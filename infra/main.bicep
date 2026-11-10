@@ -41,8 +41,10 @@ var accountArgs = empty(googleClientId) ? [] : [
 var suffix = uniqueString(resourceGroup().id)
 var containerName = 'playtests'
 
-// The one role the table needs: write and read its own recordings. A built-in role, named by its id.
+// The two roles the table needs: write and read its own recordings, and the index that finds them (ADR 0161).
+// Built-in roles, named by their ids.
 var storageBlobDataContributor = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
+var storageTableDataContributor = '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3'
 
 // Where the console lines go. Capped per day so a host that logs in a loop costs cents, not a surprise.
 resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
@@ -238,6 +240,17 @@ resource recordsSessions 'Microsoft.Authorization/roleAssignments@2022-04-01' = 
     principalId: app.identity.principalId
     principalType: 'ServicePrincipal'
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataContributor)
+  }
+}
+
+// The index of the tables, in the same account: the join codes and the open tables the lobby lists (ADR 0161).
+resource indexesTables 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: storage
+  name: guid(storage.id, app.id, storageTableDataContributor)
+  properties: {
+    principalId: app.identity.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageTableDataContributor)
   }
 }
 

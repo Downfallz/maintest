@@ -113,8 +113,32 @@ Each phase ships on the one container app there is today and leaves the game pla
    - **4.3a, done.** A table's keys name it: a seat's token, an invitation and the pilot's token are
      `<table>.<secret>` (`TableKeys`), minted so when a table opens and when a seat is offered again. A key
      minted before names no table and keeps working for the life of its table, found as it always was.
-   - **4.3b.** Tokens, codes and the lobby's projections out of the registry, which becomes a cache a table
-     is loaded into from its record and journal when a key names it (4.2c with it).
+   - **4.3b1, done.** The index of the tables (ADR 0161): a port owned by Application (`ITableIndex`) that
+     finds the seat a join code opens and lists the open tables newest first, with an adapter on Table
+     Storage in the account that holds the runs and one on files beside a directory store. Not wired yet;
+     CI runs the emulator's table service, and the app's identity is granted the table data role.
+   - **4.3b2, done.** The index follows each table's record: written right after it, in the same queue, its
+     seats' codes given to the index and those it no longer has taken back, and its summary among the open
+     tables while it is open (`TableSummary`, with no key in it). Nothing reads the index yet; an index write
+     that fails is a console line, and the record's next write puts it right.
+   - **4.3b3, one change.** The registry becomes a cache a table is loaded into from its record
+     and journal when a key or a code names it (4.2c with it), and the index is what lists and finds. Codes
+     cannot move alone: they are minted under the registry's lock, synchronously, and the index's writes
+     are a store's. The registry is asked five kinds of thing today (about 110 calls, 52 of them the
+     lobby's), and each moves this way:
+     - *Find a table* (`ById`, `ByToken`, `ByInvitation`, `Codes.Answer`): the cache, then the table a key
+       names (`TableKeys`) or the index names for a code, loaded on a miss. Keys minted before 4.3a name no
+       table; they are read off the open records once, when a host starts, for the life of those tables.
+     - *Mint or change a seat's keys* (`Add`, `TryAdd`, `Rekey`, `Codes.Mint`/`Forget`): async, the code
+       taken in the index first (refused, another is drawn), then the record written, then the open
+       table's summary at the record's revision.
+     - *List tables* (`All`: the lobby's counts and pages, an account's own tables and its caps of ADR 0147,
+       the admin panel): the open tables in the index, newest first, each summary carrying what these read
+       (format, begun, open seats, the accounts seated). An account's tables are read by filtering that
+       list, which is a few dozen at playtest scale; an entry per account is the next step if it is not.
+     - *Cap* (`Reserve`, `Capacity`): the open tables the index lists, not those this process holds.
+     - *Sweep* (`SweepIfDue`): over the index rather than the cache, still on a request until phase 6
+       makes it a scheduled command; a table not loaded is closed through its record.
    - **4.4, done.** Practice tables onto the stepper, over a journal kept in memory: the recipe's agent
      plays both seats into it, one question at a time, through the gates any decision goes through
      (`SeatAnswer`), until the person's seat is asked the scenario's question (`PracticeScenario.HandsOver`);
@@ -201,8 +225,8 @@ which adds the compilation of the engine itself.
    reads these timings, so this is not cosmetic.
 4. **Tokens.** Decided: keys of the form `<table>.<secret>`, so no index is needed (4.3a). Links already handed
    out keep their old key for the life of their table; a host that does not hold such a table finds it by the
-   open records, which are few. Join codes are typed by a person and cannot carry a table's id: they stay
-   to be decided with 4.3b (an index document per code, or the open records again).
+   open records, which are few. Join codes are typed by a person and cannot carry a table's id: they are an
+   index entry each, in Table Storage beside the open tables the lobby lists (ADR 0161).
 5. **A bot's dice.** At a table a bot's random source is seeded from the table's seed and its slot
    (`TableComposer.Source`) and lives as long as the process. A bot built fresh for each turn needs a seed that
    also depends on the journal position, or two turns draw the same numbers.

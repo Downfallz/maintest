@@ -65,8 +65,12 @@ internal static class TableHost
         var results = options.Accounts != AccountsMode.Off && store is not null
             ? await ArtifactStores.OpenResultsAsync(options.Record ?? DefaultRunsDirectory, stopping.Token)
             : null;
+        // The index that finds the tables this host records (ADR 0161): Table Storage beside a container, files
+        // beside a directory.
+        var index = store is null ? null : await OpenIndexAsync(options.Record ?? DefaultRunsDirectory, stopping.Token);
         var composer = new TableComposer(services, rules, store)
         {
+            Index = index,
             Agents = agents,
             Push = push,
             Results = results,
@@ -255,6 +259,24 @@ internal static class TableHost
     }
 
     /// <summary>The addresses a phone could be told, so choosing one is not a trip to the network settings.</summary>
+    /// <summary>
+    /// The index of the tables, or none when it cannot be opened: the store refuses its identity the table data
+    /// role, which a deployment made before ADR 0161 lacks until its bootstrap is run again. A table is its
+    /// record and its journal; the index only finds them, and a host without one serves what it holds.
+    /// </summary>
+    private static async Task<Application.Tables.Ports.ITableIndex?> OpenIndexAsync(string target, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await ArtifactStores.OpenIndexAsync(target, cancellationToken);
+        }
+        catch (Exception failure) when (failure is Azure.RequestFailedException or Azure.Identity.AuthenticationFailedException or IOException or UnauthorizedAccessException)
+        {
+            Console.WriteLine($"  The index of the tables could not be opened ({failure.Message}); the host goes on without it (ADR 0161, infra/README.md).");
+            return null;
+        }
+    }
+
     private static string Elsewhere()
     {
         var addresses = NetworkAddresses.OfThisMachine();

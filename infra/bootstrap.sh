@@ -29,8 +29,10 @@ if [[ ! "$PREFIX" =~ ^[a-z0-9]{3,11}$ ]]; then
   exit 2
 fi
 
-# The one role infra/main.bicep assigns: Storage Blob Data Contributor, to the app's own identity.
+# The roles infra/main.bicep assigns to the app's own identity: Storage Blob Data Contributor for the recordings,
+# and Storage Table Data Contributor for the index of the tables (ADR 0161).
 BLOB_CONTRIBUTOR="ba92f5b4-2d11-453d-a403-e96b0029c9fe"
+TABLE_CONTRIBUTOR="0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3"
 
 # The application id of the registration with this display name, created when there is none.
 registration() {
@@ -54,6 +56,21 @@ principal() {
     id="$(az ad sp create --id "$app_id" --query id --output tsv)"
   fi
   echo "$id"
+  return 0
+}
+
+# A role held on a condition: granted with it, and, when the principal already holds the role there on another
+# condition, that assignment replaced by one on this condition. A condition is not changed by granting the role
+# again, so a bootstrap run over an earlier one would otherwise keep the earlier condition for good.
+grant_on_condition() {
+  local principal_id="$1" role="$2" scope="$3" condition="$4"
+  local held id
+  held="$(az role assignment list --assignee "$principal_id" --role "$role" --scope "$scope" --query "[0].condition" --output tsv)"
+  id="$(az role assignment list --assignee "$principal_id" --role "$role" --scope "$scope" --query "[0].id" --output tsv)"
+  if [[ -n "$id" && "$held" != "$condition" ]]; then
+    az role assignment delete --ids "$id" --output none
+  fi
+  grant "$principal_id" "$role" "$scope" --condition "$condition" --condition-version 2.0
   return 0
 }
 
@@ -110,9 +127,8 @@ setup() {
     }"
   fi
   grant "$deployer_principal" Contributor "$scope"
-  condition="((!(ActionMatches{'Microsoft.Authorization/roleAssignments/write'})) OR (@Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {$BLOB_CONTRIBUTOR})) AND ((!(ActionMatches{'Microsoft.Authorization/roleAssignments/delete'})) OR (@Resource[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {$BLOB_CONTRIBUTOR}))"
-  grant "$deployer_principal" "Role Based Access Control Administrator" "$scope" \
-    --condition "$condition" --condition-version 2.0
+  condition="((!(ActionMatches{'Microsoft.Authorization/roleAssignments/write'})) OR (@Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {$BLOB_CONTRIBUTOR, $TABLE_CONTRIBUTOR})) AND ((!(ActionMatches{'Microsoft.Authorization/roleAssignments/delete'})) OR (@Resource[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {$BLOB_CONTRIBUTOR, $TABLE_CONTRIBUTOR}))"
+  grant_on_condition "$deployer_principal" "Role Based Access Control Administrator" "$scope" "$condition"
 
   # The registration the platform signs the operator in with. No client secret: the platform uses the
   # implicit flow, which needs ID tokens issued, and only the people listed may hold a session (ADR 0082).
