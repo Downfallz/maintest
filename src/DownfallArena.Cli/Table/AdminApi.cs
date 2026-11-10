@@ -249,7 +249,7 @@ internal sealed class AdminApi
 
         var previous = _registry.KeysOf(seat);
         var arrived = seat.Person!.HasArrived;
-        if (!_registry.Rekey(table, seat, SeatKeys.Offered()))
+        if (!_registry.Rekey(table, seat, SeatKeys.Offered(table.Id)))
         {
             return StudioResponse.OfPlainText(404, $"No unfinished table '{id}' at this host.");
         }

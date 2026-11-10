@@ -243,7 +243,7 @@ internal sealed class TableComposer
             // bot created against another rule set than the match plays would score a board that is not the
             // board, and a table picked up again has to come back in the format it was recorded in.
             var rules = RulesFor(request);
-            TableSeat[] seats = [Seat(PlayerSlot.Player1, request, Recorded(record, PlayerSlot.Player1)), Seat(PlayerSlot.Player2, request, Recorded(record, PlayerSlot.Player2))];
+            TableSeat[] seats = [Seat(id, PlayerSlot.Player1, request, Recorded(record, PlayerSlot.Player1)), Seat(id, PlayerSlot.Player2, request, Recorded(record, PlayerSlot.Player2))];
             Occupant? SeatingOf(PlayerSlot slot, string wanted) => Seating(seats[slot == PlayerSlot.Player1 ? 0 : 1], wanted, request, rules, agents, Source(seed, slot));
 
             var plan = Plan(seats, request, rules, agents, seed);
@@ -284,7 +284,7 @@ internal sealed class TableComposer
                 await run.CheckpointAsync(session.MatchId, session.Journaled, cancellationToken);
             }
 
-            var pilot = new TablePilot(record?.PilotToken ?? Token(), SeatingOf);
+            var pilot = new TablePilot(record?.PilotToken ?? TableKeys.For(id), SeatingOf);
             var api = new TableApi(session, seats, Catalogue(rules), events, run, pilot) { Guide = Guide(rules), Agents = Agents, Push = Push };
             var table = new PlayedTable(new TableOpening(id, record?.CreatedAt ?? _clock.GetUtcNow(), request), session, api, seats, pilot, run, stopping)
             {
@@ -609,19 +609,20 @@ internal sealed class TableComposer
     private static string PersonName(TableRequest request) => request.Who is { Length: > 0 } who ? $"human:{who}" : "human";
 
     /// <summary>A seat as the host knows it: a bot's where an agent was named for it, a person's where none was.</summary>
+    /// <param name="table">The table's id, which every key it mints names (<see cref="TableKeys" />).</param>
     /// <param name="recorded">The seat as an earlier host recorded it, for a table being picked up again: its token, its invitation and whether it was taken. Null for a fresh seat.</param>
-    private static TableSeat Seat(PlayerSlot slot, TableRequest request, RecordedSeat? recorded = null)
+    private static TableSeat Seat(string table, PlayerSlot slot, TableRequest request, RecordedSeat? recorded = null)
     {
         var token = recorded?.Token;
         if ((slot == PlayerSlot.Player1 ? request.Player1 : request.Player2) is not null)
         {
-            return new TableSeat(slot, token ?? Token(), Person: null);
+            return new TableSeat(slot, token ?? TableKeys.For(table), Person: null);
         }
 
         // A fresh seat is offered under an invitation, never under its token (ADR 0116). One picked up again
         // comes back as it was recorded: taken, still offered, or, from before invitations, reached by its token itself.
         var taken = recorded is null ? false : recorded.Taken ?? false;
-        var invitation = recorded is null ? Token() : recorded.Invitation;
+        var invitation = recorded is null ? TableKeys.For(table) : recorded.Invitation;
         var account = AccountId.TryParse(recorded?.Account, out var owner) ? owner : (AccountId?)null;
         var invited = !taken && AccountId.TryParse(recorded?.InvitedAccount, out var friend) ? friend : (AccountId?)null;
         var declinedBy = AccountId.TryParse(recorded?.DeclinedBy, out var decliner) ? decliner : (AccountId?)null;
@@ -633,7 +634,7 @@ internal sealed class TableComposer
             person.Arrive();
         }
 
-        return new TableSeat(slot, token ?? Token(), person)
+        return new TableSeat(slot, token ?? TableKeys.For(table), person)
         {
             Invitation = taken ? null : invitation,
             Taken = taken,
@@ -646,8 +647,9 @@ internal sealed class TableComposer
     }
 
     /// <summary>
-    /// A seat token. It is not a credential — nothing here has an account — but it must not be guessable from
-    /// another browser tab on the same machine, which is what a random 128 bits buys.
+    /// A key that names no table: the operator's own token, which is the host's and not a table's. A table's keys
+    /// name it (<see cref="TableKeys" />). Not guessable from another browser tab on the same machine, which is
+    /// what a random 128 bits buys.
     /// </summary>
     public static string Token() => Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
 }

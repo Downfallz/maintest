@@ -110,7 +110,11 @@ Each phase ships on the one container app there is today and leaves the game pla
      found to have diverged after it was registered; 4.3 makes the registry a cache a table is loaded into
      per request, which is the same change made once. What it would buy meanwhile is a shorter start: the
      host already serves while it picks tables up, and a table costs it 45 to 325 ms.
-   - **4.3.** Tokens, codes and the lobby's projections out of the registry, which becomes a cache.
+   - **4.3a, done.** A table's keys name it: a seat's token, an invitation and the pilot's token are
+     `<table>.<secret>` (`TableKeys`), minted so when a table opens and when a seat is offered again. A key
+     minted before names no table and keeps working for the life of its table, found as it always was.
+   - **4.3b.** Tokens, codes and the lobby's projections out of the registry, which becomes a cache a table
+     is loaded into from its record and journal when a key names it (4.2c with it).
    - **4.4, done.** Practice tables onto the stepper, over a journal kept in memory: the recipe's agent
      plays both seats into it, one question at a time, through the gates any decision goes through
      (`SeatAnswer`), until the person's seat is asked the scenario's question (`PracticeScenario.HandsOver`);
@@ -195,8 +199,10 @@ which adds the compilation of the engine itself.
 3. **Decision timings.** `elapsedMs` counts from when a question was shown to somebody looking (`?shown=`). With
    no memory between requests, the stamp is stored per seat, or the page sends it. The free-activation playtest
    reads these timings, so this is not cosmetic.
-4. **Tokens.** An index blob per token, or new tokens of the form `<table>.<secret>` so no index is needed.
-   Links already handed out have to keep working for the life of their table either way.
+4. **Tokens.** Decided: keys of the form `<table>.<secret>`, so no index is needed (4.3a). Links already handed
+   out keep their old key for the life of their table; a host that does not hold such a table finds it by the
+   open records, which are few. Join codes are typed by a person and cannot carry a table's id: they stay
+   to be decided with 4.3b (an index document per code, or the open records again).
 5. **A bot's dice.** At a table a bot's random source is seeded from the table's seed and its slot
    (`TableComposer.Source`) and lives as long as the process. A bot built fresh for each turn needs a seed that
    also depends on the journal position, or two turns draw the same numbers.

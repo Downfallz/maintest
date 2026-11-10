@@ -14,8 +14,8 @@ internal sealed record SeatKeys(string Token, string? Invitation, bool Taken, st
     public static SeatKeys TakenBy(string token, AccountId? account = null) => new(token, null, Taken: true, Account: account);
 
     /// <summary>A seat nobody holds: a fresh token nobody has, and a fresh invitation for a link and a code.</summary>
-    public static SeatKeys Offered() => new(TableComposer.Token(), TableComposer.Token(), Taken: false);
+    public static SeatKeys Offered(string table) => new(TableKeys.For(table), TableKeys.For(table), Taken: false);
 
     /// <summary>A seat kept for a friend (ADR 0129): fresh keys nobody has, and no code or link, since only that account accepts.</summary>
-    public static SeatKeys KeptFor(AccountId friend, DateTimeOffset at) => new(TableComposer.Token(), TableComposer.Token(), Taken: false, InvitedAccount: friend, InvitedAt: at);
+    public static SeatKeys KeptFor(string table, AccountId friend, DateTimeOffset at) => new(TableKeys.For(table), TableKeys.For(table), Taken: false, InvitedAccount: friend, InvitedAt: at);
 }
