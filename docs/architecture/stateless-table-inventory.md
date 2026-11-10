@@ -240,9 +240,10 @@ which adds the compilation of the engine itself.
     the journal does not hold. A table picked up again is held against its checkpoint as far as the two go
     together and comes back where its journal ends; before, such a table was refused.
 18. **The file journal between processes.** A directory store is one process's. Within a process every
-    journal over a directory takes turns on a run; between processes Linux locks the file for the append and
-    Windows refuses a second writer where the file is opened, and nothing does on macOS. The hosted table's
-    journal is an append blob and has none of this.
+    journal over a directory takes turns on a run. Between processes nothing keeps two writers apart but
+    Windows refusing the second where the file is opened: a line is always added at the end, so neither
+    writes over the other's, but both can take the same length for their own. The hosted table's journal is
+    an append blob and has none of this.
 19. **Who a rebuilt decision is named after.** A rebuild records every step again under the name of whoever
     sat at its round, which the seat changes further down the journal say. `SteppedSession` reads them once
     before the match is rebuilt, and learns of later ones because it writes them itself. A second process
@@ -251,6 +252,14 @@ which adds the compilation of the engine itself.
 20. **What a table's session still keeps in memory after 4.1b.** Whether each person has arrived and whether
     the match has begun (4.2), the table's version counter (4.2), the decision clock (question 3), and the
     last round each seat decided in, which a rebuild works out again.
+
+21. **A step that fails under a store that is out.** Since 4.1b the table reads its match again from the
+    journal whenever a step was refused or failed, since the line may have been written with its answer
+    lost, and takes a bot's turn again after a wait that grows to half a minute. What is left open: the
+    feed keeps the entries of a turn that was applied and not written until that reading rebuilds it, so a
+    page that polled in between holds a cursor past entries that are then recorded again under the same
+    numbers. A rebuild also moves the table's version once for each entry it records again, where ADR 0159
+    wants a replay to tell nobody; both go when the version is the journal's length (4.2).
 
 ## Documents this makes stale as it lands
 

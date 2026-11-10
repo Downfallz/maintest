@@ -24,7 +24,8 @@ internal sealed record SteppedHost(
     ICommandHandler<JoinMatch, Result<PlayerSlot>> Join,
     ICommandHandler<Concede, Result> Concede,
     IMatchRepository Matches,
-    MatchTraceRecorder Events)
+    MatchTraceRecorder Events,
+    TimeProvider Clock)
 {
     public static SteppedHost Of(IServiceProvider services)
     {
@@ -36,7 +37,8 @@ internal sealed record SteppedHost(
             services.GetRequiredService<ICommandHandler<JoinMatch, Result<PlayerSlot>>>(),
             services.GetRequiredService<ICommandHandler<Concede, Result>>(),
             services.GetRequiredService<IMatchRepository>(),
-            services.GetRequiredService<MatchTraceRecorder>());
+            services.GetRequiredService<MatchTraceRecorder>(),
+            services.GetRequiredService<TimeProvider>());
     }
 
     /// <summary>A table's own stepper over a journal.</summary>

@@ -443,10 +443,8 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
     }
 
     /// <summary>
-    /// The seat gives the match up (ADR 0087). The command ends the match behind the driver's lock; every seat
-    /// a person holds is then released, because the driver is blocked inside one of them waiting for a tap that
-    /// is not coming, and it reads the outcome once it is let go. Where the match had got to is read before,
-    /// for the note: afterwards there is only the end. Only the person playing the seat now can give it up: a
+    /// The seat gives the match up (ADR 0087), which the session ends the match by. Where the match had got to
+    /// is read before, for the note: afterwards there is only the end. Only the person playing the seat now can give it up: a
     /// token whose person is waiting for a handover (<c>--handover</c>, a swap) is watching a bot play, and a
     /// match a bot is playing is not theirs to end yet.
     /// </summary>
@@ -457,8 +455,8 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
             return StudioResponse.OfPlainText(409, $"{seat.Name} is played by a bot; it decides for itself.");
         }
 
-        // Declared before the match is ended, and held until the note is written: ending the match releases the
-        // driver, and the session would otherwise close itself with this note still on its way.
+        // Declared before the match is ended, and held until the note is written: the session would otherwise
+        // close itself the moment the match has an outcome, with this note still on its way.
         using var accepting = run?.Accepting();
         var (round, subPhase) = await WhereAsync(seat.Slot);
         var conceded = await session.ConcedeAsync(seat.Slot);
@@ -546,8 +544,8 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
             return await RefuseAsync(seat.Slot, Late);
         }
 
-        // Where this decision is being made, taken before it is handed over. Submitting releases the driver,
-        // which moves the round on, so anything read afterwards is where the match *went*: the step in
+        // Where this decision is being made, taken before it is handed over. Handing it over moves the match
+        // on, so anything read afterwards is where the match *went*: the step in
         // steps.jsonl carries where it was, and the two files this session says are aligned would disagree
         // about where every decision happened. The sub-phase is the one the options themselves name -- these
         // are the options the decision was just validated against, so it is the question's own answer to
@@ -556,15 +554,15 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         var round = (await WhereAsync(seat.Slot)).Round;
         var answered = waiting;
 
-        // And when this seat's screen was served, read now rather than after the submit. Submitting releases
-        // the driver, which can ask this seat the next question and have a poll stamp it before the recording
-        // gets here -- and a seat has one stamp, so the new question's replaces the answered one's. Read
+        // And when this seat's screen was served, read now rather than after the decision is handed over: the
+        // match can then ask this seat the next question and have a poll stamp it before the recording gets
+        // here -- and a seat has one stamp, so the new question's replaces the answered one's. Read
         // afterwards, the decision would be timed at nothing.
         var servedAt = run?.ServedAt(seat.Slot, answered);
 
 
         // How far the trace has got before this decision is handed over, so the checkpoint that follows can
-        // tell whether the driver has applied it yet.
+        // tell whether it has been applied yet, where the session applies it on another thread.
         var traced = run?.TraceLength(session.MatchId) ?? 0;
 
         // Declared before the decision is handed over, and held until its note is written. The match can end
@@ -572,13 +570,13 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         // way to writing it down -- showing a finished session whose last decision is missing.
         using var accepting = run?.Accepting();
 
-        // Checked against the options, and still refused: the seat moved on between the two. That is the race
-        // the driver would have thrown on, answered as the late tap it is.
-        // The moment of acceptance, read *before* the seat is answered and kept only if it was. After the
-        // submit is too late: it releases the driver, and this thread can lose the processor between the two,
-        // so the clock would then read once a whole command had run -- dating the note after the thing it
-        // records and putting engine time inside a duration that measures a person. Read first, it is at worst
-        // a few instructions early, and it cannot contain any of the engine, which is the error worth having.
+        // Checked against the options, and still refused: the seat moved on between the two, and the tap is
+        // answered as the late one it is.
+        // The moment of acceptance, read *before* the decision is handed over and kept only if it was taken.
+        // After is too late: the clock would then read once a whole command had run -- dating the note after
+        // the thing it records and putting engine time inside a duration that measures a person. Read first,
+        // it is at worst a few instructions early, and it cannot contain any of the engine, which is the error
+        // worth having.
         var acceptedAt = run?.Now();
         var taken = await session.DecideAsync(seat.Slot, decision, asking, options, round);
         if (!taken.Taken)
@@ -750,6 +748,11 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
 
         var outcome = await session.SwapAsync(slot, next, wanted, round);
+        if (!outcome.Taken && session.IsOver)
+        {
+            return Refused(NoRoundsLeft);
+        }
+
         if (!outcome.Taken)
         {
             var floor = outcome.Reached is { } reached ? reached + 1 : 1;

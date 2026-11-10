@@ -39,7 +39,6 @@ internal static class ArtifactStores
         return await BlobArtifactStore.OpenAsync(container, cancellationToken);
     }
 
-    /// <summary>The container accounts are kept in, next to the recordings' one (ADR 0122).</summary>
     /// <summary>
     /// The journal the tables of a store are stepped over (ADR 0159), kept where the store keeps its runs: a
     /// table's <c>decisions.jsonl</c> is one file, written by the journal and listed by the store. A store this
@@ -57,6 +56,7 @@ internal static class ArtifactStores
         };
     }
 
+    /// <summary>The container accounts are kept in, next to the recordings' one (ADR 0122).</summary>
     public const string AccountsContainer = "accounts";
 
     /// <summary>

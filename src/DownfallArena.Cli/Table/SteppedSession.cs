@@ -54,6 +54,17 @@ internal sealed class SteppedSession : ITableSession
     private int _pump;
     private int _disposed;
 
+    // Whether the match kept here may be behind its journal: a step was refused or failed, and what it left
+    // is not known. Whoever takes the bots' turns reads the match again first.
+    private int _stale;
+
+    private static readonly TimeSpan FirstRetry = TimeSpan.FromMilliseconds(250);
+    private static readonly TimeSpan LongestRetry = TimeSpan.FromSeconds(30);
+
+    // How often in a row another writer may take the match further before the step waits a moment, or gives up
+    // where somebody is waiting for its answer.
+    private const int MovedInARow = 3;
+
     private SteppedSession(SteppedHost host, IDecisionJournal journal, JournaledMatch match, SteppedSeats seats, PlaytestRun? run, bool legacyStream, CancellationToken stopping)
     {
         _host = host;
@@ -70,8 +81,7 @@ internal sealed class SteppedSession : ITableSession
             (seat.Person as SteppedPerson)?.Attach(() => Waiting(seat.Slot));
         }
 
-        // A table let go of before its match ended has no outcome, which is what an abandoned table is.
-        _stopped = stopping.Register(() => _outcome.TrySetCanceled());
+        _stopped = stopping.Register(Stop);
     }
 
     /// <summary>
@@ -140,25 +150,40 @@ internal sealed class SteppedSession : ITableSession
         Pump();
     }
 
-    /// <remarks>
-    /// The match in memory is let go of once whatever step is being taken has finished, and its feed after it:
-    /// a step still running would otherwise record into a feed nobody is left to forget.
-    /// </remarks>
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0)
-        {
-            return;
-        }
-
         _stopped.Dispose();
-        _outcome.TrySetCanceled();
-        _stepper.ForgetAsync(_match.MatchId).ContinueWith(
-            _ => _host.Events.Forget(_match.MatchId),
-            CancellationToken.None,
-            TaskContinuationOptions.ExecuteSynchronously,
-            TaskScheduler.Default);
+        Stop();
     }
+
+    /// <summary>
+    /// Lets the table go: nothing more is taken, the match in memory and its feed are forgotten once whatever
+    /// step is being taken has finished, and only then does a match that had not ended complete without an
+    /// outcome, which is what an abandoned table is. Whoever waits for the outcome before deleting the table's
+    /// files is then waiting for the last line a step could write.
+    /// </summary>
+    private void Stop()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) == 0)
+        {
+            _ = LetGoAsync();
+        }
+    }
+
+    private async Task LetGoAsync()
+    {
+        try
+        {
+            await _stepper.ForgetAsync(_match.MatchId);
+        }
+        finally
+        {
+            _host.Events.Forget(_match.MatchId);
+            _outcome.TrySetCanceled();
+        }
+    }
+
+    private bool LetGo => Volatile.Read(ref _disposed) != 0;
 
     public string SeatedName(PlayerSlot slot) => Sitting(slot).Name;
 
@@ -178,46 +203,62 @@ internal sealed class SteppedSession : ITableSession
     public async Task<SwapOutcome> SwapAsync(PlayerSlot slot, Occupant next, string wanted, int round)
     {
         ArgumentNullException.ThrowIfNull(next);
-        while (true)
+        Occupant? held = null;
+        var reached = 0;
+        for (var attempt = 0; attempt < MovedInARow && !LetGo; attempt++)
         {
-            Occupant? held = null;
-            var reached = 0;
-            var changed = await _stepper.ChangeSeatAsync(
-                _match,
-                state =>
-                {
-                    var plan = Seated(state.SeatChanges);
-                    held = plan.At(slot, RoundOf(state, slot));
-                    reached = Reached(slot, state, plan);
-                    if (round <= reached)
-                    {
-                        return Result.Failure<SeatChangeEntry>(JournalErrors.RoundReached);
-                    }
-
-                    var change = new SeatChangeEntry(slot, wanted, round, reached);
-                    lock (_gate)
-                    {
-                        _offered = (change, next);
-                    }
-
-                    return Result.Success(change);
-                },
-                _stopping);
-            if (changed.IsFailure && changed.Error == JournalErrors.Moved)
+            Result<JournaledState> changed;
+            try
             {
-                continue;
+                changed = await _stepper.ChangeSeatAsync(
+                    _match,
+                    state =>
+                    {
+                        var plan = Seated(state.SeatChanges);
+                        held = plan.At(slot, RoundOf(state, slot));
+                        reached = Reached(slot, state, plan);
+                        if (round <= reached)
+                        {
+                            return Result.Failure<SeatChangeEntry>(JournalErrors.RoundReached);
+                        }
+
+                        var change = new SeatChangeEntry(slot, wanted, round, reached);
+                        lock (_gate)
+                        {
+                            _offered = (change, next);
+                        }
+
+                        return Result.Success(change);
+                    },
+                    _stopping);
+            }
+            catch (OperationCanceledException) when (_stopping.IsCancellationRequested)
+            {
+                break;
+            }
+            catch
+            {
+                Behind();
+                throw;
             }
 
-            held ??= Sitting(slot);
-            if (changed.IsFailure)
+            if (changed.IsSuccess)
             {
-                return new SwapOutcome(held, reached == 0 ? null : reached, Taken: false);
+                Take(changed.Value);
+                Pump();
+                return new SwapOutcome(held ?? Sitting(slot), reached == 0 ? null : reached, Taken: true);
             }
 
-            Take(changed.Value);
-            Pump();
-            return new SwapOutcome(held, reached == 0 ? null : reached, Taken: true);
+            if (changed.Error != JournalErrors.Moved)
+            {
+                // Refused on a match that is over, the caller is about to ask whether it is.
+                await CaughtUpAsync();
+                break;
+            }
         }
+
+        Behind();
+        return new SwapOutcome(held ?? Sitting(slot), reached == 0 ? null : reached, Taken: false);
     }
 
     /// <remarks>The board the last step left, the seat's held answers on it: where the match has got to, and how it ended.</remarks>
@@ -226,13 +267,13 @@ internal sealed class SteppedSession : ITableSession
 
     /// <remarks>
     /// One moment by construction: the question, the board and the options are the ones a single step left. A
-    /// read that finds the bots owing a turn nobody is taking -- a write that failed under the last one -- sets
-    /// it off again, which is all a read ever does to the match.
+    /// read that finds the match kept here possibly behind its journal, or the bots owing a turn, sets off
+    /// whoever takes those turns, which is all a read ever does to the match.
     /// </remarks>
     public Task<Result<SeatSnapshot>> SnapshotAsync(PlayerSlot slot)
     {
         var (state, plan) = Read();
-        if (HasBegun && state.Outcome is null && Waiting(PlayerSlot.Player1, state, plan) is null && Waiting(PlayerSlot.Player2, state, plan) is null)
+        if (Volatile.Read(ref _stale) != 0 || (HasBegun && state.Outcome is null && Waiting(PlayerSlot.Player1, state, plan) is null && Waiting(PlayerSlot.Player2, state, plan) is null))
         {
             Pump();
         }
@@ -254,7 +295,7 @@ internal sealed class SteppedSession : ITableSession
     {
         ArgumentNullException.ThrowIfNull(decision);
         var reading = Read().State.Of(slot);
-        if (!HasBegun || reading.Asking != asked)
+        if (LetGo || !HasBegun || reading.Asking != asked)
         {
             return DecisionTaken.Late;
         }
@@ -271,14 +312,21 @@ internal sealed class SteppedSession : ITableSession
                 asked,
                 _stopping);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (_stopping.IsCancellationRequested)
         {
             return DecisionTaken.Late;
+        }
+        catch
+        {
+            // Written or not, nobody here knows: the line may be in the journal with its answer lost on the way.
+            Behind();
+            throw;
         }
 
         if (step.IsFailure)
         {
-            Stopped(step.Error);
+            // Late for the match as it is kept here, which may itself be what is late.
+            Behind();
             return DecisionTaken.Late;
         }
 
@@ -289,22 +337,46 @@ internal sealed class SteppedSession : ITableSession
         return new DecisionTaken(true, step.Value.Step.Held.IsEmpty);
     }
 
+    /// <remarks>
+    /// A concession another writer got in the way of is taken again. One refused because the match is already
+    /// over -- this very concession, written by an attempt whose answer was lost -- is the match conceded.
+    /// </remarks>
     public async Task<Result> ConcedeAsync(PlayerSlot slot)
     {
-        while (true)
+        var refusal = JournalErrors.Moved;
+        for (var attempt = 0; attempt < MovedInARow && !LetGo; attempt++)
         {
-            var conceded = await _stepper.ConcedeAsync(_match, slot, CancellationToken.None);
+            Result<JournaledState> conceded;
+            try
+            {
+                conceded = await _stepper.ConcedeAsync(_match, slot, _stopping);
+            }
+            catch (OperationCanceledException) when (_stopping.IsCancellationRequested)
+            {
+                break;
+            }
+            catch
+            {
+                Behind();
+                throw;
+            }
+
             if (conceded.IsSuccess)
             {
                 Take(conceded.Value);
                 return Result.Success();
             }
 
-            if (conceded.Error != JournalErrors.Moved)
+            refusal = conceded.Error;
+            if (refusal != JournalErrors.Moved)
             {
-                return Result.Failure(conceded.Error);
+                break;
             }
         }
+
+        return await CaughtUpAsync() is { Outcome: { Reason: MatchEndReason.Concession } ended } && ended.Winner == Other(slot)
+            ? Result.Success()
+            : Result.Failure(refusal);
     }
 
     /// <remarks>Nothing to wait for: a decision is applied before <see cref="DecideAsync" /> answers.</remarks>
@@ -483,58 +555,158 @@ internal sealed class SteppedSession : ITableSession
     /// is over. Each is a turn of its own so a tap, a concession or a seat changing hands has the match between
     /// two of them, and so the pages see each as it lands.
     /// </summary>
+    /// <remarks>
+    /// It is also where the match kept here is read again when it may be behind its journal, and what does not
+    /// give up on a store that is out: a turn that could not be written is taken again after a wait that grows
+    /// to half a minute, for as long as the table is held. Nobody may be reading the table to set it off again
+    /// -- a page closed on the bot's turn is the very case a notice exists for (ADR 0118).
+    /// </remarks>
     private async Task AdvancedAsync()
     {
-        try
+        var wait = FirstRetry;
+        var moved = 0;
+        while (!LetGo)
         {
-            while (HasBegun && !IsOver && Volatile.Read(ref _disposed) == 0)
+            try
             {
-                var step = await _stepper.AdvanceAsync(_match, changes => Seated(changes).Seats(), once: true, _stopping);
-                if (step.IsFailure)
+                if (Interlocked.Exchange(ref _stale, 0) != 0)
                 {
-                    if (step.Error == JournalErrors.Moved)
+                    var read = await _stepper.ReadAsync(_match, _stopping);
+                    if (read.IsFailure)
                     {
-                        continue;
+                        Ended(read.Error);
+                        return;
                     }
 
-                    Stopped(step.Error);
+                    Take(read.Value);
+                }
+
+                if (!HasBegun || IsOver)
+                {
                     return;
                 }
 
+                var step = await _stepper.AdvanceAsync(_match, changes => Seated(changes).Seats(), once: true, _stopping);
+                if (step.IsFailure && step.Error != JournalErrors.Moved)
+                {
+                    Ended(step.Error);
+                    return;
+                }
+
+                if (step.IsFailure)
+                {
+                    // Another writer took the match further: read it again, and wait a moment once it keeps happening.
+                    Behind(pump: false);
+                    if (++moved >= MovedInARow)
+                    {
+                        wait = await WaitedAsync(wait);
+                    }
+
+                    continue;
+                }
+
+                moved = 0;
+                wait = FirstRetry;
                 Take(step.Value.State);
                 if (!step.Value.Step.Owed)
                 {
                     return;
                 }
             }
+            catch (OperationCanceledException) when (_stopping.IsCancellationRequested)
+            {
+                // The table was let go of under a bot's turn.
+                return;
+            }
+            catch (Exception failure) when (Transient(failure))
+            {
+                Behind(pump: false);
+                Console.WriteLine($"  Session {_match.Run}: the bots' turn could not be taken ({failure.Message}); it is taken again in {wait.TotalSeconds:0.##} s.");
+                try
+                {
+                    wait = await WaitedAsync(wait);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+            }
+            catch (Exception failure)
+            {
+                // A bot that throws, a journal that cannot be read as one: the table ends without an outcome,
+                // as the driver's task did, and says why.
+                Console.WriteLine($"  Session {_match.Run} cannot be played on: {failure.Message}");
+                _outcome.TrySetException(failure);
+                return;
+            }
         }
-        catch (OperationCanceledException)
+    }
+
+    /// <summary>Waits before a turn is taken again, and says how long the next wait is.</summary>
+    private async Task<TimeSpan> WaitedAsync(TimeSpan wait)
+    {
+        await Task.Delay(wait, _host.Clock, _stopping);
+        return wait + wait < LongestRetry ? wait + wait : LongestRetry;
+    }
+
+    /// <summary>
+    /// Whether a failure is the store's and may pass: a file or a blob that could not be reached, a request that
+    /// timed out. Anything else is the table's own, and is not taken again.
+    /// </summary>
+    private static bool Transient(Exception failure) => failure switch
+    {
+        AggregateException several => several.InnerExceptions.Count > 0 && several.InnerExceptions.All(Transient),
+        _ => failure is IOException or UnauthorizedAccessException or TimeoutException or OperationCanceledException or Azure.RequestFailedException,
+    };
+
+    /// <summary>
+    /// Says the match kept here may be behind its journal, and has it read again by whoever takes the bots'
+    /// turns: a step was refused or failed, and the line it was writing may be in the journal all the same.
+    /// </summary>
+    private void Behind(bool pump = true)
+    {
+        Volatile.Write(ref _stale, 1);
+        if (pump)
         {
-            // The table was let go of under a bot's turn.
-        }
-        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or Azure.RequestFailedException)
-        {
-            // The journal could not be written: the turn is nobody's, and the next read of a seat takes it again.
-            Console.WriteLine($"  Session {_match.Run}: the bots' turn could not be written down ({failure.Message}); the next read takes it again.");
-        }
-        catch (Exception failure)
-        {
-            // A bot that throws, a match that cannot be played on: the table ends without an outcome and says why,
-            // as the driver's task did.
-            _outcome.TrySetException(failure);
+            Pump();
         }
     }
 
     /// <summary>
-    /// A step was refused. A late answer and a match already over are answers; a journal that no longer fits
-    /// the match is the table's end, without an outcome.
+    /// The match where its journal ends, read now for a caller about to answer on it; none when it could not
+    /// be read, which leaves it to be read again behind.
     /// </summary>
-    private void Stopped(DomainError error)
+    private async Task<JournaledState?> CaughtUpAsync()
     {
-        if (error.Code == JournalErrors.DivergedCode)
+        if (LetGo)
         {
-            _outcome.TrySetResult(Result.Failure<MatchOutcome>(error));
+            return null;
         }
+
+        try
+        {
+            var read = await _stepper.ReadAsync(_match, _stopping);
+            if (read.IsSuccess)
+            {
+                Take(read.Value);
+                Pump();
+                return read.Value;
+            }
+        }
+        catch (Exception failure) when (Transient(failure))
+        {
+            // Said by whoever reads it again.
+        }
+
+        Behind();
+        return null;
+    }
+
+    /// <summary>The match cannot be played on from its journal: the table ends without an outcome, and says why.</summary>
+    private void Ended(DomainError error)
+    {
+        Console.WriteLine($"  Session {_match.Run} cannot be played on: {error.Message}");
+        _outcome.TrySetResult(Result.Failure<MatchOutcome>(error));
     }
 
     private void Reach(PlayerSlot slot, int? round)

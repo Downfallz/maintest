@@ -1,7 +1,9 @@
 using DownfallArena.Application.Agents;
+using DownfallArena.Application.Learning.Tracing;
 using DownfallArena.Application.Matches.Decisions;
 using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Matches.Journaling;
+using DownfallArena.Application.Matches.Ports;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Cli.Table;
 using DownfallArena.Domain.Matches;
@@ -25,7 +27,7 @@ public sealed class SteppedSessionTests : IDisposable
 
     private readonly HostedTables _host = new();
     private readonly HostedTables _other = new();
-    private readonly InMemoryDecisionJournal _journal = new();
+    private readonly Unreliable _journal = new();
     private readonly CancellationTokenSource _stopping = new();
     private readonly List<SteppedSession> _opened = [];
 
@@ -193,17 +195,89 @@ public sealed class SteppedSessionTests : IDisposable
         (await _journal.ReadAsync(Run, TestContext.Current.CancellationToken)).Entries[^1].ShouldBe(new ConcessionEntry(PlayerSlot.Player1));
     }
 
+    /// <summary>
+    /// A table let go of has no outcome, keeps nothing in the host's stores, and takes nothing more: a tap, a
+    /// concession or a seat change that arrives after must not bring back the match that was just forgotten.
+    /// </summary>
     [Fact]
-    public async Task A_table_let_go_of_before_its_match_ended_has_no_outcome()
+    public async Task A_table_let_go_of_has_no_outcome_forgets_its_match_and_takes_nothing_more()
     {
         var (session, person, _) = await Opened(_host);
         session.Begin();
         await Waiting(person, PlayerOptionsKind.Evolution);
+        await BotHeld(PlayerOptionsKind.Evolution);
+        var options = await Options(session);
+        var written = (await _journal.ReadAsync(Run, TestContext.Current.CancellationToken)).Position;
 
         await _stopping.CancelAsync();
+        await Task.WhenAny(session.Outcome);
+        var tap = await session.DecideAsync(PlayerSlot.Player1, PlayerDecision.Pass, 1, options, round: 1);
+        var conceded = await session.ConcedeAsync(PlayerSlot.Player1);
+        var swapped = await session.SwapAsync(PlayerSlot.Player1, Named(_host)(PlayerSlot.Player1, "greedy")!, "greedy", round: 3);
 
         session.IsOver.ShouldBeTrue();
         session.Outcome.IsCanceled.ShouldBeTrue();
+        tap.ShouldBe(DecisionTaken.Late);
+        conceded.IsFailure.ShouldBeTrue();
+        swapped.Taken.ShouldBeFalse();
+        (await _journal.ReadAsync(Run, TestContext.Current.CancellationToken)).Position.ShouldBe(written);
+        (await _host.Services.GetRequiredService<IMatchRepository>().FindAsync(session.MatchId, TestContext.Current.CancellationToken)).ShouldBeNull();
+        _host.Services.GetRequiredService<MatchTraceRecorder>().Length(session.MatchId).ShouldBe(0);
+    }
+
+    /// <summary>
+    /// A line can be in the journal with its answer lost on the way back: the writer is told the match moved.
+    /// The tap is answered as late, and the seat reads on from the journal rather than staying on a question
+    /// the journal says it has answered.
+    /// </summary>
+    [Fact]
+    public async Task A_decision_written_whose_answer_was_lost_is_late_and_the_seat_reads_on_from_the_journal()
+    {
+        var (session, person, _) = await Opened(_host);
+        session.Begin();
+        await Waiting(person, PlayerOptionsKind.Evolution);
+        await BotHeld(PlayerOptionsKind.Evolution);
+        _journal.LoseTheNextAnswer();
+
+        var taken = await session.DecideAsync(PlayerSlot.Player1, PlayerDecision.Pass, 1, await Options(session), round: 1);
+        var next = await Waiting(person, PlayerOptionsKind.Speed);
+
+        taken.ShouldBe(DecisionTaken.Late);
+        next.Asked.ShouldBe(2);
+        (await Decisions()).Count(decision => decision == new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass)).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task A_concession_written_whose_answer_was_lost_is_the_match_conceded()
+    {
+        var (session, person, _) = await Opened(_host);
+        session.Begin();
+        await Waiting(person, PlayerOptionsKind.Evolution);
+        await BotHeld(PlayerOptionsKind.Evolution);
+        _journal.LoseTheNextAnswer();
+
+        var conceded = await session.ConcedeAsync(PlayerSlot.Player1);
+
+        conceded.IsSuccess.ShouldBeTrue();
+        (await session.Outcome.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken)).Value.Winner.ShouldBe(PlayerSlot.Player2);
+        (await _journal.ReadAsync(Run, TestContext.Current.CancellationToken)).Entries.OfType<ConcessionEntry>().ShouldHaveSingleItem();
+    }
+
+    /// <summary>
+    /// Nobody may be reading a table when a store is out under a bot's turn -- a table of bots, a page closed
+    /// while the bot thinks -- so the turn is taken again by the table itself, after a wait.
+    /// </summary>
+    [Fact]
+    public async Task A_bot_s_turn_that_could_not_be_written_is_taken_again_without_anybody_reading_the_table()
+    {
+        var (session, _, _) = await Opened(_host, people: false);
+        _journal.FailTheNext(2);
+
+        session.Begin();
+        var outcome = await session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+        outcome.IsSuccess.ShouldBeTrue();
+        _journal.Failed.ShouldBe(2);
     }
 
     private const string Run = "table-1";
@@ -267,6 +341,36 @@ public sealed class SteppedSessionTests : IDisposable
         var waiting = person.Waiting.ShouldNotBeNull();
         waiting.Kind.ShouldBe(kind);
         return waiting;
+    }
+
+    /// <summary>A journal whose store can be made to fail: an append that throws, or one written whose answer is lost.</summary>
+    private sealed class Unreliable : IDecisionJournal
+    {
+        private readonly InMemoryDecisionJournal _inner = new();
+        private int _failing;
+        private int _losing;
+
+        /// <summary>How many appends were refused by the store.</summary>
+        public int Failed { get; private set; }
+
+        public void FailTheNext(int appends) => Volatile.Write(ref _failing, appends);
+
+        public void LoseTheNextAnswer() => Volatile.Write(ref _losing, 1);
+
+        public Task<JournalReading> ReadAsync(string run, CancellationToken cancellationToken = default) => _inner.ReadAsync(run, cancellationToken);
+
+        public async Task<JournalPosition?> AppendAsync(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken = default)
+        {
+            if (entries.Count > 0 && Volatile.Read(ref _failing) > 0)
+            {
+                Interlocked.Decrement(ref _failing);
+                Failed++;
+                throw new IOException("The store is out.");
+            }
+
+            var written = await _inner.AppendAsync(run, after, entries, cancellationToken);
+            return entries.Count > 0 && Interlocked.Exchange(ref _losing, 0) != 0 ? null : written;
+        }
     }
 
     /// <summary>A bot that can be made to stop and think at its next decision, and says when it has.</summary>

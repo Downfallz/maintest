@@ -75,6 +75,10 @@ internal sealed class PlaytestRun
     private int _recording;
     private readonly int _seed;
 
+    // Whether this run was opened over what an earlier host wrote (Reopen): its dataset files are then started
+    // over before the match is written into them.
+    private readonly bool _reopened;
+
     private PlaytestRun(
         RunPlace place,
         RunRecorder recorder,
@@ -87,6 +91,7 @@ internal sealed class PlaytestRun
     {
         Journal = new DecisionJournal(place.Writer, clock, rebuild?.Recorded);
         _record = rebuild?.Record ?? reopened;
+        _reopened = reopened is not null;
         _staged = rebuild?.Staged;
         SessionId = place.SessionId;
         Location = place.Location;
@@ -779,6 +784,14 @@ internal sealed class PlaytestRun
 
         // Taken before the recorder is handed the match, because being handed it is what makes it forget.
         _kept = _events.EntriesOf(matchId);
+
+        // An earlier host may have got as far as writing the steps and the episodes and no further -- it stopped
+        // before the record said finished, or could not write that. Written into again as they are, a dataset
+        // would hold the match twice under a manifest that counts it once.
+        if (_reopened)
+        {
+            await _recorder.StartAsync(cancellationToken);
+        }
 
         await _recorder.MatchPlayedAsync(matchId, _seed, player1Board, cancellationToken);
         await _recorder.FinishAsync(cancellationToken);

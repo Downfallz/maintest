@@ -434,6 +434,7 @@ public sealed class TableRestorerTests : IDisposable
         await Finished(table);
         var record = (await _before.Stored!.RecordAsync(table.Id, TestContext.Current.CancellationToken)).ShouldNotBeNull();
         await new FileArtifactStore(_runs).Writer(table.Id).WriteJsonAsync(TableRecord.File, record with { Status = TableRecord.Open }, TestContext.Current.CancellationToken);
+        var dataset = await Files(table.Id, "manifest.json", "steps.jsonl", "episodes.jsonl");
 
         var said = await TableRestorer.RestoreAsync(_after.Stored!, _after.Composer, _later, TimeProvider.System, TestContext.Current.CancellationToken);
 
@@ -447,7 +448,12 @@ public sealed class TableRestorerTests : IDisposable
         }
 
         (await _after.Stored!.RecordAsync(table.Id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Finished);
+        var again = await Files(table.Id, "manifest.json", "steps.jsonl", "episodes.jsonl");
+        Lines(again[1]).ShouldBe(Lines(dataset[1]), "the steps the earlier host wrote are not written a second time");
+        Lines(again[2]).ShouldBe(2, "an episode a seat");
     }
+
+    private static int Lines(string? text) => text.ShouldNotBeNull().Split('\n', StringSplitOptions.RemoveEmptyEntries).Length;
 
     private async Task<IReadOnlyList<string?>> Files(string id, params string[] names)
     {
