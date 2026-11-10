@@ -217,9 +217,29 @@
 .intro-actions .primary { border: 1px solid var(--gold); border-radius: 8px; }
 .intro-caption { font-size: 11px; color: var(--muted); line-height: 1.6; margin-top: 20px; }
 .intro-art { position: relative; isolation: isolate; min-height: 410px; border: 1px solid var(--line); border-radius: 120px 16px 16px 16px; overflow: hidden; background: linear-gradient(0deg, var(--paper), transparent 60%), url('battle-art/eclipse-battle.webp') center/cover; }
-.intro-art::after { content: ''; position: absolute; inset: 50% 0 0; background: linear-gradient(transparent, var(--paper)); pointer-events: none; }
-.intro-beast { position: absolute; width: 53%; height: 73%; object-fit: contain; bottom: 7%; filter: drop-shadow(0 12px 18px #0009); }
-.intro-brute { left: -4%; z-index: 1; }.intro-predator { left: 23%; bottom: 4%; z-index: 2; }.intro-warped { right: -3%; }
+.intro-art::after { content: ''; position: absolute; inset: 58% 0 0; z-index: 4; background: linear-gradient(transparent, color-mix(in srgb, var(--paper) 70%, transparent)); pointer-events: none; }
+/* Three Stage 3 creatures in depth, the way the field sets a team: each on its own ground, the nearest lowest and
+   largest, the farthest small and a little hazy, so none hides another. */
+.intro-beast { position: absolute; display: block; }
+.intro-beast img { position: relative; z-index: 1; display: block; width: 100%; height: auto; filter: drop-shadow(0 10px 14px #000a); }
+.intro-beast::after { content: ''; position: absolute; left: 12%; right: 12%; bottom: 2%; height: 12%; border-radius: 50%; background: radial-gradient(#000c, transparent 70%); }
+.intro-back { z-index: 1; right: 2%; bottom: 43%; width: 33%; opacity: .9; filter: saturate(.85) brightness(.88); }
+.intro-middle { z-index: 2; left: 33%; bottom: 23%; width: 39%; }
+.intro-front { z-index: 3; left: -1%; bottom: 3%; width: 45%; }
+.intro-evolution { grid-column: 1/-1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); align-items: center; gap: 32px; margin: 48px 0 0; padding: 32px 0 0; border-top: 1px solid var(--line); }
+.intro-evolution-copy > .eyebrow { color: var(--brand-ember); }
+.intro-evolution h3 { font: 400 clamp(24px, 2.6vw, 32px)/1.15 Georgia, serif; margin: 12px 0 14px; }
+.intro-evolution p:not(.eyebrow) { color: var(--muted); font-size: 14px; line-height: 1.75; margin: 0; }
+.evolution-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; counter-reset: stage; }
+.evolution-strip li { position: relative; display: grid; gap: 8px; justify-items: center; padding: 14px 10px 12px; border: 1px solid var(--line); border-radius: 14px; background: radial-gradient(ellipse at 50% 85%, #f0c46b14, transparent 60%), var(--panel); }
+.evolution-strip li + li::before { content: '→'; position: absolute; left: -12px; top: 42%; transform: translate(-50%, -50%); color: var(--gold); font-size: 16px; }
+.evolution-strip img { width: 100%; aspect-ratio: 3 / 2; object-fit: contain; filter: drop-shadow(0 6px 10px #0009); }
+.evolution-strip span { display: grid; justify-items: center; font: 400 17px Georgia, serif; }
+.evolution-strip small { color: var(--brand-ember); font: 700 10px/1.6 system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; }
+.intro-features { grid-column: 1/-1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin: 36px 0 0; padding: 0; list-style: none; }
+.intro-features li { display: grid; gap: 6px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.intro-features strong { color: var(--gold); font-size: 14px; }
+.intro-features span { color: var(--muted); font-size: 13px; line-height: 1.6; }
 .how-it-plays { grid-column: 1/-1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; padding: 36px 0 0; margin: 40px 0 0; border-top: 1px solid var(--line); list-style: none; scroll-margin-top: 24px; }
 .how-it-plays li { display: flex; gap: 16px; }
 .step-number { color: var(--brand-ember); font: 22px Georgia, serif; padding-top: 2px; }
@@ -267,6 +287,7 @@
   .welcome-intro { column-gap: 24px; padding-top: 40px; }
   .intro-art { min-height: 380px; }
   .how-it-plays { gap: 22px; }
+  .intro-features { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 700px) {
   .home-header { min-height: 84px; gap: 8px; }
@@ -284,7 +305,13 @@
   .intro-description { font-size: 15px; line-height: 1.65; }
   .intro-actions { gap: 12px 20px; margin-top: 22px; }
   .intro-caption { margin-top: 16px; }
-  .intro-art { min-height: 250px; border-radius: 60px 12px 12px 12px; }
+  .intro-art { min-height: 0; aspect-ratio: 4 / 3; border-radius: 60px 12px 12px 12px; }
+  .intro-evolution { grid-template-columns: 1fr; gap: 20px; margin-top: 36px; padding-top: 28px; }
+  .evolution-strip { gap: 8px; }
+  .evolution-strip li { padding: 10px 6px 8px; }
+  .evolution-strip li + li::before { left: -8px; font-size: 13px; }
+  .evolution-strip span { font-size: 14px; }
+  .intro-features { grid-template-columns: 1fr; margin-top: 28px; }
   .how-it-plays { grid-template-columns: 1fr; gap: 24px; margin: 4px 0 0; padding-top: 28px; }
   .how-it-plays p { max-width: 42ch; }
   .home-page .sign-in-panel { margin-top: 4px; padding: 22px; }
