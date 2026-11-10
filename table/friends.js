@@ -157,6 +157,8 @@ export function mountFriends(doc, { request = accountRequest, nav = globalThis.n
   render();
   return {
     stop: () => win.clearInterval(interval),
+    /** Reads the list again: a request answered from the bell changes it. */
+    refresh: () => refresh(true),
     /** Told by the lobby whether an invitation of this player's is waiting: one at a time, so Invite waits too. */
     setOutstanding(next) {
       if (Boolean(next) === outstanding) return;

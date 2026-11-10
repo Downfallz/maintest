@@ -32,3 +32,21 @@ export function tableOf(answer, tokens) {
 export function seatsOf(answer, tokens) {
   return tableOf(answer, tokens)?.seats ?? null;
 }
+
+/**
+ * Whose turn it is at an unfinished table, from the seats the host says are being asked something now, and
+ * whether it is this browser's: null before the match begins, once it is over, or while nobody is asked (the
+ * bots are thinking or a round is resolving).
+ */
+export function turnOf(table, held = []) {
+  if (table.over || table.waiting || !Array.isArray(table.seats)) return null;
+  const asked = table.seats.filter(seat => seat.turn);
+  if (asked.length === 0) return null;
+  if (asked.some(seat => held.includes(seat.seat))) {
+    return { mine: true, text: asked.length > 1 ? 'Your turn · both players choose' : 'Your turn' };
+  }
+  if (asked.every(seat => seat.kind === 'open')) return { mine: false, text: 'Waiting for a player to take the open seat' };
+  if (asked.length > 1) return { mine: false, text: 'Both players to play' };
+  const name = asked[0].name && asked[0].name !== 'Player' ? asked[0].name : 'The other player';
+  return { mine: false, text: `${name}'s turn` };
+}
