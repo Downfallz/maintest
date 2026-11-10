@@ -1,6 +1,8 @@
 import { preferredPresentation, savePresentation, presentationPath } from './battle-preferences.js';
 import { nextPath } from './account.js';
 import { mountNavigation } from './navigation.js';
+import { turnOf } from './players.js';
+export { turnOf } from './players.js';
 export { codePath } from './navigation.js';
 import { activateSeats, savedSeats } from './session.js';
 
@@ -33,24 +35,6 @@ export async function lobbyRequest(path, body, token, fetchImpl = globalThis.fet
 export function versus(table) {
   if (Array.isArray(table.seats) && table.seats.length === 2) return table.seats.map(seat => ({ seat: seat.seat, kind: seat.kind, name: seat.name }));
   return (table.players ?? []).map((name, index) => ({ seat: `player${index + 1}`, kind: 'person', name }));
-}
-
-/**
- * Whose turn it is at an unfinished table, from the seats the host says are being asked something now, and
- * whether it is this browser's: null before the match begins, once it is over, or while nobody is asked (the
- * bots are thinking or a round is resolving).
- */
-export function turnOf(table, held = []) {
-  if (table.over || table.waiting || !Array.isArray(table.seats)) return null;
-  const asked = table.seats.filter(seat => seat.turn);
-  if (asked.length === 0) return null;
-  if (asked.some(seat => held.includes(seat.seat))) {
-    return { mine: true, text: asked.length > 1 ? 'Your turn · both players choose' : 'Your turn' };
-  }
-  if (asked.every(seat => seat.kind === 'open')) return { mine: false, text: 'Waiting for a player to take the open seat' };
-  if (asked.length > 1) return { mine: false, text: 'Both players to play' };
-  const name = asked[0].name && asked[0].name !== 'Player' ? asked[0].name : 'The other player';
-  return { mine: false, text: `${name}'s turn` };
 }
 
 export const GAMES_PER_PAGE = 6;
@@ -228,6 +212,7 @@ export function mountLobby(doc, location, storage) {
   let reinviting = null;
   let pendingRematch = rematchRequest(location.search);
   let onOutstanding = () => {};
+  let onMine = () => {};
   let showAll = false;
   let loading = false;
   let drawn = '';
@@ -517,6 +502,7 @@ export function mountLobby(doc, location, storage) {
       mine = saved.tables;
       invitations = saved.invitations ?? [];
       limit = Number.isInteger(saved.ongoingPerKind) ? saved.ongoingPerKind : null;
+      onMine({ tables: mine, invitations });
       render();
       maybeLoadFinished();
       // A request waiting either way is answered elsewhere: read the opponents again until it is.
@@ -662,6 +648,10 @@ export function mountLobby(doc, location, storage) {
       opponents = next;
       if (listing) render();
     },
+    /** Told every read of the player's games, so the bell counts them without reading them again. */
+    onMine(tell) { onMine = tell; },
+    /** Reads the lists again: the bell answered an invitation. */
+    refresh: () => void refresh(),
     /** Told whenever whether an invitation of this player's is waiting changes, so the Friends panel can say so. */
     onOutstanding(tell) { onOutstanding = tell; },
     /** Told by the sign-in whenever who is signed in changes; the lists are read again for them. */
@@ -686,9 +676,10 @@ if (typeof document !== 'undefined') {
   try { storage = globalThis.localStorage; } catch { /* Invitations still work without browser storage. */ }
   const lobby = mountLobby(document, globalThis.location, storage);
   const next = nextPath(globalThis.location.search);
-  const friends = mountNavigation(document, storage, {
+  const navigation = mountNavigation(document, storage, {
     onInvite: lobby.invite,
     onFriends: lobby.friendsChanged,
+    onInbox: () => lobby.refresh(),
     onChange(account, mode) {
       if (account && next) { globalThis.location.assign(next); return; }
       const playable = Boolean(account) || mode === 'off';
@@ -698,5 +689,6 @@ if (typeof document !== 'undefined') {
       lobby.setAccount(account, mode);
     },
   });
-  lobby.onOutstanding(friends.setOutstanding);
+  lobby.onOutstanding(navigation.setOutstanding);
+  lobby.onMine(navigation.inbox.feed);
 }

@@ -33,6 +33,7 @@ a viewpoint before either private board is read.
 | Settings | One dialog of tabs (below) | Everyone |
 | Admin | Existing `/admin` page | Existing operator check |
 | Account avatar/name | Who is signed in, Settings, and Sign out (confirmed) on this device | Signed-in players |
+| Bell (Notifications) | Dialog of what waits for the player, each with its action (below) | Signed-in players |
 
 Settings gathers what a player sets once rather than visits: its tabs are **Game** (the reading pace, speed, phase
 tips and less motion every new game starts from, ADR 0140), **Notifications** (the device controls or an
@@ -51,6 +52,26 @@ Incoming friend requests appear as a count in the menu. Removing a friend asks f
 the existing create dialog with the chosen friend selected. Merely opening Notifications never requests
 browser permission; the existing explicit device action owns that request. Google sign-in still uses the
 provider's rendered button, not a custom credential control.
+
+## The bell
+
+What waits for the player is counted on a bell beside the account button, in every page's header, and listed in
+its window, each with the action it calls for:
+
+| Waiting | Action |
+| --- | --- |
+| A game where it is the player's turn (the host asks a seat they hold) | **Play →** opens it with that seat |
+| An invitation a friend sent (ADR 0129) | **Accept & play →** takes the seat and opens the game; **Decline** |
+| A friend request | **Accept**, **Decline** (silent, as in Friends) |
+| An invitation of theirs a friend declined | **Open the lobby →**, where Invite another, Open and Close are |
+
+The bell sits outside the menu, so a phone sees its count without opening anything. The badge counts up to nine,
+then says 9+; its accessible name says how much waits. Where the platform offers one, an installed app shows the
+same count on its icon (`navigator.setAppBadge`). Every action is the route the lobby or the Friends panel already
+uses; a request answered here is read again by the Friends panel, and the lobby reads its lists again. The bell
+reads `GET /api/lobby/mine` and `GET /api/friends` itself every twenty seconds while the page is in view; on the
+lobby, which reads the games every ten, it takes the lobby's read instead of making its own. The pure part
+(`inboxItems`, `badgeText`, `bellLabel`) is `table/inbox.js`'s and has its own tests.
 
 ## Refresh and account transitions
 

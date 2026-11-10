@@ -73,7 +73,8 @@ docs/
                 with a Google sign-in and the home page (accounts-plan.md, ADR 0122), and the plan for friends and
                 inviting one of them to a table (friends-plan.md).
                 Home navigation (home-navigation.md) separates the signed-out introduction from the dashboard;
-                friends, invitation codes and one Settings (game, notifications, privacy, account) open from a responsive menu.
+                friends, invitation codes and one Settings (game, notifications, privacy, account) open from a responsive menu,
+                and a bell beside the account counts what waits (turns, invitations, friend requests) and acts on each.
                 The battle view UX recovery plan (battle-ux-parity-plan.md, AU1–AU14) maps classic behaviours,
                 reuse boundaries and acceptance criteria; AU3a records energy before AU3b renders receipts.
                 AU12 adds public creature references and retained last-cast links; historical inspection stays on recorded frames.
