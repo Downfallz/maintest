@@ -96,7 +96,7 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0088](0088-price-initiative-by-the-turn-order-it-changes.md) | Price initiative by the turn order it changes | Accepted |
 | [0089](0089-pick-packages-face-down-and-reveal-them-together.md) | Pick packages face down and reveal them together | Accepted |
 | [0090](0090-score-whether-a-package-spell-earns-its-pick-not-how-hard-it-hits.md) | Score whether a package's spell earns its pick, not how hard it hits | Accepted |
-| [0091](0091-a-table-survives-the-host-that-played-it.md) | A table survives the host that played it, rebuilt from its seed and its decisions | Accepted |
+| [0091](0091-a-table-survives-the-host-that-played-it.md) | A table survives the host that played it, rebuilt from its seed and its decisions | Superseded by [0159](0159-advance-a-table-by-submitted-decisions-over-its-journal.md) |
 | [0092](0092-a-table-waits-for-its-players-then-both-pick-at-once.md) | A table waits for its players, then both pick their first package at once | Accepted, amended by [0111](0111-both-seats-are-asked-their-speeds-and-intents-at-once.md) |
 | [0093](0093-a-drain-that-leaves-an-enemy-unable-to-pay-is-priced-as-a-stun.md) | A drain that leaves an enemy unable to pay is priced as a stun | Accepted |
 | [0094](0094-the-lookahead-prices-a-purchase-by-playing-rounds-out.md) | The lookahead prices a purchase by playing rounds out | Proposed |
@@ -164,4 +164,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0156](0156-replay-a-finished-game-in-the-battle-view-for-its-players.md) | Replay a finished game in the battle view for the players who sat at it | Accepted |
 | [0157](0157-make-the-battle-view-the-game.md) | Make the battle view the game, and archive the classic table | Accepted |
 | [0158](0158-carve-the-interface-in-bone-and-soot.md) | Carve the interface in bone and soot: one display face, sharp cut shapes, grain on every surface, one bar in a match | Accepted |
-| [0159](0159-advance-a-table-by-submitted-decisions-over-its-journal.md) | Advance a table by submitted decisions over its journal, not by a loop that waits in memory | Proposed |
+| [0159](0159-advance-a-table-by-submitted-decisions-over-its-journal.md) | Advance a table by submitted decisions over its journal, not by a loop that waits in memory | Accepted |
