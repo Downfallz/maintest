@@ -7,7 +7,8 @@ namespace DownfallArena.Cli.Tests.Table;
 
 /// <summary>
 /// The table's API over a session a test started itself and a driver plays: the blocking model, which practice
-/// tables keep and which the tests of the routes' own behaviour are written against.
+/// tables keep. The tests of the routes' own behaviour are written against <see cref="Stepped" />; what is left
+/// here is what only that model does, the reads it makes again while the match moves under a poll.
 /// </summary>
 internal static class Driven
 {

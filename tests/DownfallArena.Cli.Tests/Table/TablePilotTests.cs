@@ -3,18 +3,17 @@ using System.Text.Json;
 using DownfallArena.Application.Agents;
 using DownfallArena.Application.Catalogue;
 using DownfallArena.Application.Learning.Tracing;
+using DownfallArena.Application.Matches.Ports;
 using DownfallArena.Application.Matches.Projections;
-using DownfallArena.Application.Matches.Queries;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.Cli.Tests.Studio;
 using DownfallArena.Domain.Matches;
-using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Infrastructure.Learning;
+using DownfallArena.Infrastructure.Matches;
 using DownfallArena.Infrastructure.Randomness;
 using DownfallArena.Infrastructure.Resources.Authoring;
-using DownfallArena.SharedKernel.Identifiers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -25,6 +24,13 @@ namespace DownfallArena.Cli.Tests.Table;
 /// engine's own commands, so what these assert is the boundary around it — which round a swap may name, which
 /// token may ask for one, and that the record says a seat changed hands.
 /// </summary>
+/// <remarks>
+/// The table is stepped over its journal and recorded, as the composer builds every ordinary one (ADR 0159).
+/// A bot's turn is the match's turn there, so nothing can hold a match of two bots at a round while a swap is
+/// asked: the swap would wait behind the bot. A test that needs the match to play on to its outcome asks its
+/// swap before the table has begun (<see cref="Started" />), and one that needs a round being played keeps
+/// seat 2 for a person nobody answers for (<see cref="Playing" />).
+/// </remarks>
 public sealed class TablePilotTests : IDisposable
 {
     private static readonly RuleSet Rules = RuleSet.Create(2, 2, 1, 12, 2.0);
@@ -32,17 +38,19 @@ public sealed class TablePilotTests : IDisposable
     private const string SeatToken = "token-of-player-1";
 
     private readonly StudioContent _content = new();
-    private Watching? _held;
     private readonly CancellationTokenSource _stopping = new();
+    private readonly List<SteppedSession> _opened = [];
     private readonly string _runs = Path.Combine(Path.GetTempPath(), $"downfall-pilot-{Guid.NewGuid():N}");
     private IHost? _host;
 
     public void Dispose()
     {
-        // Let go of a match a test left held, so the driver thread is not parked for thirty seconds.
-        _held?.Release();
-        _held?.Dispose();
         _stopping.Cancel();
+        foreach (var session in _opened)
+        {
+            session.Dispose();
+        }
+
         _stopping.Dispose();
         _host?.Dispose();
         _content.Dispose();
@@ -50,10 +58,10 @@ public sealed class TablePilotTests : IDisposable
     }
 
     /// <summary>
-    /// The runs directory, once the session writing into it has stopped. A released match's driver thread can
-    /// still be writing its last record when the host is disposed, and a delete racing it fails on a file
-    /// created between the listing and the removal (seen in CI). A few short waits let the writer finish; a
-    /// directory still busy after them is a real leak and fails the test.
+    /// The runs directory, once the session writing into it has stopped. A table let go of can still be
+    /// writing a bot's turn down when the host is disposed, and a delete racing it fails on a file created
+    /// between the listing and the removal (seen in CI). A few short waits let the writer finish; a directory
+    /// still busy after them is a real leak and fails the test.
     /// </summary>
     private void DeleteRuns()
     {
@@ -91,7 +99,7 @@ public sealed class TablePilotTests : IDisposable
         said.GetProperty("to").GetString().ShouldBe("Random");
         said.GetProperty("round").GetInt32().ShouldBe(3);
 
-        table.Release();
+        table.Session.Begin();
         var outcome = await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
         outcome.IsSuccess.ShouldBeTrue(outcome.IsFailure ? outcome.Error.Message : null);
     }
@@ -100,15 +108,15 @@ public sealed class TablePilotTests : IDisposable
     /// A swap naming the round being played is refused, and refused by name so a page can say why.
     /// </summary>
     /// <remarks>
-    /// The driver asks one seat for several decisions inside one sub-phase — a speed for each creature, then
-    /// an intent for each — so a seat changing hands between two of them splits that sub-phase between two
-    /// players. Round 1 is always under way by the time a table answers anything, which is what makes this
-    /// the mid-round case rather than a contrived one.
+    /// One seat is asked for several decisions inside one sub-phase — a speed for each creature, then an
+    /// intent for each — so a seat changing hands between two of them splits that sub-phase between two
+    /// players. The seat's bot has decided in round 1 by the time the swap is asked, which is what makes this
+    /// the mid-round case: a seat that has decided nothing in a round yet can still be named it.
     /// </remarks>
     [Fact]
     public async Task A_swap_naming_the_round_being_played_is_refused_as_mid_round()
     {
-        var table = await Started();
+        var table = await Playing();
 
         var answer = await Swap(table, "player1", agent: "random", round: 1);
 
@@ -120,7 +128,7 @@ public sealed class TablePilotTests : IDisposable
     [Fact]
     public async Task A_swap_naming_a_round_already_gone_is_refused_too()
     {
-        var table = await Started();
+        var table = await Playing();
 
         var answer = await Swap(table, "player1", agent: "random", round: 0);
 
@@ -185,12 +193,9 @@ public sealed class TablePilotTests : IDisposable
     [Fact]
     public async Task A_swap_is_noted_with_its_direction_and_both_rounds()
     {
-        var table = await Started();
+        var table = await Playing();
 
         (await Swap(table, "player1", agent: "random", round: 4)).Status.ShouldBe(200);
-        table.Release();
-        await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
-        await table.Run.FinishAsync(table.Session.MatchId, await Board(table.Session), TestContext.Current.CancellationToken);
 
         var note = Lines(table.Run, "notes.jsonl").Single(line => line.GetProperty("kind").GetString() == "Seat");
         note.GetProperty("slot").GetString().ShouldBe("Player1");
@@ -214,7 +219,7 @@ public sealed class TablePilotTests : IDisposable
         var table = await Started();
 
         (await Swap(table, "player1", agent: "random", round: 3)).Status.ShouldBe(200);
-        table.Release();
+        table.Session.Begin();
         await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
         await table.Run.FinishAsync(table.Session.MatchId, await Board(table.Session), TestContext.Current.CancellationToken);
 
@@ -240,7 +245,7 @@ public sealed class TablePilotTests : IDisposable
 
         // Past the round cap these rules set, so the match ends before the seat would change hands.
         (await Swap(table, "player1", agent: "random", round: 99)).Status.ShouldBe(200);
-        table.Release();
+        table.Session.Begin();
         await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
         await table.Run.FinishAsync(table.Session.MatchId, await Board(table.Session), TestContext.Current.CancellationToken);
 
@@ -261,7 +266,7 @@ public sealed class TablePilotTests : IDisposable
     public async Task A_swap_on_a_match_that_has_ended_is_refused()
     {
         var table = await Started();
-        table.Release();
+        table.Session.Begin();
         await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
 
         var answer = await Swap(table, "player1", agent: "random", round: 99);
@@ -288,7 +293,7 @@ public sealed class TablePilotTests : IDisposable
     [Fact]
     public async Task The_pilot_is_shown_who_is_playing_each_seat()
     {
-        var table = await Started();
+        var table = await Playing();
 
         var answer = await table.Api.HandleAsync("GET", "/api/pilot", string.Empty, PilotToken);
 
@@ -313,7 +318,7 @@ public sealed class TablePilotTests : IDisposable
     [Fact]
     public async Task The_pilot_is_shown_the_swap_a_seat_is_waiting_to_make()
     {
-        var table = await Started();
+        var table = await Playing();
         (await Swap(table, "player1", agent: "random", round: 4)).Status.ShouldBe(200);
 
         var answer = await table.Api.HandleAsync("GET", "/api/pilot", string.Empty, PilotToken);
@@ -339,7 +344,7 @@ public sealed class TablePilotTests : IDisposable
     [Fact]
     public async Task The_pilot_view_carries_no_board_no_hand_and_no_intent()
     {
-        var table = await Started();
+        var table = await Playing();
 
         var served = Text(await table.Api.HandleAsync("GET", "/api/pilot", string.Empty, PilotToken));
 
@@ -410,15 +415,38 @@ public sealed class TablePilotTests : IDisposable
     private static JsonElement Read(PlaytestRun run, string relativePath) =>
         JsonDocument.Parse(File.ReadAllText(Path.Combine(run.Location, relativePath))).RootElement;
 
-    private static async Task<PlayerBoardState> Board(TableSession session)
-    {
-        var board = await session.Queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(session.MatchId, PlayerSlot.Player1));
-        return board.Value;
-    }
+    private static async Task<PlayerBoardState> Board(SteppedSession session) =>
+        (await session.BoardAsync(PlayerSlot.Player1)).Value;
 
     private static string Text(StudioResponse response) => Encoding.UTF8.GetString(response.Body);
 
-    private async Task<Table> Started()
+    /// <summary>
+    /// Two greedy bots at a table that has not begun: nobody has been asked anything, so a seat can be named
+    /// any round there is, and the match plays itself to an outcome once a test begins it.
+    /// </summary>
+    /// <remarks>
+    /// Before the table begins rather than while it runs, because nothing else makes a swap for a later round
+    /// a fact rather than a race. Two bots play a match of this rule set in milliseconds, and a bot made to
+    /// stop and think holds the match's turn, which a swap needs to be written down in.
+    /// </remarks>
+    private Task<Table> Started() => Opened(opponent: null);
+
+    /// <summary>
+    /// A greedy bot in seat 1 and, in seat 2, a person nobody answers for, begun: both seats are asked their
+    /// pick at once, the bot has answered, and the match stays in round 1 for as long as the test lasts.
+    /// </summary>
+    private async Task<Table> Playing()
+    {
+        var table = await Opened(new SteppedPerson());
+        table.Session.Begin();
+
+        await Decided(table, PlayerSlot.Player1);
+        return table;
+    }
+
+    /// <summary>A recorded table stepped over the journal its run keeps, with the pilot's routes over it: opened, and not begun.</summary>
+    /// <param name="opponent">The person seat 2 is kept for, or none for a second greedy bot.</param>
+    private async Task<Table> Opened(SteppedPerson? opponent)
     {
         new ContentStore(_content.Path).Build(Path.Combine(_content.Path, "dst"));
         _host = CliHost.Build(
@@ -427,122 +455,60 @@ public sealed class TablePilotTests : IDisposable
             logMatchToConsole: false);
 
         var resources = _host.Services.GetRequiredService<IGameResources>();
+        var events = _host.Services.GetRequiredService<MatchTraceRecorder>();
+        var catalogue = CatalogueProjection.Build(resources, Rules);
+        var player2 = opponent is null ? new Occupant(new GreedyAgent(resources, Rules), "Greedy") : SeatPlan.Person("human:mk");
         var run = PlaytestRun.Open(
             new FileArtifactStore(_runs),
-            new PlaytestSetup(resources, Rules, Seed: 7, "Greedy", "Greedy"),
-            _host.Services.GetRequiredService<MatchTraceRecorder>(),
+            new PlaytestSetup(resources, Rules, Seed: 7, "Greedy", player2.Name),
+            events,
             TimeProvider.System);
-        await run.StartAsync(CatalogueProjection.Build(resources, Rules), _stopping.Token);
+        await run.StartAsync(catalogue, _stopping.Token);
 
-        // Two bots, so the match plays itself to an outcome while the pilot moves a seat under it. What is
-        // being tested is the piloting, and a person in a seat would only add a thread to block on. Player 1's
-        // agent says when it has first been asked something, because "a round is being played" is only true of
-        // a seat that has been asked about it, and a test that posted before that would be testing the other
-        // case: a seat nothing has begun for, which may be seated for any round at all.
-        var asked = new Watching(new GreedyAgent(resources, Rules));
-        var session = await TableSession.StartAsync(
-            _host.Services,
-            Rules,
-            seed: 7,
-            new SeatAgent(new Occupant(asked, "Greedy")),
-            new SeatAgent(new Occupant(new GreedyAgent(resources, Rules), "Greedy")),
-            new TableStart(run.Wrap),
-            cancellationToken: _stopping.Token);
-
-        var pilot = new TablePilot(PilotToken, (slot, wanted) => wanted switch
+        // Who a name stands for, to the pilot and to the table reading its own journal alike.
+        Occupant? Seating(PlayerSlot slot, string wanted) => wanted switch
         {
             "random" => new Occupant(new RandomAgent(new SeededRandomSource(3)), "Random"),
             "person" when slot == PlayerSlot.Player1 => new Occupant(new GreedyAgent(resources, Rules), "human:mk"),
             _ => null,
-        });
+        };
 
-        var api = Driven.Api(
-            session,
-            session.Queries,
-            [new TableSeat(PlayerSlot.Player1, SeatToken, Person: null), new TableSeat(PlayerSlot.Player2, "token-of-player-2", Person: null)],
-            CatalogueProjection.Build(resources, Rules),
-            _host.Services.GetRequiredService<MatchTraceRecorder>(),
-            run,
-            pilot);
+        TableSeat[] seats = [new TableSeat(PlayerSlot.Player1, SeatToken, Person: null), new TableSeat(PlayerSlot.Player2, "token-of-player-2", opponent)];
+        var journal = new FileDecisionJournal(_runs, TimeProvider.System);
+        var session = await Stepped.OpenAsync(
+            _host.Services,
+            Rules,
+            seed: 7,
+            new SteppedSeats(new SeatPlan(new Occupant(new GreedyAgent(resources, Rules), "Greedy"), player2), seats, Seating),
+            _stopping.Token,
+            journal,
+            run);
+        _opened.Add(session);
 
-        asked.Asked.WaitOne(TimeSpan.FromSeconds(30)).ShouldBeTrue("player 1 should have been asked something");
-        _held = asked;
-        return new Table(api, session, run, asked);
+        var api = new TableApi(session, seats, catalogue, events, run, new TablePilot(PilotToken, Seating));
+        return new Table(api, session, run, journal);
     }
 
     /// <summary>
-    /// The table under test. <see cref="Release"/> lets the held match run on: every test that waits for an
-    /// outcome calls it, and the ones that only read a view do not need to.
+    /// Waits until a seat's bot has a decision in the journal: it has then decided in the round being played,
+    /// which is what makes that round one the seat has reached.
     /// </summary>
-    private sealed record Table(TableApi Api, TableSession Session, PlaytestRun Run, Watching Player1)
+    private static async Task Decided(Table table, PlayerSlot slot)
     {
-        public void Release() => Player1.Release();
+        for (var attempt = 0; attempt < 500; attempt++)
+        {
+            var reading = await table.Journal.ReadAsync(table.Run.SessionId, TestContext.Current.CancellationToken);
+            if (reading.Decisions.Any(decision => decision.Slot == slot))
+            {
+                return;
+            }
+
+            await Task.Delay(10, TestContext.Current.CancellationToken);
+        }
+
+        throw new InvalidOperationException($"The bot in {slot} never decided anything.");
     }
 
-    /// <summary>
-    /// A bot that says when it has first been asked for a decision, holds the match there until it is let go,
-    /// and plays as itself after that.
-    /// </summary>
-    /// <remarks>
-    /// The holding is what makes a swap for a later round a fact rather than a race. Two bots play a match of
-    /// this rule set in milliseconds, so a test that posts "seat this at round 3" after the match has started
-    /// is racing the match to round 3, and losing that race is a 409 -- the pilot answering correctly. Held in
-    /// its first decision, the match cannot be past round 1 when the swap is posted.
-    /// <para>
-    /// Holding a decision is safe because <see cref="SeatAgent.Deciding"/> takes the seat's lock, hands back a
-    /// decider, and calls the agent outside it -- which is the same reason a seat held by a person does not
-    /// stop the host answering. A wrapper that blocked with that lock held would deadlock the pilot instead.
-    /// </para>
-    /// </remarks>
-    private sealed class Watching(IPlayerAgent inner) : IPlayerAgent, IDisposable
-    {
-        private readonly ManualResetEventSlim _held = new(false);
-
-        public ManualResetEvent Asked { get; } = new(false);
-
-        /// <summary>Lets the match run on, once the swap it must not have reached has been posted.</summary>
-        public void Release() => _held.Set();
-
-        public void Dispose()
-        {
-            _held.Dispose();
-            Asked.Dispose();
-        }
-
-        public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options)
-        {
-            Hold();
-            return inner.DecideEvolution(board, options);
-        }
-
-        public Speed DecideSpeed(PlayerBoardState board, CreatureId creature)
-        {
-            Hold();
-            return inner.DecideSpeed(board, creature);
-        }
-
-        public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options)
-        {
-            Hold();
-            return inner.DecideTieOrder(board, options);
-        }
-
-        public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption)
-        {
-            Hold();
-            return inner.DecideIntent(board, intentOption);
-        }
-
-        public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options)
-        {
-            Hold();
-            return inner.DecideTargets(board, options);
-        }
-
-        private void Hold()
-        {
-            Asked.Set();
-            _held.Wait(TimeSpan.FromSeconds(30));
-        }
-    }
+    /// <summary>The table under test: the routes, the session they are over, its recording and its journal.</summary>
+    private sealed record Table(TableApi Api, SteppedSession Session, PlaytestRun Run, IDecisionJournal Journal);
 }
