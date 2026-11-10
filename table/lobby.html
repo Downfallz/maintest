@@ -43,6 +43,10 @@
           <fieldset class="lobby-filters"><legend>Show games</legend><button id="mine-ongoing" type="button" aria-pressed="true" aria-controls="my-tables">Ongoing <span id="ongoing-count"></span></button><button id="mine-finished" type="button" aria-pressed="false" aria-controls="my-tables">Finished <span id="finished-count"></span></button></fieldset>
           <div id="my-tables" class="mine-groups"><p class="empty-state">Finding your games…</p></div>
         </section>
+        <section id="opponents" aria-labelledby="opponents-heading" class="lobby-section" hidden>
+          <div class="section-heading"><h2 id="opponents-heading">Recent opponents <span id="opponents-count" class="lobby-count"></span></h2><span class="muted">Challenge a friend again, or ask to be friends first</span></div>
+          <div id="opponent-cards" class="lobby-grid opponent-grid"></div>
+        </section>
         <section aria-labelledby="tables-heading" class="lobby-section">
           <div class="section-heading"><h2 id="tables-heading">Find an opponent <span id="tables-count" class="lobby-count"></span></h2></div>
           <fieldset class="lobby-filters"><legend>Show tables</legend><button id="filter-open" type="button" aria-pressed="true">Open seats</button><button id="filter-all" type="button" aria-pressed="false">All ongoing</button></fieldset>

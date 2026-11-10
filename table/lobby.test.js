@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { codePath, finishedSummary, friendChoice, gameKind, invitationLine, invitedState, lobbyRequest, localFinished, ongoingGames, ongoingLimit, rematchRequest, tableState, turnOf, versus, visibleTables } from './lobby.js';
+import { challengeRequest, codePath, finishedSummary, opponentAction, opponentRecord, friendChoice, gameKind, invitationLine, invitedState, lobbyRequest, localFinished, ongoingGames, ongoingLimit, rematchRequest, tableState, turnOf, versus, visibleTables } from './lobby.js';
 import { activateSeats, forget, heldSeats, savedSeats, selectTableSeats } from './session.js';
 
 function storage() {
@@ -156,4 +156,24 @@ test('a finished card leads with the result, names who it was against, and opens
   assert.equal(finishedSummary({ ...kept, outcome: 'draw', session: null }).action, null, 'a result kept before tables were named opens nothing');
   assert.equal(finishedSummary({ ...kept, outcome: 'both' }).tag, 'Shared device');
   assert.equal(finishedSummary({ ...kept, outcome: null, rounds: 1 }).detail, '1 round');
+});
+
+test("a recent opponent's record names only what happened, from this player's side", () => {
+  assert.equal(opponentRecord({ won: 2, lost: 1, drawn: 0 }), 'Won 2 · Lost 1');
+  assert.equal(opponentRecord({ won: 0, lost: 0, drawn: 1 }), 'Drew 1');
+  assert.equal(opponentRecord({}), 'No result kept');
+});
+
+test('a friend is challenged, anyone else is asked to be a friend first, and nothing is offered where friends are not kept', () => {
+  assert.deepEqual(opponentAction({ relation: 'friend' }), { label: 'Challenge →', act: 'challenge', primary: true });
+  assert.equal(opponentAction({ relation: 'none' }).act, 'ask');
+  // Asking one who asked first accepts their request.
+  assert.deepEqual(opponentAction({ relation: 'asking' }), { label: 'Accept friend', act: 'ask', primary: false });
+  assert.equal(opponentAction({ relation: 'asked' }).act, null);
+  assert.equal(opponentAction({ relation: null }), null);
+});
+
+test("a challenge opens on the friend in the last game's format and rating", () => {
+  assert.deepEqual(challengeRequest({ id: 'acct_abcdefghijklmnop', format: '1v1', casual: true }), { friend: 'acct_abcdefghijklmnop', format: '1v1', ranked: false });
+  assert.deepEqual(challengeRequest({ id: 'acct_abcdefghijklmnop', format: '', casual: false }), { friend: 'acct_abcdefghijklmnop', format: null, ranked: true });
 });

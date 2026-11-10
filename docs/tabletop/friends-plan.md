@@ -142,6 +142,7 @@ All signed in (`401 Account.SignInRequired` otherwise), all behind the same-orig
 | `DELETE /api/lobby/tables/<id>/invitation` | Cancel, by the inviter. |
 | `POST /api/lobby/tables/<id>/invitation` `{ friend }` | Invite another friend to the same seat, after a cancel or a decline. Same two refusals as opening. |
 | `POST /api/lobby/tables/<id>/open` | Offer the seat to everyone instead: today's open place. |
+| `GET /api/lobby/opponents` | `{ opponents: [{ id, name, lastPlayedAt, games, won, lost, drawn, format, casual, relation }] }`: the eight players met most recently, from the kept results, newest first; an account deleted since is left out. `relation` is `friend`, `asked`, `asking` or `none`, null where the host keeps no friends. |
 | `DELETE /api/lobby/tables/<id>` | Close a table that has not begun and whose every taken seat is yours. |
 
 ## The lobby
@@ -159,6 +160,11 @@ Signed in, the lobby gains two things in the table's visual language:
   same *Test* as the game page. The *What we keep* panel adds one line: your friends list, and where to reach
   this browser if you asked to be notified.
 - A table's outcome gains *Rematch*, which opens the create dialog with the same friend and format.
+- **Recent opponents**, under *Your games*, only when there is one: the eight players met most recently, from the
+  kept results (`GET /api/lobby/opponents`), each with the record between you, the last game's format and rating,
+  and one way to play again: *Challenge* for a friend (the create dialog on them, in that format and rating), *Add
+  friend* or *Accept friend* otherwise, *Friend request sent* while one waits. As with *Rematch* (ADR 0153), nothing
+  is sent to a player who is not a friend.
 
 A page on the lobby refreshes its lists when the service worker tells it a notice arrived, and on its usual
 refresh otherwise.

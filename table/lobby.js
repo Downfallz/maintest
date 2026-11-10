@@ -146,6 +146,35 @@ export function invitationLine(invitation) {
   return `${from} invites you to a ${invitation?.table?.format ?? ''} battle`.replace('  ', ' ');
 }
 
+/**
+ * The record against a recent opponent, from this player's side: the games won, lost and drawn, the ones that
+ * happened only.
+ */
+export function opponentRecord(opponent) {
+  const parts = [['Won', opponent?.won], ['Lost', opponent?.lost], ['Drew', opponent?.drawn]].filter(([, count]) => Number.isInteger(count) && count > 0);
+  return parts.map(([word, count]) => `${word} ${count}`).join(' · ') || 'No result kept';
+}
+
+/**
+ * How a recent opponent is challenged again (ADR 0153): a friend is invited from the create dialog, anyone else is
+ * asked to be a friend first (asking one who asked you accepts), and a request already sent waits. Nothing is sent
+ * to a stranger. Null where the host keeps no friends.
+ */
+export function opponentAction(opponent) {
+  switch (opponent?.relation) {
+    case 'friend': return { label: 'Challenge →', act: 'challenge', primary: true };
+    case 'asking': return { label: 'Accept friend', act: 'ask', primary: false };
+    case 'none': return { label: 'Add friend', act: 'ask', primary: false };
+    case 'asked': return { label: 'Friend request sent', act: null, primary: false };
+    default: return null;
+  }
+}
+
+/** What the create dialog opens on to challenge a friend again: them, in the format and rating of the last game. */
+export function challengeRequest(opponent) {
+  return { friend: opponent.id, format: opponent.format || null, ranked: opponent.casual !== true };
+}
+
 function statusText(state) {
   if (!state.recording) return 'This host is not saving games. New tables are unavailable until recording is enabled.';
   const tables = state.tables.length === 1 ? 'table' : 'tables';
@@ -166,6 +195,7 @@ export function mountLobby(doc, location, storage) {
   const finished = { players: { page: 0, data: null }, bots: { page: 0, data: null } };
   let finishedSeen = null, finishedReads = 0;
   let invitations = [];
+  let opponents = [];
   let friends = [];
   let reinviting = null;
   let pendingRematch = rematchRequest(location.search);
@@ -284,6 +314,49 @@ export function mountLobby(doc, location, storage) {
     root.append(ways);
     return root;
   }
+  // A player met recently: the record between them, when and what they last played, and the way to play again.
+  function opponentCard(opponent) {
+    const root = node('article', '', `game-card opponent ${opponent.relation ?? 'unknown'}`);
+    const top = node('div', '', 'game-card-top');
+    top.append(node('h3', opponent.name), node('span', opponentRecord(opponent), 'status-tag record'));
+    const when = opponent.lastPlayedAt ? new Date(opponent.lastPlayedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : '';
+    const games = `${opponent.games} game${opponent.games === 1 ? '' : 's'}`;
+    root.append(top, node('p', [`Last ${opponent.format ?? ''} battle${opponent.casual ? ' · unranked' : ''}`, when, games].filter(Boolean).join(' · '), 'game-turn'));
+    const action = opponentAction(opponent);
+    if (action) {
+      const button = node('button', action.label, action.primary ? 'primary' : 'secondary');
+      button.type = 'button';
+      button.disabled = !action.act;
+      if (action.act === 'challenge') button.addEventListener('click', () => openCreate(challengeRequest(opponent)));
+      else if (action.act === 'ask') button.addEventListener('click', () => askFriend(button, opponent));
+      root.append(button);
+    }
+    return root;
+  }
+  // Asking a recent opponent to be a friend: their card then says the request went, or, when they had asked first,
+  // that they are a friend now and can be challenged.
+  async function askFriend(button, opponent) {
+    if (busy) return;
+    busy = true;
+    button.disabled = true;
+    problem();
+    try {
+      const answer = await lobbyRequest('/api/friends/requests', { username: opponent.name });
+      opponents = opponents.map(one => one.id === opponent.id ? { ...one, relation: answer?.accepted ? 'friend' : 'asked' } : one);
+    } catch (error) { problem(error.message || 'Could not send the friend request. Try again.'); button.disabled = false; }
+    finally { busy = false; }
+    if (listing) render();
+  }
+  // The players met most recently (signed in only), read with the finished games: a finished game is what adds one.
+  async function loadOpponents() {
+    const reading = revision;
+    try {
+      const data = account ? await lobbyRequest('/api/lobby/opponents') : { opponents: [] };
+      if (reading !== revision) return;
+      opponents = data.opponents ?? [];
+    } catch { if (reading === revision) opponents = []; }
+    if (listing) render();
+  }
   function group(kind, label, count) {
     const root = node('section', '', `mine-group ${kind}`);
     root.dataset.kind = kind; root.setAttribute('aria-label', label);
@@ -369,15 +442,19 @@ export function mountLobby(doc, location, storage) {
     if (finishedReads <= 0) return;
     finishedReads -= 1;
     for (const [kind] of KINDS) void loadFinished(kind);
+    void loadOpponents();
   }
   function render() {
-    const key = JSON.stringify([listing, mine, invitations, showAll, account, mode, mineTab, finished, limit]);
+    const key = JSON.stringify([listing, mine, invitations, showAll, account, mode, mineTab, finished, limit, opponents]);
     if (key === drawn) return;
     drawn = key;
     const available = visibleTables(listing.tables, mine, showAll);
     el('invitations').hidden = invitations.length === 0;
     el('invitations-count').textContent = invitations.length || '';
     el('invitation-cards').replaceChildren(...invitations.map(invitationCard));
+    el('opponents').hidden = signInFirst() || !account || opponents.length === 0;
+    el('opponents-count').textContent = opponents.length || '';
+    el('opponent-cards').replaceChildren(...opponents.map(opponentCard));
     onOutstanding(mine.some(entry => invitedState(entry.invited)?.waiting));
     const ongoing = ongoingGames(mine);
     const finishedTotal = KINDS.reduce((sum, [kind]) => sum + (finished[kind].data?.total ?? 0), 0);

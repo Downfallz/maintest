@@ -9,7 +9,7 @@ const battle = {
 };
 const held = { table: battle, seats: [{ seat: 'player1', token: 'seat-token' }] };
 
-async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, games = null, finished = { players: [], bots: [] } } = {}) {
+async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, games = null, finished = { players: [], bots: [] }, opponents = [] } = {}) {
   const state = { account, mode, meDown, offline: false, mineReads: 0, friendReads: 0, finishedReads: [], privateReads: [], release: null,
     friends: { friends: [friend], incoming: [challenger], outgoing: [] } };
   const errors = [];
@@ -52,6 +52,8 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
       state.removals = (state.removals ?? 0) + 1;
       state.friends = { ...state.friends, friends: [] }; return json({});
     }
+    if (path === '/api/lobby/opponents') { state.opponentReads = (state.opponentReads ?? 0) + 1; return json({ opponents }); }
+    if (path === '/api/friends/requests' && route.request().method() === 'POST') { state.asked = route.request().postDataJSON(); return json({ accepted: false }); }
     if (path === '/api/friends') { state.friendReads++; return json(state.friends); }
     if (path === `/api/friends/requests/${challenger.id}/accept`) {
       state.friends = { ...state.friends, friends: [friend, challenger], incoming: [] }; return json({});
@@ -439,3 +441,39 @@ test('a finished page that failed is read again on the next poll, and the three 
   expect(state.errors).toEqual([]);
 });
 
+
+test('recent opponents are listed with the record between you: a friend is challenged again in the same format, anyone else is asked to be a friend first', async ({ page }, info) => {
+  const last = '2026-11-08T20:00:00Z';
+  const state = await home(page, { opponents: [
+    { id: friend.id, name: friend.username, lastPlayedAt: last, games: 3, won: 2, lost: 1, drawn: 0, format: '1v1', casual: true, relation: 'friend' },
+    { id: 'acct_dddddddddddddddd', name: 'Julie', lastPlayedAt: last, games: 1, won: 0, lost: 1, drawn: 0, format: '3v3', casual: false, relation: 'none' },
+    { id: challenger.id, name: challenger.username, lastPlayedAt: last, games: 1, won: 1, lost: 0, drawn: 0, format: '3v3', casual: false, relation: 'asked' },
+  ] });
+  const section = page.locator('#opponents'), cards = section.locator('.game-card.opponent');
+  await expect(section).toBeVisible();
+  await expect(cards).toHaveCount(3);
+  await expect(cards.nth(0)).toContainText('Won 2 · Lost 1');
+  await expect(cards.nth(0)).toContainText('Last 1v1 battle · unranked');
+  await expect(cards.nth(2).getByRole('button', { name: 'Friend request sent' })).toBeDisabled();
+  await page.screenshot({ path: info.outputPath('recent-opponents.png'), fullPage: true });
+  // A stranger is asked to be a friend, by name: no invitation reaches them.
+  await cards.nth(1).getByRole('button', { name: 'Add friend' }).click();
+  await expect(cards.nth(1).getByRole('button', { name: 'Friend request sent' })).toBeDisabled();
+  expect(state.asked).toEqual({ username: 'Julie' });
+  // A friend is challenged from the create dialog, on them, in the last game's format and rating.
+  await cards.nth(0).getByRole('button', { name: 'Challenge →' }).click();
+  await expect(page.locator('#create-dialog')).toBeVisible();
+  await expect(page.locator('#opponent')).toHaveValue('friend');
+  await expect(page.locator('#friend')).toHaveValue(friend.id);
+  await expect(page.locator('#format')).toHaveValue('1v1');
+  await expect(page.locator('#ranked')).not.toBeChecked();
+  expect(state.created).toBeUndefined();
+  expect(state.errors).toEqual([]);
+});
+
+test('a player who has met nobody yet sees no recent opponents section', async ({ page }) => {
+  const state = await home(page);
+  await expect(page.locator('#my-tables .game-card')).toHaveCount(1);
+  await expect.poll(() => state.opponentReads ?? 0).toBeGreaterThan(0);
+  await expect(page.locator('#opponents')).toBeHidden();
+});
