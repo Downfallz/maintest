@@ -166,3 +166,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0158](0158-carve-the-interface-in-bone-and-soot.md) | Carve the interface in bone and soot: one display face, sharp cut shapes, grain on every surface, one bar in a match | Accepted |
 | [0159](0159-advance-a-table-by-submitted-decisions-over-its-journal.md) | Advance a table by submitted decisions over its journal, not by a loop that waits in memory | Accepted |
 | [0160](0160-run-the-table-outside-a-virtual-network.md) | Run the hosted table outside a virtual network, and keep the storage account by identity alone | Accepted |
+| [0161](0161-index-tables-in-azure-table-storage.md) | Index the tables in Azure Table Storage, for the codes and the lobby | Accepted |
