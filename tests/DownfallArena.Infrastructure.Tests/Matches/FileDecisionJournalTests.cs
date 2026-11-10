@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DownfallArena.Application.Matches.Journaling;
+using DownfallArena.Domain.Matches;
 using DownfallArena.Infrastructure.Matches;
 
 namespace DownfallArena.Infrastructure.Tests.Matches;
@@ -52,21 +53,52 @@ public sealed class FileDecisionJournalTests : IDisposable
     }
 
     [Fact]
-    public async Task A_line_that_is_no_decision_is_counted_and_carries_none()
+    public async Task A_seat_changing_hands_written_before_the_journal_was_the_source_is_read_as_one()
     {
         Directory.CreateDirectory(Path.Combine(_root, "run-1"));
         var path = Path.Combine(_root, "run-1", "decisions.jsonl");
         await File.WriteAllTextAsync(path, """{"seq":1,"at":"2026-11-10T14:00:00+00:00","slot":"player1","kind":"Swap","to":"greedy","atRound":3,"pass":false}""" + "\n", TestContext.Current.CancellationToken);
 
         var reading = await _journal.ReadAsync("run-1", TestContext.Current.CancellationToken);
+
+        reading.Entries.ShouldBe([new SeatChangeEntry(PlayerSlot.Player1, "greedy", 3)]);
+        reading.Decisions.ShouldBeEmpty();
+        reading.Position.Lines.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task A_line_of_a_kind_this_journal_does_not_know_is_counted_and_passed_over()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "run-1"));
+        var path = Path.Combine(_root, "run-1", "decisions.jsonl");
+        await File.WriteAllTextAsync(path, """{"seq":1,"at":"2026-11-10T14:00:00+00:00","slot":"player1","kind":"SomethingLater","pass":false}""" + "\n", TestContext.Current.CancellationToken);
+
+        var reading = await _journal.ReadAsync("run-1", TestContext.Current.CancellationToken);
         await _journal.AppendAsync("run-1", reading.Position, [DecisionJournalTests.EveryKind[1]], TestContext.Current.CancellationToken);
 
-        reading.Decisions.ShouldBeEmpty();
+        reading.Entries.ShouldBeEmpty();
         reading.Position.Lines.ShouldBe(1);
         var lines = await File.ReadAllLinesAsync(path, TestContext.Current.CancellationToken);
         using var passed = JsonDocument.Parse(lines[1]);
         passed.RootElement.GetProperty("seq").GetInt64().ShouldBe(2);
-        (await _journal.ReadAsync("run-1", TestContext.Current.CancellationToken)).Decisions.ShouldBe([DecisionJournalTests.EveryKind[1]]);
+        (await _journal.ReadAsync("run-1", TestContext.Current.CancellationToken)).Entries.ShouldBe([DecisionJournalTests.EveryKind[1]]);
+    }
+
+    [Fact]
+    public async Task A_seat_changing_hands_and_a_concession_are_lines_of_their_own_kind()
+    {
+        await _journal.AppendAsync("run-1", JournalPosition.Start, [new SeatChangeEntry(PlayerSlot.Player2, "greedy", 3), new ConcessionEntry(PlayerSlot.Player1)], TestContext.Current.CancellationToken);
+
+        var lines = await File.ReadAllLinesAsync(Path.Combine(_root, "run-1", "decisions.jsonl"), TestContext.Current.CancellationToken);
+        using var changed = JsonDocument.Parse(lines[0]);
+        changed.RootElement.GetProperty("kind").GetString().ShouldBe("Swap");
+        changed.RootElement.GetProperty("slot").GetString().ShouldBe("player2");
+        changed.RootElement.GetProperty("to").GetString().ShouldBe("greedy");
+        changed.RootElement.GetProperty("atRound").GetInt32().ShouldBe(3);
+        using var conceded = JsonDocument.Parse(lines[1]);
+        conceded.RootElement.GetProperty("kind").GetString().ShouldBe("Concession");
+        conceded.RootElement.GetProperty("slot").GetString().ShouldBe("player1");
+        conceded.RootElement.GetProperty("seq").GetInt64().ShouldBe(2);
     }
 
     [Fact]
@@ -79,7 +111,7 @@ public sealed class FileDecisionJournalTests : IDisposable
         var late = await _journal.AppendAsync("run-1", read, [DecisionJournalTests.EveryKind[2]], TestContext.Current.CancellationToken);
 
         late.ShouldBeNull();
-        (await _journal.ReadAsync("run-1", TestContext.Current.CancellationToken)).Decisions.ShouldBe([DecisionJournalTests.EveryKind[0], DecisionJournalTests.EveryKind[1]]);
+        (await _journal.ReadAsync("run-1", TestContext.Current.CancellationToken)).Entries.ShouldBe([DecisionJournalTests.EveryKind[0], DecisionJournalTests.EveryKind[1]]);
     }
 
     [Fact]

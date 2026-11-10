@@ -25,7 +25,7 @@ public sealed class BlobDecisionJournalTests
 
         var reading = await journal.ReadAsync("run-1", TestContext.Current.CancellationToken);
 
-        reading.Decisions.ShouldBeEmpty();
+        reading.Entries.ShouldBeEmpty();
         reading.Position.ShouldBe(JournalPosition.Start);
     }
 
@@ -38,7 +38,7 @@ public sealed class BlobDecisionJournalTests
         var second = await journal.AppendAsync("run-1", first, [.. DecisionJournalTests.EveryKind.Skip(5)], TestContext.Current.CancellationToken);
 
         var reading = await journal.ReadAsync("run-1", TestContext.Current.CancellationToken);
-        reading.Decisions.ShouldBe(DecisionJournalTests.EveryKind);
+        reading.Entries.ShouldBe(DecisionJournalTests.EveryKind);
         reading.Position.ShouldBe(second);
     }
 
@@ -52,7 +52,7 @@ public sealed class BlobDecisionJournalTests
         var late = await journal.AppendAsync("run-1", read, [DecisionJournalTests.EveryKind[1]], TestContext.Current.CancellationToken);
 
         late.ShouldBeNull();
-        (await journal.ReadAsync("run-1", TestContext.Current.CancellationToken)).Decisions.ShouldBe([DecisionJournalTests.EveryKind[0]]);
+        (await journal.ReadAsync("run-1", TestContext.Current.CancellationToken)).Entries.ShouldBe([DecisionJournalTests.EveryKind[0]]);
     }
 
     [Fact]
@@ -66,7 +66,7 @@ public sealed class BlobDecisionJournalTests
             journal.AppendAsync("run-1", end, [DecisionJournalTests.EveryKind[2]], TestContext.Current.CancellationToken));
 
         written.Count(position => position is not null).ShouldBe(1);
-        (await journal.ReadAsync("run-1", TestContext.Current.CancellationToken)).Decisions.Count.ShouldBe(2);
+        (await journal.ReadAsync("run-1", TestContext.Current.CancellationToken)).Entries.Count.ShouldBe(2);
     }
 
     [Fact]

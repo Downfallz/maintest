@@ -33,7 +33,7 @@ public sealed class MatchReplayTests
 
         var second = new Replica(new JournalStore());
 
-        var rebuilt = await second.Replay.RebuildAsync(Table, decisions, TestContext.Current.CancellationToken);
+        var rebuilt = await second.Replay.RebuildAsync(Table, [.. decisions.Select(decision => new DecisionEntry(decision))], TestContext.Current.CancellationToken);
 
         rebuilt.IsSuccess.ShouldBeTrue();
         rebuilt.Value.ShouldBe(held);
@@ -51,7 +51,7 @@ public sealed class MatchReplayTests
             new(PlayerSlot.Player1, PlayerDecision.Pass),
         ];
 
-        var rebuilt = await replica.Replay.RebuildAsync(Table, decisions, TestContext.Current.CancellationToken);
+        var rebuilt = await replica.Replay.RebuildAsync(Table, [.. decisions.Select(decision => new DecisionEntry(decision))], TestContext.Current.CancellationToken);
 
         rebuilt.IsFailure.ShouldBeTrue();
         rebuilt.Error.Code.ShouldBe(JournalErrors.DivergedCode);

@@ -94,6 +94,48 @@ public sealed class MatchStepperTests
         log.Trace().ShouldBe(played.Events);
     }
 
+    /// <summary>
+    /// A seat told to change hands from the top of a round is played by its first occupant up to there and by
+    /// the other from there on, at whichever decision of the round comes first, and in the middle of a step
+    /// that plays several rounds of agents. It is the match the driver plays with a seat that does the same.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Matches))]
+    public async Task A_seat_that_changes_hands_at_the_top_of_a_round_is_played_by_each_occupant_in_turn(uint seed, CombatDeclaration declaration)
+    {
+        const int Round = 2;
+        var driven = await DrivenAsync(seed, declaration, new Handing(Agent(seed, PlayerSlot.Player1), Successor(seed), Round), Agent(seed, PlayerSlot.Player2));
+
+        var agents = await SteppedAsync(seed, declaration, person1: false, person2: false, changing: seats => seats.From(PlayerSlot.Player1, Round, Successor(seed)));
+        var person = await SteppedAsync(seed, declaration, person1: true, person2: false, changing: seats => seats.From(PlayerSlot.Player1, Round, Successor(seed)));
+
+        driven.Events.ShouldContain(raised => raised.StartsWith("RoundStarted", StringComparison.Ordinal) && raised.Contains("\"Number\":2", StringComparison.Ordinal));
+        agents.Events.ShouldBe(driven.Events);
+        person.Events.ShouldBe(driven.Events);
+    }
+
+    /// <summary>
+    /// What a witness sees of a stepped match is what an agent wrapped in the driver is asked and answers: the
+    /// same boards, the same options, the same decisions, seat by seat. A seat answered from outside is seen as
+    /// if an agent had been asked there, which is how a match is recorded with nobody seated to record through.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Matches))]
+    public async Task What_a_witness_sees_of_a_stepped_match_is_what_each_agent_is_asked_and_answers_in_the_driver(uint seed, CombatDeclaration declaration)
+    {
+        var driven = new Noting();
+        await DrivenAsync(seed, declaration, driven.Around(default, PlayerSlot.Player1, Agent(seed, PlayerSlot.Player1)), driven.Around(default, PlayerSlot.Player2, Agent(seed, PlayerSlot.Player2)));
+
+        foreach (var (person1, person2) in new[] { (false, false), (true, false), (true, true) })
+        {
+            var stepped = new Noting();
+            await SteppedAsync(seed, declaration, person1, person2, stepped);
+
+            stepped.Of(PlayerSlot.Player1).ShouldBe(driven.Of(PlayerSlot.Player1));
+            stepped.Of(PlayerSlot.Player2).ShouldBe(driven.Of(PlayerSlot.Player2));
+        }
+    }
+
     [Fact]
     public async Task A_pick_is_held_and_shown_to_its_seat_alone_until_both_seats_are_done()
     {
@@ -262,14 +304,21 @@ public sealed class MatchStepperTests
 
     private static RandomAgent Agent(uint seed, PlayerSlot slot) => new RandomAgent(new TestRandom(seed + (slot == PlayerSlot.Player1 ? 1u : 2u)));
 
-    private static async Task<(MatchOutcome? Outcome, IReadOnlyList<string> Events)> DrivenAsync(uint seed, CombatDeclaration declaration)
+    /// <summary>The agent a seat is handed over to: one with dice of its own.</summary>
+    private static RandomAgent Successor(uint seed) => new(new TestRandom(seed + 50));
+
+    private static Task<(MatchOutcome? Outcome, IReadOnlyList<string> Events)> DrivenAsync(uint seed, CombatDeclaration declaration) =>
+        DrivenAsync(seed, declaration, Agent(seed, PlayerSlot.Player1), Agent(seed, PlayerSlot.Player2));
+
+    /// <summary>The match the driver plays at a table from a seed, with the agents it is given.</summary>
+    private static async Task<(MatchOutcome? Outcome, IReadOnlyList<string> Events)> DrivenAsync(uint seed, CombatDeclaration declaration, IPlayerAgent player1, IPlayerAgent player2)
     {
         var store = new MatchStore();
         var match = store.Started(Rules(declaration), new TestRandom(seed));
         var log = EventLog.Of(store);
         var driver = new MatchDriver(Commands(store), Queries(store)) { AsksSpeedsAndIntentsTogether = true };
 
-        var outcome = await driver.PlayAsync(match.Id, Agent(seed, PlayerSlot.Player1), Agent(seed, PlayerSlot.Player2), TestContext.Current.CancellationToken);
+        var outcome = await driver.PlayAsync(match.Id, player1, player2, TestContext.Current.CancellationToken);
 
         outcome.IsSuccess.ShouldBeTrue();
         return (outcome.Value, log.Trace());
@@ -280,14 +329,21 @@ public sealed class MatchStepperTests
     /// sit there, one question at a time through the seat's view; and at every stop, the seats the step says are
     /// asked are the seats whose view says so.
     /// </summary>
-    private static async Task<(MatchOutcome? Outcome, IReadOnlyList<string> Events, IReadOnlyList<SeatDecision> Decided)> SteppedAsync(uint seed, CombatDeclaration declaration, bool person1, bool person2)
+    private static async Task<(MatchOutcome? Outcome, IReadOnlyList<string> Events, IReadOnlyList<SeatDecision> Decided)> SteppedAsync(
+        uint seed,
+        CombatDeclaration declaration,
+        bool person1,
+        bool person2,
+        Noting? witness = null,
+        Func<MatchSeats, MatchSeats>? changing = null)
     {
         var store = new MatchStore();
         var match = store.Started(Rules(declaration), new TestRandom(seed));
         var log = EventLog.Of(store);
-        var stepper = Stepper(store);
+        var stepper = new MatchStepper(Commands(store), Queries(store), witness is null ? [] : [witness]);
         var agents = new Dictionary<PlayerSlot, IPlayerAgent> { [PlayerSlot.Player1] = Agent(seed, PlayerSlot.Player1), [PlayerSlot.Player2] = Agent(seed, PlayerSlot.Player2) };
         var seats = new MatchSeats(person1 ? null : agents[PlayerSlot.Player1], person2 ? null : agents[PlayerSlot.Player2]);
+        seats = changing?.Invoke(seats) ?? seats;
         var decided = new List<SeatDecision>();
 
         var step = (await stepper.AdvanceAsync(match.Id, seats, HeldAnswers.None, TestContext.Current.CancellationToken)).Value;

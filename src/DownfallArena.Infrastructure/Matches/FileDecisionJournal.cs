@@ -1,4 +1,3 @@
-using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Matches.Journaling;
 using DownfallArena.Application.Matches.Ports;
 using DownfallArena.Infrastructure.Learning;
@@ -36,10 +35,10 @@ public sealed class FileDecisionJournal : IDecisionJournal
         }
     }
 
-    public Task<JournalPosition?> AppendAsync(string run, JournalPosition after, IReadOnlyList<SeatDecision> decisions, CancellationToken cancellationToken = default)
+    public Task<JournalPosition?> AppendAsync(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(after);
-        ArgumentNullException.ThrowIfNull(decisions);
+        ArgumentNullException.ThrowIfNull(entries);
         var path = PathOf(run);
         lock (_gate)
         {
@@ -50,15 +49,15 @@ public sealed class FileDecisionJournal : IDecisionJournal
                 return Task.FromResult<JournalPosition?>(null);
             }
 
-            if (decisions.Count == 0)
+            if (entries.Count == 0)
             {
                 return Task.FromResult<JournalPosition?>(after);
             }
 
             stream.Seek(0, SeekOrigin.End);
-            stream.Write(JournalLines.Write(after, decisions, _clock.GetUtcNow()));
+            stream.Write(JournalLines.Write(after, entries, _clock.GetUtcNow()));
             stream.Flush(flushToDisk: true);
-            return Task.FromResult<JournalPosition?>(new JournalPosition(after.Lines + decisions.Count, stream.Length));
+            return Task.FromResult<JournalPosition?>(new JournalPosition(after.Lines + entries.Count, stream.Length));
         }
     }
 

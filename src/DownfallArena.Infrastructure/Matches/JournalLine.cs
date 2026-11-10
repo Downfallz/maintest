@@ -1,5 +1,6 @@
 using DownfallArena.Application.Matches.Decisions;
 using DownfallArena.Application.Matches.Driving;
+using DownfallArena.Application.Matches.Journaling;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Rounds;
@@ -10,8 +11,7 @@ namespace DownfallArena.Infrastructure.Matches;
 /// <summary>
 /// One line of <c>decisions.jsonl</c>, the file the table has written since ADR 0091: a decision as the wire
 /// would have posted it -- a creature by its number, a spell and a package by their ids -- with the seat that
-/// made it and when. The file also holds lines that are no decision (a seat changing hands); they are read as
-/// lines and carry no decision.
+/// made it and when; or a seat changing hands; or, since ADR 0159, a seat conceding.
 /// </summary>
 internal sealed record JournalLine
 {
@@ -22,7 +22,7 @@ internal sealed record JournalLine
     /// <summary>The seat, as a URL names it: <c>player1</c> or <c>player2</c>.</summary>
     public required string Slot { get; init; }
 
-    /// <summary>A <see cref="PlayerOptionsKind" /> name for a decision; anything else is another kind of line.</summary>
+    /// <summary>A <see cref="PlayerOptionsKind" /> name for a decision, <see cref="SwapKind" /> or <see cref="ConcessionKind" />.</summary>
     public required string Kind { get; init; }
 
     public int? Creature { get; init; }
@@ -45,14 +45,49 @@ internal sealed record JournalLine
     /// <summary>For a seat changing hands: the round it changes at the top of.</summary>
     public int? AtRound { get; init; }
 
-    public static JournalLine Of(long seq, DateTimeOffset at, SeatDecision taken)
+    /// <summary>The kind of the line a seat changing hands is written as, since ADR 0091.</summary>
+    public const string SwapKind = "Swap";
+
+    /// <summary>The kind of the line a concession is written as (ADR 0159).</summary>
+    public const string ConcessionKind = "Concession";
+
+    public static JournalLine Of(long seq, DateTimeOffset at, IJournalEntry entry) => entry switch
+    {
+        DecisionEntry decided => Of(seq, at, decided.Decision),
+        ConcessionEntry conceded => new JournalLine { Seq = seq, At = at, Slot = NameOf(conceded.Slot), Kind = ConcessionKind },
+        SeatChangeEntry changed => new JournalLine { Seq = seq, At = at, Slot = NameOf(changed.Slot), Kind = SwapKind, To = changed.To, AtRound = changed.FromRound },
+        _ => throw new ArgumentException($"A journal does not hold a {entry?.GetType().Name}.", nameof(entry)),
+    };
+
+    /// <summary>
+    /// What this line records, or nothing for a kind of line this reader does not know. A line that names a
+    /// kind it knows and lacks what the kind needs is a broken file, not another kind of line.
+    /// </summary>
+    public IJournalEntry? ToEntry()
+    {
+        if (Kind == ConcessionKind)
+        {
+            return new ConcessionEntry(SlotOf());
+        }
+
+        if (Kind == SwapKind)
+        {
+            return To is { } to && AtRound is { } round
+                ? new SeatChangeEntry(SlotOf(), to, round)
+                : throw Broken("it is a seat changing hands without who takes it or from which round");
+        }
+
+        return ToDecision() is { } decision ? new DecisionEntry(decision) : null;
+    }
+
+    private static JournalLine Of(long seq, DateTimeOffset at, SeatDecision taken)
     {
         var decision = taken.Decision;
         return new JournalLine
         {
             Seq = seq,
             At = at,
-            Slot = taken.Slot == PlayerSlot.Player1 ? "player1" : "player2",
+            Slot = NameOf(taken.Slot),
             Kind = decision.Kind.ToString(),
             Creature = decision.Creature?.Value,
             Spell = decision.Spell?.ToString(),
@@ -64,23 +99,14 @@ internal sealed record JournalLine
         };
     }
 
-    /// <summary>
-    /// The decision this line records, or none for a line that is not a decision. A line that names a decision
-    /// and lacks what its kind needs is a broken file, not another kind of line.
-    /// </summary>
-    public SeatDecision? ToDecision()
+    /// <summary>The decision this line records, or none for a line that is not a decision.</summary>
+    private SeatDecision? ToDecision()
     {
         if (!Enum.TryParse<PlayerOptionsKind>(Kind, out var kind) || kind is PlayerOptionsKind.Waiting or PlayerOptionsKind.Ended)
         {
             return null;
         }
 
-        var slot = Slot switch
-        {
-            "player1" => PlayerSlot.Player1,
-            "player2" => PlayerSlot.Player2,
-            _ => throw Broken($"'{Slot}' names no seat"),
-        };
         var decision = kind switch
         {
             PlayerOptionsKind.Evolution when Pass => PlayerDecision.Pass,
@@ -92,8 +118,17 @@ internal sealed record JournalLine
             PlayerOptionsKind.Action when Creature is { } creature && Spell is { } spell => PlayerDecision.Act(CreatureId.From(creature), SpellId.Parse(spell), [.. (Targets ?? []).Select(CreatureId.From)]),
             _ => throw Broken($"it is a {Kind} without what a {Kind} needs"),
         };
-        return new SeatDecision(slot, decision);
+        return new SeatDecision(SlotOf(), decision);
     }
 
-    private InvalidDataException Broken(string why) => new($"Journal line {Seq} is not a decision: {why}.");
+    private static string NameOf(PlayerSlot slot) => slot == PlayerSlot.Player1 ? "player1" : "player2";
+
+    private PlayerSlot SlotOf() => Slot switch
+    {
+        "player1" => PlayerSlot.Player1,
+        "player2" => PlayerSlot.Player2,
+        _ => throw Broken($"'{Slot}' names no seat"),
+    };
+
+    private InvalidDataException Broken(string why) => new($"Journal line {Seq} is not one this journal reads: {why}.");
 }

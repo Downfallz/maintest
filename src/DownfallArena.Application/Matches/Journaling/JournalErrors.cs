@@ -15,6 +15,12 @@ public static class JournalErrors
     public static readonly DomainError Moved = new("Journal.Moved", "The match moved on while this decision was on its way. Read it again.");
 
     /// <summary>
+    /// A seat can only be told to change hands from the top of a round the match has not reached: the round it
+    /// is in is already being played by whoever sits there.
+    /// </summary>
+    public static readonly DomainError RoundReached = new("Journal.RoundReached", "The match has already reached that round. A seat changes hands from the top of a later one.");
+
+    /// <summary>
     /// A line does not answer what the rebuilt match asks: the content, the rules or the engine changed under
     /// the journal. Nothing is guessed at, and the journal is left as it is.
     /// </summary>

@@ -2,7 +2,6 @@ using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Blobs.Specialized;
-using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Matches.Journaling;
 using DownfallArena.Application.Matches.Ports;
 using DownfallArena.Infrastructure.Learning;
@@ -43,19 +42,19 @@ public sealed class BlobDecisionJournal : IDecisionJournal
         }
     }
 
-    public async Task<JournalPosition?> AppendAsync(string run, JournalPosition after, IReadOnlyList<SeatDecision> decisions, CancellationToken cancellationToken = default)
+    public async Task<JournalPosition?> AppendAsync(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(after);
-        ArgumentNullException.ThrowIfNull(decisions);
+        ArgumentNullException.ThrowIfNull(entries);
         var blob = _container.GetAppendBlobClient(NameOf(run));
         await blob.CreateIfNotExistsAsync(new AppendBlobCreateOptions { HttpHeaders = Json }, cancellationToken);
-        if (decisions.Count == 0)
+        if (entries.Count == 0)
         {
             var properties = await blob.GetPropertiesAsync(cancellationToken: cancellationToken);
             return properties.Value.ContentLength == after.Mark ? after : null;
         }
 
-        var lines = JournalLines.Write(after, decisions, _clock.GetUtcNow());
+        var lines = JournalLines.Write(after, entries, _clock.GetUtcNow());
         try
         {
             using var stream = new MemoryStream(lines);
@@ -69,7 +68,7 @@ public sealed class BlobDecisionJournal : IDecisionJournal
             return null;
         }
 
-        return new JournalPosition(after.Lines + decisions.Count, after.Mark + lines.Length);
+        return new JournalPosition(after.Lines + entries.Count, after.Mark + lines.Length);
     }
 
     private static string NameOf(string run) => BlobArtifactNames.Resolve(BlobArtifactNames.Prefix(run), JournalLines.FileName);
