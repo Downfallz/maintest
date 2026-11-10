@@ -525,7 +525,7 @@ test('a player who has met nobody yet sees no recent opponents section', async (
 test('the bell counts what waits for the player and acts on each: play a turn, answer an invitation, answer a friend request', async ({ page }, info) => {
   const state = await home(page, { invitations: [{ table: { id: 'invited', format: '1v1' }, from: { id: friend.id, username: friend.username }, sentAt: '2026-11-09T20:00:00Z' }] });
   // The game page itself is not this test's: a stand-in answers where the bell sends the player.
-  await page.route('**/play?**', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Game</title>' }));
+  await page.route('**/battle?**', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Game</title>' }));
   const bell = page.locator('#inbox-open'), badge = page.locator('#inbox-badge');
   await expect(bell).toBeInViewport();
   await expect(badge).toHaveText('3');
@@ -547,20 +547,20 @@ test('the bell counts what waits for the player and acts on each: play a turn, a
   await expect(dialog.locator('.inbox-item.invitation')).toHaveCount(0);
   expect(state.answered).toEqual(['decline:invited']);
   await expect(badge).toHaveText('1');
-  // The turn opens the game with the seat the player holds there.
+  // The turn opens the game, in the battle view (ADR 0157), with the seat the player holds there.
   await dialog.locator('.inbox-item.turn').getByRole('button', { name: 'Play →' }).click();
-  await page.waitForURL(/\/play\?player1=seat-token$/);
+  await page.waitForURL(/\/battle\?player1=seat-token$/);
   expect(state.errors).toEqual([]);
 });
 
 test('accepting an invitation from the bell takes the seat and opens the game', async ({ page }) => {
   const state = await home(page, { incoming: [], games: [], invitations: [{ table: { id: 'invited', format: '1v1' }, from: { id: friend.id, username: friend.username } }] });
   // The game page itself is not this test's: a stand-in answers where the bell sends the player.
-  await page.route('**/play?**', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Game</title>' }));
+  await page.route('**/battle?**', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Game</title>' }));
   await expect(page.locator('#inbox-badge')).toHaveText('1');
   await page.locator('#inbox-open').click();
   await page.locator('#inbox-dialog .inbox-item.invitation').getByRole('button', { name: 'Accept & play →' }).click();
-  await page.waitForURL(/\/play\?player2=invited-token$/);
+  await page.waitForURL(/\/battle\?player2=invited-token$/);
   expect(state.answered).toEqual(['accept:invited']);
 });
 
