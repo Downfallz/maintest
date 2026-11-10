@@ -16,12 +16,14 @@ public sealed class TableIndexingTests : IDisposable
     private readonly TableRegistry _registry = new();
     private readonly string _indexDirectory = Path.Combine(Path.GetTempPath(), $"downfall-index-{Guid.NewGuid():N}");
     private readonly FileTableIndex _index;
+    private readonly Failing _failing;
     private readonly TableComposer _composer;
 
     public TableIndexingTests()
     {
         _index = new FileTableIndex(_indexDirectory);
-        _composer = new TableComposer(_hosted.Services, HostedTables.Rules, new FileArtifactStore(_hosted.RunsDirectory)) { Index = _index };
+        _failing = new Failing(_index);
+        _composer = new TableComposer(_hosted.Services, HostedTables.Rules, new FileArtifactStore(_hosted.RunsDirectory)) { Index = _failing };
     }
 
     public void Dispose()
@@ -79,6 +81,28 @@ public sealed class TableIndexingTests : IDisposable
         (await _index.CodeAsync(after, Cancel)).ShouldBe(new IndexedCode(after, table.Id, "player2"));
     }
 
+    /// <summary>
+    /// A code a seat no longer has is taken back from the index even when the index could not be written at the
+    /// moment the seat changed hands: the next write of the record takes it back.
+    /// </summary>
+    [Fact]
+    public async Task A_code_the_index_could_not_take_back_is_taken_back_at_the_next_record_write()
+    {
+        var table = await Opened();
+        var seat = table.Seats[1];
+        var before = _registry.Codes.Of(seat).ShouldNotBeNull();
+        _registry.Rekey(table, seat, SeatKeys.Offered(table.Id)).ShouldBeTrue();
+        _failing.Fail = true;
+        await table.RecordAsync(_registry.Codes, Cancel);
+        var stranded = await _index.CodeAsync(before, Cancel);
+        _failing.Fail = false;
+
+        await table.RecordAsync(_registry.Codes, Cancel);
+
+        stranded.ShouldNotBeNull("the index was out when the seat changed hands");
+        (await _index.CodeAsync(before, Cancel)).ShouldBeNull();
+    }
+
     [Fact]
     public async Task A_table_that_ended_is_listed_no_more_and_its_codes_open_nothing()
     {
@@ -109,5 +133,25 @@ public sealed class TableIndexingTests : IDisposable
         await table.RecordAsync(_registry.Codes, Cancel);
         table.Session.HasBegun.ShouldBeTrue();
         return table;
+    }
+
+    /// <summary>The index, which can be made to refuse every write: a store that is out.</summary>
+    private sealed class Failing(ITableIndex inner) : ITableIndex
+    {
+        public bool Fail { get; set; }
+
+        public Task<IndexedCode?> CodeAsync(string code, CancellationToken cancellationToken = default) => inner.CodeAsync(code, cancellationToken);
+
+        public Task<bool> AddCodeAsync(IndexedCode code, CancellationToken cancellationToken = default) => Fail ? Out<bool>() : inner.AddCodeAsync(code, cancellationToken);
+
+        public Task RemoveCodeAsync(string code, string table, CancellationToken cancellationToken = default) => Fail ? Out<bool>() : inner.RemoveCodeAsync(code, table, cancellationToken);
+
+        public Task PutOpenAsync(IndexedTable table, CancellationToken cancellationToken = default) => Fail ? Out<bool>() : inner.PutOpenAsync(table, cancellationToken);
+
+        public Task CloseAsync(string table, DateTimeOffset createdAt, long revision, CancellationToken cancellationToken = default) => Fail ? Out<bool>() : inner.CloseAsync(table, createdAt, revision, cancellationToken);
+
+        public Task<IReadOnlyList<IndexedTable>> OpenAsync(int skip, int take, CancellationToken cancellationToken = default) => inner.OpenAsync(skip, take, cancellationToken);
+
+        private static Task<TResult> Out<TResult>() => Task.FromException<TResult>(new IOException("The index is out."));
     }
 }

@@ -380,6 +380,10 @@ internal sealed class PlaytestRun
 
     private const int RecordAttempts = 5;
 
+    // Codes a seat no longer has that the index has not taken back yet: an index write that failed leaves them
+    // here, for the next record write to take back.
+    private readonly HashSet<string> _owedCodes = new(StringComparer.Ordinal);
+
     /// <summary>The index that finds this table (ADR 0161), or none on a host that keeps no index.</summary>
     public ITableIndex? Index { get; init; }
 
@@ -401,6 +405,10 @@ internal sealed class PlaytestRun
             var codes = written.Status == TableRecord.Open
                 ? written.Seats.Where(seat => seat.Code is not null).ToDictionary(seat => seat.Code!, seat => seat.Slot, StringComparer.Ordinal)
                 : [];
+            // Owed before anything is written: a code this record no longer has is kept until the index has taken
+            // it back, since the next record will not have it either and would never say it again. Only this run's
+            // record writes touch it, and they take turns.
+            _owedCodes.UnionWith((before?.Seats ?? []).Select(seat => seat.Code).OfType<string>().Where(code => !codes.ContainsKey(code)));
             foreach (var (code, seat) in codes)
             {
                 if (!await index.AddCodeAsync(new IndexedCode(code, written.Id, seat), cancellationToken)
@@ -410,9 +418,10 @@ internal sealed class PlaytestRun
                 }
             }
 
-            foreach (var code in (before?.Seats ?? []).Select(seat => seat.Code).OfType<string>().Where(code => !codes.ContainsKey(code)))
+            foreach (var code in _owedCodes.Where(code => !codes.ContainsKey(code)).ToList())
             {
                 await index.RemoveCodeAsync(code, written.Id, cancellationToken);
+                _owedCodes.Remove(code);
             }
 
             if (written.Status == TableRecord.Open)
