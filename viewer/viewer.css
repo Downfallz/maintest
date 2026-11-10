@@ -1,5 +1,14 @@
 /* BEGIN GENERATED BRANDING — run node scripts/sync-branding.mjs */
 /* Official UI palette. See docs/art/branding.md. */
+/* The display face (ADR 0158). Only the table's host serves the file; a page opened elsewhere falls back to the
+   serif named after it in --font-display. */
+@font-face {
+  font-family: "Marcellus";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/marcellus-latin-400.woff2') format('woff2');
+}
 :root {
   color-scheme: dark;
   --brand-slate: #0b1519;
@@ -13,6 +22,9 @@
   --brand-ember: #d39c85;
   --brand-wash: #352e25;
   --brand-on-accent: #0b1519;
+  --brand-soot: #070d10;
+  --brand-bone: #d8c7a7;
+  --brand-line-soft: #2a3a41;
   --ink: var(--brand-ivory);
   --muted: var(--brand-muted);
   --paper: var(--brand-slate);
@@ -27,6 +39,20 @@
   --accent-ink: var(--brand-on-accent);
   --accent-wash: var(--brand-wash);
   --accent-strong: var(--brand-gold-bright);
+  --soot: var(--brand-soot);
+  --bone: var(--brand-bone);
+  --line-soft: var(--brand-line-soft);
+  /* Bone and soot (ADR 0158): carved capitals for titles, sharp corners, one cut corner on what matters. */
+  --font-display: "Marcellus", "Trajan Pro", Georgia, serif;
+  --font-text: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --radius-sharp: 2px;
+  --radius-soft: 3px;
+  --cut: 12px;
+  /* Bone grain and soot smudges, drawn by the browser from two small SVG filters: no image to serve. */
+  --tex-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .85 0 0 0 0 .78 0 0 0 0 .65 0 0 0 .17 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E");
+  --tex-soot: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='700' height='700'%3E%3Cfilter id='s' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.008' numOctaves='4' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .01 0 0 0 0 .02 0 0 0 0 .03 2.4 0 0 0 -.95'/%3E%3C/filter%3E%3Crect width='700' height='700' filter='url(%23s)'/%3E%3C/svg%3E");
+  /* The rule under a title: the rune, then a bone hairline that fades out. */
+  --tex-rule: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='104 30 282 440'%3E%3Cg fill='%23d8c7a7'%3E%3Cpath d='M119 170 254 41 209 145 371 241 319 300 280 269 291 258Z'/%3E%3Cpath d='M164 215 304 307 244 338 299 373 267 459 171 341 231 277Z'/%3E%3C/g%3E%3C/svg%3E");
   /* Semantic colours are independent of the brand accents. */
   --ally: #96ccb0;
   --enemy: #e3a29a;
@@ -60,19 +86,19 @@ header { display: flex; align-items: center; gap: 16px; padding: 12px 20px; back
 header h1 { font-size: 18px; margin: 0; flex: 1; }
 header .hint { color: var(--muted); }
 
-.button { display: inline-block; padding: 6px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); cursor: pointer; }
+.button { display: inline-block; padding: 6px 12px; border: 1px solid var(--line); border-radius: var(--radius-sharp); background: var(--card); cursor: pointer; }
 .button:hover { border-color: var(--accent); color: var(--accent); }
 button { font: inherit; }
 
-.drop { margin: 12px 20px 0; padding: 14px; border: 2px dashed var(--line); border-radius: 8px; color: var(--muted); text-align: center; }
+.drop { margin: 12px 20px 0; padding: 14px; border: 2px dashed var(--line); border-radius: var(--radius-soft); color: var(--muted); text-align: center; }
 .drop.active { border-color: var(--accent); color: var(--accent); background: var(--accent-wash); }
 
 main { display: grid; grid-template-columns: 280px 1fr; gap: 16px; padding: 16px 20px; min-height: calc(100vh - 120px); }
 
-nav { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px; align-self: start; position: sticky; top: 12px; }
+nav { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-soft); padding: 12px; align-self: start; position: sticky; top: 12px; }
 nav h2, section h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 0 0 8px; }
 nav ul { list-style: none; margin: 0 0 16px; padding: 0; }
-nav li { padding: 6px 8px; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; gap: 8px; }
+nav li { padding: 6px 8px; border-radius: var(--radius-sharp); cursor: pointer; display: flex; justify-content: space-between; gap: 8px; }
 nav li:hover { background: var(--paper); }
 nav li.selected { background: var(--accent-wash); color: var(--accent); }
 nav li .kind { color: var(--muted); font-size: 12px; }
@@ -81,14 +107,14 @@ nav select { width: 100%; margin-bottom: 6px; }
 #view { min-width: 0; }
 .empty { color: var(--muted); padding: 40px; text-align: center; }
 
-.card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin-bottom: 16px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-soft); padding: 14px; margin-bottom: 16px; }
 .card h3 { margin: 0 0 10px; font-size: 15px; }
 .title { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .title h2 { font-size: 20px; text-transform: none; letter-spacing: 0; color: var(--ink); margin: 0; }
 .title .muted { color: var(--muted); }
 
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; }
-.stat { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.stat { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-soft); padding: 10px 12px; }
 .stat .label { color: var(--muted); font-size: 12px; }
 .stat .value { font-size: 20px; font-weight: 600; }
 .stat .sub { color: var(--muted); font-size: 12px; }
@@ -116,7 +142,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .trace { display: grid; grid-template-columns: 340px 1fr; gap: 16px; }
 .events { max-height: 70vh; overflow: auto; }
 .events ol { list-style: none; margin: 0; padding: 0; }
-.events li { padding: 4px 8px; border-radius: 4px; cursor: pointer; display: grid; grid-template-columns: 34px 1fr; gap: 6px; }
+.events li { padding: 4px 8px; border-radius: var(--radius-sharp); cursor: pointer; display: grid; grid-template-columns: 34px 1fr; gap: 6px; }
 .events li:hover { background: var(--paper); }
 .events li.current { background: var(--accent-wash); }
 .events li .seq { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
@@ -127,22 +153,22 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .team h4 { margin: 0 0 8px; }
 .team.player1 h4 { color: var(--player1); }
 .team.player2 h4 { color: var(--player2); }
-.creature { border: 1px solid var(--line); border-radius: 6px; padding: 8px; margin-bottom: 8px; }
+.creature { border: 1px solid var(--line); border-radius: var(--radius-sharp); padding: 8px; margin-bottom: 8px; }
 .creature.dead { opacity: 0.55; }
 .creature .name { display: flex; justify-content: space-between; font-weight: 600; }
 .creature .name .tags { font-weight: 400; color: var(--muted); font-size: 12px; }
-.bar { height: 10px; background: var(--raised); border-radius: 5px; overflow: hidden; margin: 6px 0; }
+.bar { height: 10px; background: var(--raised); border-radius: var(--radius-sharp); overflow: hidden; margin: 6px 0; }
 .bar > div { height: 100%; background: var(--health); }
 .bar.low > div { background: var(--health-low); }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; }
-.chip { font-size: 11px; padding: 1px 6px; border-radius: 10px; background: #fef3c7; color: #92400e; }
+.chip { font-size: 11px; padding: 1px 6px; border-radius: var(--radius-soft); background: #fef3c7; color: #92400e; }
 .chip.stun { background: #fee2e2; color: #991b1b; }
 .chip.buff { background: #dcfce7; color: #166534; }
 .chip.spell { background: #e0e7ff; color: #3730a3; }
 .chip.intent { background: #f3e8ff; color: #6b21a8; }
 
 .timeline { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-.slot { border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; font-size: 12px; }
+.slot { border: 1px solid var(--line); border-radius: var(--radius-sharp); padding: 4px 8px; font-size: 12px; }
 .slot.revealed { border-color: var(--accent); }
 .slot.resolved { background: var(--accent-wash); }
 .slot.player1 { border-left: 4px solid var(--player1); }
@@ -159,7 +185,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 /* Spells against outcomes retain distinct blue/amber data colours even though navigation now uses gold.
    The share is printed beside every bar; colour is never the only way to read the comparison. */
 .share { display: flex; align-items: center; gap: 8px; }
-.share .track { position: relative; flex: 1; min-width: 120px; height: 12px; background: var(--raised); border-radius: 3px; }
+.share .track { position: relative; flex: 1; min-width: 120px; height: 12px; background: var(--raised); border-radius: var(--radius-sharp); }
 .share .track::before { content: ''; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--muted); opacity: 0.55; }
 .share .fill { position: absolute; top: 0; bottom: 0; background: var(--chart-above); }
 .share .fill.above { left: 50%; border-radius: 0 3px 3px 0; }

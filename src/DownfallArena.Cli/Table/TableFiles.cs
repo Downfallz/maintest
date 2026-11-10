@@ -24,6 +24,8 @@ internal sealed class TableFiles
 
     private const string Webp = "image/webp";
 
+    private const string Woff2 = "font/woff2";
+
     // The evolution illustrations (table/battle-evolution-art.js, ADR 0151), named here one by one like every other
     // route: the page asks for the one a creature on the field resolves to, and nothing else is read.
     private static readonly string[] EvolutionArt =
@@ -70,6 +72,7 @@ internal sealed class TableFiles
             ["/leaderboard.css"] = (Path.Combine(tableDirectory, "leaderboard.css"), Css),
             ["/lobby.css"] = (Path.Combine(tableDirectory, "lobby.css"), Css),
             ["/table.css"] = (Path.Combine(tableDirectory, "table.css"), Css),
+            ["/identity.css"] = (Path.Combine(tableDirectory, "identity.css"), Css),
             ["/table.js"] = (Path.Combine(tableDirectory, "table.js"), JavaScript),
             ["/transport.js"] = (Path.Combine(tableDirectory, "transport.js"), JavaScript),
             ["/seats.js"] = (Path.Combine(tableDirectory, "seats.js"), JavaScript),
@@ -85,6 +88,9 @@ internal sealed class TableFiles
             ["/manifest.webmanifest"] = (Path.Combine(tableDirectory, "manifest.webmanifest"), Manifest),
             ["/icon.svg"] = (Path.Combine(tableDirectory, "icon.svg"), Svg),
             ["/brand-mark.svg"] = (Path.Combine(tableDirectory, "brand-mark.svg"), Svg),
+
+            // The display face of the brand (ADR 0158), served here so no page asks another site for a font.
+            ["/fonts/marcellus-latin-400.woff2"] = (Path.Combine(tableDirectory, "fonts", "marcellus-latin-400.woff2"), Woff2),
             ["/icon-192.png"] = (Path.Combine(tableDirectory, "icon-192.png"), Png),
             ["/icon-512.png"] = (Path.Combine(tableDirectory, "icon-512.png"), Png),
             ["/notification-badge.png"] = (Path.Combine(tableDirectory, "notification-badge.png"), Png),
@@ -203,7 +209,7 @@ internal sealed class TableFiles
         }
 
         // A bitmap is bytes; everything else the table ships is text.
-        return route.ContentType is Png or Webp
+        return route.ContentType is Png or Webp or Woff2
             ? new StudioResponse(200, route.ContentType, File.ReadAllBytes(route.Path))
             : StudioResponse.OfText(200, route.ContentType, File.ReadAllText(route.Path));
     }
