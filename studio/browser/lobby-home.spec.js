@@ -55,8 +55,8 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
     // Each opponent's relation is the friends list's, as the host reads it.
     if (path === '/api/lobby/opponents') {
       state.opponentReads = (state.opponentReads ?? 0) + 1;
-      const has = (key, id) => state.friends[key].some(link => link.id === id);
-      return json({ opponents: opponents.map(one => ({ ...one, relation: has('friends', one.id) ? 'friend' : has('outgoing', one.id) ? 'asked' : has('incoming', one.id) ? 'asking' : 'none' })) });
+      const relation = id => [['friends', 'friend'], ['outgoing', 'asked'], ['incoming', 'asking']].find(([key]) => state.friends[key].some(link => link.id === id))?.[1] ?? 'none';
+      return json({ opponents: opponents.map(one => ({ ...one, relation: relation(one.id) })) });
     }
     if (path === '/api/friends/requests' && route.request().method() === 'POST') {
       state.asked = route.request().postDataJSON();

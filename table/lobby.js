@@ -177,11 +177,12 @@ export function opponentAction(opponent) {
  */
 export function reconcileRelations(opponents, list) {
   if (!list) return opponents;
-  const ids = key => new Set((list[key] ?? []).map(link => link.id));
-  const friends = ids('friends'), outgoing = ids('outgoing'), incoming = ids('incoming');
+  // In this order: a friendship outranks a request either way, as the host reads them.
+  const kinds = [['friends', 'friend'], ['outgoing', 'asked'], ['incoming', 'asking']]
+    .map(([key, relation]) => [new Set((list[key] ?? []).map(link => link.id)), relation]);
   return opponents.map(opponent => {
     if (opponent.relation == null) return opponent;
-    const relation = friends.has(opponent.id) ? 'friend' : outgoing.has(opponent.id) ? 'asked' : incoming.has(opponent.id) ? 'asking' : 'none';
+    const relation = kinds.find(([ids]) => ids.has(opponent.id))?.[1] ?? 'none';
     return relation === opponent.relation ? opponent : { ...opponent, relation };
   });
 }
