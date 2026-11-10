@@ -276,7 +276,7 @@ internal sealed class TableComposer
             // trace, which the earlier host's has just been held against.
             if (run is not null)
             {
-                await run.CheckpointAsync(session.MatchId, cancellationToken);
+                await run.CheckpointAsync(session.MatchId, session.Journaled, cancellationToken);
             }
 
             var pilot = new TablePilot(record?.PilotToken ?? Token(), SeatingOf);

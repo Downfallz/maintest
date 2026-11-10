@@ -26,8 +26,9 @@ internal sealed class TableSession : IDisposable
     private readonly Action _forget;
     private readonly TaskCompletionSource _begin;
 
-    private TableSession(MatchId matchId, RuleSet rules, (SeatAgent Player1, SeatAgent Player2) seats, TableHandlers handlers, Task<Result<MatchOutcome>> outcome, Action forget, TaskCompletionSource begin)
+    private TableSession(MatchId matchId, RuleSet rules, (SeatAgent Player1, SeatAgent Player2) seats, TableHandlers handlers, Task<Result<MatchOutcome>> outcome, Action forget, TaskCompletionSource begin, MatchTraceRecorder? recorder)
     {
+        Recorder = recorder;
         _begin = begin;
         MatchId = matchId;
         Rules = rules;
@@ -40,6 +41,9 @@ internal sealed class TableSession : IDisposable
     }
 
     public MatchId MatchId { get; }
+
+    /// <summary>What records this match's feed, when the host keeps one.</summary>
+    public MatchTraceRecorder? Recorder { get; }
 
     /// <summary>
     /// The rule set this match is playing, the table's own rather than the host's: the format is chosen per
@@ -161,7 +165,8 @@ internal sealed class TableSession : IDisposable
                 recorder?.Forget(matchId);
                 repository.ForgetAsync(matchId, CancellationToken.None).GetAwaiter().GetResult();
             },
-            begin);
+            begin,
+            recorder);
     }
 
     /// <summary>The seat of a slot, so a caller says which player rather than which field.</summary>

@@ -744,7 +744,8 @@ internal sealed class PlaytestRun
         }
     }
 
-    public Task CheckpointAsync(MatchId matchId, CancellationToken cancellationToken = default)
+    /// <param name="upTo">How many of the match's entries are its own, as its journal holds it; every one when none.</param>
+    public Task CheckpointAsync(MatchId matchId, int? upTo, CancellationToken cancellationToken = default)
     {
         // Reading the trace and queueing its write happen together, under the same lock the closing takes. The
         // null above is not enough on its own: a checkpoint can read a partial trace while the match is still
@@ -759,11 +760,14 @@ internal sealed class PlaytestRun
                 return Task.CompletedTask;
             }
 
-            return _events.Snapshot(matchId, _stamp, _seed) is { } trace
+            return _events.Snapshot(matchId, _stamp, _seed, upTo) is { } trace
                 ? _writer.WriteJsonAsync($"{RunRecorder.TracesDirectory}/{matchId}.json", trace, cancellationToken)
                 : Task.CompletedTask;
         }
     }
+
+    /// <summary>Rewrites the trace as it stands, every entry of it: see the other overload.</summary>
+    public Task CheckpointAsync(MatchId matchId, CancellationToken cancellationToken = default) => CheckpointAsync(matchId, upTo: null, cancellationToken);
 
     /// <summary>
     /// Closes the session: the episodes, the final trace, and the manifest with its counts. The board is the

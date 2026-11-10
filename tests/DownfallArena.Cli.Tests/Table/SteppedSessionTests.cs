@@ -1,4 +1,5 @@
 using DownfallArena.Application.Agents;
+using DownfallArena.Application.Catalogue;
 using DownfallArena.Application.Learning.Tracing;
 using DownfallArena.Application.Matches.Decisions;
 using DownfallArena.Application.Matches.Driving;
@@ -30,6 +31,7 @@ public sealed class SteppedSessionTests : IDisposable
     private readonly Unreliable _journal = new();
     private readonly CancellationTokenSource _stopping = new();
     private readonly List<SteppedSession> _opened = [];
+    private TableSeat[] _seats = [];
 
     public void Dispose()
     {
@@ -220,6 +222,45 @@ public sealed class SteppedSessionTests : IDisposable
     }
 
     /// <summary>
+    /// A seat is shown the feed of the match its journal holds, and no further: the entries of a bot's turn that
+    /// was applied and could not be written are of a match that is not the table's, and are recorded again
+    /// under the same numbers once the turn is taken again.
+    /// </summary>
+    [Fact]
+    public async Task A_seat_is_not_shown_the_entries_of_a_turn_its_journal_does_not_hold()
+    {
+        var (session, _, _) = await Opened(_host, people: false);
+        var api = Api(session);
+        var journaled = session.Journaled;
+        _journal.FailTheNext(3);
+
+        session.Begin();
+        await Failed();
+        var shown = await FeedNextAsync(api);
+
+        shown.ShouldBe(journaled.ShouldNotBeNull());
+        _host.Services.GetRequiredService<MatchTraceRecorder>().Length(session.MatchId).ShouldBeGreaterThan(shown, "the turn that was not written has recorded its entries");
+    }
+
+    /// <summary>
+    /// A table's pages are told what changed once the match that changed is the journal's: a bot's turn that
+    /// records its entries and is not written moves nothing, where every entry recorded used to.
+    /// </summary>
+    [Fact]
+    public async Task A_turn_its_journal_does_not_hold_does_not_move_the_table_s_version()
+    {
+        var (session, _, _) = await Opened(_host, people: false);
+        var api = Api(session);
+        var before = api.Changes.Version;
+        _journal.FailTheNext(3);
+
+        session.Begin();
+        await Failed();
+
+        api.Changes.Version.ShouldBe(before);
+    }
+
+    /// <summary>
     /// A table let go of has no outcome, keeps nothing in the host's stores, and takes nothing more: a tap, a
     /// concession or a seat change that arrives after must not bring back the match that was just forgotten.
     /// </summary>
@@ -306,6 +347,30 @@ public sealed class SteppedSessionTests : IDisposable
 
     private const string Run = "table-1";
 
+    /// <summary>The routes over a session opened here, under the seats it was opened with.</summary>
+    private TableApi Api(SteppedSession session) =>
+        new(session, _seats, CatalogueProjection.Build(_host.Services.GetRequiredService<IGameResources>(), HostedTables.Rules), _host.Services.GetRequiredService<MatchTraceRecorder>());
+
+    /// <summary>Where a seat's next read of the feed starts, as the seat route says: how much of it the seat was shown.</summary>
+    private static async Task<int> FeedNextAsync(TableApi api)
+    {
+        var answer = await api.HandleAsync("GET", "/api/seat/player1", string.Empty, "seat-1");
+        answer.Status.ShouldBe(200);
+        using var payload = System.Text.Json.JsonDocument.Parse(answer.Body);
+        return payload.RootElement.GetProperty("feedNext").GetInt32();
+    }
+
+    /// <summary>Waits until the journal has refused an append.</summary>
+    private async Task Failed()
+    {
+        for (var attempt = 0; attempt < 500 && _journal.Failed == 0; attempt++)
+        {
+            await Task.Delay(10, TestContext.Current.CancellationToken);
+        }
+
+        _journal.Failed.ShouldBeGreaterThan(0);
+    }
+
     /// <summary>A table with its person in seat 1 and a bot that can be held in seat 2, or two bots.</summary>
     /// <param name="handover">The round the person's seat is theirs from, a bot holding it until then; none for a seat theirs from the start.</param>
     private async Task<(SteppedSession Session, SteppedPerson Person, Held Bot)> Opened(HostedTables host, MatchId? matchId = null, bool people = true, int? handover = null)
@@ -314,6 +379,7 @@ public sealed class SteppedSessionTests : IDisposable
         var person = new SteppedPerson();
         var bot = new Held(new GreedyAgent(resources, HostedTables.Rules));
         TableSeat[] seats = [new TableSeat(PlayerSlot.Player1, "seat-1", people ? person : null), new TableSeat(PlayerSlot.Player2, "seat-2", Person: null)];
+        _seats = seats;
         var plan = new SeatPlan(
             people ? SeatPlan.Person(PersonName) : new Occupant(new GreedyAgent(resources, HostedTables.Rules), "greedy"),
             new Occupant(bot, "greedy"));
@@ -381,8 +447,10 @@ public sealed class SteppedSessionTests : IDisposable
         private int _failing;
         private int _losing;
 
+        private int _failed;
+
         /// <summary>How many appends were refused by the store.</summary>
-        public int Failed { get; private set; }
+        public int Failed => Volatile.Read(ref _failed);
 
         public void FailTheNext(int appends) => Volatile.Write(ref _failing, appends);
 
@@ -395,7 +463,7 @@ public sealed class SteppedSessionTests : IDisposable
             if (entries.Count > 0 && Volatile.Read(ref _failing) > 0)
             {
                 Interlocked.Decrement(ref _failing);
-                Failed++;
+                Interlocked.Increment(ref _failed);
                 throw new IOException("The store is out.");
             }
 
