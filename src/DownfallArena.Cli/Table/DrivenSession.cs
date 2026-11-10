@@ -21,6 +21,13 @@ internal sealed class DrivenSession(TableSession session, IReadOnlyList<TableSea
 {
     private readonly MatchQueryHandlers _reads = reads ?? session.Queries;
 
+    /// <remarks>Never raised: a seat reads a driven match through the lock its commands are applied behind, so a read told of an entry waits for the command that recorded it.</remarks>
+    public event Action? Changed
+    {
+        add { }
+        remove { }
+    }
+
     public MatchId MatchId => session.MatchId;
 
     public RuleSet Rules => session.Rules;

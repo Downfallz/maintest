@@ -81,6 +81,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
                 }
             }
 
+            session.Changed += changes.Bump;
             session.Outcome.ContinueWith(_ => changes.Bump(), CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         }
 

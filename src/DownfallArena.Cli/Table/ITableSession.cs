@@ -14,6 +14,12 @@ namespace DownfallArena.Cli.Table;
 /// </summary>
 internal interface ITableSession : IDisposable
 {
+    /// <summary>
+    /// Raised when what the seats read has changed without a question being asked or an entry being recorded
+    /// to say so: what moves a table's version beside those (ADR 0119).
+    /// </summary>
+    event Action? Changed;
+
     MatchId MatchId { get; }
 
     /// <summary>The rule set this match is playing, the table's own rather than the host's (ADR 0081).</summary>

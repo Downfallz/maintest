@@ -129,6 +129,13 @@ internal sealed class SteppedSession : ITableSession
         }
     }
 
+    /// <remarks>
+    /// Raised once a step's match is what the seats read. The feed says an entry was recorded while the step
+    /// that recorded it is still being taken; a page that read on that word alone would have the new entries
+    /// beside the board of before, and nothing to tell it to read again.
+    /// </remarks>
+    public event Action? Changed;
+
     public MatchId MatchId => _match.MatchId;
 
     public RuleSet Rules => _match.Rules;
@@ -302,25 +309,30 @@ internal sealed class SteppedSession : ITableSession
 
         // The asking is the one this session read, so the round its board says is the round of the question.
         var at = reading.View.Board.RoundNumber;
-        Result<JournaledStep> step;
-        try
+        var step = Result.Failure<JournaledStep>(JournalErrors.Moved);
+        for (var attempt = 0; attempt < MovedInARow && step.IsFailure && step.Error == JournalErrors.Moved; attempt++)
         {
-            step = await _stepper.SubmitAsync(
-                _match,
-                changes => SeatPlan.IsPerson(Seated(changes).At(slot, at)) ? MatchSeats.People : null,
-                new SeatDecision(slot, decision),
-                asked,
-                _stopping);
-        }
-        catch (OperationCanceledException) when (_stopping.IsCancellationRequested)
-        {
-            return DecisionTaken.Late;
-        }
-        catch
-        {
-            // Written or not, nobody here knows: the line may be in the journal with its answer lost on the way.
-            Behind();
-            throw;
+            try
+            {
+                // Taken again when another writer got in the way: the asking says whether it is still this
+                // decision's to answer, and a line of its own found already written makes it a late one.
+                step = await _stepper.SubmitAsync(
+                    _match,
+                    changes => SeatPlan.IsPerson(Seated(changes).At(slot, at)) ? MatchSeats.People : null,
+                    new SeatDecision(slot, decision),
+                    asked,
+                    _stopping);
+            }
+            catch (OperationCanceledException) when (_stopping.IsCancellationRequested)
+            {
+                return DecisionTaken.Late;
+            }
+            catch
+            {
+                // Written or not, nobody here knows: the line may be in the journal with its answer lost on the way.
+                Behind();
+                throw;
+            }
         }
 
         if (step.IsFailure)
@@ -338,12 +350,14 @@ internal sealed class SteppedSession : ITableSession
     }
 
     /// <remarks>
-    /// A concession another writer got in the way of is taken again. One refused because the match is already
-    /// over -- this very concession, written by an attempt whose answer was lost -- is the match conceded.
+    /// A concession another writer got in the way of is taken again. When it is then refused because the match
+    /// is over by this very seat's concession, the line was its own, written by the attempt whose answer was
+    /// lost: the match is conceded. A concession refused outright on a match that is over stays refused.
     /// </remarks>
     public async Task<Result> ConcedeAsync(PlayerSlot slot)
     {
         var refusal = JournalErrors.Moved;
+        var moved = false;
         for (var attempt = 0; attempt < MovedInARow && !LetGo; attempt++)
         {
             Result<JournaledState> conceded;
@@ -372,9 +386,12 @@ internal sealed class SteppedSession : ITableSession
             {
                 break;
             }
+
+            moved = true;
         }
 
-        return await CaughtUpAsync() is { Outcome: { Reason: MatchEndReason.Concession } ended } && ended.Winner == Other(slot)
+        var ended = await CaughtUpAsync();
+        return moved && ended is { Outcome: { Reason: MatchEndReason.Concession } outcome } && outcome.Winner == Other(slot)
             ? Result.Success()
             : Result.Failure(refusal);
     }
@@ -478,10 +495,12 @@ internal sealed class SteppedSession : ITableSession
     private void Take(JournaledState state)
     {
         Seated(state.SeatChanges);
+        var kept = false;
         lock (_gate)
         {
             if (_state is null || state.Position.Lines >= _state.Position.Lines)
             {
+                kept = true;
                 _state = state;
             }
         }
@@ -492,6 +511,10 @@ internal sealed class SteppedSession : ITableSession
         }
 
         Announce();
+        if (kept)
+        {
+            Changed?.Invoke();
+        }
     }
 
     /// <summary>
