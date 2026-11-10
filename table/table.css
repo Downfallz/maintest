@@ -1,6 +1,6 @@
 /* BEGIN GENERATED BRANDING — run node scripts/sync-branding.mjs */
 /* Official UI palette. See docs/art/branding.md. */
-/* The display face (ADR 0157). Only the table's host serves the file; a page opened elsewhere falls back to the
+/* The display face (ADR 0158). Only the table's host serves the file; a page opened elsewhere falls back to the
    serif named after it in --font-display. */
 @font-face {
   font-family: "Marcellus";
@@ -42,7 +42,7 @@
   --soot: var(--brand-soot);
   --bone: var(--brand-bone);
   --line-soft: var(--brand-line-soft);
-  /* Bone and soot (ADR 0157): carved capitals for titles, sharp corners, one cut corner on what matters. */
+  /* Bone and soot (ADR 0158): carved capitals for titles, sharp corners, one cut corner on what matters. */
   --font-display: "Marcellus", "Trajan Pro", Georgia, serif;
   --font-text: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --radius-sharp: 2px;

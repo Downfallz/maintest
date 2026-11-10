@@ -162,6 +162,9 @@ function mountHomeNavigation(doc, win = globalThis) {
       doc.body.dataset.home = account ? 'member' : mode === 'off' ? 'local' : 'guest';
       el('join-open').hidden = !playable;
       el('friends-open').hidden = !account;
+      // Signed in, Settings lives in the account menu, with who is signed in; a guest, who has no account menu,
+      // finds it in the main menu.
+      el('app-settings-open').hidden = Boolean(account);
       el('app-settings-tab-notifications').hidden = !account;
       el('app-settings-tab-account').hidden = !account;
       if (!account && ['notifications', 'account'].includes(tabs.find(tab => tab.getAttribute('aria-selected') === 'true')?.dataset.settingsTab)) showTab('game');

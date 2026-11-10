@@ -49,6 +49,9 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     /// </summary>
     public const int OngoingPerKind = 5;
 
+    /// <summary>How many games in progress one page of Find an opponent shows.</summary>
+    public const int PageSize = 8;
+
     /// <summary>How long a seat is kept for a friend (ADR 0129): past this, the invitation counts as declined.</summary>
     public static readonly TimeSpan InvitationFor = TimeSpan.FromHours(24);
 
@@ -83,6 +86,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 ("GET", Prefix + "/mine") => await MineAsync(account),
                 ("GET", _) when FinishedRoute(path) is { } finished => SignInRequired(account) ?? await FinishedAsync(finished.AgainstBots, finished.Page, account),
                 ("GET", Prefix + "/opponents") => SignInRequired(account) ?? await OpponentsAsync(account),
+                ("GET", _) when PageRoute(path) is { } listed => await PageAsync(listed.OpenOnly, listed.Page, account),
                 ("POST", Prefix + "/adopt") => await AdoptAsync(body, account),
                 ("POST", Prefix + "/tables") => SignInRequired(account) ?? await OpenAsync(body, account),
                 ("POST", Prefix + "/leave") => await LeaveAsync(token, account),
@@ -109,6 +113,45 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         {
             return Problem(400, "The request is not valid JSON.");
         }
+    }
+
+    /// <summary>How many seats of a table in progress anybody may take: open places nobody has reached yet.</summary>
+    private static int OpenSeatCount(PlayedTable table) =>
+        table.IsOver ? 0 : table.Seats.Count(seat => table.OpenSeats.Contains(seat.Name) && seat.Person is { HasArrived: false });
+
+    /// <summary>
+    /// Whether <c>/api/lobby/page/open/&lt;page&gt;</c> or <c>/api/lobby/page/all/&lt;page&gt;</c> was asked, and
+    /// which page, counted from 1; null for any other path.
+    /// </summary>
+    private static (bool OpenOnly, int Page)? PageRoute(string path)
+    {
+        const string listed = Prefix + "/page/";
+        if (!path.StartsWith(listed, StringComparison.Ordinal) || path[listed.Length..].Split('/') is not [var view, var page])
+        {
+            return null;
+        }
+
+        return view is "open" or "all" && int.TryParse(page, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var number) && number >= 1
+            ? (view == "open", number - 1)
+            : null;
+    }
+
+    /// <summary>
+    /// One page of the games in progress, newest first, as the lobby's Find an opponent lists them: the ones with a
+    /// seat to take, or all of them. A signed-in player's own tables are not offered to them as open seats; they are
+    /// under Your games. A page past the end shows the last one.
+    /// </summary>
+    private async Task<StudioResponse> PageAsync(bool openOnly, int page, AccountId? account)
+    {
+        PlayedTable[] tables = [.. registry.All()
+            .Where(table => !table.IsOver)
+            .Where(table => !openOnly || (OpenSeatCount(table) > 0 && (account is not { } me || table.Seats.All(seat => seat.Account != me))))
+            .OrderByDescending(table => table.CreatedAt)
+            .ThenBy(table => table.Id, StringComparer.Ordinal)];
+        var pages = Math.Max(1, (tables.Length + PageSize - 1) / PageSize);
+        var at = Math.Clamp(page, 0, pages - 1);
+        var items = await Task.WhenAll(tables.Skip(at * PageSize).Take(PageSize).Select(DescribeAsync));
+        return Json(new { total = tables.Length, pages, page = at + 1, items });
     }
 
     /// <summary>
@@ -150,7 +193,10 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         format = composer.Rules.Format.ToString(),
         formats = MatchFormat.Offered.Select(format => format.ToString()).ToArray(),
         accounts = AccountApi.Named(Accounts?.Mode ?? AccountsMode.Off),
-        tables = await Task.WhenAll(registry.All().Where(table => !table.IsOver).Select(DescribeAsync)),
+        // The tables themselves are read a page at a time (PageAsync): a lobby polled every ten seconds by every
+        // player must not carry every game in progress each time.
+        ongoing = registry.All().Count(table => !table.IsOver),
+        open = registry.All().Count(table => !table.IsOver && OpenSeatCount(table) > 0),
     });
 
     private async Task<StudioResponse> ResumeAsync(string body, AccountId? account)
@@ -1114,7 +1160,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             waiting = !table.Session.HasBegun && !table.IsOver,
             over = table.IsOver,
             round = await AdminApi.RoundNowAsync(table),
-            openSeats = table.IsOver ? 0 : table.Seats.Count(seat => table.OpenSeats.Contains(seat.Name) && seat.Person is { HasArrived: false }),
+            openSeats = OpenSeatCount(table),
             players = seats.Select(seat => seat.Name).ToArray(),
             seats,
         };

@@ -6,9 +6,12 @@ HTML/CSS/JavaScript presentation, using the existing account and seat APIs.
 
 ## Page states
 
-- **Signed out on an account host:** creature artwork, a short tactical-game introduction, three steps
-  explaining mutations/tempo/spells, and the existing Google sign-in. No empty game lists, friend panel or
-  device settings. The developer host still uses its typed-name sign-in.
+- **Signed out on an account host:** a short tactical-game introduction beside three Stage 3 creatures
+  (Ravager, Deathstalker, Transcendent) set in depth on the eclipse battlefield, nearest lowest and largest, none
+  hiding another; an Evolution strip (Warped, Stormborn, Cataclysm: Stage 1 to 3, loaded as it scrolls into view);
+  three steps (mutations, tempo, spells); four things to do (friends and rematches, ranked or unranked, the bell and
+  phone notices, the bot); and the existing Google sign-in. No empty game lists, friend panel or device settings.
+  The developer host still uses its typed-name sign-in.
 - **Signed in:** a greeting, New battle, invitations, Your games, and Find an opponent. Account actions stay
   behind the player's avatar/name. Match cards retain resume, join, invitation and turn-state behaviours.
   Your games groups its Ongoing and Finished tabs against players and against bots, at most five of each in
@@ -30,7 +33,7 @@ a viewpoint before either private board is read.
 | Friends | Dialog with requests, friend list, add/remove and Invite | Signed-in players |
 | Leaderboard | Existing `/leaderboard` page | Account hosts |
 | Join with a code | Dialog validating an eight-character invitation and following `/j/<code>` | Signed-in players and local accounts-off hosts |
-| Settings | One dialog of tabs (below) | Everyone |
+| Settings | One dialog of tabs (below) | Guests in the main menu; signed-in players in the account menu, beside who is signed in |
 | Admin | Existing `/admin` page | Existing operator check |
 | Account avatar/name | Who is signed in, Settings, and Sign out (confirmed) on this device | Signed-in players |
 | Bell (Notifications) | Dialog of what waits for the player, each with its action (below) | Signed-in players |
@@ -53,6 +56,14 @@ the existing create dialog with the chosen friend selected. Merely opening Notif
 browser permission; the existing explicit device action owns that request. Google sign-in still uses the
 provider's rendered button, not a custom credential control.
 
+## Find an opponent
+
+The games in progress are read a page at a time: `GET /api/lobby` counts them and the open seats, and
+`GET /api/lobby/page/<open|all>/<page>` serves eight, newest first (a signed-in player's own open tables are under
+*Your games*, not offered back as open seats). The lobby's ten-second poll reads the page on show, never every game.
+Each game is one row (its format and state, who sits, whose turn, and a seat to take), the component finished games
+use too, with the same pager.
+
 ## The bell
 
 What waits for the player is counted on a bell beside the account button, in every page's header, and listed in
@@ -60,7 +71,7 @@ its window, each with the action it calls for:
 
 | Waiting | Action |
 | --- | --- |
-| A game where it is the player's turn (the host asks a seat they hold) | **Play →** opens it with that seat |
+| A game against another person where it is the player's turn (the host asks a seat they hold); a game against a bot or on one shared device never counts, since nobody waits on it | **Play →** opens it with that seat |
 | An invitation a friend sent (ADR 0129) | **Accept & play →** takes the seat and opens the game; **Decline** |
 | A friend request | **Accept**, **Decline** (silent, as in Friends) |
 | An invitation of theirs a friend declined | **Open the lobby →**, where Invite another, Open and Close are |

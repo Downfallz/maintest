@@ -19,7 +19,7 @@ test('brand text, links and action labels remain readable on their intended surf
       assert.ok(contrast(tokens[foreground], tokens[background]) >= 4.5, `${foreground} on ${background}`);
     }
   }
-  // Bone titles, and text at the sooty foot of a page (ADR 0157).
+  // Bone titles, and text at the sooty foot of a page (ADR 0158).
   for (const background of ['--brand-slate', '--brand-panel', '--brand-raised', '--brand-soot']) {
     assert.ok(contrast(tokens['--brand-bone'], tokens[background]) >= 7, `--brand-bone on ${background}`);
   }

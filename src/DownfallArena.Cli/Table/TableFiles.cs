@@ -89,7 +89,7 @@ internal sealed class TableFiles
             ["/icon.svg"] = (Path.Combine(tableDirectory, "icon.svg"), Svg),
             ["/brand-mark.svg"] = (Path.Combine(tableDirectory, "brand-mark.svg"), Svg),
 
-            // The display face of the brand (ADR 0157), served here so no page asks another site for a font.
+            // The display face of the brand (ADR 0158), served here so no page asks another site for a font.
             ["/fonts/marcellus-latin-400.woff2"] = (Path.Combine(tableDirectory, "fonts", "marcellus-latin-400.woff2"), Woff2),
             ["/icon-192.png"] = (Path.Combine(tableDirectory, "icon-192.png"), Png),
             ["/icon-512.png"] = (Path.Combine(tableDirectory, "icon-512.png"), Png),

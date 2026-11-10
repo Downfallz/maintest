@@ -3,7 +3,7 @@ import { preferredPresentation, presentationPath } from './battle-preferences.js
 import { turnOf } from './players.js';
 import { activateSeats } from './session.js';
 
-// What waits for a signed-in player, wherever they are in the app: the games where it is their turn, the
+// What waits for a signed-in player, wherever they are in the app: the games against another person where it is their turn, the
 // invitations a friend sent them, the friend requests they were sent, and an invitation of theirs a friend
 // declined. One bell in the shared header counts them, and its window acts on each where it stands.
 
@@ -14,26 +14,29 @@ const GROUPS = Object.freeze([
   { kind: 'declined', label: 'Declined' },
 ]);
 
-/** Who a game is against, from the seats this player does not hold: a person's name, a bot's, or a shared device. */
-function opponentOf(table, held) {
-  const other = (table.seats ?? []).find(seat => !held.includes(seat.seat));
-  if (!other) return 'a shared device';
-  if (other.kind === 'bot') return `${other.name ?? 'a bot'} (bot)`;
-  return other.name && other.name !== 'Player' ? other.name : 'another player';
+/**
+ * The person a game is against, from the seats this player does not hold, or null when nobody waits on them: a game
+ * against a bot or on one shared device is played when the player chooses to, so the bell never counts its turn.
+ */
+function personAgainst(table, held) {
+  const others = (table.seats ?? []).filter(seat => !held.includes(seat.seat));
+  if (others.length === 0 || others.some(seat => seat.kind !== 'person')) return null;
+  const name = others[0].name;
+  return name && name !== 'Player' ? name : 'another player';
 }
 
 /**
- * The things waiting for this player, in the order the window lists them: the games where it is their turn,
+ * The things waiting for this player, in the order the window lists them: the games against another person where it is their turn,
  * then the invitations they received, then the friend requests, then their own invitations a friend declined.
  * `mine` and `invitations` are `GET /api/lobby/mine`'s; `friends` is `GET /api/friends`'s.
  */
 export function inboxItems({ mine = [], invitations = [], friends = null } = {}) {
   const items = [];
   for (const entry of mine) {
-    const held = (entry.seats ?? []).map(seat => seat.seat);
-    if (turnOf(entry.table, held)?.mine) {
+    const held = (entry.seats ?? []).map(seat => seat.seat), against = personAgainst(entry.table, held);
+    if (against && turnOf(entry.table, held)?.mine) {
       const round = Number.isInteger(entry.table.round) ? ` · Round ${entry.table.round}` : '';
-      items.push({ kind: 'turn', key: `turn:${entry.table.id}`, title: `Your turn against ${opponentOf(entry.table, held)}`,
+      items.push({ kind: 'turn', key: `turn:${entry.table.id}`, title: `Your turn against ${against}`,
         detail: `${entry.table.format ?? ''} battle${round}`.trim(), seats: entry.seats });
     }
   }

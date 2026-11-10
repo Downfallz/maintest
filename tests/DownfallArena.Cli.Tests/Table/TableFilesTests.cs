@@ -58,7 +58,7 @@ public sealed class TableFilesTests
         badge.Body.Take(4).ShouldBe([0x89, (byte)'P', (byte)'N', (byte)'G']);
     }
 
-    /// <summary>The display face is the host's own file (ADR 0157): no page asks another site for a font.</summary>
+    /// <summary>The display face is the host's own file (ADR 0158): no page asks another site for a font.</summary>
     [Fact]
     public void The_display_face_is_served_as_woff2_bytes()
     {

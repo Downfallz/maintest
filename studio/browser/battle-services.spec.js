@@ -143,8 +143,9 @@ test('a signed-in player can read a menu panel and return to the same live match
     return height;
   });
   expect(before.height).toBe(withoutHeader);
-  await page.getByRole('button', { name: 'Open navigation' }).click();
-  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Settings', exact: true }).click();
+  // Signed in, Settings opens from the account menu, not the main navigation.
+  await page.locator('#account-menu summary').click();
+  await page.locator('#account-settings').click();
   await page.getByRole('dialog', { name: 'Settings', exact: true }).getByRole('tab', { name: 'Privacy' }).click();
   await expect(page.getByRole('heading', { name: 'What we keep' })).toBeVisible();
   await page.keyboard.press('Escape');

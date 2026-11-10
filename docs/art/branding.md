@@ -32,7 +32,7 @@ variants into slate. Copper is a secondary decorative accent, not a new gameplay
 
 ## Bone and soot
 
-[ADR 0157](../adr/0157-carve-the-interface-in-bone-and-soot.md) gives the pages the rune's own material.
+[ADR 0158](../adr/0158-carve-the-interface-in-bone-and-soot.md) gives the pages the rune's own material.
 
 | Token | Value | Use |
 | --- | --- | --- |
@@ -115,7 +115,7 @@ illustrations and gameplay colours are unchanged.
 
 ## Reference captures
 
-The lobby captures show the bone-and-soot pass (ADR 0157): a local host with developer sign-in, a made-up player
+The lobby captures show the bone-and-soot pass (ADR 0158): a local host with developer sign-in, a made-up player
 name and one game against a bot. The studio captures predate that pass and use the repository catalogue.
 They demonstrate branding, not a live multiplayer match.
 

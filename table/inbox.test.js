@@ -5,23 +5,23 @@ import { badgeText, bellLabel, inboxItems } from './inbox.js';
 const table = (id, seats, extra = {}) => ({ id, format: '3v3', over: false, waiting: false, round: 4, seats, ...extra });
 const me = { seat: 'player1', kind: 'person', name: 'MarcF' };
 
-test('a game where this player is asked is their turn, named by who it is against; one where the other is asked is not', () => {
+test('a game against another person where this player is asked is their turn, named by who it is against', () => {
   const mine = [
     { table: table('a', [{ ...me, turn: true }, { seat: 'player2', kind: 'person', name: 'Bastien' }]), seats: [{ seat: 'player1', token: 't1' }] },
     { table: table('b', [me, { seat: 'player2', kind: 'person', name: 'Julie', turn: true }]), seats: [{ seat: 'player1', token: 't2' }] },
-    { table: table('c', [{ ...me, turn: true }, { seat: 'player2', kind: 'bot', name: 'Lookahead' }]), seats: [{ seat: 'player1', token: 't3' }] },
   ];
   const items = inboxItems({ mine });
-  assert.deepEqual(items.map(item => item.title), ['Your turn against Bastien', 'Your turn against Lookahead (bot)']);
+  assert.deepEqual(items.map(item => item.title), ['Your turn against Bastien']);
   assert.equal(items[0].detail, '3v3 battle · Round 4');
   assert.deepEqual(items[0].seats, [{ seat: 'player1', token: 't1' }]);
 });
 
-test('a finished game, one not begun and a shared device whose turn it is are read as such', () => {
+test('a game against a bot, on one shared device, finished or not begun never counts as a turn waiting', () => {
+  const bot = { table: table('c', [{ ...me, turn: true }, { seat: 'player2', kind: 'bot', name: 'Lookahead' }]), seats: [{ seat: 'player1', token: 't3' }] };
   const both = { table: table('d', [{ ...me, turn: true }, { seat: 'player2', kind: 'person', name: 'MarcF' }]), seats: [{ seat: 'player1', token: 'a' }, { seat: 'player2', token: 'b' }] };
   const over = { table: table('e', [{ ...me, turn: true }, { seat: 'player2', kind: 'person', name: 'Bastien' }], { over: true }), seats: [{ seat: 'player1', token: 'c' }] };
   const waiting = { table: table('f', [{ ...me, turn: true }, { seat: 'player2', kind: 'open' }], { waiting: true }), seats: [{ seat: 'player1', token: 'd' }] };
-  assert.deepEqual(inboxItems({ mine: [both, over, waiting] }).map(item => item.title), ['Your turn against a shared device']);
+  assert.deepEqual(inboxItems({ mine: [bot, both, over, waiting] }), []);
 });
 
 test('turns come first, then invitations, friend requests and declined invitations, each with what its action needs', () => {

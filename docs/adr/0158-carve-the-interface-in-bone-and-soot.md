@@ -1,4 +1,4 @@
-# 0157. Carve the interface in bone and soot
+# 0158. Carve the interface in bone and soot
 
 Date: 2026-11-10
 Status: Accepted

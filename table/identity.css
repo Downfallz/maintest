@@ -1,4 +1,4 @@
-/* Bone and soot (ADR 0157, docs/art/branding.md). The last sheet every page of the table loads: it owns the shape,
+/* Bone and soot (ADR 0158, docs/art/branding.md). The last sheet every page of the table loads: it owns the shape,
    the texture and the titles of what the pages share (ground, buttons, cards, windows, headers). The page sheets
    keep their own layout. Tokens come from the generated branding block. */
 
@@ -44,7 +44,7 @@ dialog .eyebrow, .lobby-hero .eyebrow, .intro-copy > .eyebrow { color: var(--bra
 
 /* Cards and windows: grain and soot inside, a bone-tinted edge, the top right corner cut. --cut: 0px keeps a
    surface square, which is what a sheet docked to an edge of the screen wants. */
-html :is(.game-card, .lobby-panel, dialog),
+html :is(.game-card, .game-row, .lobby-panel, dialog),
 .battle-page :is(#history-dialog, #help-dialog, #growth-dialog, #inspect-dialog, #atlas-dialog, #opponent-dialog, #match-dialog) {
   --cut-edge: color-mix(in srgb, var(--bone) 26%, var(--line-soft));
   border-color: var(--cut-edge); border-radius: 0;
@@ -56,7 +56,7 @@ html :is(.game-card, .lobby-panel, dialog),
 }
 html .home-dialog .lobby-panel { background: none; clip-path: none; }
 html .game-card:is(.mine, .invitation) { --cut-edge: color-mix(in srgb, var(--gold) 70%, var(--line-soft)); border-top-width: 1px; }
-html .game-card.opponent { --cut: 8px; }
+html :is(.game-card.opponent, .game-row) { --cut: 8px; }
 html dialog { --cut: 16px; }
 .lobby-page dialog::backdrop { background: color-mix(in srgb, var(--soot) 82%, transparent); }
 .home-dialog > .dialog-heading { border-bottom: 0; background: var(--tex-grain), linear-gradient(var(--soot), var(--paper)); }
@@ -144,7 +144,5 @@ html dialog { --cut: 16px; }
 #settings-dialog .settings-concede { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin: 18px 0 0; padding-top: 14px; border-top: 1px solid color-mix(in srgb, var(--refused) 25%, transparent); }
 #settings-dialog .settings-concede p { margin: 0; color: var(--muted); font-size: 12px; }
 #settings-dialog #concede-open { width: auto; background: transparent; border-color: color-mix(in srgb, var(--refused) 45%, transparent); color: var(--refused); }
-/* The bell's count stays inside the bar when the header is the top of the screen. */
-.battle-page[data-home="member"] .home-header .inbox-badge { top: 2px; right: 0; }
 .presentation-choice select { flex: 1 1 200px; max-width: 320px; }
 .presentation-choice small { flex: 1 1 100%; }
