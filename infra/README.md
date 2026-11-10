@@ -9,9 +9,8 @@ on GitHub Pages (ADR 0023).
 | Resource | What it is for | What it costs |
 | --- | --- | --- |
 | Container app `downfall-table` | The CLI's `table --lobby --platform-auth`, 0.5 vCPU, 1 GiB, **0 to 1 replica** | Nothing idle. While a page is open, well inside the monthly free grant for a few evenings of play |
-| Container Apps environment | Where the app runs, consumption plan | Nothing on its own |
-| Virtual network, one subnet | Where the app runs, so the storage account can refuse every other network | Nothing |
-| Storage account, Blob only | The recorded sessions, one prefix per session under `playtests/`; no key, and only the app's subnet may reach it | Cents |
+| Container Apps environment | Where the app runs, consumption plan, on the platform's own network (ADR 0160) | Nothing on its own |
+| Storage account, Blob only | The recorded sessions, one prefix per session under `playtests/`; no key, and only an identity holding a role on it may read or write | Cents |
 | Log Analytics workspace | The host's console lines, 30 days, capped at 0.5 GB a day | Cents, often nothing |
 
 The app scales to zero a few minutes after the last request. An open seat holds an event stream and polls
@@ -124,14 +123,45 @@ Android Chrome takes the notice as it is; iOS only once the table is added to th
 az group delete --name downfall-table
 ```
 
-The recordings go with it. Download them first if they matter. The account refuses every network but the
-app's, so let your own address in for the download and take it out again:
+The recordings go with it. Download them first if they matter. The account has no key, so give yourself the
+reading role first:
 
 ```bash
 account="$(az storage account list --resource-group downfall-table --query "[0].name" --output tsv)"
-az storage account network-rule add --resource-group downfall-table --account-name "$account" --ip-address "$(curl -s https://api.ipify.org)"
 az role assignment create --assignee "$(az ad signed-in-user show --query id --output tsv)" \
   --role "Storage Blob Data Reader" --scope "$(az storage account show --name "$account" --query id --output tsv)"
 az storage blob download-batch --account-name "$account" --auth-mode login --source playtests --destination runs/azure
-az storage account network-rule remove --resource-group downfall-table --account-name "$account" --ip-address "$(curl -s https://api.ipify.org)"
 ```
+
+## Leaving the virtual network, once
+
+A table deployed before ADR 0160 runs in a virtual network, and Azure bills a load balancer and a public
+address for it every hour, in a resource group named `ME_<environment>_<group>_<region>`. An environment
+cannot leave its network and an app cannot change environment, so both are deleted and deployed again. The
+recordings, the accounts and the open tables are in the storage account and stay (ADR 0091).
+
+```bash
+group=downfall-table
+app=downfall-table
+environment="$(az resource list --resource-group "$group" --resource-type Microsoft.App/managedEnvironments --query "[0].name" --output tsv)"
+account="$(az storage account list --resource-group "$group" --query "[0].id" --output tsv)"
+identity="$(az resource show --resource-group "$group" --resource-type Microsoft.App/containerApps --name "$app" --query identity.principalId --output tsv)"
+
+# The role goes with the identity it was given to: the next deployment assigns it to the new app's.
+az role assignment delete --assignee "$identity" --scope "$account"
+az resource delete --resource-group "$group" --resource-type Microsoft.App/containerApps --name "$app"
+az resource delete --resource-group "$group" --resource-type Microsoft.App/managedEnvironments --name "$environment"
+```
+
+Deleting the environment takes several minutes, and takes the `ME_...` group with it. Then:
+
+1. Run the *Deploy the table* workflow. It makes the environment and the app again, and opens the storage
+   account's network.
+2. Delete the network nothing uses any more:
+
+   ```bash
+   az network vnet delete --resource-group "$group" --name "$(az network vnet list --resource-group "$group" --query "[0].name" --output tsv)"
+   ```
+
+3. The table has a new address. Run `infra/bootstrap.sh redirect`, and replace the old address with the new
+   one in the Google client's *Authorized JavaScript origins* (see "Player sign-in").

@@ -214,8 +214,9 @@ which adds the compilation of the engine itself.
     retried on failure, and "your turn" after a grace is a delayed message: both are a queue's, and a
     Storage Queue has the delay and an emulator (Azurite, already in CI). A fact several things react to on
     their own, "the match is over" for results, ratings and notices, is Event Grid's, and the least risky
-    place to try it. Functions are a second hosting model beside the one image, and the storage account
-    only lets the container app's subnet in, which a classic Consumption plan cannot join. So: a port either
+    place to try it. Functions are a second hosting model beside the one image. (The storage account
+    no longer refuses a Functions plan by its network: ADR 0160 opened it, and an identity is what it
+    asks.) So: a port either
     way, a queue and Container Apps first, Event Grid when one fact has several consumers. Not verified:
     current prices, and whether an append to an append blob raises a storage event at all.
 

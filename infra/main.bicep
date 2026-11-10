@@ -40,7 +40,6 @@ var accountArgs = empty(googleClientId) ? [] : [
 ]
 var suffix = uniqueString(resourceGroup().id)
 var containerName = 'playtests'
-var subnetName = 'apps'
 
 // The one role the table needs: write and read its own recordings. A built-in role, named by its id.
 var storageBlobDataContributor = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
@@ -60,54 +59,10 @@ resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   }
 }
 
-// The network the app runs in, so the storage account can refuse everything else. A virtual network and a
-// service endpoint cost nothing; the subnet is the smallest a Container Apps environment on workload
-// profiles takes, delegated to it.
-resource network 'Microsoft.Network/virtualNetworks@2024-01-01' = {
-  name: '${namePrefix}-net-${suffix}'
-  location: location
-  properties: {
-    addressSpace: {
-      addressPrefixes: [
-        '10.80.0.0/23'
-      ]
-    }
-    subnets: [
-      {
-        name: subnetName
-        properties: {
-          addressPrefix: '10.80.0.0/27'
-          delegations: [
-            {
-              name: 'container-apps'
-              properties: {
-                serviceName: 'Microsoft.App/environments'
-              }
-            }
-          ]
-          serviceEndpoints: [
-            {
-              service: 'Microsoft.Storage'
-              locations: [
-                location
-              ]
-            }
-          ]
-        }
-      }
-    ]
-  }
-}
-
-// The subnet by its id, spelled from the network's own id rather than read back from its properties: a
-// deployment is validated before anything in it exists, and the storage provider refuses a network rule whose
-// subnet id is still an unevaluated read of a network that has not been made yet.
-var appsSubnetId = '${network.id}/subnets/${subnetName}'
-
-// Blob only (ADR 0080). Two fences, either of which would hold alone (ADR 0082): the network refuses every
-// request that does not come from the app's subnet, and shared-key access is off, so no key exists to leak
-// and the only credential that works is the app's identity. An owner who wants to read the recordings from
-// elsewhere adds their own address for the occasion (infra/README.md).
+// Blob only (ADR 0080). One fence, the one that names who may read (ADR 0160): shared-key access is off, so
+// no key exists to leak, public blob access is off, and the only credential that works is an identity
+// holding a role on the account, which is the app's. The network is open: closing it to all but the app's
+// subnet put the environment in a virtual network, and with it a load balancer billed every hour.
 resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: take('${namePrefix}${suffix}', 24)
   location: location
@@ -126,14 +81,9 @@ resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
     allowSharedKeyAccess: false
     defaultToOAuthAuthentication: true
     networkAcls: {
-      defaultAction: 'Deny'
+      defaultAction: 'Allow'
       bypass: 'None'
-      virtualNetworkRules: [
-        {
-          id: appsSubnetId
-          action: 'Allow'
-        }
-      ]
+      virtualNetworkRules: []
       ipRules: []
     }
     encryption: {
@@ -173,14 +123,12 @@ resource playtests 'Microsoft.Storage/storageAccounts/blobServices/containers@20
   }
 }
 
+// On the platform's own network, not one of ours (ADR 0160): an environment in a virtual network brings a
+// load balancer and a public address into the subscription, billed whether or not a replica runs.
 resource appEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = {
   name: '${namePrefix}-env-${suffix}'
   location: location
   properties: {
-    vnetConfiguration: {
-      infrastructureSubnetId: appsSubnetId
-      internal: false
-    }
     workloadProfiles: [
       {
         name: 'Consumption'

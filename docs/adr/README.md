@@ -87,7 +87,7 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0079](0079-decision-previews-and-reproducible-practice.md) | Decision previews and reproducible practice | Accepted |
 | [0080](0080-host-the-table-on-azure-container-apps.md) | Host the table on Azure Container Apps, with the studio left on GitHub Pages | Accepted |
 | [0081](0081-a-host-of-tables-found-by-their-tokens.md) | A host of tables, each found by its tokens, opened from a lobby behind the operator's door | Accepted |
-| [0082](0082-deploy-from-github-to-azure-without-a-secret.md) | Deploy the table from GitHub to Azure without a secret | Accepted |
+| [0082](0082-deploy-from-github-to-azure-without-a-secret.md) | Deploy the table from GitHub to Azure without a secret | Accepted, amended by [0160](0160-run-the-table-outside-a-virtual-network.md) |
 | [0083](0083-an-action-resolves-when-its-targets-are-confirmed.md) | An action resolves when its targets are confirmed | Accepted, amended by [0112](0112-spells-are-chosen-at-the-slot-by-default.md) for the default rules |
 | [0084](0084-a-creature-waits-only-for-a-critical-worth-waiting-for.md) | A creature waits only for a critical worth waiting for | Accepted |
 | [0085](0085-a-denied-kill-reads-the-enemies-still-to-act.md) | A denied kill reads the enemies still to act | Accepted |
@@ -165,3 +165,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0157](0157-make-the-battle-view-the-game.md) | Make the battle view the game, and archive the classic table | Accepted |
 | [0158](0158-carve-the-interface-in-bone-and-soot.md) | Carve the interface in bone and soot: one display face, sharp cut shapes, grain on every surface, one bar in a match | Accepted |
 | [0159](0159-advance-a-table-by-submitted-decisions-over-its-journal.md) | Advance a table by submitted decisions over its journal, not by a loop that waits in memory | Accepted |
+| [0160](0160-run-the-table-outside-a-virtual-network.md) | Run the hosted table outside a virtual network, and keep the storage account by identity alone | Accepted |
