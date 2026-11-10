@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using DownfallArena.Application.Matches.Journaling;
 using DownfallArena.Application.Matches.Ports;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Application.Messaging;
@@ -14,7 +15,7 @@ namespace DownfallArena.Application.Learning.Tracing;
 /// dispatched once the command that raised them is saved, so the boards are the ones after that command.
 /// <see cref="Complete"/> hands the trace over and forgets the match.
 /// </summary>
-public sealed class MatchTraceRecorder(IMatchRepository matches) : IDomainEventListener
+public sealed class MatchTraceRecorder(IMatchRepository matches) : IDomainEventListener, IMatchMemory
 {
     // Concurrent on the outside, because a batch plays its matches at the same time (ADR 0030) and this
     // listens to every one of them; and guarded on the inside, because a match being played is also a match

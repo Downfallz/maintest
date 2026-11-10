@@ -7,6 +7,7 @@ using DownfallArena.Application.Learning.Recording;
 using DownfallArena.Application.Learning.Tracing;
 using DownfallArena.Application.Matches.Commands;
 using DownfallArena.Application.Matches.Driving;
+using DownfallArena.Application.Matches.Journaling;
 using DownfallArena.Application.Messaging;
 using DownfallArena.Application.Ports;
 using DownfallArena.Application.Simulation;
@@ -95,6 +96,7 @@ internal sealed class GameSession
         {
             serviceCollection.AddSingleton<MatchTraceRecorder>();
             serviceCollection.AddSingleton<IDomainEventListener>(provider => provider.GetRequiredService<MatchTraceRecorder>());
+            serviceCollection.AddSingleton<IMatchMemory>(provider => provider.GetRequiredService<MatchTraceRecorder>());
         }
 
         if (cliOptions.SlotLog is { } slotLog)

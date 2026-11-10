@@ -15,7 +15,7 @@ namespace DownfallArena.Infrastructure;
 public static class InfrastructureServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the adapters: the in-memory match repository, the seeded random source factory, the weights
+    /// Registers the adapters: the in-memory match repository and decision journal, the seeded random source factory, the weights
     /// files of the heuristic agent, and a process random source. Without a seed the process source is seeded once per process; pass one to replay.
     /// </summary>
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, int? randomSeed = null)
@@ -23,6 +23,7 @@ public static class InfrastructureServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.TryAddSingleton<IMatchRepository, InMemoryMatchRepository>();
+        services.TryAddSingleton<IDecisionJournal, InMemoryDecisionJournal>();
         services.TryAddSingleton<IRandomSourceFactory, SeededRandomSourceFactory>();
         services.TryAddSingleton<IScoringWeightsSource, JsonScoringWeightsSource>();
         services.TryAddSingleton<IPolicySource, JsonPolicySource>();

@@ -3,6 +3,7 @@ using DownfallArena.Application.Evaluation;
 using DownfallArena.Application.Matches;
 using DownfallArena.Application.Matches.Commands;
 using DownfallArena.Application.Matches.Driving;
+using DownfallArena.Application.Matches.Journaling;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Application.Matches.Queries;
 using DownfallArena.Application.Messaging;
@@ -46,6 +47,8 @@ public static class ApplicationServiceCollectionExtensions
         services.TryAddTransient<MatchQueryHandlers>();
         services.TryAddTransient<MatchDriver>();
         services.TryAddTransient<MatchStepper>();
+        services.TryAddTransient<MatchReplay>();
+        services.TryAddSingleton<JournaledStepper>();
         services.TryAddTransient<RandomAgent>();
         services.TryAddSingleton<IAgentFactory, AgentFactory>();
         services.TryAddTransient<BatchRunner>();

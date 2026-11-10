@@ -1,0 +1,99 @@
+using DownfallArena.Application.Matches.Decisions;
+using DownfallArena.Application.Matches.Driving;
+using DownfallArena.Application.Matches.Projections;
+using DownfallArena.Domain.Matches;
+using DownfallArena.Domain.Matches.Rounds;
+using DownfallArena.SharedKernel.Identifiers;
+
+namespace DownfallArena.Infrastructure.Matches;
+
+/// <summary>
+/// One line of <c>decisions.jsonl</c>, the file the table has written since ADR 0091: a decision as the wire
+/// would have posted it -- a creature by its number, a spell and a package by their ids -- with the seat that
+/// made it and when. The file also holds lines that are no decision (a seat changing hands); they are read as
+/// lines and carry no decision.
+/// </summary>
+internal sealed record JournalLine
+{
+    public required long Seq { get; init; }
+
+    public required DateTimeOffset At { get; init; }
+
+    /// <summary>The seat, as a URL names it: <c>player1</c> or <c>player2</c>.</summary>
+    public required string Slot { get; init; }
+
+    /// <summary>A <see cref="PlayerOptionsKind" /> name for a decision; anything else is another kind of line.</summary>
+    public required string Kind { get; init; }
+
+    public int? Creature { get; init; }
+
+    public string? Spell { get; init; }
+
+    public string? Tier { get; init; }
+
+    public string? Speed { get; init; }
+
+    public IReadOnlyList<int>? Targets { get; init; }
+
+    public IReadOnlyList<int>? Order { get; init; }
+
+    public bool Pass { get; init; }
+
+    /// <summary>For a seat changing hands: who was named for it.</summary>
+    public string? To { get; init; }
+
+    /// <summary>For a seat changing hands: the round it changes at the top of.</summary>
+    public int? AtRound { get; init; }
+
+    public static JournalLine Of(long seq, DateTimeOffset at, SeatDecision taken)
+    {
+        var decision = taken.Decision;
+        return new JournalLine
+        {
+            Seq = seq,
+            At = at,
+            Slot = taken.Slot == PlayerSlot.Player1 ? "player1" : "player2",
+            Kind = decision.Kind.ToString(),
+            Creature = decision.Creature?.Value,
+            Spell = decision.Spell?.ToString(),
+            Tier = decision.Tier?.ToString(),
+            Speed = decision.Speed?.ToString(),
+            Targets = decision.Kind is PlayerOptionsKind.Target or PlayerOptionsKind.Action ? [.. decision.Targets.Select(target => target.Value)] : null,
+            Order = decision.Kind == PlayerOptionsKind.TieOrder ? [.. decision.Order.Select(creature => creature.Value)] : null,
+            Pass = decision.IsPass,
+        };
+    }
+
+    /// <summary>
+    /// The decision this line records, or none for a line that is not a decision. A line that names a decision
+    /// and lacks what its kind needs is a broken file, not another kind of line.
+    /// </summary>
+    public SeatDecision? ToDecision()
+    {
+        if (!Enum.TryParse<PlayerOptionsKind>(Kind, out var kind) || kind is PlayerOptionsKind.Waiting or PlayerOptionsKind.Ended)
+        {
+            return null;
+        }
+
+        var slot = Slot switch
+        {
+            "player1" => PlayerSlot.Player1,
+            "player2" => PlayerSlot.Player2,
+            _ => throw Broken($"'{Slot}' names no seat"),
+        };
+        var decision = kind switch
+        {
+            PlayerOptionsKind.Evolution when Pass => PlayerDecision.Pass,
+            PlayerOptionsKind.Evolution when Creature is { } creature && Tier is { } tier => PlayerDecision.Buy(CreatureId.From(creature), TierId.Parse(tier)),
+            PlayerOptionsKind.Speed when Creature is { } creature && Enum.TryParse<Speed>(Speed, out var speed) && Enum.IsDefined(speed) => PlayerDecision.ChooseSpeed(CreatureId.From(creature), speed),
+            PlayerOptionsKind.TieOrder when Order is { } order => PlayerDecision.OrderTies([.. order.Select(CreatureId.From)]),
+            PlayerOptionsKind.Intent when Creature is { } creature && Spell is { } spell => PlayerDecision.DeclareIntent(CreatureId.From(creature), SpellId.Parse(spell)),
+            PlayerOptionsKind.Target => PlayerDecision.BindTargets([.. (Targets ?? []).Select(CreatureId.From)]),
+            PlayerOptionsKind.Action when Creature is { } creature && Spell is { } spell => PlayerDecision.Act(CreatureId.From(creature), SpellId.Parse(spell), [.. (Targets ?? []).Select(CreatureId.From)]),
+            _ => throw Broken($"it is a {Kind} without what a {Kind} needs"),
+        };
+        return new SeatDecision(slot, decision);
+    }
+
+    private InvalidDataException Broken(string why) => new($"Journal line {Seq} is not a decision: {why}.");
+}
