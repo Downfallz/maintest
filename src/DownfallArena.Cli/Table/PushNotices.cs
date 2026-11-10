@@ -31,7 +31,7 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
 
     // The last asking each seat's page said it drew, kept on the seat's own lifetime: a table let go of takes
     // its seats, and their entries, with it.
-    private readonly ConditionalWeakTable<HumanSeat, StrongBox<long>> _shown = [];
+    private readonly ConditionalWeakTable<ISeatPerson, StrongBox<long>> _shown = [];
 
     // The endpoints a push service said were gone. A browser keeps its subscription when the service drops it,
     // and a page sends it again on every load; answering those with 410 is how the page learns to make a new

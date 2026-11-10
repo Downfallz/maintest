@@ -456,7 +456,7 @@ public sealed class TablePilotTests : IDisposable
             _ => null,
         });
 
-        var api = new TableApi(
+        var api = Driven.Api(
             session,
             session.Queries,
             [new TableSeat(PlayerSlot.Player1, SeatToken, Person: null), new TableSeat(PlayerSlot.Player2, "token-of-player-2", Person: null)],

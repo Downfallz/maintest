@@ -189,7 +189,7 @@ public sealed class WaitingRoomTests : IDisposable
         answer.Status.ShouldBe(status, Encoding.UTF8.GetString(answer.Body));
     }
 
-    private static async Task<Asking> Asked(HumanSeat person, long after = 0)
+    private static async Task<Asking> Asked(ISeatPerson person, long after = 0)
     {
         for (var attempt = 0; attempt < 300 && (person.Waiting is null || person.Waiting.Asked == after); attempt++)
         {

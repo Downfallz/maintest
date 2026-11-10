@@ -232,7 +232,7 @@ internal static class TableHost
 
         foreach (var seat in table.Seats)
         {
-            var who = seat.Person is null ? table.Session.Seat(seat.Slot).Seated.Name : "a person";
+            var who = seat.Person is null ? table.Session.SeatedName(seat.Slot) : "a person";
             var join = registry.Codes.Of(seat) is { } code ? $" — joins at {server.Url[..^1]}{JoinCodes.Prefix}{code}" : string.Empty;
             Console.WriteLine($"  {seat.Name}: {who}{join}");
         }

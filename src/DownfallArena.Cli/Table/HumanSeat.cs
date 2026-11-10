@@ -17,7 +17,7 @@ namespace DownfallArena.Cli.Table;
 /// sessions at once (<c>docs/tabletop/playtest-app.md</c>, ADR 0081). What it does not do is decide anything: the question it is
 /// waiting on is public, and whoever answers has to answer that exact question.
 /// </remarks>
-internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
+internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent, ISeatPerson
 {
     private readonly Lock _gate = new();
     private Asking? _question;

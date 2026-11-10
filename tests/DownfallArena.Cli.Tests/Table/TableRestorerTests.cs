@@ -136,7 +136,7 @@ public sealed class TableRestorerTests : IDisposable
         (await _after.Stored!.JournalAsync(table.Id, TestContext.Current.CancellationToken)).Count.ShouldBe(journal.Count, "a replay writes nothing it read");
 
         // And the game goes on from there: the person's next decision is taken by the rebuilt table and written down.
-        rebuilt.Seats[0].Person!.Submit(PlayerDecision.DeclareIntent(waiting.Creature!.Value, SpellId.Parse("spell:strike:v1")), waiting.Asked).ShouldBeTrue();
+        ((HumanSeat)rebuilt.Seats[0].Person!).Submit(PlayerDecision.DeclareIntent(waiting.Creature!.Value, SpellId.Parse("spell:strike:v1")), waiting.Asked).ShouldBeTrue();
         for (var attempt = 0; attempt < 300 && (await _after.Stored!.JournalAsync(table.Id, TestContext.Current.CancellationToken)).Count == journal.Count; attempt++)
         {
             await Task.Delay(20, TestContext.Current.CancellationToken);
@@ -157,8 +157,8 @@ public sealed class TableRestorerTests : IDisposable
         var person = table.Seats[0].Person!;
         await PlayUntil(table, person, PlayerOptionsKind.Action);
         var asked = person.Waiting.ShouldNotBeNull();
-        var options = await table.Session.Queries.GetPlayerOptions.HandleAsync(new GetPlayerOptions(table.Session.MatchId, PlayerSlot.Player1), TestContext.Current.CancellationToken);
-        var offered = options.Value.Action.ShouldNotBeNull().Spells[0];
+        var options = await table.Session.SnapshotAsync(PlayerSlot.Player1);
+        var offered = options.Value.Options.Action.ShouldNotBeNull().Spells[0];
         await Post(table, asked, $$"""{"kind":"Action","creature":{{asked.Creature!.Value.Value}},"spell":"{{offered.Spell}}","targets":[{{offered.LegalTargets.Candidates[0].Value}}]}""");
         var next = await Waiting(person);
         var board = await Board(table.Session, PlayerSlot.Player1);
@@ -229,7 +229,7 @@ public sealed class TableRestorerTests : IDisposable
     public async Task An_open_table_is_rebuilt_even_after_a_long_break()
     {
         var table = await Opened(HostedTables.OnePerson);
-        table.Seats[0].Person!.Submit(PlayerDecision.Pass, (await Waiting(table.Seats[0].Person!)).Asked).ShouldBeTrue();
+        ((HumanSeat)table.Seats[0].Person!).Submit(PlayerDecision.Pass, (await Waiting(table.Seats[0].Person!)).Asked).ShouldBeTrue();
         await Task.Delay(100, TestContext.Current.CancellationToken);
         var later = new Clock { Now = DateTimeOffset.UtcNow + TimeSpan.FromDays(30) };
 
@@ -488,7 +488,7 @@ public sealed class TableRestorerTests : IDisposable
     /// Through the table's API, as a page plays: that is where a decision is checkpointed into the trace, which
     /// is what a rebuild is held against.
     /// </summary>
-    private async Task PlayUntil(PlayedTable table, HumanSeat person, PlayerOptionsKind kind)
+    private async Task PlayUntil(PlayedTable table, ISeatPerson person, PlayerOptionsKind kind)
     {
         for (var attempt = 0; attempt < 600; attempt++)
         {
@@ -506,8 +506,8 @@ public sealed class TableRestorerTests : IDisposable
                     await Post(table, question, $$"""{"kind":"Speed","creature":{{creature.Value}},"speed":"Quick"}""");
                     break;
                 case { Kind: PlayerOptionsKind.TieOrder } question:
-                    var options = await table.Session.Queries.GetPlayerOptions.HandleAsync(new GetPlayerOptions(table.Session.MatchId, PlayerSlot.Player1), TestContext.Current.CancellationToken);
-                    var order = options.Value.TieOrder!.Ties.SelectMany(group => group).Select(creature => creature.Value);
+                    var options = await table.Session.SnapshotAsync(PlayerSlot.Player1);
+                    var order = options.Value.Options.TieOrder!.Ties.SelectMany(group => group).Select(creature => creature.Value);
                     await Post(table, question, $$"""{"kind":"TieOrder","order":[{{string.Join(",", order)}}]}""");
                     break;
                 default:
@@ -552,7 +552,7 @@ public sealed class TableRestorerTests : IDisposable
         answer.Status.ShouldBe(204, System.Text.Encoding.UTF8.GetString(answer.Body));
     }
 
-    private static async Task<Asking> Waiting(HumanSeat person)
+    private static async Task<Asking> Waiting(ISeatPerson person)
     {
         for (var attempt = 0; attempt < 300 && person.Waiting is null; attempt++)
         {
@@ -562,9 +562,9 @@ public sealed class TableRestorerTests : IDisposable
         return person.Waiting.ShouldNotBeNull();
     }
 
-    private static async Task<string> Board(TableSession session, PlayerSlot slot)
+    private static async Task<string> Board(ITableSession session, PlayerSlot slot)
     {
-        var board = await session.Queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(session.MatchId, slot), TestContext.Current.CancellationToken);
+        var board = await session.BoardAsync(slot);
         board.IsSuccess.ShouldBeTrue();
         return JsonSerializer.Serialize(board.Value, ArtifactJson.LineOptions);
     }

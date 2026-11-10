@@ -109,7 +109,7 @@ public sealed class RecordedTableReplayTests : IDisposable
 
     private static async Task<string> Held(PlayedTable table, PlayerSlot slot)
     {
-        var board = await table.Session.Queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(table.Session.MatchId, slot), TestContext.Current.CancellationToken);
+        var board = await table.Session.BoardAsync(slot);
         return JsonSerializer.Serialize(board.Value, ArtifactJson.LineOptions);
     }
 

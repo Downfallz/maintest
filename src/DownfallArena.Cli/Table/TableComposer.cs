@@ -311,8 +311,9 @@ internal sealed class TableComposer
 
             var seats = new[] { seat1.Seat, seat2.Seat };
             var pilot = new TablePilot(rebuilding?.Record.PilotToken ?? Token(), SeatingOf);
-            var api = new TableApi(session, session.Queries, seats, Catalogue(rules), events, run, pilot) { Guide = Guide(rules), Agents = Agents, Push = Push };
-            var table = new PlayedTable(new TableOpening(id, rebuilding?.Record.CreatedAt ?? _clock.GetUtcNow(), request), session, api, seats, pilot, run, stopping)
+            var driven = new DrivenSession(session, seats, run);
+            var api = new TableApi(driven, seats, Catalogue(rules), events, run, pilot) { Guide = Guide(rules), Agents = Agents, Push = Push };
+            var table = new PlayedTable(new TableOpening(id, rebuilding?.Record.CreatedAt ?? _clock.GetUtcNow(), request), driven, api, seats, pilot, run, stopping)
             {
                 EventStreamVersion = rebuilding?.Record.EventStreamVersion ?? MatchTrace.CurrentEventStreamVersion,
                 OpenSeats = rebuilding?.Record.OpenSeats ?? [],
@@ -400,7 +401,7 @@ internal sealed class TableComposer
             // deleted while the files are written must not change who played (ADR 0122, stage 5).
             var owners = table.Seats.Select(seat => seat.Account).ToArray();
             var finishedAt = _clock.GetUtcNow();
-            var board = await session.Queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(session.MatchId, PlayerSlot.Player1));
+            var board = await session.BoardAsync(PlayerSlot.Player1);
             if (board.IsFailure)
             {
                 Console.WriteLine($"  Session {run.SessionId} ended but its final board could not be read: {board.Error.Message}");
@@ -492,7 +493,7 @@ internal sealed class TableComposer
     {
         if (seat.Person is null)
         {
-            var spec = table.Session.Seat(seat.Slot).Seated.Name;
+            var spec = table.Session.SeatedName(seat.Slot);
             return LobbyApi.BotName(Agents.FirstOrDefault(agent => string.Equals(agent.Value, spec, StringComparison.OrdinalIgnoreCase))?.Label ?? spec);
         }
 
@@ -526,7 +527,7 @@ internal sealed class TableComposer
             board.RoundNumber ?? 0,
             outcome.Winner is { } winner ? TableSeat.NameOf(winner) : null,
             [.. table.Seats.Select((seat, index) => seat.Person is null
-                ? new ResultSeat(seat.Name, null, table.Session.Seat(seat.Slot).Seated.Name)
+                ? new ResultSeat(seat.Name, null, table.Session.SeatedName(seat.Slot))
                 : new ResultSeat(seat.Name, accounts[index], null))],
             table.Id,
             table.Casual);
@@ -563,7 +564,7 @@ internal sealed class TableComposer
     {
         if (string.Equals(wanted, TableRequest.Person, StringComparison.OrdinalIgnoreCase))
         {
-            return seat.Person is { } person ? new Occupant(person, PersonName(request)) : null;
+            return seat.Person is HumanSeat person ? new Occupant(person, PersonName(request)) : null;
         }
 
         try

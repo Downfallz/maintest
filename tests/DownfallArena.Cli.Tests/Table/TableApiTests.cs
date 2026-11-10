@@ -357,7 +357,7 @@ public sealed partial class TableApiTests : IDisposable
 
     /// <summary>The same table, built again: the same content and the same rules answer the same tag.</summary>
     private TableApi Api((TableApi Api, TableSession Session, HumanSeat Person, string Token) table, RuleSet rules) =>
-        new(
+        Driven.Api(
             table.Session,
             table.Session.Queries,
             [new TableSeat(PlayerSlot.Player1, table.Token, table.Person), new TableSeat(PlayerSlot.Player2, "token-of-player-2", Person: null)],
@@ -654,7 +654,7 @@ public sealed partial class TableApiTests : IDisposable
     {
         var table = await Seated();
         var moving = table.Session.Queries with { GetPlayerOptions = new AnsweredWhileRead(table.Session.Queries.GetPlayerOptions, table.Person, movesBeforeTheRead) };
-        var api = new TableApi(
+        var api = Driven.Api(
             table.Session,
             moving,
             [new TableSeat(PlayerSlot.Player1, table.Token, table.Person), new TableSeat(PlayerSlot.Player2, "token-of-player-2", Person: null)],
@@ -683,7 +683,7 @@ public sealed partial class TableApiTests : IDisposable
         var session = await TableSession.StartAsync(_host.Services, rules, seed: 7, new SeatAgent(new Occupant(person, "human:mk")), new SeatAgent(new Occupant(bot, "greedy")), cancellationToken: _stopping.Token);
 
         const string token = "token-of-player-1";
-        var api = new TableApi(
+        var api = Driven.Api(
             session,
             session.Queries,
             [new TableSeat(PlayerSlot.Player1, token, person), new TableSeat(PlayerSlot.Player2, "token-of-player-2", Person: null)],

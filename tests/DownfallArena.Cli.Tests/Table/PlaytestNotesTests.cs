@@ -379,7 +379,7 @@ public sealed class PlaytestNotesTests : IDisposable
         var table = await Recording();
         var first = table.Person.Waiting!.Asked;
         var resources = _host!.Services.GetRequiredService<IGameResources>();
-        var api = new TableApi(
+        var api = Driven.Api(
             table.Session,
             table.Session.Queries with { GetPlayerOptions = new AnsweredElsewhere(table.Session.Queries.GetPlayerOptions, table.Person, table.Run) },
             [new TableSeat(PlayerSlot.Player1, table.Token, table.Person), new TableSeat(PlayerSlot.Player2, "token-of-player-2", Person: null)],
@@ -561,7 +561,7 @@ public sealed class PlaytestNotesTests : IDisposable
 
         var session = await TableSession.StartAsync(_host.Services, rules, seed: 7, new SeatAgent(new Occupant(person, "human:mk")), new SeatAgent(new Occupant(bot, "greedy")), new TableStart(run.Wrap), cancellationToken: _stopping.Token);
         const string token = "token-of-player-1";
-        var api = new TableApi(
+        var api = Driven.Api(
             session,
             session.Queries,
             [new TableSeat(PlayerSlot.Player1, token, person), new TableSeat(PlayerSlot.Player2, "token-of-player-2", Person: null)],
