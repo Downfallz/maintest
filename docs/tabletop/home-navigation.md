@@ -6,9 +6,12 @@ HTML/CSS/JavaScript presentation, using the existing account and seat APIs.
 
 ## Page states
 
-- **Signed out on an account host:** creature artwork, a short tactical-game introduction, three steps
-  explaining mutations/tempo/spells, and the existing Google sign-in. No empty game lists, friend panel or
-  device settings. The developer host still uses its typed-name sign-in.
+- **Signed out on an account host:** a short tactical-game introduction beside three Stage 3 creatures
+  (Ravager, Deathstalker, Transcendent) set in depth on the eclipse battlefield, nearest lowest and largest, none
+  hiding another; an Evolution strip (Warped, Stormborn, Cataclysm: Stage 1 to 3, loaded as it scrolls into view);
+  three steps (mutations, tempo, spells); four things to do (friends and rematches, ranked or unranked, the bell and
+  phone notices, the bot); and the existing Google sign-in. No empty game lists, friend panel or device settings.
+  The developer host still uses its typed-name sign-in.
 - **Signed in:** a greeting, New battle, invitations, Your games, and Find an opponent. Account actions stay
   behind the player's avatar/name. Match cards retain resume, join, invitation and turn-state behaviours.
   Your games groups its Ongoing and Finished tabs against players and against bots, at most five of each in
