@@ -10,6 +10,7 @@ using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Events;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.SharedKernel.Identifiers;
+using DownfallArena.SharedKernel.Primitives;
 using NSubstitute;
 
 namespace DownfallArena.Application.Tests.Matches.Journaling;
@@ -414,6 +415,86 @@ public sealed class JournaledStepperTests
         current.IsSuccess.ShouldBeTrue();
         over.Error.ShouldBe(MatchErrors.NotInProgress);
         journal.Lines.Skip(written).ShouldBe([new SeatChangeEntry(PlayerSlot.Player1, "greedy", 2), new ConcessionEntry(PlayerSlot.Player1)]);
+    }
+
+    /// <summary>
+    /// What a seat change depends on is settled in the turn that writes it: the caller is shown the match as
+    /// that turn finds it and says the line, or why there is none. Nothing of the seat's can land in between.
+    /// </summary>
+    [Fact]
+    public async Task A_seat_change_is_settled_against_the_match_as_its_turn_finds_it_and_one_refused_there_writes_nothing()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent);
+        var journal = new JournalStore();
+        var replica = new Replica(journal);
+        await replica.Journaled.SubmitAsync(table, MatchSeats.People, new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass), cancellationToken: TestContext.Current.CancellationToken);
+        var change = new SeatChangeEntry(PlayerSlot.Player2, "greedy", 2, Reached: 1);
+        JournaledState? found = null;
+
+        var refused = await replica.Journaled.ChangeSeatAsync(
+            table,
+            state =>
+            {
+                found = state;
+                return Result.Failure<SeatChangeEntry>(JournalErrors.RoundReached);
+            },
+            TestContext.Current.CancellationToken);
+        var taken = await replica.Journaled.ChangeSeatAsync(table, _ => Result.Success(change), TestContext.Current.CancellationToken);
+
+        refused.Error.ShouldBe(JournalErrors.RoundReached);
+        found.ShouldNotBeNull().Player1.Asking.ShouldBe(2);
+        taken.Value.SeatChanges.ShouldBe([change]);
+        journal.Lines.OfType<SeatChangeEntry>().ShouldBe([change]);
+    }
+
+    /// <summary>
+    /// Who sits where is a reading of the journal's seat changes, taken when the step has its turn: a seat told
+    /// to change hands while the step waited for the match has changed hands by the time the step plays it.
+    /// </summary>
+    [Fact]
+    public async Task A_step_s_seats_are_what_the_journal_s_seat_changes_make_them_when_it_has_its_turn()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent);
+        var journal = new JournalStore();
+        var replica = new Replica(journal);
+        var change = new SeatChangeEntry(PlayerSlot.Player1, "random", 1);
+        await replica.Journaled.ChangeSeatAsync(table, change, TestContext.Current.CancellationToken);
+        IReadOnlyList<SeatChangeEntry>? read = null;
+
+        var step = await replica.Journaled.AdvanceAsync(
+            table,
+            changes =>
+            {
+                read = changes;
+                return new MatchSeats(changes.Count == 1 ? Agent(3, PlayerSlot.Player1) : null, null);
+            },
+            once: true,
+            TestContext.Current.CancellationToken);
+
+        read.ShouldBe([change]);
+        step.Value.Step.Decided.ShouldNotBeEmpty();
+        step.Value.Step.Decided.ShouldAllBe(decision => decision.Slot == PlayerSlot.Player1);
+        step.Value.Step.Asked.ShouldBe([PlayerSlot.Player2]);
+    }
+
+    /// <summary>
+    /// A decision is its submitter's to make only while the seat is: when the journal's seat changes have left
+    /// the seat to somebody else by the time the decision has its turn, it is late, and nothing is written.
+    /// </summary>
+    [Fact]
+    public async Task A_decision_the_seat_changes_leave_to_somebody_else_is_late_and_writes_nothing()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent);
+        var journal = new JournalStore();
+        var replica = new Replica(journal);
+        var pass = new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass);
+
+        var late = await replica.Journaled.SubmitAsync(table, _ => null, pass, cancellationToken: TestContext.Current.CancellationToken);
+        var taken = await replica.Journaled.SubmitAsync(table, _ => MatchSeats.People, pass, cancellationToken: TestContext.Current.CancellationToken);
+
+        late.Error.ShouldBe(DecisionErrors.NotPending);
+        taken.IsSuccess.ShouldBeTrue();
+        journal.Decisions.ShouldBe([pass]);
     }
 
     /// <summary>

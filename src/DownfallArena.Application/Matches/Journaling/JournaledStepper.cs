@@ -70,9 +70,23 @@ public sealed class JournaledStepper(
     /// </param>
     public Task<Result<JournaledStep>> AdvanceAsync(JournaledMatch match, MatchSeats seats, bool once, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(match);
         ArgumentNullException.ThrowIfNull(seats);
-        return StepAsync(match, _ => null, held => stepper.AdvanceAsync(match.MatchId, seats, held, once, cancellationToken), cancellationToken);
+        return AdvanceAsync(match, _ => seats, once, cancellationToken);
+    }
+
+    /// <summary>
+    /// Takes the decisions the Player agents owe, the seats being whatever the journal's seat changes make them
+    /// when the step has its turn.
+    /// </summary>
+    /// <param name="seated">
+    /// Who sits where, given the seat changes the journal holds. Asked inside the step's turn, so a seat told to
+    /// change hands while this step waited for the match has changed hands by the time the step reads it.
+    /// </param>
+    public Task<Result<JournaledStep>> AdvanceAsync(JournaledMatch match, Func<IReadOnlyList<SeatChangeEntry>, MatchSeats> seated, bool once, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(match);
+        ArgumentNullException.ThrowIfNull(seated);
+        return StepAsync(match, kept => stepper.AdvanceAsync(match.MatchId, seated([.. kept.SeatChanges]), kept.Held, once, cancellationToken), cancellationToken);
     }
 
     /// <summary>
@@ -86,13 +100,28 @@ public sealed class JournaledStepper(
     /// </param>
     public Task<Result<JournaledStep>> SubmitAsync(JournaledMatch match, MatchSeats seats, SeatDecision submitted, long? asking = null, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(match);
         ArgumentNullException.ThrowIfNull(seats);
+        return SubmitAsync(match, _ => seats, submitted, asking, cancellationToken);
+    }
+
+    /// <summary>
+    /// Takes the decision of a seat nobody here answers for, the seats being whatever the journal's seat changes
+    /// make them when the decision has its turn.
+    /// </summary>
+    /// <param name="seated">
+    /// Who sits where, given the seat changes the journal holds; none when they leave the decision no longer the
+    /// submitter's to make, which is answered as a late one (<see cref="DecisionErrors.NotPending" />).
+    /// </param>
+    public Task<Result<JournaledStep>> SubmitAsync(JournaledMatch match, Func<IReadOnlyList<SeatChangeEntry>, MatchSeats?> seated, SeatDecision submitted, long? asking = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(match);
+        ArgumentNullException.ThrowIfNull(seated);
         ArgumentNullException.ThrowIfNull(submitted);
         return StepAsync(
             match,
-            kept => asking is { } believed && believed != kept.Asking(submitted.Slot) ? DecisionErrors.NotPending : null,
-            held => stepper.SubmitAsync(match.MatchId, seats, held, submitted, cancellationToken),
+            kept => (asking is { } believed && believed != kept.Asking(submitted.Slot)) || seated([.. kept.SeatChanges]) is not { } seats
+                ? Task.FromResult(Result.Failure<MatchStep>(DecisionErrors.NotPending))
+                : stepper.SubmitAsync(match.MatchId, seats, kept.Held, submitted, cancellationToken),
             cancellationToken);
     }
 
@@ -152,8 +181,22 @@ public sealed class JournaledStepper(
     /// </remarks>
     public Task<Result<JournaledState>> ChangeSeatAsync(JournaledMatch match, SeatChangeEntry change, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(match);
         ArgumentNullException.ThrowIfNull(change);
+        return ChangeSeatAsync(match, _ => Result.Success(change), cancellationToken);
+    }
+
+    /// <summary>
+    /// Writes down that a seat changes hands, the change being settled against the match as it stands when the
+    /// request has its turn.
+    /// </summary>
+    /// <param name="asked">
+    /// The change to write, or why there is none, given the match as it stands. Asked inside the turn that writes
+    /// it: whatever the caller knows of the seat is then true of the very moment the line lands after.
+    /// </param>
+    public Task<Result<JournaledState>> ChangeSeatAsync(JournaledMatch match, Func<JournaledState, Result<SeatChangeEntry>> asked, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(match);
+        ArgumentNullException.ThrowIfNull(asked);
         return InTurnAsync(match.MatchId, async kept =>
         {
             var loaded = await LoadAsync(match, kept, cancellationToken);
@@ -173,6 +216,13 @@ public sealed class JournaledStepper(
                 return Result.Failure<JournaledState>(MatchErrors.NotInProgress);
             }
 
+            var wanted = asked(state.Value);
+            if (wanted.IsFailure)
+            {
+                return Result.Failure<JournaledState>(wanted.Error);
+            }
+
+            var change = wanted.Value;
             if (change.FromRound < (state.Value.Player1.View.Board.RoundNumber ?? 0))
             {
                 return Result.Failure<JournaledState>(JournalErrors.RoundReached);
@@ -205,22 +255,13 @@ public sealed class JournaledStepper(
             return true;
         });
 
-    private Task<Result<JournaledStep>> StepAsync(
-        JournaledMatch match,
-        Func<Kept, DomainError?> late,
-        Func<HeldAnswers, Task<Result<MatchStep>>> take,
-        CancellationToken cancellationToken) =>
+    private Task<Result<JournaledStep>> StepAsync(JournaledMatch match, Func<Kept, Task<Result<MatchStep>>> take, CancellationToken cancellationToken) =>
         InTurnAsync(match.MatchId, async kept =>
         {
             var loaded = await LoadAsync(match, kept, cancellationToken);
             if (loaded.IsFailure)
             {
                 return Result.Failure<JournaledStep>(loaded.Error);
-            }
-
-            if (late(kept) is { } refusal)
-            {
-                return Result.Failure<JournaledStep>(refusal);
             }
 
             try
@@ -240,10 +281,10 @@ public sealed class JournaledStepper(
         JournaledMatch match,
         Kept kept,
         JournalPosition loaded,
-        Func<HeldAnswers, Task<Result<MatchStep>>> take,
+        Func<Kept, Task<Result<MatchStep>>> take,
         CancellationToken cancellationToken)
     {
-        var step = await take(kept.Held);
+        var step = await take(kept);
         if (step.IsFailure)
         {
             // A decision refused before it was taken changed nothing. Any other refusal may have come after
