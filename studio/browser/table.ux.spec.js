@@ -202,9 +202,9 @@ test('the classic match ignores game shortcuts while its player menu owns focus'
   await page.reload();
   await expect(page.locator('#account-name')).toHaveText('Marc');
   await expect(page.locator('.speed-spell')).toHaveCount(6);
-  const menu = page.locator('#home-menu-toggle');
-  if (await menu.isVisible()) await menu.click();
-  await page.locator('#app-settings-open').click();
+  // Signed in, Settings opens from the account menu.
+  await page.locator('#account-menu summary').click();
+  await page.locator('#account-settings').click();
   await page.keyboard.press('1');
   await page.keyboard.press('Escape');
   await expect(page.locator('#app-settings-dialog')).toBeHidden();

@@ -9,8 +9,8 @@ const battle = {
 };
 const held = { table: battle, seats: [{ seat: 'player1', token: 'seat-token' }] };
 
-async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, games = null, finished = { players: [], bots: [] }, opponents = [], invitations = [], incoming = [challenger] } = {}) {
-  const state = { account, mode, meDown, offline: false, mineReads: 0, friendReads: 0, finishedReads: [], privateReads: [], release: null, invitations,
+async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, games = null, finished = { players: [], bots: [] }, opponents = [], invitations = [], incoming = [challenger], publicTables = [battle] } = {}) {
+  const state = { account, mode, meDown, offline: false, mineReads: 0, friendReads: 0, finishedReads: [], privateReads: [], release: null, invitations, publicTables,
     friends: { friends: [friend], incoming, outgoing: [] } };
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -33,7 +33,16 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
     if (path === '/api/account/dev') { state.account = player; return json({}); }
     if (path === '/api/lobby') {
       if (state.offline) return route.fulfill({ status: 503, json: { message: 'Offline' } });
-      return json({ recording: true, format: '3v3', formats: ['3v3', '2v2', '1v1'], tables: [battle] });
+      return json({ recording: true, format: '3v3', formats: ['3v3', '2v2', '1v1'], ongoing: state.publicTables.length, open: state.publicTables.filter(one => one.openSeats > 0).length });
+    }
+    // Find an opponent, a page of eight at a time, as the host serves it.
+    const listed = /^\/api\/lobby\/page\/(open|all)\/(\d+)$/.exec(path);
+    if (listed) {
+      if (state.offline) return route.fulfill({ status: 503, json: { message: 'Offline' } });
+      state.tablePages = [...(state.tablePages ?? []), `${listed[1]}/${listed[2]}`];
+      const all = listed[1] === 'open' ? state.publicTables.filter(one => one.openSeats > 0) : state.publicTables;
+      const pages = Math.max(1, Math.ceil(all.length / 8)), at = Math.min(Number(listed[2]), pages);
+      return json({ total: all.length, pages, page: at, items: all.slice((at - 1) * 8, at * 8) });
     }
     if (['/api/lobby/adopt', '/api/lobby/mine', '/api/lobby/resume'].includes(path)) {
       state.privateReads.push(path); state.mineReads++;
@@ -143,8 +152,8 @@ test('a guest sees an introduction and sign-in, with secondary details in the me
 test('a signed-in player keeps game settings with the account, starting from step, 1x and tips on', async ({ page }) => {
   const state = await home(page);
   await openNavigation(page);
-  // The menu and the account menu open the same Settings, on its Game tab.
-  await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Settings', exact: true })).toBeVisible();
+  // Signed in, Settings is in the account menu only: the main menu does not repeat it.
+  await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Settings', exact: true })).toBeHidden();
   await page.keyboard.press('Escape');
 
   const dialog = await openAccountSettings(page);
@@ -367,7 +376,7 @@ for (const file of ['leaderboard', 'battle', 'index']) {
     await expect(page.locator('#inbox-badge')).toHaveText('2');
     await openNavigation(page);
     const nav = page.getByRole('navigation', { name: 'Main navigation' });
-    await expect(nav.locator(':scope > :visible')).toHaveText(['Lobby', /Friends/, 'Leaderboard', 'Join with a code', 'Settings']);
+    await expect(nav.locator(':scope > :visible')).toHaveText(['Lobby', /Friends/, 'Leaderboard', 'Join with a code']);
     const sharedStyle = await nav.evaluate(node => {
       const props = ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'padding', 'minHeight'];
       const styleOf = selector => props.map(prop => getComputedStyle(node.querySelector(selector))[prop]);
@@ -413,14 +422,15 @@ test('your games are grouped against players and against bots, at most five of e
   await page.locator('#my-games-section').screenshot({ path: info.outputPath('lobby-ongoing.png') });
 
   await page.locator('#mine-finished').click();
-  await expect(bots.locator('.game-card')).toHaveCount(6); await expect(bots.locator('.game-card').first()).toContainText('Victory');
-  await expect(bots.locator('.game-card').first()).toContainText('vs Lookahead');
-  await expect(bots.locator('.game-card a').first()).toHaveAttribute('href', '/battle?replay=t0&seat=player1');
-  await expect(players.locator('.game-card')).toContainText('Defeat'); await expect(players.locator('.lobby-pages')).toHaveCount(0);
+  // Finished games are rows: one line each, with the result, who, when and the way back to the game.
+  await expect(bots.locator('.game-row')).toHaveCount(6); await expect(bots.locator('.game-row').first()).toContainText('Victory');
+  await expect(bots.locator('.game-row').first()).toContainText('vs Lookahead');
+  await expect(bots.locator('.game-row a').first()).toHaveAttribute('href', '/battle?replay=t0&seat=player1');
+  await expect(players.locator('.game-row')).toContainText('Defeat'); await expect(players.locator('.lobby-pages')).toHaveCount(0);
   await expect(bots.locator('.lobby-pages span')).toHaveText('Page 1 of 2');
   await page.locator('#my-games-section').screenshot({ path: info.outputPath('lobby-finished.png') });
   await bots.getByRole('button', { name: 'Next →' }).click();
-  await expect(bots.locator('.game-card')).toHaveCount(2); await expect(bots.locator('.lobby-pages span')).toHaveText('Page 2 of 2');
+  await expect(bots.locator('.game-row')).toHaveCount(2); await expect(bots.locator('.lobby-pages span')).toHaveText('Page 2 of 2');
   await expect(bots.getByRole('button', { name: 'Next →' })).toBeDisabled();
   expect(state.finishedReads.filter(read => read.startsWith('players'))).toEqual(['players/1']);
   await noOverflow(page);
@@ -455,7 +465,7 @@ test('a finished page that failed is read again on the next poll, and the three 
   finished.bots.push(won);
   await poll(); await expect.poll(() => state.finishedReads.length).toBe(6);
   await page.locator('#mine-finished').click();
-  await expect(page.locator('.mine-group.bots .game-card')).toHaveCount(1);
+  await expect(page.locator('.mine-group.bots .game-row')).toHaveCount(1);
   await poll(); await expect.poll(() => state.finishedReads.length).toBe(8);
   await poll(); await poll();
   expect(state.finishedReads.length).toBe(8);
@@ -576,4 +586,34 @@ test('with nothing waiting the bell shows no count and says so; a guest has no b
   await page.locator('#action-confirm').click();
   await expect(page.locator('body')).toHaveAttribute('data-home', 'guest');
   await expect(page.locator('#inbox-open')).toBeHidden();
+});
+
+test('find an opponent pages the tables eight at a time, one row each, open seats first and every battle on request', async ({ page }, info) => {
+  const open = Array.from({ length: 10 }, (_, index) => ({ id: `open-${index}`, format: '3v3', over: false, waiting: true, openSeats: 1, round: null,
+    seats: [{ seat: 'player1', kind: 'person', name: `Rival${index}`, turn: false }, { seat: 'player2', kind: 'open', name: 'Open seat' }] }));
+  const busy = { id: 'busy', format: '1v1', over: false, waiting: false, openSeats: 0, round: 5,
+    seats: [{ seat: 'player1', kind: 'person', name: 'Julie', turn: true }, { seat: 'player2', kind: 'bot', name: 'Lookahead' }] };
+  const state = await home(page, { publicTables: [...open, busy] });
+  const list = page.locator('#open-tables'), rows = list.locator('.game-row');
+  await expect(rows).toHaveCount(8);
+  await expect(page.locator('#tables-count')).toHaveText('10');
+  await expect(page.locator('#lobby-status')).toHaveText('11 tables ongoing · updates automatically');
+  await expect(rows.first()).toContainText('Rival0');
+  await expect(rows.first().getByRole('button', { name: 'Join 3v3 table open-0' })).toBeVisible();
+  // One row each: the list grows by short lines, never by cards.
+  for (const box of await rows.evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().height))) expect(box).toBeLessThan(page.viewportSize().width < 760 ? 120 : 80);
+  await noOverflow(page);
+  await page.locator('#my-games-section ~ section').last().screenshot({ path: info.outputPath('find-an-opponent.png') });
+  await list.getByRole('button', { name: 'Next →' }).click();
+  await expect(rows).toHaveCount(2);
+  await expect(list.locator('.lobby-pages span')).toHaveText('Page 2 of 2');
+  // Every battle underway, from its first page: the one nobody can join has no action.
+  await page.locator('#filter-all').click();
+  await expect(page.locator('#tables-count')).toHaveText('11');
+  await expect(list.locator('.lobby-pages span')).toHaveText('Page 1 of 2');
+  await list.getByRole('button', { name: 'Next →' }).click();
+  const last = rows.filter({ hasText: 'Julie' });
+  await expect(last).toContainText('Round 5'); await expect(last.getByRole('button')).toHaveCount(0);
+  expect(state.tablePages).toEqual(expect.arrayContaining(['open/1', 'open/2', 'all/1', 'all/2']));
+  expect(state.errors).toEqual([]);
 });

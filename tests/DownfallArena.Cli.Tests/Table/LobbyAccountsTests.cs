@@ -101,7 +101,7 @@ public sealed class LobbyAccountsTests : IDisposable
         await OpenAsync(mark);
         await OpenAsync(mark, opponent: "bot");
 
-        var tables = Read(await (await LobbyAsync()).HandleAsync("GET", "/api/lobby", "")).GetProperty("tables").EnumerateArray()
+        var tables = Read(await (await LobbyAsync()).HandleAsync("GET", "/api/lobby/page/all/1", "")).GetProperty("items").EnumerateArray()
             .Select(table => table.GetProperty("seats").EnumerateArray().Select(seat => $"{seat.GetProperty("kind").GetString()}:{seat.GetProperty("name").GetString()}").ToArray())
             .ToList();
 
@@ -114,8 +114,8 @@ public sealed class LobbyAccountsTests : IDisposable
     {
         var (table, _) = await OpenAsync(await PlayerAsync("MarkF"), opponent: "bot");
         var lobby = await LobbyAsync();
-        static bool[] Turns(JsonElement listed) => [.. listed.GetProperty("tables")[0].GetProperty("seats").EnumerateArray().Select(seat => seat.GetProperty("turn").GetBoolean())];
-        Turns(Read(await lobby.HandleAsync("GET", "/api/lobby", ""))).ShouldBe([false, false]);
+        static bool[] Turns(JsonElement listed) => [.. listed.GetProperty("items")[0].GetProperty("seats").EnumerateArray().Select(seat => seat.GetProperty("turn").GetBoolean())];
+        Turns(Read(await lobby.HandleAsync("GET", "/api/lobby/page/all/1", ""))).ShouldBe([false, false]);
 
         table.Seats[0].Person!.Arrive();
         table.Session.Begin();
@@ -124,7 +124,7 @@ public sealed class LobbyAccountsTests : IDisposable
             await Task.Delay(20, Cancel);
         }
 
-        Turns(Read(await lobby.HandleAsync("GET", "/api/lobby", ""))).ShouldBe([true, false]);
+        Turns(Read(await lobby.HandleAsync("GET", "/api/lobby/page/all/1", ""))).ShouldBe([true, false]);
     }
 
     [Fact]
