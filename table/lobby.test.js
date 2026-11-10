@@ -159,9 +159,10 @@ test('a finished card leads with the result, names who it was against, and opens
 });
 
 test("a recent opponent's record names only what happened, from this player's side", () => {
-  assert.equal(opponentRecord({ won: 2, lost: 1, drawn: 0 }), 'Won 2 · Lost 1');
-  assert.equal(opponentRecord({ won: 0, lost: 0, drawn: 1 }), 'Drew 1');
-  assert.equal(opponentRecord({}), 'No result kept');
+  // The card shows won–lost, and a third figure only when there was a draw; it is read as the words.
+  assert.deepEqual(opponentRecord({ won: 2, lost: 1, drawn: 0 }), { score: '2–1', text: 'Won 2 · Lost 1' });
+  assert.deepEqual(opponentRecord({ won: 0, lost: 0, drawn: 1 }), { score: '0–0–1', text: 'Drew 1' });
+  assert.deepEqual(opponentRecord({}), { score: '–', text: 'No result kept' });
 });
 
 test('a friend is challenged, anyone else is asked to be a friend first, and nothing is offered where friends are not kept', () => {

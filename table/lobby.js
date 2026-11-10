@@ -147,12 +147,15 @@ export function invitationLine(invitation) {
 }
 
 /**
- * The record against a recent opponent, from this player's side: the games won, lost and drawn, the ones that
- * happened only.
+ * The record against a recent opponent, from this player's side: the score a card shows (won–lost, and drawn
+ * when there was a draw), and the words it is read as (the games won, lost and drawn, the ones that happened only).
  */
 export function opponentRecord(opponent) {
-  const parts = [['Won', opponent?.won], ['Lost', opponent?.lost], ['Drew', opponent?.drawn]].filter(([, count]) => Number.isInteger(count) && count > 0);
-  return parts.map(([word, count]) => `${word} ${count}`).join(' · ') || 'No result kept';
+  const count = value => (Number.isInteger(value) && value > 0 ? value : 0);
+  const won = count(opponent?.won), lost = count(opponent?.lost), drawn = count(opponent?.drawn);
+  const parts = [['Won', won], ['Lost', lost], ['Drew', drawn]].filter(([, games]) => games > 0);
+  if (!parts.length) return { score: '–', text: 'No result kept' };
+  return { score: [won, lost, ...(drawn ? [drawn] : [])].join('–'), text: parts.map(([word, games]) => `${word} ${games}`).join(' · ') };
 }
 
 /**
@@ -335,10 +338,12 @@ export function mountLobby(doc, location, storage) {
   function opponentCard(opponent) {
     const root = node('article', '', `game-card opponent ${opponent.relation ?? 'unknown'}`);
     const top = node('div', '', 'game-card-top');
-    top.append(node('h3', opponent.name), node('span', opponentRecord(opponent), 'status-tag record'));
+    const record = opponentRecord(opponent), score = node('span', record.score, 'status-tag record');
+    score.setAttribute('aria-label', record.text); score.title = record.text;
+    top.append(node('h3', opponent.name), score);
     const when = opponent.lastPlayedAt ? new Date(opponent.lastPlayedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : '';
-    const games = `${opponent.games} game${opponent.games === 1 ? '' : 's'}`;
-    root.append(top, node('p', [`Last ${opponent.format ?? ''} battle${opponent.casual ? ' · unranked' : ''}`, when, games].filter(Boolean).join(' · '), 'game-turn'));
+    // The last game, which a challenge starts from: its format and rating, and when.
+    root.append(top, node('p', [opponent.format, opponent.casual ? 'unranked' : '', when].filter(Boolean).join(' · '), 'game-turn'));
     const action = opponentAction(opponent);
     if (action) {
       const button = node('button', action.label, action.primary ? 'primary' : 'secondary');

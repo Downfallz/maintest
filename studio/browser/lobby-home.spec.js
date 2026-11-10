@@ -463,8 +463,18 @@ test('recent opponents are listed with the record between you: a friend is chall
   const section = page.locator('#opponents'), cards = section.locator('.game-card.opponent');
   await expect(section).toBeVisible();
   await expect(cards).toHaveCount(3);
-  await expect(cards.nth(0)).toContainText('Won 2 · Lost 1');
-  await expect(cards.nth(0)).toContainText('Last 1v1 battle · unranked');
+  await expect(cards.nth(0).locator('.record')).toHaveText('2–1');
+  await expect(cards.nth(0).locator('.record')).toHaveAccessibleName('Won 2 · Lost 1');
+  await expect(cards.nth(0)).toContainText('1v1 · unranked');
+  // One row that scrolls sideways: every card on the same line, the section one card high, the page never wider.
+  const tops = await cards.evaluateAll(nodes => nodes.map(node => Math.round(node.getBoundingClientRect().top)));
+  expect(new Set(tops).size).toBe(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  if (page.viewportSize().width < 600) {
+    const strip = page.locator('#opponent-cards');
+    expect(await strip.evaluate(node => node.scrollWidth > node.clientWidth)).toBe(true);
+    await expect(cards.nth(1)).not.toBeInViewport({ ratio: 1 });
+  }
   await expect(cards.nth(2).getByRole('button', { name: 'Accept friend' })).toBeEnabled();
   await page.screenshot({ path: info.outputPath('recent-opponents.png'), fullPage: true });
   // A stranger is asked to be a friend, by name: no invitation reaches them.
