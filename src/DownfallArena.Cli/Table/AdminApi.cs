@@ -86,6 +86,13 @@ internal sealed class AdminApi
         ArgumentNullException.ThrowIfNull(path);
         if (LobbyApi.Names(path))
         {
+            // A finished game's replay is the operator's to read as well as its players' (ADR 0156), by the panel's
+            // token or the platform's sign-in alike, and whatever game it was: the pages ask this one route.
+            if (method == "GET" && LobbyApi.ReplayRoute(path) is { } replayed && _stored is { } recorded && _gate.Admit(token, principal) is not null)
+            {
+                return await ReplayAsync(recorded, replayed);
+            }
+
             var player = Accounts is null || account is null ? null : await Accounts.WhoAsync(account);
             return await Lobby.HandleAsync(method, path, body, token, player);
         }

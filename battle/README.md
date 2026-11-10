@@ -100,8 +100,8 @@ confirmation over the host's sequential questions, with simultaneous reveal stil
 `table/battle-match.js` and `src/match.ts` provide two-round upkeep/aftermath review,
 concession, the host outcome and a manual whole-match replay. Replay steps distinguish recorded action frames,
 labelled reference frames and missing battlefield snapshots. `/battle?replay=<session>&seat=player2` opens a
-finished recording: the operator's with the admin panel's token, or a player's own game by their account, read
-off `GET /api/lobby/tables/<table>/replay`. The lobby's finished games open it ([ADR 0156](../docs/adr/0156-replay-a-finished-game-in-the-battle-view-for-its-players.md)).
+finished recording off `GET /api/lobby/tables/<table>/replay`: any for the operator, by the admin panel's token or
+the platform's sign-in, or a player's own game by their account. The lobby's finished games open it ([ADR 0156](../docs/adr/0156-replay-a-finished-game-in-the-battle-view-for-its-players.md)).
 
 `node node_modules/playwright/cli.js test --config table.config.js battle.loop.js` (from `studio/browser`)
 plays complete 3v3 games in both declarations, reads recorded sessions, and checks two independent seats'

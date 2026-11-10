@@ -101,7 +101,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 ("POST", _) when TableRoute(path, "/invitation") is { } id => SignInRequired(account) ?? await ReinviteAsync(id, body, player!),
                 ("POST", _) when TableRoute(path, "/open") is { } id => SignInRequired(account) ?? await OpenToEveryoneAsync(id, player!),
                 ("DELETE", _) when TableRoute(path, "") is { } id => SignInRequired(account) ?? await CloseAsync(id, player!),
-                ("GET", _) when TableRoute(path, "/replay") is { } id => await ReplayAsync(id, account),
+                ("GET", _) when ReplayRoute(path) is { } id => await ReplayAsync(id, account),
                 _ => Problem(404, "No such lobby route."),
             };
         }
@@ -129,6 +129,9 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     }
 
     /// <summary>The table id of <c>/api/lobby/tables/&lt;id&gt;&lt;suffix&gt;</c>, or null for any other path, an empty id among them.</summary>
+    /// <summary>The table of <c>/api/lobby/tables/&lt;table&gt;/replay</c>, or null for any other path.</summary>
+    internal static string? ReplayRoute(string path) => TableRoute(path, "/replay");
+
     private static string? TableRoute(string path, string suffix)
     {
         const string tables = Prefix + "/tables/";

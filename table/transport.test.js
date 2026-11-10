@@ -154,7 +154,7 @@ const replayed = JSON.stringify({
   feed: [{ sequence: 3, event: { kind: 'RoundEnded' } }, { sequence: 9, event: { kind: 'CombatActionResolved' } }],
 });
 
-test('a replay asks the host for its session once, with the operator token, and serves it as a finished seat', async () => {
+test('a replay asks the host for its session once, carrying the operator token it holds, and serves it as a finished seat', async () => {
   const { calls, fetchImpl } = stub({ status: 200, body: replayed });
   const transport = replayTransport('20261031 x', 'player2', 'op', fetchImpl);
 
@@ -162,7 +162,7 @@ test('a replay asks the host for its session once, with the operator token, and 
   await transport.seat(10);
 
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].path, '/api/sessions/20261031%20x/replay');
+  assert.equal(calls[0].path, '/api/lobby/tables/20261031%20x/replay');
   assert.equal(calls[0].options.headers['X-Seat-Token'], 'op');
   assert.equal(seat.body.over, true);
   assert.equal(seat.body.replay, true);
@@ -186,7 +186,7 @@ test('a replay decides nothing, and asks again after a refusal', async () => {
   assert.equal(decided.ok, false);
 });
 
-test('without the operator token, a replay is one of the player\'s own games, asked of the lobby', async () => {
+test('without the operator token, a replay asks the same route bare: a platform sign-in or a player\'s account answers it', async () => {
   const { calls, fetchImpl } = stub({ status: 200, body: replayed });
   const transport = replayTransport('20261031 x', 'player1', null, fetchImpl);
 

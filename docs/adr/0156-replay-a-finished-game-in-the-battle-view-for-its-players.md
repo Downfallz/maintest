@@ -19,8 +19,8 @@ its end card, the final scorecard, and a whole-match replay back to that card. I
 - **The finished card opens the battle view.** A finished game's `replay` is
   `/battle?replay=<table>&seat=<the player's seat>`. It replaces `session`, the viewer's link. This holds
   whatever the presentation preference (ADR 0136): the recap exists only in the battle view.
-- **The page picks the route by who reads.** Holding the operator token, it reads the panel's route as before.
-  Without one, it reads the lobby's, and a refusal asks to sign in or says the match is not the reader's.
+- **The pages ask that one route.** It admits the operator too, by the panel's token or the platform's sign-in
+  (`--platform-auth`), for any game. A refusal asks to sign in or says the match is not the reader's.
 
 ## Consequences
 
@@ -32,7 +32,9 @@ its end card, the final scorecard, and a whole-match replay back to that card. I
 
 ## Alternatives considered
 
-- **Open the panel's route to accounts:** one route would carry two access rules, the operator's and a player's.
+- **Pick the route by the token the page holds:** behind `--platform-auth` the operator signs in through the
+  platform and the page holds no token, so the operator's replays would have been refused.
+- **Open the panel's route to accounts:** the panel's routes would then admit players, which none of the others does.
 - **Follow the presentation preference:** the classic page's replay has no end card and no recap.
 
 ## Follow-up
