@@ -9,7 +9,8 @@ namespace DownfallArena.Cli.Table;
 /// <summary>
 /// One match played at a table, as the host needs it: whatever plays the match behind this, the routes, the
 /// lobby and the recording ask the same things of it. It is the seam ADR 0159 moves the host across: a driver
-/// blocked on its seats on one side (<see cref="DrivenSession" />), a match stepped over its journal on the other.
+/// blocked on its seats on one side (<see cref="DrivenSession" />), a match stepped over its journal on the other
+/// (<see cref="SteppedSession" />).
 /// </summary>
 internal interface ITableSession : IDisposable
 {
@@ -45,7 +46,7 @@ internal interface ITableSession : IDisposable
     /// <param name="wanted">The name the pilot gave, as it is written down.</param>
     Task<SwapOutcome> SwapAsync(PlayerSlot slot, Occupant next, string wanted, int round);
 
-    /// <summary>A seat's board as the match has it, with none of the answers the seat is holding.</summary>
+    /// <summary>A seat's board, for where the match has got to and how it ended. What a seat reads to play is its snapshot.</summary>
     Task<Result<PlayerBoardState>> BoardAsync(PlayerSlot slot);
 
     /// <summary>What a seat reads, as one moment.</summary>

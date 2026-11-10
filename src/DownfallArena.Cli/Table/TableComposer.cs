@@ -7,11 +7,14 @@ using DownfallArena.Application.Agents;
 using DownfallArena.Application.Catalogue;
 using DownfallArena.Application.Learning.Ports;
 using DownfallArena.Application.Learning.Tracing;
+using DownfallArena.Application.Matches.Journaling;
+using DownfallArena.Application.Matches.Ports;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Application.Matches.Queries;
 using DownfallArena.Application.Ports;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
+using DownfallArena.Infrastructure.Matches;
 using DownfallArena.Infrastructure.Resources;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Randomness;
@@ -40,10 +43,17 @@ internal sealed class TableComposer
     private readonly ConcurrentDictionary<RuleSet, CatalogueView> _catalogues = new();
     private readonly ConcurrentDictionary<RuleSet, DecisionGuideProjection> _guides = new();
     private readonly IArtifactStore? _store;
+    private readonly IDecisionJournal? _journal;
+    private readonly SteppedHost _stepped;
     private readonly TimeProvider _clock;
 
     /// <param name="store">Where sessions are recorded, or <c>null</c> for a host that keeps nothing.</param>
-    public TableComposer(IServiceProvider services, RuleSet rules, IArtifactStore? store)
+    /// <param name="journal">
+    /// The journal the tables are stepped over (ADR 0159), kept where the store keeps its runs so a table's
+    /// <c>decisions.jsonl</c> is the journal's. Worked out from the store when not given; a host that keeps
+    /// nothing gives each table one in memory, which goes with the table.
+    /// </param>
+    public TableComposer(IServiceProvider services, RuleSet rules, IArtifactStore? store, IDecisionJournal? journal = null)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(rules);
@@ -52,6 +62,8 @@ internal sealed class TableComposer
         _rules = rules;
         _store = store;
         _clock = services.GetRequiredService<TimeProvider>();
+        _journal = store is null ? null : journal ?? ArtifactStores.JournalOf(store, _clock);
+        _stepped = SteppedHost.Of(services);
 
         // The host's own format is built now, so the ordinary case costs nothing at the first opening: a card
         // the page prints is the card the engine resolves, and a tuning pass is a rebuild and a restart rather
@@ -140,16 +152,21 @@ internal sealed class TableComposer
     {
         ArgumentNullException.ThrowIfNull(request);
         var seed = request.Seed ?? RandomNumberGenerator.GetInt32(int.MaxValue);
-        return BuildAsync(request with { Seed = seed }, rebuilding: null, cancellationToken);
+        return ComposedAsync(request with { Seed = seed }, cancellationToken);
     }
 
+    private async Task<PlayedTable> ComposedAsync(TableRequest request, CancellationToken cancellationToken) =>
+        await BuildAsync(request, reopening: null, cancellationToken)
+        ?? throw new InvalidOperationException("A table opening now has no journal to be refused by.");
+
     /// <summary>
-    /// Rebuilds a table an earlier host left unfinished, from its record and its journal (ADR 0091): the same
-    /// request and seed, the same match id, the same tokens, and every recorded decision replayed into a fresh
-    /// match before anybody is asked anything. Null when the replay does not reach the end of the record --
-    /// the content or the engine changed under it -- or does not reach it in time; the table is let go of
-    /// then, and the run stays in the store as it was.
+    /// Picks up a table an earlier host left unfinished, from its record and its journal (ADR 0159): the same
+    /// request and seed, the same match id, the same tokens, and the match rebuilt from every line of its
+    /// journal before anybody is asked anything. Null when the journal no longer answers the match it rebuilds,
+    /// or the match it rebuilds is not the one the earlier host checkpointed -- the content, the rules or the
+    /// engine changed under it; the table is let go of then, and the run stays in the store as it was.
     /// </summary>
+    /// <param name="journal">The journal's lines as the store lists them, which say whether the table had begun.</param>
     public async Task<PlayedTable?> ResumeAsync(TableRecord record, IReadOnlyList<JournalEntry> journal, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(record);
@@ -164,160 +181,111 @@ internal sealed class TableComposer
             throw new InvalidDataException($"Unsupported table event stream version {record.EventStreamVersion}.");
         }
 
-        var table = await BuildAsync(record.Request(), (record, journal), cancellationToken);
-        var replayed = table.Run!.Journal.Exhausted;
-        await Task.WhenAny(replayed, table.Session.Outcome, Task.Delay(ReplayWithin, cancellationToken));
-        string? reason = null;
-        bool? agreed = null;
-
-        // Read on its own rather than as the task that ended the wait: a record whose last line ends the
-        // match -- the earlier host died after writing it and before marking the table finished -- completes
-        // the replay and the outcome together, and is a finished table recovered, not a replay that failed.
-        if (replayed.IsCompletedSuccessfully)
-        {
-            // The last recorded decision is handed over before the command it causes is applied; the trace
-            // growing past it is what says the board has caught up.
-            await table.Run.WaitForTraceAsync(table.Session.MatchId, Math.Max(0, table.Run.TraceLength(table.Session.MatchId) - 1), cancellationToken);
-            agreed = await table.Run.AgreesWithCheckpointAsync(table.Session.MatchId, () => table.Seats.Any(seat => seat.Person?.Waiting is not null), cancellationToken);
-            if (agreed == true)
-            {
-                // Kept: the dataset the replay re-recorded lands now. The rebuilt trace is the whole match
-                // again; the checkpoint the replay was held against is overwritten with it, as every decision
-                // from here on will overwrite it.
-                await table.Run.KeepAsync(cancellationToken);
-                await table.Run.CheckpointAsync(table.Session.MatchId, cancellationToken);
-                return table;
-            }
-
-            reason = agreed is null
-                ? "the rebuilt match had not caught up with the trace that was checkpointed in time"
-                : "the rebuilt match does not agree with the trace that was checkpointed: the content, the rules or the engine changed under the record";
-        }
-
-        reason ??= NotRebuiltBecause(replayed, table.Session.Outcome);
-        Console.WriteLine($"  Session {record.Id} was not rebuilt: {reason}");
-
-        // Only a refusal the record itself explains is marked: a line that does not answer, a match that ends before
-        // its record does, boards that differ. One that ran out of time may be a slow start, and the next host on
-        // the same basis tries it again.
-        var diverged = replayed.IsCompletedSuccessfully ? agreed is false : replayed.IsFaulted || table.Session.Outcome.IsCompleted;
-        if (diverged && Basis is { } basis)
-        {
-            await table.Run.MarkRefusedAsync(basis, cancellationToken);
-        }
-
-        table.Dispose();
-        return null;
+        return await BuildAsync(record.Request(), new Reopening(record, DecisionJournal.HoldsDecision(journal)), cancellationToken);
     }
 
-    /// <summary>How long a replay may take: a whole match is milliseconds, and a host must not hang on a record that never catches up.</summary>
-    private static readonly TimeSpan ReplayWithin = TimeSpan.FromSeconds(20);
-
-    /// <summary>Why a replay that did not reach a rebuilt table stopped, for the console.</summary>
-    private static string NotRebuiltBecause(Task replayed, Task outcome)
-    {
-        if (replayed.IsFaulted)
-        {
-            return replayed.Exception?.GetBaseException().Message ?? "the record has diverged";
-        }
-
-        return outcome.IsCompleted ? "the match ended during the replay" : "the replay did not finish in time";
-    }
+    /// <summary>A table being picked up again: its record, and whether its match had begun.</summary>
+    private sealed record Reopening(TableRecord Record, bool Begun);
 
     /// <summary>
-    /// The recording of a table, opened for a table opening now or resumed over what an earlier host wrote,
-    /// and started either way; none for a host told to keep nothing.
+    /// The recording of a table, opened for a table opening now or over what an earlier host wrote; none for a
+    /// host told to keep nothing.
     /// </summary>
-    private async Task<PlaytestRun?> OpenRunAsync(string id, PlaytestSetup setup, MatchTraceRecorder events, (TableRecord Record, IReadOnlyList<JournalEntry> Journal)? rebuilding, CancellationToken cancellationToken)
+    private async Task<PlaytestRun?> OpenRunAsync(string id, PlaytestSetup setup, MatchTraceRecorder events, TableRecord? reopened, CancellationToken cancellationToken)
     {
         if (_store is not { } store)
         {
             return null;
         }
 
-        if (rebuilding is not { } rebuild)
+        if (reopened is not null)
         {
-            var opened = PlaytestRun.Open(store, id, setup, events, _clock);
-
-            // The catalogue of the rule set this table plays, so a 2v2 session is stamped with the game it
-            // played rather than with the host's default.
-            await opened.StartAsync(Catalogue(setup.Rules), cancellationToken);
-            return opened;
+            // Nothing is started over: the dataset is written when the match ends, from the steps the rebuild
+            // records again, and everything else is as the earlier host left it.
+            return PlaytestRun.Reopen(store, id, setup, events, _clock, reopened);
         }
 
-        var resumed = PlaytestRun.Resume(store, id, setup, events, _clock, rebuild.Record, rebuild.Journal);
-        await resumed.ResumeAsync(cancellationToken);
-        return resumed;
+        var opened = PlaytestRun.Open(store, id, setup, events, _clock);
+
+        // The catalogue of the rule set this table plays, so a 2v2 session is stamped with the game it
+        // played rather than with the host's default.
+        await opened.StartAsync(Catalogue(setup.Rules), cancellationToken);
+        return opened;
     }
 
-    /// <summary>The seat as the earlier host recorded it, for a table being rebuilt; null for a fresh one.</summary>
+    /// <summary>The seat as the earlier host recorded it, for a table being picked up again; null for a fresh one.</summary>
     private static RecordedSeat? Recorded(TableRecord? record, PlayerSlot slot) =>
         record?.Seats.FirstOrDefault(seat => seat.Slot == TableSeat.NameOf(slot));
 
-    private async Task<PlayedTable> BuildAsync(TableRequest request, (TableRecord Record, IReadOnlyList<JournalEntry> Journal)? rebuilding, CancellationToken cancellationToken)
+    /// <summary>
+    /// Builds a table over its journal: the seats, the recording, the match where the journal ends, and the
+    /// routes over it. Null for a table picked up again whose journal or checkpoint refuses it.
+    /// </summary>
+    private async Task<PlayedTable?> BuildAsync(TableRequest request, Reopening? reopening, CancellationToken cancellationToken)
     {
         var stopping = new CancellationTokenSource();
-        TableSession? session = null;
-        MatchId? legacyStream = null;
+        SteppedSession? session = null;
         try
         {
             var agents = _services.GetRequiredService<IAgentFactory>();
             var resources = _services.GetRequiredService<IGameResources>();
-            var events = _services.GetRequiredService<MatchTraceRecorder>();
+            var events = _stepped.Events;
+            var record = reopening?.Record;
             var seed = request.Seed ?? throw new InvalidOperationException("A table is built with a seed.");
-            var id = rebuilding?.Record.Id ?? PlaytestRun.NewId(_clock);
+            var id = record?.Id ?? PlaytestRun.NewId(_clock);
 
             // Resolved once, and then every seat, the setup, the session and the page read the same one: a
             // bot created against another rule set than the match plays would score a board that is not the
-            // board, and a rebuilt table has to come back in the format it was recorded in (ADR 0091).
+            // board, and a table picked up again has to come back in the format it was recorded in.
             var rules = RulesFor(request);
+            TableSeat[] seats = [Seat(PlayerSlot.Player1, request, Recorded(record, PlayerSlot.Player1)), Seat(PlayerSlot.Player2, request, Recorded(record, PlayerSlot.Player2))];
+            Occupant? SeatingOf(PlayerSlot slot, string wanted) => Seating(seats[slot == PlayerSlot.Player1 ? 0 : 1], wanted, request, rules, agents, Source(seed, slot));
 
-            // Each seat draws from its own source, derived from the table's seed the way `GameSession` derives
-            // an agent's: a table's bots then replay from the seed its run stamp carries, whatever other tables
-            // this host played before or beside it. A source shared across tables would make every recording
-            // depend on the order the host's requests happened to arrive in.
-            var seat1 = Seat(PlayerSlot.Player1, request, rules, agents, Source(seed, PlayerSlot.Player1), stopping.Token, Recorded(rebuilding?.Record, PlayerSlot.Player1));
-            var seat2 = Seat(PlayerSlot.Player2, request, rules, agents, Source(seed, PlayerSlot.Player2), stopping.Token, Recorded(rebuilding?.Record, PlayerSlot.Player2));
-            (SeatAgent Agent, TableSeat Seat) Of(PlayerSlot slot) => slot == PlayerSlot.Player1 ? seat1 : seat2;
-            Occupant? SeatingOf(PlayerSlot slot, string wanted) => Seating(Of(slot).Seat, wanted, request, rules, agents, Source(seed, slot));
+            var plan = Plan(seats, request, rules, agents, seed);
+            var setup = new PlaytestSetup(resources, rules, seed, Stamped(seats[0], request.Player1, request), Stamped(seats[1], request.Player2, request));
+            var run = await OpenRunAsync(id, setup, events, record, cancellationToken);
 
-            var setup = new PlaytestSetup(resources, rules, seed, Stamped(seat1, request.Player1, request), Stamped(seat2, request.Player2, request));
-            var run = await OpenRunAsync(id, setup, events, rebuilding, cancellationToken);
-
-            // A swap line is applied as the replay reaches it, through the pilot's own seating.
-            run?.Journal.SwapsThrough((slot, wanted, round) => SeatingOf(slot, wanted) is { } next && Of(slot).Agent.SwapAt(next, round).Taken);
-
-            // A table with a person in it waits for every person to reach their seat before the first question
-            // (ADR 0092). A rebuilt table that had begun -- it has decisions to replay -- begins at once; one
-            // that was still waiting waits again, whatever handover the pilot had scheduled meanwhile.
-            var waits = (seat1.Seat.Person is not null || seat2.Seat.Person is not null) && (rebuilding is null || !DecisionJournal.HoldsDecision(rebuilding.Value.Journal));
-            var start = new TableStart(run is { } recording ? recording.Wrap : null, rebuilding?.Record.MatchId, waits);
-            if (rebuilding?.Record is { EventStreamVersion: 1 } legacy)
+            List<CreatureDefinitionId> roster = [.. Enumerable.Repeat(resources.Creatures.First().Id, rules.TeamSize)];
+            var match = new JournaledMatch(id, record?.MatchId ?? MatchId.New(), rules, seed, roster);
+            var opened = await SteppedSession.OpenAsync(
+                _stepped,
+                _journal ?? new InMemoryDecisionJournal(),
+                match,
+                new SteppedSeats(plan, seats, SeatingOf),
+                run,
+                legacyStream: record is { EventStreamVersion: 1 },
+                stopping.Token);
+            if (opened.IsFailure)
             {
-                events.UseLegacyEventStream(legacy.MatchId);
-                legacyStream = legacy.MatchId;
+                await RefusedAsync(id, run, opened.Error.Message, diverged: opened.Error.Code == JournalErrors.DivergedCode, cancellationToken);
+                stopping.Dispose();
+                return null;
             }
 
-            session = await TableSession.StartAsync(_services, rules, seed, seat1.Agent, seat2.Agent, start, stopping.Token);
+            session = opened.Value;
+            if (run is not null && record is not null && !await run.AgreesWithCheckpointSoFarAsync(session.MatchId, cancellationToken))
+            {
+                await RefusedAsync(id, run, "the rebuilt match does not agree with the trace that was checkpointed: the content, the rules or the engine changed under the record", diverged: true, cancellationToken);
+                Abandon(session, stopping);
+                return null;
+            }
 
             // One checkpoint before anybody has tapped anything, so the trace file exists from the start. A
             // session abandoned at its first question is then a readable run rather than one missing a file,
-            // and every checkpoint after this one overwrites it. Not on a rebuild: the checkpoint there is the
-            // earlier host's, and the replay is held against it before anything overwrites it.
-            if (run is not null && rebuilding is null)
+            // and every checkpoint after this one overwrites it. On a table picked up again it is the rebuilt
+            // trace, which the earlier host's has just been held against.
+            if (run is not null)
             {
                 await run.CheckpointAsync(session.MatchId, cancellationToken);
             }
 
-            var seats = new[] { seat1.Seat, seat2.Seat };
-            var pilot = new TablePilot(rebuilding?.Record.PilotToken ?? Token(), SeatingOf);
-            var driven = new DrivenSession(session, seats, run);
-            var api = new TableApi(driven, seats, Catalogue(rules), events, run, pilot) { Guide = Guide(rules), Agents = Agents, Push = Push };
-            var table = new PlayedTable(new TableOpening(id, rebuilding?.Record.CreatedAt ?? _clock.GetUtcNow(), request), driven, api, seats, pilot, run, stopping)
+            var pilot = new TablePilot(record?.PilotToken ?? Token(), SeatingOf);
+            var api = new TableApi(session, seats, Catalogue(rules), events, run, pilot) { Guide = Guide(rules), Agents = Agents, Push = Push };
+            var table = new PlayedTable(new TableOpening(id, record?.CreatedAt ?? _clock.GetUtcNow(), request), session, api, seats, pilot, run, stopping)
             {
-                EventStreamVersion = rebuilding?.Record.EventStreamVersion ?? MatchTrace.CurrentEventStreamVersion,
-                OpenSeats = rebuilding?.Record.OpenSeats ?? [],
-                Casual = rebuilding?.Record.Casual ?? false,
+                EventStreamVersion = record?.EventStreamVersion ?? MatchTrace.CurrentEventStreamVersion,
+                OpenSeats = record?.OpenSeats ?? [],
+                Casual = record?.Casual ?? false,
             };
             Push?.Watch(table);
 
@@ -329,44 +297,86 @@ internal sealed class TableComposer
                 _ = CloseWhenOverAsync(table, run);
             }
 
+            // A table with a person in it waits for every person to reach their seat before the first question
+            // (ADR 0092). One picked up again that had begun -- its journal holds a decision -- begins at once;
+            // one that was still waiting waits again, whatever handover the pilot had scheduled meanwhile. Begun
+            // last, once everything that listens to the table does: the first question is said to whoever is
+            // listening when it is asked.
+            if (seats.All(seat => seat.Person is null) || reopening is { Begun: true })
+            {
+                session.Begin();
+            }
+
             return table;
         }
         catch
         {
             await stopping.CancelAsync();
-            if (session is null && legacyStream is { } abandoned)
-            {
-                _services.GetRequiredService<MatchTraceRecorder>().Forget(abandoned);
-            }
-
             Abandon(session, stopping);
             throw;
         }
     }
 
     /// <summary>
-    /// Lets go of a table that failed to open. A session that had already started is a match in the host's
-    /// stores and a driver on its own task, and nothing will ever find it to let go of it: no table holds it,
-    /// so no sweep reaches it. It is disposed once its driver has stopped, the way a table's is, so an outage
-    /// of the store that made every opening fail does not also leave a match behind each attempt.
+    /// Says why a table was not picked up again, and marks its record when the reason is the record's own: a
+    /// line that does not answer, boards that differ. A host on the same engine, content and rules then leaves
+    /// it as it is instead of rebuilding it at every start (ADR 0115).
     /// </summary>
-    private static void Abandon(TableSession? session, CancellationTokenSource stopping)
+    private async Task RefusedAsync(string id, PlaytestRun? run, string reason, bool diverged, CancellationToken cancellationToken)
     {
-        if (session is null)
+        Console.WriteLine($"  Session {id} was not rebuilt: {reason}");
+        if (diverged && run is not null && Basis is { } basis)
         {
-            stopping.Dispose();
-            return;
+            await run.MarkRefusedAsync(basis, cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Lets go of a table that failed to open. A session that had been opened is a match in the host's stores,
+    /// and nothing will ever find it to let go of it: no table holds it, so no sweep reaches it.
+    /// </summary>
+    private static void Abandon(SteppedSession? session, CancellationTokenSource stopping)
+    {
+        session?.Dispose();
+        stopping.Dispose();
+    }
+
+    /// <summary>
+    /// Who sits where as the table opens: a bot where one was named, the seat's own person where none was, and,
+    /// with a handover, the understudy until the top of the round named.
+    /// </summary>
+    private Occupant Opening(TableSeat seat, TableRequest request, RuleSet rules, IAgentFactory agents, int seed)
+    {
+        var named = seat.Slot == PlayerSlot.Player1 ? request.Player1 : request.Player2;
+        if (seat.Person is not null && request.Handover is null)
+        {
+            return SeatPlan.Person(PersonName(request));
         }
 
-        session.Outcome.ContinueWith(
-            _ =>
-            {
-                session.Dispose();
-                stopping.Dispose();
-            },
-            CancellationToken.None,
-            TaskContinuationOptions.ExecuteSynchronously,
-            TaskScheduler.Default);
+        // Each seat draws from its own source, derived from the table's seed the way `GameSession` derives
+        // an agent's: a table's bots then replay from the seed its run stamp carries, whatever other tables
+        // this host played before or beside it. A source shared across tables would make every recording
+        // depend on the order the host's requests happened to arrive in.
+        var spec = named ?? Understudy;
+        return new Occupant(agents.Create(spec, rules, Source(seed, seat.Slot)), spec.ToString());
+    }
+
+    private SeatPlan Plan(TableSeat[] seats, TableRequest request, RuleSet rules, IAgentFactory agents, int seed)
+    {
+        var plan = new SeatPlan(Opening(seats[0], request, rules, agents, seed), Opening(seats[1], request, rules, agents, seed));
+        if (request.Handover is not { } round)
+        {
+            return plan;
+        }
+
+        // A handover is a seat change like any other: the bot sits down and the seat hands over at the top of
+        // the round named.
+        foreach (var seat in seats.Where(seat => seat.Person is not null))
+        {
+            plan = plan.From(seat.Slot, round, SeatPlan.Person(PersonName(request)), reached: 0);
+        }
+
+        return plan;
     }
 
     /// <summary>
@@ -543,8 +553,8 @@ internal sealed class TableComposer
     /// played, in the axis <c>compare-stamps</c> reads. One stamp built from what happened beats two built
     /// from what was asked for and what was configured.
     /// </remarks>
-    private static string Stamped((SeatAgent Agent, TableSeat Seat) seat, AgentSpec? named, TableRequest request) =>
-        seat.Seat.Person is null || request.Handover is not null ? (named ?? Understudy).ToString() : PersonName(request);
+    private static string Stamped(TableSeat seat, AgentSpec? named, TableRequest request) =>
+        seat.Person is null || request.Handover is not null ? (named ?? Understudy).ToString() : PersonName(request);
 
     /// <summary>The bot a person's seat is played by until a handover: the default of every other command.</summary>
     private static readonly AgentSpec Understudy = AgentSpec.Random;
@@ -564,7 +574,7 @@ internal sealed class TableComposer
     {
         if (string.Equals(wanted, TableRequest.Person, StringComparison.OrdinalIgnoreCase))
         {
-            return seat.Person is HumanSeat person ? new Occupant(person, PersonName(request)) : null;
+            return seat.Person is null ? null : SeatPlan.Person(PersonName(request));
         }
 
         try
@@ -593,45 +603,24 @@ internal sealed class TableComposer
     /// </summary>
     private static string PersonName(TableRequest request) => request.Who is { Length: > 0 } who ? $"human:{who}" : "human";
 
-    /// <param name="recorded">The seat as an earlier host recorded it, for a table being rebuilt: its token, its invitation and whether it was taken. Null for a fresh seat.</param>
-    private static (SeatAgent Agent, TableSeat Seat) Seat(
-        PlayerSlot slot,
-        TableRequest request,
-        RuleSet rules,
-        IAgentFactory agents,
-        IRandomSource random,
-        CancellationToken cancellation,
-        RecordedSeat? recorded = null)
+    /// <summary>A seat as the host knows it: a bot's where an agent was named for it, a person's where none was.</summary>
+    /// <param name="recorded">The seat as an earlier host recorded it, for a table being picked up again: its token, its invitation and whether it was taken. Null for a fresh seat.</param>
+    private static TableSeat Seat(PlayerSlot slot, TableRequest request, RecordedSeat? recorded = null)
     {
         var token = recorded?.Token;
-        // A seat no agent was named for is a person's. Until a handover it is played by the understudy.
-        var named = slot == PlayerSlot.Player1 ? request.Player1 : request.Player2;
-        var spec = named ?? Understudy;
-        var bot = new Occupant(agents.Create(spec, rules, random), spec.ToString());
-        if (named is not null)
+        if ((slot == PlayerSlot.Player1 ? request.Player1 : request.Player2) is not null)
         {
-            return (new SeatAgent(bot), new TableSeat(slot, token ?? Token(), Person: null));
+            return new TableSeat(slot, token ?? Token(), Person: null);
         }
 
-        var human = new HumanSeat(cancellation);
-        var person = new Occupant(human, PersonName(request));
-
-        // A handover is a swap like any other: the bot sits down and the seat is told to hand over at the top
-        // of the round named. Without one the person plays from the first decision.
-        var seat = new SeatAgent(request.Handover is null ? person : bot);
-        if (request.Handover is { } round)
-        {
-            seat.SwapAt(person, round);
-        }
-
-        // A fresh seat is offered under an invitation, never under its token (ADR 0116). A rebuilt one comes back
-        // as it was recorded: taken, still offered, or, from before invitations, reached by its token itself.
+        // A fresh seat is offered under an invitation, never under its token (ADR 0116). One picked up again
+        // comes back as it was recorded: taken, still offered, or, from before invitations, reached by its token itself.
         var taken = recorded is null ? false : recorded.Taken ?? false;
         var invitation = recorded is null ? Token() : recorded.Invitation;
         var account = AccountId.TryParse(recorded?.Account, out var owner) ? owner : (AccountId?)null;
         var invited = !taken && AccountId.TryParse(recorded?.InvitedAccount, out var friend) ? friend : (AccountId?)null;
         var declinedBy = AccountId.TryParse(recorded?.DeclinedBy, out var decliner) ? decliner : (AccountId?)null;
-        return (seat, new TableSeat(slot, token ?? Token(), human)
+        return new TableSeat(slot, token ?? Token(), new SteppedPerson())
         {
             Invitation = taken ? null : invitation,
             Taken = taken,
@@ -640,7 +629,7 @@ internal sealed class TableComposer
             InvitedAccount = invited,
             InvitedAt = invited is null ? null : recorded?.InvitedAt,
             DeclinedBy = declinedBy,
-        });
+        };
     }
 
     /// <summary>

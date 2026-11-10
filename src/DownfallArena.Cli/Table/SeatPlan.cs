@@ -107,6 +107,8 @@ internal sealed class SeatPlan
 
         public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options) => throw Asked();
 
+        public ChosenAction DecideAction(PlayerBoardState board, ActionOptions options) => throw Asked();
+
         private static InvalidOperationException Asked() => new("A seat's person decides from their own page; nothing decides in their place.");
     }
 }

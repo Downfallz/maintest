@@ -1,11 +1,11 @@
 namespace DownfallArena.Cli.Table;
 
 /// <summary>
-/// Rebuilds every recorded open table when a host starts. A game that began does not expire during a pause.
+/// Picks up every recorded open table when a host starts, each where its journal ends (ADR 0159). A game that began does not expire during a pause.
 /// Finished and explicitly closed records are left alone, as are runs with no table record, and a table that
-/// never began and was opened longer ago than <see cref="TableRegistry.NeverBegunFor" /> (ADR 0115). A replay
+/// never began and was opened longer ago than <see cref="TableRegistry.NeverBegunFor" /> (ADR 0115). A journal
 /// that no longer fits the current engine or content is reported and preserved for the operator, and marked, so a
-/// host on the same engine, content and rules does not replay it again.
+/// host on the same engine, content and rules does not rebuild it again.
 /// </summary>
 internal static class TableRestorer
 {

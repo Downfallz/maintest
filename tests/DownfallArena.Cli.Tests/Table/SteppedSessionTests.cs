@@ -1,0 +1,308 @@
+using DownfallArena.Application.Agents;
+using DownfallArena.Application.Matches.Decisions;
+using DownfallArena.Application.Matches.Driving;
+using DownfallArena.Application.Matches.Journaling;
+using DownfallArena.Application.Matches.Projections;
+using DownfallArena.Cli.Table;
+using DownfallArena.Domain.Matches;
+using DownfallArena.Domain.Matches.Rounds;
+using DownfallArena.Domain.Resources;
+using DownfallArena.Infrastructure.Learning;
+using DownfallArena.Infrastructure.Matches;
+using DownfallArena.SharedKernel.Identifiers;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace DownfallArena.Cli.Tests.Table;
+
+/// <summary>
+/// A table's match stepped over its journal (ADR 0159): nothing waits on a person, a decision is written and
+/// applied before it is answered, the bots' turns are taken behind it, and a table opened over a journal is
+/// where the journal ends.
+/// </summary>
+public sealed class SteppedSessionTests : IDisposable
+{
+    private const string PersonName = "human:mk";
+
+    private readonly HostedTables _host = new();
+    private readonly HostedTables _other = new();
+    private readonly InMemoryDecisionJournal _journal = new();
+    private readonly CancellationTokenSource _stopping = new();
+    private readonly List<SteppedSession> _opened = [];
+
+    public void Dispose()
+    {
+        _stopping.Cancel();
+        foreach (var session in _opened)
+        {
+            session.Dispose();
+        }
+
+        _stopping.Dispose();
+        _other.Dispose();
+        _host.Dispose();
+    }
+
+    [Fact]
+    public async Task Nobody_is_asked_anything_until_the_table_begins_and_then_its_person_is_told_once()
+    {
+        var (session, person, _) = await Opened(_host);
+        var told = new List<Asking>();
+        person.Asked += (asking, _) => told.Add(asking);
+        var before = person.Waiting;
+
+        session.Begin();
+        session.Begin();
+        await session.SnapshotAsync(PlayerSlot.Player1);
+
+        before.ShouldBeNull();
+        session.HasBegun.ShouldBeTrue();
+        person.Waiting.ShouldBe(new Asking(PlayerOptionsKind.Evolution, null, 1));
+        told.ShouldBe([new Asking(PlayerOptionsKind.Evolution, null, 1)]);
+    }
+
+    /// <summary>
+    /// The tap answers once its decision is written and applied. The bot in the other seat owes its speeds
+    /// after it, and is still thinking when the tap has answered: its turn is taken behind, not inside.
+    /// </summary>
+    [Fact]
+    public async Task A_decision_is_written_and_applied_before_it_answers_and_the_bot_s_turn_is_taken_behind_it()
+    {
+        var (session, person, bot) = await Opened(_host);
+        session.Begin();
+        await Waiting(person, PlayerOptionsKind.Evolution);
+        await BotHeld(PlayerOptionsKind.Evolution);
+        bot.Hold();
+
+        var taken = await session.DecideAsync(PlayerSlot.Player1, PlayerDecision.Pass, 1, await Options(session), round: 1).WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+        var written = await Decisions();
+        await bot.Asked.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+        var thinking = (await Decisions()).Count;
+        var next = await Waiting(person, PlayerOptionsKind.Speed);
+        bot.Release();
+        await BotHeld(PlayerOptionsKind.Speed);
+
+        taken.ShouldBe(new DecisionTaken(Taken: true, SetsOff: true));
+        written.ShouldContain(new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass));
+        thinking.ShouldBe(written.Count, "nothing of the bot's turn was written while it was thinking");
+        next.Asked.ShouldBe(2, "the person is asked their own speeds while the bot thinks about its own");
+    }
+
+    [Fact]
+    public async Task An_answer_to_an_asking_that_has_passed_and_one_for_a_seat_a_bot_holds_are_late()
+    {
+        var (session, person, _) = await Opened(_host);
+        session.Begin();
+        await Waiting(person, PlayerOptionsKind.Evolution);
+        await BotHeld(PlayerOptionsKind.Evolution);
+        var before = (await Decisions()).Count;
+
+        var stale = await session.DecideAsync(PlayerSlot.Player1, PlayerDecision.Pass, asked: 7, await Options(session), round: 1);
+        var bots = await session.DecideAsync(PlayerSlot.Player2, PlayerDecision.Pass, asked: 1, await Options(session), round: 1);
+
+        stale.ShouldBe(DecisionTaken.Late);
+        bots.ShouldBe(DecisionTaken.Late);
+        (await Decisions()).Count.ShouldBe(before);
+    }
+
+    /// <summary>
+    /// A seat changes hands from the top of a round it has not reached. The round its person is being asked
+    /// about is reached; the next is not, and the change waits there, written in the journal with what the seat
+    /// had reached when it was asked.
+    /// </summary>
+    [Fact]
+    public async Task A_seat_changes_hands_from_a_round_it_has_not_reached_and_the_journal_says_so()
+    {
+        var (session, person, _) = await Opened(_host);
+        session.Begin();
+        await Waiting(person, PlayerOptionsKind.Evolution);
+        var greedy = Named(_host)(PlayerSlot.Player1, "greedy").ShouldNotBeNull();
+
+        var reached = await session.SwapAsync(PlayerSlot.Player1, greedy, "greedy", round: 1);
+        var later = await session.SwapAsync(PlayerSlot.Player1, greedy, "greedy", round: 2);
+
+        reached.Taken.ShouldBeFalse();
+        reached.Reached.ShouldBe(1);
+        reached.Held.Name.ShouldBe(PersonName);
+        later.Taken.ShouldBeTrue();
+        session.Pending(PlayerSlot.Player1).ShouldBe(new Swap(greedy, 2));
+        session.SeatedName(PlayerSlot.Player1).ShouldBe(PersonName);
+        session.PlayedByItsPerson(PlayerSlot.Player1).ShouldBeTrue();
+        (await _journal.ReadAsync(Run, TestContext.Current.CancellationToken)).Entries.OfType<SeatChangeEntry>()
+            .ShouldBe([new SeatChangeEntry(PlayerSlot.Player1, "greedy", 2, Reached: 1)]);
+    }
+
+    /// <summary>
+    /// Another process that holds nothing but the journal opens the table where it ends: the same question
+    /// under the same asking, the same board, and whoever the journal's seat changes say sits where.
+    /// </summary>
+    [Fact]
+    public async Task A_table_opened_over_its_journal_is_where_the_journal_ends_with_whoever_it_says_sits_there()
+    {
+        var (session, person, _) = await Opened(_host);
+        session.Begin();
+        await Waiting(person, PlayerOptionsKind.Evolution);
+        await BotHeld(PlayerOptionsKind.Evolution);
+        (await session.DecideAsync(PlayerSlot.Player1, PlayerDecision.Pass, 1, await Options(session), round: 1)).Taken.ShouldBeTrue();
+        var asked = await Waiting(person, PlayerOptionsKind.Speed);
+        await BotHeld(PlayerOptionsKind.Speed);
+        (await session.SwapAsync(PlayerSlot.Player1, Named(_host)(PlayerSlot.Player1, "greedy")!, "greedy", round: 3)).Taken.ShouldBeTrue();
+        var board = (await session.SnapshotAsync(PlayerSlot.Player1)).Value;
+
+        var (elsewhere, there, _) = await Opened(_other, session.MatchId);
+        var unbegun = there.Waiting;
+        elsewhere.Begin();
+        var read = (await elsewhere.SnapshotAsync(PlayerSlot.Player1)).Value;
+
+        unbegun.ShouldBeNull();
+        read.Waiting.ShouldBe(asked);
+        System.Text.Json.JsonSerializer.Serialize(read.Board, ArtifactJson.LineOptions).ShouldBe(System.Text.Json.JsonSerializer.Serialize(board.Board, ArtifactJson.LineOptions));
+        read.OpponentIntents.ShouldBe(board.OpponentIntents);
+        elsewhere.SeatedName(PlayerSlot.Player1).ShouldBe(PersonName);
+        elsewhere.Pending(PlayerSlot.Player1).ShouldNotBeNull().Round.ShouldBe(3);
+        elsewhere.Pending(PlayerSlot.Player1)!.Next.Name.ShouldBe("greedy");
+    }
+
+    [Fact]
+    public async Task A_table_of_bots_plays_itself_to_an_outcome_once_it_begins()
+    {
+        var (session, _, _) = await Opened(_host, people: false);
+        var waited = session.Outcome.IsCompleted;
+
+        session.Begin();
+        var outcome = await session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+        waited.ShouldBeFalse();
+        outcome.IsSuccess.ShouldBeTrue();
+        session.IsOver.ShouldBeTrue();
+        (await session.BoardAsync(PlayerSlot.Player1)).Value.Outcome.ShouldBe(outcome.Value);
+    }
+
+    [Fact]
+    public async Task A_concession_ends_the_table_at_once_and_is_the_journal_s_last_line()
+    {
+        var (session, person, _) = await Opened(_host);
+        session.Begin();
+        await Waiting(person, PlayerOptionsKind.Evolution);
+
+        var conceded = await session.ConcedeAsync(PlayerSlot.Player1);
+
+        conceded.IsSuccess.ShouldBeTrue();
+        var outcome = await session.Outcome.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+        outcome.Value.Winner.ShouldBe(PlayerSlot.Player2);
+        person.Waiting.ShouldBeNull();
+        (await _journal.ReadAsync(Run, TestContext.Current.CancellationToken)).Entries[^1].ShouldBe(new ConcessionEntry(PlayerSlot.Player1));
+    }
+
+    [Fact]
+    public async Task A_table_let_go_of_before_its_match_ended_has_no_outcome()
+    {
+        var (session, person, _) = await Opened(_host);
+        session.Begin();
+        await Waiting(person, PlayerOptionsKind.Evolution);
+
+        await _stopping.CancelAsync();
+
+        session.IsOver.ShouldBeTrue();
+        session.Outcome.IsCanceled.ShouldBeTrue();
+    }
+
+    private const string Run = "table-1";
+
+    /// <summary>A table with its person in seat 1 and a bot that can be held in seat 2, or two bots.</summary>
+    private async Task<(SteppedSession Session, SteppedPerson Person, Held Bot)> Opened(HostedTables host, MatchId? matchId = null, bool people = true)
+    {
+        var resources = host.Services.GetRequiredService<IGameResources>();
+        var person = new SteppedPerson();
+        var bot = new Held(new GreedyAgent(resources, HostedTables.Rules));
+        TableSeat[] seats = [new TableSeat(PlayerSlot.Player1, "seat-1", people ? person : null), new TableSeat(PlayerSlot.Player2, "seat-2", Person: null)];
+        var plan = new SeatPlan(
+            people ? SeatPlan.Person(PersonName) : new Occupant(new GreedyAgent(resources, HostedTables.Rules), "greedy"),
+            new Occupant(bot, "greedy"));
+        List<CreatureDefinitionId> roster = [.. Enumerable.Repeat(resources.Creatures.First().Id, HostedTables.Rules.TeamSize)];
+        var opened = await SteppedSession.OpenAsync(
+            SteppedHost.Of(host.Services),
+            _journal,
+            new JournaledMatch(Run, matchId ?? MatchId.New(), HostedTables.Rules, 7, roster),
+            new SteppedSeats(plan, seats, Named(host)),
+            stopping: _stopping.Token);
+        opened.IsSuccess.ShouldBeTrue(opened.IsFailure ? opened.Error.Message : string.Empty);
+        _opened.Add(opened.Value);
+        return (opened.Value, person, bot);
+    }
+
+    /// <summary>Who a name stands for, as a pilot's seating says: the seat's own person, or the bot of that name.</summary>
+    private static Func<PlayerSlot, string, Occupant?> Named(HostedTables host) => (_, wanted) =>
+        wanted == TableRequest.Person
+            ? SeatPlan.Person(PersonName)
+            : new Occupant(new GreedyAgent(host.Services.GetRequiredService<IGameResources>(), HostedTables.Rules), wanted);
+
+    private static async Task<PlayerOptions> Options(SteppedSession session) => (await session.SnapshotAsync(PlayerSlot.Player1)).Value.Options;
+
+    private async Task<IReadOnlyList<SeatDecision>> Decisions() =>
+        (await _journal.ReadAsync(Run, TestContext.Current.CancellationToken)).Decisions;
+
+    /// <summary>Waits until the bot's answers to what both seats are asked at once are in the journal.</summary>
+    private async Task BotHeld(PlayerOptionsKind kind)
+    {
+        for (var attempt = 0; attempt < 500; attempt++)
+        {
+            if ((await Decisions()).Any(decision => decision.Slot == PlayerSlot.Player2 && decision.Decision.Kind == kind))
+            {
+                return;
+            }
+
+            await Task.Delay(10, TestContext.Current.CancellationToken);
+        }
+
+        throw new InvalidOperationException($"The bot never answered its {kind}.");
+    }
+
+    private static async Task<Asking> Waiting(SteppedPerson person, PlayerOptionsKind kind)
+    {
+        for (var attempt = 0; attempt < 500 && person.Waiting?.Kind != kind; attempt++)
+        {
+            await Task.Delay(10, TestContext.Current.CancellationToken);
+        }
+
+        var waiting = person.Waiting.ShouldNotBeNull();
+        waiting.Kind.ShouldBe(kind);
+        return waiting;
+    }
+
+    /// <summary>A bot that can be made to stop and think at its next decision, and says when it has.</summary>
+    private sealed class Held(IPlayerAgent inner) : IPlayerAgent
+    {
+        private readonly TaskCompletionSource _asked = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private volatile TaskCompletionSource? _thinking;
+
+        /// <summary>Completes when the bot is asked something while it is held.</summary>
+        public Task Asked => _asked.Task;
+
+        public void Hold() => _thinking = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public void Release() => _thinking?.TrySetResult();
+
+        public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options) => Thought().DecideEvolution(board, options);
+
+        public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) => Thought().DecideSpeed(board, creature);
+
+        public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options) => Thought().DecideTieOrder(board, options);
+
+        public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption) => Thought().DecideIntent(board, intentOption);
+
+        public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options) => Thought().DecideTargets(board, options);
+
+        public ChosenAction DecideAction(PlayerBoardState board, ActionOptions options) => Thought().DecideAction(board, options);
+
+        private IPlayerAgent Thought()
+        {
+            if (_thinking is { } thinking)
+            {
+                _asked.TrySetResult();
+                thinking.Task.Wait(TimeSpan.FromSeconds(30));
+            }
+
+            return inner;
+        }
+    }
+}

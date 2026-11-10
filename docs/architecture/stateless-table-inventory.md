@@ -68,8 +68,8 @@ Each phase ships on the one container app there is today and leaves the game pla
    `MatchReplay` builds a match again from how it was created and its decisions, by the commands that built
    it. `JournaledStepper` is the stepper over a journal: it reads the journal before each step, rebuilds the
    match in memory when it is not where the journal ends, writes what the step decided, and tells a writer
-   that lost the race the match moved. `RecordedTableReplayTests` holds it to what the host records today.
-   Nothing in the host uses it yet.
+   that lost the race the match moved. `RecordedTableReplayTests` holds it to what the host recorded before
+   phase 4.
 4. **The host on the journaled stepper, and its own state out of memory.** In five slices, each leaving the
    game playable:
    - **4.1a, done.** What the stepper lacked to carry an ordinary table. A seat changes hands from the top of
@@ -80,9 +80,15 @@ Each phase ships on the one container app there is today and leaves the game pla
      (`IDecisionWitness`) as the question the driver would have asked an agent there and its answer, a
      rebuilt match's included, which is how a match is recorded with nobody seated to record through.
      Every step answers with what both seats read (`JournaledState`).
-   - **4.1b.** Ordinary recorded tables play through `JournaledStepper`; practice tables stay on the driver
-     behind a seam. The host's journal, its seats and its session stay in the code, unused by ordinary
-     tables, so the two ways of recording one seeded table can be held to each other.
+   - **4.1b, done.** Every table the composer builds is stepped over its journal (`SteppedSession`), recorded
+     or not; practice tables stay on the driver behind the same seam (`ITableSession`, `DrivenSession`). A tap
+     is written and applied in one turn of the match and answers; what the Player agents owe after it is
+     taken behind it, one of their turns a turn of the match. Who sits where is the table's opening and the
+     journal's seat changes folded in order (`SeatPlan`). The recording is shown every decision
+     (`PlaytestRun.Witnessed`) and is rebuilt with the match. A host that starts opens each table where its
+     journal ends, with no replay through seats and no wait. The blocking seat, the seat agent, the session
+     and the host's own journal stay in the code for practice tables and for the tests that hold the two
+     models to each other (`SteppedRecordingTests`, `RecordedTableReplayTests`) until 4.4.
    - **4.2.** Arrival and "has begun" in the table record, with a revision and a conditional write; the
      version becomes journal lines plus that revision; `TableRestorer` becomes registration with no replay.
    - **4.3.** Tokens, codes and the lobby's projections out of the registry, which becomes a cache.
@@ -196,12 +202,13 @@ which adds the compilation of the engine itself.
    table's version and is no line of the journal.
 
 10. **A concession.** Answered in 4.1a: a line of its own (`Concession`), written in the turn that ends the
-    match, so a match rebuilt from its journal is conceded where it was. The host writes it from 4.1b.
-11. **A seat changing hands.** Half answered in 4.1a: the swap line is read as a seat change, the stepper
-    reads who sits off the round at every decision, and a change is refused from a round the match has
-    reached. Left for 4.1b: the host folding the lines into who sits where. A line written before the
-    journal was the source does not say at which round it was asked, so two swaps pending on one seat of a
-    table open across the deploy could fold differently from how they were applied.
+    match, so a match rebuilt from its journal is conceded where it was. The host has written it since 4.1b.
+11. **A seat changing hands.** Answered. The swap line is read as a seat change and says what the seat had
+    reached when it was asked (`reached`), so the lines fold into who sits where the same way every time:
+    a change asked while another had not happened replaces it. The seat's reached round and the line are
+    settled in one turn of the match, so no decision of the seat's lands between them. A line written
+    before the journal was the source does not say what the seat had reached, so two swaps pending on one
+    seat of a table open across the deploy could fold differently from how they were applied.
 12. **Two shapes of one line.** `JournalLine` in Infrastructure and `JournalEntry` in the host describe the
     same file until phase 4 removes the host's; `RecordedTableReplayTests` is what holds them together.
 13. **Loading on every step.** `JournaledStepper` reads the whole journal before each step and rebuilds the
@@ -219,18 +226,36 @@ which adds the compilation of the engine itself.
     way, a queue and Container Apps first, Event Grid when one fact has several consumers. Not verified:
     current prices, and whether an append to an append blob raises a storage event at all.
 
-15. **A page's `waitingAsked`.** From 4.1b it is the seat's asking, which counts every decision of the seat
-    where today's counter counts the questions put to a person since the host started. Still an integer,
-    still increasing, still per seat; the values differ, in the page and in `notes.jsonl`.
+15. **A page's `waitingAsked`.** Since 4.1b it is the seat's asking, which counts every decision of the seat
+    where the counter before it counted the questions put to a person since the host started. Still an
+    integer, still increasing, still per seat; the values differ, in the page and in `notes.jsonl`. A seat a
+    bot plays for a while counts the bot's decisions too.
 16. **A Player agent's turn inside a request.** Decided: the agents' advance runs after the tap has answered,
     in the background, which is the in-process shape of phase 5. A step that plays agents holds the match's
     turn, so a tap made while one is thinking waits behind it; and a failed journal write now fails the tap
     where the match used to go on unrecorded.
 
+17. **A checkpoint ahead of the journal.** Decided in 4.1b: the journal is the table. A trace checkpointed
+    past the journal's last line, a turn applied and seen by a checkpoint and never written, is of a match
+    the journal does not hold. A table picked up again is held against its checkpoint as far as the two go
+    together and comes back where its journal ends; before, such a table was refused.
+18. **The file journal between processes.** A directory store is one process's. Within a process every
+    journal over a directory takes turns on a run; between processes Linux locks the file for the append and
+    Windows refuses a second writer where the file is opened, and nothing does on macOS. The hosted table's
+    journal is an append blob and has none of this.
+19. **Who a rebuilt decision is named after.** A rebuild records every step again under the name of whoever
+    sat at its round, which the seat changes further down the journal say. `SteppedSession` reads them once
+    before the match is rebuilt, and learns of later ones because it writes them itself. A second process
+    writing a seat change is seen at the next step, after a rebuild it caused has named its steps. One
+    process until 4.2, where the table is loaded per request and reads its seat changes with its journal.
+20. **What a table's session still keeps in memory after 4.1b.** Whether each person has arrived and whether
+    the match has begun (4.2), the table's version counter (4.2), the decision clock (question 3), and the
+    last round each seat decided in, which a rebuild works out again.
+
 ## Documents this makes stale as it lands
 
-- `infra/README.md`: "a match lives in memory", and the cold-start paragraph.
-- `docs/tabletop/playtest-app.md`: the blocking seat and the thread per session.
+- `infra/README.md`: the cold-start paragraph, as the apps are split (phase 6).
+- `docs/tabletop/playtest-app.md`: the blocking seat and the thread per session, which practice tables keep
+  until 4.4.
 - ADR 0091 (superseded), and the remarks in `HumanSeat`, `TableSession`, `TableGate`, `StoredSessions` that
   cite it.
-- `AGENTS.md`: the `table` command's description of rebuilding at start.
