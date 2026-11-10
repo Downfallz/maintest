@@ -339,21 +339,31 @@ public sealed class JournaledStepperTests
         (await replica.Journaled.SubmitAsync(table, MatchSeats.People, new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass), cancellationToken: TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
     }
 
+    /// <summary>
+    /// A round the match has left cannot be handed over; the one it is in can, to whoever knows the seat has
+    /// decided nothing in it yet. Here seat 1 is played by an agent through round 1 and answered from outside
+    /// from round 2, so the step stops at the top of round 2 with that seat still to decide.
+    /// </summary>
     [Fact]
-    public async Task A_seat_cannot_change_hands_from_a_round_the_match_has_reached_nor_once_it_is_over()
+    public async Task A_seat_cannot_change_hands_from_a_round_the_match_has_left_nor_once_it_is_over()
     {
         var table = Table(3, CombatDeclaration.HiddenIntent);
         var journal = new JournalStore();
         var replica = new Replica(journal);
-        var round = (await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken)).Value.Player1.View.Board.RoundNumber.ShouldNotBeNull();
+        var seats = new MatchSeats(Agent(3, PlayerSlot.Player1), Agent(3, PlayerSlot.Player2)).From(PlayerSlot.Player1, 2, null);
+        var step = (await replica.Journaled.AdvanceAsync(table, seats, TestContext.Current.CancellationToken)).Value;
+        step.State.Player1.View.Board.RoundNumber.ShouldBe(2);
+        var written = journal.Lines.Count;
 
-        var reached = await replica.Journaled.ChangeSeatAsync(table, new SeatChangeEntry(PlayerSlot.Player1, "greedy", round), TestContext.Current.CancellationToken);
+        var left = await replica.Journaled.ChangeSeatAsync(table, new SeatChangeEntry(PlayerSlot.Player1, "greedy", 1), TestContext.Current.CancellationToken);
+        var current = await replica.Journaled.ChangeSeatAsync(table, new SeatChangeEntry(PlayerSlot.Player1, "greedy", 2), TestContext.Current.CancellationToken);
         await replica.Journaled.ConcedeAsync(table, PlayerSlot.Player1, TestContext.Current.CancellationToken);
-        var over = await replica.Journaled.ChangeSeatAsync(table, new SeatChangeEntry(PlayerSlot.Player1, "greedy", round + 1), TestContext.Current.CancellationToken);
+        var over = await replica.Journaled.ChangeSeatAsync(table, new SeatChangeEntry(PlayerSlot.Player1, "greedy", 3), TestContext.Current.CancellationToken);
 
-        reached.Error.ShouldBe(JournalErrors.RoundReached);
+        left.Error.ShouldBe(JournalErrors.RoundReached);
+        current.IsSuccess.ShouldBeTrue();
         over.Error.ShouldBe(MatchErrors.NotInProgress);
-        journal.Lines.ShouldBe([new ConcessionEntry(PlayerSlot.Player1)]);
+        journal.Lines.Skip(written).ShouldBe([new SeatChangeEntry(PlayerSlot.Player1, "greedy", 2), new ConcessionEntry(PlayerSlot.Player1)]);
     }
 
     /// <summary>

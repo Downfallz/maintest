@@ -130,10 +130,15 @@ public sealed class JournaledStepper(
     }
 
     /// <summary>
-    /// Writes down that a seat changes hands from the top of a round the match has not reached. Who the name
-    /// stands for is the caller's to say: this keeps the line where the decisions are, so whoever picks the
-    /// match up reads it there (<see cref="JournaledState.SeatChanges" />).
+    /// Writes down that a seat changes hands from the top of a round. Who the name stands for is the caller's
+    /// to say: this keeps the line where the decisions are, so whoever picks the match up reads it there
+    /// (<see cref="JournaledState.SeatChanges" />).
     /// </summary>
+    /// <remarks>
+    /// A round the match has left is refused here. The round it is in is not: a seat that has decided nothing in
+    /// it yet changes hands at its first decision there, and whether it has is the caller's to know, since only
+    /// the caller sees each decision's round as it is taken.
+    /// </remarks>
     public Task<Result<JournaledState>> ChangeSeatAsync(JournaledMatch match, SeatChangeEntry change, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(match);
@@ -157,7 +162,7 @@ public sealed class JournaledStepper(
                 return Result.Failure<JournaledState>(MatchErrors.NotInProgress);
             }
 
-            if (change.FromRound <= (state.Value.Player1.View.Board.RoundNumber ?? 0))
+            if (change.FromRound < (state.Value.Player1.View.Board.RoundNumber ?? 0))
             {
                 return Result.Failure<JournaledState>(JournalErrors.RoundReached);
             }
