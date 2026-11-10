@@ -80,9 +80,25 @@ public abstract class TableIndexContract
         await index.PutOpenAsync(new IndexedTable("table-1", Noon, 1, "{}"), TestContext.Current.CancellationToken);
         await index.PutOpenAsync(new IndexedTable("table-2", Noon.AddMinutes(1), 1, "{}"), TestContext.Current.CancellationToken);
 
-        await index.RemoveOpenAsync("table-1", Noon, TestContext.Current.CancellationToken);
-        await index.RemoveOpenAsync("table-9", Noon, TestContext.Current.CancellationToken);
+        await index.CloseAsync("table-1", Noon, 2, TestContext.Current.CancellationToken);
+        await index.CloseAsync("table-9", Noon, 1, TestContext.Current.CancellationToken);
 
         (await index.OpenAsync(0, 10, TestContext.Current.CancellationToken)).Select(table => table.Table).ShouldBe(["table-2"]);
+    }
+
+    /// <summary>
+    /// Another host can write a table's summary late, after the table closed: the index keeps the revision it
+    /// closed at, and an earlier one does not list the table again.
+    /// </summary>
+    [Fact]
+    public async Task A_summary_of_an_earlier_revision_written_after_the_table_closed_does_not_list_it_again()
+    {
+        var index = await IndexAsync();
+        await index.PutOpenAsync(new IndexedTable("table-1", Noon, 1, "{}"), TestContext.Current.CancellationToken);
+
+        await index.CloseAsync("table-1", Noon, 3, TestContext.Current.CancellationToken);
+        await index.PutOpenAsync(new IndexedTable("table-1", Noon, 2, "{}"), TestContext.Current.CancellationToken);
+
+        (await index.OpenAsync(0, 10, TestContext.Current.CancellationToken)).ShouldBeEmpty();
     }
 }

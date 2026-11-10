@@ -22,8 +22,12 @@ public interface ITableIndex
     /// </summary>
     Task PutOpenAsync(IndexedTable table, CancellationToken cancellationToken = default);
 
-    /// <summary>Takes a table out of the open ones: it ended, or it was let go of.</summary>
-    Task RemoveOpenAsync(string table, DateTimeOffset createdAt, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Takes a table out of the open ones at a revision of its record: it ended, or it was let go of. The index
+    /// keeps that it closed, and at which revision, so a summary of an earlier revision arriving late from
+    /// another host does not list it again.
+    /// </summary>
+    Task CloseAsync(string table, DateTimeOffset createdAt, long revision, CancellationToken cancellationToken = default);
 
     /// <summary>The open tables, newest first, from the first one past <paramref name="skip" />, at most <paramref name="take" />.</summary>
     Task<IReadOnlyList<IndexedTable>> OpenAsync(int skip, int take, CancellationToken cancellationToken = default);

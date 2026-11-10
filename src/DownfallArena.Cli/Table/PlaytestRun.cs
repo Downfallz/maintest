@@ -421,7 +421,7 @@ internal sealed class PlaytestRun
             }
             else
             {
-                await index.RemoveOpenAsync(written.Id, written.CreatedAt, cancellationToken);
+                await index.CloseAsync(written.Id, written.CreatedAt, written.Revision, cancellationToken);
             }
         }
         catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or Azure.RequestFailedException or ArgumentException)

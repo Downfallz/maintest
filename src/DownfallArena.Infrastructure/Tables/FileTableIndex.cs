@@ -70,27 +70,27 @@ public sealed class FileTableIndex : ITableIndex
     public Task PutOpenAsync(IndexedTable table, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(table);
-        var path = PathOf(_open, table.Table);
-        lock (Gate)
-        {
-            if (Read<IndexedTable>(path) is not { } held || held.Revision < table.Revision)
-            {
-                Write(path, table);
-            }
-        }
-
+        Put(new Listed(table.Table, table.CreatedAt, table.Revision, table.Summary, Closed: false));
         return Task.CompletedTask;
     }
 
-    public Task RemoveOpenAsync(string table, DateTimeOffset createdAt, CancellationToken cancellationToken = default)
+    public Task CloseAsync(string table, DateTimeOffset createdAt, long revision, CancellationToken cancellationToken = default)
     {
-        var path = PathOf(_open, table);
+        Put(new Listed(table, createdAt, revision, Summary: string.Empty, Closed: true));
+        return Task.CompletedTask;
+    }
+
+    /// <summary>A table's entry written, unless the one held is of the same revision of its record or a later one.</summary>
+    private void Put(Listed listed)
+    {
+        var path = PathOf(_open, listed.Table);
         lock (Gate)
         {
-            File.Delete(path);
+            if (Read<Listed>(path) is not { } held || held.Revision < listed.Revision)
+            {
+                Write(path, listed);
+            }
         }
-
-        return Task.CompletedTask;
     }
 
     public Task<IReadOnlyList<IndexedTable>> OpenAsync(int skip, int take, CancellationToken cancellationToken = default)
@@ -99,8 +99,10 @@ public sealed class FileTableIndex : ITableIndex
         {
             IReadOnlyList<IndexedTable> open = Directory.Exists(_open)
                 ? [.. Directory.EnumerateFiles(_open, "*.json")
-                    .Select(Read<IndexedTable>)
-                    .OfType<IndexedTable>()
+                    .Select(Read<Listed>)
+                    .OfType<Listed>()
+                    .Where(table => !table.Closed)
+                    .Select(table => new IndexedTable(table.Table, table.CreatedAt, table.Revision, table.Summary))
                     .OrderByDescending(table => table.CreatedAt)
                     .ThenByDescending(table => table.Table, StringComparer.Ordinal)
                     .Skip(Math.Max(0, skip))
@@ -143,4 +145,7 @@ public sealed class FileTableIndex : ITableIndex
         File.WriteAllBytes(beside, JsonSerializer.SerializeToUtf8Bytes(entry, ArtifactJson.DocumentOptions));
         File.Move(beside, path, overwrite: true);
     }
+
+    /// <summary>An open table's entry, or what is left of it once the table closed: its revision, kept so no earlier summary lists it again.</summary>
+    private sealed record Listed(string Table, DateTimeOffset CreatedAt, long Revision, string Summary, bool Closed);
 }
