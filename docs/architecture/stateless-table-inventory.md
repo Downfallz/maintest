@@ -117,10 +117,24 @@ Each phase ships on the one container app there is today and leaves the game pla
      finds the seat a join code opens and lists the open tables newest first, with an adapter on Table
      Storage in the account that holds the runs and one on files beside a directory store. Not wired yet;
      CI runs the emulator's table service, and the app's identity is granted the table data role.
-   - **4.3b2.** Join codes through the index: minted into it, spent out of it, and a code this host does not
-     hold opens the table the index names.
-   - **4.3b3.** The lobby's open tables from the index, and the registry a cache a table is loaded into from
-     its record and journal when a key or a code names it (4.2c with it).
+   - **4.3b2 and 4.3b3, one change.** The registry becomes a cache a table is loaded into from its record
+     and journal when a key or a code names it (4.2c with it), and the index is what lists and finds. Codes
+     cannot move alone: they are minted under the registry's lock, synchronously, and the index's writes
+     are a store's. The registry is asked five kinds of thing today (about 110 calls, 52 of them the
+     lobby's), and each moves this way:
+     - *Find a table* (`ById`, `ByToken`, `ByInvitation`, `Codes.Answer`): the cache, then the table a key
+       names (`TableKeys`) or the index names for a code, loaded on a miss. Keys minted before 4.3a name no
+       table; they are read off the open records once, when a host starts, for the life of those tables.
+     - *Mint or change a seat's keys* (`Add`, `TryAdd`, `Rekey`, `Codes.Mint`/`Forget`): async, the code
+       taken in the index first (refused, another is drawn), then the record written, then the open
+       table's summary at the record's revision.
+     - *List tables* (`All`: the lobby's counts and pages, an account's own tables and its caps of ADR 0147,
+       the admin panel): the open tables in the index, newest first, each summary carrying what these read
+       (format, begun, open seats, the accounts seated). An account's tables are read by filtering that
+       list, which is a few dozen at playtest scale; an entry per account is the next step if it is not.
+     - *Cap* (`Reserve`, `Capacity`): the open tables the index lists, not those this process holds.
+     - *Sweep* (`SweepIfDue`): over the index rather than the cache, still on a request until phase 6
+       makes it a scheduled command; a table not loaded is closed through its record.
    - **4.4, done.** Practice tables onto the stepper, over a journal kept in memory: the recipe's agent
      plays both seats into it, one question at a time, through the gates any decision goes through
      (`SeatAnswer`), until the person's seat is asked the scenario's question (`PracticeScenario.HandsOver`);
