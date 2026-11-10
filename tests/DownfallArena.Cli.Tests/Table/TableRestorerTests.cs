@@ -290,6 +290,28 @@ public sealed class TableRestorerTests : IDisposable
     }
 
     /// <summary>
+    /// A journal with a line no host can read is that table's problem and no other's: it is left as it was and
+    /// said so, and the tables after it are picked up.
+    /// </summary>
+    [Fact]
+    public async Task A_journal_with_a_line_it_cannot_read_leaves_that_table_alone_and_the_others_are_picked_up()
+    {
+        var broken = await Opened(HostedTables.OnePerson);
+        await PlayUntil(broken, broken.Seats[0].Person!, PlayerOptionsKind.Intent);
+        var sound = await Opened(HostedTables.OnePerson);
+        await PlayUntil(sound, sound.Seats[0].Person!, PlayerOptionsKind.Intent);
+        var journal = await JournalAsync(broken.Id);
+        journal.First(line => (string?)line["kind"] == "Speed").Remove("speed");
+        await RewriteAsync(broken.Id, journal);
+
+        var said = await TableRestorer.RestoreAsync(_after.Stored!, _after.Composer, _later, TimeProvider.System, TestContext.Current.CancellationToken);
+
+        said.ShouldContain(line => line.StartsWith($"Session {broken.Id} was not rebuilt", StringComparison.Ordinal));
+        _later.ById(broken.Id).ShouldBeNull();
+        _later.ById(sound.Id).ShouldNotBeNull();
+    }
+
+    /// <summary>
     /// A record can fit a match move for move and still be another match -- the same legal moves under other
     /// content or another engine -- and the boards the earlier host checkpointed are what says so.
     /// </summary>

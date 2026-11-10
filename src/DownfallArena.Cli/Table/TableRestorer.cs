@@ -36,7 +36,19 @@ internal static class TableRestorer
                 continue;
             }
 
-            var journal = await composer.JournalAsync(id, cancellationToken);
+            // Read inside what refuses one table: a line no host can read is that table's to be left over, and the
+            // tables after it are picked up all the same.
+            Application.Matches.Journaling.JournalReading? journal;
+            try
+            {
+                journal = await composer.JournalAsync(id, cancellationToken);
+            }
+            catch (Exception failure) when (Refuses(failure))
+            {
+                said.Add($"Session {record.Id} was not rebuilt: {failure.Message}");
+                continue;
+            }
+
             var lines = journal?.Entries.Count ?? 0;
             var decided = journal?.Decisions.Count > 0;
             if (!record.Begun && !decided && now - record.CreatedAt >= TableRegistry.NeverBegunFor)
@@ -52,7 +64,7 @@ internal static class TableRestorer
             {
                 table = await composer.ResumeAsync(record, decided, cancellationToken);
             }
-            catch (Exception failure) when (failure is ArgumentException or IOException or System.Text.Json.JsonException or InvalidDataException or InvalidOperationException)
+            catch (Exception failure) when (Refuses(failure))
             {
                 said.Add($"Session {record.Id} was not rebuilt: {failure.Message}");
                 continue;
@@ -76,4 +88,8 @@ internal static class TableRestorer
 
         return said;
     }
+
+    /// <summary>What refuses one table rather than the host's start: its record or journal no longer read, or no longer fit.</summary>
+    private static bool Refuses(Exception failure) =>
+        failure is ArgumentException or IOException or System.Text.Json.JsonException or InvalidDataException or InvalidOperationException;
 }
