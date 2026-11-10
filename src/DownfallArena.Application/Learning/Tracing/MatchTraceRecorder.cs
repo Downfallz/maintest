@@ -115,11 +115,22 @@ public sealed class MatchTraceRecorder(IMatchRepository matches) : IDomainEventL
     /// entries here, and the second one has a finished trace written somewhere. A caller that checkpoints by
     /// overwriting a file would replace that trace with an empty one, with nothing left to say it had.
     /// </remarks>
-    public MatchTrace? Snapshot(MatchId matchId, RunStamp stamp, int? seed)
+    /// <param name="length">How many entries to take, from the first; every entry when none.</param>
+    public MatchTrace? Snapshot(MatchId matchId, RunStamp stamp, int? seed, int? length = null)
     {
         ArgumentNullException.ThrowIfNull(stamp);
+        if (!_entries.TryGetValue(matchId, out var recorded))
+        {
+            return null;
+        }
 
-        return _entries.TryGetValue(matchId, out var recorded) ? Trace(matchId, stamp, seed, recorded.Snapshot(0), recorded.EventStreamVersion) : null;
+        var entries = recorded.Snapshot(0);
+        if (length is { } kept && kept < entries.Count)
+        {
+            entries.RemoveRange(Math.Max(0, kept), entries.Count - Math.Max(0, kept));
+        }
+
+        return Trace(matchId, stamp, seed, entries, recorded.EventStreamVersion);
     }
 
     /// <summary>

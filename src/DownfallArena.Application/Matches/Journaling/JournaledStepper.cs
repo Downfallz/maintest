@@ -32,13 +32,17 @@ namespace DownfallArena.Application.Matches.Journaling;
 /// (<see cref="JournaledState" />), so a host that keeps the last one serves a seat without coming back here.
 /// </para>
 /// </remarks>
+/// <param name="inStep">Told, in the same turn as each of those answers, that the match stands where its journal ends.</param>
 public sealed class JournaledStepper(
     MatchStepper stepper,
     MatchReplay replay,
     IDecisionJournal journal,
     IMatchRepository matches,
-    ICommandHandler<Concede, Result> concede)
+    ICommandHandler<Concede, Result> concede,
+    IEnumerable<IMatchInStep>? inStep = null)
 {
+    private readonly IReadOnlyList<IMatchInStep> _inStep = [.. inStep ?? []];
+
     private static readonly string DecisionCodes = DecisionErrors.NotPending.Code[..(DecisionErrors.NotPending.Code.IndexOf('.', StringComparison.Ordinal) + 1)];
 
     private readonly ConcurrentDictionary<MatchId, Kept> _kept = new();
@@ -440,6 +444,12 @@ public sealed class JournaledStepper(
             }
 
             readings.Add(new SeatReading(view.Value, kept.Asking(slot)));
+        }
+
+        // Every state is read off a match that stands where the journal ends: loaded, rebuilt or just written.
+        foreach (var told in _inStep)
+        {
+            told.InStep(match.MatchId, position);
         }
 
         return Result.Success(new JournaledState(readings[0].View.Board.Outcome, readings[0], readings[1], position, [.. kept.SeatChanges]));
