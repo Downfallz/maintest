@@ -57,11 +57,22 @@ public sealed class JournaledStepper(
     }
 
     /// <summary>Takes every decision the Player agents owe, until a person is asked or the match is over.</summary>
-    public Task<Result<JournaledStep>> AdvanceAsync(JournaledMatch match, MatchSeats seats, CancellationToken cancellationToken = default)
+    public Task<Result<JournaledStep>> AdvanceAsync(JournaledMatch match, MatchSeats seats, CancellationToken cancellationToken = default) =>
+        AdvanceAsync(match, seats, once: false, cancellationToken);
+
+    /// <summary>
+    /// Takes the decisions the Player agents owe, all of them or one turn's worth.
+    /// </summary>
+    /// <param name="once">
+    /// Whether to stop after one thing the agents do (<see cref="MatchStepper.AdvanceAsync(MatchId, MatchSeats, HeldAnswers, bool, CancellationToken)" />).
+    /// Each such step is a turn of its own on the match, so whatever else is waiting for the match -- a decision,
+    /// a seat changing hands, a reader -- has it between two of the agents' turns.
+    /// </param>
+    public Task<Result<JournaledStep>> AdvanceAsync(JournaledMatch match, MatchSeats seats, bool once, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(match);
         ArgumentNullException.ThrowIfNull(seats);
-        return StepAsync(match, _ => null, held => stepper.AdvanceAsync(match.MatchId, seats, held, cancellationToken), cancellationToken);
+        return StepAsync(match, _ => null, held => stepper.AdvanceAsync(match.MatchId, seats, held, once, cancellationToken), cancellationToken);
     }
 
     /// <summary>

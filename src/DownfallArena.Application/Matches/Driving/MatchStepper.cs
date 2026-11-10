@@ -30,11 +30,23 @@ public sealed class MatchStepper(MatchCommandHandlers commands, MatchQueryHandle
     /// <summary>
     /// Takes every decision the Player agents owe, until a person is asked or the match is over.
     /// </summary>
-    public Task<Result<MatchStep>> AdvanceAsync(MatchId matchId, MatchSeats seats, HeldAnswers held, CancellationToken cancellationToken = default)
+    public Task<Result<MatchStep>> AdvanceAsync(MatchId matchId, MatchSeats seats, HeldAnswers held, CancellationToken cancellationToken = default) =>
+        AdvanceAsync(matchId, seats, held, once: false, cancellationToken);
+
+    /// <summary>
+    /// Takes the decisions the Player agents owe, all of them or one turn's worth.
+    /// </summary>
+    /// <param name="once">
+    /// Whether to stop after one thing the agents do: one seat's turn, or the answers they owe when both seats
+    /// are asked at once. A step cut short this way is neither over nor asking a person anything
+    /// (<see cref="MatchStep.Owed" />), and is taken again for the rest. It is how a caller lets something else
+    /// have the match between two of the agents' turns, where one step for a whole match of agents would not.
+    /// </param>
+    public Task<Result<MatchStep>> AdvanceAsync(MatchId matchId, MatchSeats seats, HeldAnswers held, bool once, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(seats);
         ArgumentNullException.ThrowIfNull(held);
-        return RunAsync(matchId, seats, held, [], cancellationToken);
+        return RunAsync(matchId, seats, held, [], once, cancellationToken);
     }
 
     /// <summary>
@@ -87,7 +99,7 @@ public sealed class MatchStepper(MatchCommandHandlers commands, MatchQueryHandle
             }
         }
 
-        return await RunAsync(matchId, seats, held, [submitted], cancellationToken);
+        return await RunAsync(matchId, seats, held, [submitted], once: false, cancellationToken);
     }
 
     /// <summary>
@@ -109,8 +121,10 @@ public sealed class MatchStepper(MatchCommandHandlers commands, MatchQueryHandle
         return Result.Success(new SeatView(WithAnswers(seat.Board, answers), WithAnswers(seat.Options, answers), Question(read.Value, slot, held)));
     }
 
-    private async Task<Result<MatchStep>> RunAsync(MatchId matchId, MatchSeats seats, HeldAnswers held, List<SeatDecision> decided, CancellationToken cancellationToken)
+    private async Task<Result<MatchStep>> RunAsync(MatchId matchId, MatchSeats seats, HeldAnswers held, List<SeatDecision> decided, bool once, CancellationToken cancellationToken)
     {
+        // Whether the agents have done their one thing, when the step is to stop after it.
+        var acted = false;
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -131,6 +145,12 @@ public sealed class MatchStepper(MatchCommandHandlers commands, MatchQueryHandle
 
             if (table.AsksTogether)
             {
+                if (once && acted)
+                {
+                    var people = Slots.Where(slot => seats.Of(slot, table.Of(slot).Board.RoundNumber) is null && Question(table.Of(slot).Options, held.Of(slot)) is not null).ToList();
+                    return Result.Success(new MatchStep(null, held, people, decided));
+                }
+
                 foreach (var slot in Slots)
                 {
                     if (seats.Of(slot, table.Of(slot).Board.RoundNumber) is not { } agent)
@@ -142,6 +162,7 @@ public sealed class MatchStepper(MatchCommandHandlers commands, MatchQueryHandle
                     {
                         held = held.With(slot, answer);
                         decided.Add(new SeatDecision(slot, answer));
+                        acted = true;
                     }
                 }
 
@@ -153,6 +174,7 @@ public sealed class MatchStepper(MatchCommandHandlers commands, MatchQueryHandle
 
                 await RevealAsync(matchId, held, cancellationToken);
                 held = HeldAnswers.None;
+                acted = true;
                 continue;
             }
 
@@ -171,11 +193,18 @@ public sealed class MatchStepper(MatchCommandHandlers commands, MatchQueryHandle
                 return Result.Success(new MatchStep(null, held, [acting], decided));
             }
 
-            var acted = await ActAsync(matchId, acting, Seen(matchId, acting, bot), table.Of(acting), decided, cancellationToken);
-            if (acted.IsFailure)
+            if (once && acted)
             {
-                return Result.Failure<MatchStep>(acted.Error);
+                return Result.Success(new MatchStep(null, held, [], decided));
             }
+
+            var turn = await ActAsync(matchId, acting, Seen(matchId, acting, bot), table.Of(acting), decided, cancellationToken);
+            if (turn.IsFailure)
+            {
+                return Result.Failure<MatchStep>(turn.Error);
+            }
+
+            acted = true;
         }
     }
 

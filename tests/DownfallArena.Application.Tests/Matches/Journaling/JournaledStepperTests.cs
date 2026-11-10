@@ -53,6 +53,56 @@ public sealed class JournaledStepperTests
     }
 
     /// <summary>
+    /// A match of agents taken one of their turns at a time is the match taken in one step: the same events, the
+    /// same journal. Between two of those turns the match is anybody's, which is what lets a seat be told to
+    /// change hands while agents play it.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Matches))]
+    public async Task A_match_of_agents_taken_a_turn_at_a_time_is_the_match_taken_in_one_step(uint seed, CombatDeclaration declaration)
+    {
+        var driven = await DrivenAsync(seed, declaration);
+        var table = Table(seed, declaration);
+        var journal = new JournalStore();
+        var replica = new Replica(journal);
+        var seats = new MatchSeats(Agent(seed, PlayerSlot.Player1), Agent(seed, PlayerSlot.Player2));
+        var turns = 0;
+
+        var step = (await replica.Journaled.AdvanceAsync(table, seats, once: true, TestContext.Current.CancellationToken)).Value;
+        while (!step.Step.IsOver)
+        {
+            (++turns).ShouldBeLessThan(5000);
+            step.Step.Owed.ShouldBeTrue("two agents never leave a person asked");
+            step = (await replica.Journaled.AdvanceAsync(table, seats, once: true, TestContext.Current.CancellationToken)).Value;
+        }
+
+        turns.ShouldBeGreaterThan(10);
+        step.Step.Outcome.ShouldBe(driven.Outcome);
+        replica.Events.Trace().ShouldBe(driven.Events);
+    }
+
+    /// <summary>
+    /// A turn at a time with a person in a seat: the step stops owing nothing as soon as the person is the one
+    /// asked, and says so rather than taking the agent's next turn.
+    /// </summary>
+    [Fact]
+    public async Task A_turn_at_a_time_stops_at_the_person_as_one_step_does()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent);
+        var replica = new Replica(new JournalStore());
+        var seats = new MatchSeats(null, Agent(3, PlayerSlot.Player2));
+
+        var first = (await replica.Journaled.AdvanceAsync(table, seats, once: true, TestContext.Current.CancellationToken)).Value;
+        var second = (await replica.Journaled.AdvanceAsync(table, seats, once: true, TestContext.Current.CancellationToken)).Value;
+
+        first.Step.Asked.ShouldBe([PlayerSlot.Player1]);
+        first.Step.Owed.ShouldBeFalse();
+        first.Step.Decided.ShouldNotBeEmpty();
+        second.Step.Asked.ShouldBe([PlayerSlot.Player1]);
+        second.Step.Decided.ShouldBeEmpty();
+    }
+
+    /// <summary>
     /// Two replicas take turns at one table, each step on the one that did not take the step before: neither
     /// ever holds the match as the journal has it, so every step is a rebuild. The match they play between them
     /// is the driver's, and a third process that never saw it reads it whole off the journal.
