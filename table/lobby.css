@@ -125,9 +125,6 @@
 
 /* Copper supports the brand; gold remains the action/selection accent. */
 .lobby-hero .eyebrow, .lobby-panel > .eyebrow { color: var(--brand-ember); }
-.presentation-choice { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 16px 0; }
-.presentation-choice select { min-height: 44px; }
-.presentation-choice small { color: var(--muted); }
 
 /* Home: a restrained header, a game-focused dashboard and a separate first-visit welcome. */
 .home-page { padding-top: 0; }

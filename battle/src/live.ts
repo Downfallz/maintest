@@ -712,12 +712,9 @@ scene.onReady = () => { ready = true; $('battle').dataset.ready = 'true'; $('bat
 function failRenderer() {
   audio.stop();
   discovering++; rendererFailed = true; ready = false; view = null; connection.stop(); services.reset(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset();
-  render(); $('loading').hidden = false; text('load-title', 'The renderer was interrupted'); text('load-detail', 'Reload to restore the scene, or continue playing at the table.');
-  // The match goes on without the scene: the same seat continues at the table, not the lobby.
-  if (selected) {
-    text('access-link', 'Continue at table');
-    $<HTMLAnchorElement>('access-link').href = seatPath('/play', selected, storage);
-  }
+  render(); $('loading').hidden = false; text('load-title', 'The renderer was interrupted'); text('load-detail', 'Reload to restore the scene: your seat and the match wait for you.');
+  // The classic table is archived (ADR 0156): reloading the scene is the way back, and the lobby lists the game.
+  text('access-link', 'Lobby'); $<HTMLAnchorElement>('access-link').href = '/';
   text('retry', 'Reload scene'); $('retry').hidden = false;
 }
 $('retry').addEventListener('click', () => { if (rendererFailed) location.reload(); else if (selected) void connection.refresh(); else void discover(); });

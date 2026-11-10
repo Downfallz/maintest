@@ -9,7 +9,7 @@ import { fitsViewport, fitsBattlefield } from './fit.js';
 
 async function enter(page, join) {
   await page.goto(join); await page.locator('#invitation-take').click();
-  await expect(page.locator('#table, #pass').filter({ visible: true }).first()).toBeVisible({ timeout: 20000 });
+  await page.waitForURL(/\/battle(?:\?|$)/, { timeout: 20000 }); // The accepted seat goes on to the battle view (ADR 0156).
   const tokens = await page.evaluate(() => JSON.parse(localStorage.getItem('downfall.table.seats')));
   await page.goto(`${new URL(join).origin}/battle`); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
   await expect(page.locator('#loading')).toBeHidden(); return tokens;

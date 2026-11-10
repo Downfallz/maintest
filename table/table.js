@@ -2,7 +2,7 @@ import { createFeedback } from './feedback.js';
 import { httpTransport, replayTransport } from './transport.js';
 import { activeSeat, holdsOn, isAsked, needsPass } from './seats.js';
 import { activateSeats, forget, heldSeats, isOperator, keeps, operatorToken, playPath, replayOf, resumeTokens, savedSeats, seatsFromLocation, selectTableSeats, tableFromLocation } from './session.js';
-import { addressAfter, invitationPlan, invitationText, spentLink } from './invitation.js';
+import { addressAfter, battleAddress, invitationPlan, invitationText, spentLink } from './invitation.js';
 import { keyBytes, noticeButton, offerShown, pushSupported, sameKey, testReading, showOwnNotice, TAG } from './push.js';
 import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue, referenceLines } from './card.js';
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, statPairs, turnOrder, liveChoice } from './board.js';
@@ -22,6 +22,7 @@ import { outcomeText, rematchLink } from './outcome.js';
 import { askedKey, validTargets, emptyCastAllowed, combatDecision } from './slot.js';
 import { activeTurn, boardPresentation, decisionView, presentedView } from './presentation.js';
 import { practice, storage } from './startup.js';
+import { preferredPresentation } from './battle-preferences.js';
 import { SPEEDS, TEMPO_RULE, phaseLabel, stageLabel, stepLabel, tempoLabel } from './terms.js';
 
 // The page renders what the host serves and submits what a player taps. It holds no rule: which spells are
@@ -253,6 +254,14 @@ async function verifiedSeats(held) {
 function enter(held, practice) {
   if (held.length === 0) {
     setPhase(practice ? 'Choose a practice scenario below.' : 'Type the code the host printed, or open the link it printed.');
+    return;
+  }
+
+  // The battle view is the game (ADR 0156): an accepted seat, a notice's link or a held seat goes on there. This
+  // page keeps the doorway (codes, invitations) and is the archived table only for practice, an admin replay or a
+  // browser that stored the archive's own value.
+  if (!practice && preferredPresentation(storage) === 'battle') {
+    globalThis.location.replace(battleAddress(held, globalThis.location?.search ?? '', keeps(storage)));
     return;
   }
 

@@ -36,7 +36,7 @@ table/                         Static HTML table: the page two people play a tab
                                presentation.js is the pure seat-to-presentation boundary shared with future live battle work.
                                `/battle-lab` is an isolated visual study using fictional sample frames, not a live seat
                                (docs/tabletop/browser-battle-plan.md, ADR 0123); `/battle` is the opt-in Phaser
-                               complete game loop for one authenticated seat (ADRs 0125–0128), opt-in behind a lobby preference (ADR 0136).
+                               complete game loop for one authenticated seat (ADRs 0125–0128), the game every seat opens in since ADR 0156 (`/play` keeps the invitation doorway, replays, practice, and the archived classic table for a browser storing `downfall.presentation = classic`).
 battle/                         Isolated Phaser/TypeScript presentation; builds into ignored table/battle-build/.
 learning/                      The Python training project (uv, ruff, pytest) and the heuristic weights files. See docs/learning/training.md,
                                and docs/learning/plan.md for where the loop is going and what has been refuted on the way.

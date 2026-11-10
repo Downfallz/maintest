@@ -18,8 +18,10 @@ test.afterAll(async () => {
 test('the real host supplies the battle and external decisions update it without battle writes', async ({ page, context }, info) => {
   await page.goto(join);
   await page.locator('#invitation-take').click();
-  await expect(page.locator('#table, #pass').filter({ visible: true }).first()).toBeVisible({ timeout: 20000 });
+  await page.waitForURL(/\/battle(?:\?|$)/, { timeout: 20000 }); // The accepted seat goes on to the battle view (ADR 0156).
   const tokens = await page.evaluate(() => JSON.parse(localStorage.getItem('downfall.table.seats')));
+  // The page that accepted went on to the battle itself; only the page this test watches may read the seat.
+  await page.goto('about:blank');
   const origin = new URL(join).origin;
   const headers = { 'X-Seat-Token': tokens.player1 };
   const before = await (await context.request.get(`${origin}/api/seat/player1`, { headers })).json();

@@ -161,3 +161,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0153](0153-play-the-same-game-again-from-the-end-card.md) | Play the same game again from the battle's end card, and call the lobby the Lobby | Accepted for the opt-in battle view |
 | [0154](0154-record-the-critical-roll-as-a-d20-face.md) | Record the critical roll as a d20 face, and show the field's dice | Accepted |
 | [0155](0155-let-a-game-between-players-be-unranked.md) | Let a game between two players be opened as unranked | Accepted |
+| [0156](0156-make-the-battle-view-the-game.md) | Make the battle view the game, and archive the classic table | Accepted |

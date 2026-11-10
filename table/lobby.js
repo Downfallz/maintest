@@ -1,4 +1,4 @@
-import { preferredPresentation, savePresentation, presentationPath } from './battle-preferences.js';
+import { preferredPresentation, presentationPath } from './battle-preferences.js';
 import { nextPath } from './account.js';
 import { mountNavigation } from './navigation.js';
 export { codePath } from './navigation.js';
@@ -154,12 +154,8 @@ function statusText(state) {
 
 export function mountLobby(doc, location, storage) {
   const el = id => doc.getElementById(id);
-  let presentation = preferredPresentation(storage);
-  const chooser = el('presentation');
-  if (chooser) {
-    chooser.value = presentation;
-    chooser.addEventListener('change', () => { presentation = chooser.value; savePresentation(storage, presentation); });
-  }
+  // Games open in the battle view (ADR 0156); only a browser that asked for the archived table opens /play.
+  const presentation = preferredPresentation(storage);
   let listing = null;
   let mine = [], mineTab = 'ongoing', limit = null;
   // Each kind's finished page, read from the host a page at a time (ADR 0147); `seen` is what the last read was of.
