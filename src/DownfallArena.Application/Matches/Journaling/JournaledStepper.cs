@@ -206,40 +206,7 @@ public sealed class JournaledStepper(
 
             try
             {
-                var step = await take(kept.Held);
-                if (step.IsFailure)
-                {
-                    // A decision refused before it was taken changed nothing. Any other refusal may have come
-                    // after part of a step, which the journal knows nothing of.
-                    if (!RefusedUntaken(step.Error))
-                    {
-                        await LetGoAsync(match.MatchId, kept, cancellationToken);
-                    }
-
-                    return Result.Failure<JournaledStep>(step.Error);
-                }
-
-                var position = loaded.Value;
-                if (step.Value.Decided.Count > 0)
-                {
-                    var written = await WriteAsync(match, kept, position, [.. step.Value.Decided.Select(decision => new DecisionEntry(decision))], cancellationToken);
-                    if (written is null)
-                    {
-                        return Result.Failure<JournaledStep>(JournalErrors.Moved);
-                    }
-
-                    position = written;
-                    foreach (var decision in step.Value.Decided)
-                    {
-                        kept.Decided[Index(decision.Slot)]++;
-                    }
-                }
-
-                kept.Held = step.Value.Held;
-                var state = await StateAsync(match, kept, position, cancellationToken);
-                return state.IsFailure
-                    ? Result.Failure<JournaledStep>(state.Error)
-                    : Result.Success(new JournaledStep(step.Value, state.Value));
+                return await TakenAsync(match, kept, loaded.Value, take, cancellationToken);
             }
             catch
             {
@@ -248,6 +215,64 @@ public sealed class JournaledStepper(
                 throw;
             }
         });
+
+    /// <summary>A step taken on the match in memory, written after the position it was loaded at, and the match as it leaves it.</summary>
+    private async Task<Result<JournaledStep>> TakenAsync(
+        JournaledMatch match,
+        Kept kept,
+        JournalPosition loaded,
+        Func<HeldAnswers, Task<Result<MatchStep>>> take,
+        CancellationToken cancellationToken)
+    {
+        var step = await take(kept.Held);
+        if (step.IsFailure)
+        {
+            // A decision refused before it was taken changed nothing. Any other refusal may have come after
+            // part of a step, which the journal knows nothing of.
+            if (!RefusedUntaken(step.Error))
+            {
+                await LetGoAsync(match.MatchId, kept, cancellationToken);
+            }
+
+            return Result.Failure<JournaledStep>(step.Error);
+        }
+
+        if (await DecidedAsync(match, kept, loaded, step.Value.Decided, cancellationToken) is not { } position)
+        {
+            return Result.Failure<JournaledStep>(JournalErrors.Moved);
+        }
+
+        kept.Held = step.Value.Held;
+        var state = await StateAsync(match, kept, position, cancellationToken);
+        return state.IsFailure
+            ? Result.Failure<JournaledStep>(state.Error)
+            : Result.Success(new JournaledStep(step.Value, state.Value));
+    }
+
+    /// <summary>
+    /// Writes what a step decided and counts it for its seats. Where the journal ends afterwards, which is where
+    /// it ended before for a step that decided nothing; none when another writer got there first.
+    /// </summary>
+    private async Task<JournalPosition?> DecidedAsync(JournaledMatch match, Kept kept, JournalPosition after, IReadOnlyList<SeatDecision> decided, CancellationToken cancellationToken)
+    {
+        if (decided.Count == 0)
+        {
+            return after;
+        }
+
+        var written = await WriteAsync(match, kept, after, [.. decided.Select(decision => new DecisionEntry(decision))], cancellationToken);
+        if (written is null)
+        {
+            return null;
+        }
+
+        foreach (var decision in decided)
+        {
+            kept.Decided[Index(decision.Slot)]++;
+        }
+
+        return written;
+    }
 
     /// <summary>
     /// Runs one thing at a time for a match. What is kept for a match can be let go of while a caller waits
