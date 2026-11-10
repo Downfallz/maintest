@@ -17,37 +17,72 @@ namespace DownfallArena.Cli.Table;
 /// </summary>
 /// <param name="run">The recording, or none: what a swap is written down in, and what says the trace has grown.</param>
 /// <param name="reads">The read side to ask instead of the session's own, or none: a test puts a slow or a moving one here.</param>
-internal sealed class DrivenSession(TableSession session, IReadOnlyList<TableSeat> seats, PlaytestRun? run = null, MatchQueryHandlers? reads = null) : ITableSession
+internal sealed class DrivenSession : ITableSession
 {
-    private readonly MatchQueryHandlers _reads = reads ?? session.Queries;
+    private readonly TableSession _session;
+    private readonly IReadOnlyList<TableSeat> _seats;
+    private readonly PlaytestRun? _run;
+    private readonly MatchQueryHandlers _reads;
 
-    /// <remarks>Never raised: a seat reads a driven match through the lock its commands are applied behind, so a read told of an entry waits for the command that recorded it.</remarks>
-    public event Action? Changed
+    public DrivenSession(TableSession session, IReadOnlyList<TableSeat> seats, PlaytestRun? run = null, MatchQueryHandlers? reads = null)
     {
-        add { }
-        remove { }
+        ArgumentNullException.ThrowIfNull(session);
+        ArgumentNullException.ThrowIfNull(seats);
+        _session = session;
+        _seats = seats;
+        _run = run;
+        _reads = reads ?? session.Queries;
+        if (session.Recorder is { } recorder)
+        {
+            recorder.EntryRecorded += Recorded;
+        }
     }
 
-    public MatchId MatchId => session.MatchId;
+    /// <remarks>
+    /// Raised as each entry of the match is recorded. A seat reads a driven match through the lock its commands
+    /// are applied behind, so a read told of an entry waits for the command that recorded it.
+    /// </remarks>
+    public event Action? Changed;
 
-    public RuleSet Rules => session.Rules;
+    /// <remarks>A driven match has no journal to stand behind: every entry recorded is the match's.</remarks>
+    public int? Journaled => null;
 
-    public Task<Result<MatchOutcome>> Outcome => session.Outcome;
+    public MatchId MatchId => _session.MatchId;
 
-    public bool IsOver => session.IsOver;
+    public RuleSet Rules => _session.Rules;
 
-    public bool HasBegun => session.HasBegun;
+    public Task<Result<MatchOutcome>> Outcome => _session.Outcome;
 
-    public void Begin() => session.Begin();
+    public bool IsOver => _session.IsOver;
 
-    public void Dispose() => session.Dispose();
+    public bool HasBegun => _session.HasBegun;
 
-    public string SeatedName(PlayerSlot slot) => session.Seat(slot).Seated.Name;
+    public void Begin() => _session.Begin();
+
+    public void Dispose()
+    {
+        if (_session.Recorder is { } recorder)
+        {
+            recorder.EntryRecorded -= Recorded;
+        }
+
+        _session.Dispose();
+    }
+
+    private void Recorded(MatchId recorded)
+    {
+        if (recorded == _session.MatchId)
+        {
+            Changed?.Invoke();
+        }
+    }
+
+    public string SeatedName(PlayerSlot slot) => _session.Seat(slot).Seated.Name;
 
     public bool PlayedByItsPerson(PlayerSlot slot) =>
-        Person(slot) is { } person && ReferenceEquals(session.Seat(slot).Seated.Agent, person);
+        Person(slot) is { } person && ReferenceEquals(_session.Seat(slot).Seated.Agent, person);
 
-    public Swap? Pending(PlayerSlot slot) => session.Seat(slot).Pending;
+    public Swap? Pending(PlayerSlot slot) => _session.Seat(slot).Pending;
 
     /// <remarks>
     /// Nothing about the seat is read before it is asked. The round it has reached, who is sitting in it and
@@ -57,18 +92,18 @@ internal sealed class DrivenSession(TableSession session, IReadOnlyList<TableSea
     /// </remarks>
     public Task<SwapOutcome> SwapAsync(PlayerSlot slot, Occupant next, string wanted, int round)
     {
-        var outcome = session.Seat(slot).SwapAt(next, round);
+        var outcome = _session.Seat(slot).SwapAt(next, round);
         if (outcome.Taken)
         {
             // Written where it was asked, so a rebuilt table asks for it at the same point of the match.
-            run?.Journal.SwapAsked(slot, wanted, round);
+            _run?.Journal.SwapAsked(slot, wanted, round);
         }
 
         return Task.FromResult(outcome);
     }
 
     public async Task<Result<PlayerBoardState>> BoardAsync(PlayerSlot slot) =>
-        await _reads.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(session.MatchId, slot));
+        await _reads.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(_session.MatchId, slot));
 
     /// <summary>
     /// The question the seat is blocked on, with the board and the options that go with it, read as one.
@@ -94,7 +129,7 @@ internal sealed class DrivenSession(TableSession session, IReadOnlyList<TableSea
                 return Result.Failure<SeatSnapshot>(board.Error);
             }
 
-            var options = await _reads.GetPlayerOptions.HandleAsync(new GetPlayerOptions(session.MatchId, slot));
+            var options = await _reads.GetPlayerOptions.HandleAsync(new GetPlayerOptions(_session.MatchId, slot));
             if (options.IsFailure)
             {
                 return Result.Failure<SeatSnapshot>(options.Error);
@@ -131,22 +166,22 @@ internal sealed class DrivenSession(TableSession session, IReadOnlyList<TableSea
     /// The command ends the match behind the driver's lock; every seat a person holds is then released, because
     /// the driver is blocked inside one of them waiting for a tap that is not coming, and it reads the outcome
     /// once it is let go. A table given up while it waited for its players begins now, so the driver reads the
-    /// end and the session closes; it would otherwise wait for a player who is never coming to a match that is over.
+    /// end and the _session closes; it would otherwise wait for a player who is never coming to a match that is over.
     /// </remarks>
     public async Task<Result> ConcedeAsync(PlayerSlot slot)
     {
-        var conceded = await session.Concede.HandleAsync(new Concede(session.MatchId, slot));
+        var conceded = await _session.Concede.HandleAsync(new Concede(_session.MatchId, slot));
         if (conceded.IsFailure)
         {
             return conceded;
         }
 
-        foreach (var seat in seats)
+        foreach (var seat in _seats)
         {
             (seat.Person as HumanSeat)?.Release();
         }
 
-        session.Begin();
+        _session.Begin();
         return conceded;
     }
 
@@ -165,21 +200,21 @@ internal sealed class DrivenSession(TableSession session, IReadOnlyList<TableSea
     /// </remarks>
     public async Task SettledAsync(PlayerSlot slot, int traced)
     {
-        if (run is { } recording)
+        if (_run is { } recording)
         {
-            await recording.WaitForTraceAsync(session.MatchId, traced, CancellationToken.None);
+            await recording.WaitForTraceAsync(_session.MatchId, traced, CancellationToken.None);
         }
 
         await BoardAsync(slot);
     }
 
-    private HumanSeat? Person(PlayerSlot slot) => seats.FirstOrDefault(seat => seat.Slot == slot)?.Person as HumanSeat;
+    private HumanSeat? Person(PlayerSlot slot) => _seats.FirstOrDefault(seat => seat.Slot == slot)?.Person as HumanSeat;
 
     private static PlayerSlot Other(PlayerSlot slot) => slot == PlayerSlot.Player1 ? PlayerSlot.Player2 : PlayerSlot.Player1;
 
     /// <summary>
     /// A seat's board with the picks, speeds and intents its person has answered and the match does not have yet.
-    /// Both seats are asked theirs at once and the answers reach the match together once both are done (ADR 0111,
+    /// Both _seats are asked theirs at once and the answers reach the match together once both are done (ADR 0111,
     /// ADR 0117); until then the board would show a player none of what they have just chosen, which is the very
     /// thing they choose the next creature's on (ADR 0039). Once the match has an answer, its own copy is the one shown.
     /// </summary>

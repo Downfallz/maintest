@@ -477,6 +477,28 @@ public sealed class JournaledStepperTests
     }
 
     /// <summary>
+    /// Every state a stepper answers with is of a match that stands where its journal ends, and whatever listens
+    /// is told so in the same turn, with the same position: what the match raised by then is the journal's.
+    /// </summary>
+    [Fact]
+    public async Task Each_state_answered_is_told_in_its_turn_to_be_where_the_journal_ends()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent);
+        var journal = new JournalStore();
+        var told = new List<JournalPosition>();
+        var inStep = Substitute.For<IMatchInStep>();
+        inStep.When(listener => listener.InStep(table.MatchId, Arg.Any<JournalPosition>())).Do(call => told.Add(call.Arg<JournalPosition>()));
+        var replica = new Replica(journal, inStep);
+
+        var read = await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken);
+        var passed = await replica.Journaled.SubmitAsync(table, MatchSeats.People, new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass), cancellationToken: TestContext.Current.CancellationToken);
+        var late = await replica.Journaled.SubmitAsync(table, MatchSeats.People, new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass), asking: 1, TestContext.Current.CancellationToken);
+
+        late.IsFailure.ShouldBeTrue();
+        told.ShouldBe([read.Value.Position, passed.Value.State.Position]);
+    }
+
+    /// <summary>
     /// What a seat change depends on is settled in the turn that writes it: the caller is shown the match as
     /// that turn finds it and says the line, or why there is none. Nothing of the seat's can land in between.
     /// </summary>

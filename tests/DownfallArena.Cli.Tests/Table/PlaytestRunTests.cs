@@ -80,6 +80,21 @@ public sealed class PlaytestRunTests : IDisposable
     /// session opened -- which says "this was abandoned" out loud, where a manifest counting the steps of an
     /// unfinished match would read exactly like a finished one.
     /// </summary>
+    /// <summary>
+    /// A checkpoint keeps the match as its journal holds it and no more (ADR 0159): entries past that may be of a
+    /// step that is never written, and a host picking the table up holds its rebuilt match against what is kept.
+    /// </summary>
+    [Fact]
+    public async Task A_checkpoint_keeps_the_entries_it_is_told_are_the_match_s_and_no_more()
+    {
+        var (run, session, person) = await StartedWithAPerson();
+        await Waiting(person, "Evolution");
+
+        await run.CheckpointAsync(session.MatchId, upTo: 2, TestContext.Current.CancellationToken);
+
+        Read(run, Path.Combine("traces", $"{session.MatchId}.json")).GetProperty("entries").GetArrayLength().ShouldBe(2);
+    }
+
     [Fact]
     public async Task An_abandoned_session_keeps_its_zero_count_manifest_and_a_readable_partial_trace()
     {

@@ -44,9 +44,10 @@ internal sealed record SteppedHost(
     /// <summary>A table's own stepper over a journal.</summary>
     /// <param name="witness">What is shown every decision of the table's match, the replayed ones among them.</param>
     /// <param name="memory">What is told to forget the match when it is about to be rebuilt.</param>
-    public JournaledStepper Stepper(IDecisionJournal journal, IDecisionWitness witness, IMatchMemory memory)
+    /// <param name="inStep">What is told, in the match's turn, that the match stands where its journal ends.</param>
+    public JournaledStepper Stepper(IDecisionJournal journal, IDecisionWitness witness, IMatchMemory memory, IMatchInStep inStep)
     {
         var stepper = new MatchStepper(Commands, Queries, [witness]);
-        return new JournaledStepper(stepper, new MatchReplay(Create, Join, Concede, stepper, Matches, [memory]), journal, Matches, Concede);
+        return new JournaledStepper(stepper, new MatchReplay(Create, Join, Concede, stepper, Matches, [memory]), journal, Matches, Concede, [inStep]);
     }
 }

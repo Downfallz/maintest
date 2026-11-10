@@ -35,7 +35,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
 {
     public DecisionGuideProjection? Guide { get; init; }
 
-    private readonly ChangeWatcher _watcher = new(session, seats, events);
+    private readonly ChangeWatcher _watcher = new(session, seats);
 
     /// <summary>
     /// That this table changed, for the pages streaming it (ADR 0119): a question asked, which the seats say
@@ -50,29 +50,18 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
     public void Detach() => _watcher.Detach();
 
     /// <summary>
-    /// What moves the version on its own, without a route: a seat asked, an entry recorded for this match --
-    /// the recorder is the host's and records every table's, so each watcher keeps to its own match -- and the
-    /// outcome. Unsubscribed with the table, or a host would hold every table it ever played through the
-    /// recorder.
+    /// What moves the version on its own, without a route: a seat asked, what the seats read changing -- an
+    /// entry recorded for a driven match, a step kept for a stepped one -- and the outcome. Unsubscribed with
+    /// the table, or the seats and the session would hold every watcher a page ever opened.
     /// </summary>
     private sealed class ChangeWatcher
     {
-        private readonly MatchTraceRecorder _events;
-        private readonly Action<MatchId> _recorded;
+        private readonly ITableSession _session;
 
-        public ChangeWatcher(ITableSession session, IReadOnlyList<TableSeat> seats, MatchTraceRecorder events)
+        public ChangeWatcher(ITableSession session, IReadOnlyList<TableSeat> seats)
         {
-            _events = events;
+            _session = session;
             var changes = Changes;
-            var matchId = session.MatchId;
-            _recorded = recorded =>
-            {
-                if (recorded == matchId)
-                {
-                    changes.Bump();
-                }
-            };
-            events.EntryRecorded += _recorded;
             foreach (var seat in seats)
             {
                 if (seat.Person is { } person)
@@ -89,7 +78,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
 
         public void Detach()
         {
-            _events.EntryRecorded -= _recorded;
+            _session.Changed -= Changes.Bump;
             Changes.Close();
         }
     }
@@ -103,6 +92,12 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
     /// can reach it.
     /// </summary>
     public Func<TableSeat, string?>? CodeOf { get; set; }
+
+    /// <summary>
+    /// Writes the table's record as it stands, once the registry holds the table and has minted its codes: what
+    /// a person reaching their seat, and the match beginning, are kept in. None for a table nobody records.
+    /// </summary>
+    public Func<Task>? Record { get; set; }
 
     /// <summary>The notices sent to a seat nobody is looking at (ADR 0118): told which askings a page has drawn.</summary>
     public PushNotices? Push { get; init; }
@@ -166,7 +161,10 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
             return StudioResponse.OfPlainText(403, $"Every request carries the seat's own '{TokenHeader}'.");
         }
 
-        Arrived(holder);
+        if (Arrived(holder) && Record is { } record)
+        {
+            await RecordedAsync(record);
+        }
 
         if (path == "/api/session" && method == "GET")
         {
@@ -289,7 +287,8 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
     /// A request on a seat is its person reaching it. The match begins when every person has (ADR 0092): a
     /// bot's seat needs nobody, and a table of bots began when it was composed.
     /// </summary>
-    private void Arrived(TableSeat holder)
+    /// <returns>Whether a person has just reached their seat, which the table's record says from then on.</returns>
+    private bool Arrived(TableSeat holder)
     {
         var arrived = holder.Person is { HasArrived: false };
         holder.Person?.Arrive();
@@ -302,6 +301,24 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         if (arrived)
         {
             Changes.Bump();
+        }
+
+        return arrived;
+    }
+
+    /// <summary>
+    /// Writes the table's record, and never fails the request for it: the person has reached their seat and the
+    /// match may have begun whether or not the store took it. A table picked up again without it waits again.
+    /// </summary>
+    private static async Task RecordedAsync(Func<Task> record)
+    {
+        try
+        {
+            await record();
+        }
+        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or JsonException or ObjectDisposedException or Azure.RequestFailedException)
+        {
+            Console.WriteLine($"  A seat's arrival could not be written into its table's record: {failure.Message}");
         }
     }
 
@@ -361,13 +378,17 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
             return StudioResponse.OfPlainText(500, snapshot.Error.Message);
         }
 
-        var (waiting, board, options, opponentIntents) = snapshot.Value;
+        var (waiting, board, options, opponentIntents, journaled) = snapshot.Value;
 
         // Everything the host looked at this poll: the slice from the cursor onwards. What the seat may be told
         // of it is a subset, and where to resume is the end of the slice rather than the end of that subset.
         // Through the session when there is one: closing hands the trace over and the recorder forgets the
         // match, while these two are still reading the end of it on their screens.
-        var examined = run is { } recording ? recording.Entries(session.MatchId, since) : events.EntriesOf(session.MatchId, since);
+        // And no further than the match this board is of, as its journal holds it: an entry past it may be of a
+        // step that is never written, and a page that was shown it would hold a cursor past entries recorded
+        // again under the same numbers.
+        var recorded = run is { } recording ? recording.Entries(session.MatchId, since) : events.EntriesOf(session.MatchId, since);
+        var examined = journaled is { } kept && kept - since < recorded.Count ? [.. recorded.Take(Math.Max(0, kept - since))] : recorded;
 
         // The moment this seat was shown what it is being asked, which is what a decision's duration is
         // measured from. Only the page's own acknowledgement of *this* asking counts. Anything else leaves the
@@ -623,7 +644,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
             // The trace, as far as the match has got -- and not until the command this decision caused has
             // finished raising everything it raises.
             await session.SettledAsync(slot, traced);
-            await recording.CheckpointAsync(session.MatchId, CancellationToken.None);
+            await recording.CheckpointAsync(session.MatchId, session.Journaled, CancellationToken.None);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
         {

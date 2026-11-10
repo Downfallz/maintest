@@ -192,6 +192,46 @@ public sealed class TableRestorerTests : IDisposable
         _later.All().ShouldBeEmpty();
     }
 
+    /// <summary>
+    /// Two people who both reached their seats began the match, and a host that picks the table up does not wait
+    /// for them again: the record says it began, though neither has decided anything yet (ADR 0092, ADR 0159).
+    /// </summary>
+    [Fact]
+    public async Task A_table_whose_people_had_all_reached_their_seats_is_picked_up_begun_before_any_decision()
+    {
+        var table = await Opened(HostedTables.TwoPeople);
+        table.Session.HasBegun.ShouldBeTrue();
+        (await _before.Stored!.JournalAsync(table.Id, TestContext.Current.CancellationToken)).ShouldBeEmpty();
+
+        await TableRestorer.RestoreAsync(_after.Stored!, _after.Composer, _later, TimeProvider.System, TestContext.Current.CancellationToken);
+
+        var rebuilt = _later.ById(table.Id).ShouldNotBeNull();
+        rebuilt.Session.HasBegun.ShouldBeTrue();
+        (await Waiting(rebuilt.Seats[0].Person!)).Kind.ShouldBe(PlayerOptionsKind.Evolution);
+    }
+
+    /// <summary>
+    /// A person who reached their seat before the host stopped is not waited for again: the match begins the
+    /// moment the other person reaches theirs, at whichever host they reach it.
+    /// </summary>
+    [Fact]
+    public async Task A_person_who_had_reached_their_seat_is_not_waited_for_again()
+    {
+        var table = await _before.Composer.ComposeAsync(HostedTables.TwoPeople, TestContext.Current.CancellationToken);
+        _earlier.TryAdd(table).ShouldBeTrue();
+        await table.RecordAsync(_earlier.Codes, TestContext.Current.CancellationToken);
+        (await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Seats[0].Token)).Status.ShouldBe(200);
+
+        await TableRestorer.RestoreAsync(_after.Stored!, _after.Composer, _later, TimeProvider.System, TestContext.Current.CancellationToken);
+        var rebuilt = _later.ById(table.Id).ShouldNotBeNull();
+        var waited = rebuilt.Session.HasBegun;
+        (await rebuilt.Api.HandleAsync("GET", "/api/seat/player2", string.Empty, rebuilt.Seats[1].Token)).Status.ShouldBe(200);
+
+        waited.ShouldBeFalse();
+        rebuilt.Seats[0].Person!.HasArrived.ShouldBeTrue();
+        rebuilt.Session.HasBegun.ShouldBeTrue();
+    }
+
     /// <summary>The host's own table is recorded as open the moment it is; rebuilt beside itself it would be the same match twice.</summary>
     [Fact]
     public async Task A_table_this_host_already_holds_is_not_rebuilt_beside_itself()

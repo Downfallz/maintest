@@ -24,6 +24,8 @@ internal sealed class MovedBehindTheRead(ITableSession inner, Func<SeatSnapshot,
 
     public MatchId MatchId => inner.MatchId;
 
+    public int? Journaled => inner.Journaled;
+
     public RuleSet Rules => inner.Rules;
 
     public Task<Result<MatchOutcome>> Outcome => inner.Outcome;

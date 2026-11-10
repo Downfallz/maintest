@@ -7,7 +7,11 @@ namespace DownfallArena.Cli.Table;
 /// -- both carrying the picks, speeds and intents the seat has answered and the match does not have yet (ADR
 /// 0111, ADR 0117) -- and how many intents the other side still holds face down, as a number and nothing else.
 /// </summary>
-internal sealed record SeatSnapshot(Asking? Waiting, PlayerBoardState Board, PlayerOptions Options, int OpponentIntents)
+/// <param name="Journaled">
+/// How many of the match's trace entries belong to the match this snapshot is of, as its journal holds it: the
+/// feed a seat is shown beside this board stops there. None where every entry recorded is the match's.
+/// </param>
+internal sealed record SeatSnapshot(Asking? Waiting, PlayerBoardState Board, PlayerOptions Options, int OpponentIntents, int? Journaled = null)
 {
     /// <summary>
     /// How many of a board's intents are still face down. A round keeps every intent it was given

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Blobs.Specialized;
@@ -47,6 +48,36 @@ public sealed class BlobArtifactWriter : IArtifactWriter
             stream.Position = 0;
             await blob.UploadAsync(stream, new BlobUploadOptions { HttpHeaders = Json }, cancellationToken);
         });
+    }
+
+    /// <remarks>On the service's own condition: the blob's entity tag, or that there is no blob yet.</remarks>
+    public Task<string?> WriteJsonIfAsync<TValue>(string relativePath, TValue value, string? expected, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+
+        var blob = _container.GetBlobClient(BlobArtifactNames.Resolve(Prefix, relativePath));
+        var written = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var turn = InTurnAsync(async () =>
+        {
+            var condition = expected is null ? new BlobRequestConditions { IfNoneMatch = ETag.All } : new BlobRequestConditions { IfMatch = new ETag(expected) };
+            try
+            {
+                using var stream = new MemoryStream(JsonSerializer.SerializeToUtf8Bytes(value, ArtifactJson.DocumentOptions));
+                var uploaded = await blob.UploadAsync(stream, new BlobUploadOptions { HttpHeaders = Json, Conditions = condition }, cancellationToken);
+                written.TrySetResult(uploaded.Value.ETag.ToString());
+            }
+            catch (RequestFailedException failure) when (failure.Status is 409 or 412)
+            {
+                written.TrySetResult(null);
+            }
+        });
+        return AnsweredAsync(turn, written.Task);
+
+        static async Task<string?> AnsweredAsync(Task turn, Task<string?> answer)
+        {
+            await turn;
+            return await answer;
+        }
     }
 
     public Task StartJsonLinesAsync(string relativePath, CancellationToken cancellationToken = default)

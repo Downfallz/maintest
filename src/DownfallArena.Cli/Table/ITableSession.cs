@@ -15,12 +15,18 @@ namespace DownfallArena.Cli.Table;
 internal interface ITableSession : IDisposable
 {
     /// <summary>
-    /// Raised when what the seats read has changed without a question being asked or an entry being recorded
-    /// to say so: what moves a table's version beside those (ADR 0119).
+    /// Raised when what the seats read has changed, other than a question asked of a seat's person, which the
+    /// person says: what moves a table's version beside that and the outcome (ADR 0119).
     /// </summary>
     event Action? Changed;
 
     MatchId MatchId { get; }
+
+    /// <summary>
+    /// How many of the match's trace entries are of the match as its journal holds it: what a checkpoint keeps.
+    /// Entries past it may be of a step that is never written. None where every entry recorded is the match's.
+    /// </summary>
+    int? Journaled { get; }
 
     /// <summary>The rule set this match is playing, the table's own rather than the host's (ADR 0081).</summary>
     RuleSet Rules { get; }

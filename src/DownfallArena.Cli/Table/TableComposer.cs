@@ -181,7 +181,7 @@ internal sealed class TableComposer
             throw new InvalidDataException($"Unsupported table event stream version {record.EventStreamVersion}.");
         }
 
-        return await BuildAsync(record.Request(), new Reopening(record, DecisionJournal.HoldsDecision(journal)), cancellationToken);
+        return await BuildAsync(record.Request(), new Reopening(record, record.Begun || DecisionJournal.HoldsDecision(journal)), cancellationToken);
     }
 
     /// <summary>A table being picked up again: its record, and whether its match had begun.</summary>
@@ -276,7 +276,7 @@ internal sealed class TableComposer
             // trace, which the earlier host's has just been held against.
             if (run is not null)
             {
-                await run.CheckpointAsync(session.MatchId, cancellationToken);
+                await run.CheckpointAsync(session.MatchId, session.Journaled, cancellationToken);
             }
 
             var pilot = new TablePilot(record?.PilotToken ?? Token(), SeatingOf);
@@ -620,7 +620,15 @@ internal sealed class TableComposer
         var account = AccountId.TryParse(recorded?.Account, out var owner) ? owner : (AccountId?)null;
         var invited = !taken && AccountId.TryParse(recorded?.InvitedAccount, out var friend) ? friend : (AccountId?)null;
         var declinedBy = AccountId.TryParse(recorded?.DeclinedBy, out var decliner) ? decliner : (AccountId?)null;
-        return new TableSeat(slot, token ?? Token(), new SteppedPerson())
+        // A person who had reached their seat before an earlier host stopped has reached it here too: the table
+        // waits for whoever has not, and only for them (ADR 0092).
+        var person = new SteppedPerson();
+        if (recorded?.Arrived == true)
+        {
+            person.Arrive();
+        }
+
+        return new TableSeat(slot, token ?? Token(), person)
         {
             Invitation = taken ? null : invitation,
             Taken = taken,

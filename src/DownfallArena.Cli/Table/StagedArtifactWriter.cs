@@ -18,6 +18,10 @@ internal sealed class StagedArtifactWriter(IArtifactWriter inner) : IArtifactWri
     public Task WriteJsonAsync<TValue>(string relativePath, TValue value, CancellationToken cancellationToken = default) =>
         Pass(token => inner.WriteJsonAsync(relativePath, value, token), cancellationToken);
 
+    /// <remarks>Never held back: a conditional write is answered as it is made, and held it could not be.</remarks>
+    public Task<string?> WriteJsonIfAsync<TValue>(string relativePath, TValue value, string? expected, CancellationToken cancellationToken = default) =>
+        inner.WriteJsonIfAsync(relativePath, value, expected, cancellationToken);
+
     public Task StartJsonLinesAsync(string relativePath, CancellationToken cancellationToken = default) =>
         Pass(token => inner.StartJsonLinesAsync(relativePath, token), cancellationToken);
 

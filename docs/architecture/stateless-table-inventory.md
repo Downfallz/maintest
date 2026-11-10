@@ -89,8 +89,24 @@ Each phase ships on the one container app there is today and leaves the game pla
      journal ends, with no replay through seats and no wait. The blocking seat, the seat agent, the session
      and the host's own journal stay in the code for practice tables and for the tests that hold the two
      models to each other (`SteppedRecordingTests`, `RecordedTableReplayTests`) until 4.4.
-   - **4.2.** Arrival and "has begun" in the table record, with a revision and a conditional write; the
-     version becomes journal lines plus that revision; `TableRestorer` becomes registration with no replay.
+   - **4.2a, done.** A stepped table shows and says only what its journal holds. The stepper tells whoever
+     listens, in the match's turn, that the match stands where its journal ends (`IMatchInStep`); the
+     session keeps how long the trace was then beside the state it serves. A seat's feed and a checkpoint
+     stop there, and the table's version moves when a step's match is kept, not when an entry is recorded:
+     a turn that is never written is shown to nobody, and a rebuild tells the pages once.
+   - **4.2b, done.** Arrival and "has begun" in the table record, which has a revision and is written on a
+     condition: a store document is read with a tag and written only if it still has it (the file's digest,
+     the blob's entity tag), and the record is written over the one stored, keeping an ending, a refusal and
+     a beginning another host wrote. A table picked up again that had begun begins at once, decision or not,
+     and waits only for whoever had not reached their seat. The version is still counted: it is served to
+     no page as a number, and deriving it from the journal and the revision is worth it only once a second
+     process writes a table (question 9), so it moves with that.
+   - **4.2c, folded into 4.3.** `TableRestorer` becomes registration with no replay: a table's match is
+     rebuilt at the first request that needs it. Done on its own, it needs a session whose state is not
+     there yet behind every read the lobby, the notices and the pilot make without waiting, and a table
+     found to have diverged after it was registered; 4.3 makes the registry a cache a table is loaded into
+     per request, which is the same change made once. What it would buy meanwhile is a shorter start: the
+     host already serves while it picks tables up, and a table costs it 45 to 325 ms.
    - **4.3.** Tokens, codes and the lobby's projections out of the registry, which becomes a cache.
    - **4.4.** Practice tables onto the stepper; `HumanSeat`, `SeatAgent`, `TableSession`, `TableGate`, the
      host's `DecisionJournal` and `JournalEntry` go.
@@ -251,16 +267,16 @@ which adds the compilation of the engine itself.
     writing a seat change is seen at the next step, after a rebuild it caused has named its steps. One
     process until 4.2, where the table is loaded per request and reads its seat changes with its journal.
 20. **What a table's session still keeps in memory after 4.1b.** Whether each person has arrived and whether
-    the match has begun (4.2), the table's version counter (4.2), the decision clock (question 3), and the
+    the match has begun (written into the record since 4.2b, and read back when the table is picked up), the
+    table's version counter (question 9), the decision clock (question 3), and the
     last round each seat decided in, which a rebuild works out again.
 
 21. **A step that fails under a store that is out.** Since 4.1b the table reads its match again from the
     journal whenever a step was refused or failed, since the line may have been written with its answer
-    lost, and takes a bot's turn again after a wait that grows to half a minute. What is left open: the
-    feed keeps the entries of a turn that was applied and not written until that reading rebuilds it, so a
-    page that polled in between holds a cursor past entries that are then recorded again under the same
-    numbers. A rebuild also moves the table's version once for each entry it records again, where ADR 0159
-    wants a replay to tell nobody; both go when the version is the journal's length (4.2).
+    lost, and takes a bot's turn again after a wait that grows to half a minute. The entries of a turn that
+    was applied and not written stay in the host's trace until that reading rebuilds it; since 4.2a no page
+    is shown them and no checkpoint keeps them, and a rebuild moves the table's version once, when its
+    match is kept, rather than once for each entry it records again.
 
 22. **Who may give a match up.** Answered in 4.1b. The route's look at whether the seat's own person is
     playing it comes before the concession has waited for the match, behind a bot's turn that can carry the

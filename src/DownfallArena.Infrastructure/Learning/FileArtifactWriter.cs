@@ -21,6 +21,10 @@ public sealed class FileArtifactWriter : IArtifactWriter
 
     private readonly Lock _gate = new();
 
+    // The process's, not the writer's: two tables' hosts over one directory are two writers over the same files,
+    // and a conditional write is a read and a write that nothing may come between.
+    private static readonly Lock Conditional = new();
+
     // The tail of the chain: a task that completes when the write before this one has finished, whether it
     // succeeded or not. A turn, not a result -- a failed write must not fail the next one.
     private Task _turn = Task.CompletedTask;
@@ -43,6 +47,48 @@ public sealed class FileArtifactWriter : IArtifactWriter
             await using var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
             await JsonSerializer.SerializeAsync(stream, value, ArtifactJson.DocumentOptions, cancellationToken);
         });
+    }
+
+    /// <remarks>
+    /// Written beside the document and moved over it, so a reader finds the content before or the content
+    /// after and never half of it. Two processes over one directory are not kept apart here, as with a table's
+    /// journal on disk: a directory store is one process's.
+    /// </remarks>
+    public Task<string?> WriteJsonIfAsync<TValue>(string relativePath, TValue value, string? expected, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+
+        var path = Resolve(relativePath);
+        var bytes = JsonSerializer.SerializeToUtf8Bytes(value, ArtifactJson.DocumentOptions);
+        var written = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var turn = InTurnAsync(() =>
+        {
+            written.TrySetResult(Replaced(path, bytes, expected));
+            return Task.CompletedTask;
+        });
+        return AnsweredAsync(turn, written.Task);
+
+        static async Task<string?> AnsweredAsync(Task turn, Task<string?> answer)
+        {
+            await turn;
+            return await answer;
+        }
+    }
+
+    private static string? Replaced(string path, byte[] bytes, string? expected)
+    {
+        lock (Conditional)
+        {
+            if (FileTags.Current(path) != expected)
+            {
+                return null;
+            }
+
+            var beside = $"{path}.{Guid.NewGuid():N}.tmp";
+            File.WriteAllBytes(beside, bytes);
+            File.Move(beside, path, overwrite: true);
+            return FileTags.Of(bytes);
+        }
     }
 
     public Task StartJsonLinesAsync(string relativePath, CancellationToken cancellationToken = default)

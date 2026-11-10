@@ -16,8 +16,19 @@ internal sealed class Replica
     {
     }
 
+    /// <param name="inStep">What is told, in the match's turn, that the match stands where its journal ends.</param>
+    public Replica(JournalStore journal, IMatchInStep inStep)
+        : this(journal, [], [], inStep)
+    {
+    }
+
     /// <param name="witnesses">What sees every decision this process's stepper takes, a rebuilt match's included.</param>
     public Replica(JournalStore journal, IReadOnlyList<IDecisionWitness> witnesses, params IMatchMemory[] memories)
+        : this(journal, witnesses, memories, inStep: null)
+    {
+    }
+
+    private Replica(JournalStore journal, IReadOnlyList<IDecisionWitness> witnesses, IMatchMemory[] memories, IMatchInStep? inStep)
     {
         Store = new MatchStore();
         Events = EventLog.Of(Store);
@@ -41,7 +52,7 @@ internal sealed class Replica
             Stepper,
             Store.Repository,
             memories);
-        Journaled = new JournaledStepper(Stepper, Replay, journal.Journal, Store.Repository, concede);
+        Journaled = new JournaledStepper(Stepper, Replay, journal.Journal, Store.Repository, concede, inStep is null ? [] : [inStep]);
     }
 
     public MatchStore Store { get; }

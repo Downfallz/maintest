@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using DownfallArena.Application.Agents;
 using DownfallArena.Application.Matches.Decisions;
 using DownfallArena.Application.Matches.Driving;
@@ -42,6 +43,11 @@ internal sealed class SteppedSession : ITableSession
     // What the readers are served from, and who the plan says sits where: replaced, never changed in place.
     private readonly Lock _gate = new();
     private JournaledState? _state;
+
+    // How long the match's trace was each time the match stood where its journal ends, by where that was; and
+    // the length that goes with the state kept. Told inside the match's turn, read with the state it is of.
+    private readonly ConcurrentDictionary<JournalPosition, int> _marks = new();
+    private int _journaled;
     private SeatPlan _plan;
     private List<SeatChangeEntry> _folded = [];
     private (SeatChangeEntry Change, Occupant Next)? _offered;
@@ -75,7 +81,7 @@ internal sealed class SteppedSession : ITableSession
         _legacyStream = legacyStream;
         _stopping = stopping;
         var seen = new Seen(this);
-        _stepper = host.Stepper(journal, seen, seen);
+        _stepper = host.Stepper(journal, seen, seen, seen);
         foreach (var seat in seats.Seats)
         {
             (seat.Person as SteppedPerson)?.Attach(() => Waiting(seat.Slot));
@@ -139,6 +145,17 @@ internal sealed class SteppedSession : ITableSession
     public event Action? Changed;
 
     public MatchId MatchId => _match.MatchId;
+
+    public int? Journaled
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _journaled;
+            }
+        }
+    }
 
     public RuleSet Rules => _match.Rules;
 
@@ -312,7 +329,7 @@ internal sealed class SteppedSession : ITableSession
     /// </remarks>
     public Task<Result<SeatSnapshot>> SnapshotAsync(PlayerSlot slot)
     {
-        var (state, plan) = Read();
+        var (state, plan, journaled) = ReadKept();
         if (Volatile.Read(ref _stale) != 0 || (HasBegun && state.Outcome is null && Waiting(PlayerSlot.Player1, state, plan) is null && Waiting(PlayerSlot.Player2, state, plan) is null))
         {
             Pump();
@@ -323,7 +340,8 @@ internal sealed class SteppedSession : ITableSession
             Waiting(slot, state, plan),
             view.Board,
             view.Options,
-            SeatSnapshot.StillFaceDown(state.Of(Other(slot)).View.Board))));
+            SeatSnapshot.StillFaceDown(state.Of(Other(slot)).View.Board),
+            journaled)));
     }
 
     /// <remarks>
@@ -466,6 +484,15 @@ internal sealed class SteppedSession : ITableSession
         return plan.At(slot, RoundOf(state, slot));
     }
 
+    /// <summary>The state kept, who sits where, and how much of the trace is of that state, read as one.</summary>
+    private (JournaledState State, SeatPlan Plan, int Journaled) ReadKept()
+    {
+        lock (_gate)
+        {
+            return (_state ?? throw new InvalidOperationException("The table's match has not been opened."), _plan, _journaled);
+        }
+    }
+
     private (JournaledState State, SeatPlan Plan) Read()
     {
         lock (_gate)
@@ -543,6 +570,11 @@ internal sealed class SteppedSession : ITableSession
             {
                 kept = true;
                 _state = state;
+                _journaled = _marks.TryGetValue(state.Position, out var traced) ? traced : _journaled;
+                foreach (var passed in _marks.Keys.Where(position => position.Lines < state.Position.Lines))
+                {
+                    _marks.TryRemove(passed, out _);
+                }
             }
         }
 
@@ -828,8 +860,14 @@ internal sealed class SteppedSession : ITableSession
     /// Nothing sits between a stepped match and its seats, so this is where a decision is recorded as a step
     /// under the name of whoever holds the seat (<see cref="PlaytestRun.Witnessed" />), and where its round is noted.
     /// </summary>
-    private sealed class Seen(SteppedSession session) : IDecisionWitness, IMatchMemory
+    private sealed class Seen(SteppedSession session) : IDecisionWitness, IMatchMemory, IMatchInStep
     {
+        /// <remarks>
+        /// Everything the match has raised by now is the journal's. What it raises next, until it is told this
+        /// again, may be a step that is never written: a page is not shown it, and a checkpoint does not keep it.
+        /// </remarks>
+        public void InStep(MatchId matchId, JournalPosition position) => session._marks[position] = session._host.Events.Length(matchId);
+
         public IPlayerAgent Around(MatchId matchId, PlayerSlot slot, IPlayerAgent decider)
         {
             var reaching = new ReachingAgent(decider, round => session.Reach(slot, round));

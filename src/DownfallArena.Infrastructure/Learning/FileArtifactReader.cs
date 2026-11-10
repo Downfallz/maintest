@@ -35,9 +35,32 @@ public sealed class FileArtifactReader : IArtifactReader
 
         // Shared with a writer: a table's journal and notes are appended to while the store lists and reads
         // them, and a reader that asked for the file to itself would refuse that writer, or be refused by it.
-        await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, bufferSize: 4096, useAsync: true);
+        await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, bufferSize: 4096, useAsync: true);
         using var reader = new StreamReader(stream);
         return await reader.ReadToEndAsync(cancellationToken);
+    }
+
+    public async Task<TaggedText?> ReadTaggedAsync(string relativePath, CancellationToken cancellationToken = default)
+    {
+        var path = Resolve(relativePath);
+        if (!File.Exists(path))
+        {
+            return null;
+        }
+
+        byte[] bytes;
+        try
+        {
+            await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, bufferSize: 4096, useAsync: true);
+            bytes = new byte[stream.Length];
+            await stream.ReadExactlyAsync(bytes, cancellationToken);
+        }
+        catch (FileNotFoundException)
+        {
+            return null;
+        }
+
+        return new TaggedText(System.Text.Encoding.UTF8.GetString(bytes), FileTags.Of(bytes));
     }
 
     private string Resolve(string relativePath)
