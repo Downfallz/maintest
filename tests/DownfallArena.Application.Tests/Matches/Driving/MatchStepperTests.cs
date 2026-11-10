@@ -1,6 +1,3 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
 using DownfallArena.Application.Agents;
 using DownfallArena.Application.Matches.Commands;
 using DownfallArena.Application.Matches.Decisions;
@@ -12,7 +9,6 @@ using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Events;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.SharedKernel.Identifiers;
-using DownfallArena.SharedKernel.Primitives;
 using NSubstitute;
 
 namespace DownfallArena.Application.Tests.Matches.Driving;
@@ -21,7 +17,7 @@ namespace DownfallArena.Application.Tests.Matches.Driving;
 /// The stepper plays the match the driver plays at a table, without anything waiting between two decisions
 /// (ADR 0159): held to the driver event for event, with Player agents and with people in the seats.
 /// </summary>
-public sealed partial class MatchStepperTests
+public sealed class MatchStepperTests
 {
     public static TheoryData<uint, CombatDeclaration> Matches
     {
@@ -80,7 +76,7 @@ public sealed partial class MatchStepperTests
         var played = await SteppedAsync(seed, declaration, person1: true, person2: false);
         var store = new MatchStore();
         var match = store.Started(Rules(declaration), new TestRandom(seed));
-        var log = Logged(store);
+        var log = EventLog.Of(store);
         var stepper = Stepper(store);
         var held = HeldAnswers.None;
         MatchStep? last = null;
@@ -95,7 +91,7 @@ public sealed partial class MatchStepperTests
         }
 
         last.ShouldNotBeNull().Outcome.ShouldBe(played.Outcome);
-        Trace(log).ShouldBe(played.Events);
+        log.Trace().ShouldBe(played.Events);
     }
 
     [Fact]
@@ -103,7 +99,7 @@ public sealed partial class MatchStepperTests
     {
         var store = new MatchStore();
         var match = store.Started(MatchStore.TwoOnTwo(), new TestRandom(3));
-        var log = Logged(store);
+        var log = EventLog.Of(store);
         var stepper = Stepper(store);
         var begun = (await stepper.AdvanceAsync(match.Id, MatchSeats.People, HeldAnswers.None, TestContext.Current.CancellationToken)).Value;
         begun.Asked.ShouldBe([PlayerSlot.Player1, PlayerSlot.Player2]);
@@ -143,7 +139,7 @@ public sealed partial class MatchStepperTests
     {
         var store = new MatchStore();
         var match = store.Started(MatchStore.TwoOnTwo(), new TestRandom(3));
-        var log = Logged(store);
+        var log = EventLog.Of(store);
         var seats = new MatchSeats(null, Passing());
 
         var step = (await Stepper(store).AdvanceAsync(match.Id, seats, HeldAnswers.None, TestContext.Current.CancellationToken)).Value;
@@ -175,7 +171,7 @@ public sealed partial class MatchStepperTests
     {
         var store = new MatchStore();
         var match = store.Started(MatchStore.TwoOnTwo(), new TestRandom(3));
-        var log = Logged(store);
+        var log = EventLog.Of(store);
         var stepper = Stepper(store);
         var creature = (await stepper.SeatAsync(match.Id, PlayerSlot.Player1, HeldAnswers.None, TestContext.Current.CancellationToken)).Value.Board.Allies[0].Id;
 
@@ -270,13 +266,13 @@ public sealed partial class MatchStepperTests
     {
         var store = new MatchStore();
         var match = store.Started(Rules(declaration), new TestRandom(seed));
-        var log = Logged(store);
+        var log = EventLog.Of(store);
         var driver = new MatchDriver(Commands(store), Queries(store)) { AsksSpeedsAndIntentsTogether = true };
 
         var outcome = await driver.PlayAsync(match.Id, Agent(seed, PlayerSlot.Player1), Agent(seed, PlayerSlot.Player2), TestContext.Current.CancellationToken);
 
         outcome.IsSuccess.ShouldBeTrue();
-        return (outcome.Value, Trace(log));
+        return (outcome.Value, log.Trace());
     }
 
     /// <summary>
@@ -288,7 +284,7 @@ public sealed partial class MatchStepperTests
     {
         var store = new MatchStore();
         var match = store.Started(Rules(declaration), new TestRandom(seed));
-        var log = Logged(store);
+        var log = EventLog.Of(store);
         var stepper = Stepper(store);
         var agents = new Dictionary<PlayerSlot, IPlayerAgent> { [PlayerSlot.Player1] = Agent(seed, PlayerSlot.Player1), [PlayerSlot.Player2] = Agent(seed, PlayerSlot.Player2) };
         var seats = new MatchSeats(person1 ? null : agents[PlayerSlot.Player1], person2 ? null : agents[PlayerSlot.Player2]);
@@ -317,7 +313,7 @@ public sealed partial class MatchStepperTests
         decided.AddRange(step.Decided);
         step.Held.IsEmpty.ShouldBeTrue();
         step.Asked.ShouldBeEmpty();
-        return (step.Outcome, Trace(log), decided);
+        return (step.Outcome, log.Trace(), decided);
     }
 
     /// <summary>What an agent answers to the question a seat's view asks, on the board and the options the view shows.</summary>
@@ -369,48 +365,4 @@ public sealed partial class MatchStepperTests
         new(
             new GetBoardStateForPlayerHandler(store.Workflow),
             new GetPlayerOptionsHandler(store.Workflow, TestContent.Resources));
-
-    private static EventLog Logged(MatchStore store)
-    {
-        var log = new EventLog();
-        store.Dispatcher.DispatchAsync(Arg.Any<DownfallArena.Domain.Matches.Match>(), Arg.Any<CancellationToken>()).Returns(call => log.RecordAsync(call.Arg<DownfallArena.Domain.Matches.Match>()));
-        return log;
-    }
-
-    /// <summary>
-    /// The events as text, one a line, with the ids a match draws for itself blanked: two matches from the same
-    /// seed differ in their own id and their rounds', and in nothing a player could see.
-    /// </summary>
-    private static List<string> Trace(EventLog log) =>
-        [.. log.All.Select(raised => $"{raised.GetType().Name} {DrawnId().Replace(JsonSerializer.Serialize(raised, raised.GetType(), EventJson), "id")}")];
-
-    private static readonly JsonSerializerOptions EventJson = new() { Converters = { new CreatureKey() } };
-
-    [GeneratedRegex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")]
-    private static partial Regex DrawnId();
-
-    /// <summary>Writes a creature id where JSON wants text: some events key what they carry by creature.</summary>
-    private sealed class CreatureKey : JsonConverter<CreatureId>
-    {
-        public override CreatureId Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => throw new NotSupportedException();
-
-        public override void Write(Utf8JsonWriter writer, CreatureId value, JsonSerializerOptions options) => writer.WriteStringValue(value.ToString());
-
-        public override void WriteAsPropertyName(Utf8JsonWriter writer, CreatureId value, JsonSerializerOptions options) => writer.WritePropertyName(value.ToString());
-    }
-
-    /// <summary>Every event the match raised, in the order it raised them.</summary>
-    private sealed class EventLog
-    {
-        private readonly List<IDomainEvent> _all = [];
-
-        public IReadOnlyList<IDomainEvent> All => _all;
-
-        public Task RecordAsync(DownfallArena.Domain.Matches.Match match)
-        {
-            _all.AddRange(match.DomainEvents);
-            match.ClearDomainEvents();
-            return Task.CompletedTask;
-        }
-    }
 }

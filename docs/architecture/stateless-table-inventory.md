@@ -62,8 +62,14 @@ Each phase ships on the one container app there is today and leaves the game pla
    `SeatView`, which is what `TableApi.WithAnswers` computes today. Every decision a step takes comes back in
    order (`MatchStep.Decided`); submitted again to two seats nobody answers for, they rebuild the match with
    no agent asked anything, which is the load path of phase 3. Nothing in the host uses it yet.
-3. **The journal as the source.** A journal port in Application; file and blob adapters with an append
-   condition; a repository that is a cache over replay; replay made silent (no file written, no notice sent).
+3. **The journal as the source.** Done: `IDecisionJournal` reads a run's decisions and appends after a
+   position, refusing a writer that did not read the last line; in memory, as the `decisions.jsonl` file the
+   table has always written, and as the same append blob with the service's own position condition.
+   `MatchReplay` builds a match again from how it was created and its decisions, by the commands that built
+   it. `JournaledStepper` is the stepper over a journal: it reads the journal before each step, rebuilds the
+   match in memory when it is not where the journal ends, writes what the step decided, and tells a writer
+   that lost the race the match moved. `RecordedTableReplayTests` holds it to what the host records today.
+   Nothing in the host uses it yet.
 4. **The host's own state out of memory.** Tokens and codes, arrival, the version, the lobby's projections and
    caps, the decision clock. `HumanSeat`, `TableSession`'s task, `TableGate` and `TableRestorer` go here.
 5. **Bots behind a port.** In-process adapter first; the queue adapter and its worker command second.
@@ -114,6 +120,20 @@ What this says:
   much as a correctness one, and phase 3 has a number to hold: a cold load within a small multiple of the
   engine's replay.
 
+**The load of phase 3** (`FileDecisionJournal.ReadAsync` then `MatchReplay.RebuildAsync`), measured the same
+way: a process that has just started, one core, the table host's listeners attached, each journal loaded
+three times.
+
+| Journal | Match | Load |
+| --- | --- | --- |
+| 84 lines | greedy against greedy, 7 rounds | 45 to 60 ms |
+| 195 lines | random against random, 15 rounds | 110 to 150 ms |
+| 214 lines | random against random, 17 rounds | 155 to 325 ms |
+
+The highest figure of each row is the first load of the process. Reading the file is 0.5 to 2 ms of it, 22 ms
+the first time. That is two to five times the engine's own replay and about a tenth of today's rebuild: the
+target phase 3 was given.
+
 Not measured: a blob store (one more round trip for the journal), a real half-vCPU quota (the sandbox could
 pin a core but not throttle one), and the first load of a process before any match has been played in it,
 which adds the compilation of the engine itself.
@@ -136,7 +156,7 @@ which adds the compilation of the engine itself.
    also depends on the journal position, or two turns draw the same numbers.
 6. **Practice tables** (ADR 0079) record nothing by design. They can stay on the blocking loop while the API is
    one replica; with several, they need a short-lived journal or a sticky route.
-7. **Unrecorded tables** (`--no-record`) need a journal that is kept in memory and nowhere else.
+7. **Unrecorded tables** (`--no-record`). Answered: `InMemoryDecisionJournal`, conditional like the others.
 8. **Content changing under an open table.** Today a divergent replay is refused once, at start, and marked.
    When every cold load replays, a deploy that moves content strands open tables at the next tap. Options: pin
    the content hash in the table record and refuse with a clear message, or keep serving the old content
@@ -144,6 +164,19 @@ which adds the compilation of the engine itself.
 9. **The event stream across replicas.** A replica holding a stream has to learn of a line another replica
    wrote: watch the journal's length on a short timer, or stay at one API replica until it matters. The page's
    five-second poll already covers a missed notice.
+
+10. **A concession.** It ends the match and is no line of the journal: a table that was conceded is rebuilt
+    unconceded unless its record says it is finished. It needs a line of its own, or the record's status
+    written before the match is told.
+11. **A seat changing hands.** The pilot's swaps are lines of `decisions.jsonl` the journal counts and does
+    not read. Who answers for a seat, and from which round, has to reach the stepper: a step that plays
+    several rounds of Player agents cannot change one of them at the top of a round it passes through.
+12. **Two shapes of one line.** `JournalLine` in Infrastructure and `JournalEntry` in the host describe the
+    same file until phase 4 removes the host's; `RecordedTableReplayTests` is what holds them together.
+13. **Loading on every step.** `JournaledStepper` reads the whole journal before each step and rebuilds the
+    whole match when another process wrote last. Two replicas alternating on one table rebuild at every
+    step, which the figures above price. Applying only the lines not yet seen is the cheaper path if that
+    pattern turns out to matter.
 
 ## Documents this makes stale as it lands
 
