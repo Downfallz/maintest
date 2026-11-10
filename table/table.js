@@ -2,7 +2,7 @@ import { createFeedback } from './feedback.js';
 import { httpTransport, replayTransport } from './transport.js';
 import { activeSeat, holdsOn, isAsked, needsPass } from './seats.js';
 import { activateSeats, forget, heldSeats, isOperator, keeps, operatorToken, playPath, replayOf, resumeTokens, savedSeats, seatsFromLocation, selectTableSeats, tableFromLocation } from './session.js';
-import { addressAfter, invitationPlan, invitationText, spentLink } from './invitation.js';
+import { addressAfter, battleAddress, invitationPlan, invitationText, spentLink } from './invitation.js';
 import { keyBytes, noticeButton, offerShown, pushSupported, sameKey, testReading, showOwnNotice, TAG } from './push.js';
 import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue, referenceLines } from './card.js';
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, statPairs, turnOrder, liveChoice } from './board.js';
@@ -22,6 +22,7 @@ import { outcomeText, rematchLink } from './outcome.js';
 import { askedKey, validTargets, emptyCastAllowed, combatDecision } from './slot.js';
 import { activeTurn, boardPresentation, decisionView, presentedView } from './presentation.js';
 import { practice, storage } from './startup.js';
+import { preferredPresentation } from './battle-preferences.js';
 import { SPEEDS, TEMPO_RULE, phaseLabel, stageLabel, stepLabel, tempoLabel } from './terms.js';
 
 // The page renders what the host serves and submits what a player taps. It holds no rule: which spells are
@@ -251,9 +252,32 @@ async function verifiedSeats(held) {
   return seats;
 }
 
+// The table these seats sit at, as the host's resume says, so the battle view opens this game and not a list of
+// every game the browser holds; a notice's link names it already, and a host that cannot say leaves it unnamed.
+async function toBattle(held) {
+  const tokens = held.map(seat => seat.token);
+  let table = new URLSearchParams(globalThis.location?.search ?? '').get('table');
+  try {
+    const response = await fetch('/api/lobby/resume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tokens }) });
+    if (response.ok) table = tableOf(await response.json(), tokens)?.id ?? table;
+  } catch {
+    // Unnamed, the battle view still finds the seats this browser holds and asks which to open.
+  }
+  globalThis.location.replace(battleAddress(held, table, keeps(storage)));
+}
+
 function enter(held, practice) {
   if (held.length === 0) {
     setPhase(practice ? 'Choose a practice scenario below.' : 'Type the code the host printed, or open the link it printed.');
+    return;
+  }
+
+  // The battle view is the game (ADR 0157): an accepted seat, a notice's link or a held seat goes on there. This
+  // page keeps the doorway (codes, invitations) and is the archived table only for practice, an admin replay or a
+  // browser that stored the archive's own value.
+  // A shared device holds both seats: the battle view plays one seat and has no handover, so it stays here.
+  if (!practice && held.length === 1 && preferredPresentation(storage) === 'battle') {
+    void toBattle(held);
     return;
   }
 

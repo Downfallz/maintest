@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { classicTable } from './classic-table-fixture.js';
 
 // What a test expects follows the layout's own widths (table.css: 760 and 1100), not a project's name.
 const widthOf = page => page.viewportSize().width;
@@ -40,6 +41,7 @@ const catalogue = {
   effects: [{ kind: 'DefenseDebuff', glyph: '◇', harmful: true }, { kind: 'Bleed', glyph: '♥', harmful: true }, { kind: 'Regeneration', glyph: '♥', harmful: false }],
 };
 
+test.beforeEach(classicTable);
 test.beforeEach(async ({ page }) => {
   await page.route('**/api/catalogue', route => route.fulfill({ json: catalogue }));
   await page.route('**/api/seat/player1**', route => route.fulfill({ json: view }));
