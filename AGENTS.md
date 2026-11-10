@@ -63,7 +63,8 @@ docs/
                 creature art direction (creature-art-direction.md), the ART-2 reference intake
                 (asset-intake.md, source-intake.json), runtime sprites (runtime-sprites.md), spell VFX (spell-vfx.md), mutation cues (mutation-cues.md), playback polish (battle-polish.md) and pipeline follow-ups.
   adr/          Architecture Decision Records. New decision = new ADR.
-  architecture/ How the code is organized and why.
+  architecture/ How the code is organized and why, and what has to move for a table no process holds in
+                memory (stateless-table-inventory.md, ADR 0159, proposed).
   domain/       Glossary (ubiquitous language), game rules, the spell catalogue, a planned change with
                 the audit it is measured against (tier-evolution-plan.md, tier-evolution-inventory.md), and
                 the plan for a second combat declaration mode (free-activation-plan.md, ADR 0110), and the

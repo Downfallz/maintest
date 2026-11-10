@@ -164,3 +164,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0156](0156-replay-a-finished-game-in-the-battle-view-for-its-players.md) | Replay a finished game in the battle view for the players who sat at it | Accepted |
 | [0157](0157-make-the-battle-view-the-game.md) | Make the battle view the game, and archive the classic table | Accepted |
 | [0158](0158-carve-the-interface-in-bone-and-soot.md) | Carve the interface in bone and soot: one display face, sharp cut shapes, grain on every surface, one bar in a match | Accepted |
+| [0159](0159-advance-a-table-by-submitted-decisions-over-its-journal.md) | Advance a table by submitted decisions over its journal, not by a loop that waits in memory | Proposed |
