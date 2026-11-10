@@ -25,6 +25,11 @@ internal sealed class RecordRefused(IArtifactStore inner) : IArtifactStore
                 ? Task.FromException(new IOException("The store is out."))
                 : inner.WriteJsonAsync(relativePath, value, cancellationToken);
 
+        public Task<string?> WriteJsonIfAsync<TValue>(string relativePath, TValue value, string? expected, CancellationToken cancellationToken = default) =>
+            store.Refusing && relativePath.EndsWith(TableRecord.File, StringComparison.Ordinal)
+                ? Task.FromException<string?>(new IOException("The store is out."))
+                : inner.WriteJsonIfAsync(relativePath, value, expected, cancellationToken);
+
         public Task StartJsonLinesAsync(string relativePath, CancellationToken cancellationToken = default) =>
             inner.StartJsonLinesAsync(relativePath, cancellationToken);
 

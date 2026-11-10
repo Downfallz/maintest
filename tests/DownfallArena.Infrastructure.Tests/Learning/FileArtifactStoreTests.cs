@@ -6,6 +6,43 @@ namespace DownfallArena.Infrastructure.Tests.Learning;
 /// <summary>The store over a root directory: a run is one directory under it, listed and removed as such.</summary>
 public sealed class FileArtifactStoreTests
 {
+    /// <summary>
+    /// A document written on a condition is written only over the content its writer read: two writers that
+    /// read the same content cannot both write after it, and the second reads again (ADR 0159).
+    /// </summary>
+    [Fact]
+    public async Task A_document_is_written_on_a_condition_only_over_the_content_its_writer_read()
+    {
+        using var directory = new ContentDirectory();
+        var store = new FileArtifactStore(directory.Path);
+        var writer = store.Writer("run-1");
+        var reader = store.Reader("run-1");
+
+        var first = await writer.WriteJsonIfAsync("table.json", new { Revision = 1 }, expected: null, TestContext.Current.CancellationToken);
+        var again = await writer.WriteJsonIfAsync("table.json", new { Revision = 1 }, expected: null, TestContext.Current.CancellationToken);
+        var read = (await reader.ReadTaggedAsync("table.json", TestContext.Current.CancellationToken)).ShouldNotBeNull();
+        var second = await writer.WriteJsonIfAsync("table.json", new { Revision = 2 }, read.Tag, TestContext.Current.CancellationToken);
+        var late = await writer.WriteJsonIfAsync("table.json", new { Revision = 3 }, read.Tag, TestContext.Current.CancellationToken);
+
+        first.ShouldBe(read.Tag);
+        again.ShouldBeNull("there was a document already");
+        second.ShouldNotBeNull();
+        late.ShouldBeNull("the document moved since it was read");
+        (await reader.ReadTaggedAsync("table.json", TestContext.Current.CancellationToken)).ShouldNotBeNull().Tag.ShouldBe(second);
+        (await reader.ReadTextAsync("table.json", TestContext.Current.CancellationToken)).ShouldNotBeNull().ShouldContain("\"revision\": 2");
+    }
+
+    [Fact]
+    public async Task A_document_nobody_wrote_reads_as_none()
+    {
+        using var directory = new ContentDirectory();
+        var store = new FileArtifactStore(directory.Path);
+
+        var read = await store.Reader("run-1").ReadTaggedAsync("table.json", TestContext.Current.CancellationToken);
+
+        read.ShouldBeNull();
+    }
+
     [Fact]
     public async Task The_runs_are_the_directories_under_the_root_in_ordinal_order()
     {
