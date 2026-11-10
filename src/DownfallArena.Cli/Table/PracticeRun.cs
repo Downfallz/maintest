@@ -67,7 +67,7 @@ internal sealed class PracticeRun : IAsyncDisposable
             }
 
             var events = services.GetRequiredService<MatchTraceRecorder>();
-            var api = new TableApi(session, session.Queries, seats, CatalogueProjection.Build(resources, rules), events)
+            var api = new TableApi(new DrivenSession(session, seats), seats, CatalogueProjection.Build(resources, rules), events)
             {
                 Guide = new DecisionGuideProjection(resources, rules),
                 FeedStart = events.EntriesOf(session.MatchId).Count,

@@ -5,16 +5,14 @@ using DownfallArena.Application.Catalogue;
 using DownfallArena.Application.Learning.Tracing;
 using DownfallArena.Application.Matches.Decisions;
 using DownfallArena.Application.Matches.Projections;
-using DownfallArena.Application.Matches.Queries;
-using DownfallArena.Application.Messaging;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.Cli.Tests.Studio;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Infrastructure.Learning;
+using DownfallArena.Infrastructure.Matches;
 using DownfallArena.Infrastructure.Resources.Authoring;
-using DownfallArena.SharedKernel.Primitives;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -23,15 +21,18 @@ namespace DownfallArena.Cli.Tests.Table;
 /// <summary>
 /// <c>notes.jsonl</c>, which is the one thing a playtest knows that no other artifact carries. What matters
 /// is that the host writes the two kinds it owns and refuses to let a client write them, and that a duration
-/// is measured from the moment a screen was served rather than off the wall clock.
+/// is measured from the moment a screen was served rather than off the wall clock. The table is stepped over
+/// its journal and recorded, as the composer builds every ordinary one (ADR 0159).
 /// </summary>
 public sealed class PlaytestNotesTests : IDisposable
 {
     private static readonly RuleSet Rules = RuleSet.Create(2, 2, 1, 6, 2.0);
     private static readonly DateTimeOffset Start = new(2026, 9, 17, 20, 30, 0, TimeSpan.Zero);
+    private const string PersonName = "human:mk";
 
     private readonly StudioContent _content = new();
     private readonly CancellationTokenSource _stopping = new();
+    private readonly List<SteppedSession> _opened = [];
     private readonly SteppingClock _clock = new(Start);
     private readonly string _runs = Path.Combine(Path.GetTempPath(), $"downfall-notes-{Guid.NewGuid():N}");
     private IHost? _host;
@@ -39,6 +40,11 @@ public sealed class PlaytestNotesTests : IDisposable
     public void Dispose()
     {
         _stopping.Cancel();
+        foreach (var session in _opened)
+        {
+            session.Dispose();
+        }
+
         _stopping.Dispose();
         _host?.Dispose();
         _content.Dispose();
@@ -46,10 +52,10 @@ public sealed class PlaytestNotesTests : IDisposable
     }
 
     /// <summary>
-    /// Removes the runs, waiting out a table still writing to them. Cancelling does not wait for the driver,
-    /// and since both seats are asked at once (ADR 0111) the bot's answer can still be journaled after the
-    /// test is done, adding a file under the delete: "directory not empty" (seen in CI). A few short waits let
-    /// the writer finish; a directory still busy after them is a real leak and fails the test.
+    /// Removes the runs, waiting out a table still writing to them. Cancelling does not wait for the bot's
+    /// turn, which is taken behind the person's tap, so its answer can still be journaled after the test is
+    /// done, adding a file under the delete: "directory not empty" (seen in CI). A few short waits let the
+    /// writer finish; a directory still busy after them is a real leak and fails the test.
     /// </summary>
     private void DeleteRuns()
     {
@@ -92,8 +98,8 @@ public sealed class PlaytestNotesTests : IDisposable
     }
 
     /// <summary>
-    /// A concession is written where the match had got to, and before the session closes: ending the match
-    /// releases the driver, whose end is what closes a recorded session, and the note is declared to it first.
+    /// A concession is written where the match had got to, and before the session closes: the match's outcome
+    /// is what closes a recorded session, and the note is declared to it first.
     /// </summary>
     [Fact]
     public async Task A_concession_is_noted_where_the_match_had_got_to_before_the_session_closes()
@@ -112,8 +118,8 @@ public sealed class PlaytestNotesTests : IDisposable
 
     /// <summary>
     /// A person who concedes while asked to bind targets, or to choose an action at the slot (ADR 0110), ends the
-    /// session with its outcome. The released seat's answer passes through the recording seat, which refuses
-    /// anything its options never offered; an empty target set was such an answer and left the session open.
+    /// session with its outcome. A driver's seat, released, once answered with an empty target set its options
+    /// never offered and left the session open; a stepped table has nobody to release, and ends the same way.
     /// </summary>
     [Theory]
     [InlineData(false)]
@@ -176,7 +182,7 @@ public sealed class PlaytestNotesTests : IDisposable
     private static readonly RuleSet AtActivation = RuleSet.Create(2, 2, 1, 6, 2.0, combatDeclaration: CombatDeclaration.AtActivation);
 
     /// <summary>Passes, goes Standard and keeps any tie order until the seat is asked to target or to act.</summary>
-    private static async Task PlayUntilTheSlot((TableApi Api, TableSession Session, HumanSeat Person, string Token, PlaytestRun Run) table)
+    private static async Task PlayUntilTheSlot((TableApi Api, SteppedSession Session, SteppedPerson Person, string Token, PlaytestRun Run) table)
     {
         for (var attempt = 0; attempt < 600; attempt++)
         {
@@ -206,7 +212,7 @@ public sealed class PlaytestNotesTests : IDisposable
     }
 
     /// <summary>The first spell the seat is served with its first legal target set.</summary>
-    private static async Task<string> FirstAction((TableApi Api, TableSession Session, HumanSeat Person, string Token, PlaytestRun Run) table)
+    private static async Task<string> FirstAction((TableApi Api, SteppedSession Session, SteppedPerson Person, string Token, PlaytestRun Run) table)
     {
         using var payload = JsonDocument.Parse(Text(await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token)));
         var action = payload.RootElement.GetProperty("options").GetProperty("action");
@@ -246,16 +252,15 @@ public sealed class PlaytestNotesTests : IDisposable
 
     /// <summary>
     /// The acceptance moment is read before the seat is answered, and so carries none of what answering it
-    /// sets off. Handing a decision over releases the driver, which runs a whole command and asks the next
-    /// question; a thread that reads its clock afterwards can be scheduled again at any point in that, and
-    /// would date the note after the thing it records and put engine time inside a duration that measures a
-    /// person reading a screen.
+    /// sets off. Handing a decision over writes it down, runs a whole command and asks the next question, all
+    /// before the session answers; a clock read afterwards would date the note after the thing it records and
+    /// put engine time inside a duration that measures a person reading a screen.
     /// </summary>
     /// <remarks>
     /// Read after the submit, this reports a minute: the clock here moves exactly when the seat comes off the
-    /// question being answered, which is what the submit does, under its own lock, before it returns. The
-    /// other timing tests in this file cannot catch it -- their clock only moves when the test moves it, so it
-    /// reads the same on both sides of the handoff and both orderings pass.
+    /// question being answered, which the submit has done by the time it returns. The other timing tests in
+    /// this file cannot catch it -- their clock only moves when the test moves it, so it reads the same on both
+    /// sides of the handoff and both orderings pass.
     /// </remarks>
     [Fact]
     public async Task A_decision_is_timed_before_it_is_handed_to_the_engine()
@@ -315,9 +320,9 @@ public sealed class PlaytestNotesTests : IDisposable
     /// <summary>
     /// A decision is noted where it was asked, not where the match went once it was accepted. The sub-phase is
     /// the one the options the decision was validated against named, which is why this holds by construction
-    /// rather than by winning a race: submitting releases the driver, and anything read afterwards may already
+    /// rather than by winning a race: submitting moves the match on, and anything read afterwards may already
     /// be the next sub-phase. There is deliberately no test here for that race -- with a bot in the other seat
-    /// the driver advances in microseconds, so a test that asserted on it would pass or fail by timing, which
+    /// the match advances in microseconds, so a test that asserted on it would pass or fail by timing, which
     /// is worse than no test. What is asserted is the contract: the note says what the options said.
     /// </summary>
     [Fact]
@@ -373,15 +378,24 @@ public sealed class PlaytestNotesTests : IDisposable
     /// next one. This poll's acknowledgement names the answered question, and must not overwrite the next
     /// one's stamp: the clock keeps one a seat, and the next decision would be timed from nothing.
     /// </summary>
+    /// <remarks>
+    /// A stepped table reads a seat as one moment, so the other device answers behind that read: once the
+    /// route has its snapshot, and before it looks at what the page says it has drawn.
+    /// </remarks>
     [Fact]
     public async Task An_acknowledgement_of_a_question_answered_meanwhile_leaves_the_next_ones_clock_alone()
     {
         var table = await Recording();
         var first = table.Person.Waiting!.Asked;
         var resources = _host!.Services.GetRequiredService<IGameResources>();
+        var elsewhere = new MovedBehindTheRead(table.Session, async read =>
+        {
+            await table.Session.DecideAsync(PlayerSlot.Player1, PlayerDecision.Pass, read.Waiting!.Asked, read.Options, round: 1);
+            await Waiting(table.Person, "Speed");
+            table.Run.Served(PlayerSlot.Player1, table.Person.Waiting);
+        });
         var api = new TableApi(
-            table.Session,
-            table.Session.Queries with { GetPlayerOptions = new AnsweredElsewhere(table.Session.Queries.GetPlayerOptions, table.Person, table.Run) },
+            elsewhere,
             [new TableSeat(PlayerSlot.Player1, table.Token, table.Person), new TableSeat(PlayerSlot.Player2, "token-of-player-2", Person: null)],
             CatalogueProjection.Build(resources, Rules),
             _host.Services.GetRequiredService<MatchTraceRecorder>(),
@@ -508,7 +522,7 @@ public sealed class PlaytestNotesTests : IDisposable
         answer.Status.ShouldBe(404);
     }
 
-    private static IEnumerable<JsonElement> Notes((TableApi Api, TableSession Session, HumanSeat Person, string Token, PlaytestRun Run) table) =>
+    private static IEnumerable<JsonElement> Notes((TableApi Api, SteppedSession Session, SteppedPerson Person, string Token, PlaytestRun Run) table) =>
         File.ReadAllLines(Path.Combine(table.Run.Location, "notes.jsonl"))
             .Where(line => line.Length > 0)
             .Select(line => JsonDocument.Parse(line).RootElement);
@@ -517,10 +531,10 @@ public sealed class PlaytestNotesTests : IDisposable
     /// The page saying it has drawn what this seat is being asked, which is what the host times a decision
     /// from. It names the asking, so acknowledging one question never starts another's clock.
     /// </summary>
-    private static Task Shown((TableApi Api, TableSession Session, HumanSeat Person, string Token, PlaytestRun Run) table) =>
+    private static Task Shown((TableApi Api, SteppedSession Session, SteppedPerson Person, string Token, PlaytestRun Run) table) =>
         Get(table, $"?shown={table.Person.Waiting?.Asked}");
 
-    private static async Task Get((TableApi Api, TableSession Session, HumanSeat Person, string Token, PlaytestRun Run) table, string query = "")
+    private static async Task Get((TableApi Api, SteppedSession Session, SteppedPerson Person, string Token, PlaytestRun Run) table, string query = "")
     {
         var answer = await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token, query: query);
         answer.Status.ShouldBe(200, Text(answer));
@@ -530,18 +544,22 @@ public sealed class PlaytestNotesTests : IDisposable
     /// A decision carries the asking it answers, as the page's does off <c>waitingAsked</c>. The host refuses
     /// one that names another question, so a test that left it out would be testing that refusal.
     /// </summary>
-    private static string Answering(string body, HumanSeat person) =>
+    private static string Answering(string body, SteppedPerson person) =>
         body.Insert(1, $"\"asked\":{person.Waiting?.Asked ?? 0},");
 
-    private static async Task Post((TableApi Api, TableSession Session, HumanSeat Person, string Token, PlaytestRun Run) table, string body)
+    private static async Task Post((TableApi Api, SteppedSession Session, SteppedPerson Person, string Token, PlaytestRun Run) table, string body)
     {
         var answer = await table.Api.HandleAsync("POST", "/api/seat/player1/decision", Answering(body, table.Person), table.Token);
         answer.Status.ShouldBe(204, Text(answer));
     }
 
-    private Task<(TableApi Api, TableSession Session, HumanSeat Person, string Token, PlaytestRun Run)> Recording(TimeProvider? clock = null) => Recording(Rules, clock);
+    private Task<(TableApi Api, SteppedSession Session, SteppedPerson Person, string Token, PlaytestRun Run)> Recording(TimeProvider? clock = null) => Recording(Rules, clock);
 
-    private async Task<(TableApi Api, TableSession Session, HumanSeat Person, string Token, PlaytestRun Run)> Recording(RuleSet rules, TimeProvider? clock = null)
+    /// <summary>
+    /// A person in seat 1 and a greedy bot in seat 2 at a recorded table stepped over the journal its run keeps,
+    /// begun: the person is on their first question.
+    /// </summary>
+    private async Task<(TableApi Api, SteppedSession Session, SteppedPerson Person, string Token, PlaytestRun Run)> Recording(RuleSet rules, TimeProvider? clock = null)
     {
         new ContentStore(_content.Path).Build(Path.Combine(_content.Path, "dst"));
         _host = CliHost.Build(
@@ -550,31 +568,37 @@ public sealed class PlaytestNotesTests : IDisposable
             logMatchToConsole: false);
 
         var resources = _host.Services.GetRequiredService<IGameResources>();
-        var person = new HumanSeat(_stopping.Token);
-        var bot = new GreedyAgent(resources, rules);
+        var events = _host.Services.GetRequiredService<MatchTraceRecorder>();
+        var catalogue = CatalogueProjection.Build(resources, rules);
         var run = PlaytestRun.Open(
             new FileArtifactStore(_runs),
-            new PlaytestSetup(resources, rules, Seed: 7, "human:mk", "greedy"),
-            _host.Services.GetRequiredService<MatchTraceRecorder>(),
+            new PlaytestSetup(resources, rules, Seed: 7, PersonName, "greedy"),
+            events,
             clock ?? _clock);
-        await run.StartAsync(CatalogueProjection.Build(resources, rules), _stopping.Token);
+        await run.StartAsync(catalogue, _stopping.Token);
 
-        var session = await TableSession.StartAsync(_host.Services, rules, seed: 7, new SeatAgent(new Occupant(person, "human:mk")), new SeatAgent(new Occupant(bot, "greedy")), new TableStart(run.Wrap), cancellationToken: _stopping.Token);
         const string token = "token-of-player-1";
-        var api = new TableApi(
-            session,
-            session.Queries,
-            [new TableSeat(PlayerSlot.Player1, token, person), new TableSeat(PlayerSlot.Player2, "token-of-player-2", Person: null)],
-            CatalogueProjection.Build(resources, rules),
-            _host.Services.GetRequiredService<MatchTraceRecorder>(),
+        var person = new SteppedPerson();
+        TableSeat[] seats = [new TableSeat(PlayerSlot.Player1, token, person), new TableSeat(PlayerSlot.Player2, "token-of-player-2", Person: null)];
+        var plan = new SeatPlan(SeatPlan.Person(PersonName), new Occupant(new GreedyAgent(resources, rules), "greedy"));
+        var session = await Stepped.OpenAsync(
+            _host.Services,
+            rules,
+            seed: 7,
+            new SteppedSeats(plan, seats, (_, _) => null),
+            _stopping.Token,
+            new FileDecisionJournal(_runs, clock ?? _clock),
             run);
+        _opened.Add(session);
+        var api = new TableApi(session, seats, catalogue, events, run);
+        session.Begin();
 
         await Waiting(person, "Evolution");
         return (api, session, person, token, run);
     }
 
-    /// <summary>Waits until the seat is asked something, whatever it is: the driver asks the other seat in between.</summary>
-    private static async Task Settle(HumanSeat person)
+    /// <summary>Waits until the seat is asked something, whatever it is: the bot takes its turn in between.</summary>
+    private static async Task Settle(SteppedPerson person)
     {
         for (var attempt = 0; attempt < 300 && person.Waiting is null; attempt++)
         {
@@ -583,7 +607,7 @@ public sealed class PlaytestNotesTests : IDisposable
     }
 
     /// <summary>The seat's tied creatures as its options list them, which is the order that changes nothing.</summary>
-    private static async Task<IEnumerable<int>> TiedOf((TableApi Api, TableSession Session, HumanSeat Person, string Token, PlaytestRun Run) table)
+    private static async Task<IEnumerable<int>> TiedOf((TableApi Api, SteppedSession Session, SteppedPerson Person, string Token, PlaytestRun Run) table)
     {
         var answer = await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token);
         using var payload = JsonDocument.Parse(Text(answer));
@@ -591,8 +615,8 @@ public sealed class PlaytestNotesTests : IDisposable
             .EnumerateArray().SelectMany(tie => tie.EnumerateArray()).Select(creature => creature.GetInt32())];
     }
 
-    /// <summary>The seat blocks on another thread, so a test waits for the question rather than assuming it.</summary>
-    private static async Task Waiting(HumanSeat person, string kind)
+    /// <summary>The bot's turns are taken behind a tap, so a test waits for the question rather than assuming it.</summary>
+    private static async Task Waiting(SteppedPerson person, string kind)
     {
         for (var attempt = 0; attempt < 300; attempt++)
         {
@@ -611,26 +635,26 @@ public sealed class PlaytestNotesTests : IDisposable
 
     /// <summary>
     /// A clock that stands still while the seat is on one named question and jumps the moment it is off it.
-    /// The jump stands for everything that happens once a decision is handed over -- the driver released, a
+    /// The jump stands for everything that happens once a decision is handed over -- the line written, a
     /// command run, the next question asked -- so a note holding any of it reads a minute late.
     /// </summary>
     /// <remarks>
-    /// The two orderings are told apart with no race because <see cref="HumanSeat.Submit" /> clears the
-    /// question under its own lock before it returns, and an asking is never reused: while the seat is on
-    /// asking <c>n</c> the read is before the handoff, and once it is on null or on anything past <c>n</c> the
-    /// read is after it. Neither branch waits on a thread being scheduled, which is why the bug this catches
-    /// can be caught at all -- it is a race in production and an ordering here.
+    /// The two orderings are told apart with no race because a stepped table has written and applied a decision
+    /// before <see cref="SteppedSession.DecideAsync" /> answers, and an asking is never reused: it is one more
+    /// than the decisions the seat has in the journal. While the seat is on asking <c>n</c> the read is before
+    /// the handoff, and once it is on null or on anything past <c>n</c> the read is after it. Neither branch
+    /// waits on a thread being scheduled.
     /// </remarks>
     private sealed class ClockThatJumpsOnceTheSeatIsAnswered(DateTimeOffset pending, DateTimeOffset answered) : TimeProvider
     {
-        private HumanSeat? _seat;
+        private SteppedPerson? _seat;
         private long? _asking;
 
         public override DateTimeOffset GetUtcNow() =>
             _seat is { } seat && _asking is { } asking && seat.Waiting?.Asked != asking ? answered : pending;
 
         /// <summary>Freeze the clock until this seat is off the question it is waiting on right now.</summary>
-        public void Answering(HumanSeat seat)
+        public void Answering(SteppedPerson seat)
         {
             _seat = seat;
             _asking = seat.Waiting?.Asked;
@@ -645,33 +669,5 @@ public sealed class PlaytestNotesTests : IDisposable
         public override DateTimeOffset GetUtcNow() => _now;
 
         public void Advance(TimeSpan by) => _now = _now.Add(by);
-    }
-
-    /// <summary>
-    /// The other device, during this poll's options read: it answers the question the poll was about, then
-    /// acknowledges the next one. Once only, as a device would.
-    /// </summary>
-    private sealed class AnsweredElsewhere(IQueryHandler<GetPlayerOptions, Result<PlayerOptions>> inner, HumanSeat person, PlaytestRun run)
-        : IQueryHandler<GetPlayerOptions, Result<PlayerOptions>>
-    {
-        private bool _answered;
-
-        public async Task<Result<PlayerOptions>> HandleAsync(GetPlayerOptions query, CancellationToken cancellationToken = default)
-        {
-            var options = await inner.HandleAsync(query, cancellationToken);
-            if (!_answered && person.Waiting is { } question)
-            {
-                _answered = true;
-                person.Submit(PlayerDecision.Pass, question.Asked);
-                while (person.Waiting is not { } next || next.Asked == question.Asked)
-                {
-                    await Task.Delay(5, TestContext.Current.CancellationToken);
-                }
-
-                run.Served(PlayerSlot.Player1, person.Waiting);
-            }
-
-            return options;
-        }
     }
 }

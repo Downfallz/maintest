@@ -28,7 +28,16 @@ public sealed class FileArtifactReader : IArtifactReader
     public async Task<string?> ReadTextAsync(string relativePath, CancellationToken cancellationToken = default)
     {
         var path = Resolve(relativePath);
-        return File.Exists(path) ? await File.ReadAllTextAsync(path, cancellationToken) : null;
+        if (!File.Exists(path))
+        {
+            return null;
+        }
+
+        // Shared with a writer: a table's journal and notes are appended to while the store lists and reads
+        // them, and a reader that asked for the file to itself would refuse that writer, or be refused by it.
+        await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, bufferSize: 4096, useAsync: true);
+        using var reader = new StreamReader(stream);
+        return await reader.ReadToEndAsync(cancellationToken);
     }
 
     private string Resolve(string relativePath)

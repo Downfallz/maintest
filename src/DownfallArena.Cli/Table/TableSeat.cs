@@ -13,7 +13,7 @@ namespace DownfallArena.Cli.Table;
 /// never answers two seats in one payload, and that two devices later is a change of who holds which token
 /// rather than a change of what the host serves (<c>docs/tabletop/playtest-app.md</c> §4).
 /// </remarks>
-internal sealed record TableSeat(PlayerSlot Slot, string Token, HumanSeat? Person)
+internal sealed record TableSeat(PlayerSlot Slot, string Token, ISeatPerson? Person)
 {
     /// <summary>Replaced when its player explicitly leaves, revoking their previous access.</summary>
     public string Token { get; set; } = Token;

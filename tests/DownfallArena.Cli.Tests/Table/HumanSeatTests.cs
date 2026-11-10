@@ -264,7 +264,7 @@ public sealed class HumanSeatTests
     }
 
     /// <summary>The seat is asked on another thread, so a test waits for the question rather than assuming it.</summary>
-    private static async Task<HumanSeat.Question> WaitingFor(HumanSeat seat, PlayerOptionsKind kind)
+    private static async Task<Asking> WaitingFor(HumanSeat seat, PlayerOptionsKind kind)
     {
         while (seat.Waiting is not { } question || question.Kind != kind)
         {

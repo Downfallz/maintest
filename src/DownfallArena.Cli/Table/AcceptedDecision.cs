@@ -14,4 +14,4 @@ namespace DownfallArena.Cli.Table;
 /// engine asked next.
 /// </remarks>
 /// <param name="ServedAt">Null when nothing can say the options ever reached a person.</param>
-internal sealed record AcceptedDecision(HumanSeat.Question? Answered, DateTimeOffset? ServedAt, DateTimeOffset AcceptedAt);
+internal sealed record AcceptedDecision(Asking? Answered, DateTimeOffset? ServedAt, DateTimeOffset AcceptedAt);

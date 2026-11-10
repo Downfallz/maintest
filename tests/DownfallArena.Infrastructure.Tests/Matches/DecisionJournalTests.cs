@@ -36,7 +36,7 @@ public sealed class DecisionJournalTests : IDisposable
         Decided(PlayerSlot.Player2, PlayerDecision.BindTargets([CreatureId.From(1), CreatureId.From(2)])),
         Decided(PlayerSlot.Player1, PlayerDecision.BindTargets([])),
         Decided(PlayerSlot.Player2, PlayerDecision.Act(CreatureId.From(3), SpellId.Parse("spell:guard:v1"), [CreatureId.From(3)])),
-        new SeatChangeEntry(PlayerSlot.Player2, "greedy", 3),
+        new SeatChangeEntry(PlayerSlot.Player2, "greedy", 3, Reached: 1),
         new ConcessionEntry(PlayerSlot.Player1),
     ];
 

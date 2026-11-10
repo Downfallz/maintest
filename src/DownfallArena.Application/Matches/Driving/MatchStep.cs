@@ -15,4 +15,10 @@ namespace DownfallArena.Application.Matches.Driving;
 public sealed record MatchStep(MatchOutcome? Outcome, HeldAnswers Held, IReadOnlyList<PlayerSlot> Asked, IReadOnlyList<SeatDecision> Decided)
 {
     public bool IsOver => Outcome is not null;
+
+    /// <summary>
+    /// Whether the Player agents still owe decisions: the match is not over and no person is asked anything.
+    /// Only a step told to stop after one of the agents' turns ends this way; it is taken again for the rest.
+    /// </summary>
+    public bool Owed => Outcome is null && Asked.Count == 0;
 }

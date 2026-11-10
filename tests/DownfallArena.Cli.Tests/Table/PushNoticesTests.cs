@@ -157,8 +157,8 @@ public sealed class PushNoticesTests : IDisposable
     {
         var seat = new TableSeat(Domain.Matches.PlayerSlot.Player2, "token", new HumanSeat(CancellationToken.None));
 
-        var withRound = JsonDocument.Parse(PushNotices.Payload(new HumanSeat.Question(Application.Matches.Projections.PlayerOptionsKind.Speed, null, 4), 7, seat, "a b")).RootElement;
-        var atTheSlot = JsonDocument.Parse(PushNotices.Payload(new HumanSeat.Question(Application.Matches.Projections.PlayerOptionsKind.Action, null, 5), null, seat, "t")).RootElement;
+        var withRound = JsonDocument.Parse(PushNotices.Payload(new Asking(Application.Matches.Projections.PlayerOptionsKind.Speed, null, 4), 7, seat, "a b")).RootElement;
+        var atTheSlot = JsonDocument.Parse(PushNotices.Payload(new Asking(Application.Matches.Projections.PlayerOptionsKind.Action, null, 5), null, seat, "t")).RootElement;
 
         withRound.GetProperty("url").GetString().ShouldBe("/play?table=a%20b");
         withRound.GetProperty("body").GetString().ShouldBe("Round 7: choose a tempo.");

@@ -213,7 +213,7 @@ internal sealed class AdminApi
 
         _registry.Add(table, reservation);
         await table.RecordAsync(_registry.Codes);
-        Console.WriteLine($"  Session {table.Id} opened by {operatorName}: {string.Join(", ", table.Seats.Select(seat => $"{seat.Name} {(seat.Person is null ? table.Session.Seat(seat.Slot).Seated.Name : $"code {_registry.Codes.Of(seat)}")}"))}");
+        Console.WriteLine($"  Session {table.Id} opened by {operatorName}: {string.Join(", ", table.Seats.Select(seat => $"{seat.Name} {(seat.Person is null ? table.Session.SeatedName(seat.Slot) : $"code {_registry.Codes.Of(seat)}")}"))}");
         return StudioResponse.OfJson(await DescribedAsync(table), ArtifactJson.LineOptions, status: 201);
     }
 
@@ -509,7 +509,7 @@ internal sealed class AdminApi
             seats = table.Seats.Select(seat => new
             {
                 slot = seat.Name,
-                seated = table.Session.Seat(seat.Slot).Seated.Name,
+                seated = table.Session.SeatedName(seat.Slot),
                 hasPerson = seat.Person is not null,
                 code = _registry.Codes.Of(seat),
                 join = _registry.Codes.Of(seat) is { } code ? $"{JoinCodes.Prefix}{code}" : null,

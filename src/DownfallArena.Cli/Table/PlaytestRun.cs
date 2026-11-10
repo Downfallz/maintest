@@ -75,6 +75,20 @@ internal sealed class PlaytestRun
     private int _recording;
     private readonly int _seed;
 
+    // Whether this run was opened over what an earlier host wrote (Reopen): its dataset files are then started
+    // over before the match is written into them.
+    private readonly bool _reopened;
+
+    /// <summary>The record an earlier host left of the table, for a run opened over it (<see cref="Reopen" />).</summary>
+    private TableRecord? Reopened
+    {
+        init
+        {
+            _record = value ?? _record;
+            _reopened = value is not null;
+        }
+    }
+
     private PlaytestRun(
         RunPlace place,
         RunRecorder recorder,
@@ -171,7 +185,19 @@ internal sealed class PlaytestRun
         return Build(store, id, setup, events, clock, (record, recorded));
     }
 
-    private static PlaytestRun Build(IArtifactStore store, string id, PlaytestSetup setup, MatchTraceRecorder events, TimeProvider clock, (TableRecord Record, IReadOnlyList<JournalEntry> Recorded)? rebuilding)
+    /// <summary>
+    /// The recording of a table a host picks up again, when the table is stepped over its journal (ADR 0159).
+    /// Nothing is replayed through it and nothing is held back: the match is rebuilt from the journal by the
+    /// stepper, the steps are recorded again as it is (<see cref="Witnessed" />), and the notes, the catalogue and
+    /// the journal stay as the earlier host left them.
+    /// </summary>
+    public static PlaytestRun Reopen(IArtifactStore store, string id, PlaytestSetup setup, MatchTraceRecorder events, TimeProvider clock, TableRecord record)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        return Build(store, id, setup, events, clock, rebuilding: null, record);
+    }
+
+    private static PlaytestRun Build(IArtifactStore store, string id, PlaytestSetup setup, MatchTraceRecorder events, TimeProvider clock, (TableRecord Record, IReadOnlyList<JournalEntry> Recorded)? rebuilding, TableRecord? reopened = null)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
@@ -194,7 +220,7 @@ internal sealed class PlaytestRun
             events,
             traceLimit: 1);
 
-        return new PlaytestRun(place, recorder, events, stamp, clock, setup.Seed, rebuilding is { } rebuild ? new Rebuild(rebuild.Record, rebuild.Recorded, staged!) : null);
+        return new PlaytestRun(place, recorder, events, stamp, clock, setup.Seed, rebuilding is { } rebuild ? new Rebuild(rebuild.Record, rebuild.Recorded, staged!) : null) { Reopened = reopened };
     }
 
     /// <summary>What a resumed run is resumed over: the record it will mark, the lines it replays, and the writer that holds the replay's dataset back.</summary>
@@ -285,12 +311,42 @@ internal sealed class PlaytestRun
             return stopped || _kept is not null ? false : null;
         }
 
+        return Agree(written, rebuilt, written.GetArrayLength());
+    }
+
+    /// <summary>
+    /// Whether the match as rebuilt from its journal agrees with the trace the earlier host checkpointed, as far
+    /// as both go (ADR 0159). The journal is the table: a checkpoint that runs past it -- a bot's turn applied and
+    /// seen by a checkpoint, and never written -- holds entries of a match that is no longer the table's, and
+    /// only what the two have in common says whether the record still fits the engine and the content.
+    /// </summary>
+    public async Task<bool> AgreesWithCheckpointSoFarAsync(MatchId matchId, CancellationToken cancellationToken = default)
+    {
+        var text = await _reader.ReadTextAsync($"{RunRecorder.TracesDirectory}/{matchId}.json", cancellationToken);
+        if (text is null)
+        {
+            return true;
+        }
+
+        using var checkpoint = System.Text.Json.JsonDocument.Parse(text);
+        if (!checkpoint.RootElement.TryGetProperty("entries", out var written) || written.ValueKind != System.Text.Json.JsonValueKind.Array)
+        {
+            return true;
+        }
+
+        var rebuilt = System.Text.Json.JsonSerializer.SerializeToElement(Trace(matchId), ArtifactJson.DocumentOptions);
+        return Agree(written, rebuilt, Math.Min(written.GetArrayLength(), rebuilt.GetArrayLength()));
+    }
+
+    /// <summary>Whether the first entries of a checkpoint are the first entries of a rebuilt trace.</summary>
+    private static bool Agree(System.Text.Json.JsonElement written, System.Text.Json.JsonElement rebuilt, int entries)
+    {
         // The boards and where they were, not the events: a player's id is drawn when the seat joins and is
         // on the joining event, and it is nothing the record claims to keep. The boards are the match.
-        var index = 0;
-        foreach (var entry in written.EnumerateArray())
+        for (var index = 0; index < entries; index++)
         {
-            var again = rebuilt[index++];
+            var entry = written[index];
+            var again = rebuilt[index];
             if (!EnergyReceiptAgrees(entry, again))
             {
                 return false;
@@ -438,6 +494,39 @@ internal sealed class PlaytestRun
     }
 
     /// <summary>
+    /// Whoever is about to decide for a seat of a stepped match, recorded as an agent seated there would be: the
+    /// same steps, each under the name of whoever the table says holds the seat at that board's round, and the
+    /// run stamp growing at the first decision a new occupant makes. Nothing sits between the match and its
+    /// seats to record through any more, so the stepper shows every decision to this instead (ADR 0159).
+    /// </summary>
+    /// <param name="named">Who holds the seat of a board at that board's round, by the name a record calls them.</param>
+    public IPlayerAgent Witnessed(MatchId matchId, IPlayerAgent decider, Func<PlayerBoardState, string> named)
+    {
+        ArgumentNullException.ThrowIfNull(decider);
+        ArgumentNullException.ThrowIfNull(named);
+        return _recorder.Wrap(matchId, decider, board =>
+        {
+            var name = named(board);
+            Reseated(board.Slot, name, board.RoundNumber);
+            return new Decider(decider, name);
+        });
+    }
+
+    /// <summary>
+    /// Lets go of what was recorded of a match about to be rebuilt from its journal: the replay records every
+    /// step again and says again which seats changed hands.
+    /// </summary>
+    public void Forget(MatchId matchId)
+    {
+        lock (_seatedGate)
+        {
+            _playing.Clear();
+        }
+
+        _recorder.Forget(matchId);
+    }
+
+    /// <summary>
     /// Notices that a seat has actually changed hands and grows the run stamp to say so.
     /// </summary>
     /// <remarks>
@@ -485,13 +574,13 @@ internal sealed class PlaytestRun
     /// Records that a seat has been shown what it is being asked, which is what the next decision's duration
     /// is measured from.
     /// </summary>
-    public void Served(PlayerSlot slot, HumanSeat.Question? question) => _served.Served(slot, question);
+    public void Served(PlayerSlot slot, Asking? question) => _served.Served(slot, question);
 
     /// <summary>
     /// When this seat's current options were served, read before the decision is handed over so a question
     /// asked in its wake cannot take the moment with it.
     /// </summary>
-    public DateTimeOffset? ServedAt(PlayerSlot slot, HumanSeat.Question? question) => _served.ServedAt(slot, question);
+    public DateTimeOffset? ServedAt(PlayerSlot slot, Asking? question) => _served.ServedAt(slot, question);
 
     /// <summary>This session's clock, so a caller reads the moment of an event where the event happens.</summary>
     public DateTimeOffset Now() => _clock.GetUtcNow();
@@ -703,6 +792,14 @@ internal sealed class PlaytestRun
 
         // Taken before the recorder is handed the match, because being handed it is what makes it forget.
         _kept = _events.EntriesOf(matchId);
+
+        // An earlier host may have got as far as writing the steps and the episodes and no further -- it stopped
+        // before the record said finished, or could not write that. Written into again as they are, a dataset
+        // would hold the match twice under a manifest that counts it once.
+        if (_reopened)
+        {
+            await _recorder.StartAsync(cancellationToken);
+        }
 
         await _recorder.MatchPlayedAsync(matchId, _seed, player1Board, cancellationToken);
         await _recorder.FinishAsync(cancellationToken);

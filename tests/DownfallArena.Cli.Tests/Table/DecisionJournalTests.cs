@@ -226,6 +226,15 @@ public sealed class DecisionJournalTests : IDisposable
         return JsonSerializer.Serialize(board.Value with { MatchId = MatchId.From(Guid.Parse("00000000-0000-0000-0000-000000000001")) }, ArtifactJson.LineOptions);
     }
 
+    private static async Task<string> Board(ITableSession session, PlayerSlot slot)
+    {
+        var board = await session.BoardAsync(slot);
+        board.IsSuccess.ShouldBeTrue();
+
+        // The replayed session is another match of the same seed, so its id is its own; everything else is held.
+        return JsonSerializer.Serialize(board.Value with { MatchId = MatchId.From(Guid.Parse("00000000-0000-0000-0000-000000000001")) }, ArtifactJson.LineOptions);
+    }
+
     private static PlayerBoardState BoardIn(int round) => new()
     {
         MatchId = MatchId.New(),

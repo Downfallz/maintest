@@ -3,8 +3,10 @@ using Azure.Storage;
 using Azure.Storage.Blobs;
 using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.Application.Learning.Ports;
+using DownfallArena.Application.Matches.Ports;
 using DownfallArena.Infrastructure.Accounts;
 using DownfallArena.Infrastructure.Learning;
+using DownfallArena.Infrastructure.Matches;
 
 namespace DownfallArena.Cli.Table;
 
@@ -35,6 +37,23 @@ internal static class ArtifactStores
             ? new BlobContainerClient(uri, new StorageSharedKeyCredential(DevelopmentAccount, DevelopmentKey))
             : new BlobContainerClient(uri, new DefaultAzureCredential());
         return await BlobArtifactStore.OpenAsync(container, cancellationToken);
+    }
+
+    /// <summary>
+    /// The journal the tables of a store are stepped over (ADR 0159), kept where the store keeps its runs: a
+    /// table's <c>decisions.jsonl</c> is one file, written by the journal and listed by the store. A store this
+    /// does not know has to be given its journal by whoever made it.
+    /// </summary>
+    public static IDecisionJournal JournalOf(IArtifactStore store, TimeProvider clock)
+    {
+        ArgumentNullException.ThrowIfNull(store);
+        ArgumentNullException.ThrowIfNull(clock);
+        return store switch
+        {
+            FileArtifactStore files => new FileDecisionJournal(files.RootDirectory, clock),
+            BlobArtifactStore blobs => blobs.Journal(clock),
+            _ => throw new ArgumentException($"A {store.GetType().Name} does not say where its tables' journals are kept; name the journal beside it.", nameof(store)),
+        };
     }
 
     /// <summary>The container accounts are kept in, next to the recordings' one (ADR 0122).</summary>

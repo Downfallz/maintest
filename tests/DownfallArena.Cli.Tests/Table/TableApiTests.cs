@@ -26,21 +26,28 @@ using Microsoft.Extensions.Hosting;
 namespace DownfallArena.Cli.Tests.Table;
 
 /// <summary>
-/// The API with a person in one seat and a bot in the other, driven without HTTP. What these hold is the
-/// boundary: a token answers for its own seat and for nothing else, and a late tap is a refusal rather than
-/// the end of the session.
+/// The API with a person in one seat and a bot in the other, driven without HTTP, over a table stepped over its
+/// journal as the composer builds every ordinary one (ADR 0159). What these hold is the boundary: a token
+/// answers for its own seat and for nothing else, and a late tap is a refusal rather than the end of the session.
 /// </summary>
 public sealed partial class TableApiTests : IDisposable
 {
     private static readonly RuleSet Rules = RuleSet.Create(2, 2, 1, 6, 2.0);
+    private const string PersonName = "human:mk";
 
     private readonly StudioContent _content = new();
     private readonly CancellationTokenSource _stopping = new();
+    private readonly List<SteppedSession> _opened = [];
     private IHost? _host;
 
     public void Dispose()
     {
         _stopping.Cancel();
+        foreach (var session in _opened)
+        {
+            session.Dispose();
+        }
+
         _stopping.Dispose();
         _host?.Dispose();
         _content.Dispose();
@@ -75,9 +82,9 @@ public sealed partial class TableApiTests : IDisposable
     }
 
     /// <summary>
-    /// A concession ends the match on the spot for the other seat (ADR 0087): the driver, blocked on the person's
-    /// question, is let go and completes with the outcome; the seat is told it is over and who won; a second
-    /// concession, and a bot's, are refused.
+    /// A concession ends the match on the spot for the other seat (ADR 0087): the table has its outcome once the
+    /// route has answered, and its person is asked nothing more; the seat is told it is over and who won; a
+    /// second concession is refused.
     /// </summary>
     [Fact]
     public async Task A_seat_that_concedes_ends_the_match_for_its_opponent_and_is_told_who_won()
@@ -109,16 +116,24 @@ public sealed partial class TableApiTests : IDisposable
     /// swap): a match a bot is playing is not theirs to end yet, and a concession from the sideline would end
     /// a recorded match the bot was in the middle of.
     /// </summary>
+    /// <remarks>
+    /// The person's seat is a bot's until the top of round 2, as a handover seats it. The other seat's bot is
+    /// held at its first decision, so the match is still in round 1 when the person asks from the sideline; let
+    /// go, the bots play the round out and the seat is its person's.
+    /// </remarks>
     [Fact]
     public async Task A_seat_a_bot_plays_cannot_concede_even_for_the_person_waiting_to_take_it()
     {
-        var table = await Seated();
-        var bot = new GreedyAgent(_host!.Services.GetRequiredService<IGameResources>(), Rules);
+        var resources = Hosted();
+        var opponent = new HeldAgent(new GreedyAgent(resources, Rules));
+        opponent.Hold();
+        var understudy = new SeatPlan(new Occupant(new GreedyAgent(resources, Rules), "greedy"), new Occupant(opponent, "greedy"));
+        var table = await Opened(Rules, understudy.From(PlayerSlot.Player1, round: 2, SeatPlan.Person(PersonName), reached: 0));
 
         var nobody = await table.Api.HandleAsync("POST", "/api/seat/player2/concede", string.Empty, "token-of-player-2");
-        var held = table.Session.Seat(PlayerSlot.Player1).Seat(new Occupant(bot, "greedy"));
         var sideline = await table.Api.HandleAsync("POST", "/api/seat/player1/concede", string.Empty, table.Token);
-        table.Session.Seat(PlayerSlot.Player1).Seat(held);
+        opponent.Release();
+        await Asked(table.Person);
         var playing = await table.Api.HandleAsync("POST", "/api/seat/player1/concede", string.Empty, table.Token);
 
         nobody.Status.ShouldBe(409);
@@ -356,10 +371,10 @@ public sealed partial class TableApiTests : IDisposable
     }
 
     /// <summary>The same table, built again: the same content and the same rules answer the same tag.</summary>
-    private TableApi Api((TableApi Api, TableSession Session, HumanSeat Person, string Token) table, RuleSet rules) =>
+    /// <param name="session">The session the routes ask instead of the table's own, when a test puts something around it.</param>
+    private TableApi Api((TableApi Api, SteppedSession Session, SteppedPerson Person, string Token) table, RuleSet rules, ITableSession? session = null) =>
         new(
-            table.Session,
-            table.Session.Queries,
+            session ?? table.Session,
             [new TableSeat(PlayerSlot.Player1, table.Token, table.Person), new TableSeat(PlayerSlot.Player2, "token-of-player-2", Person: null)],
             CatalogueProjection.Build(_host!.Services.GetRequiredService<IGameResources>(), rules),
             _host.Services.GetRequiredService<MatchTraceRecorder>());
@@ -433,7 +448,7 @@ public sealed partial class TableApiTests : IDisposable
             .Select(choice => choice.GetProperty("creature").GetInt32()).ShouldBe([first]);
         intents.RootElement.GetProperty("board").GetProperty("intents").EnumerateArray()
             .Select(intent => intent.GetProperty("actor").GetInt32()).ShouldBe([declaring]);
-        (await table.Session.Queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(table.Session.MatchId, PlayerSlot.Player1), TestContext.Current.CancellationToken))
+        (await _host!.Services.GetRequiredService<MatchQueryHandlers>().GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(table.Session.MatchId, PlayerSlot.Player1), TestContext.Current.CancellationToken))
             .Value.Intents.ShouldBeEmpty("the match has none of them until the seat is done");
     }
 
@@ -463,7 +478,7 @@ public sealed partial class TableApiTests : IDisposable
     /// <summary>
     /// A decision belongs to one asking. Two consecutive questions of the same shape -- two Evolution picks --
     /// pass `Question.Answers`, so without naming the asking a tap validated against the first could land on
-    /// the second: a second client on the same token, or a slow request the driver overtook. Refused as late,
+    /// the second: a second client on the same token, or a slow request the match overtook. Refused as late,
     /// which is what it is.
     /// </summary>
     [Fact]
@@ -552,7 +567,7 @@ public sealed partial class TableApiTests : IDisposable
     /// Plays this seat through a whole round of decisions, each one answered with what the options offer, until
     /// the match asks it to bind targets. Everything the other seat does in between is the bot's own doing.
     /// </summary>
-    private static async Task PlayUpToTargeting((TableApi Api, TableSession Session, HumanSeat Person, string Token) table)
+    private static async Task PlayUpToTargeting((TableApi Api, SteppedSession Session, SteppedPerson Person, string Token) table)
     {
         await Post(table, """{"kind":"Evolution","pass":true}""");
         await AnswerEach(table, PlayerOptionsKind.Speed, creature => $$"""{"kind":"Speed","creature":{{creature}},"speed":"Quick"}""", until: PlayerOptionsKind.Intent);
@@ -586,11 +601,11 @@ public sealed partial class TableApiTests : IDisposable
 
     /// <summary>
     /// Answers every question of one kind until the seat is asked the next one. It polls rather than counting
-    /// creatures, because between two questions the seat is waiting for nothing at all: the driver is off
-    /// asking the other seat.
+    /// creatures, because between two questions the seat is waiting for nothing at all: the bot in the other
+    /// seat is taking its turn, behind the tap that was just answered.
     /// </summary>
     private static async Task AnswerEach(
-        (TableApi Api, TableSession Session, HumanSeat Person, string Token) table,
+        (TableApi Api, SteppedSession Session, SteppedPerson Person, string Token) table,
         PlayerOptionsKind kind,
         Func<int, string> body,
         PlayerOptionsKind until)
@@ -620,7 +635,7 @@ public sealed partial class TableApiTests : IDisposable
     /// Keeps the order the roll-off left (ADR 0063), read off the options the seat is served, as a page that
     /// changes nothing would post it.
     /// </summary>
-    private static async Task KeepTieOrder((TableApi Api, TableSession Session, HumanSeat Person, string Token) table)
+    private static async Task KeepTieOrder((TableApi Api, SteppedSession Session, SteppedPerson Person, string Token) table)
     {
         using var payload = JsonDocument.Parse(Text(await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token)));
         var groups = payload.RootElement.GetProperty("options").GetProperty("tieOrder").GetProperty("ties");
@@ -632,29 +647,34 @@ public sealed partial class TableApiTests : IDisposable
     /// A decision carries the asking it answers, as the page's does off <c>waitingAsked</c>. The host refuses
     /// one that names another question, so a test that left it out would be testing that refusal.
     /// </summary>
-    private static string Answering(string body, HumanSeat person) =>
+    private static string Answering(string body, SteppedPerson person) =>
         body.Insert(1, $"\"asked\":{person.Waiting?.Asked ?? 0},");
 
-    private static async Task Post((TableApi Api, TableSession Session, HumanSeat Person, string Token) table, string body)
+    private static async Task Post((TableApi Api, SteppedSession Session, SteppedPerson Person, string Token) table, string body)
     {
         var answer = await table.Api.HandleAsync("POST", "/api/seat/player1/decision", Answering(body, table.Person), table.Token);
         answer.Status.ShouldBe(204, Text(answer));
     }
 
     /// <summary>
-    /// A poll reads the options and the question in separate steps, and the match does not wait for it in
-    /// between: the other seat resolves an action the moment it binds it (ADR 0083), and a second device on the
-    /// same seat can answer. Whichever side of the options read the match moves on, a page was once asked
-    /// for an Intent beside the options of the step before, and had no spell to offer.
+    /// On the blocking model practice tables keep, a poll reads the options and the question in separate steps,
+    /// and the match does not wait for it in between: the other seat resolves an action the moment it binds it
+    /// (ADR 0083), and a second device on the same seat can answer. Whichever side of the options read the match
+    /// moves on, a page was once asked for an Intent beside the options of the step before, and had no spell to
+    /// offer.
     /// </summary>
+    /// <remarks>
+    /// Kept on a table the driver plays: what it holds is the reads <see cref="DrivenSession" /> makes again
+    /// until the question has not moved, and a stepped table has no such reads to move between.
+    /// </remarks>
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
     public async Task A_seat_is_served_the_options_of_the_question_it_is_asked(bool movesBeforeTheRead)
     {
-        var table = await Seated();
+        var table = await SeatedByTheDriver();
         var moving = table.Session.Queries with { GetPlayerOptions = new AnsweredWhileRead(table.Session.Queries.GetPlayerOptions, table.Person, movesBeforeTheRead) };
-        var api = new TableApi(
+        var api = Driven.Api(
             table.Session,
             moving,
             [new TableSeat(PlayerSlot.Player1, table.Token, table.Person), new TableSeat(PlayerSlot.Player2, "token-of-player-2", Person: null)],
@@ -668,34 +688,87 @@ public sealed partial class TableApiTests : IDisposable
             .ShouldBe(payload.RootElement.GetProperty("waitingFor").GetString());
     }
 
-    private Task<(TableApi Api, TableSession Session, HumanSeat Person, string Token)> Seated() => Seated(Rules);
+    /// <summary>
+    /// The same on a stepped table, where the question, the board and the options are one moment by
+    /// construction. The only place left for the match to move is behind that read: a second device on the seat
+    /// answers before the route has answered the poll. What is served is still the question that was read,
+    /// beside its own options, and not the one the seat has moved on to.
+    /// </summary>
+    [Fact]
+    public async Task A_seat_is_served_the_options_of_the_question_it_read_when_another_device_answers_behind_the_read()
+    {
+        var table = await Seated();
+        var elsewhere = new MovedBehindTheRead(table.Session, async read =>
+        {
+            await table.Session.DecideAsync(PlayerSlot.Player1, PlayerDecision.Pass, read.Waiting!.Asked, read.Options, round: 1);
+            await Waiting(table.Person, "Speed");
+        });
 
-    private async Task<(TableApi Api, TableSession Session, HumanSeat Person, string Token)> Seated(RuleSet rules)
+        var answer = await Api(table, Rules, elsewhere).HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token);
+
+        using var payload = JsonDocument.Parse(Text(answer));
+        payload.RootElement.GetProperty("waitingFor").GetString().ShouldBe("Evolution");
+        payload.RootElement.GetProperty("options").GetProperty("kind").GetString().ShouldBe("Evolution");
+    }
+
+    private Task<(TableApi Api, SteppedSession Session, SteppedPerson Person, string Token)> Seated() => Seated(Rules);
+
+    /// <summary>A person in seat 1 and a greedy bot in seat 2, begun: the person is on their first question.</summary>
+    private async Task<(TableApi Api, SteppedSession Session, SteppedPerson Person, string Token)> Seated(RuleSet rules)
+    {
+        var resources = Hosted();
+        var table = await Opened(rules, new SeatPlan(SeatPlan.Person(PersonName), new Occupant(new GreedyAgent(resources, rules), "greedy")));
+        table.Session.Begin();
+
+        await Waiting(table.Person, "Evolution");
+        return table;
+    }
+
+    /// <summary>The content built and a host over it, which a test's table is opened on.</summary>
+    private IGameResources Hosted()
     {
         new ContentStore(_content.Path).Build(Path.Combine(_content.Path, "dst"));
         _host = CliHost.Build(
             new CliOptions { Command = "table", Output = "out.csv", SchemaPath = Path.Combine(_content.Path, "dst", "game.schema.json") },
             seed: 7,
             logMatchToConsole: false);
+        return _host.Services.GetRequiredService<IGameResources>();
+    }
 
-        var person = new HumanSeat(_stopping.Token);
-        var bot = new GreedyAgent(_host.Services.GetRequiredService<IGameResources>(), rules);
-        var session = await TableSession.StartAsync(_host.Services, rules, seed: 7, new SeatAgent(new Occupant(person, "human:mk")), new SeatAgent(new Occupant(bot, "greedy")), cancellationToken: _stopping.Token);
-
+    /// <summary>
+    /// A table stepped over a journal in memory, a person's seat and a bot's, with the routes over it: opened
+    /// and not begun, so nobody has been asked anything.
+    /// </summary>
+    /// <param name="plan">Who sits where, and from the top of which round.</param>
+    private async Task<(TableApi Api, SteppedSession Session, SteppedPerson Person, string Token)> Opened(RuleSet rules, SeatPlan plan)
+    {
         const string token = "token-of-player-1";
+        var person = new SteppedPerson();
+        TableSeat[] seats = [new TableSeat(PlayerSlot.Player1, token, person), new TableSeat(PlayerSlot.Player2, "token-of-player-2", Person: null)];
+        var session = await Stepped.OpenAsync(_host!.Services, rules, seed: 7, new SteppedSeats(plan, seats, (_, _) => null), _stopping.Token);
+        _opened.Add(session);
         var api = new TableApi(
             session,
-            session.Queries,
-            [new TableSeat(PlayerSlot.Player1, token, person), new TableSeat(PlayerSlot.Player2, "token-of-player-2", Person: null)],
+            seats,
             CatalogueProjection.Build(_host.Services.GetRequiredService<IGameResources>(), rules),
             _host.Services.GetRequiredService<MatchTraceRecorder>());
-
-        await Waiting(person, "Evolution");
         return (api, session, person, token);
     }
 
-    /// <summary>The seat blocks on another thread, so a test waits for the question rather than assuming it.</summary>
-    private static async Task Waiting(HumanSeat person, string kind)
+    /// <summary>The same two seats on the blocking model: a driver plays the match and waits on the person.</summary>
+    private async Task<(TableSession Session, HumanSeat Person, string Token)> SeatedByTheDriver()
+    {
+        var resources = Hosted();
+        var person = new HumanSeat(_stopping.Token);
+        var bot = new GreedyAgent(resources, Rules);
+        var session = await TableSession.StartAsync(_host!.Services, Rules, seed: 7, new SeatAgent(new Occupant(person, PersonName)), new SeatAgent(new Occupant(bot, "greedy")), cancellationToken: _stopping.Token);
+
+        await Waiting(person, "Evolution");
+        return (session, person, "token-of-player-1");
+    }
+
+    /// <summary>The bots' turns are taken behind a tap, so a test waits for the question rather than assuming it.</summary>
+    private static async Task Waiting(ISeatPerson person, string kind)
     {
         for (var attempt = 0; attempt < 300; attempt++)
         {
@@ -708,6 +781,17 @@ public sealed partial class TableApiTests : IDisposable
         }
 
         throw new InvalidOperationException($"The seat never waited for {kind}; it is waiting for {person.Waiting?.Kind.ToString() ?? "nothing"}.");
+    }
+
+    /// <summary>Waits until the seat's person is asked something, whatever it is.</summary>
+    private static async Task Asked(SteppedPerson person)
+    {
+        for (var attempt = 0; attempt < 300 && person.Waiting is null; attempt++)
+        {
+            await Task.Delay(20, TestContext.Current.CancellationToken);
+        }
+
+        person.Waiting.ShouldNotBeNull("the seat was never asked anything");
     }
 
     private static string Text(StudioResponse response) => Encoding.UTF8.GetString(response.Body);

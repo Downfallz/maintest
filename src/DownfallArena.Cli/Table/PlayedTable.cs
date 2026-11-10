@@ -18,7 +18,7 @@ internal sealed class PlayedTable : IDisposable
 
     public PlayedTable(
         TableOpening opening,
-        TableSession session,
+        ITableSession session,
         TableApi api,
         IReadOnlyList<TableSeat> seats,
         TablePilot pilot,
@@ -50,7 +50,7 @@ internal sealed class PlayedTable : IDisposable
 
     public int EventStreamVersion { get; init; } = MatchTrace.CurrentEventStreamVersion;
 
-    public TableSession Session { get; }
+    public ITableSession Session { get; }
 
     public TableApi Api { get; }
 
@@ -152,7 +152,7 @@ internal sealed class PlayedTable : IDisposable
     {
         // Never cancelled by the table's own stopping: a listing reads a table that is being let go of, and
         // a disposed source is an exception where a null would do.
-        var board = await Session.Queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(Session.MatchId, PlayerSlot.Player1), CancellationToken.None);
+        var board = await Session.BoardAsync(PlayerSlot.Player1);
         return board.IsSuccess ? board.Value.RoundNumber : null;
     }
 

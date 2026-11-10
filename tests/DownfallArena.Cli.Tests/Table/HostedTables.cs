@@ -4,6 +4,7 @@ using DownfallArena.Cli.Table;
 using DownfallArena.Cli.Tests.Studio;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Infrastructure.Learning;
+using DownfallArena.Infrastructure.Matches;
 using DownfallArena.Infrastructure.Resources.Authoring;
 using Microsoft.Extensions.Hosting;
 
@@ -52,7 +53,10 @@ internal sealed class HostedTables : IDisposable
             seed: 7,
             logMatchToConsole: false);
         var opened = store?.Invoke(RunsDirectory);
-        Composer = new TableComposer(_host.Services, rules ?? Rules, opened) { Push = push, Basis = basis };
+
+        // A store wrapped by a test still keeps its runs under the directory it was made over, and so does the journal.
+        var journal = opened is null or FileArtifactStore ? null : new FileDecisionJournal(RunsDirectory, TimeProvider.System);
+        Composer = new TableComposer(_host.Services, rules ?? Rules, opened, journal) { Push = push, Basis = basis };
         Stored = opened is null ? null : new StoredSessions(opened);
     }
 

@@ -124,6 +124,10 @@ requires, and it is tested with `node --test table/*.test.js` alongside the stud
 
 ### 2.2 How a decision reaches the aggregate
 
+> Since ADR 0159 an ordinary table is not played this way: its match is stepped over its journal, a tap is a
+> decision submitted and nothing waits on a person (`docs/architecture/stateless-table-inventory.md`). What
+> follows is the model the app was built on, which practice tables still run on.
+
 The host plays the match with `MatchDriver.PlayAsync(matchId, seat1, seat2)`, which "asks what they can do,
 lets their agent decide, submits, and drives the resolution" (`MatchDriver.cs:11-18`). A **seat** is an
 `IPlayerAgent` whose four `Decide*` methods block until the HTTP host hands them the answer a player tapped.
@@ -514,7 +518,7 @@ Stated, not implied.
 | --- | --- |
 | **Two devices** | Part 4. A transport and token-distribution change, on an API that is already per seat. |
 | **Undo, rewind, and playing the current position out** | A `Match` has no undo, `InMemoryMatchRepository` keeps no history, and the aggregate cannot be copied: the repository holds the object itself (`InMemoryMatchRepository.cs:13,17-25`). So every one of these is the same mechanism — a **replay**, not a fork. A match is deterministic given its seed and its decision sequence, and `steps.jsonl` is that sequence, so an undo rebuilds the match and replays every step but the last, and "play this position out ten times with bots" replays the whole sequence into ten fresh matches. That replay is a decision of its own and it is not in v1. In v1 a misplay stays on the board and becomes a `Misplay` note — which is what happened at the table, and therefore the truth. |
-| **A session that survives a host restart** | ~~The match lives in `InMemoryMatchRepository`. A restart abandons the session; the checkpointed trace (5.1) is what is left.~~ Settled by ADR 0091: a host that starts over a store rebuilds every open table from its seed and `decisions.jsonl`, under the same match id, tokens and codes. Open tables no longer expire during a pause (ADR 0115). The player lobby supports resuming, creating, joining and explicitly leaving a seat for a replacement. |
+| **A session that survives a host restart** | ~~The match lives in `InMemoryMatchRepository`. A restart abandons the session; the checkpointed trace (5.1) is what is left.~~ Settled by ADR 0091, then ADR 0159: a table is its journal, and a host that starts over a store picks up every open table where `decisions.jsonl` ends, under the same match id, tokens and codes. Open tables no longer expire during a pause (ADR 0115). The player lobby supports resuming, creating, joining and explicitly leaving a seat for a replacement. |
 | **A push transport** | Part 2.3. |
 | **A per-event narration of resolution beyond the whitelist** | v1 shows each action as it resolves (the Just resolved line of Part 3, read from the whitelisted `CombatActionResolved`) and the board after it, plus the other whitelisted events. Anything richer must pass the default-deny filter of 1.3 first. |
 | **A human-rolled die** | The engine rolls, through `IRandomSource`. Letting a player roll a physical d20 and type the face would be an adapter on that **existing** port, and it is the only way to playtest the die of decision B (plan.md:201-222) rather than the probability. **Which die is settled — a d20, with every chance a whole number of twentieths ([d20-criticals.md](d20-criticals.md))** — so the reason it is still out of v1 is not the die but the record: a typed face is an input nothing replays from a seed, and a number a player can mistype with no undo. v1 prints the threshold the card carries (`d20: 14+`) and says whether the roll landed. It cannot print the face: `CombatResolution` carries `IsCritical` and not the value behind it (`CombatResolution.cs:43`), so a face would mean a Domain change with its own ADR. |

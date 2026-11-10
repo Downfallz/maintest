@@ -11,8 +11,8 @@ using DownfallArena.SharedKernel.Identifiers;
 namespace DownfallArena.Cli.Tests.Table;
 
 /// <summary>
-/// A host that starts over a store rebuilds the tables the host before it left unfinished (ADR 0091): same
-/// board, same question, same links and codes. Two hosts over one store stand in for the one before and the
+/// A host that starts over a store picks up the tables the host before it left unfinished, from their journals
+/// (ADR 0159, after ADR 0091): same board, same question, same links and codes. Two hosts over one store stand in for the one before and the
 /// one after a redeploy; the first is never disposed before the second has rebuilt, because a replica that
 /// went away did not close anything.
 /// </summary>
@@ -136,11 +136,7 @@ public sealed class TableRestorerTests : IDisposable
         (await _after.Stored!.JournalAsync(table.Id, TestContext.Current.CancellationToken)).Count.ShouldBe(journal.Count, "a replay writes nothing it read");
 
         // And the game goes on from there: the person's next decision is taken by the rebuilt table and written down.
-        rebuilt.Seats[0].Person!.Submit(PlayerDecision.DeclareIntent(waiting.Creature!.Value, SpellId.Parse("spell:strike:v1")), waiting.Asked).ShouldBeTrue();
-        for (var attempt = 0; attempt < 300 && (await _after.Stored!.JournalAsync(table.Id, TestContext.Current.CancellationToken)).Count == journal.Count; attempt++)
-        {
-            await Task.Delay(20, TestContext.Current.CancellationToken);
-        }
+        await Post(rebuilt, waiting, $$"""{"kind":"Intent","creature":{{waiting.Creature!.Value.Value}},"spell":"spell:strike:v1"}""");
 
         (await _after.Stored!.JournalAsync(table.Id, TestContext.Current.CancellationToken)).Count.ShouldBe(journal.Count + 1);
     }
@@ -157,8 +153,8 @@ public sealed class TableRestorerTests : IDisposable
         var person = table.Seats[0].Person!;
         await PlayUntil(table, person, PlayerOptionsKind.Action);
         var asked = person.Waiting.ShouldNotBeNull();
-        var options = await table.Session.Queries.GetPlayerOptions.HandleAsync(new GetPlayerOptions(table.Session.MatchId, PlayerSlot.Player1), TestContext.Current.CancellationToken);
-        var offered = options.Value.Action.ShouldNotBeNull().Spells[0];
+        var options = await table.Session.SnapshotAsync(PlayerSlot.Player1);
+        var offered = options.Value.Options.Action.ShouldNotBeNull().Spells[0];
         await Post(table, asked, $$"""{"kind":"Action","creature":{{asked.Creature!.Value.Value}},"spell":"{{offered.Spell}}","targets":[{{offered.LegalTargets.Candidates[0].Value}}]}""");
         var next = await Waiting(person);
         var board = await Board(table.Session, PlayerSlot.Player1);
@@ -229,8 +225,7 @@ public sealed class TableRestorerTests : IDisposable
     public async Task An_open_table_is_rebuilt_even_after_a_long_break()
     {
         var table = await Opened(HostedTables.OnePerson);
-        table.Seats[0].Person!.Submit(PlayerDecision.Pass, (await Waiting(table.Seats[0].Person!)).Asked).ShouldBeTrue();
-        await Task.Delay(100, TestContext.Current.CancellationToken);
+        await Post(table, await Waiting(table.Seats[0].Person!), """{"kind":"Evolution","pass":true}""");
         var later = new Clock { Now = DateTimeOffset.UtcNow + TimeSpan.FromDays(30) };
 
         var said = await TableRestorer.RestoreAsync(_after.Stored!, _after.Composer, _later, later, TestContext.Current.CancellationToken);
@@ -376,26 +371,25 @@ public sealed class TableRestorerTests : IDisposable
     }
 
     /// <summary>
-    /// A replay that stops short of the checkpoint at a person's question is not going to catch up: nobody answers
-    /// during a rebuild. It is refused at once rather than after the whole wait a bot's late decision is given.
+    /// The journal is the table (ADR 0159). A checkpoint that runs past it -- a decision applied and seen by a
+    /// checkpoint, and never written down -- is of a match the journal does not hold: the table comes back
+    /// where its journal ends, held against the checkpoint as far as the two go together.
     /// </summary>
     [Fact]
-    public async Task A_replay_that_stops_short_at_a_persons_question_is_refused_without_the_whole_wait()
+    public async Task A_journal_that_stops_short_of_the_checkpoint_is_the_table_as_far_as_it_goes()
     {
         var table = await Opened(HostedTables.OnePerson);
         await PlayUntil(table, table.Seats[0].Person!, PlayerOptionsKind.Intent);
-        await Task.Delay(200, TestContext.Current.CancellationToken);
         var store = new FileArtifactStore(_runs);
         var journal = (await _before.Stored!.JournalAsync(table.Id, TestContext.Current.CancellationToken)).ToList();
         var kept = journal.Take(journal.FindLastIndex(entry => entry.Slot == "player1" && entry.Kind == "Speed")).ToList();
         await store.Writer(table.Id).StartJsonLinesAsync(DecisionJournal.File, TestContext.Current.CancellationToken);
         await store.Writer(table.Id).AppendJsonLinesAsync(DecisionJournal.File, kept, TestContext.Current.CancellationToken);
-        var clock = System.Diagnostics.Stopwatch.StartNew();
 
         await TableRestorer.RestoreAsync(_after.Stored!, _after.Composer, _later, TimeProvider.System, TestContext.Current.CancellationToken);
 
-        _later.All().ShouldBeEmpty("the rebuilt trace never reaches the checkpoint");
-        clock.Elapsed.ShouldBeLessThan(TimeSpan.FromSeconds(5), "the ten seconds are for a bot deciding, not for a person");
+        var rebuilt = _later.ById(table.Id).ShouldNotBeNull();
+        (await Waiting(rebuilt.Seats[0].Person!)).Kind.ShouldBe(PlayerOptionsKind.Speed);
     }
 
     private static ReplayBasis Basis(string engine) => new(engine, "content", Application.Learning.RuleSetStamp.Of(HostedTables.Rules));
@@ -440,6 +434,7 @@ public sealed class TableRestorerTests : IDisposable
         await Finished(table);
         var record = (await _before.Stored!.RecordAsync(table.Id, TestContext.Current.CancellationToken)).ShouldNotBeNull();
         await new FileArtifactStore(_runs).Writer(table.Id).WriteJsonAsync(TableRecord.File, record with { Status = TableRecord.Open }, TestContext.Current.CancellationToken);
+        var dataset = await Files(table.Id, "manifest.json", "steps.jsonl", "episodes.jsonl");
 
         var said = await TableRestorer.RestoreAsync(_after.Stored!, _after.Composer, _later, TimeProvider.System, TestContext.Current.CancellationToken);
 
@@ -453,7 +448,12 @@ public sealed class TableRestorerTests : IDisposable
         }
 
         (await _after.Stored!.RecordAsync(table.Id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Finished);
+        var again = await Files(table.Id, "manifest.json", "steps.jsonl", "episodes.jsonl");
+        Lines(again[1]).ShouldBe(Lines(dataset[1]), "the steps the earlier host wrote are not written a second time");
+        Lines(again[2]).ShouldBe(2, "an episode a seat");
     }
+
+    private static int Lines(string? text) => text.ShouldNotBeNull().Split('\n', StringSplitOptions.RemoveEmptyEntries).Length;
 
     private async Task<IReadOnlyList<string?>> Files(string id, params string[] names)
     {
@@ -488,7 +488,7 @@ public sealed class TableRestorerTests : IDisposable
     /// Through the table's API, as a page plays: that is where a decision is checkpointed into the trace, which
     /// is what a rebuild is held against.
     /// </summary>
-    private async Task PlayUntil(PlayedTable table, HumanSeat person, PlayerOptionsKind kind)
+    private async Task PlayUntil(PlayedTable table, ISeatPerson person, PlayerOptionsKind kind)
     {
         for (var attempt = 0; attempt < 600; attempt++)
         {
@@ -506,8 +506,8 @@ public sealed class TableRestorerTests : IDisposable
                     await Post(table, question, $$"""{"kind":"Speed","creature":{{creature.Value}},"speed":"Quick"}""");
                     break;
                 case { Kind: PlayerOptionsKind.TieOrder } question:
-                    var options = await table.Session.Queries.GetPlayerOptions.HandleAsync(new GetPlayerOptions(table.Session.MatchId, PlayerSlot.Player1), TestContext.Current.CancellationToken);
-                    var order = options.Value.TieOrder!.Ties.SelectMany(group => group).Select(creature => creature.Value);
+                    var options = await table.Session.SnapshotAsync(PlayerSlot.Player1);
+                    var order = options.Value.Options.TieOrder!.Ties.SelectMany(group => group).Select(creature => creature.Value);
                     await Post(table, question, $$"""{"kind":"TieOrder","order":[{{string.Join(",", order)}}]}""");
                     break;
                 default:
@@ -546,13 +546,13 @@ public sealed class TableRestorerTests : IDisposable
         throw new InvalidOperationException("The bot in the other seat never wrote its intents down.");
     }
 
-    private static async Task Post(PlayedTable table, HumanSeat.Question question, string body)
+    private static async Task Post(PlayedTable table, Asking question, string body)
     {
         var answer = await table.Api.HandleAsync("POST", "/api/seat/player1/decision", body.Insert(1, $"\"asked\":{question.Asked},"), table.Seats[0].Token);
         answer.Status.ShouldBe(204, System.Text.Encoding.UTF8.GetString(answer.Body));
     }
 
-    private static async Task<HumanSeat.Question> Waiting(HumanSeat person)
+    private static async Task<Asking> Waiting(ISeatPerson person)
     {
         for (var attempt = 0; attempt < 300 && person.Waiting is null; attempt++)
         {
@@ -562,9 +562,9 @@ public sealed class TableRestorerTests : IDisposable
         return person.Waiting.ShouldNotBeNull();
     }
 
-    private static async Task<string> Board(TableSession session, PlayerSlot slot)
+    private static async Task<string> Board(ITableSession session, PlayerSlot slot)
     {
-        var board = await session.Queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(session.MatchId, slot), TestContext.Current.CancellationToken);
+        var board = await session.BoardAsync(slot);
         board.IsSuccess.ShouldBeTrue();
         return JsonSerializer.Serialize(board.Value, ArtifactJson.LineOptions);
     }

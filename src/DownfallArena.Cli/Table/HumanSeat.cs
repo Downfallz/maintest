@@ -17,10 +17,10 @@ namespace DownfallArena.Cli.Table;
 /// sessions at once (<c>docs/tabletop/playtest-app.md</c>, ADR 0081). What it does not do is decide anything: the question it is
 /// waiting on is public, and whoever answers has to answer that exact question.
 /// </remarks>
-internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
+internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent, ISeatPerson
 {
     private readonly Lock _gate = new();
-    private Question? _question;
+    private Asking? _question;
     private TaskCompletionSource<PlayerDecision?>? _answer;
     private bool _released;
 
@@ -31,7 +31,7 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
     /// Raised as the match asks this seat something, with the round it belongs to when the question has one:
     /// what a notice to a phone nobody is looking at is sent about (<see cref="PushNotices" />, ADR 0118).
     /// </summary>
-    public event Action<Question, int?>? Asked;
+    public event Action<Asking, int?>? Asked;
 
     // The round the question being asked belongs to, and the picks, speeds and intents answered in it.
     private int? _round;
@@ -50,7 +50,7 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
     public void Depart() => Volatile.Write(ref _arrived, 0);
 
     /// <summary>What this seat is waiting for, or <c>null</c> when the match is not asking it anything.</summary>
-    public Question? Waiting
+    public Asking? Waiting
     {
         get
         {
@@ -69,7 +69,7 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
     /// Which asking the caller believes it is answering. Checked here, under the same lock that hands the
     /// answer over, because anywhere else it is a check and then a gap: two callers can both read the seat's
     /// current question, both agree it is theirs, and the first can advance the driver to the next question of
-    /// the same shape while the second is still on its way. <see cref="Question.Answers" /> would then accept
+    /// the same shape while the second is still on its way. <see cref="Asking.Answers" /> would then accept
     /// that second tap for a question nobody meant it for — a pick spent by accident, or a choice the round no
     /// longer allows handed to the driver.
     /// </param>
@@ -139,22 +139,22 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
 
     public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options)
     {
-        var decision = Ask(new Question(PlayerOptionsKind.Evolution, Creature: null), board?.RoundNumber);
+        var decision = Ask(new Asking(PlayerOptionsKind.Evolution, Creature: null), board?.RoundNumber);
         return decision is null || decision.IsPass
             ? EvolutionDecision.Pass
             : EvolutionDecision.Unlock(new EvolutionChoice(Required(decision.Creature), Required(decision.Tier)));
     }
 
     public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) =>
-        Ask(new Question(PlayerOptionsKind.Speed, creature), board?.RoundNumber) is { } decision ? Required(decision.Speed) : Speed.Standard;
+        Ask(new Asking(PlayerOptionsKind.Speed, creature), board?.RoundNumber) is { } decision ? Required(decision.Speed) : Speed.Standard;
 
     public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options) =>
-        Ask(new Question(PlayerOptionsKind.TieOrder, Creature: null))?.Order ?? [];
+        Ask(new Asking(PlayerOptionsKind.TieOrder, Creature: null))?.Order ?? [];
 
     public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption)
     {
         ArgumentNullException.ThrowIfNull(intentOption);
-        if (Ask(new Question(PlayerOptionsKind.Intent, intentOption.Creature), board?.RoundNumber) is { } decision)
+        if (Ask(new Asking(PlayerOptionsKind.Intent, intentOption.Creature), board?.RoundNumber) is { } decision)
         {
             return Required(decision.Spell);
         }
@@ -173,7 +173,7 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
         // Released: the ended match refuses whatever is handed to it, but a recording seat checks the answer
         // against the options before the match sees it, and refuses an answer they never offered as a bug. So a
         // released seat hands back the first set the options offer, which is nobody's choice either.
-        return Ask(new Question(PlayerOptionsKind.Target, options.Actor))?.Targets ?? TargetSets.Of(options.LegalTargets).FirstOrDefault() ?? [];
+        return Ask(new Asking(PlayerOptionsKind.Target, options.Actor))?.Targets ?? TargetSets.Of(options.LegalTargets).FirstOrDefault() ?? [];
     }
 
     /// <summary>
@@ -183,7 +183,7 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
     public ChosenAction DecideAction(PlayerBoardState board, ActionOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
-        if (Ask(new Question(PlayerOptionsKind.Action, options.Actor)) is { } decision)
+        if (Ask(new Asking(PlayerOptionsKind.Action, options.Actor)) is { } decision)
         {
             return new ChosenAction(Required(decision.Spell), decision.Targets);
         }
@@ -194,7 +194,7 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
     }
 
     /// <summary>The person's answer, or <c>null</c> from a seat that has been released: nobody is answering.</summary>
-    private PlayerDecision? Ask(Question shape, int? round = null)
+    private PlayerDecision? Ask(Asking shape, int? round = null)
     {
         // Stamped here rather than at the call sites, which name the shape and have no reason to know
         // that two askings of it are two things.
@@ -242,33 +242,4 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
     private static TValue Required<TValue>(TValue? value)
         where TValue : class =>
         value ?? throw new InvalidOperationException("The decision reached the seat without the value its kind needs.");
-
-    /// <summary>
-    /// What the match is asking this seat. The creature is the one being asked about for a speed choice, an
-    /// intent, a target binding and an action chosen at the slot, and none for evolution or a tie order, which
-    /// are asked of the player rather than of one creature.
-    /// </summary>
-    /// <param name="Asked">
-    /// Which asking this is, counted by the seat. It exists so that two questions of the same shape are two
-    /// questions: a seat with two Evolution picks in a round is asked <c>(Evolution, null)</c> twice, and
-    /// anything comparing askings by their shape alone -- the decision clock does -- would treat the second as
-    /// a continuation of the first, keep the first's stamp for it and then take that stamp away when the first
-    /// was answered. Nothing else reads it; it is identity, not information.
-    /// </param>
-    internal sealed record Question(PlayerOptionsKind Kind, CreatureId? Creature, long Asked = 0)
-    {
-        /// <summary>Whether a decision answers this question rather than the previous one.</summary>
-        public bool Answers(PlayerDecision decision)
-        {
-            ArgumentNullException.ThrowIfNull(decision);
-            if (decision.Kind != Kind)
-            {
-                return false;
-            }
-
-            // Evolution names its own creature and a tie order names several; the other four are asked about one
-            // creature, and the answer is for it.
-            return Kind is PlayerOptionsKind.Evolution or PlayerOptionsKind.TieOrder || Creature is null || decision.Creature is null || decision.Creature == Creature;
-        }
-    }
 }

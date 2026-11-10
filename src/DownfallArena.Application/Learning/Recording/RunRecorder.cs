@@ -50,6 +50,9 @@ public sealed class RunRecorder(
 
     private RunStamp _stamp = stamp;
 
+    // The stamp the run was opened with, which a match forgotten goes back to.
+    private readonly RunStamp _opened = stamp;
+
     /// <summary>
     /// Records that a seat changed hands, by growing that seat's name in the run stamp.
     /// </summary>
@@ -93,6 +96,19 @@ public sealed class RunRecorder(
         await writer.StartJsonLinesAsync(StepsFile, cancellationToken);
         await writer.StartJsonLinesAsync(EpisodesFile, cancellationToken);
         await WriteManifestAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Lets go of what was recorded of a match that is about to be played again from its start, rebuilt from its
+    /// journal (ADR 0159): its steps, and the seats that changed hands in it. The replay says all of it again.
+    /// </summary>
+    public void Forget(MatchId matchId)
+    {
+        _steps.Remove(matchId);
+        lock (_seats)
+        {
+            _stamp = _opened;
+        }
     }
 
     /// <summary>

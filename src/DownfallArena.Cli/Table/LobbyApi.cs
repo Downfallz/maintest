@@ -1176,7 +1176,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         if (seat.Person is null)
         {
             // The name the bot list gives it (search-19, Greedy), not the spec it was seated by, which is a path.
-            var spec = table.Session.Seat(seat.Slot).Seated.Name;
+            var spec = table.Session.SeatedName(seat.Slot);
             var label = composer.Agents.FirstOrDefault(agent => string.Equals(agent.Value, spec, StringComparison.OrdinalIgnoreCase))?.Label;
             return new SeatSummary(seat.Name, "bot", BotName(label ?? spec), Turn: false);
         }

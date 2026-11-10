@@ -30,11 +30,23 @@ public sealed class MatchStepper(MatchCommandHandlers commands, MatchQueryHandle
     /// <summary>
     /// Takes every decision the Player agents owe, until a person is asked or the match is over.
     /// </summary>
-    public Task<Result<MatchStep>> AdvanceAsync(MatchId matchId, MatchSeats seats, HeldAnswers held, CancellationToken cancellationToken = default)
+    public Task<Result<MatchStep>> AdvanceAsync(MatchId matchId, MatchSeats seats, HeldAnswers held, CancellationToken cancellationToken = default) =>
+        AdvanceAsync(matchId, seats, held, once: false, cancellationToken);
+
+    /// <summary>
+    /// Takes the decisions the Player agents owe, all of them or one turn's worth.
+    /// </summary>
+    /// <param name="once">
+    /// Whether to stop after one thing the agents do: one seat's turn, or the answers they owe when both seats
+    /// are asked at once. A step cut short this way is neither over nor asking a person anything
+    /// (<see cref="MatchStep.Owed" />), and is taken again for the rest. It is how a caller lets something else
+    /// have the match between two of the agents' turns, where one step for a whole match of agents would not.
+    /// </param>
+    public Task<Result<MatchStep>> AdvanceAsync(MatchId matchId, MatchSeats seats, HeldAnswers held, bool once, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(seats);
         ArgumentNullException.ThrowIfNull(held);
-        return RunAsync(matchId, seats, held, [], cancellationToken);
+        return RunAsync(matchId, seats, held, [], once, cancellationToken);
     }
 
     /// <summary>
@@ -87,7 +99,7 @@ public sealed class MatchStepper(MatchCommandHandlers commands, MatchQueryHandle
             }
         }
 
-        return await RunAsync(matchId, seats, held, [submitted], cancellationToken);
+        return await RunAsync(matchId, seats, held, [submitted], once: false, cancellationToken);
     }
 
     /// <summary>
@@ -109,8 +121,10 @@ public sealed class MatchStepper(MatchCommandHandlers commands, MatchQueryHandle
         return Result.Success(new SeatView(WithAnswers(seat.Board, answers), WithAnswers(seat.Options, answers), Question(read.Value, slot, held)));
     }
 
-    private async Task<Result<MatchStep>> RunAsync(MatchId matchId, MatchSeats seats, HeldAnswers held, List<SeatDecision> decided, CancellationToken cancellationToken)
+    private async Task<Result<MatchStep>> RunAsync(MatchId matchId, MatchSeats seats, HeldAnswers held, List<SeatDecision> decided, bool once, CancellationToken cancellationToken)
     {
+        // Whether the agents have done their one thing, when the step is to stop after it.
+        var acted = false;
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -129,54 +143,83 @@ public sealed class MatchStepper(MatchCommandHandlers commands, MatchQueryHandle
                     : Result.Failure<MatchStep>(MatchErrors.NotInProgress);
             }
 
-            if (table.AsksTogether)
+            var going = new Going(matchId, seats, table, decided, Stopping: once && acted);
+            var moved = table.AsksTogether
+                ? await TogetherAsync(going, held, cancellationToken)
+                : await InTurnAsync(going, held, cancellationToken);
+            if (moved.Stopped is { } stopped)
             {
-                foreach (var slot in Slots)
-                {
-                    if (seats.Of(slot, table.Of(slot).Board.RoundNumber) is not { } agent)
-                    {
-                        continue;
-                    }
+                return stopped;
+            }
 
-                    foreach (var answer in Answers(Seen(matchId, slot, agent), table.Of(slot), held.Of(slot)))
-                    {
-                        held = held.With(slot, answer);
-                        decided.Add(new SeatDecision(slot, answer));
-                    }
-                }
+            held = moved.Held;
+            acted = true;
+        }
+    }
 
-                var asked = Slots.Where(slot => Question(table.Of(slot).Options, held.Of(slot)) is not null).ToList();
-                if (asked.Count > 0)
-                {
-                    return Result.Success(new MatchStep(null, held, asked, decided));
-                }
+    /// <summary>
+    /// Both seats are asked at once: the agents answer what they have not, and once neither seat has anything
+    /// left to answer the answers reach the match, seat 1's first. Stops where a person still has a question.
+    /// </summary>
+    private async Task<Moved> TogetherAsync(Going going, HeldAnswers held, CancellationToken cancellationToken)
+    {
+        var (matchId, seats, table, decided, stopping) = going;
+        if (stopping)
+        {
+            var people = Slots.Where(slot => seats.Of(slot, table.Of(slot).Board.RoundNumber) is null && Question(table.Of(slot).Options, held.Of(slot)) is not null).ToList();
+            return Moved.To(new MatchStep(null, held, people, decided));
+        }
 
-                await RevealAsync(matchId, held, cancellationToken);
-                held = HeldAnswers.None;
+        foreach (var slot in Slots)
+        {
+            if (seats.Of(slot, table.Of(slot).Board.RoundNumber) is not { } agent)
+            {
                 continue;
             }
 
-            if (!held.IsEmpty)
+            foreach (var answer in Answers(Seen(matchId, slot, agent), table.Of(slot), held.Of(slot)))
             {
-                throw new InvalidOperationException($"Match {matchId} holds answers while its seats are not being asked together.");
-            }
-
-            if (Turn(table) is not { } acting)
-            {
-                throw new InvalidOperationException($"Match {matchId} is in progress but no player can act.");
-            }
-
-            if (seats.Of(acting, table.Of(acting).Board.RoundNumber) is not { } bot)
-            {
-                return Result.Success(new MatchStep(null, held, [acting], decided));
-            }
-
-            var acted = await ActAsync(matchId, acting, Seen(matchId, acting, bot), table.Of(acting), decided, cancellationToken);
-            if (acted.IsFailure)
-            {
-                return Result.Failure<MatchStep>(acted.Error);
+                held = held.With(slot, answer);
+                decided.Add(new SeatDecision(slot, answer));
             }
         }
+
+        var asked = Slots.Where(slot => Question(table.Of(slot).Options, held.Of(slot)) is not null).ToList();
+        if (asked.Count > 0)
+        {
+            return Moved.To(new MatchStep(null, held, asked, decided));
+        }
+
+        await RevealAsync(matchId, held, cancellationToken);
+        return Moved.On(HeldAnswers.None);
+    }
+
+    /// <summary>One seat is asked: its agent takes the turn, or the step stops for the person who has it.</summary>
+    private async Task<Moved> InTurnAsync(Going going, HeldAnswers held, CancellationToken cancellationToken)
+    {
+        var (matchId, seats, table, decided, stopping) = going;
+        if (!held.IsEmpty)
+        {
+            throw new InvalidOperationException($"Match {matchId} holds answers while its seats are not being asked together.");
+        }
+
+        if (Turn(table) is not { } acting)
+        {
+            throw new InvalidOperationException($"Match {matchId} is in progress but no player can act.");
+        }
+
+        if (seats.Of(acting, table.Of(acting).Board.RoundNumber) is not { } bot)
+        {
+            return Moved.To(new MatchStep(null, held, [acting], decided));
+        }
+
+        if (stopping)
+        {
+            return Moved.To(new MatchStep(null, held, [], decided));
+        }
+
+        var turn = await ActAsync(matchId, acting, Seen(matchId, acting, bot), table.Of(acting), decided, cancellationToken);
+        return turn.IsFailure ? new Moved(Result.Failure<MatchStep>(turn.Error), held) : Moved.On(held);
     }
 
     /// <summary>
@@ -545,6 +588,17 @@ public sealed class MatchStepper(MatchCommandHandlers commands, MatchQueryHandle
     }
 
     private sealed record Seat(PlayerBoardState Board, PlayerOptions Options);
+
+    /// <summary>What one pass of a step works on: the match as it was just read, and whether the agents have done the one thing a step taken a turn at a time lets them do.</summary>
+    private sealed record Going(MatchId MatchId, MatchSeats Seats, Table Table, List<SeatDecision> Decided, bool Stopping);
+
+    /// <summary>What one pass of a step did: stopped with its answer, or moved the match on with these answers held.</summary>
+    private sealed record Moved(Result<MatchStep>? Stopped, HeldAnswers Held)
+    {
+        public static Moved To(MatchStep step) => new(Result.Success(step), step.Held);
+
+        public static Moved On(HeldAnswers held) => new(null, held);
+    }
 
     /// <summary>An agent that has already decided: it answers every question with the decision it was given.</summary>
     private sealed class Answering(PlayerDecision decision) : IPlayerAgent
