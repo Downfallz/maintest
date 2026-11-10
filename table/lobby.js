@@ -186,7 +186,10 @@ export function mountLobby(doc, location, storage) {
   function enter(entry) {
     activateSeats(entry.seats, storage);
     // The link also carries the seats so browsers that refuse storage can still play this visit.
-    location.assign(`${presentationPath(presentation)}?${new URLSearchParams(entry.seats.map(item => [item.seat, item.token]))}`);
+    // Both seats on this device (a shared device) play at the classic table, the one view with a handover between
+    // two players (ADR 0156); the battle view plays one seat.
+    const view = entry.seats.length > 1 ? 'table' : presentation;
+    location.assign(`${presentationPath(view)}?${new URLSearchParams(entry.seats.map(item => [item.seat, item.token]))}`);
   }
   function askSignIn() {
     problem('Sign in to play, then choose your player name.');

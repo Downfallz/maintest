@@ -21,6 +21,9 @@ replays and the practice scenarios.
   practice scenarios, and a browser that stores `downfall.presentation = classic`. That value is how the classic
   table's own tests reach it. An older `table` choice from the removed dropdown plays the battle view.
 - **The battle view no longer links to the table.** An interrupted renderer offers Reload scene and the lobby.
+- **A shared device stays at the table.** A browser holding both seats of a game plays it there, from the lobby or
+  `/play`: the battle view plays one seat and has no handover between two players, and the seat it does not play
+  would never arrive. The battle view gains this game when it gains a handover.
 
 ## Consequences
 

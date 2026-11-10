@@ -2693,3 +2693,16 @@ test('/play hands accepted seats on to the battle view, naming the table the hos
   await new Promise(resolve => setImmediate(resolve)); await new Promise(resolve => setImmediate(resolve));
   assert.deepEqual(replaced, ['/battle?table=new-game']);
 });
+
+test('both seats of a shared device stay at the classic table, the view with a handover between two players', async () => {
+  const p = page();
+  const replaced = [];
+  p.context.preferredPresentation = () => 'battle';
+  p.context.location = { search: '', replace: url => replaced.push(url) };
+  p.context.fetch = async () => ({ ok: true });
+  const started = [];
+  p.context.start = seats => started.push(seats.map(seat => seat.seat));
+  p.context.enter([{ seat: 'player1', token: 'one' }, { seat: 'player2', token: 'two' }], null);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(replaced, []); assert.deepEqual(started, [['player1', 'player2']]);
+});

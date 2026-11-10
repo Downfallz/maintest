@@ -274,7 +274,8 @@ function enter(held, practice) {
   // The battle view is the game (ADR 0156): an accepted seat, a notice's link or a held seat goes on there. This
   // page keeps the doorway (codes, invitations) and is the archived table only for practice, an admin replay or a
   // browser that stored the archive's own value.
-  if (!practice && preferredPresentation(storage) === 'battle') {
+  // A shared device holds both seats: the battle view plays one seat and has no handover, so it stays here.
+  if (!practice && held.length === 1 && preferredPresentation(storage) === 'battle') {
     void toBattle(held);
     return;
   }
