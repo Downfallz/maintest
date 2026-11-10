@@ -485,13 +485,13 @@ internal sealed class PlaytestRun
     /// Records that a seat has been shown what it is being asked, which is what the next decision's duration
     /// is measured from.
     /// </summary>
-    public void Served(PlayerSlot slot, HumanSeat.Question? question) => _served.Served(slot, question);
+    public void Served(PlayerSlot slot, Asking? question) => _served.Served(slot, question);
 
     /// <summary>
     /// When this seat's current options were served, read before the decision is handed over so a question
     /// asked in its wake cannot take the moment with it.
     /// </summary>
-    public DateTimeOffset? ServedAt(PlayerSlot slot, HumanSeat.Question? question) => _served.ServedAt(slot, question);
+    public DateTimeOffset? ServedAt(PlayerSlot slot, Asking? question) => _served.ServedAt(slot, question);
 
     /// <summary>This session's clock, so a caller reads the moment of an event where the event happens.</summary>
     public DateTimeOffset Now() => _clock.GetUtcNow();

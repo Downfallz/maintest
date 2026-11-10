@@ -222,9 +222,10 @@ which adds the compilation of the engine itself.
 15. **A page's `waitingAsked`.** From 4.1b it is the seat's asking, which counts every decision of the seat
     where today's counter counts the questions put to a person since the host started. Still an integer,
     still increasing, still per seat; the values differ, in the page and in `notes.jsonl`.
-16. **A Player agent's turn inside a request.** A step that plays agents holds the match's turn, so a tap
-    waits behind a slow agent, and a failed journal write now fails the tap where the match used to go on
-    unrecorded. Running the agents' advance after the tap has answered is the in-process shape of phase 5.
+16. **A Player agent's turn inside a request.** Decided: the agents' advance runs after the tap has answered,
+    in the background, which is the in-process shape of phase 5. A step that plays agents holds the match's
+    turn, so a tap made while one is thinking waits behind it; and a failed journal write now fails the tap
+    where the match used to go on unrecorded.
 
 ## Documents this makes stale as it lands
 

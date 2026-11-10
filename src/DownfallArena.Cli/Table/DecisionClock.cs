@@ -31,7 +31,7 @@ internal sealed class DecisionClock(TimeProvider clock)
     /// Records that a seat has been shown what it is being asked. A seat waiting for nothing is forgotten,
     /// which is what makes the next question a new one rather than a continuation of the last.
     /// </summary>
-    public void Served(PlayerSlot slot, HumanSeat.Question? question)
+    public void Served(PlayerSlot slot, Asking? question)
     {
         lock (_gate)
         {
@@ -60,7 +60,7 @@ internal sealed class DecisionClock(TimeProvider clock)
     /// seat, so the new question's stamp replaces the answered one's. Reading it first means the race can cost
     /// the *next* duration a poll of accuracy, and never costs this one its whole duration.
     /// </remarks>
-    public DateTimeOffset? ServedAt(PlayerSlot slot, HumanSeat.Question? question)
+    public DateTimeOffset? ServedAt(PlayerSlot slot, Asking? question)
     {
         lock (_gate)
         {
@@ -75,7 +75,7 @@ internal sealed class DecisionClock(TimeProvider clock)
     /// own serving. The question has to be named: if the next one has already been stamped, that stamp is the
     /// next one's and taking it would leave that decision timed from nothing.
     /// </summary>
-    public void Answered(PlayerSlot slot, HumanSeat.Question? answered)
+    public void Answered(PlayerSlot slot, Asking? answered)
     {
         lock (_gate)
         {
@@ -86,5 +86,5 @@ internal sealed class DecisionClock(TimeProvider clock)
         }
     }
 
-    private sealed record Stamped(HumanSeat.Question Question, DateTimeOffset At);
+    private sealed record Stamped(Asking Question, DateTimeOffset At);
 }

@@ -61,7 +61,7 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
     }
 
     /// <summary>A page has drawn this asking in front of somebody: no notice for it.</summary>
-    public void Shown(TableSeat seat, HumanSeat.Question question)
+    public void Shown(TableSeat seat, Asking question)
     {
         ArgumentNullException.ThrowIfNull(seat);
         ArgumentNullException.ThrowIfNull(question);
@@ -128,7 +128,7 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
     /// a browser may hold several (ADR 0115), and the question is at the one that asked. The id is the session's
     /// public name, on the session page's address already; no token travels.
     /// </summary>
-    public static string Payload(HumanSeat.Question question, int? round, TableSeat seat, string table)
+    public static string Payload(Asking question, int? round, TableSeat seat, string table)
     {
         ArgumentNullException.ThrowIfNull(question);
         ArgumentNullException.ThrowIfNull(seat);
@@ -147,7 +147,7 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
         return JsonSerializer.Serialize(new { title = "Your turn", body, url = $"/play?table={Uri.EscapeDataString(table)}", tag = $"turn:{seat.Name}", asked = question.Asked }, Web);
     }
 
-    private async Task NoticeAsync(PlayedTable table, TableSeat seat, HumanSeat.Question question, int? round)
+    private async Task NoticeAsync(PlayedTable table, TableSeat seat, Asking question, int? round)
     {
         try
         {

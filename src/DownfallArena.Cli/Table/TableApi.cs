@@ -461,7 +461,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     /// be served beside options that are not its own. So the question is read again once the options are in,
     /// and the reads are repeated until it has not moved: it can only move on a decision, so this ends.
     /// </remarks>
-    private async Task<Result<(HumanSeat.Question? Waiting, PlayerBoardState Board, PlayerOptions Options)>> SnapshotAsync(TableSeat seat)
+    private async Task<Result<(Asking? Waiting, PlayerBoardState Board, PlayerOptions Options)>> SnapshotAsync(TableSeat seat)
     {
         while (true)
         {
@@ -469,13 +469,13 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
             var board = await queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(session.MatchId, seat.Slot));
             if (board.IsFailure)
             {
-                return Result.Failure<(HumanSeat.Question?, PlayerBoardState, PlayerOptions)>(board.Error);
+                return Result.Failure<(Asking?, PlayerBoardState, PlayerOptions)>(board.Error);
             }
 
             var options = await queries.GetPlayerOptions.HandleAsync(new GetPlayerOptions(session.MatchId, seat.Slot));
             if (options.IsFailure)
             {
-                return Result.Failure<(HumanSeat.Question?, PlayerBoardState, PlayerOptions)>(options.Error);
+                return Result.Failure<(Asking?, PlayerBoardState, PlayerOptions)>(options.Error);
             }
 
             if (seat.Person?.Waiting?.Asked == waiting?.Asked)

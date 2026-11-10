@@ -546,13 +546,13 @@ public sealed class TableRestorerTests : IDisposable
         throw new InvalidOperationException("The bot in the other seat never wrote its intents down.");
     }
 
-    private static async Task Post(PlayedTable table, HumanSeat.Question question, string body)
+    private static async Task Post(PlayedTable table, Asking question, string body)
     {
         var answer = await table.Api.HandleAsync("POST", "/api/seat/player1/decision", body.Insert(1, $"\"asked\":{question.Asked},"), table.Seats[0].Token);
         answer.Status.ShouldBe(204, System.Text.Encoding.UTF8.GetString(answer.Body));
     }
 
-    private static async Task<HumanSeat.Question> Waiting(HumanSeat person)
+    private static async Task<Asking> Waiting(HumanSeat person)
     {
         for (var attempt = 0; attempt < 300 && person.Waiting is null; attempt++)
         {
