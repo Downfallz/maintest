@@ -58,6 +58,20 @@ public sealed class TableFilesTests
         badge.Body.Take(4).ShouldBe([0x89, (byte)'P', (byte)'N', (byte)'G']);
     }
 
+    /// <summary>The display face is the host's own file (ADR 0157): no page asks another site for a font.</summary>
+    [Fact]
+    public void The_display_face_is_served_as_woff2_bytes()
+    {
+        var font = Files.Get("/fonts/marcellus-latin-400.woff2");
+
+        font.Status.ShouldBe(200);
+        font.ContentType.ShouldBe("font/woff2");
+        Encoding.ASCII.GetString(font.Body, 0, 4).ShouldBe("wOF2");
+
+        // Read as text, a font comes back longer than its file and no browser can use it.
+        font.Body.Length.ShouldBe(14552);
+    }
+
     /// <summary>The operator's pages are routes of this host too (ADR 0081), reached by name rather than by file.</summary>
     [Theory]
     [InlineData("/pilot", "pilot.js")]
