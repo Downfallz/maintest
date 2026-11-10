@@ -190,6 +190,14 @@ export function reconcileRelations(opponents, list) {
   });
 }
 
+/**
+ * The order the recent opponents are shown in: friends first, the ones a tap challenges, then everyone else, each
+ * group met most recently first as the host listed it. A friendship accepted in the page moves its card forward.
+ */
+export function opponentOrder(opponents) {
+  return [...opponents.filter(one => one.relation === 'friend'), ...opponents.filter(one => one.relation !== 'friend')];
+}
+
 /** What the create dialog opens on to challenge a friend again: them, in the format and rating of the last game. */
 export function challengeRequest(opponent) {
   return { friend: opponent.id, format: opponent.format || null, ranked: opponent.casual !== true };
@@ -476,7 +484,7 @@ export function mountLobby(doc, location, storage) {
     el('invitation-cards').replaceChildren(...invitations.map(invitationCard));
     el('opponents').hidden = signInFirst() || !account || opponents.length === 0;
     el('opponents-count').textContent = opponents.length || '';
-    el('opponent-cards').replaceChildren(...opponents.map(opponentCard));
+    el('opponent-cards').replaceChildren(...opponentOrder(opponents).map(opponentCard));
     onOutstanding(mine.some(entry => invitedState(entry.invited)?.waiting));
     const ongoing = ongoingGames(mine);
     const finishedTotal = KINDS.reduce((sum, [kind]) => sum + (finished[kind].data?.total ?? 0), 0);

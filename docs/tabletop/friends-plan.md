@@ -162,7 +162,8 @@ Signed in, the lobby gains two things in the table's visual language:
 - A table's outcome gains *Rematch*, which opens the create dialog with the same friend and format.
 - **Recent opponents**, under *Your games*, only when there is one: the eight players met most recently, from the
   kept results (`GET /api/lobby/opponents`), in one row that scrolls sideways (the section keeps one card's height;
-  on a phone the next card shows at the edge), each with the score between you (*2–1*, read as *Won 2 · Lost 1*), the last game's format and rating,
+  on a phone the next card shows at the edge; friends first, the ones a tap challenges, then the others, each group
+  met most recently first), each with the score between you (*2–1*, read as *Won 2 · Lost 1*), the last game's format and rating,
   and one way to play again: *Challenge* for a friend (the create dialog on them, in that format and rating), *Add
   friend* or *Accept friend* otherwise, *Friend request sent* while one waits. As with *Rematch* (ADR 0153), nothing
   is sent to a player who is not a friend.

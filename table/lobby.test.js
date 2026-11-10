@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { challengeRequest, codePath, reconcileRelations, finishedSummary, opponentAction, opponentRecord, friendChoice, gameKind, invitationLine, invitedState, lobbyRequest, localFinished, ongoingGames, ongoingLimit, rematchRequest, tableState, turnOf, versus, visibleTables } from './lobby.js';
+import { challengeRequest, codePath, opponentOrder, reconcileRelations, finishedSummary, opponentAction, opponentRecord, friendChoice, gameKind, invitationLine, invitedState, lobbyRequest, localFinished, ongoingGames, ongoingLimit, rematchRequest, tableState, turnOf, versus, visibleTables } from './lobby.js';
 import { activateSeats, forget, heldSeats, savedSeats, selectTableSeats } from './session.js';
 
 function storage() {
@@ -187,4 +187,10 @@ test('a friends list read again changes how each recent opponent is offered, and
   assert.equal(reconcileRelations(opponents, null), opponents);
   // An opponent whose relation did not change is the same object, so nothing is drawn again.
   assert.equal(reconcileRelations(opponents, { friends: [], incoming: [{ id: 'c' }], outgoing: [{ id: 'a' }] })[0], opponents[0]);
+});
+
+test('friends come first among recent opponents, each group in the order the host listed it', () => {
+  const opponents = [{ id: 'a', relation: 'none' }, { id: 'b', relation: 'friend' }, { id: 'c', relation: 'asking' }, { id: 'd', relation: 'friend' }, { id: 'e', relation: null }];
+  assert.deepEqual(opponentOrder(opponents).map(one => one.id), ['b', 'd', 'a', 'c', 'e']);
+  assert.deepEqual(opponentOrder([]), []);
 });

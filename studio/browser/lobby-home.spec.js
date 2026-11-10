@@ -454,13 +454,17 @@ test('a finished page that failed is read again on the next poll, and the three 
 
 test('recent opponents are listed with the record between you: a friend is challenged again in the same format, anyone else is asked to be a friend first', async ({ page }, info) => {
   const last = '2026-11-08T20:00:00Z';
-  // Bastien is a friend and Alex asked to be one (the mock's friends list); Julie is neither.
+  // Bastien is a friend and Alex asked to be one (the mock's friends list); Julie is neither. The host lists them
+  // met most recently first: Julie, Bastien, Alex.
   const state = await home(page, { opponents: [
+    { id: 'acct_dddddddddddddddd', name: 'Julie', lastPlayedAt: '2026-11-09T20:00:00Z', games: 1, won: 0, lost: 1, drawn: 0, format: '3v3', casual: false },
     { id: friend.id, name: friend.username, lastPlayedAt: last, games: 3, won: 2, lost: 1, drawn: 0, format: '1v1', casual: true },
-    { id: 'acct_dddddddddddddddd', name: 'Julie', lastPlayedAt: last, games: 1, won: 0, lost: 1, drawn: 0, format: '3v3', casual: false },
-    { id: challenger.id, name: challenger.username, lastPlayedAt: last, games: 1, won: 1, lost: 0, drawn: 0, format: '3v3', casual: false },
+    { id: challenger.id, name: challenger.username, lastPlayedAt: '2026-11-07T20:00:00Z', games: 1, won: 1, lost: 0, drawn: 0, format: '3v3', casual: false },
   ] });
   const section = page.locator('#opponents'), cards = section.locator('.game-card.opponent');
+  const names = () => cards.locator('h3').allTextContents();
+  // A friend, the one a tap challenges, comes first; the others keep the order they were met in.
+  await expect.poll(names).toEqual(['Bastien', 'Julie', 'Alex']);
   await expect(section).toBeVisible();
   await expect(cards).toHaveCount(3);
   await expect(cards.nth(0).locator('.record')).toHaveText('2–1');
@@ -485,8 +489,10 @@ test('recent opponents are listed with the record between you: a friend is chall
   await openPanel(page, /^Friends/);
   await page.locator('#friends-dialog').getByRole('button', { name: 'Accept', exact: true }).click();
   await page.getByRole('button', { name: 'Close friends' }).click();
-  await expect(cards.nth(2).getByRole('button', { name: 'Challenge →' })).toBeEnabled();
-  await expect(cards.nth(1).getByRole('button', { name: 'Friend request sent' })).toBeDisabled();
+  // A friend now, Alex moves forward with the friends: after Bastien, met more recently.
+  await expect.poll(names).toEqual(['Bastien', 'Alex', 'Julie']);
+  await expect(cards.nth(1).getByRole('button', { name: 'Challenge →' })).toBeEnabled();
+  await expect(cards.nth(2).getByRole('button', { name: 'Friend request sent' })).toBeDisabled();
   // A friend is challenged from the create dialog, on them, in the last game's format and rating.
   await cards.nth(0).getByRole('button', { name: 'Challenge →' }).click();
   await expect(page.locator('#create-dialog')).toBeVisible();
