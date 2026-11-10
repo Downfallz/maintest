@@ -116,6 +116,42 @@ public sealed class FileDecisionJournalTests : IDisposable
     }
 
     [Fact]
+    public async Task A_line_is_appended_while_somebody_else_is_reading_the_file()
+    {
+        var read = (await _journal.AppendAsync("run-1", JournalPosition.Start, [DecisionJournalTests.EveryKind[0]], TestContext.Current.CancellationToken)).ShouldNotBeNull();
+        var path = Path.Combine(_root, "run-1", "decisions.jsonl");
+        await using var listing = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+
+        var written = await _journal.AppendAsync("run-1", read, [DecisionJournalTests.EveryKind[1]], TestContext.Current.CancellationToken);
+
+        written.ShouldNotBeNull();
+        (await _journal.ReadAsync("run-1", TestContext.Current.CancellationToken)).Entries.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task Two_journals_over_one_directory_take_turns_on_a_run()
+    {
+        var other = new FileDecisionJournal(_root, new At(Now));
+        var appends = Enumerable.Range(0, 40).Select(turn => Task.Run(async () =>
+        {
+            var journal = turn % 2 == 0 ? _journal : other;
+            while (true)
+            {
+                var reading = await journal.ReadAsync("run-1", TestContext.Current.CancellationToken);
+                if (await journal.AppendAsync("run-1", reading.Position, [DecisionJournalTests.EveryKind[0]], TestContext.Current.CancellationToken) is not null)
+                {
+                    return;
+                }
+            }
+        }));
+
+        await Task.WhenAll(appends);
+
+        var lines = await File.ReadAllLinesAsync(Path.Combine(_root, "run-1", "decisions.jsonl"), TestContext.Current.CancellationToken);
+        lines.Select(line => JsonDocument.Parse(line).RootElement.GetProperty("seq").GetInt64()).ShouldBe(Enumerable.Range(1, 40).Select(seq => (long)seq));
+    }
+
+    [Fact]
     public async Task A_decision_line_without_what_its_kind_needs_is_a_broken_file()
     {
         Directory.CreateDirectory(Path.Combine(_root, "run-1"));
