@@ -198,7 +198,15 @@ export function mountNavigation(doc, storage, { onInvite, onChange = () => {}, o
   // The bell's actions are the Friends panel's and the lobby's: a friend accepted there is read again here, and
   // the page that mounted the navigation is told what changed.
   let friends = null;
-  const inbox = mountInbox(doc, { storage, onChange: what => { if (what === 'friends') void friends?.refresh(); onInbox(what); } });
+  const inbox = mountInbox(doc, {
+    storage,
+    onChange: what => {
+      if (what === 'friends') {
+        void friends?.refresh();
+      }
+      onInbox(what);
+    },
+  });
   friends = mountFriends(doc, {
     onRequests: navigation.requests,
     onList: list => { inbox.feedFriends(list); onFriends(list); },

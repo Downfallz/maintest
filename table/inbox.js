@@ -8,10 +8,10 @@ import { activateSeats } from './session.js';
 // declined. One bell in the shared header counts them, and its window acts on each where it stands.
 
 const GROUPS = Object.freeze([
-  ['turn', 'Your turn'],
-  ['invitation', 'Invitations'],
-  ['friend', 'Friend requests'],
-  ['declined', 'Declined'],
+  { kind: 'turn', label: 'Your turn' },
+  { kind: 'invitation', label: 'Invitations' },
+  { kind: 'friend', label: 'Friend requests' },
+  { kind: 'declined', label: 'Declined' },
 ]);
 
 /** Who a game is against, from the seats this player does not hold: a person's name, a bot's, or a shared device. */
@@ -116,6 +116,13 @@ export function mountInbox(doc, { storage = null, request = accountRequest, win 
       }
     }
   }
+  // An installed app shows the same count on its icon, where the platform offers one; a refusal changes nothing.
+  function appBadge(count) {
+    const navigator = win.navigator;
+    if (typeof navigator?.setAppBadge !== 'function') return;
+    const pending = count ? navigator.setAppBadge(count) : navigator.clearAppBadge?.();
+    pending?.catch?.(() => {});
+  }
   function render() {
     const items = account ? inboxItems({ mine, invitations, friends }) : [];
     const key = JSON.stringify([account?.id ?? null, items.map(item => [item.key, item.title, item.detail])]);
@@ -126,11 +133,9 @@ export function mountInbox(doc, { storage = null, request = accountRequest, win 
     badge.textContent = badgeText(items.length);
     badge.hidden = items.length === 0;
     bell.setAttribute('aria-label', bellLabel(items.length));
-    // An installed app shows the same count on its icon, where the platform offers one.
-    try { if (items.length) void win.navigator?.setAppBadge?.(items.length)?.catch?.(() => {}); else void win.navigator?.clearAppBadge?.()?.catch?.(() => {}); }
-    catch { /* No app badge here: the bell still counts. */ }
-    const groups = GROUPS.map(([kind, label]) => [label, items.filter(item => item.kind === kind)]).filter(([, list]) => list.length);
-    el('inbox-list').replaceChildren(...(groups.length ? groups.map(([label, list]) => {
+    appBadge(items.length);
+    const groups = GROUPS.map(group => ({ label: group.label, list: items.filter(item => item.kind === group.kind) })).filter(group => group.list.length);
+    el('inbox-list').replaceChildren(...(groups.length ? groups.map(({ label, list }) => {
       const section = node('section', '', 'inbox-group');
       section.append(node('h3', `${label} · ${list.length}`));
       const ul = node('ul', '', 'inbox-items');
