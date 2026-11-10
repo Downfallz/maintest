@@ -87,7 +87,7 @@ public sealed class FileDecisionJournalTests : IDisposable
     [Fact]
     public async Task A_seat_changing_hands_and_a_concession_are_lines_of_their_own_kind()
     {
-        await _journal.AppendAsync("run-1", JournalPosition.Start, [new SeatChangeEntry(PlayerSlot.Player2, "greedy", 3), new ConcessionEntry(PlayerSlot.Player1)], TestContext.Current.CancellationToken);
+        await _journal.AppendAsync("run-1", JournalPosition.Start, [new SeatChangeEntry(PlayerSlot.Player2, "greedy", 3, Reached: 1), new ConcessionEntry(PlayerSlot.Player1)], TestContext.Current.CancellationToken);
 
         var lines = await File.ReadAllLinesAsync(Path.Combine(_root, "run-1", "decisions.jsonl"), TestContext.Current.CancellationToken);
         using var changed = JsonDocument.Parse(lines[0]);
@@ -95,6 +95,7 @@ public sealed class FileDecisionJournalTests : IDisposable
         changed.RootElement.GetProperty("slot").GetString().ShouldBe("player2");
         changed.RootElement.GetProperty("to").GetString().ShouldBe("greedy");
         changed.RootElement.GetProperty("atRound").GetInt32().ShouldBe(3);
+        changed.RootElement.GetProperty("reached").GetInt32().ShouldBe(1);
         using var conceded = JsonDocument.Parse(lines[1]);
         conceded.RootElement.GetProperty("kind").GetString().ShouldBe("Concession");
         conceded.RootElement.GetProperty("slot").GetString().ShouldBe("player1");

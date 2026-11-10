@@ -45,6 +45,9 @@ internal sealed record JournalLine
     /// <summary>For a seat changing hands: the round it changes at the top of.</summary>
     public int? AtRound { get; init; }
 
+    /// <summary>For a seat changing hands: the last round the seat had decided anything in when it was asked; none in older lines.</summary>
+    public int? Reached { get; init; }
+
     /// <summary>The kind of the line a seat changing hands is written as, since ADR 0091.</summary>
     public const string SwapKind = "Swap";
 
@@ -55,7 +58,7 @@ internal sealed record JournalLine
     {
         DecisionEntry decided => Of(seq, at, decided.Decision),
         ConcessionEntry conceded => new JournalLine { Seq = seq, At = at, Slot = NameOf(conceded.Slot), Kind = ConcessionKind },
-        SeatChangeEntry changed => new JournalLine { Seq = seq, At = at, Slot = NameOf(changed.Slot), Kind = SwapKind, To = changed.To, AtRound = changed.FromRound },
+        SeatChangeEntry changed => new JournalLine { Seq = seq, At = at, Slot = NameOf(changed.Slot), Kind = SwapKind, To = changed.To, AtRound = changed.FromRound, Reached = changed.Reached },
         _ => throw new ArgumentException($"A journal does not hold a {entry?.GetType().Name}.", nameof(entry)),
     };
 
@@ -73,7 +76,7 @@ internal sealed record JournalLine
         if (Kind == SwapKind)
         {
             return To is { } to && AtRound is { } round
-                ? new SeatChangeEntry(SlotOf(), to, round)
+                ? new SeatChangeEntry(SlotOf(), to, round, Reached)
                 : throw Broken("it is a seat changing hands without who takes it or from which round");
         }
 
