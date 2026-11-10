@@ -41,6 +41,13 @@ internal sealed record SteppedHost(
             services.GetRequiredService<TimeProvider>());
     }
 
+    /// <summary>A stepper over a journal that nothing watches: what sets a match up before a table plays it.</summary>
+    public JournaledStepper Stepper(IDecisionJournal journal)
+    {
+        var stepper = new MatchStepper(Commands, Queries);
+        return new JournaledStepper(stepper, new MatchReplay(Create, Join, Concede, stepper, Matches, []), journal, Matches, Concede);
+    }
+
     /// <summary>A table's own stepper over a journal.</summary>
     /// <param name="witness">What is shown every decision of the table's match, the replayed ones among them.</param>
     /// <param name="memory">What is told to forget the match when it is about to be rebuilt.</param>
