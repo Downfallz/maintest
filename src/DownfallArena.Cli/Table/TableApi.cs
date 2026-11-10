@@ -276,8 +276,6 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
 
     private static PlayerSlot Other(PlayerSlot slot) => slot == PlayerSlot.Player1 ? PlayerSlot.Player2 : PlayerSlot.Player1;
 
-    private TableSeat? Seat(PlayerSlot slot) => seats.FirstOrDefault(seat => seat.Slot == slot);
-
     private TableSeat? Holder(string? token) =>
         string.IsNullOrWhiteSpace(token) ? null : seats.FirstOrDefault(seat => string.Equals(seat.Token, token, StringComparison.Ordinal));
 
@@ -749,19 +747,9 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
 
         var outcome = await session.SwapAsync(slot, next, wanted, round);
-        if (!outcome.Taken && session.IsOver)
-        {
-            return Refused(NoRoundsLeft);
-        }
-
         if (!outcome.Taken)
         {
-            var floor = outcome.Reached is { } reached ? reached + 1 : 1;
-            return Refused(new DomainError(
-                MidRound,
-                outcome.Reached is { } playing
-                    ? $"Round {playing} is being played; a seat changes hands at the top of a round, so name {floor} or later."
-                    : "A seat changes hands at the top of a round, so name round 1 or later."));
+            return NotTaken(outcome);
         }
 
         // Checked again, now that the seat has taken it. A match that ended while the agent was being resolved
@@ -776,6 +764,22 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         await NoteSwapAsync(slot, outcome.Reached, new SeatChange(held, next.Name, round));
         Changes.Bump();
         return StudioResponse.OfJson(new { slot = TableSeat.NameOf(slot), from = held, to = next.Name, round }, ArtifactJson.LineOptions);
+    }
+
+    /// <summary>Why a seat did not take a swap: the match ended meanwhile, or the round named is one the seat has reached.</summary>
+    private StudioResponse NotTaken(SwapOutcome outcome)
+    {
+        if (session.IsOver)
+        {
+            return Refused(NoRoundsLeft);
+        }
+
+        var floor = outcome.Reached is { } reached ? reached + 1 : 1;
+        return Refused(new DomainError(
+            MidRound,
+            outcome.Reached is { } playing
+                ? $"Round {playing} is being played; a seat changes hands at the top of a round, so name {floor} or later."
+                : "A seat changes hands at the top of a round, so name round 1 or later."));
     }
 
     /// <summary>

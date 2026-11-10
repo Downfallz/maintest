@@ -106,27 +106,29 @@ internal sealed class SteppedSession : ITableSession
         ArgumentNullException.ThrowIfNull(seats);
 
         var session = new SteppedSession(host, journal, match, seats, run, legacyStream, stopping);
+        Result<JournaledState> state;
         try
         {
             // Read once before the match is: a rebuild names every decision's seat as it replays it, and the
             // names come from the seat changes that are further down the same journal.
             var reading = await journal.ReadAsync(match.Run, stopping);
             session.Seated([.. reading.Entries.OfType<SeatChangeEntry>()]);
-            var state = await session._stepper.ReadAsync(match, stopping);
-            if (state.IsFailure)
-            {
-                session.Dispose();
-                return Result.Failure<SteppedSession>(state.Error);
-            }
-
-            session.Take(state.Value);
-            return Result.Success(session);
+            state = await session._stepper.ReadAsync(match, stopping);
         }
         catch
         {
-            session.Dispose();
+            session.Stop();
             throw;
         }
+
+        if (state.IsFailure)
+        {
+            session.Stop();
+            return Result.Failure<SteppedSession>(state.Error);
+        }
+
+        session.Take(state.Value);
+        return Result.Success(session);
     }
 
     /// <remarks>
@@ -181,12 +183,13 @@ internal sealed class SteppedSession : ITableSession
     {
         try
         {
-            await _stepper.ForgetAsync(_match.MatchId);
+            // Not the table's own token, which is cancelled by now: this is what lets the match go.
+            await _stepper.ForgetAsync(_match.MatchId, CancellationToken.None);
         }
         finally
         {
             _host.Events.Forget(_match.MatchId);
-            _outcome.TrySetCanceled();
+            _outcome.TrySetCanceled(_stopping);
         }
     }
 
@@ -210,53 +213,23 @@ internal sealed class SteppedSession : ITableSession
     public async Task<SwapOutcome> SwapAsync(PlayerSlot slot, Occupant next, string wanted, int round)
     {
         ArgumentNullException.ThrowIfNull(next);
-        Occupant? held = null;
-        var reached = 0;
+        var asked = new SwapAsking(slot, next, wanted, round);
         for (var attempt = 0; attempt < MovedInARow && !LetGo; attempt++)
         {
-            Result<JournaledState> changed;
-            try
-            {
-                changed = await _stepper.ChangeSeatAsync(
-                    _match,
-                    state =>
-                    {
-                        var plan = Seated(state.SeatChanges);
-                        held = plan.At(slot, RoundOf(state, slot));
-                        reached = Reached(slot, state, plan);
-                        if (round <= reached)
-                        {
-                            return Result.Failure<SeatChangeEntry>(JournalErrors.RoundReached);
-                        }
-
-                        var change = new SeatChangeEntry(slot, wanted, round, reached);
-                        lock (_gate)
-                        {
-                            _offered = (change, next);
-                        }
-
-                        return Result.Success(change);
-                    },
-                    _stopping);
-            }
-            catch (OperationCanceledException) when (_stopping.IsCancellationRequested)
+            var changed = await ChangedAsync(asked);
+            if (changed is not { } answered)
             {
                 break;
             }
-            catch
-            {
-                Behind();
-                throw;
-            }
 
-            if (changed.IsSuccess)
+            if (answered.IsSuccess)
             {
-                Take(changed.Value);
+                Take(answered.Value);
                 Pump();
-                return new SwapOutcome(held ?? Sitting(slot), reached == 0 ? null : reached, Taken: true);
+                return asked.Outcome(Sitting(slot), taken: true);
             }
 
-            if (changed.Error != JournalErrors.Moved)
+            if (answered.Error != JournalErrors.Moved)
             {
                 // Refused on a match that is over, the caller is about to ask whether it is.
                 await CaughtUpAsync();
@@ -265,7 +238,67 @@ internal sealed class SteppedSession : ITableSession
         }
 
         Behind();
-        return new SwapOutcome(held ?? Sitting(slot), reached == 0 ? null : reached, Taken: false);
+        return asked.Outcome(Sitting(slot), taken: false);
+    }
+
+    /// <summary>The seat change asked for, taken to the match's turn; none when the table was let go of meanwhile.</summary>
+    private async Task<Result<JournaledState>?> ChangedAsync(SwapAsking asked)
+    {
+        try
+        {
+            return await _stepper.ChangeSeatAsync(_match, state => Settled(asked, state), _stopping);
+        }
+        catch (OperationCanceledException) when (_stopping.IsCancellationRequested)
+        {
+            return null;
+        }
+        catch
+        {
+            Behind();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// The line for a seat change, or why there is none, against the match as its turn finds it: who holds the
+    /// seat and the last round it is committed to are read here, where nothing of the seat's can land after.
+    /// </summary>
+    private Result<SeatChangeEntry> Settled(SwapAsking asked, JournaledState state)
+    {
+        var plan = Seated(state.SeatChanges);
+        asked.Held = plan.At(asked.Slot, RoundOf(state, asked.Slot));
+        asked.Reached = Reached(asked.Slot, state, plan);
+        if (asked.Round <= asked.Reached)
+        {
+            return Result.Failure<SeatChangeEntry>(JournalErrors.RoundReached);
+        }
+
+        var change = new SeatChangeEntry(asked.Slot, asked.Wanted, asked.Round, asked.Reached);
+        lock (_gate)
+        {
+            _offered = (change, asked.Next);
+        }
+
+        return Result.Success(change);
+    }
+
+    /// <summary>A seat change being asked for, and what its turn on the match found of the seat.</summary>
+    private sealed class SwapAsking(PlayerSlot slot, Occupant next, string wanted, int round)
+    {
+        public PlayerSlot Slot { get; } = slot;
+
+        public Occupant Next { get; } = next;
+
+        public string Wanted { get; } = wanted;
+
+        public int Round { get; } = round;
+
+        /// <summary>Who held the seat when the change had its turn; none when it never had one.</summary>
+        public Occupant? Held { get; set; }
+
+        public int Reached { get; set; }
+
+        public SwapOutcome Outcome(Occupant sitting, bool taken) => new(Held ?? sitting, Reached == 0 ? null : Reached, taken);
     }
 
     /// <remarks>The board the last step left, the seat's held answers on it: where the match has got to, and how it ended.</remarks>
@@ -559,11 +592,11 @@ internal sealed class SteppedSession : ITableSession
     {
         if (Interlocked.Exchange(ref _pump, 2) == 0)
         {
-            _ = Task.Run(PumpAsync);
+            _ = Task.Run(TurnsAsync, CancellationToken.None);
         }
     }
 
-    private async Task PumpAsync()
+    private async Task TurnsAsync()
     {
         do
         {
@@ -590,51 +623,10 @@ internal sealed class SteppedSession : ITableSession
         var moved = 0;
         while (!LetGo)
         {
+            Turn turn;
             try
             {
-                if (Interlocked.Exchange(ref _stale, 0) != 0)
-                {
-                    var read = await _stepper.ReadAsync(_match, _stopping);
-                    if (read.IsFailure)
-                    {
-                        Ended(read.Error);
-                        return;
-                    }
-
-                    Take(read.Value);
-                }
-
-                if (!HasBegun || IsOver)
-                {
-                    return;
-                }
-
-                var step = await _stepper.AdvanceAsync(_match, changes => Seated(changes).Seats(), once: true, _stopping);
-                if (step.IsFailure && step.Error != JournalErrors.Moved)
-                {
-                    Ended(step.Error);
-                    return;
-                }
-
-                if (step.IsFailure)
-                {
-                    // Another writer took the match further: read it again, and wait a moment once it keeps happening.
-                    Behind(pump: false);
-                    if (++moved >= MovedInARow)
-                    {
-                        wait = await WaitedAsync(wait);
-                    }
-
-                    continue;
-                }
-
-                moved = 0;
-                wait = FirstRetry;
-                Take(step.Value.State);
-                if (!step.Value.Step.Owed)
-                {
-                    return;
-                }
+                turn = await TurnAsync();
             }
             catch (OperationCanceledException) when (_stopping.IsCancellationRequested)
             {
@@ -645,14 +637,7 @@ internal sealed class SteppedSession : ITableSession
             {
                 Behind(pump: false);
                 Console.WriteLine($"  Session {_match.Run}: the bots' turn could not be taken ({failure.Message}); it is taken again in {wait.TotalSeconds:0.##} s.");
-                try
-                {
-                    wait = await WaitedAsync(wait);
-                }
-                catch (OperationCanceledException)
-                {
-                    return;
-                }
+                turn = Turn.Failed;
             }
             catch (Exception failure)
             {
@@ -662,13 +647,99 @@ internal sealed class SteppedSession : ITableSession
                 _outcome.TrySetException(failure);
                 return;
             }
+
+            if (turn == Turn.Done)
+            {
+                return;
+            }
+
+            if (turn == Turn.Taken)
+            {
+                moved = 0;
+                wait = FirstRetry;
+            }
+            else if (turn == Turn.Failed || ++moved >= MovedInARow)
+            {
+                // The store is out, or another writer keeps taking the match further: not at once again.
+                if (await WaitedAsync(wait) is not { } next)
+                {
+                    return;
+                }
+
+                wait = next;
+            }
         }
     }
 
-    /// <summary>Waits before a turn is taken again, and says how long the next wait is.</summary>
-    private async Task<TimeSpan> WaitedAsync(TimeSpan wait)
+    /// <summary>
+    /// One turn of whoever takes the bots' turns: the match read again when it may be behind its journal, then
+    /// one of the agents' turns taken.
+    /// </summary>
+    private async Task<Turn> TurnAsync()
     {
-        await Task.Delay(wait, _host.Clock, _stopping);
+        if (Interlocked.Exchange(ref _stale, 0) != 0)
+        {
+            var read = await _stepper.ReadAsync(_match, _stopping);
+            if (read.IsFailure)
+            {
+                Ended(read.Error);
+                return Turn.Done;
+            }
+
+            Take(read.Value);
+        }
+
+        if (!HasBegun || IsOver)
+        {
+            return Turn.Done;
+        }
+
+        var step = await _stepper.AdvanceAsync(_match, changes => Seated(changes).Seats(), once: true, _stopping);
+        if (step.IsFailure && step.Error == JournalErrors.Moved)
+        {
+            // Another writer took the match further: it is read again before the next turn.
+            Behind(pump: false);
+            return Turn.Moved;
+        }
+
+        if (step.IsFailure)
+        {
+            Ended(step.Error);
+            return Turn.Done;
+        }
+
+        Take(step.Value.State);
+        return step.Value.Step.Owed ? Turn.Taken : Turn.Done;
+    }
+
+    /// <summary>How a turn of whoever takes the bots' turns went.</summary>
+    private enum Turn
+    {
+        /// <summary>Nothing more is owed: a person is asked, the match is over, or the table cannot be played on.</summary>
+        Done,
+
+        /// <summary>A turn was taken and the agents owe another.</summary>
+        Taken,
+
+        /// <summary>Another writer took the match further first.</summary>
+        Moved,
+
+        /// <summary>The store could not be reached.</summary>
+        Failed,
+    }
+
+    /// <summary>Waits before a turn is taken again, and says how long the next wait is; nothing when the table was let go of meanwhile.</summary>
+    private async Task<TimeSpan?> WaitedAsync(TimeSpan wait)
+    {
+        try
+        {
+            await Task.Delay(wait, _host.Clock, _stopping);
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+
         return wait + wait < LongestRetry ? wait + wait : LongestRetry;
     }
 

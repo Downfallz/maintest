@@ -79,6 +79,16 @@ internal sealed class PlaytestRun
     // over before the match is written into them.
     private readonly bool _reopened;
 
+    /// <summary>The record an earlier host left of the table, for a run opened over it (<see cref="Reopen" />).</summary>
+    private TableRecord? Reopened
+    {
+        init
+        {
+            _record = value ?? _record;
+            _reopened = value is not null;
+        }
+    }
+
     private PlaytestRun(
         RunPlace place,
         RunRecorder recorder,
@@ -86,12 +96,10 @@ internal sealed class PlaytestRun
         RunStamp stamp,
         TimeProvider clock,
         int seed,
-        Rebuild? rebuild,
-        TableRecord? reopened = null)
+        Rebuild? rebuild)
     {
         Journal = new DecisionJournal(place.Writer, clock, rebuild?.Recorded);
-        _record = rebuild?.Record ?? reopened;
-        _reopened = reopened is not null;
+        _record = rebuild?.Record;
         _staged = rebuild?.Staged;
         SessionId = place.SessionId;
         Location = place.Location;
@@ -212,7 +220,7 @@ internal sealed class PlaytestRun
             events,
             traceLimit: 1);
 
-        return new PlaytestRun(place, recorder, events, stamp, clock, setup.Seed, rebuilding is { } rebuild ? new Rebuild(rebuild.Record, rebuild.Recorded, staged!) : null, reopened);
+        return new PlaytestRun(place, recorder, events, stamp, clock, setup.Seed, rebuilding is { } rebuild ? new Rebuild(rebuild.Record, rebuild.Recorded, staged!) : null) { Reopened = reopened };
     }
 
     /// <summary>What a resumed run is resumed over: the record it will mark, the lines it replays, and the writer that holds the replay's dataset back.</summary>
