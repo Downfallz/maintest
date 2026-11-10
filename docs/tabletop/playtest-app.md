@@ -124,9 +124,9 @@ requires, and it is tested with `node --test table/*.test.js` alongside the stud
 
 ### 2.2 How a decision reaches the aggregate
 
-> Since ADR 0159 an ordinary table is not played this way: its match is stepped over its journal, a tap is a
-> decision submitted and nothing waits on a person (`docs/architecture/stateless-table-inventory.md`). What
-> follows is the model the app was built on, which practice tables still run on.
+> Since ADR 0159 no table is played this way: its match is stepped over its journal, a tap is a decision
+> submitted and nothing waits on a person (`docs/architecture/stateless-table-inventory.md`). What follows is
+> the model the app was built on, kept for why the seat, the swap and the recording are shaped as they are.
 
 The host plays the match with `MatchDriver.PlayAsync(matchId, seat1, seat2)`, which "asks what they can do,
 lets their agent decide, submits, and drives the resolution" (`MatchDriver.cs:11-18`). A **seat** is an

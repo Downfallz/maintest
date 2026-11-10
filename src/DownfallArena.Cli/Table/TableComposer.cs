@@ -166,11 +166,10 @@ internal sealed class TableComposer
     /// or the match it rebuilds is not the one the earlier host checkpointed -- the content, the rules or the
     /// engine changed under it; the table is let go of then, and the run stays in the store as it was.
     /// </summary>
-    /// <param name="journal">The journal's lines as the store lists them, which say whether the table had begun.</param>
-    public async Task<PlayedTable?> ResumeAsync(TableRecord record, IReadOnlyList<JournalEntry> journal, CancellationToken cancellationToken = default)
+    /// <param name="begun">Whether the table had begun: its record says so, or its journal holds a decision.</param>
+    public async Task<PlayedTable?> ResumeAsync(TableRecord record, bool begun, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(record);
-        ArgumentNullException.ThrowIfNull(journal);
         if (_store is null)
         {
             return null;
@@ -181,8 +180,14 @@ internal sealed class TableComposer
             throw new InvalidDataException($"Unsupported table event stream version {record.EventStreamVersion}.");
         }
 
-        return await BuildAsync(record.Request(), new Reopening(record, record.Begun || DecisionJournal.HoldsDecision(journal)), cancellationToken);
+        return await BuildAsync(record.Request(), new Reopening(record, record.Begun || begun), cancellationToken);
     }
+
+    /// <summary>
+    /// What a table's journal holds, read without rebuilding anything; none on a host that keeps nothing.
+    /// </summary>
+    public async Task<JournalReading?> JournalAsync(string id, CancellationToken cancellationToken = default) =>
+        _journal is { } journal ? await journal.ReadAsync(id, cancellationToken) : null;
 
     /// <summary>A table being picked up again: its record, and whether its match had begun.</summary>
     private sealed record Reopening(TableRecord Record, bool Begun);

@@ -144,27 +144,6 @@ internal sealed class StoredSessions(IArtifactStore store)
         }
     }
 
-    /// <summary>Every decision the table took, in order; empty when none was written.</summary>
-    public async Task<IReadOnlyList<JournalEntry>> JournalAsync(string id, CancellationToken cancellationToken = default)
-    {
-        var text = await store.Reader(id).ReadTextAsync(DecisionJournal.File, cancellationToken);
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return [];
-        }
-
-        var entries = new List<JournalEntry>();
-        foreach (var line in text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        {
-            if (JsonSerializer.Deserialize<JournalEntry>(line, ArtifactJson.LineOptions) is { } entry)
-            {
-                entries.Add(entry);
-            }
-        }
-
-        return entries;
-    }
-
     private async Task<RunManifest?> ManifestAsync(string id, CancellationToken cancellationToken)
     {
         try

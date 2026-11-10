@@ -349,7 +349,7 @@ internal sealed class SteppedSession : ITableSession
     /// journal. What the bots owe after it is not waited for: it is taken in the background, and the pages are
     /// told as it lands.
     /// </remarks>
-    public async Task<DecisionTaken> DecideAsync(PlayerSlot slot, PlayerDecision decision, long asked, PlayerOptions offered, int? round)
+    public async Task<DecisionTaken> DecideAsync(PlayerSlot slot, PlayerDecision decision, long asked)
     {
         ArgumentNullException.ThrowIfNull(decision);
         var reading = Read().State.Of(slot);
@@ -454,9 +454,6 @@ internal sealed class SteppedSession : ITableSession
             ? Result.Success()
             : Result.Failure(refusal);
     }
-
-    /// <remarks>Nothing to wait for: a decision is applied before <see cref="DecideAsync" /> answers.</remarks>
-    public Task SettledAsync(PlayerSlot slot, int traced) => Task.CompletedTask;
 
     /// <summary>What a seat's person is being asked, or nothing: before the table begins, once it is over, and while a bot holds the seat.</summary>
     private Asking? Waiting(PlayerSlot slot)
@@ -682,7 +679,7 @@ internal sealed class SteppedSession : ITableSession
             catch (Exception failure)
             {
                 // A bot that throws, a journal that cannot be read as one: the table ends without an outcome,
-                // as the driver's task did, and says why.
+                // and says why.
                 Console.WriteLine($"  Session {_match.Run} cannot be played on: {failure.Message}");
                 _outcome.TrySetException(failure);
                 return;

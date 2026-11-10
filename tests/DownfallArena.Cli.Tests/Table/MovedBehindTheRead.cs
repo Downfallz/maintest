@@ -55,10 +55,8 @@ internal sealed class MovedBehindTheRead(ITableSession inner, Func<SeatSnapshot,
         return snapshot;
     }
 
-    public Task<DecisionTaken> DecideAsync(PlayerSlot slot, PlayerDecision decision, long asked, PlayerOptions offered, int? round) =>
-        inner.DecideAsync(slot, decision, asked, offered, round);
+    public Task<DecisionTaken> DecideAsync(PlayerSlot slot, PlayerDecision decision, long asked) =>
+        inner.DecideAsync(slot, decision, asked);
 
     public Task<Result> ConcedeAsync(PlayerSlot slot) => inner.ConcedeAsync(slot);
-
-    public Task SettledAsync(PlayerSlot slot, int traced) => inner.SettledAsync(slot, traced);
 }

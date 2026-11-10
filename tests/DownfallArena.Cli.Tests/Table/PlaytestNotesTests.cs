@@ -390,7 +390,7 @@ public sealed class PlaytestNotesTests : IDisposable
         var resources = _host!.Services.GetRequiredService<IGameResources>();
         var elsewhere = new MovedBehindTheRead(table.Session, async read =>
         {
-            await table.Session.DecideAsync(PlayerSlot.Player1, PlayerDecision.Pass, read.Waiting!.Asked, read.Options, round: 1);
+            await table.Session.DecideAsync(PlayerSlot.Player1, PlayerDecision.Pass, read.Waiting!.Asked);
             await Waiting(table.Person, "Speed");
             table.Run.Served(PlayerSlot.Player1, table.Person.Waiting);
         });

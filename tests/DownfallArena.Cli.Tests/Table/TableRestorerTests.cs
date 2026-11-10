@@ -115,7 +115,7 @@ public sealed class TableRestorerTests : IDisposable
         var asked = person.Waiting.ShouldNotBeNull();
         var board = await Board(table.Session, PlayerSlot.Player1);
         var code = _earlier.Codes.Of(table.Seats[0]).ShouldNotBeNull();
-        var journal = await _before.Stored!.JournalAsync(table.Id, TestContext.Current.CancellationToken);
+        var journal = await JournalAsync(table.Id);
 
         var said = await TableRestorer.RestoreAsync(_after.Stored!, _after.Composer, _later, TimeProvider.System, TestContext.Current.CancellationToken);
 
@@ -133,12 +133,12 @@ public sealed class TableRestorerTests : IDisposable
         waiting.Kind.ShouldBe(asked.Kind);
         waiting.Creature.ShouldBe(asked.Creature);
         (await Board(rebuilt.Session, PlayerSlot.Player1)).ShouldBe(board);
-        (await _after.Stored!.JournalAsync(table.Id, TestContext.Current.CancellationToken)).Count.ShouldBe(journal.Count, "a replay writes nothing it read");
+        (await JournalAsync(table.Id)).Count.ShouldBe(journal.Count, "a replay writes nothing it read");
 
         // And the game goes on from there: the person's next decision is taken by the rebuilt table and written down.
         await Post(rebuilt, waiting, $$"""{"kind":"Intent","creature":{{waiting.Creature!.Value.Value}},"spell":"spell:strike:v1"}""");
 
-        (await _after.Stored!.JournalAsync(table.Id, TestContext.Current.CancellationToken)).Count.ShouldBe(journal.Count + 1);
+        (await JournalAsync(table.Id)).Count.ShouldBe(journal.Count + 1);
     }
 
     /// <summary>
@@ -158,13 +158,13 @@ public sealed class TableRestorerTests : IDisposable
         await Post(table, asked, $$"""{"kind":"Action","creature":{{asked.Creature!.Value.Value}},"spell":"{{offered.Spell}}","targets":[{{offered.LegalTargets.Candidates[0].Value}}]}""");
         var next = await Waiting(person);
         var board = await Board(table.Session, PlayerSlot.Player1);
-        var journal = await _before.Stored!.JournalAsync(table.Id, TestContext.Current.CancellationToken);
+        var journal = await JournalAsync(table.Id);
 
         await TableRestorer.RestoreAsync(_after.Stored!, _after.Composer, _later, TimeProvider.System, TestContext.Current.CancellationToken);
 
         (await _before.Stored!.RecordAsync(table.Id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Declaration.ShouldBe("at-activation");
-        journal.ShouldContain(entry => entry.Kind == "Action");
-        journal.ShouldNotContain(entry => entry.Kind == "Intent" || entry.Kind == "Target");
+        journal.ShouldContain(entry => (string?)entry["kind"] == "Action");
+        journal.ShouldNotContain(entry => (string?)entry["kind"] == "Intent" || (string?)entry["kind"] == "Target");
         var rebuilt = _later.ById(table.Id).ShouldNotBeNull();
         rebuilt.Session.Rules.CombatDeclaration.ShouldBe(CombatDeclaration.AtActivation);
         var waiting = await Waiting(rebuilt.Seats[0].Person!);
@@ -201,7 +201,7 @@ public sealed class TableRestorerTests : IDisposable
     {
         var table = await Opened(HostedTables.TwoPeople);
         table.Session.HasBegun.ShouldBeTrue();
-        (await _before.Stored!.JournalAsync(table.Id, TestContext.Current.CancellationToken)).ShouldBeEmpty();
+        (await JournalAsync(table.Id)).ShouldBeEmpty();
 
         await TableRestorer.RestoreAsync(_after.Stored!, _after.Composer, _later, TimeProvider.System, TestContext.Current.CancellationToken);
 
@@ -279,11 +279,9 @@ public sealed class TableRestorerTests : IDisposable
     {
         var table = await Opened(HostedTables.OnePerson);
         await PlayUntil(table, table.Seats[0].Person!, PlayerOptionsKind.Intent);
-        var store = new FileArtifactStore(_runs);
-        var journal = (await _before.Stored!.JournalAsync(table.Id, TestContext.Current.CancellationToken)).ToList();
-        journal[1] = journal[1] with { Slot = journal[1].Slot == "player1" ? "player2" : "player1" };
-        await store.Writer(table.Id).StartJsonLinesAsync(DecisionJournal.File, TestContext.Current.CancellationToken);
-        await store.Writer(table.Id).AppendJsonLinesAsync(DecisionJournal.File, journal, TestContext.Current.CancellationToken);
+        var journal = await JournalAsync(table.Id);
+        journal[1]["slot"] = (string?)journal[1]["slot"] == "player1" ? "player2" : "player1";
+        await RewriteAsync(table.Id, journal);
 
         var said = await TableRestorer.RestoreAsync(_after.Stored!, _after.Composer, _later, TimeProvider.System, TestContext.Current.CancellationToken);
 
@@ -354,11 +352,9 @@ public sealed class TableRestorerTests : IDisposable
         var table = await Opened(HostedTables.OnePerson);
         await PlayUntil(table, table.Seats[0].Person!, PlayerOptionsKind.Intent);
         await Task.Delay(200, TestContext.Current.CancellationToken);
-        var store = new FileArtifactStore(_runs);
-        var journal = (await _before.Stored!.JournalAsync(table.Id, TestContext.Current.CancellationToken)).ToList();
-        journal[1] = journal[1] with { Slot = journal[1].Slot == "player1" ? "player2" : "player1" };
-        await store.Writer(table.Id).StartJsonLinesAsync(DecisionJournal.File, TestContext.Current.CancellationToken);
-        await store.Writer(table.Id).AppendJsonLinesAsync(DecisionJournal.File, journal, TestContext.Current.CancellationToken);
+        var journal = await JournalAsync(table.Id);
+        journal[1]["slot"] = (string?)journal[1]["slot"] == "player1" ? "player2" : "player1";
+        await RewriteAsync(table.Id, journal);
         var before = await Files(table.Id, "manifest.json", "steps.jsonl", "episodes.jsonl");
 
         await TableRestorer.RestoreAsync(_after.Stored!, _after.Composer, _later, TimeProvider.System, TestContext.Current.CancellationToken);
@@ -420,11 +416,9 @@ public sealed class TableRestorerTests : IDisposable
     {
         var table = await Opened(HostedTables.OnePerson);
         await PlayUntil(table, table.Seats[0].Person!, PlayerOptionsKind.Intent);
-        var store = new FileArtifactStore(_runs);
-        var journal = (await _before.Stored!.JournalAsync(table.Id, TestContext.Current.CancellationToken)).ToList();
-        var kept = journal.Take(journal.FindLastIndex(entry => entry.Slot == "player1" && entry.Kind == "Speed")).ToList();
-        await store.Writer(table.Id).StartJsonLinesAsync(DecisionJournal.File, TestContext.Current.CancellationToken);
-        await store.Writer(table.Id).AppendJsonLinesAsync(DecisionJournal.File, kept, TestContext.Current.CancellationToken);
+        var journal = await JournalAsync(table.Id);
+        var kept = journal.Take(journal.FindLastIndex(entry => (string?)entry["slot"] == "player1" && (string?)entry["kind"] == "Speed")).ToList();
+        await RewriteAsync(table.Id, kept);
 
         await TableRestorer.RestoreAsync(_after.Stored!, _after.Composer, _later, TimeProvider.System, TestContext.Current.CancellationToken);
 
@@ -438,11 +432,9 @@ public sealed class TableRestorerTests : IDisposable
     private async Task Diverged(PlayedTable table)
     {
         await Task.Delay(200, TestContext.Current.CancellationToken);
-        var store = new FileArtifactStore(_runs);
-        var journal = (await _before.Stored!.JournalAsync(table.Id, TestContext.Current.CancellationToken)).ToList();
-        journal[1] = journal[1] with { Slot = journal[1].Slot == "player1" ? "player2" : "player1" };
-        await store.Writer(table.Id).StartJsonLinesAsync(DecisionJournal.File, TestContext.Current.CancellationToken);
-        await store.Writer(table.Id).AppendJsonLinesAsync(DecisionJournal.File, journal, TestContext.Current.CancellationToken);
+        var journal = await JournalAsync(table.Id);
+        journal[1]["slot"] = (string?)journal[1]["slot"] == "player1" ? "player2" : "player1";
+        await RewriteAsync(table.Id, journal);
     }
 
     /// <summary>The host's own table holds its place before the rebuild, so a store full of open tables cannot take it.</summary>
@@ -494,6 +486,18 @@ public sealed class TableRestorerTests : IDisposable
     }
 
     private static int Lines(string? text) => text.ShouldNotBeNull().Split('\n', StringSplitOptions.RemoveEmptyEntries).Length;
+
+    /// <summary>The lines of a table's journal as they are written, to read or to rewrite.</summary>
+    private async Task<List<System.Text.Json.Nodes.JsonObject>> JournalAsync(string id)
+    {
+        var path = Path.Combine(_runs, id, PlaytestRun.JournalFile);
+        var text = File.Exists(path) ? await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken) : string.Empty;
+        return [.. text.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(line => System.Text.Json.Nodes.JsonNode.Parse(line)!.AsObject())];
+    }
+
+    /// <summary>A table's journal replaced by these lines: what an engine or content that changed under it would read.</summary>
+    private async Task RewriteAsync(string id, IEnumerable<System.Text.Json.Nodes.JsonObject> lines) =>
+        await File.WriteAllLinesAsync(Path.Combine(_runs, id, PlaytestRun.JournalFile), lines.Select(line => line.ToJsonString()), TestContext.Current.CancellationToken);
 
     private async Task<IReadOnlyList<string?>> Files(string id, params string[] names)
     {
@@ -569,8 +573,8 @@ public sealed class TableRestorerTests : IDisposable
         {
             try
             {
-                var journal = await _before.Stored!.JournalAsync(table.Id, TestContext.Current.CancellationToken);
-                if (journal.Count(entry => entry.Slot == "player2" && entry.Kind == "Intent") == HostedTables.Rules.TeamSize)
+                var journal = await JournalAsync(table.Id);
+                if (journal.Count(entry => (string?)entry["slot"] == "player2" && (string?)entry["kind"] == "Intent") == HostedTables.Rules.TeamSize)
                 {
                     return;
                 }

@@ -35,21 +35,13 @@ internal sealed class PlaytestRun
     public const string NotesFile = "notes.jsonl";
     public const string CatalogueFile = "catalogue.json";
 
-    /// <summary>What a record and a journal name beside the dataset: the two files a rebuild reads (ADR 0091).</summary>
-    public static readonly IReadOnlyList<string> RebuildFiles = [TableRecord.File, DecisionJournal.File];
+    /// <summary>The table's journal (ADR 0159), started with the run so a session abandoned before its first decision lists it.</summary>
+    public const string JournalFile = "decisions.jsonl";
 
-    // How long a checkpoint waits for the decision it follows to reach the trace, and how often it looks. The
-    // driver applies one command in microseconds, so this is all but always over on the first look; the bound
-    // exists so that a driver which is not coming back costs a stale trace rather than a hanging tap.
+    // How long closing waits for a decision still being written down, and how often it looks. The bound exists
+    // so that a thread which is not coming back costs a missing note rather than a table that never closes.
     private static readonly TimeSpan GrowthWait = TimeSpan.FromMilliseconds(250);
     private static readonly TimeSpan GrowthStep = TimeSpan.FromMilliseconds(5);
-
-    // How long a rebuilt match may take to reach the checkpoint it is held against: the bots deciding past the
-    // last recorded decision, each as slow as it is. Long against a bot's decision, short against a host start.
-    private static readonly TimeSpan CatchUpWait = TimeSpan.FromSeconds(10);
-
-    // How long a rebuilt trace stands still, with a person asked a question, before it is taken to have stopped.
-    private static readonly TimeSpan StandingStill = TimeSpan.FromMilliseconds(500);
 
     private readonly IArtifactWriter _writer;
     private readonly IArtifactReader _reader;
@@ -95,12 +87,8 @@ internal sealed class PlaytestRun
         MatchTraceRecorder events,
         RunStamp stamp,
         TimeProvider clock,
-        int seed,
-        Rebuild? rebuild)
+        int seed)
     {
-        Journal = new DecisionJournal(place.Writer, clock, rebuild?.Recorded);
-        _record = rebuild?.Record;
-        _staged = rebuild?.Staged;
         SessionId = place.SessionId;
         Location = place.Location;
         _writer = place.Writer;
@@ -115,9 +103,6 @@ internal sealed class PlaytestRun
 
     /// <summary>The name of this session's run in its store, and the id every note carries.</summary>
     public string SessionId { get; }
-
-    /// <summary>Every decision of the match as it is taken, and what a rebuild replays (ADR 0091).</summary>
-    public DecisionJournal Journal { get; }
 
     /// <summary>
     /// Where the session is being written, which its players are told before the first tap: a directory on
@@ -169,21 +154,7 @@ internal sealed class PlaytestRun
     /// name, and a table told <c>--no-record</c> still has to be found by it (ADR 0081).
     /// </summary>
     public static PlaytestRun Open(IArtifactStore store, string id, PlaytestSetup setup, MatchTraceRecorder events, TimeProvider clock) =>
-        Build(store, id, setup, events, clock, rebuilding: null);
-
-    /// <summary>
-    /// Opens a session over what an earlier host wrote, to replay it: the journal starts full and the files
-    /// are not started over. The dataset files are, because their steps were in the earlier host's memory
-    /// and are re-recorded by the replay, but not before <see cref="KeepAsync" />: a replay can be refused,
-    /// and a run refused is left as the earlier host wrote it. The notes, the catalogue, the record and the
-    /// journal were written as they happened and are kept; the record is the one marked when this table ends.
-    /// </summary>
-    public static PlaytestRun Resume(IArtifactStore store, string id, PlaytestSetup setup, MatchTraceRecorder events, TimeProvider clock, TableRecord record, IReadOnlyList<JournalEntry> recorded)
-    {
-        ArgumentNullException.ThrowIfNull(record);
-        ArgumentNullException.ThrowIfNull(recorded);
-        return Build(store, id, setup, events, clock, (record, recorded));
-    }
+        Build(store, id, setup, events, clock);
 
     /// <summary>
     /// The recording of a table a host picks up again, when the table is stepped over its journal (ADR 0159).
@@ -194,10 +165,10 @@ internal sealed class PlaytestRun
     public static PlaytestRun Reopen(IArtifactStore store, string id, PlaytestSetup setup, MatchTraceRecorder events, TimeProvider clock, TableRecord record)
     {
         ArgumentNullException.ThrowIfNull(record);
-        return Build(store, id, setup, events, clock, rebuilding: null, record);
+        return Build(store, id, setup, events, clock, record);
     }
 
-    private static PlaytestRun Build(IArtifactStore store, string id, PlaytestSetup setup, MatchTraceRecorder events, TimeProvider clock, (TableRecord Record, IReadOnlyList<JournalEntry> Recorded)? rebuilding, TableRecord? reopened = null)
+    private static PlaytestRun Build(IArtifactStore store, string id, PlaytestSetup setup, MatchTraceRecorder events, TimeProvider clock, TableRecord? reopened = null)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
@@ -210,21 +181,17 @@ internal sealed class PlaytestRun
         var stamp = RunStamp.Create(EngineVersion.Current, setup.Resources, setup.Rules, schema, setup.Player1Agent, setup.Player2Agent, setup.Seed);
 
         // One trace, because a session is one match: the limit is what stops the recorder from being asked for
-        // a second one it never had. On a rebuild its writes are held back until the replay is kept.
-        var staged = rebuilding is null ? null : new StagedArtifactWriter(place.Writer);
+        // a second one it never had.
         var recorder = new RunRecorder(
-            staged ?? place.Writer,
+            place.Writer,
             stamp,
             StepEncoding.For(schema, setup.Resources, setup.Rules),
             clock,
             events,
             traceLimit: 1);
 
-        return new PlaytestRun(place, recorder, events, stamp, clock, setup.Seed, rebuilding is { } rebuild ? new Rebuild(rebuild.Record, rebuild.Recorded, staged!) : null) { Reopened = reopened };
+        return new PlaytestRun(place, recorder, events, stamp, clock, setup.Seed) { Reopened = reopened };
     }
-
-    /// <summary>What a resumed run is resumed over: the record it will mark, the lines it replays, and the writer that holds the replay's dataset back.</summary>
-    private sealed record Rebuild(TableRecord Record, IReadOnlyList<JournalEntry> Recorded, StagedArtifactWriter Staged);
 
     /// <summary>
     /// Starts the dataset files and writes what this session is playing. The manifest lands with zero counts,
@@ -234,84 +201,8 @@ internal sealed class PlaytestRun
     {
         await _recorder.StartAsync(cancellationToken);
         await _writer.StartJsonLinesAsync(NotesFile, cancellationToken);
-        await _writer.StartJsonLinesAsync(DecisionJournal.File, cancellationToken);
+        await _writer.StartJsonLinesAsync(JournalFile, cancellationToken);
         await _writer.WriteJsonAsync(CatalogueFile, catalogue, cancellationToken);
-    }
-
-    /// <summary>Starts the dataset files over for a replay, and nothing else: see <see cref="Resume" />. Held back until <see cref="KeepAsync" />.</summary>
-    public Task ResumeAsync(CancellationToken cancellationToken = default) => _recorder.StartAsync(cancellationToken);
-
-    /// <summary>
-    /// The replay reached the end of the record and the rebuilt match agrees with it: the dataset files it
-    /// re-recorded land now, in the order they were written, and every write from here on lands as it comes.
-    /// Nothing to do for a run opened rather than resumed.
-    /// </summary>
-    public Task KeepAsync(CancellationToken cancellationToken = default) => _staged?.LetThroughAsync(cancellationToken) ?? Task.CompletedTask;
-
-    private readonly StagedArtifactWriter? _staged;
-
-    /// <summary>
-    /// Whether the match as rebuilt agrees with the trace the earlier host checkpointed: every entry it wrote
-    /// is an entry of the rebuilt trace, in its place. A record can fit a match structurally and still be
-    /// another match -- the same legal moves under another seed, or under content that changed -- and the
-    /// boards the checkpoint holds are what says so. True when there is no checkpoint to hold it against. Null
-    /// when it cannot say: the rebuilt trace was still short of the checkpoint when the wait for a bot to catch up
-    /// ran out, which a slow start explains as well as a record that no longer fits.
-    /// </summary>
-    /// <param name="stalled">
-    /// Whether the rebuilt match is waiting on somebody who is not coming: a person asked a question during the
-    /// replay. While it holds and the trace stops growing, the wait for the trace to catch up ends early.
-    /// </param>
-    public async Task<bool?> AgreesWithCheckpointAsync(MatchId matchId, Func<bool>? stalled = null, CancellationToken cancellationToken = default)
-    {
-        var text = await _reader.ReadTextAsync($"{RunRecorder.TracesDirectory}/{matchId}.json", cancellationToken);
-        if (text is null)
-        {
-            return true;
-        }
-
-        using var checkpoint = System.Text.Json.JsonDocument.Parse(text);
-        if (!checkpoint.RootElement.TryGetProperty("entries", out var written) || written.ValueKind != System.Text.Json.JsonValueKind.Array)
-        {
-            return true;
-        }
-
-        // The checkpoint can run past the last recorded decision: a bot that decided after it, and whose line the
-        // earlier host did not live to write, is asked again here and decides live. That takes as long as the
-        // bot takes, so the rebuilt trace is given the time to reach the checkpoint before it is held against it.
-        // The time is the clock's, not a count of steps: a delay of a few milliseconds lasts longer than asked, and
-        // counted as asked a ten-second bound was close to twenty in the container.
-        // A person asked a question moves nothing until they answer, and nobody answers during a rebuild: once one
-        // is asked and the trace has stood still a moment, waiting longer only delays the host's start.
-        var started = _clock.GetTimestamp();
-        var length = _events.Length(matchId);
-        var still = started;
-        var stopped = false;
-        while (_events.Length(matchId) < written.GetArrayLength() && _kept is null && _clock.GetElapsedTime(started) < CatchUpWait)
-        {
-            if (_events.Length(matchId) != length)
-            {
-                length = _events.Length(matchId);
-                still = _clock.GetTimestamp();
-            }
-            else if (stalled?.Invoke() == true && _clock.GetElapsedTime(still) >= StandingStill)
-            {
-                stopped = true;
-                break;
-            }
-
-            await Task.Delay(GrowthStep, _clock, cancellationToken);
-        }
-
-        var rebuilt = System.Text.Json.JsonSerializer.SerializeToElement(Trace(matchId), ArtifactJson.DocumentOptions);
-        if (written.GetArrayLength() > rebuilt.GetArrayLength())
-        {
-            // Short because the match stopped -- at a person's question, or closed -- is an answer; short because
-            // the time ran out with a bot still deciding is not.
-            return stopped || _kept is not null ? false : null;
-        }
-
-        return Agree(written, rebuilt, written.GetArrayLength());
     }
 
     /// <summary>
@@ -484,33 +375,6 @@ internal sealed class PlaytestRun
     }
 
     private const int RecordAttempts = 5;
-
-    /// <summary>
-    /// The agent the driver plays for a seat: the seat itself, wrapped so every decision it makes is a step.
-    /// It goes <em>around</em> the seat rather than inside it, so a handover swaps who is seated without
-    /// swapping the recording out with them.
-    /// </summary>
-    /// <remarks>
-    /// The seat is also what says who decides each step: it is the thing a handover or a swap changes, so
-    /// asking it is asking the one place that knows. Working it out here instead would be a second copy of the
-    /// seating rule, kept in a file that has no reason to be edited when the seating changes. It answers with
-    /// the occupant as well as the name, so the recorder asks whoever it names rather than reading the seat a
-    /// second time.
-    /// </remarks>
-    public IPlayerAgent Wrap(MatchId matchId, SeatAgent seat)
-    {
-        ArgumentNullException.ThrowIfNull(seat);
-        return _recorder.Wrap(matchId, seat, board =>
-        {
-            var decider = seat.Deciding(board);
-            Reseated(board.Slot, decider.Name, board.RoundNumber);
-
-            // The journal goes around the occupant, inside the seat: the seat still says who is sitting and
-            // applies its swaps, and the journal answers for them while it is replaying and writes after them
-            // once it is not.
-            return decider with { Agent = Journal.Around(decider.Agent, board.Slot) };
-        });
-    }
 
     /// <summary>
     /// Whoever is about to decide for a seat of a stepped match, recorded as an agent seated there would be: the
@@ -701,21 +565,6 @@ internal sealed class PlaytestRun
         _writer.AppendJsonLinesAsync(NotesFile, [note], cancellationToken);
 
     /// <summary>
-    /// Rewrites the trace as it stands. Called after every accepted decision, which is cheap next to a person
-    /// thinking and is the difference between an abandoned session being readable and being nothing.
-    /// </summary>
-    /// <remarks>
-    /// It does nothing once the session has been closed, and that is not an optimisation. A decision can still
-    /// be in flight when the match ends -- the request thread parks on a board query behind the driver's own
-    /// writes, the host closes the session, and only then does the request reach here -- and by that point
-    /// <see cref="MatchTraceRecorder.Complete" /> has handed the finished trace over and forgotten the match.
-    /// Writing then would truncate the real trace to an empty one. The recorder answering null for a match it
-    /// no longer holds is what makes that impossible rather than merely unlikely.
-    /// </remarks>
-    /// <summary>How far the trace has got, so a caller can tell when something it set in motion has reached it.</summary>
-    public int TraceLength(MatchId matchId) => Trace(matchId).Count;
-
-    /// <summary>
     /// The match's trace, live or as closing kept it: a record whose last line ends the match closes the
     /// session during its own replay, and the recorder forgets the match as it is handed it.
     /// </summary>
@@ -741,27 +590,6 @@ internal sealed class PlaytestRun
         _kept is { } final
             ? [.. final.Skip(Math.Clamp(since, 0, final.Count))]
             : _events.EntriesOf(matchId, since);
-
-    /// <summary>
-    /// Waits until the trace has grown past <paramref name="beyond" />, or until the wait runs out.
-    /// </summary>
-    /// <remarks>
-    /// A decision is applied on the driver's own thread, and the seat holding it is released asynchronously --
-    /// so the request thread that accepted the tap runs on ahead of the command it caused. This is half of
-    /// catching up with it: the first event of that command appearing is what says the command has *started*.
-    /// The caller pairs it with the table's own gate to learn that the command has finished. The bound is
-    /// there so a driver that stalls costs a stale trace rather than a player's tap hanging.
-    /// </remarks>
-    public async Task WaitForTraceAsync(MatchId matchId, int beyond, CancellationToken cancellationToken = default)
-    {
-        // Not past the closing either: once the trace is kept, the recorder forgets the match and its length
-        // reads as nothing from then on.
-        var started = _clock.GetTimestamp();
-        while (_events.Length(matchId) <= beyond && _kept is null && _clock.GetElapsedTime(started) < GrowthWait)
-        {
-            await Task.Delay(GrowthStep, _clock, cancellationToken);
-        }
-    }
 
     /// <param name="upTo">How many of the match's entries are its own, as its journal holds it; every one when none.</param>
     public Task CheckpointAsync(MatchId matchId, int? upTo, CancellationToken cancellationToken = default)
@@ -826,7 +654,6 @@ internal sealed class PlaytestRun
 
         await _recorder.MatchPlayedAsync(matchId, _seed, player1Board, cancellationToken);
         await _recorder.FinishAsync(cancellationToken);
-        await Task.WhenAny(Journal.Written);
         await MarkAsync(TableRecord.Finished, cancellationToken);
 
         // And only now are the files written. Saying so at the top of this method would let the session page

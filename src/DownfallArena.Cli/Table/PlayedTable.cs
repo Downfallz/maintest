@@ -115,8 +115,8 @@ internal sealed class PlayedTable : IDisposable
             return;
         }
 
-        // Read before the cancellation, which can end the match synchronously: a driver let go of inside
-        // Cancel itself leaves the table reading as over by the time it is asked whether it was.
+        // Read before the cancellation, which ends the session at once: a table let go of inside Cancel
+        // itself reads as over by the time it is asked whether it was.
         if (Run is { } run && !IsOver)
         {
             Closing = run.MarkAsync(TableRecord.Closed, CancellationToken.None);
@@ -128,9 +128,9 @@ internal sealed class PlayedTable : IDisposable
     public void Touch(DateTimeOffset now) => Interlocked.Exchange(ref _touched, now.UtcTicks);
 
     /// <summary>
-    /// After the table is let go of: waits for its driver to stop and for every write of its recording to
-    /// land, so what is done to its run next is done after the match and not beside it. Bounded: a driver
-    /// that is not coming back must not hold the operator's request.
+    /// After the table is let go of: waits for its session to have stopped -- whatever step it was taking
+    /// finished -- and for every write of its recording to land, so what is done to its run next is done after
+    /// the match and not beside it. Bounded: a step that is not coming back must not hold the operator's request.
     /// </summary>
     public async Task QuiesceAsync(CancellationToken cancellationToken = default)
     {
@@ -157,17 +157,16 @@ internal sealed class PlayedTable : IDisposable
     }
 
     /// <summary>
-    /// Stops the match if it is still being played and lets the session go. A seat waiting on a person is
-    /// released with a cancellation, which ends the driver without an outcome; the recording keeps what it
-    /// has, which is what an abandoned session is, and its record keeps saying open: letting a table go is
+    /// Stops the match if it is still being played and lets the session go, which ends it without an outcome;
+    /// the recording keeps what it has, which is what an abandoned session is, and its record keeps saying open: letting a table go is
     /// what a host does as it stops, and the next host rebuilds what it let go of. Closing a table for good
     /// is <see cref="Close" />. Once only: the registry lets a table go and a test holds it too, and neither
     /// should have to know about the other.
     /// </summary>
     /// <remarks>
-    /// The session is let go of once the driver has stopped, not now: the driver may be inside a command,
-    /// holding the gate the session disposes, and a gate disposed under it is an exception where an outcome
-    /// should be. Cancelling is what ends the driver; the outcome completing is what says it has.
+    /// The session is let go of once its match has stopped, not now: a step may be inside a command, and the
+    /// session lets its match go only once that step is over. Cancelling is what stops it; the outcome
+    /// completing is what says it has.
     /// </remarks>
     public void Dispose()
     {

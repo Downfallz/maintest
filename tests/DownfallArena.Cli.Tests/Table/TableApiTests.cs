@@ -657,38 +657,6 @@ public sealed partial class TableApiTests : IDisposable
     }
 
     /// <summary>
-    /// On the blocking model practice tables keep, a poll reads the options and the question in separate steps,
-    /// and the match does not wait for it in between: the other seat resolves an action the moment it binds it
-    /// (ADR 0083), and a second device on the same seat can answer. Whichever side of the options read the match
-    /// moves on, a page was once asked for an Intent beside the options of the step before, and had no spell to
-    /// offer.
-    /// </summary>
-    /// <remarks>
-    /// Kept on a table the driver plays: what it holds is the reads <see cref="DrivenSession" /> makes again
-    /// until the question has not moved, and a stepped table has no such reads to move between.
-    /// </remarks>
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task A_seat_is_served_the_options_of_the_question_it_is_asked(bool movesBeforeTheRead)
-    {
-        var table = await SeatedByTheDriver();
-        var moving = table.Session.Queries with { GetPlayerOptions = new AnsweredWhileRead(table.Session.Queries.GetPlayerOptions, table.Person, movesBeforeTheRead) };
-        var api = Driven.Api(
-            table.Session,
-            moving,
-            [new TableSeat(PlayerSlot.Player1, table.Token, table.Person), new TableSeat(PlayerSlot.Player2, "token-of-player-2", Person: null)],
-            CatalogueProjection.Build(_host!.Services.GetRequiredService<IGameResources>(), Rules),
-            _host.Services.GetRequiredService<MatchTraceRecorder>());
-
-        var answer = await api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token);
-
-        using var payload = JsonDocument.Parse(Text(answer));
-        payload.RootElement.GetProperty("options").GetProperty("kind").GetString()
-            .ShouldBe(payload.RootElement.GetProperty("waitingFor").GetString());
-    }
-
-    /// <summary>
     /// The same on a stepped table, where the question, the board and the options are one moment by
     /// construction. The only place left for the match to move is behind that read: a second device on the seat
     /// answers before the route has answered the poll. What is served is still the question that was read,
@@ -700,7 +668,7 @@ public sealed partial class TableApiTests : IDisposable
         var table = await Seated();
         var elsewhere = new MovedBehindTheRead(table.Session, async read =>
         {
-            await table.Session.DecideAsync(PlayerSlot.Player1, PlayerDecision.Pass, read.Waiting!.Asked, read.Options, round: 1);
+            await table.Session.DecideAsync(PlayerSlot.Player1, PlayerDecision.Pass, read.Waiting!.Asked);
             await Waiting(table.Person, "Speed");
         });
 
@@ -755,20 +723,8 @@ public sealed partial class TableApiTests : IDisposable
         return (api, session, person, token);
     }
 
-    /// <summary>The same two seats on the blocking model: a driver plays the match and waits on the person.</summary>
-    private async Task<(TableSession Session, HumanSeat Person, string Token)> SeatedByTheDriver()
-    {
-        var resources = Hosted();
-        var person = new HumanSeat(_stopping.Token);
-        var bot = new GreedyAgent(resources, Rules);
-        var session = await TableSession.StartAsync(_host!.Services, Rules, seed: 7, new SeatAgent(new Occupant(person, PersonName)), new SeatAgent(new Occupant(bot, "greedy")), cancellationToken: _stopping.Token);
-
-        await Waiting(person, "Evolution");
-        return (session, person, "token-of-player-1");
-    }
-
     /// <summary>The bots' turns are taken behind a tap, so a test waits for the question rather than assuming it.</summary>
-    private static async Task Waiting(ISeatPerson person, string kind)
+    private static async Task Waiting(SteppedPerson person, string kind)
     {
         for (var attempt = 0; attempt < 300; attempt++)
         {
@@ -796,37 +752,4 @@ public sealed partial class TableApiTests : IDisposable
 
     private static string Text(StudioResponse response) => Encoding.UTF8.GetString(response.Body);
 
-    /// <summary>
-    /// Reads the options and moves the match on, one before the other: the person passes every evolution until
-    /// the match asks them something else. That is the step the match can take between the reads of one poll,
-    /// made certain instead of left to the scheduler.
-    /// </summary>
-    private sealed class AnsweredWhileRead(IQueryHandler<GetPlayerOptions, Result<PlayerOptions>> inner, HumanSeat person, bool movesBeforeTheRead)
-        : IQueryHandler<GetPlayerOptions, Result<PlayerOptions>>
-    {
-        public async Task<Result<PlayerOptions>> HandleAsync(GetPlayerOptions query, CancellationToken cancellationToken = default)
-        {
-            if (movesBeforeTheRead)
-            {
-                await PassEvolutionsAsync();
-            }
-
-            var options = await inner.HandleAsync(query, cancellationToken);
-            await PassEvolutionsAsync();
-            return options;
-        }
-
-        private async Task PassEvolutionsAsync()
-        {
-            while (person.Waiting is not { Kind: not PlayerOptionsKind.Evolution })
-            {
-                if (person.Waiting is { } question)
-                {
-                    person.Submit(PlayerDecision.Pass, question.Asked);
-                }
-
-                await Task.Delay(5, TestContext.Current.CancellationToken);
-            }
-        }
-    }
 }
