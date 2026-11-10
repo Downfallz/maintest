@@ -294,6 +294,29 @@ public sealed class JournaledStepperTests
         elsewhere.Value.Outcome.ShouldBe(conceded.Value.Outcome);
     }
 
+    /// <summary>
+    /// The command that concedes changes the match in memory before it is saved and its events are handed on.
+    /// When that fails, the match in memory is conceded and the journal does not say so: it is let go of, so
+    /// the next reader finds the match the journal describes, still being played.
+    /// </summary>
+    [Fact]
+    public async Task A_concession_that_fails_once_the_match_has_taken_it_is_not_kept_in_memory()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent);
+        var journal = new JournalStore();
+        var replica = new Replica(journal);
+        await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken);
+        replica.Store.Dispatcher.DispatchAsync(Arg.Any<Match>(), Arg.Any<CancellationToken>()).Returns(Task.FromException(new IOException("The listener is down.")));
+
+        await Should.ThrowAsync<IOException>(() => replica.Journaled.ConcedeAsync(table, PlayerSlot.Player2, TestContext.Current.CancellationToken));
+        replica.Store.Dispatcher.DispatchAsync(Arg.Any<Match>(), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
+        var read = await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken);
+
+        journal.Lines.ShouldBeEmpty();
+        read.Value.Outcome.ShouldBeNull();
+        read.Value.Player1.View.Asked.ShouldBe(new SeatQuestion(PlayerOptionsKind.Evolution, null));
+    }
+
     [Fact]
     public async Task A_seat_told_to_change_hands_is_a_line_the_next_reader_finds_and_the_match_is_as_it_was()
     {

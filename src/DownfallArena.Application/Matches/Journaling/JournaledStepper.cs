@@ -100,14 +100,17 @@ public sealed class JournaledStepper(
                 return Result.Failure<JournaledState>(loaded.Error);
             }
 
-            var conceded = await concede.HandleAsync(new Concede(match.MatchId, slot), cancellationToken);
-            if (conceded.IsFailure)
-            {
-                return Result.Failure<JournaledState>(conceded.Error);
-            }
-
             try
             {
+                // Inside what lets the match go on a failure: the command changes the match in memory before it
+                // is saved and its events are handed on, so one that throws there leaves a conceded match the
+                // journal knows nothing of.
+                var conceded = await concede.HandleAsync(new Concede(match.MatchId, slot), cancellationToken);
+                if (conceded.IsFailure)
+                {
+                    return Result.Failure<JournaledState>(conceded.Error);
+                }
+
                 var written = await WriteAsync(match, kept, loaded.Value, [new ConcessionEntry(slot)], cancellationToken);
                 if (written is null)
                 {
@@ -119,7 +122,7 @@ public sealed class JournaledStepper(
             }
             catch
             {
-                // The match in memory is conceded and the journal may not say so.
+                // The match in memory may be conceded, and the journal may not say so.
                 await LetGoAsync(match.MatchId, kept, CancellationToken.None);
                 throw;
             }
