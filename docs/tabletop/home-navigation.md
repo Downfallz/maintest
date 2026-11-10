@@ -71,7 +71,7 @@ its window, each with the action it calls for:
 
 | Waiting | Action |
 | --- | --- |
-| A game where it is the player's turn (the host asks a seat they hold) | **Play →** opens it with that seat |
+| A game against another person where it is the player's turn (the host asks a seat they hold); a game against a bot or on one shared device never counts, since nobody waits on it | **Play →** opens it with that seat |
 | An invitation a friend sent (ADR 0129) | **Accept & play →** takes the seat and opens the game; **Decline** |
 | A friend request | **Accept**, **Decline** (silent, as in Friends) |
 | An invitation of theirs a friend declined | **Open the lobby →**, where Invite another, Open and Close are |

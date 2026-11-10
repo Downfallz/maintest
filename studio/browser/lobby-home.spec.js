@@ -374,6 +374,9 @@ for (const file of ['leaderboard', 'battle', 'index']) {
     await expect(page.locator('#account-name')).toHaveText(player.username);
     // The bell reads what waits on its own on every page: the turn at Bastien's table and Alex's request.
     await expect(page.locator('#inbox-badge')).toHaveText('2');
+    // Whole on screen, even where the header sits at the screen's top edge (the battle view on a phone).
+    await expect(page.locator('#inbox-badge')).toBeInViewport({ ratio: 1 });
+    expect(await page.locator('#inbox-badge').evaluate(badge => badge.getBoundingClientRect().top >= 0)).toBe(true);
     await openNavigation(page);
     const nav = page.getByRole('navigation', { name: 'Main navigation' });
     await expect(nav.locator(':scope > :visible')).toHaveText(['Lobby', /Friends/, 'Leaderboard', 'Join with a code']);
