@@ -1,12 +1,15 @@
+using Azure.Data.Tables;
 using Azure.Identity;
 using Azure.Storage;
 using Azure.Storage.Blobs;
 using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.Application.Learning.Ports;
 using DownfallArena.Application.Matches.Ports;
+using DownfallArena.Application.Tables.Ports;
 using DownfallArena.Infrastructure.Accounts;
 using DownfallArena.Infrastructure.Learning;
 using DownfallArena.Infrastructure.Matches;
+using DownfallArena.Infrastructure.Tables;
 
 namespace DownfallArena.Cli.Table;
 
@@ -149,6 +152,46 @@ internal static class ArtifactStores
     }
 
     /// <summary>The recordings' container URL with its container swapped for the accounts' one.</summary>
+    /// <summary>
+    /// The index of the tables a store's runs are (ADR 0161): files beside the runs' directory, or Table Storage in
+    /// the account that holds the runs' container, under the same identity.
+    /// </summary>
+    public static async Task<ITableIndex> OpenIndexAsync(string target, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(target);
+        if (!IsContainerUrl(target))
+        {
+            var runs = Path.GetFullPath(target).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return new FileTableIndex(Path.Combine(Path.GetDirectoryName(runs) ?? runs, IndexDirectory));
+        }
+
+        var recordings = new Uri(target, UriKind.Absolute);
+        var endpoint = TablesUri(recordings);
+        var table = IsEmulator(recordings)
+            ? new TableClient(endpoint, StorageTableIndex.Name, new TableSharedKeyCredential(DevelopmentAccount, DevelopmentKey))
+            : new TableClient(endpoint, StorageTableIndex.Name, new DefaultAzureCredential());
+        return await StorageTableIndex.OpenAsync(table, cancellationToken);
+    }
+
+    /// <summary>The directory a directory store's index is kept in, beside the runs' one.</summary>
+    public const string IndexDirectory = "index";
+
+    /// <summary>
+    /// The Table Storage endpoint of the account a recordings container is in: the account's table host, or, for
+    /// the emulator, its table service on the port after the blob service's next one, as Azurite serves it.
+    /// </summary>
+    public static Uri TablesUri(Uri recordings)
+    {
+        ArgumentNullException.ThrowIfNull(recordings);
+        if (IsEmulator(recordings))
+        {
+            return new UriBuilder(recordings) { Port = recordings.Port + 2, Path = DevelopmentAccount, Query = string.Empty }.Uri;
+        }
+
+        var host = recordings.Host.Replace(".blob.", ".table.", StringComparison.OrdinalIgnoreCase);
+        return new UriBuilder(recordings.Scheme, host) { Port = recordings.IsDefaultPort ? -1 : recordings.Port }.Uri;
+    }
+
     public static Uri AccountsUri(Uri recordings)
     {
         ArgumentNullException.ThrowIfNull(recordings);

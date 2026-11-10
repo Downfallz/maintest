@@ -113,8 +113,14 @@ Each phase ships on the one container app there is today and leaves the game pla
    - **4.3a, done.** A table's keys name it: a seat's token, an invitation and the pilot's token are
      `<table>.<secret>` (`TableKeys`), minted so when a table opens and when a seat is offered again. A key
      minted before names no table and keeps working for the life of its table, found as it always was.
-   - **4.3b.** Tokens, codes and the lobby's projections out of the registry, which becomes a cache a table
-     is loaded into from its record and journal when a key names it (4.2c with it).
+   - **4.3b1, done.** The index of the tables (ADR 0161): a port owned by Application (`ITableIndex`) that
+     finds the seat a join code opens and lists the open tables newest first, with an adapter on Table
+     Storage in the account that holds the runs and one on files beside a directory store. Not wired yet;
+     CI runs the emulator's table service, and the app's identity is granted the table data role.
+   - **4.3b2.** Join codes through the index: minted into it, spent out of it, and a code this host does not
+     hold opens the table the index names.
+   - **4.3b3.** The lobby's open tables from the index, and the registry a cache a table is loaded into from
+     its record and journal when a key or a code names it (4.2c with it).
    - **4.4, done.** Practice tables onto the stepper, over a journal kept in memory: the recipe's agent
      plays both seats into it, one question at a time, through the gates any decision goes through
      (`SeatAnswer`), until the person's seat is asked the scenario's question (`PracticeScenario.HandsOver`);
@@ -201,8 +207,8 @@ which adds the compilation of the engine itself.
    reads these timings, so this is not cosmetic.
 4. **Tokens.** Decided: keys of the form `<table>.<secret>`, so no index is needed (4.3a). Links already handed
    out keep their old key for the life of their table; a host that does not hold such a table finds it by the
-   open records, which are few. Join codes are typed by a person and cannot carry a table's id: they stay
-   to be decided with 4.3b (an index document per code, or the open records again).
+   open records, which are few. Join codes are typed by a person and cannot carry a table's id: they are an
+   index entry each, in Table Storage beside the open tables the lobby lists (ADR 0161).
 5. **A bot's dice.** At a table a bot's random source is seeded from the table's seed and its slot
    (`TableComposer.Source`) and lives as long as the process. A bot built fresh for each turn needs a seed that
    also depends on the journal position, or two turns draw the same numbers.

@@ -50,4 +50,33 @@ public sealed class ArtifactStoresTests
 
         store.ShouldBeOfType<Infrastructure.Accounts.FileAccountStore>().RootDirectory.ShouldBe(Path.Combine(Path.GetTempPath(), "downfall", "accounts"));
     }
+
+    [Theory]
+    [InlineData("https://downfallabc.blob.core.windows.net/playtests", "https://downfallabc.table.core.windows.net/")]
+    [InlineData("http://127.0.0.1:10000/devstoreaccount1/playtests", "http://127.0.0.1:10002/devstoreaccount1")]
+    public void The_index_of_a_container_s_tables_is_in_the_same_account(string recordings, string tables)
+    {
+        ArtifactStores.TablesUri(new Uri(recordings)).ShouldBe(new Uri(tables));
+    }
+
+    [Fact]
+    public async Task The_index_of_a_directory_store_is_kept_beside_its_runs()
+    {
+        var parent = Path.Combine(Path.GetTempPath(), $"downfall-index-{Guid.NewGuid():N}");
+        try
+        {
+            var index = await ArtifactStores.OpenIndexAsync(Path.Combine(parent, "playtest"), TestContext.Current.CancellationToken);
+
+            await index.AddCodeAsync(new DownfallArena.Application.Tables.Ports.IndexedCode("ABCD1234", "table-1", "player2"), TestContext.Current.CancellationToken);
+
+            File.Exists(Path.Combine(parent, ArtifactStores.IndexDirectory, "codes", "ABCD1234.json")).ShouldBeTrue();
+        }
+        finally
+        {
+            if (Directory.Exists(parent))
+            {
+                Directory.Delete(parent, recursive: true);
+            }
+        }
+    }
 }

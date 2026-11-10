@@ -10,7 +10,7 @@ on GitHub Pages (ADR 0023).
 | --- | --- | --- |
 | Container app `downfall-table` | The CLI's `table --lobby --platform-auth`, 0.5 vCPU, 1 GiB, **0 to 1 replica** | Nothing idle. While a page is open, well inside the monthly free grant for a few evenings of play |
 | Container Apps environment | Where the app runs, consumption plan, on the platform's own network (ADR 0160) | Nothing on its own |
-| Storage account, Blob only | The recorded sessions, one prefix per session under `playtests/`; no key, and only an identity holding a role on it may read or write | Cents |
+| Storage account, Blob and Table | The recorded sessions, one prefix per session under `playtests/`, and the index that finds them (`tableindex`: join codes, open tables; ADR 0161); no key, and only an identity holding a role on it may read or write | Cents |
 | Log Analytics workspace | The host's console lines, 30 days, capped at 0.5 GB a day | Cents, often nothing |
 
 The app scales to zero a few minutes after the last request. An open seat holds an event stream and polls
@@ -38,7 +38,7 @@ You need the Azure subscription's owner, signed in, and ideally the GitHub CLI s
 
    It registers the four resource providers, creates `downfall-table` in `canadacentral`, an app
    registration GitHub deploys as (federated to this repository's `azure` environment, allowed to change that
-   one resource group and to assign one role in it), and the registration the admin panel's sign-in uses (no client
+   one resource group and to assign two roles in it, blob and table data), and the registration the admin panel's sign-in uses (no client
    secret). It prints seven repository variables and sets them when `gh` is signed in. `LOCATION`,
    `RESOURCE_GROUP`, `REPO` and `PREFIX` override the defaults; the prefix travels to the template through
    the `TABLE_NAME_PREFIX` variable, so every resource name follows it.
@@ -117,6 +117,9 @@ Android Chrome takes the notice as it is; iOS only once the table is added to th
   request that touches it; a warning fails the run.
 - Locally: `docker build -t downfall-table .` and `docker run --rm -p 8080:8080 downfall-table` give an admin panel
   on port 8080, with the operator's token in the log.
+- A deployment made before ADR 0161 has to run `infra/bootstrap.sh setup` once more before the first deploy
+  that carries the index: the deployer may assign only the roles the bootstrap names, and the table data role
+  is new. Running it again changes nothing else.
 
 ## Taking it down
 
