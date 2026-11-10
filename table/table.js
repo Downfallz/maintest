@@ -78,7 +78,8 @@ async function showAdminLink(fetchImpl = globalThis.fetch?.bind(globalThis)) {
 // the host which of the held seats still answer, settles into the same `enter` either way.
 function boot(practice) {
   void showAdminLink();
-  // A finished session the admin panel opened: no seat, only its replay, read with the operator's token.
+  // A finished session's replay: the operator's, read with the panel's token, or a player's own game, read by their
+  // account (ADR 0156). No seat either way.
   const watched = replayOf(globalThis.location?.search ?? '');
   if (watched) {
     start([{ seat: watched.seat, token: null, transport: replayTransport(watched.id, watched.seat, operatorToken(storage)) }], watched.seat, false, true);

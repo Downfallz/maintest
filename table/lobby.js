@@ -78,7 +78,7 @@ export function localFinished(mine, kind, page = 0, size = GAMES_PER_PAGE) {
   const list = mine.filter(entry => entry.table.over && gameKind(entry.table) === kind).map(entry => {
     const held = (entry.seats ?? []).map(one => one.seat), other = versus(entry.table).find(side => !held.includes(side.seat));
     return { table: entry.table.id, format: entry.table.format, casual: entry.table.casual === true, finishedAt: null, rounds: entry.table.round ?? null, outcome: null,
-      opponent: other ? { kind: other.kind, name: other.name } : { kind: 'self', name: 'Shared device' }, seats: entry.seats, session: null };
+      opponent: other ? { kind: other.kind, name: other.name } : { kind: 'self', name: 'Shared device' }, seats: entry.seats, replay: null };
   });
   const pages = Math.max(1, Math.ceil(list.length / size)), at = Math.min(Math.max(0, page), pages - 1);
   return { total: list.length, pages, page: at + 1, items: list.slice(at * size, (at + 1) * size) };
@@ -90,7 +90,7 @@ export function finishedSummary(item) {
   return { title: `${item.format ?? ''} battle`.trim(), tag: OUTCOMES[item.outcome] ?? 'Finished', tone: item.outcome ?? 'finished', casual: item.casual === true,
     against: item.opponent?.name ?? 'Unknown', bot: item.opponent?.kind === 'bot',
     detail: Number.isInteger(item.rounds) && item.rounds > 0 ? `${item.rounds} round${item.rounds === 1 ? '' : 's'}` : '',
-    action: item.seats?.length ? 'View game →' : item.session ? 'Watch the replay →' : null };
+    action: item.seats?.length ? 'View game →' : item.replay ? 'Watch the replay →' : null };
 }
 
 /** What a group of games in progress says of its limit (ADR 0147): how many of how many, and whether it is full. */
@@ -422,7 +422,7 @@ export function mountLobby(doc, location, storage) {
       button.addEventListener('click', () => enter({ seats: item.seats }));
       root.append(button);
     } else if (summary.action) {
-      const link = node('a', summary.action, 'button-link'); link.href = item.session;
+      const link = node('a', summary.action, 'button-link'); link.href = item.replay;
       root.append(link);
     }
     return root;

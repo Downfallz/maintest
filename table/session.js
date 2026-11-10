@@ -29,6 +29,17 @@ export function replayOf(search) {
   return id ? { id, seat: query.get('seat') === 'player2' ? 'player2' : 'player1' } : null;
 }
 
+/**
+ * What a replay page says when the host refuses it (ADR 0156). An operator holding the panel's token was refused
+ * that token, so the way back is the panel. A player is asked to sign in when signed out, and told otherwise that
+ * only the match's players can watch it again. `link` is 'signin' for the sign-in page of this very address.
+ */
+export function replayMessage(state, operator) {
+  if (operator) return { title: 'This recording needs the operator', detail: 'The admin panel\'s token was refused. Open the recording from the admin panel again.', link: '/admin', label: 'Open admin' };
+  if (state === 'signin') return { title: 'Sign in to watch this match', detail: 'Only the players of this match can watch it again. Sign in with the account that played it.', link: 'signin', label: 'Sign in' };
+  return { title: 'This match is not one of yours', detail: 'Only its players can watch it again, from the Finished tab of their lobby.', link: '/', label: 'Lobby' };
+}
+
 // What the link brings plus what this browser already had, with the link winning: opening a fresh code is how
 // a player says they are somebody else now.
 export function heldSeats(search, storage) {
