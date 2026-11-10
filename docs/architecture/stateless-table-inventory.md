@@ -21,7 +21,10 @@ The work is smaller on the engine's side than "a match lives in memory" suggests
 | Accounts, friends, devices, preferences, results | Blob, beside the recordings | Done. Already outside the process |
 | The session-signing key | `store.SessionKeyAsync` | Done. Read from the store, so replicas agree |
 
-## What holds a table in one process
+## What held a table in one process
+
+The table as it stood before ADR 0159. Since phase 4.4 no table is played this way: the first six rows are gone
+from the code, and the rest are where the phases above left them.
 
 | What | Where | Why it is in memory | Where it goes |
 | --- | --- | --- | --- |
@@ -107,9 +110,18 @@ Each phase ships on the one container app there is today and leaves the game pla
      found to have diverged after it was registered; 4.3 makes the registry a cache a table is loaded into
      per request, which is the same change made once. What it would buy meanwhile is a shorter start: the
      host already serves while it picks tables up, and a table costs it 45 to 325 ms.
-   - **4.3.** Tokens, codes and the lobby's projections out of the registry, which becomes a cache.
-   - **4.4.** Practice tables onto the stepper; `HumanSeat`, `SeatAgent`, `TableSession`, `TableGate`, the
-     host's `DecisionJournal` and `JournalEntry` go.
+   - **4.3a, done.** A table's keys name it: a seat's token, an invitation and the pilot's token are
+     `<table>.<secret>` (`TableKeys`), minted so when a table opens and when a seat is offered again. A key
+     minted before names no table and keeps working for the life of its table, found as it always was.
+   - **4.3b.** Tokens, codes and the lobby's projections out of the registry, which becomes a cache a table
+     is loaded into from its record and journal when a key names it (4.2c with it).
+   - **4.4, done.** Practice tables onto the stepper, over a journal kept in memory: the recipe's agent
+     plays both seats into it, one question at a time, through the gates any decision goes through
+     (`SeatAnswer`), until the person's seat is asked the scenario's question (`PracticeScenario.HandsOver`);
+     the table then opens over that journal like any other. `HumanSeat`, `SeatAgent`, `TableSession`,
+     `TableGate`, `DrivenSession`, the host's `DecisionJournal` and `JournalEntry`, and the run's staged
+     rebuild are gone, with the tests of what they did. The two tests that held the stepped table to the
+     driven one went with the driven one: they held the switch, and the switch is made.
 5. **Bots behind a port.** In-process adapter first; the queue adapter and its worker command second.
 6. **Time-dependent work as a command**, then the infrastructure ADR: how many apps, which jobs.
 
@@ -187,13 +199,16 @@ which adds the compilation of the engine itself.
 3. **Decision timings.** `elapsedMs` counts from when a question was shown to somebody looking (`?shown=`). With
    no memory between requests, the stamp is stored per seat, or the page sends it. The free-activation playtest
    reads these timings, so this is not cosmetic.
-4. **Tokens.** An index blob per token, or new tokens of the form `<table>.<secret>` so no index is needed.
-   Links already handed out have to keep working for the life of their table either way.
+4. **Tokens.** Decided: keys of the form `<table>.<secret>`, so no index is needed (4.3a). Links already handed
+   out keep their old key for the life of their table; a host that does not hold such a table finds it by the
+   open records, which are few. Join codes are typed by a person and cannot carry a table's id: they stay
+   to be decided with 4.3b (an index document per code, or the open records again).
 5. **A bot's dice.** At a table a bot's random source is seeded from the table's seed and its slot
    (`TableComposer.Source`) and lives as long as the process. A bot built fresh for each turn needs a seed that
    also depends on the journal position, or two turns draw the same numbers.
-6. **Practice tables** (ADR 0079) record nothing by design. They can stay on the blocking loop while the API is
-   one replica; with several, they need a short-lived journal or a sticky route.
+6. **Practice tables** (ADR 0079) record nothing by design. Answered in 4.4: they are stepped over a journal
+   in memory, which is the one replica's. With several, a practice table needs a sticky route or a journal in
+   the store; it is one person against a script, and a sticky route is the cheaper of the two.
 7. **Unrecorded tables** (`--no-record`). Answered: `InMemoryDecisionJournal`, conditional like the others.
 8. **Content changing under an open table.** Today a divergent replay is refused once, at start, and marked.
    When every cold load replays, a deploy that moves content strands open tables at the next tap. Options: pin
@@ -225,8 +240,9 @@ which adds the compilation of the engine itself.
     settled in one turn of the match, so no decision of the seat's lands between them. A line written
     before the journal was the source does not say what the seat had reached, so two swaps pending on one
     seat of a table open across the deploy could fold differently from how they were applied.
-12. **Two shapes of one line.** `JournalLine` in Infrastructure and `JournalEntry` in the host describe the
-    same file until phase 4 removes the host's; `RecordedTableReplayTests` is what holds them together.
+12. **Two shapes of one line.** Answered in 4.4: the host's `JournalEntry` is gone, and `JournalLine` in
+    Infrastructure is the only shape of a line. It still reads a swap written before the journal was the
+    source (`FileDecisionJournalTests`).
 13. **Loading on every step.** `JournaledStepper` reads the whole journal before each step and rebuilds the
     whole match when another process wrote last. Two replicas alternating on one table rebuild at every
     step, which the figures above price. Applying only the lines not yet seen is the cheaper path if that
@@ -286,7 +302,5 @@ which adds the compilation of the engine itself.
 ## Documents this makes stale as it lands
 
 - `infra/README.md`: the cold-start paragraph, as the apps are split (phase 6).
-- `docs/tabletop/playtest-app.md`: the blocking seat and the thread per session, which practice tables keep
-  until 4.4.
-- ADR 0091 (superseded), and the remarks in `HumanSeat`, `TableSession`, `TableGate`, `StoredSessions` that
-  cite it.
+- ADR 0091 (superseded), and the remarks in `StoredSessions`, `TableRecord` and `TableRegistry` that cite it
+  for what a table's record is for, which still holds.

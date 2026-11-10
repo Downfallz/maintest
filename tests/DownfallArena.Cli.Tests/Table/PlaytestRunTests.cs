@@ -5,13 +5,13 @@ using DownfallArena.Application.Catalogue;
 using DownfallArena.Application.Learning.Recording;
 using DownfallArena.Application.Learning.Tracing;
 using DownfallArena.Application.Matches.Projections;
-using DownfallArena.Application.Matches.Queries;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.Cli.Tests.Studio;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Infrastructure.Learning;
+using DownfallArena.Infrastructure.Matches;
 using DownfallArena.Infrastructure.Resources.Authoring;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -29,11 +29,17 @@ public sealed class PlaytestRunTests : IDisposable
     private readonly StudioContent _content = new();
     private readonly CancellationTokenSource _stopping = new();
     private readonly string _runs = Path.Combine(Path.GetTempPath(), $"downfall-playtest-{Guid.NewGuid():N}");
+    private readonly List<SteppedSession> _sessions = [];
     private IHost? _host;
 
     public void Dispose()
     {
         _stopping.Cancel();
+        foreach (var session in _sessions)
+        {
+            session.Dispose();
+        }
+
         _stopping.Dispose();
         _host?.Dispose();
         _content.Dispose();
@@ -116,69 +122,6 @@ public sealed class PlaytestRunTests : IDisposable
         File.ReadAllText(Path.Combine(run.Location, "steps.jsonl")).ShouldBeEmpty();
     }
 
-    /// <summary>
-    /// The wait that catches up with the driver returns as soon as the trace has passed the mark it was given.
-    /// It is half of the barrier a decision's checkpoint uses: this one says the command has started, and the
-    /// table's gate says it has finished.
-    /// </summary>
-    [Fact]
-    public async Task Waiting_for_the_trace_returns_once_it_has_passed_the_mark()
-    {
-        var (run, session) = await Started();
-        await session.Outcome;
-        var length = run.TraceLength(session.MatchId);
-
-        await run.WaitForTraceAsync(session.MatchId, beyond: length - 1, TestContext.Current.CancellationToken);
-
-        run.TraceLength(session.MatchId).ShouldBe(length);
-    }
-
-    /// <summary>
-    /// And it is bounded. Nothing else is coming here, so the wait runs out and the caller carries on: a stale
-    /// trace is the cost of a driver that never came back, and a hanging tap is not.
-    /// </summary>
-    [Fact]
-    public async Task Waiting_for_a_trace_that_never_grows_gives_up_rather_than_hanging()
-    {
-        var (run, session) = await Started();
-        await session.Outcome;
-        var length = run.TraceLength(session.MatchId);
-
-        await run.WaitForTraceAsync(session.MatchId, beyond: length + 10, TestContext.Current.CancellationToken);
-        await run.CheckpointAsync(session.MatchId, TestContext.Current.CancellationToken);
-
-        Read(run, Path.Combine("traces", $"{session.MatchId}.json")).GetProperty("entries").GetArrayLength().ShouldBe(length);
-    }
-
-    /// <summary>
-    /// A rebuilt trace still short of its checkpoint when the wait runs out says nothing either way: a bot slow to
-    /// decide on a busy start explains it as well as a record that no longer fits, and the next host tries again.
-    /// </summary>
-    [Fact]
-    public async Task A_trace_that_has_not_caught_up_when_the_wait_runs_out_neither_agrees_nor_disagrees()
-    {
-        var (run, session) = await Started();
-        await session.Outcome;
-        await CheckpointedPast(run, session);
-
-        var agrees = await run.AgreesWithCheckpointAsync(session.MatchId, stalled: null, TestContext.Current.CancellationToken);
-
-        agrees.ShouldBeNull();
-    }
-
-    /// <summary>A trace standing still at a person's question has stopped, and short of its checkpoint it disagrees.</summary>
-    [Fact]
-    public async Task A_trace_stopped_at_a_persons_question_short_of_its_checkpoint_disagrees()
-    {
-        var (run, session) = await Started();
-        await session.Outcome;
-        await CheckpointedPast(run, session);
-
-        var agrees = await run.AgreesWithCheckpointAsync(session.MatchId, stalled: () => true, TestContext.Current.CancellationToken);
-
-        agrees.ShouldBe(false);
-    }
-
     [Theory]
     [InlineData("gained")]
     [InlineData("before")]
@@ -196,25 +139,9 @@ public sealed class PlaytestRunTests : IDisposable
         receipt["grants"]![0]![field] = receipt["grants"]![0]![field]!.GetValue<int>() + 1;
         await File.WriteAllTextAsync(path, trace.ToJsonString(), TestContext.Current.CancellationToken);
 
-        var agrees = await run.AgreesWithCheckpointAsync(session.MatchId, stalled: () => true, TestContext.Current.CancellationToken);
+        var agrees = await run.AgreesWithCheckpointSoFarAsync(session.MatchId, TestContext.Current.CancellationToken);
 
-        agrees.ShouldBe(false);
-    }
-
-    /// <summary>A checkpoint one entry longer than the match it holds: what an earlier host wrote past where this one stops.</summary>
-    private static async Task CheckpointedPast(PlaytestRun run, TableSession session)
-    {
-        await run.CheckpointAsync(session.MatchId, TestContext.Current.CancellationToken);
-        var path = Path.Combine(run.Location, "traces", $"{session.MatchId}.json");
-        for (var attempt = 0; attempt < 300 && !File.Exists(path); attempt++)
-        {
-            await Task.Delay(10, TestContext.Current.CancellationToken);
-        }
-
-        var trace = System.Text.Json.Nodes.JsonNode.Parse(await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken))!;
-        var entries = trace["entries"]!.AsArray();
-        entries.Add(entries[^1]!.DeepClone());
-        await File.WriteAllTextAsync(path, trace.ToJsonString(), TestContext.Current.CancellationToken);
+        agrees.ShouldBeFalse();
     }
 
     /// <summary>
@@ -286,13 +213,6 @@ public sealed class PlaytestRunTests : IDisposable
         Read(run, Path.Combine("traces", $"{session.MatchId}.json")).GetProperty("entries").GetArrayLength().ShouldBe(written);
     }
 
-    private static async Task<PlayerBoardState> Board(TableSession session)
-    {
-        var board = await session.Queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(session.MatchId, PlayerSlot.Player1));
-        board.IsSuccess.ShouldBeTrue();
-        return board.Value;
-    }
-
     /// <summary>
     /// A seat that changed hands mid-match says so on every step, so a fast-forwarded session can be split
     /// into the bot's opening and the person's play.
@@ -309,11 +229,8 @@ public sealed class PlaytestRunTests : IDisposable
     {
         const int HandsOverAt = 3;
         var (run, session) = await Started(seat1: resources =>
-        {
-            var seat = new SeatAgent(new Occupant(Bot(resources), "greedy"));
-            seat.SwapAt(new Occupant(Bot(resources), "human:mk"), HandsOverAt);
-            return seat;
-        });
+            new SeatPlan(new Occupant(Bot(resources), "greedy"), new Occupant(Bot(resources), "greedy"))
+                .From(PlayerSlot.Player1, HandsOverAt, new Occupant(Bot(resources), "human:mk"), reached: 0));
         await session.Outcome;
         await run.FinishAsync(session.MatchId, await Board(session), TestContext.Current.CancellationToken);
 
@@ -347,11 +264,8 @@ public sealed class PlaytestRunTests : IDisposable
     public async Task A_seat_handed_over_before_its_first_decision_still_grows_the_stamp()
     {
         var (run, session) = await Started(player1Agent: "Greedy", seat1: resources =>
-        {
-            var seat = new SeatAgent(new Occupant(Bot(resources), "Greedy"));
-            seat.SwapAt(new Occupant(Bot(resources), "human:mk"), round: 1);
-            return seat;
-        });
+            new SeatPlan(new Occupant(Bot(resources), "Greedy"), new Occupant(Bot(resources), "greedy"))
+                .From(PlayerSlot.Player1, 1, new Occupant(Bot(resources), "human:mk"), reached: 0));
         await session.Outcome;
         await run.FinishAsync(session.MatchId, await Board(session), TestContext.Current.CancellationToken);
 
@@ -361,24 +275,23 @@ public sealed class PlaytestRunTests : IDisposable
             .ShouldAllBe(step => step.GetProperty("decidedBy").GetString() == "human:mk");
     }
 
-    private static IReadOnlyList<JsonElement> Lines(PlaytestRun run, string relativePath) =>
-        [.. File.ReadAllLines(Path.Combine(run.Location, relativePath))
-            .Where(line => line.Length > 0)
-            .Select(line => JsonDocument.Parse(line).RootElement)];
-
-    private static JsonElement Read(PlaytestRun run, string relativePath) =>
-        JsonDocument.Parse(File.ReadAllText(Path.Combine(run.Location, relativePath))).RootElement;
+    private static async Task<PlayerBoardState> Board(SteppedSession session)
+    {
+        var board = await session.BoardAsync(PlayerSlot.Player1);
+        board.IsSuccess.ShouldBeTrue();
+        return board.Value;
+    }
 
     /// <summary>A session that stops at the first question, because a person is holding one of the seats.</summary>
-    private async Task<(PlaytestRun Run, TableSession Session, HumanSeat Person)> StartedWithAPerson()
+    private async Task<(PlaytestRun Run, SteppedSession Session, SteppedPerson Person)> StartedWithAPerson()
     {
-        var person = new HumanSeat(_stopping.Token);
-        var (run, session) = await Started(seat1: _ => new SeatAgent(new Occupant(person, "human:mk")));
+        var person = new SteppedPerson();
+        var (run, session) = await Started(seat1: resources => new SeatPlan(SeatPlan.Person("human:mk"), new Occupant(Bot(resources), "greedy")), person: person);
         return (run, session, person);
     }
 
-    /// <summary>The seat blocks on another thread, so a test waits for the question rather than assuming it.</summary>
-    private static async Task Waiting(HumanSeat person, string kind)
+    /// <summary>The bots take their turns behind the table, so a test waits for the question rather than assuming it.</summary>
+    private static async Task Waiting(SteppedPerson person, string kind)
     {
         for (var attempt = 0; attempt < 300; attempt++)
         {
@@ -395,11 +308,15 @@ public sealed class PlaytestRunTests : IDisposable
 
     /// <summary>
     /// A session with a bot in each seat by default, which is the one that plays itself to an outcome without
-    /// a tap. What it exercises is the recording, and the recording does not know who is seated.
+    /// a tap, stepped over a journal in the run's directory. What it exercises is the recording, and the
+    /// recording does not know who is seated.
     /// </summary>
-    private async Task<(PlaytestRun Run, TableSession Session)> Started(
+    /// <param name="seat1">Who sits where, when not two bots; the opening's first seat is what the stamp names.</param>
+    /// <param name="person">The first seat's person, when the plan seats one.</param>
+    private async Task<(PlaytestRun Run, SteppedSession Session)> Started(
         string player1Agent = "greedy",
-        Func<IGameResources, SeatAgent>? seat1 = null)
+        Func<IGameResources, SeatPlan>? seat1 = null,
+        SteppedPerson? person = null)
     {
         new ContentStore(_content.Path).Build(Path.Combine(_content.Path, "dst"));
         _host = CliHost.Build(
@@ -410,22 +327,34 @@ public sealed class PlaytestRunTests : IDisposable
         var resources = _host.Services.GetRequiredService<IGameResources>();
         var run = PlaytestRun.Open(
             new FileArtifactStore(_runs),
-            new PlaytestSetup(resources, Rules, Seed: 7, player1Agent, "greedy"),
+            new PlaytestSetup(resources, Rules, Seed: 7, person is null ? player1Agent : "human:mk", "greedy"),
             _host.Services.GetRequiredService<MatchTraceRecorder>(),
             TimeProvider.System);
         await run.StartAsync(CatalogueProjection.Build(resources, Rules), _stopping.Token);
 
-        var session = await TableSession.StartAsync(
+        var plan = seat1?.Invoke(resources) ?? new SeatPlan(new Occupant(Bot(resources), player1Agent), new Occupant(Bot(resources), "greedy"));
+        TableSeat[] seats = [new TableSeat(PlayerSlot.Player1, "seat-1", person), new TableSeat(PlayerSlot.Player2, "seat-2", Person: null)];
+        var session = await Stepped.OpenAsync(
             _host.Services,
             Rules,
             seed: 7,
-            seat1?.Invoke(resources) ?? new SeatAgent(new Occupant(Bot(resources), player1Agent)),
-            new SeatAgent(new Occupant(Bot(resources), "greedy")),
-            new TableStart(run.Wrap),
-            cancellationToken: _stopping.Token);
-
+            new SteppedSeats(plan, seats, static (_, _) => null),
+            _stopping.Token,
+            new FileDecisionJournal(_runs, TimeProvider.System),
+            run);
+        _sessions.Add(session);
+        session.Begin();
         return (run, session);
     }
 
     private static GreedyAgent Bot(IGameResources resources) => new(resources, Rules);
+
+    private static IReadOnlyList<JsonElement> Lines(PlaytestRun run, string relativePath) =>
+        [.. File.ReadAllLines(Path.Combine(run.Location, relativePath))
+            .Where(line => line.Length > 0)
+            .Select(line => JsonDocument.Parse(line).RootElement)];
+
+    private static JsonElement Read(PlaytestRun run, string relativePath) =>
+        JsonDocument.Parse(File.ReadAllText(Path.Combine(run.Location, relativePath))).RootElement;
+
 }

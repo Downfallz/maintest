@@ -35,9 +35,9 @@ internal sealed class TableRegistry : IDisposable
 
     /// <summary>
     /// How many tables may be under way at once. The admin panel is behind the operator's login, so this bounds a
-    /// mistake rather than an attack: a seat blocks a thread while a person thinks (ADR 0054), and a host
-    /// with hundreds of them is a host that stopped answering. A table waiting for its players (ADR 0092)
-    /// counts: it holds no thread yet, but it will the moment they arrive, and refusing them then would
+    /// mistake rather than an attack: a table holds its match in memory and its bots think on this host's
+    /// processor, and a host with hundreds of them is a host that stopped answering. A table waiting for its
+    /// players (ADR 0092) counts: it plays nothing yet, but it will the moment they arrive, and refusing them then would
     /// strand two people who have just sat down, while refusing the operator now is one line on their panel.
     /// </summary>
     public const int MostUnderWay = 16;

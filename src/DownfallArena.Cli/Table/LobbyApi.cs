@@ -298,7 +298,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
             if (friend is not null)
             {
-                registry.Rekey(table, table.Seats[1], SeatKeys.KeptFor(AccountId.Parse(friend), clock.GetUtcNow()));
+                registry.Rekey(table, table.Seats[1], SeatKeys.KeptFor(table.Id, AccountId.Parse(friend), clock.GetUtcNow()));
             }
 
             try
@@ -401,7 +401,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     {
         var previous = registry.KeysOf(seat);
         var before = seat.DeclinedBy;
-        if (!registry.Rekey(table, seat, SeatKeys.Offered()))
+        if (!registry.Rekey(table, seat, SeatKeys.Offered(table.Id)))
         {
             return false;
         }
@@ -580,7 +580,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             var previous = registry.KeysOf(seat);
             var open = table.OpenSeats;
             var declined = seat.DeclinedBy;
-            if (!registry.Rekey(table, seat, SeatKeys.KeptFor(friend, clock.GetUtcNow())))
+            if (!registry.Rekey(table, seat, SeatKeys.KeptFor(table.Id, friend, clock.GetUtcNow())))
             {
                 return Problem(409, "Lobby.Gone", "This table is no longer available: it was closed.");
             }
@@ -636,7 +636,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         var previous = registry.KeysOf(seat);
         var open = table.OpenSeats;
         var declined = seat.DeclinedBy;
-        if (!registry.Rekey(table, seat, SeatKeys.Offered()))
+        if (!registry.Rekey(table, seat, SeatKeys.Offered(table.Id)))
         {
             return false;
         }
@@ -815,7 +815,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         var arrived = seat.Person!.HasArrived;
         var open = table.OpenSeats;
         var leaver = seat.Account;
-        if (!registry.Rekey(table, seat, SeatKeys.Offered()))
+        if (!registry.Rekey(table, seat, SeatKeys.Offered(table.Id)))
         {
             return false;
         }
@@ -1077,7 +1077,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             }
         }
 
-        if (!seats.All(seat => registry.Rekey(table, seat, SeatKeys.TakenBy(TableComposer.Token(), account))))
+        if (!seats.All(seat => registry.Rekey(table, seat, SeatKeys.TakenBy(TableKeys.For(table.Id), account))))
         {
             Undo();
             return false;

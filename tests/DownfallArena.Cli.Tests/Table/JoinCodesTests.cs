@@ -136,6 +136,6 @@ public sealed class JoinCodesTests : IDisposable
         JoinCodes.Names(path).ShouldBe(expected);
     }
 
-    private TableSeat Seat(PlayerSlot slot, string token, bool held) =>
-        new(slot, token, held ? new HumanSeat(_stopping.Token) : null);
+    private static TableSeat Seat(PlayerSlot slot, string token, bool held) =>
+        new(slot, token, held ? new SteppedPerson() : null);
 }

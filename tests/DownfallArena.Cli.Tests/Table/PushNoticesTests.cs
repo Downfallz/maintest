@@ -155,7 +155,7 @@ public sealed class PushNoticesTests : IDisposable
     [Fact]
     public void The_payload_names_what_is_asked_and_the_round_when_the_question_has_one()
     {
-        var seat = new TableSeat(Domain.Matches.PlayerSlot.Player2, "token", new HumanSeat(CancellationToken.None));
+        var seat = new TableSeat(Domain.Matches.PlayerSlot.Player2, "token", new SteppedPerson());
 
         var withRound = JsonDocument.Parse(PushNotices.Payload(new Asking(Application.Matches.Projections.PlayerOptionsKind.Speed, null, 4), 7, seat, "a b")).RootElement;
         var atTheSlot = JsonDocument.Parse(PushNotices.Payload(new Asking(Application.Matches.Projections.PlayerOptionsKind.Action, null, 5), null, seat, "t")).RootElement;

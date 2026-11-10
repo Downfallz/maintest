@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Domain.Matches;
 
@@ -27,6 +28,18 @@ internal sealed record PracticeScenario(
     // The page lists the recipes and plays the rules the match serves it; a rule set per recipe is not its to read.
     [JsonIgnore]
     public RuleSet Rules => Declaration == CombatDeclaration.AtActivation ? AtTheSlot : HiddenIntents;
+
+    /// <summary>
+    /// Whether a question of the person's seat is the one the scenario hands them, or one after it: its round or
+    /// a later one, its kind, and, when the scenario names one, its creature. Everything before it is scripted.
+    /// </summary>
+    public bool HandsOver(PlayerBoardState board, SeatQuestion question)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+        ArgumentNullException.ThrowIfNull(question);
+        return board.RoundNumber >= Round && question.Kind == Question
+            && (question.Creature is null || AllyIndex is not { } index || question.Creature == board.Allies[index].Id);
+    }
 
     public static IReadOnlyList<PracticeScenario> All { get; } =
     [

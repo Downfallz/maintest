@@ -77,7 +77,7 @@ public sealed class SteppedSessionTests : IDisposable
         await BotHeld(PlayerOptionsKind.Evolution);
         bot.Hold();
 
-        var taken = await session.DecideAsync(PlayerSlot.Player1, PlayerDecision.Pass, 1, await Options(session), round: 1).WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+        var taken = await session.DecideAsync(PlayerSlot.Player1, PlayerDecision.Pass, 1).WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
         var written = await Decisions();
         await bot.Asked.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
         var thinking = (await Decisions()).Count;
@@ -100,8 +100,8 @@ public sealed class SteppedSessionTests : IDisposable
         await BotHeld(PlayerOptionsKind.Evolution);
         var before = (await Decisions()).Count;
 
-        var stale = await session.DecideAsync(PlayerSlot.Player1, PlayerDecision.Pass, asked: 7, await Options(session), round: 1);
-        var bots = await session.DecideAsync(PlayerSlot.Player2, PlayerDecision.Pass, asked: 1, await Options(session), round: 1);
+        var stale = await session.DecideAsync(PlayerSlot.Player1, PlayerDecision.Pass, asked: 7);
+        var bots = await session.DecideAsync(PlayerSlot.Player2, PlayerDecision.Pass, asked: 1);
 
         stale.ShouldBe(DecisionTaken.Late);
         bots.ShouldBe(DecisionTaken.Late);
@@ -146,7 +146,7 @@ public sealed class SteppedSessionTests : IDisposable
         session.Begin();
         await Waiting(person, PlayerOptionsKind.Evolution);
         await BotHeld(PlayerOptionsKind.Evolution);
-        (await session.DecideAsync(PlayerSlot.Player1, PlayerDecision.Pass, 1, await Options(session), round: 1)).Taken.ShouldBeTrue();
+        (await session.DecideAsync(PlayerSlot.Player1, PlayerDecision.Pass, 1)).Taken.ShouldBeTrue();
         var asked = await Waiting(person, PlayerOptionsKind.Speed);
         await BotHeld(PlayerOptionsKind.Speed);
         (await session.SwapAsync(PlayerSlot.Player1, Named(_host)(PlayerSlot.Player1, "greedy")!, "greedy", round: 3)).Taken.ShouldBeTrue();
@@ -271,12 +271,11 @@ public sealed class SteppedSessionTests : IDisposable
         session.Begin();
         await Waiting(person, PlayerOptionsKind.Evolution);
         await BotHeld(PlayerOptionsKind.Evolution);
-        var options = await Options(session);
         var written = (await _journal.ReadAsync(Run, TestContext.Current.CancellationToken)).Position;
 
         await _stopping.CancelAsync();
         await Task.WhenAny(session.Outcome);
-        var tap = await session.DecideAsync(PlayerSlot.Player1, PlayerDecision.Pass, 1, options, round: 1);
+        var tap = await session.DecideAsync(PlayerSlot.Player1, PlayerDecision.Pass, 1);
         var conceded = await session.ConcedeAsync(PlayerSlot.Player1);
         var swapped = await session.SwapAsync(PlayerSlot.Player1, Named(_host)(PlayerSlot.Player1, "greedy")!, "greedy", round: 3);
 
@@ -304,7 +303,7 @@ public sealed class SteppedSessionTests : IDisposable
         await BotHeld(PlayerOptionsKind.Evolution);
         _journal.LoseTheNextAnswer();
 
-        var taken = await session.DecideAsync(PlayerSlot.Player1, PlayerDecision.Pass, 1, await Options(session), round: 1);
+        var taken = await session.DecideAsync(PlayerSlot.Player1, PlayerDecision.Pass, 1);
         var next = await Waiting(person, PlayerOptionsKind.Speed);
 
         taken.ShouldBe(DecisionTaken.Late);
@@ -406,8 +405,6 @@ public sealed class SteppedSessionTests : IDisposable
         wanted == TableRequest.Person
             ? SeatPlan.Person(PersonName)
             : new Occupant(new GreedyAgent(host.Services.GetRequiredService<IGameResources>(), HostedTables.Rules), wanted);
-
-    private static async Task<PlayerOptions> Options(SteppedSession session) => (await session.SnapshotAsync(PlayerSlot.Player1)).Value.Options;
 
     private async Task<IReadOnlyList<SeatDecision>> Decisions() =>
         (await _journal.ReadAsync(Run, TestContext.Current.CancellationToken)).Decisions;

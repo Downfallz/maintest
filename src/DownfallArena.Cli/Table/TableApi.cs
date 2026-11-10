@@ -107,8 +107,8 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
     public const string TokenHeader = "X-Seat-Token";
 
     /// <summary>
-    /// Whether the match reached an outcome. Stronger than "stopped being played" on purpose: a driver task
-    /// that faulted or was cancelled is also complete, and the session page is fenced on this because the
+    /// Whether the match reached an outcome. Stronger than "stopped being played" on purpose: a session
+    /// that failed or was let go of is also complete, and the session page is fenced on this because the
     /// trace it carries holds both seats' boards. Nothing about a match that broke says the hidden half of it
     /// may now be read.
     /// </summary>
@@ -423,8 +423,8 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
                 // board nobody is asked anything on (ADR 0092).
                 waiting = WaitingRoom(),
 
-                // Over on the board as well as on the driver: a concession ends the match on the board first,
-                // and the driver says so only once the seat it was asking has let it go (ADR 0087).
+                // Over on the board as well as on the session: the board says it the moment the match ends,
+                // whoever reads the outcome after (ADR 0087).
                 over = session.IsOver || board.State == MatchState.Ended,
                 outcome = Outcome(board.Outcome),
 
@@ -586,11 +586,6 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         // afterwards, the decision would be timed at nothing.
         var servedAt = run?.ServedAt(seat.Slot, answered);
 
-
-        // How far the trace has got before this decision is handed over, so the checkpoint that follows can
-        // tell whether it has been applied yet, where the session applies it on another thread.
-        var traced = run?.TraceLength(session.MatchId) ?? 0;
-
         // Declared before the decision is handed over, and held until its note is written. The match can end
         // on this very tap, and the host would otherwise close the session while this thread is still on its
         // way to writing it down -- showing a finished session whose last decision is missing.
@@ -604,7 +599,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         // it is at worst a few instructions early, and it cannot contain any of the engine, which is the error
         // worth having.
         var acceptedAt = run?.Now();
-        var taken = await session.DecideAsync(seat.Slot, decision, asking, options, round);
+        var taken = await session.DecideAsync(seat.Slot, decision, asking);
         if (!taken.Taken)
         {
             return await RefuseAsync(seat.Slot, Late);
@@ -612,7 +607,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
 
         var accepted = acceptedAt is { } moment ? new AcceptedDecision(answered, servedAt, moment) : null;
 
-        await RecordAsync(seat.Slot, round, subPhase, accepted, traced, taken.SetsOff);
+        await RecordAsync(seat.Slot, round, subPhase, accepted, taken.SetsOff);
 
         // The other seat sees this decision's effects on its next read; its page is told to read now.
         Changes.Bump();
@@ -626,7 +621,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
     /// moved on would be refused as late. A lost line goes to the console, where it is the operator's problem
     /// rather than the player's.
     /// </summary>
-    private async Task RecordAsync(PlayerSlot slot, int? round, RoundSubPhase? subPhase, AcceptedDecision? accepted, int traced, bool setsOff)
+    private async Task RecordAsync(PlayerSlot slot, int? round, RoundSubPhase? subPhase, AcceptedDecision? accepted, bool setsOff)
     {
         if (run is not { } recording || accepted is null)
         {
@@ -641,9 +636,8 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
                 return;
             }
 
-            // The trace, as far as the match has got -- and not until the command this decision caused has
-            // finished raising everything it raises.
-            await session.SettledAsync(slot, traced);
+            // The trace, as far as the journal holds the match: the decision was written and applied before
+            // the session answered, and whatever the bots do after it is checkpointed with the next one.
             await recording.CheckpointAsync(session.MatchId, session.Journaled, CancellationToken.None);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
@@ -723,11 +717,12 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
     /// stage 6).
     /// </para>
     /// <para>
-    /// A round is named rather than an instant, and one the match has not reached. The driver asks a seat for
+    /// A round is named rather than an instant, and one the match has not reached. The match asks a seat for
     /// several decisions inside one sub-phase — a speed for each creature, then an intent for each — so a
     /// seat changing hands between two of them would split that sub-phase between two players and make the
-    /// round unreadable. Naming a future round makes that impossible rather than unlikely: the seat holds the
-    /// swap and applies it against the board, so it lands where a round begins however long the request took.
+    /// round unreadable. Naming a future round makes that impossible rather than unlikely: the swap is written
+    /// where the decisions are and read against each board, so it lands where a round begins however long the
+    /// request took.
     /// </para>
     /// </remarks>
     private async Task<StudioResponse> PilotAsync(string method, string rest, string body, string? token)
@@ -925,7 +920,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         try
         {
             // The round is the seat's own, read as the swap was taken. A board read here would be after the
-            // fact: the driver can enter the round this names before it answers, and the note would then say
+            // fact: the bots can take the match into the round this names before it answers, and the note would then say
             // it was asked for at or after the round it lands at. There is no sub-phase, because a swap is not
             // made at one -- it is an operator's action against a round.
             await recording.SeatedAsync(session.MatchId, slot, round, change, CancellationToken.None);

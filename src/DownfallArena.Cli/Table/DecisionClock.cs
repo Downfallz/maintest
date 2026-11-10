@@ -8,7 +8,7 @@ namespace DownfallArena.Cli.Table;
 /// </summary>
 /// <remarks>
 /// The moment that counts is the moment the options were <em>served to somebody looking at them</em>, not the
-/// moment the engine asked them. The driver may ask a seat while nobody is looking at the screen, and in
+/// moment the engine asked them. The match may ask a seat while nobody is looking at the screen, and in
 /// hotseat the page polls both seats on a timer while only one of them is on screen and the other is behind
 /// the pass-the-device screen: a duration started by a background poll would measure the handover -- the walk
 /// round the table, picking the phone up, tapping ready -- and not the decision. So only a poll that says it
@@ -55,7 +55,7 @@ internal sealed class DecisionClock(TimeProvider clock)
     /// </summary>
     /// <remarks>
     /// Read before the decision is handed over, and that is the whole reason this is separate from
-    /// <see cref="Answered" />. Submitting releases the driver, which can ask the seat the next question and
+    /// <see cref="Answered" />. Handing it over moves the match on, which can ask the seat the next question and
     /// have a poll stamp it before the host has finished writing the first one down -- and a stamp is one per
     /// seat, so the new question's stamp replaces the answered one's. Reading it first means the race can cost
     /// the *next* duration a poll of accuracy, and never costs this one its whole duration.

@@ -36,8 +36,22 @@ internal static class TableRestorer
                 continue;
             }
 
-            var journal = await stored.JournalAsync(id, cancellationToken);
-            if (!record.Begun && !DecisionJournal.HoldsDecision(journal) && now - record.CreatedAt >= TableRegistry.NeverBegunFor)
+            // Read inside what refuses one table: a line no host can read is that table's to be left over, and the
+            // tables after it are picked up all the same.
+            Application.Matches.Journaling.JournalReading? journal;
+            try
+            {
+                journal = await composer.JournalAsync(id, cancellationToken);
+            }
+            catch (Exception failure) when (Refuses(failure))
+            {
+                said.Add($"Session {record.Id} was not rebuilt: {failure.Message}");
+                continue;
+            }
+
+            var lines = journal?.Entries.Count ?? 0;
+            var decided = journal?.Decisions.Count > 0;
+            if (!record.Begun && !decided && now - record.CreatedAt >= TableRegistry.NeverBegunFor)
             {
                 // A table that never began is let go of by the sweep after the same time (ADR 0115); one the
                 // host before this one never got to sweep is left as it is, not marked, and not rebuilt.
@@ -48,9 +62,9 @@ internal static class TableRestorer
             PlayedTable? table;
             try
             {
-                table = await composer.ResumeAsync(record, journal, cancellationToken);
+                table = await composer.ResumeAsync(record, decided, cancellationToken);
             }
-            catch (Exception failure) when (failure is ArgumentException or IOException or System.Text.Json.JsonException or InvalidDataException or InvalidOperationException)
+            catch (Exception failure) when (Refuses(failure))
             {
                 said.Add($"Session {record.Id} was not rebuilt: {failure.Message}");
                 continue;
@@ -69,9 +83,13 @@ internal static class TableRestorer
             }
 
             table.Touch(now);
-            said.Add($"Session {record.Id} rebuilt from {journal.Count} recorded decisions; its seats answer to the links and codes they had.");
+            said.Add($"Session {record.Id} rebuilt from {lines} recorded decisions; its seats answer to the links and codes they had.");
         }
 
         return said;
     }
+
+    /// <summary>What refuses one table rather than the host's start: its record or journal no longer read, or no longer fit.</summary>
+    private static bool Refuses(Exception failure) =>
+        failure is ArgumentException or IOException or System.Text.Json.JsonException or InvalidDataException or InvalidOperationException;
 }
