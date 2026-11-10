@@ -189,8 +189,8 @@ export function challengeRequest(opponent) {
 
 function statusText(state) {
   if (!state.recording) return 'This host is not saving games. New tables are unavailable until recording is enabled.';
-  const tables = state.tables.length === 1 ? 'table' : 'tables';
-  return `${state.tables.length} ${tables} ongoing · updates automatically`;
+  const count = Number.isInteger(state.ongoing) ? state.ongoing : (state.tables ?? []).length;
+  return `${count} ${count === 1 ? 'table' : 'tables'} ongoing · updates automatically`;
 }
 
 export function mountLobby(doc, location, storage) {
@@ -210,6 +210,8 @@ export function mountLobby(doc, location, storage) {
   let onOutstanding = () => {};
   let onMine = () => {};
   let showAll = false;
+  // The page of Find an opponent on show, read from the host a page at a time with the rest of the lobby.
+  const publicTables = { page: 0, data: null };
   let loading = false;
   let drawn = '';
   let busy = false;
@@ -266,6 +268,54 @@ export function mountLobby(doc, location, storage) {
     const heading = node('h3', text);
     if (casual) heading.append(node('span', 'Unranked', 'casual-tag'));
     return heading;
+  }
+  // One row of a list: what it is and its state, who plays, a detail line, and the one thing to do. Public tables
+  // and finished games share it, so a long list stays one line an entry and reads the same everywhere.
+  function row({ heading, casual = false, tag, tone = '', sides = [], detail = '', action = null, className = '' }) {
+    const root = node('article', '', `game-row ${className}`.trim());
+    const top = node('div', '', 'game-row-top');
+    top.append(title(heading, casual), node('span', tag, `status-tag ${tone}`.trim()));
+    const line = node('div', '', 'game-row-who');
+    sides.forEach((side, index) => {
+      if (index > 0) line.append(node('span', 'vs', 'vs'));
+      const who = node('span', side.name, `who ${side.kind}${side.you ? ' you' : ''}`);
+      line.append(who);
+      if (side.kind === 'bot') line.append(node('span', 'bot', 'bot-tag'));
+    });
+    if (sides.length) line.setAttribute('aria-label', sides.map(side => side.name).join(' versus '));
+    root.append(top, line, node('p', detail, 'game-row-detail'));
+    if (action) root.append(action);
+    return root;
+  }
+  // The pages of a list served a page at a time: previous, where, next. Nothing when it fits on one page.
+  function pager(label, shown, go) {
+    if (!shown || shown.pages <= 1) return null;
+    const pages = node('nav', '', 'lobby-pages'); pages.setAttribute('aria-label', label);
+    const previous = node('button', '← Previous'), next = node('button', 'Next →');
+    for (const [button, step] of [[previous, -1], [next, 1]]) {
+      button.type = 'button'; button.dataset.page = String(step);
+      button.addEventListener('click', () => go(shown.page - 1 + step));
+    }
+    previous.disabled = shown.page <= 1; next.disabled = shown.page >= shown.pages;
+    const at = node('span', `Page ${shown.page} of ${shown.pages}`); at.setAttribute('aria-live', 'polite');
+    pages.append(previous, at, next);
+    return pages;
+  }
+  // A game in progress in Find an opponent: its state, who sits, and a seat to take, or the way back to one's own.
+  function tableRow(table) {
+    const entry = mine.find(one => one.table.id === table.id);
+    const held = (entry?.seats ?? []).map(seat => seat.seat);
+    const turn = turnOf(table, held);
+    let action = null;
+    if (entry || table.openSeats > 0) {
+      action = node('button', cardAction(table, entry), entry ? 'primary' : 'secondary');
+      action.type = 'button';
+      action.setAttribute('aria-label', `${entry ? 'Resume' : 'Join'} ${table.format} table ${table.id}`);
+      if (entry) action.addEventListener('click', () => enter(entry));
+      else action.addEventListener('click', () => act(action, () => lobbyRequest(`/api/lobby/tables/${encodeURIComponent(table.id)}/join`, {})));
+    }
+    return row({ heading: `${table.format} battle`, casual: table.casual === true, tag: tableState(table), tone: table.openSeats > 0 ? 'available' : '',
+      sides: versus(table).map(side => ({ ...side, you: held.includes(side.seat) })), detail: turn?.text ?? '', action, className: 'public' });
   }
   function card(table, entry) {
     const root = node('article', '', `game-card${entry ? ' mine' : ''}`);
@@ -391,46 +441,30 @@ export function mountLobby(doc, location, storage) {
   // A finished game, as the kept results tell it: the result, who it was against, and the way back to it.
   function finishedCard(item) {
     const summary = finishedSummary(item);
-    const root = node('article', '', `game-card mine finished ${summary.tone}`);
-    const top = node('div', '', 'game-card-top');
-    top.append(title(summary.title, summary.casual), node('span', summary.tag, `status-tag outcome ${summary.tone}`));
-    const line = node('div', '', 'versus');
-    const who = node('span', '', 'side');
-    who.append(node('span', `vs ${summary.against}`, `who ${item.opponent?.kind ?? 'person'}`));
-    if (summary.bot) who.append(node('span', 'bot', 'bot-tag'));
-    line.append(who);
     const when = item.finishedAt ? new Date(item.finishedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '';
-    root.append(top, line, node('p', [when, summary.detail].filter(Boolean).join(' · ') || ' ', 'game-turn'));
+    let action = null;
     if (summary.action && item.seats?.length) {
-      const button = node('button', summary.action, 'primary'); button.type = 'button';
-      button.addEventListener('click', () => enter({ seats: item.seats }));
-      root.append(button);
+      action = node('button', summary.action, 'secondary'); action.type = 'button';
+      action.addEventListener('click', () => enter({ seats: item.seats }));
     } else if (summary.action) {
-      const link = node('a', summary.action, 'button-link'); link.href = item.replay;
-      root.append(link);
+      action = node('a', summary.action, 'button-link'); action.href = item.replay;
     }
-    return root;
+    return row({ heading: summary.title, casual: summary.casual, tag: summary.tag, tone: `outcome ${summary.tone}`,
+      sides: [{ name: `vs ${summary.against}`, kind: item.opponent?.kind ?? 'person' }], detail: [when, summary.detail].filter(Boolean).join(' · '), action,
+      className: `finished ${summary.tone}` });
   }
   // A kind's finished games, a page at a time from the host, with that kind's own pages.
   function finishedGroup(kind, label) {
     const shown = finished[kind].data;
     const root = group(kind, label, { text: shown ? String(shown.total) : '…', full: false });
-    const cards = node('div', '', 'lobby-grid');
-    if (!shown) cards.append(node('p', 'Finding your finished games…', 'empty-state'));
-    else cards.append(...(shown.items.length ? shown.items.map(finishedCard) : [node('p', `No finished games ${label.toLowerCase()} yet.`, 'empty-state')]));
-    root.append(cards);
-    if (shown && shown.pages > 1) {
-      const pages = node('nav', '', 'lobby-pages'); pages.setAttribute('aria-label', `Pages of your finished games ${label.toLowerCase()}`);
-      const previous = node('button', '← Previous'), next = node('button', 'Next →');
-      for (const [button, step] of [[previous, -1], [next, 1]]) {
-        button.type = 'button'; button.dataset.page = String(step);
-        button.addEventListener('click', () => { finished[kind].page = shown.page - 1 + step; void loadFinished(kind); root.scrollIntoView?.({ block: 'start', behavior: 'smooth' }); });
-      }
-      previous.disabled = shown.page <= 1; next.disabled = shown.page >= shown.pages;
-      const at = node('span', `Page ${shown.page} of ${shown.pages}`); at.setAttribute('aria-live', 'polite');
-      pages.append(previous, at, next);
-      root.append(pages);
-    }
+    const rows = node('div', '', 'game-rows');
+    if (!shown) rows.append(node('p', 'Finding your finished games…', 'empty-state'));
+    else rows.append(...(shown.items.length ? shown.items.map(finishedCard) : [node('p', `No finished games ${label.toLowerCase()} yet.`, 'empty-state')]));
+    root.append(rows);
+    const pages = pager(`Pages of your finished games ${label.toLowerCase()}`, shown, page => {
+      finished[kind].page = page; void loadFinished(kind); root.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+    });
+    if (pages) root.append(pages);
     return root;
   }
   // Signed in, a kind's finished page is the host's (ADR 0147); elsewhere, the finished tables this browser reaches.
@@ -459,10 +493,11 @@ export function mountLobby(doc, location, storage) {
     void loadOpponents();
   }
   function render() {
-    const key = JSON.stringify([listing, mine, invitations, showAll, account, mode, mineTab, finished, limit, opponents]);
+    const key = JSON.stringify([listing, mine, invitations, showAll, account, mode, mineTab, finished, limit, opponents, publicTables]);
     if (key === drawn) return;
     drawn = key;
-    const available = visibleTables(listing.tables, mine, showAll);
+    // A host without accounts cannot tell whose seats this browser holds: its own open tables are left out here.
+    const shownTables = publicTables.data, available = shownTables ? visibleTables(shownTables.items, mine, showAll) : null;
     el('invitations').hidden = invitations.length === 0;
     el('invitations-count').textContent = invitations.length || '';
     el('invitation-cards').replaceChildren(...invitations.map(invitationCard));
@@ -476,11 +511,15 @@ export function mountLobby(doc, location, storage) {
     el('mine-count').textContent = ongoing.players.length + ongoing.bots.length + finishedTotal;
     el('ongoing-count').textContent = ongoing.players.length + ongoing.bots.length ? `· ${ongoing.players.length + ongoing.bots.length}` : '';
     el('finished-count').textContent = loaded && finishedTotal ? `· ${finishedTotal}` : '';
-    el('tables-count').textContent = available.length;
+    el('tables-count').textContent = shownTables ? shownTables.total : '';
     const none = signInFirst() ? 'Sign in to see your games, on this device and every other one you sign in on.' : 'No games here yet. Create a table, take an open seat or enter an invitation code.';
     if (signInFirst() || (!mine.length && !finishedTotal && mineTab === 'ongoing')) el('my-tables').replaceChildren(node('p', none, 'empty-state'));
     else el('my-tables').replaceChildren(...KINDS.map(([kind, label]) => mineTab === 'ongoing' ? ongoingGroup(kind, label, ongoing[kind]) : finishedGroup(kind, label)));
-    el('open-tables').replaceChildren(...(available.length ? available.map(table => card(table)) : [node('p', showAll ? 'No battles underway. Create the first table.' : 'No open seats right now. Create a table and invite another player, or play a bot.', 'empty-state')]));
+    const rows = node('div', '', 'game-rows');
+    if (!available) rows.append(node('p', 'Finding open tables…', 'empty-state'));
+    else rows.append(...(available.length ? available.map(tableRow) : [node('p', showAll ? 'No battles underway. Create the first table.' : 'No open seats right now. Create a table and invite another player, or play a bot.', 'empty-state')]));
+    const tablePages = pager(showAll ? 'Pages of the battles underway' : 'Pages of the open seats', shownTables, page => { publicTables.page = page; void loadTables(); });
+    el('open-tables').replaceChildren(rows, ...(tablePages ? [tablePages] : []));
     el('new-table').disabled = !listing.recording;
     el('lobby-status').textContent = statusText(listing);
     const options = listing.formats;
@@ -489,15 +528,29 @@ export function mountLobby(doc, location, storage) {
       el('format').value = listing.format;
     }
   }
+  const tablesPath = (all, page) => `/api/lobby/page/${all ? 'all' : 'open'}/${page + 1}`;
+  // A page asked for (a filter, previous, next) is read at once; the polls keep reading the page on show.
+  async function loadTables() {
+    const view = showAll, page = publicTables.page, reading = revision;
+    try {
+      const data = await lobbyRequest(tablesPath(view, page));
+      if (reading !== revision || view !== showAll || page !== publicTables.page || !Array.isArray(data?.items)) return;
+      publicTables.data = data; publicTables.page = data.page - 1;
+    } catch (error) { if (reading === revision) problem(error.message || 'Could not read the tables. Try again.'); }
+    if (listing) render();
+  }
   async function refresh() {
     if (loading) { refreshAgain = true; return; }
     loading = true;
     const reading = revision;
     try {
       const tokens = savedSeats(storage).map(item => item.token);
-      const [publicTables, saved] = await Promise.all([lobbyRequest('/api/lobby'), yours(tokens)]);
+      const view = showAll, page = publicTables.page;
+      const [summary, saved, tables] = await Promise.all([lobbyRequest('/api/lobby'), yours(tokens), lobbyRequest(tablesPath(view, page)).catch(() => null)]);
       if (reading !== revision) return;
-      listing = publicTables;
+      // A page that failed keeps the one on show: it is read again on the next poll.
+      if (Array.isArray(tables?.items) && view === showAll && page === publicTables.page) { publicTables.data = tables; publicTables.page = tables.page - 1; }
+      listing = summary;
       mine = saved.tables;
       invitations = saved.invitations ?? [];
       limit = Number.isInteger(saved.ongoingPerKind) ? saved.ongoingPerKind : null;
@@ -534,10 +587,12 @@ export function mountLobby(doc, location, storage) {
     if (listing) render();
   });
   for (const [id, all] of [['filter-open', false], ['filter-all', true]]) el(id).addEventListener('click', () => {
-    showAll = all;
+    if (showAll === all) return;
+    showAll = all; publicTables.page = 0; publicTables.data = null;
     el('filter-open').setAttribute('aria-pressed', String(!all));
     el('filter-all').setAttribute('aria-pressed', String(all));
     if (listing) render();
+    void loadTables();
   });
   const dialog = el('create-dialog');
   // The friends a seat can be kept for (ADR 0129), read when the dialog opens: the list is short and changes rarely.
@@ -660,6 +715,8 @@ export function mountLobby(doc, location, storage) {
       mode = nextMode;
       if (changed) {
         revision += 1; adopted = false; mine = []; invitations = []; opponents = []; limit = null; finishedSeen = null; finishedReads = 0;
+        // Open seats leave out the player's own tables: another account's page is not this one's.
+        publicTables.page = 0; publicTables.data = null;
         for (const [kind] of KINDS) finished[kind] = { page: 0, data: null };
         if (dialog.open) dialog.close();
         problem();
