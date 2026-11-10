@@ -358,6 +358,9 @@ public sealed class JournaledStepper(
     /// </summary>
     private async Task<Result<JournalPosition>> LoadAsync(JournaledMatch match, Kept kept, CancellationToken cancellationToken)
     {
+        // Before anything is read or rebuilt: a step that reaches its turn after its caller gave the match up
+        // must not bring back a match that was let go of while it waited.
+        cancellationToken.ThrowIfCancellationRequested();
         var reading = await journal.ReadAsync(match.Run, cancellationToken);
         if (kept.Position == reading.Position && await matches.FindAsync(match.MatchId, cancellationToken) is not null)
         {
