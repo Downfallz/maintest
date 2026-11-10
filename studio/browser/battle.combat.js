@@ -9,7 +9,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
   const { host, join } = await startHost(declaration);
   try {
     await page.goto(join); await page.locator('#invitation-take').click();
-    await page.waitForURL(/\/battle(?:\?|$)/, { timeout: 20000 }); // The accepted seat goes on to the battle view (ADR 0156).
+    await page.waitForURL(/\/battle(?:\?|$)/, { timeout: 20000 }); // The accepted seat goes on to the battle view (ADR 0157).
     const tokens = await page.evaluate(() => JSON.parse(localStorage.getItem('downfall.table.seats')));
     const origin = new URL(join).origin, headers = { 'X-Seat-Token': tokens.player1 };
     const read = async () => (await context.request.get(`${origin}/api/seat/player1`, { headers })).json();

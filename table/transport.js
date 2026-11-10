@@ -78,8 +78,11 @@ export function replayTransport(id, seat, token, fetchImpl = globalThis.fetch.bi
   // The asking itself is kept, not its answer: the catalogue and the first poll ask at the same moment. A refusal
   // or a failure is forgotten, so the next poll asks again.
   let loading = null;
+  // One route for every reader (ADR 0156): the operator by the panel's token, which not every host gives the page,
+  // or by the platform's sign-in; a player by the account cookie the browser sends, for one of their own games.
+  const path = `/api/lobby/tables/${encodeURIComponent(id)}/replay`;
   async function request() {
-    const response = await fetchImpl(`/api/sessions/${encodeURIComponent(id)}/replay`, { method: 'GET', headers: token ? { 'X-Seat-Token': token } : {} });
+    const response = await fetchImpl(path, { method: 'GET', headers: token ? { 'X-Seat-Token': token } : {} });
     const text = await response.text();
     return { status: response.status, ok: response.ok, body: text ? parse(text) : null };
   }

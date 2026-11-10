@@ -9,9 +9,9 @@ const battle = {
 };
 const held = { table: battle, seats: [{ seat: 'player1', token: 'seat-token' }] };
 
-async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, games = null, finished = { players: [], bots: [] } } = {}) {
-  const state = { account, mode, meDown, offline: false, mineReads: 0, friendReads: 0, finishedReads: [], privateReads: [], release: null,
-    friends: { friends: [friend], incoming: [challenger], outgoing: [] } };
+async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, games = null, finished = { players: [], bots: [] }, opponents = [], invitations = [], incoming = [challenger] } = {}) {
+  const state = { account, mode, meDown, offline: false, mineReads: 0, friendReads: 0, finishedReads: [], privateReads: [], release: null, invitations,
+    friends: { friends: [friend], incoming, outgoing: [] } };
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   state.errors = errors;
@@ -39,7 +39,7 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
       state.privateReads.push(path); state.mineReads++;
       const tables = state.account || state.mode === 'off' ? games ?? [held] : [];
       if (delayMine && state.mineReads === 1) await new Promise(resolve => { state.release = resolve; });
-      return json({ tables, invitations: [], ongoingPerKind: state.account ? 5 : undefined });
+      return json({ tables, invitations: state.account ? state.invitations : [], ongoingPerKind: state.account ? 5 : undefined });
     }
     const pageOf = /^\/api\/lobby\/finished\/(bots|players)\/(\d+)$/.exec(path);
     if (pageOf) {
@@ -52,7 +52,28 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
       state.removals = (state.removals ?? 0) + 1;
       state.friends = { ...state.friends, friends: [] }; return json({});
     }
+    // Each opponent's relation is the friends list's, as the host reads it.
+    if (path === '/api/lobby/opponents') {
+      state.opponentReads = (state.opponentReads ?? 0) + 1;
+      const relation = id => [['friends', 'friend'], ['outgoing', 'asked'], ['incoming', 'asking']].find(([key]) => state.friends[key].some(link => link.id === id))?.[1] ?? 'none';
+      return json({ opponents: opponents.map(one => ({ ...one, relation: relation(one.id) })) });
+    }
+    if (path === '/api/friends/requests' && route.request().method() === 'POST') {
+      state.asked = route.request().postDataJSON();
+      const other = opponents.find(one => one.name === state.asked.username);
+      state.friends = { ...state.friends, outgoing: [...state.friends.outgoing, { id: other.id, username: other.name }] };
+      return json({ accepted: false });
+    }
     if (path === '/api/friends') { state.friendReads++; return json(state.friends); }
+    const answer = /^\/api\/lobby\/tables\/([^/]+)\/(accept|decline)$/.exec(path);
+    if (answer) {
+      state.answered = [...(state.answered ?? []), `${answer[2]}:${answer[1]}`];
+      state.invitations = state.invitations.filter(one => one.table.id !== answer[1]);
+      return json(answer[2] === 'accept' ? { seats: [{ seat: 'player2', token: 'invited-token' }] } : {});
+    }
+    if (path === `/api/friends/requests/${challenger.id}` && route.request().method() === 'DELETE') {
+      state.friends = { ...state.friends, incoming: [] }; return json({});
+    }
     if (path === `/api/friends/requests/${challenger.id}/accept`) {
       state.friends = { ...state.friends, friends: [friend, challenger], incoming: [] }; return json({});
     }
@@ -342,6 +363,8 @@ for (const file of ['leaderboard', 'battle', 'index']) {
     await home(page);
     await page.goto(`/table/${file}.html`);
     await expect(page.locator('#account-name')).toHaveText(player.username);
+    // The bell reads what waits on its own on every page: the turn at Bastien's table and Alex's request.
+    await expect(page.locator('#inbox-badge')).toHaveText('2');
     await openNavigation(page);
     const nav = page.getByRole('navigation', { name: 'Main navigation' });
     await expect(nav.locator(':scope > :visible')).toHaveText(['Lobby', /Friends/, 'Leaderboard', 'Join with a code', 'Settings']);
@@ -374,7 +397,7 @@ test('your games are grouped against players and against bots, at most five of e
     seats: [{ ...battle.seats[0], turn }, against === 'bot' ? bot : { ...battle.seats[1], turn: false }] }, seats: [{ seat: 'player1', token: `${id}-token` }] });
   const games = [game('waiting-on-them', { against: 'person' }), ...Array.from({ length: 4 }, (_, index) => game(`bot-${index}`)), game('your-move', { turn: true })];
   const result = (index, outcome, opponent) => ({ match: `m${index}`, table: `t${index}`, finishedAt: `2026-11-0${1 + (index % 7)}T20:00:00Z`, format: '3v3', rounds: 9,
-    outcome, you: ['player1'], opponent, seats: null, session: `/session/t${index}` });
+    outcome, you: ['player1'], opponent, seats: null, replay: `/battle?replay=t${index}&seat=player1` });
   const finished = { bots: Array.from({ length: 8 }, (_, index) => result(index, 'won', { kind: 'bot', name: 'Lookahead' })),
     players: [result(20, 'lost', { kind: 'person', name: 'bastien' })] };
   const state = await home(page, { games, finished });
@@ -392,7 +415,7 @@ test('your games are grouped against players and against bots, at most five of e
   await page.locator('#mine-finished').click();
   await expect(bots.locator('.game-card')).toHaveCount(6); await expect(bots.locator('.game-card').first()).toContainText('Victory');
   await expect(bots.locator('.game-card').first()).toContainText('vs Lookahead');
-  await expect(bots.locator('.game-card a').first()).toHaveAttribute('href', '/session/t0');
+  await expect(bots.locator('.game-card a').first()).toHaveAttribute('href', '/battle?replay=t0&seat=player1');
   await expect(players.locator('.game-card')).toContainText('Defeat'); await expect(players.locator('.lobby-pages')).toHaveCount(0);
   await expect(bots.locator('.lobby-pages span')).toHaveText('Page 1 of 2');
   await page.locator('#my-games-section').screenshot({ path: info.outputPath('lobby-finished.png') });
@@ -419,7 +442,7 @@ test('a finished page that failed is read again on the next poll, and the three 
   const bot = { seat: 'player2', kind: 'bot', name: 'Lookahead', turn: false };
   const games = [{ table: { ...battle, id: 'live', seats: [battle.seats[0], bot] }, seats: [{ seat: 'player1', token: 'live-token' }] }];
   const won = { match: 'm1', table: 'done', finishedAt: '2026-11-07T20:00:00Z', format: '3v3', rounds: 4, outcome: 'won', you: ['player1'],
-    opponent: { kind: 'bot', name: 'Lookahead' }, seats: null, session: '/session/done' };
+    opponent: { kind: 'bot', name: 'Lookahead' }, seats: null, replay: '/battle?replay=done&seat=player1' };
   const finished = { bots: [], players: [] };
   const state = await home(page, { games, finished });
   state.failFinished = 0;
@@ -439,3 +462,118 @@ test('a finished page that failed is read again on the next poll, and the three 
   expect(state.errors).toEqual([]);
 });
 
+
+test('recent opponents are listed with the record between you: a friend is challenged again in the same format, anyone else is asked to be a friend first', async ({ page }, info) => {
+  const last = '2026-11-08T20:00:00Z';
+  // Bastien is a friend and Alex asked to be one (the mock's friends list); Julie is neither. The host lists them
+  // met most recently first: Julie, Bastien, Alex.
+  const state = await home(page, { opponents: [
+    { id: 'acct_dddddddddddddddd', name: 'Julie', lastPlayedAt: '2026-11-09T20:00:00Z', games: 1, won: 0, lost: 1, drawn: 0, format: '3v3', casual: false },
+    { id: friend.id, name: friend.username, lastPlayedAt: last, games: 3, won: 2, lost: 1, drawn: 0, format: '1v1', casual: true },
+    { id: challenger.id, name: challenger.username, lastPlayedAt: '2026-11-07T20:00:00Z', games: 1, won: 1, lost: 0, drawn: 0, format: '3v3', casual: false },
+  ] });
+  const section = page.locator('#opponents'), cards = section.locator('.game-card.opponent');
+  const names = () => cards.locator('h3').allTextContents();
+  // A friend, the one a tap challenges, comes first; the others keep the order they were met in.
+  await expect.poll(names).toEqual(['Bastien', 'Julie', 'Alex']);
+  await expect(section).toBeVisible();
+  await expect(cards).toHaveCount(3);
+  await expect(cards.nth(0).locator('.record')).toHaveText('2–1');
+  await expect(cards.nth(0).locator('.record')).toHaveAccessibleName('Won 2 · Lost 1');
+  await expect(cards.nth(0)).toContainText('1v1 · unranked');
+  // One row that scrolls sideways: every card on the same line, the section one card high, the page never wider.
+  const tops = await cards.evaluateAll(nodes => nodes.map(node => Math.round(node.getBoundingClientRect().top)));
+  expect(new Set(tops).size).toBe(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  if (page.viewportSize().width < 600) {
+    const strip = page.locator('#opponent-cards');
+    expect(await strip.evaluate(node => node.scrollWidth > node.clientWidth)).toBe(true);
+    await expect(cards.nth(1)).not.toBeInViewport({ ratio: 1 });
+  }
+  await expect(cards.nth(2).getByRole('button', { name: 'Accept friend' })).toBeEnabled();
+  await page.screenshot({ path: info.outputPath('recent-opponents.png'), fullPage: true });
+  // A stranger is asked to be a friend, by name: no invitation reaches them.
+  await cards.nth(1).getByRole('button', { name: 'Add friend' }).click();
+  await expect(cards.nth(1).getByRole('button', { name: 'Friend request sent' })).toBeDisabled();
+  expect(state.asked).toEqual({ username: 'Julie' });
+  // Accepted from the Friends panel instead, Alex's card follows: Alex can be challenged now.
+  await openPanel(page, /^Friends/);
+  await page.locator('#friends-dialog').getByRole('button', { name: 'Accept', exact: true }).click();
+  await page.getByRole('button', { name: 'Close friends' }).click();
+  // A friend now, Alex moves forward with the friends: after Bastien, met more recently.
+  await expect.poll(names).toEqual(['Bastien', 'Alex', 'Julie']);
+  await expect(cards.nth(1).getByRole('button', { name: 'Challenge →' })).toBeEnabled();
+  await expect(cards.nth(2).getByRole('button', { name: 'Friend request sent' })).toBeDisabled();
+  // A friend is challenged from the create dialog, on them, in the last game's format and rating.
+  await cards.nth(0).getByRole('button', { name: 'Challenge →' }).click();
+  await expect(page.locator('#create-dialog')).toBeVisible();
+  await expect(page.locator('#opponent')).toHaveValue('friend');
+  await expect(page.locator('#friend')).toHaveValue(friend.id);
+  await expect(page.locator('#format')).toHaveValue('1v1');
+  await expect(page.locator('#ranked')).not.toBeChecked();
+  expect(state.created).toBeUndefined();
+  expect(state.errors).toEqual([]);
+});
+
+test('a player who has met nobody yet sees no recent opponents section', async ({ page }) => {
+  const state = await home(page);
+  await expect(page.locator('#my-tables .game-card')).toHaveCount(1);
+  await expect.poll(() => state.opponentReads ?? 0).toBeGreaterThan(0);
+  await expect(page.locator('#opponents')).toBeHidden();
+});
+
+test('the bell counts what waits for the player and acts on each: play a turn, answer an invitation, answer a friend request', async ({ page }, info) => {
+  const state = await home(page, { invitations: [{ table: { id: 'invited', format: '1v1' }, from: { id: friend.id, username: friend.username }, sentAt: '2026-11-09T20:00:00Z' }] });
+  // The game page itself is not this test's: a stand-in answers where the bell sends the player.
+  await page.route('**/play?**', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Game</title>' }));
+  const bell = page.locator('#inbox-open'), badge = page.locator('#inbox-badge');
+  await expect(bell).toBeInViewport();
+  await expect(badge).toHaveText('3');
+  await expect(bell).toHaveAccessibleName('Notifications · 3 waiting');
+  await bell.click();
+  const dialog = page.locator('#inbox-dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('.inbox-group h3')).toHaveText(['Your turn · 1', 'Invitations · 1', 'Friend requests · 1']);
+  await expect(dialog.locator('.inbox-item.turn')).toContainText('Your turn against Bastien');
+  await expect(dialog.locator('.inbox-item.turn')).toContainText('3v3 battle · Round 3');
+  await page.screenshot({ path: info.outputPath('inbox.png') });
+  // A friend request accepted here is gone from the bell and from the Friends panel's count.
+  await dialog.locator('.inbox-item.friend').getByRole('button', { name: 'Accept', exact: true }).click();
+  await expect(dialog.locator('.inbox-item.friend')).toHaveCount(0);
+  await expect(page.locator('#friend-requests-badge')).toBeHidden();
+  await expect(badge).toHaveText('2');
+  // An invitation declined here is answered with the lobby's own route.
+  await dialog.locator('.inbox-item.invitation').getByRole('button', { name: 'Decline' }).click();
+  await expect(dialog.locator('.inbox-item.invitation')).toHaveCount(0);
+  expect(state.answered).toEqual(['decline:invited']);
+  await expect(badge).toHaveText('1');
+  // The turn opens the game with the seat the player holds there.
+  await dialog.locator('.inbox-item.turn').getByRole('button', { name: 'Play →' }).click();
+  await page.waitForURL(/\/play\?player1=seat-token$/);
+  expect(state.errors).toEqual([]);
+});
+
+test('accepting an invitation from the bell takes the seat and opens the game', async ({ page }) => {
+  const state = await home(page, { incoming: [], games: [], invitations: [{ table: { id: 'invited', format: '1v1' }, from: { id: friend.id, username: friend.username } }] });
+  // The game page itself is not this test's: a stand-in answers where the bell sends the player.
+  await page.route('**/play?**', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Game</title>' }));
+  await expect(page.locator('#inbox-badge')).toHaveText('1');
+  await page.locator('#inbox-open').click();
+  await page.locator('#inbox-dialog .inbox-item.invitation').getByRole('button', { name: 'Accept & play →' }).click();
+  await page.waitForURL(/\/play\?player2=invited-token$/);
+  expect(state.answered).toEqual(['accept:invited']);
+});
+
+test('with nothing waiting the bell shows no count and says so; a guest has no bell', async ({ page }) => {
+  await home(page, { incoming: [], games: [] });
+  await expect(page.locator('#inbox-open')).toHaveAccessibleName('Notifications · nothing waiting');
+  await expect(page.locator('#inbox-badge')).toBeHidden();
+  await page.locator('#inbox-open').click();
+  await expect(page.locator('#inbox-dialog .inbox-empty')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.locator('#account-menu summary').click();
+  await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+  await page.locator('#action-confirm').click();
+  await expect(page.locator('body')).toHaveAttribute('data-home', 'guest');
+  await expect(page.locator('#inbox-open')).toBeHidden();
+});

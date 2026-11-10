@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test('the lobby opens every seat in the battle view, with no view to choose, whatever an older choice said (ADR 0156)', async ({ page }) => {
+test('the lobby opens every seat in the battle view, with no view to choose, whatever an older choice said (ADR 0157)', async ({ page }) => {
   const held = { table: { id: 'release-table', format: '3v3', round: 2, openSeats: 0 }, seats: [{ seat: 'player1', token: 'accepted-seat' }] };
   await page.route('**/api/**', route => {
     const path = new URL(route.request().url()).pathname;

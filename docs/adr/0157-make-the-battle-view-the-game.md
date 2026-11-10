@@ -1,4 +1,4 @@
-# 0156. Make the battle view the game, and archive the classic table
+# 0157. Make the battle view the game, and archive the classic table
 
 Date: 2026-11-10
 Status: Accepted. Supersedes the Table/Arena preference of [ADR 0136](0136-gate-the-arena-release-behind-a-reversible-preference.md);

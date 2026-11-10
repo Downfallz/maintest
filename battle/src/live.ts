@@ -32,7 +32,7 @@ import { matchControls } from './match';
 import { rematchPlan } from '../../table/outcome.js';
 import { createBattlePlanning } from '../../table/battle-planning.js';
 import { createBattleMatch } from '../../table/battle-match.js';
-import { replayOf, operatorToken } from '../../table/session.js';
+import { replayOf, operatorToken, replayMessage } from '../../table/session.js';
 import { httpTransport, replayTransport } from '../../table/transport.js';
 import { battleSeats, seatPath } from '../../table/battle-seats.js';
 import { createLiveConnection } from '../../table/battle-live.js';
@@ -159,10 +159,12 @@ function status(state: string) {
     stale: 'Connection interrupted · retrying', signin: 'Sign in to continue', revoked: 'Seat access is no longer valid' };
   text('connection', messages[state] ?? state);
   if ((state === 'signin' || state === 'revoked') && replayOf(location.search)) {
-    // A recording is read with the operator token the admin panel holds; no account sign-in grants it.
-    text('load-title', 'This recording needs the operator');
-    text('load-detail', 'Open it from the admin panel, which holds the operator token.');
-    $<HTMLAnchorElement>('access-link').href = '/admin'; text('access-link', 'Open admin');
+    // A recording is the operator's to read with the panel's token, or a player's own game read by their account
+    // (ADR 0156): signed out is asked to sign in, and anybody else is told whose it is.
+    const replay = replayMessage(state, Boolean(operatorToken(storage)));
+    text('load-title', replay.title); text('load-detail', replay.detail);
+    $<HTMLAnchorElement>('access-link').href = replay.link === 'signin' ? signInPath(location.pathname + location.search) : replay.link;
+    text('access-link', replay.label);
     $('retry').hidden = false;
   } else if (state === 'signin' || state === 'revoked') {
     selected = null;
@@ -713,7 +715,7 @@ function failRenderer() {
   audio.stop();
   discovering++; rendererFailed = true; ready = false; view = null; connection.stop(); services.reset(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset();
   render(); $('loading').hidden = false; text('load-title', 'The renderer was interrupted'); text('load-detail', 'Reload to restore the scene: your seat and the match wait for you.');
-  // The classic table is archived (ADR 0156): reloading the scene is the way back, and the lobby lists the game.
+  // The classic table is archived (ADR 0157): reloading the scene is the way back, and the lobby lists the game.
   text('access-link', 'Lobby'); $<HTMLAnchorElement>('access-link').href = '/';
   text('retry', 'Reload scene'); $('retry').hidden = false;
 }

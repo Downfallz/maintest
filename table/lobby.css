@@ -59,6 +59,17 @@
 .mine-group .lobby-count.full { color: var(--gold); border-color: var(--gold); }
 .mine-limit { margin: 10px 0 0; color: var(--muted); font-size: 13px; }
 .game-card .status-tag.outcome.won { color: var(--ok); border-color: var(--ok); }
+/* Recent opponents are one row that scrolls sideways, whatever their number: the section keeps one card's height,
+   and on a phone the next card shows at the edge, which says there are more. Each card is the name and the score
+   between you, the last game in small, and the one way to play again. */
+.opponent-strip { display: flex; gap: 10px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory;
+  scroll-padding-inline: 2px; padding: 2px 2px 8px; scrollbar-width: thin; }
+.opponent-strip:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 12px; }
+.game-card.opponent { flex: 0 0 min(76%, 240px); scroll-snap-align: start; padding: 12px 14px; gap: 8px; }
+.game-card.opponent h3 { margin: 0; min-width: 0; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.game-card.opponent .status-tag.record { color: var(--ink); font-variant-numeric: tabular-nums; }
+.game-card.opponent .game-turn { color: var(--muted); font-size: 12px; margin: 0; }
+.game-card.opponent button { width: 100%; min-height: 40px; margin-top: auto; }
 .game-card .status-tag.outcome.lost { color: var(--bad); border-color: var(--bad); }
 .game-card.finished .button-link { display: block; margin-top: auto; text-align: center; padding: 12px 16px; border: 1px solid var(--line); border-radius: 8px; text-decoration: none; }
 .empty-state { grid-column: 1 / -1; padding: 28px; border: 1px dashed var(--line); border-radius: 12px; color: var(--muted); line-height: 1.7; }
@@ -140,6 +151,36 @@
 .home-header #account-name { max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
 .home-header .account-chip { font-size: 12px; }
 .nav-badge { display: inline-grid; place-items: center; min-width: 19px; height: 19px; border-radius: 50%; padding: 0 4px; background: var(--gold); color: var(--accent-ink); font-size: 10px; }
+/* The bell: what waits for the player (their turns, invitations, friend requests), counted on it in every page's
+   header and listed in its window, each with its action. Outside the menu, so a phone sees it without opening it. */
+.inbox-button { position: relative; flex: none; display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--muted); }
+.inbox-button[hidden] { display: none; }
+.inbox-button:hover, .inbox-button[aria-expanded="true"] { color: var(--gold); background: var(--accent-wash); }
+.inbox-button svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.inbox-button:has(.inbox-badge:not([hidden])) { color: var(--gold); border-color: color-mix(in srgb, var(--gold) 55%, var(--line)); }
+.inbox-badge { position: absolute; top: -4px; right: -5px; font-weight: 700; box-shadow: 0 0 0 2px var(--paper); }
+.inbox-list { display: grid; gap: 22px; }
+.inbox-group h3 { margin: 0 0 8px; color: var(--muted); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+.inbox-items { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.inbox-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--raised); }
+.inbox-item.turn { border-color: color-mix(in srgb, var(--gold) 60%, var(--line)); }
+.inbox-text { display: grid; gap: 3px; min-width: 0; }
+.inbox-text strong { overflow-wrap: anywhere; }
+.inbox-text small { color: var(--muted); font-size: 12px; }
+.inbox-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; flex: none; }
+.inbox-actions :is(button, a) { min-height: 44px; }
+.inbox-actions .button-link { display: inline-flex; align-items: center; justify-content: center; padding: 8px 14px; border: 1px solid var(--line); border-radius: 8px; color: var(--gold); text-decoration: none; }
+.inbox-empty { margin: 0; }
+/* The narrowest phones fit the brand, the menu, the bell and the account in one row by giving up some air. */
+@media (max-width: 360px) {
+  header.home-header { gap: 4px; }
+  .inbox-button { width: 40px; height: 40px; }
+}
+@media (max-width: 520px) {
+  .inbox-item { flex-direction: column; align-items: stretch; }
+  .inbox-actions { justify-content: stretch; }
+  .inbox-actions > * { flex: 1; }
+}
 .home-page .lobby-hero { padding: 44px 0 30px; }
 .home-page .lobby-hero h2 { font-size: clamp(34px, 4vw, 50px); }
 .home-page .lobby-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); }

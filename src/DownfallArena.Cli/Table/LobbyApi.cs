@@ -34,6 +34,12 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     /// <summary>Where finished games are kept (ADR 0147), the composer's own unless given: what the Finished tab reads.</summary>
     public Application.Accounts.Ports.IMatchResults? Results { get; set; }
 
+    /// <summary>
+    /// A finished session's replay off the host's store, as the admin panel serves it (ADR 0156); none on a host that
+    /// records nothing.
+    /// </summary>
+    public Func<string, Task<StudioResponse>>? Replay { get; set; }
+
     /// <summary>What tells a friend's devices of an invitation, and the inviter's of its answer; none without push keys.</summary>
     public AccountNotices? Notices { get; set; }
 
@@ -76,6 +82,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 ("POST", Prefix + "/resume") => SignInRequired(account) ?? await ResumeAsync(body, account),
                 ("GET", Prefix + "/mine") => await MineAsync(account),
                 ("GET", _) when FinishedRoute(path) is { } finished => SignInRequired(account) ?? await FinishedAsync(finished.AgainstBots, finished.Page, account),
+                ("GET", Prefix + "/opponents") => SignInRequired(account) ?? await OpponentsAsync(account),
                 ("POST", Prefix + "/adopt") => await AdoptAsync(body, account),
                 ("POST", Prefix + "/tables") => SignInRequired(account) ?? await OpenAsync(body, account),
                 ("POST", Prefix + "/leave") => await LeaveAsync(token, account),
@@ -94,6 +101,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 ("POST", _) when TableRoute(path, "/invitation") is { } id => SignInRequired(account) ?? await ReinviteAsync(id, body, player!),
                 ("POST", _) when TableRoute(path, "/open") is { } id => SignInRequired(account) ?? await OpenToEveryoneAsync(id, player!),
                 ("DELETE", _) when TableRoute(path, "") is { } id => SignInRequired(account) ?? await CloseAsync(id, player!),
+                ("GET", _) when ReplayRoute(path) is { } id => await ReplayAsync(id, account),
                 _ => Problem(404, "No such lobby route."),
             };
         }
@@ -121,6 +129,9 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     }
 
     /// <summary>The table id of <c>/api/lobby/tables/&lt;id&gt;&lt;suffix&gt;</c>, or null for any other path, an empty id among them.</summary>
+    /// <summary>The table of <c>/api/lobby/tables/&lt;table&gt;/replay</c>, or null for any other path.</summary>
+    internal static string? ReplayRoute(string path) => TableRoute(path, "/replay");
+
     private static string? TableRoute(string path, string suffix)
     {
         const string tables = Prefix + "/tables/";
@@ -1159,6 +1170,31 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     private bool Owns(TableSeat seat, AccountId? account) => Accounts is null || seat.Account is null || seat.Account == account;
 
     /// <summary>The refusal a host with accounts gives a request that is nobody's; null where it may go on.</summary>
+    /// <summary>Where a finished game is watched again: the battle view replaying it from the player's own seat.</summary>
+    private static string ReplayLink(string table, string[] mine) =>
+        $"/battle?replay={Uri.EscapeDataString(table)}&seat={(mine is ["player2", ..] ? "player2" : "player1")}";
+
+    /// <summary>
+    /// A finished game replayed for a player who sat at it (ADR 0156): the public events and final boards the admin
+    /// panel's replay serves, and only to an account a kept result names at that table. Signed out is a 401 and
+    /// somebody else's game a 403, so the page asks for the right sign-in rather than retrying.
+    /// </summary>
+    private async Task<StudioResponse> ReplayAsync(string id, AccountId? account)
+    {
+        if (account is not { } me)
+        {
+            return Problem(401, "Account.SignInRequired", "Sign in with the account that played this match to watch it again.");
+        }
+
+        if (Replay is not { } replay || (Results ?? composer.Results) is not { } results)
+        {
+            return Problem(404, "Lobby.NoReplay", "This host keeps no recording of finished games.");
+        }
+
+        var played = (await results.ListAsync()).Any(result => result.Table == id && result.Seats.Any(seat => seat.Account == me));
+        return played ? await replay(id) : Problem(403, "Lobby.NotYourGame", "Only the players of this match can watch it again.");
+    }
+
     private StudioResponse? SignInRequired(AccountId? account) =>
         Accounts is not null && account is null
             ? StudioResponse.OfJson(new { error = "Account.SignInRequired", message = "Sign in to play: open the home page and continue with Google." }, ArtifactJson.LineOptions, 401)
@@ -1220,11 +1256,60 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                     : other.Agent is { } spec ? new { kind = "bot", name = BotName(composer.Agents.FirstOrDefault(agent => string.Equals(agent.Value, spec, StringComparison.OrdinalIgnoreCase))?.Label ?? spec) }
                     : new { kind = "person", name = other.Account is { } opponent ? await NameAsync(opponent) : "Player" },
                 seats = held?.Seats.Where(seat => seat.Account == me).Select(seat => new { seat = seat.Name, token = seat.Token }).ToArray(),
-                session = held is null && result.Table is { } recorded ? $"/session/{Uri.EscapeDataString(recorded)}" : null,
+                // The battle view's whole-match recap from this player's side (ADR 0156), not the viewer's trace.
+                replay = held is null && result.Table is { } recorded ? ReplayLink(recorded, mine) : null,
             });
         }
 
         return Json(new { total = shown.Total, pages = shown.Pages, page = shown.Page + 1, items });
+    }
+
+    /// <summary>
+    /// The players a signed-in player met most recently, from the kept results: their name, the record between them,
+    /// the format and rating of their last game, and where their friendship stands, which says how to challenge them
+    /// again (ADR 0153): a friend is invited, anyone else is asked to be a friend first, and nothing is sent to a
+    /// stranger. An account deleted since is nobody to challenge and is left out. <c>relation</c> is null where this
+    /// host keeps no friends.
+    /// </summary>
+    private async Task<StudioResponse> OpponentsAsync(AccountId? account)
+    {
+        if (account is not { } me || (Results ?? composer.Results) is not { } results || Accounts is not { } accounts)
+        {
+            return Json(new { opponents = Array.Empty<object>() });
+        }
+
+        var links = Friends is { } friends ? await friends.ListAsync(me) : null;
+        var opponents = new List<object>();
+        foreach (var opponent in RecentOpponents.Of(await results.ListAsync(), me))
+        {
+            if (await accounts.AccountAsync(opponent.Account) is not { } found)
+            {
+                continue;
+            }
+
+            opponents.Add(new
+            {
+                id = opponent.Account.Value,
+                name = found.Username.Value,
+                lastPlayedAt = opponent.LastPlayed,
+                games = opponent.Games,
+                won = opponent.Won,
+                lost = opponent.Lost,
+                drawn = opponent.Drawn,
+                format = opponent.LastFormat,
+                casual = opponent.LastCasual,
+                relation = links switch
+                {
+                    null => null,
+                    _ when links.Has(opponent.Account) => "friend",
+                    _ when links.Asked(opponent.Account) => "asked",
+                    _ when links.AskedBy(opponent.Account) => "asking",
+                    _ => "none",
+                },
+            });
+        }
+
+        return Json(new { opponents });
     }
 
     /// <summary>

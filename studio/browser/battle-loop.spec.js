@@ -11,7 +11,7 @@ const feed = [{ sequence: 1, round: 1, event: { kind: 'OngoingEffectsApplied', r
 const catalogue = { cards: [{ id: 'strike', name: 'Strike', effects: ['Host damage text'] }], packages: [
   { id: 'root', name: 'Warden', level: 1, initiativeBonus: 2, spells: ['strike'], passiveLines: ['Host passive'] },
   { id: 'future', name: 'Guardian', level: 2, initiativeBonus: 3, spells: [], prerequisites: ['root'] } ] };
-async function mount(page, { kind = 'Evolution', replay = false, over = false } = {}) {
+async function mount(page, { kind = 'Evolution', replay = false, over = false, refused = null } = {}) {
   const state = { errors: [], writes: [], shown: [], concessions: 0, reads: [], status: 204, view: { board: structuredClone(board), over, feed: over ? feed : [], feedNext: over ? 3 : 0, waitingFor: over ? null : kind, waitingAsked: over ? null : 11, waitingCreature: 1,
     outcome: over ? { winner: 'player1', reason: 'RoundCap' } : null,
     options: { evolution: { remainingPicks: 2, creatures: [{ creature: 1, availableTiers: ['root'] }] }, speed: { missing: [1, 2, 3] }, tieOrder: { ties: [[1, 2, 3]] } } } };
@@ -21,6 +21,7 @@ async function mount(page, { kind = 'Evolution', replay = false, over = false } 
     const req = route.request(), url = new URL(req.url()); state.reads.push(url.pathname);
     if (url.pathname === '/api/lobby/resume') return route.fulfill({ json: { tables: [{ table: { id: 'a', format: '3v3' }, seats: [{ seat: 'player1', token: 'first' }] }] } });
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: catalogue });
+    if (url.pathname.endsWith('/replay') && refused) return route.fulfill({ status: refused, json: { message: 'Refused by the host.' } });
     if (url.pathname.endsWith('/replay')) return route.fulfill({ json: { catalogue, feed, boards: { player1: board, player2: { ...board, allies: board.enemies, enemies: board.allies } }, outcome: { winner: 'player1', reason: 'Elimination' } } });
     if (url.pathname.endsWith('/events')) return route.fulfill({ contentType: 'text/event-stream', body: '' });
     if (url.pathname.endsWith('/concede')) { state.concessions++; state.view.over = true; state.view.waitingFor = null; state.view.outcome = { winner: 'player2', reason: 'Concession' }; return route.fulfill({ status: 204 }); }
@@ -37,6 +38,7 @@ async function mount(page, { kind = 'Evolution', replay = false, over = false } 
   });
   await page.goto(`/table/battle.html${replay ? '?replay=finished&seat=player2' : ''}`);
   await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
+  if (refused) return state;
   await expect(page.locator('#loading')).toBeHidden();
   await expect(page.locator('#loading')).toBeHidden(); return state;
 }
@@ -94,7 +96,17 @@ test('finished matches replay before and after frames, then return to result', a
 test('a session replay link reads only that recording and preserves perspective', async ({ page }) => {
   const h = await mount(page, { replay: true }); await matchResult(page); await page.locator('#match-replay').click(); await expect(page.locator('[data-creature="4"]')).toHaveClass(/ally/);
   // The player's own game settings (ADR 0140) may be read as for any game; no seat is.
-  expect([...new Set(h.reads)].filter(path => path !== '/api/account/preferences').sort()).toEqual(['/api/me', '/api/sessions/finished/replay']); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+  // A player opening one of their own games from the lobby holds no operator token: the lobby serves it (ADR 0156).
+  expect([...new Set(h.reads)].filter(path => path !== '/api/account/preferences').sort()).toEqual(['/api/lobby/tables/finished/replay', '/api/me']); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});
+test('a replay refused to a signed-out player asks for sign-in, and one of somebody else\'s games says so', async ({ page }) => {
+  await mount(page, { replay: true, refused: 401 });
+  await expect(page.locator('#load-title')).toHaveText('Sign in to watch this match');
+  await expect(page.locator('#access-link')).toHaveText('Sign in');
+  await expect(page.locator('#access-link')).toHaveAttribute('href', /replay%3Dfinished/);
+  await mount(page, { replay: true, refused: 403 });
+  await expect(page.locator('#load-title')).toHaveText('This match is not one of yours');
+  await expect(page.locator('#access-link')).toHaveAttribute('href', '/');
 });
 for (const viewport of [{ width: 320, height: 568 }, { width: 844, height: 390 }]) test(`planning confirmation fits ${viewport.width}x${viewport.height}`, async ({ page }) => {
   await page.setViewportSize(viewport); const h = await mount(page); await expect(page.locator('#planning-dialog')).toBeVisible(); await page.locator('[data-mutation="root"]').click();

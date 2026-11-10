@@ -588,7 +588,7 @@ test('a session opened from the admin panel goes straight to its replay, and its
   const feed = [{ sequence: 10, round: 1, subPhase: 'Activation', event: { kind: 'CombatActionResolved', roundId: 1,
     resolution: { action: { actor: 1, spell: cards[3].id, targets: [2] } }, appliedOutcomes: [{ kind: 'DamageOutcome', target: 2, amount: 7 }], frame } }];
   let asked = 0;
-  await page.route('**/api/sessions/finished-one/replay', route => {
+  await page.route('**/api/lobby/tables/finished-one/replay', route => {
     asked += 1;
     return route.fulfill({ json: { id: 'finished-one', outcome: { winner: 'player2', reason: 'Elimination' }, catalogue,
       boards: { player1: view.board, player2: { ...view.board, allies: view.board.enemies, enemies: view.board.allies } }, feed } });

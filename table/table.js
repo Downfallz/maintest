@@ -79,7 +79,8 @@ async function showAdminLink(fetchImpl = globalThis.fetch?.bind(globalThis)) {
 // the host which of the held seats still answer, settles into the same `enter` either way.
 function boot(practice) {
   void showAdminLink();
-  // A finished session the admin panel opened: no seat, only its replay, read with the operator's token.
+  // A finished session's replay: the operator's, read with the panel's token, or a player's own game, read by their
+  // account (ADR 0156). No seat either way.
   const watched = replayOf(globalThis.location?.search ?? '');
   if (watched) {
     start([{ seat: watched.seat, token: null, transport: replayTransport(watched.id, watched.seat, operatorToken(storage)) }], watched.seat, false, true);
@@ -271,7 +272,7 @@ function enter(held, practice) {
     return;
   }
 
-  // The battle view is the game (ADR 0156): an accepted seat, a notice's link or a held seat goes on there. This
+  // The battle view is the game (ADR 0157): an accepted seat, a notice's link or a held seat goes on there. This
   // page keeps the doorway (codes, invitations) and is the archived table only for practice, an admin replay or a
   // browser that stored the archive's own value.
   // A shared device holds both seats: the battle view plays one seat and has no handover, so it stays here.

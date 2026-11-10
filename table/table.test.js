@@ -78,7 +78,7 @@ function page() {
   };
   for (const node of Object.values(nodes)) node.owner = document;
   const context = vm.createContext({ ...transport, ...seats, ...session, ...invitation, ...players, ...push, ...card, ...board, ...hand, ...feed, ...timeline, ...mat, ...notes, ...ties, ...replay, ...guidance, ...practice, ...waiting, ...slot, ...presentation, ...terms, ...combatFx, ...feedback, ...outcome,
-    // These tests read the archived classic table (ADR 0156): its browser asked for it, so /play does not hand on to /battle.
+    // These tests read the archived classic table (ADR 0157): its browser asked for it, so /play does not hand on to /battle.
     preferredPresentation: () => 'table',
     document, storage: null, practice: null, URLSearchParams, console, innerHeight: 800, location: { search: '' }, setInterval: () => {},
     setTimeout: (action, delay) => { timers.set(++timerId, action); delays.set(timerId, delay); return timerId; }, clearTimeout: id => timers.delete(id),
@@ -2682,7 +2682,7 @@ test('a browser that keeps its seats links the live battle bare, with no token i
   assert.equal(p.nodes['battle-link'].href, '/battle');
 });
 
-test('/play hands accepted seats on to the battle view, naming the table the host says they sit at (ADR 0156)', async () => {
+test('/play hands accepted seats on to the battle view, naming the table the host says they sit at (ADR 0157)', async () => {
   const p = page();
   const replaced = [];
   p.context.preferredPresentation = () => 'battle';

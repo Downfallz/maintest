@@ -416,6 +416,33 @@ public sealed class AdminApiTests : IDisposable
         kinds.ShouldBeSubsetOf(["RoundEnergyGranted", "OngoingEffectsApplied", "PurchasesRevealed", "CombatActionResolved", "RoundEnded"]);
         var listed = JsonDocument.Parse(Text(await admin.HandleAsync("GET", "/api/sessions", "", OperatorToken, null))).RootElement.GetProperty("sessions")[0];
         listed.GetProperty("replay").GetString().ShouldBe($"/play?replay={played}");
+        // The lobby serves its players the very replay the panel reads (ADR 0156), off the same store.
+        Text(await admin.Lobby.Replay.ShouldNotBeNull()(played)).ShouldBe(Text(answer));
+    }
+
+    /// <summary>
+    /// The pages ask the lobby's replay route only (ADR 0156), so it answers the operator too, for a game no account
+    /// played: by the panel's token, and behind the platform by its sign-in, where the page holds no token at all.
+    /// </summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task The_operator_replays_any_finished_session_off_the_lobby_route(bool behindPlatform)
+    {
+        var admin = Admin(behindPlatform ? OperatorGate.BehindPlatform() : OperatorGate.WithToken(OperatorToken));
+        var token = behindPlatform ? null : OperatorToken;
+        var principal = behindPlatform ? "mark@example.test" : null;
+        var played = Opened(await admin.HandleAsync("POST", "/api/tables", """{"player1":"greedy","player2":"greedy"}""", token, principal));
+        var table = _registry.ById(played).ShouldNotBeNull();
+        for (var attempt = 0; attempt < 500 && !table.IsFinished; attempt++)
+        {
+            await Task.Delay(20, TestContext.Current.CancellationToken);
+        }
+
+        var answer = await admin.HandleAsync("GET", $"/api/lobby/tables/{played}/replay", "", token, principal);
+
+        answer.Status.ShouldBe(200, Text(answer));
+        Text(answer).ShouldBe(Text(await admin.HandleAsync("GET", $"/api/sessions/{played}/replay", "", token, principal)));
     }
 
     [Fact]

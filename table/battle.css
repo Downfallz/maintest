@@ -771,7 +771,8 @@
   .battle-page[data-home="member"] .home-header .account-initial { width: 30px; height: 30px; font-size: 15px; }
   .battle-page[data-home="member"] .home-header .home-navigation { top: 48px; left: auto; right: 0; width: min(360px, calc(100vw - 16px)); border-radius: 0 0 12px 12px; }
   .battle-page[data-home="member"] .home-header .account-menu { position: fixed; top: 52px; left: auto; right: 8px; }
-  .battle-page[data-home="member"] #battle .hud-top { padding-left: 8px; padding-right: 98px; }
+  .battle-page[data-home="member"] #battle .hud-top { padding-left: 8px; padding-right: 142px; }
+  .battle-page[data-home="member"] .home-header .inbox-button { border: 0; }
   #battle #history-open { position: relative; width: 44px; min-width: 44px; padding: 0; display: grid; place-items: center; border: 0; background: transparent; color: #d8dfd6; font-size: 0; }
   #battle #history-open::before {
     content: ''; width: 22px; height: 22px; background: currentColor;
