@@ -18,7 +18,16 @@ internal sealed class JournalStore
     {
         Journal = Substitute.For<IDecisionJournal>();
         Journal.ReadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(_ => new JournalReading([.. _lines], End));
+            .Returns(async _ =>
+            {
+                if (BeforeRead is { } wait)
+                {
+                    BeforeRead = null;
+                    await wait();
+                }
+
+                return new JournalReading([.. _lines], End);
+            });
         Journal.AppendAsync(Arg.Any<string>(), Arg.Any<JournalPosition>(), Arg.Any<IReadOnlyList<SeatDecision>>(), Arg.Any<CancellationToken>())
             .Returns(call =>
             {
@@ -37,6 +46,9 @@ internal sealed class JournalStore
     public IDecisionJournal Journal { get; }
 
     public IReadOnlyList<SeatDecision> Lines => _lines;
+
+    /// <summary>Awaited once, as the next reading arrives and before it is answered: where a step is held in its turn.</summary>
+    public Func<Task>? BeforeRead { get; set; }
 
     /// <summary>Run once, as the next append arrives and before it is judged: where another writer gets in first.</summary>
     public Action? BeforeAppend { get; set; }

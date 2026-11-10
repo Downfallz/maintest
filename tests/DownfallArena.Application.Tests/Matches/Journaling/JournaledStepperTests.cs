@@ -185,6 +185,41 @@ public sealed class JournaledStepperTests
         await replica.Store.Repository.Received(3).ForgetAsync(table.MatchId, Arg.Any<CancellationToken>());
     }
 
+    /// <summary>
+    /// A step asked for while a match is being let go of waits behind that, and must then take its turn with
+    /// the steps asked for after: let loose on its own it would share the match with them. What shows it here
+    /// is that the step after it finds the match where the one that waited left it, and rebuilds nothing.
+    /// </summary>
+    [Fact]
+    public async Task A_step_that_waited_behind_a_match_being_let_go_of_takes_its_turn_with_the_steps_after_it()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent);
+        var journal = new JournalStore();
+        var replica = new Replica(journal);
+        await replica.Journaled.SeatAsync(table, PlayerSlot.Player1, TestContext.Current.CancellationToken);
+        var reading = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        journal.BeforeRead = async () =>
+        {
+            reading.SetResult();
+            await release.Task;
+        };
+        var first = replica.Journaled.SeatAsync(table, PlayerSlot.Player1, TestContext.Current.CancellationToken);
+        await reading.Task;
+        var letGo = replica.Journaled.ForgetAsync(table.MatchId, TestContext.Current.CancellationToken);
+        var waited = replica.Journaled.SubmitAsync(table, MatchSeats.People, new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass), TestContext.Current.CancellationToken);
+
+        release.SetResult();
+        await first;
+        await letGo;
+        (await waited).IsSuccess.ShouldBeTrue();
+        var saved = replica.Store.Calls.Count;
+        var next = await replica.Journaled.SeatAsync(table, PlayerSlot.Player1, TestContext.Current.CancellationToken);
+
+        next.Value.Board.HasPassedEvolution.ShouldBeTrue();
+        replica.Store.Calls.Count.ShouldBe(saved);
+    }
+
     private static JournaledMatch Table(uint seed, CombatDeclaration declaration)
     {
         var rules = MatchStore.TwoOnTwo().WithCombatDeclaration(declaration);

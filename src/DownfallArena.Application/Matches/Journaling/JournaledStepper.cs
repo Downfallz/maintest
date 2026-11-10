@@ -51,11 +51,10 @@ public sealed class JournaledStepper(MatchStepper stepper, MatchReplay replay, I
     }
 
     /// <summary>What a seat reads: its board and options with the answers it is holding, and its question.</summary>
-    public async Task<Result<SeatView>> SeatAsync(JournaledMatch match, PlayerSlot slot, CancellationToken cancellationToken = default)
+    public Task<Result<SeatView>> SeatAsync(JournaledMatch match, PlayerSlot slot, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(match);
-        var kept = _kept.GetOrAdd(match.MatchId, _ => new Kept());
-        return await kept.InTurnAsync(async () =>
+        return InTurnAsync(match.MatchId, async kept =>
         {
             var loaded = await LoadAsync(match, kept, cancellationToken);
             return loaded.IsFailure
@@ -68,26 +67,20 @@ public sealed class JournaledStepper(MatchStepper stepper, MatchReplay replay, I
     /// Lets go of a match this process is done with. The journal is untouched, so the match is rebuilt if
     /// anybody asks for it again; a host that plays many for days would otherwise keep every one.
     /// </summary>
-    public async Task ForgetAsync(MatchId matchId, CancellationToken cancellationToken = default)
-    {
-        if (!_kept.TryGetValue(matchId, out var kept))
-        {
-            await matches.ForgetAsync(matchId, cancellationToken);
-            return;
-        }
-
-        await kept.InTurnAsync(async () =>
+    public Task ForgetAsync(MatchId matchId, CancellationToken cancellationToken = default) =>
+        InTurnAsync(matchId, async kept =>
         {
             await LetGoAsync(matchId, kept, cancellationToken);
-            _kept.TryRemove(matchId, out _);
+
+            // Retired inside its own turn, and only then taken out: a step already waiting behind this one
+            // finds it retired and takes its turn again with whatever is kept for the match by then.
+            kept.Retired = true;
+            _kept.TryRemove(new KeyValuePair<MatchId, Kept>(matchId, kept));
             return true;
         });
-    }
 
-    private Task<Result<MatchStep>> StepAsync(JournaledMatch match, Func<HeldAnswers, Task<Result<MatchStep>>> take, CancellationToken cancellationToken)
-    {
-        var kept = _kept.GetOrAdd(match.MatchId, _ => new Kept());
-        return kept.InTurnAsync(async () =>
+    private Task<Result<MatchStep>> StepAsync(JournaledMatch match, Func<HeldAnswers, Task<Result<MatchStep>>> take, CancellationToken cancellationToken) =>
+        InTurnAsync(match.MatchId, async kept =>
         {
             var loaded = await LoadAsync(match, kept, cancellationToken);
             if (loaded.IsFailure)
@@ -132,6 +125,23 @@ public sealed class JournaledStepper(MatchStepper stepper, MatchReplay replay, I
                 throw;
             }
         });
+
+    /// <summary>
+    /// Runs one thing at a time for a match. What is kept for a match can be let go of while a caller waits
+    /// for its turn on it (<see cref="ForgetAsync" />); a caller that finds it retired starts over with what is
+    /// kept now, so everything asked of one match always takes turns on the same thing.
+    /// </summary>
+    private async Task<TResult> InTurnAsync<TResult>(MatchId matchId, Func<Kept, Task<TResult>> step)
+    {
+        while (true)
+        {
+            var kept = _kept.GetOrAdd(matchId, _ => new Kept());
+            var (ran, result) = await kept.InTurnAsync(async () => kept.Retired ? (false, default(TResult)!) : (true, await step(kept)));
+            if (ran)
+            {
+                return result;
+            }
+        }
     }
 
     /// <summary>
@@ -202,5 +212,8 @@ public sealed class JournaledStepper(MatchStepper stepper, MatchReplay replay, I
         public JournalPosition? Position { get; set; }
 
         public HeldAnswers Held { get; set; } = HeldAnswers.None;
+
+        /// <summary>Whether this has been let go of: set and read only by whoever has the turn.</summary>
+        public bool Retired { get; set; }
     }
 }
