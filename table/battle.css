@@ -277,6 +277,7 @@
 .history-effects [data-tone="condition"] { color: #d9bdf2; }
 #history-empty { padding: 12px 18px; font-size: 14px; }
 .history-footer { flex: none; height: auto; display: block; padding: 10px 18px; border-top: 1px solid #52695e; text-transform: none; letter-spacing: 0; }
+.history-footer button { margin: 0 6px 6px 0; }
 .history-footer p { margin: 0; font-size: 11px; line-height: 1.5; color: var(--muted); }
 #history-new { font-size: 12px; margin-bottom: 8px; }
 @media (max-width: 619px) {
@@ -1023,9 +1024,10 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
 .atlas-family-head strong { font: 18px var(--font-display); color: var(--mutation-colour); }
 .atlas-family-head small { color: var(--muted); font-size: 11px; }
 .atlas-stage { position: relative; display: flex; flex-wrap: nowrap; justify-content: space-evenly; gap: 8px; }
-.atlas-node { position: relative; display: inline-flex; flex: 0 1 auto; min-width: 0; align-items: center; gap: 7px; min-height: 44px; max-width: 100%; padding: 6px 12px 6px 6px; border: 1px solid #4c6159; border-radius: var(--radius-sharp); background: #182b31; color: #9fb0a6; font-size: 13px; text-align: left; cursor: pointer; }
-.atlas-node-stage { display: inline-grid; place-items: center; flex: none; width: 24px; height: 24px; border-radius: 50%; border: 1px solid currentColor; font: 800 11px/1 system-ui, sans-serif; }
-.atlas-node-name { min-width: 0; overflow-wrap: anywhere; font-weight: 650; line-height: 1.15; }
+.atlas-node { position: relative; display: inline-flex; flex: 0 1 auto; min-width: 0; align-items: center; gap: 5px; min-height: 44px; max-width: 100%; padding: 6px 8px 6px 5px; border: 1px solid #4c6159; border-radius: var(--radius-sharp); background: #182b31; color: #9fb0a6; font-size: 13px; text-align: left; cursor: pointer; }
+.atlas-node-stage { display: inline-grid; place-items: center; flex: none; width: 20px; height: 20px; border-radius: 50%; border: 1px solid currentColor; font: 800 11px/1 system-ui, sans-serif; }
+/* A name breaks inside a word only when nothing else fits: the node is tight so that three of them share a row. */
+.atlas-node-name { min-width: 0; overflow-wrap: anywhere; font-size: 12px; font-weight: 650; line-height: 1.15; letter-spacing: -.01em; }
 .atlas-node-flag { padding: 1px 6px; border-radius: var(--radius-sharp); background: var(--gold); color: #1a1d1a; font: 800 9px/1.4 system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; }
 .atlas-node[data-status="known"] { border-color: var(--mutation-colour); background: color-mix(in srgb, var(--mutation-colour) 22%, #182b31); color: #f2eee2; }
 .atlas-node[data-status="known"] .atlas-node-stage { background: var(--mutation-colour); border-color: var(--mutation-colour); color: #142126; }
