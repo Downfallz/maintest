@@ -101,8 +101,12 @@ Each phase ships on the one container app there is today and leaves the game pla
      and waits only for whoever had not reached their seat. The version is still counted: it is served to
      no page as a number, and deriving it from the journal and the revision is worth it only once a second
      process writes a table (question 9), so it moves with that.
-   - **4.2c.** `TableRestorer` becomes registration with no replay: a table's match is rebuilt at the first
-     request that needs it.
+   - **4.2c, folded into 4.3.** `TableRestorer` becomes registration with no replay: a table's match is
+     rebuilt at the first request that needs it. Done on its own, it needs a session whose state is not
+     there yet behind every read the lobby, the notices and the pilot make without waiting, and a table
+     found to have diverged after it was registered; 4.3 makes the registry a cache a table is loaded into
+     per request, which is the same change made once. What it would buy meanwhile is a shorter start: the
+     host already serves while it picks tables up, and a table costs it 45 to 325 ms.
    - **4.3.** Tokens, codes and the lobby's projections out of the registry, which becomes a cache.
    - **4.4.** Practice tables onto the stepper; `HumanSeat`, `SeatAgent`, `TableSession`, `TableGate`, the
      host's `DecisionJournal` and `JournalEntry` go.
