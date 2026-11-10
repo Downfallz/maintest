@@ -162,8 +162,22 @@ which adds the compilation of the engine itself.
    the content hash in the table record and refuse with a clear message, or keep serving the old content
    beside the new for the tables that began on it.
 9. **The event stream across replicas.** A replica holding a stream has to learn of a line another replica
-   wrote: watch the journal's length on a short timer, or stay at one API replica until it matters. The page's
-   five-second poll already covers a missed notice.
+   wrote. In this order, each step taken only when the one before it stops being enough:
+   - One API replica. The problem does not exist, and what takes load off the API is moving the Player
+     agents to a worker (phase 5), not a second replica.
+   - Each replica watches where the journal ends, about once a second, for every table it holds a stream
+     for. Its own streams are told at once, in memory; a line written by another replica is seen within the
+     second. One metadata read a second for a table with a page open, and no new resource. The page's
+     five-second poll already covers a missed notice.
+   - A service that holds the connections (Azure Web PubSub or SignalR Service), if a second is too slow. It
+     would also let a page stay connected while no replica is awake, which a stream held by a replica
+     prevents today. Its free tier is small and its paid tier is not; the prices have to be checked before
+     this is chosen.
+
+   Set aside: session affinity (the two players of a table can land on two replicas), Redis (it does not
+   scale to zero), Event Grid (it pushes to an address, and replicas behind the ingress have none of their
+   own). Whatever is watched has to cover the table record too: a person reaching their seat moves the
+   table's version and is no line of the journal.
 
 10. **A concession.** It ends the match and is no line of the journal: a table that was conceded is rebuilt
     unconceded unless its record says it is finished. It needs a line of its own, or the record's status
@@ -177,6 +191,16 @@ which adds the compilation of the engine itself.
     whole match when another process wrote last. Two replicas alternating on one table rebuild at every
     step, which the figures above price. Applying only the lines not yet seen is the cheaper path if that
     pattern turns out to matter.
+
+14. **Event Grid and Functions.** At playtest volume every candidate costs next to nothing, so cost does not
+    decide; what each need is does. A Player agent's turn to take (phase 5) is a work item for one consumer,
+    retried on failure, and "your turn" after a grace is a delayed message: both are a queue's, and a
+    Storage Queue has the delay and an emulator (Azurite, already in CI). A fact several things react to on
+    their own, "the match is over" for results, ratings and notices, is Event Grid's, and the least risky
+    place to try it. Functions are a second hosting model beside the one image, and the storage account
+    only lets the container app's subnet in, which a classic Consumption plan cannot join. So: a port either
+    way, a queue and Container Apps first, Event Grid when one fact has several consumers. Not verified:
+    current prices, and whether an append to an append blob raises a storage event at all.
 
 ## Documents this makes stale as it lands
 
