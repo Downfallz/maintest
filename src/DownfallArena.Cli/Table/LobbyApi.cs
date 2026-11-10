@@ -76,6 +76,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 ("POST", Prefix + "/resume") => SignInRequired(account) ?? await ResumeAsync(body, account),
                 ("GET", Prefix + "/mine") => await MineAsync(account),
                 ("GET", _) when FinishedRoute(path) is { } finished => SignInRequired(account) ?? await FinishedAsync(finished.AgainstBots, finished.Page, account),
+                ("GET", Prefix + "/opponents") => SignInRequired(account) ?? await OpponentsAsync(account),
                 ("POST", Prefix + "/adopt") => await AdoptAsync(body, account),
                 ("POST", Prefix + "/tables") => SignInRequired(account) ?? await OpenAsync(body, account),
                 ("POST", Prefix + "/leave") => await LeaveAsync(token, account),
@@ -1225,6 +1226,54 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         }
 
         return Json(new { total = shown.Total, pages = shown.Pages, page = shown.Page + 1, items });
+    }
+
+    /// <summary>
+    /// The players a signed-in player met most recently, from the kept results: their name, the record between them,
+    /// the format and rating of their last game, and where their friendship stands, which says how to challenge them
+    /// again (ADR 0153): a friend is invited, anyone else is asked to be a friend first, and nothing is sent to a
+    /// stranger. An account deleted since is nobody to challenge and is left out. <c>relation</c> is null where this
+    /// host keeps no friends.
+    /// </summary>
+    private async Task<StudioResponse> OpponentsAsync(AccountId? account)
+    {
+        if (account is not { } me || (Results ?? composer.Results) is not { } results || Accounts is not { } accounts)
+        {
+            return Json(new { opponents = Array.Empty<object>() });
+        }
+
+        var links = Friends is { } friends ? await friends.ListAsync(me) : null;
+        var opponents = new List<object>();
+        foreach (var opponent in RecentOpponents.Of(await results.ListAsync(), me))
+        {
+            if (await accounts.AccountAsync(opponent.Account) is not { } found)
+            {
+                continue;
+            }
+
+            opponents.Add(new
+            {
+                id = opponent.Account.Value,
+                name = found.Username.Value,
+                lastPlayedAt = opponent.LastPlayed,
+                games = opponent.Games,
+                won = opponent.Won,
+                lost = opponent.Lost,
+                drawn = opponent.Drawn,
+                format = opponent.LastFormat,
+                casual = opponent.LastCasual,
+                relation = links switch
+                {
+                    null => null,
+                    _ when links.Has(opponent.Account) => "friend",
+                    _ when links.Asked(opponent.Account) => "asked",
+                    _ when links.AskedBy(opponent.Account) => "asking",
+                    _ => "none",
+                },
+            });
+        }
+
+        return Json(new { opponents });
     }
 
     /// <summary>
