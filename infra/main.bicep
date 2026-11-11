@@ -89,6 +89,23 @@ var relayName = '${namePrefix}-relay-${suffix}'
 // The service's own host name, made from its name: nothing is read off a resource that may not be deployed.
 var relayHost = '${relayName}.webpubsub.azure.com'
 var relayId = resourceId('Microsoft.SignalRService/webPubSub', relayName)
+var relayStandard = relaySku == 'Standard_S1'
+var relayProperties = {
+  disableLocalAuth: true
+  disableAadAuth: false
+  tls: {
+    clientCertEnabled: false
+  }
+}
+var relayRules = {
+  defaultAction: 'Deny'
+  publicNetwork: {
+    allow: [
+      'ClientConnection'
+      'RESTAPI'
+    ]
+  }
+}
 var relayEnv = relayOn ? [
   {
     name: 'DOWNFALL_RELAY'
@@ -183,30 +200,16 @@ resource relay 'Microsoft.SignalRService/webPubSub@2024-03-01' = if (relayOn) {
   location: location
   sku: {
     name: relayOn ? relaySku : 'Free_F1'
-    tier: relaySku == 'Standard_S1' ? 'Standard' : 'Free'
+    tier: relayStandard ? 'Standard' : 'Free'
     capacity: 1
   }
   identity: {
     type: 'SystemAssigned'
   }
-  properties: {
-    disableLocalAuth: true
-    disableAadAuth: false
-    tls: {
-      clientCertEnabled: false
-    }
-    // The pages connect from anywhere a player is, so the public endpoint stays; it is narrowed to what the table
-    // uses: the pages' and processes' connections, and the REST calls that send and sign. Nothing else is let in.
-    networkACLs: {
-      defaultAction: 'Deny'
-      publicNetwork: {
-        allow: [
-          'ClientConnection'
-          'RESTAPI'
-        ]
-      }
-    }
-  }
+  // The pages connect from anywhere a player is, so the public endpoint stays. On Standard it is narrowed to what
+  // the table uses: the pages' and processes' connections, and the REST calls that send and sign. Free refuses any
+  // network rule ("Free tier doesn't support setting network ACLs"), so there the property is not sent at all.
+  properties: union(relayProperties, relayStandard ? { networkACLs: relayRules } : {})
 }
 
 // On the platform's own network, not one of ours (ADR 0160): an environment in a virtual network brings a
