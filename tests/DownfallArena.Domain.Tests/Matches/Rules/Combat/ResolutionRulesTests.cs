@@ -30,9 +30,9 @@ public sealed class ResolutionRulesTests
         partial.EffectiveTargets.ShouldBe([Arena.Ghoul]);
         partial.DroppedTargets.ShouldBeEmpty();
         partial.EnergySpent.ShouldBe(Energy.Of(0));
-        partial.Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 2, false)]);
+        partial.Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 2, false) { Blocked = 1 }]);
 
-        Resolve(Strike(Arena.Wraith), creatures, NoCrit).Outcomes.ShouldBe([new DamageOutcome(Arena.Wraith, 0, false)]);
+        Resolve(Strike(Arena.Wraith), creatures, NoCrit).Outcomes.ShouldBe([new DamageOutcome(Arena.Wraith, 0, false) { Blocked = 3 }]);
     }
 
     /// <summary>
@@ -47,8 +47,8 @@ public sealed class ResolutionRulesTests
         Arena.Find(living, Arena.Ghoul).Apply(DefenseBuff.Of(1, Duration.OfRounds(1)));
         var creatures = Arena.Snapshots(living);
 
-        Resolve(Strike(Arena.Ghoul), creatures, Crit).Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 9, true)]);
-        Resolve(Strike(Arena.Ghoul), creatures, NoCrit).Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 4, false)]);
+        Resolve(Strike(Arena.Ghoul), creatures, Crit).Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 9, true) { Blocked = 1 }]);
+        Resolve(Strike(Arena.Ghoul), creatures, NoCrit).Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 4, false) { Blocked = 1 }]);
     }
 
     /// <summary>ADR 0101: what a cast does to its own caster is a cost, not a hit, so the caster's bonus leaves it alone.</summary>
@@ -78,8 +78,8 @@ public sealed class ResolutionRulesTests
         Arena.Find(living, Arena.Ghoul).Apply(DefenseBuff.Of(5, Duration.OfRounds(1)));
         var creatures = Sundering(Arena.Snapshots(living), 3);
 
-        Resolve(Strike(Arena.Ghoul), creatures, NoCrit).Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 1, false)]);
-        Resolve(Strike(Arena.Ghoul), creatures, Crit).Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 4, true)]);
+        Resolve(Strike(Arena.Ghoul), creatures, NoCrit).Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 1, false) { Blocked = 2 }]);
+        Resolve(Strike(Arena.Ghoul), creatures, Crit).Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 4, true) { Blocked = 2 }]);
     }
 
     /// <summary>ADR 0106: a sunder larger than the defense it meets takes it to zero and adds nothing beyond it.</summary>
@@ -90,7 +90,7 @@ public sealed class ResolutionRulesTests
         Arena.Find(living, Arena.Ghoul).Apply(DefenseBuff.Of(1, Duration.OfRounds(1)));
         var creatures = Sundering(Arena.Snapshots(living), 3);
 
-        Resolve(Strike(Arena.Ghoul), creatures, NoCrit).Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 3, false)]);
+        Resolve(Strike(Arena.Ghoul), creatures, NoCrit).Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 3, false) { Blocked = 0 }]);
         Resolve(Strike(Arena.Wraith), creatures, NoCrit).Outcomes.ShouldBe([new DamageOutcome(Arena.Wraith, 3, false)]);
     }
 
@@ -107,7 +107,7 @@ public sealed class ResolutionRulesTests
 
         var outcomes = ResolutionRules.Resolve(action, Sundering(Arena.Snapshots(living), 3), Resources(spell), RuleSet.Default, NoCrit, Speed.Standard).Outcomes;
 
-        outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 3, false), new DamageOutcome(Arena.Knight, 0, false) { OnCaster = true }]);
+        outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 3, false), new DamageOutcome(Arena.Knight, 0, false) { OnCaster = true, Blocked = 2 }]);
     }
 
     /// <summary>
@@ -134,7 +134,7 @@ public sealed class ResolutionRulesTests
         resolution.EnergySpent.ShouldBe(Energy.Of(1));
         resolution.Outcomes.ShouldBe(
         [
-            new DamageOutcome(Arena.Ghoul, 5, true),
+            new DamageOutcome(Arena.Ghoul, 5, true) { Blocked = 1 },
             new HealOutcome(Arena.Ghoul, 4),
             new EnergyOutcome(Arena.Ghoul, 1),
             new EnergyDrainOutcome(Arena.Ghoul, 2),
@@ -256,7 +256,7 @@ public sealed class ResolutionRulesTests
 
         var resolution = ResolutionRules.Resolve(Strike(Arena.Ghoul), Arena.Snapshots(living), Arena.Resources, rules, Crit, Speed.Standard);
 
-        resolution.Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, int.MaxValue - 3, true)]);
+        resolution.Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, int.MaxValue - 3, true) { Blocked = 3 }]);
     }
 
     [Fact]

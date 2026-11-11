@@ -142,13 +142,23 @@ public static class ResolutionRules
     private static EffectOutcome Outcome(Effect effect, CreatureSnapshot target, double multiplier, bool isCritical, int damageBonus, int sunder) =>
         effect switch
         {
-            Damage damage => new DamageOutcome(target.Id, Math.Max(0, Multiplied(damage.Amount + damageBonus, multiplier) - Math.Max(0, target.TotalDefense.Value - sunder)), isCritical),
+            Damage damage => Hit(target, Multiplied(damage.Amount + damageBonus, multiplier), isCritical, sunder),
             Heal heal => new HealOutcome(target.Id, Multiplied(heal.Amount, multiplier)),
             EnergyGain energy => new EnergyOutcome(target.Id, energy.Amount),
             EnergyDrain drain => new EnergyDrainOutcome(target.Id, drain.Amount),
             LastingEffect lasting => new ConditionOutcome(target.Id, lasting),
             _ => throw new InvalidOperationException($"Effect '{effect.GetType().Name}' has no resolution rule."),
         };
+
+    /// <summary>
+    /// A hit met by the target's total defense less the caster's sunder: what gets through, and what the defense took.
+    /// </summary>
+    private static DamageOutcome Hit(CreatureSnapshot target, int hit, bool isCritical, int sunder)
+    {
+        var defense = Math.Max(0, target.TotalDefense.Value - sunder);
+        var through = Math.Max(0, hit - defense);
+        return new DamageOutcome(target.Id, through, isCritical) { Blocked = hit - through };
+    }
 
     /// <summary>
     /// The floored product, capped at the largest damage a creature can take so a huge multiplier cannot overflow.
