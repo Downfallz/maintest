@@ -70,6 +70,18 @@ public sealed class TableFilesCachingTests : IDisposable
         Decompressed(answer.Body, encoding).ShouldBe(raw);
     }
 
+    [Theory]
+    [InlineData("gzip, br;q=0", "gzip")]
+    [InlineData("br;q=0, gzip;q=0.5", "gzip")]
+    [InlineData("gzip;q=0", null)]
+    [InlineData("br;q=0, gzip;q=0", null)]
+    public void An_encoding_the_browser_refuses_with_a_zero_quality_is_never_sent(string accepted, string? encoding)
+    {
+        var answer = Files.Get("/lobby.js", null, accepted);
+
+        answer.Headers!.SingleOrDefault(header => header.Key == "Content-Encoding").Value.ShouldBe(encoding);
+    }
+
     [Fact]
     public void A_browser_that_takes_no_compression_is_sent_the_file_as_it_is()
     {

@@ -25,13 +25,34 @@ internal sealed record ServedFile(DateTime Written, string Tag, byte[] Raw, byte
     /// <summary>The encoding this browser takes, Brotli first, and the bytes in it; no encoding, the raw bytes.</summary>
     public (string? Encoding, byte[] Body) For(string? acceptEncoding)
     {
-        var accepted = (acceptEncoding ?? string.Empty).Split(',').Select(one => one.Split(';')[0].Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var accepted = Accepted(acceptEncoding);
         if (Brotli is not null && accepted.Contains("br"))
         {
             return ("br", Brotli);
         }
 
         return Gzip is not null && accepted.Contains("gzip") ? ("gzip", Gzip) : (null, Raw);
+    }
+
+    // The encodings the browser takes: each one named, unless its quality is zero, which is the browser refusing it.
+    private static HashSet<string> Accepted(string? acceptEncoding)
+    {
+        var accepted = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in (acceptEncoding ?? string.Empty).Split(','))
+        {
+            var parts = entry.Split(';');
+            var name = parts[0].Trim();
+            var refused = parts.Skip(1).Select(part => part.Trim()).Any(part =>
+                part.StartsWith("q=", StringComparison.OrdinalIgnoreCase)
+                && double.TryParse(part[2..], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var quality)
+                && quality <= 0);
+            if (name.Length > 0 && !refused)
+            {
+                accepted.Add(name);
+            }
+        }
+
+        return accepted;
     }
 
     private static byte[] Compressed(byte[] raw, Func<Stream, Stream> compressor)
