@@ -14,6 +14,14 @@ public interface IDecisionJournal
     Task<JournalReading> ReadAsync(string run, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// The entries written after a position read or written earlier, and where the journal ends now: what a
+    /// process holding the match as it stood there reads to catch up, rather than the whole journal (inventory
+    /// question 13). No entries, at the same position, when nobody wrote since. Nothing when the journal does
+    /// not reach the position, so it is not the journal the position was taken from, and is read whole.
+    /// </summary>
+    Task<JournalReading?> ReadAfterAsync(string run, JournalPosition after, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Writes entries after the others, if the journal still ends where the caller read it to. Null, and
     /// nothing written, when somebody else wrote first: two writers cannot both write the same line.
     /// </summary>

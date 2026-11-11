@@ -59,25 +59,46 @@ public sealed class MatchReplay(
             }
         }
 
-        var held = HeldAnswers.None;
+        return await AppliedAsync(match.MatchId, HeldAnswers.None, entries, 0, cancellationToken);
+    }
+
+    /// <summary>
+    /// The match in memory taken on through the entries written after the ones it already went through, and the
+    /// answers it is holding then: what catches up with another process's lines without building the match
+    /// again (inventory question 13). Refused with <see cref="JournalErrors.Diverged" /> at the first entry the
+    /// match does not take, which leaves it part of the way, for the caller to rebuild.
+    /// </summary>
+    /// <param name="held">The answers the match was holding after the entries it went through.</param>
+    /// <param name="seen">How many entries it went through, so a refusal names the journal's own line.</param>
+    public Task<Result<HeldAnswers>> ContinueAsync(JournaledMatch match, HeldAnswers held, IReadOnlyList<IJournalEntry> entries, int seen, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(match);
+        ArgumentNullException.ThrowIfNull(held);
+        ArgumentNullException.ThrowIfNull(entries);
+        ArgumentOutOfRangeException.ThrowIfNegative(seen);
+        return AppliedAsync(match.MatchId, held, entries, seen, cancellationToken);
+    }
+
+    private async Task<Result<HeldAnswers>> AppliedAsync(MatchId matchId, HeldAnswers held, IReadOnlyList<IJournalEntry> entries, int seen, CancellationToken cancellationToken)
+    {
         for (var line = 0; line < entries.Count; line++)
         {
             switch (entries[line])
             {
                 case DecisionEntry decided:
-                    var step = await stepper.SubmitAsync(match.MatchId, MatchSeats.People, held, decided.Decision, cancellationToken);
+                    var step = await stepper.SubmitAsync(matchId, MatchSeats.People, held, decided.Decision, cancellationToken);
                     if (step.IsFailure)
                     {
-                        return Result.Failure<HeldAnswers>(JournalErrors.Diverged(line + 1, step.Error));
+                        return Result.Failure<HeldAnswers>(JournalErrors.Diverged(seen + line + 1, step.Error));
                     }
 
                     held = step.Value.Held;
                     break;
                 case ConcessionEntry conceded:
-                    var given = await concede.HandleAsync(new Concede(match.MatchId, conceded.Slot), cancellationToken);
+                    var given = await concede.HandleAsync(new Concede(matchId, conceded.Slot), cancellationToken);
                     if (given.IsFailure)
                     {
-                        return Result.Failure<HeldAnswers>(JournalErrors.Diverged(line + 1, given.Error));
+                        return Result.Failure<HeldAnswers>(JournalErrors.Diverged(seen + line + 1, given.Error));
                     }
 
                     held = HeldAnswers.None;

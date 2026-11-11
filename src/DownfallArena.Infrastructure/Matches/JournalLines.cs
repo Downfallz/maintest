@@ -15,10 +15,16 @@ internal static class JournalLines
     public const string FileName = "decisions.jsonl";
 
     /// <summary>The entries in a journal's bytes, and where it ends: its length is the mark an append is conditional on.</summary>
-    public static JournalReading Read(ReadOnlySpan<byte> content)
+    public static JournalReading Read(ReadOnlySpan<byte> content) => Read(content, JournalPosition.Start);
+
+    /// <summary>
+    /// The entries in the bytes a journal holds after a position, and where it ends: the position moved on by
+    /// the lines and the bytes read.
+    /// </summary>
+    public static JournalReading Read(ReadOnlySpan<byte> content, JournalPosition after)
     {
         var entries = new List<IJournalEntry>();
-        var lines = 0;
+        var lines = after.Lines;
         foreach (var text in Encoding.UTF8.GetString(content).Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
             lines++;
@@ -30,7 +36,7 @@ internal static class JournalLines
             }
         }
 
-        return new JournalReading(entries, new JournalPosition(lines, content.Length));
+        return new JournalReading(entries, new JournalPosition(lines, after.Mark + content.Length));
     }
 
     /// <summary>The lines to write after a position: numbered on from it, stamped with the time they were taken.</summary>

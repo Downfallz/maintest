@@ -20,13 +20,15 @@ internal sealed class JournalStore
         Journal.ReadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(async _ =>
             {
-                if (BeforeRead is { } wait)
-                {
-                    BeforeRead = null;
-                    await wait();
-                }
-
+                await ReadingAsync();
                 return new JournalReading([.. _lines], End);
+            });
+        Journal.ReadAfterAsync(Arg.Any<string>(), Arg.Any<JournalPosition>(), Arg.Any<CancellationToken>())
+            .Returns(async call =>
+            {
+                await ReadingAsync();
+                var after = call.Arg<JournalPosition>();
+                return after.Mark > _lines.Count ? null : new JournalReading([.. _lines.Skip((int)after.Mark)], End);
             });
         Journal.AppendAsync(Arg.Any<string>(), Arg.Any<JournalPosition>(), Arg.Any<IReadOnlyList<IJournalEntry>>(), Arg.Any<CancellationToken>())
             .Returns(call =>
@@ -61,6 +63,15 @@ internal sealed class JournalStore
 
     /// <summary>A line of any kind written by somebody else.</summary>
     public void WriteElsewhere(IJournalEntry line) => _lines.Add(line);
+
+    private async Task ReadingAsync()
+    {
+        if (BeforeRead is { } wait)
+        {
+            BeforeRead = null;
+            await wait();
+        }
+    }
 
     private JournalPosition End => new(_lines.Count, _lines.Count);
 }

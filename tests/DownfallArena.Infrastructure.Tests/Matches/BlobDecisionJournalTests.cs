@@ -95,6 +95,49 @@ public sealed class BlobDecisionJournalTests
         stale.ShouldBeNull();
     }
 
+    [Fact]
+    public async Task Read_after_a_position_a_journal_gives_the_entries_written_since_and_where_it_ends_now()
+    {
+        var journal = await Journal();
+        var first = (await journal.AppendAsync("run-1", JournalPosition.Start, [.. DecisionJournalTests.EveryKind.Take(4)], TestContext.Current.CancellationToken)).ShouldNotBeNull();
+        var second = await journal.AppendAsync("run-1", first, [.. DecisionJournalTests.EveryKind.Skip(4)], TestContext.Current.CancellationToken);
+
+        var since = await journal.ReadAfterAsync("run-1", first, TestContext.Current.CancellationToken);
+
+        since.ShouldNotBeNull().Entries.ShouldBe([.. DecisionJournalTests.EveryKind.Skip(4)]);
+        since.Position.ShouldBe(second);
+        since.Position.ShouldBe((await journal.ReadAsync("run-1", TestContext.Current.CancellationToken)).Position);
+    }
+
+    [Fact]
+    public async Task Read_after_where_it_ends_a_journal_gives_nothing_and_the_same_position()
+    {
+        var journal = await Journal();
+        var nobody = await journal.ReadAfterAsync("run-1", JournalPosition.Start, TestContext.Current.CancellationToken);
+        var end = (await journal.AppendAsync("run-1", JournalPosition.Start, [DecisionJournalTests.EveryKind[0]], TestContext.Current.CancellationToken)).ShouldNotBeNull();
+
+        var since = await journal.ReadAfterAsync("run-1", end, TestContext.Current.CancellationToken);
+
+        nobody.ShouldNotBeNull().Entries.ShouldBeEmpty();
+        nobody.Position.ShouldBe(JournalPosition.Start);
+        since.ShouldNotBeNull().Entries.ShouldBeEmpty();
+        since.Position.ShouldBe(end);
+    }
+
+    [Fact]
+    public async Task Read_after_a_position_it_does_not_reach_a_journal_gives_nothing()
+    {
+        var journal = await Journal();
+        var longer = (await journal.AppendAsync("run-2", JournalPosition.Start, [.. DecisionJournalTests.EveryKind.Take(3)], TestContext.Current.CancellationToken)).ShouldNotBeNull();
+        await journal.AppendAsync("run-1", JournalPosition.Start, [DecisionJournalTests.EveryKind[0]], TestContext.Current.CancellationToken);
+
+        var shorter = await journal.ReadAfterAsync("run-1", longer, TestContext.Current.CancellationToken);
+        var none = await journal.ReadAfterAsync("run-3", longer, TestContext.Current.CancellationToken);
+
+        shorter.ShouldBeNull();
+        none.ShouldBeNull();
+    }
+
     private static async Task<BlobDecisionJournal> Journal()
     {
         if (!await Reachable())
