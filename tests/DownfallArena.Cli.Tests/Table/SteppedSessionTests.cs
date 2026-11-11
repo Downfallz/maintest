@@ -455,6 +455,8 @@ public sealed class SteppedSessionTests : IDisposable
 
         public Task<JournalReading> ReadAsync(string run, CancellationToken cancellationToken = default) => _inner.ReadAsync(run, cancellationToken);
 
+        public Task<long> EndAsync(string run, CancellationToken cancellationToken = default) => _inner.EndAsync(run, cancellationToken);
+
         public async Task<JournalPosition?> AppendAsync(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken = default)
         {
             if (entries.Count > 0 && Volatile.Read(ref _failing) > 0)

@@ -190,7 +190,23 @@ Each phase ships on the one container app there is today and leaves the game pla
      infrastructure ADR (phase 6) says how many apps there are and gives its identity the queue role. A page
      whose table another process moved learns of it from where the journal ends (question 9), which is needed
      as soon as a worker is another process.
-6. **Time-dependent work as a command**, then the infrastructure ADR: how many apps, which jobs.
+6. **Time-dependent work as a command, and the apps that run it** ([ADR 0162](../adr/0162-run-the-table-as-an-api-a-worker-and-an-hourly-job.md)):
+   an API app, a turn worker app and an hourly job, from one image. In four slices.
+   - **6a, done.** A process sees what the others write to the tables it holds (`TableWatch`): about once a
+     second, for every unfinished table asked for in the last ten minutes, where its journal ends
+     (`IDecisionJournal.EndAsync`, read without reading the journal) and its record's revision. A journal that
+     moved is read again and its pages told (`ITableSession.CatchUpAsync`, question 9); a record another
+     process wrote (`PlaytestRun.RewrittenAsync`) makes the host let the table go (`TableRegistry.LetGo`), and
+     the next request picks it up as the record says. How a table ended, and a refusal, are written over the
+     record as stored rather than from memory, so they never put back keys another process changed; a full
+     record write that finds another's revision ahead of its own says so on the console, since it keeps what
+     this process holds.
+   - **6b, next.** `table-tend`: one pass of the sweep and of the invitations' expiry over the index and the
+     records, run by the hourly job; the tables it picks up take no bot turn.
+   - **6c.** `table-worker`: the two workers of 5b in a process of their own; the API with `--turns queue` and no
+     workers.
+   - **6d.** The worker app scaled on the queue's length, the job, the queue role and the bootstrap's
+     condition, and the deployment of all three.
 
 Phases 2 and 3 are where the risk is. Phase 4 is where the volume is.
 
@@ -282,8 +298,9 @@ which adds the compilation of the engine itself.
    so a deploy that moves content strands open tables at the next tap. Options: pin
    the content hash in the table record and refuse with a clear message, or keep serving the old content
    beside the new for the tables that began on it.
-9. **The event stream across replicas.** A replica holding a stream has to learn of a line another replica
-   wrote. In this order, each step taken only when the one before it stops being enough:
+9. **The event stream across replicas.** Answered in 6a with the second step below: a process watches where the
+   journal ends, about once a second, for the tables it holds. A replica holding a stream has to learn of a line
+   another replica wrote. In this order, each step taken only when the one before it stops being enough:
    - One API replica. The problem does not exist, and what takes load off the API is moving the Player
      agents to a worker (phase 5), not a second replica.
    - Each replica watches where the journal ends, about once a second, for every table it holds a stream

@@ -23,6 +23,15 @@ public sealed class InMemoryDecisionJournal : IDecisionJournal
         }
     }
 
+    public Task<long> EndAsync(string run, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(run);
+        lock (_gate)
+        {
+            return Task.FromResult<long>(_journals.TryGetValue(run, out var written) ? written.Count : 0);
+        }
+    }
+
     public Task<JournalPosition?> AppendAsync(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(run);

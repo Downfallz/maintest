@@ -71,5 +71,18 @@ public sealed class BlobDecisionJournal : IDecisionJournal
         return new JournalPosition(after.Lines + entries.Count, after.Mark + lines.Length);
     }
 
+    public async Task<long> EndAsync(string run, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var properties = await _container.GetAppendBlobClient(NameOf(run)).GetPropertiesAsync(cancellationToken: cancellationToken);
+            return properties.Value.ContentLength;
+        }
+        catch (RequestFailedException failure) when (failure.Status == 404)
+        {
+            return 0;
+        }
+    }
+
     private static string NameOf(string run) => BlobArtifactNames.Resolve(BlobArtifactNames.Prefix(run), JournalLines.FileName);
 }

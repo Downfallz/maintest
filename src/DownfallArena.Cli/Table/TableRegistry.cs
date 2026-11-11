@@ -580,6 +580,36 @@ internal sealed class TableRegistry : IDisposable
     }
 
     /// <summary>
+    /// Lets go of a table this host holds without closing it, as a host stopping does (ADR 0162): another process
+    /// wrote its record, so what this host holds of it is behind, and the next request that names it picks it up
+    /// again as the record now says it is. False when it was not held.
+    /// </summary>
+    public bool LetGo(string id)
+    {
+        PlayedTable? table;
+        lock (_gate)
+        {
+            if (!_byId.Remove(id, out table))
+            {
+                return false;
+            }
+
+            _byToken.Remove(table.Pilot.Token);
+            foreach (var seat in table.Seats)
+            {
+                _byToken.Remove(seat.Token);
+                if (seat.Invitation is { } invitation)
+                {
+                    _byInvitation.Remove(invitation);
+                }
+            }
+        }
+
+        table.Dispose();
+        return true;
+    }
+
+    /// <summary>
     /// A table whose run was deleted, out of the index for good and never picked up again by this host: no record
     /// says it is open any more, and nothing could say it is closed either.
     /// </summary>

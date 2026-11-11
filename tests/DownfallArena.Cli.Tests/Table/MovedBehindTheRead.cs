@@ -38,6 +38,8 @@ internal sealed class MovedBehindTheRead(ITableSession inner, Func<SeatSnapshot,
 
     public void Dispose() => inner.Dispose();
 
+    public Task<bool> CatchUpAsync(CancellationToken cancellationToken = default) => inner.CatchUpAsync(cancellationToken);
+
     public string SeatedName(PlayerSlot slot) => inner.SeatedName(slot);
 
     public bool PlayedByItsPerson(PlayerSlot slot) => inner.PlayedByItsPerson(slot);

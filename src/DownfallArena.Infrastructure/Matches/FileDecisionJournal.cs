@@ -74,5 +74,11 @@ public sealed class FileDecisionJournal : IDecisionJournal
         }
     }
 
+    public Task<long> EndAsync(string run, CancellationToken cancellationToken = default)
+    {
+        var file = new FileInfo(PathOf(run));
+        return Task.FromResult(file.Exists ? file.Length : 0);
+    }
+
     private string PathOf(string run) => Path.Combine(_runs.LocationOf(run), JournalLines.FileName);
 }

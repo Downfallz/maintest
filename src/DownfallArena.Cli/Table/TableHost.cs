@@ -185,6 +185,10 @@ internal static class TableHost
             server.Starting = true;
             var serving = server.RunAsync(stopping.Token);
             var working = await StartWorkersAsync(channels, turns, registry, clock, stopping.Token);
+
+            // What other processes write to the tables this host holds -- the worker's turns, the hourly job's
+            // expiries -- is seen within a second (ADR 0162). A host that records nothing shares its tables with nobody.
+            var watching = stored is null ? Task.CompletedTask : new TableWatch(registry, clock).RunAsync(stopping.Token);
             if (serving.IsFaulted)
             {
                 await serving;
@@ -221,6 +225,7 @@ internal static class TableHost
             // workers stop with it.
             await serving;
             await working;
+            await watching;
             return 0;
         }
         catch (System.Net.HttpListenerException exception)

@@ -88,9 +88,10 @@ public sealed class WorkersRunningTests
             await Task.Delay(10, Cancel);
         }
 
-        clock.Advance(TimeSpan.FromSeconds(1));
+        // The wait may start after the line is said: the clock is moved on until the wait has seen it move.
         for (var waited = 0; channel.Sent == 0 && waited < 200; waited++)
         {
+            clock.Advance(TimeSpan.FromSeconds(1));
             await Task.Delay(10, Cancel);
         }
 
