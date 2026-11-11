@@ -166,7 +166,9 @@ internal static class TableHost
         var leaderboard = accounts is null || results is null
             ? null
             : new LeaderboardApi(results, accounts, clock, spec => LobbyApi.BotName(agents.FirstOrDefault(agent => string.Equals(agent.Value, spec, StringComparison.OrdinalIgnoreCase))?.Label ?? spec));
-        using var server = new TableServer(options.Bind, options.Port, registry, new TableFiles(TableDirectory), admin, clock, stored, accounts, leaderboard, friends) { Tended = options.Tended };
+        // A player's own statistics (ADR 0168), read off the same results, named from this host's catalogue.
+        var stats = accounts is null || results is null ? null : new StatsApi(results, accounts, services.GetRequiredService<IGameResources>());
+        using var server = new TableServer(options.Bind, options.Port, registry, new TableFiles(TableDirectory), admin, clock, stored, accounts, leaderboard, friends, stats) { Tended = options.Tended };
 
         Console.WriteLine($"Table on {server.Url}");
 

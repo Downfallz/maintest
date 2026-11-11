@@ -379,7 +379,7 @@ for (const file of ['leaderboard', 'battle', 'index']) {
     expect(await page.locator('#inbox-badge').evaluate(badge => badge.getBoundingClientRect().top >= 0)).toBe(true);
     await openNavigation(page);
     const nav = page.getByRole('navigation', { name: 'Main navigation' });
-    await expect(nav.locator(':scope > :visible')).toHaveText(['Lobby', /Friends/, 'Leaderboard', 'Join with a code']);
+    await expect(nav.locator(':scope > :visible')).toHaveText(['Lobby', /Friends/, 'Leaderboard', 'Your stats', 'Join with a code']);
     const sharedStyle = await nav.evaluate(node => {
       const props = ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'padding', 'minHeight'];
       const styleOf = selector => props.map(prop => getComputedStyle(node.querySelector(selector))[prop]);
@@ -395,6 +395,25 @@ for (const file of ['leaderboard', 'battle', 'index']) {
     await noOverflow(page);
   });
 }
+
+test('the signed-in player reads their own statistics on a page of their own', async ({ page }) => {
+  await home(page);
+  await page.route('**/api/stats', route => route.fulfill({ json: {
+    overall: { games: 3, won: 2, lost: 1, drawn: 0 }, againstPlayers: { games: 1, won: 0, lost: 1, drawn: 0 }, againstBots: { games: 2, won: 2, lost: 0, drawn: 0 },
+    formats: [{ format: '3v3', tally: { games: 3, won: 2, lost: 1, drawn: 0 } }], shared: 0, streak: { outcome: 'won', length: 2 }, bestWinStreak: 2,
+    averageRounds: 7.5, withTeams: 3, creatures: [{ id: 'creature:main:v1', name: 'Warped', fielded: 9, won: 6, survived: 4 }],
+    mutations: [], spells: [{ id: 'spell:strike:v1', name: 'Strike', casts: 21, games: 3, won: 2 }],
+  } }));
+  await page.goto('/table/stats.html');
+  await expect(page.locator('#record-cards .stats-card').first()).toContainText('2–1–0');
+  await expect(page.locator('#glance')).toContainText('2 wins in a row');
+  await expect(page.locator('#creature-rows')).toContainText('Warped');
+  await expect(page.locator('#mutation-rows')).toContainText('No mutation bought yet.');
+  await openNavigation(page);
+  await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Your stats' })).toHaveAttribute('aria-current', 'page');
+  await page.keyboard.press('Escape');
+  await noOverflow(page);
+});
 
 test('an account host that cannot be reached says so instead of offering a sign-in with no way in', async ({ page }) => {
   const state = await home(page, { account: null, mode: 'google', meDown: true });

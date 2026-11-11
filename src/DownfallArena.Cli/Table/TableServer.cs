@@ -40,11 +40,12 @@ internal sealed class TableServer : IDisposable
     private readonly TimeProvider _clock;
     private readonly AccountApi? _accounts;
     private readonly LeaderboardApi? _leaderboard;
+    private readonly StatsApi? _stats;
     private readonly FriendsApi? _friends;
 
     /// <param name="accounts">The players' sign-in (ADR 0122), or none for a host with accounts off.</param>
     /// <param name="stored">The host's store, read for a session page whose table this process no longer has; none for a host that records nothing.</param>
-    public TableServer(string address, int port, TableRegistry registry, TableFiles files, AdminApi admin, TimeProvider clock, StoredSessions? stored = null, AccountApi? accounts = null, LeaderboardApi? leaderboard = null, FriendsApi? friends = null)
+    public TableServer(string address, int port, TableRegistry registry, TableFiles files, AdminApi admin, TimeProvider clock, StoredSessions? stored = null, AccountApi? accounts = null, LeaderboardApi? leaderboard = null, FriendsApi? friends = null, StatsApi? stats = null)
     {
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(files);
@@ -59,6 +60,7 @@ internal sealed class TableServer : IDisposable
         _accounts = accounts;
         _friends = friends;
         _leaderboard = leaderboard;
+        _stats = stats;
         _host = new HttpHost(address, port, AnswerAsync);
     }
 
@@ -279,6 +281,13 @@ internal sealed class TableServer : IDisposable
             return _leaderboard is null
                 ? StudioResponse.OfPlainText(404, "This host keeps no ladder: players do not sign in here (--accounts off).")
                 : await _leaderboard.HandleAsync(method, account);
+        }
+
+        if (StatsApi.Names(path))
+        {
+            return _stats is null
+                ? StudioResponse.OfPlainText(404, "This host keeps no statistics: players do not sign in here (--accounts off).")
+                : await _stats.HandleAsync(method, account);
         }
 
         var token = request.Headers[TableApi.TokenHeader];
