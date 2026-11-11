@@ -598,7 +598,9 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
             return await RefuseAsync(seat.Slot, Late);
         }
 
-        var accepted = acceptedAt is { } moment ? new AcceptedDecision(answered, servedAt, moment) : null;
+        // A day at most: a page's clock that says more is a tab left open, not a decision being read.
+        var pageElapsed = posted.ElapsedMs is >= 0 and <= PageElapsedAtMost ? posted.ElapsedMs : null;
+        var accepted = acceptedAt is { } moment ? new AcceptedDecision(answered, servedAt, moment) { PageElapsedMs = pageElapsed } : null;
 
         await RecordAsync(seat.Slot, round, subPhase, accepted, taken.SetsOff);
 
@@ -638,6 +640,9 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
             await Console.Error.WriteLineAsync($"The session could not record a decision of {TableSeat.NameOf(slot)}: {exception.Message}");
         }
     }
+
+    // The longest a page may say it had a question in front of somebody (inventory question 3).
+    private const long PageElapsedAtMost = 24 * 60 * 60 * 1000;
 
     private static readonly DomainError Late = new("Seat.NotWaiting", "This seat is not waiting for that decision any more.");
 

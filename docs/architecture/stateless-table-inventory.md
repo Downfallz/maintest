@@ -37,7 +37,7 @@ from the code, and the rest are where the phases above left them.
 | Whether a person has arrived | `HumanSeat.Arrive`, ADR 0092 | A flag | The table record |
 | Token to table, code to seat | `TableRegistry`, `JoinCodes` | Dictionaries filled at open and at restore | An index in the store, or a token that names its table |
 | The table's version | `TableChanges` | A counter | Journal length plus record revision |
-| When a question was shown | `DecisionClock` | Per-seat stamps for `elapsedMs` | Open question 3 |
+| When a question was shown | `DecisionClock` | Per-seat stamps for `elapsedMs` | Question 3: the page's own measure when the stamp is lost |
 | "Your turn" after a grace | `PushNotices`, off `HumanSeat.Asked` | A delay in process | A delayed message, or stays best-effort |
 | The trace and feed of a live match | `MatchTraceRecorder` | Built from dispatched events | A cache rebuilt by replay |
 | The recording as it is written | `PlaytestRun` (757 lines) | Written as the driver runs | A projection of the journal (open question 2) |
@@ -314,9 +314,15 @@ which adds the compilation of the engine itself.
    the match runs. `RunRecorder` keeps a match's steps in memory and writes them when the match is over;
    only the trace is rewritten after a decision. So the steps are one more thing rebuilt by replay: a
    witness sees a rebuilt match as it was seen being played (4.1a), and `/session/<id>` behaves as today.
-3. **Decision timings.** `elapsedMs` counts from when a question was shown to somebody looking (`?shown=`). With
-   no memory between requests, the stamp is stored per seat, or the page sends it. The free-activation playtest
-   reads these timings, so this is not cosmetic.
+3. **Decision timings.** Answered. `elapsedMs` counts from when a question was shown to somebody looking: the
+   page's `?shown=` poll, stamped in the host's memory (`DecisionClock`). A host restarted, or a table picked up
+   again, between the drawing and the tap has lost that stamp.
+   - The page now measures the same span by its own clock, from the first time it drew the asking to the tap, and
+     sends it with the decision (`elapsedMs` in the decision's body, `table/battle-live.js`).
+   - The host's stamp stays the measure. The page's is read only when the host has none, and the note then says
+     `"timedBy": "page"`.
+   - A page measure below zero or over a day is no measure, and the duration stays unknown.
+   - No storage write, whatever the number of API replicas.
 4. **Tokens.** Decided: keys of the form `<table>.<secret>`, so no index is needed (4.3a). Links already handed
    out keep their old key for the life of their table; a host finds such a table by the open records, read
    once as it starts (4.3b3). Join codes are typed by a person and cannot carry a table's id: they are an

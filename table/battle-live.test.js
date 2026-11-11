@@ -212,6 +212,20 @@ for (const status of [401, 403, 410]) for (const source of ['shown', 'submit']) 
   assert.deepEqual(h.views.at(-1), [null, null]); assert.equal(h.states.at(-1), refusedAs[status]); assert.equal(h.jobs.size, 0);
 });
 
+test('a decision carries how long the page had its question in front of the player, from the first time it drew it', async () => {
+  let clock = 1000; const sent = [];
+  const connection = createLiveConnection({ onState: () => {}, onView: () => {}, schedule: () => 0, cancel: () => {}, now: () => clock });
+  const transport = { catalogue: async () => ok({ cards: [] }), seat: async () => ok({ board: {}, feedNext: 0 }),
+    events: () => new Promise(() => {}), decide: async body => { sent.push(body); return ok(null); } };
+  connection.start(transport); await tick();
+  await connection.shown(4); clock += 2500; await connection.shown(4); clock += 500;
+  await connection.submit({ kind: 'Action', asked: 4 }); await tick();
+  await connection.submit({ kind: 'Action', asked: 5 }); await tick();
+  assert.equal(sent[0].elapsedMs, 3000, 'timed from the first drawing, not the latest');
+  assert.equal('elapsedMs' in sent[1], false, 'a question this page never drew is not timed by it');
+  connection.stop();
+});
+
 test('concession shares the command write fence and refreshes the authoritative result', async () => {
   const h = harness(), write = pending(); let concessions = 0, decisions = 0;
   h.transport.concede = () => { concessions++; return write.promise; };

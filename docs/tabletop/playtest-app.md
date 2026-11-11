@@ -456,7 +456,7 @@ with `TimeProvider`. Same JSON conventions as every other artifact (`artifacts.m
 | `round`, `subPhase` | Where in the match, as in `StepRecord`. |
 | `at` | When (UTC). |
 | `kind` | `Decision`, `Refused`, `Seat`, `Concession`, `Lookup`, `Misplay`, `Comment`. A `Concession` is the seat giving the match up, where the match had got to (ADR 0087). |
-| `elapsedMs` | For a `Decision`: from the moment the seat's options were served to the moment the decision was accepted. |
+| `elapsedMs` | For a `Decision`: from the moment the seat's options were served to the moment the decision was accepted. The host's stamp when it has one; the page's own measure otherwise, which `timedBy: "page"` marks. |
 | `code`, `message` | For a `Refused`: the `DomainError` the aggregate or the host's pre-check returned. |
 | `text` | For a `Lookup`, a `Misplay` or a `Comment`: what the player typed or picked. |
 

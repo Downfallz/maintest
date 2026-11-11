@@ -356,6 +356,51 @@ public sealed class PlaytestNotesTests : IDisposable
     }
 
     /// <summary>
+    /// A decision whose screen the host has no stamp of -- it was restarted, or picked the table up again, between the
+    /// page drawing it and the tap -- is timed by the page's own measure, and the note says whose it is (inventory Q3).
+    /// </summary>
+    [Fact]
+    public async Task A_decision_the_host_has_no_stamp_of_is_timed_by_the_page_and_says_so()
+    {
+        var table = await Recording();
+
+        await Post(table, """{"kind":"Evolution","pass":true,"elapsedMs":4200}""");
+
+        var note = Notes(table).Single(note => note.GetProperty("kind").GetString() == "Decision");
+        note.GetProperty("elapsedMs").GetInt64().ShouldBe(4200);
+        note.GetProperty("timedBy").GetString().ShouldBe("page");
+    }
+
+    /// <summary>The host's own stamp is the measure whenever it has one: the page's is only for when it lost it.</summary>
+    [Fact]
+    public async Task The_host_s_own_stamp_is_the_measure_over_the_page_s()
+    {
+        var table = await Recording();
+
+        await Get(table, $"?shown={table.Person.Waiting?.Asked}");
+        _clock.Advance(TimeSpan.FromSeconds(30));
+        await Post(table, """{"kind":"Evolution","pass":true,"elapsedMs":1}""");
+
+        var note = Notes(table).Single(note => note.GetProperty("kind").GetString() == "Decision");
+        note.GetProperty("elapsedMs").GetInt64().ShouldBe(30_000);
+        note.GetProperty("timedBy").ValueKind.ShouldBe(JsonValueKind.Null);
+    }
+
+    /// <summary>A page's measure that cannot be one -- negative, or more than a day -- is no measure: the duration stays unknown.</summary>
+    [Theory]
+    [InlineData(-5)]
+    [InlineData(90_000_000)]
+    public async Task A_page_measure_that_cannot_be_one_leaves_the_duration_unknown(long elapsed)
+    {
+        var table = await Recording();
+
+        await Post(table, $$"""{"kind":"Evolution","pass":true,"elapsedMs":{{elapsed}}}""");
+
+        Notes(table).Single(note => note.GetProperty("kind").GetString() == "Decision")
+            .GetProperty("elapsedMs").ValueKind.ShouldBe(JsonValueKind.Null);
+    }
+
+    /// <summary>
     /// An acknowledgement of a different asking is not this one's. One seat is asked several questions in a
     /// row, so a page that named the wrong one -- or a stale one still in flight -- must not start this
     /// question's clock, or the duration begins before anybody saw it.

@@ -35,7 +35,8 @@ export function livePresentation(view, packages = new Map(), history = null) {
 // One selected seat, one read at a time. The seat is read when the host says it changed and on nothing else
 // (ADR 0164): no clock. A notification during a read owes one more read. Every continuation belongs to its
 // connection, so a late response cannot repaint a different seat or a closed page.
-export function createLiveConnection({ onState, onView, schedule = setTimeout, cancel = clearTimeout }) {
+export function createLiveConnection({ onState, onView, schedule = setTimeout, cancel = clearTimeout,
+  now = () => performance.now() }) {
   let active = null;
   function stop() {
     const previous = active;
@@ -49,7 +50,9 @@ export function createLiveConnection({ onState, onView, schedule = setTimeout, c
   // the host runs, so a resumed seat reads its board and nothing else.
   function start(transport, catalogue) {
     stop();
-    const connection = { abort: new AbortController(), pollTimer: null, streamTimer: null,
+    // `drawn` keeps, per asking, when this page first put the question in front of the player: the host keeps the
+    // same moment, and reads this one only when it lost its own (a deploy, a table picked up again; inventory Q3).
+    const connection = { abort: new AbortController(), pollTimer: null, streamTimer: null, drawn: new Map(),
       busy: false, owed: false, over: false, since: 0, catalogue: catalogue ?? null, retry: 1000, failed: 0, streams: 0, revision: 0, writing: false };
     active = connection;
     const current = () => active === connection;
@@ -135,6 +138,7 @@ export function createLiveConnection({ onState, onView, schedule = setTimeout, c
     };
     connection.refresh = refresh;
     connection.shown = async asked => {
+      if (!connection.drawn.has(asked)) connection.drawn.set(asked, now());
       const answer = await transport.seat(connection.since, asked);
       if (!current() || refused(answer)) return null;
       return answer;
@@ -157,7 +161,13 @@ export function createLiveConnection({ onState, onView, schedule = setTimeout, c
         if (current()) void refresh();
       }
     };
-    connection.submit = decision => write(() => transport.decide(decision));
+    // A decision carries how long this page had it in front of the player, when the page drew it.
+    connection.submit = decision => {
+      const drawn = connection.drawn.get(decision?.asked);
+      connection.drawn.delete(decision?.asked);
+      const timed = drawn === undefined ? decision : { ...decision, elapsedMs: Math.max(0, Math.round(now() - drawn)) };
+      return write(() => transport.decide(timed));
+    };
     connection.concede = () => write(() => transport.concede());
     onView(null, null);
     onState('connecting');
