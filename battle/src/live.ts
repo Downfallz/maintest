@@ -783,6 +783,10 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('pagehide', suspend);
 window.addEventListener('pageshow', event => { if (event.persisted) { if (selected) choose(selected); else void discover(); } });
+// Back online, the stream waiting to open again opens now (ADR 0163); its `ready` reads the seat.
+window.addEventListener('online', () => connection.reconnect());
+// A notice the service worker received for this browser is a second word that something changed, beside the stream.
+navigator.serviceWorker?.addEventListener?.('message', event => { if ((event as MessageEvent).data?.kind === 'notice' && selected && !document.hidden) void connection.refresh(); });
 try {
   bootScene(scene, $('phaser-mount'), { isReady: () => ready || rendererFailed, onContextLost: failRenderer, onNeverReady: failRenderer });
 } catch { failRenderer(); }

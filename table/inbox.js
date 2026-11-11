@@ -1,4 +1,5 @@
 import { accountRequest } from './account.js';
+import { accountMoved, onLobbyChange } from './changes.js';
 import { preferredPresentation, presentationPath } from './battle-preferences.js';
 import { turnOf } from './players.js';
 import { activateSeats } from './session.js';
@@ -68,11 +69,11 @@ export function bellLabel(count) {
 }
 
 /**
- * The bell and its window. It reads the player's games and friends itself, every `interval` while the page is in
- * view, unless the page that mounts it hands it the same lists (`feed`, `feedFriends`) more recently. Every action
- * is the one the lobby or the Friends panel already offers, sent to the same route.
+ * The bell and its window. It reads the player's games and friends itself when the host says the player's lists
+ * changed (ADR 0163), unless the page that mounts it handed it the same lists (`feed`, `feedFriends`) within `fresh`
+ * milliseconds. Every action is the one the lobby or the Friends panel already offers, sent to the same route.
  */
-export function mountInbox(doc, { storage = null, request = accountRequest, win = globalThis, interval = 20000, onChange = () => {} } = {}) {
+export function mountInbox(doc, { storage = null, request = accountRequest, win = globalThis, changes = onLobbyChange, fresh: freshFor = 5000, onChange = () => {} } = {}) {
   const el = id => doc.getElementById(id);
   let account = null, mine = [], invitations = [], friends = null, fed = 0, busy = false, drawn = '';
   const problem = (text = '') => { el('inbox-problem').textContent = text; el('inbox-problem').hidden = !text; };
@@ -159,21 +160,20 @@ export function mountInbox(doc, { storage = null, request = accountRequest, win 
   }
   async function refresh(force = false) {
     if (!account) { mine = []; invitations = []; friends = null; render(); return; }
-    const reading = account.id, fresh = !force && Date.now() - fed < interval * 0.75;
+    const reading = account.id, fresh = !force && Date.now() - fed < freshFor;
     try {
       const [games, list] = await Promise.all([fresh ? null : request('/api/lobby/mine'), request('/api/friends')]);
       if (account?.id !== reading) return;
       if (games) { mine = games.tables ?? []; invitations = games.invitations ?? []; }
       friends = list;
       render();
-    } catch { /* Read again on the next poll: a bell that missed one read keeps what it last knew. */ }
+    } catch { /* Read again on the next change: a bell that missed one read keeps what it last knew. */ }
   }
   el('inbox-open').addEventListener('click', () => { problem(); void refresh(true); });
-  const visible = () => { if (!doc.hidden) void refresh(); };
-  doc.addEventListener('visibilitychange', visible);
-  const timer = win.setInterval(visible, interval);
+  // The lobby's stream opening (the page loaded, back in view, back online) and the player's own lists changing.
+  const unlisten = changes(event => { if (!doc.hidden && accountMoved(event)) void refresh(); });
   return {
-    stop() { win.clearInterval(timer); doc.removeEventListener('visibilitychange', visible); },
+    stop() { unlisten(); },
     /** Told by the sign-in whenever who is signed in changes. */
     setAccount(next) {
       if ((next?.id ?? null) === (account?.id ?? null)) return;

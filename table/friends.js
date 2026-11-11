@@ -3,6 +3,7 @@
 // says. The pure part is what the panel says; the mount does the asking.
 
 import { accountRequest, confirmAction, nameProblem } from './account.js';
+import { accountMoved, onLobbyChange } from './changes.js';
 
 /** The sections of the panel from the host's list: what each shows, and what is said when it is empty. */
 export function friendSections(list) {
@@ -22,10 +23,8 @@ export function askedText(answer) {
   return answer.accepted ? `${answer.other.username} had already asked you: you are friends now.` : `Asked. ${answer.other.username} will see your request.`;
 }
 
-/** The panel's refresh is cheap and the list changes rarely: once a half-minute, and whenever a notice arrives. */
-export const REFRESH_EVERY = 30000;
 
-export function mountFriends(doc, { request = accountRequest, nav = globalThis.navigator, win = globalThis, onInvite = null, onRequests = () => {}, onList = () => {} } = {}) {
+export function mountFriends(doc, { request = accountRequest, nav = globalThis.navigator, changes = onLobbyChange, onInvite = null, onRequests = () => {}, onList = () => {} } = {}) {
   const el = id => doc.getElementById(id);
   let account = null;
   let list = null;
@@ -153,10 +152,11 @@ export function mountFriends(doc, { request = accountRequest, nav = globalThis.n
   });
 
   nav?.serviceWorker?.addEventListener?.('message', event => { if (event.data?.kind === 'notice') void refresh(true); });
-  const interval = win.setInterval(() => { if (!doc.hidden && account && !busy) void refresh(true); }, REFRESH_EVERY);
+  // Read when the host says this player's lists changed, and when the lobby's stream opens (ADR 0163): no clock.
+  const unlisten = changes(event => { if (accountMoved(event) && account && !busy) void refresh(true); });
   render();
   return {
-    stop: () => win.clearInterval(interval),
+    stop: () => unlisten(),
     /** Reads the list again: a request answered from the bell changes it. */
     refresh: () => refresh(true),
     /** Told by the lobby whether an invitation of this player's is waiting: one at a time, so Invite waits too. */

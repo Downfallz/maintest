@@ -1,5 +1,6 @@
 import { preferredPresentation, presentationPath } from './battle-preferences.js';
 import { nextPath } from './account.js';
+import { onLobbyChange } from './changes.js';
 import { mountNavigation } from './navigation.js';
 import { turnOf } from './players.js';
 export { turnOf } from './players.js';
@@ -193,7 +194,7 @@ function statusText(state) {
   return `${count} ${count === 1 ? 'table' : 'tables'} ongoing · updates automatically`;
 }
 
-export function mountLobby(doc, location, storage) {
+export function mountLobby(doc, location, storage, { changes = onLobbyChange } = {}) {
   const el = id => doc.getElementById(id);
   // Games open in the battle view (ADR 0157); only a browser that asked for the archived table opens /play.
   const presentation = preferredPresentation(storage);
@@ -475,13 +476,13 @@ export function mountLobby(doc, location, storage) {
       if (reading !== revision || wanted !== finished[kind].page) return;
       finished[kind].data = data; finished[kind].page = data.page - 1;
     } catch (error) {
-      // Read again on the next poll: a page that failed once is not given up on.
+      // Read again on the next change: a page that failed once is not given up on.
       if (reading === revision) { finishedReads = Math.max(finishedReads, 1); problem(error.message || 'Could not read your finished games. Try again.'); }
     }
     if (listing) render();
   }
-  // Read on the first poll, and again when a game of this player's finished or who is signed in changed: never on
-  // every poll. A game the host says is over may still be having its result written, so the three polls after a
+  // Read on the first read, and again when a game of this player's finished or who is signed in changed: never on
+  // every read. A game the host says is over may still be having its result written, so the three reads after a
   // finish read again, which is a bounded wait rather than a page that misses it until the next reload.
   function maybeLoadFinished() {
     if (signInFirst()) return;
@@ -529,7 +530,7 @@ export function mountLobby(doc, location, storage) {
     }
   }
   const tablesPath = (all, page) => `/api/lobby/page/${all ? 'all' : 'open'}/${page + 1}`;
-  // A page asked for (a filter, previous, next) is read at once; the polls keep reading the page on show.
+  // A page asked for (a filter, previous, next) is read at once; each change the host announces reads the page on show again.
   async function loadTables() {
     const view = showAll, page = publicTables.page, reading = revision;
     try {
@@ -539,6 +540,7 @@ export function mountLobby(doc, location, storage) {
     } catch (error) { if (reading === revision) problem(error.message || 'Could not read the tables. Try again.'); }
     if (listing) render();
   }
+  let failures = 0, retry = null;
   async function refresh() {
     if (loading) { refreshAgain = true; return; }
     loading = true;
@@ -548,7 +550,7 @@ export function mountLobby(doc, location, storage) {
       const view = showAll, page = publicTables.page;
       const [summary, saved, tables] = await Promise.all([lobbyRequest('/api/lobby'), yours(tokens), lobbyRequest(tablesPath(view, page)).catch(() => null)]);
       if (reading !== revision) return;
-      // A page that failed keeps the one on show: it is read again on the next poll.
+      // A page that failed keeps the one on show: it is read again on the next change.
       if (Array.isArray(tables?.items) && view === showAll && page === publicTables.page) { publicTables.data = tables; publicTables.page = tables.page - 1; }
       listing = summary;
       mine = saved.tables;
@@ -561,8 +563,15 @@ export function mountLobby(doc, location, storage) {
       if (account && opponents.some(one => one.relation === 'asked' || one.relation === 'asking')) void loadOpponents();
       el('lobby-status').textContent = statusText(listing);
       maybeRematch();
+      failures = 0;
     } catch (error) {
-      if (reading === revision) el('lobby-status').textContent = 'Connection interrupted. Reconnecting automatically…';
+      if (reading === revision) {
+        el('lobby-status').textContent = 'Connection interrupted. Reconnecting automatically…';
+        // Tried again, later each time, until it answers: a retry, not a clock.
+        failures += 1;
+        globalThis.clearTimeout(retry);
+        retry = globalThis.setTimeout(() => void refresh(), Math.min(30000, 1000 * 2 ** (failures - 1)));
+      }
     } finally {
       loading = false;
       if (refreshAgain) { refreshAgain = false; void refresh(); }
@@ -687,12 +696,20 @@ export function mountLobby(doc, location, storage) {
     finally { busy = false; showOpponent(); }
   });
   void refresh();
-  const resume = () => { if (!doc.hidden && !dialog.open && !busy) void refresh(); };
-  doc.addEventListener('visibilitychange', resume);
-  globalThis.addEventListener?.('online', resume);
-  const interval = globalThis.setInterval(() => { if (!doc.hidden && !dialog.open && !busy) void refresh(); }, 10000);
+  // No clock reads the lists (ADR 0163): the host says when they changed, and the stream's `ready` -- the page
+  // opened, back in view, back online -- reads them too. A change heard while the player is in the create dialog
+  // or acting waits for them to finish rather than redrawing under them.
+  let owed = false;
+  const resume = () => {
+    if (doc.hidden) return;
+    if (dialog.open || busy) { owed = true; return; }
+    owed = false;
+    void refresh();
+  };
+  dialog.addEventListener('close', () => { if (owed) resume(); });
+  const unlisten = changes(resume);
   return {
-    stop: () => { globalThis.clearInterval(interval); doc.removeEventListener('visibilitychange', resume); globalThis.removeEventListener?.('online', resume); },
+    stop: () => { unlisten(); globalThis.clearTimeout(retry); },
     /** Opens the create dialog with that friend chosen: what the Friends panel's Invite does. */
     invite: friend => openCreate({ friend: friend?.id ?? null }),
     /** Told every friends list the Friends panel reads, so each recent opponent offers the way its friendship allows. */

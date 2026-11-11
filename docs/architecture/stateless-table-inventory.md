@@ -18,6 +18,7 @@ The work is smaller on the engine's side than "a match lives in memory" suggests
 | A table rebuilt from seed and journal | `TableComposer.ResumeAsync`, `TableLoader` | Done, at the first request that names it |
 | An append-only blob per file | `Infrastructure/Learning/BlobArtifactWriter` | Done. No position condition yet |
 | A change notice with a version | `TableChanges`, `GET /api/seat/{seat}/events` | Done. Counted in memory |
+| The lobby's change notice (ADR 0163) | `LobbyChanges`, `GET /api/lobby/events` | Done. Counted in memory, one replica's |
 | Accounts, friends, devices, preferences, results | Blob, beside the recordings | Done. Already outside the process |
 | The session-signing key | `store.SessionKeyAsync` | Done. Read from the store, so replicas agree |
 
@@ -339,12 +340,13 @@ which adds the compilation of the engine itself.
      agents to a worker (phase 5), not a second replica.
    - Each replica watches where the journal ends, about once a second, for every table it holds a stream
      for. Its own streams are told at once, in memory; a line written by another replica is seen within the
-     second. One metadata read a second for a table with a page open, and no new resource. The page's
-     five-second poll already covers a missed notice.
+     second. One metadata read a second for a table with a page open, and no new resource. Since ADR 0163 the
+     page has no poll: a missed notice is covered by the `ready` of every stream that opens and by a stream
+     silent past two keep-alives being opened again.
    - A service that holds the connections (Azure Web PubSub or SignalR Service), if a second is too slow. It
      would also let a page stay connected while no replica is awake, which a stream held by a replica
      prevents today. Its free tier is small and its paid tier is not; the prices have to be checked before
-     this is chosen.
+     this is chosen. ADR 0163 sketches it for the seat and lobby streams alike, and leaves it to its own ADR.
 
    Set aside: session affinity (the two players of a table can land on two replicas), Redis (it does not
    scale to zero), Event Grid (it pushes to an address, and replicas behind the ingress have none of their

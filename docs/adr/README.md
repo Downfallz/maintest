@@ -168,3 +168,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0160](0160-run-the-table-outside-a-virtual-network.md) | Run the hosted table outside a virtual network, and keep the storage account by identity alone | Accepted |
 | [0161](0161-index-tables-in-azure-table-storage.md) | Index the tables in Azure Table Storage, for the codes and the lobby | Accepted |
 | [0162](0162-run-the-table-as-an-api-a-worker-and-an-hourly-job.md) | Run the table as an API app, a turn worker app and an hourly job, each seeing what the others write | Accepted |
+| [0163](0163-read-on-what-the-host-says-changed-never-on-a-clock.md) | Read on what the host says changed, never on a clock: the lobby's stream, and no fallback poll | Accepted |

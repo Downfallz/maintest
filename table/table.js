@@ -290,7 +290,7 @@ function enter(held, practice) {
 }
 
 // Who plays whom, under the seat's name (ADR 0122): the names the lobby gives the seats, asked of the host when
-// the page starts and every half minute after, so an opponent who takes the open place shows up by name.
+// the page starts and again a few seconds after the table changes, so an opponent who takes the open place shows up by name.
 async function showPlayers(state) {
   const tokens = state.seats.map(seat => seat.token);
   try {
@@ -329,7 +329,6 @@ function start(seats, holder = null, practicing = false, replaying = false) {
   void load(state);
   if (!practicing && !replaying) {
     void showPlayers(state);
-    globalThis.setInterval(() => { if (!document.hidden) void showPlayers(state); }, 30000);
   }
   setupTalentWindow(state);
   setupPhaseControls(state);
@@ -390,40 +389,47 @@ function start(seats, holder = null, practicing = false, replaying = false) {
   });
 
   void refresh(state);
-  // The timer is the fallback: a page the host streams its changes to (ADR 0119) reads on each, and on its own
-  // only every few seconds in case a change was missed; one the host cannot stream to reads as it always did.
-  // A read the page asks for itself, after a tap, is never held back.
-  setInterval(() => tick(state), 700);
+  // No clock reads this page (ADR 0163): each seat's stream says when its table changed (ADR 0119), each stream
+  // that opens says `ready` and is read on, and a read the page asks for itself, after a tap, is never held back.
+  // A page back in view or back online reads at once and opens a stream that was waiting to.
   state.live = new Set();
-  state.polled = 0;
+  state.wake = new Set();
   for (const seat of seats) void watch(state, seat);
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'hidden') void refresh(state); });
+  const resume = () => {
+    if (document.visibilityState === 'hidden') return;
+    for (const wake of [...state.wake]) wake();
+    void refresh(state);
+  };
+  document.addEventListener('visibilitychange', resume);
+  globalThis.addEventListener?.('online', resume);
+  globalThis.addEventListener?.('pageshow', event => { if (event.persisted) resume(); });
   if (globalThis.navigator?.onLine === false) connectionStatus('Offline · reconnect when online');
 }
 
-function tick(state) {
-  if (state.live?.size > 0 && Date.now() - (state.polled ?? 0) < StreamedPollEvery) return;
-  void refresh(state);
+// Whether every seat this page shows has reached the end: a finished match changes no more, and its streams are
+// not opened again.
+function finished(state) {
+  return state.views.length > 0 && state.views.every(entry => entry?.view?.over);
 }
 
-// How long a streamed page goes between polls of its own: long enough to cost nothing, short enough that a
-// change the stream dropped is on screen before anybody wonders.
-const StreamedPollEvery = 5000;
-
 // One seat's stream, kept open for the life of the page: each change the host announces is a read now, and a
-// stream that ends -- the phone slept, the network blinked, the host restarted -- is opened again after a
-// moment, a little later each time, until the seat is no longer this page's.
+// stream that ends -- the phone slept, the network blinked, the host restarted, it fell silent past the host's
+// keep-alive -- is opened again after a moment, a little later each time, until the seat is no longer this
+// page's or its match is over. The players line is read again on the changes too, since a seat reached or left
+// is one of them, but not more than once in a few seconds.
 async function watch(state, seat) {
+  if (typeof seat.transport.events !== 'function') return;
   let pause = 1000;
-  while (state.seats.includes(seat)) {
+  while (state.seats.includes(seat) && !finished(state)) {
     const controller = new AbortController();
     try {
       const answer = await seat.transport.events(() => {
         state.live.add(seat.seat);
         pause = 1000;
         void refresh(state);
+        playersSoon(state);
       }, controller.signal);
-      // Refused is a seat that is no longer this page's, or a host without the route: the poll carries on alone.
+      // Refused is a seat that is no longer this page's, or a host without the route.
       if (answer.status === 403 || answer.status === 404) return;
     } catch {
       // The stream broke; the loop below opens it again.
@@ -431,9 +437,21 @@ async function watch(state, seat) {
       state.live.delete(seat.seat);
       controller.abort();
     }
-    await new Promise(resolve => setTimeout(resolve, pause));
+    if (finished(state)) return;
+    await new Promise(resolve => {
+      const wake = () => { state.wake.delete(wake); clearTimeout(timer); pause = 1000; resolve(); };
+      const timer = setTimeout(wake, pause);
+      state.wake.add(wake);
+    });
     pause = Math.min(pause * 2, 10000);
   }
+}
+
+// The players line, read after a change at most once in a few seconds: a seat reached or left moves the table's
+// version, but so does every step, and the line is a courtesy.
+function playersSoon(state) {
+  if (state.practice || state.replaying || state.playersDue) return;
+  state.playersDue = setTimeout(() => { state.playersDue = null; void showPlayers(state); }, 3000);
 }
 
 // Tells the host this seat's question is now in front of somebody. It is the ordinary seat poll with the flag
@@ -563,13 +581,17 @@ async function refresh(state) {
   state.polling = true;
   try {
     state.again = false;
-    state.polled = Date.now();
     await poll(state);
+    state.failed = 0;
     connectionStatus('');
   } catch {
     state.rendered = null;
     connectionStatus(globalThis.navigator?.onLine === false ? 'Offline · reconnect when online' : 'Connection lost · retrying…');
     setPhase('Connection lost · retrying…');
+    // Tried again, later each time, until it answers: a retry, not a clock. Coming back online reads at once.
+    state.failed = (state.failed ?? 0) + 1;
+    clearTimeout(state.retry);
+    state.retry = setTimeout(() => void refresh(state), Math.min(30000, 1000 * 2 ** (state.failed - 1)));
   } finally {
     state.polling = false;
     if (state.again && !state.sending) void refresh(state);

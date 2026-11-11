@@ -20,6 +20,12 @@ internal sealed class FriendsApi(Friends friends, AccountApi accounts, AccountNo
 
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web);
 
+    /// <summary>
+    /// What tells both players' lobbies their lists changed (ADR 0163), the silent ways out included: a page in view
+    /// has no poll of its own left to find them.
+    /// </summary>
+    public LobbyChanges? Changes { get; set; }
+
     public static bool Names(string path) => path == Prefix || path.StartsWith(Prefix + "/", StringComparison.Ordinal);
 
     public async Task<StudioResponse> HandleAsync(string method, string path, string body, AccountRequest request)
@@ -70,6 +76,7 @@ internal sealed class FriendsApi(Friends friends, AccountApi accounts, AccountNo
             return Refused(asked.Error);
         }
 
+        Told(me.Id, asked.Value.Other);
         if (notices is { } send)
         {
             // Told once either way: of the request, or, when asking back is accepting, of the friendship.
@@ -90,6 +97,7 @@ internal sealed class FriendsApi(Friends friends, AccountApi accounts, AccountNo
             return Refused(accepted.Error);
         }
 
+        Told(me.Id, other);
         if (notices is { } send)
         {
             await send.SendAsync(other, AccountNotices.Payload("A new friend", $"{me.Username.Value} accepted your friend request.", "/lobby#friends", $"friend:{me.Id.Value}"), "friend");
@@ -101,7 +109,15 @@ internal sealed class FriendsApi(Friends friends, AccountApi accounts, AccountNo
     private async Task<StudioResponse> UnlinkAsync(AccountId me, AccountId other)
     {
         await friends.UnlinkAsync(me, other);
+        Told(me, other);
         return Answer(new { removed = true });
+    }
+
+    // Both players: the other one's lists moved, and so did this one's on every other device they are signed in on.
+    private void Told(AccountId me, AccountId other)
+    {
+        Changes?.Account(me);
+        Changes?.Account(other);
     }
 
     private async Task<object> DescribeAsync(FriendLink link)

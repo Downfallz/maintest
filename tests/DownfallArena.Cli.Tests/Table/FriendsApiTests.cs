@@ -164,6 +164,25 @@ public sealed class FriendsApiTests : IDisposable
         (await List(bastien)).GetProperty("friends").GetArrayLength().ShouldBe(0);
     }
 
+    [Fact]
+    public async Task A_request_and_its_silent_withdrawal_each_tell_both_players_lobbies_to_read_again()
+    {
+        var changes = new LobbyChanges();
+        _api.Changes = changes;
+        var mark = await SignInAsync("MarkF");
+        var bastien = await SignInAsync("bastien");
+
+        await Ask(mark, "bastien");
+        var bastienId = DownfallArena.SharedKernel.Identifiers.AccountId.Parse(IdOf(await List(mark), "outgoing"));
+        var markId = DownfallArena.SharedKernel.Identifiers.AccountId.Parse(IdOf(await List(bastien), "incoming"));
+        var asked = (changes.VersionOf(markId), changes.VersionOf(bastienId));
+        await _api.HandleAsync("DELETE", $"/api/friends/requests/{bastienId.Value}", "{}", Signed(mark));
+
+        asked.ShouldBe((1, 1));
+        changes.VersionOf(markId).ShouldBe(2, "a silent way out is still a list that changed");
+        changes.VersionOf(bastienId).ShouldBe(2);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root))

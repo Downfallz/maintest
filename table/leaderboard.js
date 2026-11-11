@@ -1,3 +1,5 @@
+import { onLobbyChange } from './changes.js';
+
 // The ladder (ADR 0124): who ranks where among the players with an account, and, for whoever is signed in,
 // their own place and their record against each bot. The host computes everything; this page only draws it.
 
@@ -62,7 +64,7 @@ export function drawLadder(doc, ladder) {
     you.push(node(doc, 'p', 'Against the bots (not ranked)', 'eyebrow'), bots);
   }
   el('you').replaceChildren(...you);
-  el('ladder-status').textContent = `${ladder.players.length} player${ladder.players.length === 1 ? '' : 's'} on the ladder · updates every half minute`;
+  el('ladder-status').textContent = `${ladder.players.length} player${ladder.players.length === 1 ? '' : 's'} on the ladder · updates as games end`;
 }
 
 async function load(doc) {
@@ -84,5 +86,7 @@ async function load(doc) {
 
 if (typeof document !== 'undefined') {
   void load(document);
-  globalThis.setInterval(() => { if (!document.hidden) void load(document); }, 30000);
+  // Read when a game ends or begins somewhere (the lobby's public changes, ADR 0163) and when the stream opens --
+  // the page loaded, back in view -- rather than on a clock. A ladder moves only when a ranked game ends.
+  onLobbyChange(event => { if (!document.hidden && (event.event === 'ready' || String(event.data).startsWith('lobby'))) void load(document); });
 }

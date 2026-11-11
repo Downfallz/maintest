@@ -32,9 +32,10 @@ export function livePresentation(view, packages = new Map(), history = null) {
     actor: board.turn ? String(board.turn.slot.creature) : null, targets: [] } };
 }
 
-// One selected seat, one poll at a time. Notifications during a poll owe another poll. Every continuation
-// belongs to its connection, so a late response cannot repaint a different seat or a closed page.
-export function createLiveConnection({ onState, onView, schedule = setTimeout, cancel = clearTimeout, pollMs = 5000 }) {
+// One selected seat, one read at a time. The seat is read when the host says it changed and on nothing else
+// (ADR 0163): no clock. A notification during a read owes one more read. Every continuation belongs to its
+// connection, so a late response cannot repaint a different seat or a closed page.
+export function createLiveConnection({ onState, onView, schedule = setTimeout, cancel = clearTimeout }) {
   let active = null;
   function stop() {
     const previous = active;
@@ -49,7 +50,7 @@ export function createLiveConnection({ onState, onView, schedule = setTimeout, c
   function start(transport, catalogue) {
     stop();
     const connection = { abort: new AbortController(), pollTimer: null, streamTimer: null,
-      busy: false, owed: false, since: 0, catalogue: catalogue ?? null, retry: 1000, streams: 0, revision: 0, writing: false };
+      busy: false, owed: false, over: false, since: 0, catalogue: catalogue ?? null, retry: 1000, failed: 0, streams: 0, revision: 0, writing: false };
     active = connection;
     const current = () => active === connection;
     function refused(answer) {
@@ -79,37 +80,53 @@ export function createLiveConnection({ onState, onView, schedule = setTimeout, c
         if (revision !== connection.revision) { connection.owed = true; return; }
         if (!answer.ok || !answer.body?.board) throw new Error('Board unavailable');
         if (Number.isInteger(answer.body.feedNext)) connection.since = Math.max(connection.since, answer.body.feedNext);
+        connection.over = answer.body.over === true;
         onView(answer.body, connection.catalogue);
         onState('live');
+        connection.failed = 0;
       } catch {
-        if (current() && revision === connection.revision) onState('stale');
+        // A read that failed is tried again, later each time: a retry until it answers, not a clock.
+        if (current() && revision === connection.revision) {
+          onState('stale');
+          connection.owed = false;
+          connection.failed++;
+          connection.pollTimer = schedule(refresh, Math.min(30000, 1000 * 2 ** (connection.failed - 1)));
+        }
       } finally {
         connection.busy = false;
-        if (current()) {
-          const owed = connection.owed;
+        if (current() && connection.owed) {
           connection.owed = false;
-          connection.pollTimer = schedule(refresh, owed ? 0 : pollMs);
+          connection.pollTimer = schedule(refresh, 0);
         }
       }
     }
     async function stream() {
-      // The stream opens with `ready`. On the first stream the poll already in flight is the board as it
-      // stands, so that `ready` owes nothing; on a reconnect it says what may have changed meanwhile.
-      const first = connection.streams++ === 0;
+      // Every `ready` is read on, the first one too: a change between the first read and the stream opening
+      // would otherwise be missed, and no clock comes to find it. A read in flight owes one more.
+      connection.streams++;
+      connection.streamTimer = null;
+      let answer = null;
       try {
-        const answer = await transport.events(event => {
+        answer = await transport.events(event => {
           if (!current()) return;
           connection.retry = 1000;
-          if (!(first && event?.event === 'ready')) void refresh();
+          void refresh();
         }, connection.abort.signal);
         if (!current() || (answer && refused(answer))) return;
       } catch { if (!current()) return; }
-      // Polling keeps snapshots fresh while the notification channel reconnects.
-      if (current()) {
-        connection.streamTimer = schedule(stream, connection.retry);
-        connection.retry = Math.min(30000, connection.retry * 2);
-      }
+      // A finished match changes no more: its stream is not opened again. A host without the route reads once.
+      if (!current() || connection.over || answer?.status === 404) return;
+      connection.streamTimer = schedule(stream, connection.retry);
+      connection.retry = Math.min(30000, connection.retry * 2);
     }
+    // A page back in view or back online opens its stream now rather than after the wait, and its `ready` reads.
+    connection.reconnect = () => {
+      if (!current() || connection.over || connection.streamTimer === null) return;
+      cancel(connection.streamTimer);
+      connection.streamTimer = null;
+      connection.retry = 1000;
+      void stream();
+    };
     connection.refresh = refresh;
     connection.shown = async asked => {
       const answer = await transport.seat(connection.since, asked);
@@ -141,7 +158,7 @@ export function createLiveConnection({ onState, onView, schedule = setTimeout, c
     void refresh();
     if (transport.events) void stream();
   }
-  return { start, stop, refresh: () => active?.refresh(),
+  return { start, stop, refresh: () => active?.refresh(), reconnect: () => active?.reconnect?.(),
     shown: asked => active?.shown(asked) ?? Promise.resolve(null),
     history: () => active?.history() ?? Promise.resolve(null),
     concede: () => active?.concede() ?? Promise.resolve(null),

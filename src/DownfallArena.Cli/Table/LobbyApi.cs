@@ -43,6 +43,9 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     /// <summary>What tells a friend's devices of an invitation, and the inviter's of its answer; none without push keys.</summary>
     public AccountNotices? Notices { get; set; }
 
+    /// <summary>What <c>GET /api/lobby/events</c> streams (ADR 0163); none on a host that streams no lobby.</summary>
+    public LobbyChanges? Changes { get; set; }
+
     /// <summary>
     /// How many games an account may have in progress against bots, and how many against players (ADR 0147). A sixth
     /// is refused until one ends, so a player's lobby stays a list they can read.
@@ -86,6 +89,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             return (method, path) switch
             {
                 ("GET", Prefix) => await ListAsync(),
+                ("GET", Prefix + "/events") => Events(account),
                 // Signed out where players sign in, a saved seat is not "nothing": it is a seat that needs its player
                 // signed in, and a page told nothing would forget it instead of sending them to sign in.
                 ("POST", Prefix + "/resume") => SignInRequired(account) ?? await ResumeAsync(body, account),
@@ -339,6 +343,9 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 table.Dispose();
                 return Problem(503, $"The table could not be opened: {failure.Message}");
             }
+
+            // Its seats were handed out after it was composed: the lobbies in view read it as it now stands (ADR 0163).
+            table.Api.Changes.Bump();
 
             try
             {
@@ -766,8 +773,22 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     private async Task InviteNoticeAsync(AccountId friend, AccountId me, PlayedTable table) =>
         await NoticeAsync(friend, "An invitation", $"{await NameAsync(me)} invites you to a {table.Session.Rules.Format} battle.", "/lobby#invitations", $"invite:{table.Id}");
 
+    /// <summary>
+    /// The lobby's changes as they happen (ADR 0163): the public lists for anybody, and the signed-in player's own
+    /// lists for them, as server-sent events. Nothing changes on the page's own clock any more: this is what it
+    /// reads on.
+    /// </summary>
+    private StudioResponse Events(AccountId? account) =>
+        Changes is not { } changes
+            ? Problem(404, "This host streams no lobby.")
+            : StudioResponse.OfStream(
+                "text/event-stream; charset=utf-8",
+                (stream, cancellationToken) => changes.StreamAsync(stream, account, cancellationToken),
+                [new KeyValuePair<string, string>("Cache-Control", "no-cache"), new KeyValuePair<string, string>("X-Accel-Buffering", "no")]);
+
     private async Task NoticeAsync(AccountId to, string title, string body, string url, string tag, string topic = "invitation")
     {
+        Changes?.Account(to);
         if (Notices is { } notices)
         {
             await notices.SendAsync(to, AccountNotices.Payload(title, body, url, tag), topic);
@@ -1540,6 +1561,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             try
             {
                 await table.RecordAsync();
+                table.Api.Changes.Bump();
                 return true;
             }
             catch

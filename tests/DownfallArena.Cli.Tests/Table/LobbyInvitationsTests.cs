@@ -379,6 +379,44 @@ public sealed class LobbyInvitationsTests : IDisposable
         await rebuilt.QuiesceAsync(Cancel);
     }
 
+    [Fact]
+    public async Task An_invitation_and_its_decline_tell_both_players_lobbies_and_the_public_lists_to_read_again()
+    {
+        var changes = new LobbyChanges();
+        (await LobbyAsync()).Changes = changes;
+        _hosted.Composer.Lobby = changes;
+        var mark = await PlayerAsync("MarkF");
+        var bastien = await PlayerAsync("bastien");
+        await BefriendAsync(mark, bastien);
+
+        var table = await InvitedTableAsync(mark, bastien);
+        var invited = (changes.VersionOf(mark.Account.Id), changes.VersionOf(bastien.Account.Id), changes.Version);
+        (await ActAsync("POST", table, "/decline", bastien)).Status.ShouldBe(200);
+
+        invited.Item1.ShouldBeGreaterThan(0);
+        invited.Item2.ShouldBeGreaterThan(0, "the friend's bell shows the invitation without a poll");
+        invited.Item3.ShouldBeGreaterThan(0);
+        changes.VersionOf(mark.Account.Id).ShouldBeGreaterThan(invited.Item1, "the inviter's lobby shows the decline");
+        changes.VersionOf(bastien.Account.Id).ShouldBeGreaterThan(invited.Item2);
+    }
+
+    [Fact]
+    public async Task A_change_of_a_table_that_moves_nothing_a_lobby_shows_tells_no_lobby()
+    {
+        var changes = new LobbyChanges();
+        (await LobbyAsync()).Changes = changes;
+        _hosted.Composer.Lobby = changes;
+        var mark = await PlayerAsync("MarkF");
+        var bastien = await PlayerAsync("bastien");
+        await BefriendAsync(mark, bastien);
+        var table = await InvitedTableAsync(mark, bastien);
+        var before = (changes.Version, changes.VersionOf(mark.Account.Id), changes.VersionOf(bastien.Account.Id));
+
+        table.Api.Changes.Bump();
+
+        (changes.Version, changes.VersionOf(mark.Account.Id), changes.VersionOf(bastien.Account.Id)).ShouldBe(before, "a step of a match reaches its seats, not every lobby");
+    }
+
     public void Dispose()
     {
         _registry.Dispose();
