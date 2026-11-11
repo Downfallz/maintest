@@ -68,6 +68,12 @@ on:
     branches: [main]
     paths:
       - "src/**"
+      # Not the hosts: the table's (Table, Hosting) and the studio's (Studio) change nothing the loop records or
+      # plays -- it runs simulate and evaluate -- and most merges touch only the table, each one spending a full
+      # turn (about twenty runner minutes a seed) replaying numbers nothing could have moved.
+      - "!src/DownfallArena.Cli/Table/**"
+      - "!src/DownfallArena.Cli/Hosting/**"
+      - "!src/DownfallArena.Cli/Studio/**"
       - "data/**"
       - "learning/**"
       # Not the experiment file: the pull request that changes it already runs that exact turn, and merging
