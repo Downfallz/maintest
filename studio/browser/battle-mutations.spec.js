@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { returningBattlePlayer } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
+import { decided } from './decision.js';
 test.beforeEach(returningBattlePlayer);
 const roster = [1, 2, 3].map(id => ({ id, name: `Creature ${id}`, isAlive: true, health: 20, maxHealth: 20, energy: 2, conditions: [], acquiredTiers: [], knownSpells: [] }));
 const roots = ['Brute', 'Predator', 'Warped'];
@@ -34,7 +35,7 @@ async function mount(page, { content = catalogue, allies = roster, picks = [], i
       return route.fulfill({ status: state.status, json: state.view });
     }
     if (url.pathname.endsWith('/decision')) {
-      state.writes.push(route.request().postDataJSON()); if (state.hold) await state.hold;
+      state.writes.push(decided(route.request())); if (state.hold) await state.hold;
       state.view = state.next ? state.next(state.view) : { ...state.view, waitingFor: null, waitingAsked: null }; state.next = null;
       return route.fulfill({ status: 204 });
     }

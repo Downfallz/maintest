@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { returningBattlePlayer, mutationTree } from './battle-help-fixture.js';
 import { startHost, stopHost } from './host.js';
 import { fitsViewport } from './fit.js';
+import { decided } from './decision.js';
 test.beforeEach(returningBattlePlayer);
 
 test('the real catalogue tree follows public purchases without acknowledging the reference', async ({ page, context }, info) => {
@@ -20,7 +21,7 @@ test('the real catalogue tree follows public purchases without acknowledging the
     page.on('request', request => {
       const url = new URL(request.url());
       if (url.searchParams.has('shown')) shown.push(url.searchParams.get('shown'));
-      if (url.pathname.endsWith('/decision')) writes.push(request.postDataJSON());
+      if (url.pathname.endsWith('/decision')) writes.push(decided(request));
     });
     await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true'); await expect(page.locator('#loading')).toBeHidden();
     await expect(page.locator('#upkeep-dialog')).toBeVisible(); await page.locator('#upkeep-close').click();

@@ -6,6 +6,7 @@ import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
 import { join as pathJoin } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fitsViewport, fitsBattlefield } from './fit.js';
+import { decided } from './decision.js';
 
 async function enter(page, join) {
   await page.goto(join); await page.locator('#invitation-take').click();
@@ -205,7 +206,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     if (!new URL(page.url()).pathname.startsWith('/battle')) return; // Invitation acceptance lives on /play.
     const url = new URL(request.url());
     if (url.searchParams.has('shown')) shown.push(Number(url.searchParams.get('shown')));
-    if (url.pathname.endsWith('/decision')) writes.push({ command: request.postDataJSON(), seen: [...shown] });
+    if (url.pathname.endsWith('/decision')) writes.push({ command: decided(request), seen: [...shown] });
   });
   page.on('response', async response => {
     if (!/\/api\/seat\/player1(?:\?|$)/.test(response.url()) || response.url().includes('shown=')) return;
@@ -339,7 +340,7 @@ test('two battle seats plan simultaneously without revealing the other team choi
     }
     await expect.poll(async () => { first = await read(page, 'player1', firstTokens.player1); second = await read(other, 'player2', secondTokens.player2); return [first.waitingFor, second.waitingFor]; }, { timeout: 15000 }).toEqual(['Speed', 'Speed']);
     const tempos = [];
-    page.on('request', request => { if (request.url().endsWith('/decision') && request.postDataJSON()?.kind === 'Speed') tempos.push(request.postDataJSON()); });
+    page.on('request', request => { if (request.url().endsWith('/decision') && request.postDataJSON()?.kind === 'Speed') tempos.push(decided(request)); });
     // Interrupt after the first accepted creature, then reload. The host's own private receipts survive;
     // neither the draft nor the rest of the old confirmed batch resumes by itself.
     await page.route('**/decision', route => route.request().postDataJSON()?.kind === 'Speed' && tempos.length === 2 ? route.abort('failed') : route.continue());
