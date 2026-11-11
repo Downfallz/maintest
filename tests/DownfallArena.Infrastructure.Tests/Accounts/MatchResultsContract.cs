@@ -44,6 +44,25 @@ public abstract class MatchResultsContract
         (await results.ListAsync(Cancel)).Select(result => result.MatchId).ShouldBe([november.MatchId, december.MatchId]);
     }
 
+    /// <summary>
+    /// A match closed a second time -- by a process that took the closing over, or after one that stopped before it
+    /// marked the table finished -- is recorded again at a later time, and is still one result.
+    /// </summary>
+    [Fact]
+    public async Task A_match_recorded_again_at_a_later_close_is_kept_once()
+    {
+        var results = await ResultsAsync();
+        var first = Finished(new DateTimeOffset(2026, 11, 3, 20, 0, 0, TimeSpan.Zero));
+        var again = first with { FinishedAt = first.FinishedAt.AddMinutes(3) };
+        var account = first.Seats[0].Account!.Value;
+
+        await results.RecordAsync(first, Cancel);
+        await results.RecordAsync(again, Cancel);
+
+        (await results.ListAsync(Cancel)).ShouldHaveSingleItem().MatchId.ShouldBe(first.MatchId);
+        (await results.ListForAsync(account, Cancel)).ShouldHaveSingleItem();
+    }
+
     [Fact]
     public async Task A_result_keeps_the_table_it_was_played_at_and_one_kept_before_that_reads_without_it()
     {

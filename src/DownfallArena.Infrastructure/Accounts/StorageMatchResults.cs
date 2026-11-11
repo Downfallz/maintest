@@ -1,4 +1,3 @@
-using System.Globalization;
 using Azure.Data.Tables;
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Ports;
@@ -9,8 +8,9 @@ namespace DownfallArena.Infrastructure.Accounts;
 /// <summary>
 /// Results in Azure Table Storage (ADR 0168), in the account that holds the index of the tables: every result in
 /// the partition <c>match</c>, which the leaderboard reads whole, and again in the partition of each account that
-/// held a seat, which that player's pages read alone. A row key sorts by when the match finished, then by its id,
-/// so a partition reads oldest first. Each entity holds the result in the shape the blobs kept it in.
+/// held a seat, which that player's pages read alone. A row is keyed by the match's id alone, so recording a match
+/// again is the same row whenever it is closed; a partition is put in order as it is read. Each entity holds the
+/// result in the shape the blobs kept it in.
 /// </summary>
 public sealed class StorageMatchResults : IMatchResults
 {
@@ -83,14 +83,15 @@ public sealed class StorageMatchResults : IMatchResults
             results.Add(ResultDocuments.Read(entity.GetString(Document)));
         }
 
-        // Already in row-key order, which is this one; sorted again so a row written under another clock's
-        // rounding cannot put two results of the same instant out of the order every store lists them in.
+        // Rows come in the order of their match ids; every store lists results oldest first.
         return [.. results.OrderBy(result => result.FinishedAt).ThenBy(result => result.MatchId, StringComparer.Ordinal)];
     }
 
     private static string PartitionOf(AccountId account) => AccountPrefix + account.Value;
 
-    /// <summary>When the match finished, as ticks wide enough to sort as text, then the match's own id.</summary>
-    private static string RowOf(MatchResult result) =>
-        $"{result.FinishedAt.UtcTicks.ToString("D19", CultureInfo.InvariantCulture)}-{ResultDocuments.IdOf(result):D}";
+    /// <summary>
+    /// The match's own id, and nothing that can change between two closings of it: a match a second process closes
+    /// again, after the first stopped or lost its claim, finishes at another time and must still be one row.
+    /// </summary>
+    private static string RowOf(MatchResult result) => ResultDocuments.IdOf(result).ToString("D");
 }

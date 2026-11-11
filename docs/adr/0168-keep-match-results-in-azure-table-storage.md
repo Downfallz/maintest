@@ -16,14 +16,15 @@ creature statistics, which come next, would read the same history again, in more
 ## Decision
 
 We will keep results in Azure Table Storage: a table `matchresults` in the account that already holds the
-index of the tables (ADR 0161). Each result is written as entities whose row key sorts by when the match
-finished, then by its id:
+index of the tables (ADR 0161). Each result is written as entities whose row key is the match's id, which no
+second closing of the match can change:
 
 - one entity in the partition `match`, which the leaderboard reads whole, in order;
 - one entity per account that held a seat, in that account's own partition, which a player's pages read alone.
 
 Each entity holds the result as one JSON property, in the shape the blobs used. A write is an upsert, so a
-match recorded twice is kept once, as before. The first process to open the table copies the result blobs into
+match recorded twice is kept once, even when a second process closes it at a later time. A partition is put in
+order, oldest first, as it is read. The first process to open the table copies the result blobs into
 it, then marks the copy done. The blobs stay where they are. A directory keeps its files, as an index on a
 laptop does.
 
