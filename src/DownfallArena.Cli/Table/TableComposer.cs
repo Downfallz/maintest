@@ -75,6 +75,16 @@ internal sealed class TableComposer
 
     public bool Records => _store is not null;
 
+    /// <summary>
+    /// Where the turns the bots of this host's tables owe are taken (ADR 0159, phase 5): in this process unless
+    /// a host says otherwise.
+    /// </summary>
+    public IAgentTurns Turns
+    {
+        get => _stepped.Turns;
+        init => _stepped = _stepped with { Turns = value };
+    }
+
     /// <summary>The notices a seat's phone gets when nobody is looking at its page (ADR 0118), or none on a host without push keys.</summary>
     public PushNotices? Push { get; init; }
 
@@ -252,9 +262,10 @@ internal sealed class TableComposer
             // board, and a table picked up again has to come back in the format it was recorded in.
             var rules = RulesFor(request);
             TableSeat[] seats = [Seat(id, PlayerSlot.Player1, request, Recorded(record, PlayerSlot.Player1)), Seat(id, PlayerSlot.Player2, request, Recorded(record, PlayerSlot.Player2))];
-            Occupant? SeatingOf(PlayerSlot slot, string wanted) => Seating(seats[slot == PlayerSlot.Player1 ? 0 : 1], wanted, request, rules, agents, Source(seed, slot));
+            var dice = new TableDice(_services.GetRequiredService<IRandomSourceFactory>(), seed);
+            Occupant? SeatingOf(PlayerSlot slot, string wanted) => Seating(seats[slot == PlayerSlot.Player1 ? 0 : 1], wanted, request, rules, agents, dice.For(slot));
 
-            var plan = Plan(seats, request, rules, agents, seed);
+            var plan = Plan(seats, request, rules, agents, dice);
             var setup = new PlaytestSetup(resources, rules, seed, Stamped(seats[0], request.Player1, request), Stamped(seats[1], request.Player2, request));
             var run = await OpenRunAsync(id, setup, events, record, cancellationToken);
 
@@ -264,7 +275,7 @@ internal sealed class TableComposer
                 _stepped,
                 _journal ?? new InMemoryDecisionJournal(),
                 match,
-                new SteppedSeats(plan, seats, SeatingOf),
+                new SteppedSeats(plan, seats, SeatingOf) { Dice = dice },
                 run,
                 legacyStream: record is { EventStreamVersion: 1 },
                 stopping.Token);
@@ -363,7 +374,7 @@ internal sealed class TableComposer
     /// Who sits where as the table opens: a bot where one was named, the seat's own person where none was, and,
     /// with a handover, the understudy until the top of the round named.
     /// </summary>
-    private Occupant Opening(TableSeat seat, TableRequest request, RuleSet rules, IAgentFactory agents, int seed)
+    private static Occupant Opening(TableSeat seat, TableRequest request, RuleSet rules, IAgentFactory agents, TableDice dice)
     {
         var named = seat.Slot == PlayerSlot.Player1 ? request.Player1 : request.Player2;
         if (seat.Person is not null && request.Handover is null)
@@ -371,17 +382,16 @@ internal sealed class TableComposer
             return SeatPlan.Person(PersonName(request));
         }
 
-        // Each seat draws from its own source, derived from the table's seed the way `GameSession` derives
-        // an agent's: a table's bots then replay from the seed its run stamp carries, whatever other tables
-        // this host played before or beside it. A source shared across tables would make every recording
-        // depend on the order the host's requests happened to arrive in.
+        // Each seat throws its own dice, seeded for each turn from the table's seed, the seat and where the
+        // journal ends (ADR 0159, phase 5): a table's bots then replay from the seed its run stamp carries,
+        // whatever other tables this host played before or beside it, and whichever process takes the turn.
         var spec = named ?? Understudy;
-        return new Occupant(agents.Create(spec, rules, Source(seed, seat.Slot)), spec.ToString());
+        return new Occupant(agents.Create(spec, rules, dice.For(seat.Slot)), spec.ToString());
     }
 
-    private SeatPlan Plan(TableSeat[] seats, TableRequest request, RuleSet rules, IAgentFactory agents, int seed)
+    private static SeatPlan Plan(TableSeat[] seats, TableRequest request, RuleSet rules, IAgentFactory agents, TableDice dice)
     {
-        var plan = new SeatPlan(Opening(seats[0], request, rules, agents, seed), Opening(seats[1], request, rules, agents, seed));
+        var plan = new SeatPlan(Opening(seats[0], request, rules, agents, dice), Opening(seats[1], request, rules, agents, dice));
         if (request.Handover is not { } round)
         {
             return plan;
@@ -397,13 +407,6 @@ internal sealed class TableComposer
         return plan;
     }
 
-    /// <summary>
-    /// A seat's own random source: the table's seed and the slot, the same derivation <c>GameSession</c> uses
-    /// for an agent named on the command line, so a bot seated at a table draws what the same bot would draw
-    /// in a <c>play</c> of that seed.
-    /// </summary>
-    private IRandomSource Source(int seed, PlayerSlot slot) =>
-        _services.GetRequiredService<IRandomSourceFactory>().Create(unchecked((seed * 31) + (slot == PlayerSlot.Player1 ? 1 : 2)));
 
     /// <summary>
     /// Closes the session's dataset, and only on a match that reached an outcome. A session someone walked away

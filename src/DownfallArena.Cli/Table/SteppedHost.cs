@@ -6,6 +6,7 @@ using DownfallArena.Application.Matches.Ports;
 using DownfallArena.Application.Matches.Queries;
 using DownfallArena.Application.Messaging;
 using DownfallArena.Domain.Matches;
+using DownfallArena.Infrastructure.Matches;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Primitives;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,6 +28,12 @@ internal sealed record SteppedHost(
     MatchTraceRecorder Events,
     TimeProvider Clock)
 {
+    /// <summary>
+    /// Where the turns a table's bots owe are taken (ADR 0159, phase 5): in this process unless a host says
+    /// otherwise.
+    /// </summary>
+    public IAgentTurns Turns { get; init; } = new InProcessAgentTurns(Clock);
+
     public static SteppedHost Of(IServiceProvider services)
     {
         ArgumentNullException.ThrowIfNull(services);

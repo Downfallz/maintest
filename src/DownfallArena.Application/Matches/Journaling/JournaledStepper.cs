@@ -88,9 +88,27 @@ public sealed class JournaledStepper(
     /// </param>
     public Task<Result<JournaledStep>> AdvanceAsync(JournaledMatch match, Func<IReadOnlyList<SeatChangeEntry>, MatchSeats> seated, bool once, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(seated);
+        return AdvanceAsync(match, (changes, _) => seated(changes), once, cancellationToken);
+    }
+
+    /// <summary>
+    /// Takes the decisions the Player agents owe, the seats being whatever the journal's seat changes make them
+    /// when the step has its turn, and told where the journal ends then.
+    /// </summary>
+    /// <param name="seated">
+    /// Who sits where, given the seat changes the journal holds and where the journal ends as the step begins:
+    /// what an agent whose dice are thrown per decision is seeded from, so that any process taking the same turn
+    /// takes it the same way (ADR 0159, phase 5).
+    /// </param>
+    public Task<Result<JournaledStep>> AdvanceAsync(JournaledMatch match, Func<IReadOnlyList<SeatChangeEntry>, JournalPosition, MatchSeats> seated, bool once, CancellationToken cancellationToken = default)
+    {
         ArgumentNullException.ThrowIfNull(match);
         ArgumentNullException.ThrowIfNull(seated);
-        return StepAsync(match, kept => stepper.AdvanceAsync(match.MatchId, seated([.. kept.SeatChanges]), kept.Held, once, cancellationToken), cancellationToken);
+        return StepAsync(
+            match,
+            kept => stepper.AdvanceAsync(match.MatchId, seated([.. kept.SeatChanges], kept.Position ?? JournalPosition.Start), kept.Held, once, cancellationToken),
+            cancellationToken);
     }
 
     /// <summary>

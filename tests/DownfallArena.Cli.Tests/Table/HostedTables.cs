@@ -1,5 +1,6 @@
 using DownfallArena.Application.Agents;
 using DownfallArena.Application.Learning.Ports;
+using DownfallArena.Application.Matches.Journaling;
 using DownfallArena.Cli.Table;
 using DownfallArena.Cli.Tests.Studio;
 using DownfallArena.Domain.Matches;
@@ -44,7 +45,8 @@ internal sealed class HostedTables : IDisposable
     /// <param name="rules">The rules every table is composed with, <see cref="Rules" /> unless given.</param>
     /// <param name="push">The notices the tables send (ADR 0118), or none, which is the ordinary host of these tests.</param>
     /// <param name="index">The index of the tables, a fresh one unless given: another host's, for two hosts over one store and one index.</param>
-    public HostedTables(Func<string, IArtifactStore>? store, RuleSet? rules = null, PushNotices? push = null, ReplayBasis? basis = null, InMemoryTableIndex? index = null)
+    /// <param name="turns">Where the bots' turns are taken, this process unless given: a test that takes them itself.</param>
+    public HostedTables(Func<string, IArtifactStore>? store, RuleSet? rules = null, PushNotices? push = null, ReplayBasis? basis = null, InMemoryTableIndex? index = null, IAgentTurns? turns = null)
     {
         Index = index ?? new InMemoryTableIndex();
         _content.Write("presentation/package-tags.json", PackageTags);
@@ -59,7 +61,9 @@ internal sealed class HostedTables : IDisposable
 
         // A store wrapped by a test still keeps its runs under the directory it was made over, and so does the journal.
         var journal = opened is null or FileArtifactStore ? null : new FileDecisionJournal(RunsDirectory, TimeProvider.System);
-        Composer = new TableComposer(_host.Services, rules ?? Rules, opened, journal) { Push = push, Basis = basis, Index = Index };
+        Composer = turns is null
+            ? new TableComposer(_host.Services, rules ?? Rules, opened, journal) { Push = push, Basis = basis, Index = Index }
+            : new TableComposer(_host.Services, rules ?? Rules, opened, journal) { Push = push, Basis = basis, Index = Index, Turns = turns };
         Stored = opened is null ? null : new StoredSessions(opened);
     }
 

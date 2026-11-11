@@ -28,7 +28,7 @@ namespace DownfallArena.Cli.Table;
 /// the trace and the outcome move it as they did. Deriving it from the journal is the next slice's.
 /// </para>
 /// </remarks>
-internal sealed class SteppedSession : ITableSession
+internal sealed class SteppedSession : ITableSession, IAgentTurnTaker
 {
     private readonly SteppedHost _host;
     private readonly JournaledStepper _stepper;
@@ -57,15 +57,11 @@ internal sealed class SteppedSession : ITableSession
     private readonly int[] _reached = [0, 0];
 
     private int _begun;
-    private int _pump;
     private int _disposed;
 
     // Whether the match kept here may be behind its journal: a step was refused or failed, and what it left
     // is not known. Whoever takes the bots' turns reads the match again first.
     private int _stale;
-
-    private static readonly TimeSpan FirstRetry = TimeSpan.FromMilliseconds(250);
-    private static readonly TimeSpan LongestRetry = TimeSpan.FromSeconds(30);
 
     // How often in a row another writer may take the match further before the step waits a moment, or gives up
     // where somebody is waiting for its answer.
@@ -622,89 +618,51 @@ internal sealed class SteppedSession : ITableSession
     }
 
     /// <summary>
-    /// Sets the bots' turns off, unless they are being taken: then whoever is taking them looks once more
-    /// when done, since what was asked for may have come after its last look.
+    /// Says the bots owe a turn, to whoever takes their turns (ADR 0159, phase 5): it takes them one at a time
+    /// until nothing more is owed, each through <see cref="TakeTurnAsync" />.
     /// </summary>
-    private void Pump()
-    {
-        if (Interlocked.Exchange(ref _pump, 2) == 0)
-        {
-            _ = Task.Run(TurnsAsync, CancellationToken.None);
-        }
-    }
+    private void Pump() => _host.Turns.Owe(this);
 
-    private async Task TurnsAsync()
-    {
-        do
-        {
-            Volatile.Write(ref _pump, 1);
-            await AdvancedAsync();
-        }
-        while (Interlocked.CompareExchange(ref _pump, 0, 1) != 1);
-    }
+    public string Run => _match.Run;
+
+    public CancellationToken Stopping => _stopping;
 
     /// <summary>
-    /// Takes what the bots owe, one of their turns a turn of the match, until a person is asked or the match
-    /// is over. Each is a turn of its own so a tap, a concession or a seat changing hands has the match between
-    /// two of them, and so the pages see each as it lands.
+    /// One of the bots' turns, each a turn of the match of its own so a tap, a concession or a seat changing
+    /// hands has the match between two of them, and so the pages see each as it lands.
     /// </summary>
     /// <remarks>
-    /// It is also where the match kept here is read again when it may be behind its journal, and what does not
-    /// give up on a store that is out: a turn that could not be written is taken again after a wait that grows
-    /// to half a minute, for as long as the table is held. Nobody may be reading the table to set it off again
-    /// -- a page closed on the bot's turn is the very case a notice exists for (ADR 0118).
+    /// It is also where the match kept here is read again when it may be behind its journal. A store that is out
+    /// is answered <see cref="AgentTurn.Failed" />, for whoever takes the turns to wait and try again; a bot that
+    /// throws, or a journal that cannot be read as one, ends the table without an outcome, and says why.
     /// </remarks>
-    private async Task AdvancedAsync()
+    public async Task<AgentTurn> TakeTurnAsync(CancellationToken cancellationToken = default)
     {
-        var wait = FirstRetry;
-        var moved = 0;
-        while (!LetGo)
+        if (LetGo || cancellationToken.IsCancellationRequested)
         {
-            Turn turn;
-            try
-            {
-                turn = await TurnAsync();
-            }
-            catch (OperationCanceledException) when (_stopping.IsCancellationRequested)
-            {
-                // The table was let go of under a bot's turn.
-                return;
-            }
-            catch (Exception failure) when (Transient(failure))
-            {
-                Behind(pump: false);
-                Console.WriteLine($"  Session {_match.Run}: the bots' turn could not be taken ({failure.Message}); it is taken again in {wait.TotalSeconds:0.##} s.");
-                turn = Turn.Failed;
-            }
-            catch (Exception failure)
-            {
-                // A bot that throws, a journal that cannot be read as one: the table ends without an outcome,
-                // and says why.
-                Console.WriteLine($"  Session {_match.Run} cannot be played on: {failure.Message}");
-                _outcome.TrySetException(failure);
-                return;
-            }
+            return AgentTurn.Done;
+        }
 
-            if (turn == Turn.Done)
-            {
-                return;
-            }
-
-            if (turn == Turn.Taken)
-            {
-                moved = 0;
-                wait = FirstRetry;
-            }
-            else if (turn == Turn.Failed || ++moved >= MovedInARow)
-            {
-                // The store is out, or another writer keeps taking the match further: not at once again.
-                if (await WaitedAsync(wait) is not { } next)
-                {
-                    return;
-                }
-
-                wait = next;
-            }
+        try
+        {
+            return await TurnAsync();
+        }
+        catch (OperationCanceledException) when (_stopping.IsCancellationRequested)
+        {
+            // The table was let go of under a bot's turn.
+            return AgentTurn.Done;
+        }
+        catch (Exception failure) when (Transient(failure))
+        {
+            Behind(pump: false);
+            Console.WriteLine($"  Session {_match.Run}: the bots' turn could not be taken ({failure.Message}); it is taken again in a moment.");
+            return AgentTurn.Failed;
+        }
+        catch (Exception failure)
+        {
+            Console.WriteLine($"  Session {_match.Run} cannot be played on: {failure.Message}");
+            _outcome.TrySetException(failure);
+            return AgentTurn.Done;
         }
     }
 
@@ -712,7 +670,7 @@ internal sealed class SteppedSession : ITableSession
     /// One turn of whoever takes the bots' turns: the match read again when it may be behind its journal, then
     /// one of the agents' turns taken.
     /// </summary>
-    private async Task<Turn> TurnAsync()
+    private async Task<AgentTurn> TurnAsync()
     {
         if (Interlocked.Exchange(ref _stale, 0) != 0)
         {
@@ -720,7 +678,7 @@ internal sealed class SteppedSession : ITableSession
             if (read.IsFailure)
             {
                 Ended(read.Error);
-                return Turn.Done;
+                return AgentTurn.Done;
             }
 
             Take(read.Value);
@@ -728,56 +686,34 @@ internal sealed class SteppedSession : ITableSession
 
         if (!HasBegun || IsOver)
         {
-            return Turn.Done;
+            return AgentTurn.Done;
         }
 
-        var step = await _stepper.AdvanceAsync(_match, changes => Seated(changes).Seats(), once: true, _stopping);
+        var step = await _stepper.AdvanceAsync(
+            _match,
+            (changes, at) =>
+            {
+                // Inside the turn, where it begins: the dice of this turn are this turn's wherever it is taken.
+                _seats.Dice?.At(at);
+                return Seated(changes).Seats();
+            },
+            once: true,
+            _stopping);
         if (step.IsFailure && step.Error == JournalErrors.Moved)
         {
             // Another writer took the match further: it is read again before the next turn.
             Behind(pump: false);
-            return Turn.Moved;
+            return AgentTurn.Moved;
         }
 
         if (step.IsFailure)
         {
             Ended(step.Error);
-            return Turn.Done;
+            return AgentTurn.Done;
         }
 
         Take(step.Value.State);
-        return step.Value.Step.Owed ? Turn.Taken : Turn.Done;
-    }
-
-    /// <summary>How a turn of whoever takes the bots' turns went.</summary>
-    private enum Turn
-    {
-        /// <summary>Nothing more is owed: a person is asked, the match is over, or the table cannot be played on.</summary>
-        Done,
-
-        /// <summary>A turn was taken and the agents owe another.</summary>
-        Taken,
-
-        /// <summary>Another writer took the match further first.</summary>
-        Moved,
-
-        /// <summary>The store could not be reached.</summary>
-        Failed,
-    }
-
-    /// <summary>Waits before a turn is taken again, and says how long the next wait is; nothing when the table was let go of meanwhile.</summary>
-    private async Task<TimeSpan?> WaitedAsync(TimeSpan wait)
-    {
-        try
-        {
-            await Task.Delay(wait, _host.Clock, _stopping);
-        }
-        catch (OperationCanceledException)
-        {
-            return null;
-        }
-
-        return wait + wait < LongestRetry ? wait + wait : LongestRetry;
+        return step.Value.Step.Owed ? AgentTurn.Taken : AgentTurn.Done;
     }
 
     /// <summary>
