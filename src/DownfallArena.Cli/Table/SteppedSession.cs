@@ -694,8 +694,10 @@ internal sealed class SteppedSession : ITableSession, IAgentTurnTaker
             (changes, at) =>
             {
                 // Inside the turn, where it begins: the dice of this turn are this turn's wherever it is taken.
+                // Seated first, so a bot the seat changes make now is made on the dice a bot is made on.
+                var seats = Seated(changes).Seats();
                 _seats.Dice?.At(at);
-                return Seated(changes).Seats();
+                return seats;
             },
             once: true,
             _stopping);

@@ -56,6 +56,35 @@ public sealed class TableDiceTests
         again.ShouldBe(first);
     }
 
+    [Fact]
+    public void A_turn_taken_again_at_the_same_place_throws_the_same_numbers_again()
+    {
+        var dice = new TableDice(new SeededRandomSourceFactory(), 7);
+        var die = dice.For(PlayerSlot.Player1);
+        var first = Thrown(dice, die, lines: 12);
+
+        // The turn's line could not be written: the journal still ends where it did, and the turn is taken again.
+        var again = Thrown(dice, die, lines: 12);
+
+        again.ShouldBe(first);
+    }
+
+    [Fact]
+    public void What_a_bot_throws_as_it_is_made_does_not_depend_on_where_the_table_was_when_it_was_made()
+    {
+        var played = new TableDice(new SeededRandomSourceFactory(), 7);
+        played.At(new JournalPosition(40, 4000));
+        var fresh = new TableDice(new SeededRandomSourceFactory(), 7);
+
+        var seatedMidMatch = Made(played.For(PlayerSlot.Player1));
+        var madeAgainElsewhere = Made(fresh.For(PlayerSlot.Player1));
+
+        madeAgainElsewhere.ShouldBe(seatedMidMatch);
+    }
+
+    /// <summary>Ten numbers a die throws before its table is next told where a turn begins: what a bot throws as it is made.</summary>
+    private static int[] Made(IRandomSource die) => [.. Enumerable.Range(0, 10).Select(_ => die.NextInt32(0, 1_000_000))];
+
     /// <summary>Ten numbers a seat's die throws on the turn that begins where the journal holds that many lines.</summary>
     private static int[] Thrown(TableDice dice, PlayerSlot slot, long lines) => Thrown(dice, dice.For(slot), lines);
 
