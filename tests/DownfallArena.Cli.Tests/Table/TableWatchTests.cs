@@ -200,6 +200,49 @@ public sealed class TableWatchTests : IDisposable
     }
 
     [Fact]
+    public async Task A_run_whose_claim_another_took_over_finds_out_before_it_writes()
+    {
+        using var registry = _here.Registry();
+        var table = await RecordedAsync(registry, HostedTables.OnePerson);
+        using var elsewhere = _there.Registry();
+        var there = (await elsewhere.ByIdAsync(table.Id, Cancel)).ShouldNotBeNull();
+        (await table.Run!.ClaimClosingAsync(Cancel)).ShouldBeTrue();
+        var renewed = await table.Run.StillClosingAsync(Cancel);
+        await File.WriteAllTextAsync(
+            Path.Combine(_runs, table.Id, PlaytestRun.ClosingFile),
+            JsonSerializer.Serialize(new { By = "stalled", At = DateTimeOffset.UtcNow - PlaytestRun.ClosingHeld - TimeSpan.FromMinutes(1) }, ArtifactJson.DocumentOptions),
+            Cancel);
+        (await there.Run!.ClaimClosingAsync(Cancel)).ShouldBeTrue();
+
+        var stillHere = await table.Run.StillClosingAsync(Cancel);
+
+        renewed.ShouldBeTrue();
+        stillHere.ShouldBeFalse("the claim is another run's now");
+        (await there.Run.StillClosingAsync(Cancel)).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task A_checkpoint_never_writes_over_the_trace_another_process_finished()
+    {
+        using var registry = _here.Registry();
+        var table = await RecordedAsync(registry, Randoms);
+        using var elsewhere = _there.Registry();
+        var there = (await elsewhere.ByIdAsync(table.Id, Cancel)).ShouldNotBeNull();
+        (await ((IAgentTurnTaker)there.Session).TakeTurnAsync(Cancel)).ShouldBe(AgentTurn.Taken);
+        (await table.Session.CatchUpAsync(Cancel)).ShouldBeTrue();
+        var path = Path.Combine(_runs, table.Id, RunRecorder.TracesDirectory, $"{table.Session.MatchId}.json");
+        await table.Run!.CheckpointAsync(table.Session.MatchId, Cancel);
+        var checkpointed = await File.ReadAllTextAsync(path, Cancel);
+        const string finished = "{ \"outcome\": { \"reason\": \"Elimination\" } }";
+        await File.WriteAllTextAsync(path, finished, Cancel);
+
+        await table.Run.CheckpointAsync(table.Session.MatchId, Cancel);
+
+        checkpointed.ShouldContain("entries", Case.Insensitive);
+        (await File.ReadAllTextAsync(path, Cancel)).ShouldBe(finished, "the match's trace with its outcome is the last word on it");
+    }
+
+    [Fact]
     public async Task No_run_claims_the_closing_of_a_session_whose_record_says_it_finished()
     {
         using var registry = _here.Registry();

@@ -453,8 +453,21 @@ internal sealed class TableComposer
                 await results.RecordAsync(result);
             }
 
+            // The claim renewed before each step that another closer would repeat: one that stalled past it and was
+            // taken over from stops here, and leaves the files and the notices to the process that took it over.
+            if (!await run.StillClosingAsync())
+            {
+                Console.WriteLine($"  Session {run.SessionId} is being written by another process, which took it over from this one.");
+                return;
+            }
+
             await run.FinishAsync(session.MatchId, board.Value);
             Console.WriteLine($"  Session {run.SessionId} written to '{run.Location}'");
+            if (!await run.StillClosingAsync())
+            {
+                Console.WriteLine($"  Session {run.SessionId} was taken over by another process, which tells its seats how it ended.");
+                return;
+            }
 
             // Told after the files are written, and on its own: a device store or an account that cannot be read is
             // a notice that did not arrive, never a recording left unfinished.

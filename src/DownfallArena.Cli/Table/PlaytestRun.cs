@@ -714,9 +714,55 @@ internal sealed class PlaytestRun
                 return Task.CompletedTask;
             }
 
-            return _events.Snapshot(matchId, _stamp, _seed, upTo) is { } trace
-                ? _writer.WriteJsonAsync($"{RunRecorder.TracesDirectory}/{matchId}.json", trace, cancellationToken)
-                : Task.CompletedTask;
+            if (_events.Snapshot(matchId, _stamp, _seed, upTo) is not { } trace)
+            {
+                return Task.CompletedTask;
+            }
+
+            // Queued behind the one before, so this process's checkpoints land in the order they were taken.
+            var before = _checkpointed;
+            return _checkpointed = CheckpointAfterAsync(before, $"{RunRecorder.TracesDirectory}/{matchId}.json", trace, cancellationToken);
+        }
+    }
+
+    // The last checkpoint queued: the next one is written after it.
+    private Task _checkpointed = Task.CompletedTask;
+
+    /// <summary>
+    /// A checkpoint written after the one before it, and never over a finished trace: another process may hold the
+    /// table, close it and write the match's trace with its outcome while this one's checkpoint is on its way
+    /// (ADR 0162). It is written only over the trace it read, and read again when somebody wrote it since.
+    /// </summary>
+    private async Task CheckpointAfterAsync(Task before, string path, MatchTrace trace, CancellationToken cancellationToken)
+    {
+        await Task.WhenAny(before);
+        for (var attempt = 1; attempt <= RecordAttempts; attempt++)
+        {
+            var read = await _reader.ReadTaggedAsync(path, cancellationToken);
+            if (read is not null && Finished(read.Text))
+            {
+                return;
+            }
+
+            if (await _writer.WriteJsonIfAsync(path, trace, read?.Tag, cancellationToken) is not null)
+            {
+                return;
+            }
+        }
+    }
+
+    /// <summary>Whether a trace as written is a finished match's: its outcome is on it.</summary>
+    private static bool Finished(string trace)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(trace);
+            return document.RootElement.ValueKind == JsonValueKind.Object
+                && document.RootElement.EnumerateObject().Any(property => string.Equals(property.Name, nameof(MatchTrace.Outcome), StringComparison.OrdinalIgnoreCase) && property.Value.ValueKind != JsonValueKind.Null);
+        }
+        catch (JsonException)
+        {
+            return false;
         }
     }
 
@@ -810,6 +856,19 @@ internal sealed class PlaytestRun
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Whether this run's claim on closing the session still stands, renewed for another <see cref="ClosingHeld" />
+    /// when it does: written only over the claim it read, so a run whose claim another took over -- it stalled
+    /// longer than a claim stands -- finds out before it writes the files or tells anybody, and stops.
+    /// </summary>
+    public async Task<bool> StillClosingAsync(CancellationToken cancellationToken = default)
+    {
+        var read = await _reader.ReadTaggedAsync(ClosingFile, cancellationToken);
+        return read is not null
+            && ClosingOf(read.Text)?.By == _closer
+            && await _writer.WriteJsonIfAsync(ClosingFile, new Closing(_closer, _clock.GetUtcNow()), read.Tag, cancellationToken) is not null;
     }
 
     /// <summary>
