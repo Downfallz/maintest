@@ -23,6 +23,19 @@ public sealed class InMemoryDecisionJournal : IDecisionJournal
         }
     }
 
+    public Task<JournalReading?> ReadAfterAsync(string run, JournalPosition after, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(run);
+        ArgumentNullException.ThrowIfNull(after);
+        lock (_gate)
+        {
+            var written = _journals.TryGetValue(run, out var journal) ? journal : [];
+            return Task.FromResult<JournalReading?>(written.Count < after.Mark
+                ? null
+                : new JournalReading([.. written.Skip((int)after.Mark)], new JournalPosition(written.Count, written.Count)));
+        }
+    }
+
     public Task<long> EndAsync(string run, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(run);

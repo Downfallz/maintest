@@ -49,6 +49,30 @@ public sealed class FileDecisionJournal : IDecisionJournal
         }
     }
 
+    public Task<JournalReading?> ReadAfterAsync(string run, JournalPosition after, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(after);
+        var path = PathOf(run);
+        lock (Gate)
+        {
+            if (!File.Exists(path))
+            {
+                return Task.FromResult<JournalReading?>(after.Mark == 0 ? new JournalReading([], after) : null);
+            }
+
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            if (stream.Length < after.Mark)
+            {
+                return Task.FromResult<JournalReading?>(null);
+            }
+
+            stream.Position = after.Mark;
+            var bytes = new byte[stream.Length - after.Mark];
+            stream.ReadExactly(bytes);
+            return Task.FromResult<JournalReading?>(JournalLines.Read(bytes, after));
+        }
+    }
+
     public Task<JournalPosition?> AppendAsync(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(after);

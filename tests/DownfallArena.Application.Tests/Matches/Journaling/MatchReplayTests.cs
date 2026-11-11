@@ -60,6 +60,41 @@ public sealed class MatchReplayTests
     }
 
     [Fact]
+    public async Task A_match_taken_on_through_later_lines_stands_where_a_rebuild_from_all_of_them_does()
+    {
+        var first = new Replica(new JournalStore());
+        (await first.Replay.RebuildAsync(Table, [], TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
+        var entries = new List<IJournalEntry>();
+        var held = HeldAnswers.None;
+        foreach (var decision in await OpeningAsync(first))
+        {
+            held = (await first.Stepper.SubmitAsync(Table.MatchId, MatchSeats.People, held, decision, TestContext.Current.CancellationToken)).Value.Held;
+            entries.Add(new DecisionEntry(decision));
+        }
+
+        var continued = new Replica(new JournalStore());
+        var opened = await continued.Replay.RebuildAsync(Table, entries[..2], TestContext.Current.CancellationToken);
+
+        var taken = await continued.Replay.ContinueAsync(Table, opened.Value, entries[2..], 2, TestContext.Current.CancellationToken);
+
+        taken.IsSuccess.ShouldBeTrue();
+        taken.Value.ShouldBe(held);
+        continued.Events.Trace().ShouldBe(first.Events.Trace());
+    }
+
+    [Fact]
+    public async Task A_later_line_the_match_does_not_take_is_a_divergence_that_names_the_journal_s_line()
+    {
+        var replica = new Replica(new JournalStore());
+        var opened = await replica.Replay.RebuildAsync(Table, [new DecisionEntry(new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass))], TestContext.Current.CancellationToken);
+
+        var taken = await replica.Replay.ContinueAsync(Table, opened.Value, [new DecisionEntry(new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass))], 1, TestContext.Current.CancellationToken);
+
+        taken.Error.Code.ShouldBe(JournalErrors.DivergedCode);
+        taken.Error.Message.ShouldContain("Line 2");
+    }
+
+    [Fact]
     public async Task What_remembers_a_match_s_events_forgets_the_match_before_they_are_raised_again()
     {
         var memory = Substitute.For<IMatchMemory>();

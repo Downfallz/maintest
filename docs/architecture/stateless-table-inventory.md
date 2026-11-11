@@ -70,9 +70,10 @@ Each phase ships on the one container app there is today and leaves the game pla
    position, refusing a writer that did not read the last line; in memory, as the `decisions.jsonl` file the
    table has always written, and as the same append blob with the service's own position condition.
    `MatchReplay` builds a match again from how it was created and its decisions, by the commands that built
-   it. `JournaledStepper` is the stepper over a journal: it reads the journal before each step, rebuilds the
-   match in memory when it is not where the journal ends, writes what the step decided, and tells a writer
-   that lost the race the match moved. `RecordedTableReplayTests` holds it to what the host recorded before
+   it. `JournaledStepper` is the stepper over a journal: it reads the journal before each step, takes the
+   match in memory on through the lines written since it last stood where the journal ended (question 13),
+   rebuilds it when it is neither, writes what the step decided, and tells a writer that lost the race the
+   match moved. `RecordedTableReplayTests` holds it to what the host recorded before
    phase 4.
 4. **The host on the journaled stepper, and its own state out of memory.** In five slices, each leaving the
    game playable:
@@ -390,10 +391,15 @@ which adds the compilation of the engine itself.
 12. **Two shapes of one line.** Answered in 4.4: the host's `JournalEntry` is gone, and `JournalLine` in
     Infrastructure is the only shape of a line. It still reads a swap written before the journal was the
     source (`FileDecisionJournalTests`).
-13. **Loading on every step.** `JournaledStepper` reads the whole journal before each step and rebuilds the
-    whole match when another process wrote last. Two replicas alternating on one table rebuild at every
-    step, which the figures above price. Applying only the lines not yet seen is the cheaper path if that
-    pattern turns out to matter.
+13. **Loading on every step.** Answered. Before each step `JournaledStepper` reads only what the journal holds
+    after the position its match in memory stood at (`IDecisionJournal.ReadAfterAsync`: a range from the
+    blob's length, a seek in the file), and takes the match on through those lines with the same commands a
+    rebuild uses (`MatchReplay.ContinueAsync`). A host and a worker taking turns at one table each pay for the
+    other's lines, not for the match again, and read the journal whole only the first time. The match is
+    rebuilt from the whole journal when this process held none, let go of it, or the lines written since do
+    not answer it; a rebuild then names the line that does not, as before. What remembers the match's events
+    keeps them and hears the new ones, so a feed or a trace grows as it would in the process that wrote them.
+    A seat change among those lines is named as after a rebuild (question 19).
 
 14. **Event Grid and Functions.** At playtest volume every candidate costs next to nothing, so cost does not
     decide; what each need is does. A Player agent's turn to take (phase 5) is a work item for one consumer,
@@ -427,7 +433,8 @@ which adds the compilation of the engine itself.
 19. **Who a rebuilt decision is named after.** A rebuild records every step again under the name of whoever
     sat at its round, which the seat changes further down the journal say. `SteppedSession` reads them once
     before the match is rebuilt, and learns of later ones because it writes them itself. A second process
-    writing a seat change is seen at the next step, after a rebuild it caused has named its steps. One
+    writing a seat change is seen at the next step, after a rebuild it caused, or the lines it caught up on
+    (question 13), have named their steps. One
     process until 4.2, where the table is loaded per request and reads its seat changes with its journal.
 20. **What a table's session still keeps in memory after 4.1b.** Whether each person has arrived and whether
     the match has begun (written into the record since 4.2b, and read back when the table is picked up), the

@@ -42,6 +42,28 @@ public sealed class BlobDecisionJournal : IDecisionJournal
         }
     }
 
+    public async Task<JournalReading?> ReadAfterAsync(string run, JournalPosition after, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(after);
+        var blob = _container.GetBlobClient(NameOf(run));
+        try
+        {
+            // The bytes from the mark on, the service's to cut: a range is read as the blob stands when it is
+            // asked, and every append is a whole block of whole lines.
+            var download = await blob.DownloadContentAsync(new BlobDownloadOptions { Range = new HttpRange(after.Mark) }, cancellationToken);
+            return JournalLines.Read(download.Value.Content.ToMemory().Span, after);
+        }
+        catch (RequestFailedException failure) when (failure.Status == 404)
+        {
+            return after.Mark == 0 ? new JournalReading([], after) : null;
+        }
+        catch (RequestFailedException failure) when (failure.Status == 416)
+        {
+            // A range that starts at the end, or past it: nothing written since, or not this journal.
+            return await EndAsync(run, cancellationToken) == after.Mark ? new JournalReading([], after) : null;
+        }
+    }
+
     public async Task<JournalPosition?> AppendAsync(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(after);
