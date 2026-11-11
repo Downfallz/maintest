@@ -201,8 +201,13 @@ Each phase ships on the one container app there is today and leaves the game pla
      record as stored rather than from memory, so they never put back keys another process changed; a full
      record write that finds another's revision ahead of its own says so on the console, since it keeps what
      this process holds.
-   - **6b, next.** `table-tend`: one pass of the sweep and of the invitations' expiry over the index and the
-     records, run by the hourly job; the tables it picks up take no bot turn.
+   - **6b, done.** `table-tend` (`TableTend`): one pass of the sweep and of the invitations' expiry over the
+     index and the records, and the process exits; what the hourly job runs. The sweep closes, through its
+     record, every table that never began and was opened twenty hours ago; an invitation nobody answered in a
+     day is let go of, under the lobby's claim gate (`LobbyApi.ExpireInvitationsNowAsync`). The tables it picks
+     up take no bot turn (`NoAgentTurns`). A host that holds one of them sees its record rewritten and lets it
+     go (6a). The API keeps the same two passes on its requests until 6d deploys the job, so a host on a
+     laptop, with no job, still sweeps.
    - **6c.** `table-worker`: the two workers of 5b in a process of their own; the API with `--turns queue` and no
      workers.
    - **6d.** The worker app scaled on the queue's length, the job, the queue role and the bootstrap's

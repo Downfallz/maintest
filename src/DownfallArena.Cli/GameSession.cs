@@ -90,8 +90,9 @@ internal sealed class GameSession
 
         // The table is the third drain, and the one that reads the entries while they are still being made:
         // its feed is what a seat is told happened (ADR 0054). It never forgets a match, which is a leak
-        // bounded by how many tables a host takes and how long it keeps them (ADR 0081).
-        var showsAFeed = cliOptions.Command is "table";
+        // bounded by how many tables a host takes and how long it keeps them (ADR 0081). The hourly job picks
+        // tables up the way a host does, recordings and all, so it records their feeds too (ADR 0162).
+        var showsAFeed = cliOptions.Command is "table" or CliOptions.TendCommand;
         if (tracesOneMatch || tracesARun || showsAFeed)
         {
             serviceCollection.AddSingleton<MatchTraceRecorder>();
@@ -153,6 +154,8 @@ internal sealed class GameSession
                 // same default as every other command, and says so out loud rather than defaulting silently.
                 // --format still wins over the file's team size, so one rule set file plays every format.
                 return await Table.TableHost.RunAsync(_services, _options, TableRules(), _seed);
+            case CliOptions.TendCommand:
+                return await Table.TableTend.RunAsync(_services, _options, TableRules());
             default:
                 await Console.Error.WriteLineAsync($"Unknown command '{_options.Command}'. {CliOptions.Usage}");
                 return 2;

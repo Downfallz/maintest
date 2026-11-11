@@ -69,6 +69,9 @@ internal sealed class HostedTables : IDisposable
 
     public TableComposer Composer { get; }
 
+    /// <summary>The game schema the host's content was built into: what a command line names with <c>--schema</c>.</summary>
+    public string SchemaPath => Path.Combine(_content.Path, "dst", "game.schema.json");
+
     /// <summary>
     /// The index of the tables (ADR 0161) every registry of this host lists and finds by, and the composer's runs
     /// write into: held in memory, and shared by a registry made again, as a store's index outlives its host.

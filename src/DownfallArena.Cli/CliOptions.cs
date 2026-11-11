@@ -162,7 +162,10 @@ internal sealed record CliOptions
 
     public const int DefaultPort = 5099;
 
-    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table|push-keys [--seed N] [--matches N] [--format 3v3|2v2|1v1] [--declaration hidden-intent|at-activation] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--slot-log file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth] [--push-keys file] [--accounts off|google|dev] [--google-client-id id]";
+    /// <summary>One pass of the work that is due on the tables, and then nothing: what the hourly job runs (ADR 0162).</summary>
+    public const string TendCommand = "table-tend";
+
+    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table|table-tend|push-keys [--seed N] [--matches N] [--format 3v3|2v2|1v1] [--declaration hidden-intent|at-activation] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--slot-log file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth] [--push-keys file] [--accounts off|google|dev] [--google-client-id id]";
 
     /// <summary>Every option this command line takes. Anything else is a typo, and says so by name.</summary>
     private const string RecordOption = "--record";
@@ -365,9 +368,9 @@ internal sealed record CliOptions
             return values.ContainsKey(GoogleClientIdOption) ? "'--google-client-id' goes with '--accounts google'." : null;
         }
 
-        if (command != "table")
+        if (command is not ("table" or TendCommand))
         {
-            return "'--accounts' is for table only: it says how players sign in.";
+            return "'--accounts' is for table and table-tend only: it says how players sign in.";
         }
 
         var mode = ParseAccounts(accounts);

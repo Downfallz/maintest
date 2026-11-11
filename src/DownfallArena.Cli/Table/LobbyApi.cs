@@ -411,9 +411,10 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     /// Invitations nobody answered in a day count as declined (ADR 0129): the seat is let go of the way a decline
     /// lets go of it, and the inviter's card says who did not answer. Under the claim gate, as every seat change is.
     /// </summary>
-    private async Task ExpireInvitationsAsync()
+    private async Task<int> ExpireInvitationsAsync()
     {
         var now = clock.GetUtcNow();
+        var expired = 0;
         foreach (var table in await TablesAsync(Kept))
         {
             foreach (var seat in table.Seats.Where(seat => seat.InvitedAccount is not null && !seat.Taken).ToArray())
@@ -421,11 +422,30 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 // Ran out, or the two are no longer friends (removing a friend cancels the invitation between them).
                 var inviter = table.Seats.FirstOrDefault(other => other != seat && other.Account is not null)?.Account;
                 var unfriended = Friends is { } friends && inviter is { } host && !await friends.AreFriendsAsync(host, seat.InvitedAccount!.Value);
-                if (now - (seat.InvitedAt ?? now) >= InvitationFor || unfriended)
+                if ((now - (seat.InvitedAt ?? now) >= InvitationFor || unfriended) && await LetGoAsync(table, seat, declinedBy: unfriended ? null : seat.InvitedAccount))
                 {
-                    await LetGoAsync(table, seat, declinedBy: unfriended ? null : seat.InvitedAccount);
+                    expired++;
                 }
             }
+        }
+
+        return expired;
+    }
+
+    /// <summary>
+    /// The invitations that ran out let go of now, under the claim gate: what the hourly job does (ADR 0162), so an
+    /// invitation runs out whether or not anybody reads a lobby. How many were.
+    /// </summary>
+    public async Task<int> ExpireInvitationsNowAsync()
+    {
+        await Claims.WaitAsync();
+        try
+        {
+            return await ExpireInvitationsAsync();
+        }
+        finally
+        {
+            Claims.Release();
         }
     }
 
