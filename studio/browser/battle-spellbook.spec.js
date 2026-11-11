@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { openSpells } from './battle-spells-fixture.js';
 import { returningBattlePlayer } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
+import { decided } from './decision.js';
 test.beforeEach(returningBattlePlayer);
 const legal = { candidates: [4], minTargets: 1, maxTargets: 1 };
 const ids = [...Array.from({ length: 18 }, (_, i) => `spell-${i}`), 'unknown-spell'];
@@ -32,7 +33,7 @@ async function mount(page, kind = 'Intent') {
     if (url.pathname === '/api/lobby/resume') return route.fulfill({ json: { tables: [{ table: { id: 'spellbook', format: '3v3' }, seats: [{ seat: 'player1', token: 'seat' }] }] } });
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards } });
     if (url.pathname.endsWith('/events')) return route.fulfill({ contentType: 'text/event-stream', body: 'event: ready\ndata: 0\n\n' });
-    if (url.pathname.endsWith('/decision')) { state.writes.push(request.postDataJSON()); state.view.waitingFor = null; return route.fulfill({ status: 204 }); }
+    if (url.pathname.endsWith('/decision')) { state.writes.push(decided(request)); state.view.waitingFor = null; return route.fulfill({ status: 204 }); }
     if (url.pathname === '/api/seat/player1') {
       state.reads++;
       if (url.searchParams.has('shown')) state.shown.push(Number(url.searchParams.get('shown')));

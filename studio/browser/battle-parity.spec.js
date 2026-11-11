@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { openSpells } from './battle-spells-fixture.js';
 import { teamTempos } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
+import { decided } from './decision.js';
 
 // Cross-feature presentation acceptance. These are declared fixture responses, not a second game engine.
 // battle.loop.js separately plays both declaration modes against the actual host.
@@ -39,7 +40,7 @@ async function mount(page) {
       return route.fulfill({ json: state.view });
     }
     if (url.pathname.endsWith('/decision')) {
-      const command = request.postDataJSON(); state.writes.push(command);
+      const command = decided(request); state.writes.push(command);
       if (command.kind === 'Evolution') {
         state.view.waitingFor = 'Speed'; state.view.options = { speed: { missing: [1, 2, 3] } };
         state.view.board.subPhase = 'Speed';

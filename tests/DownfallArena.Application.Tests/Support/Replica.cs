@@ -23,6 +23,13 @@ internal sealed class Replica
     }
 
     /// <param name="witnesses">What sees every decision this process's stepper takes, a rebuilt match's included.</param>
+    /// <param name="inStep">What is told, in the match's turn, that the match stands where its journal ends.</param>
+    public Replica(JournalStore journal, IReadOnlyList<IDecisionWitness> witnesses, IMatchInStep inStep)
+        : this(journal, witnesses, [], inStep)
+    {
+    }
+
+    /// <param name="witnesses">What sees every decision this process's stepper takes, a rebuilt match's included.</param>
     public Replica(JournalStore journal, IReadOnlyList<IDecisionWitness> witnesses, params IMatchMemory[] memories)
         : this(journal, witnesses, memories, inStep: null)
     {

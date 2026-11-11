@@ -4,7 +4,7 @@ using DownfallArena.SharedKernel.Identifiers;
 namespace DownfallArena.Cli.Table;
 
 /// <summary>
-/// <c>table.json</c>: what a host needs to rebuild a table it no longer has (ADR 0091) -- who was asked to sit
+/// <c>table.json</c>: what a host needs to pick up a table it does not hold (ADR 0159) -- who was asked to sit
 /// where, the seed, the match's id, and the tokens and codes the players already hold, so a link or a code
 /// handed out before the host went away still reaches the same seat afterwards. The decisions are beside it,
 /// in <c>decisions.jsonl</c>.
@@ -54,7 +54,7 @@ internal sealed record TableRecord
     /// named: a request that named none played the host's own, and recording that as nothing would rebuild the
     /// table in whatever the host's default has become since. A rebuilt table has to come back in the format it
     /// was recorded in, because the replay feeds it the decisions of a match with that many creatures
-    /// (ADR 0091). Null only in a record written before this field existed.
+    /// (ADR 0159). Null only in a record written before this field existed.
     /// </summary>
     public string? Format { get; init; }
 

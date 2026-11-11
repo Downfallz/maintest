@@ -12,14 +12,16 @@ namespace DownfallArena.Application.Matches.Journaling;
 
 /// <summary>
 /// Steps a match whose journal is the source of truth (ADR 0159). Before each step the journal is read; the
-/// match in memory is used when it stands where the journal ends, and rebuilt from the journal otherwise. What
+/// match in memory is used when it stands where the journal ends, taken on through the lines written since when
+/// it stood where the journal ended before them, and rebuilt from the journal otherwise. What
 /// a step does is written after the rest, on the condition that nobody else wrote first.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The match in memory is a cache. Losing it -- a process that restarted, another one that wrote the last line
-/// -- costs a replay and nothing else, so a caller needs nothing but the <see cref="JournaledMatch" /> between
-/// two requests.
+/// The match in memory is a cache. Losing it -- a process that restarted -- costs a replay and nothing else, so a
+/// caller needs nothing but the <see cref="JournaledMatch" /> between two requests. Another process writing the
+/// last lines costs those lines: two processes taking turns at one table, a host and a worker, each read and
+/// take what the other wrote, not the whole match again.
 /// </para>
 /// <para>
 /// A step is applied in memory and then written. When the writing is refused, the match in memory is ahead of
@@ -400,20 +402,32 @@ public sealed class JournaledStepper(
 
     /// <summary>
     /// Makes the match in memory the one the journal describes, and says where the journal ends. The journal
-    /// is read every time: another process may have written to it since this one last looked.
+    /// is read every time: another process may have written to it since this one last looked. A match in memory
+    /// that stood where the journal ended is taken on through the lines written since, and only those are read
+    /// (inventory question 13); any other is rebuilt from the whole journal.
     /// </summary>
     private async Task<Result<JournalPosition>> LoadAsync(JournaledMatch match, Kept kept, CancellationToken cancellationToken)
     {
         // Before anything is read or rebuilt: a step that reaches its turn after its caller gave the match up
         // must not bring back a match that was let go of while it waited.
         cancellationToken.ThrowIfCancellationRequested();
-        var reading = await journal.ReadAsync(match.Run, cancellationToken);
-        if (kept.Position == reading.Position && await matches.FindAsync(match.MatchId, cancellationToken) is not null)
+        if (kept.Position is { } known && await matches.FindAsync(match.MatchId, cancellationToken) is not null
+            && await journal.ReadAfterAsync(match.Run, known, cancellationToken) is { } since)
         {
-            return Result.Success(reading.Position);
+            if (since.Position == known)
+            {
+                return Result.Success(known);
+            }
+
+            if (await ContinuedAsync(match, kept, since, cancellationToken))
+            {
+                return Result.Success(since.Position);
+            }
         }
 
         kept.Position = null;
+        var reading = await journal.ReadAsync(match.Run, cancellationToken);
+        Replaying(match, [.. reading.Entries.OfType<SeatChangeEntry>()]);
         var rebuilt = await replay.RebuildAsync(match, reading.Entries, cancellationToken);
         if (rebuilt.IsFailure)
         {
@@ -423,14 +437,52 @@ public sealed class JournaledStepper(
 
         kept.Position = reading.Position;
         kept.Held = rebuilt.Value;
+        kept.Entries = reading.Entries.Count;
         kept.SeatChanges.Clear();
-        kept.SeatChanges.AddRange(reading.Entries.OfType<SeatChangeEntry>());
-        foreach (var slot in new[] { PlayerSlot.Player1, PlayerSlot.Player2 })
+        kept.Decided[0] = kept.Decided[1] = 0;
+        Count(kept, reading.Entries);
+        return Result.Success(reading.Position);
+    }
+
+    /// <summary>
+    /// Takes the match in memory on through the lines another process wrote since it last stood where the
+    /// journal ended. Whether it now stands where the journal ends; when it does not, it went part of the way
+    /// and is rebuilt, which also names the line it stopped at.
+    /// </summary>
+    private async Task<bool> ContinuedAsync(JournaledMatch match, Kept kept, JournalReading since, CancellationToken cancellationToken)
+    {
+        // Out of step until the lines are all taken: a step that throws halfway leaves a match no position describes.
+        kept.Position = null;
+        Replaying(match, [.. kept.SeatChanges, .. since.Entries.OfType<SeatChangeEntry>()]);
+        var continued = await replay.ContinueAsync(match, kept.Held, since.Entries, kept.Entries, cancellationToken);
+        if (continued.IsFailure)
         {
-            kept.Decided[Index(slot)] = reading.Entries.OfType<DecisionEntry>().LongCount(entry => entry.Decision.Slot == slot);
+            return false;
         }
 
-        return Result.Success(reading.Position);
+        kept.Position = since.Position;
+        kept.Held = continued.Value;
+        kept.Entries += since.Entries.Count;
+        Count(kept, since.Entries);
+        return true;
+    }
+
+    private void Replaying(JournaledMatch match, IReadOnlyList<SeatChangeEntry> seatChanges)
+    {
+        foreach (var told in _inStep)
+        {
+            told.Replaying(match.MatchId, seatChanges);
+        }
+    }
+
+    /// <summary>Counts entries the match in memory has gone through: each seat's decisions and the seat changes.</summary>
+    private static void Count(Kept kept, IReadOnlyList<IJournalEntry> entries)
+    {
+        kept.SeatChanges.AddRange(entries.OfType<SeatChangeEntry>());
+        foreach (var entry in entries.OfType<DecisionEntry>())
+        {
+            kept.Decided[Index(entry.Decision.Slot)]++;
+        }
     }
 
     /// <summary>
@@ -447,6 +499,7 @@ public sealed class JournaledStepper(
         }
 
         kept.Position = written;
+        kept.Entries += entries.Count;
         return written;
     }
 
@@ -502,6 +555,9 @@ public sealed class JournaledStepper(
 
         /// <summary>How many decisions each seat has in the journal, seat 1 first.</summary>
         public long[] Decided { get; } = [0, 0];
+
+        /// <summary>How many entries of the journal the match in memory has gone through, whatever their kind.</summary>
+        public int Entries { get; set; }
 
         public List<SeatChangeEntry> SeatChanges { get; } = [];
 

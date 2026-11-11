@@ -5,6 +5,11 @@ off the code on 2026-11-10. It is a map for sizing the work, not a design: each 
 tests when it starts. Sizes are line counts of the files as they stand, to say how big a thing is, not how
 long it takes.
 
+**Status, 2026-11-11: done.** Every phase has landed, and the hosted table runs as an API, a worker and an
+hourly job (ADR 0162). Two questions stay open without blocking anything: 14 (Event Grid, which nothing at
+playtest volume needs yet) and 18 (a directory store shared between processes, which the hosted table does
+not use). The rest of this page is the record of how the work was cut.
+
 ## What is already there
 
 The work is smaller on the engine's side than "a match lives in memory" suggests.
@@ -71,9 +76,10 @@ Each phase ships on the one container app there is today and leaves the game pla
    position, refusing a writer that did not read the last line; in memory, as the `decisions.jsonl` file the
    table has always written, and as the same append blob with the service's own position condition.
    `MatchReplay` builds a match again from how it was created and its decisions, by the commands that built
-   it. `JournaledStepper` is the stepper over a journal: it reads the journal before each step, rebuilds the
-   match in memory when it is not where the journal ends, writes what the step decided, and tells a writer
-   that lost the race the match moved. `RecordedTableReplayTests` holds it to what the host recorded before
+   it. `JournaledStepper` is the stepper over a journal: it reads the journal before each step, takes the
+   match in memory on through the lines written since it last stood where the journal ended (question 13),
+   rebuilds it when it is neither, writes what the step decided, and tells a writer that lost the race the
+   match moved. `RecordedTableReplayTests` holds it to what the host recorded before
    phase 4.
 4. **The host on the journaled stepper, and its own state out of memory.** In five slices, each leaving the
    game playable:
@@ -392,10 +398,15 @@ which adds the compilation of the engine itself.
 12. **Two shapes of one line.** Answered in 4.4: the host's `JournalEntry` is gone, and `JournalLine` in
     Infrastructure is the only shape of a line. It still reads a swap written before the journal was the
     source (`FileDecisionJournalTests`).
-13. **Loading on every step.** `JournaledStepper` reads the whole journal before each step and rebuilds the
-    whole match when another process wrote last. Two replicas alternating on one table rebuild at every
-    step, which the figures above price. Applying only the lines not yet seen is the cheaper path if that
-    pattern turns out to matter.
+13. **Loading on every step.** Answered. Before each step `JournaledStepper` reads only what the journal holds
+    after the position its match in memory stood at (`IDecisionJournal.ReadAfterAsync`: a range from the
+    blob's length, a seek in the file), and takes the match on through those lines with the same commands a
+    rebuild uses (`MatchReplay.ContinueAsync`). A host and a worker taking turns at one table each pay for the
+    other's lines, not for the match again, and read the journal whole only the first time. The match is
+    rebuilt from the whole journal when this process held none, let go of it, or the lines written since do
+    not answer it; a rebuild then names the line that does not, as before. What remembers the match's events
+    keeps them and hears the new ones, so a feed or a trace grows as it would in the process that wrote them.
+    A seat change among those lines is named as after a rebuild (question 19).
 
 14. **Event Grid and Functions.** At playtest volume every candidate costs next to nothing, so cost does not
     decide; what each need is does. A Player agent's turn to take (phase 5) is a work item for one consumer,
@@ -426,11 +437,12 @@ which adds the compilation of the engine itself.
     Windows refusing the second where the file is opened: a line is always added at the end, so neither
     writes over the other's, but both can take the same length for their own. The hosted table's journal is
     an append blob and has none of this.
-19. **Who a rebuilt decision is named after.** A rebuild records every step again under the name of whoever
-    sat at its round, which the seat changes further down the journal say. `SteppedSession` reads them once
-    before the match is rebuilt, and learns of later ones because it writes them itself. A second process
-    writing a seat change is seen at the next step, after a rebuild it caused has named its steps. One
-    process until 4.2, where the table is loaded per request and reads its seat changes with its journal.
+19. **Who a rebuilt decision is named after.** Answered. A replayed decision is recorded under the name of
+    whoever sat at its round, which the seat changes say, including those further down the lines being
+    replayed. The stepper tells the session every seat change through those lines before it replays them
+    (`IMatchInStep.Replaying`), for a rebuild of the whole journal and for the lines another process wrote
+    (question 13) alike. Before, the session read the journal once as it opened, and learned of a change
+    another process wrote only after the decisions that followed it were named.
 20. **What a table's session still keeps in memory after 4.1b.** Whether each person has arrived and whether
     the match has begun (written into the record since 4.2b, and read back when the table is picked up), the
     table's version counter (question 9), the decision clock (question 3), and the
@@ -448,8 +460,8 @@ which adds the compilation of the engine itself.
     seat past a handover. So the session asks again inside the turn that ends the match, as it does for a
     decision and a seat change, and a concession that finds a bot holding the seat ends nothing.
 
-## Documents this makes stale as it lands
+## Documents this made stale as it landed
 
-- `infra/README.md`: the cold-start paragraph, as the apps are split (phase 6).
-- ADR 0091 (superseded), and the remarks in `StoredSessions`, `TableRecord` and `TableRegistry` that cite it
-  for what a table's record is for, which still holds.
+Brought up to date: `infra/README.md` describes the API, the worker and the job (phase 6); ADR 0091 is marked
+superseded, and the remarks in `TableRecord` and `TableRegistry` that cited it for what a table's record is
+for now cite ADR 0159, which keeps it.

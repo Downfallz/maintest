@@ -105,8 +105,9 @@ public sealed class JournaledStepperTests
 
     /// <summary>
     /// Two replicas take turns at one table, each step on the one that did not take the step before: neither
-    /// ever holds the match as the journal has it, so every step is a rebuild. The match they play between them
-    /// is the driver's, and a third process that never saw it reads it whole off the journal.
+    /// ever holds the match as the journal has it, so each takes the other's line before its own, and reads the
+    /// journal whole only the first time (inventory question 13). The match they play between them is the
+    /// driver's, and a third process that never saw it reads it whole off the journal.
     /// </summary>
     [Theory]
     [MemberData(nameof(Matches))]
@@ -131,6 +132,7 @@ public sealed class JournaledStepperTests
         }
 
         step.Step.Outcome.ShouldBe(driven.Outcome);
+        await journal.Journal.Received(2).ReadAsync(table.Run, Arg.Any<CancellationToken>());
         var late = new Replica(journal);
         var read = await late.Journaled.AdvanceAsync(table, MatchSeats.People, TestContext.Current.CancellationToken);
         read.Value.Step.Outcome.ShouldBe(driven.Outcome);
@@ -199,6 +201,56 @@ public sealed class JournaledStepperTests
         step.Error.Code.ShouldBe(JournalErrors.DivergedCode);
         view.Error.Code.ShouldBe(JournalErrors.DivergedCode);
         journal.Decisions.ShouldBe(written);
+    }
+
+    /// <summary>
+    /// A process that stood where the journal ended takes the lines another wrote since, and only those: the
+    /// match it holds then is the one a process that never saw it rebuilds from the whole journal, events and all.
+    /// </summary>
+    [Fact]
+    public async Task Lines_another_process_wrote_are_taken_on_the_match_in_memory_without_building_it_again()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent);
+        var journal = new JournalStore();
+        var mine = new Replica(journal);
+        var theirs = new Replica(journal);
+        await mine.Journaled.ReadAsync(table, TestContext.Current.CancellationToken);
+        await theirs.Journaled.SubmitAsync(table, MatchSeats.People, new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass), cancellationToken: TestContext.Current.CancellationToken);
+        await theirs.Journaled.SubmitAsync(table, MatchSeats.People, new SeatDecision(PlayerSlot.Player2, PlayerDecision.Pass), cancellationToken: TestContext.Current.CancellationToken);
+
+        var caught = (await mine.Journaled.ReadAsync(table, TestContext.Current.CancellationToken)).Value;
+
+        var whole = new Replica(journal);
+        var rebuilt = (await whole.Journaled.ReadAsync(table, TestContext.Current.CancellationToken)).Value;
+        await mine.Store.Repository.Received(1).ForgetAsync(table.MatchId, Arg.Any<CancellationToken>());
+        caught.Position.ShouldBe(rebuilt.Position);
+        caught.Player1.Asking.ShouldBe(rebuilt.Player1.Asking);
+        JsonSerializer.Serialize(caught.Player1.View).ShouldBe(JsonSerializer.Serialize(rebuilt.Player1.View));
+        JsonSerializer.Serialize(caught.Player2.View).ShouldBe(JsonSerializer.Serialize(rebuilt.Player2.View));
+        mine.Events.Trace().ShouldBe(whole.Events.Trace());
+    }
+
+    /// <summary>
+    /// Lines another process wrote that the match in memory does not take leave it part of the way: it is
+    /// rebuilt, and refused as a rebuild refuses the journal, naming the journal's own line.
+    /// </summary>
+    [Fact]
+    public async Task Lines_another_process_wrote_that_the_match_does_not_take_are_refused_as_a_rebuild_refuses_them()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent);
+        var journal = new JournalStore();
+        var replica = new Replica(journal);
+        await replica.Journaled.SubmitAsync(table, MatchSeats.People, new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass), cancellationToken: TestContext.Current.CancellationToken);
+        journal.WriteElsewhere(new SeatDecision(PlayerSlot.Player2, PlayerDecision.Pass));
+        journal.WriteElsewhere(new SeatDecision(PlayerSlot.Player2, PlayerDecision.Pass));
+
+        var read = await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken);
+        var again = await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken);
+
+        read.Error.Code.ShouldBe(JournalErrors.DivergedCode);
+        read.Error.Message.ShouldContain("Line 3");
+        again.Error.ShouldBe(read.Error);
+        journal.Lines.Count.ShouldBe(3);
     }
 
     [Fact]
@@ -496,6 +548,59 @@ public sealed class JournaledStepperTests
 
         late.IsFailure.ShouldBeTrue();
         told.ShouldBe([read.Value.Position, passed.Value.State.Position]);
+    }
+
+    /// <summary>
+    /// Lines another process wrote are taken on only once whatever listens is told every seat change through
+    /// them: a decision after a seat change among those lines is seen when its seat is already named after
+    /// whoever the change seats (inventory question 19).
+    /// </summary>
+    [Fact]
+    public async Task Seat_changes_among_the_lines_another_process_wrote_are_told_before_the_lines_are_taken_on()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent);
+        var journal = new JournalStore();
+        var seen = new Noting();
+        var inStep = Substitute.For<IMatchInStep>();
+        var change = new SeatChangeEntry(PlayerSlot.Player2, "greedy", 1, Reached: 0);
+        int? seenWhenTold = null;
+        inStep.When(listener => listener.Replaying(table.MatchId, Arg.Is<IReadOnlyList<SeatChangeEntry>>(changes => changes.SequenceEqual(new[] { change }))))
+            .Do(_ => seenWhenTold = seen.Of(PlayerSlot.Player2).Count);
+        var replica = new Replica(journal, [seen], inStep);
+        await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken);
+        journal.WriteElsewhere(change);
+        journal.WriteElsewhere(new SeatDecision(PlayerSlot.Player2, PlayerDecision.Pass));
+
+        await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken);
+
+        seenWhenTold.ShouldBe(0);
+        seen.Of(PlayerSlot.Player2).Count.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// A match rebuilt from its journal is rebuilt only once whatever listens is told every seat change the
+    /// journal holds, the ones further down than the decisions replayed first included.
+    /// </summary>
+    [Fact]
+    public async Task Seat_changes_of_a_journal_being_rebuilt_are_told_before_any_line_is_replayed()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent);
+        var journal = new JournalStore();
+        var seen = new Noting();
+        var inStep = Substitute.For<IMatchInStep>();
+        var change = new SeatChangeEntry(PlayerSlot.Player2, "greedy", 1, Reached: 0);
+        int? seenWhenTold = null;
+        inStep.When(listener => listener.Replaying(table.MatchId, Arg.Any<IReadOnlyList<SeatChangeEntry>>()))
+            .Do(call => seenWhenTold = call.Arg<IReadOnlyList<SeatChangeEntry>>().SequenceEqual(new[] { change }) ? seen.Of(PlayerSlot.Player1).Count : null);
+        journal.WriteElsewhere(new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass));
+        journal.WriteElsewhere(change);
+        journal.WriteElsewhere(new SeatDecision(PlayerSlot.Player2, PlayerDecision.Pass));
+        var replica = new Replica(journal, [seen], inStep);
+
+        await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken);
+
+        seenWhenTold.ShouldBe(0);
+        seen.Of(PlayerSlot.Player1).Count.ShouldBe(1);
     }
 
     /// <summary>

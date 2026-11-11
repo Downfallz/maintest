@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { returningBattlePlayer } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
 import { mount as playbackMount, entry, before } from './battle-playback-fixture.js';
+import { decided } from './decision.js';
 test.beforeEach(returningBattlePlayer);
 test.setTimeout(60000);
 const creature = (id, extra = {}) => ({ id, name: 'Skullbeast', isAlive: true, health: 20, maxHealth: 25, energy: 6,
@@ -48,7 +49,7 @@ async function mount(page, options = {}) {
       if (url.searchParams.has('shown')) h.shown.push(url.searchParams.get('shown'));
       return route.fulfill({ status: h.status, json: h.view });
     }
-    if (url.pathname.endsWith('/decision')) h.writes.push(route.request().postDataJSON());
+    if (url.pathname.endsWith('/decision')) h.writes.push(decided(route.request()));
     return route.fulfill({ status: 500 });
   });
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 10000));

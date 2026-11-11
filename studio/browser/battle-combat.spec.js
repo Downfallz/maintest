@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { openSpells } from './battle-spells-fixture.js';
 import { returningBattlePlayer } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
+import { decided } from './decision.js';
 test.beforeEach(returningBattlePlayer);
 // Match the lab/live suites: software-rendered Phaser pages run one case at a time within this file.
 test.describe.configure({ mode: 'default' });
@@ -9,7 +10,7 @@ const legal = (candidates, minTargets = 1, maxTargets = 1) => ({ candidates, min
 const creature = id => ({ id, name: `Creature ${id}`, health: 21, maxHealth: 30, energy: 5, totalDefense: 2,
   currentInitiative: 7, isAlive: true, isStunned: false, isStunImmune: false, knownSpells: ['bolt', 'ward', 'locked'], conditions: [] });
 async function mount(page, { kind = 'Action', targets = legal([4, 5, 6]), shownStatus = 200 } = {}) {
-  const state = { writes: [], measured: [], shown: [], status: 204, seatStatus: 200, shownStatus, message: '', wait: null, view: {
+  const state = { writes: [], shown: [], status: 204, seatStatus: 200, shownStatus, message: '', wait: null, view: {
     waitingFor: kind, waitingAsked: 11, waitingCreature: 1, feedNext: 83, over: false,
     board: { slot: 'Player1', roundNumber: 4, phase: 'Combat', subPhase: kind === 'Intent' ? 'Intent' : 'Activation', activationCursor: 0,
       allies: [1, 2, 3].map(creature), enemies: [4, 5, 6].map(creature), timeline: [{ creature: 1, owner: 'Player1', speed: 'Quick' }] },
@@ -22,8 +23,7 @@ async function mount(page, { kind = 'Action', targets = legal([4, 5, 6]), shownS
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: ['bolt', 'ward', 'locked'].map(id => ({ id, name: `Host ${id}`, cost: 0, targeting: 'Host target text', effects: ['Host effect text'] })) } });
     if (url.pathname.endsWith('/events')) return route.fulfill({ contentType: 'text/event-stream', body: 'event: ready\ndata: 0\n\n' });
     if (url.pathname.endsWith('/decision')) {
-      // The page's own measure of the decision (inventory question 3) is kept apart: the decision is what is compared.
-      const { elapsedMs, ...decision } = request.postDataJSON(); state.measured.push(elapsedMs); state.writes.push(decision); if (state.wait) await state.wait;
+      state.writes.push(decided(request)); if (state.wait) await state.wait;
       if (state.status === 204) { state.view.waitingFor = null; state.view.waitingAsked = null; state.view.board.enemies[0].health = 12; return route.fulfill({ status: 204 }); }
       // A refusal is the host's: the asking it refused has moved on, and the next read says so.
       state.view.waitingAsked += 1;
@@ -54,7 +54,6 @@ test('target taps select and deselect; only explicit confirmation posts one comp
   await target.click(); await expect(page.locator('#combat-confirm')).toBeDisabled(); expect(state.writes).toEqual([]);
   await target.click(); await page.locator('#combat-confirm').click();
   await expect.poll(() => state.writes).toEqual([{ kind: 'Action', creature: 1, spell: 'bolt', targets: [4], asked: 11 }]);
-  expect(state.measured).toHaveLength(1); expect(state.measured[0]).toBeGreaterThanOrEqual(0);
   await expect(page.locator('[data-creature="4"] .creature-stats')).toContainText('12/30'); await expect(page.locator('#combat-open')).toBeHidden();
 });
 test('changing spell cancels the previous target choice without a write', async ({ page }) => {
