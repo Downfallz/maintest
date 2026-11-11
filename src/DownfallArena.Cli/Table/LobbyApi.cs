@@ -1369,7 +1369,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             return Problem(404, "Lobby.NoReplay", "This host keeps no recording of finished games.");
         }
 
-        var played = (await results.ListAsync()).Any(result => result.Table == id && result.Seats.Any(seat => seat.Account == me));
+        var played = (await results.ListForAsync(me)).Any(result => result.Table == id);
         return played ? await replay(id) : Problem(403, "Lobby.NotYourGame", "Only the players of this match can watch it again.");
     }
 
@@ -1413,7 +1413,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             return Json(new { total = 0, pages = 1, page = 1, items = Array.Empty<object>() });
         }
 
-        var shown = FinishedGames.Page(await results.ListAsync(), me, againstBots, page);
+        var shown = FinishedGames.Page(await results.ListForAsync(me), me, againstBots, page);
         var items = new List<object>();
         foreach (var result in shown.Items)
         {
@@ -1459,7 +1459,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
         var links = Friends is { } friends ? await friends.ListAsync(me) : null;
         var opponents = new List<object>();
-        foreach (var opponent in RecentOpponents.Of(await results.ListAsync(), me))
+        foreach (var opponent in RecentOpponents.Of(await results.ListForAsync(me), me))
         {
             if (await accounts.AccountAsync(opponent.Account) is not { } found)
             {

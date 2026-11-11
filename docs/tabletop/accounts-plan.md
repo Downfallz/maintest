@@ -206,8 +206,9 @@ Each stage is one pull request, built, tested, formatted, with the node tests wh
    recordings keep the id only. The lobby says what is kept ("What we keep") and offers *Delete account…* in the
    account menu.
 5. **Results for a ladder.** *Built*: when a recorded match with at least one account ends, the host keeps a
-   `MatchResult` beside the accounts, at `results/<yyyy-MM>/<matchId>.json` (`IMatchResults`, a file and a blob
-   adapter): when it finished, format, declaration, content hash, rounds, the winning seat (or a draw), and each
+   `MatchResult`: as a file beside the accounts on a laptop (`results/<yyyy-MM>/<matchId>.json`), and on Azure in
+   the table `matchresults`, by match and again by each account that held a seat, so a player's pages read their
+   own partition (ADR 0168; the result blobs kept before it are copied in at the first start): when it finished, format, declaration, content hash, rounds, the winning seat (or a draw), and each
    seat's account id or bot spec, never a name. `Ranked` says whether it counts on a ladder of people: two seats,
    each its own account. An abandoned match leaves no result. The seats' accounts are in `table.json` too, so an
    exported session carries ids and no names.
