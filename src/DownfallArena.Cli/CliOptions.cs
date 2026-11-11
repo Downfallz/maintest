@@ -90,6 +90,13 @@ internal sealed record CliOptions
     /// </summary>
     public AccountsMode Accounts { get; init; }
 
+    /// <summary>
+    /// Whether the turns a table's bots owe go through a queue to a worker (ADR 0159, phase 5): <c>--turns queue</c>,
+    /// or <c>DOWNFALL_TURNS=queue</c>; taken in the process otherwise, which <c>--turns process</c> says. The queues
+    /// are the storage account's beside a container of recordings, and this process's own beside a directory.
+    /// </summary>
+    public bool QueuedTurns { get; init; }
+
     /// <summary>The Google client id the sign-in is for; <c>DOWNFALL_GOOGLE_CLIENT_ID</c> when not given. Public, not a secret.</summary>
     public string? GoogleClientId { get; init; }
 
@@ -176,6 +183,8 @@ internal sealed record CliOptions
 
     private const string AccountsOption = "--accounts";
 
+    private const string TurnsOption = "--turns";
+
     private const string GoogleClientIdOption = "--google-client-id";
 
     private const string DeclarationOption = "--declaration";
@@ -186,7 +195,7 @@ internal sealed record CliOptions
     [
         SeedOption, "--matches", "--out", "--schema", RecordOption, "--traces", "--trace", "--p1", "--p2",
         "--seeds", "--benchmarks", "--data", "--port", "--export", HandoverOption, "--rules", "--bind",
-        "--who", FormatOption, DeclarationOption, SlotLogOption, PushKeysOption, AccountsOption, GoogleClientIdOption,
+        "--who", FormatOption, DeclarationOption, SlotLogOption, PushKeysOption, AccountsOption, GoogleClientIdOption, TurnsOption,
     ];
 
     private static readonly string[] PracticeConflicts = [RecordOption, "--trace", "--rules", SeedOption, HandoverOption, "--p1", "--p2", FormatOption, DeclarationOption];
@@ -232,6 +241,7 @@ internal sealed record CliOptions
             PushKeys = values.GetValueOrDefault(PushKeysOption),
             Accounts = values.TryGetValue(AccountsOption, out var accounts) ? ParseAccounts(accounts) : AccountsMode.Off,
             GoogleClientId = values.GetValueOrDefault(GoogleClientIdOption),
+            QueuedTurns = values.TryGetValue(TurnsOption, out var turns) && ParseTurns(turns),
             Bind = values.TryGetValue("--bind", out var bind) ? HttpHost.Bindable(bind) : HttpHost.Loopback,
             Seeds = values.GetValueOrDefault("--seeds"),
             Benchmarks = values.GetValueOrDefault("--benchmarks") ?? DefaultBenchmarks,
@@ -267,6 +277,16 @@ internal sealed record CliOptions
         if (values.ContainsKey(PushKeysOption) && command != "table")
         {
             return "'--push-keys' is for table only: it names the keys a table signs its notices with.";
+        }
+
+        if (values.TryGetValue(TurnsOption, out var turned) && (command != "table" || flags.Contains(PracticeOption)))
+        {
+            return "'--turns' is for table only, and not --practice: it says where the bots' turns are taken.";
+        }
+
+        if (turned is not null)
+        {
+            ParseTurns(turned);
         }
 
         if (AccountsContradiction(command, values, flags) is { } accounts)
@@ -365,6 +385,14 @@ internal sealed record CliOptions
             ? "'--google-client-id' goes with '--accounts google'."
             : null;
     }
+
+    /// <summary>Whether <c>--turns</c> names the queue; anything but queue or process is one line, not a stack.</summary>
+    internal static bool ParseTurns(string text) => text switch
+    {
+        "queue" => true,
+        "process" => false,
+        _ => throw new ArgumentException($"'--turns' takes process or queue, not '{text}'.", nameof(text)),
+    };
 
     private static AccountsMode ParseAccounts(string text) => text switch
     {

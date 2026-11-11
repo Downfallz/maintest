@@ -1,8 +1,11 @@
 using System.Text.Json.Nodes;
 using DownfallArena.Application.Agents;
 using DownfallArena.Application.Matches.Journaling;
+using DownfallArena.Application.Work;
 using DownfallArena.Cli.Table;
 using DownfallArena.Infrastructure.Learning;
+using DownfallArena.Infrastructure.Matches;
+using DownfallArena.Infrastructure.Work;
 
 namespace DownfallArena.Cli.Tests.Table;
 
@@ -74,6 +77,38 @@ public sealed class AgentTurnsTests : IDisposable
         var there = await LinesAsync(_other, table.Id);
         here.Count.ShouldBeGreaterThan(before);
         there.Skip(before).ShouldBe(here.Skip(before));
+    }
+
+    [Fact]
+    public async Task A_table_whose_bots_owe_their_turns_through_a_queue_is_played_to_its_end_by_the_worker()
+    {
+        var channels = new InMemoryWorkChannels(TimeProvider.System);
+        var turns = await channels.OpenAsync(AgentTurnWorker.Queue, Cancel);
+        using var queued = new HostedTables(directory => new FileArtifactStore(directory), turns: new QueuedAgentTurns(turns, TimeProvider.System));
+        using var registry = queued.Registry();
+        var table = await queued.Composer.ComposeAsync(HostedTables.Bots, Cancel);
+        using (var place = (await registry.ReserveAsync(Cancel)).ShouldNotBeNull())
+        {
+            await registry.AddAsync(table, place, Cancel);
+        }
+
+        await table.RecordAsync(Cancel);
+        var worker = new AgentTurnWorker(
+            turns,
+            await channels.OpenAsync(PoisonedWork.QueueOf(AgentTurnWorker.Queue), Cancel),
+            async (run, cancellationToken) => (await registry.ByIdAsync(run, cancellationToken))?.Session as IAgentTurnTaker,
+            TimeProvider.System);
+
+        for (var look = 0; look < 600 && !table.IsOver; look++)
+        {
+            if (await worker.RunOnceAsync(Cancel) == 0)
+            {
+                await Task.Delay(10, Cancel);
+            }
+        }
+
+        table.IsOver.ShouldBeTrue("the worker took every turn the queue said the table owed");
+        (await table.Session.Outcome).IsSuccess.ShouldBeTrue();
     }
 
     /// <summary>A table of two random bots, added and written down, nothing played yet.</summary>

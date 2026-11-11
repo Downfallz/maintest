@@ -3,11 +3,15 @@ using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Friends;
 using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.Application.Learning;
+using DownfallArena.Application.Matches.Journaling;
+using DownfallArena.Application.Ports;
 using DownfallArena.Application.Tables.Ports;
+using DownfallArena.Application.Work;
 using DownfallArena.Cli.Hosting;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Infrastructure.Accounts;
+using DownfallArena.Infrastructure.Matches;
 using DownfallArena.Infrastructure.Tables;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -69,8 +73,14 @@ internal static class TableHost
         // The index that lists and finds the tables (ADR 0161): Table Storage beside a container, files beside a
         // directory, and this process's own for a host that keeps nothing or whose store's index cannot be opened.
         var index = (store is null ? null : await OpenIndexAsync(options.Record ?? DefaultRunsDirectory, stopping.Token)) ?? new InMemoryTableIndex();
+        // Where the bots' turns are taken (ADR 0159, phase 5): handed to a worker through a queue when the host is
+        // told so, and in this process otherwise.
+        var queued = options.QueuedTurns || string.Equals(Environment.GetEnvironmentVariable(TurnsEnvironment), "queue", StringComparison.OrdinalIgnoreCase);
+        var channels = queued ? ArtifactStores.OpenChannels(options.Record ?? DefaultRunsDirectory, clock) : null;
+        var turns = channels is null ? null : await OpenChannelAsync(channels, AgentTurnWorker.Queue, stopping.Token);
         var composer = new TableComposer(services, rules, store)
         {
+            Turns = turns is null ? new InProcessAgentTurns(clock) : new QueuedAgentTurns(turns, clock) { Said = Console.WriteLine },
             Index = index,
             Agents = agents,
             Push = push,
@@ -174,6 +184,7 @@ internal static class TableHost
             // it: a page polling a seat never reads it as lost.
             server.Starting = true;
             var serving = server.RunAsync(stopping.Token);
+            var working = await StartWorkersAsync(channels, turns, registry, clock, stopping.Token);
             if (serving.IsFaulted)
             {
                 await serving;
@@ -206,8 +217,10 @@ internal static class TableHost
                 : "  Reachable from this network. A seat is its code: anyone who has one plays that seat.");
 
             // Serving stops on Ctrl+C, which is also how a session that ended badly is left readable rather
-            // than vanishing: the host keeps serving after a match so its players can read the end screen.
+            // than vanishing: the host keeps serving after a match so its players can read the end screen. The
+            // workers stop with it.
             await serving;
+            await working;
             return 0;
         }
         catch (System.Net.HttpListenerException exception)
@@ -280,6 +293,47 @@ internal static class TableHost
             Console.WriteLine($"  The index of the tables could not be opened ({failure.Message}); the host keeps its own, which finds what this process holds and what it picks up (ADR 0161, infra/README.md).");
             return null;
         }
+    }
+
+    /// <summary>The variable that hands the bots' turns to a worker through a queue: <c>queue</c>, as <c>--turns queue</c> does.</summary>
+    public const string TurnsEnvironment = "DOWNFALL_TURNS";
+
+    /// <summary>A work queue, or none when it cannot be opened: the bots' turns are then taken in this process, which is said.</summary>
+    private static async Task<IWorkChannel?> OpenChannelAsync(IWorkChannels channels, string name, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await channels.OpenAsync(name, cancellationToken);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is Azure.Identity.AuthenticationFailedException)
+        {
+            Console.WriteLine($"  The queue {name} could not be opened ({failure.Message}); the bots' turns are taken in this process.");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// The two workers of the queued turns (ADR 0159, phase 5), in this process until the infrastructure ADR says
+    /// otherwise: one takes the turns the queue says tables owe, the other keeps for good what the first gave up
+    /// on. None when the turns are taken in this process.
+    /// </summary>
+    private static async Task<Task> StartWorkersAsync(IWorkChannels? channels, IWorkChannel? turns, TableRegistry registry, TimeProvider clock, CancellationToken stopping)
+    {
+        if (channels is null || turns is null)
+        {
+            Console.WriteLine("  Turns: the bots' turns are taken in this process (--turns queue hands them to a worker).");
+            return Task.CompletedTask;
+        }
+
+        var poison = await channels.OpenAsync(PoisonedWork.QueueOf(turns.Name), stopping);
+        var deadLetters = await channels.OpenAsync(DeadLetter.QueueOf(turns.Name), stopping);
+        var worker = new AgentTurnWorker(turns, poison, async (run, cancellationToken) => (await registry.ByIdAsync(run, cancellationToken))?.Session as IAgentTurnTaker, clock)
+        {
+            Said = Console.WriteLine,
+        };
+        var keeper = new DeadLetterWorker(poison, deadLetters, clock, Environment.MachineName) { Said = Console.WriteLine };
+        Console.WriteLine($"  Turns: through the queue {turns.Name}, given up on after {AgentTurnWorker.MostDeliveries} deliveries onto {poison.Name}, kept for good on {deadLetters.Name}.");
+        return Task.WhenAll(worker.RunAsync(stopping), keeper.RunAsync(stopping));
     }
 
     private static string Elsewhere()

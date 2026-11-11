@@ -2,14 +2,17 @@ using Azure.Data.Tables;
 using Azure.Identity;
 using Azure.Storage;
 using Azure.Storage.Blobs;
+using Azure.Storage.Queues;
 using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.Application.Learning.Ports;
 using DownfallArena.Application.Matches.Ports;
+using DownfallArena.Application.Ports;
 using DownfallArena.Application.Tables.Ports;
 using DownfallArena.Infrastructure.Accounts;
 using DownfallArena.Infrastructure.Learning;
 using DownfallArena.Infrastructure.Matches;
 using DownfallArena.Infrastructure.Tables;
+using DownfallArena.Infrastructure.Work;
 
 namespace DownfallArena.Cli.Table;
 
@@ -171,6 +174,41 @@ internal static class ArtifactStores
             ? new TableClient(endpoint, StorageTableIndex.Name, new TableSharedKeyCredential(DevelopmentAccount, DevelopmentKey))
             : new TableClient(endpoint, StorageTableIndex.Name, new DefaultAzureCredential());
         return await StorageTableIndex.OpenAsync(table, cancellationToken);
+    }
+
+    /// <summary>
+    /// The work queues the bots' turns go through when a host hands them to a worker (ADR 0159, phase 5): the storage
+    /// account's beside a container of recordings, and this process's own beside a directory, which has no queues.
+    /// </summary>
+    public static IWorkChannels OpenChannels(string target, TimeProvider clock)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(target);
+        if (!IsContainerUrl(target))
+        {
+            return new InMemoryWorkChannels(clock);
+        }
+
+        var recordings = new Uri(target, UriKind.Absolute);
+        var endpoint = QueuesUri(recordings);
+        return new StorageWorkChannels(IsEmulator(recordings)
+            ? new QueueServiceClient(endpoint, new StorageSharedKeyCredential(DevelopmentAccount, DevelopmentKey))
+            : new QueueServiceClient(endpoint, new DefaultAzureCredential()));
+    }
+
+    /// <summary>
+    /// The Queue Storage endpoint of the account a recordings container is in: the account's queue host, or, for the
+    /// emulator, its queue service on the port after the blob service's, as Azurite serves it.
+    /// </summary>
+    public static Uri QueuesUri(Uri recordings)
+    {
+        ArgumentNullException.ThrowIfNull(recordings);
+        if (IsEmulator(recordings))
+        {
+            return new UriBuilder(recordings) { Port = recordings.Port + 1, Path = DevelopmentAccount, Query = string.Empty }.Uri;
+        }
+
+        var host = recordings.Host.Replace(".blob.", ".queue.", StringComparison.OrdinalIgnoreCase);
+        return new UriBuilder(recordings.Scheme, host) { Port = recordings.IsDefaultPort ? -1 : recordings.Port }.Uri;
     }
 
     /// <summary>The directory a directory store's index is kept in, beside the runs' one.</summary>

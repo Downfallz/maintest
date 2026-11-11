@@ -5,6 +5,20 @@ namespace DownfallArena.Cli.Tests.Table;
 
 public sealed class ArtifactStoresTests
 {
+    [Theory]
+    [InlineData("https://downfallabc.blob.core.windows.net/playtests", "https://downfallabc.queue.core.windows.net/")]
+    [InlineData("http://127.0.0.1:10000/devstoreaccount1/playtests", "http://127.0.0.1:10001/devstoreaccount1")]
+    public void The_queues_of_a_container_s_turns_are_in_the_same_account(string recordings, string queues)
+    {
+        ArtifactStores.QueuesUri(new Uri(recordings)).ShouldBe(new Uri(queues));
+    }
+
+    [Fact]
+    public void A_directory_store_s_queues_are_this_process_s_own()
+    {
+        ArtifactStores.OpenChannels(Path.Combine(Path.GetTempPath(), "downfall", "playtest"), TimeProvider.System).ShouldBeOfType<Infrastructure.Work.InMemoryWorkChannels>();
+    }
+
     [Fact]
     public async Task A_directory_is_a_file_store_under_it()
     {
