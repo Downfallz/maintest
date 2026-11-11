@@ -54,6 +54,28 @@ public sealed class MatchResultRecordingTests : IDisposable
         table.Dispose();
     }
 
+    /// <summary>
+    /// What each seat played is kept with the result, for its players' statistics: every creature of both teams off
+    /// the final board, and the casts that resolved, credited to the creature that cast them.
+    /// </summary>
+    [Fact]
+    public async Task A_finished_table_records_what_each_seat_played_and_cast()
+    {
+        var table = await Composer().ComposeAsync(PlayedByTheUnderstudy, Cancel);
+        table.Seats[0].Account = AccountId.New();
+
+        await FinishedAsync(table);
+
+        var teams = _results.All.ShouldHaveSingleItem().Teams;
+        var size = HostedTables.Rules.TeamSize;
+        teams.Count(creature => creature.Seat == "player1").ShouldBe(size);
+        teams.Count(creature => creature.Seat == "player2").ShouldBe(size);
+        teams.ShouldAllBe(creature => creature.Creature.StartsWith("creature:", StringComparison.Ordinal));
+        teams.SelectMany(creature => creature.Casts.Values).Sum().ShouldBeGreaterThan(0);
+        teams.SelectMany(creature => creature.Casts.Keys).ShouldAllBe(spell => spell.StartsWith("spell:", StringComparison.Ordinal));
+        table.Dispose();
+    }
+
     [Fact]
     public async Task A_table_opened_as_unranked_records_its_result_as_casual()
     {

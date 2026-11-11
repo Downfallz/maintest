@@ -10,6 +10,7 @@ using DownfallArena.Application.Learning.Tracing;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Application.Tables.Ports;
 using DownfallArena.Domain.Matches;
+using DownfallArena.Domain.Matches.Events;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Infrastructure.Learning;
@@ -720,6 +721,9 @@ internal sealed class PlaytestRun
             return _checkpointed = CheckpointAfterAsync(before, $"{RunRecorder.TracesDirectory}/{matchId}.json", trace, cancellationToken);
         }
     }
+
+    /// <summary>Every event this process holds of the match, in order: all of them once the match is over.</summary>
+    public IEnumerable<IMatchEvent> EventsOf(MatchId matchId) => _events.EntriesOf(matchId).Select(entry => entry.Event);
 
     /// <summary>Rewrites the trace as it stands, every entry of it: see the other overload.</summary>
     public Task CheckpointAsync(MatchId matchId, CancellationToken cancellationToken = default) => CheckpointAsync(matchId, upTo: null, cancellationToken);
