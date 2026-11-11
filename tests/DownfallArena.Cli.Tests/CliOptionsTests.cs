@@ -293,15 +293,54 @@ public sealed class CliOptionsTests
     }
 
     [Fact]
-    public void The_bots_turns_are_taken_in_the_process_unless_the_table_is_told_to_queue_them()
+    public void The_bots_turns_are_taken_where_the_table_is_told_and_nowhere_named_when_it_is_not()
     {
-        CliOptions.Parse(["table"]).QueuedTurns.ShouldBeFalse();
-        CliOptions.Parse(["table", "--turns", "process"]).QueuedTurns.ShouldBeFalse();
-        CliOptions.Parse(["table", "--turns", "queue"]).QueuedTurns.ShouldBeTrue();
+        CliOptions.Parse(["table"]).Turns.ShouldBeNull();
+        CliOptions.Parse(["table", "--turns", "process"]).Turns.ShouldBe(TurnsMode.Process);
+        CliOptions.Parse(["table", "--turns", "queue"]).Turns.ShouldBe(TurnsMode.Queue);
+        CliOptions.Parse(["table", "--turns", "worker"]).Turns.ShouldBe(TurnsMode.Worker);
     }
 
     [Theory]
-    [InlineData("table", "--turns", "worker")]
+    [InlineData("queue", "Queue")]
+    [InlineData(" Worker ", "Worker")]
+    [InlineData("process", "Process")]
+    [InlineData("thread", null)]
+    [InlineData(null, null)]
+    public void The_variable_names_the_turns_as_the_option_does(string? text, string? turns)
+    {
+        var parsed = CliOptions.TryParseTurns(text)?.ToString();
+
+        parsed.ShouldBe(turns);
+    }
+
+    [Fact]
+    public void A_host_told_where_the_turns_are_taken_takes_them_there()
+    {
+        TableHost.TurnsOf(CliOptions.Parse(["table", "--turns", "worker"])).ShouldBe(TurnsMode.Worker);
+    }
+
+    [Fact]
+    public void The_worker_takes_a_store_and_may_tell_the_players_accounts_how_a_match_ended()
+    {
+        var options = CliOptions.Parse([CliOptions.WorkerCommand, "--record", "https://downfall.blob.core.windows.net/playtests", "--accounts", "google", "--push-keys", "keys.json"]);
+
+        options.Command.ShouldBe("table-worker");
+        options.Accounts.ShouldBe(AccountsMode.Google);
+        options.PushKeys.ShouldBe("keys.json");
+    }
+
+    [Theory]
+    [InlineData("table-worker", "--no-record")]
+    [InlineData("table-tend", "--no-record")]
+    public void The_worker_and_the_job_work_on_a_store_and_refuse_to_record_nothing(params string[] args)
+    {
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(args)).Message.ShouldContain("--no-record");
+    }
+
+    [Theory]
+    [InlineData("table", "--turns", "thread")]
+    [InlineData("table-worker", "--turns", "queue")]
     [InlineData("play", "--turns", "queue")]
     [InlineData("table", "--turns", "queue", "--practice")]
     public void Turns_the_table_cannot_take_that_way_are_refused_by_name(params string[] args)

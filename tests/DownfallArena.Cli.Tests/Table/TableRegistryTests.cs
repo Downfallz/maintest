@@ -238,6 +238,22 @@ public sealed class TableRegistryTests : IDisposable
     }
 
     [Fact]
+    public async Task Letting_go_of_the_idle_tables_lets_go_of_the_ones_held_here_that_nobody_is_at()
+    {
+        using var registry = _hosted.Registry();
+        var finished = await Composed(HostedTables.Bots);
+        await finished.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        var live = await Composed(HostedTables.OnePerson);
+        await Added(registry, finished);
+        await Added(registry, live);
+
+        var gone = registry.LetGoOfIdle(live.CreatedAt + TableRegistry.NeverBegunFor + TableRegistry.FinishedFor);
+
+        gone.ShouldBe([finished.Id, live.Id], ignoreOrder: true);
+        registry.HeldTables().ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task A_game_that_began_keeps_its_seat_after_a_long_break()
     {
         using var registry = _hosted.Registry();

@@ -73,10 +73,20 @@ internal static class TableHost
         // The index that lists and finds the tables (ADR 0161): Table Storage beside a container, files beside a
         // directory, and this process's own for a host that keeps nothing or whose store's index cannot be opened.
         var index = (store is null ? null : await OpenIndexAsync(options.Record ?? DefaultRunsDirectory, stopping.Token)) ?? new InMemoryTableIndex();
-        // Where the bots' turns are taken (ADR 0159, phase 5): handed to a worker through a queue when the host is
-        // told so, and in this process otherwise.
-        var queued = options.QueuedTurns || string.Equals(Environment.GetEnvironmentVariable(TurnsEnvironment), "queue", StringComparison.OrdinalIgnoreCase);
-        var channels = queued ? ArtifactStores.OpenChannels(options.Record ?? DefaultRunsDirectory, clock) : null;
+        // Where the bots' turns are taken (ADR 0159, phase 5; ADR 0162): handed to a worker through a queue when the
+        // host is told so -- its own, or table-worker's in a process of its own -- and in this process otherwise.
+        var mode = TurnsOf(options);
+        if (mode == TurnsMode.Worker && !(store is not null && ArtifactStores.IsContainerUrl(options.Record ?? DefaultRunsDirectory)))
+        {
+            // A directory's queues are this process's own, and a host recording nothing has no store a worker could
+            // pick its tables up from: no table-worker could take a turn put on them.
+            Console.WriteLine(store is null
+                ? "  Turns: this host records nothing a worker could pick its tables up from, so the bots' turns are taken by a worker here (--turns worker needs --record <container-url>)."
+                : "  Turns: a directory has no queue another process reads, so the bots' turns are taken by a worker here (--turns worker needs --record <container-url>).");
+            mode = TurnsMode.Queue;
+        }
+
+        var channels = mode == TurnsMode.Process ? null : ArtifactStores.OpenChannels(options.Record ?? DefaultRunsDirectory, clock);
         var turns = channels is null ? null : await OpenChannelAsync(channels, AgentTurnWorker.Queue, stopping.Token);
         var composer = new TableComposer(services, rules, store)
         {
@@ -184,7 +194,9 @@ internal static class TableHost
             // it: a page polling a seat never reads it as lost.
             server.Starting = true;
             var serving = server.RunAsync(stopping.Token);
-            var working = await StartWorkersAsync(channels, turns, registry, clock, stopping.Token);
+            var working = mode == TurnsMode.Worker && turns is not null
+                ? TakenByTheWorker(turns)
+                : await StartWorkersAsync(channels, turns, registry, clock, stopping.Token);
 
             // What other processes write to the tables this host holds -- the worker's turns, the hourly job's
             // expiries -- is seen within a second (ADR 0162). A host that records nothing shares its tables with nobody.
@@ -300,8 +312,19 @@ internal static class TableHost
         }
     }
 
-    /// <summary>The variable that hands the bots' turns to a worker through a queue: <c>queue</c>, as <c>--turns queue</c> does.</summary>
+    /// <summary>The variable that says where the bots' turns are taken when <c>--turns</c> does not: <c>process</c>, <c>queue</c> or <c>worker</c>.</summary>
     public const string TurnsEnvironment = "DOWNFALL_TURNS";
+
+    /// <summary>Where the bots' turns are taken: as the command line says, or the variable, or in this process.</summary>
+    internal static TurnsMode TurnsOf(CliOptions options) =>
+        options.Turns ?? CliOptions.TryParseTurns(Environment.GetEnvironmentVariable(TurnsEnvironment)) ?? TurnsMode.Process;
+
+    /// <summary>The bots' turns put on the queue for table-worker, in a process of its own (ADR 0162): no worker here.</summary>
+    private static Task TakenByTheWorker(IWorkChannel turns)
+    {
+        Console.WriteLine($"  Turns: through the queue {turns.Name}, taken by {CliOptions.WorkerCommand} in a process of its own.");
+        return Task.CompletedTask;
+    }
 
     /// <summary>A work queue, or none when it cannot be opened: the bots' turns are then taken in this process, which is said.</summary>
     internal static async Task<IWorkChannel?> OpenChannelAsync(IWorkChannels channels, string name, CancellationToken cancellationToken)
@@ -318,9 +341,9 @@ internal static class TableHost
     }
 
     /// <summary>
-    /// The two workers of the queued turns (ADR 0159, phase 5), in this process until the infrastructure ADR says
-    /// otherwise: one takes the turns the queue says tables owe, the other keeps for good what the first gave up
-    /// on. None when the turns are taken in this process.
+    /// The two workers of the queued turns (ADR 0159, phase 5): one takes the turns the queue says tables owe, the
+    /// other keeps for good what the first gave up on. In a host told <c>--turns queue</c>, and in
+    /// <c>table-worker</c> (ADR 0162); none when the turns are taken in this process.
     /// </summary>
     internal static async Task<Task> StartWorkersAsync(IWorkChannels? channels, IWorkChannel? turns, TableRegistry registry, TimeProvider clock, CancellationToken stopping)
     {

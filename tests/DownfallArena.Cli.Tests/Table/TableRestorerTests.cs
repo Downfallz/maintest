@@ -684,6 +684,8 @@ public sealed class TableRestorerTests : IDisposable
         await Finished(table);
         var record = (await _before.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull();
         await new FileArtifactStore(_runs).Writer(table.Id).WriteJsonAsync(TableRecord.File, record with { Status = TableRecord.Open }, Cancel);
+        // Died before closing the session, so before claiming it (ADR 0162): a claim it left would stand a while.
+        File.Delete(Path.Combine(_runs, table.Id, PlaytestRun.ClosingFile));
         var dataset = await Files(table.Id, "manifest.json", "steps.jsonl", "episodes.jsonl");
         var later = await Restarted();
 

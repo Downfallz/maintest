@@ -208,8 +208,25 @@ Each phase ships on the one container app there is today and leaves the game pla
      up take no bot turn (`NoAgentTurns`). A host that holds one of them sees its record rewritten and lets it
      go (6a). The API keeps the same two passes on its requests until 6d deploys the job, so a host on a
      laptop, with no job, still sweeps.
-   - **6c.** `table-worker`: the two workers of 5b in a process of their own; the API with `--turns queue` and no
-     workers.
+   - **6c, done.** `table-worker` (`TableWorker`): the two workers of 5b in a process of their own, over a
+     container's store and queues (a directory's queues are one process's, so it refuses one). It picks the
+     tables up as a host does, watches them as a host does (6a), lets go of the ones nobody is at
+     (`TableRegistry.LetGoOfIdle`, the held half of the sweep) and stops on SIGTERM. It takes the host's
+     `--accounts` and push keys: a match its turn ends is kept for the ladder and told to the seats' accounts
+     from here. ADR 0162's "`--turns queue` and no workers" is `--turns worker` (`DOWNFALL_TURNS=worker`): the
+     API's bots' turns go on the queue and it runs no worker; on a directory, or recording nothing, it says so
+     and takes them with a worker of its own, as `--turns queue` does. With two processes holding one table,
+     either may see its match end: one closes the session, the one whose claim on it stands
+     (`PlaytestRun.ClaimClosingAsync`, `closing.json` beside the record, two minutes, then another may take it
+     over). It keeps the result, writes the files once -- started over, so a takeover never adds to what a
+     process that stopped half wrote -- and tells the seats' accounts, renewing its claim before each write of
+     the close and before the notices, so a closer that stalled past it and was taken over from stops at the
+     next of them; the other waits for the
+     record to say finished and serves what it wrote. A checkpoint of the trace is written only over the trace
+     it read, and never over one with the match's outcome on it, so a checkpoint on its way when another
+     process closes the match cannot cut its trace short. The worker tells no seat "your turn": it serves no page,
+     so it cannot know who is looking. The API that serves the seat reads the turn within a second and tells
+     it, as long as it is awake, which it is for five minutes after the last request.
    - **6d.** The worker app scaled on the queue's length, the job, the queue role and the bootstrap's
      condition, and the deployment of all three.
 

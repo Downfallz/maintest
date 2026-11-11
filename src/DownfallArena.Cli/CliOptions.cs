@@ -91,11 +91,13 @@ internal sealed record CliOptions
     public AccountsMode Accounts { get; init; }
 
     /// <summary>
-    /// Whether the turns a table's bots owe go through a queue to a worker (ADR 0159, phase 5): <c>--turns queue</c>,
-    /// or <c>DOWNFALL_TURNS=queue</c>; taken in the process otherwise, which <c>--turns process</c> says. The queues
-    /// are the storage account's beside a container of recordings, and this process's own beside a directory.
+    /// Where the turns a table's bots owe are taken (ADR 0159, phase 5; ADR 0162): through a queue to a worker in this
+    /// process (<c>--turns queue</c>), through a queue to <c>table-worker</c> in another (<c>--turns worker</c>), or in
+    /// this process as each is owed (<c>--turns process</c>, the default). <c>DOWNFALL_TURNS</c> says it when the command
+    /// line does not. The queues are the storage account's beside a container of recordings, and this process's own
+    /// beside a directory, which no other process can reach.
     /// </summary>
-    public bool QueuedTurns { get; init; }
+    public TurnsMode? Turns { get; init; }
 
     /// <summary>The Google client id the sign-in is for; <c>DOWNFALL_GOOGLE_CLIENT_ID</c> when not given. Public, not a secret.</summary>
     public string? GoogleClientId { get; init; }
@@ -165,7 +167,10 @@ internal sealed record CliOptions
     /// <summary>One pass of the work that is due on the tables, and then nothing: what the hourly job runs (ADR 0162).</summary>
     public const string TendCommand = "table-tend";
 
-    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table|table-tend|push-keys [--seed N] [--matches N] [--format 3v3|2v2|1v1] [--declaration hidden-intent|at-activation] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--slot-log file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth] [--push-keys file] [--accounts off|google|dev] [--google-client-id id]";
+    /// <summary>The bots' turns the queue says tables owe, taken until stopped: what the worker app runs (ADR 0162).</summary>
+    public const string WorkerCommand = "table-worker";
+
+    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table|table-tend|table-worker|push-keys [--seed N] [--matches N] [--format 3v3|2v2|1v1] [--declaration hidden-intent|at-activation] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--slot-log file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth] [--push-keys file] [--accounts off|google|dev] [--google-client-id id] [--turns process|queue|worker]";
 
     /// <summary>Every option this command line takes. Anything else is a typo, and says so by name.</summary>
     private const string RecordOption = "--record";
@@ -244,7 +249,7 @@ internal sealed record CliOptions
             PushKeys = values.GetValueOrDefault(PushKeysOption),
             Accounts = values.TryGetValue(AccountsOption, out var accounts) ? ParseAccounts(accounts) : AccountsMode.Off,
             GoogleClientId = values.GetValueOrDefault(GoogleClientIdOption),
-            QueuedTurns = values.TryGetValue(TurnsOption, out var turns) && ParseTurns(turns),
+            Turns = values.TryGetValue(TurnsOption, out var turns) ? ParseTurns(turns) : null,
             Bind = values.TryGetValue("--bind", out var bind) ? HttpHost.Bindable(bind) : HttpHost.Loopback,
             Seeds = values.GetValueOrDefault("--seeds"),
             Benchmarks = values.GetValueOrDefault("--benchmarks") ?? DefaultBenchmarks,
@@ -277,9 +282,14 @@ internal sealed record CliOptions
             return "'--platform-auth' is for table only: it says a platform in front of the host signs the operator in.";
         }
 
-        if (values.ContainsKey(PushKeysOption) && command != "table")
+        if (values.ContainsKey(PushKeysOption) && command is not ("table" or WorkerCommand))
         {
-            return "'--push-keys' is for table only: it names the keys a table signs its notices with.";
+            return "'--push-keys' is for table and table-worker only: it names the keys a table signs its notices with.";
+        }
+
+        if (flags.Contains("--no-record") && command is (TendCommand or WorkerCommand))
+        {
+            return $"'--no-record' is not for {command}: it works on the tables a store holds, '--record' or {TableHost.DefaultRunsDirectory}.";
         }
 
         if (values.TryGetValue(TurnsOption, out var turned) && (command != "table" || flags.Contains(PracticeOption)))
@@ -368,9 +378,9 @@ internal sealed record CliOptions
             return values.ContainsKey(GoogleClientIdOption) ? "'--google-client-id' goes with '--accounts google'." : null;
         }
 
-        if (command is not ("table" or TendCommand))
+        if (command is not ("table" or TendCommand or WorkerCommand))
         {
-            return "'--accounts' is for table and table-tend only: it says how players sign in.";
+            return "'--accounts' is for table, table-tend and table-worker only: it says how players sign in.";
         }
 
         var mode = ParseAccounts(accounts);
@@ -389,12 +399,17 @@ internal sealed record CliOptions
             : null;
     }
 
-    /// <summary>Whether <c>--turns</c> names the queue; anything but queue or process is one line, not a stack.</summary>
-    internal static bool ParseTurns(string text) => text switch
+    /// <summary>Where <c>--turns</c> says the bots' turns are taken; anything else is one line, not a stack.</summary>
+    internal static TurnsMode ParseTurns(string text) =>
+        TryParseTurns(text) ?? throw new ArgumentException($"'--turns' takes process, queue or worker, not '{text}'.", nameof(text));
+
+    /// <summary>Where a <c>--turns</c> value, or <c>DOWNFALL_TURNS</c>, says the bots' turns are taken; none for anything else.</summary>
+    internal static TurnsMode? TryParseTurns(string? text) => text?.Trim().ToLowerInvariant() switch
     {
-        "queue" => true,
-        "process" => false,
-        _ => throw new ArgumentException($"'--turns' takes process or queue, not '{text}'.", nameof(text)),
+        "process" => TurnsMode.Process,
+        "queue" => TurnsMode.Queue,
+        "worker" => TurnsMode.Worker,
+        _ => null,
     };
 
     private static AccountsMode ParseAccounts(string text) => text switch

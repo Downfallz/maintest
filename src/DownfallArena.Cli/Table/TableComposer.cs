@@ -439,6 +439,14 @@ internal sealed class TableComposer
                 return;
             }
 
+            // One process closes the files and tells the seats, however many hold the table (ADR 0162): the others
+            // wait for the record to say it is done, and serve the session from what that one wrote.
+            var stopping = (session as IAgentTurnTaker)?.Stopping ?? CancellationToken.None;
+            if (!await ClaimedAsync(run, session.MatchId, stopping))
+            {
+                return;
+            }
+
             // The result before the record says finished: a host that fails to keep it leaves the table open, and
             // the next host rebuilds it from its decisions and keeps it then. Kept twice, it is kept once.
             if (Results is { } results && ResultOf(table, session.Outcome.Result.Value, board.Value, finishedAt, owners) is { } result)
@@ -446,8 +454,21 @@ internal sealed class TableComposer
                 await results.RecordAsync(result);
             }
 
-            await run.FinishAsync(session.MatchId, board.Value);
+            // The claim is renewed before each write the closing makes and before the notices: a closer that stalled
+            // past it and was taken over from stops at the next of them, and serves what the other one writes.
+            if (!await run.FinishAsync(session.MatchId, board.Value))
+            {
+                Console.WriteLine($"  Session {run.SessionId} was taken over by another process, which writes it.");
+                await WrittenElsewhereAsync(run, session.MatchId, stopping);
+                return;
+            }
+
             Console.WriteLine($"  Session {run.SessionId} written to '{run.Location}'");
+            if (!await run.StillClosingAsync())
+            {
+                Console.WriteLine($"  Session {run.SessionId} was taken over by another process, which tells its seats how it ended.");
+                return;
+            }
 
             // Told after the files are written, and on its own: a device store or an account that cannot be read is
             // a notice that did not arrive, never a recording left unfinished.
@@ -465,6 +486,78 @@ internal sealed class TableComposer
             table.MarkClosed();
         }
     }
+
+    /// <summary>
+    /// Whether this process is the one to close a session (ADR 0162). One that is not waits for the one that is,
+    /// as long as its claim stands, and serves the session from what it wrote; a claim that ran out unfinished is a
+    /// process that stopped, and this one claims the closing in its place.
+    /// </summary>
+    /// <param name="stopping">The table's own: a table let go of, or a host stopping, waits for nobody.</param>
+    private async Task<bool> ClaimedAsync(PlaytestRun run, MatchId matchId, CancellationToken stopping)
+    {
+        for (var claims = 0; claims < ClosingClaims; claims++)
+        {
+            if (await ClaimOrNullAsync(run, stopping) is { } claimed)
+            {
+                return claimed;
+            }
+
+            if (await WrittenElsewhereAsync(run, matchId, stopping))
+            {
+                return false;
+            }
+        }
+
+        Console.WriteLine($"  Session {run.SessionId} is being written by another process that has not finished it.");
+        return false;
+    }
+
+    /// <summary>The claim, made or refused; none when the table stopped meanwhile, which waits for nobody either.</summary>
+    private static async Task<bool?> ClaimOrNullAsync(PlaytestRun run, CancellationToken stopping)
+    {
+        try
+        {
+            return await run.ClaimClosingAsync(stopping) ? true : null;
+        }
+        catch (OperationCanceledException) when (stopping.IsCancellationRequested)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Waits, as long as a claim stands, for the process that claimed the closing of a session to write it, and
+    /// serves what it wrote: whether it did. A table let go of, or a host stopping, waits for nobody.
+    /// </summary>
+    private async Task<bool> WrittenElsewhereAsync(PlaytestRun run, MatchId matchId, CancellationToken stopping)
+    {
+        try
+        {
+            for (var waited = TimeSpan.Zero; waited <= PlaytestRun.ClosingHeld; waited += ClosingLooks)
+            {
+                if (await run.ClosedElsewhereAsync(matchId, stopping))
+                {
+                    Console.WriteLine($"  Session {run.SessionId} was written to '{run.Location}' by another process.");
+                    return true;
+                }
+
+                await Task.Delay(ClosingLooks, _clock, stopping);
+            }
+        }
+        catch (OperationCanceledException) when (stopping.IsCancellationRequested)
+        {
+            // Whoever picks the table up next closes it, or sees it closed.
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>How often a process that did not close a session looks whether the one that did is done.</summary>
+    internal static readonly TimeSpan ClosingLooks = TimeSpan.FromSeconds(1);
+
+    // How many claims one process makes on a session it finds claimed, one claim's time apart.
+    private const int ClosingClaims = 3;
 
     /// <summary>
     /// A table that records nothing, out of the open tables of the index once its match has an outcome: there is

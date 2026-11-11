@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Security.Cryptography;
+using System.Text.Json;
 using DownfallArena.Application.Agents;
 using DownfallArena.Application.Catalogue;
 using DownfallArena.Application.Learning;
@@ -68,17 +69,12 @@ internal sealed class PlaytestRun
     private int _recording;
     private readonly int _seed;
 
-    // Whether this run was opened over what an earlier host wrote (Reopen): its dataset files are then started
-    // over before the match is written into them.
-    private readonly bool _reopened;
-
     /// <summary>The record an earlier host left of the table, for a run opened over it (<see cref="Reopen" />).</summary>
     private TableRecord? Reopened
     {
         init
         {
             _record = value ?? _record;
-            _reopened = value is not null;
             _revision = value?.Revision ?? 0;
         }
     }
@@ -713,20 +709,70 @@ internal sealed class PlaytestRun
                 return Task.CompletedTask;
             }
 
-            return _events.Snapshot(matchId, _stamp, _seed, upTo) is { } trace
-                ? _writer.WriteJsonAsync($"{RunRecorder.TracesDirectory}/{matchId}.json", trace, cancellationToken)
-                : Task.CompletedTask;
+            if (_events.Snapshot(matchId, _stamp, _seed, upTo) is not { } trace)
+            {
+                return Task.CompletedTask;
+            }
+
+            // Queued behind the one before, so this process's checkpoints land in the order they were taken.
+            var before = _checkpointed;
+            return _checkpointed = CheckpointAfterAsync(before, $"{RunRecorder.TracesDirectory}/{matchId}.json", trace, cancellationToken);
         }
     }
 
     /// <summary>Rewrites the trace as it stands, every entry of it: see the other overload.</summary>
     public Task CheckpointAsync(MatchId matchId, CancellationToken cancellationToken = default) => CheckpointAsync(matchId, upTo: null, cancellationToken);
 
+    // The last checkpoint queued: the next one is written after it.
+    private Task _checkpointed = Task.CompletedTask;
+
+    /// <summary>
+    /// A checkpoint written after the one before it, and never over a finished trace: another process may hold the
+    /// table, close it and write the match's trace with its outcome while this one's checkpoint is on its way
+    /// (ADR 0162). It is written only over the trace it read, and read again when somebody wrote it since.
+    /// </summary>
+    private async Task CheckpointAfterAsync(Task before, string path, MatchTrace trace, CancellationToken cancellationToken)
+    {
+        await Task.WhenAny(before);
+        for (var attempt = 1; attempt <= RecordAttempts; attempt++)
+        {
+            var read = await _reader.ReadTaggedAsync(path, cancellationToken);
+            if (read is not null && Finished(read.Text))
+            {
+                return;
+            }
+
+            if (await _writer.WriteJsonIfAsync(path, trace, read?.Tag, cancellationToken) is not null)
+            {
+                return;
+            }
+        }
+    }
+
+    /// <summary>Whether a trace as written is a finished match's: its outcome is on it.</summary>
+    private static bool Finished(string trace)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(trace);
+            return document.RootElement.ValueKind == JsonValueKind.Object
+                && document.RootElement.EnumerateObject().Any(property => string.Equals(property.Name, nameof(MatchTrace.Outcome), StringComparison.OrdinalIgnoreCase) && property.Value.ValueKind != JsonValueKind.Null);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
     /// <summary>
     /// Closes the session: the episodes, the final trace, and the manifest with its counts. The board is the
     /// one the match ended on, which is what an episode's return is read from.
     /// </summary>
-    public async Task FinishAsync(MatchId matchId, PlayerBoardState player1Board, CancellationToken cancellationToken = default)
+    /// <returns>
+    /// Whether the files were written: not when this run claimed the closing (<see cref="ClaimClosingAsync" />) and
+    /// another run took the claim over before one of its writes, which is left to that run.
+    /// </returns>
+    public async Task<bool> FinishAsync(MatchId matchId, PlayerBoardState player1Board, CancellationToken cancellationToken = default)
     {
         // Checkpoints are stopped before anything final is written, not after. A checkpoint already inside the
         // lock queues its write first and the finished trace lands on top of it; one arriving afterwards finds
@@ -750,23 +796,153 @@ internal sealed class PlaytestRun
         // Taken before the recorder is handed the match, because being handed it is what makes it forget.
         _kept = _events.EntriesOf(matchId);
 
-        // An earlier host may have got as far as writing the steps and the episodes and no further -- it stopped
-        // before the record said finished, or could not write that. Written into again as they are, a dataset
-        // would hold the match twice under a manifest that counts it once.
-        if (_reopened)
+        // Another run may have got as far as writing the steps and the episodes and no further -- it stopped
+        // before the record said finished, or could not write that: an earlier host, or another process whose
+        // claim on closing ran out (ADR 0162), which this run need not have been opened over. Written into again
+        // as they are, a dataset would hold the match twice under a manifest that counts it once, so they are
+        // started over: the steps and the episodes are only ever written here, at the close. Each write is made
+        // only while this run's claim on closing still stands, renewed before it (ADR 0162): a run that stalled
+        // past its claim and was taken over from stops at its next write, and leaves the rest to the other.
+        if (!await StillOursAsync(cancellationToken))
         {
-            await _recorder.StartAsync(cancellationToken);
+            return false;
+        }
+
+        await _recorder.StartAsync(cancellationToken);
+        if (!await StillOursAsync(cancellationToken))
+        {
+            return false;
         }
 
         await _recorder.MatchPlayedAsync(matchId, _seed, player1Board, cancellationToken);
+        if (!await StillOursAsync(cancellationToken))
+        {
+            return false;
+        }
+
         await _recorder.FinishAsync(cancellationToken);
+        if (!await StillOursAsync(cancellationToken))
+        {
+            return false;
+        }
+
         await MarkAsync(TableRecord.Finished, cancellationToken);
 
         // And only now are the files written. Saying so at the top of this method would let the session page
         // answer while the manifest still says the match played nothing, or while a file it is about to embed
         // is half written. Whether anything is still on its way into them is the other half of IsClosed.
         FilesWritten = true;
+        return true;
     }
+
+    /// <summary>Whether this run may write the session's files: it claimed nothing, or its claim still stands.</summary>
+    private async Task<bool> StillOursAsync(CancellationToken cancellationToken) =>
+        Volatile.Read(ref _claimed) == 0 || await StillClosingAsync(cancellationToken);
+
+    // Whether this run claimed the closing of the session, whose writes are then made only while the claim stands.
+    private int _claimed;
+
+    /// <summary>The claim one process makes on closing the session's files (ADR 0162), beside them.</summary>
+    public const string ClosingFile = "closing.json";
+
+    /// <summary>
+    /// How long a claim on closing the session stands. Closing takes a few writes; a claim older than this is a
+    /// process that stopped between its claim and its last write, and another closes the session in its place.
+    /// </summary>
+    public static readonly TimeSpan ClosingHeld = TimeSpan.FromMinutes(2);
+
+    /// <summary>
+    /// Claims the closing of the session's files for this run, so that one process closes them and tells the seats
+    /// how the match ended, however many hold the table (ADR 0162): the worker that took the bot's last turn, the
+    /// host whose seat made the last tap, and a host that caught up with either. A claim is a document written only
+    /// where there is none, or where the one there is older than <see cref="ClosingHeld" />.
+    /// </summary>
+    /// <returns>Whether this run is the one to close the session: not when its record already says it finished, or
+    /// another run's claim stands.</returns>
+    public async Task<bool> ClaimClosingAsync(CancellationToken cancellationToken = default)
+    {
+        for (var attempt = 1; attempt <= RecordAttempts; attempt++)
+        {
+            if (await FinishedAsync(cancellationToken))
+            {
+                return false;
+            }
+
+            // Two machines' clocks compared: a claim's two minutes are a few seconds more or less, which only moves
+            // how soon a process that stopped is taken over from.
+            var now = _clock.GetUtcNow();
+            var read = await _reader.ReadTaggedAsync(ClosingFile, cancellationToken);
+            if (read is not null && ClosingOf(read.Text) is { } held && held.By != _closer && now - held.At < ClosingHeld)
+            {
+                return false;
+            }
+
+            if (await _writer.WriteJsonIfAsync(ClosingFile, new Closing(_closer, now), read?.Tag, cancellationToken) is not null)
+            {
+                Volatile.Write(ref _claimed, 1);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Whether this run's claim on closing the session still stands, renewed for another <see cref="ClosingHeld" />
+    /// when it does: written only over the claim it read, so a run whose claim another took over -- it stalled
+    /// longer than a claim stands -- finds out before it writes the files or tells anybody, and stops.
+    /// </summary>
+    public async Task<bool> StillClosingAsync(CancellationToken cancellationToken = default)
+    {
+        var read = await _reader.ReadTaggedAsync(ClosingFile, cancellationToken);
+        return read is not null
+            && ClosingOf(read.Text)?.By == _closer
+            && await _writer.WriteJsonIfAsync(ClosingFile, new Closing(_closer, _clock.GetUtcNow()), read.Tag, cancellationToken) is not null;
+    }
+
+    /// <summary>
+    /// Whether another process has closed the session's files, as the record says once they are all written. When
+    /// it has, this run takes them as written: the session page is served, and what this run kept of the match to
+    /// write is let go of.
+    /// </summary>
+    public async Task<bool> ClosedElsewhereAsync(MatchId matchId, CancellationToken cancellationToken = default)
+    {
+        if (!await FinishedAsync(cancellationToken))
+        {
+            return false;
+        }
+
+        lock (_ordering)
+        {
+            CheckpointsStopped = true;
+        }
+
+        _kept = _events.EntriesOf(matchId);
+        _recorder.Forget(matchId);
+        FilesWritten = true;
+        return true;
+    }
+
+    private async Task<bool> FinishedAsync(CancellationToken cancellationToken) =>
+        await _reader.ReadTextAsync(TableRecord.File, cancellationToken) is { } text && StoredSessions.RecordOf(text)?.Status == TableRecord.Finished;
+
+    private static Closing? ClosingOf(string text)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<Closing>(text, ArtifactJson.DocumentOptions);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    // Who this run is, to its own claim: a run picked up again by the same process is another run.
+    private readonly string _closer = Guid.NewGuid().ToString("N");
+
+    /// <summary>A claim on closing the session: by which run, and when it was made.</summary>
+    private sealed record Closing(string By, DateTimeOffset At);
 
     /// <summary>
     /// Waits for everything on its way into the files to land: every decision being accepted, then a write
