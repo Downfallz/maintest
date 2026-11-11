@@ -43,7 +43,7 @@ internal sealed class TableComposer
     private readonly IServiceProvider _services;
     private readonly RuleSet _rules;
     private readonly TableContent _own;
-    private readonly ConcurrentDictionary<string, Task<TableContent?>> _pinned = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, Lazy<Task<TableContent?>>> _pinned = new(StringComparer.Ordinal);
     private readonly List<Microsoft.Extensions.Hosting.IHost> _pinnedHosts = [];
     private Task? _kept;
     private readonly IArtifactStore? _store;
@@ -252,15 +252,17 @@ internal sealed class TableComposer
             return _own;
         }
 
-        var pinned = _pinned.GetOrAdd(version, PinnedAsync);
+        // Built once however many tables of that content are picked up at the same time.
+        var pinned = _pinned.GetOrAdd(version, one => new Lazy<Task<TableContent?>>(() => PinnedAsync(one)));
         try
         {
-            return await pinned.WaitAsync(cancellationToken) ?? _own;
+            return await pinned.Value.WaitAsync(cancellationToken) ?? _own;
         }
-        catch (Exception failure) when (TableRegistry.StoreFails(failure))
+        catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is UnauthorizedAccessException)
         {
-            // Not kept: the next pick-up reads the store again.
-            _pinned.TryRemove(new KeyValuePair<string, Task<TableContent?>>(version, pinned));
+            // Not kept: the next pick-up reads the store and writes its copy again, and the table is unavailable
+            // meanwhile rather than replayed on content it did not begin on.
+            _pinned.TryRemove(new KeyValuePair<string, Lazy<Task<TableContent?>>>(version, pinned));
             throw;
         }
     }
@@ -313,12 +315,14 @@ internal sealed class TableComposer
             return null;
         }
 
+        // A directory of this load's own, so no other load -- in this process or another over the same temporary
+        // directory -- writes over the schema while it is read. Beside a copy of this host's presentation, which is
+        // kept out of the content hash and only says how the same ids are drawn. A file that cannot be written is
+        // thrown: the table is unavailable for a moment, not replayed on content it did not begin on.
+        var directory = Path.Combine(Path.GetTempPath(), "downfall-content", version, Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
         try
         {
-            // Beside a copy of this host's presentation, which is kept out of the content hash and only says how
-            // the same ids are drawn.
-            var directory = Path.Combine(Path.GetTempPath(), "downfall-content", version);
-            Directory.CreateDirectory(directory);
             var schema = Path.Combine(directory, ContentFile);
             await File.WriteAllTextAsync(schema, text);
             if (_services.GetService<GameContentFile>() is { } own && Path.GetDirectoryName(Path.GetFullPath(own.SchemaPath)) is { } beside)
@@ -330,11 +334,19 @@ internal sealed class TableComposer
             }
 
             var host = CliHost.Build(new CliOptions { Command = "table", Output = "out.csv", SchemaPath = schema }, seed: 0, logMatchToConsole: false);
-            var content = new TableContent(host.Services, SteppedHost.Of(host.Services) with { Turns = _stepped.Turns });
-            if (!string.Equals(content.Version, version, StringComparison.Ordinal))
+            TableContent content;
+            try
+            {
+                content = new TableContent(host.Services, SteppedHost.Of(host.Services) with { Turns = _stepped.Turns });
+                if (!string.Equals(content.Version, version, StringComparison.Ordinal))
+                {
+                    throw new InvalidGameContentException($"The content kept under {version} is {content.Version}.");
+                }
+            }
+            catch
             {
                 host.Dispose();
-                throw new InvalidGameContentException($"The content kept under {version} is {content.Version}.");
+                throw;
             }
 
             lock (_pinnedHosts)
@@ -345,7 +357,7 @@ internal sealed class TableComposer
             Console.WriteLine($"  Content {version} kept for the tables that began on it, beside this host's ({_own.Version}).");
             return content;
         }
-        catch (Exception failure) when (failure is InvalidGameContentException or JsonException or IOException or UnauthorizedAccessException)
+        catch (Exception failure) when (failure is InvalidGameContentException or JsonException)
         {
             Console.WriteLine($"  The content {version} a table began on cannot be read by this engine ({failure.Message}): the table is replayed on this host's ({_own.Version}).");
             return null;

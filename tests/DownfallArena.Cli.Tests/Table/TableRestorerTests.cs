@@ -565,6 +565,26 @@ public sealed class TableRestorerTests : IDisposable
         (await moved.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().Void.ShouldBeFalse();
     }
 
+    /// <summary>
+    /// Tables that began on the same older content and are picked up at the same time share one load of it (ADR 0163):
+    /// none of them is replayed on the host's content, which would void it.
+    /// </summary>
+    [Fact]
+    public async Task Tables_of_one_older_content_picked_up_at_once_are_all_replayed_on_it()
+    {
+        var first = await Opened(HostedTables.OnePerson);
+        var second = await Opened(HostedTables.OnePerson);
+        await PlayUntil(first, first.Seats[0].Person!, PlayerOptionsKind.Intent);
+        await PlayUntil(second, second.Seats[0].Person!, PlayerOptionsKind.Intent);
+        await Task.Delay(200, Cancel);
+        using var moved = new HostedTables(_ => new FileArtifactStore(_runs), content: Healthier);
+        using var registry = await moved.RestartedAsync();
+
+        var picked = await Task.WhenAll(registry.ByIdAsync(first.Id, Cancel), registry.ByIdAsync(second.Id, Cancel));
+
+        picked.ShouldAllBe(table => table != null && table.Content == first.Content);
+    }
+
     /// <summary>A table is picked up under the rules it began under (ADR 0163), whatever rules the host now reads.</summary>
     [Fact]
     public async Task A_table_picked_up_by_a_host_on_other_rules_plays_the_rules_it_began_under()
