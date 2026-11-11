@@ -20,7 +20,7 @@ async function mount(page, ids = [1, 2, 3]) {
     const request = route.request(), url = new URL(request.url());
     if (url.pathname === '/api/lobby/resume') return route.fulfill({ json: { tables: [{ table: { id: 'tempo', format: `${ids.length}v${ids.length}` }, seats: [{ seat: 'player1', token: 'seat' }] }] } });
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [{ id: 'strike', name: 'Strike', cost: 2, critical: '10%', targeting: 'One enemy', effects: ['Recorded spell effect'] }] } });
-    if (url.pathname.endsWith('/events')) return route.fulfill({ contentType: 'text/event-stream', body: '' });
+    if (url.pathname.endsWith('/events')) return route.fulfill({ contentType: 'text/event-stream', body: 'event: ready\ndata: 0\n\n' });
     if (url.pathname.endsWith('/decision')) {
       const command = request.postDataJSON(); state.writes.push(command);
       if (state.hold) await state.hold;

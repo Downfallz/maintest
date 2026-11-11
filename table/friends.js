@@ -153,10 +153,15 @@ export function mountFriends(doc, { request = accountRequest, nav = globalThis.n
 
   nav?.serviceWorker?.addEventListener?.('message', event => { if (event.data?.kind === 'notice') void refresh(true); });
   // Read when the host says this player's lists changed, and when the lobby's stream opens (ADR 0163): no clock.
-  const unlisten = changes(event => { if (accountMoved(event) && account && !busy) void refresh(true); });
+  // Listened to while somebody is signed in only.
+  let unlisten = null;
+  const listen = on => {
+    if (on && !unlisten) unlisten = changes(event => { if (accountMoved(event) && account && !busy) void refresh(true); });
+    if (!on && unlisten) { unlisten(); unlisten = null; }
+  };
   render();
   return {
-    stop: () => unlisten(),
+    stop: () => listen(false),
     /** Reads the list again: a request answered from the bell changes it. */
     refresh: () => refresh(true),
     /** Told by the lobby whether an invitation of this player's is waiting: one at a time, so Invite waits too. */
@@ -170,6 +175,7 @@ export function mountFriends(doc, { request = accountRequest, nav = globalThis.n
       if ((next?.id ?? null) === (account?.id ?? null)) return;
       account = next;
       list = null;
+      listen(Boolean(account));
       render();
       problem();
       note();

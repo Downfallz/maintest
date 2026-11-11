@@ -20,7 +20,7 @@ async function mount(page, { kind = 'Action', targets = legal([4, 5, 6]), shownS
     const request = route.request(), url = new URL(request.url());
     if (url.pathname === '/api/lobby/resume') return route.fulfill({ json: { tables: [{ table: { id: 'table-a', format: '3v3' }, seats: [{ seat: 'player1', token: 'first' }] }] } });
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: ['bolt', 'ward', 'locked'].map(id => ({ id, name: `Host ${id}`, cost: 0, targeting: 'Host target text', effects: ['Host effect text'] })) } });
-    if (url.pathname.endsWith('/events')) return route.fulfill({ contentType: 'text/event-stream', body: '' });
+    if (url.pathname.endsWith('/events')) return route.fulfill({ contentType: 'text/event-stream', body: 'event: ready\ndata: 0\n\n' });
     if (url.pathname.endsWith('/decision')) {
       state.writes.push(request.postDataJSON()); if (state.wait) await state.wait;
       if (state.status === 204) { state.view.waitingFor = null; state.view.waitingAsked = null; state.view.board.enemies[0].health = 12; return route.fulfill({ status: 204 }); }

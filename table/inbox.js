@@ -170,14 +170,20 @@ export function mountInbox(doc, { storage = null, request = accountRequest, win 
     } catch { /* Read again on the next change: a bell that missed one read keeps what it last knew. */ }
   }
   el('inbox-open').addEventListener('click', () => { problem(); void refresh(true); });
-  // The lobby's stream opening (the page loaded, back in view, back online) and the player's own lists changing.
-  const unlisten = changes(event => { if (!doc.hidden && accountMoved(event)) void refresh(); });
+  // The lobby's stream opening (the page loaded, back in view, back online) and the player's own lists changing,
+  // listened to while somebody is signed in: a page nobody signed in to has no bell to keep current.
+  let unlisten = null;
+  const listen = on => {
+    if (on && !unlisten) unlisten = changes(event => { if (!doc.hidden && accountMoved(event)) void refresh(); });
+    if (!on && unlisten) { unlisten(); unlisten = null; }
+  };
   return {
-    stop() { unlisten(); },
+    stop() { listen(false); },
     /** Told by the sign-in whenever who is signed in changes. */
     setAccount(next) {
       if ((next?.id ?? null) === (account?.id ?? null)) return;
       account = next; mine = []; invitations = []; friends = null; fed = 0;
+      listen(Boolean(account));
       render();
       void refresh(true);
     },

@@ -707,9 +707,12 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     void refresh();
   };
   dialog.addEventListener('close', () => { if (owed) resume(); });
+  // Back in view or back online reads at once, whatever the stream can say yet.
+  doc.addEventListener('visibilitychange', resume);
+  globalThis.addEventListener?.('online', resume);
   const unlisten = changes(resume);
   return {
-    stop: () => { unlisten(); globalThis.clearTimeout(retry); },
+    stop: () => { unlisten(); globalThis.clearTimeout(retry); doc.removeEventListener('visibilitychange', resume); globalThis.removeEventListener?.('online', resume); },
     /** Opens the create dialog with that friend chosen: what the Friends panel's Invite does. */
     invite: friend => openCreate({ friend: friend?.id ?? null }),
     /** Told every friends list the Friends panel reads, so each recent opponent offers the way its friendship allows. */
