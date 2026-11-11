@@ -26,6 +26,7 @@ internal static class CliHost
             .AddApplication()
             .AddInfrastructure(seed)
             .AddGameResources(options.SchemaPath);
+        builder.Services.AddSingleton(new GameContentFile(options.SchemaPath));
 
         if (logMatchToConsole)
         {

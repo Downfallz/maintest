@@ -13,7 +13,7 @@ studio is not here: it is on GitHub Pages (ADR 0023).
 | Container app `downfall-worker` | The CLI's `table-worker`: the bots' turns the API puts on the `agent-turns` queue, and the dead letters; no ingress, 0.5 vCPU, 1 GiB, **0 to 1 replica**, scaled on the length of `agent-turns` and `agent-turns-poison` | Nothing idle. Seconds per bot turn |
 | Container Apps job `downfall-tend` | The CLI's `table-tend`, at 17 minutes past every hour: closes the tables that never began, lets go of the invitations nobody answered; 0.25 vCPU, 0.5 GiB | A few seconds an hour |
 | Container Apps environment | Where the app runs, consumption plan, on the platform's own network (ADR 0160) | Nothing on its own |
-| Storage account, Blob, Table and Queue | The recorded sessions, one prefix per session under `playtests/`, the index that finds them (`tableindex`: join codes, open tables; ADR 0161), and the queues of the bots' turns (`agent-turns`, `agent-turns-poison`, `agent-turns-dlq`; ADR 0159, phase 5); no key, and only an identity holding a role on it may read or write | Cents |
+| Storage account, Blob, Table and Queue | The recorded sessions, one prefix per session under `playtests/`, the index that finds them (`tableindex`: join codes, open tables; ADR 0161), the queues of the bots' turns (`agent-turns`, `agent-turns-poison`, `agent-turns-dlq`; ADR 0159, phase 5), and the content each table began on (`content/`, one schema per content hash, about 50 KB each; ADR 0163); no key, and only an identity holding a role on it may read or write | Cents |
 | Log Analytics workspace | The host's console lines, 30 days, capped at 0.5 GB a day | Cents, often nothing |
 
 The app scales to zero a few minutes after the last request. An open seat holds an event stream and polls

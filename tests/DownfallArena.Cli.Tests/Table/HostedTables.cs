@@ -46,12 +46,14 @@ internal sealed class HostedTables : IDisposable
     /// <param name="push">The notices the tables send (ADR 0118), or none, which is the ordinary host of these tests.</param>
     /// <param name="index">The index of the tables, a fresh one unless given: another host's, for two hosts over one store and one index.</param>
     /// <param name="turns">Where the bots' turns are taken, this process unless given: a test that takes them itself.</param>
-    public HostedTables(Func<string, IArtifactStore>? store, RuleSet? rules = null, PushNotices? push = null, ReplayBasis? basis = null, InMemoryTableIndex? index = null, IAgentTurns? turns = null)
+    /// <param name="content">A change to the content before it is built: a host after a deploy that moved it.</param>
+    public HostedTables(Func<string, IArtifactStore>? store, RuleSet? rules = null, PushNotices? push = null, ReplayBasis? basis = null, InMemoryTableIndex? index = null, IAgentTurns? turns = null, Action<StudioContent>? content = null)
     {
         Index = index ?? new InMemoryTableIndex();
         _content.Write("presentation/package-tags.json", PackageTags);
         _content.Write("presentation/spell-art.json", SpellArt);
         _content.Write("presentation/mutation-art.json", MutationArt);
+        content?.Invoke(_content);
         new ContentStore(_content.Path).Build(Path.Combine(_content.Path, "dst"));
         _host = CliHost.Build(
             new CliOptions { Command = "table", Output = "out.csv", SchemaPath = Path.Combine(_content.Path, "dst", "game.schema.json") },
@@ -61,13 +63,21 @@ internal sealed class HostedTables : IDisposable
 
         // A store wrapped by a test still keeps its runs under the directory it was made over, and so does the journal.
         var journal = opened is null or FileArtifactStore ? null : new FileDecisionJournal(RunsDirectory, TimeProvider.System);
+
+        // The content the tables began on, kept beside the runs as a host keeps it (ADR 0163), and shared by every host
+        // over the same runs.
+        ContentsDirectory = $"{(opened as FileArtifactStore)?.RootDirectory ?? RunsDirectory}-content";
+        var contents = opened is null ? null : new FileArtifactStore(ContentsDirectory);
         Composer = turns is null
-            ? new TableComposer(_host.Services, rules ?? Rules, opened, journal) { Push = push, Basis = basis, Index = Index }
-            : new TableComposer(_host.Services, rules ?? Rules, opened, journal) { Push = push, Basis = basis, Index = Index, Turns = turns };
+            ? new TableComposer(_host.Services, rules ?? Rules, opened, journal) { Push = push, Basis = basis, Index = Index, Contents = contents }
+            : new TableComposer(_host.Services, rules ?? Rules, opened, journal) { Push = push, Basis = basis, Index = Index, Turns = turns, Contents = contents };
         Stored = opened is null ? null : new StoredSessions(opened);
     }
 
     public TableComposer Composer { get; }
+
+    /// <summary>Where the content the tables began on is kept (ADR 0163), beside the runs.</summary>
+    public string ContentsDirectory { get; }
 
     /// <summary>The game schema the host's content was built into: what a command line names with <c>--schema</c>.</summary>
     public string SchemaPath => Path.Combine(_content.Path, "dst", "game.schema.json");
@@ -119,6 +129,17 @@ internal sealed class HostedTables : IDisposable
         _host.Dispose();
         _content.Dispose();
         DeleteRuns();
+        if (Directory.Exists(ContentsDirectory))
+        {
+            try
+            {
+                Directory.Delete(ContentsDirectory, recursive: true);
+            }
+            catch (IOException)
+            {
+                // Another host over the same runs is deleting it too, or still keeping its content.
+            }
+        }
     }
 
     /// <summary>

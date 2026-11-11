@@ -341,8 +341,17 @@ which adds the compilation of the engine itself.
        says "This match was ended" (`ended`).
 
      A record refused and left open before this is voided at its next pick-up on another basis.
-   - **8b.** Each table keeps the content and the rule set it began on, and is replayed on them, so only an engine
-     change can still void a match.
+   - **8b, done.** Each table keeps the content and the rule set it began on, and is replayed on them, so only an
+     engine change can still void a match.
+     - The record names the content's hash (`Content`) and the rule set (`Rules`, `RecordedRules`).
+     - The schema is kept once per hash in a `content` store beside the recordings (`ArtifactStores.OpenContentAsync`),
+       written where there is none when a table opens.
+     - A table picked up on other content is replayed on services built for its kept schema
+       (`TableContent`, through `CliHost.Build`, as the studio builds one per schema). This host's presentation
+       sits beside the kept schema, so the same ids are drawn the same way.
+     - A kept schema that is missing, or that this engine cannot read, leaves the table on the host's content.
+       That is how a table opened before 8b is replayed, and it is voided if it no longer fits.
+     - A store that does not answer makes the table unavailable for a moment, never void.
 9. **The event stream across replicas.** Answered in 6a with the second step below: a process watches where the
    journal ends, about once a second, for the tables it holds. A replica holding a stream has to learn of a line
    another replica wrote. In this order, each step taken only when the one before it stops being enough:

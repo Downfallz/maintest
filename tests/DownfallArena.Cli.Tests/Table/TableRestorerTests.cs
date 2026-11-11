@@ -545,6 +545,92 @@ public sealed class TableRestorerTests : IDisposable
     }
 
     /// <summary>
+    /// A deploy that moves the content does not end the matches that began before it (ADR 0163): a table is picked up
+    /// on the content it began on, kept beside the runs, whatever content the host picking it up plays.
+    /// </summary>
+    [Fact]
+    public async Task A_table_picked_up_by_a_host_on_other_content_is_replayed_on_the_content_it_began_on()
+    {
+        var table = await Opened(HostedTables.OnePerson);
+        await PlayUntil(table, table.Seats[0].Person!, PlayerOptionsKind.Intent);
+        await Task.Delay(200, Cancel);
+        using var moved = new HostedTables(_ => new FileArtifactStore(_runs), content: Healthier);
+        using var registry = await moved.RestartedAsync();
+
+        var picked = await registry.ByIdAsync(table.Id, Cancel);
+
+        picked.ShouldNotBeNull("replayed on the content it began on, not voided by the host's");
+        picked.Content.ShouldBe(table.Content);
+        picked.Content.ShouldNotBe((await moved.Composer.ComposeAsync(HostedTables.Bots, Cancel)).Content, "the host's own content moved");
+        (await moved.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().Void.ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// Tables that began on the same older content and are picked up at the same time share one load of it (ADR 0163):
+    /// none of them is replayed on the host's content, which would void it.
+    /// </summary>
+    [Fact]
+    public async Task Tables_of_one_older_content_picked_up_at_once_are_all_replayed_on_it()
+    {
+        var first = await Opened(HostedTables.OnePerson);
+        var second = await Opened(HostedTables.OnePerson);
+        await PlayUntil(first, first.Seats[0].Person!, PlayerOptionsKind.Intent);
+        await PlayUntil(second, second.Seats[0].Person!, PlayerOptionsKind.Intent);
+        await Task.Delay(200, Cancel);
+        using var moved = new HostedTables(_ => new FileArtifactStore(_runs), content: Healthier);
+        using var registry = await moved.RestartedAsync();
+
+        var picked = await Task.WhenAll(registry.ByIdAsync(first.Id, Cancel), registry.ByIdAsync(second.Id, Cancel));
+
+        picked.ShouldAllBe(table => table != null && table.Content == first.Content);
+    }
+
+    /// <summary>A table is picked up under the rules it began under (ADR 0163), whatever rules the host now reads.</summary>
+    [Fact]
+    public async Task A_table_picked_up_by_a_host_on_other_rules_plays_the_rules_it_began_under()
+    {
+        var table = await Opened(HostedTables.OnePerson);
+        await PlayUntil(table, table.Seats[0].Person!, PlayerOptionsKind.Intent);
+        await Task.Delay(200, Cancel);
+        using var moved = new HostedTables(_ => new FileArtifactStore(_runs), rules: RuleSet.Create(2, 3, 1, 5, 2.0));
+        using var registry = await moved.RestartedAsync();
+
+        var picked = await registry.ByIdAsync(table.Id, Cancel);
+
+        picked.ShouldNotBeNull();
+        picked.Session.Rules.ShouldBe(HostedTables.Rules);
+    }
+
+    /// <summary>
+    /// A table whose content was never kept -- opened before ADR 0163, or by a host that could not keep it -- is
+    /// replayed on the host's own content, as before, and voided when that no longer fits.
+    /// </summary>
+    [Fact]
+    public async Task A_table_whose_content_was_not_kept_is_replayed_on_the_host_s_and_voided_if_it_no_longer_fits()
+    {
+        var table = await Opened(HostedTables.OnePerson);
+        await PlayUntil(table, table.Seats[0].Person!, PlayerOptionsKind.Intent);
+        await Task.Delay(200, Cancel);
+        Directory.Delete(_before.ContentsDirectory, recursive: true);
+        using var moved = new HostedTables(_ => new FileArtifactStore(_runs), content: Healthier);
+        using var registry = await moved.RestartedAsync();
+
+        var picked = await registry.ByIdAsync(table.Id, Cancel);
+
+        picked.ShouldBeNull();
+        (await moved.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().Void.ShouldBeTrue();
+    }
+
+    /// <summary>The content after a deploy that moved it: the one creature a point of health more.</summary>
+    private static void Healthier(Studio.StudioContent content) => content.Write("Creatures/main.v1.json", """
+        {
+          "id": "creature:main:v1", "name": "Main", "creatureClass": "Creature",
+          "baseHealth": 21, "baseEnergy": 0, "baseDefense": 1, "baseInitiative": 5, "baseCriticalChance": 0,
+          "talentTreeId": "talent-tree:base", "startingSpellIds": ["spell:strike"]
+        }
+        """);
+
+    /// <summary>
     /// Each seat's account is told its match was voided (ADR 0163), once: a second process finds the table already
     /// ended, and tells nobody.
     /// </summary>

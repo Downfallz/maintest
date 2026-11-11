@@ -20,6 +20,14 @@ public sealed class ArtifactStoresTests
     }
 
     [Fact]
+    public async Task The_content_tables_began_on_is_kept_beside_the_runs_never_among_them()
+    {
+        var store = await ArtifactStores.OpenContentAsync(Path.Combine(Path.GetTempPath(), "downfall", "playtest"), TestContext.Current.CancellationToken);
+
+        store.ShouldBeOfType<FileArtifactStore>().RootDirectory.ShouldBe(Path.GetFullPath(Path.Combine(Path.GetTempPath(), "downfall", ArtifactStores.ContentContainer)));
+    }
+
+    [Fact]
     public async Task A_directory_is_a_file_store_under_it()
     {
         var store = await ArtifactStores.OpenAsync(Path.Combine(Path.GetTempPath(), "downfall-runs"), TestContext.Current.CancellationToken);
