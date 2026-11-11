@@ -1,5 +1,6 @@
-// The hosted table (ADR 0080, ADR 0082): one container app scaled between zero and one replica, the storage
-// account its sessions are recorded into, and the platform's sign-in in front of the lobby.
+// The hosted table (ADR 0080, ADR 0082, ADR 0162): the API app scaled between zero and one replica, the worker
+// app that takes the bots' turns, scaled on its queue, the hourly job that tends the tables, the storage account
+// all three record into and read, and the platform's sign-in in front of the lobby.
 //
 // Deployed into an existing resource group by .github/workflows/deploy.yml; infra/README.md says how the
 // group, the deploying identity and the sign-in registration are made once.
@@ -40,11 +41,37 @@ var accountArgs = empty(googleClientId) ? [] : [
 ]
 var suffix = uniqueString(resourceGroup().id)
 var containerName = 'playtests'
+var rulesFile = 'docs/tabletop/playtest.rules.json'
+var recordings = '${storage.properties.primaryEndpoints.blob}${containerName}'
 
-// The two roles the table needs: write and read its own recordings, and the index that finds them (ADR 0161).
-// Built-in roles, named by their ids.
+// The queues the bots' turns go through (ADR 0159, phase 5): made by the processes as they open them.
+var turnsQueue = 'agent-turns'
+var poisonQueue = 'agent-turns-poison'
+
+// The push keys as a secret of each app that sends notices, read by the host as a variable (ADR 0118).
+var pushSecrets = empty(pushKeys) ? [] : [
+  {
+    name: 'push-keys'
+    value: pushKeys
+  }
+]
+var pushEnv = empty(pushKeys) ? [] : [
+  {
+    name: 'DOWNFALL_PUSH_KEYS'
+    secretRef: 'push-keys'
+  }
+]
+
+// The roles the table's processes need: write and read the recordings, the index that finds them (ADR 0161),
+// and the queues the bots' turns go through (ADR 0162). Built-in roles, named by their ids.
 var storageBlobDataContributor = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
 var storageTableDataContributor = '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3'
+var storageQueueDataContributor = '974c5e8b-45b9-4653-ba55-5f855dd0fb88'
+var recordsAndIndexes = [
+  storageBlobDataContributor
+  storageTableDataContributor
+]
+var recordsIndexesAndQueues = concat(recordsAndIndexes, [storageQueueDataContributor])
 
 // Where the console lines go. Capped per day so a host that logs in a loop costs cents, not a surprise.
 resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
@@ -147,8 +174,8 @@ resource appEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = {
   }
 }
 
-// One replica at most: a seat blocks a thread while a person thinks, and a second replica would hold other
-// tables than the ones its players were told about (ADR 0080). Zero when nobody has a page open.
+// The API (ADR 0162): one replica at most, zero when nobody has a page open. Its bots' turns go on the queue for
+// the worker, and the hourly job tends its tables, so it answers requests and streams, and nothing else.
 resource app 'Microsoft.App/containerApps@2024-03-01' = {
   name: '${namePrefix}-table'
   location: location
@@ -161,12 +188,7 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
     configuration: {
       activeRevisionsMode: 'Single'
       // The push keys are a secret of the app, read by the table as a variable (ADR 0118); none when empty.
-      secrets: empty(pushKeys) ? [] : [
-        {
-          name: 'push-keys'
-          value: pushKeys
-        }
-      ]
+      secrets: pushSecrets
       ingress: {
         external: true
         targetPort: 8080
@@ -188,16 +210,14 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
             '--port'
             '8080'
             '--rules'
-            'docs/tabletop/playtest.rules.json'
+            rulesFile
             '--record'
-            '${storage.properties.primaryEndpoints.blob}${containerName}'
+            recordings
+            '--turns'
+            'worker'
+            '--tended'
           ], accountArgs)
-          env: empty(pushKeys) ? [] : [
-            {
-              name: 'DOWNFALL_PUSH_KEYS'
-              secretRef: 'push-keys'
-            }
-          ]
+          env: pushEnv
           resources: {
             cpu: json('0.5')
             memory: '1Gi'
@@ -232,27 +252,151 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
   }
 }
 
-// Scoped to the one account, for the app's own identity and nothing else.
-resource recordsSessions 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: storage
-  name: guid(storage.id, app.id, storageBlobDataContributor)
+// The worker (ADR 0162): the turn worker and the dead-letter worker, over the same store, picking tables up as
+// the API does. No ingress. Zero replicas while neither queue holds anything, one when either does: a second
+// would only take turns the first is already taking. It closes a match its turn ended, so it keeps the result
+// and tells the accounts as the API would, with the same sign-in and the same keys.
+resource worker 'Microsoft.App/containerApps@2025-01-01' = {
+  name: '${namePrefix}-worker'
+  location: location
+  identity: {
+    type: 'SystemAssigned'
+  }
   properties: {
-    principalId: app.identity.principalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataContributor)
+    environmentId: appEnvironment.id
+    workloadProfileName: 'Consumption'
+    configuration: {
+      activeRevisionsMode: 'Single'
+      secrets: pushSecrets
+    }
+    template: {
+      containers: [
+        {
+          name: 'worker'
+          image: image
+          args: concat([
+            'table-worker'
+            '--rules'
+            rulesFile
+            '--record'
+            recordings
+          ], accountArgs)
+          env: pushEnv
+          resources: {
+            cpu: json('0.5')
+            memory: '1Gi'
+          }
+        }
+      ]
+      scale: {
+        minReplicas: 0
+        maxReplicas: 1
+        // Read with the app's own identity: the account takes no key (ADR 0160).
+        rules: [
+          {
+            name: 'turns-owed'
+            custom: {
+              type: 'azure-queue'
+              metadata: {
+                accountName: storage.name
+                queueName: turnsQueue
+                queueLength: '1'
+              }
+              identity: 'system'
+            }
+          }
+          {
+            name: 'turns-given-up-on'
+            custom: {
+              type: 'azure-queue'
+              metadata: {
+                accountName: storage.name
+                queueName: poisonQueue
+                queueLength: '1'
+              }
+              identity: 'system'
+            }
+          }
+        ]
+      }
+    }
   }
 }
 
-// The index of the tables, in the same account: the join codes and the open tables the lobby lists (ADR 0161).
-resource indexesTables 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+// The tending job (ADR 0162): one pass of the sweep and of the invitations' expiry, every hour, and it exits.
+// The tables it picks up take no bot turn, and it tells nobody anything, so it holds no keys.
+resource tend 'Microsoft.App/jobs@2024-03-01' = {
+  name: '${namePrefix}-tend'
+  location: location
+  identity: {
+    type: 'SystemAssigned'
+  }
+  properties: {
+    environmentId: appEnvironment.id
+    workloadProfileName: 'Consumption'
+    configuration: {
+      triggerType: 'Schedule'
+      replicaTimeout: 900
+      replicaRetryLimit: 1
+      scheduleTriggerConfig: {
+        cronExpression: '17 * * * *'
+        parallelism: 1
+        replicaCompletionCount: 1
+      }
+    }
+    template: {
+      containers: [
+        {
+          name: 'tend'
+          image: image
+          args: concat([
+            'table-tend'
+            '--rules'
+            rulesFile
+            '--record'
+            recordings
+          ], accountArgs)
+          resources: {
+            cpu: json('0.25')
+            memory: '0.5Gi'
+          }
+        }
+      ]
+    }
+  }
+}
+
+// Scoped to the one account, for each process's own identity and nothing else: the API and the worker read and
+// write the recordings, the index and the queues; the job, the recordings and the index.
+resource apiRoles 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for role in recordsIndexesAndQueues: {
   scope: storage
-  name: guid(storage.id, app.id, storageTableDataContributor)
+  name: guid(storage.id, app.id, role)
   properties: {
     principalId: app.identity.principalId
     principalType: 'ServicePrincipal'
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageTableDataContributor)
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', role)
   }
-}
+}]
+
+resource workerRoles 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for role in recordsIndexesAndQueues: {
+  scope: storage
+  name: guid(storage.id, worker.id, role)
+  properties: {
+    principalId: worker.identity.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', role)
+  }
+}]
+
+resource tendRoles 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for role in recordsAndIndexes: {
+  scope: storage
+  name: guid(storage.id, tend.id, role)
+  properties: {
+    principalId: tend.identity.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', role)
+  }
+}]
 
 // The operator's door (ADR 0081): the platform signs them in and stamps who they are on every request it
 // forwards. Anonymous requests still pass, because a player joins by a code and has no account; only the
@@ -298,4 +442,10 @@ output url string = 'https://${app.properties.configuration.ingress.fqdn}'
 output redirectUri string = 'https://${app.properties.configuration.ingress.fqdn}/.auth/login/aad/callback'
 
 @description('Where sessions are recorded.')
-output recordings string = '${storage.properties.primaryEndpoints.blob}${containerName}'
+output recordings string = recordings
+
+@description('The app that takes the bots\' turns.')
+output worker string = worker.name
+
+@description('The job that tends the tables every hour.')
+output tendJob string = tend.name

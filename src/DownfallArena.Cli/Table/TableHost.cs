@@ -140,6 +140,8 @@ internal static class TableHost
         var admin = new AdminApi(registry, composer, gate, clock, described, stored, agents, push) { Accounts = accounts };
         // A table opened for a friend (ADR 0129): the lobby checks the friendship and tells the friend's devices.
         admin.Lobby.Friends = friendships;
+        // A host the hourly job tends lets no request do the job's work (ADR 0162).
+        admin.Lobby.Tended = options.Tended;
         admin.Lobby.Notices = accounts?.Notices;
         // How a match ended, to each seat's account (stage 4), named as the cards name them.
         composer.Notices = accounts?.Notices;
@@ -148,7 +150,7 @@ internal static class TableHost
         var leaderboard = accounts is null || results is null
             ? null
             : new LeaderboardApi(results, accounts, clock, spec => LobbyApi.BotName(agents.FirstOrDefault(agent => string.Equals(agent.Value, spec, StringComparison.OrdinalIgnoreCase))?.Label ?? spec));
-        using var server = new TableServer(options.Bind, options.Port, registry, new TableFiles(TableDirectory), admin, clock, stored, accounts, leaderboard, friends);
+        using var server = new TableServer(options.Bind, options.Port, registry, new TableFiles(TableDirectory), admin, clock, stored, accounts, leaderboard, friends) { Tended = options.Tended };
 
         Console.WriteLine($"Table on {server.Url}");
 
@@ -170,6 +172,10 @@ internal static class TableHost
             : accounts is null
                 ? "  Notices: on. A seat's page offers \"Notify me when it's my turn\"."
                 : "  Notices: on. A seat's page offers \"Notify me when it's my turn\"; the lobby offers \"Notify me on this device\" to a signed-in player.");
+
+        Console.WriteLine(options.Tended
+            ? "  Tending: by the hourly job (table-tend). Requests close no table that never began and let no invitation go (ADR 0162)."
+            : "  Tending: on requests, once a minute at most. --tended leaves it to the hourly job (table-tend).");
 
         // The place of the table the command line asks for is held first: a table composed into a host whose
         // tables are as many as it takes would be recorded and announced with nothing answering to its codes.

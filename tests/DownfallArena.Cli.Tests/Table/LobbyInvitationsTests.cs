@@ -85,6 +85,24 @@ public sealed class LobbyInvitationsTests : IDisposable
         (await table.Run!.RewrittenAsync(Cancel)).ShouldNotBeNull("the host that held the table lets it go at its next look");
     }
 
+    [Fact]
+    public async Task On_a_host_the_job_tends_an_invitation_that_ran_out_is_not_listed_nor_in_the_way_and_is_left_to_the_job()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var bastien = await PlayerAsync("bastien");
+        await BefriendAsync(mark, bastien);
+        (await LobbyAsync()).Tended = true;
+        var table = await InvitedTableAsync(mark, bastien);
+        _clock.Advance(LobbyApi.InvitationFor);
+
+        var listed = (await MineAsync(bastien)).GetProperty("invitations").GetArrayLength();
+        var another = await OpenForAsync(mark, bastien);
+
+        listed.ShouldBe(0, "it ran out");
+        another.Status.ShouldBe(201, "an invitation that ran out stands in nobody's way");
+        table.Seats[1].InvitedAccount.ShouldBe(bastien.Account.Id, "letting it go is the hourly job's");
+    }
+
     private static JsonElement Read(StudioResponse response) => JsonDocument.Parse(Encoding.UTF8.GetString(response.Body)).RootElement.Clone();
 
     private async Task<StudioResponse> OpenForAsync(SignedIn inviter, SignedIn friend) =>

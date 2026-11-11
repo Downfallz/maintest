@@ -227,8 +227,20 @@ Each phase ships on the one container app there is today and leaves the game pla
      process closes the match cannot cut its trace short. The worker tells no seat "your turn": it serves no page,
      so it cannot know who is looking. The API that serves the seat reads the turn within a second and tells
      it, as long as it is awake, which it is for five minutes after the last request.
-   - **6d.** The worker app scaled on the queue's length, the job, the queue role and the bootstrap's
-     condition, and the deployment of all three.
+   - **6d, done.** `infra/main.bicep` deploys the three from one image:
+     - The API runs `table --turns worker --tended`. With `--tended`, a request no longer sweeps the index nor
+       lets invitations go (`TableServer.Tended`, `LobbyApi.Tended`). It still lets go of the tables it holds
+       that nobody is at (`TableRegistry.LetGoOfIdleIfDue`). An invitation past its day is neither listed nor in
+       the way of a new one until the job lets it go.
+     - The worker app `<prefix>-worker` runs `table-worker` with the API's `--accounts` and push keys, with no
+       ingress. It scales from 0 to 1 on the length of `agent-turns` and `agent-turns-poison`, read with its own
+       identity.
+     - The Container Apps job `<prefix>-tend` runs `table-tend` at 17 minutes past every hour.
+     - Each process holds only the roles it uses on the one account: the API and the worker hold blob, table
+       and queue data; the job holds blob and table data.
+     - The bootstrap's condition lets the deployer assign the queue data role. A deployment made before this
+       slice runs `infra/bootstrap.sh setup` once more first.
+     - The image's smoke test runs both new commands.
 
 Phases 2 and 3 are where the risk is. Phase 4 is where the volume is.
 

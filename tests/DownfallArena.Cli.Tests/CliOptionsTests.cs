@@ -330,6 +330,14 @@ public sealed class CliOptionsTests
         options.PushKeys.ShouldBe("keys.json");
     }
 
+    [Fact]
+    public void A_host_is_told_a_job_tends_its_tables_and_tends_them_itself_otherwise()
+    {
+        CliOptions.Parse(["table", "--tended"]).Tended.ShouldBeTrue();
+        CliOptions.Parse(["table"]).Tended.ShouldBeFalse();
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["table-tend", "--tended"])).Message.ShouldContain("--tended");
+    }
+
     [Theory]
     [InlineData("table-worker", "--no-record")]
     [InlineData("table-tend", "--no-record")]

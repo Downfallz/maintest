@@ -29,10 +29,12 @@ if [[ ! "$PREFIX" =~ ^[a-z0-9]{3,11}$ ]]; then
   exit 2
 fi
 
-# The roles infra/main.bicep assigns to the app's own identity: Storage Blob Data Contributor for the recordings,
-# and Storage Table Data Contributor for the index of the tables (ADR 0161).
+# The roles infra/main.bicep assigns to the identities of the API, the worker and the job: Storage Blob Data
+# Contributor for the recordings, Storage Table Data Contributor for the index of the tables (ADR 0161), and
+# Storage Queue Data Contributor for the queues the bots' turns go through (ADR 0162).
 BLOB_CONTRIBUTOR="ba92f5b4-2d11-453d-a403-e96b0029c9fe"
 TABLE_CONTRIBUTOR="0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3"
+QUEUE_CONTRIBUTOR="974c5e8b-45b9-4653-ba55-5f855dd0fb88"
 
 # The application id of the registration with this display name, created when there is none.
 registration() {
@@ -114,7 +116,7 @@ setup() {
   scope="/subscriptions/$subscription/resourceGroups/$RESOURCE_GROUP"
 
   # The deploying identity: trusted for this repository's `azure` environment and nothing else, and allowed
-  # to change this one resource group. It may assign exactly one role, the one the template assigns.
+  # to change this one resource group. It may assign the roles the template assigns, and no other.
   deployer="$(registration "$DEPLOYER_NAME")"
   deployer_principal="$(principal "$deployer")"
   subject="repo:${REPO}:environment:${ENVIRONMENT}"
@@ -127,7 +129,7 @@ setup() {
     }"
   fi
   grant "$deployer_principal" Contributor "$scope"
-  condition="((!(ActionMatches{'Microsoft.Authorization/roleAssignments/write'})) OR (@Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {$BLOB_CONTRIBUTOR, $TABLE_CONTRIBUTOR})) AND ((!(ActionMatches{'Microsoft.Authorization/roleAssignments/delete'})) OR (@Resource[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {$BLOB_CONTRIBUTOR, $TABLE_CONTRIBUTOR}))"
+  condition="((!(ActionMatches{'Microsoft.Authorization/roleAssignments/write'})) OR (@Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {$BLOB_CONTRIBUTOR, $TABLE_CONTRIBUTOR, $QUEUE_CONTRIBUTOR})) AND ((!(ActionMatches{'Microsoft.Authorization/roleAssignments/delete'})) OR (@Resource[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {$BLOB_CONTRIBUTOR, $TABLE_CONTRIBUTOR, $QUEUE_CONTRIBUTOR}))"
   grant_on_condition "$deployer_principal" "Role Based Access Control Administrator" "$scope" "$condition"
 
   # The registration the platform signs the operator in with. No client secret: the platform uses the

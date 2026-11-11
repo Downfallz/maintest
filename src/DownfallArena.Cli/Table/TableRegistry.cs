@@ -627,19 +627,28 @@ internal sealed class TableRegistry : IDisposable
     /// <see cref="SweepAsync" />, at most once every <see cref="SweepEvery" />: what every request may afford, so a
     /// host whose admin panel nobody opens still lets go of the tables nobody is at.
     /// </summary>
-    public Task<IReadOnlyList<string>> SweepIfDueAsync(DateTimeOffset now, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<string>> SweepIfDueAsync(DateTimeOffset now, CancellationToken cancellationToken = default) =>
+        SweepDue(now) ? SweepAsync(now, cancellationToken) : Task.FromResult<IReadOnlyList<string>>([]);
+
+    /// <summary>
+    /// <see cref="LetGoOfIdle" />, at most once every <see cref="SweepEvery" />: what a request may afford on a host a
+    /// job tends (ADR 0162), which closes nothing it does not hold.
+    /// </summary>
+    public IReadOnlyList<string> LetGoOfIdleIfDue(DateTimeOffset now) => SweepDue(now) ? LetGoOfIdle(now) : [];
+
+    /// <summary>Whether a sweep is due, and if so, that it is taken now.</summary>
+    private bool SweepDue(DateTimeOffset now)
     {
         lock (_gate)
         {
             if (now - _swept < SweepEvery)
             {
-                return Task.FromResult<IReadOnlyList<string>>([]);
+                return false;
             }
 
             _swept = now;
+            return true;
         }
-
-        return SweepAsync(now, cancellationToken);
     }
 
     /// <summary>

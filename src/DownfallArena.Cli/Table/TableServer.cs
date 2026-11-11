@@ -65,6 +65,12 @@ internal sealed class TableServer : IDisposable
     public string Url => _host.Url;
 
     /// <summary>
+    /// Whether a job tends this host's tables (ADR 0162, <c>--tended</c>): a request then lets go of the tables this
+    /// process holds that nobody is at, and leaves closing the ones that never began to the job.
+    /// </summary>
+    public bool Tended { get; init; }
+
+    /// <summary>
     /// Whether the host is still rebuilding the tables an earlier host left open (ADR 0091). It serves from the
     /// first moment, because a platform that waits for the port to answer gives up after a minute and a host with
     /// many records to replay takes longer (ADR 0080); but while this is true a request for a table it does not
@@ -244,9 +250,11 @@ internal sealed class TableServer : IDisposable
         }
 
         // A host whose admin panel nobody opens still lets go of finished tables nobody reads and of tables
-        // that never began and nobody came to (ADR 0115): any request may sweep, once a minute at most.
+        // that never began and nobody came to (ADR 0115): any request may sweep, once a minute at most. On a host
+        // a job tends, the job closes the tables that never began, and a request lets go of what this process
+        // holds and nothing else (ADR 0162).
         var now = _clock.GetUtcNow();
-        foreach (var gone in await _registry.SweepIfDueAsync(now))
+        foreach (var gone in Tended ? _registry.LetGoOfIdleIfDue(now) : await _registry.SweepIfDueAsync(now))
         {
             Console.WriteLine($"  Session {gone} let go of: finished and unread, or never begun and nobody came.");
         }

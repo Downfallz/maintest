@@ -242,6 +242,42 @@ public sealed class TableServerTests : IAsyncDisposable
         (await Get($"{url}session/{finished.Id}", token: null)).StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 
+    /// <summary>
+    /// On a host the hourly job tends (ADR 0162), a request still lets go of the finished tables this process holds,
+    /// and closes no table it does not hold: that is the job's.
+    /// </summary>
+    [Fact]
+    public async Task On_a_host_a_job_tends_a_request_lets_go_of_what_it_holds_and_closes_nothing_else()
+    {
+        var url = Serve(OperatorGate.BehindPlatform(), tended: true);
+        var finished = await Opened(HostedTables.Bots);
+        await finished.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        await Finished(finished);
+        var elsewhere = await NeverBegunElsewhereAsync();
+        _clock.Now = elsewhere.CreatedAt + TableRegistry.NeverBegunFor + TableRegistry.FinishedFor;
+
+        (await Get($"{url}index.html", token: null)).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        // The page itself is served before the sweep; the next request finds the table gone.
+        (await Get($"{url}api/session", token: null)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        _registry.Held(finished.Id).ShouldBeNull();
+        (await _hosted.Stored!.RecordAsync(elsewhere.Id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Open, "closing it is the job's");
+    }
+
+    /// <summary>A table another process opened and wrote down, nobody came to, and nobody here holds.</summary>
+    private async Task<PlayedTable> NeverBegunElsewhereAsync()
+    {
+        using var other = _hosted.Registry();
+        var table = await _hosted.Composer.ComposeAsync(HostedTables.OnePerson, TestContext.Current.CancellationToken);
+        using (var place = (await other.ReserveAsync(TestContext.Current.CancellationToken)).ShouldNotBeNull())
+        {
+            await other.AddAsync(table, place, TestContext.Current.CancellationToken);
+        }
+
+        await table.RecordAsync(TestContext.Current.CancellationToken);
+        return table;
+    }
+
     /// <summary>A host whose lobby nobody opens still lets go: any request sweeps, by the host's clock.</summary>
     [Fact]
     public async Task Any_request_lets_go_of_a_table_nobody_has_been_at_for_long_enough()
@@ -392,10 +428,10 @@ public sealed class TableServerTests : IAsyncDisposable
         (await Get($"{url}api/seat/player1", "a-token-of-a-table-not-rebuilt-yet")).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
 
-    private string Serve(OperatorGate gate)
+    private string Serve(OperatorGate gate, bool tended = false)
     {
         var admin = new AdminApi(_registry, _hosted.Composer, gate, _clock, "Rules 2 creatures (a test)", _hosted.Stored);
-        _server = new TableServer(HttpHost.Loopback, FreePort(), _registry, new TableFiles(Path.Combine(AppContext.BaseDirectory, "table")), admin, _clock, _hosted.Stored);
+        _server = new TableServer(HttpHost.Loopback, FreePort(), _registry, new TableFiles(Path.Combine(AppContext.BaseDirectory, "table")), admin, _clock, _hosted.Stored) { Tended = tended };
         _serving = _server.RunAsync(_stopping.Token);
         return _server.Url;
     }
