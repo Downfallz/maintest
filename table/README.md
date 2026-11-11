@@ -502,6 +502,14 @@ The worker shows a notice unless a window on the page it opens is in front of so
 game, a "your turn" over the lobby, neither over its own page; every open page is told a notice arrived, so a lobby
 reads its lists again at once.
 
+## Loading and offline (ADR 0166)
+
+The host reads each file once, sends it compressed (Brotli or gzip) with an `ETag`, and answers 304 when the
+browser's copy is current. Pages, scripts, styles and `sw.js` are revalidated on every load, so a deploy reaches
+every page at its next load; pictures and the font are kept a day. Every page with the navigation registers the
+service worker, which serves nothing from a cache but `offline.html`, shown when a page cannot be loaded at all;
+it reloads by itself when the network is back.
+
 ## Friends
 
 Signed in, the lobby's **Friends** panel (ADR 0129, `docs/tabletop/friends-plan.md` stage 2) lists your friends, the

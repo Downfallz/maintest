@@ -15,7 +15,7 @@ internal static class PracticeHost
             var path = request.Url?.AbsolutePath ?? "/";
             if (!path.StartsWith("/api/", StringComparison.Ordinal))
             {
-                return files.Get(path);
+                return files.Get(path, request.Headers["If-None-Match"], request.Headers["Accept-Encoding"]);
             }
             var refusal = HttpHost.CrossSite(request.Headers["Sec-Fetch-Site"], request.HttpMethod, request.ContentType, "table");
             return refusal ?? await table.HandleAsync(request.HttpMethod, path, body, request.Headers[TableApi.TokenHeader], request.Headers["If-None-Match"], request.Url?.Query);

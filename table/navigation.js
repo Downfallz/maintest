@@ -251,6 +251,13 @@ export function mountNavigation(doc, storage, { onInvite, onChange = () => {}, o
   return { setOutstanding: friends.setOutstanding, inbox };
 }
 
+// Every page with the navigation has the service worker (ADR 0166), not only one whose player asked for notices: it
+// is what shows the offline page instead of the browser's error when the table cannot be reached. It asks for no
+// permission, and a browser that refuses it changes nothing.
+if (typeof navigator !== 'undefined' && navigator.serviceWorker?.register) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+
 if (typeof document !== 'undefined' && document.querySelector('[data-navigation]:not([data-navigation="lobby"])')) {
   let storage = null;
   try { storage = globalThis.localStorage; } catch { /* The menu also works without browser storage. */ }

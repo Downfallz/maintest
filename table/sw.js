@@ -1,6 +1,10 @@
 // The table's service worker (ADR 0118): it shows the "your turn" the host pushes, and opens the game when
-// the notice is tapped. It caches nothing and serves nothing -- a deploy must reach every page on its next
-// load, and a worker holding yesterday's page would stop that.
+// the notice is tapped. It serves no page of the table from a cache -- a deploy must reach every page on its next
+// load, and a worker holding yesterday's page would stop that. The one thing it keeps is the offline page (ADR 0166),
+// shown in place of the browser's own error when a page cannot be loaded at all.
+
+const OFFLINE = '/offline.html';
+const CACHE = 'downfall-offline-v1';
 
 const ICON = '/icon-192.png';
 const BADGE = '/notification-badge.png';
@@ -107,8 +111,27 @@ function read(event) {
   }
 }
 
-self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
+// A navigation goes to the network as it always did -- through the preload the browser started while the worker woke,
+// when there is one -- and only a navigation that could not be answered at all is shown the offline page. Nothing
+// else the page asks for is touched.
+async function navigate(event) {
+  try {
+    return (await event.preloadResponse) ?? await fetch(event.request);
+  } catch {
+    return (await caches.match(OFFLINE)) ?? Response.error();
+  }
+}
+
+// Only this one page, under one cache name: an older name is dropped, so nothing else is ever kept.
+async function activate() {
+  for (const name of await caches.keys()) if (name !== CACHE) await caches.delete(name);
+  await self.registration.navigationPreload?.enable();
+  await self.clients.claim();
+}
+
+self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.add(OFFLINE)).then(() => self.skipWaiting())));
+self.addEventListener('activate', event => event.waitUntil(activate()));
+self.addEventListener('fetch', event => { if (event.request.mode === 'navigate') event.respondWith(navigate(event)); });
 self.addEventListener('push', event => event.waitUntil(onPush(read(event))));
 self.addEventListener('notificationclick', event => {
   event.notification.close();

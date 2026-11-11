@@ -3,6 +3,8 @@
 Date: 2026-10-31
 
 Status: Accepted. Amends ADR 0054 (the page polls) and ADR 0080 (the hosted table's configuration).
+Amended by [0166](0166-serve-the-table-s-files-once-compressed-and-revalidated.md): the worker keeps one page, the
+offline page, and every page registers it.
 
 ## Context
 
