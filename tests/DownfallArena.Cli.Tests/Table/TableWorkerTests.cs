@@ -48,6 +48,7 @@ public sealed class TableWorkerTests : IDisposable
             await Task.Delay(100, Cancel);
         }
 
+        var beforeTheHost = (await _hosted.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().Status;
         await table.Session.CatchUpAsync(Cancel);
         await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), Cancel);
         for (var waited = 0; waited < 300 && !(table.IsFinished && table.Run!.IsClosed); waited++)
@@ -59,6 +60,7 @@ public sealed class TableWorkerTests : IDisposable
         await working;
 
         options.Command.ShouldBe(CliOptions.WorkerCommand);
+        beforeTheHost.ShouldBe(TableRecord.Finished, "the worker wrote the match before the host read its end");
         (await _hosted.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Finished);
         table.Run!.IsClosed.ShouldBeTrue("the host serves the session the worker wrote");
         var episodes = await File.ReadAllLinesAsync(Path.Combine(_hosted.RunsDirectory, table.Id, RunRecorder.EpisodesFile), Cancel);

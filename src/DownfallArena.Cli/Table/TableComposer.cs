@@ -441,7 +441,7 @@ internal sealed class TableComposer
 
             // One process closes the files and tells the seats, however many hold the table (ADR 0162): the others
             // wait for the record to say it is done, and serve the session from what that one wrote.
-            if (!await ClaimedAsync(run, session.MatchId))
+            if (!await ClaimedAsync(run, session.MatchId, (session as IAgentTurnTaker)?.Stopping ?? CancellationToken.None))
             {
                 return;
             }
@@ -478,25 +478,34 @@ internal sealed class TableComposer
     /// as long as its claim stands, and serves the session from what it wrote; a claim that ran out unfinished is a
     /// process that stopped, and this one claims the closing in its place.
     /// </summary>
-    private async Task<bool> ClaimedAsync(PlaytestRun run, MatchId matchId)
+    /// <param name="stopping">The table's own: a table let go of, or a host stopping, waits for nobody.</param>
+    private async Task<bool> ClaimedAsync(PlaytestRun run, MatchId matchId, CancellationToken stopping)
     {
-        for (var claims = 0; claims < ClosingClaims; claims++)
+        try
         {
-            if (await run.ClaimClosingAsync())
+            for (var claims = 0; claims < ClosingClaims; claims++)
             {
-                return true;
-            }
-
-            for (var waited = TimeSpan.Zero; waited <= PlaytestRun.ClosingHeld; waited += ClosingLooks)
-            {
-                if (await run.ClosedElsewhereAsync(matchId))
+                if (await run.ClaimClosingAsync(stopping))
                 {
-                    Console.WriteLine($"  Session {run.SessionId} was written to '{run.Location}' by another process.");
-                    return false;
+                    return true;
                 }
 
-                await Task.Delay(ClosingLooks, _clock);
+                for (var waited = TimeSpan.Zero; waited <= PlaytestRun.ClosingHeld; waited += ClosingLooks)
+                {
+                    if (await run.ClosedElsewhereAsync(matchId, stopping))
+                    {
+                        Console.WriteLine($"  Session {run.SessionId} was written to '{run.Location}' by another process.");
+                        return false;
+                    }
+
+                    await Task.Delay(ClosingLooks, _clock, stopping);
+                }
             }
+        }
+        catch (OperationCanceledException) when (stopping.IsCancellationRequested)
+        {
+            // Let go of, or stopping: whoever picks the table up next closes it, or sees it closed.
+            return false;
         }
 
         Console.WriteLine($"  Session {run.SessionId} is being written by another process that has not finished it.");

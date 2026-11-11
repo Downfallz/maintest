@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Ports;
@@ -64,6 +65,14 @@ internal static class TableWorker
             stopping.Cancel();
         };
         Console.CancelKeyPress += stop;
+
+        // The platform stops a replica it scales in with SIGTERM: the item being taken comes back to the queue
+        // rather than being cut off between two writes.
+        using var terminated = PosixSignalRegistration.Create(PosixSignal.SIGTERM, context =>
+        {
+            context.Cancel = true;
+            stopping.Cancel();
+        });
         using var sender = keys is null ? null : new WebPushSender(keys);
         try
         {
@@ -132,12 +141,41 @@ internal static class TableWorker
             ? "  Notices: off. How a match ended reaches nobody's devices from here (--accounts and --push-keys)."
             : "  Notices: on. Each seat's account is told how a match ended when its last turn is taken here.");
         using var registry = new TableRegistry(over.Index) { Loader = new TableLoader(new StoredSessions(over.Store), composer, clock), Basis = composer.Basis };
-        var working = await TableHost.StartWorkersAsync(over.Channels, turns, registry, clock, stopping);
+        using var running = CancellationTokenSource.CreateLinkedTokenSource(stopping);
+        try
+        {
+            var working = await TableHost.StartWorkersAsync(over.Channels, turns, registry, clock, running.Token);
 
-        // What the host writes to the tables this worker holds -- a seat's tap, a closed table, a seat changing
-        // hands -- is seen as the host sees the worker's (ADR 0162).
-        var watching = new TableWatch(registry, clock).RunAsync(stopping);
-        await working;
-        await watching;
+            // What the host writes to the tables this worker holds -- a seat's tap, a closed table, a seat changing
+            // hands -- is seen as the host sees the worker's (ADR 0162); and a finished table nobody is at any more is
+            // let go of, as a host lets go of it, or a worker that never stops would hold every table it ever took.
+            var watching = new TableWatch(registry, clock).RunAsync(running.Token);
+            var letting = LetGoOfIdleAsync(registry, clock, running.Token);
+            await working;
+            await watching;
+            await letting;
+        }
+        finally
+        {
+            // A worker that stopped on its own stops the rest before the tables are let go of under them.
+            await running.CancelAsync();
+        }
+    }
+
+    /// <summary>Lets go of the tables nobody is at any more, every <see cref="TableRegistry.SweepEvery" />, until stopped.</summary>
+    private static async Task LetGoOfIdleAsync(TableRegistry registry, TimeProvider clock, CancellationToken stopping)
+    {
+        try
+        {
+            while (!stopping.IsCancellationRequested)
+            {
+                await Task.Delay(TableRegistry.SweepEvery, clock, stopping);
+                registry.LetGoOfIdle(clock.GetUtcNow());
+            }
+        }
+        catch (OperationCanceledException) when (stopping.IsCancellationRequested)
+        {
+            // Stopped.
+        }
     }
 }

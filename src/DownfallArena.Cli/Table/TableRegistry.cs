@@ -648,6 +648,28 @@ internal sealed class TableRegistry : IDisposable
     /// </summary>
     public async Task<IReadOnlyList<string>> SweepAsync(DateTimeOffset now, CancellationToken cancellationToken = default)
     {
+        List<string> swept = [.. LetGoOfIdle(now)];
+        if (Loader is { } loader)
+        {
+            foreach (var listed in await ListedAsync(cancellationToken))
+            {
+                if (Held(listed.Table) is null && TableSummary.Parse(listed.Summary) is { Begun: false } && now - listed.CreatedAt >= NeverBegunFor
+                    && await ExpiredAsync(loader, listed.Table, now, cancellationToken))
+                {
+                    swept.Add(listed.Table);
+                }
+            }
+        }
+
+        return swept;
+    }
+
+    /// <summary>
+    /// The half of the sweep that is this process's own: lets go of the tables it holds that nobody is at any more
+    /// (see the class remarks), and touches nothing it does not hold. What a worker, which tends nothing, does.
+    /// </summary>
+    public IReadOnlyList<string> LetGoOfIdle(DateTimeOffset now)
+    {
         List<PlayedTable> gone = [];
         lock (_gate)
         {
@@ -668,20 +690,7 @@ internal sealed class TableRegistry : IDisposable
             table.Close();
         }
 
-        List<string> swept = [.. gone.Select(table => table.Id)];
-        if (Loader is { } loader)
-        {
-            foreach (var listed in await ListedAsync(cancellationToken))
-            {
-                if (Held(listed.Table) is null && TableSummary.Parse(listed.Summary) is { Begun: false } && now - listed.CreatedAt >= NeverBegunFor
-                    && await ExpiredAsync(loader, listed.Table, now, cancellationToken))
-                {
-                    swept.Add(listed.Table);
-                }
-            }
-        }
-
-        return swept;
+        return [.. gone.Select(table => table.Id)];
     }
 
     /// <summary>A table nobody holds closed through its record; a failure is a line on the console, and the next sweep tries again.</summary>

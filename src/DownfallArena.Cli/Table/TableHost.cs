@@ -78,8 +78,11 @@ internal static class TableHost
         var mode = TurnsOf(options);
         if (mode == TurnsMode.Worker && !(store is not null && ArtifactStores.IsContainerUrl(options.Record ?? DefaultRunsDirectory)))
         {
-            // A directory's queues are this process's own: no table-worker could take a turn put on them.
-            Console.WriteLine($"  Turns: a directory has no queue another process reads, so the bots' turns are taken by a worker here (--turns worker needs --record <container-url>).");
+            // A directory's queues are this process's own, and a host recording nothing has no store a worker could
+            // pick its tables up from: no table-worker could take a turn put on them.
+            Console.WriteLine(store is null
+                ? "  Turns: this host records nothing a worker could pick its tables up from, so the bots' turns are taken by a worker here (--turns worker needs --record <container-url>)."
+                : "  Turns: a directory has no queue another process reads, so the bots' turns are taken by a worker here (--turns worker needs --record <container-url>).");
             mode = TurnsMode.Queue;
         }
 

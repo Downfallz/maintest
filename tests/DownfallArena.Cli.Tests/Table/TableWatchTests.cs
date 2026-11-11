@@ -152,6 +152,31 @@ public sealed class TableWatchTests : IDisposable
     }
 
     [Fact]
+    public async Task A_run_that_takes_over_a_claim_that_ran_out_writes_the_match_once()
+    {
+        using var registry = _here.Registry();
+        var table = await RecordedAsync(registry, Randoms);
+        using var elsewhere = _there.Registry();
+        var there = (await elsewhere.ByIdAsync(table.Id, Cancel)).ShouldNotBeNull();
+        await PlayedOutAsync((IAgentTurnTaker)there.Session);
+        await ClosedAsync(there);
+        // The other process wrote the match and stopped before its record said so: its claim ran out since.
+        var record = (await _here.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull();
+        await new FileArtifactStore(_runs).Writer(table.Id).WriteJsonAsync(TableRecord.File, record with { Status = TableRecord.Open }, Cancel);
+        await File.WriteAllTextAsync(
+            Path.Combine(_runs, table.Id, PlaytestRun.ClosingFile),
+            JsonSerializer.Serialize(new { By = "stopped", At = DateTimeOffset.UtcNow - PlaytestRun.ClosingHeld - TimeSpan.FromMinutes(1) }, ArtifactJson.DocumentOptions),
+            Cancel);
+
+        (await table.Session.CatchUpAsync(Cancel)).ShouldBeTrue();
+        await ClosedAsync(table);
+
+        var episodes = await File.ReadAllLinesAsync(Path.Combine(_runs, table.Id, RunRecorder.EpisodesFile), Cancel);
+        episodes.Length.ShouldBe(2, "the dataset is started over by whoever closes it, not added to");
+        (await _here.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Finished);
+    }
+
+    [Fact]
     public async Task A_claim_on_closing_a_session_stands_for_one_run_until_it_runs_out()
     {
         using var registry = _here.Registry();

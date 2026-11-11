@@ -751,13 +751,12 @@ internal sealed class PlaytestRun
         // Taken before the recorder is handed the match, because being handed it is what makes it forget.
         _kept = _events.EntriesOf(matchId);
 
-        // An earlier host may have got as far as writing the steps and the episodes and no further -- it stopped
-        // before the record said finished, or could not write that. Written into again as they are, a dataset
-        // would hold the match twice under a manifest that counts it once.
-        if (_reopened)
-        {
-            await _recorder.StartAsync(cancellationToken);
-        }
+        // Another run may have got as far as writing the steps and the episodes and no further -- it stopped
+        // before the record said finished, or could not write that: an earlier host, or another process whose
+        // claim on closing ran out (ADR 0162), which this run need not have been opened over. Written into again
+        // as they are, a dataset would hold the match twice under a manifest that counts it once, so they are
+        // started over: the steps and the episodes are only ever written here, at the close.
+        await _recorder.StartAsync(cancellationToken);
 
         await _recorder.MatchPlayedAsync(matchId, _seed, player1Board, cancellationToken);
         await _recorder.FinishAsync(cancellationToken);
@@ -795,6 +794,8 @@ internal sealed class PlaytestRun
                 return false;
             }
 
+            // Two machines' clocks compared: a claim's two minutes are a few seconds more or less, which only moves
+            // how soon a process that stopped is taken over from.
             var now = _clock.GetUtcNow();
             var read = await _reader.ReadTaggedAsync(ClosingFile, cancellationToken);
             if (read is not null && ClosingOf(read.Text) is { } held && held.By != _closer && now - held.At < ClosingHeld)

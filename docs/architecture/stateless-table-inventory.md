@@ -210,12 +210,16 @@ Each phase ships on the one container app there is today and leaves the game pla
      laptop, with no job, still sweeps.
    - **6c, done.** `table-worker` (`TableWorker`): the two workers of 5b in a process of their own, over a
      container's store and queues (a directory's queues are one process's, so it refuses one). It picks the
-     tables up as a host does and watches them as a host does (6a). The API runs `--turns worker`
-     (`DOWNFALL_TURNS=worker`): its bots' turns go on the queue and it runs no worker; on a directory it says so
+     tables up as a host does, watches them as a host does (6a), lets go of the ones nobody is at
+     (`TableRegistry.LetGoOfIdle`, the held half of the sweep) and stops on SIGTERM. It takes the host's
+     `--accounts` and push keys: a match its turn ends is kept for the ladder and told to the seats' accounts
+     from here. ADR 0162's "`--turns queue` and no workers" is `--turns worker` (`DOWNFALL_TURNS=worker`): the
+     API's bots' turns go on the queue and it runs no worker; on a directory, or recording nothing, it says so
      and takes them with a worker of its own, as `--turns queue` does. With two processes holding one table,
      either may see its match end: one closes the session, the one whose claim on it stands
      (`PlaytestRun.ClaimClosingAsync`, `closing.json` beside the record, two minutes, then another may take it
-     over). It keeps the result, writes the files once and tells the seats' accounts; the other waits for the
+     over). It keeps the result, writes the files once -- started over, so a takeover never adds to what a
+     process that stopped half wrote -- and tells the seats' accounts; the other waits for the
      record to say finished and serves what it wrote. The worker tells no seat "your turn": it serves no page,
      so it cannot know who is looking. The API that serves the seat reads the turn within a second and tells
      it, as long as it is awake, which it is for five minutes after the last request.
