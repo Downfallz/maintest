@@ -171,3 +171,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0163](0163-keep-a-table-on-the-content-it-began-on-and-void-what-no-longer-replays.md) | Keep a table on the content it began on, and void a match its journal no longer replays | Accepted |
 | [0164](0164-read-on-what-the-host-says-changed-never-on-a-clock.md) | Read on what the host says changed, never on a clock: the lobby's stream, and no fallback poll | Accepted |
 | [0165](0165-relay-what-moved-through-azure-web-pubsub.md) | Relay what moved through Azure Web PubSub: pages and processes told whichever process moved it | Accepted |
+| [0166](0166-serve-the-table-s-files-once-compressed-and-revalidated.md) | Serve the table's files once, compressed and revalidated, and keep an offline page | Accepted |

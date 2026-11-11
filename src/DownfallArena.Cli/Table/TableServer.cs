@@ -212,7 +212,7 @@ internal sealed class TableServer : IDisposable
         // Old seat links keep working; an ordinary visit opens the player lobby.
         if (path == "/" && request.Url?.Query is not { Length: > 0 })
         {
-            return _files.Get("/lobby");
+            return _files.Get("/lobby", request.Headers["If-None-Match"], request.Headers["Accept-Encoding"]);
         }
 
         // Bookmarks and invitations can carry seat capabilities in their query string.
@@ -226,12 +226,12 @@ internal sealed class TableServer : IDisposable
         {
             return request.Url?.Query.Contains("token=", StringComparison.Ordinal) == true
                 ? StudioResponse.OfRedirect(AdminApi.Page + request.Url.Query)
-                : _files.Get("/lobby");
+                : _files.Get("/lobby", request.Headers["If-None-Match"], request.Headers["Accept-Encoding"]);
         }
 
         if (!path.StartsWith("/api/", StringComparison.Ordinal) && !path.StartsWith(SessionPrefix, StringComparison.Ordinal))
         {
-            return _files.Get(path);
+            return _files.Get(path, request.Headers["If-None-Match"], request.Headers["Accept-Encoding"]);
         }
 
         // Both the API and the session page go behind the same-origin fence. The session page especially: it

@@ -1,0 +1,47 @@
+using System.IO.Compression;
+using System.Security.Cryptography;
+
+namespace DownfallArena.Cli.Table;
+
+/// <summary>
+/// One of the table's files as it is served (ADR 0166): its bytes, the tag that names them, and the same bytes
+/// compressed for a browser that takes Brotli or gzip. Pictures and the font are compressed already and kept as they
+/// are; a text file too small to gain is kept as it is too.
+/// </summary>
+internal sealed record ServedFile(DateTime Written, string Tag, byte[] Raw, byte[]? Brotli, byte[]? Gzip)
+{
+    /// <summary>Below this, compressing costs more than it saves.</summary>
+    public const int Smallest = 1024;
+
+    public static ServedFile Read(string path, DateTime written, bool compress)
+    {
+        var raw = File.ReadAllBytes(path);
+        var tag = $"\"{Convert.ToHexStringLower(SHA256.HashData(raw))[..32]}\"";
+        return compress && raw.Length >= Smallest
+            ? new ServedFile(written, tag, raw, Compressed(raw, stream => new BrotliStream(stream, CompressionLevel.Optimal)), Compressed(raw, stream => new GZipStream(stream, CompressionLevel.Optimal)))
+            : new ServedFile(written, tag, raw, null, null);
+    }
+
+    /// <summary>The encoding this browser takes, Brotli first, and the bytes in it; no encoding, the raw bytes.</summary>
+    public (string? Encoding, byte[] Body) For(string? acceptEncoding)
+    {
+        var accepted = (acceptEncoding ?? string.Empty).Split(',').Select(one => one.Split(';')[0].Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (Brotli is not null && accepted.Contains("br"))
+        {
+            return ("br", Brotli);
+        }
+
+        return Gzip is not null && accepted.Contains("gzip") ? ("gzip", Gzip) : (null, Raw);
+    }
+
+    private static byte[] Compressed(byte[] raw, Func<Stream, Stream> compressor)
+    {
+        using var buffer = new MemoryStream();
+        using (var compressing = compressor(buffer))
+        {
+            compressing.Write(raw);
+        }
+
+        return buffer.ToArray();
+    }
+}

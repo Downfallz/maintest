@@ -86,6 +86,7 @@ internal sealed class TableFiles
             // page and a notification show: the manifest and the icon, as a vector and as the two bitmaps
             // Android asks for.
             ["/sw.js"] = (Path.Combine(tableDirectory, "sw.js"), JavaScript),
+            ["/offline.html"] = (Path.Combine(tableDirectory, "offline.html"), StudioResponse.Html),
             ["/manifest.webmanifest"] = (Path.Combine(tableDirectory, "manifest.webmanifest"), Manifest),
             ["/icon.svg"] = (Path.Combine(tableDirectory, "icon.svg"), Svg),
             ["/brand-mark.svg"] = (Path.Combine(tableDirectory, "brand-mark.svg"), Svg),
@@ -192,7 +193,13 @@ internal sealed class TableFiles
     /// <summary>The routes this host serves, so a test can hold them against what the page actually imports.</summary>
     public IReadOnlyCollection<string> Routes => _routes.Keys;
 
-    public StudioResponse Get(string path)
+    public StudioResponse Get(string path) => Get(path, ifNoneMatch: null, acceptEncoding: null);
+
+    /// <summary>
+    /// A file as the page's browser asks for it: unchanged since its copy (<paramref name="ifNoneMatch" />) is a 304 and
+    /// no body; otherwise the bytes, compressed when the browser takes Brotli or gzip, with the tag that names them.
+    /// </summary>
+    public StudioResponse Get(string path, string? ifNoneMatch, string? acceptEncoding)
     {
         if (path == "/favicon.ico")
         {
@@ -209,9 +216,67 @@ internal sealed class TableFiles
             return StudioResponse.OfPlainText(500, $"'{route.Path}' is missing. Run the table from the repository root.");
         }
 
-        // A bitmap is bytes; everything else the table ships is text.
-        return route.ContentType is Png or Webp or Woff2
-            ? new StudioResponse(200, route.ContentType, File.ReadAllBytes(route.Path))
-            : StudioResponse.OfText(200, route.ContentType, File.ReadAllText(route.Path));
+        var served = Served(route.Path, route.ContentType);
+        var (encoding, body) = served.For(acceptEncoding);
+        var tag = encoding is null ? served.Tag : $"{served.Tag[..^1]}-{encoding}\"";
+        List<KeyValuePair<string, string>> headers =
+        [
+            new("ETag", tag),
+            new("Cache-Control", Lasting(route.ContentType) ? LastingCache : RevalidatedCache),
+            new("Vary", "Accept-Encoding"),
+        ];
+        if (Matches(ifNoneMatch, served.Tag))
+        {
+            return new StudioResponse(304, route.ContentType, [], headers);
+        }
+
+        if (encoding is not null)
+        {
+            headers.Add(new("Content-Encoding", encoding));
+        }
+
+        return new StudioResponse(200, route.ContentType, body, headers);
+    }
+
+    /// <summary>
+    /// Images and the font: kept a day by the browser and used while it asks again for a week, since a deploy changes
+    /// them rarely and a stale one is only a picture. Everything else -- pages, scripts, styles, the worker -- is asked
+    /// again on every load, so a deploy reaches every page at its next load (ADR 0118), and answered 304 when it did
+    /// not change (ADR 0166).
+    /// </summary>
+    public const string LastingCache = "public, max-age=86400, stale-while-revalidate=604800";
+
+    public const string RevalidatedCache = "no-cache";
+
+    private static bool Lasting(string contentType) => contentType is Png or Webp or Woff2;
+
+    // Whether the browser's copy is this one, in whichever encoding it was given.
+    private static bool Matches(string? ifNoneMatch, string tag)
+    {
+        if (string.IsNullOrWhiteSpace(ifNoneMatch))
+        {
+            return false;
+        }
+
+        var bare = tag[..^1];
+        return ifNoneMatch.Split(',').Select(one => one.Trim().Replace("W/", string.Empty, StringComparison.Ordinal))
+            .Any(one => one == "*" || one == tag || (one.StartsWith(bare + "-", StringComparison.Ordinal) && one.EndsWith('"')));
+    }
+
+    // Each file is read once, hashed once and compressed once, and read again only when it changed on disk: what a
+    // developer editing the pages while the host runs expects, and nothing a deployed image ever does.
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, ServedFile> _served = new(StringComparer.Ordinal);
+
+    private ServedFile Served(string path, string contentType)
+    {
+        var written = File.GetLastWriteTimeUtc(path);
+        if (_served.TryGetValue(path, out var held) && held.Written == written)
+        {
+            return held;
+        }
+
+        var made = ServedFile.Read(path, written, compress: !Lasting(contentType));
+        _served[path] = made;
+        return made;
     }
 }
