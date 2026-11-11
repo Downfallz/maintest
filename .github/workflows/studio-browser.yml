@@ -6,9 +6,15 @@ on:
       - 'table/**'
       - 'battle/**'
       - 'src/**'
+      # Not the console commands no page reaches -- play, human, evaluate (ADR 0167).
+      - '!src/DownfallArena.Cli/ConsoleAgent.cs'
+      - '!src/DownfallArena.Cli/ConsoleMatchLog.cs'
+      - '!src/DownfallArena.Cli/EvaluationConsole.cs'
       - 'viewer/viewer.css'
       - 'data/**'
       - '.github/workflows/studio-browser.yml'
+      # Last, so no pattern above takes it back: Markdown is read by no page and no spec.
+      - '!**/*.md'
   workflow_dispatch:
 permissions:
   contents: read
