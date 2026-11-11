@@ -14,15 +14,15 @@ internal static class ResultDocuments
 
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web) { WriteIndented = true };
 
-    public static string PathOf(MatchResult result)
+    public static string PathOf(MatchResult result) => $"{Prefix}{result.FinishedAt.UtcDateTime:yyyy-MM}/{IdOf(result):D}.json";
+
+    /// <summary>The match's id, which names its record wherever it is kept.</summary>
+    public static Guid IdOf(MatchResult result)
     {
         ArgumentNullException.ThrowIfNull(result);
-        if (!Guid.TryParse(result.MatchId, out var match))
-        {
-            throw new ArgumentException($"'{result.MatchId}' is not a match id.", nameof(result));
-        }
-
-        return $"{Prefix}{result.FinishedAt.UtcDateTime:yyyy-MM}/{match:D}.json";
+        return Guid.TryParse(result.MatchId, out var match)
+            ? match
+            : throw new ArgumentException($"'{result.MatchId}' is not a match id.", nameof(result));
     }
 
     public static string Write(MatchResult result) => JsonSerializer.Serialize(

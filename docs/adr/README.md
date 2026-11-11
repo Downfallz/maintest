@@ -173,3 +173,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0165](0165-relay-what-moved-through-azure-web-pubsub.md) | Relay what moved through Azure Web PubSub: pages and processes told whichever process moved it | Accepted |
 | [0166](0166-serve-the-table-s-files-once-compressed-and-revalidated.md) | Serve the table's files once, compressed and revalidated, and keep an offline page | Accepted |
 | [0167](0167-run-the-workflows-on-what-they-read.md) | Run the workflows on what they read: no learning loop on push, no republished studio for the table's host | Accepted |
+| [0168](0168-keep-match-results-in-azure-table-storage.md) | Keep match results in Azure Table Storage, by match and by account | Accepted |

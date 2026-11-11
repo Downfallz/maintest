@@ -112,7 +112,11 @@ internal static class ArtifactStores
         return await BlobArtifactStore.OpenAsync(container, cancellationToken);
     }
 
-    /// <summary>Where finished matches with an account in them are kept (ADR 0122, stage 5): beside the accounts, under <c>results/</c>.</summary>
+    /// <summary>
+    /// Where finished matches with an account in them are kept (ADR 0122, stage 5): files beside the accounts under
+    /// <c>results/</c> for a directory, and the storage account's table <c>matchresults</c> for a container (ADR 0168),
+    /// which takes in the result blobs the accounts' container kept before it the first time it is opened.
+    /// </summary>
     public static async Task<IMatchResults> OpenResultsAsync(string target, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(target);
@@ -122,11 +126,15 @@ internal static class ArtifactStores
             return new FileMatchResults(Path.Combine(Path.GetDirectoryName(runs) ?? runs, AccountsContainer));
         }
 
-        var uri = AccountsUri(new Uri(target, UriKind.Absolute));
+        var recordings = new Uri(target, UriKind.Absolute);
+        var uri = AccountsUri(recordings);
         var container = IsEmulator(uri)
             ? new BlobContainerClient(uri, new StorageSharedKeyCredential(DevelopmentAccount, DevelopmentKey))
             : new BlobContainerClient(uri, new DefaultAzureCredential());
-        return await BlobMatchResults.OpenAsync(container, cancellationToken);
+        var table = IsEmulator(recordings)
+            ? new TableClient(TablesUri(recordings), StorageMatchResults.Name, new TableSharedKeyCredential(DevelopmentAccount, DevelopmentKey))
+            : new TableClient(TablesUri(recordings), StorageMatchResults.Name, new DefaultAzureCredential());
+        return await StorageMatchResults.OpenAsync(table, await BlobMatchResults.OpenAsync(container, cancellationToken), cancellationToken);
     }
 
     /// <summary>Where an account's devices are kept (friends plan, stage 1): beside the accounts, under <c>devices/</c>.</summary>
