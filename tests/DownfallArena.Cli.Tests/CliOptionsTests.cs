@@ -292,6 +292,23 @@ public sealed class CliOptionsTests
         Should.Throw<ArgumentException>(() => CliOptions.Parse(args)).Message.ShouldContain("--");
     }
 
+    [Fact]
+    public void The_bots_turns_are_taken_in_the_process_unless_the_table_is_told_to_queue_them()
+    {
+        CliOptions.Parse(["table"]).QueuedTurns.ShouldBeFalse();
+        CliOptions.Parse(["table", "--turns", "process"]).QueuedTurns.ShouldBeFalse();
+        CliOptions.Parse(["table", "--turns", "queue"]).QueuedTurns.ShouldBeTrue();
+    }
+
+    [Theory]
+    [InlineData("table", "--turns", "worker")]
+    [InlineData("play", "--turns", "queue")]
+    [InlineData("table", "--turns", "queue", "--practice")]
+    public void Turns_the_table_cannot_take_that_way_are_refused_by_name(params string[] args)
+    {
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(args)).Message.ShouldContain("--turns");
+    }
+
     /// <summary>Asking for both is asking for opposite things, and is refused by name rather than resolved.</summary>
     [Fact]
     public void Recording_nowhere_and_recording_somewhere_cannot_both_be_asked_for()

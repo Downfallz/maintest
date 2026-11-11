@@ -145,6 +145,33 @@ public sealed class TableIndexFailuresTests : IDisposable
         (await hosted.Index.OpenAsync(0, 10, Cancel)).ShouldHaveSingleItem().Table.ShouldBe(table.Id);
     }
 
+    [Fact]
+    public async Task A_table_whose_store_is_out_is_unavailable_rather_than_gone_and_is_picked_up_once_the_store_is_back()
+    {
+        RecordRefused? store = null;
+        using var hosted = new HostedTables(directory => store = new RecordRefused(new FileArtifactStore(directory)));
+        using var first = hosted.Registry();
+        var table = await hosted.Composer.ComposeAsync(HostedTables.OnePerson, Cancel);
+        using (var place = (await first.ReserveAsync(Cancel)).ShouldNotBeNull())
+        {
+            await first.AddAsync(table, place, Cancel);
+        }
+
+        await table.RecordAsync(Cancel);
+        using var restarted = hosted.Registry();
+        store!.ReadsRefused = true;
+
+        var unavailable = await restarted.FindAsync(table.Id, Cancel);
+        var taker = await Should.ThrowAsync<IOException>(() => TableHost.TakerAsync(restarted, table.Id, Cancel));
+        store.ReadsRefused = false;
+        var back = await restarted.FindAsync(table.Id, Cancel);
+
+        unavailable.Table.ShouldBeNull();
+        unavailable.Unavailable.ShouldNotBeNull().ShouldContain("The store is out.");
+        taker.Message.ShouldContain("The store is out.");
+        back.Table.ShouldNotBeNull().Id.ShouldBe(table.Id);
+    }
+
     /// <summary>A table of one person against a bot, added and written down.</summary>
     private async Task<PlayedTable> AddedAsync(TableRegistry registry)
     {

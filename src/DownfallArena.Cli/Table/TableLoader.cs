@@ -11,7 +11,11 @@ namespace DownfallArena.Cli.Table;
 /// </summary>
 internal sealed class TableLoader(StoredSessions stored, TableComposer composer, TimeProvider clock)
 {
-    /// <summary>The table, picked up again; none when it is not open, or when it cannot be picked up, which is said on the console.</summary>
+    /// <summary>
+    /// The table, picked up again; none when it is not open, or when it cannot be picked up, which is said on the
+    /// console. A store that is out is thrown (<see cref="TableRegistry.StoreFails" />): the table may be there all
+    /// the same, and whoever asked tries again.
+    /// </summary>
     public async Task<PlayedTable?> LoadAsync(string id, CancellationToken cancellationToken = default)
     {
         TableRecord? record;
@@ -40,7 +44,7 @@ internal sealed class TableLoader(StoredSessions stored, TableComposer composer,
 
             journal = await composer.JournalAsync(id, cancellationToken);
         }
-        catch (Exception failure) when (Refuses(failure))
+        catch (Exception failure) when (Refuses(failure) && !TableRegistry.StoreFails(failure))
         {
             Console.WriteLine($"  Session {id} was not picked up: {failure.Message}");
             return null;
@@ -59,7 +63,7 @@ internal sealed class TableLoader(StoredSessions stored, TableComposer composer,
         {
             table = await composer.ResumeAsync(record, decided, cancellationToken);
         }
-        catch (Exception failure) when (Refuses(failure))
+        catch (Exception failure) when (Refuses(failure) && !TableRegistry.StoreFails(failure))
         {
             Console.WriteLine($"  Session {id} was not picked up: {failure.Message}");
             return null;

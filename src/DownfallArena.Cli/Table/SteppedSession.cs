@@ -627,6 +627,10 @@ internal sealed class SteppedSession : ITableSession, IAgentTurnTaker
 
     public CancellationToken Stopping => _stopping;
 
+    public string? LastFailure => Volatile.Read(ref _lastFailure);
+
+    private string? _lastFailure;
+
     /// <summary>
     /// One of the bots' turns, each a turn of the match of its own so a tap, a concession or a seat changing
     /// hands has the match between two of them, and so the pages see each as it lands.
@@ -655,6 +659,7 @@ internal sealed class SteppedSession : ITableSession, IAgentTurnTaker
         catch (Exception failure) when (Transient(failure))
         {
             Behind(pump: false);
+            Volatile.Write(ref _lastFailure, $"{failure.GetType().Name}: {failure.Message}");
             Console.WriteLine($"  Session {_match.Run}: the bots' turn could not be taken ({failure.Message}); it is taken again in a moment.");
             return AgentTurn.Failed;
         }

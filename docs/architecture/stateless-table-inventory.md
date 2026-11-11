@@ -176,11 +176,20 @@ Each phase ships on the one container app there is today and leaves the game pla
      hands the seats it is asked for: a process that picked the table up takes the turn the one that held it
      would have (question 5). The bots of a table play otherwise than before, since their dice are; the
      benchmark is not a table and does not move.
-   - **5b, next.** A queue adapter on Azure Storage Queue, in the account that holds the runs: a message says
-     which table owes a turn and from where its journal ended, and a worker command picks the table up, takes
-     its turns and lets it go. The table host runs the worker in its own process until the infrastructure ADR
-     (phase 6) says how many apps there are. A page whose table another process moved learns of it from where
-     the journal ends (question 9), which 5b needs as soon as the worker is another process.
+   - **5b, done, behind `--turns queue`.** The turns a table owes go on a queue (`QueuedAgentTurns`, over a
+     port of work queues, `IWorkChannel`: Azure Storage queues in the account that holds the runs, this
+     process's own beside a directory). A worker (`AgentTurnWorker`) receives each item, finds the table --
+     held, or picked up from its record and journal -- and takes its turns until nothing more is owed. It
+     retries as a queue trigger does: a failed item comes back after 2, 4, 8 and 16 seconds, and at its fifth
+     delivery it goes on `agent-turns-poison` with why its last delivery failed. A second worker
+     (`DeadLetterWorker`) keeps what the poison queue holds for good on `agent-turns-dlq`, with the queue it came
+     from, how many deliveries, when it was queued, poisoned and set aside, and on which host, and says so on the
+     console. A busy table, another writer moving its match, is handed on as a new item, never counted as a
+     failure; a long run of turns is handed on before its item could come back to another worker. Both workers
+     run in the table host's own process; the hosted table keeps taking its turns in process until the
+     infrastructure ADR (phase 6) says how many apps there are and gives its identity the queue role. A page
+     whose table another process moved learns of it from where the journal ends (question 9), which is needed
+     as soon as a worker is another process.
 6. **Time-dependent work as a command**, then the infrastructure ADR: how many apps, which jobs.
 
 Phases 2 and 3 are where the risk is. Phase 4 is where the volume is.

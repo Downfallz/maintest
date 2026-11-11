@@ -86,6 +86,8 @@ public sealed class InProcessAgentTurnsTests
 
         public CancellationToken Stopping { get; init; }
 
+        public string? LastFailure => null;
+
         public bool Slow { get; init; }
 
         public int Taken => Volatile.Read(ref _taken);
