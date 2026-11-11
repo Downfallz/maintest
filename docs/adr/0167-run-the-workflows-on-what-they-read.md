@@ -11,7 +11,7 @@ a push to `main`, about twenty were the full CI on pull requests and as many the
 those merges changed only the table's host, `src/DownfallArena.Cli/Table/`. The learning loop reads none of it and
 spent about twenty runner minutes a seed replaying numbers nothing had moved; the studio's site is its export,
 which reads none of it either, and was republished identical. A pull request of documentation alone still built and
-tested everything.
+tested everything, which this decision keeps (see below).
 
 ## Decision
 
@@ -19,9 +19,6 @@ tested everything.
   changes `learning/experiments/next.json`, and on demand.
 - **The studio's publication leaves out the table's host** (`src/DownfallArena.Cli/Table/`, `Hosting/`): every other
   change under `src/` still republishes it, since the weights and the audit it publishes are the engine's own.
-- **The CI skips its build and its tests for a pull request of Markdown alone.** A first job reads the pull
-  request's files; the two others depend on it and are skipped when only `.md` files changed, which a required check
-  counts as passed. No test reads a Markdown file. A push to `main` and a dispatch always run them.
 - **The browser suite leaves out the console commands no page reaches** (`ConsoleAgent`, `ConsoleMatchLog`,
   `EvaluationConsole`) and Markdown.
 
@@ -33,3 +30,9 @@ tested everything.
   commands, or a test that starts to read Markdown, has to say so here.
 - Neutral: the browser suite still runs on almost every change under `src/`: it plays the real engine, so most of
   `src/` is what it reads.
+
+## Alternatives considered
+
+- Skip the CI's build and tests for a pull request of Markdown alone: the job that builds is also the one that runs
+  the Sonar analysis every pull request has to pass (AGENTS.md), and a test does read Markdown --
+  `learning/tests/test_knobs.py` takes its effect kinds from `data/README.md`'s table. Kept running.

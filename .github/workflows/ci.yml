@@ -19,45 +19,9 @@ env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
 
 jobs:
-  # Whether a pull request changes anything but Markdown (ADR 0167): a pull request of documentation alone builds
-  # nothing and tests nothing, so the two jobs below are skipped for it, which a required check counts as passed.
-  # No test reads a Markdown file. A push to main, and a dispatch, always run both.
-  changes:
-    name: What the change touches
-    runs-on: ubuntu-latest
-    outputs:
-      code: ${{ steps.diff.outputs.code }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          fetch-depth: 2
-
-      # A pull request's checkout is its merge commit, whose first parent is the base it merges into.
-      - name: Anything but Markdown?
-        id: diff
-        env:
-          EVENT: ${{ github.event_name }}
-        run: |
-          if [[ "$EVENT" != "pull_request" ]]; then
-            echo "code=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          changed="$(git diff --name-only HEAD^1 HEAD)"
-          echo "$changed"
-          if grep -qvE '\.md$' <<< "$changed"; then
-            echo "code=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "code=false" >> "$GITHUB_OUTPUT"
-            echo "Markdown only: nothing to build or test." >> "$GITHUB_STEP_SUMMARY"
-          fi
-
   # The learning project (learning/, ADR 0013) has its own gate: ruff and pytest under uv.
   learning:
     name: Lint and test the learning project
-    needs: changes
-    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -93,8 +57,6 @@ jobs:
 
   build-and-test:
     name: Build, format check, test, analyse
-    needs: changes
-    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     env:
       AZURITE_BLOB_ENDPOINT: http://127.0.0.1:10000/devstoreaccount1
