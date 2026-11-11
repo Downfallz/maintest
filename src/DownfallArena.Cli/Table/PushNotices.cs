@@ -9,7 +9,7 @@ namespace DownfallArena.Cli.Table;
 
 /// <summary>
 /// "Your turn", sent to a seat's phone when the match asks it something and nobody is looking (ADR 0118). A
-/// page in front of somebody says so within a poll (<c>?shown=</c>, <see cref="DecisionClock" />), and a seat
+/// page in front of somebody says so once it drew it (<c>?shown=</c>, <see cref="DecisionClock" />), and a seat
 /// whose page said so gets no notice; a seat whose page is asleep, closed or on another app gets one after a
 /// short grace, and its service worker shows it. One notice an asking at most: the next asking comes only
 /// after this one is answered.
@@ -17,8 +17,9 @@ namespace DownfallArena.Cli.Table;
 internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProvider clock, TimeSpan? grace = null)
 {
     /// <summary>
-    /// How long a question waits for its page before a notice goes. A page polls every 700 ms and acknowledges
-    /// the asking it draws on the poll after, so two seconds is a page that is not there, not one that is slow.
+    /// How long a question waits for its page before a notice goes. A page in view is told of the question by its
+    /// stream (ADR 0119), reads it at once and acknowledges it once drawn (ADR 0164), so two seconds is a page that
+    /// is not there, not one that is slow.
     /// </summary>
     public static readonly TimeSpan Grace = TimeSpan.FromSeconds(2);
 

@@ -2361,23 +2361,31 @@ test('a hidden page acknowledges nothing, and the next poll in front of somebody
   assert.deepEqual(announced, [4]);
 });
 
-test('a streamed page reads on its own only every few seconds, and at once when asked', async () => {
+test('no clock reads the page: a read that failed is tried again, later each time, and only then', async () => {
   const p = page();
-  const polls = [];
-  p.context.poll = async () => { polls.push(Date.now()); };
-  p.state.live = new Set(['player1']);
-  p.state.polled = Date.now();
+  p.context.poll = async () => { throw new Error('offline'); };
+  p.context.connectionStatus = () => {};
+  p.context.setPhase = () => {};
 
-  p.context.tick(p.state);
-  await new Promise(resolve => setTimeout(resolve, 0));
-  assert.equal(polls.length, 0, 'the stream is open and the last read is fresh');
   await p.context.refresh(p.state);
-  assert.equal(polls.length, 1, 'a read the page asks for is never held back');
+  await p.context.refresh(p.state);
 
-  p.state.live = new Set();
-  p.context.tick(p.state);
-  await new Promise(resolve => setTimeout(resolve, 0));
-  assert.equal(polls.length, 2, 'no stream: the timer reads as it always did');
+  assert.deepEqual([...p.delays.entries()].filter(([id]) => p.timers.has(id)).map(([, delay]) => delay), [2000], 'one retry due, the second one later');
+});
+
+test('a finished match opens no stream again, and a seat with no stream opens none at all', async () => {
+  const p = page();
+  p.state.wake = new Set(); p.state.live = new Set();
+  let opened = 0;
+  const seat = { seat: 'player1', transport: { events: async () => { opened++; return { status: 200, ok: true }; } } };
+  p.state.seats = [seat];
+  p.state.views = [{ seat: 'player1', view: { ...p.view, over: true } }];
+
+  await p.context.watch(p.state, seat);
+  await p.context.watch(p.state, { seat: 'player2', transport: {} });
+
+  assert.equal(opened, 0);
+  assert.equal(p.timers.size, 0);
 });
 
 test('a read asked for while one is in flight is made once that one is done, not dropped', async () => {

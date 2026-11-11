@@ -148,6 +148,11 @@ internal static class TableHost
         admin.Lobby.Notices = accounts?.Notices;
         // How a match ended, to each seat's account (stage 4), named as the cards name them.
         composer.Notices = accounts?.Notices;
+        // What the lobbies in view read on, instead of reading on a clock (ADR 0164).
+        var lobbyChanges = new LobbyChanges();
+        composer.Lobby = lobbyChanges;
+        admin.Lobby.Changes = lobbyChanges;
+        friends?.Changes = lobbyChanges;
         composer.NameOf = accounts is null ? null : async id => (await accounts.AccountAsync(id))?.Username.Value;
         // The ladder (ADR 0124), read from the results the composer keeps; bots are named as the lobby names them.
         var leaderboard = accounts is null || results is null

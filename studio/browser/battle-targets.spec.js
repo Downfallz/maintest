@@ -31,7 +31,7 @@ async function mount(page, kind = 'Action') {
     const request = route.request(), url = new URL(request.url());
     if (url.pathname === '/api/lobby/resume') return route.fulfill({ json: { tables: [{ table: { id: 'spellbook', format: '3v3' }, seats: [{ seat: 'player1', token: 'seat' }] }] } });
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards } });
-    if (url.pathname.endsWith('/events')) return route.fulfill({ contentType: 'text/event-stream', body: '' });
+    if (url.pathname.endsWith('/events')) return route.fulfill({ contentType: 'text/event-stream', body: 'event: ready\ndata: 0\n\n' });
     if (url.pathname.endsWith('/decision')) { state.writes.push(request.postDataJSON()); state.view.waitingFor = null; return route.fulfill({ status: 204 }); }
     if (url.pathname === '/api/seat/player1') {
       state.reads++;

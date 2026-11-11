@@ -23,7 +23,7 @@ async function mount(page, { kind = 'Evolution', replay = false, over = false, r
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: catalogue });
     if (url.pathname.endsWith('/replay') && refused) return route.fulfill({ status: refused, json: { message: 'Refused by the host.' } });
     if (url.pathname.endsWith('/replay')) return route.fulfill({ json: { catalogue, feed, boards: { player1: board, player2: { ...board, allies: board.enemies, enemies: board.allies } }, outcome: { winner: 'player1', reason: 'Elimination' } } });
-    if (url.pathname.endsWith('/events')) return route.fulfill({ contentType: 'text/event-stream', body: '' });
+    if (url.pathname.endsWith('/events')) return route.fulfill({ contentType: 'text/event-stream', body: 'event: ready\ndata: 0\n\n' });
     if (url.pathname.endsWith('/concede')) { state.concessions++; state.view.over = true; state.view.waitingFor = null; state.view.outcome = { winner: 'player2', reason: 'Concession' }; return route.fulfill({ status: 204 }); }
     if (url.pathname.endsWith('/decision')) {
       state.writes.push(req.postDataJSON());

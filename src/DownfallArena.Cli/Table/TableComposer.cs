@@ -103,6 +103,12 @@ internal sealed class TableComposer
     /// </summary>
     public AccountNotices? Notices { get; set; }
 
+    /// <summary>
+    /// What tells the lobbies in view that a table they list, or a player's own games, changed (ADR 0164); none in
+    /// a process that serves no lobby, such as the turn worker.
+    /// </summary>
+    public LobbyChanges? Lobby { get; set; }
+
     /// <summary>The name an account chose, for the notice that names the opponent; "A player" for one that is gone.</summary>
     public Func<AccountId, Task<string?>>? NameOf { get; set; }
 
@@ -443,6 +449,7 @@ internal sealed class TableComposer
                 Index = run is null ? Index : null,
             };
             Push?.Watch(table);
+            Lobby?.Watch(table);
 
             // Closed the moment the match has an outcome rather than when the host stops. The host keeps
             // serving so two people can read the end screen and write a comment, and a session page opened
@@ -617,6 +624,10 @@ internal sealed class TableComposer
             if (Results is { } results && ResultOf(table, session.Outcome.Result.Value, board.Value, finishedAt, owners) is { } result)
             {
                 await results.RecordAsync(result);
+                foreach (var owner in owners)
+                {
+                    Lobby?.Account(owner);
+                }
             }
 
             // The claim is renewed before each write the closing makes and before the notices: a closer that stalled

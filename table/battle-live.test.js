@@ -44,10 +44,10 @@ test('no view at all presents an empty board', () => {
   assert.equal(livePresentation(null).frame.actor, null);
 });
 
-test('polling uses feedNext including gaps and sends no shown acknowledgement', async () => {
+test('reads use feedNext including gaps and send no shown acknowledgement', async () => {
   const h = harness(), requests = [];
   h.transport.seat = async (...args) => { requests.push(args); return ok({ board: {}, feed: [{ sequence: 31 }], feedNext: 83 }); };
-  h.connection.start(h.transport); await tick(); await h.run(5000);
+  h.connection.start(h.transport); await tick(); await h.connection.refresh();
   assert.deepEqual(requests, [[0], [83]]);
   assert.equal(h.states.at(-1), 'live'); h.connection.stop();
 });
@@ -88,19 +88,47 @@ for (const status of [401, 403, 410]) for (const source of ['catalogue', 'seat',
   });
 }
 
-test('a transient failure marks the old snapshot stale and polling recovers', async () => {
+test('a transient failure marks the old snapshot stale and is retried, later each time, until it answers', async () => {
   const h = harness(); let calls = 0;
-  h.transport.seat = async () => { if (++calls === 2) throw new Error('offline'); return ok({ board: { roundNumber: calls } }); };
-  h.connection.start(h.transport); await tick(); await h.run(5000);
+  h.transport.seat = async () => { if (calls++ === 1 || calls === 3) throw new Error('offline'); return ok({ board: { roundNumber: calls } }); };
+  h.connection.start(h.transport); await tick(); await h.connection.refresh();
   assert.equal(h.states.at(-1), 'stale'); assert.equal(h.views.at(-1)[0].board.roundNumber, 1);
-  await h.run(5000); assert.equal(h.states.at(-1), 'live'); assert.equal(h.views.at(-1)[0].board.roundNumber, 3); h.connection.stop();
+  await h.run(1000); assert.equal(h.states.at(-1), 'stale');
+  await h.run(2000); assert.equal(h.states.at(-1), 'live'); assert.equal(h.views.at(-1)[0].board.roundNumber, 4);
+  assert.equal(h.jobs.size, 0, 'an answered read leaves nothing due'); h.connection.stop();
 });
 
-test('closed notification streams reconnect with bounded backoff while polling continues', async () => {
+test('nothing reads the seat on a clock: an open stream leaves no job due', async () => {
+  const h = harness(); let calls = 0;
+  h.transport.seat = async () => { calls++; return ok({ board: {}, feedNext: 1 }); };
+  h.connection.start(h.transport); await tick();
+  assert.equal(calls, 1); assert.equal(h.jobs.size, 0); h.connection.stop();
+});
+
+test('closed notification streams reconnect with bounded backoff', async () => {
   const h = harness(); h.transport.events = async () => ({ ok: true, status: 200 });
   h.connection.start(h.transport); await tick();
   for (const delay of [1000, 2000, 4000, 8000, 16000, 30000, 30000]) await h.run(delay);
-  assert.ok([...h.jobs.values()].some(job => job.delay === 5000)); h.connection.stop(); assert.equal(h.jobs.size, 0);
+  assert.deepEqual([...h.jobs.values()].map(job => job.delay), [30000]); h.connection.stop(); assert.equal(h.jobs.size, 0);
+});
+
+test('a finished match does not open its stream again', async () => {
+  const h = harness();
+  h.transport.seat = async () => ok({ board: {}, over: true });
+  h.transport.events = async () => { await tick(); return { ok: true, status: 200 }; };
+  h.connection.start(h.transport); await tick(); await tick(); await tick();
+  assert.equal(h.jobs.size, 0); h.connection.stop();
+});
+
+test('a page back in view opens its waiting stream now, and its ready reads the seat', async () => {
+  const h = harness(); let calls = 0; const notify = [];
+  h.transport.seat = async () => { calls++; return ok({ board: {}, feedNext: 1 }); };
+  h.transport.events = callback => { notify.push(callback); return notify.length === 1 ? Promise.resolve({ ok: true, status: 200 }) : new Promise(() => {}); };
+  h.connection.start(h.transport); await tick();
+  h.connection.reconnect(); await tick();
+  assert.equal(notify.length, 2); assert.equal(h.jobs.size, 0, 'the wait was given up');
+  notify[1]({ event: 'ready' }); await tick();
+  assert.equal(calls, 2); h.connection.stop();
 });
 
 test('identical host names remain distinguishable without replacing their names or identities', () => {
@@ -116,16 +144,16 @@ test('one label names a creature on every surface: the name alone, the id beside
   assert.equal(creatureLabel(null, 3), 'Creature 3'); assert.equal(creatureLabel(board, undefined), 'Creature ?');
 });
 
-test('the first stream\'s ready owes no second poll; a reconnect\'s ready refreshes', async () => {
+test('the first stream\'s ready is read on too, so a change before the stream opened is not missed', async () => {
   const h = harness(); let calls = 0; const notify = [];
   h.transport.seat = async () => { calls++; return ok({ board: {}, feedNext: 1 }); };
   h.transport.events = callback => { notify.push(callback); return new Promise(() => {}); };
   h.connection.start(h.transport); await tick();
   notify[0]({ event: 'ready' }); await tick();
-  assert.equal(calls, 1, 'the board already in flight is the one ready announces');
-  assert.equal(h.jobs.size, 1, 'only the next poll is due');
-  notify[0]({ event: 'changed' }); await tick();
   assert.equal(calls, 2);
+  notify[0]({ event: 'changed' }); await tick();
+  assert.equal(calls, 3);
+  assert.equal(h.jobs.size, 0, 'nothing is due on a clock');
   h.connection.stop();
 });
 
@@ -167,7 +195,7 @@ test('notifications during a command do not read until it settles', async () => 
   h.transport.events = callback => { notify = callback; return new Promise(() => {}); };
   h.connection.start(h.transport); await tick(); const send = h.connection.submit({ kind: 'Action' });
   notify({ event: 'changed' }); notify({ event: 'changed' }); await tick(); assert.equal(reads, 1);
-  write.resolve(ok(null)); await send; await tick(); assert.equal(reads, 2); assert.deepEqual([...h.jobs.values()].map(job => job.delay), [5000]); h.connection.stop();
+  write.resolve(ok(null)); await send; await tick(); assert.equal(reads, 2); assert.equal(h.jobs.size, 0, 'the read after the write covers what was announced during it'); h.connection.stop();
 });
 test('a failed write refreshes the board without retrying the command', async () => {
   const h = harness(); let writes = 0, reads = 0;
@@ -214,9 +242,9 @@ test('finished history reads the selected seat from zero and a seat replacement 
   h.connection.start({ ...h.transport, seat: async () => ok({ board: {}, feedNext: 10 }) });
   full.resolve(ok({ over: true, board: {}, feedNext: 90 })); assert.equal(await history, null); assert.deepEqual(reads, [0, 0]); h.connection.stop();
 });
-test('recorded transports need no live notification channel', async () => {
+test('recorded transports need no live notification channel and are read once', async () => {
   const h = harness(); delete h.transport.events; h.connection.start(h.transport); await tick();
-  assert.equal(h.states.at(-1), 'live'); assert.deepEqual([...h.jobs.values()].map(job => job.delay), [5000]); h.connection.stop();
+  assert.equal(h.states.at(-1), 'live'); assert.equal(h.jobs.size, 0); h.connection.stop();
 });
 
 test('each creature carries the illustration its purchases resolve to, from what the board says it owns', () => {
@@ -228,4 +256,17 @@ test('each creature carries the illustration its purchases resolve to, from what
   assert.equal(livePresentation(view, packages, { log }).creatures[0].evolution.artworkId, 'brute-base');
   assert.equal(livePresentation({ board: { ...view.board, allies: [{ id: 1, name: 'A', acquiredTiers: ['tier:prowler:v1'] }] } }, packages, { log }).creatures[0].evolution.artworkId, 'predator-base');
   assert.equal(livePresentation(view).creatures[0].evolution.artworkId, 'base-creature');
+});
+
+test('a reconnect queued before the last board arrived is given up once that board says the match is over', async () => {
+  const h = harness(), last = pending(); let reads = 0, opened = 0; let notify;
+  h.transport.seat = () => (++reads === 1 ? Promise.resolve(ok({ board: {} })) : last.promise);
+  h.transport.events = callback => { opened++; notify = callback; return Promise.resolve({ ok: true, status: 200 }); };
+  h.connection.start(h.transport); await tick();
+  notify({ event: 'changed' }); await tick();
+  assert.deepEqual([...h.jobs.values()].map(job => job.delay), [1000], 'the stream ended before the read answered');
+
+  last.resolve(ok({ board: {}, over: true })); await tick();
+
+  assert.equal(h.jobs.size, 0); assert.equal(opened, 1); h.connection.stop();
 });

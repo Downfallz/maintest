@@ -2,7 +2,8 @@
 
 Date: 2026-11-01
 
-Status: Accepted. Amends ADR 0054 (the page polls, and nothing is pushed).
+Status: Accepted. Amends ADR 0054 (the page polls, and nothing is pushed). Amended by [0164](0164-read-on-what-the-host-says-changed-never-on-a-clock.md):
+the fallback poll is gone, every `ready` is read on, and a stream silent for 45 seconds is opened again.
 
 ## Context
 

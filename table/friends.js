@@ -3,6 +3,7 @@
 // says. The pure part is what the panel says; the mount does the asking.
 
 import { accountRequest, confirmAction, nameProblem } from './account.js';
+import { accountMoved, backoff, onLobbyChange } from './changes.js';
 
 /** The sections of the panel from the host's list: what each shows, and what is said when it is empty. */
 export function friendSections(list) {
@@ -22,10 +23,8 @@ export function askedText(answer) {
   return answer.accepted ? `${answer.other.username} had already asked you: you are friends now.` : `Asked. ${answer.other.username} will see your request.`;
 }
 
-/** The panel's refresh is cheap and the list changes rarely: once a half-minute, and whenever a notice arrives. */
-export const REFRESH_EVERY = 30000;
 
-export function mountFriends(doc, { request = accountRequest, nav = globalThis.navigator, win = globalThis, onInvite = null, onRequests = () => {}, onList = () => {} } = {}) {
+export function mountFriends(doc, { request = accountRequest, nav = globalThis.navigator, changes = onLobbyChange, onInvite = null, onRequests = () => {}, onList = () => {} } = {}) {
   const el = id => doc.getElementById(id);
   let account = null;
   let list = null;
@@ -127,10 +126,14 @@ export function mountFriends(doc, { request = accountRequest, nav = globalThis.n
       if (account?.id !== forAccount) return;
       list = read;
       render();
+      retry.answered();
     } catch (error) {
       if (!quiet && account?.id === forAccount) problem(error.message || 'Could not load your friends. Try again.');
+      // Read again shortly: the change that asked for this read will not be announced twice.
+      if (account?.id === forAccount) retry.failed();
     }
   }
+  const retry = backoff(() => void refresh(true));
 
   el('friend-ask').addEventListener('submit', async event => {
     event.preventDefault();
@@ -153,10 +156,16 @@ export function mountFriends(doc, { request = accountRequest, nav = globalThis.n
   });
 
   nav?.serviceWorker?.addEventListener?.('message', event => { if (event.data?.kind === 'notice') void refresh(true); });
-  const interval = win.setInterval(() => { if (!doc.hidden && account && !busy) void refresh(true); }, REFRESH_EVERY);
+  // Read when the host says this player's lists changed, and when the lobby's stream opens (ADR 0164): no clock.
+  // Listened to while somebody is signed in only.
+  let unlisten = null;
+  const listen = on => {
+    if (on && !unlisten) unlisten = changes(event => { if (accountMoved(event) && account && !busy) void refresh(true); });
+    if (!on && unlisten) { unlisten(); unlisten = null; }
+  };
   render();
   return {
-    stop: () => win.clearInterval(interval),
+    stop: () => { listen(false); retry.stop(); },
     /** Reads the list again: a request answered from the bell changes it. */
     refresh: () => refresh(true),
     /** Told by the lobby whether an invitation of this player's is waiting: one at a time, so Invite waits too. */
@@ -170,6 +179,8 @@ export function mountFriends(doc, { request = accountRequest, nav = globalThis.n
       if ((next?.id ?? null) === (account?.id ?? null)) return;
       account = next;
       list = null;
+      retry.stop();
+      listen(Boolean(account));
       render();
       problem();
       note();
