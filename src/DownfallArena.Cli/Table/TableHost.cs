@@ -299,7 +299,7 @@ internal static class TableHost
     public const string TurnsEnvironment = "DOWNFALL_TURNS";
 
     /// <summary>A work queue, or none when it cannot be opened: the bots' turns are then taken in this process, which is said.</summary>
-    private static async Task<IWorkChannel?> OpenChannelAsync(IWorkChannels channels, string name, CancellationToken cancellationToken)
+    internal static async Task<IWorkChannel?> OpenChannelAsync(IWorkChannels channels, string name, CancellationToken cancellationToken)
     {
         try
         {
@@ -317,7 +317,7 @@ internal static class TableHost
     /// otherwise: one takes the turns the queue says tables owe, the other keeps for good what the first gave up
     /// on. None when the turns are taken in this process.
     /// </summary>
-    private static async Task<Task> StartWorkersAsync(IWorkChannels? channels, IWorkChannel? turns, TableRegistry registry, TimeProvider clock, CancellationToken stopping)
+    internal static async Task<Task> StartWorkersAsync(IWorkChannels? channels, IWorkChannel? turns, TableRegistry registry, TimeProvider clock, CancellationToken stopping)
     {
         if (channels is null || turns is null)
         {
