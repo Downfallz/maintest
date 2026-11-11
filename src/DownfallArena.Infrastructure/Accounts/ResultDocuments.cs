@@ -37,7 +37,8 @@ internal static class ResultDocuments
             result.Ranked,
             [.. result.Seats.Select(seat => new SeatRecord(seat.Seat, seat.Account?.Value, seat.Agent))],
             result.Table,
-            result.Casual),
+            result.Casual,
+            result.Teams.Count == 0 ? null : [.. result.Teams.Select(creature => new CreatureRecord(creature.Seat, creature.Creature, creature.Mutations, creature.Survived, creature.Casts))]),
         Web);
 
     public static MatchResult Read(string json)
@@ -53,10 +54,15 @@ internal static class ResultDocuments
             record.Winner,
             [.. record.Seats.Select(seat => new ResultSeat(seat.Seat, AccountId.TryParse(seat.Account, out var id) ? id : null, seat.Agent))],
             record.Table,
-            record.Casual);
+            record.Casual)
+        {
+            Teams = [.. (record.Teams ?? []).Select(creature => new PlayedCreature(creature.Seat, creature.Creature, creature.Mutations ?? [], creature.Survived, creature.Casts ?? new Dictionary<string, int>(StringComparer.Ordinal)))],
+        };
     }
 
-    private sealed record Record(string Match, DateTimeOffset FinishedAt, string Format, string Declaration, string ContentHash, int Rounds, string? Winner, bool Ranked, IReadOnlyList<SeatRecord> Seats, string? Table = null, bool Casual = false);
+    private sealed record Record(string Match, DateTimeOffset FinishedAt, string Format, string Declaration, string ContentHash, int Rounds, string? Winner, bool Ranked, IReadOnlyList<SeatRecord> Seats, string? Table = null, bool Casual = false, IReadOnlyList<CreatureRecord>? Teams = null);
+
+    private sealed record CreatureRecord(string Seat, string Creature, IReadOnlyList<string>? Mutations, bool Survived, IReadOnlyDictionary<string, int>? Casts);
 
     private sealed record SeatRecord(string Seat, string? Account, string? Agent);
 }

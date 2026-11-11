@@ -127,6 +127,33 @@ public abstract class MatchResultsContract
     }
 
     [Fact]
+    public async Task What_each_seat_played_reads_back_with_its_mutations_and_casts()
+    {
+        var results = await ResultsAsync();
+        PlayedCreature played = new("player1", "creature:wolf:v1", ["tier:guard:v1"], Survived: true, new Dictionary<string, int> { ["spell:strike:v1"] = 3 });
+        PlayedCreature fallen = new("player2", "creature:bear:v1", [], Survived: false, new Dictionary<string, int>());
+        var result = Finished(new DateTimeOffset(2026, 11, 3, 20, 0, 0, TimeSpan.Zero)) with { Teams = [played, fallen] };
+
+        await results.RecordAsync(result, Cancel);
+
+        var teams = (await results.ListAsync(Cancel)).ShouldHaveSingleItem().Teams;
+        teams.Select(creature => (creature.Seat, creature.Creature, creature.Survived)).ShouldBe([("player1", "creature:wolf:v1", true), ("player2", "creature:bear:v1", false)]);
+        teams[0].Mutations.ShouldBe(["tier:guard:v1"]);
+        teams[0].Casts.ShouldBe(played.Casts);
+        teams[1].Casts.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task A_result_kept_before_teams_were_reads_back_with_none()
+    {
+        var results = await ResultsAsync();
+
+        await results.RecordAsync(Finished(new DateTimeOffset(2026, 11, 3, 20, 0, 0, TimeSpan.Zero)), Cancel);
+
+        (await results.ListAsync(Cancel)).ShouldHaveSingleItem().Teams.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task A_store_nothing_was_recorded_in_lists_nothing()
     {
         (await (await ResultsAsync()).ListAsync(Cancel)).ShouldBeEmpty();

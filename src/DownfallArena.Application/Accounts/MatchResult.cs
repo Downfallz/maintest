@@ -6,6 +6,7 @@ namespace DownfallArena.Application.Accounts;
 /// here. <see cref="Winner" /> is the winning seat's name, or null for a draw. <see cref="Table" /> is the table
 /// it was played at, whose recorded session keeps the match (ADR 0147); null in a result kept before it was.
 /// <see cref="Casual" /> marks a game its players opened as unranked (ADR 0155): it is kept and listed, never rated.
+/// <see cref="Teams" /> is what each seat played, for a player's statistics; empty in a result kept before it was.
 /// </summary>
 public sealed record MatchResult(
     string MatchId,
@@ -19,6 +20,9 @@ public sealed record MatchResult(
     string? Table = null,
     bool Casual = false)
 {
+    /// <summary>Every creature both seats played, the first seat's first; empty in a result kept before it was.</summary>
+    public IReadOnlyList<PlayedCreature> Teams { get; init; } = [];
+
     /// <summary>
     /// Whether the match counts on a ladder of people: two seats, each held by its own account, in a game not opened
     /// as unranked. A bot, a seat nobody owned, one account holding both seats (a shared device), or a casual game

@@ -637,8 +637,11 @@ internal sealed class TableComposer
 
             // The result before the record says finished: a host that fails to keep it leaves the table open, and
             // the next host rebuilds it from its decisions and keeps it then. Kept twice, it is kept once.
-            if (Results is { } results && ResultOf(table, session.Outcome.Result.Value, board.Value, finishedAt, owners) is { } result)
+            if (Results is { } results && ResultOf(table, session.Outcome.Result.Value, board.Value, finishedAt, owners) is { } kept)
             {
+                // What each seat played, for its players' statistics: the creatures off the final board, the casts off
+                // the events this process holds of the match, which are all of them once it has its outcome.
+                var result = kept with { Teams = PlayedTeams.Of(board.Value, run.EventsOf(session.MatchId), TableSeat.NameOf) };
                 await results.RecordAsync(result);
                 foreach (var owner in owners)
                 {

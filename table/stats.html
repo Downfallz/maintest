@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1519" />
+  <title>Downfall Instinct — your statistics</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
+  <link rel="stylesheet" href="table.css" />
+  <link rel="stylesheet" href="lobby.css" />
+  <link rel="stylesheet" href="leaderboard.css" />
+  <link rel="stylesheet" href="stats.css" />
+  <link rel="stylesheet" href="identity.css" />
+  <script type="module" src="navigation.js"></script>
+</head>
+<body class="lobby-page">
+  <header class="masthead lobby-header home-header" data-navigation="stats"></header>
+  <main class="lobby-main">
+    <section class="lobby-hero" aria-labelledby="stats-title">
+      <div><p class="eyebrow">Your finished games</p><h2 id="stats-title">Your statistics.</h2><p class="hero-detail">How your games went, and what you played in them. Only you see this page.</p></div>
+    </section>
+    <output id="stats-status" class="lobby-status muted">Reading your games…</output>
+    <p id="stats-problem" class="problem" role="alert" hidden></p>
+    <div id="stats-body" class="lobby-layout" hidden>
+      <div class="stats-main">
+        <section class="lobby-section" aria-labelledby="record-heading">
+          <div class="section-heading"><h2 id="record-heading">Record</h2><span class="muted">Won–lost–drawn</span></div>
+          <div id="record-cards" class="stats-cards"></div>
+        </section>
+        <section class="lobby-section" aria-labelledby="creatures-heading">
+          <div class="section-heading"><h2 id="creatures-heading">Creatures</h2><span id="teams-note" class="muted"></span></div>
+          <div class="ladder-scroll"><table class="ladder" aria-labelledby="creatures-heading"><thead><tr><th scope="col">Creature</th><th scope="col" class="number">Fielded</th><th scope="col" class="number">Won</th><th scope="col" class="number" title="Still standing when the game ended">Standing</th></tr></thead><tbody id="creature-rows"></tbody></table></div>
+        </section>
+        <section class="lobby-section" aria-labelledby="mutations-heading">
+          <div class="section-heading"><h2 id="mutations-heading">Mutations</h2></div>
+          <div class="ladder-scroll"><table class="ladder" aria-labelledby="mutations-heading"><thead><tr><th scope="col">Mutation</th><th scope="col" class="number">Bought</th><th scope="col" class="number">Won</th></tr></thead><tbody id="mutation-rows"></tbody></table></div>
+        </section>
+        <section class="lobby-section" aria-labelledby="spells-heading">
+          <div class="section-heading"><h2 id="spells-heading">Spells</h2></div>
+          <div class="ladder-scroll"><table class="ladder" aria-labelledby="spells-heading"><thead><tr><th scope="col">Spell</th><th scope="col" class="number">Casts</th><th scope="col" class="number">Games</th><th scope="col" class="number">Won</th></tr></thead><tbody id="spell-rows"></tbody></table></div>
+        </section>
+      </div>
+      <aside class="lobby-sidebar" aria-label="At a glance">
+        <section class="lobby-panel" aria-labelledby="glance-heading"><p class="eyebrow">At a glance</p><h2 id="glance-heading">Your form</h2><dl id="glance" class="stats-glance"></dl></section>
+        <section class="lobby-panel" aria-labelledby="formats-heading"><p class="eyebrow">By format</p><h2 id="formats-heading">Team sizes</h2><ul id="formats" class="bots"></ul></section>
+      </aside>
+    </div>
+  </main>
+  <script type="module" src="stats.js"></script>
+</body>
+</html>
