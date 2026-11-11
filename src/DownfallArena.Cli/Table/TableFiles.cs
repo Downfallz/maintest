@@ -152,6 +152,7 @@ internal sealed class TableFiles
             ["/battle-order.js"] = (Path.Combine(tableDirectory, "battle-order.js"), JavaScript),
             ["/battle-tempo.js"] = (Path.Combine(tableDirectory, "battle-tempo.js"), JavaScript),
             ["/battle-match.js"] = (Path.Combine(tableDirectory, "battle-match.js"), JavaScript),
+            ["/scoreboard.js"] = (Path.Combine(tableDirectory, "scoreboard.js"), JavaScript),
             ["/battle-guidance.js"] = (Path.Combine(tableDirectory, "battle-guidance.js"), JavaScript),
             ["/battle-seen.js"] = (Path.Combine(tableDirectory, "battle-seen.js"), JavaScript),
             ["/battle-opponent.js"] = (Path.Combine(tableDirectory, "battle-opponent.js"), JavaScript),
