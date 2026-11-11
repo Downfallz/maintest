@@ -173,7 +173,7 @@ public sealed class TableWatchTests : IDisposable
 
         var episodes = await File.ReadAllLinesAsync(Path.Combine(_runs, table.Id, RunRecorder.EpisodesFile), Cancel);
         episodes.Length.ShouldBe(2, "the dataset is started over by whoever closes it, not added to");
-        (await _here.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Finished);
+        (await _here.Stored.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Finished);
     }
 
     [Fact]

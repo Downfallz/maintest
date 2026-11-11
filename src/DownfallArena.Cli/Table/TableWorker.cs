@@ -134,7 +134,7 @@ internal static class TableWorker
         if (over is { Accounts: { } accounts, Devices: { } devices } && sender is not null)
         {
             composer.Notices = new AccountNotices(sender, new AccountDevices(devices, clock));
-            composer.NameOf = async id => (await accounts.FindAsync(id))?.Username.Value;
+            composer.NameOf = async id => (await accounts.FindAsync(id, stopping))?.Username.Value;
         }
 
         Console.WriteLine(composer.Notices is null

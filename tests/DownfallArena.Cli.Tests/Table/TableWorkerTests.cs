@@ -19,7 +19,7 @@ public sealed class TableWorkerTests : IDisposable
 
     public TableWorkerTests()
     {
-        var queue = _channels.OpenAsync(AgentTurnWorker.Queue).GetAwaiter().GetResult();
+        var queue = _channels.OpenAsync(AgentTurnWorker.Queue, CancellationToken.None).GetAwaiter().GetResult();
         _hosted = new HostedTables(directory => new FileArtifactStore(directory), turns: new QueuedAgentTurns(queue, TimeProvider.System));
     }
 
@@ -61,7 +61,7 @@ public sealed class TableWorkerTests : IDisposable
 
         options.Command.ShouldBe(CliOptions.WorkerCommand);
         beforeTheHost.ShouldBe(TableRecord.Finished, "the worker wrote the match before the host read its end");
-        (await _hosted.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Finished);
+        (await _hosted.Stored.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Finished);
         table.Run!.IsClosed.ShouldBeTrue("the host serves the session the worker wrote");
         var episodes = await File.ReadAllLinesAsync(Path.Combine(_hosted.RunsDirectory, table.Id, RunRecorder.EpisodesFile), Cancel);
         episodes.Length.ShouldBe(2, "written once, by the worker");
