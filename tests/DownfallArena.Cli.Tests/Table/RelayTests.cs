@@ -185,8 +185,61 @@ public sealed class RelayTests : IDisposable
         opened.ShouldBe(1, "the first connection dropped before it opened");
     }
 
+    [Fact]
+    public async Task A_look_that_could_not_be_made_drops_the_connection_and_the_next_one_looks_at_everything_again()
+    {
+        var relay = new RecordedRelay();
+        var opened = 0;
+        var connections = 0;
+        using var stopping = CancellationTokenSource.CreateLinkedTokenSource(Cancel);
+        var listener = new RelayListener(relay, _ => { opened++; return Task.CompletedTask; }, (_, _) => throw new IOException("the store is out"), TimeProvider.System)
+        {
+            Receive = (_, token) => ++connections == 1 ? Messages(["", "worker|one", "worker|two"], null, token) : Messages([""], stopping, token),
+        };
+
+        await listener.RunAsync(stopping.Token);
+
+        connections.ShouldBe(2, "the move that could not be looked at is not dropped: the connection is");
+        opened.ShouldBe(2, "and the next opening looks at every table held, that one included");
+    }
+
+    [Fact]
+    public async Task A_table_s_record_written_is_said_through_the_relay_once_the_write_has_landed()
+    {
+        using var hosted = new HostedTables(recording: true);
+        var relay = new RecordedRelay();
+        hosted.Composer.Relay = relay;
+        var table = await hosted.Composer.ComposeAsync(HostedTables.OnePerson, Cancel);
+        var before = relay.Said.Count(said => said == $"table {table.Id}");
+
+        await table.RecordAsync(Cancel);
+
+        relay.Said.Count(said => said == $"table {table.Id}").ShouldBeGreaterThan(before);
+    }
+
+    [Fact]
+    public void The_tables_the_hourly_sweep_closed_are_said_through_the_relay_with_the_lobby()
+    {
+        var relay = new RecordedRelay();
+
+        TableTend.Announce(relay, new TableTend.Tended(["one", "two"], 0));
+
+        relay.Said.ShouldBe(["table one", "table two", "lobby"]);
+    }
+
+    [Fact]
+    public void A_sweep_that_closed_nothing_says_nothing()
+    {
+        var relay = new RecordedRelay();
+
+        TableTend.Announce(relay, new TableTend.Tended([], 3));
+
+        relay.Said.ShouldBeEmpty("an invitation let go of is said by its table's own change");
+    }
+
     // The messages, then the listener is stopped, as a host stopping does.
-    private static async IAsyncEnumerable<string> Messages(string[] messages, CancellationTokenSource stopping, [EnumeratorCancellation] CancellationToken cancellationToken)
+    // A connection that says these and then closes; with `stopping`, the listener is stopped after them.
+    private static async IAsyncEnumerable<string> Messages(string[] messages, CancellationTokenSource? stopping, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         foreach (var message in messages)
         {
@@ -194,8 +247,11 @@ public sealed class RelayTests : IDisposable
             yield return message;
         }
 
-        await stopping.CancelAsync();
-        cancellationToken.ThrowIfCancellationRequested();
+        if (stopping is not null)
+        {
+            await stopping.CancelAsync();
+            cancellationToken.ThrowIfCancellationRequested();
+        }
     }
 
     private static string Url(DownfallArena.Cli.Studio.StudioResponse response) =>

@@ -460,6 +460,10 @@ internal sealed class TableComposer
             {
                 var named = table.Id;
                 table.Api.Changes.Bumped += () => relay.Table(named);
+
+                // A change written to the record -- a seat reached, given or kept -- is said again once the write has
+                // landed: the other processes look at the record, and a look before it lands finds nothing.
+                table.Recorded += () => relay.Table(named);
                 api.Negotiate = cancellationToken => relay.SeatAsync(named, cancellationToken);
             }
 

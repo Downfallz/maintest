@@ -27,7 +27,7 @@ internal sealed class TableWatch(TableRegistry registry, TimeProvider clock)
         var changed = 0;
         foreach (var table in registry.HeldTables().Where(table => !table.IsOver && now - table.Touched < WatchedFor))
         {
-            if (await LookAsync(table, cancellationToken))
+            if (await LookAsync(table, cancellationToken) == true)
             {
                 changed++;
             }
@@ -37,13 +37,42 @@ internal sealed class TableWatch(TableRegistry registry, TimeProvider clock)
     }
 
     /// <summary>
-    /// One look at one table, the one another process said it moved (ADR 0165): whether this host holds it unfinished,
-    /// and then as <see cref="WatchOnceAsync" /> looks at each. Whether it was moved or let go of.
+    /// One look at every table held, as a relay's connection opens (ADR 0165), that fails when any look could not be
+    /// made: nothing comes to look again on a clock, so the store being out has to be said, and the look made again.
     /// </summary>
-    public async Task<bool> MovedAsync(string table, CancellationToken cancellationToken = default) =>
-        registry.Held(table) is { IsOver: false } held && await LookAsync(held, cancellationToken);
+    public async Task ReconcileAsync(CancellationToken cancellationToken = default)
+    {
+        var now = clock.GetUtcNow();
+        var failed = 0;
+        foreach (var table in registry.HeldTables().Where(table => !table.IsOver && now - table.Touched < WatchedFor))
+        {
+            if (await LookAsync(table, cancellationToken) is null)
+            {
+                failed++;
+            }
+        }
 
-    private async Task<bool> LookAsync(PlayedTable table, CancellationToken cancellationToken)
+        if (failed > 0)
+        {
+            throw new IOException($"{failed} table{(failed == 1 ? string.Empty : "s")} could not be looked at.");
+        }
+    }
+
+    /// <summary>
+    /// One look at one table, the one another process said it moved (ADR 0165): whether this host holds it unfinished,
+    /// and then as <see cref="WatchOnceAsync" /> looks at each. A look that could not be made fails, so that what
+    /// heard the move can have it looked at again.
+    /// </summary>
+    public async Task MovedAsync(string table, CancellationToken cancellationToken = default)
+    {
+        if (registry.Held(table) is { IsOver: false } held && await LookAsync(held, cancellationToken) is null)
+        {
+            throw new IOException($"Session {table} could not be looked at.");
+        }
+    }
+
+    // Whether the table moved or was let go of; null when the look could not be made.
+    private async Task<bool?> LookAsync(PlayedTable table, CancellationToken cancellationToken)
     {
         try
         {
@@ -69,7 +98,7 @@ internal sealed class TableWatch(TableRegistry registry, TimeProvider clock)
         catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is ObjectDisposedException)
         {
             // The store is out for a moment, or the table was let go of under the look: the next look tries.
-            return false;
+            return failure is ObjectDisposedException ? false : null;
         }
     }
 

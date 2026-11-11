@@ -80,6 +80,7 @@ var recordsAndIndexes = [
   storageTableDataContributor
 ]
 var recordsIndexesAndQueues = concat(recordsAndIndexes, [storageQueueDataContributor])
+var roleDefinitions = 'Microsoft.Authorization/roleDefinitions'
 
 // What each process says through the relay and signs a page's address with (ADR 0165).
 var webPubSubServiceOwner = '12cf5a90-567b-43ae-8102-96cf46c7d9b4'
@@ -87,6 +88,7 @@ var relayOn = !empty(relaySku)
 var relayName = '${namePrefix}-relay-${suffix}'
 // The service's own host name, made from its name: nothing is read off a resource that may not be deployed.
 var relayHost = '${relayName}.webpubsub.azure.com'
+var relayId = resourceId('Microsoft.SignalRService/webPubSub', relayName)
 var relayEnv = relayOn ? [
   {
     name: 'DOWNFALL_RELAY'
@@ -184,12 +186,25 @@ resource relay 'Microsoft.SignalRService/webPubSub@2024-03-01' = if (relayOn) {
     tier: relaySku == 'Standard_S1' ? 'Standard' : 'Free'
     capacity: 1
   }
+  identity: {
+    type: 'SystemAssigned'
+  }
   properties: {
     disableLocalAuth: true
     disableAadAuth: false
-    publicNetworkAccess: 'Enabled'
     tls: {
       clientCertEnabled: false
+    }
+    // The pages connect from anywhere a player is, so the public endpoint stays; it is narrowed to what the table
+    // uses: the pages' and processes' connections, and the REST calls that send and sign. Nothing else is let in.
+    networkACLs: {
+      defaultAction: 'Deny'
+      publicNetwork: {
+        allow: [
+          'ClientConnection'
+          'RESTAPI'
+        ]
+      }
     }
   }
 }
@@ -417,7 +432,7 @@ resource apiRoles 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for ro
   properties: {
     principalId: app.identity.principalId
     principalType: 'ServicePrincipal'
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', role)
+    roleDefinitionId: subscriptionResourceId(roleDefinitions, role)
   }
 }]
 
@@ -427,7 +442,7 @@ resource workerRoles 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for
   properties: {
     principalId: worker.identity.principalId
     principalType: 'ServicePrincipal'
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', role)
+    roleDefinitionId: subscriptionResourceId(roleDefinitions, role)
   }
 }]
 
@@ -437,20 +452,18 @@ resource tendRoles 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for r
   properties: {
     principalId: tend.identity.principalId
     principalType: 'ServicePrincipal'
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', role)
+    roleDefinitionId: subscriptionResourceId(roleDefinitions, role)
   }
 }]
 
 // Each process says through the relay what it moved, and the API signs the pages' addresses (ADR 0165).
-var relayId = resourceId('Microsoft.SignalRService/webPubSub', relayName)
-
 resource apiRelayRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (relayOn) {
   scope: relay
   name: guid(relayId, app.id, webPubSubServiceOwner)
   properties: {
     principalId: app.identity.principalId
     principalType: 'ServicePrincipal'
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', webPubSubServiceOwner)
+    roleDefinitionId: subscriptionResourceId(roleDefinitions, webPubSubServiceOwner)
   }
 }
 
@@ -460,7 +473,7 @@ resource workerRelayRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = 
   properties: {
     principalId: worker.identity.principalId
     principalType: 'ServicePrincipal'
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', webPubSubServiceOwner)
+    roleDefinitionId: subscriptionResourceId(roleDefinitions, webPubSubServiceOwner)
   }
 }
 
@@ -470,7 +483,7 @@ resource tendRelayRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if
   properties: {
     principalId: tend.identity.principalId
     principalType: 'ServicePrincipal'
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', webPubSubServiceOwner)
+    roleDefinitionId: subscriptionResourceId(roleDefinitions, webPubSubServiceOwner)
   }
 }
 

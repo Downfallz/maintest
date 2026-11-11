@@ -53,6 +53,7 @@ internal static class TableTend
             var tended = await TendAsync(registry, lobby, clock.GetUtcNow());
             if (relay is not null)
             {
+                Announce(relay, tended);
                 await Task.WhenAny(relay.SentAsync(), Task.Delay(TimeSpan.FromSeconds(10), clock));
             }
 
@@ -73,6 +74,26 @@ internal static class TableTend
     }
 
     /// <summary>One pass: the sweep, then the invitations that ran out.</summary>
+    /// <summary>
+    /// The tables the sweep closed, said through the relay (ADR 0165): it closes them through their records without
+    /// holding them, so no change of theirs is raised here, and a process that holds one, or a lobby that lists it,
+    /// would otherwise go on showing it open.
+    /// </summary>
+    internal static void Announce(IChangeRelay relay, Tended tended)
+    {
+        ArgumentNullException.ThrowIfNull(relay);
+        ArgumentNullException.ThrowIfNull(tended);
+        foreach (var id in tended.Swept)
+        {
+            relay.Table(id);
+        }
+
+        if (tended.Swept.Count > 0)
+        {
+            relay.Lobby();
+        }
+    }
+
     internal static async Task<Tended> TendAsync(TableRegistry registry, LobbyApi lobby, DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(registry);

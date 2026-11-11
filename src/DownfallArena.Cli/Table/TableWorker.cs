@@ -164,8 +164,7 @@ internal static class TableWorker
             // What the host writes to the tables this worker holds -- a seat's tap, a closed table, a seat changing
             // hands -- is seen as the host sees the worker's (ADR 0162); and a finished table nobody is at any more is
             // let go of, as a host lets go of it, or a worker that never stops would hold every table it ever took.
-            var watch = new TableWatch(registry, clock);
-            var watching = relay is null ? watch.RunAsync(running.Token) : new RelayListener(relay, watch, clock).RunAsync(running.Token);
+            var watching = TableHost.WatchAsync(new TableWatch(registry, clock), relay, clock, running.Token);
             var letting = LetGoOfIdleAsync(registry, clock, running.Token);
             await working;
             await watching;

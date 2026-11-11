@@ -221,12 +221,9 @@ internal static class TableHost
                 : await StartWorkersAsync(channels, turns, registry, clock, stopping.Token);
 
             // What other processes write to the tables this host holds -- the worker's turns, the hourly job's
-            // expiries -- is seen within a second (ADR 0162). A host that records nothing shares its tables with nobody.
-            // What another process wrote to a table this host holds is heard through the relay when there is one, and
-            // looked for every second when there is not (ADR 0162, 0165).
-            var watch = new TableWatch(registry, clock);
-            var watching = stored is null ? Task.CompletedTask
-                : relay is null ? watch.RunAsync(stopping.Token) : new RelayListener(relay, watch, clock).RunAsync(stopping.Token);
+            // expiries -- is heard through the relay when there is one, and looked for every second when there is not
+            // (ADR 0162, 0165). A host that records nothing shares its tables with nobody.
+            var watching = stored is null ? Task.CompletedTask : WatchAsync(new TableWatch(registry, clock), relay, clock, stopping.Token);
             if (serving.IsFaulted)
             {
                 await serving;
@@ -445,4 +442,9 @@ internal static class TableHost
         var verifier = keys is null ? null : new GoogleIdTokenVerifier(googleClientId!, keys, clock);
         return (new AccountApi(new AccountRegistry(store, clock), sessions, options.Accounts, verifier, googleClientId), store);
     }
+
+    /// <summary>What another process wrote to the tables held, heard through the relay or looked for every second.</summary>
+    internal static Task WatchAsync(TableWatch watch, IChangeRelay? relay, TimeProvider clock, CancellationToken stopping) =>
+        relay is null ? watch.RunAsync(stopping) : new RelayListener(relay, watch, clock).RunAsync(stopping);
+
 }
