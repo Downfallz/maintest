@@ -98,3 +98,19 @@ if ! grep -q '^Engine [0-9a-f]\{12\}\.' <<<"$log"; then
   fail "The engine the image was built from is not stamped on its log."
 fi
 echo "ok: the engine commit is stamped"
+
+# The worker app and the tending job are the same image under other commands (ADR 0162). The job tends a store
+# and exits; the worker refuses a directory, whose queues no other process could put a turn on.
+tended="$(docker run --rm "$IMAGE" table-tend --rules docs/tabletop/playtest.rules.json --record /tmp/runs 2>&1)" \
+  || fail "table-tend did not tend an empty store: $tended"
+if ! grep -q 'Tended' <<<"$tended"; then
+  fail "table-tend did not say what it tended: $tended"
+fi
+echo "ok: the tending job's command runs"
+if refused="$(docker run --rm "$IMAGE" table-worker --record /tmp/runs 2>&1)"; then
+  fail "table-worker took a directory, whose queues no host shares."
+fi
+if ! grep -q 'container-url' <<<"$refused"; then
+  fail "table-worker did not say why it refused a directory: $refused"
+fi
+echo "ok: the worker's command runs, and refuses a directory"

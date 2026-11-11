@@ -1,9 +1,10 @@
 name: Deploy the table
 
-# The hosted table (ADR 0080, ADR 0082). A pull request that touches anything the image carries builds the
-# image and tries it, so a change that breaks only the container is caught before it merges; a push to main
-# that touches the same paths also pushes the image to GitHub's container registry and deploys it to Azure. Nothing here holds a secret: Azure is reached with an identity
-# federated to this repository's `azure` environment, and the registry with the run's own token.
+# The hosted table (ADR 0080, ADR 0082, ADR 0162): the API, the worker and the hourly job, from one image.
+# A pull request that touches anything the image carries builds the image and tries it, so a change that breaks
+# only the container is caught before it merges; a push to main that touches the same paths also pushes the
+# image to GitHub's container registry and deploys it to Azure. Nothing here holds a secret: Azure is reached
+# with an identity federated to this repository's `azure` environment, and the registry with the run's own token.
 #
 # Deploying needs the one-time setup in infra/README.md. Until its repository variables exist the deploy job
 # is skipped, so main stays green on a fork or before anybody has set Azure up.
@@ -186,6 +187,8 @@ jobs:
             echo "- Admin panel: ${url}/admin"
             echo "- Image: \`${IMAGE}\`"
             echo "- Recordings: $(jq -r .recordings.value "$RUNNER_TEMP/outputs.json")"
+            echo "- The bots' turns: the worker app \`$(jq -r .worker.value "$RUNNER_TEMP/outputs.json")\`, scaled on its queue"
+            echo "- Tending: the job \`$(jq -r .tendJob.value "$RUNNER_TEMP/outputs.json")\`, every hour"
             echo
             echo "The sign-in registration must list \`${redirect}\` as a web redirect URI. The first deployment"
             echo "is the one that makes that address; infra/README.md, step 5, adds it once."

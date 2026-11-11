@@ -55,6 +55,12 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     /// <summary>How long a seat is kept for a friend (ADR 0129): past this, the invitation counts as declined.</summary>
     public static readonly TimeSpan InvitationFor = TimeSpan.FromHours(24);
 
+    /// <summary>
+    /// Whether a job lets go of the invitations that ran out (ADR 0162, <c>--tended</c>): no request does then, and an
+    /// invitation past its day is read as gone until the job lets it go, within the hour.
+    /// </summary>
+    public bool Tended { get; set; }
+
     public static bool Names(string path) => path == Prefix || path.StartsWith(Prefix + "/", StringComparison.Ordinal);
 
     /// <summary>An admin close or deletion must not race a claim writing the same table record.</summary>
@@ -384,7 +390,11 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             return Problem(403, FriendErrors.NotFriends.Code, FriendErrors.NotFriends.Message);
         }
 
-        await ExpireInvitationsAsync();
+        if (!Tended)
+        {
+            await ExpireInvitationsAsync();
+        }
+
         return await HasOutstandingInvitationAsync(me)
             ? Problem(409, "Lobby.InvitationOutstanding", "You already have an invitation waiting for an answer. Cancel it first, or wait for it.")
             : null;
@@ -392,7 +402,10 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
     /// <summary>Whether the account holds a table with a seat still kept for a friend: one such at a time (ADR 0129).</summary>
     private async Task<bool> HasOutstandingInvitationAsync(AccountId me) =>
-        (await TablesAsync(Kept)).Any(table => Inviter(table, me) && table.Seats.Any(seat => seat.InvitedAccount is not null && !seat.Taken));
+        (await TablesAsync(Kept)).Any(table => Inviter(table, me) && table.Seats.Any(seat => seat.InvitedAccount is not null && !seat.Taken && !RanOut(seat)));
+
+    /// <summary>Whether a seat's invitation waited its day: gone, whether or not anybody let it go yet.</summary>
+    private bool RanOut(TableSeat seat) => clock.GetUtcNow() - (seat.InvitedAt ?? clock.GetUtcNow()) >= InvitationFor;
 
     /// <summary>Whether a summary says a seat is kept for a friend: what the invitations are looked for in.</summary>
     private static bool Kept(TableSummary summary) => summary.Seats.Any(seat => seat.InvitedAccount is not null && seat.Taken != true);
@@ -1438,15 +1451,19 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             return Json(new { tables = Array.Empty<object>(), invitations = Array.Empty<object>() });
         }
 
-        // Under the gate, as every seat change is: an invitation that ran out is let go of as this list is read.
-        await Claims.WaitAsync();
-        try
+        // Under the gate, as every seat change is: an invitation that ran out is let go of as this list is read,
+        // unless a job does that (ADR 0162), and then it is not listed meanwhile.
+        if (!Tended)
         {
-            await ExpireInvitationsAsync();
-        }
-        finally
-        {
-            Claims.Release();
+            await Claims.WaitAsync();
+            try
+            {
+                await ExpireInvitationsAsync();
+            }
+            finally
+            {
+                Claims.Release();
+            }
         }
 
         var tables = await Task.WhenAll((await TablesAsync(summary => summary.Seats.Any(seat => seat.Account == account.Value.Value), over: true))
@@ -1460,7 +1477,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
         // The tables waiting for this account (ADR 0129): each with who asked, and since when.
         var invitations = await Task.WhenAll((await TablesAsync(summary => summary.Seats.Any(seat => seat.InvitedAccount == account.Value.Value && seat.Taken != true)))
-            .Where(table => !table.IsOver && table.Seats.Any(seat => seat.InvitedAccount == account && !seat.Taken))
+            .Where(table => !table.IsOver && table.Seats.Any(seat => seat.InvitedAccount == account && !seat.Taken && !RanOut(seat)))
             .Select(async table =>
             {
                 var seat = table.Seats.First(seat => seat.InvitedAccount == account);

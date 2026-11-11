@@ -99,6 +99,13 @@ internal sealed record CliOptions
     /// </summary>
     public TurnsMode? Turns { get; init; }
 
+    /// <summary>
+    /// Whether a job tends this host's tables (<c>--tended</c>, ADR 0162): the hourly <c>table-tend</c> closes the tables
+    /// that never began and lets go of the invitations nobody answered, so no request does. A request still lets
+    /// go of the tables this process holds that nobody is at.
+    /// </summary>
+    public bool Tended { get; init; }
+
     /// <summary>The Google client id the sign-in is for; <c>DOWNFALL_GOOGLE_CLIENT_ID</c> when not given. Public, not a secret.</summary>
     public string? GoogleClientId { get; init; }
 
@@ -170,7 +177,7 @@ internal sealed record CliOptions
     /// <summary>The bots' turns the queue says tables owe, taken until stopped: what the worker app runs (ADR 0162).</summary>
     public const string WorkerCommand = "table-worker";
 
-    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table|table-tend|table-worker|push-keys [--seed N] [--matches N] [--format 3v3|2v2|1v1] [--declaration hidden-intent|at-activation] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--slot-log file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth] [--push-keys file] [--accounts off|google|dev] [--google-client-id id] [--turns process|queue|worker]";
+    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table|table-tend|table-worker|push-keys [--seed N] [--matches N] [--format 3v3|2v2|1v1] [--declaration hidden-intent|at-activation] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--slot-log file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth] [--push-keys file] [--accounts off|google|dev] [--google-client-id id] [--turns process|queue|worker] [--tended]";
 
     /// <summary>Every option this command line takes. Anything else is a typo, and says so by name.</summary>
     private const string RecordOption = "--record";
@@ -192,6 +199,8 @@ internal sealed record CliOptions
     private const string AccountsOption = "--accounts";
 
     private const string TurnsOption = "--turns";
+
+    private const string TendedOption = "--tended";
 
     private const string GoogleClientIdOption = "--google-client-id";
 
@@ -246,6 +255,7 @@ internal sealed record CliOptions
             Practice = flags.Contains(PracticeOption),
             Lobby = flags.Contains(LobbyOption),
             PlatformAuth = flags.Contains(PlatformAuthOption),
+            Tended = flags.Contains(TendedOption),
             PushKeys = values.GetValueOrDefault(PushKeysOption),
             Accounts = values.TryGetValue(AccountsOption, out var accounts) ? ParseAccounts(accounts) : AccountsMode.Off,
             GoogleClientId = values.GetValueOrDefault(GoogleClientIdOption),
@@ -280,6 +290,11 @@ internal sealed record CliOptions
         if (flags.Contains(PlatformAuthOption) && command != "table")
         {
             return "'--platform-auth' is for table only: it says a platform in front of the host signs the operator in.";
+        }
+
+        if (flags.Contains(TendedOption) && (command != "table" || flags.Contains(PracticeOption)))
+        {
+            return "'--tended' is for table only, and not --practice: it says the hourly job tends the tables, so no request does.";
         }
 
         if (values.ContainsKey(PushKeysOption) && command is not ("table" or WorkerCommand))
@@ -365,7 +380,7 @@ internal sealed record CliOptions
     }
 
     /// <summary>The options that carry nothing after them, so the scanner does not swallow the next argument.</summary>
-    private static readonly HashSet<string> Valueless = new(StringComparer.Ordinal) { "--write", "--no-record", PracticeOption, LobbyOption, PlatformAuthOption };
+    private static readonly HashSet<string> Valueless = new(StringComparer.Ordinal) { "--write", "--no-record", PracticeOption, LobbyOption, PlatformAuthOption, TendedOption };
 
     /// <summary>
     /// What a sign-in cannot be had with. Accounts live beside the recordings, so a host that records nothing, or
