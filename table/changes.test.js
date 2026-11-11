@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { accountMoved, createLobbyChanges, keepWatching, streamEvents } from './changes.js';
+import { accountMoved, backoff, createLobbyChanges, keepWatching, streamEvents } from './changes.js';
 
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const encode = text => new TextEncoder().encode(text);
@@ -144,4 +144,29 @@ test('the stream opening and the player\'s own lists moving are what the bell an
   assert.equal(accountMoved({ event: 'ready', data: '0' }), true);
   assert.equal(accountMoved({ event: 'changed', data: 'account 3' }), true);
   assert.equal(accountMoved({ event: 'changed', data: 'lobby 7' }), false);
+});
+
+test('a read that failed is tried again, later each time, and the wait starts over once one answers', () => {
+  const time = clock(); let runs = 0;
+  const retry = backoff(() => { runs++; }, time);
+
+  retry.failed(); retry.failed();
+  assert.deepEqual([...time.jobs.values()].map(job => job.delay), [2000], 'one retry due, the second one later');
+  retry.answered();
+  assert.equal(time.jobs.size, 0);
+  retry.failed();
+  assert.deepEqual([...time.jobs.values()].map(job => job.delay), [1000]);
+  assert.equal(runs, 0);
+});
+
+test('a sign-in opens the lobby stream again, so the host reads the new player from it', async () => {
+  const doc = page(); const signals = [];
+  const changes = createLobbyChanges({ doc, win: page(), fetchImpl: async (_, options) => { signals.push(options.signal); return { ok: true, status: 200, body: openBody() }; }, ...clock() });
+  changes.subscribe(() => {}); await tick();
+
+  changes.reopen(); await tick();
+
+  assert.equal(signals.length, 2);
+  assert.equal(signals[0].aborted, true);
+  assert.equal(signals[1].aborted, false);
 });

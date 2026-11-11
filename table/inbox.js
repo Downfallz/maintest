@@ -1,5 +1,5 @@
 import { accountRequest } from './account.js';
-import { accountMoved, onLobbyChange } from './changes.js';
+import { accountMoved, backoff, onLobbyChange, signedInChanged } from './changes.js';
 import { preferredPresentation, presentationPath } from './battle-preferences.js';
 import { turnOf } from './players.js';
 import { activateSeats } from './session.js';
@@ -73,7 +73,7 @@ export function bellLabel(count) {
  * changed (ADR 0163), unless the page that mounts it handed it the same lists (`feed`, `feedFriends`) within `fresh`
  * milliseconds. Every action is the one the lobby or the Friends panel already offers, sent to the same route.
  */
-export function mountInbox(doc, { storage = null, request = accountRequest, win = globalThis, changes = onLobbyChange, fresh: freshFor = 5000, onChange = () => {} } = {}) {
+export function mountInbox(doc, { storage = null, request = accountRequest, win = globalThis, changes = onLobbyChange, reopen = signedInChanged, fresh: freshFor = 5000, onChange = () => {} } = {}) {
   const el = id => doc.getElementById(id);
   let account = null, mine = [], invitations = [], friends = null, fed = 0, busy = false, drawn = '';
   const problem = (text = '') => { el('inbox-problem').textContent = text; el('inbox-problem').hidden = !text; };
@@ -167,8 +167,14 @@ export function mountInbox(doc, { storage = null, request = accountRequest, win 
       if (games) { mine = games.tables ?? []; invitations = games.invitations ?? []; }
       friends = list;
       render();
-    } catch { /* Read again on the next change: a bell that missed one read keeps what it last knew. */ }
+      retry.answered();
+    } catch {
+      // A bell that missed one read keeps what it last knew, and reads again shortly: the change it was told of
+      // will not be told twice.
+      if (account?.id === reading) retry.failed();
+    }
   }
+  const retry = backoff(() => void refresh(true), { schedule: (run, delay) => win.setTimeout(run, delay), cancel: id => win.clearTimeout(id) });
   el('inbox-open').addEventListener('click', () => { problem(); void refresh(true); });
   // The lobby's stream opening (the page loaded, back in view, back online) and the player's own lists changing,
   // listened to while somebody is signed in: a page nobody signed in to has no bell to keep current.
@@ -178,12 +184,15 @@ export function mountInbox(doc, { storage = null, request = accountRequest, win 
     if (!on && unlisten) { unlisten(); unlisten = null; }
   };
   return {
-    stop() { listen(false); },
+    stop() { listen(false); retry.stop(); },
     /** Told by the sign-in whenever who is signed in changes. */
     setAccount(next) {
       if ((next?.id ?? null) === (account?.id ?? null)) return;
       account = next; mine = []; invitations = []; friends = null; fed = 0;
+      retry.stop();
       listen(Boolean(account));
+      // The lobby's stream knows who is signed in from when it opened: it is opened again for whoever is now.
+      reopen();
       render();
       void refresh(true);
     },

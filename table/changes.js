@@ -115,6 +115,9 @@ export function createLobbyChanges({ doc = globalThis.document, win = globalThis
       open();
       return () => { listeners.delete(listener); if (listeners.size === 0) close(); };
     },
+    // The host reads who is signed in when the stream opens: a sign-in, a sign-out or another account opens it again,
+    // and its `ready` reads the new player's lists.
+    reopen() { close(); refused = false; open(); },
   };
 }
 
@@ -124,6 +127,23 @@ let shared = null;
 export function onLobbyChange(listener) {
   shared ??= createLobbyChanges();
   return shared.subscribe(listener);
+}
+
+// Who is signed in changed: the page's lobby stream, if it has one, is opened again for them.
+export function signedInChanged() {
+  shared?.reopen();
+}
+
+// A read that failed is tried again a second later, then two, up to thirty, until one answers: a retry, not a
+// clock, since the change that asked for it will not be announced twice. `failed()` after a failure schedules
+// `run`; `answered()` after a success starts the wait over; `stop()` gives up what is due.
+export function backoff(run, { schedule = setTimeout, cancel = clearTimeout, first = 1000, most = 30000 } = {}) {
+  let timer = null, pause = first;
+  return {
+    failed() { cancel(timer); timer = schedule(() => { timer = null; run(); }, pause); pause = Math.min(pause * 2, most); },
+    answered() { cancel(timer); timer = null; pause = first; },
+    stop() { cancel(timer); timer = null; pause = first; },
+  };
 }
 
 // Whether an event is one the signed-in player's own lists should be read again on: the stream opening (whatever

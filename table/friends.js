@@ -3,7 +3,7 @@
 // says. The pure part is what the panel says; the mount does the asking.
 
 import { accountRequest, confirmAction, nameProblem } from './account.js';
-import { accountMoved, onLobbyChange } from './changes.js';
+import { accountMoved, backoff, onLobbyChange } from './changes.js';
 
 /** The sections of the panel from the host's list: what each shows, and what is said when it is empty. */
 export function friendSections(list) {
@@ -126,10 +126,14 @@ export function mountFriends(doc, { request = accountRequest, nav = globalThis.n
       if (account?.id !== forAccount) return;
       list = read;
       render();
+      retry.answered();
     } catch (error) {
       if (!quiet && account?.id === forAccount) problem(error.message || 'Could not load your friends. Try again.');
+      // Read again shortly: the change that asked for this read will not be announced twice.
+      if (account?.id === forAccount) retry.failed();
     }
   }
+  const retry = backoff(() => void refresh(true));
 
   el('friend-ask').addEventListener('submit', async event => {
     event.preventDefault();
@@ -161,7 +165,7 @@ export function mountFriends(doc, { request = accountRequest, nav = globalThis.n
   };
   render();
   return {
-    stop: () => listen(false),
+    stop: () => { listen(false); retry.stop(); },
     /** Reads the list again: a request answered from the bell changes it. */
     refresh: () => refresh(true),
     /** Told by the lobby whether an invitation of this player's is waiting: one at a time, so Invite waits too. */
@@ -175,6 +179,7 @@ export function mountFriends(doc, { request = accountRequest, nav = globalThis.n
       if ((next?.id ?? null) === (account?.id ?? null)) return;
       account = next;
       list = null;
+      retry.stop();
       listen(Boolean(account));
       render();
       problem();

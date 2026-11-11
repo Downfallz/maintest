@@ -242,3 +242,16 @@ test('each creature carries the illustration its purchases resolve to, from what
   assert.equal(livePresentation({ board: { ...view.board, allies: [{ id: 1, name: 'A', acquiredTiers: ['tier:prowler:v1'] }] } }, packages, { log }).creatures[0].evolution.artworkId, 'predator-base');
   assert.equal(livePresentation(view).creatures[0].evolution.artworkId, 'base-creature');
 });
+
+test('a reconnect queued before the last board arrived is given up once that board says the match is over', async () => {
+  const h = harness(), last = pending(); let reads = 0, opened = 0; let notify;
+  h.transport.seat = () => (++reads === 1 ? Promise.resolve(ok({ board: {} })) : last.promise);
+  h.transport.events = callback => { opened++; notify = callback; return Promise.resolve({ ok: true, status: 200 }); };
+  h.connection.start(h.transport); await tick();
+  notify({ event: 'changed' }); await tick();
+  assert.deepEqual([...h.jobs.values()].map(job => job.delay), [1000], 'the stream ended before the read answered');
+
+  last.resolve(ok({ board: {}, over: true })); await tick();
+
+  assert.equal(h.jobs.size, 0); assert.equal(opened, 1); h.connection.stop();
+});

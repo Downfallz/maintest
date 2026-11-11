@@ -81,6 +81,8 @@ export function createLiveConnection({ onState, onView, schedule = setTimeout, c
         if (!answer.ok || !answer.body?.board) throw new Error('Board unavailable');
         if (Number.isInteger(answer.body.feedNext)) connection.since = Math.max(connection.since, answer.body.feedNext);
         connection.over = answer.body.over === true;
+        // A finished match changes no more: a reconnect queued before its last board arrived is given up.
+        if (connection.over) { cancel(connection.streamTimer); connection.streamTimer = null; }
         onView(answer.body, connection.catalogue);
         onState('live');
         connection.failed = 0;
@@ -103,8 +105,9 @@ export function createLiveConnection({ onState, onView, schedule = setTimeout, c
     async function stream() {
       // Every `ready` is read on, the first one too: a change between the first read and the stream opening
       // would otherwise be missed, and no clock comes to find it. A read in flight owes one more.
-      connection.streams++;
       connection.streamTimer = null;
+      if (!current() || connection.over) return;
+      connection.streams++;
       let answer = null;
       try {
         answer = await transport.events(event => {
