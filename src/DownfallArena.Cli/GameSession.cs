@@ -153,6 +153,8 @@ internal sealed class GameSession
                 // same default as every other command, and says so out loud rather than defaulting silently.
                 // --format still wins over the file's team size, so one rule set file plays every format.
                 return await Table.TableHost.RunAsync(_services, _options, TableRules(), _seed);
+            case CliOptions.TendCommand:
+                return await Table.TableTend.RunAsync(_services, _options, TableRules());
             default:
                 await Console.Error.WriteLineAsync($"Unknown command '{_options.Command}'. {CliOptions.Usage}");
                 return 2;

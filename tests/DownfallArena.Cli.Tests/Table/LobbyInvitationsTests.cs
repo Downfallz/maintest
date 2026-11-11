@@ -66,6 +66,25 @@ public sealed class LobbyInvitationsTests : IDisposable
         (await _friends.AcceptAsync(other.Account.Id, one.Account.Id, Cancel)).IsSuccess.ShouldBeTrue();
     }
 
+    [Fact]
+    public async Task An_invitation_that_ran_out_is_let_go_of_by_the_hourly_job_in_another_process_and_the_host_sees_it()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var bastien = await PlayerAsync("bastien");
+        await BefriendAsync(mark, bastien);
+        var table = await InvitedTableAsync(mark, bastien);
+        _clock.Advance(LobbyApi.InvitationFor);
+
+        // The job: a registry of its own over the same store and index, and a lobby over it.
+        using var job = await _hosted.RestartedAsync();
+        var tended = await TableTend.TendAsync(job, new LobbyApi(job, _hosted.Composer, _clock) { Friends = _friends }, _clock.GetUtcNow());
+
+        tended.Expired.ShouldBe(1);
+        var stored = (await _hosted.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull();
+        stored.Seats.Single(seat => seat.Slot == "player2").InvitedAccount.ShouldBeNull();
+        (await table.Run!.RewrittenAsync(Cancel)).ShouldNotBeNull("the host that held the table lets it go at its next look");
+    }
+
     private static JsonElement Read(StudioResponse response) => JsonDocument.Parse(Encoding.UTF8.GetString(response.Body)).RootElement.Clone();
 
     private async Task<StudioResponse> OpenForAsync(SignedIn inviter, SignedIn friend) =>

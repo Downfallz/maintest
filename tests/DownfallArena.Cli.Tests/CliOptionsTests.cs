@@ -309,6 +309,16 @@ public sealed class CliOptionsTests
         Should.Throw<ArgumentException>(() => CliOptions.Parse(args)).Message.ShouldContain("--turns");
     }
 
+    [Fact]
+    public void The_hourly_job_tends_a_store_and_may_read_the_players_friendships()
+    {
+        var options = CliOptions.Parse([CliOptions.TendCommand, "--record", "runs/playtest", "--accounts", "google"]);
+
+        options.Command.ShouldBe("table-tend");
+        options.Record.ShouldBe("runs/playtest");
+        options.Accounts.ShouldBe(AccountsMode.Google);
+    }
+
     /// <summary>Asking for both is asking for opposite things, and is refused by name rather than resolved.</summary>
     [Fact]
     public void Recording_nowhere_and_recording_somewhere_cannot_both_be_asked_for()
