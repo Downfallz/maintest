@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { returningBattlePlayer } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
 import { WINDUP_MS, IMPACT_MS } from '../../table/battle-timing.js';
+import { decided } from './decision.js';
 test.beforeEach(returningBattlePlayer);
 const creature = id => ({ id, name: `Creature ${id}`, health: 20, maxHealth: 20, energy: 4, totalDefense: 2,
   isAlive: true, conditions: [], knownSpells: [], acquiredTiers: [] });
@@ -28,7 +29,7 @@ async function mount(page, overrides = {}) {
     const request = route.request(), url = new URL(request.url());
     if (url.pathname === '/api/lobby/resume') return route.fulfill({ json: { tables: [{ table: { id: 'order', format: '3v3' }, seats: [{ seat: 'player1', token: 'seat' }] }] } });
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [], packages: [], rules: { combatDeclaration: 'AtActivation' } } });
-    if (url.pathname.endsWith('/decision')) { state.writes.push(request.postDataJSON()); return route.fulfill({ status: 204 }); }
+    if (url.pathname.endsWith('/decision')) { state.writes.push(decided(request)); return route.fulfill({ status: 204 }); }
     if (url.pathname === '/api/seat/player1') {
       if (url.searchParams.has('shown')) state.shown.push(Number(url.searchParams.get('shown')));
       return route.fulfill({ status: state.status, json: state.view });

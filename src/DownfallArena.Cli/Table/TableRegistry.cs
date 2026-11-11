@@ -86,8 +86,9 @@ internal sealed class TableRegistry : IDisposable
     public TableLoader? Loader { get; init; }
 
     /// <summary>
-    /// The basis this host replays tables on (ADR 0091): a table refused under it is the operator's, and is neither
-    /// listed nor counted here; one refused under another basis is tried again (ADR 0115).
+    /// The basis this host replays tables on: a table refused under it before ADR 0163 voided such tables is
+    /// neither listed nor counted here; one refused under another basis is tried again (ADR 0115), and voided
+    /// if it still does not replay (ADR 0163).
     /// </summary>
     public ReplayBasis? Basis { get; init; }
 
@@ -760,7 +761,7 @@ internal sealed class TableRegistry : IDisposable
 
     /// <summary>
     /// Lets every table go, as a host stopping does: without closing any, so that a host after this one picks up
-    /// what was being played (ADR 0091).
+    /// what was being played (ADR 0159).
     /// </summary>
     public void Dispose()
     {

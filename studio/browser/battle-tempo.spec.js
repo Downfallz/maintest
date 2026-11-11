@@ -1,10 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { returningBattlePlayer } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
+import { decided, drawnFor } from './decision.js';
 test.beforeEach(returningBattlePlayer);
 const creature = id => ({ id, name: `Creature ${id}`, health: 20, maxHealth: 20, energy: id + 2, isAlive: true, conditions: [], knownSpells: ['strike'] });
 async function mount(page, ids = [1, 2, 3]) {
-  const state = { errors: [], writes: [], shown: [], refuse: null, lost: false, hold: null,
+  const state = { errors: [], writes: [], drawn: [], shown: [], refuse: null, lost: false, hold: null,
     view: { waitingFor: 'Speed', waitingAsked: 11, waitingCreature: ids[0], feed: [], feedNext: 0,
       board: { slot: 'Player1', phase: 'Planning', subPhase: 'Speed', roundNumber: 1, allies: ids.map(creature), enemies: [4, 5, 6].map(creature), timeline: [], speedChoices: [] },
       options: { speed: { missing: ids } }, guidance: [{ spell: 'strike', standardCriticalChance: .4 }] } };
@@ -22,7 +23,7 @@ async function mount(page, ids = [1, 2, 3]) {
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [{ id: 'strike', name: 'Strike', cost: 2, critical: '10%', targeting: 'One enemy', effects: ['Recorded spell effect'] }] } });
     if (url.pathname.endsWith('/events')) return route.fulfill({ contentType: 'text/event-stream', body: 'event: ready\ndata: 0\n\n' });
     if (url.pathname.endsWith('/decision')) {
-      const command = request.postDataJSON(); state.writes.push(command);
+      const command = decided(request); state.writes.push(command); state.drawn.push(drawnFor(request));
       if (state.hold) await state.hold;
       if (state.refuse === command.creature) return route.fulfill({ status: 409, json: { message: 'Review this tempo.' } });
       accept(command);
@@ -67,6 +68,16 @@ for (const count of [1, 2, 3]) test(`${count} creature tabs keep an editable tea
   await expect(page.locator('#planning-dialog')).toBeHidden();
   expect(h.writes).toEqual([1, 2, 3].slice(0, count).map((creature, index) => ({ kind: 'Speed', creature, speed: index ? 'Standard' : 'Quick', asked: 11 + index })));
   expect([...new Set(h.shown)]).toEqual([11, 12, 13].slice(0, count)); expect(h.errors).toEqual([]);
+});
+// The page says how long each asking was drawn before its tempo was sent (inventory question 3), which the host
+// reads when it lost its own stamp of the moment it was shown.
+test('each tempo sent says how long its asking was drawn before the tap', async ({ page }) => {
+  const h = await mount(page, [1, 2]);
+  await fill(page, 2);
+  await page.locator('#planning-confirm').click();
+  await expect.poll(() => h.drawn.length).toBe(2);
+  for (const span of h.drawn) { expect(Number.isInteger(span)).toBe(true); expect(span).toBeGreaterThanOrEqual(0); }
+  expect(h.errors).toEqual([]);
 });
 test('a refusal after one accepted creature leaves a reviewable draft and requires another confirmation', async ({ page }) => {
   const h = await mount(page); h.refuse = 2; await fill(page, 3); await page.locator('#planning-confirm').click();

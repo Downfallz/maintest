@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { openSpells } from './battle-spells-fixture.js';
 import { returningBattlePlayer } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
+import { decided } from './decision.js';
 test.beforeEach(returningBattlePlayer);
 // Match the lab/live suites: software-rendered Phaser pages run one case at a time within this file.
 test.describe.configure({ mode: 'default' });
@@ -22,7 +23,7 @@ async function mount(page, { kind = 'Action', targets = legal([4, 5, 6]), shownS
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: ['bolt', 'ward', 'locked'].map(id => ({ id, name: `Host ${id}`, cost: 0, targeting: 'Host target text', effects: ['Host effect text'] })) } });
     if (url.pathname.endsWith('/events')) return route.fulfill({ contentType: 'text/event-stream', body: 'event: ready\ndata: 0\n\n' });
     if (url.pathname.endsWith('/decision')) {
-      state.writes.push(request.postDataJSON()); if (state.wait) await state.wait;
+      state.writes.push(decided(request)); if (state.wait) await state.wait;
       if (state.status === 204) { state.view.waitingFor = null; state.view.waitingAsked = null; state.view.board.enemies[0].health = 12; return route.fulfill({ status: 204 }); }
       // A refusal is the host's: the asking it refused has moved on, and the next read says so.
       state.view.waitingAsked += 1;

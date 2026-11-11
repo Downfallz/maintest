@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { returningBattlePlayer, matchResult, teamTempos } from './battle-help-fixture.js';
 import { fitsViewport, fitsBattlefield } from './fit.js';
+import { decided } from './decision.js';
 test.beforeEach(returningBattlePlayer);
 test.describe.configure({ mode: 'default' });
 const creature = id => ({ id, name: `Creature ${id}`, health: 20, maxHealth: 20, energy: 4, isAlive: true, conditions: [], acquiredTiers: [], knownSpells: ['strike'] });
@@ -26,7 +27,7 @@ async function mount(page, { kind = 'Evolution', replay = false, over = false, r
     if (url.pathname.endsWith('/events')) return route.fulfill({ contentType: 'text/event-stream', body: 'event: ready\ndata: 0\n\n' });
     if (url.pathname.endsWith('/concede')) { state.concessions++; state.view.over = true; state.view.waitingFor = null; state.view.outcome = { winner: 'player2', reason: 'Concession' }; return route.fulfill({ status: 204 }); }
     if (url.pathname.endsWith('/decision')) {
-      state.writes.push(req.postDataJSON());
+      state.writes.push(decided(req));
       if (state.status !== 204) return route.fulfill({ status: state.status, json: { message: 'The offered pick has changed.' } });
       state.view.waitingFor = null; state.view.waitingAsked = null; return route.fulfill({ status: 204 });
     }

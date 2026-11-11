@@ -10,4 +10,11 @@ namespace DownfallArena.Application.Matches.Journaling;
 public interface IMatchInStep
 {
     void InStep(MatchId matchId, JournalPosition position);
+
+    /// <summary>
+    /// Told, before lines of the journal are replayed -- the whole journal rebuilt, or the lines another process
+    /// wrote taken on -- every seat change the journal holds through them, in order: who each replayed decision
+    /// is named after (inventory question 19), the seat changes further down those same lines included.
+    /// </summary>
+    void Replaying(MatchId matchId, IReadOnlyList<SeatChangeEntry> seatChanges);
 }

@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { openSpells } from './battle-spells-fixture.js';
 import { returningBattlePlayer } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
+import { decided } from './decision.js';
 test.beforeEach(returningBattlePlayer);
 const creature = (id, name) => ({ id, name, isAlive: true, health: 20, maxHealth: 20, energy: 6,
   totalDefense: 0, currentInitiative: 0, conditions: [], acquiredTiers: [], knownSpells: ['focus'] });
@@ -36,7 +37,7 @@ async function mount(page, input = initial()) {
       if (url.searchParams.has('shown')) { h.shown.push(url.searchParams.get('shown')); if (h.ack) await h.ack; }
       return route.fulfill({ status: h.status, json: h.view });
     }
-    if (url.pathname.endsWith('/decision')) { h.writes.push(route.request().postDataJSON()); return route.fulfill({ status: 204 }); }
+    if (url.pathname.endsWith('/decision')) { h.writes.push(decided(route.request())); return route.fulfill({ status: 204 }); }
     return route.fulfill({ status: 500 });
   });
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));

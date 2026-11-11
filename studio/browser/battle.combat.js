@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { openSpells } from './battle-spells-fixture.js';
 import { returningBattlePlayer, readResults } from './battle-help-fixture.js';
 import { startHost, stopHost } from './host.js';
+import { decided } from './decision.js';
 test.beforeEach(returningBattlePlayer);
 
 for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaration}: battle combat commands resolve through the real engine`, async ({ page, context }, info) => {
@@ -33,7 +34,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     page.on('request', request => {
       const url = new URL(request.url());
       if (url.searchParams.has('shown')) shown.push(Number(url.searchParams.get('shown')));
-      if (url.pathname.endsWith('/decision')) sent.push({ command: request.postDataJSON(), seen: [...shown] });
+      if (url.pathname.endsWith('/decision')) sent.push({ command: decided(request), seen: [...shown] });
     });
     page.on('response', async response => {
       if (/\/api\/seat\/player1(?:\?|$)/.test(response.url()) && response.ok()) {
