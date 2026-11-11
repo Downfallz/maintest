@@ -1,10 +1,12 @@
 using System.Text.Json;
+using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Matches.Decisions;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Application.Matches.Queries;
 using DownfallArena.Cli.Table;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Rounds;
+using DownfallArena.Infrastructure.Accounts;
 using DownfallArena.Infrastructure.Learning;
 using DownfallArena.SharedKernel.Identifiers;
 
@@ -499,7 +501,10 @@ public sealed class TableRestorerTests : IDisposable
         (await _after.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Closed);
     }
 
-    /// <summary>A replay refused leaves the run exactly as the earlier host wrote it: its manifest, its dataset, its trace.</summary>
+    /// <summary>
+    /// A replay refused leaves the run's files exactly as the earlier host wrote them: its manifest, its dataset, its
+    /// trace. Only its record says it ended, void (ADR 0163).
+    /// </summary>
     [Fact]
     public async Task A_replay_that_is_refused_leaves_the_run_as_the_earlier_host_wrote_it()
     {
@@ -513,15 +518,15 @@ public sealed class TableRestorerTests : IDisposable
 
         picked.ShouldBeNull();
         (await Files(table.Id, "manifest.json", "steps.jsonl", "episodes.jsonl")).ShouldBe(before);
-        (await _after.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Open, "left as it was, not closed");
+        (await _after.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().Void.ShouldBeTrue("ended void, its files kept as they were");
     }
 
     /// <summary>
-    /// A record refused under an engine, content and rules is marked with them when the pick-up is refused, and
-    /// kept open for the operator.
+    /// A table whose journal no longer replays ends as a void match (ADR 0163): closed and marked void with the
+    /// engine, content and rules it was refused under, and out of the lobby.
     /// </summary>
     [Fact]
-    public async Task A_refused_pick_up_is_marked_in_the_record_and_the_table_kept_open()
+    public async Task A_pick_up_whose_journal_no_longer_replays_voids_the_table_under_its_basis()
     {
         var table = await Opened(HostedTables.OnePerson);
         await PlayUntil(table, table.Seats[0].Person!, PlayerOptionsKind.Intent);
@@ -534,7 +539,46 @@ public sealed class TableRestorerTests : IDisposable
         picked.ShouldBeNull();
         var record = (await refusing.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull();
         record.RefusedUnder.ShouldBe(Basis("abc123"));
-        record.Status.ShouldBe(TableRecord.Open, "kept for the operator, not closed");
+        record.Status.ShouldBe(TableRecord.Closed);
+        record.Void.ShouldBeTrue();
+        (await refusing.Index.OpenAsync(0, 10, Cancel)).ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// Each seat's account is told its match was voided (ADR 0163), once: a second process finds the table already
+    /// ended, and tells nobody.
+    /// </summary>
+    [Fact]
+    public async Task The_seats_of_a_void_match_are_told_once_however_many_processes_find_it()
+    {
+        var table = await Opened(HostedTables.OnePerson);
+        await PlayUntil(table, table.Seats[0].Person!, PlayerOptionsKind.Intent);
+        await Diverged(table);
+        var account = AccountId.New();
+        var record = (await _before.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull();
+        var owned = record with { Seats = [.. record.Seats.Select(seat => seat.Person ? seat with { Account = account.Value } : seat)] };
+        await new FileArtifactStore(_runs).Writer(table.Id).WriteJsonAsync(TableRecord.File, owned, Cancel);
+        var devicesRoot = $"{_runs}-devices";
+        try
+        {
+            var devices = new AccountDevices(new FileDeviceStore(devicesRoot), TimeProvider.System);
+            await devices.AddAsync(account, new PushDevice("https://push.example/player", DeviceKey, DeviceAuth, default), Cancel);
+            var sender = new Sender();
+            _after.Composer.Notices = new AccountNotices(sender, devices);
+            var later = await Restarted();
+            using var another = _after.Registry();
+
+            var first = await later.ByIdAsync(table.Id, Cancel);
+            var second = await another.ByIdAsync(table.Id, Cancel);
+
+            first.ShouldBeNull();
+            second.ShouldBeNull();
+            sender.Sent.ShouldHaveSingleItem().ShouldContain("updated");
+        }
+        finally
+        {
+            Directory.Delete(devicesRoot, recursive: true);
+        }
     }
 
     /// <summary>
@@ -610,7 +654,9 @@ public sealed class TableRestorerTests : IDisposable
         var picked = await registry.ByIdAsync(table.Id, Cancel);
 
         picked.ShouldBeNull("replayed, and refused again");
-        (await newer.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().RefusedUnder.ShouldBe(Basis("def456"));
+        var record = (await newer.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull();
+        record.RefusedUnder.ShouldBe(Basis("def456"));
+        record.Void.ShouldBeTrue("refused once more, it ends void (ADR 0163)");
     }
 
     /// <summary>
@@ -633,6 +679,25 @@ public sealed class TableRestorerTests : IDisposable
         (await Waiting(rebuilt.Seats[0].Person!)).Kind.ShouldBe(PlayerOptionsKind.Speed);
     }
 
+    private const string DeviceKey = "BAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0A";
+    private const string DeviceAuth = "AAECAwQFBgcICQoLDA0ODw";
+
+    /// <summary>Every notice it is handed, sent.</summary>
+    private sealed class Sender : IPushSender
+    {
+        public List<string> Sent { get; } = [];
+
+        public Task<bool> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
+        {
+            lock (Sent)
+            {
+                Sent.Add(payload);
+            }
+
+            return Task.FromResult(true);
+        }
+    }
+
     private static ReplayBasis Basis(string engine) => new(engine, "content", Application.Learning.RuleSetStamp.Of(HostedTables.Rules));
 
     /// <summary>The record's second decision handed to the other seat: a line that no longer answers the question asked.</summary>
@@ -644,14 +709,15 @@ public sealed class TableRestorerTests : IDisposable
         await RewriteAsync(table.Id, journal);
     }
 
-    /// <summary>The table's journal diverged, and its pick-up refused by a host on this basis, which marks its record.</summary>
+    /// <summary>
+    /// The table's journal diverged, and its pick-up was refused by a host on this basis before ADR 0163: its record
+    /// marked with the basis and left open for the operator.
+    /// </summary>
     private async Task Refused(PlayedTable table, ReplayBasis basis)
     {
         await Diverged(table);
-        using var refusing = new HostedTables(_ => new FileArtifactStore(_runs), basis: basis);
-        using var registry = await refusing.RestartedAsync();
-        (await registry.ByIdAsync(table.Id, Cancel)).ShouldBeNull();
-        (await refusing.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().RefusedUnder.ShouldBe(basis);
+        var record = (await _before.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull();
+        await new FileArtifactStore(_runs).Writer(table.Id).WriteJsonAsync(TableRecord.File, record with { RefusedUnder = basis }, Cancel);
     }
 
     /// <summary>

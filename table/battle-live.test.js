@@ -76,13 +76,14 @@ test('a late catalogue after stopping opens no seat and paints no board', async 
   assert.equal(calls, 0); assert.deepEqual(h.views, [[null, null]]);
 });
 
-for (const status of [401, 403]) for (const source of ['catalogue', 'seat', 'events']) {
+const refusedAs = { 401: 'signin', 403: 'revoked', 410: 'ended' };
+for (const status of [401, 403, 410]) for (const source of ['catalogue', 'seat', 'events']) {
   test(`${status} from ${source} clears the board and stops polling and notifications`, async () => {
     const h = harness(); let signal;
     const transport = { ...h.transport, events: (_, value) => { signal = value; return new Promise(() => {}); } };
     transport[source] = async (_, value) => { if (value) signal = value; return { ok: false, status }; };
     h.connection.start(transport); await tick();
-    assert.equal(h.states.at(-1), status === 401 ? 'signin' : 'revoked');
+    assert.equal(h.states.at(-1), refusedAs[status]);
     assert.deepEqual(h.views.at(-1), [null, null]); assert.equal(h.jobs.size, 0); assert.equal(signal.aborted, true);
   });
 }
@@ -175,12 +176,12 @@ test('a failed write refreshes the board without retrying the command', async ()
   h.connection.start(h.transport); await tick(); await assert.rejects(h.connection.submit({ kind: 'Action' }), /lost/); await tick();
   assert.equal(reads, 2); assert.equal(writes, 1); h.connection.stop();
 });
-for (const status of [401, 403]) for (const source of ['shown', 'submit']) test(`${status} on ${source} erases the private board`, async () => {
+for (const status of [401, 403, 410]) for (const source of ['shown', 'submit']) test(`${status} on ${source} erases the private board`, async () => {
   const h = harness(); h.connection.start(h.transport); await tick();
   if (source === 'shown') h.transport.seat = async () => ({ ok: false, status });
   else h.transport.decide = async () => ({ ok: false, status });
   await h.connection[source](11);
-  assert.deepEqual(h.views.at(-1), [null, null]); assert.equal(h.states.at(-1), status === 401 ? 'signin' : 'revoked'); assert.equal(h.jobs.size, 0);
+  assert.deepEqual(h.views.at(-1), [null, null]); assert.equal(h.states.at(-1), refusedAs[status]); assert.equal(h.jobs.size, 0);
 });
 
 test('concession shares the command write fence and refreshes the authoritative result', async () => {

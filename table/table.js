@@ -424,7 +424,7 @@ async function watch(state, seat) {
         void refresh(state);
       }, controller.signal);
       // Refused is a seat that is no longer this page's, or a host without the route: the poll carries on alone.
-      if (answer.status === 403 || answer.status === 404) return;
+      if (answer.status === 403 || answer.status === 404 || answer.status === 410) return;
     } catch {
       // The stream broke; the loop below opens it again.
     } finally {
@@ -576,10 +576,11 @@ async function refresh(state) {
   }
 }
 
-// Whether the host said this seat's token is no longer one of its seats. A replay refused is the operator's
-// sign-in, not a seat this browser holds, so nothing saved is forgotten for it.
+// Whether the host said this seat's token is no longer one of its seats: refused, or a match voided by an update
+// (410, ADR 0163). A replay refused is the operator's sign-in, not a seat this browser holds, so nothing saved is
+// forgotten for it.
 function revokes(state, answer) {
-  return answer.status === 403 && !state.replaying;
+  return (answer.status === 403 || answer.status === 410) && !state.replaying;
 }
 
 async function poll(state) {

@@ -97,6 +97,14 @@ internal sealed class TableLoader(StoredSessions stored, TableComposer composer,
         return await stored.CloseAsync(id, composer.Index, cancellationToken);
     }
 
+    /// <summary>
+    /// Whether this key is a seat of a table that ended as a void match (ADR 0163): its record names the seat by this
+    /// very key, so a stranger who guessed a table's id learns nothing.
+    /// </summary>
+    public async Task<bool> VoidSeatAsync(string id, string key, CancellationToken cancellationToken = default) =>
+        await stored.RecordAsync(id, cancellationToken) is { Void: true } record
+        && record.Seats.Any(seat => seat.Person && string.Equals(seat.Token, key, StringComparison.Ordinal));
+
     /// <summary>What refuses one table rather than the request: its record or journal no longer read, or no longer fit.</summary>
     internal static bool Refuses(Exception failure) =>
         failure is ArgumentException or IOException or System.Text.Json.JsonException or InvalidDataException or InvalidOperationException;

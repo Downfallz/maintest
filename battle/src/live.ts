@@ -150,15 +150,26 @@ let wasTargeting = false;
 function status(state: string) {
   $('battle').dataset.connection = state;
   // Losing the connection or the seat fences a pending sound opt-in; an animation's own cancellation does not.
-  if (state === 'stale' || state === 'signin' || state === 'revoked') audio.stop();
-  if (state === 'signin' || state === 'revoked' || (state === 'stale' && !view)) $('loading').hidden = false;
-  if (['signin', 'revoked'].includes(state)) services.reset();
+  // A seat that can no longer play: signed out, no longer this page's, or a match voided by an update (ADR 0163).
+  const closed = state === 'signin' || state === 'revoked' || state === 'ended';
+  if (state === 'stale' || closed) audio.stop();
+  if (closed || (state === 'stale' && !view)) $('loading').hidden = false;
+  if (closed) services.reset();
   services.setOnline(state === 'live');
   if (state === 'stale') playback.skip();
   const messages: Record<string, string> = { live: 'LIVE', connecting: 'Connecting…',
-    stale: 'Connection interrupted · retrying', signin: 'Sign in to continue', revoked: 'Seat access is no longer valid' };
+    stale: 'Connection interrupted · retrying', signin: 'Sign in to continue', revoked: 'Seat access is no longer valid',
+    ended: 'This match was ended' };
   text('connection', messages[state] ?? state);
-  if ((state === 'signin' || state === 'revoked') && replayOf(location.search)) {
+  if (state === 'ended') {
+    selected = null;
+    text('perspective', 'YOUR TEAM');
+    text('load-title', messages.ended);
+    text('load-detail', 'The game was updated and this match could no longer be played on. It ended without a result and does not count.');
+    $<HTMLAnchorElement>('access-link').href = '/';
+    text('access-link', 'Lobby');
+    $('retry').hidden = true;
+  } else if ((state === 'signin' || state === 'revoked') && replayOf(location.search)) {
     // A recording is the operator's to read with the panel's token, or a player's own game read by their account
     // (ADR 0156): signed out is asked to sign in, and anybody else is told whose it is.
     const replay = replayMessage(state, Boolean(operatorToken(storage)));

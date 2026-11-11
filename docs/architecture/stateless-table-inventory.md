@@ -327,11 +327,22 @@ which adds the compilation of the engine itself.
    in memory, which is the one replica's. With several, a practice table needs a sticky route or a journal in
    the store; it is one person against a script, and a sticky route is the cheaper of the two.
 7. **Unrecorded tables** (`--no-record`). Answered: `InMemoryDecisionJournal`, conditional like the others.
-8. **Content changing under an open table.** A divergent replay is refused once, when the table is picked up,
-   and marked; a host on that basis no longer lists it, and it stays the operator's. Since 4.3b3 every cold load replays,
-   so a deploy that moves content strands open tables at the next tap. Options: pin
-   the content hash in the table record and refuse with a clear message, or keep serving the old content
-   beside the new for the tables that began on it.
+8. **Content changing under an open table.** Decided in [ADR 0163](../adr/0163-keep-a-table-on-the-content-it-began-on-and-void-what-no-longer-replays.md),
+   in two slices.
+   - Since 4.3b3 every cold load replays, so a deploy that moves content or rules refused open tables at the next
+     tap. A refused table stayed open for the operator, and its players' links went dead.
+   - **8a, done.** A pick-up whose journal no longer replays (a line that does not answer, boards that differ from
+     the checkpoint) ends the table as a **void match** (`PlaytestRun.MarkVoidAsync`):
+     - its record is closed and marked `Void`, with the basis it was refused under, and the table leaves the index
+       and its codes;
+     - no result is kept for the ladder;
+     - each seat's account is told, once, by the process whose claim on closing stands (6c);
+     - a seat's key is answered `410 Gone` with the reason (`TableRegistry.VoidSeatAsync`), and the battle view
+       says "This match was ended" (`ended`).
+
+     A record refused and left open before this is voided at its next pick-up on another basis.
+   - **8b.** Each table keeps the content and the rule set it began on, and is replayed on them, so only an engine
+     change can still void a match.
 9. **The event stream across replicas.** Answered in 6a with the second step below: a process watches where the
    journal ends, about once a second, for the tables it holds. A replica holding a stream has to learn of a line
    another replica wrote. In this order, each step taken only when the one before it stops being enough:
