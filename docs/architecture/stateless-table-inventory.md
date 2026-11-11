@@ -5,6 +5,11 @@ off the code on 2026-11-10. It is a map for sizing the work, not a design: each 
 tests when it starts. Sizes are line counts of the files as they stand, to say how big a thing is, not how
 long it takes.
 
+**Status, 2026-11-11: done.** Every phase has landed, and the hosted table runs as an API, a worker and an
+hourly job (ADR 0162). Two questions stay open without blocking anything: 14 (Event Grid, which nothing at
+playtest volume needs yet) and 18 (a directory store shared between processes, which the hosted table does
+not use). The rest of this page is the record of how the work was cut.
+
 ## What is already there
 
 The work is smaller on the engine's side than "a match lives in memory" suggests.
@@ -430,12 +435,12 @@ which adds the compilation of the engine itself.
     Windows refusing the second where the file is opened: a line is always added at the end, so neither
     writes over the other's, but both can take the same length for their own. The hosted table's journal is
     an append blob and has none of this.
-19. **Who a rebuilt decision is named after.** A rebuild records every step again under the name of whoever
-    sat at its round, which the seat changes further down the journal say. `SteppedSession` reads them once
-    before the match is rebuilt, and learns of later ones because it writes them itself. A second process
-    writing a seat change is seen at the next step, after a rebuild it caused, or the lines it caught up on
-    (question 13), have named their steps. One
-    process until 4.2, where the table is loaded per request and reads its seat changes with its journal.
+19. **Who a rebuilt decision is named after.** Answered. A replayed decision is recorded under the name of
+    whoever sat at its round, which the seat changes say, including those further down the lines being
+    replayed. The stepper tells the session every seat change through those lines before it replays them
+    (`IMatchInStep.Replaying`), for a rebuild of the whole journal and for the lines another process wrote
+    (question 13) alike. Before, the session read the journal once as it opened, and learned of a change
+    another process wrote only after the decisions that followed it were named.
 20. **What a table's session still keeps in memory after 4.1b.** Whether each person has arrived and whether
     the match has begun (written into the record since 4.2b, and read back when the table is picked up), the
     table's version counter (question 9), the decision clock (question 3), and the
@@ -453,8 +458,8 @@ which adds the compilation of the engine itself.
     seat past a handover. So the session asks again inside the turn that ends the match, as it does for a
     decision and a seat change, and a concession that finds a bot holding the seat ends nothing.
 
-## Documents this makes stale as it lands
+## Documents this made stale as it landed
 
-- `infra/README.md`: the cold-start paragraph, as the apps are split (phase 6).
-- ADR 0091 (superseded), and the remarks in `StoredSessions`, `TableRecord` and `TableRegistry` that cite it
-  for what a table's record is for, which still holds.
+Brought up to date: `infra/README.md` describes the API, the worker and the job (phase 6); ADR 0091 is marked
+superseded, and the remarks in `TableRecord` and `TableRegistry` that cited it for what a table's record is
+for now cite ADR 0159, which keeps it.
