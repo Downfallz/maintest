@@ -32,6 +32,9 @@ internal static class TableWorker
         public IMatchResults? Results { get; init; }
 
         public IDeviceStore? Devices { get; init; }
+
+        /// <summary>Where the content the tables began on is kept (ADR 0163), or nowhere.</summary>
+        public IArtifactStore? Contents { get; init; }
     }
 
     public static async Task<int> RunAsync(IServiceProvider services, CliOptions options, RuleSet rules)
@@ -79,7 +82,10 @@ internal static class TableWorker
             var over = new Over(
                 await ArtifactStores.OpenAsync(target, stopping.Token),
                 await ArtifactStores.OpenIndexAsync(target, stopping.Token),
-                ArtifactStores.OpenChannels(target, clock));
+                ArtifactStores.OpenChannels(target, clock))
+            {
+                Contents = await TableHost.OpenContentsAsync(target, stopping.Token),
+            };
             if (options.Accounts != AccountsMode.Off)
             {
                 over = over with
@@ -123,6 +129,7 @@ internal static class TableWorker
         var turns = await over.Channels.OpenAsync(AgentTurnWorker.Queue, stopping);
         var composer = new TableComposer(services, rules, over.Store)
         {
+            Contents = over.Contents,
             Turns = new QueuedAgentTurns(turns, clock) { Said = Console.WriteLine },
             Index = over.Index,
             Agents = SeatableAgents.Read(TableHost.WeightsDirectory),

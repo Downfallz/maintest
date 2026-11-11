@@ -3,6 +3,7 @@ using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Friends;
 using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.Application.Learning;
+using DownfallArena.Application.Learning.Ports;
 using DownfallArena.Application.Matches.Journaling;
 using DownfallArena.Application.Ports;
 using DownfallArena.Application.Tables.Ports;
@@ -88,8 +89,10 @@ internal static class TableHost
 
         var channels = mode == TurnsMode.Process ? null : ArtifactStores.OpenChannels(options.Record ?? DefaultRunsDirectory, clock);
         var turns = channels is null ? null : await OpenChannelAsync(channels, AgentTurnWorker.Queue, stopping.Token);
+        var contents = store is null ? null : await OpenContentsAsync(options.Record ?? DefaultRunsDirectory, stopping.Token);
         var composer = new TableComposer(services, rules, store)
         {
+            Contents = contents,
             Turns = turns is null ? new InProcessAgentTurns(clock) : new QueuedAgentTurns(turns, clock) { Said = Console.WriteLine },
             Index = index,
             Agents = agents,
@@ -305,6 +308,23 @@ internal static class TableHost
     /// role, which a deployment made before ADR 0161 lacks until its bootstrap is run again. A table is its
     /// record and its journal; the index only finds them, and a host without one serves what it holds.
     /// </summary>
+    /// <summary>
+    /// Where the content the tables began on is kept (ADR 0163), or none when it cannot be opened: the tables are then
+    /// replayed on this host's own content, as before, which is said.
+    /// </summary>
+    internal static async Task<IArtifactStore?> OpenContentsAsync(string target, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await ArtifactStores.OpenContentAsync(target, cancellationToken);
+        }
+        catch (Exception failure) when (failure is Azure.RequestFailedException or Azure.Identity.AuthenticationFailedException or IOException or UnauthorizedAccessException)
+        {
+            Console.WriteLine($"  The content the tables began on cannot be kept ({failure.Message}); a table picked up after the content changed is replayed on this host's (ADR 0163).");
+            return null;
+        }
+    }
+
     private static async Task<ITableIndex?> OpenIndexAsync(string target, CancellationToken cancellationToken)
     {
         try

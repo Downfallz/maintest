@@ -85,6 +85,19 @@ internal sealed record TableRecord
     /// </summary>
     public bool Void { get; init; }
 
+    /// <summary>
+    /// The hash of the content the table began on (ADR 0163), kept in the store under it: a host on other content
+    /// replays the table on this one. None in a record written before it was kept, and such a table is replayed on
+    /// the host's own content.
+    /// </summary>
+    public string? Content { get; init; }
+
+    /// <summary>
+    /// The rule set the table plays (ADR 0163), so a host reading another rules file replays it under these. None in
+    /// a record written before it was kept, and such a table plays the host's rules in its recorded format.
+    /// </summary>
+    public RecordedRules? Rules { get; init; }
+
     /// <summary>Only explicitly offered seats are public. Older, invitation-only tables offer none.</summary>
     public IReadOnlyList<string> OpenSeats { get; init; } = [];
 
@@ -126,6 +139,8 @@ internal sealed record TableRecord
             OpenSeats = table.OpenSeats,
             Casual = table.Casual,
             Begun = table.Session.HasBegun,
+            Content = table.Content,
+            Rules = RecordedRules.Of(table.Session.Rules),
         };
     }
 
@@ -140,6 +155,8 @@ internal sealed record TableRecord
             Status = stored is { Status: not Open } ended && Status == Open ? ended.Status : Status,
             RefusedUnder = RefusedUnder ?? stored?.RefusedUnder,
             Void = Void || stored?.Void == true,
+            Content = Content ?? stored?.Content,
+            Rules = Rules ?? stored?.Rules,
             Begun = Begun || stored?.Begun == true,
         };
 

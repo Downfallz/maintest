@@ -86,6 +86,32 @@ internal static class ArtifactStores
         return await BlobAccountStore.OpenAsync(container, cancellationToken);
     }
 
+    /// <summary>The container the content tables began on is kept in, next to the recordings' one (ADR 0163).</summary>
+    public const string ContentContainer = "content";
+
+    /// <summary>
+    /// Where the content the tables began on is kept beside what <c>--record</c> names (ADR 0163), one schema under
+    /// its hash: a directory <c>content</c> next to the runs' directory, or a container <c>content</c> in the same
+    /// storage account. Never inside the recordings: the session store reads everything at the top of it as a session.
+    /// </summary>
+    public static async Task<IArtifactStore> OpenContentAsync(string target, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(target);
+        if (!IsContainerUrl(target))
+        {
+            var runs = Path.GetFullPath(target).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return new FileArtifactStore(Path.Combine(Path.GetDirectoryName(runs) ?? runs, ContentContainer));
+        }
+
+        var recordings = new Uri(target, UriKind.Absolute);
+        var path = recordings.AbsolutePath.TrimEnd('/');
+        var uri = new UriBuilder(recordings) { Path = $"{path[..path.LastIndexOf('/')]}/{ContentContainer}", Query = string.Empty }.Uri;
+        var container = IsEmulator(uri)
+            ? new BlobContainerClient(uri, new StorageSharedKeyCredential(DevelopmentAccount, DevelopmentKey))
+            : new BlobContainerClient(uri, new DefaultAzureCredential());
+        return await BlobArtifactStore.OpenAsync(container, cancellationToken);
+    }
+
     /// <summary>Where finished matches with an account in them are kept (ADR 0122, stage 5): beside the accounts, under <c>results/</c>.</summary>
     public static async Task<IMatchResults> OpenResultsAsync(string target, CancellationToken cancellationToken = default)
     {

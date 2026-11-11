@@ -31,6 +31,7 @@ internal static class TableTend
             var index = await ArtifactStores.OpenIndexAsync(target);
             var composer = new TableComposer(services, rules, store)
             {
+                Contents = await TableHost.OpenContentsAsync(target, CancellationToken.None),
                 Turns = new NoAgentTurns(),
                 Index = index,
                 Basis = ReplayBasis.Of(EngineVersion.Current, services.GetRequiredService<IGameResources>(), rules),
