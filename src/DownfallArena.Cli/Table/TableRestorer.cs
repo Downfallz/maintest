@@ -24,7 +24,7 @@ internal static class TableRestorer
         var open = new HashSet<string>(StringComparer.Ordinal);
         foreach (var id in (await stored.ListAsync(cancellationToken)).Select(session => session.Id))
         {
-            if (await RecordOrNoneAsync(stored, id, said, cancellationToken) is not { Status: TableRecord.Open } record)
+            if (await ReadAsync(stored, id, said, cancellationToken) is not { Record: { Status: TableRecord.Open } record })
             {
                 continue;
             }
@@ -47,9 +47,15 @@ internal static class TableRestorer
             }
 
             // Listed, and not open in its record: it ended, or its run is gone. Out of the index at the record's
-            // revision, or for good when there is no record left to say anything.
-            var record = await RecordOrNoneAsync(stored, listed.Table, said, cancellationToken);
-            await registry.Index.CloseAsync(listed.Table, listed.CreatedAt, record?.Revision ?? long.MaxValue, cancellationToken);
+            // revision, or for good when there is no record left to say anything. A record that cannot be read
+            // says neither, and the entry is left as it is: a store out for a moment must not end a table for good.
+            var read = await ReadAsync(stored, listed.Table, said, cancellationToken);
+            if (read is not { } reading || reading.Record is { Status: TableRecord.Open })
+            {
+                continue;
+            }
+
+            await registry.Index.CloseAsync(listed.Table, listed.CreatedAt, reading.Record?.Revision ?? long.MaxValue, cancellationToken);
             closed++;
         }
 
@@ -57,16 +63,19 @@ internal static class TableRestorer
         return said;
     }
 
-    private static async Task<TableRecord?> RecordOrNoneAsync(StoredSessions stored, string id, List<string> said, CancellationToken cancellationToken)
+    /// <summary>A run's record as read, none in it when the run has none; no reading at all when it could not be read.</summary>
+    private static async Task<Reading?> ReadAsync(StoredSessions stored, string id, List<string> said, CancellationToken cancellationToken)
     {
         try
         {
-            return await stored.RecordAsync(id, cancellationToken);
+            return new Reading(await stored.RecordAsync(id, cancellationToken));
         }
-        catch (Exception failure) when (TableLoader.Refuses(failure))
+        catch (Exception failure) when (TableLoader.Refuses(failure) || TableRegistry.StoreFails(failure))
         {
             said.Add($"Session {id} was not indexed: {failure.Message}");
             return null;
         }
     }
+
+    private sealed record Reading(TableRecord? Record);
 }

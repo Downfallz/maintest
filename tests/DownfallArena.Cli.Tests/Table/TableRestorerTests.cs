@@ -370,6 +370,28 @@ public sealed class TableRestorerTests : IDisposable
         (await _after.Index.OpenAsync(0, 10, Cancel)).ShouldBeEmpty();
     }
 
+    /// <summary>
+    /// A record whose beginning was never written may stand over a journal of decisions: the sweep reads the journal
+    /// as a pick-up does, and leaves a game in progress open.
+    /// </summary>
+    [Fact]
+    public async Task The_sweep_leaves_open_a_table_whose_journal_holds_decisions_its_record_never_said_began()
+    {
+        var table = await Opened(HostedTables.OnePerson);
+        await Post(table, await Waiting(table.Seats[0].Person!), """{"kind":"Evolution","pass":true}""");
+        await table.QuiesceAsync(Cancel);
+        _earlier.Dispose();
+        await NeverBegunAsync(table.Id);
+        var clock = new Clock { Now = table.CreatedAt + TableRegistry.NeverBegunFor + TimeSpan.FromMinutes(1) };
+        var later = await Restarted(clock);
+
+        var swept = await later.SweepAsync(clock.Now, Cancel);
+
+        swept.ShouldBeEmpty();
+        (await _after.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Open);
+        (await later.ByIdAsync(table.Id, Cancel)).ShouldNotBeNull();
+    }
+
     [Fact]
     public async Task An_open_table_is_picked_up_even_after_a_long_break()
     {
@@ -704,6 +726,15 @@ public sealed class TableRestorerTests : IDisposable
         var path = Path.Combine(_runs, id, PlaytestRun.JournalFile);
         var text = File.Exists(path) ? await File.ReadAllTextAsync(path, Cancel) : string.Empty;
         return [.. text.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(line => System.Text.Json.Nodes.JsonNode.Parse(line)!.AsObject())];
+    }
+
+    /// <summary>A table's record rewritten to say its match never began, as one whose beginning failed to be written says.</summary>
+    private async Task NeverBegunAsync(string id)
+    {
+        var path = Path.Combine(_runs, id, TableRecord.File);
+        var record = System.Text.Json.Nodes.JsonNode.Parse(await File.ReadAllTextAsync(path, Cancel))!.AsObject();
+        record["begun"] = false;
+        await File.WriteAllTextAsync(path, record.ToJsonString(), Cancel);
     }
 
     /// <summary>A table's journal replaced by these lines: what an engine or content that changed under it would read.</summary>

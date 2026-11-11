@@ -75,9 +75,23 @@ internal sealed class TableLoader(StoredSessions stored, TableComposer composer,
         return table;
     }
 
-    /// <summary>Closes a table no host holds, through its record, as the sweep does to one that never began.</summary>
-    public Task<bool> CloseAsync(string id, CancellationToken cancellationToken = default) =>
-        stored.CloseAsync(id, composer.Index, cancellationToken);
+    /// <summary>
+    /// Closes a table no host holds through its record, when the record and the journal both say it never began and
+    /// it was opened longer ago than <see cref="TableRegistry.NeverBegunFor" /> (ADR 0115): the same reading a pick-up
+    /// makes, since a record whose beginning was never written may stand over a journal of decisions.
+    /// </summary>
+    /// <returns>Whether the table was closed.</returns>
+    public async Task<bool> ExpireAsync(string id, DateTimeOffset now, CancellationToken cancellationToken = default)
+    {
+        if (await stored.RecordAsync(id, cancellationToken) is not { Status: TableRecord.Open, Begun: false } record
+            || now - record.CreatedAt < TableRegistry.NeverBegunFor
+            || (await composer.JournalAsync(id, cancellationToken))?.Decisions.Count > 0)
+        {
+            return false;
+        }
+
+        return await stored.CloseAsync(id, composer.Index, cancellationToken);
+    }
 
     /// <summary>What refuses one table rather than the request: its record or journal no longer read, or no longer fit.</summary>
     internal static bool Refuses(Exception failure) =>

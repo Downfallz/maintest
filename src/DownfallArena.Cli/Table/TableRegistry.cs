@@ -620,7 +620,7 @@ internal sealed class TableRegistry : IDisposable
             foreach (var listed in await ListedAsync(cancellationToken))
             {
                 if (Held(listed.Table) is null && TableSummary.Parse(listed.Summary) is { Begun: false } && now - listed.CreatedAt >= NeverBegunFor
-                    && await ClosedAsync(loader, listed.Table, cancellationToken))
+                    && await ExpiredAsync(loader, listed.Table, now, cancellationToken))
                 {
                     swept.Add(listed.Table);
                 }
@@ -631,28 +631,38 @@ internal sealed class TableRegistry : IDisposable
     }
 
     /// <summary>A table nobody holds closed through its record; a failure is a line on the console, and the next sweep tries again.</summary>
-    private async Task<bool> ClosedAsync(TableLoader loader, string id, CancellationToken cancellationToken)
+    private async Task<bool> ExpiredAsync(TableLoader loader, string id, DateTimeOffset now, CancellationToken cancellationToken)
     {
         lock (_gate)
         {
-            // Picked up meanwhile, or being: it is this host's to sweep as a held table, by its last request.
-            if (_loading.ContainsKey(id) || _byId.ContainsKey(id))
+            // Picked up meanwhile, or being: it is this host's to sweep as a held table, by its last request. Gone
+            // while it is read, so no request picks up a table about to be closed.
+            if (_loading.ContainsKey(id) || _byId.ContainsKey(id) || !_gone.Add(id))
             {
                 return false;
             }
-
-            _gone.Add(id);
         }
 
+        var expired = false;
         try
         {
-            return await loader.CloseAsync(id, cancellationToken);
+            expired = await loader.ExpireAsync(id, now, cancellationToken);
         }
         catch (Exception failure) when (TableLoader.Refuses(failure) || StoreFails(failure))
         {
             Console.WriteLine($"  Session {id} could not be closed: {failure.Message}");
-            return false;
         }
+
+        if (!expired)
+        {
+            // Its journal says it began, or it could not be read: a game a request may still pick up.
+            lock (_gate)
+            {
+                _gone.Remove(id);
+            }
+        }
+
+        return expired;
     }
 
     /// <summary>

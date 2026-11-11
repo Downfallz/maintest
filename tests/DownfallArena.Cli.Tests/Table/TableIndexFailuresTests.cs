@@ -124,6 +124,27 @@ public sealed class TableIndexFailuresTests : IDisposable
         counting.CodesTaken.ShouldBe(0, "both seats are this browser's, and no link or code names either");
     }
 
+    [Fact]
+    public async Task A_table_whose_record_cannot_be_read_as_a_host_starts_stays_listed()
+    {
+        RecordRefused? store = null;
+        using var hosted = new HostedTables(directory => store = new RecordRefused(new FileArtifactStore(directory)));
+        using var first = hosted.Registry();
+        var table = await hosted.Composer.ComposeAsync(HostedTables.OnePerson, Cancel);
+        using (var place = (await first.ReserveAsync(Cancel)).ShouldNotBeNull())
+        {
+            await first.AddAsync(table, place, Cancel);
+        }
+
+        await table.RecordAsync(Cancel);
+        store!.ReadsRefused = true;
+
+        using var restarted = await hosted.RestartedAsync();
+
+        // A store out for a moment says nothing of the table: the entry stays as it was, not closed for good.
+        (await hosted.Index.OpenAsync(0, 10, Cancel)).ShouldHaveSingleItem().Table.ShouldBe(table.Id);
+    }
+
     /// <summary>A table of one person against a bot, added and written down.</summary>
     private async Task<PlayedTable> AddedAsync(TableRegistry registry)
     {
