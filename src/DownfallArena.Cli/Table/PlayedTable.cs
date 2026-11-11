@@ -72,13 +72,80 @@ internal sealed class PlayedTable : IDisposable
 
     /// <summary>
     /// Writes the table down for a host that comes after this one (ADR 0091): the request, the match id, and
-    /// the tokens and codes its players hold. Called once the registry has minted the codes, which is the
-    /// moment all of it is known. Nothing for a table that records nothing.
+    /// the tokens and codes its players hold, and the index of the tables after it (ADR 0161). A table that
+    /// records nothing is still kept in the index, which is how its host finds and counts it.
     /// </summary>
-    public Task RecordAsync(JoinCodes codes, CancellationToken cancellationToken = default)
+    public Task RecordAsync(CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(codes);
-        return Run is { } run && Request is { } request ? run.RecordAsync(TableRecord.Of(this, request, codes), cancellationToken) : Task.CompletedTask;
+        if (Request is not { } request)
+        {
+            return Task.CompletedTask;
+        }
+
+        return Run is { } run ? run.RecordAsync(TableRecord.Of(this, request), cancellationToken) : IndexedAsync(TableRecord.Of(this, request));
+    }
+
+    /// <summary>
+    /// Marks how the table ended -- finished, or closed without finishing -- in its record, or, for a table that
+    /// records nothing, in the index alone. A write that fails is a line on the console.
+    /// </summary>
+    public Task MarkAsync(string status, CancellationToken cancellationToken = default)
+    {
+        if (Run is { } run)
+        {
+            return run.MarkAsync(status, cancellationToken);
+        }
+
+        TableRecord? indexed;
+        lock (_indexGate)
+        {
+            indexed = _indexed;
+
+            // Nothing indexed yet, which a table of two bots can end before: the first record says it.
+            _markedFirst ??= indexed is null ? status : null;
+        }
+
+        return indexed is not null && indexed.Status != status ? IndexedAsync(indexed with { Status = status }) : Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// The index a table that records nothing keeps itself in (ADR 0161), its record being held here and never
+    /// written; a recorded table is indexed by its run, after each record write.
+    /// </summary>
+    public Application.Tables.Ports.ITableIndex? Index
+    {
+        get => _indexer?.Index;
+        init => _indexer = value is null ? null : new TableIndexer(value, Id);
+    }
+
+    private readonly TableIndexer? _indexer;
+    private readonly Lock _indexGate = new();
+    private TableRecord? _indexed;
+    private string? _markedFirst;
+    private Task _indexing = Task.CompletedTask;
+
+    /// <summary>The record a table that records nothing would have written, into the index, after the one before it.</summary>
+    private Task IndexedAsync(TableRecord record)
+    {
+        if (Run is not null || _indexer is not { } indexer)
+        {
+            return Task.CompletedTask;
+        }
+
+        lock (_indexGate)
+        {
+            var before = _indexed;
+            var written = (before is null && _markedFirst is { } ended ? record with { Status = ended } : record).Over(before);
+            _indexed = written;
+            // Never cancelled by the table's own stopping: an index write is what lets the lobby see how it ended.
+            return _indexing = AfterAsync(_indexing, () => indexer.FollowAsync(before, written, CancellationToken.None));
+        }
+
+        static async Task AfterAsync(Task before, Func<Task> next)
+        {
+            await Task.WhenAny(before);
+            await next();
+        }
     }
 
     public DateTimeOffset CreatedAt { get; }
@@ -117,9 +184,9 @@ internal sealed class PlayedTable : IDisposable
 
         // Read before the cancellation, which ends the session at once: a table let go of inside Cancel
         // itself reads as over by the time it is asked whether it was.
-        if (Run is { } run && !IsOver)
+        if (!IsOver)
         {
-            Closing = run.MarkAsync(TableRecord.Closed, CancellationToken.None);
+            Closing = MarkAsync(TableRecord.Closed, CancellationToken.None);
         }
 
         Dispose();

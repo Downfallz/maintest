@@ -16,7 +16,7 @@ public sealed class MatchResultRecordingTests : IDisposable
     private static CancellationToken Cancel => TestContext.Current.CancellationToken;
 
     private TableComposer Composer(IMatchResults? results = null) =>
-        new(_hosted.Services, HostedTables.Rules, new FileArtifactStore(_hosted.RunsDirectory)) { Results = results ?? _results };
+        new(_hosted.Services, HostedTables.Rules, new FileArtifactStore(_hosted.RunsDirectory)) { Results = results ?? _results, Index = _hosted.Index };
 
     /// <summary>A person's seat its understudy plays to the end: a seat with a person in it that finishes on its own.</summary>
     private static TableRequest PlayedByTheUnderstudy => new(null, AgentSpec.Parse("greedy"), Who: null, Handover: 999, Seed: 7);
@@ -83,9 +83,9 @@ public sealed class MatchResultRecordingTests : IDisposable
     {
         var table = await Composer(new Failing()).ComposeAsync(PlayedByTheUnderstudy, Cancel);
         table.Seats[0].Account = AccountId.New();
-        using var registry = new TableRegistry();
-        registry.TryAdd(table).ShouldBeTrue();
-        await table.RecordAsync(registry.Codes, Cancel);
+        using var registry = _hosted.Registry();
+        await AddedAsync(registry, table);
+        await table.RecordAsync(Cancel);
 
         await FinishedAsync(table);
 
@@ -102,13 +102,19 @@ public sealed class MatchResultRecordingTests : IDisposable
         var table = await composer.ComposeAsync(PlayedByTheUnderstudy, Cancel);
         table.Seats[0].Account = account;
         await FinishedAsync(table);
-        using var registry = new TableRegistry();
-        registry.TryAdd(table).ShouldBeTrue();
+        using var registry = _hosted.Registry();
+        await AddedAsync(registry, table);
 
         var offered = await new LobbyApi(registry, composer, TimeProvider.System).ReleaseAsync(account);
 
         offered.ShouldBe(0);
         table.Seats[0].Account.ShouldBe(account);
+    }
+
+    private static async Task AddedAsync(TableRegistry registry, PlayedTable table)
+    {
+        using var place = (await registry.ReserveAsync(Cancel)).ShouldNotBeNull();
+        await registry.AddAsync(table, place, Cancel);
     }
 
     public void Dispose() => _hosted.Dispose();

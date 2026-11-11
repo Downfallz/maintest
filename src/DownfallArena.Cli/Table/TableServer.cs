@@ -97,11 +97,19 @@ internal sealed class TableServer : IDisposable
     /// </remarks>
     private async Task<StudioResponse> SessionPageAsync(string id)
     {
-        if (_registry.ById(id) is not { } table)
+        if (_registry.Held(id) is not { } table)
         {
-            // A table still being rebuilt is a match under way, and its stored trace holds both seats' boards: it
-            // is served once the host either holds it (and refuses it until it ends) or has given up on it.
-            return Starting ? StartingUp() : await StoredSessionPageAsync(id);
+            // A table nobody holds here is read off the store, unless its record says it is still open: its stored
+            // trace holds both seats' boards, and it is served once the table ends. Picking it up only to refuse
+            // the page would replay a match for nothing.
+            if (Starting)
+            {
+                return StartingUp();
+            }
+
+            return await StillOpenAsync(id)
+                ? StudioResponse.OfPlainText(409, "The session is still being played. Its trace carries both seats' boards, so it is served once the match has an outcome.")
+                : await StoredSessionPageAsync(id);
         }
 
         // Somebody reading the session is somebody at the table: the hour a finished table is kept for is
@@ -144,6 +152,24 @@ internal sealed class TableServer : IDisposable
     /// here -- there is no match in memory to leak a seat of -- so what the store has is what is shown, a
     /// partial trace included.
     /// </summary>
+    /// <summary>Whether a run's record says its table is open, or cannot be read to say it is not.</summary>
+    private async Task<bool> StillOpenAsync(string id)
+    {
+        if (_stored is not { } stored || !TableKeys.IsTableId(id))
+        {
+            return false;
+        }
+
+        try
+        {
+            return await stored.RecordAsync(id) is { Status: TableRecord.Open };
+        }
+        catch (Exception failure) when (TableLoader.Refuses(failure) || TableRegistry.StoreFails(failure))
+        {
+            return true;
+        }
+    }
+
     private async Task<StudioResponse> StoredSessionPageAsync(string id)
     {
         if (_stored is not { } stored || id.Length == 0 || id.Contains('/', StringComparison.Ordinal) || id.Contains('\\', StringComparison.Ordinal) || id == "." || id == "..")
@@ -174,7 +200,7 @@ internal sealed class TableServer : IDisposable
 
         if (JoinCodes.Names(path))
         {
-            return _registry.Codes.Answer(path);
+            return await _registry.AnswerAsync(path);
         }
 
         // Old seat links keep working; an ordinary visit opens the player lobby.
@@ -220,7 +246,7 @@ internal sealed class TableServer : IDisposable
         // A host whose admin panel nobody opens still lets go of finished tables nobody reads and of tables
         // that never began and nobody came to (ADR 0115): any request may sweep, once a minute at most.
         var now = _clock.GetUtcNow();
-        foreach (var gone in _registry.SweepIfDue(now))
+        foreach (var gone in await _registry.SweepIfDueAsync(now))
         {
             Console.WriteLine($"  Session {gone} let go of: finished and unread, or never begun and nobody came.");
         }
@@ -263,7 +289,7 @@ internal sealed class TableServer : IDisposable
 
         // The token says which table, and the table's own API says the rest. A token no table holds is
         // answered as a missing one: which half of it was wrong is not information a stranger is given.
-        if (_registry.ByToken(token) is not { } table)
+        if (await _registry.ByTokenAsync(token) is not { } table)
         {
             if (Starting && !string.IsNullOrEmpty(token))
             {
@@ -279,7 +305,7 @@ internal sealed class TableServer : IDisposable
         }
 
         table.Touch(now);
-        await _admin.Lobby.SeatReachedAsync(table, token);
+        await LobbyApi.SeatReachedAsync(table, token);
         return await table.Api.HandleAsync(method, path, body, token, request.Headers["If-None-Match"], request.Url?.Query);
     }
 
@@ -308,7 +334,7 @@ internal sealed class TableServer : IDisposable
         }
 
         // A finished table is only read now, and a seat nobody owned stays nobody's.
-        if (seat.Account is null && (table.IsOver || await _admin.Lobby.BindAsync(table, seat, player.Account.Id)))
+        if (seat.Account is null && (table.IsOver || await LobbyApi.BindAsync(table, seat, player.Account.Id)))
         {
             return null;
         }

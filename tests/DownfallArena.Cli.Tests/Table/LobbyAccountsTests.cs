@@ -4,7 +4,6 @@ using DownfallArena.Application.Accounts;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.Infrastructure.Accounts;
-using DownfallArena.Infrastructure.Learning;
 
 namespace DownfallArena.Cli.Tests.Table;
 
@@ -12,7 +11,7 @@ namespace DownfallArena.Cli.Tests.Table;
 public sealed class LobbyAccountsTests : IDisposable
 {
     private readonly HostedTables _hosted = new(recording: true);
-    private readonly TableRegistry _registry = new();
+    private readonly TableRegistry _registry;
     private readonly string _accountsRoot = Path.Combine(Path.GetTempPath(), $"lobby-accounts-{Guid.CreateVersion7():N}");
     private readonly FileAccountStore _store;
     private readonly AccountRegistry _accounts;
@@ -20,6 +19,7 @@ public sealed class LobbyAccountsTests : IDisposable
 
     public LobbyAccountsTests()
     {
+        _registry = _hosted.Registry();
         _store = new FileAccountStore(_accountsRoot);
         _accounts = new AccountRegistry(_store, TimeProvider.System);
     }
@@ -40,7 +40,7 @@ public sealed class LobbyAccountsTests : IDisposable
     private async Task<(PlayedTable Table, JsonElement Opened)> OpenAsync(SignedIn player, string opponent = "person")
     {
         var opened = Read(await (await LobbyAsync()).HandleAsync("POST", "/api/lobby/tables", $$"""{"opponent":"{{opponent}}"}""", player: player));
-        return (_registry.ById(opened.GetProperty("table").GetProperty("id").GetString()!)!, opened);
+        return ((await _registry.ByIdAsync(opened.GetProperty("table").GetProperty("id").GetString()!, Cancel))!, opened);
     }
 
     [Fact]
@@ -85,10 +85,8 @@ public sealed class LobbyAccountsTests : IDisposable
 
         table.Seats[0].Account.ShouldBe(mark.Account.Id);
         table.Seats[1].Account.ShouldBe(bastien.Account.Id);
-        using var after = new HostedTables(_ => new FileArtifactStore(_hosted.RunsDirectory));
-        using var restored = new TableRegistry();
-        await TableRestorer.RestoreAsync(after.Stored!, after.Composer, restored, TimeProvider.System, Cancel);
-        var rebuilt = restored.ById(table.Id).ShouldNotBeNull();
+        using var restored = await _hosted.RestartedAsync();
+        var rebuilt = (await restored.ByIdAsync(table.Id, Cancel)).ShouldNotBeNull();
         rebuilt.Seats.Select(seat => seat.Account).ShouldBe([mark.Account.Id, bastien.Account.Id]);
         restored.Dispose();
         await rebuilt.QuiesceAsync(Cancel);
@@ -180,7 +178,7 @@ public sealed class LobbyAccountsTests : IDisposable
         var adopted = Read(await (await LobbyAsync()).HandleAsync("POST", "/api/lobby/adopt", JsonSerializer.Serialize(new { tokens = new[] { saved, theirs.Seats[0].Token } }), player: mark));
 
         adopted.GetProperty("tables").GetArrayLength().ShouldBe(1);
-        _registry.ByToken(saved)!.Seats[0].Account.ShouldBe(mark.Account.Id);
+        (await _registry.ByTokenAsync(saved, Cancel))!.Seats[0].Account.ShouldBe(mark.Account.Id);
         theirs.Seats[0].Account.ShouldBe(bastien.Account.Id);
     }
 
@@ -199,7 +197,7 @@ public sealed class LobbyAccountsTests : IDisposable
         offered.ShouldBe(1);
         marks.Seats[0].Account.ShouldBeNull();
         marks.OpenSeats.ShouldContain("player1");
-        _registry.ByToken(token).ShouldBeNull();
+        (await _registry.ByTokenAsync(token, Cancel)).ShouldBeNull();
         theirs.Seats[0].Account.ShouldBe(bastien.Account.Id);
         (await _hosted.Stored!.RecordAsync(marks.Id, Cancel)).ShouldNotBeNull().Seats.Single(seat => seat.Slot == "player1").Account.ShouldBeNull();
     }

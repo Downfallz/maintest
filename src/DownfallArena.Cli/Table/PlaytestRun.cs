@@ -283,7 +283,10 @@ internal sealed class PlaytestRun
         ArgumentNullException.ThrowIfNull(record);
         lock (_recordGate)
         {
-            _record = _record is { Status: not TableRecord.Open } ended ? record with { Status = ended.Status } : record;
+            // A table can end before it is first written down (two bots are quick): its end, marked then, is
+            // what the first record says, or the table would be open in its record and in the index for good.
+            var ended = _record is null ? _markedFirst : _record.Status;
+            _record = ended is null or TableRecord.Open ? record : record with { Status = ended };
             return _recordWritten = WriteRecordAfterAsync(_recordWritten, _record, cancellationToken);
         }
     }
@@ -298,6 +301,13 @@ internal sealed class PlaytestRun
         Task written;
         lock (_recordGate)
         {
+            if (_record is null)
+            {
+                // Nothing written down yet: the first record says it (RecordAsync).
+                _markedFirst = status;
+                return;
+            }
+
             if (_record is not { } record || record.Status == status)
             {
                 return;
@@ -349,6 +359,7 @@ internal sealed class PlaytestRun
     }
 
     private TableRecord? _record;
+    private string? _markedFirst;
     private readonly Lock _recordGate = new();
     private Task _recordWritten = Task.CompletedTask;
 
@@ -360,84 +371,72 @@ internal sealed class PlaytestRun
     private async Task WriteRecordAfterAsync(Task before, TableRecord record, CancellationToken cancellationToken)
     {
         await Task.WhenAny(before);
+        var (stored, written) = await WriteOverAsync(_reader, _writer, SessionId, _ => record, cancellationToken);
+        await IndexedAsync(stored, written, cancellationToken);
+    }
+
+    /// <summary>
+    /// A record written over the one stored, on the condition that nobody wrote it since it was read, read again
+    /// and written again when somebody had (ADR 0159). What is written is worked out from what is stored.
+    /// </summary>
+    private static async Task<(TableRecord? Stored, TableRecord Written)> WriteOverAsync(IArtifactReader reader, IArtifactWriter writer, string sessionId, Func<TableRecord?, TableRecord> over, CancellationToken cancellationToken)
+    {
         for (var attempt = 1; ; attempt++)
         {
-            var read = await _reader.ReadTaggedAsync(TableRecord.File, cancellationToken);
+            var read = await reader.ReadTaggedAsync(TableRecord.File, cancellationToken);
             var stored = read is null ? null : StoredSessions.RecordOf(read.Text);
-            var written = record.Over(stored);
-            if (await _writer.WriteJsonIfAsync(TableRecord.File, written, read?.Tag, cancellationToken) is not null)
+            var written = over(stored).Over(stored);
+            if (await writer.WriteJsonIfAsync(TableRecord.File, written, read?.Tag, cancellationToken) is not null)
             {
-                await IndexedAsync(stored, written, cancellationToken);
-                return;
+                return (stored, written);
             }
 
             if (attempt == RecordAttempts)
             {
-                throw new IOException($"The record of session {SessionId} was written by somebody else at every one of {RecordAttempts} attempts.");
+                throw new IOException($"The record of session {sessionId} was written by somebody else at every one of {RecordAttempts} attempts.");
             }
         }
+    }
+
+    /// <summary>
+    /// Closes a table no host holds, through its record (ADR 0161): marked closed, so no host picks it up again,
+    /// and out of the open tables of the index. Nothing for a table whose record is not open, or that has none.
+    /// </summary>
+    /// <returns>Whether the record was open and is now closed.</returns>
+    public static async Task<bool> CloseRecordAsync(IArtifactStore store, string id, ITableIndex index, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(store);
+        ArgumentNullException.ThrowIfNull(index);
+        var place = RunPlace.In(store, id);
+        var open = false;
+        var (stored, written) = await WriteOverAsync(place.Reader, place.Writer, id, stored =>
+        {
+            if (stored is null)
+            {
+                throw new InvalidDataException($"Session {id} has no table record.");
+            }
+
+            open = stored.Status == TableRecord.Open;
+            return open ? stored with { Status = TableRecord.Closed } : stored;
+        }, cancellationToken);
+        await new TableIndexer(index, id).FollowAsync(stored, written, cancellationToken);
+        return open;
     }
 
     private const int RecordAttempts = 5;
 
-    // Codes a seat no longer has that the index has not taken back yet: an index write that failed leaves them
-    // here, for the next record write to take back.
-    private readonly HashSet<string> _owedCodes = new(StringComparer.Ordinal);
-
     /// <summary>The index that finds this table (ADR 0161), or none on a host that keeps no index.</summary>
-    public ITableIndex? Index { get; init; }
-
-    /// <summary>
-    /// The index brought in line with a record just written (ADR 0161): its seats' codes given to it and those it
-    /// no longer has taken back, and its summary among the open tables while it is open. An index write that
-    /// fails is a line on the console and nothing else: the record is the table, and its next write puts the
-    /// index right.
-    /// </summary>
-    private async Task IndexedAsync(TableRecord? before, TableRecord written, CancellationToken cancellationToken)
+    public ITableIndex? Index
     {
-        if (Index is not { } index)
-        {
-            return;
-        }
-
-        try
-        {
-            var codes = written.Status == TableRecord.Open
-                ? written.Seats.Where(seat => seat.Code is not null).ToDictionary(seat => seat.Code!, seat => seat.Slot, StringComparer.Ordinal)
-                : [];
-            // Owed before anything is written: a code this record no longer has is kept until the index has taken
-            // it back, since the next record will not have it either and would never say it again. Only this run's
-            // record writes touch it, and they take turns.
-            _owedCodes.UnionWith((before?.Seats ?? []).Select(seat => seat.Code).OfType<string>().Where(code => !codes.ContainsKey(code)));
-            foreach (var (code, seat) in codes)
-            {
-                if (!await index.AddCodeAsync(new IndexedCode(code, written.Id, seat), cancellationToken)
-                    && await index.CodeAsync(code, cancellationToken) is { } held && (held.Table != written.Id || held.Seat != seat))
-                {
-                    Console.WriteLine($"  Session {SessionId}: the code of {seat} is another table's in the index, which keeps it.");
-                }
-            }
-
-            foreach (var code in _owedCodes.Where(code => !codes.ContainsKey(code)).ToList())
-            {
-                await index.RemoveCodeAsync(code, written.Id, cancellationToken);
-                _owedCodes.Remove(code);
-            }
-
-            if (written.Status == TableRecord.Open)
-            {
-                await index.PutOpenAsync(new IndexedTable(written.Id, written.CreatedAt, written.Revision, TableSummary.Of(written).ToJson()), cancellationToken);
-            }
-            else
-            {
-                await index.CloseAsync(written.Id, written.CreatedAt, written.Revision, cancellationToken);
-            }
-        }
-        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or Azure.RequestFailedException or ArgumentException)
-        {
-            Console.WriteLine($"  Session {SessionId} could not be written into the index of the tables: {failure.Message}");
-        }
+        get => _indexer?.Index;
+        init => _indexer = value is null ? null : new TableIndexer(value, SessionId);
     }
+
+    private readonly TableIndexer? _indexer;
+
+    /// <summary>The index brought in line with a record just written (<see cref="TableIndexer" />).</summary>
+    private Task IndexedAsync(TableRecord? before, TableRecord written, CancellationToken cancellationToken) =>
+        _indexer?.FollowAsync(before, written, cancellationToken) ?? Task.CompletedTask;
 
     /// <summary>
     /// Whoever is about to decide for a seat of a stepped match, recorded as an agent seated there would be: the

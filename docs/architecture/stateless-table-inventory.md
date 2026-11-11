@@ -15,7 +15,7 @@ The work is smaller on the engine's side than "a match lives in memory" suggests
 | A port for where a match lives | `Application/Matches/Ports/IMatchRepository` | Done. One adapter, in memory |
 | What a seat is being asked | `GetPlayerOptions`, `PlayerOptionsProjection` | Done. A query, no waiting |
 | Every decision written as it is taken | `Cli/Table/DecisionJournal`, `JournalEntry` | Done, bots and tie orders included |
-| A table rebuilt from seed and journal | `TableComposer.ResumeAsync`, `TableRestorer` | Done, run once at start |
+| A table rebuilt from seed and journal | `TableComposer.ResumeAsync`, `TableLoader` | Done, at the first request that names it |
 | An append-only blob per file | `Infrastructure/Learning/BlobArtifactWriter` | Done. No position condition yet |
 | A change notice with a version | `TableChanges`, `GET /api/seat/{seat}/events` | Done. Counted in memory |
 | Accounts, friends, devices, preferences, results | Blob, beside the recordings | Done. Already outside the process |
@@ -104,12 +104,9 @@ Each phase ships on the one container app there is today and leaves the game pla
      and waits only for whoever had not reached their seat. The version is still counted: it is served to
      no page as a number, and deriving it from the journal and the revision is worth it only once a second
      process writes a table (question 9), so it moves with that.
-   - **4.2c, folded into 4.3.** `TableRestorer` becomes registration with no replay: a table's match is
-     rebuilt at the first request that needs it. Done on its own, it needs a session whose state is not
-     there yet behind every read the lobby, the notices and the pilot make without waiting, and a table
-     found to have diverged after it was registered; 4.3 makes the registry a cache a table is loaded into
-     per request, which is the same change made once. What it would buy meanwhile is a shorter start: the
-     host already serves while it picks tables up, and a table costs it 45 to 325 ms.
+   - **4.2c, done with 4.3b3.** Nothing is replayed when a host starts: a table's match is rebuilt at the
+     first request that names it (`TableLoader`). `TableRestorer` is what a host does with the open records
+     as it starts: each is put back into the index, and the keys minted before 4.3a are told to the registry.
    - **4.3a, done.** A table's keys name it: a seat's token, an invitation and the pilot's token are
      `<table>.<secret>` (`TableKeys`), minted so when a table opens and when a seat is offered again. A key
      minted before names no table and keeps working for the life of its table, found as it always was.
@@ -121,24 +118,45 @@ Each phase ships on the one container app there is today and leaves the game pla
      seats' codes given to the index and those it no longer has taken back, and its summary among the open
      tables while it is open (`TableSummary`, with no key in it). Nothing reads the index yet; an index write
      that fails is a console line, and the record's next write puts it right.
-   - **4.3b3, one change.** The registry becomes a cache a table is loaded into from its record
-     and journal when a key or a code names it (4.2c with it), and the index is what lists and finds. Codes
-     cannot move alone: they are minted under the registry's lock, synchronously, and the index's writes
-     are a store's. The registry is asked five kinds of thing today (about 110 calls, 52 of them the
-     lobby's), and each moves this way:
-     - *Find a table* (`ById`, `ByToken`, `ByInvitation`, `Codes.Answer`): the cache, then the table a key
-       names (`TableKeys`) or the index names for a code, loaded on a miss. Keys minted before 4.3a name no
-       table; they are read off the open records once, when a host starts, for the life of those tables.
-     - *Mint or change a seat's keys* (`Add`, `TryAdd`, `Rekey`, `Codes.Mint`/`Forget`): async, the code
-       taken in the index first (refused, another is drawn), then the record written, then the open
-       table's summary at the record's revision.
-     - *List tables* (`All`: the lobby's counts and pages, an account's own tables and its caps of ADR 0147,
-       the admin panel): the open tables in the index, newest first, each summary carrying what these read
-       (format, begun, open seats, the accounts seated). An account's tables are read by filtering that
-       list, which is a few dozen at playtest scale; an entry per account is the next step if it is not.
-     - *Cap* (`Reserve`, `Capacity`): the open tables the index lists, not those this process holds.
-     - *Sweep* (`SweepIfDue`): over the index rather than the cache, still on a request until phase 6
-       makes it a scheduled command; a table not loaded is closed through its record.
+   - **4.3b3, done.** The registry is a cache a table is picked up into from its record and journal when
+     a key or a code names it (4.2c with it), and the index is what lists, counts and finds. A seat's code is
+     one of its keys (`TableSeat.Code`), taken in the index before the seat is given it, and a code answers
+     only while its seat still holds it, whatever the index says. A host that records nothing keeps an index
+     in its process, and so does a host whose store's index cannot be opened; a table that records nothing
+     indexes itself. What each kind of request does now:
+     - *Find a table* (`ByIdAsync`, `ByTokenAsync`, `ByInvitationAsync`, `AnswerAsync`): the cache, then the
+       table a key names (`TableKeys`) or the index names for a code, picked up once however many requests
+       ask for it meanwhile. A key whose table part is not a table's id names nothing. Keys minted before
+       4.3a are read off the open records when a host starts (`Remember`), for the life of those tables.
+     - *Give a seat its keys* (`AddAsync`, `RekeyAsync`): the code taken in the index first (refused,
+       another is drawn), then the record written, then the open table's summary at the record's revision.
+       A code a seat no longer has is taken back by the record write after.
+     - *List tables* (`OpenAsync`: the lobby's counts and pages, an account's own tables and its caps of
+       ADR 0147, the invitations, the admin panel): the open tables in the index, newest first, and those
+       this host holds as they stand now, which the index may be a write behind. What is shown of a table
+       is read off the table itself, picked up when it is not held: eight a lobby page. An account's
+       tables are read by filtering that list, a few dozen at playtest scale; an entry per account is the
+       next step if it is not.
+     - *Cap* (`ReserveAsync`): the open tables the index lists and the unfinished ones held here, which a
+       table added a moment ago is before its record lands. Two hosts can both take the last place.
+     - *Sweep* (`SweepAsync`): the tables held, as before, and the open tables of the index nobody holds
+       that never began and were opened twenty hours ago, closed through their record. Still on a request
+       until phase 6 makes it a scheduled command.
+     - *Delete a run*: closes its table if this host holds it, and takes it out of the index for good
+       (`DeletedAsync`).
+     - *An index behind its records*: a host starting takes out of the index every table it lists whose
+       record is no longer open, which an index write that failed on a table's last record leaves behind,
+       and a table asked for whose record is not open is taken out then. A table that could not be picked
+       up is not tried again for a minute.
+     - *An index that does not answer*: the lists, the cap and the sweep go on with the tables held here, and
+       a table whose codes cannot be taken is not opened (503).
+     - *A table a host refused to pick up* stays listed, its summary saying under what basis: a host on that
+       basis neither lists nor counts it (it is the operator's, ADR 0115), and one on another basis tries it.
+
+     What stays in one process: a table is held from when it is picked up until it is over and swept, or
+     the host stops; letting an idle table go before that is a next step, once a bot's turn no longer has to
+     be taken by the process that holds it (phase 5). Until then, a table whose bot was to move when a host
+     stopped moves at the first request that names it, and its "your turn" waits for that request too.
    - **4.4, done.** Practice tables onto the stepper, over a journal kept in memory: the recipe's agent
      plays both seats into it, one question at a time, through the gates any decision goes through
      (`SeatAnswer`), until the person's seat is asked the scenario's question (`PracticeScenario.HandsOver`);
@@ -224,9 +242,9 @@ which adds the compilation of the engine itself.
    no memory between requests, the stamp is stored per seat, or the page sends it. The free-activation playtest
    reads these timings, so this is not cosmetic.
 4. **Tokens.** Decided: keys of the form `<table>.<secret>`, so no index is needed (4.3a). Links already handed
-   out keep their old key for the life of their table; a host that does not hold such a table finds it by the
-   open records, which are few. Join codes are typed by a person and cannot carry a table's id: they are an
-   index entry each, in Table Storage beside the open tables the lobby lists (ADR 0161).
+   out keep their old key for the life of their table; a host finds such a table by the open records, read
+   once as it starts (4.3b3). Join codes are typed by a person and cannot carry a table's id: they are an
+   index entry each, in Table Storage beside the open tables the lobby lists (ADR 0161), and a seat's key.
 5. **A bot's dice.** At a table a bot's random source is seeded from the table's seed and its slot
    (`TableComposer.Source`) and lives as long as the process. A bot built fresh for each turn needs a seed that
    also depends on the journal position, or two turns draw the same numbers.
@@ -234,8 +252,9 @@ which adds the compilation of the engine itself.
    in memory, which is the one replica's. With several, a practice table needs a sticky route or a journal in
    the store; it is one person against a script, and a sticky route is the cheaper of the two.
 7. **Unrecorded tables** (`--no-record`). Answered: `InMemoryDecisionJournal`, conditional like the others.
-8. **Content changing under an open table.** Today a divergent replay is refused once, at start, and marked.
-   When every cold load replays, a deploy that moves content strands open tables at the next tap. Options: pin
+8. **Content changing under an open table.** A divergent replay is refused once, when the table is picked up,
+   and marked; a host on that basis no longer lists it, and it stays the operator's. Since 4.3b3 every cold load replays,
+   so a deploy that moves content strands open tables at the next tap. Options: pin
    the content hash in the table record and refuse with a clear message, or keep serving the old content
    beside the new for the tables that began on it.
 9. **The event stream across replicas.** A replica holding a stream has to learn of a line another replica

@@ -14,7 +14,7 @@ namespace DownfallArena.Cli.Tests.Table;
 public sealed class LobbyPagesTests : IDisposable
 {
     private readonly HostedTables _hosted = new(recording: true);
-    private readonly TableRegistry _registry = new();
+    private readonly TableRegistry _registry;
     private readonly string _root = Path.Combine(Path.GetTempPath(), $"lobby-pages-{Guid.CreateVersion7():N}");
     private readonly FileAccountStore _store;
     private readonly AccountRegistry _accounts;
@@ -22,6 +22,7 @@ public sealed class LobbyPagesTests : IDisposable
 
     public LobbyPagesTests()
     {
+        _registry = _hosted.Registry();
         _store = new FileAccountStore(_root);
         _accounts = new AccountRegistry(_store, TimeProvider.System);
     }

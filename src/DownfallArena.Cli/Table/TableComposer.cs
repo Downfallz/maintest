@@ -17,6 +17,7 @@ using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Infrastructure.Matches;
 using DownfallArena.Infrastructure.Resources;
+using DownfallArena.Infrastructure.Tables;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Randomness;
 using Microsoft.Extensions.DependencyInjection;
@@ -98,8 +99,11 @@ internal sealed class TableComposer
     /// </summary>
     public ReplayBasis? Basis { get; init; }
 
-    /// <summary>The index that finds the tables this host records (ADR 0161), or none: a host that keeps nothing, or a test.</summary>
-    public ITableIndex? Index { get; init; }
+    /// <summary>
+    /// The index that finds and lists this host's tables (ADR 0161): the store's, or one held in this process for a
+    /// host that keeps nothing, and for a test.
+    /// </summary>
+    public ITableIndex Index { get; init; } = new InMemoryTableIndex();
 
     /// <summary>
     /// The rule set this host opens a table on when the request names no format: the engine default, the file
@@ -295,6 +299,7 @@ internal sealed class TableComposer
                 EventStreamVersion = record?.EventStreamVersion ?? MatchTrace.CurrentEventStreamVersion,
                 OpenSeats = record?.OpenSeats ?? [],
                 Casual = record?.Casual ?? false,
+                Index = run is null ? Index : null,
             };
             Push?.Watch(table);
 
@@ -304,6 +309,10 @@ internal sealed class TableComposer
             if (run is not null)
             {
                 _ = CloseWhenOverAsync(table, run);
+            }
+            else
+            {
+                _ = IndexedWhenOverAsync(table);
             }
 
             // A table with a person in it waits for every person to reach their seat before the first question
@@ -451,6 +460,19 @@ internal sealed class TableComposer
         {
             // Finished, written or not: what is not marked here is a table that is never swept.
             table.MarkClosed();
+        }
+    }
+
+    /// <summary>
+    /// A table that records nothing, out of the open tables of the index once its match has an outcome: there is
+    /// nothing else to close.
+    /// </summary>
+    private static async Task IndexedWhenOverAsync(PlayedTable table)
+    {
+        await Task.WhenAny(table.Session.Outcome);
+        if (table.IsOver)
+        {
+            await table.MarkAsync(TableRecord.Finished);
         }
     }
 
@@ -642,6 +664,7 @@ internal sealed class TableComposer
         {
             Invitation = taken ? null : invitation,
             Taken = taken,
+            Code = recorded?.Code,
             Push = recorded?.Push,
             Account = account,
             InvitedAccount = invited,

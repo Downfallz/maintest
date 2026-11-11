@@ -10,7 +10,12 @@ namespace DownfallArena.Cli.Tests.Table;
 public sealed class LobbyApiTests : IDisposable
 {
     private readonly HostedTables _hosted = new(recording: true);
-    private readonly TableRegistry _registry = new();
+    private readonly TableRegistry _registry;
+
+    public LobbyApiTests()
+    {
+        _registry = _hosted.Registry();
+    }
 
     private LobbyApi Lobby => new(_registry, _hosted.Composer, TimeProvider.System);
 
@@ -25,7 +30,7 @@ public sealed class LobbyApiTests : IDisposable
     {
         var opened = Read(await Lobby.HandleAsync("POST", "/api/lobby/tables", """{"opponent":"person","format":"1v1"}"""));
         var id = opened.GetProperty("table").GetProperty("id").GetString()!;
-        var table = _registry.ById(id).ShouldNotBeNull();
+        var table = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull();
         opened.GetProperty("seats").GetArrayLength().ShouldBe(1);
         opened.GetProperty("seats")[0].GetProperty("seat").GetString().ShouldBe("player1");
         opened.GetProperty("table").GetProperty("format").GetString().ShouldBe("1v1");
@@ -38,7 +43,7 @@ public sealed class LobbyApiTests : IDisposable
         foreach (var seat in table.Seats)
         {
             text.ShouldNotContain(seat.Token);
-            if (_registry.Codes.Of(seat) is { } code)
+            if (seat.Code is { } code)
             {
                 text.ShouldNotContain(code);
             }
@@ -52,7 +57,7 @@ public sealed class LobbyApiTests : IDisposable
         // The creator's seat is theirs from the start: no link or code names it, and only the other place is offered.
         table.Seats[0].Taken.ShouldBeTrue();
         table.Seats[0].Key.ShouldBeNull();
-        _registry.Codes.Of(table.Seats[0]).ShouldBeNull();
+        table.Seats[0].Code.ShouldBeNull();
         table.Seats[1].Invitation.ShouldNotBeNull();
 
         Read(listed).GetProperty("items")[0].GetProperty("openSeats").GetInt32().ShouldBe(1);
@@ -64,11 +69,11 @@ public sealed class LobbyApiTests : IDisposable
         var opened = Read(await Lobby.HandleAsync("POST", "/api/lobby/tables", """{"opponent":"person","format":"1v1","ranked":false}"""));
         var id = opened.GetProperty("table").GetProperty("id").GetString()!;
 
-        _registry.ById(id).ShouldNotBeNull().Casual.ShouldBeTrue();
+        (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Casual.ShouldBeTrue();
         opened.GetProperty("table").GetProperty("casual").GetBoolean().ShouldBeTrue();
         (await _hosted.Stored!.RecordAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Casual.ShouldBeTrue();
         var bot = Read(await Lobby.HandleAsync("POST", "/api/lobby/tables", """{"opponent":"bot","format":"1v1","ranked":false}"""));
-        _registry.ById(bot.GetProperty("table").GetProperty("id").GetString()!).ShouldNotBeNull().Casual.ShouldBeFalse();
+        (await _registry.ByIdAsync(bot.GetProperty("table").GetProperty("id").GetString()!, TestContext.Current.CancellationToken)).ShouldNotBeNull().Casual.ShouldBeFalse();
     }
 
     [Fact]
@@ -87,7 +92,7 @@ public sealed class LobbyApiTests : IDisposable
     public async Task An_accepted_invitation_consumes_the_same_place_as_the_public_join_button()
     {
         var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
-        var table = _registry.ById(id)!;
+        var table = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!;
         (await Claim(table.Seats[1].Invitation!)).Status.ShouldBe(200);
 
         (await Lobby.HandleAsync("POST", $"/api/lobby/tables/{id}/join", "{}")).Status.ShouldBe(409);
@@ -99,8 +104,8 @@ public sealed class LobbyApiTests : IDisposable
     public async Task A_seat_token_from_an_older_link_still_consumes_its_open_place()
     {
         var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
-        var table = _registry.ById(id)!;
-        await Lobby.SeatReachedAsync(table, table.Seats[1].Token);
+        var table = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!;
+        await LobbyApi.SeatReachedAsync(table, table.Seats[1].Token);
 
         (await Lobby.HandleAsync("POST", $"/api/lobby/tables/{id}/join", "{}")).Status.ShouldBe(409);
         (await _hosted.Stored!.RecordAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull().OpenSeats.ShouldBeEmpty();
@@ -114,9 +119,9 @@ public sealed class LobbyApiTests : IDisposable
     public async Task An_invitation_is_taken_once_whoever_opens_its_link_second()
     {
         var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
-        var table = _registry.ById(id)!;
+        var table = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!;
         var invitation = table.Seats[1].Invitation.ShouldNotBeNull();
-        var code = _registry.Codes.Of(table.Seats[1]).ShouldNotBeNull();
+        var code = table.Seats[1].Code.ShouldNotBeNull();
 
         var answers = await Task.WhenAll(Claim(invitation), Claim(invitation));
 
@@ -125,8 +130,8 @@ public sealed class LobbyApiTests : IDisposable
         token.ShouldNotBe(invitation);
         table.Seats[1].Token.ShouldBe(token);
         table.Seats[1].Taken.ShouldBeTrue();
-        _registry.ByInvitation(invitation).ShouldBeNull();
-        _registry.Codes.Answer($"/j/{code}").ShouldNameNoSeat();
+        (await _registry.ByInvitationAsync(invitation, TestContext.Current.CancellationToken)).ShouldBeNull();
+        (await _registry.AnswerAsync($"/j/{code}", TestContext.Current.CancellationToken)).ShouldNameNoSeat();
         Read(await Ask(invitation)).GetProperty("invitations")[0].GetProperty("kind").GetString().ShouldBe("spent");
 
         var recorded = (await _hosted.Stored!.RecordAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull();
@@ -139,22 +144,18 @@ public sealed class LobbyApiTests : IDisposable
     public async Task A_table_recorded_before_invitations_keeps_its_links_to_the_seat_token()
     {
         var table = await _hosted.Composer.ComposeAsync(HostedTables.OnePerson, TestContext.Current.CancellationToken);
-        _registry.TryAdd(table).ShouldBeTrue();
-        await table.RecordAsync(_registry.Codes, TestContext.Current.CancellationToken);
+        await AddAsync(table);
         var recorded = (await _hosted.Stored!.RecordAsync(table.Id, TestContext.Current.CancellationToken)).ShouldNotBeNull();
         await table.Run!.RecordAsync(recorded with { Seats = [.. recorded.Seats.Select(seat => seat with { Invitation = null, Taken = null })] }, TestContext.Current.CancellationToken);
         var token = table.Seats[0].Token;
         _registry.Dispose();
         await table.QuiesceAsync(TestContext.Current.CancellationToken);
-        using var after = new HostedTables(_ => new FileArtifactStore(_hosted.RunsDirectory));
-        using var restored = new TableRegistry();
+        using var restored = await _hosted.RestartedAsync();
 
-        await TableRestorer.RestoreAsync(after.Stored!, after.Composer, restored, TimeProvider.System, TestContext.Current.CancellationToken);
-
-        var rebuilt = restored.ById(table.Id).ShouldNotBeNull();
+        var rebuilt = (await restored.ByIdAsync(table.Id, TestContext.Current.CancellationToken)).ShouldNotBeNull();
         rebuilt.Seats[0].Key.ShouldBe(token);
-        var code = restored.Codes.Of(rebuilt.Seats[0]).ShouldNotBeNull();
-        restored.Codes.Answer($"/j/{code}").Headers.ShouldNotBeNull().ShouldContain(header => header.Key == "Location" && header.Value == $"/?player1={token}");
+        var code = rebuilt.Seats[0].Code.ShouldNotBeNull();
+        (await restored.AnswerAsync($"/j/{code}", TestContext.Current.CancellationToken)).Headers.ShouldNotBeNull().ShouldContain(header => header.Key == "Location" && header.Value == $"/?player1={token}");
         restored.Dispose();
         await rebuilt.QuiesceAsync(TestContext.Current.CancellationToken);
     }
@@ -165,18 +166,19 @@ public sealed class LobbyApiTests : IDisposable
     {
         RecordRefused? store = null;
         using var hosted = new HostedTables(directory => store = new RecordRefused(new FileArtifactStore(directory)));
-        var lobby = new LobbyApi(_registry, hosted.Composer, TimeProvider.System);
+        using var registry = hosted.Registry();
+        var lobby = new LobbyApi(registry, hosted.Composer, TimeProvider.System);
         var id = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", "{}")).GetProperty("table").GetProperty("id").GetString()!;
-        var table = _registry.ById(id)!;
+        var table = (await registry.ByIdAsync(id, TestContext.Current.CancellationToken))!;
         var seat = table.Seats[1];
-        var (token, invitation, code) = (seat.Token, seat.Invitation!, _registry.Codes.Of(seat));
+        var (token, invitation, code) = (seat.Token, seat.Invitation!, seat.Code);
         store!.Refusing = true;
 
         await Should.ThrowAsync<IOException>(() => lobby.HandleAsync("POST", "/api/lobby/claim", JsonSerializer.Serialize(new { tokens = new[] { invitation } })));
 
-        (seat.Token, seat.Invitation, seat.Taken, _registry.Codes.Of(seat)).ShouldBe((token, invitation, false, code));
+        (seat.Token, seat.Invitation, seat.Taken, seat.Code).ShouldBe((token, invitation, false, code));
         table.OpenSeats.ShouldBe(["player2"]);
-        _registry.ByInvitation(invitation).ShouldNotBeNull();
+        (await registry.ByInvitationAsync(invitation, TestContext.Current.CancellationToken)).ShouldNotBeNull();
         store.Refusing = false;
         (await lobby.HandleAsync("POST", "/api/lobby/claim", JsonSerializer.Serialize(new { tokens = new[] { invitation } }))).Status.ShouldBe(200);
     }
@@ -186,13 +188,13 @@ public sealed class LobbyApiTests : IDisposable
     public async Task An_invitation_to_a_table_let_go_of_is_refused()
     {
         var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
-        var table = _registry.ById(id)!;
+        var table = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!;
         var invitation = table.Seats[1].Invitation!;
-        _registry.Remove(id).ShouldBeTrue();
+        (await _registry.RemoveAsync(id, TestContext.Current.CancellationToken)).ShouldBeTrue();
 
         (await Claim(invitation)).Status.ShouldBe(409);
-        _registry.Rekey(table, table.Seats[1], SeatKeys.TakenBy("late")).ShouldBeFalse();
-        _registry.ByToken("late").ShouldBeNull();
+        (await _registry.RekeyAsync(table, table.Seats[1], SeatKeys.TakenBy("late"), TestContext.Current.CancellationToken)).ShouldBeFalse();
+        (await _registry.ByTokenAsync("late", TestContext.Current.CancellationToken)).ShouldBeNull();
         await table.QuiesceAsync(TestContext.Current.CancellationToken);
     }
 
@@ -200,7 +202,7 @@ public sealed class LobbyApiTests : IDisposable
     public async Task Asking_what_a_link_carries_spends_nothing()
     {
         var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
-        var table = _registry.ById(id)!;
+        var table = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!;
         var invitation = table.Seats[1].Invitation!;
 
         for (var asked = 0; asked < 2; asked++)
@@ -213,7 +215,7 @@ public sealed class LobbyApiTests : IDisposable
 
         table.OpenSeats.ShouldBe(["player2"]);
         table.Seats[1].Person!.HasArrived.ShouldBeFalse();
-        _registry.ByInvitation(invitation).ShouldNotBeNull();
+        (await _registry.ByInvitationAsync(invitation, TestContext.Current.CancellationToken)).ShouldNotBeNull();
     }
 
     /// <summary>An invitation is not a seat token: a page polling with it, an old one or a script, is refused, so it cannot sit down without accepting.</summary>
@@ -221,16 +223,16 @@ public sealed class LobbyApiTests : IDisposable
     public async Task An_invitation_reaches_no_seat_until_it_is_accepted()
     {
         var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
-        var invitation = _registry.ById(id)!.Seats[1].Invitation!;
+        var invitation = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!.Seats[1].Invitation!;
 
-        _registry.ByToken(invitation).ShouldBeNull();
+        (await _registry.ByTokenAsync(invitation, TestContext.Current.CancellationToken)).ShouldBeNull();
     }
 
     [Fact]
     public async Task A_link_carrying_a_seat_token_is_answered_as_a_seat_and_spends_nothing()
     {
         var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
-        var table = _registry.ById(id)!;
+        var table = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!;
 
         var answer = Read(await Ask(table.Seats[0].Token, table.Pilot.Token)).GetProperty("invitations");
 
@@ -246,7 +248,7 @@ public sealed class LobbyApiTests : IDisposable
     public async Task One_link_for_one_shared_browser_takes_both_seats_together()
     {
         var table = await _hosted.Composer.ComposeAsync(HostedTables.TwoPeople, TestContext.Current.CancellationToken);
-        _registry.TryAdd(table).ShouldBeTrue();
+        await AddAsync(table);
 
         var claimed = Read(await Claim(table.Seats[0].Invitation!, table.Seats[1].Invitation!)).GetProperty("seats");
 
@@ -259,8 +261,8 @@ public sealed class LobbyApiTests : IDisposable
     {
         var first = await _hosted.Composer.ComposeAsync(HostedTables.OnePerson, TestContext.Current.CancellationToken);
         var second = await _hosted.Composer.ComposeAsync(HostedTables.OnePerson, TestContext.Current.CancellationToken);
-        _registry.TryAdd(first).ShouldBeTrue();
-        _registry.TryAdd(second).ShouldBeTrue();
+        await AddAsync(first);
+        await AddAsync(second);
 
         (await Claim(first.Seats[0].Invitation!, second.Seats[0].Invitation!)).Status.ShouldBe(409);
         first.Seats[0].Taken.ShouldBeFalse();
@@ -271,7 +273,7 @@ public sealed class LobbyApiTests : IDisposable
     public async Task Leaving_offers_the_place_under_a_fresh_invitation()
     {
         var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
-        var table = _registry.ById(id)!;
+        var table = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!;
         var first = table.Seats[1].Invitation!;
         var token = Read(await Claim(first)).GetProperty("seats")[0].GetProperty("token").GetString()!;
 
@@ -280,7 +282,7 @@ public sealed class LobbyApiTests : IDisposable
         var next = table.Seats[1].Invitation.ShouldNotBeNull();
         next.ShouldNotBe(first);
         table.Seats[1].Taken.ShouldBeFalse();
-        _registry.Codes.Of(table.Seats[1]).ShouldNotBeNull();
+        table.Seats[1].Code.ShouldNotBeNull();
         (await Claim(first)).Status.ShouldBe(409);
         (await Claim(next)).Status.ShouldBe(200);
     }
@@ -289,21 +291,18 @@ public sealed class LobbyApiTests : IDisposable
     public async Task A_redeploy_keeps_an_outstanding_invitation_and_a_taken_seat_as_they_were()
     {
         var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
-        var table = _registry.ById(id)!;
+        var table = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!;
         var creator = table.Seats[0].Token;
         var invitation = table.Seats[1].Invitation!;
-        var code = _registry.Codes.Of(table.Seats[1])!;
-        using var after = new HostedTables(_ => new FileArtifactStore(_hosted.RunsDirectory));
-        using var restored = new TableRegistry();
+        var code = table.Seats[1].Code!;
+        using var restored = await _hosted.RestartedAsync();
 
-        await TableRestorer.RestoreAsync(after.Stored!, after.Composer, restored, TimeProvider.System, TestContext.Current.CancellationToken);
-
-        var rebuilt = restored.ById(id).ShouldNotBeNull();
+        var rebuilt = (await restored.ByIdAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull();
         rebuilt.Seats[0].Taken.ShouldBeTrue();
-        restored.Codes.Of(rebuilt.Seats[0]).ShouldBeNull();
-        restored.ByToken(creator).ShouldBeSameAs(rebuilt);
-        restored.ByInvitation(invitation).ShouldNotBeNull().Seat.ShouldBeSameAs(rebuilt.Seats[1]);
-        restored.Codes.Of(rebuilt.Seats[1]).ShouldBe(code);
+        rebuilt.Seats[0].Code.ShouldBeNull();
+        (await restored.ByTokenAsync(creator, TestContext.Current.CancellationToken)).ShouldBeSameAs(rebuilt);
+        (await restored.ByInvitationAsync(invitation, TestContext.Current.CancellationToken)).ShouldNotBeNull().Seat.ShouldBeSameAs(rebuilt.Seats[1]);
+        rebuilt.Seats[1].Code.ShouldBe(code);
         restored.Dispose();
         await rebuilt.QuiesceAsync(TestContext.Current.CancellationToken);
     }
@@ -313,7 +312,7 @@ public sealed class LobbyApiTests : IDisposable
     {
         var opened = await Open();
         var id = opened.GetProperty("table").GetProperty("id").GetString()!;
-        var table = _registry.ById(id)!;
+        var table = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!;
         var body = JsonSerializer.Serialize(new { tokens = new[] { table.Seats[0].Token, table.Pilot.Token, "unknown" } });
         var resumed = Read(await Lobby.HandleAsync("POST", "/api/lobby/resume", body));
 
@@ -327,7 +326,7 @@ public sealed class LobbyApiTests : IDisposable
     public async Task Leaving_a_started_game_revokes_the_old_token_and_invitation_and_a_new_player_can_take_over()
     {
         var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
-        var table = _registry.ById(id)!;
+        var table = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!;
         await Lobby.HandleAsync("POST", $"/api/lobby/tables/{id}/join", "{}");
         foreach (var seat in table.Seats)
         {
@@ -349,11 +348,11 @@ public sealed class LobbyApiTests : IDisposable
 
         var before = await table.RoundAsync();
         var token = table.Seats[1].Token;
-        var code = _registry.Codes.Of(table.Seats[1])!;
+        var code = table.Seats[1].Code!;
         (await Lobby.HandleAsync("POST", "/api/lobby/leave", "{}", token)).Status.ShouldBe(200);
 
-        _registry.ByToken(token).ShouldBeNull();
-        _registry.Codes.Answer($"/j/{code}").ShouldNameNoSeat();
+        (await _registry.ByTokenAsync(token, TestContext.Current.CancellationToken)).ShouldBeNull();
+        (await _registry.AnswerAsync($"/j/{code}", TestContext.Current.CancellationToken)).ShouldNameNoSeat();
         (await table.Api.HandleAsync("GET", "/api/seat/player2", "", token)).Status.ShouldBe(403);
         (await Lobby.HandleAsync("POST", "/api/lobby/leave", "{}", token)).Status.ShouldBe(403);
         table.Session.Outcome.IsCompleted.ShouldBeFalse();
@@ -365,12 +364,11 @@ public sealed class LobbyApiTests : IDisposable
         (await table.RoundAsync()).ShouldBe(before);
         (await _hosted.Stored!.RecordAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Seats[1].Token.ShouldBe(replacement);
 
-        using var after = new HostedTables(_ => new FileArtifactStore(_hosted.RunsDirectory));
-        using var restored = new TableRegistry();
-        (await TableRestorer.RestoreAsync(after.Stored!, after.Composer, restored, TimeProvider.System, TestContext.Current.CancellationToken)).ShouldHaveSingleItem().ShouldContain("rebuilt");
-        var rebuilt = restored.ById(id).ShouldNotBeNull();
-        restored.ByToken(token).ShouldBeNull();
-        restored.ByToken(replacement).ShouldBeSameAs(rebuilt);
+        using var restored = _hosted.Registry();
+        (await TableRestorer.RestoreAsync(_hosted.Stored!, restored, TestContext.Current.CancellationToken)).ShouldHaveSingleItem().ShouldContain("1 open table indexed");
+        var rebuilt = (await restored.ByIdAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull();
+        (await restored.ByTokenAsync(token, TestContext.Current.CancellationToken)).ShouldBeNull();
+        (await restored.ByTokenAsync(replacement, TestContext.Current.CancellationToken)).ShouldBeSameAs(rebuilt);
         rebuilt.OpenSeats.ShouldBeEmpty();
         (await rebuilt.RoundAsync()).ShouldBe(before);
         restored.Dispose();
@@ -381,19 +379,18 @@ public sealed class LobbyApiTests : IDisposable
     public async Task A_redeploy_keeps_claimed_places_private_and_keeps_a_vacated_place_joinable()
     {
         var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
-        var table = _registry.ById(id)!;
+        var table = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!;
         var oldToken = table.Seats[0].Token;
         await Lobby.HandleAsync("POST", "/api/lobby/leave", "{}", oldToken);
-        using var after = new HostedTables(_ => new FileArtifactStore(_hosted.RunsDirectory));
-        using var restored = new TableRegistry();
+        using var restored = _hosted.Registry();
 
-        var said = await TableRestorer.RestoreAsync(after.Stored!, after.Composer, restored, TimeProvider.System, TestContext.Current.CancellationToken);
+        var said = await TableRestorer.RestoreAsync(_hosted.Stored!, restored, TestContext.Current.CancellationToken);
 
-        said.ShouldHaveSingleItem().ShouldContain("rebuilt");
-        var rebuilt = restored.ById(id).ShouldNotBeNull();
+        said.ShouldHaveSingleItem().ShouldContain("1 open table indexed");
+        var rebuilt = (await restored.ByIdAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull();
         rebuilt.OpenSeats.ShouldBe(["player2", "player1"]);
-        restored.ByToken(oldToken).ShouldBeNull();
-        var lobby = new LobbyApi(restored, after.Composer, TimeProvider.System);
+        (await restored.ByTokenAsync(oldToken, TestContext.Current.CancellationToken)).ShouldBeNull();
+        var lobby = new LobbyApi(restored, _hosted.Composer, TimeProvider.System);
         Read(await lobby.HandleAsync("POST", $"/api/lobby/tables/{id}/join", "{}")).GetProperty("seats")[0].GetProperty("seat").GetString().ShouldBe("player1");
         restored.Dispose();
         await rebuilt.QuiesceAsync(TestContext.Current.CancellationToken);
@@ -416,12 +413,12 @@ public sealed class LobbyApiTests : IDisposable
     [Fact]
     public async Task The_lobby_seats_the_first_featured_bot_and_refuses_the_others()
     {
-        var composer = new TableComposer(_hosted.Services, HostedTables.Rules, new FileArtifactStore(_hosted.RunsDirectory)) { Agents = [new SeatableAgent("random", "Random", Featured: true), new SeatableAgent("greedy", "Greedy", Featured: false)] };
+        var composer = new TableComposer(_hosted.Services, HostedTables.Rules, new FileArtifactStore(_hosted.RunsDirectory)) { Index = _hosted.Index, Agents = [new SeatableAgent("random", "Random", Featured: true), new SeatableAgent("greedy", "Greedy", Featured: false)] };
         var lobby = new LobbyApi(_registry, composer, TimeProvider.System);
 
         var opened = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", JsonSerializer.Serialize(new { opponent = "bot" })));
 
-        _registry.ById(opened.GetProperty("table").GetProperty("id").GetString()!).ShouldNotBeNull().Request.ShouldNotBeNull().Player2.ShouldBe(AgentSpec.Parse("random"));
+        (await _registry.ByIdAsync(opened.GetProperty("table").GetProperty("id").GetString()!, TestContext.Current.CancellationToken)).ShouldNotBeNull().Request.ShouldNotBeNull().Player2.ShouldBe(AgentSpec.Parse("random"));
         (await lobby.HandleAsync("POST", "/api/lobby/tables", JsonSerializer.Serialize(new { opponent = "greedy" }))).Status.ShouldBe(400);
         (await lobby.HandleAsync("POST", "/api/lobby/tables", JsonSerializer.Serialize(new { opponent = "random" }))).Status.ShouldBe(400);
     }
@@ -430,7 +427,7 @@ public sealed class LobbyApiTests : IDisposable
     public async Task An_invitation_only_table_is_not_made_joinable_by_appearing_in_the_lobby()
     {
         var table = await _hosted.Composer.ComposeAsync(HostedTables.OnePerson, TestContext.Current.CancellationToken);
-        _registry.TryAdd(table).ShouldBeTrue();
+        await AddAsync(table);
         (await Lobby.HandleAsync("POST", $"/api/lobby/tables/{table.Id}/join", "{}")).Status.ShouldBe(409);
     }
 
@@ -440,12 +437,10 @@ public sealed class LobbyApiTests : IDisposable
         var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
         var joined = Read(await Lobby.HandleAsync("POST", $"/api/lobby/tables/{id}/join", "{}"));
         var token = joined.GetProperty("seats")[0].GetProperty("token").GetString()!;
-        using var after = new HostedTables(_ => new FileArtifactStore(_hosted.RunsDirectory));
-        using var restored = new TableRegistry();
-        await TableRestorer.RestoreAsync(after.Stored!, after.Composer, restored, TimeProvider.System, TestContext.Current.CancellationToken);
-        var rebuilt = restored.ById(id).ShouldNotBeNull();
-        restored.ByToken(token).ShouldBeSameAs(rebuilt);
-        var lobby = new LobbyApi(restored, after.Composer, TimeProvider.System);
+        using var restored = await _hosted.RestartedAsync();
+        var rebuilt = (await restored.ByIdAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull();
+        (await restored.ByTokenAsync(token, TestContext.Current.CancellationToken)).ShouldBeSameAs(rebuilt);
+        var lobby = new LobbyApi(restored, _hosted.Composer, TimeProvider.System);
 
         (await lobby.HandleAsync("POST", $"/api/lobby/tables/{id}/join", "{}")).Status.ShouldBe(409);
         restored.Dispose();
@@ -458,7 +453,7 @@ public sealed class LobbyApiTests : IDisposable
         using var unrecorded = new HostedTables();
         var lobby = new LobbyApi(_registry, unrecorded.Composer, TimeProvider.System);
         (await lobby.HandleAsync("POST", "/api/lobby/tables", "{}")).Status.ShouldBe(409);
-        _registry.All().ShouldBeEmpty();
+        _registry.HeldTables().ShouldBeEmpty();
     }
 
     [Theory]
@@ -473,7 +468,7 @@ public sealed class LobbyApiTests : IDisposable
     public async Task Invalid_requests_are_refused_without_opening_a_table(string path, string body)
     {
         (await Lobby.HandleAsync("POST", path, body)).Status.ShouldBe(400);
-        _registry.All().ShouldBeEmpty();
+        _registry.HeldTables().ShouldBeEmpty();
     }
 
     /// <summary>
@@ -484,18 +479,18 @@ public sealed class LobbyApiTests : IDisposable
     public async Task Taking_a_place_from_the_lobby_revokes_the_seats_old_link_and_code()
     {
         var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
-        var table = _registry.ById(id)!;
+        var table = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!;
         var oldToken = table.Seats[1].Token;
-        var oldCode = _registry.Codes.Of(table.Seats[1]).ShouldNotBeNull();
+        var oldCode = table.Seats[1].Code.ShouldNotBeNull();
 
         var joined = Read(await Lobby.HandleAsync("POST", $"/api/lobby/tables/{id}/join", "{}"));
         var newToken = joined.GetProperty("seats")[0].GetProperty("token").GetString()!;
 
         newToken.ShouldNotBe(oldToken);
-        _registry.ByToken(oldToken).ShouldBeNull();
-        _registry.ByToken(newToken).ShouldBeSameAs(table);
-        _registry.Codes.Of(table.Seats[1]).ShouldBeNull();
-        _registry.Codes.Answer($"/j/{oldCode}").ShouldNameNoSeat();
+        (await _registry.ByTokenAsync(oldToken, TestContext.Current.CancellationToken)).ShouldBeNull();
+        (await _registry.ByTokenAsync(newToken, TestContext.Current.CancellationToken)).ShouldBeSameAs(table);
+        table.Seats[1].Code.ShouldBeNull();
+        (await _registry.AnswerAsync($"/j/{oldCode}", TestContext.Current.CancellationToken)).ShouldNameNoSeat();
         table.Seats[1].Invitation.ShouldBeNull();
         (await _hosted.Stored!.RecordAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Seats[1].Token.ShouldBe(newToken);
     }
@@ -505,10 +500,10 @@ public sealed class LobbyApiTests : IDisposable
     public async Task A_seat_write_after_the_match_ended_keeps_the_record_finished()
     {
         var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
-        var table = _registry.ById(id)!;
+        var table = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!;
 
         await table.Run!.MarkAsync(TableRecord.Finished, TestContext.Current.CancellationToken);
-        await table.RecordAsync(_registry.Codes, TestContext.Current.CancellationToken);
+        await table.RecordAsync(TestContext.Current.CancellationToken);
 
         (await _hosted.Stored!.RecordAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Finished);
     }
@@ -529,7 +524,7 @@ public sealed class LobbyApiTests : IDisposable
         var notices = new PushNotices(new NothingSent(), "BP8", TimeProvider.System);
         var lobby = new LobbyApi(_registry, _hosted.Composer, TimeProvider.System, notices);
         var id = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", "{}")).GetProperty("table").GetProperty("id").GetString()!;
-        var table = _registry.ById(id)!;
+        var table = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!;
         var token = table.Seats[0].Token;
 
         Read(await lobby.HandleAsync("GET", "/api/lobby/push", "")).GetProperty("publicKey").GetString().ShouldBe("BP8");
@@ -539,10 +534,8 @@ public sealed class LobbyApiTests : IDisposable
         table.Seats[0].Push.ShouldBe(new PushSubscription("https://push.example/one", BrowserKey, BrowserAuth));
         (await _hosted.Stored!.RecordAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Seats[0].Push.ShouldBe(table.Seats[0].Push);
 
-        using var after = new HostedTables(_ => new FileArtifactStore(_hosted.RunsDirectory));
-        using var restored = new TableRegistry();
-        await TableRestorer.RestoreAsync(after.Stored!, after.Composer, restored, TimeProvider.System, TestContext.Current.CancellationToken);
-        var rebuilt = restored.ById(id).ShouldNotBeNull();
+        using var restored = await _hosted.RestartedAsync();
+        var rebuilt = (await restored.ByIdAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull();
         rebuilt.Seats[0].Push.ShouldBe(table.Seats[0].Push);
         restored.Dispose();
         await rebuilt.QuiesceAsync(TestContext.Current.CancellationToken);
@@ -553,7 +546,7 @@ public sealed class LobbyApiTests : IDisposable
     {
         var lobby = new LobbyApi(_registry, _hosted.Composer, TimeProvider.System, new PushNotices(new NothingSent(), "BP8", TimeProvider.System));
         var id = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", "{}")).GetProperty("table").GetProperty("id").GetString()!;
-        var table = _registry.ById(id)!;
+        var table = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!;
         var token = table.Seats[0].Token;
         Read(await lobby.HandleAsync("PUT", "/api/lobby/push", Browser, token));
 
@@ -581,7 +574,7 @@ public sealed class LobbyApiTests : IDisposable
         var body = JsonSerializer.Serialize(new { endpoint, keys = p256dh is null ? null : new { p256dh, auth } });
         var lobby = new LobbyApi(_registry, _hosted.Composer, TimeProvider.System, new PushNotices(new NothingSent(), "BP8", TimeProvider.System));
         var id = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", "{}")).GetProperty("table").GetProperty("id").GetString()!;
-        var table = _registry.ById(id)!;
+        var table = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!;
 
         (await lobby.HandleAsync("PUT", "/api/lobby/push", body, table.Seats[0].Token)).Status.ShouldBe(400);
         table.Seats[0].Push.ShouldBeNull();
@@ -594,7 +587,7 @@ public sealed class LobbyApiTests : IDisposable
         var sender = new Refusing();
         var lobby = new LobbyApi(_registry, _hosted.Composer, TimeProvider.System, new PushNotices(sender, "BP8", TimeProvider.System));
         var id = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", "{}")).GetProperty("table").GetProperty("id").GetString()!;
-        var table = _registry.ById(id)!;
+        var table = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!;
         var token = table.Seats[0].Token;
 
         var unsubscribed = await lobby.HandleAsync("POST", "/api/lobby/push/test", "{}", token);
@@ -624,7 +617,7 @@ public sealed class LobbyApiTests : IDisposable
         var notices = new PushNotices(sender, "BP8", TimeProvider.System);
         var lobby = new LobbyApi(_registry, _hosted.Composer, TimeProvider.System, notices);
         var id = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", "{}")).GetProperty("table").GetProperty("id").GetString()!;
-        var table = _registry.ById(id)!;
+        var table = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!;
         var token = table.Seats[0].Token;
         Read(await lobby.HandleAsync("PUT", "/api/lobby/push", Browser, token));
         var held = table.Seats[0].Push!;
@@ -670,7 +663,7 @@ public sealed class LobbyApiTests : IDisposable
     public async Task A_subscription_needs_a_seat_token_and_a_host_with_keys()
     {
         var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
-        var token = _registry.ById(id)!.Seats[0].Token;
+        var token = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!.Seats[0].Token;
 
         (await Lobby.HandleAsync("PUT", "/api/lobby/push", Browser, token)).Status.ShouldBe(404, "this host has no keys");
         Read(await Lobby.HandleAsync("GET", "/api/lobby/push", "")).GetProperty("publicKey").ValueKind.ShouldBe(JsonValueKind.Null);
@@ -692,7 +685,7 @@ public sealed class LobbyApiTests : IDisposable
     {
         var lobby = new LobbyApi(_registry, _hosted.Composer, TimeProvider.System, new PushNotices(new NothingSent(), "BP8", TimeProvider.System));
         var id = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", "{}")).GetProperty("table").GetProperty("id").GetString()!;
-        var table = _registry.ById(id)!;
+        var table = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!;
         var departed = table.Seats[0].Token;
         (await lobby.HandleAsync("POST", "/api/lobby/leave", "{}", departed)).Status.ShouldBe(200);
 
@@ -704,6 +697,13 @@ public sealed class LobbyApiTests : IDisposable
     private sealed class NothingSent : IPushSender
     {
         public Task<bool> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default) => Task.FromResult(true);
+    }
+
+    /// <summary>A table composed by hand, registered and recorded as the lobby and the admin panel do it.</summary>
+    private async Task AddAsync(PlayedTable table)
+    {
+        await _registry.AddAsync(table, (await _registry.ReserveAsync(TestContext.Current.CancellationToken)).ShouldNotBeNull(), TestContext.Current.CancellationToken);
+        await table.RecordAsync(TestContext.Current.CancellationToken);
     }
 
     private async Task<JsonElement> Open() => Read(await Lobby.HandleAsync("POST", "/api/lobby/tables", "{}"));

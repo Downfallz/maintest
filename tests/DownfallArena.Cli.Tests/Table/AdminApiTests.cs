@@ -17,7 +17,12 @@ public sealed class AdminApiTests : IDisposable
     private const string OperatorToken = "token-of-the-operator";
 
     private readonly HostedTables _hosted = new(recording: true);
-    private readonly TableRegistry _registry = new(mostUnderWay: 1);
+    private readonly TableRegistry _registry;
+
+    public AdminApiTests()
+    {
+        _registry = _hosted.Registry(mostUnderWay: 1);
+    }
 
     public void Dispose()
     {
@@ -82,8 +87,8 @@ public sealed class AdminApiTests : IDisposable
         // And the table is now the registry's, found by the invitation the link carries, which is not the
         // seat's token: whoever accepts it first gets that (ADR 0116).
         var invitation = seats[0].GetProperty("link").GetString()!["/?player1=".Length..];
-        _registry.ByInvitation(invitation).ShouldNotBeNull().Table.Id.ShouldBe(id);
-        _registry.ByToken(invitation).ShouldBeNull();
+        (await _registry.ByInvitationAsync(invitation, TestContext.Current.CancellationToken)).ShouldNotBeNull().Table.Id.ShouldBe(id);
+        (await _registry.ByTokenAsync(invitation, TestContext.Current.CancellationToken)).ShouldBeNull();
     }
 
     [Fact]
@@ -108,7 +113,7 @@ public sealed class AdminApiTests : IDisposable
         var admin = Admin(OperatorGate.WithToken(OperatorToken));
         var opened = JsonDocument.Parse(Text(await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy"}""", OperatorToken, null))).RootElement;
         var id = opened.GetProperty("id").GetString()!;
-        var table = _registry.ById(id)!;
+        var table = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!;
         var first = table.Seats[0].Invitation!;
         var claimed = await admin.Lobby.HandleAsync("POST", "/api/lobby/claim", JsonSerializer.Serialize(new { tokens = new[] { first } }));
         var lost = JsonDocument.Parse(Text(claimed)).RootElement.GetProperty("seats")[0].GetProperty("token").GetString()!;
@@ -121,7 +126,7 @@ public sealed class AdminApiTests : IDisposable
         var next = invited.GetProperty("link").GetString()!["/?player1=".Length..];
         next.ShouldNotBe(first);
         invited.GetProperty("code").GetString().ShouldNotBeNull();
-        _registry.ByToken(lost).ShouldBeNull();
+        (await _registry.ByTokenAsync(lost, TestContext.Current.CancellationToken)).ShouldBeNull();
         Seat(await admin.HandleAsync("GET", "/api/tables", "", OperatorToken, null)).GetProperty("taken").GetBoolean().ShouldBeFalse();
         (await _hosted.Stored!.RecordAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Seats[0].Invitation.ShouldBe(next);
         (await admin.Lobby.HandleAsync("POST", "/api/lobby/claim", JsonSerializer.Serialize(new { tokens = new[] { next } }))).Status.ShouldBe(200);
@@ -135,20 +140,20 @@ public sealed class AdminApiTests : IDisposable
     {
         RecordRefused? store = null;
         using var hosted = new HostedTables(directory => store = new RecordRefused(new FileArtifactStore(directory)));
-        using var registry = new TableRegistry();
+        using var registry = hosted.Registry();
         var admin = new AdminApi(registry, hosted.Composer, OperatorGate.WithToken(OperatorToken), TimeProvider.System, "Rules 2 creatures (a test)", hosted.Stored);
         var id = JsonDocument.Parse(Text(await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy"}""", OperatorToken, null))).RootElement.GetProperty("id").GetString()!;
-        var table = registry.ById(id)!;
+        var table = (await registry.ByIdAsync(id, TestContext.Current.CancellationToken))!;
         var claimed = await admin.Lobby.HandleAsync("POST", "/api/lobby/claim", JsonSerializer.Serialize(new { tokens = new[] { table.Seats[0].Invitation! } }));
         var held = JsonDocument.Parse(Text(claimed)).RootElement.GetProperty("seats")[0].GetProperty("token").GetString()!;
         store!.Refusing = true;
 
         (await admin.HandleAsync("POST", $"/api/tables/{id}/seats/player1/invite", "", OperatorToken, null)).Status.ShouldBe(503);
 
-        registry.ByToken(held).ShouldBeSameAs(table);
+        (await registry.ByTokenAsync(held, TestContext.Current.CancellationToken)).ShouldBeSameAs(table);
         table.Seats[0].Taken.ShouldBeTrue();
         table.Seats[0].Invitation.ShouldBeNull();
-        registry.Codes.Of(table.Seats[0]).ShouldBeNull();
+        table.Seats[0].Code.ShouldBeNull();
         registry.Dispose();
         await table.QuiesceAsync(TestContext.Current.CancellationToken);
     }
@@ -194,7 +199,7 @@ public sealed class AdminApiTests : IDisposable
 
         (await admin.HandleAsync("POST", "/api/tables", body, OperatorToken, null)).Status.ShouldBe(400);
 
-        _registry.All().ShouldBeEmpty();
+        _registry.HeldTables().ShouldBeEmpty();
     }
 
     /// <summary>A spec that parses but names a file that is not there fails while composing, and is the operator's typo too.</summary>
@@ -206,7 +211,7 @@ public sealed class AdminApiTests : IDisposable
         var answer = await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"heuristic:nowhere.json"}""", OperatorToken, null);
 
         answer.Status.ShouldBe(400, Text(answer));
-        _registry.All().ShouldBeEmpty();
+        _registry.HeldTables().ShouldBeEmpty();
     }
 
     /// <summary>
@@ -232,12 +237,12 @@ public sealed class AdminApiTests : IDisposable
         var admin = Admin(OperatorGate.WithToken(OperatorToken));
         var opened = JsonDocument.Parse(Text(await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy"}""", OperatorToken, null))).RootElement;
         var id = opened.GetProperty("id").GetString()!;
-        var table = _registry.ById(id).ShouldNotBeNull();
+        var table = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull();
 
         (await admin.HandleAsync("DELETE", $"/api/tables/{id}", "", OperatorToken, null)).Status.ShouldBe(204);
 
         (await admin.HandleAsync("DELETE", $"/api/tables/{id}", "", OperatorToken, null)).Status.ShouldBe(404);
-        _registry.All().ShouldBeEmpty();
+        _registry.HeldTables().ShouldBeEmpty();
         await Should.ThrowAsync<OperationCanceledException>(() => table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
     }
 
@@ -324,9 +329,9 @@ public sealed class AdminApiTests : IDisposable
     {
         var admin = Admin(OperatorGate.WithToken(OperatorToken));
         var live = Opened(await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy","who":"mk"}""", OperatorToken, null));
-        _registry.Remove(live);
+        await ClosedAsync(live);
         var gone = Opened(await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy","who":"mk"}""", OperatorToken, null));
-        _registry.Remove(gone);
+        await ClosedAsync(gone);
         var kept = Opened(await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy","who":"mk"}""", OperatorToken, null));
 
         var answer = await admin.HandleAsync("GET", "/api/sessions", "", OperatorToken, null);
@@ -349,7 +354,7 @@ public sealed class AdminApiTests : IDisposable
     {
         var admin = Admin(OperatorGate.WithToken(OperatorToken));
         var playing = Opened(await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy"}""", OperatorToken, null));
-        var table = _registry.ById(playing).ShouldNotBeNull();
+        var table = (await _registry.ByIdAsync(playing, TestContext.Current.CancellationToken)).ShouldNotBeNull();
 
         var answer = await admin.HandleAsync("DELETE", "/api/sessions", $$"""{"ids":["{{playing}}","nowhere"]}""", OperatorToken, null);
 
@@ -357,7 +362,7 @@ public sealed class AdminApiTests : IDisposable
         var told = JsonDocument.Parse(Text(answer)).RootElement;
         told.GetProperty("deleted").EnumerateArray().Select(id => id.GetString()).ShouldBe([playing]);
         told.GetProperty("missing").EnumerateArray().Select(id => id.GetString()).ShouldBe(["nowhere"]);
-        _registry.ById(playing).ShouldBeNull();
+        (await _registry.ByIdAsync(playing, TestContext.Current.CancellationToken)).ShouldBeNull();
         Directory.Exists(Path.Combine(_hosted.RunsDirectory, playing)).ShouldBeFalse("the run goes with the table");
         await Should.ThrowAsync<OperationCanceledException>(() => table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
         (await admin.HandleAsync("DELETE", "/api/sessions", """{"ids":[]}""", OperatorToken, null)).Status.ShouldBe(400);
@@ -373,7 +378,7 @@ public sealed class AdminApiTests : IDisposable
     {
         var admin = Admin(OperatorGate.WithToken(OperatorToken));
         var playing = Opened(await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy"}""", OperatorToken, null));
-        var table = _registry.ById(playing).ShouldNotBeNull();
+        var table = (await _registry.ByIdAsync(playing, TestContext.Current.CancellationToken)).ShouldNotBeNull();
 
         var answer = await admin.HandleAsync("DELETE", "/api/sessions", $$"""{"ids":["{{playing}}"]}""", OperatorToken, null);
 
@@ -394,13 +399,13 @@ public sealed class AdminApiTests : IDisposable
     {
         var admin = Admin(OperatorGate.WithToken(OperatorToken));
         var played = Opened(await admin.HandleAsync("POST", "/api/tables", """{"player1":"greedy","player2":"greedy"}""", OperatorToken, null));
-        var table = _registry.ById(played).ShouldNotBeNull();
+        var table = (await _registry.ByIdAsync(played, TestContext.Current.CancellationToken)).ShouldNotBeNull();
         for (var attempt = 0; attempt < 500 && !table.IsFinished; attempt++)
         {
             await Task.Delay(20, TestContext.Current.CancellationToken);
         }
 
-        _registry.Remove(played);
+        await _registry.RemoveAsync(played, TestContext.Current.CancellationToken);
 
         var answer = await admin.HandleAsync("GET", $"/api/sessions/{played}/replay", "", OperatorToken, null);
 
@@ -433,7 +438,7 @@ public sealed class AdminApiTests : IDisposable
         var token = behindPlatform ? null : OperatorToken;
         var principal = behindPlatform ? "mark@example.test" : null;
         var played = Opened(await admin.HandleAsync("POST", "/api/tables", """{"player1":"greedy","player2":"greedy"}""", token, principal));
-        var table = _registry.ById(played).ShouldNotBeNull();
+        var table = (await _registry.ByIdAsync(played, TestContext.Current.CancellationToken)).ShouldNotBeNull();
         for (var attempt = 0; attempt < 500 && !table.IsFinished; attempt++)
         {
             await Task.Delay(20, TestContext.Current.CancellationToken);
@@ -480,9 +485,9 @@ public sealed class AdminApiTests : IDisposable
     {
         var admin = Admin(OperatorGate.WithToken(OperatorToken));
         var first = Opened(await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy"}""", OperatorToken, null));
-        _registry.Remove(first);
+        await ClosedAsync(first);
         var second = Opened(await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy"}""", OperatorToken, null));
-        _registry.Remove(second);
+        await ClosedAsync(second);
 
         var one = await admin.HandleAsync("GET", $"/api/sessions/{first}/export", "", OperatorToken, null);
         var both = await admin.HandleAsync("POST", "/api/sessions/export", $$"""{"ids":["{{first}}","{{second}}","nowhere"]}""", OperatorToken, null);
@@ -527,9 +532,10 @@ public sealed class AdminApiTests : IDisposable
     public async Task A_finished_table_on_a_host_that_records_nothing_offers_no_replay()
     {
         using var silent = new HostedTables(recording: false);
-        var admin = new AdminApi(_registry, silent.Composer, OperatorGate.WithToken(OperatorToken), TimeProvider.System, "Rules 2 creatures (a test)");
+        using var registry = silent.Registry(mostUnderWay: 1);
+        var admin = new AdminApi(registry, silent.Composer, OperatorGate.WithToken(OperatorToken), TimeProvider.System, "Rules 2 creatures (a test)");
         var played = Opened(await admin.HandleAsync("POST", "/api/tables", """{"player1":"greedy","player2":"greedy"}""", OperatorToken, null));
-        var table = _registry.ById(played).ShouldNotBeNull();
+        var table = (await registry.ByIdAsync(played, TestContext.Current.CancellationToken)).ShouldNotBeNull();
         for (var attempt = 0; attempt < 500 && !table.IsFinished; attempt++)
         {
             await Task.Delay(20, TestContext.Current.CancellationToken);
@@ -539,6 +545,17 @@ public sealed class AdminApiTests : IDisposable
 
         table.IsFinished.ShouldBeTrue();
         listed.GetProperty("replay").ValueKind.ShouldBe(JsonValueKind.Null);
+    }
+
+    /// <summary>
+    /// Closes a table and waits for its record to say so: the index counts it under way until then, and this
+    /// host takes one table at a time.
+    /// </summary>
+    private async Task ClosedAsync(string id)
+    {
+        var table = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull();
+        (await _registry.RemoveAsync(id, TestContext.Current.CancellationToken)).ShouldBeTrue();
+        await table.Closing.WaitAsync(TestContext.Current.CancellationToken);
     }
 
     private static string Opened(StudioResponse answer)

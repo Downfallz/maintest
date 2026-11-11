@@ -16,8 +16,8 @@ on GitHub Pages (ADR 0023).
 The app scales to zero a few minutes after the last request. An open seat holds an event stream and polls
 beneath it (ADR 0119), so a table being played keeps it awake; the first request after a quiet spell waits
 some seconds while a replica starts. A table is its journal (ADR 0159): the match in memory is a copy of it, and the
-replica that starts next **picks up every table left open** where its journal ends, under the same links and
-codes. A game that began does not expire during a
+replica that starts next **picks up a table left open** where its journal ends, at the first request that names
+it, under the same links and codes. A game that began does not expire during a
 pause, and a table that never began is closed after twenty hours without a request (ADR 0115); the operator
 can explicitly close unused tables. The recording is what survives either way: the admin panel lists every recorded
 session, links to it in the viewer and exports it.

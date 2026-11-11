@@ -30,6 +30,13 @@ internal sealed record TableSeat(PlayerSlot Slot, string Token, ISeatPerson? Per
     public bool Taken { get; set; }
 
     /// <summary>
+    /// The short code a person types to reach this seat's invitation (<see cref="JoinCodes" />), or none: a bot's
+    /// seat, a taken one, one kept for a friend. One of the seat's keys, taken in the index of the tables before
+    /// the seat is given it (ADR 0161), and written into the table's record with the rest of them.
+    /// </summary>
+    public string? Code { get; set; }
+
+    /// <summary>
     /// Where the browser holding this seat asked its notices to be sent (ADR 0118), or none. One of the seat's
     /// keys: it goes when the token does, since it is that browser's and not the next one's.
     /// </summary>
@@ -64,6 +71,23 @@ internal sealed record TableSeat(PlayerSlot Slot, string Token, ISeatPerson? Per
     /// while the seat is kept for a friend (ADR 0129): that invitation is accepted signed in, never by a key.
     /// </summary>
     public string? Key => Person is null || Taken || InvitedAccount is not null ? null : Invitation ?? Token;
+
+    /// <summary>
+    /// The seat's keys replaced by these, code included. The registry's to call for a table it holds, since it
+    /// finds seats by their keys; a table not registered yet may be given its keys directly.
+    /// </summary>
+    public void Given(SeatKeys keys)
+    {
+        ArgumentNullException.ThrowIfNull(keys);
+        Token = keys.Token;
+        Invitation = keys.Invitation;
+        Taken = keys.Taken;
+        Code = keys.Code;
+        Push = keys.Push;
+        Account = keys.Account;
+        InvitedAccount = keys.InvitedAccount;
+        InvitedAt = keys.InvitedAt;
+    }
 
     /// <summary>The name a URL and a page use for a slot.</summary>
     public static string NameOf(PlayerSlot slot) => slot == PlayerSlot.Player1 ? "player1" : "player2";

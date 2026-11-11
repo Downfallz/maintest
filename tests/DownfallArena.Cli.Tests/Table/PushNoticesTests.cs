@@ -20,12 +20,12 @@ public sealed class PushNoticesTests : IDisposable
 
     private readonly Sender _sender = new();
     private readonly FakeTimeProvider _clock = new();
-    private readonly TableRegistry _registry = new();
+    private TableRegistry? _registry;
     private HostedTables? _hosted;
 
     public void Dispose()
     {
-        _registry.Dispose();
+        _registry?.Dispose();
         _hosted?.Dispose();
     }
 
@@ -172,8 +172,7 @@ public sealed class PushNoticesTests : IDisposable
     {
         var notices = new PushNotices(_sender, "BP8", _clock, Grace);
         _hosted = new HostedTables(null, push: notices);
-        var table = await _hosted.Composer.ComposeAsync(HostedTables.TwoPeople, TestContext.Current.CancellationToken);
-        _registry.TryAdd(table).ShouldBeTrue();
+        var table = await Added(HostedTables.TwoPeople);
         table.Seats[0].Push = Phone;
         table.Seats[1].Push = Phone;
 
@@ -202,9 +201,18 @@ public sealed class PushNoticesTests : IDisposable
     {
         var notices = new PushNotices(_sender, "BP8", _clock, Grace);
         _hosted = new HostedTables(null, push: notices);
-        var table = await _hosted.Composer.ComposeAsync(HostedTables.OnePerson, TestContext.Current.CancellationToken);
-        _registry.TryAdd(table).ShouldBeTrue();
+        var table = await Added(HostedTables.OnePerson);
         return (table, notices);
+    }
+
+    /// <summary>A table composed on the host and held by its registry.</summary>
+    private async Task<PlayedTable> Added(TableRequest request)
+    {
+        var table = await _hosted!.Composer.ComposeAsync(request, TestContext.Current.CancellationToken);
+        _registry = _hosted.Registry();
+        using var place = (await _registry.ReserveAsync(TestContext.Current.CancellationToken)).ShouldNotBeNull();
+        await _registry.AddAsync(table, place, TestContext.Current.CancellationToken);
+        return table;
     }
 
     /// <summary>The person reaches their seat, which is what begins the match and asks the first question (ADR 0092).</summary>

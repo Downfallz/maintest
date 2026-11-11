@@ -3,10 +3,12 @@ using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Friends;
 using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.Application.Learning;
+using DownfallArena.Application.Tables.Ports;
 using DownfallArena.Cli.Hosting;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Infrastructure.Accounts;
+using DownfallArena.Infrastructure.Tables;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DownfallArena.Cli.Table;
@@ -44,7 +46,6 @@ internal static class TableHost
         // able to leave the disk as it found it.
         var store = options.Recording ? await ArtifactStores.OpenAsync(options.Record ?? DefaultRunsDirectory, stopping.Token) : null;
         var agents = SeatableAgents.Read(WeightsDirectory);
-        using var registry = new TableRegistry();
 
         // "Your turn" to a seat's phone (ADR 0118), when the host has keys to sign it with: the file named, or
         // the hosted table's variable. A key pair that is not one is one line here, not a refusal per notice.
@@ -60,14 +61,14 @@ internal static class TableHost
         }
 
         using var sender = keys is null ? null : new WebPushSender(keys);
-        var push = keys is null ? null : new PushNotices(sender!, keys.PublicKey, clock) { Record = table => table.RecordAsync(registry.Codes) };
+        var push = keys is null ? null : new PushNotices(sender!, keys.PublicKey, clock) { Record = table => table.RecordAsync() };
         // Finished matches with an account in them, kept beside the accounts for a ladder (ADR 0122, stage 5).
         var results = options.Accounts != AccountsMode.Off && store is not null
             ? await ArtifactStores.OpenResultsAsync(options.Record ?? DefaultRunsDirectory, stopping.Token)
             : null;
-        // The index that finds the tables this host records (ADR 0161): Table Storage beside a container, files
-        // beside a directory.
-        var index = store is null ? null : await OpenIndexAsync(options.Record ?? DefaultRunsDirectory, stopping.Token);
+        // The index that lists and finds the tables (ADR 0161): Table Storage beside a container, files beside a
+        // directory, and this process's own for a host that keeps nothing or whose store's index cannot be opened.
+        var index = (store is null ? null : await OpenIndexAsync(options.Record ?? DefaultRunsDirectory, stopping.Token)) ?? new InMemoryTableIndex();
         var composer = new TableComposer(services, rules, store)
         {
             Index = index,
@@ -77,6 +78,9 @@ internal static class TableHost
             Basis = ReplayBasis.Of(EngineVersion.Current, services.GetRequiredService<IGameResources>(), rules),
         };
         var stored = store is null ? null : new StoredSessions(store);
+        // The tables this host holds, and the way to the others: picked up from their records when a request
+        // names them, on a host that records any.
+        using var registry = new TableRegistry(index) { Loader = stored is null ? null : new TableLoader(stored, composer, clock), Basis = composer.Basis };
 
         // The operator's door: the platform's login where the host is behind one, a printed token everywhere
         // else. The token is minted the way a pilot's is, and printed the way a pilot's is.
@@ -147,10 +151,14 @@ internal static class TableHost
                 ? "  Notices: on. A seat's page offers \"Notify me when it's my turn\"."
                 : "  Notices: on. A seat's page offers \"Notify me when it's my turn\"; the lobby offers \"Notify me on this device\" to a signed-in player.");
 
-        // The place of the table the command line asks for is held first: the rebuild below fills the host up
-        // to its bound, and a table composed into a full host would be recorded and announced with nothing
-        // answering to its codes. An empty host always has the place.
-        using var place = options.Lobby ? null : registry.Reserve() ?? throw new InvalidOperationException("An empty host has a place for its first table.");
+        // The place of the table the command line asks for is held first: a table composed into a host whose
+        // tables are as many as it takes would be recorded and announced with nothing answering to its codes.
+        using var place = options.Lobby ? null : await registry.ReserveAsync(stopping.Token);
+        if (!options.Lobby && place is null)
+        {
+            await Console.Error.WriteLineAsync($"The tables already open are as many as a host takes ({registry.Capacity}): close one from the admin panel (--lobby) first.");
+            return 1;
+        }
 
         ConsoleCancelEventHandler stop = (_, eventArgs) =>
         {
@@ -160,11 +168,10 @@ internal static class TableHost
         Console.CancelKeyPress += stop;
         try
         {
-            // Serving starts before the rebuild: the container's platform waits a minute for the port to answer
-            // and then restarts it (ADR 0080), and replaying every table an earlier host left open can take longer
-            // than that -- a host that rebuilt before serving never came up again. Until the rebuild is done the
-            // server answers a table it does not hold yet with "try again in a moment" (TableServer.Starting),
-            // which keeps what ADR 0091 asked of it: a page polling a seat never reads it as lost.
+            // Serving starts before the open tables are indexed: the container's platform waits a minute for the
+            // port to answer and then restarts it (ADR 0080). Until they are, the server answers a key it cannot
+            // place yet with "try again in a moment" (TableServer.Starting), which keeps what ADR 0091 asked of
+            // it: a page polling a seat never reads it as lost.
             server.Starting = true;
             var serving = server.RunAsync(stopping.Token);
             if (serving.IsFaulted)
@@ -172,11 +179,9 @@ internal static class TableHost
                 await serving;
             }
 
-            // And before the table the command line asks for: that one is recorded as open the moment it is, and
-            // rebuilt after itself it would be the same match twice.
             if (stored is not null)
             {
-                foreach (var line in await TableRestorer.RestoreAsync(stored, composer, registry, clock, stopping.Token))
+                foreach (var line in await TableRestorer.RestoreAsync(stored, registry, stopping.Token))
                 {
                     Console.WriteLine($"  {line}");
                 }
@@ -186,9 +191,9 @@ internal static class TableHost
             if (place is not null)
             {
                 var table = await composer.ComposeAsync(TableRequest.Of(options, seed), stopping.Token);
-                registry.Add(table, place);
-                await table.RecordAsync(registry.Codes, stopping.Token);
-                Announce(server, registry, table);
+                await registry.AddAsync(table, place, stopping.Token);
+                await table.RecordAsync(stopping.Token);
+                Announce(server, table);
             }
 
             server.Starting = false;
@@ -228,7 +233,7 @@ internal static class TableHost
     /// that seat's player types. Everything a session needs to be joined and to be reproduced is on these
     /// lines, because the alternative is a playtest that nobody can place afterwards.
     /// </summary>
-    private static void Announce(TableServer server, TableRegistry registry, PlayedTable table)
+    private static void Announce(TableServer server, PlayedTable table)
     {
         Console.WriteLine(table.Run is { } run
             ? $"  Session {run.SessionId} into '{run.Location}'"
@@ -237,7 +242,7 @@ internal static class TableHost
         foreach (var seat in table.Seats)
         {
             var who = seat.Person is null ? table.Session.SeatedName(seat.Slot) : "a person";
-            var join = registry.Codes.Of(seat) is { } code ? $" — joins at {server.Url[..^1]}{JoinCodes.Prefix}{code}" : string.Empty;
+            var join = seat.Code is { } code ? $" — joins at {server.Url[..^1]}{JoinCodes.Prefix}{code}" : string.Empty;
             Console.WriteLine($"  {seat.Name}: {who}{join}");
         }
 
@@ -264,7 +269,7 @@ internal static class TableHost
     /// role, which a deployment made before ADR 0161 lacks until its bootstrap is run again. A table is its
     /// record and its journal; the index only finds them, and a host without one serves what it holds.
     /// </summary>
-    private static async Task<Application.Tables.Ports.ITableIndex?> OpenIndexAsync(string target, CancellationToken cancellationToken)
+    private static async Task<ITableIndex?> OpenIndexAsync(string target, CancellationToken cancellationToken)
     {
         try
         {
@@ -272,7 +277,7 @@ internal static class TableHost
         }
         catch (Exception failure) when (failure is Azure.RequestFailedException or Azure.Identity.AuthenticationFailedException or IOException or UnauthorizedAccessException)
         {
-            Console.WriteLine($"  The index of the tables could not be opened ({failure.Message}); the host goes on without it (ADR 0161, infra/README.md).");
+            Console.WriteLine($"  The index of the tables could not be opened ({failure.Message}); the host keeps its own, which finds what this process holds and what it picks up (ADR 0161, infra/README.md).");
             return null;
         }
     }

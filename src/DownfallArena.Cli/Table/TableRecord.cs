@@ -96,11 +96,10 @@ internal sealed record TableRecord
     /// </summary>
     public bool Begun { get; init; }
 
-    public static TableRecord Of(PlayedTable table, TableRequest request, JoinCodes codes)
+    public static TableRecord Of(PlayedTable table, TableRequest request)
     {
         ArgumentNullException.ThrowIfNull(table);
         ArgumentNullException.ThrowIfNull(request);
-        ArgumentNullException.ThrowIfNull(codes);
         return new TableRecord
         {
             EventStreamVersion = table.EventStreamVersion,
@@ -114,7 +113,7 @@ internal sealed record TableRecord
             Handover = request.Handover,
             Format = table.Session.Rules.Format.ToString(),
             Declaration = CombatDeclarationText.Of(table.Session.Rules.CombatDeclaration),
-            Seats = [.. table.Seats.Select(seat => new RecordedSeat(seat.Name, seat.Token, codes.Of(seat), seat.Person is not null, seat.Invitation, seat.Person is null ? null : seat.Taken, seat.Push, seat.Account?.Value, seat.InvitedAccount?.Value, seat.InvitedAt, seat.DeclinedBy?.Value, seat.Person?.HasArrived))],
+            Seats = [.. table.Seats.Select(seat => new RecordedSeat(seat.Name, seat.Token, seat.Code, seat.Person is not null, seat.Invitation, seat.Person is null ? null : seat.Taken, seat.Push, seat.Account?.Value, seat.InvitedAccount?.Value, seat.InvitedAt, seat.DeclinedBy?.Value, seat.Person?.HasArrived))],
             PilotToken = table.Pilot.Token,
             Status = Open,
             OpenSeats = table.OpenSeats,

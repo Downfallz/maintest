@@ -124,7 +124,7 @@ internal sealed class AdminApi
         }
 
         // The one moment memory is about to be spent, so the one moment tables nobody is at are let go of.
-        foreach (var gone in _registry.Sweep(_clock.GetUtcNow()))
+        foreach (var gone in await _registry.SweepAsync(_clock.GetUtcNow()))
         {
             Console.WriteLine($"  Session {gone} let go of: nobody has asked for it in a while.");
         }
@@ -141,7 +141,7 @@ internal sealed class AdminApi
         {
             ("GET", "") => await ListAsync(),
             ("POST", "") => await OpenAsync(body, operatorName),
-            ("DELETE", { Length: > 0 } id) => await LobbyApi.ExclusivelyAsync(() => Task.FromResult(Close(id, operatorName))),
+            ("DELETE", { Length: > 0 } id) => await LobbyApi.ExclusivelyAsync(() => CloseAsync(id, operatorName)),
             ("POST", _) when Reinvited(rest) is { } seat => await LobbyApi.ExclusivelyAsync(() => ReinviteAsync(seat.Table, seat.Slot, operatorName)),
             _ => StudioResponse.OfPlainText(404, $"No such route: {method} {path}"),
         };
@@ -173,9 +173,24 @@ internal sealed class AdminApi
                 declaration = CombatDeclarationText.Of(_composer.Rules.CombatDeclaration),
                 recording = _composer.Records,
                 agents = _agents.Select(agent => new { value = agent.Value, label = agent.Label, featured = agent.Featured }).ToArray(),
-                tables = await Task.WhenAll(_registry.All().Select(DescribedAsync)),
+                tables = await Task.WhenAll((await TablesAsync()).Select(DescribedAsync)),
             },
             ArtifactJson.LineOptions);
+
+    /// <summary>
+    /// Every table the operator manages, newest first: the open tables of the index, picked up when this host does
+    /// not hold them yet, and the finished ones this host still holds. One that cannot be picked up is the
+    /// stored sessions' to show.
+    /// </summary>
+    private async Task<IReadOnlyList<PlayedTable>> TablesAsync()
+    {
+        var held = _registry.HeldTables();
+        var heldIds = held.Select(table => table.Id).ToHashSet(StringComparer.Ordinal);
+        var picked = await Task.WhenAll((await _registry.OpenAsync())
+            .Where(listed => !heldIds.Contains(listed.Id))
+            .Select(listed => _registry.ByIdAsync(listed.Id)));
+        return [.. held.Concat(picked.OfType<PlayedTable>()).DistinctBy(table => table.Id).OrderByDescending(table => table.CreatedAt)];
+    }
 
     /// <summary>The formats a chooser is offered: the shortlist, and this host's own when it is not on it.</summary>
     private IEnumerable<MatchFormat> Formats() =>
@@ -193,7 +208,7 @@ internal sealed class AdminApi
 
         // The place is taken before composing, because composing opens the recording and starts the match: a
         // table refused afterwards would have written a run nobody played.
-        using var reservation = _registry.Reserve();
+        using var reservation = await _registry.ReserveAsync();
         if (reservation is null)
         {
             return Full();
@@ -211,9 +226,18 @@ internal sealed class AdminApi
             return StudioResponse.OfPlainText(400, failure.Message);
         }
 
-        _registry.Add(table, reservation);
-        await table.RecordAsync(_registry.Codes);
-        Console.WriteLine($"  Session {table.Id} opened by {operatorName}: {string.Join(", ", table.Seats.Select(seat => $"{seat.Name} {(seat.Person is null ? table.Session.SeatedName(seat.Slot) : $"code {_registry.Codes.Of(seat)}")}"))}");
+        try
+        {
+            await _registry.AddAsync(table, reservation);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure))
+        {
+            table.Dispose();
+            return StudioResponse.OfPlainText(503, $"The table could not be opened: {failure.Message}");
+        }
+
+        await table.RecordAsync();
+        Console.WriteLine($"  Session {table.Id} opened by {operatorName}: {string.Join(", ", table.Seats.Select(seat => $"{seat.Name} {(seat.Person is null ? table.Session.SeatedName(seat.Slot) : $"code {seat.Code}")}"))}");
         return StudioResponse.OfJson(await DescribedAsync(table), ArtifactJson.LineOptions, status: 201);
     }
 
@@ -237,7 +261,7 @@ internal sealed class AdminApi
     /// </summary>
     private async Task<StudioResponse> ReinviteAsync(string id, string slot, string operatorName)
     {
-        if (_registry.ById(id) is not { IsOver: false } table)
+        if (await _registry.ByIdAsync(id) is not { IsOver: false } table)
         {
             return StudioResponse.OfPlainText(404, $"No unfinished table '{id}' at this host.");
         }
@@ -249,7 +273,7 @@ internal sealed class AdminApi
 
         var previous = _registry.KeysOf(seat);
         var arrived = seat.Person!.HasArrived;
-        if (!_registry.Rekey(table, seat, SeatKeys.Offered(table.Id)))
+        if (!await _registry.RekeyAsync(table, seat, SeatKeys.Offered(table.Id)))
         {
             return StudioResponse.OfPlainText(404, $"No unfinished table '{id}' at this host.");
         }
@@ -257,13 +281,13 @@ internal sealed class AdminApi
         seat.Person.Depart();
         try
         {
-            await table.RecordAsync(_registry.Codes);
+            await table.RecordAsync();
         }
         catch (Exception failure)
         {
             // Whatever failed, memory goes back to what the record still says: a seat rekeyed here and not on
             // the store would let the cut-off device back in after a redeploy, and kill the invitation passed on.
-            _registry.Rekey(table, seat, previous);
+            _registry.Restore(table, seat, previous);
             if (arrived)
             {
                 seat.Person.Arrive();
@@ -278,13 +302,13 @@ internal sealed class AdminApi
         }
 
         Console.WriteLine($"  Session {id}: {slot} invited again by {operatorName}.");
-        var code = _registry.Codes.Of(seat);
+        var code = seat.Code;
         return StudioResponse.OfJson(new { slot, code, join = code is null ? null : $"{JoinCodes.Prefix}{code}", link = $"/?{seat.Name}={seat.Key}" }, ArtifactJson.LineOptions);
     }
 
-    private StudioResponse Close(string id, string operatorName)
+    private async Task<StudioResponse> CloseAsync(string id, string operatorName)
     {
-        if (!_registry.Remove(id))
+        if (!await _registry.RemoveAsync(id))
         {
             return StudioResponse.OfPlainText(404, $"No table '{id}' at this host.");
         }
@@ -390,14 +414,24 @@ internal sealed class AdminApi
             // A table still being played is closed first: its match is stopped and its codes stop answering.
             // And then waited for: a checkpoint or a note still on its way would otherwise land after the
             // deletion and bring the run back, on the blob store as a prefix and here as a directory.
-            var table = _registry.ById(id);
-            var closed = _registry.Remove(id);
-            if (closed && table is not null)
+            // Only a table held here is closed first: one nobody holds writes nothing, and picking it up to close
+            // it would replay a match for a run about to go.
+            var table = _registry.Held(id);
+            var closed = table is not null && await _registry.RemoveAsync(id);
+            if (closed)
             {
-                await table.QuiesceAsync();
+                await table!.QuiesceAsync();
             }
 
+            var record = await RecordOrNoneAsync(stored, id);
             var removed = await stored.DeleteAsync(id);
+            if (record is not null)
+            {
+                // Out of the index for good, whatever it still listed: a table nobody could pick up is listed
+                // until its record says otherwise, and its record is gone.
+                await _registry.DeletedAsync(id, record.CreatedAt);
+            }
+
             (closed || removed ? deleted : missing).Add(id);
         }
 
@@ -409,6 +443,19 @@ internal sealed class AdminApi
         return StudioResponse.OfJson(new { deleted, missing }, ArtifactJson.LineOptions);
     }
 
+    /// <summary>A run's table record, or none when it has none or it cannot be read.</summary>
+    private static async Task<TableRecord?> RecordOrNoneAsync(StoredSessions stored, string id)
+    {
+        try
+        {
+            return await stored.RecordAsync(id);
+        }
+        catch (Exception failure) when (TableLoader.Refuses(failure))
+        {
+            return null;
+        }
+    }
+
     private async Task<StudioResponse> ExportAsync(StoredSessions stored, IReadOnlyList<string> ids, string? problem, string name)
     {
         if (problem is not null)
@@ -418,7 +465,7 @@ internal sealed class AdminApi
 
         // A run being written is not a run to export: a checkpoint half written, or a line half appended,
         // would travel as a file. It is exportable once its match is over, or once its table is closed.
-        var live = ids.Where(id => _registry.ById(id) is { IsOver: false }).ToList();
+        var live = ids.Where(id => _registry.Held(id) is { IsOver: false }).ToList();
         if (live.Count > 0)
         {
             return StudioResponse.OfJson(
@@ -467,7 +514,7 @@ internal sealed class AdminApi
     /// <summary>One stored run as the panel lists it, with what its table says when this host still has it.</summary>
     private object Described(StoredSession session)
     {
-        var table = _registry.ById(session.Id);
+        var table = _registry.Held(session.Id);
         return new
         {
             id = session.Id,
@@ -511,8 +558,8 @@ internal sealed class AdminApi
                 slot = seat.Name,
                 seated = table.Session.SeatedName(seat.Slot),
                 hasPerson = seat.Person is not null,
-                code = _registry.Codes.Of(seat),
-                join = _registry.Codes.Of(seat) is { } code ? $"{JoinCodes.Prefix}{code}" : null,
+                code = seat.Code,
+                join = seat.Code is { } code ? $"{JoinCodes.Prefix}{code}" : null,
                 link = seat.Key is { } key ? $"/?{seat.Name}={key}" : null,
 
                 // Somebody's browser holds it (ADR 0116): no link reaches it, and a new invitation is the way

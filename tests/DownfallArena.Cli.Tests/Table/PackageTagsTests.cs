@@ -11,7 +11,12 @@ namespace DownfallArena.Cli.Tests.Table;
 public sealed class PackageTagsTests : IDisposable
 {
     private readonly HostedTables _hosted = new();
-    private readonly TableRegistry _registry = new();
+    private readonly TableRegistry _registry;
+
+    public PackageTagsTests()
+    {
+        _registry = _hosted.Registry();
+    }
 
     public void Dispose()
     {
@@ -19,11 +24,18 @@ public sealed class PackageTagsTests : IDisposable
         _hosted.Dispose();
     }
 
+    private async Task<PlayedTable> Opened()
+    {
+        var table = await _hosted.Composer.ComposeAsync(HostedTables.OnePerson, TestContext.Current.CancellationToken);
+        using var place = (await _registry.ReserveAsync(TestContext.Current.CancellationToken)).ShouldNotBeNull();
+        await _registry.AddAsync(table, place, TestContext.Current.CancellationToken);
+        return table;
+    }
+
     [Fact]
     public async Task The_catalogue_carries_each_package_s_tags()
     {
-        var table = await _hosted.Composer.ComposeAsync(HostedTables.OnePerson, TestContext.Current.CancellationToken);
-        _registry.TryAdd(table).ShouldBeTrue();
+        var table = await Opened();
 
         var answer = await table.Api.HandleAsync("GET", "/api/catalogue", string.Empty, table.Seats[0].Token);
 
@@ -37,8 +49,7 @@ public sealed class PackageTagsTests : IDisposable
     [Fact]
     public async Task The_catalogue_carries_how_each_package_shows_on_a_creature()
     {
-        var table = await _hosted.Composer.ComposeAsync(HostedTables.OnePerson, TestContext.Current.CancellationToken);
-        _registry.TryAdd(table).ShouldBeTrue();
+        var table = await Opened();
 
         var answer = await table.Api.HandleAsync("GET", "/api/catalogue", string.Empty, table.Seats[0].Token);
 
@@ -52,8 +63,7 @@ public sealed class PackageTagsTests : IDisposable
     [Fact]
     public async Task The_catalogue_carries_how_each_card_s_cast_is_drawn()
     {
-        var table = await _hosted.Composer.ComposeAsync(HostedTables.OnePerson, TestContext.Current.CancellationToken);
-        _registry.TryAdd(table).ShouldBeTrue();
+        var table = await Opened();
 
         var answer = await table.Api.HandleAsync("GET", "/api/catalogue", string.Empty, table.Seats[0].Token);
 
