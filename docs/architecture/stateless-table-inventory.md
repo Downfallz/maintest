@@ -164,7 +164,23 @@ Each phase ships on the one container app there is today and leaves the game pla
      `TableGate`, `DrivenSession`, the host's `DecisionJournal` and `JournalEntry`, and the run's staged
      rebuild are gone, with the tests of what they did. The two tests that held the stepped table to the
      driven one went with the driven one: they held the switch, and the switch is made.
-5. **Bots behind a port.** In-process adapter first; the queue adapter and its worker command second.
+5. **Bots behind a port.** In two slices.
+   - **5a, done.** A table says its bots owe a turn to a port Application owns (`IAgentTurns`), and whoever
+     takes their turns takes them one at a time through the table (`IAgentTurnTaker.TakeTurnAsync`): each turn
+     a step of the journaled stepper, written on the condition that nobody wrote first, the door a person's
+     decision comes through. The default adapter takes them in the process that holds the table
+     (`InProcessAgentTurns`), with what the session's own loop did: one table's turns one after the other, a
+     store that is out waited out from a quarter of a second to half a minute, another writer taking the match
+     further three times in a row waited out the same way. A bot's dice are thrown per turn (`TableDice`),
+     seeded from the table's seed, the seat and where the journal ends as the turn begins, which the stepper
+     hands the seats it is asked for: a process that picked the table up takes the turn the one that held it
+     would have (question 5). The bots of a table play otherwise than before, since their dice are; the
+     benchmark is not a table and does not move.
+   - **5b, next.** A queue adapter on Azure Storage Queue, in the account that holds the runs: a message says
+     which table owes a turn and from where its journal ended, and a worker command picks the table up, takes
+     its turns and lets it go. The table host runs the worker in its own process until the infrastructure ADR
+     (phase 6) says how many apps there are. A page whose table another process moved learns of it from where
+     the journal ends (question 9), which 5b needs as soon as the worker is another process.
 6. **Time-dependent work as a command**, then the infrastructure ADR: how many apps, which jobs.
 
 Phases 2 and 3 are where the risk is. Phase 4 is where the volume is.
@@ -245,9 +261,9 @@ which adds the compilation of the engine itself.
    out keep their old key for the life of their table; a host finds such a table by the open records, read
    once as it starts (4.3b3). Join codes are typed by a person and cannot carry a table's id: they are an
    index entry each, in Table Storage beside the open tables the lobby lists (ADR 0161), and a seat's key.
-5. **A bot's dice.** At a table a bot's random source is seeded from the table's seed and its slot
-   (`TableComposer.Source`) and lives as long as the process. A bot built fresh for each turn needs a seed that
-   also depends on the journal position, or two turns draw the same numbers.
+5. **A bot's dice.** Answered in 5a: seeded for each turn from the table's seed, the seat and the journal's
+   length as the turn begins (`TableDice`), so any process taking the same turn throws the same numbers. Before,
+   a seat's source lived as long as the process, and a table picked up elsewhere would have thrown others.
 6. **Practice tables** (ADR 0079) record nothing by design. Answered in 4.4: they are stepped over a journal
    in memory, which is the one replica's. With several, a practice table needs a sticky route or a journal in
    the store; it is one person against a script, and a sticky route is the cheaper of the two.
