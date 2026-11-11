@@ -441,7 +441,8 @@ internal sealed class TableComposer
 
             // One process closes the files and tells the seats, however many hold the table (ADR 0162): the others
             // wait for the record to say it is done, and serve the session from what that one wrote.
-            if (!await ClaimedAsync(run, session.MatchId, (session as IAgentTurnTaker)?.Stopping ?? CancellationToken.None))
+            var stopping = (session as IAgentTurnTaker)?.Stopping ?? CancellationToken.None;
+            if (!await ClaimedAsync(run, session.MatchId, stopping))
             {
                 return;
             }
@@ -453,15 +454,15 @@ internal sealed class TableComposer
                 await results.RecordAsync(result);
             }
 
-            // The claim renewed before each step that another closer would repeat: one that stalled past it and was
-            // taken over from stops here, and leaves the files and the notices to the process that took it over.
-            if (!await run.StillClosingAsync())
+            // The claim is renewed before each write the closing makes and before the notices: a closer that stalled
+            // past it and was taken over from stops at the next of them, and serves what the other one writes.
+            if (!await run.FinishAsync(session.MatchId, board.Value))
             {
-                Console.WriteLine($"  Session {run.SessionId} is being written by another process, which took it over from this one.");
+                Console.WriteLine($"  Session {run.SessionId} was taken over by another process, which writes it.");
+                await WrittenElsewhereAsync(run, session.MatchId, stopping);
                 return;
             }
 
-            await run.FinishAsync(session.MatchId, board.Value);
             Console.WriteLine($"  Session {run.SessionId} written to '{run.Location}'");
             if (!await run.StillClosingAsync())
             {
@@ -494,34 +495,61 @@ internal sealed class TableComposer
     /// <param name="stopping">The table's own: a table let go of, or a host stopping, waits for nobody.</param>
     private async Task<bool> ClaimedAsync(PlaytestRun run, MatchId matchId, CancellationToken stopping)
     {
+        for (var claims = 0; claims < ClosingClaims; claims++)
+        {
+            if (await ClaimOrNullAsync(run, stopping) is { } claimed)
+            {
+                return claimed;
+            }
+
+            if (await WrittenElsewhereAsync(run, matchId, stopping))
+            {
+                return false;
+            }
+        }
+
+        Console.WriteLine($"  Session {run.SessionId} is being written by another process that has not finished it.");
+        return false;
+    }
+
+    /// <summary>The claim, made or refused; none when the table stopped meanwhile, which waits for nobody either.</summary>
+    private static async Task<bool?> ClaimOrNullAsync(PlaytestRun run, CancellationToken stopping)
+    {
         try
         {
-            for (var claims = 0; claims < ClosingClaims; claims++)
+            return await run.ClaimClosingAsync(stopping) ? true : null;
+        }
+        catch (OperationCanceledException) when (stopping.IsCancellationRequested)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Waits, as long as a claim stands, for the process that claimed the closing of a session to write it, and
+    /// serves what it wrote: whether it did. A table let go of, or a host stopping, waits for nobody.
+    /// </summary>
+    private async Task<bool> WrittenElsewhereAsync(PlaytestRun run, MatchId matchId, CancellationToken stopping)
+    {
+        try
+        {
+            for (var waited = TimeSpan.Zero; waited <= PlaytestRun.ClosingHeld; waited += ClosingLooks)
             {
-                if (await run.ClaimClosingAsync(stopping))
+                if (await run.ClosedElsewhereAsync(matchId, stopping))
                 {
+                    Console.WriteLine($"  Session {run.SessionId} was written to '{run.Location}' by another process.");
                     return true;
                 }
 
-                for (var waited = TimeSpan.Zero; waited <= PlaytestRun.ClosingHeld; waited += ClosingLooks)
-                {
-                    if (await run.ClosedElsewhereAsync(matchId, stopping))
-                    {
-                        Console.WriteLine($"  Session {run.SessionId} was written to '{run.Location}' by another process.");
-                        return false;
-                    }
-
-                    await Task.Delay(ClosingLooks, _clock, stopping);
-                }
+                await Task.Delay(ClosingLooks, _clock, stopping);
             }
         }
         catch (OperationCanceledException) when (stopping.IsCancellationRequested)
         {
-            // Let go of, or stopping: whoever picks the table up next closes it, or sees it closed.
-            return false;
+            // Whoever picks the table up next closes it, or sees it closed.
+            return true;
         }
 
-        Console.WriteLine($"  Session {run.SessionId} is being written by another process that has not finished it.");
         return false;
     }
 

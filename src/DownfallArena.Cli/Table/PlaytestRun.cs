@@ -768,7 +768,11 @@ internal sealed class PlaytestRun
     /// Closes the session: the episodes, the final trace, and the manifest with its counts. The board is the
     /// one the match ended on, which is what an episode's return is read from.
     /// </summary>
-    public async Task FinishAsync(MatchId matchId, PlayerBoardState player1Board, CancellationToken cancellationToken = default)
+    /// <returns>
+    /// Whether the files were written: not when this run claimed the closing (<see cref="ClaimClosingAsync" />) and
+    /// another run took the claim over before one of its writes, which is left to that run.
+    /// </returns>
+    public async Task<bool> FinishAsync(MatchId matchId, PlayerBoardState player1Board, CancellationToken cancellationToken = default)
     {
         // Checkpoints are stopped before anything final is written, not after. A checkpoint already inside the
         // lock queues its write first and the finished trace lands on top of it; one arriving afterwards finds
@@ -796,18 +800,47 @@ internal sealed class PlaytestRun
         // before the record said finished, or could not write that: an earlier host, or another process whose
         // claim on closing ran out (ADR 0162), which this run need not have been opened over. Written into again
         // as they are, a dataset would hold the match twice under a manifest that counts it once, so they are
-        // started over: the steps and the episodes are only ever written here, at the close.
+        // started over: the steps and the episodes are only ever written here, at the close. Each write is made
+        // only while this run's claim on closing still stands, renewed before it (ADR 0162): a run that stalled
+        // past its claim and was taken over from stops at its next write, and leaves the rest to the other.
+        if (!await StillOursAsync(cancellationToken))
+        {
+            return false;
+        }
+
         await _recorder.StartAsync(cancellationToken);
+        if (!await StillOursAsync(cancellationToken))
+        {
+            return false;
+        }
 
         await _recorder.MatchPlayedAsync(matchId, _seed, player1Board, cancellationToken);
+        if (!await StillOursAsync(cancellationToken))
+        {
+            return false;
+        }
+
         await _recorder.FinishAsync(cancellationToken);
+        if (!await StillOursAsync(cancellationToken))
+        {
+            return false;
+        }
+
         await MarkAsync(TableRecord.Finished, cancellationToken);
 
         // And only now are the files written. Saying so at the top of this method would let the session page
         // answer while the manifest still says the match played nothing, or while a file it is about to embed
         // is half written. Whether anything is still on its way into them is the other half of IsClosed.
         FilesWritten = true;
+        return true;
     }
+
+    /// <summary>Whether this run may write the session's files: it claimed nothing, or its claim still stands.</summary>
+    private async Task<bool> StillOursAsync(CancellationToken cancellationToken) =>
+        Volatile.Read(ref _claimed) == 0 || await StillClosingAsync(cancellationToken);
+
+    // Whether this run claimed the closing of the session, whose writes are then made only while the claim stands.
+    private int _claimed;
 
     /// <summary>The claim one process makes on closing the session's files (ADR 0162), beside them.</summary>
     public const string ClosingFile = "closing.json";
@@ -846,6 +879,7 @@ internal sealed class PlaytestRun
 
             if (await _writer.WriteJsonIfAsync(ClosingFile, new Closing(_closer, now), read?.Tag, cancellationToken) is not null)
             {
+                Volatile.Write(ref _claimed, 1);
                 return true;
             }
         }

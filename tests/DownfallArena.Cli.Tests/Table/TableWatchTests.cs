@@ -3,6 +3,7 @@ using DownfallArena.Application.Agents;
 using DownfallArena.Application.Learning.Recording;
 using DownfallArena.Application.Matches.Journaling;
 using DownfallArena.Cli.Table;
+using DownfallArena.Domain.Matches;
 using DownfallArena.Infrastructure.Learning;
 
 namespace DownfallArena.Cli.Tests.Table;
@@ -219,6 +220,25 @@ public sealed class TableWatchTests : IDisposable
         renewed.ShouldBeTrue();
         stillHere.ShouldBeFalse("the claim is another run's now");
         (await there.Run.StillClosingAsync(Cancel)).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task A_closer_whose_claim_another_took_over_stops_before_its_next_write()
+    {
+        using var registry = _here.Registry();
+        var table = await RecordedAsync(registry, HostedTables.OnePerson);
+        (await table.Run!.ClaimClosingAsync(Cancel)).ShouldBeTrue();
+        await File.WriteAllTextAsync(
+            Path.Combine(_runs, table.Id, PlaytestRun.ClosingFile),
+            JsonSerializer.Serialize(new { By = "took-over", At = DateTimeOffset.UtcNow }, ArtifactJson.DocumentOptions),
+            Cancel);
+        var board = (await table.Session.BoardAsync(PlayerSlot.Player1)).Value;
+
+        var written = await table.Run.FinishAsync(table.Session.MatchId, board, Cancel);
+
+        written.ShouldBeFalse();
+        (await File.ReadAllLinesAsync(Path.Combine(_runs, table.Id, RunRecorder.EpisodesFile), Cancel)).ShouldBeEmpty("the files are the other run's to write");
+        (await _here.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Open);
     }
 
     [Fact]
