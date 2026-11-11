@@ -365,7 +365,7 @@ public sealed class LobbyApiTests : IDisposable
         (await _hosted.Stored!.RecordAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Seats[1].Token.ShouldBe(replacement);
 
         using var restored = _hosted.Registry();
-        (await TableRestorer.RestoreAsync(_hosted.Stored!, restored, _hosted.Composer.Basis, TestContext.Current.CancellationToken)).ShouldHaveSingleItem().ShouldContain("1 open table indexed");
+        (await TableRestorer.RestoreAsync(_hosted.Stored!, restored, TestContext.Current.CancellationToken)).ShouldHaveSingleItem().ShouldContain("1 open table indexed");
         var rebuilt = (await restored.ByIdAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull();
         (await restored.ByTokenAsync(token, TestContext.Current.CancellationToken)).ShouldBeNull();
         (await restored.ByTokenAsync(replacement, TestContext.Current.CancellationToken)).ShouldBeSameAs(rebuilt);
@@ -384,7 +384,7 @@ public sealed class LobbyApiTests : IDisposable
         await Lobby.HandleAsync("POST", "/api/lobby/leave", "{}", oldToken);
         using var restored = _hosted.Registry();
 
-        var said = await TableRestorer.RestoreAsync(_hosted.Stored!, restored, _hosted.Composer.Basis, TestContext.Current.CancellationToken);
+        var said = await TableRestorer.RestoreAsync(_hosted.Stored!, restored, TestContext.Current.CancellationToken);
 
         said.ShouldHaveSingleItem().ShouldContain("1 open table indexed");
         var rebuilt = (await restored.ByIdAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull();

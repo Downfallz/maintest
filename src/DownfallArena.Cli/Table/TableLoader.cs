@@ -21,6 +21,13 @@ internal sealed class TableLoader(StoredSessions stored, TableComposer composer,
             record = await stored.RecordAsync(id, cancellationToken);
             if (record is not { Status: TableRecord.Open })
             {
+                // Asked for, and not open: if the index still lists it, its last index write failed, and nothing
+                // else would ever take it out.
+                if (record is not null)
+                {
+                    await new TableIndexer(composer.Index, id).FollowAsync(null, record, cancellationToken);
+                }
+
                 return null;
             }
 

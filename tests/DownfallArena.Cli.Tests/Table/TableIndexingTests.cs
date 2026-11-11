@@ -125,7 +125,7 @@ public sealed class TableIndexingTests : IDisposable
     /// record takes it out of the open tables of the index, and its codes with it.
     /// </summary>
     [Fact]
-    public async Task A_record_refused_to_be_picked_up_is_left_out_of_the_index()
+    public async Task A_record_refused_to_be_picked_up_is_listed_by_no_host_on_its_basis()
     {
         var table = await Opened();
         var code = table.Seats[1].Code.ShouldNotBeNull();
@@ -137,9 +137,12 @@ public sealed class TableIndexingTests : IDisposable
 
         var picked = await registry.ByIdAsync(table.Id, Cancel);
 
+        // Kept in the index, saying under what it was refused, so a host on another basis lists it and tries it.
         picked.ShouldBeNull();
-        (await refusing.Index.OpenAsync(0, 10, Cancel)).ShouldBeEmpty();
-        (await refusing.Index.CodeAsync(code, Cancel)).ShouldBeNull();
+        (await registry.OpenAsync(Cancel)).ShouldBeEmpty();
+        (await registry.ReserveAsync(Cancel)).ShouldNotBeNull().Dispose();
+        TableSummary.Parse((await refusing.Index.OpenAsync(0, 10, Cancel)).ShouldHaveSingleItem().Summary).ShouldNotBeNull().RefusedUnder.ShouldBe(refusing.Composer.Basis);
+        (await refusing.Index.CodeAsync(code, Cancel)).ShouldNotBeNull().Table.ShouldBe(table.Id);
     }
 
     /// <summary>Both seats pass their first evolution, which writes two lines into the journal.</summary>

@@ -23,9 +23,9 @@ internal sealed class TableIndexer(ITableIndex index, string table)
         ArgumentNullException.ThrowIfNull(written);
         try
         {
-            // A table a host refused to pick up is the operator's, not the lobby's (ADR 0115): kept open in its
-            // record, and left out of the index, its codes with it.
-            var listed = written.Status == TableRecord.Open && written.RefusedUnder is null;
+            // A table a host refused to pick up stays listed, its summary saying under what: a host on that basis
+            // leaves it to the operator (ADR 0115), and one on another basis tries it again.
+            var listed = written.Status == TableRecord.Open;
             var codes = listed
                 ? written.Seats.Where(seat => seat.Code is not null).ToDictionary(seat => seat.Code!, seat => seat.Slot, StringComparer.Ordinal)
                 : [];

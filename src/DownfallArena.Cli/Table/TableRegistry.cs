@@ -47,7 +47,10 @@ internal sealed class TableRegistry : IDisposable
     public const int MostUnderWay = 16;
 
     /// <summary>How many open tables a listing reads off the index: far more than the cap, which bounds them.</summary>
-    private const int Listing = 1000;
+    internal const int Listing = 1000;
+
+    /// <summary>How long a table that could not be picked up is not tried again: a lobby polled every ten seconds must not replay it at each poll.</summary>
+    public static readonly TimeSpan RefusedFor = TimeSpan.FromMinutes(1);
 
     /// <summary>How many codes are drawn for one seat before the index is taken to be failing rather than full.</summary>
     private const int CodeDraws = 16;
@@ -59,6 +62,7 @@ internal sealed class TableRegistry : IDisposable
     private readonly Dictionary<string, Task<PlayedTable?>> _loading = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _legacy = new(StringComparer.Ordinal);
     private readonly HashSet<string> _gone = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, long> _refusedUntil = new(StringComparer.Ordinal);
     private readonly CancellationTokenSource _stopping = new();
     private DateTimeOffset _swept = DateTimeOffset.MinValue;
     private int _reserved;
@@ -82,6 +86,37 @@ internal sealed class TableRegistry : IDisposable
     public TableLoader? Loader { get; init; }
 
     /// <summary>
+    /// The basis this host replays tables on (ADR 0091): a table refused under it is the operator's, and is neither
+    /// listed nor counted here; one refused under another basis is tried again (ADR 0115).
+    /// </summary>
+    public ReplayBasis? Basis { get; init; }
+
+    /// <summary>Whether a failure is the index's or the store's being out, which a request reads past rather than fails on.</summary>
+    internal static bool StoreFails(Exception failure) =>
+        failure is IOException or UnauthorizedAccessException or Azure.RequestFailedException;
+
+    /// <summary>
+    /// The open tables of the index, or none when it does not answer: what is held here is still counted and
+    /// listed, and the line on the console says the rest is missing.
+    /// </summary>
+    private async Task<IReadOnlyList<IndexedTable>> ListedAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await Index.OpenAsync(0, Listing, cancellationToken);
+        }
+        catch (Exception failure) when (StoreFails(failure))
+        {
+            Console.WriteLine($"  The index of the tables did not answer ({failure.Message}): only the tables this host holds are listed.");
+            return [];
+        }
+    }
+
+    /// <summary>Whether an index entry is a table this host leaves alone: closed by it, or refused under its basis.</summary>
+    private bool LeftAlone(string id, TableSummary? summary) =>
+        _gone.Contains(id) || (summary?.RefusedUnder is { } refused && refused == Basis);
+
+    /// <summary>
     /// A place for one more table, taken before the table is composed, or none when the tables are as many as the
     /// cap. Composing a table opens its recording and starts its match, so the place has to be held first: two
     /// requests arriving for the last one would otherwise both compose, and one would be refused having written a
@@ -94,11 +129,13 @@ internal sealed class TableRegistry : IDisposable
     /// </remarks>
     public async Task<Reservation?> ReserveAsync(CancellationToken cancellationToken = default)
     {
-        var listed = await Index.OpenAsync(0, Listing, cancellationToken);
+        var listed = await ListedAsync(cancellationToken);
         lock (_gate)
         {
-            var underWay = listed.Select(table => table.Table)
-                .Where(id => !_gone.Contains(id) && (!_byId.TryGetValue(id, out var held) || !held.IsOver))
+            var underWay = listed
+                .Where(table => !LeftAlone(table.Table, TableSummary.Parse(table.Summary)))
+                .Select(table => table.Table)
+                .Where(id => !_byId.TryGetValue(id, out var held) || !held.IsOver)
                 .Union(_byId.Values.Where(held => !held.IsOver).Select(held => held.Id), StringComparer.Ordinal)
                 .Count();
             if (underWay + _reserved >= Capacity)
@@ -111,14 +148,26 @@ internal sealed class TableRegistry : IDisposable
         }
     }
 
-    /// <summary>Adds a table into the place reserved for it, giving its seats their codes.</summary>
+    /// <summary>
+    /// Adds a table into the place reserved for it, giving its seats their codes. A failure of the index is thrown,
+    /// with no code left taken and the table not added: the caller lets it go.
+    /// </summary>
     public async Task AddAsync(PlayedTable table, Reservation reservation, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(table);
         ArgumentNullException.ThrowIfNull(reservation);
-        foreach (var seat in table.Seats)
+        try
         {
-            seat.Code = await CodeForAsync(table, seat, seat.Code, cancellationToken);
+            foreach (var seat in table.Seats)
+            {
+                seat.Code = await CodeForAsync(table, seat, seat.Code, cancellationToken);
+            }
+        }
+        catch
+        {
+            // The table is not added: the codes its seats were given go back, as far as the index answers.
+            await ForgetCodesAsync(table);
+            throw;
         }
 
         lock (_gate)
@@ -158,6 +207,22 @@ internal sealed class TableRegistry : IDisposable
         async Task<bool> TakenAsync(string code) =>
             await Index.AddCodeAsync(new IndexedCode(code, table.Id, seat.Name), cancellationToken)
             || await Index.CodeAsync(code, cancellationToken) is { } held && held.Table == table.Id && held.Seat == seat.Name;
+    }
+
+    /// <summary>The codes a table's seats hold given back to the index, as far as it answers: a table that is not added.</summary>
+    private async Task ForgetCodesAsync(PlayedTable table)
+    {
+        foreach (var code in table.Seats.Select(seat => seat.Code).OfType<string>())
+        {
+            try
+            {
+                await Index.RemoveCodeAsync(code, table.Id, CancellationToken.None);
+            }
+            catch (Exception failure) when (StoreFails(failure))
+            {
+                // Left in the index: it names a seat that never had it, and the answer reads the seat.
+            }
+        }
     }
 
     /// <summary>Under the lock: the table into every map.</summary>
@@ -231,7 +296,8 @@ internal sealed class TableRegistry : IDisposable
                 return held;
             }
 
-            if (Loader is null || !TableKeys.IsTableId(id) || _gone.Contains(id) || _stopping.IsCancellationRequested)
+            if (Loader is null || !TableKeys.IsTableId(id) || _gone.Contains(id) || _stopping.IsCancellationRequested
+                || (_refusedUntil.TryGetValue(id, out var until) && Environment.TickCount64 < until))
             {
                 return null;
             }
@@ -250,7 +316,11 @@ internal sealed class TableRegistry : IDisposable
         return await loading.WaitAsync(cancellationToken);
     }
 
-    /// <summary>A table picked up into the cache, on the registry's own time: whoever asked first may stop waiting, the others may not.</summary>
+    /// <summary>
+    /// A table picked up into the cache, on the registry's own time: whoever asked first may stop waiting, the others
+    /// may not. One that cannot be picked up is not tried again for <see cref="RefusedFor" />, and a failure is its
+    /// own, said on the console: a listing that asked for it shows the others.
+    /// </summary>
     private async Task<PlayedTable?> PickUpAsync(string id)
     {
         await Task.Yield();
@@ -258,39 +328,43 @@ internal sealed class TableRegistry : IDisposable
         try
         {
             table = await Loader!.LoadAsync(id, _stopping.Token);
+            if (table is not null)
+            {
+                // Its seats' codes, as the record has them, are the index's already: the record wrote them there.
+                // A seat with no code yet gets one before anybody can reach it, which the next record write keeps.
+                foreach (var seat in table.Seats.Where(seat => seat.Key is not null && seat.Code is null))
+                {
+                    seat.Code = await CodeForAsync(table, seat, null, _stopping.Token);
+                }
+            }
         }
         catch (OperationCanceledException) when (_stopping.IsCancellationRequested)
         {
             // The host is stopping: nothing to pick up any more.
         }
-        finally
+        catch (Exception failure) when (TableLoader.Refuses(failure) || StoreFails(failure))
         {
-            lock (_gate)
+            Console.WriteLine($"  Session {id} was not picked up: {failure.Message}");
+        }
+
+        lock (_gate)
+        {
+            _loading.Remove(id);
+            if (table is not null && !_gone.Contains(id) && !_stopping.IsCancellationRequested)
             {
-                _loading.Remove(id);
-                if (table is not null && !_gone.Contains(id) && !_stopping.IsCancellationRequested)
-                {
-                    Register(table);
-                }
-                else
-                {
-                    table?.Dispose();
-                    table = null;
-                }
+                _refusedUntil.Remove(id);
+                Register(table);
+                return table;
+            }
+
+            if (table is null)
+            {
+                _refusedUntil[id] = Environment.TickCount64 + (long)RefusedFor.TotalMilliseconds;
             }
         }
 
-        if (table is not null)
-        {
-            // Its seats' codes, as the record has them, are the index's already: the record wrote them there. A
-            // seat with no code yet gets one, which the next record write keeps.
-            foreach (var seat in table.Seats.Where(seat => seat.Key is not null && seat.Code is null))
-            {
-                seat.Code = await CodeForAsync(table, seat, null, CancellationToken.None);
-            }
-        }
-
-        return table;
+        table?.Dispose();
+        return null;
     }
 
     /// <summary>The table a seat or pilot token belongs to, or none.</summary>
@@ -388,32 +462,42 @@ internal sealed class TableRegistry : IDisposable
         var code = await CodeForAsync(table, offered, keys.Code, cancellationToken);
         lock (_gate)
         {
-            if (_byId.GetValueOrDefault(table.Id) != table)
-            {
-                return false;
-            }
+            return _byId.GetValueOrDefault(table.Id) == table && Swap(table, seat, keys, code);
+        }
+    }
 
-            _byToken.Remove(seat.Token);
-            if (seat.Invitation is { } spent)
-            {
-                _byInvitation.Remove(spent);
-            }
+    /// <summary>Under the lock: a held table's seat given these keys and this code, the maps with them.</summary>
+    private bool Swap(PlayedTable table, TableSeat seat, SeatKeys keys, string? code)
+    {
+        _byToken.Remove(seat.Token);
+        if (seat.Invitation is { } spent)
+        {
+            _byInvitation.Remove(spent);
+        }
 
-            seat.Token = keys.Token;
-            seat.Invitation = keys.Invitation;
-            seat.Taken = keys.Taken;
-            seat.Code = code;
-            seat.Push = keys.Push;
-            seat.Account = keys.Account;
-            seat.InvitedAccount = keys.InvitedAccount;
-            seat.InvitedAt = keys.InvitedAt;
-            _byToken[keys.Token] = table;
-            if (keys.Invitation is { } invitation)
-            {
-                _byInvitation[invitation] = table;
-            }
+        seat.Given(keys with { Code = code });
+        _byToken[keys.Token] = table;
+        if (keys.Invitation is { } invitation)
+        {
+            _byInvitation[invitation] = table;
+        }
 
-            return true;
+        return true;
+    }
+
+    /// <summary>
+    /// Puts back the keys a seat had, as <see cref="KeysOf" /> read them, when what changed them could not be saved:
+    /// without asking the index anything, since the code they hold is still the seat's there -- only the record
+    /// write that failed would have taken it back. False once the table is no longer here.
+    /// </summary>
+    public bool Restore(PlayedTable table, TableSeat seat, SeatKeys keys)
+    {
+        ArgumentNullException.ThrowIfNull(table);
+        ArgumentNullException.ThrowIfNull(seat);
+        ArgumentNullException.ThrowIfNull(keys);
+        lock (_gate)
+        {
+            return _byId.GetValueOrDefault(table.Id) == table && Swap(table, seat, keys, keys.Code);
         }
     }
 
@@ -423,21 +507,21 @@ internal sealed class TableRegistry : IDisposable
     /// </summary>
     public async Task<IReadOnlyList<ListedTable>> OpenAsync(CancellationToken cancellationToken = default)
     {
-        var listed = await Index.OpenAsync(0, Listing, cancellationToken);
+        var listed = await ListedAsync(cancellationToken);
         var held = HeldTables();
         var byId = held.ToDictionary(table => table.Id, StringComparer.Ordinal);
-        HashSet<string> gone;
-        lock (_gate)
-        {
-            gone = [.. _gone];
-        }
 
         // A table this host closed is not listed while its record is on its way, nor if it never lands: the
-        // index is a write behind it, and its next listing of the table would be wrong.
-        var fromIndex = listed
-            .Where(entry => !byId.ContainsKey(entry.Table) && !gone.Contains(entry.Table))
-            .Select(entry => TableSummary.Parse(entry.Summary) is { } summary ? new ListedTable(entry.Table, entry.CreatedAt, summary, Held: null) : null)
-            .OfType<ListedTable>();
+        // index is a write behind it. Nor is one refused under this host's basis, which is the operator's.
+        List<ListedTable> fromIndex;
+        lock (_gate)
+        {
+            fromIndex = [.. listed
+                .Where(entry => !byId.ContainsKey(entry.Table))
+                .Select(entry => TableSummary.Parse(entry.Summary) is { } summary && !LeftAlone(entry.Table, summary) ? new ListedTable(entry.Table, entry.CreatedAt, summary, Held: null) : null)
+                .OfType<ListedTable>()];
+        }
+
         var fromHere = held
             .Where(table => !table.IsOver)
             .Select(table => TableSummary.Of(table) is { } summary ? new ListedTable(table.Id, table.CreatedAt, summary, table) : null)
@@ -533,7 +617,7 @@ internal sealed class TableRegistry : IDisposable
         List<string> swept = [.. gone.Select(table => table.Id)];
         if (Loader is { } loader)
         {
-            foreach (var listed in await Index.OpenAsync(0, Listing, cancellationToken))
+            foreach (var listed in await ListedAsync(cancellationToken))
             {
                 if (Held(listed.Table) is null && TableSummary.Parse(listed.Summary) is { Begun: false } && now - listed.CreatedAt >= NeverBegunFor
                     && await ClosedAsync(loader, listed.Table, cancellationToken))
@@ -551,7 +635,8 @@ internal sealed class TableRegistry : IDisposable
     {
         lock (_gate)
         {
-            if (_loading.ContainsKey(id))
+            // Picked up meanwhile, or being: it is this host's to sweep as a held table, by its last request.
+            if (_loading.ContainsKey(id) || _byId.ContainsKey(id))
             {
                 return false;
             }
@@ -563,7 +648,7 @@ internal sealed class TableRegistry : IDisposable
         {
             return await loader.CloseAsync(id, cancellationToken);
         }
-        catch (Exception failure) when (TableLoader.Refuses(failure) || failure is UnauthorizedAccessException or Azure.RequestFailedException)
+        catch (Exception failure) when (TableLoader.Refuses(failure) || StoreFails(failure))
         {
             Console.WriteLine($"  Session {id} could not be closed: {failure.Message}");
             return false;
@@ -579,6 +664,11 @@ internal sealed class TableRegistry : IDisposable
         List<PlayedTable> all;
         lock (_gate)
         {
+            if (_stopping.IsCancellationRequested)
+            {
+                return;
+            }
+
             _stopping.Cancel();
             all = [.. _byId.Values];
             _byId.Clear();
@@ -590,6 +680,8 @@ internal sealed class TableRegistry : IDisposable
         {
             table.Dispose();
         }
+
+        _stopping.Dispose();
     }
 
     /// <summary>

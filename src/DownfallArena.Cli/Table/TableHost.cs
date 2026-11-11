@@ -80,7 +80,7 @@ internal static class TableHost
         var stored = store is null ? null : new StoredSessions(store);
         // The tables this host holds, and the way to the others: picked up from their records when a request
         // names them, on a host that records any.
-        using var registry = new TableRegistry(index) { Loader = stored is null ? null : new TableLoader(stored, composer, clock) };
+        using var registry = new TableRegistry(index) { Loader = stored is null ? null : new TableLoader(stored, composer, clock), Basis = composer.Basis };
 
         // The operator's door: the platform's login where the host is behind one, a printed token everywhere
         // else. The token is minted the way a pilot's is, and printed the way a pilot's is.
@@ -181,7 +181,7 @@ internal static class TableHost
 
             if (stored is not null)
             {
-                foreach (var line in await TableRestorer.RestoreAsync(stored, registry, composer.Basis, stopping.Token))
+                foreach (var line in await TableRestorer.RestoreAsync(stored, registry, stopping.Token))
                 {
                     Console.WriteLine($"  {line}");
                 }

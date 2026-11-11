@@ -66,7 +66,7 @@ public sealed class TableRestorerTests : IDisposable
         await Opened(HostedTables.OnePerson);
         _later = _after.Registry();
 
-        var said = await TableRestorer.RestoreAsync(_after.Stored!, _later, _after.Composer.Basis, Cancel);
+        var said = await TableRestorer.RestoreAsync(_after.Stored!, _later, Cancel);
 
         said.ShouldHaveSingleItem().ShouldStartWith("2 open tables indexed");
     }
@@ -332,7 +332,7 @@ public sealed class TableRestorerTests : IDisposable
     public async Task A_table_this_host_already_holds_is_not_picked_up_beside_itself()
     {
         var table = await Opened(HostedTables.OnePerson);
-        await TableRestorer.RestoreAsync(_before.Stored!, _earlier, _before.Composer.Basis, Cancel);
+        await TableRestorer.RestoreAsync(_before.Stored!, _earlier, Cancel);
 
         var found = await _earlier.ByIdAsync(table.Id, Cancel);
 
@@ -545,7 +545,7 @@ public sealed class TableRestorerTests : IDisposable
 
     /// <summary>A record a host on this basis refused is the operator's, not the lobby's: the start-up pass leaves it out of the index (ADR 0115).</summary>
     [Fact]
-    public async Task A_record_refused_under_this_host_s_basis_is_kept_out_of_the_index_by_the_start_up_pass()
+    public async Task A_record_refused_under_this_host_s_basis_is_not_listed_by_it_after_the_start_up_pass()
     {
         var table = await Opened(HostedTables.OnePerson);
         await PlayUntil(table, table.Seats[0].Person!, PlayerOptionsKind.Intent);
@@ -554,7 +554,7 @@ public sealed class TableRestorerTests : IDisposable
 
         using var registry = await again.RestartedAsync();
 
-        (await again.Index.OpenAsync(0, 10, Cancel)).ShouldBeEmpty();
+        (await registry.OpenAsync(Cancel)).ShouldBeEmpty();
     }
 
     /// <summary>Another engine, other content or other rules may replay what an earlier one could not, so the lobby lists it again.</summary>
@@ -564,11 +564,15 @@ public sealed class TableRestorerTests : IDisposable
         var table = await Opened(HostedTables.OnePerson);
         await PlayUntil(table, table.Seats[0].Person!, PlayerOptionsKind.Intent);
         await Refused(table, Basis("abc123"));
-        using var newer = new HostedTables(_ => new FileArtifactStore(_runs), basis: Basis("def456"));
+        using var refusing = new HostedTables(_ => new FileArtifactStore(_runs), basis: Basis("abc123"));
+        using var first = await refusing.RestartedAsync();
+        (await first.OpenAsync(Cancel)).ShouldBeEmpty();
 
+        // The same index the refusing host kept, as a store's index outlives its host.
+        using var newer = new HostedTables(_ => new FileArtifactStore(_runs), basis: Basis("def456"), index: refusing.Index);
         using var registry = await newer.RestartedAsync();
 
-        (await newer.Index.OpenAsync(0, 10, Cancel)).ShouldHaveSingleItem().Table.ShouldBe(table.Id);
+        (await registry.OpenAsync(Cancel)).ShouldHaveSingleItem().Id.ShouldBe(table.Id);
     }
 
     /// <summary>Another engine, other content or other rules may replay what an earlier one could not, so it tries.</summary>
@@ -688,7 +692,7 @@ public sealed class TableRestorerTests : IDisposable
         }
 
         _later = new TableRegistry(_after.Index, mostUnderWay) { Loader = new TableLoader(_after.Stored!, _after.Composer, clock) };
-        await TableRestorer.RestoreAsync(_after.Stored!, _later, _after.Composer.Basis, Cancel);
+        await TableRestorer.RestoreAsync(_after.Stored!, _later, Cancel);
         return _later;
     }
 

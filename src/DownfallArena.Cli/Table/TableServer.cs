@@ -97,11 +97,19 @@ internal sealed class TableServer : IDisposable
     /// </remarks>
     private async Task<StudioResponse> SessionPageAsync(string id)
     {
-        if (await _registry.ByIdAsync(id) is not { } table)
+        if (_registry.Held(id) is not { } table)
         {
-            // An open table is picked up rather than read off the store: its stored trace holds both seats' boards,
-            // and it is served once the table ends, or once no host can pick it up.
-            return Starting ? StartingUp() : await StoredSessionPageAsync(id);
+            // A table nobody holds here is read off the store, unless its record says it is still open: its stored
+            // trace holds both seats' boards, and it is served once the table ends. Picking it up only to refuse
+            // the page would replay a match for nothing.
+            if (Starting)
+            {
+                return StartingUp();
+            }
+
+            return await StillOpenAsync(id)
+                ? StudioResponse.OfPlainText(409, "The session is still being played. Its trace carries both seats' boards, so it is served once the match has an outcome.")
+                : await StoredSessionPageAsync(id);
         }
 
         // Somebody reading the session is somebody at the table: the hour a finished table is kept for is
@@ -144,6 +152,24 @@ internal sealed class TableServer : IDisposable
     /// here -- there is no match in memory to leak a seat of -- so what the store has is what is shown, a
     /// partial trace included.
     /// </summary>
+    /// <summary>Whether a run's record says its table is open, or cannot be read to say it is not.</summary>
+    private async Task<bool> StillOpenAsync(string id)
+    {
+        if (_stored is not { } stored || !TableKeys.IsTableId(id))
+        {
+            return false;
+        }
+
+        try
+        {
+            return await stored.RecordAsync(id) is { Status: TableRecord.Open };
+        }
+        catch (Exception failure) when (TableLoader.Refuses(failure) || TableRegistry.StoreFails(failure))
+        {
+            return true;
+        }
+    }
+
     private async Task<StudioResponse> StoredSessionPageAsync(string id)
     {
         if (_stored is not { } stored || id.Length == 0 || id.Contains('/', StringComparison.Ordinal) || id.Contains('\\', StringComparison.Ordinal) || id == "." || id == "..")

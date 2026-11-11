@@ -309,19 +309,29 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
             table.OpenSeats = opponent == "person" ? ["player2"] : [];
             table.Casual = opponent is "person" or "friend" && opening?.Ranked == false;
-            await registry.AddAsync(table, reservation);
 
             // The seats handed to this browser are taken by it from the start: no link names them, and only the
-            // place left for another player keeps an invitation and a code (ADR 0116).
+            // place left for another player keeps an invitation and a code (ADR 0116). Given before the table is
+            // added, so no code is taken for a seat nobody will type one for.
             var handed = table.Seats.Where(seat => seat.Person is not null && (seat.Name == "player1" || opponent == "hotseat")).ToArray();
             foreach (var seat in handed)
             {
-                await registry.RekeyAsync(table, seat, SeatKeys.TakenBy(seat.Token, account));
+                seat.Given(SeatKeys.TakenBy(seat.Token, account));
             }
 
             if (friend is not null)
             {
-                await registry.RekeyAsync(table, table.Seats[1], SeatKeys.KeptFor(table.Id, AccountId.Parse(friend), clock.GetUtcNow()));
+                table.Seats[1].Given(SeatKeys.KeptFor(table.Id, AccountId.Parse(friend), clock.GetUtcNow()));
+            }
+
+            try
+            {
+                await registry.AddAsync(table, reservation);
+            }
+            catch (Exception failure) when (TableRegistry.StoreFails(failure))
+            {
+                table.Dispose();
+                return Problem(503, $"The table could not be opened: {failure.Message}");
             }
 
             try
@@ -441,7 +451,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         }
         catch
         {
-            await registry.RekeyAsync(table, seat, previous);
+            registry.Restore(table, seat, previous);
             seat.DeclinedBy = before;
             throw;
         }
@@ -617,7 +627,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             }
             catch
             {
-                await registry.RekeyAsync(table, seat, previous);
+                registry.Restore(table, seat, previous);
                 table.OpenSeats = open;
                 seat.DeclinedBy = declined;
                 throw;
@@ -674,7 +684,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         }
         catch
         {
-            await registry.RekeyAsync(table, seat, previous);
+            registry.Restore(table, seat, previous);
             table.OpenSeats = open;
             seat.DeclinedBy = declined;
             throw;
@@ -865,7 +875,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         }
         catch
         {
-            await registry.RekeyAsync(table, seat, previous);
+            registry.Restore(table, seat, previous);
             table.OpenSeats = open;
             if (arrived)
             {
@@ -1094,21 +1104,30 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     private async Task<bool> TakeAsync(PlayedTable table, TableSeat[] seats, AccountId? account)
     {
         var before = seats.Select(registry.KeysOf).ToArray();
-        async Task UndoAsync()
+        void Undo()
         {
             for (var index = 0; index < seats.Length; index++)
             {
-                await registry.RekeyAsync(table, seats[index], before[index]);
+                registry.Restore(table, seats[index], before[index]);
             }
         }
 
-        foreach (var seat in seats)
+        try
         {
-            if (!await registry.RekeyAsync(table, seat, SeatKeys.TakenBy(TableKeys.For(table.Id), account)))
+            foreach (var seat in seats)
             {
-                await UndoAsync();
-                return false;
+                if (!await registry.RekeyAsync(table, seat, SeatKeys.TakenBy(TableKeys.For(table.Id), account)))
+                {
+                    Undo();
+                    return false;
+                }
             }
+        }
+        catch
+        {
+            // The index did not answer for one seat: the ones taken before it are given back too.
+            Undo();
+            throw;
         }
 
         foreach (var seat in seats)
@@ -1125,7 +1144,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         }
         catch
         {
-            await UndoAsync();
+            Undo();
             table.OpenSeats = open;
             throw;
         }

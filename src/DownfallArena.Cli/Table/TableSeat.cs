@@ -72,6 +72,23 @@ internal sealed record TableSeat(PlayerSlot Slot, string Token, ISeatPerson? Per
     /// </summary>
     public string? Key => Person is null || Taken || InvitedAccount is not null ? null : Invitation ?? Token;
 
+    /// <summary>
+    /// The seat's keys replaced by these, code included. The registry's to call for a table it holds, since it
+    /// finds seats by their keys; a table not registered yet may be given its keys directly.
+    /// </summary>
+    public void Given(SeatKeys keys)
+    {
+        ArgumentNullException.ThrowIfNull(keys);
+        Token = keys.Token;
+        Invitation = keys.Invitation;
+        Taken = keys.Taken;
+        Code = keys.Code;
+        Push = keys.Push;
+        Account = keys.Account;
+        InvitedAccount = keys.InvitedAccount;
+        InvitedAt = keys.InvitedAt;
+    }
+
     /// <summary>The name a URL and a page use for a slot.</summary>
     public static string NameOf(PlayerSlot slot) => slot == PlayerSlot.Player1 ? "player1" : "player2";
 

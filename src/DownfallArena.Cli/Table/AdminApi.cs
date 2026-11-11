@@ -226,7 +226,16 @@ internal sealed class AdminApi
             return StudioResponse.OfPlainText(400, failure.Message);
         }
 
-        await _registry.AddAsync(table, reservation);
+        try
+        {
+            await _registry.AddAsync(table, reservation);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure))
+        {
+            table.Dispose();
+            return StudioResponse.OfPlainText(503, $"The table could not be opened: {failure.Message}");
+        }
+
         await table.RecordAsync();
         Console.WriteLine($"  Session {table.Id} opened by {operatorName}: {string.Join(", ", table.Seats.Select(seat => $"{seat.Name} {(seat.Person is null ? table.Session.SeatedName(seat.Slot) : $"code {seat.Code}")}"))}");
         return StudioResponse.OfJson(await DescribedAsync(table), ArtifactJson.LineOptions, status: 201);
@@ -278,7 +287,7 @@ internal sealed class AdminApi
         {
             // Whatever failed, memory goes back to what the record still says: a seat rekeyed here and not on
             // the store would let the cut-off device back in after a redeploy, and kill the invitation passed on.
-            await _registry.RekeyAsync(table, seat, previous);
+            _registry.Restore(table, seat, previous);
             if (arrived)
             {
                 seat.Person.Arrive();
@@ -405,8 +414,10 @@ internal sealed class AdminApi
             // A table still being played is closed first: its match is stopped and its codes stop answering.
             // And then waited for: a checkpoint or a note still on its way would otherwise land after the
             // deletion and bring the run back, on the blob store as a prefix and here as a directory.
-            var table = await _registry.ByIdAsync(id);
-            var closed = await _registry.RemoveAsync(id);
+            // Only a table held here is closed first: one nobody holds writes nothing, and picking it up to close
+            // it would replay a match for a run about to go.
+            var table = _registry.Held(id);
+            var closed = table is not null && await _registry.RemoveAsync(id);
             if (closed && table is not null)
             {
                 await table.QuiesceAsync();

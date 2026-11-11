@@ -142,7 +142,16 @@ Each phase ships on the one container app there is today and leaves the game pla
      - *Sweep* (`SweepAsync`): the tables held, as before, and the open tables of the index nobody holds
        that never began and were opened twenty hours ago, closed through their record. Still on a request
        until phase 6 makes it a scheduled command.
-     - *Delete a run*: closes its table, and takes it out of the index for good (`DeletedAsync`).
+     - *Delete a run*: closes its table if this host holds it, and takes it out of the index for good
+       (`DeletedAsync`).
+     - *An index behind its records*: a host starting takes out of the index every table it lists whose
+       record is no longer open, which an index write that failed on a table's last record leaves behind,
+       and a table asked for whose record is not open is taken out then. A table that could not be picked
+       up is not tried again for a minute.
+     - *An index that does not answer*: the lists, the cap and the sweep go on with the tables held here, and
+       a table whose codes cannot be taken is not opened (503).
+     - *A table a host refused to pick up* stays listed, its summary saying under what basis: a host on that
+       basis neither lists nor counts it (it is the operator's, ADR 0115), and one on another basis tries it.
 
      What stays in one process: a table is held from when it is picked up until it is over and swept, or
      the host stops; letting an idle table go before that is a next step, once a bot's turn no longer has to
@@ -244,7 +253,7 @@ which adds the compilation of the engine itself.
    the store; it is one person against a script, and a sticky route is the cheaper of the two.
 7. **Unrecorded tables** (`--no-record`). Answered: `InMemoryDecisionJournal`, conditional like the others.
 8. **Content changing under an open table.** A divergent replay is refused once, when the table is picked up,
-   and marked; the table leaves the index then and stays the operator's. Since 4.3b3 every cold load replays,
+   and marked; a host on that basis no longer lists it, and it stays the operator's. Since 4.3b3 every cold load replays,
    so a deploy that moves content strands open tables at the next tap. Options: pin
    the content hash in the table record and refuse with a clear message, or keep serving the old content
    beside the new for the tables that began on it.
