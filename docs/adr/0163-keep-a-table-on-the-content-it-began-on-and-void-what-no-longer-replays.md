@@ -37,6 +37,8 @@ One process tells, the one whose claim on closing the session stands (ADR 0162).
   less than one recorded session.
 - Bad: an engine change that alters how a recorded decision resolves still ends the matches that met it. Such
   changes are rarer than content changes, and tests catch them first.
+- Bad: a void match does not come back, even when the engine change that voided it is reverted: a refusal used
+  to leave the table for another engine to try.
 - Bad: a table opened before its content was pinned carries no hash. It is replayed on the host's content, as
   before, and is voided if that no longer fits.
 - Neutral: an open table the operator held after a refusal before this ADR is voided at its next pick-up.
