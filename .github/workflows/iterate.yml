@@ -1,9 +1,8 @@
 name: Learning loop
 
 # One turn of scripts/iterate.sh on the CI runners, so a report exists without a local .NET SDK, a local uv, or
-# anyone at a keyboard (learning phase L7, docs/learning/explained.md). It runs when the engine, the content or
-# the learning project changes on main, when a pull request changes the experiment file, once a week, and on
-# demand. The knobs come from learning/experiments/next.json unless a dispatch types them in, so asking for a
+# anyone at a keyboard (learning phase L7, docs/learning/explained.md). It runs when a pull request changes the
+# experiment file, once a week, and on demand (ADR 0167). The knobs come from learning/experiments/next.json unless a dispatch types them in, so asking for a
 # run is a commit and the parameters of every experiment stay in git. The numbers land in the run summary; the
 # report page, the evaluations and the trained policies are kept as an artifact.
 on:
@@ -64,27 +63,9 @@ on:
   schedule:
     # Monday morning UTC: one report on whatever landed during the week, even a week with no engine change.
     - cron: "0 6 * * 1"
-  push:
-    branches: [main]
-    paths:
-      - "src/**"
-      # Not the hosts: the table's (Table, Hosting) and the studio's (Studio) change nothing the loop records or
-      # plays -- it runs simulate and evaluate -- and most merges touch only the table, each one spending a full
-      # turn (about twenty runner minutes a seed) replaying numbers nothing could have moved.
-      - "!src/DownfallArena.Cli/Table/**"
-      - "!src/DownfallArena.Cli/Hosting/**"
-      - "!src/DownfallArena.Cli/Studio/**"
-      - "data/**"
-      - "learning/**"
-      # Not the experiment file: the pull request that changes it already runs that exact turn, and merging
-      # it would run the identical one again. Measured rather than assumed -- ci-150 is the merge of ci-149's
-      # pull request, and it reproduced every number of it to sixteen decimal places on a different engine
-      # build, for 56 runner minutes (journal, 2026-09-17). A change to the learning project itself still
-      # triggers, because that genuinely can change what a turn produces.
-      - "!learning/experiments/**"
-      - "benchmarks/**"
-      - "scripts/iterate.sh"
-      - ".github/workflows/iterate.yml"
+  # No push trigger (ADR 0167): every engine change on main ran a full turn, about twenty runner minutes a
+  # seed, and most of those merges moved nothing the loop measures. Monday's run reports on whatever landed
+  # during the week, and a turn on a change of one's own is a dispatch or a pull request on next.json away.
   # An experiment is asked for by committing it: a pull request that changes the file runs the loop with it.
   # The file, not the directory: `learning/experiments/**` also matched the README beside it, so a
   # documentation edit spent a full turn replaying a 5000-match experiment nobody had changed. search.yml

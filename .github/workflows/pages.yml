@@ -20,8 +20,8 @@ on:
       - "data/**"
       - "benchmarks/**"
       - "src/**"
-      # Not the table's host nor the HTTP hosting under it: the published files are the studio's export, which
-      # reads neither. Most engine-side merges are the table's, and each one republished an identical site.
+      # Not the table's host nor the HTTP hosting under it (ADR 0167): the published files are the studio's export,
+      # which reads neither. Most engine-side merges are the table's, and each one republished an identical site.
       - "!src/DownfallArena.Cli/Table/**"
       - "!src/DownfallArena.Cli/Hosting/**"
       - "tools/**"
