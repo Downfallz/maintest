@@ -22,6 +22,12 @@ test('a linked invitation is offered for review and is never claimed', async () 
   assert.equal(result.choices.length, 0); assert.equal(result.invitations.length, 1);
   assert.deepEqual(calls.map(one => one.path), ['/api/lobby/resume', '/api/lobby/invitations']);
 });
+test('a saved seat of a voided match names its table, and only the one the link asks for', async () => {
+  const voided = async path => ({ ok: true, json: async () => path.endsWith('/resume') ? { tables: [], ended: [{ table: 'gone' }, { table: 'other' }] } : { invitations: [] } });
+  assert.deepEqual((await battleSeats('', storage, voided)).ended, ['gone', 'other']);
+  assert.deepEqual((await battleSeats('?table=gone', storage, voided)).ended, ['gone']);
+  assert.deepEqual((await battleSeats('', storage, host([]))).ended, [], 'a host before ADR 0163 says nothing of it');
+});
 test('an account refusal retains its status and never fetches a private board', async () => {
   await assert.rejects(battleSeats('', storage, async () => ({ ok: false, status: 401 })), error => error.status === 401);
 });

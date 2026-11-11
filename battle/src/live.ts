@@ -693,6 +693,8 @@ async function discover(autoResume = true) {
     if (ticket !== discovering) return;
     heldSeats = result.held;
     if (autoResume && result.choices.length === 1 && !result.invitations.length && result.held.filter((one: Choice) => one.table.id === result.choices[0].table.id).length === 1) { choose(result.choices[0]); return; }
+    // The seat this link or browser held belongs to a match voided by an update (ADR 0163): say why it ended.
+    if (!result.choices.length && !result.invitations.length && result.ended.length) { status('ended'); return; }
     $('loading').hidden = false;
     text('load-title', result.choices.length ? 'Choose your seat' : 'No seat available');
     text('connection', result.choices.length ? 'Choose a seat' : 'No active seat');
