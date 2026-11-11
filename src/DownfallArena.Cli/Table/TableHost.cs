@@ -327,13 +327,25 @@ internal static class TableHost
 
         var poison = await channels.OpenAsync(PoisonedWork.QueueOf(turns.Name), stopping);
         var deadLetters = await channels.OpenAsync(DeadLetter.QueueOf(turns.Name), stopping);
-        var worker = new AgentTurnWorker(turns, poison, async (run, cancellationToken) => (await registry.ByIdAsync(run, cancellationToken))?.Session as IAgentTurnTaker, clock)
+        var worker = new AgentTurnWorker(turns, poison, (run, cancellationToken) => TakerAsync(registry, run, cancellationToken), clock)
         {
             Said = Console.WriteLine,
         };
         var keeper = new DeadLetterWorker(poison, deadLetters, clock, Environment.MachineName) { Said = Console.WriteLine };
         Console.WriteLine($"  Turns: through the queue {turns.Name}, given up on after {AgentTurnWorker.MostDeliveries} deliveries onto {poison.Name}, kept for good on {deadLetters.Name}.");
         return Task.WhenAll(worker.RunAsync(stopping), keeper.RunAsync(stopping));
+    }
+
+    /// <summary>
+    /// The table a queued turn is owed at, or none when it is gone; a store that is out is thrown, so the worker
+    /// retries the item, and gives up on it only as it gives up on any other failure.
+    /// </summary>
+    internal static async Task<IAgentTurnTaker?> TakerAsync(TableRegistry registry, string run, CancellationToken cancellationToken)
+    {
+        var found = await registry.FindAsync(run, cancellationToken);
+        return found.Unavailable is { } why
+            ? throw new IOException($"Session {run} could not be picked up: {why}")
+            : found.Table?.Session as IAgentTurnTaker;
     }
 
     private static string Elsewhere()

@@ -59,7 +59,7 @@ internal sealed class TableRegistry : IDisposable
     private readonly Dictionary<string, PlayedTable> _byId = new(StringComparer.Ordinal);
     private readonly Dictionary<string, PlayedTable> _byToken = new(StringComparer.Ordinal);
     private readonly Dictionary<string, PlayedTable> _byInvitation = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, Task<PlayedTable?>> _loading = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Task<Found>> _loading = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _legacy = new(StringComparer.Ordinal);
     private readonly HashSet<string> _gone = new(StringComparer.Ordinal);
     private readonly Dictionary<string, long> _refusedUntil = new(StringComparer.Ordinal);
@@ -281,25 +281,33 @@ internal sealed class TableRegistry : IDisposable
     }
 
     /// <summary>A table by its id: held here, or picked up from its record when it is open and can be.</summary>
-    public async Task<PlayedTable?> ByIdAsync(string id, CancellationToken cancellationToken = default)
+    public async Task<PlayedTable?> ByIdAsync(string id, CancellationToken cancellationToken = default) =>
+        (await FindAsync(id, cancellationToken)).Table;
+
+    /// <summary>
+    /// A table by its id, or why there is none: it is not open or not a table here (<see cref="Found.Gone" />), or
+    /// it could not be read because the store is out (<see cref="Found.Unavailable" />), which asking again may
+    /// mend. A worker taking turns for it waits out the second and lets go of the first.
+    /// </summary>
+    public async Task<Found> FindAsync(string id, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(id))
         {
-            return null;
+            return Found.Gone;
         }
 
-        Task<PlayedTable?> loading;
+        Task<Found> loading;
         lock (_gate)
         {
             if (_byId.TryGetValue(id, out var held))
             {
-                return held;
+                return new Found(held, null);
             }
 
             if (Loader is null || !TableKeys.IsTableId(id) || _gone.Contains(id) || _stopping.IsCancellationRequested
                 || (_refusedUntil.TryGetValue(id, out var until) && Environment.TickCount64 < until))
             {
-                return null;
+                return Found.Gone;
             }
 
             // One pick-up a table, whoever asks for it meanwhile: a table picked up twice would be two matches
@@ -318,13 +326,15 @@ internal sealed class TableRegistry : IDisposable
 
     /// <summary>
     /// A table picked up into the cache, on the registry's own time: whoever asked first may stop waiting, the others
-    /// may not. One that cannot be picked up is not tried again for <see cref="RefusedFor" />, and a failure is its
-    /// own, said on the console: a listing that asked for it shows the others.
+    /// may not. One that cannot be picked up is not tried again for <see cref="RefusedFor" />; one whose store is out
+    /// is tried again at the next request, and the failure is said on the console either way: a listing that asked
+    /// for it shows the others.
     /// </summary>
-    private async Task<PlayedTable?> PickUpAsync(string id)
+    private async Task<Found> PickUpAsync(string id)
     {
         await Task.Yield();
         PlayedTable? table = null;
+        string? unavailable = null;
         try
         {
             table = await Loader!.LoadAsync(id, _stopping.Token);
@@ -342,7 +352,14 @@ internal sealed class TableRegistry : IDisposable
         {
             // The host is stopping: nothing to pick up any more.
         }
-        catch (Exception failure) when (TableLoader.Refuses(failure) || StoreFails(failure))
+        catch (Exception failure) when (StoreFails(failure))
+        {
+            Console.WriteLine($"  Session {id} could not be picked up for now: {failure.Message}");
+            unavailable = $"{failure.GetType().Name}: {failure.Message}";
+            table?.Dispose();
+            table = null;
+        }
+        catch (Exception failure) when (TableLoader.Refuses(failure))
         {
             Console.WriteLine($"  Session {id} was not picked up: {failure.Message}");
         }
@@ -354,17 +371,24 @@ internal sealed class TableRegistry : IDisposable
             {
                 _refusedUntil.Remove(id);
                 Register(table);
-                return table;
+                return new Found(table, null);
             }
 
-            if (table is null)
+            if (table is null && unavailable is null)
             {
                 _refusedUntil[id] = Environment.TickCount64 + (long)RefusedFor.TotalMilliseconds;
             }
         }
 
         table?.Dispose();
-        return null;
+        return unavailable is null ? Found.Gone : new Found(null, unavailable);
+    }
+
+    /// <summary>A table found by its id, or none, and when none, whether the store being out is why.</summary>
+    /// <param name="Unavailable">Why the table could not be read, when the store is out; none when it simply is not there.</param>
+    internal sealed record Found(PlayedTable? Table, string? Unavailable)
+    {
+        public static Found Gone { get; } = new(null, null);
     }
 
     /// <summary>The table a seat or pilot token belongs to, or none.</summary>

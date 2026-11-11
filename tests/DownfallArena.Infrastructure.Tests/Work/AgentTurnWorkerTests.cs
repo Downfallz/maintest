@@ -38,6 +38,44 @@ public sealed class AgentTurnWorkerTests
     }
 
     [Fact]
+    public async Task One_item_is_taken_at_a_look_and_the_others_wait_unreceived()
+    {
+        var table = new Scripted("table-1", AgentTurn.Done);
+        var worker = await WorkerAsync(table);
+        await OweAsync("table-1");
+        await OweAsync("table-1");
+
+        var taken = await worker.RunOnceAsync(Cancel);
+        var waiting = await (await TurnsAsync()).ReceiveAsync(10, TimeSpan.FromMinutes(1), Cancel);
+
+        taken.ShouldBe(1);
+        waiting.ShouldHaveSingleItem().Delivered.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task The_time_an_item_is_hidden_for_is_counted_from_when_it_was_received()
+    {
+        var table = new Scripted("table-1", AgentTurn.Taken, AgentTurn.Taken, AgentTurn.Done);
+        var turns = await TurnsAsync();
+        var worker = new AgentTurnWorker(
+            turns,
+            await PoisonAsync(),
+            (_, _) =>
+            {
+                // Finding the table took most of the time the item is hidden for.
+                _clock.Advance(AgentTurnWorker.HiddenFor / 2 + TimeSpan.FromSeconds(1));
+                return Task.FromResult<IAgentTurnTaker?>(table);
+            },
+            _clock);
+        await OweAsync("table-1");
+
+        await worker.RunOnceAsync(Cancel);
+
+        table.Taken.ShouldBe(1);
+        (await turns.ReceiveAsync(10, TimeSpan.FromMinutes(1), Cancel)).ShouldHaveSingleItem().Delivered.ShouldBe(1);
+    }
+
+    [Fact]
     public async Task An_item_for_a_table_nobody_can_take_turns_at_is_done_with()
     {
         var worker = await WorkerAsync(table: null);

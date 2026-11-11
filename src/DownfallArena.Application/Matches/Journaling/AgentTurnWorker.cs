@@ -52,13 +52,16 @@ public sealed class AgentTurnWorker(
     /// <summary>What the worker says of an item it retries or gives up on: the host's console.</summary>
     public Action<string> Said { get; init; } = _ => { };
 
-    /// <summary>One look at the queue: every item it hands out taken. How many items there were.</summary>
+    /// <summary>
+    /// One look at the queue: one item taken, if there was one. One at a time, since an item is hidden only for so
+    /// long: one waiting behind others whose turns take a while would come back to another worker before its own.
+    /// </summary>
     public async Task<int> RunOnceAsync(CancellationToken cancellationToken = default)
     {
-        var received = await turns.ReceiveAsync(16, HiddenFor, cancellationToken);
+        var received = await turns.ReceiveAsync(1, HiddenFor, cancellationToken);
         foreach (var work in received)
         {
-            await TakeAsync(work, cancellationToken);
+            await TakeAsync(work, clock.GetUtcNow(), cancellationToken);
         }
 
         return received.Count;
@@ -102,7 +105,8 @@ public sealed class AgentTurnWorker(
         }
     }
 
-    private async Task TakeAsync(QueuedWork work, CancellationToken cancellationToken)
+    /// <param name="received">When the item was received, which its time hidden is counted from.</param>
+    private async Task TakeAsync(QueuedWork work, DateTimeOffset received, CancellationToken cancellationToken)
     {
         if (OwedTurn.Parse(work.Body) is not { } owed)
         {
@@ -119,7 +123,7 @@ public sealed class AgentTurnWorker(
                 return;
             }
 
-            await TurnsAsync(work, owed, table, cancellationToken);
+            await TurnsAsync(work, owed, table, received, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -132,9 +136,8 @@ public sealed class AgentTurnWorker(
     }
 
     /// <summary>The table's turns, taken until nothing more is owed, the item handed on, or a turn failed.</summary>
-    private async Task TurnsAsync(QueuedWork work, OwedTurn owed, IAgentTurnTaker table, CancellationToken cancellationToken)
+    private async Task TurnsAsync(QueuedWork work, OwedTurn owed, IAgentTurnTaker table, DateTimeOffset received, CancellationToken cancellationToken)
     {
-        var started = clock.GetUtcNow();
         var moved = 0;
         while (true)
         {
@@ -143,7 +146,7 @@ public sealed class AgentTurnWorker(
                 case AgentTurn.Done:
                     await turns.DeleteAsync(work, cancellationToken);
                     return;
-                case AgentTurn.Taken when clock.GetUtcNow() - started > HiddenFor / 2:
+                case AgentTurn.Taken when clock.GetUtcNow() - received > HiddenFor / 2:
                     await HandOnAsync(work, owed, TimeSpan.Zero, cancellationToken);
                     return;
                 case AgentTurn.Taken:
