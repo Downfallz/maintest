@@ -6,9 +6,11 @@ using DownfallArena.Application.Matches.Queries;
 using DownfallArena.Cli.Table;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Rounds;
+using DownfallArena.Domain.Resources;
 using DownfallArena.Infrastructure.Accounts;
 using DownfallArena.Infrastructure.Learning;
 using DownfallArena.SharedKernel.Identifiers;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DownfallArena.Cli.Tests.Table;
 
@@ -561,7 +563,7 @@ public sealed class TableRestorerTests : IDisposable
 
         picked.ShouldNotBeNull("replayed on the content it began on, not voided by the host's");
         picked.Content.ShouldBe(table.Content);
-        picked.Content.ShouldNotBe((await moved.Composer.ComposeAsync(HostedTables.Bots, Cancel)).Content, "the host's own content moved");
+        picked.Content.ShouldNotBe(moved.Services.GetRequiredService<IGameResources>().Version, "the host's own content moved");
         (await moved.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().Void.ShouldBeFalse();
     }
 
