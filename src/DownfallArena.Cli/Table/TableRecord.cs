@@ -72,11 +72,18 @@ internal sealed record TableRecord
     public required string Status { get; init; }
 
     /// <summary>
-    /// The basis a host refused to rebuild this table under, or none: the record stays open and kept for the operator
-    /// (ADR 0115), and a host with the same basis does not replay it again at every start. A host on another engine,
-    /// other content or other rules tries it once more.
+    /// The basis a host refused to rebuild this table under, or none. Since ADR 0163 a refusal voids the table
+    /// (<see cref="Void" />), and this says under what. A record refused before then is still open and kept for the
+    /// operator (ADR 0115): a host with the same basis does not replay it again, and one on another basis tries it
+    /// once more, and voids it if it is refused again.
     /// </summary>
     public ReplayBasis? RefusedUnder { get; init; }
+
+    /// <summary>
+    /// Whether the table ended as a void match (ADR 0163): its journal no longer replays on the engine that picked it
+    /// up, so it was closed with no outcome, nothing was kept for the ladder, and its seats were told why.
+    /// </summary>
+    public bool Void { get; init; }
 
     /// <summary>Only explicitly offered seats are public. Older, invitation-only tables offer none.</summary>
     public IReadOnlyList<string> OpenSeats { get; init; } = [];
@@ -132,6 +139,7 @@ internal sealed record TableRecord
             Revision = (stored?.Revision ?? 0) + 1,
             Status = stored is { Status: not Open } ended && Status == Open ? ended.Status : Status,
             RefusedUnder = RefusedUnder ?? stored?.RefusedUnder,
+            Void = Void || stored?.Void == true,
             Begun = Begun || stored?.Begun == true,
         };
 

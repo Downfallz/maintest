@@ -247,7 +247,13 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             table = await DescribeAsync(group.Key),
             seats = group.Select(one => new { seat = group.Key.Seats.Single(seat => seat.Token == one.Token).Name, token = one.Token }).ToArray(),
         }));
-        return Json(new { tables });
+
+        // A saved seat of a void match (ADR 0163) is no seat to resume, and its page is told why rather than that it
+        // has none: the tables are named, and nothing else of them is said.
+        var unanswered = found.Where(one => one.Table is null).Select(one => one.Token).ToArray();
+        var voided = await Task.WhenAll(unanswered.Select(async token => await registry.VoidSeatAsync(token) ? TableKeys.TableOf(token) : null));
+        var ended = voided.OfType<string>().Distinct(StringComparer.Ordinal).Select(table => new { table }).ToArray();
+        return Json(new { tables, ended });
     }
 
     /// <summary>

@@ -322,6 +322,25 @@ public sealed class LobbyApiTests : IDisposable
         table.Session.HasBegun.ShouldBeFalse();
     }
 
+    /// <summary>A saved seat of a void match (ADR 0163) is no seat to resume, and its table is named so its page says why.</summary>
+    [Fact]
+    public async Task Resuming_a_seat_of_a_void_match_names_its_table_and_nothing_else()
+    {
+        var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
+        var table = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!;
+        await table.RecordAsync(TestContext.Current.CancellationToken);
+        _registry.LetGo(id).ShouldBeTrue();
+        var record = (await _hosted.Stored!.RecordAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull();
+        await new FileArtifactStore(_hosted.RunsDirectory).Writer(id)
+            .WriteJsonAsync(TableRecord.File, record with { Status = TableRecord.Closed, Void = true }, TestContext.Current.CancellationToken);
+        var body = JsonSerializer.Serialize(new { tokens = new[] { table.Seats[0].Token, TableKeys.For(id), "unknown" } });
+
+        var resumed = Read(await Lobby.HandleAsync("POST", "/api/lobby/resume", body));
+
+        resumed.GetProperty("tables").GetArrayLength().ShouldBe(0);
+        resumed.GetProperty("ended").EnumerateArray().Select(one => one.GetProperty("table").GetString()).ShouldBe([id]);
+    }
+
     [Fact]
     public async Task Leaving_a_started_game_revokes_the_old_token_and_invitation_and_a_new_player_can_take_over()
     {

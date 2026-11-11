@@ -52,11 +52,14 @@ export function createLiveConnection({ onState, onView, schedule = setTimeout, c
       busy: false, owed: false, since: 0, catalogue: catalogue ?? null, retry: 1000, streams: 0, revision: 0, writing: false };
     active = connection;
     const current = () => active === connection;
+    // 401 asks for the seat's account, 403 is a seat this page no longer holds, and 410 a match that ended void
+    // because the game was updated under it (ADR 0163): each clears the board and stops for good.
     function refused(answer) {
-      if (answer.status !== 401 && answer.status !== 403) return false;
+      const states = { 401: 'signin', 403: 'revoked', 410: 'ended' };
+      if (!(answer.status in states)) return false;
       stop();
       onView(null, null);
-      onState(answer.status === 401 ? 'signin' : 'revoked');
+      onState(states[answer.status]);
       return true;
     }
     async function refresh() {

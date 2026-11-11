@@ -281,7 +281,7 @@ internal sealed class TableComposer
                 stopping.Token);
             if (opened.IsFailure)
             {
-                await RefusedAsync(id, run, opened.Error.Message, diverged: opened.Error.Code == JournalErrors.DivergedCode, cancellationToken);
+                await RefusedAsync(id, run, record, opened.Error.Message, diverged: opened.Error.Code == JournalErrors.DivergedCode, cancellationToken);
                 stopping.Dispose();
                 return null;
             }
@@ -289,7 +289,7 @@ internal sealed class TableComposer
             session = opened.Value;
             if (run is not null && record is not null && !await run.AgreesWithCheckpointSoFarAsync(session.MatchId, cancellationToken))
             {
-                await RefusedAsync(id, run, "the rebuilt match does not agree with the trace that was checkpointed: the content, the rules or the engine changed under the record", diverged: true, cancellationToken);
+                await RefusedAsync(id, run, record, "the rebuilt match does not agree with the trace that was checkpointed: the content, the rules or the engine changed under the record", diverged: true, cancellationToken);
                 Abandon(session, stopping);
                 return null;
             }
@@ -347,18 +347,53 @@ internal sealed class TableComposer
     }
 
     /// <summary>
-    /// Says why a table was not picked up again, and marks its record when the reason is the record's own: a
-    /// line that does not answer, boards that differ. A host on the same engine, content and rules then leaves
-    /// it as it is instead of rebuilding it at every start (ADR 0115).
+    /// Says why a table was not picked up again. When the reason is the record's own -- a line that does not answer,
+    /// boards that differ -- the table ends as a void match (ADR 0163): its record closed and marked void, with the
+    /// basis it was refused under, and each seat's account told why by the one process whose claim stands.
     /// </summary>
-    private async Task RefusedAsync(string id, PlaytestRun? run, string reason, bool diverged, CancellationToken cancellationToken)
+    private async Task RefusedAsync(string id, PlaytestRun? run, TableRecord? record, string reason, bool diverged, CancellationToken cancellationToken)
     {
         Console.WriteLine($"  Session {id} was not rebuilt: {reason}");
-        if (diverged && run is not null && Basis is { } basis)
+        if (!diverged || run is null)
         {
-            await run.MarkRefusedAsync(basis, cancellationToken);
+            return;
+        }
+
+        await run.MarkVoidAsync(Basis, cancellationToken);
+        Console.WriteLine($"  Session {id} voided: its journal no longer replays on this engine (ADR 0163).");
+        if (record is not null && await run.ClaimClosingAsync(cancellationToken))
+        {
+            await NotifyVoidAsync(id, record);
         }
     }
+
+    /// <summary>
+    /// Each seat's account told its match was voided (ADR 0163), once an account: two seats of one device's are one
+    /// notice. A device store that cannot be read is a notice that did not arrive.
+    /// </summary>
+    private async Task NotifyVoidAsync(string id, TableRecord record)
+    {
+        if (Notices is not { } notices)
+        {
+            return;
+        }
+
+        var accounts = record.Seats.Where(seat => seat.Person && seat.Account is not null).Select(seat => seat.Account!).Distinct(StringComparer.Ordinal);
+        try
+        {
+            foreach (var account in accounts)
+            {
+                await notices.SendAsync(AccountId.Parse(account), AccountNotices.Payload("Match ended", VoidNotice, "/lobby", $"match:{id}"), "match");
+            }
+        }
+        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or JsonException or FormatException or Azure.RequestFailedException or HttpRequestException)
+        {
+            Console.WriteLine($"  Session {id}: the players could not be told the match was voided: {failure.Message}");
+        }
+    }
+
+    /// <summary>What a seat's account and page are told of a void match (ADR 0163).</summary>
+    internal const string VoidNotice = "The game was updated and your match could no longer be played on. It ended without a result and does not count.";
 
     /// <summary>
     /// Lets go of a table that failed to open. A session that had been opened is a match in the host's stores,

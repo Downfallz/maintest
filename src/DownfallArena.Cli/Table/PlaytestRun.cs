@@ -329,25 +329,26 @@ internal sealed class PlaytestRun
     }
 
     /// <summary>
-    /// Marks the record as refused under this basis, so a host on the same basis leaves it as it is instead of
-    /// replaying it at every start. The status is untouched: a table that could not be rebuilt stays open for the
-    /// operator, who closes or deletes it (ADR 0115). A write that fails is a line on the console, and the next host
-    /// tries the replay again.
+    /// Ends the table as a void match (ADR 0163): its record closed and marked void over the record as stored, with the
+    /// basis it was refused under when there is one, and the index follows. A write that fails is a line on the
+    /// console, and the next process to pick the table up voids it again.
     /// </summary>
-    public async Task MarkRefusedAsync(ReplayBasis basis, CancellationToken cancellationToken = default)
+    public async Task MarkVoidAsync(ReplayBasis? basis, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(basis);
         Task written;
         lock (_recordGate)
         {
-            if (_record is not { } record || record.RefusedUnder == basis)
+            if (_record is not { } record)
             {
                 return;
             }
 
-            _record = record with { RefusedUnder = basis };
+            _record = record with { Status = TableRecord.Closed, Void = true, RefusedUnder = basis ?? record.RefusedUnder };
             var fallback = _record;
-            written = _recordWritten = WriteRecordAfterAsync(_recordWritten, stored => (stored ?? fallback) with { RefusedUnder = basis }, cancellationToken);
+            written = _recordWritten = WriteRecordAfterAsync(
+                _recordWritten,
+                stored => (stored ?? fallback) with { Status = TableRecord.Closed, Void = true, RefusedUnder = basis ?? stored?.RefusedUnder },
+                cancellationToken);
         }
 
         try
@@ -356,7 +357,7 @@ internal sealed class PlaytestRun
         }
         catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or ObjectDisposedException or Azure.RequestFailedException)
         {
-            Console.WriteLine($"  Session {SessionId} could not be marked as refused: {failure.Message}");
+            Console.WriteLine($"  Session {SessionId} could not be voided: {failure.Message}");
         }
     }
 
