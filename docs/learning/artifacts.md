@@ -193,7 +193,8 @@ One line per note, written through `IArtifactWriter.AppendJsonLinesAsync` and ti
 | `round`, `subPhase` | Where in the match, as in `steps.jsonl`. |
 | `at` | When, in UTC. |
 | `kind` | `Decision`, `Refused`, `Seat`, `Lookup`, `Misplay` or `Comment`. |
-| `elapsedMs` | For a `Decision`: from the moment that seat's options were **served** to the moment the decision was accepted. Served, not asked: the engine may ask a seat while nobody is looking at the screen, and the difference is the walk back to the table. Null when nothing can say the options ever reached a person — a bot seat, or a decision that beat the page's own word that the board was up. Never zero for that case: zero is a measurement and reads exactly like an instant decision. |
+| `elapsedMs` | For a `Decision`: from the moment that seat's options were **served** to the moment the decision was accepted. Served, not asked: the engine may ask a seat while nobody is looking at the screen, and the difference is the walk back to the table. Null when nothing can say the options ever reached a person — a bot seat, or a decision that beat the page's own word that the board was up. Never zero for that case: zero is a measurement and reads exactly like an instant decision. When the host lost its stamp (restarted, or the table picked up again) the page's own measure, from drawing the question to the tap, is written instead, and `timedBy` says so. |
+| `timedBy` | For a `Decision`: `page` when `elapsedMs` is the page's own measure; null when the host timed it, which is every decision before the page measured. |
 | `code`, `message` | For a `Refused`: the `DomainError` the aggregate or the host's pre-check returned. |
 | `text` | For a `Lookup`, a `Misplay` or a `Comment`: what the player typed. A tap carries none. |
 | `from`, `to` | For a `Seat`: what the seat's occupant was called before the swap, and what the one taking it is called. |
