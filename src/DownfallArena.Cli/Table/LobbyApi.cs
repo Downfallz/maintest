@@ -43,7 +43,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     /// <summary>What tells a friend's devices of an invitation, and the inviter's of its answer; none without push keys.</summary>
     public AccountNotices? Notices { get; set; }
 
-    /// <summary>What <c>GET /api/lobby/events</c> streams (ADR 0163); none on a host that streams no lobby.</summary>
+    /// <summary>What <c>GET /api/lobby/events</c> streams (ADR 0164); none on a host that streams no lobby.</summary>
     public LobbyChanges? Changes { get; set; }
 
     /// <summary>
@@ -251,7 +251,13 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             table = await DescribeAsync(group.Key),
             seats = group.Select(one => new { seat = group.Key.Seats.Single(seat => seat.Token == one.Token).Name, token = one.Token }).ToArray(),
         }));
-        return Json(new { tables });
+
+        // A saved seat of a void match (ADR 0163) is no seat to resume, and its page is told why rather than that it
+        // has none: the tables are named, and nothing else of them is said.
+        var unanswered = found.Where(one => one.Table is null).Select(one => one.Token).ToArray();
+        var voided = await Task.WhenAll(unanswered.Select(async token => await registry.VoidSeatAsync(token) ? TableKeys.TableOf(token) : null));
+        var ended = voided.OfType<string>().Distinct(StringComparer.Ordinal).Select(table => new { table }).ToArray();
+        return Json(new { tables, ended });
     }
 
     /// <summary>
@@ -344,7 +350,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 return Problem(503, $"The table could not be opened: {failure.Message}");
             }
 
-            // Its seats were handed out after it was composed: the lobbies in view read it as it now stands (ADR 0163).
+            // Its seats were handed out after it was composed: the lobbies in view read it as it now stands (ADR 0164).
             table.Api.Changes.Bump();
 
             try
@@ -774,7 +780,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         await NoticeAsync(friend, "An invitation", $"{await NameAsync(me)} invites you to a {table.Session.Rules.Format} battle.", "/lobby#invitations", $"invite:{table.Id}");
 
     /// <summary>
-    /// The lobby's changes as they happen (ADR 0163): the public lists for anybody, and the signed-in player's own
+    /// The lobby's changes as they happen (ADR 0164): the public lists for anybody, and the signed-in player's own
     /// lists for them, as server-sent events. Nothing changes on the page's own clock any more: this is what it
     /// reads on.
     /// </summary>

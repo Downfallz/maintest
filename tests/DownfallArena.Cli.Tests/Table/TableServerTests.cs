@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Text.Json;
 using DownfallArena.Cli.Hosting;
 using DownfallArena.Cli.Table;
+using DownfallArena.Infrastructure.Learning;
 
 namespace DownfallArena.Cli.Tests.Table;
 
@@ -276,6 +277,29 @@ public sealed class TableServerTests : IAsyncDisposable
 
         await table.RecordAsync(TestContext.Current.CancellationToken);
         return table;
+    }
+
+    /// <summary>
+    /// A seat of a void match is told why its match ended (ADR 0163), with 410 rather than a seat it lost; a key that
+    /// names the table and no seat of it learns nothing more than before.
+    /// </summary>
+    [Fact]
+    public async Task A_seat_of_a_void_match_is_told_it_ended_and_a_stranger_is_not()
+    {
+        var url = Serve(OperatorGate.BehindPlatform());
+        var table = await Opened(HostedTables.OnePerson);
+        await table.RecordAsync(TestContext.Current.CancellationToken);
+        _registry.LetGo(table.Id).ShouldBeTrue();
+        var record = (await _hosted.Stored!.RecordAsync(table.Id, TestContext.Current.CancellationToken)).ShouldNotBeNull();
+        await new FileArtifactStore(_hosted.RunsDirectory).Writer(table.Id)
+            .WriteJsonAsync(TableRecord.File, record with { Status = TableRecord.Closed, Void = true }, TestContext.Current.CancellationToken);
+
+        var seat = await Get($"{url}api/seat/player1", table.Seats[0].Token);
+        var stranger = await Get($"{url}api/seat/player1", TableKeys.For(table.Id));
+
+        seat.StatusCode.ShouldBe(HttpStatusCode.Gone);
+        (await seat.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)).ShouldContain("updated");
+        stranger.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
 
     /// <summary>A host whose lobby nobody opens still lets go: any request sweeps, by the host's clock.</summary>

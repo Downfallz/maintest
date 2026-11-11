@@ -5,7 +5,7 @@ using DownfallArena.SharedKernel.Identifiers;
 namespace DownfallArena.Cli.Tests.Table;
 
 /// <summary>
-/// The lobby's stream (ADR 0163): <c>ready</c>, then a <c>changed</c> for the public lists and one for the signed-in
+/// The lobby's stream (ADR 0164): <c>ready</c>, then a <c>changed</c> for the public lists and one for the signed-in
 /// player's own lists, and nothing of another player's.
 /// </summary>
 public sealed class LobbyChangesTests

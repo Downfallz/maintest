@@ -156,7 +156,7 @@ export function mountFriends(doc, { request = accountRequest, nav = globalThis.n
   });
 
   nav?.serviceWorker?.addEventListener?.('message', event => { if (event.data?.kind === 'notice') void refresh(true); });
-  // Read when the host says this player's lists changed, and when the lobby's stream opens (ADR 0163): no clock.
+  // Read when the host says this player's lists changed, and when the lobby's stream opens (ADR 0164): no clock.
   // Listened to while somebody is signed in only.
   let unlisten = null;
   const listen = on => {

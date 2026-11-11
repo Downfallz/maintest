@@ -50,6 +50,9 @@ internal sealed class PlayedTable : IDisposable
 
     public int EventStreamVersion { get; init; } = MatchTrace.CurrentEventStreamVersion;
 
+    /// <summary>The hash of the content the table is played on (ADR 0163), which its record keeps; none for a table built without one.</summary>
+    public string? Content { get; init; }
+
     public ITableSession Session { get; }
 
     public TableApi Api { get; }

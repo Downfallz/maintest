@@ -18,7 +18,7 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
 {
     /// <summary>
     /// How long a question waits for its page before a notice goes. A page in view is told of the question by its
-    /// stream (ADR 0119), reads it at once and acknowledges it once drawn (ADR 0163), so two seconds is a page that
+    /// stream (ADR 0119), reads it at once and acknowledges it once drawn (ADR 0164), so two seconds is a page that
     /// is not there, not one that is slow.
     /// </summary>
     public static readonly TimeSpan Grace = TimeSpan.FromSeconds(2);

@@ -70,7 +70,7 @@ export function bellLabel(count) {
 
 /**
  * The bell and its window. It reads the player's games and friends itself when the host says the player's lists
- * changed (ADR 0163), unless the page that mounts it handed it the same lists (`feed`, `feedFriends`) within `fresh`
+ * changed (ADR 0164), unless the page that mounts it handed it the same lists (`feed`, `feedFriends`) within `fresh`
  * milliseconds. Every action is the one the lobby or the Friends panel already offers, sent to the same route.
  */
 export function mountInbox(doc, { storage = null, request = accountRequest, win = globalThis, changes = onLobbyChange, reopen = signedInChanged, fresh: freshFor = 5000, onChange = () => {} } = {}) {

@@ -33,7 +33,7 @@ export function livePresentation(view, packages = new Map(), history = null) {
 }
 
 // One selected seat, one read at a time. The seat is read when the host says it changed and on nothing else
-// (ADR 0163): no clock. A notification during a read owes one more read. Every continuation belongs to its
+// (ADR 0164): no clock. A notification during a read owes one more read. Every continuation belongs to its
 // connection, so a late response cannot repaint a different seat or a closed page.
 export function createLiveConnection({ onState, onView, schedule = setTimeout, cancel = clearTimeout }) {
   let active = null;
@@ -53,11 +53,14 @@ export function createLiveConnection({ onState, onView, schedule = setTimeout, c
       busy: false, owed: false, over: false, since: 0, catalogue: catalogue ?? null, retry: 1000, failed: 0, streams: 0, revision: 0, writing: false };
     active = connection;
     const current = () => active === connection;
+    // 401 asks for the seat's account, 403 is a seat this page no longer holds, and 410 a match that ended void
+    // because the game was updated under it (ADR 0163): each clears the board and stops for good.
     function refused(answer) {
-      if (answer.status !== 401 && answer.status !== 403) return false;
+      const states = { 401: 'signin', 403: 'revoked', 410: 'ended' };
+      if (!(answer.status in states)) return false;
       stop();
       onView(null, null);
-      onState(answer.status === 401 ? 'signin' : 'revoked');
+      onState(states[answer.status]);
       return true;
     }
     async function refresh() {

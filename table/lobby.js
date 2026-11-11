@@ -696,7 +696,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     finally { busy = false; showOpponent(); }
   });
   void refresh();
-  // No clock reads the lists (ADR 0163): the host says when they changed, and the stream's `ready` -- the page
+  // No clock reads the lists (ADR 0164): the host says when they changed, and the stream's `ready` -- the page
   // opened, back in view, back online -- reads them too. A change heard while the player is in the create dialog
   // or acting waits for them to finish rather than redrawing under them.
   let owed = false;

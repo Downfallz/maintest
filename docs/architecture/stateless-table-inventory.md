@@ -18,7 +18,7 @@ The work is smaller on the engine's side than "a match lives in memory" suggests
 | A table rebuilt from seed and journal | `TableComposer.ResumeAsync`, `TableLoader` | Done, at the first request that names it |
 | An append-only blob per file | `Infrastructure/Learning/BlobArtifactWriter` | Done. No position condition yet |
 | A change notice with a version | `TableChanges`, `GET /api/seat/{seat}/events` | Done. Counted in memory |
-| The lobby's change notice (ADR 0163) | `LobbyChanges`, `GET /api/lobby/events` | Done. Counted in memory, one replica's |
+| The lobby's change notice (ADR 0164) | `LobbyChanges`, `GET /api/lobby/events` | Done. Counted in memory, one replica's |
 | Accounts, friends, devices, preferences, results | Blob, beside the recordings | Done. Already outside the process |
 | The session-signing key | `store.SessionKeyAsync` | Done. Read from the store, so replicas agree |
 
@@ -328,11 +328,31 @@ which adds the compilation of the engine itself.
    in memory, which is the one replica's. With several, a practice table needs a sticky route or a journal in
    the store; it is one person against a script, and a sticky route is the cheaper of the two.
 7. **Unrecorded tables** (`--no-record`). Answered: `InMemoryDecisionJournal`, conditional like the others.
-8. **Content changing under an open table.** A divergent replay is refused once, when the table is picked up,
-   and marked; a host on that basis no longer lists it, and it stays the operator's. Since 4.3b3 every cold load replays,
-   so a deploy that moves content strands open tables at the next tap. Options: pin
-   the content hash in the table record and refuse with a clear message, or keep serving the old content
-   beside the new for the tables that began on it.
+8. **Content changing under an open table.** Decided in [ADR 0163](../adr/0163-keep-a-table-on-the-content-it-began-on-and-void-what-no-longer-replays.md),
+   in two slices.
+   - Since 4.3b3 every cold load replays, so a deploy that moves content or rules refused open tables at the next
+     tap. A refused table stayed open for the operator, and its players' links went dead.
+   - **8a, done.** A pick-up whose journal no longer replays (a line that does not answer, boards that differ from
+     the checkpoint) ends the table as a **void match** (`PlaytestRun.MarkVoidAsync`):
+     - its record is closed and marked `Void`, with the basis it was refused under, and the table leaves the index
+       and its codes;
+     - no result is kept for the ladder;
+     - each seat's account is told, once, by the process whose claim on closing stands (6c);
+     - a seat's key is answered `410 Gone` with the reason (`TableRegistry.VoidSeatAsync`), and the battle view
+       says "This match was ended" (`ended`).
+
+     A record refused and left open before this is voided at its next pick-up on another basis.
+   - **8b, done.** Each table keeps the content and the rule set it began on, and is replayed on them, so only an
+     engine change can still void a match.
+     - The record names the content's hash (`Content`) and the rule set (`Rules`, `RecordedRules`).
+     - The schema is kept once per hash in a `content` store beside the recordings (`ArtifactStores.OpenContentAsync`),
+       written where there is none when a table opens.
+     - A table picked up on other content is replayed on services built for its kept schema
+       (`TableContent`, through `CliHost.Build`, as the studio builds one per schema). This host's presentation
+       sits beside the kept schema, so the same ids are drawn the same way.
+     - A kept schema that is missing, or that this engine cannot read, leaves the table on the host's content.
+       That is how a table opened before 8b is replayed, and it is voided if it no longer fits.
+     - A store that does not answer makes the table unavailable for a moment, never void.
 9. **The event stream across replicas.** Answered in 6a with the second step below: a process watches where the
    journal ends, about once a second, for the tables it holds. A replica holding a stream has to learn of a line
    another replica wrote. In this order, each step taken only when the one before it stops being enough:
@@ -340,13 +360,13 @@ which adds the compilation of the engine itself.
      agents to a worker (phase 5), not a second replica.
    - Each replica watches where the journal ends, about once a second, for every table it holds a stream
      for. Its own streams are told at once, in memory; a line written by another replica is seen within the
-     second. One metadata read a second for a table with a page open, and no new resource. Since ADR 0163 the
+     second. One metadata read a second for a table with a page open, and no new resource. Since ADR 0164 the
      page has no poll: a missed notice is covered by the `ready` of every stream that opens and by a stream
      silent past two keep-alives being opened again.
    - A service that holds the connections (Azure Web PubSub or SignalR Service), if a second is too slow. It
      would also let a page stay connected while no replica is awake, which a stream held by a replica
      prevents today. Its free tier is small and its paid tier is not; the prices have to be checked before
-     this is chosen. ADR 0163 sketches it for the seat and lobby streams alike, and leaves it to its own ADR.
+     this is chosen. ADR 0164 sketches it for the seat and lobby streams alike, and leaves it to its own ADR.
 
    Set aside: session affinity (the two players of a table can land on two replicas), Redis (it does not
    scale to zero), Event Grid (it pushes to an address, and replicas behind the ingress have none of their

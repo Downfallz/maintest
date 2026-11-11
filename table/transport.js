@@ -51,7 +51,7 @@ export function httpTransport(seat, token, fetchImpl = globalThis.fetch.bind(glo
 
     // The table's changes as the host streams them (ADR 0119): `onChange` is called for each, and the call
     // returns when the host closes the stream, the signal aborts it, or it goes silent past the host's keep-alive
-    // (ADR 0163), which the page takes for a dropped connection and opens again. A fetch rather than an EventSource,
+    // (ADR 0164), which the page takes for a dropped connection and opens again. A fetch rather than an EventSource,
     // which cannot carry the seat token in a header, and a token in the address is one anybody behind the
     // player can read.
     events: (onChange, signal) => streamEvents(fetchImpl, `/api/seat/${seat}/events`, { 'X-Seat-Token': token }, onChange, signal),

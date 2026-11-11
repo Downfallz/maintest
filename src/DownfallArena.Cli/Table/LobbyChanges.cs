@@ -6,7 +6,7 @@ using DownfallArena.SharedKernel.Identifiers;
 namespace DownfallArena.Cli.Table;
 
 /// <summary>
-/// That something a lobby shows changed, for the pages waiting to hear it (ADR 0163): the public lists of games and
+/// That something a lobby shows changed, for the pages waiting to hear it (ADR 0164): the public lists of games and
 /// open seats, for everybody, and one account's own games, invitations and friends, for that account. Like a
 /// table's stream (ADR 0119) it says only to read again, never what changed; the lobby's routes still answer.
 /// </summary>

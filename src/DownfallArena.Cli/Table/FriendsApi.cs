@@ -21,7 +21,7 @@ internal sealed class FriendsApi(Friends friends, AccountApi accounts, AccountNo
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web);
 
     /// <summary>
-    /// What tells both players' lobbies their lists changed (ADR 0163), the silent ways out included: a page in view
+    /// What tells both players' lobbies their lists changed (ADR 0164), the silent ways out included: a page in view
     /// has no poll of its own left to find them.
     /// </summary>
     public LobbyChanges? Changes { get; set; }

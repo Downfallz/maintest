@@ -3,7 +3,7 @@ namespace DownfallArena.Cli.Table;
 /// <summary>
 /// That something about a table changed, for the pages waiting to hear it (ADR 0119): a question asked or
 /// answered, a seat reached or left, the match begun or over. It says nothing of what changed -- the seat
-/// route says that, one seat at a time -- only that a page should ask again now (ADR 0163: the page has no poll of its own to wait for).
+/// route says that, one seat at a time -- only that a page should ask again now (ADR 0164: the page has no poll of its own to wait for).
 /// </summary>
 internal sealed class TableChanges
 {
