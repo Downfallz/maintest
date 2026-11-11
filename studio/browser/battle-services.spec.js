@@ -5,9 +5,9 @@ test.beforeEach(returningBattlePlayer);
 const creature = (id, health) => ({ id, name: `Creature ${id}`, health, maxHealth: 30, energy: 2, totalDefense: 1,
   currentInitiative: 5, isAlive: health > 0, conditions: [], knownSpells: [], acquiredTiers: [] });
 async function mount(page, { over = true, recording = true, outcome = { winner: 'player1', reason: 'Elimination' }, both = false, account = null, permission = 'default', unsupported = false,
-  opponent = undefined, friends = [], rematch = { status: 201, json: { seats: [{ seat: 'player1', token: 'next' }] } } } = {}) {
+  opponent = undefined, friends = [], rematch = { status: 201, json: { seats: [{ seat: 'player1', token: 'next' }] } }, feed = [] } = {}) {
   const state = { status: 200, writes: [], reads: [], errors: [], view: { over, recording, outcome,
-    waitingFor: null, feed: [], feedNext: 0, board: { slot: 'Player1', roundNumber: 7, phase: 'Combat', subPhase: 'Activation',
+    waitingFor: null, feed, feedNext: feed.length, board: { slot: 'Player1', roundNumber: 7, phase: 'Combat', subPhase: 'Activation',
       allies: [creature(1, 17), creature(2, 4), creature(3, 0)], enemies: [creature(4, 0), creature(5, 0), creature(6, 0)], timeline: [] } } };
   page.on('pageerror', error => state.errors.push(error.message));
   await page.addInitScript(({ both, permission, unsupported }) => {
@@ -72,6 +72,37 @@ for (const [winner, reason, title] of [['player1', 'Elimination', 'Victory'], ['
     expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
   });
 }
+// A match's public feed as the host serves it: three casts, one fully blocked, and an upkeep whose bleed finishes a creature.
+const hit = (sequence, actor, target, amount, { blocked = 0, dies = false, bleed = false } = {}) => ({ sequence, round: 2, event: { kind: 'CombatActionResolved',
+  resolution: { action: { actor, spell: 'spell:strike:v1', targets: [target] }, fizzled: false, isCritical: amount > 8,
+    outcomes: [{ kind: 'DamageOutcome', target, amount, blocked, onCaster: false }, ...(bleed ? [{ kind: 'ConditionOutcome', target, effect: { kind: 'Bleed' } }] : [])] },
+  appliedOutcomes: amount ? [{ kind: 'DamageOutcome', target, amount, onCaster: false }] : [],
+  frame: { before: [creature(target, 30)], after: [creature(target, dies ? 0 : 10)], timeline: [], rollOffs: [] } } });
+const reported = [hit(1, 1, 4, 12, { dies: true }), hit(2, 2, 5, 0, { blocked: 3 }), hit(3, 1, 5, 9, { blocked: 1, bleed: true }), hit(4, 5, 3, 8, { dies: true }),
+  { sequence: 5, round: 3, event: { kind: 'OngoingEffectsApplied', regenerationTicks: [{ creature: 2, healed: 2, shares: [{ source: { caster: 2, spell: 'spell:mend:v1' }, amount: 2 }] }],
+    bleedTicks: [{ creature: 5, damage: 4, shares: [{ source: { caster: 1, spell: 'spell:strike:v1' }, amount: 4 }] }], energyRegenerationTicks: [] } },
+  hit(6, 2, 6, 14, { dies: true })];
+test('the result reports what each creature did, its creature of the match first', async ({ page }, info) => {
+  const h = await mount(page, { feed: reported }); await matchResult(page);
+  const report = page.locator('#match-report');
+  await expect(report).toBeVisible();
+  await expect(page.locator('#match-mvp')).toContainText('Creature 1'); await expect(page.locator('#match-mvp')).toContainText('25 damage · 2 KO');
+  const first = page.locator('.match-report-table[data-side="ally"] tr[data-creature="1"]');
+  await expect(first.locator('td').nth(0)).toContainText('25'); await expect(first.locator('td').nth(0)).toContainText('4 bleed');
+  await expect(first).toHaveAttribute('data-mvp', 'true');
+  // The Ghoul's own defense blocked one hit whole and a point of the next; the second creature regenerated itself.
+  const struck = page.locator('.match-report-table[data-side="enemy"] tr[data-creature="5"]');
+  await expect(struck.locator('td').nth(3)).toHaveText('4'); await expect(struck.locator('td').nth(2)).toHaveText('13');
+  // Finished at the upkeep by the first creature's bleed, which the first creature is credited with.
+  await expect(first.locator('td').nth(4)).toHaveText('2');
+  await expect(page.locator('.match-report-table[data-side="ally"] tr[data-creature="2"] td').nth(1)).toContainText('2 regen');
+  await expect(page.locator('.match-report-table[data-side="ally"] tr[data-creature="3"]')).toHaveAttribute('data-fallen', 'true');
+  await expect(page.locator('.match-report-table[data-side="ally"] tfoot td').nth(4)).toHaveText('3');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await fitsViewport(page, '#match-replay, #match-lobby');
+  await page.screenshot({ path: info.outputPath('battle-report.png') });
+  expect(h.errors).toEqual([]);
+});
 test('empty replay keeps an explicit message on the result and a legacy outcome stays unknown', async ({ page }) => {
   await mount(page, { outcome: null }); await matchResult(page); await expect(page.locator('#match-title')).toHaveText('Match complete');
   await page.locator('#match-replay').click(); await expect(page.locator('#match-replay-error')).toContainText('Nothing was recorded');

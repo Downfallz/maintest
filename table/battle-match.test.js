@@ -21,7 +21,8 @@ test('round review uses applied ticks and authoritative cleanup round ids', () =
   const notes = roundNotes(feed, board).join('\n'); assert.match(notes, /Round 1.*Ongoing damage −2/); assert.match(notes, /Round 1.*Defense ends/); assert.match(notes, /Round 1.*Aftermath complete/);
 });
 test('finished replay rereads the full seat and steps before and after actual frames', async () => {
-  const h = harness(); assert.equal(h.reads(), 0); await h.control.replay();
+  // The battle report has read the seat's whole feed once already; the replay reads it again for its frames.
+  const h = harness(); assert.equal(h.reads(), 1); await h.control.replay(); assert.equal(h.reads(), 2);
   assert.match(h.control.model().summary, /Upkeep/); assert.match(h.control.model().note, /Reference/);
   h.control.move(1); assert.match(h.control.model().summary, /Root mutation/);
   h.control.move(1); assert.equal(h.control.model().board.creatures[1].health, 20);
@@ -29,6 +30,17 @@ test('finished replay rereads the full seat and steps before and after actual fr
   h.control.move(1); assert.match(h.control.model().summary, /Cleanup/); assert.equal(h.control.model().board.creatures.length, 0);
   assert.match(h.control.model().note, /No battlefield/); h.control.move(-1); assert.equal(h.control.model().stage, 'after');
   h.control.jump(1); assert.equal(h.control.model().index, 0); h.control.closeReplay(); assert.equal(h.control.model().active, false);
+});
+test('a finished seat reads its whole feed once for the battle report, and a live one reads nothing', async () => {
+  const h = harness(); await new Promise(resolve => setImmediate(resolve));
+  const report = h.control.model().report;
+  assert.equal(report.sides[0].creatures[0].dealt, 20); assert.equal(report.sides[0].creatures[0].kills, 1); assert.equal(report.mvp, 1);
+  h.control.receive(finished, { packages: [] }); assert.equal(h.reads(), 1);
+  const live = harness({ ...finished, over: false }); assert.equal(live.reads(), 0); assert.equal(live.control.model().report, null);
+});
+test('a replay\'s view is its own whole feed, read for the report without asking the host again', async () => {
+  const h = harness({ ...finished, replay: true }); await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.reads(), 0); assert.equal(h.control.model().report.sides[1].creatures[0].taken, 22);
 });
 test('live seats cannot request a finished replay and finished seats cannot concede', async () => {
   const live = harness({ ...finished, over: false }); await live.control.replay(); assert.equal(live.reads(), 0);

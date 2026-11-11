@@ -4,6 +4,7 @@ import { playbackBoard } from './replay.js';
 import { livePresentation } from './battle-live.js';
 import { purchaseLog } from './battle-chronology.js';
 import { outcomeText, matchResultSummary } from './outcome.js';
+import { matchScoreboard } from './scoreboard.js';
 
 export function roundNotes(entries, board) {
   const rounds = [...new Set(entries.map(entry => entry.event?.roundId ?? entry.round))].sort((a, b) => a - b);
@@ -66,14 +67,30 @@ function replayBoard(action, actions, index, stage, latest, catalogue, purchases
 export function createBattleMatch({ connection, onChange }) {
   let latest = null, catalogue = null, seat = null, entries = [], actions = [], index = -1, stage = 'before';
   let generation = 0, busy = false, error = '', cached = null, conceded = false;
+  // The battle report of a finished match (scoreboard.js), read once off the seat's whole feed: a replay's view
+  // carries it already, a live seat asks for it the way the replay does.
+  let report = null, reporting = false;
   // The replay reads the seat's whole feed again; its reveals say when each creature bought what it shows.
   const purchases = purchaseLog();
   const emit = () => { cached = null; onChange(); };
-  function reset(nextSeat) { generation++; latest = null; catalogue = null; seat = nextSeat; entries = []; actions = []; index = -1; busy = false; error = ''; conceded = false; emit(); }
+  function reset(nextSeat) { generation++; latest = null; catalogue = null; seat = nextSeat; entries = []; actions = []; index = -1; busy = false; error = ''; conceded = false; report = null; reporting = false; emit(); }
   function receive(view, cards) {
     latest = view; catalogue = cards;
     if (!view) { reset(seat); return; }
     entries = retainRoundEvents(entries, view.feed, view.board?.roundNumber); emit();
+    if (view.over && !report && !reporting) void readReport(view);
+  }
+  async function readReport(view) {
+    const context = generation;
+    reporting = true;
+    try {
+      const answer = view.replay ? null : await connection.history();
+      const whole = view.replay ? view : answer?.ok ? answer.body : null;
+      if (context !== generation || !whole?.over) return;
+      report = matchScoreboard(whole.feed ?? [], whole.board ?? view.board, packagesOf(catalogue));
+      emit();
+    } catch { /* The result stands without its report; the next view that is over asks again. */ }
+    finally { if (context === generation) reporting = false; }
   }
   async function replay() {
     if (!latest?.over || busy) return;
@@ -137,7 +154,7 @@ export function createBattleMatch({ connection, onChange }) {
       note: replayNote(action, stage),
       previous: active && (index > 0 || (twoFrames && stage === 'after')),
       next: active && (index + 1 < actions.length || (twoFrames && stage === 'before')),
-      result: matchResultSummary(latest, seat), outcome: outcomeText(latest, seat), over: Boolean(latest?.over),
+      result: matchResultSummary(latest, seat), outcome: outcomeText(latest, seat), over: Boolean(latest?.over), report: latest?.over ? report : null,
       canConcede: canConcede(), busy, error,
       notes: roundNotes(entries, latest?.board) };
     return cached;
