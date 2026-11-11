@@ -393,11 +393,12 @@ internal sealed class PlaytestRun
     private long _revision;
 
     /// <summary>
-    /// Whether another process has written the table's record since this one last did (ADR 0162): its revision is
-    /// past the one this process wrote. Never while a write of this process's own is on its way, which would read as
-    /// one. A process holding the table lets it go then, and picks it up again as the record now says it is.
+    /// The table's record, when another process has written it since this one last did (ADR 0162): its revision is
+    /// past the one this process wrote. None otherwise, and never while a write of this process's own is on its way,
+    /// which would read as one. A process holding the table catches up with it, or lets it go and picks it up again
+    /// as the record now says it is.
     /// </summary>
-    public async Task<bool> RewrittenAsync(CancellationToken cancellationToken = default)
+    public async Task<TableRecord?> RewrittenAsync(CancellationToken cancellationToken = default)
     {
         Task pending;
         lock (_recordGate)
@@ -407,13 +408,15 @@ internal sealed class PlaytestRun
 
         if (!pending.IsCompleted)
         {
-            return false;
+            return null;
         }
 
         var read = await _reader.ReadTaggedAsync(TableRecord.File, cancellationToken);
         return read is not null && StoredSessions.RecordOf(read.Text) is { } stored
-            && pending.IsCompleted && pending == Volatile.Read(ref _recordWritten)
-            && stored.Revision > Interlocked.Read(ref _revision);
+            && pending == Volatile.Read(ref _recordWritten)
+            && stored.Revision > Interlocked.Read(ref _revision)
+            ? stored
+            : null;
     }
 
     /// <summary>

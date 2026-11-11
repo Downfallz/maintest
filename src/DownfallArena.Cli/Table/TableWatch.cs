@@ -5,7 +5,8 @@ namespace DownfallArena.Cli.Table;
 /// second, for every unfinished table somebody asked for lately, where its journal ends and its record's revision.
 /// A journal that moved -- a turn the worker took -- is read again, and its pages told (question 9). A record another
 /// process wrote -- an invitation the hourly job expired, a table it closed -- makes the host let the table go, and
-/// the next request picks it up again as the record says.
+/// the next request picks it up again as the record says; except a record that says the match finished, which no
+/// request could pick up again: that table is read to its end instead, so its players see the outcome.
 /// </summary>
 /// <remarks>
 /// Two reads a table a second, the journal's length and the record, for the tables asked for in the last ten
@@ -28,10 +29,20 @@ internal sealed class TableWatch(TableRegistry registry, TimeProvider clock)
         {
             try
             {
-                if (table.Run is { } run && await run.RewrittenAsync(cancellationToken))
+                if (table.Run is { } run && await run.RewrittenAsync(cancellationToken) is { } rewritten)
                 {
-                    Console.WriteLine($"  Session {table.Id} was written by another process: let go of, and picked up again at the next request.");
-                    registry.LetGo(table.Id);
+                    if (rewritten.Status == TableRecord.Finished)
+                    {
+                        // Finished elsewhere -- the worker took the last turn: the journal holds the end, and the
+                        // players read it here, where their seats are.
+                        await table.Session.CatchUpAsync(cancellationToken);
+                    }
+                    else
+                    {
+                        Console.WriteLine($"  Session {table.Id} was written by another process: let go of, and picked up again at the next request.");
+                        registry.LetGo(table.Id);
+                    }
+
                     changed++;
                 }
                 else if (await table.Session.CatchUpAsync(cancellationToken))

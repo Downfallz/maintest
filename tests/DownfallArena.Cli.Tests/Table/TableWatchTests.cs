@@ -67,8 +67,8 @@ public sealed class TableWatchTests : IDisposable
 
         await picked.RecordAsync(Cancel);
 
-        own.ShouldBeFalse();
-        (await table.Run.RewrittenAsync(Cancel)).ShouldBeTrue();
+        own.ShouldBeNull();
+        (await table.Run.RewrittenAsync(Cancel)).ShouldNotBeNull().Revision.ShouldBeGreaterThan(0);
     }
 
     [Fact]
@@ -89,6 +89,30 @@ public sealed class TableWatchTests : IDisposable
         var again = (await registry.ByIdAsync(table.Id, Cancel)).ShouldNotBeNull();
         again.ShouldNotBeSameAs(table);
         again.Seats[0].Token.ShouldBe(picked.Seats[0].Token);
+    }
+
+    [Fact]
+    public async Task A_table_another_process_finished_is_read_to_its_end_and_kept_for_its_players()
+    {
+        using var registry = _here.Registry();
+        var table = await RecordedAsync(registry, Randoms);
+        using var elsewhere = _there.Registry();
+        var picked = (IAgentTurnTaker)(await elsewhere.ByIdAsync(table.Id, Cancel)).ShouldNotBeNull().Session;
+        for (var turn = 0; turn < 2000 && await picked.TakeTurnAsync(Cancel) != AgentTurn.Done; turn++)
+        {
+        }
+
+        for (var waited = 0; waited < 300 && (await _here.Stored!.RecordAsync(table.Id, Cancel))?.Status != TableRecord.Finished; waited++)
+        {
+            await Task.Delay(20, Cancel);
+        }
+
+        var changed = await new TableWatch(registry, TimeProvider.System).WatchOnceAsync(Cancel);
+
+        changed.ShouldBe(1);
+        registry.Held(table.Id).ShouldBeSameAs(table, "a finished table could not be picked up again: its players' seats are here");
+        await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(10), Cancel);
+        table.IsOver.ShouldBeTrue();
     }
 
     [Fact]
