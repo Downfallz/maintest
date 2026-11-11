@@ -198,6 +198,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         {
             ("GET", [_]) => await SeatAsync(holder, Since(query), Shown(query)),
             ("GET", [_, "events"]) => Events(),
+            ("GET", [_, "negotiate"]) => await NegotiateAsync(),
             ("POST", [_, "decision"]) => await DecideAsync(holder, body),
             ("POST", [_, "concede"]) => await ConcedeAsync(holder),
             _ => StudioResponse.OfPlainText(404, $"No such route: {method} {path}"),
@@ -210,6 +211,30 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
     /// changes. It says what to ask, not what was asked: the seat route still answers one seat at a time. It
     /// ends when the browser goes, when the table is let go of, or once the match is over and said so.
     /// </summary>
+    /// <summary>
+    /// Where this seat's page connects to hear its table move through the relay (ADR 0165), when this host has one;
+    /// 404 otherwise, and the page reads <see cref="Events" /> instead. The address is the service's own, signed for
+    /// this table's group and nothing else, and good for a while.
+    /// </summary>
+    public Func<CancellationToken, Task<Uri>>? Negotiate { get; set; }
+
+    private async Task<StudioResponse> NegotiateAsync()
+    {
+        if (Negotiate is not { } negotiate)
+        {
+            return StudioResponse.OfPlainText(404, "This host relays nothing: read the seat's events.");
+        }
+
+        try
+        {
+            return StudioResponse.OfJson(new { url = (await negotiate(CancellationToken.None)).AbsoluteUri }, ArtifactJson.LineOptions);
+        }
+        catch (Exception failure) when (failure is Azure.RequestFailedException or HttpRequestException or Azure.Identity.AuthenticationFailedException)
+        {
+            return StudioResponse.OfPlainText(503, $"The relay could not be reached: {failure.Message}");
+        }
+    }
+
     private StudioResponse Events() =>
         StudioResponse.OfStream(
             "text/event-stream; charset=utf-8",

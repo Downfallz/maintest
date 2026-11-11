@@ -144,6 +144,14 @@ internal static class TableWorker
             composer.NameOf = async id => (await accounts.FindAsync(id, stopping))?.Username.Value;
         }
 
+        // The turns taken here move tables whose seats are served elsewhere: said through the relay when there is one,
+        // with the lobbies' lists they move (ADR 0165).
+        var relay = WebPubSubRelay.FromEnvironment();
+        composer.Relay = relay;
+        composer.Lobby = relay is null ? null : new LobbyChanges { Relay = relay };
+        Console.WriteLine(relay is null
+            ? "  Relay: none. The host looks at the tables for what this worker wrote."
+            : "  Relay: on. What this worker moves is said through Web PubSub, and what the host moves heard there.");
         Console.WriteLine(composer.Notices is null
             ? "  Notices: off. How a match ended reaches nobody's devices from here (--accounts and --push-keys)."
             : "  Notices: on. Each seat's account is told how a match ended when its last turn is taken here.");
@@ -156,7 +164,7 @@ internal static class TableWorker
             // What the host writes to the tables this worker holds -- a seat's tap, a closed table, a seat changing
             // hands -- is seen as the host sees the worker's (ADR 0162); and a finished table nobody is at any more is
             // let go of, as a host lets go of it, or a worker that never stops would hold every table it ever took.
-            var watching = new TableWatch(registry, clock).RunAsync(running.Token);
+            var watching = TableHost.WatchAsync(new TableWatch(registry, clock), relay, clock, running.Token);
             var letting = LetGoOfIdleAsync(registry, clock, running.Token);
             await working;
             await watching;

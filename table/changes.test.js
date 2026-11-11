@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { accountMoved, backoff, createLobbyChanges, keepWatching, streamEvents } from './changes.js';
+import { accountMoved, backoff, createLobbyChanges, keepWatching, socketOrStream, streamEvents } from './changes.js';
 
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const encode = text => new TextEncoder().encode(text);
@@ -116,7 +116,7 @@ function page() {
 
 test('the lobby has one stream however many parts of the page listen, and tells each of them', async () => {
   const doc = page(); let opened = 0; const body = openBody(); const heard = [];
-  const changes = createLobbyChanges({ doc, win: page(), fetchImpl: async () => { opened++; return { ok: true, status: 200, body }; }, ...clock() });
+  const changes = createLobbyChanges({ doc, win: page(), WebSocketImpl: null, fetchImpl: async () => { opened++; return { ok: true, status: 200, body }; }, ...clock() });
 
   changes.subscribe(event => heard.push(['bell', event.data]));
   changes.subscribe(event => heard.push(['friends', event.data]));
@@ -129,7 +129,7 @@ test('the lobby has one stream however many parts of the page listen, and tells 
 
 test('a hidden page holds no lobby stream, and opens one when it is in view again', async () => {
   const doc = page(); const signals = [];
-  const changes = createLobbyChanges({ doc, win: page(), fetchImpl: async (_, options) => { signals.push(options.signal); return { ok: true, status: 200, body: openBody() }; }, ...clock() });
+  const changes = createLobbyChanges({ doc, win: page(), WebSocketImpl: null, fetchImpl: async (_, options) => { signals.push(options.signal); return { ok: true, status: 200, body: openBody() }; }, ...clock() });
   changes.subscribe(() => {}); await tick();
 
   doc.hidden = true; doc.fire('visibilitychange'); await tick();
@@ -161,7 +161,7 @@ test('a read that failed is tried again, later each time, and the wait starts ov
 
 test('a sign-in opens the lobby stream again, so the host reads the new player from it', async () => {
   const doc = page(); const signals = [];
-  const changes = createLobbyChanges({ doc, win: page(), fetchImpl: async (_, options) => { signals.push(options.signal); return { ok: true, status: 200, body: openBody() }; }, ...clock() });
+  const changes = createLobbyChanges({ doc, win: page(), WebSocketImpl: null, fetchImpl: async (_, options) => { signals.push(options.signal); return { ok: true, status: 200, body: openBody() }; }, ...clock() });
   changes.subscribe(() => {}); await tick();
 
   changes.reopen(); await tick();
@@ -169,4 +169,65 @@ test('a sign-in opens the lobby stream again, so the host reads the new player f
   assert.equal(signals.length, 2);
   assert.equal(signals[0].aborted, true);
   assert.equal(signals[1].aborted, false);
+});
+
+// A WebSocket the test drives: what it was opened on, and the way to open it, say something, or close it.
+function sockets() {
+  const made = [];
+  class FakeSocket {
+    constructor(url) { this.url = url; this.closed = false; made.push(this); }
+    close() { if (!this.closed) { this.closed = true; this.onclose?.(); } }
+  }
+  return { made, FakeSocket };
+}
+const negotiated = url => async path => (path.endsWith('/negotiate')
+  ? { ok: true, status: 200, json: async () => ({ url }) }
+  : { ok: true, status: 200, body: openBody() });
+
+test('with a relay, the page hears through the address the host signed: ready once open, changed on each message', async () => {
+  const { made, FakeSocket } = sockets(); const heard = [];
+  const ending = socketOrStream(negotiated('wss://relay.example/a'), '/api/seat/player1', { 'X-Seat-Token': 'cafe' }, event => heard.push(event), new AbortController().signal, { WebSocketImpl: FakeSocket });
+  await tick();
+  made[0].onopen(); made[0].onmessage({ data: 'changed' }); made[0].close();
+
+  assert.equal(made[0].url, 'wss://relay.example/a');
+  assert.deepEqual(heard, [{ event: 'ready', data: '' }, { event: 'changed', data: 'changed' }]);
+  assert.deepEqual(await ending, { status: 200, ok: true, socket: true });
+});
+
+test('a host without a relay is read through its own stream', async () => {
+  const asked = [];
+  const fetchImpl = async path => { asked.push(path); return path.endsWith('/negotiate') ? { ok: false, status: 404 } : { ok: true, status: 200, body: { getReader: () => ({ read: async () => ({ done: true }) }) } }; };
+  await socketOrStream(fetchImpl, '/api/lobby-a', {}, () => {}, new AbortController().signal, { WebSocketImpl: sockets().FakeSocket });
+
+  assert.deepEqual(asked, ['/api/lobby-a/negotiate', '/api/lobby-a/events']);
+});
+
+test('a relay that refuses the connection before it opens sends the page to the host\'s stream, and not back again', async () => {
+  const { made, FakeSocket } = sockets(); const asked = [];
+  const fetchImpl = async path => { asked.push(path); return path.endsWith('/negotiate') ? { ok: true, status: 200, json: async () => ({ url: 'wss://full' }) } : { ok: true, status: 200, body: { getReader: () => ({ read: async () => ({ done: true }) }) } }; };
+  const first = socketOrStream(fetchImpl, '/api/lobby-b', {}, () => {}, new AbortController().signal, { WebSocketImpl: FakeSocket });
+  await tick(); made[0].close(); await first;
+  await socketOrStream(fetchImpl, '/api/lobby-b', {}, () => {}, new AbortController().signal, { WebSocketImpl: FakeSocket });
+
+  assert.deepEqual(asked, ['/api/lobby-b/negotiate', '/api/lobby-b/events', '/api/lobby-b/events']);
+});
+
+test('a seat the host no longer knows is refused, with no connection opened', async () => {
+  const { made, FakeSocket } = sockets();
+  const answer = await socketOrStream(async () => ({ ok: false, status: 403 }), '/api/seat/player2', {}, () => {}, new AbortController().signal, { WebSocketImpl: FakeSocket });
+
+  assert.deepEqual(answer, { status: 403, ok: false });
+  assert.equal(made.length, 0);
+});
+
+test('a relay connection the page lets go of is closed, and the abort is thrown as fetch throws it', async () => {
+  const { made, FakeSocket } = sockets(); const controller = new AbortController();
+  const ending = socketOrStream(negotiated('wss://relay.example/c'), '/api/seat/player1', {}, () => {}, controller.signal, { WebSocketImpl: FakeSocket });
+  await tick(); made[0].onopen();
+
+  controller.abort();
+
+  await assert.rejects(ending, error => error.name === 'AbortError');
+  assert.equal(made[0].closed, true);
 });

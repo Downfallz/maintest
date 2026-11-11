@@ -78,21 +78,34 @@ internal sealed class PlayedTable : IDisposable
     /// the tokens and codes its players hold, and the index of the tables after it (ADR 0161). A table that
     /// records nothing is still kept in the index, which is how its host finds and counts it.
     /// </summary>
-    public Task RecordAsync(CancellationToken cancellationToken = default)
+    public async Task RecordAsync(CancellationToken cancellationToken = default)
     {
         if (Request is not { } request)
         {
-            return Task.CompletedTask;
+            return;
         }
 
-        return Run is { } run ? run.RecordAsync(TableRecord.Of(this, request), cancellationToken) : IndexedAsync(TableRecord.Of(this, request));
+        await (Run is { } run ? run.RecordAsync(TableRecord.Of(this, request), cancellationToken) : IndexedAsync(TableRecord.Of(this, request)));
+        Recorded?.Invoke();
     }
+
+    /// <summary>
+    /// Raised once a write of the record has landed: what another process reads to see a seat reached, given or kept,
+    /// so what tells it to look (ADR 0165) is said after the write, never before it, when the look would find nothing.
+    /// </summary>
+    public event Action? Recorded;
 
     /// <summary>
     /// Marks how the table ended -- finished, or closed without finishing -- in its record, or, for a table that
     /// records nothing, in the index alone. A write that fails is a line on the console.
     /// </summary>
-    public Task MarkAsync(string status, CancellationToken cancellationToken = default)
+    public async Task MarkAsync(string status, CancellationToken cancellationToken = default)
+    {
+        await MarkedAsync(status, cancellationToken);
+        Recorded?.Invoke();
+    }
+
+    private Task MarkedAsync(string status, CancellationToken cancellationToken)
     {
         if (Run is { } run)
         {

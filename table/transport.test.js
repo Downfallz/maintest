@@ -209,13 +209,15 @@ test('the events call reads the stream under the seat token and tells of each ch
   const calls = [];
   const chunks = ['event: ready\ndata: 1\n\n', ': keep-alive\n\nevent: changed\nda', 'ta: 2\n\n'].map(text => new TextEncoder().encode(text));
   const body = { getReader: () => ({ read: async () => (chunks.length ? { value: chunks.shift(), done: false } : { value: undefined, done: true }) }) };
-  const transport = httpTransport('player1', 'cafe', async (path, options) => { calls.push({ path, options }); return { status: 200, ok: true, body }; });
+  const transport = httpTransport('player1', 'cafe', async (path, options) => { calls.push({ path, options }); return path.endsWith('/negotiate') ? { status: 404, ok: false } : { status: 200, ok: true, body }; });
   const heard = [];
 
   const answer = await transport.events(event => heard.push(event), new AbortController().signal);
 
-  assert.equal(calls[0].path, '/api/seat/player1/events');
-  assert.equal(calls[0].options.headers['X-Seat-Token'], 'cafe');
+  // A host without a relay (ADR 0165) is asked first, and read through its own stream.
+  assert.equal(calls[0].path, '/api/seat/player1/negotiate');
+  assert.equal(calls[1].path, '/api/seat/player1/events');
+  assert.equal(calls[1].options.headers['X-Seat-Token'], 'cafe');
   assert.deepEqual(heard, [{ event: 'ready', data: '1' }, { event: 'changed', data: '2' }]);
   assert.equal(answer.ok, true);
 });

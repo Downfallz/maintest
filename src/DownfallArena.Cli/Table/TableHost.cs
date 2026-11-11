@@ -149,9 +149,17 @@ internal static class TableHost
         // How a match ended, to each seat's account (stage 4), named as the cards name them.
         composer.Notices = accounts?.Notices;
         // What the lobbies in view read on, instead of reading on a clock (ADR 0164).
-        var lobbyChanges = new LobbyChanges();
+        // With a relay (ADR 0165), what changed is also said to every page and process through it, whichever replica
+        // they reach, and pages connect to it rather than to this process's streams.
+        var relay = WebPubSubRelay.FromEnvironment();
+        Console.WriteLine(relay is null
+            ? $"  Relay: none. Pages read this process's own streams, and it looks at the tables it holds every second for what other processes wrote ({WebPubSubRelay.Environment} names a Web PubSub endpoint)."
+            : "  Relay: on. Pages and processes hear what moved through Web PubSub, and nothing is looked at on a clock.");
+        var lobbyChanges = new LobbyChanges { Relay = relay };
         composer.Lobby = lobbyChanges;
+        composer.Relay = relay;
         admin.Lobby.Changes = lobbyChanges;
+        admin.Lobby.Relay = relay;
         friends?.Changes = lobbyChanges;
         composer.NameOf = accounts is null ? null : async id => (await accounts.AccountAsync(id))?.Username.Value;
         // The ladder (ADR 0124), read from the results the composer keeps; bots are named as the lobby names them.
@@ -213,8 +221,9 @@ internal static class TableHost
                 : await StartWorkersAsync(channels, turns, registry, clock, stopping.Token);
 
             // What other processes write to the tables this host holds -- the worker's turns, the hourly job's
-            // expiries -- is seen within a second (ADR 0162). A host that records nothing shares its tables with nobody.
-            var watching = stored is null ? Task.CompletedTask : new TableWatch(registry, clock).RunAsync(stopping.Token);
+            // expiries -- is heard through the relay when there is one, and looked for every second when there is not
+            // (ADR 0162, 0165). A host that records nothing shares its tables with nobody.
+            var watching = stored is null ? Task.CompletedTask : WatchAsync(new TableWatch(registry, clock), relay, clock, stopping.Token);
             if (serving.IsFaulted)
             {
                 await serving;
@@ -433,4 +442,9 @@ internal static class TableHost
         var verifier = keys is null ? null : new GoogleIdTokenVerifier(googleClientId!, keys, clock);
         return (new AccountApi(new AccountRegistry(store, clock), sessions, options.Accounts, verifier, googleClientId), store);
     }
+
+    /// <summary>What another process wrote to the tables held, heard through the relay or looked for every second.</summary>
+    internal static Task WatchAsync(TableWatch watch, IChangeRelay? relay, TimeProvider clock, CancellationToken stopping) =>
+        relay is null ? watch.RunAsync(stopping) : new RelayListener(relay, watch, clock).RunAsync(stopping);
+
 }

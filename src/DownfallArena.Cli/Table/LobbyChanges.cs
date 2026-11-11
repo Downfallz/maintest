@@ -33,8 +33,18 @@ internal sealed class LobbyChanges
     /// <summary>How often the stream says it is still there, as a table's does (<see cref="TableApi.KeepAlive" />).</summary>
     public TimeSpan KeepAlive { get; init; } = TimeSpan.FromSeconds(20);
 
+    /// <summary>
+    /// Where the same is said to every process's pages (ADR 0165), beside this process's own stream: none where no
+    /// relay is configured.
+    /// </summary>
+    public IChangeRelay? Relay { get; init; }
+
     /// <summary>The public lists changed: a table was opened, closed or let go of.</summary>
-    public void Everyone() => _everyone.Bump();
+    public void Everyone()
+    {
+        _everyone.Bump();
+        Relay?.Lobby();
+    }
 
     /// <summary>One account's own lists changed: a friend's request, an invitation, a result kept.</summary>
     public void Account(AccountId? account)
@@ -42,6 +52,7 @@ internal sealed class LobbyChanges
         if (account is { } id)
         {
             Of(id).Bump();
+            Relay?.Account(id);
         }
     }
 
@@ -81,10 +92,10 @@ internal sealed class LobbyChanges
     // has as much to read again as the one invited now.
     private void Told(Shape? previous, Shape next)
     {
-        _everyone.Bump();
+        Everyone();
         foreach (var account in (previous?.Accounts ?? []).Concat(next.Accounts).Distinct())
         {
-            Of(account).Bump();
+            Account(account);
         }
     }
 

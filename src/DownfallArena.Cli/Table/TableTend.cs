@@ -43,9 +43,20 @@ internal static class TableTend
             var friends = options.Accounts == AccountsMode.Off
                 ? null
                 : new Friends(await ArtifactStores.OpenFriendsAsync(target), await ArtifactStores.OpenAccountsAsync(target), clock);
-            var lobby = new LobbyApi(registry, composer, clock) { Friends = friends };
+            // What the pass closes and lets go of is said to the pages and the API through the relay, when there is one
+            // (ADR 0165), and the job waits for it to have gone before it exits.
+            var relay = WebPubSubRelay.FromEnvironment();
+            composer.Relay = relay;
+            composer.Lobby = relay is null ? null : new LobbyChanges { Relay = relay };
+            var lobby = new LobbyApi(registry, composer, clock) { Friends = friends, Changes = composer.Lobby };
 
             var tended = await TendAsync(registry, lobby, clock.GetUtcNow());
+            if (relay is not null)
+            {
+                Announce(relay, tended);
+                await Task.WhenAny(relay.SentAsync(), Task.Delay(TimeSpan.FromSeconds(10), clock));
+            }
+
             Console.WriteLine($"Tended '{target}': {tended.Swept.Count} table{(tended.Swept.Count == 1 ? string.Empty : "s")} that never began closed, {tended.Expired} invitation{(tended.Expired == 1 ? string.Empty : "s")} that ran out let go of.");
             foreach (var id in tended.Swept)
             {
@@ -63,6 +74,26 @@ internal static class TableTend
     }
 
     /// <summary>One pass: the sweep, then the invitations that ran out.</summary>
+    /// <summary>
+    /// The tables the sweep closed, said through the relay (ADR 0165): it closes them through their records without
+    /// holding them, so no change of theirs is raised here, and a process that holds one, or a lobby that lists it,
+    /// would otherwise go on showing it open.
+    /// </summary>
+    internal static void Announce(IChangeRelay relay, Tended tended)
+    {
+        ArgumentNullException.ThrowIfNull(relay);
+        ArgumentNullException.ThrowIfNull(tended);
+        foreach (var id in tended.Swept)
+        {
+            relay.Table(id);
+        }
+
+        if (tended.Swept.Count > 0)
+        {
+            relay.Lobby();
+        }
+    }
+
     internal static async Task<Tended> TendAsync(TableRegistry registry, LobbyApi lobby, DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(registry);

@@ -46,6 +46,9 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     /// <summary>What <c>GET /api/lobby/events</c> streams (ADR 0164); none on a host that streams no lobby.</summary>
     public LobbyChanges? Changes { get; set; }
 
+    /// <summary>Where a lobby is sent to hear the same through the relay (ADR 0165); none, and it reads the stream.</summary>
+    public IChangeRelay? Relay { get; set; }
+
     /// <summary>
     /// How many games an account may have in progress against bots, and how many against players (ADR 0147). A sixth
     /// is refused until one ends, so a player's lobby stays a list they can read.
@@ -90,6 +93,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             {
                 ("GET", Prefix) => await ListAsync(),
                 ("GET", Prefix + "/events") => Events(account),
+                ("GET", Prefix + "/negotiate") => await NegotiateAsync(account),
                 // Signed out where players sign in, a saved seat is not "nothing": it is a seat that needs its player
                 // signed in, and a page told nothing would forget it instead of sending them to sign in.
                 ("POST", Prefix + "/resume") => SignInRequired(account) ?? await ResumeAsync(body, account),
@@ -791,6 +795,27 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 "text/event-stream; charset=utf-8",
                 (stream, cancellationToken) => changes.StreamAsync(stream, account, cancellationToken),
                 [new KeyValuePair<string, string>("Cache-Control", "no-cache"), new KeyValuePair<string, string>("X-Accel-Buffering", "no")]);
+
+    /// <summary>
+    /// Where the page connects to hear the lobby move through the relay (ADR 0165): the public lists for anybody, and
+    /// the signed-in player's own lists as that user. 404 without a relay, and the page reads the stream instead.
+    /// </summary>
+    private async Task<StudioResponse> NegotiateAsync(AccountId? account)
+    {
+        if (Relay is not { } relay)
+        {
+            return Problem(404, "This host relays nothing: read the lobby's events.");
+        }
+
+        try
+        {
+            return Json(new { url = (await relay.LobbyAsync(account)).AbsoluteUri });
+        }
+        catch (Exception failure) when (failure is Azure.RequestFailedException or HttpRequestException or Azure.Identity.AuthenticationFailedException)
+        {
+            return Problem(503, $"The relay could not be reached: {failure.Message}");
+        }
+    }
 
     private async Task NoticeAsync(AccountId to, string title, string body, string url, string tag, string topic = "invitation")
     {

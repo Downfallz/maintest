@@ -27,36 +27,79 @@ internal sealed class TableWatch(TableRegistry registry, TimeProvider clock)
         var changed = 0;
         foreach (var table in registry.HeldTables().Where(table => !table.IsOver && now - table.Touched < WatchedFor))
         {
-            try
+            if (await LookAsync(table, cancellationToken) == true)
             {
-                if (table.Run is { } run && await run.RewrittenAsync(cancellationToken) is { } rewritten)
-                {
-                    if (rewritten.Status == TableRecord.Finished)
-                    {
-                        // Finished elsewhere -- the worker took the last turn: the journal holds the end, and the
-                        // players read it here, where their seats are.
-                        await table.Session.CatchUpAsync(cancellationToken);
-                    }
-                    else
-                    {
-                        Console.WriteLine($"  Session {table.Id} was written by another process: let go of, and picked up again at the next request.");
-                        registry.LetGo(table.Id);
-                    }
-
-                    changed++;
-                }
-                else if (await table.Session.CatchUpAsync(cancellationToken))
-                {
-                    changed++;
-                }
-            }
-            catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is ObjectDisposedException)
-            {
-                // The store is out for a moment, or the table was let go of under the look: the next look tries.
+                changed++;
             }
         }
 
         return changed;
+    }
+
+    /// <summary>
+    /// One look at every table held, as a relay's connection opens (ADR 0165), that fails when any look could not be
+    /// made: nothing comes to look again on a clock, so the store being out has to be said, and the look made again.
+    /// </summary>
+    public async Task ReconcileAsync(CancellationToken cancellationToken = default)
+    {
+        var now = clock.GetUtcNow();
+        var failed = 0;
+        foreach (var table in registry.HeldTables().Where(table => !table.IsOver && now - table.Touched < WatchedFor))
+        {
+            if (await LookAsync(table, cancellationToken) is null)
+            {
+                failed++;
+            }
+        }
+
+        if (failed > 0)
+        {
+            throw new IOException($"{failed} table{(failed == 1 ? string.Empty : "s")} could not be looked at.");
+        }
+    }
+
+    /// <summary>
+    /// One look at one table, the one another process said it moved (ADR 0165): whether this host holds it unfinished,
+    /// and then as <see cref="WatchOnceAsync" /> looks at each. A look that could not be made fails, so that what
+    /// heard the move can have it looked at again.
+    /// </summary>
+    public async Task MovedAsync(string table, CancellationToken cancellationToken = default)
+    {
+        if (registry.Held(table) is { IsOver: false } held && await LookAsync(held, cancellationToken) is null)
+        {
+            throw new IOException($"Session {table} could not be looked at.");
+        }
+    }
+
+    // Whether the table moved or was let go of; null when the look could not be made.
+    private async Task<bool?> LookAsync(PlayedTable table, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (table.Run is { } run && await run.RewrittenAsync(cancellationToken) is { } rewritten)
+            {
+                if (rewritten.Status == TableRecord.Finished)
+                {
+                    // Finished elsewhere -- the worker took the last turn: the journal holds the end, and the
+                    // players read it here, where their seats are.
+                    await table.Session.CatchUpAsync(cancellationToken);
+                }
+                else
+                {
+                    Console.WriteLine($"  Session {table.Id} was written by another process: let go of, and picked up again at the next request.");
+                    registry.LetGo(table.Id);
+                }
+
+                return true;
+            }
+
+            return await table.Session.CatchUpAsync(cancellationToken);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is ObjectDisposedException)
+        {
+            // The store is out for a moment, or the table was let go of under the look: the next look tries.
+            return failure is ObjectDisposedException ? false : null;
+        }
     }
 
     /// <summary>Looks every <see cref="Every" /> until the host stops.</summary>

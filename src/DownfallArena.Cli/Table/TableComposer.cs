@@ -109,6 +109,12 @@ internal sealed class TableComposer
     /// </summary>
     public LobbyChanges? Lobby { get; set; }
 
+    /// <summary>
+    /// Where this process says a table moved, for its seats' pages and the other processes (ADR 0165), and where a
+    /// seat's page is sent to hear it; none where no relay is configured, and the pages read the host's own stream.
+    /// </summary>
+    public IChangeRelay? Relay { get; set; }
+
     /// <summary>The name an account chose, for the notice that names the opponent; "A player" for one that is gone.</summary>
     public Func<AccountId, Task<string?>>? NameOf { get; set; }
 
@@ -450,6 +456,16 @@ internal sealed class TableComposer
             };
             Push?.Watch(table);
             Lobby?.Watch(table);
+            if (Relay is { } relay)
+            {
+                var named = table.Id;
+                table.Api.Changes.Bumped += () => relay.Table(named);
+
+                // A change written to the record -- a seat reached, given or kept -- is said again once the write has
+                // landed: the other processes look at the record, and a look before it lands finds nothing.
+                table.Recorded += () => relay.Table(named);
+                api.Negotiate = cancellationToken => relay.SeatAsync(named, cancellationToken);
+            }
 
             // Closed the moment the match has an outcome rather than when the host stops. The host keeps
             // serving so two people can read the end screen and write a comment, and a session page opened

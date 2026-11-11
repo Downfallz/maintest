@@ -24,6 +24,7 @@ The work is smaller on the engine's side than "a match lives in memory" suggests
 | An append-only blob per file | `Infrastructure/Learning/BlobArtifactWriter` | Done. No position condition yet |
 | A change notice with a version | `TableChanges`, `GET /api/seat/{seat}/events` | Done. Counted in memory |
 | The lobby's change notice (ADR 0164) | `LobbyChanges`, `GET /api/lobby/events` | Done. Counted in memory, one replica's |
+| What moved, across processes (ADR 0165) | `IChangeRelay`, `WebPubSubRelay`, `RelayListener`, `GET /api/seat/{seat}/negotiate`, `GET /api/lobby/negotiate` | Done, opted into. Held by Web PubSub; without it, the rows above |
 | Accounts, friends, devices, preferences, results | Blob, beside the recordings | Done. Already outside the process |
 | The session-signing key | `store.SessionKeyAsync` | Done. Read from the store, so replicas agree |
 
@@ -366,7 +367,8 @@ which adds the compilation of the engine itself.
        That is how a table opened before 8b is replayed, and it is voided if it no longer fits.
      - A store that does not answer makes the table unavailable for a moment, never void.
 9. **The event stream across replicas.** Answered in 6a with the second step below: a process watches where the
-   journal ends, about once a second, for the tables it holds. A replica holding a stream has to learn of a line
+   journal ends, about once a second, for the tables it holds. ADR 0165 takes the third step, opted into: with the
+   relay, pages and processes hear what moved through Web PubSub, and nothing is looked at on a clock. A replica holding a stream has to learn of a line
    another replica wrote. In this order, each step taken only when the one before it stops being enough:
    - One API replica. The problem does not exist, and what takes load off the API is moving the Player
      agents to a worker (phase 5), not a second replica.
@@ -375,7 +377,7 @@ which adds the compilation of the engine itself.
      second. One metadata read a second for a table with a page open, and no new resource. Since ADR 0164 the
      page has no poll: a missed notice is covered by the `ready` of every stream that opens and by a stream
      silent past two keep-alives being opened again.
-   - A service that holds the connections (Azure Web PubSub or SignalR Service), if a second is too slow. It
+   - A service that holds the connections (Azure Web PubSub, ADR 0165), if a second is too slow. It
      would also let a page stay connected while no replica is awake, which a stream held by a replica
      prevents today. Its free tier is small and its paid tier is not; the prices have to be checked before
      this is chosen. ADR 0164 sketches it for the seat and lobby streams alike, and leaves it to its own ADR.
