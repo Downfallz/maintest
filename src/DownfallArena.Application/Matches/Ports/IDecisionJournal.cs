@@ -18,4 +18,11 @@ public interface IDecisionJournal
     /// nothing written, when somebody else wrote first: two writers cannot both write the same line.
     /// </summary>
     Task<JournalPosition?> AppendAsync(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Where the journal ends, as the store measures it (<see cref="JournalPosition.Mark" />), read without reading
+    /// the journal: what a process holding the table watches to learn of a line another process wrote (ADR 0162).
+    /// Zero for a run nobody wrote.
+    /// </summary>
+    Task<long> EndAsync(string run, CancellationToken cancellationToken = default);
 }

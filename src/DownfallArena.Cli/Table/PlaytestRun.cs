@@ -79,6 +79,7 @@ internal sealed class PlaytestRun
         {
             _record = value ?? _record;
             _reopened = value is not null;
+            _revision = value?.Revision ?? 0;
         }
     }
 
@@ -287,7 +288,8 @@ internal sealed class PlaytestRun
             // what the first record says, or the table would be open in its record and in the index for good.
             var ended = _record is null ? _markedFirst : _record.Status;
             _record = ended is null or TableRecord.Open ? record : record with { Status = ended };
-            return _recordWritten = WriteRecordAfterAsync(_recordWritten, _record, cancellationToken);
+            var snapshot = _record;
+            return _recordWritten = WriteRecordAfterAsync(_recordWritten, _ => snapshot, cancellationToken);
         }
     }
 
@@ -313,8 +315,11 @@ internal sealed class PlaytestRun
                 return;
             }
 
+            // Over the record as stored, not this one: a mark changes nothing else, and another process may have
+            // changed the seats' keys since this one last wrote (ADR 0162).
             _record = record with { Status = status };
-            written = _recordWritten = WriteRecordAfterAsync(_recordWritten, _record, cancellationToken);
+            var fallback = _record;
+            written = _recordWritten = WriteRecordAfterAsync(_recordWritten, stored => (stored ?? fallback) with { Status = status }, cancellationToken);
         }
 
         try
@@ -345,7 +350,8 @@ internal sealed class PlaytestRun
             }
 
             _record = record with { RefusedUnder = basis };
-            written = _recordWritten = WriteRecordAfterAsync(_recordWritten, _record, cancellationToken);
+            var fallback = _record;
+            written = _recordWritten = WriteRecordAfterAsync(_recordWritten, stored => (stored ?? fallback) with { RefusedUnder = basis }, cancellationToken);
         }
 
         try
@@ -368,11 +374,46 @@ internal sealed class PlaytestRun
     /// Written over the record as stored and only if nobody wrote it since it was read (ADR 0159): another host
     /// may hold the same table, and the record keeps what either of them wrote that the other must not undo.
     /// </summary>
-    private async Task WriteRecordAfterAsync(Task before, TableRecord record, CancellationToken cancellationToken)
+    private async Task WriteRecordAfterAsync(Task before, Func<TableRecord?, TableRecord> over, CancellationToken cancellationToken)
     {
         await Task.WhenAny(before);
-        var (stored, written) = await WriteOverAsync(_reader, _writer, SessionId, _ => record, cancellationToken);
+        var (stored, written) = await WriteOverAsync(_reader, _writer, SessionId, over, cancellationToken);
+        var known = Interlocked.Exchange(ref _revision, written.Revision);
+        if (known > 0 && stored is { } other && other.Revision > known)
+        {
+            // Another process wrote the record since this one last did, and the watch had not seen it yet: what this
+            // write says of the seats is this process's, and the other's is lost. Rare -- a seat changing hands here
+            // in the second an hourly job expires its invitation -- and said, not hidden.
+            Console.WriteLine($"  Session {SessionId}: its record was written by another process (revision {other.Revision}) since this one last wrote it ({known}); this write keeps what this process holds.");
+        }
         await IndexedAsync(stored, written, cancellationToken);
+    }
+
+    // The revision of the record as this process last wrote it, or read it as it reopened the run.
+    private long _revision;
+
+    /// <summary>
+    /// Whether another process has written the table's record since this one last did (ADR 0162): its revision is
+    /// past the one this process wrote. Never while a write of this process's own is on its way, which would read as
+    /// one. A process holding the table lets it go then, and picks it up again as the record now says it is.
+    /// </summary>
+    public async Task<bool> RewrittenAsync(CancellationToken cancellationToken = default)
+    {
+        Task pending;
+        lock (_recordGate)
+        {
+            pending = _recordWritten;
+        }
+
+        if (!pending.IsCompleted)
+        {
+            return false;
+        }
+
+        var read = await _reader.ReadTaggedAsync(TableRecord.File, cancellationToken);
+        return read is not null && StoredSessions.RecordOf(read.Text) is { } stored
+            && pending.IsCompleted && pending == Volatile.Read(ref _recordWritten)
+            && stored.Revision > Interlocked.Read(ref _revision);
     }
 
     /// <summary>

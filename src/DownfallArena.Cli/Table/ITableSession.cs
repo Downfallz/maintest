@@ -74,4 +74,10 @@ internal interface ITableSession : IDisposable
     /// </summary>
     Task<Result> ConcedeAsync(PlayerSlot slot);
 
+
+    /// <summary>
+    /// Reads the match again when its journal no longer ends where the match kept here does: a line another process
+    /// wrote (ADR 0162). Whether it had moved; the pages are told as the match is taken.
+    /// </summary>
+    Task<bool> CatchUpAsync(CancellationToken cancellationToken = default);
 }

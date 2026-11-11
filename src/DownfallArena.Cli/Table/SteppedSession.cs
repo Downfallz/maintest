@@ -32,6 +32,7 @@ internal sealed class SteppedSession : ITableSession, IAgentTurnTaker
 {
     private readonly SteppedHost _host;
     private readonly JournaledStepper _stepper;
+    private readonly IDecisionJournal _journal;
     private readonly JournaledMatch _match;
     private readonly SteppedSeats _seats;
     private readonly PlaytestRun? _run;
@@ -77,6 +78,7 @@ internal sealed class SteppedSession : ITableSession, IAgentTurnTaker
         _legacyStream = legacyStream;
         _stopping = stopping;
         var seen = new Seen(this);
+        _journal = journal;
         _stepper = host.Stepper(journal, seen, seen, seen);
         foreach (var seat in seats.Seats)
         {
@@ -774,6 +776,23 @@ internal sealed class SteppedSession : ITableSession, IAgentTurnTaker
 
         Behind();
         return null;
+    }
+
+    public async Task<bool> CatchUpAsync(CancellationToken cancellationToken = default)
+    {
+        if (LetGo)
+        {
+            return false;
+        }
+
+        var end = await _journal.EndAsync(_match.Run, cancellationToken);
+        if (end == Read().State.Position.Mark)
+        {
+            return false;
+        }
+
+        await CaughtUpAsync();
+        return true;
     }
 
     /// <summary>The match cannot be played on from its journal: the table ends without an outcome, and says why.</summary>

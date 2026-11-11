@@ -56,6 +56,21 @@ public sealed class DecisionJournalTests : IDisposable
     [Theory]
     [InlineData("memory")]
     [InlineData("file")]
+    public async Task Where_a_journal_ends_is_read_without_reading_it_and_is_where_the_last_append_left_it(string kept)
+    {
+        var journal = Journal(kept);
+        var nothing = await journal.EndAsync("run-1", TestContext.Current.CancellationToken);
+        var written = (await journal.AppendAsync("run-1", JournalPosition.Start, [.. EveryKind.Take(3)], TestContext.Current.CancellationToken)).ShouldNotBeNull();
+
+        var end = await journal.EndAsync("run-1", TestContext.Current.CancellationToken);
+
+        nothing.ShouldBe(0);
+        end.ShouldBe(written.Mark);
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("file")]
     public async Task Entries_of_every_kind_are_read_back_as_they_were_written_in_order(string kept)
     {
         var journal = Journal(kept);

@@ -1,0 +1,67 @@
+namespace DownfallArena.Cli.Table;
+
+/// <summary>
+/// What a host does so that it sees what other processes write to the tables it holds (ADR 0162): about once a
+/// second, for every unfinished table somebody asked for lately, where its journal ends and its record's revision.
+/// A journal that moved -- a turn the worker took -- is read again, and its pages told (question 9). A record another
+/// process wrote -- an invitation the hourly job expired, a table it closed -- makes the host let the table go, and
+/// the next request picks it up again as the record says.
+/// </summary>
+/// <remarks>
+/// Two reads a table a second, the journal's length and the record, for the tables asked for in the last ten
+/// minutes. A table nobody asked for since is read again when somebody does, which is when it matters.
+/// </remarks>
+internal sealed class TableWatch(TableRegistry registry, TimeProvider clock)
+{
+    /// <summary>How often the tables held are looked at.</summary>
+    public static readonly TimeSpan Every = TimeSpan.FromSeconds(1);
+
+    /// <summary>How long after its last request a table is still looked at.</summary>
+    public static readonly TimeSpan WatchedFor = TimeSpan.FromMinutes(10);
+
+    /// <summary>One look at every table watched. How many were moved or let go of.</summary>
+    public async Task<int> WatchOnceAsync(CancellationToken cancellationToken = default)
+    {
+        var now = clock.GetUtcNow();
+        var changed = 0;
+        foreach (var table in registry.HeldTables().Where(table => !table.IsOver && now - table.Touched < WatchedFor))
+        {
+            try
+            {
+                if (table.Run is { } run && await run.RewrittenAsync(cancellationToken))
+                {
+                    Console.WriteLine($"  Session {table.Id} was written by another process: let go of, and picked up again at the next request.");
+                    registry.LetGo(table.Id);
+                    changed++;
+                }
+                else if (await table.Session.CatchUpAsync(cancellationToken))
+                {
+                    changed++;
+                }
+            }
+            catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is ObjectDisposedException)
+            {
+                // The store is out for a moment, or the table was let go of under the look: the next look tries.
+            }
+        }
+
+        return changed;
+    }
+
+    /// <summary>Looks every <see cref="Every" /> until the host stops.</summary>
+    public async Task RunAsync(CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                await WatchOnceAsync(cancellationToken);
+                await Task.Delay(Every, clock, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+        }
+    }
+}
