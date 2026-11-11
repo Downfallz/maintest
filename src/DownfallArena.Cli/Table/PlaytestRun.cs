@@ -604,7 +604,7 @@ internal sealed class PlaytestRun
         }
 
         return NoteAsync(
-            PlaytestNote.Decision(Where(matchId, slot, round, subPhase), accepted.ServedAt, accepted.AcceptedAt, accepted.Answered?.Asked),
+            PlaytestNote.Decision(Where(matchId, slot, round, subPhase), accepted.ServedAt, accepted.AcceptedAt, accepted.Answered?.Asked, accepted.PageElapsedMs),
             cancellationToken);
     }
 

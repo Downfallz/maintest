@@ -38,6 +38,13 @@ internal sealed record TableDecisionBody
     public bool Pass { get; init; }
 
     /// <summary>
+    /// How long the page had this question in front of the player, by its own clock, from the first time it drew it
+    /// to the tap; none from a page that did not draw it (inventory question 3). The host keeps its own measure, and
+    /// reads this only when it lost it.
+    /// </summary>
+    public long? ElapsedMs { get; init; }
+
+    /// <summary>
     /// The decision this body names, or the reason it names none. A body that does not parse is refused here
     /// rather than reaching the check: what the check answers is "the options do not offer this", which is a
     /// true thing to tell a player, and "this is not a decision at all" is not.
