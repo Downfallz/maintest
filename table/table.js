@@ -403,6 +403,8 @@ function start(seats, holder = null, practicing = false, replaying = false) {
   document.addEventListener('visibilitychange', resume);
   globalThis.addEventListener?.('online', resume);
   globalThis.addEventListener?.('pageshow', event => { if (event.persisted) resume(); });
+  // Gone offline is said at once: no read on a clock would find it out.
+  globalThis.addEventListener?.('offline', () => connectionStatus('Offline · reconnect when online'));
   if (globalThis.navigator?.onLine === false) connectionStatus('Offline · reconnect when online');
 }
 
@@ -583,7 +585,8 @@ async function refresh(state) {
     state.again = false;
     await poll(state);
     state.failed = 0;
-    connectionStatus('');
+    // A read that left before the network went answers after it went: it does not take "Offline" down.
+    connectionStatus(globalThis.navigator?.onLine === false ? 'Offline · reconnect when online' : '');
   } catch {
     state.rendered = null;
     connectionStatus(globalThis.navigator?.onLine === false ? 'Offline · reconnect when online' : 'Connection lost · retrying…');
