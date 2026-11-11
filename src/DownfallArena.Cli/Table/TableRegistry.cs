@@ -237,7 +237,7 @@ internal sealed class TableRegistry : IDisposable
         }
 
         _byToken[table.Pilot.Token] = table;
-        table.Api.Record = () => table.RecordAsync();
+        table.Api.Record = () => table.RecordAsync(CancellationToken.None);
         foreach (var seat in table.Seats)
         {
             _byToken[seat.Token] = table;

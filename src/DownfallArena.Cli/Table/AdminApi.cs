@@ -418,9 +418,9 @@ internal sealed class AdminApi
             // it would replay a match for a run about to go.
             var table = _registry.Held(id);
             var closed = table is not null && await _registry.RemoveAsync(id);
-            if (closed && table is not null)
+            if (closed)
             {
-                await table.QuiesceAsync();
+                await table!.QuiesceAsync();
             }
 
             var record = await RecordOrNoneAsync(stored, id);

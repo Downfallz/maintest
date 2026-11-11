@@ -285,8 +285,8 @@ internal sealed class PlaytestRun
         {
             // A table can end before it is first written down (two bots are quick): its end, marked then, is
             // what the first record says, or the table would be open in its record and in the index for good.
-            var ended = _record is { Status: not TableRecord.Open } held ? held.Status : _record is null ? _markedFirst : null;
-            _record = ended is null ? record : record with { Status = ended };
+            var ended = _record is null ? _markedFirst : _record.Status;
+            _record = ended is null or TableRecord.Open ? record : record with { Status = ended };
             return _recordWritten = WriteRecordAfterAsync(_recordWritten, _record, cancellationToken);
         }
     }
@@ -411,8 +411,13 @@ internal sealed class PlaytestRun
         var open = false;
         var (stored, written) = await WriteOverAsync(place.Reader, place.Writer, id, stored =>
         {
-            open = stored is { Status: TableRecord.Open };
-            return stored is null ? throw new InvalidDataException($"Session {id} has no table record.") : stored with { Status = open ? TableRecord.Closed : stored.Status };
+            if (stored is null)
+            {
+                throw new InvalidDataException($"Session {id} has no table record.");
+            }
+
+            open = stored.Status == TableRecord.Open;
+            return open ? stored with { Status = TableRecord.Closed } : stored;
         }, cancellationToken);
         await new TableIndexer(index, id).FollowAsync(stored, written, cancellationToken);
         return open;

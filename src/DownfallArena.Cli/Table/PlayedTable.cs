@@ -137,7 +137,8 @@ internal sealed class PlayedTable : IDisposable
             var before = _indexed;
             var written = (before is null && _markedFirst is { } ended ? record with { Status = ended } : record).Over(before);
             _indexed = written;
-            return _indexing = AfterAsync(_indexing, () => indexer.FollowAsync(before, written));
+            // Never cancelled by the table's own stopping: an index write is what lets the lobby see how it ended.
+            return _indexing = AfterAsync(_indexing, () => indexer.FollowAsync(before, written, CancellationToken.None));
         }
 
         static async Task AfterAsync(Task before, Func<Task> next)
