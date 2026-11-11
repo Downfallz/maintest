@@ -65,7 +65,10 @@ export function matchScoreboard(feed, board, packages = new Map()) {
       for (const tick of event.bleedTicks ?? []) {
         add(rows, tick.creature, 'taken', tick.damage);
         lastBleed.set(tick.creature, tick.shares);
-        for (const share of tick.shares ?? []) { add(rows, share.source?.caster, 'dealt', share.amount); add(rows, share.source?.caster, 'bleed', share.amount); }
+        // A bleed a spell puts on its own caster is a cost, as its direct recoil is: taken, never dealt.
+        for (const share of (tick.shares ?? []).filter(one => one.source?.caster !== tick.creature)) {
+          add(rows, share.source?.caster, 'dealt', share.amount); add(rows, share.source?.caster, 'bleed', share.amount);
+        }
       }
     }
   }

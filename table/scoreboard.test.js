@@ -30,6 +30,12 @@ test('damage and healing count what landed and what the bleeds and regenerations
   assert.deepEqual(report.sides.map(side => side.totals.dealt), [6, 0]);
 });
 
+test('a bleed a spell put on its own caster is damage taken, never damage dealt', () => {
+  const report = matchScoreboard([upkeep(1, { bleeds: [{ creature: 1, damage: 4, shares: [share(1, 4)] }] })], board([creature(1, 'Specter')], [creature(3, 'Ghoul')]));
+
+  assert.deepEqual([row(report, 1).dealt, row(report, 1).bleed, row(report, 1).taken], [0, 0, 4]);
+});
+
 test('a hit the defense took whole counts as blocked though nothing landed', () => {
   const report = matchScoreboard([cast(1, 3, { outcomes: [damage(1, 0, { blocked: 3 })] })], board([creature(1, 'Wolf')], [creature(3, 'Ghoul')]));
 
