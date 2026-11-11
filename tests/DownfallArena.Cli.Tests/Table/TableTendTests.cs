@@ -60,14 +60,16 @@ public sealed class TableTendTests : IDisposable
     [Fact]
     public async Task The_command_tends_a_store_and_says_what_it_did()
     {
-        var options = CliOptions.Parse([CliOptions.TendCommand, "--record", _hosted.RunsDirectory]);
+        // Services built for this very command, as the command line builds them: what it needs is registered for it.
+        var options = CliOptions.Parse([CliOptions.TendCommand, "--record", _hosted.RunsDirectory]) with { SchemaPath = _hosted.SchemaPath };
+        using var services = CliHost.Build(options, seed: 7, logMatchToConsole: false);
         var said = new StringWriter();
         var before = Console.Out;
         Console.SetOut(said);
         int exit;
         try
         {
-            exit = await TableTend.RunAsync(_hosted.Services, options, HostedTables.Rules);
+            exit = await TableTend.RunAsync(services.Services, options, HostedTables.Rules);
         }
         finally
         {
