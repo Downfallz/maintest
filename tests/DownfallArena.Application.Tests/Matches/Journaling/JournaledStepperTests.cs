@@ -551,6 +551,59 @@ public sealed class JournaledStepperTests
     }
 
     /// <summary>
+    /// Lines another process wrote are taken on only once whatever listens is told every seat change through
+    /// them: a decision after a seat change among those lines is seen when its seat is already named after
+    /// whoever the change seats (inventory question 19).
+    /// </summary>
+    [Fact]
+    public async Task Seat_changes_among_the_lines_another_process_wrote_are_told_before_the_lines_are_taken_on()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent);
+        var journal = new JournalStore();
+        var seen = new Noting();
+        var inStep = Substitute.For<IMatchInStep>();
+        var change = new SeatChangeEntry(PlayerSlot.Player2, "greedy", 1, Reached: 0);
+        int? seenWhenTold = null;
+        inStep.When(listener => listener.Replaying(table.MatchId, Arg.Is<IReadOnlyList<SeatChangeEntry>>(changes => changes.SequenceEqual(new[] { change }))))
+            .Do(_ => seenWhenTold = seen.Of(PlayerSlot.Player2).Count);
+        var replica = new Replica(journal, [seen], inStep);
+        await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken);
+        journal.WriteElsewhere(change);
+        journal.WriteElsewhere(new SeatDecision(PlayerSlot.Player2, PlayerDecision.Pass));
+
+        await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken);
+
+        seenWhenTold.ShouldBe(0);
+        seen.Of(PlayerSlot.Player2).Count.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// A match rebuilt from its journal is rebuilt only once whatever listens is told every seat change the
+    /// journal holds, the ones further down than the decisions replayed first included.
+    /// </summary>
+    [Fact]
+    public async Task Seat_changes_of_a_journal_being_rebuilt_are_told_before_any_line_is_replayed()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent);
+        var journal = new JournalStore();
+        var seen = new Noting();
+        var inStep = Substitute.For<IMatchInStep>();
+        var change = new SeatChangeEntry(PlayerSlot.Player2, "greedy", 1, Reached: 0);
+        int? seenWhenTold = null;
+        inStep.When(listener => listener.Replaying(table.MatchId, Arg.Any<IReadOnlyList<SeatChangeEntry>>()))
+            .Do(call => seenWhenTold = call.Arg<IReadOnlyList<SeatChangeEntry>>().SequenceEqual(new[] { change }) ? seen.Of(PlayerSlot.Player1).Count : null);
+        journal.WriteElsewhere(new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass));
+        journal.WriteElsewhere(change);
+        journal.WriteElsewhere(new SeatDecision(PlayerSlot.Player2, PlayerDecision.Pass));
+        var replica = new Replica(journal, [seen], inStep);
+
+        await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken);
+
+        seenWhenTold.ShouldBe(0);
+        seen.Of(PlayerSlot.Player1).Count.ShouldBe(1);
+    }
+
+    /// <summary>
     /// What a seat change depends on is settled in the turn that writes it: the caller is shown the match as
     /// that turn finds it and says the line, or why there is none. Nothing of the seat's can land in between.
     /// </summary>

@@ -427,6 +427,7 @@ public sealed class JournaledStepper(
 
         kept.Position = null;
         var reading = await journal.ReadAsync(match.Run, cancellationToken);
+        Replaying(match, [.. reading.Entries.OfType<SeatChangeEntry>()]);
         var rebuilt = await replay.RebuildAsync(match, reading.Entries, cancellationToken);
         if (rebuilt.IsFailure)
         {
@@ -452,6 +453,7 @@ public sealed class JournaledStepper(
     {
         // Out of step until the lines are all taken: a step that throws halfway leaves a match no position describes.
         kept.Position = null;
+        Replaying(match, [.. kept.SeatChanges, .. since.Entries.OfType<SeatChangeEntry>()]);
         var continued = await replay.ContinueAsync(match, kept.Held, since.Entries, kept.Entries, cancellationToken);
         if (continued.IsFailure)
         {
@@ -463,6 +465,14 @@ public sealed class JournaledStepper(
         kept.Entries += since.Entries.Count;
         Count(kept, since.Entries);
         return true;
+    }
+
+    private void Replaying(JournaledMatch match, IReadOnlyList<SeatChangeEntry> seatChanges)
+    {
+        foreach (var told in _inStep)
+        {
+            told.Replaying(match.MatchId, seatChanges);
+        }
     }
 
     /// <summary>Counts entries the match in memory has gone through: each seat's decisions and the seat changes.</summary>

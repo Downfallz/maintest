@@ -113,10 +113,8 @@ internal sealed class SteppedSession : ITableSession, IAgentTurnTaker
         Result<JournaledState> state;
         try
         {
-            // Read once before the match is: a rebuild names every decision's seat as it replays it, and the
-            // names come from the seat changes that are further down the same journal.
-            var reading = await journal.ReadAsync(match.Run, stopping);
-            session.Seated([.. reading.Entries.OfType<SeatChangeEntry>()]);
+            // The stepper tells the seat changes further down the journal before it replays it
+            // (Seen.Replaying): a rebuild names every decision's seat as it replays it.
             state = await session._stepper.ReadAsync(match, stopping);
         }
         catch
@@ -826,6 +824,13 @@ internal sealed class SteppedSession : ITableSession, IAgentTurnTaker
         /// again, may be a step that is never written: a page is not shown it, and a checkpoint does not keep it.
         /// </remarks>
         public void InStep(MatchId matchId, JournalPosition position) => session._marks[position] = session._host.Events.Length(matchId);
+
+        /// <remarks>
+        /// Folded before the lines are replayed, so a decision after a seat change among them -- written by another
+        /// process, or by this one before it started -- is named after whoever the change seats (inventory
+        /// question 19), as it was when it was taken.
+        /// </remarks>
+        public void Replaying(MatchId matchId, IReadOnlyList<SeatChangeEntry> seatChanges) => session.Seated(seatChanges);
 
         public IPlayerAgent Around(MatchId matchId, PlayerSlot slot, IPlayerAgent decider)
         {
