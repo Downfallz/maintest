@@ -87,16 +87,16 @@ test('the result reports what each creature did, its creature of the match first
   const report = page.locator('#match-report');
   await expect(report).toBeVisible();
   await expect(page.locator('#match-mvp')).toContainText('Creature 1'); await expect(page.locator('#match-mvp')).toContainText('25 damage · 2 KO');
-  const first = page.locator('.match-report-table[data-side="ally"] tr[data-creature="1"]');
+  const first = page.locator('.match-report-table[data-side="ally"] tr[data-report-creature="1"]');
   await expect(first.locator('td').nth(0)).toContainText('25'); await expect(first.locator('td').nth(0)).toContainText('4 bleed');
   await expect(first).toHaveAttribute('data-mvp', 'true');
   // The Ghoul's own defense blocked one hit whole and a point of the next; the second creature regenerated itself.
-  const struck = page.locator('.match-report-table[data-side="enemy"] tr[data-creature="5"]');
+  const struck = page.locator('.match-report-table[data-side="enemy"] tr[data-report-creature="5"]');
   await expect(struck.locator('td').nth(3)).toHaveText('4'); await expect(struck.locator('td').nth(2)).toHaveText('13');
   // Finished at the upkeep by the first creature's bleed, which the first creature is credited with.
   await expect(first.locator('td').nth(4)).toHaveText('2');
-  await expect(page.locator('.match-report-table[data-side="ally"] tr[data-creature="2"] td').nth(1)).toContainText('2 regen');
-  await expect(page.locator('.match-report-table[data-side="ally"] tr[data-creature="3"]')).toHaveAttribute('data-fallen', 'true');
+  await expect(page.locator('.match-report-table[data-side="ally"] tr[data-report-creature="2"] td').nth(1)).toContainText('2 regen');
+  await expect(page.locator('.match-report-table[data-side="ally"] tr[data-report-creature="3"]')).toHaveAttribute('data-fallen', 'true');
   await expect(page.locator('.match-report-table[data-side="ally"] tfoot td').nth(4)).toHaveText('3');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await fitsViewport(page, '#match-replay, #match-lobby');
