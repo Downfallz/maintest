@@ -1,4 +1,4 @@
-import { parseEvents, streamEvents } from './changes.js';
+import { parseEvents, socketOrStream } from './changes.js';
 
 export { parseEvents };
 
@@ -54,7 +54,8 @@ export function httpTransport(seat, token, fetchImpl = globalThis.fetch.bind(glo
     // (ADR 0164), which the page takes for a dropped connection and opens again. A fetch rather than an EventSource,
     // which cannot carry the seat token in a header, and a token in the address is one anybody behind the
     // player can read.
-    events: (onChange, signal) => streamEvents(fetchImpl, `/api/seat/${seat}/events`, { 'X-Seat-Token': token }, onChange, signal),
+    // Through the relay when the host has one (ADR 0165), its own stream otherwise.
+    events: (onChange, signal) => socketOrStream(fetchImpl, `/api/seat/${seat}`, { 'X-Seat-Token': token }, onChange, signal),
 
     // A note goes to one route for both seats: the host records it against whichever seat's token carried it,
     // so nobody can file a misplay against the other player.

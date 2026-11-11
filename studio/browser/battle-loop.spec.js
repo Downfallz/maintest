@@ -26,7 +26,8 @@ async function mount(page, { kind = 'Evolution', replay = false, over = false, r
     if (url.pathname.endsWith('/events')) return route.fulfill({ contentType: 'text/event-stream', body: 'event: ready\ndata: 0\n\n' });
     if (url.pathname.endsWith('/concede')) { state.concessions++; state.view.over = true; state.view.waitingFor = null; state.view.outcome = { winner: 'player2', reason: 'Concession' }; return route.fulfill({ status: 204 }); }
     if (url.pathname.endsWith('/decision')) {
-      state.writes.push(req.postDataJSON());
+      // The page's own measure of the decision (inventory question 3) is set aside: the decision is what is compared.
+      const { elapsedMs: _measured, ...decision } = req.postDataJSON(); state.writes.push(decision);
       if (state.status !== 204) return route.fulfill({ status: state.status, json: { message: 'The offered pick has changed.' } });
       state.view.waitingFor = null; state.view.waitingAsked = null; return route.fulfill({ status: 204 });
     }

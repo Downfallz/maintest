@@ -30,11 +30,15 @@ if [[ ! "$PREFIX" =~ ^[a-z0-9]{3,11}$ ]]; then
 fi
 
 # The roles infra/main.bicep assigns to the identities of the API, the worker and the job: Storage Blob Data
-# Contributor for the recordings, Storage Table Data Contributor for the index of the tables (ADR 0161), and
-# Storage Queue Data Contributor for the queues the bots' turns go through (ADR 0162).
+# Contributor for the recordings, Storage Table Data Contributor for the index of the tables (ADR 0161),
+# Storage Queue Data Contributor for the queues the bots' turns go through (ADR 0162), and Web PubSub Service
+# Owner on the relay (ADR 0165).
 BLOB_CONTRIBUTOR="ba92f5b4-2d11-453d-a403-e96b0029c9fe"
 TABLE_CONTRIBUTOR="0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3"
 QUEUE_CONTRIBUTOR="974c5e8b-45b9-4653-ba55-5f855dd0fb88"
+# Web PubSub Service Owner on the relay (ADR 0165): each process says through it what moved, and the API signs the
+# pages' addresses.
+RELAY_OWNER="12cf5a90-567b-43ae-8102-96cf46c7d9b4"
 
 # The application id of the registration with this display name, created when there is none.
 registration() {
@@ -108,7 +112,7 @@ setup() {
 
   # The providers a fresh subscription has not registered yet: nothing deploys without them.
   local namespace
-  for namespace in Microsoft.App Microsoft.Network Microsoft.OperationalInsights Microsoft.Storage; do
+  for namespace in Microsoft.App Microsoft.Network Microsoft.OperationalInsights Microsoft.SignalRService Microsoft.Storage; do
     az provider register --namespace "$namespace" --wait --output none
   done
 
@@ -129,7 +133,7 @@ setup() {
     }"
   fi
   grant "$deployer_principal" Contributor "$scope"
-  condition="((!(ActionMatches{'Microsoft.Authorization/roleAssignments/write'})) OR (@Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {$BLOB_CONTRIBUTOR, $TABLE_CONTRIBUTOR, $QUEUE_CONTRIBUTOR})) AND ((!(ActionMatches{'Microsoft.Authorization/roleAssignments/delete'})) OR (@Resource[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {$BLOB_CONTRIBUTOR, $TABLE_CONTRIBUTOR, $QUEUE_CONTRIBUTOR}))"
+  condition="((!(ActionMatches{'Microsoft.Authorization/roleAssignments/write'})) OR (@Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {$BLOB_CONTRIBUTOR, $TABLE_CONTRIBUTOR, $QUEUE_CONTRIBUTOR, $RELAY_OWNER})) AND ((!(ActionMatches{'Microsoft.Authorization/roleAssignments/delete'})) OR (@Resource[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {$BLOB_CONTRIBUTOR, $TABLE_CONTRIBUTOR, $QUEUE_CONTRIBUTOR, $RELAY_OWNER}))"
   grant_on_condition "$deployer_principal" "Role Based Access Control Administrator" "$scope" "$condition"
 
   # The registration the platform signs the operator in with. No client secret: the platform uses the

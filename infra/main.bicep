@@ -24,6 +24,14 @@ param operators string
 @description('The Google OAuth client id players sign in with (ADR 0122). Public, not a secret. Empty, players do not sign in.')
 param googleClientId string = ''
 
+@description('The relay the pages and processes hear what moved through (ADR 0165): Free_F1 (20 connections, 20 000 messages a day), Standard_S1 (1 000 connections a unit), or empty for none, and the pages read the API\'s own streams. Opted into once the bootstrap has granted its role.')
+@allowed([
+  ''
+  'Free_F1'
+  'Standard_S1'
+])
+param relaySku string = ''
+
 @description('A short word every resource name starts with.')
 @minLength(3)
 @maxLength(11)
@@ -72,6 +80,19 @@ var recordsAndIndexes = [
   storageTableDataContributor
 ]
 var recordsIndexesAndQueues = concat(recordsAndIndexes, [storageQueueDataContributor])
+
+// What each process says through the relay and signs a page's address with (ADR 0165).
+var webPubSubServiceOwner = '12cf5a90-567b-43ae-8102-96cf46c7d9b4'
+var relayOn = !empty(relaySku)
+var relayName = '${namePrefix}-relay-${suffix}'
+// The service's own host name, made from its name: nothing is read off a resource that may not be deployed.
+var relayHost = '${relayName}.webpubsub.azure.com'
+var relayEnv = relayOn ? [
+  {
+    name: 'DOWNFALL_RELAY'
+    value: 'https://${relayHost}'
+  }
+] : []
 
 // Where the console lines go. Capped per day so a host that logs in a loop costs cents, not a surprise.
 resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
@@ -152,6 +173,27 @@ resource playtests 'Microsoft.Storage/storageAccounts/blobServices/containers@20
   }
 }
 
+// The relay (ADR 0165): it holds the pages' connections, so a page is told what moved whichever process moved it
+// and whether or not the API is awake. Reached by identity alone, as the storage account is (ADR 0160): local auth
+// is off, so no access key exists to leak, and a page connects with an address the API signs for its own group.
+resource relay 'Microsoft.SignalRService/webPubSub@2024-03-01' = if (relayOn) {
+  name: relayName
+  location: location
+  sku: {
+    name: relayOn ? relaySku : 'Free_F1'
+    tier: relaySku == 'Standard_S1' ? 'Standard' : 'Free'
+    capacity: 1
+  }
+  properties: {
+    disableLocalAuth: true
+    disableAadAuth: false
+    publicNetworkAccess: 'Enabled'
+    tls: {
+      clientCertEnabled: false
+    }
+  }
+}
+
 // On the platform's own network, not one of ours (ADR 0160): an environment in a virtual network brings a
 // load balancer and a public address into the subscription, billed whether or not a replica runs.
 resource appEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = {
@@ -217,7 +259,7 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
             'worker'
             '--tended'
           ], accountArgs)
-          env: pushEnv
+          env: concat(pushEnv, relayEnv)
           resources: {
             cpu: json('0.5')
             memory: '1Gi'
@@ -281,7 +323,7 @@ resource worker 'Microsoft.App/containerApps@2025-01-01' = {
             '--record'
             recordings
           ], accountArgs)
-          env: pushEnv
+          env: concat(pushEnv, relayEnv)
           resources: {
             cpu: json('0.5')
             memory: '1Gi'
@@ -356,6 +398,7 @@ resource tend 'Microsoft.App/jobs@2024-03-01' = {
             '--record'
             recordings
           ], accountArgs)
+          env: relayEnv
           resources: {
             cpu: json('0.25')
             memory: '0.5Gi'
@@ -397,6 +440,39 @@ resource tendRoles 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for r
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', role)
   }
 }]
+
+// Each process says through the relay what it moved, and the API signs the pages' addresses (ADR 0165).
+var relayId = resourceId('Microsoft.SignalRService/webPubSub', relayName)
+
+resource apiRelayRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (relayOn) {
+  scope: relay
+  name: guid(relayId, app.id, webPubSubServiceOwner)
+  properties: {
+    principalId: app.identity.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', webPubSubServiceOwner)
+  }
+}
+
+resource workerRelayRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (relayOn) {
+  scope: relay
+  name: guid(relayId, worker.id, webPubSubServiceOwner)
+  properties: {
+    principalId: worker.identity.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', webPubSubServiceOwner)
+  }
+}
+
+resource tendRelayRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (relayOn) {
+  scope: relay
+  name: guid(relayId, tend.id, webPubSubServiceOwner)
+  properties: {
+    principalId: tend.identity.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', webPubSubServiceOwner)
+  }
+}
 
 // The operator's door (ADR 0081): the platform signs them in and stamps who they are on every request it
 // forwards. Anonymous requests still pass, because a player joins by a code and has no account; only the
@@ -449,3 +525,6 @@ output worker string = worker.name
 
 @description('The job that tends the tables every hour.')
 output tendJob string = tend.name
+
+@description('The relay the pages connect to, or nothing when there is none (ADR 0165).')
+output relayHostName string = relayOn ? relayHost : ''

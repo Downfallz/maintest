@@ -43,9 +43,19 @@ internal static class TableTend
             var friends = options.Accounts == AccountsMode.Off
                 ? null
                 : new Friends(await ArtifactStores.OpenFriendsAsync(target), await ArtifactStores.OpenAccountsAsync(target), clock);
-            var lobby = new LobbyApi(registry, composer, clock) { Friends = friends };
+            // What the pass closes and lets go of is said to the pages and the API through the relay, when there is one
+            // (ADR 0165), and the job waits for it to have gone before it exits.
+            var relay = WebPubSubRelay.FromEnvironment();
+            composer.Relay = relay;
+            composer.Lobby = relay is null ? null : new LobbyChanges { Relay = relay };
+            var lobby = new LobbyApi(registry, composer, clock) { Friends = friends, Changes = composer.Lobby };
 
             var tended = await TendAsync(registry, lobby, clock.GetUtcNow());
+            if (relay is not null)
+            {
+                await Task.WhenAny(relay.SentAsync(), Task.Delay(TimeSpan.FromSeconds(10), clock));
+            }
+
             Console.WriteLine($"Tended '{target}': {tended.Swept.Count} table{(tended.Swept.Count == 1 ? string.Empty : "s")} that never began closed, {tended.Expired} invitation{(tended.Expired == 1 ? string.Empty : "s")} that ran out let go of.");
             foreach (var id in tended.Swept)
             {

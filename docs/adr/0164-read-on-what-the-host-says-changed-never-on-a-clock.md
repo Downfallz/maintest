@@ -3,7 +3,8 @@
 Date: 2026-11-11
 
 Status: Accepted. Amends [0119](0119-a-seat-page-is-told-when-its-table-changed.md) (the fallback poll is gone) and
-answers the page side of question 9 of [the stateless table inventory](../architecture/stateless-table-inventory.md)
+answers the page side of question 9 of [the stateless table inventory](../architecture/stateless-table-inventory.md).
+Its "Several replicas, next" is taken by [0165](0165-relay-what-moved-through-azure-web-pubsub.md)
 
 ## Context
 

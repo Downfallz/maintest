@@ -14,15 +14,18 @@ studio is not here: it is on GitHub Pages (ADR 0023).
 | Container Apps job `downfall-tend` | The CLI's `table-tend`, at 17 minutes past every hour: closes the tables that never began, lets go of the invitations nobody answered; 0.25 vCPU, 0.5 GiB | A few seconds an hour |
 | Container Apps environment | Where the app runs, consumption plan, on the platform's own network (ADR 0160) | Nothing on its own |
 | Storage account, Blob, Table and Queue | The recorded sessions, one prefix per session under `playtests/`, the index that finds them (`tableindex`: join codes, open tables; ADR 0161), the queues of the bots' turns (`agent-turns`, `agent-turns-poison`, `agent-turns-dlq`; ADR 0159, phase 5), and the content each table began on (`content/`, one schema per content hash, about 50 KB each; ADR 0163); no key, and only an identity holding a role on it may read or write | Cents |
+| Web PubSub `downfall-relay-…` | The relay (ADR 0165): every page's connection, told what moved by the API, the worker and the job, and the hosts' group the API and the worker hear each other through; no access key, only the three identities' Web PubSub Service Owner role. Deployed when the repository variable `TABLE_RELAY_SKU` says `Free_F1` or `Standard_S1`; unset or `none`, left out | Free: nothing, up to 20 connections and 20 000 messages a day. Standard: about $1.61 a unit a day (1 000 connections, 1 million messages a day each), to check in the pricing calculator |
 | Log Analytics workspace | The host's console lines, 30 days, capped at 0.5 GB a day | Cents, often nothing |
 
-The app scales to zero a few minutes after the last request. An open seat holds an event stream and polls
-beneath it (ADR 0119), so a table being played keeps it awake; the first request after a quiet spell waits
+The app scales to zero a few minutes after the last request. With the relay (ADR 0165), an open page holds its
+connection to Web PubSub, not to the app, so a page left open keeps nothing awake; a page reads the app only when it
+is told something moved. Without it, or when the relay's connections are all taken (Free: 20), a page holds an
+event stream to the app instead (ADR 0119, 0164), which keeps it awake. The first request after a quiet spell waits
 some seconds while a replica starts. A table is its journal (ADR 0159): the match in memory is a copy of it, and the
 replica that starts next **picks up a table left open** where its journal ends, at the first request that names
 it, under the same links and codes. A bot's turn is taken by the worker, which starts when the queue has
-one (a cold start of some seconds, the first time) and stops when it is empty; the API reads the worker's turn
-within a second (ADR 0162). A game that began does not expire during a pause, and a table that never began is
+one (a cold start of some seconds, the first time) and stops when it is empty; the API hears the worker's turn
+through the relay as it is taken, or, without one, reads it within a second (ADR 0162, 0165). A game that began does not expire during a pause, and a table that never began is
 closed by the hourly job twenty hours after it opened (ADR 0115, ADR 0162); the operator can explicitly close
 unused tables. The recording is what survives either way: the admin panel lists every recorded
 session, links to it in the viewer and exports it.
@@ -128,6 +131,11 @@ Android Chrome takes the notice as it is; iOS only once the table is added to th
 - Likewise, a deployment made before ADR 0162 runs `infra/bootstrap.sh setup` once more before the first deploy
   that carries the worker and the job: the queue data role is new. Until it has, that deployment fails on the
   role assignment, and the table already running is left as it was.
+- The relay (ADR 0165) is opted into, once: run `infra/bootstrap.sh setup` again (the Web PubSub Service Owner
+  role and the `Microsoft.SignalRService` provider are new, and a deployer that may not assign the role fails the
+  deployment), then set the repository variable `TABLE_RELAY_SKU` to `Free_F1` (or `Standard_S1`) and deploy. Unset
+  or `none`, there is no relay, and the pages read the app's own streams as before. Setting it back to `none` takes
+  the relay out at the next deploy.
 - The job runs by itself every hour; to run it now, `az containerapp job start --resource-group downfall-table
   --name downfall-tend`. Its runs and their console lines are under the job's *Execution history* in the portal.
 
