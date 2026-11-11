@@ -1,4 +1,6 @@
+using System.Text.Json;
 using DownfallArena.Application.Agents;
+using DownfallArena.Application.Learning.Recording;
 using DownfallArena.Application.Matches.Journaling;
 using DownfallArena.Cli.Table;
 using DownfallArena.Infrastructure.Learning;
@@ -132,6 +134,59 @@ public sealed class TableWatchTests : IDisposable
     }
 
     [Fact]
+    public async Task A_match_two_processes_hold_is_written_by_one_of_them_and_served_by_both()
+    {
+        using var registry = _here.Registry();
+        var table = await RecordedAsync(registry, Randoms);
+        using var elsewhere = _there.Registry();
+        var there = (await elsewhere.ByIdAsync(table.Id, Cancel)).ShouldNotBeNull();
+        await PlayedOutAsync((IAgentTurnTaker)there.Session);
+
+        (await table.Session.CatchUpAsync(Cancel)).ShouldBeTrue();
+        await ClosedAsync(table);
+        await ClosedAsync(there);
+
+        var episodes = await File.ReadAllLinesAsync(Path.Combine(_runs, table.Id, RunRecorder.EpisodesFile), Cancel);
+        episodes.Length.ShouldBe(2, "one episode a seat: the match is written once, not once by each process");
+        table.Run!.IsClosed.ShouldBeTrue("the session is served where it was not written, once it is");
+    }
+
+    [Fact]
+    public async Task A_claim_on_closing_a_session_stands_for_one_run_until_it_runs_out()
+    {
+        using var registry = _here.Registry();
+        var table = await RecordedAsync(registry, HostedTables.OnePerson);
+        using var elsewhere = _there.Registry();
+        var there = (await elsewhere.ByIdAsync(table.Id, Cancel)).ShouldNotBeNull();
+
+        var first = await table.Run!.ClaimClosingAsync(Cancel);
+        var second = await there.Run!.ClaimClosingAsync(Cancel);
+        var again = await table.Run.ClaimClosingAsync(Cancel);
+        await File.WriteAllTextAsync(
+            Path.Combine(_runs, table.Id, PlaytestRun.ClosingFile),
+            JsonSerializer.Serialize(new { By = "stopped", At = DateTimeOffset.UtcNow - PlaytestRun.ClosingHeld - TimeSpan.FromMinutes(1) }, ArtifactJson.DocumentOptions),
+            Cancel);
+        var takenOver = await there.Run.ClaimClosingAsync(Cancel);
+
+        first.ShouldBeTrue();
+        second.ShouldBeFalse("the first run's claim stands");
+        again.ShouldBeTrue("a run's own claim is its own");
+        takenOver.ShouldBeTrue("a claim that ran out is a process that stopped");
+    }
+
+    [Fact]
+    public async Task No_run_claims_the_closing_of_a_session_whose_record_says_it_finished()
+    {
+        using var registry = _here.Registry();
+        var table = await RecordedAsync(registry, HostedTables.OnePerson);
+        await table.Run!.MarkAsync(TableRecord.Finished, Cancel);
+
+        var claimed = await table.Run.ClaimClosingAsync(Cancel);
+
+        claimed.ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task How_a_table_ended_is_written_over_the_record_as_stored_keeping_another_process_s_keys()
     {
         using var registry = _here.Registry();
@@ -160,6 +215,26 @@ public sealed class TableWatchTests : IDisposable
         let.ShouldBeTrue();
         again.ShouldNotBeNull().ShouldNotBeSameAs(table);
         registry.LetGo("nobody").ShouldBeFalse();
+    }
+
+    /// <summary>A table's bots' turns, taken here until the match is over.</summary>
+    private static async Task PlayedOutAsync(IAgentTurnTaker table)
+    {
+        for (var turn = 0; turn < 2000 && await table.TakeTurnAsync(Cancel) != AgentTurn.Done; turn++)
+        {
+        }
+    }
+
+    /// <summary>Waits for a table's match to end and its session to be written, here or elsewhere.</summary>
+    private static async Task ClosedAsync(PlayedTable table)
+    {
+        await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), Cancel);
+        for (var waited = 0; waited < 300 && !(table.IsFinished && table.Run!.IsClosed); waited++)
+        {
+            await Task.Delay(50, Cancel);
+        }
+
+        table.IsFinished.ShouldBeTrue();
     }
 
     private async Task<PlayedTable> RecordedAsync(TableRegistry registry, TableRequest request)

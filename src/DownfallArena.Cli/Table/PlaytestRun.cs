@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Security.Cryptography;
+using System.Text.Json;
 using DownfallArena.Application.Agents;
 using DownfallArena.Application.Catalogue;
 using DownfallArena.Application.Learning;
@@ -767,6 +768,92 @@ internal sealed class PlaytestRun
         // is half written. Whether anything is still on its way into them is the other half of IsClosed.
         FilesWritten = true;
     }
+
+    /// <summary>The claim one process makes on closing the session's files (ADR 0162), beside them.</summary>
+    public const string ClosingFile = "closing.json";
+
+    /// <summary>
+    /// How long a claim on closing the session stands. Closing takes a few writes; a claim older than this is a
+    /// process that stopped between its claim and its last write, and another closes the session in its place.
+    /// </summary>
+    public static readonly TimeSpan ClosingHeld = TimeSpan.FromMinutes(2);
+
+    /// <summary>
+    /// Claims the closing of the session's files for this run, so that one process closes them and tells the seats
+    /// how the match ended, however many hold the table (ADR 0162): the worker that took the bot's last turn, the
+    /// host whose seat made the last tap, and a host that caught up with either. A claim is a document written only
+    /// where there is none, or where the one there is older than <see cref="ClosingHeld" />.
+    /// </summary>
+    /// <returns>Whether this run is the one to close the session: not when its record already says it finished, or
+    /// another run's claim stands.</returns>
+    public async Task<bool> ClaimClosingAsync(CancellationToken cancellationToken = default)
+    {
+        for (var attempt = 1; attempt <= RecordAttempts; attempt++)
+        {
+            if (await FinishedAsync(cancellationToken))
+            {
+                return false;
+            }
+
+            var now = _clock.GetUtcNow();
+            var read = await _reader.ReadTaggedAsync(ClosingFile, cancellationToken);
+            if (read is not null && ClosingOf(read.Text) is { } held && held.By != _closer && now - held.At < ClosingHeld)
+            {
+                return false;
+            }
+
+            if (await _writer.WriteJsonIfAsync(ClosingFile, new Closing(_closer, now), read?.Tag, cancellationToken) is not null)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Whether another process has closed the session's files, as the record says once they are all written. When
+    /// it has, this run takes them as written: the session page is served, and what this run kept of the match to
+    /// write is let go of.
+    /// </summary>
+    public async Task<bool> ClosedElsewhereAsync(MatchId matchId, CancellationToken cancellationToken = default)
+    {
+        if (!await FinishedAsync(cancellationToken))
+        {
+            return false;
+        }
+
+        lock (_ordering)
+        {
+            CheckpointsStopped = true;
+        }
+
+        _kept = _events.EntriesOf(matchId);
+        _recorder.Forget(matchId);
+        FilesWritten = true;
+        return true;
+    }
+
+    private async Task<bool> FinishedAsync(CancellationToken cancellationToken) =>
+        await _reader.ReadTextAsync(TableRecord.File, cancellationToken) is { } text && StoredSessions.RecordOf(text)?.Status == TableRecord.Finished;
+
+    private static Closing? ClosingOf(string text)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<Closing>(text, ArtifactJson.DocumentOptions);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    // Who this run is, to its own claim: a run picked up again by the same process is another run.
+    private readonly string _closer = Guid.NewGuid().ToString("N");
+
+    /// <summary>A claim on closing the session: by which run, and when it was made.</summary>
+    private sealed record Closing(string By, DateTimeOffset At);
 
     /// <summary>
     /// Waits for everything on its way into the files to land: every decision being accepted, then a write

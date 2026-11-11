@@ -439,6 +439,13 @@ internal sealed class TableComposer
                 return;
             }
 
+            // One process closes the files and tells the seats, however many hold the table (ADR 0162): the others
+            // wait for the record to say it is done, and serve the session from what that one wrote.
+            if (!await ClaimedAsync(run, session.MatchId))
+            {
+                return;
+            }
+
             // The result before the record says finished: a host that fails to keep it leaves the table open, and
             // the next host rebuilds it from its decisions and keeps it then. Kept twice, it is kept once.
             if (Results is { } results && ResultOf(table, session.Outcome.Result.Value, board.Value, finishedAt, owners) is { } result)
@@ -465,6 +472,42 @@ internal sealed class TableComposer
             table.MarkClosed();
         }
     }
+
+    /// <summary>
+    /// Whether this process is the one to close a session (ADR 0162). One that is not waits for the one that is,
+    /// as long as its claim stands, and serves the session from what it wrote; a claim that ran out unfinished is a
+    /// process that stopped, and this one claims the closing in its place.
+    /// </summary>
+    private async Task<bool> ClaimedAsync(PlaytestRun run, MatchId matchId)
+    {
+        for (var claims = 0; claims < ClosingClaims; claims++)
+        {
+            if (await run.ClaimClosingAsync())
+            {
+                return true;
+            }
+
+            for (var waited = TimeSpan.Zero; waited <= PlaytestRun.ClosingHeld; waited += ClosingLooks)
+            {
+                if (await run.ClosedElsewhereAsync(matchId))
+                {
+                    Console.WriteLine($"  Session {run.SessionId} was written to '{run.Location}' by another process.");
+                    return false;
+                }
+
+                await Task.Delay(ClosingLooks, _clock);
+            }
+        }
+
+        Console.WriteLine($"  Session {run.SessionId} is being written by another process that has not finished it.");
+        return false;
+    }
+
+    /// <summary>How often a process that did not close a session looks whether the one that did is done.</summary>
+    internal static readonly TimeSpan ClosingLooks = TimeSpan.FromSeconds(1);
+
+    // How many claims one process makes on a session it finds claimed, one claim's time apart.
+    private const int ClosingClaims = 3;
 
     /// <summary>
     /// A table that records nothing, out of the open tables of the index once its match has an outcome: there is

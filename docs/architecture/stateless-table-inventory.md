@@ -208,8 +208,17 @@ Each phase ships on the one container app there is today and leaves the game pla
      up take no bot turn (`NoAgentTurns`). A host that holds one of them sees its record rewritten and lets it
      go (6a). The API keeps the same two passes on its requests until 6d deploys the job, so a host on a
      laptop, with no job, still sweeps.
-   - **6c.** `table-worker`: the two workers of 5b in a process of their own; the API with `--turns queue` and no
-     workers.
+   - **6c, done.** `table-worker` (`TableWorker`): the two workers of 5b in a process of their own, over a
+     container's store and queues (a directory's queues are one process's, so it refuses one). It picks the
+     tables up as a host does and watches them as a host does (6a). The API runs `--turns worker`
+     (`DOWNFALL_TURNS=worker`): its bots' turns go on the queue and it runs no worker; on a directory it says so
+     and takes them with a worker of its own, as `--turns queue` does. With two processes holding one table,
+     either may see its match end: one closes the session, the one whose claim on it stands
+     (`PlaytestRun.ClaimClosingAsync`, `closing.json` beside the record, two minutes, then another may take it
+     over). It keeps the result, writes the files once and tells the seats' accounts; the other waits for the
+     record to say finished and serves what it wrote. The worker tells no seat "your turn": it serves no page,
+     so it cannot know who is looking. The API that serves the seat reads the turn within a second and tells
+     it, as long as it is awake, which it is for five minutes after the last request.
    - **6d.** The worker app scaled on the queue's length, the job, the queue role and the bootstrap's
      condition, and the deployment of all three.
 
