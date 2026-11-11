@@ -69,17 +69,12 @@ internal sealed class PlaytestRun
     private int _recording;
     private readonly int _seed;
 
-    // Whether this run was opened over what an earlier host wrote (Reopen): its dataset files are then started
-    // over before the match is written into them.
-    private readonly bool _reopened;
-
     /// <summary>The record an earlier host left of the table, for a run opened over it (<see cref="Reopen" />).</summary>
     private TableRecord? Reopened
     {
         init
         {
             _record = value ?? _record;
-            _reopened = value is not null;
             _revision = value?.Revision ?? 0;
         }
     }
@@ -725,6 +720,9 @@ internal sealed class PlaytestRun
         }
     }
 
+    /// <summary>Rewrites the trace as it stands, every entry of it: see the other overload.</summary>
+    public Task CheckpointAsync(MatchId matchId, CancellationToken cancellationToken = default) => CheckpointAsync(matchId, upTo: null, cancellationToken);
+
     // The last checkpoint queued: the next one is written after it.
     private Task _checkpointed = Task.CompletedTask;
 
@@ -765,9 +763,6 @@ internal sealed class PlaytestRun
             return false;
         }
     }
-
-    /// <summary>Rewrites the trace as it stands, every entry of it: see the other overload.</summary>
-    public Task CheckpointAsync(MatchId matchId, CancellationToken cancellationToken = default) => CheckpointAsync(matchId, upTo: null, cancellationToken);
 
     /// <summary>
     /// Closes the session: the episodes, the final trace, and the manifest with its counts. The board is the

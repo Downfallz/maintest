@@ -288,8 +288,10 @@ public sealed class TableWatchTests : IDisposable
     /// <summary>A table's bots' turns, taken here until the match is over.</summary>
     private static async Task PlayedOutAsync(IAgentTurnTaker table)
     {
-        for (var turn = 0; turn < 2000 && await table.TakeTurnAsync(Cancel) != AgentTurn.Done; turn++)
+        var turns = 0;
+        while (turns < 2000 && await table.TakeTurnAsync(Cancel) != AgentTurn.Done)
         {
+            turns++;
         }
     }
 
