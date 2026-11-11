@@ -219,8 +219,9 @@ Each phase ships on the one container app there is today and leaves the game pla
      either may see its match end: one closes the session, the one whose claim on it stands
      (`PlaytestRun.ClaimClosingAsync`, `closing.json` beside the record, two minutes, then another may take it
      over). It keeps the result, writes the files once -- started over, so a takeover never adds to what a
-     process that stopped half wrote -- and tells the seats' accounts, renewing its claim before the files and
-     before the notices, so a closer that stalled past it and was taken over from stops there; the other waits for the
+     process that stopped half wrote -- and tells the seats' accounts, renewing its claim before each write of
+     the close and before the notices, so a closer that stalled past it and was taken over from stops at the
+     next of them; the other waits for the
      record to say finished and serves what it wrote. A checkpoint of the trace is written only over the trace
      it read, and never over one with the match's outcome on it, so a checkpoint on its way when another
      process closes the match cannot cut its trace short. The worker tells no seat "your turn": it serves no page,
