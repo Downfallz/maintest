@@ -26,13 +26,29 @@ public sealed class TableWatchTests : IDisposable
         _there = new HostedTables(_ => new FileArtifactStore(_runs), index: _here.Index, turns: _owedThere);
     }
 
+    /// <summary>
+    /// Lets the hosts go, then the runs, waiting out a table that is still writing its last files: a match that ended
+    /// writes its dataset after its outcome, as <see cref="HostedTables" /> waits it out too.
+    /// </summary>
     public void Dispose()
     {
         _here.Dispose();
         _there.Dispose();
-        if (Directory.Exists(_runs))
+        for (var attempt = 1; ; attempt++)
         {
-            Directory.Delete(_runs, recursive: true);
+            try
+            {
+                if (Directory.Exists(_runs))
+                {
+                    Directory.Delete(_runs, recursive: true);
+                }
+
+                return;
+            }
+            catch (IOException) when (attempt < 50)
+            {
+                Thread.Sleep(100);
+            }
         }
     }
 
