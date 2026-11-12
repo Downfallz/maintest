@@ -134,6 +134,27 @@ public sealed class TableTendTests : IDisposable
         System.Text.Json.JsonDocument.Parse(notice.Payload).RootElement.GetProperty("body").GetString().ShouldBe("6 hours left to answer, or the match is lost.");
     }
 
+    /// <summary>A pass run again in the same hour, as the job is after a failure, tells nobody twice (ADR 0169).</summary>
+    [Fact]
+    public async Task A_second_pass_in_the_same_hour_warns_nobody_again()
+    {
+        var (sent, late, _) = await WatchedAccountsAsync();
+        using var host = _hosted.Registry();
+        var table = await BegunAsync(host);
+        table.Seats[1].Account = late;
+        await PassAsync(table, table.Seats[0]);
+        await table.RecordAsync(Cancel);
+        using var job = await _hosted.RestartedAsync();
+        var lobby = new LobbyApi(job, _hosted.Composer, TimeProvider.System);
+        var first = await TableTend.TendAsync(job, lobby, DateTimeOffset.UtcNow + TimeSpan.FromHours(18) + TimeSpan.FromMinutes(5), _hosted.Composer);
+
+        var again = await TableTend.TendAsync(job, lobby, DateTimeOffset.UtcNow + TimeSpan.FromHours(18) + TimeSpan.FromMinutes(30), _hosted.Composer);
+
+        first.Warned.ShouldBe([table.Id]);
+        again.Warned.ShouldBeEmpty();
+        sent.Sent.Count.ShouldBe(1);
+    }
+
     [Fact]
     public async Task A_pass_before_the_last_quarter_or_after_its_first_hour_warns_nobody()
     {

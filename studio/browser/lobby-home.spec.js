@@ -659,3 +659,19 @@ test('find an opponent pages the tables eight at a time, one row each, open seat
   expect(state.tablePages).toEqual(expect.arrayContaining(['open/1', 'open/2', 'all/1', 'all/2']));
   expect(state.errors).toEqual([]);
 });
+
+test('a game between two players counts its time to answer down on the card, with nothing read again', async ({ page }) => {
+  const now = new Date('2026-11-12T12:00:00Z');
+  await page.clock.install({ time: now });
+  const answerBy = new Date(now.getTime() + 62.5 * 60000).toISOString();
+  const state = await home(page, { games: [{ ...held, table: { ...battle, answerBy } }] });
+  const card = page.locator('.mine-group.players .game-card');
+  await expect(card).toContainText('Your turn · 1 h left');
+  const reads = state.mineReads;
+
+  await page.clock.fastForward('03:00');
+
+  await expect(card).toContainText(/Your turn · 5\d min left/);
+  expect(state.mineReads).toBe(reads);
+  expect(state.errors).toEqual([]);
+});

@@ -1,4 +1,5 @@
 using System.Globalization;
+using DownfallArena.SharedKernel.Identifiers;
 
 namespace DownfallArena.Cli.Table;
 
@@ -115,24 +116,30 @@ internal static class TurnTimeouts
                 continue;
             }
 
-            var left = since + TimeSpan.FromHours(listed.Summary.TurnLimitHours.Value) - now;
-            var told = false;
+            var asked = new List<AccountId>();
             foreach (var seat in table.Seats.Where(seat => seat.Person is not null && seat.Account is not null))
             {
-                if (!table.Session.PlayedByItsPerson(seat.Slot) || (await table.Session.SnapshotAsync(seat.Slot)) is not { IsSuccess: true, Value.Waiting: not null })
+                if (table.Session.PlayedByItsPerson(seat.Slot) && (await table.Session.SnapshotAsync(seat.Slot)) is { IsSuccess: true, Value.Waiting: not null })
                 {
-                    continue;
+                    asked.Add(seat.Account!.Value);
                 }
-
-                var payload = AccountNotices.Payload("Your turn is waiting", $"{Left(left)} left to answer, or the match is lost.", $"/play?table={Uri.EscapeDataString(table.Id)}", $"turn:{table.Id}");
-                await notices.SendAsync(seat.Account!.Value, payload, "turn");
-                told = true;
             }
 
-            if (told)
+            // Claimed before it is sent: a pass run again tells nobody twice, at the cost of a notice lost to a
+            // pass that failed between the two.
+            if (asked.Count == 0 || table.Run is not { } run || !await run.ClaimWarningAsync(last?.Mark ?? 0))
             {
-                warned.Add(listed.Id);
+                continue;
             }
+
+            var left = since + TimeSpan.FromHours(listed.Summary.TurnLimitHours.Value) - now;
+            var payload = AccountNotices.Payload("Your turn is waiting", $"{Left(left)} left to answer, or the match is lost.", $"/play?table={Uri.EscapeDataString(table.Id)}", $"turn:{table.Id}");
+            foreach (var account in asked.Distinct())
+            {
+                await notices.SendAsync(account, payload, "turn");
+            }
+
+            warned.Add(listed.Id);
         }
 
         return warned;
