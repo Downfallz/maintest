@@ -140,12 +140,26 @@ export function orderControls(reveal: ReturnType<typeof createBattleOrderReveal>
       return chip;
     }));
   }
+  // On a narrow field the card takes the side of the field with more room beside the lit creature, and no more of it
+  // than that room, so it never covers the creature it explains; the field's layout moves with the scene, so this is
+  // asked again whenever the scene lays its creatures out. A wide field keeps the card on the far side by team.
+  function place() {
+    const card = el('order-why');
+    const lit = focused ? document.querySelector<HTMLElement>(`#actor-layer [data-creature="${focused}"]`) : null;
+    const zone = card.offsetParent as HTMLElement | null;
+    if (card.hidden || !lit || !zone || !matchMedia('(max-width: 619px)').matches) { delete card.dataset.place; card.style.removeProperty('max-height'); return; }
+    const field = zone.getBoundingClientRect(), creature = lit.getBoundingClientRect();
+    const above = creature.top - field.top, below = field.bottom - creature.bottom;
+    card.dataset.place = above > below ? 'top' : 'bottom';
+    card.style.maxHeight = `${Math.max(120, Math.floor(Math.max(above, below)) - 16)}px`;
+  }
   // The lit creature is let go of once it leaves the order; the card is drawn again only when its reason changes.
   function refreshWhy(model: Model, enabled: boolean, board: unknown) {
     if (focused && (!enabled || !model.rows.some((row: Row) => row.id === focused))) focused = null;
     const reason = focused ? orderReason(board, focused) : null;
     const nextWhy = JSON.stringify(reason);
     if (nextWhy !== why) { why = nextWhy; drawWhy(reason); }
+    place();
   }
   function render(model: Model, enabled: boolean, canAuto: boolean, board: unknown = null) {
     available = enabled; openers.forEach(button => { button.disabled = !enabled; });
@@ -170,5 +184,5 @@ export function orderControls(reveal: ReturnType<typeof createBattleOrderReveal>
     }
     if (canAuto && reveal.model().pending && !reading) { reveal.presented(); reading = true; onVisibility(); }
   }
-  return { render, isOpening: () => opening, isReading: () => reading, finish, details: () => show(true), focused: () => focused };
+  return { render, isOpening: () => opening, isReading: () => reading, finish, details: () => show(true), focused: () => focused, place };
 }
