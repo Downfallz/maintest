@@ -1582,3 +1582,61 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
   .match-who-inner { max-width: 86px; }
   .match-mvp .match-portrait { width: 52px; height: 52px; }
 }
+
+/* The turn order, interactive: a strip entry lights its creature on the field in ice blue (never the acting gold),
+   says its initiative and whether a d20 placed it, and opens a card at the top of the field saying why it holds
+   its place. The same blue numbers the tied creatures while the seat orders them. */
+#timeline .timeline-init { margin-left: 6px; color: #b9d9f2; font-weight: 700; }
+#timeline .timeline-die { margin-left: 6px; padding: 0 4px; border-radius: 4px; background: #eac88e22; color: #eac88e; font: 700 9px/1.5 system-ui, sans-serif; letter-spacing: .04em; vertical-align: 1px; }
+#timeline li[data-focused="true"] > button { border-radius: var(--radius-soft); background: linear-gradient(180deg, #6fc3ff2e, #6fc3ff10); box-shadow: inset 0 0 0 1.5px #6fc3ffcc, 0 0 14px #6fc3ff40; }
+#timeline li[data-focused="true"] .timeline-name { color: #dff1ff; }
+.order-why { position: absolute; top: 8px; left: 8px; z-index: 20; width: min(340px, calc(100% - 16px)); padding: 12px 14px 12px; border: 1px solid #6fc3ff66; border-left: 3px solid #6fc3ff;
+  border-radius: var(--radius-soft); background: linear-gradient(160deg, #14303bf2, #0f2228f2 70%); color: var(--ink); box-shadow: 0 10px 28px #050d10aa, 0 0 22px #6fc3ff26;
+  animation: order-why-in .18s ease-out; }
+.order-why[hidden] { display: none; }
+.order-why[data-team="enemy"] { border-left-color: #d98b6f; }
+/* The card stands on the side of the field away from the creature it lights, never over it: a wide field keeps your
+   team on the left and the opponent on the right, an upright phone the opponent above and your team below. */
+@media (min-width: 620px) { .order-why[data-team="ally"] { left: auto; right: 8px; } }
+@media (max-width: 619px) { .order-why[data-team="enemy"] { top: auto; bottom: 8px; } }
+@keyframes order-why-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.order-why-head { display: flex; align-items: center; gap: 10px; }
+.order-why-rank { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: #8fc3ef; color: #142126; font: 800 14px/1 system-ui, sans-serif; box-shadow: 0 0 0 3px #6fc3ff33; }
+.order-why-rank[data-tempo="Quick"] { background: #eac88e; }
+.order-why-who { flex: 1; min-width: 0; margin: 0; display: grid; }
+.order-why-who strong { font: 17px var(--font-display); color: #e8f5ff; overflow-wrap: anywhere; }
+.order-why-who small { color: var(--muted); font-size: 11px; letter-spacing: .02em; }
+#order-why-close { flex: none; width: 44px; height: 44px; margin: -8px -10px -8px 0; padding: 0; border: 0; background: transparent; color: #b9d9f2; font-size: 22px; }
+.order-why-lines { margin: 10px 0 0; padding: 0; list-style: none; display: grid; gap: 5px; font-size: 13px; line-height: 1.4; color: #d7e6ec; }
+.order-why-lines li { padding-left: 14px; position: relative; }
+.order-why-lines li::before { content: ''; position: absolute; left: 2px; top: .55em; width: 5px; height: 5px; border-radius: 50%; background: #6fc3ff; }
+.order-why-dice { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.order-why-dice[hidden] { display: none; }
+.order-why-die { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px 3px 3px; border: 1px solid #eac88e44; border-radius: 999px; background: #0c1a1f; font-size: 11px; color: #d7e6ec; }
+.order-why-die[data-team="enemy"] { border-color: #d98b6f55; }
+.order-why-die.is-self { border-color: #6fc3ffcc; box-shadow: 0 0 10px #6fc3ff33; color: #e8f5ff; }
+/* A d20 face: a hexagon in gold, its last throw on it. */
+.order-why-face { display: grid; place-items: center; width: 22px; height: 22px; clip-path: polygon(50% 0, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%); background: #eac88e; color: #142126; font: 800 10px/1 system-ui, sans-serif; }
+.order-why-inspect { flex: none; min-height: 44px; margin: -6px 0; padding: 4px 12px; font-size: 12px; }
+.order-why-throws { margin-left: 5px; color: #eac88e; font-weight: 700; }
+@media (max-width: 619px) {
+  .order-why { padding: 10px 12px; }
+  .order-why-lines { margin-top: 8px; gap: 3px; font-size: 12px; }
+  .order-why-dice { margin-top: 8px; gap: 4px; }
+  .order-why-die { padding: 2px 7px 2px 2px; font-size: 10.5px; }
+  .order-why-who strong { font-size: 15px; }
+}
+
+/* The field's blue: the creature the strip points at, and while ties are ordered, each tied creature with its
+   place (or a ? still to place); the opponent's places in those ties muted. */
+.creature[data-focus="focus"] .caption, .creature[data-focus="placed"] .caption, .creature[data-focus="pending"] .caption { border-bottom: 2px solid #6fc3ff; }
+.creature[data-focus] .creature-tag { color: #b9e0ff; }
+.creature[data-focus="opponent"] .creature-tag { color: #e9b7a4; }
+.creature .focus-badge { position: absolute; left: 50%; top: 4%; z-index: 3; transform: translateX(-50%); display: grid; place-items: center; min-width: 30px; height: 30px; padding: 0 6px;
+  border-radius: 999px; background: #6fc3ff; color: #0d1d24; font: 800 15px/1 system-ui, sans-serif; box-shadow: 0 0 0 3px #0d1d24cc, 0 0 16px #6fc3ff99; pointer-events: none; }
+.creature .focus-badge[hidden] { display: none; }
+.creature[data-focus="pending"] .focus-badge { background: #0d1d24; color: #b9e0ff; box-shadow: 0 0 0 2px #6fc3ff, 0 0 16px #6fc3ff66; animation: focus-ask 1.6s ease-in-out infinite; }
+.creature[data-focus="opponent"] .focus-badge { background: #2a1c18; color: #e9b7a4; box-shadow: 0 0 0 2px #d98b6f99; }
+@keyframes focus-ask { 50% { box-shadow: 0 0 0 2px #6fc3ff, 0 0 22px #6fc3ffcc; } }
+@media (prefers-reduced-motion: reduce) { .order-why, .creature[data-focus="pending"] .focus-badge { animation: none; } }
+#battle[data-reduced-motion="true"] .order-why, #battle[data-reduced-motion="true"] .creature[data-focus="pending"] .focus-badge { animation: none; }

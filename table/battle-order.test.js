@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { battleOrder, battleTieGroups, createBattleOrderReveal, rollOffDice } from './battle-order.js';
+import { battleOrder, battleTieGroups, createBattleOrderReveal, orderReason, rollOffDice, tieMarks } from './battle-order.js';
 import { livePresentation } from './battle-live.js';
 
 const slot = (creature, owner = 'Player1', speed = 'Quick', initiative = 5) => ({ creature, owner, speed, initiative });
@@ -132,4 +132,48 @@ test('roll-off dice say which tie each broke and where its creature finished in 
   assert.deepEqual(rollOffDice(board).map(die => [die.id, die.value, die.group, die.place, die.rivals]),
     [['5', 13, 1, 1, 1], ['1', 2, 1, 2, 1], ['2', 17, 2, 1, 1], ['4', 4, 2, 2, 1]]);
   assert.deepEqual(rollOffDice({ timeline: [slot(1, 'Instinct', 8)], rollOffs: [{ creature: 9, rolls: [3] }] }), []);
+});
+
+test('a creature alone in its tempo and initiative is placed by its band and its neighbours\' initiative', () => {
+  const ranked = { ...board, timeline: [slot(1, 'Player1', 'Quick', 9), slot(4, 'Player2', 'Quick', 7), slot(2, 'Player1', 'Quick', 5), slot(5, 'Player2', 'Standard', 8)], rollOffs: [] };
+  const reason = orderReason(livePresentation(view({ board: ranked })), '4');
+
+  assert.equal(reason.position, 2);
+  assert.equal(reason.tie, 'none');
+  assert.deepEqual(reason.lines, ['Instinct: acts before every Precision creature.', 'Initiative 7: after Ally 1 (9), before Ally 2 (5).']);
+});
+
+test('a tie across the teams is explained by the roll-off, with every rolled die and its rerolls', () => {
+  const reason = orderReason(livePresentation(view()), '4');
+
+  assert.equal(reason.tie, 'rolled');
+  assert.deepEqual(reason.dice.map(die => [die.id, die.rolls, die.self]), [['2', [11, 18], false], ['4', [11, 8], true], ['1', [2], false]]);
+  assert.equal(reason.lines[1], 'Initiative 5, tied with Ally 2 and Ally 1.');
+});
+
+test('a creature that shared a rolled tie with its own team says its owner ordered those places', () => {
+  assert.match(orderReason(livePresentation(view()), '2').lines.at(-1), /^Within its team's places, you chose the order\.$/);
+});
+
+test('a tie within one team rolls nothing: its owner chose the order', () => {
+  const own = { ...board, timeline: [slot(1, 'Player1', 'Quick', 6), slot(3, 'Player1', 'Quick', 6), slot(4, 'Player2', 'Quick', 2)], rollOffs: [] };
+
+  const reason = orderReason(livePresentation(view({ board: own })), '3');
+
+  assert.equal(reason.tie, 'own');
+  assert.deepEqual(reason.dice, []);
+  assert.equal(reason.lines.at(-1), 'Same team: you chose the order, no dice.');
+});
+
+test('a creature with no place in the order has no reason', () => {
+  assert.equal(orderReason(livePresentation(view()), '99'), null);
+});
+
+test('while ties are ordered, the field marks each tied creature with its place, a ? while it is still to place, and the opponent\'s fixed places', () => {
+  const marks = tieMarks(view({ board: tieBoard, options: ties }), [1]);
+
+  assert.deepEqual(Object.fromEntries(marks), {
+    1: { badge: '1', state: 'placed' }, 2: { badge: '3', state: 'placed' }, 4: { badge: '2', state: 'opponent' },
+    3: { badge: '?', state: 'pending' }, 6: { badge: '?', state: 'pending' }, 5: { badge: '4', state: 'opponent' },
+  });
 });

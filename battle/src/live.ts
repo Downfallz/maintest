@@ -4,7 +4,7 @@ import { creatureInspection, creatureCues, spokenCues } from '../../table/battle
 import { chipElement, conditionIcons, iconElement, type EffectChip } from './condition-icons';
 import { inspectionControls } from './inspection';
 import { battleTargetState, battleTargetTag } from '../../table/battle-targets.js';
-import { battleOrder, createBattleOrderReveal, rollOffDice } from '../../table/battle-order.js';
+import { battleOrder, createBattleOrderReveal, rollOffDice, tieMarks } from '../../table/battle-order.js';
 import { orderControls } from './order';
 import { createBattleGrowth } from '../../table/battle-growth.js';
 import { growthControls } from './growth';
@@ -267,6 +267,9 @@ function announceRound(round: number | null) {
 }
 let matchShown = '', lastMutationReveal: number | null = null, mutationOpened = '', spellOpened = '', orderShown = false;
 let dockShape = '', dockMoved = false;
+// What the field marks in blue and numbers, by creature id (the strip's lit creature, or the ties being ordered).
+type FieldMark = { badge: string; state: string };
+let fieldMarks = new Map<string, FieldMark>();
 
 function render() {
   if (receiving) return;
@@ -348,6 +351,19 @@ function render() {
     if (drafted) return `${drafted === 'Quick' ? '⚡' : '✦'} ${tempoLabel(drafted).toUpperCase()}`;
     return id === tempoFocus ? 'CHOOSING TEMPO' : 'TEMPO ?';
   };
+  // The field says in blue what the strip or the tie sheet is about: the creature the strip lit, or the seat's tied
+  // creatures with the place each takes while it orders them, the opponent's places in those ties muted beside them.
+  const tieSheet = plan.opened && plan.latest?.waitingFor === 'TieOrder' && !playbackState.active && !replay.active
+    ? tieMarks(plan.latest, plan.tapped) as Map<string, FieldMark> : null;
+  const stripFocus = orderUI.focused();
+  fieldMarks = tieSheet ?? new Map(stripFocus ? [[stripFocus, { badge: '', state: 'focus' }]] : []);
+  const focusIds = [...fieldMarks].filter(([, mark]) => mark.state !== 'opponent').map(([id]) => id);
+  if (focusIds.length && !targeting) frame = { ...frame, focus: focusIds };
+  const tieTag = (id: string) => {
+    const mark = tieSheet?.get(id);
+    if (!mark) return null;
+    return mark.state === 'pending' ? 'TAP TO PLACE' : `PLACE ${mark.badge}`;
+  };
   // A sheet docked under a phone's field shortens it: the captions go compact so the art stays in view.
   $('battle').dataset.docked = String($<HTMLDialogElement>('combat-dialog').open || ($<HTMLDialogElement>('planning-dialog').open && ['Evolution', 'Speed', 'TieOrder'].includes($('planning-dialog').dataset.kind ?? '')));
   $('battle').classList.toggle('mutation-entry', mutation.available && !plan.opened);
@@ -362,6 +378,8 @@ function render() {
       if (shownArt.has(one.id)) { node.dataset.artworkShown = shownArt.get(one.id)!; shownArt.delete(one.id); }
       node.addEventListener('click', event => {
         if (controls.target(one.id)) return;
+        // While the seat orders its ties, a tied creature of its own is placed by tapping it on the field too.
+        if (['pending', 'placed'].includes(fieldMarks.get(one.id)?.state ?? '')) { planning.order(Number(one.id)); return; }
         if ((event.currentTarget as HTMLElement).dataset.mutationRecipient === 'true') planningUI.openCreature(Number(one.id));
         else inspectCreature(one.id);
       });
@@ -372,6 +390,11 @@ function render() {
     node.dataset.mutationFocus = String(mutation.recipient === one.id);
     node.dataset.sheetFocus = String(tempoFocus === one.id);
     if (tempoDrafts.has(one.id)) node.dataset.tempo = tempoDrafts.get(one.id)!; else delete node.dataset.tempo;
+    const mark = fieldMarks.get(one.id);
+    if (mark) node.dataset.focus = mark.state; else delete node.dataset.focus;
+    let badge = node.querySelector<HTMLElement>('.focus-badge');
+    if (mark?.badge && !badge) { badge = document.createElement('span'); badge.className = 'focus-badge'; badge.setAttribute('aria-hidden', 'true'); node.append(badge); }
+    if (badge) { badge.hidden = !mark?.badge; badge.textContent = mark?.badge ?? ''; }
     if (mutation.recipient === one.id && mutation.previewForm) node.dataset.previewForm = mutation.previewForm;
     else delete node.dataset.previewForm;
     node.dataset.form = one.form;
@@ -388,7 +411,7 @@ function render() {
     if (targeting) node.setAttribute('aria-pressed', String(frame.selected?.includes(one.id) === true));
     else node.removeAttribute('aria-pressed');
     const targetTag = battleTargetTag(targetState, one);
-    const condition = mutation.tag(one.id) ?? tempoTag(one.id) ?? targetTag?.tag ?? tagOf(one);
+    const condition = mutation.tag(one.id) ?? tempoTag(one.id) ?? tieTag(one.id) ?? targetTag?.tag ?? tagOf(one);
     node.querySelector('.creature-name')!.textContent = one.label;
     node.querySelector('.creature-tag')!.textContent = condition;
     statChips(node.querySelector<HTMLElement>('.creature-stats')!, one.health, one.maxHealth, one.energy);
@@ -420,7 +443,7 @@ function render() {
   text('round-phase', view?.waiting && !view.over ? 'WAITING' : phaseLabel(board.phase).toUpperCase());
   text('ally-label', view ? 'YOUR TEAM' : ''); text('enemy-label', view ? opponentLabel() : '');
   const order = battleOrder(view?.waiting && !view.over ? null : board);
-  orderUI.render(order, Boolean(view) && !view?.waiting && !rendererFailed, false);
+  orderUI.render(order, Boolean(view) && !view?.waiting && !rendererFailed, false, view?.waiting && !view.over ? null : board);
   const orderReading = orderUI.isReading() && !replay.active;
   $('battle').dataset.orderReading = String(orderReading);
   $('order-continue').hidden = !orderReading;
@@ -516,7 +539,7 @@ function render() {
     lastMutationReveal = reveal.sequence;
     if (!reduced()) scene.revealMutations(reveal.rows.map((row: {creature: number}) => String(row.creature)));
   }
-  orderUI.render(order, Boolean(view) && !view?.waiting && !rendererFailed, canAuto() && !upkeep.model().pending);
+  orderUI.render(order, Boolean(view) && !view?.waiting && !rendererFailed, canAuto() && !upkeep.model().pending, view?.waiting && !view.over ? null : board);
   helpUI.render(guide, canAuto() && !upkeep.model().pending && !orderReveal.model().pending);
   // The mutation phase opens its tree by itself once the board is unobstructed: after the upkeep receipt, the
   // turn order and a first-use tip, never in the waiting room or over another dialog or playback. Once per asking: a player who
@@ -722,6 +745,7 @@ async function discover(autoResume = true) {
 scene.onLayout = positions => placeHitTargets(creatures.map(one => nodes.get(one.id)!), positions);
 scene.onDice = shown => { if (shown) $('battle').dataset.dice = shown; else delete $('battle').dataset.dice; };
 scene.onHalo = id => { if (id) $('battle').dataset.halo = id; else delete $('battle').dataset.halo; };
+scene.onFocus = ids => { if (ids) $('battle').dataset.focusLit = ids; else delete $('battle').dataset.focusLit; };
 scene.onArtwork = (id, shown) => { const node = nodes.get(id); if (node) node.dataset.artworkShown = shown; else shownArt.set(id, shown); };
 scene.onReady = () => { ready = true; $('battle').dataset.ready = 'true'; $('battle').dataset.assetFallback = String(scene.assetFailed); render(); };
 function failRenderer() {

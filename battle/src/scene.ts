@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ActingHalo } from './acting-halo';
+import { ActingHalo, FOCUS } from './acting-halo';
 import { DiceLayer } from './dice';
 import { placements, strikeApproach } from '../../table/battle-layout.js';
 import { CREATURE_ART, figureArt, figureGeometry } from '../../table/battle-art.js';
@@ -61,6 +61,11 @@ export class BattleScene extends Phaser.Scene {
   // Which creature the acting halo lights now, or null (`#battle[data-halo]` for tests and tools).
   onHalo: (id: string | null) => void = () => {};
   private halo: ActingHalo | null = null;
+  // One blue halo per creature the turn order or a tie points at (SceneFrame.focus), made the first time it is lit.
+  private focusHalos = new Map<string, ActingHalo>();
+  // Which creatures the blue focus lights now (`#battle[data-focus-lit]` for tests and tools).
+  onFocus: (ids: string) => void = () => {};
+  private focusLit = '';
   private dice: DiceLayer | null = null;
   // The dice on the field now, `id:value:tone` each (`#battle[data-dice]` for tests and tools).
   onDice: (shown: string) => void = () => {};
@@ -122,15 +127,19 @@ export class BattleScene extends Phaser.Scene {
     const changed = state.stage !== this.previous;
     if (changed && (state.stage === 'decision' || state.stage === 'resolved')) this.clearMotion();
     this.arrange(rosterChanged);
+    const focus = new Set(state.focus ?? []);
     for (const creature of state.creatures) {
       const figure = this.figures.get(creature.id)!;
       const acting = creature.id === state.actor;
       const selected = creature.id === state.mutationFocus || creature.id === state.target || state.selected?.includes(creature.id) === true;
       const legal = state.stage === 'targeting' && state.targets.includes(creature.id);
-      figure.ring.setStrokeStyle(selected ? 3 : 1.5, selected || acting ? GOLD : EMBER, selected || legal || acting ? .95 : .15);
-      // While targets are chosen, whatever cannot be targeted steps back; the caster stays in full.
+      const focused = focus.has(creature.id) && !selected;
+      figure.ring.setStrokeStyle(selected || focused ? 3 : 1.5, focused ? FOCUS.tint : selected || acting ? GOLD : EMBER, selected || legal || acting || focused ? .95 : .15);
+      // While targets are chosen, whatever cannot be targeted steps back; the caster stays in full. What the blue
+      // focus points at stands out the same way, a little less: the rest of the field stays readable.
       const aside = state.stage === 'targeting' && !legal && !selected && !acting;
-      figure.image.setAlpha(!creature.isAlive ? .20 : (state.mutationFocus && !selected) || aside ? .52 : 1);
+      const unlit = focus.size > 0 && !focused && !selected && !acting;
+      figure.image.setAlpha(!creature.isAlive ? .20 : (state.mutationFocus && !selected) || aside ? .52 : unlit ? .62 : 1);
       figure.alive = creature.isAlive;
       figure.shadow.setAlpha(creature.isAlive ? .55 : .2);
       this.followCues(figure);
@@ -140,6 +149,7 @@ export class BattleScene extends Phaser.Scene {
     const lit = actor ? this.figures.get(actor.id) ?? null : null;
     this.halo?.show(lit);
     if ((lit?.id ?? null) !== this.haloId) { this.haloId = lit?.id ?? null; this.onHalo(this.haloId); }
+    this.lightFocus(state.creatures.filter(one => focus.has(one.id) && one.isAlive).map(one => one.id));
     const standing = (state.dice ?? []).filter(die => this.figures.get(die.id)?.alive);
     this.dice?.show(standing, id => this.figures.get(id) ?? null, this.time.now);
     // `id:value:tone`, then the tie a roll-off broke and its place in it (`tie1:2`) or the face a crit needed (`14+`).
@@ -388,9 +398,24 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
+  // The blue halos follow the focus: one per creature lit, the others hidden, so a tie being ordered lights them all.
+  private lightFocus(ids: string[]) {
+    for (const [id, halo] of this.focusHalos) if (!ids.includes(id)) halo.show(null);
+    for (const id of ids) {
+      const figure = this.figures.get(id);
+      if (!figure) continue;
+      let halo = this.focusHalos.get(id);
+      if (!halo) { halo = new ActingHalo(this, FOCUS); this.focusHalos.set(id, halo); }
+      halo.show(figure);
+    }
+    const lit = ids.join(' ');
+    if (lit !== this.focusLit) { this.focusLit = lit; this.onFocus(lit); }
+  }
+
   update(time: number) {
     if (!this.state) return;
     this.halo?.follow(time, this.reduced);
+    for (const halo of this.focusHalos.values()) halo.follow(time, this.reduced);
     this.dice?.follow(time, this.reduced);
     // Creatures stand still between actions: only a played action moves them.
     for (const figure of this.figures.values()) {

@@ -1,5 +1,5 @@
 import { livePresentation } from './battle-live.js';
-import { orderOf } from './ties.js';
+import { orderOf, untapped } from './ties.js';
 import { tempoLabel } from './terms.js';
 
 // Consume the presented board, including its historical cursor/rolls during playback. Never rank locally.
@@ -19,7 +19,7 @@ export function battleOrder(board) {
     const creature = board.creatures?.find(one => one.id === String(slot.creature));
     return { id: String(slot.creature), position: index + 1, label: creature?.label ?? `Creature ${slot.creature}`,
       team: teamOf(slot), speed: slot.speed, tempo: tempoLabel(slot.speed), initiative: slot.initiative,
-      roll: slot.roll || '', state: stateOf(index, board, finished), condition: conditionOf(creature),
+      roll: slot.roll || '', rolls: slot.rolls ?? [], state: stateOf(index, board, finished), condition: conditionOf(creature),
       inspectable: Boolean(creature) };
   });
   const summary = team => {
@@ -104,4 +104,73 @@ export function rollOffDice(board) {
     dice.push({ id, value: rolled.at(-1), rolls: [...rolled], group, place });
   }
   return dice.map(die => ({ ...die, rivals: places.get(die.group) - 1 }));
+}
+
+const sameTie = (a, b) => a.speed === b.speed && a.initiative === b.initiative;
+const names = rows => {
+  const labels = rows.map(row => row.label);
+  return labels.length < 2 ? labels.join('') : `${labels.slice(0, -1).join(', ')} and ${labels.at(-1)}`;
+};
+const chooser = team => team === 'Your team' ? 'you chose' : 'your opponent chose';
+
+/**
+ * Why a creature holds its place in the order, from the presented board alone (game-rules.md, turn order): the
+ * tempo band first, then initiative within the band, then a tie, which a d20 roll-off breaks between teams and the
+ * owner orders within their own places. Null for a creature with no place. Never re-ranks: it explains the order
+ * the host served, with the rolls it recorded.
+ */
+export function orderReason(board, id) {
+  const rows = battleOrder(board).rows;
+  const row = rows.find(one => one.id === String(id));
+  if (!row) return null;
+  const band = rows.filter(one => one.speed === row.speed);
+  const tied = band.filter(one => one !== row && sameTie(one, row));
+  const lines = [row.speed === 'Quick'
+    ? `${row.tempo}: acts before every Precision creature.`
+    : `${row.tempo}: acts after every Instinct creature.`];
+  let tie = 'none';
+  const dice = [];
+  if (tied.length === 0) {
+    const ahead = band.filter(one => Number.isFinite(one.initiative) && one.initiative > row.initiative).at(-1);
+    const behind = band.find(one => Number.isFinite(one.initiative) && one.initiative < row.initiative);
+    const around = [ahead && `after ${ahead.label} (${ahead.initiative})`, behind && `before ${behind.label} (${behind.initiative})`].filter(Boolean);
+    lines.push(!Number.isFinite(row.initiative) ? 'Initiative not recorded.'
+      : around.length ? `Initiative ${row.initiative}: ${around.join(', ')}.` : `Initiative ${row.initiative}, alone in its tempo.`);
+  } else {
+    const group = [row, ...tied].sort((a, b) => a.position - b.position);
+    const crossed = group.some(one => one.team !== row.team);
+    lines.push(`Initiative ${row.initiative}, tied with ${names(tied)}.`);
+    if (crossed) {
+      tie = 'rolled';
+      for (const one of group) if (one.rolls.length) dice.push({ id: one.id, label: one.label, team: one.team, rolls: [...one.rolls], self: one === row });
+      lines.push(dice.length ? 'A d20 roll-off broke it: highest first, matches roll again.'
+        : 'A d20 roll-off between the teams broke the tie.');
+      if (group.filter(one => one.team === row.team).length > 1) lines.push(`Within its team's places, ${chooser(row.team)} the order.`);
+    } else {
+      tie = 'own';
+      lines.push(`Same team: ${chooser(row.team)} the order, no dice.`);
+    }
+  }
+  return { id: row.id, label: row.label, team: row.team, position: row.position, total: rows.length,
+    speed: row.speed, tempo: row.tempo, initiative: row.initiative, tie, dice, lines };
+}
+
+/**
+ * What the field marks while the seat orders its ties (ADR 0063), by creature id: each of the seat's tied creatures
+ * with the place it takes now ("placed", once tapped or once it is the last left in its tie) or a "?" while it is
+ * still to place ("pending"), and each opponent creature holding a place in the same tie ("opponent").
+ */
+export function tieMarks(view, tapped = []) {
+  const groups = view?.options?.tieOrder?.ties ?? [];
+  const left = untapped(groups, tapped);
+  const marks = new Map();
+  battleTieGroups(view, tapped).forEach((group, index) => {
+    const settled = left[index].length <= 1;
+    for (const one of group.assignments) {
+      const placed = settled || tapped.includes(one.id);
+      marks.set(String(one.id), { badge: placed && one.position != null ? String(one.position) : '?', state: placed ? 'placed' : 'pending' });
+    }
+    for (const row of group.fixed) marks.set(row.id, { badge: String(row.position), state: 'opponent' });
+  });
+  return marks;
 }

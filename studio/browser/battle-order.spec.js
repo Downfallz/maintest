@@ -201,3 +201,83 @@ for (const away of ['hidden', 'reload']) test(`a seat ${away === 'hidden' ? 'tha
   await page.locator('#order-continue').click();
   await expect(page.locator('#combat-dialog')).toBeVisible(); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });
+
+test('a strip entry lights its creature in blue and says why it holds its place, and a second tap puts it out', async ({ page }, info) => {
+  const h = await mount(page);
+  const entry = page.locator('#timeline [data-order-creature="4"]');
+  // Each place says its initiative, and a d20 marks those a roll-off placed.
+  await expect(entry).toContainText('⚡5'); await expect(entry.locator('.timeline-die')).toHaveText('d20');
+  await expect(page.locator('#timeline [data-order-creature="6"] .timeline-die')).toHaveCount(0);
+
+  await entry.click();
+
+  await expect(entry).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#battle')).toHaveAttribute('data-focus-lit', '4');
+  await expect(page.locator('#actor-layer [data-creature="4"]')).toHaveAttribute('data-focus', 'focus');
+  const why = page.locator('#order-why');
+  await expect(why).toBeVisible();
+  await expect(page.locator('#order-why-meta')).toHaveText('Opponent · 2 of 6');
+  await expect(page.locator('#order-why-lines li')).toHaveText(['Instinct: acts before every Precision creature.', 'Initiative 5, tied with Creature 1 and Creature 2.',
+    'A d20 roll-off broke it: highest first, matches roll again.']);
+  await expect(page.locator('.order-why-die')).toHaveText(['18Creature 111 → 18', '8Creature 411 → 8', '2Creature 22']);
+  await expect(page.locator('.order-why-die').first()).toHaveAttribute('aria-label', 'Creature 1: d20 11 then 18');
+  await expect(page.locator('.order-why-die.is-self')).toContainText('Creature 4');
+  await fitsViewport(page, '#order-why-close, #order-why-inspect');
+  // The card stands away from the creature it lights, so the creature stays in view.
+  await page.clock.runFor(1000);
+  const [card, lit] = await Promise.all([why.boundingBox(), page.locator('#actor-layer [data-creature="4"] .caption').boundingBox()]);
+  expect(card.y > lit.y + lit.height || card.y + card.height < lit.y || card.x > lit.x + lit.width || card.x + card.width < lit.x).toBe(true);
+  await page.screenshot({ path: info.outputPath('order-why.jpg'), type: 'jpeg', quality: 85, animations: 'disabled' });
+
+  await entry.click();
+
+  await expect(entry).toHaveAttribute('aria-pressed', 'false');
+  await expect(why).toBeHidden();
+  await expect(page.locator('#battle')).not.toHaveAttribute('data-focus-lit', /./);
+  await expect(page.locator('#actor-layer [data-creature="4"]')).not.toHaveAttribute('data-focus', /./);
+  expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
+});
+
+test('the why card opens the creature\'s sheet, and Escape or its close puts the light out', async ({ page }) => {
+  const h = await mount(page);
+  await page.locator('#timeline [data-order-creature="5"]').click();
+  await expect(page.locator('#order-why-lines li').nth(1)).toHaveText('Initiative 3, tied with Creature 3.');
+
+  await page.locator('#order-why-inspect').click();
+  await expect(page.locator('#inspect-name')).toHaveText('Creature 5');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#order-why')).toBeVisible('closing the sheet keeps the light');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#order-why')).toBeHidden();
+
+  await page.locator('#timeline [data-order-creature="6"]').click();
+  await expect(page.locator('#order-why-lines li').nth(1)).toHaveText('Initiative 1: after Creature 3 (3).');
+  await page.locator('#order-why-close').click();
+  await expect(page.locator('#order-why')).toBeHidden(); await expect(page.locator('#timeline [data-order-creature="6"]')).toBeFocused();
+  expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
+});
+
+test('ordering ties lights the tied creatures on the field with their places, and a tap on the field places one', async ({ page }, info) => {
+  const h = await mount(page, { board: { ...board, subPhase: 'Speed', timeline: [] }, feed: [] });
+  await h.publish({ board: { ...board, subPhase: 'TieOrder' }, waitingFor: 'TieOrder', waitingAsked: 20,
+    options: { tieOrder: { ties: [[1, 2]] } }, feed: [reveal(11)] });
+  await page.locator('#planning-open').click();
+  // The docked sheet shortens the field: let it lay both rows out above the sheet.
+  await page.clock.runFor(1000);
+  const field = id => page.locator(`#actor-layer [data-creature="${id}"]`);
+  await expect(field(1)).toHaveAttribute('data-focus', 'pending'); await expect(field(1).locator('.focus-badge')).toHaveText('?');
+  await expect(field(2)).toHaveAttribute('data-focus', 'pending');
+  await expect(field(4)).toHaveAttribute('data-focus', 'opponent'); await expect(field(4).locator('.focus-badge')).toHaveText('2');
+  await expect(field(1).locator('.creature-tag')).toHaveText('TAP TO PLACE');
+  await expect(page.locator('#battle')).toHaveAttribute('data-focus-lit', '1 2');
+  await page.screenshot({ path: info.outputPath('ties-on-field.jpg'), type: 'jpeg', quality: 85 });
+
+  await field(2).click();
+
+  await expect(field(2)).toHaveAttribute('data-focus', 'placed'); await expect(field(2).locator('.focus-badge')).toHaveText('1');
+  await expect(field(1).locator('.focus-badge')).toHaveText('3', 'the last one left takes the last place');
+  await expect(page.locator('.tie-group').first()).toContainText('#1 → Creature 2 · #3 → Creature 1');
+  await page.locator('#planning-confirm').click();
+  expect(h.state.writes).toEqual([{ kind: 'TieOrder', order: [2, 1], asked: 20 }]);
+  expect(h.state.errors).toEqual([]);
+});

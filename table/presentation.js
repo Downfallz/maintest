@@ -42,6 +42,7 @@ export function boardPresentation(board) {
   const cursor = cursorOf(board);
   const timeline = withCursor(board?.timeline, cursor).map((slot, index) => ({
     ...slot, position: index + 1, side: side(slot, board?.slot), roll: rollText(board?.rollOffs, slot.creature),
+    rolls: [...((board?.rollOffs ?? []).find(rollOff => rollOff?.creature === slot.creature)?.rolls ?? [])],
   }));
   return {
     allies: board?.allies ?? [],
