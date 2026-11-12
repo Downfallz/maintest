@@ -377,6 +377,7 @@ body.classic-page:has(#table:not([hidden])) .home-header .brand { display: flex;
 .casual-tag { display: inline-block; margin-left: 8px; padding: 1px 8px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font: 600 10px/1.6 system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; vertical-align: middle; }
 .ranked-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 14px; padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .ranked-row[hidden] { display: none; }
+.field-note { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; font-weight: 400; }
 .ranked-row > span { display: flex; flex-direction: column; gap: 3px; font-weight: 650; }
 .ranked-row small { color: var(--muted); font-size: 12px; font-weight: 400; line-height: 1.5; }
 .ranked-row input { width: 22px; height: 22px; flex: none; accent-color: var(--gold); }

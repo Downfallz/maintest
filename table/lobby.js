@@ -626,6 +626,8 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     el('friend-row').hidden = value !== 'friend';
     // Only a game between two players can count on the ladder: a bot or a shared device never does.
     el('ranked-row').hidden = !['person', 'friend'].includes(value) || mode === 'off';
+    // So is how long a player has to answer before losing (ADR 0169): a bot always answers.
+    el('turn-limit-row').hidden = !['person', 'friend'].includes(value);
     // At the most games of that kind at once (ADR 0147), the host would refuse: say so before the player asks.
     const kind = value === 'bot' ? 'bots' : 'players', full = !reinviting && Number.isInteger(limit) && ongoingGames(mine)[kind].length >= limit;
     if (full) el('create-help').textContent = `You already have ${limit} games ${kind === 'bots' ? 'against bots' : 'against players'} in progress, the most at once. Finish one to start another.`;
@@ -647,6 +649,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     else if (opponent) el('opponent').value = opponent;
     if (format && [...el('format').options].some(option => option.value === format)) el('format').value = format;
     el('ranked').checked = ranked !== false; el('ranked').disabled = Boolean(reinvite);
+    el('turn-limit').value = '72'; el('turn-limit').disabled = Boolean(reinvite);
     const opening = revision;
     void loadFriends(friend).then(() => {
       if (opening !== revision || signInFirst()) return;
@@ -690,7 +693,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
       } else {
         const between = ['person', 'friend'].includes(el('opponent').value);
         enter(await lobbyRequest('/api/lobby/tables', { opponent: el('opponent').value, format: el('format').value, friend: el('opponent').value === 'friend' ? el('friend').value : undefined,
-          ...(between && !el('ranked').checked ? { ranked: false } : {}) }));
+          ...(between && !el('ranked').checked ? { ranked: false } : {}), ...(between ? { turnLimit: Number(el('turn-limit').value) } : {}) }));
       }
     } catch (error) { el('create-problem').textContent = error.message || 'Could not create the table. Try again.'; el('create-problem').hidden = false; }
     finally { busy = false; showOpponent(); }

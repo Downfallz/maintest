@@ -464,9 +464,12 @@ test('your games are grouped against players and against bots, at most five of e
   // A game against another player can be opened unranked (ADR 0155); a bot's never counts, so it has no switch.
   await expect(page.getByLabel(/^Ranked/)).toBeChecked();
   await page.locator('#opponent').selectOption('bot'); await expect(page.locator('#ranked-row')).toBeHidden();
+  // Nor a time to answer (ADR 0169): a bot always answers. Between players it is three days unless another is chosen.
+  await expect(page.locator('#turn-limit-row')).toBeHidden();
   await page.locator('#opponent').selectOption('person'); await page.getByLabel(/^Ranked/).uncheck();
+  await expect(page.getByLabel(/^Time to answer/)).toHaveValue('72'); await page.getByLabel(/^Time to answer/).selectOption('168');
   await page.locator('#create-submit').click();
-  await expect.poll(() => state.created).toEqual({ opponent: 'person', format: '3v3', ranked: false });
+  await expect.poll(() => state.created).toEqual({ opponent: 'person', format: '3v3', ranked: false, turnLimit: 168 });
   expect(state.errors).toEqual([]);
 });
 
