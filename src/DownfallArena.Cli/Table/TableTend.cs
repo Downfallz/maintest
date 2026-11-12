@@ -23,7 +23,13 @@ internal static class TableTend
     {
         /// <summary>The tables ended because their player let their time to answer run out (ADR 0169).</summary>
         public IReadOnlyList<string> TimedOut { get; init; } = [];
+
+        /// <summary>The tables whose player was told a quarter of their time to answer is left (ADR 0169).</summary>
+        public IReadOnlyList<string> Warned { get; init; } = [];
     }
+
+    /// <summary>How often the job runs (infra/main.bicep): the warning is sent by the one pass of that interval that finds a quarter left.</summary>
+    internal static readonly TimeSpan Interval = TimeSpan.FromHours(1);
 
     public static async Task<int> RunAsync(IServiceProvider services, CliOptions options, RuleSet rules)
     {
@@ -97,6 +103,11 @@ internal static class TableTend
                 Console.WriteLine($"  Session {id} ended: its player let their time to answer run out.");
             }
 
+            foreach (var id in tended.Warned)
+            {
+                Console.WriteLine($"  Session {id}: its player was told a quarter of their time to answer is left.");
+            }
+
             return 0;
         }
         catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is Azure.Identity.AuthenticationFailedException)
@@ -127,7 +138,7 @@ internal static class TableTend
         }
     }
 
-    /// <summary>One pass: the sweep, the invitations that ran out, then the games whose player's time ran out.</summary>
+    /// <summary>One pass: the sweep, the invitations that ran out, the games whose player's time ran out, then the players whose time reaches its last quarter.</summary>
     /// <param name="composer">What reads a table's last move; none, and no game is timed out.</param>
     internal static async Task<Tended> TendAsync(TableRegistry registry, LobbyApi lobby, DateTimeOffset now, TableComposer? composer = null, TimeProvider? clock = null)
     {
@@ -136,6 +147,7 @@ internal static class TableTend
         var swept = await registry.SweepAsync(now);
         var expired = await lobby.ExpireInvitationsNowAsync();
         var timedOut = composer is null ? [] : await TurnTimeouts.EndAsync(registry, composer, now, clock ?? TimeProvider.System);
-        return new Tended(swept, expired) { TimedOut = timedOut };
+        var warned = composer is null ? [] : await TurnTimeouts.WarnAsync(registry, composer, now, Interval);
+        return new Tended(swept, expired) { TimedOut = timedOut, Warned = warned };
     }
 }

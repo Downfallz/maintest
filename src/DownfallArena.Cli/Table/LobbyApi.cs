@@ -1300,6 +1300,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             format = table.Session.Rules.Format.ToString(),
             casual = table.Casual,
             turnLimitHours = table.TurnLimit is { } limit ? (int)limit.TotalHours : (int?)null,
+            answerBy = await TurnTimeouts.AnswerByAsync(table, composer),
             waiting = !table.Session.HasBegun && !table.IsOver,
             over = table.IsOver,
             round = await AdminApi.RoundNowAsync(table),

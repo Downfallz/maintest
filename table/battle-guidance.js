@@ -1,6 +1,7 @@
 import { phaseLabel, TEMPO_RULE } from './terms.js';
 import { activeTurn } from './presentation.js';
 import { creatureLabel } from './battle-live.js';
+import { timeLeft } from './players.js';
 
 export const HELP_PREFERENCE_KEY = 'downfall.arena.help.v1';
 const TOPICS = ['mutation', 'tempo', 'ties', 'action', 'intent', 'target'];
@@ -125,7 +126,7 @@ function objective(view, topic) {
 }
 
 // Read only the selected seat's public context and current offer. No draft, hidden opponent plan or schedule arithmetic.
-export function battleGuidance(view, catalogue, { accepted = false, targeting = false, historical = false, online = true } = {}) {
+export function battleGuidance(view, catalogue, { accepted = false, targeting = false, historical = false, online = true, now = Date.now() } = {}) {
   if (!view?.board) return { available: false, topic: null, objective: 'Choose a viewpoint to play.', title: '', lines: [], round: '', context: '', next: '', phase: '', flow: [] };
   const board = view.board, waiting = Boolean(view.waiting && !view.over), mode = declaration(view, catalogue);
   const round = `Round ${board.roundNumber ?? '—'}${Number.isInteger(catalogue?.rules?.roundCap) ? ` of ${catalogue.rules.roundCap}` : ''}`;
@@ -133,6 +134,9 @@ export function battleGuidance(view, catalogue, { accepted = false, targeting = 
   let current = objective(view, topic);
   if (topic === 'mutation' && view.options?.evolution?.remainingPicks === 0) topic = null;
   if (targeting) current = `${creatureLabel(board, view.waitingCreature)}: select targets, then Confirm cast.`;
+  // A game between two players: how long this seat has before not answering loses it (ADR 0169).
+  const left = topic && !accepted ? timeLeft(view.answerBy, now) : null;
+  if (left) current = `${current} ${left} left to answer.`;
   if (accepted) current = 'Choice sent. Waiting for the next decision or the other team.';
   if (!online) current = 'Connection interrupted. Reconnect before choosing.';
   if (view.over) current = 'Match complete. Open Match result or History.';
@@ -160,10 +164,21 @@ const THEIR_CHOICE = Object.freeze({
  * player's creature taking its slot in combat, or the other player's command after this seat's is sent. Null
  * while this seat has a question, before the match starts, once it is over, and between steps the host resolves
  * by itself. `opponent` is the other seat's name as the table lists it; a bot "thinks", a person "chooses".
- * @param {{ accepted?: boolean, opponent?: string | null, bot?: boolean }} [options]
+ * In a game between two players the detail ends with how long the other side has left to answer (ADR 0169).
+ * @param {{ accepted?: boolean, opponent?: string | null, bot?: boolean, now?: number }} [options]
+ * @returns {Waited | null}
  */
 export function waitingOn(view, options = {}) {
-  const { accepted = false, opponent = null, bot = false } = options;
+  const { accepted = false, opponent = null, bot = false, now = Date.now() } = options;
+  const waited = waitingFor(view, { accepted, opponent, bot });
+  const left = waited && waited.kind !== 'seats' ? timeLeft(view.answerBy, now) : null;
+  return left ? { ...waited, detail: `${waited.detail} · ${left} left to answer` } : waited;
+}
+
+/** @typedef {{ kind: string, eyebrow: string, title: string, detail: string, creature: (number | null) }} Waited */
+
+/** @returns {Waited | null} */
+function waitingFor(view, { accepted, opponent, bot }) {
   const board = view?.board;
   // Before the match: the table waits for both players to reach their seats, and says so in the dock's card.
   if (board && view.waiting && !view.over && !view.replay) {

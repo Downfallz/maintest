@@ -95,6 +95,9 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
     /// <summary>The notices sent to a seat nobody is looking at (ADR 0118): told which askings a page has drawn.</summary>
     public PushNotices? Push { get; init; }
 
+    /// <summary>When the table's time to answer runs out (ADR 0169), or none: a table without a limit, not begun or over.</summary>
+    public Func<Task<DateTimeOffset?>>? AnswerBy { get; set; }
+
     public int FeedStart { get; init; }
 
     public const string TokenHeader = "X-Seat-Token";
@@ -436,6 +439,9 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
                 // inherit the first's moment.
                 waitingAsked = waiting?.Asked,
                 playedByBot = seat.Person is null,
+
+                // When whoever is asked loses for not answering (ADR 0169): the page counts down to it.
+                answerBy = AnswerBy is { } answerBy ? await answerBy() : null,
 
                 // Who the table is waiting for before it begins, or null: the page shows a room rather than a
                 // board nobody is asked anything on (ADR 0092).

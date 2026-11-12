@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { seatsOf, versusLine } from './players.js';
+import { seatsOf, timeLeft, turnOf, versusLine } from './players.js';
 
 const mark = { seat: 'player1', kind: 'person', name: 'MarkF' };
 
@@ -25,4 +25,20 @@ test('the seats are read from the table the page holds a token of', () => {
   assert.equal(seatsOf(answer, ['mine'])[0].name, 'bastien');
   assert.equal(seatsOf(answer, ['none']), null);
   assert.equal(seatsOf(null, ['mine']), null);
+});
+
+test('the time left to answer reads in days and hours, hours, or minutes, and is nothing once it has passed', () => {
+  const now = Date.parse('2026-11-12T00:00:00Z');
+  const at = hours => new Date(now + hours * 3600000).toISOString();
+
+  assert.deepEqual([at(53), at(48), at(5.5), at(0.25), at(-1), undefined].map(answerBy => timeLeft(answerBy, now)), ['2 d 5 h', '2 d', '5 h', '15 min', null, null]);
+});
+
+test('whose turn it is says how long they have left to answer in a game between two players', () => {
+  const now = Date.parse('2026-11-12T00:00:00Z');
+  const table = mine => ({ answerBy: '2026-11-13T05:00:00Z', seats: [{ seat: 'player1', kind: 'person', name: 'Mark', turn: mine }, { seat: 'player2', kind: 'person', name: 'Bastien', turn: !mine }] });
+
+  assert.equal(turnOf(table(true), ['player1'], now).text, 'Your turn · 1 d 5 h left');
+  assert.equal(turnOf(table(false), ['player1'], now).text, "Bastien's turn · 1 d 5 h left");
+  assert.equal(turnOf({ ...table(true), answerBy: null }, ['player1'], now).text, 'Your turn');
 });
