@@ -125,34 +125,33 @@ export function orderReason(board, id) {
   if (!row) return null;
   const band = rows.filter(one => one.speed === row.speed);
   const tied = band.filter(one => one !== row && sameTie(one, row));
-  const lines = [row.speed === 'Quick'
-    ? `${row.tempo}: acts before every Precision creature.`
-    : `${row.tempo}: acts after every Instinct creature.`];
-  let tie = 'none';
-  const dice = [];
-  if (tied.length === 0) {
-    const ahead = band.filter(one => Number.isFinite(one.initiative) && one.initiative > row.initiative).at(-1);
-    const behind = band.find(one => Number.isFinite(one.initiative) && one.initiative < row.initiative);
-    const around = [ahead && `after ${ahead.label} (${ahead.initiative})`, behind && `before ${behind.label} (${behind.initiative})`].filter(Boolean);
-    lines.push(!Number.isFinite(row.initiative) ? 'Initiative not recorded.'
-      : around.length ? `Initiative ${row.initiative}: ${around.join(', ')}.` : `Initiative ${row.initiative}, alone in its tempo.`);
-  } else {
-    const group = [row, ...tied].sort((a, b) => a.position - b.position);
-    const crossed = group.some(one => one.team !== row.team);
-    lines.push(`Initiative ${row.initiative}, tied with ${names(tied)}.`);
-    if (crossed) {
-      tie = 'rolled';
-      for (const one of group) if (one.rolls.length) dice.push({ id: one.id, label: one.label, team: one.team, rolls: [...one.rolls], self: one === row });
-      lines.push(dice.length ? 'A d20 roll-off broke it: highest first, matches roll again.'
-        : 'A d20 roll-off between the teams broke the tie.');
-      if (group.filter(one => one.team === row.team).length > 1) lines.push(`Within its team's places, ${chooser(row.team)} the order.`);
-    } else {
-      tie = 'own';
-      lines.push(`Same team: ${chooser(row.team)} the order, no dice.`);
-    }
-  }
+  const head = row.speed === 'Quick' ? `${row.tempo}: acts before every Precision creature.` : `${row.tempo}: acts after every Instinct creature.`;
+  const placed = tied.length === 0 ? { tie: 'none', dice: [], lines: [initiativeLine(row, band)] } : tieReason(row, tied);
   return { id: row.id, label: row.label, team: row.team, position: row.position, total: rows.length,
-    speed: row.speed, tempo: row.tempo, initiative: row.initiative, tie, dice, lines };
+    speed: row.speed, tempo: row.tempo, initiative: row.initiative, tie: placed.tie, dice: placed.dice, lines: [head, ...placed.lines] };
+}
+
+// A creature alone on its tempo and initiative: its initiative between its neighbours' in the band.
+function initiativeLine(row, band) {
+  if (!Number.isFinite(row.initiative)) return 'Initiative not recorded.';
+  const ahead = band.findLast(one => Number.isFinite(one.initiative) && one.initiative > row.initiative);
+  const behind = band.find(one => Number.isFinite(one.initiative) && one.initiative < row.initiative);
+  const around = [ahead && `after ${ahead.label} (${ahead.initiative})`, behind && `before ${behind.label} (${behind.initiative})`].filter(Boolean);
+  return around.length ? `Initiative ${row.initiative}: ${around.join(', ')}.` : `Initiative ${row.initiative}, alone in its tempo.`;
+}
+
+// A creature tied on tempo and initiative: a roll-off between the teams, with its dice, or its owner's choice.
+function tieReason(row, tied) {
+  const group = [row, ...tied].sort((a, b) => a.position - b.position);
+  const lines = [`Initiative ${row.initiative}, tied with ${names(tied)}.`];
+  if (!group.some(one => one.team !== row.team)) {
+    return { tie: 'own', dice: [], lines: [...lines, `Same team: ${chooser(row.team)} the order, no dice.`] };
+  }
+  const dice = group.filter(one => one.rolls.length)
+    .map(one => ({ id: one.id, label: one.label, team: one.team, rolls: [...one.rolls], self: one === row }));
+  lines.push(dice.length ? 'A d20 roll-off broke it: highest first, matches roll again.' : 'A d20 roll-off between the teams broke the tie.');
+  if (group.filter(one => one.team === row.team).length > 1) lines.push(`Within its team's places, ${chooser(row.team)} the order.`);
+  return { tie: 'rolled', dice, lines };
 }
 
 /**
