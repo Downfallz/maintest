@@ -428,7 +428,8 @@ test('an account host that cannot be reached says so instead of offering a sign-
 test('every game against a player waiting for the player is gathered under Your turn, the most pressing first, and Play next opens it', async ({ page }, info) => {
   const bot = { seat: 'player2', kind: 'bot', name: 'Lookahead', turn: false };
   const game = (id, { turn = true, against = 'bot', answerBy = null, casual = false } = {}) => ({ table: { ...battle, id, over: false, answerBy, casual, createdAt: '2026-11-10T18:00:00Z',
-    seats: [{ ...battle.seats[0], turn }, against === 'bot' ? bot : { ...battle.seats[1], turn: !turn }] }, seats: [{ seat: 'player1', token: `${id}-token` }] });
+    seats: [{ ...battle.seats[0], turn, account: 'acct_marc' }, against === 'bot' ? bot : { ...battle.seats[1], turn: !turn, account: 'acct_bastien' }] },
+    seats: [{ seat: 'player1', token: `${id}-token` }] });
   const soon = new Date(Date.now() + 2 * 3600000).toISOString(), later = new Date(Date.now() + 20 * 3600000).toISOString();
   const games = [game('bot-move'), game('their-move', { turn: false, against: 'person' }), game('friend-later', { against: 'person', answerBy: later }),
     game('friend-soon', { against: 'person', answerBy: soon, casual: true })];

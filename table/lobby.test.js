@@ -198,8 +198,8 @@ test('friends come first among recent opponents, each group in the order the hos
 // A game of this browser's: its table, who sits, who is asked, and when it must answer by (ADR 0169).
 const held = (id, { mine = true, bot = false, over = false, answerBy = null } = {}) => ({
   table: { id, format: '3v3', over, answerBy, seats: [
-    { seat: 'player1', kind: 'person', name: 'Mark', turn: mine },
-    { seat: 'player2', kind: bot ? 'bot' : 'person', name: bot ? 'Greedy' : 'Bastien', turn: !mine } ] },
+    { seat: 'player1', kind: 'person', name: 'Mark', turn: mine, account: 'acct_mark' },
+    { seat: 'player2', kind: bot ? 'bot' : 'person', name: bot ? 'Greedy' : 'Bastien', turn: !mine, ...(bot ? {} : { account: 'acct_bastien' }) } ] },
   seats: [{ seat: 'player1', token: `${id}-token` }],
 });
 
@@ -232,6 +232,18 @@ test('a game counts on the ladder when it is between players, in 3v3, and not op
   assert.equal(isRanked({ ...held('b').table, casual: true }), false, 'opened unranked, or a shared device');
   assert.equal(isRanked({ ...held('c').table, format: '1v1' }), false, 'only 3v3 is ranked (ADR 0171)');
   assert.equal(isRanked(held('d', { bot: true }).table), false, 'a bot never is');
+});
+
+test('a game whose seats no account holds is not ranked: a host where nobody signs in keeps no ladder', () => {
+  const table = held('a').table;
+  assert.equal(isRanked({ ...table, seats: table.seats.map(seat => ({ ...seat, account: undefined })) }), false);
+  assert.equal(isRanked({ ...table, seats: [table.seats[0], { ...table.seats[1], account: table.seats[0].account }] }), false, 'one account at both seats');
+});
+
+test('a seat still open or kept for a friend leaves a game ranked: an account takes it', () => {
+  const table = held('a').table;
+  assert.equal(isRanked({ ...table, seats: [table.seats[0], { seat: 'player2', kind: 'open', name: 'Open seat' }] }), true);
+  assert.equal(isRanked({ ...table, seats: [table.seats[0], { seat: 'player2', kind: 'invited', name: 'Bastien' }] }), true);
 });
 
 test('a card says the day its game was created, and nothing when the host did not say', () => {

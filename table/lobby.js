@@ -61,11 +61,16 @@ export function yourTurn(mine) {
 }
 
 /**
- * Whether a game counts on the ladder (ADR 0171): one between players, in 3v3, not opened unranked. A game against a
- * bot never does, nor one on a shared device, which the host opens unranked.
+ * Whether a game counts on the ladder, as the host keeps its result (`MatchResult.Ranked`, ADR 0124, 0171): between
+ * players, in 3v3, not opened unranked, each person's seat held by an account of its own. A game against a bot never
+ * does, nor one on a shared device, which the host opens unranked, nor one on a host where nobody signs in, whose
+ * seats no account holds. A seat still open, or kept for a friend, is taken by an account when it is taken.
  */
 export function isRanked(table) {
-  return gameKind(table) === 'players' && table?.format === '3v3' && table?.casual !== true;
+  if (gameKind(table) !== 'players' || table?.format !== '3v3' || table?.casual === true) return false;
+  const people = (table.seats ?? []).filter(seat => seat.kind === 'person');
+  const accounts = people.map(seat => seat.account);
+  return people.length > 0 && accounts.every(Boolean) && new Set(accounts).size === accounts.length;
 }
 
 /** When a game was created, as a card says it: the day, in the reader's own words for it. */
