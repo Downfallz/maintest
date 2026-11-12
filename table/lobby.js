@@ -316,20 +316,20 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     });
     return button;
   }
-  // A title, with the tag that says whether the game counts on the ladder: `ranked` true or false when the host said
-  // so, which a finished game's card does; otherwise an unranked game alone says it (`casual`).
-  function title(text, casual, ranked = null) {
+  // A title, with the tag that says whether the game counts on the ladder: `standing` ('ranked' or 'unranked') when
+  // the host said so, which a finished game's card does; otherwise an unranked game alone says it (`casual`).
+  function title(text, casual, standing) {
     const heading = node('h3', text);
-    if (ranked === true) heading.append(node('span', 'Ranked', 'casual-tag ranked'));
-    else if (ranked === false || casual) heading.append(node('span', 'Unranked', 'casual-tag'));
+    const shown = standing ?? (casual ? 'unranked' : '');
+    if (shown) heading.append(node('span', shown === 'ranked' ? 'Ranked' : 'Unranked', shown === 'ranked' ? 'casual-tag ranked' : 'casual-tag'));
     return heading;
   }
   // One row of a list: what it is and its state, who plays, a detail line, and the one thing to do. Public tables
   // and finished games share it, so a long list stays one line an entry and reads the same everywhere.
-  function row({ heading, casual = false, ranked = null, tag, tone = '', sides = [], detail = '', action = null, className = '' }) {
+  function row({ heading, casual = false, standing, tag, tone = '', sides = [], detail = '', action = null, className = '' }) {
     const root = node('article', '', `game-row ${className}`.trim());
     const top = node('div', '', 'game-row-top');
-    top.append(title(heading, casual, ranked), node('span', tag, `status-tag ${tone}`.trim()));
+    top.append(title(heading, casual, standing), node('span', tag, `status-tag ${tone}`.trim()));
     const line = node('div', '', 'game-row-who');
     sides.forEach((side, index) => {
       if (index > 0) line.append(node('span', 'vs', 'vs'));
@@ -541,7 +541,8 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
       action = node('a', summary.action, 'button-link'); action.href = item.replay;
     }
     // Created and finished, labelled, since a card carries both: a game against a player can last days (ADR 0169).
-    return row({ heading: summary.title, casual: summary.casual, ranked: summary.ranked, tag: summary.tag, tone: `outcome ${summary.tone}`,
+    const standing = { true: 'ranked', false: 'unranked' }[String(summary.ranked)];
+    return row({ heading: summary.title, casual: summary.casual, standing, tag: summary.tag, tone: `outcome ${summary.tone}`,
       sides: [{ name: `vs ${summary.against}`, kind: item.opponent?.kind ?? 'person' }],
       detail: [created && `Created ${created}`, when && `Finished ${when}`, summary.detail].filter(Boolean).join(' · '), action,
       className: `finished ${summary.tone}` });
