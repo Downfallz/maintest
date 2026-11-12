@@ -11,7 +11,8 @@ namespace DownfallArena.Infrastructure.Matches;
 /// <summary>
 /// One line of <c>decisions.jsonl</c>, the file the table has written since ADR 0091: a decision as the wire
 /// would have posted it -- a creature by its number, a spell and a package by their ids -- with the seat that
-/// made it and when; or a seat changing hands; or, since ADR 0159, a seat conceding.
+/// made it and when; or a seat changing hands; or, since ADR 0159, a seat conceding; or, since ADR 0169, the seats
+/// that let their time to answer run out.
 /// </summary>
 internal sealed record JournalLine
 {
@@ -48,17 +49,24 @@ internal sealed record JournalLine
     /// <summary>For a seat changing hands: the last round the seat had decided anything in when it was asked; none in older lines.</summary>
     public int? Reached { get; init; }
 
+    /// <summary>For a timeout: every seat that let its time run out, <see cref="Slot" /> the first of them.</summary>
+    public IReadOnlyList<string>? Late { get; init; }
+
     /// <summary>The kind of the line a seat changing hands is written as, since ADR 0091.</summary>
     public const string SwapKind = "Swap";
 
     /// <summary>The kind of the line a concession is written as (ADR 0159).</summary>
     public const string ConcessionKind = "Concession";
 
+    /// <summary>The kind of the line a timeout is written as (ADR 0169).</summary>
+    public const string TimeoutKind = "Timeout";
+
     public static JournalLine Of(long seq, DateTimeOffset at, IJournalEntry entry) => entry switch
     {
         DecisionEntry decided => Of(seq, at, decided.Decision),
         ConcessionEntry conceded => new JournalLine { Seq = seq, At = at, Slot = NameOf(conceded.Slot), Kind = ConcessionKind },
         SeatChangeEntry changed => new JournalLine { Seq = seq, At = at, Slot = NameOf(changed.Slot), Kind = SwapKind, To = changed.To, AtRound = changed.FromRound, Reached = changed.Reached },
+        TimeoutEntry timedOut when timedOut.Late.Count > 0 => new JournalLine { Seq = seq, At = at, Slot = NameOf(timedOut.Late[0]), Kind = TimeoutKind, Late = [.. timedOut.Late.Select(NameOf)] },
         _ => throw new ArgumentException($"A journal does not hold a {entry?.GetType().Name}.", nameof(entry)),
     };
 
@@ -71,6 +79,11 @@ internal sealed record JournalLine
         if (Kind == ConcessionKind)
         {
             return new ConcessionEntry(SlotOf());
+        }
+
+        if (Kind == TimeoutKind)
+        {
+            return new TimeoutEntry([.. (Late ?? [Slot]).Select(SlotNamed)]);
         }
 
         if (Kind == SwapKind)
@@ -126,11 +139,13 @@ internal sealed record JournalLine
 
     private static string NameOf(PlayerSlot slot) => slot == PlayerSlot.Player1 ? "player1" : "player2";
 
-    private PlayerSlot SlotOf() => Slot switch
+    private PlayerSlot SlotOf() => SlotNamed(Slot);
+
+    private PlayerSlot SlotNamed(string name) => name switch
     {
         "player1" => PlayerSlot.Player1,
         "player2" => PlayerSlot.Player2,
-        _ => throw Broken($"'{Slot}' names no seat"),
+        _ => throw Broken($"'{name}' names no seat"),
     };
 
     private InvalidDataException Broken(string why) => new($"Journal line {Seq} is not one this journal reads: {why}.");

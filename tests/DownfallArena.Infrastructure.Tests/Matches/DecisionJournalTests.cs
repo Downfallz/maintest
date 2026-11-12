@@ -25,7 +25,7 @@ public sealed class DecisionJournalTests : IDisposable
         }
     }
 
-    /// <summary>An entry of each kind: every decision a seat makes, with both seats and both shapes of a pick, a seat changing hands, a concession.</summary>
+    /// <summary>An entry of each kind: every decision a seat makes, with both seats and both shapes of a pick, a seat changing hands, a concession, and a timeout of one seat and of both.</summary>
     internal static IReadOnlyList<IJournalEntry> EveryKind { get; } =
     [
         Decided(PlayerSlot.Player1, PlayerDecision.Buy(CreatureId.From(1), TierId.Parse("tier:guard:v1"))),
@@ -38,6 +38,8 @@ public sealed class DecisionJournalTests : IDisposable
         Decided(PlayerSlot.Player2, PlayerDecision.Act(CreatureId.From(3), SpellId.Parse("spell:guard:v1"), [CreatureId.From(3)])),
         new SeatChangeEntry(PlayerSlot.Player2, "greedy", 3, Reached: 1),
         new ConcessionEntry(PlayerSlot.Player1),
+        new TimeoutEntry([PlayerSlot.Player2]),
+        new TimeoutEntry([PlayerSlot.Player1, PlayerSlot.Player2]),
     ];
 
     private static DecisionEntry Decided(PlayerSlot slot, PlayerDecision decision) => new(new SeatDecision(slot, decision));

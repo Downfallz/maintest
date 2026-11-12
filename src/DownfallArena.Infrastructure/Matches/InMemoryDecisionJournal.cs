@@ -11,6 +11,23 @@ public sealed class InMemoryDecisionJournal : IDecisionJournal
 {
     private readonly Lock _gate = new();
     private readonly Dictionary<string, List<IJournalEntry>> _journals = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, DateTimeOffset> _written = new(StringComparer.Ordinal);
+    private readonly TimeProvider _clock;
+
+    /// <param name="clock">What says when a journal was last written; the system's clock unless a test gives another.</param>
+    public InMemoryDecisionJournal(TimeProvider? clock = null)
+    {
+        _clock = clock ?? TimeProvider.System;
+    }
+
+    public Task<DateTimeOffset?> LastWrittenAsync(string run, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(run);
+        lock (_gate)
+        {
+            return Task.FromResult<DateTimeOffset?>(_written.TryGetValue(run, out var at) ? at : null);
+        }
+    }
 
     public Task<JournalReading> ReadAsync(string run, CancellationToken cancellationToken = default)
     {
@@ -69,6 +86,7 @@ public sealed class InMemoryDecisionJournal : IDecisionJournal
             }
 
             journal.AddRange(entries);
+            _written[run] = _clock.GetUtcNow();
             return Task.FromResult<JournalPosition?>(new JournalPosition(journal.Count, journal.Count));
         }
     }

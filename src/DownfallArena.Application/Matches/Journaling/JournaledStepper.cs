@@ -35,13 +35,15 @@ namespace DownfallArena.Application.Matches.Journaling;
 /// </para>
 /// </remarks>
 /// <param name="inStep">Told, in the same turn as each of those answers, that the match stands where its journal ends.</param>
+/// <param name="timeOut">What times a match out (ADR 0169); a stepper made without it cannot.</param>
 public sealed class JournaledStepper(
     MatchStepper stepper,
     MatchReplay replay,
     IDecisionJournal journal,
     IMatchRepository matches,
     ICommandHandler<Concede, Result> concede,
-    IEnumerable<IMatchInStep>? inStep = null)
+    IEnumerable<IMatchInStep>? inStep = null,
+    ICommandHandler<TimeOut, Result>? timeOut = null)
 {
     private readonly IReadOnlyList<IMatchInStep> _inStep = [.. inStep ?? []];
 
@@ -169,7 +171,50 @@ public sealed class JournaledStepper(
     {
         ArgumentNullException.ThrowIfNull(match);
         ArgumentNullException.ThrowIfNull(refused);
-        return InTurnAsync(match.MatchId, async kept =>
+        return EndAsync(
+            match,
+            standing => standing.Outcome is null && refused(standing) is { } refusal
+                ? Result.Failure<Ending>(refusal)
+                : Result.Success(new Ending(new ConcessionEntry(slot), () => concede.HandleAsync(new Concede(match.MatchId, slot), cancellationToken))),
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// The players who let the table's time to answer run out lose the match, or draw it when both did (ADR 0169), the
+    /// match and the journal in one turn, like a concession.
+    /// </summary>
+    /// <param name="late">
+    /// Which players ran out, given the match as it stands when the timeout has its turn: who is asked then, and
+    /// for how long, is the caller's to know. None, and nothing ends.
+    /// </param>
+    public Task<Result<JournaledState>> TimeOutAsync(JournaledMatch match, Func<JournaledState, IReadOnlyList<PlayerSlot>> late, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(match);
+        ArgumentNullException.ThrowIfNull(late);
+        var ender = timeOut ?? throw new InvalidOperationException("This stepper was made without the command that times a match out.");
+        return EndAsync(
+            match,
+            standing =>
+            {
+                if (standing.Outcome is not null)
+                {
+                    return Result.Failure<Ending>(MatchErrors.NotInProgress);
+                }
+
+                IReadOnlyList<PlayerSlot> slots = [.. late(standing).Distinct()];
+                return slots.Count == 0
+                    ? Result.Failure<Ending>(MatchErrors.NobodyTimedOut)
+                    : Result.Success(new Ending(new TimeoutEntry(slots), () => ender.HandleAsync(new TimeOut(match.MatchId, slots), cancellationToken)));
+            },
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Ends the match in one turn: what ends it is settled against the match as the turn finds it, applied, and written
+    /// as its line. The answers the seats were holding are nobody's any more.
+    /// </summary>
+    private Task<Result<JournaledState>> EndAsync(JournaledMatch match, Func<JournaledState, Result<Ending>> decide, CancellationToken cancellationToken) =>
+        InTurnAsync(match.MatchId, async kept =>
         {
             var loaded = await LoadAsync(match, kept, cancellationToken);
             if (loaded.IsFailure)
@@ -183,23 +228,24 @@ public sealed class JournaledStepper(
                 return standing;
             }
 
-            if (standing.Value.Outcome is null && refused(standing.Value) is { } refusal)
+            var ending = decide(standing.Value);
+            if (ending.IsFailure)
             {
-                return Result.Failure<JournaledState>(refusal);
+                return Result.Failure<JournaledState>(ending.Error);
             }
 
             try
             {
                 // Inside what lets the match go on a failure: the command changes the match in memory before it
-                // is saved and its events are handed on, so one that throws there leaves a conceded match the
+                // is saved and its events are handed on, so one that throws there leaves an ended match the
                 // journal knows nothing of.
-                var conceded = await concede.HandleAsync(new Concede(match.MatchId, slot), cancellationToken);
-                if (conceded.IsFailure)
+                var ended = await ending.Value.End();
+                if (ended.IsFailure)
                 {
-                    return Result.Failure<JournaledState>(conceded.Error);
+                    return Result.Failure<JournaledState>(ended.Error);
                 }
 
-                var written = await WriteAsync(match, kept, loaded.Value, [new ConcessionEntry(slot)], cancellationToken);
+                var written = await WriteAsync(match, kept, loaded.Value, [ending.Value.Entry], cancellationToken);
                 if (written is null)
                 {
                     return Result.Failure<JournaledState>(JournalErrors.Moved);
@@ -210,12 +256,14 @@ public sealed class JournaledStepper(
             }
             catch
             {
-                // The match in memory may be conceded, and the journal may not say so.
+                // The match in memory may be ended, and the journal may not say so.
                 await LetGoAsync(match.MatchId, kept, CancellationToken.None);
                 throw;
             }
         });
-    }
+
+    /// <summary>What ends a match: its line in the journal, and the command that ends it in memory.</summary>
+    private sealed record Ending(IJournalEntry Entry, Func<Task<Result>> End);
 
     /// <summary>
     /// Writes down that a seat changes hands from the top of a round. Who the name stands for is the caller's

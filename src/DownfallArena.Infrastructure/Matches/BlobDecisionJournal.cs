@@ -106,5 +106,18 @@ public sealed class BlobDecisionJournal : IDecisionJournal
         }
     }
 
+    public async Task<DateTimeOffset?> LastWrittenAsync(string run, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var properties = await _container.GetAppendBlobClient(NameOf(run)).GetPropertiesAsync(cancellationToken: cancellationToken);
+            return properties.Value.ContentLength == 0 ? null : properties.Value.LastModified;
+        }
+        catch (RequestFailedException failure) when (failure.Status == 404)
+        {
+            return null;
+        }
+    }
+
     private static string NameOf(string run) => BlobArtifactNames.Resolve(BlobArtifactNames.Prefix(run), JournalLines.FileName);
 }

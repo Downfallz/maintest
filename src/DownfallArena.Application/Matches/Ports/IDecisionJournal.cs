@@ -33,4 +33,10 @@ public interface IDecisionJournal
     /// Zero for a run nobody wrote.
     /// </summary>
     Task<long> EndAsync(string run, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// When the journal was last written, as the store keeps it, read without reading the journal: how long a table
+    /// has waited for its next move (ADR 0169). None for a run nobody wrote.
+    /// </summary>
+    Task<DateTimeOffset?> LastWrittenAsync(string run, CancellationToken cancellationToken = default);
 }
