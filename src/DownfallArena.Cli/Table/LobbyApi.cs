@@ -1452,6 +1452,10 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 match = result.MatchId,
                 table = result.Table,
                 finishedAt = result.FinishedAt,
+                // When its table was opened, read off the table's id; and whether it counts on the ladder, as the
+                // ladder itself decides (MatchResult.Ranked).
+                createdAt = PlaytestRun.OpenedAt(result.Table),
+                ranked = result.Ranked,
                 format = result.Format,
                 casual = result.Casual,
                 rounds = result.Rounds,

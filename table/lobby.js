@@ -113,6 +113,9 @@ const OUTCOMES = Object.freeze({ won: 'Victory', lost: 'Defeat', draw: 'Draw', b
 /** What a finished game's card says: the result as a tag, who it was against, and how long it ran. */
 export function finishedSummary(item) {
   return { title: `${item.format ?? ''} battle`.trim(), tag: OUTCOMES[item.outcome] ?? 'Finished', tone: item.outcome ?? 'finished', casual: item.casual === true,
+    // Whether it counted on the ladder, as the host's kept result says; null for a host that did not say (an older one, or
+    // a game this browser only knows from its own list).
+    ranked: typeof item.ranked === 'boolean' ? item.ranked : null,
     against: item.opponent?.name ?? 'Unknown', bot: item.opponent?.kind === 'bot',
     detail: Number.isInteger(item.rounds) && item.rounds > 0 ? `${item.rounds} round${item.rounds === 1 ? '' : 's'}` : '',
     action: item.seats?.length ? 'View game →' : item.replay ? 'Watch the replay →' : null };
@@ -313,17 +316,20 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     });
     return button;
   }
-  function title(text, casual) {
+  // A title, with the tag that says whether the game counts on the ladder: `ranked` true or false when the host said
+  // so, which a finished game's card does; otherwise an unranked game alone says it (`casual`).
+  function title(text, casual, ranked = null) {
     const heading = node('h3', text);
-    if (casual) heading.append(node('span', 'Unranked', 'casual-tag'));
+    if (ranked === true) heading.append(node('span', 'Ranked', 'casual-tag ranked'));
+    else if (ranked === false || casual) heading.append(node('span', 'Unranked', 'casual-tag'));
     return heading;
   }
   // One row of a list: what it is and its state, who plays, a detail line, and the one thing to do. Public tables
   // and finished games share it, so a long list stays one line an entry and reads the same everywhere.
-  function row({ heading, casual = false, tag, tone = '', sides = [], detail = '', action = null, className = '' }) {
+  function row({ heading, casual = false, ranked = null, tag, tone = '', sides = [], detail = '', action = null, className = '' }) {
     const root = node('article', '', `game-row ${className}`.trim());
     const top = node('div', '', 'game-row-top');
-    top.append(title(heading, casual), node('span', tag, `status-tag ${tone}`.trim()));
+    top.append(title(heading, casual, ranked), node('span', tag, `status-tag ${tone}`.trim()));
     const line = node('div', '', 'game-row-who');
     sides.forEach((side, index) => {
       if (index > 0) line.append(node('span', 'vs', 'vs'));
@@ -526,7 +532,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
   // A finished game, as the kept results tell it: the result, who it was against, and the way back to it.
   function finishedCard(item) {
     const summary = finishedSummary(item);
-    const when = item.finishedAt ? new Date(item.finishedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+    const created = createdOn(item.createdAt), when = createdOn(item.finishedAt);
     let action = null;
     if (summary.action && item.seats?.length) {
       action = node('button', summary.action, 'secondary'); action.type = 'button';
@@ -534,8 +540,10 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     } else if (summary.action) {
       action = node('a', summary.action, 'button-link'); action.href = item.replay;
     }
-    return row({ heading: summary.title, casual: summary.casual, tag: summary.tag, tone: `outcome ${summary.tone}`,
-      sides: [{ name: `vs ${summary.against}`, kind: item.opponent?.kind ?? 'person' }], detail: [when, summary.detail].filter(Boolean).join(' · '), action,
+    // Created and finished, labelled, since a card carries both: a game against a player can last days (ADR 0169).
+    return row({ heading: summary.title, casual: summary.casual, ranked: summary.ranked, tag: summary.tag, tone: `outcome ${summary.tone}`,
+      sides: [{ name: `vs ${summary.against}`, kind: item.opponent?.kind ?? 'person' }],
+      detail: [created && `Created ${created}`, when && `Finished ${when}`, summary.detail].filter(Boolean).join(' · '), action,
       className: `finished ${summary.tone}` });
   }
   // A kind's finished games, a page at a time from the host, with that kind's own pages.

@@ -397,3 +397,4 @@ body.classic-page:has(#table:not([hidden])) .home-header .brand { display: flex;
 .game-meta { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 0; font-size: 12px; color: var(--muted); }
 .game-meta .game-ranked.ranked { color: var(--gold); font-weight: 650; }
 .game-row .status-tag.ranked { color: var(--gold); border-color: var(--gold); }
+.casual-tag.ranked { color: var(--gold); border-color: var(--gold); }
