@@ -26,8 +26,7 @@ public sealed record PlayerStats(
         var played = results
             .Where(result => Counts(result) && result.Seats.Count(seat => seat.Account == account) == 1)
             .OrderBy(result => result.FinishedAt).ThenBy(result => result.MatchId, StringComparer.Ordinal)
-            .Select(result => (Result: result, Seat: result.Seats.Single(seat => seat.Account == account).Seat))
-            .Select(game => (game.Result, game.Seat, Outcome: OutcomeFor(game.Result, game.Seat)))
+            .Select(result => Played(result, result.Seats.Single(seat => seat.Account == account).Seat))
             .ToArray();
 
         var teamed = played.Where(game => game.Result.Teams.Count > 0).ToArray();
@@ -60,6 +59,8 @@ public sealed record PlayerStats(
         ArgumentNullException.ThrowIfNull(result);
         return result.Ranked && MatchFormat.TryParse(result.Format, out var format) && format == MatchFormat.ThreeOnThree;
     }
+
+    private static (MatchResult Result, string Seat, GameOutcome Outcome) Played(MatchResult result, string seat) => (result, seat, OutcomeFor(result, seat));
 
     private static GameOutcome OutcomeFor(MatchResult result, string seat)
     {

@@ -672,6 +672,10 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
   function rankedChosen() {
     return kind === 'pvp' && ['person', 'friend'].includes(el('opponent').value) && mode !== 'off' && el('ranked').checked;
   }
+  /**
+   * Opens the create dialog, on the opponent, friend, format and rank a rematch or a challenge asks for.
+   * @param {{ friend?: string | null, reinvite?: string | null, opponent?: string | null, format?: string | null, ranked?: boolean }} [asked]
+   */
   function openCreate({ friend = null, reinvite = null, opponent = null, format = null, ranked = true } = {}) {
     if (signInFirst()) { askSignIn(); return; }
     if (!listing) return;

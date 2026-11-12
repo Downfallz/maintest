@@ -74,7 +74,8 @@ export function drawStats(doc, stats) {
   el('spell-rows').replaceChildren(...rows(doc, stats.spells, spell => [spell.name, String(spell.casts), String(spell.games), percent(spell.won, spell.games)], 'No spell cast yet.', 4));
 
   const games = stats.ranked.games;
-  el('stats-status').textContent = games ? `${games} ranked game${games === 1 ? '' : 's'} · updates as your games end` : 'No ranked game yet. Play a ranked 3v3 game against another player: it counts here as soon as it ends.';
+  const counted = `${games} ranked game${games === 1 ? '' : 's'} · updates as your games end`;
+  el('stats-status').textContent = games ? counted : 'No ranked game yet. Play a ranked 3v3 game against another player: it counts here as soon as it ends.';
   el('stats-body').hidden = false;
 }
 
