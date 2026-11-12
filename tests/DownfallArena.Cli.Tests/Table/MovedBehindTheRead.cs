@@ -64,5 +64,5 @@ internal sealed class MovedBehindTheRead(ITableSession inner, Func<SeatSnapshot,
 
     public Task<Result> ConcedeAsync(PlayerSlot slot) => inner.ConcedeAsync(slot);
 
-    public Task<Result> TimeOutAsync() => inner.TimeOutAsync();
+    public Task<Result> TimeOutAsync(long since) => inner.TimeOutAsync(since);
 }

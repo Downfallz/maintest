@@ -20,12 +20,12 @@ public sealed class InMemoryDecisionJournal : IDecisionJournal
         _clock = clock ?? TimeProvider.System;
     }
 
-    public Task<DateTimeOffset?> LastWrittenAsync(string run, CancellationToken cancellationToken = default)
+    public Task<JournalWrite?> LastWrittenAsync(string run, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(run);
         lock (_gate)
         {
-            return Task.FromResult<DateTimeOffset?>(_written.TryGetValue(run, out var at) ? at : null);
+            return Task.FromResult(_written.TryGetValue(run, out var at) ? new JournalWrite(at, _journals[run].Count) : null);
         }
     }
 

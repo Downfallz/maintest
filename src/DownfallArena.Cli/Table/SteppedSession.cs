@@ -455,7 +455,7 @@ internal sealed class SteppedSession : ITableSession, IAgentTurnTaker
             : Result.Failure(refusal);
     }
 
-    public async Task<Result> TimeOutAsync()
+    public async Task<Result> TimeOutAsync(long since)
     {
         Result<JournaledState> ended;
         try
@@ -463,6 +463,7 @@ internal sealed class SteppedSession : ITableSession, IAgentTurnTaker
             // Who is late is settled in the match's turn: whoever a person is asked for as the timeout reaches it.
             ended = await _stepper.TimeOutAsync(
                 _match,
+                since,
                 state =>
                 {
                     var plan = Seated(state.SeatChanges);

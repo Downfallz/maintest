@@ -32,15 +32,16 @@ internal static class TurnTimeouts
                 continue;
             }
 
-            var since = Since(await composer.LastMoveAsync(listed.Id), listed.Summary, listed.CreatedAt);
+            var last = await composer.LastMoveAsync(listed.Id);
+            var since = Since(last?.At, listed.Summary, listed.CreatedAt);
             if (!RanOut(listed.Summary, since, now) || await registry.ByIdAsync(listed.Id) is not { IsOver: false } table)
             {
                 continue;
             }
 
-            // Who is late is settled where the match ends: nobody still asked, a move that landed since the time was
-            // read, and nothing ends.
-            if ((await table.Session.TimeOutAsync()).IsSuccess)
+            // Who is late is settled where the match ends, against the journal the time was read from: a move that
+            // landed since moved its end, nobody still asked, and nothing ends.
+            if ((await table.Session.TimeOutAsync(last?.Mark ?? 0)).IsSuccess)
             {
                 ended.Add(listed.Id);
                 await ClosedAsync(table, clock);

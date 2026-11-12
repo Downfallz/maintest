@@ -106,12 +106,12 @@ public sealed class BlobDecisionJournal : IDecisionJournal
         }
     }
 
-    public async Task<DateTimeOffset?> LastWrittenAsync(string run, CancellationToken cancellationToken = default)
+    public async Task<JournalWrite?> LastWrittenAsync(string run, CancellationToken cancellationToken = default)
     {
         try
         {
             var properties = await _container.GetAppendBlobClient(NameOf(run)).GetPropertiesAsync(cancellationToken: cancellationToken);
-            return properties.Value.ContentLength == 0 ? null : properties.Value.LastModified;
+            return properties.Value.ContentLength == 0 ? null : new JournalWrite(properties.Value.LastModified, properties.Value.ContentLength);
         }
         catch (RequestFailedException failure) when (failure.Status == 404)
         {

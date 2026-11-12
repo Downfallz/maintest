@@ -24,8 +24,9 @@ with the same reason. Like a concession, it is a line of the journal (a timeout)
 journal ends where it did. A timed-out game counts on the ladder as any finished game does.
 
 The hourly job (`table-tend`) does it. For each begun table with a limit, the time since the journal was last
-written is read from the store, without reading the journal. Only a table past its limit is picked up, to see who
-is still asked. A player is told once, on their devices, when a quarter of their time is left.
+written is read from the store, without reading the journal, together with where the journal ended then. Only a
+table past its limit is picked up, to see who is still asked, and the timeout is refused if the journal no longer
+ends there: a move landed in between, and whoever is asked now has just been asked. A player is told once, on their devices, when a quarter of their time is left.
 
 ## Consequences
 

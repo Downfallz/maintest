@@ -183,11 +183,16 @@ public sealed class JournaledStepper(
     /// The players who let the table's time to answer run out lose the match, or draw it when both did (ADR 0169), the
     /// match and the journal in one turn, like a concession.
     /// </summary>
+    /// <param name="since">
+    /// Where the journal ended when its time was seen to run out (<see cref="JournalPosition.Mark" />). A journal the
+    /// turn finds ending anywhere else was written since: a move was made, its time did not run out, and the timeout
+    /// is refused with <see cref="JournalErrors.Moved" />.
+    /// </param>
     /// <param name="late">
     /// Which players ran out, given the match as it stands when the timeout has its turn: who is asked then, and
     /// for how long, is the caller's to know. None, and nothing ends.
     /// </param>
-    public Task<Result<JournaledState>> TimeOutAsync(JournaledMatch match, Func<JournaledState, IReadOnlyList<PlayerSlot>> late, CancellationToken cancellationToken = default)
+    public Task<Result<JournaledState>> TimeOutAsync(JournaledMatch match, long since, Func<JournaledState, IReadOnlyList<PlayerSlot>> late, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(match);
         ArgumentNullException.ThrowIfNull(late);
@@ -199,6 +204,11 @@ public sealed class JournaledStepper(
                 if (standing.Outcome is not null)
                 {
                     return Result.Failure<Ending>(MatchErrors.NotInProgress);
+                }
+
+                if (standing.Position.Mark != since)
+                {
+                    return Result.Failure<Ending>(JournalErrors.Moved);
                 }
 
                 IReadOnlyList<PlayerSlot> slots = [.. late(standing).Distinct()];

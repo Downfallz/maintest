@@ -73,6 +73,21 @@ public sealed class DecisionJournalTests : IDisposable
     [Theory]
     [InlineData("memory")]
     [InlineData("file")]
+    public async Task Its_last_write_is_read_with_where_the_journal_ended_after_it_and_a_journal_nobody_wrote_has_none(string kept)
+    {
+        var journal = Journal(kept);
+        var nothing = await journal.LastWrittenAsync("run-1", TestContext.Current.CancellationToken);
+        var written = (await journal.AppendAsync("run-1", JournalPosition.Start, [.. EveryKind.Take(3)], TestContext.Current.CancellationToken)).ShouldNotBeNull();
+
+        var last = await journal.LastWrittenAsync("run-1", TestContext.Current.CancellationToken);
+
+        nothing.ShouldBeNull();
+        last.ShouldNotBeNull().Mark.ShouldBe(written.Mark);
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("file")]
     public async Task Entries_of_every_kind_are_read_back_as_they_were_written_in_order(string kept)
     {
         var journal = Journal(kept);

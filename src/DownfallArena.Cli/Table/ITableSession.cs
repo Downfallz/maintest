@@ -80,8 +80,10 @@ internal interface ITableSession : IDisposable
     /// <summary>
     /// The people asked to decide now lose the match for letting the table's time to answer run out, or draw it when
     /// both are asked (ADR 0169). Who is asked is settled where the match ends; nobody asked, and nothing ends.
+    /// <paramref name="since" /> is where the journal ended when the time was seen to run out: a journal written since
+    /// had a move made, and nothing ends.
     /// </summary>
-    Task<Result> TimeOutAsync();
+    Task<Result> TimeOutAsync(long since);
 
 
     /// <summary>

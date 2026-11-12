@@ -414,7 +414,9 @@ public sealed class JournaledStepperTests
         var replica = new Replica(journal);
         await replica.Journaled.SubmitAsync(table, MatchSeats.People, new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass), cancellationToken: TestContext.Current.CancellationToken);
 
-        var ended = await replica.Journaled.TimeOutAsync(table, state => state.Player2.View.Asked is null ? [] : [PlayerSlot.Player2], TestContext.Current.CancellationToken);
+        var since = (await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken)).Value.Position.Mark;
+
+        var ended = await replica.Journaled.TimeOutAsync(table, since, state => state.Player2.View.Asked is null ? [] : [PlayerSlot.Player2], TestContext.Current.CancellationToken);
 
         ended.Value.Outcome.ShouldBe(new MatchOutcome(PlayerSlot.Player1, MatchEndReason.TimedOut));
         journal.Lines[^1].ShouldBe(new TimeoutEntry([PlayerSlot.Player2]));
@@ -429,10 +431,31 @@ public sealed class JournaledStepperTests
         var journal = new JournalStore();
         var replica = new Replica(journal);
 
-        var ended = await replica.Journaled.TimeOutAsync(table, _ => [], TestContext.Current.CancellationToken);
+        var ended = await replica.Journaled.TimeOutAsync(table, 0, _ => [], TestContext.Current.CancellationToken);
 
         ended.Error.ShouldBe(MatchErrors.NobodyTimedOut);
         journal.Lines.ShouldBeEmpty();
+        (await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken)).Value.Outcome.ShouldBeNull();
+    }
+
+    /// <summary>
+    /// The time is read before the timeout has its turn. A move made in between moved the journal's end, so whoever
+    /// is asked now was asked just now: the timeout is refused, and nothing ends or is written.
+    /// </summary>
+    [Fact]
+    public async Task A_timeout_seen_before_a_move_that_landed_since_ends_nothing()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent);
+        var journal = new JournalStore();
+        var replica = new Replica(journal);
+        var since = (await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken)).Value.Position.Mark;
+        await new Replica(journal).Journaled.SubmitAsync(table, MatchSeats.People, new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass), cancellationToken: TestContext.Current.CancellationToken);
+        var lines = journal.Lines.Count;
+
+        var ended = await replica.Journaled.TimeOutAsync(table, since, state => state.Player2.View.Asked is null ? [] : [PlayerSlot.Player2], TestContext.Current.CancellationToken);
+
+        ended.Error.ShouldBe(JournalErrors.Moved);
+        journal.Lines.Count.ShouldBe(lines);
         (await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken)).Value.Outcome.ShouldBeNull();
     }
 
