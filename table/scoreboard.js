@@ -1,4 +1,5 @@
 import { creatureForm } from './battle-art.js';
+import { creatureLabel } from './battle-live.js';
 
 // A finished match's battle report: what each creature did, read off the seat's whole public feed and its final
 // board. Its damage counts the hits it landed and the bleeds it put on enemies, healing the heals it cast and the
@@ -10,8 +11,9 @@ import { creatureForm } from './battle-art.js';
 
 const STATS = ['dealt', 'bleed', 'healed', 'regen', 'taken', 'blocked', 'kills', 'casts', 'crits'];
 
-function blank(creature, side, packages) {
-  const row = { id: creature.id, name: creature.name ?? `Creature ${creature.id}`, side, alive: creature.isAlive !== false,
+// Named as every other surface of the battle names it ("Creature 4", as on the board), never by the host's raw name.
+function blank(creature, side, packages, board) {
+  const row = { id: creature.id, name: creatureLabel(board, creature.id), side, alive: creature.isAlive !== false,
     form: creatureForm(creature, packages), owner: creature.owner };
   for (const stat of STATS) row[stat] = 0;
   return row;
@@ -29,8 +31,8 @@ function largest(shares) {
 export function matchScoreboard(feed, board, packages = new Map()) {
   if (!board || !Array.isArray(feed)) return null;
   const rows = new Map();
-  for (const creature of board.allies ?? []) rows.set(creature.id, blank(creature, 'ally', packages));
-  for (const creature of board.enemies ?? []) rows.set(creature.id, blank(creature, 'enemy', packages));
+  for (const creature of board.allies ?? []) rows.set(creature.id, blank(creature, 'ally', packages, board));
+  for (const creature of board.enemies ?? []) rows.set(creature.id, blank(creature, 'enemy', packages, board));
   const alive = new Map([...rows.keys()].map(id => [id, true]));
   const lastBleed = new Map();
   let resolved = 0;

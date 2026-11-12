@@ -82,3 +82,9 @@ test('the creature of the match is the one that dealt the most, and there is non
   assert.equal(matchScoreboard([], final).mvp, null);
   assert.equal(matchScoreboard(null, final), null);
 });
+
+test('a creature is named as the board names it, never by the host\'s raw name', () => {
+  const report = matchScoreboard([], board([creature(1, 'Main'), creature(2, 'Main')], [creature(4, 'Main')]));
+
+  assert.deepEqual(report.sides.flatMap(side => side.creatures.map(one => one.name)), ['Creature 1', 'Creature 2', 'Creature 4']);
+});
