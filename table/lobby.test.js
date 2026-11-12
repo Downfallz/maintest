@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { challengeRequest, codePath, opponentOrder, reconcileRelations, finishedSummary, opponentAction, opponentRecord, friendChoice, gameKind, invitationLine, invitedState, lobbyRequest, localFinished, ongoingGames, ongoingLimit, rematchRequest, tableState, turnOf, versus, visibleTables } from './lobby.js';
+import { challengeRequest, codePath, opponentOrder, reconcileRelations, finishedSummary, opponentAction, opponentRecord, friendChoice, gameKind, invitationLine, invitedState, lobbyRequest, localFinished, ongoingGames, ongoingLimit, rematchRequest, tableState, turnOf, versus, visibleTables, yourTurn } from './lobby.js';
 import { activateSeats, forget, heldSeats, savedSeats, selectTableSeats } from './session.js';
 
 function storage() {
@@ -193,4 +193,35 @@ test('friends come first among recent opponents, each group in the order the hos
   const opponents = [{ id: 'a', relation: 'none' }, { id: 'b', relation: 'friend' }, { id: 'c', relation: 'asking' }, { id: 'd', relation: 'friend' }, { id: 'e', relation: null }];
   assert.deepEqual(opponentOrder(opponents).map(one => one.id), ['b', 'd', 'a', 'c', 'e']);
   assert.deepEqual(opponentOrder([]), []);
+});
+
+// A game of this browser's: its table, who sits, who is asked, and when it must answer by (ADR 0169).
+const held = (id, { mine = true, bot = false, over = false, answerBy = null } = {}) => ({
+  table: { id, format: '3v3', over, answerBy, seats: [
+    { seat: 'player1', kind: 'person', name: 'Mark', turn: mine },
+    { seat: 'player2', kind: bot ? 'bot' : 'person', name: bot ? 'Greedy' : 'Bastien', turn: !mine } ] },
+  seats: [{ seat: 'player1', token: `${id}-token` }],
+});
+
+test('your turn gathers every game waiting for this player, against players and bots alike', () => {
+  const games = [held('a'), held('b', { mine: false }), held('c', { bot: true }), held('d', { over: true })];
+
+  assert.deepEqual(yourTurn(games).map(entry => entry.table.id), ['a', 'c']);
+});
+
+test('your turn puts first the game whose time to answer runs out soonest, then the ones with none, as the host listed them', () => {
+  const games = [held('no-clock'), held('later', { answerBy: '2026-11-13T10:00:00Z' }), held('also-no-clock', { bot: true }), held('sooner', { answerBy: '2026-11-12T10:00:00Z' })];
+
+  assert.deepEqual(yourTurn(games).map(entry => entry.table.id), ['sooner', 'later', 'no-clock', 'also-no-clock']);
+});
+
+test('nothing waiting for this player is an empty turn', () => {
+  assert.deepEqual(yourTurn([held('a', { mine: false })]), []);
+  assert.deepEqual(yourTurn([]), []);
+});
+
+test('in each group, the games waiting for this player come first, the most pressing of them first', () => {
+  const games = [held('theirs', { mine: false }), held('later', { answerBy: '2026-11-13T10:00:00Z' }), held('sooner', { answerBy: '2026-11-12T10:00:00Z' })];
+
+  assert.deepEqual(ongoingGames(games).players.map(entry => entry.table.id), ['sooner', 'later', 'theirs']);
 });

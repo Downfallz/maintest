@@ -433,6 +433,10 @@ hands it over under a fresh token and code, so an invitation already sent for it
 and place availability survive redeployment through the same recorded store as the decision journal, and a
 table that never began is closed after twenty hours nobody asked anything of it (ADR 0115).
 
+**Your turn**, above Your games, gathers every game waiting for the player, against players and bots alike, the
+one whose time to answer runs out soonest first, and **Play next** opens that one. The games stay in their groups
+below too, where the ones waiting for the player also come first, in the same order.
+
 ## Signing in (ADR 0122)
 
 `table --accounts google --google-client-id <id>` (or `DOWNFALL_GOOGLE_CLIENT_ID`) lets players sign in on the

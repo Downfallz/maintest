@@ -42,16 +42,30 @@ export const GAMES_PER_PAGE = 6;
 /** The two kinds of game the lobby lists apart (ADR 0147), in the order it shows them. */
 export const KINDS = Object.freeze([['players', 'Against players'], ['bots', 'Against bots']]);
 
+/**
+ * Every game waiting for this player, whatever its kind, the most pressing first: the one whose time to answer runs
+ * out soonest (ADR 0169), then the ones with no time to answer, in the host's order. What "Your turn" lists, and
+ * "Play next" opens the first of.
+ */
+export function yourTurn(mine) {
+  const waiting = mine.filter(entry => !entry.table.over && turnOf(entry.table, (entry.seats ?? []).map(held => held.seat))?.mine === true);
+  const due = entry => { const at = Date.parse(entry.table.answerBy ?? ''); return Number.isFinite(at) ? at : Number.POSITIVE_INFINITY; };
+  return waiting.map((entry, index) => ({ entry, index })).sort((a, b) => due(a.entry) - due(b.entry) || a.index - b.index).map(one => one.entry);
+}
+
 /** Whether a table is played against a bot or between people (a shared device among them), by who sits. */
 export function gameKind(table) {
   return (table?.seats ?? []).some(seat => seat.kind === 'bot') ? 'bots' : 'players';
 }
 
-/** The player's games in progress, by kind: in each, the ones waiting for this player first, then the host's order. */
+/**
+ * The player's games in progress, by kind: in each, the ones waiting for this player first, the most pressing first as
+ * "Your turn" lists them, then the others in the host's order.
+ */
 export function ongoingGames(mine) {
   const ongoing = mine.filter(entry => !entry.table.over);
-  const waiting = entry => turnOf(entry.table, (entry.seats ?? []).map(held => held.seat))?.mine === true;
-  const ordered = [...ongoing.filter(waiting), ...ongoing.filter(entry => !waiting(entry))];
+  const waiting = yourTurn(ongoing);
+  const ordered = [...waiting, ...ongoing.filter(entry => !waiting.includes(entry))];
   return { players: ordered.filter(entry => gameKind(entry.table) === 'players'), bots: ordered.filter(entry => gameKind(entry.table) === 'bots') };
 }
 
@@ -438,6 +452,33 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     root.append(head);
     return root;
   }
+  // Every game waiting for the player, both kinds together, the most pressing first, each a tap away, and the first
+  // one tap away from the header: the games are also in their groups below, this is the way to go through them.
+  function yourTurnBand(waiting) {
+    const root = node('section', '', 'your-turn-band');
+    root.setAttribute('aria-labelledby', 'your-turn-heading');
+    const head = node('header', '', 'your-turn-head');
+    const heading = node('h3', `Your turn · ${waiting.length}`);
+    heading.id = 'your-turn-heading';
+    const next = node('button', 'Play next →', 'primary');
+    next.type = 'button';
+    next.id = 'play-next';
+    next.setAttribute('aria-label', `Play next: ${waiting[0].table.format} battle`);
+    next.addEventListener('click', () => enter(waiting[0]));
+    head.append(heading, next);
+    const rows = node('div', '', 'game-rows');
+    rows.append(...waiting.map(entry => {
+      const held = (entry.seats ?? []).map(seat => seat.seat);
+      const play = node('button', 'Play →', 'secondary');
+      play.type = 'button';
+      play.setAttribute('aria-label', `Play ${entry.table.format} table ${entry.table.id}`);
+      play.addEventListener('click', () => enter(entry));
+      return row({ heading: `${entry.table.format} battle`, casual: entry.table.casual === true, tag: gameKind(entry.table) === 'bots' ? 'Against a bot' : 'Against a player',
+        sides: versus(entry.table).map(side => ({ ...side, you: held.includes(side.seat) })), detail: `${turnOf(entry.table, held).text} · ${tableState(entry.table)}`, action: play, className: 'mine' });
+    }));
+    root.append(head, rows);
+    return root;
+  }
   // A kind's games in progress: all of them, since the host keeps at most a few of each (ADR 0147).
   function ongoingGroup(kind, label, entries) {
     const count = ongoingLimit(entries.length, limit), root = group(kind, label, count);
@@ -522,6 +563,9 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     el('finished-count').textContent = loaded && finishedTotal ? `· ${finishedTotal}` : '';
     el('tables-count').textContent = shownTables ? shownTables.total : '';
     const none = signInFirst() ? 'Sign in to see your games, on this device and every other one you sign in on.' : 'No games here yet. Create a table, take an open seat or enter an invitation code.';
+    const waiting = signInFirst() ? [] : yourTurn(mine);
+    el('your-turn').replaceChildren(...(waiting.length ? [yourTurnBand(waiting)] : []));
+    el('your-turn').hidden = waiting.length === 0;
     if (signInFirst() || (!mine.length && !finishedTotal && mineTab === 'ongoing')) el('my-tables').replaceChildren(node('p', none, 'empty-state'));
     else el('my-tables').replaceChildren(...KINDS.map(([kind, label]) => mineTab === 'ongoing' ? ongoingGroup(kind, label, ongoing[kind]) : finishedGroup(kind, label)));
     const rows = node('div', '', 'game-rows');

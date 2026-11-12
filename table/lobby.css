@@ -388,3 +388,9 @@ body.classic-page:has(#table:not([hidden])) .home-header .brand { display: flex;
 .create-tabs button small { color: var(--muted); font-size: 12px; font-weight: 400; }
 .create-tabs button[aria-selected="true"] { color: var(--gold); border-color: var(--gold); background: color-mix(in srgb, var(--gold) 5.1%, transparent); }
 .create-panel[hidden] { display: none; }
+
+/* Your turn (lobby): every game waiting for the player, both kinds, the most pressing first, above the groups. */
+.your-turn-band { display: grid; gap: 10px; margin: 0 0 16px; padding: 12px 14px; border: 1px solid var(--gold); border-radius: var(--radius-soft); background: color-mix(in srgb, var(--gold) 8%, var(--panel)); }
+.your-turn-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.your-turn-head h3 { margin: 0; font: 400 18px/1.25 var(--font-display); color: var(--gold); }
+.your-turn-head #play-next { min-height: 44px; }
