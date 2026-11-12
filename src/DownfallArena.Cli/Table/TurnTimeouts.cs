@@ -117,9 +117,10 @@ internal static class TurnTimeouts
             }
 
             var asked = new List<AccountId>();
-            foreach (var seat in table.Seats.Where(seat => seat.Person is not null && seat.Account is not null))
+            foreach (var seat in table.Seats.Where(seat => seat.Person is not null && seat.Account is not null && table.Session.PlayedByItsPerson(seat.Slot)))
             {
-                if (table.Session.PlayedByItsPerson(seat.Slot) && (await table.Session.SnapshotAsync(seat.Slot)) is { IsSuccess: true, Value.Waiting: not null })
+                var snapshot = await table.Session.SnapshotAsync(seat.Slot);
+                if (snapshot is { IsSuccess: true, Value.Waiting: not null })
                 {
                     asked.Add(seat.Account!.Value);
                 }

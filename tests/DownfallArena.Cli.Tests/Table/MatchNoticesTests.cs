@@ -104,8 +104,8 @@ public sealed class MatchNoticesTests : IDisposable
 
         await FinishedAsync(table);
 
-        var (_, body) = _sender.Sent.ShouldHaveSingleItem() is var sent ? NoticeTo("MarkF") : default;
-        body.ShouldMatch("Greedy");
+        _sender.Sent.ShouldHaveSingleItem();
+        NoticeTo("MarkF").Body.ShouldMatch("Greedy");
         table.Dispose();
     }
 
