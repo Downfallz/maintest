@@ -134,12 +134,19 @@ export class BattleScene extends Phaser.Scene {
       const selected = creature.id === state.mutationFocus || creature.id === state.target || state.selected?.includes(creature.id) === true;
       const legal = state.stage === 'targeting' && state.targets.includes(creature.id);
       const focused = focus.has(creature.id) && !selected;
-      figure.ring.setStrokeStyle(selected || focused ? 3 : 1.5, focused ? FOCUS.tint : selected || acting ? GOLD : EMBER, selected || legal || acting || focused ? .95 : .15);
+      let ringColour = EMBER;
+      if (focused) ringColour = FOCUS.tint;
+      else if (selected || acting) ringColour = GOLD;
+      figure.ring.setStrokeStyle(selected || focused ? 3 : 1.5, ringColour, selected || legal || acting || focused ? .95 : .15);
       // While targets are chosen, whatever cannot be targeted steps back; the caster stays in full. What the blue
       // focus points at stands out the same way, a little less: the rest of the field stays readable.
       const aside = state.stage === 'targeting' && !legal && !selected && !acting;
       const unlit = focus.size > 0 && !focused && !selected && !acting;
-      figure.image.setAlpha(!creature.isAlive ? .20 : (state.mutationFocus && !selected) || aside ? .52 : unlit ? .62 : 1);
+      let alpha = 1;
+      if (!creature.isAlive) alpha = .20;
+      else if ((state.mutationFocus && !selected) || aside) alpha = .52;
+      else if (unlit) alpha = .62;
+      figure.image.setAlpha(alpha);
       figure.alive = creature.isAlive;
       figure.shadow.setAlpha(creature.isAlive ? .55 : .2);
       this.followCues(figure);

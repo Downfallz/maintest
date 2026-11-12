@@ -1587,7 +1587,7 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
    says its initiative and whether a d20 placed it, and opens a card at the top of the field saying why it holds
    its place. The same blue numbers the tied creatures while the seat orders them. */
 #timeline .timeline-init { margin-left: 6px; color: #b9d9f2; font-weight: 700; }
-#timeline .timeline-die { margin-left: 6px; padding: 0 4px; border-radius: 4px; background: #eac88e22; color: #eac88e; font: 700 9px/1.5 system-ui, sans-serif; letter-spacing: .04em; vertical-align: 1px; }
+#timeline .timeline-die { margin-left: 6px; padding: 0 4px; border-radius: 4px; background: #2b2619; color: #eac88e; font: 700 9px/1.5 system-ui, sans-serif; letter-spacing: .04em; vertical-align: 1px; }
 #timeline li[data-focused="true"] > button { border-radius: var(--radius-soft); background: linear-gradient(180deg, #6fc3ff2e, #6fc3ff10); box-shadow: inset 0 0 0 1.5px #6fc3ffcc, 0 0 14px #6fc3ff40; }
 #timeline li[data-focused="true"] .timeline-name { color: #dff1ff; }
 .order-why { position: absolute; top: 8px; left: 8px; z-index: 20; width: min(340px, calc(100% - 16px)); padding: 12px 14px 12px; border: 1px solid #6fc3ff66; border-left: 3px solid #6fc3ff;

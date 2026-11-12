@@ -16,7 +16,10 @@ export function orderControls(reveal: ReturnType<typeof createBattleOrderReveal>
   // The creature the strip lights on the field, with why it holds its place: a tap lights it, a second tap, the
   // card's close or Escape puts it out, and a creature no longer in the order is let go of.
   let focused: string | null = null, why = '';
-  function setFocus(id: string | null) { if (focused === id) return; focused = id; key = ''; onVisibility(); }
+  function setFocus(id: string | null) {
+    if (focused === id) return;
+    focused = id; key = ''; onVisibility();
+  }
   el('order-why-close').addEventListener('click', () => {
     const was = focused; setFocus(null);
     if (was) el('timeline').querySelector<HTMLButtonElement>(`[data-order-creature="${was}"]`)?.focus({ preventScroll: true });
@@ -137,13 +140,17 @@ export function orderControls(reveal: ReturnType<typeof createBattleOrderReveal>
       return chip;
     }));
   }
-  function render(model: Model, enabled: boolean, canAuto: boolean, board: unknown = null) {
-    available = enabled; openers.forEach(button => { button.disabled = !enabled; });
-    if (!enabled) { opener = null; reading = false; if (dialog.open) dialog.close(); el<HTMLDetailsElement>('order-rules').open = false; }
+  // The lit creature is let go of once it leaves the order; the card is drawn again only when its reason changes.
+  function refreshWhy(model: Model, enabled: boolean, board: unknown) {
     if (focused && (!enabled || !model.rows.some((row: Row) => row.id === focused))) focused = null;
     const reason = focused ? orderReason(board, focused) : null;
     const nextWhy = JSON.stringify(reason);
     if (nextWhy !== why) { why = nextWhy; drawWhy(reason); }
+  }
+  function render(model: Model, enabled: boolean, canAuto: boolean, board: unknown = null) {
+    available = enabled; openers.forEach(button => { button.disabled = !enabled; });
+    if (!enabled) { opener = null; reading = false; if (dialog.open) dialog.close(); el<HTMLDetailsElement>('order-rules').open = false; }
+    refreshWhy(model, enabled, board);
     const next = JSON.stringify([model, enabled, focused]);
     if (key !== next) {
       const active = document.activeElement as HTMLElement | null;
