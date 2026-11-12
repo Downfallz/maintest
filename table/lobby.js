@@ -44,13 +44,34 @@ export const KINDS = Object.freeze([['players', 'Against players'], ['bots', 'Ag
 
 /**
  * Every game waiting for this player, whatever its kind, the most pressing first: the one whose time to answer runs
- * out soonest (ADR 0169), then the ones with no time to answer, in the host's order. What "Your turn" lists, and
- * "Play next" opens the first of.
+ * out soonest (ADR 0169), then the ones with no time to answer, in the host's order.
  */
-export function yourTurn(mine) {
+export function waitingGames(mine) {
   const waiting = mine.filter(entry => !entry.table.over && turnOf(entry.table, (entry.seats ?? []).map(held => held.seat))?.mine === true);
   const due = entry => { const at = Date.parse(entry.table.answerBy ?? ''); return Number.isFinite(at) ? at : Number.POSITIVE_INFINITY; };
   return waiting.map((entry, index) => ({ entry, index })).sort((a, b) => due(a.entry) - due(b.entry) || a.index - b.index).map(one => one.entry);
+}
+
+/**
+ * The games against players waiting for this player, the most pressing first: what "Your turn" lists and "Play next"
+ * opens the first of. A game against a bot is always waiting for its player, so it would only be in the way here.
+ */
+export function yourTurn(mine) {
+  return waitingGames(mine).filter(entry => gameKind(entry.table) === 'players');
+}
+
+/**
+ * Whether a game counts on the ladder (ADR 0171): one between players, in 3v3, not opened unranked. A game against a
+ * bot never does, nor one on a shared device, which the host opens unranked.
+ */
+export function isRanked(table) {
+  return gameKind(table) === 'players' && table?.format === '3v3' && table?.casual !== true;
+}
+
+/** When a game was created, as a card says it: the day, in the reader's own words for it. */
+export function createdOn(createdAt, locale = undefined) {
+  const at = createdAt ? new Date(createdAt) : null;
+  return at && Number.isFinite(at.getTime()) ? at.toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' }) : null;
 }
 
 /** Whether a table is played against a bot or between people (a shared device among them), by who sits. */
@@ -64,7 +85,7 @@ export function gameKind(table) {
  */
 export function ongoingGames(mine) {
   const ongoing = mine.filter(entry => !entry.table.over);
-  const waiting = yourTurn(ongoing);
+  const waiting = waitingGames(ongoing);
   const ordered = [...waiting, ...ongoing.filter(entry => !waiting.includes(entry))];
   return { players: ordered.filter(entry => gameKind(entry.table) === 'players'), bots: ordered.filter(entry => gameKind(entry.table) === 'bots') };
 }
@@ -346,7 +367,8 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     const turn = turnOf(table, (entry?.seats ?? []).map(held => held.seat));
     const invited = invitedState(entry?.invited);
     // An unranked game (ADR 0155) says so beside its title.
-    top.append(title(`${table.format} battle`, table.casual === true), turn?.mine
+    // One's own card says ranked or not in its last line, beside its date; another's says it in the title.
+    top.append(title(`${table.format} battle`, !entry && table.casual === true), turn?.mine
       ? node('span', 'Your turn', 'status-tag your-turn')
       : node('span', invited?.tag ?? tableState(table), `status-tag${table.openSeats > 0 ? ' available' : ''}${invited ? ' invited' : ''}`));
     const line = node('div', '', 'versus');
@@ -362,6 +384,14 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     line.setAttribute('aria-label', sides.map(side => side.name).join(' versus '));
     root.append(top, line);
     if (turn) root.append(node('p', turn.mine ? `${turn.text} · ${tableState(table)}` : turn.text, `game-turn${turn.mine ? ' mine' : ''}`));
+    // When it was created and whether it counts on the ladder, on every card of one's own.
+    if (entry) {
+      const created = createdOn(table.createdAt);
+      const meta = node('p', '', 'game-meta');
+      if (created) meta.append(node('span', `Created ${created}`, 'game-created'));
+      meta.append(node('span', isRanked(table) ? 'Ranked' : 'Unranked', `game-ranked${isRanked(table) ? ' ranked' : ''}`));
+      root.append(meta);
+    }
     root.append(node('p', table.id, 'game-id'));
     const button = node('button', cardAction(table, entry));
     button.type = 'button';
@@ -473,7 +503,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
       play.type = 'button';
       play.setAttribute('aria-label', `Play ${entry.table.format} table ${entry.table.id}`);
       play.addEventListener('click', () => enter(entry));
-      return row({ heading: `${entry.table.format} battle`, casual: entry.table.casual === true, tag: gameKind(entry.table) === 'bots' ? 'Against a bot' : 'Against a player',
+      return row({ heading: `${entry.table.format} battle`, tag: isRanked(entry.table) ? 'Ranked' : 'Unranked', tone: isRanked(entry.table) ? 'ranked' : '',
         sides: versus(entry.table).map(side => ({ ...side, you: held.includes(side.seat) })), detail: `${turnOf(entry.table, held).text} · ${tableState(entry.table)}`, action: play, className: 'mine' });
     }));
     root.append(head, rows);

@@ -433,9 +433,11 @@ hands it over under a fresh token and code, so an invitation already sent for it
 and place availability survive redeployment through the same recorded store as the decision journal, and a
 table that never began is closed after twenty hours nobody asked anything of it (ADR 0115).
 
-**Your turn**, above Your games, gathers every game waiting for the player, against players and bots alike, the
-one whose time to answer runs out soonest first, and **Play next** opens that one. The games stay in their groups
-below too, where the ones waiting for the player also come first, in the same order.
+**Your turn**, above Your games, gathers every game against a player that waits for the player, the one whose time
+to answer runs out soonest first, and **Play next** opens that one; a game against a bot always waits for its player,
+so it is left to its group. The games stay in their groups below too, where the ones waiting for the player come
+first, in the same order. Every card of one's own says the day its game was created and whether it is ranked: a
+game between players, in 3v3, not opened unranked (ADR 0171).
 
 ## Signing in (ADR 0122)
 

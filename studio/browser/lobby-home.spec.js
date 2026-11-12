@@ -425,21 +425,29 @@ test('an account host that cannot be reached says so instead of offering a sign-
   expect(state.errors).toEqual([]);
 });
 
-test('every game waiting for the player is gathered under Your turn, the most pressing first, and Play next opens it', async ({ page }, info) => {
+test('every game against a player waiting for the player is gathered under Your turn, the most pressing first, and Play next opens it', async ({ page }, info) => {
   const bot = { seat: 'player2', kind: 'bot', name: 'Lookahead', turn: false };
-  const game = (id, { turn = true, against = 'bot', answerBy = null } = {}) => ({ table: { ...battle, id, over: false, answerBy,
+  const game = (id, { turn = true, against = 'bot', answerBy = null, casual = false } = {}) => ({ table: { ...battle, id, over: false, answerBy, casual, createdAt: '2026-11-10T18:00:00Z',
     seats: [{ ...battle.seats[0], turn }, against === 'bot' ? bot : { ...battle.seats[1], turn: !turn }] }, seats: [{ seat: 'player1', token: `${id}-token` }] });
   const soon = new Date(Date.now() + 2 * 3600000).toISOString(), later = new Date(Date.now() + 20 * 3600000).toISOString();
   const games = [game('bot-move'), game('their-move', { turn: false, against: 'person' }), game('friend-later', { against: 'person', answerBy: later }),
-    game('friend-soon', { against: 'person', answerBy: soon })];
+    game('friend-soon', { against: 'person', answerBy: soon, casual: true })];
   const state = await home(page, { games });
   const band = page.locator('.your-turn-band');
 
-  await expect(band.getByRole('heading', { name: 'Your turn · 3' })).toBeVisible();
-  await expect(band.locator('.game-row')).toHaveCount(3);
-  await expect(band.locator('.game-row').first()).toContainText('Against a player');
+  // A game against a bot is always waiting for its player: it stays in its group, not here.
+  await expect(band.getByRole('heading', { name: 'Your turn · 2' })).toBeVisible();
+  await expect(band.locator('.game-row')).toHaveCount(2);
+  await expect(band.locator('.game-row').first()).toContainText('Unranked');
   await expect(band.locator('.game-row').first()).toContainText('left');
-  await expect(band.locator('.game-row').last()).toContainText('Against a bot');
+  await expect(band.locator('.game-row').last()).toContainText('Ranked');
+  await expect(band).not.toContainText('Lookahead');
+  // Every card of one's own says when its game was created and whether it counts on the ladder.
+  const bots = page.locator('.mine-group.bots .game-card');
+  await expect(bots.locator('.game-meta')).toContainText('Created');
+  await expect(bots.locator('.game-meta')).toContainText('2026');
+  await expect(bots.locator('.game-meta .game-ranked')).toHaveText('Unranked');
+  await expect(page.locator('.mine-group.players .game-meta .game-ranked.ranked')).toHaveCount(2);
   // Still in their own groups too: the band is the way through them, not their only place.
   await expect(page.locator('.mine-group .game-card')).toHaveCount(4);
   await expect(page.locator('#my-games-section')).toBeInViewport({ ratio: 0.1 });
