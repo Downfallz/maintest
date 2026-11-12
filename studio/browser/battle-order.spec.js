@@ -223,10 +223,13 @@ test('a strip entry lights its creature in blue and says why it holds its place,
   await expect(page.locator('.order-why-die').first()).toHaveAttribute('aria-label', 'Creature 1: d20 11 then 18');
   await expect(page.locator('.order-why-die.is-self')).toContainText('Creature 4');
   await fitsViewport(page, '#order-why-close, #order-why-inspect');
-  // The card stands away from the creature it lights, so the creature stays in view.
-  await page.clock.runFor(1000);
-  const [card, lit] = await Promise.all([why.boundingBox(), page.locator('#actor-layer [data-creature="4"] .caption').boundingBox()]);
-  expect(card.y > lit.y + lit.height || card.y + card.height < lit.y || card.x > lit.x + lit.width || card.x + card.width < lit.x).toBe(true);
+  // The card stands away from the creature it lights, so the creature stays in view. The field lays its creatures
+  // out on the scene's own frames, so a loaded runner is given until it settles rather than one measure.
+  await expect.poll(async () => {
+    await page.clock.runFor(250);
+    const [card, lit] = await Promise.all([why.boundingBox(), page.locator('#actor-layer [data-creature="4"] .caption').boundingBox()]);
+    return card.y > lit.y + lit.height || card.y + card.height < lit.y || card.x > lit.x + lit.width || card.x + card.width < lit.x;
+  }, { timeout: 5000 }).toBe(true);
   await page.screenshot({ path: info.outputPath('order-why.jpg'), type: 'jpeg', quality: 85, animations: 'disabled' });
 
   await entry.click();
