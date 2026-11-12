@@ -104,5 +104,11 @@ public sealed class FileDecisionJournal : IDecisionJournal
         return Task.FromResult(file.Exists ? file.Length : 0);
     }
 
+    public Task<JournalWrite?> LastWrittenAsync(string run, CancellationToken cancellationToken = default)
+    {
+        var file = new FileInfo(PathOf(run));
+        return Task.FromResult(file.Exists && file.Length > 0 ? new JournalWrite(new DateTimeOffset(file.LastWriteTimeUtc, TimeSpan.Zero), file.Length) : null);
+    }
+
     private string PathOf(string run) => Path.Combine(_runs.LocationOf(run), JournalLines.FileName);
 }

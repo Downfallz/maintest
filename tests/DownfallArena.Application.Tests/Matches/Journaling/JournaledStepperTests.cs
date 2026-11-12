@@ -402,6 +402,63 @@ public sealed class JournaledStepperTests
     /// When that fails, the match in memory is conceded and the journal does not say so: it is let go of, so
     /// the next reader finds the match the journal describes, still being played.
     /// </summary>
+    /// <summary>
+    /// A timeout (ADR 0169) is a line of the journal, settled against the match as its turn finds it: the seat the
+    /// caller names as late loses, and a match rebuilt from the journal ends the same way.
+    /// </summary>
+    [Fact]
+    public async Task A_timeout_is_a_line_of_the_journal_and_a_match_rebuilt_from_it_ends_the_same()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent);
+        var journal = new JournalStore();
+        var replica = new Replica(journal);
+        await replica.Journaled.SubmitAsync(table, MatchSeats.People, new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass), cancellationToken: TestContext.Current.CancellationToken);
+
+        var since = (await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken)).Value.Position.Mark;
+
+        var ended = await replica.Journaled.TimeOutAsync(table, since, state => state.Player2.View.Asked is null ? [] : [PlayerSlot.Player2], TestContext.Current.CancellationToken);
+
+        ended.Value.Outcome.ShouldBe(new MatchOutcome(PlayerSlot.Player1, MatchEndReason.TimedOut));
+        journal.Lines[^1].ShouldBe(new TimeoutEntry([PlayerSlot.Player2]));
+        var rebuilt = await new Replica(journal).Journaled.ReadAsync(table, TestContext.Current.CancellationToken);
+        rebuilt.Value.Outcome.ShouldBe(new MatchOutcome(PlayerSlot.Player1, MatchEndReason.TimedOut));
+    }
+
+    [Fact]
+    public async Task Nobody_late_ends_nothing_and_writes_nothing()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent);
+        var journal = new JournalStore();
+        var replica = new Replica(journal);
+
+        var ended = await replica.Journaled.TimeOutAsync(table, 0, _ => [], TestContext.Current.CancellationToken);
+
+        ended.Error.ShouldBe(MatchErrors.NobodyTimedOut);
+        journal.Lines.ShouldBeEmpty();
+        (await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken)).Value.Outcome.ShouldBeNull();
+    }
+
+    /// <summary>
+    /// The time is read before the timeout has its turn. A move made in between moved the journal's end, so whoever
+    /// is asked now was asked just now: the timeout is refused, and nothing ends or is written.
+    /// </summary>
+    [Fact]
+    public async Task A_timeout_seen_before_a_move_that_landed_since_ends_nothing()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent);
+        var journal = new JournalStore();
+        var replica = new Replica(journal);
+        var since = (await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken)).Value.Position.Mark;
+        await new Replica(journal).Journaled.SubmitAsync(table, MatchSeats.People, new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass), cancellationToken: TestContext.Current.CancellationToken);
+        var lines = journal.Lines.Count;
+
+        var ended = await replica.Journaled.TimeOutAsync(table, since, state => state.Player2.View.Asked is null ? [] : [PlayerSlot.Player2], TestContext.Current.CancellationToken);
+
+        ended.Error.ShouldBe(JournalErrors.Moved);
+        journal.Lines.Count.ShouldBe(lines);
+        (await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken)).Value.Outcome.ShouldBeNull();
+    }
+
     [Fact]
     public async Task A_concession_that_fails_once_the_match_has_taken_it_is_not_kept_in_memory()
     {

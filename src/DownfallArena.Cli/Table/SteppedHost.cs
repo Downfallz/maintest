@@ -34,6 +34,9 @@ internal sealed record SteppedHost(
     /// </summary>
     public IAgentTurns Turns { get; init; } = new InProcessAgentTurns(Clock);
 
+    /// <summary>What times a match out (ADR 0169); a host made without it cannot, nor replay a journal that did.</summary>
+    public ICommandHandler<TimeOut, Result>? TimeOut { get; init; }
+
     public static SteppedHost Of(IServiceProvider services)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -45,14 +48,17 @@ internal sealed record SteppedHost(
             services.GetRequiredService<ICommandHandler<Concede, Result>>(),
             services.GetRequiredService<IMatchRepository>(),
             services.GetRequiredService<MatchTraceRecorder>(),
-            services.GetRequiredService<TimeProvider>());
+            services.GetRequiredService<TimeProvider>())
+        {
+            TimeOut = services.GetService<ICommandHandler<TimeOut, Result>>(),
+        };
     }
 
     /// <summary>A stepper over a journal that nothing watches: what sets a match up before a table plays it.</summary>
     public JournaledStepper Stepper(IDecisionJournal journal)
     {
         var stepper = new MatchStepper(Commands, Queries);
-        return new JournaledStepper(stepper, new MatchReplay(Create, Join, Concede, stepper, Matches, []), journal, Matches, Concede);
+        return new JournaledStepper(stepper, new MatchReplay(Create, Join, Concede, stepper, Matches, [], TimeOut), journal, Matches, Concede, timeOut: TimeOut);
     }
 
     /// <summary>A table's own stepper over a journal.</summary>
@@ -62,6 +68,6 @@ internal sealed record SteppedHost(
     public JournaledStepper Stepper(IDecisionJournal journal, IDecisionWitness witness, IMatchMemory memory, IMatchInStep inStep)
     {
         var stepper = new MatchStepper(Commands, Queries, [witness]);
-        return new JournaledStepper(stepper, new MatchReplay(Create, Join, Concede, stepper, Matches, [memory]), journal, Matches, Concede, [inStep]);
+        return new JournaledStepper(stepper, new MatchReplay(Create, Join, Concede, stepper, Matches, [memory], TimeOut), journal, Matches, Concede, [inStep], TimeOut);
     }
 }

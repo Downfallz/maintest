@@ -161,12 +161,16 @@ internal sealed class SteppedSession : ITableSession, IAgentTurnTaker
 
     public bool HasBegun => Volatile.Read(ref _begun) != 0;
 
+    public DateTimeOffset? BegunAt { get; private set; }
+
     public void Begin()
     {
         if (Interlocked.Exchange(ref _begun, 1) != 0)
         {
             return;
         }
+
+        BegunAt = _host.Clock.GetUtcNow();
 
         Announce();
         Pump();
@@ -449,6 +453,37 @@ internal sealed class SteppedSession : ITableSession, IAgentTurnTaker
         return moved && ended is { Outcome: { Reason: MatchEndReason.Concession } outcome } && outcome.Winner == Other(slot)
             ? Result.Success()
             : Result.Failure(refusal);
+    }
+
+    public async Task<Result> TimeOutAsync(long since)
+    {
+        Result<JournaledState> ended;
+        try
+        {
+            // Who is late is settled in the match's turn: whoever a person is asked for as the timeout reaches it.
+            ended = await _stepper.TimeOutAsync(
+                _match,
+                since,
+                state =>
+                {
+                    var plan = Seated(state.SeatChanges);
+                    return [.. new[] { PlayerSlot.Player1, PlayerSlot.Player2 }.Where(slot => Waiting(slot, state, plan) is not null)];
+                },
+                _stopping);
+        }
+        catch
+        {
+            Behind();
+            throw;
+        }
+
+        if (ended.IsFailure)
+        {
+            return Result.Failure(ended.Error);
+        }
+
+        Take(ended.Value);
+        return Result.Success();
     }
 
     /// <summary>What a seat's person is being asked, or nothing: before the table begins, once it is over, and while a bot holds the seat.</summary>

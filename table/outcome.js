@@ -45,12 +45,17 @@ export function rematchPlan(table, held, friendship = null) {
 export function outcomeText(view, seat) {
   const outcome = view?.outcome;
   if (!outcome) return 'The match is over.';
-  const because = { Elimination: outcome.winner ? 'the last team standing' : 'neither team survived', RoundCap: outcome.winner ? 'more health at the round cap' : 'equal health at the round cap', Concession: 'a concession' }[outcome.reason] ?? outcome.reason ?? 'reason not recorded';
+  const because = { Elimination: outcome.winner ? 'the last team standing' : 'neither team survived', RoundCap: outcome.winner ? 'more health at the round cap' : 'equal health at the round cap', Concession: 'a concession', TimedOut: outcome.winner ? 'the time to answer ran out' : 'both players let the time to answer run out' }[outcome.reason] ?? outcome.reason ?? 'reason not recorded';
   if (!outcome.winner) return `The match is a draw · ${because}.`;
   const won = outcome.winner === seat;
   const winner = seatLabel(outcome.winner);
   // A replay opened from the admin panel is nobody's seat: it names the winner rather than saying "you".
   if (view.replay) return `${winner} wins · ${because}.`;
+  // A timeout (ADR 0169) says whose time ran out, from this seat's side, as a concession does.
+  if (outcome.reason === 'TimedOut') {
+    const other = seatLabel(seat === 'player1' ? 'player2' : 'player1');
+    return won ? `${other} let their time to answer run out · you win.` : `Your time to answer ran out · ${winner} wins.`;
+  }
   if (outcome.reason === 'Concession') {
     const other = seatLabel(seat === 'player1' ? 'player2' : 'player1');
     return won ? `${other} conceded · you win.` : `You conceded · ${winner} wins.`;

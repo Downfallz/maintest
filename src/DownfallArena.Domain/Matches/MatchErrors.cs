@@ -13,4 +13,6 @@ public static class MatchErrors
     public static readonly DomainError UnknownCreatureDefinition = new("Match.UnknownCreatureDefinition", "The roster names a creature definition that is not in the game resources.");
 
     public static readonly DomainError NotInProgress = new("Match.NotInProgress", "The match has not started or has already ended.");
+
+    public static readonly DomainError NobodyTimedOut = new("Match.NobodyTimedOut", "A match times out for at least one player who let their time to answer run out.");
 }

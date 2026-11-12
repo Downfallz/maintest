@@ -295,6 +295,15 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             return Problem(400, "Choose one of the offered match formats.");
         }
 
+        // How long a player has to answer (ADR 0169): a game between two players has a limit, three days unless they
+        // chose another one offered; a game against the bot or on a shared device has none.
+        var betweenPlayers = opponent is "person" or "friend";
+        var turnLimit = opening?.TurnLimit ?? DefaultTurnLimitHours;
+        if (betweenPlayers && !TurnLimitHours.Contains(turnLimit))
+        {
+            return Problem(400, "Lobby.TurnLimit", "Choose how long a player has to answer: a day, three days or a week.");
+        }
+
         await Claims.WaitAsync();
         try
         {
@@ -329,6 +338,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
             table.OpenSeats = opponent == "person" ? ["player2"] : [];
             table.Casual = opponent is "person" or "friend" && opening?.Ranked == false;
+            table.TurnLimit = betweenPlayers ? TimeSpan.FromHours(turnLimit) : null;
 
             // The seats handed to this browser are taken by it from the start: no link names them, and only the
             // place left for another player keeps an invitation and a code (ADR 0116). Given before the table is
@@ -1289,6 +1299,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             createdAt = table.CreatedAt,
             format = table.Session.Rules.Format.ToString(),
             casual = table.Casual,
+            turnLimitHours = table.TurnLimit is { } limit ? (int)limit.TotalHours : (int?)null,
             waiting = !table.Session.HasBegun && !table.IsOver,
             over = table.IsOver,
             round = await AdminApi.RoundNowAsync(table),
@@ -1613,8 +1624,15 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
     private static StudioResponse Problem(int status, string code, string message) => Json(new { error = code, message }, status);
 
+    /// <summary>The time to answer a game between two players can be given (ADR 0169), in hours: a day, three days, a week.</summary>
+    internal static readonly IReadOnlyList<int> TurnLimitHours = [24, 72, 168];
+
+    /// <summary>The time to answer a game between two players has unless it is given another one: three days.</summary>
+    internal const int DefaultTurnLimitHours = 72;
+
     /// <param name="Ranked">False opens a game between two players unranked (ADR 0155); a bot or a shared device never is.</param>
-    private sealed record Opening(string? Opponent, string? Format, string? Friend, bool? Ranked = null);
+    /// <param name="TurnLimit">How many hours a player of a game between two players has to answer (ADR 0169).</param>
+    private sealed record Opening(string? Opponent, string? Format, string? Friend, bool? Ranked = null, int? TurnLimit = null);
 
     /// <param name="Turn">Whether this seat's player is being asked something now: whose turn it is.</param>
     private sealed record SeatSummary(string Seat, string Kind, string Name, bool Turn, string? Account = null);

@@ -67,6 +67,9 @@ internal sealed class PlayedTable : IDisposable
     /// <summary>Opened as unranked (ADR 0155): its result is kept and listed, never rated on the ladder.</summary>
     public bool Casual { get; set; }
 
+    /// <summary>How long a player asked has to answer before they lose (ADR 0169); none for a table without a limit.</summary>
+    public TimeSpan? TurnLimit { get; set; }
+
     /// <summary>The recording, or none for a table told to keep nothing.</summary>
     public PlaytestRun? Run { get; }
 

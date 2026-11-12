@@ -104,6 +104,12 @@ internal sealed record TableRecord
     /// <summary>Opened as unranked (ADR 0155). False in a record written before a game could be.</summary>
     public bool Casual { get; init; }
 
+    /// <summary>How many hours a player asked has to answer before they lose (ADR 0169); none for a table without a limit.</summary>
+    public int? TurnLimitHours { get; init; }
+
+    /// <summary>When the match began, by the clock of the host that began it; none before it has, and in an older record.</summary>
+    public DateTimeOffset? BegunAt { get; init; }
+
     /// <summary>
     /// How many times the record has been written, the first write being 1: what a conditional write is read
     /// and refused on, and the record's half of the table's version once a second process writes (ADR 0159).
@@ -138,7 +144,9 @@ internal sealed record TableRecord
             Status = Open,
             OpenSeats = table.OpenSeats,
             Casual = table.Casual,
+            TurnLimitHours = table.TurnLimit is { } limit ? (int)limit.TotalHours : null,
             Begun = table.Session.HasBegun,
+            BegunAt = table.Session.BegunAt,
             Content = table.Content,
             Rules = RecordedRules.Of(table.Session.Rules),
         };
@@ -158,6 +166,9 @@ internal sealed record TableRecord
             Content = Content ?? stored?.Content,
             Rules = Rules ?? stored?.Rules,
             Begun = Begun || stored?.Begun == true,
+            // The first beginning stands: a host picking a begun table up begins it again, later.
+            BegunAt = stored?.BegunAt ?? BegunAt,
+            TurnLimitHours = TurnLimitHours ?? stored?.TurnLimitHours,
         };
 
     /// <summary>The request the table was composed from, to compose it again.</summary>

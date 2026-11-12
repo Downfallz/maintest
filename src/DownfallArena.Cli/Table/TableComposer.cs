@@ -201,9 +201,14 @@ internal sealed class TableComposer
         return await BuildAsync(record.Request(), new Reopening(record, record.Begun || begun), cancellationToken);
     }
 
+    /// <summary>When a table's journal was last written, and where it ended then: its last move (ADR 0169); none for a table that kept none.</summary>
+    public async Task<JournalWrite?> LastMoveAsync(string id, CancellationToken cancellationToken = default) =>
+        _journal is { } journal ? await journal.LastWrittenAsync(id, cancellationToken) : null;
+
     /// <summary>
     /// What a table's journal holds, read without rebuilding anything; none on a host that keeps nothing.
     /// </summary>
+
     public async Task<JournalReading?> JournalAsync(string id, CancellationToken cancellationToken = default) =>
         _journal is { } journal ? await journal.ReadAsync(id, cancellationToken) : null;
 
@@ -452,6 +457,7 @@ internal sealed class TableComposer
                 Content = content.Version,
                 OpenSeats = record?.OpenSeats ?? [],
                 Casual = record?.Casual ?? false,
+                TurnLimit = record?.TurnLimitHours is { } hours ? TimeSpan.FromHours(hours) : null,
                 Index = run is null ? Index : null,
             };
             Push?.Watch(table);

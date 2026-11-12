@@ -52,14 +52,16 @@ internal sealed class Replica
                 new GetPlayerOptionsHandler(Store.Workflow, TestContent.Resources)),
             witnesses);
         var concede = new ConcedeHandler(Store.Workflow);
+        var timeOut = new TimeOutHandler(Store.Workflow);
         Replay = new MatchReplay(
             new CreateMatchHandler(Store.Workflow, TestContent.Resources, new TestRandomFactory()),
             new JoinMatchHandler(Store.Workflow),
             concede,
             Stepper,
             Store.Repository,
-            memories);
-        Journaled = new JournaledStepper(Stepper, Replay, journal.Journal, Store.Repository, concede, inStep is null ? [] : [inStep]);
+            memories,
+            timeOut);
+        Journaled = new JournaledStepper(Stepper, Replay, journal.Journal, Store.Repository, concede, inStep is null ? [] : [inStep], timeOut);
     }
 
     public MatchStore Store { get; }

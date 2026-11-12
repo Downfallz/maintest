@@ -43,6 +43,19 @@ public sealed class BlobDecisionJournalTests
     }
 
     [Fact]
+    public async Task Its_last_write_is_read_with_where_the_journal_ended_after_it_and_a_journal_nobody_wrote_has_none()
+    {
+        var journal = await Journal();
+        var nothing = await journal.LastWrittenAsync("run-1", TestContext.Current.CancellationToken);
+        var written = (await journal.AppendAsync("run-1", JournalPosition.Start, [.. DecisionJournalTests.EveryKind.Take(3)], TestContext.Current.CancellationToken)).ShouldNotBeNull();
+
+        var last = await journal.LastWrittenAsync("run-1", TestContext.Current.CancellationToken);
+
+        nothing.ShouldBeNull();
+        last.ShouldNotBeNull().Mark.ShouldBe(written.Mark);
+    }
+
+    [Fact]
     public async Task Decisions_are_read_back_in_order_and_the_end_read_is_the_end_written()
     {
         var journal = await Journal();

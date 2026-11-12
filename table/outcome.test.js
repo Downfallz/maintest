@@ -11,6 +11,10 @@ test('a draw names the reason without a winner', () => {
 test('a concession is said from the seat reading it', () => {
   assert.equal(outcomeText({ outcome: { winner: 'player2', reason: 'Concession' } }, 'player1'), 'You conceded · Player 2 wins.');
   assert.equal(outcomeText({ outcome: { winner: 'player2', reason: 'Concession' } }, 'player2'), 'Player 1 conceded · you win.');
+  // A timeout (ADR 0169) says whose time ran out, from each side, and a timeout of both is a draw.
+  assert.equal(outcomeText({ outcome: { winner: 'player1', reason: 'TimedOut' } }, 'player2'), 'Your time to answer ran out · Player 1 wins.');
+  assert.equal(outcomeText({ outcome: { winner: 'player1', reason: 'TimedOut' } }, 'player1'), 'Player 2 let their time to answer run out · you win.');
+  assert.equal(outcomeText({ outcome: { winner: null, reason: 'TimedOut' } }, 'player1'), 'The match is a draw · both players let the time to answer run out.');
 });
 test('a replay is nobody\'s seat and names the winner', () => {
   assert.equal(outcomeText({ replay: true, outcome: { winner: 'player1', reason: 'Elimination' } }, 'player1'), 'Player 1 wins · the last team standing.');

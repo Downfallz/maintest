@@ -40,6 +40,7 @@ public static class ApplicationServiceCollectionExtensions
         services.TryAddTransient<ICommandHandler<SubmitIntent, Result>, SubmitIntentHandler>();
         services.TryAddTransient<ICommandHandler<SubmitAction, Result>, SubmitActionHandler>();
         services.TryAddTransient<ICommandHandler<Concede, Result>, ConcedeHandler>();
+        services.TryAddTransient<ICommandHandler<TimeOut, Result>, TimeOutHandler>();
         services.TryAddTransient<IQueryHandler<GetBoardStateForPlayer, Result<PlayerBoardState>>, GetBoardStateForPlayerHandler>();
         services.TryAddTransient<IQueryHandler<GetPlayerOptions, Result<PlayerOptions>>, GetPlayerOptionsHandler>();
 

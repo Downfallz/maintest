@@ -13,7 +13,9 @@ internal sealed record TableSummary(
     bool Begun,
     IReadOnlyList<string> OpenSeats,
     IReadOnlyList<TableSummary.Seat> Seats,
-    ReplayBasis? RefusedUnder = null)
+    ReplayBasis? RefusedUnder = null,
+    int? TurnLimitHours = null,
+    DateTimeOffset? BegunAt = null)
 {
     /// <summary>A seat as a lobby sees it: whose, and whether a person still has to take or reach it.</summary>
     internal sealed record Seat(string Slot, bool Person, bool? Taken, string? Account, string? InvitedAccount, bool? Arrived);
@@ -28,7 +30,9 @@ internal sealed record TableSummary(
             record.Begun,
             record.OpenSeats,
             [.. record.Seats.Select(seat => new Seat(seat.Slot, seat.Person, seat.Taken, seat.Account, seat.InvitedAccount, seat.Arrived))],
-            record.RefusedUnder);
+            record.RefusedUnder,
+            record.TurnLimitHours,
+            record.BegunAt);
     }
 
     /// <summary>A live table's summary, as its record would say it now; none for a table composed from no request.</summary>

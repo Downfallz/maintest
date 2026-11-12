@@ -20,6 +20,9 @@ public static class JournalErrors
     /// </summary>
     public static readonly DomainError RoundReached = new("Journal.RoundReached", "The match has already played that round. A seat changes hands from the top of a later one.");
 
+    /// <summary>A journal that holds a timeout (ADR 0169), replayed by something made without the command that times a match out.</summary>
+    public static readonly DomainError CannotTimeOut = new("Journal.CannotTimeOut", "This replay cannot time a match out, and the journal holds a timeout.");
+
     /// <summary>
     /// A line does not answer what the rebuilt match asks: the content, the rules or the engine changed under
     /// the journal. Nothing is guessed at, and the journal is left as it is.

@@ -25,7 +25,8 @@ public sealed class MatchReplay(
     ICommandHandler<Concede, Result> concede,
     MatchStepper stepper,
     IMatchRepository matches,
-    IEnumerable<IMatchMemory> memories)
+    IEnumerable<IMatchMemory> memories,
+    ICommandHandler<TimeOut, Result>? timeOut = null)
 {
     private readonly IReadOnlyList<IMatchMemory> _memories = [.. memories];
 
@@ -99,6 +100,17 @@ public sealed class MatchReplay(
                     if (given.IsFailure)
                     {
                         return Result.Failure<HeldAnswers>(JournalErrors.Diverged(seen + line + 1, given.Error));
+                    }
+
+                    held = HeldAnswers.None;
+                    break;
+                case TimeoutEntry timedOut:
+                    var ran = timeOut is null
+                        ? Result.Failure(JournalErrors.CannotTimeOut)
+                        : await timeOut.HandleAsync(new TimeOut(matchId, timedOut.Late), cancellationToken);
+                    if (ran.IsFailure)
+                    {
+                        return Result.Failure<HeldAnswers>(JournalErrors.Diverged(seen + line + 1, ran.Error));
                     }
 
                     held = HeldAnswers.None;

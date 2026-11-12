@@ -398,6 +398,8 @@ resource tend 'Microsoft.App/jobs@2024-03-01' = {
       triggerType: 'Schedule'
       replicaTimeout: 900
       replicaRetryLimit: 1
+      // A game it times out tells its players how it ended (ADR 0169).
+      secrets: pushSecrets
       scheduleTriggerConfig: {
         cronExpression: '17 * * * *'
         parallelism: 1
@@ -416,7 +418,7 @@ resource tend 'Microsoft.App/jobs@2024-03-01' = {
             '--record'
             recordings
           ], accountArgs)
-          env: relayEnv
+          env: concat(pushEnv, relayEnv)
           resources: {
             cpu: json('0.25')
             memory: '0.5Gi'
