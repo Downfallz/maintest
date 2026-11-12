@@ -308,69 +308,76 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
   } finally { await page.close(); await stopHost(hostInfo.host); await rm(directory, { recursive: true, force: true }); }
 });
 
-test('two battle seats plan simultaneously without revealing the other team choices', async ({ page, context, browser }, info) => {
-  test.setTimeout(120000);
-  await returningBattlePlayer({ context });
-  const hostInfo = await startHost('at-activation', [], { twoPeople: true });
-  const otherContext = await browser.newContext({ viewport: page.viewportSize() }); const other = await otherContext.newPage();
-  await returningBattlePlayer({ context: otherContext });
-  const errors = []; for (const surface of [page, other]) surface.on('pageerror', error => errors.push(error.message));
-  try {
-    const firstTokens = await enter(page, hostInfo.joins[0]), secondTokens = await enter(other, hostInfo.joins[1]);
-    const origin = new URL(hostInfo.join).origin;
-    const read = async (surface, seat, token) => (await surface.request.get(`${origin}/api/seat/${seat}`, { headers: { 'X-Seat-Token': token } })).json();
-    let first, second;
-    await expect.poll(async () => { first = await read(page, 'player1', firstTokens.player1); second = await read(other, 'player2', secondTokens.player2); return [first.waitingFor, second.waitingFor]; }).toEqual(['Evolution', 'Evolution']);
-    for (const surface of [page, other]) {
-      await expect(surface.locator('#upkeep-dialog')).toBeVisible();
-      await surface.locator('#upkeep-close').click();
-    }
-    await answer(page, first);
-    // Nothing of a private pick reaches the other seat: not its board, its offer, its feed or its question.
-    const concealed = await read(other, 'player2', secondTokens.player2);
-    expect(concealed.waitingAsked).toBe(second.waitingAsked); expect(concealed.options).toEqual(second.options);
-    expect(concealed.board).toEqual(second.board); expect(concealed.feed).toEqual(second.feed);
-    // Each seat finishes its own picks; the opponent's untouched asking never becomes acknowledged by this page.
-    for (const [surface, seat, token] of [[page, 'player1', firstTokens.player1], [other, 'player2', secondTokens.player2]]) {
-      for (let pick = 0; pick < 3; pick++) {
-        const view = await read(surface, seat, token); if (view.waitingFor !== 'Evolution') break;
-        await mutationTree(surface); await surface.locator('#planning-pass').click(); await confirm(surface, '#planning-confirm');
-        await expect.poll(async () => (await read(surface, seat, token)).waitingAsked).not.toBe(view.waitingAsked);
+// The page this test cuts a request off from runs without its service worker: WebKit sends the requests of a page
+// a service worker controls through that worker, where page.route never sees them (Playwright intercepts a service
+// worker's requests on Chromium only), so on release-ios no tempo was ever cut off and the dialog said nothing.
+test.describe('without a service worker', () => {
+  test.use({ serviceWorkers: 'block' });
+
+  test('two battle seats plan simultaneously without revealing the other team choices', async ({ page, context, browser }, info) => {
+    test.setTimeout(120000);
+    await returningBattlePlayer({ context });
+    const hostInfo = await startHost('at-activation', [], { twoPeople: true });
+    const otherContext = await browser.newContext({ viewport: page.viewportSize() }); const other = await otherContext.newPage();
+    await returningBattlePlayer({ context: otherContext });
+    const errors = []; for (const surface of [page, other]) surface.on('pageerror', error => errors.push(error.message));
+    try {
+      const firstTokens = await enter(page, hostInfo.joins[0]), secondTokens = await enter(other, hostInfo.joins[1]);
+      const origin = new URL(hostInfo.join).origin;
+      const read = async (surface, seat, token) => (await surface.request.get(`${origin}/api/seat/${seat}`, { headers: { 'X-Seat-Token': token } })).json();
+      let first, second;
+      await expect.poll(async () => { first = await read(page, 'player1', firstTokens.player1); second = await read(other, 'player2', secondTokens.player2); return [first.waitingFor, second.waitingFor]; }).toEqual(['Evolution', 'Evolution']);
+      for (const surface of [page, other]) {
+        await expect(surface.locator('#upkeep-dialog')).toBeVisible();
+        await surface.locator('#upkeep-close').click();
       }
-    }
-    await expect.poll(async () => { first = await read(page, 'player1', firstTokens.player1); second = await read(other, 'player2', secondTokens.player2); return [first.waitingFor, second.waitingFor]; }, { timeout: 15000 }).toEqual(['Speed', 'Speed']);
-    const tempos = [];
-    page.on('request', request => { if (request.url().endsWith('/decision') && request.postDataJSON()?.kind === 'Speed') tempos.push(decided(request)); });
-    // Interrupt after the first accepted creature, then reload. The host's own private receipts survive;
-    // neither the draft nor the rest of the old confirmed batch resumes by itself.
-    // Counted by the route itself: a request event can reach the page after the route sees the same request
-    // (WebKit), so a count kept by the event cannot say which tempo this is.
-    let routedTempos = 0;
-    await page.route('**/decision', route => {
-      if (route.request().postDataJSON()?.kind !== 'Speed') return route.continue();
-      routedTempos++;
-      return routedTempos === 2 ? route.abort('failed') : route.continue();
-    });
-    await teamTempos(page);
-    for (let index = 0; index < 3; index++) await page.locator('[data-speed="Standard"]').click();
-    expect(tempos).toEqual([]);
-    await page.screenshot({ path: info.outputPath('au5-real-team-tempos.jpg'), type: 'jpeg', quality: 85 });
-    await confirm(page, '#planning-confirm');
-    await expect(page.locator('#planning-dialog-error')).toContainText('may have arrived');
-    const partial = await read(page, 'player1', firstTokens.player1); expect(partial.board.speedChoices).toHaveLength(1);
-    const privateSurface = value => ({ board: value.board, options: value.options, feed: value.feed,
-      waitingAsked: value.waitingAsked, waitingFor: value.waitingFor, waitingCreature: value.waitingCreature });
-    expect(privateSurface(await read(other, 'player2', secondTokens.player2))).toEqual(privateSurface(second));
-    await page.unroute('**/decision');
-    await page.reload(); await expect(page.locator('#loading')).toBeHidden(); await teamTempos(page);
-    await expect(page.locator('[data-tempo-tab]')).toHaveCount(2); await expect(page.locator('#planning-confirm')).toBeDisabled();
-    expect(tempos).toHaveLength(2);
-    await page.locator('[data-speed="Standard"]').click(); await page.locator('[data-speed="Quick"]').click();
-    await confirm(page, '#planning-confirm'); await expect(page.locator('#planning-dialog')).toBeHidden();
-    expect(tempos).toHaveLength(4); expect(tempos.filter(one => one.creature === first.waitingCreature)).toHaveLength(1);
-    expect(privateSurface(await read(other, 'player2', secondTokens.player2))).toEqual(privateSurface(second));
-    await page.locator('#settings').click(); await page.locator('#concede-open').click(); await page.locator('#concede-confirm').click();
-    await matchResult(other); await expect(other.locator('#match-outcome')).toHaveText('Player 1 conceded · you win.');
-    await other.screenshot({ path: info.outputPath('concession-result.jpg'), type: 'jpeg', quality: 85 }); expect(errors).toEqual([]);
-  } finally { await otherContext.close(); await page.close(); await stopHost(hostInfo.host); }
+      await answer(page, first);
+      // Nothing of a private pick reaches the other seat: not its board, its offer, its feed or its question.
+      const concealed = await read(other, 'player2', secondTokens.player2);
+      expect(concealed.waitingAsked).toBe(second.waitingAsked); expect(concealed.options).toEqual(second.options);
+      expect(concealed.board).toEqual(second.board); expect(concealed.feed).toEqual(second.feed);
+      // Each seat finishes its own picks; the opponent's untouched asking never becomes acknowledged by this page.
+      for (const [surface, seat, token] of [[page, 'player1', firstTokens.player1], [other, 'player2', secondTokens.player2]]) {
+        for (let pick = 0; pick < 3; pick++) {
+          const view = await read(surface, seat, token); if (view.waitingFor !== 'Evolution') break;
+          await mutationTree(surface); await surface.locator('#planning-pass').click(); await confirm(surface, '#planning-confirm');
+          await expect.poll(async () => (await read(surface, seat, token)).waitingAsked).not.toBe(view.waitingAsked);
+        }
+      }
+      await expect.poll(async () => { first = await read(page, 'player1', firstTokens.player1); second = await read(other, 'player2', secondTokens.player2); return [first.waitingFor, second.waitingFor]; }, { timeout: 15000 }).toEqual(['Speed', 'Speed']);
+      const tempos = [];
+      page.on('request', request => { if (request.url().endsWith('/decision') && request.postDataJSON()?.kind === 'Speed') tempos.push(decided(request)); });
+      // Interrupt after the first accepted creature, then reload. The host's own private receipts survive;
+      // neither the draft nor the rest of the old confirmed batch resumes by itself.
+      // Counted by the route itself: a request event can reach the page after the route sees the same request
+      // (WebKit), so a count kept by the event cannot say which tempo this is.
+      let routedTempos = 0;
+      await page.route('**/decision', route => {
+        if (route.request().postDataJSON()?.kind !== 'Speed') return route.continue();
+        routedTempos++;
+        return routedTempos === 2 ? route.abort('failed') : route.continue();
+      });
+      await teamTempos(page);
+      for (let index = 0; index < 3; index++) await page.locator('[data-speed="Standard"]').click();
+      expect(tempos).toEqual([]);
+      await page.screenshot({ path: info.outputPath('au5-real-team-tempos.jpg'), type: 'jpeg', quality: 85 });
+      await confirm(page, '#planning-confirm');
+      await expect(page.locator('#planning-dialog-error')).toContainText('may have arrived');
+      const partial = await read(page, 'player1', firstTokens.player1); expect(partial.board.speedChoices).toHaveLength(1);
+      const privateSurface = value => ({ board: value.board, options: value.options, feed: value.feed,
+        waitingAsked: value.waitingAsked, waitingFor: value.waitingFor, waitingCreature: value.waitingCreature });
+      expect(privateSurface(await read(other, 'player2', secondTokens.player2))).toEqual(privateSurface(second));
+      await page.unroute('**/decision');
+      await page.reload(); await expect(page.locator('#loading')).toBeHidden(); await teamTempos(page);
+      await expect(page.locator('[data-tempo-tab]')).toHaveCount(2); await expect(page.locator('#planning-confirm')).toBeDisabled();
+      expect(tempos).toHaveLength(2);
+      await page.locator('[data-speed="Standard"]').click(); await page.locator('[data-speed="Quick"]').click();
+      await confirm(page, '#planning-confirm'); await expect(page.locator('#planning-dialog')).toBeHidden();
+      expect(tempos).toHaveLength(4); expect(tempos.filter(one => one.creature === first.waitingCreature)).toHaveLength(1);
+      expect(privateSurface(await read(other, 'player2', secondTokens.player2))).toEqual(privateSurface(second));
+      await page.locator('#settings').click(); await page.locator('#concede-open').click(); await page.locator('#concede-confirm').click();
+      await matchResult(other); await expect(other.locator('#match-outcome')).toHaveText('Player 1 conceded · you win.');
+      await other.screenshot({ path: info.outputPath('concession-result.jpg'), type: 'jpeg', quality: 85 }); expect(errors).toEqual([]);
+    } finally { await otherContext.close(); await page.close(); await stopHost(hostInfo.host); }
+  });
 });
