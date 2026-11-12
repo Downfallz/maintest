@@ -177,3 +177,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0169](0169-end-a-match-whose-player-let-their-time-to-answer-run-out.md) | End a match whose player let their time to answer run out | Accepted |
 | [0170](0170-end-a-begun-match-whose-left-seat-nobody-takes-in-a-day.md) | End a begun match whose left seat nobody takes in a day | Accepted |
 | [0171](0171-rank-only-3v3-games-and-count-a-players-statistics-on-them.md) | Rank only 3v3 games, and count a player's statistics on them alone | Accepted |
+| [0172](0172-let-named-player-accounts-be-the-operator.md) | Let named player accounts be the operator | Accepted |

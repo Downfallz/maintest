@@ -110,6 +110,12 @@ internal sealed record CliOptions
     public string? GoogleClientId { get; init; }
 
     /// <summary>
+    /// The accounts that are the operator when signed in, by their ids, comma-separated (ADR 0172);
+    /// <c>DOWNFALL_ADMINS</c> when not given.
+    /// </summary>
+    public string? Admins { get; init; }
+
+    /// <summary>
     /// Who is playing, as initials. It goes into the run stamp as <c>human:&lt;initials&gt;</c>, so
     /// <c>compare-stamps</c> reports the agents axis between two sessions played by different people rather
     /// than calling them the same player (<c>docs/tabletop/app-roadmap.md</c>, stage 5).
@@ -177,7 +183,7 @@ internal sealed record CliOptions
     /// <summary>The bots' turns the queue says tables owe, taken until stopped: what the worker app runs (ADR 0162).</summary>
     public const string WorkerCommand = "table-worker";
 
-    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table|table-tend|table-worker|push-keys [--seed N] [--matches N] [--format 3v3|2v2|1v1] [--declaration hidden-intent|at-activation] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--slot-log file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth] [--push-keys file] [--accounts off|google|dev] [--google-client-id id] [--turns process|queue|worker] [--tended]";
+    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table|table-tend|table-worker|push-keys [--seed N] [--matches N] [--format 3v3|2v2|1v1] [--declaration hidden-intent|at-activation] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--slot-log file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth] [--push-keys file] [--accounts off|google|dev] [--google-client-id id] [--admins acct_...] [--turns process|queue|worker] [--tended]";
 
     /// <summary>Every option this command line takes. Anything else is a typo, and says so by name.</summary>
     private const string RecordOption = "--record";
@@ -203,6 +209,7 @@ internal sealed record CliOptions
     private const string TendedOption = "--tended";
 
     private const string GoogleClientIdOption = "--google-client-id";
+    private const string AdminsOption = "--admins";
 
     private const string DeclarationOption = "--declaration";
 
@@ -213,6 +220,7 @@ internal sealed record CliOptions
         SeedOption, "--matches", "--out", "--schema", RecordOption, "--traces", "--trace", "--p1", "--p2",
         "--seeds", "--benchmarks", "--data", "--port", "--export", HandoverOption, "--rules", "--bind",
         "--who", FormatOption, DeclarationOption, SlotLogOption, PushKeysOption, AccountsOption, GoogleClientIdOption, TurnsOption,
+        AdminsOption,
     ];
 
     private static readonly string[] PracticeConflicts = [RecordOption, "--trace", "--rules", SeedOption, HandoverOption, "--p1", "--p2", FormatOption, DeclarationOption];
@@ -259,6 +267,7 @@ internal sealed record CliOptions
             PushKeys = values.GetValueOrDefault(PushKeysOption),
             Accounts = values.TryGetValue(AccountsOption, out var accounts) ? ParseAccounts(accounts) : AccountsMode.Off,
             GoogleClientId = values.GetValueOrDefault(GoogleClientIdOption),
+            Admins = values.GetValueOrDefault(AdminsOption),
             Turns = values.TryGetValue(TurnsOption, out var turns) ? ParseTurns(turns) : null,
             Bind = values.TryGetValue("--bind", out var bind) ? HttpHost.Bindable(bind) : HttpHost.Loopback,
             Seeds = values.GetValueOrDefault("--seeds"),
@@ -388,6 +397,16 @@ internal sealed record CliOptions
     /// </summary>
     private static string? AccountsContradiction(string command, Dictionary<string, string> values, HashSet<string> flags)
     {
+        if (values.ContainsKey(AdminsOption) && (command != "table" || ParseAccounts(values.GetValueOrDefault(AccountsOption) ?? "off") == AccountsMode.Off))
+        {
+            return "'--admins' is for table only, with '--accounts google' or '--accounts dev': it names the accounts that are the operator once signed in.";
+        }
+
+        if (values.TryGetValue(AdminsOption, out var admins) && OperatorGate.ParseAdmins(admins).Problem is { } problem)
+        {
+            return $"'--admins': {problem}";
+        }
+
         if (!values.TryGetValue(AccountsOption, out var accounts))
         {
             return values.ContainsKey(GoogleClientIdOption) ? "'--google-client-id' goes with '--accounts google'." : null;

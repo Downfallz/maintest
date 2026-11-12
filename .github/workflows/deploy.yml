@@ -168,6 +168,8 @@ jobs:
           # The Google OAuth client players sign in with (ADR 0122). Public: Google's own pages show it. A fork sets
           # its own in the TABLE_GOOGLE_CLIENT_ID variable.
           GOOGLE_CLIENT_ID: ${{ vars.TABLE_GOOGLE_CLIENT_ID || '809377988923-jsaqtfo92r9ria75s9g8cd53o1iurc6b.apps.googleusercontent.com' }}
+          # The player accounts that are the operator once signed in (ADR 0172), by id, comma-separated; unset, none.
+          ADMIN_ACCOUNTS: ${{ vars.TABLE_ADMIN_ACCOUNTS }}
           NAME_PREFIX: ${{ vars.TABLE_NAME_PREFIX }}
           # The push key pair (ADR 0118), or nothing: a table without one sends no notices and says so in its log.
           PUSH_KEYS: ${{ secrets.TABLE_PUSH_KEYS }}
@@ -182,7 +184,7 @@ jobs:
             --name "table-${GITHUB_RUN_NUMBER}" \
             --template-file infra/main.bicep \
             --parameters image="$IMAGE" signInClientId="$SIGN_IN_CLIENT_ID" operators="$OPERATORS" \
-              namePrefix="${NAME_PREFIX:-downfall}" pushKeys="$PUSH_KEYS" googleClientId="$GOOGLE_CLIENT_ID" relaySku="$relay" \
+              namePrefix="${NAME_PREFIX:-downfall}" pushKeys="$PUSH_KEYS" googleClientId="$GOOGLE_CLIENT_ID" adminAccounts="$ADMIN_ACCOUNTS" relaySku="$relay" \
             --query properties.outputs --output json > "$RUNNER_TEMP/outputs.json"
           url="$(jq -r .url.value "$RUNNER_TEMP/outputs.json")"
           redirect="$(jq -r .redirectUri.value "$RUNNER_TEMP/outputs.json")"
