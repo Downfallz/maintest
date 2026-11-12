@@ -343,7 +343,14 @@ test('two battle seats plan simultaneously without revealing the other team choi
     page.on('request', request => { if (request.url().endsWith('/decision') && request.postDataJSON()?.kind === 'Speed') tempos.push(decided(request)); });
     // Interrupt after the first accepted creature, then reload. The host's own private receipts survive;
     // neither the draft nor the rest of the old confirmed batch resumes by itself.
-    await page.route('**/decision', route => route.request().postDataJSON()?.kind === 'Speed' && tempos.length === 2 ? route.abort('failed') : route.continue());
+    // Counted by the route itself: a request event can reach the page after the route sees the same request
+    // (WebKit), so a count kept by the event cannot say which tempo this is.
+    let routedTempos = 0;
+    await page.route('**/decision', route => {
+      if (route.request().postDataJSON()?.kind !== 'Speed') return route.continue();
+      routedTempos++;
+      return routedTempos === 2 ? route.abort('failed') : route.continue();
+    });
     await teamTempos(page);
     for (let index = 0; index < 3; index++) await page.locator('[data-speed="Standard"]').click();
     expect(tempos).toEqual([]);
