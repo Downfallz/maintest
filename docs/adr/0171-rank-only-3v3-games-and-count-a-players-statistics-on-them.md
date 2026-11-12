@@ -16,7 +16,8 @@ player plays, and the statistics needed a table by format and a table by creatur
 
 We will rank only 3v3 games. A ranked game between two signed-in players is 3v3. A request that names another
 format is refused (`Lobby.RankedFormat`), and one that names none is played 3v3. An unranked game, a game against a
-bot and a game on a shared device may be 1v1, 2v2 or 3v3. The time to answer is chosen the same way, ranked or not.
+bot and a game on a shared device may be 1v1, 2v2 or 3v3. A game on a shared device is opened
+unranked, so another account taking a seat its player left never makes it ranked. The time to answer is chosen the same way, ranked or not.
 
 A player's statistics count their ranked 3v3 games alone: the record, the streaks, the average length, and the
 mutations and spells they played. The tables by format and by creature are removed. Every result is still kept

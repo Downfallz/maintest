@@ -69,6 +69,21 @@ public sealed class LobbyAccountsTests : IDisposable
         opened.GetProperty("table").GetProperty("casual").GetBoolean().ShouldBeTrue();
     }
 
+    /// <summary>
+    /// A game on a shared device is unranked from the start (ADR 0171): any format is allowed, and a seat its player
+    /// leaves and another account takes must not make it a ranked game.
+    /// </summary>
+    [Fact]
+    public async Task A_game_on_a_shared_device_is_opened_unranked_in_any_format()
+    {
+        var mark = await PlayerAsync("MarkF");
+
+        var opened = Read(await (await LobbyAsync()).HandleAsync("POST", "/api/lobby/tables", """{"opponent":"hotseat","format":"1v1"}""", player: mark));
+
+        opened.GetProperty("table").GetProperty("format").GetString().ShouldBe("1v1");
+        opened.GetProperty("table").GetProperty("casual").GetBoolean().ShouldBeTrue();
+    }
+
     [Fact]
     public async Task Nobody_signed_in_opens_a_table_takes_a_place_or_accepts_an_invitation()
     {

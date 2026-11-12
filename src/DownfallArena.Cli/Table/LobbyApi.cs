@@ -350,7 +350,9 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             }
 
             table.OpenSeats = opponent == "person" ? ["player2"] : [];
-            table.Casual = opponent is "person" or "friend" && opening?.Ranked == false;
+            // A shared device is never ranked (ADR 0171), even once another account takes a seat its player left: a
+            // game in any format must not reach the ladder that way.
+            table.Casual = opponent == "hotseat" || (opponent is "person" or "friend" && opening?.Ranked == false);
             table.TurnLimit = betweenPlayers ? TimeSpan.FromHours(turnLimit) : null;
 
             // The seats handed to this browser are taken by it from the start: no link names them, and only the
