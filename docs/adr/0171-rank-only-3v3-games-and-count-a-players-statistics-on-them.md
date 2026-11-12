@@ -22,7 +22,7 @@ A player's statistics count their ranked 3v3 games alone: the record, the streak
 mutations and spells they played. The tables by format and by creature are removed. Every result is still kept
 as it was, and the finished games, the recent opponents and the ladder read it as before.
 
-The create dialog says so: a Solo tab plays a bot, with its difficulty and format, and a PvP tab plays a player.
+The create dialog says so: a PvP tab, first, plays a player, and a Solo tab beside it plays a bot, with its difficulty and format.
 While Ranked is on, the format is 3v3 and cannot be changed.
 
 ## Consequences

@@ -702,8 +702,9 @@ test('the create dialog plays Solo against a bot in any format, and PvP ranked i
   await page.locator('#create-dialog').screenshot({ path: info.outputPath('create-solo.png') });
   await page.locator('#create-submit').click();
   await expect.poll(() => state.created).toEqual({ opponent: 'bot', format: '2v2' });
-  // The arrow keys move between the two tabs.
-  await solo.focus(); await page.keyboard.press('ArrowRight'); await expect(pvp).toBeFocused(); await expect(pvp).toHaveAttribute('aria-selected', 'true');
+  // PvP comes first, Solo beside it; the arrow keys move between the two tabs.
+  await expect(page.getByRole('tab')).toHaveText([/^PvP/, /^Solo/]);
+  await solo.focus(); await page.keyboard.press('ArrowLeft'); await expect(pvp).toBeFocused(); await expect(pvp).toHaveAttribute('aria-selected', 'true');
   await noOverflow(page);
   expect(state.errors).toEqual([]);
 });
