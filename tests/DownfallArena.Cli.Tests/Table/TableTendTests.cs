@@ -154,6 +154,49 @@ public sealed class TableTendTests : IDisposable
         sent.Sent.ShouldBeEmpty();
     }
 
+    /// <summary>
+    /// A begun game whose player left their seat (ADR 0170), from before games had a time to answer: nobody took the
+    /// seat and nobody moved for a day, and the pass ends it with the team nobody holds giving it up.
+    /// </summary>
+    [Fact]
+    public async Task A_begun_game_whose_left_seat_nobody_took_in_a_day_ends_with_that_seat_conceding()
+    {
+        using var host = _hosted.Registry();
+        var table = await LeftAsync(host);
+        using var job = await _hosted.RestartedAsync();
+
+        var tended = await TableTend.TendAsync(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System), DateTimeOffset.UtcNow + TimeSpan.FromHours(25), _hosted.Composer);
+
+        tended.Abandoned.ShouldBe([table.Id]);
+        (await job.Held(table.Id).ShouldNotBeNull().Session.Outcome).Value.ShouldBe(new Domain.Matches.MatchOutcome(Domain.Matches.PlayerSlot.Player1, Domain.Matches.MatchEndReason.Concession));
+        (await _hosted.Composer.JournalAsync(table.Id, Cancel)).ShouldNotBeNull().Entries[^1].ShouldBe(new ConcessionEntry(Domain.Matches.PlayerSlot.Player2));
+    }
+
+    [Fact]
+    public async Task A_begun_game_with_a_left_seat_waits_a_day_for_someone_to_take_it()
+    {
+        using var host = _hosted.Registry();
+        var table = await LeftAsync(host);
+        using var job = await _hosted.RestartedAsync();
+
+        var tended = await TableTend.TendAsync(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System), DateTimeOffset.UtcNow + TimeSpan.FromHours(23), _hosted.Composer);
+
+        tended.Abandoned.ShouldBeEmpty();
+        (await _hosted.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Open);
+    }
+
+    /// <summary>A begun game without a time to answer, whose second player left: their seat offered to anyone, as Leave does.</summary>
+    private async Task<PlayedTable> LeftAsync(TableRegistry registry)
+    {
+        var table = await BegunAsync(registry);
+        table.TurnLimit = null;
+        await PassAsync(table, table.Seats[0]);
+        table.Seats[1].Person!.Depart();
+        table.OpenSeats = [table.Seats[1].Name];
+        await table.RecordAsync(Cancel);
+        return table;
+    }
+
     /// <summary>Each seat's page is told when the time to answer runs out (ADR 0169): the last move plus the limit.</summary>
     [Fact]
     public async Task A_seat_of_a_game_with_a_time_to_answer_is_told_when_it_runs_out()

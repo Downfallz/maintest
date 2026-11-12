@@ -146,7 +146,7 @@ internal static class TurnTimeouts
     }
 
     /// <summary>Waits for a table that just ended to have written its session, its result and its notices.</summary>
-    private static async Task ClosedAsync(PlayedTable table, TimeProvider clock)
+    internal static async Task ClosedAsync(PlayedTable table, TimeProvider clock)
     {
         var deadline = clock.GetUtcNow() + Closing;
         while (!table.IsFinished && clock.GetUtcNow() < deadline)
