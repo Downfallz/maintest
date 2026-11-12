@@ -24,6 +24,7 @@
     </header>
     <nav class="timeline-wrap" aria-label="Activation order"><button id="order-open" data-order-open type="button" aria-label="Inspect turn order" disabled>Order ↗</button><ol id="timeline"></ol><span id="no-timeline">Waiting for a board</span></nav>
     <section id="battle-zone" aria-label="Battlefield">
+      <aside id="order-why" class="order-why" aria-label="Why this place in the turn order" aria-live="polite" hidden><div class="order-why-head"><span id="order-why-rank" class="order-why-rank" aria-hidden="true"></span><p class="order-why-who"><strong id="order-why-name"></strong><small id="order-why-meta"></small></p><button id="order-why-inspect" type="button" class="order-why-inspect">Inspect ↗</button><button id="order-why-close" type="button" aria-label="Clear the highlight">×</button></div><ul id="order-why-lines" class="order-why-lines"></ul><div id="order-why-dice" class="order-why-dice" hidden></div></aside>
       <div id="round-toast" role="status" aria-live="polite" hidden><span class="eyebrow">NEW ROUND</span><strong id="round-toast-number"></strong></div>
       <div id="phaser-mount" aria-hidden="true"></div><div class="vignette"></div>
       <span id="ally-label" class="team-label ally"></span><span id="enemy-label" class="team-label enemy"></span>

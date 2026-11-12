@@ -751,9 +751,20 @@ While an opponent's action waits unplayed (arrived under the turn order or anoth
 strip show its round as it stood before that action, not the engine's latest board.
 
 The order strip shows each place as a badge in its tempo's colour (a tick once played), never a number run into the
-name, with a quiet chevron between places, read left to right. The order sheet reads like the other sheets: the round
+name, with a quiet chevron between places, read left to right. Each place also says its initiative (⚡) and carries a
+small d20 mark when a roll-off placed it. A tap on a place lights its creature on the field in ice blue (a rim around
+its silhouette, a pool at its feet and a blue caption line, the rest of the field a little dimmed; never the acting
+gold) and opens a card at the top of the field saying why it holds its place (`orderReason` in
+`table/battle-order.js`): its rank, its tempo band, its initiative against its neighbours', and the tie that placed it,
+with the d20s a roll-off threw and their rerolls, or the owner's choice in a tie of one team. The card stands on the
+side of the field away from the creature it lights, offers **Inspect ↗** for the full sheet, and a second tap, its ×
+or Escape puts the light out. The order sheet's creature links still open the inspection. The order sheet reads like the other sheets: the round
 under a TURN ORDER eyebrow, each tempo band a chip, each creature a card with its place badge, its state and its facts
 as chips and its d20 roll in gold, and one Continue.
+
+While the seat orders its ties the field shows them in the same blue (`tieMarks`): each tied creature of its own wears
+the place it takes now as a numbered badge, or a ? breathing while it is still to place, and a tap on it on the field
+places it as its pill does; the opponent's places in those ties wear their number muted.
 
 The order of tied creatures docks like the mutation pick and the team's tempos, the field above it: each tie is a card
 with its shared places as gold badges and who takes each now, the creatures still to place as pills tapped in acting

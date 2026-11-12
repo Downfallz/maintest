@@ -28,6 +28,8 @@ export interface MutationRevealMarker {
 }
 export interface SceneFrame {
   mutationFocus?: string;
+  // The creatures the field lights in blue: the one the turn-order strip points at, or the ties being ordered.
+  focus?: readonly string[];
   // The d20s the field shows beside the creatures that rolled them (ADR 0154).
   dice?: { id: string; value: number; tone: 'crit' | 'miss' | 'roll'; key: string; group?: number; place?: number; rivals?: number; needed?: number | null }[];
   reveal?: { round: number; inset?: number; markers: MutationRevealMarker[] };
