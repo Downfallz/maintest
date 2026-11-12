@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { ActingHalo, FOCUS } from './acting-halo';
-import { HorizonArch } from './horizon-arch';
+import { BattleHorizon } from './battle-horizon';
 import { DiceLayer } from './dice';
 import { placements, strikeApproach } from '../../table/battle-layout.js';
 import { CREATURE_ART, figureArt, figureGeometry } from '../../table/battle-art.js';
@@ -41,7 +41,7 @@ const wrap = (value: number, span: number) => ((value % span) + span) % span;
 export class BattleScene extends Phaser.Scene {
   private figures = new Map<string, Figure>();
   private backdrop?: Phaser.GameObjects.Image;
-  private arch?: HorizonArch;
+  private horizon?: BattleHorizon;
   private replay = false;
   private motes: Phaser.GameObjects.Arc[] = [];
   private effects: Phaser.GameObjects.GameObject[] = [];
@@ -86,6 +86,8 @@ export class BattleScene extends Phaser.Scene {
     this.load.image('battle-floor', `${this.assetRoot}eclipse-battle.webp`);
     for (const asset of CREATURE_ART) this.load.image(asset.key, `${this.assetRoot}${asset.file}`);
     this.load.on('loaderror', (file: Phaser.Loader.File) => {
+      // A missing optional scenery plate leaves the earlier landscape in place.
+      if (String(file.key).startsWith('horizon-')) return;
       if (!String(file.key).startsWith('evolution-')) { this.assetFailed = true; return; }
       this.loadingArt.delete(String(file.key)); this.failedArt.add(String(file.key));
     });
@@ -94,7 +96,7 @@ export class BattleScene extends Phaser.Scene {
   create() {
     if (this.textures.exists('battle-floor')) {
       this.backdrop = this.add.image(0, 0, 'battle-floor').setOrigin(.5, 0).setTint(0xb5bbc2).setDepth(-10);
-      this.arch = new HorizonArch(this, this.backdrop.texture.getSourceImage() as HTMLImageElement);
+      this.horizon = new BattleHorizon(this, this.backdrop, this.assetRoot);
     }
     // A local vector fallback keeps the scene selectable if an image fails to load.
     const fallback = this.add.graphics();
@@ -119,7 +121,7 @@ export class BattleScene extends Phaser.Scene {
     this.reduced = reduced;
     this.rate = playbackRate(rate);
     if (!this.ready) return;
-    this.arch?.present(state.round ?? null, !reduced && !replay && !this.replay);
+    this.horizon?.present(state.round ?? null, !reduced && !replay && !this.replay);
     this.replay = replay;
     // The roster is who stands where; what each one looks like changes in place, so a purchase can be seen to happen.
     const roster = JSON.stringify(state.creatures.map(one => [one.id, one.enemy]));
@@ -272,7 +274,7 @@ export class BattleScene extends Phaser.Scene {
       const source = this.backdrop.texture.getSourceImage();
       const factor = Math.max(width / source.width, height / source.height);
       this.backdrop.setDisplaySize(source.width * factor, source.height * factor).setPosition(width / 2, -(source.height * factor - height) * .35);
-      this.arch?.layout(width, height, this.backdrop.y + this.backdrop.displayHeight * .42);
+      this.horizon?.layout(width, height);
     }
     if (!this.figures.size) {
       this.upkeepMarkers.present(this.state?.upkeep, new Map(), this.reduced);
@@ -430,7 +432,7 @@ export class BattleScene extends Phaser.Scene {
 
   update(time: number, delta: number) {
     if (!this.state) return;
-    this.arch?.update(delta * this.rate);
+    this.horizon?.update(delta * this.rate);
     this.halo?.follow(time, this.reduced);
     for (const halo of this.focusHalos.values()) halo.follow(time, this.reduced);
     this.dice?.follow(time, this.reduced);

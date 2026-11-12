@@ -142,6 +142,9 @@ public sealed class TableFilesTests
     /// <summary>The scene's art is bytes, served as the image it is rather than decoded as text.</summary>
     [Theory]
     [InlineData("eclipse-battle")]
+    [InlineData("horizon/breach")]
+    [InlineData("horizon/shattered-sky")]
+    [InlineData("horizon/broken-floor")]
     [InlineData("creatures")]
     [InlineData("base-creature")]
     [InlineData("brute")]
