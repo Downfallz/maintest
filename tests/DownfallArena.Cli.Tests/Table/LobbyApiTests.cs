@@ -76,6 +76,30 @@ public sealed class LobbyApiTests : IDisposable
         (await _registry.ByIdAsync(bot.GetProperty("table").GetProperty("id").GetString()!, TestContext.Current.CancellationToken)).ShouldNotBeNull().Casual.ShouldBeFalse();
     }
 
+    /// <summary>A game between two players has a time to answer (ADR 0169): three days unless another offered one is chosen.</summary>
+    [Fact]
+    public async Task A_game_between_two_players_gives_three_days_to_answer_unless_another_offered_time_is_chosen()
+    {
+        var plain = Read(await Lobby.HandleAsync("POST", "/api/lobby/tables", """{"opponent":"person","format":"1v1"}"""));
+        var week = Read(await Lobby.HandleAsync("POST", "/api/lobby/tables", """{"opponent":"person","format":"1v1","turnLimit":168}"""));
+
+        plain.GetProperty("table").GetProperty("turnLimitHours").GetInt32().ShouldBe(72);
+        var id = week.GetProperty("table").GetProperty("id").GetString()!;
+        (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull().TurnLimit.ShouldBe(TimeSpan.FromDays(7));
+        (await _hosted.Stored!.RecordAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull().TurnLimitHours.ShouldBe(168);
+    }
+
+    [Fact]
+    public async Task A_game_against_the_bot_has_no_time_to_answer_and_an_unoffered_time_is_refused()
+    {
+        var bot = Read(await Lobby.HandleAsync("POST", "/api/lobby/tables", """{"opponent":"bot","format":"1v1","turnLimit":24}"""));
+        var odd = await Lobby.HandleAsync("POST", "/api/lobby/tables", """{"opponent":"person","format":"1v1","turnLimit":5}""");
+
+        (await _registry.ByIdAsync(bot.GetProperty("table").GetProperty("id").GetString()!, TestContext.Current.CancellationToken)).ShouldNotBeNull().TurnLimit.ShouldBeNull();
+        odd.Status.ShouldBe(400);
+        JsonDocument.Parse(odd.Body).RootElement.GetProperty("error").GetString().ShouldBe("Lobby.TurnLimit");
+    }
+
     [Fact]
     public async Task Two_players_racing_for_one_place_cannot_both_take_it()
     {

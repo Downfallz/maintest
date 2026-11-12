@@ -41,6 +41,9 @@ internal interface ITableSession : IDisposable
     /// <summary>Begins the match, once. Saying it twice is nothing.</summary>
     void Begin();
 
+    /// <summary>When this session began the match, by its host's clock; none before it has.</summary>
+    DateTimeOffset? BegunAt { get; }
+
     /// <summary>Who is deciding for a seat now, by the name a record calls them.</summary>
     string SeatedName(PlayerSlot slot);
 
@@ -73,6 +76,12 @@ internal interface ITableSession : IDisposable
     /// that finds a bot holding the seat when the concession reaches the match.
     /// </summary>
     Task<Result> ConcedeAsync(PlayerSlot slot);
+
+    /// <summary>
+    /// The people asked to decide now lose the match for letting the table's time to answer run out, or draw it when
+    /// both are asked (ADR 0169). Who is asked is settled where the match ends; nobody asked, and nothing ends.
+    /// </summary>
+    Task<Result> TimeOutAsync();
 
 
     /// <summary>

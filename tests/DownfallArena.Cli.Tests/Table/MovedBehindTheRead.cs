@@ -34,6 +34,8 @@ internal sealed class MovedBehindTheRead(ITableSession inner, Func<SeatSnapshot,
 
     public bool HasBegun => inner.HasBegun;
 
+    public DateTimeOffset? BegunAt => inner.BegunAt;
+
     public void Begin() => inner.Begin();
 
     public void Dispose() => inner.Dispose();
@@ -61,4 +63,6 @@ internal sealed class MovedBehindTheRead(ITableSession inner, Func<SeatSnapshot,
         inner.DecideAsync(slot, decision, asked);
 
     public Task<Result> ConcedeAsync(PlayerSlot slot) => inner.ConcedeAsync(slot);
+
+    public Task<Result> TimeOutAsync() => inner.TimeOutAsync();
 }
