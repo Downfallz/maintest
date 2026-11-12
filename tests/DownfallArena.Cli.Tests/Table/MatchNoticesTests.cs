@@ -14,12 +14,12 @@ namespace DownfallArena.Cli.Tests.Table;
 /// </summary>
 public sealed class MatchNoticesTests : IDisposable
 {
-    private const string Key = "BAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0A";
-    private const string Auth = "AAECAwQFBgcICQoLDA0ODw";
+    private const string Key = InMemoryDeviceStore.Key;
+    private const string Auth = InMemoryDeviceStore.Auth;
 
     private readonly HostedTables _hosted = new(recording: true);
-    private readonly Sender _sender = new();
-    private readonly AccountDevices _devices = new(new InMemoryDevices(), TimeProvider.System);
+    private readonly RecordedPush _sender = new();
+    private readonly AccountDevices _devices = new(new InMemoryDeviceStore(), TimeProvider.System);
     private readonly Dictionary<AccountId, string> _names = [];
 
     private static CancellationToken Cancel => TestContext.Current.CancellationToken;
@@ -104,8 +104,8 @@ public sealed class MatchNoticesTests : IDisposable
 
         await FinishedAsync(table);
 
-        var (_, body) = _sender.Sent.ShouldHaveSingleItem() is var sent ? NoticeTo("MarkF") : default;
-        body.ShouldMatch("Greedy");
+        _sender.Sent.ShouldHaveSingleItem();
+        NoticeTo("MarkF").Body.ShouldMatch("Greedy");
         table.Dispose();
     }
 
@@ -161,52 +161,4 @@ public sealed class MatchNoticesTests : IDisposable
     }
 
     public void Dispose() => _hosted.Dispose();
-
-    private sealed class Sender : IPushSender
-    {
-        public List<(string Endpoint, string Payload, string Topic)> Sent { get; } = [];
-
-        public Task<bool> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
-        {
-            lock (Sent)
-            {
-                Sent.Add((to.Endpoint, payload, topic));
-            }
-
-            return Task.FromResult(true);
-        }
-    }
-
-    private sealed class InMemoryDevices : IDeviceStore
-    {
-        private readonly Dictionary<AccountId, IReadOnlyList<PushDevice>> _held = [];
-
-        public Task<IReadOnlyList<PushDevice>> ListAsync(AccountId account, CancellationToken cancellationToken = default)
-        {
-            lock (_held)
-            {
-                return Task.FromResult(_held.TryGetValue(account, out var devices) ? devices : []);
-            }
-        }
-
-        public Task SaveAsync(AccountId account, IReadOnlyList<PushDevice> devices, CancellationToken cancellationToken = default)
-        {
-            lock (_held)
-            {
-                _held[account] = [.. devices];
-            }
-
-            return Task.CompletedTask;
-        }
-
-        public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)
-        {
-            lock (_held)
-            {
-                _held.Remove(account);
-            }
-
-            return Task.CompletedTask;
-        }
-    }
 }

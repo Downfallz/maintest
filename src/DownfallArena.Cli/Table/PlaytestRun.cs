@@ -931,11 +931,14 @@ internal sealed class PlaytestRun
     private async Task<bool> FinishedAsync(CancellationToken cancellationToken) =>
         await _reader.ReadTextAsync(TableRecord.File, cancellationToken) is { } text && StoredSessions.RecordOf(text)?.Status == TableRecord.Finished;
 
-    private static Closing? ClosingOf(string text)
+    private static Closing? ClosingOf(string text) => DocumentOf<Closing>(text);
+
+    private static T? DocumentOf<T>(string text)
+        where T : class
     {
         try
         {
-            return JsonSerializer.Deserialize<Closing>(text, ArtifactJson.DocumentOptions);
+            return JsonSerializer.Deserialize<T>(text, ArtifactJson.DocumentOptions);
         }
         catch (JsonException)
         {
@@ -948,6 +951,30 @@ internal sealed class PlaytestRun
 
     /// <summary>A claim on closing the session: by which run, and when it was made.</summary>
     private sealed record Closing(string By, DateTimeOffset At);
+
+    /// <summary>The claim one pass of the hourly job makes on warning a table's player (ADR 0169), beside the session.</summary>
+    public const string WarnedFile = "warned.json";
+
+    /// <summary>
+    /// Claims the warning that a quarter of the time to answer is left, for the wait that began where the journal
+    /// ends now (<paramref name="mark" />): written only where no claim names that very wait, so a pass the job runs
+    /// again after a failure, or a second pass in the same hour, tells nobody twice. A move made since starts another
+    /// wait, which is warned again.
+    /// </summary>
+    /// <returns>Whether this pass is the one to warn.</returns>
+    public async Task<bool> ClaimWarningAsync(long mark, CancellationToken cancellationToken = default)
+    {
+        var read = await _reader.ReadTaggedAsync(WarnedFile, cancellationToken);
+        if (read is not null && DocumentOf<Warned>(read.Text)?.Mark == mark)
+        {
+            return false;
+        }
+
+        return await _writer.WriteJsonIfAsync(WarnedFile, new Warned(mark), read?.Tag, cancellationToken) is not null;
+    }
+
+    /// <summary>A claim on warning a table's player: the journal's end the wait began at.</summary>
+    private sealed record Warned(long Mark);
 
     /// <summary>
     /// Waits for everything on its way into the files to land: every decision being accepted, then a write

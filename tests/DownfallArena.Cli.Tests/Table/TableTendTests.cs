@@ -1,7 +1,9 @@
+using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Matches.Journaling;
 using DownfallArena.Cli.Table;
 using DownfallArena.Infrastructure.Learning;
 using DownfallArena.Infrastructure.Matches;
+using DownfallArena.SharedKernel.Identifiers;
 
 namespace DownfallArena.Cli.Tests.Table;
 
@@ -105,6 +107,164 @@ public sealed class TableTendTests : IDisposable
 
         tended.TimedOut.ShouldBeEmpty();
         (await _hosted.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Open);
+    }
+
+    /// <summary>
+    /// The pass that finds a quarter of a player's time to answer left tells that player once, on their devices
+    /// (ADR 0169); the player who already answered is told nothing.
+    /// </summary>
+    [Fact]
+    public async Task The_player_asked_is_told_once_when_a_quarter_of_their_time_is_left()
+    {
+        var (sent, late, answered) = await WatchedAccountsAsync();
+        using var host = _hosted.Registry();
+        var table = await BegunAsync(host);
+        table.Seats[0].Account = answered;
+        table.Seats[1].Account = late;
+        await PassAsync(table, table.Seats[0]);
+        await table.RecordAsync(Cancel);
+        using var job = await _hosted.RestartedAsync();
+
+        var tended = await TableTend.TendAsync(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System), DateTimeOffset.UtcNow + TimeSpan.FromHours(18) + TimeSpan.FromMinutes(5), _hosted.Composer);
+
+        tended.Warned.ShouldBe([table.Id]);
+        tended.TimedOut.ShouldBeEmpty();
+        var notice = sent.Sent.ShouldHaveSingleItem();
+        notice.Endpoint.ShouldBe($"https://push.example/{late.Value}");
+        System.Text.Json.JsonDocument.Parse(notice.Payload).RootElement.GetProperty("body").GetString().ShouldBe("6 hours left to answer, or the match is lost.");
+    }
+
+    /// <summary>A pass run again in the same hour, as the job is after a failure, tells nobody twice (ADR 0169).</summary>
+    [Fact]
+    public async Task A_second_pass_in_the_same_hour_warns_nobody_again()
+    {
+        var (sent, late, _) = await WatchedAccountsAsync();
+        using var host = _hosted.Registry();
+        var table = await BegunAsync(host);
+        table.Seats[1].Account = late;
+        await PassAsync(table, table.Seats[0]);
+        await table.RecordAsync(Cancel);
+        using var job = await _hosted.RestartedAsync();
+        var lobby = new LobbyApi(job, _hosted.Composer, TimeProvider.System);
+        var first = await TableTend.TendAsync(job, lobby, DateTimeOffset.UtcNow + TimeSpan.FromHours(18) + TimeSpan.FromMinutes(5), _hosted.Composer);
+
+        var again = await TableTend.TendAsync(job, lobby, DateTimeOffset.UtcNow + TimeSpan.FromHours(18) + TimeSpan.FromMinutes(30), _hosted.Composer);
+
+        first.Warned.ShouldBe([table.Id]);
+        again.Warned.ShouldBeEmpty();
+        sent.Sent.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task A_pass_before_the_last_quarter_or_after_its_first_hour_warns_nobody()
+    {
+        var (sent, late, _) = await WatchedAccountsAsync();
+        using var host = _hosted.Registry();
+        var table = await BegunAsync(host);
+        table.Seats[1].Account = late;
+        await PassAsync(table, table.Seats[0]);
+        await table.RecordAsync(Cancel);
+        using var job = await _hosted.RestartedAsync();
+        var lobby = new LobbyApi(job, _hosted.Composer, TimeProvider.System);
+
+        var before = await TableTend.TendAsync(job, lobby, DateTimeOffset.UtcNow + TimeSpan.FromHours(17.5), _hosted.Composer);
+        var after = await TableTend.TendAsync(job, lobby, DateTimeOffset.UtcNow + TimeSpan.FromHours(19.5), _hosted.Composer);
+
+        before.Warned.ShouldBeEmpty();
+        after.Warned.ShouldBeEmpty();
+        sent.Sent.ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// A begun game whose player left their seat (ADR 0170), from before games had a time to answer: nobody took the
+    /// seat and nobody moved for a day, and the pass ends it with the team nobody holds giving it up.
+    /// </summary>
+    [Fact]
+    public async Task A_begun_game_whose_left_seat_nobody_took_in_a_day_ends_with_that_seat_conceding()
+    {
+        using var host = _hosted.Registry();
+        var table = await LeftAsync(host);
+        using var job = await _hosted.RestartedAsync();
+
+        var tended = await TableTend.TendAsync(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System), DateTimeOffset.UtcNow + TimeSpan.FromHours(25), _hosted.Composer);
+
+        tended.Abandoned.ShouldBe([table.Id]);
+        (await job.Held(table.Id).ShouldNotBeNull().Session.Outcome).Value.ShouldBe(new Domain.Matches.MatchOutcome(Domain.Matches.PlayerSlot.Player1, Domain.Matches.MatchEndReason.Concession));
+        (await _hosted.Composer.JournalAsync(table.Id, Cancel)).ShouldNotBeNull().Entries[^1].ShouldBe(new ConcessionEntry(Domain.Matches.PlayerSlot.Player2));
+    }
+
+    [Fact]
+    public async Task A_begun_game_with_a_left_seat_waits_a_day_for_someone_to_take_it()
+    {
+        using var host = _hosted.Registry();
+        var table = await LeftAsync(host);
+        using var job = await _hosted.RestartedAsync();
+
+        var tended = await TableTend.TendAsync(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System), DateTimeOffset.UtcNow + TimeSpan.FromHours(23), _hosted.Composer);
+
+        tended.Abandoned.ShouldBeEmpty();
+        (await _hosted.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Open);
+    }
+
+    /// <summary>A begun game without a time to answer, whose second player left: their seat offered to anyone, as Leave does.</summary>
+    private async Task<PlayedTable> LeftAsync(TableRegistry registry)
+    {
+        var table = await BegunAsync(registry);
+        table.TurnLimit = null;
+        await PassAsync(table, table.Seats[0]);
+        table.Seats[1].Person!.Depart();
+        table.OpenSeats = [table.Seats[1].Name];
+        await table.RecordAsync(Cancel);
+        return table;
+    }
+
+    /// <summary>Each seat's page is told when the time to answer runs out (ADR 0169): the last move plus the limit.</summary>
+    [Fact]
+    public async Task A_seat_of_a_game_with_a_time_to_answer_is_told_when_it_runs_out()
+    {
+        using var host = _hosted.Registry();
+        var table = await BegunAsync(host);
+        await PassAsync(table, table.Seats[0]);
+        var moved = (await _hosted.Composer.LastMoveAsync(table.Id, Cancel)).ShouldNotBeNull().At;
+
+        var view = await SeatViewAsync(table, table.Seats[1]);
+
+        view.GetProperty("answerBy").GetDateTimeOffset().ShouldBe(moved + TimeSpan.FromHours(24));
+    }
+
+    [Fact]
+    public async Task A_seat_of_a_game_without_a_time_to_answer_is_told_none()
+    {
+        using var host = _hosted.Registry();
+        var table = await BegunAsync(host);
+        table.TurnLimit = null;
+
+        var view = await SeatViewAsync(table, table.Seats[1]);
+
+        view.GetProperty("answerBy").ValueKind.ShouldBe(System.Text.Json.JsonValueKind.Null);
+    }
+
+    private static async Task<System.Text.Json.JsonElement> SeatViewAsync(PlayedTable table, TableSeat seat)
+    {
+        var answered = await table.Api.HandleAsync("GET", $"/api/seat/{seat.Name}", string.Empty, seat.Token);
+        answered.Status.ShouldBe(200);
+        return System.Text.Json.JsonDocument.Parse(answered.Body).RootElement;
+    }
+
+    /// <summary>Two accounts with one device each, told through the composer the job uses.</summary>
+    private async Task<(RecordedPush Sent, AccountId Late, AccountId Answered)> WatchedAccountsAsync()
+    {
+        var sent = new RecordedPush();
+        var devices = new AccountDevices(new InMemoryDeviceStore(), TimeProvider.System);
+        var late = AccountId.New();
+        var answered = AccountId.New();
+        foreach (var account in new[] { late, answered })
+        {
+            await devices.AddAsync(account, new PushDevice($"https://push.example/{account.Value}", InMemoryDeviceStore.Key, InMemoryDeviceStore.Auth, default), Cancel);
+        }
+
+        _hosted.Composer.Notices = new AccountNotices(sent, devices);
+        return (sent, late, answered);
     }
 
     /// <summary>A game between two people with a day to answer, begun: both people reached their seats and are asked their first pick.</summary>

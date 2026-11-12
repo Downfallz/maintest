@@ -462,6 +462,7 @@ internal sealed class TableComposer
             };
             Push?.Watch(table);
             Lobby?.Watch(table);
+            api.AnswerBy = () => TurnTimeouts.AnswerByAsync(table, this);
             if (Relay is { } relay)
             {
                 var named = table.Id;

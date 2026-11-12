@@ -24,7 +24,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Match outcome | How a Match ended: the winning Player slot, or a draw, and the reason (`Elimination`, `RoundCap`, `Concession`, `TimedOut`). | decided |
 | Concession | A Player giving the Match up: it ends on the spot, the other Player wins, and the Round is left where it was (ADR 0087). | decided |
 | Timed out | How a Match ends when a Player asked to decide lets the table's time to answer run out: the other Player wins, or nobody does when both were asked and both let it run out (ADR 0169). | decided |
-| Time to answer | How long a Player of a game between two Players has to answer once asked, chosen when the table is opened: a day, three days (the default) or a week. A game against a bot has none (ADR 0169). | decided |
+| Time to answer | How long a Player of a game between two Players has to answer once asked, chosen when the table is opened: a day, three days (the default) or a week. It counts from the last move; the Player asked is warned once when a quarter of it is left. A game against a bot has none (ADR 0169). | decided |
 | Match state | Where a Match is in its life: `WaitingForPlayers`, `InProgress`, `Ended`. | decided |
 | Roster | The Creature definitions a Player brings to a Match; its size is the Rule set's team size. | decided |
 | Board | Whether positions on a board matter (range, adjacency) or the game is slot-based only. | open |

@@ -215,6 +215,14 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
   const publicTables = { page: 0, data: null };
   let loading = false;
   let drawn = '';
+  // A time left to answer counts down on its own (ADR 0169): the cards are drawn again each minute while one says
+  // it, with nothing read from the host.
+  let minute = 0;
+  globalThis.setInterval(() => {
+    if (!listing || ![...mine.map(entry => entry.table), ...(publicTables.data?.items ?? [])].some(table => table?.answerBy)) return;
+    minute += 1;
+    render();
+  }, 60000);
   let busy = false;
   let account = null;
   let mode = 'loading';
@@ -494,7 +502,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     void loadOpponents();
   }
   function render() {
-    const key = JSON.stringify([listing, mine, invitations, showAll, account, mode, mineTab, finished, limit, opponents, publicTables]);
+    const key = JSON.stringify([listing, mine, invitations, showAll, account, mode, mineTab, finished, limit, opponents, publicTables, minute]);
     if (key === drawn) return;
     drawn = key;
     // A host without accounts cannot tell whose seats this browser holds: its own open tables are left out here.

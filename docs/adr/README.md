@@ -175,3 +175,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0167](0167-run-the-workflows-on-what-they-read.md) | Run the workflows on what they read: no learning loop on push, no republished studio for the table's host | Accepted |
 | [0168](0168-keep-match-results-in-azure-table-storage.md) | Keep match results in Azure Table Storage, by match and by account | Accepted |
 | [0169](0169-end-a-match-whose-player-let-their-time-to-answer-run-out.md) | End a match whose player let their time to answer run out | Accepted |
+| [0170](0170-end-a-begun-match-whose-left-seat-nobody-takes-in-a-day.md) | End a begun match whose left seat nobody takes in a day | Accepted |

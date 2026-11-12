@@ -1,3 +1,6 @@
+using System.Globalization;
+using DownfallArena.SharedKernel.Identifiers;
+
 namespace DownfallArena.Cli.Table;
 
 /// <summary>
@@ -13,6 +16,40 @@ internal static class TurnTimeouts
     /// <summary>The time a table has waited for its next move from: its last move, or else its beginning, or else its opening.</summary>
     internal static DateTimeOffset Since(DateTimeOffset? lastMove, TableSummary summary, DateTimeOffset createdAt) =>
         lastMove ?? summary.BegunAt ?? createdAt;
+
+    /// <summary>
+    /// When a table's time to answer runs out (ADR 0169): its last move, or else its beginning, plus its limit. None for
+    /// a table without a limit, one not begun, and one over.
+    /// </summary>
+    internal static async Task<DateTimeOffset?> AnswerByAsync(PlayedTable table, TableComposer composer)
+    {
+        ArgumentNullException.ThrowIfNull(table);
+        ArgumentNullException.ThrowIfNull(composer);
+        if (table.TurnLimit is not { } limit || table.IsOver || !table.Session.HasBegun)
+        {
+            return null;
+        }
+
+        var last = await composer.LastMoveAsync(table.Id);
+        return (last?.At ?? table.Session.BegunAt ?? table.CreatedAt) + limit;
+    }
+
+    /// <summary>
+    /// Whether this pass is the one to warn a table's player (ADR 0169): a quarter of the limit or less is left, and
+    /// it was more than that an interval of the job ago. The job runs once an interval, so one pass lands there.
+    /// </summary>
+    internal static bool WarnNow(TableSummary summary, DateTimeOffset since, DateTimeOffset now, TimeSpan interval)
+    {
+        if (summary is not { Begun: true, TurnLimitHours: { } hours })
+        {
+            return false;
+        }
+
+        var limit = TimeSpan.FromHours(hours);
+        var left = since + limit - now;
+        var quarter = limit / 4;
+        return left > TimeSpan.Zero && left <= quarter && left > quarter - interval;
+    }
 
     /// <summary>Whether a table's time to answer ran out by now: begun, with a limit, and nothing written for that long.</summary>
     internal static bool RanOut(TableSummary summary, DateTimeOffset since, DateTimeOffset now) =>
@@ -51,8 +88,73 @@ internal static class TurnTimeouts
         return ended;
     }
 
+    /// <summary>
+    /// The people whose time to answer reaches its last quarter in this pass, told so on their account's devices
+    /// (ADR 0169): each person asked at a table the pass finds there. The tables they sit at, by id.
+    /// </summary>
+    public static async Task<IReadOnlyList<string>> WarnAsync(TableRegistry registry, TableComposer composer, DateTimeOffset now, TimeSpan interval)
+    {
+        ArgumentNullException.ThrowIfNull(registry);
+        ArgumentNullException.ThrowIfNull(composer);
+        var warned = new List<string>();
+        if (composer.Notices is not { } notices)
+        {
+            return warned;
+        }
+
+        foreach (var listed in await registry.OpenAsync())
+        {
+            if (listed.Summary is not { Begun: true, TurnLimitHours: not null })
+            {
+                continue;
+            }
+
+            var last = await composer.LastMoveAsync(listed.Id);
+            var since = Since(last?.At, listed.Summary, listed.CreatedAt);
+            if (!WarnNow(listed.Summary, since, now, interval) || await registry.ByIdAsync(listed.Id) is not { IsOver: false } table)
+            {
+                continue;
+            }
+
+            var asked = new List<AccountId>();
+            foreach (var seat in table.Seats.Where(seat => seat.Person is not null && seat.Account is not null && table.Session.PlayedByItsPerson(seat.Slot)))
+            {
+                var snapshot = await table.Session.SnapshotAsync(seat.Slot);
+                if (snapshot is { IsSuccess: true, Value.Waiting: not null })
+                {
+                    asked.Add(seat.Account!.Value);
+                }
+            }
+
+            // Claimed before it is sent: a pass run again tells nobody twice, at the cost of a notice lost to a
+            // pass that failed between the two.
+            if (asked.Count == 0 || table.Run is not { } run || !await run.ClaimWarningAsync(last?.Mark ?? 0))
+            {
+                continue;
+            }
+
+            var left = since + TimeSpan.FromHours(listed.Summary.TurnLimitHours.Value) - now;
+            var payload = AccountNotices.Payload("Your turn is waiting", $"{Left(left)} left to answer, or the match is lost.", $"/play?table={Uri.EscapeDataString(table.Id)}", $"turn:{table.Id}");
+            foreach (var account in asked.Distinct())
+            {
+                await notices.SendAsync(account, payload, "turn");
+            }
+
+            warned.Add(listed.Id);
+        }
+
+        return warned;
+    }
+
+    /// <summary>A time left as a notice says it, in whole hours: a quarter of a week is still counted in hours.</summary>
+    internal static string Left(TimeSpan left)
+    {
+        var hours = Math.Max(1, (int)Math.Round(left.TotalHours));
+        return hours == 1 ? "1 hour" : string.Create(CultureInfo.InvariantCulture, $"{hours} hours");
+    }
+
     /// <summary>Waits for a table that just ended to have written its session, its result and its notices.</summary>
-    private static async Task ClosedAsync(PlayedTable table, TimeProvider clock)
+    internal static async Task ClosedAsync(PlayedTable table, TimeProvider clock)
     {
         var deadline = clock.GetUtcNow() + Closing;
         while (!table.IsFinished && clock.GetUtcNow() < deadline)

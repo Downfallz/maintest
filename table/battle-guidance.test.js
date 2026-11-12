@@ -170,3 +170,13 @@ test('the dock says whom it waits for in plain words instead of sending the play
   assert.equal(battleGuidance(combat(), catalogue).objective, 'Waiting for your opponent: Creature 4 is choosing its action.');
 });
 
+
+test('in a game between two players, the seat asked and the seat waiting both read how long is left to answer', () => {
+  const now = Date.parse('2026-11-12T00:00:00Z'), answerBy = '2026-11-12T05:30:00Z';
+
+  assert.match(battleGuidance(view('Evolution', { answerBy }), catalogue, { now }).objective, / 5 h left to answer\.$/);
+  assert.doesNotMatch(battleGuidance(view('Evolution', { answerBy }), catalogue, { now, accepted: true }).objective, /left to answer/, 'a choice sent asks nothing more');
+  assert.doesNotMatch(battleGuidance(view('Evolution'), catalogue, { now }).objective, /left to answer/, 'a game without a time to answer');
+  const theirs = view(null, { answerBy, board: { ...view().board, subPhase: 'Speed' } });
+  assert.match(waitingOn(theirs, { opponent: 'bastien', now }).detail, /Setting their tempos · 5 h left to answer$/);
+});

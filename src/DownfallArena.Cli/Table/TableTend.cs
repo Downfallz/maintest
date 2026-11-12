@@ -12,8 +12,9 @@ namespace DownfallArena.Cli.Table;
 /// The <c>table-tend</c> command (ADR 0162, phase 6): one pass of the work that is due on the tables, over the
 /// index and the records, and then it exits. What the hourly job runs, so nothing that waits for a time to pass
 /// waits for a request: the sweep closes, through its record, every table that never began and was opened twenty
-/// hours ago, an invitation nobody answered in a day is let go of, and a game whose player let their time to answer
-/// run out ends with them losing (ADR 0169). The tables it picks up to do so take no bot turn here: that is the
+/// hours ago, an invitation nobody answered in a day is let go of, a game whose player let their time to answer
+/// run out ends with them losing (ADR 0169), and a begun game whose seat its player left and nobody took in a day
+/// ends with that seat giving it up (ADR 0170). The tables it picks up to do so take no bot turn here: that is the
 /// worker's.
 /// </summary>
 internal static class TableTend
@@ -23,7 +24,16 @@ internal static class TableTend
     {
         /// <summary>The tables ended because their player let their time to answer run out (ADR 0169).</summary>
         public IReadOnlyList<string> TimedOut { get; init; } = [];
+
+        /// <summary>The tables whose player was told a quarter of their time to answer is left (ADR 0169).</summary>
+        public IReadOnlyList<string> Warned { get; init; } = [];
+
+        /// <summary>The begun tables ended because nobody took the seat their player left in a day (ADR 0170).</summary>
+        public IReadOnlyList<string> Abandoned { get; init; } = [];
     }
+
+    /// <summary>How often the job runs (infra/main.bicep): the warning is sent by the one pass of that interval that finds a quarter left.</summary>
+    internal static readonly TimeSpan Interval = TimeSpan.FromHours(1);
 
     public static async Task<int> RunAsync(IServiceProvider services, CliOptions options, RuleSet rules)
     {
@@ -86,7 +96,7 @@ internal static class TableTend
                 await Task.WhenAny(relay.SentAsync(), Task.Delay(TimeSpan.FromSeconds(10), clock));
             }
 
-            Console.WriteLine($"Tended '{target}': {tended.Swept.Count} table{(tended.Swept.Count == 1 ? string.Empty : "s")} that never began closed, {tended.Expired} invitation{(tended.Expired == 1 ? string.Empty : "s")} that ran out let go of, {tended.TimedOut.Count} game{(tended.TimedOut.Count == 1 ? string.Empty : "s")} timed out.");
+            Console.WriteLine($"Tended '{target}': {tended.Swept.Count} table{(tended.Swept.Count == 1 ? string.Empty : "s")} that never began closed, {tended.Expired} invitation{(tended.Expired == 1 ? string.Empty : "s")} that ran out let go of, {tended.TimedOut.Count} game{(tended.TimedOut.Count == 1 ? string.Empty : "s")} timed out, {tended.Abandoned.Count} left by a player ended.");
             foreach (var id in tended.Swept)
             {
                 Console.WriteLine($"  Session {id} closed: it never began.");
@@ -95,6 +105,16 @@ internal static class TableTend
             foreach (var id in tended.TimedOut)
             {
                 Console.WriteLine($"  Session {id} ended: its player let their time to answer run out.");
+            }
+
+            foreach (var id in tended.Abandoned)
+            {
+                Console.WriteLine($"  Session {id} ended: nobody took the seat its player left.");
+            }
+
+            foreach (var id in tended.Warned)
+            {
+                Console.WriteLine($"  Session {id}: its player was told a quarter of their time to answer is left.");
             }
 
             return 0;
@@ -116,18 +136,18 @@ internal static class TableTend
     {
         ArgumentNullException.ThrowIfNull(relay);
         ArgumentNullException.ThrowIfNull(tended);
-        foreach (var id in tended.Swept.Concat(tended.TimedOut))
+        foreach (var id in tended.Swept.Concat(tended.TimedOut).Concat(tended.Abandoned))
         {
             relay.Table(id);
         }
 
-        if (tended.Swept.Count > 0 || tended.TimedOut.Count > 0)
+        if (tended.Swept.Count > 0 || tended.TimedOut.Count > 0 || tended.Abandoned.Count > 0)
         {
             relay.Lobby();
         }
     }
 
-    /// <summary>One pass: the sweep, the invitations that ran out, then the games whose player's time ran out.</summary>
+    /// <summary>One pass: the sweep, the invitations that ran out, the games whose player's time ran out, the games whose open seat nobody took, then the players whose time reaches its last quarter.</summary>
     /// <param name="composer">What reads a table's last move; none, and no game is timed out.</param>
     internal static async Task<Tended> TendAsync(TableRegistry registry, LobbyApi lobby, DateTimeOffset now, TableComposer? composer = null, TimeProvider? clock = null)
     {
@@ -136,6 +156,8 @@ internal static class TableTend
         var swept = await registry.SweepAsync(now);
         var expired = await lobby.ExpireInvitationsNowAsync();
         var timedOut = composer is null ? [] : await TurnTimeouts.EndAsync(registry, composer, now, clock ?? TimeProvider.System);
-        return new Tended(swept, expired) { TimedOut = timedOut };
+        var abandoned = composer is null ? [] : await AbandonedSeats.EndAsync(registry, composer, now, clock ?? TimeProvider.System);
+        var warned = composer is null ? [] : await TurnTimeouts.WarnAsync(registry, composer, now, Interval);
+        return new Tended(swept, expired) { TimedOut = timedOut, Warned = warned, Abandoned = abandoned };
     }
 }

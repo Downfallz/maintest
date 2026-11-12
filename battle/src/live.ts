@@ -46,7 +46,7 @@ interface Creature { form: string; description: string; id: string; name: string
   knownSpells?: string[]; conditions: { effect: { kind?: string; $type?: string; amount?: number }; remainingRounds: number | null }[];
   evolution?: { artworkId: string | null; artworkFile: string | null; capstoneEffectIds: string[] } }
 interface View { board: object; over: boolean; waiting: unknown; waitingFor: string | null;
-  outcome?: { winner?: string; reason?: string } }
+  outcome?: { winner?: string; reason?: string }; answerBy?: string | null }
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const text = (id: string, value: string) => { if ($(id).textContent !== value) $(id).textContent = value; };
 const audio = new BattleAudio();
@@ -755,6 +755,9 @@ function applySettings() {
 }
 function keepForGame(change: object) { const game = gameOf(); if (game) saveGameOverride(storage, game, change); }
 void loadSettings(storage).then(answer => { settings = answer.settings; settingsKnown = true; applySettings(); render(); });
+// A time left to answer counts down on its own (ADR 0169): drawn again each minute while the game has one, with
+// nothing read from the host.
+globalThis.setInterval(() => { if (view?.answerBy && !view.over) render(); }, 60000);
 $('playback-speed').addEventListener('change', () => {
   const speed = Number($<HTMLSelectElement>('playback-speed').value);
   playback.setRate(speed); keepForGame({ speed });
