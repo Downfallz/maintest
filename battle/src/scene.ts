@@ -12,6 +12,8 @@ import { MutationCues } from './mutation-cues';
 import { CapstoneEffects } from './capstone-effects';
 import { EVOLUTION_REGISTRY } from '../../table/battle-evolution-art.js';
 import { SpellEffects, type EffectAnchor } from './spell-effects';
+import { ConditionAuras } from './condition-auras';
+import { aurasShown } from '../../table/battle-auras.js';
 
 const playing = (state: SceneFrame) => state.stage === 'windup' || state.stage === 'impact';
 
@@ -28,6 +30,8 @@ interface Figure {
   form: string;
   // The evolution illustration it asked for (ADR 0151), its capstone effects, and the appearance they were made for.
   wanted: string | null; effects: CapstoneEffects; look: string; cueKey: string;
+  // Its lasting conditions, drawn on it beside the badges under it (battle-auras.js).
+  auras: ConditionAuras;
 }
 
 const GOLD = 0xeac88e;
@@ -69,6 +73,9 @@ export class BattleScene extends Phaser.Scene {
   // Which creatures the blue focus lights now (`#battle[data-focus-lit]` for tests and tools).
   onFocus: (ids: string) => void = () => {};
   private focusLit = '';
+  // What the lasting conditions draw on the figures now (`#battle[data-auras]` for tests and tools).
+  onAuras: (shown: string) => void = () => {};
+  private aurasShown = '';
   private dice: DiceLayer | null = null;
   // The dice on the field now, `id:value:tone` each (`#battle[data-dice]` for tests and tools).
   onDice: (shown: string) => void = () => {};
@@ -128,12 +135,16 @@ export class BattleScene extends Phaser.Scene {
     const rosterChanged = roster !== this.roster;
     if (rosterChanged) {
       this.clearMotion();
-      for (const figure of this.figures.values()) { figure.cues.destroy(); figure.effects.destroy(); figure.image.destroy(); figure.shadow.destroy(); figure.ring.destroy(); }
+      for (const figure of this.figures.values()) { figure.cues.destroy(); figure.effects.destroy(); figure.auras.destroy(); figure.image.destroy(); figure.shadow.destroy(); figure.ring.destroy(); }
       this.figures.clear();
       this.roster = roster;
       this.makeFigures();
     }
     for (const creature of state.creatures) this.dress(this.figures.get(creature.id)!, creature, !rosterChanged);
+    // A fallen creature carries nothing: its conditions end with it.
+    const auras = state.creatures.map(one => [one.id, this.figures.get(one.id)!.auras.set(one.isAlive ? one.statuses ?? [] : [])] as const);
+    const shown = aurasShown(auras);
+    if (shown !== this.aurasShown) { this.aurasShown = shown; this.onAuras(shown); }
     const changed = state.stage !== this.previous;
     if (changed && (state.stage === 'decision' || state.stage === 'resolved')) this.clearMotion();
     this.arrange(rosterChanged);
@@ -198,7 +209,7 @@ export class BattleScene extends Phaser.Scene {
       // Team identity remains in labels, formation and targeting; preserve the approved art palette.
       const cues = new MutationCues(this, creature.layers ?? [], creature.id, creature.form);
       this.figures.set(creature.id, { id: creature.id, image, shadow, ring, art, enemy, cues, form: creature.form, alive: creature.isAlive,
-        wanted: null, effects: new CapstoneEffects(this, []), look: '', cueKey: '', home: { x: 0, y: 0, size: 0, hitWidth: 0 } });
+        wanted: null, effects: new CapstoneEffects(this, []), auras: new ConditionAuras(this), look: '', cueKey: '', home: { x: 0, y: 0, size: 0, hitWidth: 0 } });
     }
   }
 
@@ -351,6 +362,13 @@ export class BattleScene extends Phaser.Scene {
     if (struck.length) this.cameras.main.shake(160 * MOTION_SCALE / this.rate, .003);
   }
 
+  // The silhouette as drawn now, wherever the action has carried the image: its foot and its visible size.
+  private body(figure: Figure) {
+    const [left, top, right, bottom] = figure.art.bounds;
+    return { footX: figure.image.x, footY: figure.image.y, width: (right - left) * figure.image.scaleX,
+      height: (bottom - top) * figure.image.scaleY, depth: figure.image.depth };
+  }
+
   private anchor(figure: Figure): EffectAnchor {
     const height = (figure.art.bounds[3] - figure.art.bounds[1]) * figure.image.scaleY;
     return { x: figure.home.x, y: figure.home.y - height * .5,
@@ -440,6 +458,7 @@ export class BattleScene extends Phaser.Scene {
     for (const figure of this.figures.values()) {
       this.followCues(figure);
       figure.effects.follow(figure.image, figure.alive && figure.image.visible, time, this.reduced);
+      figure.auras.follow(this.body(figure), figure.alive && figure.image.visible, time, this.reduced);
     }
     const width = Math.max(1, this.cameras.main.displayWidth);
     const height = Math.max(1, this.cameras.main.displayHeight);
