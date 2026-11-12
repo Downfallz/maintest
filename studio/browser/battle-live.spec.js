@@ -453,7 +453,7 @@ test('keyboard inspection and settings return focus and fit a short viewport', a
 });
 
 test('cold scene resources and sampled frame intervals are recorded for release review', async ({ page }, info) => {
-  await mount(page); await choose(page);
+  const state = await mount(page); state.first.board.roundNumber = 1; await choose(page);
   const metrics = await page.evaluate(async () => {
     const intervals = []; let previous = performance.now();
     await new Promise(resolve => {
@@ -474,7 +474,7 @@ test('cold scene resources and sampled frame intervals are recorded for release 
   await info.attach('release-metrics', { body: JSON.stringify(metrics, null, 2), contentType: 'application/json' });
 });
 
-test('the horizon falls once on 3 to 4 and settles on resume, replay and reduced motion', async ({ page }) => {
+test('the horizon falls once on 1 to 2 and settles on resume, replay and reduced motion', async ({ page }) => {
   await mountSpellScene(page);
   const present = (round, { reduced = false, replay = false } = {}) => page.evaluate(({ round, reduced, replay }) => {
     window.artScene.present({ stage: 'decision', actor: null, target: null, targets: [], creatures: [], round }, reduced, 1, replay);
@@ -483,24 +483,24 @@ test('the horizon falls once on 3 to 4 and settles on resume, replay and reduced
     const piece = window.artScene.children.getByName('horizon-span');
     return { visible: piece.visible, angle: piece.angle };
   });
-  await present(4);
+  await present(2);
   expect((await span()).visible).toBe(false);
-  await present(3);
+  await present(1);
   expect(await span()).toEqual({ visible: true, angle: 0 });
-  await present(4);
+  await present(2);
   await page.clock.runFor(400);
   const midway = await span();
   expect(midway.visible).toBe(true);
   expect(midway.angle).toBeGreaterThan(0);
-  await present(4);
+  await present(2);
   expect((await span()).angle).toBe(midway.angle);
   await page.clock.runFor(800);
   expect((await span()).visible).toBe(false);
-  await present(3);
-  await present(4, { replay: true });
+  await present(1);
+  await present(2, { replay: true });
   expect((await span()).visible).toBe(false);
-  await present(3);
-  await present(4, { reduced: true });
+  await present(1);
+  await present(2, { reduced: true });
   expect((await span()).visible).toBe(false);
 });
 
@@ -525,9 +525,9 @@ test('horizon damage follows the displayed round in both directions and keeps sp
   const present = round => page.evaluate(round => window.artScene.present(
     { stage: 'decision', target: null, actor: null, targets: [], creatures: [], round }, true, 1, true), round);
   const stages = [
-    [1, ['crown', 'pier', 'span']], [2, ['pier', 'span']], [4, ['pier']], [6, ['breach', 'pier']],
-    [8, ['breach']], [10, ['breach', 'shattered-sky']], [12, ['breach', 'broken-floor', 'shattered-sky']],
-    [14, ['breach', 'broken-floor', 'faults', 'shattered-sky']],
+    [1, ['pier', 'span']], [2, ['pier']], [4, ['fallen-ledge', 'pier']], [6, ['breach', 'fallen-ledge', 'pier']],
+    [8, ['breach', 'fallen-ledge']], [10, ['breach', 'fallen-ledge', 'shattered-sky']], [12, ['breach', 'broken-floor', 'fallen-ledge', 'shattered-sky']],
+    [14, ['breach', 'broken-floor', 'fallen-ledge', 'faults', 'shattered-sky']],
   ];
   for (const [round, pieces] of stages) {
     await present(round);
@@ -540,7 +540,7 @@ test('horizon damage follows the displayed round in both directions and keeps sp
   await present(16);
   expect(await commands()).toBeGreaterThan(first);
   await present(6);
-  expect(await visible()).toEqual(['breach', 'pier']);
+  expect(await visible()).toEqual(['breach', 'fallen-ledge', 'pier']);
   await present(null);
   expect(await visible()).toEqual([]);
 });

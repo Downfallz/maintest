@@ -128,6 +128,7 @@ internal sealed class TableFiles
             ["/battle-build/game.js.LEGAL.txt"] = (Path.Combine(tableDirectory, "battle-build", "game.js.LEGAL.txt"), StudioResponse.Plain),
             ["/battle-build/PHASER-LICENSE.txt"] = (Path.Combine(tableDirectory, "battle-build", "PHASER-LICENSE.txt"), StudioResponse.Plain),
             ["/battle-art/eclipse-battle.webp"] = (Path.Combine(tableDirectory, "battle-art", "eclipse-battle.webp"), Webp),
+            ["/battle-art/horizon/fallen-ledge.webp"] = (Path.Combine(tableDirectory, "battle-art", "horizon", "fallen-ledge.webp"), Webp),
             ["/battle-art/horizon/breach.webp"] = (Path.Combine(tableDirectory, "battle-art", "horizon", "breach.webp"), Webp),
             ["/battle-art/horizon/shattered-sky.webp"] = (Path.Combine(tableDirectory, "battle-art", "horizon", "shattered-sky.webp"), Webp),
             ["/battle-art/horizon/broken-floor.webp"] = (Path.Combine(tableDirectory, "battle-art", "horizon", "broken-floor.webp"), Webp),

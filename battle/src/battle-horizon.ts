@@ -4,9 +4,10 @@ import { HorizonArch } from './horizon-arch';
 // The sky feathers into the floor across source rows 399–479. When both are present they reconstruct
 // the final painting. The background still owns the original crop and camera in every orientation.
 const plates = [
-  { file: 'breach', round: 6, top: 0, depth: -9.8 },
-  { file: 'shattered-sky', round: 10, top: 0, depth: -9.5 },
-  { file: 'broken-floor', round: 12, top: 399, depth: -9.6 },
+  { file: 'fallen-ledge', round: 4, left: 450, top: 300, replacedAt: 6, depth: -9.9 },
+  { file: 'breach', round: 6, left: 0, top: 0, replacedAt: 12, depth: -9.8 },
+  { file: 'shattered-sky', round: 10, left: 0, top: 0, replacedAt: Infinity, depth: -9.5 },
+  { file: 'broken-floor', round: 12, left: 0, top: 399, replacedAt: Infinity, depth: -9.6 },
 ] as const;
 const TRANSITION_MS = 950;
 
@@ -31,7 +32,8 @@ export class BattleHorizon {
     this.arch.layout(width, height, this.backdrop.y + this.backdrop.displayHeight * .42);
     for (const plate of plates) {
       this.images.get(plate.file)?.setScale(this.backdrop.scaleX, this.backdrop.scaleY)
-        .setPosition(this.backdrop.x, this.backdrop.y + plate.top * this.backdrop.scaleY);
+        .setPosition(this.backdrop.x - this.backdrop.displayWidth / 2 + plate.left * this.backdrop.scaleX,
+          this.backdrop.y + plate.top * this.backdrop.scaleY);
     }
     this.draw();
   }
@@ -48,7 +50,7 @@ export class BattleHorizon {
     if (round !== null) {
       for (const plate of plates) {
         // A late join needs only the visible tiles. The breach also backs the feathered sky until round 12.
-        if (round >= plate.round - 1 && (plate.round !== 6 || round < 12)) this.load(plate);
+        if (round >= plate.round - 1 && round < plate.replacedAt) this.load(plate);
       }
     }
     this.draw();
@@ -59,7 +61,7 @@ export class BattleHorizon {
     this.requested.add(plate.file);
     const key = 'horizon-' + plate.file;
     this.scene.load.once('filecomplete-image-' + key, () => {
-      const image = this.scene.add.image(0, 0, key).setName(key).setOrigin(.5, 0)
+      const image = this.scene.add.image(0, 0, key).setName(key).setOrigin(0, 0)
         .setTint(0xb5bbc2).setDepth(plate.depth);
       this.images.set(plate.file, image);
       // The player may have rewound or rotated while the file was in flight.
@@ -79,8 +81,15 @@ export class BattleHorizon {
     const progress = this.elapsed / TRANSITION_MS;
     this.arch.draw(this.round, progress);
     for (const plate of plates) {
+      const image = this.images.get(plate.file);
+      if (!image) continue;
       const visible = this.round !== null && this.round >= plate.round;
-      this.images.get(plate.file)?.setVisible(visible).setAlpha(this.round === plate.round ? progress : 1);
+      const alpha = this.round === plate.round ? progress : 1;
+      image.setVisible(visible).setAlpha(alpha);
+      if (plate.file === 'fallen-ledge') {
+        // Reveal the exposed cliff from the back edge toward the fighters as the shelf gives way.
+        image.setCrop(0, 0, image.width, Math.ceil(image.height * alpha));
+      }
     }
     this.drawFaults(progress);
   }
