@@ -17,6 +17,10 @@ dotnet run --project src/DownfallArena.Cli -- table --lobby
 
 Open the printed host URL at `/battle-lab`. For a static preview after building:
 `python3 -m http.server 8765`, then `/table/battle-lab.html` on that server.
+For the horizon study, open `/battle-lab?study=horizon` (static preview: `/table/battle-lab.html?study=horizon`).
+Select **Enter round 7** to see the distant stone span fall, then **Return to round 6** to repeat.
+In a live match the displayed round drives the same scenery. Reduced motion and replay navigation show the settled view.
+
 Rebuild after changing TypeScript or the imported shared table modules; there is no watch server.
 
 `build` type-checks and emits `table/battle-build/game.js` and `live.js`, legal comments and the Phaser MIT license.

@@ -65,7 +65,7 @@ let view: View | null = null;
 let catalogue: Catalogue | null = null;
 let inspected: string | null = null;
 let creatures: Creature[] = [];
-let frame: SceneFrame = { stage: 'decision', target: null, actor: null, targets: [], creatures: [] };
+let frame: SceneFrame = { round: null, stage: 'decision', target: null, actor: null, targets: [], creatures: [] };
 let discovering = 0;
 let heldSeats: Choice[] = [];
 let rendererFailed = false;
@@ -532,7 +532,7 @@ function render() {
   const critical = impact ? (playbackState.cue as { roll?: { value: number; critical: boolean; needed?: number | null } | null } | null)?.roll : null;
   if (critical && frame.actor) dice.push({ id: frame.actor, value: critical.value, tone: critical.critical ? 'crit' : 'miss', key: `crit:${playbackState.sequence}`, needed: critical.needed ?? null });
   frame = { ...frame, dice };
-  scene.present(frame, reduced(), playbackState.rate);
+  scene.present(frame, reduced(), playbackState.rate, replay.active);
   const reveal = growth.receipt();
   if (!reveal) lastMutationReveal = null;
   else if (lastMutationReveal !== reveal.sequence && reveal.round === board.round && visible() && !replay.active && !playbackState.active && !plan.opened) {

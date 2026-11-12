@@ -473,3 +473,46 @@ test('cold scene resources and sampled frame intervals are recorded for release 
   await writeFile(info.outputPath('release-metrics.json'), JSON.stringify(metrics, null, 2));
   await info.attach('release-metrics', { body: JSON.stringify(metrics, null, 2), contentType: 'application/json' });
 });
+
+test('the horizon falls once on 6 to 7 and settles on resume, replay and reduced motion', async ({ page }) => {
+  await mountSpellScene(page);
+  const present = (round, { reduced = false, replay = false } = {}) => page.evaluate(({ round, reduced, replay }) => {
+    window.artScene.present({ stage: 'decision', actor: null, target: null, targets: [], creatures: [], round }, reduced, 1, replay);
+  }, { round, reduced, replay });
+  const span = () => page.evaluate(() => {
+    const piece = window.artScene.children.getByName('horizon-span');
+    return { visible: piece.visible, angle: piece.angle };
+  });
+  await present(7);
+  expect((await span()).visible).toBe(false);
+  await present(6);
+  expect(await span()).toEqual({ visible: true, angle: 0 });
+  await present(7);
+  await page.clock.runFor(400);
+  const midway = await span();
+  expect(midway.visible).toBe(true);
+  expect(midway.angle).toBeGreaterThan(0);
+  await present(7);
+  expect((await span()).angle).toBe(midway.angle);
+  await page.clock.runFor(800);
+  expect((await span()).visible).toBe(false);
+  await present(6);
+  await present(7, { replay: true });
+  expect((await span()).visible).toBe(false);
+  await present(6);
+  await present(7, { reduced: true });
+  expect((await span()).visible).toBe(false);
+});
+
+test('a returning seat sees the round seven ruins with the combat HUD on a landscape phone', async ({ page }, info) => {
+  test.skip(info.project.name !== 'phone');
+  await page.setViewportSize({ width: 844, height: 390 });
+  const state = await mount(page);
+  state.second.board.roundNumber = 7;
+  state.second.waitingFor = null;
+  state.second.waitingAsked = null;
+  await choose(page, 2);
+  await expect(page.locator('#round-number')).toHaveText('07');
+  await expect(page.locator('.creature')).toHaveCount(6);
+  await page.screenshot({ path: info.outputPath('horizon-live-landscape.png') });
+});
