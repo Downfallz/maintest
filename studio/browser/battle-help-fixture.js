@@ -50,7 +50,10 @@ export const readResults = (page, onOrder = null) => acknowledge(page, async () 
 // already opened or still waits behind its button.
 export async function matchResult(page) {
   const dialog = page.locator('#match-dialog'), button = page.locator('#match-open');
-  await expect.poll(async () => await dialog.isVisible() || await button.isVisible()).toBe(true);
-  if (!await dialog.isVisible()) await button.click({ timeout: 2000 }).catch(() => {});
-  await expect(dialog).toBeVisible();
+  // A loaded machine can take longer than one short click to reach the button: the click is tried until the result
+  // is open, instead of once with its failure swallowed.
+  await expect(async () => {
+    if (!await dialog.isVisible()) await button.click({ timeout: 2000 });
+    await expect(dialog).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 20000 });
 }
