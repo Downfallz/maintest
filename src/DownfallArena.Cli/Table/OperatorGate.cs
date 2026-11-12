@@ -38,12 +38,10 @@ internal sealed class OperatorGate
     /// <summary>Where the platform signs somebody in, and sends them back to the admin panel afterwards.</summary>
     public const string Login = "/.auth/login/aad?post_login_redirect_uri=/admin";
 
-    private readonly IReadOnlySet<AccountId> _admins;
-
     private OperatorGate(string? token, IReadOnlySet<AccountId>? admins = null)
     {
         Token = token;
-        _admins = admins ?? new HashSet<AccountId>();
+        Admins = admins ?? new HashSet<AccountId>();
     }
 
     /// <summary>The operator's token when the console is the door, or <c>null</c> when the platform is.</summary>
@@ -52,7 +50,7 @@ internal sealed class OperatorGate
     public bool TrustsPlatform => Token is null;
 
     /// <summary>The accounts that are the operator when signed in, whatever the other door is.</summary>
-    public IReadOnlySet<AccountId> Admins => _admins;
+    public IReadOnlySet<AccountId> Admins { get; }
 
     /// <summary>The same door, and the accounts that are the operator too (ADR 0172).</summary>
     public OperatorGate WithAdmins(IEnumerable<AccountId> admins)
@@ -78,7 +76,7 @@ internal sealed class OperatorGate
     /// </summary>
     public string? Admit(string? token, string? principal, Account? account = null)
     {
-        if (account is not null && _admins.Contains(account.Id))
+        if (account is not null && Admins.Contains(account.Id))
         {
             return account.Username.Value;
         }

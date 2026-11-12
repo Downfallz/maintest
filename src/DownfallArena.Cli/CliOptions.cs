@@ -397,14 +397,9 @@ internal sealed record CliOptions
     /// </summary>
     private static string? AccountsContradiction(string command, Dictionary<string, string> values, HashSet<string> flags)
     {
-        if (values.ContainsKey(AdminsOption) && (command != "table" || ParseAccounts(values.GetValueOrDefault(AccountsOption) ?? "off") == AccountsMode.Off))
+        if (AdminsContradiction(command, values) is { } admins)
         {
-            return "'--admins' is for table only, with '--accounts google' or '--accounts dev': it names the accounts that are the operator once signed in.";
-        }
-
-        if (values.TryGetValue(AdminsOption, out var admins) && OperatorGate.ParseAdmins(admins).Problem is { } problem)
-        {
-            return $"'--admins': {problem}";
+            return admins;
         }
 
         if (!values.TryGetValue(AccountsOption, out var accounts))
@@ -431,6 +426,22 @@ internal sealed record CliOptions
         return values.ContainsKey(GoogleClientIdOption) && mode != AccountsMode.Google
             ? "'--google-client-id' goes with '--accounts google'."
             : null;
+    }
+
+    /// <summary>What admin accounts cannot be had with (ADR 0172): a host that signs nobody in, or an id that is not one.</summary>
+    private static string? AdminsContradiction(string command, Dictionary<string, string> values)
+    {
+        if (!values.TryGetValue(AdminsOption, out var admins))
+        {
+            return null;
+        }
+
+        if (command != "table" || ParseAccounts(values.GetValueOrDefault(AccountsOption) ?? "off") == AccountsMode.Off)
+        {
+            return "'--admins' is for table only, with '--accounts google' or '--accounts dev': it names the accounts that are the operator once signed in.";
+        }
+
+        return OperatorGate.ParseAdmins(admins).Problem is { } problem ? $"'--admins': {problem}" : null;
     }
 
     /// <summary>Where <c>--turns</c> says the bots' turns are taken; anything else is one line, not a stack.</summary>
