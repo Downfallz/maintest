@@ -279,6 +279,15 @@ public sealed class CliOptionsTests
         CliOptions.Parse(["table", "--accounts", "google", "--google-client-id", "1234.apps.googleusercontent.com"]).GoogleClientId.ShouldBe("1234.apps.googleusercontent.com");
     }
 
+    /// <summary>The accounts that are the operator once signed in (ADR 0172), taken as given and parsed by the gate.</summary>
+    [Fact]
+    public void A_table_with_accounts_names_its_admins_by_account_id()
+    {
+        CliOptions.Parse(["table", "--accounts", "google", "--admins", "acct_abcdefghijklmnop,acct_qrstuvwxyz234567"]).Admins
+            .ShouldBe("acct_abcdefghijklmnop,acct_qrstuvwxyz234567");
+        CliOptions.Parse(["table"]).Admins.ShouldBeNull();
+    }
+
     [Theory]
     [InlineData("table", "--accounts", "facebook")]
     [InlineData("play", "--accounts", "google")]
@@ -287,6 +296,9 @@ public sealed class CliOptionsTests
     [InlineData("table", "--accounts", "dev", "--bind", "0.0.0.0")]
     [InlineData("table", "--google-client-id", "1234")]
     [InlineData("table", "--accounts", "dev", "--google-client-id", "1234")]
+    [InlineData("table", "--admins", "acct_abcdefghijklmnop")]
+    [InlineData("table-tend", "--accounts", "dev", "--admins", "acct_abcdefghijklmnop")]
+    [InlineData("table", "--accounts", "dev", "--admins", "downfallz")]
     public void A_sign_in_the_table_cannot_have_is_refused_by_name(params string[] args)
     {
         Should.Throw<ArgumentException>(() => CliOptions.Parse(args)).Message.ShouldContain("--");

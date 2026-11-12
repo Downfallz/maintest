@@ -1598,7 +1598,11 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 /* The card stands on the side of the field away from the creature it lights, never over it: a wide field keeps your
    team on the left and the opponent on the right, an upright phone the opponent above and your team below. */
 @media (min-width: 620px) { .order-why[data-team="ally"] { left: auto; right: 8px; } }
-@media (max-width: 619px) { .order-why[data-team="enemy"] { top: auto; bottom: 8px; } }
+@media (max-width: 619px) {
+  .order-why { overflow-y: auto; overscroll-behavior: contain; }
+  .order-why[data-team="enemy"]:not([data-place]), .order-why[data-place="bottom"] { top: auto; bottom: 8px; }
+  .order-why[data-place="top"] { top: 8px; bottom: auto; }
+}
 @keyframes order-why-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 .order-why-head { display: flex; align-items: center; gap: 10px; }
 .order-why-rank { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: #8fc3ef; color: #142126; font: 800 14px/1 system-ui, sans-serif; box-shadow: 0 0 0 3px #6fc3ff33; }

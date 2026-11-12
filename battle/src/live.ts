@@ -742,7 +742,7 @@ async function discover(autoResume = true) {
   }
 }
 
-scene.onLayout = positions => placeHitTargets(creatures.map(one => nodes.get(one.id)!), positions);
+scene.onLayout = positions => { placeHitTargets(creatures.map(one => nodes.get(one.id)!), positions); orderUI.place(); };
 scene.onDice = shown => { if (shown) $('battle').dataset.dice = shown; else delete $('battle').dataset.dice; };
 scene.onHalo = id => { if (id) $('battle').dataset.halo = id; else delete $('battle').dataset.halo; };
 scene.onFocus = ids => { if (ids) $('battle').dataset.focusLit = ids; else delete $('battle').dataset.focusLit; };

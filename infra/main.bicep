@@ -24,6 +24,9 @@ param operators string
 @description('The Google OAuth client id players sign in with (ADR 0122). Public, not a secret. Empty, players do not sign in.')
 param googleClientId string = ''
 
+@description('The player accounts that are the operator once signed in (ADR 0172), by their ids (acct_...), comma-separated. Empty, only the operators above reach the admin panel.')
+param adminAccounts string = ''
+
 @description('The relay the pages and processes hear what moved through (ADR 0165): Free_F1 (20 connections, 20 000 messages a day), Standard_S1 (1 000 connections a unit), or empty for none, and the pages read the API\'s own streams. Opted into once the bootstrap has granted its role.')
 @allowed([
   ''
@@ -46,6 +49,12 @@ var accountArgs = empty(googleClientId) ? [] : [
   'google'
   '--google-client-id'
   googleClientId
+]
+// The admin accounts (ADR 0172), on the API alone: it is the one process that serves the panel, and only with players
+// signing in at all.
+var adminArgs = empty(googleClientId) || empty(trim(adminAccounts)) ? [] : [
+  '--admins'
+  trim(adminAccounts)
 ]
 var suffix = uniqueString(resourceGroup().id)
 var containerName = 'playtests'
@@ -276,7 +285,7 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
             '--turns'
             'worker'
             '--tended'
-          ], accountArgs)
+          ], accountArgs, adminArgs)
           env: concat(pushEnv, relayEnv)
           resources: {
             cpu: json('0.5')

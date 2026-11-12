@@ -84,27 +84,30 @@ internal sealed class AdminApi
     public async Task<StudioResponse> HandleAsync(string method, string path, string body, string? token, string? principal, AccountRequest? account = null)
     {
         ArgumentNullException.ThrowIfNull(path);
+        // Who is signed in, asked once: the player a lobby route acts for, and an admin account the gate admits
+        // (ADR 0172).
+        var player = Accounts is null || account is null ? null : await Accounts.WhoAsync(account);
+        var operatorName = _gate.Admit(token, principal, player?.Account);
         if (LobbyApi.Names(path))
         {
             // A finished game's replay is the operator's to read as well as its players' (ADR 0156), by the panel's
-            // token or the platform's sign-in alike, and whatever game it was: the pages ask this one route.
-            if (method == "GET" && LobbyApi.ReplayRoute(path) is { } replayed && _stored is { } recorded && _gate.Admit(token, principal) is not null)
+            // token, the platform's sign-in or an admin account alike, and whatever game it was: the pages ask this
+            // one route.
+            if (method == "GET" && LobbyApi.ReplayRoute(path) is { } replayed && _stored is { } recorded && operatorName is not null)
             {
                 return await ReplayAsync(recorded, replayed);
             }
 
-            var player = Accounts is null || account is null ? null : await Accounts.WhoAsync(account);
             return await Lobby.HandleAsync(method, path, body, token, player);
         }
 
-        var operatorName = _gate.Admit(token, principal);
         if (path == MePath)
         {
             // Not a refusal when it is nobody's: the table page asks this to know whether to show the way back
             // to the panel, and a player's page must read "no" rather than an error.
             // The player half answers the same question for the home page: whether this host signs players in,
-            // how, and as whom. The operator and the player are two sign-ins and one request can carry both.
-            var player = Accounts is null || account is null ? null : await Accounts.WhoAsync(account);
+            // how, and as whom. The operator and the player are two sign-ins and one request can carry both, and an
+            // admin account is both at once.
             var me = StudioResponse.OfJson(
                 new
                 {

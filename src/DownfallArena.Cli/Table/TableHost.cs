@@ -108,6 +108,15 @@ internal static class TableHost
         // The operator's door: the platform's login where the host is behind one, a printed token everywhere
         // else. The token is minted the way a pilot's is, and printed the way a pilot's is.
         var gate = options.PlatformAuth ? OperatorGate.BehindPlatform() : OperatorGate.WithToken(TableComposer.Token());
+        // The accounts that are the operator once signed in (ADR 0172), a third door beside either.
+        var (admins, adminProblem) = OperatorGate.ParseAdmins(options.Admins ?? Environment.GetEnvironmentVariable(AdminsEnvironment));
+        if (adminProblem is not null || (admins.Count > 0 && options.Accounts == AccountsMode.Off))
+        {
+            await Console.Error.WriteLineAsync(adminProblem ?? $"{AdminsEnvironment} names admin accounts, and this host signs nobody in: add '--accounts google' or '--accounts dev'.");
+            return 1;
+        }
+
+        gate = gate.WithAdmins(admins);
         var described = RuleSetFile.Describe(rules, options.Rules);
         // The players' sign-in (ADR 0122), kept beside the recordings. A Google sign-in without its client id is
         // one line here rather than a page whose button never draws.
@@ -252,6 +261,10 @@ internal static class TableHost
             Console.WriteLine(gate.Token is { } token
                 ? $"  Admin: {server.Url}admin?token={token}"
                 : $"  Admin: {server.Url}admin, behind the platform's sign-in ({OperatorGate.PrincipalHeader} is trusted).");
+            if (gate.Admins.Count > 0)
+            {
+                Console.WriteLine($"  Admin accounts, once signed in: {string.Join(", ", gate.Admins)}.");
+            }
 
             Console.WriteLine(server.IsLoopback
                 ? $"  Only this machine can reach it.{Elsewhere()}"
@@ -428,6 +441,9 @@ internal static class TableHost
 
     /// <summary>The variable the hosted table reads its Google client id from (ADR 0122).</summary>
     public const string GoogleClientIdEnvironment = "DOWNFALL_GOOGLE_CLIENT_ID";
+
+    /// <summary>The variable a host reads its admin accounts from when <c>--admins</c> is not given (ADR 0172).</summary>
+    public const string AdminsEnvironment = "DOWNFALL_ADMINS";
 
     private static string AccountsLocation(CliOptions options)
     {

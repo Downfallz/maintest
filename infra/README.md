@@ -88,6 +88,11 @@ and the pilot links. Its invitation-only tables are listed but cannot be claimed
 To let somebody else open tables, add their Entra object id to the `TABLE_OPERATORS` variable,
 comma-separated, and run the workflow again.
 
+A player account can be the operator too (ADR 0172): signed in with Google, it sees Admin in the menu and opens
+the panel with no second sign-in. Sign in on the home page, open `/api/me`, copy `account.id` (`acct_...`), put it
+in the `TABLE_ADMIN_ACCOUNTS` repository variable (several comma-separated), and run the workflow again. The id,
+not the player name: a deleted account's name can be taken by anybody. Entra stays a way in beside it.
+
 ## Player sign-in
 
 Players sign in on the home page with Google (ADR 0122). The host checks Google's ID token itself, so the only
