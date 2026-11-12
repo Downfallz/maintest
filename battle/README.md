@@ -18,8 +18,11 @@ dotnet run --project src/DownfallArena.Cli -- table --lobby
 Open the printed host URL at `/battle-lab`. For a static preview after building:
 `python3 -m http.server 8765`, then `/table/battle-lab.html` on that server.
 For the horizon study, open `/battle-lab?study=horizon` (static preview: `/table/battle-lab.html?study=horizon`).
-Select **Enter round 7** to see the distant stone span fall, then **Return to round 6** to repeat.
-In a live match the displayed round drives the same scenery. Reduced motion and replay navigation show the settled view.
+Use **Enter round 2** and the subsequent even-round buttons to advance. **Reset scene** returns to round 1.
+The crown falls at 2, the span at 4, the distant city and the edge of the plateau at 6, and the remaining pier at 8.
+The eclipse splits at 10 and the floor breaks into islands at 12. Another fissure opens on each later even round.
+The live battle uses the displayed round. Odd rounds keep the previous damage. Reduced motion and replay navigation
+show the settled view. The three additional WebP tiles load on demand, starting one round before their reveal.
 
 Rebuild after changing TypeScript or the imported shared table modules; there is no watch server.
 
