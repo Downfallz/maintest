@@ -96,6 +96,35 @@ public sealed class LobbyFinishedTests : IDisposable
         items[1].GetProperty("seats").ValueKind.ShouldBe(JsonValueKind.Null);
     }
 
+    [Fact]
+    public async Task A_finished_game_says_when_its_table_was_opened_and_whether_it_counted_on_the_ladder()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var bastien = await PlayerAsync("bastien");
+        await RecordAsync(0, new("player1", mark.Account.Id, null), new("player2", bastien.Account.Id, null), table: "20261110-180500-ab12cd34");
+        await RecordAsync(1, new("player1", mark.Account.Id, null), new("player2", mark.Account.Id, null));
+
+        var items = Read(await (await LobbyAsync()).HandleAsync("GET", "/api/lobby/finished/players/1", "", player: mark)).GetProperty("items");
+
+        items[1].GetProperty("createdAt").GetDateTimeOffset().ShouldBe(new DateTimeOffset(2026, 11, 10, 18, 5, 0, TimeSpan.Zero));
+        items[1].GetProperty("ranked").GetBoolean().ShouldBeTrue();
+        items[0].GetProperty("createdAt").ValueKind.ShouldBe(JsonValueKind.Null, "a result kept before tables were named says nothing of when");
+        items[0].GetProperty("ranked").GetBoolean().ShouldBeFalse("one account at both seats is a shared device");
+    }
+
+    [Theory]
+    [InlineData("20261110-180500-ab12cd34", "2026-11-10T18:05:00+00:00")]
+    [InlineData("20260101-000000-00000000", "2026-01-01T00:00:00+00:00")]
+    public void A_session_id_says_when_its_session_was_opened(string id, string opened) =>
+        PlaytestRun.OpenedAt(id).ShouldBe(DateTimeOffset.Parse(opened, System.Globalization.CultureInfo.InvariantCulture));
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("swept-table")]
+    [InlineData("2026111")]
+    public void Any_other_id_says_nothing_of_when(string? id) =>
+        PlaytestRun.OpenedAt(id).ShouldBeNull();
+
     /// <summary>
     /// A finished game is watched again by the players who sat at it (ADR 0156): the lobby serves its replay to an
     /// account a kept result names at that table, asks the signed-out to sign in, and refuses everybody else.

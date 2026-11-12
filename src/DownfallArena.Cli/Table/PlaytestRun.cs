@@ -1015,4 +1015,14 @@ internal sealed class PlaytestRun
         string.Create(
             CultureInfo.InvariantCulture,
             $"{clock.GetUtcNow():yyyyMMdd-HHmmss}-{Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(4))}");
+
+    /// <summary>
+    /// When a session was opened, read back off its id (<see cref="NewId" />), to the second, UTC: what a finished game's
+    /// card says of it once its table is gone. None for an id this host did not mint that way.
+    /// </summary>
+    public static DateTimeOffset? OpenedAt(string? id) =>
+        id is { Length: >= 15 } && DateTimeOffset.TryParseExact(id[..15], "yyyyMMdd-HHmmss", CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var at)
+            ? at
+            : null;
 }

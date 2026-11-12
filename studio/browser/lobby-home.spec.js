@@ -476,7 +476,8 @@ test('your games are grouped against players and against bots, at most five of e
     seats: [{ ...battle.seats[0], turn }, against === 'bot' ? bot : { ...battle.seats[1], turn: false }] }, seats: [{ seat: 'player1', token: `${id}-token` }] });
   const games = [game('waiting-on-them', { against: 'person' }), ...Array.from({ length: 4 }, (_, index) => game(`bot-${index}`)), game('your-move', { turn: true })];
   const result = (index, outcome, opponent) => ({ match: `m${index}`, table: `t${index}`, finishedAt: `2026-11-0${1 + (index % 7)}T20:00:00Z`, format: '3v3', rounds: 9,
-    outcome, you: ['player1'], opponent, seats: null, replay: `/battle?replay=t${index}&seat=player1` });
+    outcome, you: ['player1'], opponent, seats: null, replay: `/battle?replay=t${index}&seat=player1`,
+    createdAt: '2026-10-30T18:00:00Z', ranked: opponent.kind === 'person' });
   const finished = { bots: Array.from({ length: 8 }, (_, index) => result(index, 'won', { kind: 'bot', name: 'Lookahead' })),
     players: [result(20, 'lost', { kind: 'person', name: 'bastien' })] };
   const state = await home(page, { games, finished });
@@ -497,6 +498,10 @@ test('your games are grouped against players and against bots, at most five of e
   await expect(bots.locator('.game-row').first()).toContainText('vs Lookahead');
   await expect(bots.locator('.game-row a').first()).toHaveAttribute('href', '/battle?replay=t0&seat=player1');
   await expect(players.locator('.game-row')).toContainText('Defeat'); await expect(players.locator('.lobby-pages')).toHaveCount(0);
+  // Each says when it was created and when it finished, and whether it counted on the ladder, as the host kept it.
+  await expect(players.locator('.game-row-detail')).toContainText('Created'); await expect(players.locator('.game-row-detail')).toContainText('Finished');
+  await expect(players.locator('.casual-tag.ranked')).toHaveText('Ranked');
+  await expect(bots.locator('.game-row').first().locator('.casual-tag')).toHaveText('Unranked');
   await expect(bots.locator('.lobby-pages span')).toHaveText('Page 1 of 2');
   await page.locator('#my-games-section').screenshot({ path: info.outputPath('lobby-finished.png') });
   await bots.getByRole('button', { name: 'Next →' }).click();

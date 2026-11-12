@@ -437,7 +437,9 @@ table that never began is closed after twenty hours nobody asked anything of it 
 to answer runs out soonest first, and **Play next** opens that one; a game against a bot always waits for its player,
 so it is left to its group. The games stay in their groups below too, where the ones waiting for the player come
 first, in the same order. Every card of one's own says the day its game was created and whether it is ranked: a
-game between players, in 3v3, not opened unranked, each seat held by an account of its own (ADR 0124, 0171).
+game between players, in 3v3, not opened unranked, each seat held by an account of its own (ADR 0124, 0171). A finished game's
+row says the same from the host's kept result: the day its table was opened, the day it finished, and Ranked or
+Unranked as the ladder counted it.
 
 ## Signing in (ADR 0122)
 
