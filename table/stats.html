@@ -19,7 +19,7 @@
   <header class="masthead lobby-header home-header" data-navigation="stats"></header>
   <main class="lobby-main">
     <section class="lobby-hero" aria-labelledby="stats-title">
-      <div><p class="eyebrow">Your finished games</p><h2 id="stats-title">Your statistics.</h2><p class="hero-detail">How your games went, and what you played in them. Only you see this page.</p></div>
+      <div><p class="eyebrow">Your ranked games</p><h2 id="stats-title">Your statistics.</h2><p class="hero-detail">How your ranked 3v3 games went, and what you played in them. Games against a bot and unranked games do not count here. Only you see this page.</p></div>
     </section>
     <output id="stats-status" class="lobby-status muted">Reading your games…</output>
     <p id="stats-problem" class="problem" role="alert" hidden></p>
@@ -29,12 +29,8 @@
           <div class="section-heading"><h2 id="record-heading">Record</h2><span class="muted">Won–lost–drawn</span></div>
           <div id="record-cards" class="stats-cards"></div>
         </section>
-        <section class="lobby-section" aria-labelledby="creatures-heading">
-          <div class="section-heading"><h2 id="creatures-heading">Creatures</h2><span id="teams-note" class="muted"></span></div>
-          <div class="ladder-scroll"><table class="ladder" aria-labelledby="creatures-heading"><thead><tr><th scope="col">Creature</th><th scope="col" class="number">Fielded</th><th scope="col" class="number">Won</th><th scope="col" class="number" title="Still standing when the game ended">Standing</th></tr></thead><tbody id="creature-rows"></tbody></table></div>
-        </section>
         <section class="lobby-section" aria-labelledby="mutations-heading">
-          <div class="section-heading"><h2 id="mutations-heading">Mutations</h2></div>
+          <div class="section-heading"><h2 id="mutations-heading">Mutations</h2><span id="teams-note" class="muted"></span></div>
           <div class="ladder-scroll"><table class="ladder" aria-labelledby="mutations-heading"><thead><tr><th scope="col">Mutation</th><th scope="col" class="number">Bought</th><th scope="col" class="number">Won</th></tr></thead><tbody id="mutation-rows"></tbody></table></div>
         </section>
         <section class="lobby-section" aria-labelledby="spells-heading">
@@ -44,7 +40,6 @@
       </div>
       <aside class="lobby-sidebar" aria-label="At a glance">
         <section class="lobby-panel" aria-labelledby="glance-heading"><p class="eyebrow">At a glance</p><h2 id="glance-heading">Your form</h2><dl id="glance" class="stats-glance"></dl></section>
-        <section class="lobby-panel" aria-labelledby="formats-heading"><p class="eyebrow">By format</p><h2 id="formats-heading">Team sizes</h2><ul id="formats" class="bots"></ul></section>
       </aside>
     </div>
   </main>

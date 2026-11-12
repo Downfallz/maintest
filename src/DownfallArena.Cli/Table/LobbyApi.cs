@@ -304,6 +304,19 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             return Problem(400, "Lobby.TurnLimit", "Choose how long a player has to answer: a day, three days or a week.");
         }
 
+        // A ranked game is 3v3 (ADR 0171): a game between two signed-in players counts on the ladder unless opened
+        // unranked, and only in the one format, which it is played in when it names none. Without a sign-in there is
+        // no ladder to count on.
+        if (betweenPlayers && account is not null && opening?.Ranked != false)
+        {
+            if (opening?.Format is not null && format != MatchFormat.ThreeOnThree)
+            {
+                return Problem(400, "Lobby.RankedFormat", "A ranked game is 3v3. Choose 3v3, or open the game unranked to play another format.");
+            }
+
+            format = MatchFormat.ThreeOnThree;
+        }
+
         await Claims.WaitAsync();
         try
         {

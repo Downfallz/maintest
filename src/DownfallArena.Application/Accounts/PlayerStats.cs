@@ -1,64 +1,43 @@
+using DownfallArena.Domain.Matches;
 using DownfallArena.SharedKernel.Identifiers;
 
 namespace DownfallArena.Application.Accounts;
 
 /// <summary>
-/// A player's statistics, read off the results of the games they held a seat in: how their games went, overall,
-/// against players and bots and by format; their streaks and how long their games last; and what they played,
-/// creature by creature, mutation by mutation and spell by spell. A game whose two seats one account held (a
-/// shared device) is counted apart and in nothing else: it has no side that won. Only games recorded with their
-/// teams count towards creatures, mutations and spells.
+/// A player's statistics, read off their ranked games (ADR 0171): games between two accounts, opened ranked, in
+/// the ranked format, 3v3. How those games went, the streaks and how long the games last, and what the player
+/// played in them, mutation by mutation and spell by spell. Games against a bot, unranked games and games on a shared
+/// device are kept and listed elsewhere, and counted in nothing here. Only games recorded with their teams count
+/// towards mutations and spells.
 /// </summary>
 public sealed record PlayerStats(
-    Tally Overall,
-    Tally AgainstPlayers,
-    Tally AgainstBots,
-    IReadOnlyList<FormatTally> Formats,
-    int Shared,
+    Tally Ranked,
     StreakOf? Streak,
     int BestWinStreak,
     double? AverageRounds,
     int WithTeams,
-    IReadOnlyList<CreatureTally> Creatures,
     IReadOnlyList<MutationTally> Mutations,
     IReadOnlyList<SpellTally> Spells)
 {
-    /// <summary>The statistics of an account over its results; results it held no seat in are passed over.</summary>
+    /// <summary>The statistics of an account over its results; results that are not its ranked games are passed over.</summary>
     public static PlayerStats Of(IEnumerable<MatchResult> results, AccountId account)
     {
         ArgumentNullException.ThrowIfNull(results);
-        var played = new List<(MatchResult Result, string Seat, GameOutcome Outcome)>();
-        var shared = 0;
-        foreach (var result in results.OrderBy(result => result.FinishedAt).ThenBy(result => result.MatchId, StringComparer.Ordinal))
-        {
-            var mine = result.Seats.Where(seat => seat.Account == account).Select(seat => seat.Seat).ToArray();
-            if (mine.Length > 1)
-            {
-                shared++;
-            }
-            else if (mine.Length == 1)
-            {
-                played.Add((result, mine[0], OutcomeFor(result, mine[0])));
-            }
-        }
+        var played = results
+            .Where(result => Counts(result) && result.Seats.Count(seat => seat.Account == account) == 1)
+            .OrderBy(result => result.FinishedAt).ThenBy(result => result.MatchId, StringComparer.Ordinal)
+            .Select(result => (Result: result, Seat: result.Seats.Single(seat => seat.Account == account).Seat))
+            .Select(game => (game.Result, game.Seat, Outcome: OutcomeFor(game.Result, game.Seat)))
+            .ToArray();
 
         var teamed = played.Where(game => game.Result.Teams.Count > 0).ToArray();
         var fielded = teamed.SelectMany(game => game.Result.Teams.Where(creature => creature.Seat == game.Seat).Select(creature => (Creature: creature, game.Outcome))).ToArray();
         return new PlayerStats(
             Count(played.Select(game => game.Outcome)),
-            Count(played.Where(game => !game.Result.AgainstBot).Select(game => game.Outcome)),
-            Count(played.Where(game => game.Result.AgainstBot).Select(game => game.Outcome)),
-            [.. played.GroupBy(game => game.Result.Format, StringComparer.Ordinal)
-                .Select(format => new FormatTally(format.Key, Count(format.Select(game => game.Outcome))))
-                .OrderByDescending(format => format.Tally.Games).ThenBy(format => format.Format, StringComparer.Ordinal)],
-            shared,
             CurrentStreak(played.Select(game => game.Outcome)),
             LongestWinRun(played.Select(game => game.Outcome)),
-            played.Count == 0 ? null : played.Average(game => game.Result.Rounds),
+            played.Length == 0 ? null : played.Average(game => game.Result.Rounds),
             teamed.Length,
-            [.. fielded.GroupBy(one => one.Creature.Creature, StringComparer.Ordinal)
-                .Select(creature => new CreatureTally(creature.Key, creature.Count(), creature.Count(one => one.Outcome == GameOutcome.Won), creature.Count(one => one.Creature.Survived)))
-                .OrderByDescending(creature => creature.Fielded).ThenBy(creature => creature.Creature, StringComparer.Ordinal)],
             [.. fielded.SelectMany(one => one.Creature.Mutations.Select(mutation => (Mutation: mutation, one.Outcome)))
                 .GroupBy(bought => bought.Mutation, StringComparer.Ordinal)
                 .Select(mutation => new MutationTally(mutation.Key, mutation.Count(), mutation.Count(bought => bought.Outcome == GameOutcome.Won)))
@@ -70,6 +49,16 @@ public sealed record PlayerStats(
                 .GroupBy(spell => spell.Spell, StringComparer.Ordinal)
                 .Select(spell => new SpellTally(spell.Key, spell.Sum(game => game.Casts), spell.Count(), spell.Count(game => game.Outcome == GameOutcome.Won)))
                 .OrderByDescending(spell => spell.Casts).ThenBy(spell => spell.Spell, StringComparer.Ordinal)]);
+    }
+
+    /// <summary>
+    /// Whether a result counts here (ADR 0171): ranked, as the ladder rates it, and 3v3, the one ranked format. A ranked
+    /// game in another format, from before ranked games were 3v3, is not.
+    /// </summary>
+    public static bool Counts(MatchResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        return result.Ranked && MatchFormat.TryParse(result.Format, out var format) && format == MatchFormat.ThreeOnThree;
     }
 
     private static GameOutcome OutcomeFor(MatchResult result, string seat)

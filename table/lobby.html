@@ -61,11 +61,17 @@
   <footer class="home-footer"><span>Downfall Instinct</span><span>Mutate. Adapt. Strike.</span></footer>
   <dialog id="create-dialog" aria-labelledby="create-title">
     <form id="create-table"><div class="dialog-heading"><div><p class="eyebrow">A new battle</p><h2 id="create-title">Create a table</h2></div><button id="create-close" type="button" class="secondary" aria-label="Close new table">×</button></div>
-      <label for="opponent">Who are you playing?</label><select id="opponent" name="opponent"><option value="person">Another player · open seat</option><option value="friend">A friend · seat kept for them</option><option value="bot">Solo · the strongest bot</option><option value="hotseat">Two players · shared device</option></select>
-      <div id="friend-row" hidden><label for="friend">Which friend?</label><select id="friend" name="friend"></select></div>
-      <label for="format">Creatures per side</label><select id="format" name="format"></select>
+      <div id="create-tabs" class="create-tabs" role="tablist" aria-label="Kind of game"><button id="create-solo" type="button" role="tab" aria-selected="false" aria-controls="create-solo-panel">Solo<small>Against a bot</small></button><button id="create-pvp" type="button" role="tab" aria-selected="true" aria-controls="create-pvp-panel">PvP<small>Against a player</small></button></div>
+      <div id="create-solo-panel" class="create-panel" role="tabpanel" aria-labelledby="create-solo" hidden>
+        <label for="bot-level">Bot difficulty</label><select id="bot-level" name="bot-level"><option value="strongest">The strongest bot</option></select>
+      </div>
+      <div id="create-pvp-panel" class="create-panel" role="tabpanel" aria-labelledby="create-pvp">
+        <label for="opponent">Who are you playing?</label><select id="opponent" name="opponent"><option value="person">Another player · open seat</option><option value="friend">A friend · seat kept for them</option><option value="hotseat">Two players · shared device</option></select>
+        <div id="friend-row" hidden><label for="friend">Which friend?</label><select id="friend" name="friend"></select></div>
+        <label id="ranked-row" class="ranked-row" for="ranked"><span>Ranked<small>Counts on the leaderboard and in your statistics, always 3v3. Turn it off for a friendly or practice game in any format.</small></span><input id="ranked" name="ranked" type="checkbox" checked></label>
+      </div>
+      <label for="format">Creatures per side<small id="format-note" class="field-note" hidden>Ranked games are 3v3.</small></label><select id="format" name="format"></select>
       <div id="turn-limit-row" hidden><label for="turn-limit">Time to answer<small class="field-note">A player who lets it run out loses the game.</small></label><select id="turn-limit" name="turn-limit"><option value="24">A day</option><option value="72" selected>Three days</option><option value="168">A week</option></select></div>
-      <label id="ranked-row" class="ranked-row" for="ranked"><span>Ranked<small>Counts on the leaderboard. Turn it off for a friendly or practice game.</small></span><input id="ranked" name="ranked" type="checkbox" checked></label>
       <p id="create-help" class="muted">You take the first seat. Another player can join from this lobby or with your invitation.</p>
       <p id="create-problem" class="problem" role="alert" hidden></p>
       <div class="dialog-actions"><button id="create-cancel" type="button" class="secondary">Cancel</button><button id="create-submit" class="primary" type="submit">Create &amp; play →</button></div>

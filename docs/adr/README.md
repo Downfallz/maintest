@@ -176,3 +176,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0168](0168-keep-match-results-in-azure-table-storage.md) | Keep match results in Azure Table Storage, by match and by account | Accepted |
 | [0169](0169-end-a-match-whose-player-let-their-time-to-answer-run-out.md) | End a match whose player let their time to answer run out | Accepted |
 | [0170](0170-end-a-begun-match-whose-left-seat-nobody-takes-in-a-day.md) | End a begun match whose left seat nobody takes in a day | Accepted |
+| [0171](0171-rank-only-3v3-games-and-count-a-players-statistics-on-them.md) | Rank only 3v3 games, and count a player's statistics on them alone | Accepted |

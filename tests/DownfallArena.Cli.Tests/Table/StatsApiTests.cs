@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace DownfallArena.Cli.Tests.Table;
 
-/// <summary>A signed-in player's own statistics (ADR 0168), served off their results and named from the catalogue.</summary>
+/// <summary>A signed-in player's own statistics (ADR 0168), served off their ranked results (ADR 0171) and named from the catalogue.</summary>
 public sealed class StatsApiTests : IDisposable
 {
     private static readonly DateTimeOffset Start = new(2026, 11, 3, 20, 0, 0, TimeSpan.Zero);
@@ -56,28 +56,30 @@ public sealed class StatsApiTests : IDisposable
     private static JsonElement Read(StudioResponse response) => JsonDocument.Parse(Encoding.UTF8.GetString(response.Body)).RootElement.Clone();
 
     [Fact]
-    public async Task A_signed_in_player_reads_their_own_record_and_what_they_played_by_name()
+    public async Task A_signed_in_player_reads_their_own_ranked_record_and_what_they_played_by_name()
     {
         var mark = await PlayerAsync("MarkF");
+        var bastien = await PlayerAsync("Bastien");
         var creature = Resources.Creatures.First();
         var spell = Resources.Spells.First();
         await _results.RecordAsync(
-            new MatchResult(Guid.CreateVersion7().ToString(), Start, "3v3", "at-activation", "hash", 10, "player1", [new("player1", mark.Id, null), new("player2", null, "greedy")])
+            new MatchResult(Guid.CreateVersion7().ToString(), Start, "3v3", "at-activation", "hash", 10, "player1", [new("player1", mark.Id, null), new("player2", bastien.Id, null)])
             {
                 Teams = [new PlayedCreature("player1", creature.Id.Value, ["tier:gone:v1"], Survived: true, new Dictionary<string, int> { [spell.Id.Value] = 4 })],
             },
+            Cancel);
+        await _results.RecordAsync(
+            new MatchResult(Guid.CreateVersion7().ToString(), Start.AddHours(1), "3v3", "at-activation", "hash", 10, "player2", [new("player1", mark.Id, null), new("player2", null, "greedy")]),
             Cancel);
         var accounts = await AccountsAsync();
         var stats = new StatsApi(_results, accounts, Resources);
 
         var read = Read(await stats.HandleAsync("GET", new AccountRequest(await SessionOfAsync(accounts, "MarkF"), Secure: false)));
 
-        read.GetProperty("overall").GetProperty("won").GetInt32().ShouldBe(1);
-        read.GetProperty("againstBots").GetProperty("games").GetInt32().ShouldBe(1);
+        read.GetProperty("ranked").GetProperty("games").GetInt32().ShouldBe(1, "a game against a bot is not ranked");
+        read.GetProperty("ranked").GetProperty("won").GetInt32().ShouldBe(1);
         read.GetProperty("streak").GetProperty("outcome").GetString().ShouldBe("won");
-        var fielded = read.GetProperty("creatures").EnumerateArray().ShouldHaveSingleItem();
-        fielded.GetProperty("name").GetString().ShouldBe(creature.Name);
-        fielded.GetProperty("fielded").GetInt32().ShouldBe(1);
+        read.TryGetProperty("creatures", out _).ShouldBeFalse();
         read.GetProperty("mutations").EnumerateArray().ShouldHaveSingleItem().GetProperty("name").GetString().ShouldBe("tier:gone:v1", "a mutation the catalogue no longer holds is shown by its id");
         var cast = read.GetProperty("spells").EnumerateArray().ShouldHaveSingleItem();
         cast.GetProperty("name").GetString().ShouldBe(spell.Name);
@@ -104,8 +106,8 @@ public sealed class StatsApiTests : IDisposable
 
         var read = Read(await stats.HandleAsync("GET", new AccountRequest(await SessionOfAsync(accounts, "MarkF"), Secure: false)));
 
-        read.GetProperty("overall").GetProperty("games").GetInt32().ShouldBe(0);
+        read.GetProperty("ranked").GetProperty("games").GetInt32().ShouldBe(0);
         read.GetProperty("streak").ValueKind.ShouldBe(JsonValueKind.Null);
-        read.GetProperty("creatures").GetArrayLength().ShouldBe(0);
+        read.GetProperty("mutations").GetArrayLength().ShouldBe(0);
     }
 }
