@@ -714,7 +714,8 @@ for (const candidates of [[2, 3, 4], [1, 5, 6], [1, 2, 5]]) {
     await page.route('**/api/seat/player1**', route => route.fulfill({ json: view }));
     await expect(page.locator('#decision')).toHaveAttribute('data-kind', 'Speed');
     await expect(page.locator('#mini-board')).not.toHaveClass(/targeting/);
-    expect((await page.locator('#mini-board .mini-creature').first().boundingBox()).height).toBeLessThan(72);
+    // Every poll redraws the chips, so one reading can land on a chip that has no box yet: read until one has.
+    await expect.poll(async () => (await page.locator('#mini-board .mini-creature').first().boundingBox())?.height ?? Infinity).toBeLessThan(72);
   });
 }
 

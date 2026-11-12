@@ -72,7 +72,7 @@ function sideTable(side: Report['sides'][number], label: string, report: Report,
   head.append(titles);
   const body = document.createElement('tbody');
   for (const fighter of side.creatures) {
-    const row = document.createElement('tr'); row.dataset.creature = String(fighter.id);
+    const row = document.createElement('tr'); row.dataset.reportCreature = String(fighter.id);
     if (!fighter.alive) row.dataset.fallen = 'true';
     if (fighter.id === report.mvp) row.dataset.mvp = 'true';
     const who = node('th', 'match-who'); who.setAttribute('scope', 'row');
