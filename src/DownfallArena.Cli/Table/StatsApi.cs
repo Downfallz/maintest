@@ -10,9 +10,9 @@ namespace DownfallArena.Cli.Table;
 
 /// <summary>
 /// A signed-in player's own statistics (<c>GET /api/stats</c>), read off the results of their games, which their
-/// partition holds alone (ADR 0168): how their games went, their streaks, and the creatures, mutations and spells
-/// they played. Nobody reads another player's. Names come from this host's catalogue; a creature, mutation or spell
-/// it no longer holds is shown by its id.
+/// partition holds alone (ADR 0168), and only their ranked 3v3 games counted (ADR 0171): how those went, their
+/// streaks, and the mutations and spells they played. Nobody reads another player's. Names come from this host's
+/// catalogue; a mutation or spell it no longer holds is shown by its id.
 /// </summary>
 internal sealed class StatsApi(IMatchResults results, AccountApi accounts, IGameResources resources)
 {
@@ -39,16 +39,11 @@ internal sealed class StatsApi(IMatchResults results, AccountApi accounts, IGame
         var shown = StudioResponse.OfJson(
             new
             {
-                stats.Overall,
-                stats.AgainstPlayers,
-                stats.AgainstBots,
-                formats = stats.Formats.Select(format => new { format.Format, format.Tally }),
-                stats.Shared,
+                stats.Ranked,
                 streak = stats.Streak is { } streak ? new { outcome = OutcomeName(streak.Outcome), streak.Length } : null,
                 stats.BestWinStreak,
                 averageRounds = stats.AverageRounds is { } rounds ? Math.Round(rounds, 1) : (double?)null,
                 stats.WithTeams,
-                creatures = stats.Creatures.Select(creature => new { id = creature.Creature, name = CreatureName(creature.Creature), creature.Fielded, creature.Won, creature.Survived }),
                 mutations = stats.Mutations.Select(mutation => new { id = mutation.Mutation, name = MutationName(mutation.Mutation), mutation.Bought, mutation.Won }),
                 spells = stats.Spells.Select(spell => new { id = spell.Spell, name = SpellName(spell.Spell), spell.Casts, spell.Games, spell.Won }),
             },
@@ -59,9 +54,6 @@ internal sealed class StatsApi(IMatchResults results, AccountApi accounts, IGame
     }
 
     private static string OutcomeName(GameOutcome outcome) => outcome.ToString().ToLower(CultureInfo.InvariantCulture);
-
-    private string CreatureName(string id) =>
-        CreatureDefinitionId.TryParse(id, out var parsed) && resources.TryGetCreature(parsed, out var creature) ? creature.Name : id;
 
     private string MutationName(string id) =>
         TierId.TryParse(id, out var parsed) && resources.TryGetTier(parsed, out var tier) ? tier.Name : id;

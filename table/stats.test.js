@@ -15,9 +15,9 @@ test('the streak says how many of the same outcome in a row, and nothing before 
   assert.equal(streakText({ outcome: 'drawn', length: 2 }), '2 draws in a row');
 });
 
-test('what was played says which games it counts when older ones kept no teams', () => {
-  assert.equal(teamsNote({ overall: { games: 0 }, withTeams: 0 }), '');
-  assert.equal(teamsNote({ overall: { games: 4 }, withTeams: 4 }), 'From your 4 games');
-  assert.equal(teamsNote({ overall: { games: 1 }, withTeams: 1 }), 'From your 1 game');
-  assert.match(teamsNote({ overall: { games: 9 }, withTeams: 2 }), /^From 2 of your 9 games: older games/);
+test('what was played says which ranked games it counts when older ones kept no teams', () => {
+  assert.equal(teamsNote({ ranked: { games: 0 }, withTeams: 0 }), '');
+  assert.equal(teamsNote({ ranked: { games: 4 }, withTeams: 4 }), 'From your 4 games');
+  assert.equal(teamsNote({ ranked: { games: 1 }, withTeams: 1 }), 'From your 1 game');
+  assert.match(teamsNote({ ranked: { games: 9 }, withTeams: 2 }), /^From 2 of your 9 games: older games/);
 });

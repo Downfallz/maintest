@@ -625,8 +625,28 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     el('opponent').querySelector('option[value="friend"]').hidden = mode === 'off';
   }
   let wanted = null;
+  // Solo plays a bot; PvP another player, a friend, or a second player on this device.
+  let kind = 'pvp';
+  const opponentOf = () => kind === 'solo' ? 'bot' : el('opponent').value;
+  function choose(next) {
+    kind = next;
+    for (const [tab, panel, which] of [['create-solo', 'create-solo-panel', 'solo'], ['create-pvp', 'create-pvp-panel', 'pvp']]) {
+      el(tab).setAttribute('aria-selected', String(kind === which));
+      el(tab).tabIndex = kind === which ? 0 : -1;
+      el(panel).hidden = kind !== which;
+    }
+    showOpponent();
+  }
+  for (const [tab, which] of [['create-solo', 'solo'], ['create-pvp', 'pvp']]) el(tab).addEventListener('click', () => choose(which));
+  // Two tabs, as a tab list moves: an arrow key goes to the other one.
+  el('create-tabs').addEventListener('keydown', event => {
+    if (!['ArrowLeft', 'ArrowRight'].includes(event.key) || reinviting) return;
+    event.preventDefault();
+    choose(kind === 'solo' ? 'pvp' : 'solo');
+    el(kind === 'solo' ? 'create-solo' : 'create-pvp').focus();
+  });
   function showOpponent() {
-    const value = el('opponent').value;
+    const value = opponentOf();
     const missing = value === 'friend' && friendChoice(friends, wanted).missing;
     el('create-help').textContent = missing
       ? 'That player is not in your friends yet. Ask them from the Friends panel, then invite them.'
@@ -634,6 +654,11 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     el('friend-row').hidden = value !== 'friend';
     // Only a game between two players can count on the ladder: a bot or a shared device never does.
     el('ranked-row').hidden = !['person', 'friend'].includes(value) || mode === 'off';
+    // A ranked game is 3v3 (ADR 0171): its format is fixed while Ranked is on, and free otherwise.
+    const ranked = rankedChosen();
+    if (ranked) el('format').value = '3v3';
+    el('format').disabled = ranked || Boolean(reinviting);
+    el('format-note').hidden = !ranked;
     // So is how long a player has to answer before losing (ADR 0169): a bot always answers.
     el('turn-limit-row').hidden = !['person', 'friend'].includes(value);
     // At the most games of that kind at once (ADR 0147), the host would refuse: say so before the player asks.
@@ -643,6 +668,14 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     el('create-submit').disabled = full || (value === 'friend' && !el('friend').value);
   }
   el('friend').addEventListener('change', showOpponent);
+  el('ranked').addEventListener('change', showOpponent);
+  function rankedChosen() {
+    return kind === 'pvp' && ['person', 'friend'].includes(el('opponent').value) && mode !== 'off' && el('ranked').checked;
+  }
+  /**
+   * Opens the create dialog, on the opponent, friend, format and rank a rematch or a challenge asks for.
+   * @param {{ friend?: string | null, reinvite?: string | null, opponent?: string | null, format?: string | null, ranked?: boolean }} [asked]
+   */
   function openCreate({ friend = null, reinvite = null, opponent = null, format = null, ranked = true } = {}) {
     if (signInFirst()) { askSignIn(); return; }
     if (!listing) return;
@@ -652,16 +685,18 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     el('create-title').textContent = reinvite ? 'Invite another friend' : 'Create a table';
     el('create-submit').textContent = reinvite ? 'Invite →' : 'Create & play →';
     el('opponent').disabled = Boolean(reinvite);
-    el('format').disabled = Boolean(reinvite);
+    for (const tab of ['create-solo', 'create-pvp']) el(tab).disabled = Boolean(reinvite);
+    kind = opponent === 'bot' ? 'solo' : 'pvp';
     if (friend || reinvite) el('opponent').value = 'friend';
-    else if (opponent) el('opponent').value = opponent;
+    else if (opponent && opponent !== 'bot') el('opponent').value = opponent;
     if (format && [...el('format').options].some(option => option.value === format)) el('format').value = format;
-    el('ranked').checked = ranked !== false; el('ranked').disabled = Boolean(reinvite);
+    // A ranked game is 3v3 (ADR 0171): played again in another format, a game from before that is played unranked.
+    el('ranked').checked = ranked !== false && (!format || format === '3v3'); el('ranked').disabled = Boolean(reinvite);
     el('turn-limit').value = '72'; el('turn-limit').disabled = Boolean(reinvite);
     const opening = revision;
     void loadFriends(friend).then(() => {
       if (opening !== revision || signInFirst()) return;
-      showOpponent();
+      choose(kind);
       if (!dialog.open) dialog.showModal();
     });
   }
@@ -679,7 +714,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
   const help = {
     person: 'You take the first seat. Another player can join from this lobby or with your invitation.',
     friend: 'The second seat is kept for your friend: nobody else can take it. They are told on their phone, and you wait at the table. One invitation at a time.',
-    bot: 'The strongest bot the game has plays the other side. Your game is saved so you can come back later.',
+    bot: 'The bot plays the other side. Your game is saved so you can come back later.',
     hotseat: 'Both players use this device. Pass it between turns.',
   };
   el('opponent').addEventListener('change', showOpponent);
@@ -690,7 +725,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     el('create-submit').disabled = true;
     el('create-problem').hidden = true;
     try {
-      if (el('opponent').value === 'friend' && !el('friend').value) {
+      if (opponentOf() === 'friend' && !el('friend').value) {
         throw new Error('Choose a friend to keep the seat for.');
       }
 
@@ -699,8 +734,8 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
         dialog.close();
         await refresh();
       } else {
-        const between = ['person', 'friend'].includes(el('opponent').value);
-        enter(await lobbyRequest('/api/lobby/tables', { opponent: el('opponent').value, format: el('format').value, friend: el('opponent').value === 'friend' ? el('friend').value : undefined,
+        const opponent = opponentOf(), between = ['person', 'friend'].includes(opponent);
+        enter(await lobbyRequest('/api/lobby/tables', { opponent, format: el('format').value, friend: opponent === 'friend' ? el('friend').value : undefined,
           ...(between && !el('ranked').checked ? { ranked: false } : {}), ...(between ? { turnLimit: Number(el('turn-limit').value) } : {}) }));
       }
     } catch (error) { el('create-problem').textContent = error.message || 'Could not create the table. Try again.'; el('create-problem').hidden = false; }

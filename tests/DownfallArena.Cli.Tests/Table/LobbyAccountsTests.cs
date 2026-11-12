@@ -43,6 +43,47 @@ public sealed class LobbyAccountsTests : IDisposable
         return ((await _registry.ByIdAsync(opened.GetProperty("table").GetProperty("id").GetString()!, Cancel))!, opened);
     }
 
+    /// <summary>A ranked game is 3v3 (ADR 0171): another format is refused, and a ranked game that names none is 3v3.</summary>
+    [Fact]
+    public async Task A_ranked_game_is_3v3_and_another_format_is_refused()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var lobby = await LobbyAsync();
+
+        var refused = await lobby.HandleAsync("POST", "/api/lobby/tables", """{"opponent":"person","format":"1v1"}""", player: mark);
+        var unnamed = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", """{"opponent":"person"}""", player: mark));
+
+        refused.Status.ShouldBe(400);
+        Read(refused).GetProperty("error").GetString().ShouldBe("Lobby.RankedFormat");
+        unnamed.GetProperty("table").GetProperty("format").GetString().ShouldBe("3v3");
+    }
+
+    [Fact]
+    public async Task An_unranked_game_between_players_is_played_in_the_format_chosen()
+    {
+        var mark = await PlayerAsync("MarkF");
+
+        var opened = Read(await (await LobbyAsync()).HandleAsync("POST", "/api/lobby/tables", """{"opponent":"person","format":"1v1","ranked":false}""", player: mark));
+
+        opened.GetProperty("table").GetProperty("format").GetString().ShouldBe("1v1");
+        opened.GetProperty("table").GetProperty("casual").GetBoolean().ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// A game on a shared device is unranked from the start (ADR 0171): any format is allowed, and a seat its player
+    /// leaves and another account takes must not make it a ranked game.
+    /// </summary>
+    [Fact]
+    public async Task A_game_on_a_shared_device_is_opened_unranked_in_any_format()
+    {
+        var mark = await PlayerAsync("MarkF");
+
+        var opened = Read(await (await LobbyAsync()).HandleAsync("POST", "/api/lobby/tables", """{"opponent":"hotseat","format":"1v1"}""", player: mark));
+
+        opened.GetProperty("table").GetProperty("format").GetString().ShouldBe("1v1");
+        opened.GetProperty("table").GetProperty("casual").GetBoolean().ShouldBeTrue();
+    }
+
     [Fact]
     public async Task Nobody_signed_in_opens_a_table_takes_a_place_or_accepts_an_invitation()
     {

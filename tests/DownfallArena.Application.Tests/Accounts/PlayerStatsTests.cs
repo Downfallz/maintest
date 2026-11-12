@@ -22,27 +22,27 @@ public sealed class PlayerStatsTests
         new(seat, creature, mutations ?? [], survived, casts ?? []);
 
     [Fact]
-    public void Games_are_counted_from_the_players_side_whichever_seat_they_held_against_players_and_bots_apart()
+    public void Ranked_games_are_counted_from_the_players_side_whichever_seat_they_held()
     {
         MatchResult[] results = [Against(0, winner: "player1"), Against(1, winner: "player2"), Against(2, winner: null),
-            Game(3, new("player1", Bastien, null), new("player2", Mark, null), winner: "player2"), AgainstBot(4, winner: "player2")];
+            Game(3, new("player1", Bastien, null), new("player2", Mark, null), winner: "player2")];
 
-        var stats = PlayerStats.Of(results, Mark);
-
-        stats.Overall.ShouldBe(new Tally(5, 2, 2, 1));
-        stats.AgainstPlayers.ShouldBe(new Tally(4, 2, 1, 1));
-        stats.AgainstBots.ShouldBe(new Tally(1, 0, 1, 0));
+        PlayerStats.Of(results, Mark).Ranked.ShouldBe(new Tally(4, 2, 1, 1));
     }
 
+    /// <summary>
+    /// Only ranked 3v3 games count (ADR 0171): a game against a bot, one opened unranked, one on a shared device, and a
+    /// ranked game in another format from before ranked games were 3v3, are counted in nothing.
+    /// </summary>
     [Fact]
-    public void A_game_one_account_held_both_seats_of_is_counted_apart_and_in_nothing_else()
+    public void Games_that_are_not_ranked_3v3_count_in_nothing()
     {
-        MatchResult[] results = [Against(0), Game(1, new("player1", Mark, null), new("player2", Mark, null), rounds: 30)];
+        MatchResult[] results = [Against(0, rounds: 9), AgainstBot(1), Against(2, rounds: 30) with { Casual = true },
+            Game(3, new("player1", Mark, null), new("player2", Mark, null), rounds: 30), Against(4, format: "1v1", rounds: 30)];
 
         var stats = PlayerStats.Of(results, Mark);
 
-        stats.Shared.ShouldBe(1);
-        stats.Overall.Games.ShouldBe(1);
+        stats.Ranked.ShouldBe(new Tally(1, 1, 0, 0));
         stats.AverageRounds.ShouldBe(9);
         stats.Streak.ShouldBe(new StreakOf(GameOutcome.Won, 1));
     }
@@ -54,17 +54,9 @@ public sealed class PlayerStatsTests
 
         var stats = PlayerStats.Of(results, Mark);
 
-        stats.Overall.ShouldBe(Tally.None);
+        stats.Ranked.ShouldBe(Tally.None);
         stats.Streak.ShouldBeNull();
         stats.AverageRounds.ShouldBeNull();
-    }
-
-    [Fact]
-    public void Each_format_has_its_own_tally_the_most_played_first()
-    {
-        MatchResult[] results = [Against(0, format: "1v1"), Against(1, format: "3v3", winner: "player2"), Against(2, format: "3v3")];
-
-        PlayerStats.Of(results, Mark).Formats.ShouldBe([new FormatTally("3v3", new Tally(2, 1, 1, 0)), new FormatTally("1v1", new Tally(1, 1, 0, 0))]);
     }
 
     [Fact]
@@ -87,7 +79,7 @@ public sealed class PlayerStatsTests
     }
 
     [Fact]
-    public void What_was_played_counts_the_players_own_creatures_and_only_games_kept_with_their_teams()
+    public void What_was_played_counts_the_players_own_team_and_only_games_kept_with_their_teams()
     {
         var won = Against(0) with
         {
@@ -107,7 +99,6 @@ public sealed class PlayerStatsTests
         var stats = PlayerStats.Of([won, lost, untold], Mark);
 
         stats.WithTeams.ShouldBe(2);
-        stats.Creatures.ShouldBe([new CreatureTally("creature:wolf:v1", 2, 1, 1), new CreatureTally("creature:bear:v1", 1, 1, 0)]);
         stats.Mutations.ShouldBe([new MutationTally("tier:guard:v1", 2, 1)]);
         stats.Spells.ShouldBe([new SpellTally("spell:strike:v1", 4, 1, 1), new SpellTally("spell:roar:v1", 3, 2, 1)]);
     }

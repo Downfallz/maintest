@@ -396,19 +396,22 @@ for (const file of ['leaderboard', 'battle', 'index']) {
   });
 }
 
-test('the signed-in player reads their own statistics on a page of their own', async ({ page }) => {
+test('the signed-in player reads the statistics of their ranked games on a page of their own', async ({ page }) => {
   await home(page);
   await page.route('**/api/stats', route => route.fulfill({ json: {
-    overall: { games: 3, won: 2, lost: 1, drawn: 0 }, againstPlayers: { games: 1, won: 0, lost: 1, drawn: 0 }, againstBots: { games: 2, won: 2, lost: 0, drawn: 0 },
-    formats: [{ format: '3v3', tally: { games: 3, won: 2, lost: 1, drawn: 0 } }], shared: 0, streak: { outcome: 'won', length: 2 }, bestWinStreak: 2,
-    averageRounds: 7.5, withTeams: 3, creatures: [{ id: 'creature:main:v1', name: 'Warped', fielded: 9, won: 6, survived: 4 }],
-    mutations: [], spells: [{ id: 'spell:strike:v1', name: 'Strike', casts: 21, games: 3, won: 2 }],
+    ranked: { games: 3, won: 2, lost: 1, drawn: 0 }, streak: { outcome: 'won', length: 2 }, bestWinStreak: 2,
+    averageRounds: 7.5, withTeams: 3, mutations: [], spells: [{ id: 'spell:strike:v1', name: 'Strike', casts: 21, games: 3, won: 2 }],
   } }));
   await page.goto('/table/stats.html');
-  await expect(page.locator('#record-cards .stats-card').first()).toContainText('2–1–0');
+  await expect(page.locator('#record-cards .stats-card')).toHaveCount(1);
+  await expect(page.locator('#record-cards .stats-card')).toContainText('Ranked 3v3');
+  await expect(page.locator('#record-cards .stats-card')).toContainText('2–1–0');
+  await expect(page.locator('#stats-status')).toHaveText('3 ranked games · updates as your games end');
   await expect(page.locator('#glance')).toContainText('2 wins in a row');
-  await expect(page.locator('#creature-rows')).toContainText('Warped');
+  await expect(page.locator('#spell-rows')).toContainText('Strike');
   await expect(page.locator('#mutation-rows')).toContainText('No mutation bought yet.');
+  // Ranked games are all 3v3 (ADR 0171): no table of creatures and no table of formats.
+  await expect(page.locator('#creature-rows, #formats')).toHaveCount(0);
   await openNavigation(page);
   await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Your stats' })).toHaveAttribute('aria-current', 'page');
   await page.keyboard.press('Escape');
@@ -458,16 +461,18 @@ test('your games are grouped against players and against bots, at most five of e
   await noOverflow(page);
 
   // At five games against bots, a sixth is turned down before it is asked for.
-  await page.locator('#new-table').click(); await page.locator('#opponent').selectOption('bot');
+  await page.locator('#new-table').click(); await page.getByRole('tab', { name: /^Solo/ }).click();
   await expect(page.locator('#create-help')).toContainText('the most at once'); await expect(page.locator('#create-submit')).toBeDisabled();
-  await page.locator('#opponent').selectOption('person'); await expect(page.locator('#create-submit')).toBeEnabled();
+  await page.getByRole('tab', { name: /^PvP/ }).click(); await expect(page.locator('#create-submit')).toBeEnabled();
   // A game against another player can be opened unranked (ADR 0155); a bot's never counts, so it has no switch.
   await expect(page.getByLabel(/^Ranked/)).toBeChecked();
-  await page.locator('#opponent').selectOption('bot'); await expect(page.locator('#ranked-row')).toBeHidden();
+  await page.getByRole('tab', { name: /^Solo/ }).click(); await expect(page.locator('#ranked-row')).toBeHidden();
+  await expect(page.getByLabel('Bot difficulty')).toHaveValue('strongest');
   // Nor a time to answer (ADR 0169): a bot always answers. Between players it is three days unless another is chosen.
   await expect(page.locator('#turn-limit-row')).toBeHidden();
-  await page.locator('#opponent').selectOption('person'); await page.getByLabel(/^Ranked/).uncheck();
+  await page.getByRole('tab', { name: /^PvP/ }).click(); await page.locator('#opponent').selectOption('person');
   await expect(page.getByLabel(/^Time to answer/)).toHaveValue('72'); await page.getByLabel(/^Time to answer/).selectOption('168');
+  await page.getByLabel(/^Ranked/).uncheck();
   await page.locator('#create-submit').click();
   await expect.poll(() => state.created).toEqual({ opponent: 'person', format: '3v3', ranked: false, turnLimit: 168 });
   expect(state.errors).toEqual([]);
@@ -673,5 +678,33 @@ test('a game between two players counts its time to answer down on the card, wit
 
   await expect(card).toContainText(/Your turn · 5\d min left/);
   expect(state.mineReads).toBe(reads);
+  expect(state.errors).toEqual([]);
+});
+
+test('the create dialog plays Solo against a bot in any format, and PvP ranked in 3v3 or unranked in any format', async ({ page }, info) => {
+  const state = await home(page);
+  await page.locator('#new-table').click();
+  const solo = page.getByRole('tab', { name: /^Solo/ }), pvp = page.getByRole('tab', { name: /^PvP/ }), format = page.getByLabel(/^Creatures per side/);
+  await expect(pvp).toHaveAttribute('aria-selected', 'true');
+  // Ranked is 3v3 (ADR 0171): the format is fixed and says why.
+  await expect(format).toHaveValue('3v3'); await expect(format).toBeDisabled(); await expect(page.locator('#format-note')).toBeVisible();
+  const ranked = await page.getByLabel(/^Time to answer/).locator('option').allTextContents();
+  await page.getByLabel(/^Ranked/).uncheck();
+  await expect(format).toBeEnabled(); await expect(page.locator('#format-note')).toBeHidden();
+  expect(await page.getByLabel(/^Time to answer/).locator('option').allTextContents()).toEqual(ranked);
+  await format.selectOption('1v1');
+  await page.getByLabel(/^Ranked/).check(); await expect(format).toHaveValue('3v3');
+  await page.locator('#create-dialog').screenshot({ path: info.outputPath('create-pvp.png') });
+
+  await solo.click();
+  await expect(page.locator('#create-solo-panel')).toBeVisible(); await expect(page.locator('#create-pvp-panel')).toBeHidden();
+  await expect(format).toBeEnabled(); await format.selectOption('2v2');
+  await page.locator('#create-dialog').screenshot({ path: info.outputPath('create-solo.png') });
+  await page.locator('#create-submit').click();
+  await expect.poll(() => state.created).toEqual({ opponent: 'bot', format: '2v2' });
+  // PvP comes first, Solo beside it; the arrow keys move between the two tabs.
+  await expect(page.getByRole('tab')).toHaveText([/^PvP/, /^Solo/]);
+  await solo.focus(); await page.keyboard.press('ArrowLeft'); await expect(pvp).toBeFocused(); await expect(pvp).toHaveAttribute('aria-selected', 'true');
+  await noOverflow(page);
   expect(state.errors).toEqual([]);
 });

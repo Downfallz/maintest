@@ -1,7 +1,7 @@
 import { onLobbyChange } from './changes.js';
 
-// A player's own statistics (ADR 0168): how their finished games went, and the creatures, mutations and spells
-// they played. The host computes everything from the results it keeps for the player; this page only draws it.
+// A player's own statistics (ADR 0168): how their ranked 3v3 games went (ADR 0171), and the mutations and spells
+// they played in them. The host computes everything from the results it keeps for the player; this page only draws it.
 
 /** Won–lost–drawn, as a ladder writes it. */
 export function tallyText({ won, lost, drawn }) {
@@ -20,9 +20,9 @@ export function streakText(streak) {
   return streak.length === 1 ? `1 ${word[0]}` : `${streak.length} ${word[1]} in a row`;
 }
 
-/** What the creatures section says about which games it counts, when not all of them do. */
+/** What the mutations and spells say about which games they count, when not all of them do. */
 export function teamsNote(stats) {
-  const games = stats.overall.games;
+  const games = stats.ranked.games;
   if (!games) return '';
   if (stats.withTeams === games) return `From your ${games} game${games === 1 ? '' : 's'}`;
   return `From ${stats.withTeams} of your ${games} games: older games did not keep their teams`;
@@ -60,26 +60,22 @@ export function drawStats(doc, stats) {
     element.append(node(doc, 'small', label), node(doc, 'strong', tallyText(tally)), node(doc, 'span', `${tally.games} game${tally.games === 1 ? '' : 's'} · ${percent(tally.won, tally.games)} won`));
     return element;
   };
-  el('record-cards').replaceChildren(card('All games', stats.overall), card('Against players', stats.againstPlayers), card('Against bots', stats.againstBots));
+  el('record-cards').replaceChildren(card('Ranked 3v3', stats.ranked));
 
   const glance = [
     ['Current streak', streakText(stats.streak)],
     ['Best win streak', String(stats.bestWinStreak)],
     ['Average length', stats.averageRounds === null ? '–' : `${stats.averageRounds} rounds`],
   ];
-  if (stats.shared) glance.push(['On a shared device', `${stats.shared} game${stats.shared === 1 ? '' : 's'}, not counted`]);
   el('glance').replaceChildren(...glance.flatMap(([term, value]) => [node(doc, 'dt', term), node(doc, 'dd', value)]));
-  el('formats').replaceChildren(...(stats.formats.length
-    ? stats.formats.map(format => { const item = node(doc, 'li'); item.append(node(doc, 'span', format.format), node(doc, 'span', `${tallyText(format.tally)} · ${percent(format.tally.won, format.tally.games)}`)); return item; })
-    : [node(doc, 'li', 'No game yet')]));
 
   el('teams-note').textContent = teamsNote(stats);
-  el('creature-rows').replaceChildren(...rows(doc, stats.creatures, creature => [creature.name, String(creature.fielded), percent(creature.won, creature.fielded), percent(creature.survived, creature.fielded)], 'Your creatures show here once a game ends.', 4));
   el('mutation-rows').replaceChildren(...rows(doc, stats.mutations, mutation => [mutation.name, String(mutation.bought), percent(mutation.won, mutation.bought)], 'No mutation bought yet.', 3));
   el('spell-rows').replaceChildren(...rows(doc, stats.spells, spell => [spell.name, String(spell.casts), String(spell.games), percent(spell.won, spell.games)], 'No spell cast yet.', 4));
 
-  const games = stats.overall.games;
-  el('stats-status').textContent = games ? `${games} finished game${games === 1 ? '' : 's'} · updates as your games end` : 'No finished game yet. Play one from the lobby: it counts here as soon as it ends.';
+  const games = stats.ranked.games;
+  const counted = `${games} ranked game${games === 1 ? '' : 's'} · updates as your games end`;
+  el('stats-status').textContent = games ? counted : 'No ranked game yet. Play a ranked 3v3 game against another player: it counts here as soon as it ends.';
   el('stats-body').hidden = false;
 }
 

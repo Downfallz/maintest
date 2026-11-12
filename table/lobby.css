@@ -381,3 +381,10 @@ body.classic-page:has(#table:not([hidden])) .home-header .brand { display: flex;
 .ranked-row > span { display: flex; flex-direction: column; gap: 3px; font-weight: 650; }
 .ranked-row small { color: var(--muted); font-size: 12px; font-weight: 400; line-height: 1.5; }
 .ranked-row input { width: 22px; height: 22px; flex: none; accent-color: var(--gold); }
+
+/* The create dialog's two kinds of game: Solo against a bot, PvP against a player. Two tabs over the same form. */
+.create-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 4px 0 14px; }
+.create-tabs button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; margin: 0; padding: 10px 14px; border-radius: var(--radius-soft); text-align: left; font-weight: 650; }
+.create-tabs button small { color: var(--muted); font-size: 12px; font-weight: 400; }
+.create-tabs button[aria-selected="true"] { color: var(--gold); border-color: var(--gold); background: color-mix(in srgb, var(--gold) 5.1%, transparent); }
+.create-panel[hidden] { display: none; }
