@@ -39,6 +39,11 @@ test('no slot is acting while the round is planned; the cursor\'s creature is du
   assert.equal(livePresentation({ board: { ...planning.board, subPhase: 'Activation' } }).frame.actor, '17');
 });
 
+test('the scene reads its round from the displayed board', () => {
+  assert.equal(livePresentation({ board: { ...planning.board, roundNumber: 7 } }).frame.round, 7);
+  assert.equal(livePresentation(null).frame.round, null);
+});
+
 test('no view at all presents an empty board', () => {
   assert.equal(livePresentation(null).creatures.length, 0);
   assert.equal(livePresentation(null).frame.actor, null);

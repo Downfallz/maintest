@@ -27,6 +27,7 @@ export interface MutationRevealMarker {
   id: string; mutation: string; stage: number | null; colour: string; gains: string[]; fallback: string;
 }
 export interface SceneFrame {
+  round: number | null;
   mutationFocus?: string;
   // The creatures the field lights in blue: the one the turn-order strip points at, or the ties being ordered.
   focus?: readonly string[];
@@ -44,7 +45,7 @@ export interface SceneFrame {
   creatures: { id: string; form: string; layers?: MutationLayer[]; isAlive: boolean; enemy: boolean;
     evolution?: { artworkId: string | null; capstoneEffectIds: string[] } }[];
 }
-export const labSceneFrame = (state: LabState): SceneFrame => ({
-  stage: state.stage, target: state.target, actor: state.action.actor, targets: state.action.targets,
+export const labSceneFrame = (state: LabState, round = state.board.roundNumber): SceneFrame => ({
+  round, stage: state.stage, target: state.target, actor: state.action.actor, targets: state.action.targets,
   creatures: creaturesOf(state).map(one => ({ ...one, enemy: isEnemy(state, one.id) })),
 });

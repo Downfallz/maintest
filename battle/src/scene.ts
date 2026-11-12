@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { ActingHalo, FOCUS } from './acting-halo';
+import { HorizonArch } from './horizon-arch';
 import { DiceLayer } from './dice';
 import { placements, strikeApproach } from '../../table/battle-layout.js';
 import { CREATURE_ART, figureArt, figureGeometry } from '../../table/battle-art.js';
@@ -40,6 +41,8 @@ const wrap = (value: number, span: number) => ((value % span) + span) % span;
 export class BattleScene extends Phaser.Scene {
   private figures = new Map<string, Figure>();
   private backdrop?: Phaser.GameObjects.Image;
+  private arch?: HorizonArch;
+  private replay = false;
   private motes: Phaser.GameObjects.Arc[] = [];
   private effects: Phaser.GameObjects.GameObject[] = [];
   private upkeepMarkers = new UpkeepMarkers(this);
@@ -89,7 +92,10 @@ export class BattleScene extends Phaser.Scene {
   }
 
   create() {
-    if (this.textures.exists('battle-floor')) this.backdrop = this.add.image(0, 0, 'battle-floor').setOrigin(.5, 0).setTint(0xb5bbc2).setDepth(-10);
+    if (this.textures.exists('battle-floor')) {
+      this.backdrop = this.add.image(0, 0, 'battle-floor').setOrigin(.5, 0).setTint(0xb5bbc2).setDepth(-10);
+      this.arch = new HorizonArch(this, this.backdrop.texture.getSourceImage() as HTMLImageElement);
+    }
     // A local vector fallback keeps the scene selectable if an image fails to load.
     const fallback = this.add.graphics();
     fallback.fillStyle(0x71867e).fillTriangle(40, 0, 0, 90, 80, 90);
@@ -108,11 +114,13 @@ export class BattleScene extends Phaser.Scene {
     this.onReady();
   }
 
-  present(state: SceneFrame, reduced: boolean, rate: number) {
+  present(state: SceneFrame, reduced: boolean, rate: number, replay = false) {
     this.state = state;
     this.reduced = reduced;
     this.rate = playbackRate(rate);
     if (!this.ready) return;
+    this.arch?.present(state.round ?? null, !reduced && !replay && !this.replay);
+    this.replay = replay;
     // The roster is who stands where; what each one looks like changes in place, so a purchase can be seen to happen.
     const roster = JSON.stringify(state.creatures.map(one => [one.id, one.enemy]));
     const rosterChanged = roster !== this.roster;
@@ -264,6 +272,7 @@ export class BattleScene extends Phaser.Scene {
       const source = this.backdrop.texture.getSourceImage();
       const factor = Math.max(width / source.width, height / source.height);
       this.backdrop.setDisplaySize(source.width * factor, source.height * factor).setPosition(width / 2, -(source.height * factor - height) * .35);
+      this.arch?.layout(width, height, this.backdrop.y + this.backdrop.displayHeight * .42);
     }
     if (!this.figures.size) {
       this.upkeepMarkers.present(this.state?.upkeep, new Map(), this.reduced);
@@ -419,8 +428,9 @@ export class BattleScene extends Phaser.Scene {
     if (lit !== this.focusLit) { this.focusLit = lit; this.onFocus(lit); }
   }
 
-  update(time: number) {
+  update(time: number, delta: number) {
     if (!this.state) return;
+    this.arch?.update(delta * this.rate);
     this.halo?.follow(time, this.reduced);
     for (const halo of this.focusHalos.values()) halo.follow(time, this.reduced);
     this.dice?.follow(time, this.reduced);

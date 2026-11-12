@@ -14,6 +14,8 @@ const motion = matchMedia('(prefers-reduced-motion: reduce)');
 const playback = createLabPlayback();
 let state = initialLabState() as LabState;
 let ready = false;
+const horizonStudy = new URLSearchParams(location.search).get('study') === 'horizon';
+let studyRound = 6;
 const audio = new BattleAudio();
 const nodes = new Map<string, HTMLButtonElement>();
 const assetRoot = new URL('battle-art/', document.baseURI).href;
@@ -96,7 +98,8 @@ function render() {
   lab.dataset.motion = reduced() ? 'reduced' : 'full';
   creaturesOf(state).forEach(updateCreature);
   const actor = creature(state.action.actor)!;
-  $('round-number').textContent = pad(state.board.roundNumber);
+  const round = horizonStudy ? studyRound : state.board.roundNumber;
+  $('round-number').textContent = pad(round);
   $('round-phase').textContent = phaseLabel(state.board.phase).toUpperCase();
   $('actor-name').textContent = actor.name;
   const art = CREATURE_ART.find(one => one.form === actor.form) ?? CREATURE_ART[0];
@@ -108,7 +111,11 @@ function render() {
   button('choose').setAttribute('aria-pressed', String(state.stage !== 'decision'));
   button('cancel').hidden = state.stage !== 'targeting';
   button('skip').hidden = !isLabPlaying(state);
-  button('confirm').hidden = isLabPlaying(state);
+  const showRoundControl = horizonStudy && state.stage === 'decision';
+  button('horizon-round').hidden = !showRoundControl;
+  button('horizon-round').disabled = !ready;
+  button('horizon-round').textContent = studyRound === 6 ? 'Enter round 7' : 'Return to round 6';
+  button('confirm').hidden = isLabPlaying(state) || showRoundControl;
   button('confirm').disabled = !ready || (state.stage !== 'resolved' && !(state.stage === 'targeting' && state.target));
   button('confirm').textContent = confirmLabel();
   const inspected = creature(state.inspected)!;
@@ -118,11 +125,12 @@ function render() {
   const { kicker, title } = callout();
   $('callout-kicker').textContent = kicker;
   $('callout-title').textContent = title;
-  scene.present(labSceneFrame(state), reduced(), speed());
+  scene.present(labSceneFrame(state, round), reduced(), speed());
 }
 
 function reset() {
   playback.cancel();
+  studyRound = 6;
   dispatch({ type: 'reset' });
   button('choose').focus({ preventScroll: true });
 }
@@ -176,6 +184,7 @@ button('confirm').addEventListener('click', () => {
   }, { reducedMotion: reduced(), speed: speed() });
   (isLabPlaying(state) ? button('skip') : button('confirm')).focus({ preventScroll: true });
 });
+button('horizon-round').addEventListener('click', () => { studyRound = studyRound === 6 ? 7 : 6; render(); });
 button('skip').addEventListener('click', () => skip());
 button('reset').addEventListener('click', reset);
 button('reload').addEventListener('click', () => location.reload());

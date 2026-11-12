@@ -28,7 +28,7 @@ export function livePresentation(view, packages = new Map(), history = null) {
     ...creatureAppearance(one, packages),
     evolution: resolveEvolution({ ...one, id: String(one.id) }, packages, history),
   }));
-  return { ...board, creatures, frame: { creatures, stage: 'decision', target: null,
+  return { ...board, creatures, frame: { creatures, round: board.round ?? null, stage: 'decision', target: null,
     actor: board.turn ? String(board.turn.slot.creature) : null, targets: [] } };
 }
 
