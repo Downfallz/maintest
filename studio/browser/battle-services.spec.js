@@ -106,6 +106,27 @@ test('the result reports what each creature did, its creature of the match first
   await page.screenshot({ path: info.outputPath('battle-report.png') });
   expect(h.errors).toEqual([]);
 });
+test('every creature of the report shows its portrait, which a tap shows large and a second tap gives back', async ({ page }) => {
+  const h = await mount(page, { feed: reported }); await matchResult(page);
+  const portraits = page.locator('#match-report-sides .match-portrait');
+  await expect(portraits).toHaveCount(6); await expect(portraits.first()).toBeVisible();
+  await expect(page.locator('.match-report-table[data-side="enemy"] .match-portrait').first()).toHaveAttribute('data-side', 'enemy');
+  const fallen = page.locator('.match-report-table[data-side="ally"] tr[data-report-creature="3"] .match-portrait');
+  await expect(fallen).toHaveAttribute('data-fallen', 'true');
+  await fallen.click();
+  await expect(page.locator('#match-zoom')).toBeVisible(); await expect(page.locator('#match-zoom-close')).toBeFocused();
+  await expect(page.locator('#match-zoom-close')).toHaveAttribute('data-defeated', 'true');
+  await expect(page.locator('#match-zoom-name')).toHaveText(await fallen.getAttribute('data-zoom-name'));
+  expect(await page.locator('#match-zoom-close').evaluate(node => node.style.backgroundImage)).toContain('battle-art/');
+  await page.locator('#match-zoom-close').click();
+  await expect(page.locator('#match-zoom')).toBeHidden(); await expect(fallen).toBeFocused();
+  // Escape gives the result back before it closes the result.
+  await page.locator('#match-mvp .match-portrait').click(); await expect(page.locator('#match-zoom')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#match-zoom')).toBeHidden(); await expect(page.locator('#match-dialog')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  expect(h.errors).toEqual([]);
+});
 test('empty replay keeps an explicit message on the result and a legacy outcome stays unknown', async ({ page }) => {
   await mount(page, { outcome: null }); await matchResult(page); await expect(page.locator('#match-title')).toHaveText('Match complete');
   await page.locator('#match-replay').click(); await expect(page.locator('#match-replay-error')).toContainText('Nothing was recorded');

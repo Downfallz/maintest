@@ -263,6 +263,22 @@ test('defense shows with a shield and each kind of condition with its icon, on p
   expect(clear).toBe(true); expect(h.errors).toEqual([]);
 });
 
+test('the field draws a stun over the head and the one body condition that matters most, never more', async ({ page }, info) => {
+  const h = await mount(page);
+  h.view.board.allies[0] = { ...h.view.board.allies[0], isStunned: true, conditions: [
+    { effect: { kind: 'DefenseUp', amount: 2 }, remainingRounds: 1 }, { effect: { kind: 'Bleed', amountPerRound: 2 }, remainingRounds: 2 },
+    { effect: { kind: 'Regeneration', amountPerRound: 1 }, remainingRounds: 2 }] };
+  h.view.board.allies[1] = { ...h.view.board.allies[1], conditions: [{ effect: { kind: 'DefenseUp', amount: 2 }, remainingRounds: 1 }] };
+  await h.publish();
+  await expect(page.locator('#battle')).toHaveAttribute('data-auras', '1:stun+health-loss 2:defense-gain');
+  await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true'); await page.clock.runFor(900);
+  await page.screenshot({ path: info.outputPath('condition-auras.png') });
+  // A creature that falls loses what it carried.
+  h.view.board.allies[0] = { ...h.view.board.allies[0], isAlive: false, health: 0 }; await h.publish();
+  await expect(page.locator('#battle')).toHaveAttribute('data-auras', '2:defense-gain');
+  expect(h.errors).toEqual([]);
+});
+
 test('a new round is announced at the top of the field, then fades; opening the page is not a new round', async ({ page }) => {
   const h = await mount(page); await expect(page.locator('#round-toast')).toBeHidden();
   h.view.board.roundNumber = 4; await h.publish();

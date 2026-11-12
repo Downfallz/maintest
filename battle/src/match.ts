@@ -26,12 +26,20 @@ function teamCard(team: Team, side: string) {
   return card;
 }
 
-interface Fighter { id: number; name: string; side: string; alive: boolean; form: string; dealt: number; bleed: number; healed: number; regen: number; taken: number; blocked: number; kills: number; casts: number; crits: number }
+interface Fighter { id: number; name: string; side: string; alive: boolean; form: string; artwork?: string | null; dealt: number; bleed: number; healed: number; regen: number; taken: number; blocked: number; kills: number; casts: number; crits: number }
 interface Report { sides: { side: string; creatures: Fighter[]; totals: Record<string, number> }[]; mvp: number | null; top: Record<string, number> }
-const portrait = (form: string) => {
-  const image = document.createElement('img'); image.className = 'match-portrait'; image.alt = ''; image.decoding = 'async'; image.loading = 'lazy';
-  // Beside the page, as the scene loads its figures: /battle-art under /battle, and under /table/ where the suite serves it.
-  image.src = `battle-art/${form || 'base-creature'}.webp`; return image;
+// Beside the page, as the scene loads its figures: /battle-art under /battle, and under /table/ where the suite serves it.
+const sprite = (form: string) => `battle-art/${form || 'base-creature'}.webp`;
+// The creature as it ended: the illustration its purchases resolve to, its form's sprite if that one never loads. A
+// tap shows it large, the way the inspection's portrait does; the button says whom.
+const portrait = (fighter: Fighter) => {
+  const button = node('button', 'match-portrait') as HTMLButtonElement; button.type = 'button';
+  button.dataset.side = fighter.side; button.dataset.fallen = String(!fighter.alive); button.dataset.zoomName = fighter.name;
+  button.setAttribute('aria-label', `Show ${fighter.name} large`);
+  const image = document.createElement('img'); image.alt = ''; image.decoding = 'async'; image.loading = 'lazy';
+  image.src = fighter.artwork ? `battle-art/${fighter.artwork}` : sprite(fighter.form);
+  if (fighter.artwork) image.addEventListener('error', () => { if (!image.src.endsWith(sprite(fighter.form))) image.src = sprite(fighter.form); }, { once: true });
+  button.append(image); return button;
 };
 const figure = (value: number, small = '') => {
   const cell = node('td', 'match-figure', String(value));
@@ -49,7 +57,7 @@ function mvpCard(report: Report) {
   words.append(node('p', 'match-mvp-eyebrow', 'Creature of the match'), node('strong', '', fighter.name),
     node('p', 'match-mvp-line', [`${fighter.dealt} damage`, fighter.kills ? `${fighter.kills} KO` : '', fighter.healed ? `${fighter.healed} healed` : ''].filter(Boolean).join(' · ')));
   card.setAttribute('aria-label', `Creature of the match: ${fighter.name}, ${words.lastChild?.textContent ?? ''}`);
-  card.append(portrait(fighter.form), words);
+  card.append(portrait(fighter), words);
   return [card];
 }
 
@@ -78,7 +86,7 @@ function sideTable(side: Report['sides'][number], label: string, report: Report,
     const who = node('th', 'match-who'); who.setAttribute('scope', 'row');
     const name = node('span', 'match-name', fighter.name);
     if (!fighter.alive) name.append(node('small', 'match-fallen', 'fallen'));
-    const inner = node('span', 'match-who-inner'); inner.append(portrait(fighter.form), name); who.append(inner);
+    const inner = node('span', 'match-who-inner'); inner.append(portrait(fighter), name); who.append(inner);
     const dealt = figure(fighter.dealt, fighter.bleed ? `${fighter.bleed} bleed` : '');
     const bar = node('span', 'match-share'); bar.style.setProperty('--share', String(report.top.dealt ? fighter.dealt / report.top.dealt : 0)); dealt.prepend(bar);
     row.append(who, dealt, figure(fighter.healed, fighter.regen ? `${fighter.regen} regen` : ''), figure(fighter.taken), figure(fighter.blocked), figure(fighter.kills));
@@ -109,6 +117,28 @@ async function playAgain(plan: NonNullable<Rematch>) {
 export function matchControls(controller: Controller, beforeOpen: () => void, rematch: () => Rematch = () => null) {
   const result = el<HTMLDialogElement>('match-dialog'), concede = el<HTMLDialogElement>('concede-dialog');
   let roundsKey = '', resultKey = '', reportKey = '', starting = false, rematchError = '';
+  // A portrait zooms over the whole result: a tap on it or Escape gives the result back, focus on the portrait.
+  const zoom = el('match-zoom'), picture = el<HTMLButtonElement>('match-zoom-close');
+  let zoomed: HTMLElement | null = null;
+  function unzoom(focus = true) {
+    if (zoom.hidden) return;
+    zoom.hidden = true; if (focus && zoomed?.isConnected) zoomed.focus({ preventScroll: true });
+    zoomed = null;
+  }
+  el('match-report').addEventListener('click', event => {
+    const button = (event.target as HTMLElement).closest<HTMLElement>('.match-portrait');
+    const image = button?.querySelector('img');
+    if (!button || !image?.currentSrc && !image?.src) return;
+    zoomed = button;
+    picture.style.backgroundImage = `url("${image.currentSrc || image.src}")`;
+    picture.dataset.side = button.dataset.side ?? 'ally'; picture.dataset.defeated = button.dataset.fallen ?? 'false';
+    picture.setAttribute('aria-label', `Back to the result from ${button.dataset.zoomName ?? 'the creature'}`);
+    text('match-zoom-name', button.dataset.zoomName ?? '');
+    zoom.hidden = false; picture.focus({ preventScroll: true });
+  });
+  picture.addEventListener('click', () => unzoom());
+  result.addEventListener('cancel', event => { if (!zoom.hidden) { event.preventDefault(); unzoom(); } });
+  result.addEventListener('close', () => unzoom(false));
   el('match-rematch').addEventListener('click', async () => {
     const plan = rematch();
     if (!plan || starting) return;
@@ -148,7 +178,7 @@ export function matchControls(controller: Controller, beforeOpen: () => void, re
     }
     const reportData = JSON.stringify([model.report, model.result?.teams?.map((team: Team) => team.label)]);
     if (reportData !== reportKey) {
-      reportKey = reportData;
+      reportKey = reportData; unzoom(false);
       const report = model.report as Report | null;
       el('match-report').hidden = !report?.mvp && !report?.sides.some(side => side.creatures.some(one => one.casts));
       el('match-mvp').replaceChildren(...(report ? mvpCard(report) : []));

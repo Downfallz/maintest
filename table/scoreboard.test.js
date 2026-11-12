@@ -88,3 +88,13 @@ test('a creature is named as the board names it, never by the host\'s raw name',
 
   assert.deepEqual(report.sides.flatMap(side => side.creatures.map(one => one.name)), ['Creature 1', 'Creature 2', 'Creature 4']);
 });
+
+test('a creature is drawn as it ended: the illustration its purchases resolve to', () => {
+  const packages = new Map([['tier:brute:v1', { id: 'tier:brute:v1', level: 1, prerequisites: [], visual: { family: 'brute', artwork: 'brute-base' } }]]);
+  const final = board([{ ...creature(1, 'Wolf'), acquiredTiers: ['tier:brute:v1'] }], [creature(2, 'Ghoul')]);
+
+  const report = matchScoreboard([], final, packages);
+
+  assert.match(row(report, 1).artwork, /brute-base\.webp$/);
+  assert.match(row(report, 2).artwork, /base-creature\.webp$/, 'a creature that bought nothing shows the ancestral Stage 0');
+});
