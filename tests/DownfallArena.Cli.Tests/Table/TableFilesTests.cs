@@ -85,6 +85,13 @@ public sealed class TableFilesTests
         Files.Get($"/{module}").Status.ShouldBe(200);
     }
 
+    /// <summary>The admin panel's Players tab is a module its own module imports (ADR 0174), served beside it.</summary>
+    [Fact]
+    public void The_admin_panel_s_players_module_is_served()
+    {
+        Files.Get("/admin-players.js").Status.ShouldBe(200);
+    }
+
     /// <summary>
     /// The battle laboratory (ADR 0123) is a page of this host like the others, and what it loads is relative to
     /// itself: the stylesheet and the bundle it names resolve to routes of the host.

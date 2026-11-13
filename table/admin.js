@@ -6,6 +6,8 @@
 // whoever holds the token the console printed, or whoever the platform in front of the host signed in. The
 // game is not open yet, so the operator opens every table and the players, who never sign in, join by code.
 
+import { mountPlayers } from './admin-players.js';
+
 const POLL_MS = 2500;
 
 // Where this browser keeps the operator's token once a link brought it, so the table page can show the way
@@ -130,6 +132,8 @@ export function adminTransport(token, fetchImpl = globalThis.fetch.bind(globalTh
   }
 
   return {
+    // Any route of the panel, for a tab that reads its own (the Players tab, admin-players.js).
+    request: send,
     list: () => send('GET', '/api/tables'),
     open: request => send('POST', '/api/tables', request),
     close: id => send('DELETE', `/api/tables/${encodeURIComponent(id)}`),
@@ -255,7 +259,7 @@ export const SESSIONS_PER_PAGE = 20;
 
 // The headquarters' sections, each one part of the address (`/admin#sessions`), so a reload or a link opens it and
 // Back moves between them. The first is where the page opens.
-export const ADMIN_TABS = Object.freeze(['tables', 'sessions']);
+export const ADMIN_TABS = Object.freeze(['tables', 'sessions', 'players']);
 
 /** The section an address names, or the first one for an address that names none the page has. */
 export function tabOf(hash) {
@@ -562,6 +566,18 @@ async function start() {
     element('tab-tables-count').textContent = String(tables.length);
   }
 
+  // The accounts (ADR 0174), on a host that signs players in: read when the panel opens, when its section is opened
+  // and on Refresh, never on the clock -- a listing reads every account.
+  const players = mountPlayers({
+    send: transport.request,
+    element,
+    shown: available => {
+      element('tab-players').hidden = !available;
+      element('players-off').hidden = available;
+      element('players-on').hidden = !available;
+    },
+  });
+
   // The section the address names is the one shown; following a section's link changes the address, so Back and a
   // reload keep it.
   function showTab() {
@@ -648,8 +664,11 @@ async function start() {
   element('sessions-refresh').addEventListener('click', redrawSessions);
   element('tables-previous').addEventListener('click', () => { tablesPage -= 1; drawTables(); });
   element('tables-next').addEventListener('click', () => { tablesPage += 1; drawTables(); });
-  element('admin-refresh').addEventListener('click', async () => { await redraw(); await redrawSessions(); });
-  globalThis.addEventListener?.('hashchange', showTab);
+  element('admin-refresh').addEventListener('click', async () => { await redraw(); await redrawSessions(); await players.redraw(); });
+  globalThis.addEventListener?.('hashchange', () => {
+    showTab();
+    if (tabOf(globalThis.location?.hash) === 'players') void players.redraw();
+  });
   showTab();
   element('sessions-export').addEventListener('click', async () => saveZip(await transport.exportSessions(selected())));
   element('sessions-delete').addEventListener('click', () => {
@@ -674,6 +693,7 @@ async function start() {
   const again = () => setTimeout(() => void redraw().finally(again), POLL_MS);
   await redraw();
   await redrawSessions();
+  await players.redraw();
   again();
 }
 

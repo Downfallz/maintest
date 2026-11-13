@@ -253,6 +253,10 @@ Each stage is one pull request, with its tests and docs, and leaves the panel wo
    on the host waits until a host holds more tables than one listing carries. A tab appears with its stage.
 2. **A2, players.** ADR for activity. `AccountActivity` (last sign-in and last seen), the account listing, the
    Players tab and its side sheet with sign out everywhere, rename and delete. The *What we keep* panel updated.
+   *Built (2026-11-13)*: ADR 0174. The listing is `IAccountStore.ListAsync` (every account, not a page of them: the
+   sort needs them all), joined in `PlayerDirectory`; `GET /api/admin/players?q&sort&page` pages it twenty at a time,
+   sorted by last seen, last sign-in, newest, name, games or rating. The sheet adds friends, devices and the last
+   eight games. A rename keeps the account's sessions. The tab shows only on a host that signs players in.
 3. **A2b, suspension.** ADR: a suspended account cannot sign in, its sessions end, its seats in unfinished games are
    kept for a time then offered to others, and its player is told why at the sign-in. The side sheet's Suspend and
    Restore.

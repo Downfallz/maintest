@@ -1,6 +1,7 @@
 using System.Text.Json;
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Friends;
+using DownfallArena.Application.Accounts.Players;
 using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.Application.Learning;
 using DownfallArena.Application.Learning.Ports;
@@ -135,6 +136,7 @@ internal static class TableHost
         var accounts = opened?.Api;
         FriendsApi? friends = null;
         Friends? friendships = null;
+        PlayersApi? players = null;
         if (accounts is not null)
         {
             // The devices an account is told on (friends plan, stage 1), kept beside the accounts; with keys to
@@ -148,8 +150,16 @@ internal static class TableHost
             accounts.ForgetFriends = id => friendships.ForgetAsync(id);
             // The settings every new game of the account starts from (ADR 0140), beside the accounts too.
             accounts.Preferences = await ArtifactStores.OpenPreferencesAsync(options.Record ?? DefaultRunsDirectory, stopping.Token);
+            // When each account last signed in and was last seen (ADR 0174), beside the accounts too, and the
+            // operator's list of players read from it, the accounts and the results.
+            accounts.Activity = new AccountActivityLog(await ArtifactStores.OpenActivityAsync(options.Record ?? DefaultRunsDirectory, stopping.Token), clock);
+            players = new PlayersApi(new PlayerDirectory(opened.Value.Store, accounts.Activity, results, clock), accounts, results)
+            {
+                Friends = friendships,
+                BotNamed = spec => LobbyApi.BotName(agents.FirstOrDefault(agent => string.Equals(agent.Value, spec, StringComparison.OrdinalIgnoreCase))?.Label ?? spec),
+            };
         }
-        var admin = new AdminApi(registry, composer, gate, clock, described, stored, agents, push) { Accounts = accounts };
+        var admin = new AdminApi(registry, composer, gate, clock, described, stored, agents, push) { Accounts = accounts, Players = players };
         // A table opened for a friend (ADR 0129): the lobby checks the friendship and tells the friend's devices.
         admin.Lobby.Friends = friendships;
         // A host the hourly job tends lets no request do the job's work (ADR 0162).

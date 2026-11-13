@@ -63,3 +63,35 @@ input[type="text"] { font: inherit; min-height: 44px; border: 1px solid var(--li
   .admin-page .admin-main { padding: 0 16px 32px; }
   .admin-title { flex-direction: column; align-items: stretch; padding-top: 20px; }
 }
+
+/* Players (A2, ADR 0174): one table, a sheet that slides from the right. On a phone the table keeps the name, the
+   last visit, the games and the rating, and the sheet takes the whole screen. */
+.players { max-width: none; }
+.player-filters input[type="search"] { font: inherit; min-height: 44px; border: 1px solid var(--line); border-radius: var(--radius-soft); padding: 10px 12px; background: var(--raised); color: var(--ink); width: 22ch; max-width: 100%; }
+.player-table { margin-top: 12px; overflow-x: auto; }
+.player-table table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.player-table th { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.player-table td { padding: 6px 10px; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); white-space: nowrap; }
+.player-table :is(.player-games, .player-wins, .player-rating) { text-align: right; font-variant-numeric: tabular-nums; }
+.player-open { min-height: 40px; padding: 4px 0; border: 0; background: none; color: var(--gold); font: inherit; font-weight: 650; text-align: left; cursor: pointer; overflow-wrap: anywhere; white-space: normal; }
+.player-open:hover { text-decoration: underline; }
+#players-empty[hidden], #players-off[hidden], #players-on[hidden], #tab-players[hidden] { display: none; }
+.lobby-page .player-sheet { width: min(480px, 100vw); max-width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0 0 0 auto; padding: 0; overflow: hidden; --cut: 0px; }
+.player-sheet[open] { display: flex; flex-direction: column; }
+.player-facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 14px; margin: 0 0 18px; font-size: 14px; }
+.player-facts dt { color: var(--muted); }
+.player-facts dd { margin: 0; overflow-wrap: anywhere; }
+.player-recent { margin: 0 0 18px; padding-left: 20px; font-size: 13px; display: grid; gap: 4px; }
+.player-action { margin: 12px 0 0; padding: 12px 0 0; border-top: 1px solid var(--line); }
+.player-action p { margin: 0 0 8px; font-size: 13px; }
+.player-action label { display: grid; gap: 6px; font-size: 13px; }
+.player-action input[type="text"] { width: 100%; box-sizing: border-box; }
+.player-action > button { margin-top: 8px; }
+.player-delete { border-top-color: color-mix(in srgb, var(--refused) 40%, transparent); }
+
+@media (max-width: 720px) {
+  .player-table :is(.player-created, .player-signed-in, .player-wins) { display: none; }
+  .player-table :is(th, td) { padding: 6px 6px; }
+  .lobby-page .player-sheet { width: 100vw; }
+}
+#player-said:empty { display: none; }
