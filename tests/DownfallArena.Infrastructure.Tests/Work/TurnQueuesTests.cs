@@ -104,6 +104,26 @@ public sealed class TurnQueuesTests
         (await _letters.CountAsync(Cancel)).ShouldBe(0);
     }
 
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("""{"run":"table-1"}""")]
+    [InlineData("not json")]
+    public async Task An_item_that_is_not_a_whole_letter_is_listed_as_it_is_and_can_be_dropped(string body)
+    {
+        await _letters.SendAsync(body, Timeout.InfiniteTimeSpan, cancellationToken: Cancel);
+        await LetterAsync("table-2");
+
+        var listed = await Queues().LettersAsync(Cancel);
+
+        listed.Count.ShouldBe(2);
+        listed[0].Letter.ShouldBeNull();
+        listed[0].Table.ShouldBeNull();
+        listed[0].Raw.ShouldBe(body);
+        (await Queues().DropAsync([listed[0].Id], Cancel)).Handled.ShouldBe([listed[0].Id]);
+        (await Queues().RequeueAsync(null, Cancel)).Handled.Count.ShouldBe(1, "only the whole letter has a turn to requeue");
+        _turns.Bodies.ShouldBe([new OwedTurn("table-2").ToJson()]);
+    }
+
     [Fact]
     public async Task A_letter_asked_for_that_is_gone_is_said_missing_and_the_others_stay()
     {
