@@ -45,6 +45,20 @@ public sealed class TableTendTests : IDisposable
     }
 
     [Fact]
+    public async Task A_pass_says_what_it_has_done_after_each_stage()
+    {
+        using var host = _hosted.Registry();
+        var table = await RecordedAsync(host, HostedTables.OnePerson);
+        using var job = await _hosted.RestartedAsync();
+        var said = new List<TableTend.Tended>();
+
+        await TableTend.TendAsync(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System), table.CreatedAt + TableRegistry.NeverBegunFor + TimeSpan.FromMinutes(1), progress: said.Add);
+
+        said[0].Swept.ShouldBe([table.Id], "the closures are said before the invitations are read");
+        said[^1].Swept.ShouldBe([table.Id]);
+    }
+
+    [Fact]
     public async Task A_pass_closes_nothing_that_is_not_due()
     {
         using var host = _hosted.Registry();
@@ -346,7 +360,7 @@ public sealed class TableTendTests : IDisposable
         var log = new Infrastructure.Tables.FileTendLog(_own);
         var clock = new MovableClock(new DateTimeOffset(2026, 11, 13, 18, 0, 0, TimeSpan.Zero));
 
-        var (_, run) = await TableTend.RecordedAsync(log, Application.Tables.Tending.TendTrigger.Manual, "mk", clock, _ =>
+        var (_, run) = await TableTend.RecordedAsync(log, Application.Tables.Tending.TendTrigger.Manual, "mk", clock, (_, _) =>
         {
             clock.Advance(TimeSpan.FromSeconds(2));
             return Task.FromResult(new TableTend.Tended(["never-began"], 1) { TimedOut = ["late"] });
@@ -366,7 +380,7 @@ public sealed class TableTendTests : IDisposable
         var log = await TableTend.OpenLogAsync(() => throw new Azure.RequestFailedException(403, "This request is not authorized."));
 
         log.ShouldBeNull();
-        var (tended, _) = await TableTend.RecordedAsync(log, Application.Tables.Tending.TendTrigger.Schedule, null, TimeProvider.System, _ => Task.FromResult(new TableTend.Tended(["closed"], 0)));
+        var (tended, _) = await TableTend.RecordedAsync(log, Application.Tables.Tending.TendTrigger.Schedule, null, TimeProvider.System, (_, _) => Task.FromResult(new TableTend.Tended(["closed"], 0)));
         tended.Swept.ShouldBe(["closed"]);
     }
 
@@ -375,11 +389,27 @@ public sealed class TableTendTests : IDisposable
     {
         var log = new Infrastructure.Tables.FileTendLog(_own);
 
-        await Should.ThrowAsync<IOException>(() => TableTend.RecordedAsync(log, Application.Tables.Tending.TendTrigger.Schedule, null, TimeProvider.System, _ => throw new IOException("the store is out")));
+        await Should.ThrowAsync<IOException>(() => TableTend.RecordedAsync(log, Application.Tables.Tending.TendTrigger.Schedule, null, TimeProvider.System, (_, _) => throw new IOException("the store is out")));
 
         var kept = (await log.FindAsync((await log.IdsAsync(Cancel)).ShouldHaveSingleItem(), Cancel)).ShouldNotBeNull();
         kept.Outcome.ShouldBe(Application.Tables.Tending.TendOutcome.Failed);
         kept.Error.ShouldBe("the store is out");
+    }
+
+    [Fact]
+    public async Task A_pass_that_fails_partway_keeps_what_it_had_done()
+    {
+        var log = new Infrastructure.Tables.FileTendLog(_own);
+
+        await Should.ThrowAsync<IOException>(() => TableTend.RecordedAsync(log, Application.Tables.Tending.TendTrigger.Schedule, null, TimeProvider.System, (_, progress) =>
+        {
+            progress(new TableTend.Tended(["closed-for-good"], 0));
+            throw new IOException("the index is out");
+        }));
+
+        var kept = (await log.FindAsync((await log.IdsAsync(Cancel)).ShouldHaveSingleItem(), Cancel)).ShouldNotBeNull();
+        kept.Outcome.ShouldBe(Application.Tables.Tending.TendOutcome.Failed);
+        kept.NeverBegan.ShouldBe(["closed-for-good"]);
     }
 
     private async Task<PlayedTable> RecordedAsync(TableRegistry registry, TableRequest request)

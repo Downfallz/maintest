@@ -181,13 +181,14 @@ internal static class TableHost
         admin.Lobby.Relay = relay;
         friends?.Changes = lobbyChanges;
         // The tending runs (A3), kept beside the recordings, and a pass run now from the panel: the hourly job's pass,
-        // over this process's tables, said through the relay as the job says it.
-        if (store is not null)
+        // over this process's tables, said through the relay as the job says it. A store of runs that cannot be opened
+        // leaves the panel without its Jobs tab, never the players without the host.
+        if (store is not null
+            && await TableTend.OpenLogAsync(() => ArtifactStores.OpenTendLogAsync(options.Record ?? DefaultRunsDirectory, stopping.Token)) is { } tendLog)
         {
-            var tendLog = await ArtifactStores.OpenTendLogAsync(options.Record ?? DefaultRunsDirectory, stopping.Token);
-            admin.Jobs = new JobsApi(tendLog, clock, async now =>
+            admin.Jobs = new JobsApi(tendLog, clock, async (now, progress) =>
             {
-                var tended = await TableTend.TendAsync(registry, admin.Lobby, now, composer, clock);
+                var tended = await TableTend.TendAsync(registry, admin.Lobby, now, composer, clock, progress);
                 if (relay is not null)
                 {
                     TableTend.Announce(relay, tended);

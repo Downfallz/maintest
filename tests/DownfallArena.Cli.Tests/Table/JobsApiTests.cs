@@ -32,8 +32,8 @@ public sealed class JobsApiTests : IDisposable
 
     private static JsonElement Json(StudioResponse response) => JsonDocument.Parse(Encoding.UTF8.GetString(response.Body)).RootElement.Clone();
 
-    private JobsApi Jobs(Func<DateTimeOffset, Task<TableTend.Tended>>? pass = null) =>
-        new(_log, new FixedClock(Now), pass ?? (_ => Task.FromResult(new TableTend.Tended(["never-began"], 2) { Warned = ["warned"] })));
+    private JobsApi Jobs(Func<DateTimeOffset, Action<TableTend.Tended>, Task<TableTend.Tended>>? pass = null) =>
+        new(_log, new FixedClock(Now), pass ?? ((_, _) => Task.FromResult(new TableTend.Tended(["never-began"], 2) { Warned = ["warned"] })));
 
     private static TendRun Run(DateTimeOffset started, string[] timedOut) =>
         new(TendRun.NewId(started), started, started.AddSeconds(1), TendTrigger.Schedule, null, TendOutcome.Completed, null, [], 0, timedOut, [], []);
@@ -89,7 +89,7 @@ public sealed class JobsApiTests : IDisposable
     [Fact]
     public async Task A_pass_the_store_stops_is_said_and_kept_as_failed()
     {
-        var answer = await Jobs(_ => throw new IOException("the store is out")).HandleAsync("POST", JobsApi.TendRoute, null, "mk");
+        var answer = await Jobs((_, _) => throw new IOException("the store is out")).HandleAsync("POST", JobsApi.TendRoute, null, "mk");
 
         answer.Status.ShouldBe(503);
         var kept = (await _log.FindAsync((await _log.IdsAsync(Cancel)).ShouldHaveSingleItem(), Cancel)).ShouldNotBeNull();

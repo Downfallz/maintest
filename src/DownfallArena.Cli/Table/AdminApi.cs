@@ -153,7 +153,7 @@ internal sealed class AdminApi
         if (JobsApi.Names(path))
         {
             return Jobs is null
-                ? StudioResponse.OfPlainText(404, "This host records nothing (--no-record), so it keeps no tending runs.")
+                ? StudioResponse.OfPlainText(404, "This host keeps no tending runs: it records nothing (--no-record), or their store could not be opened.")
                 : await Jobs.HandleAsync(method, path, query, operatorName);
         }
 

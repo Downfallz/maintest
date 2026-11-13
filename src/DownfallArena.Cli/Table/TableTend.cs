@@ -94,7 +94,7 @@ internal static class TableTend
             // Every run is kept for the admin panel's Jobs tab (A3), the one that failed too. A log that cannot be
             // opened costs the run its record, never the pass: the tables are tended all the same.
             var log = await OpenLogAsync(() => ArtifactStores.OpenTendLogAsync(target));
-            var (tended, _) = await RecordedAsync(log, TendTrigger.Schedule, by: null, clock, now => TendAsync(registry, lobby, now, composer, clock));
+            var (tended, _) = await RecordedAsync(log, TendTrigger.Schedule, by: null, clock, (now, progress) => TendAsync(registry, lobby, now, composer, clock, progress));
             if (relay is not null)
             {
                 Announce(relay, tended);
@@ -155,29 +155,35 @@ internal static class TableTend
     /// <summary>
     /// A pass, kept as a run of the log (docs/tabletop/admin-plan.md, A3): when it started and ended, what started it,
     /// and what it did, or the error it stopped on, which is then thrown again. The hourly job's and an operator's
-    /// alike. A log that cannot be written to says so on the console and loses that one run, never the pass.
+    /// alike. The pass says what it has done as it goes, so a run that stops partway keeps what its earlier stages did:
+    /// those tables are closed for good, and the next pass will not find them again. A log that cannot be written to
+    /// says so on the console and loses that one run, never the pass.
     /// </summary>
-    internal static async Task<(Tended Tended, TendRun Run)> RecordedAsync(ITendLog? log, TendTrigger trigger, string? by, TimeProvider clock, Func<DateTimeOffset, Task<Tended>> pass)
+    internal static async Task<(Tended Tended, TendRun Run)> RecordedAsync(ITendLog? log, TendTrigger trigger, string? by, TimeProvider clock, Func<DateTimeOffset, Action<Tended>, Task<Tended>> pass)
     {
         ArgumentNullException.ThrowIfNull(clock);
         ArgumentNullException.ThrowIfNull(pass);
         var started = clock.GetUtcNow();
         var id = TendRun.NewId(started);
+        var done = new Tended([], 0);
         Tended tended;
         try
         {
-            tended = await pass(started);
+            tended = await pass(started, progress => done = progress);
         }
         catch (Exception failure)
         {
-            await KeepAsync(log, new TendRun(id, started, clock.GetUtcNow(), trigger, by, TendOutcome.Failed, failure.Message, [], 0, [], [], []));
+            await KeepAsync(log, Run(id, started, clock.GetUtcNow(), trigger, by, done, failure.Message));
             throw;
         }
 
-        var run = new TendRun(id, started, clock.GetUtcNow(), trigger, by, TendOutcome.Completed, null, tended.Swept, tended.Expired, tended.TimedOut, tended.Abandoned, tended.Warned);
+        var run = Run(id, started, clock.GetUtcNow(), trigger, by, tended, error: null);
         await KeepAsync(log, run);
         return (tended, run);
     }
+
+    private static TendRun Run(string id, DateTimeOffset started, DateTimeOffset finished, TendTrigger trigger, string? by, Tended done, string? error) =>
+        new(id, started, finished, trigger, by, error is null ? TendOutcome.Completed : TendOutcome.Failed, error, done.Swept, done.Expired, done.TimedOut, done.Abandoned, done.Warned);
 
     /// <summary>The tend log, or none when it cannot be opened: said on the console, and the pass goes on without it.</summary>
     internal static async Task<ITendLog?> OpenLogAsync(Func<Task<ITendLog>> open)
@@ -213,15 +219,25 @@ internal static class TableTend
 
     /// <summary>One pass: the sweep, the invitations that ran out, the games whose player's time ran out, the games whose open seat nobody took, then the players whose time reaches its last quarter.</summary>
     /// <param name="composer">What reads a table's last move; none, and no game is timed out.</param>
-    internal static async Task<Tended> TendAsync(TableRegistry registry, LobbyApi lobby, DateTimeOffset now, TableComposer? composer = null, TimeProvider? clock = null)
+    /// <param name="progress">Told what the pass has done after each stage, so a pass that stops partway is known by what it did.</param>
+    internal static async Task<Tended> TendAsync(TableRegistry registry, LobbyApi lobby, DateTimeOffset now, TableComposer? composer = null, TimeProvider? clock = null, Action<Tended>? progress = null)
     {
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(lobby);
-        var swept = await registry.SweepNeverBegunAsync(now);
-        var expired = await lobby.ExpireInvitationsNowAsync();
-        var timedOut = composer is null ? [] : await TurnTimeouts.EndAsync(registry, composer, now, clock ?? TimeProvider.System);
-        var abandoned = composer is null ? [] : await AbandonedSeats.EndAsync(registry, composer, now, clock ?? TimeProvider.System);
-        var warned = composer is null ? [] : await TurnTimeouts.WarnAsync(registry, composer, now, Interval);
-        return new Tended(swept, expired) { TimedOut = timedOut, Warned = warned, Abandoned = abandoned };
+        var done = new Tended(await registry.SweepNeverBegunAsync(now), 0);
+        progress?.Invoke(done);
+        done = done with { Expired = await lobby.ExpireInvitationsNowAsync() };
+        progress?.Invoke(done);
+        if (composer is not null)
+        {
+            done = done with { TimedOut = await TurnTimeouts.EndAsync(registry, composer, now, clock ?? TimeProvider.System) };
+            progress?.Invoke(done);
+            done = done with { Abandoned = await AbandonedSeats.EndAsync(registry, composer, now, clock ?? TimeProvider.System) };
+            progress?.Invoke(done);
+            done = done with { Warned = await TurnTimeouts.WarnAsync(registry, composer, now, Interval) };
+            progress?.Invoke(done);
+        }
+
+        return done;
     }
 }

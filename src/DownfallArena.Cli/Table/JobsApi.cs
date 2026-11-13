@@ -28,10 +28,10 @@ internal sealed class JobsApi
     private readonly ITendLog _log;
     private readonly TendRuns _runs;
     private readonly TimeProvider _clock;
-    private readonly Func<DateTimeOffset, Task<TableTend.Tended>> _pass;
+    private readonly Func<DateTimeOffset, Action<TableTend.Tended>, Task<TableTend.Tended>> _pass;
 
-    /// <param name="pass">The tending pass this process runs, the one <c>table-tend</c> runs, over its own tables.</param>
-    public JobsApi(ITendLog log, TimeProvider clock, Func<DateTimeOffset, Task<TableTend.Tended>> pass)
+    /// <param name="pass">The tending pass this process runs, the one <c>table-tend</c> runs, over its own tables, telling what it has done as it goes.</param>
+    public JobsApi(ITendLog log, TimeProvider clock, Func<DateTimeOffset, Action<TableTend.Tended>, Task<TableTend.Tended>> pass)
     {
         ArgumentNullException.ThrowIfNull(log);
         ArgumentNullException.ThrowIfNull(clock);

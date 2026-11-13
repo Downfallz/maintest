@@ -357,7 +357,7 @@ public sealed class AdminApiTests : IDisposable
         var tend = Path.Combine(_hosted.RunsDirectory, "..", $"tend-{Guid.NewGuid():N}");
         try
         {
-            admin.Jobs = new JobsApi(new Infrastructure.Tables.FileTendLog(tend), clock, now => TableTend.TendAsync(_registry, admin.Lobby, now));
+            admin.Jobs = new JobsApi(new Infrastructure.Tables.FileTendLog(tend), clock, (now, progress) => TableTend.TendAsync(_registry, admin.Lobby, now, progress: progress));
             clock.Advance(TableRegistry.NeverBegunFor + TimeSpan.FromMinutes(5));
 
             var run = JsonDocument.Parse(Text(await admin.HandleAsync("POST", JobsApi.TendRoute, "", OperatorToken, principal: null))).RootElement.GetProperty("run");
