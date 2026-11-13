@@ -43,7 +43,7 @@ and Back moves between tabs. On a phone the tabs scroll sideways under the heade
 | Tables | Open a table (today's form) and the tables under way, filtered and paged |
 | Sessions | Today's recorded sessions, unchanged but for the shared list parts |
 | Players | Every account: name, created, last signed in, last seen, games (ranked, against players, against bots), rating |
-| Jobs | The tending runs, newest first, each with its counts; the bot turn queues and their failures |
+| Jobs | The tending runs, newest first, each with its counts and its sheet; Run a pass now; the bot turn queues, their failed turns, and Requeue or Drop |
 | Settings | Registration open or closed, and the host's other switches |
 | Activity | What operators did on this page: who closed, deleted, reinvited or switched what, and when |
 
@@ -114,11 +114,40 @@ it fails, so a run that crashed shows as one. Each table id in a record links to
 The Jobs tab lists the runs newest first, twenty a page, with a total line for the last day and the last week:
 "in 24 hours: 3 tables that never began closed, 1 game timed out, 0 abandoned".
 
-### The bot turns are read off their queues
+A run can also be started by hand: **Run a pass now** in the Jobs tab runs the same tending pass in the API's
+process (`TableTend`'s pass, not the Azure job), and records it like any other, marked `manual` with the operator's
+name. A pass is safe beside the hourly one: each table it ends is closed through its record and claimed once
+(`closing.json`), so two passes never end the same game twice. Each run opens a side sheet: when it started and
+ended, who or what started it, its counts, every table it touched with what it did to it (closed, timed out, left,
+warned) and a link to the session, and its error when it failed.
 
-The worker's queues already exist. A small port over them (`ITurnQueueStatus`: approximate length of each queue, and
-the oldest poison and dead letters with their error) lets the Jobs tab show turns waiting, turns that failed, and the
-error of each, with two actions per dead letter: put it back on the queue, or drop it.
+### The bot turns can be inspected and put back
+
+The worker's queues already exist (ADR 0159, phase 5):
+
+- `agent-turns`, the turns tables owe;
+- `agent-turns-poison`, an item given up on after five deliveries, with its last error;
+- `agent-turns-dlq`, where the second worker keeps each poisoned item for good, as a dead letter: the original item,
+  the queue it came from, how many times it was delivered, the error, and when and where it was set aside.
+
+Today an item that reaches the dead letters stays there, and its table waits for the next move to ask for its turn
+again. The Jobs tab shows the three queues and lets the operator act on them:
+
+- each queue's length, and the age of its oldest item;
+- the dead letters (and anything still on the poison queue), twenty a page, newest first: the table and seat, how many
+  deliveries, when it was set aside, the error's first line; a row opens the full letter and its error;
+- **Requeue** on a letter, on the selected ones or on all of them: the original item goes back on `agent-turns`, as a
+  new item with its deliveries counted from zero, and the letter is deleted once the item is sent;
+- **Drop** on a letter or the selected ones, after a confirmation: deleted, nothing requeued.
+
+Requeueing is safe whatever the table became: the worker finds the table before it takes a turn, and a table that is
+over, closed or gone owes nothing, so the item is simply done with. A requeued item that fails five times again comes
+back to the dead letters, with its new error. Every requeue and drop goes to the operator log.
+
+The queue port (`IWorkChannel`) only receives (hiding what it receives) and deletes. It gains `PeekAsync(most)` and
+`CountAsync()`, which read without hiding, implemented on the storage queues and on the directory ones; requeue is a
+receive, a send to `agent-turns`, then a delete, in that order, so a failure in between leaves the letter where it
+was.
 
 ### Registration is a host setting
 
@@ -158,8 +187,13 @@ All behind the operator gate (ADR 0081, 0172), JSON, paged by `?page=` with twen
 | `DELETE /api/admin/players/<id>` | Deletes the account as its player would: the name freed, its seats in unfinished games offered to others |
 | `POST /api/admin/players/<id>/suspension`, `DELETE .../suspension` | Suspends or restores the account (ADR below) |
 | `GET /api/admin/jobs/tend?page` | Tending runs, newest first, and the 24-hour and 7-day totals |
-| `GET /api/admin/jobs/turns` | The turn queues' lengths and their failed turns |
-| `POST /api/admin/jobs/turns/<id>/retry`, `DELETE /api/admin/jobs/turns/<id>` | Requeue or drop a failed turn |
+| `GET /api/admin/jobs/tend/<run>` | One run, every table it touched and what it did, its error |
+| `POST /api/admin/jobs/tend/run` | Runs a tending pass now, in the API's process; answers the run when it ends |
+| `GET /api/admin/jobs/turns` | Each turn queue's length and the age of its oldest item |
+| `GET /api/admin/jobs/turns/<poison\|dlq>?page` | The failed turns on that queue, newest first |
+| `GET /api/admin/jobs/turns/<poison\|dlq>/<id>` | One failed turn: the original item, deliveries, the full error |
+| `POST /api/admin/jobs/turns/requeue {"from","ids"\|"all"}` | Puts those turns back on `agent-turns` and deletes them where they were |
+| `POST /api/admin/jobs/turns/drop {"from","ids"}` | Deletes those turns, requeuing nothing |
 | `GET`/`PUT /api/admin/settings` | The host settings |
 | `GET /api/admin/activity?page` | The operator log |
 
@@ -187,12 +221,14 @@ Each stage is one pull request, with its tests and docs, and leaves the panel wo
 3. **A2b, suspension.** ADR: a suspended account cannot sign in, its sessions end, its seats in unfinished games are
    kept for a time then offered to others, and its player is told why at the sign-in. The side sheet's Suspend and
    Restore.
-4. **A3, jobs.** `ITendLog`; `table-tend` writes its runs; the Jobs tab with runs and totals. Then the turn queues'
-   status and the retry and drop actions.
-5. **A4, settings.** ADR for registration. `HostSettings`, the Settings tab, `Account.RegistrationClosed` in the
+4. **A3, jobs: the tending runs.** `ITendLog`; `table-tend` writes its runs; the Jobs tab with runs, totals and each
+   run's sheet; Run a pass now.
+5. **A3b, jobs: the bot turns.** `PeekAsync` and `CountAsync` on the queues; the queues' lengths, the dead letters and
+   the poison queue paged, each letter's sheet; Requeue (one, selected, all) and Drop.
+6. **A4, settings.** ADR for registration. `HostSettings`, the Settings tab, `Account.RegistrationClosed` in the
    lobby, the notice line under every page's header.
-6. **A5, overview.** The numbers, once A2 to A4 give them their sources.
-7. **A6, activity.** The operator log and its tab.
+7. **A5, overview.** The numbers, once A2 to A4 give them their sources.
+8. **A6, activity.** The operator log and its tab.
 
 Every stage keeps the panel behind the gate. None of it changes a game.
 
@@ -204,6 +240,8 @@ Every stage keeps the panel behind the gate. None of it changes a game.
    before. Invitation codes can follow in a plan of their own.
 3. The player actions are sign out everywhere, rename and delete in A2, and suspension in A2b with its own ADR.
 4. The plan goes in as a pull request of its own, read before any stage is built.
+5. A job can be inspected and run again: a tending run has its sheet and Run a pass now; a failed bot turn has its
+   sheet, and the dead letters go back on the main queue with Requeue (added 2026-11-13).
 
 Still to decide, with the stage that needs it: how long the operator log is kept (proposed: the last 1,000 lines,
 A6).
