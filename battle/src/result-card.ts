@@ -16,39 +16,61 @@ const KIND_LABELS: Record<ResultCard['kind'], string> = { incoming: "Opponent's 
 const STATUS_BADGES: Record<string, string> = { Critical: 'Crit', Fizzled: 'Fizzle' };
 
 function node(tag: string, className: string, text = '') {
-  const one = document.createElement(tag); one.className = className; if (text) one.textContent = text; return one;
+  const one = document.createElement(tag);
+  one.className = className;
+  if (text) one.textContent = text;
+  return one;
+}
+
+// A turnover's lines, or its one-line detail when it has none, or a word that nothing changed.
+function summaryBody(card: ResultCard) {
+  let lines = card.lines ?? [];
+  if (!lines.length && card.detail) lines = [{ text: card.detail, tone: '' }];
+  if (!lines.length) return node('p', 'result-card-empty', 'Nothing changed.');
+  const list = node('ul', 'result-card-lines');
+  for (const line of lines) {
+    const item = node('li', '', line.text);
+    if (line.tone) item.dataset.tone = line.tone;
+    list.append(item);
+  }
+  return list;
+}
+
+// What a cast did: its fizzle, or its chips by the creature they landed on, or no effect.
+function castBody(card: ResultCard, effects: Parameters<typeof chipElement>[1]) {
+  if (card.status === 'Fizzled') return node('p', 'result-card-reason', card.reason ? `Fizzled: ${card.reason}` : 'Fizzled');
+  if (!card.groups?.length) return node('p', 'result-card-empty', 'No effect');
+  const groups = node('ul', 'result-card-groups');
+  for (const group of card.groups) {
+    const item = node('li', 'result-card-group');
+    const chips = node('span', 'result-card-chips');
+    chips.append(...group.chips.map(chip => chipElement(chip, effects)));
+    item.append(node('span', 'result-card-target', group.target), chips);
+    groups.append(item);
+  }
+  return groups;
+}
+
+function castHead(card: ResultCard) {
+  const head = node('h3', 'result-card-head');
+  head.append(node('span', 'result-card-who', card.caster ?? ''), node('span', 'result-card-what', card.spell ?? ''));
+  const badge = card.status ? STATUS_BADGES[card.status] : undefined;
+  if (badge) head.append(node('span', 'result-card-status', badge));
+  return head;
 }
 
 export function resultCardElement(card: ResultCard, effects: Parameters<typeof chipElement>[1] = []) {
   const article = node('article', 'result-card');
   article.dataset.kind = card.kind;
   if (card.status) article.dataset.status = card.status;
-  article.append(node('p', 'result-card-kind', [card.kind === 'summary' ? card.title : KIND_LABELS[card.kind],
-    Number.isInteger(card.round) ? `Round ${card.round}` : ''].filter(Boolean).join(' · ')));
+  const kind = card.kind === 'summary' ? card.title : KIND_LABELS[card.kind];
+  const round = Number.isInteger(card.round) ? `Round ${card.round}` : '';
+  article.append(node('p', 'result-card-kind', [kind, round].filter(Boolean).join(' · ')));
   if (card.kind === 'summary') {
-    const lines = card.lines?.length ? card.lines : card.detail ? [{ text: card.detail, tone: '' }] : [];
-    if (lines.length) {
-      const list = node('ul', 'result-card-lines');
-      for (const line of lines) { const item = node('li', '', line.text); if (line.tone) item.dataset.tone = line.tone; list.append(item); }
-      article.append(list);
-    } else article.append(node('p', 'result-card-empty', 'Nothing changed.'));
+    article.append(summaryBody(card));
     return article;
   }
-  const head = node('h3', 'result-card-head');
-  head.append(node('span', 'result-card-who', card.caster ?? ''), node('span', 'result-card-what', card.spell ?? ''));
-  if (card.status && STATUS_BADGES[card.status]) head.append(node('span', 'result-card-status', STATUS_BADGES[card.status]));
-  article.append(head);
-  if (card.status === 'Fizzled') article.append(node('p', 'result-card-reason', card.reason ? `Fizzled: ${card.reason}` : 'Fizzled'));
-  else if (card.groups?.length) {
-    const groups = node('ul', 'result-card-groups');
-    for (const group of card.groups) {
-      const item = node('li', 'result-card-group');
-      const chips = node('span', 'result-card-chips'); chips.append(...group.chips.map(chip => chipElement(chip, effects)));
-      item.append(node('span', 'result-card-target', group.target), chips);
-      groups.append(item);
-    }
-    article.append(groups);
-  } else article.append(node('p', 'result-card-empty', 'No effect'));
+  article.append(castHead(card), castBody(card, effects));
   for (const text of card.dropped ?? []) article.append(node('p', 'result-card-dropped', `Dropped: ${text}`));
   return article;
 }

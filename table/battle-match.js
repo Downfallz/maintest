@@ -45,7 +45,9 @@ export function replayCard(action, catalogue, board) {
     const theirs = !board?.allies?.some(one => String(one.id) === String(action.actor?.id));
     return readingCard(action, board, theirs);
   }
-  const title = action.final ? INTERLUDES.result : action.ordinaryEnergy ? 'Round energy' : INTERLUDES[action.interlude] ?? 'Recorded step';
+  let title = INTERLUDES[action.interlude] ?? 'Recorded step';
+  if (action.ordinaryEnergy) title = 'Round energy';
+  if (action.final) title = INTERLUDES.result;
   const text = replayText(action, catalogue), prefix = `${title} · `;
   return { kind: 'summary', title, detail: text.startsWith(prefix) ? text.slice(prefix.length) : text, round: action.round ?? null, lines: [] };
 }
