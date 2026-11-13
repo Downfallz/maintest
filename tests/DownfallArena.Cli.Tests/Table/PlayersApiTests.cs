@@ -44,9 +44,10 @@ public sealed class PlayersApiTests : IDisposable
 
     private async Task<AccountApi> AccountsAsync()
     {
-        var accounts = new AccountApi(new AccountRegistry(_store, _clock), new AccountSessions(await _store.SessionKeyAsync(Cancel), _clock), AccountsMode.Development);
-        accounts.Activity = new AccountActivityLog(_activity, _clock);
-        return accounts;
+        return new AccountApi(new AccountRegistry(_store, _clock), new AccountSessions(await _store.SessionKeyAsync(Cancel), _clock), AccountsMode.Development)
+        {
+            Activity = new AccountActivityLog(_activity, _clock),
+        };
     }
 
     private PlayersApi Players(AccountApi accounts) =>

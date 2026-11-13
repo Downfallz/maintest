@@ -19,7 +19,7 @@ export function playersPath({ q = '', sort = 'seen', page = 1 } = {}) {
   if (sort && sort !== 'seen') asked.set('sort', sort);
   if (Number.isInteger(page) && page > 1) asked.set('page', String(page));
   const query = asked.toString();
-  return `/api/admin/players${query ? `?${query}` : ''}`;
+  return query ? '/api/admin/players?' + query : '/api/admin/players';
 }
 
 /** How long ago a moment was, in the largest unit that keeps it short; "never" for a moment not kept. */
@@ -80,6 +80,12 @@ export function actionSaid(action, answer, username) {
     case 'delete': return { refused: false, line: `${username}'s account is deleted.` };
     default: return { refused: false, line: 'Done.' };
   }
+}
+
+/** An account's friends as its sheet counts them, with the requests either way still waiting. */
+export function friendsText(sheet) {
+  const friends = String(sheet?.friends ?? 0);
+  return sheet?.requests ? `${friends} · ${sheet.requests} pending` : friends;
 }
 
 /** One finished game as the sheet lists it. */
@@ -190,7 +196,7 @@ export function mountPlayers({ send, element, shown }) {
       ...fact('Games', `${row.games} (${row.split})`),
       ...fact('Wins', String(row.wins)),
       ...fact('Rating', row.rating),
-      ...fact('Friends', `${opened.friends ?? 0}${opened.requests ? ` · ${opened.requests} pending` : ''}`),
+      ...fact('Friends', friendsText(opened)),
       ...fact('Devices told', String(opened.devices ?? 0)),
     );
     const recent = opened.recent ?? [];

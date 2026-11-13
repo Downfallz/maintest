@@ -106,22 +106,7 @@ internal sealed class AdminApi
 
         if (path == MePath)
         {
-            // Not a refusal when it is nobody's: the table page asks this to know whether to show the way back
-            // to the panel, and a player's page must read "no" rather than an error.
-            // The player half answers the same question for the home page: whether this host signs players in,
-            // how, and as whom. The operator and the player are two sign-ins and one request can carry both, and an
-            // admin account is both at once.
-            var me = StudioResponse.OfJson(
-                new
-                {
-                    @operator = operatorName is not null,
-                    admin = Page,
-                    accounts = AccountApi.Named(Accounts?.Mode ?? AccountsMode.Off),
-                    googleClientId = Accounts?.GoogleClientId,
-                    account = player is null ? null : AccountApi.Describe(player.Account),
-                },
-                ArtifactJson.LineOptions);
-            return player?.Renewed is { } renewed ? me with { Headers = [new KeyValuePair<string, string>("Set-Cookie", renewed)] } : me;
+            return Me(operatorName, player);
         }
 
         if (operatorName is null)
@@ -158,6 +143,27 @@ internal sealed class AdminApi
             ("POST", _) when Reinvited(rest) is { } seat => await LobbyApi.ExclusivelyAsync(() => ReinviteAsync(seat.Table, seat.Slot, operatorName)),
             _ => StudioResponse.OfPlainText(404, $"No such route: {method} {path}"),
         };
+    }
+
+    /// <summary>
+    /// Whose request this is. Not a refusal when it is nobody's: the table page asks this to know whether to show the
+    /// way back to the panel, and a player's page must read "no" rather than an error. The player half answers the
+    /// same question for the home page: whether this host signs players in, how, and as whom. The operator and the
+    /// player are two sign-ins and one request can carry both, and an admin account is both at once.
+    /// </summary>
+    private StudioResponse Me(string? operatorName, SignedIn? player)
+    {
+        var me = StudioResponse.OfJson(
+            new
+            {
+                @operator = operatorName is not null,
+                admin = Page,
+                accounts = AccountApi.Named(Accounts?.Mode ?? AccountsMode.Off),
+                googleClientId = Accounts?.GoogleClientId,
+                account = player is null ? null : AccountApi.Describe(player.Account),
+            },
+            ArtifactJson.LineOptions);
+        return player?.Renewed is { } renewed ? me with { Headers = [new KeyValuePair<string, string>("Set-Cookie", renewed)] } : me;
     }
 
     /// <summary>

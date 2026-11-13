@@ -158,11 +158,20 @@ internal sealed class PlayersApi
     }
 
     // A game one account held both seats of was neither won nor lost by it.
-    private static string Outcome(string? winner, ResultSeat? mine, ResultSeat? other, AccountId account) =>
-        other?.Account == account ? "played"
-        : winner is null ? "draw"
-        : winner == mine?.Seat ? "win"
-        : "loss";
+    private static string Outcome(string? winner, ResultSeat? mine, ResultSeat? other, AccountId account)
+    {
+        if (other?.Account == account)
+        {
+            return "played";
+        }
+
+        if (winner is null)
+        {
+            return "draw";
+        }
+
+        return winner == mine?.Seat ? "win" : "loss";
+    }
 
     private async Task<StudioResponse> SignOutAsync(Account account, string operatorName)
     {
@@ -233,10 +242,20 @@ internal sealed class PlayersApi
 
     private static StudioResponse Gone() => Problem(404, AccountErrors.NotFound.Code, AccountErrors.NotFound.Message);
 
-    private static StudioResponse Refused(DomainError error) => Problem(
-        error == AccountErrors.UsernameTaken ? 409 : error == AccountErrors.NotFound ? 404 : 400,
-        error.Code,
-        error.Message);
+    private static StudioResponse Refused(DomainError error)
+    {
+        var status = 400;
+        if (error == AccountErrors.UsernameTaken)
+        {
+            status = 409;
+        }
+        else if (error == AccountErrors.NotFound)
+        {
+            status = 404;
+        }
+
+        return Problem(status, error.Code, error.Message);
+    }
 
     private static T? Read<T>(string body)
         where T : class => string.IsNullOrWhiteSpace(body) ? null : JsonSerializer.Deserialize<T>(body, Web);

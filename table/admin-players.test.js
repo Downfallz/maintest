@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { PLAYER_SORTS, actionSaid, ago, deleteConfirmed, gameLine, playerRows, playersLine, playersPath, ratingText } from './admin-players.js';
+import { PLAYER_SORTS, actionSaid, ago, deleteConfirmed, friendsText, gameLine, playerRows, playersLine, playersPath, ratingText } from './admin-players.js';
 
 const NOW = Date.parse('2026-11-13T20:00:00Z');
 
@@ -69,4 +69,10 @@ test('a finished game reads as its outcome, the opponent, the format and when', 
     'Lost against Greedy · 1v1 · unranked · 3 h ago');
   assert.equal(gameLine({ outcome: 'played', opponent: 'themselves', format: '3v3', ranked: false, finishedAt: null }, NOW),
     'Played both seats · 3v3 · unranked · never');
+});
+
+test('friends are counted with the requests still waiting, when there are any', () => {
+  assert.equal(friendsText({ friends: 3, requests: 1 }), '3 · 1 pending');
+  assert.equal(friendsText({ friends: 0, requests: 0 }), '0');
+  assert.equal(friendsText(null), '0');
 });
