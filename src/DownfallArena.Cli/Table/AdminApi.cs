@@ -93,15 +93,7 @@ internal sealed class AdminApi
         var operatorName = _gate.Admit(token, principal, player?.Account);
         if (LobbyApi.Names(path))
         {
-            // A finished game's replay is the operator's to read as well as its players' (ADR 0156), by the panel's
-            // token, the platform's sign-in or an admin account alike, and whatever game it was: the pages ask this
-            // one route.
-            if (method == "GET" && LobbyApi.ReplayRoute(path) is { } replayed && _stored is { } recorded && operatorName is not null)
-            {
-                return await ReplayAsync(recorded, replayed);
-            }
-
-            return await Lobby.HandleAsync(method, path, body, token, player);
+            return await LobbyAsync(method, path, body, token, player, operatorName);
         }
 
         if (path == MePath)
@@ -143,6 +135,21 @@ internal sealed class AdminApi
             ("POST", _) when Reinvited(rest) is { } seat => await LobbyApi.ExclusivelyAsync(() => ReinviteAsync(seat.Table, seat.Slot, operatorName)),
             _ => StudioResponse.OfPlainText(404, $"No such route: {method} {path}"),
         };
+    }
+
+    /// <summary>
+    /// A lobby route. A finished game's replay is the operator's to read as well as its players' (ADR 0156), by the
+    /// panel's token, the platform's sign-in or an admin account alike, and whatever game it was: the pages ask this
+    /// one route.
+    /// </summary>
+    private async Task<StudioResponse> LobbyAsync(string method, string path, string body, string? token, SignedIn? player, string? operatorName)
+    {
+        if (method == "GET" && LobbyApi.ReplayRoute(path) is { } replayed && _stored is { } recorded && operatorName is not null)
+        {
+            return await ReplayAsync(recorded, replayed);
+        }
+
+        return await Lobby.HandleAsync(method, path, body, token, player);
     }
 
     /// <summary>
