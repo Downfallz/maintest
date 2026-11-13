@@ -248,7 +248,9 @@ Each stage is one pull request, with its tests and docs, and leaves the panel wo
 
 1. **A1, the shell.** The shared header, the title row, the tabs and the hash routing, the shared list part. Tables
    and Sessions move into their tabs unchanged; Tables gains paging. No server change. Browser tests for each tab
-   on desktop and phone.
+   on desktop and phone. *Built (2026-11-13)*: the tabs are links in a navigation row (`#tables`, `#sessions`), and
+   the Tables tab pages the host's listing in the page, twenty at a time, as Sessions does; paging over the index
+   on the host waits until a host holds more tables than one listing carries. A tab appears with its stage.
 2. **A2, players.** ADR for activity. `AccountActivity` (last sign-in and last seen), the account listing, the
    Players tab and its side sheet with sign out everywhere, rename and delete. The *What we keep* panel updated.
 3. **A2b, suspension.** ADR: a suspended account cannot sign in, its sessions end, its seats in unfinished games are

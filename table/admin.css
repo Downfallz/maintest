@@ -35,3 +35,31 @@ input[type="text"] { font: inherit; min-height: 44px; border: 1px solid var(--li
 @media (max-width: 720px) {
   .list-head { flex-direction: column; align-items: stretch; }
 }
+
+/* Headquarters (docs/tabletop/admin-plan.md, A1): the shared header on top, the panel's own title row, then its
+   sections as tabs along one line, the same underline as the Settings window's; each section is part of the address. */
+.admin-page .admin-main { padding: 0 24px 40px; }
+.admin-title { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; padding: 32px 0 18px; }
+.admin-title h2 { margin: 6px 0 8px; font: 400 clamp(30px, 4vw, 44px)/1.1 var(--font-display); }
+.admin-title .eyebrow { margin: 0; color: var(--brand-ember); }
+.admin-title .muted { margin: 0; overflow-wrap: anywhere; }
+.admin-meta :is(output, span) { display: inline; }
+.admin-meta-label { margin-right: 4px; color: var(--gold); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+#tables-pages[hidden], #tables-empty[hidden] { display: none; }
+.admin-title .secondary { margin-top: 0; flex: none; }
+.admin-tabs { display: flex; gap: 4px; margin-bottom: 18px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+.admin-tabs a { flex: none; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 14px; border-bottom: 2px solid transparent;
+  color: var(--muted); font-weight: 650; text-decoration: none; }
+.admin-tabs a:hover { color: var(--ink); }
+.admin-tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--gold); }
+.admin-tabs a:focus-visible { outline: 2px solid var(--gold); outline-offset: -4px; }
+.tab-count { min-width: 22px; padding: 1px 7px; border-radius: 999px; background: var(--raised); color: var(--muted); font-size: 12px; text-align: center; }
+.tab-count:empty { display: none; }
+.admin-tabs a[aria-current="page"] .tab-count { color: var(--gold); }
+.admin-panel[hidden] { display: none; }
+.admin-panel > .no-god-view { margin-top: 0; }
+
+@media (max-width: 720px) {
+  .admin-page .admin-main { padding: 0 16px 32px; }
+  .admin-title { flex-direction: column; align-items: stretch; padding-top: 20px; }
+}

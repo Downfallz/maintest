@@ -5,21 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#0b1519" />
     <title>Downfall Instinct — admin</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="table.css" />
     <link rel="stylesheet" href="pilot.css" />
+    <link rel="stylesheet" href="lobby.css" />
     <link rel="stylesheet" href="admin.css" />
     <link rel="stylesheet" href="identity.css" />
   </head>
-  <body>
-    <header class="masthead">
-      <div class="brand"><span class="brand-mark" aria-hidden="true"></span><div><span class="eyebrow">The host</span><h1>Admin</h1></div></div>
-      <div class="session-state"><span class="seat-label">Rules</span><output id="rules">Connecting…</output></div>
-    </header>
+  <body class="lobby-page admin-page">
+    <header class="masthead lobby-header home-header" data-navigation="admin"></header>
 
-    <main id="admin" hidden>
+    <main class="lobby-main admin-main">
+    <section class="admin-title" aria-labelledby="admin-title">
+      <div>
+        <p class="eyebrow">The host</p><h2 id="admin-title">Headquarters</h2>
+        <p class="admin-meta muted"><span class="admin-meta-label">Rules</span> <output id="rules">Connecting…</output> <span aria-hidden="true">·</span> <span id="recording"></span></p>
+      </div>
+      <button id="admin-refresh" type="button" class="secondary">Refresh</button>
+    </section>
+    <nav id="admin-tabs" class="admin-tabs" aria-label="Headquarters sections">
+      <a id="tab-tables" href="#tables" data-tab="tables">Tables <span id="tab-tables-count" class="tab-count"></span></a>
+      <a id="tab-sessions" href="#sessions" data-tab="sessions">Sessions <span id="tab-sessions-count" class="tab-count"></span></a>
+    </nav>
+
+    <div id="admin" hidden>
+    <section id="panel-tables" class="admin-panel" aria-labelledby="tab-tables" data-panel="tables">
       <p class="muted no-god-view">
         Open a table, read each seat's code to its player, and hand a seat over from its pilot page. This page
-        shows who is at each table, never what they hold. <span id="recording"></span>
+        shows who is at each table, never what they hold.
       </p>
 
       <section class="control" aria-labelledby="open-title">
@@ -38,7 +52,14 @@
 
       <h2 class="list-title">Tables under way</h2>
       <section id="tables" class="seats tables" aria-label="Tables"></section>
-
+      <p id="tables-empty" class="muted" hidden>No table is being played. Open one above, or wait for players to open theirs in the lobby.</p>
+      <nav id="tables-pages" class="session-pages" aria-label="Table pages">
+        <button id="tables-previous" type="button" class="secondary">← Newer</button>
+        <output id="tables-count" class="muted"></output>
+        <button id="tables-next" type="button" class="secondary">Older →</button>
+      </nav>
+    </section>
+    <section id="panel-sessions" class="admin-panel" aria-labelledby="tab-sessions" data-panel="sessions" hidden>
       <section class="control sessions" aria-labelledby="sessions-title">
         <div class="list-head">
           <h2 id="sessions-title">Recorded sessions</h2>
@@ -77,11 +98,14 @@
           <button id="sessions-next" type="button" class="secondary">Older →</button>
         </nav>
       </section>
-    </main>
+    </section>
+    </div>
 
     <p id="problem" class="problem" hidden></p>
     <a id="sign-in" class="sign-in" hidden>Sign in to manage the tables</a>
+    </main>
 
     <script type="module" src="admin.js"></script>
+    <script type="module" src="navigation.js"></script>
   </body>
 </html>
