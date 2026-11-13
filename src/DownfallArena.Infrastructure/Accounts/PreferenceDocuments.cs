@@ -16,7 +16,7 @@ internal static class PreferenceDocuments
     public static string PathOf(AccountId account) => $"preferences/{account.Value}.json";
 
     public static string Write(GamePreferences preferences) => JsonSerializer.Serialize(
-        new PreferencesRecord(preferences.Pace.ToString().ToLowerInvariant(), preferences.Speed, preferences.Help, preferences.ReducedMotion), Web);
+        new PreferencesRecord(preferences.Pace.ToString().ToLowerInvariant(), preferences.Speed, preferences.Help, preferences.ReducedMotion, preferences.Reactions), Web);
 
     public static GamePreferences? Read(string json)
     {
@@ -26,9 +26,10 @@ internal static class PreferenceDocuments
             return null;
         }
 
-        var made = GamePreferences.Create(record.Pace, record.Speed, record.Help, record.ReducedMotion);
+        var made = GamePreferences.Create(record.Pace, record.Speed, record.Help, record.ReducedMotion, record.Reactions ?? true);
         return made.IsSuccess ? made.Value : null;
     }
 
-    private sealed record PreferencesRecord(string? Pace, decimal Speed, bool Help, bool ReducedMotion);
+    // Reactions is missing from a document written before ADR 0173, which shows them, as every account did then.
+    private sealed record PreferencesRecord(string? Pace, decimal Speed, bool Help, bool ReducedMotion, bool? Reactions);
 }

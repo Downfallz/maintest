@@ -164,9 +164,10 @@ test('a signed-in player keeps game settings with the account, starting from ste
   await expect(dialog.getByLabel('Playback speed')).toHaveValue('1');
   await expect(dialog.getByLabel('Phase tips')).toBeChecked();
   await expect(dialog.getByLabel('Less motion')).not.toBeChecked();
+  await expect(dialog.getByLabel('Opponent reactions')).toBeChecked();
   await expect(page.locator('#game-settings-where')).toContainText('Kept with your account');
   await dialog.getByLabel('Read confirmed results').selectOption('auto');
-  await expect.poll(() => state.saved).toEqual({ pace: 'auto', speed: 1, help: true, reducedMotion: false });
+  await expect.poll(() => state.saved).toEqual({ pace: 'auto', speed: 1, help: true, reducedMotion: false, reactions: true });
   await dialog.getByLabel('Playback speed').selectOption('1.5');
   await expect.poll(() => state.saved?.speed).toBe(1.5);
   await noOverflow(page);

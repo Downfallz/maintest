@@ -83,6 +83,22 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
     }
 
+    /// <summary>What the reactions' cooldown is measured with (ADR 0173).</summary>
+    public TimeProvider Clock { get; init; } = TimeProvider.System;
+
+    private TableReactions? _reactions;
+
+    /// <summary>The reactions the two seats send each other (ADR 0173), kept with the table's record when it has one.</summary>
+    public TableReactions Reactions => LazyInitializer.EnsureInitialized(ref _reactions, () => new TableReactions(Clock, run));
+
+    /// <summary>
+    /// Whether the two seats may react to each other (ADR 0173): two people, the match begun, and not one account in
+    /// both seats, which is one person on a shared device. Against a bot there is nobody to read a reaction.
+    /// </summary>
+    private bool Reacting =>
+        session.HasBegun && seats.Count == 2 && seats.All(seat => seat.Person is not null)
+        && !(seats[0].Account is { } account && seats[1].Account == account);
+
     /// <summary>The bots the pilot may seat, as the host offers them (<see cref="SeatableAgents" />); the page adds the seat's own person.</summary>
     public IReadOnlyList<SeatableAgent> Agents { get; init; } = [];
 
@@ -204,6 +220,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
             ("GET", [_, "negotiate"]) => await NegotiateAsync(),
             ("POST", [_, "decision"]) => await DecideAsync(holder, body),
             ("POST", [_, "concede"]) => await ConcedeAsync(holder),
+            ("POST", [_, "reaction"]) => await ReactAsync(holder, body),
             _ => StudioResponse.OfPlainText(404, $"No such route: {method} {path}"),
         };
     }
@@ -457,6 +474,9 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
                 // a player who taps one believes the thing they noticed was written down.
                 recording = run is not null,
                 opponentIntents,
+
+                // The reactions the two players sent each other (ADR 0173): never part of the match's feed or trace.
+                reactions = await ReactionsViewAsync(),
 
                 // What has happened, as this seat may be told it: the boards the trace keeps beside every
                 // event are dropped here and the other seat's hidden decisions never reach the wire
@@ -728,6 +748,51 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         await recording.TypedAsync(session.MatchId, seat.Slot, round, subPhase, kind, posted.Trimmed(), CancellationToken.None);
         return new StudioResponse(204, StudioResponse.Plain, []);
     }
+
+    /// <summary>
+    /// A reaction this seat sends the other (ADR 0173): one of the catalogue's, one every few seconds at most, and only
+    /// between two people. Both pages read it on the change it makes; no notice is sent for it.
+    /// </summary>
+    private async Task<StudioResponse> ReactAsync(TableSeat seat, string body)
+    {
+        if (!Reacting)
+        {
+            return StudioResponse.OfJson(new { error = "Reaction.Unavailable", message = "Reactions are only sent between two players at a begun match." }, ArtifactJson.LineOptions, status: 409);
+        }
+
+        string? reaction;
+        try
+        {
+            reaction = JsonSerializer.Deserialize<TableReactionBody>(body, ArtifactJson.LineOptions)?.Reaction;
+        }
+        catch (JsonException exception)
+        {
+            return StudioResponse.OfPlainText(400, exception.Message);
+        }
+
+        var sent = await Reactions.SendAsync(seat.Name, reaction);
+        switch (sent.Refusal)
+        {
+            case null:
+                Changes.Bump();
+                return StudioResponse.OfJson(new { reaction = Described(sent.Reaction!) }, ArtifactJson.LineOptions);
+            case "Reaction.Unknown":
+                return StudioResponse.OfJson(new { error = sent.Refusal, message = $"'{reaction}' is not a reaction. One of: {string.Join(", ", TableReactions.Catalogue)}." }, ArtifactJson.LineOptions, status: 400);
+            case "Reaction.TooSoon":
+                return StudioResponse.OfJson(new { error = sent.Refusal, message = "Wait a moment before reacting again.", retryAfterMs = (long)Math.Ceiling(sent.Wait.TotalMilliseconds) }, ArtifactJson.LineOptions, status: 429);
+            default:
+                return StudioResponse.OfJson(new { error = sent.Refusal, message = "The reaction could not be kept. Try again." }, ArtifactJson.LineOptions, status: 503);
+        }
+    }
+
+    private static object Described(TableReaction reaction) =>
+        new { sequence = reaction.Sequence, seat = reaction.Seat, reaction = reaction.Reaction, at = reaction.At };
+
+    /// <summary>What a seat's view says of the reactions: whether it may send one, and the last few, both seats'.</summary>
+    private async Task<object> ReactionsViewAsync() =>
+        Reacting
+            ? new { available = true, cooldownMs = (long)TableReactions.Cooldown.TotalMilliseconds, recent = (await Reactions.RecentAsync()).Select(Described).ToArray() }
+            : new { available = false, cooldownMs = (long)TableReactions.Cooldown.TotalMilliseconds, recent = Array.Empty<object>() };
 
     /// <summary>
     /// Where in the match a note is about to be written, read off the seat's own board. A board that cannot be

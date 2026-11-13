@@ -62,7 +62,7 @@ test('a new player reads in Step at 1x with tips, and a change in Match settings
 
   const kept = () => page.evaluate(() => ({ globals: localStorage.getItem('downfall.arena.game-settings.v1'),
     game: JSON.parse(localStorage.getItem('downfall.arena.game-overrides.v1') ?? '[]').find(one => one.game === 'table-a') }));
-  expect(await kept()).toEqual({ globals: null, game: { game: 'table-a', pace: 'auto', speed: 2, help: true, reducedMotion: false } });
+  expect(await kept()).toEqual({ globals: null, game: { game: 'table-a', pace: 'auto', speed: 2, help: true, reducedMotion: false, reactions: true } });
   await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true'); await choose(page);
   await expect(page.locator('#playback-preference')).toHaveValue('auto');
   await expect(page.locator('#playback-speed')).toHaveValue('2');

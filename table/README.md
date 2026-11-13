@@ -609,6 +609,13 @@ The existing host still marks an accepted seat as arrived on authenticated reads
 [ADR 0126](../docs/adr/0126-answer-combat-questions-in-the-live-arena.md) and
 [the build instructions](../battle/README.md).
 
+Two people at a begun match send each other **reactions** from the header's 💬: a fixed set of eight short messages,
+never free text, one every four seconds a seat, shown as a bubble by the sender's side and once to the other player,
+even one sent while they were away. `battle-reactions.js` decides what shows; the host keeps the last eight with the
+table (`POST /api/seat/<seat>/reaction`, `reactions` in the seat's view). The player hides the opponent's for one game
+from the set, or for every game in Settings. No reaction is notified or counted in the bell
+([ADR 0173](../docs/adr/0173-let-players-react-with-a-fixed-set-of-messages.md)).
+
 The battle view's **History** drawer retains public events from the current and previous round, capped at 200.
 Attacks expand into actual applied effects and recorded before/after changes; reading history preserves
 command drafts and never sends a decision or `shown`. It is separate from animation playback, so skipping
