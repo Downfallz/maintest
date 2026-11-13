@@ -1,0 +1,200 @@
+# Plan: the admin panel as the host's headquarters
+
+Status: proposed, 2026-11-13. Nothing here is built yet; each stage below is one pull request.
+
+## What the owner asked for
+
+Bring `/admin` up to the battle view and the lobby: the shared header at the top, several tabs, paging everywhere a
+list can grow. Beside what it does today (open a table, the tables under way, the recorded sessions), it should
+show:
+
+- the players: every account, how many games each has played, and when each last signed in;
+- the jobs: the hourly tending job's latest runs, and how many games each closed, timed out, or ended because a
+  player never played;
+- a switch that lets new accounts be created or not;
+- and more of what a host's operator needs at a glance: a headquarters.
+
+## What exists today
+
+| Concern | What the host has | What `/admin` shows |
+| --- | --- | --- |
+| Operator door | Console token, platform sign-in, admin accounts (ADR 0081, 0172) | Everything, behind the door |
+| Tables | The index of open tables, each table's seats, codes, pilot link (`GET /api/tables`) | One unpaged list, "Tables under way" |
+| Sessions | Every recording in the store, filtered and paged twenty at a time (`GET /api/sessions`) | Recorded sessions, export, delete |
+| Accounts | `IAccountStore`: find by id, subject or name; no listing; `CreatedAt` but no sign-in time | Nothing |
+| Results | `IMatchResults.ListAsync` / `ListForAsync` (ADR 0168): every finished game, by match and by account | Nothing |
+| Tending job | `table-tend` (ADR 0162) prints one line a run and one line a table to the job's console log | Nothing; the counts live only in Azure's log stream |
+| Bot turns | The queues `agent-turns`, `agent-turns-poison`, `agent-turns-dlq` (ADR 0159, phase 5) | Nothing |
+| Registration | Always open: a new Google subject is asked for a name (ADR 0122) | Nothing |
+
+The page itself predates the identity work (ADR 0158): its own masthead, one long column, no tabs.
+
+## The shape of the page
+
+One page, `/admin`, under the same header as every other page (`table/navigation.js`): the brand, Lobby, Settings,
+the account chip, and the Admin link lit. Under it, the panel's own title row (Headquarters, the rules the host runs,
+a Refresh) and a row of tabs. A tab is part of the address (`/admin#players`), so a reload or a shared link opens it,
+and Back moves between tabs. On a phone the tabs scroll sideways under the header, as the lobby's do.
+
+| Tab | Holds |
+| --- | --- |
+| Overview | The numbers at a glance, each a link into its tab (below) |
+| Tables | Open a table (today's form) and the tables under way, filtered and paged |
+| Sessions | Today's recorded sessions, unchanged but for the shared list parts |
+| Players | Every account: name, created, last signed in, last seen, games (ranked, against players, against bots), rating |
+| Jobs | The tending runs, newest first, each with its counts; the bot turn queues and their failures |
+| Settings | Registration open or closed, and the host's other switches |
+| Activity | What operators did on this page: who closed, deleted, reinvited or switched what, and when |
+
+Every list is the same part: a header row that sorts, a filter row, twenty rows a page, and Newer / Older with the
+count between them, as the sessions list already has. A row opens a side sheet with the details and its actions;
+nothing in a row acts without a confirmation.
+
+### Overview
+
+Cards, each one number and a word, linking to the tab that explains it:
+
+- players: total, signed in during the last 7 days, new in the last 7 days;
+- games: in progress (against players, against bots), finished today and in the last 7 days, void;
+- waiting: open seats, invitations not yet answered, games whose time to answer runs out in the next day;
+- jobs: the last tending run (when, and whether it ended well), bot turns waiting, turns that failed;
+- registration: open or closed.
+
+A card whose number needs attention (a failed run, turns in the poison queue, registration closed) is drawn in the
+warning colour.
+
+## The model
+
+### A player's activity is kept beside the account
+
+`Account` stays as it is: it is what a session is checked against. Beside it, one small record per account:
+
+```
+AccountActivity(AccountId, DateTimeOffset LastSignIn, DateTimeOffset LastSeen)
+```
+
+- `LastSignIn` is written when the account signs in (Google or dev): `AccountApi.SignedInAs`.
+- `LastSeen` is written when a request carries the account's session, at most once an hour per account, so a
+  playing account costs one write an hour, not one a request.
+- Both are forgotten with the account, as its devices and preferences are.
+
+This is new personal data, so the lobby's *What we keep* panel says it: "when you last signed in and last used the
+site, so the host can see who still plays". It needs an ADR (below).
+
+### The players list is read, never kept twice
+
+`IAccountStore` gains a paged listing (`ListAsync(skip, take)`); the file store reads its directory, the blob store
+lists its prefix. The Players tab joins, per page of twenty:
+
+- the account (name, created);
+- its activity (last sign-in, last seen);
+- its results from `IMatchResults.ListForAsync`: games in all, ranked, against players, against bots, and wins;
+- its rating from the ladder (ADR 0124).
+
+Sorting by games or by last seen needs every account read once. That is fine at the size the host is (tens to
+hundreds of accounts), and the plan says so: past a few thousand, the counts move into the activity record, written
+when a result is kept.
+
+### A tending run leaves a record
+
+`table-tend` already computes everything the Jobs tab needs (`Tended`: tables that never began, invitations let go
+of, games timed out, games left by a player, warnings sent). It writes it as one record per run, beside the
+recordings:
+
+```
+TendRun(Started, Finished, Outcome: completed | failed, Error?,
+        NeverBegan[], InvitationsExpired, TimedOut[], Abandoned[], Warned[])
+```
+
+A new port, `ITendLog` (Application), with a file adapter (`runs/tend/<started>.json`) and a blob one (a `tend`
+prefix in the recordings' container), keeps the last 500 runs. The job writes its record when it ends, and also when
+it fails, so a run that crashed shows as one. Each table id in a record links to its session in the Sessions tab.
+
+The Jobs tab lists the runs newest first, twenty a page, with a total line for the last day and the last week:
+"in 24 hours: 3 tables that never began closed, 1 game timed out, 0 abandoned".
+
+### The bot turns are read off their queues
+
+The worker's queues already exist. A small port over them (`ITurnQueueStatus`: approximate length of each queue, and
+the oldest poison and dead letters with their error) lets the Jobs tab show turns waiting, turns that failed, and the
+error of each, with two actions per dead letter: put it back on the queue, or drop it.
+
+### Registration is a host setting
+
+A host setting is not an account's preference: one record for the host, kept beside the accounts:
+
+```
+HostSettings(bool RegistrationOpen, string? Notice, ... )   settings/host.json
+```
+
+- `RegistrationOpen` false: a Google sign-in whose subject has no account is answered
+  `409 Account.RegistrationClosed` ("New accounts are closed for now") instead of the ticket that asks for a name.
+  Every existing account signs in as before. A dev host is unaffected. The lobby says the same where the name would
+  be asked.
+- `Notice`: an optional line every page shows under the header (a maintenance window, a new version), set from the
+  Settings tab.
+
+Read once a minute by the host, so a change reaches every process without a restart. This is a decision about who
+can join, so it gets an ADR.
+
+### What an operator does is recorded
+
+Every action the panel takes (open, close, reinvite, delete sessions, export, change a setting, requeue or drop a
+turn) writes one line to an operator log: who (the operator's name from the gate), what, on which id, when. Kept
+beside the accounts, the last 1,000 lines, read in the Activity tab. Today these lines go to the console only.
+
+## The routes
+
+All behind the operator gate (ADR 0081, 0172), JSON, paged by `?page=` with twenty a page and `?sort=`/`?q=`:
+
+| Route | Answers |
+| --- | --- |
+| `GET /api/admin/overview` | The Overview's numbers |
+| `GET /api/admin/players?page&sort&q` | A page of players with their activity, game counts and rating |
+| `GET /api/admin/players/<id>` | One player: the same, plus friends, devices, games in progress, recent results |
+| `POST /api/admin/players/<id>/sign-out` | Signs the account out everywhere (raises its generation) |
+| `GET /api/admin/jobs/tend?page` | Tending runs, newest first, and the 24-hour and 7-day totals |
+| `GET /api/admin/jobs/turns` | The turn queues' lengths and their failed turns |
+| `POST /api/admin/jobs/turns/<id>/retry`, `DELETE /api/admin/jobs/turns/<id>` | Requeue or drop a failed turn |
+| `GET`/`PUT /api/admin/settings` | The host settings |
+| `GET /api/admin/activity?page` | The operator log |
+
+The existing `/api/tables` and `/api/sessions` stay as they are; the Tables tab only gains paging over the index's
+`OpenAsync(skip, take)`.
+
+## Where the code goes
+
+| Layer | Adds |
+| --- | --- |
+| Application | `AccountActivity` and its port, `IAccountStore.ListAsync`, `ITendLog` and `TendRun`, `ITurnQueueStatus`, `HostSettings` and its port, `OperatorLog` and its port, `AdminOverview` (the numbers, computed from the ports) |
+| Infrastructure | File and blob adapters for each port, beside the existing ones; the queue status over the storage queues |
+| Cli | `AdminApi` routes above; `TableTend` writes its run; `AccountApi` writes activity and honours registration |
+| table/ | `admin.html` rebuilt on `navigation.js` and `identity.css`; `admin.js` split into a tab router and one module per tab, each with pure, node-tested model functions as today |
+
+## Stages
+
+Each stage is one pull request, with its tests and docs, and leaves the panel working.
+
+1. **A1, the shell.** The shared header, the title row, the tabs and the hash routing, the shared list part. Tables
+   and Sessions move into their tabs unchanged; Tables gains paging. No server change. Browser tests for each tab
+   on desktop and phone.
+2. **A2, players.** ADR for activity. `AccountActivity`, the account listing, the Players tab and its side sheet,
+   sign out everywhere. The *What we keep* panel updated.
+3. **A3, jobs.** `ITendLog`; `table-tend` writes its runs; the Jobs tab with runs and totals. Then the turn queues'
+   status and the retry and drop actions.
+4. **A4, settings.** ADR for registration. `HostSettings`, the Settings tab, `Account.RegistrationClosed` in the
+   lobby, the notice line under every page's header.
+5. **A5, overview.** The numbers, once A2 to A4 give them their sources.
+6. **A6, activity.** The operator log and its tab.
+
+Every stage keeps the panel behind the gate. None of it changes a game.
+
+## Questions for the owner
+
+1. Is *last seen* (the last request, at most hourly) wanted beside *last sign-in*? A Google sign-in lasts weeks, so
+   last sign-in alone says little about who still plays. Recommended: both.
+2. When registration is closed, should a person with an invitation from a friend or a seat's code still be able to
+   create an account? Recommended: not in this plan. Closed means closed; invitation codes can follow later.
+3. Player actions beyond *sign out everywhere*: should the panel be able to delete an account, rename one (a name
+   that breaks the rules) or suspend one? Recommended: sign out and rename in A2, suspension as its own ADR later.
+4. Keep the operator log for how long? Recommended: the last 1,000 lines.
