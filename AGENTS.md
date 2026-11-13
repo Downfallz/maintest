@@ -75,7 +75,8 @@ docs/
                 plus the plan for the Automa, the opponent a person executes from printed components (automa.md), and
                 the free-activation playtest (free-activation-playtest.md, ADR 0110), and the plan for player accounts
                 with a Google sign-in and the home page (accounts-plan.md, ADR 0122), and the plan for friends and
-                inviting one of them to a table (friends-plan.md).
+                inviting one of them to a table (friends-plan.md), and the plan for the admin panel as the host's
+                headquarters: tabs, players, the jobs' runs, registration (admin-plan.md).
                 Home navigation (home-navigation.md) separates the signed-out introduction from the dashboard;
                 friends, invitation codes and one Settings (game, notifications, privacy, account) open from a responsive menu,
                 and a bell beside the account counts what waits (turns, invitations, friend requests) and acts on each.
