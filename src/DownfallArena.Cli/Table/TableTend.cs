@@ -91,8 +91,9 @@ internal static class TableTend
             composer.Lobby = relay is null ? null : new LobbyChanges { Relay = relay };
             var lobby = new LobbyApi(registry, composer, clock) { Friends = friends, Changes = composer.Lobby };
 
-            // Every run is kept for the admin panel's Jobs tab (A3), the one that failed too.
-            var log = await ArtifactStores.OpenTendLogAsync(target);
+            // Every run is kept for the admin panel's Jobs tab (A3), the one that failed too. A log that cannot be
+            // opened costs the run its record, never the pass: the tables are tended all the same.
+            var log = await OpenLogAsync(() => ArtifactStores.OpenTendLogAsync(target));
             var (tended, _) = await RecordedAsync(log, TendTrigger.Schedule, by: null, clock, now => TendAsync(registry, lobby, now, composer, clock));
             if (relay is not null)
             {
@@ -178,6 +179,21 @@ internal static class TableTend
         return (tended, run);
     }
 
+    /// <summary>The tend log, or none when it cannot be opened: said on the console, and the pass goes on without it.</summary>
+    internal static async Task<ITendLog?> OpenLogAsync(Func<Task<ITendLog>> open)
+    {
+        ArgumentNullException.ThrowIfNull(open);
+        try
+        {
+            return await open();
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is Azure.Identity.AuthenticationFailedException)
+        {
+            await Console.Error.WriteLineAsync($"The tending runs could not be opened, so this one is not kept: {failure.Message}");
+            return null;
+        }
+    }
+
     private static async Task KeepAsync(ITendLog? log, TendRun run)
     {
         if (log is null)
@@ -201,7 +217,7 @@ internal static class TableTend
     {
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(lobby);
-        var swept = await registry.SweepAsync(now);
+        var swept = await registry.SweepNeverBegunAsync(now);
         var expired = await lobby.ExpireInvitationsNowAsync();
         var timedOut = composer is null ? [] : await TurnTimeouts.EndAsync(registry, composer, now, clock ?? TimeProvider.System);
         var abandoned = composer is null ? [] : await AbandonedSeats.EndAsync(registry, composer, now, clock ?? TimeProvider.System);

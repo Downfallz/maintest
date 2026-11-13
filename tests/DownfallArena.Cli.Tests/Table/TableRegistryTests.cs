@@ -219,6 +219,26 @@ public sealed class TableRegistryTests : IDisposable
         open.Single(table => table.Id == theirs.Id).Held.ShouldBeNull();
     }
 
+    /// <summary>
+    /// A tending run keeps the tables it closed because they never began; a finished game the host only let go of
+    /// from its memory is still finished, and is not one of them.
+    /// </summary>
+    [Fact]
+    public async Task A_finished_table_let_go_of_from_memory_is_not_one_that_never_began()
+    {
+        using var registry = _hosted.Registry();
+        var finished = await Composed(HostedTables.Bots);
+        await finished.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        var idle = await Composed(HostedTables.OnePerson);
+        await Added(registry, finished);
+        await Added(registry, idle);
+
+        var closed = await registry.SweepNeverBegunAsync(idle.CreatedAt + TableRegistry.NeverBegunFor + TableRegistry.FinishedFor, TestContext.Current.CancellationToken);
+
+        closed.ShouldBe([idle.Id]);
+        registry.HeldTables().ShouldBeEmpty("the finished table is let go of all the same");
+    }
+
     [Fact]
     public async Task A_finished_table_is_let_go_of_an_hour_after_the_last_request_and_a_live_one_is_not()
     {

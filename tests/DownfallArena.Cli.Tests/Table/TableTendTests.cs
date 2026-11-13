@@ -361,6 +361,16 @@ public sealed class TableTendTests : IDisposable
     }
 
     [Fact]
+    public async Task A_log_that_cannot_be_opened_leaves_the_pass_to_run_without_it()
+    {
+        var log = await TableTend.OpenLogAsync(() => throw new Azure.RequestFailedException(403, "This request is not authorized."));
+
+        log.ShouldBeNull();
+        var (tended, _) = await TableTend.RecordedAsync(log, Application.Tables.Tending.TendTrigger.Schedule, null, TimeProvider.System, _ => Task.FromResult(new TableTend.Tended(["closed"], 0)));
+        tended.Swept.ShouldBe(["closed"]);
+    }
+
+    [Fact]
     public async Task A_pass_that_fails_is_kept_as_failed_and_its_error_is_thrown_again()
     {
         var log = new Infrastructure.Tables.FileTendLog(_own);
