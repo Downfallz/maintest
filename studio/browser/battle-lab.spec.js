@@ -205,6 +205,8 @@ test('the command portrait uses current art and the retired sheet is never downl
 });
 
 test('the horizon study advances through every even round and resets on the six-creature board', async ({ page }, info) => {
+  // Seven collapses, each loading and fading its art, take 9 to 14 s on an idle desktop: a busy runner outlasts 30 s.
+  test.setTimeout(60000);
   await page.goto('/table/battle-lab.html?study=horizon');
   await expect(page.locator('#lab')).toHaveAttribute('data-ready', 'true');
   await expect(page.locator('#round-number')).toHaveText('01');

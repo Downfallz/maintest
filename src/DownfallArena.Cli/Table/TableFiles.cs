@@ -26,6 +26,9 @@ internal sealed class TableFiles
 
     private const string Woff2 = "font/woff2";
 
+    // The battlefield's collapse tiles (battle/src/battle-horizon.ts), each loaded a round before the round that shows it.
+    private static readonly string[] HorizonArt = ["fallen-ledge", "breach", "shattered-sky", "broken-floor"];
+
     // The evolution illustrations (table/battle-evolution-art.js, ADR 0151), named here one by one like every other
     // route: the page asks for the one a creature on the field resolves to, and nothing else is read.
     private static readonly string[] EvolutionArt =
@@ -128,9 +131,6 @@ internal sealed class TableFiles
             ["/battle-build/game.js.LEGAL.txt"] = (Path.Combine(tableDirectory, "battle-build", "game.js.LEGAL.txt"), StudioResponse.Plain),
             ["/battle-build/PHASER-LICENSE.txt"] = (Path.Combine(tableDirectory, "battle-build", "PHASER-LICENSE.txt"), StudioResponse.Plain),
             ["/battle-art/eclipse-battle.webp"] = (Path.Combine(tableDirectory, "battle-art", "eclipse-battle.webp"), Webp),
-            ["/battle-art/horizon/breach.webp"] = (Path.Combine(tableDirectory, "battle-art", "horizon", "breach.webp"), Webp),
-            ["/battle-art/horizon/shattered-sky.webp"] = (Path.Combine(tableDirectory, "battle-art", "horizon", "shattered-sky.webp"), Webp),
-            ["/battle-art/horizon/broken-floor.webp"] = (Path.Combine(tableDirectory, "battle-art", "horizon", "broken-floor.webp"), Webp),
             ["/battle-art/creatures.webp"] = (Path.Combine(tableDirectory, "battle-art", "creatures.webp"), Webp),
             ["/battle-art/base-creature.webp"] = (Path.Combine(tableDirectory, "battle-art", "base-creature.webp"), Webp),
             ["/battle-art/brute.webp"] = (Path.Combine(tableDirectory, "battle-art", "brute.webp"), Webp),
@@ -190,6 +190,11 @@ internal sealed class TableFiles
             ["/admin.css"] = (Path.Combine(tableDirectory, "admin.css"), Css),
             ["/admin.js"] = (Path.Combine(tableDirectory, "admin.js"), JavaScript),
         };
+
+        foreach (var art in HorizonArt)
+        {
+            _routes[$"/battle-art/horizon/{art}.webp"] = (Path.Combine(tableDirectory, "battle-art", "horizon", $"{art}.webp"), Webp);
+        }
 
         foreach (var art in EvolutionArt)
         {
