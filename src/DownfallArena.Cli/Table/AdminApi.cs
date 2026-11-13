@@ -79,8 +79,11 @@ internal sealed class AdminApi
     /// <summary>The operator's list of players (ADR 0174), on a host that signs players in; none otherwise.</summary>
     public PlayersApi? Players { get; init; }
 
+    /// <summary>The operator's jobs (A3): the tending runs and a pass run now, on a host that records; none otherwise.</summary>
+    public JobsApi? Jobs { get; set; }
+
     public static bool Names(string path) =>
-        path == MePath || Under(path, Prefix) || Under(path, SessionsPrefix) || PlayersApi.Names(path) || LobbyApi.Names(path);
+        path == MePath || Under(path, Prefix) || Under(path, SessionsPrefix) || PlayersApi.Names(path) || JobsApi.Names(path) || LobbyApi.Names(path);
 
     private static bool Under(string path, string prefix) => path == prefix || path.StartsWith(prefix + "/", StringComparison.Ordinal);
 
@@ -117,6 +120,13 @@ internal sealed class AdminApi
             return Players is null
                 ? StudioResponse.OfPlainText(404, "Players do not sign in at this host (--accounts off), so it has no players to list.")
                 : await Players.HandleAsync(method, path, body, query, operatorName);
+        }
+
+        if (JobsApi.Names(path))
+        {
+            return Jobs is null
+                ? StudioResponse.OfPlainText(404, "This host records nothing (--no-record), so it keeps no tending runs.")
+                : await Jobs.HandleAsync(method, path, query, operatorName);
         }
 
         if (Under(path, SessionsPrefix))

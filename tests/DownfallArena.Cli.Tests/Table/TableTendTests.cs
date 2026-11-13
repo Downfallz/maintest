@@ -15,7 +15,18 @@ public sealed class TableTendTests : IDisposable
 {
     private readonly HostedTables _hosted = new(directory => new FileArtifactStore(directory), turns: new NoAgentTurns());
 
-    public void Dispose() => _hosted.Dispose();
+    // Where a test keeps its own tending runs and its own recordings: a directory of its own, so the log beside the
+    // recordings is not shared with another test's.
+    private readonly string _own = Path.Combine(Path.GetTempPath(), $"downfall-tend-{Guid.NewGuid():N}");
+
+    public void Dispose()
+    {
+        _hosted.Dispose();
+        if (Directory.Exists(_own))
+        {
+            Directory.Delete(_own, recursive: true);
+        }
+    }
 
     private static CancellationToken Cancel => TestContext.Current.CancellationToken;
 
@@ -305,7 +316,8 @@ public sealed class TableTendTests : IDisposable
     public async Task The_command_tends_a_store_and_says_what_it_did()
     {
         // Services built for this very command, as the command line builds them: what it needs is registered for it.
-        var options = CliOptions.Parse([CliOptions.TendCommand, "--record", _hosted.RunsDirectory]) with { SchemaPath = _hosted.SchemaPath };
+        var runs = Path.Combine(_own, "playtest");
+        var options = CliOptions.Parse([CliOptions.TendCommand, "--record", runs]) with { SchemaPath = _hosted.SchemaPath };
         using var services = CliHost.Build(options, seed: 7, logMatchToConsole: false);
         var said = new StringWriter();
         var before = Console.Out;
@@ -322,6 +334,42 @@ public sealed class TableTendTests : IDisposable
 
         exit.ShouldBe(0);
         said.ToString().ShouldContain("Tended");
+        var log = await ArtifactStores.OpenTendLogAsync(runs, Cancel);
+        var run = (await log.FindAsync((await log.IdsAsync(Cancel)).ShouldHaveSingleItem(), Cancel)).ShouldNotBeNull();
+        run.Trigger.ShouldBe(Application.Tables.Tending.TendTrigger.Schedule);
+        run.Outcome.ShouldBe(Application.Tables.Tending.TendOutcome.Completed);
+    }
+
+    [Fact]
+    public async Task A_pass_is_kept_as_a_run_with_what_it_did()
+    {
+        var log = new Infrastructure.Tables.FileTendLog(_own);
+        var clock = new MovableClock(new DateTimeOffset(2026, 11, 13, 18, 0, 0, TimeSpan.Zero));
+
+        var (_, run) = await TableTend.RecordedAsync(log, Application.Tables.Tending.TendTrigger.Manual, "mk", clock, _ =>
+        {
+            clock.Advance(TimeSpan.FromSeconds(2));
+            return Task.FromResult(new TableTend.Tended(["never-began"], 1) { TimedOut = ["late"] });
+        });
+
+        var kept = (await log.FindAsync(run.Id, Cancel)).ShouldNotBeNull();
+        kept.By.ShouldBe("mk");
+        kept.NeverBegan.ShouldBe(["never-began"]);
+        kept.TimedOut.ShouldBe(["late"]);
+        kept.InvitationsExpired.ShouldBe(1);
+        (kept.Finished - kept.Started).ShouldBe(TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
+    public async Task A_pass_that_fails_is_kept_as_failed_and_its_error_is_thrown_again()
+    {
+        var log = new Infrastructure.Tables.FileTendLog(_own);
+
+        await Should.ThrowAsync<IOException>(() => TableTend.RecordedAsync(log, Application.Tables.Tending.TendTrigger.Schedule, null, TimeProvider.System, _ => throw new IOException("the store is out")));
+
+        var kept = (await log.FindAsync((await log.IdsAsync(Cancel)).ShouldHaveSingleItem(), Cancel)).ShouldNotBeNull();
+        kept.Outcome.ShouldBe(Application.Tables.Tending.TendOutcome.Failed);
+        kept.Error.ShouldBe("the store is out");
     }
 
     private async Task<PlayedTable> RecordedAsync(TableRegistry registry, TableRequest request)
@@ -334,5 +382,14 @@ public sealed class TableTendTests : IDisposable
 
         await table.RecordAsync(Cancel);
         return table;
+    }
+
+    private sealed class MovableClock(DateTimeOffset start) : TimeProvider
+    {
+        private DateTimeOffset _now = start;
+
+        public void Advance(TimeSpan by) => _now += by;
+
+        public override DateTimeOffset GetUtcNow() => _now;
     }
 }

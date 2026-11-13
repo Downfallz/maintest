@@ -76,8 +76,8 @@ input[type="text"] { font: inherit; min-height: 44px; border: 1px solid var(--li
 .player-open { min-height: 40px; padding: 4px 0; border: 0; background: none; color: var(--gold); font: inherit; font-weight: 650; text-align: left; cursor: pointer; overflow-wrap: anywhere; white-space: normal; }
 .player-open:hover { text-decoration: underline; }
 #players-empty[hidden], #players-off[hidden], #players-on[hidden], #tab-players[hidden] { display: none; }
-.lobby-page .player-sheet { width: min(480px, 100vw); max-width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0 0 0 auto; padding: 0; overflow: hidden; --cut: 0px; }
-.player-sheet[open] { display: flex; flex-direction: column; }
+.lobby-page .side-sheet { width: min(480px, 100vw); max-width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0 0 0 auto; padding: 0; overflow: hidden; --cut: 0px; }
+.side-sheet[open] { display: flex; flex-direction: column; }
 .player-facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 14px; margin: 0 0 18px; font-size: 14px; }
 .player-facts dt { color: var(--muted); }
 .player-facts dd { margin: 0; overflow-wrap: anywhere; }
@@ -92,6 +92,18 @@ input[type="text"] { font: inherit; min-height: 44px; border: 1px solid var(--li
 @media (max-width: 720px) {
   .player-table :is(.player-created, .player-signed-in, .player-wins) { display: none; }
   .player-table :is(th, td) { padding: 6px 6px; }
-  .lobby-page .player-sheet { width: 100vw; }
+  .lobby-page .side-sheet { width: 100vw; }
 }
 #player-said:empty { display: none; }
+
+/* Jobs (A3): the totals over the runs, a failed run in the refusal colour, each table of a run on its own line. */
+.jobs-total { margin: 8px 0 0; font-size: 14px; }
+.jobs-total.warning { color: var(--refused); }
+#jobs-off[hidden], #jobs-on[hidden], #tab-jobs[hidden], #jobs-empty[hidden], #run-tables-empty[hidden], #run-error[hidden], #jobs-pass-confirm[hidden] { display: none; }
+.run-row.failed { border-color: var(--refused); }
+.run-row .run-error { color: var(--refused); }
+.run-row .player-open { min-height: 32px; }
+.run-tables { padding-left: 18px; }
+.run-tables li { overflow-wrap: anywhere; }
+.run-tables a { color: var(--gold); }
+#jobs-said:empty { display: none; }

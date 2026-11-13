@@ -344,6 +344,15 @@ public sealed class AdminApiTests : IDisposable
     }
 
     [Fact]
+    public async Task The_jobs_are_the_operators_alone_and_none_on_a_host_that_keeps_no_runs()
+    {
+        var admin = Admin(OperatorGate.WithToken(OperatorToken));
+
+        (await admin.HandleAsync("POST", JobsApi.TendRoute, "", "a-seat-s-token", principal: null)).Status.ShouldBe(403);
+        (await admin.HandleAsync("GET", JobsApi.TendRoute, "", OperatorToken, principal: null)).Status.ShouldBe(404);
+    }
+
+    [Fact]
     public async Task Whether_players_sign_in_and_as_whom_is_answered_beside_the_operator()
     {
         var root = Path.Combine(Path.GetTempPath(), $"accounts-me-{Guid.CreateVersion7():N}");

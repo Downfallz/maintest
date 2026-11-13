@@ -191,6 +191,7 @@ internal sealed class TableFiles
             ["/admin.css"] = (Path.Combine(tableDirectory, "admin.css"), Css),
             ["/admin.js"] = (Path.Combine(tableDirectory, "admin.js"), JavaScript),
             ["/admin-players.js"] = (Path.Combine(tableDirectory, "admin-players.js"), JavaScript),
+            ["/admin-jobs.js"] = (Path.Combine(tableDirectory, "admin-jobs.js"), JavaScript),
         };
 
         foreach (var art in HorizonArt)

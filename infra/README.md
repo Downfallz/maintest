@@ -13,7 +13,7 @@ studio is not here: it is on GitHub Pages (ADR 0023).
 | Container app `downfall-worker` | The CLI's `table-worker`: the bots' turns the API puts on the `agent-turns` queue, and the dead letters; no ingress, 0.5 vCPU, 1 GiB, **0 to 1 replica**, scaled on the length of `agent-turns` and `agent-turns-poison` | Nothing idle. Seconds per bot turn |
 | Container Apps job `downfall-tend` | The CLI's `table-tend`, at 17 minutes past every hour: closes the tables that never began, lets go of the invitations nobody answered; 0.25 vCPU, 0.5 GiB | A few seconds an hour |
 | Container Apps environment | Where the app runs, consumption plan, on the platform's own network (ADR 0160) | Nothing on its own |
-| Storage account, Blob, Table and Queue | The recorded sessions, one prefix per session under `playtests/`, the index that finds them (`tableindex`: join codes, open tables; ADR 0161), the finished matches' results by match and by player (`matchresults`; ADR 0168), the queues of the bots' turns (`agent-turns`, `agent-turns-poison`, `agent-turns-dlq`; ADR 0159, phase 5), and the content each table began on (`content/`, one schema per content hash, about 50 KB each; ADR 0163); no key, and only an identity holding a role on it may read or write | Cents |
+| Storage account, Blob, Table and Queue | The recorded sessions, one prefix per session under `playtests/`, the index that finds them (`tableindex`: join codes, open tables; ADR 0161), the finished matches' results by match and by player (`matchresults`; ADR 0168), the queues of the bots' turns (`agent-turns`, `agent-turns-poison`, `agent-turns-dlq`; ADR 0159, phase 5), the content each table began on (`content/`, one schema per content hash, about 50 KB each; ADR 0163), and the tending runs the admin panel's Jobs tab lists (`tend/`, the last 500, a few hundred bytes each); no key, and only an identity holding a role on it may read or write | Cents |
 | Web PubSub `downfall-relay-…` | The relay (ADR 0165): every page's connection, told what moved by the API, the worker and the job, and the hosts' group the API and the worker hear each other through; no access key, only the three identities' Web PubSub Service Owner role. Deployed when the repository variable `TABLE_RELAY_SKU` says `Free_F1` or `Standard_S1`; unset or `none`, left out | Free: nothing, up to 20 connections and 20 000 messages a day. Standard: about $1.61 a unit a day (1 000 connections, 1 million messages a day each), to check in the pricing calculator |
 | Log Analytics workspace | The host's console lines, 30 days, capped at 0.5 GB a day | Cents, often nothing |
 
@@ -142,7 +142,9 @@ Android Chrome takes the notice as it is; iOS only once the table is added to th
   or `none`, there is no relay, and the pages read the app's own streams as before. Setting it back to `none` takes
   the relay out at the next deploy.
 - The job runs by itself every hour; to run it now, `az containerapp job start --resource-group downfall-table
-  --name downfall-tend`. Its runs and their console lines are under the job's *Execution history* in the portal.
+  --name downfall-tend`, or **Run a pass now** in the admin panel's Jobs tab, which runs the same pass in the API.
+  Each run, the failed ones too, is kept in the `tend` container and listed in that tab; their console lines are under
+  the job's *Execution history* in the portal.
 
 ## Taking it down
 

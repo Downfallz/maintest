@@ -85,11 +85,13 @@ public sealed class TableFilesTests
         Files.Get($"/{module}").Status.ShouldBe(200);
     }
 
-    /// <summary>The admin panel's Players tab is a module its own module imports (ADR 0174), served beside it.</summary>
-    [Fact]
-    public void The_admin_panel_s_players_module_is_served()
+    /// <summary>The admin panel's tabs are modules its own module imports (ADR 0174, A3), served beside it.</summary>
+    [Theory]
+    [InlineData("/admin-players.js")]
+    [InlineData("/admin-jobs.js")]
+    public void The_admin_panel_s_tab_modules_are_served(string module)
     {
-        Files.Get("/admin-players.js").Status.ShouldBe(200);
+        Files.Get(module).Status.ShouldBe(200);
     }
 
     /// <summary>

@@ -1,6 +1,8 @@
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Friends;
 using DownfallArena.Application.Learning;
+using DownfallArena.Application.Tables.Ports;
+using DownfallArena.Application.Tables.Tending;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Infrastructure.Matches;
@@ -89,7 +91,9 @@ internal static class TableTend
             composer.Lobby = relay is null ? null : new LobbyChanges { Relay = relay };
             var lobby = new LobbyApi(registry, composer, clock) { Friends = friends, Changes = composer.Lobby };
 
-            var tended = await TendAsync(registry, lobby, clock.GetUtcNow(), composer, clock);
+            // Every run is kept for the admin panel's Jobs tab (A3), the one that failed too.
+            var log = await ArtifactStores.OpenTendLogAsync(target);
+            var (tended, _) = await RecordedAsync(log, TendTrigger.Schedule, by: null, clock, now => TendAsync(registry, lobby, now, composer, clock));
             if (relay is not null)
             {
                 Announce(relay, tended);
@@ -144,6 +148,50 @@ internal static class TableTend
         if (tended.Swept.Count > 0 || tended.TimedOut.Count > 0 || tended.Abandoned.Count > 0)
         {
             relay.Lobby();
+        }
+    }
+
+    /// <summary>
+    /// A pass, kept as a run of the log (docs/tabletop/admin-plan.md, A3): when it started and ended, what started it,
+    /// and what it did, or the error it stopped on, which is then thrown again. The hourly job's and an operator's
+    /// alike. A log that cannot be written to says so on the console and loses that one run, never the pass.
+    /// </summary>
+    internal static async Task<(Tended Tended, TendRun Run)> RecordedAsync(ITendLog? log, TendTrigger trigger, string? by, TimeProvider clock, Func<DateTimeOffset, Task<Tended>> pass)
+    {
+        ArgumentNullException.ThrowIfNull(clock);
+        ArgumentNullException.ThrowIfNull(pass);
+        var started = clock.GetUtcNow();
+        var id = TendRun.NewId(started);
+        Tended tended;
+        try
+        {
+            tended = await pass(started);
+        }
+        catch (Exception failure)
+        {
+            await KeepAsync(log, new TendRun(id, started, clock.GetUtcNow(), trigger, by, TendOutcome.Failed, failure.Message, [], 0, [], [], []));
+            throw;
+        }
+
+        var run = new TendRun(id, started, clock.GetUtcNow(), trigger, by, TendOutcome.Completed, null, tended.Swept, tended.Expired, tended.TimedOut, tended.Abandoned, tended.Warned);
+        await KeepAsync(log, run);
+        return (tended, run);
+    }
+
+    private static async Task KeepAsync(ITendLog? log, TendRun run)
+    {
+        if (log is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await log.RecordAsync(run);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure))
+        {
+            await Console.Error.WriteLineAsync($"The tending run {run.Id} could not be kept: {failure.Message}");
         }
     }
 
