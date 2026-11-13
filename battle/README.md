@@ -83,7 +83,7 @@ performance still require release measurement.
 node --test studio/*.test.js table/*.test.js
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium
-npm --prefix studio/browser test -- battle-lab.spec.js battle-live.spec.js battle-combat.spec.js battle-playback.spec.js battle-loop.spec.js battle-history.spec.js battle-guidance.spec.js battle-upkeep.spec.js battle-spellbook.spec.js battle-mutations.spec.js battle-evolution.spec.js battle-tempo.spec.js battle-pacing.spec.js battle-growth.spec.js battle-order.spec.js battle-targets.spec.js battle-inspection.spec.js battle-services.spec.js battle-parity.spec.js
+npm --prefix studio/browser test -- battle-lab.spec.js battle-live.spec.js battle-combat.spec.js battle-playback.spec.js battle-loop.spec.js battle-history.spec.js battle-guidance.spec.js battle-upkeep.spec.js battle-spellbook.spec.js battle-mutations.spec.js battle-evolution.spec.js battle-tempo.spec.js battle-pacing.spec.js battle-growth.spec.js battle-order.spec.js battle-targets.spec.js battle-inspection.spec.js battle-services.spec.js battle-parity.spec.js battle-reactions.spec.js
 dotnet build
 dotnet test --no-build
 dotnet format --verify-no-changes
@@ -572,6 +572,16 @@ phone held upright, or the spell choice docked beside it) the chip folds to the 
 and heart, and the field's team label ("OPPONENT · NAME") still names them; on the smallest phones the round's
 phase gives up its place, since the command dock names it too.
 
+## Reactions
+
+Between two people, the header's **💬** opens a fixed set of eight short messages (Hello, Good luck, Well played,
+Nice move, Oops, Thinking, Thanks, Good game); one tap sends it and closes the set ([ADR 0173](../docs/adr/0173-let-players-react-with-a-fixed-set-of-messages.md)).
+It shows at once as a bubble on this seat's side, and the other player's newest one as a bubble by theirs, with how
+long ago it was sent when they were away. A seat reacts once every four seconds; the set says so. The set also hides
+the opponent's reactions for this game; Settings, in the menu, hides them for every game. No reaction is offered
+against a bot, in a replay, or on a device holding both seats. `table/battle-reactions.js` decides what shows and
+when; `src/reactions.ts` draws it. No notification is sent for a reaction and the bell counts none.
+
 ## Evolution illustrations and capstone effects
 
 Each creature is drawn as the evolution its purchases resolve to
@@ -674,6 +684,11 @@ client. It reads like the other sheets ([ADR 0153](../docs/adr/0153-play-the-sam
 - a crest in the result's colour, and the round in the eyebrow;
 - each team a card of how many stand and the health it kept as a bar, whose whole line is its accessible name;
 - one row of pills.
+
+Below the teams, the battle report (`battle/src/match.ts`) names the creature of the match and tables what each
+creature did. A tap on a creature, its name or its portrait, shows its illustration large over the result, as the
+inspection's portrait does; a tap on the picture or Escape gives the report back. On a phone the rows hide their
+portraits to keep the figures readable, and the name alone is the way in.
 
 The first pill plays the same game again (`rematchPlan`, `table/outcome.js`). **Rematch** against the bot or on a
 shared device opens the same table at once. **Invite to rematch** keeps a friend's seat, or opens the lobby on a

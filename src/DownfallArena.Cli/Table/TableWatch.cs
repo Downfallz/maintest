@@ -65,7 +65,14 @@ internal sealed class TableWatch(TableRegistry registry, TimeProvider clock)
     /// </summary>
     public async Task MovedAsync(string table, CancellationToken cancellationToken = default)
     {
-        if (registry.Held(table) is { IsOver: false } held && await LookAsync(held, cancellationToken) is null)
+        if (registry.Held(table) is not { IsOver: false } held)
+        {
+            return;
+        }
+
+        // A reaction another process kept is one of the things that moved (ADR 0173): read again at the next view.
+        held.Api.Reactions.Stale();
+        if (await LookAsync(held, cancellationToken) is null)
         {
             throw new IOException($"Session {table} could not be looked at.");
         }

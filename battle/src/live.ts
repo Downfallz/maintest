@@ -1,5 +1,7 @@
 import { createBattleServices } from '../../table/battle-services.js';
 import { serviceControls } from './services';
+import { createBattleReactions } from '../../table/battle-reactions.js';
+import { reactionControls } from './reactions';
 import { creatureInspection, creatureCues, spokenCues } from '../../table/battle-inspection.js';
 import { chipElement, conditionIcons, iconElement, type EffectChip } from './condition-icons';
 import { inspectionControls } from './inspection';
@@ -84,6 +86,7 @@ const connection = createLiveConnection({ onState: status, onView: (next: View |
   try {
     view = next; catalogue = content ?? catalogue;
     if (next) services.receive(next);
+    reactions.receive(next);
     history.receive(next, catalogue); upkeep.receive(next); orderReveal.receive(next, { since: seenGame ? seenSince(storage, seenGame) : null }); growth.receive(next, catalogue);
     combat.receive(next); planning.receive(next); match.receive(next, catalogue);
     playback.receive(next, new Map(catalogue?.cards?.map(card => [card.id, card]) ?? []),
@@ -95,7 +98,7 @@ const connection = createLiveConnection({ onState: status, onView: (next: View |
 } });
 const visible = () => ready && !rendererFailed && !document.hidden &&
   !document.querySelector('.navigation-panels dialog[open]') &&
-  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog', 'atlas-dialog', 'opponent-dialog'].some(id => $<HTMLDialogElement>(id).open) &&
+  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog', 'atlas-dialog', 'opponent-dialog', 'reactions-dialog'].some(id => $<HTMLDialogElement>(id).open) &&
   // A revealed turn order holds the field until Continue: what arrives meanwhile waits for it.
   !orderUI.isReading();
 let tabStorage: Storage | null = null;
@@ -132,6 +135,12 @@ const rematchOf = () => {
 const matchUI = matchControls(match, () => { passOver(); combat.close(); planning.close(); }, rematchOf, () => catalogue?.effects ?? []);
 const services = createBattleServices({ onChange: () => servicesUI.render() });
 const servicesUI = serviceControls(services, storage);
+// Reactions (ADR 0173): the set of short messages the two players send each other, and the bubbles that show them.
+const reactions = createBattleReactions({ onChange: () => reactionsUI.render(), storage });
+const reactionsUI = reactionControls(reactions, {
+  opponentName: () => opponentCard(opponent.seat, opponent.ladder, opponent.friends).name || 'Opponent',
+  onShown: shown => { keepForGame({ reactions: shown }); reactions.setShown(shown); },
+});
 const inspectionUI = inspectionControls();
 const historyUI = historyControls(history, () => playback.skip(), () => render());
 // The mutation reveal last read: opened with See and closed, or set aside with Continue.
@@ -334,7 +343,7 @@ function render() {
   controls.render(action, catalogue, growth.highlights(action, visible() && !playbackState.active && !replay.active), spellsHeld);
   const shape = `${$<HTMLDialogElement>('combat-dialog').open}|${$<HTMLDialogElement>('planning-dialog').open && ['Evolution', 'Speed', 'TieOrder'].includes($('planning-dialog').dataset.kind ?? '')}`;
   if (shape !== dockShape) { dockShape = shape; dockMoved = playbackState.active; }
-  else if (!playbackState.active) dockMoved = false; planningUI.render(planning.model(), catalogue); atlasUI.refresh(catalogue); matchUI.render(); servicesUI.render(); historyUI.render(history.model());
+  else if (!playbackState.active) dockMoved = false; planningUI.render(planning.model(), catalogue); atlasUI.refresh(catalogue); matchUI.render(); servicesUI.render(); reactionsUI.render(); historyUI.render(history.model());
   // No command is offered while results are still to be read: the next choice appears once the player has
   // seen what led to it (ADR 0139). Skip all remains the deliberate way out, except past an opponent's action.
   if (playbackState.active) for (const id of ['combat-open', 'planning-open', 'match-open']) $(id).hidden = true;
@@ -702,6 +711,9 @@ function choose(choice: Choice) {
   const transport = httpTransport(choice.seat, choice.token, request);
   connection.start(transport, catalogue);
   services.reset(transport, heldSeats.filter(one => one.table.id === choice.table.id).map(one => httpTransport(one.seat, one.token, request)), `${choice.table.id}:${choice.seat}`);
+  // A device holding both seats is two people side by side: they have no use for reactions.
+  reactions.reset(transport, `${choice.table.id}:${choice.seat}`, choice.seat, { hotseat: heldSeats.filter(one => one.table.id === choice.table.id).length > 1 });
+  reactions.setShown(effectiveSettings(settings, gameOverride(storage, choice.table.id)).reactions);
 }
 
 async function discover(autoResume = true) {
@@ -709,7 +721,7 @@ async function discover(autoResume = true) {
   if (rendererFailed) return;
   const ticket = ++discovering;
   $('loading').hidden = true;
-  connection.stop(); services.reset(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); selected = null; seenGame = null; opponent = { seat: null, ladder: null, friends: null }; drawOpponent(); helpUI.setGame(null); view = null; catalogue = null; render();
+  connection.stop(); services.reset(); reactions.reset(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); selected = null; seenGame = null; opponent = { seat: null, ladder: null, friends: null }; drawOpponent(); helpUI.setGame(null); view = null; catalogue = null; render();
   $('retry').hidden = true; $('seat-choices').replaceChildren();
   text('perspective', 'YOUR TEAM'); text('connection', 'Connecting…');
   text('load-title', 'Opening your battle'); text('load-detail', 'Verifying the seats saved in this browser…');
@@ -786,6 +798,7 @@ function applySettings() {
   $<HTMLSelectElement>('playback-speed').value = String(chosen.speed); playback.setRate(chosen.speed);
   $<HTMLInputElement>('reduce-motion').checked = chosen.reducedMotion; playback.setReduced(reduced()); $('battle').dataset.reducedMotion = String(reduced());
   helpUI.setHelp(chosen.help);
+  reactions.setShown(chosen.reactions);
 }
 function keepForGame(change: object) { const game = gameOf(); if (game) saveGameOverride(storage, game, change); }
 void loadSettings(storage).then(answer => { settings = answer.settings; settingsKnown = true; applySettings(); render(); });

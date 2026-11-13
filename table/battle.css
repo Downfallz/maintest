@@ -1585,6 +1585,13 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 .match-report-table td.match-figure small { display: block; color: var(--muted); font-size: 10px; line-height: 1.2; }
 .match-report-table .match-who { text-align: left; font-weight: 600; }
 .match-who-inner { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 190px; }
+/* A creature of the report is a button that zooms its illustration: it keeps the look of the row it sits in. */
+#match-dialog .match-zoom-open { min-height: 0; margin: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; letter-spacing: inherit; cursor: zoom-in; box-shadow: none; }
+#match-dialog .match-zoom-open:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 6px; }
+#match-dialog .match-report-table .match-zoom-open { width: 100%; min-height: 32px; }
+.match-mvp-portrait { flex: none; border-radius: 50%; }
+#match-dialog .match-zoom { z-index: 6; }
+#match-zoom .inspect-zoom-picture { background-color: transparent; box-shadow: none; }
 .match-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .match-fallen { display: block; color: #d98b6f; font-size: 10px; font-weight: 500; letter-spacing: .6px; text-transform: uppercase; }
 .match-report-table tr[data-fallen="true"] .match-portrait { filter: grayscale(1) brightness(.6); }
@@ -1711,3 +1718,34 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
   background: none; font-size: 14px; letter-spacing: normal; text-transform: none; }
 #result-dialog .result-footer button { min-height: 44px; padding: 10px 16px; font-size: 14px; }
 #result-dialog .unseen { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* Reactions (ADR 0173): the set opens from the header, beside History; a reaction shows as a bubble on its sender's
+   side of the field, the other player's at the right under their name, this seat's at the left, and goes by itself.
+   It never takes a tap from the field: the bubble lets every touch through to the creatures under it. */
+#battle #reactions-open { min-width: 44px; min-height: 44px; font-size: 19px; padding: 4px 9px; }
+#battle #reactions-open[hidden] { display: none; }
+.reaction-bubble { position: absolute; z-index: 12; top: 38px; display: flex; align-items: center; gap: 8px; max-width: min(260px, calc(50% - 12px)); margin: 0;
+  padding: 7px 12px 7px 9px; border: 1px solid #b79868; border-radius: 14px; background: linear-gradient(180deg, #1d3236f5, #122126f5);
+  box-shadow: 0 8px 22px #0009; color: #f2eee2; font: 15px/1.2 var(--font-display); pointer-events: none; animation: reaction-in .22s ease-out; }
+.reaction-bubble[hidden] { display: none; }
+.reaction-bubble.theirs { right: 12px; border-color: #d98b6f; border-top-right-radius: 3px; }
+.reaction-bubble.mine { left: 12px; border-color: #7fb6a4; border-top-left-radius: 3px; }
+.reaction-bubble .reaction-glyph { font-size: 22px; line-height: 1; }
+.reaction-bubble .reaction-words { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reaction-bubble small { color: var(--muted); font: 11px/1.2 system-ui, sans-serif; white-space: nowrap; }
+@keyframes reaction-in { from { opacity: 0; transform: translateY(-6px) scale(.96); } to { opacity: 1; transform: none; } }
+#battle[data-reduced-motion="true"] .reaction-bubble { animation: none; }
+@media (prefers-reduced-motion: reduce) { .reaction-bubble { animation: none; } }
+.reactions-dialog { width: min(380px, calc(100vw - 32px)); padding: 16px; border: 1px solid #b7986866; border-radius: var(--radius-soft); background: #13232a; color: #f2eee2; box-shadow: 0 18px 40px #000a; }
+.reactions-dialog::backdrop { background: #050b0d99; }
+.reactions-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.reactions-header h2 { margin: 0; font: 22px var(--font-display); }
+.reactions-header button { min-width: 44px; min-height: 44px; }
+.reactions-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.reaction-choice { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 6px 10px; border: 1px solid #b7986855; border-radius: var(--radius-soft); background: #1b2e34; color: inherit; font: 15px/1.2 var(--font-display); text-align: left; cursor: pointer; }
+.reaction-choice:hover:not(:disabled), .reaction-choice:focus-visible { border-color: var(--gold); background: #22393f; }
+.reaction-choice:disabled { opacity: .5; cursor: default; }
+.reaction-choice .reaction-glyph { font-size: 22px; line-height: 1; }
+.reactions-note { min-height: 2.4em; margin: 10px 0 6px; color: var(--muted); font-size: 13px; }
+.reactions-shown { display: flex; min-height: 44px; align-items: center; justify-content: space-between; gap: 12px; padding-top: 10px; border-top: 1px solid #ffffff14; }
+.reactions-shown small { display: block; color: var(--muted); font-size: 12px; }
+.reactions-shown input { width: 22px; height: 22px; flex: none; }

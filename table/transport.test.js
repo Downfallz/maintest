@@ -227,3 +227,15 @@ test('a stream the host refuses is answered as refused, with nothing read', asyn
 
   assert.deepEqual(await transport.events(() => assert.fail('nothing to hear'), new AbortController().signal), { status: 403, ok: false });
 });
+
+test('a reaction is posted to the seat by its name alone (ADR 0173)', async () => {
+  const { calls, fetchImpl } = stub({ status: 200, body: '{"reaction":{"sequence":1}}' });
+  const transport = httpTransport('player2', 'abc', fetchImpl);
+
+  await transport.react('good-game');
+
+  assert.equal(calls[0].path, '/api/seat/player2/reaction');
+  assert.equal(calls[0].options.method, 'POST');
+  assert.equal(calls[0].options.headers['X-Seat-Token'], 'abc');
+  assert.equal(calls[0].options.body, '{"reaction":"good-game"}');
+});

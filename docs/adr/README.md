@@ -178,3 +178,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0170](0170-end-a-begun-match-whose-left-seat-nobody-takes-in-a-day.md) | End a begun match whose left seat nobody takes in a day | Accepted |
 | [0171](0171-rank-only-3v3-games-and-count-a-players-statistics-on-them.md) | Rank only 3v3 games, and count a player's statistics on them alone | Accepted |
 | [0172](0172-let-named-player-accounts-be-the-operator.md) | Let named player accounts be the operator | Accepted |
+| [0173](0173-let-players-react-with-a-fixed-set-of-messages.md) | Let players react with a fixed set of messages, and notify nobody of one | Accepted |

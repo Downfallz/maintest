@@ -1,11 +1,11 @@
 // The settings every new game starts from (ADR 0140): how confirmed results are read, at what speed, whether
-// first-use help shows, and whether motion is reduced. A signed-in player's are kept by the host with the
+// first-use help shows, whether motion is reduced, and whether the opponent's reactions show (ADR 0173). A signed-in player's are kept by the host with the
 // account; a signed-out browser keeps its own. A game can override any of them for its own duration, in this
 // browser, without changing them; a new game starts from them again.
 
 import { accountRequest } from './account.js';
 
-export const GAME_DEFAULTS = Object.freeze({ pace: 'step', speed: 1, help: true, reducedMotion: false });
+export const GAME_DEFAULTS = Object.freeze({ pace: 'step', speed: 1, help: true, reducedMotion: false, reactions: true });
 export const SPEEDS = Object.freeze([0.5, 1, 1.5, 2]);
 const GLOBAL_KEY = 'downfall.arena.game-settings.v1';
 const OVERRIDE_KEY = 'downfall.arena.game-overrides.v1';
@@ -21,6 +21,7 @@ export function settingsOf(value) {
   if (SPEEDS.includes(Number(value?.speed))) out.speed = Number(value.speed);
   if (typeof value?.help === 'boolean') out.help = value.help;
   if (typeof value?.reducedMotion === 'boolean') out.reducedMotion = value.reducedMotion;
+  if (typeof value?.reactions === 'boolean') out.reactions = value.reactions;
   return out;
 }
 
@@ -97,11 +98,11 @@ export function settingsWhere(account) {
  */
 export function mountGameSettings(doc, storage, { request = accountRequest } = {}) {
   const el = id => doc.getElementById(id);
-  const fields = { pace: el('game-settings-pace'), speed: el('game-settings-speed'), help: el('game-settings-help'), reducedMotion: el('game-settings-motion') };
+  const fields = { pace: el('game-settings-pace'), speed: el('game-settings-speed'), help: el('game-settings-help'), reducedMotion: el('game-settings-motion'), reactions: el('game-settings-reactions') };
   let account = false, ticket = 0, saving = Promise.resolve();
   function show(settings) {
     fields.pace.value = settings.pace; fields.speed.value = String(settings.speed);
-    fields.help.checked = settings.help; fields.reducedMotion.checked = settings.reducedMotion;
+    fields.help.checked = settings.help; fields.reducedMotion.checked = settings.reducedMotion; fields.reactions.checked = settings.reactions;
     el('game-settings-where').textContent = settingsWhere(account);
   }
   function problem(message) { el('game-settings-problem').textContent = message ?? ''; el('game-settings-problem').hidden = !message; }
@@ -118,7 +119,7 @@ export function mountGameSettings(doc, storage, { request = accountRequest } = {
   for (const opener of doc.querySelectorAll('[data-home-dialog="app-settings-dialog"]')) opener.addEventListener('click', () => { problem(null); void refresh(); });
   el('game-settings').addEventListener('submit', event => event.preventDefault());
   el('game-settings').addEventListener('change', () => {
-    const value = { pace: fields.pace.value, speed: Number(fields.speed.value), help: fields.help.checked, reducedMotion: fields.reducedMotion.checked };
+    const value = { pace: fields.pace.value, speed: Number(fields.speed.value), help: fields.help.checked, reducedMotion: fields.reducedMotion.checked, reactions: fields.reactions.checked };
     saving = saving.then(() => saveSettings(storage, value, { account, request })).then(() => problem(null),
       error => problem(`Saved in this browser only: ${error?.message ?? 'the host did not answer'}.`));
   });
