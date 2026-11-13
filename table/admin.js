@@ -253,6 +253,22 @@ export function pageOf(rows, page, size = SESSIONS_PER_PAGE) {
 
 export const SESSIONS_PER_PAGE = 20;
 
+// The headquarters' sections, each one part of the address (`/admin#sessions`), so a reload or a link opens it and
+// Back moves between them. The first is where the page opens.
+export const ADMIN_TABS = Object.freeze(['tables', 'sessions']);
+
+/** The section an address names, or the first one for an address that names none the page has. */
+export function tabOf(hash) {
+  const named = String(hash ?? '').replace(/^#/, '');
+  return ADMIN_TABS.includes(named) ? named : ADMIN_TABS[0];
+}
+
+/** What a list's pager says: how many it shows of how many, and which page of how many. */
+export function pagerLine(kept, total, shown, noun) {
+  const counted = kept === total ? `${total}` : `${kept} of ${total}`;
+  return `${counted} ${noun}${total === 1 ? '' : 's'} · page ${shown.page + 1} of ${shown.pages}`;
+}
+
 function sessionState(session) {
   if (session.live) return 'live on this host';
   return session.over ? 'finished' : 'not finished';
@@ -438,7 +454,8 @@ async function saveZip(answer) {
 async function start() {
   const token = operatorToken(globalThis.location?.search ?? '', kept());
   if (globalThis.location?.search && globalThis.history?.replaceState) {
-    globalThis.history.replaceState(null, '', globalThis.location.pathname);
+    // The token leaves the address; the section it names stays, so a link to /admin?token=…#sessions opens Sessions.
+    globalThis.history.replaceState(null, '', globalThis.location.pathname + (globalThis.location.hash ?? ''));
   }
   const transport = adminTransport(token);
   const problem = element('problem');
@@ -450,6 +467,9 @@ async function start() {
   // The last listing of the store, and the page of it on screen.
   let sessions = [];
   let page = 0;
+  // The tables as the last answer listed them, and the page of them on screen.
+  let tables = [];
+  let tablesPage = 0;
 
   function fillDeclarations(answer) {
     const list = declarations(answer);
@@ -520,8 +540,37 @@ async function start() {
     fillPickers(answer.body);
     element('rules').textContent = answer.body?.rules ?? '';
     element('recording').textContent = answer.body?.recording ? 'Sessions are recorded.' : 'Nothing is recorded (--no-record).';
-    element('tables').replaceChildren(...tableRows(answer.body).map(row => card(row, transport, redraw)));
+    tables = tableRows(answer.body);
+    drawTables();
     element('admin').hidden = false;
+  }
+
+  function drawPager(name, shown, line) {
+    element(`${name}-count`).textContent = line;
+    element(`${name}-previous`).disabled = shown.page === 0;
+    element(`${name}-next`).disabled = shown.page >= shown.pages - 1;
+  }
+
+  function drawTables() {
+    const shown = pageOf(tables, tablesPage);
+    tablesPage = shown.page;
+    element('tables').replaceChildren(...shown.rows.map(row => card(row, transport, redraw)));
+    drawPager('tables', shown, pagerLine(tables.length, tables.length, shown, 'table'));
+    // No table is a sentence, not a pager over nothing.
+    element('tables-empty').hidden = tables.length > 0;
+    element('tables-pages').hidden = tables.length === 0;
+    element('tab-tables-count').textContent = String(tables.length);
+  }
+
+  // The section the address names is the one shown; following a section's link changes the address, so Back and a
+  // reload keep it.
+  function showTab() {
+    const shown = tabOf(globalThis.location?.hash);
+    for (const panel of document.querySelectorAll('[data-panel]')) panel.hidden = panel.dataset.panel !== shown;
+    for (const tab of document.querySelectorAll('[data-tab]')) {
+      if (tab.dataset.tab === shown) tab.setAttribute('aria-current', 'page');
+      else tab.removeAttribute('aria-current');
+    }
   }
 
   function selected() {
@@ -554,9 +603,8 @@ async function start() {
     const shown = pageOf(kept, page);
     page = shown.page;
     element('sessions').replaceChildren(...shown.rows.map(row => sessionItem(row, transport)));
-    element('sessions-count').textContent = `${kept.length} of ${sessions.length} session${sessions.length === 1 ? '' : 's'} · page ${shown.page + 1} of ${shown.pages}`;
-    element('sessions-previous').disabled = shown.page === 0;
-    element('sessions-next').disabled = shown.page >= shown.pages - 1;
+    drawPager('sessions', shown, `${kept.length} of ${pagerLine(sessions.length, sessions.length, shown, 'session')}`);
+    element('tab-sessions-count').textContent = String(sessions.length);
     element('sessions-all').checked = false;
     armTools();
   }
@@ -598,6 +646,11 @@ async function start() {
     armTools();
   });
   element('sessions-refresh').addEventListener('click', redrawSessions);
+  element('tables-previous').addEventListener('click', () => { tablesPage -= 1; drawTables(); });
+  element('tables-next').addEventListener('click', () => { tablesPage += 1; drawTables(); });
+  element('admin-refresh').addEventListener('click', async () => { await redraw(); await redrawSessions(); });
+  globalThis.addEventListener?.('hashchange', showTab);
+  showTab();
   element('sessions-export').addEventListener('click', async () => saveZip(await transport.exportSessions(selected())));
   element('sessions-delete').addEventListener('click', () => {
     const ids = selected();

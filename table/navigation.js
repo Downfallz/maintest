@@ -195,7 +195,7 @@ export function mountNavigation(doc, storage, { onInvite, onChange = () => {}, o
   const el = id => doc.getElementById(id);
   header.innerHTML = headerContent;
   doc.body.insertAdjacentHTML('beforeend', panels);
-  const current = { lobby: 'play-link-home', leaderboard: 'leaderboard-link', stats: 'stats-link' }[page];
+  const current = { lobby: 'play-link-home', leaderboard: 'leaderboard-link', stats: 'stats-link', admin: 'nav-admin-link' }[page];
   if (current) el(current).setAttribute('aria-current', 'page');
   const navigation = mountHomeNavigation(doc);
   const devices = mountDevices(doc, { storage });

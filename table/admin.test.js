@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { OPERATOR_KEY, adminTransport, declarationToShow, declarations, defaultFormat, defaultOpponent, deletionSaid, filenameOf, filterSessions, formatToShow, formats, openAsked, operatorToken, pageOf, said, seatable, sessionRows, signInNeeded, tableRows } from './admin.js';
+import { OPERATOR_KEY, adminTransport, declarationToShow, declarations, defaultFormat, defaultOpponent, deletionSaid, filenameOf, filterSessions, formatToShow, formats, openAsked, operatorToken, pageOf, said, seatable, sessionRows, signInNeeded, tableRows, tabOf, pagerLine, ADMIN_TABS } from './admin.js';
 
 function answering(status, body, seen = []) {
   return async (path, options) => {
@@ -348,4 +348,19 @@ test('a finished table offers its replay beside its viewer link, and a table bei
   ] });
 
   assert.deepEqual(rows.map(row => [row.session, row.replay]), [['/session/done', '/play?replay=done'], [null, null]]);
+});
+
+test('the headquarters open the section the address names, and Tables for any other', () => {
+  assert.deepEqual([...ADMIN_TABS], ['tables', 'sessions']);
+  assert.equal(tabOf('#sessions'), 'sessions');
+  assert.equal(tabOf('sessions'), 'sessions');
+  assert.equal(tabOf('#players'), 'tables');
+  assert.equal(tabOf(''), 'tables');
+  assert.equal(tabOf(undefined), 'tables');
+});
+
+test('a pager says how many it shows of how many and which page, in the singular for one', () => {
+  assert.equal(pagerLine(25, 25, { page: 1, pages: 2 }, 'table'), '25 tables · page 2 of 2');
+  assert.equal(pagerLine(1, 1, { page: 0, pages: 1 }, 'table'), '1 table · page 1 of 1');
+  assert.equal(pagerLine(3, 25, { page: 0, pages: 1 }, 'session'), '3 of 25 sessions · page 1 of 1');
 });
