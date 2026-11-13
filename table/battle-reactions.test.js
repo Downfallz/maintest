@@ -116,6 +116,16 @@ test('a sent reaction shows at once, then cools down for as long as the host say
   assert.equal(reactions.model().coolingMs, 0);
 });
 
+test('the other player\'s reaction sent just before this seat\'s own still shows when the view brings both', async () => {
+  const { reactions } = mounted({ transport: { react: async () => ({ ok: true, status: 200, body: { reaction: { sequence: 2 } } }) } });
+  reactions.receive(view([]));
+  await reactions.send('hello');
+
+  reactions.receive(view([sent(1, 'player2', 'good-luck'), sent(2, 'player1', 'hello')]));
+
+  assert.equal(reactions.model().theirs.label, 'Good luck!');
+});
+
 test('a reaction the host says came too soon is taken back and waits as long as it says', async () => {
   const { reactions } = mounted({ transport: { react: async () => ({ ok: false, status: 429, body: { retryAfterMs: 1500 } }) } });
   reactions.receive(view([]));

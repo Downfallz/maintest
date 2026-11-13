@@ -120,8 +120,8 @@ export function createBattleReactions({ onChange, storage = null, now = () => Da
     owner.sending = false;
     if (answer?.ok) {
       cooling(owner, owner.cooldownMs);
-      const sequence = Number(answer.body?.reaction?.sequence);
-      if (sequence) saveSeenReaction(storage, owner.game, sequence);
+      // What was shown moves on only with a view: the other player's reaction sent just before this one may not
+      // have reached this page yet, and taking this one's number as read would skip it.
       onChange();
       return true;
     }

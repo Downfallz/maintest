@@ -42,7 +42,9 @@ match played over days also means the other player is usually not looking when a
 - Good: a muted or hidden reaction costs the receiver nothing: no sound, no vibration, no badge.
 - Bad: one more small blob write per reaction, and one read per table a process picks up or is told moved.
 - Bad: a process that holds a table reads its reactions again only when told the table moved, so with more than one
-  API replica and no relay, a page streaming from another replica sees a reaction at its next change.
+  API replica a page reading from another replica can see a reaction only at its next change: without a relay
+  because its stream is told nothing, and with one because the relay tells the page before it tells the other
+  replicas. The API runs one replica today (ADR 0165); raising it means reading reactions by their tag on a view.
 - Neutral: the set is English, like the rest of the page.
 
 ## Alternatives considered
