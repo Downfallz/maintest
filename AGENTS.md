@@ -43,7 +43,7 @@ battle/                         Isolated Phaser/TypeScript presentation; builds 
 learning/                      The Python training project (uv, ruff, pytest) and the heuristic weights files. See docs/learning/training.md,
                                and docs/learning/plan.md for where the loop is going and what has been refuted on the way.
 models/                        Trained policies (policy.json, small, committed with their evaluation). See models/README.md.
-infra/                         The hosted table on Azure (ADR 0080-0082, ADR 0162): main.bicep (the API app, the worker app, the hourly
+infra/                         The hosted table on Azure (ADR 0080-0082, ADR 0162, ADR 0175: play.downfallinstinct.com behind Cloudflare): main.bicep (the API app, the worker app, the hourly
                                tending job), the one-time bootstrap.sh, and README.md.
 Dockerfile                     The table's image, built and tried by .github/workflows/deploy.yml before it is pushed and deployed.
 scripts/                       iterate.sh, one turn of the learning loop (docs/learning/training.md),
