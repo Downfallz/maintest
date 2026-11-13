@@ -2,6 +2,7 @@ import { createBattleMatch } from '../../table/battle-match.js';
 import { rematchPlan } from '../../table/outcome.js';
 import { activateSeats } from '../../table/session.js';
 import { presentationPath } from '../../table/battle-preferences.js';
+import { resultCardElement, type ResultCard } from './result-card';
 
 type Controller = ReturnType<typeof createBattleMatch>;
 type Rematch = ReturnType<typeof rematchPlan>;
@@ -106,9 +107,10 @@ async function playAgain(plan: NonNullable<Rematch>) {
   location.assign(`${presentationPath('battle')}?${new URLSearchParams(seats.map(one => [one.seat, one.token]))}`);
 }
 
-export function matchControls(controller: Controller, beforeOpen: () => void, rematch: () => Rematch = () => null) {
+export function matchControls(controller: Controller, beforeOpen: () => void, rematch: () => Rematch = () => null,
+  cues: () => Parameters<typeof resultCardElement>[1] = () => []) {
   const result = el<HTMLDialogElement>('match-dialog'), concede = el<HTMLDialogElement>('concede-dialog');
-  let roundsKey = '', resultKey = '', reportKey = '', starting = false, rematchError = '';
+  let roundsKey = '', resultKey = '', reportKey = '', cardKey = '', starting = false, rematchError = '';
   el('match-rematch').addEventListener('click', async () => {
     const plan = rematch();
     if (!plan || starting) return;
@@ -160,6 +162,11 @@ export function matchControls(controller: Controller, beforeOpen: () => void, re
     el('battle').dataset.replay = String(model.active);
     text('replay-text', model.summary); text('replay-note', model.note);
     text('replay-position', `Round ${model.round} · ${model.index + 1} of ${model.count}`);
+    // Where the replay stands in the match, as a thin bar, and the step itself drawn as the last result is.
+    el('replay-progress').style.width = model.count ? `${Math.round(((model.index + 1) / model.count) * 100)}%` : '0%';
+    const card = (model.card ?? null) as ResultCard | null, nextCard = JSON.stringify(card);
+    if (nextCard !== cardKey) { cardKey = nextCard; el('replay-card').replaceChildren(...(card ? [resultCardElement(card, cues())] : [])); }
+    el('replay-controls').dataset.stage = model.stage ?? '';
     el<HTMLButtonElement>('replay-previous').disabled = !model.previous;
     el<HTMLButtonElement>('replay-next').disabled = !model.next;
     const rounds = JSON.stringify(model.rounds);

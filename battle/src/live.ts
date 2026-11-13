@@ -29,6 +29,7 @@ import { combatControls } from './combat';
 import { createBattleCombat } from '../../table/battle-combat.js';
 import { planningControls, type Catalogue } from './planning';
 import { matchControls } from './match';
+import { resultCardElement, type ResultCard } from './result-card';
 import { rematchPlan } from '../../table/outcome.js';
 import { createBattlePlanning } from '../../table/battle-planning.js';
 import { createBattleMatch } from '../../table/battle-match.js';
@@ -128,7 +129,7 @@ const rematchOf = () => {
   const held = heldSeats.filter(one => one.table.id === selected!.table.id).map(one => one.seat);
   return rematchPlan(selected.table, held.length ? held : [selected.seat], opponentCard(opponent.seat, opponent.ladder, opponent.friends).friend);
 };
-const matchUI = matchControls(match, () => { passOver(); combat.close(); planning.close(); }, rematchOf);
+const matchUI = matchControls(match, () => { passOver(); combat.close(); planning.close(); }, rematchOf, () => catalogue?.effects ?? []);
 const services = createBattleServices({ onChange: () => servicesUI.render() });
 const servicesUI = serviceControls(services, storage);
 const inspectionUI = inspectionControls();
@@ -315,6 +316,7 @@ function render() {
   $('reading-open').setAttribute('aria-label', `Result details: ${playbackState.summary}`);
   $('playback-result').hidden = !playbackState.summary;
   text('result-text', playbackState.summary);
+  resultCard(playbackState.result as ResultCard | null);
   text('playback-announcement', playbackState.stage === 'windup' ? '' : playbackState.summary);
   $('playback-result').setAttribute('aria-label', `Action result: ${playbackState.summary}`);
   text('result-label', playbackState.active ? 'Confirmed result' : 'Last result');
@@ -581,6 +583,14 @@ function statChips(stats: HTMLElement, health: number, maxHealth: number, energy
 }
 
 // An action's outcomes read as chips beside the creature each landed on; its words stay for screen readers.
+// The last result sheet draws the result as the journal draws a cast (result-card.ts), redrawn only when it changes.
+function resultCard(card: ResultCard | null) {
+  const holder = $('result-card'), key = JSON.stringify(card);
+  if (holder.dataset.key === key) return;
+  holder.dataset.key = key;
+  holder.replaceChildren(...(card ? [resultCardElement(card, catalogue?.effects ?? [])] : []));
+}
+
 function readingDetail(reading: { detail: string; groups?: { target: string; chips: EffectChip[] }[] } | null) {
   const detail = $('reading-detail'), key = JSON.stringify(reading ? [reading.detail, reading.groups] : null);
   if (detail.dataset.key === key) return;

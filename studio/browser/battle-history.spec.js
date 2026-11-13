@@ -216,6 +216,14 @@ test('the action result opens the journal over itself and takes the focus back',
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '11'); await page.clock.runFor(WINDUP_MS + IMPACT_MS);
   await page.locator('#playback-next').click(); await page.locator('#playback-result').click();
   await expect(page.locator('#result-dialog')).toBeVisible();
+  // The last result is drawn as the journal draws a cast: whose, which spell, the crit, and the chips by target.
+  const card = page.locator('#result-dialog .result-card');
+  await expect(card).toHaveAttribute('data-kind', 'incoming'); await expect(card).toHaveAttribute('data-status', 'Critical');
+  await expect(card.locator('.result-card-who')).toHaveText('Creature 4'); await expect(card.locator('.result-card-what')).toHaveText('Strike');
+  await expect(card.locator('.result-card-status')).toHaveText('Crit'); await expect(card.locator('.result-card-target')).toHaveText('Creature 1');
+  await expect(card.locator('.effect-chip')).toHaveCount(1);
+  await fitsViewport(page, '#result-dialog [data-history-open], #result-dialog .close');
+  await page.screenshot({ path: test.info().outputPath('last-result.png') });
   await page.locator('#result-dialog [data-history-open]').click(); await expect(rows(page)).toHaveCount(2);
   await page.keyboard.press('Escape');
   await expect(page.locator('#result-dialog [data-history-open]')).toBeFocused();

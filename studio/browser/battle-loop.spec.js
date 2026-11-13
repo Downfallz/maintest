@@ -91,6 +91,11 @@ test('finished matches replay before and after frames, then return to result', a
   await matchResult(page); await expect(page.locator('#match-outcome')).toContainText('round cap'); await page.locator('#match-replay').click();
   await expect(page.locator('#replay-note')).toContainText('Reference:'); await page.locator('#replay-next').click(); await expect(page.locator('[data-creature="4"] .creature-stats')).toContainText('20/20');
   await page.locator('#replay-next').click(); await expect(page.locator('[data-creature="4"] .creature-tag')).toHaveText('DEFEATED');
+  // The step is drawn as the last result is: the cast, its target and its chip, under where the replay stands.
+  const card = page.locator('#replay-card .result-card');
+  await expect(card).toHaveAttribute('data-kind', 'own'); await expect(card.locator('.result-card-who')).toHaveText('Creature 1');
+  await expect(card.locator('.result-card-target')).toHaveText('Creature 4'); await expect(page.locator('#replay-position')).toHaveText('Round 1 · 2 of 3');
+  expect(await page.locator('#replay-progress').evaluate(bar => bar.style.width)).toBe('67%');
   await fitsBattlefield(page); await fitsViewport(page, '.creature, #replay-next, #replay-previous, #replay-close'); await page.screenshot({ path: info.outputPath('match-replay.jpg'), type: 'jpeg', quality: 85 });
   await page.locator('#replay-close').click(); await fitsBattlefield(page); await expect(page.locator('#match-open')).toBeVisible(); expect(h.errors).toEqual([]);
 });

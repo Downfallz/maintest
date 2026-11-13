@@ -679,7 +679,14 @@ The first pill plays the same game again (`rematchPlan`, `table/outcome.js`). **
 shared device opens the same table at once. **Invite to rematch** keeps a friend's seat, or opens the lobby on a
 player who is not a friend. Then come **Replay the match** and **Lobby**; History stays in the field's header.
 Match replay now reaches the host's final public snapshot after
-all recorded actions/cleanup, then returns to the scorecard. Empty feeds keep a readable error on that card;
+all recorded actions/cleanup, then returns to the scorecard. Its dock says where it stands (round, step and a thin
+progress bar, before or after the recorded action) and draws each step as the last result is drawn
+(`battle/src/result-card.ts`): a cast as the journal's summary draws it, whose cast in its side's colour, the spell,
+a CRIT or FIZZLE badge and the field's chips gathered by the creature they landed on; an upkeep, an aftermath, a
+reveal or the result under its own title. On a phone the controls sit under the card in one row: the arrows,
+the round between them, and Result. The last result sheet (`#result-dialog`, from the dock's Last result) draws
+the same card from the playback's `result` (`readingCard` of the item last shown), a turnover with every line
+of its receipt. Empty feeds keep a readable error on that card;
 legacy frameless events remain text-only. A recorded session replays for the operator, or for the players who sat at it (ADR 0156).
 
 Settings offers selection vibration through the existing feedback helper, independently of the battle view's
