@@ -39,6 +39,8 @@ export function httpTransport(seat, token, fetchImpl = globalThis.fetch.bind(glo
 
     // Gives the match up for this seat: the other seat wins on the spot (ADR 0087).
     concede: () => send('POST', `/api/seat/${seat}/concede`),
+    // One of a fixed set of short messages for the other player (ADR 0173); never free text.
+    react: reaction => send('POST', `/api/seat/${seat}/reaction`, { reaction }),
     leave: () => send('POST', '/api/lobby/leave', {}),
 
     // Where "your turn" goes when nobody is looking at this page (ADR 0118): the host's key to subscribe

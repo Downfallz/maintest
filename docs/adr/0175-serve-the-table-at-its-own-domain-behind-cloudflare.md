@@ -1,4 +1,4 @@
-# 0172. Serve the table at its own domain, behind Cloudflare
+# 0175. Serve the table at its own domain, behind Cloudflare
 
 Date: 2026-11-13
 

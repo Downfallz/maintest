@@ -28,7 +28,10 @@ internal static class AccountDocuments
         return key.Length >= SessionKeyBytes ? key : throw new InvalidDataException($"The session key holds {key.Length} bytes; it takes {SessionKeyBytes}.");
     }
 
-    public static string AccountPath(AccountId id) => $"accounts/{id.Value}.json";
+    /// <summary>The prefix every account record is under, which a listing reads.</summary>
+    public const string AccountsPrefix = "accounts/";
+
+    public static string AccountPath(AccountId id) => $"{AccountsPrefix}{id.Value}.json";
 
     public static string SubjectPath(ExternalIdentity identity) =>
         $"by-subject/{identity.Provider}/{Convert.ToBase64String(Encoding.UTF8.GetBytes(identity.Subject)).TrimEnd('=').Replace('+', '-').Replace('/', '_')}.json";

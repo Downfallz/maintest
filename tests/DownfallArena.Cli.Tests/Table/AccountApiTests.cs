@@ -325,6 +325,7 @@ public sealed class AccountApiTests : IDisposable
         read.GetProperty("preferences").GetProperty("speed").GetDecimal().ShouldBe(1m);
         read.GetProperty("preferences").GetProperty("help").GetBoolean().ShouldBeTrue();
         read.GetProperty("preferences").GetProperty("reducedMotion").GetBoolean().ShouldBeFalse();
+        read.GetProperty("preferences").GetProperty("reactions").GetBoolean().ShouldBeTrue();
     }
 
     [Fact]
@@ -335,7 +336,7 @@ public sealed class AccountApiTests : IDisposable
         var mark = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
         var other = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"Other"}""", Nobody));
 
-        var saved = await api.HandleAsync("PUT", "/api/account/preferences", """{"pace":"auto","speed":1.5,"help":false,"reducedMotion":true}""", Signed(mark));
+        var saved = await api.HandleAsync("PUT", "/api/account/preferences", """{"pace":"auto","speed":1.5,"help":false,"reducedMotion":true,"reactions":false}""", Signed(mark));
 
         saved.Status.ShouldBe(200);
         var read = Json(await api.HandleAsync("GET", "/api/account/preferences", "", Signed(mark))).GetProperty("preferences");
@@ -343,6 +344,7 @@ public sealed class AccountApiTests : IDisposable
         read.GetProperty("speed").GetDecimal().ShouldBe(1.5m);
         read.GetProperty("help").GetBoolean().ShouldBeFalse();
         read.GetProperty("reducedMotion").GetBoolean().ShouldBeTrue();
+        read.GetProperty("reactions").GetBoolean().ShouldBeFalse();
         Json(await api.HandleAsync("GET", "/api/account/preferences", "", Signed(other))).GetProperty("saved").GetBoolean().ShouldBeFalse();
     }
 

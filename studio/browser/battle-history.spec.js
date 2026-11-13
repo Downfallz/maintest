@@ -23,6 +23,9 @@ async function mount(page, feed = [entry(10)]) {
     localStorage.setItem('downfall.table.seats', JSON.stringify({ player1: 'seat' }));
     const original = window.fetch;
     window.fetch = (url, options) => String(url).endsWith('/events') ? Promise.resolve(new Response(new ReadableStream({ start(controller) {
+      // A host says it is still there every twenty seconds (ADR 0119): without it the page takes a quiet stream for a
+      // dropped one after 45 seconds (ADR 0164) and opens another, and a long test would notify the closed one.
+      const alive = setInterval(() => { try { controller.enqueue(new TextEncoder().encode(': keep-alive\n\n')); } catch { clearInterval(alive); } }, 20000);
       window.notifyBattle = () => controller.enqueue(new TextEncoder().encode('event: changed\ndata: 1\n\n'));
     } }), { headers: { 'Content-Type': 'text/event-stream' } })) : original(url, options);
   });
@@ -213,6 +216,14 @@ test('the action result opens the journal over itself and takes the focus back',
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '11'); await page.clock.runFor(WINDUP_MS + IMPACT_MS);
   await page.locator('#playback-next').click(); await page.locator('#playback-result').click();
   await expect(page.locator('#result-dialog')).toBeVisible();
+  // The last result is drawn as the journal draws a cast: whose, which spell, the crit, and the chips by target.
+  const card = page.locator('#result-dialog .result-card');
+  await expect(card).toHaveAttribute('data-kind', 'incoming'); await expect(card).toHaveAttribute('data-status', 'Critical');
+  await expect(card.locator('.result-card-who')).toHaveText('Creature 4'); await expect(card.locator('.result-card-what')).toHaveText('Strike');
+  await expect(card.locator('.result-card-status')).toHaveText('Crit'); await expect(card.locator('.result-card-target')).toHaveText('Creature 1');
+  await expect(card.locator('.effect-chip')).toHaveCount(1);
+  await fitsViewport(page, '#result-dialog [data-history-open], #result-dialog .close');
+  await page.screenshot({ path: test.info().outputPath('last-result.png') });
   await page.locator('#result-dialog [data-history-open]').click(); await expect(rows(page)).toHaveCount(2);
   await page.keyboard.press('Escape');
   await expect(page.locator('#result-dialog [data-history-open]')).toBeFocused();

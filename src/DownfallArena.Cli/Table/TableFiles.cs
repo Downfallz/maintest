@@ -26,6 +26,9 @@ internal sealed class TableFiles
 
     private const string Woff2 = "font/woff2";
 
+    // The battlefield's collapse tiles (battle/src/battle-horizon.ts), each loaded a round before the round that shows it.
+    private static readonly string[] HorizonArt = ["fallen-ledge", "breach", "shattered-sky", "broken-floor"];
+
     // The evolution illustrations (table/battle-evolution-art.js, ADR 0151), named here one by one like every other
     // route: the page asks for the one a creature on the field resolves to, and nothing else is read.
     private static readonly string[] EvolutionArt =
@@ -143,6 +146,7 @@ internal sealed class TableFiles
             ["/battle.css"] = (Path.Combine(tableDirectory, "battle.css"), Css),
             ["/battle-combat.js"] = (Path.Combine(tableDirectory, "battle-combat.js"), JavaScript),
             ["/battle-services.js"] = (Path.Combine(tableDirectory, "battle-services.js"), JavaScript),
+            ["/battle-reactions.js"] = (Path.Combine(tableDirectory, "battle-reactions.js"), JavaScript),
             ["/battle-inspection.js"] = (Path.Combine(tableDirectory, "battle-inspection.js"), JavaScript),
             ["/battle-growth.js"] = (Path.Combine(tableDirectory, "battle-growth.js"), JavaScript),
             ["/battle-mutations.js"] = (Path.Combine(tableDirectory, "battle-mutations.js"), JavaScript),
@@ -186,7 +190,13 @@ internal sealed class TableFiles
             ["/admin"] = (Path.Combine(tableDirectory, "admin.html"), StudioResponse.Html),
             ["/admin.css"] = (Path.Combine(tableDirectory, "admin.css"), Css),
             ["/admin.js"] = (Path.Combine(tableDirectory, "admin.js"), JavaScript),
+            ["/admin-players.js"] = (Path.Combine(tableDirectory, "admin-players.js"), JavaScript),
         };
+
+        foreach (var art in HorizonArt)
+        {
+            _routes[$"/battle-art/horizon/{art}.webp"] = (Path.Combine(tableDirectory, "battle-art", "horizon", $"{art}.webp"), Webp);
+        }
 
         foreach (var art in EvolutionArt)
         {

@@ -203,3 +203,21 @@ test('the command portrait uses current art and the retired sheet is never downl
   await expect(page.locator('#actor-portrait')).toHaveCSS('background-image', /brute\.webp/);
   expect(retired).toEqual([]);
 });
+
+test('the horizon study advances through every even round and resets on the six-creature board', async ({ page }, info) => {
+  // Seven collapses, each loading and fading its art, take 9 to 14 s on an idle desktop: a busy runner outlasts 30 s.
+  test.setTimeout(60000);
+  await page.goto('/table/battle-lab.html?study=horizon');
+  await expect(page.locator('#lab')).toHaveAttribute('data-ready', 'true');
+  await expect(page.locator('#round-number')).toHaveText('01');
+  for (const round of [2, 4, 6, 8, 10, 12, 14]) {
+    await page.getByRole('button', { name: 'Enter round ' + round, exact: true }).click();
+    await expect(page.locator('#round-number')).toHaveText(String(round).padStart(2, '0'));
+  }
+  await expect(page.locator('.creature')).toHaveCount(6);
+  await page.screenshot({ path: info.outputPath('horizon-aftermath.png') });
+  await page.locator('#choose').click();
+  await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'targeting');
+  await page.locator('#reset').click();
+  await expect(page.locator('#round-number')).toHaveText('01');
+});

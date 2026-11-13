@@ -27,6 +27,9 @@ async function mount(page, { over = true, recording = true, outcome = { winner: 
     Object.defineProperty(navigator, 'vibrate', { configurable: true, writable: true, value: () => window.serviceCalls.push('vibrate') });
     const original = fetch;
     window.fetch = (url, options) => String(url).endsWith('/events') ? Promise.resolve(new Response(new ReadableStream({ start(controller) {
+      // A host says it is still there every twenty seconds (ADR 0119): without it the page takes a quiet stream for a
+      // dropped one after 45 seconds (ADR 0164) and opens another, and a long test would notify the closed one.
+      const alive = setInterval(() => { try { controller.enqueue(new TextEncoder().encode(': keep-alive\n\n')); } catch { clearInterval(alive); } }, 20000);
       window.notifyBattle = () => controller.enqueue(new TextEncoder().encode('event: changed\ndata: 1\n\n'));
     } }), { headers: { 'Content-Type': 'text/event-stream' } })) : original(url, options);
   }, { both, permission, unsupported });
@@ -102,6 +105,25 @@ test('the result reports what each creature did, its creature of the match first
   await fitsViewport(page, '#match-replay, #match-lobby');
   await page.screenshot({ path: info.outputPath('battle-report.png') });
   expect(h.errors).toEqual([]);
+});
+test('a creature of the report shows its illustration large, as the inspection does, and Escape gives the report back', async ({ page }, info) => {
+  await mount(page, { feed: reported }); await matchResult(page);
+  const zoom = page.locator('#match-zoom'), picture = page.locator('#match-zoom-close');
+  // On a phone the row hides its portrait: its name is the way in.
+  const fallen = page.locator('.match-report-table[data-side="ally"] tr[data-report-creature="3"] .match-zoom-open');
+  await expect(fallen).toHaveAccessibleName('Show Creature 3 large');
+  await fallen.click();
+  await expect(zoom).toBeVisible(); await expect(picture).toBeFocused();
+  await expect(picture).toHaveAttribute('data-defeated', 'true');
+  expect(await picture.evaluate(one => one.style.backgroundImage)).toMatch(/battle-art\/.+\.webp/);
+  await page.screenshot({ path: info.outputPath('report-zoom.png') });
+  await page.keyboard.press('Escape');
+  await expect(zoom).toBeHidden(); await expect(page.locator('#match-dialog')).toBeVisible(); await expect(fallen).toBeFocused();
+  // The creature of the match zooms from its portrait; a tap on the picture gives the report back.
+  await page.locator('#match-mvp .match-zoom-open').click();
+  await expect(picture).toHaveAttribute('data-side', 'ally'); await expect(picture).toHaveAttribute('data-defeated', 'false');
+  await picture.click();
+  await expect(zoom).toBeHidden(); await expect(page.locator('#match-dialog')).toBeVisible();
 });
 test('empty replay keeps an explicit message on the result and a legacy outcome stays unknown', async ({ page }) => {
   await mount(page, { outcome: null }); await matchResult(page); await expect(page.locator('#match-title')).toHaveText('Match complete');

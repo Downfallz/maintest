@@ -62,7 +62,7 @@ test('a new player reads in Step at 1x with tips, and a change in Match settings
 
   const kept = () => page.evaluate(() => ({ globals: localStorage.getItem('downfall.arena.game-settings.v1'),
     game: JSON.parse(localStorage.getItem('downfall.arena.game-overrides.v1') ?? '[]').find(one => one.game === 'table-a') }));
-  expect(await kept()).toEqual({ globals: null, game: { game: 'table-a', pace: 'auto', speed: 2, help: true, reducedMotion: false } });
+  expect(await kept()).toEqual({ globals: null, game: { game: 'table-a', pace: 'auto', speed: 2, help: true, reducedMotion: false, reactions: true } });
   await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true'); await choose(page);
   await expect(page.locator('#playback-preference')).toHaveValue('auto');
   await expect(page.locator('#playback-speed')).toHaveValue('2');
@@ -453,7 +453,7 @@ test('keyboard inspection and settings return focus and fit a short viewport', a
 });
 
 test('cold scene resources and sampled frame intervals are recorded for release review', async ({ page }, info) => {
-  await mount(page); await choose(page);
+  const state = await mount(page); state.first.board.roundNumber = 1; await choose(page);
   const metrics = await page.evaluate(async () => {
     const intervals = []; let previous = performance.now();
     await new Promise(resolve => {
@@ -472,4 +472,75 @@ test('cold scene resources and sampled frame intervals are recorded for release 
   expect(metrics.resources.reduce((sum, entry) => sum + entry.decodedBytes, 0)).toBeLessThan(4 * 1024 * 1024);
   await writeFile(info.outputPath('release-metrics.json'), JSON.stringify(metrics, null, 2));
   await info.attach('release-metrics', { body: JSON.stringify(metrics, null, 2), contentType: 'application/json' });
+});
+
+test('the horizon falls once on 1 to 2 and settles on resume, replay and reduced motion', async ({ page }) => {
+  await mountSpellScene(page);
+  const present = (round, { reduced = false, replay = false } = {}) => page.evaluate(({ round, reduced, replay }) => {
+    window.artScene.present({ stage: 'decision', actor: null, target: null, targets: [], creatures: [], round }, reduced, 1, replay);
+  }, { round, reduced, replay });
+  const span = () => page.evaluate(() => {
+    const piece = window.artScene.children.getByName('horizon-span');
+    return { visible: piece.visible, angle: piece.angle };
+  });
+  await present(2);
+  expect((await span()).visible).toBe(false);
+  await present(1);
+  expect(await span()).toEqual({ visible: true, angle: 0 });
+  await present(2);
+  await page.clock.runFor(400);
+  const midway = await span();
+  expect(midway.visible).toBe(true);
+  expect(midway.angle).toBeGreaterThan(0);
+  await present(2);
+  expect((await span()).angle).toBe(midway.angle);
+  await page.clock.runFor(800);
+  expect((await span()).visible).toBe(false);
+  await present(1);
+  await present(2, { replay: true });
+  expect((await span()).visible).toBe(false);
+  await present(1);
+  await present(2, { reduced: true });
+  expect((await span()).visible).toBe(false);
+});
+
+test('a returning seat sees the round twelve ruins with the combat HUD on a landscape phone', async ({ page }, info) => {
+  test.skip(info.project.name !== 'phone');
+  await page.setViewportSize({ width: 844, height: 390 });
+  const state = await mount(page);
+  state.second.board.roundNumber = 12;
+  state.second.waitingFor = null;
+  state.second.waitingAsked = null;
+  await choose(page, 2);
+  await expect(page.locator('#round-number')).toHaveText('12');
+  await expect(page.locator('.creature')).toHaveCount(6);
+  await page.screenshot({ path: info.outputPath('horizon-live-landscape.png') });
+});
+
+test('horizon damage follows the displayed round in both directions and keeps spreading past twelve', async ({ page }) => {
+  await mountSpellScene(page);
+  const visible = () => page.evaluate(() => window.artScene.children.list
+    .filter(piece => piece.name.startsWith('horizon-') && piece.visible)
+    .map(piece => piece.name.slice(8)).sort());
+  const present = round => page.evaluate(round => window.artScene.present(
+    { stage: 'decision', target: null, actor: null, targets: [], creatures: [], round }, true, 1, true), round);
+  const stages = [
+    [1, ['pier', 'span']], [2, ['pier']], [4, ['fallen-ledge', 'pier']], [6, ['breach', 'fallen-ledge', 'pier']],
+    [8, ['breach', 'fallen-ledge']], [10, ['breach', 'fallen-ledge', 'shattered-sky']], [12, ['breach', 'broken-floor', 'fallen-ledge', 'shattered-sky']],
+    [14, ['breach', 'broken-floor', 'fallen-ledge', 'faults', 'shattered-sky']],
+  ];
+  for (const [round, pieces] of stages) {
+    await present(round);
+    await expect.poll(async () => { await page.clock.runFor(80); return visible(); }).toEqual(pieces);
+    await present(round + 1);
+    if (round !== 1) expect(await visible()).toEqual(pieces);
+  }
+  const commands = () => page.evaluate(() => window.artScene.children.getByName('horizon-faults').commandBuffer.length);
+  const first = await commands();
+  await present(16);
+  expect(await commands()).toBeGreaterThan(first);
+  await present(6);
+  expect(await visible()).toEqual(['breach', 'fallen-ledge', 'pier']);
+  await present(null);
+  expect(await visible()).toEqual([]);
 });

@@ -17,6 +17,14 @@ dotnet run --project src/DownfallArena.Cli -- table --lobby
 
 Open the printed host URL at `/battle-lab`. For a static preview after building:
 `python3 -m http.server 8765`, then `/table/battle-lab.html` on that server.
+For the horizon study, open `/battle-lab?study=horizon` (static preview: `/table/battle-lab.html?study=horizon`).
+Use **Enter round 2** and the subsequent even-round buttons to advance. **Reset scene** returns to round 1.
+The right leg of the arch and its span collapse at 2. At 4 a section of the far ledge gives way between the teams.
+Storm clouds gather over the collapsing city at 6, and the remaining pier falls at 8.
+The eclipse splits at 10 and wide chasms cut through the center of the floor at 12. Another fissure opens on each later even round.
+The live battle uses the displayed round. Odd rounds keep the previous damage. Reduced motion and replay navigation
+show the settled view. The additional WebP tiles load on demand, starting one round before their reveal.
+
 Rebuild after changing TypeScript or the imported shared table modules; there is no watch server.
 
 `build` type-checks and emits `table/battle-build/game.js` and `live.js`, legal comments and the Phaser MIT license.
@@ -75,7 +83,7 @@ performance still require release measurement.
 node --test studio/*.test.js table/*.test.js
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium
-npm --prefix studio/browser test -- battle-lab.spec.js battle-live.spec.js battle-combat.spec.js battle-playback.spec.js battle-loop.spec.js battle-history.spec.js battle-guidance.spec.js battle-upkeep.spec.js battle-spellbook.spec.js battle-mutations.spec.js battle-evolution.spec.js battle-tempo.spec.js battle-pacing.spec.js battle-growth.spec.js battle-order.spec.js battle-targets.spec.js battle-inspection.spec.js battle-services.spec.js battle-parity.spec.js
+npm --prefix studio/browser test -- battle-lab.spec.js battle-live.spec.js battle-combat.spec.js battle-playback.spec.js battle-loop.spec.js battle-history.spec.js battle-guidance.spec.js battle-upkeep.spec.js battle-spellbook.spec.js battle-mutations.spec.js battle-evolution.spec.js battle-tempo.spec.js battle-pacing.spec.js battle-growth.spec.js battle-order.spec.js battle-targets.spec.js battle-inspection.spec.js battle-services.spec.js battle-parity.spec.js battle-reactions.spec.js
 dotnet build
 dotnet test --no-build
 dotnet format --verify-no-changes
@@ -564,6 +572,16 @@ phone held upright, or the spell choice docked beside it) the chip folds to the 
 and heart, and the field's team label ("OPPONENT · NAME") still names them; on the smallest phones the round's
 phase gives up its place, since the command dock names it too.
 
+## Reactions
+
+Between two people, the header's **💬** opens a fixed set of eight short messages (Hello, Good luck, Well played,
+Nice move, Oops, Thinking, Thanks, Good game); one tap sends it and closes the set ([ADR 0173](../docs/adr/0173-let-players-react-with-a-fixed-set-of-messages.md)).
+It shows at once as a bubble on this seat's side, and the other player's newest one as a bubble by theirs, with how
+long ago it was sent when they were away. A seat reacts once every four seconds; the set says so. The set also hides
+the opponent's reactions for this game; Settings, in the menu, hides them for every game. No reaction is offered
+against a bot, in a replay, or on a device holding both seats. `table/battle-reactions.js` decides what shows and
+when; `src/reactions.ts` draws it. No notification is sent for a reaction and the bell counts none.
+
 ## Evolution illustrations and capstone effects
 
 Each creature is drawn as the evolution its purchases resolve to
@@ -667,11 +685,23 @@ client. It reads like the other sheets ([ADR 0153](../docs/adr/0153-play-the-sam
 - each team a card of how many stand and the health it kept as a bar, whose whole line is its accessible name;
 - one row of pills.
 
+Below the teams, the battle report (`battle/src/match.ts`) names the creature of the match and tables what each
+creature did. A tap on a creature, its name or its portrait, shows its illustration large over the result, as the
+inspection's portrait does; a tap on the picture or Escape gives the report back. On a phone the rows hide their
+portraits to keep the figures readable, and the name alone is the way in.
+
 The first pill plays the same game again (`rematchPlan`, `table/outcome.js`). **Rematch** against the bot or on a
 shared device opens the same table at once. **Invite to rematch** keeps a friend's seat, or opens the lobby on a
 player who is not a friend. Then come **Replay the match** and **Lobby**; History stays in the field's header.
 Match replay now reaches the host's final public snapshot after
-all recorded actions/cleanup, then returns to the scorecard. Empty feeds keep a readable error on that card;
+all recorded actions/cleanup, then returns to the scorecard. Its dock says where it stands (round, step and a thin
+progress bar, before or after the recorded action) and draws each step as the last result is drawn
+(`battle/src/result-card.ts`): a cast as the journal's summary draws it, whose cast in its side's colour, the spell,
+a CRIT or FIZZLE badge and the field's chips gathered by the creature they landed on; an upkeep, an aftermath, a
+reveal or the result under its own title. On a phone the controls sit under the card in one row: the arrows,
+the round between them, and Result. The last result sheet (`#result-dialog`, from the dock's Last result) draws
+the same card from the playback's `result` (`readingCard` of the item last shown), a turnover with every line
+of its receipt. Empty feeds keep a readable error on that card;
 legacy frameless events remain text-only. A recorded session replays for the operator, or for the players who sat at it (ADR 0156).
 
 Settings offers selection vibration through the existing feedback helper, independently of the battle view's
@@ -751,9 +781,20 @@ While an opponent's action waits unplayed (arrived under the turn order or anoth
 strip show its round as it stood before that action, not the engine's latest board.
 
 The order strip shows each place as a badge in its tempo's colour (a tick once played), never a number run into the
-name, with a quiet chevron between places, read left to right. The order sheet reads like the other sheets: the round
+name, with a quiet chevron between places, read left to right. Each place also says its initiative (⚡) and carries a
+small d20 mark when a roll-off placed it. A tap on a place lights its creature on the field in ice blue (a rim around
+its silhouette, a pool at its feet and a blue caption line, the rest of the field a little dimmed; never the acting
+gold) and opens a card at the top of the field saying why it holds its place (`orderReason` in
+`table/battle-order.js`): its rank, its tempo band, its initiative against its neighbours', and the tie that placed it,
+with the d20s a roll-off threw and their rerolls, or the owner's choice in a tie of one team. The card stands on the
+side of the field away from the creature it lights, offers **Inspect ↗** for the full sheet, and a second tap, its ×
+or Escape puts the light out. The order sheet's creature links still open the inspection. The order sheet reads like the other sheets: the round
 under a TURN ORDER eyebrow, each tempo band a chip, each creature a card with its place badge, its state and its facts
 as chips and its d20 roll in gold, and one Continue.
+
+While the seat orders its ties the field shows them in the same blue (`tieMarks`): each tied creature of its own wears
+the place it takes now as a numbered badge, or a ? breathing while it is still to place, and a tap on it on the field
+places it as its pill does; the opponent's places in those ties wear their number muted.
 
 The order of tied creatures docks like the mutation pick and the team's tempos, the field above it: each tie is a card
 with its shared places as gold badges and who takes each now, the creatures still to place as pills tapped in acting

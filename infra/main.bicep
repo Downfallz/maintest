@@ -24,6 +24,9 @@ param operators string
 @description('The Google OAuth client id players sign in with (ADR 0122). Public, not a secret. Empty, players do not sign in.')
 param googleClientId string = ''
 
+@description('The player accounts that are the operator once signed in (ADR 0175), by their ids (acct_...), comma-separated. Empty, only the operators above reach the admin panel.')
+param adminAccounts string = ''
+
 @description('The relay the pages and processes hear what moved through (ADR 0165): Free_F1 (20 connections, 20 000 messages a day), Standard_S1 (1 000 connections a unit), or empty for none, and the pages read the API\'s own streams. Opted into once the bootstrap has granted its role.')
 @allowed([
   ''
@@ -32,13 +35,13 @@ param googleClientId string = ''
 ])
 param relaySku string = ''
 
-@description('The table\'s own host name behind Cloudflare, e.g. play.downfallinstinct.com (ADR 0172). Empty, the table answers at the platform\'s address only.')
+@description('The table\'s own host name behind Cloudflare, e.g. play.downfallinstinct.com (ADR 0175). Empty, the table answers at the platform\'s address only.')
 param customDomain string = ''
 
 @description('The name the Cloudflare Origin CA certificate was uploaded under to the Container Apps environment, once, by hand (infra/README.md). Read only when customDomain is set.')
 param originCertificateName string = 'cloudflare-origin'
 
-@description('Whether the API answers Cloudflare\'s addresses alone (ADR 0172), so nobody reaches it around Cloudflare at the platform\'s address. Turned on once the custom domain serves.')
+@description('Whether the API answers Cloudflare\'s addresses alone (ADR 0175), so nobody reaches it around Cloudflare at the platform\'s address. Turned on once the custom domain serves.')
 param onlyCloudflare bool = false
 
 @description('A short word every resource name starts with.')
@@ -55,6 +58,12 @@ var accountArgs = empty(googleClientId) ? [] : [
   'google'
   '--google-client-id'
   googleClientId
+]
+// The admin accounts (ADR 0175), on the API alone: it is the one process that serves the panel, and only with players
+// signing in at all.
+var adminArgs = empty(googleClientId) || empty(trim(adminAccounts)) ? [] : [
+  '--admins'
+  trim(adminAccounts)
 ]
 var suffix = uniqueString(resourceGroup().id)
 var containerName = 'playtests'
@@ -123,7 +132,7 @@ var relayEnv = relayOn ? [
 ] : []
 
 // Cloudflare's IPv4 ranges (https://www.cloudflare.com/ips-v4), the only addresses the API answers when
-// onlyCloudflare is on (ADR 0172). The platform's ingress takes IPv4 only, and Cloudflare reaches it over IPv4.
+// onlyCloudflare is on (ADR 0175). The platform's ingress takes IPv4 only, and Cloudflare reaches it over IPv4.
 // They change rarely; compare them with the published list before turning the fence on, and when Cloudflare
 // announces a change.
 var cloudflareRanges = [
@@ -145,7 +154,7 @@ var cloudflareRanges = [
 ]
 var ingressRestrictions = onlyCloudflare ? map(range(0, length(cloudflareRanges)), i => {
   name: 'cloudflare-${i}'
-  description: 'Cloudflare (ADR 0172)'
+  description: 'Cloudflare (ADR 0175)'
   ipAddressRange: cloudflareRanges[i]
   action: 'Allow'
 }) : []
@@ -295,7 +304,7 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
         customDomains: domainOn ? [
           {
             name: customDomain
-            // The Cloudflare Origin CA certificate, uploaded once by hand (ADR 0172), so its private key is in no
+            // The Cloudflare Origin CA certificate, uploaded once by hand (ADR 0175), so its private key is in no
             // repository, variable or secret of the workflow.
             certificateId: resourceId('Microsoft.App/managedEnvironments/certificates', appEnvironment.name, originCertificateName)
             bindingType: 'SniEnabled'
@@ -324,7 +333,7 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
             '--turns'
             'worker'
             '--tended'
-          ], accountArgs)
+          ], accountArgs, adminArgs)
           env: concat(pushEnv, relayEnv)
           resources: {
             cpu: json('0.5')
@@ -577,16 +586,16 @@ resource signIn 'Microsoft.App/containerApps/authConfigs@2024-03-01' = {
   }
 }
 
-@description('Where the table answers: its own domain when it has one (ADR 0172), the platform\'s address otherwise.')
+@description('Where the table answers: its own domain when it has one (ADR 0175), the platform\'s address otherwise.')
 output url string = domainOn ? 'https://${customDomain}' : 'https://${app.properties.configuration.ingress.fqdn}'
 
-@description('The platform\'s own address, which Cloudflare\'s record points at (ADR 0172).')
+@description('The platform\'s own address, which Cloudflare\'s record points at (ADR 0175).')
 output platformUrl string = 'https://${app.properties.configuration.ingress.fqdn}'
 
 @description('What the sign-in registration must list as its redirect URI, once (infra/README.md).')
 output redirectUri string = domainOn ? 'https://${customDomain}/.auth/login/aad/callback' : 'https://${app.properties.configuration.ingress.fqdn}/.auth/login/aad/callback'
 
-@description('The value of the asuid TXT record that proves the custom domain is ours (ADR 0172).')
+@description('The value of the asuid TXT record that proves the custom domain is ours (ADR 0175).')
 output customDomainVerificationId string = appEnvironment.properties.customDomainConfiguration.customDomainVerificationId
 
 @description('Where sessions are recorded.')

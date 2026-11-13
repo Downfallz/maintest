@@ -1,6 +1,7 @@
 using System.Text.Json;
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Friends;
+using DownfallArena.Application.Accounts.Players;
 using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.Application.Learning;
 using DownfallArena.Application.Learning.Ports;
@@ -108,6 +109,15 @@ internal static class TableHost
         // The operator's door: the platform's login where the host is behind one, a printed token everywhere
         // else. The token is minted the way a pilot's is, and printed the way a pilot's is.
         var gate = options.PlatformAuth ? OperatorGate.BehindPlatform() : OperatorGate.WithToken(TableComposer.Token());
+        // The accounts that are the operator once signed in (ADR 0172), a third door beside either.
+        var (admins, adminProblem) = OperatorGate.ParseAdmins(options.Admins ?? Environment.GetEnvironmentVariable(AdminsEnvironment));
+        if (adminProblem is not null || (admins.Count > 0 && options.Accounts == AccountsMode.Off))
+        {
+            await Console.Error.WriteLineAsync(adminProblem ?? $"{AdminsEnvironment} names admin accounts, and this host signs nobody in: add '--accounts google' or '--accounts dev'.");
+            return 1;
+        }
+
+        gate = gate.WithAdmins(admins);
         var described = RuleSetFile.Describe(rules, options.Rules);
         // The players' sign-in (ADR 0122), kept beside the recordings. A Google sign-in without its client id is
         // one line here rather than a page whose button never draws.
@@ -126,6 +136,7 @@ internal static class TableHost
         var accounts = opened?.Api;
         FriendsApi? friends = null;
         Friends? friendships = null;
+        PlayersApi? players = null;
         if (accounts is not null)
         {
             // The devices an account is told on (friends plan, stage 1), kept beside the accounts; with keys to
@@ -139,8 +150,16 @@ internal static class TableHost
             accounts.ForgetFriends = id => friendships.ForgetAsync(id);
             // The settings every new game of the account starts from (ADR 0140), beside the accounts too.
             accounts.Preferences = await ArtifactStores.OpenPreferencesAsync(options.Record ?? DefaultRunsDirectory, stopping.Token);
+            // When each account last signed in and was last seen (ADR 0174), beside the accounts too, and the
+            // operator's list of players read from it, the accounts and the results.
+            accounts.Activity = new AccountActivityLog(await ArtifactStores.OpenActivityAsync(options.Record ?? DefaultRunsDirectory, stopping.Token), clock);
+            players = new PlayersApi(new PlayerDirectory(opened.Value.Store, accounts.Activity, results, clock), accounts, results)
+            {
+                Friends = friendships,
+                BotNamed = spec => LobbyApi.BotName(agents.FirstOrDefault(agent => string.Equals(agent.Value, spec, StringComparison.OrdinalIgnoreCase))?.Label ?? spec),
+            };
         }
-        var admin = new AdminApi(registry, composer, gate, clock, described, stored, agents, push) { Accounts = accounts };
+        var admin = new AdminApi(registry, composer, gate, clock, described, stored, agents, push) { Accounts = accounts, Players = players };
         // A table opened for a friend (ADR 0129): the lobby checks the friendship and tells the friend's devices.
         admin.Lobby.Friends = friendships;
         // A host the hourly job tends lets no request do the job's work (ADR 0162).
@@ -252,6 +271,10 @@ internal static class TableHost
             Console.WriteLine(gate.Token is { } token
                 ? $"  Admin: {server.Url}admin?token={token}"
                 : $"  Admin: {server.Url}admin, behind the platform's sign-in ({OperatorGate.PrincipalHeader} is trusted).");
+            if (gate.Admins.Count > 0)
+            {
+                Console.WriteLine($"  Admin accounts, once signed in: {string.Join(", ", gate.Admins)}.");
+            }
 
             Console.WriteLine(server.IsLoopback
                 ? $"  Only this machine can reach it.{Elsewhere()}"
@@ -428,6 +451,9 @@ internal static class TableHost
 
     /// <summary>The variable the hosted table reads its Google client id from (ADR 0122).</summary>
     public const string GoogleClientIdEnvironment = "DOWNFALL_GOOGLE_CLIENT_ID";
+
+    /// <summary>The variable a host reads its admin accounts from when <c>--admins</c> is not given (ADR 0172).</summary>
+    public const string AdminsEnvironment = "DOWNFALL_ADMINS";
 
     private static string AccountsLocation(CliOptions options)
     {

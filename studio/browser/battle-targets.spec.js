@@ -25,6 +25,9 @@ async function mount(page, kind = 'Action') {
     localStorage.setItem('downfall.table.seats', JSON.stringify({ player1: 'seat' }));
     const original = window.fetch;
     window.fetch = (url, options) => String(url).endsWith('/events') ? Promise.resolve(new Response(new ReadableStream({ start(controller) {
+      // A host says it is still there every twenty seconds (ADR 0119): without it the page takes a quiet stream for a
+      // dropped one after 45 seconds (ADR 0164) and opens another, and a long test would notify the closed one.
+      const alive = setInterval(() => { try { controller.enqueue(new TextEncoder().encode(': keep-alive\n\n')); } catch { clearInterval(alive); } }, 20000);
       window.notifyBattle = () => controller.enqueue(new TextEncoder().encode('event: changed\ndata: 1\n\n'));
     } }), { headers: { 'Content-Type': 'text/event-stream' } })) : original(url, options);
   });
@@ -49,6 +52,9 @@ const target = (page, id) => page.locator(`.creature[data-creature="${id}"]`);
 const preview = page => page.locator('#combat-preview');
 const choose = page => page.locator('[data-spell="spell-0"]').click();
 test('selected effects and cost stay beside a fixed explicit confirmation', async ({ page }, info) => {
+  // Two layout checks, a full-page picture and a whole target selection: 12 to 13 s on an idle desktop, past 30 on
+  // a loaded runner, as the heaviest journeys elsewhere are given.
+  test.setTimeout(60000);
   const h = await mount(page); await choose(page);
   // The caster carries the acting halo, without a word: the scene lights the creature whose slot it is.
   await expect(page.locator('#battle')).toHaveAttribute('data-halo', '1');

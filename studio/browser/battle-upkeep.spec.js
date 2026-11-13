@@ -11,7 +11,7 @@ const energy = round => ({ sequence: round * 10, round: round + 1, event: { kind
 const ongoing = (round, ticks = false) => ({ sequence: round * 10 + 1, round: round + 1, event: { kind: 'OngoingEffectsApplied', roundId: round,
   ...(ticks ? { energyRegenerationTicks: [{ creature: 1, gained: 2 }], regenerationTicks: [{ creature: 1, healed: 0 }], bleedTicks: [{ creature: 1, damage: 7 }] } : {}) } });
 async function mount(page, { waiting = null, round = 1, feed = [energy(round), ongoing(round)], tips = false } = {}) {
-  const state = { errors: [], writes: [], shown: [], status: 200, view: { board: { slot: 'Player1', roundNumber: round, phase: 'Planning', subPhase: 'Evolution',
+  const state = { errors: [], writes: [], shown: [], served: 0, status: 200, view: { board: { slot: 'Player1', roundNumber: round, phase: 'Planning', subPhase: 'Evolution',
     nextEvolutionRound: round, allies: roster.slice(0, 3), enemies: roster.slice(3), timeline: [] }, waiting,
     waitingFor: 'Evolution', waitingAsked: 11, waitingCreature: 1,
     options: { evolution: { remainingPicks: 2, creatures: [{ creature: 1, availableTiers: ['root'] }] } }, feed, feedNext: round * 10 + 2 } };
@@ -24,6 +24,9 @@ async function mount(page, { waiting = null, round = 1, feed = [energy(round), o
     localStorage.setItem('downfall.arena.game-settings.v1', JSON.stringify({ pace: 'auto', speed: 1, help: Boolean(tips), reducedMotion: false }));
     const original = window.fetch;
     window.fetch = (url, options) => String(url).endsWith('/events') ? Promise.resolve(new Response(new ReadableStream({ start(controller) {
+      // A host says it is still there every twenty seconds (ADR 0119): without it the page takes a quiet stream for a
+      // dropped one after 45 seconds (ADR 0164) and opens another, and a long test would notify the closed one.
+      const alive = setInterval(() => { try { controller.enqueue(new TextEncoder().encode(': keep-alive\n\n')); } catch { clearInterval(alive); } }, 20000);
       window.notifyBattle = () => controller.enqueue(new TextEncoder().encode('event: changed\ndata: 1\n\n'));
     } }), { headers: { 'Content-Type': 'text/event-stream' } })) : original(url, options);
   }, { tips });
@@ -35,7 +38,7 @@ async function mount(page, { waiting = null, round = 1, feed = [energy(round), o
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: { rules: { energyPerRound: 99, combatDeclaration: 'AtActivation' }, cards: [{ id: 'strike', name: 'Strike', cost: 2 }], packages: [{ id: 'root', name: 'Warden', level: 1, spells: ['strike'] }] } });
     if (url.pathname === '/api/seat/player1') {
       if (url.searchParams.has('shown')) state.shown.push(url.searchParams.get('shown'));
-      return route.fulfill({ status: state.status, json: state.view });
+      await route.fulfill({ status: state.status, json: state.view }); state.served++; return;
     }
     return route.fulfill({ status: 500 });
   });
@@ -47,7 +50,11 @@ async function mount(page, { waiting = null, round = 1, feed = [energy(round), o
   state.writes.length = 0;
   const publish = async (feed, extra = {}) => {
     state.view = { ...state.view, ...extra, feed, feedNext: Math.max(state.view.feedNext, ...feed.map(one => one.sequence + 1)) };
+    const served = state.served;
     await page.evaluate(() => window.notifyBattle());
+    // A change told while a read is in flight is owed one more read, which the page schedules at no delay: a paused
+    // clock runs it only when it is moved, and a loaded machine is when the two overlap.
+    await expect.poll(async () => { if (state.served > served) return true; await page.clock.runFor(0); return false; }).toBe(true);
   };
   return { state, publish };
 }

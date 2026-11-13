@@ -2,6 +2,7 @@ import { createBattleMatch } from '../../table/battle-match.js';
 import { rematchPlan } from '../../table/outcome.js';
 import { activateSeats } from '../../table/session.js';
 import { presentationPath } from '../../table/battle-preferences.js';
+import { resultCardElement, type ResultCard } from './result-card';
 
 type Controller = ReturnType<typeof createBattleMatch>;
 type Rematch = ReturnType<typeof rematchPlan>;
@@ -33,6 +34,15 @@ const portrait = (form: string) => {
   // Beside the page, as the scene loads its figures: /battle-art under /battle, and under /table/ where the suite serves it.
   image.src = `battle-art/${form || 'base-creature'}.webp`; return image;
 };
+// A creature of the report shows its illustration large when tapped, as the inspection's portrait does: the button
+// carries what to show, so the zoom never looks the creature up again. On a phone the row hides its portrait and the
+// name alone is the way in.
+function zoomable(fighter: Fighter, className: string) {
+  const button = document.createElement('button'); button.type = 'button'; button.className = `${className} match-zoom-open`;
+  button.dataset.form = fighter.form || 'base-creature'; button.dataset.side = fighter.side; button.dataset.defeated = String(!fighter.alive);
+  button.setAttribute('aria-label', `Show ${fighter.name} large`);
+  return button;
+}
 const figure = (value: number, small = '') => {
   const cell = node('td', 'match-figure', String(value));
   if (!value) cell.dataset.zero = 'true';
@@ -49,7 +59,8 @@ function mvpCard(report: Report) {
   words.append(node('p', 'match-mvp-eyebrow', 'Creature of the match'), node('strong', '', fighter.name),
     node('p', 'match-mvp-line', [`${fighter.dealt} damage`, fighter.kills ? `${fighter.kills} KO` : '', fighter.healed ? `${fighter.healed} healed` : ''].filter(Boolean).join(' · ')));
   card.setAttribute('aria-label', `Creature of the match: ${fighter.name}, ${words.lastChild?.textContent ?? ''}`);
-  card.append(portrait(fighter.form), words);
+  const open = zoomable(fighter, 'match-mvp-portrait'); open.append(portrait(fighter.form));
+  card.append(open, words);
   return [card];
 }
 
@@ -78,7 +89,7 @@ function sideTable(side: Report['sides'][number], label: string, report: Report,
     const who = node('th', 'match-who'); who.setAttribute('scope', 'row');
     const name = node('span', 'match-name', fighter.name);
     if (!fighter.alive) name.append(node('small', 'match-fallen', 'fallen'));
-    const inner = node('span', 'match-who-inner'); inner.append(portrait(fighter.form), name); who.append(inner);
+    const inner = zoomable(fighter, 'match-who-inner'); inner.append(portrait(fighter.form), name); who.append(inner);
     const dealt = figure(fighter.dealt, fighter.bleed ? `${fighter.bleed} bleed` : '');
     const bar = node('span', 'match-share'); bar.style.setProperty('--share', String(report.top.dealt ? fighter.dealt / report.top.dealt : 0)); dealt.prepend(bar);
     row.append(who, dealt, figure(fighter.healed, fighter.regen ? `${fighter.regen} regen` : ''), figure(fighter.taken), figure(fighter.blocked), figure(fighter.kills));
@@ -106,9 +117,10 @@ async function playAgain(plan: NonNullable<Rematch>) {
   location.assign(`${presentationPath('battle')}?${new URLSearchParams(seats.map(one => [one.seat, one.token]))}`);
 }
 
-export function matchControls(controller: Controller, beforeOpen: () => void, rematch: () => Rematch = () => null) {
+export function matchControls(controller: Controller, beforeOpen: () => void, rematch: () => Rematch = () => null,
+  cues: () => Parameters<typeof resultCardElement>[1] = () => []) {
   const result = el<HTMLDialogElement>('match-dialog'), concede = el<HTMLDialogElement>('concede-dialog');
-  let roundsKey = '', resultKey = '', reportKey = '', starting = false, rematchError = '';
+  let roundsKey = '', resultKey = '', reportKey = '', cardKey = '', starting = false, rematchError = '';
   el('match-rematch').addEventListener('click', async () => {
     const plan = rematch();
     if (!plan || starting) return;
@@ -116,6 +128,26 @@ export function matchControls(controller: Controller, beforeOpen: () => void, re
     try { await playAgain(plan); } catch (error) { rematchError = (error as Error).message || 'Could not start the rematch. Try again.'; }
     finally { starting = false; render(); }
   });
+  // The report's zoom: a creature tapped shows large over the whole result; a tap on it or Escape gives the report back.
+  const zoom = el('match-zoom'), picture = el<HTMLButtonElement>('match-zoom-close');
+  let zoomedFrom: HTMLElement | null = null;
+  function unzoom(focus = true) {
+    if (zoom.hidden) return;
+    zoom.hidden = true;
+    if (focus && zoomedFrom?.isConnected) zoomedFrom.focus({ preventScroll: true });
+    zoomedFrom = null;
+  }
+  el('match-report').addEventListener('click', event => {
+    const open = (event.target as HTMLElement).closest<HTMLElement>('.match-zoom-open');
+    if (!open) return;
+    picture.style.backgroundImage = `url("battle-art/${open.dataset.form}.webp")`;
+    picture.dataset.side = open.dataset.side ?? 'ally'; picture.dataset.defeated = open.dataset.defeated ?? 'false';
+    picture.setAttribute('aria-label', `Back to the battle report from ${open.getAttribute('aria-label')?.replace(/^Show | large$/g, '') ?? 'the creature'}`);
+    zoomedFrom = open; zoom.hidden = false; picture.focus({ preventScroll: true });
+  });
+  picture.addEventListener('click', () => unzoom());
+  result.addEventListener('cancel', event => { if (!zoom.hidden) { event.preventDefault(); unzoom(); } });
+  result.addEventListener('close', () => unzoom(false));
   el('match-open').addEventListener('click', () => { beforeOpen(); result.showModal(); });
   el('match-replay').addEventListener('click', async () => { beforeOpen(); await controller.replay(); if (controller.model().active) { result.close(); el('replay-next').focus(); } });
   el('replay-previous').addEventListener('click', () => controller.move(-1));
@@ -160,6 +192,11 @@ export function matchControls(controller: Controller, beforeOpen: () => void, re
     el('battle').dataset.replay = String(model.active);
     text('replay-text', model.summary); text('replay-note', model.note);
     text('replay-position', `Round ${model.round} · ${model.index + 1} of ${model.count}`);
+    // Where the replay stands in the match, as a thin bar, and the step itself drawn as the last result is.
+    el('replay-progress').style.width = model.count ? `${Math.round(((model.index + 1) / model.count) * 100)}%` : '0%';
+    const card = (model.card ?? null) as ResultCard | null, nextCard = JSON.stringify(card);
+    if (nextCard !== cardKey) { cardKey = nextCard; el('replay-card').replaceChildren(...(card ? [resultCardElement(card, cues())] : [])); }
+    el('replay-controls').dataset.stage = model.stage ?? '';
     el<HTMLButtonElement>('replay-previous').disabled = !model.previous;
     el<HTMLButtonElement>('replay-next').disabled = !model.next;
     const rounds = JSON.stringify(model.rounds);

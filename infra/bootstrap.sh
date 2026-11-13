@@ -167,7 +167,7 @@ redirect() {
     return 1
   fi
 
-  # The platform's address, and the table's own domain when DOMAIN names it (ADR 0172): both stay listed, so the
+  # The platform's address, and the table's own domain when DOMAIN names it (ADR 0175): both stay listed, so the
   # admin panel signs in at either while the domain is brought in.
   local uris=("https://$fqdn/.auth/login/aad/callback")
   if [[ -n "${DOMAIN:-}" ]]; then

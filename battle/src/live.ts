@@ -1,10 +1,12 @@
 import { createBattleServices } from '../../table/battle-services.js';
 import { serviceControls } from './services';
+import { createBattleReactions } from '../../table/battle-reactions.js';
+import { reactionControls } from './reactions';
 import { creatureInspection, creatureCues, spokenCues } from '../../table/battle-inspection.js';
 import { chipElement, conditionIcons, iconElement, type EffectChip } from './condition-icons';
 import { inspectionControls } from './inspection';
 import { battleTargetState, battleTargetTag } from '../../table/battle-targets.js';
-import { battleOrder, createBattleOrderReveal, rollOffDice } from '../../table/battle-order.js';
+import { battleOrder, createBattleOrderReveal, rollOffDice, tieMarks } from '../../table/battle-order.js';
 import { orderControls } from './order';
 import { createBattleGrowth } from '../../table/battle-growth.js';
 import { growthControls } from './growth';
@@ -29,6 +31,7 @@ import { combatControls } from './combat';
 import { createBattleCombat } from '../../table/battle-combat.js';
 import { planningControls, type Catalogue } from './planning';
 import { matchControls } from './match';
+import { resultCardElement, type ResultCard } from './result-card';
 import { rematchPlan } from '../../table/outcome.js';
 import { createBattlePlanning } from '../../table/battle-planning.js';
 import { createBattleMatch } from '../../table/battle-match.js';
@@ -65,7 +68,7 @@ let view: View | null = null;
 let catalogue: Catalogue | null = null;
 let inspected: string | null = null;
 let creatures: Creature[] = [];
-let frame: SceneFrame = { stage: 'decision', target: null, actor: null, targets: [], creatures: [] };
+let frame: SceneFrame = { round: null, stage: 'decision', target: null, actor: null, targets: [], creatures: [] };
 let discovering = 0;
 let heldSeats: Choice[] = [];
 let rendererFailed = false;
@@ -83,6 +86,7 @@ const connection = createLiveConnection({ onState: status, onView: (next: View |
   try {
     view = next; catalogue = content ?? catalogue;
     if (next) services.receive(next);
+    reactions.receive(next);
     history.receive(next, catalogue); upkeep.receive(next); orderReveal.receive(next, { since: seenGame ? seenSince(storage, seenGame) : null }); growth.receive(next, catalogue);
     combat.receive(next); planning.receive(next); match.receive(next, catalogue);
     playback.receive(next, new Map(catalogue?.cards?.map(card => [card.id, card]) ?? []),
@@ -94,7 +98,7 @@ const connection = createLiveConnection({ onState: status, onView: (next: View |
 } });
 const visible = () => ready && !rendererFailed && !document.hidden &&
   !document.querySelector('.navigation-panels dialog[open]') &&
-  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog', 'atlas-dialog', 'opponent-dialog'].some(id => $<HTMLDialogElement>(id).open) &&
+  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog', 'atlas-dialog', 'opponent-dialog', 'reactions-dialog'].some(id => $<HTMLDialogElement>(id).open) &&
   // A revealed turn order holds the field until Continue: what arrives meanwhile waits for it.
   !orderUI.isReading();
 let tabStorage: Storage | null = null;
@@ -128,9 +132,15 @@ const rematchOf = () => {
   const held = heldSeats.filter(one => one.table.id === selected!.table.id).map(one => one.seat);
   return rematchPlan(selected.table, held.length ? held : [selected.seat], opponentCard(opponent.seat, opponent.ladder, opponent.friends).friend);
 };
-const matchUI = matchControls(match, () => { passOver(); combat.close(); planning.close(); }, rematchOf);
+const matchUI = matchControls(match, () => { passOver(); combat.close(); planning.close(); }, rematchOf, () => catalogue?.effects ?? []);
 const services = createBattleServices({ onChange: () => servicesUI.render() });
 const servicesUI = serviceControls(services, storage);
+// Reactions (ADR 0173): the set of short messages the two players send each other, and the bubbles that show them.
+const reactions = createBattleReactions({ onChange: () => reactionsUI.render(), storage });
+const reactionsUI = reactionControls(reactions, {
+  opponentName: () => opponentCard(opponent.seat, opponent.ladder, opponent.friends).name || 'Opponent',
+  onShown: shown => { keepForGame({ reactions: shown }); reactions.setShown(shown); },
+});
 const inspectionUI = inspectionControls();
 const historyUI = historyControls(history, () => playback.skip(), () => render());
 // The mutation reveal last read: opened with See and closed, or set aside with Continue.
@@ -267,6 +277,9 @@ function announceRound(round: number | null) {
 }
 let matchShown = '', lastMutationReveal: number | null = null, mutationOpened = '', spellOpened = '', orderShown = false;
 let dockShape = '', dockMoved = false;
+// What the field marks in blue and numbers, by creature id (the strip's lit creature, or the ties being ordered).
+type FieldMark = { badge: string; state: string };
+let fieldMarks = new Map<string, FieldMark>();
 
 function render() {
   if (receiving) return;
@@ -312,6 +325,7 @@ function render() {
   $('reading-open').setAttribute('aria-label', `Result details: ${playbackState.summary}`);
   $('playback-result').hidden = !playbackState.summary;
   text('result-text', playbackState.summary);
+  resultCard(playbackState.result as ResultCard | null);
   text('playback-announcement', playbackState.stage === 'windup' ? '' : playbackState.summary);
   $('playback-result').setAttribute('aria-label', `Action result: ${playbackState.summary}`);
   text('result-label', playbackState.active ? 'Confirmed result' : 'Last result');
@@ -329,7 +343,7 @@ function render() {
   controls.render(action, catalogue, growth.highlights(action, visible() && !playbackState.active && !replay.active), spellsHeld);
   const shape = `${$<HTMLDialogElement>('combat-dialog').open}|${$<HTMLDialogElement>('planning-dialog').open && ['Evolution', 'Speed', 'TieOrder'].includes($('planning-dialog').dataset.kind ?? '')}`;
   if (shape !== dockShape) { dockShape = shape; dockMoved = playbackState.active; }
-  else if (!playbackState.active) dockMoved = false; planningUI.render(planning.model(), catalogue); atlasUI.refresh(catalogue); matchUI.render(); servicesUI.render(); historyUI.render(history.model());
+  else if (!playbackState.active) dockMoved = false; planningUI.render(planning.model(), catalogue); atlasUI.refresh(catalogue); matchUI.render(); servicesUI.render(); reactionsUI.render(); historyUI.render(history.model());
   // No command is offered while results are still to be read: the next choice appears once the player has
   // seen what led to it (ADR 0139). Skip all remains the deliberate way out, except past an opponent's action.
   if (playbackState.active) for (const id of ['combat-open', 'planning-open', 'match-open']) $(id).hidden = true;
@@ -348,6 +362,19 @@ function render() {
     if (drafted) return `${drafted === 'Quick' ? '⚡' : '✦'} ${tempoLabel(drafted).toUpperCase()}`;
     return id === tempoFocus ? 'CHOOSING TEMPO' : 'TEMPO ?';
   };
+  // The field says in blue what the strip or the tie sheet is about: the creature the strip lit, or the seat's tied
+  // creatures with the place each takes while it orders them, the opponent's places in those ties muted beside them.
+  const tieSheet = plan.opened && plan.latest?.waitingFor === 'TieOrder' && !playbackState.active && !replay.active
+    ? tieMarks(plan.latest, plan.tapped) as Map<string, FieldMark> : null;
+  const stripFocus = orderUI.focused();
+  fieldMarks = tieSheet ?? new Map(stripFocus ? [[stripFocus, { badge: '', state: 'focus' }]] : []);
+  const focusIds = [...fieldMarks].filter(([, mark]) => mark.state !== 'opponent').map(([id]) => id);
+  if (focusIds.length && !targeting) frame = { ...frame, focus: focusIds };
+  const tieTag = (id: string) => {
+    const mark = tieSheet?.get(id);
+    if (!mark) return null;
+    return mark.state === 'pending' ? 'TAP TO PLACE' : `PLACE ${mark.badge}`;
+  };
   // A sheet docked under a phone's field shortens it: the captions go compact so the art stays in view.
   $('battle').dataset.docked = String($<HTMLDialogElement>('combat-dialog').open || ($<HTMLDialogElement>('planning-dialog').open && ['Evolution', 'Speed', 'TieOrder'].includes($('planning-dialog').dataset.kind ?? '')));
   $('battle').classList.toggle('mutation-entry', mutation.available && !plan.opened);
@@ -362,6 +389,8 @@ function render() {
       if (shownArt.has(one.id)) { node.dataset.artworkShown = shownArt.get(one.id)!; shownArt.delete(one.id); }
       node.addEventListener('click', event => {
         if (controls.target(one.id)) return;
+        // While the seat orders its ties, a tied creature of its own is placed by tapping it on the field too.
+        if (['pending', 'placed'].includes(fieldMarks.get(one.id)?.state ?? '')) { planning.order(Number(one.id)); return; }
         if ((event.currentTarget as HTMLElement).dataset.mutationRecipient === 'true') planningUI.openCreature(Number(one.id));
         else inspectCreature(one.id);
       });
@@ -372,6 +401,11 @@ function render() {
     node.dataset.mutationFocus = String(mutation.recipient === one.id);
     node.dataset.sheetFocus = String(tempoFocus === one.id);
     if (tempoDrafts.has(one.id)) node.dataset.tempo = tempoDrafts.get(one.id)!; else delete node.dataset.tempo;
+    const mark = fieldMarks.get(one.id);
+    if (mark) node.dataset.focus = mark.state; else delete node.dataset.focus;
+    let badge = node.querySelector<HTMLElement>('.focus-badge');
+    if (mark?.badge && !badge) { badge = document.createElement('span'); badge.className = 'focus-badge'; badge.setAttribute('aria-hidden', 'true'); node.append(badge); }
+    if (badge) { badge.hidden = !mark?.badge; badge.textContent = mark?.badge ?? ''; }
     if (mutation.recipient === one.id && mutation.previewForm) node.dataset.previewForm = mutation.previewForm;
     else delete node.dataset.previewForm;
     node.dataset.form = one.form;
@@ -388,7 +422,7 @@ function render() {
     if (targeting) node.setAttribute('aria-pressed', String(frame.selected?.includes(one.id) === true));
     else node.removeAttribute('aria-pressed');
     const targetTag = battleTargetTag(targetState, one);
-    const condition = mutation.tag(one.id) ?? tempoTag(one.id) ?? targetTag?.tag ?? tagOf(one);
+    const condition = mutation.tag(one.id) ?? tempoTag(one.id) ?? tieTag(one.id) ?? targetTag?.tag ?? tagOf(one);
     node.querySelector('.creature-name')!.textContent = one.label;
     node.querySelector('.creature-tag')!.textContent = condition;
     statChips(node.querySelector<HTMLElement>('.creature-stats')!, one.health, one.maxHealth, one.energy);
@@ -420,7 +454,7 @@ function render() {
   text('round-phase', view?.waiting && !view.over ? 'WAITING' : phaseLabel(board.phase).toUpperCase());
   text('ally-label', view ? 'YOUR TEAM' : ''); text('enemy-label', view ? opponentLabel() : '');
   const order = battleOrder(view?.waiting && !view.over ? null : board);
-  orderUI.render(order, Boolean(view) && !view?.waiting && !rendererFailed, false);
+  orderUI.render(order, Boolean(view) && !view?.waiting && !rendererFailed, false, view?.waiting && !view.over ? null : board);
   const orderReading = orderUI.isReading() && !replay.active;
   $('battle').dataset.orderReading = String(orderReading);
   $('order-continue').hidden = !orderReading;
@@ -509,14 +543,14 @@ function render() {
   const critical = impact ? (playbackState.cue as { roll?: { value: number; critical: boolean; needed?: number | null } | null } | null)?.roll : null;
   if (critical && frame.actor) dice.push({ id: frame.actor, value: critical.value, tone: critical.critical ? 'crit' : 'miss', key: `crit:${playbackState.sequence}`, needed: critical.needed ?? null });
   frame = { ...frame, dice };
-  scene.present(frame, reduced(), playbackState.rate);
+  scene.present(frame, reduced(), playbackState.rate, replay.active);
   const reveal = growth.receipt();
   if (!reveal) lastMutationReveal = null;
   else if (lastMutationReveal !== reveal.sequence && reveal.round === board.round && visible() && !replay.active && !playbackState.active && !plan.opened) {
     lastMutationReveal = reveal.sequence;
     if (!reduced()) scene.revealMutations(reveal.rows.map((row: {creature: number}) => String(row.creature)));
   }
-  orderUI.render(order, Boolean(view) && !view?.waiting && !rendererFailed, canAuto() && !upkeep.model().pending);
+  orderUI.render(order, Boolean(view) && !view?.waiting && !rendererFailed, canAuto() && !upkeep.model().pending, view?.waiting && !view.over ? null : board);
   helpUI.render(guide, canAuto() && !upkeep.model().pending && !orderReveal.model().pending);
   // The mutation phase opens its tree by itself once the board is unobstructed: after the upkeep receipt, the
   // turn order and a first-use tip, never in the waiting room or over another dialog or playback. Once per asking: a player who
@@ -558,6 +592,14 @@ function statChips(stats: HTMLElement, health: number, maxHealth: number, energy
 }
 
 // An action's outcomes read as chips beside the creature each landed on; its words stay for screen readers.
+// The last result sheet draws the result as the journal draws a cast (result-card.ts), redrawn only when it changes.
+function resultCard(card: ResultCard | null) {
+  const holder = $('result-card'), key = JSON.stringify(card);
+  if (holder.dataset.key === key) return;
+  holder.dataset.key = key;
+  holder.replaceChildren(...(card ? [resultCardElement(card, catalogue?.effects ?? [])] : []));
+}
+
 function readingDetail(reading: { detail: string; groups?: { target: string; chips: EffectChip[] }[] } | null) {
   const detail = $('reading-detail'), key = JSON.stringify(reading ? [reading.detail, reading.groups] : null);
   if (detail.dataset.key === key) return;
@@ -669,6 +711,9 @@ function choose(choice: Choice) {
   const transport = httpTransport(choice.seat, choice.token, request);
   connection.start(transport, catalogue);
   services.reset(transport, heldSeats.filter(one => one.table.id === choice.table.id).map(one => httpTransport(one.seat, one.token, request)), `${choice.table.id}:${choice.seat}`);
+  // A device holding both seats is two people side by side: they have no use for reactions.
+  reactions.reset(transport, `${choice.table.id}:${choice.seat}`, choice.seat, { hotseat: heldSeats.filter(one => one.table.id === choice.table.id).length > 1 });
+  reactions.setShown(effectiveSettings(settings, gameOverride(storage, choice.table.id)).reactions);
 }
 
 async function discover(autoResume = true) {
@@ -676,7 +721,7 @@ async function discover(autoResume = true) {
   if (rendererFailed) return;
   const ticket = ++discovering;
   $('loading').hidden = true;
-  connection.stop(); services.reset(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); selected = null; seenGame = null; opponent = { seat: null, ladder: null, friends: null }; drawOpponent(); helpUI.setGame(null); view = null; catalogue = null; render();
+  connection.stop(); services.reset(); reactions.reset(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); selected = null; seenGame = null; opponent = { seat: null, ladder: null, friends: null }; drawOpponent(); helpUI.setGame(null); view = null; catalogue = null; render();
   $('retry').hidden = true; $('seat-choices').replaceChildren();
   text('perspective', 'YOUR TEAM'); text('connection', 'Connecting…');
   text('load-title', 'Opening your battle'); text('load-detail', 'Verifying the seats saved in this browser…');
@@ -719,9 +764,10 @@ async function discover(autoResume = true) {
   }
 }
 
-scene.onLayout = positions => placeHitTargets(creatures.map(one => nodes.get(one.id)!), positions);
+scene.onLayout = positions => { placeHitTargets(creatures.map(one => nodes.get(one.id)!), positions); orderUI.place(); };
 scene.onDice = shown => { if (shown) $('battle').dataset.dice = shown; else delete $('battle').dataset.dice; };
 scene.onHalo = id => { if (id) $('battle').dataset.halo = id; else delete $('battle').dataset.halo; };
+scene.onFocus = ids => { if (ids) $('battle').dataset.focusLit = ids; else delete $('battle').dataset.focusLit; };
 scene.onArtwork = (id, shown) => { const node = nodes.get(id); if (node) node.dataset.artworkShown = shown; else shownArt.set(id, shown); };
 scene.onReady = () => { ready = true; $('battle').dataset.ready = 'true'; $('battle').dataset.assetFallback = String(scene.assetFailed); render(); };
 function failRenderer() {
@@ -752,6 +798,7 @@ function applySettings() {
   $<HTMLSelectElement>('playback-speed').value = String(chosen.speed); playback.setRate(chosen.speed);
   $<HTMLInputElement>('reduce-motion').checked = chosen.reducedMotion; playback.setReduced(reduced()); $('battle').dataset.reducedMotion = String(reduced());
   helpUI.setHelp(chosen.help);
+  reactions.setShown(chosen.reactions);
 }
 function keepForGame(change: object) { const game = gameOf(); if (game) saveGameOverride(storage, game, change); }
 void loadSettings(storage).then(answer => { settings = answer.settings; settingsKnown = true; applySettings(); render(); });

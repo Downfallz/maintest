@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { ActingHalo } from './acting-halo';
+import { ActingHalo, FOCUS } from './acting-halo';
+import { BattleHorizon } from './battle-horizon';
 import { DiceLayer } from './dice';
 import { placements, strikeApproach } from '../../table/battle-layout.js';
 import { CREATURE_ART, figureArt, figureGeometry } from '../../table/battle-art.js';
@@ -40,6 +41,8 @@ const wrap = (value: number, span: number) => ((value % span) + span) % span;
 export class BattleScene extends Phaser.Scene {
   private figures = new Map<string, Figure>();
   private backdrop?: Phaser.GameObjects.Image;
+  private horizon?: BattleHorizon;
+  private replay = false;
   private motes: Phaser.GameObjects.Arc[] = [];
   private effects: Phaser.GameObjects.GameObject[] = [];
   private upkeepMarkers = new UpkeepMarkers(this);
@@ -61,6 +64,11 @@ export class BattleScene extends Phaser.Scene {
   // Which creature the acting halo lights now, or null (`#battle[data-halo]` for tests and tools).
   onHalo: (id: string | null) => void = () => {};
   private halo: ActingHalo | null = null;
+  // One blue halo per creature the turn order or a tie points at (SceneFrame.focus), made the first time it is lit.
+  private focusHalos = new Map<string, ActingHalo>();
+  // Which creatures the blue focus lights now (`#battle[data-focus-lit]` for tests and tools).
+  onFocus: (ids: string) => void = () => {};
+  private focusLit = '';
   private dice: DiceLayer | null = null;
   // The dice on the field now, `id:value:tone` each (`#battle[data-dice]` for tests and tools).
   onDice: (shown: string) => void = () => {};
@@ -78,13 +86,18 @@ export class BattleScene extends Phaser.Scene {
     this.load.image('battle-floor', `${this.assetRoot}eclipse-battle.webp`);
     for (const asset of CREATURE_ART) this.load.image(asset.key, `${this.assetRoot}${asset.file}`);
     this.load.on('loaderror', (file: Phaser.Loader.File) => {
+      // A missing optional scenery plate leaves the earlier landscape in place.
+      if (String(file.key).startsWith('horizon-')) return;
       if (!String(file.key).startsWith('evolution-')) { this.assetFailed = true; return; }
       this.loadingArt.delete(String(file.key)); this.failedArt.add(String(file.key));
     });
   }
 
   create() {
-    if (this.textures.exists('battle-floor')) this.backdrop = this.add.image(0, 0, 'battle-floor').setOrigin(.5, 0).setTint(0xb5bbc2).setDepth(-10);
+    if (this.textures.exists('battle-floor')) {
+      this.backdrop = this.add.image(0, 0, 'battle-floor').setOrigin(.5, 0).setTint(0xb5bbc2).setDepth(-10);
+      this.horizon = new BattleHorizon(this, this.backdrop, this.assetRoot);
+    }
     // A local vector fallback keeps the scene selectable if an image fails to load.
     const fallback = this.add.graphics();
     fallback.fillStyle(0x71867e).fillTriangle(40, 0, 0, 90, 80, 90);
@@ -103,11 +116,13 @@ export class BattleScene extends Phaser.Scene {
     this.onReady();
   }
 
-  present(state: SceneFrame, reduced: boolean, rate: number) {
+  present(state: SceneFrame, reduced: boolean, rate: number, replay = false) {
     this.state = state;
     this.reduced = reduced;
     this.rate = playbackRate(rate);
     if (!this.ready) return;
+    this.horizon?.present(state.round ?? null, !reduced && !replay && !this.replay);
+    this.replay = replay;
     // The roster is who stands where; what each one looks like changes in place, so a purchase can be seen to happen.
     const roster = JSON.stringify(state.creatures.map(one => [one.id, one.enemy]));
     const rosterChanged = roster !== this.roster;
@@ -122,15 +137,26 @@ export class BattleScene extends Phaser.Scene {
     const changed = state.stage !== this.previous;
     if (changed && (state.stage === 'decision' || state.stage === 'resolved')) this.clearMotion();
     this.arrange(rosterChanged);
+    const focus = new Set(state.focus ?? []);
     for (const creature of state.creatures) {
       const figure = this.figures.get(creature.id)!;
       const acting = creature.id === state.actor;
       const selected = creature.id === state.mutationFocus || creature.id === state.target || state.selected?.includes(creature.id) === true;
       const legal = state.stage === 'targeting' && state.targets.includes(creature.id);
-      figure.ring.setStrokeStyle(selected ? 3 : 1.5, selected || acting ? GOLD : EMBER, selected || legal || acting ? .95 : .15);
-      // While targets are chosen, whatever cannot be targeted steps back; the caster stays in full.
+      const focused = focus.has(creature.id) && !selected;
+      let ringColour = EMBER;
+      if (focused) ringColour = FOCUS.tint;
+      else if (selected || acting) ringColour = GOLD;
+      figure.ring.setStrokeStyle(selected || focused ? 3 : 1.5, ringColour, selected || legal || acting || focused ? .95 : .15);
+      // While targets are chosen, whatever cannot be targeted steps back; the caster stays in full. What the blue
+      // focus points at stands out the same way, a little less: the rest of the field stays readable.
       const aside = state.stage === 'targeting' && !legal && !selected && !acting;
-      figure.image.setAlpha(!creature.isAlive ? .20 : (state.mutationFocus && !selected) || aside ? .52 : 1);
+      const unlit = focus.size > 0 && !focused && !selected && !acting;
+      let alpha = 1;
+      if (!creature.isAlive) alpha = .20;
+      else if ((state.mutationFocus && !selected) || aside) alpha = .52;
+      else if (unlit) alpha = .62;
+      figure.image.setAlpha(alpha);
       figure.alive = creature.isAlive;
       figure.shadow.setAlpha(creature.isAlive ? .55 : .2);
       this.followCues(figure);
@@ -140,6 +166,7 @@ export class BattleScene extends Phaser.Scene {
     const lit = actor ? this.figures.get(actor.id) ?? null : null;
     this.halo?.show(lit);
     if ((lit?.id ?? null) !== this.haloId) { this.haloId = lit?.id ?? null; this.onHalo(this.haloId); }
+    this.lightFocus(state.creatures.filter(one => focus.has(one.id) && one.isAlive).map(one => one.id));
     const standing = (state.dice ?? []).filter(die => this.figures.get(die.id)?.alive);
     this.dice?.show(standing, id => this.figures.get(id) ?? null, this.time.now);
     // `id:value:tone`, then the tie a roll-off broke and its place in it (`tie1:2`) or the face a crit needed (`14+`).
@@ -247,6 +274,7 @@ export class BattleScene extends Phaser.Scene {
       const source = this.backdrop.texture.getSourceImage();
       const factor = Math.max(width / source.width, height / source.height);
       this.backdrop.setDisplaySize(source.width * factor, source.height * factor).setPosition(width / 2, -(source.height * factor - height) * .35);
+      this.horizon?.layout(width, height);
     }
     if (!this.figures.size) {
       this.upkeepMarkers.present(this.state?.upkeep, new Map(), this.reduced);
@@ -388,9 +416,25 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
-  update(time: number) {
+  // The blue halos follow the focus: one per creature lit, the others hidden, so a tie being ordered lights them all.
+  private lightFocus(ids: string[]) {
+    for (const [id, halo] of this.focusHalos) if (!ids.includes(id)) halo.show(null);
+    for (const id of ids) {
+      const figure = this.figures.get(id);
+      if (!figure) continue;
+      let halo = this.focusHalos.get(id);
+      if (!halo) { halo = new ActingHalo(this, FOCUS); this.focusHalos.set(id, halo); }
+      halo.show(figure);
+    }
+    const lit = ids.join(' ');
+    if (lit !== this.focusLit) { this.focusLit = lit; this.onFocus(lit); }
+  }
+
+  update(time: number, delta: number) {
     if (!this.state) return;
+    this.horizon?.update(delta * this.rate);
     this.halo?.follow(time, this.reduced);
+    for (const halo of this.focusHalos.values()) halo.follow(time, this.reduced);
     this.dice?.follow(time, this.reduced);
     // Creatures stand still between actions: only a played action moves them.
     for (const figure of this.figures.values()) {

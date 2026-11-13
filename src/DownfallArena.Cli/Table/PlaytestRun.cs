@@ -33,7 +33,7 @@ namespace DownfallArena.Cli.Table;
 /// (<c>docs/tabletop/app-roadmap.md</c>, "A recorded session whose content no longer exists"). A bot run needs
 /// neither: it is never interrupted by dinner, and it is regenerated from a seed and a hash.
 /// </remarks>
-internal sealed class PlaytestRun
+internal sealed class PlaytestRun : IReactionKeeper
 {
     public const string NotesFile = "notes.jsonl";
     public const string CatalogueFile = "catalogue.json";
@@ -976,6 +976,21 @@ internal sealed class PlaytestRun
     /// <summary>A claim on warning a table's player: the journal's end the wait began at.</summary>
     private sealed record Warned(long Mark);
 
+    /// <summary>The reactions the two seats sent each other (ADR 0173), beside the session: the last few, both seats'.</summary>
+    public const string ReactionsFile = "reactions.json";
+
+    public async Task<(IReadOnlyList<TableReaction> Items, string? Tag)> ReactionsAsync(CancellationToken cancellationToken = default)
+    {
+        var read = await _reader.ReadTaggedAsync(ReactionsFile, cancellationToken);
+        return (read is null ? [] : DocumentOf<Reactions>(read.Text)?.Items ?? [], read?.Tag);
+    }
+
+    public Task<string?> WriteReactionsIfAsync(IReadOnlyList<TableReaction> items, string? expected, CancellationToken cancellationToken = default) =>
+        _writer.WriteJsonIfAsync(ReactionsFile, new Reactions(items), expected, cancellationToken);
+
+    /// <summary>The reactions file: the last few reactions, oldest first.</summary>
+    private sealed record Reactions(IReadOnlyList<TableReaction> Items);
+
     /// <summary>
     /// Waits for everything on its way into the files to land: every decision being accepted, then a write
     /// queued behind every write before it, which the writers take in turn. What is deleted or read after this
@@ -1015,4 +1030,14 @@ internal sealed class PlaytestRun
         string.Create(
             CultureInfo.InvariantCulture,
             $"{clock.GetUtcNow():yyyyMMdd-HHmmss}-{Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(4))}");
+
+    /// <summary>
+    /// When a session was opened, read back off its id (<see cref="NewId" />), to the second, UTC: what a finished game's
+    /// card says of it once its table is gone. None for an id this host did not mint that way.
+    /// </summary>
+    public static DateTimeOffset? OpenedAt(string? id) =>
+        id is { Length: >= 15 } && DateTimeOffset.TryParseExact(id[..15], "yyyyMMdd-HHmmss", CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var at)
+            ? at
+            : null;
 }

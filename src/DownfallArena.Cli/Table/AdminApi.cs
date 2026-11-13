@@ -76,46 +76,29 @@ internal sealed class AdminApi
         Lobby = new LobbyApi(registry, composer, clock, push) { Replay = stored is null ? null : id => ReplayAsync(stored, id) };
     }
 
+    /// <summary>The operator's list of players (ADR 0174), on a host that signs players in; none otherwise.</summary>
+    public PlayersApi? Players { get; init; }
+
     public static bool Names(string path) =>
-        path == MePath || Under(path, Prefix) || Under(path, SessionsPrefix) || LobbyApi.Names(path);
+        path == MePath || Under(path, Prefix) || Under(path, SessionsPrefix) || PlayersApi.Names(path) || LobbyApi.Names(path);
 
     private static bool Under(string path, string prefix) => path == prefix || path.StartsWith(prefix + "/", StringComparison.Ordinal);
 
-    public async Task<StudioResponse> HandleAsync(string method, string path, string body, string? token, string? principal, AccountRequest? account = null)
+    public async Task<StudioResponse> HandleAsync(string method, string path, string body, string? token, string? principal, AccountRequest? account = null, string? query = null)
     {
         ArgumentNullException.ThrowIfNull(path);
+        // Who is signed in, asked once: the player a lobby route acts for, and an admin account the gate admits
+        // (ADR 0172).
+        var player = Accounts is null || account is null ? null : await Accounts.WhoAsync(account);
+        var operatorName = _gate.Admit(token, principal, player?.Account);
         if (LobbyApi.Names(path))
         {
-            // A finished game's replay is the operator's to read as well as its players' (ADR 0156), by the panel's
-            // token or the platform's sign-in alike, and whatever game it was: the pages ask this one route.
-            if (method == "GET" && LobbyApi.ReplayRoute(path) is { } replayed && _stored is { } recorded && _gate.Admit(token, principal) is not null)
-            {
-                return await ReplayAsync(recorded, replayed);
-            }
-
-            var player = Accounts is null || account is null ? null : await Accounts.WhoAsync(account);
-            return await Lobby.HandleAsync(method, path, body, token, player);
+            return await LobbyAsync(method, path, body, token, player, operatorName);
         }
 
-        var operatorName = _gate.Admit(token, principal);
         if (path == MePath)
         {
-            // Not a refusal when it is nobody's: the table page asks this to know whether to show the way back
-            // to the panel, and a player's page must read "no" rather than an error.
-            // The player half answers the same question for the home page: whether this host signs players in,
-            // how, and as whom. The operator and the player are two sign-ins and one request can carry both.
-            var player = Accounts is null || account is null ? null : await Accounts.WhoAsync(account);
-            var me = StudioResponse.OfJson(
-                new
-                {
-                    @operator = operatorName is not null,
-                    admin = Page,
-                    accounts = AccountApi.Named(Accounts?.Mode ?? AccountsMode.Off),
-                    googleClientId = Accounts?.GoogleClientId,
-                    account = player is null ? null : AccountApi.Describe(player.Account),
-                },
-                ArtifactJson.LineOptions);
-            return player?.Renewed is { } renewed ? me with { Headers = [new KeyValuePair<string, string>("Set-Cookie", renewed)] } : me;
+            return Me(operatorName, player);
         }
 
         if (operatorName is null)
@@ -127,6 +110,13 @@ internal sealed class AdminApi
         foreach (var gone in await _registry.SweepAsync(_clock.GetUtcNow()))
         {
             Console.WriteLine($"  Session {gone} let go of: nobody has asked for it in a while.");
+        }
+
+        if (PlayersApi.Names(path))
+        {
+            return Players is null
+                ? StudioResponse.OfPlainText(404, "Players do not sign in at this host (--accounts off), so it has no players to list.")
+                : await Players.HandleAsync(method, path, body, query, operatorName);
         }
 
         if (Under(path, SessionsPrefix))
@@ -145,6 +135,42 @@ internal sealed class AdminApi
             ("POST", _) when Reinvited(rest) is { } seat => await LobbyApi.ExclusivelyAsync(() => ReinviteAsync(seat.Table, seat.Slot, operatorName)),
             _ => StudioResponse.OfPlainText(404, $"No such route: {method} {path}"),
         };
+    }
+
+    /// <summary>
+    /// A lobby route. A finished game's replay is the operator's to read as well as its players' (ADR 0156), by the
+    /// panel's token, the platform's sign-in or an admin account alike, and whatever game it was: the pages ask this
+    /// one route.
+    /// </summary>
+    private async Task<StudioResponse> LobbyAsync(string method, string path, string body, string? token, SignedIn? player, string? operatorName)
+    {
+        if (method == "GET" && LobbyApi.ReplayRoute(path) is { } replayed && _stored is { } recorded && operatorName is not null)
+        {
+            return await ReplayAsync(recorded, replayed);
+        }
+
+        return await Lobby.HandleAsync(method, path, body, token, player);
+    }
+
+    /// <summary>
+    /// Whose request this is. Not a refusal when it is nobody's: the table page asks this to know whether to show the
+    /// way back to the panel, and a player's page must read "no" rather than an error. The player half answers the
+    /// same question for the home page: whether this host signs players in, how, and as whom. The operator and the
+    /// player are two sign-ins and one request can carry both, and an admin account is both at once.
+    /// </summary>
+    private StudioResponse Me(string? operatorName, SignedIn? player)
+    {
+        var me = StudioResponse.OfJson(
+            new
+            {
+                @operator = operatorName is not null,
+                admin = Page,
+                accounts = AccountApi.Named(Accounts?.Mode ?? AccountsMode.Off),
+                googleClientId = Accounts?.GoogleClientId,
+                account = player is null ? null : AccountApi.Describe(player.Account),
+            },
+            ArtifactJson.LineOptions);
+        return player?.Renewed is { } renewed ? me with { Headers = [new KeyValuePair<string, string>("Set-Cookie", renewed)] } : me;
     }
 
     /// <summary>

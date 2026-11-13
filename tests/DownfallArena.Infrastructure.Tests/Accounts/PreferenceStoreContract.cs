@@ -25,8 +25,8 @@ public abstract class PreferenceStoreContract
         var store = await StoreAsync();
         var account = AccountId.New();
 
-        await store.SaveAsync(account, new GamePreferences(ReadingPace.Auto, 1.5m, Help: false, ReducedMotion: true), Cancel);
-        (await store.GetAsync(account, Cancel)).ShouldBe(new GamePreferences(ReadingPace.Auto, 1.5m, Help: false, ReducedMotion: true));
+        await store.SaveAsync(account, new GamePreferences(ReadingPace.Auto, 1.5m, Help: false, ReducedMotion: true, Reactions: false), Cancel);
+        (await store.GetAsync(account, Cancel)).ShouldBe(new GamePreferences(ReadingPace.Auto, 1.5m, Help: false, ReducedMotion: true, Reactions: false));
 
         await store.SaveAsync(account, GamePreferences.Default, Cancel);
         (await store.GetAsync(account, Cancel)).ShouldBe(GamePreferences.Default);

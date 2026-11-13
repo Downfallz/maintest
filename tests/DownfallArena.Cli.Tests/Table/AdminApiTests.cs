@@ -294,6 +294,55 @@ public sealed class AdminApiTests : IDisposable
         JsonDocument.Parse(Text(await platform.HandleAsync("GET", "/api/me", "", null, null))).RootElement.GetProperty("operator").GetBoolean().ShouldBeFalse();
     }
 
+    /// <summary>
+    /// An account the host names its admin is the operator once signed in (ADR 0172): <c>/api/me</c> says so, which
+    /// is what shows the menu's Admin link, and the panel's routes let it in; any other account is refused.
+    /// </summary>
+    [Fact]
+    public async Task A_signed_in_admin_account_is_the_operator_and_another_account_is_not()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"accounts-admin-{Guid.CreateVersion7():N}");
+        try
+        {
+            var store = new Infrastructure.Accounts.FileAccountStore(root);
+            var accounts = new AccountApi(new Application.Accounts.AccountRegistry(store, TimeProvider.System), new AccountSessions(await store.SessionKeyAsync(TestContext.Current.CancellationToken), TimeProvider.System), AccountsMode.Development);
+            async Task<(AccountRequest Request, string Id)> SignInAsync(string name)
+            {
+                var signedIn = await accounts.HandleAsync("POST", "/api/account/dev", $$"""{"username":"{{name}}"}""", new AccountRequest(null, Secure: false));
+                var request = new AccountRequest(signedIn.Headers!.Single().Value.Split(';')[0][(AccountSessions.Cookie.Length + 1)..], Secure: false);
+                return (request, JsonDocument.Parse(Text(signedIn)).RootElement.GetProperty("account").GetProperty("id").GetString()!);
+            }
+
+            var owner = await SignInAsync("Downfallz");
+            var player = await SignInAsync("Someone");
+            var platform = OperatorGate.BehindPlatform().WithAdmins([SharedKernel.Identifiers.AccountId.Parse(owner.Id)]);
+            var admin = new AdminApi(_registry, _hosted.Composer, platform, TimeProvider.System, "Rules", _hosted.Stored) { Accounts = accounts };
+
+            JsonDocument.Parse(Text(await admin.HandleAsync("GET", "/api/me", "", null, null, owner.Request))).RootElement.GetProperty("operator").GetBoolean().ShouldBeTrue();
+            JsonDocument.Parse(Text(await admin.HandleAsync("GET", "/api/me", "", null, null, player.Request))).RootElement.GetProperty("operator").GetBoolean().ShouldBeFalse();
+            (await admin.HandleAsync("GET", "/api/tables", "", null, null, owner.Request)).Status.ShouldBe(200);
+            (await admin.HandleAsync("GET", "/api/sessions", "", null, null, owner.Request)).Status.ShouldBe(200);
+            (await admin.HandleAsync("GET", "/api/tables", "", null, null, player.Request)).Status.ShouldBe(401, "another player is sent to the platform's sign-in, as before");
+            (await admin.HandleAsync("GET", "/api/tables", "", null, "mark@example.test", player.Request)).Status.ShouldBe(200, "the platform's door stays open beside it");
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task The_players_are_the_operators_alone_and_none_on_a_host_without_accounts()
+    {
+        var admin = Admin(OperatorGate.WithToken(OperatorToken));
+
+        (await admin.HandleAsync("GET", PlayersApi.Prefix, "", "a-seat-s-token", principal: null)).Status.ShouldBe(403);
+        (await admin.HandleAsync("GET", PlayersApi.Prefix, "", OperatorToken, principal: null)).Status.ShouldBe(404);
+    }
+
     [Fact]
     public async Task Whether_players_sign_in_and_as_whom_is_answered_beside_the_operator()
     {

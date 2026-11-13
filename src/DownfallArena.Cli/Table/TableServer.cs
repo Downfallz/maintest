@@ -301,7 +301,7 @@ internal sealed class TableServer : IDisposable
 
         if (AdminApi.Names(path))
         {
-            return await _admin.HandleAsync(method, path, body, token, request.Headers[OperatorGate.PrincipalHeader], account);
+            return await _admin.HandleAsync(method, path, body, token, request.Headers[OperatorGate.PrincipalHeader], account, request.Url?.Query);
         }
 
         // The token says which table, and the table's own API says the rest. A token no table holds is

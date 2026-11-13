@@ -26,6 +26,27 @@ public sealed class FileAccountStore : IAccountStore
     public async Task<Account?> FindAsync(AccountId id, CancellationToken cancellationToken = default) =>
         await ReadAsync(AccountDocuments.AccountPath(id), cancellationToken) is { } json ? AccountDocuments.ReadAccount(json) : null;
 
+    public async Task<IReadOnlyList<Account>> ListAsync(CancellationToken cancellationToken = default)
+    {
+        var directory = FullPath(AccountDocuments.AccountsPrefix);
+        if (!Directory.Exists(directory))
+        {
+            return [];
+        }
+
+        var accounts = new List<Account>();
+        // A staged write ends in .tmp, and an account deleted while the directory is read is not listed.
+        foreach (var path in Directory.EnumerateFiles(directory, "*.json").Where(path => path.EndsWith(".json", StringComparison.Ordinal)))
+        {
+            if (await ReadAsync(Path.GetRelativePath(RootDirectory, path), cancellationToken) is { } json)
+            {
+                accounts.Add(AccountDocuments.ReadAccount(json));
+            }
+        }
+
+        return accounts;
+    }
+
     public async Task SaveAsync(Account account, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(account);

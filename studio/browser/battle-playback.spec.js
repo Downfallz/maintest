@@ -14,6 +14,8 @@ test('a cast that tried to crit shows its d20 beside the caster as it lands, and
   test.setTimeout(60000);
   const h = await mount(page);
   await h.publish([entry(12), entry(10, { criticalRoll: 19 })]);
+  // The feed is fetched on the real clock: the lunge begins only once it has arrived, so the test clock waits for it.
+  await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'windup');
   await page.clock.runFor(860);
   // The die says what the roll needed: Strike crits from 14 on a d20 (its card, ADR 0100).
   await expect(page.locator('#battle')).toHaveAttribute('data-dice', '1:19:crit:14+');
@@ -27,6 +29,7 @@ test('a cast that fell short of its crit says the face it needed under its die',
   const h = await mount(page), short = entry(10, { actor: 3, criticalRoll: 9 });
   short.event.resolution.isCritical = false;
   await h.publish([entry(12), short]);
+  await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'windup');
   await page.clock.runFor(1400);
   await expect(page.locator('#battle')).toHaveAttribute('data-dice', '3:9:miss:14+');
   await page.screenshot({ path: info.outputPath('critical-miss-die.png') });

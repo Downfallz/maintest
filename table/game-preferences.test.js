@@ -9,7 +9,7 @@ function storage(initial = {}) {
 const refused = async () => { throw Object.assign(new Error('Sign in first.'), { status: 401 }); };
 
 test('a new game reads step by step at normal speed with help on', () => {
-  assert.deepEqual(GAME_DEFAULTS, { pace: 'step', speed: 1, help: true, reducedMotion: false });
+  assert.deepEqual(GAME_DEFAULTS, { pace: 'step', speed: 1, help: true, reducedMotion: false, reactions: true });
   assert.deepEqual(localSettings(storage()), GAME_DEFAULTS);
   assert.deepEqual(effectiveSettings(null, null), GAME_DEFAULTS);
 });
@@ -32,7 +32,7 @@ test('a game override changes that game alone and leaves the player settings as 
 
   assert.deepEqual(gameOverride(kept, 'table-a'), { pace: 'step', speed: 2 });
   assert.deepEqual(gameOverride(kept, 'table-b'), {});
-  assert.deepEqual(localSettings(kept), { pace: 'auto', speed: 1.5, help: false, reducedMotion: false });
+  assert.deepEqual(localSettings(kept), { pace: 'auto', speed: 1.5, help: false, reducedMotion: false, reactions: true });
 });
 
 test('only the latest games keep an override', () => {
@@ -58,7 +58,7 @@ test('a signed-in player reads the account settings and this browser remembers t
 
   const loaded = await loadSettings(kept, request);
 
-  assert.deepEqual(loaded, { account: true, settings: { pace: 'auto', speed: 2, help: false, reducedMotion: true } });
+  assert.deepEqual(loaded, { account: true, settings: { pace: 'auto', speed: 2, help: false, reducedMotion: true, reactions: true } });
   assert.deepEqual(localSettings(kept), loaded.settings);
 });
 
@@ -89,5 +89,12 @@ test('signed in, saving puts the whole settings with the account', async () => {
 
   await saveSettings(storage(), { pace: 'auto', speed: 1.5 }, { account: true, request: async (...args) => { asked.push(args); } });
 
-  assert.deepEqual(asked, [['/api/account/preferences', { pace: 'auto', speed: 1.5, help: true, reducedMotion: false }, undefined, 'PUT']]);
+  assert.deepEqual(asked, [['/api/account/preferences', { pace: 'auto', speed: 1.5, help: true, reducedMotion: false, reactions: true }, undefined, 'PUT']]);
+});
+
+test('the opponent\'s reactions show unless the player hid them, and one game can hide them alone', () => {
+  assert.equal(effectiveSettings({}, {}).reactions, true);
+  assert.equal(effectiveSettings({ reactions: false }, {}).reactions, false);
+  assert.equal(effectiveSettings({ reactions: true }, { reactions: false }).reactions, false);
+  assert.deepEqual(settingsOf({ reactions: 'no' }), {});
 });

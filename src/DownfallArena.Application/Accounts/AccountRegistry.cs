@@ -97,6 +97,54 @@ public sealed class AccountRegistry
         }
     }
 
+    /// <summary>
+    /// Gives the account another name (ADR 0174), checked as a name chosen at registration is: the new name is held
+    /// first, then the account written, then the old name freed for another player. A change of case alone keeps the
+    /// name it holds. Sessions are left alone: they name the account, not its name.
+    /// </summary>
+    public async Task<Result<Account>> RenameAsync(AccountId id, string? candidate, CancellationToken cancellationToken = default)
+    {
+        var name = Username.Create(candidate);
+        if (name.IsFailure)
+        {
+            return Result.Failure<Account>(name.Error);
+        }
+
+        await Writes.WaitAsync(cancellationToken);
+        try
+        {
+            if (await _store.FindAsync(id, cancellationToken) is not { } account)
+            {
+                return Result.Failure<Account>(AccountErrors.NotFound);
+            }
+
+            var renamed = account with { Username = name.Value };
+            if (name.Value.Key == account.Username.Key)
+            {
+                await _store.SaveAsync(renamed, cancellationToken);
+                return Result.Success(renamed);
+            }
+
+            var reservation = new UsernameReservation(name.Value, id, _clock.GetUtcNow());
+            if (await ReserveAsync(reservation, account.Identity, cancellationToken) is not { } held || held.Account != id)
+            {
+                return Result.Failure<Account>(AccountErrors.UsernameTaken);
+            }
+
+            await _store.SaveAsync(renamed, cancellationToken);
+            if (await _store.FindUsernameAsync(account.Username, cancellationToken) is { } old && old.Account == id)
+            {
+                await _store.ReleaseUsernameAsync(old, cancellationToken);
+            }
+
+            return Result.Success(renamed);
+        }
+        finally
+        {
+            Writes.Release();
+        }
+    }
+
     /// <summary>Whether a name could be registered now: what the page says while a player types.</summary>
     public async Task<Result> CheckUsernameAsync(string? candidate, CancellationToken cancellationToken = default)
     {
