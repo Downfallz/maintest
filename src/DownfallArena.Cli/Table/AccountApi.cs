@@ -393,7 +393,7 @@ internal sealed class AccountApi
         }
 
         var asked = Read<PreferencesBody>(body);
-        var created = GamePreferences.Create(asked?.Pace, asked?.Speed ?? 0m, asked?.Help ?? true, asked?.ReducedMotion ?? false);
+        var created = GamePreferences.Create(asked?.Pace, asked?.Speed ?? 0m, asked?.Help ?? true, asked?.ReducedMotion ?? false, asked?.Reactions ?? true);
         if (created.IsFailure)
         {
             return Refused(created.Error);
@@ -409,6 +409,7 @@ internal sealed class AccountApi
         speed = preferences.Speed,
         help = preferences.Help,
         reducedMotion = preferences.ReducedMotion,
+        reactions = preferences.Reactions,
     };
 
     private async Task<StudioResponse> NameAsync(string candidate)
@@ -438,7 +439,7 @@ internal sealed class AccountApi
 
     private sealed record CredentialBody(string? Credential);
 
-    private sealed record PreferencesBody(string? Pace, decimal? Speed, bool? Help, bool? ReducedMotion);
+    private sealed record PreferencesBody(string? Pace, decimal? Speed, bool? Help, bool? ReducedMotion, bool? Reactions);
 
     private sealed record RegisterBody(string? Ticket, string? Username);
 

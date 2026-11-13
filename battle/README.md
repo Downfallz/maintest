@@ -83,7 +83,7 @@ performance still require release measurement.
 node --test studio/*.test.js table/*.test.js
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium
-npm --prefix studio/browser test -- battle-lab.spec.js battle-live.spec.js battle-combat.spec.js battle-playback.spec.js battle-loop.spec.js battle-history.spec.js battle-guidance.spec.js battle-upkeep.spec.js battle-spellbook.spec.js battle-mutations.spec.js battle-evolution.spec.js battle-tempo.spec.js battle-pacing.spec.js battle-growth.spec.js battle-order.spec.js battle-targets.spec.js battle-inspection.spec.js battle-services.spec.js battle-parity.spec.js
+npm --prefix studio/browser test -- battle-lab.spec.js battle-live.spec.js battle-combat.spec.js battle-playback.spec.js battle-loop.spec.js battle-history.spec.js battle-guidance.spec.js battle-upkeep.spec.js battle-spellbook.spec.js battle-mutations.spec.js battle-evolution.spec.js battle-tempo.spec.js battle-pacing.spec.js battle-growth.spec.js battle-order.spec.js battle-targets.spec.js battle-inspection.spec.js battle-services.spec.js battle-parity.spec.js battle-reactions.spec.js
 dotnet build
 dotnet test --no-build
 dotnet format --verify-no-changes
@@ -571,6 +571,16 @@ nothing about them rather than guessing. `table/battle-opponent.js` decides what
 phone held upright, or the spell choice docked beside it) the chip folds to the opponent's medallion wearing its rank
 and heart, and the field's team label ("OPPONENT · NAME") still names them; on the smallest phones the round's
 phase gives up its place, since the command dock names it too.
+
+## Reactions
+
+Between two people, the header's **💬** opens a fixed set of eight short messages (Hello, Good luck, Well played,
+Nice move, Oops, Thinking, Thanks, Good game); one tap sends it and closes the set ([ADR 0173](../docs/adr/0173-let-players-react-with-a-fixed-set-of-messages.md)).
+It shows at once as a bubble on this seat's side, and the other player's newest one as a bubble by theirs, with how
+long ago it was sent when they were away. A seat reacts once every four seconds; the set says so. The set also hides
+the opponent's reactions for this game; Settings, in the menu, hides them for every game. No reaction is offered
+against a bot, in a replay, or on a device holding both seats. `table/battle-reactions.js` decides what shows and
+when; `src/reactions.ts` draws it. No notification is sent for a reaction and the bell counts none.
 
 ## Evolution illustrations and capstone effects
 
