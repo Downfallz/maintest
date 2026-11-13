@@ -76,12 +76,15 @@ internal sealed class AdminApi
         Lobby = new LobbyApi(registry, composer, clock, push) { Replay = stored is null ? null : id => ReplayAsync(stored, id) };
     }
 
+    /// <summary>The operator's list of players (ADR 0174), on a host that signs players in; none otherwise.</summary>
+    public PlayersApi? Players { get; init; }
+
     public static bool Names(string path) =>
-        path == MePath || Under(path, Prefix) || Under(path, SessionsPrefix) || LobbyApi.Names(path);
+        path == MePath || Under(path, Prefix) || Under(path, SessionsPrefix) || PlayersApi.Names(path) || LobbyApi.Names(path);
 
     private static bool Under(string path, string prefix) => path == prefix || path.StartsWith(prefix + "/", StringComparison.Ordinal);
 
-    public async Task<StudioResponse> HandleAsync(string method, string path, string body, string? token, string? principal, AccountRequest? account = null)
+    public async Task<StudioResponse> HandleAsync(string method, string path, string body, string? token, string? principal, AccountRequest? account = null, string? query = null)
     {
         ArgumentNullException.ThrowIfNull(path);
         // Who is signed in, asked once: the player a lobby route acts for, and an admin account the gate admits
@@ -130,6 +133,13 @@ internal sealed class AdminApi
         foreach (var gone in await _registry.SweepAsync(_clock.GetUtcNow()))
         {
             Console.WriteLine($"  Session {gone} let go of: nobody has asked for it in a while.");
+        }
+
+        if (PlayersApi.Names(path))
+        {
+            return Players is null
+                ? StudioResponse.OfPlainText(404, "Players do not sign in at this host (--accounts off), so it has no players to list.")
+                : await Players.HandleAsync(method, path, body, query, operatorName);
         }
 
         if (Under(path, SessionsPrefix))

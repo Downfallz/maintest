@@ -85,6 +85,12 @@ internal sealed class AccountApi
     /// <summary>Where each account's game settings are kept (ADR 0140); null on a host that keeps none.</summary>
     public IPreferenceStore? Preferences { get; set; }
 
+    /// <summary>
+    /// When each account last signed in and last used the site (ADR 0174), written as it happens; null on a host
+    /// that keeps none. Forgotten with the account.
+    /// </summary>
+    public AccountActivityLog? Activity { get; set; }
+
     /// <summary>How <c>/api/me</c> names the mode to a page.</summary>
     public static string Named(AccountsMode mode) => mode switch
     {
@@ -112,6 +118,11 @@ internal sealed class AccountApi
         var renewed = _sessions.DueForRenewal(claim)
             ? AccountSessions.SetCookie(_sessions.Issue(account), request.Secure)
             : null;
+        if (Activity is { } activity)
+        {
+            await activity.SeenAsync(account.Id, cancellationToken);
+        }
+
         return new SignedIn(account, renewed);
     }
 
@@ -133,6 +144,89 @@ internal sealed class AccountApi
 
         _cache[id] = (account, now);
         return account;
+    }
+
+    /// <summary>
+    /// Raises the account's generation, so every session it holds stops working, and forgets its devices: a phone
+    /// that signed out everywhere was lost or lent, and must be told nothing more. Its player's own "sign out
+    /// everywhere" and the operator's (ADR 0174) alike. Null when there is no such account.
+    /// </summary>
+    public async Task<Account?> SignOutEverywhereAsync(AccountId id, CancellationToken cancellationToken = default)
+    {
+        var raised = await _registry.SignOutEverywhereAsync(id, cancellationToken);
+        if (raised is not null)
+        {
+            _cache[raised.Id] = (raised, _sessions.Clock.GetUtcNow());
+            if (Devices is { } devices)
+            {
+                await devices.ForgetAsync(id, cancellationToken);
+            }
+        }
+
+        return raised;
+    }
+
+    /// <summary>
+    /// Deletes the account and everything kept for it (ADR 0122, ADR 0174): its seats in unfinished games are offered
+    /// to other players, the name is freed, every session of it stops working, and its devices, friendships, settings
+    /// and activity go. Its player's own deletion and the operator's alike. False when there is no such account.
+    /// </summary>
+    public async Task<bool> ForgetAsync(AccountId id, CancellationToken cancellationToken = default)
+    {
+        if (await _registry.FindAsync(id, cancellationToken) is null)
+        {
+            return false;
+        }
+
+        if (ReleaseSeats is { } release)
+        {
+            await release(id);
+        }
+
+        // The account goes first, so a request that resolved its name a moment ago finds nobody once it reaches the
+        // friendship lock; what the account was still on is cleaned up after, under that same lock.
+        var deleted = await _registry.DeleteAsync(id, cancellationToken);
+        _cache.TryRemove(id, out _);
+        if (Devices is { } devices)
+        {
+            await devices.ForgetAsync(id, cancellationToken);
+        }
+
+        if (ForgetFriends is { } forget)
+        {
+            await forget(id);
+        }
+
+        if (Preferences is { } preferences)
+        {
+            await preferences.ForgetAsync(id, cancellationToken);
+        }
+
+        if (Activity is { } activity)
+        {
+            await activity.ForgetAsync(id, cancellationToken);
+        }
+
+        return deleted;
+    }
+
+    /// <summary>Gives the account another name (ADR 0174), checked as a chosen name is; the name it had is freed.</summary>
+    public async Task<Result<Account>> RenameAsync(AccountId id, string? username, CancellationToken cancellationToken = default)
+    {
+        var renamed = await _registry.RenameAsync(id, username, cancellationToken);
+        if (renamed.IsSuccess)
+        {
+            _cache[id] = (renamed.Value, _sessions.Clock.GetUtcNow());
+        }
+
+        return renamed;
+    }
+
+    /// <summary>The account as the store holds it now, the cache refreshed with it: what the operator acts on.</summary>
+    public async Task<Account?> FreshAsync(AccountId id, CancellationToken cancellationToken = default)
+    {
+        _cache.TryRemove(id, out _);
+        return await AccountAsync(id, cancellationToken);
     }
 
     public async Task<StudioResponse> HandleAsync(string method, string path, string body, AccountRequest request)
@@ -187,7 +281,7 @@ internal sealed class AccountApi
         }
 
         return await _registry.FindAsync(identity) is { } account
-            ? SignedInAs(account, request)
+            ? await SignedInAsync(account, request)
             : Answer(new { needsUsername = true, ticket = _sessions.Ticket(identity) });
     }
 
@@ -200,7 +294,7 @@ internal sealed class AccountApi
         }
 
         var registered = await _registry.RegisterAsync(identity, asked!.Username);
-        return registered.IsSuccess ? SignedInAs(registered.Value, request) : Refused(registered.Error);
+        return registered.IsSuccess ? await SignedInAsync(registered.Value, request) : Refused(registered.Error);
     }
 
     private async Task<StudioResponse> DevelopmentAsync(string body, AccountRequest request)
@@ -221,27 +315,18 @@ internal sealed class AccountApi
         var identity = new ExternalIdentity(ExternalIdentity.Development, name.Value.Key);
         if (await _registry.FindAsync(identity) is { } account)
         {
-            return SignedInAs(account, request);
+            return await SignedInAsync(account, request);
         }
 
         var registered = await _registry.RegisterAsync(identity, name.Value.Value);
-        return registered.IsSuccess ? SignedInAs(registered.Value, request) : Refused(registered.Error);
+        return registered.IsSuccess ? await SignedInAsync(registered.Value, request) : Refused(registered.Error);
     }
 
     private async Task<StudioResponse> SignOutAsync(string body, AccountRequest request)
     {
         if (Read<SignOutBody>(body)?.Everywhere == true && await WhoAsync(request) is { } who)
         {
-            if (await _registry.SignOutEverywhereAsync(who.Account.Id) is { } raised)
-            {
-                _cache[raised.Id] = (raised, _sessions.Clock.GetUtcNow());
-            }
-
-            // Every device too: a phone that signed out everywhere was lost or lent, and must be told nothing more.
-            if (Devices is { } devices)
-            {
-                await devices.ForgetAsync(who.Account.Id);
-            }
+            await SignOutEverywhereAsync(who.Account.Id);
         }
 
         return Answer(new { signedOut = true }, AccountSessions.ClearCookie(request.Secure));
@@ -263,30 +348,7 @@ internal sealed class AccountApi
             return Problem(400, "Account.ConfirmDelete", "Type your player name exactly to delete your account.");
         }
 
-        if (ReleaseSeats is { } release)
-        {
-            await release(who.Account.Id);
-        }
-
-        // The account goes first, so a request that resolved its name a moment ago finds nobody once it reaches the
-        // friendship lock; what the account was still on is cleaned up after, under that same lock.
-        await _registry.DeleteAsync(who.Account.Id);
-        _cache.TryRemove(who.Account.Id, out _);
-        if (Devices is { } devices)
-        {
-            await devices.ForgetAsync(who.Account.Id);
-        }
-
-        if (ForgetFriends is { } forget)
-        {
-            await forget(who.Account.Id);
-        }
-
-        if (Preferences is { } preferences)
-        {
-            await preferences.ForgetAsync(who.Account.Id);
-        }
-
+        await ForgetAsync(who.Account.Id);
         return Answer(new { deleted = true }, AccountSessions.ClearCookie(request.Secure));
     }
 
@@ -420,8 +482,15 @@ internal sealed class AccountApi
             : Answer(new { available = false, error = check.Error.Code, message = check.Error.Message });
     }
 
-    private StudioResponse SignedInAs(Account account, AccountRequest request) =>
-        Answer(new { account = Describe(account) }, AccountSessions.SetCookie(_sessions.Issue(account), request.Secure));
+    private async Task<StudioResponse> SignedInAsync(Account account, AccountRequest request)
+    {
+        if (Activity is { } activity)
+        {
+            await activity.SignedInAsync(account.Id);
+        }
+
+        return Answer(new { account = Describe(account) }, AccountSessions.SetCookie(_sessions.Issue(account), request.Secure));
+    }
 
     private static StudioResponse Refused(DomainError error) => Problem(
         error == AccountErrors.UsernameTaken || error == AccountErrors.AlreadyRegistered ? 409 : 400,

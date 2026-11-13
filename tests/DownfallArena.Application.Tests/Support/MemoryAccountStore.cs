@@ -39,6 +39,14 @@ internal sealed class MemoryAccountStore : IAccountStore
         }
     }
 
+    public Task<IReadOnlyList<Account>> ListAsync(CancellationToken cancellationToken = default)
+    {
+        lock (Accounts)
+        {
+            return Task.FromResult<IReadOnlyList<Account>>([.. Accounts.Values]);
+        }
+    }
+
     public async Task SaveAsync(Account account, CancellationToken cancellationToken = default)
     {
         if (SlowWrites)
