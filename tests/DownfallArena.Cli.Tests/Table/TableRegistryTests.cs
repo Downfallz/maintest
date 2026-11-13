@@ -345,6 +345,9 @@ public sealed class TableRegistryTests : IDisposable
 
         table.Dispose();
         await Forgotten(repository, table.Session.MatchId);
+        // The recorder lets go after the repository (SteppedSession.LetGoAsync, so no late event records the
+        // match again), on the same background release: it is waited for, not read the moment the repository is.
+        await ForgottenBy(recorder, table.Session.MatchId);
 
         recorder.EntriesOf(table.Session.MatchId).ShouldBeEmpty();
     }
@@ -372,6 +375,14 @@ public sealed class TableRegistryTests : IDisposable
     }
 
     /// <summary>The forgetting runs once the driver has stopped, on its own task, so a test waits for it.</summary>
+    private static async Task ForgottenBy(MatchTraceRecorder recorder, MatchId matchId)
+    {
+        for (var attempt = 0; attempt < 300 && recorder.Length(matchId) > 0; attempt++)
+        {
+            await Task.Delay(20, TestContext.Current.CancellationToken);
+        }
+    }
+
     private static async Task Forgotten(IMatchRepository repository, MatchId matchId)
     {
         for (var attempt = 0; attempt < 300; attempt++)
