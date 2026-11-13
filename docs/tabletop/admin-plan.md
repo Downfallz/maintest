@@ -149,6 +149,38 @@ The queue port (`IWorkChannel`) only receives (hiding what it receives) and dele
 receive, a send to `agent-turns`, then a delete, in that order, so a failure in between leaves the letter where it
 was.
 
+### An operator can void a corrupted match, with a reason
+
+Today a match ends as a **void match** only on its own: when its journal no longer replays on the engine that
+picks it up (ADR 0163). The record is closed and marked void, the table leaves the index, no result is kept, each
+seat's account is told, and a seat's page is answered `410 Gone` with the reason. The operator has no way to do
+the same to a match that is stuck, broken by a bug, or abused, and no way to say why.
+
+**Void…** on a table (Tables tab) or a session (Sessions tab) opens a sheet that asks for a reason, and nothing is
+voided without one:
+
+- a **category**, one of: the match is stuck, the engine misbehaved, a player abused the game, the operator made a
+  mistake, other;
+- an **explanation**, required, 10 to 500 characters, in words a player reads;
+- a confirmation that names the table, its players and what will happen to its result.
+
+What a void by the operator does is what ADR 0163's void does, and a little more:
+
+- the record is closed and marked void, and keeps the reason: the category, the explanation, who voided it and
+  when (`VoidReason` on the record, beside the existing `Void` mark);
+- the table leaves the index, its pending bot turn is dropped, and its seats' keys answer `410` with the explanation,
+  which the battle view and the seat discovery already show;
+- each seat's account is told on its devices, in the same notice as an engine void, with the explanation;
+- **a finished match can be voided too**: its kept result is removed from `IMatchResults`, so the ladder (computed
+  from the results) and each player's statistics no longer count it. The finished games list shows it as voided,
+  with the explanation, and its replay stays available;
+- the operator log records the void, its category, explanation and operator.
+
+The session list and the table list show a voided match with its category, and the Overview counts the voids of
+the last 7 days. A void is final: there is no un-void, as with ADR 0163.
+
+This changes what a kept result means (a result can now be withdrawn), so it gets an ADR that amends 0163 and 0168.
+
 ### Registration is a host setting
 
 A host setting is not an account's preference: one record for the host, kept beside the accounts:
@@ -186,6 +218,7 @@ All behind the operator gate (ADR 0081, 0172), JSON, paged by `?page=` with twen
 | `POST /api/admin/players/<id>/rename {"username"}` | Renames the account, the name checked as a player's own is (ADR 0122) |
 | `DELETE /api/admin/players/<id>` | Deletes the account as its player would: the name freed, its seats in unfinished games offered to others |
 | `POST /api/admin/players/<id>/suspension`, `DELETE .../suspension` | Suspends or restores the account (ADR below) |
+| `POST /api/admin/tables/<id>/void {"category","explanation"}` | Voids the match, in progress or finished, with its reason; `400 Admin.VoidReason` without one |
 | `GET /api/admin/jobs/tend?page` | Tending runs, newest first, and the 24-hour and 7-day totals |
 | `GET /api/admin/jobs/tend/<run>` | One run, every table it touched and what it did, its error |
 | `POST /api/admin/jobs/tend/run` | Runs a tending pass now, in the API's process; answers the run when it ends |
@@ -225,10 +258,13 @@ Each stage is one pull request, with its tests and docs, and leaves the panel wo
    run's sheet; Run a pass now.
 5. **A3b, jobs: the bot turns.** `PeekAsync` and `CountAsync` on the queues; the queues' lengths, the dead letters and
    the poison queue paged, each letter's sheet; Requeue (one, selected, all) and Drop.
-6. **A4, settings.** ADR for registration. `HostSettings`, the Settings tab, `Account.RegistrationClosed` in the
+6. **A3c, voiding a match.** ADR (amends 0163 and 0168). `VoidReason` on the record, the void sheet on tables and
+   sessions, the result withdrawn from `IMatchResults` for a finished match, the players told with the explanation,
+   the voided games shown as such in the finished games list.
+7. **A4, settings.** ADR for registration. `HostSettings`, the Settings tab, `Account.RegistrationClosed` in the
    lobby, the notice line under every page's header.
-7. **A5, overview.** The numbers, once A2 to A4 give them their sources.
-8. **A6, activity.** The operator log and its tab.
+8. **A5, overview.** The numbers, once A2 to A4 give them their sources.
+9. **A6, activity.** The operator log and its tab.
 
 Every stage keeps the panel behind the gate. None of it changes a game.
 
@@ -242,6 +278,10 @@ Every stage keeps the panel behind the gate. None of it changes a game.
 4. The plan goes in as a pull request of its own, read before any stage is built.
 5. A job can be inspected and run again: a tending run has its sheet and Run a pass now; a failed bot turn has its
    sheet, and the dead letters go back on the main queue with Requeue (added 2026-11-13).
+
+6. An operator can void a corrupted match with a documented reason (added 2026-11-13). Proposed, for the owner to
+   confirm when reading the plan: a finished match can be voided too (its result withdrawn from the ladder and the
+   statistics), and the reason is a category and a required explanation, both shown to the players.
 
 Still to decide, with the stage that needs it: how long the operator log is kept (proposed: the last 1,000 lines,
 A6).
