@@ -86,6 +86,29 @@ public sealed class InMemoryWorkChannel(string name, TimeProvider clock) : IWork
         return Task.CompletedTask;
     }
 
+    public Task<IReadOnlyList<PeekedWork>> PeekAsync(int most, CancellationToken cancellationToken = default)
+    {
+        var now = clock.GetUtcNow();
+        lock (_gate)
+        {
+            _held.RemoveAll(held => held.Expires <= now);
+            return Task.FromResult<IReadOnlyList<PeekedWork>>([.. _held
+                .Where(held => held.VisibleAt <= now)
+                .Take(Math.Max(0, most))
+                .Select(held => new PeekedWork(held.Id, held.Body, held.Delivered, held.QueuedAt))]);
+        }
+    }
+
+    public Task<int> CountAsync(CancellationToken cancellationToken = default)
+    {
+        var now = clock.GetUtcNow();
+        lock (_gate)
+        {
+            _held.RemoveAll(held => held.Expires <= now);
+            return Task.FromResult(_held.Count);
+        }
+    }
+
     private sealed class Held(string id, string body, DateTimeOffset queuedAt, DateTimeOffset expires)
     {
         public string Id { get; } = id;

@@ -91,4 +91,45 @@ public abstract class WorkChannelContract
 
         (await channel.ReceiveAsync(10, TimeSpan.FromMinutes(1), Cancel)).ShouldHaveSingleItem().Body.ShouldBe("dead letter");
     }
+
+    [Fact]
+    public async Task A_peek_shows_the_items_first_in_first_without_hiding_them_or_counting_a_delivery()
+    {
+        var channel = await ChannelAsync();
+        await channel.SendAsync("first", cancellationToken: Cancel);
+        await channel.SendAsync("second", cancellationToken: Cancel);
+
+        var peeked = await channel.PeekAsync(10, Cancel);
+        var received = await channel.ReceiveAsync(10, TimeSpan.FromMinutes(1), Cancel);
+
+        peeked.Select(item => item.Body).ShouldBe(["first", "second"]);
+        peeked[0].Delivered.ShouldBe(0);
+        received.Count.ShouldBe(2, "a peek hides nothing");
+        received[0].Delivered.ShouldBe(1, "a peek counts no delivery");
+    }
+
+    [Fact]
+    public async Task A_peek_leaves_out_the_items_received_and_hidden()
+    {
+        var channel = await ChannelAsync();
+        await channel.SendAsync("taken", cancellationToken: Cancel);
+        await channel.ReceiveAsync(1, TimeSpan.FromMinutes(1), Cancel);
+        await channel.SendAsync("waiting", cancellationToken: Cancel);
+
+        (await channel.PeekAsync(10, Cancel)).Select(item => item.Body).ShouldBe(["waiting"]);
+    }
+
+    [Fact]
+    public async Task The_count_holds_every_item_hidden_or_not_and_none_once_deleted()
+    {
+        var channel = await ChannelAsync();
+        await channel.SendAsync("one", cancellationToken: Cancel);
+        await channel.SendAsync("two", cancellationToken: Cancel);
+        var taken = (await channel.ReceiveAsync(1, TimeSpan.FromMinutes(1), Cancel)).ShouldHaveSingleItem();
+
+        (await channel.CountAsync(Cancel)).ShouldBe(2);
+
+        await channel.DeleteAsync(taken, Cancel);
+        (await channel.CountAsync(Cancel)).ShouldBe(1);
+    }
 }

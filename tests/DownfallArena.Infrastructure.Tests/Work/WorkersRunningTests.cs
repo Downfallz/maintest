@@ -146,6 +146,11 @@ public sealed class WorkersRunningTests
 
         public Task RetryAsync(QueuedWork work, TimeSpan after, CancellationToken cancellationToken = default) => Out();
 
+        public Task<IReadOnlyList<PeekedWork>> PeekAsync(int most, CancellationToken cancellationToken = default) =>
+            Task.FromException<IReadOnlyList<PeekedWork>>(new IOException("The queue is out."));
+
+        public Task<int> CountAsync(CancellationToken cancellationToken = default) => Task.FromException<int>(new IOException("The queue is out."));
+
         private static Task Out() => Task.FromException(new IOException("The queue is out."));
     }
 
@@ -177,5 +182,9 @@ public sealed class WorkersRunningTests
         public Task DeleteAsync(QueuedWork work, CancellationToken cancellationToken = default) => inner.DeleteAsync(work, cancellationToken);
 
         public Task RetryAsync(QueuedWork work, TimeSpan after, CancellationToken cancellationToken = default) => inner.RetryAsync(work, after, cancellationToken);
+
+        public Task<IReadOnlyList<PeekedWork>> PeekAsync(int most, CancellationToken cancellationToken = default) => inner.PeekAsync(most, cancellationToken);
+
+        public Task<int> CountAsync(CancellationToken cancellationToken = default) => inner.CountAsync(cancellationToken);
     }
 }

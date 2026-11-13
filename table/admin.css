@@ -107,3 +107,20 @@ input[type="text"] { font: inherit; min-height: 44px; border: 1px solid var(--li
 .run-tables li { overflow-wrap: anywhere; }
 .run-tables a { color: var(--gold); }
 #jobs-said:empty { display: none; }
+
+/* Bot turns (A3b): the three queues as counts side by side, a queue holding turns given up on in the warning colour,
+   and a letter's whole error as it was written. */
+.turns { margin-top: 22px; }
+.turn-queues { list-style: none; margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; }
+.turn-queue { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-soft); background: var(--panel); font-size: 13px; }
+.turn-queue-count { font-size: 22px; font-variant-numeric: tabular-nums; }
+.turn-queue.warning { border-color: var(--refused); }
+.turn-queue.warning .turn-queue-count { color: var(--refused); }
+.letter-row .run-error { color: var(--refused); overflow-wrap: anywhere; }
+.letter-error { margin: 0 0 14px; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius-soft); background: var(--raised); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 40vh; overflow-y: auto; }
+.letter-session { display: inline-block; margin: 0 0 14px; color: var(--gold); }
+#turns-on[hidden], #turns-empty[hidden], #turns-more[hidden], #turns-confirm[hidden], #letter-session[hidden] { display: none; }
+#turns-said:empty { display: none; }
+/* A selection checkbox is a box beside its words, not a field: the form inputs' 44px height is the label's to give. */
+.selection-tools label.check { display: inline-flex; flex-direction: row; align-items: center; gap: 8px; min-height: 44px; margin: 0; }
+.selection-tools label.check input[type="checkbox"] { width: 20px; height: 20px; min-height: 0; margin: 0; padding: 0; }

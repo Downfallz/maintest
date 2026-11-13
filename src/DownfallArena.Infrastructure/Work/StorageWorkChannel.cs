@@ -42,4 +42,17 @@ public sealed class StorageWorkChannel(QueueClient queue) : IWorkChannel
         ArgumentNullException.ThrowIfNull(work);
         await queue.UpdateMessageAsync(work.Id, work.Receipt, visibilityTimeout: after, cancellationToken: cancellationToken);
     }
+
+    public async Task<IReadOnlyList<PeekedWork>> PeekAsync(int most, CancellationToken cancellationToken = default)
+    {
+        var peeked = await queue.PeekMessagesAsync(Math.Clamp(most, 1, MostAtOnce), cancellationToken);
+        return [.. peeked.Value.Select(message => new PeekedWork(
+            message.MessageId,
+            message.Body.ToString(),
+            message.DequeueCount,
+            message.InsertedOn ?? DateTimeOffset.MinValue))];
+    }
+
+    public async Task<int> CountAsync(CancellationToken cancellationToken = default) =>
+        (await queue.GetPropertiesAsync(cancellationToken)).Value.ApproximateMessagesCount;
 }

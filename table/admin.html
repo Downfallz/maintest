@@ -138,7 +138,7 @@
       </section>
     </section>
     <section id="panel-jobs" class="admin-panel" aria-labelledby="tab-jobs" data-panel="jobs" hidden>
-      <p id="jobs-off" class="muted">This host records nothing (<code>--no-record</code>), so it keeps no tending runs.</p>
+      <p id="jobs-off" class="muted">This host keeps no tending runs (it records nothing, <code>--no-record</code>) and takes its bots' turns in its own process, so it has no jobs to show.</p>
       <section id="jobs-on" class="control players" aria-labelledby="jobs-title" hidden>
         <div class="list-head">
           <h2 id="jobs-title">Tending runs</h2>
@@ -161,8 +161,45 @@
           <button id="jobs-next" type="button" class="secondary">Older →</button>
         </nav>
       </section>
+      <section id="turns-on" class="control players turns" aria-labelledby="turns-title" hidden>
+        <div class="list-head">
+          <h2 id="turns-title">Bot turns</h2>
+          <button id="turns-refresh" type="button" class="secondary">Refresh</button>
+        </div>
+        <p class="muted">The turns tables owe their bots go through a queue a worker takes them from. A turn that fails five times waits on the poison queue for half a minute, then is kept as a dead letter. Requeue puts its turn back as a new one; a table that is over, closed or gone owes nothing, so its turn is simply done with.</p>
+        <ul id="turns-queues" class="turn-queues" aria-label="Turn queues"></ul>
+        <div class="selection-tools">
+          <label class="check"><input id="turns-all" type="checkbox" /> Select all shown</label>
+          <button id="turns-requeue" type="button" disabled>Requeue selected</button>
+          <button id="turns-requeue-all" type="button" class="secondary">Requeue every letter</button>
+          <button id="turns-drop" type="button" class="danger" disabled>Drop selected…</button>
+        </div>
+        <div id="turns-confirm" class="confirm" hidden>
+          <p id="turns-confirm-line"></p>
+          <button id="turns-drop-yes" type="button" class="danger">Drop</button>
+          <button id="turns-drop-no" type="button" class="secondary">Keep them</button>
+        </div>
+        <output id="turns-said" class="said"></output>
+        <ol id="turns-letters" class="session-list" aria-label="Dead letters"></ol>
+        <p id="turns-empty" class="muted" hidden>No dead letter: every turn given up on has been dealt with.</p>
+        <p id="turns-more" class="muted" hidden></p>
+      </section>
     </section>
     </div>
+
+    <dialog id="letter-sheet" class="home-dialog side-sheet" aria-labelledby="letter-sheet-name">
+      <div class="dialog-heading">
+        <div><p class="eyebrow">Dead letter</p><h2 id="letter-sheet-name">Letter</h2></div>
+        <button id="letter-sheet-close" type="button" aria-label="Close the letter">×</button>
+      </div>
+      <div class="home-dialog-body">
+        <dl id="letter-facts" class="player-facts"></dl>
+        <a id="letter-session" class="letter-session" hidden>Open the table's session</a>
+        <h3>Error</h3>
+        <pre id="letter-error" class="letter-error"></pre>
+        <button id="letter-requeue" type="button">Requeue this turn</button>
+      </div>
+    </dialog>
 
     <dialog id="run-sheet" class="home-dialog side-sheet" aria-labelledby="run-sheet-name">
       <div class="dialog-heading">

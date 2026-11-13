@@ -31,11 +31,15 @@ public sealed record DeadLetter(
 
     public string ToJson() => JsonSerializer.Serialize(this, Web);
 
+    /// <summary>
+    /// A dead letter as its queue holds it, or none when the text is not a whole one: an item with no queue or no body
+    /// is something else put on the queue, listed and dropped as it is, never requeued.
+    /// </summary>
     public static DeadLetter? Parse(string text)
     {
         try
         {
-            return JsonSerializer.Deserialize<DeadLetter>(text, Web);
+            return JsonSerializer.Deserialize<DeadLetter>(text, Web) is { Queue.Length: > 0, Body.Length: > 0 } letter ? letter : null;
         }
         catch (JsonException)
         {

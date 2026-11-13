@@ -270,6 +270,15 @@ Each stage is one pull request, with its tests and docs, and leaves the panel wo
    a time, kept as manual with the operator's name. The tab shows only on a host that records.
 5. **A3b, jobs: the bot turns.** `PeekAsync` and `CountAsync` on the queues; the queues' lengths, the dead letters and
    the poison queue paged, each letter's sheet; Requeue (one, selected, all) and Drop.
+   *Built (2026-11-13)*: `PeekAsync` and `CountAsync` on `IWorkChannel` (storage and in-process queues), and
+   `TurnQueues` (Application) over the three queues. A storage queue shows only its first 32 items without taking
+   them, so the tab lists the first 32 dead letters, first set aside first, and says how many more wait behind them;
+   requeueing or dropping those brings the rest into view. The poison queue is shown by its count, since the
+   dead-letter worker sets its items aside within half a minute. Requeue and drop walk the dead letters a batch at a
+   time, hiding what they hold and letting back at once what they were not asked for; a letter is deleted only after
+   its turn was sent. `GET /api/admin/jobs/turns`, `POST .../requeue {"ids"} | {"all":true}`, `POST .../drop {"ids"}`.
+   Each requeue and drop is a console line naming the operator until the activity log (A6) keeps it. The Jobs tab
+   shows on a host with either tending runs or turn queues.
 6. **A3c, voiding a match.** ADR (amends 0163 and 0168). `VoidReason` on the record, the void sheet on tables and
    sessions, the result withdrawn from `IMatchResults` for a finished match, the players told with the explanation,
    the voided games shown as such in the finished games list.

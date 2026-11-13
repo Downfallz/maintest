@@ -180,6 +180,14 @@ internal static class TableHost
         admin.Lobby.Changes = lobbyChanges;
         admin.Lobby.Relay = relay;
         friends?.Changes = lobbyChanges;
+        // The bots' turn queues (A3b), when the turns go through them: their lengths and dead letters in the Jobs tab.
+        if (channels is not null && turns is not null)
+        {
+            var poisoned = await OpenChannelAsync(channels, PoisonedWork.QueueOf(turns.Name), stopping.Token);
+            var letters = await OpenChannelAsync(channels, DeadLetter.QueueOf(turns.Name), stopping.Token);
+            admin.Turns = poisoned is null || letters is null ? null : new TurnsApi(new TurnQueues(turns, poisoned, letters));
+        }
+
         // The tending runs (A3), kept beside the recordings, and a pass run now from the panel: the hourly job's pass,
         // over this process's tables, said through the relay as the job says it. A store of runs that cannot be opened
         // leaves the panel without its Jobs tab, never the players without the host.

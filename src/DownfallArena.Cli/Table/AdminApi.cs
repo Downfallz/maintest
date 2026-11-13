@@ -82,6 +82,9 @@ internal sealed class AdminApi
     /// <summary>The operator's jobs (A3): the tending runs and a pass run now, on a host that records; none otherwise.</summary>
     public JobsApi? Jobs { get; set; }
 
+    /// <summary>The bots' turn queues (A3b), on a host whose turns go through queues; none otherwise.</summary>
+    public TurnsApi? Turns { get; set; }
+
     public static bool Names(string path) =>
         path == MePath || Under(path, Prefix) || Under(path, SessionsPrefix) || PlayersApi.Names(path) || JobsApi.Names(path) || LobbyApi.Names(path);
 
@@ -148,6 +151,13 @@ internal sealed class AdminApi
             return Players is null
                 ? StudioResponse.OfPlainText(404, "Players do not sign in at this host (--accounts off), so it has no players to list.")
                 : await Players.HandleAsync(method, path, body, query, operatorName);
+        }
+
+        if (TurnsApi.Names(path))
+        {
+            return Turns is null
+                ? StudioResponse.OfPlainText(404, "This host takes the bots' turns in its own process, so it has no turn queues.")
+                : await Turns.HandleAsync(method, path, body, operatorName);
         }
 
         if (JobsApi.Names(path))

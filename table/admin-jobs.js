@@ -101,7 +101,7 @@ function made(tag, className, text) {
  * Draws the Jobs tab into the page. `send(method, path, body)` is the admin transport's; `shown(available)` says
  * whether this host keeps runs at all, which a host recording nothing does not.
  */
-export function mountJobs({ send, element, shown }) {
+export function mountJobs({ send, element, shown, warn = () => {} }) {
   let page = 1;
 
   async function redraw() {
@@ -127,7 +127,7 @@ export function mountJobs({ send, element, shown }) {
     element('jobs-count').textContent = runsLine(answer.body);
     element('jobs-previous').disabled = page <= 1;
     element('jobs-next').disabled = page >= (answer.body.pages ?? 1);
-    element('tab-jobs-count').textContent = (answer.body.day?.failed ?? 0) > 0 ? '!' : '';
+    warn((answer.body.day?.failed ?? 0) > 0);
   }
 
   function runRow(row) {
