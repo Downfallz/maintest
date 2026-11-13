@@ -180,6 +180,24 @@ internal static class TableHost
         admin.Lobby.Changes = lobbyChanges;
         admin.Lobby.Relay = relay;
         friends?.Changes = lobbyChanges;
+        // The tending runs (A3), kept beside the recordings, and a pass run now from the panel: the hourly job's pass,
+        // over this process's tables, said through the relay as the job says it. A store of runs that cannot be opened
+        // leaves the panel without its Jobs tab, never the players without the host.
+        if (store is not null
+            && await TableTend.OpenLogAsync(() => ArtifactStores.OpenTendLogAsync(options.Record ?? DefaultRunsDirectory, stopping.Token)) is { } tendLog)
+        {
+            admin.Jobs = new JobsApi(tendLog, clock, async (now, progress) =>
+            {
+                var tended = await TableTend.TendAsync(registry, admin.Lobby, now, composer, clock, progress);
+                if (relay is not null)
+                {
+                    TableTend.Announce(relay, tended);
+                }
+
+                return tended;
+            });
+        }
+
         composer.NameOf = accounts is null ? null : async id => (await accounts.AccountAsync(id))?.Username.Value;
         // The ladder (ADR 0124), read from the results the composer keeps; bots are named as the lobby names them.
         var leaderboard = accounts is null || results is null

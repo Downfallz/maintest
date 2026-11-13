@@ -262,6 +262,12 @@ Each stage is one pull request, with its tests and docs, and leaves the panel wo
    Restore.
 4. **A3, jobs: the tending runs.** `ITendLog`; `table-tend` writes its runs; the Jobs tab with runs, totals and each
    run's sheet; Run a pass now.
+   *Built (2026-11-13)*: `TendRun` and `ITendLog` (Application), kept in a `tend` directory or container beside the
+   recordings rather than under them, since the session store reads every top-level prefix as a session. A run's id
+   begins with its start time, so the newest are listed without a read and the week's totals read only the week's
+   records. `table-tend` keeps a failed run too, then fails as before. `GET /api/admin/jobs/tend?page` and
+   `GET /api/admin/jobs/tend/<id>` read them; `POST /api/admin/jobs/tend` runs the pass in the API's process, one at
+   a time, kept as manual with the operator's name. The tab shows only on a host that records.
 5. **A3b, jobs: the bot turns.** `PeekAsync` and `CountAsync` on the queues; the queues' lengths, the dead letters and
    the poison queue paged, each letter's sheet; Requeue (one, selected, all) and Drop.
 6. **A3c, voiding a match.** ADR (amends 0163 and 0168). `VoidReason` on the record, the void sheet on tables and

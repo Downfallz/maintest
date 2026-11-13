@@ -28,6 +28,7 @@
       <a id="tab-tables" href="#tables" data-tab="tables">Tables <span id="tab-tables-count" class="tab-count"></span></a>
       <a id="tab-sessions" href="#sessions" data-tab="sessions">Sessions <span id="tab-sessions-count" class="tab-count"></span></a>
       <a id="tab-players" href="#players" data-tab="players" hidden>Players <span id="tab-players-count" class="tab-count"></span></a>
+      <a id="tab-jobs" href="#jobs" data-tab="jobs" hidden>Jobs <span id="tab-jobs-count" class="tab-count"></span></a>
     </nav>
 
     <div id="admin" hidden>
@@ -136,9 +137,48 @@
         </nav>
       </section>
     </section>
+    <section id="panel-jobs" class="admin-panel" aria-labelledby="tab-jobs" data-panel="jobs" hidden>
+      <p id="jobs-off" class="muted">This host records nothing (<code>--no-record</code>), so it keeps no tending runs.</p>
+      <section id="jobs-on" class="control players" aria-labelledby="jobs-title" hidden>
+        <div class="list-head">
+          <h2 id="jobs-title">Tending runs</h2>
+          <button id="jobs-pass" type="button" class="secondary">Run a pass now</button>
+        </div>
+        <p class="muted">Each pass closes the tables that never began, lets go of the invitations nobody answered, ends the games whose player let their time run out or left their seat, and warns the players whose time is running low. The hourly job runs one; a pass run here does the same work over this host's tables, and both are kept, the last 500.</p>
+        <div id="jobs-pass-confirm" class="confirm" hidden>
+          <p>Run a pass now? It ends and closes what is due, as the hourly job would.</p>
+          <button id="jobs-pass-yes" type="button" class="danger">Run the pass</button>
+          <button id="jobs-pass-no" type="button" class="secondary">Cancel</button>
+        </div>
+        <p id="jobs-day" class="jobs-total"></p>
+        <p id="jobs-week" class="jobs-total muted"></p>
+        <output id="jobs-said" class="said"></output>
+        <ol id="jobs-runs" class="session-list" aria-label="Tending runs"></ol>
+        <p id="jobs-empty" class="muted" hidden>No run is kept yet. The hourly job keeps one each time it runs, and so does Run a pass now.</p>
+        <nav class="session-pages" aria-label="Run pages">
+          <button id="jobs-previous" type="button" class="secondary">← Newer</button>
+          <output id="jobs-count" class="muted"></output>
+          <button id="jobs-next" type="button" class="secondary">Older →</button>
+        </nav>
+      </section>
+    </section>
     </div>
 
-    <dialog id="player-sheet" class="home-dialog player-sheet" aria-labelledby="player-sheet-name">
+    <dialog id="run-sheet" class="home-dialog side-sheet" aria-labelledby="run-sheet-name">
+      <div class="dialog-heading">
+        <div><p class="eyebrow">Tending run</p><h2 id="run-sheet-name">Run</h2></div>
+        <button id="run-sheet-close" type="button" aria-label="Close the run's sheet">×</button>
+      </div>
+      <div class="home-dialog-body">
+        <dl id="run-facts" class="player-facts"></dl>
+        <p id="run-error" class="problem" hidden></p>
+        <h3>Tables</h3>
+        <ul id="run-tables" class="player-recent run-tables"></ul>
+        <p id="run-tables-empty" class="muted" hidden>It touched no table.</p>
+      </div>
+    </dialog>
+
+    <dialog id="player-sheet" class="home-dialog side-sheet player-sheet" aria-labelledby="player-sheet-name">
       <div class="dialog-heading">
         <div><p class="eyebrow">Player</p><h2 id="player-sheet-name">Player</h2></div>
         <button id="player-sheet-close" type="button" aria-label="Close the player's sheet">×</button>

@@ -677,9 +677,19 @@ internal sealed class TableRegistry : IDisposable
     /// Lets go of the tables nobody is at any more (see the class remarks), and closes, through its record, every
     /// open table of the index nobody holds that never began and was opened longer ago than <see cref="NeverBegunFor" />.
     /// </summary>
-    public async Task<IReadOnlyList<string>> SweepAsync(DateTimeOffset now, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<string>> SweepAsync(DateTimeOffset now, CancellationToken cancellationToken = default) =>
+        [.. (await SweptAsync(now, cancellationToken)).Select(swept => swept.Id)];
+
+    /// <summary>
+    /// <see cref="SweepAsync" />, keeping only the tables it closed because they never began: what a tending run keeps.
+    /// A finished table this host let go of is still finished, only out of its memory, and is not one of them.
+    /// </summary>
+    public async Task<IReadOnlyList<string>> SweepNeverBegunAsync(DateTimeOffset now, CancellationToken cancellationToken = default) =>
+        [.. (await SweptAsync(now, cancellationToken)).Where(swept => swept.NeverBegan).Select(swept => swept.Id)];
+
+    private async Task<List<(string Id, bool NeverBegan)>> SweptAsync(DateTimeOffset now, CancellationToken cancellationToken)
     {
-        List<string> swept = [.. LetGoOfIdle(now)];
+        List<(string Id, bool NeverBegan)> swept = [.. LetGoOfIdleTables(now).Select(table => (table.Id, !table.IsFinished))];
         if (Loader is { } loader)
         {
             foreach (var listed in await ListedAsync(cancellationToken))
@@ -687,7 +697,7 @@ internal sealed class TableRegistry : IDisposable
                 if (Held(listed.Table) is null && TableSummary.Parse(listed.Summary) is { Begun: false } && now - listed.CreatedAt >= NeverBegunFor
                     && await ExpiredAsync(loader, listed.Table, now, cancellationToken))
                 {
-                    swept.Add(listed.Table);
+                    swept.Add((listed.Table, true));
                 }
             }
         }
@@ -699,7 +709,9 @@ internal sealed class TableRegistry : IDisposable
     /// The half of the sweep that is this process's own: lets go of the tables it holds that nobody is at any more
     /// (see the class remarks), and touches nothing it does not hold. What a worker, which tends nothing, does.
     /// </summary>
-    public IReadOnlyList<string> LetGoOfIdle(DateTimeOffset now)
+    public IReadOnlyList<string> LetGoOfIdle(DateTimeOffset now) => [.. LetGoOfIdleTables(now).Select(table => table.Id)];
+
+    private List<PlayedTable> LetGoOfIdleTables(DateTimeOffset now)
     {
         List<PlayedTable> gone = [];
         lock (_gate)
@@ -721,7 +733,7 @@ internal sealed class TableRegistry : IDisposable
             table.Close();
         }
 
-        return [.. gone.Select(table => table.Id)];
+        return gone;
     }
 
     /// <summary>A table nobody holds closed through its record; a failure is a line on the console, and the next sweep tries again.</summary>

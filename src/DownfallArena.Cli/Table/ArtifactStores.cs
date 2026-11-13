@@ -86,6 +86,32 @@ internal static class ArtifactStores
         return await BlobAccountStore.OpenAsync(container, cancellationToken);
     }
 
+    /// <summary>The container the tending runs are kept in, next to the recordings' one (docs/tabletop/admin-plan.md, A3).</summary>
+    public const string TendContainer = "tend";
+
+    /// <summary>
+    /// Where the tending runs are kept beside what <c>--record</c> names: a directory <c>tend</c> next to the runs'
+    /// directory, or a container <c>tend</c> in the same storage account. Never inside the recordings: the session
+    /// store reads everything at the top of it as a session.
+    /// </summary>
+    public static async Task<ITendLog> OpenTendLogAsync(string target, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(target);
+        if (!IsContainerUrl(target))
+        {
+            var runs = Path.GetFullPath(target).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return new FileTendLog(Path.Combine(Path.GetDirectoryName(runs) ?? runs, TendContainer));
+        }
+
+        var recordings = new Uri(target, UriKind.Absolute);
+        var path = recordings.AbsolutePath.TrimEnd('/');
+        var uri = new UriBuilder(recordings) { Path = $"{path[..path.LastIndexOf('/')]}/{TendContainer}", Query = string.Empty }.Uri;
+        var container = IsEmulator(uri)
+            ? new BlobContainerClient(uri, new StorageSharedKeyCredential(DevelopmentAccount, DevelopmentKey))
+            : new BlobContainerClient(uri, new DefaultAzureCredential());
+        return await BlobTendLog.OpenAsync(container, cancellationToken);
+    }
+
     /// <summary>The container the content tables began on is kept in, next to the recordings' one (ADR 0163).</summary>
     public const string ContentContainer = "content";
 

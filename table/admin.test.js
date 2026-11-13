@@ -351,11 +351,12 @@ test('a finished table offers its replay beside its viewer link, and a table bei
 });
 
 test('the headquarters open the section the address names, and Tables for any other', () => {
-  assert.deepEqual([...ADMIN_TABS], ['tables', 'sessions', 'players']);
+  assert.deepEqual([...ADMIN_TABS], ['tables', 'sessions', 'players', 'jobs']);
   assert.equal(tabOf('#sessions'), 'sessions');
   assert.equal(tabOf('sessions'), 'sessions');
   assert.equal(tabOf('#players'), 'players');
-  assert.equal(tabOf('#jobs'), 'tables');
+  assert.equal(tabOf('#jobs'), 'jobs');
+  assert.equal(tabOf('#settings'), 'tables');
   assert.equal(tabOf(''), 'tables');
   assert.equal(tabOf(undefined), 'tables');
 });

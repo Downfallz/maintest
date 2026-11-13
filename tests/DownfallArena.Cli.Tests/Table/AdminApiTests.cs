@@ -343,6 +343,45 @@ public sealed class AdminApiTests : IDisposable
         (await admin.HandleAsync("GET", PlayersApi.Prefix, "", OperatorToken, principal: null)).Status.ShouldBe(404);
     }
 
+    /// <summary>
+    /// A pass run from the panel keeps what it closed: the sweep every admin request does must not close the due
+    /// tables first, or the run of that same request would find nothing and say so.
+    /// </summary>
+    [Fact]
+    public async Task A_pass_run_from_the_panel_keeps_the_tables_it_closed()
+    {
+        var clock = new MovableClock(DateTimeOffset.UtcNow);
+        var admin = new AdminApi(_registry, _hosted.Composer, OperatorGate.WithToken(OperatorToken), clock, "Rules", _hosted.Stored);
+        var opened = JsonDocument.Parse(Text(await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy"}""", OperatorToken, principal: null))).RootElement;
+        var id = opened.GetProperty("id").GetString();
+        var tend = Path.Combine(_hosted.RunsDirectory, "..", $"tend-{Guid.NewGuid():N}");
+        try
+        {
+            admin.Jobs = new JobsApi(new Infrastructure.Tables.FileTendLog(tend), clock, (now, progress) => TableTend.TendAsync(_registry, admin.Lobby, now, progress: progress));
+            clock.Advance(TableRegistry.NeverBegunFor + TimeSpan.FromMinutes(5));
+
+            var run = JsonDocument.Parse(Text(await admin.HandleAsync("POST", JobsApi.TendRoute, "", OperatorToken, principal: null))).RootElement.GetProperty("run");
+
+            run.GetProperty("neverBegan").EnumerateArray().Select(table => table.GetString()).ShouldBe([id]);
+        }
+        finally
+        {
+            if (Directory.Exists(tend))
+            {
+                Directory.Delete(tend, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task The_jobs_are_the_operators_alone_and_none_on_a_host_that_keeps_no_runs()
+    {
+        var admin = Admin(OperatorGate.WithToken(OperatorToken));
+
+        (await admin.HandleAsync("POST", JobsApi.TendRoute, "", "a-seat-s-token", principal: null)).Status.ShouldBe(403);
+        (await admin.HandleAsync("GET", JobsApi.TendRoute, "", OperatorToken, principal: null)).Status.ShouldBe(404);
+    }
+
     [Fact]
     public async Task Whether_players_sign_in_and_as_whom_is_answered_beside_the_operator()
     {
@@ -719,4 +758,13 @@ public sealed class AdminApiTests : IDisposable
         new(_registry, _hosted.Composer, gate, TimeProvider.System, "Rules 2 creatures (a test)", _hosted.Stored, agents);
 
     private static string Text(StudioResponse response) => Encoding.UTF8.GetString(response.Body);
+
+    private sealed class MovableClock(DateTimeOffset start) : TimeProvider
+    {
+        private DateTimeOffset _now = start;
+
+        public void Advance(TimeSpan by) => _now += by;
+
+        public override DateTimeOffset GetUtcNow() => _now;
+    }
 }

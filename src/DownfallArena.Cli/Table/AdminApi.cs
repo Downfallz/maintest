@@ -79,8 +79,11 @@ internal sealed class AdminApi
     /// <summary>The operator's list of players (ADR 0174), on a host that signs players in; none otherwise.</summary>
     public PlayersApi? Players { get; init; }
 
+    /// <summary>The operator's jobs (A3): the tending runs and a pass run now, on a host that records; none otherwise.</summary>
+    public JobsApi? Jobs { get; set; }
+
     public static bool Names(string path) =>
-        path == MePath || Under(path, Prefix) || Under(path, SessionsPrefix) || PlayersApi.Names(path) || LobbyApi.Names(path);
+        path == MePath || Under(path, Prefix) || Under(path, SessionsPrefix) || PlayersApi.Names(path) || JobsApi.Names(path) || LobbyApi.Names(path);
 
     private static bool Under(string path, string prefix) => path == prefix || path.StartsWith(prefix + "/", StringComparison.Ordinal);
 
@@ -106,17 +109,17 @@ internal sealed class AdminApi
             return Refused();
         }
 
+        // Before the sweep below: a pass run from the Jobs tab sweeps itself, and keeps what it closed only if nothing
+        // closed it a moment before.
+        if (await SectionAsync(method, path, body, query, operatorName) is { } section)
+        {
+            return section;
+        }
+
         // The one moment memory is about to be spent, so the one moment tables nobody is at are let go of.
         foreach (var gone in await _registry.SweepAsync(_clock.GetUtcNow()))
         {
             Console.WriteLine($"  Session {gone} let go of: nobody has asked for it in a while.");
-        }
-
-        if (PlayersApi.Names(path))
-        {
-            return Players is null
-                ? StudioResponse.OfPlainText(404, "Players do not sign in at this host (--accounts off), so it has no players to list.")
-                : await Players.HandleAsync(method, path, body, query, operatorName);
         }
 
         if (Under(path, SessionsPrefix))
@@ -135,6 +138,26 @@ internal sealed class AdminApi
             ("POST", _) when Reinvited(rest) is { } seat => await LobbyApi.ExclusivelyAsync(() => ReinviteAsync(seat.Table, seat.Slot, operatorName)),
             _ => StudioResponse.OfPlainText(404, $"No such route: {method} {path}"),
         };
+    }
+
+    /// <summary>The Players and Jobs tabs' routes (ADR 0174, A3), or null for a route of neither.</summary>
+    private async Task<StudioResponse?> SectionAsync(string method, string path, string body, string? query, string operatorName)
+    {
+        if (PlayersApi.Names(path))
+        {
+            return Players is null
+                ? StudioResponse.OfPlainText(404, "Players do not sign in at this host (--accounts off), so it has no players to list.")
+                : await Players.HandleAsync(method, path, body, query, operatorName);
+        }
+
+        if (JobsApi.Names(path))
+        {
+            return Jobs is null
+                ? StudioResponse.OfPlainText(404, "This host keeps no tending runs: it records nothing (--no-record), or their store could not be opened.")
+                : await Jobs.HandleAsync(method, path, query, operatorName);
+        }
+
+        return null;
     }
 
     /// <summary>

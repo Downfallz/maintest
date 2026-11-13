@@ -6,6 +6,7 @@
 // whoever holds the token the console printed, or whoever the platform in front of the host signed in. The
 // game is not open yet, so the operator opens every table and the players, who never sign in, join by code.
 
+import { mountJobs } from './admin-jobs.js';
 import { mountPlayers } from './admin-players.js';
 
 const POLL_MS = 2500;
@@ -259,7 +260,7 @@ export const SESSIONS_PER_PAGE = 20;
 
 // The headquarters' sections, each one part of the address (`/admin#sessions`), so a reload or a link opens it and
 // Back moves between them. The first is where the page opens.
-export const ADMIN_TABS = Object.freeze(['tables', 'sessions', 'players']);
+export const ADMIN_TABS = Object.freeze(['tables', 'sessions', 'players', 'jobs']);
 
 /** The section an address names, or the first one for an address that names none the page has. */
 export function tabOf(hash) {
@@ -578,6 +579,18 @@ async function start() {
     },
   });
 
+  // The tending runs (A3), on a host that records: read when the panel opens, when its section is opened and on
+  // Refresh, never on the clock.
+  const jobs = mountJobs({
+    send: transport.request,
+    element,
+    shown: available => {
+      element('tab-jobs').hidden = !available;
+      element('jobs-off').hidden = available;
+      element('jobs-on').hidden = !available;
+    },
+  });
+
   // The section the address names is the one shown; following a section's link changes the address, so Back and a
   // reload keep it.
   function showTab() {
@@ -664,10 +677,11 @@ async function start() {
   element('sessions-refresh').addEventListener('click', redrawSessions);
   element('tables-previous').addEventListener('click', () => { tablesPage -= 1; drawTables(); });
   element('tables-next').addEventListener('click', () => { tablesPage += 1; drawTables(); });
-  element('admin-refresh').addEventListener('click', async () => { await redraw(); await redrawSessions(); await players.redraw(); });
+  element('admin-refresh').addEventListener('click', async () => { await redraw(); await redrawSessions(); await players.redraw(); await jobs.redraw(); });
   globalThis.addEventListener?.('hashchange', () => {
     showTab();
     if (tabOf(globalThis.location?.hash) === 'players') void players.redraw();
+    if (tabOf(globalThis.location?.hash) === 'jobs') void jobs.redraw();
   });
   showTab();
   element('sessions-export').addEventListener('click', async () => saveZip(await transport.exportSessions(selected())));
@@ -694,6 +708,7 @@ async function start() {
   await redraw();
   await redrawSessions();
   await players.redraw();
+  await jobs.redraw();
   again();
 }
 
