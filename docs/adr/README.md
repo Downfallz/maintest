@@ -85,7 +85,7 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0077](0077-a-mobile-field-guide-before-the-editor.md) | A mobile field guide before the editor | Accepted |
 | [0078](0078-momentum-is-a-free-strike-that-gathers-energy.md) | Momentum is a free strike that gathers energy | Accepted |
 | [0079](0079-decision-previews-and-reproducible-practice.md) | Decision previews and reproducible practice | Accepted |
-| [0080](0080-host-the-table-on-azure-container-apps.md) | Host the table on Azure Container Apps, with the studio left on GitHub Pages | Accepted |
+| [0080](0080-host-the-table-on-azure-container-apps.md) | Host the table on Azure Container Apps, with the studio left on GitHub Pages | Accepted, amended by [0172](0172-serve-the-table-at-its-own-domain-behind-cloudflare.md) |
 | [0081](0081-a-host-of-tables-found-by-their-tokens.md) | A host of tables, each found by its tokens, opened from a lobby behind the operator's door | Accepted |
 | [0082](0082-deploy-from-github-to-azure-without-a-secret.md) | Deploy the table from GitHub to Azure without a secret | Accepted, amended by [0160](0160-run-the-table-outside-a-virtual-network.md) |
 | [0083](0083-an-action-resolves-when-its-targets-are-confirmed.md) | An action resolves when its targets are confirmed | Accepted, amended by [0112](0112-spells-are-chosen-at-the-slot-by-default.md) for the default rules |
@@ -177,3 +177,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0169](0169-end-a-match-whose-player-let-their-time-to-answer-run-out.md) | End a match whose player let their time to answer run out | Accepted |
 | [0170](0170-end-a-begun-match-whose-left-seat-nobody-takes-in-a-day.md) | End a begun match whose left seat nobody takes in a day | Accepted |
 | [0171](0171-rank-only-3v3-games-and-count-a-players-statistics-on-them.md) | Rank only 3v3 games, and count a player's statistics on them alone | Accepted |
+| [0172](0172-serve-the-table-at-its-own-domain-behind-cloudflare.md) | Serve the table at its own domain, behind Cloudflare | Accepted |

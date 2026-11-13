@@ -32,6 +32,15 @@ param googleClientId string = ''
 ])
 param relaySku string = ''
 
+@description('The table\'s own host name behind Cloudflare, e.g. play.downfallinstinct.com (ADR 0172). Empty, the table answers at the platform\'s address only.')
+param customDomain string = ''
+
+@description('The name the Cloudflare Origin CA certificate was uploaded under to the Container Apps environment, once, by hand (infra/README.md). Read only when customDomain is set.')
+param originCertificateName string = 'cloudflare-origin'
+
+@description('Whether the API answers Cloudflare\'s addresses alone (ADR 0172), so nobody reaches it around Cloudflare at the platform\'s address. Turned on once the custom domain serves.')
+param onlyCloudflare bool = false
+
 @description('A short word every resource name starts with.')
 @minLength(3)
 @maxLength(11)
@@ -112,6 +121,35 @@ var relayEnv = relayOn ? [
     value: 'https://${relayHost}'
   }
 ] : []
+
+// Cloudflare's IPv4 ranges (https://www.cloudflare.com/ips-v4), the only addresses the API answers when
+// onlyCloudflare is on (ADR 0172). The platform's ingress takes IPv4 only, and Cloudflare reaches it over IPv4.
+// They change rarely; compare them with the published list before turning the fence on, and when Cloudflare
+// announces a change.
+var cloudflareRanges = [
+  '173.245.48.0/20'
+  '103.21.244.0/22'
+  '103.22.200.0/22'
+  '103.31.4.0/22'
+  '141.101.64.0/18'
+  '108.162.192.0/18'
+  '190.93.240.0/20'
+  '188.114.96.0/20'
+  '197.234.240.0/22'
+  '198.41.128.0/17'
+  '162.158.0.0/15'
+  '104.16.0.0/13'
+  '104.24.0.0/14'
+  '172.64.0.0/13'
+  '131.0.72.0/22'
+]
+var ingressRestrictions = onlyCloudflare ? map(range(0, length(cloudflareRanges)), i => {
+  name: 'cloudflare-${i}'
+  description: 'Cloudflare (ADR 0172)'
+  ipAddressRange: cloudflareRanges[i]
+  action: 'Allow'
+}) : []
+var domainOn = !empty(customDomain)
 
 // Where the console lines go. Capped per day so a host that logs in a loop costs cents, not a surprise.
 resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
@@ -254,6 +292,16 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
         targetPort: 8080
         transport: 'http'
         allowInsecure: false
+        customDomains: domainOn ? [
+          {
+            name: customDomain
+            // The Cloudflare Origin CA certificate, uploaded once by hand (ADR 0172), so its private key is in no
+            // repository, variable or secret of the workflow.
+            certificateId: resourceId('Microsoft.App/managedEnvironments/certificates', appEnvironment.name, originCertificateName)
+            bindingType: 'SniEnabled'
+          }
+        ] : []
+        ipSecurityRestrictions: ingressRestrictions
       }
     }
     template: {
@@ -529,11 +577,17 @@ resource signIn 'Microsoft.App/containerApps/authConfigs@2024-03-01' = {
   }
 }
 
-@description('Where the table answers.')
-output url string = 'https://${app.properties.configuration.ingress.fqdn}'
+@description('Where the table answers: its own domain when it has one (ADR 0172), the platform\'s address otherwise.')
+output url string = domainOn ? 'https://${customDomain}' : 'https://${app.properties.configuration.ingress.fqdn}'
+
+@description('The platform\'s own address, which Cloudflare\'s record points at (ADR 0172).')
+output platformUrl string = 'https://${app.properties.configuration.ingress.fqdn}'
 
 @description('What the sign-in registration must list as its redirect URI, once (infra/README.md).')
-output redirectUri string = 'https://${app.properties.configuration.ingress.fqdn}/.auth/login/aad/callback'
+output redirectUri string = domainOn ? 'https://${customDomain}/.auth/login/aad/callback' : 'https://${app.properties.configuration.ingress.fqdn}/.auth/login/aad/callback'
+
+@description('The value of the asuid TXT record that proves the custom domain is ours (ADR 0172).')
+output customDomainVerificationId string = appEnvironment.properties.customDomainConfiguration.customDomainVerificationId
 
 @description('Where sessions are recorded.')
 output recordings string = recordings

@@ -3,7 +3,7 @@
 # run by the subscription's owner in Azure Cloud Shell (or anywhere `az login` has been run as them).
 #
 #   infra/bootstrap.sh setup      # the resource group, the deploying identity, the sign-in registration
-#   infra/bootstrap.sh redirect   # after the first deployment: the sign-in's redirect URI
+#   infra/bootstrap.sh redirect   # after the first deployment: the sign-in's redirect URIs (DOMAIN=<host> adds the table's own)
 #
 # Safe to run again: everything it makes it looks for first. It creates no secret. What it prints at the
 # end are ids, which the workflow reads as repository variables; with the GitHub CLI signed in, it sets them.
@@ -167,9 +167,14 @@ redirect() {
     return 1
   fi
 
-  uri="https://$fqdn/.auth/login/aad/callback"
-  az ad app update --id "$sign_in" --web-redirect-uris "$uri" --enable-id-token-issuance true --output none
-  echo "Sign-in redirects to $uri. The lobby is https://$fqdn/lobby."
+  # The platform's address, and the table's own domain when DOMAIN names it (ADR 0172): both stay listed, so the
+  # admin panel signs in at either while the domain is brought in.
+  local uris=("https://$fqdn/.auth/login/aad/callback")
+  if [[ -n "${DOMAIN:-}" ]]; then
+    uris+=("https://$DOMAIN/.auth/login/aad/callback")
+  fi
+  az ad app update --id "$sign_in" --web-redirect-uris "${uris[@]}" --enable-id-token-issuance true --output none
+  echo "Sign-in redirects to ${uris[*]}. The lobby is https://${DOMAIN:-$fqdn}/."
   return 0
 }
 
