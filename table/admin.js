@@ -454,7 +454,8 @@ async function saveZip(answer) {
 async function start() {
   const token = operatorToken(globalThis.location?.search ?? '', kept());
   if (globalThis.location?.search && globalThis.history?.replaceState) {
-    globalThis.history.replaceState(null, '', globalThis.location.pathname);
+    // The token leaves the address; the section it names stays, so a link to /admin?token=…#sessions opens Sessions.
+    globalThis.history.replaceState(null, '', globalThis.location.pathname + (globalThis.location.hash ?? ''));
   }
   const transport = adminTransport(token);
   const problem = element('problem');

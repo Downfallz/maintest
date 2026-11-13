@@ -66,6 +66,10 @@ test('the headquarters open on Tables under the shared header, and each section 
   await expect(page.locator('#panel-tables')).toBeVisible();
   await page.goto('/table/admin.html#sessions');
   await expect(page.locator('#panel-sessions')).toBeVisible();
+  // The console's link carries the token: it leaves the address, and the section it names stays.
+  await page.goto('/table/admin.html?token=operator#sessions');
+  await expect(page.locator('#panel-sessions')).toBeVisible();
+  await expect(page).toHaveURL(/\/table\/admin\.html#sessions$/);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(widthOf(page));
 });
 
