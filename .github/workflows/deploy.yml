@@ -168,7 +168,7 @@ jobs:
           # The Google OAuth client players sign in with (ADR 0122). Public: Google's own pages show it. A fork sets
           # its own in the TABLE_GOOGLE_CLIENT_ID variable.
           GOOGLE_CLIENT_ID: ${{ vars.TABLE_GOOGLE_CLIENT_ID || '809377988923-jsaqtfo92r9ria75s9g8cd53o1iurc6b.apps.googleusercontent.com' }}
-          # The player accounts that are the operator once signed in (ADR 0172), by id, comma-separated; unset, none.
+          # The player accounts that are the operator once signed in (ADR 0175), by id, comma-separated; unset, none.
           ADMIN_ACCOUNTS: ${{ vars.TABLE_ADMIN_ACCOUNTS }}
           NAME_PREFIX: ${{ vars.TABLE_NAME_PREFIX }}
           # The push key pair (ADR 0118), or nothing: a table without one sends no notices and says so in its log.
@@ -176,6 +176,11 @@ jobs:
           # The relay (ADR 0165), opted into by the TABLE_RELAY_SKU variable once the bootstrap has granted its role: Free_F1
           # or Standard_S1. Unset, none: the pages read the API's own streams, as before.
           RELAY_SKU: ${{ vars.TABLE_RELAY_SKU || 'none' }}
+          # The table's own host name behind Cloudflare (ADR 0175), e.g. play.downfallinstinct.com, once its
+          # certificate is uploaded; unset, the platform's address only. TABLE_ONLY_CLOUDFLARE=true then closes
+          # the platform's address to all but Cloudflare.
+          CUSTOM_DOMAIN: ${{ vars.TABLE_DOMAIN }}
+          ONLY_CLOUDFLARE: ${{ vars.TABLE_ONLY_CLOUDFLARE == 'true' }}
         run: |
           relay="$RELAY_SKU"
           if [[ "$relay" == "none" ]]; then relay=""; fi
@@ -185,6 +190,7 @@ jobs:
             --template-file infra/main.bicep \
             --parameters image="$IMAGE" signInClientId="$SIGN_IN_CLIENT_ID" operators="$OPERATORS" \
               namePrefix="${NAME_PREFIX:-downfall}" pushKeys="$PUSH_KEYS" googleClientId="$GOOGLE_CLIENT_ID" adminAccounts="$ADMIN_ACCOUNTS" relaySku="$relay" \
+              customDomain="$CUSTOM_DOMAIN" onlyCloudflare="$ONLY_CLOUDFLARE" \
             --query properties.outputs --output json > "$RUNNER_TEMP/outputs.json"
           url="$(jq -r .url.value "$RUNNER_TEMP/outputs.json")"
           redirect="$(jq -r .redirectUri.value "$RUNNER_TEMP/outputs.json")"
@@ -192,6 +198,8 @@ jobs:
             echo "### The table is at ${url}"
             echo
             echo "- Admin panel: ${url}/admin"
+            echo "- Platform address: $(jq -r .platformUrl.value "$RUNNER_TEMP/outputs.json")"
+            echo "- Domain verification (TXT asuid.<host>): \`$(jq -r .customDomainVerificationId.value "$RUNNER_TEMP/outputs.json")\`"
             echo "- Image: \`${IMAGE}\`"
             echo "- Recordings: $(jq -r .recordings.value "$RUNNER_TEMP/outputs.json")"
             echo "- The bots' turns: the worker app \`$(jq -r .worker.value "$RUNNER_TEMP/outputs.json")\`, scaled on its queue"

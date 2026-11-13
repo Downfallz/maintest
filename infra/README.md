@@ -88,7 +88,7 @@ and the pilot links. Its invitation-only tables are listed but cannot be claimed
 To let somebody else open tables, add their Entra object id to the `TABLE_OPERATORS` variable,
 comma-separated, and run the workflow again.
 
-A player account can be the operator too (ADR 0172): signed in with Google, it sees Admin in the menu and opens
+A player account can be the operator too (ADR 0175): signed in with Google, it sees Admin in the menu and opens
 the panel with no second sign-in. Sign in on the home page, open `/api/me`, copy `account.id` (`acct_...`), put it
 in the `TABLE_ADMIN_ACCOUNTS` repository variable (several comma-separated), and run the workflow again. The id,
 not the player name: a deleted account's name can be taken by anybody. Entra stays a way in beside it.
@@ -107,6 +107,40 @@ Services, Credentials, *Create OAuth client ID*, type *Web application*:
 Accounts are kept in the storage account's `accounts` container, beside the recordings, and hold a player name, an
 internal id and Google's subject id for the sign-in. No email is kept. A player deletes their account from the
 account menu on the home page; the lobby's *What we keep* panel says the same to players.
+
+## Its own domain, behind Cloudflare
+
+The table answers at `play.downfallinstinct.com` through Cloudflare's proxy (ADR 0175). Once, in this order:
+
+1. **Cloudflare, DNS** (both *DNS only*, grey, for now):
+   - `CNAME play` → the platform's address (the deploy summary's *Platform address*, without `https://`).
+   - `TXT asuid.play` → the deploy summary's *Domain verification* value.
+2. **Cloudflare, SSL/TLS**: mode *Full (strict)*. Under *Origin Server*, *Create Certificate*: RSA (2048),
+   host names `play.downfallinstinct.com` and `*.downfallinstinct.com`, 15 years, PEM. Never paste the private
+   key anywhere but the files below.
+3. **Upload the certificate**, in Cloud Shell, then delete the files:
+
+   ```bash
+   nano origin.pem   # the certificate
+   nano origin.key   # the private key
+   openssl pkcs12 -export -out origin.pfx -inkey origin.key -in origin.pem -passout pass:
+   environment="$(az containerapp env list -g downfall-table --query "[0].name" -o tsv)"
+   az containerapp env certificate upload -g downfall-table -n "$environment" \
+     --certificate-file origin.pfx --certificate-name cloudflare-origin
+   rm origin.pem origin.key origin.pfx
+   ```
+
+4. **Bind it**: set the repository variable `TABLE_DOMAIN` to `play.downfallinstinct.com` and run the workflow.
+5. **Proxy it**: switch the `play` record to *Proxied* (orange).
+6. **Sign-ins**: `DOMAIN=play.downfallinstinct.com infra/bootstrap.sh redirect` for the admin panel, and add
+   `https://play.downfallinstinct.com` to the Google client's *Authorized JavaScript origins* (see "Player sign-in").
+7. **Close the platform's address**, once players have moved: compare the ranges in `infra/main.bicep` with
+   <https://www.cloudflare.com/ips-v4>, set `TABLE_ONLY_CLOUDFLARE` to `true`, and run the workflow. The
+   platform's address then answers Cloudflare alone.
+
+In Cloudflare, keep Rocket Loader and Email Address Obfuscation off (they rewrite the pages and break their ETags,
+ADR 0166) and bypass the cache on `/api/*` and `/.auth/*`. A browser keeps its cookie, saved seats and push
+subscription per origin, so players sign in again on the new address and turn notifications on again.
 
 ## "Your turn" on a phone
 
