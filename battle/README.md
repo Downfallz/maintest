@@ -675,6 +675,11 @@ client. It reads like the other sheets ([ADR 0153](../docs/adr/0153-play-the-sam
 - each team a card of how many stand and the health it kept as a bar, whose whole line is its accessible name;
 - one row of pills.
 
+Below the teams, the battle report (`battle/src/match.ts`) names the creature of the match and tables what each
+creature did. A tap on a creature, its name or its portrait, shows its illustration large over the result, as the
+inspection's portrait does; a tap on the picture or Escape gives the report back. On a phone the rows hide their
+portraits to keep the figures readable, and the name alone is the way in.
+
 The first pill plays the same game again (`rematchPlan`, `table/outcome.js`). **Rematch** against the bot or on a
 shared device opens the same table at once. **Invite to rematch** keeps a friend's seat, or opens the lobby on a
 player who is not a friend. Then come **Replay the match** and **Lobby**; History stays in the field's header.

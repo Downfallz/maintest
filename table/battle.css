@@ -1563,6 +1563,13 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 .match-report-table td.match-figure small { display: block; color: var(--muted); font-size: 10px; line-height: 1.2; }
 .match-report-table .match-who { text-align: left; font-weight: 600; }
 .match-who-inner { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 190px; }
+/* A creature of the report is a button that zooms its illustration: it keeps the look of the row it sits in. */
+#match-dialog .match-zoom-open { min-height: 0; margin: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; letter-spacing: inherit; cursor: zoom-in; box-shadow: none; }
+#match-dialog .match-zoom-open:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 6px; }
+#match-dialog .match-report-table .match-zoom-open { width: 100%; min-height: 32px; }
+.match-mvp-portrait { flex: none; border-radius: 50%; }
+#match-dialog .match-zoom { z-index: 6; }
+#match-zoom .inspect-zoom-picture { background-color: transparent; box-shadow: none; }
 .match-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .match-fallen { display: block; color: #d98b6f; font-size: 10px; font-weight: 500; letter-spacing: .6px; text-transform: uppercase; }
 .match-report-table tr[data-fallen="true"] .match-portrait { filter: grayscale(1) brightness(.6); }
