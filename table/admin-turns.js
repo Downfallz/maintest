@@ -43,7 +43,7 @@ export function letterRows(answer, now = Date.now()) {
 /** What is said under the list when the dead letters are more than a queue lets anybody see at once. */
 export function moreLine(answer) {
   const letters = answer?.letters?.length ?? 0;
-  const held = (answer?.queues ?? []).find(queue => /-dlq$/.test(queue.name ?? ''))?.count ?? letters;
+  const held = (answer?.queues ?? []).find(queue => (queue.name ?? '').endsWith('-dlq'))?.count ?? letters;
   return held > letters ? `Showing the first ${letters} of ${held}. Requeue or drop these to see the rest.` : '';
 }
 

@@ -91,6 +91,22 @@ public sealed class TurnQueues
         return new ListedLetter(id, letter, letter is null ? null : OwedTurn.Parse(letter.Body)?.Run, body);
     }
 
+    /// <summary>The letters of one batch: each one asked for is handled; the others, and any it could not handle, are held to be let back.</summary>
+    private static async Task HandleAsync(IReadOnlyList<QueuedWork> batch, HashSet<string>? wanted, Func<QueuedWork, DeadLetter?, Task<bool>> handle, List<string> handled, List<QueuedWork> held)
+    {
+        foreach (var work in batch)
+        {
+            if ((wanted is null || wanted.Remove(work.Id)) && await handle(work, DeadLetter.Parse(work.Body)))
+            {
+                handled.Add(work.Id);
+            }
+            else
+            {
+                held.Add(work);
+            }
+        }
+    }
+
     private async Task<LettersHandled> WalkAsync(IReadOnlyCollection<string>? ids, Func<QueuedWork, DeadLetter?, Task<bool>> handle, CancellationToken cancellationToken)
     {
         var wanted = ids is null ? null : new HashSet<string>(ids, StringComparer.Ordinal);
@@ -108,17 +124,7 @@ public sealed class TurnQueues
                 }
 
                 walked += batch.Count;
-                foreach (var work in batch)
-                {
-                    if ((wanted is null || wanted.Remove(work.Id)) && await handle(work, DeadLetter.Parse(work.Body)))
-                    {
-                        handled.Add(work.Id);
-                    }
-                    else
-                    {
-                        held.Add(work);
-                    }
-                }
+                await HandleAsync(batch, wanted, handle, handled, held);
             }
         }
         finally
