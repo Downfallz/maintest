@@ -27,7 +27,9 @@ jobs:
   # The mock-host journeys, one job per Playwright project, side by side. As one step they took thirty-five to
   # forty-seven minutes after AU14 and #504 (the complete-match replay waiting out a hidden list, fixed in #503,
   # pushed them past sixty), with the real-engine journeys' eleven after them in a sixty-minute job. A project
-  # takes about a quarter of that; tablet runs only table.ux.spec.js, so it shares the desktop job.
+  # takes about a quarter of that; tablet runs only table.ux.spec.js, so it shares the desktop job. Desktop runs the
+  # most journeys, 476 with tablet's, which took 18 to 20 minutes and on a loaded runner ran past the thirty, so
+  # it is played in two halves (Playwright's --shard), each well inside the limit.
   journeys:
     name: journeys (${{ matrix.name }})
     runs-on: ubuntu-latest
@@ -40,8 +42,10 @@ jobs:
             projects: --project=small-phone
           - name: phone
             projects: --project=phone
-          - name: desktop and tablet
-            projects: --project=desktop --project=tablet
+          - name: desktop and tablet 1/2
+            projects: --project=desktop --project=tablet --shard=1/2
+          - name: desktop and tablet 2/2
+            projects: --project=desktop --project=tablet --shard=2/2
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

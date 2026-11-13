@@ -54,6 +54,18 @@ test('the summary after the queue drains is the last action\'s full result', () 
   const h = harness(); h.receive([]); h.receive([event(4), event(6)]); h.drain();
   assert.match(h.queue.model().summary, /Strike.*critical.*Damage 7/);
 });
+test('the last result is a card of the action shown: its caster, spell, crit and chips by target', () => {
+  const h = harness(); h.receive([]); h.receive([event(4)]); h.drain();
+  const card = h.queue.model().result;
+  assert.equal(card.kind, 'own'); assert.equal(card.caster, 'Creature 1'); assert.equal(card.spell, 'Strike'); assert.equal(card.status, 'Critical');
+  assert.equal(card.round, 2); assert.equal(card.groups[0].target, 'Creature 2'); assert.equal(card.groups[0].chips.length, 1);
+});
+test('a skip makes the card the last result it reaches, and a reset forgets it', () => {
+  const h = harness(); h.receive([]);
+  h.receive([event(4), event(6, { resolution: { action: { actor: 1, spell: 'hit', targets: [3] } }, appliedOutcomes: [{ kind: 'DamageOutcome', target: 3, amount: 4 }] })]);
+  h.queue.skip(); assert.equal(h.queue.model().result.groups[0].target, 'Creature 3');
+  h.queue.reset(); assert.equal(h.queue.model().result, null);
+});
 test('arrivals during playback join behind the current action without restarting its windup', () => {
   const h = harness(); h.receive([]); h.receive([event(4)]); h.tick(); h.receive([event(5)]);
   assert.equal(h.queue.model().stage, 'impact'); assert.equal(h.queue.model().remaining, 2); h.drain();
@@ -459,7 +471,9 @@ test('the reading card marks the player\'s own cast, a fizzle and a round summar
   fizzle.receive([event(4, { resolution: { action: { actor: 1, spell: 'hit', targets: [2] }, fizzled: true, fizzleReason: { message: 'Not enough energy' } }, appliedOutcomes: [] })]);
   assert.match(fizzle.queue.model().reading.detail, /^Fizzled: /);
   const summary = harness(); summary.queue.setMode('step'); summary.receive([]); summary.receive([cleanupEvent(4)]);
-  assert.deepEqual(summary.queue.model().reading, { kind: 'summary', title: 'Aftermath', detail: '1 condition ended' });
+  const { lines, ...reading } = summary.queue.model().reading;
+  assert.deepEqual(reading, { kind: 'summary', title: 'Aftermath', detail: '1 condition ended', round: 2 });
+  assert.match(lines.map(line => line.text).join(' · '), /DefenseBuff ends/);
 });
 test('an aftermath with no recorded action frame in its round reads by its plaques alone', () => {
   const h = harness(); h.queue.setMode('step'); h.receive([]);

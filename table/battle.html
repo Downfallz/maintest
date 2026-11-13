@@ -49,8 +49,9 @@
       <div id="playback-pacing" hidden><button id="reading-open" class="reading-text" type="button"><span id="reading-kind"></span><span id="reading-title"></span><span id="reading-detail"></span></button><span id="reading-dots" class="reading-dots" aria-hidden="true" hidden><i></i><i></i><i></i></span><div class="reading-buttons"><button id="waiting-last" type="button" hidden>Last result ↗</button><button id="playback-skip" type="button" hidden>Skip</button><button id="playback-next" type="button" hidden>OK</button><button id="order-continue" type="button" hidden>Continue</button></div></div>
     </section>
     <section id="replay-controls" hidden aria-label="Recorded match replay">
-      <div><strong id="replay-position"></strong><p id="replay-text" aria-live="polite"></p><small id="replay-note"></small></div>
-      <div class="replay-buttons"><button id="replay-previous" type="button">Previous</button><button id="replay-next" type="button">Next</button><select id="replay-round" aria-label="Replay round"></select><button id="replay-close" type="button">Return to result</button></div>
+      <header class="replay-head"><p class="eyebrow">MATCH REPLAY</p><strong id="replay-position"></strong><small id="replay-note"></small><span class="replay-progress" aria-hidden="true"><span id="replay-progress"></span></span></header>
+      <div id="replay-card" class="replay-card"></div><p id="replay-text" class="unseen" aria-live="polite"></p>
+      <div class="replay-buttons"><button id="replay-previous" type="button"><span aria-hidden="true">‹</span> <span class="replay-word">Previous</span></button><select id="replay-round" aria-label="Replay round"></select><button id="replay-next" class="primary" type="button"><span class="replay-word">Next</span> <span aria-hidden="true">›</span></button><button id="replay-close" type="button" aria-label="Return to result"><span class="replay-long">Return to result</span><span class="replay-short" aria-hidden="true">Result</span></button></div>
     </section>
     <output id="playback-announcement" class="playback-announcement" aria-live="polite"></output>
   </main>
@@ -117,7 +118,11 @@
   </dialog>
   
   <dialog id="concede-dialog" aria-labelledby="concede-title"><h2 id="concede-title">Concede this match?</h2><p>Your opponent wins immediately. This cannot be undone.</p><button id="concede-confirm" type="button">Concede match</button><form method="dialog"><button id="concede-cancel" type="submit" autofocus>Keep playing</button></form><p id="concede-error"></p></dialog>
-  <dialog id="result-dialog" aria-labelledby="result-title"><form method="dialog"><button class="close" aria-label="Close action result">×</button></form><p class="eyebrow">CONFIRMED BY THE HOST</p><h2 id="result-title">Action result</h2><p id="result-text"></p><button type="button" data-history-open>Open match history</button></dialog>
+  <dialog id="result-dialog" aria-labelledby="result-title">
+    <header class="result-header"><div><p class="eyebrow">CONFIRMED BY THE HOST</p><h2 id="result-title">Last result</h2></div><form method="dialog"><button class="close" aria-label="Close action result">×</button></form></header>
+    <div id="result-card" class="result-body"></div><p id="result-text" class="unseen" aria-hidden="true"></p>
+    <footer class="result-footer"><button type="button" data-history-open>Open match history</button></footer>
+  </dialog>
   <dialog id="combat-dialog" aria-labelledby="combat-heading">
     <button id="combat-dialog-close" type="button" class="close" aria-label="Close spell choices">×</button>
     <h2 id="combat-heading">Choose a spell</h2>

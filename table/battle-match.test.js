@@ -31,6 +31,14 @@ test('finished replay rereads the full seat and steps before and after actual fr
   assert.match(h.control.model().note, /No battlefield/); h.control.move(-1); assert.equal(h.control.model().stage, 'after');
   h.control.jump(1); assert.equal(h.control.model().index, 0); h.control.closeReplay(); assert.equal(h.control.model().active, false);
 });
+test('each replay step is a card: an upkeep and a reveal under their titles, a cast as the reading bar draws it', async () => {
+  const h = harness(); await h.control.replay();
+  let card = h.control.model().card; assert.equal(card.kind, 'summary'); assert.equal(card.title, 'Upkeep'); assert.equal(card.round, 1);
+  h.control.move(1); card = h.control.model().card; assert.equal(card.title, 'Mutations revealed'); assert.match(card.detail, /Root mutation/);
+  h.control.move(1); card = h.control.model().card;
+  assert.equal(card.kind, 'own'); assert.equal(card.caster, 'Creature 1'); assert.equal(card.groups[0].target, 'Creature 4');
+  h.control.closeReplay(); assert.equal(h.control.model().card, null);
+});
 test('a finished seat reads its whole feed once for the battle report, and a live one reads nothing', async () => {
   const h = harness(); await new Promise(resolve => setImmediate(resolve));
   const report = h.control.model().report;

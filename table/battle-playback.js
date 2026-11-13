@@ -17,7 +17,9 @@ export function readingCard(item, board, theirs) {
   if (!item) return null;
   if (item.receipt) {
     const paced = item.upkeep ?? item.aftermath;
-    return { kind: 'summary', title: paced?.title ?? item.receipt.title, detail: paced?.summary ?? '' };
+    // Every line of the receipt too, for the result card that shows the whole of it rather than the field's plaques.
+    return { kind: 'summary', title: paced?.title ?? item.receipt.title, detail: paced?.summary ?? '', round: item.round ?? null,
+      lines: item.receipt.sections.flatMap(section => section.items.map(row => ({ text: row.text, tone: row.tone ?? '' }))) };
   }
   const name = id => creatureLabel(board, id);
   const outcome = item.status === 'Fizzled' ? [`Fizzled: ${item.reason}`]
@@ -30,7 +32,10 @@ export function readingCard(item, board, theirs) {
     const group = groups.find(one => one.target === target) ?? (groups.push({ target, chips: [] }), groups.at(-1));
     group.chips.push(outcomeChip(effect));
   }
-  return { kind: theirs ? 'incoming' : 'own', title: `${name(item.actor?.id)} · ${item.spell}`, detail: outcome.join(' · '), groups };
+  // The caster and the spell apart, as the journal's summary keeps them, for a card that draws them apart.
+  return { kind: theirs ? 'incoming' : 'own', title: `${name(item.actor?.id)} · ${item.spell}`, detail: outcome.join(' · '), groups,
+    caster: name(item.actor?.id), spell: item.spell, status: item.status ?? 'Resolved', reason: item.status === 'Fizzled' ? item.reason ?? '' : '',
+    dropped: [...(item.dropped ?? [])], round: item.round ?? null };
 }
 
 // A paced turnover is read on the field: a plaque on each creature it touched, and one line in the reading
@@ -164,7 +169,8 @@ export function actionCue(action, cards = new Map(), harmful = new Set()) {
 // The first read is a baseline (also after hidden-tab return); a sequence is consumed when queued, not when
 // its animation ends, so duplicate polls, skip and a cancelled callback can never repeat it.
 export function createBattlePlayback({ onChange, schedule = setTimeout, cancel = clearTimeout, limit = 12, onUpkeepHandled = (_round) => {} }) {
-  let latest = null, queue = [], current = null, stage = 'decision', summary = '';
+  // `shown` is the item whose result the player reads last: the result card is drawn from it, the summary is its text.
+  let latest = null, queue = [], current = null, stage = 'decision', summary = '', shown = null;
   let mode = 'auto', presented = null, read = null, ordinaryRounds = new Set(), lastFramed = null;
   let seen = null, timer = null, generation = 0, reduced = false, rate = 1, catalogue = new Map(), harmful = new Set(), bought = new Map();
   // When each creature bought what it shows, from the reveals this seat's feed brought (ADR 0151).
@@ -181,7 +187,7 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     if (!current) { stage = 'decision'; emit(); return; }
     presented = current.sequence;
     if (current.receipt?.category === 'Upkeep') onUpkeepHandled(current.round);
-    summary = resultText(current);
+    summary = resultText(current); shown = current;
     if (current.receipt) { stage = 'resolved'; emit(); if (!waits(current)) later(next, 3500, false); return; }
     stage = reduced ? 'impact' : 'windup'; emit();
     if (reduced) later(finish, REDUCED_MS, false);
@@ -202,16 +208,18 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
   // Settling shows the latest board with one result to read, whichever the caller names. An upkeep already
   // presented was handled when it was shown; one still queued is handled only when the player chose to skip
   // it. A rotation, a motion or speed change, a lost connection or a catch-up leaves it to the upkeep notice.
-  function settle(text, dismissUpkeep = false) {
-    if (dismissUpkeep) for (const item of queue) if (item.receipt?.category === 'Upkeep') onUpkeepHandled(item.round);
-    cancelTimer(); queue = []; current = null; stage = 'decision'; summary = text; emit();
+  function settle(item, dismissUpkeep = false) {
+    if (dismissUpkeep) for (const one of queue) if (one.receipt?.category === 'Upkeep') onUpkeepHandled(one.round);
+    cancelTimer(); queue = []; current = null; stage = 'decision';
+    if (item) { summary = resultText(item); shown = item; }
+    emit();
   }
   // What the player reads after a skip is the last result they would have reached, not the one cut short.
   function skip({ dismissUpkeep = false } = {}) {
-    settle(queue.length ? resultText(queue.at(-1)) : summary, dismissUpkeep);
+    settle(queue.at(-1) ?? null, dismissUpkeep);
   }
   function reset() {
-    cancelTimer(); latest = null; queue = []; current = null; lastFramed = null; stage = 'decision'; seen = null; presented = null; read = null; ordinaryRounds.clear(); summary = ''; catalogue = new Map(); harmful = new Set(); bought = new Map(); purchases.reset(); emit();
+    cancelTimer(); latest = null; queue = []; current = null; lastFramed = null; stage = 'decision'; seen = null; presented = null; read = null; ordinaryRounds.clear(); summary = ''; shown = null; catalogue = new Map(); harmful = new Set(); bought = new Map(); purchases.reset(); emit();
   }
   /**
    * `since` is the last sequence this seat was shown before the page was closed or hidden: on the first read, what
@@ -250,7 +258,7 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
       // A settled action is still the round's latest: a later aftermath reads on its frame, or on none.
       const newest = actions.at(-1);
       if (newest) lastFramed = framed(newest) ? newest : null;
-      settle(resultText(arriving.at(-1))); return;
+      settle(arriving.at(-1)); return;
     }
     // An upkeep keeps the board it arrived with, when that board is still its own round before combat: what
     // arrives later belongs to the planning and combat after it, never to the upkeep being read.
@@ -269,7 +277,7 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
         // A split upkeep reads on the board that brought its last part, while that is still before combat.
         previous.snapshot = item.snapshot ?? previous.snapshot;
         if (previous === current) {
-          presented = item.sequence; summary = resultText(previous);
+          presented = item.sequence; summary = resultText(previous); shown = previous;
           cancelTimer(); if (!waits(current)) later(next, 3500, false);
         }
       } else queue.push(item);
@@ -312,7 +320,8 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
       paced: current?.upkeep ?? current?.aftermath ?? null,
       canNext: Boolean(current && stage === 'resolved'),
       // Next is offered for every incoming action, whatever the pace, and for everything when the player steps.
-      asks: Boolean(current && waits(current)), reading: readingCard(current, latest?.board, incoming(current)), incoming: incoming(current), label: current?.receipt?.title ?? (current ? `${current.spell} · ${current.status}` : ''), remaining: queue.length + (current ? 1 : 0), cue };
+      asks: Boolean(current && waits(current)), reading: readingCard(current, latest?.board, incoming(current)),
+      result: readingCard(shown, latest?.board, incoming(shown)), incoming: incoming(current), label: current?.receipt?.title ?? (current ? `${current.spell} · ${current.status}` : ''), remaining: queue.length + (current ? 1 : 0), cue };
   }
   function setReduced(value) {
     if (value === reduced) return;

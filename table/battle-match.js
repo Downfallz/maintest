@@ -5,6 +5,7 @@ import { livePresentation } from './battle-live.js';
 import { purchaseLog } from './battle-chronology.js';
 import { outcomeText, matchResultSummary } from './outcome.js';
 import { matchScoreboard } from './scoreboard.js';
+import { readingCard } from './battle-playback.js';
 
 export function roundNotes(entries, board) {
   const rounds = [...new Set(entries.map(entry => entry.event?.roundId ?? entry.round))].sort((a, b) => a - b);
@@ -33,6 +34,22 @@ export function replayText(action, catalogue) {
     return `Mutations revealed · ${purchases || 'No mutations acquired'}`;
   }
   return [lastResolvedText(action), ...(action.dropped ?? []).map(text => `Dropped: ${text}`)].join(' · ');
+}
+
+// The replay step as a result card: a cast as the reading bar draws it (whose, which spell, what came of it), and
+// any other step under its own title with what `replayText` says of it.
+const INTERLUDES = { upkeep: 'Upkeep', aftermath: 'Aftermath', purchases: 'Mutations revealed', result: 'Match result' };
+export function replayCard(action, catalogue, board) {
+  if (!action) return null;
+  if (!action.interlude && !action.final) {
+    const theirs = !board?.allies?.some(one => String(one.id) === String(action.actor?.id));
+    return readingCard(action, board, theirs);
+  }
+  let title = INTERLUDES[action.interlude] ?? 'Recorded step';
+  if (action.ordinaryEnergy) title = 'Round energy';
+  if (action.final) title = INTERLUDES.result;
+  const text = replayText(action, catalogue), prefix = `${title} · `;
+  return { kind: 'summary', title, detail: text.startsWith(prefix) ? text.slice(prefix.length) : text, round: action.round ?? null, lines: [] };
 }
 
 function purchaseText(choice, catalogue) {
@@ -151,6 +168,7 @@ export function createBattleMatch({ connection, onChange }) {
     const twoFrames = active && !action.interlude && Boolean(action.frame);
     cached = { active, sequence: action?.sequence, board: replayBoard(action, actions, index, stage, latest, catalogue, purchases), stage, index, count: actions.length, round: action?.round,
       rounds: [...new Set(actions.map(one => one.round))], summary: active ? replayText(action, catalogue) : '',
+      card: active ? replayCard(action, catalogue, latest?.board) : null,
       note: replayNote(action, stage),
       previous: active && (index > 0 || (twoFrames && stage === 'after')),
       next: active && (index + 1 < actions.length || (twoFrames && stage === 'before')),

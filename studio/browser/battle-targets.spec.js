@@ -52,6 +52,9 @@ const target = (page, id) => page.locator(`.creature[data-creature="${id}"]`);
 const preview = page => page.locator('#combat-preview');
 const choose = page => page.locator('[data-spell="spell-0"]').click();
 test('selected effects and cost stay beside a fixed explicit confirmation', async ({ page }, info) => {
+  // Two layout checks, a full-page picture and a whole target selection: 12 to 13 s on an idle desktop, past 30 on
+  // a loaded runner, as the heaviest journeys elsewhere are given.
+  test.setTimeout(60000);
   const h = await mount(page); await choose(page);
   // The caster carries the acting halo, without a word: the scene lights the creature whose slot it is.
   await expect(page.locator('#battle')).toHaveAttribute('data-halo', '1');
