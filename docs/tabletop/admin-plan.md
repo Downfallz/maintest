@@ -1,6 +1,7 @@
 # Plan: the admin panel as the host's headquarters
 
-Status: proposed, 2026-11-13. Nothing here is built yet; each stage below is one pull request.
+Status: accepted, 2026-11-13 (the owner settled the questions at the end). Nothing here is built yet; each stage below
+is one pull request.
 
 ## What the owner asked for
 
@@ -153,6 +154,9 @@ All behind the operator gate (ADR 0081, 0172), JSON, paged by `?page=` with twen
 | `GET /api/admin/players?page&sort&q` | A page of players with their activity, game counts and rating |
 | `GET /api/admin/players/<id>` | One player: the same, plus friends, devices, games in progress, recent results |
 | `POST /api/admin/players/<id>/sign-out` | Signs the account out everywhere (raises its generation) |
+| `POST /api/admin/players/<id>/rename {"username"}` | Renames the account, the name checked as a player's own is (ADR 0122) |
+| `DELETE /api/admin/players/<id>` | Deletes the account as its player would: the name freed, its seats in unfinished games offered to others |
+| `POST /api/admin/players/<id>/suspension`, `DELETE .../suspension` | Suspends or restores the account (ADR below) |
 | `GET /api/admin/jobs/tend?page` | Tending runs, newest first, and the 24-hour and 7-day totals |
 | `GET /api/admin/jobs/turns` | The turn queues' lengths and their failed turns |
 | `POST /api/admin/jobs/turns/<id>/retry`, `DELETE /api/admin/jobs/turns/<id>` | Requeue or drop a failed turn |
@@ -178,23 +182,28 @@ Each stage is one pull request, with its tests and docs, and leaves the panel wo
 1. **A1, the shell.** The shared header, the title row, the tabs and the hash routing, the shared list part. Tables
    and Sessions move into their tabs unchanged; Tables gains paging. No server change. Browser tests for each tab
    on desktop and phone.
-2. **A2, players.** ADR for activity. `AccountActivity`, the account listing, the Players tab and its side sheet,
-   sign out everywhere. The *What we keep* panel updated.
-3. **A3, jobs.** `ITendLog`; `table-tend` writes its runs; the Jobs tab with runs and totals. Then the turn queues'
+2. **A2, players.** ADR for activity. `AccountActivity` (last sign-in and last seen), the account listing, the
+   Players tab and its side sheet with sign out everywhere, rename and delete. The *What we keep* panel updated.
+3. **A2b, suspension.** ADR: a suspended account cannot sign in, its sessions end, its seats in unfinished games are
+   kept for a time then offered to others, and its player is told why at the sign-in. The side sheet's Suspend and
+   Restore.
+4. **A3, jobs.** `ITendLog`; `table-tend` writes its runs; the Jobs tab with runs and totals. Then the turn queues'
    status and the retry and drop actions.
-4. **A4, settings.** ADR for registration. `HostSettings`, the Settings tab, `Account.RegistrationClosed` in the
+5. **A4, settings.** ADR for registration. `HostSettings`, the Settings tab, `Account.RegistrationClosed` in the
    lobby, the notice line under every page's header.
-5. **A5, overview.** The numbers, once A2 to A4 give them their sources.
-6. **A6, activity.** The operator log and its tab.
+6. **A5, overview.** The numbers, once A2 to A4 give them their sources.
+7. **A6, activity.** The operator log and its tab.
 
 Every stage keeps the panel behind the gate. None of it changes a game.
 
-## Questions for the owner
+## Questions the owner settled (2026-11-13)
 
-1. Is *last seen* (the last request, at most hourly) wanted beside *last sign-in*? A Google sign-in lasts weeks, so
-   last sign-in alone says little about who still plays. Recommended: both.
-2. When registration is closed, should a person with an invitation from a friend or a seat's code still be able to
-   create an account? Recommended: not in this plan. Closed means closed; invitation codes can follow later.
-3. Player actions beyond *sign out everywhere*: should the panel be able to delete an account, rename one (a name
-   that breaks the rules) or suspend one? Recommended: sign out and rename in A2, suspension as its own ADR later.
-4. Keep the operator log for how long? Recommended: the last 1,000 lines.
+1. Activity keeps both *last sign-in* and *last seen* (the last request, written at most hourly): a Google sign-in
+   lasts weeks, so the sign-in alone says little about who still plays.
+2. Closed registration means closed: no new account, invitation or seat code included. Existing accounts sign in as
+   before. Invitation codes can follow in a plan of their own.
+3. The player actions are sign out everywhere, rename and delete in A2, and suspension in A2b with its own ADR.
+4. The plan goes in as a pull request of its own, read before any stage is built.
+
+Still to decide, with the stage that needs it: how long the operator log is kept (proposed: the last 1,000 lines,
+A6).
