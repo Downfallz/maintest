@@ -73,7 +73,8 @@ test('the opponent\'s reaction shows by their side, named, and goes by itself', 
   await expect(bubble).toHaveAttribute('aria-label', 'Bastien: Nice move!');
   await expect(bubble).toHaveAttribute('role', 'status');
   await page.screenshot({ path: info.outputPath('reaction-bubble.png') });
-  await page.clock.runFor(5000);
+  // Jumped, not run: running five seconds renders every one of the scene's frames, twenty seconds of a loaded runner.
+  await page.clock.fastForward(5000);
   await expect(bubble).toBeHidden();
 });
 
