@@ -268,3 +268,61 @@ test('a pass run now is confirmed, then listed first, and a run\'s sheet links i
   await sheet.locator('#run-sheet-close').click();
   await expect(sheet).toBeHidden();
 });
+
+// The bots' turns in the Jobs tab (A3b): the three queues, the dead letters, requeue, drop and a letter's sheet.
+async function withTurns(page) {
+  const letter = (index, extra = {}) => ({ id: `letter-${index}`, table: `table-${index}`, queue: 'agent-turns', delivered: 5,
+    error: 'The journal could not be read.', fullError: 'The journal could not be read.\n   at Journal.ReadAsync()', queuedAt: '2026-11-13T17:00:00Z',
+    poisonedAt: '2026-11-13T17:01:00Z', deadLetteredAt: '2026-11-13T17:02:00Z', host: 'worker-1', body: `{"run":"table-${index}"}`, ...extra });
+  let letters = [letter(1, { table: 'a-table-with-a-very-long-session-id-20261113-172233-abcdef' }), letter(2), letter(3)];
+  const asked = [];
+  await page.route(/\/api\/admin\/jobs\/turns(\/[a-z]+)?$/, route => {
+    const action = new URL(route.request().url()).pathname.split('/').pop();
+    if (route.request().method() === 'POST') {
+      const body = route.request().postDataJSON();
+      asked.push({ action, body });
+      const ids = body.all ? letters.map(one => one.id) : body.ids;
+      letters = letters.filter(one => !ids.includes(one.id));
+      return route.fulfill({ json: { handled: ids, missing: [] } });
+    }
+    return route.fulfill({ json: { queues: [{ name: 'agent-turns', count: 1, oldest: '2026-11-13T19:00:00Z' }, { name: 'agent-turns-poison', count: 0, oldest: null },
+      { name: 'agent-turns-dlq', count: letters.length, oldest: letters.length ? '2026-11-13T17:00:00Z' : null }], letters, shownAtMost: 32 } });
+  });
+  await page.reload();
+  return asked;
+}
+
+test('the bots\' turn queues show in the Jobs tab, and their dead letters are requeued and dropped', async ({ page }, info) => {
+  const asked = await withTurns(page);
+  await page.locator('#tab-jobs').click();
+
+  await expect(page.locator('#jobs-off')).toBeHidden();
+  await expect(page.locator('#turns-queues li')).toHaveCount(3);
+  await expect(page.locator('#turns-queues li.warning')).toHaveText(/3\s*Dead letters/);
+  await expect(page.locator('#tab-jobs-count')).toHaveText('!');
+  await expect(page.locator('#turns-letters li')).toHaveCount(3);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(widthOf(page));
+  await page.locator('#turns-on').screenshot({ path: info.outputPath('admin-turns.png') });
+
+  await page.locator('#turns-letters input').first().check();
+  await page.locator('#turns-requeue').click();
+  await expect(page.locator('#turns-said')).toHaveText('1 letter requeued.');
+  expect(asked.at(-1)).toEqual({ action: 'requeue', body: { ids: ['letter-1'] } });
+  await expect(page.locator('#turns-letters li')).toHaveCount(2);
+
+  await page.locator('#turns-letters input').first().check();
+  await page.locator('#turns-drop').click();
+  await expect(page.locator('#turns-confirm')).toBeVisible();
+  await page.locator('#turns-drop-yes').click();
+  await expect(page.locator('#turns-said')).toHaveText('1 letter dropped.');
+  expect(asked.at(-1)).toEqual({ action: 'drop', body: { ids: ['letter-2'] } });
+
+  await page.locator('#turns-letters .player-open').first().click();
+  await expect(page.locator('#letter-sheet')).toBeVisible();
+  await expect(page.locator('#letter-error')).toContainText('at Journal.ReadAsync()');
+  await expect(page.locator('#letter-session')).toHaveAttribute('href', '/session/table-3');
+  await page.locator('#letter-requeue').click();
+  await expect(page.locator('#letter-sheet')).toBeHidden();
+  await expect(page.locator('#turns-empty')).toBeVisible();
+  await expect(page.locator('#tab-jobs-count')).toHaveText('');
+});

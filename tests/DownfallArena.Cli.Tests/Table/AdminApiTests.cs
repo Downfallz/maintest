@@ -374,6 +374,15 @@ public sealed class AdminApiTests : IDisposable
     }
 
     [Fact]
+    public async Task The_turn_queues_are_the_operators_alone_and_none_on_a_host_that_takes_its_turns_itself()
+    {
+        var admin = Admin(OperatorGate.WithToken(OperatorToken));
+
+        (await admin.HandleAsync("GET", TurnsApi.Prefix, "", "a-seat-s-token", principal: null)).Status.ShouldBe(403);
+        (await admin.HandleAsync("GET", TurnsApi.Prefix, "", OperatorToken, principal: null)).Status.ShouldBe(404);
+    }
+
+    [Fact]
     public async Task The_jobs_are_the_operators_alone_and_none_on_a_host_that_keeps_no_runs()
     {
         var admin = Admin(OperatorGate.WithToken(OperatorToken));

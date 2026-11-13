@@ -8,6 +8,7 @@
 
 import { mountJobs } from './admin-jobs.js';
 import { mountPlayers } from './admin-players.js';
+import { mountTurns } from './admin-turns.js';
 
 const POLL_MS = 2500;
 
@@ -581,14 +582,25 @@ async function start() {
 
   // The tending runs (A3), on a host that records: read when the panel opens, when its section is opened and on
   // Refresh, never on the clock.
+  // The tab shows when the host keeps either: its tending runs, or its bots' turn queues (A3b). Its mark says when
+  // either has something waiting on the operator: a failed run, or a turn given up on.
+  const jobsTab = { runs: false, turns: false, runsWarn: false, turnsWarn: false };
+  const drawJobsTab = () => {
+    element('tab-jobs').hidden = !(jobsTab.runs || jobsTab.turns);
+    element('jobs-off').hidden = jobsTab.runs || jobsTab.turns;
+    element('tab-jobs-count').textContent = jobsTab.runsWarn || jobsTab.turnsWarn ? '!' : '';
+  };
   const jobs = mountJobs({
     send: transport.request,
     element,
-    shown: available => {
-      element('tab-jobs').hidden = !available;
-      element('jobs-off').hidden = available;
-      element('jobs-on').hidden = !available;
-    },
+    shown: available => { jobsTab.runs = available; element('jobs-on').hidden = !available; drawJobsTab(); },
+    warn: on => { jobsTab.runsWarn = on; drawJobsTab(); },
+  });
+  const turnQueues = mountTurns({
+    send: transport.request,
+    element,
+    shown: available => { jobsTab.turns = available; element('turns-on').hidden = !available; drawJobsTab(); },
+    warn: on => { jobsTab.turnsWarn = on; drawJobsTab(); },
   });
 
   // The section the address names is the one shown; following a section's link changes the address, so Back and a
@@ -677,11 +689,14 @@ async function start() {
   element('sessions-refresh').addEventListener('click', redrawSessions);
   element('tables-previous').addEventListener('click', () => { tablesPage -= 1; drawTables(); });
   element('tables-next').addEventListener('click', () => { tablesPage += 1; drawTables(); });
-  element('admin-refresh').addEventListener('click', async () => { await redraw(); await redrawSessions(); await players.redraw(); await jobs.redraw(); });
+  element('admin-refresh').addEventListener('click', async () => { await redraw(); await redrawSessions(); await players.redraw(); await jobs.redraw(); await turnQueues.redraw(); });
   globalThis.addEventListener?.('hashchange', () => {
     showTab();
     if (tabOf(globalThis.location?.hash) === 'players') void players.redraw();
-    if (tabOf(globalThis.location?.hash) === 'jobs') void jobs.redraw();
+    if (tabOf(globalThis.location?.hash) === 'jobs') {
+      void jobs.redraw();
+      void turnQueues.redraw();
+    }
   });
   showTab();
   element('sessions-export').addEventListener('click', async () => saveZip(await transport.exportSessions(selected())));
@@ -709,6 +724,7 @@ async function start() {
   await redrawSessions();
   await players.redraw();
   await jobs.redraw();
+  await turnQueues.redraw();
   again();
 }
 

@@ -24,4 +24,13 @@ public interface IWorkChannel
 
     /// <summary>The item comes back after this long, not before, delivered once more.</summary>
     Task RetryAsync(QueuedWork work, TimeSpan after, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Up to <paramref name="most" /> of the items a receiver could take now, first in first, without hiding them or
+    /// counting a delivery: what an operator reads a queue by (admin plan, A3b). A storage queue shows its first 32.
+    /// </summary>
+    Task<IReadOnlyList<PeekedWork>> PeekAsync(int most, CancellationToken cancellationToken = default);
+
+    /// <summary>How many items the queue holds, hidden ones included; a storage queue's count is approximate.</summary>
+    Task<int> CountAsync(CancellationToken cancellationToken = default);
 }
