@@ -42,6 +42,9 @@ internal sealed class JobsApi
         _pass = pass;
     }
 
+    /// <summary>The kept runs, as the Overview reads the last of them (A5).</summary>
+    public TendRuns Runs => _runs;
+
     public static bool Names(string path) => path == Prefix || path.StartsWith(Prefix + "/", StringComparison.Ordinal);
 
     public async Task<StudioResponse> HandleAsync(string method, string path, string? query, string operatorName)
