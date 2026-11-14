@@ -90,6 +90,8 @@ test('the result reports what each creature did, its creature of the match first
   const report = page.locator('#match-report');
   await expect(report).toBeVisible();
   await expect(page.locator('#match-mvp')).toContainText('Creature 1'); await expect(page.locator('#match-mvp')).toContainText('25 damage · 2 KO');
+  // Drawn as it ended the match, with the illustration its mutations gave it (the base one here, none bought).
+  await expect(page.locator('#match-mvp img')).toHaveAttribute('src', 'battle-art/evolutions/base-creature.webp');
   const first = page.locator('.match-report-table[data-side="ally"] tr[data-report-creature="1"]');
   await expect(first.locator('td').nth(0)).toContainText('25'); await expect(first.locator('td').nth(0)).toContainText('4 bleed');
   await expect(first).toHaveAttribute('data-mvp', 'true');
@@ -106,6 +108,17 @@ test('the result reports what each creature did, its creature of the match first
   await page.screenshot({ path: info.outputPath('battle-report.png') });
   expect(h.errors).toEqual([]);
 });
+test('an illustration that does not load leaves the creature\'s figure in the zoom, not an empty picture', async ({ page }) => {
+  await page.route('**/battle-art/evolutions/**', route => route.fulfill({ status: 404, body: '' }));
+  await mount(page, { feed: reported }); await matchResult(page);
+
+  await page.locator('.match-report-table[data-side="ally"] tr[data-report-creature="3"] .match-zoom-open').click();
+
+  const picture = page.locator('#match-zoom-close');
+  await expect(picture).toBeVisible();
+  await expect.poll(() => picture.evaluate(one => one.style.backgroundImage)).toContain('battle-art/base-creature.webp');
+  await expect.poll(() => page.locator('#match-mvp img').evaluate(one => one.getAttribute('src'))).toBe('battle-art/base-creature.webp');
+});
 test('a creature of the report shows its illustration large, as the inspection does, and Escape gives the report back', async ({ page }, info) => {
   await mount(page, { feed: reported }); await matchResult(page);
   const zoom = page.locator('#match-zoom'), picture = page.locator('#match-zoom-close');
@@ -115,7 +128,8 @@ test('a creature of the report shows its illustration large, as the inspection d
   await fallen.click();
   await expect(zoom).toBeVisible(); await expect(picture).toBeFocused();
   await expect(picture).toHaveAttribute('data-defeated', 'true');
-  expect(await picture.evaluate(one => one.style.backgroundImage)).toMatch(/battle-art\/.+\.webp/);
+  // The illustration its mutations gave it, once loaded (the base one here, none bought).
+  await expect.poll(() => picture.evaluate(one => one.style.backgroundImage)).toContain('battle-art/evolutions/base-creature.webp');
   await page.screenshot({ path: info.outputPath('report-zoom.png') });
   await page.keyboard.press('Escape');
   await expect(zoom).toBeHidden(); await expect(page.locator('#match-dialog')).toBeVisible(); await expect(fallen).toBeFocused();

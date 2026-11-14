@@ -27,19 +27,25 @@ function teamCard(team: Team, side: string) {
   return card;
 }
 
-interface Fighter { id: number; name: string; side: string; alive: boolean; form: string; dealt: number; bleed: number; healed: number; regen: number; taken: number; blocked: number; kills: number; casts: number; crits: number }
+interface Fighter { id: number; name: string; side: string; alive: boolean; form: string; artwork: string | null; dealt: number; bleed: number; healed: number; regen: number; taken: number; blocked: number; kills: number; casts: number; crits: number }
 interface Report { sides: { side: string; creatures: Fighter[]; totals: Record<string, number> }[]; mvp: number | null; top: Record<string, number> }
-const portrait = (form: string) => {
+// Beside the page, as the scene loads its figures: /battle-art under /battle, and under /table/ where the suite serves it.
+const figureOf = (fighter: Fighter) => `battle-art/${fighter.form || 'base-creature'}.webp`;
+// The creature as it ended the match: the illustration its mutations gave it, and its form's figure when it never
+// mutated or the illustration does not load.
+const artOf = (fighter: Fighter) => fighter.artwork ? `battle-art/${fighter.artwork}` : figureOf(fighter);
+const portrait = (fighter: Fighter) => {
   const image = document.createElement('img'); image.className = 'match-portrait'; image.alt = ''; image.decoding = 'async'; image.loading = 'lazy';
-  // Beside the page, as the scene loads its figures: /battle-art under /battle, and under /table/ where the suite serves it.
-  image.src = `battle-art/${form || 'base-creature'}.webp`; return image;
+  image.src = artOf(fighter);
+  image.addEventListener('error', () => { const figure = figureOf(fighter); if (!image.src.endsWith(figure)) image.src = figure; }, { once: true });
+  return image;
 };
 // A creature of the report shows its illustration large when tapped, as the inspection's portrait does: the button
 // carries what to show, so the zoom never looks the creature up again. On a phone the row hides its portrait and the
 // name alone is the way in.
 function zoomable(fighter: Fighter, className: string) {
   const button = document.createElement('button'); button.type = 'button'; button.className = `${className} match-zoom-open`;
-  button.dataset.form = fighter.form || 'base-creature'; button.dataset.side = fighter.side; button.dataset.defeated = String(!fighter.alive);
+  button.dataset.form = fighter.form || 'base-creature'; button.dataset.art = artOf(fighter); button.dataset.figure = figureOf(fighter); button.dataset.side = fighter.side; button.dataset.defeated = String(!fighter.alive);
   button.setAttribute('aria-label', `Show ${fighter.name} large`);
   return button;
 }
@@ -59,7 +65,7 @@ function mvpCard(report: Report) {
   words.append(node('p', 'match-mvp-eyebrow', 'Creature of the match'), node('strong', '', fighter.name),
     node('p', 'match-mvp-line', [`${fighter.dealt} damage`, fighter.kills ? `${fighter.kills} KO` : '', fighter.healed ? `${fighter.healed} healed` : ''].filter(Boolean).join(' · ')));
   card.setAttribute('aria-label', `Creature of the match: ${fighter.name}, ${words.lastChild?.textContent ?? ''}`);
-  const open = zoomable(fighter, 'match-mvp-portrait'); open.append(portrait(fighter.form));
+  const open = zoomable(fighter, 'match-mvp-portrait'); open.append(portrait(fighter));
   card.append(open, words);
   return [card];
 }
@@ -89,7 +95,7 @@ function sideTable(side: Report['sides'][number], label: string, report: Report,
     const who = node('th', 'match-who'); who.setAttribute('scope', 'row');
     const name = node('span', 'match-name', fighter.name);
     if (!fighter.alive) name.append(node('small', 'match-fallen', 'fallen'));
-    const inner = zoomable(fighter, 'match-who-inner'); inner.append(portrait(fighter.form), name); who.append(inner);
+    const inner = zoomable(fighter, 'match-who-inner'); inner.append(portrait(fighter), name); who.append(inner);
     const dealt = figure(fighter.dealt, fighter.bleed ? `${fighter.bleed} bleed` : '');
     const bar = node('span', 'match-share'); bar.style.setProperty('--share', String(report.top.dealt ? fighter.dealt / report.top.dealt : 0)); dealt.prepend(bar);
     row.append(who, dealt, figure(fighter.healed, fighter.regen ? `${fighter.regen} regen` : ''), figure(fighter.taken), figure(fighter.blocked), figure(fighter.kills));
@@ -140,7 +146,16 @@ export function matchControls(controller: Controller, beforeOpen: () => void, re
   el('match-report').addEventListener('click', event => {
     const open = (event.target as HTMLElement).closest<HTMLElement>('.match-zoom-open');
     if (!open) return;
-    picture.style.backgroundImage = `url("battle-art/${open.dataset.form}.webp")`;
+    // The form's figure at once, and the illustration once it has loaded, as the inspection's portrait does: one that
+    // never loads leaves the figure rather than an empty zoom. One image at a time: their transparent parts would show
+    // each other.
+    const figure = open.dataset.figure ?? 'battle-art/base-creature.webp', art = open.dataset.art ?? figure;
+    picture.style.backgroundImage = `url("${figure}")`; picture.dataset.art = art;
+    if (art !== figure) {
+      const image = new Image();
+      image.onload = () => { if (picture.dataset.art === art) picture.style.backgroundImage = `url("${art}")`; };
+      image.src = art;
+    }
     picture.dataset.side = open.dataset.side ?? 'ally'; picture.dataset.defeated = open.dataset.defeated ?? 'false';
     picture.setAttribute('aria-label', `Back to the battle report from ${open.getAttribute('aria-label')?.replace(/^Show | large$/g, '') ?? 'the creature'}`);
     zoomedFrom = open; zoom.hidden = false; picture.focus({ preventScroll: true });
