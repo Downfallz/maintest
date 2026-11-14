@@ -7,7 +7,7 @@ token is enough): how long a pull request stays open, how many were merged befor
 how CI on main fares. Standard library only, so it runs in a session, a workflow or a laptop alike.
 
     python3 scripts/workflow-metrics.py                 # the last 300 pull requests on origin/main
-    python3 scripts/workflow-metrics.py --last 100 --github --repo downfallz/maintest
+    python3 scripts/workflow-metrics.py --last 100 --github   # the repository is origin's, read from git
 """
 
 from __future__ import annotations
@@ -24,11 +24,22 @@ from datetime import datetime
 from pathlib import Path
 
 PR_NUMBER = re.compile(r"\(#(\d+)\)$")
+GITHUB_REMOTE = re.compile(r"github\.com[:/]([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+?)(?:\.git)?/?$")
 ADR_FILE = re.compile(r"^(\d{4})-.+\.md$")
 
 
 def git(*args: str) -> str:
     return subprocess.run(["git", *args], capture_output=True, text=True, check=True).stdout
+
+
+def origin_repository() -> str:
+    """owner/name of origin on GitHub. Read from git rather than taken as an argument, so the API is only ever
+    asked about the repository this checkout belongs to."""
+    url = git("remote", "get-url", "origin").strip()
+    match = GITHUB_REMOTE.search(url)
+    if not match:
+        raise SystemExit(f"origin is not a GitHub repository: {url}")
+    return f"{match.group(1)}/{match.group(2)}"
 
 
 def merged_pull_requests(ref: str, last: int) -> list[dict]:
@@ -145,7 +156,6 @@ def main() -> None:
     parser.add_argument("--ref", default="origin/main")
     parser.add_argument("--last", type=int, default=300)
     parser.add_argument("--github", action="store_true", help="also read GitHub (needs GITHUB_TOKEN)")
-    parser.add_argument("--repo", default="downfallz/maintest")
     args = parser.parse_args()
 
     prs = merged_pull_requests(args.ref, args.last)
@@ -154,7 +164,7 @@ def main() -> None:
         token = os.environ.get("GITHUB_TOKEN", "")
         if not token:
             raise SystemExit("--github needs a token in GITHUB_TOKEN")
-        report["github"] = github_report(args.repo, prs, token)
+        report["github"] = github_report(origin_repository(), prs, token)
     print(json.dumps(report, indent=2))
 
 
