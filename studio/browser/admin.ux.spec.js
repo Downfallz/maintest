@@ -568,3 +568,39 @@ test('a host that keeps no scenarios shows no Scenarios tab', async ({ page }) =
   await expect(page.locator('#tab-sessions')).toBeVisible();
   await expect(page.locator('#tab-scenarios')).toBeHidden();
 });
+
+// The diagnosis of a table in progress (scenarios plan, S5b): its facts from its card, a replay check, what its seats
+// hold on request, its bot turn owed again, and the Void sheet one button away.
+test('a table in progress is diagnosed from its card, and the Void sheet is one button away', async ({ page }, info) => {
+  const asked = [];
+  await page.route('**/api/tables', route => route.fulfill({ json: { ...tables, tables: [table(1)] } }));
+  await page.route('**/api/tables/table-01/diagnosis**', async route => {
+    const url = new URL(route.request().url()); asked.push(`${route.request().method()} ${url.pathname.replace('/api/tables/table-01/diagnosis', '') || '/'}`);
+    if (url.pathname.endsWith('/replay')) return route.fulfill({ json: { replays: false, message: 'Line 41 of the journal does not answer the match being rebuilt.' } });
+    if (url.pathname.endsWith('/hidden')) return route.fulfill({ json: { seats: [{ slot: 'player1', speeds: [{ creature: 1, speed: 'Quick' }], intents: [], picks: [], held: [] }, { slot: 'player2', speeds: [], intents: [], picks: [], held: [] }] } });
+    if (url.pathname.endsWith('/turn')) return route.fulfill({ json: { message: 'The bots\' turn is owed again.' } });
+    return route.fulfill({ json: { id: 'table-01', status: 'open', held: true, begun: true, over: false, round: 3,
+      seats: [{ slot: 'player1', name: 'human:mk', kind: 'person', playedByBot: false, asked: null }, { slot: 'player2', name: 'Greedy', kind: 'bot', playedByBot: true, asked: { kind: 'Action', creature: 5 } }],
+      journal: { entries: 41, lastWritten: '2026-11-14T04:00:00Z', tail: [{ kind: 'Speed', seat: 'player1' }] }, basis: { content: 'f3e8a42ddbd02c11', rules: '3v3', engine: 'abc' }, turns: { queued: true, letters: 1, lastError: 'Timeout' } } });
+  });
+  page.on('dialog', dialog => dialog.accept());
+  await page.reload();
+  await page.locator('#tab-tables').click();
+
+  await page.locator('#tables button', { hasText: 'Diagnose…' }).first().click();
+  await expect(page.locator('#diagnosis-sheet-name')).toHaveText('table-01');
+  await expect(page.locator('#diagnosis-facts')).toContainText('player2: Greedy (bot) · asked Action for creature 5');
+  await expect(page.locator('#diagnosis-facts')).toContainText('1 dead letter · last letter: Timeout');
+  await page.locator('#diagnosis-replay').click();
+  await expect(page.locator('#diagnosis-said')).toHaveText('Line 41 of the journal does not answer the match being rebuilt.');
+  await expect(page.locator('#diagnosis-said')).toHaveClass(/refused/);
+  await page.locator('#diagnosis-reveal').click();
+  await expect(page.locator('#diagnosis-hidden li').first()).toHaveText('player1: creature 1 Quick');
+  await page.locator('#diagnosis-turn').click();
+  await expect(page.locator('#diagnosis-said')).toHaveText('The bots\' turn is owed again.');
+  await page.screenshot({ path: info.outputPath('diagnosis-sheet.png') });
+  await page.locator('#diagnosis-void').click();
+  await expect(page.locator('#void-sheet-name')).toHaveText('table-01');
+  expect(asked).toEqual(['GET /', 'POST /replay', 'POST /hidden', 'POST /turn', 'GET /']);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(widthOf(page));
+});

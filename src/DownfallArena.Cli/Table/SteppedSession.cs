@@ -658,6 +658,12 @@ internal sealed class SteppedSession : ITableSession, IAgentTurnTaker
     /// </summary>
     private void Pump() => _host.Turns.Owe(this);
 
+    /// <summary>
+    /// Says again that the bots owe a turn, which the operator's diagnosis asks of a table whose bot is asked and whose
+    /// turn was lost (docs/tabletop/scenarios-plan.md, S5b): taken once, as any owed turn, whoever takes them.
+    /// </summary>
+    public void OweTurn() => Pump();
+
     public string Run => _match.Run;
 
     public CancellationToken Stopping => _stopping;

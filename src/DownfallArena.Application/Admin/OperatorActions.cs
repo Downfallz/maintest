@@ -27,6 +27,8 @@ public sealed class OperatorActions(IOperatorLog log, TimeProvider clock)
     public const string SaveSettings = "settings.save";
     public const string CutScenario = "scenario.cut";
     public const string RemoveScenario = "scenario.remove";
+    public const string RevealHidden = "table.reveal";
+    public const string OweTurn = "table.turn";
 
     /// <summary>Notes what an operator did, now.</summary>
     public async Task<OperatorAction> RecordAsync(string by, string action, string? target, string? detail, CancellationToken cancellationToken = default)

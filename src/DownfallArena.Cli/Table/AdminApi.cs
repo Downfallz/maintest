@@ -93,6 +93,9 @@ internal sealed class AdminApi
     /// <summary>The Overview tab (A5): the numbers at a glance.</summary>
     public OverviewApi? Overview { get; set; }
 
+    /// <summary>The diagnosis of a table in progress (scenarios plan, S5b), on a host that records its tables.</summary>
+    public TableDiagnosisApi? Diagnosis { get; set; }
+
     /// <summary>The match scenarios (ADR 0179), on a host that records the sessions they are cut from.</summary>
     public ScenarioAdminApi? Scenarios { get; set; }
 
@@ -190,6 +193,13 @@ internal sealed class AdminApi
             return Turns is null
                 ? StudioResponse.OfPlainText(404, "This host takes the bots' turns in its own process, so it has no turn queues.")
                 : await Turns.HandleAsync(method, path, body, operatorName);
+        }
+
+        if (TableDiagnosisApi.Names(path))
+        {
+            return Diagnosis is null
+                ? StudioResponse.OfPlainText(404, "This host records nothing (--no-record), so it has no table record or journal to diagnose.")
+                : await Diagnosis.HandleAsync(method, path, operatorName);
         }
 
         if (ScenarioAdminApi.Names(path))

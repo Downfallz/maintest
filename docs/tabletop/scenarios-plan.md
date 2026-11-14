@@ -175,18 +175,26 @@ open or copy, the session's page, and **remove…**. A host that keeps no scenar
 `table/admin-scenarios.js` (pure parts tested by `admin-scenarios.test.js`); `admin.ux.spec.js` drives the sheet and
 the tab.
 
-**S5b.** **Tables tab**, on a table under way, **Diagnose** opens a sheet:
+**S5b (done).** On a table under way, the Tables tab's **Diagnose…** opens a sheet (`TableDiagnosisApi`, behind the
+admin gate; the page is `table/admin-diagnosis.js`, its pure parts tested by `admin-diagnosis.test.js`):
 
-- **Public**: status, both seats (person, bot, empty), who is asked and since when (`answerBy`), journal length
-  and its last lines (kind, seat, time, no content), the table's version, the record's basis (engine, content,
-  rules), and the owed bot turn with its poison or dead-letter entries for this table.
-- **Check replay**: rebuilds from the record on the recorded content and rules, writes nothing, and says
-  "replays" or the first line that diverges and why.
-- **Reveal hidden state**, explicit and logged with the operator's name: the answers held and the intents
-  submitted, per seat.
-- **Requeue this table's turn**: the Jobs tab's Requeue (`TurnsApi`), scoped to this table's letters, or a fresh
-  `OwedTurn` when the turn was never queued. Refused when no bot seat is asked.
-- **Void…**: the void sheet of ADR 0176 (category, explanation, confirmation), opened on this table.
+- **What anyone may see** (`GET /api/tables/<id>/diagnosis`): its state (open, closed or void; held by this process
+  or not; begun, over, round), each seat (who, person or bot, played by a bot now, and what it is asked: a person's
+  question, or a bot's options), when the asked player must answer by, the journal's length, when it was last
+  written and its last twelve lines by kind and seat (never what was chosen), the content, rules and engine it is
+  played on (and the basis it was refused under), and its bot turns' troubles (this process's last failure, this
+  table's dead letters and the last one's error). An open table is picked up as any request naming it would be; a
+  closed one is read from its record alone.
+- **Check replay** (`POST .../diagnosis/replay`): the match rebuilt from the record and journal on the content and
+  rules it began on, under a match id of its own and forgotten once read, so the table being played is untouched;
+  it says "replays" or why not.
+- **Reveal hidden state…** (`POST .../diagnosis/hidden`), after a confirmation: each seat's speeds, intents and
+  picks face down, and the answers held for it, read on the same match rebuilt aside, and noted in the Activity tab
+  with the operator's name (`table.reveal`).
+- **Requeue the bot's turn** (`POST .../diagnosis/turn`): this table's dead letters back on the queue, or else the
+  bots' turn owed again, which a bot that is not asked anything takes nothing of; refused only for a table of two
+  people. Noted in the Activity tab (`table.turn`).
+- **Void…**: ADR 0176's sheet, opened on the same table.
 
 ### S6 — Tutorials and puzzles (metadata)
 

@@ -269,6 +269,25 @@
       </div>
     </dialog>
 
+    <dialog id="diagnosis-sheet" class="home-dialog side-sheet" aria-labelledby="diagnosis-sheet-name">
+      <div class="dialog-heading">
+        <div><p class="eyebrow">Diagnose the table</p><h2 id="diagnosis-sheet-name">Table</h2></div>
+        <button id="diagnosis-close" type="button" aria-label="Close">×</button>
+      </div>
+      <div class="home-dialog-body">
+        <dl id="diagnosis-facts" class="diagnosis-facts"></dl>
+        <output id="diagnosis-said" class="said"></output>
+        <ul id="diagnosis-hidden" class="diagnosis-hidden" aria-label="What the seats hold face down" hidden></ul>
+        <div class="diagnosis-actions">
+          <button id="diagnosis-refresh" type="button" class="secondary">Refresh</button>
+          <button id="diagnosis-replay" type="button">Check replay</button>
+          <button id="diagnosis-turn" type="button">Requeue the bot's turn</button>
+          <button id="diagnosis-reveal" type="button" class="secondary">Reveal hidden state…</button>
+          <button id="diagnosis-void" type="button" class="danger">Void…</button>
+        </div>
+      </div>
+    </dialog>
+
     <dialog id="scenario-sheet" class="home-dialog side-sheet" aria-labelledby="scenario-sheet-name">
       <div class="dialog-heading">
         <div><p class="eyebrow">Practice from a round</p><h2 id="scenario-sheet-name">Session</h2></div>

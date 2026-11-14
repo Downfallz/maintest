@@ -232,6 +232,7 @@ internal static class TableHost
         // cannot be opened leaves the actions on the console alone, never the panel without them.
         var notes = store is null ? OperatorNotes.None : await OpenNotesAsync(options.Record ?? DefaultRunsDirectory, clock, stopping.Token);
         admin.Notes = notes;
+        admin.Diagnosis = stored is null ? null : new TableDiagnosisApi(registry, composer, stored) { Turns = queues, Notes = notes };
         players?.Notes = notes;
         admin.Turns?.Notes = notes;
         admin.Jobs?.Notes = notes;

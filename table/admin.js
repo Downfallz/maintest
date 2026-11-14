@@ -14,6 +14,7 @@ import { mountPlayers } from './admin-players.js';
 import { mountTurns } from './admin-turns.js';
 import { mountVoid, voidLabel } from './admin-void.js';
 import { mountScenarios } from './admin-scenarios.js';
+import { mountDiagnosis } from './admin-diagnosis.js';
 
 const POLL_MS = 2500;
 
@@ -406,6 +407,14 @@ function card(row, transport, redraw) {
 function cardActions(row, transport, redraw) {
   if (!row.closable) return [];
   const actions = [];
+  if (openDiagnosis) {
+    const diagnose = document.createElement('button');
+    diagnose.type = 'button';
+    diagnose.className = 'close';
+    diagnose.textContent = 'Diagnose…';
+    diagnose.addEventListener('click', () => openDiagnosis({ id: row.id, players: row.seats.map(seat => `${seat.slot}: ${seat.seated}`).join(' · ') }));
+    actions.push(diagnose);
+  }
   if (openVoid) {
     const voiding = document.createElement('button');
     voiding.type = 'button';
@@ -432,6 +441,9 @@ let openVoid = null;
 
 // The scenario sheet's opener (ADR 0179), once the page has mounted it: a session row not being played offers it.
 let openScenario = null;
+
+// The Diagnose sheet's opener (scenarios plan, S5b), once the page has mounted it: a table card offers it.
+let openDiagnosis = null;
 
 function sessionItem(row, transport) {
   const item = document.createElement('li');
@@ -686,6 +698,9 @@ async function start() {
       element('activity-on').hidden = !available;
     },
   });
+
+  // Diagnosing a table in progress (scenarios plan, S5b): from its card, the Void sheet one button away.
+  openDiagnosis = mountDiagnosis({ send: transport.request, element, openVoid, after: redraw }).open;
 
   // The match scenarios (ADR 0179), on a host that keeps them: cut from a session row, listed in their tab.
   const scenarios = mountScenarios({
