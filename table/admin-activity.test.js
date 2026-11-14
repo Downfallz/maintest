@@ -25,7 +25,7 @@ test('an action reads as what was done, by whom and when, with the way to the ta
 });
 
 test('every action the host notes has a label, and one this page does not know reads as its name', () => {
-  assert.equal(Object.keys(ACTION_LABELS).length, 15);
+  assert.equal(Object.keys(ACTION_LABELS).length, 17);
   assert.equal(activityRows({ actions: [{ id: 'x', at: null, by: null, action: 'host.restart' }] }, NOW)[0].what, 'host.restart');
 });
 

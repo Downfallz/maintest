@@ -263,3 +263,55 @@ test('a friend is invited to the rematch at once; anyone else opens the lobby on
   await expect(page.locator('#match-rematch')).toHaveText('Invite to rematch'); await page.locator('#match-rematch').click();
   await page.waitForURL(/\/lobby\?rematch=acct_bastienbastienba&format=3v3$/); expect(h.writes).toEqual([]);
 });
+
+// A match scenario's practice (ADR 0179): /battle?scenario=<id> resumes the account's practice or starts one from the
+// cut, says so in a band over the field, and Restart the round starts it again from the cut.
+async function practise(page, { signedIn = true } = {}) {
+  const state = { asked: [], errors: [] };
+  page.on('pageerror', error => state.errors.push(error.message));
+  const view = { over: false, recording: false, waitingFor: null, feed: [], feedNext: 0, practice: { scenario: 'sc-1', title: 'Bleed after a stun', goal: 'Keep Creature 5 alive', round: 4 },
+    board: { slot: 'Player2', roundNumber: 4, phase: 'Planning', subPhase: 'Speed', allies: [creature(4, 20), creature(5, 9)], enemies: [creature(1, 18), creature(2, 12)], timeline: [] } };
+  let opened = 0;
+  await page.route('**/api/**', async route => {
+    const req = route.request(), url = new URL(req.url());
+    if (url.pathname === '/api/scenarios/sc-1/practice') {
+      state.asked.push(req.method());
+      if (!signedIn) return route.fulfill({ status: 401, json: { error: 'Account.SignInRequired', message: 'Sign in to practise a scenario.' } });
+      if (req.method() === 'GET' && opened === 0) return route.fulfill({ status: 404, json: { error: 'Scenario.NoPractice', message: 'None.' } });
+      if (req.method() === 'POST') opened++;
+      return route.fulfill({ json: { seat: 'player2', token: `practice-${opened}`, table: { id: 'practice-sc-1', format: '2v2', seats: [{ seat: 'player2', name: 'Learner', kind: 'person' }, { seat: 'player1', name: 'Recorded opponent', kind: 'bot' }] }, practice: view.practice } });
+    }
+    if (url.pathname === '/api/me') return route.fulfill({ json: { accounts: 'dev', account: signedIn ? { id: 'acct_learnerlearnerlea', username: 'Learner' } : null } });
+    if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [], packages: [] } });
+    if (url.pathname === '/api/seat/player2') { state.asked.push(`seat:${req.headers()['x-seat-token']}`); return route.fulfill({ json: view }); }
+    if (url.pathname.endsWith('/events')) return route.fulfill({ status: 204 });
+    return route.fulfill({ status: 404, json: {} });
+  });
+  await page.goto('/table/battle.html?scenario=sc-1');
+  return state;
+}
+test('a scenario opens as practice from its cut, says so over the field, and restarts from the cut', async ({ page }, info) => {
+  const state = await practise(page);
+  const band = page.locator('#practice-band');
+  await expect(band).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('#practice-title')).toHaveText('Bleed after a stun');
+  await expect(page.locator('#practice-detail')).toHaveText('From the top of round 4 · the recorded match is unchanged');
+  await expect(page.locator('#round-number')).toHaveText('04');
+  // No practice yet: asked for the account's, then one started from the cut, and its seat read with its own token.
+  expect(state.asked.slice(0, 2)).toEqual(['GET', 'POST']);
+  expect(state.asked).toContain('seat:practice-1');
+  await page.screenshot({ path: info.outputPath('practice-band.png') });
+  await page.locator('#practice-restart').click();
+  await expect.poll(() => state.asked.filter(one => one === 'POST').length).toBe(2);
+  await expect.poll(() => state.asked.includes('seat:practice-2')).toBe(true);
+  await expect(band).toBeVisible();
+  await expect(page.locator('#practice-leave')).toHaveAttribute('href', '/');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  expect(state.errors).toEqual([]);
+});
+test('a scenario asks a player who is not signed in to sign in, and shows no practice', async ({ page }) => {
+  const state = await practise(page, { signedIn: false });
+  await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'signin', { timeout: 10000 });
+  await expect(page.locator('#practice-band')).toBeHidden();
+  expect(state.errors).toEqual([]);
+});

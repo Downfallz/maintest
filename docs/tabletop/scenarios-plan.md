@@ -134,17 +134,30 @@ Under `Application/Matches/Scenarios`, each one class and one public method, all
 - Not done here: `IScenarioStore` (scenarios kept in the store, beside the recordings). It comes with S4, which is
   the first stage that keeps them.
 
-### S4 — Hosted play (Cli host, battle view)
+### S4 — Hosted play (done)
 
-- `POST /api/scenarios {"session","round","seat","title?","goal?","opponent?"}` (operator) cuts and stores it, and
-  returns `{ id, link }`. `GET /api/scenarios` lists them. `DELETE /api/scenarios/<id>` removes one.
-- `POST /api/scenarios/<id>/play` starts an ephemeral practice table, the way `PracticeRun` does, and returns a
-  seat key. Unrecorded, never indexed, never in the lobby or the ladder. It ends at the match's end, or after
-  an idle hour.
-- `/battle?scenario=<id>`: the battle view on that seat, with a band "Practice from <session>, round N. The
-  official result is unchanged", **Restart the round** and **Leave**.
-- Who opens the link: any signed-in account (`401` otherwise, which offers sign-in). Each opening is a table of
-  its own, so two people on one link never share a board.
+- **Where a practice lives (decided with the owner).** In this process's memory, over the services the host already
+  built for the scenario's content: no host is built for a practice, so an onboarding where twenty players open a
+  tutorial at once is twenty small matches. One practice per signed-in account (opening one, a tutorial included,
+  replaces the last), 200 at most per process, one nobody reads for an hour let go of. A restart or a deploy ends
+  them; the page then offers the round again. The API runs one replica today; a host on several would need the
+  practice journaled in the store, which this does not do.
+- **The operator** (`ScenarioAdminApi`, behind the admin panel's gate): `GET /api/admin/scenarios` lists them;
+  `POST` with `{"session","round","seat?","title?","goal?"}` cuts a recorded session on the content it was played
+  on and keeps it, answering `{ id, link }`, or 409 with the rounds the session does offer; `DELETE
+  /api/admin/scenarios/<id>` removes one. Kept beside the recordings (`scenarios/<id>/scenario.json`, or the
+  `scenarios` container); the content is not carried, since the store keeps it under its hash (ADR 0163).
+- **A signed-in player** (`ScenariosApi`, 401 signed out): `GET /api/scenarios/<id>` says what it is, `GET
+  .../practice` resumes the account's practice of it, `POST .../practice` starts one from the cut in place of
+  whatever practice the account had. A practice's seat token reaches its table only for the account that opened it.
+- **`/battle?scenario=<id>`**: the battle view resumes the account's practice or starts one, and a band in the
+  field's top right corner says "Practice", its title, "From the top of round N · the recorded match is unchanged",
+  with **Restart the round** and **Leave**. The seat's view carries `practice`. The opponent's seat reads as a bot.
+- Tests: the operator's cut, its refusals and its list; a signed-out player refused; a practice opened from the cut
+  in the scenario's seat with nothing recorded; resumed, replaced, let go of after an hour, refused past the bound,
+  refused once the scenario is removed (`ScenariosApiTests`); the page's practice module (`battle-practice.test.js`)
+  and the band in the browser (`battle-services.spec.js`).
+- Not done here: the scripted opponent's handover said in the battle view (the host's console says it).
 
 ### S5 — Admin panel
 

@@ -116,6 +116,9 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
 
     public int FeedStart { get; init; }
 
+    /// <summary>What a match scenario's practice is (ADR 0179), served in the seat's view so the page shows it as practice; none for a game.</summary>
+    public PracticeLabel? Practice { get; init; }
+
     public const string TokenHeader = "X-Seat-Token";
 
     /// <summary>
@@ -473,6 +476,9 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
                 // the page has to know: buttons that post a note into a 409 are worse than no buttons, because
                 // a player who taps one believes the thing they noticed was written down.
                 recording = run is not null,
+
+                // A match scenario's practice (ADR 0179): the page shows it as one, the official result untouched.
+                practice = Practice,
                 opponentIntents,
 
                 // The reactions the two players sent each other (ADR 0173): never part of the match's feed or trace.

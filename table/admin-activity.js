@@ -20,6 +20,8 @@ export const ACTION_LABELS = Object.freeze({
   'turns.requeue': 'Requeued dead letters',
   'turns.drop': 'Dropped dead letters',
   'settings.save': 'Saved the settings',
+  'scenario.cut': 'Cut a scenario',
+  'scenario.remove': 'Removed a scenario',
 });
 
 const TABLE_ACTIONS = new Set(['table.open', 'table.close', 'table.reinvite', 'table.void', 'sessions.delete', 'sessions.export']);

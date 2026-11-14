@@ -1749,3 +1749,20 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 .reactions-shown { display: flex; min-height: 44px; align-items: center; justify-content: space-between; gap: 12px; padding-top: 10px; border-top: 1px solid #ffffff14; }
 .reactions-shown small { display: block; color: var(--muted); font-size: 12px; }
 .reactions-shown input { width: 22px; height: 22px; flex: none; }
+
+/* A match scenario's practice (ADR 0179): a band in the field's top right corner says it is practice, where it began
+   and that the recorded match is untouched, and offers the round again or the way out. */
+.practice-band { position: absolute; top: 8px; right: 8px; z-index: 8; display: grid; gap: 2px; width: min(280px, calc(100% - 16px)); padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--gold) 45%, #3f554d); border-left: 3px solid var(--gold); border-radius: var(--radius-soft);
+  background: linear-gradient(160deg, #1d3236f0, #122126f0); box-shadow: 0 8px 22px #050d10aa; color: var(--ink); }
+.practice-band[hidden] { display: none; }
+.practice-band .eyebrow { margin: 0; color: var(--gold); font-size: 10px; letter-spacing: 1.6px; }
+.practice-band strong { font: 15px/1.2 var(--font-display); overflow-wrap: anywhere; }
+.practice-band small { color: #b8c9bd; font-size: 11px; line-height: 1.3; }
+.practice-actions { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+.practice-actions button { min-height: 32px; padding: 4px 10px; font-size: 12px; }
+.practice-actions a { color: #b8c9bd; font-size: 12px; }
+@media (max-width: 619px) {
+  .practice-band { top: 4px; right: 4px; width: min(220px, calc(100% - 8px)); padding: 6px 8px; }
+  .practice-band small#practice-goal { display: none; }
+}

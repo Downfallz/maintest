@@ -25,6 +25,8 @@ public sealed class OperatorActions(IOperatorLog log, TimeProvider clock)
     public const string Requeue = "turns.requeue";
     public const string Drop = "turns.drop";
     public const string SaveSettings = "settings.save";
+    public const string CutScenario = "scenario.cut";
+    public const string RemoveScenario = "scenario.remove";
 
     /// <summary>Notes what an operator did, now.</summary>
     public async Task<OperatorAction> RecordAsync(string by, string action, string? target, string? detail, CancellationToken cancellationToken = default)
