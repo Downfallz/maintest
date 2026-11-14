@@ -98,28 +98,41 @@ Under `Application/Matches/Scenarios`, each one class and one public method, all
   repository's content: a greedy mirror under both declarations, cut at every round, each scenario played on
   to the source's very outcome.
 
-### S2 — The scripted opponent
+### S2 — The scripted opponent (done)
 
-- `ScriptedAgent(recorded, fallback)`: asked a question, it answers with the next recorded entry of its seat
-  when that entry answers the same question (same kind, same creature) and is among the legal options. At the
-  first question it cannot answer that way, it hands over to the fallback for good (`greedy` by default, any
-  seatable agent by choice).
-- Under hidden intents, the opponent's answers of the round being replayed were given before seeing the
-  person's. Replaying them is what the opponent would have done, which is the point of "play it differently".
-- Tests: it follows a record until the person deviates and an answer stops fitting. The handover is said once
-  (`ScriptedAgent.TookOver`), shown in the battle view as "The opponent is now a bot".
+- `ScriptedOpponent` (`Application/Matches/Scenarios`): asked a question, it answers with the next recorded answer
+  of its seat when `PlayerDecisionCheck` says that answer answers what is asked (same kind, same creature) and is
+  among the options offered. At the first question it cannot answer that way, or once the recorded answers run out,
+  it hands over to its fallback for good (`TookOver`, and `HandedOver` said once). `ScriptedOpponent.Of(cut, seat,
+  fallback)` takes the seat's answers after the cut.
+- Under hidden intents, the opponent's answers of the round being replayed were given before seeing the person's.
+  Replaying them is what the opponent would have done, which is the point of "play it differently".
+- Tests: two scripted seats play a scenario to its source's very outcome without taking over, under both combat
+  declarations; a seat whose answers run out hands over once and the match plays out; an answer not offered, or
+  about another creature, hands over for good.
+- Not done here: the battle view's "The opponent is now a bot" (S4). The local practice table says it on the console.
 
-### S3 — Store and CLI
+### S3 — The file and the CLI (done)
 
-- `IScenarioStore`: `scenarios/<id>.json` beside the recordings, or a `scenarios` container. Same store
-  selection as recordings (`--record`).
-- `dotnet run --project src/DownfallArena.Cli -- scenario cut --session <id> --round N [--seat player1] [-o file]`
-  writes a scenario. `--with-content` embeds the content.
-- `scenario check <file>` rebuilds it and says whether it still holds on this engine, so a scenario can be a
-  regression test.
-- `table --scenario <file|id>`: a practice host started on it, unrecorded, as `--practice` is.
-- An xUnit test reads `tests/…/Scenarios/*.json` and rebuilds each one. Committing a repro file is how a bug
-  becomes a test.
+- `scenario.json`, version 1 (`Infrastructure/Matches/Scenarios/ScenarioFile`): the cut (`source`: session, run,
+  match, round, `cutAt`), the source's seed, roster and rules, the content's hash, the engine it was verified on,
+  the seat played, an optional title and goal, the journal entries before and after the cut in `decisions.jsonl`'s
+  own dialect, the checkpoint, and with `--with-content` the content's schema itself.
+- The checkpoint is compared by inclusion, not equality: every value recorded at the cut must be found unchanged
+  on the rebuilt boards, and a field the boards gained since is not asked for. Without that, any field added to the
+  board projection would refuse every scenario cut before it.
+- `scenario-cut --session runs/playtest/<id>` lists the rounds a session can be cut at, and with `--round N` writes
+  `scenario.json` (`--out`, `--seat player1|player2`, `--title`, `--goal`, `--with-content`). It replays on the
+  content the session was played on: this host's own, or the one kept beside the runs under its hash (ADR 0163).
+- `scenario-check --scenario <file>` rebuilds the scenario on this engine and says whether it holds, exit code 0
+  or 1. It plays on the content the file carries, or on this host's when that is the content the file names.
+- `table --scenario <file>`: the practice page on that one scenario, opened at once in the seat it names, the
+  scripted opponent in the other seat over greedy, nothing recorded; the page's Restart starts it again from its cut.
+- A scenario file kept under `tests/DownfallArena.Infrastructure.Tests/Scenarios/` is a regression test: it must
+  carry its content, and it must still rebuild, and its source's answers after the cut still apply, on every engine
+  change. One is kept: a greedy 1v1 mirror cut at round 3.
+- Not done here: `IScenarioStore` (scenarios kept in the store, beside the recordings). It comes with S4, which is
+  the first stage that keeps them.
 
 ### S4 — Hosted play (Cli host, battle view)
 

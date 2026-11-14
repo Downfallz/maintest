@@ -62,6 +62,6 @@ internal static class ScenarioBoards
         var second = await stepper.SeatAsync(match.MatchId, PlayerSlot.Player2, built.Value, cancellationToken);
         return second.IsFailure
             ? Result.Failure<ScenarioCheckpoint>(second.Error)
-            : Result.Success(new ScenarioCheckpoint(round, first.Value.Board, second.Value.Board));
+            : Result.Success(ScenarioCheckpoint.Of(round, first.Value.Board, second.Value.Board));
     }
 }
