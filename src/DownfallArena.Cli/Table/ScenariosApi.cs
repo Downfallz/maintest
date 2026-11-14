@@ -85,7 +85,9 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
             token = play.Token,
             table = new
             {
-                id = $"practice-{practice.Scenario}",
+                // The playthrough's own: the page keeps what it showed of a game under its table's id, and a restart
+                // is a new game whose rounds have not been shown yet; a resumed one is the same game.
+                id = $"practice-{play.Session.MatchId}",
                 format = play.Session.Rules.Format.ToString(),
                 seats = new[] { new { seat, name, kind = "person" }, new { seat = other, name = "Recorded opponent", kind = "bot" } },
             },

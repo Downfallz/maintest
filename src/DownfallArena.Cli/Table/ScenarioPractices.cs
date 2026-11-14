@@ -1,3 +1,5 @@
+using DownfallArena.Infrastructure.Matches;
+
 namespace DownfallArena.Cli.Table;
 
 /// <summary>
@@ -16,6 +18,7 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
     public static readonly TimeSpan Idle = TimeSpan.FromHours(1);
 
     private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly InProcessAgentTurns _turns = new(clock);
     private readonly Dictionary<string, Practice> _byAccount = new(StringComparer.Ordinal);
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, Practice> _byToken = new(StringComparer.Ordinal);
 
@@ -87,7 +90,11 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
                 return (null, new Refusal("Scenario.Busy", "Too many practices are being played on this host right now. Try again in a few minutes.", 503));
             }
 
-            var (content, stepped) = await composer.PlayedOnAsync(document.Content, cancellationToken);
+            var (content, shared) = await composer.PlayedOnAsync(document.Content, cancellationToken);
+
+            // The opponent answers in this process, whatever the host's tables do: a practice is in no index, so a
+            // worker taking the queue's turns (--turns worker) would never find it, and the practice would wait forever.
+            var stepped = shared with { Turns = _turns };
             if (!string.Equals(content.Version, document.Content, StringComparison.Ordinal))
             {
                 return (null, new Refusal("Scenario.ContentGone", "The content this scenario was cut on is no longer kept at this host.", 409));

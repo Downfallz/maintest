@@ -2,12 +2,14 @@ using System.Text;
 using System.Text.Json;
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Admin;
+using DownfallArena.Application.Matches.Journaling;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.Infrastructure.Accounts;
 using DownfallArena.Infrastructure.Admin;
 using DownfallArena.Infrastructure.Learning;
 using Microsoft.Extensions.Time.Testing;
+using NSubstitute;
 
 namespace DownfallArena.Cli.Tests.Table;
 
@@ -147,6 +149,53 @@ public sealed class ScenariosApiTests : IDisposable
         (await _hosted.Stored!.ListAsync(Cancel)).Count.ShouldBe(recorded);
     }
 
+    /// <summary>
+    /// A host whose bots' turns go to a queue a worker takes (the deployed shape, --turns worker): a practice is in no
+    /// index the worker could find it by, so its opponent answers in this process, or the practice would wait forever.
+    /// </summary>
+    [Fact]
+    public async Task A_practice_s_opponent_answers_in_process_on_a_host_whose_bots_turns_go_to_a_queue()
+    {
+        var (_, scenario) = await CutAsync();
+        using var queued = new HostedTables(_ => new FileArtifactStore(_hosted.RunsDirectory), turns: Substitute.For<IAgentTurns>());
+        await using var practices = new ScenarioPractices(queued.Composer, _store, _clock);
+        var accounts = await AccountsAsync();
+        var api = new ScenariosApi(_store, practices, accounts);
+        var opened = Read(await api.HandleAsync("POST", $"{ScenariosApi.Prefix}/{scenario}/practice", await SignedInAsync(accounts, "learner")));
+        var practice = practices.ByToken(opened.GetProperty("token").GetString()).ShouldNotBeNull();
+
+        var asked = await AnswerSpeedsAsync(practice.Play);
+
+        asked.ShouldNotBe("Speed", "the opponent answered its own speeds and the round moved on");
+    }
+
+    /// <summary>Answers every speed the practice's seat is asked, Quick, and says what the seat is asked after.</summary>
+    private static async Task<string?> AnswerSpeedsAsync(ScenarioPlay play)
+    {
+        var seat = play.Seat == Domain.Matches.PlayerSlot.Player1 ? "player1" : "player2";
+        async Task<JsonElement> ViewAsync() => Read(await play.Api.HandleAsync("GET", $"/api/seat/{seat}", "", play.Token));
+        var view = await ViewAsync();
+        foreach (var creature in view.GetProperty("options").GetProperty("speed").GetProperty("missing").EnumerateArray().Select(one => one.GetInt32()).ToList())
+        {
+            var asked = (await ViewAsync()).GetProperty("waitingAsked").GetInt64();
+            var sent = await play.Api.HandleAsync("POST", $"/api/seat/{seat}/decision", JsonSerializer.Serialize(new { asked, kind = "Speed", creature, speed = "Quick" }), play.Token);
+            sent.Status.ShouldBe(204, Encoding.UTF8.GetString(sent.Body));
+        }
+
+        for (var waited = 0; waited < 50; waited++)
+        {
+            view = await ViewAsync();
+            if (view.GetProperty("options").GetProperty("kind").GetString() != "Speed")
+            {
+                break;
+            }
+
+            await Task.Delay(100, Cancel);
+        }
+
+        return view.GetProperty("options").GetProperty("kind").GetString();
+    }
+
     [Fact]
     public async Task A_reloaded_page_resumes_the_practice_and_a_restart_replaces_it()
     {
@@ -155,14 +204,17 @@ public sealed class ScenariosApiTests : IDisposable
         var accounts = await AccountsAsync();
         var api = new ScenariosApi(_store, practices, accounts);
         var learner = await SignedInAsync(accounts, "learner");
-        var first = Read(await api.HandleAsync("POST", $"{ScenariosApi.Prefix}/{scenario}/practice", learner)).GetProperty("token").GetString();
+        var first = Read(await api.HandleAsync("POST", $"{ScenariosApi.Prefix}/{scenario}/practice", learner));
 
-        var resumed = Read(await api.HandleAsync("GET", $"{ScenariosApi.Prefix}/{scenario}/practice", learner)).GetProperty("token").GetString();
-        var restarted = Read(await api.HandleAsync("POST", $"{ScenariosApi.Prefix}/{scenario}/practice", learner)).GetProperty("token").GetString();
+        var resumed = Read(await api.HandleAsync("GET", $"{ScenariosApi.Prefix}/{scenario}/practice", learner));
+        var restarted = Read(await api.HandleAsync("POST", $"{ScenariosApi.Prefix}/{scenario}/practice", learner));
 
-        resumed.ShouldBe(first);
-        restarted.ShouldNotBe(first);
-        practices.ByToken(first).ShouldBeNull();
+        resumed.GetProperty("token").GetString().ShouldBe(first.GetProperty("token").GetString());
+        restarted.GetProperty("token").GetString().ShouldNotBe(first.GetProperty("token").GetString());
+        practices.ByToken(first.GetProperty("token").GetString()).ShouldBeNull();
+        // The page keeps what it showed of a game under its table's id: a resumed practice is the same game, a restart a new one.
+        resumed.GetProperty("table").GetProperty("id").GetString().ShouldBe(first.GetProperty("table").GetProperty("id").GetString());
+        restarted.GetProperty("table").GetProperty("id").GetString().ShouldNotBe(first.GetProperty("table").GetProperty("id").GetString());
         practices.Count.ShouldBe(1);
     }
 
