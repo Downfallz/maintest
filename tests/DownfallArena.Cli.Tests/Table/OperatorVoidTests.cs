@@ -110,6 +110,26 @@ public sealed class OperatorVoidTests : IDisposable
         _registry.Held(id).ShouldNotBeNull();
     }
 
+    /// <summary>
+    /// A results store that fails while the result is withdrawn leaves the record not void, so voiding again withdraws
+    /// it: a void record whose result still counted would refuse every retry as already void.
+    /// </summary>
+    [Fact]
+    public async Task A_void_whose_result_could_not_be_withdrawn_can_be_tried_again()
+    {
+        var (id, _) = await OpenedAsync();
+        await _results.RecordAsync(new MatchResult(Guid.CreateVersion7().ToString(), DateTimeOffset.UtcNow, "3v3", "at-activation", "hash", 9, "player1",
+            [new ResultSeat("player1", AccountId.New(), null), new ResultSeat("player2", AccountId.New(), null)], id), Cancel);
+        _results.FailNextRecord = true;
+
+        await Should.ThrowAsync<IOException>(() => VoidAsync(id, Reason()));
+        (await _hosted.Stored!.RecordAsync(id, Cancel)).ShouldNotBeNull().Void.ShouldBeFalse();
+
+        (await VoidAsync(id, Reason())).Status.ShouldBe(200);
+        _results.All.ShouldHaveSingleItem().Voided.ShouldNotBeNull();
+        (await _hosted.Stored!.RecordAsync(id, Cancel)).ShouldNotBeNull().Void.ShouldBeTrue();
+    }
+
     [Fact]
     public async Task A_void_is_final()
     {
@@ -157,8 +177,17 @@ public sealed class OperatorVoidTests : IDisposable
 
         public IReadOnlyList<MatchResult> All => [.. _kept.Values];
 
+        /// <summary>The next record fails, as a store that is out does.</summary>
+        public bool FailNextRecord { get; set; }
+
         public Task RecordAsync(MatchResult result, CancellationToken cancellationToken = default)
         {
+            if (FailNextRecord)
+            {
+                FailNextRecord = false;
+                throw new IOException("The results store is out.");
+            }
+
             _kept[result.MatchId] = result;
             return Task.CompletedTask;
         }

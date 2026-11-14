@@ -335,13 +335,16 @@ internal sealed class AdminApi
             return Problem(409, "Admin.AlreadyVoid", $"Table '{id}' is already void. A void is final.");
         }
 
+        // The result is withdrawn before the record says void: a store that fails in between leaves a record that is
+        // not void yet, so the operator voids again and the withdrawal is retried, rather than a void record whose
+        // result still counts and that refuses every retry as already void.
         await _registry.RemoveAsync(id);
+        var withdrawn = await WithdrawResultAsync(id, reason.Value);
         if (!await stored.VoidAsync(id, _composer.Index, reason.Value))
         {
             return Problem(409, "Admin.AlreadyVoid", $"Table '{id}' is already void. A void is final.");
         }
 
-        var withdrawn = await WithdrawResultAsync(id, reason.Value);
         await _composer.NotifyVoidAsync(id, record, reason.Value.Explanation);
         Console.WriteLine($"  Session {id} voided by {operatorName} ({reason.Value.Category}){(withdrawn ? ", its result withdrawn" : string.Empty)}: {reason.Value.Explanation}");
         return StudioResponse.OfJson(new { voided = true, withdrawn, category = reason.Value.Category }, ArtifactJson.LineOptions);

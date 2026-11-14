@@ -30,7 +30,9 @@ void is, and a little more:
   ladder, not in a player's statistics, not among recent opponents or the operator's game counts. The finished
   games list still shows it, as voided, with the explanation, and its replay stays available.
 
-A void is final, as in ADR 0163. Voiding a match already void is refused. ADR 0163's own void keeps its notice and
+A void is final, as in ADR 0163. Voiding a match already void is refused. The result is marked void before the
+record is: a store that fails in between leaves a record not yet void, so the operator voids again and the result is
+withdrawn then, rather than a void record whose result still counts. ADR 0163's own void keeps its notice and
 carries no reason.
 
 ## Consequences
