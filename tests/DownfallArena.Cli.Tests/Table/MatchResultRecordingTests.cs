@@ -116,6 +116,29 @@ public sealed class MatchResultRecordingTests : IDisposable
         table.Dispose();
     }
 
+    /// <summary>
+    /// The operator voids a match as it ends, before its closer keeps its result (ADR 0176): the void found no result to
+    /// withdraw, so the closer reads the record after its write and keeps its result void, never counting.
+    /// </summary>
+    [Fact]
+    public async Task A_match_the_operator_voided_as_it_ended_keeps_its_result_void()
+    {
+        var table = await Composer().ComposeAsync(PlayedByTheUnderstudy, Cancel);
+        table.Seats[0].Account = AccountId.New();
+        using var registry = _hosted.Registry();
+        await AddedAsync(registry, table);
+        await table.RecordAsync(Cancel);
+        var reason = MatchVoid.Create("engine", "The engine resolved one spell twice in a row.", "operator", DateTimeOffset.UtcNow).Value;
+        await PlaytestRun.VoidRecordAsync(new FileArtifactStore(_hosted.RunsDirectory), table.Id, index: null, reason, Cancel);
+
+        await FinishedAsync(table);
+
+        var kept = _results.All.ShouldHaveSingleItem();
+        kept.Voided.ShouldBe(reason);
+        kept.Ranked.ShouldBeFalse();
+        table.Dispose();
+    }
+
     [Fact]
     public async Task Deleting_an_account_leaves_a_finished_table_naming_the_account_it_was_played_under()
     {
@@ -148,9 +171,10 @@ public sealed class MatchResultRecordingTests : IDisposable
         public Task<IReadOnlyList<MatchResult>> ListAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<MatchResult>>([]);
     }
 
+    /// <summary>Results kept once a match, as every store keeps them: kept again, a result replaces the one before.</summary>
     private sealed class Kept : IMatchResults
     {
-        private readonly List<MatchResult> _kept = [];
+        private readonly Dictionary<string, MatchResult> _kept = [];
 
         public IReadOnlyList<MatchResult> All
         {
@@ -158,7 +182,7 @@ public sealed class MatchResultRecordingTests : IDisposable
             {
                 lock (_kept)
                 {
-                    return [.. _kept];
+                    return [.. _kept.Values];
                 }
             }
         }
@@ -167,7 +191,7 @@ public sealed class MatchResultRecordingTests : IDisposable
         {
             lock (_kept)
             {
-                _kept.Add(result);
+                _kept[result.MatchId] = result;
             }
 
             return Task.CompletedTask;

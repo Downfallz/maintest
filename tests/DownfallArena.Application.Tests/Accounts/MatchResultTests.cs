@@ -32,4 +32,29 @@ public sealed class MatchResultTests
 
         casual.Ranked.ShouldBeFalse();
     }
+
+    [Fact]
+    public void A_game_the_operator_voided_between_two_accounts_is_not_ranked()
+    {
+        var voided = Between(new("player1", Mark, null), new("player2", Bastien, null)) with { Voided = new MatchVoid("abuse", "A player used a bug to win.", "op", DateTimeOffset.UnixEpoch) };
+
+        voided.Ranked.ShouldBeFalse();
+    }
+
+    [Theory]
+    [InlineData("abuse", "A player used a bug to win.", true)]
+    [InlineData(" STUCK ", "The match stopped answering.", true)]
+    [InlineData("bored", "A player used a bug to win.", false)]
+    [InlineData("abuse", "too short", false)]
+    [InlineData(null, "A player used a bug to win.", false)]
+    public void A_void_needs_a_known_category_and_an_explanation_of_ten_to_five_hundred_characters(string? category, string explanation, bool made)
+    {
+        MatchVoid.Create(category, explanation, "op", DateTimeOffset.UnixEpoch).IsSuccess.ShouldBe(made);
+    }
+
+    [Fact]
+    public void An_explanation_past_five_hundred_characters_is_refused()
+    {
+        MatchVoid.Create("other", new string('x', 501), "op", DateTimeOffset.UnixEpoch).Error.ShouldBe(MatchVoid.Invalid);
+    }
 }

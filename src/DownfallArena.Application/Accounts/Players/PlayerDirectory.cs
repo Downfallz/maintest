@@ -37,7 +37,9 @@ public sealed class PlayerDirectory
         var activity = (await _activity.ListAsync(cancellationToken)).ToDictionary(kept => kept.Account);
         var results = _results is null ? [] : await _results.ListAsync(cancellationToken);
         var standings = Standings.Compute(results, _clock.GetUtcNow()).Players.ToDictionary(standing => standing.Account);
+        // A game the operator voided (ADR 0176) is no game the player played.
         var played = results
+            .Where(result => result.Voided is null)
             .SelectMany(result => result.Seats.Where(seat => seat.Account is not null).Select(seat => (Account: seat.Account!.Value, Seat: seat, Result: result)))
             .ToLookup(entry => entry.Account);
         return [.. accounts.Select(account => Summarize(account, activity.GetValueOrDefault(account.Id), played[account.Id], standings.GetValueOrDefault(account.Id)))];

@@ -531,7 +531,8 @@ internal sealed class TableComposer
     /// Each seat's account told its match was voided (ADR 0163), once an account: two seats of one device's are one
     /// notice. A device store that cannot be read is a notice that did not arrive.
     /// </summary>
-    private async Task NotifyVoidAsync(string id, TableRecord record)
+    /// <param name="explanation">Why the operator voided it (ADR 0176); none for a match the engine voided.</param>
+    internal async Task NotifyVoidAsync(string id, TableRecord record, string? explanation = null)
     {
         if (Notices is not { } notices)
         {
@@ -543,7 +544,7 @@ internal sealed class TableComposer
         {
             foreach (var account in accounts)
             {
-                await notices.SendAsync(AccountId.Parse(account), AccountNotices.Payload("Match ended", VoidNotice, "/lobby", $"match:{id}"), "match");
+                await notices.SendAsync(AccountId.Parse(account), AccountNotices.Payload(explanation is null ? "Match ended" : "Match voided", explanation ?? VoidNotice, "/lobby", $"match:{id}"), "match");
             }
         }
         catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or JsonException or FormatException or Azure.RequestFailedException or HttpRequestException)
@@ -644,12 +645,24 @@ internal sealed class TableComposer
 
             // The result before the record says finished: a host that fails to keep it leaves the table open, and
             // the next host rebuilds it from its decisions and keeps it then. Kept twice, it is kept once.
+            var voided = false;
             if (Results is { } results && ResultOf(table, session.Outcome.Result.Value, board.Value, finishedAt, owners) is { } kept)
             {
                 // What each seat played, for its players' statistics: the creatures off the final board, the casts off
                 // the events this process holds of the match, which are all of them once it has its outcome.
                 var result = kept with { Teams = PlayedTeams.Of(board.Value, run.EventsOf(session.MatchId), TableSeat.NameOf) };
                 await results.RecordAsync(result);
+
+                // The operator may have voided the match while it was being kept (ADR 0176), and withdrawn the result
+                // before this wrote it: the record is read after the write, and a void it says marks the result too.
+                // The void reads the results again after it writes the record, so one of the two sees the other.
+                if (await run.VoidedAsync() is { } reason)
+                {
+                    await results.RecordAsync(result with { Voided = reason });
+                    voided = true;
+                    Console.WriteLine($"  Session {run.SessionId} was voided as it ended: its result is kept void.");
+                }
+
                 foreach (var owner in owners)
                 {
                     Lobby?.Account(owner);
@@ -669,6 +682,12 @@ internal sealed class TableComposer
             if (!await run.StillClosingAsync())
             {
                 Console.WriteLine($"  Session {run.SessionId} was taken over by another process, which tells its seats how it ended.");
+                return;
+            }
+
+            // A void match's players were told why it was voided, not how it ended.
+            if (voided)
+            {
                 return;
             }
 

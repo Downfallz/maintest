@@ -181,3 +181,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0173](0173-let-players-react-with-a-fixed-set-of-messages.md) | Let players react with a fixed set of messages, and notify nobody of one | Accepted |
 | [0174](0174-keep-when-each-account-last-signed-in-and-was-seen.md) | Keep when each account last signed in and was last seen | Accepted |
 | [0175](0175-serve-the-table-at-its-own-domain-behind-cloudflare.md) | Serve the table at its own domain, behind Cloudflare | Accepted |
+| [0176](0176-let-the-operator-void-a-match-with-a-reason.md) | Let the operator void a match with a reason, and withdraw a finished one's result | Accepted |

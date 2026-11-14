@@ -362,7 +362,9 @@ public sealed class LobbyApiTests : IDisposable
         var resumed = Read(await Lobby.HandleAsync("POST", "/api/lobby/resume", body));
 
         resumed.GetProperty("tables").GetArrayLength().ShouldBe(0);
-        resumed.GetProperty("ended").EnumerateArray().Select(one => one.GetProperty("table").GetString()).ShouldBe([id]);
+        var ended = resumed.GetProperty("ended").EnumerateArray().ShouldHaveSingleItem();
+        ended.GetProperty("table").GetString().ShouldBe(id);
+        ended.GetProperty("explanation").GetString().ShouldBe(TableComposer.VoidNotice);
     }
 
     [Fact]

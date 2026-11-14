@@ -397,11 +397,11 @@ internal sealed class TableRegistry : IDisposable
     /// Whether a key no table answers to is a seat of a table that ended as a void match (ADR 0163), for its page to
     /// be told why rather than shown a seat it lost. A record that cannot be read says nothing.
     /// </summary>
-    public async Task<bool> VoidSeatAsync(string? token, CancellationToken cancellationToken = default)
+    public async Task<string?> VoidSeatAsync(string? token, CancellationToken cancellationToken = default)
     {
         if (Loader is not { } loader || TableKeys.TableOf(token) is not { } id)
         {
-            return false;
+            return null;
         }
 
         try
@@ -410,7 +410,7 @@ internal sealed class TableRegistry : IDisposable
         }
         catch (Exception failure) when (TableLoader.Refuses(failure) || StoreFails(failure))
         {
-            return false;
+            return null;
         }
     }
 

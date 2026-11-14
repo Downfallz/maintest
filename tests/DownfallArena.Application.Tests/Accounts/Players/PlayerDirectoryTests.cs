@@ -167,4 +167,13 @@ public sealed class PlayerDirectoryTests
 
         PlayerDirectory.Page(players, PlayerSort.Created, null, 1).Players.Select(player => player.Account.Username.Value).ShouldBe(["New", "Old"]);
     }
+
+    [Fact]
+    public async Task A_voided_game_is_not_counted()
+    {
+        var mark = Add("Mark");
+        Results(Game(new("player1", mark.Id, null), new("player2", null, "greedy")) with { Voided = new MatchVoid("stuck", "The match stopped answering.", "op", Start) });
+
+        (await Directory().FindAsync(mark.Id, Cancel)).ShouldNotBeNull().Games.ShouldBe(0);
+    }
 }

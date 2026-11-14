@@ -257,10 +257,12 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         }));
 
         // A saved seat of a void match (ADR 0163) is no seat to resume, and its page is told why rather than that it
-        // has none: the tables are named, and nothing else of them is said.
+        // has none: the tables are named, with why each ended -- the operator's explanation (ADR 0176) or the
+        // engine's notice -- and nothing else of them is said.
         var unanswered = found.Where(one => one.Table is null).Select(one => one.Token).ToArray();
-        var voided = await Task.WhenAll(unanswered.Select(async token => await registry.VoidSeatAsync(token) ? TableKeys.TableOf(token) : null));
-        var ended = voided.OfType<string>().Distinct(StringComparer.Ordinal).Select(table => new { table }).ToArray();
+        var voided = await Task.WhenAll(unanswered.Select(async token => await registry.VoidSeatAsync(token) is { } why ? (Table: TableKeys.TableOf(token), Why: why) : default));
+        var ended = voided.Where(one => one.Table is not null).DistinctBy(one => one.Table, StringComparer.Ordinal)
+            .Select(one => new { table = one.Table, explanation = one.Why }).ToArray();
         return Json(new { tables, ended });
     }
 
@@ -1456,6 +1458,8 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 // ladder itself decides (MatchResult.Ranked).
                 createdAt = PlaytestRun.OpenedAt(result.Table),
                 ranked = result.Ranked,
+                // A game the operator voided (ADR 0176): listed, with why, and counted nowhere.
+                voided = result.Voided is { } voided ? new { category = voided.Category, explanation = voided.Explanation } : null,
                 format = result.Format,
                 casual = result.Casual,
                 rounds = result.Rounds,

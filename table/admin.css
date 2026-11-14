@@ -124,3 +124,12 @@ input[type="text"] { font: inherit; min-height: 44px; border: 1px solid var(--li
 /* A selection checkbox is a box beside its words, not a field: the form inputs' 44px height is the label's to give. */
 .selection-tools label.check { display: inline-flex; flex-direction: row; align-items: center; gap: 8px; min-height: 44px; margin: 0; }
 .selection-tools label.check input[type="checkbox"] { width: 20px; height: 20px; min-height: 0; margin: 0; padding: 0; }
+
+/* Voiding a match (ADR 0176): the sheet's explanation is a box to write in, and what will happen is said in the
+   refusal colour before the button that does it. */
+#void-explanation { width: 100%; box-sizing: border-box; font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-soft); background: var(--raised); color: var(--ink); resize: vertical; }
+.void-count { margin: 4px 0 0; font-size: 12px; text-align: right; }
+.void-warning { margin: 14px 0 8px; color: var(--refused); font-size: 13px; }
+#void-said:empty { display: none; }
+.link-button { border: 0; padding: 0; background: none; font: inherit; cursor: pointer; text-decoration: underline; }
+.danger-link { color: var(--refused); }

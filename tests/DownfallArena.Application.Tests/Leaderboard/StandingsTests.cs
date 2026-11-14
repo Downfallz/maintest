@@ -71,4 +71,15 @@ public sealed class StandingsTests
 
         later.ShouldBeGreaterThan(now);
     }
+
+    [Fact]
+    public void A_voided_game_rates_nobody_and_tallies_against_no_bot()
+    {
+        var standings = Standings.Compute(
+            [Game(Mark, Bastien, "player1", 0) with { Voided = new MatchVoid("abuse", "A player used a bug to win.", "op", Start) }, AgainstBot(Mark, "greedy", "player1", 1) with { Voided = new MatchVoid("abuse", "A player used a bug to win.", "op", Start) }],
+            Start.AddMinutes(2));
+
+        standings.Players.ShouldBeEmpty();
+        standings.AgainstBots(Mark).ShouldBeEmpty();
+    }
 }

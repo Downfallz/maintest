@@ -56,14 +56,16 @@ export function createLiveConnection({ onState, onView, schedule = setTimeout, c
       busy: false, owed: false, over: false, since: 0, catalogue: catalogue ?? null, retry: 1000, failed: 0, streams: 0, revision: 0, writing: false };
     active = connection;
     const current = () => active === connection;
-    // 401 asks for the seat's account, 403 is a seat this page no longer holds, and 410 a match that ended void
-    // because the game was updated under it (ADR 0163): each clears the board and stops for good.
+    // 401 asks for the seat's account, 403 is a seat this page no longer holds, and 410 a match that ended void,
+    // because the game was updated under it (ADR 0163) or the operator voided it, saying why (ADR 0176), which is
+    // handed on: each clears the board and stops for good.
     function refused(answer) {
       const states = { 401: 'signin', 403: 'revoked', 410: 'ended' };
       if (!(answer.status in states)) return false;
       stop();
       onView(null, null);
-      onState(states[answer.status]);
+      if (answer.status === 410 && answer.body?.message) onState(states[answer.status], answer.body.message);
+      else onState(states[answer.status]);
       return true;
     }
     async function refresh() {

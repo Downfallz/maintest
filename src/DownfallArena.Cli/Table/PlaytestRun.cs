@@ -391,6 +391,16 @@ internal sealed class PlaytestRun : IReactionKeeper
     private long _revision;
 
     /// <summary>
+    /// Why the operator voided this table (ADR 0176), as its record says now; none for a table not voided so. Read as
+    /// a closer keeps the match's result: a void made meanwhile has its result marked void too, whoever wrote it last.
+    /// </summary>
+    public async Task<Application.Accounts.MatchVoid?> VoidedAsync(CancellationToken cancellationToken = default)
+    {
+        var read = await _reader.ReadTaggedAsync(TableRecord.File, cancellationToken);
+        return read is not null && StoredSessions.RecordOf(read.Text) is { Void: true, VoidReason: { } reason } ? reason : null;
+    }
+
+    /// <summary>
     /// The table's record, when another process has written it since this one last did (ADR 0162): its revision is
     /// past the one this process wrote. None otherwise, and never while a write of this process's own is on its way,
     /// which would read as one. A process holding the table catches up with it, or lets it go and picks it up again
@@ -463,6 +473,34 @@ internal sealed class PlaytestRun : IReactionKeeper
         }, cancellationToken);
         await new TableIndexer(index, id).FollowAsync(stored, written, cancellationToken);
         return open;
+    }
+
+    /// <summary>
+    /// Voids a table through its record, for the operator (ADR 0176): closed, marked void with the reason, and out of
+    /// the index. False for a table already void, which keeps the reason it was voided for.
+    /// </summary>
+    public static async Task<bool> VoidRecordAsync(IArtifactStore store, string id, ITableIndex? index, Application.Accounts.MatchVoid reason, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(store);
+        ArgumentNullException.ThrowIfNull(reason);
+        var place = RunPlace.In(store, id);
+        var voided = false;
+        var (stored, written) = await WriteOverAsync(place.Reader, place.Writer, id, stored =>
+        {
+            if (stored is null)
+            {
+                throw new InvalidDataException($"Session {id} has no table record.");
+            }
+
+            voided = !stored.Void;
+            return voided ? stored with { Status = TableRecord.Closed, Void = true, VoidReason = reason } : stored;
+        }, cancellationToken);
+        if (index is not null)
+        {
+            await new TableIndexer(index, id).FollowAsync(stored, written, cancellationToken);
+        }
+
+        return voided;
     }
 
     private const int RecordAttempts = 5;

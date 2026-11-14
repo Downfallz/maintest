@@ -158,4 +158,17 @@ public abstract class MatchResultsContract
     {
         (await (await ResultsAsync()).ListAsync(Cancel)).ShouldBeEmpty();
     }
+
+    [Fact]
+    public async Task A_result_recorded_again_as_voided_keeps_the_reason_and_is_kept_once()
+    {
+        var results = await ResultsAsync();
+        var result = Finished(new DateTimeOffset(2026, 11, 13, 20, 0, 0, TimeSpan.Zero));
+        await results.RecordAsync(result, Cancel);
+        var reason = new MatchVoid("engine", "The engine resolved a spell twice.", "op", new DateTimeOffset(2026, 11, 13, 21, 0, 0, TimeSpan.Zero));
+
+        await results.RecordAsync(result with { Voided = reason }, Cancel);
+
+        (await results.ListAsync(Cancel)).ShouldHaveSingleItem().Voided.ShouldBe(reason);
+    }
 }

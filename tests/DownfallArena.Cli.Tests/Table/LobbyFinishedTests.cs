@@ -50,6 +50,24 @@ public sealed class LobbyFinishedTests : IDisposable
     private Task RecordAsync(int minutes, ResultSeat you, ResultSeat other, string? winner = "player1", string? table = null) =>
         _results.RecordAsync(new MatchResult(Guid.CreateVersion7().ToString(), Start.AddMinutes(minutes), "3v3", "at-activation", "hash", 9, winner, [you, other], table), Cancel);
 
+    /// <summary>A game the operator voided (ADR 0176) stays among the finished games, said voided and why, and unranked.</summary>
+    [Fact]
+    public async Task A_voided_game_is_listed_as_voided_with_its_explanation()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var bastien = await PlayerAsync("bastien");
+        var result = new MatchResult(Guid.CreateVersion7().ToString(), Start, "3v3", "at-activation", "hash", 9, "player1", [new("player1", mark.Account.Id, null), new("player2", bastien.Account.Id, null)])
+        {
+            Voided = new MatchVoid("abuse", "A player won through a bug in the order of the slots.", "op", Start.AddHours(1)),
+        };
+        await _results.RecordAsync(result, Cancel);
+
+        var item = Read(await (await LobbyAsync()).HandleAsync("GET", "/api/lobby/finished/players/1", "", player: mark)).GetProperty("items").EnumerateArray().ShouldHaveSingleItem();
+
+        item.GetProperty("voided").GetProperty("explanation").GetString().ShouldBe("A player won through a bug in the order of the slots.");
+        item.GetProperty("ranked").GetBoolean().ShouldBeFalse();
+    }
+
     [Fact]
     public async Task Finished_games_are_read_from_the_kept_results_newest_first_a_page_at_a_time_bots_apart_from_players()
     {

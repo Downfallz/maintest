@@ -150,7 +150,7 @@ test('without kept results, a kind\'s finished games are the finished tables thi
 test('a finished card leads with the result, names who it was against, and opens the game or its replay', () => {
   const kept = { format: '3v3', rounds: 9, outcome: 'won', opponent: { kind: 'bot', name: 'Lookahead' }, seats: null, replay: '/battle?replay=t1&seat=player1' };
 
-  assert.deepEqual(finishedSummary(kept), { title: '3v3 battle', tag: 'Victory', tone: 'won', casual: false, ranked: null, against: 'Lookahead', bot: true, detail: '9 rounds', action: 'Watch the replay →' });
+  assert.deepEqual(finishedSummary(kept), { title: '3v3 battle', tag: 'Victory', tone: 'won', casual: false, ranked: null, voided: null, against: 'Lookahead', bot: true, detail: '9 rounds', action: 'Watch the replay →' });
   assert.equal(finishedSummary({ ...kept, casual: true }).casual, true, 'an unranked game says so');
   assert.equal(finishedSummary({ ...kept, outcome: 'lost', seats: [{ seat: 'player1', token: 't' }] }).action, 'View game →');
   assert.equal(finishedSummary({ ...kept, outcome: 'draw', replay: null }).action, null, 'a result kept before tables were named opens nothing');
@@ -257,4 +257,12 @@ test('a finished game says whether it counted on the ladder as the host kept it,
   assert.equal(finishedSummary({ ...kept, ranked: true }).ranked, true);
   assert.equal(finishedSummary({ ...kept, ranked: false }).ranked, false);
   assert.equal(finishedSummary(kept).ranked, null);
+});
+
+test('a game the operator voided says Voided and why instead of its result', () => {
+  const summary = finishedSummary({ format: '3v3', outcome: 'won', ranked: false, voided: { category: 'abuse', explanation: 'A player won through a bug.' }, opponent: { kind: 'person', name: 'Bastien' } });
+
+  assert.equal(summary.tag, 'Voided');
+  assert.equal(summary.tone, 'voided');
+  assert.equal(summary.voided, 'A player won through a bug.');
 });

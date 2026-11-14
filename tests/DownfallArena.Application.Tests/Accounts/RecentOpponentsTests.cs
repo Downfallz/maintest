@@ -70,4 +70,12 @@ public sealed class RecentOpponentsTests
         shown[0].LastPlayed.ShouldBe(Start.AddMinutes(RecentOpponents.MostShown + 1));
         shown[^1].LastPlayed.ShouldBe(Start.AddMinutes(2));
     }
+
+    [Fact]
+    public void A_voided_game_meets_nobody()
+    {
+        MatchResult[] results = [Against(Bastien, 0) with { Voided = new MatchVoid("mistake", "Opened on the wrong rules.", "op", Start) }];
+
+        RecentOpponents.Of(results, Mark).ShouldBeEmpty();
+    }
 }

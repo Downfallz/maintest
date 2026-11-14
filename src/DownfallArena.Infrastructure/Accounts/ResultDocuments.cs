@@ -38,7 +38,8 @@ internal static class ResultDocuments
             [.. result.Seats.Select(seat => new SeatRecord(seat.Seat, seat.Account?.Value, seat.Agent))],
             result.Table,
             result.Casual,
-            result.Teams.Count == 0 ? null : [.. result.Teams.Select(creature => new CreatureRecord(creature.Seat, creature.Creature, creature.Mutations, creature.Survived, creature.Casts))]),
+            result.Teams.Count == 0 ? null : [.. result.Teams.Select(creature => new CreatureRecord(creature.Seat, creature.Creature, creature.Mutations, creature.Survived, creature.Casts))],
+            result.Voided is { } voided ? new VoidRecord(voided.Category, voided.Explanation, voided.By, voided.At) : null),
         Web);
 
     public static MatchResult Read(string json)
@@ -57,10 +58,14 @@ internal static class ResultDocuments
             record.Casual)
         {
             Teams = [.. (record.Teams ?? []).Select(creature => new PlayedCreature(creature.Seat, creature.Creature, creature.Mutations ?? [], creature.Survived, creature.Casts ?? new Dictionary<string, int>(StringComparer.Ordinal)))],
+            Voided = record.Void is { } voided ? new MatchVoid(voided.Category, voided.Explanation, voided.By, voided.At) : null,
         };
     }
 
-    private sealed record Record(string Match, DateTimeOffset FinishedAt, string Format, string Declaration, string ContentHash, int Rounds, string? Winner, bool Ranked, IReadOnlyList<SeatRecord> Seats, string? Table = null, bool Casual = false, IReadOnlyList<CreatureRecord>? Teams = null);
+    private sealed record Record(string Match, DateTimeOffset FinishedAt, string Format, string Declaration, string ContentHash, int Rounds, string? Winner, bool Ranked, IReadOnlyList<SeatRecord> Seats, string? Table = null, bool Casual = false, IReadOnlyList<CreatureRecord>? Teams = null, VoidRecord? Void = null);
+
+    // A result the operator voided (ADR 0176); absent from every result that counts.
+    private sealed record VoidRecord(string Category, string Explanation, string By, DateTimeOffset At);
 
     private sealed record CreatureRecord(string Seat, string Creature, IReadOnlyList<string>? Mutations, bool Survived, IReadOnlyDictionary<string, int>? Casts);
 

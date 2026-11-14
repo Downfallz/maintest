@@ -20,7 +20,8 @@ export async function streamEvents(fetchImpl, path, headers, onEvent, signal, { 
   try {
     heard();
     const response = await fetchImpl(path, { headers, signal: local.signal, credentials: 'same-origin' });
-    if (!response.ok || !response.body) return { status: response.status, ok: false };
+    if (!response.ok) return refusal(response);
+    if (!response.body) return { status: response.status, ok: false };
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let rest = '';
@@ -49,12 +50,18 @@ export async function streamEvents(fetchImpl, path, headers, onEvent, signal, { 
 // when the connection closes, as a stream ends. A host without a relay answers 404, a relay that refuses this
 // connection (its connections are all taken, say) closes it before it opens: either way the page reads the host's own
 // stream instead, and for the rest of its life, so a host at its relay's limit is not asked again at every reconnect.
+// What a refused stream says: a void match's 410 carries why it ended (ADR 0176), which its page shows.
+async function refusal(response) {
+  const said = response.status === 410 ? await Promise.resolve(response.json?.()).catch(() => null) : null;
+  return typeof said?.message === 'string' ? { status: response.status, ok: false, body: { message: said.message } } : { status: response.status, ok: false };
+}
+
 const viaStream = new Set();
 
 export async function socketOrStream(fetchImpl, base, headers, onEvent, signal, { WebSocketImpl = globalThis.WebSocket, ...options } = {}) {
   if (typeof WebSocketImpl === 'function' && !viaStream.has(base)) {
     const answer = await fetchImpl(`${base}/negotiate`, { headers, signal, credentials: 'same-origin' });
-    if ([401, 403, 410].includes(answer.status)) return { status: answer.status, ok: false };
+    if ([401, 403, 410].includes(answer.status)) return refusal(answer);
     if (answer.ok) {
       const url = (await answer.json().catch(() => null))?.url;
       const heard = typeof url === 'string' ? await socket(WebSocketImpl, url, onEvent, signal) : { opened: false };

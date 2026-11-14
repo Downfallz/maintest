@@ -326,3 +326,39 @@ test('the bots\' turn queues show in the Jobs tab, and their dead letters are re
   await expect(page.locator('#turns-empty')).toBeVisible();
   await expect(page.locator('#tab-jobs-count')).toHaveText('');
 });
+
+// Voiding a match (A3c, ADR 0176): from a session row, only with a category and an explanation, and the session then
+// says it is void.
+test('a session is voided only with a reason, and then says it is void', async ({ page }, info) => {
+  let voided = null;
+  const listed = () => ({ sessions: [{ ...session('people-finished', 'human:mk', 'human:jo', true), voidable: !voided, voided: voided?.category ?? null }] });
+  await page.route('**/api/sessions', route => route.fulfill({ json: listed() }));
+  await page.route(/\/api\/tables\/people-finished\/void$/, route => {
+    voided = route.request().postDataJSON();
+    return route.fulfill({ json: { voided: true, withdrawn: true, category: voided.category } });
+  });
+  await page.reload();
+  await page.locator('#tab-sessions').click();
+
+  await page.locator('#sessions .danger-link').click();
+  const sheet = page.locator('#void-sheet');
+  await expect(sheet).toBeVisible();
+  await expect(sheet.locator('#void-sheet-name')).toHaveText('people-finished');
+  await expect(sheet.locator('#void-warning')).toContainText('Its result is withdrawn');
+  await expect(sheet.locator('#void-submit')).toBeDisabled();
+  await sheet.locator('#void-category').selectOption('abuse');
+  await sheet.locator('#void-explanation').fill('short');
+  await expect(sheet.locator('#void-submit')).toBeDisabled();
+  await sheet.locator('#void-explanation').fill('A player won through a bug in the order of the slots.');
+  await expect(sheet.locator('#void-submit')).toBeEnabled();
+  const box = await sheet.boundingBox();
+  expect(box.x + box.width).toBeLessThanOrEqual(widthOf(page) + 1);
+  await page.screenshot({ path: info.outputPath('admin-void-sheet.png') });
+
+  await sheet.locator('#void-submit').click();
+  await expect(sheet).toBeHidden();
+  expect(voided).toEqual({ category: 'abuse', explanation: 'A player won through a bug in the order of the slots.' });
+  await expect(page.locator('#sessions-said')).toHaveText('people-finished voided; its result is withdrawn.');
+  await expect(page.locator('#sessions li').first()).toContainText('void: a player abused the game');
+  await expect(page.locator('#sessions .danger-link')).toHaveCount(0);
+});

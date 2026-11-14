@@ -366,3 +366,15 @@ test('a pager says how many it shows of how many and which page, in the singular
   assert.equal(pagerLine(1, 1, { page: 0, pages: 1 }, 'table'), '1 table · page 1 of 1');
   assert.equal(pagerLine(3, 25, { page: 0, pages: 1 }, 'session'), '3 of 25 sessions · page 1 of 1');
 });
+
+test('a session says whether it is void, and under what, and whether it can be voided', () => {
+  const [voided, open] = sessionRows({ sessions: [
+    { id: 'v', player1: 'human:mk', player2: 'Greedy', over: true, voided: 'abuse', voidable: false },
+    { id: 'o', player1: 'human:mk', player2: 'Greedy', over: false, voidable: true },
+  ] });
+
+  assert.equal(voided.state, 'void: a player abused the game');
+  assert.equal(voided.voidable, false);
+  assert.equal(open.voidable, true);
+  assert.equal(open.voided, null);
+});

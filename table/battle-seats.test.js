@@ -28,6 +28,12 @@ test('a saved seat of a voided match names its table, and only the one the link 
   assert.deepEqual((await battleSeats('?table=gone', storage, voided)).ended, ['gone']);
   assert.deepEqual((await battleSeats('', storage, host([]))).ended, [], 'a host before ADR 0163 says nothing of it');
 });
+test('a saved seat of a match the operator voided says why, in the operator\'s words', async () => {
+  const voided = async path => ({ ok: true, json: async () => path.endsWith('/resume')
+    ? { tables: [], ended: [{ table: 'gone', explanation: 'The match stopped answering after a host restart.' }, { table: 'other' }] } : { invitations: [] } });
+  assert.equal((await battleSeats('', storage, voided)).why, 'The match stopped answering after a host restart.');
+  assert.equal((await battleSeats('?table=other', storage, voided)).why, null, 'a host before ADR 0176 says no reason');
+});
 test('an account refusal retains its status and never fetches a private board', async () => {
   await assert.rejects(battleSeats('', storage, async () => ({ ok: false, status: 401 })), error => error.status === 401);
 });

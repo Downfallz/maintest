@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DownfallArena.Application.Accounts;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Infrastructure.Learning;
@@ -138,6 +139,7 @@ internal sealed class AdminApi
             ("GET", "") => await ListAsync(),
             ("POST", "") => await OpenAsync(body, operatorName),
             ("DELETE", { Length: > 0 } id) => await LobbyApi.ExclusivelyAsync(() => CloseAsync(id, operatorName)),
+            ("POST", _) when Voided(rest) is { } voided => await LobbyApi.ExclusivelyAsync(() => VoidAsync(voided, body, operatorName)),
             ("POST", _) when Reinvited(rest) is { } seat => await LobbyApi.ExclusivelyAsync(() => ReinviteAsync(seat.Table, seat.Slot, operatorName)),
             _ => StudioResponse.OfPlainText(404, $"No such route: {method} {path}"),
         };
@@ -307,6 +309,72 @@ internal sealed class AdminApi
             status: 409);
 
     /// <summary>The table and seat of <c>&lt;id&gt;/seats/&lt;seat&gt;/invite</c>, or null for any other path.</summary>
+    private static string? Voided(string rest) => rest.Split('/') is [{ Length: > 0 } table, "void"] ? table : null;
+
+    /// <summary>
+    /// Voids a match for the operator, in progress or finished, with the reason they give (ADR 0176): the table let go of
+    /// if this host holds it, its record closed and marked void with the reason, a result kept for it marked void too so
+    /// it counts nowhere, and its players told with the explanation. Refused without a reason, and for a match already void.
+    /// </summary>
+    private async Task<StudioResponse> VoidAsync(string id, string body, string operatorName)
+    {
+        var asked = string.IsNullOrWhiteSpace(body) ? null : JsonSerializer.Deserialize<VoidBody>(body, ArtifactJson.LineOptions);
+        var reason = MatchVoid.Create(asked?.Category, asked?.Explanation, operatorName, _clock.GetUtcNow());
+        if (reason.IsFailure)
+        {
+            return Problem(400, reason.Error.Code, reason.Error.Message);
+        }
+
+        if (_stored is not { } stored || await stored.RecordAsync(id) is not { } record)
+        {
+            return Problem(404, "Admin.NoTable", $"No table '{id}' is recorded at this host.");
+        }
+
+        if (record.Void)
+        {
+            // A void is final, but one whose result a failing store left counting is finished now, under its own reason.
+            return await WithdrawResultAsync(id, record.VoidReason ?? reason.Value)
+                ? StudioResponse.OfJson(new { voided = true, withdrawn = true, category = (record.VoidReason ?? reason.Value).Category }, ArtifactJson.LineOptions)
+                : Problem(409, "Admin.AlreadyVoid", $"Table '{id}' is already void. A void is final.");
+        }
+
+        // The result is withdrawn before the record says void, so a store that fails in between leaves a record not void
+        // yet, which the operator voids again; and after, for a closer that kept the result in between: it reads the
+        // record after its write, so either it sees the void and marks its result, or this sees its result.
+        await _registry.RemoveAsync(id);
+        var withdrawn = await WithdrawResultAsync(id, reason.Value);
+        var voided = await stored.VoidAsync(id, _composer.Index, reason.Value);
+        withdrawn = await WithdrawResultAsync(id, reason.Value) || withdrawn;
+        if (!voided)
+        {
+            return Problem(409, "Admin.AlreadyVoid", $"Table '{id}' is already void. A void is final.");
+        }
+
+        // Every other process holding the table, finished or not, lets it go and answers its seats 410 (ADR 0165).
+        _composer.Relay?.Table(id);
+        await _composer.NotifyVoidAsync(id, record, reason.Value.Explanation);
+        Console.WriteLine($"  Session {id} voided by {operatorName} ({reason.Value.Category}){(withdrawn ? ", its result withdrawn" : string.Empty)}: {reason.Value.Explanation}");
+        return StudioResponse.OfJson(new { voided = true, withdrawn, category = reason.Value.Category }, ArtifactJson.LineOptions);
+    }
+
+    /// <summary>The result kept for the table, marked void with the reason so it counts nowhere (ADR 0176); false when none was kept.</summary>
+    private async Task<bool> WithdrawResultAsync(string id, MatchVoid reason)
+    {
+        if (_composer.Results is not { } results
+            || (await results.ListAsync()).FirstOrDefault(result => result.Table == id && result.Voided is null) is not { } kept)
+        {
+            return false;
+        }
+
+        await results.RecordAsync(kept with { Voided = reason });
+        return true;
+    }
+
+    private static StudioResponse Problem(int status, string code, string message) =>
+        StudioResponse.OfJson(new { error = code, message }, ArtifactJson.LineOptions, status: status);
+
+    private sealed record VoidBody(string? Category, string? Explanation);
+
     private static (string Table, string Slot)? Reinvited(string rest)
     {
         var parts = rest.Split('/');
@@ -586,6 +654,9 @@ internal sealed class AdminApi
             location = session.Location,
             live = table is not null,
             over = table?.IsOver ?? session.Matches > 0,
+            // Whether the operator can void it (ADR 0176): a table's run that is not void yet.
+            voidable = session.Table && !session.Void,
+            voided = session.Void ? session.VoidCategory ?? "engine" : null,
             session = $"/session/{session.Id}",
             replay = (table?.IsOver ?? session.Matches > 0) ? ReplayPath(session.Id) : null,
             export = $"{SessionsPrefix}/{session.Id}/export",
