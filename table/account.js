@@ -30,6 +30,16 @@ export function accountState(me) {
   return { mode: me?.accounts ?? 'off', account: me?.account ?? null, clientId: me?.googleClientId ?? null };
 }
 
+/**
+ * The operator's notice (ADR 0177) as /api/me carries it, or null for none: one line under the header of every page
+ * but the game itself, where nothing is added over the board.
+ */
+export function noticeText(me, page) {
+  if (page === 'classic' || page === 'battle') return null;
+  const line = typeof me?.notice === 'string' ? me.notice.trim() : '';
+  return line || null;
+}
+
 export async function accountRequest(path, body, fetchImpl = globalThis.fetch.bind(globalThis), method = body === undefined ? 'GET' : 'POST') {
   const options = { method, headers: {}, credentials: 'same-origin' };
   if (body !== undefined) { options.headers['Content-Type'] = 'application/json'; options.body = JSON.stringify(body); }

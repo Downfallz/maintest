@@ -9,7 +9,7 @@ const battle = {
 };
 const held = { table: battle, seats: [{ seat: 'player1', token: 'seat-token' }] };
 
-async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, games = null, finished = { players: [], bots: [] }, opponents = [], invitations = [], incoming = [challenger], publicTables = [battle] } = {}) {
+async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, notice = null, registrationClosed = false, games = null, finished = { players: [], bots: [] }, opponents = [], invitations = [], incoming = [challenger], publicTables = [battle] } = {}) {
   const state = { account, mode, meDown, offline: false, mineReads: 0, friendReads: 0, finishedReads: [], privateReads: [], release: null, invitations, publicTables,
     friends: { friends: [friend], incoming, outgoing: [] } };
   const errors = [];
@@ -18,7 +18,7 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
   await page.addInitScript(() => {
     window.permissionRequests = 0;
     if (window.Notification) Notification.requestPermission = async () => { window.permissionRequests++; return 'denied'; };
-    window.google = { accounts: { id: { initialize() {}, renderButton(el) {
+    window.google = { accounts: { id: { initialize(options) { window.googleSignIn = options.callback; }, renderButton(el) {
       const button = document.createElement('button'); button.textContent = 'Continue with Google'; el.append(button);
     } } } };
   });
@@ -26,7 +26,9 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
     const path = new URL(route.request().url()).pathname;
     const json = value => route.fulfill({ json: value });
     if (path === '/api/me' && state.meDown) return route.fulfill({ status: 503, json: { message: 'Restarting' } });
-    if (path === '/api/me') return json({ accounts: state.mode, account: state.account, googleClientId: 'test-client', operator });
+    if (path === '/api/me') return json({ accounts: state.mode, account: state.account, googleClientId: 'test-client', operator, notice });
+    // A first sign-in while the operator has registration closed (ADR 0177) is refused rather than asked for a name.
+    if (path === '/api/account/google' && registrationClosed) return route.fulfill({ status: 409, json: { error: 'Account.RegistrationClosed', message: 'New accounts are closed for now. Try again later.' } });
     // A table asked for is noted and refused: the dialog's request is what the tests read.
     if (path === '/api/lobby/tables' && route.request().method() === 'POST') { state.created = route.request().postDataJSON(); return route.fulfill({ status: 409, json: { message: 'All tables are occupied.' } }); }
     if (path === '/api/account/signout') { state.signouts ??= []; state.signouts.push(route.request().postDataJSON()); state.account = null; return json({}); }
@@ -758,4 +760,17 @@ test('the create dialog plays Solo against a bot in any format, and PvP ranked i
   await solo.focus(); await page.keyboard.press('ArrowLeft'); await expect(pvp).toBeFocused(); await expect(pvp).toHaveAttribute('aria-selected', 'true');
   await noOverflow(page);
   expect(state.errors).toEqual([]);
+});
+
+test('a first sign-in while registration is closed is told so, and the operator\'s notice shows under the header', async ({ page }, testInfo) => {
+  await home(page, { account: null, mode: 'google', registrationClosed: true, notice: 'New accounts open again on Monday.' });
+  await expect(page.locator('#host-notice')).toHaveText('New accounts open again on Monday.');
+  await expect(page.getByRole('button', { name: 'Continue with Google' })).toBeVisible();
+
+  await page.evaluate(() => window.googleSignIn({ credential: 'a-token-google-signed' }));
+
+  await expect(page.locator('#sign-in-problem')).toHaveText('New accounts are closed for now. Try again later.');
+  await expect(page.locator('#name-dialog')).not.toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath('home-registration-closed.jpg'), fullPage: true, type: 'jpeg', quality: 85, animations: 'disabled' });
 });

@@ -17,6 +17,9 @@ public static class AccountErrors
 
     public static readonly DomainError NotFound = new("Account.NotFound", "There is no such account.");
 
+    /// <summary>A new account refused while the operator has registration closed (ADR 0177).</summary>
+    public static readonly DomainError RegistrationClosed = new("Account.RegistrationClosed", "New accounts are closed for now. Try again later.");
+
     public static readonly DomainError PreferencesInvalid = new(
         "Account.PreferencesInvalid",
         "Game settings take a pace of auto or step and a speed of 0.5, 1, 1.5 or 2.");

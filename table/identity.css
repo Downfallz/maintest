@@ -146,3 +146,11 @@ html dialog { --cut: 16px; }
 #settings-dialog #concede-open { width: auto; background: transparent; border-color: color-mix(in srgb, var(--refused) 45%, transparent); color: var(--refused); }
 .presentation-choice select { flex: 1 1 200px; max-width: 320px; }
 .presentation-choice small { flex: 1 1 100%; }
+
+/* The operator's notice (ADR 0177): one line under the header, bone on soot with a gold rule at its left, never over
+   the board. */
+.host-notice {
+  max-width: 1500px; margin: 10px auto 0; padding: 8px 14px; border-left: 2px solid var(--gold);
+  background: color-mix(in srgb, var(--panel) 70%, transparent); color: var(--bone); font-size: 14px; line-height: 1.4;
+  overflow-wrap: anywhere;
+}

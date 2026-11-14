@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Ports;
+using DownfallArena.Application.Hosting;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.Infrastructure.Accounts;
@@ -404,6 +405,64 @@ public sealed class AccountApiTests : IDisposable
     public async Task A_body_that_is_not_json_is_a_bad_request()
     {
         (await (await ApiAsync()).HandleAsync("POST", "/api/account/google", "{", Nobody)).Status.ShouldBe(400);
+    }
+
+    private async Task<AccountApi> ClosedAsync(AccountsMode mode = AccountsMode.Google)
+    {
+        var api = await ApiAsync(mode);
+        api.Settings = new HostSettingsCache(new FileHostSettingsStore(_root), _clock);
+        await api.Settings.SaveAsync(new HostSettings(RegistrationOpen: false, Notice: null, "mark", _clock.GetUtcNow()));
+        return api;
+    }
+
+    /// <summary>Closed means closed (ADR 0177): a sign-in with no account is refused, not asked for a name.</summary>
+    [Fact]
+    public async Task A_sign_in_with_no_account_is_refused_while_registration_is_closed()
+    {
+        var api = await ClosedAsync();
+
+        var answer = await api.HandleAsync("POST", "/api/account/google", $$"""{"credential":"{{GoodToken}}"}""", Nobody);
+
+        answer.Status.ShouldBe(409);
+        Json(answer).GetProperty("error").GetString().ShouldBe(AccountErrors.RegistrationClosed.Code);
+        Json(answer).TryGetProperty("ticket", out _).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task An_existing_account_signs_in_while_registration_is_closed()
+    {
+        await new AccountRegistry(_store, _clock).RegisterAsync(Mark, "MarkF", TestContext.Current.CancellationToken);
+        var api = await ClosedAsync();
+
+        var answer = await api.HandleAsync("POST", "/api/account/google", $$"""{"credential":"{{GoodToken}}"}""", Nobody);
+
+        answer.Status.ShouldBe(200);
+        Session(answer).ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task A_name_sent_with_a_ticket_from_before_the_closing_makes_no_account()
+    {
+        var api = await ApiAsync();
+        api.Settings = new HostSettingsCache(new FileHostSettingsStore(_root), _clock);
+        var ticket = await TicketAsync(api);
+        await api.Settings.SaveAsync(new HostSettings(RegistrationOpen: false, Notice: null, "mark", _clock.GetUtcNow()));
+
+        var answer = await api.HandleAsync("POST", "/api/account", $$"""{"ticket":"{{ticket}}","username":"MarkF"}""", Nobody);
+
+        answer.Status.ShouldBe(409);
+        Json(answer).GetProperty("error").GetString().ShouldBe(AccountErrors.RegistrationClosed.Code);
+        (await _store.FindBySubjectAsync(Mark, TestContext.Current.CancellationToken)).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task A_developer_s_host_signs_in_a_new_name_while_registration_is_closed()
+    {
+        var api = await ClosedAsync(AccountsMode.Development);
+
+        var answer = await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody);
+
+        answer.Status.ShouldBe(200);
     }
 
     public void Dispose()

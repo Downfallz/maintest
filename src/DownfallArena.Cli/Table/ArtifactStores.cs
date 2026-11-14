@@ -4,6 +4,7 @@ using Azure.Storage;
 using Azure.Storage.Blobs;
 using Azure.Storage.Queues;
 using DownfallArena.Application.Accounts.Ports;
+using DownfallArena.Application.Hosting.Ports;
 using DownfallArena.Application.Learning.Ports;
 using DownfallArena.Application.Matches.Ports;
 using DownfallArena.Application.Ports;
@@ -212,6 +213,23 @@ internal static class ArtifactStores
             ? new BlobContainerClient(uri, new StorageSharedKeyCredential(DevelopmentAccount, DevelopmentKey))
             : new BlobContainerClient(uri, new DefaultAzureCredential());
         return await BlobActivityStore.OpenAsync(container, cancellationToken);
+    }
+
+    /// <summary>Where the host's settings are kept (ADR 0177): beside the accounts, as <c>settings/host.json</c>.</summary>
+    public static async Task<IHostSettingsStore> OpenHostSettingsAsync(string target, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(target);
+        if (!IsContainerUrl(target))
+        {
+            var runs = Path.GetFullPath(target).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return new FileHostSettingsStore(Path.Combine(Path.GetDirectoryName(runs) ?? runs, AccountsContainer));
+        }
+
+        var uri = AccountsUri(new Uri(target, UriKind.Absolute));
+        var container = IsEmulator(uri)
+            ? new BlobContainerClient(uri, new StorageSharedKeyCredential(DevelopmentAccount, DevelopmentKey))
+            : new BlobContainerClient(uri, new DefaultAzureCredential());
+        return await BlobHostSettingsStore.OpenAsync(container, cancellationToken);
     }
 
     /// <summary>Where each account's friendships are kept (ADR 0129): beside the accounts, under <c>friends/</c>.</summary>
