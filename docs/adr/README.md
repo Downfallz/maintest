@@ -182,3 +182,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0174](0174-keep-when-each-account-last-signed-in-and-was-seen.md) | Keep when each account last signed in and was last seen | Accepted |
 | [0175](0175-serve-the-table-at-its-own-domain-behind-cloudflare.md) | Serve the table at its own domain, behind Cloudflare | Accepted |
 | [0176](0176-let-the-operator-void-a-match-with-a-reason.md) | Let the operator void a match with a reason, and withdraw a finished one's result | Accepted |
+| [0177](0177-let-a-player-choose-the-bot-by-its-level.md) | Let a player choose the bot by its level, and show them nothing else of it | Accepted |

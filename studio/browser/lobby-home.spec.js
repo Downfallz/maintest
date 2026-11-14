@@ -518,7 +518,7 @@ test('your games are grouped against players and against bots, at most five of e
   // A game against another player can be opened unranked (ADR 0155); a bot's never counts, so it has no switch.
   await expect(page.getByLabel(/^Ranked/)).toBeChecked();
   await page.getByRole('tab', { name: /^Solo/ }).click(); await expect(page.locator('#ranked-row')).toBeHidden();
-  await expect(page.getByLabel('Bot difficulty')).toHaveValue('strongest');
+  await expect(page.getByLabel('Bot difficulty')).toHaveValue('hard');
   // Nor a time to answer (ADR 0169): a bot always answers. Between players it is three days unless another is chosen.
   await expect(page.locator('#turn-limit-row')).toBeHidden();
   await page.getByRole('tab', { name: /^PvP/ }).click(); await page.locator('#opponent').selectOption('person');
@@ -750,9 +750,14 @@ test('the create dialog plays Solo against a bot in any format, and PvP ranked i
   await solo.click();
   await expect(page.locator('#create-solo-panel')).toBeVisible(); await expect(page.locator('#create-pvp-panel')).toBeHidden();
   await expect(format).toBeEnabled(); await format.selectOption('2v2');
+  // A bot is chosen by how strong it is, never by its name (ADR 0177): Hard unless the player picks another.
+  const level = page.getByLabel('Bot difficulty');
+  await expect(level).toHaveValue('hard');
+  expect(await level.locator('option').allTextContents()).toEqual(['Easy · makes mistakes', 'Medium · plays it straight', 'Hard · the strongest']);
+  await level.selectOption('easy');
   await page.locator('#create-dialog').screenshot({ path: info.outputPath('create-solo.png') });
   await page.locator('#create-submit').click();
-  await expect.poll(() => state.created).toEqual({ opponent: 'bot', format: '2v2' });
+  await expect.poll(() => state.created).toEqual({ opponent: 'bot', format: '2v2', level: 'easy' });
   // PvP comes first, Solo beside it; the arrow keys move between the two tabs.
   await expect(page.getByRole('tab')).toHaveText([/^PvP/, /^Solo/]);
   await solo.focus(); await page.keyboard.press('ArrowLeft'); await expect(pvp).toBeFocused(); await expect(pvp).toHaveAttribute('aria-selected', 'true');

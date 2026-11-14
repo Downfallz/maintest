@@ -266,13 +266,6 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         return Json(new { tables, ended });
     }
 
-    /// <summary>
-    /// The one bot a visitor may play (ADR 0121): the first one <c>learning/seatable.json</c> puts forward, which is
-    /// the strongest the journal has measured, so the lobby follows the next one without a change here. Greedy when
-    /// the host was given no list.
-    /// </summary>
-    private string Strongest => composer.Agents.FirstOrDefault(agent => agent.Featured)?.Value ?? "greedy";
-
     private async Task<StudioResponse> OpenAsync(string body, AccountId? account)
     {
         if (!composer.Records)
@@ -290,6 +283,13 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         // A table for a friend (ADR 0129): the second seat is kept for that account, and one such seat at a time.
         // Checked under the claim gate below: two requests of one account must not both pass the one-at-a-time rule.
         var friend = opponent == "friend" ? opening?.Friend : null;
+
+        // The bot a player plays is chosen by its level (ADR 0177), never by its name: Hard when none is named.
+        var level = opponent == "bot" ? composer.Levels.Named(opening?.Level ?? BotLevels.Default) : null;
+        if (opponent == "bot" && level is null)
+        {
+            return Problem(400, "Lobby.BotLevel", "Choose how strong the bot is: easy, medium or hard.");
+        }
 
         var format = composer.Rules.Format;
         if (opening?.Format is { } named && (!MatchFormat.TryParse(named, out format) || !MatchFormat.Offered.Contains(format)))
@@ -338,7 +338,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 return Problem(409, "All tables are occupied. Ask the operator to close an unused table.");
             }
 
-            var request = new TableRequest(null, opponent == "bot" ? AgentSpec.Parse(Strongest) : null, null, null, null, format);
+            var request = new TableRequest(null, level is not null ? AgentSpec.Parse(level.Agent) : null, null, null, null, format);
             PlayedTable table;
             try
             {
@@ -1336,10 +1336,9 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     {
         if (seat.Person is null)
         {
-            // The name the bot list gives it (search-19, Greedy), not the spec it was seated by, which is a path.
+            // Its level, never its name (ADR 0177): which bot sits behind "Hard" is the operator's to know.
             var spec = table.Session.SeatedName(seat.Slot);
-            var label = composer.Agents.FirstOrDefault(agent => string.Equals(agent.Value, spec, StringComparison.OrdinalIgnoreCase))?.Label;
-            return new SeatSummary(seat.Name, "bot", BotName(label ?? spec), Turn: false);
+            return new SeatSummary(seat.Name, "bot", composer.Levels.PlayerName(spec), Turn: false, Level: composer.Levels.Of(spec)?.Level);
         }
 
         // Whose turn it is: a seat whose person is being asked a question right now. Both seats can be at once
@@ -1467,7 +1466,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 outcome = mine.Length > 1 ? "both" : result.Winner is null ? "draw" : mine.Contains(result.Winner) ? "won" : "lost",
                 you = mine,
                 opponent = other is null ? new { kind = "self", name = "Shared device" }
-                    : other.Agent is { } spec ? new { kind = "bot", name = BotName(composer.Agents.FirstOrDefault(agent => string.Equals(agent.Value, spec, StringComparison.OrdinalIgnoreCase))?.Label ?? spec) }
+                    : other.Agent is { } spec ? new { kind = "bot", name = composer.Levels.PlayerName(spec) }
                     : new { kind = "person", name = other.Account is { } opponent ? await NameAsync(opponent) : "Player" },
                 seats = held?.Seats.Where(seat => seat.Account == me).Select(seat => new { seat = seat.Name, token = seat.Token }).ToArray(),
                 // The battle view's whole-match recap from this player's side (ADR 0156), not the viewer's trace.
@@ -1656,10 +1655,12 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
     /// <param name="Ranked">False opens a game between two players unranked (ADR 0155); a bot or a shared device never is.</param>
     /// <param name="TurnLimit">How many hours a player of a game between two players has to answer (ADR 0169).</param>
-    private sealed record Opening(string? Opponent, string? Format, string? Friend, bool? Ranked = null, int? TurnLimit = null);
+    /// <param name="Level">How strong the bot is, for a game against one (ADR 0177): easy, medium or hard; hard when none.</param>
+    private sealed record Opening(string? Opponent, string? Format, string? Friend, bool? Ranked = null, int? TurnLimit = null, string? Level = null);
 
     /// <param name="Turn">Whether this seat's player is being asked something now: whose turn it is.</param>
-    private sealed record SeatSummary(string Seat, string Kind, string Name, bool Turn, string? Account = null);
+    /// <param name="Level">A bot's level (ADR 0177), which a rematch asks for again; none for a person or a bot no level seats.</param>
+    private sealed record SeatSummary(string Seat, string Kind, string Name, bool Turn, string? Account = null, string? Level = null);
 
     private sealed record ResumeRequest(IReadOnlyList<string>? Tokens);
 

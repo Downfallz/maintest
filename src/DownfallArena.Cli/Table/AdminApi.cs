@@ -233,7 +233,7 @@ internal sealed class AdminApi
                 declarations = new[] { CombatDeclarationText.HiddenIntent, CombatDeclarationText.AtActivation },
                 declaration = CombatDeclarationText.Of(_composer.Rules.CombatDeclaration),
                 recording = _composer.Records,
-                agents = _agents.Select(agent => new { value = agent.Value, label = agent.Label, featured = agent.Featured }).ToArray(),
+                agents = _agents.Select(agent => new { value = agent.Value, label = agent.Label, featured = agent.Featured, level = _composer.Levels.Of(agent.Value)?.Name }).ToArray(),
                 tables = await Task.WhenAll((await TablesAsync()).Select(DescribedAsync)),
             },
             ArtifactJson.LineOptions);
@@ -687,6 +687,9 @@ internal sealed class AdminApi
             {
                 slot = seat.Name,
                 seated = table.Session.SeatedName(seat.Slot),
+
+                // The level a player knows this bot by (ADR 0177), beside its own name: the operator sees both.
+                level = seat.Person is null ? _composer.Levels.Of(table.Session.SeatedName(seat.Slot))?.Name : null,
                 hasPerson = seat.Person is not null,
                 code = seat.Code,
                 join = seat.Code is { } code ? $"{JoinCodes.Prefix}{code}" : null,

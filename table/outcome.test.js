@@ -52,6 +52,10 @@ test('the final card trusts the host outcome even when the losing team has more 
 test('the end card plays the same game again in one tap against a bot or on a shared device', () => {
   const bot = { format: '1v1', seats: [{ seat: 'player1', kind: 'person', account: 'acct_mark' }, { seat: 'player2', kind: 'bot', name: 'Lookahead' }] };
   assert.deepEqual(rematchPlan(bot, ['player1']), { label: 'Rematch', request: { opponent: 'bot', format: '1v1' } });
+  // The same level again (ADR 0177).
+  const easy = { format: '3v3', seats: [{ seat: 'player1', kind: 'person' }, { seat: 'player2', kind: 'bot', name: 'Easy', level: 'easy' }] };
+  assert.deepEqual(rematchPlan(easy, ['player1']), { label: 'Rematch', request: { opponent: 'bot', format: '3v3', level: 'easy' } });
+  assert.equal(rematchLink(easy, ['player1']), '/lobby?rematch=bot&level=easy&format=3v3');
   const shared = { format: '3v3', seats: [{ seat: 'player1', kind: 'person' }, { seat: 'player2', kind: 'person' }] };
   assert.deepEqual(rematchPlan(shared, ['player1', 'player2']), { label: 'Rematch', request: { opponent: 'hotseat', format: '3v3' } });
 });

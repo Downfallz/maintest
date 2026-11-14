@@ -452,11 +452,11 @@ public sealed class LobbyApiTests : IDisposable
     }
 
     /// <summary>
-    /// A visitor plays one bot, the strongest the host puts forward first (ADR 0121); Greedy and Random are the
-    /// operator's, from the admin panel.
+    /// A visitor names no bot (ADR 0121): with no level asked for, Hard, the strongest the host puts forward first
+    /// (ADR 0177); naming a bot as the opponent is refused.
     /// </summary>
     [Fact]
-    public async Task The_lobby_seats_the_first_featured_bot_and_refuses_the_others()
+    public async Task The_lobby_seats_the_first_featured_bot_as_Hard_and_refuses_a_named_one()
     {
         var composer = new TableComposer(_hosted.Services, HostedTables.Rules, new FileArtifactStore(_hosted.RunsDirectory)) { Index = _hosted.Index, Agents = [new SeatableAgent("random", "Random", Featured: true), new SeatableAgent("greedy", "Greedy", Featured: false)] };
         var lobby = new LobbyApi(_registry, composer, TimeProvider.System);

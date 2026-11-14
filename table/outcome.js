@@ -11,7 +11,7 @@ export function rematchLink(table, held) {
   const theirs = seats.filter(seat => !held.includes(seat.seat));
   const params = new URLSearchParams();
   if (theirs.length === 0) params.set('rematch', 'hotseat');
-  else if (theirs[0].kind === 'bot') params.set('rematch', 'bot');
+  else if (theirs[0].kind === 'bot') { params.set('rematch', 'bot'); if (theirs[0].level) params.set('level', theirs[0].level); }
   else if (theirs[0].kind === 'person' && theirs[0].account) params.set('rematch', theirs[0].account);
   else return null;
   if (table.format) params.set('format', table.format);
@@ -35,7 +35,8 @@ export function rematchPlan(table, held, friendship = null) {
   const theirs = table.seats.find(seat => !held.includes(seat.seat));
   const format = table.format || undefined;
   if (!theirs) return { label: 'Rematch', request: { opponent: 'hotseat', format } };
-  if (theirs.kind === 'bot') return { label: 'Rematch', request: { opponent: 'bot', format } };
+  // The same bot level again (ADR 0177): the table names it on the bot's seat.
+  if (theirs.kind === 'bot') return { label: 'Rematch', request: { opponent: 'bot', format, ...(theirs.level ? { level: theirs.level } : {}) } };
   if (friendship === 'friend') return { label: 'Invite to rematch', request: { opponent: 'friend', friend: theirs.account, format, ...(table.casual === true ? { ranked: false } : {}) } };
   return { label: 'Invite to rematch', link };
 }

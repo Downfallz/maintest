@@ -91,6 +91,14 @@ test('a taken seat of a table being played offers a new invitation, and nothing 
   assert.equal(rows[1].seats[0].reinvite, null, 'a finished table has no seat left to come back to');
 });
 
+test('a bot a level seats is named with its level beside its own name, for the operator alone', () => {
+  const rows = tableRows({ tables: [{ id: 'a', seats: [{ slot: 'player1', seated: 'human:mk' }, { slot: 'player2', seated: 'lookahead-55', level: 'Hard' }] }] });
+
+  assert.equal(rows[0].seats[0].seated, 'human:mk');
+  assert.equal(rows[0].seats[1].seated, 'lookahead-55 · Hard');
+  assert.equal(seatable({ agents: [{ value: 'greedy', label: 'Greedy', level: 'Medium' }] })[1].label, 'Greedy · Medium');
+});
+
 test('an empty or missing list draws nothing', () => {
   assert.deepEqual(tableRows(null), []);
   assert.deepEqual(tableRows({}), []);

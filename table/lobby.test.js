@@ -97,7 +97,8 @@ test('a rematch link names the opponent to choose again, or nothing', () => {
   assert.deepEqual(rematchRequest('?rematch=acct_abcdefghijklmnop&format=2v2'), { opponent: 'friend', friend: 'acct_abcdefghijklmnop', format: '2v2', ranked: true });
   // An unranked game's rematch starts unranked (ADR 0155).
   assert.equal(rematchRequest('?rematch=acct_abcdefghijklmnop&ranked=0').ranked, false);
-  assert.deepEqual(rematchRequest('?rematch=bot'), { opponent: 'bot', friend: null, format: null });
+  assert.deepEqual(rematchRequest('?rematch=bot'), { opponent: 'bot', friend: null, format: null, level: null });
+  assert.deepEqual(rematchRequest('?rematch=bot&level=easy&format=1v1'), { opponent: 'bot', friend: null, format: '1v1', level: 'easy' });
   assert.deepEqual(rematchRequest('?rematch=hotseat&format=1v1'), { opponent: 'hotseat', friend: null, format: '1v1' });
   assert.equal(rematchRequest('?rematch=../admin'), null);
   assert.equal(rematchRequest(''), null);
