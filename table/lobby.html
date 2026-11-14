@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0b1519" />
-  <title>Downfall Instinct — tactical creature combat</title>
+  <title>Downfall Instinct — Player lobby</title>
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="icon" href="/icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="/icon-192.png" />
@@ -16,21 +16,21 @@
 <body class="lobby-page home-page" data-home="loading">
   <header class="masthead lobby-header home-header" data-navigation="lobby"></header>
   <main class="lobby-main">
-    <section id="welcome-intro" class="welcome-intro" aria-labelledby="intro-title">
-      <div class="intro-copy"><p class="eyebrow">Adapt. Evolve. Survive.</p><h2 id="intro-title">Build your creatures.<br>Outplay your rival.</h2><p class="intro-description">A turn-based tactical duel in a world on the edge. Command three creatures, mutate them up to Stage 3 as the battle unfolds, and make every spell count.</p><div class="intro-actions"><a class="primary" href="#sign-in-panel">Play Downfall Instinct <span aria-hidden="true">→</span></a><a href="#how-it-plays">How it plays <span aria-hidden="true">↓</span></a></div><p class="intro-caption">In your browser, on a phone or a desktop · Against a friend, a rival or the bot</p></div>
-      <div class="intro-art" role="img" aria-label="Three Stage 3 creatures, Ravager, Deathstalker and Transcendent, advance under the golden eclipse"><span class="intro-beast intro-back"><img src="battle-art/evolutions/warped-stage3-transcendent.webp" alt="" decoding="async" /></span><span class="intro-beast intro-middle"><img src="battle-art/evolutions/predator-stage3-deathstalker.webp" alt="" decoding="async" /></span><span class="intro-beast intro-front"><img src="battle-art/evolutions/brute-stage3-ravager.webp" alt="" decoding="async" /></span></div>
-      <section class="intro-evolution" aria-labelledby="evolution-title"><div class="intro-evolution-copy"><p class="eyebrow">Evolution</p><h3 id="evolution-title">Every mutation reshapes your creature</h3><p>Each mutation gives a creature new spells or a passive, and changes how it looks. By Stage 3 its line shows on its body, and so do the families it borrowed from.</p></div>
-        <ol class="evolution-strip"><li><img src="battle-art/evolutions/warped-base.webp" alt="" loading="lazy" decoding="async" /><span><small>Stage 1</small>Warped</span></li><li><img src="battle-art/evolutions/warped-stage2-stormborn.webp" alt="" loading="lazy" decoding="async" /><span><small>Stage 2</small>Stormborn</span></li><li><img src="battle-art/evolutions/warped-stage3-cataclysm.webp" alt="" loading="lazy" decoding="async" /><span><small>Stage 3</small>Cataclysm</span></li></ol></section>
-      <ol id="how-it-plays" class="how-it-plays"><li><span class="step-number">01</span><div><h3>Shape your team</h3><p>On a Mutation round, spend your team's picks. Each creature takes its own path through the Mutation Tree.</p></div></li><li><span class="step-number">02</span><div><h3>Set the tempo</h3><p>Choose each creature's tempo. Instinct acts before Precision; only Precision can crit.</p></div></li><li><span class="step-number">03</span><div><h3>Make your move</h3><p>When a creature's turn comes, pick its spell and its targets. The last team standing wins.</p></div></li></ol>
-      <ul class="intro-features" aria-label="What you can do"><li><strong>Friends and rematches</strong><span>Invite a friend to a table, and play them again in one tap.</span></li><li><strong>Ranked or for fun</strong><span>Climb the leaderboard, or open an unranked game to practise.</span></li><li><strong>Never miss your turn</strong><span>A bell counts your turns, invitations and requests; your phone can tell you too.</span></li><li><strong>The bot is always there</strong><span>Play the strongest bot any time, five games at once.</span></li></ul>
-    </section>
-    <section id="sign-in-panel" class="lobby-panel sign-in-panel" aria-labelledby="sign-in-heading" hidden>
-      <div><p class="eyebrow">Play Downfall Instinct</p><h2 id="sign-in-heading">Your next battle starts here.</h2><p class="muted">Sign in, choose your player name, and start playing.</p></div>
-      <div class="sign-in-actions">
-        <div id="google-button" class="google-button" hidden></div>
-        <form id="dev-sign-in" hidden><label for="dev-username">Developer sign-in: any player name</label><div class="code-row"><input id="dev-username" name="dev-username" autocomplete="off" spellcheck="false" maxlength="20" required /><button type="submit">Sign in →</button></div></form>
-        <p id="sign-in-problem" class="problem" role="alert" hidden></p>
+    <section id="sign-in-panel" class="sign-in-panel" aria-labelledby="sign-in-heading" hidden>
+      <div class="sign-in-content">
+        <p class="eyebrow">Player lobby</p>
+        <h2 id="sign-in-heading">Sign in to play.</h2>
+        <p class="muted">Start a battle or pick up where you left off.</p>
+        <div class="sign-in-actions">
+          <div id="google-button" class="google-button" hidden></div>
+          <form id="dev-sign-in" hidden>
+            <label for="dev-username">Developer sign-in: any player name</label>
+            <div class="code-row"><input id="dev-username" name="dev-username" autocomplete="off" spellcheck="false" maxlength="20" required /><button type="submit">Sign in →</button></div>
+          </form>
+          <p id="sign-in-problem" class="problem" role="alert" hidden></p>
+        </div>
       </div>
+      <div class="sign-in-art" aria-hidden="true"></div>
     </section>
     <div id="home-games" hidden>
       <section class="lobby-hero" aria-labelledby="welcome"><div><p id="hero-eyebrow" class="eyebrow">Your games</p><h2 id="welcome">Your next battle.</h2><p class="hero-detail">Continue a match, challenge a friend, or start something new.</p></div><button id="new-table" class="primary" type="button">＋ New battle</button></section>
@@ -59,7 +59,7 @@
       </div>
     </div>
   </main>
-  <footer class="home-footer"><span>Downfall Instinct</span><span>Mutate. Adapt. Strike.</span></footer>
+  <footer class="home-footer"><span>Downfall Instinct</span><a href="https://downfallinstinct.com/">About the game <span aria-hidden="true">→</span></a></footer>
   <dialog id="create-dialog" aria-labelledby="create-title">
     <form id="create-table"><div class="dialog-heading"><div><p class="eyebrow">A new battle</p><h2 id="create-title">Create a table</h2></div><button id="create-close" type="button" class="secondary" aria-label="Close new table">×</button></div>
       <div id="create-tabs" class="create-tabs" role="tablist" aria-label="Kind of game"><button id="create-pvp" type="button" role="tab" aria-selected="true" aria-controls="create-pvp-panel">PvP<small>Against a player</small></button><button id="create-solo" type="button" role="tab" aria-selected="false" aria-controls="create-solo-panel">Solo<small>Against a bot</small></button></div>

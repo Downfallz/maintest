@@ -39,6 +39,7 @@ table/                         Static HTML table: the page two people play a tab
                                `/battle-lab` is an isolated visual study using fictional sample frames, not a live seat
                                (docs/tabletop/browser-battle-plan.md, ADR 0123); `/battle` is the opt-in Phaser
                                complete game loop for one authenticated seat (ADRs 0125–0128), the game every seat opens in since ADR 0157 (`/play` keeps the invitation doorway, replays, practice, and the archived classic table for a browser storing `downfall.presentation = classic`).
+showcase/                       English/French public game site. Build with node showcase/build.mjs; Cloudflare Pages serves showcase/dist.
 battle/                         Isolated Phaser/TypeScript presentation; builds into ignored table/battle-build/.
 learning/                      The Python training project (uv, ruff, pytest) and the heuristic weights files. See docs/learning/training.md,
                                and docs/learning/plan.md for where the loop is going and what has been refuted on the way.
@@ -79,7 +80,7 @@ docs/
                 headquarters: tabs, players, the jobs' runs, registration (admin-plan.md), and the plan for scenarios:
                 a recorded match cut at the top of a round, played differently as practice, shared as a link or a
                 scenario.json, and the admin diagnosis of a stuck table (scenarios-plan.md).
-                Home navigation (home-navigation.md) separates the signed-out introduction from the dashboard;
+                Home navigation (home-navigation.md) separates the signed-out player doorway from the dashboard;
                 friends, invitation codes and one Settings (game, notifications, privacy, account) open from a responsive menu,
                 and a bell beside the account counts what waits (turns, invitations, friend requests) and acts on each.
                 The battle view UX recovery plan (battle-ux-parity-plan.md, AU1–AU14) maps classic behaviours,

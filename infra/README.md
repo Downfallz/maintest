@@ -108,6 +108,8 @@ Accounts are kept in the storage account's `accounts` container, beside the reco
 internal id and Google's subject id for the sign-in. No email is kept. A player deletes their account from the
 account menu on the home page; the lobby's *What we keep* panel says the same to players.
 
+The apex serves the [independent static showcase](../showcase/README.md).
+
 ## Its own domain, behind Cloudflare
 
 The table answers at `play.downfallinstinct.com` through Cloudflare's proxy (ADR 0175). Once, in this order:

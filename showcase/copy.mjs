@@ -1,0 +1,56 @@
+// Each family follows one playable branch of the Mutation Tree. Names and illustrations come from the catalogue.
+export const paths = [
+  ['brute', 'ironbound', 'dreadnought'],
+  ['prowler', 'assassin', 'deathstalker'],
+  ['occultist', 'elementalist', 'harbinger'],
+];
+
+export const english = {
+  lang: 'en', other: 'Français', switchLabel: 'Read in French',
+  description: 'Command three creatures in a turn-based tactical duel. Explore the Mutation Tree, choose your tempo and fight beneath a dying sun in Downfall Instinct.',
+  skip: 'Skip to content', nav: 'Main navigation', game: 'The duel', bestiary: 'Bestiary', world: 'Battlefield',
+  play: 'Play now', kicker: '3v3 tactical creature combat', title: ['Evolve to', 'survive.'],
+  pitch: 'Three creatures under a dying sun. Grow armour, sprout claws, or bend the dead to your will. What you become is up to you.',
+  explore: 'Explore the bestiary', specimen: 'Colossus', specimenLine: 'Brute lineage · Stage III',
+  familiesTitle: 'Choose a bloodline.', familiesLead: 'A mutation changes the body and the spells it carries. Explore one path through each family.',
+  familyPicker: 'Creature family', stage: 'Stage', families: [
+    { name: 'Brute', trait: 'Armour & endurance', blurb: 'Grow a shell thick enough to live through the next blow. An Ironhide can brace itself with Carapace. A Colossus can answer with a Crushing Stomp.' },
+    { name: 'Predator', trait: 'Speed & ambush', blurb: 'Shape a hunter that can choose its moment. Deathmarked gains Ambush. Follow that path to Deathstalker and open a wound with Eviscerate.' },
+    { name: 'Warped', trait: 'Sorcery & control', blurb: 'Trade flesh for sorcery. A Stormborn can slow a rival with Ice Grip. As a Cataclysm it can freeze one in place or strike it with Incinerate.' },
+  ],
+  duelTitle: 'One round. Three decisions.', duelLead: 'Two commanders share one timeline. The last team standing wins.',
+  moves: [
+    ['Mutate', 'On a Mutation round, spend your team’s picks on the creatures you want to evolve.'],
+    ['Choose a tempo', 'Instinct moves first. Precision waits, but gives the creature a chance to land a critical hit.'],
+    ['Cast', 'When your creature acts, read the field, choose a spell and pick its targets.'],
+  ],
+  worldTitle: 'Watch the world give way.', worldLead: 'The ruins change as the duel goes on. Move through three moments on the same battlefield.',
+  roundPicker: 'Battlefield round', round: 'Round', moments: ['The eclipse hangs over the intact ruins.', 'The stone arch has fallen. Storm clouds close in.', 'The sky burns over deep faults in the shattered floor.'],
+  closing: 'Face your next opponent.', modes: 'Invite a friend, enter a ranked 3v3 duel, or try your mutations against a bot.',
+  platform: 'Play in your browser', footerTop: 'Back to top',
+};
+
+export const french = {
+  lang: 'fr', other: 'English', switchLabel: 'Read in English',
+  description: 'Mène trois créatures dans un duel tactique au tour par tour. Explore l’arbre des mutations et choisis ton tempo sous le soleil mourant de Downfall Instinct.',
+  skip: 'Aller au contenu', nav: 'Navigation principale', game: 'Le duel', bestiary: 'Bestiaire', world: 'Champ de bataille',
+  play: 'Jouer', kicker: 'Duel tactique de créatures · 3 contre 3', title: ['Évolue pour', 'survivre.'],
+  pitch: 'Trois créatures sous un soleil mourant. Fais pousser une carapace, aiguise tes griffes ou commande aux morts. À toi de choisir leur évolution.',
+  explore: 'Explorer le bestiaire', specimen: 'Colosse', specimenLine: 'Lignée Brute · Stade III',
+  familiesTitle: 'Choisis une lignée.', familiesLead: 'Chaque mutation transforme le corps et les sorts de ta créature. Découvre un chemin possible pour chaque famille.',
+  familyPicker: 'Famille de créatures', stage: 'Stade', families: [
+    { name: 'Brute', stages: ['Brute', 'Blindé', 'Colosse'], trait: 'Armure et endurance', blurb: 'Fais pousser une armure capable d’encaisser le prochain coup. Le Blindé se protège avec Carapace. Le Colosse peut riposter avec Piétinement.' },
+    { name: 'Prédateur', stages: ['Prédateur', 'Condamné', 'Écorcheur'], trait: 'Vitesse et embuscade', blurb: 'Façonne un chasseur qui frappe au bon moment. Le Condamné apprend Embuscade. Devenu Écorcheur, il peut ouvrir une plaie avec Éviscérer.' },
+    { name: 'Altéré', stages: ['Altéré', 'Tempête', 'Cataclysme'], trait: 'Magie et contrôle', blurb: 'La chair cède à la sorcellerie. Tempête ralentit sa proie avec Emprise glaciale. Cataclysme peut la figer sur place ou la frapper avec Incinérer.' },
+  ],
+  duelTitle: 'Un round. Trois décisions.', duelLead: 'Deux adversaires partagent le même ordre de jeu. La dernière équipe en vie l’emporte.',
+  moves: [
+    ['Muter', 'Lors d’un round de mutation, répartis tes choix entre les créatures que tu veux faire évoluer.'],
+    ['Choisir un tempo', 'Instinct agit en premier. Précision attend, mais donne à la créature une chance d’infliger un coup critique.'],
+    ['Lancer un sort', 'Quand vient le tour de ta créature, observe le terrain, choisis ton sort et désigne ses cibles.'],
+  ],
+  worldTitle: 'Vois le monde se fissurer.', worldLead: 'Les ruines se transforment au fil du duel. Explore trois moments sur un même champ de bataille.',
+  roundPicker: 'Round du champ de bataille', round: 'Round', moments: ['L’éclipse domine les ruines encore intactes.', 'L’arche de pierre est tombée. Les nuages s’amoncellent.', 'Sous un ciel en feu, de profondes failles déchirent le sol.'],
+  closing: 'Affronte ton prochain adversaire.', modes: 'Invite un ami, lance un duel classé en 3 contre 3 ou essaie tes mutations contre un bot.',
+  platform: 'Joue dans ton navigateur', footerTop: 'Haut de page',
+};
