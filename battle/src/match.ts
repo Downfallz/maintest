@@ -45,7 +45,7 @@ const portrait = (fighter: Fighter) => {
 // name alone is the way in.
 function zoomable(fighter: Fighter, className: string) {
   const button = document.createElement('button'); button.type = 'button'; button.className = `${className} match-zoom-open`;
-  button.dataset.form = fighter.form || 'base-creature'; button.dataset.art = artOf(fighter); button.dataset.side = fighter.side; button.dataset.defeated = String(!fighter.alive);
+  button.dataset.form = fighter.form || 'base-creature'; button.dataset.art = artOf(fighter); button.dataset.figure = figureOf(fighter); button.dataset.side = fighter.side; button.dataset.defeated = String(!fighter.alive);
   button.setAttribute('aria-label', `Show ${fighter.name} large`);
   return button;
 }
@@ -146,8 +146,16 @@ export function matchControls(controller: Controller, beforeOpen: () => void, re
   el('match-report').addEventListener('click', event => {
     const open = (event.target as HTMLElement).closest<HTMLElement>('.match-zoom-open');
     if (!open) return;
-    const art = open.dataset.art ?? 'battle-art/base-creature.webp';
-    picture.style.backgroundImage = `url("${art}")`;
+    // The form's figure at once, and the illustration once it has loaded, as the inspection's portrait does: one that
+    // never loads leaves the figure rather than an empty zoom. One image at a time: their transparent parts would show
+    // each other.
+    const figure = open.dataset.figure ?? 'battle-art/base-creature.webp', art = open.dataset.art ?? figure;
+    picture.style.backgroundImage = `url("${figure}")`; picture.dataset.art = art;
+    if (art !== figure) {
+      const image = new Image();
+      image.onload = () => { if (picture.dataset.art === art) picture.style.backgroundImage = `url("${art}")`; };
+      image.src = art;
+    }
     picture.dataset.side = open.dataset.side ?? 'ally'; picture.dataset.defeated = open.dataset.defeated ?? 'false';
     picture.setAttribute('aria-label', `Back to the battle report from ${open.getAttribute('aria-label')?.replace(/^Show | large$/g, '') ?? 'the creature'}`);
     zoomedFrom = open; zoom.hidden = false; picture.focus({ preventScroll: true });
