@@ -74,7 +74,7 @@ export function page(c, families, app) {
   <a class="skip" href="#main">${c.skip}</a>
   <header class="mast"><div class="contain">
     <a class="wordmark" href="${home(c.lang)}">${rune}<span>Downfall Instinct</span></a>
-    <nav aria-label="${c.nav}"><a href="#bestiary">${c.bestiary}</a><a href="#duel">${c.game}</a><a href="#battlefield">${c.world}</a></nav>
+    <nav aria-label="${c.nav}"><a href="#bestiary">${c.bestiary}</a><a href="#duel">${c.game}</a><a href="#battlefield">${c.world}</a><a href="#story">${c.storyLink}</a></nav>
     <a class="language" hreflang="${other}" lang="${other}" aria-label="${c.switchLabel}" href="${home(other)}">${other.toUpperCase()}</a>
     ${play(c.play, 'nav-play')}
   </div></header>
@@ -87,6 +87,7 @@ export function page(c, families, app) {
         <h1 id="title">${c.title[0]}<br><em>${c.title[1]}</em></h1>
         <p class="pitch">${c.pitch}</p>
         <div class="actions">${play(c.play, 'gold-button')}<a class="discover" href="#bestiary">${c.explore} <span aria-hidden="true">↓</span></a></div>
+        <p class="play-note">${c.playNote}</p>
       </div><div class="specimen"><strong>${c.specimen}</strong><span>${c.specimenLine}</span></div></div>
     </section>
     ${bestiary(c, families)}
@@ -95,9 +96,20 @@ export function page(c, families, app) {
       <ol class="moves">${c.moves.map(([name, description], index) => `<li><span aria-hidden="true">${roman[index]}</span><h3>${name}</h3><p>${description}</p></li>`).join('')}</ol>
     </div></section>
     ${battlefield(c)}
-    <section class="closing"><div class="contain"><p class="kicker">${c.platform}</p><h2>${c.closing}</h2><p>${c.modes}</p>${play(c.play, 'gold-button')}</div></section>
+    <section id="story" class="story section contain" aria-labelledby="story-title">
+      <div class="story-copy">
+        <p class="kicker">${c.storyKicker}</p><h2 id="story-title">${c.storyTitle}</h2>
+        ${c.story.map(paragraph => `<p>${escape(paragraph)}</p>`).join('')}
+        <div class="tabletop-note"><h3>${c.tabletopTitle}</h3><p>${c.tabletop}</p></div>
+      </div>
+      <aside class="commitments" aria-labelledby="commitments-title">
+        <h3 id="commitments-title">${c.commitmentsTitle}</h3>
+        <dl>${c.commitments.map(([title, detail]) => `<div><dt>${title}</dt><dd>${detail}</dd></div>`).join('')}</dl>
+      </aside>
+    </section>
+    <section class="closing"><div class="contain"><p class="kicker">${c.platform}</p><h2>${c.closing}</h2><p>${c.modes}</p>${play(c.play, 'gold-button')}<p class="play-note">${c.playNote}</p></div></section>
   </main>
-  <footer class="foot contain"><a class="wordmark" href="${home(c.lang)}">${rune}Downfall Instinct</a><a href="#top">${c.footerTop} ↑</a></footer>
+  <footer class="foot contain"><a class="wordmark" href="${home(c.lang)}">${rune}Downfall Instinct</a><a href="#story">${c.storyLink}</a><a href="#top">${c.footerTop} ↑</a></footer>
 </body></html>
 `;
 }

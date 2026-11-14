@@ -11,6 +11,8 @@ export const english = {
   skip: 'Skip to content', nav: 'Main navigation', game: 'The duel', bestiary: 'Bestiary', world: 'Battlefield',
   play: 'Play now', kicker: '3v3 tactical creature combat', title: ['Evolve to', 'survive.'],
   pitch: 'Three creatures under a dying sun. Grow armour, sprout claws, or bend the dead to your will. What you become is up to you.',
+  playNote: 'Free to play · No ads · No in-game purchases',
+  storyLink: 'The story',
   explore: 'Explore the bestiary', specimen: 'Colossus', specimenLine: 'Brute lineage · Stage III',
   familiesTitle: 'Choose a bloodline.', familiesLead: 'A mutation changes the body and the spells it carries. Explore one path through each family.',
   familyPicker: 'Creature family', stage: 'Stage', families: [
@@ -26,6 +28,21 @@ export const english = {
   ],
   worldTitle: 'Watch the world give way.', worldLead: 'The ruins change as the duel goes on. Move through three moments on the same battlefield.',
   roundPicker: 'Battlefield round', round: 'Round', moments: ['The eclipse hangs over the intact ruins.', 'The stone arch has fallen. Storm clouds close in.', 'The sky burns over deep faults in the shattered floor.'],
+  storyKicker: 'From the creator',
+  storyTitle: 'The game I wanted to play.',
+  story: [
+    'Downfall Instinct started as an idea for a board game. During playtesting, I found myself thinking it could be fun to make it available online. That is how this browser version began.',
+    'I still miss 5v5 Counter-Strike matches and those early 3v3 arenas in World of Warcraft. Competitive Magic: The Gathering gave me that same feeling. Everyone knew the format going in, and I loved figuring out what I could do within its rules.',
+    'I have probably spent more time dreaming up certain Magic decks and Skyrim characters than actually playing them. I wanted to bring that part into the match itself. In Downfall Instinct, I get to look at my three creatures halfway through a duel and decide what I want them to become.',
+  ],
+  tabletopTitle: 'A board game someday?',
+  tabletop: 'Maybe one day you’ll be able to take Downfall Instinct out of a box and play it around a table. I still like that idea.',
+  commitmentsTitle: 'What you can expect.',
+  commitments: [
+    ['Free to play', 'The online game is free. No purchases, microtransactions or pay-to-win advantages.'],
+    ['No advertising', 'No ads or advertising trackers.'],
+    ['Your inbox stays yours', 'No newsletters, promotional emails or email tracking. Your email address and personal data are never sold.'],
+  ],
   closing: 'Face your next opponent.', modes: 'Invite a friend, enter a ranked 3v3 duel, or try your mutations against a bot.',
   platform: 'Play in your browser', footerTop: 'Back to top',
 };
@@ -36,6 +53,8 @@ export const french = {
   skip: 'Aller au contenu', nav: 'Navigation principale', game: 'Le duel', bestiary: 'Bestiaire', world: 'Champ de bataille',
   play: 'Jouer', kicker: 'Duel tactique de créatures · 3 contre 3', title: ['Évolue pour', 'survivre.'],
   pitch: 'Trois créatures sous un soleil mourant. Fais pousser une carapace, aiguise tes griffes ou commande aux morts. À toi de choisir leur évolution.',
+  playNote: 'Gratuit · Sans pub · Sans achats intégrés',
+  storyLink: 'L’histoire',
   explore: 'Explorer le bestiaire', specimen: 'Colosse', specimenLine: 'Lignée Brute · Stade III',
   familiesTitle: 'Choisis une lignée.', familiesLead: 'Chaque mutation transforme le corps et les sorts de ta créature. Découvre un chemin possible pour chaque famille.',
   familyPicker: 'Famille de créatures', stage: 'Stade', families: [
@@ -51,6 +70,21 @@ export const french = {
   ],
   worldTitle: 'Vois le monde se fissurer.', worldLead: 'Les ruines se transforment au fil du duel. Explore trois moments sur un même champ de bataille.',
   roundPicker: 'Round du champ de bataille', round: 'Round', moments: ['L’éclipse domine les ruines encore intactes.', 'L’arche de pierre est tombée. Les nuages s’amoncellent.', 'Sous un ciel en feu, de profondes failles déchirent le sol.'],
+  storyKicker: 'Un mot du créateur',
+  storyTitle: 'Le jeu auquel j’avais envie de jouer.',
+  story: [
+    'Downfall Instinct est né d’une idée de jeu de plateau. Au fil des tests, je me suis dit que ce serait le fun de le rendre accessible en ligne. C’est comme ça que cette version navigateur a commencé.',
+    'J’ai encore un faible pour le 5 contre 5 de Counter-Strike et les premières arènes 3 contre 3 de World of Warcraft. Je retrouvais le même plaisir dans les formats compétitifs de Magic: The Gathering. Tout le monde connaissait les règles en arrivant, et j’aimais trouver ma façon de jouer à l’intérieur de ce cadre.',
+    'J’ai probablement passé plus de temps à imaginer certains decks de Magic et certains personnages de Skyrim qu’à les jouer. J’avais envie de retrouver ce plaisir-là en pleine partie. Dans Downfall Instinct, je peux regarder mes trois créatures au milieu d’un duel et décider de ce que chacune va devenir.',
+  ],
+  tabletopTitle: 'Un jeu de plateau, un jour ?',
+  tabletop: 'Peut-être qu’un jour, tu pourras sortir Downfall Instinct de sa boîte et y jouer autour d’une table. L’idée me tente encore.',
+  commitmentsTitle: 'Les engagements du jeu.',
+  commitments: [
+    ['Gratuit', 'Le jeu en ligne est gratuit. Aucun achat, aucune microtransaction et aucun avantage payant.'],
+    ['Sans publicité', 'Aucune pub ni aucun traceur publicitaire.'],
+    ['Ta boîte courriel reste à toi', 'Aucune infolettre, aucun courriel promotionnel ni suivi des courriels. Ton adresse courriel et tes données personnelles ne sont jamais vendues.'],
+  ],
   closing: 'Affronte ton prochain adversaire.', modes: 'Invite un ami, lance un duel classé en 3 contre 3 ou essaie tes mutations contre un bot.',
   platform: 'Joue dans ton navigateur', footerTop: 'Haut de page',
 };

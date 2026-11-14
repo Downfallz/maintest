@@ -12,8 +12,19 @@ The game website link in the account menu and the guest lobby footer lead back t
    game's paintings. The late sky and ground share the original art coordinates.
 4. Offer the English page at the root and French at /fr/. Each is complete HTML; scripting adds keyboard
    and touch selection to the galleries. Players can read every entry and follow Play with scripts disabled.
-5. Give the game its own short sign-in screen. Signed-in and accounts-off players go to their dashboard.
+5. Tell the creator's first-person story, from board-game playtests to the online game, with Counter-Strike,
+   early WoW PvP, Magic deckbuilding and Skyrim character creation as personal influences. Mention a possible
+   future physical edition. Place the ad-free, purchase-free and privacy commitments alongside the story,
+   with a shorter reminder beside the Play actions.
+6. Give the game its own short sign-in screen. Signed-in and accounts-off players go to their dashboard.
    Invitation, account, PWA and private API routes stay on the game origin.
+
+## Future bestiary exploration
+
+Consider linking the home-page bestiary to a dedicated public explorer. Visitors could browse the full
+endgame roster, follow the mutations that lead to each form, and inspect the spells those mutations unlock.
+Use the studio's read-only catalogue and exploration views as the starting point. Keep the full inventory
+on its own page so the home page can introduce the three families quickly.
 
 ## Build and review
 
