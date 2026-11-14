@@ -15,6 +15,7 @@
 | [art/runtime-sprites.md](art/runtime-sprites.md) | ART-3 battle sprite selection, anchors, contrast and fallbacks. |
 | [adr/](adr/README.md) | Architecture Decision Records: what was decided, why, and what it cost. |
 | [architecture/overview.md](architecture/overview.md) | Layers, dependency rule, folder layout, how a request flows. |
+| [engineering/ai-workflow-plan.md](engineering/ai-workflow-plan.md) | Proposal: the AI workflow from an idea to a merged pull request, measured on 300 pull requests and 20 sessions, in nine stages. |
 | [domain/glossary.md](domain/glossary.md) | The ubiquitous language. Code must use these words. |
 | [domain/game-rules.md](domain/game-rules.md) | The rules of the game as implemented or decided, plus open questions. |
 | [domain/content-review.md](domain/content-review.md) | Review: an adversarial reading of the content and the rules as bot play shows them, the hypotheses a physical playtest should test, and what to do before the first session. |
