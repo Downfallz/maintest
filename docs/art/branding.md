@@ -102,8 +102,12 @@ The brand mark is the bone-and-soot rune, not a colour of the palette. `table/ic
 (`#D8C7A7`) on deep slate: it is the favicon and the app icon. Each page's mark shows `table/brand-mark.svg`,
 the same rune with no square, because the pages' headers are lit lighter than deep slate and the icon's square
 showed on them as a dark box. `icon-192.png` and `icon-512.png` are its
-textured artwork, cracked bone on a soot ground a few shades darker than deep slate; they are artwork, so they
-are not regenerated from the SVG. `notification-badge.svg` and `.png` are the white silhouette Android masks
+textured artwork, cracked bone on a deep slate ground; they are artwork, so they are not regenerated from the SVG.
+Their ground was soot, a few shades darker than deep slate, until an installed Android app showed it as a dark
+square on its slate splash screen: the ground was moved to deep slate exactly, the bone left as it was.
+`icon-maskable-192.png` and `icon-maskable-512.png` are the same picture with the rune shrunk to sit inside the
+circle a launcher may crop a maskable icon to; the manifest names each picture `any` or `maskable`, never both,
+and `table/branding.test.js` reads each one's ground against deep slate. `notification-badge.svg` and `.png` are the white silhouette Android masks
 into the status bar.
 
 ## Covered surfaces

@@ -101,6 +101,8 @@ internal sealed class TableFiles
             ["/fonts/marcellus-latin-400.woff2"] = (Path.Combine(tableDirectory, "fonts", "marcellus-latin-400.woff2"), Woff2),
             ["/icon-192.png"] = (Path.Combine(tableDirectory, "icon-192.png"), Png),
             ["/icon-512.png"] = (Path.Combine(tableDirectory, "icon-512.png"), Png),
+            ["/icon-maskable-192.png"] = (Path.Combine(tableDirectory, "icon-maskable-192.png"), Png),
+            ["/icon-maskable-512.png"] = (Path.Combine(tableDirectory, "icon-maskable-512.png"), Png),
             ["/notification-badge.png"] = (Path.Combine(tableDirectory, "notification-badge.png"), Png),
             ["/card.js"] = (Path.Combine(tableDirectory, "card.js"), JavaScript),
             ["/board.js"] = (Path.Combine(tableDirectory, "board.js"), JavaScript),

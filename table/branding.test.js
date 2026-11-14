@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import { inflateSync } from 'node:zlib';
 
 const root = new URL('../', import.meta.url);
 const read = path => readFileSync(new URL(path, root), 'utf8');
@@ -37,6 +38,11 @@ test('installed app and browser chrome use the same slate as the page', () => {
   assert.match(read('viewer/index.html'), /<title>Downfall Instinct viewer<\/title>/);
   assert.equal(manifest.background_color, tokens['--brand-slate']);
   assert.equal(manifest.theme_color, tokens['--brand-slate']);
+  // A launcher crops a maskable icon to its own shape, and the splash screen draws the icon on the background colour:
+  // each picture says what it is for, so the rune is never cropped and no square of another shade shows.
+  const pictures = manifest.icons.filter(icon => icon.type === 'image/png');
+  assert.ok(pictures.every(icon => icon.purpose === 'any' || icon.purpose === 'maskable'), 'each picture says what it is for');
+  assert.deepEqual(pictures.filter(icon => icon.purpose === 'maskable').map(icon => icon.sizes), ['192x192', '512x512']);
   for (const page of ['index', 'lobby', 'leaderboard', 'admin', 'pilot', 'battle', 'battle-lab']) {
     assert.ok(read(`table/${page}.html`).includes(`name="theme-color" content="${tokens['--brand-slate']}"`));
   }
@@ -48,6 +54,23 @@ test('the app and Android notifications use the rune instead of the placeholder 
   assert.match(read('table/sw.js'), /badge: BADGE/);
   assert.match(read('table/sw.js'), /notification-badge\.png/);
   assert.doesNotMatch(read('table/navigation.js'), /brand-mark[^<]*>D<\/span>/);
+});
+// The first pixel of a PNG, which whatever filter its first row uses stores as it is: enough to read the ground.
+function cornerOf(path) {
+  const bytes = readFileSync(new URL(path, root));
+  const chunks = [];
+  for (let at = 8; at < bytes.length;) {
+    const length = bytes.readUInt32BE(at), type = bytes.toString('latin1', at + 4, at + 8);
+    if (type === 'IDAT') chunks.push(bytes.subarray(at + 8, at + 8 + length));
+    at += 12 + length;
+  }
+  const pixels = inflateSync(Buffer.concat(chunks));
+  return `#${[...pixels.subarray(1, 4)].map(value => value.toString(16).padStart(2, '0')).join('')}`;
+}
+test('the app icons stand on the same slate as the splash screen and the page', () => {
+  for (const icon of ['icon-192', 'icon-512', 'icon-maskable-192', 'icon-maskable-512']) {
+    assert.equal(cornerOf(`table/${icon}.png`), tokens['--brand-slate'].toLowerCase(), icon);
+  }
 });
 // The app icon keeps its slate square, which a launcher needs; the pages draw the rune alone, so no darker square
 // sits on their lighter header.
