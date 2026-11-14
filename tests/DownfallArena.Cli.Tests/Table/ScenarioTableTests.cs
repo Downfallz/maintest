@@ -1,7 +1,9 @@
 using System.Text;
 using System.Text.Json.Nodes;
+using DownfallArena.Application.Matches.Journaling;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
+using DownfallArena.Domain.Matches;
 using DownfallArena.Infrastructure.Matches.Scenarios;
 
 namespace DownfallArena.Cli.Tests.Table;
@@ -76,5 +78,31 @@ public sealed class ScenarioTableTests
         await using var table = await OpenedAsync(document);
 
         (await table.HandleAsync("GET", "/api/practice", "", "someone-else")).Status.ShouldBe(403);
+    }
+
+    /// <summary>
+    /// A seat that changed hands at the source's table before the cut (the operator handing a bot's seat to a person)
+    /// is the source's seating, not the scenario's: the scenario still opens on its own person and scripted opponent.
+    /// </summary>
+    [Fact]
+    public async Task A_seat_that_changed_hands_before_the_cut_does_not_reseat_the_scenario()
+    {
+        var kept = ScenarioFile.Read(await File.ReadAllTextAsync(Kept, TestContext.Current.CancellationToken));
+        var scenario = kept.Scenario;
+        var changed = kept with
+        {
+            Scenario = scenario with
+            {
+                Before = [new SeatChangeEntry(PlayerSlot.Player2, "greedy", 2), .. scenario.Before],
+                Cut = scenario.Cut with { CutAt = scenario.Cut.CutAt + 1 },
+            },
+        };
+        await using var table = await OpenedAsync(changed);
+
+        var state = Json(await table.HandleAsync("GET", "/api/practice", "", "practice-token"));
+        var view = Json(await table.HandleAsync("GET", "/api/seat/player1", "", state["seatToken"]!.GetValue<string>()));
+
+        view["board"]!["roundNumber"]!.GetValue<int>().ShouldBe(scenario.Cut.Round);
+        view["playedByBot"]!.GetValue<bool>().ShouldBeFalse();
     }
 }

@@ -30,8 +30,10 @@ public sealed class ScenarioStarter(MatchReplay replay, MatchStepper stepper)
             return Result.Failure<ScenarioStart>(standing.Error.Code == JournalErrors.DivergedCode ? ScenarioErrors.Diverged : standing.Error);
         }
 
+        // A seat that changed hands at the source's table is the source's seating, not the scenario's: the scenario
+        // seats its own person and scripted opponent, and its journal begins with the match's own entries alone.
         return scenario.Checkpoint.StandsIn(standing.Value)
-            ? Result.Success(new ScenarioStart(match, scenario.Before))
+            ? Result.Success(new ScenarioStart(match, [.. scenario.Before.Where(entry => entry is not SeatChangeEntry)]))
             : Result.Failure<ScenarioStart>(ScenarioErrors.Diverged);
     }
 }

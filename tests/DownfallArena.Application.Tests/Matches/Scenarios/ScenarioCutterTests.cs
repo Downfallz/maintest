@@ -177,6 +177,20 @@ public sealed class ScenarioCutterTests
         memory.DidNotReceive().Forget(source.MatchId);
     }
 
+    [Fact]
+    public async Task A_scenario_s_journal_keeps_the_match_s_entries_and_leaves_the_source_s_seat_changes_behind()
+    {
+        var (source, entries, _) = await RecordedAsync(1, CombatDeclaration.AtActivation);
+        var scenarios = new Scenarios(new Replica(new JournalStore()));
+        var cut = (await scenarios.Cutter.CutAsync(source, entries, 2, TestContext.Current.CancellationToken)).Value;
+        var reseated = cut with { Before = [new SeatChangeEntry(PlayerSlot.Player2, "greedy", 2), .. cut.Before], Cut = cut.Cut with { CutAt = cut.Cut.CutAt + 1 } };
+
+        var started = await scenarios.Starter.StartAsync(reseated, "scenario-1", MatchId.New(), TestContext.Current.CancellationToken);
+
+        started.IsSuccess.ShouldBeTrue();
+        started.Value.Entries.ShouldBe(cut.Before);
+    }
+
     private sealed record Scenarios(ScenarioRounds Rounds, ScenarioCutter Cutter, ScenarioStarter Starter)
     {
         public Scenarios(Replica replica)
