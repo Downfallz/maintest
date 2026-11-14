@@ -9,7 +9,7 @@ namespace DownfallArena.Cli.Tests.Table;
 
 /// <summary>
 /// A player chooses a bot by how strong it is, Easy, Medium or Hard, and is shown that level and never the bot's name
-/// (ADR 0179).
+/// (ADR 0180).
 /// </summary>
 public sealed class LobbyBotLevelsTests : IDisposable
 {

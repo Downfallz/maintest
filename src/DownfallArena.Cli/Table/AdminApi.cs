@@ -86,11 +86,14 @@ internal sealed class AdminApi
     /// <summary>The bots' turn queues (A3b), on a host whose turns go through queues; none otherwise.</summary>
     public TurnsApi? Turns { get; set; }
 
+    /// <summary>The Overview tab (A5): the numbers at a glance.</summary>
+    public OverviewApi? Overview { get; set; }
+
     /// <summary>The Settings tab (ADR 0177), on a host that signs players in: registration and the notice.</summary>
     public SettingsApi? Settings { get; set; }
 
     public static bool Names(string path) =>
-        path == MePath || Under(path, Prefix) || Under(path, SessionsPrefix) || PlayersApi.Names(path) || JobsApi.Names(path) || SettingsApi.Names(path) || LobbyApi.Names(path);
+        path == MePath || Under(path, Prefix) || Under(path, SessionsPrefix) || PlayersApi.Names(path) || JobsApi.Names(path) || SettingsApi.Names(path) || OverviewApi.Names(path) || LobbyApi.Names(path);
 
     private static bool Under(string path, string prefix) => path == prefix || path.StartsWith(prefix + "/", StringComparison.Ordinal);
 
@@ -163,6 +166,13 @@ internal sealed class AdminApi
             return Turns is null
                 ? StudioResponse.OfPlainText(404, "This host takes the bots' turns in its own process, so it has no turn queues.")
                 : await Turns.HandleAsync(method, path, body, operatorName);
+        }
+
+        if (OverviewApi.Names(path))
+        {
+            return Overview is null
+                ? StudioResponse.OfPlainText(404, "This host has no overview.")
+                : await Overview.HandleAsync(method);
         }
 
         if (SettingsApi.Names(path))
@@ -702,7 +712,7 @@ internal sealed class AdminApi
                 slot = seat.Name,
                 seated = table.Session.SeatedName(seat.Slot),
 
-                // The level a player knows this bot by (ADR 0179), beside its own name: the operator sees both.
+                // The level a player knows this bot by (ADR 0180), beside its own name: the operator sees both.
                 level = seat.Person is null ? _composer.Levels.Of(table.Session.SeatedName(seat.Slot))?.Name : null,
                 hasPerson = seat.Person is not null,
                 code = seat.Code,

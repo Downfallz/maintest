@@ -135,7 +135,7 @@ internal static class TableWorker
             Index = over.Index,
             Agents = agents,
 
-            // The levels the API reads too (ADR 0179): a notice of a match the worker ends names the bot by the same one.
+            // The levels the API reads too (ADR 0180): a notice of a match the worker ends names the bot by the same one.
             Levels = BotLevels.OfHost(agents),
             Results = over.Results,
             Basis = ReplayBasis.Of(EngineVersion.Current, services.GetRequiredService<IGameResources>(), rules),

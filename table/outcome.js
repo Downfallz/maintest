@@ -35,7 +35,7 @@ export function rematchPlan(table, held, friendship = null) {
   const theirs = table.seats.find(seat => !held.includes(seat.seat));
   const format = table.format || undefined;
   if (!theirs) return { label: 'Rematch', request: { opponent: 'hotseat', format } };
-  // The same bot level again (ADR 0179): the table names it on the bot's seat.
+  // The same bot level again (ADR 0180): the table names it on the bot's seat.
   if (theirs.kind === 'bot') return { label: 'Rematch', request: { opponent: 'bot', format, ...(theirs.level ? { level: theirs.level } : {}) } };
   if (friendship === 'friend') return { label: 'Invite to rematch', request: { opponent: 'friend', friend: theirs.account, format, ...(table.casual === true ? { ranked: false } : {}) } };
   return { label: 'Invite to rematch', link };

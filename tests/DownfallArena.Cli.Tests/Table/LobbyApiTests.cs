@@ -453,7 +453,7 @@ public sealed class LobbyApiTests : IDisposable
 
     /// <summary>
     /// A visitor names no bot (ADR 0121): with no level asked for, Hard, the strongest the host puts forward first
-    /// (ADR 0179); naming a bot as the opponent is refused.
+    /// (ADR 0180); naming a bot as the opponent is refused.
     /// </summary>
     [Fact]
     public async Task The_lobby_seats_the_first_featured_bot_as_Hard_and_refuses_a_named_one()

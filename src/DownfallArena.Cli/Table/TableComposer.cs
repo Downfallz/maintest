@@ -162,7 +162,7 @@ internal sealed class TableComposer
     public IReadOnlyList<SeatableAgent> Agents { get; init; } = [];
 
     /// <summary>
-    /// The levels a player chooses a bot by, and the bot each seats (ADR 0179); without a file that says, Hard seats the
+    /// The levels a player chooses a bot by, and the bot each seats (ADR 0180); without a file that says, Hard seats the
     /// first bot <see cref="Agents" /> puts forward, as the lobby did before levels.
     /// </summary>
     public BotLevels Levels
@@ -865,7 +865,7 @@ internal sealed class TableComposer
         if (seat.Person is null)
         {
             var spec = table.Session.SeatedName(seat.Slot);
-            // A notice is a player's: the bot's level, never its name (ADR 0179).
+            // A notice is a player's: the bot's level, never its name (ADR 0180).
             return Levels.InSentence(spec);
         }
 

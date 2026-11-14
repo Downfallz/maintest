@@ -154,3 +154,15 @@ input[type="text"] { font: inherit; min-height: 44px; border: 1px solid var(--li
 .player-suspended { padding: 10px 12px; border: 1px solid var(--refused); border-radius: var(--radius-soft); }
 .player-suspended p { margin: 0 0 8px; overflow-wrap: anywhere; }
 .status-tag.suspended { color: var(--refused); border: 1px solid var(--refused); padding: 1px 6px; font-size: 12px; }
+
+/* Overview (A5): one number a card, its label over it and what it counts under it, the whole card a link to the tab
+   that explains it; a card that needs the operator in the warning colour. */
+.overview-cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.overview-card { display: grid; gap: 4px; min-height: 44px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius-soft); color: var(--ink); text-decoration: none; background: color-mix(in srgb, var(--panel) 70%, transparent); }
+.overview-card:hover, .overview-card:focus-visible { border-color: var(--gold); }
+.overview-card.warning { border-color: var(--refused); }
+.overview-card.warning .overview-number { color: var(--refused); }
+.overview-label { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted, inherit); }
+.overview-number { font-size: 30px; line-height: 1.1; }
+.overview-detail { font-size: 13px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

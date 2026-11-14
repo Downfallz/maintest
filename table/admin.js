@@ -8,6 +8,7 @@
 
 import { mountJobs } from './admin-jobs.js';
 import { mountSettings } from './admin-settings.js';
+import { mountOverview } from './admin-overview.js';
 import { mountPlayers } from './admin-players.js';
 import { mountTurns } from './admin-turns.js';
 import { mountVoid, voidLabel } from './admin-void.js';
@@ -28,7 +29,7 @@ export function seatable(answer) {
   const offered = Array.isArray(answer?.agents) && answer.agents.length > 0
     ? answer.agents
     : [{ value: 'greedy', label: 'Greedy — the baseline' }, { value: 'random', label: 'Random' }];
-  // A bot a level seats says which (ADR 0179): the operator sees what a player chose as well as what it is.
+  // A bot a level seats says which (ADR 0180): the operator sees what a player chose as well as what it is.
   return [PERSON, ...offered.map(agent => ({ value: agent.value, label: agent.level ? `${agent.label ?? agent.value} · ${agent.level}` : agent.label ?? agent.value, featured: agent.featured === true }))];
 }
 
@@ -196,7 +197,7 @@ export function tableRows(list) {
     declaration: table.declaration ?? null,
     seats: (table.seats ?? []).map(seat => ({
       slot: seat.slot,
-      // A bot's own name, and the level a player knows it by (ADR 0179): "lookahead-55 · Hard".
+      // A bot's own name, and the level a player knows it by (ADR 0180): "lookahead-55 · Hard".
       seated: seat.level ? `${seat.seated ?? 'nobody'} · ${seat.level}` : seat.seated ?? 'nobody',
       code: seat.code ?? null,
       join: seat.join ?? null,
@@ -268,7 +269,7 @@ export const SESSIONS_PER_PAGE = 20;
 
 // The headquarters' sections, each one part of the address (`/admin#sessions`), so a reload or a link opens it and
 // Back moves between them. The first is where the page opens.
-export const ADMIN_TABS = Object.freeze(['tables', 'sessions', 'players', 'jobs', 'settings']);
+export const ADMIN_TABS = Object.freeze(['overview', 'tables', 'sessions', 'players', 'jobs', 'settings']);
 
 /** The section an address names, or the first one for an address that names none the page has. */
 export function tabOf(hash) {
@@ -661,6 +662,9 @@ async function start() {
     warn: closed => { element('tab-settings-count').textContent = closed ? '!' : ''; },
   });
 
+  // The Overview (A5): the numbers at a glance, read when the panel opens, when its section is opened and on Refresh.
+  const overview = mountOverview({ send: transport.request, element });
+
   // The section the address names is the one shown; following a section's link changes the address, so Back and a
   // reload keep it.
   function showTab() {
@@ -747,11 +751,12 @@ async function start() {
   element('sessions-refresh').addEventListener('click', redrawSessions);
   element('tables-previous').addEventListener('click', () => { tablesPage -= 1; drawTables(); });
   element('tables-next').addEventListener('click', () => { tablesPage += 1; drawTables(); });
-  element('admin-refresh').addEventListener('click', async () => { await redraw(); await redrawSessions(); await players.redraw(); await jobs.redraw(); await turnQueues.redraw(); await settings.redraw(); });
+  element('admin-refresh').addEventListener('click', async () => { await redraw(); await redrawSessions(); await players.redraw(); await jobs.redraw(); await turnQueues.redraw(); await settings.redraw(); await overview.redraw(); });
   globalThis.addEventListener?.('hashchange', () => {
     showTab();
     if (tabOf(globalThis.location?.hash) === 'players') void players.redraw();
     if (tabOf(globalThis.location?.hash) === 'settings') void settings.redraw();
+    if (tabOf(globalThis.location?.hash) === 'overview') void overview.redraw();
     if (tabOf(globalThis.location?.hash) === 'jobs') {
       void jobs.redraw();
       void turnQueues.redraw();
@@ -785,6 +790,7 @@ async function start() {
   await jobs.redraw();
   await turnQueues.redraw();
   await settings.redraw();
+  await overview.redraw();
   again();
 }
 

@@ -752,7 +752,7 @@ test('the create dialog plays Solo against a bot in any format, and PvP ranked i
   await solo.click();
   await expect(page.locator('#create-solo-panel')).toBeVisible(); await expect(page.locator('#create-pvp-panel')).toBeHidden();
   await expect(format).toBeEnabled(); await format.selectOption('2v2');
-  // A bot is chosen by how strong it is, never by its name (ADR 0179): Hard unless the player picks another.
+  // A bot is chosen by how strong it is, never by its name (ADR 0180): Hard unless the player picks another.
   const level = page.getByLabel('Bot difficulty');
   await expect(level).toHaveValue('hard');
   expect(await level.locator('option').allTextContents()).toEqual(['Easy · makes mistakes', 'Medium · plays it straight', 'Hard · the strongest']);

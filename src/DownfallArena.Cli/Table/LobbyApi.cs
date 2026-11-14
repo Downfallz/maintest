@@ -284,7 +284,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         // Checked under the claim gate below: two requests of one account must not both pass the one-at-a-time rule.
         var friend = opponent == "friend" ? opening?.Friend : null;
 
-        // The bot a player plays is chosen by its level (ADR 0179), never by its name: Hard when none is named.
+        // The bot a player plays is chosen by its level (ADR 0180), never by its name: Hard when none is named.
         var level = opponent == "bot" ? composer.Levels.Named(opening?.Level ?? BotLevels.Default) : null;
         if (opponent == "bot" && level is null)
         {
@@ -1336,7 +1336,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     {
         if (seat.Person is null)
         {
-            // Its level, never its name (ADR 0179): which bot sits behind "Hard" is the operator's to know.
+            // Its level, never its name (ADR 0180): which bot sits behind "Hard" is the operator's to know.
             var spec = table.Session.SeatedName(seat.Slot);
             return new SeatSummary(seat.Name, "bot", composer.Levels.PlayerName(spec), Turn: false, Level: composer.Levels.Of(spec)?.Level);
         }
@@ -1655,11 +1655,11 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
     /// <param name="Ranked">False opens a game between two players unranked (ADR 0155); a bot or a shared device never is.</param>
     /// <param name="TurnLimit">How many hours a player of a game between two players has to answer (ADR 0169).</param>
-    /// <param name="Level">How strong the bot is, for a game against one (ADR 0179): easy, medium or hard; hard when none.</param>
+    /// <param name="Level">How strong the bot is, for a game against one (ADR 0180): easy, medium or hard; hard when none.</param>
     private sealed record Opening(string? Opponent, string? Format, string? Friend, bool? Ranked = null, int? TurnLimit = null, string? Level = null);
 
     /// <param name="Turn">Whether this seat's player is being asked something now: whose turn it is.</param>
-    /// <param name="Level">A bot's level (ADR 0179), which a rematch asks for again; none for a person or a bot no level seats.</param>
+    /// <param name="Level">A bot's level (ADR 0180), which a rematch asks for again; none for a person or a bot no level seats.</param>
     private sealed record SeatSummary(string Seat, string Kind, string Name, bool Turn, string? Account = null, string? Level = null);
 
     private sealed record ResumeRequest(IReadOnlyList<string>? Tokens);

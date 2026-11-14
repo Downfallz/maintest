@@ -2,7 +2,7 @@ using DownfallArena.Cli.Table;
 
 namespace DownfallArena.Cli.Tests.Table;
 
-/// <summary>Which bot each level seats, read off the file that puts bots forward, and what a player and the operator call it (ADR 0179).</summary>
+/// <summary>Which bot each level seats, read off the file that puts bots forward, and what a player and the operator call it (ADR 0180).</summary>
 public sealed class BotLevelsTests : IDisposable
 {
     private readonly string _file = Path.Combine(Path.GetTempPath(), $"seatable-{Guid.NewGuid():N}.json");

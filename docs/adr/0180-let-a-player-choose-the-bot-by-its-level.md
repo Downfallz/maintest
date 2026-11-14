@@ -1,4 +1,4 @@
-# 0179. Let a player choose the bot by its level, and show them nothing else of it
+# 0180. Let a player choose the bot by its level, and show them nothing else of it
 
 Date: 2026-11-14
 Status: Accepted. Amends [0121](0121-the-public-lobby-offers-one-bot-the-strongest.md): the lobby offers three levels,

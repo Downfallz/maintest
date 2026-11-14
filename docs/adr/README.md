@@ -184,4 +184,5 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0176](0176-let-the-operator-void-a-match-with-a-reason.md) | Let the operator void a match with a reason, and withdraw a finished one's result | Accepted |
 | [0177](0177-let-the-operator-close-registration-and-post-a-notice.md) | Let the operator close registration and post a notice | Accepted |
 | [0178](0178-let-the-operator-suspend-an-account.md) | Let the operator suspend an account | Accepted |
-| [0179](0179-let-a-player-choose-the-bot-by-its-level.md) | Let a player choose the bot by its level, and show them nothing else of it | Accepted |
+| [0179](0179-cut-a-recorded-match-at-the-top-of-a-round.md) | Cut a recorded match at the top of a round, and replay it into a match of its own | Accepted |
+| [0180](0180-let-a-player-choose-the-bot-by-its-level.md) | Let a player choose the bot by its level, and show them nothing else of it | Accepted |

@@ -82,7 +82,7 @@ public sealed class AdminApiTests : IDisposable
         seats[0].GetProperty("join").GetString().ShouldStartWith("/j/");
         seats[0].GetProperty("link").GetString().ShouldStartWith("/?player1=");
         seats[1].GetProperty("seated").GetString().ShouldBe("Greedy");
-        // The operator sees the level a player knows the bot by, beside its name (ADR 0179).
+        // The operator sees the level a player knows the bot by, beside its name (ADR 0180).
         seats[1].GetProperty("level").GetString().ShouldBe("Medium");
         seats[0].GetProperty("level").ValueKind.ShouldBe(JsonValueKind.Null);
         seats[1].GetProperty("code").ValueKind.ShouldBe(JsonValueKind.Null);

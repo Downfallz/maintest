@@ -54,7 +54,7 @@ internal static class TableHost
         var offered = SeatableAgents.Read(WeightsDirectory);
         var levels = BotLevels.OfHost(offered);
 
-        // The operator can seat every bot a level seats (ADR 0179), Easy's included, which no list put forward.
+        // The operator can seat every bot a level seats (ADR 0180), Easy's included, which no list put forward.
         IReadOnlyList<SeatableAgent> agents = [.. offered, .. levels.All
             .Where(level => offered.All(agent => !string.Equals(agent.Value, level.Agent, StringComparison.OrdinalIgnoreCase)))
             .Select(level => new SeatableAgent(level.Agent, level.Agent, Featured: false))];
@@ -144,6 +144,7 @@ internal static class TableHost
         FriendsApi? friends = null;
         Friends? friendships = null;
         PlayersApi? players = null;
+        PlayerDirectory? directory = null;
         if (accounts is not null)
         {
             // The devices an account is told on (friends plan, stage 1), kept beside the accounts; with keys to
@@ -162,10 +163,11 @@ internal static class TableHost
             accounts.Activity = new AccountActivityLog(await ArtifactStores.OpenActivityAsync(options.Record ?? DefaultRunsDirectory, stopping.Token), clock);
             // The host's settings (ADR 0177), beside the accounts too: who may make an account, and the notice.
             accounts.Settings = new HostSettingsCache(await ArtifactStores.OpenHostSettingsAsync(options.Record ?? DefaultRunsDirectory, stopping.Token), clock);
-            players = new PlayersApi(new PlayerDirectory(opened.Value.Store, accounts.Activity, results, clock), accounts, results)
+            directory = new PlayerDirectory(opened.Value.Store, accounts.Activity, results, clock);
+            players = new PlayersApi(directory, accounts, results)
             {
                 Friends = friendships,
-                // The operator's: the bot's own name, and the level a player knows it by (ADR 0179).
+                // The operator's: the bot's own name, and the level a player knows it by (ADR 0180).
                 BotNamed = spec => levels.OperatorName(spec, LobbyApi.BotName(agents.FirstOrDefault(agent => string.Equals(agent.Value, spec, StringComparison.OrdinalIgnoreCase))?.Label ?? spec)),
             };
         }
@@ -196,11 +198,13 @@ internal static class TableHost
         admin.Lobby.Relay = relay;
         friends?.Changes = lobbyChanges;
         // The bots' turn queues (A3b), when the turns go through them: their lengths and dead letters in the Jobs tab.
+        TurnQueues? queues = null;
         if (channels is not null && turns is not null)
         {
             var poisoned = await OpenChannelAsync(channels, PoisonedWork.QueueOf(turns.Name), stopping.Token);
             var letters = await OpenChannelAsync(channels, DeadLetter.QueueOf(turns.Name), stopping.Token);
-            admin.Turns = poisoned is null || letters is null ? null : new TurnsApi(new TurnQueues(turns, poisoned, letters));
+            queues = poisoned is null || letters is null ? null : new TurnQueues(turns, poisoned, letters);
+            admin.Turns = queues is null ? null : new TurnsApi(queues);
         }
 
         // The tending runs (A3), kept beside the recordings, and a pass run now from the panel: the hourly job's pass,
@@ -222,6 +226,16 @@ internal static class TableHost
                 return tended;
             });
         }
+
+        // The Overview (A5): the numbers at a glance, each read from the source its own tab reads.
+        admin.Overview = new OverviewApi(registry, composer, clock)
+        {
+            Players = directory,
+            Results = results,
+            Tending = admin.Jobs?.Runs,
+            Turns = queues,
+            Settings = accounts?.Settings,
+        };
 
         composer.NameOf = accounts is null ? null : async id => (await accounts.AccountAsync(id))?.Username.Value;
         // The ladder (ADR 0124), read from the results the composer keeps; bots are named as the lobby names them.
