@@ -162,38 +162,54 @@ fi
 # The storage adapters' tests skip themselves without an emulator (97 of them), so a gate run without one
 # leaves the blob, queue and table stores unchecked. Azurite comes from the environment's setup script
 # (npm install -g azurite); this hook only starts it, because installing it here would cost every session.
+azurite_answers() {
+  curl -s -o /dev/null --max-time 1 "http://127.0.0.1:$1/devstoreaccount1"
+  return $?
+}
+
+# Each service is probed on its own: a blob-only emulator already running would otherwise pass for all three,
+# and the queue and table tests would still skip.
+all_azurite_services_answer() {
+  azurite_answers 10000 && azurite_answers 10001 && azurite_answers 10002
+  return $?
+}
+
 start_azurite() {
   local data_dir="${AZURITE_DATA_DIR:-$HOME/.azurite}"
-  local endpoint="http://127.0.0.1:10000/devstoreaccount1"
+  local attempt service port variable
+  local missing=()
 
   if ! command -v azurite > /dev/null 2>&1; then
     echo "[session-start] Azurite is not installed: the storage tests will be skipped. Say so when reporting the gate."
     return 0
   fi
 
-  if ! curl -s -o /dev/null --max-time 2 "$endpoint"; then
+  if ! all_azurite_services_answer; then
     mkdir -p "$data_dir"
     nohup azurite --silent --skipApiVersionCheck --location "$data_dir" > "$data_dir/azurite.log" 2>&1 &
-    local attempt
     for attempt in 1 2 3 4 5 6 7 8 9 10; do
-      curl -s -o /dev/null --max-time 1 "$endpoint" && break
+      all_azurite_services_answer && break
       sleep 1
     done
   fi
 
-  if ! curl -s -o /dev/null --max-time 2 "$endpoint"; then
-    echo "[session-start] WARNING: Azurite did not start; the storage tests will be skipped."
-    return 0
-  fi
+  for service in blob:10000 queue:10001 table:10002; do
+    port="${service#*:}"
+    variable="AZURITE_$(echo "${service%%:*}" | tr '[:lower:]' '[:upper:]')_ENDPOINT"
+    if azurite_answers "$port"; then
+      if [[ -n "${CLAUDE_ENV_FILE:-}" ]]; then
+        echo "export $variable=http://127.0.0.1:$port/devstoreaccount1" >> "$CLAUDE_ENV_FILE"
+      fi
+    else
+      missing+=("${service%%:*}")
+    fi
+  done
 
-  if [[ -n "${CLAUDE_ENV_FILE:-}" ]]; then
-    {
-      echo "export AZURITE_BLOB_ENDPOINT=http://127.0.0.1:10000/devstoreaccount1"
-      echo "export AZURITE_QUEUE_ENDPOINT=http://127.0.0.1:10001/devstoreaccount1"
-      echo "export AZURITE_TABLE_ENDPOINT=http://127.0.0.1:10002/devstoreaccount1"
-    } >> "$CLAUDE_ENV_FILE"
+  if [[ ${#missing[@]} -eq 0 ]]; then
+    echo "[session-start] Azurite is running; the storage tests will run."
+  else
+    echo "[session-start] WARNING: Azurite's ${missing[*]} service(s) did not answer; their storage tests will be skipped."
   fi
-  echo "[session-start] Azurite is running; the storage tests will run."
   return 0
 }
 

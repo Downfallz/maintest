@@ -90,6 +90,29 @@ def github(path: str, token: str) -> dict | list:
         return json.load(response)
 
 
+PASSED = {"success", "skipped", "neutral"}
+
+
+def finished_green(status: str, conclusion: str | None, done: str | None, merged: datetime) -> bool:
+    """Done, passed, and before the merge; a cancelled or timed-out run never passed."""
+    if status != "completed" or not done or conclusion not in PASSED:
+        return False
+    return datetime.fromisoformat(done.replace("Z", "+00:00")) <= merged
+
+
+def green_before(repo: str, head: str, merged: datetime, token: str) -> bool:
+    """Every check on the head commit and every workflow run of it finished green before the merge.
+
+    Both are read: a pull_request run checks out the merge commit, and its runs are listed by head_sha in the
+    Actions API even where the head commit's check runs do not carry them. Nothing at all is not green.
+    """
+    checks = github(f"/repos/{repo}/commits/{head}/check-runs?per_page=100", token).get("check_runs", [])
+    runs = github(f"/repos/{repo}/actions/runs?head_sha={head}&per_page=100", token).get("workflow_runs", [])
+    seen = [(c["status"], c.get("conclusion"), c.get("completed_at")) for c in checks]
+    seen += [(r["status"], r.get("conclusion"), r.get("updated_at")) for r in runs]
+    return bool(seen) and all(finished_green(s, c, d, merged) for s, c, d in seen)
+
+
 def github_report(repo: str, prs: list[dict], token: str) -> dict:
     open_minutes: list[float] = []
     merged_early: list[int] = []
@@ -100,15 +123,8 @@ def github_report(repo: str, prs: list[dict], token: str) -> dict:
         merged = datetime.fromisoformat(detail["merged_at"].replace("Z", "+00:00"))
         opened = datetime.fromisoformat(detail["created_at"].replace("Z", "+00:00"))
         open_minutes.append((merged - opened).total_seconds() / 60)
-        runs = github(f"/repos/{repo}/commits/{detail['head']['sha']}/check-runs?per_page=100", token)
-        for run in runs.get("check_runs", []):
-            done = run.get("completed_at")
-            if run["status"] != "completed" or not done:
-                merged_early.append(pr["number"])
-                break
-            if datetime.fromisoformat(done.replace("Z", "+00:00")) > merged or run["conclusion"] == "failure":
-                merged_early.append(pr["number"])
-                break
+        if not green_before(repo, detail["head"]["sha"], merged, token):
+            merged_early.append(pr["number"])
     runs = github(f"/repos/{repo}/actions/workflows/ci.yml/runs?branch=main&event=push&per_page=100", token)
     conclusions = Counter(run.get("conclusion") or run["status"] for run in runs.get("workflow_runs", []))
     return {
