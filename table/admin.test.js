@@ -350,16 +350,17 @@ test('a finished table offers its replay beside its viewer link, and a table bei
   assert.deepEqual(rows.map(row => [row.session, row.replay]), [['/session/done', '/play?replay=done'], [null, null]]);
 });
 
-test('the headquarters open the section the address names, and Tables for any other', () => {
-  assert.deepEqual([...ADMIN_TABS], ['tables', 'sessions', 'players', 'jobs', 'settings']);
+test('the headquarters open the section the address names, and the Overview for any other', () => {
+  assert.deepEqual([...ADMIN_TABS], ['overview', 'tables', 'sessions', 'players', 'jobs', 'settings']);
   assert.equal(tabOf('#sessions'), 'sessions');
   assert.equal(tabOf('sessions'), 'sessions');
   assert.equal(tabOf('#players'), 'players');
   assert.equal(tabOf('#jobs'), 'jobs');
   assert.equal(tabOf('#settings'), 'settings');
-  assert.equal(tabOf('#activity'), 'tables');
-  assert.equal(tabOf(''), 'tables');
-  assert.equal(tabOf(undefined), 'tables');
+  assert.equal(tabOf('#tables'), 'tables');
+  assert.equal(tabOf('#activity'), 'overview');
+  assert.equal(tabOf(''), 'overview');
+  assert.equal(tabOf(undefined), 'overview');
 });
 
 test('a pager says how many it shows of how many and which page, in the singular for one', () => {

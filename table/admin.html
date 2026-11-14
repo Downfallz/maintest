@@ -25,6 +25,7 @@
       <button id="admin-refresh" type="button" class="secondary">Refresh</button>
     </section>
     <nav id="admin-tabs" class="admin-tabs" aria-label="Headquarters sections">
+      <a id="tab-overview" href="#overview" data-tab="overview">Overview <span id="tab-overview-count" class="tab-count"></span></a>
       <a id="tab-tables" href="#tables" data-tab="tables">Tables <span id="tab-tables-count" class="tab-count"></span></a>
       <a id="tab-sessions" href="#sessions" data-tab="sessions">Sessions <span id="tab-sessions-count" class="tab-count"></span></a>
       <a id="tab-players" href="#players" data-tab="players" hidden>Players <span id="tab-players-count" class="tab-count"></span></a>
@@ -33,7 +34,12 @@
     </nav>
 
     <div id="admin" hidden>
-    <section id="panel-tables" class="admin-panel" aria-labelledby="tab-tables" data-panel="tables">
+    <section id="panel-overview" class="admin-panel" aria-labelledby="tab-overview" data-panel="overview">
+      <h2 class="visually-hidden">Overview</h2>
+      <output id="overview-said" class="said"></output>
+      <ul id="overview-cards" class="overview-cards" aria-label="The host at a glance"></ul>
+    </section>
+    <section id="panel-tables" class="admin-panel" aria-labelledby="tab-tables" data-panel="tables" hidden>
       <p class="muted no-god-view">
         Open a table, read each seat's code to its player, and hand a seat over from its pilot page. This page
         shows who is at each table, never what they hold.
