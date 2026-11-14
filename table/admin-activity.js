@@ -22,6 +22,8 @@ export const ACTION_LABELS = Object.freeze({
   'settings.save': 'Saved the settings',
   'scenario.cut': 'Cut a scenario',
   'scenario.remove': 'Removed a scenario',
+  'scenario.list': 'Listed a scenario under Practice',
+  'scenario.unlist': 'Took a scenario off Practice',
   'table.reveal': 'Revealed what a table\'s seats hold',
   'table.turn': 'Owed a table\'s bot turn again',
 });

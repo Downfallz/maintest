@@ -9,13 +9,20 @@ namespace DownfallArena.Cli.Table;
 /// <summary>
 /// The match scenarios the operator cut (docs/tabletop/scenarios-plan.md, S4): one <c>scenario.json</c> a scenario,
 /// under an id that sorts by when it was cut, in a store beside the recordings. The content each names is kept
-/// beside them under its hash (ADR 0163), so a scenario does not carry it.
+/// beside them under its hash (ADR 0163), so a scenario does not carry it. Whether the operator listed a scenario for
+/// signed-in players (S6) is this host's, not the scenario's: it is kept beside it in <see cref="ListingFile" />, never in
+/// the <c>scenario.json</c> a scenario is shared as.
 /// </summary>
 internal sealed class ScenarioStore(IArtifactStore store, TimeProvider clock)
 {
     public const string File = "scenario.json";
 
+    public const string ListingFile = "listing.json";
+
     private const string Prefix = "sc-";
+
+    /// <summary>A scenario kept: its id, what it is, and whether the operator listed it under Practice.</summary>
+    internal sealed record Kept(string Id, ScenarioDocument Document, bool Listed);
 
     /// <summary>Keeps a scenario under a new id, which it returns.</summary>
     public async Task<string> PutAsync(ScenarioDocument document, CancellationToken cancellationToken = default)
@@ -52,19 +59,51 @@ internal sealed class ScenarioStore(IArtifactStore store, TimeProvider clock)
         }
     }
 
-    /// <summary>Every scenario kept, newest first, each with its id.</summary>
-    public async Task<IReadOnlyList<(string Id, ScenarioDocument Document)>> ListAsync(CancellationToken cancellationToken = default)
+    /// <summary>Every scenario kept, newest first, each with its id and whether it is listed.</summary>
+    public async Task<IReadOnlyList<Kept>> ListAsync(CancellationToken cancellationToken = default)
     {
-        var kept = new List<(string, ScenarioDocument)>();
+        var kept = new List<Kept>();
         foreach (var id in (await store.RunsAsync(cancellationToken)).Where(Names).OrderByDescending(one => one, StringComparer.Ordinal))
         {
             if (await GetAsync(id, cancellationToken) is { } document)
             {
-                kept.Add((id, document));
+                kept.Add(new Kept(id, document, await ListedAsync(id, cancellationToken)));
             }
         }
 
         return kept;
+    }
+
+    /// <summary>Whether the operator listed a scenario for signed-in players; a scenario is cut unlisted.</summary>
+    public async Task<bool> ListedAsync(string id, CancellationToken cancellationToken = default)
+    {
+        if (!Names(id) || await store.Reader(id).ReadTextAsync(ListingFile, cancellationToken) is not { } text)
+        {
+            return false;
+        }
+
+        try
+        {
+            using var listing = JsonDocument.Parse(text);
+            return listing.RootElement.TryGetProperty("listed", out var listed) && listed.ValueKind == JsonValueKind.True;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>Lists a kept scenario for signed-in players, or takes it off the list: false when no scenario is kept under the id.</summary>
+    public async Task<bool> SetListedAsync(string id, bool listed, CancellationToken cancellationToken = default)
+    {
+        if (await GetAsync(id, cancellationToken) is null)
+        {
+            return false;
+        }
+
+        using var listing = JsonDocument.Parse(listed ? """{"listed":true}""" : """{"listed":false}""");
+        await store.Writer(id).WriteJsonAsync(ListingFile, listing.RootElement, cancellationToken);
+        return true;
     }
 
     public async Task<bool> DeleteAsync(string id, CancellationToken cancellationToken = default) =>

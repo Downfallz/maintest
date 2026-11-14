@@ -154,6 +154,7 @@ input[type="text"] { font: inherit; min-height: 44px; border: 1px solid var(--li
 .player-suspended { padding: 10px 12px; border: 1px solid var(--refused); border-radius: var(--radius-soft); }
 .player-suspended p { margin: 0 0 8px; overflow-wrap: anywhere; }
 .status-tag.suspended { color: var(--refused); border: 1px solid var(--refused); padding: 1px 6px; font-size: 12px; }
+.status-tag.listed { color: var(--gold); border: 1px solid var(--gold); padding: 1px 6px; font-size: 12px; }
 
 /* Overview (A5): one number a card, its label over it and what it counts under it, the whole card a link to the tab
    that explains it; a card that needs the operator in the warning colour. */

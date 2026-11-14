@@ -274,4 +274,76 @@ public sealed class ScenariosApiTests : IDisposable
 
         refused.Status.ShouldBe(404);
     }
+
+    /// <summary>A scenario is cut off the list; listed by the operator, it is what signed-in players find under Practice (S6).</summary>
+    [Fact]
+    public async Task A_scenario_the_operator_lists_is_offered_to_signed_in_players_and_one_taken_off_is_not()
+    {
+        var (_, scenario) = await CutAsync();
+        await using var practices = new ScenarioPractices(_hosted.Composer, _store, _clock);
+        var accounts = await AccountsAsync();
+        var api = new ScenariosApi(_store, practices, accounts);
+        var learner = await SignedInAsync(accounts, "learner");
+        var before = Read(await api.HandleAsync("GET", ScenariosApi.Prefix, learner)).GetProperty("scenarios").GetArrayLength();
+
+        var listing = await Admin().HandleAsync("PUT", $"{ScenarioAdminApi.Route}/{scenario}/listing", """{"listed":true}""", "operator");
+        var offered = Read(await api.HandleAsync("GET", ScenariosApi.Prefix, learner)).GetProperty("scenarios").EnumerateArray().ToList();
+        await Admin().HandleAsync("PUT", $"{ScenarioAdminApi.Route}/{scenario}/listing", """{"listed":false}""", "operator");
+        var after = Read(await api.HandleAsync("GET", ScenariosApi.Prefix, learner)).GetProperty("scenarios").GetArrayLength();
+
+        before.ShouldBe(0);
+        listing.Status.ShouldBe(200);
+        var one = offered.ShouldHaveSingleItem();
+        (one.GetProperty("id").GetString(), one.GetProperty("title").GetString(), one.GetProperty("seat").GetString(), one.GetProperty("round").GetInt32())
+            .ShouldBe((scenario, "Second round", "player2", 2));
+        one.GetProperty("link").GetString().ShouldBe($"/battle?scenario={scenario}");
+        after.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task The_operator_s_list_says_which_scenarios_are_listed()
+    {
+        var (_, scenario) = await CutAsync();
+
+        await Admin().HandleAsync("PUT", $"{ScenarioAdminApi.Route}/{scenario}/listing", """{"listed":true}""", "operator");
+
+        Read(await Admin().HandleAsync("GET", ScenarioAdminApi.Route, "", "operator")).GetProperty("scenarios")[0].GetProperty("listed").GetBoolean().ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task Listing_and_taking_off_are_noted_in_the_operators_activity()
+    {
+        var (_, scenario) = await CutAsync();
+        var actions = new OperatorActions(new FileOperatorLog(_root), TimeProvider.System);
+        var admin = new ScenarioAdminApi(_store, _hosted.Stored!, _hosted.Composer) { Notes = new OperatorNotes(actions) };
+
+        await admin.HandleAsync("PUT", $"{ScenarioAdminApi.Route}/{scenario}/listing", """{"listed":true}""", "mark");
+        await admin.HandleAsync("PUT", $"{ScenarioAdminApi.Route}/{scenario}/listing", """{"listed":false}""", "mark");
+
+        (await actions.PageAsync(1, Cancel)).Actions.Select(one => (one.Action, one.Target)).ShouldBe([(OperatorActions.UnlistScenario, scenario), (OperatorActions.ListScenario, scenario)]);
+    }
+
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("""{"listed":"yes"}""")]
+    [InlineData("not json")]
+    public async Task A_listing_that_does_not_say_listed_or_not_is_refused(string body)
+    {
+        var (_, scenario) = await CutAsync();
+
+        (await Admin().HandleAsync("PUT", $"{ScenarioAdminApi.Route}/{scenario}/listing", body, "operator")).Status.ShouldBe(400);
+    }
+
+    [Fact]
+    public async Task A_scenario_the_host_does_not_keep_cannot_be_listed() =>
+        (await Admin().HandleAsync("PUT", $"{ScenarioAdminApi.Route}/sc-20261114-000000-deadbeef/listing", """{"listed":true}""", "operator")).Status.ShouldBe(404);
+
+    [Fact]
+    public async Task A_player_who_is_not_signed_in_finds_no_scenarios_listed()
+    {
+        await using var practices = new ScenarioPractices(_hosted.Composer, _store, _clock);
+        var api = new ScenariosApi(_store, practices, await AccountsAsync());
+
+        (await api.HandleAsync("GET", ScenariosApi.Prefix, new AccountRequest(null, Secure: false))).Status.ShouldBe(401);
+    }
 }

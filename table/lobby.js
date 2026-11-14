@@ -6,6 +6,7 @@ import { turnOf } from './players.js';
 export { turnOf } from './players.js';
 export { codePath } from './navigation.js';
 import { activateSeats, savedSeats } from './session.js';
+import { mountPracticeList } from './lobby-practice.js';
 
 export function visibleTables(tables, mine, all = false) {
   const held = new Set(mine.map(entry => entry.table.id));
@@ -896,6 +897,7 @@ if (typeof document !== 'undefined') {
   let storage = null;
   try { storage = globalThis.localStorage; } catch { /* Invitations still work without browser storage. */ }
   const lobby = mountLobby(document, globalThis.location, storage);
+  const practiceList = mountPracticeList(document);
   const next = nextPath(globalThis.location.search);
   const navigation = mountNavigation(document, storage, {
     onInvite: lobby.invite,
@@ -908,6 +910,7 @@ if (typeof document !== 'undefined') {
       document.getElementById('home-games').hidden = !playable;
       document.getElementById('hero-eyebrow').textContent = account ? `Welcome back, ${account.username}` : 'Your games';
       lobby.setAccount(account, mode);
+      practiceList.setAccount(account);
     },
   });
   lobby.onOutstanding(navigation.setOutstanding);

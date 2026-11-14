@@ -9,7 +9,7 @@ const battle = {
 };
 const held = { table: battle, seats: [{ seat: 'player1', token: 'seat-token' }] };
 
-async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, notice = null, registrationClosed = false, games = null, finished = { players: [], bots: [] }, opponents = [], invitations = [], incoming = [challenger], publicTables = [battle] } = {}) {
+async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, notice = null, registrationClosed = false, games = null, finished = { players: [], bots: [] }, opponents = [], invitations = [], incoming = [challenger], publicTables = [battle], scenarios = null } = {}) {
   const state = { account, mode, meDown, offline: false, mineReads: 0, friendReads: 0, finishedReads: [], privateReads: [], release: null, invitations, publicTables,
     friends: { friends: [friend], incoming, outgoing: [] } };
   const errors = [];
@@ -89,6 +89,10 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
       state.friends = { ...state.friends, friends: [friend, challenger], incoming: [] }; return json({});
     }
     if (path === '/api/lobby/push') return json({ publicKey: null });
+    if (path === '/api/scenarios' && scenarios) {
+      state.scenarioReads = (state.scenarioReads ?? 0) + 1;
+      return state.account ? json({ scenarios }) : route.fulfill({ status: 401, json: { message: 'Sign in to practise a scenario.' } });
+    }
     if (path === '/api/account/preferences') {
       if (!state.account) return route.fulfill({ status: 401, json: { message: 'Sign in first.' } });
       if (state.holdPreferences) await state.holdPreferences;
@@ -606,6 +610,37 @@ test('recent opponents are listed with the record between you: a friend is chall
   await expect(page.locator('#ranked')).not.toBeChecked();
   expect(state.created).toBeUndefined();
   expect(state.errors).toEqual([]);
+});
+
+// The scenarios the operator listed under Practice (scenarios plan, S6), offered to a signed-in player to open as practice.
+test('a signed-in player finds the listed scenarios under Practice, each opening its practice', async ({ page }, info) => {
+  const state = await home(page, { scenarios: [{ id: 'sc-1', title: 'Bleed after a stun', goal: 'Keep Creature 5 alive', round: 4, seat: 'player2', format: '2v2', link: '/battle?scenario=sc-1' }] });
+  const section = page.locator('#practice-scenarios');
+
+  await expect(section).toBeVisible();
+  const card = section.locator('.game-card.practice');
+  await expect(card).toHaveCount(1);
+  await expect(card.locator('h3')).toHaveText('Bleed after a stun');
+  await expect(card).toContainText('2v2 · from round 4 · you play player 2');
+  await expect(card).toContainText('Keep Creature 5 alive');
+  await expect(card.locator('a', { hasText: 'Practise' })).toHaveAttribute('href', '/battle?scenario=sc-1');
+  await expect(page.locator('#practice-count')).toHaveText('1');
+  await section.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: info.outputPath('lobby-practice.png') });
+  await noOverflow(page);
+  expect(state.errors).toEqual([]);
+});
+
+test('with nothing listed there is no Practice section', async ({ page }) => {
+  const state = await home(page, { scenarios: [] });
+  await expect.poll(() => state.scenarioReads ?? 0).toBeGreaterThan(0);
+  await expect(page.locator('#practice-scenarios')).toBeHidden();
+});
+
+test('a guest is not asked for the listed scenarios and sees no Practice section', async ({ page }) => {
+  const state = await home(page, { account: null, scenarios: [{ id: 'sc-1', round: 1, seat: 'player1', link: '/battle?scenario=sc-1' }] });
+  await expect(page.locator('#practice-scenarios')).toBeHidden();
+  expect(state.scenarioReads ?? 0).toBe(0);
 });
 
 test('a player who has met nobody yet sees no recent opponents section', async ({ page }) => {

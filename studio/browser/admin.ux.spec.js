@@ -562,6 +562,33 @@ test('a session is cut at a round from its row, and the scenario is listed with 
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(widthOf(page));
 });
 
+// Listed under Practice (scenarios plan, S6): the operator lists a scenario for signed-in players, or takes it off.
+test('a scenario is listed under Practice from its row, and taken off again', async ({ page }, info) => {
+  const kept = [{ id: 'sc-1', title: 'Bleed after a stun', session: 'people-finished', round: 3, seat: 'player2', content: 'abc', link: '/battle?scenario=sc-1', listed: false }];
+  const put = [];
+  await page.route('**/api/admin/scenarios**', async route => {
+    const req = route.request(), url = new URL(req.url());
+    if (req.method() === 'PUT' && url.pathname === '/api/admin/scenarios/sc-1/listing') {
+      put.push(req.postDataJSON()); kept[0].listed = req.postDataJSON().listed;
+      return route.fulfill({ json: { id: 'sc-1', listed: kept[0].listed } });
+    }
+    return route.fulfill({ json: { scenarios: kept } });
+  });
+  await page.reload();
+  await page.locator('#tab-scenarios').click();
+  const row = page.locator('#scenarios li', { hasText: 'Bleed after a stun' });
+
+  await row.locator('.link-button', { hasText: 'list under Practice' }).click();
+  await expect(row.locator('.status-tag.listed')).toHaveText('Listed under Practice');
+  await expect(page.locator('#scenarios-said')).toContainText('is listed under Practice');
+  await page.screenshot({ path: info.outputPath('scenario-listed.png') });
+  await row.locator('.link-button', { hasText: 'take off Practice' }).click();
+  await expect(row.locator('.status-tag.listed')).toHaveCount(0);
+
+  expect(put).toEqual([{ listed: true }, { listed: false }]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(widthOf(page));
+});
+
 test('a host that keeps no scenarios shows no Scenarios tab', async ({ page }) => {
   await page.route('**/api/admin/scenarios**', route => route.fulfill({ status: 404, body: 'This host keeps no scenarios.' }));
   await page.reload();

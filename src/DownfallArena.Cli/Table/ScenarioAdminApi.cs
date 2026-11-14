@@ -15,7 +15,8 @@ namespace DownfallArena.Cli.Table;
 /// The operator's side of the match scenarios (docs/tabletop/scenarios-plan.md, S4, ADR 0179), behind the admin
 /// panel's gate: <c>GET /api/admin/scenarios</c> lists them, <c>POST</c> with
 /// <c>{"session","round","seat?","title?","goal?"}</c> cuts a recorded session at the top of a round, on the content it
-/// was played on, and keeps it, and <c>DELETE /api/admin/scenarios/&lt;id&gt;</c> removes one. A scenario's link,
+/// was played on, and keeps it, and <c>DELETE /api/admin/scenarios/&lt;id&gt;</c> removes one; <c>PUT .../&lt;id&gt;/listing {"listed"}</c> lists it under
+/// Practice for signed-in players, or takes it off (S6). A scenario's link,
 /// <c>/battle?scenario=&lt;id&gt;</c>, is what a signed-in player opens.
 /// </summary>
 internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions stored, TableComposer composer)
@@ -36,6 +37,7 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
             ("GET", "rounds") => await RoundsAsync(System.Web.HttpUtility.ParseQueryString(query ?? string.Empty)["session"]),
             ("POST", "") => await CutAsync(body, operatorName),
             ("DELETE", { Length: > 0 } id) => await DeleteAsync(id, operatorName),
+            ("PUT", { Length: > 0 } listing) when listing.EndsWith("/listing", StringComparison.Ordinal) => await ListAsync(listing[..^"/listing".Length], body, operatorName),
             _ => Error("Scenario.NoRoute", $"No such route: {method} {path}", 404),
         };
     }
@@ -54,6 +56,7 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
                 round = one.Document.Scenario.Cut.Round,
                 seat = ScenarioCommands.SeatName(one.Document.Seat),
                 content = one.Document.Content,
+                listed = one.Listed,
                 link = Link(one.Id),
             }).ToArray(),
         }, ArtifactJson.LineOptions);
@@ -140,6 +143,35 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
         var entries = (await composer.JournalAsync(session))?.Entries ?? [];
         var match = new JournaledMatch(session, record.MatchId, rules, record.Seed, [.. Enumerable.Repeat(resources.Creatures.First().Id, rules.TeamSize)]);
         return (null, (content, match, entries));
+    }
+
+    private async Task<StudioResponse> ListAsync(string id, string body, string operatorName)
+    {
+        bool? listed;
+        try
+        {
+            using var asked = JsonDocument.Parse(body);
+            listed = asked.RootElement.ValueKind == JsonValueKind.Object && asked.RootElement.TryGetProperty("listed", out var value)
+                && value.ValueKind is JsonValueKind.True or JsonValueKind.False ? value.GetBoolean() : null;
+        }
+        catch (JsonException)
+        {
+            listed = null;
+        }
+
+        if (listed is not { } list)
+        {
+            return Error("Scenario.Invalid", "Say whether the scenario is listed: {\"listed\":true} or {\"listed\":false}.", 400);
+        }
+
+        if (!await store.SetListedAsync(id, list))
+        {
+            return Error("Scenario.NotFound", $"No scenario '{id}' at this host.", 404);
+        }
+
+        Console.WriteLine($"  Scenario {id} {(list ? "listed under Practice" : "taken off Practice")} by {operatorName}.");
+        await Notes.NoteAsync(operatorName, list ? OperatorActions.ListScenario : OperatorActions.UnlistScenario, id);
+        return StudioResponse.OfJson(new { id, listed = list }, ArtifactJson.LineOptions);
     }
 
     private async Task<StudioResponse> DeleteAsync(string id, string operatorName)
