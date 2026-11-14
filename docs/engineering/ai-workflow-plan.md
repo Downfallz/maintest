@@ -1,6 +1,6 @@
 # Plan: the AI workflow, from an idea to a merged pull request
 
-Status: proposal, 2026-11-14. Nothing here is built, and the owner has settled none of the questions at the end.
+Status: accepted in part, 2026-11-14. The owner settled questions 1, 2, 3 and 5 (at the end); W0 is being built.
 Each stage below is one pull request, or one settings change that only the owner can make.
 
 ## What the owner asked for
@@ -274,6 +274,10 @@ Each stage is one pull request with its tests, and leaves the gate green.
    `SessionStart` starts Azurite. `scripts/workflow-metrics.py`: what this plan measured, and CI on `main`,
    which it did not. The owner, in settings: the environment and its setup script, the Sonar token, the ruleset
    with today's two CI jobs required, auto-merge, branch deletion.
+   *Built (2026-11-14)*: the standing orders, Azurite started by the hook when the setup script has installed
+   it, and the script, git readings first and `--github` for the rest. Not built: the permissions. A session's
+   edit to `.claude/settings.json` was refused, so the owner adds them (the gate's `npm`, `node --test`,
+   `uv run` and `git` commands, and a deny on `mcp__github__merge_pull_request`).
 2. **W1, the contract.** An ADR: `AGENTS.md` is an index with a budget, and an area's instructions load with
    the area. The index, the area files, `docs/reference/commands.md`, the rules, the test of the budget.
 3. **W2, the gate.** The `gate` job. The browser suite on `main` and in front of `deploy`. Specs chosen by the
@@ -325,3 +329,11 @@ Each stage is one pull request with its tests, and leaves the gate green.
 6. Which scheduled run first, and at what hour? The plan says the morning digest.
 7. A read-only Azure role for `ops-report`: acceptable?
 8. The order: W0, W1, W2 as written, or the reviewers (W5) before the contract?
+
+## Questions the owner settled (2026-11-14)
+
+1. The owner merges, and the ruleset with auto-merge turns an early tap into a queued merge. A session never
+   merges.
+2. The standing orders as written: a session opens the pull request, subscribes and asks Codex unasked.
+3. The ruleset requires the two CI jobs at first; the browser suite once W2 makes it always report.
+5. One stage, one session, with a ceiling at 300,000 tokens and a wrap-up.
