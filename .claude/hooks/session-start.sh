@@ -163,7 +163,8 @@ fi
 # leaves the blob, queue and table stores unchecked. Azurite comes from the environment's setup script
 # (npm install -g azurite); this hook only starts it, because installing it here would cost every session.
 azurite_answers() {
-  curl -s -o /dev/null --max-time 1 "http://127.0.0.1:$1/devstoreaccount1"
+  local port="$1"
+  curl -s -o /dev/null --max-time 1 "http://127.0.0.1:$port/devstoreaccount1"
   return $?
 }
 

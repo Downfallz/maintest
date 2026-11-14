@@ -18,6 +18,7 @@ import os
 import re
 import statistics
 import subprocess
+import urllib.parse
 import urllib.request
 from collections import Counter
 from datetime import datetime
@@ -39,12 +40,14 @@ def origin_repository() -> str:
     match = GITHUB_REMOTE.search(url)
     if not match:
         raise SystemExit(f"origin is not a GitHub repository: {url}")
-    return f"{match.group(1)}/{match.group(2)}"
+    return f"{segment(match.group(1))}/{segment(match.group(2))}"
 
 
-def merged_pull_requests(ref: str, last: int) -> list[dict]:
-    """The squash commits of the last pull requests on ref, newest first, with the files each one touched."""
-    out = git("log", ref, "--first-parent", "--format=@@%H%x09%aI%x09%s", "--numstat")
+def merged_pull_requests(last: int) -> list[dict]:
+    """The squash commits of the last pull requests on origin/main, newest first, with the files each touched.
+
+    The branch is fixed rather than an argument, so nothing a caller types reaches the git command line."""
+    out = git("log", "origin/main", "--first-parent", "--format=@@%H%x09%aI%x09%s", "--numstat")
     commits: list[dict] = []
     current: dict | None = None
     for line in out.splitlines():
@@ -92,6 +95,15 @@ def git_report(prs: list[dict]) -> dict:
     }
 
 
+def utc(timestamp: str) -> datetime:
+    return datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+
+
+def segment(value: object) -> str:
+    """One path segment of an API URL, encoded: what an answer or a remote holds never walks the path."""
+    return urllib.parse.quote(str(value), safe="")
+
+
 def github(path: str, token: str) -> dict | list:
     request = urllib.request.Request(
         f"https://api.github.com{path}",
@@ -108,7 +120,7 @@ def finished_green(status: str, conclusion: str | None, done: str | None, merged
     """Done, passed, and before the merge; a cancelled or timed-out run never passed."""
     if status != "completed" or not done or conclusion not in PASSED:
         return False
-    return datetime.fromisoformat(done.replace("Z", "+00:00")) <= merged
+    return utc(done) <= merged
 
 
 def green_before(repo: str, head: str, merged: datetime, token: str) -> bool:
@@ -117,8 +129,9 @@ def green_before(repo: str, head: str, merged: datetime, token: str) -> bool:
     Both are read: a pull_request run checks out the merge commit, and its runs are listed by head_sha in the
     Actions API even where the head commit's check runs do not carry them. Nothing at all is not green.
     """
-    checks = github(f"/repos/{repo}/commits/{head}/check-runs?per_page=100", token).get("check_runs", [])
-    runs = github(f"/repos/{repo}/actions/runs?head_sha={head}&per_page=100", token).get("workflow_runs", [])
+    sha = segment(head)
+    checks = github(f"/repos/{repo}/commits/{sha}/check-runs?per_page=100", token).get("check_runs", [])
+    runs = github(f"/repos/{repo}/actions/runs?head_sha={sha}&per_page=100", token).get("workflow_runs", [])
     seen = [(c["status"], c.get("conclusion"), c.get("completed_at")) for c in checks]
     seen += [(r["status"], r.get("conclusion"), r.get("updated_at")) for r in runs]
     return bool(seen) and all(finished_green(s, c, d, merged) for s, c, d in seen)
@@ -128,11 +141,11 @@ def github_report(repo: str, prs: list[dict], token: str) -> dict:
     open_minutes: list[float] = []
     merged_early: list[int] = []
     for pr in prs:
-        detail = github(f"/repos/{repo}/pulls/{pr['number']}", token)
+        detail = github(f"/repos/{repo}/pulls/{segment(pr['number'])}", token)
         if not detail.get("merged_at"):
             continue
-        merged = datetime.fromisoformat(detail["merged_at"].replace("Z", "+00:00"))
-        opened = datetime.fromisoformat(detail["created_at"].replace("Z", "+00:00"))
+        merged = utc(detail["merged_at"])
+        opened = utc(detail["created_at"])
         open_minutes.append((merged - opened).total_seconds() / 60)
         if not green_before(repo, detail["head"]["sha"], merged, token):
             merged_early.append(pr["number"])
@@ -153,12 +166,11 @@ def github_report(repo: str, prs: list[dict], token: str) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--ref", default="origin/main")
     parser.add_argument("--last", type=int, default=300)
     parser.add_argument("--github", action="store_true", help="also read GitHub (needs GITHUB_TOKEN)")
     args = parser.parse_args()
 
-    prs = merged_pull_requests(args.ref, args.last)
+    prs = merged_pull_requests(args.last)
     report = {"git": git_report(prs)}
     if args.github:
         token = os.environ.get("GITHUB_TOKEN", "")
