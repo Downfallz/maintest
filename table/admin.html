@@ -28,6 +28,7 @@
       <a id="tab-overview" href="#overview" data-tab="overview">Overview <span id="tab-overview-count" class="tab-count"></span></a>
       <a id="tab-tables" href="#tables" data-tab="tables">Tables <span id="tab-tables-count" class="tab-count"></span></a>
       <a id="tab-sessions" href="#sessions" data-tab="sessions">Sessions <span id="tab-sessions-count" class="tab-count"></span></a>
+      <a id="tab-scenarios" href="#scenarios" data-tab="scenarios" hidden>Scenarios <span id="tab-scenarios-count" class="tab-count"></span></a>
       <a id="tab-players" href="#players" data-tab="players" hidden>Players <span id="tab-players-count" class="tab-count"></span></a>
       <a id="tab-jobs" href="#jobs" data-tab="jobs" hidden>Jobs <span id="tab-jobs-count" class="tab-count"></span></a>
       <a id="tab-activity" href="#activity" data-tab="activity" hidden>Activity</a>
@@ -107,6 +108,18 @@
           <output id="sessions-count" class="muted"></output>
           <button id="sessions-next" type="button" class="secondary">Older →</button>
         </nav>
+      </section>
+    </section>
+    <section id="panel-scenarios" class="admin-panel" aria-labelledby="tab-scenarios" data-panel="scenarios" hidden>
+      <p id="scenarios-off" class="muted">This host keeps no scenarios: it records nothing (<code>--no-record</code>), so it has no session to cut one from.</p>
+      <section id="scenarios-on" class="control players" aria-labelledby="scenarios-title" hidden>
+        <div class="list-head">
+          <h2 id="scenarios-title">Scenarios</h2>
+        </div>
+        <p class="muted">Recorded sessions cut at the top of a round. A signed-in player opens a scenario's link as practice: from that round, against the recorded opponent, with nothing recorded and the session untouched. Cut one from a session's row with <em>practice from a round…</em>.</p>
+        <output id="scenarios-said" class="said"></output>
+        <ol id="scenarios" class="session-list" aria-label="Scenarios"></ol>
+        <p id="scenarios-empty" class="muted" hidden>No scenario yet.</p>
       </section>
     </section>
     <section id="panel-players" class="admin-panel" aria-labelledby="tab-players" data-panel="players" hidden>
@@ -253,6 +266,27 @@
         <p id="void-warning" class="void-warning"></p>
         <output id="void-said" class="said refused"></output>
         <button id="void-submit" type="button" class="danger" disabled>Void the match</button>
+      </div>
+    </dialog>
+
+    <dialog id="scenario-sheet" class="home-dialog side-sheet" aria-labelledby="scenario-sheet-name">
+      <div class="dialog-heading">
+        <div><p class="eyebrow">Practice from a round</p><h2 id="scenario-sheet-name">Session</h2></div>
+        <button id="scenario-cancel" type="button" aria-label="Close">×</button>
+      </div>
+      <div class="home-dialog-body">
+        <p id="scenario-players" class="muted"></p>
+        <div class="player-action">
+          <label for="scenario-round">Start at the top of<select id="scenario-round"></select></label>
+          <label for="scenario-seat">The player plays<select id="scenario-seat"><option value="player1">player1</option><option value="player2">player2</option></select></label>
+        </div>
+        <div class="player-action">
+          <label for="scenario-title">Title<input id="scenario-title" type="text" maxlength="80" placeholder="Round 4" /></label>
+          <label for="scenario-goal">Goal, as the player will read it<textarea id="scenario-goal" rows="3" maxlength="300" placeholder="Keep your second creature alive through the bleed."></textarea></label>
+        </div>
+        <output id="scenario-said" class="said"></output>
+        <div id="scenario-made" class="scenario-made" hidden></div>
+        <button id="scenario-submit" type="button" disabled>Cut the scenario</button>
       </div>
     </dialog>
 

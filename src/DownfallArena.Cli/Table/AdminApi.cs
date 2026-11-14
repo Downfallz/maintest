@@ -196,7 +196,7 @@ internal sealed class AdminApi
         {
             return Scenarios is null
                 ? StudioResponse.OfPlainText(404, "This host keeps no scenarios: it records nothing (--no-record), so it has no session to cut one from.")
-                : await Scenarios.HandleAsync(method, path, body, operatorName);
+                : await Scenarios.HandleAsync(method, path, body, operatorName, query);
         }
 
         if (OverviewApi.Names(path))

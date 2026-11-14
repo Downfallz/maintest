@@ -161,19 +161,21 @@ Under `Application/Matches/Scenarios`, each one class and one public method, all
 
 ### S5 — Admin panel
 
+Two pull requests: S5a, the scenarios in the panel; S5b, the diagnosis of a table in progress, which does not
+depend on the scenarios.
+
 The panel's shape, tabs and shared list parts are [admin-plan.md](admin-plan.md)'s. This stage adds to its tabs
 and reuses its actions rather than building them twice.
 
-**Sessions tab**, on a recorded session row:
+**S5a (done).** On a recorded session's row not being played, **practice from a round…** opens a sheet: it reads
+the rounds the session can be cut at (`GET /api/admin/scenarios/rounds?session=<id>`, and why the journal stopped
+when it did), then the round, the seat, a title and a goal. **Cut the scenario** answers with the link to open or
+copy. The **Scenarios** tab (`/admin#scenarios`) lists them: title, session, round and seat, goal, and the link to
+open or copy, the session's page, and **remove…**. A host that keeps no scenarios shows no tab. The page is
+`table/admin-scenarios.js` (pure parts tested by `admin-scenarios.test.js`); `admin.ux.spec.js` drives the sheet and
+the tab.
 
-- **Practice from a round…**: a round chooser listing only compatible rounds, the seat, the opponent's
-  fallback, an optional title and goal. **Create** stores the scenario and offers **Open**, **Copy link** and
-  **Download scenario.json**.
-
-**Scenarios tab** (`/admin#scenarios`), a new tab: the scenarios, paged as every list there, each with its source
-(a link to its session), round, seat, title, link, download and delete.
-
-**Tables tab**, on a table under way, **Diagnose** opens a sheet:
+**S5b.** **Tables tab**, on a table under way, **Diagnose** opens a sheet:
 
 - **Public**: status, both seats (person, bot, empty), who is asked and since when (`answerBy`), journal length
   and its last lines (kind, seat, time, no content), the table's version, the record's basis (engine, content,

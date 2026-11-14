@@ -171,3 +171,8 @@ input[type="text"] { font: inherit; min-height: 44px; border: 1px solid var(--li
 .activity-what { overflow-wrap: anywhere; }
 .activity-target { font-family: var(--mono, monospace); font-size: 13px; }
 .activity-detail { margin-top: 2px; font-size: 13px; overflow-wrap: anywhere; }
+
+/* A scenario just cut (ADR 0179): its link, to open or copy. */
+.scenario-made { display: grid; gap: 6px; padding: 8px 10px; border: 1px solid #3f554d; border-radius: var(--radius-soft, 6px); }
+.scenario-made code { overflow-wrap: anywhere; font-size: 12px; }
+.scenario-made .session-links { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
