@@ -39,7 +39,12 @@ internal static class AccountDocuments
     public static string NamePath(Username username) => $"by-name/{username.Key}.json";
 
     public static string Write(Account account) => JsonSerializer.Serialize(
-        new AccountRecord(account.Id.Value, account.Identity.Provider, account.Identity.Subject, account.Username.Value, account.CreatedAt, account.Generation),
+        new AccountRecord(account.Id.Value, account.Identity.Provider, account.Identity.Subject, account.Username.Value, account.CreatedAt, account.Generation)
+        {
+            Suspension = account.Suspension is { } suspension
+                ? new SuspensionRecord(suspension.Reason, suspension.By, suspension.At, suspension.SeatsReleasedAt)
+                : null,
+        },
         Web);
 
     public static Account ReadAccount(string json)
@@ -50,7 +55,12 @@ internal static class AccountDocuments
             new ExternalIdentity(record.Provider, record.Subject),
             Username.Restore(record.Username),
             record.CreatedAt,
-            record.Generation);
+            record.Generation)
+        {
+            Suspension = record.Suspension is { } suspension
+                ? new AccountSuspension(suspension.Reason, suspension.By, suspension.At, suspension.SeatsReleasedAt)
+                : null,
+        };
     }
 
     public static string Write(UsernameReservation reservation) =>
@@ -70,7 +80,13 @@ internal static class AccountDocuments
         return AccountId.Parse(record.Account);
     }
 
-    private sealed record AccountRecord(string Id, string Provider, string Subject, string Username, DateTimeOffset CreatedAt, int Generation);
+    // Suspension is missing from a record written before ADR 0178, and from every account in good standing.
+    private sealed record AccountRecord(string Id, string Provider, string Subject, string Username, DateTimeOffset CreatedAt, int Generation)
+    {
+        public SuspensionRecord? Suspension { get; init; }
+    }
+
+    private sealed record SuspensionRecord(string Reason, string By, DateTimeOffset At, DateTimeOffset? SeatsReleasedAt);
 
     private sealed record NameRecord(string Username, string Account, DateTimeOffset ReservedAt);
 

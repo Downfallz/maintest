@@ -198,12 +198,14 @@ internal static class TableHost
         // The tending runs (A3), kept beside the recordings, and a pass run now from the panel: the hourly job's pass,
         // over this process's tables, said through the relay as the job says it. A store of runs that cannot be opened
         // leaves the panel without its Jobs tab, never the players without the host.
+        // The suspended accounts' seats (ADR 0178), which a pass run from the panel offers as the hourly job's does.
+        var suspendedSeats = opened is { } held ? new SuspendedSeats(held.Store, new AccountRegistry(held.Store, clock), admin.Lobby) : null;
         if (store is not null
             && await TableTend.OpenLogAsync(() => ArtifactStores.OpenTendLogAsync(options.Record ?? DefaultRunsDirectory, stopping.Token)) is { } tendLog)
         {
             admin.Jobs = new JobsApi(tendLog, clock, async (now, progress) =>
             {
-                var tended = await TableTend.TendAsync(registry, admin.Lobby, now, composer, clock, progress);
+                var tended = await TableTend.TendAsync(registry, admin.Lobby, now, composer, clock, progress, suspendedSeats);
                 if (relay is not null)
                 {
                     TableTend.Announce(relay, tended);

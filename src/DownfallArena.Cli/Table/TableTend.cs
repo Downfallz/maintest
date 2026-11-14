@@ -32,6 +32,9 @@ internal static class TableTend
 
         /// <summary>The begun tables ended because nobody took the seat their player left in a day (ADR 0170).</summary>
         public IReadOnlyList<string> Abandoned { get; init; } = [];
+
+        /// <summary>The suspended accounts whose seats were offered to other players, a day after (ADR 0178).</summary>
+        public IReadOnlyList<string> Released { get; init; } = [];
     }
 
     /// <summary>How often the job runs (infra/main.bicep): the warning is sent by the one pass of that interval that finds a quarter left.</summary>
@@ -90,11 +93,15 @@ internal static class TableTend
             composer.Relay = relay;
             composer.Lobby = relay is null ? null : new LobbyChanges { Relay = relay };
             var lobby = new LobbyApi(registry, composer, clock) { Friends = friends, Changes = composer.Lobby };
+            // The seats of the accounts suspended a day ago (ADR 0178), offered to other players.
+            var suspended = options.Accounts == AccountsMode.Off
+                ? null
+                : await OpenSuspendedAsync(target, lobby, clock);
 
             // Every run is kept for the admin panel's Jobs tab (A3), the one that failed too. A log that cannot be
             // opened costs the run its record, never the pass: the tables are tended all the same.
             var log = await OpenLogAsync(() => ArtifactStores.OpenTendLogAsync(target));
-            var (tended, _) = await RecordedAsync(log, TendTrigger.Schedule, by: null, clock, (now, progress) => TendAsync(registry, lobby, now, composer, clock, progress));
+            var (tended, _) = await RecordedAsync(log, TendTrigger.Schedule, by: null, clock, (now, progress) => TendAsync(registry, lobby, now, composer, clock, progress, suspended));
             if (relay is not null)
             {
                 Announce(relay, tended);
@@ -117,6 +124,11 @@ internal static class TableTend
                 Console.WriteLine($"  Session {id} ended: nobody took the seat its player left.");
             }
 
+            foreach (var id in tended.Released)
+            {
+                Console.WriteLine($"  Account {id}: suspended a day ago, its seats in unfinished games offered to other players.");
+            }
+
             foreach (var id in tended.Warned)
             {
                 Console.WriteLine($"  Session {id}: its player was told a quarter of their time to answer is left.");
@@ -130,6 +142,12 @@ internal static class TableTend
             await Console.Error.WriteLineAsync($"The tables could not be tended: {failure.Message}");
             return 1;
         }
+    }
+
+    private static async Task<SuspendedSeats> OpenSuspendedAsync(string target, LobbyApi lobby, TimeProvider clock)
+    {
+        var accounts = await ArtifactStores.OpenAccountsAsync(target);
+        return new SuspendedSeats(accounts, new AccountRegistry(accounts, clock), lobby);
     }
 
     /// <summary>
@@ -220,7 +238,8 @@ internal static class TableTend
     /// <summary>One pass: the sweep, the invitations that ran out, the games whose player's time ran out, the games whose open seat nobody took, then the players whose time reaches its last quarter.</summary>
     /// <param name="composer">What reads a table's last move; none, and no game is timed out.</param>
     /// <param name="progress">Told what the pass has done after each stage, so a pass that stops partway is known by what it did.</param>
-    internal static async Task<Tended> TendAsync(TableRegistry registry, LobbyApi lobby, DateTimeOffset now, TableComposer? composer = null, TimeProvider? clock = null, Action<Tended>? progress = null)
+    /// <param name="suspended">The suspended accounts' seats (ADR 0178); none on a host that signs nobody in.</param>
+    internal static async Task<Tended> TendAsync(TableRegistry registry, LobbyApi lobby, DateTimeOffset now, TableComposer? composer = null, TimeProvider? clock = null, Action<Tended>? progress = null, SuspendedSeats? suspended = null)
     {
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(lobby);
@@ -228,6 +247,12 @@ internal static class TableTend
         progress?.Invoke(done);
         done = done with { Expired = await lobby.ExpireInvitationsNowAsync() };
         progress?.Invoke(done);
+        if (suspended is not null)
+        {
+            done = done with { Released = await suspended.ReleaseAsync(now) };
+            progress?.Invoke(done);
+        }
+
         if (composer is not null)
         {
             done = done with { TimedOut = await TurnTimeouts.EndAsync(registry, composer, now, clock ?? TimeProvider.System) };

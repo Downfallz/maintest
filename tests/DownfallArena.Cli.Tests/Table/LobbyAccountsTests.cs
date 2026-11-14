@@ -243,6 +243,33 @@ public sealed class LobbyAccountsTests : IDisposable
         (await _hosted.Stored!.RecordAsync(marks.Id, Cancel)).ShouldNotBeNull().Seats.Single(seat => seat.Slot == "player1").Account.ShouldBeNull();
     }
 
+    /// <summary>
+    /// A suspended account's seats are kept a day for its player (ADR 0178), then the tending pass offers them to
+    /// other players once, as a deleted account's are, and notes it on the suspension.
+    /// </summary>
+    [Fact]
+    public async Task A_suspended_account_s_seats_are_offered_to_other_players_a_day_later_once()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var (marks, _) = await OpenAsync(mark);
+        var at = DateTimeOffset.UtcNow;
+        await _accounts.SuspendAsync(mark.Account.Id, AccountSuspension.Create("Spamming invitations to strangers.", "op", at).Value, Cancel);
+        var seats = new SuspendedSeats(_store, _accounts, await LobbyAsync());
+
+        var early = await seats.ReleaseAsync(at + AccountSuspension.SeatsKeptFor - TimeSpan.FromMinutes(1));
+        var kept = marks.Seats[0].Account;
+        var due = await seats.ReleaseAsync(at + AccountSuspension.SeatsKeptFor);
+        var later = await seats.ReleaseAsync(at + AccountSuspension.SeatsKeptFor + TimeSpan.FromHours(1));
+
+        early.ShouldBeEmpty();
+        kept.ShouldBe(mark.Account.Id);
+        due.ShouldBe([mark.Account.Id.Value]);
+        marks.Seats[0].Account.ShouldBeNull();
+        marks.OpenSeats.ShouldContain("player1");
+        later.ShouldBeEmpty();
+        (await _accounts.FindAsync(mark.Account.Id, Cancel)).ShouldNotBeNull().Suspension.ShouldNotBeNull().SeatsReleasedAt.ShouldBe(at + AccountSuspension.SeatsKeptFor);
+    }
+
     [Theory]
     [InlineData("Lookahead (lookahead-55) — the strongest: searched from search-51's weights", "Lookahead (lookahead-55)")]
     [InlineData("Greedy", "Greedy")]

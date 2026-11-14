@@ -55,7 +55,34 @@ export function playerRows(answer, now = Date.now()) {
     split: `${player.ranked ?? 0} ranked · ${player.againstPlayers ?? 0} vs players · ${player.againstBots ?? 0} vs bots`,
     wins: player.wins ?? 0,
     rating: ratingText(player),
+    suspended: Boolean(player.suspension),
   }));
+}
+
+/** The shortest and longest reason a suspension takes (ADR 0178): the host's own limits. */
+export const SUSPENSION_REASON = Object.freeze({ shortest: 10, longest: 300 });
+
+/** Whether a reason typed is one the host takes. */
+export function reasonReady(text) {
+  const length = String(text ?? '').trim().length;
+  return length >= SUSPENSION_REASON.shortest && length <= SUSPENSION_REASON.longest;
+}
+
+/** How long until a moment, in the largest unit that keeps it short. */
+function inTime(moment, now) {
+  const minutes = Math.max(1, Math.ceil((new Date(moment).getTime() - now) / 60000));
+  return minutes < 60 ? `${minutes} min` : `${Math.ceil(minutes / 60)} h`;
+}
+
+/** What the sheet says of a suspended account: who, when, why, and where its seats stand (ADR 0178). */
+export function suspensionLine(suspension, now = Date.now()) {
+  if (!suspension) return '';
+  const said = `Suspended ${ago(suspension.at, now)}${suspension.by ? ` by ${suspension.by}` : ''}: ${suspension.reason}`;
+  if (suspension.seatsReleasedAt) return `${said} Its seats were offered to other players ${ago(suspension.seatsReleasedAt, now)}.`;
+  const due = new Date(suspension.at).getTime() + 24 * 3600 * 1000;
+  return due <= now
+    ? `${said} Its seats are offered to other players at the next tending pass.`
+    : `${said} Its seats are offered to other players in ${inTime(due, now)}, unless it is restored first.`;
 }
 
 /** What the pager under the list says: how many players, how many of them the search kept, and which page. */
@@ -78,6 +105,8 @@ export function actionSaid(action, answer, username) {
     case 'sign-out': return { refused: false, line: `${username} is signed out everywhere. Every device asks them to sign in again.` };
     case 'rename': return { refused: false, line: `Renamed to ${answer.body?.account?.username ?? 'the new name'}.` };
     case 'delete': return { refused: false, line: `${username}'s account is deleted.` };
+    case 'suspend': return { refused: false, line: `${username} is suspended. Signing in tells them why.` };
+    case 'restore': return { refused: false, line: `${username} is restored and can sign in again.` };
     default: return { refused: false, line: 'Done.' };
   }
 }
@@ -155,6 +184,7 @@ export function mountPlayers({ send, element, shown }) {
     open.dataset.player = row.id;
     open.addEventListener('click', () => void openSheet(row.id));
     name.append(open);
+    if (row.suspended) name.append(' ', made('span', 'status-tag suspended', 'Suspended'));
     const games = made('td', 'player-games', String(row.games));
     games.title = row.split;
     line.append(
@@ -207,6 +237,13 @@ export function mountPlayers({ send, element, shown }) {
     element('player-delete-name').placeholder = player.username;
     element('player-delete').disabled = true;
     element('player-signout-confirm').hidden = true;
+    const suspension = player.suspension ?? null;
+    element('player-suspended').hidden = !suspension;
+    element('player-suspended-line').textContent = suspensionLine(suspension);
+    element('player-suspend-form').hidden = Boolean(suspension);
+    element('player-suspend-reason').value = '';
+    element('player-suspend').disabled = true;
+    element('player-suspend-confirm').hidden = true;
     say('', false);
   }
 
@@ -251,6 +288,16 @@ export function mountPlayers({ send, element, shown }) {
     element('player-delete').disabled = !deleteConfirmed(element('player-delete-name').value, opened?.player?.username);
   });
   element('player-delete').addEventListener('click', () => void act('delete', 'DELETE', base(), { username: element('player-delete-name').value.trim() }));
+  element('player-suspend-reason').addEventListener('input', () => {
+    element('player-suspend').disabled = !reasonReady(element('player-suspend-reason').value);
+  });
+  element('player-suspend').addEventListener('click', () => {
+    element('player-suspend-line').textContent = `Suspend ${opened.player.username}? Every session they hold ends, and signing in tells them: "${element('player-suspend-reason').value.trim()}"`;
+    element('player-suspend-confirm').hidden = false;
+  });
+  element('player-suspend-no').addEventListener('click', () => { element('player-suspend-confirm').hidden = true; });
+  element('player-suspend-yes').addEventListener('click', () => void act('suspend', 'POST', `${base()}/suspension`, { reason: element('player-suspend-reason').value.trim() }));
+  element('player-restore').addEventListener('click', () => void act('restore', 'DELETE', `${base()}/suspension`));
   element('player-sheet-close').addEventListener('click', () => element('player-sheet').close?.());
 
   element('players-search').addEventListener('input', () => {
