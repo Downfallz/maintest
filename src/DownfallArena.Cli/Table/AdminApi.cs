@@ -93,11 +93,14 @@ internal sealed class AdminApi
     /// <summary>The Overview tab (A5): the numbers at a glance.</summary>
     public OverviewApi? Overview { get; set; }
 
+    /// <summary>The match scenarios (ADR 0179), on a host that records the sessions they are cut from.</summary>
+    public ScenarioAdminApi? Scenarios { get; set; }
+
     /// <summary>The Settings tab (ADR 0177), on a host that signs players in: registration and the notice.</summary>
     public SettingsApi? Settings { get; set; }
 
     public static bool Names(string path) =>
-        path == MePath || Under(path, Prefix) || Under(path, SessionsPrefix) || PlayersApi.Names(path) || JobsApi.Names(path) || SettingsApi.Names(path) || OverviewApi.Names(path) || ActivityApi.Names(path) || LobbyApi.Names(path);
+        path == MePath || Under(path, Prefix) || Under(path, SessionsPrefix) || PlayersApi.Names(path) || JobsApi.Names(path) || SettingsApi.Names(path) || OverviewApi.Names(path) || ActivityApi.Names(path) || ScenarioAdminApi.Names(path) || LobbyApi.Names(path);
 
     private static bool Under(string path, string prefix) => path == prefix || path.StartsWith(prefix + "/", StringComparison.Ordinal);
 
@@ -187,6 +190,13 @@ internal sealed class AdminApi
             return Turns is null
                 ? StudioResponse.OfPlainText(404, "This host takes the bots' turns in its own process, so it has no turn queues.")
                 : await Turns.HandleAsync(method, path, body, operatorName);
+        }
+
+        if (ScenarioAdminApi.Names(path))
+        {
+            return Scenarios is null
+                ? StudioResponse.OfPlainText(404, "This host keeps no scenarios: it records nothing (--no-record), so it has no session to cut one from.")
+                : await Scenarios.HandleAsync(method, path, body, operatorName);
         }
 
         if (OverviewApi.Names(path))

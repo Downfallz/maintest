@@ -38,6 +38,7 @@ import { createBattleMatch } from '../../table/battle-match.js';
 import { replayOf, operatorToken, replayMessage } from '../../table/session.js';
 import { httpTransport, replayTransport } from '../../table/transport.js';
 import { battleSeats, seatPath } from '../../table/battle-seats.js';
+import { openPractice, practiceBand, practiceOf } from '../../table/battle-practice.js';
 import { createLiveConnection } from '../../table/battle-live.js';
 import { signInPath } from '../../table/account.js';
 import { seatLabel } from '../../table/invitation.js';
@@ -71,6 +72,8 @@ let creatures: Creature[] = [];
 let frame: SceneFrame = { round: null, stage: 'decision', target: null, actor: null, targets: [], creatures: [] };
 let discovering = 0;
 let heldSeats: Choice[] = [];
+// Whether the next discovery starts the scenario's practice again from its cut rather than resuming it (ADR 0179).
+let restartPractice = false;
 let rendererFailed = false;
 // The seat being shown, as this browser remembers what it saw of it, and the last mark kept for it.
 let seenGame: string | null = null, seenKept: number | null = null;
@@ -729,6 +732,26 @@ async function discover(autoResume = true) {
   text('perspective', 'YOUR TEAM'); text('connection', 'Connecting…');
   text('load-title', 'Opening your battle'); text('load-detail', 'Verifying the seats saved in this browser…');
   text('access-link', 'Lobby'); $<HTMLAnchorElement>('access-link').href = '/';
+  // A match scenario's practice (ADR 0179): the account's practice of it, resumed, or one started from its cut.
+  const scenario = practiceOf(location.search);
+  $('practice-band').hidden = true;
+  if (scenario) {
+    const fresh = restartPractice; restartPractice = false;
+    text('load-title', 'Opening the practice'); text('load-detail', 'Setting the board at the top of its round…'); $('loading').hidden = false;
+    try {
+      const opened = await openPractice(scenario, request, { fresh });
+      if (ticket !== discovering) return;
+      const band = practiceBand(opened.practice);
+      text('practice-title', band.title); text('practice-detail', band.detail); text('practice-goal', band.goal);
+      $('practice-goal').hidden = !band.goal; $('practice-band').hidden = false;
+      heldSeats = [opened]; choose(opened);
+    } catch (error) {
+      if (ticket !== discovering) return;
+      if ((error as { status?: number }).status === 401) status('signin');
+      else { text('load-title', 'Practice unavailable'); text('load-detail', (error as Error).message); $('retry').hidden = false; }
+    }
+    return;
+  }
   const recorded = replayOf(location.search);
   if (recorded) {
     text('perspective', `${seatName(recorded.seat).toUpperCase()} · RECORDED MATCH`);
@@ -782,6 +805,8 @@ function failRenderer() {
   text('access-link', 'Lobby'); $<HTMLAnchorElement>('access-link').href = '/';
   text('retry', 'Reload scene'); $('retry').hidden = false;
 }
+// Restart the round: a new practice from the scenario's cut, in place of this one.
+$('practice-restart').addEventListener('click', () => { restartPractice = true; void discover(); });
 $('retry').addEventListener('click', () => { if (rendererFailed) location.reload(); else if (selected) void connection.refresh(); else void discover(); });
 scene.onCancel = () => audio.silence();
 scene.onImpact = () => {

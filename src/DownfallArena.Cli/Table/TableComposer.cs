@@ -276,7 +276,23 @@ internal sealed class TableComposer
             return _own;
         }
 
-        if (record.Content is not { } version || string.Equals(version, _own.Version, StringComparison.Ordinal))
+        return await ContentOfVersionAsync(record.Content, cancellationToken);
+    }
+
+    /// <summary>
+    /// The content kept under a hash and the match's handlers over it (ADR 0163): what a match scenario is cut and
+    /// played on (ADR 0179). This host's own for its own hash; the kept one otherwise, or this host's own when it is not
+    /// kept, which a scenario then refuses by its checkpoint rather than playing on content it was not cut on.
+    /// </summary>
+    internal async Task<(TableContent Content, SteppedHost Stepped)> PlayedOnAsync(string? version, CancellationToken cancellationToken = default)
+    {
+        var content = Contents is null ? _own : await ContentOfVersionAsync(version, cancellationToken);
+        return (content, content.Stepped ?? _stepped);
+    }
+
+    private async Task<TableContent> ContentOfVersionAsync(string? content, CancellationToken cancellationToken)
+    {
+        if (content is not { } version || string.Equals(version, _own.Version, StringComparison.Ordinal))
         {
             return _own;
         }
