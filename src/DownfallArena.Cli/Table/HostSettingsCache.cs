@@ -20,6 +20,9 @@ internal sealed class HostSettingsCache(IHostSettingsStore store, TimeProvider c
     private DateTimeOffset? _readAt;
     private Task<HostSettings>? _reading;
 
+    // How many saves this process has made: a read that began before one finished stands for nothing newer than it.
+    private long _saves;
+
     /// <summary>The settings, read again when the ones held are older than a minute; one read at a time.</summary>
     public Task<HostSettings> CurrentAsync()
     {
@@ -47,6 +50,7 @@ internal sealed class HostSettingsCache(IHostSettingsStore store, TimeProvider c
         await store.SaveAsync(settings);
         lock (_gate)
         {
+            _saves++;
             _last = settings;
             _readAt = clock.GetUtcNow();
         }
@@ -54,6 +58,12 @@ internal sealed class HostSettingsCache(IHostSettingsStore store, TimeProvider c
 
     private async Task<HostSettings> ReadAsync()
     {
+        long saves;
+        lock (_gate)
+        {
+            saves = _saves;
+        }
+
         HostSettings? read = null;
         try
         {
@@ -66,8 +76,13 @@ internal sealed class HostSettingsCache(IHostSettingsStore store, TimeProvider c
 
         lock (_gate)
         {
-            _last = read ?? _last;
-            _readAt = clock.GetUtcNow();
+            // A save made here while the store was being read is newer than what the read found: it stands.
+            if (saves == _saves)
+            {
+                _last = read ?? _last;
+                _readAt = clock.GetUtcNow();
+            }
+
             return _last;
         }
     }

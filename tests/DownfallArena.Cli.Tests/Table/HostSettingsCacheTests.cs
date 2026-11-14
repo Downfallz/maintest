@@ -51,6 +51,25 @@ public sealed class HostSettingsCacheTests
         _store.Held.ShouldBe(Closed);
     }
 
+    /// <summary>
+    /// A read that found the old settings and finished after a save made here does not put them back: closing
+    /// registration holds in the process that closed it.
+    /// </summary>
+    [Fact]
+    public async Task A_read_that_began_before_a_save_does_not_undo_it()
+    {
+        var cache = new HostSettingsCache(_store, _clock);
+        var held = new TaskCompletionSource<HostSettings?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _store.Holding = held;
+        var reading = cache.CurrentAsync();
+
+        await cache.SaveAsync(Closed);
+        held.SetResult(HostSettings.Default);
+        await reading;
+
+        (await cache.CurrentAsync()).ShouldBe(Closed);
+    }
+
     [Fact]
     public async Task A_store_that_cannot_be_read_keeps_the_settings_last_read()
     {
@@ -73,9 +92,18 @@ public sealed class HostSettingsCacheTests
 
         public int Reads { get; private set; }
 
+        /// <summary>When set, the next read answers only once the test completes it: a read still on its way.</summary>
+        public TaskCompletionSource<HostSettings?>? Holding { get; set; }
+
         public Task<HostSettings?> GetAsync(CancellationToken cancellationToken = default)
         {
             Reads++;
+            if (Holding is { } holding)
+            {
+                Holding = null;
+                return holding.Task;
+            }
+
             return Out ? throw new IOException("The store is out.") : Task.FromResult(Held);
         }
 
