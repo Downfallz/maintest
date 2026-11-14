@@ -27,12 +27,13 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
 
     public static bool Names(string path) => path == Route || path.StartsWith(Route + "/", StringComparison.Ordinal);
 
-    public async Task<StudioResponse> HandleAsync(string method, string path, string body, string operatorName)
+    public async Task<StudioResponse> HandleAsync(string method, string path, string body, string operatorName, string? query = null)
     {
         var rest = path[Route.Length..].Trim('/');
         return (method, rest) switch
         {
             ("GET", "") => await ListAsync(),
+            ("GET", "rounds") => await RoundsAsync(System.Web.HttpUtility.ParseQueryString(query ?? string.Empty)["session"]),
             ("POST", "") => await CutAsync(body, operatorName),
             ("DELETE", { Length: > 0 } id) => await DeleteAsync(id, operatorName),
             _ => Error("Scenario.NoRoute", $"No such route: {method} {path}", 404),
@@ -76,26 +77,14 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
             return Error("Scenario.Invalid", "Name a recorded session and a round from 1; the seat is player1 or player2, the title 80 characters at most and the goal 300.", 400);
         }
 
-        if (!TableKeys.IsTableId(session) || await stored.RecordAsync(session) is not { } record)
+        var read = await SourceAsync(session);
+        if (read.Refused is { } refused)
         {
-            return Error("Scenario.NoSession", $"No recorded session '{session}' at this host.", 404);
+            return refused;
         }
 
-        if (record.Rules is not { } recorded)
-        {
-            return Error("Scenario.NoRules", "This session was recorded before its rules were kept with it (ADR 0163): it cannot be replayed on the rules it began on.", 409);
-        }
-
-        var (content, _) = await composer.PlayedOnAsync(record.Content);
-        if (record.Content is { } version && !string.Equals(content.Version, version, StringComparison.Ordinal))
-        {
-            return Error("Scenario.ContentGone", $"The content this session was played on ({version}) is not kept at this host.", 409);
-        }
-
-        var rules = recorded.ToRuleSet();
+        var (content, source, entries) = read.Source!.Value;
         var resources = content.Services.GetRequiredService<IGameResources>();
-        var entries = (await composer.JournalAsync(session))?.Entries ?? [];
-        var source = new JournaledMatch(session, record.MatchId, rules, record.Seed, [.. Enumerable.Repeat(resources.Creatures.First().Id, rules.TeamSize)]);
         var cut = await content.Services.GetRequiredService<ScenarioCutter>().CutAsync(source, entries, asked.Round);
         if (cut.IsFailure)
         {
@@ -108,6 +97,49 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
         Console.WriteLine($"  Scenario {id} cut from session {session} at round {asked.Round} by {operatorName}.");
         await Notes.NoteAsync(operatorName, OperatorActions.CutScenario, id, $"session {session}, round {asked.Round}, {ScenarioCommands.SeatName(seat)}");
         return StudioResponse.OfJson(new { id, link = Link(id) }, ArtifactJson.LineOptions, 201);
+    }
+
+    /// <summary>The rounds a recorded session can be cut at, and why its journal stopped rebuilding when it did.</summary>
+    private async Task<StudioResponse> RoundsAsync(string? session)
+    {
+        var read = await SourceAsync(session ?? string.Empty);
+        if (read.Refused is { } refused)
+        {
+            return refused;
+        }
+
+        var (content, source, entries) = read.Source!.Value;
+        var reading = await content.Services.GetRequiredService<ScenarioRounds>().ReadAsync(source, entries);
+        return StudioResponse.OfJson(new { session, rounds = reading.Rounds.Select(one => one.Round).ToArray(), stoppedBy = reading.StoppedBy?.Message }, ArtifactJson.LineOptions);
+    }
+
+    /// <summary>
+    /// A recorded session as a scenario is cut from it: the content it was played on, its match as it was created, and
+    /// its journal; or the answer that says why it cannot be.
+    /// </summary>
+    private async Task<(StudioResponse? Refused, (TableContent Content, JournaledMatch Match, IReadOnlyList<IJournalEntry> Entries)? Source)> SourceAsync(string session)
+    {
+        if (!TableKeys.IsTableId(session) || await stored.RecordAsync(session) is not { } record)
+        {
+            return (Error("Scenario.NoSession", $"No recorded session '{session}' at this host.", 404), null);
+        }
+
+        if (record.Rules is not { } recorded)
+        {
+            return (Error("Scenario.NoRules", "This session was recorded before its rules were kept with it (ADR 0163): it cannot be replayed on the rules it began on.", 409), null);
+        }
+
+        var (content, _) = await composer.PlayedOnAsync(record.Content);
+        if (record.Content is { } version && !string.Equals(content.Version, version, StringComparison.Ordinal))
+        {
+            return (Error("Scenario.ContentGone", $"The content this session was played on ({version}) is not kept at this host.", 409), null);
+        }
+
+        var rules = recorded.ToRuleSet();
+        var resources = content.Services.GetRequiredService<IGameResources>();
+        var entries = (await composer.JournalAsync(session))?.Entries ?? [];
+        var match = new JournaledMatch(session, record.MatchId, rules, record.Seed, [.. Enumerable.Repeat(resources.Creatures.First().Id, rules.TeamSize)]);
+        return (null, (content, match, entries));
     }
 
     private async Task<StudioResponse> DeleteAsync(string id, string operatorName)

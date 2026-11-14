@@ -523,3 +523,48 @@ test('the shared header reads who is signed in on the admin page and links the o
   await expect.poll(() => page.locator('#nav-admin-link').evaluate(link => link.hidden)).toBe(false);
   await expect(page.locator('#nav-admin-link')).toHaveAttribute('aria-current', 'page');
 });
+
+// Match scenarios (ADR 0179): a recorded session cut at the top of a round from its row, then listed with its link.
+test('a session is cut at a round from its row, and the scenario is listed with the link a player opens', async ({ page }, info) => {
+  const kept = [];
+  const posted = [];
+  await page.route('**/api/admin/scenarios**', async route => {
+    const req = route.request(), url = new URL(req.url());
+    if (url.pathname.endsWith('/rounds')) return route.fulfill({ json: { session: url.searchParams.get('session'), rounds: [1, 2, 3, 4], stoppedBy: null } });
+    if (req.method() === 'POST') {
+      const asked = req.postDataJSON(); posted.push(asked);
+      const made = { id: 'sc-1', title: asked.title, goal: asked.goal, session: asked.session, round: asked.round, seat: asked.seat, content: 'abc', link: '/battle?scenario=sc-1' };
+      kept.unshift(made);
+      return route.fulfill({ status: 201, json: { id: made.id, link: made.link } });
+    }
+    return route.fulfill({ json: { scenarios: kept } });
+  });
+  await page.reload();
+  await expect(page.locator('#tab-scenarios')).toBeVisible();
+  await page.locator('#tab-sessions').click();
+
+  await page.locator('#sessions li', { hasText: 'people-finished' }).locator('.link-button', { hasText: 'practice from a round' }).click();
+  await expect(page.locator('#scenario-round option')).toHaveCount(4);
+  await page.selectOption('#scenario-round', '3');
+  await page.selectOption('#scenario-seat', 'player2');
+  await page.fill('#scenario-title', 'Bleed after a stun');
+  await page.locator('#scenario-submit').click();
+
+  await expect(page.locator('#scenario-made code')).toHaveText(/\/battle\?scenario=sc-1$/);
+  expect(posted).toEqual([{ session: 'people-finished', round: 3, seat: 'player2', title: 'Bleed after a stun' }]);
+  await page.screenshot({ path: info.outputPath('scenario-sheet.png') });
+  await page.locator('#scenario-cancel').click();
+  await page.locator('#tab-scenarios').click();
+  await expect(page.locator('#scenarios li')).toHaveCount(1);
+  await expect(page.locator('#scenarios li')).toContainText('Bleed after a stun');
+  await expect(page.locator('#scenarios li a', { hasText: 'open' })).toHaveAttribute('href', '/battle?scenario=sc-1');
+  await expect(page.locator('#tab-scenarios-count')).toHaveText('1');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(widthOf(page));
+});
+
+test('a host that keeps no scenarios shows no Scenarios tab', async ({ page }) => {
+  await page.route('**/api/admin/scenarios**', route => route.fulfill({ status: 404, body: 'This host keeps no scenarios.' }));
+  await page.reload();
+  await expect(page.locator('#tab-sessions')).toBeVisible();
+  await expect(page.locator('#tab-scenarios')).toBeHidden();
+});

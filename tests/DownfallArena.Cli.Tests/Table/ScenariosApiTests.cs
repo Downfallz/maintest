@@ -113,6 +113,18 @@ public sealed class ScenariosApiTests : IDisposable
     }
 
     [Fact]
+    public async Task The_operator_reads_the_rounds_a_session_can_be_cut_at_before_choosing_one()
+    {
+        var (session, _) = await CutAsync();
+
+        var rounds = Read(await Admin().HandleAsync("GET", $"{ScenarioAdminApi.Route}/rounds", "", "operator", $"?session={session}"));
+
+        rounds.GetProperty("rounds").EnumerateArray().Select(one => one.GetInt32()).ShouldBe(Enumerable.Range(1, rounds.GetProperty("rounds").GetArrayLength()));
+        rounds.GetProperty("stoppedBy").ValueKind.ShouldBe(JsonValueKind.Null);
+        (await Admin().HandleAsync("GET", $"{ScenarioAdminApi.Route}/rounds", "", "operator", "?session=20261114-000000-deadbeef")).Status.ShouldBe(404);
+    }
+
+    [Fact]
     public async Task A_session_the_host_never_recorded_cannot_be_cut() =>
         (await Admin().HandleAsync("POST", ScenarioAdminApi.Route, JsonSerializer.Serialize(new { session = "20261114-000000-deadbeef", round = 1 }), "operator")).Status.ShouldBe(404);
 
