@@ -812,7 +812,9 @@ function failRenderer() {
 // Restart the round: a new practice from the scenario's cut, in place of this one.
 $('practice-restart').addEventListener('click', () => { restartPractice = true; void discover(); });
 $('practice-brief-open').addEventListener('click', () => $<HTMLDialogElement>('practice-brief').showModal());
-$('practice-brief-begin').addEventListener('click', () => { $<HTMLDialogElement>('practice-brief').close(); render(); });
+$('practice-brief-begin').addEventListener('click', () => $<HTMLDialogElement>('practice-brief').close());
+// However the briefing closes (Begin, Escape), what the field held back behind it comes forward.
+$('practice-brief').addEventListener('close', () => render());
 $('retry').addEventListener('click', () => { if (rendererFailed) location.reload(); else if (selected) void connection.refresh(); else void discover(); });
 scene.onCancel = () => audio.silence();
 scene.onImpact = () => {

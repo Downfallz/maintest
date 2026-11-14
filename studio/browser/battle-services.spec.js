@@ -266,11 +266,12 @@ test('a friend is invited to the rematch at once; anyone else opens the lobby on
 
 // A match scenario's practice (ADR 0179): /battle?scenario=<id> resumes the account's practice or starts one from the
 // cut, says so in a band over the field, and Restart the round starts it again from the cut.
-async function practise(page, { signedIn = true, resumed = false } = {}) {
+async function practise(page, { signedIn = true, resumed = false, asked = false } = {}) {
   const state = { asked: [], errors: [] };
   page.on('pageerror', error => state.errors.push(error.message));
   const view = { over: false, recording: false, waitingFor: null, feed: [], feedNext: 0, practice: { scenario: 'sc-1', title: 'Bleed after a stun', goal: 'Keep Creature 5 alive', round: 4 },
-    board: { slot: 'Player2', roundNumber: 4, phase: 'Planning', subPhase: 'Speed', allies: [creature(4, 20), creature(5, 9)], enemies: [creature(1, 18), creature(2, 12)], timeline: [] } };
+    board: { slot: 'Player2', roundNumber: 4, phase: 'Planning', subPhase: 'Speed', allies: [creature(4, 20), creature(5, 9)], enemies: [creature(1, 18), creature(2, 12)], timeline: [], speedChoices: [] } };
+  if (asked) Object.assign(view, { waitingFor: 'Speed', waitingAsked: 3, waitingCreature: 4, options: { speed: { missing: [4, 5] } } });
   let opened = resumed ? 1 : 0;
   await page.route('**/api/**', async route => {
     const req = route.request(), url = new URL(req.url());
@@ -323,6 +324,21 @@ test('a scenario opens as practice from its cut, says so over the field, and res
   await expect(brief).toBeHidden();
   await expect(page.locator('#practice-leave')).toHaveAttribute('href', '/');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  expect(state.errors).toEqual([]);
+});
+// Escape closes the briefing as Begin does, and what the field held back behind it (here the tempos the person is
+// asked) comes forward without anything else happening.
+test('a briefing closed with Escape lets the field go on to the question it held back', async ({ page }) => {
+  const state = await practise(page, { asked: true });
+  const brief = page.locator('#practice-brief');
+  await expect(brief).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
+  await expect(page.locator('#planning-dialog')).toBeHidden();
+
+  await page.keyboard.press('Escape');
+
+  await expect(brief).toBeHidden();
+  await expect(page.locator('#planning-dialog')).toBeVisible();
   expect(state.errors).toEqual([]);
 });
 test('a practice resumed after a reload goes on where it was, without its briefing', async ({ page }) => {
