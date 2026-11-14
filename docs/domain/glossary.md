@@ -28,6 +28,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Ranked game | A 3v3 game between two signed-in Players, not opened unranked: rated on the ladder and counted in each Player's statistics. A game against a bot, an unranked game and one on a shared device are never ranked (ADR 0155, ADR 0171). | decided |
 | Reaction | One of a fixed set of short messages (Hello, Good luck, Well played, ...) a Player sends the other during a Match between two people, never free text: a few seconds apart, kept with the table, shown once to the other Player unless they muted them, and never an event of the Match (ADR 0173). | decided |
 | Account activity | When an account last signed in and last used the site, kept to the hour beside the account and forgotten with it, so the operator can see who still plays (ADR 0174). | decided |
+| Bot level | How strong a bot a Player chooses to play: Easy, Medium or Hard, each the name of a bot the host seats. A Player is shown the level and never the bot; the operator sees both (ADR 0180). | decided |
 | Match state | Where a Match is in its life: `WaitingForPlayers`, `InProgress`, `Ended`. | decided |
 | Roster | The Creature definitions a Player brings to a Match; its size is the Rule set's team size. | decided |
 | Board | Whether positions on a board matter (range, adjacency) or the game is slot-based only. | open |

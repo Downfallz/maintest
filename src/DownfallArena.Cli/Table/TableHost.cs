@@ -51,7 +51,13 @@ internal static class TableHost
         // A table told --no-record opens nothing and writes nothing: a rule tried out at a table should be
         // able to leave the disk as it found it.
         var store = options.Recording ? await ArtifactStores.OpenAsync(options.Record ?? DefaultRunsDirectory, stopping.Token) : null;
-        var agents = SeatableAgents.Read(WeightsDirectory);
+        var offered = SeatableAgents.Read(WeightsDirectory);
+        var levels = BotLevels.OfHost(offered);
+
+        // The operator can seat every bot a level seats (ADR 0180), Easy's included, which no list put forward.
+        IReadOnlyList<SeatableAgent> agents = [.. offered, .. levels.All
+            .Where(level => offered.All(agent => !string.Equals(agent.Value, level.Agent, StringComparison.OrdinalIgnoreCase)))
+            .Select(level => new SeatableAgent(level.Agent, level.Agent, Featured: false))];
 
         // "Your turn" to a seat's phone (ADR 0118), when the host has keys to sign it with: the file named, or
         // the hosted table's variable. A key pair that is not one is one line here, not a refusal per notice.
@@ -97,6 +103,7 @@ internal static class TableHost
             Turns = turns is null ? new InProcessAgentTurns(clock) : new QueuedAgentTurns(turns, clock) { Said = Console.WriteLine },
             Index = index,
             Agents = agents,
+            Levels = levels,
             Push = push,
             Results = results,
             Basis = ReplayBasis.Of(EngineVersion.Current, services.GetRequiredService<IGameResources>(), rules),
@@ -160,7 +167,8 @@ internal static class TableHost
             players = new PlayersApi(directory, accounts, results)
             {
                 Friends = friendships,
-                BotNamed = spec => LobbyApi.BotName(agents.FirstOrDefault(agent => string.Equals(agent.Value, spec, StringComparison.OrdinalIgnoreCase))?.Label ?? spec),
+                // The operator's: the bot's own name, and the level a player knows it by (ADR 0180).
+                BotNamed = spec => levels.OperatorName(spec, LobbyApi.BotName(agents.FirstOrDefault(agent => string.Equals(agent.Value, spec, StringComparison.OrdinalIgnoreCase))?.Label ?? spec)),
             };
         }
         var admin = new AdminApi(registry, composer, gate, clock, described, stored, agents, push)
@@ -233,7 +241,7 @@ internal static class TableHost
         // The ladder (ADR 0124), read from the results the composer keeps; bots are named as the lobby names them.
         var leaderboard = accounts is null || results is null
             ? null
-            : new LeaderboardApi(results, accounts, clock, spec => LobbyApi.BotName(agents.FirstOrDefault(agent => string.Equals(agent.Value, spec, StringComparison.OrdinalIgnoreCase))?.Label ?? spec));
+            : new LeaderboardApi(results, accounts, clock, levels.PlayerName);
         // A player's own statistics (ADR 0168), read off the same results, named from this host's catalogue.
         var stats = accounts is null || results is null ? null : new StatsApi(results, accounts, services.GetRequiredService<IGameResources>());
         using var server = new TableServer(options.Bind, options.Port, registry, new TableFiles(TableDirectory), admin, clock, stored, accounts, leaderboard, friends, stats) { Tended = options.Tended };
