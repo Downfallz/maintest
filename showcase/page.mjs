@@ -25,7 +25,6 @@ function battlefield(c) {
   return `<section id="battlefield" class="section contain" aria-labelledby="world-title" data-gallery>
     <div class="section-head"><div><p class="kicker">${c.world}</p><h2 id="world-title">${c.worldTitle}</h2></div>
       <p class="lead">${c.worldLead}</p></div>
-    <p class="planet-prose">${c.worldBody}</p>
     ${selector(c.roundPicker, choices)}
     ${rounds.map((round, index) => `<figure class="moment" id="round-${round}" data-panel>
       <div class="landscape ${round === 12 ? 'shattered' : ''}">
@@ -47,16 +46,16 @@ export function page(c, specimen, app) {
         <p class="kicker">${c.kicker}</p>
         <h1 id="title">${c.title[0]}<br><em>${c.title[1]}</em></h1>
         <p class="pitch">${c.pitch}</p>
-        <div class="actions">${play(c.play, 'gold-button')}<a class="discover" href="#mutations">${c.explore} <span aria-hidden="true">↓</span></a></div>
+        <div class="actions">${play(c.play, 'gold-button')}<a class="discover" href="#duel">${c.explore} <span aria-hidden="true">↓</span></a></div>
         <p class="play-note">${c.playNote}</p>
       </div><div class="specimen"><strong>${c.specimen}</strong><span>${c.specimenLine}</span></div></div>
     </section>
-    ${battlefield(c)}
-    ${mutationStory(c, specimen)}
     <section id="duel" class="duel" aria-labelledby="duel-title"><div class="section contain">
       <p class="kicker">${c.game}</p><h2 id="duel-title">${c.duelTitle}</h2><p class="lead">${c.duelLead}</p>
       <ol class="moves">${c.moves.map(([name, description], index) => `<li><span aria-hidden="true">${roman[index]}</span><h3>${name}</h3><p>${description}</p></li>`).join('')}</ol>
     </div></section>
+    ${battlefield(c)}
+    ${mutationStory(c, specimen)}
     <section id="story" class="story section contain" aria-labelledby="story-title">
       <div class="story-copy">
         <p class="kicker">${c.storyKicker}</p><h2 id="story-title">${c.storyTitle}</h2>

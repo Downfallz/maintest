@@ -32,6 +32,7 @@ a:hover { color: var(--accent-strong); }
 .kicker::before { content: ''; width: 28px; height: 1px; background: currentColor; }
 h1, h2, h3, .specimen strong { font-family: var(--font-display); font-weight: 400; }
 h1 { margin: 20px 0 24px; font-size: clamp(70px, 7.8vw, 128px); letter-spacing: -.065em; line-height: .91; color: var(--ink); }
+html:lang(fr) .hero h1 { font-size: clamp(44px, 6.9vw, 112px); }
 h1 em { color: var(--gold); font-style: normal; }
 .pitch, .lead, .moves p { color: var(--muted); max-width: 50ch; }
 .pitch { color: var(--ink); max-width: 39ch; }
@@ -115,6 +116,7 @@ h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.0
   .specimen { top: 16px; bottom: auto; right: auto; left: 0; border: 0; padding: 3px 6px; text-align: left; background: rgb(7 13 16 / .76); }
   .specimen strong { font-size: 15px; } .specimen span { font-size: 8px; }
   h1 { font-size: clamp(57px, 14vw, 82px); line-height: .93; margin-block: 12px 18px; }
+  html:lang(fr) .hero h1 { font-size: clamp(44px, 12.6vw, 70px); }
   .pitch, .lead { font-size: 15px; }
   .actions { margin-top: 20px; gap: 6px 18px; }
   .gold-button { gap: 14px; padding-inline: 18px; }
@@ -133,7 +135,6 @@ h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.0
 .foot-links { margin-left: auto; }
 .foot-links a { font-size: 13px; }
 .mast [aria-current], .foot [aria-current] { color: var(--gold); }
-.planet-prose { max-width: 64ch; margin: -8px 0 30px; color: var(--ink); }
 .mutation-story { background: var(--tex-grain), linear-gradient(145deg, var(--paper), var(--soot) 65%); border-top: 1px solid var(--line-soft); }
 .lore-columns { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(18px, 5vw, 70px); max-width: 1060px; color: var(--muted); }
 .lore-columns p:first-child { color: var(--ink); }

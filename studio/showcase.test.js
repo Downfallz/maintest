@@ -18,6 +18,9 @@ for (const [lang, file, other] of [['en', 'index.html', '/fr/'], ['fr', 'fr/inde
     const hrefs = [...html.matchAll(/<a\b[^>]* href="([^"]+)"/g)].map(match => match[1]);
     assert.equal(hrefs.filter(href => href === game).length, 3);
     assert.deepEqual(hrefs.filter(href => href.startsWith('https:') && href !== game), [new URL('leaderboard', game).href]);
+    const sections = [...html.matchAll(/<section\b[^>]* aria-labelledby="([^"]+)"/g)].map(match => match[1]);
+    assert.deepEqual(sections.slice(0, 4), ['title', 'duel-title', 'world-title', 'mutation-title']);
+    assert.match(html, /<a class="discover" href="#duel">/);
     for (const href of hrefs.filter(href => href.startsWith('#'))) assert.ok(html.includes(`id="${href.slice(1)}"`), href);
     for (const [, path] of html.matchAll(/(?:href|src)="(\/(?:assets|fonts)\/[^"]+|\/[^"/]+\.(?:css|js))"/g))
       assert.ok(statSync(join(root, path)).size > 0, path);

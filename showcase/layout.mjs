@@ -40,7 +40,7 @@ export function layout(c, kind, app, title, description, body, scripts = []) {
   <a class="skip" href="#main">${c.skip}</a>
   <header class="mast"><div class="contain">
     <a class="wordmark" href="${path.home}">${rune}<span>Downfall Instinct</span></a>
-    <nav aria-label="${c.nav}"><a href="${section('battlefield')}">${c.world}</a><a href="${path.guide}"${kind === 'guide' ? ' aria-current="page"' : ''}>${c.guide}</a><a href="${section('duel')}">${c.game}</a><a href="${section('modes')}">${c.modesNav}</a><a href="${section('story')}">${c.storyLink}</a></nav>
+    <nav aria-label="${c.nav}"><a href="${section('duel')}">${c.game}</a><a href="${section('battlefield')}">${c.world}</a><a href="${path.guide}"${kind === 'guide' ? ' aria-current="page"' : ''}>${c.guide}</a><a href="${section('modes')}">${c.modesNav}</a><a href="${section('story')}">${c.storyLink}</a></nav>
     <a class="language" hreflang="${other}" lang="${other}" aria-label="${c.switchLabel}" href="${localized}">${other.toUpperCase()}</a>
     <a class="nav-play" href="${app}">${c.play} ${arrow}</a>
   </div></header>
