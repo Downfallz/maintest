@@ -86,8 +86,11 @@ internal sealed class AdminApi
     /// <summary>The bots' turn queues (A3b), on a host whose turns go through queues; none otherwise.</summary>
     public TurnsApi? Turns { get; set; }
 
+    /// <summary>The Settings tab (ADR 0177), on a host that signs players in: registration and the notice.</summary>
+    public SettingsApi? Settings { get; set; }
+
     public static bool Names(string path) =>
-        path == MePath || Under(path, Prefix) || Under(path, SessionsPrefix) || PlayersApi.Names(path) || JobsApi.Names(path) || LobbyApi.Names(path);
+        path == MePath || Under(path, Prefix) || Under(path, SessionsPrefix) || PlayersApi.Names(path) || JobsApi.Names(path) || SettingsApi.Names(path) || LobbyApi.Names(path);
 
     private static bool Under(string path, string prefix) => path == prefix || path.StartsWith(prefix + "/", StringComparison.Ordinal);
 
@@ -105,7 +108,7 @@ internal sealed class AdminApi
 
         if (path == MePath)
         {
-            return Me(operatorName, player);
+            return await MeAsync(operatorName, player);
         }
 
         if (operatorName is null)
@@ -145,7 +148,7 @@ internal sealed class AdminApi
         };
     }
 
-    /// <summary>The Players and Jobs tabs' routes (ADR 0174, A3), or null for a route of neither.</summary>
+    /// <summary>The Players, Settings and Jobs tabs' routes (ADR 0174, 0177, A3), or null for a route of none of them.</summary>
     private async Task<StudioResponse?> SectionAsync(string method, string path, string body, string? query, string operatorName)
     {
         if (PlayersApi.Names(path))
@@ -160,6 +163,13 @@ internal sealed class AdminApi
             return Turns is null
                 ? StudioResponse.OfPlainText(404, "This host takes the bots' turns in its own process, so it has no turn queues.")
                 : await Turns.HandleAsync(method, path, body, operatorName);
+        }
+
+        if (SettingsApi.Names(path))
+        {
+            return Settings is null
+                ? StudioResponse.OfPlainText(404, "Players do not sign in at this host (--accounts off), so it has no registration to open or close.")
+                : await Settings.HandleAsync(method, body, operatorName);
         }
 
         if (JobsApi.Names(path))
@@ -193,8 +203,10 @@ internal sealed class AdminApi
     /// same question for the home page: whether this host signs players in, how, and as whom. The operator and the
     /// player are two sign-ins and one request can carry both, and an admin account is both at once.
     /// </summary>
-    private StudioResponse Me(string? operatorName, SignedIn? player)
+    private async Task<StudioResponse> MeAsync(string? operatorName, SignedIn? player)
     {
+        // The host's notice (ADR 0177) rides on the one request every page with the header makes.
+        var settings = Accounts?.Settings is { } held ? await held.CurrentAsync() : null;
         var me = StudioResponse.OfJson(
             new
             {
@@ -203,6 +215,8 @@ internal sealed class AdminApi
                 accounts = AccountApi.Named(Accounts?.Mode ?? AccountsMode.Off),
                 googleClientId = Accounts?.GoogleClientId,
                 account = player is null ? null : AccountApi.Describe(player.Account),
+                notice = settings?.Notice,
+                registrationOpen = settings?.RegistrationOpen ?? true,
             },
             ArtifactJson.LineOptions);
         return player?.Renewed is { } renewed ? me with { Headers = [new KeyValuePair<string, string>("Set-Cookie", renewed)] } : me;
@@ -688,7 +702,7 @@ internal sealed class AdminApi
                 slot = seat.Name,
                 seated = table.Session.SeatedName(seat.Slot),
 
-                // The level a player knows this bot by (ADR 0177), beside its own name: the operator sees both.
+                // The level a player knows this bot by (ADR 0179), beside its own name: the operator sees both.
                 level = seat.Person is null ? _composer.Levels.Of(table.Session.SeatedName(seat.Slot))?.Name : null,
                 hasPerson = seat.Person is not null,
                 code = seat.Code,

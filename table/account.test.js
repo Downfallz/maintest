@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { accountRequest, accountState, nameProblem, nextPath, signInPath } from './account.js';
+import { accountRequest, accountState, nameProblem, nextPath, noticeText, signInPath } from './account.js';
 
 test('a name the host could never take is said at once, without asking it', () => {
   for (const name of ['', 'ab', '7kodiak', '_mark', 'Mark F', 'Médéric', 'a23456789012345678901']) assert.notEqual(nameProblem(name), null, name);
@@ -42,4 +42,13 @@ test('deleting an account is a DELETE with the typed name, and its refusal is sa
     return { ok: false, status: 400, text: async () => JSON.stringify({ error: 'Account.ConfirmDelete', message: 'Type your player name exactly to delete your account.' }) };
   }, 'DELETE');
   await assert.rejects(refused, error => error.code === 'Account.ConfirmDelete');
+});
+
+test('the operator\'s notice shows on every page but the game itself, and an empty one is none', () => {
+  assert.equal(noticeText({ notice: '  Maintenance at 22:00 UTC. ' }, 'lobby'), 'Maintenance at 22:00 UTC.');
+  assert.equal(noticeText({ notice: 'Maintenance at 22:00 UTC.' }, 'admin'), 'Maintenance at 22:00 UTC.');
+  assert.equal(noticeText({ notice: 'Maintenance at 22:00 UTC.' }, 'battle'), null);
+  assert.equal(noticeText({ notice: 'Maintenance at 22:00 UTC.' }, 'classic'), null);
+  assert.equal(noticeText({ notice: '   ' }, 'lobby'), null);
+  assert.equal(noticeText({}, 'lobby'), null, 'a host before ADR 0177 says no notice');
 });

@@ -105,7 +105,7 @@ public sealed class MatchNoticesTests : IDisposable
         await FinishedAsync(table);
 
         _sender.Sent.ShouldHaveSingleItem();
-        // A player knows a bot by its level, never its name (ADR 0177): Greedy is Medium.
+        // A player knows a bot by its level, never its name (ADR 0179): Greedy is Medium.
         NoticeTo("MarkF").Body.ShouldMatch("Medium bot");
         NoticeTo("MarkF").Body.ShouldNotContain("Greedy");
         table.Dispose();

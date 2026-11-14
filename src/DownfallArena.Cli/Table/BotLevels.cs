@@ -3,7 +3,7 @@ using System.Text.Json;
 namespace DownfallArena.Cli.Table;
 
 /// <summary>
-/// The levels a player chooses a bot by (ADR 0177): Easy, Medium and Hard, each the name of a bot the host seats, read off
+/// The levels a player chooses a bot by (ADR 0179): Easy, Medium and Hard, each the name of a bot the host seats, read off
 /// <c>learning/seatable.json</c> so a stronger bot behind "Hard" is a change to that file and nothing else. A player is
 /// shown the level and never the bot (its spec is a path, and its name means nothing to them); the operator is shown both.
 /// </summary>

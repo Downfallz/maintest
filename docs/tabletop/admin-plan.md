@@ -260,6 +260,14 @@ Each stage is one pull request, with its tests and docs, and leaves the panel wo
 3. **A2b, suspension.** ADR: a suspended account cannot sign in, its sessions end, its seats in unfinished games are
    kept for a time then offered to others, and its player is told why at the sign-in. The side sheet's Suspend and
    Restore.
+   *Built (2026-11-14)*: ADR 0178. `AccountSuspension` (reason, who, when) in the account's own record; suspending raises the generation in the same write and forgets the devices, restoring lifts it. A
+   suspended account's sign-in, Google or dev, is answered `403 Account.Suspended` with the reason, which the lobby's
+   sign-in panel shows. Its seats are kept a day (`AccountSuspension.SeatsKeptFor`), then the tending pass, hourly or
+   run from the panel, offers them as a deleted account's are (`SuspendedSeats`), reading the account again just before
+   and writing none, so a restore or a rename made meanwhile stands; the console names the accounts, and the tending
+   run's record does not count them yet. `POST`/`DELETE /api/admin/players/<id>/suspension`;
+   the sheet asks for the reason and a confirmation, says who suspended the account, when, why and where its seats
+   stand, and the list tags it Suspended. Each is a console line naming the operator until the activity log (A6).
 4. **A3, jobs: the tending runs.** `ITendLog`; `table-tend` writes its runs; the Jobs tab with runs, totals and each
    run's sheet; Run a pass now.
    *Built (2026-11-13)*: `TendRun` and `ITendLog` (Application), kept in a `tend` directory or container beside the
@@ -292,6 +300,15 @@ Each stage is one pull request, with its tests and docs, and leaves the panel wo
    card. A void is a console line naming the operator until the activity log (A6) keeps it.
 7. **A4, settings.** ADR for registration. `HostSettings`, the Settings tab, `Account.RegistrationClosed` in the
    lobby, the notice line under every page's header.
+   *Built (2026-11-14)*: ADR 0177. `HostSettings` (Application) and its store, `settings/host.json` in the accounts'
+   directory or container; each process reads it at most once a minute (`HostSettingsCache`), and the one that saved
+   it at once. Closed refuses a Google sign-in with no account, and a ticket handed out before the closing, with
+   `409 Account.RegistrationClosed`, which the lobby's sign-in panel says in the host's words; a dev host is not
+   affected. The notice rides on `/api/me` and shows under the header of every page but the game itself, where
+   nothing is drawn over the board. `GET`/`PUT /api/admin/settings` behind the gate; the Settings tab shows only on a
+   host that signs players in, and is marked while registration is closed. Saving is a console line naming the
+   operator until the activity log (A6) keeps it. Fixed on the way: the shared header stopped mounting on `/admin`
+   at the panel's own side sheets, so its account chip and Admin link never drew there.
 8. **A5, overview.** The numbers, once A2 to A4 give them their sources.
 9. **A6, activity.** The operator log and its tab.
 

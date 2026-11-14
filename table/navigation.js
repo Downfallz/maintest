@@ -1,4 +1,4 @@
-import { accountRequest, mountAccount } from './account.js';
+import { accountRequest, mountAccount, noticeText } from './account.js';
 import { mountDevices } from './devices.js';
 import { mountFriends } from './friends.js';
 import { mountInbox } from './inbox.js';
@@ -138,7 +138,9 @@ function mountHomeNavigation(doc, win = globalThis) {
     panel.showModal();
   });
   for (const panel of panels) {
-    panel.querySelector('[data-home-close]').addEventListener('click', () => panel.close());
+    // A page's own sheets share the dialog's look and close by their own buttons (the admin panel's): only the
+    // header's panels have a close of the header's to wire.
+    panel.querySelector('[data-home-close]')?.addEventListener('click', () => panel.close());
     panel.addEventListener('close', () => {
       const opener = openers.get(panel);
       openers.delete(panel);
@@ -194,6 +196,7 @@ export function mountNavigation(doc, storage, { onInvite, onChange = () => {}, o
   const game = page === 'classic' || page === 'battle';
   const el = id => doc.getElementById(id);
   header.innerHTML = headerContent;
+  header.insertAdjacentHTML('afterend', '<p id="host-notice" class="host-notice" role="status" hidden></p>');
   doc.body.insertAdjacentHTML('beforeend', panels);
   const current = { lobby: 'play-link-home', leaderboard: 'leaderboard-link', stats: 'stats-link', admin: 'nav-admin-link' }[page];
   if (current) el(current).setAttribute('aria-current', 'page');
@@ -236,6 +239,9 @@ export function mountNavigation(doc, storage, { onInvite, onChange = () => {}, o
       const me = await accountRequest('/api/me', undefined, (url, options) =>
         fetch(url, { ...options, headers: token ? { 'X-Seat-Token': token } : {} }));
       el('nav-admin-link').hidden = me.operator !== true;
+      const notice = noticeText(me, page);
+      el('host-notice').textContent = notice ?? '';
+      el('host-notice').hidden = !notice;
       return me;
     },
     onChange(account, mode) {

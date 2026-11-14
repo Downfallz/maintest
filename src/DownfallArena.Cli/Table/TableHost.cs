@@ -54,7 +54,7 @@ internal static class TableHost
         var offered = SeatableAgents.Read(WeightsDirectory);
         var levels = BotLevels.Read(SeatableAgents.FeaturedFile, offered.FirstOrDefault(agent => agent.Featured)?.Value ?? "greedy");
 
-        // The operator can seat every bot a level seats (ADR 0177), Easy's included, which no list put forward.
+        // The operator can seat every bot a level seats (ADR 0179), Easy's included, which no list put forward.
         IReadOnlyList<SeatableAgent> agents = [.. offered, .. levels.All
             .Where(level => offered.All(agent => !string.Equals(agent.Value, level.Agent, StringComparison.OrdinalIgnoreCase)))
             .Select(level => new SeatableAgent(level.Agent, level.Agent, Featured: false))];
@@ -160,14 +160,21 @@ internal static class TableHost
             // When each account last signed in and was last seen (ADR 0174), beside the accounts too, and the
             // operator's list of players read from it, the accounts and the results.
             accounts.Activity = new AccountActivityLog(await ArtifactStores.OpenActivityAsync(options.Record ?? DefaultRunsDirectory, stopping.Token), clock);
+            // The host's settings (ADR 0177), beside the accounts too: who may make an account, and the notice.
+            accounts.Settings = new HostSettingsCache(await ArtifactStores.OpenHostSettingsAsync(options.Record ?? DefaultRunsDirectory, stopping.Token), clock);
             players = new PlayersApi(new PlayerDirectory(opened.Value.Store, accounts.Activity, results, clock), accounts, results)
             {
                 Friends = friendships,
-                // The operator's: the bot's own name, and the level a player knows it by (ADR 0177).
+                // The operator's: the bot's own name, and the level a player knows it by (ADR 0179).
                 BotNamed = spec => levels.OperatorName(spec, LobbyApi.BotName(agents.FirstOrDefault(agent => string.Equals(agent.Value, spec, StringComparison.OrdinalIgnoreCase))?.Label ?? spec)),
             };
         }
-        var admin = new AdminApi(registry, composer, gate, clock, described, stored, agents, push) { Accounts = accounts, Players = players };
+        var admin = new AdminApi(registry, composer, gate, clock, described, stored, agents, push)
+        {
+            Accounts = accounts,
+            Players = players,
+            Settings = accounts?.Settings is { } settings ? new SettingsApi(settings, clock) : null,
+        };
         // A table opened for a friend (ADR 0129): the lobby checks the friendship and tells the friend's devices.
         admin.Lobby.Friends = friendships;
         // A host the hourly job tends lets no request do the job's work (ADR 0162).
@@ -199,12 +206,14 @@ internal static class TableHost
         // The tending runs (A3), kept beside the recordings, and a pass run now from the panel: the hourly job's pass,
         // over this process's tables, said through the relay as the job says it. A store of runs that cannot be opened
         // leaves the panel without its Jobs tab, never the players without the host.
+        // The suspended accounts' seats (ADR 0178), which a pass run from the panel offers as the hourly job's does.
+        var suspendedSeats = opened is { } held ? new SuspendedSeats(held.Store, admin.Lobby) : null;
         if (store is not null
             && await TableTend.OpenLogAsync(() => ArtifactStores.OpenTendLogAsync(options.Record ?? DefaultRunsDirectory, stopping.Token)) is { } tendLog)
         {
             admin.Jobs = new JobsApi(tendLog, clock, async (now, progress) =>
             {
-                var tended = await TableTend.TendAsync(registry, admin.Lobby, now, composer, clock, progress);
+                var tended = await TableTend.TendAsync(registry, admin.Lobby, now, composer, clock, progress, suspendedSeats);
                 if (relay is not null)
                 {
                     TableTend.Announce(relay, tended);

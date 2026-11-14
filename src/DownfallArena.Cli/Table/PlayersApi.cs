@@ -58,6 +58,8 @@ internal sealed class PlayersApi
                 ("POST", [var id, "sign-out"]) => await WithAccountAsync(id, account => SignOutAsync(account, operatorName)),
                 ("POST", [var id, "rename"]) => await WithAccountAsync(id, account => RenameAsync(account, body, operatorName)),
                 ("DELETE", [var id]) => await WithAccountAsync(id, account => DeleteAsync(account, body, operatorName)),
+                ("POST", [var id, "suspension"]) => await WithAccountAsync(id, account => SuspendAsync(account, body, operatorName)),
+                ("DELETE", [var id, "suspension"]) => await WithAccountAsync(id, account => RestoreAsync(account, operatorName)),
                 _ => Problem(404, "Players.NoRoute", $"No such route: {method} {path}"),
             };
         }
@@ -184,6 +186,41 @@ internal sealed class PlayersApi
         return Answer(new { signedOut = true });
     }
 
+    /// <summary>Suspends the account with the reason its player will read (ADR 0178).</summary>
+    private async Task<StudioResponse> SuspendAsync(Account account, string body, string operatorName)
+    {
+        var suspension = AccountSuspension.Create(Read<SuspensionBody>(body)?.Reason, operatorName, _accounts.Clock.GetUtcNow());
+        if (suspension.IsFailure)
+        {
+            return Problem(400, suspension.Error.Code, suspension.Error.Message);
+        }
+
+        var suspended = await _accounts.SuspendAsync(account.Id, suspension.Value);
+        if (suspended.IsFailure)
+        {
+            return Refused(suspended.Error);
+        }
+
+        Console.WriteLine($"  Account {account.Id.Value} ({account.Username.Value}) suspended by {operatorName}: {suspension.Value.Reason}");
+        return Answer(new { suspension = Describe(suspended.Value.Suspension) });
+    }
+
+    private async Task<StudioResponse> RestoreAsync(Account account, string operatorName)
+    {
+        var restored = await _accounts.RestoreAsync(account.Id);
+        if (restored.IsFailure)
+        {
+            return Refused(restored.Error);
+        }
+
+        Console.WriteLine($"  Account {account.Id.Value} ({account.Username.Value}) restored by {operatorName}.");
+        return Answer(new { restored = true });
+    }
+
+    private static object? Describe(AccountSuspension? suspension) => suspension is null
+        ? null
+        : new { suspension.Reason, suspension.By, suspension.At };
+
     private async Task<StudioResponse> RenameAsync(Account account, string body, string operatorName)
     {
         var renamed = await _accounts.RenameAsync(account.Id, Read<NameBody>(body)?.Username);
@@ -238,6 +275,7 @@ internal sealed class PlayersApi
         wins = player.Wins,
         rating = player.Standing is { } standing ? (int?)Math.Round(standing.Rating.Rating) : null,
         provisional = player.Standing?.Provisional,
+        suspension = Describe(player.Account.Suspension),
     };
 
     private static StudioResponse Gone() => Problem(404, AccountErrors.NotFound.Code, AccountErrors.NotFound.Message);
@@ -245,7 +283,7 @@ internal sealed class PlayersApi
     private static StudioResponse Refused(DomainError error)
     {
         var status = 400;
-        if (error == AccountErrors.UsernameTaken)
+        if (error == AccountErrors.UsernameTaken || error == AccountErrors.AlreadySuspended || error == AccountErrors.NotSuspended)
         {
             status = 409;
         }
@@ -256,6 +294,8 @@ internal sealed class PlayersApi
 
         return Problem(status, error.Code, error.Message);
     }
+
+    private sealed record SuspensionBody(string? Reason);
 
     private static T? Read<T>(string body)
         where T : class => string.IsNullOrWhiteSpace(body) ? null : JsonSerializer.Deserialize<T>(body, Web);

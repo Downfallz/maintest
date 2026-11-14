@@ -67,6 +67,9 @@ internal sealed class AccountApi
     /// </summary>
     public Func<AccountId, Task>? ReleaseSeats { get; set; }
 
+    /// <summary>The host's clock, as the sessions read it: when the operator suspends an account, among others.</summary>
+    public TimeProvider Clock => _sessions.Clock;
+
     /// <summary>The Google client id the page's sign-in button is drawn for; public, as Google's own pages show it.</summary>
     public string? GoogleClientId { get; }
 
@@ -84,6 +87,9 @@ internal sealed class AccountApi
 
     /// <summary>Where each account's game settings are kept (ADR 0140); null on a host that keeps none.</summary>
     public IPreferenceStore? Preferences { get; set; }
+
+    /// <summary>The host's settings (ADR 0177), whether a new player may make an account; none leaves registration open.</summary>
+    public HostSettingsCache? Settings { get; set; }
 
     /// <summary>
     /// When each account last signed in and last used the site (ADR 0174), written as it happens; null on a host
@@ -110,7 +116,8 @@ internal sealed class AccountApi
         ArgumentNullException.ThrowIfNull(request);
         if (_sessions.Read(request.Session) is not { } claim
             || await AccountAsync(claim.Account, cancellationToken) is not { } account
-            || account.Generation != claim.Generation)
+            || account.Generation != claim.Generation
+            || account.Suspension is not null)
         {
             return null;
         }
@@ -222,6 +229,37 @@ internal sealed class AccountApi
         return renamed;
     }
 
+    /// <summary>
+    /// Suspends the account (ADR 0178): every session it holds stops working and its devices are forgotten, as with
+    /// "sign out everywhere", and no new session is issued until it is restored.
+    /// </summary>
+    public async Task<Result<Account>> SuspendAsync(AccountId id, AccountSuspension suspension, CancellationToken cancellationToken = default)
+    {
+        var suspended = await _registry.SuspendAsync(id, suspension, cancellationToken);
+        if (suspended.IsSuccess)
+        {
+            _cache[id] = (suspended.Value, _sessions.Clock.GetUtcNow());
+            if (Devices is { } devices)
+            {
+                await devices.ForgetAsync(id, cancellationToken);
+            }
+        }
+
+        return suspended;
+    }
+
+    /// <summary>Lifts the account's suspension (ADR 0178): its player signs in again.</summary>
+    public async Task<Result<Account>> RestoreAsync(AccountId id, CancellationToken cancellationToken = default)
+    {
+        var restored = await _registry.RestoreAsync(id, cancellationToken);
+        if (restored.IsSuccess)
+        {
+            _cache[id] = (restored.Value, _sessions.Clock.GetUtcNow());
+        }
+
+        return restored;
+    }
+
     /// <summary>The account as the store holds it now, the cache refreshed with it: what the operator acts on.</summary>
     public async Task<Account?> FreshAsync(AccountId id, CancellationToken cancellationToken = default)
     {
@@ -280,10 +318,19 @@ internal sealed class AccountApi
             return Problem(401, "Account.SignInRejected", "Google's sign-in could not be checked. Sign in again.");
         }
 
-        return await _registry.FindAsync(identity) is { } account
-            ? await SignedInAsync(account, request)
+        if (await _registry.FindAsync(identity) is { } account)
+        {
+            return await SignedInAsync(account, request);
+        }
+
+        // Closed means closed (ADR 0177): no name is asked of a sign-in that has no account.
+        return await RegistrationClosedAsync()
+            ? Refused(AccountErrors.RegistrationClosed)
             : Answer(new { needsUsername = true, ticket = _sessions.Ticket(identity) });
     }
+
+    /// <summary>Whether the operator has new accounts closed (ADR 0177); a host without settings keeps them open.</summary>
+    private async Task<bool> RegistrationClosedAsync() => Settings is { } settings && !(await settings.CurrentAsync()).RegistrationOpen;
 
     private async Task<StudioResponse> RegisterAsync(string body, AccountRequest request)
     {
@@ -291,6 +338,12 @@ internal sealed class AccountApi
         if (_sessions.ReadTicket(asked?.Ticket) is not { } identity)
         {
             return Problem(401, "Account.TicketExpired", "That sign-in has run out. Sign in again, then choose your name.");
+        }
+
+        // A ticket handed out before the operator closed registration is refused too (ADR 0177).
+        if (await RegistrationClosedAsync())
+        {
+            return Refused(AccountErrors.RegistrationClosed);
         }
 
         var registered = await _registry.RegisterAsync(identity, asked!.Username);
@@ -484,6 +537,13 @@ internal sealed class AccountApi
 
     private async Task<StudioResponse> SignedInAsync(Account account, AccountRequest request)
     {
+        // A suspended account is told why, and given no session (ADR 0178).
+        if (account.Suspension is { } suspension)
+        {
+            var refused = AccountErrors.Suspended(suspension);
+            return Problem(403, refused.Code, refused.Message);
+        }
+
         if (Activity is { } activity)
         {
             await activity.SignedInAsync(account.Id);
@@ -493,7 +553,7 @@ internal sealed class AccountApi
     }
 
     private static StudioResponse Refused(DomainError error) => Problem(
-        error == AccountErrors.UsernameTaken || error == AccountErrors.AlreadyRegistered ? 409 : 400,
+        error == AccountErrors.UsernameTaken || error == AccountErrors.AlreadyRegistered || error == AccountErrors.RegistrationClosed ? 409 : 400,
         error.Code,
         error.Message);
 

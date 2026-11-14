@@ -42,7 +42,8 @@ export interface SceneFrame {
     roll?: { value: number; critical: boolean } | null };
   // `evolution` is the illustration and capstone effects the creature's purchases resolve to (ADR 0151); a frame
   // without it (the lab's samples) draws the audited sprites as before.
-  creatures: { id: string; form: string; layers?: MutationLayer[]; isAlive: boolean; enemy: boolean;
+  // `statuses` are the icon keys of its lasting conditions, as its badges show them (condition-icons.ts).
+  creatures: { id: string; form: string; layers?: MutationLayer[]; isAlive: boolean; enemy: boolean; statuses?: string[];
     evolution?: { artworkId: string | null; capstoneEffectIds: string[] } }[];
 }
 export const labSceneFrame = (state: LabState, round = state.board.roundNumber): SceneFrame => ({
