@@ -18,6 +18,22 @@ public abstract class AccountStoreContract
         new(AccountId.New(), Mark, Username.Create(name).Value, Now, Generation: 1);
 
     [Fact]
+    public async Task A_suspension_reads_back_as_it_was_saved_and_a_restore_clears_it()
+    {
+        var store = await StoreAsync();
+        var account = AnAccount();
+        var suspension = new AccountSuspension("Spamming invitations to strangers.", "mark", Now);
+        await store.SaveAsync(account with { Suspension = suspension }, Cancel);
+
+        var suspended = (await store.FindAsync(account.Id, Cancel)).ShouldNotBeNull();
+        await store.SaveAsync(suspended with { Suspension = null }, Cancel);
+        var restored = (await store.FindAsync(account.Id, Cancel)).ShouldNotBeNull();
+
+        suspended.Suspension.ShouldBe(suspension);
+        restored.Suspension.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task An_account_reads_back_as_it_was_saved_and_a_later_save_replaces_it()
     {
         var store = await StoreAsync();

@@ -112,6 +112,15 @@ async function withPlayers(page) {
   await page.route(/\/api\/admin\/players\/acct_[^/?]+(\/[a-z-]+)?$/, async route => {
     const [, id, action] = /players\/(acct_[^/?]+)(?:\/([a-z-]+))?$/.exec(new URL(route.request().url()).pathname);
     const method = route.request().method();
+    // A suspension (ADR 0178) is kept on the player as the host describes it, and a restore lifts it.
+    if (action === 'suspension' && method === 'POST') {
+      kept.get(id).suspension = { reason: route.request().postDataJSON().reason, by: 'operator', at: new Date().toISOString() };
+      return route.fulfill({ json: { suspension: kept.get(id).suspension } });
+    }
+    if (action === 'suspension' && method === 'DELETE') {
+      delete kept.get(id).suspension;
+      return route.fulfill({ json: { restored: true } });
+    }
     if (method === 'DELETE') {
       kept.delete(id);
       return route.fulfill({ json: { deleted: true } });
@@ -192,6 +201,35 @@ test('a player\'s sheet renames them, refuses a name taken, and deletes only onc
   await expect(sheet).toBeHidden();
   await expect(page.locator('#players-said')).toHaveText("Renamed's account is deleted.");
   await expect(page.locator('#tab-players-count')).toHaveText('24');
+});
+
+test('a player is suspended with a reason they read, marked in the list, and restored', async ({ page }, info) => {
+  await withPlayers(page);
+  await page.locator('#tab-players').click();
+  await page.locator('#players .player-open', { hasText: 'player02' }).click();
+  const sheet = page.locator('#player-sheet');
+
+  await expect(sheet.locator('#player-suspend')).toBeDisabled();
+  await sheet.locator('#player-suspend-reason').fill('too short');
+  await expect(sheet.locator('#player-suspend')).toBeDisabled();
+  await sheet.locator('#player-suspend-reason').fill('Spamming invitations to strangers.');
+  await sheet.locator('#player-suspend').click();
+  await expect(sheet.locator('#player-suspend-line')).toContainText('Spamming invitations to strangers.');
+  await sheet.locator('#player-suspend-yes').click();
+
+  await expect(sheet.locator('#player-said')).toHaveText('player02 is suspended. Signing in tells them why.');
+  await expect(sheet.locator('#player-suspended-line')).toHaveText(/^Suspended just now by operator: Spamming invitations to strangers\. Its seats are offered to other players in 24 h, unless it is restored first\.$/);
+  await expect(sheet.locator('#player-suspend-form')).toBeHidden();
+  await expect(page.locator('#players tr', { hasText: 'player02' }).locator('.status-tag.suspended')).toHaveText('Suspended');
+  const box = await sheet.boundingBox();
+  expect(box.x + box.width).toBeLessThanOrEqual(widthOf(page) + 1);
+  await page.screenshot({ path: info.outputPath('admin-player-suspended.png') });
+
+  await sheet.locator('#player-restore').click();
+  await expect(sheet.locator('#player-said')).toHaveText('player02 is restored and can sign in again.');
+  await expect(sheet.locator('#player-suspended')).toBeHidden();
+  await expect(sheet.locator('#player-suspend-form')).toBeVisible();
+  await expect(page.locator('#players tr', { hasText: 'player02' }).locator('.status-tag.suspended')).toHaveCount(0);
 });
 
 // The Jobs tab (A3): the tending runs, the totals over them, a pass run now and a run's sheet.

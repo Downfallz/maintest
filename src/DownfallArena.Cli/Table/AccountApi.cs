@@ -67,6 +67,9 @@ internal sealed class AccountApi
     /// </summary>
     public Func<AccountId, Task>? ReleaseSeats { get; set; }
 
+    /// <summary>The host's clock, as the sessions read it: when the operator suspends an account, among others.</summary>
+    public TimeProvider Clock => _sessions.Clock;
+
     /// <summary>The Google client id the page's sign-in button is drawn for; public, as Google's own pages show it.</summary>
     public string? GoogleClientId { get; }
 
@@ -113,7 +116,8 @@ internal sealed class AccountApi
         ArgumentNullException.ThrowIfNull(request);
         if (_sessions.Read(request.Session) is not { } claim
             || await AccountAsync(claim.Account, cancellationToken) is not { } account
-            || account.Generation != claim.Generation)
+            || account.Generation != claim.Generation
+            || account.Suspension is not null)
         {
             return null;
         }
@@ -223,6 +227,37 @@ internal sealed class AccountApi
         }
 
         return renamed;
+    }
+
+    /// <summary>
+    /// Suspends the account (ADR 0178): every session it holds stops working and its devices are forgotten, as with
+    /// "sign out everywhere", and no new session is issued until it is restored.
+    /// </summary>
+    public async Task<Result<Account>> SuspendAsync(AccountId id, AccountSuspension suspension, CancellationToken cancellationToken = default)
+    {
+        var suspended = await _registry.SuspendAsync(id, suspension, cancellationToken);
+        if (suspended.IsSuccess)
+        {
+            _cache[id] = (suspended.Value, _sessions.Clock.GetUtcNow());
+            if (Devices is { } devices)
+            {
+                await devices.ForgetAsync(id, cancellationToken);
+            }
+        }
+
+        return suspended;
+    }
+
+    /// <summary>Lifts the account's suspension (ADR 0178): its player signs in again.</summary>
+    public async Task<Result<Account>> RestoreAsync(AccountId id, CancellationToken cancellationToken = default)
+    {
+        var restored = await _registry.RestoreAsync(id, cancellationToken);
+        if (restored.IsSuccess)
+        {
+            _cache[id] = (restored.Value, _sessions.Clock.GetUtcNow());
+        }
+
+        return restored;
     }
 
     /// <summary>The account as the store holds it now, the cache refreshed with it: what the operator acts on.</summary>
@@ -502,6 +537,13 @@ internal sealed class AccountApi
 
     private async Task<StudioResponse> SignedInAsync(Account account, AccountRequest request)
     {
+        // A suspended account is told why, and given no session (ADR 0178).
+        if (account.Suspension is { } suspension)
+        {
+            var refused = AccountErrors.Suspended(suspension);
+            return Problem(403, refused.Code, refused.Message);
+        }
+
         if (Activity is { } activity)
         {
             await activity.SignedInAsync(account.Id);

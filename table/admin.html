@@ -281,6 +281,22 @@
             <button id="player-signout-no" type="button" class="secondary">Cancel</button>
           </div>
         </div>
+        <div class="player-action player-suspension">
+          <div id="player-suspended" class="player-suspended" hidden>
+            <p id="player-suspended-line"></p>
+            <button id="player-restore" type="button" class="secondary">Restore the account</button>
+          </div>
+          <div id="player-suspend-form">
+            <p class="muted">Keeps the player out: every session ends, signing in is refused with the reason below, and their seats in unfinished games are offered to other players a day later unless the account is restored first.</p>
+            <label for="player-suspend-reason">Reason the player reads (10 to 300 characters)<textarea id="player-suspend-reason" rows="3" maxlength="300" autocomplete="off"></textarea></label>
+            <button id="player-suspend" type="button" class="danger" disabled>Suspend the account</button>
+            <div id="player-suspend-confirm" class="confirm" hidden>
+              <p id="player-suspend-line"></p>
+              <button id="player-suspend-yes" type="button" class="danger">Suspend</button>
+              <button id="player-suspend-no" type="button" class="secondary">Cancel</button>
+            </div>
+          </div>
+        </div>
         <div class="player-action">
           <label for="player-rename-name">New name<input id="player-rename-name" type="text" maxlength="20" autocomplete="off" /></label>
           <button id="player-rename" type="button" class="secondary">Rename</button>

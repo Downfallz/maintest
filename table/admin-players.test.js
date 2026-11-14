@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { PLAYER_SORTS, actionSaid, ago, deleteConfirmed, friendsText, gameLine, playerRows, playersLine, playersPath, ratingText } from './admin-players.js';
+import { PLAYER_SORTS, actionSaid, ago, deleteConfirmed, friendsText, gameLine, playerRows, playersLine, playersPath, ratingText, reasonReady, suspensionLine } from './admin-players.js';
 
 const NOW = Date.parse('2026-11-13T20:00:00Z');
 
@@ -40,8 +40,38 @@ test('a player row says when they signed in and were seen, and their games split
 
   assert.deepEqual(row, {
     id: 'acct_1', username: 'Mark', created: '2026-11-01', signedIn: 'never', seen: '2 h ago',
-    games: 12, split: '3 ranked · 5 vs players · 7 vs bots', wins: 6, rating: '—',
+    games: 12, split: '3 ranked · 5 vs players · 7 vs bots', wins: 6, rating: '—', suspended: false,
   });
+});
+
+test('a suspended account is marked in its row', () => {
+  const [row] = playerRows({ players: [{ id: 'acct_1', username: 'Mark', suspension: { reason: 'Spamming invitations.', by: 'op', at: '2026-11-13T18:00:00Z' } }] }, NOW);
+
+  assert.equal(row.suspended, true);
+});
+
+test('a suspension takes a reason of 10 to 300 characters, trimmed', () => {
+  assert.equal(reasonReady('too short'), false);
+  assert.equal(reasonReady('  Spamming invitations.  '), true);
+  assert.equal(reasonReady('a'.repeat(300)), true);
+  assert.equal(reasonReady('a'.repeat(301)), false);
+  assert.equal(reasonReady(undefined), false);
+});
+
+test('a suspension says who, when and why, and where the account\'s seats stand', () => {
+  const at = new Date(NOW - 2 * 3600 * 1000).toISOString();
+  assert.equal(suspensionLine({ reason: 'Spamming invitations.', by: 'op', at }, NOW),
+    'Suspended 2 h ago by op: Spamming invitations. Its seats are offered to other players in 22 h, unless it is restored first.');
+  assert.equal(suspensionLine({ reason: 'Spamming invitations.', by: 'op', at: new Date(NOW - 25 * 3600 * 1000).toISOString() }, NOW),
+    'Suspended 1 d ago by op: Spamming invitations. Its seats in unfinished games are offered to other players by the tending pass.');
+  assert.equal(suspensionLine(null, NOW), '');
+});
+
+test('a suspension and a restore are said in a line naming the player', () => {
+  assert.deepEqual(actionSaid('suspend', { ok: true, body: {} }, 'Mark'), { refused: false, line: 'Mark is suspended. Signing in tells them why.' });
+  assert.deepEqual(actionSaid('restore', { ok: true, body: {} }, 'Mark'), { refused: false, line: 'Mark is restored and can sign in again.' });
+  assert.deepEqual(actionSaid('suspend', { ok: false, status: 409, body: { message: 'This account is already suspended.' } }, 'Mark'),
+    { refused: true, line: 'This account is already suspended.' });
 });
 
 test('the pager says how many players, how many the search kept, and which page', () => {
