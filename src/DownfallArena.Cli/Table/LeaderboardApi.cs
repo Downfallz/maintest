@@ -54,7 +54,9 @@ internal sealed class LeaderboardApi(IMatchResults results, AccountApi accounts,
 
         var bots = who is null
             ? []
-            : standings.AgainstBots(who.Account.Id).Select(record => new { bot = botName?.Invoke(record.Agent) ?? record.Agent, record.Games, record.Wins, record.Losses, record.Draws }).ToArray();
+            // By the name the player knows the bot by, its level (ADR 0180): two bots that were Hard one after the other are one row.
+            : standings.AgainstBots(who.Account.Id).GroupBy(record => botName?.Invoke(record.Agent) ?? record.Agent, StringComparer.Ordinal)
+                .Select(bot => new { bot = bot.Key, Games = bot.Sum(record => record.Games), Wins = bot.Sum(record => record.Wins), Losses = bot.Sum(record => record.Losses), Draws = bot.Sum(record => record.Draws) }).ToArray();
         var ladder = StudioResponse.OfJson(
             new
             {

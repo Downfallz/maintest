@@ -457,8 +457,10 @@ an open place and accepting an invitation answer `401` to nobody, and a seat's t
 signed out, `403` for another account). A seat that belongs to nobody yet, from a link or a code handed out before,
 becomes the account's that first reaches it signed in. **Your games** is the host's list (`GET /api/lobby/mine`),
 the same on every device; the seats a browser saved before signing in are handed over once
-(`POST /api/lobby/adopt`). Cards name each side: a person by their player name, a bot by its label, an open place
-as *Open seat*. A seat link opened signed out goes to `/lobby?next=...` and comes back after the sign-in. The game page's masthead says the same under the seat's name ("You: MarkF · against Greedy (bot)"), asked of
+(`POST /api/lobby/adopt`). Cards name each side: a person by their player name, a bot by its level (*Easy*, *Medium*, *Hard*, tagged as a
+bot; ADR 0180), an open place as *Open seat*. A game against the bot is opened at the level the create dialog's
+*Bot difficulty* chose, Hard unless another; which bot each level seats is `learning/seatable.json`'s `levels`, and
+only the admin panel names the bot itself beside its level. A seat link opened signed out goes to `/lobby?next=...` and comes back after the sign-in. The game page's masthead says the same under the seat's name ("You: MarkF · against Hard (bot)"), asked of
 the host when the page starts and again a few seconds after the table changes (ADR 0164), so an opponent who takes the open place shows up by name. A card of an unfinished game says whose turn it is: *Your turn* in gold when one of this
 browser's seats is being asked, otherwise the name of the player the match is waiting on, or both players.
 
