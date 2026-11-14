@@ -155,8 +155,12 @@ internal sealed class AdminApi
         };
     }
 
-    /// <summary>The Players, Settings and Jobs tabs' routes (ADR 0174, 0177, A3), or null for a route of none of them.</summary>
-    private async Task<StudioResponse?> SectionAsync(string method, string path, string body, string? query, string operatorName)
+    /// <summary>The tabs' own routes (ADR 0174, 0177, A3 to A6), or null for a route of none of them.</summary>
+    private async Task<StudioResponse?> SectionAsync(string method, string path, string body, string? query, string operatorName) =>
+        await PeopleAsync(method, path, body, query, operatorName) ?? await HostAsync(method, path, body, query, operatorName);
+
+    /// <summary>The Players tab's routes, and the Activity tab's: what is done to accounts, and who did what.</summary>
+    private async Task<StudioResponse?> PeopleAsync(string method, string path, string body, string? query, string operatorName)
     {
         if (PlayersApi.Names(path))
         {
@@ -165,18 +169,24 @@ internal sealed class AdminApi
                 : await Players.HandleAsync(method, path, body, query, operatorName);
         }
 
-        if (TurnsApi.Names(path))
-        {
-            return Turns is null
-                ? StudioResponse.OfPlainText(404, "This host takes the bots' turns in its own process, so it has no turn queues.")
-                : await Turns.HandleAsync(method, path, body, operatorName);
-        }
-
         if (ActivityApi.Names(path))
         {
             return Notes.Actions is { } actions
                 ? await new ActivityApi(actions).HandleAsync(method, query)
                 : StudioResponse.OfPlainText(404, "This host keeps no operator log: it records nothing (--no-record), or the log could not be opened.");
+        }
+
+        return null;
+    }
+
+    /// <summary>The routes of the host's own state: the Overview, the Jobs tab with its turn queues, and the Settings tab.</summary>
+    private async Task<StudioResponse?> HostAsync(string method, string path, string body, string? query, string operatorName)
+    {
+        if (TurnsApi.Names(path))
+        {
+            return Turns is null
+                ? StudioResponse.OfPlainText(404, "This host takes the bots' turns in its own process, so it has no turn queues.")
+                : await Turns.HandleAsync(method, path, body, operatorName);
         }
 
         if (OverviewApi.Names(path))
