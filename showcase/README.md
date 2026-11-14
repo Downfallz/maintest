@@ -13,9 +13,12 @@ The game website link in the account menu and the guest lobby footer lead back t
    both target and caster, prerequisites, passives and ordinary artwork come from the game catalogue. Visitors can
    follow a family or search names. All entries are server-rendered and open with native HTML disclosures.
 4. Explain the duel and tell the creator’s first-person story, from board-game playtests to asynchronous duels that fit around everyday life.
-   Keep the fair-play and privacy commitments beside the creator’s note and the short reminder beside Play.
+   Keep the fair-play and privacy commitments beside the creator’s note. Close with solo bot difficulties,
+   friendly formats, ranked 3v3, private statistics, and a direct link to the public leaderboard.
 5. Publish the full policy at `/privacy/` and `/fr/confidentialite/`. Link it from every page, from the signed-out lobby
    and from Settings → Privacy in the app. Privacy requests go to contact@downfallinstinct.com.
+   The footer also links to a separate copyright notice at `/copyright/` or `/fr/droit-auteur/`, covering the
+   original engine and writing, permission requests and third-party licences.
 6. Guests enter the game through its short sign-in screen. Signed-in and accounts-off players reach their dashboard.
    Invitation, account, PWA and private API routes stay on the game origin.
 
@@ -29,7 +32,7 @@ python3 -m http.server 8080 --directory showcase/dist
 ```
 
 Open http://localhost:8080/ or http://localhost:8080/fr/. Run `node --test studio/showcase.test.js` to rebuild
-and check all six pages, their navigation, the complete catalogue and the single disclosed hybrid. The build uses Node built-ins. The origin of the Play buttons
+and check the eight localized pages, their navigation, the complete catalogue and the single disclosed hybrid. The build uses Node built-ins. The origin of the Play buttons
 can be overridden for a test deployment with `GAME_ORIGIN=https://your-game-host.example`.
 
 ## Publish the apex

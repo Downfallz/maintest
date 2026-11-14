@@ -69,6 +69,11 @@ export function page(c, specimen, app) {
         <a class="editorial-link" href="${routes[c.lang].privacy}">${c.privacy} <span aria-hidden="true">→</span></a>
       </aside>
     </section>
-    <section class="closing"><div class="contain"><p class="kicker">${c.platform}</p><h2>${c.closing}</h2><p>${c.modes}</p>${play(c.play, 'gold-button')}<p class="play-note">${c.playNote}</p></div></section>
+    <section id="modes" class="play-modes" aria-labelledby="modes-title"><div class="section contain">
+      <p class="kicker">${c.platform}</p><h2 id="modes-title">${c.modesTitle}</h2>
+      <ul class="mode-list">${c.modes.map(([name, description]) => `<li><h3>${escape(name)}</h3><p>${escape(description)}</p></li>`).join('')}</ul>
+      <div class="actions">${play(c.play, 'gold-button')}<a class="discover" href="${new URL('leaderboard', app).href}">${c.leaderboardLink} ${arrow}</a></div>
+      <p class="play-note">${c.playNote}</p>
+    </div></section>
 `, ['gallery.js']);
 }

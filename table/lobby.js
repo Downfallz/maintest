@@ -157,7 +157,9 @@ export function rematchRequest(search) {
   const again = params.get('rematch');
   if (!again) return null;
   const format = params.get('format') || null;
-  if (again === 'bot' || again === 'hotseat') return { opponent: again, friend: null, format };
+  if (again === 'hotseat') return { opponent: again, friend: null, format };
+  // The same bot level again (ADR 0180), when the link names one.
+  if (again === 'bot') return { opponent: again, friend: null, format, level: params.get('level') || null };
   // A rematch of an unranked game (ADR 0155) starts unranked too.
   const ranked = params.get('ranked') !== '0';
   return /^acct_[a-z2-7]{16}$/.test(again) ? { opponent: 'friend', friend: again, format, ranked } : null;
@@ -767,9 +769,9 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
   }
   /**
    * Opens the create dialog, on the opponent, friend, format and rank a rematch or a challenge asks for.
-   * @param {{ friend?: string | null, reinvite?: string | null, opponent?: string | null, format?: string | null, ranked?: boolean }} [asked]
+   * @param {{ friend?: string | null, reinvite?: string | null, opponent?: string | null, format?: string | null, ranked?: boolean, level?: string | null }} [asked]
    */
-  function openCreate({ friend = null, reinvite = null, opponent = null, format = null, ranked = true } = {}) {
+  function openCreate({ friend = null, reinvite = null, opponent = null, format = null, ranked = true, level = null } = {}) {
     if (signInFirst()) { askSignIn(); return; }
     if (!listing) return;
     reinviting = reinvite;
@@ -783,6 +785,8 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     if (friend || reinvite) el('opponent').value = 'friend';
     else if (opponent && opponent !== 'bot') el('opponent').value = opponent;
     if (format && [...el('format').options].some(option => option.value === format)) el('format').value = format;
+    // A rematch against a bot plays the same level again (ADR 0180); a new table starts on Hard, as the lobby always did.
+    el('bot-level').value = [...el('bot-level').options].some(option => option.value === level) ? level : 'hard';
     // A ranked game is 3v3 (ADR 0171): played again in another format, a game from before that is played unranked.
     el('ranked').checked = ranked !== false && (!format || format === '3v3'); el('ranked').disabled = Boolean(reinvite);
     el('turn-limit').value = '72'; el('turn-limit').disabled = Boolean(reinvite);
@@ -829,6 +833,8 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
       } else {
         const opponent = opponentOf(), between = ['person', 'friend'].includes(opponent);
         enter(await lobbyRequest('/api/lobby/tables', { opponent, format: el('format').value, friend: opponent === 'friend' ? el('friend').value : undefined,
+          // A bot is chosen by how strong it is, never by its name (ADR 0180).
+          ...(opponent === 'bot' ? { level: el('bot-level').value } : {}),
           ...(between && !el('ranked').checked ? { ranked: false } : {}), ...(between ? { turnLimit: Number(el('turn-limit').value) } : {}) }));
       }
     } catch (error) { el('create-problem').textContent = error.message || 'Could not create the table. Try again.'; el('create-problem').hidden = false; }

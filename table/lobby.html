@@ -60,12 +60,12 @@
       </div>
     </div>
   </main>
-  <footer class="home-footer"><span>Downfall Instinct</span><a href="https://downfallinstinct.com/">About the game <span aria-hidden="true">→</span></a></footer>
+  <footer class="home-footer"><span>Downfall Instinct · © 2026</span><div class="home-footer-links"><a href="https://downfallinstinct.com/copyright/">Copyright</a><a href="https://downfallinstinct.com/">About the game <span aria-hidden="true">→</span></a></div></footer>
   <dialog id="create-dialog" aria-labelledby="create-title">
     <form id="create-table"><div class="dialog-heading"><div><p class="eyebrow">A new battle</p><h2 id="create-title">Create a table</h2></div><button id="create-close" type="button" class="secondary" aria-label="Close new table">×</button></div>
       <div id="create-tabs" class="create-tabs" role="tablist" aria-label="Kind of game"><button id="create-pvp" type="button" role="tab" aria-selected="true" aria-controls="create-pvp-panel">PvP<small>Against a player</small></button><button id="create-solo" type="button" role="tab" aria-selected="false" aria-controls="create-solo-panel">Solo<small>Against a bot</small></button></div>
       <div id="create-solo-panel" class="create-panel" role="tabpanel" aria-labelledby="create-solo" hidden>
-        <label for="bot-level">Bot difficulty</label><select id="bot-level" name="bot-level"><option value="strongest">The strongest bot</option></select>
+        <label for="bot-level">Bot difficulty</label><select id="bot-level" name="bot-level"><option value="easy">Easy · makes mistakes</option><option value="medium">Medium · plays it straight</option><option value="hard" selected>Hard · the strongest</option></select>
       </div>
       <div id="create-pvp-panel" class="create-panel" role="tabpanel" aria-labelledby="create-pvp">
         <label for="opponent">Who are you playing?</label><select id="opponent" name="opponent"><option value="person">Another player · open seat</option><option value="friend">A friend · seat kept for them</option><option value="hotseat">Two players · shared device</option></select>

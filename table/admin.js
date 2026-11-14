@@ -29,7 +29,8 @@ export function seatable(answer) {
   const offered = Array.isArray(answer?.agents) && answer.agents.length > 0
     ? answer.agents
     : [{ value: 'greedy', label: 'Greedy — the baseline' }, { value: 'random', label: 'Random' }];
-  return [PERSON, ...offered.map(agent => ({ value: agent.value, label: agent.label ?? agent.value, featured: agent.featured === true }))];
+  // A bot a level seats says which (ADR 0180): the operator sees what a player chose as well as what it is.
+  return [PERSON, ...offered.map(agent => ({ value: agent.value, label: agent.level ? `${agent.label ?? agent.value} · ${agent.level}` : agent.label ?? agent.value, featured: agent.featured === true }))];
 }
 
 // The formats a chooser offers, read off the host's answer: how many creatures a side brings, and how many
@@ -196,7 +197,8 @@ export function tableRows(list) {
     declaration: table.declaration ?? null,
     seats: (table.seats ?? []).map(seat => ({
       slot: seat.slot,
-      seated: seat.seated ?? 'nobody',
+      // A bot's own name, and the level a player knows it by (ADR 0180): "lookahead-55 · Hard".
+      seated: seat.level ? `${seat.seated ?? 'nobody'} · ${seat.level}` : seat.seated ?? 'nobody',
       code: seat.code ?? null,
       join: seat.join ?? null,
       link: seat.link ?? null,

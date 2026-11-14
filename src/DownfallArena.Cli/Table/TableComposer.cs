@@ -162,6 +162,18 @@ internal sealed class TableComposer
     public IReadOnlyList<SeatableAgent> Agents { get; init; } = [];
 
     /// <summary>
+    /// The levels a player chooses a bot by, and the bot each seats (ADR 0180); without a file that says, Hard seats the
+    /// first bot <see cref="Agents" /> puts forward, as the lobby did before levels.
+    /// </summary>
+    public BotLevels Levels
+    {
+        get => _levels ??= BotLevels.BuiltIn(Agents.FirstOrDefault(agent => agent.Featured)?.Value ?? "greedy");
+        init => _levels = value;
+    }
+
+    private BotLevels? _levels;
+
+    /// <summary>
     /// Composes and starts a table. The recording is opened before the match, so the files exist before
     /// anything can be decided into them: a session abandoned at its first question still says what it was
     /// (ADR 0054, stage 5).
@@ -842,7 +854,8 @@ internal sealed class TableComposer
                 ? ("A draw", $"A draw against {opponent}.")
                 : outcome.Winner == seat.Slot
                     ? ("Victory", $"You won against {opponent}.")
-                    : ("Defeat", $"{opponent} won.");
+                    // A player's name is written as they chose it; a bot's opens the sentence ("The Hard bot won.").
+                    : ("Defeat", table.Seats[otherIndex].Person is null ? $"{char.ToUpperInvariant(opponent[0])}{opponent[1..]} won." : $"{opponent} won.");
             await notices.SendAsync(account, AccountNotices.Payload(title, body, url, tag), "match");
         }
     }
@@ -852,7 +865,8 @@ internal sealed class TableComposer
         if (seat.Person is null)
         {
             var spec = table.Session.SeatedName(seat.Slot);
-            return LobbyApi.BotName(Agents.FirstOrDefault(agent => string.Equals(agent.Value, spec, StringComparison.OrdinalIgnoreCase))?.Label ?? spec);
+            // A notice is a player's: the bot's level, never its name (ADR 0180).
+            return Levels.InSentence(spec);
         }
 
         return owner is { } account && NameOf is { } nameOf && await nameOf(account) is { } name ? name : "the other player";

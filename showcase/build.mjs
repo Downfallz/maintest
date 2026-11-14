@@ -5,6 +5,7 @@ import { EVOLUTION_REGISTRY } from '../table/battle-evolution-art.js';
 import { resolveEvolution } from '../table/battle-evolution.js';
 import { loadCatalogue } from './catalogue.mjs';
 import { english, french } from './copy.mjs';
+import { copyrightPage } from './copyright.mjs';
 import { guidePage } from './guide.mjs';
 import { routes } from './layout.mjs';
 import { specimenPath } from './lore.mjs';
@@ -46,7 +47,8 @@ try {
   const documents = [english, french].flatMap(c => {
     const path = routes[c.lang];
     return [[path.home, page(c, specimen, application.href)], [path.guide, guidePage(c, catalogue, application.href)],
-      [path.privacy, privacyPage(c, application.href)]].map(([route, html]) => [route.slice(1) + 'index.html', html]);
+      [path.privacy, privacyPage(c, application.href)], [path.copyright, copyrightPage(c, application.href)]]
+      .map(([route, html]) => [route.slice(1) + 'index.html', html]);
   });
   const directories = new Set([...assets.map(([, to]) => dirname(to)), ...documents.map(([to]) => dirname(to))]);
   await Promise.all([...directories].map(dir => mkdir(join(stage, dir), { recursive: true })));

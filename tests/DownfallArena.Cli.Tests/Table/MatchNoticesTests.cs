@@ -97,7 +97,7 @@ public sealed class MatchNoticesTests : IDisposable
     }
 
     [Fact]
-    public async Task A_bot_s_seat_is_told_nothing_and_the_person_is_told_against_the_bot_by_its_name()
+    public async Task A_bot_s_seat_is_told_nothing_and_the_person_is_told_against_the_bot_by_its_level()
     {
         var table = await Composer().ComposeAsync(OnePerson, Cancel);
         table.Seats[0].Account = await PlayerAsync("MarkF");
@@ -105,7 +105,9 @@ public sealed class MatchNoticesTests : IDisposable
         await FinishedAsync(table);
 
         _sender.Sent.ShouldHaveSingleItem();
-        NoticeTo("MarkF").Body.ShouldMatch("Greedy");
+        // A player knows a bot by its level, never its name (ADR 0180): Greedy is Medium.
+        NoticeTo("MarkF").Body.ShouldMatch("Medium bot");
+        NoticeTo("MarkF").Body.ShouldNotContain("Greedy");
         table.Dispose();
     }
 

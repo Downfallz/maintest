@@ -227,6 +227,7 @@
 .account-menu .site-link:hover { background: var(--raised); }
 .home-footer { max-width: 1280px; margin: 32px auto 0; padding: 24px 0 0; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
 .home-footer span:first-child { color: var(--gold); letter-spacing: .8px; }
+.home-footer-links { display: flex; align-items: center; gap: 18px; }
 .home-page .home-dialog { width: min(640px, calc(100vw - 24px)); padding: 0; overflow: hidden; }
 .home-page #friends-dialog { width: min(720px, calc(100vw - 24px)); }
 .home-dialog[open] { display: flex; flex-direction: column; }

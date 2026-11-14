@@ -5,7 +5,7 @@ export const english = {
   play: 'Play now', kicker: '3v3 tactical creature combat', title: ['Evolve to', 'survive.'],
   pitch: 'The ground splits under six creatures. Yours start with the same bones as your opponent’s. By the time the arch falls, one might be growing armour and another might be calling the dead.',
   playNote: 'Free to play · No ads · No in-game purchases',
-  storyLink: 'From the creator',
+  storyLink: 'From the creator', copyright: 'Copyright',
   explore: 'See the mutations', specimen: 'Colossus', specimenLine: 'Brute lineage · Stage III',
   duelTitle: 'One round. Three decisions.', duelLead: 'Two commanders share one timeline. The last team standing wins.',
   moves: [
@@ -20,7 +20,7 @@ export const english = {
   storyTitle: 'The game I wanted to play.',
   story: [
     'Downfall Instinct started as an idea for a board game. During playtesting, I found myself thinking it could be fun to make it available online. That is how this browser version began.',
-    'I still miss 5v5 Counter-Strike matches and those early 3v3 arenas in World of Warcraft. Competitive Magic: The Gathering gave me that same feeling. Everyone knew the format going in, and I loved figuring out what I could do within its rules.',
+    'I still miss those early 3v3 arenas in World of Warcraft. Competitive Magic: The Gathering gave me that same feeling. Everyone knew the format going in, and I loved figuring out what I could do within its rules.',
     'I have probably spent more time dreaming up certain Magic decks and Skyrim characters than actually playing them. I wanted to bring that part into the match itself. In Downfall Instinct, I get to look at my three creatures halfway through a duel and decide what I want them to become.',
     'These days I barely have time to play anything. I still like having a match going, though. I can pick a mutation over my morning coffee, get on with my day and come back that evening to see what my opponent did. I wanted that easy pace as much as I wanted the competition.',
   ],
@@ -32,8 +32,13 @@ export const english = {
     ['No advertising', 'No ads or advertising trackers.'],
     ['Your inbox stays yours', 'No newsletters, promotional emails or email tracking. Your email address and personal data are never sold.'],
   ],
-  closing: 'Face your next opponent.', modes: 'Invite a friend, enter a ranked 3v3 duel, or try your mutations against a bot.',
-  platform: 'Play in your browser', footerTop: 'Back to top',
+  modesNav: 'Modes', modesTitle: 'Who will you play?',
+  modes: [
+    ['Solo against a bot', 'Choose Easy, Medium or Hard and try a mutation on your own time. The bot waits for your next move. Your record against each difficulty is kept separately.'],
+    ['Friendly PvP', 'Invite a friend to an unranked duel. Pick one, two or three creatures per side and take turns when it suits you both. Your ratings stay the same.'],
+    ['Ranked PvP', 'Play another commander in 3v3. Each result updates your public rating. Your private stats show your wins, losses and draws, the mutations you picked and the spells you cast.'],
+  ],
+  leaderboardLink: 'See the leaderboard', platform: 'Play in your browser', footerTop: 'Back to top',
 };
 
 export const french = {
@@ -43,7 +48,7 @@ export const french = {
   play: 'Jouer', kicker: 'Duel tactique de créatures · 3 contre 3', title: ['Évolue pour', 'survivre.'],
   pitch: 'La terre se fend sous six créatures. Les tiennes ont les mêmes os que celles de ton adversaire. Quand l’arche s’écroulera, l’une aura peut-être une carapace et une autre saura déjà appeler les morts.',
   playNote: 'Gratuit · Sans pub · Sans achats intégrés',
-  storyLink: 'Le créateur',
+  storyLink: 'Le créateur', copyright: 'Droit d’auteur',
   explore: 'Voir les mutations', specimen: 'Colosse', specimenLine: 'Lignée Brute · Stade III',
   duelTitle: 'Un round. Trois décisions.', duelLead: 'Deux adversaires partagent le même ordre de jeu. La dernière équipe en vie l’emporte.',
   moves: [
@@ -58,7 +63,7 @@ export const french = {
   storyTitle: 'Le jeu auquel j’avais envie de jouer.',
   story: [
     'Downfall Instinct est né d’une idée de jeu de plateau. Au fil des tests, je me suis dit que ce serait le fun de le rendre accessible en ligne. C’est comme ça que cette version navigateur a commencé.',
-    'J’ai encore un faible pour le 5 contre 5 de Counter-Strike et les premières arènes 3 contre 3 de World of Warcraft. Je retrouvais le même plaisir dans les formats compétitifs de Magic: The Gathering. Tout le monde connaissait les règles en arrivant, et j’aimais trouver ma façon de jouer à l’intérieur de ce cadre.',
+    'J’ai encore un faible pour les premières arènes 3 contre 3 de World of Warcraft. Je retrouvais le même plaisir dans les formats compétitifs de Magic: The Gathering. Tout le monde connaissait les règles en arrivant, et j’aimais trouver ma façon de jouer à l’intérieur de ce cadre.',
     'J’ai probablement passé plus de temps à imaginer certains decks de Magic et certains personnages de Skyrim qu’à les jouer. J’avais envie de retrouver ce plaisir-là en pleine partie. Dans Downfall Instinct, je peux regarder mes trois créatures au milieu d’un duel et décider de ce que chacune va devenir.',
     'Ces temps-ci, j’ai presque plus le temps de jouer à quoi que ce soit. Mais j’aime ça, avoir une partie en cours. Je peux choisir une mutation en prenant mon café, retourner à mes affaires, puis revenir le soir voir ce que l’autre a fait. C’est ça que j’aime dans le jeu asynchrone. Le duel peut durer quelques jours et trouver sa place dans ma semaine.',
   ],
@@ -70,6 +75,11 @@ export const french = {
     ['Sans publicité', 'Aucune pub ni aucun traceur publicitaire.'],
     ['Ta boîte courriel reste à toi', 'Aucune infolettre, aucun courriel promotionnel ni suivi des courriels. Ton adresse courriel et tes données personnelles ne sont jamais vendues.'],
   ],
-  closing: 'Affronte ton prochain adversaire.', modes: 'Invite un ami, lance un duel classé en 3 contre 3 ou essaie tes mutations contre un bot.',
-  platform: 'Joue dans ton navigateur', footerTop: 'Haut de page',
+  modesNav: 'Modes', modesTitle: 'Avec qui veux-tu jouer ?',
+  modes: [
+    ['Solo contre un bot', 'Essaie une mutation à ton rythme contre un bot facile, moyen ou difficile. Le bot attend ton prochain coup. Tu peux suivre ton bilan pour chaque difficulté.'],
+    ['PvP amical', 'Invite un ami à un duel hors classement. Choisissez une, deux ou trois créatures par camp et jouez chacun votre tour, quand ça vous convient. Vos cotes restent les mêmes.'],
+    ['PvP classé', 'Affronte un autre joueur en 3 contre 3. Chaque résultat met à jour ta cote publique. Tes stats privées montrent tes victoires, tes défaites, tes nulles, les mutations choisies et les sorts lancés.'],
+  ],
+  leaderboardLink: 'Voir le classement', platform: 'Joue dans ton navigateur', footerTop: 'Haut de page',
 };

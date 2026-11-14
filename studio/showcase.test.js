@@ -16,7 +16,8 @@ for (const [lang, file, other] of [['en', 'index.html', '/fr/'], ['fr', 'fr/inde
     assert.ok(html.includes(`<html lang="${lang}">`));
     assert.equal(/<a class="language"[^>]* href="([^"]+)"/.exec(html)?.[1], other);
     const hrefs = [...html.matchAll(/<a\b[^>]* href="([^"]+)"/g)].map(match => match[1]);
-    assert.deepEqual(hrefs.filter(href => href.startsWith('https:')), [game, game, game]);
+    assert.equal(hrefs.filter(href => href === game).length, 3);
+    assert.deepEqual(hrefs.filter(href => href.startsWith('https:') && href !== game), [new URL('leaderboard', game).href]);
     for (const href of hrefs.filter(href => href.startsWith('#'))) assert.ok(html.includes(`id="${href.slice(1)}"`), href);
     for (const [, path] of html.matchAll(/(?:href|src)="(\/(?:assets|fonts)\/[^"]+|\/[^"/]+\.(?:css|js))"/g))
       assert.ok(statSync(join(root, path)).size > 0, path);
@@ -33,12 +34,28 @@ for (const [file, free, advertising, inbox, tabletop] of [
 ]) {
   test(`${file} includes the creator's influences and the game's commitments without scripting`, () => {
     const html = read(file);
-    for (const text of [free, advertising, inbox, tabletop, /Counter-Strike/, /World of Warcraft/, /Magic: The Gathering/, /Skyrim/])
+    for (const text of [free, advertising, inbox, tabletop, /World of Warcraft/, /Magic: The Gathering/, /Skyrim/])
       assert.match(html, text);
+    assert.doesNotMatch(html, /Counter[ -]Strike/i);
     assert.match(html, file === 'index.html' ? /morning coffee.*come back that evening/ : /mon café.*revenir le soir/);
     assert.match(html, /<section id="story"/);
     assert.match(html, /<aside class="commitments"/);
     assert.equal((html.match(/class="play-note"/g) ?? []).length, 2);
+  });
+}
+
+for (const [file, titles, rating, privateStats] of [
+  ['index.html', ['Solo against a bot', 'Friendly PvP', 'Ranked PvP'], /public rating/, /private stats.*mutations.*spells/],
+  ['fr/index.html', ['Solo contre un bot', 'PvP amical', 'PvP classé'], /cote publique/, /stats privées.*mutations.*sorts/],
+]) {
+  test(`${file} explains all three ways to play and links to the public ladder without sign-in`, () => {
+    const html = read(file);
+    const modes = html.match(/<section id="modes"[\s\S]*?<\/section>/)?.[0] ?? '';
+    assert.deepEqual([...modes.matchAll(/<h3>([^<]+)<\/h3>/g)].map(match => match[1]), titles);
+    assert.match(modes, rating);
+    assert.match(modes, privateStats);
+    assert.ok(modes.includes(`href="${new URL('leaderboard', game).href}"`));
+    assert.match(html, /href="#modes"/);
   });
 }
 
@@ -50,8 +67,8 @@ test('the published CSS has its local font and battlefield layers', () => {
 });
 
 const pages = {
-  en: ['index.html', 'mutations/index.html', 'privacy/index.html'],
-  fr: ['fr/index.html', 'fr/mutations/index.html', 'fr/confidentialite/index.html'],
+  en: ['index.html', 'mutations/index.html', 'privacy/index.html', 'copyright/index.html'],
+  fr: ['fr/index.html', 'fr/mutations/index.html', 'fr/confidentialite/index.html', 'fr/droit-auteur/index.html'],
 };
 
 for (const [lang, documents] of Object.entries(pages)) {
@@ -63,6 +80,8 @@ for (const [lang, documents] of Object.entries(pages)) {
       assert.equal(new Set(ids).size, ids.length, file);
       const policyRoute = '/' + documents[2].replace('index.html', '');
       assert.ok(html.includes(`href="${policyRoute}"`), file);
+      const rightsRoute = '/' + documents[3].replace('index.html', '');
+      assert.ok(html.includes(`href="${rightsRoute}"`), file);
       const otherFile = pages[lang === 'en' ? 'fr' : 'en'][index];
       assert.equal(/<a class="language"[^>]* href="([^"]+)"/.exec(html)?.[1], '/' + otherFile.replace('index.html', ''));
       for (const [, href] of html.matchAll(/\b(?:href|src)="([^"]+)"/g)) {
@@ -98,9 +117,22 @@ for (const [lang, documents] of Object.entries(pages)) {
       assert.ok(policy.includes(value), value);
     assert.doesNotMatch(policy, /<script|<iframe/);
   });
+
+  test(`${lang} makes the permission contact and separate font licence available without scripts`, () => {
+    const notice = read(documents[3]);
+    for (const value of ['© 2026', 'mailto:contact@downfallinstinct.com', 'href="/fonts/OFL.txt"', 'Marcellus', 'Phaser'])
+      assert.ok(notice.includes(value), value);
+    assert.doesNotMatch(notice, /<script|<iframe/);
+  });
 }
 
 test('both the game sign-in and account privacy panel link to the public policy', () => {
   for (const file of ['../table/lobby.html', '../table/navigation.js'])
     assert.match(readFileSync(new URL(file, import.meta.url), 'utf8'), /href="https:\/\/downfallinstinct\.com\/privacy\/"/);
+});
+
+test('the game lobby and repository point to their copyright notices', () => {
+  assert.match(readFileSync(new URL('../table/lobby.html', import.meta.url), 'utf8'), /href="https:\/\/downfallinstinct\.com\/copyright\/"/);
+  assert.match(readFileSync(new URL('../README.md', import.meta.url), 'utf8'), /\]\(COPYRIGHT\.md\)/);
+  assert.match(readFileSync(new URL('../COPYRIGHT.md', import.meta.url), 'utf8'), /table\/fonts\/OFL\.txt/);
 });
