@@ -52,6 +52,8 @@ public sealed class TableFilesTests
         bitmap.ContentType.ShouldBe("image/png");
         bitmap.Body.Take(4).ShouldBe([0x89, (byte)'P', (byte)'N', (byte)'G']);
         Files.Get("/icon-512.png").Status.ShouldBe(200);
+        Files.Get("/icon-maskable-192.png").Status.ShouldBe(200);
+        Files.Get("/icon-maskable-512.png").Status.ShouldBe(200);
         // The worker names the badge Android masks into the status bar; unrouted, every push falls back to a blank one.
         var badge = Files.Get("/notification-badge.png");
         badge.ContentType.ShouldBe("image/png");
