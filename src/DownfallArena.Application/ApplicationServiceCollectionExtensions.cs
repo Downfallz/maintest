@@ -6,6 +6,7 @@ using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Matches.Journaling;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Application.Matches.Queries;
+using DownfallArena.Application.Matches.Scenarios;
 using DownfallArena.Application.Messaging;
 using DownfallArena.Application.Simulation;
 using DownfallArena.Domain.Matches;
@@ -49,6 +50,9 @@ public static class ApplicationServiceCollectionExtensions
         services.TryAddTransient<MatchDriver>();
         services.TryAddTransient<MatchStepper>();
         services.TryAddTransient<MatchReplay>();
+        services.TryAddTransient<ScenarioRounds>();
+        services.TryAddTransient<ScenarioCutter>();
+        services.TryAddTransient<ScenarioStarter>();
         services.TryAddSingleton<JournaledStepper>();
         services.TryAddTransient<RandomAgent>();
         services.TryAddSingleton<IAgentFactory, AgentFactory>();
