@@ -25,17 +25,21 @@ internal sealed class TableWatch(TableRegistry registry, TimeProvider clock)
     /// <summary>One look at every table watched. How many were moved or let go of.</summary>
     public async Task<int> WatchOnceAsync(CancellationToken cancellationToken = default)
     {
+        var looks = await LooksAsync(cancellationToken);
+        return looks.Count(look => look == true);
+    }
+
+    // One look at each table asked for lately, finished or not, in turn: whether each moved, or null where it could not be made.
+    private async Task<List<bool?>> LooksAsync(CancellationToken cancellationToken)
+    {
         var now = clock.GetUtcNow();
-        var changed = 0;
+        var looks = new List<bool?>();
         foreach (var table in registry.HeldTables().Where(table => now - table.Touched < WatchedFor))
         {
-            if (await LookAsync(table, cancellationToken) == true)
-            {
-                changed++;
-            }
+            looks.Add(await LookAsync(table, cancellationToken));
         }
 
-        return changed;
+        return looks;
     }
 
     /// <summary>
@@ -44,16 +48,7 @@ internal sealed class TableWatch(TableRegistry registry, TimeProvider clock)
     /// </summary>
     public async Task ReconcileAsync(CancellationToken cancellationToken = default)
     {
-        var now = clock.GetUtcNow();
-        var failed = 0;
-        foreach (var table in registry.HeldTables().Where(table => now - table.Touched < WatchedFor))
-        {
-            if (await LookAsync(table, cancellationToken) is null)
-            {
-                failed++;
-            }
-        }
-
+        var failed = (await LooksAsync(cancellationToken)).Count(look => look is null);
         if (failed > 0)
         {
             throw new IOException($"{failed} table{(failed == 1 ? string.Empty : "s")} could not be looked at.");
