@@ -1,8 +1,15 @@
-import { cp, mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, rename, rm, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { join } from 'node:path';
-import { english, french, paths } from './copy.mjs';
+import { EVOLUTION_REGISTRY } from '../table/battle-evolution-art.js';
+import { resolveEvolution } from '../table/battle-evolution.js';
+import { loadCatalogue } from './catalogue.mjs';
+import { english, french } from './copy.mjs';
+import { guidePage } from './guide.mjs';
+import { routes } from './layout.mjs';
+import { specimenPath } from './lore.mjs';
 import { page } from './page.mjs';
+import { privacyPage } from './privacy.mjs';
 
 const source = new URL('../', import.meta.url);
 const destination = fileURLToPath(new URL('./dist', import.meta.url));
@@ -10,30 +17,41 @@ const application = new URL(process.env.GAME_ORIGIN || 'https://play.downfallins
 if (application.protocol !== 'https:' || application.href !== application.origin + '/' || application.username || application.password)
   throw new Error('GAME_ORIGIN must be an HTTPS origin without credentials, path, query or fragment.');
 
-const json = async path => JSON.parse(await readFile(new URL(path, source), 'utf8'));
-const art = await json('data/presentation/mutation-art.json');
-const families = await Promise.all(paths.map(async path => Promise.all(path.map(async id => {
-  const tier = await json(`data/Tiers/${id}.v1.json`);
-  return { name: tier.name, ...art[tier.id] };
-}))));
-
-// Stage the complete output before replacing the last successful build.
+const catalogue = await loadCatalogue();
+const packages = new Map(catalogue.nodes.map(t => [t.id, t]));
+const owned = [];
+const specimen = [EVOLUTION_REGISTRY.base()];
+for (const shortId of specimenPath) {
+  const id = `tier:${shortId}:v1`, node = packages.get(id);
+  if (!node || !node.prerequisites.every(p => owned.includes(p)) || (node.anyOf.length && !node.anyOf.some(p => owned.includes(p))))
+    throw new Error(`Unreachable observation step ${id}`);
+  owned.push(id);
+  const visual = resolveEvolution({ acquiredTiers: owned }, packages, { log: { order: () => owned } });
+  specimen.push(EVOLUTION_REGISTRY.art(visual.artworkId));
+}
+// Publish only the ordinary forms and this observation's artwork. The remaining hybrids are discovered in play.
+const portraits = new Set([...specimen.map(art => art.file),
+  ...catalogue.nodes.filter(t => t.visual.artwork).map(t => EVOLUTION_REGISTRY.art(t.visual.artwork).file)]);
 const stage = await mkdtemp(destination + '-');
 try {
-  const copy = (from, to) => cp(new URL(from, source), join(stage, to));
-  for (const dir of ['assets', 'fonts', 'fr']) await mkdir(join(stage, dir));
   const assets = [
     ['docs/art/branding.css', 'branding.css'],
-    ...['showcase.css', 'gallery.js', '404.html'].map(file => [`showcase/${file}`, file]),
+    ...['showcase.css', 'gallery.js', 'guide.js', '404.html'].map(file => [`showcase/${file}`, file]),
     ...['brand-mark.svg', 'icon.svg'].map(file => [`table/${file}`, `assets/${file}`]),
     ...['marcellus-latin-400.woff2', 'OFL.txt'].map(file => [`table/fonts/${file}`, `fonts/${file}`]),
     ['table/battle-art/eclipse-battle.webp', 'assets/eclipse-battle.webp'],
     ...['breach', 'broken-floor', 'shattered-sky'].map(id => [`table/battle-art/horizon/${id}.webp`, `assets/${id}.webp`]),
-    ...families.flat().map(({ artwork }) => [`table/battle-art/evolutions/${artwork}.webp`, `assets/${artwork}.webp`]),
+    ...[...portraits].map(file => [`table/battle-art/${file}`, `assets/${file}`]),
   ];
-  await Promise.all(assets.map(([from, to]) => copy(from, to)));
-  for (const [language, target] of [[english, 'index.html'], [french, 'fr/index.html']])
-    await writeFile(join(stage, target), page(language, families, application.href));
+  const documents = [english, french].flatMap(c => {
+    const path = routes[c.lang];
+    return [[path.home, page(c, specimen, application.href)], [path.guide, guidePage(c, catalogue, application.href)],
+      [path.privacy, privacyPage(c, application.href)]].map(([route, html]) => [route.slice(1) + 'index.html', html]);
+  });
+  const directories = new Set([...assets.map(([, to]) => dirname(to)), ...documents.map(([to]) => dirname(to))]);
+  await Promise.all([...directories].map(dir => mkdir(join(stage, dir), { recursive: true })));
+  await Promise.all(assets.map(([from, to]) => cp(new URL(from, source), join(stage, to))));
+  await Promise.all(documents.map(([to, content]) => writeFile(join(stage, to), content)));
   await rm(destination, { recursive: true, force: true });
   await rename(stage, destination);
 } finally {

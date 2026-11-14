@@ -220,6 +220,8 @@
 .sign-in-content .muted { font-size: 15px; line-height: 1.6; }
 .sign-in-actions { display: grid; gap: 8px; margin-top: 26px; min-width: 0; }
 .sign-in-art { position: absolute; z-index: -1; inset: 8% 2% 6% 52%; background: url('battle-art/evolutions/warped-stage3-revenant.webp') right bottom / contain no-repeat; filter: drop-shadow(0 12px 8px #000a); }
+.sign-in-policy { display: inline-flex; align-items: center; min-height: 44px; margin-top: 8px; color: var(--muted); font-size: 13px; }
+.sign-in-policy:hover { color: var(--gold); }
 .home-footer a, .account-menu .site-link { color: var(--gold); }
 .account-menu .site-link { display: flex; align-items: center; justify-content: space-between; min-height: 44px; padding-inline: 12px; text-decoration: none; }
 .account-menu .site-link:hover { background: var(--raised); }

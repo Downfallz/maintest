@@ -1,0 +1,53 @@
+// A single annotated specimen. The build resolves every step with the same rules as a battle.
+export const specimenPath = ['occultist', 'necromancer', 'lich', 'brute'];
+
+export const lore = {
+  en: {
+    title: 'What grows in the fractures.',
+    opening: 'Before the corruption took hold, every creature had four feet, a hooked mask of bone and a row of spines. You can still find that same hook on a Colossus. Look closer at a Revenant and there it is again, above the empty ribs.',
+    choice: 'During a duel, you decide where the next change takes hold. Brute plates grow over living muscle. A Predator’s dorsal ridge splits and unfolds into an extra pair of legs. In the Warped, the flesh twists so far out of shape that something on the other side can answer. The first sound it makes back is a spell.',
+    caseTitle: 'Under the Revenant’s ribs', caseKicker: 'Field observation', select: 'Follow this creature’s mutations',
+    steps: [
+      ['Ancestral body', 'Before the first mutation', 'The pale hook at the tip of its skull throws a shadow over the jaw. Count four feet and follow the line of bone sweeping back from its shoulders. Everything that follows grows out of this body.'],
+      ['Warped', 'The mask splits', 'The two sides of the skull no longer meet. A current jumps across the gap when the animal opens its mouth. Shock sends it into another creature. Revitalize turns that same opening towards an ally.'],
+      ['Necrotic', 'Something answers', 'A light shows through the ribs. The creature draws its own blood and the bones of the dead rise around an ally. That is Bonewall. With Infestation it calls hungry spirits through the same wound.'],
+      ['Revenant', 'A voice for the dead', 'Its ribs now arch around a hollow chest. The spirits gather inside it. Wraithguard sends them out to shield its allies. With Death Wail they scream through its jaws, and the caster bleeds for it.'],
+      ['Brute influence', 'The dead grow heavy', 'Look at the shoulders and the weight of the front claws. Brute has taken hold beneath the Revenant’s ribs. It keeps Wraithguard and Death Wail, and it can now bring a forepaw down with Pummel.'],
+    ],
+    invite: 'That was one creature. Where would you take yours?', guideLink: 'Open the mutation field guide',
+    guideNote: 'Trace every branch and read the spells it teaches. Take your own combinations into a duel.',
+    base: 'Ancestral creature', guideTitle: 'The mutation field guide',
+    guideIntro: 'Start at the bone mask and follow a branch down to its final form. You can also open another family on the same creature. Its earlier spells stay with it.',
+    familyLabel: 'Browse a family', familyNames: ['Brute', 'Predator', 'Warped'], stage: 'Stage', innate: 'Before mutation',
+    baseNote: 'The common ancestor enters the duel with two actions. Focus builds energy. Strike spends it on a single opponent.',
+    route: 'Mutation paths', pathHint: 'Open a form to read its field notes and spells.', passive: 'Passive', afterAny: 'Opens after any one of',
+    next: 'Requires', roots: 'Open to the ancestral creature', spellTotal: 'spells', formTotal: 'illustrated forms', passiveTotal: 'passives',
+    search: 'Find a mutation or spell', placeholder: 'Try Bonewall or Predator', results: 'Search results', none: 'No matching mutation or spell.', clear: 'Clear search',
+    indexTitle: 'Follow a family', energy: 'energy', caster: 'On the caster', target: 'On the target',
+    passiveTitle: 'Stage IV', returnHome: 'Back to the world', altBase: 'A lean, four-legged creature with a hooked ivory mask and a row of dorsal spines.',
+  },
+  fr: {
+    title: 'Ce qui pousse dans les failles.',
+    opening: 'Avant que la corruption s’en mêle, chaque créature avait quatre pattes, un masque d’os crochu et une rangée d’épines. Ce crochet, on le retrouve encore chez le Colosse. Regarde bien le Revenant. Il est là aussi, juste au-dessus des côtes à nu.',
+    choice: 'En duel, c’est toi qui décides où la prochaine mutation prend racine. Chez la Brute, les plaques poussent à même le muscle. Chez le Prédateur, la crête dorsale se dédouble et déploie deux pattes de plus. Chez l’Altéré, la chair se tord au point que quelque chose, de l’autre côté, finit par répondre. Le premier son qui en ressort est un sort.',
+    caseTitle: 'Sous les côtes du Revenant', caseKicker: 'Observation de terrain', select: 'Suivre les mutations de cette créature',
+    steps: [
+      ['Corps ancestral', 'Avant la première mutation', 'Le crochet pâle au bout du crâne projette son ombre sur la mâchoire. Compte quatre pattes, puis suis la ligne d’os qui part des épaules. Tout ce qui vient après pousse à même ce corps.'],
+      ['Altéré', 'Le masque se fend', 'Les deux côtés du crâne ne se rejoignent plus. Quand la bête ouvre la gueule, un courant saute d’un bord à l’autre. Décharge le projette vers une autre créature. Avec Revitaliser, elle tourne cette même ouverture vers un allié.'],
+      ['Nécrotique', 'Quelque chose répond', 'Une lueur perce entre les côtes. La créature verse son propre sang et les os des défunts se dressent autour d’un allié. C’est le Mur d’os. Avec Infestation, elle appelle des esprits affamés par la même blessure.'],
+      ['Revenant', 'Une voix pour les morts', 'Ses côtes forment maintenant une voûte autour d’une poitrine creuse. Les esprits s’y rassemblent. Garde spectrale les envoie protéger ses alliés. Avec Hurlement funèbre, ils crient par sa gueule et la bête en saigne.'],
+      ['Marque de Brute', 'Le poids des morts', 'Regarde les épaules et le poids des griffes avant. La Brute a pris racine sous les côtes du Revenant. Ses morts répondent encore à Garde spectrale et à Hurlement funèbre. Avec Marteler, il peut aussi abattre sa patte sur un ennemi.'],
+    ],
+    invite: 'Cette bête a suivi un chemin. Où mènerais-tu la tienne ?', guideLink: 'Ouvrir le guide des mutations',
+    guideNote: 'Suis chaque branche et découvre les sorts qu’elle transmet. Tes propres croisements t’attendent en duel.',
+    base: 'Créature ancestrale', guideTitle: 'Le guide des mutations',
+    guideIntro: 'Pars du masque d’os et suis une branche jusqu’à sa forme finale. Tu peux aussi ouvrir une autre famille sur la même créature. Elle garde les sorts qu’elle a déjà appris.',
+    familyLabel: 'Parcourir les familles', familyNames: ['Brute', 'Prédateur', 'Altéré'], stage: 'Stade', innate: 'Avant la mutation',
+    baseNote: 'L’ancêtre commun entre en duel avec deux actions. Focus accumule de l’énergie. Frappe en dépense pour atteindre un seul adversaire.',
+    route: 'Chemins de mutation', pathHint: 'Ouvre une forme pour découvrir son anatomie et ses sorts.', passive: 'Passif', afterAny: 'Accessible après une seule de ces formes',
+    next: 'Requiert', roots: 'Accessible à la créature ancestrale', spellTotal: 'sorts', formTotal: 'formes illustrées', passiveTotal: 'passifs',
+    search: 'Trouver une mutation ou un sort', placeholder: 'Essaie « Mur d’os » ou « Prédateur »', results: 'Résultats de recherche', none: 'Aucune mutation ni aucun sort correspondant.', clear: 'Effacer la recherche',
+    indexTitle: 'Suivre une famille', energy: 'énergie', caster: 'Sur la créature qui lance le sort', target: 'Sur la cible',
+    passiveTitle: 'Stade IV', returnHome: 'Retour au monde', altBase: 'Une créature efflanquée à quatre pattes, au masque d’ivoire crochu et à la crête dorsale épineuse.',
+  },
+};

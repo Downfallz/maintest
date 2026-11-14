@@ -5,26 +5,19 @@ The game website link in the account menu and the guest lobby footer lead back t
 
 ## Experience
 
-1. Introduce a 3v3 duel under the eclipse with the Colossus at full size and Play in the first view.
-2. Let visitors inspect one real, three-stage mutation path per family. Show the in-game illustration
-   and English display name from the repository catalogue, alongside localized editorial copy.
-3. Explain the decisions a commander makes, then show the battlefield at rounds 1, 6 and 12 with the live
-   game's paintings. The late sky and ground share the original art coordinates.
-4. Offer the English page at the root and French at /fr/. Each is complete HTML; scripting adds keyboard
-   and touch selection to the galleries. Players can read every entry and follow Play with scripts disabled.
-5. Tell the creator's first-person story, from board-game playtests to the online game, with Counter-Strike,
-   early WoW PvP, Magic deckbuilding and Skyrim character creation as personal influences. Mention a possible
-   future physical edition. Place the ad-free, purchase-free and privacy commitments alongside the story,
-   with a shorter reminder beside the Play actions.
-6. Give the game its own short sign-in screen. Signed-in and accounts-off players go to their dashboard.
+1. Meet the Colossus, then see the actual eclipse battlefield collapse at rounds 1, 6 and 12.
+2. Follow the bone-masked ancestor through Warped, Necrotic and Revenant. The last observation adds Brute.
+   The build uses the battle illustration resolver and publishes exactly that one hybrid. The rest are discoveries in play.
+3. Browse the separate mutation field guide at `/mutations/` or `/fr/mutations/`. Read every family, prerequisite,
+   illustrated form, capstone, starting action and mutation spell without signing in. Spell costs, targets, effects on
+   both target and caster, prerequisites, passives and ordinary artwork come from the game catalogue. Visitors can
+   follow a family or search names. All entries are server-rendered and open with native HTML disclosures.
+4. Explain the duel and tell the creator’s first-person story, from board-game playtests to asynchronous duels that fit around everyday life.
+   Keep the fair-play and privacy commitments beside the creator’s note and the short reminder beside Play.
+5. Publish the full policy at `/privacy/` and `/fr/confidentialite/`. Link it from every page, from the signed-out lobby
+   and from Settings → Privacy in the app. Privacy requests go to contact@downfallinstinct.com.
+6. Guests enter the game through its short sign-in screen. Signed-in and accounts-off players reach their dashboard.
    Invitation, account, PWA and private API routes stay on the game origin.
-
-## Future bestiary exploration
-
-Consider linking the home-page bestiary to a dedicated public explorer. Visitors could browse the full
-endgame roster, follow the mutations that lead to each form, and inspect the spells those mutations unlock.
-Use the studio's read-only catalogue and exploration views as the starting point. Keep the full inventory
-on its own page so the home page can introduce the three families quickly.
 
 ## Build and review
 
@@ -36,7 +29,7 @@ python3 -m http.server 8080 --directory showcase/dist
 ```
 
 Open http://localhost:8080/ or http://localhost:8080/fr/. Run `node --test studio/showcase.test.js` to rebuild
-and check both documents and their assets. The build uses Node built-ins. The origin of the Play buttons
+and check all six pages, their navigation, the complete catalogue and the single disclosed hybrid. The build uses Node built-ins. The origin of the Play buttons
 can be overridden for a test deployment with `GAME_ORIGIN=https://your-game-host.example`.
 
 ## Publish the apex
@@ -51,15 +44,15 @@ Create a **Cloudflare Pages** project with Git integration for this repository. 
 | Build command | node showcase/build.mjs |
 | Build output directory | showcase/dist |
 
-Preview the branch deployment first. Test all three families, the battlefield selector, the language links and Play
+Preview the branch deployment first. Test the illustrated observation, the guide search and disclosures, privacy, language links and Play
 on desktop and a narrow phone. In the Pages project's **Custom domains**, add **downfallinstinct.com** and finish
 its DNS activation. The zone is already on Cloudflare. The game CNAME, its origin certificate, Google origins
 and its Azure workflow keep their existing settings. Deploy the apex before releasing the updated lobby so
 its return links have a live destination. Confirm a signed-out Play visit opens sign-in and a signed-in visit
 opens the dashboard. A prior Pages deployment can be restored independently of the game.
 
-Build watch paths may include `showcase/*`, `data/Tiers/*`, `data/presentation/mutation-art.json`,
-`docs/art/branding.css`, `table/battle-art/*`, `table/fonts/*`, `table/icon.svg` and `table/brand-mark.svg`.
+Build watch paths may include `showcase/**`, `data/{Creatures,Spells,Tiers,presentation}/**`, `docs/art/branding.css`,
+`table/battle-*art.js`, `table/battle-evolution.js`, `table/battle-art/**`, `table/fonts/**`, `table/icon.svg` and `table/brand-mark.svg`.
 With Azure Static Web Apps, upload the same contents of `showcase/dist` as a prebuilt static site.
 
 [Cloudflare build configuration](https://developers.cloudflare.com/pages/configuration/build-configuration/) ·
