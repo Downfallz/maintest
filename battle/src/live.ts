@@ -157,7 +157,7 @@ const orderUI = orderControls(orderReveal, () => playback.skip(), id => {
 }, () => render());
 let wasTargeting = false;
 
-function status(state: string) {
+function status(state: string, detail?: string) {
   $('battle').dataset.connection = state;
   // Losing the connection or the seat fences a pending sound opt-in; an animation's own cancellation does not.
   // A seat that can no longer play: signed out, no longer this page's, or a match voided by an update (ADR 0163).
@@ -175,7 +175,8 @@ function status(state: string) {
     selected = null;
     text('perspective', 'YOUR TEAM');
     text('load-title', messages.ended);
-    text('load-detail', 'The game was updated and this match could no longer be played on. It ended without a result and does not count.');
+    // The operator's explanation when they voided it (ADR 0176), the update's own notice otherwise (ADR 0163).
+    text('load-detail', detail || 'The game was updated and this match could no longer be played on. It ended without a result and does not count.');
     $<HTMLAnchorElement>('access-link').href = '/';
     text('access-link', 'Lobby');
     $('retry').hidden = true;
@@ -739,7 +740,7 @@ async function discover(autoResume = true) {
     heldSeats = result.held;
     if (autoResume && result.choices.length === 1 && !result.invitations.length && result.held.filter((one: Choice) => one.table.id === result.choices[0].table.id).length === 1) { choose(result.choices[0]); return; }
     // The seat this link or browser held belongs to a match voided by an update (ADR 0163): say why it ended.
-    if (!result.choices.length && !result.invitations.length && result.ended.length) { status('ended'); return; }
+    if (!result.choices.length && !result.invitations.length && result.ended.length) { status('ended', result.why ?? undefined); return; }
     $('loading').hidden = false;
     text('load-title', result.choices.length ? 'Choose your seat' : 'No seat available');
     text('connection', result.choices.length ? 'Choose a seat' : 'No active seat');

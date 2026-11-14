@@ -81,6 +81,15 @@ test('a late catalogue after stopping opens no seat and paints no board', async 
   assert.equal(calls, 0); assert.deepEqual(h.views, [[null, null]]);
 });
 
+test('a 410 carrying why the match was voided hands the reason on with the state', async () => {
+  const states = [];
+  const connection = createLiveConnection({ onState: (...state) => states.push(state), onView: () => {}, schedule: () => 0, cancel: () => {} });
+  const why = 'The match stopped answering after a host restart.';
+  connection.start({ catalogue: async () => ({ ok: false, status: 410, body: { error: 'Table.Void', message: why } }), seat: async () => new Promise(() => {}) });
+  await tick();
+  assert.deepEqual(states.at(-1), ['ended', why]);
+});
+
 const refusedAs = { 401: 'signin', 403: 'revoked', 410: 'ended' };
 for (const status of [401, 403, 410]) for (const source of ['catalogue', 'seat', 'events']) {
   test(`${status} from ${source} clears the board and stops polling and notifications`, async () => {

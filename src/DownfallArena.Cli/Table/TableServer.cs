@@ -1,6 +1,7 @@
 using System.Net;
 using DownfallArena.Cli.Hosting;
 using DownfallArena.Cli.Studio;
+using DownfallArena.Infrastructure.Learning;
 
 namespace DownfallArena.Cli.Table;
 
@@ -313,10 +314,11 @@ internal sealed class TableServer : IDisposable
                 return StartingUp();
             }
 
-            // A seat of a void match is told why its match ended (ADR 0163), not shown a seat it lost.
+            // A seat of a void match is told why its match ended (ADR 0163), not shown a seat it lost: as JSON, so the
+            // operator's explanation (ADR 0176) reaches the page as the words they wrote, whatever those are.
             if (await _registry.VoidSeatAsync(token) is { } voided)
             {
-                return StudioResponse.OfPlainText(410, voided);
+                return StudioResponse.OfJson(new { error = "Table.Void", message = voided }, ArtifactJson.LineOptions, status: 410);
             }
 
             return StudioResponse.OfPlainText(403, $"Every request carries the seat's own '{TableApi.TokenHeader}'.");

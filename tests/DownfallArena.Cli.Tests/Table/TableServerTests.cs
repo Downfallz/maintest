@@ -298,7 +298,9 @@ public sealed class TableServerTests : IAsyncDisposable
         var stranger = await Get($"{url}api/seat/player1", TableKeys.For(table.Id));
 
         seat.StatusCode.ShouldBe(HttpStatusCode.Gone);
-        (await seat.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)).ShouldContain("updated");
+        var said = JsonDocument.Parse(await seat.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)).RootElement;
+        said.GetProperty("error").GetString().ShouldBe("Table.Void");
+        said.GetProperty("message").GetString().ShouldBe(TableComposer.VoidNotice);
         stranger.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
 

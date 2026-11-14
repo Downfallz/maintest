@@ -25,7 +25,9 @@ void is, and a little more:
 
 - the table's record is closed and marked void, and keeps the reason; the table leaves the index, and a table this
   host holds is let go of first;
-- each seat's account is told on its devices, with the explanation, and a seat's page is answered `410` with it;
+- each seat's account is told on its devices, with the explanation, and a seat's page is answered `410` with it
+  (`{error: "Table.Void", message}`), which the battle view shows, live or after a reload (the resume listing names
+  each void table with why it ended);
 - **a kept result is not deleted but marked void with the same reason.** A void result counts nowhere: not on the
   ladder, not in a player's statistics, not among recent opponents or the operator's game counts. The finished
   games list still shows it, as voided, with the explanation, and its replay stays available.

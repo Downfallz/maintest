@@ -47,6 +47,17 @@ test('a stream tells each ready and change, carries its headers and the same-ori
   assert.deepEqual(answer, { status: 200, ok: true, silent: false });
 });
 
+test('a stream refused for a void match says why, and any other refusal says nothing more', async () => {
+  const why = 'The match stopped answering after a host restart.';
+  const gone = await streamEvents(async () => ({ ok: false, status: 410, json: async () => ({ error: 'Table.Void', message: why }) }),
+    '/api/seat/player1/events', {}, () => {}, new AbortController().signal, clock());
+  const revoked = await streamEvents(async () => ({ ok: false, status: 403, json: async () => ({ message: 'not yours' }) }),
+    '/api/seat/player1/events', {}, () => {}, new AbortController().signal, clock());
+
+  assert.deepEqual(gone, { status: 410, ok: false, body: { message: why } });
+  assert.deepEqual(revoked, { status: 403, ok: false });
+});
+
 test('a stream silent past the keep-alive is taken for dropped and ends, so it is opened again', async () => {
   const time = clock(), body = openBody();
   const ending = streamEvents(async () => ({ ok: true, status: 200, body }), '/x', {}, () => {}, new AbortController().signal, { ...time, silence: 45000 });
