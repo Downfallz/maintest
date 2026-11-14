@@ -9,6 +9,7 @@
 import { mountJobs } from './admin-jobs.js';
 import { mountSettings } from './admin-settings.js';
 import { mountOverview } from './admin-overview.js';
+import { mountActivity } from './admin-activity.js';
 import { mountPlayers } from './admin-players.js';
 import { mountTurns } from './admin-turns.js';
 import { mountVoid, voidLabel } from './admin-void.js';
@@ -267,7 +268,7 @@ export const SESSIONS_PER_PAGE = 20;
 
 // The headquarters' sections, each one part of the address (`/admin#sessions`), so a reload or a link opens it and
 // Back moves between them. The first is where the page opens.
-export const ADMIN_TABS = Object.freeze(['overview', 'tables', 'sessions', 'players', 'jobs', 'settings']);
+export const ADMIN_TABS = Object.freeze(['overview', 'tables', 'sessions', 'players', 'jobs', 'activity', 'settings']);
 
 /** The section an address names, or the first one for an address that names none the page has. */
 export function tabOf(hash) {
@@ -660,6 +661,18 @@ async function start() {
     warn: closed => { element('tab-settings-count').textContent = closed ? '!' : ''; },
   });
 
+  // What operators did (A6), on a host that keeps the log: read when the panel opens, when its section is opened and on
+  // Refresh.
+  const activity = mountActivity({
+    send: transport.request,
+    element,
+    shown: available => {
+      element('tab-activity').hidden = !available;
+      element('activity-off').hidden = available;
+      element('activity-on').hidden = !available;
+    },
+  });
+
   // The Overview (A5): the numbers at a glance, read when the panel opens, when its section is opened and on Refresh.
   const overview = mountOverview({ send: transport.request, element });
 
@@ -749,12 +762,13 @@ async function start() {
   element('sessions-refresh').addEventListener('click', redrawSessions);
   element('tables-previous').addEventListener('click', () => { tablesPage -= 1; drawTables(); });
   element('tables-next').addEventListener('click', () => { tablesPage += 1; drawTables(); });
-  element('admin-refresh').addEventListener('click', async () => { await redraw(); await redrawSessions(); await players.redraw(); await jobs.redraw(); await turnQueues.redraw(); await settings.redraw(); await overview.redraw(); });
+  element('admin-refresh').addEventListener('click', async () => { await redraw(); await redrawSessions(); await players.redraw(); await jobs.redraw(); await turnQueues.redraw(); await settings.redraw(); await overview.redraw(); await activity.redraw(); });
   globalThis.addEventListener?.('hashchange', () => {
     showTab();
     if (tabOf(globalThis.location?.hash) === 'players') void players.redraw();
     if (tabOf(globalThis.location?.hash) === 'settings') void settings.redraw();
     if (tabOf(globalThis.location?.hash) === 'overview') void overview.redraw();
+    if (tabOf(globalThis.location?.hash) === 'activity') void activity.redraw();
     if (tabOf(globalThis.location?.hash) === 'jobs') {
       void jobs.redraw();
       void turnQueues.redraw();
@@ -789,6 +803,7 @@ async function start() {
   await turnQueues.redraw();
   await settings.redraw();
   await overview.redraw();
+  await activity.redraw();
   again();
 }
 

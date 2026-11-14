@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DownfallArena.Application.Accounts;
+using DownfallArena.Application.Admin;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Infrastructure.Learning;
@@ -86,6 +87,9 @@ internal sealed class AdminApi
     /// <summary>The bots' turn queues (A3b), on a host whose turns go through queues; none otherwise.</summary>
     public TurnsApi? Turns { get; set; }
 
+    /// <summary>What operators do from the panel (A6), noted beside each action's console line, and the Activity tab.</summary>
+    public OperatorNotes Notes { get; set; } = OperatorNotes.None;
+
     /// <summary>The Overview tab (A5): the numbers at a glance.</summary>
     public OverviewApi? Overview { get; set; }
 
@@ -93,7 +97,7 @@ internal sealed class AdminApi
     public SettingsApi? Settings { get; set; }
 
     public static bool Names(string path) =>
-        path == MePath || Under(path, Prefix) || Under(path, SessionsPrefix) || PlayersApi.Names(path) || JobsApi.Names(path) || SettingsApi.Names(path) || OverviewApi.Names(path) || LobbyApi.Names(path);
+        path == MePath || Under(path, Prefix) || Under(path, SessionsPrefix) || PlayersApi.Names(path) || JobsApi.Names(path) || SettingsApi.Names(path) || OverviewApi.Names(path) || ActivityApi.Names(path) || LobbyApi.Names(path);
 
     private static bool Under(string path, string prefix) => path == prefix || path.StartsWith(prefix + "/", StringComparison.Ordinal);
 
@@ -166,6 +170,13 @@ internal sealed class AdminApi
             return Turns is null
                 ? StudioResponse.OfPlainText(404, "This host takes the bots' turns in its own process, so it has no turn queues.")
                 : await Turns.HandleAsync(method, path, body, operatorName);
+        }
+
+        if (ActivityApi.Names(path))
+        {
+            return Notes.Actions is { } actions
+                ? await new ActivityApi(actions).HandleAsync(method, query)
+                : StudioResponse.OfPlainText(404, "This host keeps no operator log: it records nothing (--no-record), or the log could not be opened.");
         }
 
         if (OverviewApi.Names(path))
@@ -322,7 +333,9 @@ internal sealed class AdminApi
         }
 
         await table.RecordAsync();
-        Console.WriteLine($"  Session {table.Id} opened by {operatorName}: {string.Join(", ", table.Seats.Select(seat => $"{seat.Name} {(seat.Person is null ? table.Session.SeatedName(seat.Slot) : $"code {seat.Code}")}"))}");
+        var seated = string.Join(", ", table.Seats.Select(seat => $"{seat.Name} {(seat.Person is null ? table.Session.SeatedName(seat.Slot) : $"code {seat.Code}")}"));
+        Console.WriteLine($"  Session {table.Id} opened by {operatorName}: {seated}");
+        await Notes.NoteAsync(operatorName, OperatorActions.OpenTable, table.Id, string.Join(", ", table.Seats.Select(seat => $"{seat.Name} {(seat.Person is null ? table.Session.SeatedName(seat.Slot) : "a person")}")));
         return StudioResponse.OfJson(await DescribedAsync(table), ArtifactJson.LineOptions, status: 201);
     }
 
@@ -378,6 +391,7 @@ internal sealed class AdminApi
         _composer.Relay?.Table(id);
         await _composer.NotifyVoidAsync(id, record, reason.Value.Explanation);
         Console.WriteLine($"  Session {id} voided by {operatorName} ({reason.Value.Category}){(withdrawn ? ", its result withdrawn" : string.Empty)}: {reason.Value.Explanation}");
+        await Notes.NoteAsync(operatorName, OperatorActions.VoidMatch, id, $"{reason.Value.Category}: {reason.Value.Explanation}");
         return StudioResponse.OfJson(new { voided = true, withdrawn, category = reason.Value.Category }, ArtifactJson.LineOptions);
     }
 
@@ -453,6 +467,7 @@ internal sealed class AdminApi
         }
 
         Console.WriteLine($"  Session {id}: {slot} invited again by {operatorName}.");
+        await Notes.NoteAsync(operatorName, OperatorActions.Reinvite, id, slot);
         var code = seat.Code;
         return StudioResponse.OfJson(new { slot, code, join = code is null ? null : $"{JoinCodes.Prefix}{code}", link = $"/?{seat.Name}={seat.Key}" }, ArtifactJson.LineOptions);
     }
@@ -465,6 +480,7 @@ internal sealed class AdminApi
         }
 
         Console.WriteLine($"  Session {id} closed by {operatorName}.");
+        await Notes.NoteAsync(operatorName, OperatorActions.CloseTable, id);
         return new StudioResponse(204, StudioResponse.Plain, []);
     }
 
@@ -487,12 +503,12 @@ internal sealed class AdminApi
             case ("DELETE", ""):
                 return await DeleteAsync(stored, Ids(body, out var problem), problem, operatorName);
             case ("POST", "export"):
-                return await ExportAsync(stored, Ids(body, out var asked), asked, "sessions");
+                return await ExportAsync(stored, Ids(body, out var asked), asked, "sessions", operatorName);
             default:
                 if (method == "GET" && rest.EndsWith("/export", StringComparison.Ordinal))
                 {
                     var id = rest[..^"/export".Length];
-                    return await ExportAsync(stored, [id], problem: null, id);
+                    return await ExportAsync(stored, [id], problem: null, id, operatorName);
                 }
 
                 if (method == "GET" && rest.EndsWith("/replay", StringComparison.Ordinal))
@@ -589,6 +605,10 @@ internal sealed class AdminApi
         if (deleted.Count > 0)
         {
             Console.WriteLine($"  Sessions deleted by {operatorName}: {string.Join(", ", deleted)}.");
+            foreach (var id in deleted)
+            {
+                await Notes.NoteAsync(operatorName, OperatorActions.DeleteSessions, id);
+            }
         }
 
         return StudioResponse.OfJson(new { deleted, missing }, ArtifactJson.LineOptions);
@@ -607,7 +627,7 @@ internal sealed class AdminApi
         }
     }
 
-    private async Task<StudioResponse> ExportAsync(StoredSessions stored, IReadOnlyList<string> ids, string? problem, string name)
+    private async Task<StudioResponse> ExportAsync(StoredSessions stored, IReadOnlyList<string> ids, string? problem, string name, string operatorName)
     {
         if (problem is not null)
         {
@@ -629,6 +649,11 @@ internal sealed class AdminApi
         if (exported.Count == 0)
         {
             return StudioResponse.OfPlainText(404, $"Nothing to export: no session named {string.Join(", ", missing)} holds any file.");
+        }
+
+        foreach (var id in exported)
+        {
+            await Notes.NoteAsync(operatorName, OperatorActions.ExportSessions, id);
         }
 
         return new StudioResponse(200, Zip, zip, [new KeyValuePair<string, string>("Content-Disposition", $"attachment; filename=\"{name}.zip\"")]);

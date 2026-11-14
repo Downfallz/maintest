@@ -266,6 +266,38 @@ test('a player is suspended with a reason they read, marked in the list, and res
   await expect(page.locator('#players tr', { hasText: 'player02' }).locator('.status-tag.suspended')).toHaveCount(0);
 });
 
+// The Activity tab (A6): what operators did, twenty a page, newest first, a table's action linking to its session.
+test('a host that records nothing shows no Activity tab', async ({ page }) => {
+  await expect(page.locator('#tab-activity')).toBeHidden();
+  await page.goto('/table/admin.html#activity');
+  await expect(page.locator('#activity-off')).toBeVisible();
+});
+
+test('the operators\' actions are listed twenty a page, newest first, a table\'s linking to its session', async ({ page }, info) => {
+  const kinds = ['table.void', 'player.suspend', 'settings.save', 'table.open', 'turns.requeue'];
+  const actions = Array.from({ length: 23 }, (_, index) => ({ id: `a${index}`, at: new Date(Date.now() - index * 60000).toISOString(), by: index % 2 ? 'ops' : 'mark',
+    action: kinds[index % kinds.length], target: index % kinds.length === 2 || index % kinds.length === 4 ? null : `target-${index}`,
+    detail: index === 0 ? 'stuck: The match stopped answering after a host restart, and nobody could reach their seat again.' : null }));
+  await page.route(/\/api\/admin\/activity(\?.*)?$/, route => {
+    const number = Number(new URL(route.request().url()).searchParams.get('page') ?? 1);
+    return route.fulfill({ json: { actions: actions.slice((number - 1) * 20, number * 20), total: actions.length, page: number, pages: 2, perPage: 20, kept: 1000 } });
+  });
+  await page.reload();
+  await page.locator('#tab-activity').click();
+
+  await expect(page.locator('#activity li')).toHaveCount(20);
+  await expect(page.locator('#activity li').first()).toContainText('Voided a match · target-0');
+  await expect(page.locator('#activity li').first().locator('a')).toHaveAttribute('href', '/session/target-0');
+  await expect(page.locator('#activity li').nth(1)).toContainText('Suspended an account · target-1');
+  await expect(page.locator('#activity li').nth(1).locator('a')).toHaveCount(0);
+  await expect(page.locator('#activity-count')).toHaveText('23 actions kept (the last 1000) · page 1 of 2');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(widthOf(page));
+  await page.screenshot({ path: info.outputPath('admin-activity.png'), fullPage: true });
+
+  await page.locator('#activity-next').click();
+  await expect(page.locator('#activity li')).toHaveCount(3);
+});
+
 // The Jobs tab (A3): the tending runs, the totals over them, a pass run now and a run's sheet.
 const tendRun = (hoursAgo, extra = {}) => {
   const started = new Date(Date.parse('2026-11-13T18:00:00Z') - hoursAgo * 3600000);

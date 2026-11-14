@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DownfallArena.Application.Admin;
 using DownfallArena.Application.Work;
 using DownfallArena.Cli.Studio;
 
@@ -11,6 +12,9 @@ namespace DownfallArena.Cli.Table;
 /// </summary>
 internal sealed class TurnsApi(TurnQueues queues)
 {
+    /// <summary>What operators do here (A6), noted beside each action's console line.</summary>
+    public OperatorNotes Notes { get; set; } = OperatorNotes.None;
+
     public const string Prefix = JobsApi.Prefix + "/turns";
 
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web);
@@ -76,6 +80,7 @@ internal sealed class TurnsApi(TurnQueues queues)
 
         var handled = await queues.RequeueAsync(asked.All == true ? null : asked.Ids);
         Console.WriteLine($"  Dead letters requeued by {operatorName}: {handled.Handled.Count}{Missing(handled)}.");
+        await Notes.NoteAsync(operatorName, OperatorActions.Requeue, target: null, $"{handled.Handled.Count} letter{(handled.Handled.Count == 1 ? string.Empty : "s")}{Missing(handled)}");
         return Answer(handled);
     }
 
@@ -88,6 +93,7 @@ internal sealed class TurnsApi(TurnQueues queues)
 
         var handled = await queues.DropAsync(ids);
         Console.WriteLine($"  Dead letters dropped by {operatorName}: {handled.Handled.Count}{Missing(handled)}.");
+        await Notes.NoteAsync(operatorName, OperatorActions.Drop, target: null, $"{handled.Handled.Count} letter{(handled.Handled.Count == 1 ? string.Empty : "s")}{Missing(handled)}");
         return Answer(handled);
     }
 

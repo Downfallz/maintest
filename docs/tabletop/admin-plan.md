@@ -319,6 +319,14 @@ Each stage is one pull request, with its tests and docs, and leaves the panel wo
    overview. The Overview is the first tab and the one the panel opens on; each card links to its tab, and a failed
    run, turns given up on or registration closed are drawn in the warning colour and mark the tab.
 9. **A6, activity.** The operator log and its tab.
+   *Built (2026-11-14)*: `OperatorAction` (who, what, on which id, when, a few words) and `OperatorActions`
+   (Application), kept one record an action beside the recordings (`operator`, a directory or a container of its own,
+   as the tending runs are), the last 1,000 (the owner's choice, 2026-11-14), the oldest let go of as new ones come.
+   Every action the panel takes is noted beside its console line, under a stable name: a table opened, closed,
+   reinvited or voided, a session deleted or exported, a player signed out, renamed, deleted, suspended or restored, a
+   tending pass run, dead letters requeued or dropped, the settings saved. A log that cannot be written says so on the
+   console and loses that one line, never the action. `GET /api/admin/activity?page`, twenty a page, newest first; the
+   Activity tab links a table's action to its session, and shows only on a host that records.
 
 Every stage keeps the panel behind the gate. None of it changes a game.
 
@@ -337,5 +345,4 @@ Every stage keeps the panel behind the gate. None of it changes a game.
    confirm when reading the plan: a finished match can be voided too (its result withdrawn from the ladder and the
    statistics), and the reason is a category and a required explanation, both shown to the players.
 
-Still to decide, with the stage that needs it: how long the operator log is kept (proposed: the last 1,000 lines,
-A6).
+7. The operator log keeps the last 1,000 actions (settled 2026-11-14, A6).
