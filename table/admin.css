@@ -166,3 +166,8 @@ input[type="text"] { font: inherit; min-height: 44px; border: 1px solid var(--li
 .overview-number { font-size: 30px; line-height: 1.1; }
 .overview-detail { font-size: 13px; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Activity (A6): one action a row, what was done first, who and when under it, its detail in small print. */
+.activity-what { overflow-wrap: anywhere; }
+.activity-target { font-family: var(--mono, monospace); font-size: 13px; }
+.activity-detail { margin-top: 2px; font-size: 13px; overflow-wrap: anywhere; }

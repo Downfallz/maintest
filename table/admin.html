@@ -30,6 +30,7 @@
       <a id="tab-sessions" href="#sessions" data-tab="sessions">Sessions <span id="tab-sessions-count" class="tab-count"></span></a>
       <a id="tab-players" href="#players" data-tab="players" hidden>Players <span id="tab-players-count" class="tab-count"></span></a>
       <a id="tab-jobs" href="#jobs" data-tab="jobs" hidden>Jobs <span id="tab-jobs-count" class="tab-count"></span></a>
+      <a id="tab-activity" href="#activity" data-tab="activity" hidden>Activity</a>
       <a id="tab-settings" href="#settings" data-tab="settings" hidden>Settings <span id="tab-settings-count" class="tab-count"></span></a>
     </nav>
 
@@ -190,6 +191,23 @@
         <ol id="turns-letters" class="session-list" aria-label="Dead letters"></ol>
         <p id="turns-empty" class="muted" hidden>No dead letter: every turn given up on has been dealt with.</p>
         <p id="turns-more" class="muted" hidden></p>
+      </section>
+    </section>
+    <section id="panel-activity" class="admin-panel" aria-labelledby="tab-activity" data-panel="activity" hidden>
+      <p id="activity-off" class="muted">This host keeps no operator log (it records nothing, <code>--no-record</code>), so what operators do is said on its console alone.</p>
+      <section id="activity-on" class="control players" aria-labelledby="activity-title" hidden>
+        <div class="list-head">
+          <h2 id="activity-title">Activity</h2>
+        </div>
+        <p class="muted">What operators did from this panel, newest first: who, what, on which table or account, and when. The last thousand actions are kept.</p>
+        <output id="activity-said" class="said"></output>
+        <ol id="activity" class="session-list" aria-label="Operators' actions"></ol>
+        <p id="activity-empty" class="muted" hidden>Nothing done from the panel yet.</p>
+        <nav class="session-pages" aria-label="Activity pages">
+          <button id="activity-previous" type="button" class="secondary">← Newer</button>
+          <output id="activity-count" class="muted"></output>
+          <button id="activity-next" type="button" class="secondary">Older →</button>
+        </nav>
       </section>
     </section>
     <section id="panel-settings" class="admin-panel" aria-labelledby="tab-settings" data-panel="settings" hidden>
