@@ -53,6 +53,37 @@ public sealed class TableDiagnosisApiTests : IDisposable
         return (registry, table);
     }
 
+    /// <summary>Both people pass their first purchase, and the seat's person gives every creature its speed while the other's give none.</summary>
+    private static async Task AnswerTheSpeedsAsync(PlayedTable table, Domain.Matches.PlayerSlot slot)
+    {
+        foreach (var each in new[] { Domain.Matches.PlayerSlot.Player1, Domain.Matches.PlayerSlot.Player2 })
+        {
+            await table.Session.DecideAsync(each, Application.Matches.Decisions.PlayerDecision.Pass, (await AskedAsync(table, each)).Waiting!.Asked);
+        }
+
+        for (var asked = (await AskedAsync(table, slot)).Waiting; asked is { Kind: Application.Matches.Projections.PlayerOptionsKind.Speed }; asked = (await table.Session.SnapshotAsync(slot)).Value.Waiting)
+        {
+            await table.Session.DecideAsync(slot, Application.Matches.Decisions.PlayerDecision.ChooseSpeed(asked.Creature!.Value, Domain.Matches.Rounds.Speed.Standard), asked.Asked);
+        }
+    }
+
+    /// <summary>The seat's view once its person is asked their first question.</summary>
+    private static async Task<SeatSnapshot> AskedAsync(PlayedTable table, Domain.Matches.PlayerSlot slot)
+    {
+        for (var waited = 0; waited < 100; waited++)
+        {
+            var read = (await table.Session.SnapshotAsync(slot)).Value;
+            if (read.Waiting is not null)
+            {
+                return read;
+            }
+
+            await Task.Delay(50, Cancel);
+        }
+
+        throw new TimeoutException($"{slot} was never asked.");
+    }
+
     [Fact]
     public async Task The_diagnosis_says_who_sits_who_is_asked_and_how_far_the_journal_goes_and_never_what_was_chosen()
     {
@@ -75,6 +106,36 @@ public sealed class TableDiagnosisApiTests : IDisposable
         {
             line.EnumerateObject().Select(one => one.Name).ShouldBe(["kind", "seat"]);
         }
+    }
+
+    /// <summary>
+    /// A person who answered all of a step both seats are asked at once waits for the other: their options still name
+    /// the step, and they are asked nothing.
+    /// </summary>
+    [Fact]
+    public async Task A_person_who_answered_and_waits_for_the_other_seat_is_asked_nothing()
+    {
+        using var hosted = new HostedTables(recording: true);
+        using var registry = hosted.Registry();
+        var table = await hosted.Composer.ComposeAsync(HostedTables.TwoPeople, Cancel);
+        using (var place = (await registry.ReserveAsync(Cancel)).ShouldNotBeNull())
+        {
+            await registry.AddAsync(table, place, Cancel);
+        }
+
+        table.Seats[0].Person!.Arrive();
+        table.Seats[1].Person!.Arrive();
+        table.Session.Begin();
+        await AnswerTheSpeedsAsync(table, Domain.Matches.PlayerSlot.Player1);
+        var answered = await table.Session.SnapshotAsync(Domain.Matches.PlayerSlot.Player1);
+        answered.Value.Waiting.ShouldBeNull();
+        answered.Value.Options.Kind.ShouldNotBe(Application.Matches.Projections.PlayerOptionsKind.Waiting);
+        await table.RecordAsync(Cancel);
+        var api = new TableDiagnosisApi(registry, hosted.Composer, hosted.Stored!);
+
+        var diagnosis = Read(await api.HandleAsync("GET", Route(table.Id), "mark"));
+
+        diagnosis.GetProperty("seats")[0].GetProperty("asked").ValueKind.ShouldBe(JsonValueKind.Null);
     }
 
     [Fact]

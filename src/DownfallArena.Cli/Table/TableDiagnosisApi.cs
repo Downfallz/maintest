@@ -113,10 +113,13 @@ internal sealed class TableDiagnosisApi(TableRegistry registry, TableComposer co
         object? asked = null;
         if (table is not null && await table.Session.SnapshotAsync(slot) is { IsSuccess: true } snapshot)
         {
-            // A person's asking is the question put to them; a bot's is its options, which it owes an answer to.
+            // A person's asking is the question put to them, none once they answered all of it and wait for the other
+            // seat, whose options still name the step; a bot's is its options, which it owes an answer to.
             asked = snapshot.Value.Waiting is { } waiting
                 ? new { kind = waiting.Kind.ToString(), creature = waiting.Creature?.Value }
-                : snapshot.Value.Options.Kind != PlayerOptionsKind.Waiting ? new { kind = snapshot.Value.Options.Kind.ToString(), creature = (int?)null } : null;
+                : !table.Session.PlayedByItsPerson(slot) && snapshot.Value.Options.Kind != PlayerOptionsKind.Waiting
+                    ? new { kind = snapshot.Value.Options.Kind.ToString(), creature = (int?)null }
+                    : null;
         }
 
         return new
