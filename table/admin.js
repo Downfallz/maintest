@@ -392,28 +392,33 @@ function card(row, transport, redraw) {
   if (row.replay) list.append(...line('Replay', anchor(row.replay, 'action by action')));
   if (row.location) list.append(...line('Written to', document.createTextNode(row.location)));
 
-  box.append(name, state, list);
-  if (row.closable && openVoid) {
+  box.append(name, state, list, ...cardActions(row, transport, redraw));
+  return box;
+}
+
+// What a table card offers under its facts: voiding it with a reason (ADR 0176) and closing it, while it is open.
+function cardActions(row, transport, redraw) {
+  if (!row.closable) return [];
+  const actions = [];
+  if (openVoid) {
     const voiding = document.createElement('button');
     voiding.type = 'button';
     voiding.className = 'close danger';
     voiding.textContent = 'Void…';
     voiding.addEventListener('click', () => openVoid({ id: row.id, players: row.seats.map(seat => `${seat.slot}: ${seat.seated}`).join(' · '), over: false }));
-    box.append(voiding);
+    actions.push(voiding);
   }
-  if (row.closable) {
-    const close = document.createElement('button');
-    close.type = 'button';
-    close.className = 'close';
-    close.textContent = 'Close this table';
-    close.addEventListener('click', async () => {
-      close.disabled = true;
-      await transport.close(row.id);
-      await redraw();
-    });
-    box.append(close);
-  }
-  return box;
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'close';
+  close.textContent = 'Close this table';
+  close.addEventListener('click', async () => {
+    close.disabled = true;
+    await transport.close(row.id);
+    await redraw();
+  });
+  actions.push(close);
+  return actions;
 }
 
 // The Void sheet's opener, once the page has mounted it (ADR 0176): a table card and a session row offer it.
