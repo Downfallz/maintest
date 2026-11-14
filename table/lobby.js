@@ -904,7 +904,6 @@ if (typeof document !== 'undefined') {
     onChange(account, mode) {
       if (account && next) { globalThis.location.assign(next); return; }
       const playable = Boolean(account) || mode === 'off';
-      document.getElementById('welcome-intro').hidden = playable;
       document.getElementById('home-games').hidden = !playable;
       document.getElementById('hero-eyebrow').textContent = account ? `Welcome back, ${account.username}` : 'Your games';
       lobby.setAccount(account, mode);

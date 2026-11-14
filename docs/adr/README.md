@@ -186,3 +186,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0178](0178-let-the-operator-suspend-an-account.md) | Let the operator suspend an account | Accepted |
 | [0179](0179-cut-a-recorded-match-at-the-top-of-a-round.md) | Cut a recorded match at the top of a round, and replay it into a match of its own | Accepted |
 | [0180](0180-let-a-player-choose-the-bot-by-its-level.md) | Let a player choose the bot by its level, and show them nothing else of it | Accepted |
+| [0181](0181-serve-the-public-showcase-from-cloudflare-pages.md) | Serve the public showcase from Cloudflare Pages | Proposed |
