@@ -72,6 +72,55 @@ public sealed class AccountRegistry
     }
 
     /// <summary>
+    /// Suspends the account (ADR 0178): the suspension written and the generation raised in one write, so every session
+    /// of it stops working at once and no new one is issued until it is restored.
+    /// </summary>
+    public Task<Result<Account>> SuspendAsync(AccountId id, AccountSuspension suspension, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(suspension);
+        return ChangeAsync(
+            id,
+            account => account.Suspension is null
+                ? Result.Success(account with { Generation = account.Generation + 1, Suspension = suspension })
+                : Result.Failure<Account>(AccountErrors.AlreadySuspended),
+            cancellationToken);
+    }
+
+    /// <summary>Lifts the account's suspension (ADR 0178): it signs in again, and whatever seats it still holds are its own.</summary>
+    public Task<Result<Account>> RestoreAsync(AccountId id, CancellationToken cancellationToken = default) =>
+        ChangeAsync(
+            id,
+            account => account.Suspension is null
+                ? Result.Failure<Account>(AccountErrors.NotSuspended)
+                : Result.Success(account with { Suspension = null }),
+            cancellationToken);
+
+    // One account read, changed and written back under the lock every write of an account takes.
+    private async Task<Result<Account>> ChangeAsync(AccountId id, Func<Account, Result<Account>> change, CancellationToken cancellationToken)
+    {
+        await Writes.WaitAsync(cancellationToken);
+        try
+        {
+            if (await _store.FindAsync(id, cancellationToken) is not { } account)
+            {
+                return Result.Failure<Account>(AccountErrors.NotFound);
+            }
+
+            var changed = change(account);
+            if (changed.IsSuccess)
+            {
+                await _store.SaveAsync(changed.Value, cancellationToken);
+            }
+
+            return changed;
+        }
+        finally
+        {
+            Writes.Release();
+        }
+    }
+
+    /// <summary>
     /// Removes the account (ADR 0122): its sign-in first, so nobody signs in to it again, then the account, then its
     /// name, which another player may then take. The same sign-in can register afresh afterwards, under a new id.
     /// False when there is no such account.

@@ -147,3 +147,10 @@ input[type="text"] { font: inherit; min-height: 44px; border: 1px solid var(--li
 .settings-count { margin: 0; text-align: right; font-size: 13px; }
 .settings-count.refused { color: var(--refused); }
 .settings-form button { justify-self: start; }
+
+/* Suspension (A2b, ADR 0178): the reason as a few lines, and a suspended account said in the warning colour, in its
+   sheet and as a tag beside its name in the list. */
+.player-suspension textarea { font: inherit; display: block; width: 100%; box-sizing: border-box; margin-top: 6px; min-height: 72px; border: 1px solid var(--line); border-radius: var(--radius-soft); padding: 10px 12px; background: var(--raised); color: var(--ink); resize: vertical; }
+.player-suspended { padding: 10px 12px; border: 1px solid var(--refused); border-radius: var(--radius-soft); }
+.player-suspended p { margin: 0 0 8px; overflow-wrap: anywhere; }
+.status-tag.suspended { color: var(--refused); border: 1px solid var(--refused); padding: 1px 6px; font-size: 12px; }

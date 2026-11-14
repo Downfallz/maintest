@@ -1,4 +1,4 @@
-# 0178. Cut a recorded match at the top of a round, and replay it into a match of its own
+# 0179. Cut a recorded match at the top of a round, and replay it into a match of its own
 
 Date: 2026-11-14
 Status: Accepted

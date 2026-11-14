@@ -146,6 +146,75 @@ public sealed class PlayersApiTests : IDisposable
         (await accounts.WhoAsync(mark.Request, Cancel)).ShouldBeNull();
     }
 
+    private const string Reason = """{"reason":"Spamming invitations to strangers."}""";
+
+    /// <summary>
+    /// A suspended account (ADR 0178) loses every session at once, and signing in again is refused with the reason
+    /// the operator gave, which its player reads; the sheet says who suspended it, when and why.
+    /// </summary>
+    [Fact]
+    public async Task A_suspended_account_is_signed_out_and_told_why_when_it_signs_in_again()
+    {
+        var accounts = await AccountsAsync();
+        var mark = await SignInAsync(accounts, "Mark");
+
+        var answer = await Players(accounts).HandleAsync("POST", $"{PlayersApi.Prefix}/{mark.Id}/suspension", Reason, null, "op");
+
+        answer.Status.ShouldBe(200);
+        (await accounts.WhoAsync(mark.Request, Cancel)).ShouldBeNull();
+        var again = await accounts.HandleAsync("POST", "/api/account/dev", """{"username":"Mark"}""", new AccountRequest(null, Secure: false));
+        again.Status.ShouldBe(403);
+        Json(again).GetProperty("error").GetString().ShouldBe("Account.Suspended");
+        Json(again).GetProperty("message").GetString().ShouldBe("This account is suspended: Spamming invitations to strangers.");
+        again.Headers.ShouldBeNull();
+        var suspension = Json(await Players(accounts).HandleAsync("GET", $"{PlayersApi.Prefix}/{mark.Id}", "", null, "op")).GetProperty("player").GetProperty("suspension");
+        suspension.GetProperty("reason").GetString().ShouldBe("Spamming invitations to strangers.");
+        suspension.GetProperty("by").GetString().ShouldBe("op");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("""{"reason":"too short"}""")]
+    public async Task A_suspension_without_a_reason_is_refused_and_suspends_nothing(string body)
+    {
+        var accounts = await AccountsAsync();
+        var mark = await SignInAsync(accounts, "Mark");
+
+        var answer = await Players(accounts).HandleAsync("POST", $"{PlayersApi.Prefix}/{mark.Id}/suspension", body, null, "op");
+
+        answer.Status.ShouldBe(400);
+        Json(answer).GetProperty("error").GetString().ShouldBe(AccountSuspension.Invalid.Code);
+        (await accounts.WhoAsync(mark.Request, Cancel)).ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task A_restored_account_signs_in_again_and_a_second_restore_is_refused()
+    {
+        var accounts = await AccountsAsync();
+        var mark = await SignInAsync(accounts, "Mark");
+        await Players(accounts).HandleAsync("POST", $"{PlayersApi.Prefix}/{mark.Id}/suspension", Reason, null, "op");
+
+        var restored = await Players(accounts).HandleAsync("DELETE", $"{PlayersApi.Prefix}/{mark.Id}/suspension", "", null, "op");
+        var again = await Players(accounts).HandleAsync("DELETE", $"{PlayersApi.Prefix}/{mark.Id}/suspension", "", null, "op");
+
+        restored.Status.ShouldBe(200);
+        again.Status.ShouldBe(409);
+        (await accounts.HandleAsync("POST", "/api/account/dev", """{"username":"Mark"}""", new AccountRequest(null, Secure: false))).Status.ShouldBe(200);
+    }
+
+    [Fact]
+    public async Task An_account_already_suspended_is_not_suspended_twice()
+    {
+        var accounts = await AccountsAsync();
+        var mark = await SignInAsync(accounts, "Mark");
+        await Players(accounts).HandleAsync("POST", $"{PlayersApi.Prefix}/{mark.Id}/suspension", Reason, null, "op");
+
+        var again = await Players(accounts).HandleAsync("POST", $"{PlayersApi.Prefix}/{mark.Id}/suspension", """{"reason":"A second reason, written later."}""", null, "op");
+
+        again.Status.ShouldBe(409);
+        Json(again).GetProperty("error").GetString().ShouldBe(AccountErrors.AlreadySuspended.Code);
+    }
+
     [Fact]
     public async Task A_renamed_account_keeps_its_sessions_and_answers_to_its_new_name()
     {

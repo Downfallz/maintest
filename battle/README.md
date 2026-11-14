@@ -800,3 +800,19 @@ The order of tied creatures docks like the mutation pick and the team's tempos, 
 with its shared places as gold badges and who takes each now, the creatures still to place as pills tapped in acting
 order, and the dice and the opponent's fixed places in small type. Keep current order and Start again are pills;
 **Inspect turn order** opens the order sheet. History and Help stay in the field's header.
+
+## Lasting conditions on the figure
+
+The badges under a creature name every condition it carries. The figure adds at most two of them
+(`table/battle-auras.js`, pure, tested by `battle-auras.test.js`), each in its own place so they never cover each
+other:
+
+- **Above the head:** a stun, as three small stars circling it.
+- **On the body:** the one condition that matters most to its life, in this order: a bleed (drops falling from
+  the body), a regeneration (pale motes rising), defense lowered (an ember shell, faltering), defense raised (a
+  thin pale shell, breathing).
+
+Energy, initiative and damage changes stay on the badges alone. A fallen creature carries nothing. The scene
+draws them (`src/condition-auras.ts`) from the frame's `statuses`, the badges' own icon keys, animated from its
+update clock like the capstone effects, and still under reduced motion. `#battle[data-auras]` says what is drawn
+(`1:stun+health-loss 2:defense-gain`).

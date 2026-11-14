@@ -543,7 +543,9 @@ function render() {
   }
   const critical = impact ? (playbackState.cue as { roll?: { value: number; critical: boolean; needed?: number | null } | null } | null)?.roll : null;
   if (critical && frame.actor) dice.push({ id: frame.actor, value: critical.value, tone: critical.critical ? 'crit' : 'miss', key: `crit:${playbackState.sequence}`, needed: critical.needed ?? null });
-  frame = { ...frame, dice };
+  // Each creature's lasting conditions as its badges name them, which the scene draws on its figure (battle-auras.js).
+  frame = { ...frame, dice, creatures: frame.creatures.map(one => ({ ...one,
+    statuses: conditionIcons(one as Parameters<typeof conditionIcons>[0], catalogue?.effects ?? []).map(icon => icon.key) })) };
   scene.present(frame, reduced(), playbackState.rate, replay.active);
   const reveal = growth.receipt();
   if (!reveal) lastMutationReveal = null;
@@ -768,6 +770,7 @@ async function discover(autoResume = true) {
 scene.onLayout = positions => { placeHitTargets(creatures.map(one => nodes.get(one.id)!), positions); orderUI.place(); };
 scene.onDice = shown => { if (shown) $('battle').dataset.dice = shown; else delete $('battle').dataset.dice; };
 scene.onHalo = id => { if (id) $('battle').dataset.halo = id; else delete $('battle').dataset.halo; };
+scene.onAuras = shown => { if (shown) $('battle').dataset.auras = shown; else delete $('battle').dataset.auras; };
 scene.onFocus = ids => { if (ids) $('battle').dataset.focusLit = ids; else delete $('battle').dataset.focusLit; };
 scene.onArtwork = (id, shown) => { const node = nodes.get(id); if (node) node.dataset.artworkShown = shown; else shownArt.set(id, shown); };
 scene.onReady = () => { ready = true; $('battle').dataset.ready = 'true'; $('battle').dataset.assetFallback = String(scene.assetFailed); render(); };

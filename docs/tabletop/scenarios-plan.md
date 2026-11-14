@@ -76,7 +76,7 @@ It is self-contained except for the content, which is named by hash. The store k
 
 ### S0 — ADR (done)
 
-[ADR 0178](../adr/0178-cut-a-recorded-match-at-the-top-of-a-round.md): a match scenario is a recorded match cut at
+[ADR 0179](../adr/0179-cut-a-recorded-match-at-the-top-of-a-round.md): a match scenario is a recorded match cut at
 the top of a round, replayed into a match of its own, never snapshotted. Glossary: **Match scenario** (not a
 Simulation scenario), **Scenario cut**, **Scenario checkpoint**, **Scripted opponent**, **Diagnosis**.
 
