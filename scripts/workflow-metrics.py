@@ -1,0 +1,146 @@
+#!/usr/bin/env python3
+"""The numbers of docs/engineering/ai-workflow-plan.md, measured again.
+
+From git alone: pull requests per week, their size, the files most of them touch, the size of AGENTS.md and
+how often it changes, and ADR numbers used twice. With --github and a token in GITHUB_TOKEN (a workflow's own
+token is enough): how long a pull request stays open, how many were merged before every check finished, and
+how CI on main fares. Standard library only, so it runs in a session, a workflow or a laptop alike.
+
+    python3 scripts/workflow-metrics.py                 # the last 300 pull requests on origin/main
+    python3 scripts/workflow-metrics.py --last 100 --github --repo downfallz/maintest
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import statistics
+import subprocess
+import urllib.request
+from collections import Counter
+from datetime import datetime
+from pathlib import Path
+
+PR_NUMBER = re.compile(r"\(#(\d+)\)$")
+ADR_FILE = re.compile(r"^(\d{4})-.+\.md$")
+
+
+def git(*args: str) -> str:
+    return subprocess.run(["git", *args], capture_output=True, text=True, check=True).stdout
+
+
+def merged_pull_requests(ref: str, last: int) -> list[dict]:
+    """The squash commits of the last pull requests on ref, newest first, with the files each one touched."""
+    out = git("log", ref, "--first-parent", "--format=@@%H%x09%aI%x09%s", "--numstat")
+    commits: list[dict] = []
+    current: dict | None = None
+    for line in out.splitlines():
+        if line.startswith("@@"):
+            sha, date, subject = line[2:].split("\t", 2)
+            match = PR_NUMBER.search(subject)
+            current = {"sha": sha, "date": date, "subject": subject, "files": []}
+            current["number"] = int(match.group(1)) if match else None
+            commits.append(current)
+        elif line.strip() and current is not None:
+            added, deleted, path = line.split("\t", 2)
+            changed = (0 if added == "-" else int(added)) + (0 if deleted == "-" else int(deleted))
+            current["files"].append((path, changed))
+    with_number = [c for c in commits if c["number"] is not None]
+    return with_number[:last]
+
+
+def quantile(values: list[float], q: float) -> float:
+    ordered = sorted(values)
+    return ordered[min(len(ordered) - 1, int(q * len(ordered)))]
+
+
+def git_report(prs: list[dict]) -> dict:
+    sizes = [sum(changed for _, changed in pr["files"]) for pr in prs]
+    weeks = Counter(datetime.fromisoformat(pr["date"]).strftime("%G-W%V") for pr in prs)
+    files = Counter(path for pr in prs for path in {p for p, _ in pr["files"]})
+    agents = Path("AGENTS.md")
+    agents_text = agents.read_text(encoding="utf-8") if agents.exists() else ""
+    adr_dir = Path("docs/adr")
+    names = [entry.name for entry in adr_dir.iterdir()] if adr_dir.is_dir() else []
+    numbers = Counter(m.group(1) for name in names if (m := ADR_FILE.match(name)))
+    return {
+        "pull_requests": len(prs),
+        "range": [prs[-1]["number"], prs[0]["number"]] if prs else [],
+        "per_week": dict(sorted(weeks.items())),
+        "changed_lines": {"median": statistics.median(sizes), "p90": quantile(sizes, 0.9)} if sizes else {},
+        "hottest_files": files.most_common(10),
+        "agents_md": {
+            "bytes": len(agents_text.encode("utf-8")),
+            "lines": agents_text.count("\n"),
+            "longest_line": max((len(line) for line in agents_text.splitlines()), default=0),
+            "changed_in": files.get("AGENTS.md", 0),
+        },
+        "adr_numbers_used_twice": sorted(n for n, count in numbers.items() if count > 1),
+    }
+
+
+def github(path: str, token: str) -> dict | list:
+    request = urllib.request.Request(
+        f"https://api.github.com{path}",
+        headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"},
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return json.load(response)
+
+
+def github_report(repo: str, prs: list[dict], token: str) -> dict:
+    open_minutes: list[float] = []
+    merged_early: list[int] = []
+    for pr in prs:
+        detail = github(f"/repos/{repo}/pulls/{pr['number']}", token)
+        if not detail.get("merged_at"):
+            continue
+        merged = datetime.fromisoformat(detail["merged_at"].replace("Z", "+00:00"))
+        opened = datetime.fromisoformat(detail["created_at"].replace("Z", "+00:00"))
+        open_minutes.append((merged - opened).total_seconds() / 60)
+        runs = github(f"/repos/{repo}/commits/{detail['head']['sha']}/check-runs?per_page=100", token)
+        for run in runs.get("check_runs", []):
+            done = run.get("completed_at")
+            if run["status"] != "completed" or not done:
+                merged_early.append(pr["number"])
+                break
+            if datetime.fromisoformat(done.replace("Z", "+00:00")) > merged or run["conclusion"] == "failure":
+                merged_early.append(pr["number"])
+                break
+    runs = github(f"/repos/{repo}/actions/workflows/ci.yml/runs?branch=main&event=push&per_page=100", token)
+    conclusions = Counter(run.get("conclusion") or run["status"] for run in runs.get("workflow_runs", []))
+    return {
+        "open_to_merge_minutes": {
+            "median": statistics.median(open_minutes),
+            "under_15": sum(m < 15 for m in open_minutes),
+            "of": len(open_minutes),
+        }
+        if open_minutes
+        else {},
+        "merged_before_green_or_on_red": merged_early,
+        "ci_on_main_last_100": dict(conclusions),
+    }
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--ref", default="origin/main")
+    parser.add_argument("--last", type=int, default=300)
+    parser.add_argument("--github", action="store_true", help="also read GitHub (needs GITHUB_TOKEN)")
+    parser.add_argument("--repo", default="downfallz/maintest")
+    args = parser.parse_args()
+
+    prs = merged_pull_requests(args.ref, args.last)
+    report = {"git": git_report(prs)}
+    if args.github:
+        token = os.environ.get("GITHUB_TOKEN", "")
+        if not token:
+            raise SystemExit("--github needs a token in GITHUB_TOKEN")
+        report["github"] = github_report(args.repo, prs, token)
+    print(json.dumps(report, indent=2))
+
+
+if __name__ == "__main__":
+    main()

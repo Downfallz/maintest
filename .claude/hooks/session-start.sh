@@ -159,4 +159,44 @@ else
   echo "[session-start] WARNING: dotnet restore failed. Check network access to api.nuget.org."
 fi
 
+# The storage adapters' tests skip themselves without an emulator (97 of them), so a gate run without one
+# leaves the blob, queue and table stores unchecked. Azurite comes from the environment's setup script
+# (npm install -g azurite); this hook only starts it, because installing it here would cost every session.
+start_azurite() {
+  local data_dir="${AZURITE_DATA_DIR:-$HOME/.azurite}"
+  local endpoint="http://127.0.0.1:10000/devstoreaccount1"
+
+  if ! command -v azurite > /dev/null 2>&1; then
+    echo "[session-start] Azurite is not installed: the storage tests will be skipped. Say so when reporting the gate."
+    return 0
+  fi
+
+  if ! curl -s -o /dev/null --max-time 2 "$endpoint"; then
+    mkdir -p "$data_dir"
+    nohup azurite --silent --skipApiVersionCheck --location "$data_dir" > "$data_dir/azurite.log" 2>&1 &
+    local attempt
+    for attempt in 1 2 3 4 5 6 7 8 9 10; do
+      curl -s -o /dev/null --max-time 1 "$endpoint" && break
+      sleep 1
+    done
+  fi
+
+  if ! curl -s -o /dev/null --max-time 2 "$endpoint"; then
+    echo "[session-start] WARNING: Azurite did not start; the storage tests will be skipped."
+    return 0
+  fi
+
+  if [[ -n "${CLAUDE_ENV_FILE:-}" ]]; then
+    {
+      echo "export AZURITE_BLOB_ENDPOINT=http://127.0.0.1:10000/devstoreaccount1"
+      echo "export AZURITE_QUEUE_ENDPOINT=http://127.0.0.1:10001/devstoreaccount1"
+      echo "export AZURITE_TABLE_ENDPOINT=http://127.0.0.1:10002/devstoreaccount1"
+    } >> "$CLAUDE_ENV_FILE"
+  fi
+  echo "[session-start] Azurite is running; the storage tests will run."
+  return 0
+}
+
+start_azurite
+
 exit 0

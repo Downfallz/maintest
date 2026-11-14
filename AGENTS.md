@@ -50,7 +50,8 @@ scripts/                       iterate.sh, one turn of the learning loop (docs/l
                                slot-choices.py, which reads a --slot-log spell by spell,
                                sweep-weight.py, which measures one agent scoring weight alone (ADR 0037),
                                declaration-reading.py, the shape of the matches under each combat declaration (ADR 0110), and
-                               spells-report/, the page of the spells the bots cast and leave (/spells-report).
+                               spells-report/, the page of the spells the bots cast and leave (/spells-report), and
+                               workflow-metrics.py, the numbers of docs/engineering/ai-workflow-plan.md measured again.
 tests/
   DownfallArena.SharedKernel.Tests  Unit tests for primitives, identifiers, stats.
   DownfallArena.Domain.Tests        Unit tests for the domain (fast, no mocks needed). Sees Domain internals.
