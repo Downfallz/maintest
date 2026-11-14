@@ -20,11 +20,11 @@ public sealed class OverviewCountsTests
         return new PlayerSummary(account, activity, 0, 0, 0, 0, 0, null);
     }
 
-    private static MatchResult Result(double hoursAgo, bool voided = false) =>
+    private static MatchResult Result(double hoursAgo, bool voided = false, double voidedHoursAgo = 0) =>
         new(Guid.CreateVersion7().ToString(), Now.AddHours(-hoursAgo), "3v3", "at-activation", "hash", 9, "player1",
             [new ResultSeat("player1", AccountId.New(), null), new ResultSeat("player2", null, "greedy")])
         {
-            Voided = voided ? MatchVoid.Create("engine", "The engine resolved one spell twice.", "op", Now).Value : null,
+            Voided = voided ? MatchVoid.Create("engine", "The engine resolved one spell twice.", "op", Now.AddHours(-voidedHoursAgo)).Value : null,
         };
 
     [Fact]
@@ -41,6 +41,15 @@ public sealed class OverviewCountsTests
         var counts = FinishedCounts.Of([Result(2), Result(30), Result(24 * 6), Result(24 * 9), Result(5, voided: true)], Now);
 
         counts.ShouldBe(new FinishedCounts(LastDay: 1, LastWeek: 3, VoidedThisWeek: 1));
+    }
+
+    /// <summary>A void is counted by when it was made: a game finished a month ago and voided today counts this week.</summary>
+    [Fact]
+    public void A_void_is_counted_this_week_by_when_it_was_made_not_when_its_game_finished()
+    {
+        var counts = FinishedCounts.Of([Result(24 * 30, voided: true, voidedHoursAgo: 2), Result(24 * 3, voided: true, voidedHoursAgo: 24 * 9)], Now);
+
+        counts.ShouldBe(new FinishedCounts(LastDay: 0, LastWeek: 0, VoidedThisWeek: 1));
     }
 
     [Fact]
