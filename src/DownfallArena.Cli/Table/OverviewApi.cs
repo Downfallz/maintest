@@ -93,9 +93,16 @@ internal sealed class OverviewApi(TableRegistry registry, TableComposer composer
     }
 
     // A host that keeps runs and has kept none yet says so, which is neither no job nor a job that does not answer.
-    private static object Run(TendRun? run) => run is null
-        ? new { id = (string?)null, started = (DateTimeOffset?)null, outcome = "none" }
-        : new { id = (string?)run.Id, started = (DateTimeOffset?)run.Started, outcome = run.Outcome == TendOutcome.Failed ? "failed" : "completed" };
+    private static object Run(TendRun? run)
+    {
+        if (run is null)
+        {
+            return new { id = (string?)null, started = (DateTimeOffset?)null, outcome = "none" };
+        }
+
+        var outcome = run.Outcome == TendOutcome.Failed ? "failed" : "completed";
+        return new { id = (string?)run.Id, started = (DateTimeOffset?)run.Started, outcome };
+    }
 
     /// <summary>What a card whose source does not answer reads.</summary>
     private static readonly object Unavailable = new { unavailable = true };
