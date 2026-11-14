@@ -40,6 +40,18 @@ public sealed class BotLevelsTests : IDisposable
     }
 
     [Fact]
+    public void Every_process_of_a_host_reads_the_same_levels_from_the_file_and_its_bots()
+    {
+        File.WriteAllText(_file, """{ "levels": [ { "level": "medium", "agent": "heuristic:learning/weights/search-51.json" } ] }""");
+        IReadOnlyList<SeatableAgent> agents = [new SeatableAgent("lookahead", "Lookahead", Featured: true)];
+
+        var levels = BotLevels.OfHost(agents, _file);
+
+        levels.Named("medium").ShouldNotBeNull().Agent.ShouldBe("heuristic:learning/weights/search-51.json");
+        levels.Named("hard").ShouldNotBeNull().Agent.ShouldBe("lookahead");
+    }
+
+    [Fact]
     public void A_file_that_does_not_parse_leaves_the_built_in_levels()
     {
         File.WriteAllText(_file, "{ not json");

@@ -59,6 +59,13 @@ internal sealed class BotLevels
         }
     }
 
+    /// <summary>
+    /// The levels a process of this host reads, the API and the turn worker alike, so a notice a worker sends names the
+    /// bot as the lobby does: <c>learning/seatable.json</c>'s, Hard the first bot it puts forward when it says nothing.
+    /// </summary>
+    public static BotLevels OfHost(IReadOnlyList<SeatableAgent> agents, string path = SeatableAgents.FeaturedFile) =>
+        Read(path, agents.FirstOrDefault(agent => agent.Featured)?.Value ?? "greedy");
+
     /// <summary>The level of that name (<c>easy</c>, <c>medium</c>, <c>hard</c>), or none.</summary>
     public BotLevel? Named(string? level) =>
         level is null ? null : All.FirstOrDefault(one => string.Equals(one.Level, level.Trim(), StringComparison.OrdinalIgnoreCase));

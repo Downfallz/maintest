@@ -127,12 +127,16 @@ internal static class TableWorker
         ArgumentNullException.ThrowIfNull(over);
         var clock = services.GetRequiredService<TimeProvider>();
         var turns = await over.Channels.OpenAsync(AgentTurnWorker.Queue, stopping);
+        var agents = SeatableAgents.Read(TableHost.WeightsDirectory);
         var composer = new TableComposer(services, rules, over.Store)
         {
             Contents = over.Contents,
             Turns = new QueuedAgentTurns(turns, clock) { Said = Console.WriteLine },
             Index = over.Index,
-            Agents = SeatableAgents.Read(TableHost.WeightsDirectory),
+            Agents = agents,
+
+            // The levels the API reads too (ADR 0179): a notice of a match the worker ends names the bot by the same one.
+            Levels = BotLevels.OfHost(agents),
             Results = over.Results,
             Basis = ReplayBasis.Of(EngineVersion.Current, services.GetRequiredService<IGameResources>(), rules),
         };

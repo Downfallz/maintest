@@ -52,7 +52,7 @@ internal static class TableHost
         // able to leave the disk as it found it.
         var store = options.Recording ? await ArtifactStores.OpenAsync(options.Record ?? DefaultRunsDirectory, stopping.Token) : null;
         var offered = SeatableAgents.Read(WeightsDirectory);
-        var levels = BotLevels.Read(SeatableAgents.FeaturedFile, offered.FirstOrDefault(agent => agent.Featured)?.Value ?? "greedy");
+        var levels = BotLevels.OfHost(offered);
 
         // The operator can seat every bot a level seats (ADR 0179), Easy's included, which no list put forward.
         IReadOnlyList<SeatableAgent> agents = [.. offered, .. levels.All
