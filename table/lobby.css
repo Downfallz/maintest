@@ -92,6 +92,8 @@
 .game-card.opponent h3 { margin: 0; min-width: 0; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .game-card.opponent .status-tag.record { color: var(--ink); font-variant-numeric: tabular-nums; }
 .game-card.opponent .game-turn { color: var(--muted); font-size: 12px; margin: 0; }
+.game-card.practice .practice-goal { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; }
+.game-card.practice a.primary { text-decoration: none; }
 .game-card.opponent button { width: 100%; min-height: 40px; margin-top: auto; }
 :is(.game-card, .game-row) .status-tag.outcome.lost { color: var(--bad); border-color: var(--bad); }
 /* A game the operator voided (ADR 0176) counts nowhere: its tag is quiet, neither a win nor a loss. */

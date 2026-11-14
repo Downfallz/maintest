@@ -27,6 +27,8 @@ public sealed class OperatorActions(IOperatorLog log, TimeProvider clock)
     public const string SaveSettings = "settings.save";
     public const string CutScenario = "scenario.cut";
     public const string RemoveScenario = "scenario.remove";
+    public const string ListScenario = "scenario.list";
+    public const string UnlistScenario = "scenario.unlist";
     public const string RevealHidden = "table.reveal";
     public const string OweTurn = "table.turn";
 

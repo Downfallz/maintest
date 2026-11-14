@@ -1,6 +1,6 @@
 # Scenarios: a recorded match cut at the top of a round
 
-Status: plan. Decisions taken with the owner on 2026-11-14 are marked **decided**; what is still to settle is in
+Status: done, S0 to S6 (one open question remains). Decisions taken with the owner on 2026-11-14 are marked **decided**; what is still to settle is in
 "Open questions". Each stage ends green on the full gate (`/verify`, and the browser suite when `table/` or
 `battle/` change).
 
@@ -196,12 +196,26 @@ admin gate; the page is `table/admin-diagnosis.js`, its pure parts tested by `ad
   people. Noted in the Activity tab (`table.turn`).
 - **Void…**: ADR 0176's sheet, opened on the same table.
 
-### S6 — Tutorials and puzzles (metadata)
+### S6 — Tutorials and puzzles (metadata) (done)
 
-- A scenario's title, goal and seat are shown as a short card before the first question, and from the band.
-- The operator can mark a scenario **listed**. Listed scenarios appear under Practice for signed-in players,
-  who open them as practice (they still create nothing).
-- Later, not in this plan: success conditions, and moving the nine `--practice` recipes into scenario files.
+- **The briefing.** A practice started from its cut (a first open, or Restart the round) opens on a card before its
+  first question: the scenario's title, its goal (or "play the position your way"), the seat the person plays and
+  the round, against the recorded opponent, and that nothing played here counts. **Begin** closes it. The band's
+  **Briefing** shows it again. A practice resumed after a reload goes on where it was, without it. The page's part is
+  `practiceBrief` in `table/battle-practice.js`.
+- **Listed under Practice.** The Scenarios tab's **list under Practice** / **take off Practice**
+  (`PUT /api/admin/scenarios/<id>/listing {"listed"}`, noted in Activity as `scenario.list` and `scenario.unlist`)
+  marks a scenario listed. A scenario is cut unlisted. Being listed is the host's: it is kept beside the scenario as
+  `listing.json`, never in the `scenario.json` it is shared as. `GET /api/scenarios` (signed in, 401 otherwise)
+  lists the listed ones, newest first. A signed-in player's home page shows them in a **Practice** section, each card
+  opening its link (`table/lobby-practice.js`); a guest, or a host with nothing listed, shows none. One left off the
+  list still opens by its link.
+- Tests: `ScenariosApiTests` (listed and taken off, the operator's list, Activity, refusals, signed out),
+  `admin-scenarios.test.js`, `lobby-practice.test.js`, `battle-practice.test.js`, and in the browser
+  `admin.ux.spec.js` (the toggle), `lobby-home.spec.js` (the section) and `battle-services.spec.js` (the briefing on a
+  fresh practice, again from the band, and not on a resumed one).
+- Later, not in this plan: success conditions, an order to the listed scenarios, and moving the nine `--practice`
+  recipes into scenario files.
 
 ## Docs to update along the way
 

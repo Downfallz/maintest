@@ -1762,6 +1762,13 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 .practice-actions { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
 .practice-actions button { min-height: 32px; padding: 4px 10px; font-size: 12px; }
 .practice-actions a { color: #b8c9bd; font-size: 12px; }
+#practice-brief { width: min(380px, calc(100vw - 32px)); padding: 18px; border: 1px solid #b7986866; border-radius: var(--radius-soft); background: #13232a; color: #f2eee2; box-shadow: 0 18px 40px #000a; }
+#practice-brief::backdrop { background: #050b0db3; }
+#practice-brief .eyebrow { margin: 0; color: var(--gold); font-size: 10px; letter-spacing: 1.6px; }
+#practice-brief h2 { margin: 4px 0 10px; font: 24px/1.15 var(--font-display); overflow-wrap: anywhere; }
+.practice-brief-goal { margin: 0 0 10px; color: #e6c88c; font-size: 15px; line-height: 1.4; overflow-wrap: anywhere; }
+.practice-brief-start, .practice-brief-note { margin: 0 0 8px; color: #c4d0c7; font-size: 13px; line-height: 1.4; }
+#practice-brief-begin { width: 100%; min-height: 44px; margin-top: 8px; }
 @media (max-width: 619px) {
   .practice-band { top: 4px; right: 4px; width: min(220px, calc(100% - 8px)); padding: 6px 8px; }
   .practice-band small#practice-goal { display: none; }

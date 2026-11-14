@@ -1,6 +1,7 @@
 // Headquarters' match scenarios (docs/tabletop/scenarios-plan.md, S5, ADR 0179): a recorded session cut at the top of a
 // round from its row in the Sessions tab, and the Scenarios tab that lists them with the link a signed-in player opens
-// as practice. The host cuts, keeps and lists; this page asks and draws.
+// as practice, and lists one under Practice for every signed-in player (S6). The host cuts, keeps and lists; this page
+// asks and draws.
 
 export const LONGEST_TITLE = 80;
 export const LONGEST_GOAL = 300;
@@ -14,7 +15,15 @@ export function scenarioRows(answer) {
     facts: `session ${one.session ?? 'unknown'} · round ${one.round} · played as ${one.seat}`,
     session: one.session ? `/session/${encodeURIComponent(one.session)}` : null,
     link: one.link,
+    listed: one.listed === true,
   }));
+}
+
+/** The listing toggle of a row: what it says, and what it sends to the host when pressed. */
+export function listingToggle(row) {
+  return row.listed
+    ? { label: 'take off Practice', state: 'Listed under Practice', body: { listed: false } }
+    : { label: 'list under Practice', state: '', body: { listed: true } };
 }
 
 /** The rounds offered as the chooser's options, and what to say when there are none or the journal stopped early. */
@@ -101,7 +110,10 @@ export function mountScenarios({ send, element, shown }) {
       const item = made('li', 'session-row scenario-row');
       item.dataset.scenario = row.id;
       const body = made('div');
-      body.append(made('div', 'session-id', row.title), made('div', 'muted', row.facts));
+      const toggle = listingToggle(row);
+      const heading = made('div', 'session-id', row.title);
+      if (toggle.state) heading.append(' ', made('span', 'status-tag listed', toggle.state));
+      body.append(heading, made('div', 'muted', row.facts));
       if (row.goal) body.append(made('div', 'activity-detail', row.goal));
       const tools = linkTools(row.link);
       if (row.session) {
@@ -109,6 +121,18 @@ export function mountScenarios({ send, element, shown }) {
         source.href = row.session;
         tools.append(source);
       }
+      const listing = made('button', 'link-button', toggle.label);
+      listing.type = 'button';
+      listing.dataset.listing = row.listed ? 'listed' : 'unlisted';
+      listing.addEventListener('click', async () => {
+        listing.disabled = true;
+        const answer = await send('PUT', `/api/admin/scenarios/${encodeURIComponent(row.id)}/listing`, toggle.body);
+        said('scenarios-said', answer.ok
+          ? (toggle.body.listed ? `“${row.title}” is listed under Practice for signed-in players.` : `“${row.title}” is off Practice; its link still opens it.`)
+          : answer.body?.message ?? `The host answered ${answer.status}.`, !answer.ok);
+        await redraw();
+      });
+      tools.append(listing);
       const remove = made('button', 'link-button danger-link', 'remove…');
       remove.type = 'button';
       remove.addEventListener('click', async () => {

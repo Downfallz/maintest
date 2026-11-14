@@ -1,11 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cutAsked, roundChoices, scenarioRows, shareLink } from './admin-scenarios.js';
+import { cutAsked, listingToggle, roundChoices, scenarioRows, shareLink } from './admin-scenarios.js';
 
 test('a scenario is listed by its title, where it was cut from, and its link', () => {
   const [row] = scenarioRows({ scenarios: [{ id: 'sc-1', title: 'Bleed after a stun', goal: 'Keep it alive', session: 's 1', round: 4, seat: 'player2', link: '/battle?scenario=sc-1' }] });
 
-  assert.deepEqual(row, { id: 'sc-1', title: 'Bleed after a stun', goal: 'Keep it alive', facts: 'session s 1 · round 4 · played as player2', session: '/session/s%201', link: '/battle?scenario=sc-1' });
+  assert.deepEqual(row, { id: 'sc-1', title: 'Bleed after a stun', goal: 'Keep it alive', facts: 'session s 1 · round 4 · played as player2', session: '/session/s%201', link: '/battle?scenario=sc-1', listed: false });
   assert.equal(scenarioRows({ scenarios: [{ id: 'sc-2', round: 3, seat: 'player1', link: '/x' }] })[0].title, 'Round 3');
 });
 
@@ -29,4 +29,11 @@ test('a cut without a round, with another seat, or with words too long is not se
 
 test('the link to copy is absolute, on this host', () => {
   assert.equal(shareLink('/battle?scenario=sc-1', 'https://play.example.com'), 'https://play.example.com/battle?scenario=sc-1');
+});
+
+test('a listed scenario says so and offers to take it off Practice; an unlisted one offers to list it', () => {
+  const [listed, unlisted] = scenarioRows({ scenarios: [{ id: 'sc-1', round: 2, seat: 'player1', link: '/a', listed: true }, { id: 'sc-2', round: 3, seat: 'player1', link: '/b' }] });
+
+  assert.deepEqual(listingToggle(listed), { label: 'take off Practice', state: 'Listed under Practice', body: { listed: false } });
+  assert.deepEqual(listingToggle(unlisted), { label: 'list under Practice', state: '', body: { listed: true } });
 });
