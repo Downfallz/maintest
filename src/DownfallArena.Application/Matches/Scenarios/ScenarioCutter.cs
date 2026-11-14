@@ -1,5 +1,6 @@
 using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Matches.Journaling;
+using DownfallArena.Application.Matches.Ports;
 using DownfallArena.SharedKernel.Primitives;
 
 namespace DownfallArena.Application.Matches.Scenarios;
@@ -7,7 +8,7 @@ namespace DownfallArena.Application.Matches.Scenarios;
 /// <summary>
 /// Cuts a recorded match at the top of a round (docs/tabletop/scenarios-plan.md, stage S1): a match scenario.
 /// </summary>
-public sealed class ScenarioCutter(ScenarioRounds rounds, MatchReplay replay, MatchStepper stepper)
+public sealed class ScenarioCutter(ScenarioRounds rounds, MatchReplay replay, MatchStepper stepper, IMatchRepository matches, IEnumerable<IMatchMemory> memories)
 {
     /// <summary>
     /// The recorded match cut at the top of <paramref name="round" />: the entries before and after the cut, and
@@ -26,7 +27,7 @@ public sealed class ScenarioCutter(ScenarioRounds rounds, MatchReplay replay, Ma
         }
 
         var before = entries.Take(cut.CutAt).ToArray();
-        var checkpoint = await ScenarioBoards.AtAsync(replay, stepper, source, before, round, cancellationToken);
+        var checkpoint = await ScenarioBoards.AtAsync(replay, stepper, new ScenarioBoards.Aside(matches, memories), source, before, round, cancellationToken);
         return checkpoint.IsFailure
             ? Result.Failure<ScenarioCut>(checkpoint.Error)
             : Result.Success(new ScenarioCut(source, cut, before, [.. entries.Skip(cut.CutAt)], checkpoint.Value));

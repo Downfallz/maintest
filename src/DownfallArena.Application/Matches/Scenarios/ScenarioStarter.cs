@@ -24,7 +24,7 @@ public sealed class ScenarioStarter(MatchReplay replay, MatchStepper stepper)
         ArgumentException.ThrowIfNullOrWhiteSpace(run);
 
         var match = scenario.Source with { Run = run, MatchId = into };
-        var standing = await ScenarioBoards.AtAsync(replay, stepper, match, scenario.Before, scenario.Cut.Round, cancellationToken);
+        var standing = await ScenarioBoards.ReadAsync(replay, stepper, match, scenario.Before, scenario.Cut.Round, cancellationToken);
         if (standing.IsFailure)
         {
             return Result.Failure<ScenarioStart>(standing.Error.Code == JournalErrors.DivergedCode ? ScenarioErrors.Diverged : standing.Error);

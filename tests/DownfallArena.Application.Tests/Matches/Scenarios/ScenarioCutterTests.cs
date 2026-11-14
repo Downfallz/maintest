@@ -6,6 +6,7 @@ using DownfallArena.Application.Matches.Scenarios;
 using DownfallArena.Application.Tests.Support;
 using DownfallArena.Domain.Matches;
 using DownfallArena.SharedKernel.Identifiers;
+using NSubstitute;
 
 namespace DownfallArena.Application.Tests.Matches.Scenarios;
 
@@ -138,29 +139,68 @@ public sealed class ScenarioCutterTests
         (await scenarios.Cutter.CutAsync(source, broken, 3, TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
     }
 
+    /// <summary>
+    /// A host cuts scenarios with the services that hold its tables: cutting one leaves the source's match in
+    /// memory where its journal ends, so the table it belongs to reads and plays on as it did.
+    /// </summary>
+    [Fact]
+    public async Task Cutting_a_scenario_leaves_the_source_s_match_in_memory_as_its_journal_leaves_it()
+    {
+        var replica = new Replica(new JournalStore());
+        var (source, entries, outcome) = await RecordedAsync(1, CombatDeclaration.AtActivation, replica);
+        var scenarios = new Scenarios(replica);
+
+        await scenarios.Cutter.CutAsync(source, entries, 2, TestContext.Current.CancellationToken);
+        await scenarios.Rounds.ReadAsync(source, [.. entries.Take(3)], TestContext.Current.CancellationToken);
+
+        var seat = await replica.Stepper.SeatAsync(source.MatchId, PlayerSlot.Player1, HeldAnswers.None, TestContext.Current.CancellationToken);
+        seat.Value.Board.State.ShouldBe(MatchState.Ended);
+        seat.Value.Board.Outcome.ShouldBe(outcome);
+    }
+
+    /// <summary>
+    /// The matches a cut is read on are set aside under ids of their own, and what kept their events is told to
+    /// let them go; the source's own match is never forgotten, which would end a table a host is playing.
+    /// </summary>
+    [Fact]
+    public async Task What_kept_the_matches_a_cut_was_read_on_lets_them_go_and_never_the_source()
+    {
+        var replica = new Replica(new JournalStore());
+        var (source, entries, _) = await RecordedAsync(1, CombatDeclaration.AtActivation, replica);
+        var memory = Substitute.For<IMatchMemory>();
+        var rounds = new ScenarioRounds(replica.Replay, replica.Stepper, replica.Store.Repository, [memory]);
+        var cutter = new ScenarioCutter(rounds, replica.Replay, replica.Stepper, replica.Store.Repository, [memory]);
+
+        await cutter.CutAsync(source, entries, 2, TestContext.Current.CancellationToken);
+
+        memory.ReceivedCalls().Count().ShouldBe(2);
+        memory.DidNotReceive().Forget(source.MatchId);
+    }
+
     private sealed record Scenarios(ScenarioRounds Rounds, ScenarioCutter Cutter, ScenarioStarter Starter)
     {
         public Scenarios(Replica replica)
-            : this(new ScenarioRounds(replica.Replay, replica.Stepper), replica.Replay, replica.Stepper)
+            : this(new ScenarioRounds(replica.Replay, replica.Stepper, replica.Store.Repository, []), replica)
         {
         }
 
-        private Scenarios(ScenarioRounds rounds, MatchReplay replay, MatchStepper stepper)
-            : this(rounds, new ScenarioCutter(rounds, replay, stepper), new ScenarioStarter(replay, stepper))
+        private Scenarios(ScenarioRounds rounds, Replica replica)
+            : this(rounds, new ScenarioCutter(rounds, replica.Replay, replica.Stepper, replica.Store.Repository, []), new ScenarioStarter(replica.Replay, replica.Stepper))
         {
         }
     }
 
     /// <summary>A match two agents played over its journal to its end: how it was created, its journal, its outcome.</summary>
-    private static async Task<(JournaledMatch Source, IReadOnlyList<IJournalEntry> Entries, MatchOutcome? Outcome)> RecordedAsync(uint seed, CombatDeclaration declaration)
+    private static async Task<(JournaledMatch Source, IReadOnlyList<IJournalEntry> Entries, MatchOutcome? Outcome)> RecordedAsync(uint seed, CombatDeclaration declaration, Replica? replica = null)
     {
         var rules = MatchStore.TwoOnTwo().WithCombatDeclaration(declaration);
         var source = new JournaledMatch("run-1", MatchId.New(), rules, (int)seed, MatchStore.Roster(rules));
         var journal = new JournalStore();
+        replica ??= new Replica(journal);
         var seats = new MatchSeats(new RandomAgent(new TestRandom(seed + 1)), new RandomAgent(new TestRandom(seed + 2)));
-        var step = await new Replica(journal).Journaled.AdvanceAsync(source, seats, TestContext.Current.CancellationToken);
+        var step = await replica.Journaled.AdvanceAsync(source, seats, TestContext.Current.CancellationToken);
         step.IsSuccess.ShouldBeTrue();
         step.Value.Step.Outcome.ShouldNotBeNull();
-        return (source, journal.Lines, step.Value.Step.Outcome);
+        return (source, step.Value.Step.Decided.Select(decision => (IJournalEntry)new DecisionEntry(decision)).ToArray(), step.Value.Step.Outcome);
     }
 }

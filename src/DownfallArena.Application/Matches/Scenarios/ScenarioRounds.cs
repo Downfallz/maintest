@@ -1,6 +1,8 @@
 using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Matches.Journaling;
+using DownfallArena.Application.Matches.Ports;
 using DownfallArena.Domain.Matches;
+using DownfallArena.SharedKernel.Identifiers;
 
 namespace DownfallArena.Application.Matches.Scenarios;
 
@@ -9,18 +11,35 @@ namespace DownfallArena.Application.Matches.Scenarios;
 /// from its seed one journal entry at a time with <see cref="MatchReplay" />. Nothing is written and nobody is
 /// asked anything.
 /// </summary>
-public sealed class ScenarioRounds(MatchReplay replay, MatchStepper stepper)
+public sealed class ScenarioRounds(MatchReplay replay, MatchStepper stepper, IMatchRepository matches, IEnumerable<IMatchMemory> memories)
 {
     /// <summary>
     /// Every round the match's board reached with no answer held, and did not end in, as far as its journal
     /// rebuilds. A round whose top rebuilds is offered even when a later line of it does not: that is the round
     /// an engine change shows in, the one to reproduce.
     /// </summary>
+    /// <remarks>
+    /// The match is rebuilt under an id of its own and forgotten once read: the source's id may be a table a host
+    /// holds in memory, which a rebuild under it would take back to wherever the reading stopped.
+    /// </remarks>
     public async Task<ScenarioReading> ReadAsync(JournaledMatch source, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(entries);
 
+        var aside = source with { MatchId = MatchId.New() };
+        try
+        {
+            return await AsideAsync(aside, entries, cancellationToken);
+        }
+        finally
+        {
+            await new ScenarioBoards.Aside(matches, memories).ForgetAsync(aside.MatchId);
+        }
+    }
+
+    private async Task<ScenarioReading> AsideAsync(JournaledMatch source, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken)
+    {
         var rounds = new List<RoundCut>();
         var built = await replay.RebuildAsync(source, [], cancellationToken);
         if (built.IsFailure)
