@@ -219,7 +219,7 @@ internal sealed class PlayersApi
 
     private static object? Describe(AccountSuspension? suspension) => suspension is null
         ? null
-        : new { suspension.Reason, suspension.By, suspension.At, suspension.SeatsReleasedAt };
+        : new { suspension.Reason, suspension.By, suspension.At };
 
     private async Task<StudioResponse> RenameAsync(Account account, string body, string operatorName)
     {

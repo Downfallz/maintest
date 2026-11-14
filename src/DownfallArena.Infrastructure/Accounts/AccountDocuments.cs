@@ -42,7 +42,7 @@ internal static class AccountDocuments
         new AccountRecord(account.Id.Value, account.Identity.Provider, account.Identity.Subject, account.Username.Value, account.CreatedAt, account.Generation)
         {
             Suspension = account.Suspension is { } suspension
-                ? new SuspensionRecord(suspension.Reason, suspension.By, suspension.At, suspension.SeatsReleasedAt)
+                ? new SuspensionRecord(suspension.Reason, suspension.By, suspension.At)
                 : null,
         },
         Web);
@@ -58,7 +58,7 @@ internal static class AccountDocuments
             record.Generation)
         {
             Suspension = record.Suspension is { } suspension
-                ? new AccountSuspension(suspension.Reason, suspension.By, suspension.At, suspension.SeatsReleasedAt)
+                ? new AccountSuspension(suspension.Reason, suspension.By, suspension.At)
                 : null,
         };
     }
@@ -86,7 +86,7 @@ internal static class AccountDocuments
         public SuspensionRecord? Suspension { get; init; }
     }
 
-    private sealed record SuspensionRecord(string Reason, string By, DateTimeOffset At, DateTimeOffset? SeatsReleasedAt);
+    private sealed record SuspensionRecord(string Reason, string By, DateTimeOffset At);
 
     private sealed record NameRecord(string Username, string Account, DateTimeOffset ReservedAt);
 

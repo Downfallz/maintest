@@ -4,10 +4,9 @@ namespace DownfallArena.Application.Accounts;
 
 /// <summary>
 /// Why and since when the operator suspended an account (ADR 0178): the player is told the reason when they try to
-/// sign in. <see cref="SeatsReleasedAt" /> is when the account's seats in unfinished games were offered to other
-/// players, a day after the suspension unless it was lifted first; none until then.
+/// sign in, and its seats in unfinished games are offered to other players a day later unless it is lifted first.
 /// </summary>
-public sealed record AccountSuspension(string Reason, string By, DateTimeOffset At, DateTimeOffset? SeatsReleasedAt = null)
+public sealed record AccountSuspension(string Reason, string By, DateTimeOffset At)
 {
     public const int ShortestReason = 10;
 
@@ -31,6 +30,6 @@ public sealed record AccountSuspension(string Reason, string By, DateTimeOffset 
             : Result.Success(new AccountSuspension(said, by, at));
     }
 
-    /// <summary>Whether the account's seats are due to be offered to other players: kept a day, and offered once.</summary>
-    public bool SeatsDue(DateTimeOffset now) => SeatsReleasedAt is null && now - At >= SeatsKeptFor;
+    /// <summary>Whether the account's seats are due to be offered to other players: kept a day for it first.</summary>
+    public bool SeatsDue(DateTimeOffset now) => now - At >= SeatsKeptFor;
 }

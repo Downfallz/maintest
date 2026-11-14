@@ -114,7 +114,7 @@ async function withPlayers(page) {
     const method = route.request().method();
     // A suspension (ADR 0178) is kept on the player as the host describes it, and a restore lifts it.
     if (action === 'suspension' && method === 'POST') {
-      kept.get(id).suspension = { reason: route.request().postDataJSON().reason, by: 'operator', at: new Date().toISOString(), seatsReleasedAt: null };
+      kept.get(id).suspension = { reason: route.request().postDataJSON().reason, by: 'operator', at: new Date().toISOString() };
       return route.fulfill({ json: { suspension: kept.get(id).suspension } });
     }
     if (action === 'suspension' && method === 'DELETE') {

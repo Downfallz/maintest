@@ -96,7 +96,7 @@ internal static class TableTend
             // The seats of the accounts suspended a day ago (ADR 0178), offered to other players.
             var suspended = options.Accounts == AccountsMode.Off
                 ? null
-                : await OpenSuspendedAsync(target, lobby, clock);
+                : await OpenSuspendedAsync(target, lobby);
 
             // Every run is kept for the admin panel's Jobs tab (A3), the one that failed too. A log that cannot be
             // opened costs the run its record, never the pass: the tables are tended all the same.
@@ -144,10 +144,10 @@ internal static class TableTend
         }
     }
 
-    private static async Task<SuspendedSeats> OpenSuspendedAsync(string target, LobbyApi lobby, TimeProvider clock)
+    private static async Task<SuspendedSeats> OpenSuspendedAsync(string target, LobbyApi lobby)
     {
         var accounts = await ArtifactStores.OpenAccountsAsync(target);
-        return new SuspendedSeats(accounts, new AccountRegistry(accounts, clock), lobby);
+        return new SuspendedSeats(accounts, lobby);
     }
 
     /// <summary>

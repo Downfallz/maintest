@@ -22,7 +22,7 @@ public abstract class AccountStoreContract
     {
         var store = await StoreAsync();
         var account = AnAccount();
-        var suspension = new AccountSuspension("Spamming invitations to strangers.", "mark", Now, SeatsReleasedAt: Now.AddDays(1));
+        var suspension = new AccountSuspension("Spamming invitations to strangers.", "mark", Now);
         await store.SaveAsync(account with { Suspension = suspension }, Cancel);
 
         var suspended = (await store.FindAsync(account.Id, Cancel)).ShouldNotBeNull();

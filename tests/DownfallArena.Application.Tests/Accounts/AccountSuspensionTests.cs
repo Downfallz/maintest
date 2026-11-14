@@ -6,7 +6,7 @@ namespace DownfallArena.Application.Tests.Accounts;
 
 /// <summary>
 /// Suspending an account (ADR 0178): with a reason its player reads, every session ended by the same write, lifted by
-/// a restore, and its seats due to other players a day later, once.
+/// a restore, and its seats due to other players a day later.
 /// </summary>
 public sealed class AccountSuspensionTests
 {
@@ -94,25 +94,11 @@ public sealed class AccountSuspensionTests
     }
 
     [Fact]
-    public void A_suspended_account_s_seats_fall_due_a_day_later_and_once()
+    public void A_suspended_account_s_seats_fall_due_a_day_later()
     {
         var suspension = Suspension();
 
         suspension.SeatsDue(suspension.At + AccountSuspension.SeatsKeptFor - TimeSpan.FromMinutes(1)).ShouldBeFalse();
         suspension.SeatsDue(suspension.At + AccountSuspension.SeatsKeptFor).ShouldBeTrue();
-        (suspension with { SeatsReleasedAt = suspension.At.AddDays(1) }).SeatsDue(suspension.At.AddDays(3)).ShouldBeFalse();
-    }
-
-    [Fact]
-    public async Task The_seats_offered_are_noted_on_the_suspension()
-    {
-        var registry = Registry();
-        var account = (await registry.RegisterAsync(Mark, "MarkF", Cancel)).Value;
-        await registry.SuspendAsync(account.Id, Suspension(), Cancel);
-        var at = _clock.GetUtcNow().AddDays(1);
-
-        var noted = (await registry.SeatsReleasedAsync(account.Id, at, Cancel)).Value;
-
-        noted.Suspension.ShouldNotBeNull().SeatsReleasedAt.ShouldBe(at);
     }
 }

@@ -78,10 +78,9 @@ function inTime(moment, now) {
 export function suspensionLine(suspension, now = Date.now()) {
   if (!suspension) return '';
   const said = `Suspended ${ago(suspension.at, now)}${suspension.by ? ` by ${suspension.by}` : ''}: ${suspension.reason}`;
-  if (suspension.seatsReleasedAt) return `${said} Its seats were offered to other players ${ago(suspension.seatsReleasedAt, now)}.`;
   const due = new Date(suspension.at).getTime() + 24 * 3600 * 1000;
   return due <= now
-    ? `${said} Its seats are offered to other players at the next tending pass.`
+    ? `${said} Its seats in unfinished games are offered to other players by the tending pass.`
     : `${said} Its seats are offered to other players in ${inTime(due, now)}, unless it is restored first.`;
 }
 

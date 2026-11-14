@@ -63,9 +63,7 @@ test('a suspension says who, when and why, and where the account\'s seats stand'
   assert.equal(suspensionLine({ reason: 'Spamming invitations.', by: 'op', at }, NOW),
     'Suspended 2 h ago by op: Spamming invitations. Its seats are offered to other players in 22 h, unless it is restored first.');
   assert.equal(suspensionLine({ reason: 'Spamming invitations.', by: 'op', at: new Date(NOW - 25 * 3600 * 1000).toISOString() }, NOW),
-    'Suspended 1 d ago by op: Spamming invitations. Its seats are offered to other players at the next tending pass.');
-  assert.equal(suspensionLine({ reason: 'Spamming invitations.', by: 'op', at: new Date(NOW - 50 * 3600 * 1000).toISOString(), seatsReleasedAt: new Date(NOW - 26 * 3600 * 1000).toISOString() }, NOW),
-    'Suspended 2 d ago by op: Spamming invitations. Its seats were offered to other players 1 d ago.');
+    'Suspended 1 d ago by op: Spamming invitations. Its seats in unfinished games are offered to other players by the tending pass.');
   assert.equal(suspensionLine(null, NOW), '');
 });
 

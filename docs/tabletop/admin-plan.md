@@ -260,12 +260,12 @@ Each stage is one pull request, with its tests and docs, and leaves the panel wo
 3. **A2b, suspension.** ADR: a suspended account cannot sign in, its sessions end, its seats in unfinished games are
    kept for a time then offered to others, and its player is told why at the sign-in. The side sheet's Suspend and
    Restore.
-   *Built (2026-11-14)*: ADR 0178. `AccountSuspension` (reason, who, when, when its seats were offered) in the account's
-   own record; suspending raises the generation in the same write and forgets the devices, restoring lifts it. A
+   *Built (2026-11-14)*: ADR 0178. `AccountSuspension` (reason, who, when) in the account's own record; suspending raises the generation in the same write and forgets the devices, restoring lifts it. A
    suspended account's sign-in, Google or dev, is answered `403 Account.Suspended` with the reason, which the lobby's
    sign-in panel shows. Its seats are kept a day (`AccountSuspension.SeatsKeptFor`), then the tending pass, hourly or
-   run from the panel, offers them as a deleted account's are, once (`SuspendedSeats`); the console names the
-   accounts, and the tending run's record does not count them yet. `POST`/`DELETE /api/admin/players/<id>/suspension`;
+   run from the panel, offers them as a deleted account's are (`SuspendedSeats`), reading the account again just before
+   and writing none, so a restore or a rename made meanwhile stands; the console names the accounts, and the tending
+   run's record does not count them yet. `POST`/`DELETE /api/admin/players/<id>/suspension`;
    the sheet asks for the reason and a confirmation, says who suspended the account, when, why and where its seats
    stand, and the list tags it Suspended. Each is a console line naming the operator until the activity log (A6).
 4. **A3, jobs: the tending runs.** `ITendLog`; `table-tend` writes its runs; the Jobs tab with runs, totals and each

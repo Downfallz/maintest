@@ -95,15 +95,6 @@ public sealed class AccountRegistry
                 : Result.Success(account with { Suspension = null }),
             cancellationToken);
 
-    /// <summary>Notes that the suspended account's seats were offered to other players (ADR 0178), so they are offered once.</summary>
-    public Task<Result<Account>> SeatsReleasedAsync(AccountId id, DateTimeOffset at, CancellationToken cancellationToken = default) =>
-        ChangeAsync(
-            id,
-            account => account.Suspension is { } suspension
-                ? Result.Success(account with { Suspension = suspension with { SeatsReleasedAt = at } })
-                : Result.Failure<Account>(AccountErrors.NotSuspended),
-            cancellationToken);
-
     // One account read, changed and written back under the lock every write of an account takes.
     private async Task<Result<Account>> ChangeAsync(AccountId id, Func<Account, Result<Account>> change, CancellationToken cancellationToken)
     {

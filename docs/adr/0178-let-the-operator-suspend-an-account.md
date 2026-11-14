@@ -13,7 +13,7 @@ suspension, with its own ADR (admin plan, A2b).
 
 ## Decision
 
-An account can carry an `AccountSuspension(Reason, By, At, SeatsReleasedAt)`, kept in the account's own record.
+An account can carry an `AccountSuspension(Reason, By, At)`, kept in the account's own record.
 
 - **Suspending** needs a reason of 10 to 300 characters, which the player reads. One write sets the suspension and
   raises the account's generation, so every session it holds stops working at once; its devices are forgotten, as
@@ -23,8 +23,11 @@ An account can carry an `AccountSuspension(Reason, By, At, SeatsReleasedAt)`, ke
   taken, its friends, results, rating and settings stay.
 - **Its seats are kept a day.** The account's seats in unfinished games are left alone for a day, in case the
   operator restores it. After that, the hourly tending pass (ADR 0162) offers them to other players, the way deleting
-  the account does (a seat left, ADR 0170), once, and notes when on the suspension. Its time to answer runs on
-  meanwhile (ADR 0169).
+  the account does (a seat left, ADR 0170). Its time to answer runs on meanwhile (ADR 0169). The pass writes no
+  account: it runs in a process of its own, and a write of its could overwrite a restore, a rename or a deletion the
+  operator made meanwhile. Offering is idempotent instead, since a seat offered is no longer the account's, and the
+  pass reads the account again just before, so one restored, or suspended again, since it listed the accounts keeps
+  its seats.
 - **Restoring** lifts the suspension: the player signs in again and holds whatever seats are still theirs. Sessions
   ended by the suspension stay ended.
 - `POST /api/admin/players/<id>/suspension {"reason"}` and `DELETE /api/admin/players/<id>/suspension`, behind the
