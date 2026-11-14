@@ -29,6 +29,7 @@
       <a id="tab-sessions" href="#sessions" data-tab="sessions">Sessions <span id="tab-sessions-count" class="tab-count"></span></a>
       <a id="tab-players" href="#players" data-tab="players" hidden>Players <span id="tab-players-count" class="tab-count"></span></a>
       <a id="tab-jobs" href="#jobs" data-tab="jobs" hidden>Jobs <span id="tab-jobs-count" class="tab-count"></span></a>
+      <a id="tab-settings" href="#settings" data-tab="settings" hidden>Settings <span id="tab-settings-count" class="tab-count"></span></a>
     </nav>
 
     <div id="admin" hidden>
@@ -183,6 +184,30 @@
         <ol id="turns-letters" class="session-list" aria-label="Dead letters"></ol>
         <p id="turns-empty" class="muted" hidden>No dead letter: every turn given up on has been dealt with.</p>
         <p id="turns-more" class="muted" hidden></p>
+      </section>
+    </section>
+    <section id="panel-settings" class="admin-panel" aria-labelledby="tab-settings" data-panel="settings" hidden>
+      <p id="settings-off" class="muted">This host signs nobody in (<code>--accounts off</code>), so it has no registration to open or close.</p>
+      <section id="settings-on" class="control players" aria-labelledby="settings-title" hidden>
+        <div class="list-head">
+          <h2 id="settings-title">Settings</h2>
+        </div>
+        <p class="muted">Kept for the whole host and read by each of its processes within a minute.</p>
+        <form id="settings-form" class="settings-form">
+          <fieldset class="settings-registration">
+            <legend>Registration</legend>
+            <label class="settings-choice"><input id="settings-open" type="radio" name="registration" value="open" /> Open</label>
+            <label class="settings-choice"><input id="settings-closed" type="radio" name="registration" value="closed" /> Closed</label>
+            <p id="settings-registration-line" class="muted"></p>
+          </fieldset>
+          <label for="settings-notice" class="settings-notice">Notice under every page's header
+            <input id="settings-notice" type="text" maxlength="200" placeholder="None" autocomplete="off" aria-describedby="settings-notice-count" />
+          </label>
+          <p id="settings-notice-count" class="muted settings-count"></p>
+          <button id="settings-save" type="submit" class="primary">Save settings</button>
+          <output id="settings-said" class="said"></output>
+          <p id="settings-saved" class="muted"></p>
+        </form>
       </section>
     </section>
     </div>

@@ -133,3 +133,17 @@ input[type="text"] { font: inherit; min-height: 44px; border: 1px solid var(--li
 #void-said:empty { display: none; }
 .link-button { border: 0; padding: 0; background: none; font: inherit; cursor: pointer; text-decoration: underline; }
 .danger-link { color: var(--refused); }
+
+/* Settings (A4, ADR 0177): registration as two choices with what each means under them, and the notice as one line
+   with how much of it is used. */
+.settings-form { display: grid; gap: 10px; max-width: 60ch; }
+.settings-registration { margin: 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-soft); }
+.settings-registration legend { padding: 0 6px; font-weight: 600; }
+.settings-choice { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-right: 18px; }
+.settings-choice input { width: 20px; height: 20px; margin: 0; }
+.settings-registration p { margin: 4px 0 0; }
+.settings-notice { display: grid; gap: 6px; }
+.settings-notice input { font: inherit; min-height: 44px; border: 1px solid var(--line); border-radius: var(--radius-soft); padding: 10px 12px; background: var(--raised); color: var(--ink); width: 100%; box-sizing: border-box; }
+.settings-count { margin: 0; text-align: right; font-size: 13px; }
+.settings-count.refused { color: var(--refused); }
+.settings-form button { justify-self: start; }

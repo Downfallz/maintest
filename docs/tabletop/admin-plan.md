@@ -292,6 +292,15 @@ Each stage is one pull request, with its tests and docs, and leaves the panel wo
    card. A void is a console line naming the operator until the activity log (A6) keeps it.
 7. **A4, settings.** ADR for registration. `HostSettings`, the Settings tab, `Account.RegistrationClosed` in the
    lobby, the notice line under every page's header.
+   *Built (2026-11-14)*: ADR 0177. `HostSettings` (Application) and its store, `settings/host.json` in the accounts'
+   directory or container; each process reads it at most once a minute (`HostSettingsCache`), and the one that saved
+   it at once. Closed refuses a Google sign-in with no account, and a ticket handed out before the closing, with
+   `409 Account.RegistrationClosed`, which the lobby's sign-in panel says in the host's words; a dev host is not
+   affected. The notice rides on `/api/me` and shows under the header of every page but the game itself, where
+   nothing is drawn over the board. `GET`/`PUT /api/admin/settings` behind the gate; the Settings tab shows only on a
+   host that signs players in, and is marked while registration is closed. Saving is a console line naming the
+   operator until the activity log (A6) keeps it. Fixed on the way: the shared header stopped mounting on `/admin`
+   at the panel's own side sheets, so its account chip and Admin link never drew there.
 8. **A5, overview.** The numbers, once A2 to A4 give them their sources.
 9. **A6, activity.** The operator log and its tab.
 

@@ -85,6 +85,9 @@ internal sealed class AccountApi
     /// <summary>Where each account's game settings are kept (ADR 0140); null on a host that keeps none.</summary>
     public IPreferenceStore? Preferences { get; set; }
 
+    /// <summary>The host's settings (ADR 0177), whether a new player may make an account; none leaves registration open.</summary>
+    public HostSettingsCache? Settings { get; set; }
+
     /// <summary>
     /// When each account last signed in and last used the site (ADR 0174), written as it happens; null on a host
     /// that keeps none. Forgotten with the account.
@@ -280,10 +283,19 @@ internal sealed class AccountApi
             return Problem(401, "Account.SignInRejected", "Google's sign-in could not be checked. Sign in again.");
         }
 
-        return await _registry.FindAsync(identity) is { } account
-            ? await SignedInAsync(account, request)
+        if (await _registry.FindAsync(identity) is { } account)
+        {
+            return await SignedInAsync(account, request);
+        }
+
+        // Closed means closed (ADR 0177): no name is asked of a sign-in that has no account.
+        return await RegistrationClosedAsync()
+            ? Refused(AccountErrors.RegistrationClosed)
             : Answer(new { needsUsername = true, ticket = _sessions.Ticket(identity) });
     }
+
+    /// <summary>Whether the operator has new accounts closed (ADR 0177); a host without settings keeps them open.</summary>
+    private async Task<bool> RegistrationClosedAsync() => Settings is { } settings && !(await settings.CurrentAsync()).RegistrationOpen;
 
     private async Task<StudioResponse> RegisterAsync(string body, AccountRequest request)
     {
@@ -291,6 +303,12 @@ internal sealed class AccountApi
         if (_sessions.ReadTicket(asked?.Ticket) is not { } identity)
         {
             return Problem(401, "Account.TicketExpired", "That sign-in has run out. Sign in again, then choose your name.");
+        }
+
+        // A ticket handed out before the operator closed registration is refused too (ADR 0177).
+        if (await RegistrationClosedAsync())
+        {
+            return Refused(AccountErrors.RegistrationClosed);
         }
 
         var registered = await _registry.RegisterAsync(identity, asked!.Username);
@@ -493,7 +511,7 @@ internal sealed class AccountApi
     }
 
     private static StudioResponse Refused(DomainError error) => Problem(
-        error == AccountErrors.UsernameTaken || error == AccountErrors.AlreadyRegistered ? 409 : 400,
+        error == AccountErrors.UsernameTaken || error == AccountErrors.AlreadyRegistered || error == AccountErrors.RegistrationClosed ? 409 : 400,
         error.Code,
         error.Message);
 
