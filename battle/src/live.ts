@@ -38,7 +38,7 @@ import { createBattleMatch } from '../../table/battle-match.js';
 import { replayOf, operatorToken, replayMessage } from '../../table/session.js';
 import { httpTransport, replayTransport } from '../../table/transport.js';
 import { battleSeats, seatPath } from '../../table/battle-seats.js';
-import { openPractice, practiceBand, practiceOf } from '../../table/battle-practice.js';
+import { openPractice, practiceBand, practiceBrief, practiceOf } from '../../table/battle-practice.js';
 import { createLiveConnection } from '../../table/battle-live.js';
 import { signInPath } from '../../table/account.js';
 import { seatLabel } from '../../table/invitation.js';
@@ -101,7 +101,7 @@ const connection = createLiveConnection({ onState: status, onView: (next: View |
 } });
 const visible = () => ready && !rendererFailed && !document.hidden &&
   !document.querySelector('.navigation-panels dialog[open]') &&
-  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog', 'atlas-dialog', 'opponent-dialog', 'reactions-dialog'].some(id => $<HTMLDialogElement>(id).open) &&
+  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog', 'atlas-dialog', 'opponent-dialog', 'reactions-dialog', 'practice-brief'].some(id => $<HTMLDialogElement>(id).open) &&
   // A revealed turn order holds the field until Continue: what arrives meanwhile waits for it.
   !orderUI.isReading();
 let tabStorage: Storage | null = null;
@@ -744,7 +744,11 @@ async function discover(autoResume = true) {
       const band = practiceBand(opened.practice);
       text('practice-title', band.title); text('practice-detail', band.detail); text('practice-goal', band.goal);
       $('practice-goal').hidden = !band.goal; $('practice-band').hidden = false;
+      const brief = practiceBrief(opened.practice, opened.seat);
+      text('practice-brief-title', brief.title); text('practice-brief-goal', brief.goal); text('practice-brief-start', brief.start); text('practice-brief-note', brief.note);
       heldSeats = [opened]; choose(opened);
+      // A practice started from its cut opens on its briefing, before its first question; a resumed one goes on where it was.
+      if (opened.fresh) $<HTMLDialogElement>('practice-brief').showModal();
     } catch (error) {
       if (ticket !== discovering) return;
       if ((error as { status?: number }).status === 401) status('signin');
@@ -807,6 +811,8 @@ function failRenderer() {
 }
 // Restart the round: a new practice from the scenario's cut, in place of this one.
 $('practice-restart').addEventListener('click', () => { restartPractice = true; void discover(); });
+$('practice-brief-open').addEventListener('click', () => $<HTMLDialogElement>('practice-brief').showModal());
+$('practice-brief-begin').addEventListener('click', () => { $<HTMLDialogElement>('practice-brief').close(); render(); });
 $('retry').addEventListener('click', () => { if (rendererFailed) location.reload(); else if (selected) void connection.refresh(); else void discover(); });
 scene.onCancel = () => audio.silence();
 scene.onImpact = () => {

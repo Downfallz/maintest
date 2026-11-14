@@ -7,13 +7,14 @@ namespace DownfallArena.Cli.Table;
 /// A player's side of the match scenarios (docs/tabletop/scenarios-plan.md, S4, ADR 0179). A signed-in account reads
 /// what a scenario is (<c>GET /api/scenarios/&lt;id&gt;</c>), opens its practice from the cut in place of whatever
 /// practice it had (<c>POST /api/scenarios/&lt;id&gt;/practice</c>), and finds the one it has again
-/// (<c>GET .../practice</c>), which is how a reloaded page resumes it. Signed out, every route answers 401.
+/// (<c>GET .../practice</c>), which is how a reloaded page resumes it. <c>GET /api/scenarios</c> lists the scenarios the
+/// operator listed under Practice (S6); one left off the list still opens by its link. Signed out, every route answers 401.
 /// </summary>
 internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practices, AccountApi accounts)
 {
     public const string Prefix = "/api/scenarios";
 
-    public static bool Names(string path) => path.StartsWith(Prefix + "/", StringComparison.Ordinal);
+    public static bool Names(string path) => path == Prefix || path.StartsWith(Prefix + "/", StringComparison.Ordinal);
 
     public async Task<StudioResponse> HandleAsync(string method, string path, AccountRequest request)
     {
@@ -22,6 +23,12 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
         if (await accounts.WhoAsync(request) is not { } who)
         {
             return Error("Account.SignInRequired", "Sign in to practise a scenario.", 401);
+        }
+
+        if (path == Prefix)
+        {
+            var listed = method == "GET" ? await ListedAsync() : Error("Scenario.NoRoute", $"No such route: {method} {path}", 404);
+            return who.Renewed is { } fresh ? listed with { Headers = [.. listed.Headers ?? [], new KeyValuePair<string, string>("Set-Cookie", fresh)] } : listed;
         }
 
         var segments = path[(Prefix.Length + 1)..].Split('/');
@@ -45,15 +52,23 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
         return who.Renewed is { } renewed ? answer with { Headers = [.. answer.Headers ?? [], new KeyValuePair<string, string>("Set-Cookie", renewed)] } : answer;
     }
 
-    private async Task<StudioResponse> DescribeAsync(string id)
-    {
-        if (await store.GetAsync(id) is not { } document)
-        {
-            return Error("Scenario.NotFound", "This scenario does not exist, or was removed.", 404);
-        }
+    private async Task<StudioResponse> DescribeAsync(string id) =>
+        await store.GetAsync(id) is { } document
+            ? StudioResponse.OfJson(Described(id, document), ArtifactJson.LineOptions)
+            : Error("Scenario.NotFound", "This scenario does not exist, or was removed.", 404);
 
+    /// <summary>The scenarios listed under Practice, newest first, each as a player reads it.</summary>
+    private async Task<StudioResponse> ListedAsync()
+    {
+        var listed = (await store.ListAsync()).Where(one => one.Listed).Select(one => Described(one.Id, one.Document)).ToArray();
+        return StudioResponse.OfJson(new { scenarios = listed }, ArtifactJson.LineOptions);
+    }
+
+    /// <summary>What a player reads of a scenario: what it is called and asks, where it starts, the seat, and its link.</summary>
+    private static object Described(string id, Infrastructure.Matches.Scenarios.ScenarioDocument document)
+    {
         var cut = document.Scenario.Cut;
-        return StudioResponse.OfJson(new
+        return new
         {
             id,
             title = document.Title ?? $"Round {cut.Round}",
@@ -61,7 +76,8 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
             round = cut.Round,
             seat = ScenarioCommands.SeatName(document.Seat),
             format = document.Scenario.Source.Rules.Format.ToString(),
-        }, ArtifactJson.LineOptions);
+            link = $"/battle?scenario={id}",
+        };
     }
 
     private async Task<StudioResponse> OpenAsync(string id, string account, string name)

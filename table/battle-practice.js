@@ -21,15 +21,30 @@ export function practiceBand(label) {
 }
 
 /**
+ * The card shown before the first question of a practice, and again from the band (S6): what it is called, what it asks,
+ * the seat the person plays and where it starts, and that nothing played here counts.
+ */
+export function practiceBrief(label, seat) {
+  return {
+    title: label?.title || 'Practice',
+    goal: label?.goal || 'No goal is set: play the position your way.',
+    start: `You play ${seat === 'player2' ? 'player 2' : 'player 1'} from the top of round ${label?.round ?? '—'}, against the recorded opponent.`,
+    note: 'The recorded match is unchanged, and nothing played here counts: no rating, no statistics, no finished game.',
+  };
+}
+
+/**
  * The account's practice of a scenario: the one it has when `fresh` is false and there is one, a new one from the cut
- * otherwise. Resolves to the seat the battle view opens (`{ seat, token, table, practice }`); rejects with the host's
- * words and status, 401 when nobody is signed in.
+ * otherwise. Resolves to the seat the battle view opens (`{ seat, token, table, practice, fresh }`), `fresh` when it was
+ * started from the cut rather than resumed; rejects with the host's words and status, 401 when nobody is signed in.
  */
 export async function openPractice(id, request, { fresh = false } = {}) {
   const path = `/api/scenarios/${encodeURIComponent(id)}/practice`;
   let response = fresh ? null : await request(path);
+  let started = false;
   if (!response || response.status === 404) {
     response = await request(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    started = true;
   }
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -37,5 +52,5 @@ export async function openPractice(id, request, { fresh = false } = {}) {
     error.status = response.status;
     throw error;
   }
-  return body;
+  return { ...body, fresh: started };
 }
