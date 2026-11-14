@@ -187,6 +187,26 @@
     </section>
     </div>
 
+    <dialog id="void-sheet" class="home-dialog side-sheet" aria-labelledby="void-sheet-name">
+      <div class="dialog-heading">
+        <div><p class="eyebrow">Void the match</p><h2 id="void-sheet-name">Table</h2></div>
+        <button id="void-cancel" type="button" aria-label="Keep the match">×</button>
+      </div>
+      <div class="home-dialog-body">
+        <p id="void-players" class="muted"></p>
+        <div class="player-action">
+          <label for="void-category">Why<select id="void-category"></select></label>
+        </div>
+        <div class="player-action">
+          <label for="void-explanation">Explanation, as the players will read it<textarea id="void-explanation" rows="5" maxlength="500" placeholder="The match stopped answering after a host restart, so it ends without a result."></textarea></label>
+          <p id="void-count" class="muted void-count"></p>
+        </div>
+        <p id="void-warning" class="void-warning"></p>
+        <output id="void-said" class="said refused"></output>
+        <button id="void-submit" type="button" class="danger" disabled>Void the match</button>
+      </div>
+    </dialog>
+
     <dialog id="letter-sheet" class="home-dialog side-sheet" aria-labelledby="letter-sheet-name">
       <div class="dialog-heading">
         <div><p class="eyebrow">Dead letter</p><h2 id="letter-sheet-name">Letter</h2></div>

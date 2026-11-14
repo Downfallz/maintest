@@ -218,7 +218,7 @@ All behind the operator gate (ADR 0081, 0172), JSON, paged by `?page=` with twen
 | `POST /api/admin/players/<id>/rename {"username"}` | Renames the account, the name checked as a player's own is (ADR 0122) |
 | `DELETE /api/admin/players/<id>` | Deletes the account as its player would: the name freed, its seats in unfinished games offered to others |
 | `POST /api/admin/players/<id>/suspension`, `DELETE .../suspension` | Suspends or restores the account (ADR below) |
-| `POST /api/admin/tables/<id>/void {"category","explanation"}` | Voids the match, in progress or finished, with its reason; `400 Admin.VoidReason` without one |
+| `POST /api/tables/<id>/void {"category","explanation"}` | Voids the match, in progress or finished, with its reason; `400 Admin.VoidReason` without one |
 | `GET /api/admin/jobs/tend?page` | Tending runs, newest first, and the 24-hour and 7-day totals |
 | `GET /api/admin/jobs/tend/<run>` | One run, every table it touched and what it did, its error |
 | `POST /api/admin/jobs/tend/run` | Runs a tending pass now, in the API's process; answers the run when it ends |
@@ -282,6 +282,14 @@ Each stage is one pull request, with its tests and docs, and leaves the panel wo
 6. **A3c, voiding a match.** ADR (amends 0163 and 0168). `VoidReason` on the record, the void sheet on tables and
    sessions, the result withdrawn from `IMatchResults` for a finished match, the players told with the explanation,
    the voided games shown as such in the finished games list.
+   *Built (2026-11-14)*: ADR 0176. `MatchVoid` (category, explanation, who, when) on the table's record
+   (`TableRecord.VoidReason`) and on its result (`MatchResult.Voided`). A kept result is not deleted but marked void,
+   and every reader leaves it out: `MatchResult.Ranked` is false, so the ladder and the statistics skip it, and the
+   bots' tallies, the recent opponents and the operator's game counts skip it by name. The finished games list keeps
+   it, tagged Voided with the explanation. The route is `POST /api/tables/<id>/void`, beside the other table routes;
+   a table this host holds is let go of first. A bot turn still queued for it finds a closed table and is done with.
+   The sessions list says which sessions are void, and under what; the Void sheet opens from a session or a table
+   card. A void is a console line naming the operator until the activity log (A6) keeps it.
 7. **A4, settings.** ADR for registration. `HostSettings`, the Settings tab, `Account.RegistrationClosed` in the
    lobby, the notice line under every page's header.
 8. **A5, overview.** The numbers, once A2 to A4 give them their sources.

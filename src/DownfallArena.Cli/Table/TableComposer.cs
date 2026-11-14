@@ -531,7 +531,8 @@ internal sealed class TableComposer
     /// Each seat's account told its match was voided (ADR 0163), once an account: two seats of one device's are one
     /// notice. A device store that cannot be read is a notice that did not arrive.
     /// </summary>
-    private async Task NotifyVoidAsync(string id, TableRecord record)
+    /// <param name="explanation">Why the operator voided it (ADR 0176); none for a match the engine voided.</param>
+    internal async Task NotifyVoidAsync(string id, TableRecord record, string? explanation = null)
     {
         if (Notices is not { } notices)
         {
@@ -543,7 +544,7 @@ internal sealed class TableComposer
         {
             foreach (var account in accounts)
             {
-                await notices.SendAsync(AccountId.Parse(account), AccountNotices.Payload("Match ended", VoidNotice, "/lobby", $"match:{id}"), "match");
+                await notices.SendAsync(AccountId.Parse(account), AccountNotices.Payload(explanation is null ? "Match ended" : "Match voided", explanation ?? VoidNotice, "/lobby", $"match:{id}"), "match");
             }
         }
         catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or JsonException or FormatException or Azure.RequestFailedException or HttpRequestException)

@@ -314,9 +314,9 @@ internal sealed class TableServer : IDisposable
             }
 
             // A seat of a void match is told why its match ended (ADR 0163), not shown a seat it lost.
-            if (await _registry.VoidSeatAsync(token))
+            if (await _registry.VoidSeatAsync(token) is { } voided)
             {
-                return StudioResponse.OfPlainText(410, TableComposer.VoidNotice);
+                return StudioResponse.OfPlainText(410, voided);
             }
 
             return StudioResponse.OfPlainText(403, $"Every request carries the seat's own '{TableApi.TokenHeader}'.");

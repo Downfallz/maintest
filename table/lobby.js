@@ -110,12 +110,17 @@ export function localFinished(mine, kind, page = 0, size = GAMES_PER_PAGE) {
 }
 
 const OUTCOMES = Object.freeze({ won: 'Victory', lost: 'Defeat', draw: 'Draw', both: 'Shared device' });
-/** What a finished game's card says: the result as a tag, who it was against, and how long it ran. */
+/**
+ * What a finished game's card says: the result as a tag, who it was against, and how long it ran. A game the operator
+ * voided (ADR 0176) says Voided instead of its result, and why, since it counts nowhere.
+ */
 export function finishedSummary(item) {
-  return { title: `${item.format ?? ''} battle`.trim(), tag: OUTCOMES[item.outcome] ?? 'Finished', tone: item.outcome ?? 'finished', casual: item.casual === true,
+  const voided = item.voided?.explanation ?? null;
+  return { title: `${item.format ?? ''} battle`.trim(), tag: voided ? 'Voided' : OUTCOMES[item.outcome] ?? 'Finished', tone: voided ? 'voided' : item.outcome ?? 'finished', casual: item.casual === true,
     // Whether it counted on the ladder, as the host's kept result says; null for a host that did not say (an older one, or
     // a game this browser only knows from its own list).
     ranked: typeof item.ranked === 'boolean' ? item.ranked : null,
+    voided,
     against: item.opponent?.name ?? 'Unknown', bot: item.opponent?.kind === 'bot',
     detail: Number.isInteger(item.rounds) && item.rounds > 0 ? `${item.rounds} round${item.rounds === 1 ? '' : 's'}` : '',
     action: item.seats?.length ? 'View game →' : item.replay ? 'Watch the replay →' : null };
@@ -544,7 +549,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     const standing = { true: 'ranked', false: 'unranked' }[String(summary.ranked)];
     return row({ heading: summary.title, casual: summary.casual, standing, tag: summary.tag, tone: `outcome ${summary.tone}`,
       sides: [{ name: `vs ${summary.against}`, kind: item.opponent?.kind ?? 'person' }],
-      detail: [created && `Created ${created}`, when && `Finished ${when}`, summary.detail].filter(Boolean).join(' · '), action,
+      detail: [summary.voided, created && `Created ${created}`, when && `Finished ${when}`, summary.detail].filter(Boolean).join(' · '), action,
       className: `finished ${summary.tone}` });
   }
   // A kind's finished games, a page at a time from the host, with that kind's own pages.

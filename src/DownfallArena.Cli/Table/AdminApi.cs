@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DownfallArena.Application.Accounts;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Infrastructure.Learning;
@@ -138,6 +139,7 @@ internal sealed class AdminApi
             ("GET", "") => await ListAsync(),
             ("POST", "") => await OpenAsync(body, operatorName),
             ("DELETE", { Length: > 0 } id) => await LobbyApi.ExclusivelyAsync(() => CloseAsync(id, operatorName)),
+            ("POST", _) when Voided(rest) is { } voided => await LobbyApi.ExclusivelyAsync(() => VoidAsync(voided, body, operatorName)),
             ("POST", _) when Reinvited(rest) is { } seat => await LobbyApi.ExclusivelyAsync(() => ReinviteAsync(seat.Table, seat.Slot, operatorName)),
             _ => StudioResponse.OfPlainText(404, $"No such route: {method} {path}"),
         };
@@ -307,6 +309,62 @@ internal sealed class AdminApi
             status: 409);
 
     /// <summary>The table and seat of <c>&lt;id&gt;/seats/&lt;seat&gt;/invite</c>, or null for any other path.</summary>
+    private static string? Voided(string rest) => rest.Split('/') is [{ Length: > 0 } table, "void"] ? table : null;
+
+    /// <summary>
+    /// Voids a match for the operator, in progress or finished, with the reason they give (ADR 0176): the table let go of
+    /// if this host holds it, its record closed and marked void with the reason, a result kept for it marked void too so
+    /// it counts nowhere, and its players told with the explanation. Refused without a reason, and for a match already void.
+    /// </summary>
+    private async Task<StudioResponse> VoidAsync(string id, string body, string operatorName)
+    {
+        var asked = string.IsNullOrWhiteSpace(body) ? null : JsonSerializer.Deserialize<VoidBody>(body, ArtifactJson.LineOptions);
+        var reason = MatchVoid.Create(asked?.Category, asked?.Explanation, operatorName, _clock.GetUtcNow());
+        if (reason.IsFailure)
+        {
+            return Problem(400, reason.Error.Code, reason.Error.Message);
+        }
+
+        if (_stored is not { } stored || await stored.RecordAsync(id) is not { } record)
+        {
+            return Problem(404, "Admin.NoTable", $"No table '{id}' is recorded at this host.");
+        }
+
+        if (record.Void)
+        {
+            return Problem(409, "Admin.AlreadyVoid", $"Table '{id}' is already void. A void is final.");
+        }
+
+        await _registry.RemoveAsync(id);
+        if (!await stored.VoidAsync(id, _composer.Index, reason.Value))
+        {
+            return Problem(409, "Admin.AlreadyVoid", $"Table '{id}' is already void. A void is final.");
+        }
+
+        var withdrawn = await WithdrawResultAsync(id, reason.Value);
+        await _composer.NotifyVoidAsync(id, record, reason.Value.Explanation);
+        Console.WriteLine($"  Session {id} voided by {operatorName} ({reason.Value.Category}){(withdrawn ? ", its result withdrawn" : string.Empty)}: {reason.Value.Explanation}");
+        return StudioResponse.OfJson(new { voided = true, withdrawn, category = reason.Value.Category }, ArtifactJson.LineOptions);
+    }
+
+    /// <summary>The result kept for the table, marked void with the reason so it counts nowhere (ADR 0176); false when none was kept.</summary>
+    private async Task<bool> WithdrawResultAsync(string id, MatchVoid reason)
+    {
+        if (_composer.Results is not { } results
+            || (await results.ListAsync()).FirstOrDefault(result => result.Table == id && result.Voided is null) is not { } kept)
+        {
+            return false;
+        }
+
+        await results.RecordAsync(kept with { Voided = reason });
+        return true;
+    }
+
+    private static StudioResponse Problem(int status, string code, string message) =>
+        StudioResponse.OfJson(new { error = code, message }, ArtifactJson.LineOptions, status: status);
+
+    private sealed record VoidBody(string? Category, string? Explanation);
+
     private static (string Table, string Slot)? Reinvited(string rest)
     {
         var parts = rest.Split('/');
@@ -586,6 +644,9 @@ internal sealed class AdminApi
             location = session.Location,
             live = table is not null,
             over = table?.IsOver ?? session.Matches > 0,
+            // Whether the operator can void it (ADR 0176): a table's run that is not void yet.
+            voidable = session.Table && !session.Void,
+            voided = session.Void ? session.VoidCategory ?? "engine" : null,
             session = $"/session/{session.Id}",
             replay = (table?.IsOver ?? session.Matches > 0) ? ReplayPath(session.Id) : null,
             export = $"{SessionsPrefix}/{session.Id}/export",

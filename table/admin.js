@@ -9,6 +9,7 @@
 import { mountJobs } from './admin-jobs.js';
 import { mountPlayers } from './admin-players.js';
 import { mountTurns } from './admin-turns.js';
+import { mountVoid, voidLabel } from './admin-void.js';
 
 const POLL_MS = 2500;
 
@@ -239,6 +240,9 @@ export function sessionRows(answer) {
     // Exportable once it is no longer being written: the host refuses a live one.
     export: session.live === true ? null : session.export,
     location: session.location ?? null,
+    // A table's run not void yet can be voided by the operator (ADR 0176); a void one says under what.
+    voidable: session.voidable === true,
+    voided: session.voided ?? null,
   }));
 }
 
@@ -276,6 +280,7 @@ export function pagerLine(kept, total, shown, noun) {
 }
 
 function sessionState(session) {
+  if (session.voided) return `void: ${voidLabel(session.voided).toLowerCase()}`;
   if (session.live) return 'live on this host';
   return session.over ? 'finished' : 'not finished';
 }
@@ -388,6 +393,14 @@ function card(row, transport, redraw) {
   if (row.location) list.append(...line('Written to', document.createTextNode(row.location)));
 
   box.append(name, state, list);
+  if (row.closable && openVoid) {
+    const voiding = document.createElement('button');
+    voiding.type = 'button';
+    voiding.className = 'close danger';
+    voiding.textContent = 'Void…';
+    voiding.addEventListener('click', () => openVoid({ id: row.id, players: row.seats.map(seat => `${seat.slot}: ${seat.seated}`).join(' · '), over: false }));
+    box.append(voiding);
+  }
   if (row.closable) {
     const close = document.createElement('button');
     close.type = 'button';
@@ -402,6 +415,9 @@ function card(row, transport, redraw) {
   }
   return box;
 }
+
+// The Void sheet's opener, once the page has mounted it (ADR 0176): a table card and a session row offer it.
+let openVoid = null;
 
 function sessionItem(row, transport) {
   const item = document.createElement('li');
@@ -431,6 +447,14 @@ function sessionItem(row, transport) {
       await saveZip(await transport.exportSession(row.id));
     });
     links.append(save);
+  }
+  if (row.voidable && openVoid) {
+    const voiding = document.createElement('button');
+    voiding.type = 'button';
+    voiding.className = 'link-button danger-link';
+    voiding.textContent = 'void…';
+    voiding.addEventListener('click', () => openVoid({ id: row.id, players: row.players, over: row.finished }));
+    links.append(voiding);
   }
   if (row.location) links.append(Object.assign(document.createElement('span'), { className: 'muted', textContent: row.location }));
   body.append(id, facts, links);
@@ -579,6 +603,19 @@ async function start() {
       element('players-on').hidden = !available;
     },
   });
+
+  // Voiding a match (ADR 0176): from a table card or a session row, said under the sessions once done.
+  openVoid = mountVoid({
+    send: transport.request,
+    element,
+    after: async line => {
+      await redraw();
+      await redrawSessions();
+      const told = element('sessions-said');
+      told.textContent = line;
+      told.classList.remove('refused');
+    },
+  }).open;
 
   // The tending runs (A3), on a host that records: read when the panel opens, when its section is opened and on
   // Refresh, never on the clock.

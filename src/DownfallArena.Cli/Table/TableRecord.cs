@@ -85,6 +85,9 @@ internal sealed record TableRecord
     /// </summary>
     public bool Void { get; init; }
 
+    /// <summary>Why the operator voided the table (ADR 0176), or null for a table that ended otherwise or voided itself (ADR 0163).</summary>
+    public Application.Accounts.MatchVoid? VoidReason { get; init; }
+
     /// <summary>
     /// The hash of the content the table began on (ADR 0163), kept in the store under it: a host on other content
     /// replays the table on this one. None in a record written before it was kept, and such a table is replayed on
@@ -163,6 +166,7 @@ internal sealed record TableRecord
             Status = stored is { Status: not Open } ended && Status == Open ? ended.Status : Status,
             RefusedUnder = RefusedUnder ?? stored?.RefusedUnder,
             Void = Void || stored?.Void == true,
+            VoidReason = VoidReason ?? stored?.VoidReason,
             Content = Content ?? stored?.Content,
             Rules = Rules ?? stored?.Rules,
             Begun = Begun || stored?.Begun == true,

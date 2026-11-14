@@ -6,7 +6,7 @@ namespace DownfallArena.Application.Accounts;
 /// The players an account has met most recently, one entry each, the last met first: what the lobby offers to
 /// challenge again. Read from the kept results (ADR 0147), so a game outlives its table. Only games between this
 /// account and another account count: a bot, a seat nobody owned and both seats on one device have nobody to
-/// challenge.
+/// challenge. A game the operator voided (ADR 0176) counts in no record.
 /// </summary>
 public static class RecentOpponents
 {
@@ -21,7 +21,7 @@ public static class RecentOpponents
         {
             var mine = result.Seats.Where(seat => seat.Account == account).ToArray();
             var other = result.Seats.FirstOrDefault(seat => seat.Account is { } id && id != account)?.Account;
-            if (mine.Length == 1 && other is { } opponent && !result.AgainstBot)
+            if (mine.Length == 1 && other is { } opponent && !result.AgainstBot && result.Voided is null)
             {
                 met.Add((opponent, mine[0].Seat, result));
             }

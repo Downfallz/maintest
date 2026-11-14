@@ -98,12 +98,15 @@ internal sealed class TableLoader(StoredSessions stored, TableComposer composer,
     }
 
     /// <summary>
-    /// Whether this key is a seat of a table that ended as a void match (ADR 0163): its record names the seat by this
-    /// very key, so a stranger who guessed a table's id learns nothing.
+    /// What this key's page is told when it is a seat of a table that ended as a void match: the operator's
+    /// explanation (ADR 0176), or the engine's notice (ADR 0163); none for any other key. The record names the seat by
+    /// this very key, so a stranger who guessed a table's id learns nothing.
     /// </summary>
-    public async Task<bool> VoidSeatAsync(string id, string key, CancellationToken cancellationToken = default) =>
+    public async Task<string?> VoidSeatAsync(string id, string key, CancellationToken cancellationToken = default) =>
         await stored.RecordAsync(id, cancellationToken) is { Void: true } record
-        && record.Seats.Any(seat => seat.Person && string.Equals(seat.Token, key, StringComparison.Ordinal));
+        && record.Seats.Any(seat => seat.Person && string.Equals(seat.Token, key, StringComparison.Ordinal))
+            ? record.VoidReason?.Explanation ?? TableComposer.VoidNotice
+            : null;
 
     /// <summary>What refuses one table rather than the request: its record or journal no longer read, or no longer fit.</summary>
     internal static bool Refuses(Exception failure) =>

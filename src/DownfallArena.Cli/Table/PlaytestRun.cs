@@ -465,6 +465,34 @@ internal sealed class PlaytestRun : IReactionKeeper
         return open;
     }
 
+    /// <summary>
+    /// Voids a table through its record, for the operator (ADR 0176): closed, marked void with the reason, and out of
+    /// the index. False for a table already void, which keeps the reason it was voided for.
+    /// </summary>
+    public static async Task<bool> VoidRecordAsync(IArtifactStore store, string id, ITableIndex? index, Application.Accounts.MatchVoid reason, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(store);
+        ArgumentNullException.ThrowIfNull(reason);
+        var place = RunPlace.In(store, id);
+        var voided = false;
+        var (stored, written) = await WriteOverAsync(place.Reader, place.Writer, id, stored =>
+        {
+            if (stored is null)
+            {
+                throw new InvalidDataException($"Session {id} has no table record.");
+            }
+
+            voided = !stored.Void;
+            return voided ? stored with { Status = TableRecord.Closed, Void = true, VoidReason = reason } : stored;
+        }, cancellationToken);
+        if (index is not null)
+        {
+            await new TableIndexer(index, id).FollowAsync(stored, written, cancellationToken);
+        }
+
+        return voided;
+    }
+
     private const int RecordAttempts = 5;
 
     /// <summary>The index that finds this table (ADR 0161), or none on a host that keeps no index.</summary>

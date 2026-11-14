@@ -259,7 +259,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         // A saved seat of a void match (ADR 0163) is no seat to resume, and its page is told why rather than that it
         // has none: the tables are named, and nothing else of them is said.
         var unanswered = found.Where(one => one.Table is null).Select(one => one.Token).ToArray();
-        var voided = await Task.WhenAll(unanswered.Select(async token => await registry.VoidSeatAsync(token) ? TableKeys.TableOf(token) : null));
+        var voided = await Task.WhenAll(unanswered.Select(async token => await registry.VoidSeatAsync(token) is not null ? TableKeys.TableOf(token) : null));
         var ended = voided.OfType<string>().Distinct(StringComparer.Ordinal).Select(table => new { table }).ToArray();
         return Json(new { tables, ended });
     }
@@ -1456,6 +1456,8 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 // ladder itself decides (MatchResult.Ranked).
                 createdAt = PlaytestRun.OpenedAt(result.Table),
                 ranked = result.Ranked,
+                // A game the operator voided (ADR 0176): listed, with why, and counted nowhere.
+                voided = result.Voided is { } voided ? new { category = voided.Category, explanation = voided.Explanation } : null,
                 format = result.Format,
                 casual = result.Casual,
                 rounds = result.Rounds,
