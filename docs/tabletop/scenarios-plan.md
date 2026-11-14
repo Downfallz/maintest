@@ -74,24 +74,29 @@ It is self-contained except for the content, which is named by hash. The store k
 
 ## Stages
 
-### S0 — ADR
+### S0 — ADR (done)
 
-"A scenario is a recorded match cut at the top of a round". Records the decisions above. Also records that a
-scenario is replayed, never snapshotted, and why that keeps ADR 0159's "no way to build a match the rules did not
-produce". Glossary: **Scenario**, **Cut**, **Scripted opponent**, **Diagnosis**.
+[ADR 0178](../adr/0178-cut-a-recorded-match-at-the-top-of-a-round.md): a match scenario is a recorded match cut at
+the top of a round, replayed into a match of its own, never snapshotted. Glossary: **Match scenario** (not a
+Simulation scenario), **Scenario cut**, **Scenario checkpoint**, **Scripted opponent**, **Diagnosis**.
 
-### S1 — Cut and rebuild (Application, Infrastructure)
+### S1 — Cut and rebuild (Application, Infrastructure) (done)
 
-- `ScenarioCut`: given a journaled match and its entries, step through them with `MatchReplay` and return the
-  index of the first entry applied while the board is in round N. The cut is the top of the round, before its
-  upkeep is answered, so the round's receipts play in front of the person.
-- **Compatible** means the source rebuilds on its recorded content and rules, under this engine, up to the cut.
-  A void match is compatible up to the round before it diverged. Each round is offered only if it rebuilds.
-  This lets an engine change be reproduced on the rounds before it bites.
-- `ScenarioRebuild`: a new `JournaledMatch` (new id, same seed, roster, rules), an in-memory journal holding the
-  prefix, rebuilt, then compared with the checkpoint. A mismatch is `Scenario.Diverged`, never a silent start.
-- Tests: Application tests with the ports faked; an Infrastructure test on the real content that records a seeded
-  bot match, cuts it at each round and asserts the boards equal the source's at that point.
+Under `Application/Matches/Scenarios`, each one class and one public method, all through `MatchReplay`:
+
+- `ScenarioRounds.ReadAsync`: the rounds a recorded match can be cut at. It steps through the journal one
+  entry at a time and keeps each round the board reaches with no answer held, with where it begins (`RoundCut`).
+  A journal that stops rebuilding still offers the round it stops in, and says why (`ScenarioReading.StoppedBy`).
+  That round is the one an engine change shows in, the one to reproduce.
+- `ScenarioCutter.CutAsync`: the match cut at a round (`ScenarioCut`): the entries before and after the cut,
+  and both seats' boards there (`ScenarioCheckpoint`). `Scenario.RoundUnavailable` for a round not offered.
+- `ScenarioStarter.StartAsync`: a match of its own under a new id and run, rebuilt from the entries before the
+  cut and held to the checkpoint. It is refused with `Scenario.Diverged` when it does not stand on those boards.
+- Tests: Application tests over two seeds and both combat declarations (every round offered in order; every cut
+  starts on its source's boards; a scenario played on with the source's later decisions ends as the source did;
+  an unavailable round; drifted boards; a journal that stops rebuilding). One Infrastructure test on the
+  repository's content: a greedy mirror under both declarations, cut at every round, each scenario played on
+  to the source's very outcome.
 
 ### S2 — The scripted opponent
 
