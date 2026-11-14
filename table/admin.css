@@ -176,3 +176,11 @@ input[type="text"] { font: inherit; min-height: 44px; border: 1px solid var(--li
 .scenario-made { display: grid; gap: 6px; padding: 8px 10px; border: 1px solid #3f554d; border-radius: var(--radius-soft, 6px); }
 .scenario-made code { overflow-wrap: anywhere; font-size: 12px; }
 .scenario-made .session-links { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+
+/* The Diagnose sheet (scenarios plan, S5b): the table's facts as a list, its actions as a row. */
+.diagnosis-facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; margin: 0; font-size: 13px; }
+.diagnosis-facts dt { color: var(--muted, #9fb0a6); }
+.diagnosis-facts dd { margin: 0; overflow-wrap: anywhere; }
+.diagnosis-hidden { margin: 0; padding-left: 18px; font-size: 13px; overflow-wrap: anywhere; }
+.diagnosis-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 480px) { .diagnosis-facts { grid-template-columns: 1fr; } .diagnosis-facts dd { margin-bottom: 6px; } }

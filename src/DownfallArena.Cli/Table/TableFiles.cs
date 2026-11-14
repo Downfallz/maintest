@@ -202,6 +202,7 @@ internal sealed class TableFiles
             ["/admin-overview.js"] = (Path.Combine(tableDirectory, "admin-overview.js"), JavaScript),
             ["/admin-activity.js"] = (Path.Combine(tableDirectory, "admin-activity.js"), JavaScript),
             ["/admin-scenarios.js"] = (Path.Combine(tableDirectory, "admin-scenarios.js"), JavaScript),
+            ["/admin-diagnosis.js"] = (Path.Combine(tableDirectory, "admin-diagnosis.js"), JavaScript),
         };
 
         foreach (var art in HorizonArt)

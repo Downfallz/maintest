@@ -22,9 +22,11 @@ export const ACTION_LABELS = Object.freeze({
   'settings.save': 'Saved the settings',
   'scenario.cut': 'Cut a scenario',
   'scenario.remove': 'Removed a scenario',
+  'table.reveal': 'Revealed what a table\'s seats hold',
+  'table.turn': 'Owed a table\'s bot turn again',
 });
 
-const TABLE_ACTIONS = new Set(['table.open', 'table.close', 'table.reinvite', 'table.void', 'sessions.delete', 'sessions.export']);
+const TABLE_ACTIONS = new Set(['table.open', 'table.close', 'table.reinvite', 'table.void', 'table.reveal', 'table.turn', 'sessions.delete', 'sessions.export']);
 
 /** The address of a page of the log, the page left out when it is the first. */
 export function activityPath(page = 1) {
