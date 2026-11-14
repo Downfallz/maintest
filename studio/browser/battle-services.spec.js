@@ -90,6 +90,8 @@ test('the result reports what each creature did, its creature of the match first
   const report = page.locator('#match-report');
   await expect(report).toBeVisible();
   await expect(page.locator('#match-mvp')).toContainText('Creature 1'); await expect(page.locator('#match-mvp')).toContainText('25 damage · 2 KO');
+  // Drawn as it ended the match, with the illustration its mutations gave it (the base one here, none bought).
+  await expect(page.locator('#match-mvp img')).toHaveAttribute('src', 'battle-art/evolutions/base-creature.webp');
   const first = page.locator('.match-report-table[data-side="ally"] tr[data-report-creature="1"]');
   await expect(first.locator('td').nth(0)).toContainText('25'); await expect(first.locator('td').nth(0)).toContainText('4 bleed');
   await expect(first).toHaveAttribute('data-mvp', 'true');

@@ -1,4 +1,5 @@
 import { creatureForm } from './battle-art.js';
+import { resolveEvolution } from './battle-evolution.js';
 import { creatureLabel } from './battle-live.js';
 
 // A finished match's battle report: what each creature did, read off the seat's whole public feed and its final
@@ -14,7 +15,10 @@ const STATS = ['dealt', 'bleed', 'healed', 'regen', 'taken', 'blocked', 'kills',
 // Named as every other surface of the battle names it ("Creature 4", as on the board), never by the host's raw name.
 function blank(creature, side, packages, board) {
   const row = { id: creature.id, name: creatureLabel(board, creature.id), side, alive: creature.isAlive !== false,
-    form: creatureForm(creature, packages), owner: creature.owner };
+    form: creatureForm(creature, packages), owner: creature.owner,
+    // The illustration its mutations gave it by the end (ADR 0151), as the field and the inspection draw it; none
+    // for a creature that never mutated, which keeps its form's figure.
+    artwork: resolveEvolution(creature, packages).artworkFile ?? null };
   for (const stat of STATS) row[stat] = 0;
   return row;
 }
