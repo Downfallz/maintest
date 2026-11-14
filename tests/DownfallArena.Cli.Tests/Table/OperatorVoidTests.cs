@@ -140,6 +140,26 @@ public sealed class OperatorVoidTests : IDisposable
         (await _hosted.Stored!.RecordAsync(id, Cancel)).ShouldNotBeNull().VoidReason.ShouldNotBeNull().Category.ShouldBe("stuck");
     }
 
+    /// <summary>
+    /// A result kept for a match after it was voided -- a closer elsewhere, or a store that failed once the record said
+    /// void -- is withdrawn when the operator voids it again, under the reason it was voided for; the void stays final.
+    /// </summary>
+    [Fact]
+    public async Task A_result_still_counting_for_a_void_match_is_withdrawn_when_it_is_voided_again()
+    {
+        var (id, _) = await OpenedAsync();
+        await VoidAsync(id, Reason());
+        await _results.RecordAsync(new MatchResult(Guid.CreateVersion7().ToString(), DateTimeOffset.UtcNow, "3v3", "at-activation", "hash", 9, "player1",
+            [new ResultSeat("player1", AccountId.New(), null), new ResultSeat("player2", AccountId.New(), null)], id), Cancel);
+
+        var answer = await VoidAsync(id, Reason("other", "Voided again to withdraw what still counted."));
+
+        answer.Status.ShouldBe(200);
+        Json(answer).GetProperty("withdrawn").GetBoolean().ShouldBeTrue();
+        _results.All.ShouldHaveSingleItem().Voided.ShouldNotBeNull().Category.ShouldBe("stuck");
+        (await _hosted.Stored!.RecordAsync(id, Cancel)).ShouldNotBeNull().VoidReason.ShouldNotBeNull().Category.ShouldBe("stuck");
+    }
+
     [Fact]
     public async Task A_table_nobody_recorded_cannot_be_voided()
     {

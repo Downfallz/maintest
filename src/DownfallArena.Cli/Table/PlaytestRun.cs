@@ -391,6 +391,16 @@ internal sealed class PlaytestRun : IReactionKeeper
     private long _revision;
 
     /// <summary>
+    /// Why the operator voided this table (ADR 0176), as its record says now; none for a table not voided so. Read as
+    /// a closer keeps the match's result: a void made meanwhile has its result marked void too, whoever wrote it last.
+    /// </summary>
+    public async Task<Application.Accounts.MatchVoid?> VoidedAsync(CancellationToken cancellationToken = default)
+    {
+        var read = await _reader.ReadTaggedAsync(TableRecord.File, cancellationToken);
+        return read is not null && StoredSessions.RecordOf(read.Text) is { Void: true, VoidReason: { } reason } ? reason : null;
+    }
+
+    /// <summary>
     /// The table's record, when another process has written it since this one last did (ADR 0162): its revision is
     /// past the one this process wrote. None otherwise, and never while a write of this process's own is on its way,
     /// which would read as one. A process holding the table catches up with it, or lets it go and picks it up again

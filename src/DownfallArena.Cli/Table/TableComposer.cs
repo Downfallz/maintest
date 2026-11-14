@@ -645,12 +645,24 @@ internal sealed class TableComposer
 
             // The result before the record says finished: a host that fails to keep it leaves the table open, and
             // the next host rebuilds it from its decisions and keeps it then. Kept twice, it is kept once.
+            var voided = false;
             if (Results is { } results && ResultOf(table, session.Outcome.Result.Value, board.Value, finishedAt, owners) is { } kept)
             {
                 // What each seat played, for its players' statistics: the creatures off the final board, the casts off
                 // the events this process holds of the match, which are all of them once it has its outcome.
                 var result = kept with { Teams = PlayedTeams.Of(board.Value, run.EventsOf(session.MatchId), TableSeat.NameOf) };
                 await results.RecordAsync(result);
+
+                // The operator may have voided the match while it was being kept (ADR 0176), and withdrawn the result
+                // before this wrote it: the record is read after the write, and a void it says marks the result too.
+                // The void reads the results again after it writes the record, so one of the two sees the other.
+                if (await run.VoidedAsync() is { } reason)
+                {
+                    await results.RecordAsync(result with { Voided = reason });
+                    voided = true;
+                    Console.WriteLine($"  Session {run.SessionId} was voided as it ended: its result is kept void.");
+                }
+
                 foreach (var owner in owners)
                 {
                     Lobby?.Account(owner);
@@ -670,6 +682,12 @@ internal sealed class TableComposer
             if (!await run.StillClosingAsync())
             {
                 Console.WriteLine($"  Session {run.SessionId} was taken over by another process, which tells its seats how it ended.");
+                return;
+            }
+
+            // A void match's players were told why it was voided, not how it ended.
+            if (voided)
+            {
                 return;
             }
 

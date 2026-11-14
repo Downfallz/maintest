@@ -134,6 +134,41 @@ public sealed class TableWatchTests : IDisposable
         table.IsOver.ShouldBeTrue();
     }
 
+    /// <summary>
+    /// A finished table another process voided (ADR 0176) is let go of here, so its seats are answered from the record
+    /// with the explanation rather than served the outcome this host still holds.
+    /// </summary>
+    [Fact]
+    public async Task The_watch_lets_go_of_a_finished_table_another_process_voided()
+    {
+        using var registry = _here.Registry();
+        var table = await RecordedAsync(registry, Randoms);
+        await PlayedOutAsync((IAgentTurnTaker)table.Session);
+        await ClosedAsync(table);
+        var reason = Application.Accounts.MatchVoid.Create("abuse", "A player won through a bug in the order of the slots.", "operator", DateTimeOffset.UtcNow).Value;
+        await PlaytestRun.VoidRecordAsync(new FileArtifactStore(_runs), table.Id, _here.Index, reason, Cancel);
+
+        var changed = await new TableWatch(registry, TimeProvider.System).WatchOnceAsync(Cancel);
+
+        changed.ShouldBe(1);
+        registry.Held(table.Id).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task A_finished_table_whose_record_is_not_void_stays_held_by_the_watch()
+    {
+        using var registry = _here.Registry();
+        var table = await RecordedAsync(registry, Randoms);
+        await PlayedOutAsync((IAgentTurnTaker)table.Session);
+        await ClosedAsync(table);
+        await _here.Stored!.CloseAsync(table.Id, _here.Index, Cancel);
+
+        var changed = await new TableWatch(registry, TimeProvider.System).WatchOnceAsync(Cancel);
+
+        changed.ShouldBe(0);
+        registry.Held(table.Id).ShouldBeSameAs(table);
+    }
+
     [Fact]
     public async Task A_match_two_processes_hold_is_written_by_one_of_them_and_served_by_both()
     {

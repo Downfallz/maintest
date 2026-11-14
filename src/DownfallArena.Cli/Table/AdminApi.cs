@@ -332,19 +332,26 @@ internal sealed class AdminApi
 
         if (record.Void)
         {
-            return Problem(409, "Admin.AlreadyVoid", $"Table '{id}' is already void. A void is final.");
+            // A void is final, but one whose result a failing store left counting is finished now, under its own reason.
+            return await WithdrawResultAsync(id, record.VoidReason ?? reason.Value)
+                ? StudioResponse.OfJson(new { voided = true, withdrawn = true, category = (record.VoidReason ?? reason.Value).Category }, ArtifactJson.LineOptions)
+                : Problem(409, "Admin.AlreadyVoid", $"Table '{id}' is already void. A void is final.");
         }
 
-        // The result is withdrawn before the record says void: a store that fails in between leaves a record that is
-        // not void yet, so the operator voids again and the withdrawal is retried, rather than a void record whose
-        // result still counts and that refuses every retry as already void.
+        // The result is withdrawn before the record says void, so a store that fails in between leaves a record not void
+        // yet, which the operator voids again; and after, for a closer that kept the result in between: it reads the
+        // record after its write, so either it sees the void and marks its result, or this sees its result.
         await _registry.RemoveAsync(id);
         var withdrawn = await WithdrawResultAsync(id, reason.Value);
-        if (!await stored.VoidAsync(id, _composer.Index, reason.Value))
+        var voided = await stored.VoidAsync(id, _composer.Index, reason.Value);
+        withdrawn = await WithdrawResultAsync(id, reason.Value) || withdrawn;
+        if (!voided)
         {
             return Problem(409, "Admin.AlreadyVoid", $"Table '{id}' is already void. A void is final.");
         }
 
+        // Every other process holding the table, finished or not, lets it go and answers its seats 410 (ADR 0165).
+        _composer.Relay?.Table(id);
         await _composer.NotifyVoidAsync(id, record, reason.Value.Explanation);
         Console.WriteLine($"  Session {id} voided by {operatorName} ({reason.Value.Category}){(withdrawn ? ", its result withdrawn" : string.Empty)}: {reason.Value.Explanation}");
         return StudioResponse.OfJson(new { voided = true, withdrawn, category = reason.Value.Category }, ArtifactJson.LineOptions);
