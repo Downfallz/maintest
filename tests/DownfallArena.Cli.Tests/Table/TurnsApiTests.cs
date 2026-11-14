@@ -1,5 +1,7 @@
 using System.Text;
 using System.Text.Json;
+using DownfallArena.Application.Admin;
+using DownfallArena.Application.Admin.Ports;
 using DownfallArena.Application.Matches.Journaling;
 using DownfallArena.Application.Work;
 using DownfallArena.Cli.Studio;
@@ -84,6 +86,23 @@ public sealed class TurnsApiTests
         (await _letters.CountAsync(Cancel)).ShouldBe(0);
     }
 
+    /// <summary>A dropped letter is gone from its queue, so the operator log (A6) keeps which it was, by its id.</summary>
+    [Fact]
+    public async Task A_drop_is_noted_with_the_ids_of_the_letters_it_dropped()
+    {
+        await LetterAsync("table-1");
+        var id = (await _letters.PeekAsync(10, Cancel))[0].Id;
+        var log = new Kept();
+        var api = Api();
+        api.Notes = new OperatorNotes(new OperatorActions(log, TimeProvider.System));
+
+        await api.HandleAsync("POST", $"{TurnsApi.Prefix}/drop", JsonSerializer.Serialize(new { ids = new[] { id } }), "op");
+
+        var noted = log.All.ShouldHaveSingleItem();
+        noted.Action.ShouldBe(OperatorActions.Drop);
+        noted.Detail.ShouldBe($"1 letter: {id}");
+    }
+
     [Theory]
     [InlineData("requeue", "{}")]
     [InlineData("drop", """{"all":true}""")]
@@ -98,5 +117,24 @@ public sealed class TurnsApiTests
     {
         TurnsApi.FirstLine("first\r\nsecond").ShouldBe("first");
         TurnsApi.FirstLine(null).ShouldBe(string.Empty);
+    }
+
+    private sealed class Kept : IOperatorLog
+    {
+        private readonly List<OperatorAction> _kept = [];
+
+        public IReadOnlyList<OperatorAction> All => _kept;
+
+        public Task RecordAsync(OperatorAction action, CancellationToken cancellationToken = default)
+        {
+            _kept.Add(action);
+            return Task.CompletedTask;
+        }
+
+        public Task<IReadOnlyList<string>> IdsAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<string>>([.. _kept.Select(action => action.Id)]);
+
+        public Task<OperatorAction?> FindAsync(string id, CancellationToken cancellationToken = default) =>
+            Task.FromResult(_kept.FirstOrDefault(action => action.Id == id));
     }
 }

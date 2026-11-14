@@ -95,6 +95,7 @@ public sealed class TableFilesTests
     [InlineData("/admin-void.js")]
     [InlineData("/admin-settings.js")]
     [InlineData("/admin-overview.js")]
+    [InlineData("/admin-activity.js")]
     public void The_admin_panel_s_tab_modules_are_served(string module)
     {
         Files.Get(module).Status.ShouldBe(200);

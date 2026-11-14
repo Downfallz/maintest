@@ -3,6 +3,7 @@ using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Friends;
 using DownfallArena.Application.Accounts.Players;
 using DownfallArena.Application.Accounts.Ports;
+using DownfallArena.Application.Admin;
 using DownfallArena.Application.Learning;
 using DownfallArena.Application.Learning.Ports;
 using DownfallArena.Application.Matches.Journaling;
@@ -227,6 +228,15 @@ internal static class TableHost
             });
         }
 
+        // What operators do from the panel (A6), kept beside the recordings and read in the Activity tab. A log that
+        // cannot be opened leaves the actions on the console alone, never the panel without them.
+        var notes = store is null ? OperatorNotes.None : await OpenNotesAsync(options.Record ?? DefaultRunsDirectory, clock, stopping.Token);
+        admin.Notes = notes;
+        players?.Notes = notes;
+        admin.Turns?.Notes = notes;
+        admin.Jobs?.Notes = notes;
+        admin.Settings?.Notes = notes;
+
         // The Overview (A5): the numbers at a glance, each read from the source its own tab reads.
         admin.Overview = new OverviewApi(registry, composer, clock)
         {
@@ -418,6 +428,20 @@ internal static class TableHost
         {
             Console.WriteLine($"  The content the tables began on cannot be kept ({failure.Message}); a table picked up after the content changed is replayed on this host's (ADR 0163).");
             return null;
+        }
+    }
+
+    /// <summary>The operator log (A6), or none when it cannot be opened, which the console says.</summary>
+    private static async Task<OperatorNotes> OpenNotesAsync(string target, TimeProvider clock, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return new OperatorNotes(new OperatorActions(await ArtifactStores.OpenOperatorLogAsync(target, cancellationToken), clock));
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is Azure.Identity.AuthenticationFailedException)
+        {
+            Console.WriteLine($"  The operator log could not be opened ({failure.Message}): what operators do is said on the console alone.");
+            return OperatorNotes.None;
         }
     }
 
