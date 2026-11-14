@@ -439,4 +439,37 @@ public sealed class CliOptionsTests
         Should.Throw<ArgumentException>(() => CliOptions.Parse(["table", "--handover", round]))
             .Message.ShouldContain("not a round to hand over on");
     }
+
+    [Fact]
+    public void A_cut_reads_its_session_round_seat_and_words_and_writes_scenario_json_by_default()
+    {
+        var options = CliOptions.Parse(["scenario-cut", "--session", "runs/playtest/x", "--round", "4", "--seat", "player2", "--title", "T", "--goal", "G", "--with-content"]);
+
+        (options.Session, options.Round, options.Seat, options.Title, options.Goal, options.WithContent, options.Output)
+            .ShouldBe(("runs/playtest/x", 4, "player2", "T", "G", true, "scenario.json"));
+    }
+
+    [Fact]
+    public void A_cut_needs_the_session_it_cuts() =>
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["scenario-cut", "--round", "4"])).Message.ShouldContain("--session");
+
+    [Fact]
+    public void A_check_needs_the_scenario_it_checks() =>
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["scenario-check"])).Message.ShouldContain("--scenario");
+
+    [Fact]
+    public void The_cut_s_options_belong_to_the_cut_alone() =>
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["table", "--round", "4"])).Message.ShouldContain("scenario-cut only");
+
+    [Fact]
+    public void A_seat_is_one_of_the_two() =>
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["scenario-cut", "--session", "s", "--seat", "player3"])).Message.ShouldContain("player3");
+
+    [Fact]
+    public void A_practice_table_on_a_scenario_plays_the_scenario_s_own_seed_and_seats() =>
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["table", "--scenario", "s.json", "--seed", "3"])).Message.ShouldContain("--scenario");
+
+    [Fact]
+    public void Only_a_table_or_a_check_reads_a_scenario_file() =>
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["play", "--scenario", "s.json"])).Message.ShouldContain("--scenario");
 }

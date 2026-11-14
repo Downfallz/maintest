@@ -63,7 +63,7 @@ public sealed class ScenarioCutterTests
             started.IsSuccess.ShouldBeTrue($"round {cut.Round}");
             started.Value.Match.MatchId.ShouldNotBe(source.MatchId);
             started.Value.Match.Seed.ShouldBe(source.Seed);
-            scenario.Value.Checkpoint.Player1.RoundNumber.ShouldBe(cut.Round);
+            scenario.Value.Checkpoint.Round.ShouldBe(cut.Round);
             scenario.Value.Before.Count.ShouldBe(cut.CutAt);
             (scenario.Value.Before.Count + scenario.Value.After.Count).ShouldBe(entries.Count);
         }

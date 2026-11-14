@@ -30,7 +30,7 @@ public sealed class ScenarioStarter(MatchReplay replay, MatchStepper stepper)
             return Result.Failure<ScenarioStart>(standing.Error.Code == JournalErrors.DivergedCode ? ScenarioErrors.Diverged : standing.Error);
         }
 
-        return standing.Value.SameBoardsAs(scenario.Checkpoint)
+        return scenario.Checkpoint.StandsIn(standing.Value)
             ? Result.Success(new ScenarioStart(match, scenario.Before))
             : Result.Failure<ScenarioStart>(ScenarioErrors.Diverged);
     }

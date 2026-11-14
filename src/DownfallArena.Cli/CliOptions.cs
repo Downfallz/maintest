@@ -169,6 +169,29 @@ internal sealed record CliOptions
     /// </summary>
     public string? Export { get; init; }
 
+    /// <summary>
+    /// A match scenario file (docs/tabletop/scenarios-plan.md, stage S3): what <c>scenario-check</c> checks, and what
+    /// <c>table --scenario</c> opens as practice. None otherwise.
+    /// </summary>
+    public string? Scenario { get; init; }
+
+    /// <summary>The recorded session directory <c>scenario-cut</c> cuts, <c>runs/playtest/&lt;id&gt;</c>.</summary>
+    public string? Session { get; init; }
+
+    /// <summary>The round <c>scenario-cut</c> cuts the session at the top of; none lists the rounds it offers.</summary>
+    public int? Round { get; init; }
+
+    /// <summary>The seat a person plays in the scenario <c>scenario-cut</c> writes: <c>player1</c> by default.</summary>
+    public string? Seat { get; init; }
+
+    /// <summary>What the scenario is called, and what a person playing it is asked to try.</summary>
+    public string? Title { get; init; }
+
+    public string? Goal { get; init; }
+
+    /// <summary>Whether <c>scenario-cut</c> writes the content into the file, so it plays where that content was never kept.</summary>
+    public bool WithContent { get; init; }
+
     public const string DefaultSchemaPath = "data/dst/game.schema.json";
 
     public const string DefaultBenchmarks = "benchmarks";
@@ -183,7 +206,13 @@ internal sealed record CliOptions
     /// <summary>The bots' turns the queue says tables owe, taken until stopped: what the worker app runs (ADR 0162).</summary>
     public const string WorkerCommand = "table-worker";
 
-    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table|table-tend|table-worker|push-keys [--seed N] [--matches N] [--format 3v3|2v2|1v1] [--declaration hidden-intent|at-activation] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--slot-log file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth] [--push-keys file] [--accounts off|google|dev] [--google-client-id id] [--admins acct_...] [--turns process|queue|worker] [--tended]";
+    /// <summary>A recorded session cut at the top of a round into a scenario file (docs/tabletop/scenarios-plan.md, S3).</summary>
+    public const string ScenarioCutCommand = "scenario-cut";
+
+    /// <summary>A scenario file rebuilt and held to its boards: whether it still holds on this engine.</summary>
+    public const string ScenarioCheckCommand = "scenario-check";
+
+    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table|table-tend|table-worker|push-keys|scenario-cut|scenario-check [--seed N] [--matches N] [--format 3v3|2v2|1v1] [--declaration hidden-intent|at-activation] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--slot-log file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth] [--push-keys file] [--accounts off|google|dev] [--google-client-id id] [--admins acct_...] [--turns process|queue|worker] [--tended] [--scenario file] [--session dir] [--round N] [--seat player1|player2] [--title text] [--goal text] [--with-content]";
 
     /// <summary>Every option this command line takes. Anything else is a typo, and says so by name.</summary>
     private const string RecordOption = "--record";
@@ -215,12 +244,19 @@ internal sealed record CliOptions
 
     private const string SlotLogOption = "--slot-log";
 
+    private const string ScenarioOption = "--scenario";
+
+    private const string WithContentOption = "--with-content";
+
+    /// <summary>What only <c>scenario-cut</c> reads.</summary>
+    private static readonly string[] CutOptions = ["--session", "--round", "--seat", "--title", "--goal"];
+
     private static readonly string[] Known =
     [
         SeedOption, "--matches", "--out", "--schema", RecordOption, "--traces", "--trace", "--p1", "--p2",
         "--seeds", "--benchmarks", "--data", "--port", "--export", HandoverOption, "--rules", "--bind",
         "--who", FormatOption, DeclarationOption, SlotLogOption, PushKeysOption, AccountsOption, GoogleClientIdOption, TurnsOption,
-        AdminsOption,
+        AdminsOption, ScenarioOption, "--session", "--round", "--seat", "--title", "--goal",
     ];
 
     private static readonly string[] PracticeConflicts = [RecordOption, "--trace", "--rules", SeedOption, HandoverOption, "--p1", "--p2", FormatOption, DeclarationOption];
@@ -244,7 +280,7 @@ internal sealed record CliOptions
             Command = command,
             Seed = values.TryGetValue(SeedOption, out var seed) ? int.Parse(seed, CultureInfo.InvariantCulture) : null,
             Matches = values.TryGetValue("--matches", out var matches) ? int.Parse(matches, CultureInfo.InvariantCulture) : 100,
-            Output = values.GetValueOrDefault("--out") ?? (command == "evaluate" ? "evaluation.json" : "simulation.csv"),
+            Output = values.GetValueOrDefault("--out") ?? command switch { "evaluate" => "evaluation.json", ScenarioCutCommand => "scenario.json", _ => "simulation.csv" },
             SchemaPath = values.GetValueOrDefault("--schema") ?? DefaultSchemaPath,
             Record = values.GetValueOrDefault(RecordOption),
             Trace = values.GetValueOrDefault("--trace"),
@@ -276,6 +312,13 @@ internal sealed record CliOptions
             Data = values.GetValueOrDefault("--data") ?? DefaultData,
             Port = values.TryGetValue("--port", out var port) ? ParsePort(port) : DefaultPort,
             Export = values.GetValueOrDefault("--export"),
+            Scenario = values.GetValueOrDefault(ScenarioOption),
+            Session = values.GetValueOrDefault("--session"),
+            Round = values.TryGetValue("--round", out var round) ? ParseRound(round) : null,
+            Seat = values.GetValueOrDefault("--seat"),
+            Title = values.GetValueOrDefault("--title"),
+            Goal = values.GetValueOrDefault("--goal"),
+            WithContent = flags.Contains(WithContentOption),
         };
     }
 
@@ -299,6 +342,11 @@ internal sealed record CliOptions
         if (flags.Contains(PlatformAuthOption) && command != "table")
         {
             return "'--platform-auth' is for table only: it says a platform in front of the host signs the operator in.";
+        }
+
+        if (ScenarioContradiction(command, values, flags) is { } scenario)
+        {
+            return scenario;
         }
 
         if (flags.Contains(TendedOption) && (command != "table" || flags.Contains(PracticeOption)))
@@ -389,7 +437,51 @@ internal sealed record CliOptions
     }
 
     /// <summary>The options that carry nothing after them, so the scanner does not swallow the next argument.</summary>
-    private static readonly HashSet<string> Valueless = new(StringComparer.Ordinal) { "--write", "--no-record", PracticeOption, LobbyOption, PlatformAuthOption, TendedOption };
+    private static readonly HashSet<string> Valueless = new(StringComparer.Ordinal) { "--write", "--no-record", PracticeOption, LobbyOption, PlatformAuthOption, TendedOption, WithContentOption };
+
+    /// <summary>
+    /// What the scenario options ask for that they cannot have: <c>--scenario</c> is the file a check or a practice table
+    /// reads, the cut's options describe the cut alone, and a practice table on a scenario records nothing and seats
+    /// nobody the scenario does not.
+    /// </summary>
+    private static string? ScenarioContradiction(string command, Dictionary<string, string> values, HashSet<string> flags)
+    {
+        if (values.ContainsKey(ScenarioOption) && command is not ("table" or ScenarioCheckCommand))
+        {
+            return "'--scenario' is for table and scenario-check only: it names the scenario file to play or to check.";
+        }
+
+        if (values.ContainsKey(ScenarioOption) && command == "table"
+            && (flags.Contains(PracticeOption) || flags.Contains(LobbyOption) || PracticeConflicts.Any(values.ContainsKey)))
+        {
+            return "'table --scenario' plays the scenario's own rules, seed and seats, and records nothing: it takes none of --practice, --lobby, --record, --rules, --seed, --handover, --p1, --p2, --format or --declaration.";
+        }
+
+        if (command == ScenarioCheckCommand && !values.ContainsKey(ScenarioOption))
+        {
+            return "'scenario-check' needs '--scenario <file>'.";
+        }
+
+        if ((CutOptions.Any(values.ContainsKey) || flags.Contains(WithContentOption)) && command != ScenarioCutCommand)
+        {
+            return "'--session', '--round', '--seat', '--title', '--goal' and '--with-content' are for scenario-cut only.";
+        }
+
+        if (command == ScenarioCutCommand && !values.ContainsKey("--session"))
+        {
+            return "'scenario-cut' needs '--session <runs/playtest/id>'.";
+        }
+
+        return values.TryGetValue("--seat", out var seat) && seat is not ("player1" or "player2")
+            ? $"'--seat' is player1 or player2, not '{seat}'."
+            : null;
+    }
+
+    private static int ParseRound(string text)
+    {
+        var round = int.Parse(text, CultureInfo.InvariantCulture);
+        return round >= 1 ? round : throw new ArgumentException($"'--round' is a round of the match, from 1: '{text}' is not one.");
+    }
 
     /// <summary>
     /// What a sign-in cannot be had with. Accounts live beside the recordings, so a host that records nothing, or
