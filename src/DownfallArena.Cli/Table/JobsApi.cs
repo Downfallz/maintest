@@ -26,7 +26,6 @@ internal sealed class JobsApi
     private static readonly SemaphoreSlim Passing = new(1, 1);
 
     private readonly ITendLog _log;
-    private readonly TendRuns _runs;
     private readonly TimeProvider _clock;
     private readonly Func<DateTimeOffset, Action<TableTend.Tended>, Task<TableTend.Tended>> _pass;
 
@@ -37,10 +36,13 @@ internal sealed class JobsApi
         ArgumentNullException.ThrowIfNull(clock);
         ArgumentNullException.ThrowIfNull(pass);
         _log = log;
-        _runs = new TendRuns(log);
+        Runs = new TendRuns(log);
         _clock = clock;
         _pass = pass;
     }
+
+    /// <summary>The kept runs, which this tab pages and the Overview reads the last of (A5).</summary>
+    public TendRuns Runs { get; }
 
     public static bool Names(string path) => path == Prefix || path.StartsWith(Prefix + "/", StringComparison.Ordinal);
 
@@ -60,7 +62,7 @@ internal sealed class JobsApi
         if (method == "GET" && path.StartsWith(TendRoute + "/", StringComparison.Ordinal))
         {
             var id = Uri.UnescapeDataString(path[(TendRoute.Length + 1)..]);
-            return await _runs.FindAsync(id) is { } run
+            return await Runs.FindAsync(id) is { } run
                 ? StudioResponse.OfJson(new { run = Describe(run) }, Web)
                 : Problem(404, "Jobs.NoRun", "No tending run is kept under that id.");
         }
@@ -93,7 +95,7 @@ internal sealed class JobsApi
     private async Task<StudioResponse> PageAsync(string? query)
     {
         var asked = System.Web.HttpUtility.ParseQueryString(query ?? string.Empty);
-        var page = await _runs.PageAsync(int.TryParse(asked["page"], out var number) ? number : 1, _clock.GetUtcNow());
+        var page = await Runs.PageAsync(int.TryParse(asked["page"], out var number) ? number : 1, _clock.GetUtcNow());
         return StudioResponse.OfJson(
             new
             {

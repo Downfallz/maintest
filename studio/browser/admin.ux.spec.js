@@ -20,11 +20,16 @@ const sessions = [
 const table = index => ({ id: `table-${String(index).padStart(2, '0')}`, round: 3, format: 'ThreeVersusThree', pilot: `/pilot?token=p${index}`,
   seats: [{ slot: 'player1', seated: 'human:mk', taken: true }, { slot: 'player2', seated: 'nobody', code: `CODE${index}`, join: `/join/CODE${index}` }] });
 
+const overview = { players: null, games: { inProgress: { againstPlayers: 1, againstBots: 2 }, finished: null },
+  waiting: { openSeats: 1, invitations: 0, endingSoon: 0 }, jobs: { lastRun: null, turns: null }, registration: null };
+
 test.beforeEach(async ({ page }) => {
   // The shared header asks who is signed in: the operator, on a host where players do not sign in.
   await page.route('**/api/me', route => route.fulfill({ json: { operator: true, admin: '/admin', accounts: 'off', account: null } }));
   await page.route('**/api/tables', route => route.fulfill({ json: tables }));
   await page.route('**/api/sessions', route => route.fulfill({ json: { sessions } }));
+  // The Overview (A5) of a host with no accounts and no jobs: its tables' numbers alone.
+  await page.route('**/api/admin/overview', route => route.fulfill({ json: overview }));
   await page.goto('/table/admin.html?token=operator');
   await expect(page.locator('#sessions li')).toHaveCount(20);
 });
@@ -49,12 +54,15 @@ test('sessions are filtered to finished matches between people and paged twenty 
   await expect(page.locator('#sessions a', { hasText: 'replay' })).toHaveAttribute('href', '/play?replay=people-finished');
 });
 
-test('the headquarters open on Tables under the shared header, and each section is part of the address', async ({ page }, info) => {
+test('the headquarters open on the Overview under the shared header, and each section is part of the address', async ({ page }, info) => {
   await expect(page.locator('header[data-navigation="admin"] #nav-admin-link')).toHaveAttribute('aria-current', 'page');
-  await expect(page.locator('#tab-tables')).toHaveAttribute('aria-current', 'page');
-  await expect(page.locator('#panel-tables')).toBeVisible(); await expect(page.locator('#panel-sessions')).toBeHidden();
+  await expect(page.locator('#tab-overview')).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('#panel-overview')).toBeVisible(); await expect(page.locator('#panel-tables')).toBeHidden();
   await expect(page.locator('#tab-sessions-count')).toHaveText('25');
 
+  await page.locator('#tab-tables').click();
+  await expect(page).toHaveURL(/#tables$/);
+  await expect(page.locator('#panel-tables')).toBeVisible(); await expect(page.locator('#panel-overview')).toBeHidden();
   await page.locator('#tab-sessions').click();
   await expect(page).toHaveURL(/#sessions$/);
   await expect(page.locator('#panel-sessions')).toBeVisible(); await expect(page.locator('#panel-tables')).toBeHidden();
@@ -73,9 +81,35 @@ test('the headquarters open on Tables under the shared header, and each section 
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(widthOf(page));
 });
 
+// The Overview (A5): a card a source, each linking to its tab, and the ones that need the operator marked.
+test('the Overview shows a card for each number the host has, links each to its tab, and marks what needs the operator', async ({ page }, info) => {
+  await page.route('**/api/admin/overview', route => route.fulfill({ json: {
+    players: { total: 42, seenThisWeek: 17, newThisWeek: 3, suspended: 1 },
+    games: { inProgress: { againstPlayers: 4, againstBots: 6 }, finished: { unavailable: true } },
+    waiting: { openSeats: 2, invitations: 1, endingSoon: 3 },
+    jobs: { lastRun: { id: 'r', started: new Date(Date.now() - 3600000).toISOString(), outcome: 'failed' }, turns: { waiting: 2, failed: 1 } },
+    registration: { open: false } } }));
+  await page.reload();
+
+  const cards = page.locator('#overview-cards .overview-card');
+  await expect(cards).toHaveCount(7);
+  await expect(page.locator('[data-card="players"] .overview-number')).toHaveText('42');
+  await expect(page.locator('[data-card="players"] .overview-detail')).toHaveText('17 seen this week · 3 new · 1 suspended');
+  await expect(page.locator('[data-card="finished"] .overview-number')).toHaveText('—');
+  await expect(page.locator('#overview-cards .overview-card.warning')).toHaveCount(3);
+  await expect(page.locator('#tab-overview-count')).toHaveText('!');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(widthOf(page));
+  await page.screenshot({ path: info.outputPath('admin-overview.png'), fullPage: true });
+
+  await page.locator('[data-card="in-progress"]').click();
+  await expect(page).toHaveURL(/#tables$/);
+  await expect(page.locator('#panel-tables')).toBeVisible();
+});
+
 test('the tables under way are paged twenty at a time, the page kept across the host\'s polls', async ({ page }) => {
   await page.route('**/api/tables', route => route.fulfill({ json: { ...tables, tables: Array.from({ length: 25 }, (_, index) => table(index)) } }));
   await page.reload();
+  await page.locator('#tab-tables').click();
   await expect(page.locator('#tables .table-card')).toHaveCount(20);
   await expect(page.locator('#tables-count')).toHaveText('25 tables · page 1 of 2');
   await expect(page.locator('#tables-previous')).toBeDisabled();

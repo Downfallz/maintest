@@ -31,6 +31,10 @@ public sealed class TendRuns
 
     public Task<TendRun?> FindAsync(string id, CancellationToken cancellationToken = default) => _log.FindAsync(id, cancellationToken);
 
+    /// <summary>The last run kept, or none before the first: what the overview says of the job (A5).</summary>
+    public async Task<TendRun?> LatestAsync(CancellationToken cancellationToken = default) =>
+        (await _log.IdsAsync(cancellationToken)) is [var newest, ..] ? await _log.FindAsync(newest, cancellationToken) : null;
+
     // Read side by side: a week is about 170 small records, and one after another they would take seconds.
     private async Task<IReadOnlyList<TendRun>> ReadAsync(IEnumerable<string> ids, CancellationToken cancellationToken)
     {

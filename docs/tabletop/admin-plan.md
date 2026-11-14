@@ -310,6 +310,14 @@ Each stage is one pull request, with its tests and docs, and leaves the panel wo
    operator until the activity log (A6) keeps it. Fixed on the way: the shared header stopped mounting on `/admin`
    at the panel's own side sheets, so its account chip and Admin link never drew there.
 8. **A5, overview.** The numbers, once A2 to A4 give them their sources.
+   *Built (2026-11-14)*: `GET /api/admin/overview`, read from what each tab reads: `PlayerCounts` and
+   `FinishedCounts` (Application) over the player directory and the kept results; the games in progress, open seats,
+   unanswered invitations and games whose time to answer runs out within a day over the open tables, the last of these
+   read off each begun game's last move as the hourly warning reads it; the last tending run (`TendRuns.LatestAsync`);
+   the bot turns waiting and given up on; registration. "Today" is the last 24 hours, so no time zone is assumed. A
+   source this host does not have is no card; one that does not answer keeps its card with a dash, never the whole
+   overview. The Overview is the first tab and the one the panel opens on; each card links to its tab, and a failed
+   run, turns given up on or registration closed are drawn in the warning colour and mark the tab.
 9. **A6, activity.** The operator log and its tab.
 
 Every stage keeps the panel behind the gate. None of it changes a game.
