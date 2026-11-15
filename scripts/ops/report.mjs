@@ -224,7 +224,7 @@ export function render(readings, now) {
     if (image) lines.push(`Image : ${image}`);
     if (usable(readings['restarts-table']) || usable(readings['restarts-worker'])) {
       const count = (name) => (usable(readings[name]) ? metricMax(readings[name]) : '?');
-      lines.push(`Redémarrages 24 h : table ${count('restarts-table')} · worker ${count('restarts-worker')}`);
+      lines.push(`Redémarrages (max. par réplica, 24 h) : table ${count('restarts-table')} · worker ${count('restarts-worker')}`);
     }
     if (usable(readings['5xx'])) lines.push(`Erreurs 5xx 24 h : ${metricTotal(readings['5xx'])}`);
     if (usable(readings.executions)) {

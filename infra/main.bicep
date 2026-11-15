@@ -646,8 +646,9 @@ resource serverErrors 'Microsoft.Insights/metricAlerts@2018-03-01' = if (alertsO
   }
 }
 
-// A replica of the API or of the worker restarting: the metric counts a replica's restarts so far, so its maximum
-// past two in a quarter of an hour is a crash loop, not a deployment, which starts a new revision instead.
+// A replica of the API or of the worker restarting past twice: a crash loop, not a deployment, which starts a new
+// revision instead. Read as the highest count a replica reports, which holds whether the platform counts per
+// interval or so far; a replica lives hours at most, since both apps scale to zero.
 resource restarts 'Microsoft.Insights/metricAlerts@2018-03-01' = [for process in [
   '${namePrefix}-table'
   '${namePrefix}-worker'
@@ -660,7 +661,7 @@ resource restarts 'Microsoft.Insights/metricAlerts@2018-03-01' = [for process in
     worker
   ]
   properties: {
-    description: '${process} restarted more than twice in 15 minutes (ADR 0185).'
+    description: 'A replica of ${process} restarted more than twice (ADR 0185).'
     severity: 2
     enabled: true
     scopes: [

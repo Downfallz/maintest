@@ -110,9 +110,14 @@ main_only_environment() {
     echo "  Restrict the '$environment' environment to main by hand (infra/runbooks/ops-identity.md, step 3)."
     return 0
   fi
-  gh api --method PUT "repos/$REPO/environments/$environment" --input - --silent <<<'{"deployment_branch_policy": {"protected_branches": false, "custom_branch_policies": true}}'
-  if [[ -z "$(gh api "repos/$REPO/environments/$environment/deployment-branch-policies" --jq '.branch_policies[] | select(.name == "main") | .name')" ]]; then
-    gh api --method POST "repos/$REPO/environments/$environment/deployment-branch-policies" -f name=main -f type=branch --silent
+  local by_hand="  Restrict the '$environment' environment to main by hand (infra/runbooks/ops-identity.md, step 3)."
+  # A signed-in account that is not the repository's admin is refused: the rest of the setup goes on.
+  gh api --method PUT "repos/$REPO/environments/$environment" --input - --silent \
+    <<<'{"deployment_branch_policy": {"protected_branches": false, "custom_branch_policies": true}}' || { echo "$by_hand"; return 0; }
+  local held
+  held="$(gh api "repos/$REPO/environments/$environment/deployment-branch-policies" --jq '.branch_policies[] | select(.name == "main") | .name')" || { echo "$by_hand"; return 0; }
+  if [[ -z "$held" ]]; then
+    gh api --method POST "repos/$REPO/environments/$environment/deployment-branch-policies" -f name=main -f type=branch --silent || echo "$by_hand"
   fi
   return 0
 }

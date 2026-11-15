@@ -20,7 +20,8 @@ alert stops anything. Without the address, none of it is deployed.
 3. **The budget's month**, set once and never moved: Azure takes a past start only within its own month. GitHub:
    *Variables*, beside *Secrets*, *New repository variable*, name `TABLE_BUDGET_START`, value the first day of the
    current month (`2026-11-01` in November 2026). Unset, the alerts are deployed without the budget, for a
-   subscription that takes none.
+   subscription that takes none. A budget made again later (the resource group recreated, the budget deleted)
+   needs the variable moved to that month first, or the deployment fails.
 
    ```text
    TABLE_BUDGET_START
