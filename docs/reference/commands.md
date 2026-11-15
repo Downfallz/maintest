@@ -326,13 +326,19 @@ page shows.
 
 `GET /api/tutorials` lists the tutorials to any signed-in account (401 signed out), in the order of the series:
 each one's `id`, `order`, `of`, `title`, `goal`, `round`, `seat`, `format` and `link`. A tutorial is opened as a
-practice by the routes above, and is never listed under Practice. While it plays, the host answers the person's
-assisted questions from the recorded answers, as the person's own decisions, and hands every question back for
-good at the first that does not fit. The seat's view says the lesson under `practice.tutorial`: `order`, `of`,
-`title`, `teaches`, `assisted` (the question kinds still answered for the person, which a page does not draw;
-empty once handed back), `steps` (each `at` a kind, a round and a creature, with `says`, `concepts` and
-`pointsAt`), `shown` (how many steps the person was asked the question of) and `done` (the last step was shown
-and its round ended, or the match ended).
+practice by the routes above, and is never listed under Practice.
+
+While it plays, the host answers the person's assisted questions from the recorded answers, as the person's own
+decisions. At the first recorded answer that does not fit, it stops and gives every question back to the person.
+
+The seat's view says the lesson under `practice.tutorial`:
+
+- `order`, `of`, `title`, and `teaches`, the question kinds the person answers.
+- `assisted`: the question kinds the host still answers for the person, so a page draws no question of that
+  kind; empty once the questions are handed back.
+- `steps`: each `at` a kind, a round and a creature, with `says`, `concepts` and `pointsAt`.
+- `shown`: how many steps have had their question asked.
+- `done`: the last step's question was asked and its round ended, or the match ended.
 
 #### The admin panel: Overview, Activity and Settings
 
