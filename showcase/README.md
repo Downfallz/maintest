@@ -39,27 +39,19 @@ can be overridden for a test deployment with `GAME_ORIGIN=https://your-game-host
 
 ## Publish the apex
 
-The numbered steps are in [infra/README.md](../infra/README.md#the-showcase-at-the-apex). Create a **Cloudflare Pages**
-project with Git integration for this repository. Use the following settings.
+CI publishes the site from `main`, behind the gate (ADR 0185). When `gate` is green and the diff touches what the
+build reads (`studio/browser/plan.js`), the `showcase` job runs `.github/workflows/showcase.yml`. It builds
+`showcase/dist` with Node 22 and uploads it to the Cloudflare Pages project `downfallinstinct-showcase` with
+Wrangler, one deployment at a time, never cancelled half-way. A red commit does not reach the apex.
 
-| Setting | Value |
-| --- | --- |
-| Production branch | main |
-| Root directory | Repository root |
-| Framework preset | None |
-| Build command | node showcase/build.mjs |
-| Build output directory | showcase/dist |
+The one-time setup (the API token, the account variable, the custom domain) is in
+[infra/README.md](../infra/README.md#the-showcase-at-the-apex). A deployment can also be asked by hand from
+**Actions, Publish the showcase, Run workflow**, on `main` only. A prior Pages deployment can be restored independently of the game.
 
-Check the deployment on its `pages.dev` address first. Test the illustrated observation, the guide search and disclosures, privacy, language links and Play
-on desktop and a narrow phone. In the Pages project's **Custom domains**, add **downfallinstinct.com** and finish
-its DNS activation. The zone is already on Cloudflare. The game CNAME, its origin certificate, Google origins
-and its Azure workflow keep their existing settings. Deploy the apex before releasing the updated lobby so
-its return links have a live destination. Confirm a signed-out Play visit opens sign-in and a signed-in visit
-opens the dashboard. A prior Pages deployment can be restored independently of the game.
+What the build reads, and so what calls for a deployment: `showcase/**`, `data/{Creatures,Spells,Tiers,presentation}/**`,
+`docs/art/branding.css`, `battle/src/cue-art.js`, `table/battle-*art.js`, `table/battle-evolution.js`, `table/battle-art/**`,
+`table/fonts/**`, `table/icon.svg` and `table/brand-mark.svg`. A build that starts to read another path adds it to
+`plan.js` and its test. With Azure Static Web Apps, upload the same contents of `showcase/dist` as a prebuilt static site.
 
-Build watch paths may include `showcase/**`, `data/{Creatures,Spells,Tiers,presentation}/**`, `docs/art/branding.css`,
-`battle/src/cue-art.js`, `table/battle-*art.js`, `table/battle-evolution.js`, `table/battle-art/**`, `table/fonts/**`, `table/icon.svg` and `table/brand-mark.svg`.
-With Azure Static Web Apps, upload the same contents of `showcase/dist` as a prebuilt static site.
-
-[Cloudflare build configuration](https://developers.cloudflare.com/pages/configuration/build-configuration/) ·
+[Direct Upload with CI](https://developers.cloudflare.com/pages/how-to/use-direct-upload-with-continuous-integration/) ·
 [Configure a custom domain](https://developers.cloudflare.com/pages/configuration/custom-domains/)

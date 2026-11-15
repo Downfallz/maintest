@@ -111,38 +111,59 @@ account menu on the home page; the lobby's *What we keep* panel says the same to
 ## The showcase at the apex
 
 The apex `downfallinstinct.com` serves the [independent static showcase](../showcase/README.md) from Cloudflare
-Pages (ADR 0185). No Azure resource changes. Once, in this order, before the lobby's links to the apex are merged:
+Pages (ADR 0185). No Azure resource changes. CI deploys it from `main` behind the gate: the `showcase` job calls
+`.github/workflows/showcase.yml`, which builds `showcase/dist` and uploads it to the Direct Upload project
+`downfallinstinct-showcase`, creating it the first time. Until the variable of step 3 exists, the job is skipped.
+Once, in this order: steps 1 to 3 before the pull request that added the workflow is merged, 4 to 7 after it.
+If the old Git-integrated project is itself named `downfallinstinct-showcase`, delete it at step 4, before the run:
+the apex is then down until step 6.
 
-1. **Cloudflare, Workers & Pages, Create, Pages, Connect to Git**: grant access to this repository only, then:
-
-   ```text
-   Production branch:       main
-   Framework preset:        None
-   Build command:           node showcase/build.mjs
-   Build output directory:  showcase/dist
-   Root directory:          (empty)
-   ```
-
-2. **The project, Settings, Variables and Secrets**, *Production* and *Preview*: the Node version the Dockerfile uses (`node:22`).
-   The build needs no secret, so the project gets none.
+1. **Cloudflare, My Profile, API Tokens, Create Token, Create Custom Token**: name it `github-showcase`, then:
 
    ```text
-   NODE_VERSION = 22
+   Permissions:        Account | Cloudflare Pages | Edit
+   Account Resources:  Include | (this account only)
    ```
 
-3. **The project, Settings, Builds, Branch control**: *Preview branches* set to *None*, so a pull request's branch
-   is not published on a public `pages.dev` address.
-4. **Check the deployment**: on the project's production `pages.dev` address, open `/`, `/fr/`, `/mutations/`, `/privacy/` and
-   `/copyright/`, and follow Play. In the browser's developer tools, check that the page's response has a
+   *Continue to summary*, *Create Token*, and copy the token. Cloudflare shows it once.
+2. **GitHub, Settings, Secrets and variables, Actions, Secrets, New repository secret**: paste the token.
+
+   ```text
+   CLOUDFLARE_API_TOKEN
+   ```
+
+3. **Cloudflare, Workers & Pages**: copy the *Account ID* from the right-hand column. Then in **GitHub, Settings,
+   Secrets and variables, Actions, Variables, New repository variable**, use this name and paste the ID as its value:
+
+   ```text
+   CLOUDFLARE_ACCOUNT_ID
+   ```
+
+4. **GitHub, Actions, Publish the showcase, Run workflow**, on `main` (any other branch is skipped). Wait for a green
+   run. From then on, a merge that touches the showcase deploys it, behind the gate.
+5. **Check the deployment** on https://downfallinstinct-showcase.pages.dev/: open `/`, `/fr/`, `/mutations/`, `/privacy/`
+   and `/copyright/`, and follow Play. In the browser's developer tools, check that the page's response has a
    `Content-Security-Policy` header. If it is missing, stop here.
-5. **Mailbox**: `contact@downfallinstinct.com` is the privacy and permissions contact. In Cloudflare, *Email,
-   Email Routing*, route it to a mailbox you read, and send it a test message.
-6. **The project, Custom domains, Set up a custom domain**: `downfallinstinct.com`. Cloudflare replaces any
-   existing apex record; the table's own record is `play` and is not touched. Then open https://downfallinstinct.com/ and follow Play.
-7. **Merge** the lobby links only now, so they have a live destination.
+6. **Move the apex.** The old project, built by Cloudflare's Git integration, still serves it.
+   **Workers & Pages, the old project, Custom domains**: remove `downfallinstinct.com`. Then **Workers & Pages,
+   downfallinstinct-showcase, Custom domains, Set up a custom domain**:
 
-To take it down: *Custom domains*, remove `downfallinstinct.com`, or *Deployments*, a previous one, *Rollback*. The
-game at `play.` is unaffected either way.
+   ```text
+   downfallinstinct.com
+   ```
+
+   The apex answers nothing between the two, usually a minute. The table's own record is `play` and is not
+   touched. Open https://downfallinstinct.com/ and follow Play.
+7. **Delete the old project**: **Workers & Pages, the old project, Settings, Delete project**. Then in **GitHub,
+   Settings, Applications, Installed GitHub Apps, Cloudflare Workers and Pages, Configure**, remove this
+   repository, or uninstall the app if nothing else uses it.
+
+The privacy and permissions contact is `contact@downfallinstinct.com`. In Cloudflare, *Email, Email Routing* routes it
+to a mailbox the owner reads.
+
+To go back to an older site: in Cloudflare, *downfallinstinct-showcase, Deployments*, a previous one, *Rollback*; or
+revert the change on `main`, through the gate. To take it down: *Custom domains*, remove
+`downfallinstinct.com`. The game at `play.` is unaffected either way.
 
 ## Its own domain, behind Cloudflare
 
