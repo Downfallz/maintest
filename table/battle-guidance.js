@@ -2,6 +2,7 @@ import { phaseLabel, TEMPO_RULE } from './terms.js';
 import { activeTurn } from './presentation.js';
 import { creatureLabel } from './battle-live.js';
 import { timeLeft } from './players.js';
+import { tutorialOf } from './battle-tutorial.js';
 
 export const HELP_PREFERENCE_KEY = 'downfall.arena.help.v1';
 const TOPICS = ['mutation', 'tempo', 'ties', 'action', 'intent', 'target'];
@@ -142,6 +143,8 @@ export function battleGuidance(view, catalogue, { accepted = false, targeting = 
   if (view.over) current = 'Match complete. Open Match result or History.';
   if (historical) current = 'Reading recorded results. Return to the current board to choose.';
   if (waiting) current = 'Waiting for players. The match begins when everyone is seated.';
+  // In a tutorial the lesson's steps take the tips' place (ADR 0187): the question keeps its objective, no tip is owed.
+  if (tutorialOf(view)) topic = null;
   const tip = topic ? tips[topic] : null;
   const actor = topic && topic !== 'mutation' && topic !== 'ties' ? creatureLabel(board, view.waitingCreature) : '';
   const next = !waiting && !view.over && !historical && Number.isInteger(board.nextEvolutionRound)

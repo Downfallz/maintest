@@ -1773,3 +1773,41 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
   .practice-band { top: 4px; right: 4px; width: min(220px, calc(100% - 8px)); padding: 6px 8px; }
   .practice-band small#practice-goal { display: none; }
 }
+/* A tutorial's coach (ADR 0187): the lesson step of the question asked, low on the field so the creatures it talks
+   about stay in view, and the concept card a step opens. What it points at is ringed in gold. */
+.coach { position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 8; display: grid; gap: 4px; max-width: 420px; margin: 0 auto; padding: 8px 10px;
+  border: 1px solid #b7986866; border-radius: var(--radius-soft); background: #0e1b20f2; color: #f2eee2; box-shadow: 0 6px 18px #0008; }
+.coach[hidden] { display: none; }
+.coach .eyebrow { margin: 0; color: var(--gold); font-size: 10px; letter-spacing: 1.6px; }
+.coach-lines p { margin: 0 0 2px; font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; }
+.coach-cards { display: flex; flex-wrap: wrap; gap: 6px; }
+.coach-cards[hidden] { display: none; }
+.coach-cards button { min-height: 44px; padding: 4px 12px; font-size: 12px; }
+[data-coach="true"] { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: var(--radius-soft); }
+#concept-dialog { width: min(380px, calc(100vw - 32px)); padding: 18px; border: 1px solid #b7986866; border-radius: var(--radius-soft); background: #13232a; color: #f2eee2; box-shadow: 0 18px 40px #000a; }
+#concept-dialog::backdrop { background: #050b0db3; }
+#concept-dialog .eyebrow { margin: 0; color: var(--gold); font-size: 10px; letter-spacing: 1.6px; }
+#concept-dialog h2 { margin: 4px 0 10px; font: 24px/1.15 var(--font-display); }
+.concept-lines p { margin: 0 0 8px; font-size: 15px; line-height: 1.4; }
+.concept-example { margin: 4px 0 8px; padding-left: 10px; border-left: 2px solid var(--gold); color: #e6c88c; font-size: 14px; line-height: 1.4; }
+.concept-rulebook { margin: 0 0 8px; color: #b8c9bd; font-size: 12px; }
+#concept-next { width: 100%; min-height: 44px; margin-top: 8px; }
+.coach-end { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.coach-end[hidden] { display: none; }
+.coach-end button, .coach-end a { display: inline-flex; align-items: center; min-height: 44px; padding: 4px 12px; font-size: 13px; }
+.coach-end a { color: #b8c9bd; }
+/* Targets are chosen on the field itself: the coach card steps aside, and the creature it points at stays ringed. */
+#battle[data-combat="targets"] .coach { display: none; }
+/* On a phone a tutorial's band is one row, so the field under it stays in view: its place in the series, Restart
+   the round and Leave. The coach card says the step, and the briefing its title. */
+@media (max-width: 700px) {
+  #battle[data-tutorial]:not([data-tutorial=""]) .practice-band { display: flex; align-items: center; gap: 8px; left: 4px; width: auto; padding: 2px 8px; }
+  #battle[data-tutorial]:not([data-tutorial=""]) .practice-band .eyebrow { flex: 1; }
+  #battle[data-tutorial]:not([data-tutorial=""]) .practice-band strong, #battle[data-tutorial]:not([data-tutorial=""]) .practice-band small, #battle[data-tutorial]:not([data-tutorial=""]) #practice-brief-open { display: none; }
+  #battle[data-tutorial]:not([data-tutorial=""]) .practice-actions { margin-top: 0; }
+}
+#battle[data-tutorial]:not([data-tutorial=""]) .practice-actions button, #battle[data-tutorial]:not([data-tutorial=""]) .practice-actions a { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
+/* Wider than a phone, the creatures stand low on the field: the coach card takes the top left corner, across from the band. */
+@media (min-width: 701px) {
+  .coach { left: 8px; right: auto; top: 8px; bottom: auto; width: min(360px, 42%); margin: 0; }
+}

@@ -83,7 +83,7 @@ performance still require release measurement.
 node --test studio/*.test.js table/*.test.js
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium
-npm --prefix studio/browser test -- battle-lab.spec.js battle-live.spec.js battle-combat.spec.js battle-playback.spec.js battle-loop.spec.js battle-history.spec.js battle-guidance.spec.js battle-upkeep.spec.js battle-spellbook.spec.js battle-mutations.spec.js battle-evolution.spec.js battle-tempo.spec.js battle-pacing.spec.js battle-growth.spec.js battle-order.spec.js battle-targets.spec.js battle-inspection.spec.js battle-services.spec.js battle-parity.spec.js battle-reactions.spec.js
+npm --prefix studio/browser test -- battle-lab.spec.js battle-live.spec.js battle-combat.spec.js battle-playback.spec.js battle-loop.spec.js battle-history.spec.js battle-guidance.spec.js battle-upkeep.spec.js battle-spellbook.spec.js battle-mutations.spec.js battle-evolution.spec.js battle-tempo.spec.js battle-pacing.spec.js battle-growth.spec.js battle-order.spec.js battle-targets.spec.js battle-inspection.spec.js battle-services.spec.js battle-parity.spec.js battle-reactions.spec.js battle-tutorial.spec.js
 dotnet build
 dotnet test --no-build
 dotnet format --verify-no-changes
@@ -826,3 +826,25 @@ The page opens the seat the host answers with, without the lobby's seat discover
 in the field's top right corner (`#practice-band`) says it is practice, where it began and that the recorded match is
 unchanged; **Restart the round** starts it again from the cut, **Leave** goes to the lobby. Signed out, the page asks
 to sign in.
+
+## A tutorial's coach
+
+A practice whose view carries `practice.tutorial` is a tutorial (ADR 0187, docs/tabletop/onboarding-plan.md, O3b).
+`table/battle-tutorial.js` (pure, `battle-tutorial.test.js`) reads the lesson, and `src/tutorial.ts` draws it:
+
+- The band says **Tutorial n of 4** where a practice says Practice, and the briefing does too. On a phone it is one
+  row: its place in the series, **Restart the round** and **Leave**.
+- The coach card (`#coach`) shows the lesson step of the question asked: the step's place, its two lines, and one
+  button per concept card. It stands low on a phone's field and in the top left corner on a wider screen. It steps
+  aside while results are read and while targets are chosen on the field. What the step points at, a creature or
+  a control (`CONTROLS`, held to the host's `LessonControls.Names`), carries `data-coach="true"` and a gold ring.
+- A step opens its concept cards (`#concept-dialog`, text from `table/concepts.js`) once, before the question's own
+  sheet, one after the other. The coach card's buttons open one again. Nothing is kept: a reload opens them again.
+- An assisted question is not drawn: `withoutAssisted` gives the view without its question, so no sheet, command
+  or tip shows for a kind `assisted` names. Once the host hands the questions back, the list is empty.
+- The phase tips are silent (`battleGuidance` returns no topic in a tutorial). Help keeps the round guide.
+- Once the host says `done`, the coach card says **Tutorial complete**, with **Keep playing** and **Leave the
+  tutorial**; the band keeps saying it.
+
+`battle-tutorial.spec.js` plays tutorial 1's own lesson to its end on a fixture board, at 320 px, 390 px and
+desktop.

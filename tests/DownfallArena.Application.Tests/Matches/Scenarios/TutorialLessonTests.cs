@@ -86,6 +86,10 @@ public sealed class TutorialLessonTests
     public void A_step_may_point_at_a_control() =>
         TutorialLesson.Create(1, "A title", Action, [Step(PlayerOptionsKind.Action) with { PointsAt = new LessonPointer(null, "spells") }]).IsSuccess.ShouldBeTrue();
 
+    [Fact]
+    public void A_step_that_points_at_a_control_the_page_does_not_have_is_refused() =>
+        TutorialLesson.Create(1, "A title", Action, [Step(PlayerOptionsKind.Action) with { PointsAt = new LessonPointer(null, "spellbook") }]).Error.Code.ShouldBe("Tutorial.UnknownControl");
+
     private static LessonStep Step(PlayerOptionsKind kind, int? creature = null) =>
         new(kind, 1, creature is { } one ? CreatureId.From(one) : null, ["A line."], ["health"]);
 }
