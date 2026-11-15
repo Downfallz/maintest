@@ -80,8 +80,17 @@ public static class ScenarioFile
             throw new InvalidDataException($"The scenario's rules are not playable: {failure.Message}", failure);
         }
 
-        var origin = new JournaledMatch(source.Run ?? throw Missing("source.run"), MatchId.From(Guid.Parse(source.Match ?? throw Missing("source.match"))), ruleSet, match.Seed,
-            [.. (match.Roster ?? throw Missing("match.roster")).Select(CreatureDefinitionId.Parse)]);
+        JournaledMatch origin;
+        try
+        {
+            origin = new JournaledMatch(source.Run ?? throw Missing("source.run"), MatchId.From(Guid.Parse(source.Match ?? throw Missing("source.match"))), ruleSet, match.Seed,
+                [.. (match.Roster ?? throw Missing("match.roster")).Select(CreatureDefinitionId.Parse)]);
+        }
+        catch (FormatException failure)
+        {
+            throw new InvalidDataException($"The scenario's match or roster is not written as one: {failure.Message}", failure);
+        }
+
         var before = Entries(file.Before);
         var cut = new ScenarioCut(origin, new RoundCut(source.Round, source.CutAt), before, Entries(file.After),
             new ScenarioCheckpoint(checkpoint.Round, checkpoint.Player1 ?? throw Missing("checkpoint.player1"), checkpoint.Player2 ?? throw Missing("checkpoint.player2")));

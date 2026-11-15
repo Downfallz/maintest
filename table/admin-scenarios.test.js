@@ -5,7 +5,7 @@ import { cutAsked, listingToggle, roundChoices, scenarioRows, shareLink } from '
 test('a scenario is listed by its title, where it was cut from, and its link', () => {
   const [row] = scenarioRows({ scenarios: [{ id: 'sc-1', title: 'Bleed after a stun', goal: 'Keep it alive', session: 's 1', round: 4, seat: 'player2', link: '/battle?scenario=sc-1' }] });
 
-  assert.deepEqual(row, { id: 'sc-1', title: 'Bleed after a stun', goal: 'Keep it alive', facts: 'session s 1 · round 4 · played as player2', session: '/session/s%201', link: '/battle?scenario=sc-1', listed: false });
+  assert.deepEqual(row, { id: 'sc-1', title: 'Bleed after a stun', goal: 'Keep it alive', facts: 'session s 1 · round 4 · played as player2', session: '/session/s%201', link: '/battle?scenario=sc-1', listed: false, shipped: false });
   assert.equal(scenarioRows({ scenarios: [{ id: 'sc-2', round: 3, seat: 'player1', link: '/x' }] })[0].title, 'Round 3');
 });
 
@@ -36,4 +36,12 @@ test('a listed scenario says so and offers to take it off Practice; an unlisted 
 
   assert.deepEqual(listingToggle(listed), { label: 'take off Practice', state: 'Listed under Practice', body: { listed: false } });
   assert.deepEqual(listingToggle(unlisted), { label: 'list under Practice', state: '', body: { listed: true } });
+});
+
+test('a scenario the repository ships names its file, and links no session of this host', () => {
+  const [row] = scenarioRows({ scenarios: [{ id: 'sc-repo-greedy', title: 'A greedy mirror', session: 'elsewhere', round: 3, seat: 'player1', source: 'repository', file: 'greedy.json', link: '/battle?scenario=sc-repo-greedy' }] });
+
+  assert.equal(row.shipped, true);
+  assert.equal(row.facts, 'scenarios/greedy.json · round 3 · played as player1');
+  assert.equal(row.session, null);
 });

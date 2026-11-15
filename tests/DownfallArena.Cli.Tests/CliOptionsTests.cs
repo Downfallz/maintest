@@ -462,6 +462,22 @@ public sealed class CliOptionsTests
         Should.Throw<ArgumentException>(() => CliOptions.Parse(["table", "--round", "4"])).Message.ShouldContain("scenario-cut only");
 
     [Fact]
+    public void A_generated_scenario_reads_its_bots_seed_round_and_words_and_names_its_own_file()
+    {
+        var options = CliOptions.Parse(["scenario-generate", "--p1", "greedy", "--p2", "random", "--seed", "5", "--round", "3", "--seat", "player2", "--title", "T", "--goal", "G"]);
+
+        (options.Player2Named, options.Seed, options.Round, options.Seat, options.Title, options.Goal, options.Output).ShouldBe((true, 5, 3, "player2", "T", "G", string.Empty));
+    }
+
+    [Fact]
+    public void A_generated_scenario_takes_no_session_and_always_carries_its_content()
+    {
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["scenario-generate", "--session", "s"])).Message.ShouldContain("scenario-generate");
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["scenario-generate", "--with-content"])).Message.ShouldContain("scenario-generate");
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["scenario-generate", "--seat", "player3"])).Message.ShouldContain("player3");
+    }
+
+    [Fact]
     public void A_seat_is_one_of_the_two() =>
         Should.Throw<ArgumentException>(() => CliOptions.Parse(["scenario-cut", "--session", "s", "--seat", "player3"])).Message.ShouldContain("player3");
 

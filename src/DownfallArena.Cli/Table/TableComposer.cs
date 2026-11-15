@@ -44,6 +44,9 @@ internal sealed class TableComposer
     private readonly RuleSet _rules;
     private readonly TableContent _own;
     private readonly ConcurrentDictionary<string, Lazy<Task<TableContent?>>> _pinned = new(StringComparer.Ordinal);
+
+    /// <summary>The contents offered without the store, by hash: the ones the repository's scenarios carry.</summary>
+    private readonly ConcurrentDictionary<string, JsonElement> _carried = new(StringComparer.Ordinal);
     private readonly List<Microsoft.Extensions.Hosting.IHost> _pinnedHosts = [];
     private Task? _kept;
     private readonly IArtifactStore? _store;
@@ -286,9 +289,16 @@ internal sealed class TableComposer
     /// </summary>
     internal async Task<(TableContent Content, SteppedHost Stepped)> PlayedOnAsync(string? version, CancellationToken cancellationToken = default)
     {
-        var content = Contents is null ? _own : await ContentOfVersionAsync(version, cancellationToken);
+        var content = Contents is null && (version is null || !_carried.ContainsKey(version)) ? _own : await ContentOfVersionAsync(version, cancellationToken);
         return (content, content.Stepped ?? _stepped);
     }
+
+    /// <summary>
+    /// Offers a content under its hash without the store: the schema a scenario the repository ships carries
+    /// (docs/tabletop/scenarios-plan.md, S7). It is built as a kept one is, and refused the same way when it is not
+    /// the content its hash names.
+    /// </summary>
+    internal void Carry(string version, JsonElement schema) => _carried.TryAdd(version, schema);
 
     private async Task<TableContent> ContentOfVersionAsync(string? content, CancellationToken cancellationToken)
     {
@@ -353,10 +363,13 @@ internal sealed class TableComposer
     /// </summary>
     private async Task<TableContent?> PinnedAsync(string version)
     {
-        var text = await Contents!.Reader(version).ReadTextAsync(ContentFile);
+        // The store's copy first: it is what the recorded tables of that content began on. A scenario file's is read
+        // only where the store keeps none.
+        var text = Contents is { } contents ? await contents.Reader(version).ReadTextAsync(ContentFile) : null;
+        text ??= _carried.TryGetValue(version, out var carried) ? carried.GetRawText() : null;
         if (text is null)
         {
-            Console.WriteLine($"  The content {version} a table began on is not kept: the table is replayed on this host's ({_own.Version}).");
+            Console.WriteLine($"  The content {version} a table or a scenario began on is not kept: it is replayed on this host's ({_own.Version}).");
             return null;
         }
 

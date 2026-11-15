@@ -18,6 +18,7 @@
 !learning/weights/
 !learning/seatable.json
 !models/
+!scenarios/
 
 # Inside what is allowed: what a build makes, and what the page does not ship.
 **/bin/

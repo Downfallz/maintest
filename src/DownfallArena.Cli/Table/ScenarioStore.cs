@@ -9,20 +9,29 @@ namespace DownfallArena.Cli.Table;
 /// <summary>
 /// The match scenarios the operator cut (docs/tabletop/scenarios-plan.md, S4): one <c>scenario.json</c> a scenario,
 /// under an id that sorts by when it was cut, in a store beside the recordings. The content each names is kept
-/// beside them under its hash (ADR 0163), so a scenario does not carry it. Whether the operator listed a scenario for
+/// beside them under its hash (ADR 0163), so a scenario cut here does not carry it. Whether the operator listed a scenario for
 /// signed-in players (S6) is this host's, not the scenario's: it is kept beside it in <see cref="ListingFile" />, never in
-/// the <c>scenario.json</c> a scenario is shared as.
+/// the <c>scenario.json</c> a scenario is shared as. The scenarios the repository ships (S7) are read beside them:
+/// found by their ids and listed first, never removed here and never listed for players.
 /// </summary>
-internal sealed class ScenarioStore(IArtifactStore store, TimeProvider clock)
+internal sealed class ScenarioStore(IArtifactStore store, TimeProvider clock, RepositoryScenarios? shipped = null)
 {
+    private readonly RepositoryScenarios _shipped = shipped ?? RepositoryScenarios.None;
+
     public const string File = "scenario.json";
 
     public const string ListingFile = "listing.json";
 
     private const string Prefix = "sc-";
 
-    /// <summary>A scenario kept: its id, what it is, and whether the operator listed it under Practice.</summary>
-    internal sealed record Kept(string Id, ScenarioDocument Document, bool Listed);
+    /// <summary>
+    /// A scenario kept: its id, what it is, whether the operator listed it under Practice, and the repository's file
+    /// it is when the repository ships it rather than the operator having cut it.
+    /// </summary>
+    internal sealed record Kept(string Id, ScenarioDocument Document, bool Listed, string? File = null);
+
+    /// <summary>Whether an id names a scenario the repository ships, which this host neither removes nor lists.</summary>
+    public bool Ships(string? id) => _shipped.Get(id) is not null;
 
     /// <summary>Keeps a scenario under a new id, which it returns.</summary>
     public async Task<string> PutAsync(ScenarioDocument document, CancellationToken cancellationToken = default)
@@ -42,6 +51,11 @@ internal sealed class ScenarioStore(IArtifactStore store, TimeProvider clock)
             return null;
         }
 
+        if (_shipped.Get(id) is { } shipped)
+        {
+            return shipped.Document;
+        }
+
         var text = await store.Reader(id).ReadTextAsync(File, cancellationToken);
         if (text is null)
         {
@@ -59,11 +73,14 @@ internal sealed class ScenarioStore(IArtifactStore store, TimeProvider clock)
         }
     }
 
-    /// <summary>Every scenario kept, newest first, each with its id and whether it is listed.</summary>
+    /// <summary>
+    /// Every scenario: the repository's in the order of their files, then the ones cut here, newest first, each with
+    /// its id and whether it is listed.
+    /// </summary>
     public async Task<IReadOnlyList<Kept>> ListAsync(CancellationToken cancellationToken = default)
     {
-        var kept = new List<Kept>();
-        foreach (var id in (await store.RunsAsync(cancellationToken)).Where(Names).OrderByDescending(one => one, StringComparer.Ordinal))
+        var kept = _shipped.All.Select(one => new Kept(one.Id, one.Document, Listed: false, one.File)).ToList();
+        foreach (var id in (await store.RunsAsync(cancellationToken)).Where(one => Names(one) && !Ships(one)).OrderByDescending(one => one, StringComparer.Ordinal))
         {
             if (await GetAsync(id, cancellationToken) is { } document)
             {
@@ -77,7 +94,7 @@ internal sealed class ScenarioStore(IArtifactStore store, TimeProvider clock)
     /// <summary>Whether the operator listed a scenario for signed-in players; a scenario is cut unlisted.</summary>
     public async Task<bool> ListedAsync(string id, CancellationToken cancellationToken = default)
     {
-        if (!Names(id) || await store.Reader(id).ReadTextAsync(ListingFile, cancellationToken) is not { } text)
+        if (!Names(id) || Ships(id) || await store.Reader(id).ReadTextAsync(ListingFile, cancellationToken) is not { } text)
         {
             return false;
         }
@@ -96,7 +113,7 @@ internal sealed class ScenarioStore(IArtifactStore store, TimeProvider clock)
     /// <summary>Lists a kept scenario for signed-in players, or takes it off the list: false when no scenario is kept under the id.</summary>
     public async Task<bool> SetListedAsync(string id, bool listed, CancellationToken cancellationToken = default)
     {
-        if (await GetAsync(id, cancellationToken) is null)
+        if (Ships(id) || await GetAsync(id, cancellationToken) is null)
         {
             return false;
         }
@@ -107,7 +124,7 @@ internal sealed class ScenarioStore(IArtifactStore store, TimeProvider clock)
     }
 
     public async Task<bool> DeleteAsync(string id, CancellationToken cancellationToken = default) =>
-        Names(id) && await store.DeleteAsync(id, cancellationToken);
+        Names(id) && !Ships(id) && await store.DeleteAsync(id, cancellationToken);
 
     /// <summary>Whether text is a scenario's id, which also keeps a request from naming anything else in the store.</summary>
     public static bool Names(string? id) =>

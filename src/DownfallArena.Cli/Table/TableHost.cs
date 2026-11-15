@@ -257,13 +257,25 @@ internal static class TableHost
         var stats = accounts is null || results is null ? null : new StatsApi(results, accounts, services.GetRequiredService<IGameResources>());
         // The match scenarios (ADR 0179): cut by the operator from the recorded sessions and kept beside them, and
         // practised by signed-in players in this process's memory, over the services built for their content.
-        var scenarioStore = store is null ? null : await OpenScenariosAsync(options.Record ?? DefaultRunsDirectory, clock, stopping.Token);
+        // The repository's own (S7) are read beside them, each played on the content it carries.
+        var shipped = store is null ? RepositoryScenarios.None : RepositoryScenarios.Read(RepositoryScenarios.DefaultDirectory);
+        foreach (var one in shipped.All)
+        {
+            composer.Carry(one.Document.Content, one.Document.Schema!.Value);
+        }
+
+        var scenarioStore = store is null ? null : await OpenScenariosAsync(options.Record ?? DefaultRunsDirectory, clock, stopping.Token, shipped);
+        if (scenarioStore is not null && shipped.All.Count > 0)
+        {
+            Console.WriteLine($"  Scenarios from {RepositoryScenarios.DefaultDirectory}/: {string.Join(", ", shipped.All.Select(one => one.File))}.");
+        }
+
         await using var practices = scenarioStore is null ? null : new ScenarioPractices(composer, scenarioStore, clock);
         admin.Scenarios = scenarioStore is null || stored is null ? null : new ScenarioAdminApi(scenarioStore, stored, composer) { Notes = admin.Notes };
         using var server = new TableServer(options.Bind, options.Port, registry, new TableFiles(TableDirectory), admin, clock, stored, accounts, leaderboard, friends, stats)
         {
             Tended = options.Tended,
-            Scenarios = scenarioStore is null || practices is null || accounts is null ? null : new ScenariosApi(scenarioStore, practices, accounts),
+            Scenarios = scenarioStore is null || practices is null || accounts is null ? null : new ScenariosApi(scenarioStore, practices, accounts) { Admins = gate.Admins },
             Practices = practices,
         };
 
@@ -429,11 +441,11 @@ internal static class TableHost
     /// Where the match scenarios are kept (ADR 0179), or none when it cannot be opened: the host then cuts and serves
     /// none, which is said, and plays every game as before.
     /// </summary>
-    internal static async Task<ScenarioStore?> OpenScenariosAsync(string target, TimeProvider clock, CancellationToken cancellationToken)
+    internal static async Task<ScenarioStore?> OpenScenariosAsync(string target, TimeProvider clock, CancellationToken cancellationToken, RepositoryScenarios? shipped = null)
     {
         try
         {
-            return new ScenarioStore(await ArtifactStores.OpenScenariosAsync(target, cancellationToken), clock);
+            return new ScenarioStore(await ArtifactStores.OpenScenariosAsync(target, cancellationToken), clock, shipped);
         }
         catch (Exception failure) when (failure is Azure.RequestFailedException or Azure.Identity.AuthenticationFailedException or IOException or UnauthorizedAccessException)
         {

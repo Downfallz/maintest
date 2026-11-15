@@ -1,7 +1,7 @@
 # src/DownfallArena.Cli — the composition root and the hosts
 
 The only place concrete adapters are wired together. It holds the console commands (play, human, simulate,
-evaluate, benchmark, scenario-cut, scenario-check, push-keys), the content studio's HTTP host (`Studio/`,
+evaluate, benchmark, scenario-cut, scenario-check, scenario-generate, push-keys), the content studio's HTTP host (`Studio/`,
 ADR 0015) and the table's (`Table/`, docs/tabletop/playtest-app.md), with `table-tend` and `table-worker`.
 Both hosts are one loopback host plus a route table (`Hosting/HttpHost.cs`).
 
