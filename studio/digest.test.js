@@ -11,6 +11,7 @@ import {
   mergedFromLog,
   noteworthy,
   originRepository,
+  quiet,
   readGitHub,
   render,
   runStatus,
@@ -130,6 +131,20 @@ test('the window defaults to the 24 hours before the run, and a field the facts 
   assert.deepEqual(given.merged, []);
 });
 
+test('git that cannot read main is named, not a crash', async () => {
+  const facts = await gather(
+    { now: NOW },
+    {
+      readMerged: () => {
+        throw new Error('unknown revision origin/main');
+      },
+      readHub: async () => ({ unread: ['PR'] }),
+    },
+  );
+  assert.deepEqual(facts.unread, ['fusions', 'PR']);
+  assert.match(render(facts), /Fusionné \(0\)/);
+});
+
 test('what could not be read is named last', () => {
   assert.match(render({ now: NOW, unread: ['PR', 'nightly'] }), /\n\nNon lu : PR, nightly$/);
 });
@@ -145,12 +160,14 @@ test('a skipped deployment says nothing, and a called one reads its jobs', () =>
   assert.equal(deployStatus([{ name: 'deploy / roll out', status: 'completed', conclusion: 'success' }]), 'green');
   assert.equal(deployStatus([{ name: 'deploy / roll out', status: 'completed', conclusion: 'failure' }]), 'red');
   assert.equal(deployStatus([{ name: 'deploy / roll out', status: 'in_progress', conclusion: null }]), 'running');
+  assert.equal(deployStatus([{ name: 'deploy / roll out', status: 'completed', conclusion: 'cancelled' }]), 'red');
 });
 
 test('a pull request with no check run has no checks to report', () => {
   assert.equal(checksStatus([]), undefined);
   assert.equal(checksStatus([{ status: 'completed', conclusion: 'success' }, { status: 'completed', conclusion: 'skipped' }]), 'green');
   assert.equal(checksStatus([{ status: 'completed', conclusion: 'failure' }]), 'red');
+  assert.equal(checksStatus([{ status: 'completed', conclusion: 'success' }, { status: 'queued', conclusion: null }]), 'running');
 });
 
 test('the repository is the origin on GitHub, and nothing else', () => {
@@ -159,33 +176,74 @@ test('the repository is the origin on GitHub, and nothing else', () => {
   assert.throws(() => originRepository('https://example.com/a/b'));
 });
 
-test('GitHub is read field by field, and a field that fails is named instead of guessed', async () => {
-  const answers = {
-    '/repos/o/r/actions/workflows/ci.yml/runs?branch=main&event=push&per_page=5': {
-      workflow_runs: [
-        { id: 2, status: 'in_progress', html_url: 'u2' },
-        { id: 1, status: 'completed', conclusion: 'success', html_url: 'u1' },
-      ],
-    },
-    '/repos/o/r/actions/runs/2/jobs?filter=latest&per_page=100': { jobs: [{ name: 'deploy', conclusion: 'skipped' }] },
-    '/repos/o/r/actions/runs/1/jobs?filter=latest&per_page=100': {
-      jobs: [{ name: 'deploy / roll out', status: 'completed', conclusion: 'success' }],
-    },
-    '/repos/o/r/issues?state=open&per_page=100': [
-      { number: 7, title: 'main is red', labels: [{ name: 'red-main' }], created_at: 'a' },
-      { number: 8, title: 'Left', labels: [{ name: 'follow-up' }], created_at: 'b' },
-      { number: 9, title: 'A pull request', labels: [{ name: 'follow-up' }], pull_request: {} },
-    ],
-  };
-  const facts = await readGitHub('o/r', async (path) => {
+const RUNS = '/repos/o/r/actions/workflows/ci.yml/runs?branch=main&event=push&per_page=5';
+const jobsOf = (id) => `/repos/o/r/actions/runs/${id}/jobs?filter=latest&per_page=100`;
+const labelled = (label) => `/repos/o/r/issues?state=open&labels=${label}&per_page=100`;
+
+function answering(answers) {
+  return async (path) => {
     if (!(path in answers)) throw new Error(`404 on ${path}`);
     return answers[path];
+  };
+}
+
+const EVERYTHING = {
+  [RUNS]: {
+    workflow_runs: [
+      { id: 2, status: 'in_progress', html_url: 'u2' },
+      { id: 1, status: 'completed', conclusion: 'success', html_url: 'u1' },
+    ],
+  },
+  [jobsOf(2)]: { jobs: [{ name: 'deploy', conclusion: 'skipped' }] },
+  [jobsOf(1)]: { jobs: [{ name: 'deploy / roll out', status: 'completed', conclusion: 'success' }] },
+  '/repos/o/r/actions/workflows/nightly.yml/runs?branch=main&per_page=1': { workflow_runs: [] },
+  [labelled('red-main')]: [{ number: 7, title: 'main is red', created_at: 'a' }],
+  [labelled('red-nightly')]: [],
+  [labelled('follow-up')]: [
+    { number: 8, title: 'Left', created_at: 'b' },
+    { number: 9, title: 'A pull request', created_at: 'c', pull_request: {} },
+  ],
+  [labelled('flaky')]: [],
+  [labelled('ops')]: [],
+  '/repos/o/r/pulls?state=open&per_page=100': [{ number: 5, title: 'Fix', draft: false, head: { sha: 'abc' } }],
+  '/repos/o/r/commits/abc/check-runs?per_page=100': { check_runs: [{ status: 'in_progress', conclusion: null }] },
+};
+
+test('GitHub is read field by field: the runs, the deployment behind a skipped one, the labels, the pull requests', async () => {
+  const facts = await readGitHub('o/r', answering(EVERYTHING));
+  assert.deepEqual(facts.runs, {
+    main: { status: 'running', url: 'u2' },
+    deploy: { status: 'green', url: 'u1' },
+    nightly: { status: 'never' },
   });
-  assert.deepEqual(facts.runs, { main: { status: 'running', url: 'u2' }, deploy: { status: 'green', url: 'u1' } });
   assert.deepEqual(facts.health, [{ number: 7, title: 'main is red', label: 'red-main', createdAt: 'a' }]);
   assert.deepEqual(facts.issues, [{ number: 8, title: 'Left', label: 'follow-up', createdAt: 'b' }]);
-  assert.deepEqual(facts.unread, ['nightly', 'PR']);
+  assert.deepEqual(facts.pullRequests, [{ number: 5, title: 'Fix', draft: false, checks: 'running' }]);
+  assert.deepEqual(facts.unread, []);
+  assert.match(render({ now: NOW, ...facts }), /nightly : jamais lancé/);
+});
+
+test('a field that fails is named instead of guessed, and the deployment is named apart from main', async () => {
+  const { [jobsOf(1)]: _, '/repos/o/r/pulls?state=open&per_page=100': __, ...rest } = EVERYTHING;
+  const facts = await readGitHub('o/r', answering(rest));
+  assert.equal(facts.runs.main.status, 'running');
+  assert.equal(facts.runs.deploy, undefined);
   assert.equal(facts.pullRequests, undefined);
+  assert.deepEqual(facts.unread, ['déploiement', 'PR']);
+});
+
+test('a full page is named, for what lies past it was not read', async () => {
+  const many = Array.from({ length: 100 }, (_, index) => ({ number: index, title: 't', created_at: 'x' }));
+  const facts = await readGitHub('o/r', answering({ ...EVERYTHING, [labelled('ops')]: many }));
+  assert.deepEqual(facts.unread, ['ops au-delà de 100']);
+});
+
+test('nothing read, or a run not green, is never a quiet day', () => {
+  const green = { status: 'green' };
+  assert.equal(quiet({ runs: { main: green, deploy: green, nightly: { status: 'never' } } }), true);
+  assert.doesNotMatch(render({ now: NOW }), /tout est vert/);
+  assert.doesNotMatch(render({ now: NOW, runs: { main: green, deploy: green, nightly: green }, unread: ['PR'] }), /tout est vert/);
+  assert.doesNotMatch(render({ now: NOW, runs: { main: { status: 'running' }, deploy: green, nightly: green } }), /tout est vert/);
 });
 
 test('a busy morning still fits a phone screen', () => {

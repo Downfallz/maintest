@@ -327,7 +327,8 @@ Each stage is one pull request with its tests, and leaves the gate green.
    issues, the open pull requests and their checks, the open follow-ups). It writes one phone screen in French.
    `studio/digest.test.js` tests it. `/digest` runs it and only reads. The scheduled task "Bilan du matin"
    starts a fresh session every day at 6:40 and pushes its answer. That session has no repository and no GitHub
-   tools: it clones `main`, and the script reads through `curl`, which the proxy signs. The REST API does not
+   tools: its prompt, kept in the skill, clones `main` and follows the skill, and the script reads through
+   `curl`, which the proxy signs. The REST API does not
    say whether a review thread is resolved, so a green pull request reads "verte", not "prête". Left: the
    weekly run and the review trigger, one at a time once the digest has run for a week.
 8. **W7, operations.** `ops-report`, the smoke test, the alerts, the runbooks, `/ops`.

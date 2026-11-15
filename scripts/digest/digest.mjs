@@ -3,13 +3,13 @@
 // session's proxy signs the requests; the fresh session the scheduled task starts has no GitHub tools). So the
 // digest reads the same every morning, and studio/digest.test.js can check its shape. It only reads.
 //
-//   git fetch origin main && node scripts/digest/digest.mjs [facts.json]
+//   git fetch origin main:refs/remotes/origin/main && node scripts/digest/digest.mjs [facts.json]
 //
 // The optional facts file adds what only the session tools know, and overrides what the script would read
 // (every field optional; a list left out reads as empty, a run left out as unknown):
 //   now          ISO time of the run. since: start of the window, 24 hours before now by default.
 //   merged       [{number, title}]: read from origin/main's first parents.
-//   runs         {main, deploy, nightly}: each {status: green | red | running, url}, read from Actions.
+//   runs         {main, deploy, nightly}: each {status: green | red | running | never, url}, read from Actions.
 //   health       [{number, title, label}]: the open red-main and red-nightly issues.
 //   pullRequests [{number, title, checks: green | red | running, openThreads, draft}]: the open ones; the REST
 //                API does not say whether a thread is resolved, so openThreads is left out unless given.
@@ -27,7 +27,8 @@ const MAX_TITLE = 60;
 const PR_NUMBER = /\(#(\d+)\)$/;
 const LOOSE_ENDS = ['follow-up', 'flaky', 'ops'];
 const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
-const RUN_WORDS = { green: 'vert', red: 'rouge', running: 'en cours' };
+const RUN_WORDS = { green: 'vert', red: 'rouge', running: 'en cours', never: 'jamais lancé' };
+const PAGE = 100;
 const HEALTH_LABELS = ['red-main', 'red-nightly'];
 const GITHUB_REMOTE = /github\.com[:/]([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+?)(?:\.git)?\/?$/;
 const RUNNING = new Set(['queued', 'pending', 'in_progress', 'requested', 'waiting']);
@@ -86,7 +87,21 @@ export function waitingFor(pullRequest) {
   return null;
 }
 
-// Something is worth a push when it moved or when it waits for the owner; a quiet day says so in one line.
+// A quiet day says so in one line, and only when everything was read and every run is green: a run nobody could
+// read is not green.
+export function quiet(facts) {
+  const runs = facts.runs ?? {};
+  const fine = (run, ...also) => [ 'green', ...also ].includes(run?.status);
+  return (
+    !noteworthy(facts) &&
+    (facts.unread ?? []).length === 0 &&
+    fine(runs.main) &&
+    fine(runs.deploy) &&
+    fine(runs.nightly, 'never')
+  );
+}
+
+// Something is worth a push when it moved or when it waits for the owner.
 export function noteworthy(facts) {
   const runs = facts.runs ?? {};
   return (
@@ -112,7 +127,7 @@ export function render(facts) {
     .sort((a, b) => String(a.createdAt ?? '').localeCompare(String(b.createdAt ?? '')));
 
   const lines = [`Bilan du ${dayLabel(now)}`];
-  if (!noteworthy(facts)) lines.push('Rien de neuf : rien fusionné, tout est vert, rien ne t’attend.');
+  if (quiet(facts)) lines.push('Rien de neuf : rien fusionné, tout est vert, rien ne t’attend.');
 
   lines.push('', `Fusionné (${merged.length})`);
   lines.push(...(merged.length ? capped(merged, (pr) => `  #${pr.number} ${shorten(pr.title)}`) : ['  rien']));
@@ -201,12 +216,17 @@ export async function readGitHub(repository, get = githubGet) {
     }
   };
   const base = `/repos/${repository}`;
+  let mainRuns = null;
 
   await attempt('main', async () => {
     const { workflow_runs: runs } = await get(`${base}/actions/workflows/ci.yml/runs?branch=main&event=push&per_page=5`);
     if (runs.length) facts.runs.main = { status: runStatus(runs[0]), url: runs[0].html_url };
-    for (const run of runs) {
-      const { jobs } = await get(`${base}/actions/runs/${run.id}/jobs?filter=latest&per_page=100`);
+    mainRuns = runs;
+  });
+  await attempt('déploiement', async () => {
+    if (mainRuns === null) throw new Error('main was not read');
+    for (const run of mainRuns) {
+      const { jobs } = await get(`${base}/actions/runs/${run.id}/jobs?filter=latest&per_page=${PAGE}`);
       const status = deployStatus(jobs);
       if (status) {
         facts.runs.deploy = { status, url: run.html_url };
@@ -215,24 +235,28 @@ export async function readGitHub(repository, get = githubGet) {
     }
   });
   await attempt('nightly', async () => {
-    const { workflow_runs: runs } = await get(`${base}/actions/workflows/nightly.yml/runs?per_page=1`);
-    if (runs.length) facts.runs.nightly = { status: runStatus(runs[0]), url: runs[0].html_url };
+    // main only: a dispatch on a feature branch is that branch's experiment, not the nightly's health.
+    const { workflow_runs: runs } = await get(`${base}/actions/workflows/nightly.yml/runs?branch=main&per_page=1`);
+    facts.runs.nightly = runs.length ? { status: runStatus(runs[0]), url: runs[0].html_url } : { status: 'never' };
   });
-  await attempt('issues', async () => {
-    const issues = (await get(`${base}/issues?state=open&per_page=100`)).filter((issue) => !issue.pull_request);
-    const labelled = (labels) =>
-      issues.flatMap((issue) => {
-        const label = issue.labels.map((each) => each.name).find((name) => labels.includes(name));
-        return label ? [{ number: issue.number, title: issue.title, label, createdAt: issue.created_at }] : [];
-      });
-    facts.health = labelled(HEALTH_LABELS);
-    facts.issues = labelled(LOOSE_ENDS);
-  });
+  // One label at a time, so pull requests and other issues never crowd a label out of the page.
+  const health = [];
+  const looseEnds = [];
+  for (const [label, into] of [...HEALTH_LABELS.map((each) => [each, health]), ...LOOSE_ENDS.map((each) => [each, looseEnds])]) {
+    await attempt(label, async () => {
+      const issues = (await get(`${base}/issues?state=open&labels=${label}&per_page=${PAGE}`)).filter((issue) => !issue.pull_request);
+      if (issues.length === PAGE) facts.unread.push(`${label} au-delà de ${PAGE}`);
+      into.push(...issues.map((issue) => ({ number: issue.number, title: issue.title, label, createdAt: issue.created_at })));
+    });
+  }
+  facts.health = health;
+  facts.issues = looseEnds;
   await attempt('PR', async () => {
-    const pulls = await get(`${base}/pulls?state=open&per_page=50`);
+    const pulls = await get(`${base}/pulls?state=open&per_page=${PAGE}`);
+    if (pulls.length === PAGE) facts.unread.push(`PR au-delà de ${PAGE}`);
     const read = [];
     for (const pull of pulls) {
-      const { check_runs: checks } = await get(`${base}/commits/${pull.head.sha}/check-runs?per_page=100`);
+      const { check_runs: checks } = await get(`${base}/commits/${pull.head.sha}/check-runs?per_page=${PAGE}`);
       read.push({ number: pull.number, title: pull.title, draft: pull.draft, checks: checksStatus(checks) });
     }
     facts.pullRequests = read;
@@ -245,8 +269,16 @@ export async function gather(given, { readMerged = mergedSince, readHub = readGi
   const now = new Date(given.now ?? Date.now());
   const since = new Date(given.since ?? now.getTime() - DAY_MS);
   const hub = await readHub(repository);
-  const facts = { ...hub, ...given, runs: { ...hub.runs, ...given.runs }, unread: [...(hub.unread ?? []), ...(given.unread ?? [])] };
-  return { ...facts, now: now.toISOString(), since: since.toISOString(), merged: given.merged ?? readMerged(since) };
+  const unread = [...(hub.unread ?? []), ...(given.unread ?? [])];
+  let merged = given.merged;
+  if (merged === undefined) {
+    try {
+      merged = readMerged(since);
+    } catch {
+      unread.unshift('fusions');
+    }
+  }
+  return { ...hub, ...given, runs: { ...hub.runs, ...given.runs }, unread, now: now.toISOString(), since: since.toISOString(), merged };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
