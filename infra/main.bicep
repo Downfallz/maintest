@@ -754,11 +754,12 @@ resource logAlerts 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = [for ru
   }
 }]
 
+// Deployed under the same condition as its rule, so the rule is there when its identity is read.
 resource logAlertRoles 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for (rule, i) in logRules: if (alertsOn) {
   scope: logs
   name: guid(logs.id, rule.name, logAnalyticsReader)
   properties: {
-    principalId: logAlerts[i].identity.principalId
+    principalId: logAlerts[i]!.identity.principalId
     principalType: 'ServicePrincipal'
     roleDefinitionId: subscriptionResourceId(roleDefinitions, logAnalyticsReader)
   }
