@@ -120,6 +120,13 @@ test('every reviewer it names is an agent with that name', () => {
   }
 });
 
+test('every reviewer reads the range /reviewers gives it, not only the checked-out branch', () => {
+  for (const name of REVIEWERS) {
+    const body = readFileSync(join(root, '.claude/agents', `${name}.md`), 'utf8');
+    assert.ok(body.includes('the range you are given'), name);
+  }
+});
+
 test('no reviewer lists a tool that edits', () => {
   for (const name of REVIEWERS) {
     const tools = frontMatter(name).tools.split(',').map((tool) => tool.trim());

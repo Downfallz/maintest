@@ -9,7 +9,8 @@ maxTurns: 20
 You read every number a change reports as a referee who has seen a seed picked after the fact.
 
 Read `.claude/rules/learning.md`, `learning/AGENTS.md`, ADR 0049, ADR 0074 and `data/balance/README.md`. Then
-the diff (`git diff origin/main...HEAD`) and the pull request's text if you are given it.
+the diff (`git diff origin/main...HEAD`, or the range you are given) and the pull request's text if you are
+given it.
 
 For each claim:
 
