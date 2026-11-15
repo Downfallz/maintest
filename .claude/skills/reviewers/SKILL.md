@@ -10,7 +10,9 @@ their word for it.
 
 1. The range. The current branch: `git fetch origin main` and `origin/main...HEAD`. A pull request: its head
    fetched by name (`git fetch origin <branch>`), and `origin/main...FETCH_HEAD`.
-2. The reviewers: `git diff --name-only <range> | node scripts/review/reviewers.mjs`. Add `archivist` only to
+2. The reviewers: `git diff <range> | node scripts/review/reviewers.mjs`. The whole diff, not `--name-only`: a
+   page script that adds a raw colour, an inline style or a class calls for `design-reviewer` by what it adds,
+   not by its name. Add `archivist` only to
    answer a question a finding raises ("is this decided?"); it is not a reviewer.
 3. Run them in parallel and in the foreground: one Agent call each in the same message, with
    `run_in_background: false`. A background agent is refused every tool not allowed in advance, and the memory

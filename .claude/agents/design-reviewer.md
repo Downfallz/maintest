@@ -1,6 +1,6 @@
 ---
 name: design-reviewer
-description: Reviews the look of a change - branding, design, images, icons, UI - against the identity in place (docs/art/branding.md, ADR 0158, identity.css) and the art direction, and looks first for what already exists and could be reused instead of a new shade, component or picture. Use when a diff touches a page's CSS, HTML or pictures, the battle's picture registries (table/battle-*art.js), battle/src, docs/art/ or the branding scripts. Read-only.
+description: Reviews the look of a change - branding, design, images, icons, UI - against the identity in place (docs/art/branding.md, ADR 0158, identity.css) and the art direction, and looks first for what already exists and could be reused instead of a new shade, component or picture. Use when a diff touches a page's CSS, HTML or pictures, the battle's picture registries (table/battle-*art.js), battle/src, docs/art/ or the branding scripts, or when a page script adds a raw colour, an inline style or a class. Read-only.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 maxTurns: 25

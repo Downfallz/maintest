@@ -319,7 +319,9 @@ Each stage is one pull request with its tests, and leaves the gate green.
    reviewers from the paths. The skill runs them in parallel, in the foreground, without its own reading of the
    change, checks each finding and sorts it (fix now, issue, dismissed). `/stage` calls it.
    `studio/reviewers.test.js` holds the choice, and that no reviewer lists a tool that edits. `design-reviewer`
-   (the brand, the pictures and reuse) joined them on 2026-11-15 and took the identity from `pages-reviewer`.
+   (the brand, the pictures and reuse) joined them on 2026-11-15 and took the identity from `pages-reviewer`;
+   the router reads the whole diff, so a page script that adds a raw colour, an inline style or a class calls
+   for it too (issue #606), and its header holds the checklist for adding a reviewer.
    The memory trial:
    `code-reviewer` and `host-reviewer` carry `memory: project`, which turns Write and Edit on; their prompt holds
    them to `.claude/agent-memory/<agent>/`, committed with the change. Not proven before the first sessions use
