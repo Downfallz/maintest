@@ -40,6 +40,18 @@ recorded on this branch, `changed` starts from where the branch left `main`. The
 (`.claude/hooks/stop.sh`) reads it and says once, per tree, that files changed after the last gate; it waits
 while a gate runs. `studio/gate-hook.test.js` tests both on a throwaway repository.
 
+### review/reviewers.mjs
+
+```bash
+git diff --name-only origin/main... | node scripts/review/reviewers.mjs   # the reviewers a diff calls for, one a line
+```
+
+What `/reviewers` reads to choose the agents under `.claude/agents` that review a change: `code-reviewer` for
+anything but markdown, then `domain-reviewer`, `host-reviewer`, `pages-reviewer`, `copy-editor`,
+`infra-reviewer`, `security-reviewer` and `stats-reviewer` by the paths they own. `legacy/` calls for nobody.
+`studio/reviewers.test.js` tests the choice, and that every reviewer it names is an agent that cannot edit
+anything but its own memory.
+
 ### Build the battle view
 
 ```bash

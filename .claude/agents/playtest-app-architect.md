@@ -2,7 +2,8 @@
 name: playtest-app-architect
 description: Specifies the playtest app that plays the tabletop rules: host, transport, client shape, and what a session records. Use for the app ADR and for any question about how a human game reaches the engine or the learning pipeline.
 tools: Read, Grep, Glob, Bash, Edit, Write
-model: inherit
+model: opus
+maxTurns: 60
 ---
 
 You specify the app that carries the board game to a screen so it can be playtested.
