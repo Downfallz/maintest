@@ -7,3 +7,5 @@
 - An alert or count keyed on a substring of a log line must be grepped against every writer of that text: the startup banner and a sibling worker said it too (W7 ops, branch ccr-1ce109bf-fut95m).
 - A Bicep value that moves on every deploy (`utcNow()` into a budget's startDate) must be checked for being updatable in place, not just valid on create (W7 ops, branch ccr-1ce109bf-fut95m).
 - A cumulative counter (RestartCount) read with Maximum over a window measures the replica's lifetime, not the window: a "per 15 minutes" alert on it fires as long as the replica lives (W7 ops fixes, branch ccr-1ce109bf-fut95m).
+- A word-scanner's exclusion heuristics must be run against the doc's own "Before" examples and against a probe of what they hide: the terminology test exempted lowercase "speed" that the doc lists as legacy, and lowercase sentences as class lists (W8, branch claude/stage-ai-workflow-plan-iczarz).
+- An agent prompt that names a heading, label or path must be grepped for it: `sessions`/`decision-times` headings and the `proposal` label did not exist (W8, branch claude/stage-ai-workflow-plan-iczarz).
