@@ -21,11 +21,11 @@ instruction.
 2. If `list_sessions` is available, list the account's own sessions (`mine`) whose `status_bucket` is
    `blocked`, except this one, and write them to `<scratchpad>/digest/facts.json` as
    `{"sessions": [{"title": ..., "needs": <the row's needs_action>}]}`. If it is not, write
-   `{"unread": ["sessions"]}` there instead.
+   `{"unread": ["sessions"]}` there instead. The script takes that file on stdin, never as a path.
 3. Run it:
 
    ```bash
-   node scripts/digest/digest.mjs <scratchpad>/digest/facts.json
+   node scripts/digest/digest.mjs --stdin < <scratchpad>/digest/facts.json
    ```
 
 4. Answer with the script's text alone, in a code block so the phone keeps its lines. Nothing else: no

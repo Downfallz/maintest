@@ -3,9 +3,9 @@
 // session's proxy signs the requests; the fresh session the scheduled task starts has no GitHub tools). So the
 // digest reads the same every morning, and studio/digest.test.js can check its shape. It only reads.
 //
-//   git fetch origin main:refs/remotes/origin/main && node scripts/digest/digest.mjs [facts.json]
+//   git fetch origin main:refs/remotes/origin/main && node scripts/digest/digest.mjs [--stdin < facts.json]
 //
-// The optional facts file adds what only the session tools know, and overrides what the script would read
+// The optional facts (on stdin, with --stdin) add what only the session tools know, and overrides what the script would read
 // (every field optional; a list left out reads as empty, a run left out as unknown):
 //   now          ISO time of the run. since: start of the window, 24 hours before now by default.
 //   merged       [{number, title}]: read from origin/main's first parents.
@@ -59,9 +59,10 @@ export function mergedFromLog(log) {
 
 function mergedSince(since) {
   // The window is passed as a date git parses, never as text a caller typed.
-  const log = execFileSync('git', ['log', 'origin/main', '--first-parent', `--since=${since.toISOString()}`, '--format=%cI%x09%s'], {
-    encoding: 'utf8',
-  });
+  // NOSONAR below: javascript:S4036, git found on PATH. The PATH is the session container's own, the command name
+  // and its arguments are fixed, and nothing the digest reads reaches them.
+  const args = ['log', 'origin/main', '--first-parent', `--since=${since.toISOString()}`, '--format=%cI%x09%s'];
+  const log = execFileSync('git', args, { encoding: 'utf8' }); // NOSONAR
   return mergedFromLog(log);
 }
 
@@ -129,28 +130,27 @@ export function render(facts) {
   const lines = [`Bilan du ${dayLabel(now)}`];
   if (quiet(facts)) lines.push('Rien de neuf : rien fusionné, tout est vert, rien ne t’attend.');
 
-  lines.push('', `Fusionné (${merged.length})`);
-  lines.push(...(merged.length ? capped(merged, (pr) => `  #${pr.number} ${shorten(pr.title)}`) : ['  rien']));
-
-  const healthOf = (label) => health.find((issue) => issue.label === label);
   lines.push(
     '',
-    [runLine('main', runs.main, healthOf('red-main')), runLine('déploiement', runs.deploy), runLine('nightly', runs.nightly, healthOf('red-nightly'))].join(
-      ' · ',
-    ),
+    `Fusionné (${merged.length})`,
+    ...(merged.length ? capped(merged, (pr) => `  #${pr.number} ${shorten(pr.title)}`) : ['  rien']),
   );
-  for (const run of [runs.main, runs.deploy, runs.nightly]) {
-    if (run?.status === 'red' && run.url) lines.push(`  ${run.url}`);
-  }
+
+  const healthOf = (label) => health.find((issue) => issue.label === label);
+  const runLines = [runLine('main', runs.main, healthOf('red-main')), runLine('déploiement', runs.deploy), runLine('nightly', runs.nightly, healthOf('red-nightly'))];
+  const redUrls = [runs.main, runs.deploy, runs.nightly].filter((run) => run?.status === 'red' && run.url).map((run) => `  ${run.url}`);
+  lines.push('', runLines.join(' · '), ...redUrls);
 
   if (waiting.length) {
-    lines.push('', `PR en attente (${waiting.length})`);
-    lines.push(...capped(waiting, (pr) => `  #${pr.number} ${pr.waits} : ${shorten(pr.title)}`));
+    lines.push('', `PR en attente (${waiting.length})`, ...capped(waiting, (pr) => `  #${pr.number} ${pr.waits} : ${shorten(pr.title)}`));
   }
 
   if (sessions.length) {
-    lines.push('', `Sessions qui attendent une réponse (${sessions.length})`);
-    lines.push(...capped(sessions, (session) => `  ${shorten(session.title)}${session.needs ? ` : ${shorten(session.needs)}` : ''}`));
+    const sessionLine = (session) => {
+      const needs = session.needs ? ' : ' + shorten(session.needs) : '';
+      return `  ${shorten(session.title)}${needs}`;
+    };
+    lines.push('', `Sessions qui attendent une réponse (${sessions.length})`, ...capped(sessions, sessionLine));
   }
 
   if (looseEnds.length) {
@@ -158,8 +158,11 @@ export function render(facts) {
       .filter(([, count]) => count > 0)
       .map(([label, count]) => `${count} ${label}`)
       .join(', ');
-    lines.push('', `Suivis ouverts : ${counts}. Les plus anciens :`);
-    lines.push(...looseEnds.slice(0, 3).map((issue) => `  #${issue.number} ${shorten(issue.title)}`));
+    lines.push(
+      '',
+      `Suivis ouverts : ${counts}. Les plus anciens :`,
+      ...looseEnds.slice(0, 3).map((issue) => `  #${issue.number} ${shorten(issue.title)}`),
+    );
   }
 
   if ((facts.unread ?? []).length) lines.push('', `Non lu : ${facts.unread.join(', ')}`);
@@ -175,7 +178,7 @@ export function runStatus(run) {
 
 export function deployStatus(jobs) {
   const deploy = jobs.filter((job) => job.name === 'deploy' || job.name.startsWith('deploy / '));
-  if (deploy.length === 0 || deploy.every((job) => job.conclusion === 'skipped')) return null;
+  if (!deploy.some((job) => job.conclusion !== 'skipped')) return null;
   if (deploy.some((job) => RED.has(job.conclusion))) return 'red';
   if (deploy.some((job) => job.status !== 'completed')) return 'running';
   return 'green';
@@ -197,7 +200,8 @@ export function originRepository(url) {
 // Through curl, which follows the session's HTTPS proxy and so is signed by it; Node's fetch would go
 // around the proxy, unsigned, and meet the anonymous rate limit of a shared address.
 async function githubGet(path) {
-  const body = execFileSync(
+  // NOSONAR: javascript:S4036, as for git above; the path is built from the origin's owner/name and fixed routes.
+  const body = execFileSync( // NOSONAR
     'curl',
     ['-sS', '--fail', '--max-time', '20', '-H', 'accept: application/vnd.github+json', `https://api.github.com${path}`],
     { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 },
@@ -225,13 +229,11 @@ export async function readGitHub(repository, get = githubGet) {
   });
   await attempt('déploiement', async () => {
     if (mainRuns === null) throw new Error('main was not read');
-    for (const run of mainRuns) {
-      const { jobs } = await get(`${base}/actions/runs/${run.id}/jobs?filter=latest&per_page=${PAGE}`);
-      const status = deployStatus(jobs);
-      if (status) {
-        facts.runs.deploy = { status, url: run.html_url, at: run.created_at };
-        break;
-      }
+    const jobsOf = await Promise.all(mainRuns.map((run) => get(`${base}/actions/runs/${run.id}/jobs?filter=latest&per_page=${PAGE}`)));
+    const index = jobsOf.findIndex(({ jobs }) => deployStatus(jobs) !== null);
+    if (index >= 0) {
+      const run = mainRuns[index];
+      facts.runs.deploy = { status: deployStatus(jobsOf[index].jobs), url: run.html_url, at: run.created_at };
     }
     // A deployment asked by hand (deploy.yml: a rollback, a first deployment) counts when it is the newer one.
     const { workflow_runs: manual } = await get(`${base}/actions/workflows/deploy.yml/runs?per_page=1`);
@@ -249,32 +251,39 @@ export async function readGitHub(repository, get = githubGet) {
   // One label at a time, so pull requests and other issues never crowd a label out of the page.
   const health = [];
   const looseEnds = [];
-  for (const [label, into] of [...HEALTH_LABELS.map((each) => [each, health]), ...LOOSE_ENDS.map((each) => [each, looseEnds])]) {
-    await attempt(label, async () => {
-      const issues = (await get(`${base}/issues?state=open&labels=${label}&per_page=${PAGE}`)).filter((issue) => !issue.pull_request);
-      if (issues.length === PAGE) facts.unread.push(`${label} au-delà de ${PAGE}`);
-      into.push(...issues.map((issue) => ({ number: issue.number, title: issue.title, label, createdAt: issue.created_at })));
-    });
-  }
+  const labels = [...HEALTH_LABELS.map((each) => [each, health]), ...LOOSE_ENDS.map((each) => [each, looseEnds])];
+  await Promise.all(
+    labels.map(([label, into]) =>
+      attempt(label, async () => {
+        const issues = (await get(`${base}/issues?state=open&labels=${label}&per_page=${PAGE}`)).filter((issue) => !issue.pull_request);
+        if (issues.length === PAGE) facts.unread.push(`${label} au-delà de ${PAGE}`);
+        into.push(...issues.map((issue) => ({ number: issue.number, title: issue.title, label, createdAt: issue.created_at })));
+      }),
+    ),
+  );
+  const byNumber = (a, b) => a.number - b.number;
+  health.sort(byNumber);
+  looseEnds.sort(byNumber);
   facts.health = health;
   facts.issues = looseEnds;
   await attempt('PR', async () => {
     const pulls = await get(`${base}/pulls?state=open&per_page=${PAGE}`);
     if (pulls.length === PAGE) facts.unread.push(`PR au-delà de ${PAGE}`);
-    const read = [];
-    for (const pull of pulls) {
-      // Both: a pull_request run checks out the merge commit, and the Actions API lists it by head_sha where the
-      // head commit's check runs do not carry it (as scripts/workflow-metrics.py reads them).
-      const { check_runs: checks } = await get(`${base}/commits/${pull.head.sha}/check-runs?per_page=${PAGE}`);
-      const { workflow_runs: runs } = await get(`${base}/actions/runs?head_sha=${pull.head.sha}&per_page=${PAGE}`);
-      read.push({ number: pull.number, title: pull.title, draft: pull.draft, checks: checksStatus([...checks, ...runs]) });
-    }
-    facts.pullRequests = read;
+    // Both: a pull_request run checks out the merge commit, and the Actions API lists it by head_sha where the
+    // head commit's check runs do not carry it (as scripts/workflow-metrics.py reads them).
+    const statusOf = async (pull) => {
+      const [{ check_runs: checks }, { workflow_runs: runs }] = await Promise.all([
+        get(`${base}/commits/${pull.head.sha}/check-runs?per_page=${PAGE}`),
+        get(`${base}/actions/runs?head_sha=${pull.head.sha}&per_page=${PAGE}`),
+      ]);
+      return { number: pull.number, title: pull.title, draft: pull.draft, checks: checksStatus([...checks, ...runs]) };
+    };
+    facts.pullRequests = await Promise.all(pulls.map(statusOf));
   });
   return facts;
 }
 
-// The facts file wins over what was read, field by field; what it leaves out is read.
+// The given facts win over what was read, field by field; what it leaves out is read.
 export async function gather(given, { readMerged = mergedSince, readHub = readGitHub, repository } = {}) {
   const now = new Date(given.now ?? Date.now());
   const since = new Date(given.since ?? now.getTime() - DAY_MS);
@@ -291,9 +300,11 @@ export async function gather(given, { readMerged = mergedSince, readHub = readGi
   return { ...hub, ...given, runs: { ...hub.runs, ...given.runs }, unread, now: now.toISOString(), since: since.toISOString(), merged };
 }
 
+// The facts come on stdin, and only with --stdin, so the script opens no path a caller names and never waits on a
+// terminal that sends nothing.
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const path = process.argv[2];
-  const given = path ? JSON.parse(readFileSync(path, 'utf8')) : {};
-  const repository = originRepository(execFileSync('git', ['remote', 'get-url', 'origin'], { encoding: 'utf8' }));
+  const given = process.argv.includes('--stdin') ? JSON.parse(readFileSync(0, 'utf8') || '{}') : {};
+  const remote = execFileSync('git', ['remote', 'get-url', 'origin'], { encoding: 'utf8' }); // NOSONAR: S4036, as above
+  const repository = originRepository(remote);
   console.log(render(await gather(given, { repository })));
 }
