@@ -25,8 +25,9 @@ export function tutorialControls(onChange: () => void) {
     text('concept-next', queue.length > 1 ? `Next card · ${queue[1].title}` : 'Back to the battle');
   }
   function open(cards: Concept[]) {
-    if (!cards.length || dialog.open) return;
+    if (!cards.length || dialog.open) return false;
     queue = [...cards]; draw(); dialog.showModal(); onChange();
+    return true;
   }
   el('concept-next').addEventListener('click', () => { queue.shift(); if (queue.length) draw(); else dialog.close(); });
   dialog.addEventListener('close', () => { queue = []; onChange(); });
@@ -44,8 +45,9 @@ export function tutorialControls(onChange: () => void) {
   /** Draws the band and the coach card for this view; `canAuto` says the field is clear for a card to open by itself. */
   function render(view: unknown, { held, canAuto }: { held: boolean; canAuto: boolean }) {
     const lesson = tutorialOf(view);
-    document.getElementById('battle')!.dataset.tutorial = lesson ? String(lesson.order) : '';
     if (lesson) {
+      // Kept until the next practice is opened: a view that is not there yet leaves the band as it reads.
+      document.getElementById('battle')!.dataset.tutorial = String(lesson.order);
       const band = tutorialBand(lesson);
       text('practice-eyebrow', band.eyebrow); text('practice-title', band.title); text('practice-detail', band.detail);
       text('practice-brief-eyebrow', band.eyebrow);
@@ -61,7 +63,8 @@ export function tutorialControls(onChange: () => void) {
       el('coach-lines').replaceChildren(...paragraphs(shown.lines));
       el('coach-cards').replaceChildren(...shown.cards.map((card: Concept) => {
         const button = document.createElement('button'); button.type = 'button'; button.dataset.concept = card.id;
-        button.textContent = `${card.title} ⓘ`; button.setAttribute('aria-label', `What is ${card.title}?`);
+        const mark = document.createElement('span'); mark.setAttribute('aria-hidden', 'true'); mark.textContent = ' ⓘ';
+        button.append(card.title, mark);
         button.addEventListener('click', () => open([card]));
         return button;
       }));
@@ -70,12 +73,13 @@ export function tutorialControls(onChange: () => void) {
     }
     key = nextKey;
     point(shown);
-    if (shown && owed() && canAuto) { opened.add(shown.key); open(shown.cards); }
+    // Read only once it has opened: a step whose cards could not open yet still owes them.
+    if (shown && owed() && canAuto && open(shown.cards)) opened.add(shown.key);
   }
   const owed = () => Boolean(shown && shown.cards.length && !opened.has(shown.key));
   /** Whether a concept card is open or still to open for the step shown: the question's own sheet waits for it. */
   const pending = () => dialog.open || owed();
   /** A new practice teaches its steps again. */
-  function reset() { opened.clear(); key = ''; dismissed = false; if (dialog.open) dialog.close(); }
+  function reset() { document.getElementById('battle')!.dataset.tutorial = ''; opened.clear(); key = ''; dismissed = false; if (dialog.open) dialog.close(); }
   return { render, pending, reset };
 }

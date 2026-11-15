@@ -23,17 +23,17 @@ export const CONCEPTS = Object.freeze([
   ], 'A creature at 1 Energy gains 2 at Upkeep and has 3: enough for a spell that costs 3.'),
   card('defense', 'Defense', '5.8', '58-resolving-an-action', '5.8 Resolving an action', [
     'Defense lowers the damage of every hit a creature takes, never below zero.',
-    'The damage a condition deals at Upkeep ignores it.',
+    'Only damage over time, applied at Upkeep, ignores it.',
   ], 'A hit of 7 on a creature with 2 Defense deals 5. The same hit on a creature with none deals 7.'),
   card('initiative', 'Initiative', '5.5', '55-turn-order-resolution', '5.5 Turn order resolution', [
     'Initiative orders the creatures inside their tempo: the highest acts first.',
     'A creature starts with its base initiative. Each mutation adds its bonus, for the rest of the match.',
-    'A tie between the two teams is settled by a d20.',
+    'A tie between the two teams is settled by a d20 roll-off.',
   ], 'Two Precision creatures at 7 and 5 initiative: the one at 7 acts first.'),
   card('tempo', 'Tempo', '5.4', '54-tempo', '5.4 Tempo', [
-    'Each round, every creature takes a tempo: Instinct or Precision.',
+    'Each round, every creature that is not stunned takes a tempo: Instinct or Precision.',
     'Instinct acts before every Precision creature, and cannot crit this round.',
-    'Precision waits its turn, and keeps the critical roll.',
+    'Precision acts after every Instinct creature, and keeps the critical roll.',
   ], 'An Instinct creature at 5 initiative acts before a Precision creature at 9.'),
   card('critical', 'Critical', '6.7', '67-the-critical-roll', '6.7 The critical roll', [
     'A Precision creature rolls a d20 when its spell resolves, against the number the spell prints.',
@@ -46,17 +46,17 @@ export const CONCEPTS = Object.freeze([
   ], 'You declare a spell that costs 3 on a creature with 3 Energy. Its Energy is not spent until its turn.'),
   card('fizzle', 'Fizzle', '6.1', '61-the-fizzle-and-every-cause-of-it', '6.1 The Fizzle, and every cause of it', [
     'A fizzle is a cast that does nothing, and costs nothing.',
-    'It happens when the caster was defeated or stunned before its turn, or can no longer pay for its spell.',
+    'It happens when the caster is defeated or stunned before its turn, can no longer pay for its spell, or has no legal target.',
   ], 'A creature declared a spell that costs 3, then was drained to 0 Energy before its turn: the spell fizzles.'),
   card('conditions', 'Conditions', '7.1', '71-the-nine-conditions-and-their-timing', '7.1 The nine Conditions and their timing', [
     'A condition is a lasting effect on a creature, with an amount and a number of rounds.',
     'It counts down in the Aftermath of each round, and ends at zero.',
-    'A stunned creature sits out a round. Once that ends, it cannot be stunned again for one round.',
+    'A stunned creature sits out every round the stun lasts. After that, it cannot be stunned again for one round.',
   ], 'A condition of 2 damage over time deals 2 at each Upkeep until it ends, whatever the Defense.'),
   card('mutation', 'Mutation', '5.3', '53-evolution', '5.3 Evolution', [
     'A mutation gives a creature new spells and an initiative bonus, for the rest of the match.',
     'The last mutation of a family, its capstone, gives a passive in place of spells.',
-    'Picks are shared by the team, and a creature takes at most one mutation a round.',
+    'On a mutation round, the team shares its picks, and a creature takes at most one mutation.',
   ], 'A creature at 5 base initiative takes a mutation with a bonus of 1: it knows new spells and acts at 6.'),
 ]);
 

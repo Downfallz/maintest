@@ -1,6 +1,6 @@
 // A tutorial in the battle view (ADR 0187, docs/tabletop/onboarding-plan.md, O3b): what the band says of it, the
 // lesson step the question asked shows, the concept cards that step opens, and the questions the host answers
-// for the person, which the page draws nothing of. Pure: the host says the lesson under `practice.tutorial` of the
+// for the person, which the page does not draw. Pure: the host says the lesson under `practice.tutorial` of the
 // seat's view, and this reads it. Nothing is decided here: a step shows by the question the host asks.
 
 import { conceptCards } from './concepts.js';
@@ -61,8 +61,8 @@ export function lessonStep(view) {
 
 /**
  * The coach card: the step of the question asked, its lines, the concept cards it opens and what it points at;
- * the tutorial's end once the host says it is done; nothing otherwise, or while `held` (results being read, a
- * recorded board), when the question is not on the field yet.
+ * the tutorial's end once the host says it is done; nothing otherwise, and nothing while `held` (results being
+ * read, a recorded board: the question is not on the field yet).
  * @param {{ held?: boolean }} [options]
  */
 export function coachCard(view, { held = false } = {}) {

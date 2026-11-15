@@ -1762,13 +1762,13 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 .practice-actions { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
 .practice-actions button { min-height: 32px; padding: 4px 10px; font-size: 12px; }
 .practice-actions a { color: #b8c9bd; font-size: 12px; }
-#practice-brief { width: min(380px, calc(100vw - 32px)); padding: 18px; border: 1px solid #b7986866; border-radius: var(--radius-soft); background: #13232a; color: #f2eee2; box-shadow: 0 18px 40px #000a; }
-#practice-brief::backdrop { background: #050b0db3; }
-#practice-brief .eyebrow { margin: 0; color: var(--gold); font-size: 10px; letter-spacing: 1.6px; }
-#practice-brief h2 { margin: 4px 0 10px; font: 24px/1.15 var(--font-display); overflow-wrap: anywhere; }
+#practice-brief, #concept-dialog { width: min(380px, calc(100vw - 32px)); padding: 18px; border: 1px solid #b7986866; border-radius: var(--radius-soft); background: #13232a; color: #f2eee2; box-shadow: 0 18px 40px #000a; }
+#practice-brief::backdrop, #concept-dialog::backdrop { background: #050b0db3; }
+#practice-brief .eyebrow, #concept-dialog .eyebrow, .coach .eyebrow { margin: 0; color: var(--gold); font-size: 10px; letter-spacing: 1.6px; }
+#practice-brief h2, #concept-dialog h2 { margin: 4px 0 10px; font: 24px/1.15 var(--font-display); overflow-wrap: anywhere; }
 .practice-brief-goal { margin: 0 0 10px; color: #e6c88c; font-size: 15px; line-height: 1.4; overflow-wrap: anywhere; }
 .practice-brief-start, .practice-brief-note { margin: 0 0 8px; color: #c4d0c7; font-size: 13px; line-height: 1.4; }
-#practice-brief-begin { width: 100%; min-height: 44px; margin-top: 8px; }
+#practice-brief-begin, #concept-next { width: 100%; min-height: 44px; margin-top: 8px; }
 @media (max-width: 619px) {
   .practice-band { top: 4px; right: 4px; width: min(220px, calc(100% - 8px)); padding: 6px 8px; }
   .practice-band small#practice-goal { display: none; }
@@ -1778,24 +1778,18 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 .coach { position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 8; display: grid; gap: 4px; max-width: 420px; margin: 0 auto; padding: 8px 10px;
   border: 1px solid #b7986866; border-radius: var(--radius-soft); background: #0e1b20f2; color: #f2eee2; box-shadow: 0 6px 18px #0008; }
 .coach[hidden] { display: none; }
-.coach .eyebrow { margin: 0; color: var(--gold); font-size: 10px; letter-spacing: 1.6px; }
 .coach-lines p { margin: 0 0 2px; font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; }
 .coach-cards { display: flex; flex-wrap: wrap; gap: 6px; }
 .coach-cards[hidden] { display: none; }
 .coach-cards button { min-height: 44px; padding: 4px 12px; font-size: 12px; }
-[data-coach="true"] { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: var(--radius-soft); }
-#concept-dialog { width: min(380px, calc(100vw - 32px)); padding: 18px; border: 1px solid #b7986866; border-radius: var(--radius-soft); background: #13232a; color: #f2eee2; box-shadow: 0 18px 40px #000a; }
-#concept-dialog::backdrop { background: #050b0db3; }
-#concept-dialog .eyebrow { margin: 0; color: var(--gold); font-size: 10px; letter-spacing: 1.6px; }
-#concept-dialog h2 { margin: 4px 0 10px; font: 24px/1.15 var(--font-display); }
+[data-coach="true"]:not(:focus-visible) { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: var(--radius-soft); }
 .concept-lines p { margin: 0 0 8px; font-size: 15px; line-height: 1.4; }
 .concept-example { margin: 4px 0 8px; padding-left: 10px; border-left: 2px solid var(--gold); color: #e6c88c; font-size: 14px; line-height: 1.4; }
-.concept-rulebook { margin: 0 0 8px; color: #b8c9bd; font-size: 12px; }
-#concept-next { width: 100%; min-height: 44px; margin-top: 8px; }
+.concept-rulebook { margin: 0 0 8px; color: var(--muted); font-size: 12px; }
 .coach-end { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 .coach-end[hidden] { display: none; }
 .coach-end button, .coach-end a { display: inline-flex; align-items: center; min-height: 44px; padding: 4px 12px; font-size: 13px; }
-.coach-end a { color: #b8c9bd; }
+.coach-end a { color: var(--muted); }
 /* Targets are chosen on the field itself: the coach card steps aside, and the creature it points at stays ringed. */
 #battle[data-combat="targets"] .coach { display: none; }
 /* On a phone a tutorial's band is one row, so the field under it stays in view: its place in the series, Restart
@@ -1811,3 +1805,5 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 @media (min-width: 701px) {
   .coach { left: 8px; right: auto; top: 8px; bottom: auto; width: min(360px, 42%); margin: 0; }
 }
+/* A short screen (a phone held sideways) scrolls the card, so its way back stays in reach. */
+#concept-dialog { max-height: calc(100dvh - 32px); overflow-y: auto; }

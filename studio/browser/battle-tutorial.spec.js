@@ -1,6 +1,5 @@
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { openSpells } from './battle-spells-fixture.js';
 import { fitsViewport } from './fit.js';
 import { decided } from './decision.js';
@@ -10,7 +9,7 @@ import { decided } from './decision.js';
 // an assisted question is not drawn, and the phase tips stay silent. The lesson is tutorial 1's own, read from its
 // file; the board and the host's answers are this fixture's.
 test.describe.configure({ mode: 'default' });
-const file = JSON.parse(readFileSync(resolve('../../scenarios/tutorials/your-first-combat.json'), 'utf8'));
+const file = JSON.parse(readFileSync(new URL('../../scenarios/tutorials/your-first-combat.json', import.meta.url), 'utf8'));
 const lesson = file.tutorial;
 const id = 'sc-repo-tutorial-your-first-combat';
 const legal = candidates => ({ candidates, minTargets: 1, maxTargets: 1 });

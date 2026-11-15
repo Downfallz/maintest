@@ -170,7 +170,7 @@ give what is said and when. It reuses everything ADR 0179 built, and the regress
    `history`); `TutorialLesson` refuses another, and the page's list is held to it. `battle-tutorial.spec.js`
    plays tutorial 1's own lesson to its end at 320 px, 390 px and desktop.
 
-   - The spec plays the lesson of the file on a fixture board, with a mock host. No browser journey plays a
+   - The spec plays the lesson in the tutorial's file on a fixture board, with a mock host. No browser journey plays a
      tutorial on the real engine yet: O5's per-tutorial specs are the place for it.
    - A concept card names its rulebook section and does not link to it: the table serves no rulebook page.
    - Nothing is kept: a reloaded page opens the step's cards again.

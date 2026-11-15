@@ -65,7 +65,7 @@ been shown and whether the lesson is done (docs/reference/commands.md).
   step's round.
 - `says` is one or two lines, each 160 characters at most. `concepts` are the concept cards the step opens, among
   `health`, `energy`, `defense`, `initiative`, `tempo`, `critical`, `intent`, `fizzle`, `conditions` and
-  `mutation`. `pointsAt` is left out, or `{ "creature": N }`, or `{ "control": "<name>" }`, the name among `spells`
+  `mutation`. `pointsAt` is omitted, or is `{ "creature": N }`, or is `{ "control": "<name>" }`, the name among `spells`
   (Choose spell), `cast` (Confirm cast), `command` (the mutations or the tie order), `order` (the turn order) and
   `history`.
 
