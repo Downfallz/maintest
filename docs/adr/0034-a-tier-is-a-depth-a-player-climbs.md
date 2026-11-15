@@ -1,7 +1,7 @@
 # 0034. A tier is a depth a player climbs, not a node in the file
 
 Date: 2026-09-13
-Status: Accepted
+Status: Superseded by [0058](0058-a-tier-is-the-package-the-balance-objective-reads.md)
 
 ## Context
 

@@ -1,4 +1,4 @@
-# 0145 — End the match in one moment
+# 0145. End the match in one moment
 
 Date: 2026-11-07
 

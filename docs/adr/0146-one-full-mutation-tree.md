@@ -1,4 +1,4 @@
-# 0146 — One full mutation tree, with spells as cards
+# 0146. One full mutation tree, with spells as cards
 
 Date: 2026-11-07
 

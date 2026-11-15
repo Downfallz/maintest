@@ -1,4 +1,4 @@
-# 0152 — Choose a Stage 3's hybrid by the influences of the creature's other mutations
+# 0152. Choose a Stage 3's hybrid by the influences of the creature's other mutations
 
 Date: 2026-11-08
 

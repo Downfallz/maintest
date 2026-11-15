@@ -23,7 +23,7 @@ public sealed class InstructionFileTests
         "src/DownfallArena.Cli",
     ];
 
-    private static readonly string Root = RepositoryRoot();
+    private static readonly string Root = RepositoryFiles.Root;
 
     [Fact]
     public void Root_agents_file_stays_under_two_hundred_lines()
@@ -80,20 +80,11 @@ public sealed class InstructionFileTests
 
         var unlisted = Directory.EnumerateFiles(docs, "*plan*.md", SearchOption.AllDirectories)
             .Select(path => Path.GetRelativePath(docs, path).Replace('\\', '/'))
+            // A journal entry is named after its title, which may say "plan" without being one (ADR 0183).
+            .Where(relative => !relative.StartsWith("learning/journal/", StringComparison.Ordinal))
             .Where(relative => !index.Contains($"({relative})", StringComparison.Ordinal))
             .Order(StringComparer.Ordinal);
 
         unlisted.ShouldBeEmpty();
-    }
-
-    private static string RepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "DownfallArena.slnx")))
-        {
-            directory = directory.Parent;
-        }
-
-        return directory?.FullName ?? throw new InvalidOperationException("The repository root was not found above the test binaries.");
     }
 }

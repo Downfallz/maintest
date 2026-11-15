@@ -1,4 +1,4 @@
-# 0139 — Confirm every incoming action before the next choice
+# 0139. Confirm every incoming action before the next choice
 
 Date: 2026-11-06
 

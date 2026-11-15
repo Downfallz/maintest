@@ -1,6 +1,6 @@
 # Plan: the AI workflow, from an idea to a merged pull request
 
-Status: accepted in part, 2026-11-14. The owner settled questions 1, 2, 3 and 5 (at the end); W0 to W2 are built.
+Status: accepted in part, 2026-11-14. The owner settled questions 1, 2, 3 and 5 (at the end); W0 to W3 are built.
 Each stage below is one pull request, or one settings change that only the owner can make.
 
 ## What the owner asked for
@@ -294,6 +294,11 @@ Each stage is one pull request with its tests, and leaves the gate green.
    from CI, and the issue.
 4. **W3, the shared files.** The ADR index generated, or dropped for the directory listing. `/adr` fetches
    first, and a test refuses a number used twice. The journal as one file per entry, with a generated index.
+   *Built (2026-11-15, ADR 0183)*: the ADR table is dropped, each file's first line and `Status:` line carry
+   what a row carried, and `AdrFileTests` refuses a number two files share; `/adr` fetches `main` and reads both
+   sides before it takes a number; the journal's 233 entries are files under `docs/learning/journal/`, named by
+   date, order in the day and slug, held by `JournalFileTests`. Neither index is committed: one command prints
+   each, because a generated file two branches regenerate conflicts like one edited by hand.
 5. **W4, the pipeline.** `/plan`, `/stage`, `/ship`, `/wrap-up`, `/browser-check`, the new `/verify`, the
    `Stop` hook.
 6. **W5, the reviewers.** The agents, `/review`, the memory trial.

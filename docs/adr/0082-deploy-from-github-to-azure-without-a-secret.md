@@ -2,7 +2,7 @@
 
 Date: 2026-09-27
 
-Status: Accepted
+Status: Accepted, amended by [0160](0160-run-the-table-outside-a-virtual-network.md)
 
 ## Context
 

@@ -1,4 +1,4 @@
-# 0154 — Record the critical roll as a d20 face, and show the field's dice
+# 0154. Record the critical roll as a d20 face, and show the field's dice
 
 Date: 2026-11-08
 
