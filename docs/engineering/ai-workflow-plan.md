@@ -67,7 +67,7 @@ measures them, and every stage that adds agents or scheduled runs spends from th
 ## The shape
 
 ```text
-idea, from a phone -> /plan -> the plan's pull request -> the owner settles its questions
+idea, from a phone -> /new-plan -> the plan's pull request -> the owner settles its questions
   -> one session per stage: /stage -> gate -> /reviewers -> /ship -> Codex -> green -> merge -> /wrap-up
   -> every morning: what merged, what is red, what waits for the owner
 ```
@@ -131,7 +131,7 @@ Path-scoped rules stay for what spans directories with no common parent. One hom
 
 | Skill | Does | Why |
 | --- | --- | --- |
-| `/plan <idea>` | Writes a plan in the shape of `docs/tabletop/admin-plan.md` and asks its open questions as choices to tap | 11 plans in 300 pull requests, each shaped by hand. |
+| `/new-plan <idea>` | Writes a plan in the shape of `docs/tabletop/admin-plan.md` and asks its open questions as choices to tap | 11 plans in 300 pull requests, each shaped by hand. |
 | `/stage <plan> <id>` | Makes a fresh session productive in one line: reads that stage and the ADRs it names, branches from `origin/main`, tests first | Sessions are reused because a new one needs a long prompt. |
 | `/ship` | The standing orders as steps. Reports ready only on green, with no open thread | "Ouvre pr", "abonne toi", "Codex". |
 | `/reviewers [pr]` | Picks the reviewers from the paths touched, checks each finding, sorts them: fix now, issue, dismissed | The subagents exist and are not called. |
@@ -246,7 +246,7 @@ most, started by a clock, an API call or a GitHub event. One is added at a time.
 
 - `copy-editor` reads every pull request that changes `docs/**`, a page's text or the rulebook.
 - A test holds player-facing strings to the Player-facing EN column of `player-terminology.md`.
-- French: the FR column exists and every page says `lang="en"`. A locale is a feature for `/plan`.
+- French: the FR column exists and every page says `lang="en"`. A locale is a feature for `/new-plan`.
 
 ### Design
 
