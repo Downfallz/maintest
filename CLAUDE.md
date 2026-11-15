@@ -17,15 +17,15 @@
   `boardgame-director` (what survives the table), `tabletop-mathematician` (measures a candidate rule set),
   `component-designer` (what is in the box), `rulebook-writer` (the rulebook and the player aid),
   `playtest-app-architect` (the app ADR). Use them for their purpose instead of doing it all inline.
-- Skills in `.claude/skills/`: the pipeline from an idea to a merged pull request (docs/engineering/ai-workflow-plan.md):
-  `/new-plan` (an idea becomes a plan; `/plan` is Claude Code's plan mode), `/stage` (one stage in a fresh session),
-  `/verify` (the gate, chosen from the diff), `/reviewers` (the reviewers the diff calls for), `/browser-check` (the
-  browser specs the diff calls for), `/ship` (the standing orders), `/wrap-up` (loose ends become issues, the
-  next stage's prompt). And `/digest` (the morning digest, run daily at 6:40, Montreal time, by a scheduled task),
-  `/ops` (the production report, ADR 0186), `/proposals` (product and
-  operations proposals, as issues labelled `proposal`), `/retro` (the week's numbers and recurring findings, as a
-  pull request on the rules and skills), `/adr`, `/new-aggregate`, `/spells-report` (the spells the bots cast
-  and leave, republished to the owner's report page).
+- Skills in `.claude/skills/`: the pipeline from an idea to a merged pull request
+  (docs/engineering/ai-workflow-plan.md): `/new-plan` (an idea becomes a plan; `/plan` is Claude Code's plan
+  mode), `/stage` (one stage in a fresh session), `/verify` (the gate, chosen from the diff), `/reviewers` (the
+  reviewers the diff calls for), `/browser-check` (the browser specs the diff calls for), `/ship` (the standing
+  orders), `/wrap-up` (loose ends become issues, the next stage's prompt). And `/digest` (the morning digest, run
+  daily at 6:40, Montreal time, by a scheduled task), `/ops` (the production report, ADR 0186), `/proposals`
+  (product and operations proposals, as issues labelled `proposal`), `/retro` (the week's numbers and recurring
+  findings, as a pull request on the rules and skills), `/adr`, `/new-aggregate`, `/spells-report` (the spells the
+  bots cast and leave, republished to the owner's report page).
 - The `Stop` hook (`.claude/hooks/stop.sh`) says once, per tree, when code changed after the last green gate:
   run `/verify`, or say plainly that the gate was not run.
 - `.claude/hooks/session-start.sh` installs the .NET SDK on Claude Code on the web when it is missing. It

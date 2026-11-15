@@ -31,6 +31,8 @@ The two agents only read and propose. The session checks, files and answers. Not
 6. Answer the owner in French, on a phone's screen: one line a proposal filed, with its number, its size and
    the agent; then one line a proposal dropped and why. Nothing else.
 
+The `proposal` label is created by the first issue that carries it, if the repository does not have it yet.
+
 ## Rules
 
 - At most five issues a run. A proposal the owner wants built becomes a plan (`/new-plan`), not a pull request
