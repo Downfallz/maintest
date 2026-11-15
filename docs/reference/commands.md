@@ -49,8 +49,9 @@ git diff --name-only origin/main... | node scripts/review/reviewers.mjs   # the 
 What `/reviewers` reads to choose the agents under `.claude/agents` that review a change: `code-reviewer` for
 anything but markdown, then `domain-reviewer`, `host-reviewer`, `pages-reviewer`, `copy-editor`,
 `infra-reviewer`, `security-reviewer` and `stats-reviewer` by the paths they own. `legacy/` calls for nobody.
-`studio/reviewers.test.js` tests the choice, and that every reviewer it names is an agent that cannot edit
-anything but its own memory.
+`studio/reviewers.test.js` tests the choice, that every reviewer it names is an agent that lists no tool that
+edits, and that the two that keep a memory name its folder in their prompt: a memory turns Write and Edit on, and
+only the prompt holds them to `.claude/agent-memory/<agent>/`.
 
 ### Build the battle view
 

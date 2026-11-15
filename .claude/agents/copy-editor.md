@@ -1,6 +1,6 @@
 ---
 name: copy-editor
-description: Edits the English of docs, the rulebook and the pages' text against .claude/rules/docs.md and player-terminology.md, and French against its FR column. Use on a change to docs/**, any markdown, or a page's words. Read-only; it proposes the text.
+description: Edits the English of docs, the rulebook and the pages' text against .claude/rules/docs.md and player-terminology.md, and French against its FR column. Use on a change to docs/**, any markdown, or a page's HTML. Read-only; it proposes the text.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 maxTurns: 20

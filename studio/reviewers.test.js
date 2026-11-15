@@ -58,6 +58,41 @@ test('a docs-only change gets the copy editor and no code reviewer', () => {
   assert.deepEqual(reviewersFor(['docs/tabletop/rulebook.md']), ['copy-editor']);
 });
 
+test('the host process and its sign-in plumbing get the security reviewer', () => {
+  assert.deepEqual(reviewersFor(['src/DownfallArena.Cli/Table/TableServer.cs']), [
+    'code-reviewer',
+    'host-reviewer',
+    'security-reviewer',
+  ]);
+  assert.deepEqual(reviewersFor(['src/DownfallArena.Cli/Hosting/HttpHost.cs']), ['code-reviewer', 'security-reviewer']);
+});
+
+test('the application side of tables and accounts gets the host reviewer, and accounts the security reviewer', () => {
+  assert.deepEqual(reviewersFor(['src/DownfallArena.Application/Tables/OpenTable.cs']), ['code-reviewer', 'host-reviewer']);
+  assert.deepEqual(reviewersFor(['src/DownfallArena.Application/Accounts/Suspension.cs']), [
+    'code-reviewer',
+    'host-reviewer',
+    'security-reviewer',
+  ]);
+});
+
+test('a session that signs nobody in is not a security change', () => {
+  assert.deepEqual(reviewersFor(['src/DownfallArena.Cli/GameSession.cs']), ['code-reviewer']);
+  assert.deepEqual(reviewersFor(['src/DownfallArena.Cli/Table/SteppedSession.cs']), ['code-reviewer', 'host-reviewer']);
+});
+
+test('what decides what CI and the local gate run gets the infrastructure reviewer', () => {
+  for (const path of ['studio/browser/plan.js', 'scripts/verify.sh', 'scripts/gate/state.sh']) {
+    assert.deepEqual(reviewersFor([path]), ['code-reviewer', 'infra-reviewer'], path);
+  }
+});
+
+test('an agent, a skill or a rule is behaviour: it gets the code reviewer besides the copy editor', () => {
+  for (const path of ['.claude/agents/host-reviewer.md', '.claude/skills/ship/SKILL.md', '.claude/rules/host.md']) {
+    assert.deepEqual(reviewersFor([path]), ['code-reviewer', 'copy-editor'], path);
+  }
+});
+
 test('the frozen prototypes call for nobody', () => {
   assert.deepEqual(reviewersFor(['legacy/arena/index.html']), []);
 });
@@ -85,12 +120,21 @@ test('every reviewer it names is an agent with that name', () => {
   }
 });
 
-test('a reviewer cannot edit, unless it keeps a memory', () => {
+test('no reviewer lists a tool that edits', () => {
+  for (const name of REVIEWERS) {
+    const tools = frontMatter(name).tools.split(',').map((tool) => tool.trim());
+    assert.ok(!tools.includes('Edit') && !tools.includes('Write'), `${name} lists ${tools.join(', ')}`);
+  }
+});
+
+test('a reviewer that keeps a memory keeps it in the repository, and its prompt holds its writes to that folder', () => {
   for (const name of REVIEWERS) {
     const fields = frontMatter(name);
-    const tools = fields.tools.split(',').map((tool) => tool.trim());
-    // A memory turns on Read, Write and Edit for the agent's own memory folder (.claude/agent-memory/<name>).
-    if (fields.memory) continue;
-    assert.ok(!tools.includes('Edit') && !tools.includes('Write'), `${name} lists ${fields.tools}`);
+    if (!fields.memory) continue;
+    // memory turns Write and Edit on for the agent; only its prompt keeps them to its own folder.
+    assert.equal(fields.memory, 'project', name);
+    const body = readFileSync(join(root, '.claude/agents', `${name}.md`), 'utf8');
+    assert.ok(body.includes(`\`.claude/agent-memory/${name}/\``), `${name} names its memory folder`);
+    assert.ok(body.includes('is the only thing you write'), `${name} holds its writes to it`);
   }
 });

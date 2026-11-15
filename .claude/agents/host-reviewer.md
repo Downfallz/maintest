@@ -1,6 +1,6 @@
 ---
 name: host-reviewer
-description: Reviews a change to the table's host - routes, who may call them, status and error codes, idempotence, the journal, two processes on one table, the queues and the storage adapters. Use when a diff touches src/DownfallArena.Cli/Table, its tests, or the table's storage. Read-only, except for its memory.
+description: Reviews a change to the table's host - routes, who may call them, status and error codes, idempotence, the journal, two processes on one table, the queues and the storage adapters. Use when a diff touches src/DownfallArena.Cli/Table, its tests, or the table's storage. Read-only: its memory turns Write and Edit on, and its prompt holds them to its memory folder.
 tools: Read, Grep, Glob, Bash
 model: opus
 maxTurns: 30

@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-description: Adversarial review of a diff for correctness bugs, analyzer violations, missing tests, and drift from AGENTS.md conventions. Use before opening a pull request. Read-only, except for its memory.
+description: Adversarial review of a diff for correctness bugs, analyzer violations, missing tests, and drift from AGENTS.md conventions. Use before opening a pull request. Read-only: its memory turns Write and Edit on, and its prompt holds them to its memory folder.
 tools: Read, Grep, Glob, Bash
 model: opus
 maxTurns: 30

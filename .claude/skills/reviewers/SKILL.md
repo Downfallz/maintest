@@ -12,7 +12,9 @@ their word for it.
    fetched by name (`git fetch origin <branch>`), and `origin/main...FETCH_HEAD`.
 2. The reviewers: `git diff --name-only <range> | node scripts/review/reviewers.mjs`. Add `archivist` only to
    answer a question a finding raises ("is this decided?"); it is not a reviewer.
-3. Run them in parallel, in the background, one Agent call each in the same message. Each prompt gives only the
+3. Run them in parallel and in the foreground: one Agent call each in the same message, with
+   `run_in_background: false`. A background agent is refused every tool not allowed in advance, and the memory
+   writes of `code-reviewer` and `host-reviewer` are not. Each prompt gives only the
    range and the pull request's text, never your own reading of the change, so the review is not anchored on it.
 4. Check every finding before you act on it: open the file at the line, and confirm the failure it claims (a
    test that fails, a path through the code, a rule it breaks). A finding that does not hold is dismissed, with
