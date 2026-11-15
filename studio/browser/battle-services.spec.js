@@ -90,6 +90,8 @@ test('the result reports what each creature did, its creature of the match first
   const report = page.locator('#match-report');
   await expect(report).toBeVisible();
   await expect(page.locator('#match-mvp')).toContainText('Creature 1'); await expect(page.locator('#match-mvp')).toContainText('25 damage · 2 KO');
+  // Drawn as it ended the match, with the illustration its mutations gave it (the base one here, none bought).
+  await expect(page.locator('#match-mvp img')).toHaveAttribute('src', 'battle-art/evolutions/base-creature.webp');
   const first = page.locator('.match-report-table[data-side="ally"] tr[data-report-creature="1"]');
   await expect(first.locator('td').nth(0)).toContainText('25'); await expect(first.locator('td').nth(0)).toContainText('4 bleed');
   await expect(first).toHaveAttribute('data-mvp', 'true');
@@ -106,6 +108,17 @@ test('the result reports what each creature did, its creature of the match first
   await page.screenshot({ path: info.outputPath('battle-report.png') });
   expect(h.errors).toEqual([]);
 });
+test('an illustration that does not load leaves the creature\'s figure in the zoom, not an empty picture', async ({ page }) => {
+  await page.route('**/battle-art/evolutions/**', route => route.fulfill({ status: 404, body: '' }));
+  await mount(page, { feed: reported }); await matchResult(page);
+
+  await page.locator('.match-report-table[data-side="ally"] tr[data-report-creature="3"] .match-zoom-open').click();
+
+  const picture = page.locator('#match-zoom-close');
+  await expect(picture).toBeVisible();
+  await expect.poll(() => picture.evaluate(one => one.style.backgroundImage)).toContain('battle-art/base-creature.webp');
+  await expect.poll(() => page.locator('#match-mvp img').evaluate(one => one.getAttribute('src'))).toBe('battle-art/base-creature.webp');
+});
 test('a creature of the report shows its illustration large, as the inspection does, and Escape gives the report back', async ({ page }, info) => {
   await mount(page, { feed: reported }); await matchResult(page);
   const zoom = page.locator('#match-zoom'), picture = page.locator('#match-zoom-close');
@@ -115,7 +128,8 @@ test('a creature of the report shows its illustration large, as the inspection d
   await fallen.click();
   await expect(zoom).toBeVisible(); await expect(picture).toBeFocused();
   await expect(picture).toHaveAttribute('data-defeated', 'true');
-  expect(await picture.evaluate(one => one.style.backgroundImage)).toMatch(/battle-art\/.+\.webp/);
+  // The illustration its mutations gave it, once loaded (the base one here, none bought).
+  await expect.poll(() => picture.evaluate(one => one.style.backgroundImage)).toContain('battle-art/evolutions/base-creature.webp');
   await page.screenshot({ path: info.outputPath('report-zoom.png') });
   await page.keyboard.press('Escape');
   await expect(zoom).toBeHidden(); await expect(page.locator('#match-dialog')).toBeVisible(); await expect(fallen).toBeFocused();
@@ -248,4 +262,97 @@ test('a friend is invited to the rematch at once; anyone else opens the lobby on
   h = await mount(page, { opponent: friend }); await matchResult(page);
   await expect(page.locator('#match-rematch')).toHaveText('Invite to rematch'); await page.locator('#match-rematch').click();
   await page.waitForURL(/\/lobby\?rematch=acct_bastienbastienba&format=3v3$/); expect(h.writes).toEqual([]);
+});
+
+// A match scenario's practice (ADR 0179): /battle?scenario=<id> resumes the account's practice or starts one from the
+// cut, says so in a band over the field, and Restart the round starts it again from the cut.
+async function practise(page, { signedIn = true, resumed = false, asked = false } = {}) {
+  const state = { asked: [], errors: [] };
+  page.on('pageerror', error => state.errors.push(error.message));
+  const view = { over: false, recording: false, waitingFor: null, feed: [], feedNext: 0, practice: { scenario: 'sc-1', title: 'Bleed after a stun', goal: 'Keep Creature 5 alive', round: 4 },
+    board: { slot: 'Player2', roundNumber: 4, phase: 'Planning', subPhase: 'Speed', allies: [creature(4, 20), creature(5, 9)], enemies: [creature(1, 18), creature(2, 12)], timeline: [], speedChoices: [] } };
+  if (asked) Object.assign(view, { waitingFor: 'Speed', waitingAsked: 3, waitingCreature: 4, options: { speed: { missing: [4, 5] } } });
+  let opened = resumed ? 1 : 0;
+  await page.route('**/api/**', async route => {
+    const req = route.request(), url = new URL(req.url());
+    if (url.pathname === '/api/scenarios/sc-1/practice') {
+      state.asked.push(req.method());
+      if (!signedIn) return route.fulfill({ status: 401, json: { error: 'Account.SignInRequired', message: 'Sign in to practise a scenario.' } });
+      if (req.method() === 'GET' && opened === 0) return route.fulfill({ status: 404, json: { error: 'Scenario.NoPractice', message: 'None.' } });
+      if (req.method() === 'POST') opened++;
+      return route.fulfill({ json: { seat: 'player2', token: `practice-${opened}`, table: { id: 'practice-sc-1', format: '2v2', seats: [{ seat: 'player2', name: 'Learner', kind: 'person' }, { seat: 'player1', name: 'Recorded opponent', kind: 'bot' }] }, practice: view.practice } });
+    }
+    if (url.pathname === '/api/me') return route.fulfill({ json: { accounts: 'dev', account: signedIn ? { id: 'acct_learnerlearnerlea', username: 'Learner' } : null } });
+    if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [], packages: [] } });
+    if (url.pathname === '/api/seat/player2') { state.asked.push(`seat:${req.headers()['x-seat-token']}`); return route.fulfill({ json: view }); }
+    if (url.pathname.endsWith('/events')) return route.fulfill({ status: 204 });
+    return route.fulfill({ status: 404, json: {} });
+  });
+  await page.goto('/table/battle.html?scenario=sc-1');
+  return state;
+}
+test('a scenario opens as practice from its cut, says so over the field, and restarts from the cut', async ({ page }, info) => {
+  const state = await practise(page);
+  const band = page.locator('#practice-band');
+  await expect(band).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('#practice-title')).toHaveText('Bleed after a stun');
+  await expect(page.locator('#practice-detail')).toHaveText('From the top of round 4 · the recorded match is unchanged');
+  await expect(page.locator('#round-number')).toHaveText('04');
+  // Started from its cut, it opens on its briefing (S6): what it is, what it asks, the seat, and that nothing counts.
+  const brief = page.locator('#practice-brief');
+  await expect(brief).toBeVisible();
+  await expect(page.locator('#practice-brief-title')).toHaveText('Bleed after a stun');
+  await expect(page.locator('#practice-brief-goal')).toHaveText('Keep Creature 5 alive');
+  await expect(page.locator('#practice-brief-start')).toHaveText('You play player 2 from the top of round 4, against the recorded opponent.');
+  await page.screenshot({ path: info.outputPath('practice-brief.png') });
+  await page.locator('#practice-brief-begin').click();
+  await expect(brief).toBeHidden();
+  // No practice yet: asked for the account's, then one started from the cut, and its seat read with its own token.
+  expect(state.asked.slice(0, 2)).toEqual(['GET', 'POST']);
+  expect(state.asked).toContain('seat:practice-1');
+  await page.screenshot({ path: info.outputPath('practice-band.png') });
+  await page.locator('#practice-restart').click();
+  await expect.poll(() => state.asked.filter(one => one === 'POST').length).toBe(2);
+  await expect.poll(() => state.asked.includes('seat:practice-2')).toBe(true);
+  await expect(band).toBeVisible();
+  await expect(brief).toBeVisible();
+  await page.locator('#practice-brief-begin').click();
+  // The band's Briefing shows the card again.
+  await page.locator('#practice-brief-open').click();
+  await expect(brief).toBeVisible();
+  await page.locator('#practice-brief-begin').click();
+  await expect(brief).toBeHidden();
+  await expect(page.locator('#practice-leave')).toHaveAttribute('href', '/');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  expect(state.errors).toEqual([]);
+});
+// Escape closes the briefing as Begin does, and what the field held back behind it (here the tempos the person is
+// asked) comes forward without anything else happening.
+test('a briefing closed with Escape lets the field go on to the question it held back', async ({ page }) => {
+  const state = await practise(page, { asked: true });
+  const brief = page.locator('#practice-brief');
+  await expect(brief).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
+  await expect(page.locator('#planning-dialog')).toBeHidden();
+
+  await page.keyboard.press('Escape');
+
+  await expect(brief).toBeHidden();
+  await expect(page.locator('#planning-dialog')).toBeVisible();
+  expect(state.errors).toEqual([]);
+});
+test('a practice resumed after a reload goes on where it was, without its briefing', async ({ page }) => {
+  const state = await practise(page, { resumed: true });
+  await expect(page.locator('#practice-band')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('#round-number')).toHaveText('04');
+  expect(state.asked.slice(0, 1)).toEqual(['GET']);
+  expect(state.asked).not.toContain('POST');
+  await expect(page.locator('#practice-brief')).toBeHidden();
+  expect(state.errors).toEqual([]);
+});
+test('a scenario asks a player who is not signed in to sign in, and shows no practice', async ({ page }) => {
+  const state = await practise(page, { signedIn: false });
+  await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'signin', { timeout: 10000 });
+  await expect(page.locator('#practice-band')).toBeHidden();
+  expect(state.errors).toEqual([]);
 });

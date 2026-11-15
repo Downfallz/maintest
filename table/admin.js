@@ -9,9 +9,12 @@
 import { mountJobs } from './admin-jobs.js';
 import { mountSettings } from './admin-settings.js';
 import { mountOverview } from './admin-overview.js';
+import { mountActivity } from './admin-activity.js';
 import { mountPlayers } from './admin-players.js';
 import { mountTurns } from './admin-turns.js';
 import { mountVoid, voidLabel } from './admin-void.js';
+import { mountScenarios } from './admin-scenarios.js';
+import { mountDiagnosis } from './admin-diagnosis.js';
 
 const POLL_MS = 2500;
 
@@ -269,7 +272,7 @@ export const SESSIONS_PER_PAGE = 20;
 
 // The headquarters' sections, each one part of the address (`/admin#sessions`), so a reload or a link opens it and
 // Back moves between them. The first is where the page opens.
-export const ADMIN_TABS = Object.freeze(['overview', 'tables', 'sessions', 'players', 'jobs', 'settings']);
+export const ADMIN_TABS = Object.freeze(['overview', 'tables', 'sessions', 'scenarios', 'players', 'jobs', 'activity', 'settings']);
 
 /** The section an address names, or the first one for an address that names none the page has. */
 export function tabOf(hash) {
@@ -404,6 +407,14 @@ function card(row, transport, redraw) {
 function cardActions(row, transport, redraw) {
   if (!row.closable) return [];
   const actions = [];
+  if (openDiagnosis) {
+    const diagnose = document.createElement('button');
+    diagnose.type = 'button';
+    diagnose.className = 'close';
+    diagnose.textContent = 'Diagnose…';
+    diagnose.addEventListener('click', () => openDiagnosis({ id: row.id, players: row.seats.map(seat => `${seat.slot}: ${seat.seated}`).join(' · ') }));
+    actions.push(diagnose);
+  }
   if (openVoid) {
     const voiding = document.createElement('button');
     voiding.type = 'button';
@@ -427,6 +438,12 @@ function cardActions(row, transport, redraw) {
 
 // The Void sheet's opener, once the page has mounted it (ADR 0176): a table card and a session row offer it.
 let openVoid = null;
+
+// The scenario sheet's opener (ADR 0179), once the page has mounted it: a session row not being played offers it.
+let openScenario = null;
+
+// The Diagnose sheet's opener (scenarios plan, S5b), once the page has mounted it: a table card offers it.
+let openDiagnosis = null;
 
 function sessionItem(row, transport) {
   const item = document.createElement('li');
@@ -464,6 +481,14 @@ function sessionItem(row, transport) {
     voiding.textContent = 'void…';
     voiding.addEventListener('click', () => openVoid({ id: row.id, players: row.players, over: row.finished }));
     links.append(voiding);
+  }
+  if (!row.live && openScenario) {
+    const practise = document.createElement('button');
+    practise.type = 'button';
+    practise.className = 'link-button';
+    practise.textContent = 'practice from a round…';
+    practise.addEventListener('click', () => openScenario({ id: row.id, players: row.players }));
+    links.append(practise);
   }
   if (row.location) links.append(Object.assign(document.createElement('span'), { className: 'muted', textContent: row.location }));
   body.append(id, facts, links);
@@ -662,6 +687,33 @@ async function start() {
     warn: closed => { element('tab-settings-count').textContent = closed ? '!' : ''; },
   });
 
+  // What operators did (A6), on a host that keeps the log: read when the panel opens, when its section is opened and on
+  // Refresh.
+  const activity = mountActivity({
+    send: transport.request,
+    element,
+    shown: available => {
+      element('tab-activity').hidden = !available;
+      element('activity-off').hidden = available;
+      element('activity-on').hidden = !available;
+    },
+  });
+
+  // Diagnosing a table in progress (scenarios plan, S5b): from its card, the Void sheet one button away.
+  openDiagnosis = mountDiagnosis({ send: transport.request, element, openVoid, after: redraw }).open;
+
+  // The match scenarios (ADR 0179), on a host that keeps them: cut from a session row, listed in their tab.
+  const scenarios = mountScenarios({
+    send: transport.request,
+    element,
+    shown: available => {
+      element('tab-scenarios').hidden = !available;
+      element('scenarios-off').hidden = available;
+      element('scenarios-on').hidden = !available;
+    },
+  });
+  openScenario = scenarios.open;
+
   // The Overview (A5): the numbers at a glance, read when the panel opens, when its section is opened and on Refresh.
   const overview = mountOverview({ send: transport.request, element });
 
@@ -751,12 +803,14 @@ async function start() {
   element('sessions-refresh').addEventListener('click', redrawSessions);
   element('tables-previous').addEventListener('click', () => { tablesPage -= 1; drawTables(); });
   element('tables-next').addEventListener('click', () => { tablesPage += 1; drawTables(); });
-  element('admin-refresh').addEventListener('click', async () => { await redraw(); await redrawSessions(); await players.redraw(); await jobs.redraw(); await turnQueues.redraw(); await settings.redraw(); await overview.redraw(); });
+  element('admin-refresh').addEventListener('click', async () => { await redraw(); await redrawSessions(); await players.redraw(); await jobs.redraw(); await turnQueues.redraw(); await settings.redraw(); await overview.redraw(); await activity.redraw(); await scenarios.redraw(); });
   globalThis.addEventListener?.('hashchange', () => {
     showTab();
     if (tabOf(globalThis.location?.hash) === 'players') void players.redraw();
     if (tabOf(globalThis.location?.hash) === 'settings') void settings.redraw();
     if (tabOf(globalThis.location?.hash) === 'overview') void overview.redraw();
+    if (tabOf(globalThis.location?.hash) === 'activity') void activity.redraw();
+    if (tabOf(globalThis.location?.hash) === 'scenarios') void scenarios.redraw();
     if (tabOf(globalThis.location?.hash) === 'jobs') {
       void jobs.redraw();
       void turnQueues.redraw();
@@ -791,6 +845,8 @@ async function start() {
   await turnQueues.redraw();
   await settings.redraw();
   await overview.redraw();
+  await activity.redraw();
+  await scenarios.redraw();
   again();
 }
 

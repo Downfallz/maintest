@@ -4,12 +4,14 @@ using Azure.Storage;
 using Azure.Storage.Blobs;
 using Azure.Storage.Queues;
 using DownfallArena.Application.Accounts.Ports;
+using DownfallArena.Application.Admin.Ports;
 using DownfallArena.Application.Hosting.Ports;
 using DownfallArena.Application.Learning.Ports;
 using DownfallArena.Application.Matches.Ports;
 using DownfallArena.Application.Ports;
 using DownfallArena.Application.Tables.Ports;
 using DownfallArena.Infrastructure.Accounts;
+using DownfallArena.Infrastructure.Admin;
 using DownfallArena.Infrastructure.Learning;
 using DownfallArena.Infrastructure.Matches;
 using DownfallArena.Infrastructure.Tables;
@@ -113,6 +115,28 @@ internal static class ArtifactStores
         return await BlobTendLog.OpenAsync(container, cancellationToken);
     }
 
+    /// <summary>The container the operators' actions are kept in (admin plan, A6), next to the recordings' one.</summary>
+    public const string OperatorContainer = "operator";
+
+    /// <summary>Where the operators' actions are kept (A6): a directory or a container of their own beside the recordings.</summary>
+    public static async Task<IOperatorLog> OpenOperatorLogAsync(string target, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(target);
+        if (!IsContainerUrl(target))
+        {
+            var runs = Path.GetFullPath(target).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return new FileOperatorLog(Path.Combine(Path.GetDirectoryName(runs) ?? runs, OperatorContainer));
+        }
+
+        var recordings = new Uri(target, UriKind.Absolute);
+        var path = recordings.AbsolutePath.TrimEnd('/');
+        var uri = new UriBuilder(recordings) { Path = $"{path[..path.LastIndexOf('/')]}/{OperatorContainer}", Query = string.Empty }.Uri;
+        var container = IsEmulator(uri)
+            ? new BlobContainerClient(uri, new StorageSharedKeyCredential(DevelopmentAccount, DevelopmentKey))
+            : new BlobContainerClient(uri, new DefaultAzureCredential());
+        return await BlobOperatorLog.OpenAsync(container, cancellationToken);
+    }
+
     /// <summary>The container the content tables began on is kept in, next to the recordings' one (ADR 0163).</summary>
     public const string ContentContainer = "content";
 
@@ -121,18 +145,32 @@ internal static class ArtifactStores
     /// its hash: a directory <c>content</c> next to the runs' directory, or a container <c>content</c> in the same
     /// storage account. Never inside the recordings: the session store reads everything at the top of it as a session.
     /// </summary>
-    public static async Task<IArtifactStore> OpenContentAsync(string target, CancellationToken cancellationToken = default)
+    public static Task<IArtifactStore> OpenContentAsync(string target, CancellationToken cancellationToken = default) =>
+        OpenBesideAsync(target, ContentContainer, cancellationToken);
+
+    /// <summary>The container the match scenarios are kept in, next to the recordings' one (ADR 0179).</summary>
+    public const string ScenariosContainer = "scenarios";
+
+    /// <summary>
+    /// Where the match scenarios the operator cuts are kept (docs/tabletop/scenarios-plan.md, S4), one
+    /// <c>scenario.json</c> under its id: beside the recordings, as the content is, never inside them.
+    /// </summary>
+    public static Task<IArtifactStore> OpenScenariosAsync(string target, CancellationToken cancellationToken = default) =>
+        OpenBesideAsync(target, ScenariosContainer, cancellationToken);
+
+    /// <summary>A store of its own beside what <c>--record</c> names: a sibling directory, or a container in the same account.</summary>
+    private static async Task<IArtifactStore> OpenBesideAsync(string target, string name, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(target);
         if (!IsContainerUrl(target))
         {
             var runs = Path.GetFullPath(target).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            return new FileArtifactStore(Path.Combine(Path.GetDirectoryName(runs) ?? runs, ContentContainer));
+            return new FileArtifactStore(Path.Combine(Path.GetDirectoryName(runs) ?? runs, name));
         }
 
         var recordings = new Uri(target, UriKind.Absolute);
         var path = recordings.AbsolutePath.TrimEnd('/');
-        var uri = new UriBuilder(recordings) { Path = $"{path[..path.LastIndexOf('/')]}/{ContentContainer}", Query = string.Empty }.Uri;
+        var uri = new UriBuilder(recordings) { Path = $"{path[..path.LastIndexOf('/')]}/{name}", Query = string.Empty }.Uri;
         var container = IsEmulator(uri)
             ? new BlobContainerClient(uri, new StorageSharedKeyCredential(DevelopmentAccount, DevelopmentKey))
             : new BlobContainerClient(uri, new DefaultAzureCredential());

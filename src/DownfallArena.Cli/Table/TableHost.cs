@@ -3,6 +3,7 @@ using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Friends;
 using DownfallArena.Application.Accounts.Players;
 using DownfallArena.Application.Accounts.Ports;
+using DownfallArena.Application.Admin;
 using DownfallArena.Application.Learning;
 using DownfallArena.Application.Learning.Ports;
 using DownfallArena.Application.Matches.Journaling;
@@ -227,6 +228,16 @@ internal static class TableHost
             });
         }
 
+        // What operators do from the panel (A6), kept beside the recordings and read in the Activity tab. A log that
+        // cannot be opened leaves the actions on the console alone, never the panel without them.
+        var notes = store is null ? OperatorNotes.None : await OpenNotesAsync(options.Record ?? DefaultRunsDirectory, clock, stopping.Token);
+        admin.Notes = notes;
+        admin.Diagnosis = stored is null ? null : new TableDiagnosisApi(registry, composer, stored) { Turns = queues, Notes = notes };
+        players?.Notes = notes;
+        admin.Turns?.Notes = notes;
+        admin.Jobs?.Notes = notes;
+        admin.Settings?.Notes = notes;
+
         // The Overview (A5): the numbers at a glance, each read from the source its own tab reads.
         admin.Overview = new OverviewApi(registry, composer, clock)
         {
@@ -244,7 +255,17 @@ internal static class TableHost
             : new LeaderboardApi(results, accounts, clock, levels.PlayerName);
         // A player's own statistics (ADR 0168), read off the same results, named from this host's catalogue.
         var stats = accounts is null || results is null ? null : new StatsApi(results, accounts, services.GetRequiredService<IGameResources>());
-        using var server = new TableServer(options.Bind, options.Port, registry, new TableFiles(TableDirectory), admin, clock, stored, accounts, leaderboard, friends, stats) { Tended = options.Tended };
+        // The match scenarios (ADR 0179): cut by the operator from the recorded sessions and kept beside them, and
+        // practised by signed-in players in this process's memory, over the services built for their content.
+        var scenarioStore = store is null ? null : await OpenScenariosAsync(options.Record ?? DefaultRunsDirectory, clock, stopping.Token);
+        await using var practices = scenarioStore is null ? null : new ScenarioPractices(composer, scenarioStore, clock);
+        admin.Scenarios = scenarioStore is null || stored is null ? null : new ScenarioAdminApi(scenarioStore, stored, composer) { Notes = admin.Notes };
+        using var server = new TableServer(options.Bind, options.Port, registry, new TableFiles(TableDirectory), admin, clock, stored, accounts, leaderboard, friends, stats)
+        {
+            Tended = options.Tended,
+            Scenarios = scenarioStore is null || practices is null || accounts is null ? null : new ScenariosApi(scenarioStore, practices, accounts),
+            Practices = practices,
+        };
 
         Console.WriteLine($"Table on {server.Url}");
 
@@ -405,6 +426,23 @@ internal static class TableHost
     /// record and its journal; the index only finds them, and a host without one serves what it holds.
     /// </summary>
     /// <summary>
+    /// Where the match scenarios are kept (ADR 0179), or none when it cannot be opened: the host then cuts and serves
+    /// none, which is said, and plays every game as before.
+    /// </summary>
+    internal static async Task<ScenarioStore?> OpenScenariosAsync(string target, TimeProvider clock, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return new ScenarioStore(await ArtifactStores.OpenScenariosAsync(target, cancellationToken), clock);
+        }
+        catch (Exception failure) when (failure is Azure.RequestFailedException or Azure.Identity.AuthenticationFailedException or IOException or UnauthorizedAccessException)
+        {
+            Console.WriteLine($"  The match scenarios cannot be kept ({failure.Message}): none can be cut or practised at this host.");
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Where the content the tables began on is kept (ADR 0163), or none when it cannot be opened: the tables are then
     /// replayed on this host's own content, as before, which is said.
     /// </summary>
@@ -418,6 +456,20 @@ internal static class TableHost
         {
             Console.WriteLine($"  The content the tables began on cannot be kept ({failure.Message}); a table picked up after the content changed is replayed on this host's (ADR 0163).");
             return null;
+        }
+    }
+
+    /// <summary>The operator log (A6), or none when it cannot be opened, which the console says.</summary>
+    private static async Task<OperatorNotes> OpenNotesAsync(string target, TimeProvider clock, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return new OperatorNotes(new OperatorActions(await ArtifactStores.OpenOperatorLogAsync(target, cancellationToken), clock));
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is Azure.Identity.AuthenticationFailedException)
+        {
+            Console.WriteLine($"  The operator log could not be opened ({failure.Message}): what operators do is said on the console alone.");
+            return OperatorNotes.None;
         }
     }
 

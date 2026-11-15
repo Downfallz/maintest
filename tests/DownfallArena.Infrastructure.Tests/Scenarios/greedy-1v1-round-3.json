@@ -1,0 +1,2590 @@
+{
+  "format": "downfall.scenario.v1",
+  "title": "A greedy 1v1 mirror, round 3",
+  "goal": "Kept as a regression test: it must rebuild on every engine change, or be cut again with the change explained.",
+  "seat": "player1",
+  "source": {
+    "session": "20261114-031619-50a4947c",
+    "run": "20261114-031619-50a4947c",
+    "match": "01a1d80e-539c-7556-be91-e03eb2bec54f",
+    "round": 3,
+    "cutAt": 10
+  },
+  "match": {
+    "seed": 5,
+    "roster": [
+      "creature:main:v1"
+    ],
+    "rules": {
+      "teamSize": 1,
+      "energyPerRound": 2,
+      "evolutionPicksPerOpportunity": 2,
+      "roundCap": 20,
+      "criticalMultiplier": 2,
+      "firstEvolutionRound": 1,
+      "evolutionInterval": 2,
+      "combatDeclaration": "AtActivation"
+    }
+  },
+  "content": "f3e8a42ddbd02c113f855a653f410434a17bcb753f8453aa0caf7a6b4d8f2886",
+  "engine": "691b11d672d1-dirty",
+  "before": [
+    {
+      "seq": 1,
+      "at": "1970-01-01T00:00:00\u002B00:00",
+      "slot": "player1",
+      "kind": "Evolution",
+      "creature": 1,
+      "spell": null,
+      "tier": "tier:brute:v1",
+      "speed": null,
+      "targets": null,
+      "order": null,
+      "pass": false,
+      "to": null,
+      "atRound": null,
+      "reached": null,
+      "late": null
+    },
+    {
+      "seq": 2,
+      "at": "1970-01-01T00:00:00\u002B00:00",
+      "slot": "player2",
+      "kind": "Evolution",
+      "creature": 2,
+      "spell": null,
+      "tier": "tier:brute:v1",
+      "speed": null,
+      "targets": null,
+      "order": null,
+      "pass": false,
+      "to": null,
+      "atRound": null,
+      "reached": null,
+      "late": null
+    },
+    {
+      "seq": 3,
+      "at": "1970-01-01T00:00:00\u002B00:00",
+      "slot": "player1",
+      "kind": "Speed",
+      "creature": 1,
+      "spell": null,
+      "tier": null,
+      "speed": "Standard",
+      "targets": null,
+      "order": null,
+      "pass": false,
+      "to": null,
+      "atRound": null,
+      "reached": null,
+      "late": null
+    },
+    {
+      "seq": 4,
+      "at": "1970-01-01T00:00:00\u002B00:00",
+      "slot": "player2",
+      "kind": "Speed",
+      "creature": 2,
+      "spell": null,
+      "tier": null,
+      "speed": "Standard",
+      "targets": null,
+      "order": null,
+      "pass": false,
+      "to": null,
+      "atRound": null,
+      "reached": null,
+      "late": null
+    },
+    {
+      "seq": 5,
+      "at": "1970-01-01T00:00:00\u002B00:00",
+      "slot": "player1",
+      "kind": "Action",
+      "creature": 1,
+      "spell": "spell:pummel:v1",
+      "tier": null,
+      "speed": null,
+      "targets": [
+        2
+      ],
+      "order": null,
+      "pass": false,
+      "to": null,
+      "atRound": null,
+      "reached": null,
+      "late": null
+    },
+    {
+      "seq": 6,
+      "at": "1970-01-01T00:00:00\u002B00:00",
+      "slot": "player2",
+      "kind": "Action",
+      "creature": 2,
+      "spell": "spell:pummel:v1",
+      "tier": null,
+      "speed": null,
+      "targets": [
+        1
+      ],
+      "order": null,
+      "pass": false,
+      "to": null,
+      "atRound": null,
+      "reached": null,
+      "late": null
+    },
+    {
+      "seq": 7,
+      "at": "1970-01-01T00:00:00\u002B00:00",
+      "slot": "player1",
+      "kind": "Speed",
+      "creature": 1,
+      "spell": null,
+      "tier": null,
+      "speed": "Standard",
+      "targets": null,
+      "order": null,
+      "pass": false,
+      "to": null,
+      "atRound": null,
+      "reached": null,
+      "late": null
+    },
+    {
+      "seq": 8,
+      "at": "1970-01-01T00:00:00\u002B00:00",
+      "slot": "player2",
+      "kind": "Speed",
+      "creature": 2,
+      "spell": null,
+      "tier": null,
+      "speed": "Standard",
+      "targets": null,
+      "order": null,
+      "pass": false,
+      "to": null,
+      "atRound": null,
+      "reached": null,
+      "late": null
+    },
+    {
+      "seq": 9,
+      "at": "1970-01-01T00:00:00\u002B00:00",
+      "slot": "player2",
+      "kind": "Action",
+      "creature": 2,
+      "spell": "spell:pummel:v1",
+      "tier": null,
+      "speed": null,
+      "targets": [
+        1
+      ],
+      "order": null,
+      "pass": false,
+      "to": null,
+      "atRound": null,
+      "reached": null,
+      "late": null
+    },
+    {
+      "seq": 10,
+      "at": "1970-01-01T00:00:00\u002B00:00",
+      "slot": "player1",
+      "kind": "Action",
+      "creature": 1,
+      "spell": "spell:pummel:v1",
+      "tier": null,
+      "speed": null,
+      "targets": [
+        2
+      ],
+      "order": null,
+      "pass": false,
+      "to": null,
+      "atRound": null,
+      "reached": null,
+      "late": null
+    }
+  ],
+  "after": [
+    {
+      "seq": 1,
+      "at": "1970-01-01T00:00:00\u002B00:00",
+      "slot": "player1",
+      "kind": "Evolution",
+      "creature": 1,
+      "spell": null,
+      "tier": "tier:berserker:v1",
+      "speed": null,
+      "targets": null,
+      "order": null,
+      "pass": false,
+      "to": null,
+      "atRound": null,
+      "reached": null,
+      "late": null
+    },
+    {
+      "seq": 2,
+      "at": "1970-01-01T00:00:00\u002B00:00",
+      "slot": "player2",
+      "kind": "Evolution",
+      "creature": 2,
+      "spell": null,
+      "tier": "tier:berserker:v1",
+      "speed": null,
+      "targets": null,
+      "order": null,
+      "pass": false,
+      "to": null,
+      "atRound": null,
+      "reached": null,
+      "late": null
+    },
+    {
+      "seq": 3,
+      "at": "1970-01-01T00:00:00\u002B00:00",
+      "slot": "player1",
+      "kind": "Speed",
+      "creature": 1,
+      "spell": null,
+      "tier": null,
+      "speed": "Standard",
+      "targets": null,
+      "order": null,
+      "pass": false,
+      "to": null,
+      "atRound": null,
+      "reached": null,
+      "late": null
+    },
+    {
+      "seq": 4,
+      "at": "1970-01-01T00:00:00\u002B00:00",
+      "slot": "player2",
+      "kind": "Speed",
+      "creature": 2,
+      "spell": null,
+      "tier": null,
+      "speed": "Standard",
+      "targets": null,
+      "order": null,
+      "pass": false,
+      "to": null,
+      "atRound": null,
+      "reached": null,
+      "late": null
+    },
+    {
+      "seq": 5,
+      "at": "1970-01-01T00:00:00\u002B00:00",
+      "slot": "player1",
+      "kind": "Action",
+      "creature": 1,
+      "spell": "spell:enraged_charge:v1",
+      "tier": null,
+      "speed": null,
+      "targets": [
+        2
+      ],
+      "order": null,
+      "pass": false,
+      "to": null,
+      "atRound": null,
+      "reached": null,
+      "late": null
+    },
+    {
+      "seq": 6,
+      "at": "1970-01-01T00:00:00\u002B00:00",
+      "slot": "player2",
+      "kind": "Action",
+      "creature": 2,
+      "spell": "spell:enraged_charge:v1",
+      "tier": null,
+      "speed": null,
+      "targets": [
+        1
+      ],
+      "order": null,
+      "pass": false,
+      "to": null,
+      "atRound": null,
+      "reached": null,
+      "late": null
+    },
+    {
+      "seq": 7,
+      "at": "1970-01-01T00:00:00\u002B00:00",
+      "slot": "player1",
+      "kind": "Speed",
+      "creature": 1,
+      "spell": null,
+      "tier": null,
+      "speed": "Quick",
+      "targets": null,
+      "order": null,
+      "pass": false,
+      "to": null,
+      "atRound": null,
+      "reached": null,
+      "late": null
+    },
+    {
+      "seq": 8,
+      "at": "1970-01-01T00:00:00\u002B00:00",
+      "slot": "player2",
+      "kind": "Speed",
+      "creature": 2,
+      "spell": null,
+      "tier": null,
+      "speed": "Standard",
+      "targets": null,
+      "order": null,
+      "pass": false,
+      "to": null,
+      "atRound": null,
+      "reached": null,
+      "late": null
+    },
+    {
+      "seq": 9,
+      "at": "1970-01-01T00:00:00\u002B00:00",
+      "slot": "player1",
+      "kind": "Action",
+      "creature": 1,
+      "spell": "spell:guard:v1",
+      "tier": null,
+      "speed": null,
+      "targets": [
+        1
+      ],
+      "order": null,
+      "pass": false,
+      "to": null,
+      "atRound": null,
+      "reached": null,
+      "late": null
+    },
+    {
+      "seq": 10,
+      "at": "1970-01-01T00:00:00\u002B00:00",
+      "slot": "player2",
+      "kind": "Action",
+      "creature": 2,
+      "spell": "spell:reckless_swing:v1",
+      "tier": null,
+      "speed": null,
+      "targets": [
+        1
+      ],
+      "order": null,
+      "pass": false,
+      "to": null,
+      "atRound": null,
+      "reached": null,
+      "late": null
+    }
+  ],
+  "checkpoint": {
+    "round": 3,
+    "player1": "{\u0022matchId\u0022:{\u0022value\u0022:\u002200000000-0000-0000-0000-000000000000\u0022},\u0022slot\u0022:0,\u0022state\u0022:1,\u0022contentHash\u0022:\u0022f3e8a42ddbd02c113f855a653f410434a17bcb753f8453aa0caf7a6b4d8f2886\u0022,\u0022roundNumber\u0022:3,\u0022phase\u0022:1,\u0022subPhase\u0022:2,\u0022allies\u0022:[{\u0022id\u0022:{\u0022value\u0022:1},\u0022owner\u0022:0,\u0022definitionId\u0022:{\u0022value\u0022:\u0022creature:main:v1\u0022,\u0022name\u0022:\u0022main\u0022,\u0022version\u0022:1},\u0022name\u0022:\u0022Main\u0022,\u0022talentTree\u0022:{\u0022value\u0022:\u0022talent-tree:base_creature:v1\u0022,\u0022name\u0022:\u0022base_creature\u0022,\u0022version\u0022:1},\u0022health\u0022:{\u0022value\u0022:22,\u0022isZero\u0022:false},\u0022maxHealth\u0022:{\u0022value\u0022:30,\u0022isZero\u0022:false},\u0022energy\u0022:{\u0022value\u0022:4,\u0022isZero\u0022:false},\u0022totalDefense\u0022:{\u0022value\u0022:0,\u0022isZero\u0022:true},\u0022baseInitiative\u0022:{\u0022value\u0022:6,\u0022isZero\u0022:false},\u0022currentInitiative\u0022:{\u0022value\u0022:6,\u0022isZero\u0022:false},\u0022criticalChance\u0022:{\u0022value\u0022:0,\u0022asPercent\u0022:0},\u0022isStunned\u0022:false,\u0022knownSpells\u0022:[{\u0022value\u0022:\u0022spell:heavy_strike:v1\u0022,\u0022name\u0022:\u0022heavy_strike\u0022,\u0022version\u0022:1},{\u0022value\u0022:\u0022spell:wait:v1\u0022,\u0022name\u0022:\u0022wait\u0022,\u0022version\u0022:1},{\u0022value\u0022:\u0022spell:pummel:v1\u0022,\u0022name\u0022:\u0022pummel\u0022,\u0022version\u0022:1},{\u0022value\u0022:\u0022spell:guard:v1\u0022,\u0022name\u0022:\u0022guard\u0022,\u0022version\u0022:1}],\u0022acquiredTiers\u0022:[{\u0022value\u0022:\u0022tier:brute:v1\u0022,\u0022name\u0022:\u0022brute\u0022,\u0022version\u0022:1}],\u0022conditions\u0022:[],\u0022stunImmunityRounds\u0022:0,\u0022passive\u0022:{\u0022stunImmunity\u0022:false,\u0022upkeepEnergy\u0022:0,\u0022damageBonus\u0022:0,\u0022sunder\u0022:0},\u0022isStunImmune\u0022:false,\u0022canBeStunned\u0022:true,\u0022damageBonus\u0022:0,\u0022isDead\u0022:false,\u0022isAlive\u0022:true}],\u0022enemies\u0022:[{\u0022id\u0022:{\u0022value\u0022:2},\u0022owner\u0022:1,\u0022definitionId\u0022:{\u0022value\u0022:\u0022creature:main:v1\u0022,\u0022name\u0022:\u0022main\u0022,\u0022version\u0022:1},\u0022name\u0022:\u0022Main\u0022,\u0022talentTree\u0022:{\u0022value\u0022:\u0022talent-tree:base_creature:v1\u0022,\u0022name\u0022:\u0022base_creature\u0022,\u0022version\u0022:1},\u0022health\u0022:{\u0022value\u0022:24,\u0022isZero\u0022:false},\u0022maxHealth\u0022:{\u0022value\u0022:30,\u0022isZero\u0022:false},\u0022energy\u0022:{\u0022value\u0022:4,\u0022isZero\u0022:false},\u0022totalDefense\u0022:{\u0022value\u0022:0,\u0022isZero\u0022:true},\u0022baseInitiative\u0022:{\u0022value\u0022:6,\u0022isZero\u0022:false},\u0022currentInitiative\u0022:{\u0022value\u0022:6,\u0022isZero\u0022:false},\u0022criticalChance\u0022:{\u0022value\u0022:0,\u0022asPercent\u0022:0},\u0022isStunned\u0022:false,\u0022knownSpells\u0022:[{\u0022value\u0022:\u0022spell:heavy_strike:v1\u0022,\u0022name\u0022:\u0022heavy_strike\u0022,\u0022version\u0022:1},{\u0022value\u0022:\u0022spell:wait:v1\u0022,\u0022name\u0022:\u0022wait\u0022,\u0022version\u0022:1},{\u0022value\u0022:\u0022spell:pummel:v1\u0022,\u0022name\u0022:\u0022pummel\u0022,\u0022version\u0022:1},{\u0022value\u0022:\u0022spell:guard:v1\u0022,\u0022name\u0022:\u0022guard\u0022,\u0022version\u0022:1}],\u0022acquiredTiers\u0022:[{\u0022value\u0022:\u0022tier:brute:v1\u0022,\u0022name\u0022:\u0022brute\u0022,\u0022version\u0022:1}],\u0022conditions\u0022:[],\u0022stunImmunityRounds\u0022:0,\u0022passive\u0022:{\u0022stunImmunity\u0022:false,\u0022upkeepEnergy\u0022:0,\u0022damageBonus\u0022:0,\u0022sunder\u0022:0},\u0022isStunImmune\u0022:false,\u0022canBeStunned\u0022:true,\u0022damageBonus\u0022:0,\u0022isDead\u0022:false,\u0022isAlive\u0022:true}],\u0022evolutionChoices\u0022:[],\u0022hasPassedEvolution\u0022:false,\u0022nextEvolutionRound\u0022:3,\u0022speedChoices\u0022:[],\u0022intents\u0022:[],\u0022timeline\u0022:[],\u0022rollOffs\u0022:[],\u0022revealedActions\u0022:[],\u0022activationCursor\u0022:0,\u0022outcome\u0022:null}",
+    "player2": "{\u0022matchId\u0022:{\u0022value\u0022:\u002200000000-0000-0000-0000-000000000000\u0022},\u0022slot\u0022:1,\u0022state\u0022:1,\u0022contentHash\u0022:\u0022f3e8a42ddbd02c113f855a653f410434a17bcb753f8453aa0caf7a6b4d8f2886\u0022,\u0022roundNumber\u0022:3,\u0022phase\u0022:1,\u0022subPhase\u0022:2,\u0022allies\u0022:[{\u0022id\u0022:{\u0022value\u0022:2},\u0022owner\u0022:1,\u0022definitionId\u0022:{\u0022value\u0022:\u0022creature:main:v1\u0022,\u0022name\u0022:\u0022main\u0022,\u0022version\u0022:1},\u0022name\u0022:\u0022Main\u0022,\u0022talentTree\u0022:{\u0022value\u0022:\u0022talent-tree:base_creature:v1\u0022,\u0022name\u0022:\u0022base_creature\u0022,\u0022version\u0022:1},\u0022health\u0022:{\u0022value\u0022:24,\u0022isZero\u0022:false},\u0022maxHealth\u0022:{\u0022value\u0022:30,\u0022isZero\u0022:false},\u0022energy\u0022:{\u0022value\u0022:4,\u0022isZero\u0022:false},\u0022totalDefense\u0022:{\u0022value\u0022:0,\u0022isZero\u0022:true},\u0022baseInitiative\u0022:{\u0022value\u0022:6,\u0022isZero\u0022:false},\u0022currentInitiative\u0022:{\u0022value\u0022:6,\u0022isZero\u0022:false},\u0022criticalChance\u0022:{\u0022value\u0022:0,\u0022asPercent\u0022:0},\u0022isStunned\u0022:false,\u0022knownSpells\u0022:[{\u0022value\u0022:\u0022spell:heavy_strike:v1\u0022,\u0022name\u0022:\u0022heavy_strike\u0022,\u0022version\u0022:1},{\u0022value\u0022:\u0022spell:wait:v1\u0022,\u0022name\u0022:\u0022wait\u0022,\u0022version\u0022:1},{\u0022value\u0022:\u0022spell:pummel:v1\u0022,\u0022name\u0022:\u0022pummel\u0022,\u0022version\u0022:1},{\u0022value\u0022:\u0022spell:guard:v1\u0022,\u0022name\u0022:\u0022guard\u0022,\u0022version\u0022:1}],\u0022acquiredTiers\u0022:[{\u0022value\u0022:\u0022tier:brute:v1\u0022,\u0022name\u0022:\u0022brute\u0022,\u0022version\u0022:1}],\u0022conditions\u0022:[],\u0022stunImmunityRounds\u0022:0,\u0022passive\u0022:{\u0022stunImmunity\u0022:false,\u0022upkeepEnergy\u0022:0,\u0022damageBonus\u0022:0,\u0022sunder\u0022:0},\u0022isStunImmune\u0022:false,\u0022canBeStunned\u0022:true,\u0022damageBonus\u0022:0,\u0022isDead\u0022:false,\u0022isAlive\u0022:true}],\u0022enemies\u0022:[{\u0022id\u0022:{\u0022value\u0022:1},\u0022owner\u0022:0,\u0022definitionId\u0022:{\u0022value\u0022:\u0022creature:main:v1\u0022,\u0022name\u0022:\u0022main\u0022,\u0022version\u0022:1},\u0022name\u0022:\u0022Main\u0022,\u0022talentTree\u0022:{\u0022value\u0022:\u0022talent-tree:base_creature:v1\u0022,\u0022name\u0022:\u0022base_creature\u0022,\u0022version\u0022:1},\u0022health\u0022:{\u0022value\u0022:22,\u0022isZero\u0022:false},\u0022maxHealth\u0022:{\u0022value\u0022:30,\u0022isZero\u0022:false},\u0022energy\u0022:{\u0022value\u0022:4,\u0022isZero\u0022:false},\u0022totalDefense\u0022:{\u0022value\u0022:0,\u0022isZero\u0022:true},\u0022baseInitiative\u0022:{\u0022value\u0022:6,\u0022isZero\u0022:false},\u0022currentInitiative\u0022:{\u0022value\u0022:6,\u0022isZero\u0022:false},\u0022criticalChance\u0022:{\u0022value\u0022:0,\u0022asPercent\u0022:0},\u0022isStunned\u0022:false,\u0022knownSpells\u0022:[{\u0022value\u0022:\u0022spell:heavy_strike:v1\u0022,\u0022name\u0022:\u0022heavy_strike\u0022,\u0022version\u0022:1},{\u0022value\u0022:\u0022spell:wait:v1\u0022,\u0022name\u0022:\u0022wait\u0022,\u0022version\u0022:1},{\u0022value\u0022:\u0022spell:pummel:v1\u0022,\u0022name\u0022:\u0022pummel\u0022,\u0022version\u0022:1},{\u0022value\u0022:\u0022spell:guard:v1\u0022,\u0022name\u0022:\u0022guard\u0022,\u0022version\u0022:1}],\u0022acquiredTiers\u0022:[{\u0022value\u0022:\u0022tier:brute:v1\u0022,\u0022name\u0022:\u0022brute\u0022,\u0022version\u0022:1}],\u0022conditions\u0022:[],\u0022stunImmunityRounds\u0022:0,\u0022passive\u0022:{\u0022stunImmunity\u0022:false,\u0022upkeepEnergy\u0022:0,\u0022damageBonus\u0022:0,\u0022sunder\u0022:0},\u0022isStunImmune\u0022:false,\u0022canBeStunned\u0022:true,\u0022damageBonus\u0022:0,\u0022isDead\u0022:false,\u0022isAlive\u0022:true}],\u0022evolutionChoices\u0022:[],\u0022hasPassedEvolution\u0022:false,\u0022nextEvolutionRound\u0022:3,\u0022speedChoices\u0022:[],\u0022intents\u0022:[],\u0022timeline\u0022:[],\u0022rollOffs\u0022:[],\u0022revealedActions\u0022:[],\u0022activationCursor\u0022:0,\u0022outcome\u0022:null}"
+  },
+  "schema": {
+    "schemaVersion": 5,
+    "contentHash": "f3e8a42ddbd02c113f855a653f410434a17bcb753f8453aa0caf7a6b4d8f2886",
+    "creatures": [
+      {
+        "id": "creature:main:v1",
+        "name": "Main",
+        "creatureClass": "Creature",
+        "baseHealth": 30,
+        "baseEnergy": 0,
+        "baseDefense": 0,
+        "baseInitiative": 5,
+        "baseCriticalChance": 0,
+        "talentTreeId": "talent-tree:base_creature:v1",
+        "startingSpellIds": [
+          "spell:heavy_strike:v1",
+          "spell:wait:v1"
+        ]
+      }
+    ],
+    "spells": [
+      {
+        "id": "spell:adrenaline_tonic:v1",
+        "name": "Overdrive",
+        "spellType": "Defensive",
+        "creatureClass": "Trickster",
+        "energyCost": 1,
+        "criticalChance": 0,
+        "targeting": {
+          "origin": "Ally",
+          "scope": "Multi",
+          "maxTargets": 3
+        },
+        "effects": [
+          {
+            "kind": "EnergyGain",
+            "amount": 4,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          },
+          {
+            "kind": "DamageBuff",
+            "amount": 1,
+            "amountPerRound": null,
+            "durationRounds": 1,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:ambush:v1",
+        "name": "Ambush",
+        "spellType": "Offensive",
+        "creatureClass": "Assassin",
+        "energyCost": 3,
+        "criticalChance": 0.35,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "Damage",
+            "amount": 10,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ],
+        "casterEffects": [
+          {
+            "kind": "InitiativeDebuff",
+            "amount": 5,
+            "amountPerRound": null,
+            "durationRounds": 1,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:bone_ward:v1",
+        "name": "Bonewall",
+        "spellType": "Defensive",
+        "creatureClass": "Necromancer",
+        "energyCost": 1,
+        "criticalChance": 0,
+        "targeting": {
+          "origin": "Ally",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "DefenseBuff",
+            "amount": 6,
+            "amountPerRound": null,
+            "durationRounds": 2,
+            "permanent": false,
+            "stacking": null
+          }
+        ],
+        "casterEffects": [
+          {
+            "kind": "Bleed",
+            "amount": null,
+            "amountPerRound": 1,
+            "durationRounds": 1,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:chain_slash:v1",
+        "name": "Dominate",
+        "spellType": "Offensive",
+        "creatureClass": "Mercenary",
+        "energyCost": 3,
+        "criticalChance": 0.5,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "Multi",
+          "maxTargets": 2
+        },
+        "effects": [
+          {
+            "kind": "Damage",
+            "amount": 7,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:crazed_specter:v1",
+        "name": "Death Wail",
+        "spellType": "Offensive",
+        "creatureClass": "Necromancer",
+        "energyCost": 3,
+        "criticalChance": 0,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "Multi",
+          "maxTargets": 3
+        },
+        "effects": [
+          {
+            "kind": "Damage",
+            "amount": 4,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          },
+          {
+            "kind": "Bleed",
+            "amount": null,
+            "amountPerRound": 4,
+            "durationRounds": 2,
+            "permanent": false,
+            "stacking": null
+          }
+        ],
+        "casterEffects": [
+          {
+            "kind": "Bleed",
+            "amount": null,
+            "amountPerRound": 4,
+            "durationRounds": 1,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:crushing_stomp:v1",
+        "name": "Crushing Stomp",
+        "spellType": "Offensive",
+        "creatureClass": "Warlord",
+        "energyCost": 4,
+        "criticalChance": 0.75,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "Damage",
+            "amount": 7,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          },
+          {
+            "kind": "Stun",
+            "amount": null,
+            "amountPerRound": null,
+            "durationRounds": 2,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:engulfing_flames:v1",
+        "name": "Incinerate",
+        "spellType": "Offensive",
+        "creatureClass": "Wizard",
+        "energyCost": 3,
+        "criticalChance": 0.35,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "Damage",
+            "amount": 10,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:enraged_charge:v1",
+        "name": "Fury",
+        "spellType": "Offensive",
+        "creatureClass": "Berserker",
+        "energyCost": 3,
+        "criticalChance": 0.8,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "Damage",
+            "amount": 6,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:extort:v1",
+        "name": "Claim",
+        "spellType": "Offensive",
+        "creatureClass": "Mercenary",
+        "energyCost": 2,
+        "criticalChance": 0.3,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "Damage",
+            "amount": 4,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          },
+          {
+            "kind": "EnergyDrain",
+            "amount": 1,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ],
+        "casterEffects": [
+          {
+            "kind": "EnergyGain",
+            "amount": 1,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:frostbite:v1",
+        "name": "Ice Grip",
+        "spellType": "Offensive",
+        "creatureClass": "Wizard",
+        "energyCost": 1,
+        "criticalChance": 0.45,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "Damage",
+            "amount": 3,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          },
+          {
+            "kind": "InitiativeDebuff",
+            "amount": 3,
+            "amountPerRound": null,
+            "durationRounds": 2,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:full_plate:v1",
+        "name": "Carapace",
+        "spellType": "Passive",
+        "creatureClass": "Warlord",
+        "energyCost": 1,
+        "criticalChance": 0,
+        "targeting": {
+          "origin": "Self",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "DefenseBuff",
+            "amount": 7,
+            "amountPerRound": null,
+            "durationRounds": 2,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:guard:v1",
+        "name": "Brace",
+        "spellType": "Defensive",
+        "creatureClass": "Brawler",
+        "energyCost": 1,
+        "criticalChance": 0,
+        "targeting": {
+          "origin": "Ally",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "DefenseBuff",
+            "amount": 1,
+            "amountPerRound": null,
+            "durationRounds": 3,
+            "permanent": false,
+            "stacking": null
+          },
+          {
+            "kind": "DefenseBuff",
+            "amount": 1,
+            "amountPerRound": null,
+            "durationRounds": 2,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:hateful_sacrifice:v1",
+        "name": "Blood Price",
+        "spellType": "Offensive",
+        "creatureClass": "Leech",
+        "energyCost": 3,
+        "criticalChance": 0.5,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "Damage",
+            "amount": 11,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ],
+        "casterEffects": [
+          {
+            "kind": "Damage",
+            "amount": 3,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:healing_screech:v1",
+        "name": "Vital Echo",
+        "spellType": "Defensive",
+        "creatureClass": "Shaman",
+        "energyCost": 2,
+        "criticalChance": 0.55,
+        "targeting": {
+          "origin": "Ally",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "Heal",
+            "amount": 2,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          },
+          {
+            "kind": "Regeneration",
+            "amount": null,
+            "amountPerRound": 4,
+            "durationRounds": 2,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:heavy_strike:v1",
+        "name": "Strike",
+        "spellType": "Offensive",
+        "creatureClass": "Creature",
+        "energyCost": 2,
+        "criticalChance": 0,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "Damage",
+            "amount": 3,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:ice_spear:v1",
+        "name": "Deep Freeze",
+        "spellType": "Offensive",
+        "creatureClass": "Wizard",
+        "energyCost": 2,
+        "criticalChance": 0.5,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "Damage",
+            "amount": 4,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          },
+          {
+            "kind": "Stun",
+            "amount": null,
+            "amountPerRound": null,
+            "durationRounds": 1,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:infectious_blast:v1",
+        "name": "Contagion",
+        "spellType": "Offensive",
+        "creatureClass": "Trickster",
+        "energyCost": 1,
+        "criticalChance": 0,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "Multi",
+          "maxTargets": 3
+        },
+        "effects": [
+          {
+            "kind": "DefenseDebuff",
+            "amount": 3,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": true,
+            "stacking": null
+          },
+          {
+            "kind": "Damage",
+            "amount": 2,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:latch:v1",
+        "name": "Latch",
+        "spellType": "Offensive",
+        "creatureClass": "Leech",
+        "energyCost": 1,
+        "criticalChance": 0,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "Bleed",
+            "amount": null,
+            "amountPerRound": 2,
+            "durationRounds": 3,
+            "permanent": false,
+            "stacking": null
+          },
+          {
+            "kind": "Damage",
+            "amount": 1,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ],
+        "casterEffects": [
+          {
+            "kind": "Regeneration",
+            "amount": null,
+            "amountPerRound": 1,
+            "durationRounds": 3,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:lightning_bolt:v1",
+        "name": "Shock",
+        "spellType": "Offensive",
+        "creatureClass": "Sorcerer",
+        "energyCost": 2,
+        "criticalChance": 0.5,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "Damage",
+            "amount": 4,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:meteor:v1",
+        "name": "Emberstorm",
+        "spellType": "Offensive",
+        "creatureClass": "Wizard",
+        "energyCost": 3,
+        "criticalChance": 0.35,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "Multi",
+          "maxTargets": 3
+        },
+        "effects": [
+          {
+            "kind": "Damage",
+            "amount": 3,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          },
+          {
+            "kind": "Bleed",
+            "amount": null,
+            "amountPerRound": 2,
+            "durationRounds": 1,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:momentum:v1",
+        "name": "Pursuit",
+        "spellType": "Offensive",
+        "creatureClass": "Assassin",
+        "energyCost": 0,
+        "criticalChance": 0,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "Damage",
+            "amount": 3,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ],
+        "casterEffects": [
+          {
+            "kind": "EnergyGain",
+            "amount": 2,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:mortal_wound:v1",
+        "name": "Eviscerate",
+        "spellType": "Offensive",
+        "creatureClass": "Assassin",
+        "energyCost": 3,
+        "criticalChance": 0.45,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "Damage",
+            "amount": 5,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          },
+          {
+            "kind": "Bleed",
+            "amount": null,
+            "amountPerRound": 4,
+            "durationRounds": 2,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:night_raid:v1",
+        "name": "Blood Hunt",
+        "spellType": "Offensive",
+        "creatureClass": "Assassin",
+        "energyCost": 3,
+        "criticalChance": 0,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "Multi",
+          "maxTargets": 2
+        },
+        "effects": [
+          {
+            "kind": "Damage",
+            "amount": 4,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          },
+          {
+            "kind": "EnergyDrain",
+            "amount": 3,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:noxious_cure:v1",
+        "name": "Toxic Mend",
+        "spellType": "Defensive",
+        "creatureClass": "Trickster",
+        "energyCost": 2,
+        "criticalChance": 0.35,
+        "targeting": {
+          "origin": "Ally",
+          "scope": "Multi",
+          "maxTargets": 3
+        },
+        "effects": [
+          {
+            "kind": "Heal",
+            "amount": 6,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          },
+          {
+            "kind": "DefenseDebuff",
+            "amount": 3,
+            "amountPerRound": null,
+            "durationRounds": 1,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:parasite_jab:v1",
+        "name": "Bite",
+        "spellType": "Offensive",
+        "creatureClass": "Leech",
+        "energyCost": 2,
+        "criticalChance": 0.45,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "Damage",
+            "amount": 6,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ],
+        "casterEffects": [
+          {
+            "kind": "Heal",
+            "amount": 4,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:poison_slash:v1",
+        "name": "Venom Claw",
+        "spellType": "Offensive",
+        "creatureClass": "Scoundrel",
+        "energyCost": 2,
+        "criticalChance": 0,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "Damage",
+            "amount": 3,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          },
+          {
+            "kind": "Bleed",
+            "amount": null,
+            "amountPerRound": 3,
+            "durationRounds": 1,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:protective_slam:v1",
+        "name": "Crash",
+        "spellType": "Offensive",
+        "creatureClass": "Mercenary",
+        "energyCost": 3,
+        "criticalChance": 0.3,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "Damage",
+            "amount": 5,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          },
+          {
+            "kind": "Stun",
+            "amount": null,
+            "amountPerRound": null,
+            "durationRounds": 1,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:psycho_rush:v1",
+        "name": "Deranged Charge",
+        "spellType": "Offensive",
+        "creatureClass": "Berserker",
+        "energyCost": 3,
+        "criticalChance": 0.5,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "Damage",
+            "amount": 10,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ],
+        "casterEffects": [
+          {
+            "kind": "DefenseDebuff",
+            "amount": 2,
+            "amountPerRound": null,
+            "durationRounds": 1,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:pummel:v1",
+        "name": "Pummel",
+        "spellType": "Offensive",
+        "creatureClass": "Brawler",
+        "energyCost": 1,
+        "criticalChance": 0.75,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "Damage",
+            "amount": 2,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:reckless_swing:v1",
+        "name": "Wild Swing",
+        "spellType": "Offensive",
+        "creatureClass": "Berserker",
+        "energyCost": 2,
+        "criticalChance": 0.5,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "Damage",
+            "amount": 6,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ],
+        "casterEffects": [
+          {
+            "kind": "Damage",
+            "amount": 2,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:rejuvenate:v1",
+        "name": "Revitalize",
+        "spellType": "Defensive",
+        "creatureClass": "Sorcerer",
+        "energyCost": 2,
+        "criticalChance": 0.2,
+        "targeting": {
+          "origin": "Ally",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "Heal",
+            "amount": 6,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:restorative_burst:v1",
+        "name": "Renewal Burst",
+        "spellType": "Defensive",
+        "creatureClass": "Shaman",
+        "energyCost": 3,
+        "criticalChance": 0,
+        "targeting": {
+          "origin": "Ally",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "Heal",
+            "amount": 14,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          },
+          {
+            "kind": "EnergyGain",
+            "amount": 3,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:restorative_gush:v1",
+        "name": "Vital Surge",
+        "spellType": "Defensive",
+        "creatureClass": "Warlord",
+        "energyCost": 1,
+        "criticalChance": 0.5,
+        "targeting": {
+          "origin": "Ally",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "Heal",
+            "amount": 10,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:revenant_guards:v1",
+        "name": "Wraithguard",
+        "spellType": "Defensive",
+        "creatureClass": "Necromancer",
+        "energyCost": 3,
+        "criticalChance": 0,
+        "targeting": {
+          "origin": "Ally",
+          "scope": "Multi",
+          "maxTargets": 3
+        },
+        "effects": [
+          {
+            "kind": "DefenseBuff",
+            "amount": 3,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": true,
+            "stacking": null
+          },
+          {
+            "kind": "DefenseBuff",
+            "amount": 5,
+            "amountPerRound": null,
+            "durationRounds": 2,
+            "permanent": false,
+            "stacking": null
+          }
+        ],
+        "casterEffects": [
+          {
+            "kind": "Bleed",
+            "amount": null,
+            "amountPerRound": 4,
+            "durationRounds": 1,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:shield_bash:v1",
+        "name": "Body Slam",
+        "spellType": "Offensive",
+        "creatureClass": "Warlord",
+        "energyCost": 3,
+        "criticalChance": 0.35,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "Damage",
+            "amount": 5,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ],
+        "casterEffects": [
+          {
+            "kind": "DefenseBuff",
+            "amount": 2,
+            "amountPerRound": null,
+            "durationRounds": 3,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:soothing_chant:v1",
+        "name": "Whisper",
+        "spellType": "Defensive",
+        "creatureClass": "Shaman",
+        "energyCost": 1,
+        "criticalChance": 0,
+        "targeting": {
+          "origin": "Ally",
+          "scope": "Multi",
+          "maxTargets": 3
+        },
+        "effects": [
+          {
+            "kind": "Regeneration",
+            "amount": null,
+            "amountPerRound": 3,
+            "durationRounds": 2,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:soul_devourer:v1",
+        "name": "Soul Feast",
+        "spellType": "Offensive",
+        "creatureClass": "Leech",
+        "energyCost": 3,
+        "criticalChance": 0,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "Damage",
+            "amount": 7,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          },
+          {
+            "kind": "EnergyDrain",
+            "amount": 3,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ],
+        "casterEffects": [
+          {
+            "kind": "Heal",
+            "amount": 4,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:summon_minions:v1",
+        "name": "Infestation",
+        "spellType": "Offensive",
+        "creatureClass": "Necromancer",
+        "energyCost": 3,
+        "criticalChance": 0,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "Multi",
+          "maxTargets": 3
+        },
+        "effects": [
+          {
+            "kind": "Bleed",
+            "amount": null,
+            "amountPerRound": 2,
+            "durationRounds": 3,
+            "permanent": false,
+            "stacking": null
+          }
+        ],
+        "casterEffects": [
+          {
+            "kind": "Damage",
+            "amount": 2,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:throwing_star:v1",
+        "name": "Quill",
+        "spellType": "Offensive",
+        "creatureClass": "Scoundrel",
+        "energyCost": 2,
+        "criticalChance": 0,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "Multi",
+          "maxTargets": 2
+        },
+        "effects": [
+          {
+            "kind": "Damage",
+            "amount": 3,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:thundering_seal:v1",
+        "name": "Alpha Roar",
+        "spellType": "Defensive",
+        "creatureClass": "Mercenary",
+        "energyCost": 2,
+        "criticalChance": 0,
+        "targeting": {
+          "origin": "Ally",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "DefenseBuff",
+            "amount": 4,
+            "amountPerRound": null,
+            "durationRounds": 2,
+            "permanent": false,
+            "stacking": null
+          },
+          {
+            "kind": "DamageBuff",
+            "amount": 2,
+            "amountPerRound": null,
+            "durationRounds": 2,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:tornado:v1",
+        "name": "Whirlwind",
+        "spellType": "Offensive",
+        "creatureClass": "Berserker",
+        "energyCost": 3,
+        "criticalChance": 0.4,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "Multi",
+          "maxTargets": 3
+        },
+        "effects": [
+          {
+            "kind": "Damage",
+            "amount": 8,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:toxic_waves:v1",
+        "name": "Void Pulse",
+        "spellType": "Offensive",
+        "creatureClass": "Shaman",
+        "energyCost": 3,
+        "criticalChance": 0.35,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "Multi",
+          "maxTargets": 3
+        },
+        "effects": [
+          {
+            "kind": "Damage",
+            "amount": 4,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          },
+          {
+            "kind": "Bleed",
+            "amount": null,
+            "amountPerRound": 3,
+            "durationRounds": 2,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:tranquilizer_dart:v1",
+        "name": "Paralyzing Barb",
+        "spellType": "Offensive",
+        "creatureClass": "Trickster",
+        "energyCost": 2,
+        "criticalChance": 0,
+        "targeting": {
+          "origin": "Enemy",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "Damage",
+            "amount": 2,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          },
+          {
+            "kind": "Stun",
+            "amount": null,
+            "amountPerRound": null,
+            "durationRounds": 1,
+            "permanent": false,
+            "stacking": null
+          },
+          {
+            "kind": "Bleed",
+            "amount": null,
+            "amountPerRound": 1,
+            "durationRounds": 2,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      },
+      {
+        "id": "spell:wait:v1",
+        "name": "Focus",
+        "spellType": "Defensive",
+        "creatureClass": "Creature",
+        "energyCost": 0,
+        "criticalChance": 0,
+        "targeting": {
+          "origin": "Self",
+          "scope": "SingleTarget",
+          "maxTargets": 1
+        },
+        "effects": [
+          {
+            "kind": "EnergyGain",
+            "amount": 2,
+            "amountPerRound": null,
+            "durationRounds": null,
+            "permanent": false,
+            "stacking": null
+          }
+        ]
+      }
+    ],
+    "talentTrees": [
+      {
+        "id": "talent-tree:base_creature:v1",
+        "name": "Base Creature Talent Tree",
+        "root": {
+          "code": "BaseCreature",
+          "name": "Base Creature",
+          "prerequisites": {
+            "allOf": [],
+            "anyOf": []
+          },
+          "spells": [
+            {
+              "id": "spell:heavy_strike:v1",
+              "prerequisites": {
+                "allOf": [],
+                "anyOf": []
+              }
+            },
+            {
+              "id": "spell:wait:v1",
+              "prerequisites": {
+                "allOf": [],
+                "anyOf": []
+              }
+            }
+          ],
+          "children": [
+            {
+              "code": "Brawler",
+              "name": "Brawler",
+              "prerequisites": {
+                "allOf": [
+                  "spell:heavy_strike:v1",
+                  "spell:wait:v1"
+                ],
+                "anyOf": []
+              },
+              "spells": [
+                {
+                  "id": "spell:pummel:v1",
+                  "prerequisites": {
+                    "allOf": [],
+                    "anyOf": []
+                  }
+                },
+                {
+                  "id": "spell:guard:v1",
+                  "prerequisites": {
+                    "allOf": [],
+                    "anyOf": []
+                  }
+                }
+              ],
+              "children": [
+                {
+                  "code": "Mercenary",
+                  "name": "Mercenary",
+                  "prerequisites": {
+                    "allOf": [],
+                    "anyOf": [
+                      "spell:pummel:v1",
+                      "spell:guard:v1"
+                    ]
+                  },
+                  "spells": [
+                    {
+                      "id": "spell:protective_slam:v1",
+                      "prerequisites": {
+                        "allOf": [],
+                        "anyOf": []
+                      }
+                    },
+                    {
+                      "id": "spell:chain_slash:v1",
+                      "prerequisites": {
+                        "allOf": [
+                          "spell:protective_slam:v1"
+                        ],
+                        "anyOf": []
+                      }
+                    },
+                    {
+                      "id": "spell:thundering_seal:v1",
+                      "prerequisites": {
+                        "allOf": [
+                          "spell:protective_slam:v1"
+                        ],
+                        "anyOf": []
+                      }
+                    }
+                  ],
+                  "children": []
+                },
+                {
+                  "code": "Warlord",
+                  "name": "Warlord",
+                  "prerequisites": {
+                    "allOf": [],
+                    "anyOf": [
+                      "spell:pummel:v1",
+                      "spell:guard:v1"
+                    ]
+                  },
+                  "spells": [
+                    {
+                      "id": "spell:full_plate:v1",
+                      "prerequisites": {
+                        "allOf": [],
+                        "anyOf": []
+                      }
+                    },
+                    {
+                      "id": "spell:restorative_gush:v1",
+                      "prerequisites": {
+                        "allOf": [
+                          "spell:full_plate:v1"
+                        ],
+                        "anyOf": []
+                      }
+                    },
+                    {
+                      "id": "spell:crushing_stomp:v1",
+                      "prerequisites": {
+                        "allOf": [
+                          "spell:full_plate:v1"
+                        ],
+                        "anyOf": []
+                      }
+                    }
+                  ],
+                  "children": []
+                },
+                {
+                  "code": "Berserker",
+                  "name": "Berserker",
+                  "prerequisites": {
+                    "allOf": [],
+                    "anyOf": [
+                      "spell:pummel:v1",
+                      "spell:guard:v1"
+                    ]
+                  },
+                  "spells": [
+                    {
+                      "id": "spell:enraged_charge:v1",
+                      "prerequisites": {
+                        "allOf": [],
+                        "anyOf": []
+                      }
+                    },
+                    {
+                      "id": "spell:tornado:v1",
+                      "prerequisites": {
+                        "allOf": [
+                          "spell:enraged_charge:v1"
+                        ],
+                        "anyOf": []
+                      }
+                    },
+                    {
+                      "id": "spell:psycho_rush:v1",
+                      "prerequisites": {
+                        "allOf": [
+                          "spell:enraged_charge:v1"
+                        ],
+                        "anyOf": []
+                      }
+                    }
+                  ],
+                  "children": []
+                }
+              ]
+            },
+            {
+              "code": "Scoundrel",
+              "name": "Scoundrel",
+              "prerequisites": {
+                "allOf": [
+                  "spell:heavy_strike:v1",
+                  "spell:wait:v1"
+                ],
+                "anyOf": []
+              },
+              "spells": [
+                {
+                  "id": "spell:poison_slash:v1",
+                  "prerequisites": {
+                    "allOf": [],
+                    "anyOf": []
+                  }
+                },
+                {
+                  "id": "spell:throwing_star:v1",
+                  "prerequisites": {
+                    "allOf": [],
+                    "anyOf": []
+                  }
+                }
+              ],
+              "children": [
+                {
+                  "code": "Leech",
+                  "name": "Leech",
+                  "prerequisites": {
+                    "allOf": [],
+                    "anyOf": [
+                      "spell:poison_slash:v1",
+                      "spell:throwing_star:v1"
+                    ]
+                  },
+                  "spells": [
+                    {
+                      "id": "spell:parasite_jab:v1",
+                      "prerequisites": {
+                        "allOf": [],
+                        "anyOf": []
+                      }
+                    },
+                    {
+                      "id": "spell:hateful_sacrifice:v1",
+                      "prerequisites": {
+                        "allOf": [
+                          "spell:parasite_jab:v1"
+                        ],
+                        "anyOf": []
+                      }
+                    },
+                    {
+                      "id": "spell:soul_devourer:v1",
+                      "prerequisites": {
+                        "allOf": [
+                          "spell:parasite_jab:v1"
+                        ],
+                        "anyOf": []
+                      }
+                    }
+                  ],
+                  "children": []
+                },
+                {
+                  "code": "Assassin",
+                  "name": "Assassin",
+                  "prerequisites": {
+                    "allOf": [],
+                    "anyOf": [
+                      "spell:poison_slash:v1",
+                      "spell:throwing_star:v1"
+                    ]
+                  },
+                  "spells": [
+                    {
+                      "id": "spell:momentum:v1",
+                      "prerequisites": {
+                        "allOf": [],
+                        "anyOf": []
+                      }
+                    },
+                    {
+                      "id": "spell:night_raid:v1",
+                      "prerequisites": {
+                        "allOf": [
+                          "spell:momentum:v1"
+                        ],
+                        "anyOf": []
+                      }
+                    },
+                    {
+                      "id": "spell:mortal_wound:v1",
+                      "prerequisites": {
+                        "allOf": [
+                          "spell:momentum:v1"
+                        ],
+                        "anyOf": []
+                      }
+                    }
+                  ],
+                  "children": []
+                },
+                {
+                  "code": "Trickster",
+                  "name": "Trickster",
+                  "prerequisites": {
+                    "allOf": [],
+                    "anyOf": [
+                      "spell:poison_slash:v1",
+                      "spell:throwing_star:v1"
+                    ]
+                  },
+                  "spells": [
+                    {
+                      "id": "spell:noxious_cure:v1",
+                      "prerequisites": {
+                        "allOf": [],
+                        "anyOf": []
+                      }
+                    },
+                    {
+                      "id": "spell:tranquilizer_dart:v1",
+                      "prerequisites": {
+                        "allOf": [
+                          "spell:noxious_cure:v1"
+                        ],
+                        "anyOf": []
+                      }
+                    },
+                    {
+                      "id": "spell:infectious_blast:v1",
+                      "prerequisites": {
+                        "allOf": [
+                          "spell:noxious_cure:v1"
+                        ],
+                        "anyOf": []
+                      }
+                    }
+                  ],
+                  "children": []
+                }
+              ]
+            },
+            {
+              "code": "Sorcerer",
+              "name": "Sorcerer",
+              "prerequisites": {
+                "allOf": [
+                  "spell:heavy_strike:v1",
+                  "spell:wait:v1"
+                ],
+                "anyOf": []
+              },
+              "spells": [
+                {
+                  "id": "spell:lightning_bolt:v1",
+                  "prerequisites": {
+                    "allOf": [],
+                    "anyOf": []
+                  }
+                },
+                {
+                  "id": "spell:rejuvenate:v1",
+                  "prerequisites": {
+                    "allOf": [],
+                    "anyOf": []
+                  }
+                }
+              ],
+              "children": [
+                {
+                  "code": "Wizard",
+                  "name": "Wizard",
+                  "prerequisites": {
+                    "allOf": [],
+                    "anyOf": [
+                      "spell:lightning_bolt:v1",
+                      "spell:rejuvenate:v1"
+                    ]
+                  },
+                  "spells": [
+                    {
+                      "id": "spell:meteor:v1",
+                      "prerequisites": {
+                        "allOf": [],
+                        "anyOf": []
+                      }
+                    },
+                    {
+                      "id": "spell:engulfing_flames:v1",
+                      "prerequisites": {
+                        "allOf": [
+                          "spell:meteor:v1"
+                        ],
+                        "anyOf": []
+                      }
+                    },
+                    {
+                      "id": "spell:ice_spear:v1",
+                      "prerequisites": {
+                        "allOf": [
+                          "spell:meteor:v1"
+                        ],
+                        "anyOf": []
+                      }
+                    }
+                  ],
+                  "children": []
+                },
+                {
+                  "code": "Necromancer",
+                  "name": "Necromancer",
+                  "prerequisites": {
+                    "allOf": [],
+                    "anyOf": [
+                      "spell:lightning_bolt:v1",
+                      "spell:rejuvenate:v1"
+                    ]
+                  },
+                  "spells": [
+                    {
+                      "id": "spell:summon_minions:v1",
+                      "prerequisites": {
+                        "allOf": [],
+                        "anyOf": []
+                      }
+                    },
+                    {
+                      "id": "spell:revenant_guards:v1",
+                      "prerequisites": {
+                        "allOf": [
+                          "spell:summon_minions:v1"
+                        ],
+                        "anyOf": []
+                      }
+                    },
+                    {
+                      "id": "spell:crazed_specter:v1",
+                      "prerequisites": {
+                        "allOf": [
+                          "spell:summon_minions:v1"
+                        ],
+                        "anyOf": []
+                      }
+                    }
+                  ],
+                  "children": []
+                },
+                {
+                  "code": "Shaman",
+                  "name": "Shaman",
+                  "prerequisites": {
+                    "allOf": [],
+                    "anyOf": [
+                      "spell:lightning_bolt:v1",
+                      "spell:rejuvenate:v1"
+                    ]
+                  },
+                  "spells": [
+                    {
+                      "id": "spell:healing_screech:v1",
+                      "prerequisites": {
+                        "allOf": [],
+                        "anyOf": []
+                      }
+                    },
+                    {
+                      "id": "spell:toxic_waves:v1",
+                      "prerequisites": {
+                        "allOf": [
+                          "spell:healing_screech:v1"
+                        ],
+                        "anyOf": []
+                      }
+                    },
+                    {
+                      "id": "spell:restorative_burst:v1",
+                      "prerequisites": {
+                        "allOf": [
+                          "spell:healing_screech:v1"
+                        ],
+                        "anyOf": []
+                      }
+                    }
+                  ],
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "tiers": [
+      {
+        "id": "tier:apex:v1",
+        "name": "Apex",
+        "level": 4,
+        "prerequisites": [],
+        "anyOf": [
+          "tier:blightweaver:v1",
+          "tier:deathstalker:v1",
+          "tier:soulreaver:v1"
+        ],
+        "spells": [],
+        "initiativeBonus": 0,
+        "passive": {
+          "damageBonus": 5
+        }
+      },
+      {
+        "id": "tier:archmage:v1",
+        "name": "Archmage",
+        "level": 4,
+        "prerequisites": [],
+        "anyOf": [
+          "tier:harbinger:v1",
+          "tier:lich:v1",
+          "tier:spiritcaller:v1"
+        ],
+        "spells": [],
+        "initiativeBonus": 0,
+        "passive": {
+          "upkeepEnergy": 1
+        },
+        "sharedWithTeam": true
+      },
+      {
+        "id": "tier:assassin:v1",
+        "name": "Deathmarked",
+        "level": 2,
+        "prerequisites": [
+          "tier:prowler:v1"
+        ],
+        "spells": [
+          "spell:momentum:v1",
+          "spell:ambush:v1"
+        ],
+        "initiativeBonus": 3
+      },
+      {
+        "id": "tier:berserker:v1",
+        "name": "Frenzied",
+        "level": 2,
+        "prerequisites": [
+          "tier:brute:v1"
+        ],
+        "spells": [
+          "spell:enraged_charge:v1",
+          "spell:reckless_swing:v1"
+        ],
+        "initiativeBonus": 3
+      },
+      {
+        "id": "tier:blightweaver:v1",
+        "name": "Blightweaver",
+        "level": 3,
+        "prerequisites": [
+          "tier:plague_doctor:v1"
+        ],
+        "spells": [
+          "spell:tranquilizer_dart:v1",
+          "spell:infectious_blast:v1"
+        ],
+        "initiativeBonus": 4
+      },
+      {
+        "id": "tier:brute:v1",
+        "name": "Brute",
+        "level": 1,
+        "prerequisites": [],
+        "spells": [
+          "spell:pummel:v1",
+          "spell:guard:v1"
+        ],
+        "initiativeBonus": 1
+      },
+      {
+        "id": "tier:deathstalker:v1",
+        "name": "Deathstalker",
+        "level": 3,
+        "prerequisites": [
+          "tier:assassin:v1"
+        ],
+        "spells": [
+          "spell:night_raid:v1",
+          "spell:mortal_wound:v1"
+        ],
+        "initiativeBonus": 5
+      },
+      {
+        "id": "tier:dreadnought:v1",
+        "name": "Colossus",
+        "level": 3,
+        "prerequisites": [
+          "tier:ironbound:v1"
+        ],
+        "spells": [
+          "spell:restorative_gush:v1",
+          "spell:crushing_stomp:v1"
+        ],
+        "initiativeBonus": 1
+      },
+      {
+        "id": "tier:elementalist:v1",
+        "name": "Stormborn",
+        "level": 2,
+        "prerequisites": [
+          "tier:occultist:v1"
+        ],
+        "spells": [
+          "spell:meteor:v1",
+          "spell:frostbite:v1"
+        ],
+        "initiativeBonus": 3
+      },
+      {
+        "id": "tier:harbinger:v1",
+        "name": "Cataclysm",
+        "level": 3,
+        "prerequisites": [
+          "tier:elementalist:v1"
+        ],
+        "spells": [
+          "spell:engulfing_flames:v1",
+          "spell:ice_spear:v1"
+        ],
+        "initiativeBonus": 3
+      },
+      {
+        "id": "tier:ironbound:v1",
+        "name": "Ironhide",
+        "level": 2,
+        "prerequisites": [
+          "tier:brute:v1"
+        ],
+        "spells": [
+          "spell:full_plate:v1",
+          "spell:shield_bash:v1"
+        ],
+        "initiativeBonus": 1
+      },
+      {
+        "id": "tier:lich:v1",
+        "name": "Revenant",
+        "level": 3,
+        "prerequisites": [
+          "tier:necromancer:v1"
+        ],
+        "spells": [
+          "spell:revenant_guards:v1",
+          "spell:crazed_specter:v1"
+        ],
+        "initiativeBonus": 2
+      },
+      {
+        "id": "tier:marauder:v1",
+        "name": "Oppressor",
+        "level": 2,
+        "prerequisites": [
+          "tier:brute:v1"
+        ],
+        "spells": [
+          "spell:protective_slam:v1",
+          "spell:extort:v1"
+        ],
+        "initiativeBonus": 2
+      },
+      {
+        "id": "tier:necromancer:v1",
+        "name": "Necrotic",
+        "level": 2,
+        "prerequisites": [
+          "tier:occultist:v1"
+        ],
+        "spells": [
+          "spell:summon_minions:v1",
+          "spell:bone_ward:v1"
+        ],
+        "initiativeBonus": 1
+      },
+      {
+        "id": "tier:occultist:v1",
+        "name": "Warped",
+        "level": 1,
+        "prerequisites": [],
+        "spells": [
+          "spell:lightning_bolt:v1",
+          "spell:rejuvenate:v1"
+        ],
+        "initiativeBonus": 2
+      },
+      {
+        "id": "tier:parasite:v1",
+        "name": "Parasite",
+        "level": 2,
+        "prerequisites": [
+          "tier:prowler:v1"
+        ],
+        "spells": [
+          "spell:parasite_jab:v1",
+          "spell:latch:v1"
+        ],
+        "initiativeBonus": 1
+      },
+      {
+        "id": "tier:plague_doctor:v1",
+        "name": "Blighted",
+        "level": 2,
+        "prerequisites": [
+          "tier:prowler:v1"
+        ],
+        "spells": [
+          "spell:noxious_cure:v1",
+          "spell:adrenaline_tonic:v1"
+        ],
+        "initiativeBonus": 3
+      },
+      {
+        "id": "tier:prowler:v1",
+        "name": "Predator",
+        "level": 1,
+        "prerequisites": [],
+        "spells": [
+          "spell:poison_slash:v1",
+          "spell:throwing_star:v1"
+        ],
+        "initiativeBonus": 3
+      },
+      {
+        "id": "tier:ravager:v1",
+        "name": "Ravager",
+        "level": 3,
+        "prerequisites": [
+          "tier:berserker:v1"
+        ],
+        "spells": [
+          "spell:tornado:v1",
+          "spell:psycho_rush:v1"
+        ],
+        "initiativeBonus": 3
+      },
+      {
+        "id": "tier:shaman:v1",
+        "name": "Ethereal",
+        "level": 2,
+        "prerequisites": [
+          "tier:occultist:v1"
+        ],
+        "spells": [
+          "spell:healing_screech:v1",
+          "spell:soothing_chant:v1"
+        ],
+        "initiativeBonus": 2
+      },
+      {
+        "id": "tier:soulreaver:v1",
+        "name": "Soulreaver",
+        "level": 3,
+        "prerequisites": [
+          "tier:parasite:v1"
+        ],
+        "spells": [
+          "spell:hateful_sacrifice:v1",
+          "spell:soul_devourer:v1"
+        ],
+        "initiativeBonus": 3
+      },
+      {
+        "id": "tier:spiritcaller:v1",
+        "name": "Transcendent",
+        "level": 3,
+        "prerequisites": [
+          "tier:shaman:v1"
+        ],
+        "spells": [
+          "spell:toxic_waves:v1",
+          "spell:restorative_burst:v1"
+        ],
+        "initiativeBonus": 2
+      },
+      {
+        "id": "tier:titan:v1",
+        "name": "Titan",
+        "level": 4,
+        "prerequisites": [],
+        "anyOf": [
+          "tier:ravager:v1",
+          "tier:dreadnought:v1",
+          "tier:warmonger:v1"
+        ],
+        "spells": [],
+        "initiativeBonus": 0,
+        "passive": {
+          "sunder": 10
+        }
+      },
+      {
+        "id": "tier:warmonger:v1",
+        "name": "Tyrant",
+        "level": 3,
+        "prerequisites": [
+          "tier:marauder:v1"
+        ],
+        "spells": [
+          "spell:chain_slash:v1",
+          "spell:thundering_seal:v1"
+        ],
+        "initiativeBonus": 2
+      }
+    ],
+    "aliases": {
+      "spell:adrenaline_tonic": "spell:adrenaline_tonic:v1",
+      "spell:ambush": "spell:ambush:v1",
+      "spell:bone_ward": "spell:bone_ward:v1",
+      "spell:chain_slash": "spell:chain_slash:v1",
+      "spell:crazed_specter": "spell:crazed_specter:v1",
+      "spell:crushing_stomp": "spell:crushing_stomp:v1",
+      "spell:engulfing_flames": "spell:engulfing_flames:v1",
+      "spell:enraged_charge": "spell:enraged_charge:v1",
+      "spell:extort": "spell:extort:v1",
+      "spell:frostbite": "spell:frostbite:v1",
+      "spell:full_plate": "spell:full_plate:v1",
+      "spell:guard": "spell:guard:v1",
+      "spell:hateful_sacrifice": "spell:hateful_sacrifice:v1",
+      "spell:healing_screech": "spell:healing_screech:v1",
+      "spell:heavy_strike": "spell:heavy_strike:v1",
+      "spell:ice_spear": "spell:ice_spear:v1",
+      "spell:infectious_blast": "spell:infectious_blast:v1",
+      "spell:latch": "spell:latch:v1",
+      "spell:lightning_bolt": "spell:lightning_bolt:v1",
+      "spell:meteor": "spell:meteor:v1",
+      "spell:momentum": "spell:momentum:v1",
+      "spell:mortal_wound": "spell:mortal_wound:v1",
+      "spell:night_raid": "spell:night_raid:v1",
+      "spell:noxious_cure": "spell:noxious_cure:v1",
+      "spell:parasite_jab": "spell:parasite_jab:v1",
+      "spell:poison_slash": "spell:poison_slash:v1",
+      "spell:protective_slam": "spell:protective_slam:v1",
+      "spell:psycho_rush": "spell:psycho_rush:v1",
+      "spell:pummel": "spell:pummel:v1",
+      "spell:reckless_swing": "spell:reckless_swing:v1",
+      "spell:rejuvenate": "spell:rejuvenate:v1",
+      "spell:restorative_burst": "spell:restorative_burst:v1",
+      "spell:restorative_gush": "spell:restorative_gush:v1",
+      "spell:revenant_guards": "spell:revenant_guards:v1",
+      "spell:shield_bash": "spell:shield_bash:v1",
+      "spell:soothing_chant": "spell:soothing_chant:v1",
+      "spell:soul_devourer": "spell:soul_devourer:v1",
+      "spell:summon_minions": "spell:summon_minions:v1",
+      "spell:throwing_star": "spell:throwing_star:v1",
+      "spell:thundering_seal": "spell:thundering_seal:v1",
+      "spell:tornado": "spell:tornado:v1",
+      "spell:toxic_waves": "spell:toxic_waves:v1",
+      "spell:tranquilizer_dart": "spell:tranquilizer_dart:v1",
+      "spell:wait": "spell:wait:v1",
+      "talent-tree:base_creature": "talent-tree:base_creature:v1"
+    }
+  }
+}

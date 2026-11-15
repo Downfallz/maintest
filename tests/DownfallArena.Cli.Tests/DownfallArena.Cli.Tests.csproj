@@ -26,6 +26,7 @@
          and StudioFilesTests asserts the served set against whatever lands here. Tests are not part of the page. -->
     <Content Include="..\..\studio\*.js" Exclude="..\..\studio\*.test.js" Link="studio\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\table\battle-build\*" Link="table\battle-build\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\DownfallArena.Infrastructure.Tests\Scenarios\*.json" Link="scenarios\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\table\battle-art\*.webp" Link="table\battle-art\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\table\battle-art\horizon\*.webp" Link="table\battle-art\horizon\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\table\battle-art\evolutions\*.webp" Link="table\battle-art\evolutions\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />

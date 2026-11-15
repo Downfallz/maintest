@@ -1,4 +1,4 @@
-# 0150 — Open the team's tempos with their phase, docked beside the field
+# 0150. Open the team's tempos with their phase, docked beside the field
 
 Date: 2026-11-08
 

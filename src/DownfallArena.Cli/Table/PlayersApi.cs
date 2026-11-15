@@ -3,6 +3,7 @@ using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Friends;
 using DownfallArena.Application.Accounts.Players;
 using DownfallArena.Application.Accounts.Ports;
+using DownfallArena.Application.Admin;
 using DownfallArena.Cli.Studio;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Primitives;
@@ -35,6 +36,9 @@ internal sealed class PlayersApi
         _accounts = accounts;
         _results = results;
     }
+
+    /// <summary>What operators do here (A6), noted beside each action's console line.</summary>
+    public OperatorNotes Notes { get; set; } = OperatorNotes.None;
 
     /// <summary>Friendships, for the count a sheet shows; none on a host that keeps none.</summary>
     public Friends? Friends { get; set; }
@@ -183,6 +187,7 @@ internal sealed class PlayersApi
         }
 
         Console.WriteLine($"  Account {account.Id.Value} ({account.Username.Value}) signed out everywhere by {operatorName}.");
+        await Notes.NoteAsync(operatorName, OperatorActions.SignOut, account.Id.Value, account.Username.Value);
         return Answer(new { signedOut = true });
     }
 
@@ -202,6 +207,7 @@ internal sealed class PlayersApi
         }
 
         Console.WriteLine($"  Account {account.Id.Value} ({account.Username.Value}) suspended by {operatorName}: {suspension.Value.Reason}");
+        await Notes.NoteAsync(operatorName, OperatorActions.Suspend, account.Id.Value, $"{account.Username.Value}: {suspension.Value.Reason}");
         return Answer(new { suspension = Describe(suspended.Value.Suspension) });
     }
 
@@ -214,6 +220,7 @@ internal sealed class PlayersApi
         }
 
         Console.WriteLine($"  Account {account.Id.Value} ({account.Username.Value}) restored by {operatorName}.");
+        await Notes.NoteAsync(operatorName, OperatorActions.Restore, account.Id.Value, account.Username.Value);
         return Answer(new { restored = true });
     }
 
@@ -230,6 +237,7 @@ internal sealed class PlayersApi
         }
 
         Console.WriteLine($"  Account {account.Id.Value} renamed from {account.Username.Value} to {renamed.Value.Username.Value} by {operatorName}.");
+        await Notes.NoteAsync(operatorName, OperatorActions.Rename, account.Id.Value, $"{account.Username.Value} to {renamed.Value.Username.Value}");
         return Answer(new { account = AccountApi.Describe(renamed.Value) });
     }
 
@@ -247,6 +255,7 @@ internal sealed class PlayersApi
         }
 
         Console.WriteLine($"  Account {account.Id.Value} ({account.Username.Value}) deleted by {operatorName}.");
+        await Notes.NoteAsync(operatorName, OperatorActions.DeletePlayer, account.Id.Value, account.Username.Value);
         return Answer(new { deleted = true });
     }
 

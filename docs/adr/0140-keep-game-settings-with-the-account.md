@@ -1,4 +1,4 @@
-# 0140 — Keep game settings with the account, override them per game
+# 0140. Keep game settings with the account, override them per game
 
 Date: 2026-11-06
 

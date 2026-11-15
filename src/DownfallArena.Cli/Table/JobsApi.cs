@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DownfallArena.Application.Admin;
 using DownfallArena.Application.Tables.Ports;
 using DownfallArena.Application.Tables.Tending;
 using DownfallArena.Cli.Studio;
@@ -40,6 +41,9 @@ internal sealed class JobsApi
         _clock = clock;
         _pass = pass;
     }
+
+    /// <summary>What operators do here (A6), noted beside each action's console line.</summary>
+    public OperatorNotes Notes { get; set; } = OperatorNotes.None;
 
     /// <summary>The kept runs, which this tab pages and the Overview reads the last of (A5).</summary>
     public TendRuns Runs { get; }
@@ -120,7 +124,9 @@ internal sealed class JobsApi
         try
         {
             var (_, run) = await TableTend.RecordedAsync(_log, TendTrigger.Manual, operatorName, _clock, _pass);
-            Console.WriteLine($"  Tending pass {run.Id} run by {operatorName}: {run.NeverBegan.Count} closed, {run.InvitationsExpired} invitations let go of, {run.TimedOut.Count} timed out, {run.Abandoned.Count} left ended, {run.Warned.Count} warned.");
+            var did = $"{run.NeverBegan.Count} closed, {run.InvitationsExpired} invitations let go of, {run.TimedOut.Count} timed out, {run.Abandoned.Count} left ended, {run.Warned.Count} warned";
+            Console.WriteLine($"  Tending pass {run.Id} run by {operatorName}: {did}.");
+            await Notes.NoteAsync(operatorName, OperatorActions.RunPass, run.Id, did);
             return StudioResponse.OfJson(new { run = Describe(run) }, Web);
         }
         catch (Exception failure) when (TableRegistry.StoreFails(failure))

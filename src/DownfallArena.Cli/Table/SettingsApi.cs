@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DownfallArena.Application.Admin;
 using DownfallArena.Application.Hosting;
 using DownfallArena.Cli.Studio;
 
@@ -10,6 +11,9 @@ namespace DownfallArena.Cli.Table;
 /// </summary>
 internal sealed class SettingsApi(HostSettingsCache settings, TimeProvider clock)
 {
+    /// <summary>What operators do here (A6), noted beside the console line.</summary>
+    public OperatorNotes Notes { get; set; } = OperatorNotes.None;
+
     public const string Route = "/api/admin/settings";
 
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web);
@@ -47,7 +51,9 @@ internal sealed class SettingsApi(HostSettingsCache settings, TimeProvider clock
         }
 
         await settings.SaveAsync(saved.Value);
-        Console.WriteLine($"  Host settings saved by {operatorName}: registration {(open ? "open" : "closed")}, {(saved.Value.Notice is null ? "no notice" : $"notice \"{saved.Value.Notice}\"")}.");
+        var said = $"registration {(open ? "open" : "closed")}, {(saved.Value.Notice is null ? "no notice" : $"notice \"{saved.Value.Notice}\"")}";
+        Console.WriteLine($"  Host settings saved by {operatorName}: {said}.");
+        await Notes.NoteAsync(operatorName, OperatorActions.SaveSettings, target: null, said);
         return Answer(saved.Value);
     }
 

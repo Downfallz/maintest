@@ -73,6 +73,12 @@ internal sealed class TableServer : IDisposable
     /// </summary>
     public bool Tended { get; init; }
 
+    /// <summary>A player's side of the match scenarios (ADR 0179), on a host that keeps them and signs players in.</summary>
+    public ScenariosApi? Scenarios { get; init; }
+
+    /// <summary>The scenarios being practised in this process, found by their seats' tokens.</summary>
+    public ScenarioPractices? Practices { get; init; }
+
     /// <summary>
     /// Whether the host is still rebuilding the tables an earlier host left open (ADR 0091). It serves from the
     /// first moment, because a platform that waits for the port to answer gives up after a minute and a host with
@@ -291,6 +297,13 @@ internal sealed class TableServer : IDisposable
                 : await _stats.HandleAsync(method, account);
         }
 
+        if (ScenariosApi.Names(path))
+        {
+            return Scenarios is null
+                ? StudioResponse.OfPlainText(404, "This host keeps no scenarios to practise: it records nothing, or players do not sign in here.")
+                : await Scenarios.HandleAsync(method, path, account);
+        }
+
         var token = request.Headers[TableApi.TokenHeader];
 
         // A seat's own lobby routes find their seat by its token, and a token whose table is still being rebuilt
@@ -303,6 +316,15 @@ internal sealed class TableServer : IDisposable
         if (AdminApi.Names(path))
         {
             return await _admin.HandleAsync(method, path, body, token, request.Headers[OperatorGate.PrincipalHeader], account, request.Url?.Query);
+        }
+
+        // A scenario's practice (ADR 0179) is found by its seat's token too, in this process's memory, and answers only
+        // the account that opened it: it is in no index and no store for another request to find.
+        if (Practices?.ByToken(token) is { } practice)
+        {
+            return _accounts is not null && (await _accounts.WhoAsync(account))?.Account.Id.ToString() == practice.Account
+                ? await practice.Play.Api.HandleAsync(method, path, body, token, request.Headers["If-None-Match"], request.Url?.Query)
+                : StudioResponse.OfPlainText(403, "This practice is another account's.");
         }
 
         // The token says which table, and the table's own API says the rest. A token no table holds is

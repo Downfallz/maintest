@@ -88,3 +88,13 @@ test('a creature is named as the board names it, never by the host\'s raw name',
 
   assert.deepEqual(report.sides.flatMap(side => side.creatures.map(one => one.name)), ['Creature 1', 'Creature 2', 'Creature 4']);
 });
+
+test('each creature is drawn as it ended the match: the illustration its mutations gave it, the base one without', () => {
+  const packages = new Map([['tier:brute:v1', { id: 'tier:brute:v1', level: 1, prerequisites: [], anyOf: [], visual: { family: 'brute', artwork: 'brute-base' } }]]);
+  const mutated = { ...creature(1, 'Wolf'), acquiredTiers: ['tier:brute:v1'] };
+
+  const report = matchScoreboard([], board([mutated], [creature(3, 'Ghoul')]), packages);
+
+  assert.match(row(report, 1).artwork, /brute/);
+  assert.equal(row(report, 3).artwork, 'evolutions/base-creature.webp');
+});

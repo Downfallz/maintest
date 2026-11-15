@@ -1,4 +1,4 @@
-# 0147 — List every finished game, and at most five of each kind in progress
+# 0147. List every finished game, and at most five of each kind in progress
 
 Date: 2026-11-07
 

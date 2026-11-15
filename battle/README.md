@@ -816,3 +816,13 @@ Energy, initiative and damage changes stay on the badges alone. A fallen creatur
 draws them (`src/condition-auras.ts`) from the frame's `statuses`, the badges' own icon keys, animated from its
 update clock like the capstone effects, and still under reduced motion. `#battle[data-auras]` says what is drawn
 (`1:stun+health-loss 2:defense-gain`).
+
+## A match scenario's practice
+
+`/battle?scenario=<id>` opens a match scenario as practice (ADR 0179, docs/tabletop/scenarios-plan.md, S4).
+`table/battle-practice.js` (pure, `battle-practice.test.js`) reads the id, asks the host for the account's practice
+of it (`GET /api/scenarios/<id>/practice`) and starts one from the cut when there is none (`POST`), and words the band.
+The page opens the seat the host answers with, without the lobby's seat discovery: a practice is in no index. A band
+in the field's top right corner (`#practice-band`) says it is practice, where it began and that the recorded match is
+unchanged; **Restart the round** starts it again from the cut, **Leave** goes to the lobby. Signed out, the page asks
+to sign in.

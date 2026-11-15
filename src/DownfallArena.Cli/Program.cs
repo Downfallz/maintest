@@ -27,6 +27,18 @@ if (options.Command == "push-keys")
     return 0;
 }
 
+// The scenario commands build their services over the content the scenario is played on, which may not be this
+// host's own (docs/tabletop/scenarios-plan.md, S3).
+switch (options.Command)
+{
+    case CliOptions.ScenarioCutCommand:
+        return await DownfallArena.Cli.Table.ScenarioCommands.CutAsync(options);
+    case CliOptions.ScenarioCheckCommand:
+        return await DownfallArena.Cli.Table.ScenarioCommands.CheckAsync(options);
+    case "table" when options.Scenario is not null:
+        return await DownfallArena.Cli.Table.PracticeHost.RunScenarioAsync(options);
+}
+
 if (!File.Exists(options.SchemaPath))
 {
     await Console.Error.WriteLineAsync($"Game schema '{options.SchemaPath}' not found. Build it first: dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst");

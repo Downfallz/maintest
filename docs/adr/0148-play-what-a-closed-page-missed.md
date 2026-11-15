@@ -1,4 +1,4 @@
-# 0148 — Play what a closed page missed
+# 0148. Play what a closed page missed
 
 Date: 2026-11-07
 

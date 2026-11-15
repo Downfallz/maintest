@@ -5,7 +5,7 @@ using DownfallArena.Infrastructure.Learning;
 namespace DownfallArena.Cli.Table;
 
 /// <summary>Serializes requests with restarts so no query uses a disposed match gate.</summary>
-internal sealed class PracticeTable(CliOptions options, string token) : IAsyncDisposable
+internal sealed class PracticeTable(CliOptions options, string token) : IPracticeTable
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
     private PracticeRun? _run;

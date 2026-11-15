@@ -266,6 +266,38 @@ test('a player is suspended with a reason they read, marked in the list, and res
   await expect(page.locator('#players tr', { hasText: 'player02' }).locator('.status-tag.suspended')).toHaveCount(0);
 });
 
+// The Activity tab (A6): what operators did, twenty a page, newest first, a table's action linking to its session.
+test('a host that records nothing shows no Activity tab', async ({ page }) => {
+  await expect(page.locator('#tab-activity')).toBeHidden();
+  await page.goto('/table/admin.html#activity');
+  await expect(page.locator('#activity-off')).toBeVisible();
+});
+
+test('the operators\' actions are listed twenty a page, newest first, a table\'s linking to its session', async ({ page }, info) => {
+  const kinds = ['table.void', 'player.suspend', 'settings.save', 'table.open', 'turns.requeue'];
+  const actions = Array.from({ length: 23 }, (_, index) => ({ id: `a${index}`, at: new Date(Date.now() - index * 60000).toISOString(), by: index % 2 ? 'ops' : 'mark',
+    action: kinds[index % kinds.length], target: index % kinds.length === 2 || index % kinds.length === 4 ? null : `target-${index}`,
+    detail: index === 0 ? 'stuck: The match stopped answering after a host restart, and nobody could reach their seat again.' : null }));
+  await page.route(/\/api\/admin\/activity(\?.*)?$/, route => {
+    const number = Number(new URL(route.request().url()).searchParams.get('page') ?? 1);
+    return route.fulfill({ json: { actions: actions.slice((number - 1) * 20, number * 20), total: actions.length, page: number, pages: 2, perPage: 20, kept: 1000 } });
+  });
+  await page.reload();
+  await page.locator('#tab-activity').click();
+
+  await expect(page.locator('#activity li')).toHaveCount(20);
+  await expect(page.locator('#activity li').first()).toContainText('Voided a match · target-0');
+  await expect(page.locator('#activity li').first().locator('a')).toHaveAttribute('href', '/session/target-0');
+  await expect(page.locator('#activity li').nth(1)).toContainText('Suspended an account · target-1');
+  await expect(page.locator('#activity li').nth(1).locator('a')).toHaveCount(0);
+  await expect(page.locator('#activity-count')).toHaveText('23 actions kept (the last 1000) · page 1 of 2');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(widthOf(page));
+  await page.screenshot({ path: info.outputPath('admin-activity.png'), fullPage: true });
+
+  await page.locator('#activity-next').click();
+  await expect(page.locator('#activity li')).toHaveCount(3);
+});
+
 // The Jobs tab (A3): the tending runs, the totals over them, a pass run now and a run's sheet.
 const tendRun = (hoursAgo, extra = {}) => {
   const started = new Date(Date.parse('2026-11-13T18:00:00Z') - hoursAgo * 3600000);
@@ -490,4 +522,112 @@ test('the shared header reads who is signed in on the admin page and links the o
   // Unhidden by the header once /api/me says the operator; on a phone it waits in the closed menu.
   await expect.poll(() => page.locator('#nav-admin-link').evaluate(link => link.hidden)).toBe(false);
   await expect(page.locator('#nav-admin-link')).toHaveAttribute('aria-current', 'page');
+});
+
+// Match scenarios (ADR 0179): a recorded session cut at the top of a round from its row, then listed with its link.
+test('a session is cut at a round from its row, and the scenario is listed with the link a player opens', async ({ page }, info) => {
+  const kept = [];
+  const posted = [];
+  await page.route('**/api/admin/scenarios**', async route => {
+    const req = route.request(), url = new URL(req.url());
+    if (url.pathname.endsWith('/rounds')) return route.fulfill({ json: { session: url.searchParams.get('session'), rounds: [1, 2, 3, 4], stoppedBy: null } });
+    if (req.method() === 'POST') {
+      const asked = req.postDataJSON(); posted.push(asked);
+      const made = { id: 'sc-1', title: asked.title, goal: asked.goal, session: asked.session, round: asked.round, seat: asked.seat, content: 'abc', link: '/battle?scenario=sc-1' };
+      kept.unshift(made);
+      return route.fulfill({ status: 201, json: { id: made.id, link: made.link } });
+    }
+    return route.fulfill({ json: { scenarios: kept } });
+  });
+  await page.reload();
+  await expect(page.locator('#tab-scenarios')).toBeVisible();
+  await page.locator('#tab-sessions').click();
+
+  await page.locator('#sessions li', { hasText: 'people-finished' }).locator('.link-button', { hasText: 'practice from a round' }).click();
+  await expect(page.locator('#scenario-round option')).toHaveCount(4);
+  await page.selectOption('#scenario-round', '3');
+  await page.selectOption('#scenario-seat', 'player2');
+  await page.fill('#scenario-title', 'Bleed after a stun');
+  await page.locator('#scenario-submit').click();
+
+  await expect(page.locator('#scenario-made code')).toHaveText(/\/battle\?scenario=sc-1$/);
+  expect(posted).toEqual([{ session: 'people-finished', round: 3, seat: 'player2', title: 'Bleed after a stun' }]);
+  await page.screenshot({ path: info.outputPath('scenario-sheet.png') });
+  await page.locator('#scenario-cancel').click();
+  await page.locator('#tab-scenarios').click();
+  await expect(page.locator('#scenarios li')).toHaveCount(1);
+  await expect(page.locator('#scenarios li')).toContainText('Bleed after a stun');
+  await expect(page.locator('#scenarios li a', { hasText: 'open' })).toHaveAttribute('href', '/battle?scenario=sc-1');
+  await expect(page.locator('#tab-scenarios-count')).toHaveText('1');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(widthOf(page));
+});
+
+// Listed under Practice (scenarios plan, S6): the operator lists a scenario for signed-in players, or takes it off.
+test('a scenario is listed under Practice from its row, and taken off again', async ({ page }, info) => {
+  const kept = [{ id: 'sc-1', title: 'Bleed after a stun', session: 'people-finished', round: 3, seat: 'player2', content: 'abc', link: '/battle?scenario=sc-1', listed: false }];
+  const put = [];
+  await page.route('**/api/admin/scenarios**', async route => {
+    const req = route.request(), url = new URL(req.url());
+    if (req.method() === 'PUT' && url.pathname === '/api/admin/scenarios/sc-1/listing') {
+      put.push(req.postDataJSON()); kept[0].listed = req.postDataJSON().listed;
+      return route.fulfill({ json: { id: 'sc-1', listed: kept[0].listed } });
+    }
+    return route.fulfill({ json: { scenarios: kept } });
+  });
+  await page.reload();
+  await page.locator('#tab-scenarios').click();
+  const row = page.locator('#scenarios li', { hasText: 'Bleed after a stun' });
+
+  await row.locator('.link-button', { hasText: 'list under Practice' }).click();
+  await expect(row.locator('.status-tag.listed')).toHaveText('Listed under Practice');
+  await expect(page.locator('#scenarios-said')).toContainText('is listed under Practice');
+  await page.screenshot({ path: info.outputPath('scenario-listed.png') });
+  await row.locator('.link-button', { hasText: 'take off Practice' }).click();
+  await expect(row.locator('.status-tag.listed')).toHaveCount(0);
+
+  expect(put).toEqual([{ listed: true }, { listed: false }]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(widthOf(page));
+});
+
+test('a host that keeps no scenarios shows no Scenarios tab', async ({ page }) => {
+  await page.route('**/api/admin/scenarios**', route => route.fulfill({ status: 404, body: 'This host keeps no scenarios.' }));
+  await page.reload();
+  await expect(page.locator('#tab-sessions')).toBeVisible();
+  await expect(page.locator('#tab-scenarios')).toBeHidden();
+});
+
+// The diagnosis of a table in progress (scenarios plan, S5b): its facts from its card, a replay check, what its seats
+// hold on request, its bot turn owed again, and the Void sheet one button away.
+test('a table in progress is diagnosed from its card, and the Void sheet is one button away', async ({ page }, info) => {
+  const asked = [];
+  await page.route('**/api/tables', route => route.fulfill({ json: { ...tables, tables: [table(1)] } }));
+  await page.route('**/api/tables/table-01/diagnosis**', async route => {
+    const url = new URL(route.request().url()); asked.push(`${route.request().method()} ${url.pathname.replace('/api/tables/table-01/diagnosis', '') || '/'}`);
+    if (url.pathname.endsWith('/replay')) return route.fulfill({ json: { replays: false, message: 'Line 41 of the journal does not answer the match being rebuilt.' } });
+    if (url.pathname.endsWith('/hidden')) return route.fulfill({ json: { seats: [{ slot: 'player1', speeds: [{ creature: 1, speed: 'Quick' }], intents: [], picks: [], held: [] }, { slot: 'player2', speeds: [], intents: [], picks: [], held: [] }] } });
+    if (url.pathname.endsWith('/turn')) return route.fulfill({ json: { message: 'The bots\' turn is owed again.' } });
+    return route.fulfill({ json: { id: 'table-01', status: 'open', held: true, begun: true, over: false, round: 3,
+      seats: [{ slot: 'player1', name: 'human:mk', kind: 'person', playedByBot: false, asked: null }, { slot: 'player2', name: 'Greedy', kind: 'bot', playedByBot: true, asked: { kind: 'Action', creature: 5 } }],
+      journal: { entries: 41, lastWritten: '2026-11-14T04:00:00Z', tail: [{ kind: 'Speed', seat: 'player1' }] }, basis: { content: 'f3e8a42ddbd02c11', rules: '3v3', engine: 'abc' }, turns: { queued: true, letters: 1, lastError: 'Timeout' } } });
+  });
+  page.on('dialog', dialog => dialog.accept());
+  await page.reload();
+  await page.locator('#tab-tables').click();
+
+  await page.locator('#tables button', { hasText: 'Diagnose…' }).first().click();
+  await expect(page.locator('#diagnosis-sheet-name')).toHaveText('table-01');
+  await expect(page.locator('#diagnosis-facts')).toContainText('player2: Greedy (bot) · asked Action for creature 5');
+  await expect(page.locator('#diagnosis-facts')).toContainText('1 dead letter · last letter: Timeout');
+  await page.locator('#diagnosis-replay').click();
+  await expect(page.locator('#diagnosis-said')).toHaveText('Line 41 of the journal does not answer the match being rebuilt.');
+  await expect(page.locator('#diagnosis-said')).toHaveClass(/refused/);
+  await page.locator('#diagnosis-reveal').click();
+  await expect(page.locator('#diagnosis-hidden li').first()).toHaveText('player1: creature 1 Quick');
+  await page.locator('#diagnosis-turn').click();
+  await expect(page.locator('#diagnosis-said')).toHaveText('The bots\' turn is owed again.');
+  await page.screenshot({ path: info.outputPath('diagnosis-sheet.png') });
+  await page.locator('#diagnosis-void').click();
+  await expect(page.locator('#void-sheet-name')).toHaveText('table-01');
+  expect(asked).toEqual(['GET /', 'POST /replay', 'POST /hidden', 'POST /turn', 'GET /']);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(widthOf(page));
 });

@@ -1,8 +1,7 @@
-# ADR 0079: Decision previews and reproducible practice
+# 0079. Decision previews and reproducible practice
 
-## Status
-
-Accepted.
+Date: 2026-09-24
+Status: Accepted
 
 ## Context
 

@@ -154,6 +154,7 @@ input[type="text"] { font: inherit; min-height: 44px; border: 1px solid var(--li
 .player-suspended { padding: 10px 12px; border: 1px solid var(--refused); border-radius: var(--radius-soft); }
 .player-suspended p { margin: 0 0 8px; overflow-wrap: anywhere; }
 .status-tag.suspended { color: var(--refused); border: 1px solid var(--refused); padding: 1px 6px; font-size: 12px; }
+.status-tag.listed { color: var(--gold); border: 1px solid var(--gold); padding: 1px 6px; font-size: 12px; }
 
 /* Overview (A5): one number a card, its label over it and what it counts under it, the whole card a link to the tab
    that explains it; a card that needs the operator in the warning colour. */
@@ -166,3 +167,21 @@ input[type="text"] { font: inherit; min-height: 44px; border: 1px solid var(--li
 .overview-number { font-size: 30px; line-height: 1.1; }
 .overview-detail { font-size: 13px; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Activity (A6): one action a row, what was done first, who and when under it, its detail in small print. */
+.activity-what { overflow-wrap: anywhere; }
+.activity-target { font-family: var(--mono, monospace); font-size: 13px; }
+.activity-detail { margin-top: 2px; font-size: 13px; overflow-wrap: anywhere; }
+
+/* A scenario just cut (ADR 0179): its link, to open or copy. */
+.scenario-made { display: grid; gap: 6px; padding: 8px 10px; border: 1px solid #3f554d; border-radius: var(--radius-soft, 6px); }
+.scenario-made code { overflow-wrap: anywhere; font-size: 12px; }
+.scenario-made .session-links { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+
+/* The Diagnose sheet (scenarios plan, S5b): the table's facts as a list, its actions as a row. */
+.diagnosis-facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; margin: 0; font-size: 13px; }
+.diagnosis-facts dt { color: var(--muted, #9fb0a6); }
+.diagnosis-facts dd { margin: 0; overflow-wrap: anywhere; }
+.diagnosis-hidden { margin: 0; padding-left: 18px; font-size: 13px; overflow-wrap: anywhere; }
+.diagnosis-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 480px) { .diagnosis-facts { grid-template-columns: 1fr; } .diagnosis-facts dd { margin-bottom: 6px; } }

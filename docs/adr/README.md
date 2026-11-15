@@ -2,14 +2,31 @@
 
 An ADR captures one decision that is hard to reverse: an architecture choice, a dependency, a convention,
 or a settled game-design question. Copy `0000-template.md`, take the next number, keep it under a page.
-Accepted ADRs are immutable. To change a decision, write a new ADR that supersedes the old one.
+Accepted ADRs are immutable. To change a decision, write a new ADR that supersedes the old one, and say so on
+the old one's `Status:` line.
+
+## Taking a number
+
+Fetch `main` first, then take the highest number on either side plus one: `/adr` does it. A number two files
+share fails `AdrFileTests`; the later pull request takes the next one.
+
+## The index
+
+The table is generated from the files (ADR 0184): a record's first line (`# NNNN. Title`) and its `Status:`
+paragraph. Never edit it. After adding a record or changing a status, and to settle a conflict in it:
+
+```bash
+UPDATE_INDEXES=1 dotnet test --project tests/DownfallArena.Architecture.Tests
+```
+
+<!-- index:start (generated, do not edit) -->
 
 | # | Title | Status |
 | --- | --- | --- |
 | [0001](0001-record-architecture-decisions.md) | Record architecture decisions | Accepted |
 | [0002](0002-clean-slate-restart.md) | Restart from a clean slate, freeze the prototypes | Accepted |
 | [0003](0003-dotnet-10-layered-solution.md) | .NET 10 solution with enforced clean-architecture layering | Accepted |
-| [0004](0004-testing-stack.md) | Testing stack: xUnit v3, Microsoft.Testing.Platform, Shouldly, NSubstitute, NetArchTest | Accepted |
+| [0004](0004-testing-stack.md) | Testing stack | Accepted |
 | [0005](0005-ai-assisted-development-kit.md) | AGENTS.md and Claude Code kit as first-class project assets | Accepted |
 | [0006](0006-sonarcloud-analysis-from-ci.md) | Run SonarCloud analysis from CI with the scanner for .NET | Accepted |
 | [0007](0007-shared-kernel-project.md) | A dependency-free SharedKernel project below Domain | Accepted |
@@ -21,7 +38,7 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0013](0013-learning-stack.md) | Learning stack: Python trains, the engine records and hosts policies, a static viewer | Accepted |
 | [0014](0014-exploration-in-recorded-datasets.md) | Record datasets with an exploring agent instead of reaching for reinforcement learning | Accepted |
 | [0015](0015-content-studio.md) | A local content studio: browse, edit, version and try the game content | Accepted |
-| [0016](0016-value-learning-on-an-advantage-baseline.md) | Learn action values against a state baseline instead of the raw match return | Accepted |
+| [0016](0016-value-learning-on-an-advantage-baseline.md) | Learn action values against a state baseline | Accepted |
 | [0017](0017-spell-initiative-on-unlock.md) | Unlocking a spell raises the creature's initiative | Superseded by [0059](0059-retire-the-spell-initiative-the-package-pays-it-now.md) |
 | [0018](0018-price-initiative-in-the-agent-weights.md) | Price initiative in the heuristic agents' weights | Accepted |
 | [0019](0019-regeneration-the-healing-counterpart-of-bleed.md) | Regeneration, the healing counterpart of Bleed | Accepted |
@@ -63,7 +80,7 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0055](0055-a-searching-agent-may-be-built-on-a-policy.md) | A searching agent may be built on a policy, so the loop has an operator that improves one | Proposed |
 | [0056](0056-a-pick-buys-a-package-every-other-round.md) | A pick buys a package, and two of them arrive every other round | Accepted, amended by [0066](0066-a-creature-buys-one-package-an-opportunity.md) |
 | [0057](0057-a-package-is-authored-not-derived.md) | Author the packages, and retire the script that derived them | Accepted |
-| [0058](0058-a-tier-is-the-package-the-balance-objective-reads.md) | Read a tier as the package, in the balance objective and the content audit | Accepted |
+| [0058](0058-a-tier-is-the-package-the-balance-objective-reads.md) | Read a tier as the package, in the balance objective and the content audit | Accepted Supersedes [0034](0034-a-tier-is-a-depth-a-player-climbs.md) |
 | [0059](0059-retire-the-spell-initiative-the-package-pays-it-now.md) | Retire Spell initiative: the package pays it now | Accepted |
 | [0060](0060-spells-sold-together-must-differ-in-play.md) | Spells sold together must differ in play, and Throwing Star buys reach | Accepted |
 | [0061](0061-a-package-initiative-bonus-is-a-balance-knob.md) | A package's initiative bonus is a balance knob, and the only one a package has | Accepted |
@@ -73,9 +90,9 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0065](0065-read-a-package-win-gap-on-what-its-sides-prove.md) | Read a package's win gap on what its sides prove | Accepted |
 | [0066](0066-a-creature-buys-one-package-an-opportunity.md) | A creature buys one package an opportunity | Accepted |
 | [0067](0067-the-lookahead-orders-its-own-ties.md) | The lookahead orders its own ties | Accepted |
-| [0068](0068-a-match-lasts-ten-to-fifteen-rounds.md) | A match lasts ten to fifteen rounds | Accepted, amended by [0071](0071-read-a-match-length-on-the-exploring-run.md) and [0086](0086-a-match-lasts-eight-to-fourteen-rounds.md) |
+| [0068](0068-a-match-lasts-ten-to-fifteen-rounds.md) | A match lasts ten to fifteen rounds | Accepted, amended by [0071](0071-read-a-match-length-on-the-exploring-run.md) and [0086](0086-a-match-lasts-eight-to-fourteen-rounds.md) (the band is now 8 to 14 rounds) |
 | [0069](0069-reveal-all-spells-before-targeting.md) | Reveal all spells before choosing targets | Superseded by [0070](0070-reveal-spells-with-confirmed-targets.md) |
-| [0070](0070-reveal-spells-with-confirmed-targets.md) | Reveal spells together with confirmed targets | Accepted, amended by [0083](0083-an-action-resolves-when-its-targets-are-confirmed.md), and by [0112](0112-spells-are-chosen-at-the-slot-by-default.md) for the default rules |
+| [0070](0070-reveal-spells-with-confirmed-targets.md) | Reveal spells together with confirmed targets | Accepted, amended by [0083](0083-an-action-resolves-when-its-targets-are-confirmed.md), and by [0112](0112-spells-are-chosen-at-the-slot-by-default.md) for the default rules Supersedes: [0069](0069-reveal-all-spells-before-targeting.md) |
 | [0071](0071-read-a-match-length-on-the-exploring-run.md) | Read a match's length on the exploring run, not on the greedy mirror | Accepted |
 | [0072](0072-a-creature-is-immune-to-stun-the-round-after-one.md) | A creature is immune to stun the round after one ends | Accepted |
 | [0073](0073-a-bleed-is-priced-as-the-damage-defense-would-block.md) | A bleed is priced as the damage a defense would block | Accepted |
@@ -86,18 +103,18 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0078](0078-momentum-is-a-free-strike-that-gathers-energy.md) | Momentum is a free strike that gathers energy | Accepted |
 | [0079](0079-decision-previews-and-reproducible-practice.md) | Decision previews and reproducible practice | Accepted |
 | [0080](0080-host-the-table-on-azure-container-apps.md) | Host the table on Azure Container Apps, with the studio left on GitHub Pages | Accepted, amended by [0175](0175-serve-the-table-at-its-own-domain-behind-cloudflare.md) |
-| [0081](0081-a-host-of-tables-found-by-their-tokens.md) | A host of tables, each found by its tokens, opened from a lobby behind the operator's door | Accepted |
+| [0081](0081-a-host-of-tables-found-by-their-tokens.md) | A host of tables, each found by its tokens, opened from a lobby behind the operator's door | Accepted. Amended by [0172](0172-let-named-player-accounts-be-the-operator.md): a player account the host names by its id is the operator once signed in, beside the token and the platform's sign-in. |
 | [0082](0082-deploy-from-github-to-azure-without-a-secret.md) | Deploy the table from GitHub to Azure without a secret | Accepted, amended by [0160](0160-run-the-table-outside-a-virtual-network.md) |
 | [0083](0083-an-action-resolves-when-its-targets-are-confirmed.md) | An action resolves when its targets are confirmed | Accepted, amended by [0112](0112-spells-are-chosen-at-the-slot-by-default.md) for the default rules |
 | [0084](0084-a-creature-waits-only-for-a-critical-worth-waiting-for.md) | A creature waits only for a critical worth waiting for | Accepted |
 | [0085](0085-a-denied-kill-reads-the-enemies-still-to-act.md) | A denied kill reads the enemies still to act | Accepted |
-| [0086](0086-a-match-lasts-eight-to-fourteen-rounds.md) | A match lasts eight to fourteen rounds | Accepted |
-| [0087](0087-a-player-may-concede.md) | A player may concede | Accepted |
+| [0086](0086-a-match-lasts-eight-to-fourteen-rounds.md) | A match lasts eight to fourteen rounds | Accepted. Amends [0068](0068-a-match-lasts-ten-to-fifteen-rounds.md) |
+| [0087](0087-a-player-may-concede.md) | A player may concede | Accepted. Amends [0011](0011-win-condition-and-round-cap.md) |
 | [0088](0088-price-initiative-by-the-turn-order-it-changes.md) | Price initiative by the turn order it changes | Accepted |
 | [0089](0089-pick-packages-face-down-and-reveal-them-together.md) | Pick packages face down and reveal them together | Accepted |
 | [0090](0090-score-whether-a-package-spell-earns-its-pick-not-how-hard-it-hits.md) | Score whether a package's spell earns its pick, not how hard it hits | Accepted |
-| [0091](0091-a-table-survives-the-host-that-played-it.md) | A table survives the host that played it, rebuilt from its seed and its decisions | Superseded by [0159](0159-advance-a-table-by-submitted-decisions-over-its-journal.md) |
-| [0092](0092-a-table-waits-for-its-players-then-both-pick-at-once.md) | A table waits for its players, then both pick their first package at once | Accepted, amended by [0111](0111-both-seats-are-asked-their-speeds-and-intents-at-once.md) |
+| [0091](0091-a-table-survives-the-host-that-played-it.md) | A table survives the host that played it, rebuilt from its seed and its decisions | Superseded by [0159](0159-advance-a-table-by-submitted-decisions-over-its-journal.md). Amended [0080](0080-host-the-table-on-azure-container-apps.md) and [0081](0081-a-host-of-tables-found-by-their-tokens.md). The host still rebuilds a table this way at start until ADR 0159's phases 3 and 4 land. |
+| [0092](0092-a-table-waits-for-its-players-then-both-pick-at-once.md) | A table waits for its players, then both pick their first package at once | Accepted, amended by [0111](0111-both-seats-are-asked-their-speeds-and-intents-at-once.md). Amends [0054](0054-a-table-for-two-people-at-one-screen.md) and [0081](0081-a-host-of-tables-found-by-their-tokens.md) |
 | [0093](0093-a-drain-that-leaves-an-enemy-unable-to-pay-is-priced-as-a-stun.md) | A drain that leaves an enemy unable to pay is priced as a stun | Accepted |
 | [0094](0094-the-lookahead-prices-a-purchase-by-playing-rounds-out.md) | The lookahead prices a purchase by playing rounds out | Proposed |
 | [0095](0095-the-tuner-reads-packages-on-a-run-that-buys-them-well.md) | The tuner reads packages on a run that buys them well | Proposed |
@@ -116,74 +133,80 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0108](0108-a-purchase-is-read-against-what-the-team-is-buying.md) | Read a purchase against what the team is buying this round | Proposed |
 | [0109](0109-the-tuner-reads-what-each-tier-1-opening-is-worth.md) | Let the tuner read what each tier-1 opening is worth | Proposed |
 | [0110](0110-a-rule-set-may-declare-spells-at-activation.md) | A rule set may declare spells at activation | Accepted, its default changed by [0112](0112-spells-are-chosen-at-the-slot-by-default.md) |
-| [0111](0111-both-seats-are-asked-their-speeds-and-intents-at-once.md) | At a table, ask both seats their speeds and intents at once | Proposed |
-| [0112](0112-spells-are-chosen-at-the-slot-by-default.md) | Choose each spell at its creature's slot by default | Accepted |
+| [0111](0111-both-seats-are-asked-their-speeds-and-intents-at-once.md) | At a table, ask both seats their speeds and intents at once | Proposed. Amends [0092](0092-a-table-waits-for-its-players-then-both-pick-at-once.md) |
+| [0112](0112-spells-are-chosen-at-the-slot-by-default.md) | Choose each spell at its creature's slot by default | Accepted. Amends, for the default rules, [0010](0010-round-phases-and-sub-phases.md), [0070](0070-reveal-spells-with-confirmed-targets.md), [0083](0083-an-action-resolves-when-its-targets-are-confirmed.md) and [0107](0107-a-creature-may-declare-a-spell-it-cannot-pay-for-yet.md) |
 | [0113](0113-a-tie-between-purchases-goes-to-the-seats-dice.md) | Break a tie between two purchases with the seat's dice | Accepted |
 | [0114](0114-a-shared-package-is-held-by-the-whole-side.md) | Let a package be shared with the whole side | Accepted |
-| [0115](0115-a-player-lobby-keeps-seats-until-the-player-leaves.md) | A player lobby keeps a seat until its player explicitly leaves | Accepted |
-| [0116](0116-a-seat-invitation-is-accepted-once.md) | A seat's invitation is accepted once, with a tap | Accepted |
-| [0118](0118-your-turn-reaches-a-phone-nobody-is-looking-at.md) | "Your turn" reaches a phone nobody is looking at | Accepted |
-| [0119](0119-a-seat-page-is-told-when-its-table-changed.md) | A seat's page is told when its table changed | Accepted |
-| [0120](0120-a-device-holding-both-seats-gets-no-notice.md) | A device holding both seats of a table gets no notice | Accepted |
+| [0115](0115-a-player-lobby-keeps-seats-until-the-player-leaves.md) | A player lobby keeps a seat until its player explicitly leaves | Accepted. Amends ADRs 0081, 0091 and 0092. Its choice of bots is replaced by [0121](0121-the-public-lobby-offers-one-bot-the-strongest.md). |
+| [0116](0116-a-seat-invitation-is-accepted-once.md) | A seat's invitation is accepted once, with a tap | Accepted. Amends ADRs 0081 and 0115. |
+| [0117](0117-a-player-makes-every-pick-of-an-opportunity-at-once.md) | At a table, ask each player every pick of an opportunity before either reaches the match | Accepted. Amends [0092](0092-a-table-waits-for-its-players-then-both-pick-at-once.md) and [0111](0111-both-seats-are-asked-their-speeds-and-intents-at-once.md) |
+| [0118](0118-your-turn-reaches-a-phone-nobody-is-looking-at.md) | "Your turn" reaches a phone nobody is looking at | Accepted. Amends ADR 0054 (the page polls) and ADR 0080 (the hosted table's configuration). Amended by [0166](0166-serve-the-table-s-files-once-compressed-and-revalidated.md): the worker keeps one page, the offline page, and every page registers it. |
+| [0119](0119-a-seat-page-is-told-when-its-table-changed.md) | A seat's page is told when its table changed | Accepted. Amends ADR 0054 (the page polls, and nothing is pushed). Amended by [0164](0164-read-on-what-the-host-says-changed-never-on-a-clock.md): the fallback poll is gone, every `ready` is read on, and a stream silent for 45 seconds is opened again. |
+| [0120](0120-a-device-holding-both-seats-gets-no-notice.md) | A device holding both seats of a table gets no notice | Accepted. Refines ADR 0118 (a notice goes when nobody drew the question). |
 | [0121](0121-the-public-lobby-offers-one-bot-the-strongest.md) | Offer one bot in the public lobby: the strongest | Accepted |
-| [0117](0117-a-player-makes-every-pick-of-an-opportunity-at-once.md) | At a table, ask each player every pick of an opportunity before either reaches the match | Accepted |
-| [0122](0122-a-player-signs-in-with-google-and-owns-their-seats.md) | A player signs in with Google, and their seats belong to their account | Accepted |
-| [0123](0123-prototype-the-arena-as-an-isolated-presentation.md) | Prototype the arena as an isolated presentation | Accepted for the isolated prototype |
-| [0124](0124-rank-players-with-glicko-2-over-ranked-results.md) | Rank players with Glicko-2, over the results of games between two accounts | Accepted |
+| [0122](0122-a-player-signs-in-with-google-and-owns-their-seats.md) | A player signs in with Google, and their seats belong to their account | Accepted. Amends ADRs 0081, 0115 and 0116. |
+| [0123](0123-prototype-the-arena-as-an-isolated-presentation.md) | Prototype the arena as an isolated presentation | Accepted for the isolated prototype; live adoption is a later decision |
+| [0124](0124-rank-players-with-glicko-2-over-ranked-results.md) | Rank players with Glicko-2, over the results of games between two accounts | Accepted. Builds on [0122](0122-a-player-signs-in-with-google-and-owns-their-seats.md). |
 | [0125](0125-read-one-authenticated-seat-in-the-live-arena.md) | Read one authenticated seat in the live arena | Accepted for the opt-in read-only integration |
 | [0126](0126-answer-combat-questions-in-the-live-arena.md) | Answer combat questions in the live arena | Accepted for the opt-in combat integration |
 | [0127](0127-play-confirmed-actions-in-the-live-arena.md) | Play confirmed actions in the live arena | Accepted for the opt-in arena |
 | [0128](0128-complete-the-game-loop-in-the-arena.md) | Complete the game loop in the arena | Accepted for the opt-in arena |
-| [0129](0129-a-player-keeps-friends-and-invites-one-of-them-to-a-table.md) | A player keeps friends, and invites one of them to a table | Accepted |
+| [0129](0129-a-player-keeps-friends-and-invites-one-of-them-to-a-table.md) | A player keeps friends, and invites one of them to a table | Accepted. Builds on [0116](0116-a-seat-invitation-is-accepted-once.md), [0118](0118-your-turn-reaches-a-phone-nobody-is-looking-at.md) and [0122](0122-a-player-signs-in-with-google-and-owns-their-seats.md). |
 | [0130](0130-map-arena-creatures-to-audited-sprites.md) | Map arena creatures to audited sprites | Accepted for the opt-in arena |
 | [0131](0131-give-confirmed-arena-spells-a-visual-vocabulary.md) | Give confirmed arena spells a visual vocabulary | Accepted for the opt-in arena |
 | [0132](0132-record-ordinary-round-energy-without-renumbering-old-tables.md) | Record ordinary round energy without renumbering old tables | Accepted |
 | [0133](0133-compose-bounded-mutation-cues-on-one-arena-body.md) | Compose bounded mutation cues on one arena body | Accepted for the opt-in arena, as a prototype policy |
 | [0134](0134-polish-confirmed-playback-with-opt-in-sound.md) | Polish confirmed playback with opt-in sound | Accepted for the opt-in arena |
-| [0135](0135-draft-team-tempos-before-sequential-confirmation.md) | Draft team tempos before sequential confirmation | Accepted for the opt-in arena |
-| [0136](0136-gate-the-arena-release-behind-a-reversible-preference.md) | Gate the arena release behind a reversible preference | Accepted for the opt-in release candidate |
-| [0137](0137-name-the-game-downfall-instinct.md) | Name the game Downfall Instinct | Accepted |
-| [0138](0138-open-the-mutation-tree-with-the-mutation-phase.md) | Open the mutation tree with the mutation phase | Accepted for the opt-in battle view |
-| [0139](0139-confirm-every-action-before-the-next-choice.md) | Confirm every incoming action before the next choice | Accepted for the opt-in battle view |
-| [0140](0140-keep-game-settings-with-the-account.md) | Keep game settings with the account, override them per game | Accepted for the opt-in battle view |
-| [0141](0141-never-hold-the-player-s-own-cast.md) | Never hold the player's own cast; Skip all from two results | Accepted for the opt-in battle view |
-| [0142](0142-teach-each-phase-once-per-game.md) | Teach each phase once per game | Accepted for the opt-in battle view |
-| [0143](0143-read-the-turnover-on-the-field.md) | Read the round turnover on the field | Accepted for the opt-in battle view |
-| [0144](0144-read-the-turn-order-on-the-field.md) | Read the turn order on the field, and hold play until it is read | Accepted for the opt-in battle view |
-| [0145](0145-end-the-match-in-one-moment.md) | End the match in one moment | Accepted for the opt-in battle view |
-| [0146](0146-one-full-mutation-tree.md) | One full mutation tree, with spells as cards | Accepted for the opt-in battle view |
-| [0147](0147-list-every-finished-game-and-cap-the-ones-in-progress.md) | List every finished game, and at most five of each kind in progress | Accepted |
-| [0148](0148-play-what-a-closed-page-missed.md) | Play what a closed page missed | Accepted for the opt-in battle view |
-| [0149](0149-open-the-spell-choice-with-the-players-turn.md) | Open the spell choice with the player's turn, docked beside the field | Accepted for the opt-in battle view |
-| [0150](0150-open-the-team-tempos-with-their-phase.md) | Open the team's tempos with their phase, docked beside the field | Accepted for the opt-in battle view |
-| [0151](0151-show-each-creature-as-its-evolution.md) | Show each creature as its evolution, from its purchase history | Accepted for the opt-in battle view |
-| [0152](0152-choose-a-stage-3-hybrid-by-influence.md) | Choose a Stage 3's hybrid by the influences of the creature's other mutations | Accepted for the opt-in battle view |
-| [0153](0153-play-the-same-game-again-from-the-end-card.md) | Play the same game again from the battle's end card, and call the lobby the Lobby | Accepted for the opt-in battle view |
-| [0154](0154-record-the-critical-roll-as-a-d20-face.md) | Record the critical roll as a d20 face, and show the field's dice | Accepted |
-| [0155](0155-let-a-game-between-players-be-unranked.md) | Let a game between two players be opened as unranked | Accepted |
-| [0156](0156-replay-a-finished-game-in-the-battle-view-for-its-players.md) | Replay a finished game in the battle view for the players who sat at it | Accepted |
-| [0157](0157-make-the-battle-view-the-game.md) | Make the battle view the game, and archive the classic table | Accepted |
-| [0158](0158-carve-the-interface-in-bone-and-soot.md) | Carve the interface in bone and soot: one display face, sharp cut shapes, grain on every surface, one bar in a match | Accepted |
-| [0159](0159-advance-a-table-by-submitted-decisions-over-its-journal.md) | Advance a table by submitted decisions over its journal, not by a loop that waits in memory | Accepted |
-| [0160](0160-run-the-table-outside-a-virtual-network.md) | Run the hosted table outside a virtual network, and keep the storage account by identity alone | Accepted |
-| [0161](0161-index-tables-in-azure-table-storage.md) | Index the tables in Azure Table Storage, for the codes and the lobby | Accepted |
-| [0162](0162-run-the-table-as-an-api-a-worker-and-an-hourly-job.md) | Run the table as an API app, a turn worker app and an hourly job, each seeing what the others write | Accepted |
-| [0163](0163-keep-a-table-on-the-content-it-began-on-and-void-what-no-longer-replays.md) | Keep a table on the content it began on, and void a match its journal no longer replays | Accepted |
-| [0164](0164-read-on-what-the-host-says-changed-never-on-a-clock.md) | Read on what the host says changed, never on a clock: the lobby's stream, and no fallback poll | Accepted |
-| [0165](0165-relay-what-moved-through-azure-web-pubsub.md) | Relay what moved through Azure Web PubSub: pages and processes told whichever process moved it | Accepted |
-| [0166](0166-serve-the-table-s-files-once-compressed-and-revalidated.md) | Serve the table's files once, compressed and revalidated, and keep an offline page | Accepted |
-| [0167](0167-run-the-workflows-on-what-they-read.md) | Run the workflows on what they read: no learning loop on push, no republished studio for the table's host | Accepted |
-| [0168](0168-keep-match-results-in-azure-table-storage.md) | Keep match results in Azure Table Storage, by match and by account | Accepted |
-| [0169](0169-end-a-match-whose-player-let-their-time-to-answer-run-out.md) | End a match whose player let their time to answer run out | Accepted |
-| [0170](0170-end-a-begun-match-whose-left-seat-nobody-takes-in-a-day.md) | End a begun match whose left seat nobody takes in a day | Accepted |
-| [0171](0171-rank-only-3v3-games-and-count-a-players-statistics-on-them.md) | Rank only 3v3 games, and count a player's statistics on them alone | Accepted |
-| [0172](0172-let-named-player-accounts-be-the-operator.md) | Let named player accounts be the operator | Accepted |
+| [0135](0135-draft-team-tempos-before-sequential-confirmation.md) | Draft team tempos before sequential confirmation | Accepted for the opt-in arena Supersedes: ADR 0128's one-creature tempo confirmation UI only |
+| [0136](0136-gate-the-arena-release-behind-a-reversible-preference.md) | Gate the arena release behind a reversible preference | Accepted for the opt-in release candidate; physical-device acceptance remains open. |
+| [0137](0137-name-the-game-downfall-instinct.md) | Name the game Downfall Instinct | Accepted. |
+| [0138](0138-open-the-mutation-tree-with-the-mutation-phase.md) | Open the mutation tree with the mutation phase | Accepted for the opt-in battle view. |
+| [0139](0139-confirm-every-action-before-the-next-choice.md) | Confirm every incoming action before the next choice | Accepted for the opt-in battle view. Amends the AU7 extension of [ADR 0127](0127-play-confirmed-actions-in-the-live-arena.md). |
+| [0140](0140-keep-game-settings-with-the-account.md) | Keep game settings with the account, override them per game | Accepted for the opt-in battle view. Changes the reading default of [ADR 0139](0139-confirm-every-action-before-the-next-choice.md) from Auto to Step. |
+| [0141](0141-never-hold-the-player-s-own-cast.md) | Never hold the player's own cast; Skip all from two results | Accepted for the opt-in battle view. Amends [ADR 0139](0139-confirm-every-action-before-the-next-choice.md) (Step no longer waits on every item) and renames its **Skip to present**. |
+| [0142](0142-teach-each-phase-once-per-game.md) | Teach each phase once per game | Accepted for the opt-in battle view. Changes how often the AU2 phase tips open. |
+| [0143](0143-read-the-turnover-on-the-field.md) | Read the round turnover on the field | Accepted for the opt-in battle view. Amends how AU7 shows the aftermath and the paced upkeep. |
+| [0144](0144-read-the-turn-order-on-the-field.md) | Read the turn order on the field, and hold play until it is read | Accepted for the opt-in battle view. Amends AU11 and [ADR 0139](0139-confirm-every-action-before-the-next-choice.md). |
+| [0145](0145-end-the-match-in-one-moment.md) | End the match in one moment | Accepted for the opt-in battle view. Amends the match-end part of [ADR 0143](0143-read-the-turnover-on-the-field.md). |
+| [0146](0146-one-full-mutation-tree.md) | One full mutation tree, with spells as cards | Accepted for the opt-in battle view. Amends the full-tree parts of AU4 and AU8 ([battle/README.md](../../battle/README.md)). |
+| [0147](0147-list-every-finished-game-and-cap-the-ones-in-progress.md) | List every finished game, and at most five of each kind in progress | Accepted. Amends the finished-table part of [ADR 0115](0115-a-player-lobby-keeps-seats-until-the-player-leaves.md). |
+| [0148](0148-play-what-a-closed-page-missed.md) | Play what a closed page missed | Accepted for the opt-in battle view. Amends the first-read baseline of the battle playback ([battle/README.md](../../battle/README.md), AU3b). |
+| [0149](0149-open-the-spell-choice-with-the-players-turn.md) | Open the spell choice with the player's turn, docked beside the field | Accepted for the opt-in battle view. Extends [ADR 0138](0138-open-the-mutation-tree-with-the-mutation-phase.md) to combat. Amends ADR 0128's explicit opening for combat questions. |
+| [0150](0150-open-the-team-tempos-with-their-phase.md) | Open the team's tempos with their phase, docked beside the field | Accepted for the opt-in battle view. Extends [ADR 0138](0138-open-the-mutation-tree-with-the-mutation-phase.md) and [ADR 0149](0149-open-the-spell-choice-with-the-players-turn.md) to the tempo phase. Amends ADR 0128's explicit opening for Speed questions. |
+| [0151](0151-show-each-creature-as-its-evolution.md) | Show each creature as its evolution, from its purchase history | Accepted for the opt-in battle view. Builds on [ADR 0133](0133-compose-bounded-mutation-cues-on-one-arena-body.md): its families, body precedence and accents stay as the fallback. |
+| [0152](0152-choose-a-stage-3-hybrid-by-influence.md) | Choose a Stage 3's hybrid by the influences of the creature's other mutations | Accepted for the opt-in battle view. Extends [ADR 0151](0151-show-each-creature-as-its-evolution.md): its identity rule, its hybrid ranks and its registry stay. |
+| [0153](0153-play-the-same-game-again-from-the-end-card.md) | Play the same game again from the battle's end card, and call the lobby the Lobby | Accepted for the opt-in battle view. Builds on [ADR 0129](0129-a-player-keeps-friends-and-invites-one-of-them-to-a-table.md) (stage 4's Rematch link) and [ADR 0145](0145-end-the-match-in-one-moment.md). |
+| [0154](0154-record-the-critical-roll-as-a-d20-face.md) | Record the critical roll as a d20 face, and show the field's dice | Accepted. Builds on [ADR 0100](0100-every-critical-chance-is-a-twentieth.md), which prices every critical chance in twentieths of a d20, and [ADR 0063](0063-an-initiative-tie-is-rolled-on-a-d20.md)'s roll-offs. |
+| [0155](0155-let-a-game-between-players-be-unranked.md) | Let a game between two players be opened as unranked | Accepted. Amends [ADR 0124](0124-rank-players-with-glicko-2-over-ranked-results.md), which ranks every finished game between two accounts. |
+| [0156](0156-replay-a-finished-game-in-the-battle-view-for-its-players.md) | Replay a finished game in the battle view for the players who sat at it | Accepted. Amends [ADR 0147](0147-list-every-finished-game-and-cap-the-ones-in-progress.md), whose finished games the host no longer holds open their recorded session. |
+| [0157](0157-make-the-battle-view-the-game.md) | Make the battle view the game, and archive the classic table | Accepted. Supersedes the Table/Arena preference of [ADR 0136](0136-gate-the-arena-release-behind-a-reversible-preference.md); its budgets and release profiles stand. |
+| [0158](0158-carve-the-interface-in-bone-and-soot.md) | Carve the interface in bone and soot | Accepted |
+| [0159](0159-advance-a-table-by-submitted-decisions-over-its-journal.md) | Advance a table by submitted decisions over its journal, not by a loop that waits in memory | Accepted. Supersedes [0091](0091-a-table-survives-the-host-that-played-it.md) and amends [0080](0080-host-the-table-on-azure-container-apps.md), [0081](0081-a-host-of-tables-found-by-their-tokens.md) and [0119](0119-a-seat-page-is-told-when-its-table-changed.md) |
+| [0160](0160-run-the-table-outside-a-virtual-network.md) | Run the hosted table outside a virtual network | Accepted |
+| [0161](0161-index-tables-in-azure-table-storage.md) | Index the tables in Azure Table Storage, for the codes and the lobby | Accepted. Follows [0159](0159-advance-a-table-by-submitted-decisions-over-its-journal.md) (phase 4.3b); amends [0080](0080-host-the-table-on-azure-container-apps.md) and [0082](0082-deploy-from-github-to-azure-without-a-secret.md) for the role the app holds on the storage account |
+| [0162](0162-run-the-table-as-an-api-a-worker-and-an-hourly-job.md) | Run the table as an API app, a turn worker app and an hourly job, each seeing what the others write | Accepted. Follows [0159](0159-advance-a-table-by-submitted-decisions-over-its-journal.md) (phase 6); amends [0080](0080-host-the-table-on-azure-container-apps.md), [0082](0082-deploy-from-github-to-azure-without-a-secret.md) and [0161](0161-index-tables-in-azure-table-storage.md) for what runs and the roles each holds |
+| [0163](0163-keep-a-table-on-the-content-it-began-on-and-void-what-no-longer-replays.md) | Keep a table on the content it began on, and void a match its journal no longer replays | Accepted. Follows [0159](0159-advance-a-table-by-submitted-decisions-over-its-journal.md) (inventory question 8) |
+| [0164](0164-read-on-what-the-host-says-changed-never-on-a-clock.md) | Read on what the host says changed, never on a clock | Accepted. Amends [0119](0119-a-seat-page-is-told-when-its-table-changed.md) (the fallback poll is gone) and answers the page side of question 9 of [the stateless table inventory](../architecture/stateless-table-inventory.md). Its "Several replicas, next" is taken by [0165](0165-relay-what-moved-through-azure-web-pubsub.md) |
+| [0165](0165-relay-what-moved-through-azure-web-pubsub.md) | Relay what moved through Azure Web PubSub | Accepted. Takes the step [0164](0164-read-on-what-the-host-says-changed-never-on-a-clock.md) left to its own ADR; amends [0119](0119-a-seat-page-is-told-when-its-table-changed.md) (a WebSocket, with a service's token) and [0162](0162-run-the-table-as-an-api-a-worker-and-an-hourly-job.md) (no process looks at its tables every second); answers the third step of question 9 of [the stateless table inventory](../architecture/stateless-table-inventory.md) |
+| [0166](0166-serve-the-table-s-files-once-compressed-and-revalidated.md) | Serve the table's files once, compressed and revalidated, and keep an offline page | Accepted. Amends [0118](0118-your-turn-reaches-a-phone-nobody-is-looking-at.md) (the worker keeps one page) |
+| [0167](0167-run-the-workflows-on-what-they-read.md) | Run the workflows on what they read | Accepted |
+| [0168](0168-keep-match-results-in-azure-table-storage.md) | Keep match results in Azure Table Storage, by match and by account | Accepted. Amends [0122](0122-a-player-signs-in-with-google-and-owns-their-seats.md) (stage 5) |
+| [0169](0169-end-a-match-whose-player-let-their-time-to-answer-run-out.md) | End a match whose player let their time to answer run out | Accepted. Builds on [0087](0087-a-player-may-concede.md), [0159](0159-advance-a-table-by-submitted-decisions-over-its-journal.md) and [0162](0162-run-the-table-as-an-api-a-worker-and-an-hourly-job.md) |
+| [0170](0170-end-a-begun-match-whose-left-seat-nobody-takes-in-a-day.md) | End a begun match whose left seat nobody takes in a day | Accepted. Builds on [0087](0087-a-player-may-concede.md), [0115](0115-a-player-lobby-keeps-seats-until-the-player-leaves.md) and [0169](0169-end-a-match-whose-player-let-their-time-to-answer-run-out.md) |
+| [0171](0171-rank-only-3v3-games-and-count-a-players-statistics-on-them.md) | Rank only 3v3 games, and count a player's statistics on them alone | Accepted. Amends [0155](0155-let-a-game-between-players-be-unranked.md) and [0168](0168-keep-match-results-in-azure-table-storage.md) |
+| [0172](0172-let-named-player-accounts-be-the-operator.md) | Let named player accounts be the operator | Accepted. Amends [0081](0081-a-host-of-tables-found-by-their-tokens.md) |
 | [0173](0173-let-players-react-with-a-fixed-set-of-messages.md) | Let players react with a fixed set of messages, and notify nobody of one | Accepted |
 | [0174](0174-keep-when-each-account-last-signed-in-and-was-seen.md) | Keep when each account last signed in and was last seen | Accepted |
-| [0175](0175-serve-the-table-at-its-own-domain-behind-cloudflare.md) | Serve the table at its own domain, behind Cloudflare | Accepted |
-| [0176](0176-let-the-operator-void-a-match-with-a-reason.md) | Let the operator void a match with a reason, and withdraw a finished one's result | Accepted |
+| [0175](0175-serve-the-table-at-its-own-domain-behind-cloudflare.md) | Serve the table at its own domain, behind Cloudflare | Accepted. Amends [0080](0080-host-the-table-on-azure-container-apps.md) |
+| [0176](0176-let-the-operator-void-a-match-with-a-reason.md) | Let the operator void a match with a reason, and withdraw a finished one's result | Accepted. Amends [0163](0163-keep-a-table-on-the-content-it-began-on-and-void-what-no-longer-replays.md) and [0168](0168-keep-match-results-in-azure-table-storage.md) |
 | [0177](0177-let-the-operator-close-registration-and-post-a-notice.md) | Let the operator close registration and post a notice | Accepted |
 | [0178](0178-let-the-operator-suspend-an-account.md) | Let the operator suspend an account | Accepted |
 | [0179](0179-cut-a-recorded-match-at-the-top-of-a-round.md) | Cut a recorded match at the top of a round, and replay it into a match of its own | Accepted |
-| [0180](0180-let-a-player-choose-the-bot-by-its-level.md) | Let a player choose the bot by its level, and show them nothing else of it | Accepted |
-| [0181](0181-serve-the-public-showcase-from-cloudflare-pages.md) | Serve the public showcase from Cloudflare Pages | Proposed |
+| [0180](0180-let-a-player-choose-the-bot-by-its-level.md) | Let a player choose the bot by its level, and show them nothing else of it | Accepted. Amends [0121](0121-the-public-lobby-offers-one-bot-the-strongest.md): the lobby offers three levels, Hard still the strongest bot |
+| [0181](0181-keep-agents-md-an-index-with-a-budget.md) | Keep AGENTS.md an index with a budget, and load an area's instructions with the area | Accepted (stage W1 of [the AI workflow plan](../engineering/ai-workflow-plan.md), settled by the owner) |
+| [0182](0182-require-one-gate-check-and-deploy-behind-it.md) | Require one gate check, and deploy behind it | Accepted |
+| [0183](0183-read-the-indexes-from-the-files-and-keep-one-journal-entry-per-file.md) | Read the indexes from the files, and keep one journal entry per file | Accepted (stage W3 of [the AI workflow plan](../engineering/ai-workflow-plan.md)). Amends [0001](0001-record-architecture-decisions.md) (the index). Amended by [0184](0184-commit-the-indexes-generated-from-the-files.md) (the indexes are committed) |
+| [0184](0184-commit-the-indexes-generated-from-the-files.md) | Commit the indexes, generated from the files | Accepted (settled by the owner). Amends [0183](0183-read-the-indexes-from-the-files-and-keep-one-journal-entry-per-file.md) (neither index was committed) |
+| [0185](0185-serve-the-public-showcase-from-cloudflare-pages.md) | Serve the public showcase from Cloudflare Pages | Proposed. Completes the apex decision left open in [0175](0175-serve-the-table-at-its-own-domain-behind-cloudflare.md). |
+
+<!-- index:end -->

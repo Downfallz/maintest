@@ -63,6 +63,7 @@ internal sealed class TableFiles
             ["/lobby"] = (Path.Combine(tableDirectory, "lobby.html"), StudioResponse.Html),
             ["/battle-preferences.js"] = (Path.Combine(tableDirectory, "battle-preferences.js"), JavaScript),
             ["/lobby.js"] = (Path.Combine(tableDirectory, "lobby.js"), JavaScript),
+            ["/lobby-practice.js"] = (Path.Combine(tableDirectory, "lobby-practice.js"), JavaScript),
             ["/navigation.js"] = (Path.Combine(tableDirectory, "navigation.js"), JavaScript),
             ["/account.js"] = (Path.Combine(tableDirectory, "account.js"), JavaScript),
             ["/devices.js"] = (Path.Combine(tableDirectory, "devices.js"), JavaScript),
@@ -175,6 +176,7 @@ internal sealed class TableFiles
             ["/battle-evolution.js"] = (Path.Combine(tableDirectory, "battle-evolution.js"), JavaScript),
             ["/battle-chronology.js"] = (Path.Combine(tableDirectory, "battle-chronology.js"), JavaScript),
             ["/battle-auras.js"] = (Path.Combine(tableDirectory, "battle-auras.js"), JavaScript),
+            ["/battle-practice.js"] = (Path.Combine(tableDirectory, "battle-practice.js"), JavaScript),
             ["/battle-layout.js"] = (Path.Combine(tableDirectory, "battle-layout.js"), JavaScript),
             ["/battle-timing.js"] = (Path.Combine(tableDirectory, "battle-timing.js"), JavaScript),
             ["/battle-build/live.js"] = (Path.Combine(tableDirectory, "battle-build", "live.js"), JavaScript),
@@ -199,6 +201,9 @@ internal sealed class TableFiles
             ["/admin-void.js"] = (Path.Combine(tableDirectory, "admin-void.js"), JavaScript),
             ["/admin-settings.js"] = (Path.Combine(tableDirectory, "admin-settings.js"), JavaScript),
             ["/admin-overview.js"] = (Path.Combine(tableDirectory, "admin-overview.js"), JavaScript),
+            ["/admin-activity.js"] = (Path.Combine(tableDirectory, "admin-activity.js"), JavaScript),
+            ["/admin-scenarios.js"] = (Path.Combine(tableDirectory, "admin-scenarios.js"), JavaScript),
+            ["/admin-diagnosis.js"] = (Path.Combine(tableDirectory, "admin-diagnosis.js"), JavaScript),
         };
 
         foreach (var art in HorizonArt)

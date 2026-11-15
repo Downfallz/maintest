@@ -1,4 +1,4 @@
-# 0153 — Play the same game again from the battle's end card, and call the lobby the Lobby
+# 0153. Play the same game again from the battle's end card, and call the lobby the Lobby
 
 Date: 2026-11-08
 

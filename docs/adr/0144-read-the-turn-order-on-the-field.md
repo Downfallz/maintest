@@ -1,4 +1,4 @@
-# 0144 — Read the turn order on the field, and hold play until it is read
+# 0144. Read the turn order on the field, and hold play until it is read
 
 Date: 2026-11-07
 
