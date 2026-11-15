@@ -170,18 +170,16 @@ export function render(facts) {
   return lines.join('\n');
 }
 
-// One run, or a deployment's jobs, as the digest's three words.
+// A workflow run as the digest's words.
 export function runStatus(run) {
   if (RUNNING.has(run.status)) return 'running';
   return run.conclusion === 'success' ? 'green' : 'red';
 }
 
-export function deployStatus(jobs) {
-  const deploy = jobs.filter((job) => job.name === 'deploy' || job.name.startsWith('deploy / '));
-  if (!deploy.some((job) => job.conclusion !== 'skipped')) return null;
-  if (deploy.some((job) => RED.has(job.conclusion))) return 'red';
-  if (deploy.some((job) => job.status !== 'completed')) return 'running';
-  return 'green';
+// A deployment's newest status (the Deployments API) as the digest's words.
+export function deploymentStatus(status) {
+  if (!status || ['queued', 'pending', 'in_progress'].includes(status.state)) return 'running';
+  return ['failure', 'error'].includes(status.state) ? 'red' : 'green';
 }
 
 export function checksStatus(checkRuns) {
@@ -220,28 +218,18 @@ export async function readGitHub(repository, get = githubGet) {
     }
   };
   const base = `/repos/${repository}`;
-  let mainRuns = null;
 
   await attempt('main', async () => {
-    const { workflow_runs: runs } = await get(`${base}/actions/workflows/ci.yml/runs?branch=main&event=push&per_page=5`);
+    const { workflow_runs: runs } = await get(`${base}/actions/workflows/ci.yml/runs?branch=main&event=push&per_page=1`);
     if (runs.length) facts.runs.main = { status: runStatus(runs[0]), url: runs[0].html_url };
-    mainRuns = runs;
   });
+  // The rollout job deploys to the azure environment, from CI or by hand (deploy.yml: a rollback, a first
+  // deployment), so the newest azure deployment is the one running, however many pushes skipped deploying.
   await attempt('déploiement', async () => {
-    if (mainRuns === null) throw new Error('main was not read');
-    const jobsOf = await Promise.all(mainRuns.map((run) => get(`${base}/actions/runs/${run.id}/jobs?filter=latest&per_page=${PAGE}`)));
-    const index = jobsOf.findIndex(({ jobs }) => deployStatus(jobs) !== null);
-    if (index >= 0) {
-      const run = mainRuns[index];
-      facts.runs.deploy = { status: deployStatus(jobsOf[index].jobs), url: run.html_url, at: run.created_at };
-    }
-    // A deployment asked by hand (deploy.yml: a rollback, a first deployment) counts when it is the newer one.
-    const { workflow_runs: manual } = await get(`${base}/actions/workflows/deploy.yml/runs?per_page=1`);
-    const byHand = manual[0];
-    if (byHand && (!facts.runs.deploy || byHand.created_at > facts.runs.deploy.at)) {
-      facts.runs.deploy = { status: runStatus(byHand), url: byHand.html_url, at: byHand.created_at };
-    }
-    if (facts.runs.deploy) delete facts.runs.deploy.at;
+    const [deployment] = await get(`${base}/deployments?environment=azure&per_page=1`);
+    if (!deployment) return;
+    const [status] = await get(`${base}/deployments/${deployment.id}/statuses?per_page=1`);
+    facts.runs.deploy = { status: deploymentStatus(status), url: status?.log_url || status?.target_url || undefined };
   });
   await attempt('nightly', async () => {
     // main only: a dispatch on a feature branch is that branch's experiment, not the nightly's health.

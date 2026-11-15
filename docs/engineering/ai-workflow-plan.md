@@ -323,14 +323,14 @@ Each stage is one pull request with its tests, and leaves the gate green.
    Code's own deep review, is the owner's to run.
 7. **W6, scheduled work.** The morning digest. Then, one at a time, the weekly run and the review trigger.
    *Built (2026-11-15)*: the owner chose the morning digest first, at 6:40, Montreal time (question 6).
-   `scripts/digest/digest.mjs` reads git and GitHub's REST API (the CI, deployment and nightly runs, the health
-   issues, the open pull requests and their checks, the open follow-ups). It writes one phone screen in French.
-   `studio/digest.test.js` tests it. `/digest` runs it and only reads. The scheduled task "Bilan du matin"
+   `scripts/digest/digest.mjs` reads git and GitHub's REST API (the CI and nightly runs, the newest deployment,
+   the health issues, the open pull requests and their checks, the open follow-ups). It writes one phone screen in
+   French. `studio/digest.test.js` tests it. `/digest` runs it and only reads. The scheduled task "Bilan du matin"
    starts a fresh session every day at 6:40 and pushes its answer. That session has no repository and no GitHub
-   tools: its prompt, kept in the skill, clones `main` and follows the skill, and the script reads through
-   `curl`, which the proxy signs. The REST API does not
-   say whether a review thread is resolved, so a green pull request reads "verte", not "prête". Left: the
-   weekly run and the review trigger, one at a time once the digest has run for a week.
+   tools: its prompt, kept in the skill, clones `main` and follows the skill, and the script reads through `curl`,
+   which the proxy signs. The REST API does not say whether a review thread is resolved, so a green pull request
+   reads "verte", not "prête". Left: the weekly run and the review trigger, one at a time once the digest has run
+   for a week.
 8. **W7, operations.** `ops-report`, the smoke test, the alerts, the runbooks, `/ops`.
 9. **W8, proposals, language, design.** `product-scout`, `ops-analyst`, `/proposals`, `/retro`, the
    terminology test, the design system, the Cowork project.

@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import {
   checksStatus,
   dayLabel,
-  deployStatus,
+  deploymentStatus,
   gather,
   mergedFromLog,
   noteworthy,
@@ -155,12 +155,12 @@ test('a run is running until it completes, and green only on success', () => {
   assert.equal(runStatus({ status: 'completed', conclusion: 'cancelled' }), 'red');
 });
 
-test('a skipped deployment says nothing, and a called one reads its jobs', () => {
-  assert.equal(deployStatus([{ name: 'gate', conclusion: 'success' }, { name: 'deploy', conclusion: 'skipped' }]), null);
-  assert.equal(deployStatus([{ name: 'deploy / roll out', status: 'completed', conclusion: 'success' }]), 'green');
-  assert.equal(deployStatus([{ name: 'deploy / roll out', status: 'completed', conclusion: 'failure' }]), 'red');
-  assert.equal(deployStatus([{ name: 'deploy / roll out', status: 'in_progress', conclusion: null }]), 'running');
-  assert.equal(deployStatus([{ name: 'deploy / roll out', status: 'completed', conclusion: 'cancelled' }]), 'red');
+test('a deployment is running until its newest status settles, and red on a failure or an error', () => {
+  assert.equal(deploymentStatus(undefined), 'running');
+  assert.equal(deploymentStatus({ state: 'in_progress' }), 'running');
+  assert.equal(deploymentStatus({ state: 'success' }), 'green');
+  assert.equal(deploymentStatus({ state: 'failure' }), 'red');
+  assert.equal(deploymentStatus({ state: 'error' }), 'red');
 });
 
 test('a pull request with no check run has no checks to report', () => {
@@ -176,8 +176,8 @@ test('the repository is the origin on GitHub, and nothing else', () => {
   assert.throws(() => originRepository('https://example.com/a/b'));
 });
 
-const RUNS = '/repos/o/r/actions/workflows/ci.yml/runs?branch=main&event=push&per_page=5';
-const jobsOf = (id) => `/repos/o/r/actions/runs/${id}/jobs?filter=latest&per_page=100`;
+const RUNS = '/repos/o/r/actions/workflows/ci.yml/runs?branch=main&event=push&per_page=1';
+const DEPLOYMENTS = '/repos/o/r/deployments?environment=azure&per_page=1';
 const labelled = (label) => `/repos/o/r/issues?state=open&labels=${label}&per_page=100`;
 
 function answering(answers) {
@@ -188,15 +188,9 @@ function answering(answers) {
 }
 
 const EVERYTHING = {
-  [RUNS]: {
-    workflow_runs: [
-      { id: 2, status: 'in_progress', html_url: 'u2' },
-      { id: 1, status: 'completed', conclusion: 'success', html_url: 'u1', created_at: '2026-11-15T01:00:00Z' },
-    ],
-  },
-  [jobsOf(2)]: { jobs: [{ name: 'deploy', conclusion: 'skipped' }] },
-  '/repos/o/r/actions/workflows/deploy.yml/runs?per_page=1': { workflow_runs: [] },
-  [jobsOf(1)]: { jobs: [{ name: 'deploy / roll out', status: 'completed', conclusion: 'success' }] },
+  [RUNS]: { workflow_runs: [{ id: 2, status: 'in_progress', html_url: 'u2' }] },
+  [DEPLOYMENTS]: [{ id: 41 }],
+  '/repos/o/r/deployments/41/statuses?per_page=1': [{ state: 'success', log_url: 'u1' }],
   '/repos/o/r/actions/workflows/nightly.yml/runs?branch=main&per_page=1': { workflow_runs: [] },
   [labelled('red-main')]: [{ number: 7, title: 'main is red', created_at: 'a' }],
   [labelled('red-nightly')]: [],
@@ -211,33 +205,15 @@ const EVERYTHING = {
   '/repos/o/r/actions/runs?head_sha=abc&per_page=100': { workflow_runs: [{ status: 'in_progress', conclusion: null }] },
 };
 
-test('a deployment asked by hand after the last one from CI is the one the digest reads', async () => {
-  const facts = await readGitHub(
-    'o/r',
-    answering({
-      ...EVERYTHING,
-      '/repos/o/r/actions/workflows/deploy.yml/runs?per_page=1': {
-        workflow_runs: [{ status: 'completed', conclusion: 'failure', html_url: 'rollback', created_at: '2026-11-15T02:00:00Z' }],
-      },
-    }),
-  );
-  assert.deepEqual(facts.runs.deploy, { status: 'red', url: 'rollback' });
+test('a deployment that has no status yet is running, and none at all is unknown', async () => {
+  const pending = await readGitHub('o/r', answering({ ...EVERYTHING, '/repos/o/r/deployments/41/statuses?per_page=1': [] }));
+  assert.deepEqual(pending.runs.deploy, { status: 'running', url: undefined });
+  const none = await readGitHub('o/r', answering({ ...EVERYTHING, [DEPLOYMENTS]: [] }));
+  assert.equal(none.runs.deploy, undefined);
+  assert.deepEqual(none.unread, []);
 });
 
-test('an older deployment by hand does not hide the newer one from CI', async () => {
-  const facts = await readGitHub(
-    'o/r',
-    answering({
-      ...EVERYTHING,
-      '/repos/o/r/actions/workflows/deploy.yml/runs?per_page=1': {
-        workflow_runs: [{ status: 'completed', conclusion: 'failure', html_url: 'old', created_at: '2026-11-14T02:00:00Z' }],
-      },
-    }),
-  );
-  assert.deepEqual(facts.runs.deploy, { status: 'green', url: 'u1' });
-});
-
-test('GitHub is read field by field: the runs, the deployment behind a skipped one, the labels, the pull requests', async () => {
+test('GitHub is read field by field: the runs, the newest deployment, the labels, the pull requests', async () => {
   const facts = await readGitHub('o/r', answering(EVERYTHING));
   assert.deepEqual(facts.runs, {
     main: { status: 'running', url: 'u2' },
@@ -252,7 +228,7 @@ test('GitHub is read field by field: the runs, the deployment behind a skipped o
 });
 
 test('a field that fails is named instead of guessed, and the deployment is named apart from main', async () => {
-  const { [jobsOf(1)]: _, '/repos/o/r/pulls?state=open&per_page=100': __, ...rest } = EVERYTHING;
+  const { [DEPLOYMENTS]: _, '/repos/o/r/pulls?state=open&per_page=100': __, ...rest } = EVERYTHING;
   const facts = await readGitHub('o/r', answering(rest));
   assert.equal(facts.runs.main.status, 'running');
   assert.equal(facts.runs.deploy, undefined);
