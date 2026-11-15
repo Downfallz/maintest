@@ -80,3 +80,23 @@ test('the cards draw with tokens, not raw colours', () => {
 test('every picture the design system shows is in the repository', () => {
   for (const path of Object.values(ASSETS).flat()) assert.ok(existsSync(join(root, path)), path);
 });
+
+test('the site header card lays out wider than the width where identity.css folds the navigation', () => {
+  const identity = readFileSync(join(root, 'table', 'identity.css'), 'utf8');
+  const fold = Number(/@media \(max-width: (\d+)px\) \{\n\s*\.home-header \.home-navigation/.exec(identity)?.[1]);
+  assert.ok(fold > 0, 'identity.css folds the navigation under some width');
+  const marker = readFileSync(join(source, 'components', 'SiteHeader', 'preview.html'), 'utf8').split('\n')[0];
+  const width = Number(/\bwidth=(\d+)/.exec(marker)?.[1]);
+  assert.ok(width > fold, `the card lays out at ${width}px, the navigation folds at ${fold}px`);
+});
+
+test('the frame that gives a tag its game-card context draws no card', () => {
+  const frame = readFileSync(join(source, 'frame.css'), 'utf8');
+  const rules = frame.split('\n');
+  const contents = rules.find((line) => line.includes('.tag-frame') && line.includes('display: contents'));
+  assert.ok(contents, 'frame.css hides the tag frame box');
+  const selector = contents.slice(0, contents.indexOf('{'));
+  const card = rules.findIndex((line) => line.startsWith('.game-card {'));
+  // .game-card sets display: flex; the frame's rule wins only by being more specific or coming later.
+  assert.ok(selector.includes('.game-card.tag-frame') || rules.indexOf(contents) > card, selector);
+});

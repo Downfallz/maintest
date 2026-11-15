@@ -27,7 +27,7 @@ export function readBranding(css = read('docs/art/branding.css')) {
   const declarations = lines
     .slice(lines.findIndex((line) => line.startsWith(':root {')))
     .map(declaration)
-    .filter((pair) => pair && pair[0].startsWith('--'))
+    .filter((pair) => pair?.[0].startsWith('--'))
     .map(([name, value]) => [name.slice(2), value]);
   const faceStart = lines.findIndex((line) => line.startsWith('@font-face'));
   const face = new Map();
