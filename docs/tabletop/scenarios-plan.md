@@ -1,6 +1,6 @@
 # Scenarios: a recorded match cut at the top of a round
 
-Status: done, S0 to S6 (one open question remains). Decisions taken with the owner on 2026-11-14 are marked **decided**; what is still to settle is in
+Status: done, S0 to S7 (one open question remains). Decisions taken with the owner on 2026-11-14 are marked **decided**; what is still to settle is in
 "Open questions". Each stage ends green on the full gate (`/verify`, and the browser suite when `table/` or
 `battle/` change).
 
@@ -128,7 +128,7 @@ Under `Application/Matches/Scenarios`, each one class and one public method, all
   or 1. It plays on the content the file carries, or on this host's when that is the content the file names.
 - `table --scenario <file>`: the practice page on that one scenario, opened at once in the seat it names, the
   scripted opponent in the other seat over greedy, nothing recorded; the page's Restart starts it again from its cut.
-- A scenario file kept under `tests/DownfallArena.Infrastructure.Tests/Scenarios/` is a regression test: it must
+- A scenario file kept under `scenarios/` (first under the Infrastructure tests, moved by S7) is a regression test: it must
   carry its content, and it must still rebuild, and its source's answers after the cut still apply, on every engine
   change. One is kept: a greedy 1v1 mirror cut at round 3.
 - Not done here: `IScenarioStore` (scenarios kept in the store, beside the recordings). It comes with S4, which is
@@ -216,6 +216,32 @@ admin gate; the page is `table/admin-diagnosis.js`, its pure parts tested by `ad
   fresh practice, again from the band, and not on a resumed one).
 - Later, not in this plan: success conditions, an order to the listed scenarios, and moving the nine `--practice`
   recipes into scenario files.
+
+### S7 — The repository's scenarios (done)
+
+Asked by the owner on 2026-11-15: a place in the repository where scenarios are added, shown by themselves in the
+admin panel's Scenarios tab and played from there; the admin panel only, for now.
+
+- **`scenarios/`** at the repository's root: every `*.json` is a scenario file that carries its content
+  (`scenarios/README.md`). The image ships the directory. One is kept: the greedy 1v1 mirror cut at round 3, which
+  was the regression fixture; every file there is still rebuilt by `ScenarioFileTests`.
+- **The host** reads the directory once when it starts (`RepositoryScenarios`), on a host that keeps scenarios:
+  each file under the id `sc-repo-<its name>`, a file that is not a scenario or carries no content said on the
+  console and left out. The content a file carries is offered to the composer under its hash
+  (`TableComposer.Carry`) and read where the store keeps no copy of it, so a practice plays on it whether or not
+  the store ever kept that content.
+- **The Scenarios tab** lists them first, marked *Repository* with their file, and a **play** link (the link the
+  tab called *open*). They are the repository's: `DELETE` and `PUT .../listing` answer 409
+  `Scenario.FromRepository`, and the page offers neither. Its id is its file's name, which anybody can read, so on
+  a host that names admin accounts (`--admins`, ADR 0172) only they open one and it answers 404 to anybody else; a
+  host that names none is reached by its operator's token alone, and any account it signs in opens one.
+- **`scenario-generate`**: a match of two bots played over its journal and cut at a round into such a file, so a
+  scenario does not need a recorded session.
+- Tests: `RepositoryScenariosTests` (the directory read, files left out, the command), `ScenariosApiTests` (listed
+  first with its file, practised on the content it carries, neither removed nor listed), `CliOptionsTests`,
+  `admin-scenarios.test.js`, and `admin.ux.spec.js` in the browser.
+- Not done here: listing one under Practice, a download of a scenario cut in the panel as a file for this
+  directory, and a host that records nothing showing them.
 
 ## Docs to update along the way
 

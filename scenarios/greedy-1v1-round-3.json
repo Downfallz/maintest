@@ -1,7 +1,7 @@
 {
   "format": "downfall.scenario.v1",
   "title": "A greedy 1v1 mirror, round 3",
-  "goal": "Kept as a regression test: it must rebuild on every engine change, or be cut again with the change explained.",
+  "goal": "A test scenario: two greedy bots played a 1v1, and you take over player 1 at the top of round 3.",
   "seat": "player1",
   "source": {
     "session": "20261114-031619-50a4947c",

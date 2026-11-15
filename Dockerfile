@@ -56,6 +56,8 @@ COPY docs/tabletop/playtest.rules.json docs/tabletop/
 COPY learning/weights/ learning/weights/
 COPY learning/seatable.json learning/
 COPY models/ models/
+# The match scenarios the admin panel lists and plays (docs/tabletop/scenarios-plan.md, S7).
+COPY scenarios/ scenarios/
 
 # The .NET images ship an unprivileged user for this; the host binds 8080, which needs no privilege.
 USER $APP_UID

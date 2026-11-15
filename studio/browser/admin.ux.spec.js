@@ -557,7 +557,7 @@ test('a session is cut at a round from its row, and the scenario is listed with 
   await page.locator('#tab-scenarios').click();
   await expect(page.locator('#scenarios li')).toHaveCount(1);
   await expect(page.locator('#scenarios li')).toContainText('Bleed after a stun');
-  await expect(page.locator('#scenarios li a', { hasText: 'open' })).toHaveAttribute('href', '/battle?scenario=sc-1');
+  await expect(page.locator('#scenarios li a', { hasText: 'play' })).toHaveAttribute('href', '/battle?scenario=sc-1');
   await expect(page.locator('#tab-scenarios-count')).toHaveText('1');
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(widthOf(page));
 });
@@ -587,6 +587,24 @@ test('a scenario is listed under Practice from its row, and taken off again', as
 
   expect(put).toEqual([{ listed: true }, { listed: false }]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(widthOf(page));
+});
+
+// The repository's scenarios (scenarios plan, S7): listed with their file, played from the row, never removed or listed here.
+test('a scenario the repository ships is played from its row, and is neither listed nor removed there', async ({ page }, info) => {
+  await page.route('**/api/admin/scenarios**', route => route.fulfill({ json: { scenarios: [
+    { id: 'sc-repo-greedy-1v1-round-3', title: 'A greedy 1v1 mirror, round 3', goal: 'A test scenario.', session: 'elsewhere', round: 3, seat: 'player1', content: 'abc', listed: false, source: 'repository', file: 'greedy-1v1-round-3.json', link: '/battle?scenario=sc-repo-greedy-1v1-round-3' },
+    { id: 'sc-1', title: 'Bleed after a stun', session: 'people-finished', round: 3, seat: 'player2', content: 'abc', listed: false, source: 'cut', file: null, link: '/battle?scenario=sc-1' },
+  ] } }));
+  await page.reload();
+  await page.locator('#tab-scenarios').click();
+  const shipped = page.locator('#scenarios li[data-source="repository"]');
+  await expect(shipped).toContainText('Repository');
+  await expect(shipped).toContainText('scenarios/greedy-1v1-round-3.json');
+  await expect(shipped.locator('a', { hasText: 'play' })).toHaveAttribute('href', '/battle?scenario=sc-repo-greedy-1v1-round-3');
+  await expect(shipped.locator('button', { hasText: 'remove' })).toHaveCount(0);
+  await expect(shipped.locator('button[data-listing]')).toHaveCount(0);
+  await expect(page.locator('#scenarios li', { hasText: 'Bleed after a stun' }).locator('button', { hasText: 'remove' })).toHaveCount(1);
+  await page.screenshot({ path: info.outputPath('scenario-repository.png') });
 });
 
 test('a host that keeps no scenarios shows no Scenarios tab', async ({ page }) => {

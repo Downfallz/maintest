@@ -17,7 +17,8 @@ namespace DownfallArena.Cli.Table;
 /// <c>{"session","round","seat?","title?","goal?"}</c> cuts a recorded session at the top of a round, on the content it
 /// was played on, and keeps it, and <c>DELETE /api/admin/scenarios/&lt;id&gt;</c> removes one; <c>PUT .../&lt;id&gt;/listing {"listed"}</c> lists it under
 /// Practice for signed-in players, or takes it off (S6). A scenario's link,
-/// <c>/battle?scenario=&lt;id&gt;</c>, is what a signed-in player opens.
+/// <c>/battle?scenario=&lt;id&gt;</c>, is what a signed-in player opens. The scenarios the repository ships (S7) are
+/// listed first, each with the file it is; one is neither removed nor listed here (409).
 /// </summary>
 internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions stored, TableComposer composer)
 {
@@ -57,6 +58,8 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
                 seat = ScenarioCommands.SeatName(one.Document.Seat),
                 content = one.Document.Content,
                 listed = one.Listed,
+                source = one.File is null ? "cut" : "repository",
+                file = one.File,
                 link = Link(one.Id),
             }).ToArray(),
         }, ArtifactJson.LineOptions);
@@ -164,6 +167,11 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
             return Error("Scenario.Invalid", "Say whether the scenario is listed: {\"listed\":true} or {\"listed\":false}.", 400);
         }
 
+        if (store.Ships(id))
+        {
+            return Error("Scenario.FromRepository", "This scenario comes from the repository and is offered in the admin panel only: it cannot be listed under Practice.", 409);
+        }
+
         if (!await store.SetListedAsync(id, list))
         {
             return Error("Scenario.NotFound", $"No scenario '{id}' at this host.", 404);
@@ -176,6 +184,11 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
 
     private async Task<StudioResponse> DeleteAsync(string id, string operatorName)
     {
+        if (store.Ships(id))
+        {
+            return Error("Scenario.FromRepository", "This scenario comes from the repository: remove its file from scenarios/ there, and it is gone at the next deploy.", 409);
+        }
+
         if (!await store.DeleteAsync(id))
         {
             return Error("Scenario.NotFound", $"No scenario '{id}' at this host.", 404);

@@ -346,4 +346,83 @@ public sealed class ScenariosApiTests : IDisposable
 
         (await api.HandleAsync("GET", ScenariosApi.Prefix, new AccountRequest(null, Secure: false))).Status.ShouldBe(401);
     }
+
+    /// <summary>The repository's scenarios as the host reads them (S7), over a composer offered the content each carries.</summary>
+    private ScenarioStore Shipping()
+    {
+        var shipped = RepositoryScenarios.Read(Path.Combine(AppContext.BaseDirectory, "scenarios"));
+        foreach (var one in shipped.All)
+        {
+            _hosted.Composer.Carry(one.Document.Content, one.Document.Schema!.Value);
+        }
+
+        return new ScenarioStore(new FileArtifactStore(Path.Combine(_root, "scenarios")), _clock, shipped);
+    }
+
+    [Fact]
+    public async Task A_scenario_the_repository_ships_is_listed_before_the_cut_ones_with_the_file_it_is()
+    {
+        var (_, cut) = await CutAsync();
+        var admin = new ScenarioAdminApi(Shipping(), _hosted.Stored!, _hosted.Composer);
+
+        var listed = Read(await admin.HandleAsync("GET", ScenarioAdminApi.Route, "", "operator")).GetProperty("scenarios");
+
+        listed.EnumerateArray().Select(one => (one.GetProperty("id").GetString(), one.GetProperty("source").GetString(), one.GetProperty("file").GetString()))
+            .ShouldBe([("sc-repo-greedy-1v1-round-3", "repository", "greedy-1v1-round-3.json"), (cut, "cut", null)]);
+        listed[0].GetProperty("link").GetString().ShouldBe("/battle?scenario=sc-repo-greedy-1v1-round-3");
+    }
+
+    [Fact]
+    public async Task A_scenario_the_repository_ships_is_practised_on_the_content_it_carries()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var accounts = await AccountsAsync();
+        var api = new ScenariosApi(store, practices, accounts);
+
+        var answer = await api.HandleAsync("POST", $"{ScenariosApi.Prefix}/sc-repo-greedy-1v1-round-3/practice", await SignedInAsync(accounts, "learner"));
+
+        answer.Status.ShouldBe(200, Encoding.UTF8.GetString(answer.Body));
+        var opened = Read(answer);
+        opened.GetProperty("seat").GetString().ShouldBe("player1");
+        var practice = practices.ByToken(opened.GetProperty("token").GetString()).ShouldNotBeNull();
+        var view = Read(await practice.Play.Api.HandleAsync("GET", "/api/seat/player1", "", practice.Play.Token));
+        view.GetProperty("board").GetProperty("roundNumber").GetInt32().ShouldBe(3);
+        view.GetProperty("recording").GetBoolean().ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task A_scenario_the_repository_ships_is_neither_removed_nor_listed_under_Practice_at_the_host()
+    {
+        var store = Shipping();
+        var admin = new ScenarioAdminApi(store, _hosted.Stored!, _hosted.Composer);
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var accounts = await AccountsAsync();
+
+        var removed = await admin.HandleAsync("DELETE", $"{ScenarioAdminApi.Route}/sc-repo-greedy-1v1-round-3", "", "operator");
+        var listing = await admin.HandleAsync("PUT", $"{ScenarioAdminApi.Route}/sc-repo-greedy-1v1-round-3/listing", """{"listed":true}""", "operator");
+        var offered = Read(await new ScenariosApi(store, practices, accounts).HandleAsync("GET", ScenariosApi.Prefix, await SignedInAsync(accounts, "learner")));
+
+        (removed.Status, listing.Status).ShouldBe((409, 409));
+        Read(removed).GetProperty("error").GetString().ShouldBe("Scenario.FromRepository");
+        (await store.GetAsync("sc-repo-greedy-1v1-round-3", Cancel)).ShouldNotBeNull();
+        offered.GetProperty("scenarios").GetArrayLength().ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task On_a_host_that_names_admin_accounts_only_they_open_a_scenario_the_repository_ships()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var accounts = await AccountsAsync();
+        var admin = await SignedInAsync(accounts, "keeper");
+        var keeper = (await accounts.WhoAsync(admin, Cancel)).ShouldNotBeNull().Account.Id;
+        var api = new ScenariosApi(store, practices, accounts) { Admins = new HashSet<SharedKernel.Identifiers.AccountId> { keeper } };
+
+        var refused = await api.HandleAsync("POST", $"{ScenariosApi.Prefix}/sc-repo-greedy-1v1-round-3/practice", await SignedInAsync(accounts, "learner"));
+        var described = await api.HandleAsync("GET", $"{ScenariosApi.Prefix}/sc-repo-greedy-1v1-round-3", await SignedInAsync(accounts, "learner"));
+        var opened = await api.HandleAsync("POST", $"{ScenariosApi.Prefix}/sc-repo-greedy-1v1-round-3/practice", admin);
+
+        (refused.Status, described.Status, opened.Status).ShouldBe((404, 404, 200));
+    }
 }

@@ -1,22 +1,28 @@
 // Headquarters' match scenarios (docs/tabletop/scenarios-plan.md, S5, ADR 0179): a recorded session cut at the top of a
 // round from its row in the Sessions tab, and the Scenarios tab that lists them with the link a signed-in player opens
-// as practice, and lists one under Practice for every signed-in player (S6). The host cuts, keeps and lists; this page
-// asks and draws.
+// as practice, and lists one under Practice for every signed-in player (S6). The scenarios the repository ships
+// (`scenarios/`, S7) are listed with them, to play from here: the host neither removes nor lists one. The host cuts,
+// keeps and lists; this page asks and draws.
 
 export const LONGEST_TITLE = 80;
 export const LONGEST_GOAL = 300;
 
 /** Each scenario as the tab draws it, from `GET /api/admin/scenarios`. */
 export function scenarioRows(answer) {
-  return (answer?.scenarios ?? []).map(one => ({
-    id: one.id,
-    title: one.title || `Round ${one.round}`,
-    goal: one.goal ?? '',
-    facts: `session ${one.session ?? 'unknown'} · round ${one.round} · played as ${one.seat}`,
-    session: one.session ? `/session/${encodeURIComponent(one.session)}` : null,
-    link: one.link,
-    listed: one.listed === true,
-  }));
+  return (answer?.scenarios ?? []).map(one => {
+    // The repository's: its session was recorded elsewhere, if anywhere, so the row names its file and links none.
+    const shipped = one.source === 'repository';
+    return {
+      id: one.id,
+      title: one.title || `Round ${one.round}`,
+      goal: one.goal ?? '',
+      facts: `${shipped ? `scenarios/${one.file ?? '?'}` : `session ${one.session ?? 'unknown'}`} · round ${one.round} · played as ${one.seat}`,
+      session: !shipped && one.session ? `/session/${encodeURIComponent(one.session)}` : null,
+      link: one.link,
+      listed: one.listed === true,
+      shipped,
+    };
+  });
 }
 
 /** The listing toggle of a row: what it says, and what it sends to the host when pressed. */
@@ -83,7 +89,7 @@ export function mountScenarios({ send, element, shown }) {
 
   function linkTools(link) {
     const tools = made('div', 'session-links');
-    const open = made('a', '', 'open');
+    const open = made('a', '', 'play');
     open.href = link;
     open.target = '_blank';
     open.rel = 'noopener';
@@ -112,6 +118,7 @@ export function mountScenarios({ send, element, shown }) {
       const body = made('div');
       const toggle = listingToggle(row);
       const heading = made('div', 'session-id', row.title);
+      if (row.shipped) heading.append(' ', made('span', 'status-tag repository', 'Repository'));
       if (toggle.state) heading.append(' ', made('span', 'status-tag listed', toggle.state));
       body.append(heading, made('div', 'muted', row.facts));
       if (row.goal) body.append(made('div', 'activity-detail', row.goal));
@@ -120,6 +127,12 @@ export function mountScenarios({ send, element, shown }) {
         const source = made('a', '', 'session');
         source.href = row.session;
         tools.append(source);
+      }
+      if (row.shipped) {
+        item.dataset.source = 'repository';
+        body.append(tools);
+        item.append(body);
+        return item;
       }
       const listing = made('button', 'link-button', toggle.label);
       listing.type = 'button';

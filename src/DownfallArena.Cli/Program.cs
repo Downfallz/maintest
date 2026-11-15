@@ -33,6 +33,8 @@ switch (options.Command)
 {
     case CliOptions.ScenarioCutCommand:
         return await DownfallArena.Cli.Table.ScenarioCommands.CutAsync(options);
+    case CliOptions.ScenarioGenerateCommand:
+        return await DownfallArena.Cli.Table.ScenarioCommands.GenerateAsync(options);
     case CliOptions.ScenarioCheckCommand:
         return await DownfallArena.Cli.Table.ScenarioCommands.CheckAsync(options);
     case "table" when options.Scenario is not null:

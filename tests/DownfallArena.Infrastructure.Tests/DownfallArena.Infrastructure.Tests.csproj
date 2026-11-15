@@ -21,9 +21,9 @@
     <Content Include="..\..\learning\weights\**\*.json" Link="weights\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
-  <!-- The match scenarios kept as regression tests: each must still rebuild on the engine (ADR 0179). -->
+  <!-- The repository's match scenarios (scenarios/): each must still rebuild on the engine (ADR 0179). -->
   <ItemGroup>
-    <Content Include="Scenarios\*.json" Link="scenarios\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\scenarios\*.json" Link="scenarios\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

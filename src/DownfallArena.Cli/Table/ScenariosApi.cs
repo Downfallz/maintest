@@ -9,9 +9,18 @@ namespace DownfallArena.Cli.Table;
 /// practice it had (<c>POST /api/scenarios/&lt;id&gt;/practice</c>), and finds the one it has again
 /// (<c>GET .../practice</c>), which is how a reloaded page resumes it. <c>GET /api/scenarios</c> lists the scenarios the
 /// operator listed under Practice (S6); one left off the list still opens by its link. Signed out, every route answers 401.
+/// A scenario the repository ships opens for the host's admin accounts alone (<see cref="Admins" />).
 /// </summary>
 internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practices, AccountApi accounts)
 {
+    /// <summary>
+    /// The host's admin accounts (ADR 0172). A scenario the repository ships (S7) is the admin panel's: its id is its
+    /// file's name, which anybody can read, so on a host that names admin accounts only they open one, and it does
+    /// not exist for anybody else. A host that names none is reached by its operator's token alone, and any account
+    /// it signs in opens one.
+    /// </summary>
+    public IReadOnlySet<DownfallArena.SharedKernel.Identifiers.AccountId> Admins { get; init; } = new HashSet<DownfallArena.SharedKernel.Identifiers.AccountId>();
+
     public const string Prefix = "/api/scenarios";
 
     public static bool Names(string path) => path == Prefix || path.StartsWith(Prefix + "/", StringComparison.Ordinal);
@@ -33,7 +42,7 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
 
         var segments = path[(Prefix.Length + 1)..].Split('/');
         var id = segments[0];
-        if (!ScenarioStore.Names(id))
+        if (!ScenarioStore.Names(id) || (store.Ships(id) && Admins.Count > 0 && !Admins.Contains(who.Account.Id)))
         {
             return Error("Scenario.NotFound", "This scenario does not exist, or was removed.", 404);
         }

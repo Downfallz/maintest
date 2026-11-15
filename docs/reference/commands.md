@@ -237,6 +237,11 @@ rounds it can be cut at, `GET`/`POST /api/admin/scenarios {"session","round","se
 on every signed-in player's home page or takes it off, noted in Activity; ADR 0179,
 docs/tabletop/scenarios-plan.md).
 
+The tab also lists every file of the repository's `scenarios/` directory, read when the host starts (`"source":
+"repository"` and its `"file"` in the list, under the id `sc-repo-<file name>`): played from the tab, on the content
+the file carries, neither removed nor listed there (409 `Scenario.FromRepository`), and opened by the host's
+admin accounts alone when it names some (`--admins`).
+
 Its link `/battle?scenario=<id>` a signed-in player opens as practice (`GET /api/scenarios/<id>`,
 `GET`/`POST /api/scenarios/<id>/practice`: resumed, or started from the cut in place of the account's last
 practice; in this process's memory, never recorded, indexed or in the ladder, one an account, 200 at most, let
@@ -482,8 +487,20 @@ dotnet run --project src/DownfallArena.Cli -- scenario-check --scenario bug.scen
 ```
 
 Whether a scenario still rebuilds on this engine and stands on the boards recorded at its cut (exit 0 or 1); a
-file kept under `tests/DownfallArena.Infrastructure.Tests/Scenarios/` is checked by the tests, so a repro becomes
-a regression test.
+file kept under `scenarios/` is checked by the tests, so a repro becomes a regression test.
+
+### scenario-generate
+
+```bash
+dotnet run --project src/DownfallArena.Cli -- scenario-generate --p1 greedy --p2 greedy --seed 5 --format 1v1 --round 3
+```
+
+A match of two bots (`--p1`, `--p2`, greedy by default; `--seed`, 1 by default; `--rules`, `--format`,
+`--declaration`) played on this host's content and cut at the top of a round into a scenario file that carries
+that content (docs/tabletop/scenarios-plan.md, S7): without `--round` it lists the rounds the match offers;
+`--seat`, `--title` and `--goal` as `scenario-cut`. It writes `scenarios/<p1>-v-<p2>-seed-<N>-round-<N>.json`
+unless `--out` names another file, and never over one already there. A file under `scenarios/` is listed in the admin panel's Scenarios tab at the
+next start of a recording host (`scenarios/README.md`).
 
 ### The hosted table's image
 

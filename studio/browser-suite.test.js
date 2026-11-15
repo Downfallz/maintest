@@ -78,6 +78,7 @@ test('the infrastructure builds the image and plays nothing', () => {
   assert.deepEqual(plan(['infra/main.bicep'], specs), { ...nothing, image: true });
   assert.deepEqual(plan(['Dockerfile'], specs), { ...nothing, image: true });
   assert.deepEqual(plan(['learning/weights/greedy.json'], specs), { ...nothing, image: true });
+  assert.deepEqual(plan(['scenarios/greedy-1v1-round-3.json'], specs), { ...nothing, image: true });
 });
 
 test('the workflows that play the journeys play everything', () => {

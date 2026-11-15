@@ -684,6 +684,6 @@ test (`.claude/rules/host.md`).
 | `GET /api/admin/players?q&sort&page`, `GET /api/admin/players/<id>`, `POST .../sign-out`, `POST .../rename`, `DELETE .../<id>`, `POST`/`DELETE .../<id>/suspension` | operator | Players (ADR 0174, ADR 0178). |
 | `GET /api/admin/jobs/tend?page`, `GET /api/admin/jobs/tend/<id>`, `POST /api/admin/jobs/tend` | operator | Tending runs, and a pass now (ADR 0162). |
 | `GET /api/admin/jobs/turns`, `POST /api/admin/jobs/turns/requeue`, `POST .../drop` | operator | Bot turns' queues and dead letters. |
-| `GET /api/admin/scenarios/rounds?session=<id>`, `GET`/`POST /api/admin/scenarios`, `DELETE /api/admin/scenarios/<id>`, `PUT /api/admin/scenarios/<id>/listing` | operator | Scenarios (ADR 0179). |
+| `GET /api/admin/scenarios/rounds?session=<id>`, `GET`/`POST /api/admin/scenarios`, `DELETE /api/admin/scenarios/<id>`, `PUT /api/admin/scenarios/<id>/listing` | operator | Scenarios (ADR 0179); the repository's `scenarios/` files are listed with them, read-only (S7). |
 | `GET /api/admin/activity?page` | operator | What operators did. |
 | `GET`/`PUT /api/admin/settings` | operator | Registration and the notice (ADR 0177). |
