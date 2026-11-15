@@ -148,7 +148,7 @@ Path-scoped rules stay for what spans directories with no common parent. One hom
 | Agent | Reads a change for |
 | --- | --- |
 | `host-reviewer` | Who may call a route, status and error codes, idempotence, the journal, two processes on one table, the queues. |
-| `pages-reviewer` | The static pages and the battle view: 320 px, touch, accessibility, the service worker, the identity. |
+| `pages-reviewer` | The static pages and the battle view: 320 px, touch, accessibility, the service worker, the page's own assets. |
 | `design-reviewer` | The brand, the pictures and the UI against `docs/art/branding.md` and the art direction; what exists and could be reused. |
 | `security-reviewer` | Tokens, sign-in, sessions, operator routes, rate limits, secrets in logs, headers, Web Push. |
 | `infra-reviewer` | Bicep, workflows, the image: least privilege, cost, the way back, what becomes a hand step. |
@@ -251,7 +251,8 @@ most, started by a clock, an API call or a GitHub event. One is added at a time.
 ### Design
 
 - A design system read from `table/identity.css` and `docs/art/branding.md` (Claude Design reads a repository
-  with `/design-sync`), so a mock-up wears the real identity.
+  with `/design-sync`), so a mock-up wears the real identity. `design-reviewer` reads a change against the same
+  two files and the art docs, and looks first for what it could reuse.
 - A new screen is mocked first, as a page the owner opens on the phone, then sent to a session.
 - A pull request that changes a page carries screenshots at 320, 390 and 1440 px; the Playwright projects
   exist. Visual baselines for a few screens are an option: the suite has none.
@@ -317,7 +318,9 @@ Each stage is one pull request with its tests, and leaves the gate green.
    `/review` is `/reviewers`, because Claude Code has its own `/review`. `scripts/review/reviewers.mjs` picks the
    reviewers from the paths. The skill runs them in parallel, in the foreground, without its own reading of the
    change, checks each finding and sorts it (fix now, issue, dismissed). `/stage` calls it.
-   `studio/reviewers.test.js` holds the choice, and that no reviewer lists a tool that edits. The memory trial:
+   `studio/reviewers.test.js` holds the choice, and that no reviewer lists a tool that edits. `design-reviewer`
+   (the brand, the pictures and reuse) joined them on 2026-11-15 and took the identity from `pages-reviewer`.
+   The memory trial:
    `code-reviewer` and `host-reviewer` carry `memory: project`, which turns Write and Edit on; their prompt holds
    them to `.claude/agent-memory/<agent>/`, committed with the change. Not proven before the first sessions use
    it: that a cloud session's reviewer writes there and the next one reads it. `/code-review ultra`, Claude

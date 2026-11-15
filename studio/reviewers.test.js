@@ -45,6 +45,12 @@ test('a style sheet, an icon or a picture gets the design reviewer', () => {
   assert.deepEqual(reviewersFor(['table/manifest.webmanifest']), ['code-reviewer', 'pages-reviewer', 'design-reviewer']);
 });
 
+test('the registries of the battle pictures get the design reviewer', () => {
+  for (const path of ['table/battle-art.js', 'table/battle-evolution-art.js', 'table/battle-warped-hybrid-art.js']) {
+    assert.deepEqual(reviewersFor([path]), ['code-reviewer', 'pages-reviewer', 'design-reviewer'], path);
+  }
+});
+
 test('the battle renderer gets the design reviewer besides the pages reviewer', () => {
   assert.deepEqual(reviewersFor(['battle/src/spell-effects.ts']), ['code-reviewer', 'pages-reviewer', 'design-reviewer']);
 });

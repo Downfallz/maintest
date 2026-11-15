@@ -18,6 +18,9 @@ const SIGNING_IN = /^([A-Za-z]*(Account|Operator|Admin|Push|SignedIn|SignIn|Toke
 // What a page looks like: its sheets, its markup, its pictures, its icon and fonts, the app's manifest.
 const LOOK = /\.(css|html|svg|png|webp|jpe?g|gif|avif|woff2|webmanifest)$/;
 
+// The registries of the battle's pictures: each one's canvas, silhouette bounds and ground anchor.
+const ART_REGISTRY = /^table\/battle-[a-z-]*art\.js$/;
+
 // What makes the brand and the art: the palette's synchronizer and the matte of the art.
 const BRAND_TOOLS = new Set(['scripts/sync-branding.mjs', 'scripts/matte-opaque-art.py']);
 
@@ -51,6 +54,7 @@ const RULES = [
     'design-reviewer',
     (path) =>
       (under(path, 'table/', 'studio/', 'viewer/') && LOOK.test(path) && !isTest(path)) ||
+      ART_REGISTRY.test(path) ||
       under(path, 'battle/src/', 'docs/art/') ||
       path === 'battle/ART.md' ||
       BRAND_TOOLS.has(path),
