@@ -45,6 +45,7 @@
 | [tabletop/friends-plan.md](tabletop/friends-plan.md) | Plan: friends, and inviting one of them to a table. |
 | [tabletop/admin-plan.md](tabletop/admin-plan.md) | Plan: the admin panel as the host's headquarters: tabs, players, the jobs' runs, registration. |
 | [tabletop/scenarios-plan.md](tabletop/scenarios-plan.md) | Plan: a recorded match cut at the top of a round, played as practice, shared as a link or a `scenario.json`, and the admin diagnosis of a stuck table. |
+| [tabletop/onboarding-plan.md](tabletop/onboarding-plan.md) | Plan: onboarding, tutorials played from repository scenarios straight into combat, and concept cards for the rule words. |
 | [tabletop/home-navigation.md](tabletop/home-navigation.md) | Home navigation: the signed-out introduction, the dashboard, the menu, one Settings, and the bell that counts what waits. |
 | [tabletop/browser-battle-plan.md](tabletop/browser-battle-plan.md) | Plan: the battle in the browser, from the isolated lab (ADR 0123) to the game every seat opens in. |
 | [tabletop/battle-ux-parity-plan.md](tabletop/battle-ux-parity-plan.md) | Plan: the battle view UX recovery, AU1–AU14: classic behaviours, reuse boundaries, acceptance criteria. AU3a records energy before AU3b renders receipts; AU12 adds public creature references and retained last-cast links, historical inspection staying on recorded frames; AU13 the final scorecard, recorded-seat notes, optional notices and haptics, unambiguous seat resume. |
