@@ -23,6 +23,6 @@ Answer, for the change as a whole:
    step in `infra/README.md`, one block to paste, for a phone. A step missing from it is a finding.
 5. CI: does `gate` still need every job that judges a change? Does a path filter skip a job the gate depends
    on? Does `studio/browser/plan.js` name what a new step reads? Do `main`'s runs queue and never cancel?
-6. Bicep: say whether `az bicep build` and `az bicep lint` could be run. A session has no `az`; say so.
+6. Bicep: say whether `az bicep build` and `az bicep lint` ran. A session has no `az`, so usually they did not.
 
 Report: a verdict in one line, then findings by severity, each with file:line, the consequence, and a fix.

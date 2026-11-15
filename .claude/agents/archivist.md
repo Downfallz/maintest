@@ -14,9 +14,10 @@ you read any of them in full.
 
 Answer the question in this shape:
 
-1. **Decided**: each decision that applies, with its ADR number, its status (an ADR superseded by another is
-   named with the one that replaced it), and the sentence that decides, quoted.
+1. **Decided**: the decisions that apply, at most five ADRs, the most recent accepted first, each with its ADR
+   number, its status (an ADR superseded by another is named with the one that replaced it), and the sentence
+   that decides, quoted.
 2. **Open**: what a plan's questions or the glossary mark as open, with the file.
 3. **Not found**: say so plainly when nothing decides it. Do not infer a decision from code.
 
-At most five ADRs, the most recent accepted first. No advice on what to decide.
+No advice on what to decide.

@@ -312,13 +312,13 @@ Each stage is one pull request with its tests, and leaves the gate green.
 6. **W5, the reviewers.** The agents, `/review`, the memory trial.
    *Built (2026-11-15)*: `host-reviewer`, `pages-reviewer`, `security-reviewer`, `infra-reviewer`,
    `stats-reviewer`, `copy-editor` and `archivist` (on `haiku`); every agent names its `model` and `maxTurns`, and
-   the three that read `AGENTS.md` first no longer do. `/review` is `/reviewers`, because Claude Code has its own
-   `/review`: `scripts/review/reviewers.mjs` picks the reviewers from the paths, the skill runs them in parallel
-   without its own reading of the change, checks each finding and sorts it (fix now, issue, dismissed); `/stage`
-   calls it. `studio/reviewers.test.js` holds the choice, and that every reviewer it names is an agent that
-   cannot edit. The memory trial: `code-reviewer` and `host-reviewer` carry `memory: project`, which writes under
+   `code-reviewer`, `domain-reviewer` and `test-engineer` no longer read `AGENTS.md` first (it is already loaded).
+   `/review` is `/reviewers`, because Claude Code has its own `/review`. `scripts/review/reviewers.mjs` picks the
+   reviewers from the paths. The skill runs them in parallel without its own reading of the change, checks each
+   finding and sorts it (fix now, issue, dismissed). `/stage` calls it. `studio/reviewers.test.js` holds the
+   choice, and that every reviewer it names cannot edit anything but its own memory. The memory trial: `code-reviewer` and `host-reviewer` carry `memory: project`, which writes under
    `.claude/agent-memory/` and is committed with the change. Not proven before the first sessions use it: that a
-   cloud session's reviewer writes there and the next one reads it. `/code-review ultra` is left to the owner.
+   cloud session's reviewer writes there and the next one reads it. `/code-review ultra`, Claude Code's own deep review, is the owner's to run.
 7. **W6, scheduled work.** The morning digest. Then, one at a time, the weekly run and the review trigger.
 8. **W7, operations.** `ops-report`, the smoke test, the alerts, the runbooks, `/ops`.
 9. **W8, proposals, language, design.** `product-scout`, `ops-analyst`, `/proposals`, `/retro`, the
