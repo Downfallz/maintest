@@ -30,7 +30,7 @@ closed by the hourly job twenty hours after it opened (ADR 0115, ADR 0162); the 
 unused tables. The recording is what survives either way: the admin panel lists every recorded
 session, links to it in the viewer and exports it.
 
-The image is `ghcr.io/downfallz/downfall-table:<commit>`, built by `.github/workflows/deploy.yml` from the
+The image is `ghcr.io/downfallz/downfall-table:<commit>`, built by `.github/workflows/image.yml` from the
 `Dockerfile` at the root and tried both ways before it is pushed (`.github/scripts/try-table-image.sh`).
 
 ## Setting it up, once
@@ -51,7 +51,7 @@ You need the Azure subscription's owner, signed in, and ideally the GitHub CLI s
    `RESOURCE_GROUP`, `REPO` and `PREFIX` override the defaults; the prefix travels to the template through
    the `TABLE_NAME_PREFIX` variable, so every resource name follows it.
 
-2. **Deploy.** Run the *Deploy the table* workflow from the Actions tab (or push to `main`). The first run
+2. **Deploy.** Run the *Deploy the table* workflow from the Actions tab (a merge to `main` deploys too, behind CI). The first run
    builds and pushes the image, and its deploy job fails on the next step, on purpose.
 
 3. **Make the image public.** GitHub creates a new package private. Open the owner's *Packages*, then
@@ -159,7 +159,9 @@ Android Chrome takes the notice as it is; iOS only once the table is added to th
 
 ## Changing it
 
-- The app follows `main`: a merge that touches anything the image carries deploys itself.
+- The app follows `main`: a merge that touches anything the image carries deploys itself, once CI's gate is
+  green on `main`, the browser suite included (ADR 0182). *Deploy the table*, run by hand, deploys the chosen
+  commit without waiting for the gate.
 - `infra/main.bicep` is the whole of the infrastructure. The workflow compiles and lints it on every pull
   request that touches it; a warning fails the run.
 - Locally: `docker build -t downfall-table .` and `docker run --rm -p 8080:8080 downfall-table` give an admin panel

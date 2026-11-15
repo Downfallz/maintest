@@ -1,0 +1,119 @@
+name: Roll the table out
+
+# The hosted table (ADR 0080, ADR 0082, ADR 0162): the API, the worker and the hourly job, from one image
+# already pushed. CI calls this on main once its gate is green, the browser suite included, and only when the
+# image was rebuilt (ADR 0182); deploy.yml calls it for a deployment asked by hand. It is a workflow of its
+# own so that neither caller grants more than it writes: this one signs in to Azure and writes no package.
+# The push keys are the one secret; Azure is reached with an identity federated to this repository's `azure`
+# environment.
+#
+# Deploying needs the one-time setup in infra/README.md. Until its repository variables exist the deploy job
+# is skipped, so main stays green on a fork or before anybody has set Azure up.
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        description: The image to deploy, already pushed.
+        type: string
+        required: true
+    secrets:
+      TABLE_PUSH_KEYS:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to Azure
+    if: vars.AZURE_CLIENT_ID != ''
+    runs-on: ubuntu-latest
+    environment: azure
+    # One deployment at a time, and never one cancelled half-way: a revision interrupted mid-rollout is worse
+    # than the next one waiting a minute.
+    concurrency:
+      group: deploy-table
+      cancel-in-progress: false
+    env:
+      IMAGE: ${{ inputs.image }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The container app pulls without a credential, so the package has to be public. GitHub makes a new
+      # package private whatever its repository is; that is one click, once (infra/README.md), and this is
+      # where forgetting it is said in a sentence rather than in a revision that never starts.
+      - name: The image can be pulled without a credential
+        run: |
+          repository="${IMAGE#ghcr.io/}"
+          repository="${repository%:*}"
+          tag="${IMAGE##*:}"
+          token="$(curl -fsS "https://ghcr.io/token?scope=repository:${repository}:pull" | jq -r .token)"
+          if ! curl -fsS -o /dev/null -H "Authorization: Bearer ${token}" \
+            -H "Accept: application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json" \
+            "https://ghcr.io/v2/${repository}/manifests/${tag}"; then
+            echo "::error::${IMAGE} cannot be pulled anonymously. Make the downfall-table package public in the repository owner's package settings (infra/README.md, step 3)."
+            exit 1
+          fi
+
+      - name: Sign in to Azure
+        uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy
+        env:
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          SIGN_IN_CLIENT_ID: ${{ vars.TABLE_SIGNIN_CLIENT_ID }}
+          OPERATORS: ${{ vars.TABLE_OPERATORS }}
+          # The Google OAuth client players sign in with (ADR 0122). Public: Google's own pages show it. A fork sets
+          # its own in the TABLE_GOOGLE_CLIENT_ID variable.
+          GOOGLE_CLIENT_ID: ${{ vars.TABLE_GOOGLE_CLIENT_ID || '809377988923-jsaqtfo92r9ria75s9g8cd53o1iurc6b.apps.googleusercontent.com' }}
+          # The player accounts that are the operator once signed in (ADR 0175), by id, comma-separated; unset, none.
+          ADMIN_ACCOUNTS: ${{ vars.TABLE_ADMIN_ACCOUNTS }}
+          NAME_PREFIX: ${{ vars.TABLE_NAME_PREFIX }}
+          # The push key pair (ADR 0118), or nothing: a table without one sends no notices and says so in its log.
+          PUSH_KEYS: ${{ secrets.TABLE_PUSH_KEYS }}
+          # The relay (ADR 0165), opted into by the TABLE_RELAY_SKU variable once the bootstrap has granted its role: Free_F1
+          # or Standard_S1. Unset, none: the pages read the API's own streams, as before.
+          RELAY_SKU: ${{ vars.TABLE_RELAY_SKU || 'none' }}
+          # The table's own host name behind Cloudflare (ADR 0175), e.g. play.downfallinstinct.com, once its
+          # certificate is uploaded; unset, the platform's address only. TABLE_ONLY_CLOUDFLARE=true then closes
+          # the platform's address to all but Cloudflare.
+          CUSTOM_DOMAIN: ${{ vars.TABLE_DOMAIN }}
+          ONLY_CLOUDFLARE: ${{ vars.TABLE_ONLY_CLOUDFLARE == 'true' }}
+        run: |
+          relay="$RELAY_SKU"
+          if [[ "$relay" == "none" ]]; then relay=""; fi
+          az deployment group create \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "table-${GITHUB_RUN_ID}" \
+            --template-file infra/main.bicep \
+            --parameters image="$IMAGE" signInClientId="$SIGN_IN_CLIENT_ID" operators="$OPERATORS" \
+              namePrefix="${NAME_PREFIX:-downfall}" pushKeys="$PUSH_KEYS" googleClientId="$GOOGLE_CLIENT_ID" adminAccounts="$ADMIN_ACCOUNTS" relaySku="$relay" \
+              customDomain="$CUSTOM_DOMAIN" onlyCloudflare="$ONLY_CLOUDFLARE" \
+            --query properties.outputs --output json > "$RUNNER_TEMP/outputs.json"
+          url="$(jq -r .url.value "$RUNNER_TEMP/outputs.json")"
+          redirect="$(jq -r .redirectUri.value "$RUNNER_TEMP/outputs.json")"
+          {
+            echo "### The table is at ${url}"
+            echo
+            echo "- Admin panel: ${url}/admin"
+            echo "- Platform address: $(jq -r .platformUrl.value "$RUNNER_TEMP/outputs.json")"
+            echo "- Domain verification (TXT asuid.<host>): \`$(jq -r .customDomainVerificationId.value "$RUNNER_TEMP/outputs.json")\`"
+            echo "- Image: \`${IMAGE}\`"
+            echo "- Recordings: $(jq -r .recordings.value "$RUNNER_TEMP/outputs.json")"
+            echo "- The bots' turns: the worker app \`$(jq -r .worker.value "$RUNNER_TEMP/outputs.json")\`, scaled on its queue"
+            echo "- Tending: the job \`$(jq -r .tendJob.value "$RUNNER_TEMP/outputs.json")\`, every hour"
+            echo
+            echo "The sign-in registration must list \`${redirect}\` as a web redirect URI. The first deployment"
+            echo "is the one that makes that address; infra/README.md, step 5, adds it once."
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -187,3 +187,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0179](0179-cut-a-recorded-match-at-the-top-of-a-round.md) | Cut a recorded match at the top of a round, and replay it into a match of its own | Accepted |
 | [0180](0180-let-a-player-choose-the-bot-by-its-level.md) | Let a player choose the bot by its level, and show them nothing else of it | Accepted |
 | [0181](0181-keep-agents-md-an-index-with-a-budget.md) | Keep AGENTS.md an index with a budget, and load an area's instructions with the area | Accepted |
+| [0182](0182-require-one-gate-check-and-deploy-behind-it.md) | Require one gate check, and deploy behind it | Accepted |

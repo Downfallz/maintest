@@ -38,7 +38,7 @@ An area marked * has its own `AGENTS.md` (and a `CLAUDE.md` that imports it): re
 | `learning/` * | The Python training project (uv, ruff, pytest) and the heuristic weights files. See docs/learning/. |
 | `models/` | Trained policies (`policy.json`, small, committed with their evaluation). See `models/README.md`. |
 | `infra/` * | The hosted table on Azure behind Cloudflare: `main.bicep`, `bootstrap.sh`, `README.md` (ADR 0080-0082, 0162, 0175). |
-| `Dockerfile` | The table's image, built and tried by `.github/workflows/deploy.yml` before it is pushed and deployed. |
+| `Dockerfile` | The table's image, built and tried by `.github/workflows/image.yml` before it is pushed and deployed. |
 | `scripts/` | The learning loop's `iterate.sh` and readers, `spells-report/`, `workflow-metrics.py` (docs/reference/commands.md). |
 | `tests/` | One test project per layer, plus `Cli.Tests` (the hosts) and `Architecture.Tests` (layering and these files). |
 | `docs/` | Indexed in `docs/README.md`: every plan, the ADRs, the domain, the tabletop, art, learning, engineering. |

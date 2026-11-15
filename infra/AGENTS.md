@@ -2,18 +2,20 @@
 
 The table at play.downfallinstinct.com behind Cloudflare (ADR 0080-0082, ADR 0162, ADR 0175): `main.bicep` (the
 API app, the worker app, the hourly tending job), the one-time `bootstrap.sh`, and `README.md`, which is the
-runbook. The image is the root `Dockerfile`, built and tried by `.github/workflows/deploy.yml`.
+runbook. The image is the root `Dockerfile`, built and tried by `.github/workflows/image.yml`
+and deployed by `rollout.yml`, which CI calls on `main` once its gate is green (ADR 0182); `deploy.yml` is the
+same two by hand.
 
 ## Commands
 
 ```bash
 docker build -t downfall-table . && docker run --rm -p 8080:8080 downfall-table   # the image locally; the token is in the log
-az bicep build --file infra/main.bicep && az bicep lint --file infra/main.bicep   # what deploy.yml runs; needs the az CLI
+az bicep build --file infra/main.bicep && az bicep lint --file infra/main.bicep   # what image.yml runs; needs the az CLI
 ```
 
 ## A change here runs
 
-- The gate. `deploy.yml` compiles and lints `main.bicep` on every pull request that touches it; a warning
+- The gate. `image.yml` compiles and lints `main.bicep` on every pull request that touches it; a warning
   fails the run. A session has no `az` and no Azure: say the Bicep was not compiled when it was not.
 - A change to the `Dockerfile`: `docker build` where Docker is available, or say it was not built.
 

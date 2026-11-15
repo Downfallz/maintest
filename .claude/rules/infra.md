@@ -3,6 +3,8 @@ paths:
   - "infra/**"
   - "Dockerfile"
   - ".github/workflows/deploy.yml"
+  - ".github/workflows/image.yml"
+  - ".github/workflows/rollout.yml"
 ---
 
 # Infrastructure rules
