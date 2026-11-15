@@ -153,3 +153,15 @@ test('the game lobby and repository point to their copyright notices', () => {
   assert.match(readFileSync(new URL('../README.md', import.meta.url), 'utf8'), /\]\(COPYRIGHT\.md\)/);
   assert.match(readFileSync(new URL('../COPYRIGHT.md', import.meta.url), 'utf8'), /table\/fonts\/OFL\.txt/);
 });
+
+test('the apex ships a strict content policy that every page keeps to', () => {
+  const headers = read('_headers');
+  for (const value of ["script-src 'self'", "style-src 'self'", "frame-ancestors 'none'", 'X-Content-Type-Options: nosniff'])
+    assert.ok(headers.includes(value), value);
+  const pages = readdirSync(root, { recursive: true }).filter(name => String(name).endsWith('.html'));
+  assert.ok(pages.length >= 9);
+  for (const name of pages) {
+    const html = read(String(name));
+    assert.doesNotMatch(html, /<script(?![^>]*\bsrc=)[^>]*>|\sstyle="|\son[a-z]+="/, String(name));
+  }
+});

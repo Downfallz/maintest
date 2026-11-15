@@ -22,6 +22,7 @@
 | [architecture/overview.md](architecture/overview.md) | Layers, dependency rule, folder layout, how a request flows. |
 | [architecture/stateless-table-inventory.md](architecture/stateless-table-inventory.md) | What has to move for a table no process holds in memory (ADR 0159). |
 | [engineering/ai-workflow-plan.md](engineering/ai-workflow-plan.md) | Plan: the AI workflow from an idea to a merged pull request, measured on 300 pull requests and 20 sessions, in nine stages. |
+| [engineering/game-releases.md](engineering/game-releases.md) | Proposed player-facing version numbers, release promotion and rollback. |
 | [reference/commands.md](reference/commands.md) | Every command, flag and route, one heading per command (ADR 0181). |
 | [domain/glossary.md](domain/glossary.md) | The ubiquitous language. Code must use these words. |
 | [domain/game-rules.md](domain/game-rules.md) | The rules of the game as implemented or decided, plus open questions. |
@@ -48,7 +49,6 @@
 | [tabletop/browser-battle-plan.md](tabletop/browser-battle-plan.md) | Plan: the battle in the browser, from the isolated lab (ADR 0123) to the game every seat opens in. |
 | [tabletop/battle-ux-parity-plan.md](tabletop/battle-ux-parity-plan.md) | Plan: the battle view UX recovery, AU1–AU14: classic behaviours, reuse boundaries, acceptance criteria. AU3a records energy before AU3b renders receipts; AU12 adds public creature references and retained last-cast links, historical inspection staying on recorded frames; AU13 the final scorecard, recorded-seat notes, optional notices and haptics, unambiguous seat resume. |
 | [tabletop/battle-ux-acceptance.md](tabletop/battle-ux-acceptance.md) | AU14: the cross-feature acceptance of the battle view. |
-| [engineering/game-releases.md](engineering/game-releases.md) | Proposed player-facing version numbers, release promotion and rollback. |
 | [tabletop/battle-release-acceptance.md](tabletop/battle-release-acceptance.md) | A8 (ADR 0136): the rollout preference, budgets and release profiles; physical and new-player gates remain open. ADR 0132 versions event streams: new tables record ordinary energy, resumed legacy tables omit it before sequencing, preserving feed and checkpoint indices. |
 | [../studio/README.md](../studio/README.md) | The content studio: browse, edit, version and try the game content. |
 | [../viewer/README.md](../viewer/README.md) | The viewer: traces, batches, evaluations, training runs and comparisons. |

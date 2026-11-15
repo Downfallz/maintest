@@ -81,6 +81,18 @@ dotnet run --project src/DownfallArena.Cli -- studio --export site/data
 The content studio on http://127.0.0.1:5099 (studio/README.md). `--export site/data` writes what the published
 studio reads, as files (ADR 0023).
 
+### showcase build
+
+```bash
+node showcase/build.mjs
+GAME_ORIGIN=https://your-game-host.example node showcase/build.mjs
+```
+
+Builds the public showcase into `showcase/dist`: eight localized pages, their assets and the `_headers` file
+Cloudflare Pages serves (showcase/README.md, ADR 0185). `GAME_ORIGIN` sets the origin of the Play links. It must be
+a bare HTTPS origin, with no path, query or credentials. The default is `https://play.downfallinstinct.com`.
+`node --test studio/showcase.test.js` rebuilds it and checks it.
+
 ## Matches in the console
 
 ### play

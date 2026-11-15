@@ -37,7 +37,7 @@ const stage = await mkdtemp(destination + '-');
 try {
   const assets = [
     ['docs/art/branding.css', 'branding.css'],
-    ...['showcase.css', 'gallery.js', 'guide.js', '404.html'].map(file => [`showcase/${file}`, file]),
+    ...['showcase.css', 'gallery.js', 'guide.js', '404.html', '_headers'].map(file => [`showcase/${file}`, file]),
     ...['brand-mark.svg', 'icon.svg'].map(file => [`table/${file}`, `assets/${file}`]),
     ...['marcellus-latin-400.woff2', 'OFL.txt'].map(file => [`table/fonts/${file}`, `fonts/${file}`]),
     ['table/battle-art/eclipse-battle.webp', 'assets/eclipse-battle.webp'],

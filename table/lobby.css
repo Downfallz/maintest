@@ -160,7 +160,7 @@
 /* Copper supports the brand; gold remains the action/selection accent. */
 .lobby-hero .eyebrow, .lobby-panel > .eyebrow { color: var(--brand-ember); }
 
-/* Home: a restrained header, a game-focused dashboard and a separate first-visit welcome. */
+/* Home: a restrained header, a game-focused dashboard and, for guests, a focused sign-in panel. */
 .home-page { padding-top: 0; }
 .home-header { position: relative; min-height: 100px; gap: 24px; z-index: 35; }
 .home-header .brand { flex: none; }

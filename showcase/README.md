@@ -39,7 +39,8 @@ can be overridden for a test deployment with `GAME_ORIGIN=https://your-game-host
 
 ## Publish the apex
 
-Create a **Cloudflare Pages** project with Git integration for this repository. Use the following settings.
+The numbered steps are in [infra/README.md](../infra/README.md#the-showcase-at-the-apex). Create a **Cloudflare Pages**
+project with Git integration for this repository. Use the following settings.
 
 | Setting | Value |
 | --- | --- |
@@ -49,7 +50,7 @@ Create a **Cloudflare Pages** project with Git integration for this repository. 
 | Build command | node showcase/build.mjs |
 | Build output directory | showcase/dist |
 
-Preview the branch deployment first. Test the illustrated observation, the guide search and disclosures, privacy, language links and Play
+Check the deployment on its `pages.dev` address first. Test the illustrated observation, the guide search and disclosures, privacy, language links and Play
 on desktop and a narrow phone. In the Pages project's **Custom domains**, add **downfallinstinct.com** and finish
 its DNS activation. The zone is already on Cloudflare. The game CNAME, its origin certificate, Google origins
 and its Azure workflow keep their existing settings. Deploy the apex before releasing the updated lobby so

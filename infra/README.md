@@ -108,7 +108,41 @@ Accounts are kept in the storage account's `accounts` container, beside the reco
 internal id and Google's subject id for the sign-in. No email is kept. A player deletes their account from the
 account menu on the home page; the lobby's *What we keep* panel says the same to players.
 
-The apex serves the [independent static showcase](../showcase/README.md).
+## The showcase at the apex
+
+The apex `downfallinstinct.com` serves the [independent static showcase](../showcase/README.md) from Cloudflare
+Pages (ADR 0185). No Azure resource changes. Once, in this order, before the lobby's links to the apex are merged:
+
+1. **Cloudflare, Workers & Pages, Create, Pages, Connect to Git**: grant access to this repository only, then:
+
+   ```text
+   Production branch:       main
+   Framework preset:        None
+   Build command:           node showcase/build.mjs
+   Build output directory:  showcase/dist
+   Root directory:          (empty)
+   ```
+
+2. **The project, Settings, Variables and Secrets**, *Production* and *Preview*: the Node version the image uses.
+   The build needs no secret, so the project gets none.
+
+   ```text
+   NODE_VERSION = 22
+   ```
+
+3. **The project, Settings, Builds, Branch control**: *Preview branches* set to *None*, so a pull request's branch
+   is not published on a public `pages.dev` address.
+4. **Check the preview**: on the project's `pages.dev` address, open `/`, `/fr/`, `/mutations/`, `/privacy/` and
+   `/copyright/`, and follow Play. In the browser's developer tools, the page's response carries
+   `Content-Security-Policy`.
+5. **Mailbox**: `contact@downfallinstinct.com` is the privacy and permissions contact. In Cloudflare, *Email,
+   Email Routing*, route it to a mailbox you read, and send it a test message.
+6. **The project, Custom domains, Set up a custom domain**: `downfallinstinct.com`. Cloudflare replaces any
+   existing apex record. Then open https://downfallinstinct.com/ and follow Play.
+7. **Merge** the lobby links only now, so they have a live destination.
+
+To take it down: *Custom domains*, remove `downfallinstinct.com`, or *Deployments*, a previous one, *Rollback*. The
+game at `play.` is unaffected either way.
 
 ## Its own domain, behind Cloudflare
 

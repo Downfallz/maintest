@@ -13,7 +13,7 @@ const policies = {
       ]],
       ['account', 'Your account and browser', [
         'On play.downfallinstinct.com, Google Identity Services provides the sign-in button and verifies your Google account. The game checks the sign-in credential and stores Google’s account identifier, a separate internal player ID and the player name you choose. It does not store your Google password, email address, real name or profile photo.',
-        'The game issues its own signed, HttpOnly session cookie (downfall_session). It expires after 30 days and can be renewed when you use the game. Signing out closes that session. Signing out everywhere invalidates the sessions on all your devices.',
+        'The game issues its own signed, HttpOnly session cookie (downfall_session). It expires after 30 days and can be renewed when you use the game. Signing out removes the session from this browser. Signing out everywhere invalidates every copy of it, on all your devices.',
         'Your browser may keep seat links, display preferences and cached game files so you can return to a match or use the installed web app. You can clear those items in your browser’s site-data settings. They are separate from the account stored by the game.',
       ]],
       ['matches', 'What playing records and who can see it', [
@@ -46,12 +46,12 @@ const policies = {
       ]],
       ['account', 'Ton compte et ton navigateur', [
         'Sur play.downfallinstinct.com, le bouton de connexion de Google Identity Services sert à vérifier ton compte Google. Le jeu vérifie le justificatif de connexion et conserve l’identifiant transmis par Google, un identifiant de joueur interne distinct et le nom de joueur que tu choisis. Il ne conserve ni ton mot de passe Google, ni ton adresse courriel, ni ton vrai nom, ni ta photo de profil.',
-        'Le jeu dépose son propre témoin de session signé, inaccessible au JavaScript (downfall_session). Il expire après 30 jours et peut être renouvelé quand tu utilises le jeu. Te déconnecter ferme cette session. L’option « Sign out everywhere » invalide les sessions sur tous tes appareils.',
+        'Le jeu dépose son propre témoin de session signé, inaccessible au JavaScript (downfall_session). Il expire après 30 jours et peut être renouvelé quand tu utilises le jeu. Te déconnecter retire la session de ce navigateur. L’option « Sign out everywhere » invalide toutes ses copies, sur tous tes appareils.',
         'Ton navigateur peut conserver des liens vers tes places dans les parties, des préférences d’affichage et des fichiers du jeu en cache pour que tu puisses reprendre une partie ou utiliser l’application Web installée. Tu peux les effacer dans les réglages des données de site de ton navigateur. Le compte est conservé séparément par le jeu.',
       ]],
       ['matches', 'Les parties et les renseignements visibles', [
         'Le jeu associe à ton identifiant de joueur tes places, tes invitations, tes actions en partie, tes résultats et les dernières réactions prédéfinies. Ces enregistrements permettent aux participants de revoir leurs parties terminées, de te présenter tes statistiques personnelles et d’aider le développeur à améliorer les adversaires automatisés.',
-        'Les autres joueurs peuvent voir ton nom de joueur quand ils jouent ou interagissent avec toi. Le classement public affiche les noms de joueur, les cotes, les résultats et la date de la dernière partie classée. Tes statistiques personnelles détaillées et ton salon individuel sont réservés à ton compte.',
+        'Les autres joueurs peuvent voir ton nom de joueur quand ils jouent ou interagissent avec toi. Le classement public affiche les noms de joueur, les cotes, les résultats et la date de la dernière partie jouée. Tes statistiques personnelles détaillées et ton salon individuel sont réservés à ton compte.',
         'Les liens d’amitié et les demandes sont conservés pour permettre aux deux joueurs de répondre ou de retirer le lien. Le jeu conserve tes préférences, ta dernière connexion et une heure d’activité récente mise à jour au plus une fois par heure. La personne qui exploite le jeu peut voir l’activité des comptes et le nombre de parties, administrer les comptes et examiner les problèmes. En cas de suspension, le motif et le moment de la suspension sont consignés.',
       ]],
       ['notifications', 'Les notifications facultatives', [
