@@ -120,8 +120,8 @@ Its sources live in [`design-system/`](design-system/): the brand book (`README.
 `node scripts/design-system/build.mjs` reads them from `branding.css` and `identity.css`, and
 `table/design-system.test.js` fails when a palette colour has no usage note, a note has no colour, or a card draws
 a raw colour. After a change to the palette, a shared part or these sources, a session rebuilds the folder and
-publishes it to the same page: the files under `project/` in one call, the page's index read again and its
-`lastChange` set, and a changed picture uploaded first.
+publishes it to the same page with `/design-system` (`.claude/skills/design-system/SKILL.md`): the files under
+`project/` in one call, the page's index read again and its `lastChange` set, and a changed picture uploaded first.
 
 ## Covered surfaces
 

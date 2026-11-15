@@ -16,6 +16,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const NOT_YET_THERE = [
   'data/dst/', // DataBuilder's output (ADR 0009)
   'table/battle-build/', // the battle bundle, built from battle/
+  'artifacts/design-system/', // the design system's folder, built by scripts/design-system/build.mjs
   '.claude/agent-memory/', // an agent's memory folder, made on its first write
 ];
 
