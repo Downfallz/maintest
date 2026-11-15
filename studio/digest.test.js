@@ -26,7 +26,7 @@ test('a quiet day says so in one line and is not worth a push', () => {
   const text = render(facts);
   assert.match(text, /^Bilan du 16 nov\./);
   assert.match(text, /Rien de neuf/);
-  assert.match(text, /main : vert · déploiement : vert · nuit : vert/);
+  assert.match(text, /main : vert · déploiement : vert · nightly : vert/);
 });
 
 test('the day is read in Montreal time, where the task runs', () => {
@@ -53,13 +53,13 @@ test('a red main names its health issue and links the run', () => {
 });
 
 test('a run nobody read is unknown, not green', () => {
-  assert.match(render({ now: NOW }), /main : inconnu · déploiement : inconnu · nuit : inconnu/);
+  assert.match(render({ now: NOW }), /main : inconnu · déploiement : inconnu · nightly : inconnu/);
 });
 
 test('a pull request waits for the owner when it is green with no open thread, and a draft waits for nobody', () => {
   assert.equal(waitingFor({ checks: 'green', openThreads: 0 }), 'prête, à fusionner');
   assert.equal(waitingFor({ checks: 'red', openThreads: 2 }), 'rouge');
-  assert.equal(waitingFor({ checks: 'green', openThreads: 2 }), '2 fil(s) ouvert(s)');
+  assert.equal(waitingFor({ checks: 'green', openThreads: 2 }), '2 fils ouverts');
   assert.equal(waitingFor({ checks: 'running' }), 'checks en cours');
   assert.equal(waitingFor({ checks: 'green', openThreads: 0, draft: true }), null);
 });
@@ -131,7 +131,7 @@ test('the window defaults to the 24 hours before the run, and a field the facts 
 });
 
 test('what could not be read is named last', () => {
-  assert.match(render({ now: NOW, unread: ['PR', 'nuit'] }), /\n\nNon lu : PR, nuit$/);
+  assert.match(render({ now: NOW, unread: ['PR', 'nightly'] }), /\n\nNon lu : PR, nightly$/);
 });
 
 test('a run is running until it completes, and green only on success', () => {
@@ -184,7 +184,7 @@ test('GitHub is read field by field, and a field that fails is named instead of 
   assert.deepEqual(facts.runs, { main: { status: 'running', url: 'u2' }, deploy: { status: 'green', url: 'u1' } });
   assert.deepEqual(facts.health, [{ number: 7, title: 'main is red', label: 'red-main', createdAt: 'a' }]);
   assert.deepEqual(facts.issues, [{ number: 8, title: 'Left', label: 'follow-up', createdAt: 'b' }]);
-  assert.deepEqual(facts.unread, ['nuit', 'PR']);
+  assert.deepEqual(facts.unread, ['nightly', 'PR']);
   assert.equal(facts.pullRequests, undefined);
 });
 

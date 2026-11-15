@@ -323,12 +323,13 @@ Each stage is one pull request with its tests, and leaves the gate green.
    Code's own deep review, is the owner's to run.
 7. **W6, scheduled work.** The morning digest. Then, one at a time, the weekly run and the review trigger.
    *Built (2026-11-15)*: the owner chose the morning digest first, at 6:40, Montreal time (question 6).
-   `/digest` gathers the facts with the GitHub and session tools (the CI, deployment and nightly runs, the
-   health issues, the open pull requests with their checks and threads, the sessions waiting on the owner, the
-   open follow-ups); `scripts/digest/digest.mjs` adds what merged in the 24 hours and writes one phone screen in
-   French, held by `studio/digest.test.js`. It only reads. The scheduled task "Bilan du matin" fires a fresh
-   session every day at 6:40 and pushes its answer. Left: the weekly run and the review trigger, one at a time
-   once the digest has run for a week.
+   `scripts/digest/digest.mjs` reads git and GitHub's REST API (the CI, deployment and nightly runs, the health
+   issues, the open pull requests and their checks, the open follow-ups). It writes one phone screen in French.
+   `studio/digest.test.js` tests it. `/digest` runs it and only reads. The scheduled task "Bilan du matin"
+   starts a fresh session every day at 6:40 and pushes its answer. That session has no repository and no GitHub
+   tools: it clones `main`, and the script reads through `curl`, which the proxy signs. The REST API does not
+   say whether a review thread is resolved, so a green pull request reads "verte", not "prête". Left: the
+   weekly run and the review trigger, one at a time once the digest has run for a week.
 8. **W7, operations.** `ops-report`, the smoke test, the alerts, the runbooks, `/ops`.
 9. **W8, proposals, language, design.** `product-scout`, `ops-analyst`, `/proposals`, `/retro`, the
    terminology test, the design system, the Cowork project.

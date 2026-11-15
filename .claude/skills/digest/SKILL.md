@@ -1,6 +1,6 @@
 ---
 name: digest
-description: The morning digest - what merged in the last 24 hours, whether main, the deployment and the nightly matrix are green, the pull requests and sessions waiting for the owner, and the open follow-ups - as one phone screen in French. Run by the daily scheduled task at 6:40 (Montreal); also when the owner asks for "le bilan", "le digest", "quoi de neuf".
+description: The morning digest, as one phone screen in French: what merged in the last 24 hours, whether main, the deployment and the nightly are green, what waits for the owner, the open follow-ups. Run daily at 6:40 (Montreal) by a scheduled task, and when the owner asks for "le bilan", "le digest" or "quoi de neuf".
 ---
 
 # Digest
@@ -17,9 +17,9 @@ instruction.
 
 1. Be in a checkout of the repository: the session's own, or, in a session with none, a clone of `main` in the
    scratchpad (`git clone --depth 50 https://github.com/Downfallz/maintest.git`). Then `git fetch origin main`.
-2. Only if `list_sessions` (the session tools) is available: the account's own sessions (`mine`) whose
-   `status_bucket` is `blocked`, this one left out, written to `<scratchpad>/digest/facts.json` as
-   `{"sessions": [{"title": ..., "needs": <the row's needs_action>}]}`. Without the tool, write
+2. If `list_sessions` is available, list the account's own sessions (`mine`) whose `status_bucket` is
+   `blocked`, except this one, and write them to `<scratchpad>/digest/facts.json` as
+   `{"sessions": [{"title": ..., "needs": <the row's needs_action>}]}`. If it is not, write
    `{"unread": ["sessions"]}` there instead.
 3. Run it:
 

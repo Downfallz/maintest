@@ -1,13 +1,13 @@
 // The morning digest (docs/engineering/ai-workflow-plan.md, W6): one phone screen, in French, of what merged,
-// what is red, what waits for the owner and what is left open. It reads git and GitHub's REST API itself (a
-// session's proxy signs the requests; a fresh session fired by the scheduled task has no GitHub tools), so the
-// digest reads the same every morning and studio/digest.test.js can hold its shape. It only reads.
+// what is red, what waits for the owner and what is left open. It reads git and GitHub's REST API itself (the
+// session's proxy signs the requests; the fresh session the scheduled task starts has no GitHub tools). So the
+// digest reads the same every morning, and studio/digest.test.js can check its shape. It only reads.
 //
 //   git fetch origin main && node scripts/digest/digest.mjs [facts.json]
 //
 // The optional facts file adds what only the session tools know, and overrides what the script would read
 // (every field optional; a list left out reads as empty, a run left out as unknown):
-//   now          ISO time of the run; since, the start of the window, defaults to 24 hours before it.
+//   now          ISO time of the run. since: start of the window, 24 hours before now by default.
 //   merged       [{number, title}]: read from origin/main's first parents.
 //   runs         {main, deploy, nightly}: each {status: green | red | running, url}, read from Actions.
 //   health       [{number, title, label}]: the open red-main and red-nightly issues.
@@ -79,7 +79,8 @@ function runLine(name, run, health) {
 export function waitingFor(pullRequest) {
   if (pullRequest.draft) return null;
   if (pullRequest.checks === 'red') return 'rouge';
-  if ((pullRequest.openThreads ?? 0) > 0) return `${pullRequest.openThreads} fil(s) ouvert(s)`;
+  const threads = pullRequest.openThreads ?? 0;
+  if (threads > 0) return `${threads} ${threads > 1 ? 'fils ouverts' : 'fil ouvert'}`;
   if (pullRequest.checks === 'running') return 'checks en cours';
   if (pullRequest.checks === 'green') return pullRequest.openThreads === undefined ? 'verte' : 'prête, à fusionner';
   return null;
@@ -119,7 +120,7 @@ export function render(facts) {
   const healthOf = (label) => health.find((issue) => issue.label === label);
   lines.push(
     '',
-    [runLine('main', runs.main, healthOf('red-main')), runLine('déploiement', runs.deploy), runLine('nuit', runs.nightly, healthOf('red-nightly'))].join(
+    [runLine('main', runs.main, healthOf('red-main')), runLine('déploiement', runs.deploy), runLine('nightly', runs.nightly, healthOf('red-nightly'))].join(
       ' · ',
     ),
   );
@@ -213,7 +214,7 @@ export async function readGitHub(repository, get = githubGet) {
       }
     }
   });
-  await attempt('nuit', async () => {
+  await attempt('nightly', async () => {
     const { workflow_runs: runs } = await get(`${base}/actions/workflows/nightly.yml/runs?per_page=1`);
     if (runs.length) facts.runs.nightly = { status: runStatus(runs[0]), url: runs[0].html_url };
   });

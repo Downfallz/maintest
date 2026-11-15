@@ -56,14 +56,15 @@ only the prompt holds them to `.claude/agent-memory/<agent>/`.
 ### digest/digest.mjs
 
 ```bash
-git fetch origin main && node scripts/digest/digest.mjs <facts.json>   # the morning digest, one phone screen in French
+git fetch origin main && node scripts/digest/digest.mjs [facts.json]   # the morning digest, one phone screen in French
 ```
 
-What `/digest` runs once it has gathered the facts with the GitHub and session tools: the CI, deployment and
-nightly runs, the open `red-main` and `red-nightly` issues, the open pull requests with their checks and threads,
-the sessions waiting on the owner, and the open `follow-up`, `flaky` and `ops` issues. It adds what merged on
-`origin/main` in the 24 hours before `now`. The facts' shape is in the script's header;
-`studio/digest.test.js` tests the text. The scheduled task "Bilan du matin" runs `/digest` every day at 6:40,
+What `/digest` runs. It reads what merged on `origin/main` in the 24 hours before the run. From GitHub's REST
+API, through `curl` (the session's proxy signs the requests), it reads the CI, deployment and nightly runs, the
+open `red-main` and `red-nightly` issues, the open pull requests with their checks, and the open `follow-up`,
+`flaky` and `ops` issues. A field it cannot read is named on its last line, never guessed. The optional facts file adds what only
+the session tools know (the sessions waiting on the owner) and overrides any field; its shape is in the script's
+header. `studio/digest.test.js` tests it. The scheduled task "Bilan du matin" runs `/digest` every day at 6:40,
 Montreal time, in a fresh session, and pushes its answer to the owner's phone.
 
 ### Build the battle view
