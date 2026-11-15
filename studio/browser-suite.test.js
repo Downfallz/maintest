@@ -116,14 +116,21 @@ test('a test that passed only on its retry is reported, and no other', () => {
 });
 
 // The local gate (scripts/verify.sh) always builds and tests the engine and the pages; the rest is the diff's.
-test('the local gate adds nothing for markdown, a page or the engine host alone', () => {
+test('the local gate adds nothing for markdown, a page test or a hook alone', () => {
   const none = { battle: false, learning: false, content: false };
   assert.deepEqual(gate([]), none);
-  assert.deepEqual(gate(['docs/adr/0182-x.md', 'learning/README.md', 'battle/README.md', 'table/lobby.js', '.claude/hooks/stop.sh']), none);
+  assert.deepEqual(gate(['docs/adr/0182-x.md', 'learning/README.md', 'battle/README.md', 'table/lobby.test.js', '.claude/hooks/stop.sh']), none);
 });
 
 test('the local gate rebuilds the battle bundle for a change to the battle view', () => {
   assert.deepEqual(gate(['battle/src/scene.ts']), { battle: true, learning: false, content: false });
+});
+
+// battle/src imports the table's own modules (battle/src/target-preview.ts reads table/battle-targets.js).
+test('the local gate rebuilds the battle bundle for a table module the bundle may import', () => {
+  for (const path of ['table/battle-targets.js', 'table/account.js']) {
+    assert.deepEqual(gate([path]), { battle: true, learning: false, content: false }, path);
+  }
 });
 
 test('the local gate runs the learning project for what its lint and tests read', () => {

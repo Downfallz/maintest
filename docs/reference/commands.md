@@ -20,7 +20,7 @@ scripts/verify.sh --all    # every step, whatever the diff
 ```
 
 The local gate, as `/verify` runs it. Of the steps above, the battle bundle, the Python side and DataBuilder run
-only when the diff calls for them (and the bundle when it is missing); everything else always runs. It starts Azurite when it is installed (`scripts/gate/azurite.sh`), always
+only when the diff calls for them, or when what they build is missing; everything else always runs. It starts Azurite when it is installed (`scripts/gate/azurite.sh`), always
 restores, builds, format-checks and tests the engine and runs the pages' tests, and adds the battle bundle, the
 learning project and the content builder when `node studio/browser/plan.js --gate` calls for them. It stops at
 the first failure and prints a summary; its last lines say whether the storage tests were skipped and what the

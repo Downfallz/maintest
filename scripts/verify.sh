@@ -130,10 +130,11 @@ else
   skip_step "learning" "nothing it reads changed"
 fi
 
-if called content; then
+# data/dst/ is ignored by git, and the host refuses to start without its schema: a fresh clone builds it.
+if called content || [[ ! -f data/dst/game.schema.json ]]; then
   run_step "content" dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst
 else
-  skip_step "content" "nothing it is built from changed"
+  skip_step "content" "built, and nothing it is built from changed"
 fi
 
 if [[ -z "${AZURITE_BLOB_ENDPOINT:-}" || -z "${AZURITE_QUEUE_ENDPOINT:-}" || -z "${AZURITE_TABLE_ENDPOINT:-}" ]]; then

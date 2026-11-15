@@ -21,14 +21,16 @@ journey is found before the pull request. Arguments: $ARGUMENTS (`--all` for eve
    for: say so and stop.
 2. Prepare once: `npm --prefix studio/browser ci --ignore-scripts`, and the battle bundle
    (`npm --prefix battle ci --ignore-scripts && npm --prefix battle run build`) if `table/battle-build/` is
-   missing. Chromium is preinstalled in a cloud session: never run `playwright install`; point the suite at it
+   missing or older than a change to `battle/` or `table/`. Chromium is preinstalled in a cloud session: never run `playwright install`; point the suite at it
    with `STUDIO_CHROMIUM=/opt/pw-browsers/chromium` when it does not find it on its own.
 3. Run in the background (`run_in_background`), one command per job, and keep working while they run:
    - Journeys, from `studio/browser`:
      `node node_modules/playwright/cli.js test <specs, or nothing for all> --trace off --reporter=dot,json`
      with `PLAYWRIGHT_JSON_OUTPUT_NAME` set to a file in the scratchpad. On a change a person sees, all four
      projects; otherwise `--project=phone --project=desktop` first, and the rest before shipping.
-   - Real engine, when called for: `dotnet build src/DownfallArena.Cli`, then
+   - Real engine, when called for: `dotnet build src/DownfallArena.Cli` and the catalogue
+     (`dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst`: `data/dst/` is ignored by git and
+     the host will not start without it), then
      `node node_modules/playwright/cli.js test --config table.config.js --trace off`.
    - Release, when called for: only with WebKit installed; otherwise say it was left to CI.
 4. Read the result when the task notifies, never by polling. `node studio/browser/flakes.js < <report>` names a

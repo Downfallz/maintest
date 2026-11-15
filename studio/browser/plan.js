@@ -101,12 +101,14 @@ export function everything() {
 }
 
 // What the local gate (scripts/verify.sh) adds to the steps it always runs, each with the paths it reads: the
-// battle bundle is rebuilt from `battle/`; the learning project lints and runs `scripts/` (test_iterate_script.py)
+// battle bundle is rebuilt from `battle/` and the table's modules it imports (`table/battle-*.js`, `account.js`); the learning project lints and runs `scripts/` (test_iterate_script.py)
 // and reads the samples, the studio's value fixture and the content, its README included (test_knobs.py); the
 // content builder is built from the engine. Markdown is read by the learning tests only.
 const isCode = (path) => !path.endsWith('.md');
 const GATE_STEPS = {
-  battle: (path) => isCode(path) && path.startsWith('battle/'),
+  battle: (path) =>
+    isCode(path) &&
+    (path.startsWith('battle/') || (path.startsWith('table/') && !path.startsWith('table/battle-build/') && !path.endsWith('.test.js'))),
   learning: (path) =>
     (isCode(path) && (path.startsWith('learning/') || path.startsWith('scripts/') || path.startsWith('viewer/samples/'))) ||
     path === 'studio/value.fixture.json' ||
