@@ -64,10 +64,25 @@ public sealed class AssistedSeat
             return next;
         }
 
+        HandBack();
+        return null;
+    }
+
+    /// <summary>
+    /// Gives every question back to the person for good, as an answer that does not fit does: for whoever submits
+    /// the answers, when the match did not take one. The person answered it first, or it could not be written,
+    /// and the script no longer says what the seat did.
+    /// </summary>
+    public void HandBack()
+    {
+        if (HandedBack)
+        {
+            return;
+        }
+
         HandedBack = true;
         _script.Clear();
         GaveBack?.Invoke(this, EventArgs.Empty);
-        return null;
     }
 
     /// <summary>Says the match took the answer <see cref="Answer" /> last gave: it is taken off the script.</summary>

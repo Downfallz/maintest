@@ -158,6 +158,20 @@ public sealed class AssistedSeatTests
         seat.HandedBack.ShouldBeTrue();
     }
 
+    [Fact]
+    public void A_seat_handed_back_by_whoever_submits_its_answers_stays_the_person_s_and_says_so_once()
+    {
+        var seat = SeatOf(Teaching(PlayerOptionsKind.Action), PlayerDecision.DeclareIntent(First, TestContent.Strike));
+        var said = 0;
+        seat.GaveBack += (_, _) => said++;
+
+        seat.HandBack();
+        seat.HandBack();
+
+        seat.Answer(IntentView(First, TestContent.Strike)).ShouldBeNull();
+        (seat.HandedBack, said).ShouldBe((true, 1));
+    }
+
     private static AssistedSeat SeatOf(TutorialLesson lesson, params PlayerDecision[] recorded) => new(lesson, recorded);
 
     private static SeatView IntentView(CreatureId asked, params SpellId[] castable) =>

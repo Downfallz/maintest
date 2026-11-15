@@ -172,7 +172,7 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
 
         if (store.Ships(id))
         {
-            return Error("Scenario.FromRepository", store.Teaches(id) ? "This tutorial comes from the repository and is offered to every signed-in account under Learn to play: it cannot be listed under Practice." : "This scenario comes from the repository and is offered in the admin panel only: it cannot be listed under Practice.", 409);
+            return Error("Scenario.FromRepository", store.Teaches(id) ? "This tutorial comes from the repository and is offered to every signed-in account: it cannot be listed under Practice." : "This scenario comes from the repository and is offered in the admin panel only: it cannot be listed under Practice.", 409);
         }
 
         if (!await store.SetListedAsync(id, list))

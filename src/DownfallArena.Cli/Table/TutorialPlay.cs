@@ -22,7 +22,7 @@ internal sealed class TutorialPlay
     private readonly PlayerSlot _seat;
     private readonly Lock _gate = new();
     private readonly bool[] _shown;
-    private ITableSession? _session;
+    private Seat? _table;
     private bool _done;
     private int _answering;
     private int _again;
@@ -103,12 +103,27 @@ internal sealed class TutorialPlay
 
     internal sealed record Pointer(int? Creature, string? Control);
 
+    /// <summary>What this reads and answers of a practice's table: the person's seat as it stands, whether the match is over, and the gate a decision goes through.</summary>
+    internal sealed record Seat(Func<SeatSnapshot?> Read, Func<bool> Over, Func<Application.Matches.Decisions.PlayerDecision, long, Task<DecisionTaken>> Decide);
+
     /// <summary>Follows a practice's session from now on: every change of what the seats read is looked at.</summary>
-    public void Follow(ITableSession session)
+    /// <remarks>
+    /// A stepped session and no other: it answers a read from what it keeps, so looking, which happens inside
+    /// the request that changed the match, waits for nothing.
+    /// </remarks>
+    public void Follow(SteppedSession session)
     {
         ArgumentNullException.ThrowIfNull(session);
-        _session = session;
+        Follow(new Seat(
+            () => session.SnapshotAsync(_seat).GetAwaiter().GetResult() is { IsSuccess: true } read ? read.Value : null,
+            () => session.IsOver,
+            (decision, asked) => session.DecideAsync(_seat, decision, asked)));
         session.Changed += Look;
+    }
+
+    internal void Follow(Seat table)
+    {
+        _table = table;
         _assisted.GaveBack += (_, _) => Console.WriteLine($"  Tutorial {Order}: the recorded answers no longer fit the match; the person answers every question from here.");
     }
 
@@ -118,14 +133,14 @@ internal sealed class TutorialPlay
     /// </summary>
     public void Look()
     {
-        if (_session is not { } session || Read(session) is not { } snapshot)
+        if (_table is not { } table || table.Read() is not { } snapshot)
         {
             return;
         }
 
         lock (_gate)
         {
-            Note(snapshot, session.IsOver);
+            Note(snapshot, table.Over());
         }
 
         // The script is read by one answering at a time: a change that comes while an answer is on its way to
@@ -137,25 +152,11 @@ internal sealed class TutorialPlay
 
         if (Interlocked.CompareExchange(ref _answering, 1, 0) == 0)
         {
-            _ = Task.Run(() => AnswerAsync(session));
+            _ = Task.Run(() => AnswerAsync(table));
         }
         else
         {
             Volatile.Write(ref _again, 1);
-        }
-    }
-
-    private SeatSnapshot? Read(ITableSession session)
-    {
-        try
-        {
-            // The stepped session answers from what it keeps: nothing is waited for.
-            var read = session.SnapshotAsync(_seat).GetAwaiter().GetResult();
-            return read.IsSuccess ? read.Value : null;
-        }
-        catch (InvalidOperationException)
-        {
-            return null;
         }
     }
 
@@ -182,12 +183,12 @@ internal sealed class TutorialPlay
 
     /// <summary>
     /// Gives the recorded answers while the seat is asked assisted questions, one of the match's turns each. An
-    /// answer the match did not take, because the person's own got there first or the table was let go of, is
-    /// left: the next change is looked at again.
+    /// answer the match did not take, because the person's own got there first, the table was let go of or it
+    /// could not be written, hands every question back to the person: the script no longer says what the seat
+    /// did, and a question nobody answers must be one the page draws.
     /// </summary>
-    private async Task AnswerAsync(ITableSession session)
+    private async Task AnswerAsync(Seat table)
     {
-        var left = false;
         try
         {
             while (true)
@@ -195,7 +196,7 @@ internal sealed class TutorialPlay
                 (Application.Matches.Decisions.PlayerDecision Decision, long Asked)? owed;
                 lock (_gate)
                 {
-                    owed = Read(session) is { } snapshot ? Owed(snapshot) : null;
+                    owed = table.Read() is { } snapshot ? Owed(snapshot) : null;
                 }
 
                 if (owed is not { } answer)
@@ -203,32 +204,36 @@ internal sealed class TutorialPlay
                     break;
                 }
 
-                if (!(await session.DecideAsync(_seat, answer.Decision, answer.Asked)).Taken)
-                {
-                    left = true;
-                    break;
-                }
-
+                var taken = (await table.Decide(answer.Decision, answer.Asked)).Taken;
                 lock (_gate)
                 {
-                    _assisted.Given();
+                    if (taken)
+                    {
+                        _assisted.Given();
+                    }
+                    else
+                    {
+                        _assisted.HandBack();
+                    }
                 }
             }
         }
         catch (Exception failure) when (failure is not OutOfMemoryException)
         {
-            // The table says what it could not do when its own step fails; the question stays the person's to answer.
-            Console.WriteLine($"  Tutorial {Order}: an assisted question could not be answered ({failure.Message}).");
-            left = true;
+            // The table says what it could not do when its own step fails; the question is the person's to answer.
+            Console.WriteLine($"  Tutorial {Order}: an assisted question could not be answered ({failure.GetType().Name}).");
+            lock (_gate)
+            {
+                _assisted.HandBack();
+            }
         }
         finally
         {
             Volatile.Write(ref _answering, 0);
         }
 
-        // A change that came while this was finishing found it busy: it is looked at now. Not after an answer
-        // that was left, which the same look would only give again.
-        if (Interlocked.Exchange(ref _again, 0) != 0 && !left)
+        // A change that came while this was finishing found it busy: it is looked at now.
+        if (Interlocked.Exchange(ref _again, 0) != 0)
         {
             Look();
         }
