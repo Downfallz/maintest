@@ -36,7 +36,7 @@ const IMAGE_FILES = new Set([
   '.github/workflows/image.yml',
   '.github/workflows/rollout.yml',
 ]);
-const IMAGE_FOLDERS = ['infra/', 'src/', 'tools/', 'data/', 'table/', 'battle/', 'learning/weights/', 'models/'];
+const IMAGE_FOLDERS = ['infra/', 'src/', 'tools/', 'data/', 'table/', 'battle/', 'learning/weights/', 'models/', 'scenarios/'];
 
 // The specs the release profiles play besides their own (battle.release.config.js).
 const RELEASE_FILES = new Set(['battle.loop.js', 'battle.release.config.js', 'battle-release.spec.js', 'battle-live.spec.js']);
