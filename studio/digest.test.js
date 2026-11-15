@@ -191,10 +191,11 @@ const EVERYTHING = {
   [RUNS]: {
     workflow_runs: [
       { id: 2, status: 'in_progress', html_url: 'u2' },
-      { id: 1, status: 'completed', conclusion: 'success', html_url: 'u1' },
+      { id: 1, status: 'completed', conclusion: 'success', html_url: 'u1', created_at: '2026-11-15T01:00:00Z' },
     ],
   },
   [jobsOf(2)]: { jobs: [{ name: 'deploy', conclusion: 'skipped' }] },
+  '/repos/o/r/actions/workflows/deploy.yml/runs?per_page=1': { workflow_runs: [] },
   [jobsOf(1)]: { jobs: [{ name: 'deploy / roll out', status: 'completed', conclusion: 'success' }] },
   '/repos/o/r/actions/workflows/nightly.yml/runs?branch=main&per_page=1': { workflow_runs: [] },
   [labelled('red-main')]: [{ number: 7, title: 'main is red', created_at: 'a' }],
@@ -206,8 +207,35 @@ const EVERYTHING = {
   [labelled('flaky')]: [],
   [labelled('ops')]: [],
   '/repos/o/r/pulls?state=open&per_page=100': [{ number: 5, title: 'Fix', draft: false, head: { sha: 'abc' } }],
-  '/repos/o/r/commits/abc/check-runs?per_page=100': { check_runs: [{ status: 'in_progress', conclusion: null }] },
+  '/repos/o/r/commits/abc/check-runs?per_page=100': { check_runs: [{ status: 'completed', conclusion: 'success' }] },
+  '/repos/o/r/actions/runs?head_sha=abc&per_page=100': { workflow_runs: [{ status: 'in_progress', conclusion: null }] },
 };
+
+test('a deployment asked by hand after the last one from CI is the one the digest reads', async () => {
+  const facts = await readGitHub(
+    'o/r',
+    answering({
+      ...EVERYTHING,
+      '/repos/o/r/actions/workflows/deploy.yml/runs?per_page=1': {
+        workflow_runs: [{ status: 'completed', conclusion: 'failure', html_url: 'rollback', created_at: '2026-11-15T02:00:00Z' }],
+      },
+    }),
+  );
+  assert.deepEqual(facts.runs.deploy, { status: 'red', url: 'rollback' });
+});
+
+test('an older deployment by hand does not hide the newer one from CI', async () => {
+  const facts = await readGitHub(
+    'o/r',
+    answering({
+      ...EVERYTHING,
+      '/repos/o/r/actions/workflows/deploy.yml/runs?per_page=1': {
+        workflow_runs: [{ status: 'completed', conclusion: 'failure', html_url: 'old', created_at: '2026-11-14T02:00:00Z' }],
+      },
+    }),
+  );
+  assert.deepEqual(facts.runs.deploy, { status: 'green', url: 'u1' });
+});
 
 test('GitHub is read field by field: the runs, the deployment behind a skipped one, the labels, the pull requests', async () => {
   const facts = await readGitHub('o/r', answering(EVERYTHING));

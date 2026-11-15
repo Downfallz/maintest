@@ -229,10 +229,17 @@ export async function readGitHub(repository, get = githubGet) {
       const { jobs } = await get(`${base}/actions/runs/${run.id}/jobs?filter=latest&per_page=${PAGE}`);
       const status = deployStatus(jobs);
       if (status) {
-        facts.runs.deploy = { status, url: run.html_url };
+        facts.runs.deploy = { status, url: run.html_url, at: run.created_at };
         break;
       }
     }
+    // A deployment asked by hand (deploy.yml: a rollback, a first deployment) counts when it is the newer one.
+    const { workflow_runs: manual } = await get(`${base}/actions/workflows/deploy.yml/runs?per_page=1`);
+    const byHand = manual[0];
+    if (byHand && (!facts.runs.deploy || byHand.created_at > facts.runs.deploy.at)) {
+      facts.runs.deploy = { status: runStatus(byHand), url: byHand.html_url, at: byHand.created_at };
+    }
+    if (facts.runs.deploy) delete facts.runs.deploy.at;
   });
   await attempt('nightly', async () => {
     // main only: a dispatch on a feature branch is that branch's experiment, not the nightly's health.
@@ -256,8 +263,11 @@ export async function readGitHub(repository, get = githubGet) {
     if (pulls.length === PAGE) facts.unread.push(`PR au-delà de ${PAGE}`);
     const read = [];
     for (const pull of pulls) {
+      // Both: a pull_request run checks out the merge commit, and the Actions API lists it by head_sha where the
+      // head commit's check runs do not carry it (as scripts/workflow-metrics.py reads them).
       const { check_runs: checks } = await get(`${base}/commits/${pull.head.sha}/check-runs?per_page=${PAGE}`);
-      read.push({ number: pull.number, title: pull.title, draft: pull.draft, checks: checksStatus(checks) });
+      const { workflow_runs: runs } = await get(`${base}/actions/runs?head_sha=${pull.head.sha}&per_page=${PAGE}`);
+      read.push({ number: pull.number, title: pull.title, draft: pull.draft, checks: checksStatus([...checks, ...runs]) });
     }
     facts.pullRequests = read;
   });
