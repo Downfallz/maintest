@@ -53,6 +53,7 @@ public static class ApplicationServiceCollectionExtensions
         services.TryAddTransient<ScenarioRounds>();
         services.TryAddTransient<ScenarioCutter>();
         services.TryAddTransient<ScenarioStarter>();
+        services.TryAddTransient<LessonReach>();
         services.TryAddSingleton<JournaledStepper>();
         services.TryAddTransient<RandomAgent>();
         services.TryAddSingleton<IAgentFactory, AgentFactory>();

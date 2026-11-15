@@ -1,7 +1,9 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using DownfallArena.Application.Matches.Journaling;
+using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Application.Matches.Scenarios;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Infrastructure.Learning;
@@ -28,6 +30,7 @@ public static class ScenarioFile
             Title = document.Title,
             Goal = document.Goal,
             Seat = Seat(document.Seat),
+            Tutorial = document.Tutorial is { } lesson ? Block(lesson) : null,
             Source = new SourceShape(document.Session, scenario.Source.Run, scenario.Source.MatchId.ToString(), scenario.Cut.Round, scenario.Cut.CutAt),
             Match = new MatchShape(scenario.Source.Seed, [.. scenario.Source.Roster.Select(one => one.ToString())], new RulesShape(
                 rules.TeamSize, rules.EnergyPerRound, rules.EvolutionPicksPerOpportunity, rules.RoundCap, rules.CriticalMultiplier,
@@ -99,7 +102,7 @@ public static class ScenarioFile
             throw new InvalidDataException($"The scenario says its cut is after {source.CutAt} entries and holds {before.Count} before it.");
         }
 
-        return new ScenarioDocument(cut, Slot(file.Seat), file.Content ?? throw Missing("content"), source.Session, file.Engine, file.Title, file.Goal, file.Schema);
+        return new ScenarioDocument(cut, Slot(file.Seat), file.Content ?? throw Missing("content"), source.Session, file.Engine, file.Title, file.Goal, file.Schema, file.Tutorial is { } block ? Lesson(block) : null);
     }
 
     private static InvalidDataException Missing(string field) => new($"The scenario file has no '{field}'.");
@@ -111,6 +114,41 @@ public static class ScenarioFile
         "player1" => PlayerSlot.Player1,
         "player2" => PlayerSlot.Player2,
         _ => throw new InvalidDataException($"The scenario's seat '{seat}' is neither player1 nor player2."),
+    };
+
+    private static TutorialShape Block(TutorialLesson lesson) => new(
+        lesson.Order,
+        lesson.Title,
+        [.. lesson.Teaches.Select(kind => kind.ToString())],
+        [.. lesson.Steps.Select(step => new StepShape(
+            new AtShape(step.Kind.ToString(), step.Round, step.Creature?.Value),
+            [.. step.Says],
+            [.. step.Concepts],
+            step.PointsAt is { } pointer ? new PointerShape(pointer.Creature?.Value, pointer.Control) : null))]);
+
+    /// <summary>The lesson a <c>tutorial</c> block holds (ADR 0187), refused by what keeps it from being one.</summary>
+    private static TutorialLesson Lesson(TutorialShape block)
+    {
+        var steps = (block.Steps ?? throw Missing("tutorial.steps")).Select((step, index) =>
+        {
+            var at = step.At ?? throw Missing($"tutorial.steps[{index}].at");
+            return new LessonStep(Kind(at.Kind), at.Round, Creature(at.Creature), step.Says ?? [], step.Concepts ?? [],
+                step.PointsAt is { } pointer ? new LessonPointer(Creature(pointer.Creature), pointer.Control) : null);
+        }).ToList();
+        var lesson = TutorialLesson.Create(block.Order, block.Title, [.. (block.Teaches ?? throw Missing("tutorial.teaches")).Select(Kind)], steps);
+        return lesson.IsSuccess ? lesson.Value : throw new InvalidDataException($"The scenario's tutorial is not a lesson: {lesson.Error.Message}");
+    }
+
+    private static PlayerOptionsKind Kind(string? kind) =>
+        Enum.TryParse<PlayerOptionsKind>(kind, out var known) && Enum.IsDefined(known) && !int.TryParse(kind, out _)
+            ? known
+            : throw new InvalidDataException($"The scenario's tutorial names the question kind '{kind}', which is not one this engine asks.");
+
+    private static CreatureId? Creature(int? creature) => creature switch
+    {
+        null => null,
+        > 0 => CreatureId.From(creature.Value),
+        _ => throw new InvalidDataException($"The scenario's tutorial names creature {creature}: a creature's number is 1 or more."),
     };
 
     /// <summary>Each entry as the journal's own line, so the file and <c>decisions.jsonl</c> never disagree on one.</summary>
@@ -131,6 +169,9 @@ public static class ScenarioFile
         public string? Goal { get; init; }
 
         public string? Seat { get; init; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public TutorialShape? Tutorial { get; init; }
 
         public SourceShape? Source { get; init; }
 
@@ -156,4 +197,17 @@ public static class ScenarioFile
     private sealed record RulesShape(int TeamSize, int EnergyPerRound, int EvolutionPicksPerOpportunity, int RoundCap, double CriticalMultiplier, int FirstEvolutionRound, int EvolutionInterval, string? CombatDeclaration);
 
     private sealed record CheckpointShape(int Round, string? Player1, string? Player2);
+
+    private sealed record TutorialShape(int Order, string? Title, string[]? Teaches, StepShape[]? Steps);
+
+    private sealed record StepShape(AtShape? At, string[]? Says, string[]? Concepts, [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] PointerShape? PointsAt);
+
+    private sealed record AtShape(
+        string? Kind,
+        int Round,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? Creature);
+
+    private sealed record PointerShape(
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? Creature,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Control);
 }

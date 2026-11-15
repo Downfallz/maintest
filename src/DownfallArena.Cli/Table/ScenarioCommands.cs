@@ -210,6 +210,17 @@ internal static class ScenarioCommands
             return await RefusedAsync($"The scenario does not hold on engine {EngineVersion.Current}: {started.Error.Message}");
         }
 
+        if (document.Tutorial is { } lesson)
+        {
+            var reached = await host.Services.GetRequiredService<LessonReach>().CheckAsync(scenario, document.Seat, lesson);
+            if (reached.IsFailure)
+            {
+                return await RefusedAsync($"The scenario holds, and its tutorial does not: {reached.Error.Message}");
+            }
+
+            Console.WriteLine($"Tutorial {lesson.Order}, {lesson.Title}: its {lesson.Steps.Count} steps are reached in order by the recorded answers.");
+        }
+
         Console.WriteLine($"The scenario holds on engine {EngineVersion.Current}: {document.Title ?? $"session {document.Session ?? scenario.Source.Run}"}, round {scenario.Cut.Round}, played as {SeatName(document.Seat)}, on content {document.Content}.");
         return 0;
     }
