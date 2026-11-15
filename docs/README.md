@@ -14,7 +14,7 @@
 | [art/creature-art-direction.md](art/creature-art-direction.md) | Approved creature concepts, spell staging, mutation cues, and the ART-2–6 asset plan. |
 | [art/asset-intake.md](art/asset-intake.md) | ART-2 WebP references, original PNG upload paths, hashes, alpha audit and ART-3 handoff. |
 | [art/runtime-sprites.md](art/runtime-sprites.md) | ART-3 battle sprite selection, anchors, contrast and fallbacks. |
-| [art/branding.md](art/branding.md) | The official UI palette and type (with `branding.css`; regenerate with `node scripts/sync-branding.mjs`), the bone and soot of ADR 0158. |
+| [art/branding.md](art/branding.md) | The official UI palette and type (with `branding.css`; regenerate with `node scripts/sync-branding.mjs`), the bone and soot of ADR 0158, and the published design system built from them (`design-system/`). |
 | [art/spell-vfx.md](art/spell-vfx.md) | Spell visual effects in the battle view. |
 | [art/mutation-cues.md](art/mutation-cues.md) | Mutation cues on one arena body. |
 | [art/battle-polish.md](art/battle-polish.md) | Playback polish, and the art pipeline's follow-ups. The ART-2 source list is `art/source-intake.json`. |

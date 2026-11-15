@@ -757,6 +757,18 @@ One full turn of the loop into `runs/<id>/`; `--help` lists every tuning flag.
 
 ## Other scripts
 
+### design-system/build.mjs
+
+```bash
+node scripts/design-system/build.mjs
+```
+
+Builds the Downfall Instinct design system's files under `artifacts/design-system/project/` (ignored, and the only
+place it writes): `tokens.json` from `docs/art/branding.css` and `docs/art/design-system/tokens.notes.json`,
+`components/bundle.css` from the frame and `table/identity.css`, the font, and the brand book and component cards
+as written. It fails when a palette colour has no usage note, or a note has no colour. A session publishes the
+folder to the design system's page (docs/art/branding.md#design-system); it prints the pictures to upload.
+
 ### workflow-metrics.py
 
 ```bash

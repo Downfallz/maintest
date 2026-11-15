@@ -46,6 +46,9 @@ Look for, in this order:
    regenerated from an SVG.
 6. Coherence across surfaces: the lobby, the battle view, the studio and the viewer read as one game. A change on
    one surface that leaves a sibling surface in the old style, or invents a style only one page has.
+   The design system restates the identity for other sessions (`docs/art/design-system/`, built by
+   `scripts/design-system/build.mjs`): a change to a shared part of `identity.css`, a role or the rules of
+   `branding.md` that leaves its brand book, a component's card or `frame.css` describing the old one.
 7. Legibility: contrast at least 4.5:1 for text and 7:1 for dark labels on an accent fill (the tokens are checked;
    a new pairing is not), colour never the only signal, the identity dark under both OS preferences, charts that
    keep the blue against gold and their labels.
