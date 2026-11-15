@@ -601,6 +601,17 @@ counts, and error lines without emails, ids, tokens or query strings. `/ops` sta
 log. `studio/ops.test.js` tests both, `read.sh` with a fake `az` and `curl`. `rollout.yml` asks the deployed
 table for `GET /api/lobby` the same way once a deployment is up, and is red when it does not answer.
 
+### ensure-labels.sh
+
+```bash
+GH_TOKEN=... GH_REPO=<owner>/<repo> .github/scripts/ensure-labels.sh [<labels.json>]
+```
+
+What `labels.yml` runs when `.github/labels.json` changes on `main`, and on demand (*Create the missing labels*,
+Run workflow): it creates on GitHub the labels the file declares and the repository does not have, each with its
+description. It only adds: a label that exists keeps its colour and description, and one the file does not name
+is left alone. `studio/labels.test.js` tests it with a fake `gh`.
+
 ## Learning
 
 ### search-weights
