@@ -43,12 +43,15 @@ while a gate runs. `studio/gate-hook.test.js` tests both on a throwaway reposito
 ### review/reviewers.mjs
 
 ```bash
-git diff --name-only origin/main... | node scripts/review/reviewers.mjs   # the reviewers a diff calls for, one a line
+git diff origin/main... | node scripts/review/reviewers.mjs               # the reviewers a diff calls for, one a line
+git diff --name-only origin/main... | node scripts/review/reviewers.mjs   # the same from the paths alone
 ```
 
 What `/reviewers` reads to choose the agents under `.claude/agents` that review a change: `code-reviewer` for
 anything but markdown, then `domain-reviewer`, `host-reviewer`, `pages-reviewer`, `design-reviewer`, `copy-editor`,
-`infra-reviewer`, `security-reviewer` and `stats-reviewer` by the paths they own. `legacy/` calls for nobody.
+`infra-reviewer`, `security-reviewer` and `stats-reviewer` by the paths they own. Given the whole diff, it also
+calls `design-reviewer` for a page script (`table/`, `studio/`, `viewer/`, not a test) whose added lines hold a
+raw colour, an inline style or a `className`. `legacy/` calls for nobody.
 `studio/reviewers.test.js` tests the choice, that every reviewer it names is an agent that lists no tool that
 edits, and that the two that keep a memory name its folder in their prompt: a memory turns Write and Edit on, and
 only the prompt holds them to `.claude/agent-memory/<agent>/`.
