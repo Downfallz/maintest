@@ -184,6 +184,20 @@ var alertGroupId = resourceId('Microsoft.Insights/actionGroups', alertGroupName)
 // after", which every host's banner says as it starts (studio/ops.test.js holds both).
 var givenUpQuery = 'ContainerAppConsoleLogs_CL | where Log_s has "deliveries, onto"'
 var tendFailedQuery = 'ContainerAppConsoleLogs_CL | where Log_s has "The tables could not be tended"'
+var logRules = [
+  {
+    name: '${namePrefix}-turn-given-up'
+    description: 'The worker gave up on a bot\'s turn and put it on the poison queue (ADR 0185).'
+    query: givenUpQuery
+  }
+  {
+    name: '${namePrefix}-tend-failed'
+    description: 'A tending pass failed (ADR 0185).'
+    query: tendFailedQuery
+  }
+]
+// What the log alerts read the console lines with, on the workspace alone.
+var logAnalyticsReader = '73c42c96-874c-492b-b04d-ab87d138a893'
 
 // Where the console lines go. Capped per day so a host that logs in a loop costs cents, not a surprise.
 resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
@@ -695,20 +709,14 @@ resource restarts 'Microsoft.Insights/metricAlerts@2018-03-01' = [for process in
 // A turn given up on, and a tending pass that failed: read from the console lines once an hour, which the job's
 // own rhythm is. The table the query reads exists only once a line was written, so the query is not checked at
 // deployment.
-resource logAlerts 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = [for rule in [
-  {
-    name: '${namePrefix}-turn-given-up'
-    description: 'The worker gave up on a bot\'s turn and put it on the poison queue (ADR 0185).'
-    query: givenUpQuery
-  }
-  {
-    name: '${namePrefix}-tend-failed'
-    description: 'A tending pass failed (ADR 0185).'
-    query: tendFailedQuery
-  }
-]: if (alertsOn) {
+resource logAlerts 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = [for rule in logRules: if (alertsOn) {
   name: rule.name
   location: location
+  // Each rule reads the console lines as its own identity, which holds Log Analytics Reader on the workspace alone,
+  // rather than as whoever deployed it.
+  identity: {
+    type: 'SystemAssigned'
+  }
   dependsOn: [
     alertGroup
   ]
@@ -743,6 +751,16 @@ resource logAlerts 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = [for ru
         alertGroupId
       ]
     }
+  }
+}]
+
+resource logAlertRoles 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for (rule, i) in logRules: if (alertsOn) {
+  scope: logs
+  name: guid(logs.id, rule.name, logAnalyticsReader)
+  properties: {
+    principalId: logAlerts[i].identity.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId(roleDefinitions, logAnalyticsReader)
   }
 }]
 

@@ -27,7 +27,8 @@ is cut to 160 characters. `/ops` runs it and reads the log.
 `rollout.yml` asks the deployed table for `GET /api/lobby` once the deployment is up; a deployment that does not
 answer is red. `main.bicep` adds an action group, which emails the address in the `TABLE_ALERT_EMAIL` secret and
 notifies the Azure mobile app signed in with it, and the alerts it sends: 5xx answers, restarts of the API and of
-the worker, a turn given up on, a failed tending pass. A budget of 5 (billing currency) a month warns at 80 % and
+the worker, a turn given up on, a failed tending pass. Each log alert reads as its own identity, with Log Analytics
+Reader on the workspace, which the deployer may now assign. A budget of 5 (billing currency) a month warns at 80 % and
 100 % spent, and at 100 % forecast, from a month set once in the `TABLE_BUDGET_START` variable, since a budget's
 start may not move. Without the secret none of these is deployed, and without the variable no budget is.
 

@@ -7,8 +7,9 @@ alert stops anything. Without the address, none of it is deployed.
 
 ## Turning them on, once
 
-1. **The providers.** Run the setup of [ops-identity.md](ops-identity.md), step 2, first: it registers
-   `Microsoft.Insights` and `Microsoft.Consumption`, without which the deployment of the alerts fails.
+1. **The providers and the role.** Run the setup of [ops-identity.md](ops-identity.md), step 2, first: it
+   registers `Microsoft.Insights` and `Microsoft.Consumption`, and lets the deployer give the log alerts Log
+   Analytics Reader on the workspace. Without it the deployment of the alerts fails.
 
 2. **The address**, as a secret, so the log never shows it. GitHub: the repository, *Settings*, *Secrets and
    variables*, *Actions*, *Secrets*, *New repository secret*, name `TABLE_ALERT_EMAIL`, value your address.

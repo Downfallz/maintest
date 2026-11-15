@@ -42,6 +42,8 @@ QUEUE_CONTRIBUTOR="974c5e8b-45b9-4653-ba55-5f855dd0fb88"
 # Web PubSub Service Owner on the relay (ADR 0165): each process says through it what moved, and the API signs the
 # pages' addresses.
 RELAY_OWNER="12cf5a90-567b-43ae-8102-96cf46c7d9b4"
+# Log Analytics Reader on the workspace, for the identities of the log alerts (ADR 0185).
+LOG_READER="73c42c96-874c-492b-b04d-ab87d138a893"
 
 # What the reading identity holds on the resource group (ADR 0185): it reads the resources, their metrics, the
 # console lines and the cost, and writes nothing. No data role: it reads no recording, index or queue message.
@@ -169,7 +171,7 @@ setup() {
   deployer_principal="$(principal "$deployer")"
   federate "$deployer" "$ENVIRONMENT"
   grant "$deployer_principal" Contributor "$scope"
-  condition="((!(ActionMatches{'Microsoft.Authorization/roleAssignments/write'})) OR (@Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {$BLOB_CONTRIBUTOR, $TABLE_CONTRIBUTOR, $QUEUE_CONTRIBUTOR, $RELAY_OWNER})) AND ((!(ActionMatches{'Microsoft.Authorization/roleAssignments/delete'})) OR (@Resource[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {$BLOB_CONTRIBUTOR, $TABLE_CONTRIBUTOR, $QUEUE_CONTRIBUTOR, $RELAY_OWNER}))"
+  condition="((!(ActionMatches{'Microsoft.Authorization/roleAssignments/write'})) OR (@Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {$BLOB_CONTRIBUTOR, $TABLE_CONTRIBUTOR, $QUEUE_CONTRIBUTOR, $RELAY_OWNER, $LOG_READER})) AND ((!(ActionMatches{'Microsoft.Authorization/roleAssignments/delete'})) OR (@Resource[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {$BLOB_CONTRIBUTOR, $TABLE_CONTRIBUTOR, $QUEUE_CONTRIBUTOR, $RELAY_OWNER, $LOG_READER}))"
   grant_on_condition "$deployer_principal" "Role Based Access Control Administrator" "$scope" "$condition"
 
   # The reading identity (ADR 0185): trusted for the `ops` environment alone, and allowed to read this one
