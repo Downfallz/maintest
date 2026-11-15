@@ -1,6 +1,6 @@
 # Plan: the AI workflow, from an idea to a merged pull request
 
-Status: accepted in part, 2026-11-14. The owner settled questions 1, 2, 3 and 5 (at the end); W0 to W5 are built.
+Status: accepted in part, 2026-11-14. The owner settled questions 1, 2, 3, 5 and 6 (at the end); W0 to W6 are built.
 Each stage below is one pull request, or one settings change that only the owner can make.
 
 ## What the owner asked for
@@ -322,6 +322,13 @@ Each stage is one pull request with its tests, and leaves the gate green.
    it: that a cloud session's reviewer writes there and the next one reads it. `/code-review ultra`, Claude
    Code's own deep review, is the owner's to run.
 7. **W6, scheduled work.** The morning digest. Then, one at a time, the weekly run and the review trigger.
+   *Built (2026-11-15)*: the owner chose the morning digest first, at 6:40, Montreal time (question 6).
+   `/digest` gathers the facts with the GitHub and session tools (the CI, deployment and nightly runs, the
+   health issues, the open pull requests with their checks and threads, the sessions waiting on the owner, the
+   open follow-ups); `scripts/digest/digest.mjs` adds what merged in the 24 hours and writes one phone screen in
+   French, held by `studio/digest.test.js`. It only reads. The scheduled task "Bilan du matin" fires a fresh
+   session every day at 6:40 and pushes its answer. Left: the weekly run and the review trigger, one at a time
+   once the digest has run for a week.
 8. **W7, operations.** `ops-report`, the smoke test, the alerts, the runbooks, `/ops`.
 9. **W8, proposals, language, design.** `product-scout`, `ops-analyst`, `/proposals`, `/retro`, the
    terminology test, the design system, the Cowork project.
@@ -371,3 +378,4 @@ Each stage is one pull request with its tests, and leaves the gate green.
 2. The standing orders as written: a session opens the pull request, subscribes and asks Codex unasked.
 3. The ruleset requires the two CI jobs at first; the browser suite once W2 makes it always report.
 5. One stage, one session, with a ceiling at 300,000 tokens and a wrap-up.
+6. The morning digest first, every day at 6:40, Montreal time (asked in W6, 2026-11-15).
