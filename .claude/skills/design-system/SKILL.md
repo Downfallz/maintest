@@ -54,7 +54,7 @@ they come from `docs/art/branding.css`, `table/identity.css` and `docs/art/desig
    Write the note from `git log` since the commit the previous `via` names, limited to the sources above.
 
 5. **Publish in one call**: `Artifact` publish with `url` the link above, `root` the absolute path of
-   `artifacts/design-system`, `file_path` the absolute path of its `project/design-system.json`, and `files`
+   `artifacts/design-system/`, `file_path` the absolute path of its `project/design-system.json`, and `files`
    mapping every other built file to itself (`"project/tokens.json": "project/tokens.json"`, ...). A `project/`
    path published before and no longer built (a card removed from `docs/art/design-system/components/`) maps to
    `null`. Never send a path outside `project/` (the rest is the type's), nor `capabilities` or `contract`.
