@@ -170,6 +170,9 @@ jobs:
       # static pages (ADR 0013 decision J, ADR 0015). The studio's and the table's modules do have tests now,
       # run by the step above, but Node's coverage does not reach Sonar (ADR 0024) -- so a page with tests and
       # a page without one measure the same here; the viewer still has no runner at all.
+      # The showcase is a static site of the same kind (ADR 0185), tested by studio/showcase.test.js. Its
+      # copy, lore and privacy modules hold the English and French texts side by side under the same keys,
+      # which the duplication detector reads as copies, so they are left out of it.
       # Sonar analyses all of them for bugs and code smells either way.
       #
       # The one suppression, and why it is one rather than a fix. `python:S1244` ("do not perform equality
@@ -205,7 +208,8 @@ jobs:
           /d:sonar.token="$SONAR_TOKEN"
           /d:sonar.cs.vscoveragexml.reportsPaths="TestResults/*.xml"
           /d:sonar.exclusions="legacy/**,artifacts/**,**/.venv/**,table/battle-build/**"
-          /d:sonar.coverage.exclusions="src/DownfallArena.Cli/**,tools/**,studio/**,table/**,viewer/**,battle/**,scripts/**"
+          /d:sonar.coverage.exclusions="src/DownfallArena.Cli/**,tools/**,studio/**,table/**,viewer/**,battle/**,scripts/**,showcase/**"
+          /d:sonar.cpd.exclusions="showcase/copy.mjs,showcase/lore.mjs,showcase/privacy.mjs"
           /d:sonar.python.version="3.11,3.12,3.13"
           /d:sonar.python.coverage.reportPaths="$RUNNER_TEMP/learning-coverage.xml"
           /d:sonar.issue.ignore.multicriteria="e1,e2"
