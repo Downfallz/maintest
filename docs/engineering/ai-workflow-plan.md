@@ -139,6 +139,7 @@ Path-scoped rules stay for what spans directories with no common parent. One hom
 | `/browser-check` | Maps the changed paths to their specs and runs those in the background | 21 spec names listed in `AGENTS.md`; a 30-minute suite. |
 | `/ops` | Runs the `ops-report` workflow and reads it (W7) | The owner reads the portal aloud. |
 | `/proposals` | Product and operations proposals, as issues (W8) | Asked for. |
+| `/triage` | Sorts the open issues against `main`: to close, the owner's, one session, together, a plan first. A prompt to paste for each session; closes only what the owner ticks | Issues open from three places and nothing closed them. |
 | `/retro` | A week's numbers and the findings that recur, as a pull request on the rules and skills | ADR 0005: instructions are "fixed when an agent misbehaves". |
 | `/verify`, changed | Starts the storage emulator. Runs what the diff calls for | 97 tests skipped; one gate for every diff. |
 | `/adr`, changed | Fetches `main` before it takes a number | Four numbers already taken. |

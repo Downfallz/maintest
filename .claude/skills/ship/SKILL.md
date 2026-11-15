@@ -12,7 +12,8 @@ The standing orders in `CLAUDE.md`, in order. None of them is asked first.
 2. Commit in small, imperative commits (`Add the Stop hook`), with the attribution lines the session gives. Push
    the branch with `git push -u origin <branch>`, retrying a network failure up to four times.
 3. Open the pull request against `main` with the GitHub tools, its body from `.github/PULL_REQUEST_TEMPLATE.md`:
-   `## What` (what and why, with the plan's stage and the ADRs), the checklist ticked only where true, and
+   `## What` (what and why, with the plan's stage and the ADRs, and `Closes #<n>` for each issue it settles, so
+   the merge closes it), the checklist ticked only where true, and
    `## Notes for the reviewer` (what the gate skipped, what was not verified, the steps left to the owner). The
    title is the change in plain words, with the stage id in parentheses (`... (W4)`).
 4. Subscribe to its activity (`subscribe_pr_activity`).
