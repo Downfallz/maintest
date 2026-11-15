@@ -40,9 +40,13 @@ const usable = (reading) => reading !== undefined && reading !== null && reading
 
 /** A console line as a public log may hold it: no email, id, token or query string, one line, short. */
 export function mask(line) {
-  const masked = String(line ?? '')
+  // A word with an @ in it is an address, or near enough: masked whole, in one pass over the words.
+  const words = String(line ?? '')
+    .split(/(\s+)/)
+    .map((word) => (word.includes('@') ? '<courriel>' : word))
+    .join('');
+  const masked = words
     .replace(/(https?:\/\/[^\s?]+)\?\S*/g, '$1?…')
-    .replace(/[^\s@]+@[^\s@]+/g, '<courriel>')
     .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, '<id>')
     .replace(/\b([a-z]{2,8})_[A-Za-z0-9-]{6,}/g, '$1_…')
     .replace(/[A-Za-z0-9+/=_-]{20,}/g, '…')
