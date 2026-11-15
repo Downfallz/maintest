@@ -1,0 +1,47 @@
+/* The frame the previews need around the shared parts of table/identity.css: the base rules of table/table.css and
+   table/lobby.css those parts build on, restated with tokens. The build puts it before identity.css, as the table
+   loads its page sheets before identity.css. */
+* { box-sizing: border-box; }
+html { font-family: var(--font-text); font-size: 14px; color-scheme: dark; }
+body { margin: 0; color: var(--ink); min-height: 100%; }
+h1, h2, h3, p { margin: 0; }
+h1 { font-family: var(--font-display); font-size: 25px; font-weight: 400; }
+h2 { font-size: 14px; font-weight: 650; }
+button { font: inherit; min-height: 44px; border: 1px solid var(--line); border-radius: var(--radius-soft); padding: 11px 14px; background: var(--raised); color: var(--ink); cursor: pointer; text-align: left; }
+button:hover:not(:disabled) { border-color: var(--gold); }
+button:disabled { opacity: 0.5; cursor: default; }
+button:focus-visible, a:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
+a { color: var(--gold); }
+a.primary { display: inline-block; padding: 12px 16px; text-decoration: none; }
+.muted { color: var(--muted); font-size: 12px; line-height: 1.6; }
+.eyebrow { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 1.8px; font-weight: 650; }
+.status-tag { color: var(--gold); border: 1px solid var(--tag-edge); font-size: 11px; padding: 4px 8px; white-space: nowrap; }
+.lobby-count { font: 12px var(--font-text); color: var(--muted); border: 1px solid var(--line); padding: 3px 7px; }
+.casual-tag { display: inline-block; padding: 1px 8px; border: 1px solid var(--line); color: var(--muted); font: 600 10px/1.6 var(--font-text); letter-spacing: .08em; text-transform: uppercase; vertical-align: middle; }
+.casual-tag.ranked { color: var(--gold); border-color: var(--gold); }
+.tag-frame { display: contents; }
+.empty-state { color: var(--muted); line-height: 1.7; }
+.game-card { border: 1px solid var(--line); padding: 20px; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.game-card h3 { margin: 0; font: 400 23px var(--font-display); }
+.game-card button { width: 100%; text-align: center; margin-top: auto; }
+.lobby-section h2 { display: flex; align-items: center; gap: 10px; }
+.dialog-heading { display: flex; justify-content: space-between; gap: 18px; align-items: center; }
+.dialog-heading h2 { font: 400 28px var(--font-display); margin-top: 8px; }
+dialog { position: static; color: var(--ink); border: 1px solid var(--line); padding: 0; max-width: 100%; }
+.window-body { padding: 18px 24px 24px; display: grid; gap: 14px; }
+.window-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+
+/* The spell card's parchment face. */
+.card { display: block; padding: 15px; border-radius: var(--radius-soft); border: 1px solid var(--parchment-edge); background: var(--parchment); color: var(--parchment-ink); text-align: left; font: inherit; }
+.card-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+.card-title { font: 400 18px var(--font-display); line-height: 1.25; }
+.card-meta { display: block; font: 10px var(--font-text); margin-top: 5px; color: var(--parchment-meta); }
+.card-body { margin-top: 13px; padding-top: 11px; border-top: 1px solid var(--parchment-rule); font-size: 11px; color: var(--parchment-ink); line-height: 1.65; }
+
+/* The site header's layout. */
+.home-header { display: flex; align-items: center; gap: 24px; min-height: 72px; padding: 0 4px; }
+.home-header .brand { display: flex; align-items: center; gap: 12px; flex: none; color: inherit; text-decoration: none; }
+.home-navigation { margin-left: auto; display: flex; align-items: center; gap: 3px; }
+.home-navigation > :is(a, button) { display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; color: var(--muted); background: transparent; text-decoration: none; font-size: 13px; }
+.nav-badge { display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-left: 6px; padding: 0 5px; background: var(--gold); color: var(--accent-ink); font-size: 11px; font-weight: 700; }
+.rune g { fill: var(--bone); }

@@ -1,0 +1,303 @@
+{
+  "$comment": "Usage notes for the design system (docs/art/design-system/README.md). The palette's values, the font stacks, the font file, the radii and --cut come from docs/art/branding.css: scripts/design-system/build.mjs reads them there, and refuses a colour with no note in `colors` or a note with no colour. `pageColors` are shades a page sheet writes out (named in `source`); the build checks each is still there.",
+  "name": "Downfall Instinct",
+  "theme": {
+    "id": "dark",
+    "name": "Bone and soot"
+  },
+  "colors": {
+    "brand-slate": "Deep slate. Page canvas, loading screen, installed-app chrome, browser theme-color and PWA manifest.",
+    "brand-panel": "Slate panel. Cards, dialogs, sheets.",
+    "brand-raised": "Raised slate. Controls, hover surfaces, layered panels.",
+    "brand-line": "Slate edge. Borders of controls and separators (3:1 on every slate surface).",
+    "brand-line-soft": "Quiet separators between rows and under footers (ADR 0158). Decorative only; never the edge of a control.",
+    "brand-gold": "Eclipse gold. The primary action, the selected tab, links. Text on brand-slate, brand-panel and brand-raised.",
+    "brand-gold-bright": "Eclipse light. Hover on a gold fill, keyboard focus emphasis.",
+    "brand-ember": "Copper ember. Secondary detail: the eyebrow over a window or hero title, ornamental edges. Never a gameplay state.",
+    "brand-ivory": "Ivory. Main text on brand-slate, brand-panel, brand-raised and brand-soot.",
+    "brand-muted": "Slate mist. Supporting text on all four dark surfaces (at least 4.5:1).",
+    "brand-wash": "Warm shadow. Selected or active surface behind gold text.",
+    "brand-on-accent": "Dark label on a gold or copper fill (at least 7:1). Never ivory on gold.",
+    "brand-soot": "Soot. The foot of a page, the head of a bar or a window, field fills mixed with slate.",
+    "brand-bone": "Bone. Titles, the name, creature names, the hairline under a title, the rune. Read first; gold is what can be done.",
+    "ink": "Role alias: body text.",
+    "muted": "Role alias: supporting text, eyebrows on the page, counters.",
+    "paper": "Role alias: the page ground.",
+    "paper-glass": "Deep slate at 94%: a bar or sheet over the board.",
+    "panel": "Role alias: panels.",
+    "card": "Role alias: cards.",
+    "raised": "Role alias: controls and hover surfaces.",
+    "sunken": "Role alias: inset wells.",
+    "line": "Role alias: control borders.",
+    "line-soft": "Role alias: quiet separators.",
+    "gold": "Role alias: actions, links, selection, checkbox accent-color.",
+    "accent": "Role alias of gold for navigation and generic selection.",
+    "accent-ink": "Role alias: text on a gold fill; the focus ring inside a cut gold button.",
+    "accent-wash": "Role alias: the active surface behind gold text.",
+    "accent-strong": "Role alias: hover of the primary action.",
+    "soot": "Role alias: soot.",
+    "bone": "Role alias: bone.",
+    "ally": "Gameplay: your creatures. Never a page, panel or action colour.",
+    "enemy": "Gameplay: the opposing creatures.",
+    "refused": "Refusal and danger text (conceding, a refused order) on dark surfaces.",
+    "ok": "Success text, with a word beside it.",
+    "ok-wash": "Success surface behind ok text.",
+    "warn": "Warning text; also the gold half of a chart comparison.",
+    "warn-wash": "Warning surface.",
+    "bad": "Error text, with a word beside it.",
+    "bad-wash": "Error surface behind bad text.",
+    "health": "Health bar above the threshold.",
+    "health-low": "Health bar when low.",
+    "player1": "Seat 1 in charts and replays.",
+    "player2": "Seat 2 in charts and replays.",
+    "chart-above": "The blue half of a chart comparison against warn. Keep both halves and a label.",
+    "chip-bg": "Mutation chip fill.",
+    "chip-ink": "Mutation chip text on chip-bg."
+  },
+  "type": {
+    "groups": [
+      {
+        "name": "Display",
+        "family": "display",
+        "styles": [
+          {
+            "name": "hero",
+            "fontSize": "58px",
+            "lineHeight": 1.15,
+            "fontWeight": 400,
+            "sample": "Your table awaits",
+            "usage": "The lobby's hero title, clamp(36px, 5vw, 58px), in bone."
+          },
+          {
+            "name": "window-title",
+            "fontSize": "28px",
+            "lineHeight": 1.2,
+            "fontWeight": 400,
+            "sample": "New game",
+            "usage": "A window's title (.dialog-heading h2), in bone."
+          },
+          {
+            "name": "asking",
+            "fontSize": "26px",
+            "lineHeight": 1.2,
+            "fontWeight": 400,
+            "sample": "Who acts first?",
+            "usage": "The decision asked of the player; text-wrap: balance."
+          },
+          {
+            "name": "page-title",
+            "fontSize": "25px",
+            "lineHeight": 1.2,
+            "fontWeight": 400,
+            "sample": "Leaderboard",
+            "usage": "A page's h1."
+          },
+          {
+            "name": "card-title",
+            "fontSize": "23px",
+            "lineHeight": 1.2,
+            "fontWeight": 400,
+            "sample": "Against Mira",
+            "usage": "A game card's title, in bone."
+          },
+          {
+            "name": "section-title",
+            "fontSize": "22px",
+            "lineHeight": 1.2,
+            "fontWeight": 400,
+            "sample": "Your games",
+            "usage": "A lobby section's title, over the rune rule, in bone."
+          },
+          {
+            "name": "spell-title",
+            "fontSize": "18px",
+            "lineHeight": 1.25,
+            "fontWeight": 400,
+            "sample": "Pummel",
+            "usage": "A spell card's title, parchment-ink on parchment."
+          },
+          {
+            "name": "wordmark",
+            "fontSize": "17px",
+            "lineHeight": 1,
+            "fontWeight": 400,
+            "letterSpacing": "0.14em",
+            "sample": "DOWNFALL INSTINCT",
+            "usage": "The name in the site header, uppercase. 13px/.1em under 700px, 11px/.06em under 360px."
+          }
+        ]
+      },
+      {
+        "name": "Text",
+        "family": "text",
+        "styles": [
+          {
+            "name": "creature-name",
+            "fontSize": "15px",
+            "lineHeight": 1.3,
+            "fontWeight": 650,
+            "sample": "Ashen Warden",
+            "usage": "A creature's name on the table."
+          },
+          {
+            "name": "body",
+            "fontSize": "14px",
+            "lineHeight": 1.4,
+            "fontWeight": 400,
+            "sample": "Plan your orders, then watch the round resolve.",
+            "usage": "Everything else, in ink."
+          },
+          {
+            "name": "panel-title",
+            "fontSize": "14px",
+            "lineHeight": 1.3,
+            "fontWeight": 650,
+            "sample": "Initiative",
+            "usage": "An h2 inside a panel."
+          },
+          {
+            "name": "caption",
+            "fontSize": "12px",
+            "lineHeight": 1.6,
+            "fontWeight": 400,
+            "sample": "Round 3 · your turn",
+            "usage": "Supporting text (.muted), in muted."
+          },
+          {
+            "name": "tag",
+            "fontSize": "10px",
+            "lineHeight": 1.6,
+            "fontWeight": 600,
+            "letterSpacing": "0.08em",
+            "sample": "RANKED",
+            "usage": "A casual or ranked tag, uppercase."
+          },
+          {
+            "name": "eyebrow",
+            "fontSize": "10px",
+            "lineHeight": 1.4,
+            "fontWeight": 650,
+            "letterSpacing": "0.16em",
+            "sample": "THE TABLE",
+            "usage": "The label over a title, uppercase; ember over a window or hero title, muted elsewhere."
+          }
+        ]
+      }
+    ]
+  },
+  "families": {
+    "radius": {
+      "tokens": [
+        {
+          "name": "radius-sharp",
+          "usage": "Controls in a group, tags, header buttons, chips."
+        },
+        {
+          "name": "radius-soft",
+          "usage": "Base buttons and fields, panels, the docked menu's bottom corners."
+        },
+        {
+          "name": "radius-pill",
+          "value": "999px",
+          "usage": "Counters only (.lobby-count, .nav-badge). A pill is a counter."
+        }
+      ]
+    },
+    "cut": {
+      "note": "The cut corner (ADR 0158): the top right corner of a card or window, two corners of the primary action. Set by --cut.",
+      "tokens": [
+        {
+          "name": "cut",
+          "usage": "A card's cut corner."
+        },
+        {
+          "name": "cut-row",
+          "value": "8px",
+          "usage": "An opponent card or a game row."
+        },
+        {
+          "name": "cut-window",
+          "value": "16px",
+          "usage": "A centred window (dialog)."
+        },
+        {
+          "name": "cut-action",
+          "value": "10px",
+          "usage": "The two cut corners of the primary action (top right, bottom left)."
+        },
+        {
+          "name": "cut-docked",
+          "value": "0px",
+          "usage": "A sheet docked to an edge stays square."
+        }
+      ]
+    },
+    "size": {
+      "tokens": [
+        {
+          "name": "control-height",
+          "value": "44px",
+          "usage": "The minimum height of a button or a header control: the touch target."
+        },
+        {
+          "name": "focus-ring",
+          "value": "3px",
+          "usage": "Focus outline width in gold, offset 4px; on a cut shape 2px accent-ink, offset -5px."
+        }
+      ]
+    },
+    "shadow": {
+      "tokens": [
+        {
+          "name": "shadow-menu",
+          "value": "0 20px 40px #00000088",
+          "usage": "A menu dropped over the match. Panels carry no shadow."
+        }
+      ]
+    }
+  },
+  "pageColors": [
+    {
+      "name": "tag-edge",
+      "value": "#756443",
+      "source": "table/table.css .status-tag",
+      "usage": "The edge of a gold status tag."
+    },
+    {
+      "name": "problem-wash",
+      "value": "#562e2a",
+      "source": "table/table.css .problem",
+      "usage": "The fill of an inline problem message, with refused text."
+    },
+    {
+      "name": "parchment",
+      "value": "#e8e5d7",
+      "source": "table/table.css .card",
+      "usage": "Spell card face: content, not a second page theme."
+    },
+    {
+      "name": "parchment-edge",
+      "value": "#c9c4ac",
+      "source": "table/table.css .card",
+      "usage": "Spell card border."
+    },
+    {
+      "name": "parchment-ink",
+      "value": "#27332b",
+      "source": "table/table.css .card",
+      "usage": "Spell card title and text on parchment."
+    },
+    {
+      "name": "parchment-meta",
+      "value": "#546151",
+      "source": "table/table.css .card-meta",
+      "usage": "Spell card meta line on parchment."
+    },
+    {
+      "name": "parchment-rule",
+      "value": "#c8c9b6",
+      "source": "table/table.css .card-body",
+      "usage": "Rule between a spell card's head and body."
+    }
+  ]
+}

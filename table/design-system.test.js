@@ -1,0 +1,81 @@
+// The design system (docs/art/design-system/README.md) is built from the repository by
+// scripts/design-system/build.mjs. These tests keep its sources in step with the palette and the shared parts.
+
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { ASSETS, buildBundleCss, buildTokens, readBranding, tokenValue, writtenFiles } from '../scripts/design-system/build.mjs';
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const source = join(root, 'docs', 'art', 'design-system');
+
+test('every colour of the palette becomes a token with a usage note, at its value in branding.css', () => {
+  const branding = readBranding();
+  const tokens = buildTokens({ branding, ref: 'test' });
+  const byName = new Map(tokens.color.tokens.map((token) => [token.name, token]));
+  for (const [name, value] of branding.declarations.filter(([, v]) => /^#[0-9a-f]{6}$/i.test(v))) {
+    assert.equal(byName.get(name)?.value.dark, value.toLowerCase(), name);
+    assert.ok(byName.get(name).usage, `${name} has a usage note`);
+  }
+});
+
+test('a role token becomes an alias of the token it names', () => {
+  assert.equal(tokenValue('var(--brand-gold)'), '{brand-gold}');
+  assert.equal(tokenValue('rgb(11 21 25 / 94%)'), 'rgba(11, 21, 25, 0.94)');
+  const tokens = buildTokens({ ref: 'test' });
+  const names = new Set(tokens.color.tokens.map((token) => token.name));
+  for (const token of tokens.color.tokens) {
+    const alias = /^\{(.+)\}$/.exec(token.value.dark);
+    if (alias) assert.ok(names.has(alias[1]), `${token.name} aliases ${alias[1]}`);
+  }
+});
+
+test('a colour added to branding.css without a usage note stops the build', () => {
+  const branding = readBranding();
+  branding.declarations.push(['brand-new', '#123456']);
+  assert.throws(() => buildTokens({ branding, ref: 'test' }), /--brand-new has no usage note/);
+});
+
+test('a page colour the notes name must still be written in its page sheet', () => {
+  assert.throws(() => buildTokens({ pageCss: '', ref: 'test' }), /parchment .* is no longer in table\/table.css/);
+});
+
+test('the radii, the cut and the font come from branding.css', () => {
+  const tokens = buildTokens({ ref: 'test' });
+  const branding = new Map(readBranding().declarations);
+  assert.equal(tokens.radius.tokens.find((t) => t.name === 'radius-sharp').value, branding.get('radius-sharp'));
+  assert.equal(tokens.cut.tokens.find((t) => t.name === 'cut').value, branding.get('cut'));
+  assert.equal(tokens.type.families.display, branding.get('font-display'));
+  const [font] = tokens.type.fonts;
+  assert.ok(existsSync(join(root, 'table', font.file)), font.file);
+});
+
+test('the shared stylesheet carries identity.css whole and the textures it reads', () => {
+  const css = buildBundleCss();
+  assert.ok(css.includes(readFileSync(join(root, 'table', 'identity.css'), 'utf8').trimEnd()));
+  for (const name of ['--tex-grain', '--tex-soot', '--tex-rule']) assert.match(css, new RegExp(`${name}: url\\(`));
+});
+
+test('every component has its card and its guidelines, and the cover has only its card', () => {
+  const files = writtenFiles();
+  assert.ok(files.includes('README.md'));
+  const components = [...new Set(files.filter((f) => f.startsWith('components/')).map((f) => f.split('/')[1]))];
+  for (const name of components) {
+    const preview = readFileSync(join(source, 'components', name, 'preview.html'), 'utf8');
+    assert.match(preview.split('\n')[0], /^<!-- @dsCard /, `${name} starts with its marker`);
+    assert.equal(files.includes(`components/${name}/README.md`), name !== 'Cover', name);
+  }
+});
+
+test('the cards draw with tokens, not raw colours', () => {
+  for (const file of writtenFiles().filter((f) => f.endsWith('.html'))) {
+    const html = readFileSync(join(source, file), 'utf8');
+    assert.doesNotMatch(html, /#[0-9a-f]{3,8}\b/i, file);
+  }
+});
+
+test('every picture the design system shows is in the repository', () => {
+  for (const path of Object.values(ASSETS).flat()) assert.ok(existsSync(join(root, path)), path);
+});

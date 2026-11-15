@@ -1,0 +1,1 @@
+The rune and the app icons. `brand-mark.svg` is drawn in bone (#D8C7A7) with no ground: use it on page headers and any surface lighter than deep slate. `icon.svg` adds a deep slate (#0B1519) square: favicon and app icon only. The PNGs are textured artwork, copied from the table; do not redraw them. `notification-badge.svg` is a white silhouette for the Android status bar.
