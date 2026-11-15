@@ -1,9 +1,9 @@
 # scenarios/ — the match scenarios the repository ships
 
-Every `*.json` here, and under `tutorials/`, is a match scenario (ADR 0179, docs/tabletop/scenarios-plan.md, S7): a match cut at the top of
-a round. A host that records its tables reads this directory when it starts and lists each file in the admin
-panel's **Scenarios** tab, marked *Repository*, with a **play** link. Nothing else is needed: add a file, deploy,
-and it is there.
+Every `*.json` here, and every one under `tutorials/`, is a match scenario (ADR 0179,
+docs/tabletop/scenarios-plan.md, S7): a match cut at the top of a round. A host that records its tables reads
+this directory when it starts and lists each file in the admin panel's **Scenarios** tab, marked *Repository*,
+with a **play** link. Nothing else is needed: add a file, deploy, and it is there.
 
 - The id is the file's name: `greedy-1v1-round-3.json` is `sc-repo-greedy-1v1-round-3`, opened at
   `/battle?scenario=sc-repo-greedy-1v1-round-3` by a signed-in admin account (any signed-in account on a host that
@@ -32,8 +32,10 @@ scenarios/<name>.json` does the same. Both commands are in docs/reference/comman
 ## Tutorials
 
 A file under `scenarios/tutorials/` is a **tutorial** (ADR 0187, docs/tabletop/onboarding-plan.md): a scenario
-file with a `tutorial` block, written by hand after `seat`. Its id is `sc-repo-tutorial-<file name>`. Until the
-hosted tutorials are built (stage O3a) the host reads it and lists it with the others, in the admin panel only.
+file with a `tutorial` block, which you write by hand after the `seat` key. Its id is
+`sc-repo-tutorial-<file name>`. A file with the block anywhere else is left out, and so is a file here without
+it. Until the hosted tutorials are built (stage O3a) the host reads it and lists it with the others, in the admin
+panel only.
 
 ```json
 "tutorial": {
@@ -44,7 +46,7 @@ hosted tutorials are built (stage O3a) the host reads it and lists it with the o
     {
       "at": { "kind": "Action", "round": 2, "creature": 2 },
       "says": ["Your creature acts. Pick a spell, then its target.", "One enemy is wounded. Strike it."],
-      "concepts": ["intent", "health"],
+      "concepts": ["health"],
       "pointsAt": { "creature": 4 }
     }
   ]
@@ -54,10 +56,12 @@ hosted tutorials are built (stage O3a) the host reads it and lists it with the o
 - `order` is its place in the series, from 1; no two tutorials share one. `title` is what the person reads.
 - `teaches` names the question kinds the person answers, among `Evolution`, `Speed`, `TieOrder`, `Intent`,
   `Target` and `Action`. Every other kind is an assisted question: answered from the recorded answers.
-- A step shows at the question `at` names: its `kind` (one the lesson teaches), its `round`, and its `creature`
-  (left out for any creature; never given for `Evolution` or `TieOrder`, which are asked of the player). One
-  step a question. The steps are written in the order they show: the last one ends the tutorial with its round.
-- `says` is one or two lines of 160 characters at most. `concepts` are the concept cards the step opens, among
+- A step shows at the question `at` names: its `kind`, one the lesson teaches, and its `round`.
+- `creature` is the creature asked about. Leave it out for any creature. Never give it for `Evolution` or
+  `TieOrder`, which are asked of the player.
+- A question has at most one step. Write the steps in the order they show. The tutorial ends at the last
+  step's round.
+- `says` is one or two lines, each 160 characters at most. `concepts` are the concept cards the step opens, among
   `health`, `energy`, `defense`, `initiative`, `tempo`, `critical`, `intent`, `fizzle`, `conditions` and
   `mutation`. `pointsAt` is left out, or `{ "creature": N }`, or `{ "control": "<name>" }`.
 

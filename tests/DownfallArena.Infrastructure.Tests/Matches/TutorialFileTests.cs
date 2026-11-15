@@ -34,7 +34,7 @@ public sealed class TutorialFileTests
         var step = lesson.Steps[0];
         (step.Kind, step.Round, step.Creature).ShouldBe((PlayerOptionsKind.Action, 2, CreatureId.From(2)));
         step.Says.Count.ShouldBe(2);
-        step.Concepts.ShouldBe(["intent", "health"]);
+        step.Concepts.ShouldBe(["health"]);
         step.PointsAt.ShouldBe(new LessonPointer(CreatureId.From(4), null));
     }
 
@@ -74,9 +74,11 @@ public sealed class TutorialFileTests
     [Fact]
     public void A_step_at_a_kind_this_engine_does_not_ask_is_refused()
     {
-        var text = Changed(file => Step(file, 1)["at"]!["kind"] = "Riddle");
+        var unknown = Changed(file => Step(file, 1)["at"]!["kind"] = "Riddle");
+        var several = Changed(file => Step(file, 1)["at"]!["kind"] = "Evolution, Speed");
 
-        Should.Throw<InvalidDataException>(() => ScenarioFile.Read(text)).Message.ShouldContain("Riddle");
+        Should.Throw<InvalidDataException>(() => ScenarioFile.Read(unknown)).Message.ShouldContain("'Riddle'");
+        Should.Throw<InvalidDataException>(() => ScenarioFile.Read(several)).Message.ShouldContain("'Evolution, Speed'");
     }
 
     [Fact]
@@ -92,7 +94,7 @@ public sealed class TutorialFileTests
     {
         var text = Changed(file => Step(file, 1)["at"] = Step(file, 0)["at"]!.DeepClone());
 
-        Should.Throw<InvalidDataException>(() => ScenarioFile.Read(text)).Message.ShouldContain("same question");
+        Should.Throw<InvalidDataException>(() => ScenarioFile.Read(text)).Message.ShouldContain("at most one step");
     }
 
     [Fact]
@@ -108,7 +110,7 @@ public sealed class TutorialFileTests
     {
         var text = Changed(file => Step(file, 0)["pointsAt"] = new JsonObject { ["creature"] = 4, ["control"] = "spells" });
 
-        Should.Throw<InvalidDataException>(() => ScenarioFile.Read(text)).Message.ShouldContain("points at");
+        Should.Throw<InvalidDataException>(() => ScenarioFile.Read(text)).Message.ShouldContain("one or the other");
     }
 
     [Fact]
@@ -129,6 +131,38 @@ public sealed class TutorialFileTests
         checkedLesson.IsFailure.ShouldBeTrue();
         checkedLesson.Error.Code.ShouldBe("Tutorial.CreatureNotOnBoard");
         checkedLesson.Error.Message.ShouldContain("Step 2");
+    }
+
+    [Fact]
+    public async Task A_step_at_a_question_about_an_enemy_is_refused_as_not_the_person_s_creature()
+    {
+        var checkedLesson = await ReachAsync(Changed(file => Step(file, 1)["at"]!["creature"] = 4));
+
+        checkedLesson.Error.Code.ShouldBe("Tutorial.NotThePersonsCreature");
+    }
+
+    [Fact]
+    public void A_step_that_is_null_or_names_a_null_concept_is_refused_as_a_file_that_is_not_a_scenario()
+    {
+        var noStep = Changed(file => file["tutorial"]!["steps"]!.AsArray().Add(null));
+        var noConcept = Changed(file => Step(file, 0)["concepts"] = new JsonArray("health", null));
+
+        Should.Throw<InvalidDataException>(() => ScenarioFile.Read(noStep)).Message.ShouldContain("tutorial.steps[3]");
+        Should.Throw<InvalidDataException>(() => ScenarioFile.Read(noConcept)).Message.ShouldContain("'null'");
+    }
+
+    [Fact]
+    public void A_block_that_misses_its_taught_kinds_its_steps_or_a_step_s_question_is_refused_by_the_field()
+    {
+        var noKinds = Changed(file => file["tutorial"]!.AsObject().Remove("teaches"));
+        var noSteps = Changed(file => file["tutorial"]!.AsObject().Remove("steps"));
+        var noQuestion = Changed(file => Step(file, 0).Remove("at"));
+        var noCreature = Changed(file => Step(file, 0)["at"]!["creature"] = 0);
+
+        Should.Throw<InvalidDataException>(() => ScenarioFile.Read(noKinds)).Message.ShouldContain("tutorial.teaches");
+        Should.Throw<InvalidDataException>(() => ScenarioFile.Read(noSteps)).Message.ShouldContain("tutorial.steps");
+        Should.Throw<InvalidDataException>(() => ScenarioFile.Read(noQuestion)).Message.ShouldContain("tutorial.steps[0].at");
+        Should.Throw<InvalidDataException>(() => ScenarioFile.Read(noCreature)).Message.ShouldContain("creature 0");
     }
 
     [Fact]

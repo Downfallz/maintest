@@ -17,11 +17,10 @@
           "creature": 2
         },
         "says": [
-          "Your creature acts. Pick a spell: that is its intent. Then pick its target.",
+          "Your creature acts. Pick a spell, then its target.",
           "One enemy is wounded. Strike it."
         ],
         "concepts": [
-          "intent",
           "health"
         ],
         "pointsAt": {
@@ -35,12 +34,11 @@
           "creature": 3
         },
         "says": [
-          "A spell costs Energy, paid when it resolves. Shock costs 2.",
-          "A cast its creature cannot pay fizzles: it does nothing."
+          "A spell costs Energy. Shock costs 2.",
+          "Every living creature gains Energy at the start of a round."
         ],
         "concepts": [
-          "energy",
-          "fizzle"
+          "energy"
         ],
         "pointsAt": {
           "creature": 3
@@ -54,7 +52,7 @@
         },
         "says": [
           "Defense lowers the damage a creature takes. The wounded enemy has none.",
-          "Hit it again: at zero Health a creature is defeated."
+          "Hit it again. At zero Health, a creature is defeated."
         ],
         "concepts": [
           "defense",

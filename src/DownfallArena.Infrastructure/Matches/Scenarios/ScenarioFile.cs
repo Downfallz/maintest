@@ -131,7 +131,7 @@ public static class ScenarioFile
     {
         var steps = (block.Steps ?? throw Missing("tutorial.steps")).Select((step, index) =>
         {
-            var at = step.At ?? throw Missing($"tutorial.steps[{index}].at");
+            var at = (step ?? throw Missing($"tutorial.steps[{index}]")).At ?? throw Missing($"tutorial.steps[{index}].at");
             return new LessonStep(Kind(at.Kind), at.Round, Creature(at.Creature), step.Says ?? [], step.Concepts ?? [],
                 step.PointsAt is { } pointer ? new LessonPointer(Creature(pointer.Creature), pointer.Control) : null);
         }).ToList();
@@ -139,9 +139,10 @@ public static class ScenarioFile
         return lesson.IsSuccess ? lesson.Value : throw new InvalidDataException($"The scenario's tutorial is not a lesson: {lesson.Error.Message}");
     }
 
+    /// <summary>By name alone: <c>TryParse</c> would read a number, or "Evolution, Speed" as the kind those two add up to.</summary>
     private static PlayerOptionsKind Kind(string? kind) =>
-        Enum.TryParse<PlayerOptionsKind>(kind, out var known) && Enum.IsDefined(known) && !int.TryParse(kind, out _)
-            ? known
+        kind is not null && Enum.GetNames<PlayerOptionsKind>().Contains(kind, StringComparer.Ordinal)
+            ? Enum.Parse<PlayerOptionsKind>(kind)
             : throw new InvalidDataException($"The scenario's tutorial names the question kind '{kind}', which is not one this engine asks.");
 
     private static CreatureId? Creature(int? creature) => creature switch
@@ -198,7 +199,7 @@ public static class ScenarioFile
 
     private sealed record CheckpointShape(int Round, string? Player1, string? Player2);
 
-    private sealed record TutorialShape(int Order, string? Title, string[]? Teaches, StepShape[]? Steps);
+    private sealed record TutorialShape(int Order, string? Title, string?[]? Teaches, StepShape?[]? Steps);
 
     private sealed record StepShape(AtShape? At, string[]? Says, string[]? Concepts, [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] PointerShape? PointsAt);
 

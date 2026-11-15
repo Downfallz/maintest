@@ -97,6 +97,21 @@ public sealed class RepositoryScenariosTests : IDisposable
     }
 
     [Fact]
+    public void A_tutorial_outside_the_tutorials_directory_or_a_file_named_as_one_is_left_out()
+    {
+        File.Copy(Tutorial, Path.Combine(_root, "a-lesson.json"));
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "scenarios", "greedy-1v1-round-3.json"), Path.Combine(_root, "tutorial-your-first-combat.json"));
+        Directory.CreateDirectory(Path.Combine(_root, "tutorials"));
+        File.Copy(Tutorial, Path.Combine(_root, "tutorials", "your-first-combat.json"));
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "scenarios", "greedy-1v1-round-3.json"), Path.Combine(_root, "tutorials", "no-lesson.json"));
+
+        var shipped = RepositoryScenarios.Read(_root);
+
+        shipped.All.Select(one => one.File).ShouldBe(["tutorials/your-first-combat.json"]);
+        shipped.Tutorials.ShouldHaveSingleItem();
+    }
+
+    [Fact]
     public async Task Checking_a_tutorial_file_checks_that_its_steps_are_reached()
     {
         var late = System.Text.Json.Nodes.JsonNode.Parse(await File.ReadAllTextAsync(Tutorial, TestContext.Current.CancellationToken))!.AsObject();

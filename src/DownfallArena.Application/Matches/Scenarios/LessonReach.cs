@@ -18,7 +18,7 @@ public sealed class LessonReach(ScenarioStarter starter, MatchReplay replay, Mat
     /// <summary>
     /// Success when every step is reached in order. Refused with the scenario's own refusal when it does not
     /// start, <see cref="TutorialErrors.CreatureNotOnBoard" /> for a step about a creature the board does not
-    /// hold, <see cref="TutorialErrors.StepsOutOfOrder" /> and <see cref="TutorialErrors.StepNeverReached" />.
+    /// hold, <see cref="TutorialErrors.NotThePersonsCreature" /> for a step at a question about an enemy, <see cref="TutorialErrors.StepsOutOfOrder" /> and <see cref="TutorialErrors.StepNeverReached" />.
     /// </summary>
     public async Task<Result> CheckAsync(ScenarioCut scenario, PlayerSlot seat, TutorialLesson lesson, CancellationToken cancellationToken = default)
     {
@@ -47,7 +47,7 @@ public sealed class LessonReach(ScenarioStarter starter, MatchReplay replay, Mat
             return Result.Failure(top.Error);
         }
 
-        if (Stranger(steps, [.. top.Value.Board.Allies.Select(one => one.Id), .. top.Value.Board.Enemies.Select(one => one.Id)]) is { } stranger)
+        if (Stranger(steps, [.. top.Value.Board.Allies.Select(one => one.Id)], [.. top.Value.Board.Enemies.Select(one => one.Id)]) is { } stranger)
         {
             return Result.Failure(stranger);
         }
@@ -88,17 +88,19 @@ public sealed class LessonReach(ScenarioStarter starter, MatchReplay replay, Mat
         return reached == steps.Count ? Result.Success() : Result.Failure(TutorialErrors.StepNeverReached(reached + 1, steps[reached]));
     }
 
-    /// <summary>The first step about a creature, or pointing at one, that the board does not hold.</summary>
-    private static DomainError? Stranger(IReadOnlyList<LessonStep> steps, IReadOnlyList<CreatureId> onBoard)
+    /// <summary>The first step about a creature, or pointing at one, that the board does not hold, or asked about an enemy.</summary>
+    private static DomainError? Stranger(IReadOnlyList<LessonStep> steps, IReadOnlyList<CreatureId> allies, IReadOnlyList<CreatureId> enemies)
     {
         for (var index = 0; index < steps.Count; index++)
         {
-            foreach (var creature in new[] { steps[index].Creature, steps[index].PointsAt?.Creature })
+            if (steps[index].Creature is { } asked && !allies.Contains(asked))
             {
-                if (creature is { } named && !onBoard.Contains(named))
-                {
-                    return TutorialErrors.CreatureNotOnBoard(index + 1, named);
-                }
+                return enemies.Contains(asked) ? TutorialErrors.NotThePersonsCreature(index + 1, asked) : TutorialErrors.CreatureNotOnBoard(index + 1, asked);
+            }
+
+            if (steps[index].PointsAt?.Creature is { } pointed && !allies.Contains(pointed) && !enemies.Contains(pointed))
+            {
+                return TutorialErrors.CreatureNotOnBoard(index + 1, pointed);
             }
         }
 

@@ -98,9 +98,10 @@ public sealed record TutorialLesson
             return TutorialErrors.Lines(number);
         }
 
-        if (step.Concepts.FirstOrDefault(concept => !ConceptCards.Has(concept)) is { } unknown)
+        // A file's array can hold a null where a name was meant.
+        if (step.Concepts.Any(concept => concept is null || !ConceptCards.Has(concept)))
         {
-            return TutorialErrors.UnknownConcept(number, unknown);
+            return TutorialErrors.UnknownConcept(number, step.Concepts.First(concept => concept is null || !ConceptCards.Has(concept)) ?? "null");
         }
 
         if (step.PointsAt is { } pointer && (pointer.Creature is null) == string.IsNullOrWhiteSpace(pointer.Control))
@@ -110,7 +111,9 @@ public sealed record TutorialLesson
 
         for (var earlier = 0; earlier < index; earlier++)
         {
-            if ((steps[earlier].Kind, steps[earlier].Round, steps[earlier].Creature) == (step.Kind, step.Round, step.Creature))
+            // A step about any creature shows at each creature's question of its kind and round.
+            var other = steps[earlier];
+            if ((other.Kind, other.Round) == (step.Kind, step.Round) && (other.Creature is null || step.Creature is null || other.Creature == step.Creature))
             {
                 return TutorialErrors.SameQuestion(number, earlier + 1);
             }

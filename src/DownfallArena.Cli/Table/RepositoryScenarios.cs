@@ -21,6 +21,9 @@ internal sealed class RepositoryScenarios
     /// <summary>The directory of <c>scenarios/</c> the tutorials are kept in, and what a tutorial's id says after the prefix.</summary>
     public const string TutorialsDirectory = "tutorials";
 
+    /// <summary>What a tutorial's id begins with, which no other shipped scenario's does.</summary>
+    public const string TutorialPrefix = Prefix + "tutorial-";
+
     /// <summary>The longest id a scenario's routes take is 63 characters.</summary>
     private const int LongestName = 63 - 8;
 
@@ -41,7 +44,7 @@ internal sealed class RepositoryScenarios
     /// <summary>Every scenario shipped, in the order of their files' names.</summary>
     public IReadOnlyList<Shipped> All { get; }
 
-    /// <summary>The scenarios that carry a lesson (ADR 0187), in the order of the series.</summary>
+    /// <summary>The scenarios of <c>tutorials/</c> that carry a lesson (ADR 0187), in the order of the series.</summary>
     public IReadOnlyList<Shipped> Tutorials { get; }
 
     public Shipped? Get(string? id) => id is not null && _byId.TryGetValue(id, out var shipped) ? shipped : null;
@@ -57,7 +60,7 @@ internal sealed class RepositoryScenarios
         var all = new List<Shipped>();
         foreach (var path in Directory.EnumerateFiles(directory, "*.json").Order(StringComparer.Ordinal))
         {
-            Add(all, path, Path.GetFileName(path), IdOf(Path.GetFileName(path)));
+            Add(all, path, Path.GetFileName(path), IdOf(Path.GetFileName(path)), tutorial: false);
         }
 
         var tutorials = Path.Combine(directory, TutorialsDirectory);
@@ -65,7 +68,7 @@ internal sealed class RepositoryScenarios
         {
             foreach (var path in Directory.EnumerateFiles(tutorials, "*.json").Order(StringComparer.Ordinal))
             {
-                Add(all, path, $"{TutorialsDirectory}/{Path.GetFileName(path)}", IdOf($"tutorial-{Path.GetFileName(path)}"));
+                Add(all, path, $"{TutorialsDirectory}/{Path.GetFileName(path)}", IdOf($"tutorial-{Path.GetFileName(path)}"), tutorial: true);
             }
         }
 
@@ -74,10 +77,17 @@ internal sealed class RepositoryScenarios
 
     /// <summary>
     /// One file read into <paramref name="all" />, or said on the console and left out: another file has its id, it
-    /// is not a scenario, it does not carry its content, or another tutorial already has its place in the series.
+    /// is not a scenario, it does not carry its content, it is a tutorial outside the tutorials' directory or named
+    /// as one there, or another tutorial already has its place in the series.
     /// </summary>
-    private static void Add(List<Shipped> all, string path, string file, string id)
+    private static void Add(List<Shipped> all, string path, string file, string id, bool tutorial)
     {
+        if (!tutorial && id.StartsWith(TutorialPrefix, StringComparison.Ordinal))
+        {
+            Console.WriteLine($"  Scenario file {file} is left out: the id {id} is a tutorial's, and it is not under {TutorialsDirectory}/.");
+            return;
+        }
+
         if (all.Exists(one => one.Id == id))
         {
             Console.WriteLine($"  Scenario file {file} is left out: another file already has the id {id}.");
@@ -91,6 +101,19 @@ internal sealed class RepositoryScenarios
             {
                 // It would play only while this host's content is the one it was cut on, and stop at the next change.
                 Console.WriteLine($"  Scenario file {file} is left out: it does not carry its content (scenario-generate does, and scenario-cut --with-content).");
+                return;
+            }
+
+            if (document.Tutorial is not null && !tutorial)
+            {
+                // Only the tutorials' directory is held step by step by the tests; a lesson elsewhere would be offered unchecked.
+                Console.WriteLine($"  Scenario file {file} is left out: it has a tutorial block, and a tutorial is kept under {TutorialsDirectory}/.");
+                return;
+            }
+
+            if (document.Tutorial is null && tutorial)
+            {
+                Console.WriteLine($"  Scenario file {file} is left out: it is under {TutorialsDirectory}/ and has no tutorial block.");
                 return;
             }
 
