@@ -9,7 +9,7 @@ A loose end written only in chat is lost. This turns the session's into issues, 
 
 1. Gather the loose ends: what the session's messages left open, the `Not verified` and `skipped` of the gate,
    flaky tests, the steps left to the owner, review findings put off. One issue each.
-2. Look for an open issue that already holds it (`gh api -X GET search/issues -f q='repo:<owner>/<repo> is:open <words>'`)
+2. Look for an open issue that already holds it (`gh api -X GET search/issues -f q='repo:Downfallz/maintest is:issue is:open <words>'`)
    and add to it rather than opening a second.
 3. Open the rest with `issue_write`: a title that says the problem, a body with the evidence (the path, the test
    name, the log line, the pull request), what was tried, and the plan and stage it came from. One label:

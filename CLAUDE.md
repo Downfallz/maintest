@@ -26,6 +26,8 @@
   (product and operations proposals, as issues labelled `proposal`), `/retro` (the week's numbers and recurring
   findings, as a pull request on the rules and skills), `/adr`, `/new-aggregate`, `/spells-report` (the spells the
   bots cast and leave, republished to the owner's report page).
+- `studio/prompts.test.js` checks that every repository path an agent or a skill names in backticks exists, and
+  that a `search/issues` query names `is:issue` or `is:pr` (GitHub refuses it otherwise).
 - The `Stop` hook (`.claude/hooks/stop.sh`) says once, per tree, when code changed after the last green gate:
   run `/verify`, or say plainly that the gate was not run.
 - `.claude/hooks/session-start.sh` installs the .NET SDK on Claude Code on the web when it is missing. It
