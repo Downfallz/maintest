@@ -5,6 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   checksStatus,
+  currentRuns,
   dayLabel,
   deploymentStatus,
   gather,
@@ -168,6 +169,16 @@ test('a pull request with no check run has no checks to report', () => {
   assert.equal(checksStatus([{ status: 'completed', conclusion: 'success' }, { status: 'completed', conclusion: 'skipped' }]), 'green');
   assert.equal(checksStatus([{ status: 'completed', conclusion: 'failure' }]), 'red');
   assert.equal(checksStatus([{ status: 'completed', conclusion: 'success' }, { status: 'queued', conclusion: null }]), 'running');
+});
+
+test('a superseded run of the same workflow and trigger does not colour a pull request', () => {
+  const runs = [
+    { workflow_id: 1, event: 'pull_request', status: 'completed', conclusion: 'success' },
+    { workflow_id: 1, event: 'pull_request', status: 'completed', conclusion: 'failure' },
+    { workflow_id: 2, event: 'pull_request', status: 'in_progress', conclusion: null },
+  ];
+  assert.deepEqual(currentRuns(runs), [runs[0], runs[2]]);
+  assert.equal(checksStatus(currentRuns(runs.slice(0, 2))), 'green');
 });
 
 test('the repository is the origin on GitHub, and nothing else', () => {

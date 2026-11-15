@@ -182,6 +182,18 @@ export function deploymentStatus(status) {
   return ['failure', 'error'].includes(status.state) ? 'red' : 'green';
 }
 
+// The current run of each workflow and trigger: the API lists a head commit's runs newest first, superseded ones
+// (a pull request closed and reopened, a run started again) included.
+export function currentRuns(runs) {
+  const seen = new Set();
+  return runs.filter((run) => {
+    const key = `${run.workflow_id}:${run.event}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 export function checksStatus(checkRuns) {
   if (checkRuns.length === 0) return undefined;
   if (checkRuns.some((check) => RED.has(check.conclusion))) return 'red';
@@ -261,7 +273,7 @@ export async function readGitHub(repository, get = githubGet) {
         get(`${base}/commits/${pull.head.sha}/check-runs?per_page=${PAGE}`),
         get(`${base}/actions/runs?head_sha=${pull.head.sha}&per_page=${PAGE}`),
       ]);
-      return { number: pull.number, title: pull.title, draft: pull.draft, checks: checksStatus([...checks, ...runs]) };
+      return { number: pull.number, title: pull.title, draft: pull.draft, checks: checksStatus([...checks, ...currentRuns(runs)]) };
     };
     facts.pullRequests = await Promise.all(pulls.map(statusOf));
   });
