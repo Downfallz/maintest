@@ -1,6 +1,6 @@
 # Plan: the AI workflow, from an idea to a merged pull request
 
-Status: accepted in part, 2026-11-14. The owner settled questions 1, 2, 3 and 5 (at the end); W0 is being built.
+Status: accepted in part, 2026-11-14. The owner settled questions 1, 2, 3 and 5 (at the end); W0 and W1 are built.
 Each stage below is one pull request, or one settings change that only the owner can make.
 
 ## What the owner asked for
@@ -280,6 +280,10 @@ Each stage is one pull request with its tests, and leaves the gate green.
    `uv run` and `git` commands, and a deny on `mcp__github__merge_pull_request`).
 2. **W1, the contract.** An ADR: `AGENTS.md` is an index with a budget, and an area's instructions load with
    the area. The index, the area files, `docs/reference/commands.md`, the rules, the test of the budget.
+   *Built (2026-11-15, ADR 0181)*: `AGENTS.md` at 153 lines and 11 KB; every command, flag and route in
+   `docs/reference/commands.md`, checked token by token against the old block; every route, with who may call
+   it, in `table/README.md`; the six area files; `host.md`, `pages.md`, `infra.md`, `learning.md` and
+   `workflows.md`; `InstructionFileTests` for the budget, the area imports and the plans `docs/README.md` lists.
 3. **W2, the gate.** The `gate` job. The browser suite on `main` and in front of `deploy`. Specs chosen by the
    diff. The retry and the flake report. The issue a red `main` opens. The ruleset then requires `gate` alone.
 4. **W3, the shared files.** The ADR index generated, or dropped for the directory listing. `/adr` fetches
