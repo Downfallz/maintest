@@ -11,7 +11,7 @@ import { everything, outputs, plan } from './browser/plan.js';
 import { flaked } from './browser/flakes.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const specs = readdirSync(join(here, 'browser')).filter((file) => file.endsWith('.spec.js')).sort();
+const specs = readdirSync(join(here, 'browser')).filter((file) => file.endsWith('.spec.js'));
 const nothing = { journeys: 'none', realEngine: false, release: false, image: false };
 
 test('a change of Markdown alone calls for nothing', () => {
@@ -54,7 +54,7 @@ test('a table page plays every journey but the studio', () => {
 });
 
 test('a studio page plays the studio and the identity, and builds nothing', () => {
-  assert.deepEqual(plan(['studio/catalogue.js'], specs), { ...nothing, journeys: 'branding.spec.js studio.spec.js' });
+  assert.deepEqual(plan(['studio/catalogue.js'], specs), { ...nothing, journeys: specs.filter((spec) => spec === 'branding.spec.js' || spec === 'studio.spec.js').join(' ') });
 });
 
 test("the pages' own tests play no journey", () => {
@@ -86,7 +86,7 @@ test('the workflows that play the journeys play everything', () => {
 
 test('several paths add up, and blank lines are not paths', () => {
   const planned = plan(['studio/browser/studio.spec.js', '', ' studio/browser/lobby-home.spec.js ', 'infra/main.bicep'], specs);
-  assert.deepEqual(planned, { ...nothing, journeys: 'lobby-home.spec.js studio.spec.js', image: true });
+  assert.deepEqual(planned, { ...nothing, journeys: specs.filter((spec) => spec === 'lobby-home.spec.js' || spec === 'studio.spec.js').join(' '), image: true });
 });
 
 test('the plan is written as the outputs the workflow reads', () => {
@@ -123,5 +123,5 @@ test('every job of the CI that runs before the gate is one the gate waits for', 
   assert.ok(needs, 'the gate job lists what it needs on one line');
 
   const after = ['gate', 'deploy', 'main-health'];
-  assert.deepEqual(needs[1].split(',').map((job) => job.trim()).sort(), jobs.filter((job) => !after.includes(job)).sort());
+  assert.deepEqual(needs[1].split(',').map((job) => job.trim()), jobs.filter((job) => !after.includes(job)));
 });

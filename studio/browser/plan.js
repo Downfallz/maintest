@@ -44,63 +44,54 @@ const RELEASE_FILES = new Set(['battle.loop.js', 'battle.release.config.js', 'ba
 const isBattleSpec = (spec) => spec.startsWith('battle-');
 const isStudioSpec = (spec) => spec === 'studio.spec.js' || spec === 'branding.spec.js';
 const isTableSpec = (spec) => spec !== 'studio.spec.js';
+const anySpec = () => true;
+const carriedByTheImage = (path) => IMAGE_FILES.has(path) || IMAGE_FOLDERS.some((folder) => path.startsWith(folder));
+
+/** What one file of the suite itself calls for: a spec is its own journey, a fixture can break any of them. */
+function suiteFile(file) {
+  const release = RELEASE_FILES.has(file);
+  if (file.endsWith('.spec.js')) return { journeys: (spec) => spec === file, release };
+  if (/^(table|battle)\.[a-z]+\.js$/.test(file)) return { realEngine: true, release };
+  return { journeys: anySpec, realEngine: true, release: true };
+}
+
+// The first rule a path matches says what it calls for: `journeys` chooses among the specs, and `realEngine`
+// and `release` ask for those jobs. A path no rule matches, or a rule that returns nothing, plays nothing.
+const RULES = [
+  // Markdown is read by no page, no spec and no image; the pages' own tests are run by `node --test`.
+  { matches: (path) => path.endsWith('.md'), calls: () => ({}) },
+  { matches: (path) => WORKFLOWS.has(path), calls: () => ({ journeys: anySpec, realEngine: true, release: true }) },
+  { matches: (path) => path.startsWith('studio/browser/'), calls: (path) => suiteFile(path.slice('studio/browser/'.length)) },
+  { matches: (path) => path.startsWith('battle/'), calls: () => ({ journeys: isBattleSpec, realEngine: true, release: true }) },
+  { matches: (path) => /^(table|studio)\/.*\.test\.js$/.test(path), calls: () => ({}) },
+  { matches: (path) => path.startsWith('table/'), calls: () => ({ journeys: isTableSpec, realEngine: true, release: true }) },
+  { matches: (path) => path.startsWith('studio/'), calls: () => ({ journeys: isStudioSpec }) },
+  { matches: (path) => path === 'viewer/viewer.css', calls: () => ({ journeys: anySpec }) },
+  { matches: (path) => path.startsWith('data/'), calls: () => ({ journeys: anySpec, realEngine: true, release: true }) },
+  { matches: (path) => CONSOLE_ONLY.has(path), calls: () => ({}) },
+  {
+    matches: (path) => path.startsWith('src/') || path.startsWith('tools/') || BUILD_FILES.has(path),
+    calls: () => ({ realEngine: true, release: true }),
+  },
+];
 
 /**
  * Decide what the changed paths call for. `specs` is every mock-host journey file the suite holds.
  * Returns `journeys` ('none', 'all', or the spec files separated by spaces) and three booleans.
  */
 export function plan(paths, specs) {
-  const journeys = new Set();
-  const calls = { realEngine: false, release: false, image: false };
-  const journeysOf = (matches) => specs.filter(matches).forEach((spec) => journeys.add(spec));
-  const engine = () => {
-    calls.realEngine = true;
-    calls.release = true;
+  const changed = paths.map((line) => line.trim()).filter(Boolean);
+  const called = changed.map((path) => RULES.find((rule) => rule.matches(path))?.calls(path) ?? {});
+  const journeys = specs.filter((spec) => called.some((call) => call.journeys?.(spec)));
+
+  let chosen = journeys.join(' ') || 'none';
+  if (journeys.length === specs.length && specs.length > 0) chosen = 'all';
+  return {
+    journeys: chosen,
+    realEngine: called.some((call) => call.realEngine === true),
+    release: called.some((call) => call.release === true),
+    image: changed.some((path) => !path.endsWith('.md') && carriedByTheImage(path)),
   };
-  const everything = () => {
-    journeysOf(() => true);
-    engine();
-  };
-
-  for (const path of paths.map((line) => line.trim()).filter(Boolean)) {
-    // Markdown is read by no page, no spec and no image.
-    if (path.endsWith('.md')) continue;
-
-    if (IMAGE_FILES.has(path) || IMAGE_FOLDERS.some((folder) => path.startsWith(folder))) calls.image = true;
-
-    if (WORKFLOWS.has(path)) {
-      everything();
-    } else if (path.startsWith('studio/browser/')) {
-      const file = path.slice('studio/browser/'.length);
-      if (RELEASE_FILES.has(file)) calls.release = true;
-      if (file.endsWith('.spec.js')) journeysOf((spec) => spec === file);
-      else if (/^(table|battle)\.[a-z]+\.js$/.test(file)) calls.realEngine = true;
-      else everything();
-    } else if (path.startsWith('battle/')) {
-      journeysOf(isBattleSpec);
-      engine();
-    } else if (path.startsWith('table/')) {
-      // The pages' own tests are run by `node --test`; no journey reads them.
-      if (path.endsWith('.test.js')) continue;
-      journeysOf(isTableSpec);
-      engine();
-    } else if (path.startsWith('studio/')) {
-      if (path.endsWith('.test.js')) continue;
-      journeysOf(isStudioSpec);
-    } else if (path === 'viewer/viewer.css') {
-      journeysOf(() => true);
-    } else if (path.startsWith('data/')) {
-      everything();
-    } else if (path.startsWith('src/')) {
-      if (!CONSOLE_ONLY.has(path)) engine();
-    } else if (path.startsWith('tools/') || BUILD_FILES.has(path)) {
-      engine();
-    }
-  }
-
-  let chosen = 'none';
-  if (journeys.size > 0) chosen = journeys.size === specs.length ? 'all' : specs.filter((spec) => journeys.has(spec)).join(' ');
-  return { journeys: chosen, ...calls };
 }
 
 /** Everything: what a run that has no diff to read plays. */
@@ -120,7 +111,7 @@ export function outputs(planned) {
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const here = dirname(fileURLToPath(import.meta.url));
-  const specs = readdirSync(here).filter((file) => file.endsWith('.spec.js')).sort();
+  const specs = readdirSync(here).filter((file) => file.endsWith('.spec.js'));
   const planned = process.argv.includes('--all') ? everything() : plan(readFileSync(0, 'utf8').split('\n'), specs);
   console.log(outputs(planned));
 }

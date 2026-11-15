@@ -11,7 +11,8 @@
 set -euo pipefail
 
 known() {
-  [[ -n "$1" && ! "$1" =~ ^0+$ ]] && git cat-file -e "$1^{commit}" 2> /dev/null
+  local commit="$1"
+  [[ -n "$commit" && ! "$commit" =~ ^0+$ ]] && git cat-file -e "$commit^{commit}" 2> /dev/null
   return $?
 }
 

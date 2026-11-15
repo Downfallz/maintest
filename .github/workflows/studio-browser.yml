@@ -85,7 +85,12 @@ jobs:
         run: node node_modules/playwright/cli.js test $SPECS $PROJECTS --retries=1 --pass-with-no-tests --reporter=dot,json
       - name: Say what flaked
         if: ${{ !cancelled() }}
-        run: node studio/browser/flakes.js "$RUNNER_TEMP/playwright-report.json"
+        run: |
+          if [[ -f "$RUNNER_TEMP/playwright-report.json" ]]; then
+            node studio/browser/flakes.js < "$RUNNER_TEMP/playwright-report.json"
+          else
+            echo "No Playwright report to read: no test ran."
+          fi
       - name: Keep previews and failure traces
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -130,7 +135,12 @@ jobs:
         run: node node_modules/playwright/cli.js test --config table.config.js --project="$PROJECT" --retries=1 --reporter=dot,json
       - name: Say what flaked
         if: ${{ !cancelled() }}
-        run: node studio/browser/flakes.js "$RUNNER_TEMP/playwright-report.json"
+        run: |
+          if [[ -f "$RUNNER_TEMP/playwright-report.json" ]]; then
+            node studio/browser/flakes.js < "$RUNNER_TEMP/playwright-report.json"
+          else
+            echo "No Playwright report to read: no test ran."
+          fi
       - name: Keep previews and failure traces
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -168,7 +178,12 @@ jobs:
         run: node node_modules/playwright/cli.js test --config battle.release.config.js --retries=1 --reporter=dot,json
       - name: Say what flaked
         if: ${{ !cancelled() }}
-        run: node studio/browser/flakes.js "$RUNNER_TEMP/playwright-report.json"
+        run: |
+          if [[ -f "$RUNNER_TEMP/playwright-report.json" ]]; then
+            node studio/browser/flakes.js < "$RUNNER_TEMP/playwright-report.json"
+          else
+            echo "No Playwright report to read: no test ran."
+          fi
       - name: Keep release measurements and screenshots
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
