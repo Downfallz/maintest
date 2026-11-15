@@ -1,28 +1,42 @@
 name: Studio browser
+
+# The browser suite: the mock-host journeys, the real-engine journeys and the release profiles. CI calls it with
+# what the diff calls for (ADR 0182, studio/browser/plan.js), on pull requests and on main; nightly.yml, and a run
+# asked by hand, play the whole matrix. It has no path filter of its own: the plan is the filter, and it is
+# decided inside a run so that the gate always reports.
 on:
-  pull_request:
-    paths:
-      - 'studio/**'
-      - 'table/**'
-      - 'battle/**'
-      - 'src/**'
-      # Not the console commands no page reaches -- play, human, evaluate (ADR 0167).
-      - '!src/DownfallArena.Cli/ConsoleAgent.cs'
-      - '!src/DownfallArena.Cli/ConsoleMatchLog.cs'
-      - '!src/DownfallArena.Cli/EvaluationConsole.cs'
-      - 'viewer/viewer.css'
-      - 'data/**'
-      - '.github/workflows/studio-browser.yml'
-      # Last, so no pattern above takes it back: Markdown is read by no page and no spec.
-      - '!**/*.md'
+  workflow_call:
+    inputs:
+      journeys:
+        description: The mock-host specs to play, separated by spaces; `all`, or `none`.
+        type: string
+        default: all
+      real-engine:
+        description: Whether to play the journeys against the real engine.
+        type: boolean
+        default: true
+      release:
+        description: Whether to play the release profiles.
+        type: boolean
+        default: true
+  # The same inputs, with the same defaults: a dispatch that declared none would read each as empty, and an
+  # empty input is equal to `false`, so a run asked by hand would skip the real engine and the release profiles.
   workflow_dispatch:
+    inputs:
+      journeys:
+        description: The mock-host specs to play, separated by spaces; `all`, or `none`.
+        type: string
+        default: all
+      real-engine:
+        description: Play the journeys against the real engine.
+        type: boolean
+        default: true
+      release:
+        description: Play the release profiles.
+        type: boolean
+        default: true
 permissions:
   contents: read
-# A newer push to the same pull request makes a running check of the older one moot: each push queued a whole
-# run of these jobs beside the last, and five of them at once held every runner a branch could get.
-concurrency:
-  group: studio-browser-${{ github.ref }}
-  cancel-in-progress: true
 jobs:
   # The mock-host journeys, one job per Playwright project, side by side. As one step they took thirty-five to
   # forty-seven minutes after AU14 and #504 (the complete-match replay waiting out a hidden list, fixed in #503,
@@ -32,6 +46,7 @@ jobs:
   # it is played in two halves (Playwright's --shard), each well inside the limit.
   journeys:
     name: journeys (${{ matrix.name }})
+    if: inputs.journeys != 'none'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -58,11 +73,24 @@ jobs:
       # These journeys answer every request from a mock host (server.js and page routes): no .NET build.
       - name: Build the isolated battle prototype
         run: npm --prefix battle ci --ignore-scripts && npm --prefix battle run build
+      # One retry (ADR 0182): a journey that fails twice is red, one that passes the second time is green and
+      # named by the step below. The specs are the ones the diff calls for; a project or a shard they leave
+      # empty passes. Unquoted on purpose: each is several arguments.
       - name: Verify the journeys of this project
         working-directory: studio/browser
         env:
           PROJECTS: ${{ matrix.projects }}
-        run: node node_modules/playwright/cli.js test $PROJECTS
+          SPECS: ${{ (inputs.journeys == 'all' || inputs.journeys == '') && ' ' || inputs.journeys }}
+          PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/playwright-report.json
+        run: node node_modules/playwright/cli.js test $SPECS $PROJECTS --retries=1 --pass-with-no-tests --reporter=dot,json
+      - name: Say what flaked
+        if: ${{ !cancelled() }}
+        run: |
+          if [[ -f "$RUNNER_TEMP/playwright-report.json" ]]; then
+            node studio/browser/flakes.js < "$RUNNER_TEMP/playwright-report.json"
+          else
+            echo "No Playwright report to read: no test ran."
+          fi
       - name: Keep previews and failure traces
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -74,6 +102,7 @@ jobs:
   # plays one table at a time (workers: 1), so the two projects only add up when they share a job.
   real-engine:
     name: real engine (${{ matrix.project }})
+    if: inputs.real-engine
     runs-on: ubuntu-latest
     timeout-minutes: 25
     strategy:
@@ -100,7 +129,18 @@ jobs:
           dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst
       - name: Verify practice journeys with the real engine
         working-directory: studio/browser
-        run: node node_modules/playwright/cli.js test --config table.config.js --project=${{ matrix.project }}
+        env:
+          PROJECT: ${{ matrix.project }}
+          PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/playwright-report.json
+        run: node node_modules/playwright/cli.js test --config table.config.js --project="$PROJECT" --retries=1 --reporter=dot,json
+      - name: Say what flaked
+        if: ${{ !cancelled() }}
+        run: |
+          if [[ -f "$RUNNER_TEMP/playwright-report.json" ]]; then
+            node studio/browser/flakes.js < "$RUNNER_TEMP/playwright-report.json"
+          else
+            echo "No Playwright report to read: no test ran."
+          fi
       - name: Keep previews and failure traces
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -108,21 +148,8 @@ jobs:
           name: studio-browser-${{ matrix.project }}
           path: studio/browser/test-results
           retention-days: 7
-  # The check a pull request has always waited on: green only when every journey job above is.
-  browser:
-    runs-on: ubuntu-latest
-    needs: [journeys, real-engine]
-    if: always()
-    timeout-minutes: 5
-    steps:
-      - name: Every journey job passed
-        env:
-          JOURNEYS: ${{ needs.journeys.result }}
-          REAL_ENGINE: ${{ needs.real-engine.result }}
-        run: |
-          echo "journeys: $JOURNEYS, real engine: $REAL_ENGINE"
-          test "$JOURNEYS" = success && test "$REAL_ENGINE" = success
   battle-release:
+    if: inputs.release
     runs-on: ubuntu-latest
     # Two of the three profiles took nine minutes in a container on main after AU14 (complete matches are
     # two minutes each); WebKit's system packages and the build come on top of the third.
@@ -146,7 +173,17 @@ jobs:
           dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst
       - name: Play complete matches in desktop, Android and iOS browser profiles
         working-directory: studio/browser
-        run: node node_modules/playwright/cli.js test --config battle.release.config.js
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/playwright-report.json
+        run: node node_modules/playwright/cli.js test --config battle.release.config.js --retries=1 --reporter=dot,json
+      - name: Say what flaked
+        if: ${{ !cancelled() }}
+        run: |
+          if [[ -f "$RUNNER_TEMP/playwright-report.json" ]]; then
+            node studio/browser/flakes.js < "$RUNNER_TEMP/playwright-report.json"
+          else
+            echo "No Playwright report to read: no test ran."
+          fi
       - name: Keep release measurements and screenshots
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

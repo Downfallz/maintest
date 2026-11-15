@@ -1,0 +1,47 @@
+name: Nightly browser matrix
+
+# The whole browser suite, every night (ADR 0182): a pull request and a merge play only what their diff calls
+# for, by a plan kept by hand, and this is what finds a path the plan forgot.
+
+on:
+  schedule:
+    # 03:17 in Montreal's winter: after the day's merges, before the morning.
+    - cron: '17 8 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser:
+    name: browser
+    uses: ./.github/workflows/studio-browser.yml
+
+  # The nightly matrix has no pull request to turn red: it keeps an issue open while it is.
+  nightly-health:
+    name: Say so when the nightly matrix is red
+    runs-on: ubuntu-latest
+    needs: browser
+    if: always()
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Open, update or close the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COMMIT: ${{ github.sha }}
+          FAILED: ${{ needs.browser.result == 'failure' }}
+          CANCELLED: ${{ needs.browser.result == 'cancelled' }}
+        run: |
+          if [[ "$FAILED" == "true" ]]; then
+            .github/scripts/health-issue.sh red red-nightly "The nightly browser matrix is red"
+          elif [[ "$CANCELLED" != "true" ]]; then
+            .github/scripts/health-issue.sh green red-nightly
+          fi

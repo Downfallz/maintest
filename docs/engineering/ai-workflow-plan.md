@@ -1,6 +1,6 @@
 # Plan: the AI workflow, from an idea to a merged pull request
 
-Status: accepted in part, 2026-11-14. The owner settled questions 1, 2, 3 and 5 (at the end); W0 and W1 are built.
+Status: accepted in part, 2026-11-14. The owner settled questions 1, 2, 3 and 5 (at the end); W0 to W2 are built.
 Each stage below is one pull request, or one settings change that only the owner can make.
 
 ## What the owner asked for
@@ -286,6 +286,12 @@ Each stage is one pull request with its tests, and leaves the gate green.
    `workflows.md`; `InstructionFileTests` for the budget, the area imports and the plans `docs/README.md` lists.
 3. **W2, the gate.** The `gate` job. The browser suite on `main` and in front of `deploy`. Specs chosen by the
    diff. The retry and the flake report. The issue a red `main` opens. The ruleset then requires `gate` alone.
+   *Built (2026-11-15, ADR 0182)*: `ci.yml` is the one pipeline, with `gate` needing every job; the browser
+   suite, the image and the deployment are workflows it calls; `studio/browser/plan.js` chooses the specs and
+   jobs from the diff, and `flakes.js` reports the retries; a push to `main` answers for everything since the
+   last green run, deploys behind the gate and keeps the `red-main` issue; the whole matrix runs nightly. Left
+   to the owner: the ruleset requiring `gate` alone. Not proven before the first merge: the deployment called
+   from CI, and the issue.
 4. **W3, the shared files.** The ADR index generated, or dropped for the directory listing. `/adr` fetches
    first, and a test refuses a number used twice. The journal as one file per entry, with a generated index.
 5. **W4, the pipeline.** `/plan`, `/stage`, `/ship`, `/wrap-up`, `/browser-check`, the new `/verify`, the

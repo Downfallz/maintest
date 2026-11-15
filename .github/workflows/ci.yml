@@ -9,9 +9,13 @@ on:
 permissions:
   contents: read
 
+# A newer push to a pull request makes the run of the older one moot. On main nothing is cancelled half-way:
+# the runs queue, in the order of the merges, so a deployment never lands under an older one, and a run the
+# next merge replaces in the queue is answered for by that merge's run, which reads everything since main was
+# last green (ADR 0182).
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   DOTNET_NOLOGO: true
@@ -19,6 +23,51 @@ env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
 
 jobs:
+  # What this run has to play (ADR 0182): the browser journeys and the image are slow, and most changes read
+  # neither. Decided here, in a job that always runs, and never by a path filter on the workflow: a workflow
+  # that is filtered out reports no check, and the pull request waits for one that never comes.
+  changes:
+    name: What the diff calls for
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      # The last green run on main, which is where a push's diff starts.
+      actions: read
+    outputs:
+      journeys: ${{ steps.plan.outputs.journeys }}
+      real-engine: ${{ steps.plan.outputs.real-engine }}
+      release: ${{ steps.plan.outputs.release }}
+      image: ${{ steps.plan.outputs.image }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # The diff is read from the history: a pull request's merge commit, or main since it was last green.
+          fetch-depth: 0
+
+      - name: Plan the run from the changed paths
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          status=0
+          .github/scripts/changed-paths.sh > "$RUNNER_TEMP/changed.txt" || status=$?
+          if [[ "$status" == 3 ]]; then
+            echo "No diff to read: this run plays everything."
+            node studio/browser/plan.js --all | tee -a "$GITHUB_OUTPUT"
+          elif [[ "$status" == 0 ]]; then
+            echo "$(wc -l < "$RUNNER_TEMP/changed.txt") changed path(s):"
+            cat "$RUNNER_TEMP/changed.txt"
+            node studio/browser/plan.js < "$RUNNER_TEMP/changed.txt" | tee -a "$GITHUB_OUTPUT"
+          else
+            exit "$status"
+          fi
+
   # The learning project (learning/, ADR 0013) has its own gate: ruff and pytest under uv.
   learning:
     name: Lint and test the learning project
@@ -213,3 +262,96 @@ jobs:
       - name: Show the storage emulator's log
         if: failure()
         run: docker logs azurite || true
+
+  # The browser suite (studio-browser.yml), for what the diff calls for: on a pull request, and on main, where
+  # a journey red after a merge used to be found by the next pull request.
+  browser:
+    name: browser
+    needs: changes
+    if: needs.changes.outputs.journeys != 'none' || needs.changes.outputs.real-engine == 'true' || needs.changes.outputs.release == 'true'
+    uses: ./.github/workflows/studio-browser.yml
+    with:
+      journeys: ${{ needs.changes.outputs.journeys }}
+      real-engine: ${{ needs.changes.outputs.real-engine == 'true' }}
+      release: ${{ needs.changes.outputs.release == 'true' }}
+
+  # The table's image, built and tried when the diff touches what it carries; on main it is also pushed, under
+  # its commit, for the deployment below to name.
+  image:
+    name: image
+    needs: changes
+    if: needs.changes.outputs.image == 'true'
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/image.yml
+    with:
+      push: ${{ github.event_name == 'push' }}
+
+  # The one check the ruleset on main requires (ADR 0182). It always reports, whatever the diff: a job the
+  # plan skipped is not a failure, a failed or cancelled one is. A job added above joins `needs`, which
+  # studio/browser-suite.test.js holds.
+  gate:
+    name: gate
+    runs-on: ubuntu-latest
+    needs: [changes, learning, build-and-test, browser, image]
+    if: always()
+    timeout-minutes: 5
+    steps:
+      - name: Every job this run called for passed
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          echo "$RESULTS" | jq -e 'all(.[]; .result == "success" or .result == "skipped")' > /dev/null
+
+  # Production follows main only once main is green: the deployment waits for the gate, the browser suite
+  # included, and runs when the image was rebuilt, which is when something the image carries changed.
+  deploy:
+    name: deploy
+    needs: [gate, image]
+    # Spelled out, because a job the plan skipped upstream (the browser suite on a change it does not read)
+    # would otherwise skip this one too.
+    if: ${{ !cancelled() && github.event_name == 'push' && needs.gate.result == 'success' && needs.image.result == 'success' }}
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/rollout.yml
+    with:
+      image: ${{ needs.image.outputs.image }}
+    secrets:
+      TABLE_PUSH_KEYS: ${{ secrets.TABLE_PUSH_KEYS }}
+
+  # A red main opens an issue, one at a time, and the next green run closes it. Its own failure (a repository
+  # without issues) fails nothing: a run that is red for this alone would never count as the last green one.
+  main-health:
+    name: Say so when main is red
+    runs-on: ubuntu-latest
+    needs: [gate, deploy]
+    if: always() && github.event_name == 'push'
+    continue-on-error: true
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Open, update or close the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COMMIT: ${{ github.sha }}
+          GATE: ${{ needs.gate.result }}
+          DEPLOY: ${{ needs.deploy.result }}
+        run: |
+          echo "gate: $GATE, deploy: $DEPLOY"
+          if [[ "$GATE" == "failure" || "$DEPLOY" == "failure" ]]; then
+            .github/scripts/health-issue.sh red red-main "main is red"
+          elif [[ "$GATE" == "success" ]]; then
+            .github/scripts/health-issue.sh green red-main
+          fi
