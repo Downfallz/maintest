@@ -636,3 +636,54 @@ spell declaration mode. First-use tips appear once per subject and can be muted;
 `battle-guidance.js` derives text from the current seat/offer and authoritative next mutation round.
 It does not acknowledge questions or send commands, and opening it preserves pending choices.
 See [AU2 and its verification](../battle/README.md#au2-objectives-and-contextual-help).
+
+## Routes
+
+One line per route the host serves, and who may call it: anyone, a signed-in **account**, the **seat** whose key
+or code the request carries, the **pilot** token, or the **operator** (the console's token, the platform's
+sign-in, or an account `--admins` names). How each behaves, with its flags and its ADR, is in
+[`docs/reference/commands.md`](../docs/reference/commands.md#table). A new route adds its line here and a host
+test (`.claude/rules/host.md`).
+
+| Route | Who | What |
+| --- | --- | --- |
+| `/`, `/lobby` | anyone | The player lobby (ADR 0115); `/lobby?token=...` redirects to admin; `/lobby?rematch=<accountId>\|bot\|hotseat&format=...` opens the create dialog on the same opponent. |
+| `/play` | seat | The game's doorway; `/play?replay=<id>` replays a finished session for the operator. |
+| `/battle` | seat | The battle view; `/battle?replay=<table>&seat=<seat>` a finished game's recap (ADR 0156); `/battle?scenario=<id>` a scenario's practice (ADR 0179). |
+| `/battle-lab` | anyone | The visual study on fictional frames (ADR 0123). |
+| `/admin?token=<operator token>` | operator | The admin panel (ADR 0081). |
+| `/pilot?token=<pilot token>` | pilot | The operator's own page for the seats of a console table. |
+| `/session/<id>` | anyone | A finished recorded session in the viewer. |
+| `/leaderboard`, `/stats` | anyone, account | The ladder (ADR 0124) and the player's own statistics (ADR 0168). |
+| `/offline.html` | anyone | The page the service worker keeps (ADR 0166). |
+| `GET /api/me` | anyone | Who is signed in, whether they are the operator, and the host's notice (ADR 0177). |
+| `DELETE /api/account` | account | Deletes the account. |
+| `GET`/`PUT /api/account/preferences` | account | Game settings (ADR 0140). |
+| `PUT`/`DELETE /api/account/push`, `POST /api/account/push/test` | account | This browser as one of the account's devices. |
+| `GET /api/lobby`, `GET /api/lobby/page/<open\|all>/<page>` | anyone | Counts, and the public tables eight at a time. |
+| `GET /api/lobby/events`, `GET /api/lobby/negotiate` | anyone | What changed: the stream (ADR 0164), or the relay's address (ADR 0165). |
+| `GET /api/lobby/mine`, `GET /api/lobby/opponents` | account | The player's tables and invitations; the eight latest opponents. |
+| `GET /api/lobby/finished/<bots\|players>/<page>` | account | Finished games, six at a time (ADR 0147). |
+| `POST /api/lobby/tables` | anyone, account | Opens a table: `opponent`, `friend`, `level` (ADR 0180), `ranked` (ADR 0155), `turnLimit` (ADR 0169), format. |
+| `POST /api/lobby/adopt` | account | Adopts the browser's saved seats into the account. |
+| `POST /api/lobby/tables/<id>/accept`, `.../decline` | account | The invited friend answers (ADR 0129). |
+| `DELETE`/`POST /api/lobby/tables/<id>/invitation`, `POST .../open`, `DELETE /api/lobby/tables/<id>` | account | The inviter cancels, re-invites, opens, or closes an unbegun table. |
+| `GET /api/lobby/tables/<table>/replay` | account | A finished game's replay, for an account that sat at it (ADR 0156). |
+| `GET /api/seat/<seat>/negotiate` | seat | The relay's address for a seat (ADR 0165). |
+| `POST /api/seat/<seat>/reaction` | seat | A reaction from the fixed set (ADR 0173). |
+| `GET /api/friends`, `POST /api/friends/requests`, `POST /api/friends/requests/<id>/accept`, `DELETE /api/friends/requests/<id>`, `DELETE /api/friends/<id>` | account | Friends (ADR 0129). |
+| `GET /api/scenarios`, `GET /api/scenarios/<id>`, `GET`/`POST /api/scenarios/<id>/practice` | account | Listed scenarios and their practice (ADR 0179). |
+| `GET /api/leaderboard`, `GET /api/stats` | anyone, account | The ladder; the player's statistics. |
+| `POST /api/pilot/seats/player1` | pilot | Hands a seat over from a round (body `{"agent","round"}`). |
+| `POST /api/tables`, `GET /api/agents` | operator | Opens a table; the bots it may seat. |
+| `GET /api/sessions`, `DELETE /api/sessions`, `GET /api/sessions/<id>/replay` | operator | Recorded sessions. |
+| `GET /api/sessions/<id>/export`, `POST /api/sessions/export` | operator | Sessions as a zip `train-clone` reads. |
+| `GET /api/tables/<id>/diagnosis`, `POST .../diagnosis/replay`, `.../diagnosis/hidden`, `.../diagnosis/turn` | operator | A table's diagnosis (scenarios plan, S5b). |
+| `POST /api/tables/<id>/void` | operator | Voids a match with a reason (ADR 0176). |
+| `GET /api/admin/overview` | operator | The numbers at a glance. |
+| `GET /api/admin/players?q&sort&page`, `GET /api/admin/players/<id>`, `POST .../sign-out`, `POST .../rename`, `DELETE .../<id>`, `POST`/`DELETE .../<id>/suspension` | operator | Players (ADR 0174, ADR 0178). |
+| `GET /api/admin/jobs/tend?page`, `GET /api/admin/jobs/tend/<id>`, `POST /api/admin/jobs/tend` | operator | Tending runs, and a pass now (ADR 0162). |
+| `GET /api/admin/jobs/turns`, `POST /api/admin/jobs/turns/requeue`, `POST .../drop` | operator | Bot turns' queues and dead letters. |
+| `GET /api/admin/scenarios/rounds?session=<id>`, `GET`/`POST /api/admin/scenarios`, `DELETE /api/admin/scenarios/<id>`, `PUT /api/admin/scenarios/<id>/listing` | operator | Scenarios (ADR 0179). |
+| `GET /api/admin/activity?page` | operator | What operators did. |
+| `GET`/`PUT /api/admin/settings` | operator | Registration and the notice (ADR 0177). |
