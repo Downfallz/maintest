@@ -19,7 +19,22 @@ on:
         description: Whether to play the release profiles.
         type: boolean
         default: true
+  # The same inputs, with the same defaults: a dispatch that declared none would read each as empty, and an
+  # empty input is equal to `false`, so a run asked by hand would skip the real engine and the release profiles.
   workflow_dispatch:
+    inputs:
+      journeys:
+        description: The mock-host specs to play, separated by spaces; `all`, or `none`.
+        type: string
+        default: all
+      real-engine:
+        description: Play the journeys against the real engine.
+        type: boolean
+        default: true
+      release:
+        description: Play the release profiles.
+        type: boolean
+        default: true
 permissions:
   contents: read
 jobs:
@@ -31,7 +46,6 @@ jobs:
   # it is played in two halves (Playwright's --shard), each well inside the limit.
   journeys:
     name: journeys (${{ matrix.name }})
-    # A dispatch passes no input, and plays everything.
     if: inputs.journeys != 'none'
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -83,7 +97,7 @@ jobs:
   # plays one table at a time (workers: 1), so the two projects only add up when they share a job.
   real-engine:
     name: real engine (${{ matrix.project }})
-    if: inputs.real-engine != false
+    if: inputs.real-engine
     runs-on: ubuntu-latest
     timeout-minutes: 25
     strategy:
@@ -125,7 +139,7 @@ jobs:
           path: studio/browser/test-results
           retention-days: 7
   battle-release:
-    if: inputs.release != false
+    if: inputs.release
     runs-on: ubuntu-latest
     # Two of the three profiles took nine minutes in a container on main after AU14 (complete matches are
     # two minutes each); WebKit's system packages and the build come on top of the third.
