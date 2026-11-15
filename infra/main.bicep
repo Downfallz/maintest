@@ -747,7 +747,8 @@ resource logAlerts 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = [for ru
 }]
 
 // The month's spending on the resource group (ADR 0185): told at 80 % and 100 % spent, and when the forecast
-// passes the budget. A budget stops nothing. The action group emails the owner, so the budget names no address of its own.
+// passes the budget. A budget stops nothing. The type requires an address of its own, so its notice arrives by email twice: from the
+// budget, and from the group with the app's notice.
 resource budget 'Microsoft.Consumption/budgets@2023-05-01' = if (budgetOn) {
   name: '${namePrefix}-monthly'
   dependsOn: [
@@ -766,6 +767,9 @@ resource budget 'Microsoft.Consumption/budgets@2023-05-01' = if (budgetOn) {
         operator: 'GreaterThanOrEqualTo'
         threshold: 80
         thresholdType: 'Actual'
+        contactEmails: [
+          alertEmail
+        ]
         contactGroups: [
           alertGroupId
         ]
@@ -775,6 +779,9 @@ resource budget 'Microsoft.Consumption/budgets@2023-05-01' = if (budgetOn) {
         operator: 'GreaterThanOrEqualTo'
         threshold: 100
         thresholdType: 'Actual'
+        contactEmails: [
+          alertEmail
+        ]
         contactGroups: [
           alertGroupId
         ]
@@ -784,6 +791,9 @@ resource budget 'Microsoft.Consumption/budgets@2023-05-01' = if (budgetOn) {
         operator: 'GreaterThanOrEqualTo'
         threshold: 100
         thresholdType: 'Forecasted'
+        contactEmails: [
+          alertEmail
+        ]
         contactGroups: [
           alertGroupId
         ]
