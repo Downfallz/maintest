@@ -105,7 +105,7 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
             var label = new PracticeLabel(scenario, document.Title ?? $"Round {cut.Round}", document.Goal, cut.Round)
             {
                 Tutorial = document.Tutorial is { } lesson
-                    ? new TutorialPlay(lesson, AssistedSeat.Of(document.Scenario, document.Seat, lesson), document.Seat, store.Tutorials.Count)
+                    ? new TutorialPlay(lesson, AssistedSeat.Of(document.Scenario, document.Seat, lesson), document.Seat, store.Series)
                     : null,
             };
             ScenarioPlay play;

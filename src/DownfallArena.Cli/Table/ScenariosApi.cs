@@ -91,7 +91,7 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
                 {
                     id = one.Id,
                     order = one.Document.Tutorial!.Order,
-                    of = Math.Max(series.Count, one.Document.Tutorial.Order),
+                    of = store.Series,
                     title = one.Document.Tutorial.Title,
                     goal = one.Document.Goal,
                     round = cut.Round,
