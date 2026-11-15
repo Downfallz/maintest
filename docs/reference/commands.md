@@ -769,7 +769,8 @@ Builds the Downfall Instinct design system's files under `artifacts/design-syste
 place it writes): `tokens.json` from `docs/art/branding.css` and `docs/art/design-system/tokens.notes.json`,
 `components/bundle.css` from the frame and `table/identity.css`, the font, and the brand book and component cards
 as written. It fails when a palette colour has no usage note, or a note has no colour. A session publishes the
-folder to the design system's page (docs/art/branding.md#design-system); it prints the pictures to upload.
+folder to the design system's page (docs/art/branding.md#design-system) with `/design-system`; it prints the
+pictures to upload.
 
 ### workflow-metrics.py
 

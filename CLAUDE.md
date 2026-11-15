@@ -25,7 +25,8 @@
   daily at 6:40, Montreal time, by a scheduled task), `/ops` (the production report, ADR 0186), `/proposals`
   (product and operations proposals, as issues labelled `proposal`), `/retro` (the week's numbers and recurring
   findings, as a pull request on the rules and skills), `/adr`, `/new-aggregate`, `/spells-report` (the spells the
-  bots cast and leave, republished to the owner's report page).
+  bots cast and leave, republished to the owner's report page), `/design-system` (the design system rebuilt from
+  the repository and republished to its page).
 - `studio/prompts.test.js` checks what an agent or a skill names in backticks: every repository path exists,
   a heading named as an anchor (`table/README.md#routes`) is in its file, a label is declared in
   `.github/labels.json`, and a `search/issues` query names `is:issue` or `is:pr` (GitHub refuses it otherwise).
