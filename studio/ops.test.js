@@ -1,4 +1,4 @@
-// The production report (ADR 0185): scripts/ops/read.sh gathers the readings ops-report.yml prints, with a fake
+// The production report (ADR 0186): scripts/ops/read.sh gathers the readings ops-report.yml prints, with a fake
 // `az` and `curl` here, and scripts/ops/report.mjs turns them into one phone screen, in French, that names what to
 // look at first and prints nothing a public log should not hold.
 

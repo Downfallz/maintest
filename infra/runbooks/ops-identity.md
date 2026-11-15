@@ -1,6 +1,6 @@
 # The ops identity
 
-So `ops-report.yml`, and with it `/ops`, can read the hosted table (ADR 0185). The identity reads the resource
+So `ops-report.yml`, and with it `/ops`, can read the hosted table (ADR 0186). The identity reads the resource
 group, its metrics, its logs and its cost, and writes nothing; it trusts this repository's `ops` environment alone,
 which only `main` may run in.
 Once. Before it, the report reads the table's answer and says `Azure non lu`.

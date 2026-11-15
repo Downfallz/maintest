@@ -23,7 +23,7 @@ OPS_NAME="${PREFIX}-table-ops"
 SIGN_IN_NAME="${PREFIX}-table-signin"
 APP_NAME="${PREFIX}-table"
 ENVIRONMENT="azure"
-# The environment ops-report.yml runs in (ADR 0185): the reading identity trusts it and nothing else.
+# The environment ops-report.yml runs in (ADR 0186): the reading identity trusts it and nothing else.
 OPS_ENVIRONMENT="ops"
 
 # The template's own bounds, and a storage account's alphabet: its name is the prefix and a hash.
@@ -42,10 +42,10 @@ QUEUE_CONTRIBUTOR="974c5e8b-45b9-4653-ba55-5f855dd0fb88"
 # Web PubSub Service Owner on the relay (ADR 0165): each process says through it what moved, and the API signs the
 # pages' addresses.
 RELAY_OWNER="12cf5a90-567b-43ae-8102-96cf46c7d9b4"
-# Log Analytics Reader on the workspace, for the identities of the log alerts (ADR 0185).
+# Log Analytics Reader on the workspace, for the identities of the log alerts (ADR 0186).
 LOG_READER="73c42c96-874c-492b-b04d-ab87d138a893"
 
-# What the reading identity holds on the resource group (ADR 0185): it reads the resources, their metrics, the
+# What the reading identity holds on the resource group (ADR 0186): it reads the resources, their metrics, the
 # console lines and the cost, and writes nothing. No data role: it reads no recording, index or queue message.
 OPS_ROLES=("Reader" "Log Analytics Reader" "Cost Management Reader")
 
@@ -104,7 +104,7 @@ federate() {
   return 0
 }
 
-# A GitHub environment only `main` may deploy to, with the GitHub CLI when it is signed in (ADR 0185): a federated
+# A GitHub environment only `main` may deploy to, with the GitHub CLI when it is signed in (ADR 0186): a federated
 # identity trusts an environment, and an environment with no branch rule is one any branch's workflow may name.
 main_only_environment() {
   local environment="$1"
@@ -155,7 +155,7 @@ setup() {
   echo "Subscription $subscription, tenant $tenant, $RESOURCE_GROUP in $LOCATION, for $REPO."
 
   # The providers a fresh subscription has not registered yet: nothing deploys without them. Insights holds the
-  # alerts, Consumption the budget and CostManagement the cost the report reads (ADR 0185).
+  # alerts, Consumption the budget and CostManagement the cost the report reads (ADR 0186).
   local namespace
   for namespace in Microsoft.App Microsoft.Network Microsoft.OperationalInsights Microsoft.SignalRService Microsoft.Storage \
     Microsoft.Insights Microsoft.Consumption Microsoft.CostManagement; do
@@ -174,7 +174,7 @@ setup() {
   condition="((!(ActionMatches{'Microsoft.Authorization/roleAssignments/write'})) OR (@Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {$BLOB_CONTRIBUTOR, $TABLE_CONTRIBUTOR, $QUEUE_CONTRIBUTOR, $RELAY_OWNER, $LOG_READER})) AND ((!(ActionMatches{'Microsoft.Authorization/roleAssignments/delete'})) OR (@Resource[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {$BLOB_CONTRIBUTOR, $TABLE_CONTRIBUTOR, $QUEUE_CONTRIBUTOR, $RELAY_OWNER, $LOG_READER}))"
   grant_on_condition "$deployer_principal" "Role Based Access Control Administrator" "$scope" "$condition"
 
-  # The reading identity (ADR 0185): trusted for the `ops` environment alone, and allowed to read this one
+  # The reading identity (ADR 0186): trusted for the `ops` environment alone, and allowed to read this one
   # resource group, its metrics, its logs and its cost.
   ops="$(registration "$OPS_NAME")"
   ops_principal="$(principal "$ops")"

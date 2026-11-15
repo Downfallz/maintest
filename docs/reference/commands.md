@@ -43,12 +43,15 @@ while a gate runs. `studio/gate-hook.test.js` tests both on a throwaway reposito
 ### review/reviewers.mjs
 
 ```bash
-git diff --name-only origin/main... | node scripts/review/reviewers.mjs   # the reviewers a diff calls for, one a line
+git diff origin/main... | node scripts/review/reviewers.mjs               # the reviewers a diff calls for, one a line
+git diff --name-only origin/main... | node scripts/review/reviewers.mjs   # the same from the paths alone
 ```
 
 What `/reviewers` reads to choose the agents under `.claude/agents` that review a change: `code-reviewer` for
 anything but markdown, then `domain-reviewer`, `host-reviewer`, `pages-reviewer`, `design-reviewer`, `copy-editor`,
-`infra-reviewer`, `security-reviewer` and `stats-reviewer` by the paths they own. `legacy/` calls for nobody.
+`infra-reviewer`, `security-reviewer` and `stats-reviewer` by the paths they own. Given the whole diff, it also
+calls `design-reviewer` for a page script (`table/`, `studio/`, `viewer/`, not a test) whose added lines hold a
+raw colour, an inline style or a `className`. `legacy/` calls for nobody.
 `studio/reviewers.test.js` tests the choice, that every reviewer it names is an agent that lists no tool that
 edits, and that the two that keep a memory name its folder in their prompt: a memory turns Write and Edit on, and
 only the prompt holds them to `.claude/agent-memory/<agent>/`.
@@ -137,6 +140,18 @@ dotnet run --project src/DownfallArena.Cli -- studio --export site/data
 
 The content studio on http://127.0.0.1:5099 (studio/README.md). `--export site/data` writes what the published
 studio reads, as files (ADR 0023).
+
+### showcase build
+
+```bash
+node showcase/build.mjs
+GAME_ORIGIN=https://your-game-host.example node showcase/build.mjs
+```
+
+Builds the public showcase into `showcase/dist`: eight localized pages, their assets and the `_headers` file
+Cloudflare Pages serves (showcase/README.md, ADR 0185). `GAME_ORIGIN` sets the origin of the Play links. It must be
+a bare HTTPS origin, with no path, query or credentials. The default is `https://play.downfallinstinct.com`.
+`node --test studio/showcase.test.js` rebuilds the showcase and checks the result.
 
 ## Matches in the console
 
@@ -574,7 +589,7 @@ AZURE=1 RESOURCE_GROUP=downfall-table scripts/ops/read.sh <dir>   # the readings
 node scripts/ops/report.mjs <dir> [--now <ISO time>]              # the production report, one phone screen in French
 ```
 
-What `ops-report.yml` runs (ADR 0185), every morning at 10:23 UTC and on demand (*Read the table in production*,
+What `ops-report.yml` runs (ADR 0186), every morning at 10:23 UTC and on demand (*Read the table in production*,
 Run workflow), signed in as the ops identity, which reads the resource group and writes nothing. `read.sh` reads
 `GET /api/lobby`, the active revisions, the restarts and 5xx answers of the last 24 hours, the tending job's runs,
 the messages waiting in the queues, the console's error lines, the month's cost and the budget; a reading that

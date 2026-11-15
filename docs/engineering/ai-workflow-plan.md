@@ -319,7 +319,9 @@ Each stage is one pull request with its tests, and leaves the gate green.
    reviewers from the paths. The skill runs them in parallel, in the foreground, without its own reading of the
    change, checks each finding and sorts it (fix now, issue, dismissed). `/stage` calls it.
    `studio/reviewers.test.js` holds the choice, and that no reviewer lists a tool that edits. `design-reviewer`
-   (the brand, the pictures and reuse) joined them on 2026-11-15 and took the identity from `pages-reviewer`.
+   (the brand, the pictures and reuse) joined them on 2026-11-15 and took the identity from `pages-reviewer`;
+   the router reads the whole diff, so a page script that adds a raw colour, an inline style or a class calls
+   for it too (issue #606), and its header holds the checklist for adding a reviewer.
    The memory trial:
    `code-reviewer` and `host-reviewer` carry `memory: project`, which turns Write and Edit on; their prompt holds
    them to `.claude/agent-memory/<agent>/`, committed with the change. Not proven before the first sessions use
@@ -336,7 +338,7 @@ Each stage is one pull request with its tests, and leaves the gate green.
    reads "verte", not "prête". Left: the weekly run and the review trigger, one at a time once the digest has run
    for a week.
 8. **W7, operations.** `ops-report`, the smoke test, the alerts, the runbooks, `/ops`.
-   *Built (2026-11-15, ADR 0185)*: `infra/bootstrap.sh setup` makes `downfall-table-ops`, federated to the `ops`
+   *Built (2026-11-15, ADR 0186)*: `infra/bootstrap.sh setup` makes `downfall-table-ops`, federated to the `ops`
    environment alone, with Reader, Log Analytics Reader and Cost Management Reader on the resource group.
    `ops-report.yml` signs in as it every morning at 10:23 UTC and on demand: `scripts/ops/read.sh` writes one
    reading per file, through `az rest`, and `scripts/ops/report.mjs` prints one phone screen in French to the log,

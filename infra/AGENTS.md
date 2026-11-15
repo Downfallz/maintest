@@ -3,7 +3,7 @@
 The table at play.downfallinstinct.com behind Cloudflare (ADR 0080-0082, ADR 0162, ADR 0175): `main.bicep` (the
 API app, the worker app, the hourly tending job, the alerts), the one-time `bootstrap.sh`, `README.md`, and
 `runbooks/`, the owner's steps written for a phone. Production is read by `ops-report.yml` as an identity that
-cannot write (ADR 0185); `/ops` reads its log. The image is the root `Dockerfile`, built and tried by `.github/workflows/image.yml`
+cannot write (ADR 0186); `/ops` reads its log. The image is the root `Dockerfile`, built and tried by `.github/workflows/image.yml`
 and deployed by `rollout.yml`, which CI calls on `main` once its gate is green (ADR 0182); `deploy.yml` is the
 same two by hand.
 

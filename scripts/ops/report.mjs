@@ -1,4 +1,4 @@
-// The production report (ADR 0185): the readings scripts/ops/read.sh wrote, one JSON file each, turned into one
+// The production report (ADR 0186): the readings scripts/ops/read.sh wrote, one JSON file each, turned into one
 // phone screen, in French, whose second line says what to look at first. ops-report.yml prints it to its log,
 // which a session reads and which is public, so it prints counts and masked lines, never a record.
 //

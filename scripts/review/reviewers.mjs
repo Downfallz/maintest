@@ -1,7 +1,13 @@
 // Which reviewers a change calls for, decided from the paths it touches, so /reviewers picks them the same way
 // every time. Each reviewer is an agent under .claude/agents; studio/reviewers.test.js holds both to that.
+// Given the whole diff rather than only its names, it also reads the lines a page script adds (issue #606).
 //
-//   git diff --name-only origin/main... | node scripts/review/reviewers.mjs     # one name a line
+//   git diff origin/main... | node scripts/review/reviewers.mjs                 # one name a line
+//   git diff --name-only origin/main... | node scripts/review/reviewers.mjs     # the paths alone
+//
+// Adding a reviewer: its agent under .claude/agents (read only, "the range you are given" in its prompt), a rule
+// below and its tests in studio/reviewers.test.js; narrow the sibling reviewer whose scope it takes over; the W5
+// "Built" note in docs/engineering/ai-workflow-plan.md; the lists in CLAUDE.md and docs/reference/commands.md.
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -20,6 +26,23 @@ const LOOK = /\.(css|html|svg|png|webp|jpe?g|gif|avif|woff2|webmanifest)$/;
 
 // The registries of the battle's pictures: each one's canvas, silhouette bounds and ground anchor.
 const ART_REGISTRY = /^table\/battle-[a-z-]*art\.js$/;
+
+// A page's own script, not its tests: where a raw colour or markup built by hand can hide.
+const PAGE_SCRIPT = /^(table|studio|viewer)\/[^/]+\.m?js$/;
+
+// What an added line of a page script says about the look: a raw colour (a hexadecimal in a string, rgb(), hsl()),
+// an inline style, or a class it sets, where a token or a shared part of identity.css may already do.
+const LOOKS_LIKE_STYLE = [
+  /['"`\s(:]#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})\b/i,
+  /\b(?:rgba?|hsla?)\(/,
+  /\bstyle\s*=|\.style\b|\bcssText\b/,
+  /\bclassName\b/,
+];
+
+const addsStyle = (path, added) =>
+  PAGE_SCRIPT.test(path) &&
+  !isTest(path) &&
+  (added.get(path) ?? []).some((line) => LOOKS_LIKE_STYLE.some((look) => look.test(line)));
 
 // What makes the brand and the art: the palette's synchronizer and the matte of the art.
 const BRAND_TOOLS = new Set(['scripts/sync-branding.mjs', 'scripts/matte-opaque-art.py']);
@@ -52,7 +75,8 @@ const RULES = [
   ],
   [
     'design-reviewer',
-    (path) =>
+    (path, added) =>
+      addsStyle(path, added) ||
       (under(path, 'table/', 'studio/', 'viewer/') && LOOK.test(path) && !isTest(path)) ||
       ART_REGISTRY.test(path) ||
       under(path, 'battle/src/', 'docs/art/') ||
@@ -95,13 +119,37 @@ const RULES = [
 
 export const REVIEWERS = RULES.map(([name]) => name);
 
-/** The reviewers the paths call for, in the order of RULES. The frozen prototypes call for nobody. */
-export function reviewersFor(paths) {
+/**
+ * The reviewers the paths call for, in the order of RULES. `added` maps a path to the lines the change adds to it,
+ * when the diff is known. The frozen prototypes call for nobody.
+ */
+export function reviewersFor(paths, added = new Map()) {
   const read = paths.map((path) => path.trim()).filter((path) => path && !path.startsWith('legacy/'));
-  return RULES.filter(([, applies]) => read.some(applies)).map(([name]) => name);
+  return RULES.filter(([, applies]) => read.some((path) => applies(path, added))).map(([name]) => name);
+}
+
+/** The paths of a unified diff (`git diff`), and the lines it adds to each. A deleted file is still a path. */
+export function readDiff(text) {
+  const paths = [];
+  const added = new Map();
+  let current = null;
+  for (const line of text.split('\n')) {
+    const header = /^diff --git a\/(.+) b\/(.+)$/.exec(line);
+    if (header) {
+      current = header[2];
+      paths.push(current);
+      added.set(current, []);
+    } else if (current && line.startsWith('+') && !line.startsWith('+++ ')) {
+      added.get(current).push(line.slice(1));
+    }
+  }
+  return { paths, added };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const paths = readFileSync(0, 'utf8').split('\n');
-  for (const name of reviewersFor(paths)) console.log(name);
+  const input = readFileSync(0, 'utf8');
+  const { paths, added } = input.startsWith('diff --git ')
+    ? readDiff(input)
+    : { paths: input.split('\n'), added: new Map() };
+  for (const name of reviewersFor(paths, added)) console.log(name);
 }

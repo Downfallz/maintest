@@ -2,7 +2,7 @@
 
 The table tells you, by email and on the Azure mobile app, when it answers 5xx, when the API or the worker
 restarts, when the worker gives up on a bot's turn, when a tending pass fails, and when the month's
-spending reaches 80 % or 100 % of a budget of 5 (billing currency), or is forecast to pass it (ADR 0185). No
+spending reaches 80 % or 100 % of a budget of 5 (billing currency), or is forecast to pass it (ADR 0186). No
 alert stops anything. Without the address, none of it is deployed.
 
 ## Turning them on, once

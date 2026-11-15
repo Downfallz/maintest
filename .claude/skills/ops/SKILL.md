@@ -5,7 +5,7 @@ description: The production report, in French, on one phone screen - whether the
 
 # Ops
 
-The hosted table, read through a door that cannot write (ADR 0185). `ops-report.yml` signs in to Azure as the
+The hosted table, read through a door that cannot write (ADR 0186). `ops-report.yml` signs in to Azure as the
 ops identity (Reader, Log Analytics Reader and Cost Management Reader on the resource group), runs
 `scripts/ops/read.sh` and prints `scripts/ops/report.mjs`'s report to its log, every morning at 10:23 UTC and on
 demand. A session reads that log; it cannot reach Azure, and the run's summary is not readable by it.

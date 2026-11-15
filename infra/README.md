@@ -47,7 +47,7 @@ You need the Azure subscription's owner, signed in, and ideally the GitHub CLI s
    It registers the four resource providers, creates `downfall-table` in `canadacentral`, an app
    registration GitHub deploys as (federated to this repository's `azure` environment, allowed to change that
    one resource group and to assign three roles in it, blob, table and queue data), and the registration the admin panel's sign-in uses (no client
-   secret). It also makes the identity the production report reads with (ADR 0185). It prints eight repository variables and sets them when `gh` is signed in. `LOCATION`,
+   secret). It also makes the identity the production report reads with (ADR 0186). It prints eight repository variables and sets them when `gh` is signed in. `LOCATION`,
    `RESOURCE_GROUP`, `REPO` and `PREFIX` override the defaults; the prefix travels to the template through
    the `TABLE_NAME_PREFIX` variable, so every resource name follows it.
 
@@ -108,6 +108,42 @@ Accounts are kept in the storage account's `accounts` container, beside the reco
 internal id and Google's subject id for the sign-in. No email is kept. A player deletes their account from the
 account menu on the home page; the lobby's *What we keep* panel says the same to players.
 
+## The showcase at the apex
+
+The apex `downfallinstinct.com` serves the [independent static showcase](../showcase/README.md) from Cloudflare
+Pages (ADR 0185). No Azure resource changes. Once, in this order, before the lobby's links to the apex are merged:
+
+1. **Cloudflare, Workers & Pages, Create, Pages, Connect to Git**: grant access to this repository only, then:
+
+   ```text
+   Production branch:       main
+   Framework preset:        None
+   Build command:           node showcase/build.mjs
+   Build output directory:  showcase/dist
+   Root directory:          (empty)
+   ```
+
+2. **The project, Settings, Variables and Secrets**, *Production* and *Preview*: the Node version the Dockerfile uses (`node:22`).
+   The build needs no secret, so the project gets none.
+
+   ```text
+   NODE_VERSION = 22
+   ```
+
+3. **The project, Settings, Builds, Branch control**: *Preview branches* set to *None*, so a pull request's branch
+   is not published on a public `pages.dev` address.
+4. **Check the deployment**: on the project's production `pages.dev` address, open `/`, `/fr/`, `/mutations/`, `/privacy/` and
+   `/copyright/`, and follow Play. In the browser's developer tools, check that the page's response has a
+   `Content-Security-Policy` header. If it is missing, stop here.
+5. **Mailbox**: `contact@downfallinstinct.com` is the privacy and permissions contact. In Cloudflare, *Email,
+   Email Routing*, route it to a mailbox you read, and send it a test message.
+6. **The project, Custom domains, Set up a custom domain**: `downfallinstinct.com`. Cloudflare replaces any
+   existing apex record; the table's own record is `play` and is not touched. Then open https://downfallinstinct.com/ and follow Play.
+7. **Merge** the lobby links only now, so they have a live destination.
+
+To take it down: *Custom domains*, remove `downfallinstinct.com`, or *Deployments*, a previous one, *Rollback*. The
+game at `play.` is unaffected either way.
+
 ## Its own domain, behind Cloudflare
 
 The table answers at `play.downfallinstinct.com` through Cloudflare's proxy (ADR 0175). The DNS records, the
@@ -117,7 +153,7 @@ origin certificate, the binding and the sign-ins that go with it are a runbook:
 ## Watching it
 
 `ops-report.yml` prints a report of the table in production every morning and on demand, and `/ops` reads it; it
-signs in as an identity that reads the resource group and writes nothing (ADR 0185). The alerts (5xx answers,
+signs in as an identity that reads the resource group and writes nothing (ADR 0186). The alerts (5xx answers,
 restarts, a turn given up on, a failed tending pass, a monthly budget of 5 in the billing currency) go by email and to the Azure mobile app
 once the `TABLE_ALERT_EMAIL` secret is set. Each deployment asks the table for `GET /api/lobby` once it is up and
 is red when it does not answer. The steps are runbooks: [runbooks/ops-identity.md](runbooks/ops-identity.md) and

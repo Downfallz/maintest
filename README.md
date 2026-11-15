@@ -87,3 +87,4 @@ rules, subagents, skills, and hooks. See [docs/README.md](docs/README.md) for th
 - [Domain glossary](docs/domain/glossary.md)
 - [Game rules](docs/domain/game-rules.md)
 - [Contributing](CONTRIBUTING.md)
+- [Copyright and permissions](COPYRIGHT.md)

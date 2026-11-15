@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The readings of the hosted table that ops-report.yml prints (ADR 0185), one JSON file each in <dir>, for
+# The readings of the hosted table that ops-report.yml prints (ADR 0186), one JSON file each in <dir>, for
 # scripts/ops/report.mjs to turn into the report. A reading that fails is written as {"error": "..."} and the next
 # one is read all the same, so one refused permission costs one line of the report, not the report.
 #

@@ -6,7 +6,7 @@ name: Roll the table out
 # own so that neither caller grants more than it writes: this one signs in to Azure and writes no package.
 # The push keys and the alerts' address are its secrets; Azure is reached with an identity federated to this
 # repository's `azure` environment. Once it is up, the table is asked for its lobby: a deployment that does not
-# answer is red (ADR 0185).
+# answer is red (ADR 0186).
 #
 # Deploying needs the one-time setup in infra/README.md. Until its repository variables exist the deploy job
 # is skipped, so main stays green on a fork or before anybody has set Azure up.
@@ -94,7 +94,7 @@ jobs:
           # the platform's address to all but Cloudflare.
           CUSTOM_DOMAIN: ${{ vars.TABLE_DOMAIN }}
           ONLY_CLOUDFLARE: ${{ vars.TABLE_ONLY_CLOUDFLARE == 'true' }}
-          # Where the alerts and the budget's notices go (ADR 0185); unset, none are deployed. A secret, so the log
+          # Where the alerts and the budget's notices go (ADR 0186); unset, none are deployed. A secret, so the log
           # masks it; read by jq from the environment into a parameters file, so no command line holds it.
           ALERT_EMAIL: ${{ secrets.TABLE_ALERT_EMAIL }}
           # The first day of the budget's month, set once (infra/runbooks/alerts.md); unset, no budget.
@@ -142,7 +142,7 @@ jobs:
             echo "is the one that makes that address; infra/README.md, step 5, adds it once."
           } >> "$GITHUB_STEP_SUMMARY"
 
-      # The deployed table, asked as a player's first request asks it (ADR 0185): a revision that does not answer
+      # The deployed table, asked as a player's first request asks it (ADR 0186): a revision that does not answer
       # turns this run red, and with it main, before a player finds out. A cold start takes up to a minute.
       - name: The table answers
         env:

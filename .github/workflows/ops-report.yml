@@ -1,6 +1,6 @@
 name: Read the table in production
 
-# The production report (ADR 0185): the table's answer, its revisions, restarts and 5xx answers, the tending job's
+# The production report (ADR 0186): the table's answer, its revisions, restarts and 5xx answers, the tending job's
 # runs, the queues, the turns given up on, the console's error lines and the month's cost, printed to the log,
 # which a session reads (`/ops`) and which is public, so it holds counts and masked lines. Every morning before the
 # digest, and on demand. It signs in with the ops identity, which can read the resource group and write nothing;

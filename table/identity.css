@@ -14,12 +14,12 @@ body:not(.battle-page) {
 input[type="checkbox"], input[type="radio"] { accent-color: var(--gold); }
 
 /* Titles are carved in bone; gold stays for what can be done. */
-.lobby-hero h2, .intro-copy h2, .dialog-heading h2, .name-title, .lobby-panel h2, .game-card h3, .how-it-plays h3,
+.lobby-hero h2, .dialog-heading h2, .name-title, .lobby-panel h2, .game-card h3,
 .mine-group-head h3, .home-header h1 { color: var(--bone); }
 .lobby-section h2 { font: 400 22px/1.2 var(--font-display); color: var(--bone); }
 .lobby-section h2 .lobby-count { font-family: var(--font-text); }
 .eyebrow { letter-spacing: .16em; }
-dialog .eyebrow, .lobby-hero .eyebrow, .intro-copy > .eyebrow { color: var(--brand-ember); }
+dialog .eyebrow, .lobby-hero .eyebrow { color: var(--brand-ember); }
 
 /* The rule under a title: the rune, then a bone hairline that fades out. */
 .lobby-section > .section-heading, .home-dialog > .dialog-heading { position: relative; }

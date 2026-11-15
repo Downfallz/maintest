@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { REVIEWERS, reviewersFor } from '../scripts/review/reviewers.mjs';
+import { REVIEWERS, readDiff, reviewersFor } from '../scripts/review/reviewers.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -64,9 +64,52 @@ test('the brand, the art direction and their tools get the design reviewer', () 
   assert.deepEqual(reviewersFor(['scripts/matte-opaque-art.py']), ['code-reviewer', 'design-reviewer']);
 });
 
-test('a page script or a capture of a test run is not a design change', () => {
+test('a page script named without its diff, or a capture of a test run, is not a design change', () => {
   assert.deepEqual(reviewersFor(['table/battle-planning.js']), ['code-reviewer', 'pages-reviewer']);
   assert.deepEqual(reviewersFor(['docs/tabletop/images/battle-lab/lab-phone.png']), ['code-reviewer']);
+});
+
+test('a page script that adds a raw colour, an inline style or a class calls for the design reviewer', () => {
+  const design = ['code-reviewer', 'pages-reviewer', 'design-reviewer'];
+  for (const line of [
+    "  ctx.fillStyle = '#c9a227';",
+    '  const glow = `rgba(255, 200, 80, ${alpha})`;',
+    "  badge.style.color = 'var(--gold)';",
+    '  return `<span style="opacity: .6">${name}</span>`;',
+    "  tag.className = 'tag tag-ally';",
+  ]) {
+    assert.deepEqual(reviewersFor(['table/table.js'], new Map([['table/table.js', [line]]])), design, line);
+  }
+});
+
+test('a page script that adds no colour and no markup is still not a design change', () => {
+  const added = new Map([['table/mat.js', ["  const seat = document.querySelector('#seat');", '  return round + 1;']]]);
+  assert.deepEqual(reviewersFor(['table/mat.js'], added), ['code-reviewer', 'pages-reviewer']);
+});
+
+test('a page test that adds a colour is not a design change', () => {
+  const added = new Map([['table/mat.test.js', ["  assert.equal(color, '#c9a227');"]]]);
+  assert.deepEqual(reviewersFor(['table/mat.test.js'], added), ['code-reviewer']);
+});
+
+test('a unified diff gives its paths and the lines it adds to each, not the ones it removes', () => {
+  const diff = [
+    'diff --git a/table/mat.js b/table/mat.js',
+    'index 1111111..2222222 100644',
+    '--- a/table/mat.js',
+    '+++ b/table/mat.js',
+    '@@ -1,2 +1,2 @@',
+    " const seat = '#seat';",
+    "-ctx.fillStyle = '#c9a227';",
+    "+ctx.fillStyle = gold;",
+    'diff --git a/table/lobby.js b/table/lobby.js',
+    'deleted file mode 100644',
+    '',
+  ].join('\n');
+  const { paths, added } = readDiff(diff);
+  assert.deepEqual(paths, ['table/mat.js', 'table/lobby.js']);
+  assert.deepEqual(added.get('table/mat.js'), ['ctx.fillStyle = gold;']);
+  assert.deepEqual(reviewersFor(paths, added), ['code-reviewer', 'pages-reviewer']);
 });
 
 test('a page test or a browser spec is not a page', () => {

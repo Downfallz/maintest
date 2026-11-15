@@ -22,6 +22,7 @@
 | [architecture/overview.md](architecture/overview.md) | Layers, dependency rule, folder layout, how a request flows. |
 | [architecture/stateless-table-inventory.md](architecture/stateless-table-inventory.md) | What has to move for a table no process holds in memory (ADR 0159). |
 | [engineering/ai-workflow-plan.md](engineering/ai-workflow-plan.md) | Plan: the AI workflow from an idea to a merged pull request, measured on 300 pull requests and 20 sessions, in nine stages. |
+| [engineering/game-releases.md](engineering/game-releases.md) | Proposed player-facing version numbers, release promotion and rollback. |
 | [reference/commands.md](reference/commands.md) | Every command, flag and route, one heading per command (ADR 0181). |
 | [domain/glossary.md](domain/glossary.md) | The ubiquitous language. Code must use these words. |
 | [domain/game-rules.md](domain/game-rules.md) | The rules of the game as implemented or decided, plus open questions. |

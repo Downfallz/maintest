@@ -50,10 +50,10 @@ param onlyCloudflare bool = false
 param namePrefix string = 'downfall'
 
 @secure()
-@description('Where the alerts go, by email and to the Azure mobile app signed in with the same address (ADR 0185). Empty, no alert and no budget are deployed.')
+@description('Where the alerts go, by email and to the Azure mobile app signed in with the same address (ADR 0186). Empty, no alert and no budget are deployed.')
 param alertEmail string = ''
 
-@description('The monthly budget of the resource group, in the billing currency (ADR 0185): an alert at 80 % and 100 % spent and at 100 % forecast. Nothing is stopped.')
+@description('The monthly budget of the resource group, in the billing currency (ADR 0186): an alert at 80 % and 100 % spent and at 100 % forecast. Nothing is stopped.')
 @minValue(1)
 param budgetAmount int = 5
 
@@ -171,7 +171,7 @@ var ingressRestrictions = onlyCloudflare ? map(range(0, length(cloudflareRanges)
 }) : []
 var domainOn = !empty(customDomain)
 
-// The alerts (ADR 0185): what the platform already measures, read where it is kept, so nothing calls the API from
+// The alerts (ADR 0186): what the platform already measures, read where it is kept, so nothing calls the API from
 // outside and keeps a replica awake. Named here, so the rules and the budget name the group without reading a
 // resource that may not be deployed.
 var alertsOn = !empty(alertEmail)
@@ -187,12 +187,12 @@ var tendFailedQuery = 'ContainerAppConsoleLogs_CL | where Log_s has "The tables 
 var logRules = [
   {
     name: '${namePrefix}-turn-given-up'
-    description: 'The worker gave up on a bot\'s turn and put it on the poison queue (ADR 0185).'
+    description: 'The worker gave up on a bot\'s turn and put it on the poison queue (ADR 0186).'
     query: givenUpQuery
   }
   {
     name: '${namePrefix}-tend-failed'
-    description: 'A tending pass failed (ADR 0185).'
+    description: 'A tending pass failed (ADR 0186).'
     query: tendFailedQuery
   }
 ]
@@ -591,7 +591,7 @@ resource tendRelayRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if
   }
 }
 
-// Where the alerts go: one email and one notice on the Azure mobile app, to the same address (ADR 0185).
+// Where the alerts go: one email and one notice on the Azure mobile app, to the same address (ADR 0186).
 resource alertGroup 'Microsoft.Insights/actionGroups@2023-01-01' = if (alertsOn) {
   name: alertGroupName
   location: 'global'
@@ -623,7 +623,7 @@ resource serverErrors 'Microsoft.Insights/metricAlerts@2018-03-01' = if (alertsO
     alertGroup
   ]
   properties: {
-    description: 'The table answered more than five 5xx in 15 minutes (ADR 0185).'
+    description: 'The table answered more than five 5xx in 15 minutes (ADR 0186).'
     severity: 2
     enabled: true
     scopes: [
@@ -678,7 +678,7 @@ resource restarts 'Microsoft.Insights/metricAlerts@2018-03-01' = [for process in
     worker
   ]
   properties: {
-    description: 'A replica of ${process} restarted more than twice (ADR 0185).'
+    description: 'A replica of ${process} restarted more than twice (ADR 0186).'
     severity: 2
     enabled: true
     scopes: [
@@ -767,7 +767,7 @@ resource logAlertRoles 'Microsoft.Authorization/roleAssignments@2022-04-01' = [f
   }
 }]
 
-// The month's spending on the resource group (ADR 0185): told at 80 % and 100 % spent, and when the forecast
+// The month's spending on the resource group (ADR 0186): told at 80 % and 100 % spent, and when the forecast
 // passes the budget. A budget stops nothing. The type requires an address of its own, so its notice arrives by email twice: from the
 // budget, and from the group with the app's notice.
 resource budget 'Microsoft.Consumption/budgets@2023-05-01' = if (budgetOn) {
