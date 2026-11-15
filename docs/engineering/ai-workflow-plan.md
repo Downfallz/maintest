@@ -1,6 +1,6 @@
 # Plan: the AI workflow, from an idea to a merged pull request
 
-Status: accepted in part, 2026-11-14. The owner settled questions 1, 2, 3 and 5 (at the end); W0 to W4 are built.
+Status: accepted in part, 2026-11-14. The owner settled questions 1, 2, 3 and 5 (at the end); W0 to W5 are built.
 Each stage below is one pull request, or one settings change that only the owner can make.
 
 ## What the owner asked for
@@ -68,7 +68,7 @@ measures them, and every stage that adds agents or scheduled runs spends from th
 
 ```text
 idea, from a phone -> /plan -> the plan's pull request -> the owner settles its questions
-  -> one session per stage: /stage -> gate -> /review -> /ship -> Codex -> green -> merge -> /wrap-up
+  -> one session per stage: /stage -> gate -> /reviewers -> /ship -> Codex -> green -> merge -> /wrap-up
   -> every morning: what merged, what is red, what waits for the owner
 ```
 
@@ -134,7 +134,7 @@ Path-scoped rules stay for what spans directories with no common parent. One hom
 | `/plan <idea>` | Writes a plan in the shape of `docs/tabletop/admin-plan.md` and asks its open questions as choices to tap | 11 plans in 300 pull requests, each shaped by hand. |
 | `/stage <plan> <id>` | Makes a fresh session productive in one line: reads that stage and the ADRs it names, branches from `origin/main`, tests first | Sessions are reused because a new one needs a long prompt. |
 | `/ship` | The standing orders as steps. Reports ready only on green, with no open thread | "Ouvre pr", "abonne toi", "Codex". |
-| `/review [pr]` | Picks the reviewers from the paths touched, checks each finding, sorts them: fix now, issue, dismissed | The subagents exist and are not called. |
+| `/reviewers [pr]` | Picks the reviewers from the paths touched, checks each finding, sorts them: fix now, issue, dismissed | The subagents exist and are not called. |
 | `/wrap-up` | Loose ends become issues. The stage is marked built in its plan. Prints the next stage's one-line prompt | Loose ends live in chat. |
 | `/browser-check` | Maps the changed paths to their specs and runs those in the background | 21 spec names listed in `AGENTS.md`; a 30-minute suite. |
 | `/ops` | Runs the `ops-report` workflow and reads it (W7) | The owner reads the portal aloud. |
@@ -208,7 +208,7 @@ most, started by a clock, an API call or a GitHub event. One is added at a time.
 | Every morning | What merged. What is red on `main` and in the deploy. Pull requests waiting for the owner. Sessions waiting on an answer. Open follow-ups | A push, in French, one screen long. |
 | Weekly | Dependabot and vulnerable packages. Indexes and budgets. `/retro` | A pull request, or issues. |
 | Monthly | `/proposals` | Issues. |
-| A pull request with no Claude trailer opens | `/review`, with comments | Review threads. |
+| A pull request with no Claude trailer opens | `/reviewers`, with comments | Review threads. |
 
 ### Sessions
 
@@ -310,6 +310,17 @@ Each stage is one pull request with its tests, and leaves the gate green.
    or waits while a gate runs; `studio/gate-hook.test.js` tries both on a throwaway repository. Not proven before the first
    sessions use them: `/wrap-up`'s issues and labels, and `/browser-check` on the real-engine and release jobs.
 6. **W5, the reviewers.** The agents, `/review`, the memory trial.
+   *Built (2026-11-15)*: `host-reviewer`, `pages-reviewer`, `security-reviewer`, `infra-reviewer`,
+   `stats-reviewer`, `copy-editor` and `archivist` (on `haiku`); every agent names its `model` and `maxTurns`, and
+   `code-reviewer`, `domain-reviewer` and `test-engineer` no longer read `AGENTS.md` first (it is already loaded).
+   `/review` is `/reviewers`, because Claude Code has its own `/review`. `scripts/review/reviewers.mjs` picks the
+   reviewers from the paths. The skill runs them in parallel, in the foreground, without its own reading of the
+   change, checks each finding and sorts it (fix now, issue, dismissed). `/stage` calls it.
+   `studio/reviewers.test.js` holds the choice, and that no reviewer lists a tool that edits. The memory trial:
+   `code-reviewer` and `host-reviewer` carry `memory: project`, which turns Write and Edit on; their prompt holds
+   them to `.claude/agent-memory/<agent>/`, committed with the change. Not proven before the first sessions use
+   it: that a cloud session's reviewer writes there and the next one reads it. `/code-review ultra`, Claude
+   Code's own deep review, is the owner's to run.
 7. **W6, scheduled work.** The morning digest. Then, one at a time, the weekly run and the review trigger.
 8. **W7, operations.** `ops-report`, the smoke test, the alerts, the runbooks, `/ops`.
 9. **W8, proposals, language, design.** `product-scout`, `ops-analyst`, `/proposals`, `/retro`, the
