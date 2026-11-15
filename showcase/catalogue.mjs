@@ -22,12 +22,12 @@ export async function loadCatalogue() {
     const s = available.get(versionless(id));
     if (!s) throw new Error(`Missing playable spell ${id}`);
     return { id: s.id, name: s.name, fr: spellNamesFr[shortId(s.id)] ?? s.name,
-      cost: s.energyCost, target: s.targeting.origin, count: s.targeting.maxTargets, effects: s.effects, casterEffects: s.casterEffects ?? [] };
+      cost: s.energyCost, critical: s.criticalChance, target: s.targeting.origin, count: s.targeting.maxTargets, effects: s.effects, casterEffects: s.casterEffects ?? [] };
   };
   const nodes = tiers.filter(t => t.enabled !== false).map(t => {
     const notes = fieldNotes[shortId(t.id)];
     if (!notes || !artwork[t.id]) throw new Error(`Missing field entry for ${t.id}`);
-    return { id: t.id, name: t.name, fr: notes[0], level: t.level, prerequisites: t.prerequisites,
+    return { id: t.id, name: t.name, fr: notes[0], level: t.level, initiative: t.initiativeBonus, prerequisites: t.prerequisites,
       anyOf: t.anyOf ?? [], visual: artwork[t.id], spells: t.spells.map(spell), notes: { en: notes[1], fr: notes[2] },
       passive: t.passive, shared: t.sharedWithTeam === true };
   });

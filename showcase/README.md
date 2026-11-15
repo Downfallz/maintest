@@ -57,7 +57,7 @@ its return links have a live destination. Confirm a signed-out Play visit opens 
 opens the dashboard. A prior Pages deployment can be restored independently of the game.
 
 Build watch paths may include `showcase/**`, `data/{Creatures,Spells,Tiers,presentation}/**`, `docs/art/branding.css`,
-`table/battle-*art.js`, `table/battle-evolution.js`, `table/battle-art/**`, `table/fonts/**`, `table/icon.svg` and `table/brand-mark.svg`.
+`battle/src/cue-art.js`, `table/battle-*art.js`, `table/battle-evolution.js`, `table/battle-art/**`, `table/fonts/**`, `table/icon.svg` and `table/brand-mark.svg`.
 With Azure Static Web Apps, upload the same contents of `showcase/dist` as a prebuilt static site.
 
 [Cloudflare build configuration](https://developers.cloudflare.com/pages/configuration/build-configuration/) ·

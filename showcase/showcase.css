@@ -167,7 +167,7 @@ h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.0
 .family-jumps { gap: 6px; }
 .family-jumps a { display: inline-flex; align-items: center; min-height: 44px; border: 1px solid var(--line-soft); padding: 6px 16px; color: var(--bone); }
 .family-jumps a:hover, .path-map a:hover { background: var(--accent-wash); }
-.field-search label, .spell-facts, .requirement, .roman, .reading-hint, .policy-date { color: var(--muted); font-size: 13px; }
+.field-search label, .requirement, .roman, .reading-hint, .policy-date { color: var(--muted); font-size: 13px; }
 .field-search label { display: block; }
 .field-search > div { display: flex; gap: 8px; flex-wrap: wrap; }
 .field-search input, .field-search button { min-height: 44px; padding: 7px 12px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); font: inherit; }
@@ -203,12 +203,30 @@ h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.0
 .field-art { aspect-ratio: 1.5; }
 .field-art img { max-height: 245px; }
 .anatomy { margin: 8px 0; max-width: 62ch; }
-.spell-list { list-style: none; padding: 0; margin: 12px 0 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; }
-.spell-list li { padding-left: 12px; border-left: 2px solid var(--line); scroll-margin-top: 14px; }
-.spell-list strong, .spell-list .spell-facts { display: block; }
-.spell-list p, .passive-rule { color: var(--muted); font-size: 14px; }
-.spell-list .caster { margin-top: 4px; }
-.caster b { font-weight: 600; }
+/* The guide uses the same stat marks and palette as the battle cards and history. */
+.spell-list { list-style: none; padding: 0; margin: 14px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: 10px; }
+.spell-list > li { min-width: 0; padding: 13px 15px; scroll-margin-top: 14px; border: 1px solid var(--line-soft); border-radius: 4px; background: #142328; }
+.spell-head, .spell-stats, .mutation-facts { display: flex; align-items: center; gap: 6px 10px; flex-wrap: wrap; }
+.spell-head { justify-content: space-between; }
+.spell-head strong { color: var(--bone); font: 20px/1.2 var(--font-display); }
+.spell-stats { gap: 4px; }
+.spell-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border: 1px solid; border-radius: 3px; font: 650 12px/1.4 var(--font-text); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.spell-chip.cost { color: #8edcf0; border-color: #8edcf055; }
+.spell-chip.crit { color: #f2d76b; border-color: #f2d76b55; }
+.spell-chip.initiative { color: #d2b6f2; border-color: #d2b6f255; }
+.spell-target, .passive-rule { color: var(--muted); font-size: 14px; }
+.spell-target { margin: 8px 0; }
+.spell-effects { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.spell-effects li { display: grid; grid-template-columns: 15px 1fr; align-items: baseline; gap: 6px; font-size: 14px; line-height: 1.45; }
+.spell-list .caster { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line-soft); }
+.caster b { display: block; color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+.cue-icon { width: 13px; height: 13px; fill: currentColor; align-self: center; }
+.cue-icon .stroked { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+.cue-health-loss { color: #ef7a6c; } .cue-health-gain { color: #86d897; }
+.cue-defense-gain { color: #8fc3ef; } .cue-defense-loss { color: #e8a76f; }
+.cue-stun { color: #f2d76b; } .cue-energy-gain, .cue-energy-loss { color: #8edcf0; }
+.cue-initiative-gain, .cue-initiative-loss { color: #d2b6f2; } .cue-damage-gain { color: #f0b48a; }
+
 .passive-entry { display: block; }
 .policy header { max-width: 820px; }
 .policy-date { margin-bottom: 14px; }

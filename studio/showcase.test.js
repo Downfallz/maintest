@@ -106,6 +106,20 @@ for (const [lang, documents] of Object.entries(pages)) {
     const expected = folder => files(folder).map(item => item.id.split(':')[1]).sort();
     assert.deepEqual(actualIds(/<details[^>]+id="form-([^"]+)"/g), expected('Tiers'));
     assert.deepEqual(actualIds(/<li id="spell-([^"]+)"/g), expected('Spells'));
+    const cards = new Map([...guide.matchAll(/<li id="spell-([^"]+)"[^>]*>([\s\S]*?)\n  <\/li>/g)].map(([, id, html]) => [id, html]));
+    for (const spell of files('Spells')) {
+      const card = cards.get(spell.id.split(':')[1]);
+      assert.ok(card.includes(`</svg>${spell.energyCost} ${lang === 'fr' ? 'énergie' : 'energy'}</span>`), spell.id);
+      assert.equal(card.includes('class="spell-chip crit"'), spell.criticalChance > 0, spell.id);
+      if (spell.criticalChance > 0) assert.ok(card.includes(`${Math.round(spell.criticalChance * 100)}%`), spell.id);
+      assert.equal(card.includes('class="caster"'), Boolean(spell.casterEffects?.length), spell.id);
+    }
+    const forms = new Map([...guide.matchAll(/<details[^>]+id="form-([^"]+)"[^>]*>([\s\S]*?)<\/details>/g)].map(([, id, html]) => [id, html]));
+    for (const tier of files('Tiers')) {
+      const form = forms.get(tier.id.split(':')[1]);
+      assert.equal(form.includes('class="spell-chip initiative"'), Boolean(tier.initiativeBonus), tier.id);
+      if (tier.initiativeBonus) assert.ok(form.includes(`${tier.initiativeBonus} initiative</span>`), tier.id);
+    }
     assert.equal((guide.match(/class="field-art"/g) ?? []).length, 21);
     assert.equal((guide.match(/class="passive-rule"/g) ?? []).length, 3);
     assert.doesNotMatch(guide, /\/hybrids\//);

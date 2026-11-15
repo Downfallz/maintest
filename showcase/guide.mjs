@@ -1,4 +1,5 @@
 import { escape, layout } from './layout.mjs';
+import { cuePath, STROKED } from '../battle/src/cue-art.js';
 import { lore } from './lore.mjs';
 
 const families = ['brute', 'predator', 'warped'];
@@ -14,6 +15,17 @@ const effectNames = {
     DamageBuff: 'Bonus de dégâts', DefenseDebuff: 'Perte de défense', InitiativeDebuff: 'Perte d’initiative', Bleed: 'Saignement',
     Regeneration: 'Régénération', Stun: 'Étourdissement' },
 };
+
+const effectIcons = {
+  Damage: 'health-loss', Bleed: 'health-loss', Heal: 'health-gain', Regeneration: 'health-gain',
+  EnergyGain: 'energy-gain', EnergyDrain: 'energy-loss', DefenseBuff: 'defense-gain', DefenseDebuff: 'defense-loss',
+  DamageBuff: 'damage-gain', InitiativeDebuff: 'initiative-loss', Stun: 'stun',
+};
+
+function icon(key) {
+  const style = STROKED.has(key) ? 'class="stroked"' : 'fill-rule="evenodd"';
+  return `<svg class="cue-icon cue-${key}" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path ${style} d="${cuePath(key)}"/></svg>`;
+}
 
 function describeEffect(e, lang) {
   const fr = lang === 'fr';
@@ -36,10 +48,14 @@ function targetText(s, lang) {
 
 function spell(s, lang) {
   const l = lore[lang];
-  const effects = list => list.map(e => escape(describeEffect(e, lang))).join(' · ');
+  const effects = list => list.map(e => `<li>${icon(effectIcons[e.kind])}<span>${escape(describeEffect(e, lang))}</span></li>`).join('');
+  const critical = lang === 'fr' ? 'Critique en Précision' : 'Precision crit chance';
   return `<li id="spell-${key(s.id)}" data-spell-name="${escape(name(s, lang))}">
-    <strong>${escape(name(s, lang))}</strong><span class="spell-facts">${targetText(s, lang)} · ${s.cost} ${l.energy}</span>
-    <p>${effects(s.effects)}</p>${s.casterEffects.length ? `<p class="caster"><b>${l.caster}</b> · ${effects(s.casterEffects)}</p>` : ''}
+    <div class="spell-head"><strong>${escape(name(s, lang))}</strong>
+      <div class="spell-stats"><span class="spell-chip cost">${icon('energy-gain')}${s.cost} ${l.energy}</span>
+      ${s.critical > 0 ? `<span class="spell-chip crit" title="${critical}"><span aria-hidden="true">✦</span>${Math.round(s.critical * 100)}% <span aria-hidden="true">crit.</span><span class="visually-hidden"> ${critical}</span></span>` : ''}</div></div>
+    <p class="spell-target">${targetText(s, lang)}</p><ul class="spell-effects">${effects(s.effects)}</ul>
+    ${s.casterEffects.length ? `<div class="caster"><b>${l.caster}</b><ul class="spell-effects">${effects(s.casterEffects)}</ul></div>` : ''}
   </li>`;
 }
 
@@ -59,7 +75,8 @@ function entry(t, lang, byId) {
     <summary><span class="roman">${romans[t.level]}</span><strong>${n}</strong><span class="form-teaser">${t.passive ? l.passive : t.spells.map(s => escape(name(s, lang))).join(' · ')}</span></summary>
     <div class="field-entry ${t.passive ? 'passive-entry' : ''}">
       ${t.visual.artwork ? `<div class="field-art"><img src="/assets/evolutions/${t.visual.artwork}.webp" alt="" width="450" height="300" loading="lazy" decoding="async"></div>` : ''}
-      <div><p class="requirement">${need}</p><p class="anatomy">${escape(t.notes[lang])}</p>
+      <div><div class="mutation-facts"><p class="requirement">${need}</p>
+        ${t.initiative ? `<span class="spell-chip initiative">${icon(t.initiative > 0 ? 'initiative-gain' : 'initiative-loss')}${t.initiative > 0 ? '+' : ''}${t.initiative} initiative</span>` : ''}</div><p class="anatomy">${escape(t.notes[lang])}</p>
       ${t.passive ? `<p class="passive-rule">${passive(t, lang)}</p>` : `<ul class="spell-list">${t.spells.map(s => spell(s, lang)).join('')}</ul>`}</div>
     </div></details>`;
 }
