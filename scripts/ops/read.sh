@@ -30,11 +30,14 @@ reading() {
 }
 
 get() {
-  az rest --method get --url "$arm$1" --output json
+  local path="$1"
+  az rest --method get --url "$arm$path" --output json
 }
 
 post() {
-  az rest --method post --url "$1" --body "$2" --output json "${@:3}"
+  local url="$1" body="$2"
+  shift 2
+  az rest --method post --url "$url" --body "$body" --output json "$@"
 }
 
 # The last 24 hours as the metrics API takes them: a start and an end, not a duration.

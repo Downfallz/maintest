@@ -42,7 +42,7 @@ const usable = (reading) => reading !== undefined && reading !== null && reading
 export function mask(line) {
   const masked = String(line ?? '')
     .replace(/(https?:\/\/[^\s?]+)\?\S*/g, '$1?…')
-    .replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, '<courriel>')
+    .replace(/[^\s@]+@[^\s@]+/g, '<courriel>')
     .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, '<id>')
     .replace(/\b([a-z]{2,8})_[A-Za-z0-9-]{6,}/g, '$1_…')
     .replace(/[A-Za-z0-9+/=_-]{20,}/g, '…')
@@ -141,30 +141,41 @@ function budgetAmount(reading) {
   return reading?.value?.[0]?.properties?.amount;
 }
 
-/** What to look at first, most urgent first; empty when nothing is wrong. */
-export function concerns(readings, now) {
-  const found = [];
-  const lobby = readings.lobby;
-  if (usable(lobby) && lobby.status === 0) found.push('la table ne répond pas');
-  else if (usable(lobby) && lobby.status !== 200) found.push(`la table répond ${lobby.status}`);
-  if (usable(readings.executions)) {
-    const { failed } = tending(readings.executions, now);
-    if (failed > 0) found.push(`${plural(failed, 'passe')} de maintenance en échec`);
-  }
-  if (usable(readings.logs)) {
-    const turns = givenUp(readings.logs);
-    if (turns > 0) found.push(`${plural(turns, 'tour abandonné', 'tours abandonnés')}`);
-  }
-  if (usable(readings['5xx'])) {
-    const errors = metricTotal(readings['5xx']);
-    if (errors > 0) found.push(`${plural(errors, 'erreur 5xx', 'erreurs 5xx')}`);
-  }
-  const restarts = ['restarts-table', 'restarts-worker'].filter((name) => usable(readings[name])).reduce((sum, name) => sum + metricMax(readings[name]), 0);
-  if (restarts > 0) found.push(plural(restarts, 'redémarrage'));
+const percent = (amount, budget) => Math.round((100 * amount) / budget);
+
+function lobbyConcern(lobby) {
+  if (!usable(lobby) || lobby.status === 200) return undefined;
+  return lobby.status === 0 ? 'la table ne répond pas' : `la table répond ${lobby.status}`;
+}
+
+function countConcern(count, one, many) {
+  return count > 0 ? plural(count, one, many) : undefined;
+}
+
+function restartsOf(readings) {
+  return ['restarts-table', 'restarts-worker'].filter((name) => usable(readings[name])).reduce((sum, name) => sum + metricMax(readings[name]), 0);
+}
+
+function budgetConcern(readings) {
   const spent = cost(readings.cost);
   const budget = budgetAmount(readings.budget);
-  if (spent && budget && spent.amount >= BUDGET_WARNING * budget) found.push(`${Math.round((100 * spent.amount) / budget)}\u00a0% du budget`);
-  return found;
+  return spent && budget && spent.amount >= BUDGET_WARNING * budget ? `${percent(spent.amount, budget)} % du budget` : undefined;
+}
+
+/** What to look at first, most urgent first; empty when nothing is wrong. */
+export function concerns(readings, now) {
+  const failedPasses = usable(readings.executions) ? tending(readings.executions, now).failed : 0;
+  const turns = usable(readings.logs) ? givenUp(readings.logs) : 0;
+  const errors = usable(readings['5xx']) ? metricTotal(readings['5xx']) : 0;
+  const tendConcern = countConcern(failedPasses, 'passe');
+  return [
+    lobbyConcern(readings.lobby),
+    tendConcern && `${tendConcern} de maintenance en échec`,
+    countConcern(turns, 'tour abandonné', 'tours abandonnés'),
+    countConcern(errors, 'erreur 5xx', 'erreurs 5xx'),
+    countConcern(restartsOf(readings), 'redémarrage'),
+    budgetConcern(readings),
+  ].filter(Boolean);
 }
 
 function clock(time) {
@@ -199,65 +210,90 @@ function why(reading) {
   return code ? code[1] : mask(error).slice(0, 60);
 }
 
+function lobbyLines(lobby) {
+  if (!usable(lobby)) return [];
+  return [
+    lobby.status === 0
+      ? `Table : ${lobby.url} ne répond pas (${number(lobby.seconds, 0)} s)`
+      : `Table : ${lobby.url} répond ${lobby.status} en ${number(lobby.seconds, 1)} s`,
+  ];
+}
+
+function revisionLines(readings) {
+  const serving = ['revisions-table', 'revisions-worker'].filter((name) => usable(readings[name])).flatMap((name) => revisions(readings[name]));
+  const image = revisions(readings['revisions-table']).find((revision) => revision.image)?.image;
+  return [serving.length > 0 && `Révisions : ${serving.map(revisionText).join(' · ')}`, image && `Image : ${image}`];
+}
+
+function restartLines(readings) {
+  if (!usable(readings['restarts-table']) && !usable(readings['restarts-worker'])) return [];
+  const count = (name) => (usable(readings[name]) ? metricMax(readings[name]) : '?');
+  return [`Redémarrages (max. par réplica, 24 h) : table ${count('restarts-table')} · worker ${count('restarts-worker')}`];
+}
+
+function tendLines(reading, now) {
+  if (!usable(reading)) return [];
+  const tend = tending(reading, now);
+  const word = tend.last && (RUN_WORDS[tend.last.status] ?? String(tend.last.status).toLowerCase());
+  const last = tend.last ? ` (dernière à ${clock(tend.last.startTime)} : ${word})` : '';
+  return [`Maintenance 24 h : ${plural(tend.runs, 'passe')}, ${tend.failed} en échec${last}`];
+}
+
+function journalLines(reading) {
+  if (!usable(reading)) return [];
+  const errors = logLines(reading);
+  const total = errors.reduce((sum, entry) => sum + entry.count, 0);
+  return [
+    `Tours abandonnés 24 h : ${givenUp(reading)}`,
+    `Erreurs du journal 24 h : ${plural(total, 'ligne')}`,
+    ...errors.slice(0, MAX_ERROR_LINES).map((entry) => `  ${entry.count} × ${entry.app} : ${entry.line}`),
+  ];
+}
+
+function costLines(readings) {
+  const spent = cost(readings.cost);
+  if (!spent) return [];
+  const budget = budgetAmount(readings.budget);
+  const money = (amount) => `${number(amount)} ${spent.currency}`.trim();
+  const share = budget ? ` sur ${money(budget)} (${percent(spent.amount, budget)} %)` : '';
+  return [`Coût du mois : ${money(spent.amount)}${share}`];
+}
+
+function unreadLabel(label, reading) {
+  return reading?.error === undefined ? label : `${label} (${why(reading)})`;
+}
+
+function unreadLines(readings, signedIn) {
+  const azure = signedIn ? Object.entries(AZURE_READINGS).filter(([name]) => !usable(readings[name])) : [];
+  const unread = azure.map(([name, label]) => unreadLabel(label, readings[name]));
+  if (!usable(readings.lobby)) unread.unshift(unreadLabel('table', readings.lobby));
+  return unread.length > 0 ? [`Non lu : ${unread.join(', ')}`] : [];
+}
+
 /** The report, one line each, that fits a phone. */
 export function render(readings, now) {
-  const lines = [`Production, ${day(now)} à ${clock(now)}`];
   const found = concerns(readings, now);
-  lines.push(found.length === 0 ? 'Rien à signaler.' : `À regarder : ${found.join(', ')}.`);
-
-  const lobby = readings.lobby;
-  if (usable(lobby)) {
-    lines.push(
-      lobby.status === 0
-        ? `Table : ${lobby.url} ne répond pas (${number(lobby.seconds, 0)} s)`
-        : `Table : ${lobby.url} répond ${lobby.status} en ${number(lobby.seconds, 1)} s`,
-    );
-  }
-
   const signedIn = readings.azure?.signedIn === true;
-  if (!signedIn) {
-    lines.push("Azure non lu : pas d'identité ops (infra/runbooks/ops-identity.md)");
-  } else {
-    const serving = ['revisions-table', 'revisions-worker'].filter((name) => usable(readings[name])).flatMap((name) => revisions(readings[name]));
-    if (serving.length > 0) lines.push(`Révisions : ${serving.map(revisionText).join(' · ')}`);
-    const image = revisions(readings['revisions-table']).find((revision) => revision.image)?.image;
-    if (image) lines.push(`Image : ${image}`);
-    if (usable(readings['restarts-table']) || usable(readings['restarts-worker'])) {
-      const count = (name) => (usable(readings[name]) ? metricMax(readings[name]) : '?');
-      lines.push(`Redémarrages (max. par réplica, 24 h) : table ${count('restarts-table')} · worker ${count('restarts-worker')}`);
-    }
-    if (usable(readings['5xx'])) lines.push(`Erreurs 5xx 24 h : ${metricTotal(readings['5xx'])}`);
-    if (usable(readings.executions)) {
-      const tend = tending(readings.executions, now);
-      const last = tend.last ? ` (dernière à ${clock(tend.last.startTime)} : ${RUN_WORDS[tend.last.status] ?? String(tend.last.status).toLowerCase()})` : '';
-      lines.push(`Maintenance 24 h : ${plural(tend.runs, 'passe')}, ${tend.failed} en échec${last}`);
-    }
-    if (usable(readings.queue)) lines.push(`Files : ${plural(metricLatest(readings.queue), 'message')} en attente`);
-    if (usable(readings.logs)) {
-      lines.push(`Tours abandonnés 24 h : ${givenUp(readings.logs)}`);
-      const errors = logLines(readings.logs);
-      const total = errors.reduce((sum, entry) => sum + entry.count, 0);
-      lines.push(`Erreurs du journal 24 h : ${plural(total, 'ligne')}`);
-      for (const entry of errors.slice(0, MAX_ERROR_LINES)) lines.push(`  ${entry.count} × ${entry.app} : ${entry.line}`);
-    }
-    const spent = cost(readings.cost);
-    if (spent) {
-      const budget = budgetAmount(readings.budget);
-      const money = (amount) => `${number(amount)} ${spent.currency}`.trim();
-      lines.push(
-        budget
-          ? `Coût du mois : ${money(spent.amount)} sur ${money(budget)} (${Math.round((100 * spent.amount) / budget)}\u00a0%)`
-          : `Coût du mois : ${money(spent.amount)}`,
-      );
-    }
-    const unread = Object.entries(AZURE_READINGS)
-      .filter(([name]) => !usable(readings[name]))
-      .map(([name, label]) => (readings[name]?.error === undefined ? label : `${label} (${why(readings[name])})`));
-    if (!usable(lobby)) unread.unshift(lobby ? `table (${why(lobby)})` : 'table');
-    if (unread.length > 0) lines.push(`Non lu : ${unread.join(', ')}`);
-  }
-  if (!signedIn && !usable(lobby)) lines.push(`Non lu : ${lobby ? `table (${why(lobby)})` : 'table'}`);
-  return lines.join('\n');
+  const azure = signedIn
+    ? [
+        ...revisionLines(readings),
+        ...restartLines(readings),
+        usable(readings['5xx']) && `Erreurs 5xx 24 h : ${metricTotal(readings['5xx'])}`,
+        ...tendLines(readings.executions, now),
+        usable(readings.queue) && `Files : ${plural(metricLatest(readings.queue), 'message')} en attente`,
+        ...journalLines(readings.logs),
+        ...costLines(readings),
+      ]
+    : ["Azure non lu : pas d'identité ops (infra/runbooks/ops-identity.md)"];
+  return [
+    `Production, ${day(now)} à ${clock(now)}`,
+    found.length === 0 ? 'Rien à signaler.' : `À regarder : ${found.join(', ')}.`,
+    ...lobbyLines(readings.lobby),
+    ...azure,
+    ...unreadLines(readings, signedIn),
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 /** Every reading in the directory, by its file's name. */
@@ -266,8 +302,8 @@ export function readAll(dir) {
   for (const file of readdirSync(dir).filter((name) => name.endsWith('.json'))) {
     try {
       readings[file.slice(0, -'.json'.length)] = JSON.parse(readFileSync(join(dir, file), 'utf8'));
-    } catch (failure) {
-      readings[file.slice(0, -'.json'.length)] = { error: `not JSON: ${failure.message}` };
+    } catch (error_) {
+      readings[file.slice(0, -'.json'.length)] = { error: `not JSON: ${error_.message}` };
     }
   }
   return readings;

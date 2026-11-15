@@ -196,6 +196,9 @@ var logRules = [
     query: tendFailedQuery
   }
 ]
+// The rules deployed: none without the alerts' address. A list, not a condition, so each rule's identity is read
+// where the rule surely exists.
+var activeLogRules = alertsOn ? logRules : []
 // What the log alerts read the console lines with, on the workspace alone.
 var logAnalyticsReader = '73c42c96-874c-492b-b04d-ab87d138a893'
 
@@ -709,7 +712,7 @@ resource restarts 'Microsoft.Insights/metricAlerts@2018-03-01' = [for process in
 // A turn given up on, and a tending pass that failed: read from the console lines once an hour, which the job's
 // own rhythm is. The table the query reads exists only once a line was written, so the query is not checked at
 // deployment.
-resource logAlerts 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = [for rule in logRules: if (alertsOn) {
+resource logAlerts 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = [for rule in activeLogRules: {
   name: rule.name
   location: location
   // Each rule reads the console lines as its own identity, which holds Log Analytics Reader on the workspace alone,
@@ -754,12 +757,11 @@ resource logAlerts 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = [for ru
   }
 }]
 
-// Deployed under the same condition as its rule, so the rule is there when its identity is read.
-resource logAlertRoles 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for (rule, i) in logRules: if (alertsOn) {
+resource logAlertRoles 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for (rule, i) in activeLogRules: {
   scope: logs
   name: guid(logs.id, rule.name, logAnalyticsReader)
   properties: {
-    principalId: logAlerts[i]!.identity.principalId
+    principalId: logAlerts[i].identity.principalId
     principalType: 'ServicePrincipal'
     roleDefinitionId: subscriptionResourceId(roleDefinitions, logAnalyticsReader)
   }
