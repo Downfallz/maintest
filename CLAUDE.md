@@ -10,14 +10,18 @@
   `boardgame-director` (what survives the table), `tabletop-mathematician` (measures a candidate rule set),
   `component-designer` (what is in the box), `rulebook-writer` (the rulebook and the player aid),
   `playtest-app-architect` (the app ADR). Use them for their purpose instead of doing it all inline.
-- Skills in `.claude/skills/`: `/adr` (create a decision record), `/new-aggregate` (scaffold an aggregate with
-  tests), `/verify` (build, tests, format check, the CI gate), `/spells-report` (the spells the bots cast and
-  leave, package by package, rebuilt and republished to the owner's report page).
+- Skills in `.claude/skills/`: the pipeline from an idea to a merged pull request (docs/engineering/ai-workflow-plan.md):
+  `/new-plan` (an idea becomes a plan; `/plan` is Claude Code's plan mode), `/stage` (one stage in a fresh session),
+  `/verify` (the gate, chosen from the diff), `/browser-check` (the browser specs the diff calls for), `/ship` (the
+  standing orders), `/wrap-up` (loose ends become issues, the next stage's prompt). And `/adr`, `/new-aggregate`,
+  `/spells-report` (the spells the bots cast and leave, republished to the owner's report page).
+- The `Stop` hook (`.claude/hooks/stop.sh`) says once, per tree, when code changed after the last green gate:
+  run `/verify`, or say plainly that the gate was not run.
 - `.claude/hooks/session-start.sh` installs the .NET SDK on Claude Code on the web when it is missing. It
   tries Microsoft's `dotnet-install.sh` first, then the distribution's own `dotnet-sdk-<channel>` package,
   because a session's network policy decides which of the two is reachable. If neither works it says so and
   exits 0: when that happens, say the build was not verified rather than pretending it was.
-- The SessionStart hook also starts the Azurite storage emulator when it is installed, and exports
+- The SessionStart hook, and `scripts/verify.sh`, also start the Azurite storage emulator when it is installed, and export
   `AZURITE_BLOB_ENDPOINT`, `AZURITE_QUEUE_ENDPOINT` and `AZURITE_TABLE_ENDPOINT`, so the storage tests run
   instead of being skipped. When it is not installed the hook says so: report those tests as skipped.
 - Personal overrides go in `.claude/settings.local.json` (git-ignored), never in `.claude/settings.json`.
