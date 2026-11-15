@@ -325,6 +325,7 @@ jobs:
       image: ${{ needs.image.outputs.image }}
     secrets:
       TABLE_PUSH_KEYS: ${{ secrets.TABLE_PUSH_KEYS }}
+      TABLE_ALERT_EMAIL: ${{ secrets.TABLE_ALERT_EMAIL }}
 
   # A red main opens an issue, one at a time, and the next green run closes it. Its own failure (a repository
   # without issues) fails nothing: a run that is red for this alone would never count as the last green one.

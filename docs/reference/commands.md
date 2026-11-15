@@ -582,6 +582,22 @@ docker build -t downfall-table . && docker run --rm -p 8080:8080 downfall-table
 
 The hosted table's image, locally: an admin panel on 8080, the operator's token in the log (infra/README.md).
 
+### ops/read.sh, ops/report.mjs
+
+```bash
+AZURE=1 RESOURCE_GROUP=downfall-table scripts/ops/read.sh <dir>   # the readings, one JSON file each; AZURE=0 reads the table alone
+node scripts/ops/report.mjs <dir> [--now <ISO time>]              # the production report, one phone screen in French
+```
+
+What `ops-report.yml` runs (ADR 0186), every morning at 10:23 UTC and on demand (*Read the table in production*,
+Run workflow), signed in as the ops identity, which reads the resource group and writes nothing. `read.sh` reads
+`GET /api/lobby`, the active revisions, the restarts and 5xx answers of the last 24 hours, the tending job's runs,
+the messages waiting in the queues, the console's error lines, the month's cost and the budget; a reading that
+fails is written as its error and the rest are read. `report.mjs` prints the report to the log, which is public:
+counts, and error lines without emails, ids, tokens or query strings. `/ops` starts the workflow and reads its
+log. `studio/ops.test.js` tests both, `read.sh` with a fake `az` and `curl`. `rollout.yml` asks the deployed
+table for `GET /api/lobby` the same way once a deployment is up, and is red when it does not answer.
+
 ## Learning
 
 ### search-weights

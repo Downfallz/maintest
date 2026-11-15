@@ -47,7 +47,7 @@ You need the Azure subscription's owner, signed in, and ideally the GitHub CLI s
    It registers the four resource providers, creates `downfall-table` in `canadacentral`, an app
    registration GitHub deploys as (federated to this repository's `azure` environment, allowed to change that
    one resource group and to assign three roles in it, blob, table and queue data), and the registration the admin panel's sign-in uses (no client
-   secret). It prints seven repository variables and sets them when `gh` is signed in. `LOCATION`,
+   secret). It also makes the identity the production report reads with (ADR 0186). It prints eight repository variables and sets them when `gh` is signed in. `LOCATION`,
    `RESOURCE_GROUP`, `REPO` and `PREFIX` override the defaults; the prefix travels to the template through
    the `TABLE_NAME_PREFIX` variable, so every resource name follows it.
 
@@ -146,37 +146,25 @@ game at `play.` is unaffected either way.
 
 ## Its own domain, behind Cloudflare
 
-The table answers at `play.downfallinstinct.com` through Cloudflare's proxy (ADR 0175). Once, in this order:
+The table answers at `play.downfallinstinct.com` through Cloudflare's proxy (ADR 0175). The DNS records, the
+origin certificate, the binding and the sign-ins that go with it are a runbook:
+[runbooks/custom-domain.md](runbooks/custom-domain.md).
 
-1. **Cloudflare, DNS** (both *DNS only*, grey, for now):
-   - `CNAME play` → the platform's address (the deploy summary's *Platform address*, without `https://`).
-   - `TXT asuid.play` → the deploy summary's *Domain verification* value.
-2. **Cloudflare, SSL/TLS**: mode *Full (strict)*. Under *Origin Server*, *Create Certificate*: RSA (2048),
-   host names `play.downfallinstinct.com` and `*.downfallinstinct.com`, 15 years, PEM. Never paste the private
-   key anywhere but the files below.
-3. **Upload the certificate**, in Cloud Shell, then delete the files:
+## Watching it
 
-   ```bash
-   nano origin.pem   # the certificate
-   nano origin.key   # the private key
-   openssl pkcs12 -export -out origin.pfx -inkey origin.key -in origin.pem -passout pass:
-   environment="$(az containerapp env list -g downfall-table --query "[0].name" -o tsv)"
-   az containerapp env certificate upload -g downfall-table -n "$environment" \
-     --certificate-file origin.pfx --certificate-name cloudflare-origin
-   rm origin.pem origin.key origin.pfx
-   ```
+`ops-report.yml` prints a report of the table in production every morning and on demand, and `/ops` reads it; it
+signs in as an identity that reads the resource group and writes nothing (ADR 0186). The alerts (5xx answers,
+restarts, a turn given up on, a failed tending pass, a monthly budget of 5 in the billing currency) go by email and to the Azure mobile app
+once the `TABLE_ALERT_EMAIL` secret is set. Each deployment asks the table for `GET /api/lobby` once it is up and
+is red when it does not answer. The steps are runbooks: [runbooks/ops-identity.md](runbooks/ops-identity.md) and
+[runbooks/alerts.md](runbooks/alerts.md); [runbooks/README.md](runbooks/README.md) lists every one.
 
-4. **Bind it**: set the repository variable `TABLE_DOMAIN` to `play.downfallinstinct.com` and run the workflow.
-5. **Proxy it**: switch the `play` record to *Proxied* (orange).
-6. **Sign-ins**: `DOMAIN=play.downfallinstinct.com infra/bootstrap.sh redirect` for the admin panel, and add
-   `https://play.downfallinstinct.com` to the Google client's *Authorized JavaScript origins* (see "Player sign-in").
-7. **Close the platform's address**, once players have moved: compare the ranges in `infra/main.bicep` with
-   <https://www.cloudflare.com/ips-v4>, set `TABLE_ONLY_CLOUDFLARE` to `true`, and run the workflow. The
-   platform's address then answers Cloudflare alone.
-
-In Cloudflare, keep Rocket Loader and Email Address Obfuscation off (they rewrite the pages and break their ETags,
-ADR 0166) and bypass the cache on `/api/*` and `/.auth/*`. A browser keeps its cookie, saved seats and push
-subscription per origin, so players sign in again on the new address and turn notifications on again.
+| Resource | What it is for | What it costs |
+| --- | --- | --- |
+| Action group `downfall-alerts` | One email and one Azure app notice per alert | Emails and app notices: free at this volume |
+| Metric alerts `downfall-table-5xx`, `downfall-table-restarts`, `downfall-worker-restarts` | What the platform already measures, checked every 5 minutes over a 15-minute window | About $0.10 a month each |
+| Log alerts `downfall-turn-given-up`, `downfall-tend-failed` | The worker's and the job's own lines, once an hour | About $0.50 a month each, to check in the pricing calculator |
+| Budget `downfall-monthly` | 5 (billing currency) a month from `TABLE_BUDGET_START`; warns at 80 % and 100 % spent, and at 100 % forecast | Free |
 
 ## "Your turn" on a phone
 
@@ -202,6 +190,7 @@ Android Chrome takes the notice as it is; iOS only once the table is added to th
   request that touches it; a warning fails the run.
 - Locally: `docker build -t downfall-table .` and `docker run --rm -p 8080:8080 downfall-table` give an admin panel
   on port 8080, with the operator's token in the log.
+- A change that brings a new role or provider: [runbooks/roles.md](runbooks/roles.md).
 - A deployment made before ADR 0161 has to run `infra/bootstrap.sh setup` once more before the first deploy
   that carries the index: the deployer may assign only the roles the bootstrap names, and the table data role
   is new. Running it again changes nothing else.

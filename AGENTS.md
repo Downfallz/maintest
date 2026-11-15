@@ -41,7 +41,7 @@ An area marked * has its own `AGENTS.md` (and a `CLAUDE.md` that imports it): re
 | `models/` | Trained policies (`policy.json`, small, committed with their evaluation). See `models/README.md`. |
 | `infra/` * | The hosted table on Azure behind Cloudflare: `main.bicep`, `bootstrap.sh`, `README.md` (ADR 0080-0082, 0162, 0175). |
 | `Dockerfile` | The table's image, built and tried by `.github/workflows/image.yml` before it is pushed and deployed. |
-| `scripts/` | The local gate's `verify.sh` and `gate/`, the learning loop's `iterate.sh` and readers, `spells-report/`, `review/` (the reviewers a diff calls for), `digest/` (the morning digest), `workflow-metrics.py` (docs/reference/commands.md). |
+| `scripts/` | The local gate's `verify.sh` and `gate/`, the learning loop's `iterate.sh` and readers, `spells-report/`, `review/` (the reviewers a diff calls for), `digest/` (the morning digest), `ops/` (the production report), `workflow-metrics.py` (docs/reference/commands.md). |
 | `tests/` | One test project per layer, plus `Cli.Tests` (the hosts) and `Architecture.Tests` (layering and these files). |
 | `docs/` | Indexed in `docs/README.md`: every plan, the ADRs, the domain, the tabletop, art, learning, engineering. |
 | `docs/reference/commands.md` | Every command, flag and route, one heading per command. |
