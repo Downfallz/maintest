@@ -76,7 +76,7 @@ export function tutorialControls(onChange: () => void) {
     // Read only once it has opened: a step whose cards could not open yet still owes them.
     if (shown && owed() && canAuto && open(shown.cards)) opened.add(shown.key);
   }
-  const owed = () => Boolean(shown && shown.cards.length && !opened.has(shown.key));
+  const owed = () => Boolean(shown?.cards.length && !opened.has(shown.key));
   /** Whether a concept card is open or still to open for the step shown: the question's own sheet waits for it. */
   const pending = () => dialog.open || owed();
   /** A new practice teaches its steps again. */
