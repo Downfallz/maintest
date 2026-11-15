@@ -15,6 +15,12 @@ const fileName = (path) => path.slice(path.lastIndexOf('/') + 1);
 // is a sign-in only where the name begins with it (SessionClaim, StoredSessions), not a game's (GameSession).
 const SIGNING_IN = /^([A-Za-z]*(Account|Operator|Admin|Push|SignedIn|SignIn|Token|Auth|JoinCode|Keys)|Session|StoredSession)[A-Za-z]*\.cs$/;
 
+// What a page looks like: its sheets, its markup, its pictures, its icon and fonts, the app's manifest.
+const LOOK = /\.(css|html|svg|png|webp|jpe?g|gif|avif|woff2|webmanifest)$/;
+
+// What makes the brand and the art: the palette's synchronizer and the matte of the art.
+const BRAND_TOOLS = new Set(['scripts/sync-branding.mjs', 'scripts/matte-opaque-art.py']);
+
 // What decides which jobs CI and the local gate run (ADR 0182).
 const GATE_FILES = new Set(['studio/browser/plan.js', 'studio/browser/flakes.js', 'scripts/verify.sh']);
 
@@ -40,6 +46,14 @@ const RULES = [
   [
     'pages-reviewer',
     (path) => under(path, 'table/', 'studio/', 'viewer/', 'battle/src/') && !isMarkdown(path) && !isTest(path),
+  ],
+  [
+    'design-reviewer',
+    (path) =>
+      (under(path, 'table/', 'studio/', 'viewer/') && LOOK.test(path) && !isTest(path)) ||
+      under(path, 'battle/src/', 'docs/art/') ||
+      path === 'battle/ART.md' ||
+      BRAND_TOOLS.has(path),
   ],
   ['copy-editor', (path) => isMarkdown(path) || (under(path, 'table/', 'studio/', 'viewer/') && path.endsWith('.html'))],
   [

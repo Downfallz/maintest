@@ -7,9 +7,9 @@
 - Path-scoped rules live in `.claude/rules/`. They load automatically when you touch matching files.
 - Subagents in `.claude/agents/`: `domain-reviewer` (DDD purity review), `test-engineer` (writes tests first),
   `code-reviewer` (adversarial review of a diff).
-- Reviewers by area: `host-reviewer`, `pages-reviewer`, `security-reviewer`, `infra-reviewer`, `stats-reviewer`
-  (a learning claim), `copy-editor` (the English). `archivist` answers "what is decided about X?" with ADR
-  numbers. `/reviewers` picks the reviewers a diff calls for (`scripts/review/reviewers.mjs`), runs them and
+- Reviewers by area: `host-reviewer`, `pages-reviewer`, `design-reviewer` (the brand, the pictures and reuse),
+  `security-reviewer`, `infra-reviewer`, `stats-reviewer` (a learning claim), `copy-editor` (the English).
+  `archivist` answers "what is decided about X?" with ADR numbers. `/reviewers` picks the reviewers a diff calls for (`scripts/review/reviewers.mjs`), runs them and
   checks each finding. `code-reviewer` and `host-reviewer` keep a memory under `.claude/agent-memory/` (a trial).
 - For the board game translation (`docs/tabletop/plan.md`):
   `boardgame-director` (what survives the table), `tabletop-mathematician` (measures a candidate rule set),

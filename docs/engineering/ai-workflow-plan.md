@@ -149,6 +149,7 @@ Path-scoped rules stay for what spans directories with no common parent. One hom
 | --- | --- |
 | `host-reviewer` | Who may call a route, status and error codes, idempotence, the journal, two processes on one table, the queues. |
 | `pages-reviewer` | The static pages and the battle view: 320 px, touch, accessibility, the service worker, the identity. |
+| `design-reviewer` | The brand, the pictures and the UI against `docs/art/branding.md` and the art direction; what exists and could be reused. |
 | `security-reviewer` | Tokens, sign-in, sessions, operator routes, rate limits, secrets in logs, headers, Web Push. |
 | `infra-reviewer` | Bicep, workflows, the image: least privilege, cost, the way back, what becomes a hand step. |
 | `stats-reviewer` | A learning claim against ADR 0049 and the paired reading. |

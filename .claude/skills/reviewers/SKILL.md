@@ -1,6 +1,6 @@
 ---
 name: reviewers
-description: Review the current branch, or a pull request, with the reviewers its paths call for (scripts/review/reviewers.mjs) - code, domain, host, pages, copy, infrastructure, security, statistics - run in parallel, then check each finding against the code and sort it - fix now, an issue, or dismissed with the reason. Use before /ship, after /verify, or when the owner says "relis", "review", "fais relire". Named reviewers because Claude Code has its own /review.
+description: Review the current branch, or a pull request, with the reviewers its paths call for (scripts/review/reviewers.mjs) - code, domain, host, pages, design, copy, infrastructure, security, statistics - run in parallel, then check each finding against the code and sort it - fix now, an issue, or dismissed with the reason. Use before /ship, after /verify, or when the owner says "relis", "review", "fais relire". Named reviewers because Claude Code has its own /review.
 ---
 
 # Reviewers
