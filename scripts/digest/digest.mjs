@@ -1,18 +1,21 @@
 // The morning digest (docs/engineering/ai-workflow-plan.md, W6): one phone screen, in French, of what merged,
-// what is red, what waits for the owner and what is left open. The /digest skill gathers the facts with the
-// GitHub and session tools into a JSON file; this script adds what merged from git and writes the text, so the
-// digest reads the same every morning and studio/digest.test.js can hold its shape.
+// what is red, what waits for the owner and what is left open. It reads git and GitHub's REST API itself (a
+// session's proxy signs the requests; a fresh session fired by the scheduled task has no GitHub tools), so the
+// digest reads the same every morning and studio/digest.test.js can hold its shape. It only reads.
 //
-//   git fetch origin main && node scripts/digest/digest.mjs <facts.json>
+//   git fetch origin main && node scripts/digest/digest.mjs [facts.json]
 //
-// The facts (every field optional; a list left out reads as empty, a run left out as unknown):
+// The optional facts file adds what only the session tools know, and overrides what the script would read
+// (every field optional; a list left out reads as empty, a run left out as unknown):
 //   now          ISO time of the run; since, the start of the window, defaults to 24 hours before it.
-//   merged       [{number, title}]: read from origin/main's first parents when left out.
-//   runs         {main, deploy, nightly}: each {status: green | red | running, url}.
+//   merged       [{number, title}]: read from origin/main's first parents.
+//   runs         {main, deploy, nightly}: each {status: green | red | running, url}, read from Actions.
 //   health       [{number, title, label}]: the open red-main and red-nightly issues.
-//   pullRequests [{number, title, checks: green | red | running, openThreads, draft}]: the open ones.
-//   sessions     [{title, needs}]: sessions waiting on the owner.
+//   pullRequests [{number, title, checks: green | red | running, openThreads, draft}]: the open ones; the REST
+//                API does not say whether a thread is resolved, so openThreads is left out unless given.
+//   sessions     [{title, needs}]: sessions waiting on the owner, from the session tools.
 //   issues       [{number, title, label, createdAt}]: open follow-up, flaky and ops issues.
+//   unread       [what could not be read]: printed last.
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -25,6 +28,10 @@ const PR_NUMBER = /\(#(\d+)\)$/;
 const LOOSE_ENDS = ['follow-up', 'flaky', 'ops'];
 const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
 const RUN_WORDS = { green: 'vert', red: 'rouge', running: 'en cours' };
+const HEALTH_LABELS = ['red-main', 'red-nightly'];
+const GITHUB_REMOTE = /github\.com[:/]([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+?)(?:\.git)?\/?$/;
+const RUNNING = new Set(['queued', 'pending', 'in_progress', 'requested', 'waiting']);
+const RED = new Set(['failure', 'timed_out', 'cancelled', 'action_required', 'startup_failure']);
 
 // A title is someone else's text: one line, and short enough for a phone.
 export function shorten(title) {
@@ -74,7 +81,7 @@ export function waitingFor(pullRequest) {
   if (pullRequest.checks === 'red') return 'rouge';
   if ((pullRequest.openThreads ?? 0) > 0) return `${pullRequest.openThreads} fil(s) ouvert(s)`;
   if (pullRequest.checks === 'running') return 'checks en cours';
-  if (pullRequest.checks === 'green') return 'prête, à fusionner';
+  if (pullRequest.checks === 'green') return pullRequest.openThreads === undefined ? 'verte' : 'prête, à fusionner';
   return null;
 }
 
@@ -139,20 +146,111 @@ export function render(facts) {
     lines.push(...looseEnds.slice(0, 3).map((issue) => `  #${issue.number} ${shorten(issue.title)}`));
   }
 
+  if ((facts.unread ?? []).length) lines.push('', `Non lu : ${facts.unread.join(', ')}`);
+
   return lines.join('\n');
 }
 
-export function withDefaults(facts, readMerged = mergedSince) {
-  const now = new Date(facts.now ?? Date.now());
-  const since = new Date(facts.since ?? now.getTime() - DAY_MS);
-  return { ...facts, now: now.toISOString(), since: since.toISOString(), merged: facts.merged ?? readMerged(since) };
+// One run, or a deployment's jobs, as the digest's three words.
+export function runStatus(run) {
+  if (RUNNING.has(run.status)) return 'running';
+  return run.conclusion === 'success' ? 'green' : 'red';
+}
+
+export function deployStatus(jobs) {
+  const deploy = jobs.filter((job) => job.name === 'deploy' || job.name.startsWith('deploy / '));
+  if (deploy.length === 0 || deploy.every((job) => job.conclusion === 'skipped')) return null;
+  if (deploy.some((job) => RED.has(job.conclusion))) return 'red';
+  if (deploy.some((job) => job.status !== 'completed')) return 'running';
+  return 'green';
+}
+
+export function checksStatus(checkRuns) {
+  if (checkRuns.length === 0) return undefined;
+  if (checkRuns.some((check) => RED.has(check.conclusion))) return 'red';
+  if (checkRuns.some((check) => check.status !== 'completed')) return 'running';
+  return 'green';
+}
+
+export function originRepository(url) {
+  const match = GITHUB_REMOTE.exec(url.trim());
+  if (!match) throw new Error(`origin is not a GitHub repository: ${url}`);
+  return `${match[1]}/${match[2]}`;
+}
+
+// Through curl, which follows the session's HTTPS proxy and so is signed by it; Node's fetch would go
+// around the proxy, unsigned, and meet the anonymous rate limit of a shared address.
+async function githubGet(path) {
+  const body = execFileSync(
+    'curl',
+    ['-sS', '--fail', '--max-time', '20', '-H', 'accept: application/vnd.github+json', `https://api.github.com${path}`],
+    { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 },
+  );
+  return JSON.parse(body);
+}
+
+// What GitHub says, field by field: a field that fails is named in unread and left out, so it reads as unknown.
+export async function readGitHub(repository, get = githubGet) {
+  const facts = { runs: {}, unread: [] };
+  const attempt = async (name, read) => {
+    try {
+      await read();
+    } catch {
+      facts.unread.push(name);
+    }
+  };
+  const base = `/repos/${repository}`;
+
+  await attempt('main', async () => {
+    const { workflow_runs: runs } = await get(`${base}/actions/workflows/ci.yml/runs?branch=main&event=push&per_page=5`);
+    if (runs.length) facts.runs.main = { status: runStatus(runs[0]), url: runs[0].html_url };
+    for (const run of runs) {
+      const { jobs } = await get(`${base}/actions/runs/${run.id}/jobs?filter=latest&per_page=100`);
+      const status = deployStatus(jobs);
+      if (status) {
+        facts.runs.deploy = { status, url: run.html_url };
+        break;
+      }
+    }
+  });
+  await attempt('nuit', async () => {
+    const { workflow_runs: runs } = await get(`${base}/actions/workflows/nightly.yml/runs?per_page=1`);
+    if (runs.length) facts.runs.nightly = { status: runStatus(runs[0]), url: runs[0].html_url };
+  });
+  await attempt('issues', async () => {
+    const issues = (await get(`${base}/issues?state=open&per_page=100`)).filter((issue) => !issue.pull_request);
+    const labelled = (labels) =>
+      issues.flatMap((issue) => {
+        const label = issue.labels.map((each) => each.name).find((name) => labels.includes(name));
+        return label ? [{ number: issue.number, title: issue.title, label, createdAt: issue.created_at }] : [];
+      });
+    facts.health = labelled(HEALTH_LABELS);
+    facts.issues = labelled(LOOSE_ENDS);
+  });
+  await attempt('PR', async () => {
+    const pulls = await get(`${base}/pulls?state=open&per_page=50`);
+    const read = [];
+    for (const pull of pulls) {
+      const { check_runs: checks } = await get(`${base}/commits/${pull.head.sha}/check-runs?per_page=100`);
+      read.push({ number: pull.number, title: pull.title, draft: pull.draft, checks: checksStatus(checks) });
+    }
+    facts.pullRequests = read;
+  });
+  return facts;
+}
+
+// The facts file wins over what was read, field by field; what it leaves out is read.
+export async function gather(given, { readMerged = mergedSince, readHub = readGitHub, repository } = {}) {
+  const now = new Date(given.now ?? Date.now());
+  const since = new Date(given.since ?? now.getTime() - DAY_MS);
+  const hub = await readHub(repository);
+  const facts = { ...hub, ...given, runs: { ...hub.runs, ...given.runs }, unread: [...(hub.unread ?? []), ...(given.unread ?? [])] };
+  return { ...facts, now: now.toISOString(), since: since.toISOString(), merged: given.merged ?? readMerged(since) };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const path = process.argv[2];
-  if (!path) {
-    console.error('usage: node scripts/digest/digest.mjs <facts.json>');
-    process.exit(2);
-  }
-  console.log(render(withDefaults(JSON.parse(readFileSync(path, 'utf8')))));
+  const given = path ? JSON.parse(readFileSync(path, 'utf8')) : {};
+  const repository = originRepository(execFileSync('git', ['remote', 'get-url', 'origin'], { encoding: 'utf8' }));
+  console.log(render(await gather(given, { repository })));
 }

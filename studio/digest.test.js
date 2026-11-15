@@ -3,7 +3,20 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { dayLabel, mergedFromLog, noteworthy, render, shorten, waitingFor, withDefaults } from '../scripts/digest/digest.mjs';
+import {
+  checksStatus,
+  dayLabel,
+  deployStatus,
+  gather,
+  mergedFromLog,
+  noteworthy,
+  originRepository,
+  readGitHub,
+  render,
+  runStatus,
+  shorten,
+  waitingFor,
+} from '../scripts/digest/digest.mjs';
 
 const NOW = '2026-11-16T11:40:00Z';
 
@@ -48,7 +61,11 @@ test('a pull request waits for the owner when it is green with no open thread, a
   assert.equal(waitingFor({ checks: 'red', openThreads: 2 }), 'rouge');
   assert.equal(waitingFor({ checks: 'green', openThreads: 2 }), '2 fil(s) ouvert(s)');
   assert.equal(waitingFor({ checks: 'running' }), 'checks en cours');
-  assert.equal(waitingFor({ checks: 'green', draft: true }), null);
+  assert.equal(waitingFor({ checks: 'green', openThreads: 0, draft: true }), null);
+});
+
+test('a green pull request whose threads were not read is green, not ready', () => {
+  assert.equal(waitingFor({ checks: 'green' }), 'verte');
 });
 
 test('a waiting pull request is listed with what it waits for', () => {
@@ -92,15 +109,83 @@ test('the merged pull requests are read from the squash subjects, and a commit w
   assert.deepEqual(mergedFromLog(log), [{ number: 600, title: 'Add the reviewers (W5)' }]);
 });
 
-test('the window defaults to the 24 hours before the run, and git is read only when merged is left out', () => {
+test('the window defaults to the 24 hours before the run, and a field the facts give is not read', async () => {
   let asked = null;
-  const facts = withDefaults({ now: NOW }, (since) => {
-    asked = since.toISOString();
-    return [];
-  });
+  const facts = await gather(
+    { now: NOW, runs: { nightly: { status: 'green' } }, sessions: [{ title: 'S' }] },
+    {
+      readMerged: (since) => {
+        asked = since.toISOString();
+        return [];
+      },
+      readHub: async () => ({ runs: { main: { status: 'red' }, nightly: { status: 'red' } }, unread: ['PR'] }),
+    },
+  );
   assert.equal(asked, '2026-11-15T11:40:00.000Z');
   assert.equal(facts.since, '2026-11-15T11:40:00.000Z');
-  assert.deepEqual(withDefaults({ now: NOW, merged: [] }, () => assert.fail('git read')).merged, []);
+  assert.deepEqual(facts.runs, { main: { status: 'red' }, nightly: { status: 'green' } });
+  assert.deepEqual(facts.sessions, [{ title: 'S' }]);
+  assert.deepEqual(facts.unread, ['PR']);
+  const given = await gather({ now: NOW, merged: [] }, { readMerged: () => assert.fail('git read'), readHub: async () => ({}) });
+  assert.deepEqual(given.merged, []);
+});
+
+test('what could not be read is named last', () => {
+  assert.match(render({ now: NOW, unread: ['PR', 'nuit'] }), /\n\nNon lu : PR, nuit$/);
+});
+
+test('a run is running until it completes, and green only on success', () => {
+  assert.equal(runStatus({ status: 'pending' }), 'running');
+  assert.equal(runStatus({ status: 'completed', conclusion: 'success' }), 'green');
+  assert.equal(runStatus({ status: 'completed', conclusion: 'cancelled' }), 'red');
+});
+
+test('a skipped deployment says nothing, and a called one reads its jobs', () => {
+  assert.equal(deployStatus([{ name: 'gate', conclusion: 'success' }, { name: 'deploy', conclusion: 'skipped' }]), null);
+  assert.equal(deployStatus([{ name: 'deploy / roll out', status: 'completed', conclusion: 'success' }]), 'green');
+  assert.equal(deployStatus([{ name: 'deploy / roll out', status: 'completed', conclusion: 'failure' }]), 'red');
+  assert.equal(deployStatus([{ name: 'deploy / roll out', status: 'in_progress', conclusion: null }]), 'running');
+});
+
+test('a pull request with no check run has no checks to report', () => {
+  assert.equal(checksStatus([]), undefined);
+  assert.equal(checksStatus([{ status: 'completed', conclusion: 'success' }, { status: 'completed', conclusion: 'skipped' }]), 'green');
+  assert.equal(checksStatus([{ status: 'completed', conclusion: 'failure' }]), 'red');
+});
+
+test('the repository is the origin on GitHub, and nothing else', () => {
+  assert.equal(originRepository('https://github.com/Downfallz/maintest.git\n'), 'Downfallz/maintest');
+  assert.equal(originRepository('git@github.com:Downfallz/maintest'), 'Downfallz/maintest');
+  assert.throws(() => originRepository('https://example.com/a/b'));
+});
+
+test('GitHub is read field by field, and a field that fails is named instead of guessed', async () => {
+  const answers = {
+    '/repos/o/r/actions/workflows/ci.yml/runs?branch=main&event=push&per_page=5': {
+      workflow_runs: [
+        { id: 2, status: 'in_progress', html_url: 'u2' },
+        { id: 1, status: 'completed', conclusion: 'success', html_url: 'u1' },
+      ],
+    },
+    '/repos/o/r/actions/runs/2/jobs?filter=latest&per_page=100': { jobs: [{ name: 'deploy', conclusion: 'skipped' }] },
+    '/repos/o/r/actions/runs/1/jobs?filter=latest&per_page=100': {
+      jobs: [{ name: 'deploy / roll out', status: 'completed', conclusion: 'success' }],
+    },
+    '/repos/o/r/issues?state=open&per_page=100': [
+      { number: 7, title: 'main is red', labels: [{ name: 'red-main' }], created_at: 'a' },
+      { number: 8, title: 'Left', labels: [{ name: 'follow-up' }], created_at: 'b' },
+      { number: 9, title: 'A pull request', labels: [{ name: 'follow-up' }], pull_request: {} },
+    ],
+  };
+  const facts = await readGitHub('o/r', async (path) => {
+    if (!(path in answers)) throw new Error(`404 on ${path}`);
+    return answers[path];
+  });
+  assert.deepEqual(facts.runs, { main: { status: 'running', url: 'u2' }, deploy: { status: 'green', url: 'u1' } });
+  assert.deepEqual(facts.health, [{ number: 7, title: 'main is red', label: 'red-main', createdAt: 'a' }]);
+  assert.deepEqual(facts.issues, [{ number: 8, title: 'Left', label: 'follow-up', createdAt: 'b' }]);
+  assert.deepEqual(facts.unread, ['nuit', 'PR']);
+  assert.equal(facts.pullRequests, undefined);
 });
 
 test('a busy morning still fits a phone screen', () => {
