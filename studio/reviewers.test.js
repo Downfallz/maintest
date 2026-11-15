@@ -27,9 +27,46 @@ test('a route change gets the host reviewer, and the security reviewer when it s
   ]);
 });
 
-test('a page change gets the pages reviewer, and its words the copy editor', () => {
+test('a page change gets the pages reviewer, its look the design reviewer, and its words the copy editor', () => {
   assert.deepEqual(reviewersFor(['table/lobby.js']), ['code-reviewer', 'pages-reviewer']);
-  assert.deepEqual(reviewersFor(['table/lobby.html']), ['code-reviewer', 'pages-reviewer', 'copy-editor']);
+  assert.deepEqual(reviewersFor(['table/lobby.html']), [
+    'code-reviewer',
+    'pages-reviewer',
+    'design-reviewer',
+    'copy-editor',
+  ]);
+});
+
+test('a style sheet, an icon or a picture gets the design reviewer', () => {
+  for (const path of ['table/identity.css', 'studio/studio.css', 'viewer/viewer.css', 'table/icon.svg']) {
+    assert.deepEqual(reviewersFor([path]), ['code-reviewer', 'pages-reviewer', 'design-reviewer'], path);
+  }
+  assert.deepEqual(reviewersFor(['table/battle-art/brute.webp']), ['code-reviewer', 'pages-reviewer', 'design-reviewer']);
+  assert.deepEqual(reviewersFor(['table/manifest.webmanifest']), ['code-reviewer', 'pages-reviewer', 'design-reviewer']);
+});
+
+test('the registries of the battle pictures get the design reviewer', () => {
+  for (const path of ['table/battle-art.js', 'table/battle-evolution-art.js', 'table/battle-warped-hybrid-art.js']) {
+    assert.deepEqual(reviewersFor([path]), ['code-reviewer', 'pages-reviewer', 'design-reviewer'], path);
+  }
+});
+
+test('the battle renderer gets the design reviewer besides the pages reviewer', () => {
+  assert.deepEqual(reviewersFor(['battle/src/spell-effects.ts']), ['code-reviewer', 'pages-reviewer', 'design-reviewer']);
+});
+
+test('the brand, the art direction and their tools get the design reviewer', () => {
+  assert.deepEqual(reviewersFor(['docs/art/branding.css']), ['code-reviewer', 'design-reviewer']);
+  assert.deepEqual(reviewersFor(['docs/art/spell-vfx.md']), ['design-reviewer', 'copy-editor']);
+  assert.deepEqual(reviewersFor(['battle/ART.md']), ['design-reviewer', 'copy-editor']);
+  assert.deepEqual(reviewersFor(['docs/art/images/branding/lobby-phone.jpg']), ['code-reviewer', 'design-reviewer']);
+  assert.deepEqual(reviewersFor(['scripts/sync-branding.mjs']), ['code-reviewer', 'design-reviewer']);
+  assert.deepEqual(reviewersFor(['scripts/matte-opaque-art.py']), ['code-reviewer', 'design-reviewer']);
+});
+
+test('a page script or a capture of a test run is not a design change', () => {
+  assert.deepEqual(reviewersFor(['table/battle-planning.js']), ['code-reviewer', 'pages-reviewer']);
+  assert.deepEqual(reviewersFor(['docs/tabletop/images/battle-lab/lab-phone.png']), ['code-reviewer']);
 });
 
 test('a page test or a browser spec is not a page', () => {
