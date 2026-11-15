@@ -221,6 +221,11 @@ test('the readings go one file each, and one that fails is written as its error 
     }
     assert.match(tools.log('az'), /api\.loganalytics\.io\/v1\/workspaces\/ws-1\/query/);
     assert.match(tools.log('az'), /storageAccounts\/st\/queueServices\/default\/providers\/Microsoft\.Insights\/metrics/);
+    const metrics = tools.log('az').split('\n').filter((line) => line.includes('Microsoft.Insights/metrics'));
+    assert.equal(metrics.length, 4);
+    for (const line of metrics) {
+      assert.match(line, /timespan=\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\/\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ(&|\s|$)/, 'a start and an end, as the metrics API takes them');
+    }
   } finally {
     tools.done();
   }

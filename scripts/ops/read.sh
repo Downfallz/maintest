@@ -37,10 +37,13 @@ post() {
   az rest --method post --url "$1" --body "$2" --output json "${@:3}"
 }
 
+# The last 24 hours as the metrics API takes them: a start and an end, not a duration.
+window="$(date -u -d '24 hours ago' +%Y-%m-%dT%H:%M:%SZ)/$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
 # A metric over the last 24 hours, by hour; a filter, URL-encoded, narrows it to one dimension.
 metric() {
   local resource="$1" name="$2" aggregation="$3" filter="${4:-}"
-  get "$resource/providers/Microsoft.Insights/metrics?api-version=2023-10-01&metricnames=$name&aggregation=$aggregation&interval=PT1H&timespan=PT24H${filter:+&%24filter=$filter}"
+  get "$resource/providers/Microsoft.Insights/metrics?api-version=2023-10-01&metricnames=$name&aggregation=$aggregation&interval=PT1H&timespan=$window${filter:+&%24filter=$filter}"
 }
 
 # The console lines of the last 24 hours that say something failed, counted by app and line; "deliveries, onto"
