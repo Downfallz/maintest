@@ -109,6 +109,20 @@ circle a launcher may crop a maskable icon to; the manifest names each picture `
 and `table/branding.test.js` reads each one's ground against deep slate. `notification-badge.svg` and `.png` are the white silhouette Android masks
 into the status bar.
 
+## Design system
+
+The identity is also published as a design system other sessions build on: tokens with a usage note each, the type
+scale with Marcellus, the radii and cuts, the shared parts of `identity.css`, a card per shared component, and the
+rune and app icons. It is private to the owner: <https://claude.ai/artifact/2wUm1qzLpxW4m69UVhe9PR>.
+
+Its sources live in [`design-system/`](design-system/): the brand book (`README.md`), the usage notes
+(`tokens.notes.json`), the previews' frame (`frame.css`) and the component cards. The values are not copied there:
+`node scripts/design-system/build.mjs` reads them from `branding.css` and `identity.css`, and
+`table/design-system.test.js` fails when a palette colour has no usage note, a note has no colour, or a card draws
+a raw colour. After a change to the palette, a shared part or these sources, a session rebuilds the folder and
+publishes it to the same page: the files under `project/` in one call, the page's index read again and its
+`lastChange` set, and a changed picture uploaded first.
+
 ## Covered surfaces
 
 Lobby (including accounts, friends and devices), leaderboard, classic match and replay, Mutation Tree,

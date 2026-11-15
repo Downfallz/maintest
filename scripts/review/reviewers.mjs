@@ -45,7 +45,7 @@ const addsStyle = (path, added) =>
   (added.get(path) ?? []).some((line) => LOOKS_LIKE_STYLE.some((look) => look.test(line)));
 
 // What makes the brand and the art: the palette's synchronizer and the matte of the art.
-const BRAND_TOOLS = new Set(['scripts/sync-branding.mjs', 'scripts/matte-opaque-art.py']);
+const BRAND_TOOLS = new Set(['scripts/sync-branding.mjs', 'scripts/matte-opaque-art.py', 'scripts/design-system/build.mjs']);
 
 // What decides which jobs CI and the local gate run (ADR 0182).
 const GATE_FILES = new Set(['studio/browser/plan.js', 'studio/browser/flakes.js', 'scripts/verify.sh']);

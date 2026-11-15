@@ -62,6 +62,7 @@ test('the brand, the art direction and their tools get the design reviewer', () 
   assert.deepEqual(reviewersFor(['docs/art/images/branding/lobby-phone.jpg']), ['code-reviewer', 'design-reviewer']);
   assert.deepEqual(reviewersFor(['scripts/sync-branding.mjs']), ['code-reviewer', 'design-reviewer']);
   assert.deepEqual(reviewersFor(['scripts/matte-opaque-art.py']), ['code-reviewer', 'design-reviewer']);
+  assert.deepEqual(reviewersFor(['scripts/design-system/build.mjs']), ['code-reviewer', 'design-reviewer']);
 });
 
 test('a page script named without its diff, or a capture of a test run, is not a design change', () => {
