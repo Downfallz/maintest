@@ -1,6 +1,6 @@
 # Onboarding: tutorials played on the table, and concept cards
 
-Status: accepted, 2026-11-15. Nothing is built.
+Status: accepted, 2026-11-15. O1 built (ADR 0187); O2 next.
 
 ## What the owner asked for
 
@@ -102,6 +102,12 @@ give what is said and when. It reuses everything ADR 0179 built, and the regress
 1. **O1, the ADR and the words.** An ADR: a tutorial is a repository scenario with a lesson block; question kinds
    the lesson does not teach are answered from the person's recorded answers; the account keeps the tutorials done
    and skipped. Glossary: **Tutorial**, **Lesson step**, **Concept card**, **Assisted question**. Docs only.
+
+   *Built (2026-11-15)*: [ADR 0187](../adr/0187-teach-by-tutorials-cut-from-repository-scenarios.md) records the
+   six settled answers as one decision: the lesson block on a repository scenario, the assisted questions checked
+   as the scripted opponent's and handed back at the first that does not fit, the steps in the phase tips' place,
+   done and skipped kept with the game settings, signed-in accounts only. The glossary has the four terms. Left
+   to O2: the block's exact fields in `ScenarioFile`, and how a lesson names the question kinds it teaches.
 2. **O2, the tutorial file.** The `tutorial` block read and written by `ScenarioFile`, `scenarios/tutorials/`
    read by `RepositoryScenarios`, and `ScenarioFileTests` holding each tutorial: it rebuilds, every step is reached
    when the recorded answers are played, and every concept a step names exists. One tutorial file, tutorial 1, as
