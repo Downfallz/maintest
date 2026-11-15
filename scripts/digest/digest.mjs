@@ -199,11 +199,8 @@ export function originRepository(url) {
 // around the proxy, unsigned, and meet the anonymous rate limit of a shared address.
 async function githubGet(path) {
   // NOSONAR: javascript:S4036, as for git above; the path is built from the origin's owner/name and fixed routes.
-  const body = execFileSync( // NOSONAR
-    'curl',
-    ['-sS', '--fail', '--max-time', '20', '-H', 'accept: application/vnd.github+json', `https://api.github.com${path}`],
-    { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 },
-  );
+  const args = ['-sS', '--fail', '--max-time', '20', '-H', 'accept: application/vnd.github+json', `https://api.github.com${path}`];
+  const body = execFileSync('curl', args, { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }); // NOSONAR
   return JSON.parse(body);
 }
 
