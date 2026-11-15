@@ -1,6 +1,6 @@
 # Plan: the AI workflow, from an idea to a merged pull request
 
-Status: accepted in part, 2026-11-14. The owner settled questions 1, 2, 3 and 5 (at the end); W0 to W3 are built.
+Status: accepted in part, 2026-11-14. The owner settled questions 1, 2, 3 and 5 (at the end); W0 to W4 are built.
 Each stage below is one pull request, or one settings change that only the owner can make.
 
 ## What the owner asked for
@@ -301,6 +301,14 @@ Each stage is one pull request with its tests, and leaves the gate green.
    order in the day and slug. Two branches still meet in a generated index: the command settles it.
 5. **W4, the pipeline.** `/plan`, `/stage`, `/ship`, `/wrap-up`, `/browser-check`, the new `/verify`, the
    `Stop` hook.
+   *Built (2026-11-15)*: the skills under `.claude/skills/`, `/plan` named `/new-plan` because Claude Code's
+   own `/plan` is its plan mode. `/verify` runs `scripts/verify.sh`: Azurite started (`scripts/gate/azurite.sh`,
+   shared with the `SessionStart` hook), the engine and the pages always, and the battle bundle, the learning
+   project and the content builder when `studio/browser/plan.js --gate` calls for them; it records the tree it
+   passed on. The `Stop` hook (`.claude/hooks/stop.sh`) compares the working tree with it
+   (`scripts/gate/state.sh changed`, per branch, markdown included) and stops the turn once per tree to say so,
+   or waits while a gate runs; `studio/gate-hook.test.js` tries both on a throwaway repository. Not proven before the first
+   sessions use them: `/wrap-up`'s issues and labels, and `/browser-check` on the real-engine and release jobs.
 6. **W5, the reviewers.** The agents, `/review`, the memory trial.
 7. **W6, scheduled work.** The morning digest. Then, one at a time, the weekly run and the review trigger.
 8. **W7, operations.** `ops-report`, the smoke test, the alerts, the runbooks, `/ops`.

@@ -40,7 +40,7 @@ An area marked * has its own `AGENTS.md` (and a `CLAUDE.md` that imports it): re
 | `models/` | Trained policies (`policy.json`, small, committed with their evaluation). See `models/README.md`. |
 | `infra/` * | The hosted table on Azure behind Cloudflare: `main.bicep`, `bootstrap.sh`, `README.md` (ADR 0080-0082, 0162, 0175). |
 | `Dockerfile` | The table's image, built and tried by `.github/workflows/image.yml` before it is pushed and deployed. |
-| `scripts/` | The learning loop's `iterate.sh` and readers, `spells-report/`, `workflow-metrics.py` (docs/reference/commands.md). |
+| `scripts/` | The local gate's `verify.sh` and `gate/`, the learning loop's `iterate.sh` and readers, `spells-report/`, `workflow-metrics.py` (docs/reference/commands.md). |
 | `tests/` | One test project per layer, plus `Cli.Tests` (the hosts) and `Architecture.Tests` (layering and these files). |
 | `docs/` | Indexed in `docs/README.md`: every plan, the ADRs, the domain, the tabletop, art, learning, engineering. |
 | `docs/reference/commands.md` | Every command, flag and route, one heading per command. |
@@ -68,7 +68,8 @@ dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst   # valida
 ```
 
 Every other command (play, simulate, evaluate, benchmark, studio, table, table-tend, table-worker, the scenarios,
-the learning CLI, iterate.sh) is in `docs/reference/commands.md`. `/verify` runs the gate.
+the learning CLI, iterate.sh) is in `docs/reference/commands.md`. `/verify` runs the gate (`scripts/verify.sh`): the
+battle bundle, the Python side and DataBuilder when the diff calls for them, the rest always.
 
 ## Definition of done
 

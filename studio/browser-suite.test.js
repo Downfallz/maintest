@@ -7,7 +7,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { everything, outputs, plan } from './browser/plan.js';
+import { everything, gate, outputs, plan } from './browser/plan.js';
 import { flaked } from './browser/flakes.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -114,6 +114,37 @@ test('a test that passed only on its retry is reported, and no other', () => {
 
   assert.deepEqual(flaked(report), ['table.ux.spec.js › lobby › lists [phone]', 'table.ux.spec.js › opens [desktop]']);
   assert.deepEqual(flaked({}), []);
+});
+
+// The local gate (scripts/verify.sh) always builds and tests the engine and the pages; the rest is the diff's.
+test('the local gate adds nothing for markdown, a page test or a hook alone', () => {
+  const none = { battle: false, learning: false, content: false };
+  assert.deepEqual(gate([]), none);
+  assert.deepEqual(gate(['docs/adr/0182-x.md', 'learning/README.md', 'battle/README.md', 'table/lobby.test.js', '.claude/hooks/stop.sh']), none);
+});
+
+test('the local gate rebuilds the battle bundle for a change to the battle view', () => {
+  assert.deepEqual(gate(['battle/src/scene.ts']), { battle: true, learning: false, content: false });
+});
+
+// battle/src imports the table's own modules (battle/src/target-preview.ts reads table/battle-targets.js).
+test('the local gate rebuilds the battle bundle for a table module the bundle may import', () => {
+  for (const path of ['table/battle-targets.js', 'table/account.js']) {
+    assert.deepEqual(gate([path]), { battle: true, learning: false, content: false }, path);
+  }
+});
+
+test('the local gate runs the learning project for what its lint and tests read', () => {
+  for (const path of ['learning/src/downfall_learning/clone.py', 'scripts/sweep-weight.py', 'scripts/iterate.sh', 'viewer/samples/evaluation.json', 'studio/value.fixture.json', 'data/README.md']) {
+    assert.deepEqual(gate([path]), { battle: false, learning: true, content: false }, path);
+  }
+});
+
+test('the local gate builds the content for the content and for what the builder is built from', () => {
+  assert.deepEqual(gate(['data/spells/pummel.json']), { battle: false, learning: true, content: true });
+  for (const path of ['tools/DownfallArena.DataBuilder/Program.cs', 'src/DownfallArena.Domain/Match.cs', 'Directory.Packages.props']) {
+    assert.deepEqual(gate([path]), { battle: false, learning: false, content: true }, path);
+  }
 });
 
 // A job that is not among the gate's needs can fail while the one required check stays green.

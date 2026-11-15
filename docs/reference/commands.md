@@ -12,6 +12,34 @@ All commands run from the repository root.
 What CI runs, and what `/verify` runs before a commit. The rules for when each part applies are in
 `AGENTS.md` ("Definition of done").
 
+### verify.sh
+
+```bash
+scripts/verify.sh          # the engine and the pages always; the rest as the diff against origin/main calls for
+scripts/verify.sh --all    # every step, whatever the diff
+```
+
+The local gate, as `/verify` runs it. Of the steps above, the battle bundle, the Python side and DataBuilder run
+only when the diff calls for them, or when what they build is missing; everything else always runs. It starts Azurite when it is installed (`scripts/gate/azurite.sh`), always
+restores, builds, format-checks and tests the engine and runs the pages' tests, and adds the battle bundle, the
+learning project and the content builder when `node studio/browser/plan.js --gate` calls for them. It stops at
+the first failure and prints a summary; its last lines say whether the storage tests were skipped and what the
+browser suite would play (`/browser-check`). Once every step passed, it records the tree it saw.
+
+### gate/state.sh
+
+```bash
+scripts/gate/state.sh changed    # the paths changed since the last green gate on this branch, markdown included
+scripts/gate/state.sh tree       # the working tree's fingerprint
+scripts/gate/state.sh record     # what verify.sh runs once it passed, with the tree it started on
+scripts/gate/state.sh running    # exits 0 while verify.sh runs
+```
+
+What the last green gate saw, kept under the git directory (`claude-gate/`), never committed. With no gate
+recorded on this branch, `changed` starts from where the branch left `main`. The `Stop` hook
+(`.claude/hooks/stop.sh`) reads it and says once, per tree, that files changed after the last gate; it waits
+while a gate runs. `studio/gate-hook.test.js` tests both on a throwaway repository.
+
 ### Build the battle view
 
 ```bash

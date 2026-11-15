@@ -4,6 +4,7 @@
 //
 //   git diff --name-only <base> HEAD | node studio/browser/plan.js    # what those paths call for
 //   node studio/browser/plan.js --all                                  # everything: a dispatch, the nightly run
+//   git diff --name-only origin/main... | node studio/browser/plan.js --gate   # the local gate's optional steps
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -99,6 +100,29 @@ export function everything() {
   return { journeys: 'all', realEngine: true, release: true, image: true };
 }
 
+// What the local gate (scripts/verify.sh) adds to the steps it always runs, each with the paths it reads: the
+// battle bundle is rebuilt from `battle/` and the table's modules it imports (`table/battle-*.js`, `account.js`); the learning project lints and runs `scripts/` (test_iterate_script.py)
+// and reads the samples, the studio's value fixture and the content, its README included (test_knobs.py); the
+// content builder is built from the engine. Markdown is read by the learning tests only.
+const isCode = (path) => !path.endsWith('.md');
+const GATE_STEPS = {
+  battle: (path) =>
+    isCode(path) &&
+    (path.startsWith('battle/') || (path.startsWith('table/') && !path.startsWith('table/battle-build/') && !path.endsWith('.test.js'))),
+  learning: (path) =>
+    (isCode(path) && (path.startsWith('learning/') || path.startsWith('scripts/') || path.startsWith('viewer/samples/'))) ||
+    path === 'studio/value.fixture.json' ||
+    path.startsWith('data/'),
+  content: (path) =>
+    isCode(path) && (path.startsWith('data/') || path.startsWith('tools/') || path.startsWith('src/') || BUILD_FILES.has(path)),
+};
+
+/** The local gate's optional steps the changed paths call for. */
+export function gate(paths) {
+  const changed = paths.map((line) => line.trim()).filter(Boolean);
+  return Object.fromEntries(Object.entries(GATE_STEPS).map(([step, reads]) => [step, changed.some(reads)]));
+}
+
 /** The plan as the `key=value` lines a workflow appends to its outputs. */
 export function outputs(planned) {
   return [
@@ -112,6 +136,11 @@ export function outputs(planned) {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const here = dirname(fileURLToPath(import.meta.url));
   const specs = readdirSync(here).filter((file) => file.endsWith('.spec.js'));
-  const planned = process.argv.includes('--all') ? everything() : plan(readFileSync(0, 'utf8').split('\n'), specs);
-  console.log(outputs(planned));
+  if (process.argv.includes('--gate')) {
+    const steps = gate(readFileSync(0, 'utf8').split('\n'));
+    console.log(Object.entries(steps).map(([step, called]) => `${step}=${called}`).join('\n'));
+  } else {
+    const planned = process.argv.includes('--all') ? everything() : plan(readFileSync(0, 'utf8').split('\n'), specs);
+    console.log(outputs(planned));
+  }
 }

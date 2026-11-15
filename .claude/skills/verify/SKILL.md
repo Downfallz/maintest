@@ -1,29 +1,33 @@
 ---
 name: verify
-description: Run the full local quality gate (restore, build with warnings as errors, format check, all tests) exactly as CI does and report the results. Use before committing, before opening a PR, or whenever asked "does it pass".
-disable-model-invocation: false
+description: Run the local quality gate as CI does - the storage emulator started, the engine built with warnings as errors, format-checked and tested, the pages' tests, and what the diff calls for (the battle bundle, the learning project, the content builder) - and report the results. Use before committing, before opening a PR, or whenever asked "does it pass".
 ---
 
 # Verify
 
-Run these commands from the repository root, in order, stopping at the first failure:
-
 ```bash
-npm --prefix battle ci --ignore-scripts && npm --prefix battle run build
-dotnet restore
-dotnet build --no-restore
-dotnet format --verify-no-changes --no-restore
-dotnet test --no-build
-node --test studio/*.test.js table/*.test.js
+scripts/verify.sh          # the steps this branch's changes call for
+scripts/verify.sh --all    # every step, whatever the diff
 ```
+
+The script fetches nothing: run `git fetch origin main` first, or it compares with a stale `main` (and with no
+`origin/main` at all it runs every step). It always restores, builds, format-checks and tests the engine and
+runs the pages' tests; it adds the battle bundle, the learning project and the content builder when the diff
+calls for them (`studio/browser/plan.js --gate`); it starts Azurite when it is installed. It stops at the first
+failure, and records the tree it passed on, which quiets the `Stop` hook until the files change again.
+
+Run it in the background (`run_in_background`): it takes three minutes or more, and longer with the learning
+project.
 
 Rules:
 
 - If `dotnet` is not available, say so plainly. Do not report the gate as passed.
-- `node --test` needs no install: it is Node's own runner and neither page has a dependency (ADR 0024).
-- The battle view bundle (ADR 0123) is built, not committed, and the host's route tests read it: without the npm
-  step, `TableFilesTests` fails and says so. If `npm` is not available, say the battle view was not built.
-- If `dotnet format --verify-no-changes` fails, run `dotnet format` to fix it, show the resulting diff, and
-  re-run the gate.
+- If `dotnet format --verify-no-changes` fails, run `dotnet format`, show the resulting diff, and run the gate
+  again.
 - If a test fails, quote the failing test name and assertion message verbatim. Do not skip or delete it.
-- Report a compact summary: each command, pass or fail, and counts (errors, warnings, tests passed/failed).
+- The summary's `note storage tests` line means the storage tests were skipped: report them as skipped, not
+  passed.
+- The summary's `note browser` line is what CI will play for this diff. When it names journeys, or says
+  `real-engine=true` or `release=true`, run `/browser-check` before `/ship`, or say they were left to CI.
+- Report a compact summary: each step, pass, fail or skip, and the counts (errors, warnings, tests passed,
+  failed, skipped).
