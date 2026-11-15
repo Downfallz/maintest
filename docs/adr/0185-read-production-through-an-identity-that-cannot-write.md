@@ -5,26 +5,30 @@ Status: Accepted
 
 ## Context
 
-A session cannot see the hosted table: it has no Azure and no portal. The owner reads the portal aloud from a
-phone, and a fault (a revision that restarts, a tending job that fails, a turn the worker gave up on, a bill that
-grows) is found by a player or not at all (docs/engineering/ai-workflow-plan.md, W7). The one identity GitHub
+A session cannot see the hosted table: it has no Azure and no portal. The owner reads the portal on a phone and
+relays it by hand, and a fault (a revision that restarts, a tending job that fails, a turn the worker gave up on,
+a bill that grows) is found by a player or not at all (docs/engineering/ai-workflow-plan.md, W7). The one identity GitHub
 signs in with is the deployer's, which may change the resource group and assign roles (ADR 0082). The
 repository is public, so a workflow's log is public too.
 
 ## Decision
 
 A second app registration, `<prefix>-table-ops`, made by `infra/bootstrap.sh setup`, is federated to this
-repository's `ops` environment alone and holds Reader, Log Analytics Reader and Cost Management Reader on the
-resource group, and nothing else: it can read no blob, table or queue, and write nothing. `ops-report.yml` signs in
-with it every morning, and on demand, and prints a report to its log: the table's answer to `GET /api/lobby`, the
-revisions, the restarts and 5xx answers of the last 24 hours, the tending job's runs, the messages waiting in the
-queues, the turns given up on, the console's error lines and the month's cost against the budget. It prints counts
-and masked lines, never a record: an error line loses its emails, ids and long tokens and is cut to 160
-characters. `/ops` runs it and reads the log. `rollout.yml` asks the deployed table for `GET /api/lobby` once the
-deployment is up, and a deployment that does not answer is red. `main.bicep` adds an action group (an email and
-the Azure mobile app, to the address in the `TABLE_ALERT_EMAIL` secret) and the alerts it sends: 5xx answers,
-restarts of the API and of the worker, a turn given up on, a failed tending pass, and a budget of 5 a month in
-the billing currency (80 % and 100 % spent, 100 % forecast). Without the secret none of these is deployed.
+repository's `ops` environment alone. It holds Reader, Log Analytics Reader and Cost Management Reader on the
+resource group, and nothing else: it can read no blob, table or queue, and write nothing. The `ops` environment
+admits `main` alone, so no other branch's workflow can sign in as it.
+
+`ops-report.yml` signs in with it every morning, and on demand, and prints a report to its log: the table's answer
+to `GET /api/lobby`, the revisions, the restarts and 5xx answers of the last 24 hours, the tending job's runs, the
+messages waiting in the queues, the turns given up on, the console's error lines and the month's cost against the
+budget. It prints counts and masked lines, never a record: an error line loses its emails, ids and long tokens and
+is cut to 160 characters. `/ops` runs it and reads the log.
+
+`rollout.yml` asks the deployed table for `GET /api/lobby` once the deployment is up; a deployment that does not
+answer is red. `main.bicep` adds an action group, which emails the address in the `TABLE_ALERT_EMAIL` secret and
+notifies the Azure mobile app signed in with it, and the alerts it sends: 5xx answers, restarts of the API and of
+the worker, a turn given up on, a failed tending pass. A budget of 5 (billing currency) a month warns at 80 % and
+100 % spent, and at 100 % forecast. Without the secret none of these is deployed.
 
 ## Consequences
 

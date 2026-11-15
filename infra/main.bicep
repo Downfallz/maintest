@@ -177,9 +177,10 @@ var domainOn = !empty(customDomain)
 var alertsOn = !empty(alertEmail)
 var alertGroupName = '${namePrefix}-alerts'
 var alertGroupId = resourceId('Microsoft.Insights/actionGroups', alertGroupName)
-// The worker writes this line as it puts a turn on the poison queue, and the job this one when a pass fails
-// (AgentTurnWorker, TableTend): the console lines are the one place either is said.
-var givenUpQuery = 'ContainerAppConsoleLogs_CL | where Log_s has "given up on after"'
+// The worker writes "deliveries, onto" as it puts a turn on the poison queue, and the job this line when a pass
+// fails (AgentTurnWorker, TableTend): the console lines are the one place either is said. Not "given up on
+// after", which every host's banner says as it starts (studio/ops.test.js holds both).
+var givenUpQuery = 'ContainerAppConsoleLogs_CL | where Log_s has "deliveries, onto"'
 var tendFailedQuery = 'ContainerAppConsoleLogs_CL | where Log_s has "The tables could not be tended"'
 
 // Where the console lines go. Capped per day so a host that logs in a loop costs cents, not a surprise.

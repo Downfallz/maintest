@@ -102,6 +102,21 @@ federate() {
   return 0
 }
 
+# A GitHub environment only `main` may deploy to, with the GitHub CLI when it is signed in (ADR 0185): a federated
+# identity trusts an environment, and an environment with no branch rule is one any branch's workflow may name.
+main_only_environment() {
+  local environment="$1"
+  if ! command -v gh >/dev/null 2>&1 || ! gh auth status >/dev/null 2>&1; then
+    echo "  Restrict the '$environment' environment to main by hand (infra/runbooks/ops-identity.md, step 3)."
+    return 0
+  fi
+  gh api --method PUT "repos/$REPO/environments/$environment" --input - --silent <<<'{"deployment_branch_policy": {"protected_branches": false, "custom_branch_policies": true}}'
+  if [[ -z "$(gh api "repos/$REPO/environments/$environment/deployment-branch-policies" --jq '.branch_policies[] | select(.name == "main") | .name')" ]]; then
+    gh api --method POST "repos/$REPO/environments/$environment/deployment-branch-policies" -f name=main -f type=branch --silent
+  fi
+  return 0
+}
+
 # A role for a principal on a scope, unless it already holds it there.
 grant() {
   local principal_id="$1" role="$2" scope="$3"
@@ -160,6 +175,7 @@ setup() {
   for role in "${OPS_ROLES[@]}"; do
     grant "$ops_principal" "$role" "$scope"
   done
+  main_only_environment "$OPS_ENVIRONMENT"
 
   # The registration the platform signs the operator in with. No client secret: the platform uses the
   # implicit flow, which needs ID tokens issued, and only the people listed may hold a session (ADR 0082).

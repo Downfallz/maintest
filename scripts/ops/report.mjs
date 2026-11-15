@@ -14,7 +14,9 @@ const MAX_LINE = 160;
 const MAX_ERROR_LINES = 3;
 const BUDGET_WARNING = 0.8;
 const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
-const GIVEN_UP = 'given up on after';
+// The worker's line as it puts a turn on the poison queue (AgentTurnWorker). Not "given up on after": every host's
+// banner says that as it starts, and the dead-letter worker as it keeps the same turn.
+export const GIVEN_UP = 'deliveries, onto';
 const RUN_WORDS = { Succeeded: 'réussie', Failed: 'en échec', Running: 'en cours', Processing: 'en cours', Stopped: 'arrêtée' };
 
 // The Azure readings, in the order the last line names those it could not read.
@@ -156,15 +158,15 @@ export function concerns(readings, now) {
   if (restarts > 0) found.push(plural(restarts, 'redémarrage'));
   const spent = cost(readings.cost);
   const budget = budgetAmount(readings.budget);
-  if (spent && budget && spent.amount >= BUDGET_WARNING * budget) found.push(`${Math.round((100 * spent.amount) / budget)} % du budget`);
+  if (spent && budget && spent.amount >= BUDGET_WARNING * budget) found.push(`${Math.round((100 * spent.amount) / budget)}\u00a0% du budget`);
   return found;
 }
 
 function clock(time) {
-  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE, hour: 'numeric', minute: '2-digit', hourCycle: 'h23' })
     .formatToParts(new Date(time))
     .reduce((all, part) => ({ ...all, [part.type]: part.value }), {});
-  return `${parts.hour}:${parts.minute}`;
+  return `${Number(parts.hour)} h ${parts.minute}`;
 }
 
 function day(time) {
@@ -239,7 +241,7 @@ export function render(readings, now) {
       const money = (amount) => `${number(amount)} ${spent.currency}`.trim();
       lines.push(
         budget
-          ? `Coût du mois : ${money(spent.amount)} sur ${money(budget)} (${Math.round((100 * spent.amount) / budget)} %)`
+          ? `Coût du mois : ${money(spent.amount)} sur ${money(budget)} (${Math.round((100 * spent.amount) / budget)}\u00a0%)`
           : `Coût du mois : ${money(spent.amount)}`,
       );
     }

@@ -95,13 +95,13 @@ jobs:
           CUSTOM_DOMAIN: ${{ vars.TABLE_DOMAIN }}
           ONLY_CLOUDFLARE: ${{ vars.TABLE_ONLY_CLOUDFLARE == 'true' }}
           # Where the alerts and the budget's notices go (ADR 0185); unset, none are deployed. A secret, so the log
-          # masks it; handed over in a parameters file, so no command line holds it.
+          # masks it; read by jq from the environment into a parameters file, so no command line holds it.
           ALERT_EMAIL: ${{ secrets.TABLE_ALERT_EMAIL }}
         run: |
           relay="$RELAY_SKU"
           if [[ "$relay" == "none" ]]; then relay=""; fi
-          jq -n --arg email "$ALERT_EMAIL" \
-            '{"$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#", contentVersion: "1.0.0.0", parameters: {alertEmail: {value: $email}}}' \
+          trap 'rm -f "$RUNNER_TEMP/alerts.parameters.json"' EXIT
+          jq -n '{"$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#", contentVersion: "1.0.0.0", parameters: {alertEmail: {value: env.ALERT_EMAIL}}}' \
             > "$RUNNER_TEMP/alerts.parameters.json"
           az deployment group create \
             --resource-group "$RESOURCE_GROUP" \
@@ -112,7 +112,6 @@ jobs:
               customDomain="$CUSTOM_DOMAIN" onlyCloudflare="$ONLY_CLOUDFLARE" \
             --parameters @"$RUNNER_TEMP/alerts.parameters.json" \
             --query properties.outputs --output json > "$RUNNER_TEMP/outputs.json"
-          rm -f "$RUNNER_TEMP/alerts.parameters.json"
           url="$(jq -r .url.value "$RUNNER_TEMP/outputs.json")"
           redirect="$(jq -r .redirectUri.value "$RUNNER_TEMP/outputs.json")"
           # The address the next step asks: the platform's, which always has a certificate a client trusts, unless

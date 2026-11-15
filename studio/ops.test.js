@@ -9,7 +9,7 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, w
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { concerns, cost, logLines, mask, metricLatest, metricTotal, render, revisions, tending } from '../scripts/ops/report.mjs';
+import { GIVEN_UP, concerns, cost, logLines, mask, metricLatest, metricTotal, render, revisions, tending } from '../scripts/ops/report.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const NOW = '2026-11-16T10:23:00Z';
@@ -56,13 +56,13 @@ const healthy = () => ({
 test('a healthy table says so on its first line and fits a phone', () => {
   const text = render(healthy(), NOW);
   const lines = text.split('\n');
-  assert.match(lines[0], /^Production, 16 nov\. à 05:23/);
+  assert.match(lines[0], /^Production, 16 nov\. à 5 h 23/);
   assert.equal(lines[1], 'Rien à signaler.');
   assert.match(text, /Table : https:\/\/play\.example\.test répond 200 en 1,8 s/);
   assert.match(text, /downfall-table--new \(active, 1 réplica, saine\)/);
   assert.match(text, /Image : ghcr\.io\/downfallz\/downfall-table:7b37d70/);
   assert.match(text, /Maintenance 24 h : 2 passes, 0 en échec/);
-  assert.match(text, /Coût du mois : 0,42 CAD sur 5 CAD \(8 %\)/);
+  assert.match(text, /Coût du mois : 0,42 CAD sur 5 CAD \(8\u00a0%\)/);
   assert.ok(lines.length <= 20, `${lines.length} lines`);
   assert.ok(lines.every((line) => line.length <= 200));
 });
@@ -86,7 +86,11 @@ test('a failed tending pass, a turn given up on, 5xx answers and restarts are ea
     executions: { value: [{ properties: { status: 'Failed', startTime: '2026-11-16T10:17:00Z' } }] },
     '5xx': metric(2, 1),
     'restarts-worker': metric(3),
-    logs: logs(['downfall-worker', '  {"table":"t1"} given up on after 5 deliveries, onto agent-turns-poison: boom', 2]),
+    logs: logs(
+      ['downfall-worker', '  {"table":"t1"} given up on after 5 deliveries, onto agent-turns-poison: boom', 2],
+      ['downfall-worker', '  Turns: through the queue agent-turns, given up on after 5 deliveries onto agent-turns-poison, kept for good on agent-turns-dlq.', 4],
+      ['downfall-worker', '  Dead letter on agent-turns-dlq: {"table":"t1"} from agent-turns, given up on after 5 deliveries: boom', 2],
+    ),
   };
   assert.deepEqual(concerns(readings, NOW), [
     '1 passe de maintenance en échec',
@@ -96,9 +100,18 @@ test('a failed tending pass, a turn given up on, 5xx answers and restarts are ea
   ]);
 });
 
+test('the line that counts a turn given up on is the worker\'s alone, in the report and in the alert', () => {
+  const read = (path) => readFileSync(join(root, path), 'utf8');
+  assert.ok(read('src/DownfallArena.Application/Matches/Journaling/AgentTurnWorker.cs').includes(`deliveries, onto {poison.Name}`));
+  assert.ok(!read('src/DownfallArena.Cli/Table/TableHost.cs').includes(GIVEN_UP), 'the hosts\' banner');
+  assert.ok(!read('src/DownfallArena.Application/Work/DeadLetterWorker.cs').includes(GIVEN_UP), 'the dead-letter worker');
+  assert.ok(read('infra/main.bicep').includes(`Log_s has "${GIVEN_UP}"`), 'the alert');
+  assert.ok(read('scripts/ops/read.sh').includes(`Log_s has '${GIVEN_UP}'`), 'the error lines');
+});
+
 test('the cost is a concern from 80 % of the budget', () => {
   const readings = { ...healthy(), cost: { properties: { columns: [{ name: 'Cost' }, { name: 'Currency' }], rows: [[4.1, 'CAD']] } } };
-  assert.deepEqual(concerns(readings, NOW), ['82 % du budget']);
+  assert.deepEqual(concerns(readings, NOW), ['82\u00a0% du budget']);
 });
 
 test('the tending runs are counted over the 24 hours before the report', () => {

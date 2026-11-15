@@ -118,7 +118,7 @@ origin certificate, the binding and the sign-ins that go with it are a runbook:
 
 `ops-report.yml` prints a report of the table in production every morning and on demand, and `/ops` reads it; it
 signs in as an identity that reads the resource group and writes nothing (ADR 0185). The alerts (5xx answers,
-restarts, a turn given up on, a failed tending pass, a monthly budget of 5) go by email and to the Azure mobile app
+restarts, a turn given up on, a failed tending pass, a monthly budget of 5 in the billing currency) go by email and to the Azure mobile app
 once the `TABLE_ALERT_EMAIL` secret is set. Each deployment asks the table for `GET /api/lobby` once it is up and
 is red when it does not answer. The steps are runbooks: [runbooks/ops-identity.md](runbooks/ops-identity.md) and
 [runbooks/alerts.md](runbooks/alerts.md); [runbooks/README.md](runbooks/README.md) lists every one.
@@ -126,9 +126,9 @@ is red when it does not answer. The steps are runbooks: [runbooks/ops-identity.m
 | Resource | What it is for | What it costs |
 | --- | --- | --- |
 | Action group `downfall-alerts` | One email and one Azure app notice per alert | Emails and app notices: free at this volume |
-| Metric alerts `downfall-table-5xx`, `downfall-table-restarts`, `downfall-worker-restarts` | What the platform already measures, every 5 minutes over 15 | About $0.10 a month each |
+| Metric alerts `downfall-table-5xx`, `downfall-table-restarts`, `downfall-worker-restarts` | What the platform already measures, checked every 5 minutes over a 15-minute window | About $0.10 a month each |
 | Log alerts `downfall-turn-given-up`, `downfall-tend-failed` | The worker's and the job's own lines, once an hour | About $0.50 a month each, to check in the pricing calculator |
-| Budget `downfall-monthly` | 5 a month in the billing currency, told at 80 % and 100 % spent and 100 % forecast | Free |
+| Budget `downfall-monthly` | 5 (billing currency) a month; warns at 80 % and 100 % spent, and at 100 % forecast | Free |
 
 ## "Your turn" on a phone
 

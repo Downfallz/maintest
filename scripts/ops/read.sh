@@ -43,12 +43,13 @@ metric() {
   get "$resource/providers/Microsoft.Insights/metrics?api-version=2023-10-01&metricnames=$name&aggregation=$aggregation&interval=PT1H&timespan=PT24H${filter:+&%24filter=$filter}"
 }
 
-# The console lines of the last 24 hours that say something failed, counted by app and line.
+# The console lines of the last 24 hours that say something failed, counted by app and line; "deliveries, onto"
+# is the worker's line for a turn it gave up on (not "given up on", which every host's banner says).
 read -r -d '' ERRORS <<'KQL'
 ContainerAppConsoleLogs_CL
 | where TimeGenerated > ago(1d)
 | extend app = coalesce(column_ifexists('ContainerAppName_s', ''), column_ifexists('ContainerJobName_s', '')), stream = column_ifexists('Stream_s', '')
-| where stream == 'stderr' or Log_s has_any ('error', 'failed', 'could not', 'given up on', 'exception', 'unhandled')
+| where stream == 'stderr' or Log_s has_any ('error', 'failed', 'could not', 'exception', 'unhandled') or Log_s has 'deliveries, onto'
 | summarize n = count() by app, line = substring(Log_s, 0, 300)
 | top 200 by n desc
 KQL
