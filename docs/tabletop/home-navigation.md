@@ -1,17 +1,13 @@
 # Home navigation
 
-The home page has two jobs: explain Downfall Instinct to a visitor and bring a returning player to their next
-battle. It uses the [official palette](../art/branding.md) and existing battle artwork. This changes the static
-HTML/CSS/JavaScript presentation, using the existing account and seat APIs.
+The public [showcase](../../showcase/README.md) introduces the game. The application home brings a player
+to sign-in or to their next battle. Both use the [official palette](../art/branding.md).
 
 ## Page states
 
-- **Signed out on an account host:** a short tactical-game introduction beside three Stage 3 creatures
-  (Ravager, Deathstalker, Transcendent) set in depth on the eclipse battlefield, nearest lowest and largest, none
-  hiding another; an Evolution strip (Warped, Stormborn, Cataclysm: Stage 1 to 3, loaded as it scrolls into view);
-  three steps (mutations, tempo, spells); four things to do (friends and rematches, ranked or unranked, the bell and
-  phone notices, the bot); and the existing Google sign-in. No empty game lists, friend panel or device settings.
-  The developer host still uses its typed-name sign-in.
+- **Signed out on an account host:** the player sees sign-in immediately and can return to the showcase from
+  the footer. Google sign-in and the local developer form use the existing account flow. Operator notices and
+  account errors appear on this screen.
 - **Signed in:** a greeting, New battle, invitations, Your games, and Find an opponent. Account actions stay
   behind the player's avatar/name. Match cards retain resume, join, invitation and turn-state behaviours.
   Your games groups its Ongoing and Finished tabs against players and against bots, at most five of each in
@@ -35,7 +31,7 @@ a viewpoint before either private board is read.
 | Join with a code | Dialog validating an eight-character invitation and following `/j/<code>` | Signed-in players and local accounts-off hosts |
 | Settings | One dialog of tabs (below) | Guests in the main menu; signed-in players in the account menu, beside who is signed in |
 | Admin | Existing `/admin` page | Existing operator check |
-| Account avatar/name | Who is signed in, Settings, and Sign out (confirmed) on this device | Signed-in players |
+| Account avatar/name | Who is signed in, Settings, Game website, and Sign out (confirmed) on this device | Signed-in players |
 | Bell (Notifications) | Dialog of what waits for the player, each with its action (below) | Signed-in players |
 
 Settings gathers what a player sets once rather than visits: its tabs are **Game** (the reading pace, speed, phase

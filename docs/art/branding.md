@@ -52,8 +52,7 @@ variants into slate. Copper is a secondary decorative accent, not a new gameplay
 - A cut shape clips what is drawn outside it: keep its focus ring inside (`outline-offset` negative).
 - `table/identity.css` is the last sheet of every page of the table and owns these shared parts. Page sheets own
   layout. Restyle a shared button, card, window or header there, not in a page sheet.
-- The font is `table/fonts/marcellus-latin-400.woff2` (SIL OFL 1.1, `table/fonts/OFL.txt`), served by the table's
-  host only. The studio and the viewer fall back to the serif named after it.
+- The font is `table/fonts/marcellus-latin-400.woff2` (SIL OFL 1.1, `table/fonts/OFL.txt`), served by the table and copied into the public showcase at build time. The studio and the viewer fall back to the serif named after it.
 - In a match the round's bar is the only bar: the site's menu, bell and account sit at its right end.
 
 ## Usage

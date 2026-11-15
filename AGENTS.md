@@ -33,6 +33,7 @@ An area marked * has its own `AGENTS.md` (and a `CLAUDE.md` that imports it): re
 | `benchmarks/` | The fixed benchmark seeds and one outcome digest per content hash, verified in CI. See `benchmarks/README.md`. |
 | `viewer/` | Static HTML viewer for learning artifacts (traces, batches, training runs). See `viewer/README.md`. |
 | `studio/` * | Static HTML content studio: browse, edit, version and try the content; and the browser suite (`studio/browser/`). |
+| `showcase/` | English/French public game site. Build with `node showcase/build.mjs`; Cloudflare Pages serves `showcase/dist`. |
 | `table/` * | Static HTML table: the pages people play on, served by `table` (docs/tabletop/playtest-app.md). |
 | `battle/` * | The Phaser/TypeScript battle view; builds into the ignored `table/battle-build/`. |
 | `learning/` * | The Python training project (uv, ruff, pytest) and the heuristic weights files. See docs/learning/. |
