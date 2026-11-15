@@ -32,3 +32,4 @@ jobs:
       image: ${{ needs.image.outputs.image }}
     secrets:
       TABLE_PUSH_KEYS: ${{ secrets.TABLE_PUSH_KEYS }}
+      TABLE_ALERT_EMAIL: ${{ secrets.TABLE_ALERT_EMAIL }}

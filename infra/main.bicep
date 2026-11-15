@@ -49,6 +49,17 @@ param onlyCloudflare bool = false
 @maxLength(11)
 param namePrefix string = 'downfall'
 
+@secure()
+@description('Where the alerts go, by email and to the Azure mobile app signed in with the same address (ADR 0185). Empty, no alert and no budget are deployed.')
+param alertEmail string = ''
+
+@description('The monthly budget of the resource group, in the billing currency (ADR 0185): an alert at 80 % and 100 % spent and at 100 % forecast. Nothing is stopped.')
+@minValue(1)
+param budgetAmount int = 5
+
+@description('The first day of the budget\'s month. A budget may start in the past only within its own month, so each deployment moves it to the current one.')
+param budgetStart string = utcNow('yyyy-MM-01')
+
 var tenantId = tenant().tenantId
 var operatorIds = filter(map(split(operators, ','), id => trim(id)), id => !empty(id))
 
@@ -159,6 +170,17 @@ var ingressRestrictions = onlyCloudflare ? map(range(0, length(cloudflareRanges)
   action: 'Allow'
 }) : []
 var domainOn = !empty(customDomain)
+
+// The alerts (ADR 0185): what the platform already measures, read where it is kept, so nothing calls the API from
+// outside and keeps a replica awake. Named here, so the rules and the budget name the group without reading a
+// resource that may not be deployed.
+var alertsOn = !empty(alertEmail)
+var alertGroupName = '${namePrefix}-alerts'
+var alertGroupId = resourceId('Microsoft.Insights/actionGroups', alertGroupName)
+// The worker writes this line as it puts a turn on the poison queue, and the job this one when a pass fails
+// (AgentTurnWorker, TableTend): the console lines are the one place either is said.
+var givenUpQuery = 'ContainerAppConsoleLogs_CL | where Log_s has "given up on after"'
+var tendFailedQuery = 'ContainerAppConsoleLogs_CL | where Log_s has "The tables could not be tended"'
 
 // Where the console lines go. Capped per day so a host that logs in a loop costs cents, not a surprise.
 resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
@@ -546,6 +568,232 @@ resource tendRelayRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if
     principalId: tend.identity.principalId
     principalType: 'ServicePrincipal'
     roleDefinitionId: subscriptionResourceId(roleDefinitions, webPubSubServiceOwner)
+  }
+}
+
+// Where the alerts go: one email and one notice on the Azure mobile app, to the same address (ADR 0185).
+resource alertGroup 'Microsoft.Insights/actionGroups@2023-01-01' = if (alertsOn) {
+  name: alertGroupName
+  location: 'global'
+  properties: {
+    groupShortName: take(namePrefix, 12)
+    enabled: true
+    emailReceivers: [
+      {
+        name: 'owner-email'
+        emailAddress: alertEmail
+        useCommonAlertSchema: true
+      }
+    ]
+    azureAppPushReceivers: [
+      {
+        name: 'owner-app'
+        emailAddress: alertEmail
+      }
+    ]
+  }
+}
+
+// The API answering 5xx: more than five in a quarter of an hour. An app at zero replicas reports nothing, so a
+// quiet night raises nothing.
+resource serverErrors 'Microsoft.Insights/metricAlerts@2018-03-01' = if (alertsOn) {
+  name: '${namePrefix}-table-5xx'
+  location: 'global'
+  dependsOn: [
+    alertGroup
+  ]
+  properties: {
+    description: 'The table answered more than five 5xx in 15 minutes (ADR 0185).'
+    severity: 2
+    enabled: true
+    scopes: [
+      app.id
+    ]
+    evaluationFrequency: 'PT5M'
+    windowSize: 'PT15M'
+    criteria: {
+      'odata.type': 'Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria'
+      allOf: [
+        {
+          criterionType: 'StaticThresholdCriterion'
+          name: 'server-errors'
+          metricNamespace: 'Microsoft.App/containerApps'
+          metricName: 'Requests'
+          dimensions: [
+            {
+              name: 'statusCodeCategory'
+              operator: 'Include'
+              values: [
+                '5xx'
+              ]
+            }
+          ]
+          operator: 'GreaterThan'
+          threshold: 5
+          timeAggregation: 'Total'
+        }
+      ]
+    }
+    autoMitigate: true
+    actions: [
+      {
+        actionGroupId: alertGroupId
+      }
+    ]
+  }
+}
+
+// A replica of the API or of the worker restarting: more than twice in a quarter of an hour is a crash loop, not a
+// deployment, which starts a new revision instead.
+resource restarts 'Microsoft.Insights/metricAlerts@2018-03-01' = [for process in [
+  '${namePrefix}-table'
+  '${namePrefix}-worker'
+]: if (alertsOn) {
+  name: '${process}-restarts'
+  location: 'global'
+  dependsOn: [
+    alertGroup
+    app
+    worker
+  ]
+  properties: {
+    description: '${process} restarted more than twice in 15 minutes (ADR 0185).'
+    severity: 2
+    enabled: true
+    scopes: [
+      resourceId('Microsoft.App/containerApps', process)
+    ]
+    evaluationFrequency: 'PT5M'
+    windowSize: 'PT15M'
+    criteria: {
+      'odata.type': 'Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria'
+      allOf: [
+        {
+          criterionType: 'StaticThresholdCriterion'
+          name: 'restarts'
+          metricNamespace: 'Microsoft.App/containerApps'
+          metricName: 'RestartCount'
+          operator: 'GreaterThan'
+          threshold: 2
+          timeAggregation: 'Total'
+        }
+      ]
+    }
+    autoMitigate: true
+    actions: [
+      {
+        actionGroupId: alertGroupId
+      }
+    ]
+  }
+}]
+
+// A turn given up on, and a tending pass that failed: read from the console lines once an hour, which the job's
+// own rhythm is. The table the query reads exists only once a line was written, so the query is not checked at
+// deployment.
+resource logAlerts 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = [for rule in [
+  {
+    name: '${namePrefix}-turn-given-up'
+    description: 'The worker gave up on a bot\'s turn and put it on the poison queue (ADR 0185).'
+    query: givenUpQuery
+  }
+  {
+    name: '${namePrefix}-tend-failed'
+    description: 'A tending pass failed (ADR 0185).'
+    query: tendFailedQuery
+  }
+]: if (alertsOn) {
+  name: rule.name
+  location: location
+  dependsOn: [
+    alertGroup
+  ]
+  properties: {
+    displayName: rule.name
+    description: rule.description
+    severity: 2
+    enabled: true
+    scopes: [
+      logs.id
+    ]
+    evaluationFrequency: 'PT1H'
+    windowSize: 'PT1H'
+    skipQueryValidation: true
+    criteria: {
+      allOf: [
+        {
+          query: rule.query
+          timeAggregation: 'Count'
+          operator: 'GreaterThan'
+          threshold: 0
+          failingPeriods: {
+            numberOfEvaluationPeriods: 1
+            minFailingPeriodsToAlert: 1
+          }
+        }
+      ]
+    }
+    autoMitigate: false
+    actions: {
+      actionGroups: [
+        alertGroupId
+      ]
+    }
+  }
+}]
+
+// The month's spending on the resource group (ADR 0185): told at 80 % and 100 % spent, and when the forecast
+// passes the budget. A budget stops nothing.
+resource budget 'Microsoft.Consumption/budgets@2023-05-01' = if (alertsOn) {
+  name: '${namePrefix}-monthly'
+  dependsOn: [
+    alertGroup
+  ]
+  properties: {
+    category: 'Cost'
+    amount: budgetAmount
+    timeGrain: 'Monthly'
+    timePeriod: {
+      startDate: budgetStart
+    }
+    notifications: {
+      actual80: {
+        enabled: true
+        operator: 'GreaterThanOrEqualTo'
+        threshold: 80
+        thresholdType: 'Actual'
+        contactEmails: [
+          alertEmail
+        ]
+        contactGroups: [
+          alertGroupId
+        ]
+      }
+      actual100: {
+        enabled: true
+        operator: 'GreaterThanOrEqualTo'
+        threshold: 100
+        thresholdType: 'Actual'
+        contactEmails: [
+          alertEmail
+        ]
+        contactGroups: [
+          alertGroupId
+        ]
+      }
+      forecast100: {
+        enabled: true
+        operator: 'GreaterThanOrEqualTo'
+        threshold: 100
+        thresholdType: 'Forecasted'
+        contactEmails: [
+          alertEmail
+        ]
+        contactGroups: [
+          alertGroupId
+        ]
+      }
+    }
   }
 }
 

@@ -2,7 +2,7 @@
 # The one-time setup the hosted table needs before .github/workflows/deploy.yml can deploy it (ADR 0082),
 # run by the subscription's owner in Azure Cloud Shell (or anywhere `az login` has been run as them).
 #
-#   infra/bootstrap.sh setup      # the resource group, the deploying identity, the sign-in registration
+#   infra/bootstrap.sh setup      # the resource group, the deploying identity, the reading identity, the sign-in registration
 #   infra/bootstrap.sh redirect   # after the first deployment: the sign-in's redirect URIs (DOMAIN=<host> adds the table's own)
 #
 # Safe to run again: everything it makes it looks for first. It creates no secret. What it prints at the
@@ -19,9 +19,12 @@ LOCATION="${LOCATION:-canadacentral}"
 RESOURCE_GROUP="${RESOURCE_GROUP:-downfall-table}"
 PREFIX="${PREFIX:-downfall}"
 DEPLOYER_NAME="${PREFIX}-table-deploy"
+OPS_NAME="${PREFIX}-table-ops"
 SIGN_IN_NAME="${PREFIX}-table-signin"
 APP_NAME="${PREFIX}-table"
 ENVIRONMENT="azure"
+# The environment ops-report.yml runs in (ADR 0185): the reading identity trusts it and nothing else.
+OPS_ENVIRONMENT="ops"
 
 # The template's own bounds, and a storage account's alphabet: its name is the prefix and a hash.
 if [[ ! "$PREFIX" =~ ^[a-z0-9]{3,11}$ ]]; then
@@ -39,6 +42,10 @@ QUEUE_CONTRIBUTOR="974c5e8b-45b9-4653-ba55-5f855dd0fb88"
 # Web PubSub Service Owner on the relay (ADR 0165): each process says through it what moved, and the API signs the
 # pages' addresses.
 RELAY_OWNER="12cf5a90-567b-43ae-8102-96cf46c7d9b4"
+
+# What the reading identity holds on the resource group (ADR 0185): it reads the resources, their metrics, the
+# console lines and the cost, and writes nothing. No data role: it reads no recording, index or queue message.
+OPS_ROLES=("Reader" "Log Analytics Reader" "Cost Management Reader")
 
 # The application id of the registration with this display name, created when there is none.
 registration() {
@@ -80,6 +87,21 @@ grant_on_condition() {
   return 0
 }
 
+# A registration trusted for one environment of this repository, unless it already is.
+federate() {
+  local app_id="$1" environment="$2"
+  local subject="repo:${REPO}:environment:${environment}"
+  if [[ -z "$(az ad app federated-credential list --id "$app_id" --query "[?subject=='$subject'].name" --output tsv)" ]]; then
+    az ad app federated-credential create --id "$app_id" --output none --parameters "{
+      \"name\": \"github-${environment}\",
+      \"issuer\": \"https://token.actions.githubusercontent.com\",
+      \"subject\": \"$subject\",
+      \"audiences\": [\"api://AzureADTokenExchange\"]
+    }"
+  fi
+  return 0
+}
+
 # A role for a principal on a scope, unless it already holds it there.
 grant() {
   local principal_id="$1" role="$2" scope="$3"
@@ -104,15 +126,17 @@ variable() {
 }
 
 setup() {
-  local subscription tenant scope deployer deployer_principal sign_in operator condition subject
+  local subscription tenant scope deployer deployer_principal ops ops_principal role sign_in operator condition
 
   subscription="$(az account show --query id --output tsv)"
   tenant="$(az account show --query tenantId --output tsv)"
   echo "Subscription $subscription, tenant $tenant, $RESOURCE_GROUP in $LOCATION, for $REPO."
 
-  # The providers a fresh subscription has not registered yet: nothing deploys without them.
+  # The providers a fresh subscription has not registered yet: nothing deploys without them. Insights holds the
+  # alerts, Consumption the budget and CostManagement the cost the report reads (ADR 0185).
   local namespace
-  for namespace in Microsoft.App Microsoft.Network Microsoft.OperationalInsights Microsoft.SignalRService Microsoft.Storage; do
+  for namespace in Microsoft.App Microsoft.Network Microsoft.OperationalInsights Microsoft.SignalRService Microsoft.Storage \
+    Microsoft.Insights Microsoft.Consumption Microsoft.CostManagement; do
     az provider register --namespace "$namespace" --wait --output none
   done
 
@@ -123,18 +147,19 @@ setup() {
   # to change this one resource group. It may assign the roles the template assigns, and no other.
   deployer="$(registration "$DEPLOYER_NAME")"
   deployer_principal="$(principal "$deployer")"
-  subject="repo:${REPO}:environment:${ENVIRONMENT}"
-  if [[ -z "$(az ad app federated-credential list --id "$deployer" --query "[?subject=='$subject'].name" --output tsv)" ]]; then
-    az ad app federated-credential create --id "$deployer" --output none --parameters "{
-      \"name\": \"github-${ENVIRONMENT}\",
-      \"issuer\": \"https://token.actions.githubusercontent.com\",
-      \"subject\": \"$subject\",
-      \"audiences\": [\"api://AzureADTokenExchange\"]
-    }"
-  fi
+  federate "$deployer" "$ENVIRONMENT"
   grant "$deployer_principal" Contributor "$scope"
   condition="((!(ActionMatches{'Microsoft.Authorization/roleAssignments/write'})) OR (@Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {$BLOB_CONTRIBUTOR, $TABLE_CONTRIBUTOR, $QUEUE_CONTRIBUTOR, $RELAY_OWNER})) AND ((!(ActionMatches{'Microsoft.Authorization/roleAssignments/delete'})) OR (@Resource[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {$BLOB_CONTRIBUTOR, $TABLE_CONTRIBUTOR, $QUEUE_CONTRIBUTOR, $RELAY_OWNER}))"
   grant_on_condition "$deployer_principal" "Role Based Access Control Administrator" "$scope" "$condition"
+
+  # The reading identity (ADR 0185): trusted for the `ops` environment alone, and allowed to read this one
+  # resource group, its metrics, its logs and its cost.
+  ops="$(registration "$OPS_NAME")"
+  ops_principal="$(principal "$ops")"
+  federate "$ops" "$OPS_ENVIRONMENT"
+  for role in "${OPS_ROLES[@]}"; do
+    grant "$ops_principal" "$role" "$scope"
+  done
 
   # The registration the platform signs the operator in with. No client secret: the platform uses the
   # implicit flow, which needs ID tokens issued, and only the people listed may hold a session (ADR 0082).
@@ -145,6 +170,7 @@ setup() {
   echo
   echo "Repository variables (Settings > Secrets and variables > Actions > Variables):"
   variable AZURE_CLIENT_ID "$deployer"
+  variable AZURE_OPS_CLIENT_ID "$ops"
   variable AZURE_TENANT_ID "$tenant"
   variable AZURE_SUBSCRIPTION_ID "$subscription"
   variable AZURE_RESOURCE_GROUP "$RESOURCE_GROUP"

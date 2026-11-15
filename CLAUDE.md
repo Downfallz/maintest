@@ -20,7 +20,7 @@
   `/new-plan` (an idea becomes a plan; `/plan` is Claude Code's plan mode), `/stage` (one stage in a fresh session),
   `/verify` (the gate, chosen from the diff), `/reviewers` (the reviewers the diff calls for), `/browser-check` (the
   browser specs the diff calls for), `/ship` (the standing orders), `/wrap-up` (loose ends become issues, the
-  next stage's prompt). And `/digest` (the morning digest, run daily at 6:40, Montreal time, by a scheduled task), `/adr`,
+  next stage's prompt). And `/digest` (the morning digest, run daily at 6:40, Montreal time, by a scheduled task), `/ops` (the production report, ADR 0185), `/adr`,
   `/new-aggregate`, `/spells-report` (the spells the bots cast and leave, republished to the owner's report page).
 - The `Stop` hook (`.claude/hooks/stop.sh`) says once, per tree, when code changed after the last green gate:
   run `/verify`, or say plainly that the gate was not run.

@@ -14,7 +14,7 @@ paths:
 - Say what a change costs: a new resource, a larger SKU, a new always-on replica, more egress. Prefer what the
   hosted table already pays for.
 - `main` deploys itself. A change that needs the owner first (a role, a provider, a secret, a DNS record) is
-  written as a numbered runbook step in `infra/README.md`: one block to paste each, and the way through the
+  written as a numbered runbook step in `infra/runbooks/` (listed in its `README.md`): one block to paste each, and the way through the
   portal, so it can be done from a phone.
 - `main.bicep` must build and lint without a warning (`az bicep build`, `az bicep lint`). A session has no `az`:
   when it could not run them, say so.

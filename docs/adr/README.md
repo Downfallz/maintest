@@ -207,5 +207,6 @@ UPDATE_INDEXES=1 dotnet test --project tests/DownfallArena.Architecture.Tests
 | [0182](0182-require-one-gate-check-and-deploy-behind-it.md) | Require one gate check, and deploy behind it | Accepted |
 | [0183](0183-read-the-indexes-from-the-files-and-keep-one-journal-entry-per-file.md) | Read the indexes from the files, and keep one journal entry per file | Accepted (stage W3 of [the AI workflow plan](../engineering/ai-workflow-plan.md)). Amends [0001](0001-record-architecture-decisions.md) (the index). Amended by [0184](0184-commit-the-indexes-generated-from-the-files.md) (the indexes are committed) |
 | [0184](0184-commit-the-indexes-generated-from-the-files.md) | Commit the indexes, generated from the files | Accepted (settled by the owner). Amends [0183](0183-read-the-indexes-from-the-files-and-keep-one-journal-entry-per-file.md) (neither index was committed) |
+| [0185](0185-read-production-through-an-identity-that-cannot-write.md) | Read production through an identity that cannot write | Accepted |
 
 <!-- index:end -->

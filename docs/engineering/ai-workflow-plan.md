@@ -1,6 +1,6 @@
 # Plan: the AI workflow, from an idea to a merged pull request
 
-Status: accepted in part, 2026-11-14. The owner settled questions 1, 2, 3, 5 and 6 (at the end); W0 to W6 are built.
+Status: accepted in part, 2026-11-14. The owner settled questions 1, 2, 3, 5, 6 and 7 (at the end); W0 to W7 are built.
 Each stage below is one pull request, or one settings change that only the owner can make.
 
 ## What the owner asked for
@@ -336,6 +336,20 @@ Each stage is one pull request with its tests, and leaves the gate green.
    reads "verte", not "prête". Left: the weekly run and the review trigger, one at a time once the digest has run
    for a week.
 8. **W7, operations.** `ops-report`, the smoke test, the alerts, the runbooks, `/ops`.
+   *Built (2026-11-15, ADR 0185)*: `infra/bootstrap.sh setup` makes `downfall-table-ops`, federated to the `ops`
+   environment alone, with Reader, Log Analytics Reader and Cost Management Reader on the resource group.
+   `ops-report.yml` signs in as it every morning at 10:23 UTC and on demand: `scripts/ops/read.sh` writes one
+   reading per file, through `az rest`, and `scripts/ops/report.mjs` prints one phone screen in French to the log,
+   which is public, so its error lines lose emails, ids, tokens and query strings. `studio/ops.test.js` tests both,
+   `read.sh` with a fake `az` and `curl`. `/ops` starts the run and reads its log. `rollout.yml` asks the deployed
+   table for `GET /api/lobby` and is red when it does not answer. `main.bicep` adds, once the `TABLE_ALERT_EMAIL`
+   secret exists, an action group (email and the Azure app), metric alerts on 5xx answers and on restarts of the API
+   and the worker, log alerts on a turn given up on and a failed tending pass, and a budget of 5 a month. No probe
+   from outside: it would keep the app awake. `infra/runbooks/` holds the identity, the alerts, a new role and the
+   custom domain, moved out of `infra/README.md`. Not proven before the first run in Azure: the Bicep (no `az`
+   here; `image.yml` compiles and lints it), the queries, the metric names, the report's readings. Left: the
+   sign-in redirect and the Google origins outside the domain's runbook, and the queue lengths per queue, which
+   would need a data role.
 9. **W8, proposals, language, design.** `product-scout`, `ops-analyst`, `/proposals`, `/retro`, the
    terminology test, the design system, the Cowork project.
 
@@ -385,3 +399,5 @@ Each stage is one pull request with its tests, and leaves the gate green.
 3. The ruleset requires the two CI jobs at first; the browser suite once W2 makes it always report.
 5. One stage, one session, with a ceiling at 300,000 tokens and a wrap-up.
 6. The morning digest first, every day at 6:40, Montreal time (asked in W6, 2026-11-15).
+7. A read-only identity of its own for `ops-report`, federated to an `ops` environment; the alerts by email and the
+   Azure app; a budget of 5 a month (asked in W7, 2026-11-15).
