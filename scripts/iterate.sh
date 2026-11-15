@@ -461,7 +461,7 @@ page="$root/$run/seeds/${seed_list[0]}/report.html"
 echo
 echo "Done. Per-seed reports are under '$root/$run/seeds/<seed>/report.html'; the first is '$page'."
 echo "The spread across the seeds is '$root/$run/spread.json'. Read that one, not a single seed (ADR 0049)."
-echo "Add a journal entry (docs/learning/journal.md) if a spread moved."
+echo "Add a journal entry (a file under docs/learning/journal/, see docs/learning/journal.md) if a spread moved."
 if [[ "$open_page" == true ]]; then
   if command -v xdg-open >/dev/null 2>&1; then xdg-open "$page" >/dev/null 2>&1 || true
   elif command -v open >/dev/null 2>&1; then open "$page" >/dev/null 2>&1 || true

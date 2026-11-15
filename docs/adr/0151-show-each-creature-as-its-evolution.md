@@ -1,4 +1,4 @@
-# 0151 — Show each creature as its evolution, from its purchase history
+# 0151. Show each creature as its evolution, from its purchase history
 
 Date: 2026-11-08
 

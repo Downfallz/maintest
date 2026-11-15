@@ -1,4 +1,4 @@
-# 0142 — Teach each phase once per game
+# 0142. Teach each phase once per game
 
 Date: 2026-11-06
 

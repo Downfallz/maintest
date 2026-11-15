@@ -1,4 +1,4 @@
-# 0149 — Open the spell choice with the player's turn, docked beside the field
+# 0149. Open the spell choice with the player's turn, docked beside the field
 
 Date: 2026-11-07
 

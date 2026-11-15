@@ -1,7 +1,7 @@
-# 0077 — A mobile field guide before the editor
+# 0077. A mobile field guide before the editor
 
-- Status: Accepted
-- Date: 2026-09-24
+Date: 2026-09-24
+Status: Accepted
 
 ## Context
 

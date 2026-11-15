@@ -438,4 +438,4 @@ These are the balance signals the roadmap asks the loop to show every time. `rep
 deltas for every evaluation both runs hold and lists the stamp axes that differ (content, engine, rules,
 schema); agents and seeds are expected to differ between evaluations and are not axes of a report.
 
-Then one entry in `journal.md`: what changed, the numbers, the decision.
+Then one entry under `journal/` (`journal.md` says how): what changed, the numbers, the decision.

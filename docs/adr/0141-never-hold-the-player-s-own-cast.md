@@ -1,4 +1,4 @@
-# 0141 — Never hold the player's own cast; Skip all from two results
+# 0141. Never hold the player's own cast; Skip all from two results
 
 Date: 2026-11-06
 

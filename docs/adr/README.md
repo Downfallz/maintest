@@ -2,189 +2,22 @@
 
 An ADR captures one decision that is hard to reverse: an architecture choice, a dependency, a convention,
 or a settled game-design question. Copy `0000-template.md`, take the next number, keep it under a page.
-Accepted ADRs are immutable. To change a decision, write a new ADR that supersedes the old one.
+Accepted ADRs are immutable. To change a decision, write a new ADR that supersedes the old one, and say so on
+the old one's `Status:` line.
 
-| # | Title | Status |
-| --- | --- | --- |
-| [0001](0001-record-architecture-decisions.md) | Record architecture decisions | Accepted |
-| [0002](0002-clean-slate-restart.md) | Restart from a clean slate, freeze the prototypes | Accepted |
-| [0003](0003-dotnet-10-layered-solution.md) | .NET 10 solution with enforced clean-architecture layering | Accepted |
-| [0004](0004-testing-stack.md) | Testing stack: xUnit v3, Microsoft.Testing.Platform, Shouldly, NSubstitute, NetArchTest | Accepted |
-| [0005](0005-ai-assisted-development-kit.md) | AGENTS.md and Claude Code kit as first-class project assets | Accepted |
-| [0006](0006-sonarcloud-analysis-from-ci.md) | Run SonarCloud analysis from CI with the scanner for .NET | Accepted |
-| [0007](0007-shared-kernel-project.md) | A dependency-free SharedKernel project below Domain | Accepted |
-| [0008](0008-messaging-without-a-mediator.md) | Use cases and domain events without a mediator library | Accepted |
-| [0009](0009-game-data-pipeline.md) | Keep the data builder: one consolidated, hashed game schema | Accepted |
-| [0010](0010-round-phases-and-sub-phases.md) | Rounds are driven by a phase and sub-phase state machine | Accepted, amended by [0083](0083-an-action-resolves-when-its-targets-are-confirmed.md), and by [0112](0112-spells-are-chosen-at-the-slot-by-default.md) for the default rules |
-| [0011](0011-win-condition-and-round-cap.md) | Win condition: last team standing, with a round cap | Accepted, amended by [0083](0083-an-action-resolves-when-its-targets-are-confirmed.md) |
-| [0012](0012-effect-taxonomy.md) | A closed taxonomy of spell effects | Accepted |
-| [0013](0013-learning-stack.md) | Learning stack: Python trains, the engine records and hosts policies, a static viewer | Accepted |
-| [0014](0014-exploration-in-recorded-datasets.md) | Record datasets with an exploring agent instead of reaching for reinforcement learning | Accepted |
-| [0015](0015-content-studio.md) | A local content studio: browse, edit, version and try the game content | Accepted |
-| [0016](0016-value-learning-on-an-advantage-baseline.md) | Learn action values against a state baseline instead of the raw match return | Accepted |
-| [0017](0017-spell-initiative-on-unlock.md) | Unlocking a spell raises the creature's initiative | Superseded by [0059](0059-retire-the-spell-initiative-the-package-pays-it-now.md) |
-| [0018](0018-price-initiative-in-the-agent-weights.md) | Price initiative in the heuristic agents' weights | Accepted |
-| [0019](0019-regeneration-the-healing-counterpart-of-bleed.md) | Regeneration, the healing counterpart of Bleed | Accepted |
-| [0020](0020-energy-regeneration-and-the-price-of-energy.md) | Energy regeneration, and the price of energy | Accepted |
-| [0021](0021-tune-the-catalogue-with-a-declared-search-space.md) | Tune the catalogue with a declared search space, not with a model | Accepted |
-| [0022](0022-price-a-defensive-effect-by-the-damage-it-prevents.md) | Price a defensive effect by the damage it prevents | Accepted |
-| [0023](0023-a-hosted-studio-with-github-as-its-backend.md) | A hosted studio, with GitHub as its backend | Accepted |
-| [0024](0024-test-the-studio-page-with-nodes-own-runner.md) | Test the studio page with Node's own test runner | Accepted |
-| [0025](0025-the-balance-knobs-are-a-part-of-a-studio-change.md) | The balance knobs are a part of a studio change, like the alias map | Accepted |
-| [0026](0026-price-what-a-cast-costs-and-how-long-it-lasts.md) | Price the part of a cost the combat reading hides, and how long an effect lasts | Accepted |
-| [0027](0027-a-condition-remembers-the-spell-that-applied-it.md) | A condition remembers the spell that applied it | Accepted |
-| [0028](0028-name-the-defense-weight-and-move-its-price-one-step-up.md) | Name the defense weight, and move its price one step up | Accepted |
-| [0029](0029-read-variety-on-an-exploring-run.md) | Read variety on an exploring run, not on the greedy mirror | Accepted |
-| [0030](0030-play-the-matches-of-a-batch-at-the-same-time.md) | Play the matches of a batch at the same time | Accepted |
-| [0031](0031-an-effect-that-lands-on-the-caster.md) | An effect that lands on the caster | Accepted |
-| [0032](0032-measure-the-initiative-weight.md) | Measure the initiative weight, and move it from 0.5 to 2.1 | Accepted |
-| [0033](0033-a-critical-cast-multiplies-a-direct-heal.md) | A critical cast multiplies a direct heal | Accepted |
-| [0034](0034-a-tier-is-a-depth-a-player-climbs.md) | A tier is a depth a player climbs, not a node in the file | Superseded by [0058](0058-a-tier-is-the-package-the-balance-objective-reads.md) |
-| [0035](0035-lowering-defense-and-taking-energy.md) | Lowering defense and taking energy | Accepted |
-| [0036](0036-raising-initiative-the-mirror-that-was-left-out.md) | Raising initiative, the mirror that was left out | Accepted |
-| [0037](0037-measure-the-energy-weight-and-move-it-from-0-2-to-0-3.md) | Measure the energy weight, and move it from 0.2 to 0.3 | Accepted |
-| [0038](0038-a-wasted-action-is-a-fizzle-whatever-wasted-it.md) | A wasted action is a fizzle, whatever wasted it | Accepted |
-| [0039](0039-the-bot-binds-its-targets-on-a-board-that-has-not-happened-yet.md) | The bot binds its targets on a board that has not happened yet | Accepted |
-| [0040](0040-remove-the-fizzle-weight.md) | Remove the fizzle weight | Accepted |
-| [0041](0041-a-condition-stacks-unless-it-is-a-stun.md) | A Condition stacks unless it is a Stun | Accepted, amended by [0072](0072-a-creature-is-immune-to-stun-the-round-after-one.md) |
-| [0042](0042-a-creature-has-no-base-critical-chance.md) | A Creature has no base critical chance | Accepted |
-| [0043](0043-a-control-spell-is-not-an-attack-and-reach-is-not-force.md) | A control spell is not an attack, and reach is not force | Accepted |
-| [0044](0044-the-exploit-target-compares-against-a-yardstick-that-does-not-hold.md) | The exploit target compares against a yardstick that does not hold | Superseded by [0052](0052-read-the-exploit-term-as-the-best-of-a-panel.md) |
-| [0045](0045-a-better-fit-is-not-a-better-player.md) | A better fit is not a better player | Accepted |
-| [0046](0046-credit-a-move-along-its-trajectory-not-from-the-end-of-the-match.md) | Credit a move along its trajectory, not from the end of the match | Accepted |
-| [0047](0047-a-lookahead-agent-needs-a-hypothetical-board.md) | A lookahead agent needs a hypothetical board | Accepted |
-| [0048](0048-the-baseline-is-a-training-time-device-and-was-fitted-as-if-it-were-not.md) | The baseline is a training-time device, and was fitted as if it were not | Accepted |
-| [0049](0049-one-seed-is-not-a-measurement.md) | One seed is not a measurement | Accepted |
-| [0050](0050-price-how-close-a-hit-brings-its-target-to-a-kill.md) | Price how close a hit brings its target to a kill, and leave the baseline at zero | Accepted |
-| [0051](0051-the-policy-sees-what-the-heuristic-sees.md) | The policy sees what the heuristic sees | Accepted |
-| [0052](0052-read-the-exploit-term-as-the-best-of-a-panel.md) | Read the exploit term as the best of a panel, not as one named agent | Accepted |
-| [0053](0053-score-the-exploit-term-on-the-clock-not-on-the-win-rate.md) | Score the exploit term on how fast the best exploiter wins, not on whether it wins | Accepted |
-| [0054](0054-a-playtest-app-on-the-same-engine.md) | A playtest app: the tabletop rule set on a screen, through the same engine | Accepted |
-| [0055](0055-a-searching-agent-may-be-built-on-a-policy.md) | A searching agent may be built on a policy, so the loop has an operator that improves one | Proposed |
-| [0056](0056-a-pick-buys-a-package-every-other-round.md) | A pick buys a package, and two of them arrive every other round | Accepted, amended by [0066](0066-a-creature-buys-one-package-an-opportunity.md) |
-| [0057](0057-a-package-is-authored-not-derived.md) | Author the packages, and retire the script that derived them | Accepted |
-| [0058](0058-a-tier-is-the-package-the-balance-objective-reads.md) | Read a tier as the package, in the balance objective and the content audit | Accepted |
-| [0059](0059-retire-the-spell-initiative-the-package-pays-it-now.md) | Retire Spell initiative: the package pays it now | Accepted |
-| [0060](0060-spells-sold-together-must-differ-in-play.md) | Spells sold together must differ in play, and Throwing Star buys reach | Accepted |
-| [0061](0061-a-package-initiative-bonus-is-a-balance-knob.md) | A package's initiative bonus is a balance knob, and the only one a package has | Accepted |
-| [0062](0062-read-the-seat-on-the-exploring-run.md) | Read the seat advantage on the exploring run, not on the greedy mirror | Accepted |
-| [0063](0063-an-initiative-tie-is-rolled-on-a-d20.md) | Roll an initiative tie between the sides on a d20, and let each side order its own | Accepted, amended by [0067](0067-the-lookahead-orders-its-own-ties.md) |
-| [0064](0064-read-a-package-monopoly-on-what-its-sample-proves.md) | Read a package's monopoly on what its sample proves, and not against an even split | Accepted |
-| [0065](0065-read-a-package-win-gap-on-what-its-sides-prove.md) | Read a package's win gap on what its sides prove | Accepted |
-| [0066](0066-a-creature-buys-one-package-an-opportunity.md) | A creature buys one package an opportunity | Accepted |
-| [0067](0067-the-lookahead-orders-its-own-ties.md) | The lookahead orders its own ties | Accepted |
-| [0068](0068-a-match-lasts-ten-to-fifteen-rounds.md) | A match lasts ten to fifteen rounds | Accepted, amended by [0071](0071-read-a-match-length-on-the-exploring-run.md) and [0086](0086-a-match-lasts-eight-to-fourteen-rounds.md) |
-| [0069](0069-reveal-all-spells-before-targeting.md) | Reveal all spells before choosing targets | Superseded by [0070](0070-reveal-spells-with-confirmed-targets.md) |
-| [0070](0070-reveal-spells-with-confirmed-targets.md) | Reveal spells together with confirmed targets | Accepted, amended by [0083](0083-an-action-resolves-when-its-targets-are-confirmed.md), and by [0112](0112-spells-are-chosen-at-the-slot-by-default.md) for the default rules |
-| [0071](0071-read-a-match-length-on-the-exploring-run.md) | Read a match's length on the exploring run, not on the greedy mirror | Accepted |
-| [0072](0072-a-creature-is-immune-to-stun-the-round-after-one.md) | A creature is immune to stun the round after one ends | Accepted |
-| [0073](0073-a-bleed-is-priced-as-the-damage-defense-would-block.md) | A bleed is priced as the damage a defense would block | Accepted |
-| [0074](0074-a-tuning-pass-confirms-a-new-leader-on-seeds-it-was-not-chosen-on.md) | A tuning pass confirms a new leader on seeds it was not chosen on | Accepted |
-| [0075](0075-capture-public-state-around-each-combat-action.md) | Capture public state around each combat action | Accepted |
-| [0076](0076-defense-buffs-count-for-at-most-ten.md) | Defense buffs count for at most ten | Accepted |
-| [0077](0077-a-mobile-field-guide-before-the-editor.md) | A mobile field guide before the editor | Accepted |
-| [0078](0078-momentum-is-a-free-strike-that-gathers-energy.md) | Momentum is a free strike that gathers energy | Accepted |
-| [0079](0079-decision-previews-and-reproducible-practice.md) | Decision previews and reproducible practice | Accepted |
-| [0080](0080-host-the-table-on-azure-container-apps.md) | Host the table on Azure Container Apps, with the studio left on GitHub Pages | Accepted, amended by [0175](0175-serve-the-table-at-its-own-domain-behind-cloudflare.md) |
-| [0081](0081-a-host-of-tables-found-by-their-tokens.md) | A host of tables, each found by its tokens, opened from a lobby behind the operator's door | Accepted |
-| [0082](0082-deploy-from-github-to-azure-without-a-secret.md) | Deploy the table from GitHub to Azure without a secret | Accepted, amended by [0160](0160-run-the-table-outside-a-virtual-network.md) |
-| [0083](0083-an-action-resolves-when-its-targets-are-confirmed.md) | An action resolves when its targets are confirmed | Accepted, amended by [0112](0112-spells-are-chosen-at-the-slot-by-default.md) for the default rules |
-| [0084](0084-a-creature-waits-only-for-a-critical-worth-waiting-for.md) | A creature waits only for a critical worth waiting for | Accepted |
-| [0085](0085-a-denied-kill-reads-the-enemies-still-to-act.md) | A denied kill reads the enemies still to act | Accepted |
-| [0086](0086-a-match-lasts-eight-to-fourteen-rounds.md) | A match lasts eight to fourteen rounds | Accepted |
-| [0087](0087-a-player-may-concede.md) | A player may concede | Accepted |
-| [0088](0088-price-initiative-by-the-turn-order-it-changes.md) | Price initiative by the turn order it changes | Accepted |
-| [0089](0089-pick-packages-face-down-and-reveal-them-together.md) | Pick packages face down and reveal them together | Accepted |
-| [0090](0090-score-whether-a-package-spell-earns-its-pick-not-how-hard-it-hits.md) | Score whether a package's spell earns its pick, not how hard it hits | Accepted |
-| [0091](0091-a-table-survives-the-host-that-played-it.md) | A table survives the host that played it, rebuilt from its seed and its decisions | Superseded by [0159](0159-advance-a-table-by-submitted-decisions-over-its-journal.md) |
-| [0092](0092-a-table-waits-for-its-players-then-both-pick-at-once.md) | A table waits for its players, then both pick their first package at once | Accepted, amended by [0111](0111-both-seats-are-asked-their-speeds-and-intents-at-once.md) |
-| [0093](0093-a-drain-that-leaves-an-enemy-unable-to-pay-is-priced-as-a-stun.md) | A drain that leaves an enemy unable to pay is priced as a stun | Accepted |
-| [0094](0094-the-lookahead-prices-a-purchase-by-playing-rounds-out.md) | The lookahead prices a purchase by playing rounds out | Proposed |
-| [0095](0095-the-tuner-reads-packages-on-a-run-that-buys-them-well.md) | The tuner reads packages on a run that buys them well | Proposed |
-| [0096](0096-energy-is-priced-by-the-spell-it-unlocks.md) | Energy is priced by the spell it unlocks | Proposed |
-| [0097](0097-the-learning-loop-measures-one-format.md) | Measure one format, and let the others be played | Proposed |
-| [0098](0098-a-defense-debuff-is-priced-by-the-damage-it-lets-through.md) | A defense debuff is priced by the damage it lets through | Proposed |
-| [0099](0099-a-win-on-the-board-outranks-any-score.md) | Let a win on the board outrank any score | Proposed |
-| [0100](0100-every-critical-chance-is-a-twentieth.md) | Every critical chance is a twentieth | Proposed |
-| [0101](0101-a-capstone-package-buys-a-passive-not-a-spell.md) | Let a capstone package buy a passive instead of a spell | Proposed |
-| [0102](0102-a-purchase-is-priced-by-what-it-adds-over-its-kind.md) | Price a purchase by what it adds over the spells of its kind | Proposed |
-| [0103](0103-energy-is-worth-holding-up-to-the-reserve-a-creature-can-spend.md) | Energy is worth holding only up to the reserve a creature can spend | Proposed |
-| [0104](0104-a-creature-saves-for-the-package-it-would-buy.md) | A creature saves for the package it would buy the round before it may buy | Proposed |
-| [0105](0105-the-engine-plays-the-tables-round-cap.md) | The engine plays the table's round cap of twenty | Accepted |
-| [0106](0106-titan-sunders-defense-instead-of-ignoring-stuns.md) | Make Titan's passive sunder defense instead of ignoring stuns | Proposed |
-| [0107](0107-a-creature-may-declare-a-spell-it-cannot-pay-for-yet.md) | A creature may declare a spell it cannot pay for yet | Accepted, amended by [0112](0112-spells-are-chosen-at-the-slot-by-default.md) for the default rules |
-| [0108](0108-a-purchase-is-read-against-what-the-team-is-buying.md) | Read a purchase against what the team is buying this round | Proposed |
-| [0109](0109-the-tuner-reads-what-each-tier-1-opening-is-worth.md) | Let the tuner read what each tier-1 opening is worth | Proposed |
-| [0110](0110-a-rule-set-may-declare-spells-at-activation.md) | A rule set may declare spells at activation | Accepted, its default changed by [0112](0112-spells-are-chosen-at-the-slot-by-default.md) |
-| [0111](0111-both-seats-are-asked-their-speeds-and-intents-at-once.md) | At a table, ask both seats their speeds and intents at once | Proposed |
-| [0112](0112-spells-are-chosen-at-the-slot-by-default.md) | Choose each spell at its creature's slot by default | Accepted |
-| [0113](0113-a-tie-between-purchases-goes-to-the-seats-dice.md) | Break a tie between two purchases with the seat's dice | Accepted |
-| [0114](0114-a-shared-package-is-held-by-the-whole-side.md) | Let a package be shared with the whole side | Accepted |
-| [0115](0115-a-player-lobby-keeps-seats-until-the-player-leaves.md) | A player lobby keeps a seat until its player explicitly leaves | Accepted |
-| [0116](0116-a-seat-invitation-is-accepted-once.md) | A seat's invitation is accepted once, with a tap | Accepted |
-| [0118](0118-your-turn-reaches-a-phone-nobody-is-looking-at.md) | "Your turn" reaches a phone nobody is looking at | Accepted |
-| [0119](0119-a-seat-page-is-told-when-its-table-changed.md) | A seat's page is told when its table changed | Accepted |
-| [0120](0120-a-device-holding-both-seats-gets-no-notice.md) | A device holding both seats of a table gets no notice | Accepted |
-| [0121](0121-the-public-lobby-offers-one-bot-the-strongest.md) | Offer one bot in the public lobby: the strongest | Accepted |
-| [0117](0117-a-player-makes-every-pick-of-an-opportunity-at-once.md) | At a table, ask each player every pick of an opportunity before either reaches the match | Accepted |
-| [0122](0122-a-player-signs-in-with-google-and-owns-their-seats.md) | A player signs in with Google, and their seats belong to their account | Accepted |
-| [0123](0123-prototype-the-arena-as-an-isolated-presentation.md) | Prototype the arena as an isolated presentation | Accepted for the isolated prototype |
-| [0124](0124-rank-players-with-glicko-2-over-ranked-results.md) | Rank players with Glicko-2, over the results of games between two accounts | Accepted |
-| [0125](0125-read-one-authenticated-seat-in-the-live-arena.md) | Read one authenticated seat in the live arena | Accepted for the opt-in read-only integration |
-| [0126](0126-answer-combat-questions-in-the-live-arena.md) | Answer combat questions in the live arena | Accepted for the opt-in combat integration |
-| [0127](0127-play-confirmed-actions-in-the-live-arena.md) | Play confirmed actions in the live arena | Accepted for the opt-in arena |
-| [0128](0128-complete-the-game-loop-in-the-arena.md) | Complete the game loop in the arena | Accepted for the opt-in arena |
-| [0129](0129-a-player-keeps-friends-and-invites-one-of-them-to-a-table.md) | A player keeps friends, and invites one of them to a table | Accepted |
-| [0130](0130-map-arena-creatures-to-audited-sprites.md) | Map arena creatures to audited sprites | Accepted for the opt-in arena |
-| [0131](0131-give-confirmed-arena-spells-a-visual-vocabulary.md) | Give confirmed arena spells a visual vocabulary | Accepted for the opt-in arena |
-| [0132](0132-record-ordinary-round-energy-without-renumbering-old-tables.md) | Record ordinary round energy without renumbering old tables | Accepted |
-| [0133](0133-compose-bounded-mutation-cues-on-one-arena-body.md) | Compose bounded mutation cues on one arena body | Accepted for the opt-in arena, as a prototype policy |
-| [0134](0134-polish-confirmed-playback-with-opt-in-sound.md) | Polish confirmed playback with opt-in sound | Accepted for the opt-in arena |
-| [0135](0135-draft-team-tempos-before-sequential-confirmation.md) | Draft team tempos before sequential confirmation | Accepted for the opt-in arena |
-| [0136](0136-gate-the-arena-release-behind-a-reversible-preference.md) | Gate the arena release behind a reversible preference | Accepted for the opt-in release candidate |
-| [0137](0137-name-the-game-downfall-instinct.md) | Name the game Downfall Instinct | Accepted |
-| [0138](0138-open-the-mutation-tree-with-the-mutation-phase.md) | Open the mutation tree with the mutation phase | Accepted for the opt-in battle view |
-| [0139](0139-confirm-every-action-before-the-next-choice.md) | Confirm every incoming action before the next choice | Accepted for the opt-in battle view |
-| [0140](0140-keep-game-settings-with-the-account.md) | Keep game settings with the account, override them per game | Accepted for the opt-in battle view |
-| [0141](0141-never-hold-the-player-s-own-cast.md) | Never hold the player's own cast; Skip all from two results | Accepted for the opt-in battle view |
-| [0142](0142-teach-each-phase-once-per-game.md) | Teach each phase once per game | Accepted for the opt-in battle view |
-| [0143](0143-read-the-turnover-on-the-field.md) | Read the round turnover on the field | Accepted for the opt-in battle view |
-| [0144](0144-read-the-turn-order-on-the-field.md) | Read the turn order on the field, and hold play until it is read | Accepted for the opt-in battle view |
-| [0145](0145-end-the-match-in-one-moment.md) | End the match in one moment | Accepted for the opt-in battle view |
-| [0146](0146-one-full-mutation-tree.md) | One full mutation tree, with spells as cards | Accepted for the opt-in battle view |
-| [0147](0147-list-every-finished-game-and-cap-the-ones-in-progress.md) | List every finished game, and at most five of each kind in progress | Accepted |
-| [0148](0148-play-what-a-closed-page-missed.md) | Play what a closed page missed | Accepted for the opt-in battle view |
-| [0149](0149-open-the-spell-choice-with-the-players-turn.md) | Open the spell choice with the player's turn, docked beside the field | Accepted for the opt-in battle view |
-| [0150](0150-open-the-team-tempos-with-their-phase.md) | Open the team's tempos with their phase, docked beside the field | Accepted for the opt-in battle view |
-| [0151](0151-show-each-creature-as-its-evolution.md) | Show each creature as its evolution, from its purchase history | Accepted for the opt-in battle view |
-| [0152](0152-choose-a-stage-3-hybrid-by-influence.md) | Choose a Stage 3's hybrid by the influences of the creature's other mutations | Accepted for the opt-in battle view |
-| [0153](0153-play-the-same-game-again-from-the-end-card.md) | Play the same game again from the battle's end card, and call the lobby the Lobby | Accepted for the opt-in battle view |
-| [0154](0154-record-the-critical-roll-as-a-d20-face.md) | Record the critical roll as a d20 face, and show the field's dice | Accepted |
-| [0155](0155-let-a-game-between-players-be-unranked.md) | Let a game between two players be opened as unranked | Accepted |
-| [0156](0156-replay-a-finished-game-in-the-battle-view-for-its-players.md) | Replay a finished game in the battle view for the players who sat at it | Accepted |
-| [0157](0157-make-the-battle-view-the-game.md) | Make the battle view the game, and archive the classic table | Accepted |
-| [0158](0158-carve-the-interface-in-bone-and-soot.md) | Carve the interface in bone and soot: one display face, sharp cut shapes, grain on every surface, one bar in a match | Accepted |
-| [0159](0159-advance-a-table-by-submitted-decisions-over-its-journal.md) | Advance a table by submitted decisions over its journal, not by a loop that waits in memory | Accepted |
-| [0160](0160-run-the-table-outside-a-virtual-network.md) | Run the hosted table outside a virtual network, and keep the storage account by identity alone | Accepted |
-| [0161](0161-index-tables-in-azure-table-storage.md) | Index the tables in Azure Table Storage, for the codes and the lobby | Accepted |
-| [0162](0162-run-the-table-as-an-api-a-worker-and-an-hourly-job.md) | Run the table as an API app, a turn worker app and an hourly job, each seeing what the others write | Accepted |
-| [0163](0163-keep-a-table-on-the-content-it-began-on-and-void-what-no-longer-replays.md) | Keep a table on the content it began on, and void a match its journal no longer replays | Accepted |
-| [0164](0164-read-on-what-the-host-says-changed-never-on-a-clock.md) | Read on what the host says changed, never on a clock: the lobby's stream, and no fallback poll | Accepted |
-| [0165](0165-relay-what-moved-through-azure-web-pubsub.md) | Relay what moved through Azure Web PubSub: pages and processes told whichever process moved it | Accepted |
-| [0166](0166-serve-the-table-s-files-once-compressed-and-revalidated.md) | Serve the table's files once, compressed and revalidated, and keep an offline page | Accepted |
-| [0167](0167-run-the-workflows-on-what-they-read.md) | Run the workflows on what they read: no learning loop on push, no republished studio for the table's host | Accepted |
-| [0168](0168-keep-match-results-in-azure-table-storage.md) | Keep match results in Azure Table Storage, by match and by account | Accepted |
-| [0169](0169-end-a-match-whose-player-let-their-time-to-answer-run-out.md) | End a match whose player let their time to answer run out | Accepted |
-| [0170](0170-end-a-begun-match-whose-left-seat-nobody-takes-in-a-day.md) | End a begun match whose left seat nobody takes in a day | Accepted |
-| [0171](0171-rank-only-3v3-games-and-count-a-players-statistics-on-them.md) | Rank only 3v3 games, and count a player's statistics on them alone | Accepted |
-| [0172](0172-let-named-player-accounts-be-the-operator.md) | Let named player accounts be the operator | Accepted |
-| [0173](0173-let-players-react-with-a-fixed-set-of-messages.md) | Let players react with a fixed set of messages, and notify nobody of one | Accepted |
-| [0174](0174-keep-when-each-account-last-signed-in-and-was-seen.md) | Keep when each account last signed in and was last seen | Accepted |
-| [0175](0175-serve-the-table-at-its-own-domain-behind-cloudflare.md) | Serve the table at its own domain, behind Cloudflare | Accepted |
-| [0176](0176-let-the-operator-void-a-match-with-a-reason.md) | Let the operator void a match with a reason, and withdraw a finished one's result | Accepted |
-| [0177](0177-let-the-operator-close-registration-and-post-a-notice.md) | Let the operator close registration and post a notice | Accepted |
-| [0178](0178-let-the-operator-suspend-an-account.md) | Let the operator suspend an account | Accepted |
-| [0179](0179-cut-a-recorded-match-at-the-top-of-a-round.md) | Cut a recorded match at the top of a round, and replay it into a match of its own | Accepted |
-| [0180](0180-let-a-player-choose-the-bot-by-its-level.md) | Let a player choose the bot by its level, and show them nothing else of it | Accepted |
-| [0181](0181-keep-agents-md-an-index-with-a-budget.md) | Keep AGENTS.md an index with a budget, and load an area's instructions with the area | Accepted |
-| [0182](0182-require-one-gate-check-and-deploy-behind-it.md) | Require one gate check, and deploy behind it | Accepted |
+## The index is the directory
+
+No table is kept here (ADR 0183): a list every pull request edits is a list two branches edit at once. Each
+file carries what a row carried, on its first line (`# NNNN. Title`) and on its `Status:` line, and
+`AdrFileTests` holds every file to that shape.
+
+```bash
+head -qn 1 docs/adr/0*.md                    # every number and title
+grep -m 1 -H '^Status: ' docs/adr/0*.md      # every status, with what amends or supersedes it
+grep -li 'web push' docs/adr/0*.md           # what is decided about a subject
+```
+
+## Taking a number
+
+Fetch `main` first, then take the highest number on either side plus one: `/adr` does it. A number two files
+share fails `AdrFileTests`; the later pull request takes the next one.

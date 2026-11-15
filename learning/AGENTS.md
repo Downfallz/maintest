@@ -29,4 +29,5 @@ spread, mean-policy, jackknife, paired, iterate.sh) is in docs/reference/command
 - Never report a win rate from one dataset seed, and never pick the best seed (ADR 0049): three seeds, the
   spread, the minimum for a gate. Compare two evaluations with `paired`, not with their intervals.
 - `runs/` is output and git-ignored; models are committed under `models/` with their evaluation.
-- A change that moves a number gets a journal entry (`docs/learning/journal.md`, `.claude/rules/learning.md`).
+- A change that moves a number gets a journal entry, a file of its own under `docs/learning/journal/`
+  (`docs/learning/journal.md` says how it is named, `.claude/rules/learning.md` what it holds).
