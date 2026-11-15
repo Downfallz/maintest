@@ -8,4 +8,8 @@ namespace DownfallArena.Cli.Table;
 /// <param name="Title">What the scenario is called.</param>
 /// <param name="Goal">What it asks the person to try, if anything.</param>
 /// <param name="Round">The round it was cut at the top of.</param>
-internal sealed record PracticeLabel(string Scenario, string Title, string? Goal, int Round);
+internal sealed record PracticeLabel(string Scenario, string Title, string? Goal, int Round)
+{
+    /// <summary>The lesson when the scenario is a Tutorial (ADR 0187): its steps and how far the person is, read as the view is served.</summary>
+    public TutorialPlay? Tutorial { get; init; }
+}

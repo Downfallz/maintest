@@ -313,7 +313,8 @@ docs/tabletop/scenarios-plan.md).
 The tab also lists every file of the repository's `scenarios/` directory, read when the host starts (`"source":
 "repository"` and its `"file"` in the list, under the id `sc-repo-<file name>`): played from the tab, on the content
 the file carries, neither removed nor listed there (409 `Scenario.FromRepository`), and opened by the host's
-admin accounts alone when it names some (`--admins`).
+admin accounts alone when it names some (`--admins`). A tutorial among them (`scenarios/tutorials/`, ADR 0187)
+says its place in the series (`"tutorial": 1`), and every signed-in account opens it.
 
 Its link `/battle?scenario=<id>` a signed-in player opens as practice (`GET /api/scenarios/<id>`,
 `GET`/`POST /api/scenarios/<id>/practice`: resumed, or started from the cut in place of the account's last
@@ -322,6 +323,22 @@ go of after an idle hour, gone with a restart), the battle view saying it is pra
 Restart the round and Leave, and opening a practice started from its cut on a briefing card (its title, goal,
 seat and round). `GET /api/scenarios` lists the scenarios listed under Practice, which a signed-in player's home
 page shows.
+
+`GET /api/tutorials` lists the tutorials to any signed-in account (401 signed out), in the order of the series:
+each one's `id`, `order`, `of`, `title`, `goal`, `round`, `seat`, `format` and `link`. A tutorial is opened as a
+practice by the routes above, and is never listed under Practice.
+
+While it plays, the host answers the person's assisted questions from the recorded answers, as the person's own
+decisions. At the first recorded answer that does not fit, it stops and gives every question back to the person.
+
+The seat's view says the lesson under `practice.tutorial`:
+
+- `order`, `of`, `title`, and `teaches`, the question kinds the person answers.
+- `assisted`: the question kinds the host still answers for the person, so a page draws no question of that
+  kind; empty once the questions are handed back.
+- `steps`: each `at` a kind, a round and a creature, with `says`, `concepts` and `pointsAt`.
+- `shown`: how many steps have had their question asked.
+- `done`: the last step's question was asked and its round ended, or the match ended.
 
 #### The admin panel: Overview, Activity and Settings
 

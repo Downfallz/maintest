@@ -672,7 +672,8 @@ test (`.claude/rules/host.md`).
 | `GET /api/seat/<seat>/negotiate` | seat | The relay's address for a seat (ADR 0165). |
 | `POST /api/seat/<seat>/reaction` | seat | A reaction from the fixed set (ADR 0173). |
 | `GET /api/friends`, `POST /api/friends/requests`, `POST /api/friends/requests/<id>/accept`, `DELETE /api/friends/requests/<id>`, `DELETE /api/friends/<id>` | account | Friends (ADR 0129). |
-| `GET /api/scenarios`, `GET /api/scenarios/<id>`, `GET`/`POST /api/scenarios/<id>/practice` | account | Listed scenarios and their practice (ADR 0179). |
+| `GET /api/scenarios`, `GET /api/scenarios/<id>`, `GET`/`POST /api/scenarios/<id>/practice` | account | Listed scenarios and their practice (ADR 0179). Only admin accounts open a repository scenario; every account opens a tutorial. |
+| `GET /api/tutorials` | account | The tutorials, in the order of the series, each opened as a practice (ADR 0187). |
 | `GET /api/leaderboard`, `GET /api/stats` | anyone, account | The ladder; the player's statistics. |
 | `POST /api/pilot/seats/player1` | pilot | Hands a seat over from a round (body `{"agent","round"}`). |
 | `POST /api/tables`, `GET /api/agents` | operator | Opens a table; the bots it may seat. |

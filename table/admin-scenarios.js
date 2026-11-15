@@ -1,8 +1,9 @@
 // Headquarters' match scenarios (docs/tabletop/scenarios-plan.md, S5, ADR 0179): a recorded session cut at the top of a
 // round from its row in the Sessions tab, and the Scenarios tab that lists them with the link a signed-in player opens
 // as practice, and lists one under Practice for every signed-in player (S6). The scenarios the repository ships
-// (`scenarios/`, S7) are listed with them, to play from here: the host neither removes nor lists one. The host cuts,
-// keeps and lists; this page asks and draws.
+// (`scenarios/`, S7) are listed with them, to play from here: the host neither removes nor lists one. A tutorial
+// among them (ADR 0187) says its place in the series: every signed-in account plays it, not the panel alone. The host
+// cuts, keeps and lists; this page asks and draws.
 
 export const LONGEST_TITLE = 80;
 export const LONGEST_GOAL = 300;
@@ -21,6 +22,7 @@ export function scenarioRows(answer) {
       link: one.link,
       listed: one.listed === true,
       shipped,
+      tutorial: Number.isInteger(one.tutorial) ? one.tutorial : null,
     };
   });
 }
@@ -119,6 +121,7 @@ export function mountScenarios({ send, element, shown }) {
       const toggle = listingToggle(row);
       const heading = made('div', 'session-id', row.title);
       if (row.shipped) heading.append(' ', made('span', 'status-tag repository', 'Repository'));
+      if (row.tutorial !== null) heading.append(' ', made('span', 'status-tag repository', `Tutorial ${row.tutorial}`));
       if (toggle.state) heading.append(' ', made('span', 'status-tag listed', toggle.state));
       body.append(heading, made('div', 'muted', row.facts));
       if (row.goal) body.append(made('div', 'activity-detail', row.goal));

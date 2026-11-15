@@ -3,6 +3,7 @@ using System.Text.Json;
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Admin;
 using DownfallArena.Application.Matches.Journaling;
+using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.Infrastructure.Accounts;
@@ -428,5 +429,222 @@ public sealed class ScenariosApiTests : IDisposable
         var opened = await api.HandleAsync("POST", $"{ScenariosApi.Prefix}/sc-repo-greedy-1v1-round-3/practice", admin);
 
         (refused.Status, described.Status, opened.Status).ShouldBe((404, 404, 200));
+    }
+
+    private const string Tutorial = "sc-repo-tutorial-your-first-combat";
+
+    [Fact]
+    public async Task A_signed_in_account_finds_the_tutorials_in_series_order_with_their_links()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var accounts = await AccountsAsync();
+        var api = new ScenariosApi(store, practices, accounts);
+
+        var answer = await api.HandleAsync("GET", ScenariosApi.TutorialsRoute, await SignedInAsync(accounts, "learner"));
+
+        answer.Status.ShouldBe(200, Encoding.UTF8.GetString(answer.Body));
+        var listed = Read(answer).GetProperty("tutorials").EnumerateArray().ShouldHaveSingleItem();
+        (listed.GetProperty("id").GetString(), listed.GetProperty("order").GetInt32(), listed.GetProperty("of").GetInt32(), listed.GetProperty("title").GetString())
+            .ShouldBe((Tutorial, 1, 1, "Your first combat"));
+        (listed.GetProperty("round").GetInt32(), listed.GetProperty("seat").GetString(), listed.GetProperty("link").GetString())
+            .ShouldBe((2, "player1", $"/battle?scenario={Tutorial}"));
+        listed.TryGetProperty("goal", out _).ShouldBeTrue();
+        listed.TryGetProperty("format", out _).ShouldBeTrue();
+        ScenariosApi.Names(ScenariosApi.TutorialsRoute).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task On_a_host_that_names_admin_accounts_a_player_who_is_not_one_still_finds_the_tutorials()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var accounts = await AccountsAsync();
+        var keeper = (await accounts.WhoAsync(await SignedInAsync(accounts, "keeper"), Cancel)).ShouldNotBeNull().Account.Id;
+        var api = new ScenariosApi(store, practices, accounts) { Admins = new HashSet<SharedKernel.Identifiers.AccountId> { keeper } };
+
+        var answer = await api.HandleAsync("GET", ScenariosApi.TutorialsRoute, await SignedInAsync(accounts, "learner"));
+
+        answer.Status.ShouldBe(200);
+        Read(answer).GetProperty("tutorials").EnumerateArray().Select(one => one.GetProperty("id").GetString()).ShouldBe([Tutorial]);
+    }
+
+    [Fact]
+    public async Task A_player_who_is_not_signed_in_finds_no_tutorials()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var api = new ScenariosApi(store, practices, await AccountsAsync());
+
+        var refused = await api.HandleAsync("GET", ScenariosApi.TutorialsRoute, new AccountRequest(null, Secure: false));
+
+        refused.Status.ShouldBe(401);
+        Read(refused).GetProperty("error").GetString().ShouldBe("Account.SignInRequired");
+    }
+
+    [Fact]
+    public async Task A_host_that_ships_no_tutorial_lists_none()
+    {
+        await using var practices = new ScenarioPractices(_hosted.Composer, _store, _clock);
+        var accounts = await AccountsAsync();
+        var api = new ScenariosApi(_store, practices, accounts);
+
+        var answer = await api.HandleAsync("GET", ScenariosApi.TutorialsRoute, await SignedInAsync(accounts, "learner"));
+
+        answer.Status.ShouldBe(200);
+        Read(answer).GetProperty("tutorials").GetArrayLength().ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task The_tutorials_route_only_answers_a_read()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var accounts = await AccountsAsync();
+        var api = new ScenariosApi(store, practices, accounts);
+
+        var refused = await api.HandleAsync("POST", ScenariosApi.TutorialsRoute, await SignedInAsync(accounts, "learner"));
+
+        refused.Status.ShouldBe(404);
+        Read(refused).GetProperty("error").GetString().ShouldBe("Scenario.NoRoute");
+    }
+
+    [Fact]
+    public async Task A_tutorial_is_not_listed_under_Practice_and_is_neither_removed_nor_listed_by_the_operator()
+    {
+        var store = Shipping();
+        var admin = new ScenarioAdminApi(store, _hosted.Stored!, _hosted.Composer);
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var accounts = await AccountsAsync();
+
+        var removed = await admin.HandleAsync("DELETE", $"{ScenarioAdminApi.Route}/{Tutorial}", "", "operator");
+        var listing = await admin.HandleAsync("PUT", $"{ScenarioAdminApi.Route}/{Tutorial}/listing", """{"listed":true}""", "operator");
+        var offered = Read(await new ScenariosApi(store, practices, accounts).HandleAsync("GET", ScenariosApi.Prefix, await SignedInAsync(accounts, "learner")));
+
+        (removed.Status, listing.Status).ShouldBe((409, 409));
+        Read(removed).GetProperty("error").GetString().ShouldBe("Scenario.FromRepository");
+        Read(listing).GetProperty("error").GetString().ShouldBe("Scenario.FromRepository");
+        offered.GetProperty("scenarios").EnumerateArray().Select(one => one.GetProperty("id").GetString()).ShouldNotContain(Tutorial);
+    }
+
+    [Fact]
+    public async Task On_a_host_that_names_admin_accounts_any_account_opens_and_reads_a_tutorial_but_not_the_other_shipped_scenario()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var accounts = await AccountsAsync();
+        var keeper = (await accounts.WhoAsync(await SignedInAsync(accounts, "keeper"), Cancel)).ShouldNotBeNull().Account.Id;
+        var api = new ScenariosApi(store, practices, accounts) { Admins = new HashSet<SharedKernel.Identifiers.AccountId> { keeper } };
+        var learner = await SignedInAsync(accounts, "learner");
+
+        var opened = await api.HandleAsync("POST", $"{ScenariosApi.Prefix}/{Tutorial}/practice", learner);
+        var described = await api.HandleAsync("GET", $"{ScenariosApi.Prefix}/{Tutorial}", learner);
+        var plain = await api.HandleAsync("GET", $"{ScenariosApi.Prefix}/sc-repo-greedy-1v1-round-3", learner);
+
+        (opened.Status, described.Status, plain.Status).ShouldBe((200, 200, 404));
+    }
+
+    [Fact]
+    public async Task The_operator_s_list_numbers_a_tutorial_in_its_series_and_the_other_scenarios_not_at_all()
+    {
+        var (_, cut) = await CutAsync();
+        var admin = new ScenarioAdminApi(Shipping(), _hosted.Stored!, _hosted.Composer);
+
+        var listed = Read(await admin.HandleAsync("GET", ScenarioAdminApi.Route, "", "operator")).GetProperty("scenarios").EnumerateArray().ToList();
+
+        listed.Select(one => (one.GetProperty("id").GetString(), one.GetProperty("tutorial").ValueKind == JsonValueKind.Null ? (int?)null : one.GetProperty("tutorial").GetInt32()))
+            .ShouldBe([("sc-repo-greedy-1v1-round-3", null), (Tutorial, 1), (cut, null)]);
+    }
+
+    [Fact]
+    public async Task A_tutorial_practice_answers_what_is_not_taught_and_stops_at_the_first_question_it_teaches()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var play = await OpenTutorialAsync(store, practices, "learner");
+
+        var view = await WaitingForAsync(play, one => one.GetProperty("waitingFor").GetString() == "Action");
+
+        view.GetProperty("waitingFor").GetString().ShouldBe("Action");
+        (view.GetProperty("board").GetProperty("roundNumber").GetInt32(), view.GetProperty("waitingCreature").GetInt32()).ShouldBe((2, 2));
+        var tutorial = view.GetProperty("practice").GetProperty("tutorial");
+        (tutorial.GetProperty("order").GetInt32(), tutorial.GetProperty("of").GetInt32(), tutorial.GetProperty("title").GetString()).ShouldBe((1, 1, "Your first combat"));
+        tutorial.GetProperty("teaches").EnumerateArray().Select(one => one.GetString()).ShouldBe(["Action"]);
+        tutorial.GetProperty("assisted").EnumerateArray().Select(one => one.GetString()).ShouldBe(["Evolution", "Speed", "TieOrder", "Intent", "Target"]);
+        tutorial.GetProperty("steps").GetArrayLength().ShouldBe(3);
+        var step = tutorial.GetProperty("steps")[0];
+        step.GetProperty("at").GetProperty("kind").GetString().ShouldBe("Action");
+        step.GetProperty("at").GetProperty("round").GetInt32().ShouldBe(2);
+        step.GetProperty("at").GetProperty("creature").GetInt32().ShouldBe(2);
+        step.GetProperty("says").GetArrayLength().ShouldBeGreaterThan(0);
+        step.GetProperty("concepts").EnumerateArray().Select(one => one.GetString()).ShouldContain("health");
+        step.GetProperty("pointsAt").GetProperty("creature").GetInt32().ShouldBe(4);
+        step.GetProperty("pointsAt").GetProperty("control").ValueKind.ShouldBe(JsonValueKind.Null);
+        (tutorial.GetProperty("shown").GetInt32(), tutorial.GetProperty("done").GetBoolean()).ShouldBe((1, false));
+    }
+
+    [Fact]
+    public async Task A_tutorial_is_done_once_the_person_has_answered_each_question_it_teaches()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var play = await OpenTutorialAsync(store, practices, "learner");
+        var recorded = (await store.GetAsync(Tutorial, Cancel)).ShouldNotBeNull().Scenario.After.OfType<DecisionEntry>()
+            .Where(entry => entry.Decision.Slot == Domain.Matches.PlayerSlot.Player1 && entry.Decision.Decision.Kind == PlayerOptionsKind.Action)
+            .Select(entry => entry.Decision.Decision).Take(3).ToList();
+        long? before = null;
+
+        foreach (var answer in recorded)
+        {
+            var view = await WaitingForAsync(play, one => one.GetProperty("waitingFor").GetString() == "Action" && one.GetProperty("waitingAsked").GetInt64() != before);
+            before = view.GetProperty("waitingAsked").GetInt64();
+            var body = JsonSerializer.Serialize(new { asked = before, kind = "Action", creature = answer.Creature!.Value.Value, spell = answer.Spell!.ToString(), targets = answer.Targets.Select(one => one.Value).ToArray() });
+            var sent = await play.Api.HandleAsync("POST", "/api/seat/player1/decision", body, play.Token);
+            sent.Status.ShouldBe(204, Encoding.UTF8.GetString(sent.Body));
+        }
+
+        var done = await WaitingForAsync(play, one => one.GetProperty("practice").GetProperty("tutorial").GetProperty("done").GetBoolean());
+        recorded.Count.ShouldBe(3);
+        done.GetProperty("practice").GetProperty("tutorial").GetProperty("shown").GetInt32().ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task A_plain_scenario_s_practice_carries_no_tutorial()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var accounts = await AccountsAsync();
+        var opened = Read(await new ScenariosApi(store, practices, accounts).HandleAsync("POST", $"{ScenariosApi.Prefix}/sc-repo-greedy-1v1-round-3/practice", await SignedInAsync(accounts, "learner")));
+        var practice = practices.ByToken(opened.GetProperty("token").GetString()).ShouldNotBeNull();
+
+        var view = Read(await practice.Play.Api.HandleAsync("GET", "/api/seat/player1", "", practice.Play.Token));
+
+        view.GetProperty("practice").GetProperty("tutorial").ValueKind.ShouldBe(JsonValueKind.Null);
+    }
+
+    /// <summary>The tutorial opened as a practice by a player of this name.</summary>
+    private async Task<ScenarioPlay> OpenTutorialAsync(ScenarioStore store, ScenarioPractices practices, string player)
+    {
+        var accounts = await AccountsAsync();
+        var answer = await new ScenariosApi(store, practices, accounts).HandleAsync("POST", $"{ScenariosApi.Prefix}/{Tutorial}/practice", await SignedInAsync(accounts, player));
+        answer.Status.ShouldBe(200, Encoding.UTF8.GetString(answer.Body));
+        return practices.ByToken(Read(answer).GetProperty("token").GetString()).ShouldNotBeNull().Play;
+    }
+
+    /// <summary>
+    /// The seat's view once it satisfies <paramref name="until" />: the assisted questions are answered in the
+    /// background, so it is read again, 50 ms apart, for up to five seconds. The last view is returned either way.
+    /// </summary>
+    private static async Task<JsonElement> WaitingForAsync(ScenarioPlay play, Func<JsonElement, bool> until)
+    {
+        var view = Read(await play.Api.HandleAsync("GET", "/api/seat/player1", "", play.Token));
+        for (var waited = 0; waited < 100 && !until(view); waited++)
+        {
+            await Task.Delay(50, Cancel);
+            view = Read(await play.Api.HandleAsync("GET", "/api/seat/player1", "", play.Token));
+        }
+
+        until(view).ShouldBeTrue(view.ToString());
+        return view;
     }
 }
