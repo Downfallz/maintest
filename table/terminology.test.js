@@ -124,12 +124,31 @@ function htmlText(html) {
   return out;
 }
 
-// Every string literal of a script, its interpolations blanked; comments and regular expressions skipped.
+// The properties whose value a person reads as it is: a string assigned to one is a label, even of one word.
+const SHOWN = new Set(['textContent', 'innerText', 'title', 'ariaLabel', 'placeholder', 'alt']);
+
+// Every string literal of a script as { text, shown }, its interpolations blanked; comments and regular
+// expressions skipped. `shown` says the literal is assigned to a property a person reads (`x.title = 'Go'`,
+// `x.textContent = step === 'a' ? 'Yes' : ('No')`): a value the expression can take, not an argument, a key, a
+// property of an object or a side of a comparison.
 function literals(source) {
   const out = [];
   const n = source.length;
   let i = 0;
   let previous = '';
+  let word = '';
+  // The brackets open here, true for one that only groups; the assignment to a shown property being read, as
+  // the number of brackets open where it started; and the literal just read, which a comparison disowns.
+  let open = [];
+  let assigned = null;
+  let literal = null;
+  const shown = () =>
+    assigned !== null && open.slice(assigned).every(Boolean) && /^[=?:|&(+]$/.test(previous);
+  const push = (label, text) => {
+    literal = { text, shown: label };
+    out.push(literal);
+    previous = 'value';
+  };
   const quoted = quote => {
     let text = '';
     for (i++; i < n && source[i] !== quote; i++) text += source[i] === '\\' ? source[++i] : source[i];
@@ -144,7 +163,10 @@ function literals(source) {
         i += 2;
       } else if (source[i] === '$' && source[i + 1] === '{') {
         i += 2;
+        const outer = [open, assigned];
+        [open, assigned] = [[], null];
         scan(true);
+        [open, assigned] = outer;
         text += ' ';
       } else text += source[i++];
     }
@@ -169,26 +191,47 @@ function literals(source) {
       } else if (c === '/' && source[i + 1] === '*') {
         const end = source.indexOf('*/', i + 2);
         i = end < 0 ? n : end + 2;
-      } else if (c === '/' && (previous === '' || previous === 'return' || /^[(,=:[!&|?{};+\-*%<>~^]$/.test(previous))) {
+      } else if (c === '/' && (previous === '' || previous === 'return' || /^([(,=:[!&|?{};+\-*%<>~^]|compared)$/.test(previous))) {
         regex();
         previous = 'value';
+        literal = null;
       } else if (c === "'" || c === '"') {
-        out.push(quoted(c));
-        previous = 'value';
+        push(shown(), quoted(c));
       } else if (c === '`') {
-        out.push(template());
-        previous = 'value';
+        const label = shown();
+        push(label, template());
       } else if (/[\w$]/.test(c)) {
-        let word = '';
+        word = previous === '.' ? '.' : '';
         while (i < n && /[\w$]/.test(source[i])) word += source[i++];
-        previous = word === 'return' || word === 'typeof' ? 'return' : 'value';
+        previous = word === 'return' || word === 'typeof' ? 'return' : 'word';
+        literal = null;
       } else {
+        const arrow = (c === '=' && source[i + 1] === '>') || (c === '>' && source[i - 1] === '=');
+        const compared =
+          !arrow && (c === '<' || c === '>' || (c === '=' && (source[i + 1] === '=' || /[=!<>]/.test(source[i - 1]))));
+        if (compared) {
+          // The literal on either side of a comparison is a value the script tests, not one it shows.
+          if (literal) literal.shown = false;
+        } else if (c === '=' && !arrow) {
+          // An assignment to a shown property opens a label, `+=` included; any other assignment closes it.
+          const target = previous === 'word' || (previous === '+' && source[i - 1] === '+');
+          assigned = target && word[0] === '.' && SHOWN.has(word.slice(1)) ? open.length : null;
+        } else if (c === '(' || c === '[' || c === '{') {
+          // A parenthesis after a name or a value is a call: its arguments are not what the property shows.
+          open.push(c === '(' && !/^(word|value|[)\]])$/.test(previous));
+        } else if (c === ')' || c === ']' || c === '}') {
+          open.pop();
+          if (assigned !== null && open.length < assigned) assigned = null;
+        } else if ((c === ';' || c === ',') && assigned === open.length) assigned = null;
         if (untilBrace && c === '{') depth++;
         if (untilBrace && c === '}' && depth-- === 0) {
           i++;
           return;
         }
-        if (!/\s/.test(c)) previous = c;
+        if (!/\s/.test(c)) {
+          previous = compared ? 'compared' : c;
+          literal = null;
+        }
         i++;
       }
     }
@@ -198,12 +241,13 @@ function literals(source) {
 }
 
 // The sentences of a script a person reads: string literals of more than one word, markup read as HTML, and
-// class lists left out. A one-word literal is not read: today every one that says a retired word is an engine
-// value ('Speed', 'Quick', 'Planning'), and a one-word label belongs in terms.js or in a page's HTML, which is.
+// class lists left out. A one-word literal is read only where it is assigned to a property a person reads
+// (`textContent`, `title`, `ariaLabel`...): every other one that says a retired word is an engine value
+// ('Speed', 'Quick', 'Planning'), and a one-word label belongs in terms.js or in a page's HTML, which is.
 function scriptText(source) {
-  return literals(source).flatMap(text => {
+  return literals(source).flatMap(({ text, shown }) => {
     if (text.includes('<')) return htmlText(text);
-    if (!/\S\s+\S/.test(text)) return [];
+    if (!/\S\s+\S/.test(text)) return shown && text.trim() ? [text] : [];
     const tokens = text.trim().split(/\s+/);
     if (tokens.every(token => /^[a-z0-9_-]+$/.test(token)) && tokens.some(token => /[-_]/.test(token))) return [];
     return [text];
@@ -253,6 +297,12 @@ test('a retired word is found in a page, a sentence, a label and a tooltip', () 
   const script = scriptText(
     'const a = `Choose speed for ${x}`; const b = "Speed revealed"; el.innerHTML = "<b>Quick</b>"; m = \'choose your package first\';',
   );
+  const labels = scriptText(
+    "chip.textContent = 'Quick'; b.title = fast ? 'Speed' : `Tier`; c.ariaLabel = 'Go'; d.title += 'Package';",
+  );
+  const chosen = scriptText(
+    "b.title = step === 'Speed' ? 'Quick' : isFast(step, 'Tier') ? ('Standard') : names['Package'] || 'Planning';",
+  );
   assert.deepEqual(violations([{ path: 'page', texts: page }, { path: 'script', texts: script }]), [
     'page: "Buy a package" says Package',
     'page: "Buy a package" says Buy a package',
@@ -265,6 +315,17 @@ test('a retired word is found in a page, a sentence, a label and a tooltip', () 
     'script: "Quick" says Quick',
     'script: "choose your package first" says Package',
   ]);
+  assert.deepEqual(violations([{ path: 'labels', texts: labels }]), [
+    'labels: "Quick" says Quick',
+    'labels: "Speed" says Speed',
+    'labels: "Tier" says Tier',
+    'labels: "Package" says Package',
+  ]);
+  assert.deepEqual(violations([{ path: 'chosen', texts: chosen }]), [
+    'chosen: "Quick" says Quick',
+    'chosen: "Standard" says Standard',
+    'chosen: "Planning" says Planning',
+  ]);
 });
 
 test('identifiers, engine values, comments, regular expressions and everyday words are not a player\'s text', () => {
@@ -275,6 +336,11 @@ test('identifiers, engine values, comments, regular expressions and everyday wor
     "const r = /Talent atlas here/g;",
     "label.textContent = 'Playback speed';",
     "if (x / 2 > 1) y = 'Main menu';",
+    "chip.textContent = tempoLabel('Quick');",
+    "b.title = step === 'Speed' ? stepLabel(step) : '';",
+    "c.dataset.step = 'Planning'; const title = 'Tier'; d.textContent = names['Quick'];",
+    "e.textContent = `${speed === 'Quick' ? 1 : 2}`;",
+    "f.title = 'Speed' === step ? go({ title: 'Tier' }) : ''; g.title = '', h = 'Quick'; i.alt = ''\nconst j = ['Standard'];",
   ].join('\n');
   assert.deepEqual(violations([{ path: 'script', texts: scriptText(script) }]), []);
 });

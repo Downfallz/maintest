@@ -45,6 +45,7 @@ Every flag of `table` is in docs/reference/commands.md.
 - 320 px wide first, 44 px touch targets, no document scrolling in the battle view.
 - The words a player reads come from docs/domain/player-terminology.md, not from the domain's own.
   `terminology.test.js` holds them to its EN column and refuses the legacy words and sentences it
-  replaced; a one-word string in a script is not read, so a one-word label comes from `terms.js`.
+  replaced. A one-word string in a script is read only where it is assigned to `textContent`, `innerText`,
+  `title`, `ariaLabel`, `placeholder` or `alt`; any other one-word label comes from `terms.js`.
 - A page reads what changed from the host's streams or the relay, never on a clock (ADR 0164, ADR 0165).
 - The host decides; the page shows. A legal option, a card's text or a rule computed here is a bug.
