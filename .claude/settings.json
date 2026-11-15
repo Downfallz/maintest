@@ -27,7 +27,9 @@
       "Bash(git merge:*)", 
       "Bash(git push:*)",
       "Bash(scripts/verify.sh:*)",
-      "Bash(scripts/gate/state.sh:*)"
+      "Bash(scripts/gate/state.sh:*)",
+      "Write(./.claude/agent-memory/**)", 
+      "Edit(./.claude/agent-memory/**)"
     ],
     "deny": [
       "Read(./.env)",
