@@ -16,8 +16,9 @@ paths:
 - A proposal searched on some seeds is checked on seeds it was not searched on (`score-content --seeds`), and a
   new content leader wins on `benchmarks/confirmation-seeds.json` too (ADR 0074).
 - A change that moves a number (content, engine, agents, the benchmark digest) gets a journal entry, a file of
-  its own under `docs/learning/journal/` named as `docs/learning/journal.md` says (ADR 0183): the date, what
-  changed, the command that measured it, the numbers with their spread, and what it does not show.
+  its own under `docs/learning/journal/`, named as `docs/learning/journal.md` says and then listed by the
+  command it gives (ADR 0183): the date, what changed, the command that measured it, the numbers with their
+  spread, and what it does not show.
 - The benchmark digest is per content hash; regenerate it with `benchmark --write` only when the content or
   the engine changed on purpose, and say why.
 - A model under `models/` is committed with its evaluation; `runs/` is never committed.

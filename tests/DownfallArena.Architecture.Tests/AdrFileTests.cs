@@ -3,8 +3,8 @@ using System.Text.RegularExpressions;
 namespace DownfallArena.Architecture.Tests;
 
 /// <summary>
-/// The decision records, held to the shape that lets the directory be its own index (ADR 0183): one number per
-/// file, the number and the title on the first line, the status on a line of its own, and no table to edit.
+/// The decision records, held to the shape the index is generated from (ADR 0183, 0184): one number per
+/// file, the number and the title on the first line, the status on a line of its own, and a table in the README that is generated from them.
 /// </summary>
 public sealed partial class AdrFileTests
 {
@@ -64,12 +64,36 @@ public sealed partial class AdrFileTests
     }
 
     [Fact]
-    public void The_readme_keeps_no_table_of_records()
+    public void The_readme_lists_every_record_as_its_file_states_it()
     {
-        var rows = File.ReadLines(Path.Combine(Directory, "README.md"))
-            .Where(line => RecordLink().IsMatch(line));
+        var readme = Path.Combine(Directory, "README.md");
+        var committed = File.ReadAllText(readme);
+        var generated = GeneratedIndexes.Place(committed, GeneratedIndexes.AdrTable(Records()));
 
-        rows.ShouldBeEmpty("the directory is the index (ADR 0183): a list every pull request edits conflicts");
+        if (GeneratedIndexes.Writing)
+        {
+            File.WriteAllText(readme, generated);
+        }
+
+        File.ReadAllText(readme).ShouldBe(generated, $"the ADR index is generated, never edited: run `{GeneratedIndexes.Command}`");
+    }
+
+    [Fact]
+    public void A_status_that_runs_over_several_lines_is_one_cell()
+    {
+        var record = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}", "0042-keep-it.md");
+        System.IO.Directory.CreateDirectory(Path.GetDirectoryName(record)!);
+        try
+        {
+            File.WriteAllLines(record, ["# 0042. Keep it | or not", "", "Date: 2026-01-01", "Status: Accepted. Amends", "[0007](0007-x.md).", "", "## Context"]);
+
+            GeneratedIndexes.AdrTable([record]).ShouldEndWith(
+                "| [0042](0042-keep-it.md) | Keep it \\| or not | Accepted. Amends [0007](0007-x.md). |\n");
+        }
+        finally
+        {
+            System.IO.Directory.Delete(Path.GetDirectoryName(record)!, recursive: true);
+        }
     }
 
     private static IEnumerable<string> Records() =>
@@ -87,7 +111,4 @@ public sealed partial class AdrFileTests
 
     [GeneratedRegex(@"^\d{4}-[a-z0-9]+(-[a-z0-9]+)*\.md$")]
     private static partial Regex RecordName();
-
-    [GeneratedRegex(@"\]\(\d{4}-[^)]*\.md\)")]
-    private static partial Regex RecordLink();
 }

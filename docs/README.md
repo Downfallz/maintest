@@ -9,7 +9,7 @@
 | [learning/agents.md](learning/agents.md) | The baseline agents (random, greedy, heuristic), their lookahead, and the scoring weights. |
 | [learning/training.md](learning/training.md) | The Python side: weight search, behaviour cloning, value regression, the policy file format, the loop. |
 | [learning/explained.md](learning/explained.md) | The learning loop in plain words, for a newcomer: what the pieces are for and how to read a report. |
-| [learning/journal.md](learning/journal.md) | One entry per change that moves a number, each a file under [learning/journal/](learning/journal/): how to write one and how to list them. |
+| [learning/journal.md](learning/journal.md) | One entry per change that moves a number, each a file under [learning/journal/](learning/journal/): how to write one, and the generated list. |
 | [learning/plan.md](learning/plan.md) | Plan (draft): where the learning loop is going, and what has been refuted on the way. |
 | [art/creature-art-direction.md](art/creature-art-direction.md) | Approved creature concepts, spell staging, mutation cues, and the ART-2–6 asset plan. |
 | [art/asset-intake.md](art/asset-intake.md) | ART-2 WebP references, original PNG upload paths, hashes, alpha audit and ART-3 handoff. |
@@ -18,7 +18,7 @@
 | [art/spell-vfx.md](art/spell-vfx.md) | Spell visual effects in the battle view. |
 | [art/mutation-cues.md](art/mutation-cues.md) | Mutation cues on one arena body. |
 | [art/battle-polish.md](art/battle-polish.md) | Playback polish, and the art pipeline's follow-ups. The ART-2 source list is `art/source-intake.json`. |
-| [adr/](adr/README.md) | Architecture Decision Records: what was decided, why, and what it cost. The directory is the index. |
+| [adr/](adr/README.md) | Architecture Decision Records: what was decided, why, and what it cost. The index is generated from the files. |
 | [architecture/overview.md](architecture/overview.md) | Layers, dependency rule, folder layout, how a request flows. |
 | [architecture/stateless-table-inventory.md](architecture/stateless-table-inventory.md) | What has to move for a table no process holds in memory (ADR 0159). |
 | [engineering/ai-workflow-plan.md](engineering/ai-workflow-plan.md) | Plan: the AI workflow from an idea to a merged pull request, measured on 300 pull requests and 20 sessions, in nine stages. |

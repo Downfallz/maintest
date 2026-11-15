@@ -1,7 +1,7 @@
 # 0183. Read the indexes from the files, and keep one journal entry per file
 
 Date: 2026-11-15
-Status: Accepted (stage W3 of [the AI workflow plan](../engineering/ai-workflow-plan.md)). Amends [0001](0001-record-architecture-decisions.md) (the index)
+Status: Accepted (stage W3 of [the AI workflow plan](../engineering/ai-workflow-plan.md)). Amends [0001](0001-record-architecture-decisions.md) (the index). Amended by [0184](0184-commit-the-indexes-generated-from-the-files.md) (the indexes are committed)
 
 ## Context
 
