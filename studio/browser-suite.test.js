@@ -119,7 +119,7 @@ test('a test that passed only on its retry is reported, and no other', () => {
 test('the local gate adds nothing for markdown, a page or the engine host alone', () => {
   const none = { battle: false, learning: false, content: false };
   assert.deepEqual(gate([]), none);
-  assert.deepEqual(gate(['docs/adr/0182-x.md', 'learning/README.md', 'table/lobby.js', '.claude/hooks/stop.sh']), none);
+  assert.deepEqual(gate(['docs/adr/0182-x.md', 'learning/README.md', 'battle/README.md', 'table/lobby.js', '.claude/hooks/stop.sh']), none);
 });
 
 test('the local gate rebuilds the battle bundle for a change to the battle view', () => {
@@ -127,10 +127,9 @@ test('the local gate rebuilds the battle bundle for a change to the battle view'
 });
 
 test('the local gate runs the learning project for what its lint and tests read', () => {
-  for (const path of ['learning/src/downfall_learning/clone.py', 'scripts/sweep-weight.py', 'viewer/samples/evaluation.json']) {
+  for (const path of ['learning/src/downfall_learning/clone.py', 'scripts/sweep-weight.py', 'scripts/iterate.sh', 'viewer/samples/evaluation.json', 'studio/value.fixture.json', 'data/README.md']) {
     assert.deepEqual(gate([path]), { battle: false, learning: true, content: false }, path);
   }
-  assert.equal(gate(['scripts/iterate.sh']).learning, false);
 });
 
 test('the local gate builds the content for the content and for what the builder is built from', () => {

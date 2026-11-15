@@ -67,8 +67,8 @@ dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst   # valida
 ```
 
 Every other command (play, simulate, evaluate, benchmark, studio, table, table-tend, table-worker, the scenarios,
-the learning CLI, iterate.sh) is in `docs/reference/commands.md`. `/verify` runs the gate (`scripts/verify.sh`), chosen
-from the diff.
+the learning CLI, iterate.sh) is in `docs/reference/commands.md`. `/verify` runs the gate (`scripts/verify.sh`): the
+battle bundle, the Python side and DataBuilder when the diff calls for them, the rest always.
 
 ## Definition of done
 

@@ -101,18 +101,23 @@ export function everything() {
 }
 
 // What the local gate (scripts/verify.sh) adds to the steps it always runs, each with the paths it reads: the
-// battle bundle is rebuilt from `battle/`, the learning project lints `scripts/` and reads the samples and the
-// content, and the content builder is built from the engine.
+// battle bundle is rebuilt from `battle/`; the learning project lints and runs `scripts/` (test_iterate_script.py)
+// and reads the samples, the studio's value fixture and the content, its README included (test_knobs.py); the
+// content builder is built from the engine. Markdown is read by the learning tests only.
+const isCode = (path) => !path.endsWith('.md');
 const GATE_STEPS = {
-  battle: (path) => path.startsWith('battle/'),
+  battle: (path) => isCode(path) && path.startsWith('battle/'),
   learning: (path) =>
-    path.startsWith('learning/') || path.startsWith('viewer/samples/') || path.startsWith('data/') || (path.startsWith('scripts/') && path.endsWith('.py')),
-  content: (path) => path.startsWith('data/') || path.startsWith('tools/') || path.startsWith('src/') || BUILD_FILES.has(path),
+    (isCode(path) && (path.startsWith('learning/') || path.startsWith('scripts/') || path.startsWith('viewer/samples/'))) ||
+    path === 'studio/value.fixture.json' ||
+    path.startsWith('data/'),
+  content: (path) =>
+    isCode(path) && (path.startsWith('data/') || path.startsWith('tools/') || path.startsWith('src/') || BUILD_FILES.has(path)),
 };
 
-/** The local gate's optional steps the changed paths call for; markdown calls for none of them. */
+/** The local gate's optional steps the changed paths call for. */
 export function gate(paths) {
-  const changed = paths.map((line) => line.trim()).filter((path) => path && !path.endsWith('.md'));
+  const changed = paths.map((line) => line.trim()).filter(Boolean);
   return Object.fromEntries(Object.entries(GATE_STEPS).map(([step, reads]) => [step, changed.some(reads)]));
 }
 

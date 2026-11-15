@@ -29,12 +29,18 @@ SUMMARY=()
 # The tree the gate tests, taken before the first step: a file edited while it runs is not what it passed on.
 TREE="$("$ROOT/scripts/gate/state.sh" tree)" || TREE=""
 
+# While it runs, the Stop hook waits for it instead of asking for a second gate on top of this one.
+RUNNING="$(git rev-parse --git-path claude-gate/running)"
+mkdir -p "$(dirname "$RUNNING")" && echo "$$ $TREE" > "$RUNNING"
+trap 'rm -f "$RUNNING"' EXIT
+
 # The paths this branch changed against main, committed or not, untracked files included. With no main to read,
 # every step runs.
 changed_paths() {
   local base
   base="$(git merge-base HEAD origin/main 2> /dev/null)" || return 1
-  { git diff --name-only "$base"; git ls-files --others --exclude-standard; } | sort -u
+  # NUL-separated, so a path with a quote or a non-ASCII letter reaches plan.js as it is, not quoted.
+  { git diff -z --name-only "$base"; git ls-files -z --others --exclude-standard; } | tr '\0' '\n' | sort -u
   return 0
 }
 
@@ -57,7 +63,9 @@ run_step() {
 }
 
 skip_step() {
-  SUMMARY+=("skip  $1: $2")
+  local name="$1"
+  local reason="$2"
+  SUMMARY+=("skip  $name: $reason")
   return 0
 }
 
@@ -68,9 +76,14 @@ report() {
   return 0
 }
 
-# As CI runs it: from learning/, so scripts/ is linted under the project's own ruff configuration.
+# As CI runs it: from learning/, so scripts/ is linted under the project's own ruff configuration, and from the
+# lock as it stands, so a stale uv.lock fails here as it does there instead of being rewritten.
 learning_gate() {
-  (cd learning && uv sync && uv run ruff check . ../scripts && uv run ruff format --check . ../scripts && uv run pytest -q)
+  (cd learning \
+    && uv sync --locked --no-build --no-install-project \
+    && uv run --no-sync ruff check . ../scripts \
+    && uv run --no-sync ruff format --check . ../scripts \
+    && uv run --no-sync pytest -q)
   return $?
 }
 
@@ -81,11 +94,16 @@ if [[ "$ALL" == true ]] || ! PATHS="$(changed_paths)"; then
   JOURNEYS="journeys=all"
 else
   echo "$(printf '%s' "$PATHS" | grep -c .) path(s) changed against origin/main."
-  STEPS="$(printf '%s\n' "$PATHS" | node studio/browser/plan.js --gate)"
-  JOURNEYS="$(printf '%s\n' "$PATHS" | node studio/browser/plan.js | paste -sd ' ' -)"
+  # A plan that cannot be read is not a diff that calls for nothing.
+  if ! STEPS="$(printf '%s\n' "$PATHS" | node studio/browser/plan.js --gate)" \
+    || ! JOURNEYS="$(printf '%s\n' "$PATHS" | node studio/browser/plan.js | paste -sd ' ' -)"; then
+    echo "studio/browser/plan.js could not read the diff: nothing was run." >&2
+    exit 1
+  fi
 fi
 called() {
-  grep -qx "$1=true" <<< "$STEPS"
+  local step="$1"
+  grep -qx "$step=true" <<< "$STEPS"
   return $?
 }
 
@@ -97,7 +115,7 @@ start_azurite "[verify]"
 if called battle || [[ ! -d table/battle-build ]]; then
   run_step "battle bundle" bash -c 'npm --prefix battle ci --ignore-scripts && npm --prefix battle run build'
 else
-  skip_step "battle bundle" "built, and battle/ unchanged"
+  skip_step "battle bundle" "built, and battle/ unchanged on this branch (rebuild it after merging main)"
 fi
 
 run_step "dotnet restore" dotnet restore
@@ -123,9 +141,10 @@ if [[ -z "${AZURITE_BLOB_ENDPOINT:-}" || -z "${AZURITE_QUEUE_ENDPOINT:-}" || -z 
 fi
 SUMMARY+=("note  browser, for /browser-check: $JOURNEYS")
 
-if [[ -n "$TREE" ]]; then
-  "$ROOT/scripts/gate/state.sh" record "$TREE"
-fi
 report
-echo "The gate passed; the tree it saw is recorded."
+if [[ -n "$TREE" ]] && "$ROOT/scripts/gate/state.sh" record "$TREE"; then
+  echo "The gate passed; the tree it started on is recorded."
+else
+  echo "The gate passed, but its tree could not be recorded: the Stop hook will still ask for it." >&2
+fi
 exit 0

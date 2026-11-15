@@ -306,7 +306,8 @@ Each stage is one pull request with its tests, and leaves the gate green.
    shared with the `SessionStart` hook), the engine and the pages always, and the battle bundle, the learning
    project and the content builder when `studio/browser/plan.js --gate` calls for them; it records the tree it
    passed on. The `Stop` hook (`.claude/hooks/stop.sh`) compares the working tree with it
-   (`scripts/gate/state.sh changed`) and stops the turn once per tree to say so. Not proven before the first
+   (`scripts/gate/state.sh changed`, per branch, markdown included) and stops the turn once per tree to say so,
+   or waits while a gate runs; `studio/gate-hook.test.js` tries both on a throwaway repository. Not proven before the first
    sessions use them: `/wrap-up`'s issues and labels, and `/browser-check` on the real-engine and release jobs.
 6. **W5, the reviewers.** The agents, `/review`, the memory trial.
 7. **W6, scheduled work.** The morning digest. Then, one at a time, the weekly run and the review trigger.

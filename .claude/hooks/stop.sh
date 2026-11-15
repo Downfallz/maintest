@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Stop hook: when code changed since the last green gate, say so once, before the turn ends, so a report never
-# passes for verified when it was not. The gate is scripts/verify.sh (/verify), which records the tree it saw;
+# passes for verified when it was not. Markdown counts: the architecture tests read it. The gate is scripts/verify.sh (/verify), which records the tree it saw;
 # scripts/gate/state.sh compares the working tree with it.
 #
 # "Once" is per tree: the warning is not repeated until the files change again, and a turn the warning itself
@@ -16,6 +16,11 @@ PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 cd "$PROJECT_DIR" || exit 0
 STATE="$PROJECT_DIR/scripts/gate/state.sh"
 [[ -x "$STATE" ]] || exit 0
+
+# A gate running in the background answers for this turn: asking for another would run two on one build.
+if "$STATE" running 2> /dev/null; then
+  exit 0
+fi
 
 CHANGED="$("$STATE" changed 2> /dev/null)" || exit 0
 [[ -n "$CHANGED" ]] || exit 0
