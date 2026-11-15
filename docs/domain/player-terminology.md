@@ -95,10 +95,10 @@ behaviour moves with them:
 
 The table translates once, in [`table/terms.js`](../../table/terms.js): the tempo labels, the phase labels and the
 stage label all come from there, so no page spells them out a second time. `table/terminology.test.js` reads the
-tables of this page: it holds `terms.js` to the Player-facing EN column, and refuses a legacy word that column
-replaced (Package, Talent atlas, Tier, and Speed, Quick, Standard and Planning as a capitalised label) in the
-table's pages, the sentences of its scripts and the battle view's. The content studio is an authoring tool and
-keeps the content's own words (Tier, level) where they name the file being edited.
+tables of this page. It holds `terms.js` to the Player-facing EN column. It also fails when the table's pages, the
+sentences of its scripts or the battle view use a legacy word that column replaced: Package, Talent atlas, Tier,
+and Speed, Quick, Standard or Planning as a capitalised label. The content studio is an authoring tool and keeps
+the content's own words (Tier, level) where they name the file being edited.
 
 French is documented here and not yet shipped: the pages have no localization layer, and this change does
 not introduce one.

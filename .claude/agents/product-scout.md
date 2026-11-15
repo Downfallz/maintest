@@ -37,4 +37,5 @@ Answer with at most five proposals, the strongest first, each in this shape:
 - **Size**: S (one pull request), M (a plan of two to four stages), L (more).
 - **Risk**: what it could break, the ADRs it touches, and what the owner must decide first.
 
-Then one line: what you read and found nothing in. Fewer than five strong proposals is a good answer; none is too.
+Then one line: what you read and found nothing in. Fewer than five strong proposals are a good answer, and so
+is none.

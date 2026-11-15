@@ -27,8 +27,8 @@ Seeds from the plan that read the repository (`docs/engineering/ai-workflow-plan
 revision per pull request, Cloudflare's settings as code, the static route table of `TableFiles.cs` derived at
 build. Weigh them like any other; drop one an issue or a merged pull request already covers.
 
-A proposal is not a change to make now: never edit, never run `az`, `bootstrap.sh` or a workflow. Nothing
-already open as an issue, and no proposal already closed (say which, and skip it).
+A proposal is not a change to make now: never edit, never run `az`, `bootstrap.sh` or a workflow. Propose
+nothing an open issue already covers, and nothing a closed proposal refused (say which, and skip it).
 
 Answer with at most five proposals, the strongest first, each in this shape:
 
