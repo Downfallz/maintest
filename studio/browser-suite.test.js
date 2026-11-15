@@ -12,7 +12,7 @@ import { flaked } from './browser/flakes.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const specs = readdirSync(join(here, 'browser')).filter((file) => file.endsWith('.spec.js'));
-const nothing = { journeys: 'none', realEngine: false, release: false, image: false };
+const nothing = { journeys: 'none', realEngine: false, release: false, image: false, showcase: false };
 
 test('a change of Markdown alone calls for nothing', () => {
   assert.deepEqual(plan(['docs/adr/0182-x.md', 'table/README.md', 'AGENTS.md', 'infra/README.md'], specs), nothing);
@@ -37,14 +37,14 @@ test('a real-engine journey plays the real engine and no mock journey', () => {
 
 test('a fixture or the mock host plays everything', () => {
   for (const file of ['server.js', 'battle-help-fixture.js', 'playwright.config.js', 'package-lock.json', 'plan.js']) {
-    assert.deepEqual(plan([`studio/browser/${file}`], specs), { journeys: 'all', realEngine: true, release: true, image: false }, file);
+    assert.deepEqual(plan([`studio/browser/${file}`], specs), { ...nothing, journeys: 'all', realEngine: true, release: true }, file);
   }
 });
 
 test('the battle view plays the battle specs, the real engine and the release profiles', () => {
   const planned = plan(['battle/src/scene.ts'], specs);
   assert.deepEqual(planned.journeys.split(' '), specs.filter((spec) => spec.startsWith('battle-')));
-  assert.deepEqual({ ...planned, journeys: '' }, { journeys: '', realEngine: true, release: true, image: true });
+  assert.deepEqual({ ...planned, journeys: '' }, { ...nothing, journeys: '', realEngine: true, release: true, image: true });
 });
 
 test('a table page plays every journey but the studio', () => {
@@ -63,7 +63,7 @@ test("the pages' own tests play no journey", () => {
 });
 
 test('the host plays the real engine and builds the image, without the mock journeys', () => {
-  assert.deepEqual(plan(['src/DownfallArena.Cli/Table/TableApi.cs'], specs), { journeys: 'none', realEngine: true, release: true, image: true });
+  assert.deepEqual(plan(['src/DownfallArena.Cli/Table/TableApi.cs'], specs), { ...nothing, realEngine: true, release: true, image: true });
 });
 
 test('a console command no page reaches builds the image and plays nothing', () => {
@@ -71,7 +71,7 @@ test('a console command no page reaches builds the image and plays nothing', () 
 });
 
 test('content plays everything', () => {
-  assert.deepEqual(plan(['data/spells/pummel.json'], specs), everything());
+  assert.deepEqual(plan(['data/Spells/pummel.json'], specs), everything());
 });
 
 test('the infrastructure builds the image and plays nothing', () => {
@@ -82,7 +82,31 @@ test('the infrastructure builds the image and plays nothing', () => {
 });
 
 test('the workflows that play the journeys play everything', () => {
-  assert.deepEqual(plan(['.github/workflows/studio-browser.yml'], specs), { journeys: 'all', realEngine: true, release: true, image: false });
+  assert.deepEqual(plan(['.github/workflows/studio-browser.yml'], specs), { ...nothing, journeys: 'all', realEngine: true, release: true });
+});
+
+// The showcase is deployed for what its build reads (ADR 0185), and only for that.
+test('the showcase is deployed for its pages, the catalogue it renders and the art it copies', () => {
+  for (const path of [
+    'showcase/page.mjs',
+    'showcase/_headers',
+    'data/Tiers/warped.json',
+    'data/presentation/mutation-art.json',
+    'docs/art/branding.css',
+    'battle/src/cue-art.js',
+    'table/battle-evolution-art.js',
+    'table/battle-art/horizon/breach.webp',
+    'table/fonts/OFL.txt',
+    '.github/workflows/showcase.yml',
+  ]) {
+    assert.equal(plan([path], specs).showcase, true, path);
+  }
+});
+
+test('the showcase is not deployed for its readme, a page test, the balance or the rest of the table', () => {
+  for (const path of ['showcase/README.md', 'studio/showcase.test.js', 'table/battle-evolution-art.test.js', 'data/balance/knobs.json', 'data/TalentTrees/a.json', 'table/lobby.js', 'src/DownfallArena.Cli/Table/TableApi.cs']) {
+    assert.equal(plan([path], specs).showcase, false, path);
+  }
 });
 
 test('several paths add up, and blank lines are not paths', () => {
@@ -91,7 +115,7 @@ test('several paths add up, and blank lines are not paths', () => {
 });
 
 test('the plan is written as the outputs the workflow reads', () => {
-  assert.equal(outputs(everything()), 'journeys=all\nreal-engine=true\nrelease=true\nimage=true');
+  assert.equal(outputs(everything()), 'journeys=all\nreal-engine=true\nrelease=true\nimage=true\nshowcase=true');
 });
 
 test('a test that passed only on its retry is reported, and no other', () => {
@@ -154,6 +178,6 @@ test('every job of the CI that runs before the gate is one the gate waits for', 
   const needs = /^ {2}gate:\n(?:.*\n)*? {4}needs: \[([^\]]*)\]/m.exec(workflow);
   assert.ok(needs, 'the gate job lists what it needs on one line');
 
-  const after = ['gate', 'deploy', 'main-health'];
+  const after = ['gate', 'deploy', 'showcase', 'main-health'];
   assert.deepEqual(needs[1].split(',').map((job) => job.trim()), jobs.filter((job) => !after.includes(job)));
 });

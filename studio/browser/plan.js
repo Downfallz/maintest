@@ -1,5 +1,5 @@
-// What a diff calls for (ADR 0182): the browser journeys, the real-engine and release jobs, and the table's
-// image, decided from the paths a change touches. CI's `changes` job asks it on every run, so the `gate` check
+// What a diff calls for (ADR 0182): the browser journeys, the real-engine and release jobs, the table's
+// image and the showcase, decided from the paths a change touches. CI's `changes` job asks it on every run, so the `gate` check
 // always reports while a change no page reads plays no journey. A path nothing here names calls for nothing.
 //
 //   git diff --name-only <base> HEAD | node studio/browser/plan.js    # what those paths call for
@@ -38,6 +38,22 @@ const IMAGE_FILES = new Set([
   '.github/workflows/rollout.yml',
 ]);
 const IMAGE_FOLDERS = ['infra/', 'src/', 'tools/', 'data/', 'table/', 'battle/', 'learning/weights/', 'models/', 'scenarios/'];
+
+// What `node showcase/build.mjs` reads (ADR 0185), and what deploys it: the pages, the catalogue it renders,
+// the branding, the art and the modules that resolve it. Its own tests and its README are not read by the build.
+const SHOWCASE_FILES = new Set([
+  'docs/art/branding.css',
+  'battle/src/cue-art.js',
+  'table/battle-evolution.js',
+  'table/icon.svg',
+  'table/brand-mark.svg',
+  '.github/workflows/showcase.yml',
+]);
+const SHOWCASE_FOLDERS = ['showcase/', 'data/Creatures/', 'data/Spells/', 'data/Tiers/', 'data/presentation/', 'table/battle-art/', 'table/fonts/'];
+const builtIntoTheShowcase = (path) =>
+  !path.endsWith('.md') &&
+  !path.endsWith('.test.js') &&
+  (SHOWCASE_FILES.has(path) || SHOWCASE_FOLDERS.some((folder) => path.startsWith(folder)) || /^table\/battle-[a-z-]*art\.js$/.test(path));
 
 // The specs the release profiles play besides their own (battle.release.config.js).
 const RELEASE_FILES = new Set(['battle.loop.js', 'battle.release.config.js', 'battle-release.spec.js', 'battle-live.spec.js']);
@@ -78,7 +94,7 @@ const RULES = [
 
 /**
  * Decide what the changed paths call for. `specs` is every mock-host journey file the suite holds.
- * Returns `journeys` ('none', 'all', or the spec files separated by spaces) and three booleans.
+ * Returns `journeys` ('none', 'all', or the spec files separated by spaces) and four booleans.
  */
 export function plan(paths, specs) {
   const changed = paths.map((line) => line.trim()).filter(Boolean);
@@ -92,12 +108,13 @@ export function plan(paths, specs) {
     realEngine: called.some((call) => call.realEngine === true),
     release: called.some((call) => call.release === true),
     image: changed.some((path) => !path.endsWith('.md') && carriedByTheImage(path)),
+    showcase: changed.some(builtIntoTheShowcase),
   };
 }
 
 /** Everything: what a run that has no diff to read plays. */
 export function everything() {
-  return { journeys: 'all', realEngine: true, release: true, image: true };
+  return { journeys: 'all', realEngine: true, release: true, image: true, showcase: true };
 }
 
 // What the local gate (scripts/verify.sh) adds to the steps it always runs, each with the paths it reads: the
@@ -130,6 +147,7 @@ export function outputs(planned) {
     `real-engine=${planned.realEngine}`,
     `release=${planned.release}`,
     `image=${planned.image}`,
+    `showcase=${planned.showcase}`,
   ].join('\n');
 }
 

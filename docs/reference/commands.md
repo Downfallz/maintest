@@ -151,7 +151,8 @@ GAME_ORIGIN=https://your-game-host.example node showcase/build.mjs
 Builds the public showcase into `showcase/dist`: eight localized pages, their assets and the `_headers` file
 Cloudflare Pages serves (showcase/README.md, ADR 0185). `GAME_ORIGIN` sets the origin of the Play links. It must be
 a bare HTTPS origin, with no path, query or credentials. The default is `https://play.downfallinstinct.com`.
-`node --test studio/showcase.test.js` rebuilds the showcase and checks the result.
+`node --test studio/showcase.test.js` rebuilds the showcase and checks the result. CI runs the same build on `main`, behind the
+gate, and deploys it (`.github/workflows/showcase.yml`, infra/README.md).
 
 ## Matches in the console
 
