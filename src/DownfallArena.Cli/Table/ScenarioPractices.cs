@@ -1,3 +1,4 @@
+using DownfallArena.Application.Matches.Scenarios;
 using DownfallArena.Infrastructure.Matches;
 
 namespace DownfallArena.Cli.Table;
@@ -101,7 +102,12 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
             }
 
             var cut = document.Scenario.Cut;
-            var label = new PracticeLabel(scenario, document.Title ?? $"Round {cut.Round}", document.Goal, cut.Round);
+            var label = new PracticeLabel(scenario, document.Title ?? $"Round {cut.Round}", document.Goal, cut.Round)
+            {
+                Tutorial = document.Tutorial is { } lesson
+                    ? new TutorialPlay(lesson, AssistedSeat.Of(document.Scenario, document.Seat, lesson), document.Seat, store.Tutorials.Count)
+                    : null,
+            };
             ScenarioPlay play;
             try
             {

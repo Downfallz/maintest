@@ -1,6 +1,6 @@
 # Onboarding: tutorials played on the table, and concept cards
 
-Status: accepted, 2026-11-15. O1 and O2 built (ADR 0187); O3a next.
+Status: accepted, 2026-11-15. O1, O2 and O3a built (ADR 0187); O3b next.
 
 ## What the owner asked for
 
@@ -136,6 +136,20 @@ give what is said and when. It reuses everything ADR 0179 built, and the regress
    the assisted questions answered for the person's seat by its recorded answers; the done state reached. Tests:
    `ScenariosApiTests` (listed to a player, not removable, opened as practice, 401 signed out), Application tests
    for the assisted seat (answered while it fits, handed back to the person when it does not).
+
+   *Built (2026-11-15)*: `GET /api/tutorials` lists the series to any signed-in account, and a tutorial is opened
+   as a practice by the scenario routes, by every account even where the host names admins; the repository's
+   other scenarios stay the admin accounts'. It is never listed under Practice or removed at the host, and the
+   admin panel marks it *Tutorial n*. `AssistedSeat` (Application) gives the seat's recorded answers for the
+   kinds the lesson does not teach, each checked as the scripted opponent's, and hands every question back for
+   good at the first that does not fit. `TutorialPlay` (the host) submits them as the person's own decisions, one
+   of the match's turns each, so the seat stays its person's. The seat's view says the lesson under
+   `practice.tutorial`: its steps, `shown`, `done` (the last step's question was asked and its round ended, or
+   the match ended) and `assisted`. Left to O3b: between an assisted question asked and its answer the view
+   says that question, so the page draws no question of a kind `assisted` names; nothing in the pages reads
+   `practice.tutorial` or `/api/tutorials` yet. Left to O4: `done` lives with the practice, in the host's
+   memory, and the account does not keep it. The local `table --practice` and `scenario` hosts play a
+   tutorial file as a plain scenario.
 4. **O3b, the coach and the concept cards.** `table/concepts.js` (the ten concepts, pure) and
    `table/battle-tutorial.js`: the **Tutorial n of 4** band with Leave, the coach card by the question asked, the
    concept cards a step opens, the phase tips silent while a tutorial plays. Tests: `concepts.test.js` (every

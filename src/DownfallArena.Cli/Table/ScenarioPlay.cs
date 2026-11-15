@@ -53,7 +53,10 @@ internal sealed record ScenarioPlay(SteppedSession Session, TableApi Api, string
         var session = opened.IsSuccess ? opened.Value : throw new InvalidDataException($"The scenario could not be opened: {opened.Error.Message}");
         try
         {
+            // A tutorial's assisted questions are answered from the first one the match asks.
+            label?.Tutorial?.Follow(session);
             session.Begin();
+            label?.Tutorial?.Look();
             var api = new TableApi(session, seats, CatalogueProjection.Build(resources, rules), stepped.Events)
             {
                 Guide = new DecisionGuideProjection(resources, rules),

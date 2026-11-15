@@ -8,8 +8,8 @@ with a **play** link. Nothing else is needed: add a file, deploy, and it is ther
 - The id is the file's name: `greedy-1v1-round-3.json` is `sc-repo-greedy-1v1-round-3`, opened at
   `/battle?scenario=sc-repo-greedy-1v1-round-3` by a signed-in admin account (any signed-in account on a host that
   names no admin account).
-- For now they are the admin panel's only: one is never listed under Practice, and never removed at the host. To
-  remove one, delete its file.
+- They are the admin panel's only, except the tutorials: one is never listed under Practice, and never removed at
+  the host. To remove one, delete its file.
 - Each file carries the content it was cut on, so it keeps playing after the content moves.
 - Each file is also a regression test: `ScenarioFileTests` rebuilds every one on the engine. A file an engine
   change breaks is generated or cut again, with the change explained.
@@ -34,8 +34,10 @@ scenarios/<name>.json` does the same. Both commands are in docs/reference/comman
 A file under `scenarios/tutorials/` is a **tutorial** (ADR 0187, docs/tabletop/onboarding-plan.md): a scenario
 file with a `tutorial` block, which you write by hand after the `seat` key. Its id is
 `sc-repo-tutorial-<file name>`. A file with the block anywhere else is left out, and so is a file here without
-it. Until the hosted tutorials are built (stage O3a) the host reads it and lists it with the others, in the admin
-panel only.
+it. The host lists it in the admin panel with the others, marked *Tutorial n*, and offers it to every signed-in
+account: `GET /api/tutorials` lists the series, and one is opened as a practice like any scenario. While it
+plays, the host answers the assisted questions for the person and says in the seat's view how far the lesson is
+(docs/reference/commands.md).
 
 ```json
 "tutorial": {

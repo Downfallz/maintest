@@ -60,6 +60,9 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
                 listed = one.Listed,
                 source = one.File is null ? "cut" : "repository",
                 file = one.File,
+
+                // Its place in the series when it is a tutorial (ADR 0187), which every signed-in account plays.
+                tutorial = one.Document.Tutorial?.Order,
                 link = Link(one.Id),
             }).ToArray(),
         }, ArtifactJson.LineOptions);
@@ -169,7 +172,7 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
 
         if (store.Ships(id))
         {
-            return Error("Scenario.FromRepository", "This scenario comes from the repository and is offered in the admin panel only: it cannot be listed under Practice.", 409);
+            return Error("Scenario.FromRepository", store.Teaches(id) ? "This tutorial comes from the repository and is offered to every signed-in account under Learn to play: it cannot be listed under Practice." : "This scenario comes from the repository and is offered in the admin panel only: it cannot be listed under Practice.", 409);
         }
 
         if (!await store.SetListedAsync(id, list))
