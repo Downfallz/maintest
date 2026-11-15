@@ -19,7 +19,7 @@ a.primary { display: inline-block; padding: 12px 16px; text-decoration: none; }
 .lobby-count { font: 12px var(--font-text); color: var(--muted); border: 1px solid var(--line); padding: 3px 7px; }
 .casual-tag { display: inline-block; padding: 1px 8px; border: 1px solid var(--line); color: var(--muted); font: 600 10px/1.6 var(--font-text); letter-spacing: .08em; text-transform: uppercase; vertical-align: middle; }
 .casual-tag.ranked { color: var(--gold); border-color: var(--gold); }
-.tag-frame { display: contents; }
+.game-card.tag-frame { display: contents; }
 .empty-state { color: var(--muted); line-height: 1.7; }
 .game-card { border: 1px solid var(--line); padding: 20px; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
 .game-card h3 { margin: 0; font: 400 23px var(--font-display); }
