@@ -16,6 +16,7 @@ namespace DownfallArena.Infrastructure.Matches.Scenarios;
 /// <param name="Title">What the scenario is called, for a person picking one.</param>
 /// <param name="Goal">What the person is asked to try, if anything.</param>
 /// <param name="Schema">The content itself, when the file carries it, so it plays where that content was never seen.</param>
+/// <param name="Tutorial">The lesson that makes it a Tutorial (ADR 0187); none for an ordinary scenario.</param>
 public sealed record ScenarioDocument(
     ScenarioCut Scenario,
     PlayerSlot Seat,
@@ -24,4 +25,5 @@ public sealed record ScenarioDocument(
     string? Engine = null,
     string? Title = null,
     string? Goal = null,
-    JsonElement? Schema = null);
+    JsonElement? Schema = null,
+    TutorialLesson? Tutorial = null);

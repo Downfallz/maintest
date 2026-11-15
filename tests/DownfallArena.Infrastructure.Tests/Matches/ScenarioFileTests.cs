@@ -60,11 +60,11 @@ public sealed class ScenarioFileTests
         Should.Throw<InvalidDataException>(() => ScenarioFile.Read(text)).Message.ShouldContain("cut");
     }
 
-    /// <summary>Every scenario kept beside these tests still rebuilds on this engine, and its source's answers after the cut still apply.</summary>
+    /// <summary>Every scenario kept beside these tests, the tutorials among them, still rebuilds on this engine, and its source's answers after the cut still apply.</summary>
     [Fact]
     public async Task Every_kept_scenario_still_holds_on_this_engine()
     {
-        var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "scenarios"), "*.json");
+        var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "scenarios"), "*.json", SearchOption.AllDirectories);
         files.ShouldNotBeEmpty();
 
         foreach (var file in files)

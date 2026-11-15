@@ -37,7 +37,7 @@ An area marked * has its own `AGENTS.md` (and a `CLAUDE.md` that imports it): re
 | `table/` * | Static HTML table: the pages people play on, served by `table` (docs/tabletop/playtest-app.md). |
 | `battle/` * | The Phaser/TypeScript battle view; builds into the ignored `table/battle-build/`. |
 | `learning/` * | The Python training project (uv, ruff, pytest) and the heuristic weights files. See docs/learning/. |
-| `scenarios/` | Match scenarios the admin panel lists and plays, one file each (`scenarios/README.md`, ADR 0179). |
+| `scenarios/` | Match scenarios the admin panel lists and plays, one file each, and the tutorials under `tutorials/` (`scenarios/README.md`, ADR 0179, 0187). |
 | `models/` | Trained policies (`policy.json`, small, committed with their evaluation). See `models/README.md`. |
 | `infra/` * | The hosted table on Azure behind Cloudflare: `main.bicep`, `bootstrap.sh`, `README.md` (ADR 0080-0082, 0162, 0175). |
 | `Dockerfile` | The table's image, built and tried by `.github/workflows/image.yml` before it is pushed and deployed. |

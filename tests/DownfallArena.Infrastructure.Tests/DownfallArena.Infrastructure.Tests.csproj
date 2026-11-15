@@ -24,6 +24,7 @@
   <!-- The repository's match scenarios (scenarios/): each must still rebuild on the engine (ADR 0179). -->
   <ItemGroup>
     <Content Include="..\..\scenarios\*.json" Link="scenarios\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\scenarios\tutorials\*.json" Link="scenarios\tutorials\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

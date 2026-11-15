@@ -13,6 +13,8 @@ public sealed class RepositoryScenariosTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), $"repository-scenarios-{Guid.CreateVersion7():N}");
 
+    private static string Tutorial => Path.Combine(AppContext.BaseDirectory, "scenarios", "tutorials", "your-first-combat.json");
+
     public RepositoryScenariosTests() => Directory.CreateDirectory(_root);
 
     public void Dispose() => Directory.Delete(_root, recursive: true);
@@ -54,6 +56,73 @@ public sealed class RepositoryScenariosTests : IDisposable
         File.Copy(Path.Combine(AppContext.BaseDirectory, "scenarios", "greedy-1v1-round-3.json"), Path.Combine(_root, "a-b.json"));
 
         RepositoryScenarios.Read(_root).All.Select(one => (one.Id, one.File)).ShouldBe([("sc-repo-a-b", "a b.json")]);
+    }
+
+    [Fact]
+    public void A_tutorial_is_read_from_the_tutorials_directory_under_an_id_that_says_so()
+    {
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "scenarios", "greedy-1v1-round-3.json"), Path.Combine(_root, "plain.json"));
+        Directory.CreateDirectory(Path.Combine(_root, "tutorials"));
+        File.Copy(Tutorial, Path.Combine(_root, "tutorials", "your-first-combat.json"));
+
+        var shipped = RepositoryScenarios.Read(_root);
+
+        shipped.All.Select(one => (one.Id, one.File)).ShouldBe([("sc-repo-plain", "plain.json"), ("sc-repo-tutorial-your-first-combat", "tutorials/your-first-combat.json")]);
+        shipped.Tutorials.ShouldHaveSingleItem().Document.Tutorial!.Order.ShouldBe(1);
+        ScenarioStore.Names(shipped.Tutorials[0].Id).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Tutorials_are_listed_in_the_order_of_the_series_and_a_place_taken_twice_keeps_the_first_file()
+    {
+        var first = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(Tutorial))!.AsObject();
+        Directory.CreateDirectory(Path.Combine(_root, "tutorials"));
+        File.WriteAllText(Path.Combine(_root, "tutorials", "b-first.json"), first.ToJsonString());
+        File.WriteAllText(Path.Combine(_root, "tutorials", "c-first-again.json"), first.ToJsonString());
+        first["tutorial"]!["order"] = 2;
+        File.WriteAllText(Path.Combine(_root, "tutorials", "a-second.json"), first.ToJsonString());
+
+        RepositoryScenarios.Read(_root).Tutorials.Select(one => one.File).ShouldBe(["tutorials/b-first.json", "tutorials/a-second.json"]);
+    }
+
+    [Fact]
+    public void A_tutorial_whose_lesson_is_not_one_is_left_out()
+    {
+        var broken = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(Tutorial))!.AsObject();
+        broken["tutorial"]!["steps"]![0]!["concepts"] = new System.Text.Json.Nodes.JsonArray("luck");
+        Directory.CreateDirectory(Path.Combine(_root, "tutorials"));
+        File.WriteAllText(Path.Combine(_root, "tutorials", "broken.json"), broken.ToJsonString());
+
+        RepositoryScenarios.Read(_root).All.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void A_tutorial_outside_the_tutorials_directory_or_a_file_named_as_one_is_left_out()
+    {
+        File.Copy(Tutorial, Path.Combine(_root, "a-lesson.json"));
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "scenarios", "greedy-1v1-round-3.json"), Path.Combine(_root, "tutorial-your-first-combat.json"));
+        Directory.CreateDirectory(Path.Combine(_root, "tutorials"));
+        File.Copy(Tutorial, Path.Combine(_root, "tutorials", "your-first-combat.json"));
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "scenarios", "greedy-1v1-round-3.json"), Path.Combine(_root, "tutorials", "no-lesson.json"));
+
+        var shipped = RepositoryScenarios.Read(_root);
+
+        shipped.All.Select(one => one.File).ShouldBe(["tutorials/your-first-combat.json"]);
+        shipped.Tutorials.ShouldHaveSingleItem();
+    }
+
+    [Fact]
+    public async Task Checking_a_tutorial_file_checks_that_its_steps_are_reached()
+    {
+        var late = System.Text.Json.Nodes.JsonNode.Parse(await File.ReadAllTextAsync(Tutorial, TestContext.Current.CancellationToken))!.AsObject();
+        late["tutorial"]!["steps"]![2]!["at"]!["round"] = 99;
+        var never = Path.Combine(_root, "never.json");
+        await File.WriteAllTextAsync(never, late.ToJsonString(), TestContext.Current.CancellationToken);
+
+        var held = await ScenarioCommands.CheckAsync(new CliOptions { Command = CliOptions.ScenarioCheckCommand, Output = "unused", Scenario = Tutorial, SchemaPath = Path.Combine(_root, "none.json") });
+        var refused = await ScenarioCommands.CheckAsync(new CliOptions { Command = CliOptions.ScenarioCheckCommand, Output = "unused", Scenario = never, SchemaPath = Path.Combine(_root, "none.json") });
+
+        (held, refused).ShouldBe((0, 1));
     }
 
     [Fact]

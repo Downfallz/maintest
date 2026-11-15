@@ -368,7 +368,11 @@ public sealed class ScenariosApiTests : IDisposable
         var listed = Read(await admin.HandleAsync("GET", ScenarioAdminApi.Route, "", "operator")).GetProperty("scenarios");
 
         listed.EnumerateArray().Select(one => (one.GetProperty("id").GetString(), one.GetProperty("source").GetString(), one.GetProperty("file").GetString()))
-            .ShouldBe([("sc-repo-greedy-1v1-round-3", "repository", "greedy-1v1-round-3.json"), (cut, "cut", null)]);
+            .ShouldBe([
+                ("sc-repo-greedy-1v1-round-3", "repository", "greedy-1v1-round-3.json"),
+                ("sc-repo-tutorial-your-first-combat", "repository", "tutorials/your-first-combat.json"),
+                (cut, "cut", null),
+            ]);
         listed[0].GetProperty("link").GetString().ShouldBe("/battle?scenario=sc-repo-greedy-1v1-round-3");
     }
 

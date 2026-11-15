@@ -560,7 +560,9 @@ dotnet run --project src/DownfallArena.Cli -- scenario-check --scenario bug.scen
 ```
 
 Whether a scenario still rebuilds on this engine and stands on the boards recorded at its cut (exit 0 or 1); a
-file kept under `scenarios/` is checked by the tests, so a repro becomes a regression test.
+file kept under `scenarios/` is checked by the tests, so a repro becomes a regression test. For a file with a
+`tutorial` block (ADR 0187) it also plays the recorded answers and says whether each lesson step is reached, in
+the order written (`scenarios/README.md`).
 
 ### scenario-generate
 

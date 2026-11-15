@@ -1,6 +1,6 @@
 # Onboarding: tutorials played on the table, and concept cards
 
-Status: accepted, 2026-11-15. O1 built (ADR 0187); O2 next.
+Status: accepted, 2026-11-15. O1 and O2 built (ADR 0187); O3a next.
 
 ## What the owner asked for
 
@@ -113,6 +113,25 @@ give what is said and when. It reuses everything ADR 0179 built, and the regress
    when the recorded answers are played, and every concept a step names exists. One tutorial file, tutorial 1, as
    the fixture. Tests: Infrastructure tests on the block, a step never reached, a step about a creature not on the
    board, an unknown concept.
+
+   *Built (2026-11-15)*: the block is `order`, `title`, `teaches` (the question kinds the person answers; every
+   other kind is answered for the person) and `steps`, each `at` a kind, a round and a creature, with `says`,
+   `concepts` and `pointsAt` (`scenarios/README.md`). `TutorialLesson` refuses what is not a lesson when the file
+   is read: an unknown concept (`ConceptCards`, the ten ids), a step at a kind the lesson does not teach, more than
+   two lines, two steps at one question. `LessonReach` plays the recorded answers and refuses a step never reached,
+   reached out of order, or about a creature not on the board; `TutorialFileTests` and `scenario-check` run it.
+   `RepositoryScenarios` reads `scenarios/tutorials/` under `sc-repo-tutorial-<name>` and lists `Tutorials` by
+   order; a lesson outside that directory, and a file there without one, are left out. Tutorial 1 is
+   `your-first-combat.json`: a greedy 3v3 on seed 5, round 2, three steps on the person's three actions, opening
+   Health, Energy and Defense; its lines are a first draft for the copy-editor at O5. It opens neither Intent nor
+   the fizzle, which the series table gives it: the hosted table's rules choose a spell when the slot comes up
+   (`AtActivation`), with no Intent to declare and a skipped slot where a fizzle would be. Where those two cards
+   belong is asked at O5. Its lines also state content facts no test holds (what Shock costs, the wounded enemy's
+   Defense): the file carries its content, so they stay true until it is cut again. Left to O3a: the tutorials
+   still show in the admin panel as plain scenarios, nothing answers the assisted questions yet, and who may open
+   one is to be said outright (`ScenariosApi` lets any signed-in account open a shipped scenario on a host that
+   names no admin). Left to O3b: `table/concepts.js` is held against `ConceptCards.Ids`, and the control names
+   `pointsAt` may use.
 3. **O3a, hosted tutorials.** `GET /api/tutorials` for any signed-in account, opening a tutorial as a practice;
    the assisted questions answered for the person's seat by its recorded answers; the done state reached. Tests:
    `ScenariosApiTests` (listed to a player, not removable, opened as practice, 401 signed out), Application tests
