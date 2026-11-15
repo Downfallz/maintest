@@ -1,6 +1,6 @@
 # Plan: the AI workflow, from an idea to a merged pull request
 
-Status: accepted in part, 2026-11-14. The owner settled questions 1, 2, 3 and 5 (at the end); W0 to W5 are built.
+Status: accepted in part, 2026-11-14. The owner settled questions 1, 2, 3, 5 and 6 (at the end); W0 to W6 are built.
 Each stage below is one pull request, or one settings change that only the owner can make.
 
 ## What the owner asked for
@@ -326,6 +326,15 @@ Each stage is one pull request with its tests, and leaves the gate green.
    it: that a cloud session's reviewer writes there and the next one reads it. `/code-review ultra`, Claude
    Code's own deep review, is the owner's to run.
 7. **W6, scheduled work.** The morning digest. Then, one at a time, the weekly run and the review trigger.
+   *Built (2026-11-15)*: the owner chose the morning digest first, at 6:40, Montreal time (question 6).
+   `scripts/digest/digest.mjs` reads git and GitHub's REST API (the CI and nightly runs, the newest deployment,
+   the health issues, the open pull requests and their checks, the open follow-ups). It writes one phone screen in
+   French. `studio/digest.test.js` tests it. `/digest` runs it and only reads. The scheduled task "Bilan du matin"
+   starts a fresh session every day at 6:40 and pushes its answer. That session has no repository and no GitHub
+   tools: its prompt, kept in the skill, clones `main` and follows the skill, and the script reads through `curl`,
+   which the proxy signs. The REST API does not say whether a review thread is resolved, so a green pull request
+   reads "verte", not "prête". Left: the weekly run and the review trigger, one at a time once the digest has run
+   for a week.
 8. **W7, operations.** `ops-report`, the smoke test, the alerts, the runbooks, `/ops`.
 9. **W8, proposals, language, design.** `product-scout`, `ops-analyst`, `/proposals`, `/retro`, the
    terminology test, the design system, the Cowork project.
@@ -375,3 +384,4 @@ Each stage is one pull request with its tests, and leaves the gate green.
 2. The standing orders as written: a session opens the pull request, subscribes and asks Codex unasked.
 3. The ruleset requires the two CI jobs at first; the browser suite once W2 makes it always report.
 5. One stage, one session, with a ceiling at 300,000 tokens and a wrap-up.
+6. The morning digest first, every day at 6:40, Montreal time (asked in W6, 2026-11-15).

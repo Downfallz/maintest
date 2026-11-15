@@ -53,6 +53,22 @@ anything but markdown, then `domain-reviewer`, `host-reviewer`, `pages-reviewer`
 edits, and that the two that keep a memory name its folder in their prompt: a memory turns Write and Edit on, and
 only the prompt holds them to `.claude/agent-memory/<agent>/`.
 
+### digest/digest.mjs
+
+```bash
+git fetch origin main:refs/remotes/origin/main && node scripts/digest/digest.mjs [facts.json]   # the morning digest, one phone screen in French
+```
+
+What `/digest` runs. It reads what merged on `origin/main` in the 24 hours before the run. From GitHub's REST API,
+through `curl` (the session's proxy signs the requests), it reads the CI and nightly runs on `main`, the newest
+deployment to the `azure` environment (from CI or by hand), the open `red-main` and `red-nightly` issues, the open
+pull requests with their checks, and the open `follow-up`, `flaky` and `ops` issues. A field it cannot read is
+named on its last line, never guessed. The optional facts, on stdin with `--stdin`, add what only the session
+tools know (the sessions waiting on the owner) and override any field; their shape is in the script's header.
+`studio/digest.test.js` tests it. The scheduled task "Bilan du matin" starts a fresh session every day at 6:40,
+Montreal time, whose prompt (in `.claude/skills/digest/SKILL.md`) clones `main` and follows the skill; it pushes
+the answer to the owner's phone.
+
 ### Build the battle view
 
 ```bash
