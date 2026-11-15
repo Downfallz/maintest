@@ -290,6 +290,36 @@ public sealed class SteppedSessionTests : IDisposable
     }
 
     /// <summary>
+    /// A table let go of and picked up again by the same process -- a registry that let it go from memory, or a
+    /// host that read its record rewritten -- is the same match id in the same stores. The table picked up again
+    /// waits for the one let go of to have forgotten its match, or that forgetting, landing after the rebuild,
+    /// takes the rebuilt match and its feed with it, and the table is voided for a trace that no longer agrees
+    /// with its checkpoint (issue #609).
+    /// </summary>
+    [Fact]
+    public async Task A_table_picked_up_again_where_it_was_let_go_of_keeps_its_match_once_the_letting_go_ends()
+    {
+        var repository = _host.Services.GetRequiredService<IMatchRepository>();
+        var recorder = _host.Services.GetRequiredService<MatchTraceRecorder>();
+        var forgetting = new HeldForgetting(repository);
+        using var letGo = new CancellationTokenSource();
+        var (session, person, _) = await Opened(_host, stepped: SteppedHost.Of(_host.Services) with { Matches = forgetting }, stopping: letGo.Token);
+        session.Begin();
+        await Waiting(person, PlayerOptionsKind.Evolution);
+        forgetting.Hold();
+        await letGo.CancelAsync();
+        await forgetting.Reached.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+
+        var pickingUp = Opened(_host, session.MatchId);
+        forgetting.Release();
+        var (again, _, _) = await pickingUp.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        await Task.WhenAny(session.Outcome).WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+
+        (await repository.FindAsync(again.MatchId, TestContext.Current.CancellationToken)).ShouldNotBeNull();
+        recorder.Length(again.MatchId).ShouldBeGreaterThan(0);
+    }
+
+    /// <summary>
     /// A line can be in the journal with its answer lost on the way back: the writer is told the match moved.
     /// The tap is answered as late, and the seat reads on from the journal rather than staying on a question
     /// the journal says it has answered.
@@ -372,7 +402,9 @@ public sealed class SteppedSessionTests : IDisposable
 
     /// <summary>A table with its person in seat 1 and a bot that can be held in seat 2, or two bots.</summary>
     /// <param name="handover">The round the person's seat is theirs from, a bot holding it until then; none for a seat theirs from the start.</param>
-    private async Task<(SteppedSession Session, SteppedPerson Person, Held Bot)> Opened(HostedTables host, MatchId? matchId = null, bool people = true, int? handover = null)
+    /// <param name="stepped">What the table is stepped over, the host's own unless given.</param>
+    /// <param name="stopping">What lets the table go, the test's own unless given.</param>
+    private async Task<(SteppedSession Session, SteppedPerson Person, Held Bot)> Opened(HostedTables host, MatchId? matchId = null, bool people = true, int? handover = null, SteppedHost? stepped = null, CancellationToken? stopping = null)
     {
         var resources = host.Services.GetRequiredService<IGameResources>();
         var person = new SteppedPerson();
@@ -390,11 +422,11 @@ public sealed class SteppedSessionTests : IDisposable
 
         List<CreatureDefinitionId> roster = [.. Enumerable.Repeat(resources.Creatures.First().Id, HostedTables.Rules.TeamSize)];
         var opened = await SteppedSession.OpenAsync(
-            SteppedHost.Of(host.Services),
+            stepped ?? SteppedHost.Of(host.Services),
             _journal,
             new JournaledMatch(Run, matchId ?? MatchId.New(), HostedTables.Rules, 7, roster),
             new SteppedSeats(plan, seats, Named(host)),
-            stopping: _stopping.Token);
+            stopping: stopping ?? _stopping.Token);
         opened.IsSuccess.ShouldBeTrue(opened.IsFailure ? opened.Error.Message : string.Empty);
         _opened.Add(opened.Value);
         return (opened.Value, person, bot);
@@ -472,6 +504,41 @@ public sealed class SteppedSessionTests : IDisposable
 
             var written = await _inner.AppendAsync(run, after, entries, cancellationToken);
             return entries.Count > 0 && Interlocked.Exchange(ref _losing, 0) != 0 ? null : written;
+        }
+    }
+
+    /// <summary>
+    /// The host's matches, whose forgetting, once held, waits until the test lets it through, and says when it has
+    /// begun. Not held at first: a match is forgotten as it is built too.
+    /// </summary>
+    private sealed class HeldForgetting(IMatchRepository inner) : IMatchRepository
+    {
+        private readonly TaskCompletionSource _reached = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _released = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private volatile bool _held;
+
+        /// <summary>Completes when a match is being forgotten while held.</summary>
+        public Task Reached => _reached.Task;
+
+        public void Hold() => _held = true;
+
+        public void Release() => _released.TrySetResult();
+
+        public Task<Match?> FindAsync(MatchId id, CancellationToken cancellationToken = default) => inner.FindAsync(id, cancellationToken);
+
+        public Task SaveAsync(Match match, CancellationToken cancellationToken = default) => inner.SaveAsync(match, cancellationToken);
+
+        public async Task ForgetAsync(MatchId id, CancellationToken cancellationToken = default)
+        {
+            if (!_held)
+            {
+                await inner.ForgetAsync(id, cancellationToken);
+                return;
+            }
+
+            _reached.TrySetResult();
+            await _released.Task.WaitAsync(TimeSpan.FromSeconds(30), CancellationToken.None);
+            await inner.ForgetAsync(id, cancellationToken);
         }
     }
 

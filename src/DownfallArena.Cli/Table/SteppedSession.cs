@@ -41,6 +41,13 @@ internal sealed class SteppedSession : ITableSession, IAgentTurnTaker
     private readonly CancellationTokenRegistration _stopped;
     private readonly TaskCompletionSource<Result<MatchOutcome>> _outcome = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+    // The matches tables of this process are letting go of, by id, until each is forgotten. A table let go of and
+    // picked up again here -- a registry that let it go from memory, a host that read its record rewritten, a
+    // second registry over the same stores -- is the same match id in the same match store and feed recorder, and
+    // the forgetting, landing after the rebuild, would take the rebuilt match and its feed with it (issue #609).
+    // Match ids are drawn at random, so one map serves every host the process runs.
+    private static readonly ConcurrentDictionary<MatchId, Task> LettingGo = new();
+
     // What the readers are served from, and who the plan says sits where: replaced, never changed in place.
     private readonly Lock _gate = new();
     private JournaledState? _state;
@@ -108,6 +115,12 @@ internal sealed class SteppedSession : ITableSession, IAgentTurnTaker
         ArgumentNullException.ThrowIfNull(journal);
         ArgumentNullException.ThrowIfNull(match);
         ArgumentNullException.ThrowIfNull(seats);
+
+        // A table this process let go of a moment ago is still forgetting this very match: the rebuild comes after.
+        if (LettingGo.TryGetValue(match.MatchId, out var lettingGo))
+        {
+            await Task.WhenAny(lettingGo).WaitAsync(stopping);
+        }
 
         var session = new SteppedSession(host, journal, match, seats, run, legacyStream, stopping);
         Result<JournaledState> state;
@@ -192,7 +205,14 @@ internal sealed class SteppedSession : ITableSession, IAgentTurnTaker
     {
         if (Interlocked.Exchange(ref _disposed, 1) == 0)
         {
-            _ = LetGoAsync();
+            var matchId = _match.MatchId;
+            var letting = LetGoAsync();
+            LettingGo[matchId] = letting;
+            _ = letting.ContinueWith(
+                done => LettingGo.TryRemove(new KeyValuePair<MatchId, Task>(matchId, done)),
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
         }
     }
 
