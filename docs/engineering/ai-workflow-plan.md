@@ -1,6 +1,6 @@
 # Plan: the AI workflow, from an idea to a merged pull request
 
-Status: accepted in part, 2026-11-14. The owner settled questions 1, 2, 3, 5, 6 and 7 (at the end); W0 to W7 are built.
+Status: accepted in part, 2026-11-14. The owner settled questions 1, 2, 3, 5, 6 and 7 (at the end); W0 to W8 are built.
 Each stage below is one pull request, or one settings change that only the owner can make.
 
 ## What the owner asked for
@@ -355,6 +355,19 @@ Each stage is one pull request with its tests, and leaves the gate green.
    would need a data role.
 9. **W8, proposals, language, design.** `product-scout`, `ops-analyst`, `/proposals`, `/retro`, the
    terminology test, the design system, the Cowork project.
+   *Built (2026-11-15)*: `product-scout` and `ops-analyst`, read-only, on `sonnet`, each proposing at most five
+   items with the evidence, a sketch, the size and the risk; `/proposals` gathers the open issues, the proposals
+   already filed and the latest ops report into one facts file, runs both, checks each proposal's evidence and
+   files at most five issues labelled `proposal`; `/retro` reads the week's numbers (`workflow-metrics.py`), the
+   review threads, the issues and the reviewers' memory, keeps a finding seen in two pull requests, changes the
+   rule, skill, agent or test that would have prevented it, and records the week under
+   `docs/engineering/retros/`. `table/terminology.test.js` reads the tables of `player-terminology.md`: `terms.js`
+   says the EN column, and no page, script sentence or battle label says a legacy word it replaced. Left to the
+   owner: the design system and the Cowork project, both made in the Claude app. Standalone Claude Design closes
+   on 2026-12-14 and `/design-sync` is the owner's to start, so the design system is made in Claude from
+   `table/identity.css` and `docs/art/branding.md`. Not built: the monthly and weekly scheduled runs (one at a
+   time, once the digest has run for a week), and `.claude-plugin/marketplace.json`, which waits for a Cowork
+   project that would use it.
 
 ## Left out, and why
 

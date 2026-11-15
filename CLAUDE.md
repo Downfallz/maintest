@@ -9,7 +9,8 @@
   `code-reviewer` (adversarial review of a diff).
 - Reviewers by area: `host-reviewer`, `pages-reviewer`, `design-reviewer` (the brand, the pictures and reuse),
   `security-reviewer`, `infra-reviewer`, `stats-reviewer` (a learning claim), `copy-editor` (the English).
-  `archivist` answers "what is decided about X?" with ADR numbers. `/reviewers` picks the reviewers a diff calls
+  `archivist` answers "what is decided about X?" with ADR numbers. `product-scout` and `ops-analyst` propose
+  features and what to automate in operations, for `/proposals`. `/reviewers` picks the reviewers a diff calls
   for (`scripts/review/reviewers.mjs`), runs them and checks each finding. `code-reviewer` and `host-reviewer` keep a memory
   under `.claude/agent-memory/` (a trial).
 - For the board game translation (`docs/tabletop/plan.md`):
@@ -21,7 +22,9 @@
   `/verify` (the gate, chosen from the diff), `/reviewers` (the reviewers the diff calls for), `/browser-check` (the
   browser specs the diff calls for), `/ship` (the standing orders), `/wrap-up` (loose ends become issues, the
   next stage's prompt). And `/digest` (the morning digest, run daily at 6:40, Montreal time, by a scheduled task),
-  `/ops` (the production report, ADR 0186), `/adr`, `/new-aggregate`, `/spells-report` (the spells the bots cast
+  `/ops` (the production report, ADR 0186), `/proposals` (product and
+  operations proposals, as issues labelled `proposal`), `/retro` (the week's numbers and recurring findings, as a
+  pull request on the rules and skills), `/adr`, `/new-aggregate`, `/spells-report` (the spells the bots cast
   and leave, republished to the owner's report page).
 - The `Stop` hook (`.claude/hooks/stop.sh`) says once, per tree, when code changed after the last green gate:
   run `/verify`, or say plainly that the gate was not run.
