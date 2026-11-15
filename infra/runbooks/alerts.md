@@ -17,13 +17,25 @@ alert stops anything. Without the address, none of it is deployed.
    TABLE_ALERT_EMAIL
    ```
 
-3. **The phone.** Install *Microsoft Azure* from the App Store or Google Play, sign in with the same address,
+3. **The budget's month**, set once and never moved: Azure takes a past start only within its own month. GitHub:
+   *Variables*, beside *Secrets*, *New repository variable*, name `TABLE_BUDGET_START`, value the first day of the
+   current month (`2026-11-01` in November 2026). Unset, the alerts are deployed without the budget, for a
+   subscription that takes none.
+
+   ```text
+   TABLE_BUDGET_START
+   ```
+
+4. **The phone.** Install *Microsoft Azure* from the App Store or Google Play, sign in with the same address,
    and allow its notifications.
 
-4. **Deploy.** GitHub: *Actions*, *Deploy the table*, *Run workflow*, on `main` (or wait for the next merge).
+5. **Deploy.** GitHub: *Actions*, *Deploy the table*, *Run workflow*, on `main` (or wait for the next merge).
 
-5. **Check.** Azure sends an email, "You've been added to an Azure Monitor action group". To see one arrive: Azure
+6. **Check.** Azure sends an email, "You've been added to an Azure Monitor action group". To see one arrive: Azure
    portal, *Monitor*, *Alerts*, *Action groups*, `downfall-alerts`, *Test*, *Email* and *Azure app push*.
+
+A deployment that goes red right after step 2 is the providers: step 1 was skipped. Run it, then re-run the
+deployment.
 
 To turn them off: delete the `TABLE_ALERT_EMAIL` secret and deploy. A deployment does not delete what it no
 longer declares: Azure portal, the `downfall-table` resource group, select the alert rules, `downfall-alerts`

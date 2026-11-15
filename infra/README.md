@@ -128,7 +128,7 @@ is red when it does not answer. The steps are runbooks: [runbooks/ops-identity.m
 | Action group `downfall-alerts` | One email and one Azure app notice per alert | Emails and app notices: free at this volume |
 | Metric alerts `downfall-table-5xx`, `downfall-table-restarts`, `downfall-worker-restarts` | What the platform already measures, checked every 5 minutes over a 15-minute window | About $0.10 a month each |
 | Log alerts `downfall-turn-given-up`, `downfall-tend-failed` | The worker's and the job's own lines, once an hour | About $0.50 a month each, to check in the pricing calculator |
-| Budget `downfall-monthly` | 5 (billing currency) a month; warns at 80 % and 100 % spent, and at 100 % forecast | Free |
+| Budget `downfall-monthly` | 5 (billing currency) a month from `TABLE_BUDGET_START`; warns at 80 % and 100 % spent, and at 100 % forecast | Free |
 
 ## "Your turn" on a phone
 

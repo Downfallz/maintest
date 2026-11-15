@@ -57,8 +57,8 @@ param alertEmail string = ''
 @minValue(1)
 param budgetAmount int = 5
 
-@description('The first day of the budget\'s month. A budget may start in the past only within its own month, so each deployment moves it to the current one.')
-param budgetStart string = utcNow('yyyy-MM-01')
+@description('The first day of the month the budget starts, yyyy-MM-01, set once (the TABLE_BUDGET_START variable): Azure takes a past start only within its own month, and a start that moves may not be accepted on an existing budget. Empty, no budget is deployed.')
+param budgetStart string = ''
 
 var tenantId = tenant().tenantId
 var operatorIds = filter(map(split(operators, ','), id => trim(id)), id => !empty(id))
@@ -175,6 +175,8 @@ var domainOn = !empty(customDomain)
 // outside and keeps a replica awake. Named here, so the rules and the budget name the group without reading a
 // resource that may not be deployed.
 var alertsOn = !empty(alertEmail)
+// The budget is a switch of its own: it needs a start set once, and some subscriptions take no budget at all.
+var budgetOn = alertsOn && !empty(budgetStart)
 var alertGroupName = '${namePrefix}-alerts'
 var alertGroupId = resourceId('Microsoft.Insights/actionGroups', alertGroupName)
 // The worker writes "deliveries, onto" as it puts a turn on the poison queue, and the job this line when a pass
@@ -644,8 +646,8 @@ resource serverErrors 'Microsoft.Insights/metricAlerts@2018-03-01' = if (alertsO
   }
 }
 
-// A replica of the API or of the worker restarting: more than twice in a quarter of an hour is a crash loop, not a
-// deployment, which starts a new revision instead.
+// A replica of the API or of the worker restarting: the metric counts a replica's restarts so far, so its maximum
+// past two in a quarter of an hour is a crash loop, not a deployment, which starts a new revision instead.
 resource restarts 'Microsoft.Insights/metricAlerts@2018-03-01' = [for process in [
   '${namePrefix}-table'
   '${namePrefix}-worker'
@@ -676,7 +678,7 @@ resource restarts 'Microsoft.Insights/metricAlerts@2018-03-01' = [for process in
           metricName: 'RestartCount'
           operator: 'GreaterThan'
           threshold: 2
-          timeAggregation: 'Total'
+          timeAggregation: 'Maximum'
         }
       ]
     }
@@ -744,8 +746,8 @@ resource logAlerts 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = [for ru
 }]
 
 // The month's spending on the resource group (ADR 0185): told at 80 % and 100 % spent, and when the forecast
-// passes the budget. A budget stops nothing.
-resource budget 'Microsoft.Consumption/budgets@2023-05-01' = if (alertsOn) {
+// passes the budget. A budget stops nothing. The action group emails the owner, so the budget names no address of its own.
+resource budget 'Microsoft.Consumption/budgets@2023-05-01' = if (budgetOn) {
   name: '${namePrefix}-monthly'
   dependsOn: [
     alertGroup
@@ -763,9 +765,6 @@ resource budget 'Microsoft.Consumption/budgets@2023-05-01' = if (alertsOn) {
         operator: 'GreaterThanOrEqualTo'
         threshold: 80
         thresholdType: 'Actual'
-        contactEmails: [
-          alertEmail
-        ]
         contactGroups: [
           alertGroupId
         ]
@@ -775,9 +774,6 @@ resource budget 'Microsoft.Consumption/budgets@2023-05-01' = if (alertsOn) {
         operator: 'GreaterThanOrEqualTo'
         threshold: 100
         thresholdType: 'Actual'
-        contactEmails: [
-          alertEmail
-        ]
         contactGroups: [
           alertGroupId
         ]
@@ -787,9 +783,6 @@ resource budget 'Microsoft.Consumption/budgets@2023-05-01' = if (alertsOn) {
         operator: 'GreaterThanOrEqualTo'
         threshold: 100
         thresholdType: 'Forecasted'
-        contactEmails: [
-          alertEmail
-        ]
         contactGroups: [
           alertGroupId
         ]

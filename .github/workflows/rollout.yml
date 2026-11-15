@@ -97,11 +97,13 @@ jobs:
           # Where the alerts and the budget's notices go (ADR 0185); unset, none are deployed. A secret, so the log
           # masks it; read by jq from the environment into a parameters file, so no command line holds it.
           ALERT_EMAIL: ${{ secrets.TABLE_ALERT_EMAIL }}
+          # The first day of the budget's month, set once (infra/runbooks/alerts.md); unset, no budget.
+          BUDGET_START: ${{ vars.TABLE_BUDGET_START }}
         run: |
           relay="$RELAY_SKU"
           if [[ "$relay" == "none" ]]; then relay=""; fi
           trap 'rm -f "$RUNNER_TEMP/alerts.parameters.json"' EXIT
-          jq -n '{"$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#", contentVersion: "1.0.0.0", parameters: {alertEmail: {value: env.ALERT_EMAIL}}}' \
+          jq -n '{"$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#", contentVersion: "1.0.0.0", parameters: {alertEmail: {value: env.ALERT_EMAIL}, budgetStart: {value: env.BUDGET_START}}}' \
             > "$RUNNER_TEMP/alerts.parameters.json"
           az deployment group create \
             --resource-group "$RESOURCE_GROUP" \
@@ -115,9 +117,12 @@ jobs:
           url="$(jq -r .url.value "$RUNNER_TEMP/outputs.json")"
           redirect="$(jq -r .redirectUri.value "$RUNNER_TEMP/outputs.json")"
           # The address the next step asks: the platform's, which always has a certificate a client trusts, unless
-          # only Cloudflare may reach it (ADR 0175), and then the table's own, which by then is proxied.
-          if [[ "$ONLY_CLOUDFLARE" == "true" ]]; then
+          # only Cloudflare may reach it (ADR 0175), and then the table's own, which by then is proxied. Fenced with
+          # no domain of its own, the table answers no runner, and nothing is asked.
+          if [[ "$ONLY_CLOUDFLARE" == "true" && -n "$CUSTOM_DOMAIN" ]]; then
             echo "probe=${url}" >> "$GITHUB_OUTPUT"
+          elif [[ "$ONLY_CLOUDFLARE" == "true" ]]; then
+            echo "probe=" >> "$GITHUB_OUTPUT"
           else
             echo "probe=$(jq -r .platformUrl.value "$RUNNER_TEMP/outputs.json")" >> "$GITHUB_OUTPUT"
           fi
@@ -143,6 +148,10 @@ jobs:
         env:
           PROBE: ${{ steps.deploy.outputs.probe }}
         run: |
+          if [[ -z "$PROBE" ]]; then
+            echo "::warning::Only Cloudflare may reach the table and it has no domain of its own (TABLE_DOMAIN), so nothing could ask it."
+            exit 0
+          fi
           for attempt in 1 2 3 4 5; do
             code="$(curl -sS -o /dev/null -m 90 -w '%{http_code}' "${PROBE}/api/lobby" || true)"
             echo "GET ${PROBE}/api/lobby: ${code} (attempt ${attempt} of 5)"

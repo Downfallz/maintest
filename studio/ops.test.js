@@ -9,12 +9,12 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, w
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { GIVEN_UP, concerns, cost, logLines, mask, metricLatest, metricTotal, render, revisions, tending } from '../scripts/ops/report.mjs';
+import { GIVEN_UP, concerns, cost, logLines, mask, metricLatest, metricMax, metricTotal, render, revisions, tending } from '../scripts/ops/report.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const NOW = '2026-11-16T10:23:00Z';
 
-const metric = (...values) => ({ value: [{ timeseries: [{ data: values.map((total) => ({ total, average: total })) }] }] });
+const metric = (...values) => ({ value: [{ timeseries: [{ data: values.map((total) => ({ total, average: total, maximum: total })) }] }] });
 const logs = (...rows) => ({ tables: [{ columns: [{ name: 'app' }, { name: 'line' }, { name: 'n' }], rows }] });
 
 const healthy = () => ({
@@ -122,6 +122,12 @@ test('a metric is the sum of its points, and a queue its latest point', () => {
   assert.equal(metricTotal(metric(1, 2, 3)), 6);
   assert.equal(metricLatest(healthy().queue), 0);
   assert.equal(metricTotal({ value: [] }), 0);
+  assert.equal(metricLatest({ value: [{ timeseries: [{ data: [{ average: 0.5 }] }] }] }), 1, 'a whole count of messages');
+});
+
+test('restarts are the highest count a replica reached, not the sum of the hours that report it', () => {
+  assert.equal(metricMax(metric(1, 1, 3, 3)), 3);
+  assert.equal(metricMax({ value: [] }), 0);
 });
 
 test('the month to date is read whatever the cost column is called', () => {

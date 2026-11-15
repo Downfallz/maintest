@@ -344,10 +344,10 @@ Each stage is one pull request with its tests, and leaves the gate green.
    `read.sh` with a fake `az` and `curl`. `/ops` starts the run and reads its log. `rollout.yml` asks the deployed
    table for `GET /api/lobby` and is red when it does not answer. `main.bicep` adds, once the `TABLE_ALERT_EMAIL`
    secret exists, an action group (email and the Azure app), metric alerts on 5xx answers and on restarts of the API
-   and the worker, log alerts on a turn given up on and a failed tending pass, and a budget of 5 a month. No probe
+   and the worker, log alerts on a turn given up on and a failed tending pass, and, once `TABLE_BUDGET_START` names its month, a budget of 5 a month. No probe
    from outside: it would keep the app awake. `infra/runbooks/` holds the identity, the alerts, a new role and the
    custom domain, moved out of `infra/README.md`. Not proven before the first run in Azure: the Bicep (no `az`
-   here; `image.yml` compiles and lints it), the queries, the metric names, the report's readings. Left: the
+   here; `image.yml` compiles and lints it), the queries, the metric names and aggregations, the report's readings. Left: the
    sign-in redirect and the Google origins outside the domain's runbook, and the queue lengths per queue, which
    would need a data role.
 9. **W8, proposals, language, design.** `product-scout`, `ops-analyst`, `/proposals`, `/retro`, the

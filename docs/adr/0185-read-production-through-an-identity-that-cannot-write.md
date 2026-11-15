@@ -28,7 +28,8 @@ is cut to 160 characters. `/ops` runs it and reads the log.
 answer is red. `main.bicep` adds an action group, which emails the address in the `TABLE_ALERT_EMAIL` secret and
 notifies the Azure mobile app signed in with it, and the alerts it sends: 5xx answers, restarts of the API and of
 the worker, a turn given up on, a failed tending pass. A budget of 5 (billing currency) a month warns at 80 % and
-100 % spent, and at 100 % forecast. Without the secret none of these is deployed.
+100 % spent, and at 100 % forecast, from a month set once in the `TABLE_BUDGET_START` variable, since a budget's
+start may not move. Without the secret none of these is deployed, and without the variable no budget is.
 
 ## Consequences
 

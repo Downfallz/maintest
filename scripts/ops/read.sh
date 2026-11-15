@@ -37,7 +37,7 @@ post() {
   az rest --method post --url "$1" --body "$2" --output json "${@:3}"
 }
 
-# The sum of a metric over the last 24 hours, by hour; a filter, URL-encoded, narrows it to one dimension.
+# A metric over the last 24 hours, by hour; a filter, URL-encoded, narrows it to one dimension.
 metric() {
   local resource="$1" name="$2" aggregation="$3" filter="${4:-}"
   get "$resource/providers/Microsoft.Insights/metrics?api-version=2023-10-01&metricnames=$name&aggregation=$aggregation&interval=PT1H&timespan=PT24H${filter:+&%24filter=$filter}"
@@ -76,8 +76,8 @@ if [[ "${AZURE:-0}" == "1" ]]; then
   fi
   reading revisions-table get "$app/revisions?api-version=2024-03-01"
   reading revisions-worker get "$worker/revisions?api-version=2024-03-01"
-  reading restarts-table metric "$app" RestartCount Total
-  reading restarts-worker metric "$worker" RestartCount Total
+  reading restarts-table metric "$app" RestartCount Maximum
+  reading restarts-worker metric "$worker" RestartCount Maximum
   reading 5xx metric "$app" Requests Total "statusCodeCategory%20eq%20%275xx%27"
   reading executions get "$group/providers/Microsoft.App/jobs/$prefix-tend/executions?api-version=2024-03-01"
 

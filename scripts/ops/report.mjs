@@ -56,15 +56,20 @@ function points(reading) {
   return (reading?.value?.[0]?.timeseries ?? []).flatMap((series) => series.data ?? []);
 }
 
-/** A metric summed over its window: restarts, 5xx answers. */
+/** A metric summed over its window: 5xx answers. */
 export function metricTotal(reading) {
   return points(reading).reduce((sum, point) => sum + (point.total ?? 0), 0);
+}
+
+/** A metric's highest point: the restarts a replica has had, which the metric counts so far, not per hour. */
+export function metricMax(reading) {
+  return points(reading).reduce((most, point) => Math.max(most, point.maximum ?? 0), 0);
 }
 
 /** A metric's latest point: the messages a queue holds. */
 export function metricLatest(reading) {
   const known = points(reading).filter((point) => point.average !== undefined);
-  return known.length === 0 ? 0 : known.at(-1).average;
+  return known.length === 0 ? 0 : Math.round(known.at(-1).average);
 }
 
 /** The revisions that serve, newest first. */
@@ -154,7 +159,7 @@ export function concerns(readings, now) {
     const errors = metricTotal(readings['5xx']);
     if (errors > 0) found.push(`${plural(errors, 'erreur 5xx', 'erreurs 5xx')}`);
   }
-  const restarts = ['restarts-table', 'restarts-worker'].filter((name) => usable(readings[name])).reduce((sum, name) => sum + metricTotal(readings[name]), 0);
+  const restarts = ['restarts-table', 'restarts-worker'].filter((name) => usable(readings[name])).reduce((sum, name) => sum + metricMax(readings[name]), 0);
   if (restarts > 0) found.push(plural(restarts, 'redémarrage'));
   const spent = cost(readings.cost);
   const budget = budgetAmount(readings.budget);
@@ -218,7 +223,7 @@ export function render(readings, now) {
     const image = revisions(readings['revisions-table']).find((revision) => revision.image)?.image;
     if (image) lines.push(`Image : ${image}`);
     if (usable(readings['restarts-table']) || usable(readings['restarts-worker'])) {
-      const count = (name) => (usable(readings[name]) ? metricTotal(readings[name]) : '?');
+      const count = (name) => (usable(readings[name]) ? metricMax(readings[name]) : '?');
       lines.push(`Redémarrages 24 h : table ${count('restarts-table')} · worker ${count('restarts-worker')}`);
     }
     if (usable(readings['5xx'])) lines.push(`Erreurs 5xx 24 h : ${metricTotal(readings['5xx'])}`);
