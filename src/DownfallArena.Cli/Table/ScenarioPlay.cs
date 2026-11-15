@@ -63,6 +63,12 @@ internal sealed record ScenarioPlay(SteppedSession Session, TableApi Api, string
                 FeedStart = session.Journaled ?? 0,
                 Practice = label,
             };
+            if (label?.Tutorial is { } tutorial)
+            {
+                // A seat handed back changes the view and not the match: the pages reading the seat's stream are told.
+                tutorial.GaveBack += api.Changes.Bump;
+            }
+
             return new ScenarioPlay(session, api, token, document.Seat);
         }
         catch

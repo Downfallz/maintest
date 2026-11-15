@@ -68,12 +68,17 @@ public sealed class TutorialPlayTests
     {
         var (table, sent) = AskedASpeed(_ => DecisionTaken.Late);
         var play = Play();
+        var said = 0;
+        play.GaveBack += () => Interlocked.Increment(ref said);
         play.Follow(table);
 
         play.Look();
 
         (await HandedBackAsync(play)).ShouldBeTrue();
         sent.Count.ShouldBe(1);
+
+        // The view changed and the match did not: the pages are told through this, once.
+        Volatile.Read(ref said).ShouldBe(1);
     }
 
     [Fact]

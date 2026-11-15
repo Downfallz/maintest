@@ -103,6 +103,12 @@ internal sealed class TutorialPlay
 
     internal sealed record Pointer(int? Creature, string? Control);
 
+    /// <summary>
+    /// Said once, when every question goes back to the person: what the seat's view says of the lesson changed
+    /// without the match moving, so whoever tells the pages a table changed is told here.
+    /// </summary>
+    public event Action? GaveBack;
+
     /// <summary>What this reads and answers of a practice's table: the person's seat as it stands, whether the match is over, and the gate a decision goes through.</summary>
     internal sealed record Seat(Func<SeatSnapshot?> Read, Func<bool> Over, Func<Application.Matches.Decisions.PlayerDecision, long, Task<DecisionTaken>> Decide);
 
@@ -124,7 +130,11 @@ internal sealed class TutorialPlay
     internal void Follow(Seat table)
     {
         _table = table;
-        _assisted.GaveBack += (_, _) => Console.WriteLine($"  Tutorial {Order}: the recorded answers no longer fit the match; the person answers every question from here.");
+        _assisted.GaveBack += (_, _) =>
+        {
+            Console.WriteLine($"  Tutorial {Order}: the recorded answers no longer fit the match; the person answers every question from here.");
+            GaveBack?.Invoke();
+        };
     }
 
     /// <summary>
