@@ -37,9 +37,9 @@ export function assistedQuestion(view) {
   return Boolean(lesson && view.waitingFor && list(lesson.assisted).includes(view.waitingFor));
 }
 
-/** The view as the page draws it: an assisted question is not the person's, so the view asks nothing. */
+/** The view as the page draws it: an assisted question is not the person's, so the view asks and offers nothing. */
 export function withoutAssisted(view) {
-  return assistedQuestion(view) ? { ...view, waitingFor: null, waitingAsked: null, waitingCreature: null } : view;
+  return assistedQuestion(view) ? { ...view, waitingFor: null, waitingAsked: null, waitingCreature: null, options: {} } : view;
 }
 
 const pointer = step => {

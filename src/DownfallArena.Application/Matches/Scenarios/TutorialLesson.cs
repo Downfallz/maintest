@@ -109,7 +109,7 @@ public sealed record TutorialLesson
             return TutorialErrors.PointsAtBoth(number);
         }
 
-        if (step.PointsAt?.Control is { } control && !LessonControls.Has(control))
+        if (step.PointsAt?.Control is { } control && !string.IsNullOrWhiteSpace(control) && !LessonControls.Has(control))
         {
             return TutorialErrors.UnknownControl(number, control);
         }

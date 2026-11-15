@@ -186,6 +186,7 @@ test('a tutorial keeps the phase tips silent, and Help still says the question a
   const g = battleGuidance(view('Action', { practice: { scenario: 'sc-repo-tutorial-a', title: 'Your first combat', round: 1, tutorial: lesson } }), catalogue);
   assert.equal(g.topic, null); assert.equal(g.title, 'Round guide'); assert.deepEqual(g.lines, []);
   assert.match(g.objective, /choose a spell, then targets/); assert.equal(g.flow.length, 4);
+  assert.equal(g.context, 'Command · First');
   assert.equal(helpPreferences(null).shouldShow(g.topic), false);
   // A plain practice is taught by the tips, as a game is.
   assert.equal(battleGuidance(view('Action', { practice: { scenario: 'sc-1', title: 'Bleed', round: 1 } }), catalogue).topic, 'action');

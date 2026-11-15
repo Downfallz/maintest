@@ -32,7 +32,10 @@ test('the band says Tutorial n of the series where a practice says Practice, and
 test('a question of a kind the host answers is not drawn: the view asks nothing', () => {
   const tempo = view(asked('Speed', 1));
   assert.equal(assistedQuestion(tempo), true);
-  assert.deepEqual(withoutAssisted(tempo), { ...tempo, waitingFor: null, waitingAsked: null, waitingCreature: null });
+  assert.deepEqual(withoutAssisted(tempo), { ...tempo, waitingFor: null, waitingAsked: null, waitingCreature: null, options: {} });
+  // What the question offered goes with it: a mutation roster or tie groups read off the options draw nothing.
+  const growth = { ...view(asked('Evolution', null)), options: { evolution: { remainingPicks: 2, creatures: [{ creature: 1, availableTiers: ['root'] }] } } };
+  assert.deepEqual(withoutAssisted(growth).options, {});
   const action = view(asked('Action', 2));
   assert.equal(assistedQuestion(action), false);
   assert.equal(withoutAssisted(action), action);

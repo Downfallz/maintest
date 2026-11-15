@@ -144,13 +144,13 @@ export function battleGuidance(view, catalogue, { accepted = false, targeting = 
   if (historical) current = 'Reading recorded results. Return to the current board to choose.';
   if (waiting) current = 'Waiting for players. The match begins when everyone is seated.';
   // In a tutorial the lesson's steps take the tips' place (ADR 0187): the question keeps its objective, no tip is owed.
-  if (tutorialOf(view)) topic = null;
-  const tip = topic ? tips[topic] : null;
+  const silent = Boolean(tutorialOf(view));
+  const tip = topic && !silent ? tips[topic] : null;
   const actor = topic && topic !== 'mutation' && topic !== 'ties' ? creatureLabel(board, view.waitingCreature) : '';
   const next = !waiting && !view.over && !historical && Number.isInteger(board.nextEvolutionRound)
     ? board.nextEvolutionRound > board.roundNumber ? `Next mutation opportunity: round ${board.nextEvolutionRound}.`
       : board.nextEvolutionRound === board.roundNumber ? 'Mutation opportunity this round.' : '' : '';
-  return { available: true, topic, objective: current, title: tip?.title ?? 'Round guide', lines: tip?.lines ?? [],
+  return { available: true, topic: silent ? null : topic, objective: current, title: tip?.title ?? 'Round guide', lines: tip?.lines ?? [],
     round: waiting ? 'Match not started' : historical ? 'Recorded results' : round,
     context: waiting || historical ? '' : [phaseLabel(board.phase), actor].filter(Boolean).join(' · '),
     next, phase: waiting || historical || view.over ? '' : board.phase, flow: roundFlow(mode) };
