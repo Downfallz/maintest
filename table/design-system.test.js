@@ -13,7 +13,7 @@ const source = join(root, 'docs', 'art', 'design-system');
 
 test('every colour of the palette becomes a token with a usage note, at its value in branding.css', () => {
   const branding = readBranding();
-  const tokens = buildTokens({ branding, ref: 'test' });
+  const tokens = buildTokens({ branding });
   const byName = new Map(tokens.color.tokens.map((token) => [token.name, token]));
   for (const [name, value] of branding.declarations.filter(([, v]) => /^#[0-9a-f]{6}$/i.test(v))) {
     assert.equal(byName.get(name)?.value.dark, value.toLowerCase(), name);
@@ -24,7 +24,7 @@ test('every colour of the palette becomes a token with a usage note, at its valu
 test('a role token becomes an alias of the token it names', () => {
   assert.equal(tokenValue('var(--brand-gold)'), '{brand-gold}');
   assert.equal(tokenValue('rgb(11 21 25 / 94%)'), 'rgba(11, 21, 25, 0.94)');
-  const tokens = buildTokens({ ref: 'test' });
+  const tokens = buildTokens();
   const names = new Set(tokens.color.tokens.map((token) => token.name));
   for (const token of tokens.color.tokens) {
     const alias = /^\{(.+)\}$/.exec(token.value.dark);
@@ -35,15 +35,15 @@ test('a role token becomes an alias of the token it names', () => {
 test('a colour added to branding.css without a usage note stops the build', () => {
   const branding = readBranding();
   branding.declarations.push(['brand-new', '#123456']);
-  assert.throws(() => buildTokens({ branding, ref: 'test' }), /--brand-new has no usage note/);
+  assert.throws(() => buildTokens({ branding }), /--brand-new has no usage note/);
 });
 
 test('a page colour the notes name must still be written in its page sheet', () => {
-  assert.throws(() => buildTokens({ pageCss: '', ref: 'test' }), /parchment .* is no longer in table\/table.css/);
+  assert.throws(() => buildTokens({ pageCss: '' }), /parchment .* is no longer in table\/table.css/);
 });
 
 test('the radii, the cut and the font come from branding.css', () => {
-  const tokens = buildTokens({ ref: 'test' });
+  const tokens = buildTokens();
   const branding = new Map(readBranding().declarations);
   assert.equal(tokens.radius.tokens.find((t) => t.name === 'radius-sharp').value, branding.get('radius-sharp'));
   assert.equal(tokens.cut.tokens.find((t) => t.name === 'cut').value, branding.get('cut'));
@@ -65,6 +65,7 @@ test('every component has its card and its guidelines, and the cover has only it
   for (const name of components) {
     const preview = readFileSync(join(source, 'components', name, 'preview.html'), 'utf8');
     assert.match(preview.split('\n')[0], /^<!-- @dsCard /, `${name} starts with its marker`);
+    assert.match(preview, /<html lang="en">/, `${name} names its language`);
     assert.equal(files.includes(`components/${name}/README.md`), name !== 'Cover', name);
   }
 });
