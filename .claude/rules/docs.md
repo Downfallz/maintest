@@ -9,8 +9,11 @@ paths:
 # Documentation rules
 
 - ADRs follow `docs/adr/0000-template.md`. Numbered, immutable once accepted; superseding means a new ADR
-  that links back. Keep them under a page. No index is kept: the first line is `# NNNN. Title`, the status is
-  on a `Status:` line, and a number is taken after fetching `main` (`/adr`, ADR 0183).
+  that links back. Keep them under a page. The first line is `# NNNN. Title`, the status is on a
+  `Status:` line, and a number is taken after fetching `main` (`/adr`, ADR 0183).
+- The ADR table and the journal's list are generated, never edited (ADR 0184). After adding an ADR or a journal
+  entry, and to settle a conflict in either:
+  `UPDATE_INDEXES=1 dotnet test --project tests/DownfallArena.Architecture.Tests`.
 - The glossary is the ubiquitous language. One term per entry, a one-sentence definition, and its status
   (`decided`, `inherited from legacy`, `open`).
 - Game rules in `docs/domain/game-rules.md` describe what the engine does today or is decided to do next.

@@ -294,11 +294,11 @@ Each stage is one pull request with its tests, and leaves the gate green.
    from CI, and the issue.
 4. **W3, the shared files.** The ADR index generated, or dropped for the directory listing. `/adr` fetches
    first, and a test refuses a number used twice. The journal as one file per entry, with a generated index.
-   *Built (2026-11-15, ADR 0183)*: the ADR table is dropped, each file's first line and `Status:` line carry
-   what a row carried, and `AdrFileTests` refuses a number two files share; `/adr` fetches `main` and reads both
-   sides before it takes a number; the journal's 233 entries are files under `docs/learning/journal/`, named by
-   date, order in the day and slug, held by `JournalFileTests`. Neither index is committed: one command prints
-   each, because a generated file two branches regenerate conflicts like one edited by hand.
+   *Built (2026-11-15, ADR 0183 and 0184)*: the ADR table and the journal's list are generated from the files and
+   committed, as the owner chose; `AdrFileTests` and `JournalFileTests` compare them with the files, rebuild them
+   with `UPDATE_INDEXES=1`, and refuse a number two files share; `/adr` fetches `main` and reads both sides
+   before it takes a number; the journal's 233 entries are files under `docs/learning/journal/`, named by date,
+   order in the day and slug. Two branches still meet in a generated index: the command settles it.
 5. **W4, the pipeline.** `/plan`, `/stage`, `/ship`, `/wrap-up`, `/browser-check`, the new `/verify`, the
    `Stop` hook.
 6. **W5, the reviewers.** The agents, `/review`, the memory trial.

@@ -4,11 +4,14 @@ namespace DownfallArena.Architecture.Tests;
 
 /// <summary>
 /// The learning journal, one file per entry (ADR 0183): each named by its date, its order in the day and a slug,
-/// each opening with that date and a title, and none written back into the page that introduces them.
+/// each opening with that date and a title, none written back into the page that introduces them, and all
+/// listed by a README generated from them.
 /// </summary>
 public sealed partial class JournalFileTests
 {
     private static readonly string Page = RepositoryFiles.PathTo("docs", "learning", "journal.md");
+    private const string Readme = "README.md";
+
     private static readonly string Directory = RepositoryFiles.PathTo("docs", "learning", "journal");
 
     [Fact]
@@ -48,7 +51,23 @@ public sealed partial class JournalFileTests
         entries.ShouldBeEmpty("an entry is a file under docs/learning/journal/ (ADR 0183), not a section of the page");
     }
 
-    private static IEnumerable<string> Entries() => System.IO.Directory.EnumerateFiles(Directory, "*.md");
+    [Fact]
+    public void The_journal_readme_lists_every_entry_newest_first()
+    {
+        var readme = Path.Combine(Directory, Readme);
+        var committed = File.ReadAllText(readme);
+        var generated = GeneratedIndexes.Place(committed, GeneratedIndexes.JournalList(Entries()));
+
+        if (GeneratedIndexes.Writing)
+        {
+            File.WriteAllText(readme, generated);
+        }
+
+        File.ReadAllText(readme).ShouldBe(generated, $"the journal index is generated, never edited: run `{GeneratedIndexes.Command}`");
+    }
+
+    private static IEnumerable<string> Entries() =>
+        System.IO.Directory.EnumerateFiles(Directory, "*.md").Where(path => Path.GetFileName(path) != Readme);
 
     [GeneratedRegex(@"^\d{4}-\d{2}-\d{2}-\d{2}-[a-z0-9]+(-[a-z0-9]+)*\.md$")]
     private static partial Regex EntryName();
