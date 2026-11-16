@@ -1,7 +1,7 @@
 # Plan: CI that fits a private repository's minutes, and a shorter wait on every pull request
 
 Status: accepted in part, 2026-11-16. The owner settled questions 1, 2, 3, 5 and 6; question 4 (Sonar) is open.
-M1 (the meter) is built.
+M1 (the meter) and M2 (the release profiles split) are built.
 
 ## What the owner asked for
 
@@ -149,9 +149,25 @@ complete runs.
    baseline.
 
    Left: the deploy and showcase jobs fall in `other`. They get a group of their own when a stage needs it.
-2. **M2, the release profiles split and deduplicated.** ADR 0188 amends ADR 0182: a pull request plays the
+2. **M2, the release profiles split and deduplicated.** ADR 0190 amends ADR 0182: a pull request plays the
    release profiles' WebKit alone; `main` and the nightly play all three. `battle-release` becomes one job per
    profile. `plan.js` and `browser-suite.test.js` hold it.
+
+   *Built (2026-11-16)*: the number became ADR 0190, 0188 being the rulebook's. `plan.js` returns `release` as
+   `none`, `webkit` or `all`; `--pull-request`, which `ci.yml` passes on a pull request, narrows `all` to
+   `webkit`, and a push, the nightly, a run by hand and a pull request that changes the release job's own
+   definition (its workflow, its configuration, `plan.js`) play `all`. `studio-browser.yml` takes `release` as one
+   of those three values (a choice list when the run is started by hand), and `battle-release` is a matrix of
+   one job per profile, each installing its own engine and keeping its artifact `battle-release-<profile>`.
+   `browser-suite.test.js` holds the plan on a pull request and on `main`, the matrix's profiles against
+   `battle.release.config.js`, and `ci.yml`'s flag. The jobs are named `battle-release (<profile>)`, which the
+   meter's `battle-release` group reads (`test_workflow_minutes.py` holds it). `/browser-check` and
+   `scripts/verify.sh` read the pull request's plan.
+
+   Not done: release-desktop is not dropped on `main` where table-desktop plays the same spec, since the owner
+   keeps the three profiles before the deployment (question 3). Not measured: the saving, which the first
+   `/retro` after the merge reads with M1's meter, and whether the per-profile timeout, cut from 35 to 25
+   minutes, holds WebKit's job with its retry. M4 narrows which paths call for the release profiles at all.
 3. **M3, the wait evened out.** Desktop in three shards, Playwright's browsers cached, the learning job folded
    into `build-and-test` (`browser-suite.test.js` holds the gate's `needs`).
 4. **M4, the narrower plan and one push per review round.** `src/` and `data/` no longer call for the release

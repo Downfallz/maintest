@@ -20,7 +20,7 @@ it was drawn from, so any change to `docs/tabletop/playtest.rules.json` calls fo
 
 - `NN-<name>.md`: one file a Part, in teaching order. The number is the file's place, never written in it.
 - `moved.json`: `{ "old-id": "new-id" }`, for a section removed or renamed, so an old link still lands.
-- `changes.md` (from R2): what changed for a player, one line each: `- YYYY-MM-DD: what changed (ADR NNNN).`
+- `changes.md`: what changed for a player, one line each: `- YYYY-MM-DD: what changed (ADR NNNN).`
 
 ## The format
 
@@ -55,8 +55,12 @@ One to three lines.
 - **Values.** `{...}` is drawn when the book is built: `rules.<field>` from the hosted rule set
   (`docs/tabletop/playtest.rules.json`), `creature.<stat>` from the reference creature
   (`data/Creatures/main.v1.json`, `health` reads `baseHealth`), `spell:<name>:vN.<field>` from the spell's file
-  (`energyCost`, `name`, or an effect by its kind: `damage`, `bleed`, `bleed.durationRounds`). Numbers,
-  `+ - * /`, parentheses, `max`, `min` and `floor` combine them. Never type a number the content holds.
+  (`energyCost`, `name`, `criticalChance`, or an effect by its kind: `damage`, `bleed`, `bleed.durationRounds`),
+  `tier:<name>:vN.<field>` from the mutation's file under `data/Tiers/` (`name`, `level`, `initiativeBonus`, or
+  its passive's `sunder`, `damageBonus`, `upkeepEnergy`). A spell's or a mutation's name may be typed. Numbers,
+  `+ - * /`, parentheses, `max`, `min` and `floor` combine them. Never type a number the content holds. An
+  example draws every value its arithmetic reads, the creature's base stats included (its base Defense, its own
+  critical chance), and states no fact about the content that the build does not check.
 - **Sources.** Every section ends with its `sources:` line: the ADRs and the `game-rules.md` headings (as
   `game-rules#<anchor>`) it gives a reading of. Only its card may follow it.
 - **Cards.** A section a concept card summarises carries it, once: its id from `ConceptCards.Ids`, its title,

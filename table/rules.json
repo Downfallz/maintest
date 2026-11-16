@@ -12,7 +12,34 @@
       "combatDeclaration": "at-activation"
     },
     "creature": "creature:main:v1",
-    "spells": []
+    "spells": [
+      "spell:adrenaline_tonic:v1",
+      "spell:chain_slash:v1",
+      "spell:crushing_stomp:v1",
+      "spell:engulfing_flames:v1",
+      "spell:frostbite:v1",
+      "spell:full_plate:v1",
+      "spell:hateful_sacrifice:v1",
+      "spell:healing_screech:v1",
+      "spell:heavy_strike:v1",
+      "spell:latch:v1",
+      "spell:meteor:v1",
+      "spell:restorative_gush:v1",
+      "spell:soul_devourer:v1",
+      "spell:summon_minions:v1",
+      "spell:thundering_seal:v1",
+      "spell:toxic_waves:v1",
+      "spell:wait:v1"
+    ],
+    "mutations": [
+      "tier:apex:v1",
+      "tier:archmage:v1",
+      "tier:brute:v1",
+      "tier:elementalist:v1",
+      "tier:occultist:v1",
+      "tier:prowler:v1",
+      "tier:titan:v1"
+    ]
   },
   "parts": [
     {
@@ -205,14 +232,2686 @@
           "card": null
         }
       ]
+    },
+    {
+      "id": "the-screen",
+      "number": 2,
+      "title": "What the screen shows",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "spans": [
+            {
+              "text": "The app is the table. It keeps the count of every number, rolls every die and walks every step nobody decides. You make the decisions; this Part says what you see while you make them."
+            }
+          ]
+        }
+      ],
+      "sections": [
+        {
+          "id": "the-creatures",
+          "number": "2.1",
+          "title": "Your creatures and theirs",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Each team has 3 creatures. The first player's are numbered 1 to 3, the second player's 4 to 6. The numbers never change, and the history names every creature by its number: Creature 4."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Every creature shows, to both players:"
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                [
+                  {
+                    "text": "its "
+                  },
+                  {
+                    "text": "Health",
+                    "strong": true
+                  },
+                  {
+                    "text": ", and the Health it started with;"
+                  }
+                ],
+                [
+                  {
+                    "text": "its "
+                  },
+                  {
+                    "text": "Energy",
+                    "strong": true
+                  },
+                  {
+                    "text": ", which pays for its spells;"
+                  }
+                ],
+                [
+                  {
+                    "text": "its "
+                  },
+                  {
+                    "text": "Defense",
+                    "strong": true
+                  },
+                  {
+                    "text": ", which lowers every hit it takes;"
+                  }
+                ],
+                [
+                  {
+                    "text": "its "
+                  },
+                  {
+                    "text": "initiative",
+                    "strong": true
+                  },
+                  {
+                    "text": ", which orders it on the timeline;"
+                  }
+                ],
+                [
+                  {
+                    "text": "its "
+                  },
+                  {
+                    "text": "conditions",
+                    "strong": true
+                  },
+                  {
+                    "text": ", each with the rounds it has left;"
+                  }
+                ],
+                [
+                  {
+                    "text": "its "
+                  },
+                  {
+                    "text": "mutations",
+                    "strong": true
+                  },
+                  {
+                    "text": ", and the spells they taught it: its spellbook."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Nothing about a creature is hidden. What is hidden is a choice not yet revealed: a mutation picked this round, a tempo, a tie order. Each is revealed for both players at once."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Every creature starts the match the same: 30 Health, 0 Energy, 0 Defense and 5 initiative, and it knows two spells, Strike and Focus. Everything that will separate them is a decision you have not made yet."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0011",
+            "ADR 0042",
+            "ADR 0089",
+            "game-rules#match-lifecycle"
+          ],
+          "card": null
+        },
+        {
+          "id": "what-the-app-does",
+          "number": "2.2",
+          "title": "What the app does for you",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "The steps nobody decides are played for you, and the history records each of them:"
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                [
+                  {
+                    "text": "Upkeep.",
+                    "strong": true
+                  },
+                  {
+                    "text": " Each creature's Energy gain, its Regeneration and its Bleed."
+                  }
+                ],
+                [
+                  {
+                    "text": "The timeline.",
+                    "strong": true
+                  },
+                  {
+                    "text": " The order of the turns, built from the tempos and the initiatives, with the d20 roll-offs that break a tie between the teams."
+                  }
+                ],
+                [
+                  {
+                    "text": "The dice.",
+                    "strong": true
+                  },
+                  {
+                    "text": " Every critical roll, on a d20 the screen shows."
+                  }
+                ],
+                [
+                  {
+                    "text": "The countdown.",
+                    "strong": true
+                  },
+                  {
+                    "text": " Every condition counts down in the Aftermath, and ends at zero."
+                  }
+                ],
+                [
+                  {
+                    "text": "The end.",
+                    "strong": true
+                  },
+                  {
+                    "text": " The match ends the moment a team is defeated, or when the last round ends."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "When the app asks you something, it offers only what the rules allow: the mutations a creature may acquire, the spells it can pay for now, the targets a spell may take. A choice it does not offer is not a legal one."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "The "
+                },
+                {
+                  "text": "Help",
+                  "strong": true
+                },
+                {
+                  "text": " dialog walks through the round you are in. The history explains each result after it resolves."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0010",
+            "ADR 0063",
+            "ADR 0083",
+            "ADR 0112",
+            "ADR 0154",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": null
+        },
+        {
+          "id": "the-numbers",
+          "number": "2.3",
+          "title": "The numbers of this table",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "The table plays one rule set. Its numbers are not rules: they move when the game is balanced, and the game plays the same when they do. This book draws every number from the rule set and the content, so it moves with them."
+                }
+              ]
+            },
+            {
+              "type": "table",
+              "header": [
+                [
+                  {
+                    "text": "Value"
+                  }
+                ],
+                [
+                  {
+                    "text": "What it decides"
+                  }
+                ],
+                [
+                  {
+                    "text": "This table"
+                  }
+                ]
+              ],
+              "rows": [
+                [
+                  [
+                    {
+                      "text": "Team size"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "The creatures each player commands"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "3"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Energy per round"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "The Energy every living creature gains at Upkeep"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "2"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Picks per mutation round"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "The mutations a team may acquire on a mutation round"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "2"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "First mutation round"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "The first round that offers mutations"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "1"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Rounds between mutation rounds"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "The gap from one mutation round to the next"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "2"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Last round"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "The round after which the match ends on Health"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "20"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Critical multiplier"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "What a critical multiplies the damage and the healing by"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "2"
+                    }
+                  ]
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "The die never changes: it is a "
+                },
+                {
+                  "text": "d20",
+                  "strong": true
+                },
+                {
+                  "text": ", for the critical roll and the roll-off alike. Every critical chance a spell prints is a whole number of twentieths, so every spell that rolls prints the face it needs."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0011",
+            "ADR 0056",
+            "ADR 0100",
+            "ADR 0105",
+            "game-rules#implemented"
+          ],
+          "card": null
+        }
+      ]
+    },
+    {
+      "id": "the-round",
+      "number": 3,
+      "title": "The round, step by step",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "spans": [
+            {
+              "text": "Every round walks the same steps, in this order, never backwards: "
+            },
+            {
+              "text": "Upkeep → Command → Combat → Aftermath",
+              "strong": true
+            },
+            {
+              "text": ". Each section below is one step. It says when it comes, who decides, and what happens. Every example uses this table's numbers and the real spells."
+            }
+          ]
+        }
+      ],
+      "sections": [
+        {
+          "id": "energy-gain",
+          "number": "3.1",
+          "title": "Energy gain",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Upkeep.",
+                  "emphasis": true
+                },
+                {
+                  "text": " The round begins, and every "
+                },
+                {
+                  "text": "living",
+                  "strong": true
+                },
+                {
+                  "text": " creature gains 2 Energy, and the Energy its Archmage passives give. Nobody decides anything. A defeated creature gains nothing, now or ever."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Archmage is shared with the whole team: each copy a team owns gives every living creature of that team 1 Energy more at every Upkeep, from the round after it was acquired."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Example.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Round 8 begins. Creature 1 has 1 Energy and Creature 2 has 4; Creature 3 is defeated. Creature 1 goes to 3 and Creature 2 to 6. Creature 3 gains nothing. Had Creature 2 acquired Archmage in round 7, every living creature of its team would gain 3; with a second copy on the team, 4."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0010",
+            "ADR 0101",
+            "ADR 0114",
+            "ADR 0132",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": {
+            "id": "energy",
+            "title": "Energy",
+            "lines": [
+              "Every living creature gains Energy at Upkeep, when a round begins.",
+              "A spell costs Energy. It is spent when the spell resolves, never before."
+            ],
+            "example": "A creature at 1 Energy gains 2 at Upkeep and has 3: enough for a spell that costs 3."
+          }
+        },
+        {
+          "id": "ongoing-effects",
+          "number": "3.2",
+          "title": "Ongoing effects",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Upkeep.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Right after the Energy gain, the conditions that work at Upkeep apply, in three passes. The order matters:"
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": true,
+              "items": [
+                [
+                  {
+                    "text": "Energy regeneration",
+                    "strong": true
+                  },
+                  {
+                    "text": " gives its Energy."
+                  }
+                ],
+                [
+                  {
+                    "text": "Regeneration",
+                    "strong": true
+                  },
+                  {
+                    "text": " heals, never above the Health the creature started with."
+                  }
+                ],
+                [
+                  {
+                    "text": "Bleed",
+                    "strong": true
+                  },
+                  {
+                    "text": " deals its damage. "
+                  },
+                  {
+                    "text": "A Bleed ignores Defense",
+                    "strong": true
+                  },
+                  {
+                    "text": ": it is the only damage in the game that does."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "A creature with two conditions of one kind takes both. Healing comes before bleeding on purpose: a Regeneration can carry a creature through a Bleed that would otherwise defeat it."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "A Bleed can end the match.",
+                  "strong": true
+                },
+                {
+                  "text": " When the Bleed pass leaves a team with no living creature, the match ends there, before anything is chosen. Both teams defeated by the same pass is a draw."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Example.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Creature 5 is at 1 Health, with a Regeneration of 4 from Vital Echo and a Bleed of 3 from Void Pulse. Its Defense is 3. The Regeneration heals it to 5. The Bleed deals 3, and its Defense does not count: it ends at 2 Health. In the other order, the Bleed would have defeated it before the healing came."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0019",
+            "ADR 0020",
+            "ADR 0083",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": null
+        },
+        {
+          "id": "evolution",
+          "number": "3.3",
+          "title": "Mutations",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Command · Evolution.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Only on a mutation round: round 1, then every 2 rounds. On any other round this step asks nobody and the round goes on to the tempos."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Each team has 2 picks. One pick acquires one mutation for one of your "
+                },
+                {
+                  "text": "living",
+                  "strong": true
+                },
+                {
+                  "text": " creatures, and "
+                },
+                {
+                  "text": "a creature acquires at most one mutation a round",
+                  "strong": true
+                },
+                {
+                  "text": ": your picks go to different creatures, and no creature climbs two Stages in one round. A team down to one living creature has one pick."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Both players pick in secret, at the same time. Nothing changes until both are done; then every pick of both teams is revealed and acquired at once. A pick you do not want, you pass. The Mutation Tree opens with the step: choose a creature, read a mutation, confirm it."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "What a mutation is.",
+                  "strong": true
+                },
+                {
+                  "text": " A named set of spells. Acquiring it teaches the creature every one of them at once, and raises its base initiative by the mutation's bonus, for the rest of the match. That bonus is the only thing that ever moves a base initiative: acquiring is how a creature gets stronger, and also how it gets faster."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Which mutation.",
+                  "strong": true
+                },
+                {
+                  "text": " There are three families, Brute, Warped and Predator, each a tree of four Stages. A Stage 1 mutation needs nothing. Every other one needs one named mutation of its family, a Stage below it: the Mutation Tree shows which. A creature may acquire a mutation it does not own when it owns what that mutation needs, and it may mix families by acquiring another family's Stage 1: two creatures may take the same mutation, and one creature may mix families. What a creature may acquire is read from what it owns as the step opens: a pick of this round opens nothing until the next mutation round."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Example.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Round 1. Every creature knows Strike and Focus and has 5 initiative. The first player picks Brute for Creature 1 and Warped for Creature 2. They would like Oppressor for Creature 1 too, but it needs Brute, which Creature 1 does not own yet, and Creature 1 already has its pick. At the same time, the second player picks Predator for Creature 4 and Brute for Creature 5. Both are done, and the four mutations are acquired together:"
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                [
+                  {
+                    "text": "Creature 1, Brute: Pummel and Brace, and 6 initiative."
+                  }
+                ],
+                [
+                  {
+                    "text": "Creature 2, Warped: Shock and Revitalize, and 7 initiative."
+                  }
+                ],
+                [
+                  {
+                    "text": "Creature 4, Predator: Venom Claw and Quill, and 8 initiative."
+                  }
+                ],
+                [
+                  {
+                    "text": "Creature 5, Brute: Pummel and Brace, and 6 initiative."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Oppressor waits for Creature 1 until round 3, the next mutation round."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0056",
+            "ADR 0057",
+            "ADR 0059",
+            "ADR 0066",
+            "ADR 0089",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": {
+            "id": "mutation",
+            "title": "Mutation",
+            "lines": [
+              "A mutation gives a creature new spells and an initiative bonus, for the rest of the match.",
+              "The last mutation of a family, its capstone, gives a passive in place of spells.",
+              "On a mutation round, the team shares its picks, and a creature takes at most one mutation."
+            ],
+            "example": "A creature at 5 base initiative acquires Brute, with a bonus of 1: it knows new spells and acts at 6."
+          }
+        },
+        {
+          "id": "capstones",
+          "number": "3.4",
+          "title": "Capstones",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Each family closes with a Stage 4 mutation, its "
+                },
+                {
+                  "text": "capstone",
+                  "strong": true
+                },
+                {
+                  "text": ". A capstone needs "
+                },
+                {
+                  "text": "any one",
+                  "strong": true
+                },
+                {
+                  "text": " of its family's Stage 3 mutations. It teaches no spell and adds no initiative. It gives a "
+                },
+                {
+                  "text": "passive",
+                  "strong": true
+                },
+                {
+                  "text": " instead, held from the reveal that acquires it to the end of the match:"
+                }
+              ]
+            },
+            {
+              "type": "table",
+              "header": [
+                [
+                  {
+                    "text": "Capstone"
+                  }
+                ],
+                [
+                  {
+                    "text": "Family"
+                  }
+                ],
+                [
+                  {
+                    "text": "Needs one of"
+                  }
+                ],
+                [
+                  {
+                    "text": "Its passive"
+                  }
+                ]
+              ],
+              "rows": [
+                [
+                  [
+                    {
+                      "text": "Titan"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Brute"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Ravager, Colossus, Tyrant"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Every hit ignores 10 Defense"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Archmage"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Warped"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Cataclysm, Revenant, Transcendent"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Energy +1 at every Upkeep, for every creature of the team"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Apex"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Predator"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Blightweaver, Deathstalker, Soulreaver"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Damage +5 on every hit"
+                    }
+                  ]
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Archmage is shared.",
+                  "strong": true
+                },
+                {
+                  "text": " The creature that acquires it owns it, and every creature of its team holds its passive. It stacks: a teammate may acquire its own copy, and each copy gives every creature of the team its passive once more."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "How each passive plays is in "
+                },
+                {
+                  "text": "the passives",
+                  "href": "#passives"
+                },
+                {
+                  "text": "."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0101",
+            "ADR 0106",
+            "ADR 0114",
+            "game-rules#implemented"
+          ],
+          "card": null
+        },
+        {
+          "id": "tempo",
+          "number": "3.5",
+          "title": "Tempo",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Command · Tempo.",
+                  "emphasis": true
+                },
+                {
+                  "text": " For each of your living creatures that is not stunned, choose a tempo: "
+                },
+                {
+                  "text": "Instinct",
+                  "strong": true
+                },
+                {
+                  "text": " or "
+                },
+                {
+                  "text": "Precision",
+                  "strong": true
+                },
+                {
+                  "text": ". Both players choose in secret, and the tempos are revealed together."
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                [
+                  {
+                    "text": "Instinct",
+                    "strong": true
+                  },
+                  {
+                    "text": " acts before every Precision creature, and "
+                  },
+                  {
+                    "text": "cannot roll a critical this round",
+                    "strong": true
+                  },
+                  {
+                    "text": ", whatever its spell prints."
+                  }
+                ],
+                [
+                  {
+                    "text": "Precision",
+                    "strong": true
+                  },
+                  {
+                    "text": " acts after every Instinct creature, and keeps its critical roll."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Choose Instinct to land a blow that does not need the dice, or to act before something that would defeat you. Choose Precision when the critical is what you hope for, or when you want the board to change before you act. A tempo chooses no spell: the spell is chosen when the creature's turn comes."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "A stunned creature takes no tempo.",
+                  "strong": true
+                },
+                {
+                  "text": " It is not in the round: no tempo, no turn, nothing it can cast. A defeated creature is not in the round either."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Example.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Creature 4 was stunned last round. The second player chooses tempos for Creatures 5 and 6 only; the first player for Creatures 1, 2 and 3. Five tempos are revealed, and the round will have five turns, not six."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0010",
+            "ADR 0072",
+            "ADR 0112",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": {
+            "id": "tempo",
+            "title": "Tempo",
+            "lines": [
+              "Each round, every creature that is not stunned takes a tempo: Instinct or Precision.",
+              "Instinct acts before every Precision creature, and cannot roll a critical this round.",
+              "Precision acts after every Instinct creature, and keeps the critical roll."
+            ],
+            "example": "An Instinct creature at 5 initiative acts before a Precision creature at 9."
+          }
+        },
+        {
+          "id": "turn-order",
+          "number": "3.6",
+          "title": "The order of the turns",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Command · Turn order resolution.",
+                  "emphasis": true
+                },
+                {
+                  "text": " The app builds the round's "
+                },
+                {
+                  "text": "timeline",
+                  "strong": true
+                },
+                {
+                  "text": ", one turn for each creature that has a tempo:"
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": true,
+              "items": [
+                [
+                  {
+                    "text": "The Instinct creatures first, the highest initiative first."
+                  }
+                ],
+                [
+                  {
+                    "text": "Then the Precision creatures, the same way."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "A creature's initiative is its base initiative, raised by its initiative buffs and lowered by its initiative debuffs, never below zero. It is read once, when the timeline is built: a debuff that lands during the combat changes the next round's order, not this one's."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Instinct always comes first. An Instinct creature at 0 initiative acts before a Precision creature at 20."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "A tie between the teams",
+                  "strong": true
+                },
+                {
+                  "text": " is settled by a "
+                },
+                {
+                  "text": "roll-off",
+                  "strong": true
+                },
+                {
+                  "text": ": each tied creature rolls a d20, and the highest takes the first place. Creatures on a number both teams rolled roll again; a number only one team rolled stands. The roll-off decides which places each team holds. How a team orders its own creatures in its places is "
+                },
+                {
+                  "text": "the next step",
+                  "href": "#tie-order"
+                },
+                {
+                  "text": "."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Example.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Creatures 1, 2, 4 and 5 have acquired Warped, and Creatures 1 and 4 have since acquired Stormborn. Creatures 1 and 4 read 10 initiative, Creatures 2 and 5 read 7, and Creatures 3 and 6 read 5. Last round, an Ice Grip lowered Creature 2's initiative by 3: it reads 4 this round. Creatures 1 and 4 chose Instinct, the rest Precision. Creatures 1 and 4 tie, and roll 8 and 15: Creature 4 acts first, then Creature 1. Then the Precision creatures, by their initiative: Creature 5, then Creatures 3 and 6, which tie between the teams and roll off as well, and Creature 2 last."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0036",
+            "ADR 0059",
+            "ADR 0063",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": {
+            "id": "initiative",
+            "title": "Initiative",
+            "lines": [
+              "Initiative orders the creatures inside their tempo: the highest acts first.",
+              "A creature starts with its base initiative. Each mutation adds its bonus, for the rest of the match.",
+              "A tie between the two teams is settled by a d20 roll-off."
+            ],
+            "example": "Two Precision creatures at 7 and 5 initiative: the one at 7 acts first."
+          }
+        },
+        {
+          "id": "tie-order",
+          "number": "3.7",
+          "title": "Ordering your ties",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Command · Tie order.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Where your team holds two places or more in one tie, you choose which of your tied creatures takes which place. The other team's places do not move. A tie your team holds alone is yours to order too, with no roll. Both players order in secret, and the orders are revealed together. A round with no such tie asks nobody."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Example.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Creatures 3, 5 and 6 tie in the Precision band and roll 11, 11 and 2. Both teams rolled 11, so Creatures 3 and 5 roll again: 4 and 17. The places go to the second player, then the first, then the second. The second player holds two of them and wants Creature 6 to act first: Creature 6 takes the first place, Creature 3 the second, Creature 5 the third."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0063",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": null
+        },
+        {
+          "id": "your-turn",
+          "number": "3.8",
+          "title": "Your creature's turn",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Combat · Activation.",
+                  "emphasis": true
+                },
+                {
+                  "text": " The timeline is walked once, turn by turn. When the turn of one of your creatures comes, you choose its "
+                },
+                {
+                  "text": "spell",
+                  "strong": true
+                },
+                {
+                  "text": " and its "
+                },
+                {
+                  "text": "targets",
+                  "strong": true
+                },
+                {
+                  "text": ", on the board as it stands, and confirm. The spell resolves at once, before the next turn. The spell and its targets become public together."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Nothing is declared in advance. You choose among the spells the creature knows and can pay for now, and you choose knowing everything that has happened this round. Every creature knows Focus, which costs 0 Energy and targets only its caster: a creature in the round always has a spell to cast."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Nothing is a reservation.",
+                  "strong": true
+                },
+                {
+                  "text": " The Energy is spent when the spell resolves. Until its turn comes, a creature can be defeated, stunned or drained. A creature defeated or stunned before its turn is "
+                },
+                {
+                  "text": "skipped",
+                  "href": "#skipped-turn"
+                },
+                {
+                  "text": "."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0083",
+            "ADR 0110",
+            "ADR 0112",
+            "game-rules#implemented",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": {
+            "id": "intent",
+            "title": "Choosing a spell",
+            "lines": [
+              "No spell is declared in advance: a creature chooses its spell when its turn comes.",
+              "You choose the spell and its targets on the board as it stands, and it resolves at once."
+            ],
+            "example": "A creature at 3 Energy, at its turn, may cast any spell it knows that costs 3 or less."
+          }
+        },
+        {
+          "id": "targets",
+          "number": "3.9",
+          "title": "Targets",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "A spell says whom it may target:"
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                [
+                  {
+                    "text": "Self",
+                    "strong": true
+                  },
+                  {
+                    "text": ": the caster, and only the caster."
+                  }
+                ],
+                [
+                  {
+                    "text": "Ally",
+                    "strong": true
+                  },
+                  {
+                    "text": ": any living creature of your team, "
+                  },
+                  {
+                    "text": "the caster included",
+                    "strong": true
+                  },
+                  {
+                    "text": "."
+                  }
+                ],
+                [
+                  {
+                    "text": "Enemy",
+                    "strong": true
+                  },
+                  {
+                    "text": ": any living creature of the other team."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "A spell for one target takes exactly one. A spell for several takes "
+                },
+                {
+                  "text": "one or more, up to its maximum",
+                  "strong": true
+                },
+                {
+                  "text": ": Emberstorm, for several enemies, may take a single one. A defeated creature cannot be a target, and no creature can be named twice by one cast."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Example.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Creature 6's turn comes, and its spell is Brace, for one ally: it may target itself or Creature 4, but not Creature 5, defeated earlier this round. Then Creature 3 casts Emberstorm while two enemies stand: it may name one or both."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0083",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": null
+        },
+        {
+          "id": "resolving-a-spell",
+          "number": "3.10",
+          "title": "Resolving a spell",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "A spell resolves completely before the next turn comes, in this order:"
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": true,
+              "items": [
+                [
+                  {
+                    "text": "Pay.",
+                    "strong": true
+                  },
+                  {
+                    "text": " The caster's Energy goes down by the spell's cost."
+                  }
+                ],
+                [
+                  {
+                    "text": "Roll for a critical",
+                    "strong": true
+                  },
+                  {
+                    "text": ", once for the whole cast, if the caster is Precision and the spell prints a chance. See "
+                  },
+                  {
+                    "text": "the critical roll",
+                    "href": "#the-critical-roll"
+                  },
+                  {
+                    "text": "."
+                  }
+                ],
+                [
+                  {
+                    "text": "Each effect, on each target.",
+                    "strong": true
+                  },
+                  {
+                    "text": " A "
+                  },
+                  {
+                    "text": "hit",
+                    "strong": true
+                  },
+                  {
+                    "text": " is the spell's damage, plus the caster's "
+                  },
+                  {
+                    "text": "damage bonus",
+                    "strong": true
+                  },
+                  {
+                    "text": ", multiplied on a critical, less the target's "
+                  },
+                  {
+                    "text": "Defense",
+                    "strong": true
+                  },
+                  {
+                    "text": ", never below zero. A heal never goes above the Health a creature started with. An Energy drain takes at most what the target has. A lasting effect becomes a "
+                  },
+                  {
+                    "text": "condition",
+                    "href": "#conditions"
+                  },
+                  {
+                    "text": "."
+                  }
+                ],
+                [
+                  {
+                    "text": "The caster's own line",
+                    "strong": true
+                  },
+                  {
+                    "text": ", if the spell has one, once for the whole cast. Damage there is lowered by the caster's own Defense, and never takes a damage bonus or a critical."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "A creature's "
+                },
+                {
+                  "text": "Defense",
+                  "strong": true
+                },
+                {
+                  "text": " is its base Defense plus its Defense buffs, which count for 10 at most however many there are, less its Defense debuffs, never below zero."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "A hit never goes past the Health left: a creature at 3 Health hit for 10 loses 3. A spell that changes nothing on a target, 0 damage through a Defense or a heal at full Health, did nothing to it."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Example.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Creature 2 is Precision, at 4 Energy, and casts Incinerate on Creature 5: cost 3, damage 10, d20: 14+. Creature 5 cast Carapace last round: its Defense is 7."
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                [
+                  {
+                    "text": "Pay: Creature 2 goes to 1 Energy."
+                  }
+                ],
+                [
+                  {
+                    "text": "The d20 is a critical: 10 × 2 = 20."
+                  }
+                ],
+                [
+                  {
+                    "text": "Less the Defense: Creature 5 loses 13, and goes from 30 to 17 Health."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Had the roll missed, it would have lost 3. "
+                },
+                {
+                  "text": "Multiply first, subtract second",
+                  "strong": true
+                },
+                {
+                  "text": ": the other order gives a number the game never deals."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0033",
+            "ADR 0035",
+            "ADR 0076",
+            "ADR 0083",
+            "ADR 0101",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": {
+            "id": "defense",
+            "title": "Defense",
+            "lines": [
+              "Defense lowers the damage of every hit a creature takes, never below zero.",
+              "Only damage over time, applied at Upkeep, ignores it."
+            ],
+            "example": "A hit of 7 on a creature with 2 Defense deals 5. A creature starts at 0 Defense: the same hit on it deals 7."
+          }
+        },
+        {
+          "id": "damage-bonus",
+          "number": "3.11",
+          "title": "The damage bonus",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "A creature's "
+                },
+                {
+                  "text": "damage bonus",
+                  "strong": true
+                },
+                {
+                  "text": " is added to every hit it deals: Apex gives 5, and each damage buff on it adds its own number. It is added "
+                },
+                {
+                  "text": "before",
+                  "strong": true
+                },
+                {
+                  "text": " the critical multiplies and before Defense is subtracted. It never touches a Bleed, a heal, or the caster's own line."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Example.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Creature 4 owns Apex, is Precision, and casts Blood Price on Creature 1, whose Defense is 3: damage 11, d20: 11+. Add the bonus: 16. On a critical, 32, less 3: Creature 1 loses 29. Without one, 13. "
+                },
+                {
+                  "text": "Add, multiply, subtract",
+                  "strong": true
+                },
+                {
+                  "text": ", in that order."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Example, damage buffs.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Alpha Roar gave Creature 5 a damage buff of 2, and Overdrive another of 1. Its Strike, for 3, deals 6 to a creature with no Defense. Damage buffs stack: add every one."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0101",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": null
+        },
+        {
+          "id": "sunder",
+          "number": "3.12",
+          "title": "Sunder",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Titan's passive is a "
+                },
+                {
+                  "text": "sunder",
+                  "strong": true
+                },
+                {
+                  "text": ": every hit its creature deals meets the target's Defense less 10, never below zero. A sunder takes Defense away; it never adds damage, and against a target with no Defense it does nothing. It moves no Defense: the target's Defense is the same against everyone else."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Example.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Creature 3 owns Titan and casts Dominate, damage 7, on Creature 5, which holds Alpha Roar's Defense of 4, and on Creature 4, at its base Defense of 0. With no critical, both lose 7. A caster with no sunder would have dealt Creature 5 only 3."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0106",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": null
+        },
+        {
+          "id": "cleanup",
+          "number": "3.13",
+          "title": "Cleanup",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Aftermath · Cleanup.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Every turn has come, and both teams still stand. Every condition counts one round down, and a condition at zero ends. A condition applied "
+                },
+                {
+                  "text": "this",
+                  "strong": true
+                },
+                {
+                  "text": " round does not count down yet: it lasts for the rest of this round, then for every round it prints. See "
+                },
+                {
+                  "text": "durations",
+                  "href": "#durations"
+                },
+                {
+                  "text": "."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "A living creature whose Stun ends here cannot be stunned for the next round. See "
+                },
+                {
+                  "text": "the stun",
+                  "href": "#stunned"
+                },
+                {
+                  "text": "."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0041",
+            "ADR 0072",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": null
+        },
+        {
+          "id": "finalization",
+          "number": "3.14",
+          "title": "The end of the round",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Aftermath · Finalization.",
+                  "emphasis": true
+                },
+                {
+                  "text": " If this was round 20, the match ends: the team with the "
+                },
+                {
+                  "text": "most Health left",
+                  "strong": true
+                },
+                {
+                  "text": ", added over its creatures, wins, and equal totals are a draw. Otherwise the next round begins."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Example.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Round 20 ends with both teams standing. The first player's creatures have 4, 5 and 6 Health: 15. The second player's have 18, 0 and 0: 18. "
+                },
+                {
+                  "text": "The second player wins",
+                  "strong": true
+                },
+                {
+                  "text": ", with fewer creatures standing. Health decides, not survivors."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0011",
+            "ADR 0105",
+            "game-rules#match-lifecycle"
+          ],
+          "card": null
+        }
+      ]
+    },
+    {
+      "id": "edge-cases",
+      "number": 4,
+      "title": "Edge cases",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "spans": [
+            {
+              "text": "These are the rules that get read wrong. Each one is a rule, not an exception."
+            }
+          ]
+        }
+      ],
+      "sections": [
+        {
+          "id": "skipped-turn",
+          "number": "4.1",
+          "title": "A skipped turn",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "A creature that cannot act when its turn comes is "
+                },
+                {
+                  "text": "skipped",
+                  "strong": true
+                },
+                {
+                  "text": ": nothing resolves for it, it spends nothing, and its owner is not asked. The next turn comes."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "A creature cannot act when it was "
+                },
+                {
+                  "text": "defeated",
+                  "strong": true
+                },
+                {
+                  "text": " or "
+                },
+                {
+                  "text": "stunned",
+                  "strong": true
+                },
+                {
+                  "text": " earlier in the round. A creature in the round always has a spell it can cast, since Focus costs 0 Energy and targets its caster; a spell it cannot pay for now, or one with no legal target, is not offered."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "So a late turn is a risk: before it comes, your creature may be defeated or stunned, and the target you meant may be gone. That is the cost of acting late, and the reason Instinct exists."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Example.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Creature 1 is Precision and Creature 5 Instinct. Creature 5 acts first and casts Crushing Stomp on Creature 1, which stuns it. When Creature 1's turn comes, it is skipped, and spends no Energy."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0083",
+            "ADR 0110",
+            "ADR 0112",
+            "game-rules#implemented",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": {
+            "id": "fizzle",
+            "title": "A skipped turn",
+            "lines": [
+              "A creature that cannot act when its turn comes is skipped: nothing resolves, and nothing is spent.",
+              "It happens when the creature was defeated or stunned earlier in the round."
+            ],
+            "example": "A creature stunned by an earlier turn is skipped when its own comes, and keeps all its Energy."
+          }
+        },
+        {
+          "id": "the-board-changes",
+          "number": "4.2",
+          "title": "The board changes between two turns",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Each spell resolves before the next turn comes, so "
+                },
+                {
+                  "text": "you always choose on the board as it is",
+                  "strong": true
+                },
+                {
+                  "text": ", and nothing happens between your confirmation and the result: a target cannot be defeated in between."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "What changes is the board before your turn. A drain may have left your creature short of the spell you counted on, and a defeated enemy leaves your spell with fewer targets. You choose among what is offered."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Example.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Creature 1 has 3 Energy and counts on Emberstorm, which costs 3. Before its turn, Creature 5 casts Soul Feast on it, which drains 3 Energy: Creature 1 is left with 0. At its turn, the app offers only the spells it can pay for now."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0035",
+            "ADR 0083",
+            "ADR 0112",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": null
+        },
+        {
+          "id": "stunned",
+          "number": "4.3",
+          "title": "A stunned creature sits the round out",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "A creature with a "
+                },
+                {
+                  "text": "Stun",
+                  "strong": true
+                },
+                {
+                  "text": " takes no tempo, gets no turn, and casts nothing for every round the Stun lasts. It still gains its Energy at Upkeep and takes its Bleed and its Regeneration. It can still acquire a mutation, since mutations come before the tempos. It can still be targeted, healed and defeated."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "A Stun that lands "
+                },
+                {
+                  "text": "during",
+                  "strong": true
+                },
+                {
+                  "text": " the combat also costs that creature its turn this round, if its turn has not come yet: it is skipped."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Stun immunity.",
+                  "strong": true
+                },
+                {
+                  "text": " When a Stun ends at Cleanup, the creature "
+                },
+                {
+                  "text": "cannot be stunned for the next round",
+                  "strong": true
+                },
+                {
+                  "text": ". A Stun that reaches a creature already stunned, or immune, is ignored: the spell's other effects still land, and the running Stun neither grows nor restarts. So no creature can be kept stunned: every Stun is followed by a round in which it cannot be stunned."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Example.",
+                  "emphasis": true
+                },
+                {
+                  "text": " In round 5, Creature 4 is hit by Crushing Stomp: Stun for 2 rounds. It sits out the next 2 rounds whole. At the Cleanup that ends the Stun, it becomes immune for one round. Another Crushing Stomp on it while it is stunned, or immune, deals its damage and stuns nothing."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0041",
+            "ADR 0072",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": null
+        },
+        {
+          "id": "durations",
+          "number": "4.4",
+          "title": "How long a condition lasts",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Read a condition's rounds as "
+                },
+                {
+                  "text": "this many of the following rounds",
+                  "strong": true
+                },
+                {
+                  "text": ". A condition applied this round lasts to the end of this round, then for the rounds it prints: the first countdown after it lands does not count. A Bleed for 1 round deals its damage once, at the next Upkeep. A Stun for 2 rounds takes the next two rounds away."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "A condition never restarts: a second one of the same kind sits beside the first, and each counts down on its own. Only a Stun is different: a second one is "
+                },
+                {
+                  "text": "ignored",
+                  "href": "#stunned"
+                },
+                {
+                  "text": "."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Example.",
+                  "emphasis": true
+                },
+                {
+                  "text": " In round 5, Creature 3 casts Infestation on three enemies: a Bleed of 2 for 3 rounds on each. It deals nothing in round 5. Each target then takes 2 at the Upkeep of each of the next 3 rounds, whatever its Defense: 6 in all."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0041",
+            "game-rules#implemented",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": null
+        },
+        {
+          "id": "the-critical-roll",
+          "number": "4.5",
+          "title": "The critical roll",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "When a "
+                },
+                {
+                  "text": "Precision",
+                  "strong": true
+                },
+                {
+                  "text": " creature's spell resolves and the spell prints a critical chance, a d20 is rolled "
+                },
+                {
+                  "text": "once for the whole cast",
+                  "strong": true
+                },
+                {
+                  "text": ". The spell prints the face it needs: d20: 11+ means 11 or more. An "
+                },
+                {
+                  "text": "Instinct",
+                  "strong": true
+                },
+                {
+                  "text": " creature never rolls, and a spell that prints no chance never rolls. A creature's own chance, 0%, is added to the spell's."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "A critical multiplies by 2, dropping any fraction, "
+                },
+                {
+                  "text": "what the cast puts on a target's Health now",
+                  "strong": true
+                },
+                {
+                  "text": ", and nothing else:"
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                [
+                  {
+                    "text": "Multiplied:",
+                    "strong": true
+                  },
+                  {
+                    "text": " the damage on a target, its damage bonus included, and a heal on a target."
+                  }
+                ],
+                [
+                  {
+                    "text": "Not multiplied:",
+                    "strong": true
+                  },
+                  {
+                    "text": " anything on the caster's own line; Energy, given or taken; a lasting effect, a Bleed, a Regeneration, a Stun, a buff or a debuff; and a sunder, which takes from the Defense, not from the hit."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "The order is the one of "
+                },
+                {
+                  "text": "resolving a spell",
+                  "href": "#resolving-a-spell"
+                },
+                {
+                  "text": ": add the damage bonus, multiply, then subtract the Defense."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Example.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Creature 2 is Precision and casts Vital Surge on Creature 3, which has 18 of 30 Health: heal 10, d20: 11+. The d20 shows a critical: the heal becomes 20, and Creature 3 goes to 30. A heal never goes past the Health a creature started with."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0033",
+            "ADR 0042",
+            "ADR 0100",
+            "ADR 0154",
+            "game-rules#implemented",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": {
+            "id": "critical",
+            "title": "Critical",
+            "lines": [
+              "A Precision creature rolls a d20 when its spell resolves, against the number the spell prints.",
+              "On a critical, the spell's damage and healing on its targets are multiplied.",
+              "An Instinct creature never rolls."
+            ],
+            "example": "A spell prints d20: 11+. A roll of 14 is a critical: its 7 damage becomes 14."
+          }
+        }
+      ]
+    },
+    {
+      "id": "reference",
+      "number": 5,
+      "title": "Reference",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "spans": [
+            {
+              "text": "Every condition, every way a match ends, and every passive, in one place."
+            }
+          ]
+        }
+      ],
+      "sections": [
+        {
+          "id": "conditions",
+          "number": "5.1",
+          "title": "The conditions",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "A "
+                },
+                {
+                  "text": "condition",
+                  "strong": true
+                },
+                {
+                  "text": " is a lasting effect on a creature, with an amount and a number of rounds. Every one except a permanent one counts down at Cleanup and ends at zero, and the first countdown after it lands does not count ("
+                },
+                {
+                  "text": "durations",
+                  "href": "#durations"
+                },
+                {
+                  "text": "). Conditions stack: a second one sits beside the first, except a Stun."
+                }
+              ]
+            },
+            {
+              "type": "table",
+              "header": [
+                [
+                  {
+                    "text": "Condition"
+                  }
+                ],
+                [
+                  {
+                    "text": "What it does"
+                  }
+                ],
+                [
+                  {
+                    "text": "When"
+                  }
+                ]
+              ],
+              "rows": [
+                [
+                  [
+                    {
+                      "text": "Bleed",
+                      "strong": true
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Deals its amount, "
+                    },
+                    {
+                      "text": "ignoring Defense",
+                      "strong": true
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Upkeep, after Regeneration"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Regeneration",
+                      "strong": true
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Heals its amount, never above the starting Health"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Upkeep, before Bleed"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Energy regeneration",
+                      "strong": true
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Gives its amount of Energy"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Upkeep, first"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Stun",
+                      "strong": true
+                    }
+                  ],
+                  [
+                    {
+                      "text": "No tempo, no turn; a second one is ignored, and so is one in the round after a Stun ends"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "The whole round"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Defense buff",
+                      "strong": true
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Raises Defense; all of them count for 10 at most"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Every hit the creature takes"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Defense debuff",
+                      "strong": true
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Lowers Defense"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Every hit the creature takes"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Initiative buff",
+                      "strong": true
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Raises initiative"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "When the timeline is built"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Initiative debuff",
+                      "strong": true
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Lowers initiative"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "When the timeline is built"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Damage buff",
+                      "strong": true
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Adds to the creature's damage bonus"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Every hit the creature deals"
+                    }
+                  ]
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Three sums, each floored at zero "
+                },
+                {
+                  "text": "after",
+                  "strong": true
+                },
+                {
+                  "text": " the subtraction:"
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                [
+                  {
+                    "text": "Defense",
+                    "strong": true
+                  },
+                  {
+                    "text": " = base Defense + Defense buffs, 10 at most, − Defense debuffs."
+                  }
+                ],
+                [
+                  {
+                    "text": "Initiative",
+                    "strong": true
+                  },
+                  {
+                    "text": " = base initiative + initiative buffs − initiative debuffs."
+                  }
+                ],
+                [
+                  {
+                    "text": "Damage bonus",
+                    "strong": true
+                  },
+                  {
+                    "text": " = what its passives give + its damage buffs."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "A "
+                },
+                {
+                  "text": "permanent",
+                  "strong": true
+                },
+                {
+                  "text": " condition never counts down: Contagion's Defense debuff, and the lasting one of Wraithguard's two Defense buffs. "
+                },
+                {
+                  "text": "Stun immunity",
+                  "strong": true
+                },
+                {
+                  "text": " is not a condition: no spell gives it, and it lasts from the Cleanup that ends a Stun to the next. A defeated creature loses its conditions and takes no new one."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0019",
+            "ADR 0020",
+            "ADR 0035",
+            "ADR 0036",
+            "ADR 0041",
+            "ADR 0072",
+            "ADR 0076",
+            "ADR 0101",
+            "game-rules#implemented"
+          ],
+          "card": {
+            "id": "conditions",
+            "title": "Conditions",
+            "lines": [
+              "A condition is a lasting effect on a creature, with an amount and a number of rounds.",
+              "It counts down in the Aftermath of each round, and ends at zero.",
+              "A stunned creature sits out every round the stun lasts. After that, it cannot be stunned again for one round."
+            ],
+            "example": "Latch's Bleed deals 2 at each of the next 3 Upkeeps, whatever the Defense."
+          }
+        },
+        {
+          "id": "the-end-of-a-match",
+          "number": "5.2",
+          "title": "The end of a match",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "A match ends in one of these ways, each checked at its own moment:"
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": true,
+              "items": [
+                [
+                  {
+                    "text": "A team is defeated",
+                    "strong": true
+                  },
+                  {
+                    "text": ", at once, on the spell or the Bleed that defeats its last creature. Nothing after it resolves: no further turn, no Cleanup. The other team wins."
+                  }
+                ],
+                [
+                  {
+                    "text": "Both teams at once",
+                    "strong": true
+                  },
+                  {
+                    "text": " is a draw. It can happen: one Bleed pass can empty both teams, and a spell's own line can defeat its caster as it defeats the last enemy."
+                  }
+                ],
+                [
+                  {
+                    "text": "The last round",
+                    "strong": true
+                  },
+                  {
+                    "text": ", round 20, ends with both teams standing: the most Health left wins, and equal totals are a draw."
+                  }
+                ],
+                [
+                  {
+                    "text": "A player concedes",
+                    "strong": true
+                  },
+                  {
+                    "text": ": the other wins."
+                  }
+                ],
+                [
+                  {
+                    "text": "A player lets their time to answer run out",
+                    "strong": true
+                  },
+                  {
+                    "text": ": they lose. When both do, it is a draw."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Example.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Round 11. The second player has only Creature 4 left, at 3 Health and no Defense. The first turn is Creature 2's, which casts Strike on it: Creature 4 is defeated, and "
+                },
+                {
+                  "text": "the first player wins now",
+                  "strong": true
+                },
+                {
+                  "text": ". No other turn comes, and nothing counts down."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0011",
+            "ADR 0083",
+            "ADR 0087",
+            "ADR 0105",
+            "ADR 0169",
+            "game-rules#match-lifecycle"
+          ],
+          "card": null
+        },
+        {
+          "id": "passives",
+          "number": "5.3",
+          "title": "The passives",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "A "
+                },
+                {
+                  "text": "passive",
+                  "strong": true
+                },
+                {
+                  "text": " is what a capstone gives its creature, from the reveal that acquires it to the end of the match. It never counts down. A creature with two capstones holds both passives."
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                [
+                  {
+                    "text": "Titan: every hit ignores 10 Defense.",
+                    "strong": true
+                  },
+                  {
+                    "text": " Its "
+                  },
+                  {
+                    "text": "sunder",
+                    "href": "#sunder"
+                  },
+                  {
+                    "text": ": each hit meets the target's Defense less 10, never below zero."
+                  }
+                ],
+                [
+                  {
+                    "text": "Archmage, shared: Energy +1 at every Upkeep.",
+                    "strong": true
+                  },
+                  {
+                    "text": " Every living creature of the team gains 1 Energy more, once for each copy the team owns, from the next round."
+                  }
+                ],
+                [
+                  {
+                    "text": "Apex: Damage +5 on every hit.",
+                    "strong": true
+                  },
+                  {
+                    "text": " It adds 5 to each hit, before the critical and before Defense: see "
+                  },
+                  {
+                    "text": "the damage bonus",
+                    "href": "#damage-bonus"
+                  },
+                  {
+                    "text": "."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Neither Titan's nor Apex's passive touches a Bleed, a heal, Energy or the caster's own line."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "A "
+                },
+                {
+                  "text": "hit",
+                  "strong": true
+                },
+                {
+                  "text": " is the damage a spell deals a target. A Bleed is not one, and neither is the caster's own line."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0101",
+            "ADR 0106",
+            "ADR 0114",
+            "game-rules#implemented"
+          ],
+          "card": null
+        }
+      ]
     }
   ],
   "cards": [
     {
       "id": "health",
       "section": "winning"
+    },
+    {
+      "id": "energy",
+      "section": "energy-gain"
+    },
+    {
+      "id": "mutation",
+      "section": "evolution"
+    },
+    {
+      "id": "tempo",
+      "section": "tempo"
+    },
+    {
+      "id": "initiative",
+      "section": "turn-order"
+    },
+    {
+      "id": "intent",
+      "section": "your-turn"
+    },
+    {
+      "id": "defense",
+      "section": "resolving-a-spell"
+    },
+    {
+      "id": "fizzle",
+      "section": "skipped-turn"
+    },
+    {
+      "id": "critical",
+      "section": "the-critical-roll"
+    },
+    {
+      "id": "conditions",
+      "section": "conditions"
     }
   ],
   "moved": {},
-  "changes": []
+  "changes": [
+    {
+      "date": "2026-11-16",
+      "text": "The official rulebook is the app's edition. A creature chooses its spell when its turn comes. Every number follows the table's rule set and content (ADR 0112, ADR 0188).",
+      "adrs": [
+        "0112",
+        "0188"
+      ]
+    }
+  ]
 }

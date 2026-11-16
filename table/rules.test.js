@@ -191,6 +191,19 @@ test('a spell\'s effect is read by its kind, and refused when the spell has two 
   refuses(book('Guard gives {spell:guard:v1.defenseBuff}.'), /"spell:guard:v1\.defenseBuff" names one of two DefenseBuff effects/);
 });
 
+test('a mutation\'s values are drawn from its file: its name, stage, initiative bonus and passive', () => {
+  const mutations = new Map([['tier:titan:v1', { id: 'tier:titan:v1', name: 'Titan', level: 4, initiativeBonus: 0, passive: { sunder: 10 } }],
+    ['tier:brute:v1', { id: 'tier:brute:v1', name: 'Brute', level: 1, initiativeBonus: 1 }]]);
+  const book = text => inputs({ mutations, parts: [{ file: '01-the-goal.md', text: goal.replace('Pummel costs {spell:pummel:v1.energyCost} and deals {spell:pummel:v1.damage}.', text) }] });
+  const clean = book('{tier:brute:v1.name} adds {tier:brute:v1.initiativeBonus}; {tier:titan:v1.name}, Stage {tier:titan:v1.level}, ignores {tier:titan:v1.sunder} Defense.');
+  assert.deepEqual(errorsOf(clean), []);
+  const built = buildRules(clean).book;
+  assert.ok(JSON.stringify(built).includes('Brute adds 1; Titan, Stage 4, ignores 10 Defense.'));
+  assert.deepEqual(built.drawnFrom.mutations, ['tier:brute:v1', 'tier:titan:v1']);
+  refuses(book('{tier:brute:v1.sunder}'), /"tier:brute:v1\.sunder" does not resolve/);
+  refuses(book('{tier:apex:v1.name}'), /mutation "tier:apex:v1" is not in data\//);
+});
+
 test('refuses an engine word where the player\'s word exists, from the terminology page', () => {
   refuses(withGoal('Two players', 'Two players buy a Package'), /"Package": the player's word is Mutation/);
   refuses(withGoal('Upkeep: every', 'StartOfRound: every'), /"StartOfRound": the player's word is Upkeep/);
@@ -222,6 +235,8 @@ test('refuses a concept card whose id is not one ConceptCards.Ids lists, a card 
   refuses(inputs({ parts: [{ file: '01-the-goal.md', text: twice }] }), /card "health" is in two sections/);
   refuses(withGoal('> A creature starts', 'A creature starts'), /card "health" has no example/);
   refuses(withGoal('At zero Health a creature is defeated.', 'One.\nTwo.\nThree.\nFour.'), /card "health" has 4 lines/);
+  refuses(withGoal('At zero Health a creature is defeated.', 'At zero Health a creature is **defeated**.'), /a card is plain text, with no markup/);
+  assert.deepEqual(errorsOf(withGoal('{max(0, creature.health - 7)}', '{floor(creature.health * 2)}')), []);
 });
 
 test('refuses Markdown outside the subset: code, HTML, deeper headings, quotes, images and links out of the book', () => {
@@ -260,7 +275,7 @@ test('the changes are dated lines, each with its ADR when it has one', () => {
 
 test('the book says what it was drawn from', () => {
   const { book } = buildRules(inputs());
-  assert.deepEqual(book.drawnFrom, { ruleSet: 'docs/tabletop/playtest.rules.json', rules: { teamSize: 3, energyPerRound: 2, criticalMultiplier: 2 }, creature: 'creature:main:v1', spells: ['spell:pummel:v1'] });
+  assert.deepEqual(book.drawnFrom, { ruleSet: 'docs/tabletop/playtest.rules.json', rules: { teamSize: 3, energyPerRound: 2, criticalMultiplier: 2 }, creature: 'creature:main:v1', spells: ['spell:pummel:v1'], mutations: [] });
 });
 
 test('the repository\'s book builds with no error', () => {

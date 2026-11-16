@@ -1,7 +1,7 @@
 // The official rulebook's build (ADR 0188, docs/tabletop/rulebook-plan.md): reads `rules/`, draws its values from
-// the hosted rule set, the reference creature and the spells under data/, refuses what a machine can find wrong,
-// and writes `table/rules.json`, the parts, sections, blocks and cards as data, never HTML. The file is committed
-// (ADR 0184); table/rules.test.js fails when it is out of date.
+// the hosted rule set, the reference creature, and the spells and mutations under data/, refuses what a machine can
+// find wrong, and writes `table/rules.json`, the parts, sections, blocks and cards as data, never HTML. The file is
+// committed (ADR 0184); table/rules.test.js fails when it is out of date.
 //
 //   node scripts/rules/build.mjs            # write table/rules.json, or list what it refuses and exit 1
 //   node scripts/rules/build.mjs --check    # exit 1 when table/rules.json is not the build of rules/
@@ -98,8 +98,10 @@ export function readInputs(root) {
     .map(file => ({ file, text: readFileSync(join(rules, file), 'utf8') }));
   const moved = existsSync(join(rules, 'moved.json')) ? readJson(join(rules, 'moved.json')) : {};
   const changes = existsSync(join(rules, 'changes.md')) ? readFileSync(join(rules, 'changes.md'), 'utf8') : null;
-  const spells = new Map(filesUnder(root, 'data/Spells').filter(path => path.endsWith('.json'))
-    .map(path => readJson(join(root, path))).map(spell => [spell.id, spell]));
+  const byId = folder => new Map(filesUnder(root, folder).filter(path => path.endsWith('.json'))
+    .map(path => readJson(join(root, path))).map(item => [item.id, item]));
+  const spells = byId('data/Spells');
+  const mutations = byId('data/Tiers');
   const gameRules = new Set(readFileSync(join(root, 'docs/domain/game-rules.md'), 'utf8').split('\n')
     .filter(line => /^#{1,6} /.test(line)).map(line => anchorOf(line.replace(/^#+ /, ''))));
   const conceptCards = readFileSync(join(root, 'src/DownfallArena.Application/Matches/Scenarios/ConceptCards.cs'), 'utf8');
@@ -113,6 +115,7 @@ export function readInputs(root) {
     ruleSet: { path: RULE_SET, values: readJson(join(root, RULE_SET)) },
     creature: readJson(join(root, CREATURE)),
     spells,
+    mutations,
     terminology: readFileSync(join(root, 'docs/domain/player-terminology.md'), 'utf8'),
     adrs: new Set(readdirSync(join(root, 'docs/adr')).map(name => /^(\d{4})-/.exec(name)?.[1]).filter(Boolean)),
     gameRules,
@@ -194,11 +197,23 @@ function spellValue(definition, name, path) {
   return scalar(effect[field ?? ('amount' in effect ? 'amount' : 'amountPerRound')]);
 }
 
-/** Answers a name from the rule set, the reference creature and the spells, and notes each spell it read. */
-function lookup({ ruleSet, creature, spells }, used) {
+// A mutation's field (`name`, `level`, `initiativeBonus`) or its passive's (`sunder`, `damageBonus`, `upkeepEnergy`).
+function mutationValue(definition, field) {
+  return scalar(Object.hasOwn(definition, field) ? definition[field] : definition.passive?.[field]);
+}
+
+/** Answers a name from the rule set, the reference creature, the spells and the mutations, and notes each it read. */
+function lookup({ ruleSet, creature, spells, mutations = new Map() }, used, usedMutations) {
   return name => {
     if (name.startsWith('rules.')) return scalar(ruleSet.values[name.slice(6)]);
     if (name.startsWith('creature.')) return scalar(creature[`base${capital(name.slice(9))}`]);
+    const mutation = /^(tier:[a-z0-9_]+:v\d+)\.(\w+)$/.exec(name);
+    if (mutation) {
+      const definition = mutations.get(mutation[1]);
+      if (!definition) throw new Error(`mutation "${mutation[1]}" is not in data/`);
+      usedMutations.add(mutation[1]);
+      return mutationValue(definition, mutation[2]);
+    }
     const spell = /^(spell:[a-z0-9_]+:v\d+)\.([\w.]+)$/.exec(name);
     if (!spell) return undefined;
     const [, id, path] = spell;
@@ -281,7 +296,8 @@ class Build {
     this.given = given;
     this.errors = [];
     this.used = new Set();
-    this.look = lookup(given, this.used);
+    this.usedMutations = new Set();
+    this.look = lookup(given, this.used, this.usedMutations);
     this.retired = retiredWords(given.terminology);
     this.conceptIds = new Set(given.conceptIds);
     this.bookLinks = [];
@@ -380,7 +396,8 @@ class Build {
   card(lines, where) {
     const found = { id: null, title: null, lines: [], example: null };
     for (const line of lines) {
-      if (MARKUP_LEFT.test(line)) this.refuse(`${where}: a card is plain text, with no markup`);
+      // A value's own * is arithmetic, not markup: the line is read without its values.
+      if (MARKUP_LEFT.test(line.replace(/\{[^{}]*\}/g, ''))) this.refuse(`${where}: a card is plain text, with no markup`);
       const field = /^(id|title):(.*)$/.exec(line);
       if (field?.[1] === 'id') found.id = field[2].trim();
       else if (field) found.title = this.resolve(field[2].trim(), where);
@@ -612,7 +629,7 @@ export function buildRules(given) {
   checkLinks(given, ids, moved, build);
   const changes = readChanges(given.changes, build);
   const book = {
-    drawnFrom: { ruleSet: given.ruleSet.path, rules: given.ruleSet.values, creature: given.creature.id, spells: [...build.used].sort((a, b) => a.localeCompare(b)) },
+    drawnFrom: { ruleSet: given.ruleSet.path, rules: given.ruleSet.values, creature: given.creature.id, spells: [...build.used].sort((a, b) => a.localeCompare(b)), mutations: [...build.usedMutations].sort((a, b) => a.localeCompare(b)) },
     parts,
     cards,
     moved,
