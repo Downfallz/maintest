@@ -1,6 +1,6 @@
 # Plan: the official rulebook, one source the app reads and an agent keeps true
 
-Status: accepted, 2026-11-16 (the owner settled the questions at the end). R1 built (ADR 0188); R2 next.
+Status: accepted, 2026-11-16 (the owner settled the questions at the end). R1 built (ADR 0188), R2 built; R3 next.
 
 ## What the owner asked for
 
@@ -144,6 +144,17 @@ and the app's edition; it keeps writing, the keeper keeps reading.
 2. **R2, the app's edition.** The rest of the book written by the `rulebook-writer` from `rulebook.md`, adapted as
    the table above says, with the copy-editor's read; `changes.md` started. `rulebook.md` frozen as the print
    draft, a line at its top pointing to `rules/`. Docs and content only. Tests: R1's, on the whole book.
+   *Built (2026-11-16)*: four more Parts from `rulebook.md`, adapted for the app: `02-the-screen.md` (what the
+   creatures show, what the app plays for you, the table's numbers), `03-the-round.md` (fourteen sections, Energy
+   gain to the end of the round, the spell chosen at the turn), `04-edge-cases.md` (the skipped turn in place of
+   the fizzle, the Stun and its immunity, durations, the critical roll) and `05-reference.md` (the conditions, the
+   end of a match, the passives). Every card of `ConceptCards.Ids` is written: `intent` is now *Choosing a spell*
+   and `fizzle` *A skipped turn*, for the hosted rule set declares nothing. `changes.md` is started, and
+   `rulebook.md` frozen. The build also draws a mutation's values (`{tier:titan:v1.sunder}`), and a card's check
+   for markup reads the line without its values. Left: the tabletop Parts 2 and 3 (pieces and setup) have no
+   counterpart beyond the table of numbers, and Part 8 stays in the tabletop file. A caster's own line
+   (Blood Price's) is not drawable yet, so the book names it without its number. `concepts.js` still holds its own
+   text until R4; whether `intent` and `fizzle` keep those ids is O5's question.
 3. **R3, the page.** `/rules`: the contents, deep links, the filter, What changed, offline, the **Rules** entry
    in the menu. A host test for the route, the line in `table/README.md#routes` and `docs/reference/commands.md`.
    Tests: `rules-page.test.js` (contents built from the file, a deep link, the filter), a browser spec at 320 px,

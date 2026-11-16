@@ -1,5 +1,10 @@
 # Downfall Instinct: the rulebook
 
+> **Frozen, 2026-11-16: the print draft.** The official rulebook is [`rules/`](../../rules/README.md), the app's
+> edition ([ADR 0188](../adr/0188-build-the-official-rulebook-from-rules.md)), built into the table's
+> `rules.json`. This file teaches the physical game and hidden Intents. It is kept as the base of a print edition
+> and is no longer re-read after a balance pass: its numbers are those of 2026-11-01.
+
 Status: **Draft** (2026-09-14, evolution rewritten 2026-09-23, one Tier a Creature an opportunity
 2026-09-23, starting Health 30 the same day, Stun immunity the same day, no Energy regeneration on any card
 2026-09-25, one Activation a slot and the Match ending the moment a Team is wiped 2026-09-28, Evolution
