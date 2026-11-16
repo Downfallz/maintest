@@ -8,11 +8,11 @@ import { SITE_ORIGIN } from './site-origins.js';
 import { mountShowAgain } from './lobby-tutorials.js';
 import { catchPageErrors, createPageErrors, mountFeedback } from './feedback-sheet.js';
 
-// A page outside a game catches its errors from the moment the menu loads, for a bug report sent from it (ADR 0189).
-// The battle view catches its own, with its seat's sheet; the archived classic table offers no entry.
+// A page catches its errors from the moment the menu loads, for a bug report sent from it (ADR 0189). The battle view
+// catches its own and mounts its own sheet, which the account menu's entry opens there with the seat on screen.
 const pageErrors = createPageErrors();
-const outsideAGame = typeof document !== 'undefined' && !['classic', 'battle'].includes(document.querySelector('[data-navigation]')?.dataset.navigation);
-if (outsideAGame) catchPageErrors(globalThis, pageErrors);
+const ownSheet = typeof document !== 'undefined' && document.querySelector('[data-navigation]')?.dataset.navigation === 'battle';
+if (typeof document !== 'undefined' && !ownSheet) catchPageErrors(globalThis, pageErrors);
 
 const headerContent = `
     <a class="brand" href="/" aria-label="Downfall Instinct home"><span class="brand-mark" aria-hidden="true"></span><h1>Downfall Instinct</h1></a>
@@ -24,11 +24,10 @@ const headerContent = `
       <a id="stats-link" href="/stats" hidden>Your stats</a>
       <button id="join-open" type="button" data-home-dialog="join-dialog" hidden>Join with a code</button>
       <button id="app-settings-open" type="button" data-home-dialog="app-settings-dialog">Settings</button>
-      <button id="feedback-open-nav" type="button" data-feedback-open hidden>Report or suggest…</button>
       <a id="nav-admin-link" href="/admin" hidden>Admin</a>
     </nav>
     <button id="inbox-open" class="inbox-button" type="button" data-home-dialog="inbox-dialog" aria-label="Notifications · nothing waiting" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0-6 6v3.6L4.4 15.5A1 1 0 0 0 5.3 17h13.4a1 1 0 0 0 .9-1.5L18 12.6V9a6 6 0 0 0-6-6Z"/><path d="M9.5 19.5a2.6 2.6 0 0 0 5 0"/></svg><span id="inbox-badge" class="nav-badge inbox-badge" aria-hidden="true" hidden></span></button>
-    <div id="account" class="account" hidden><details id="account-menu"><summary class="account-chip" aria-label="Your account"><span id="account-initial" class="account-initial" aria-hidden="true"></span><span id="account-name"></span></summary><div class="account-menu"><p class="account-menu-who"><small>Signed in as</small><strong id="account-menu-name"></strong></p><button id="account-settings" type="button" data-home-dialog="app-settings-dialog">Settings</button><a id="learn-link" class="site-link" href="/#learn-to-play">Learn to play</a><a class="site-link" href="${SITE_ORIGIN}">Game website <span aria-hidden="true">→</span></a><button id="sign-out" type="button">Sign out</button><p id="account-problem" role="alert" hidden></p></div></details></div>
+    <div id="account" class="account" hidden><details id="account-menu"><summary class="account-chip" aria-label="Your account"><span id="account-initial" class="account-initial" aria-hidden="true"></span><span id="account-name"></span></summary><div class="account-menu"><p class="account-menu-who"><small>Signed in as</small><strong id="account-menu-name"></strong></p><button id="account-settings" type="button" data-home-dialog="app-settings-dialog">Settings</button><a id="learn-link" class="site-link" href="/#learn-to-play">Learn to play</a><a class="site-link" href="${SITE_ORIGIN}">Game website <span aria-hidden="true">→</span></a><button id="feedback-open-nav" type="button" data-feedback-open>Report or suggest…</button><button id="sign-out" type="button">Sign out</button><p id="account-problem" role="alert" hidden></p></div></details></div>
 `;
 const panels = `<div class="navigation-panels lobby-page home-page">
   <dialog id="friends-dialog" class="home-dialog" aria-labelledby="friends-dialog-title"><div class="dialog-heading"><div><p class="eyebrow">Your circle</p><h2 id="friends-dialog-title">Friends</h2></div><button type="button" data-home-close aria-label="Close friends">×</button></div><div class="home-dialog-body"><section id="friends-panel" class="lobby-panel friends-panel" aria-labelledby="friends-heading" hidden>
@@ -89,7 +88,7 @@ export function codePath(value) {
 
 // A disclosure on phones, a normal navigation bar on desktop. Feature panels keep the
 // existing account/friends/device controllers and let native dialogs handle modality.
-function mountHomeNavigation(doc, win = globalThis, { game = false } = {}) {
+function mountHomeNavigation(doc, win = globalThis) {
   const el = id => doc.getElementById(id);
   const toggle = el('home-menu-toggle'), menu = el('home-navigation');
   const narrow = win.matchMedia('(max-width: 1240px)');
@@ -160,7 +159,8 @@ function mountHomeNavigation(doc, win = globalThis, { game = false } = {}) {
       if (opener && target?.getClientRects().length) target.focus();
     });
   }
-  menu.addEventListener('click', event => { if (event.target.closest('a, [data-feedback-open]')) closeMenu(); });
+  menu.addEventListener('click', event => { if (event.target.closest('a')) closeMenu(); });
+  el('feedback-open-nav').addEventListener('click', () => { el('account-menu').open = false; });
   doc.addEventListener('click', event => {
     if (!menu.contains(event.target) && !toggle.contains(event.target)) closeMenu();
     if (!el('account').contains(event.target)) el('account-menu').open = false;
@@ -184,8 +184,6 @@ function mountHomeNavigation(doc, win = globalThis, { game = false } = {}) {
       el('app-settings-tab-account').hidden = !account;
       if (!account && ['notifications', 'account'].includes(tabs.find(tab => tab.getAttribute('aria-selected') === 'true')?.dataset.settingsTab)) showTab('game');
       el('leaderboard-link').hidden = mode === 'off';
-      // Outside a game only a signed-in player can send feedback; in a game the battle view's own entry sends it.
-      el('feedback-open-nav').hidden = !account || game;
       el('stats-link').hidden = !account;
       if (identity !== (account?.id ?? null)) {
         closePanels(false);
@@ -213,11 +211,13 @@ export function mountNavigation(doc, storage, { onInvite, onChange = () => {}, o
   doc.body.insertAdjacentHTML('beforeend', panels);
   const current = { lobby: 'play-link-home', leaderboard: 'leaderboard-link', stats: 'stats-link', admin: 'nav-admin-link' }[page];
   if (current) el(current).setAttribute('aria-current', 'page');
-  const navigation = mountHomeNavigation(doc, globalThis, { game });
+  const navigation = mountHomeNavigation(doc);
   const devices = mountDevices(doc, { storage });
   const gameSettings = mountGameSettings(doc, storage);
   const showAgain = mountShowAgain(doc);
-  if (!game) mountFeedback(doc, { errors: pageErrors, fallbackFocus: () => (doc.defaultView?.matchMedia('(max-width: 1240px)').matches ? el('home-menu-toggle') : el('feedback-open-nav')) });
+  // Report or suggest (ADR 0189), in the account menu: a signed-in player's, sent as the account. The battle view's own
+  // sheet answers the entry there.
+  if (page !== 'battle') mountFeedback(doc, { errors: pageErrors, fallbackFocus: () => el('account-menu').querySelector('summary') });
   // The bell's actions are the Friends panel's and the lobby's: a friend accepted there is read again here, and
   // the page that mounted the navigation is told what changed.
   let friends = null;

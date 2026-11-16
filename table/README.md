@@ -631,7 +631,8 @@ ticked while a seat is on screen; an idea asks what it is about, what got in the
 it. `feedback-sheet.js` sends it to `POST /api/feedback` with the seat's key, the page's path and, for a report, the
 last ten errors the page caught, held in memory and never written to the device. **Send** stays off until the required answer has ten characters.
 A refusal reads as a sentence and keeps the words; `403 Feedback.Muted`, which the host sends once the Feedback tab can mute (R3), hides every entry for the page's life. A
-signed-in player finds the same entry in the lobby's menu, without a position. The archived classic table offers none.
+signed-in player also finds it in the account menu on every page: there the battle view's own sheet answers it with
+the seat on screen, and any other page sends it as the account, without a position.
 
 The battle view's **History** drawer retains public events from the current and previous round, capped at 200.
 Attacks expand into actual applied effects and recorded before/after changes; reading history preserves

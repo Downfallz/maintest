@@ -16,7 +16,7 @@ async function answering(state, route) {
   return route.fulfill(answer);
 }
 
-async function seat(page) {
+async function seat(page, { account = null } = {}) {
   const state = { sent: [], answers: [], errors: [] };
   page.on('pageerror', error => state.errors.push(error.message));
   await returningBattlePlayer({ context: page.context() });
@@ -32,7 +32,8 @@ async function seat(page) {
   await page.route('**/api/**', async route => {
     const path = new URL(route.request().url()).pathname;
     if (path === '/api/feedback') return answering(state, route);
-    if (path === '/api/me') return route.fulfill({ json: { accounts: 'dev', account: null } });
+    if (path === '/api/me') return route.fulfill({ json: { accounts: 'dev', account } });
+    if (path === '/api/friends') return route.fulfill({ json: { friends: [], incoming: [], outgoing: [] } });
     if (path.endsWith('/resume')) return route.fulfill({ json: { tables: [{ table: { id: 'one', format: '3v3',
       seats: [{ seat: 'player1', kind: 'person', name: 'Mark' }, { seat: 'player2', kind: 'person', name: 'Bastien' }] },
       seats: [{ seat: 'player1', token: 'first' }] }] } });
@@ -79,10 +80,8 @@ async function sheetFits(page) {
   }, page.viewportSize())).toEqual([]);
 }
 
-// The lobby's menu folds into a button on a phone, and stands open on a desktop.
-async function openMenu(page) {
-  const toggle = page.locator('#home-menu-toggle');
-  if (await toggle.isVisible()) await toggle.click();
+async function openAccountMenu(page) {
+  await page.locator('#account-menu summary').click();
 }
 
 test('a seat reports a bug from the match settings, with the position and the page’s last error', async ({ page }, info) => {
@@ -115,6 +114,21 @@ test('a seat reports a bug from the match settings, with the position and the pa
   await page.locator('#feedback-finish').click();
   await expect(sheet).toBeHidden();
   expect(state.errors).toEqual(['The scene lost its board']);
+});
+
+test('in a game, the account menu’s entry opens the battle’s own sheet, sent with the seat on screen', async ({ page }) => {
+  const state = await seat(page, { account: player });
+
+  await page.locator('#account-menu summary').click();
+  await page.locator('#feedback-open-nav').click();
+  await page.getByRole('button', { name: /Something is wrong/ }).click();
+  await page.getByRole('radio', { name: 'Something looks wrong' }).check();
+  await page.getByLabel(/What happened/).fill('The crest overlaps my first creature.');
+  await page.locator('#feedback-send').click();
+
+  await expect(page.locator('#feedback-sent')).toBeVisible();
+  await expect(page.locator('#feedback-dialog')).toHaveCount(1);
+  expect(state.sent).toEqual([expect.objectContaining({ token: 'first', body: expect.objectContaining({ kind: 'bug', category: 'looks', attach: true }) })]);
 });
 
 test('the result offers the entry on a quiet line of its own', async ({ page }, info) => {
@@ -177,11 +191,12 @@ test('a sheet closed while it sends is empty when it opens again, once the host 
   await expect(page.getByLabel(/What happened/)).toHaveValue('');
 });
 
-test('a signed-in player sends an idea from the lobby’s menu, without a seat or a position', async ({ page }, info) => {
+test('a signed-in player sends an idea from the lobby’s account menu, without a seat or a position', async ({ page }, info) => {
   const state = await lobby(page);
 
-  await openMenu(page);
-  await page.getByRole('button', { name: 'Report or suggest' }).click();
+  await openAccountMenu(page);
+  await page.getByRole('button', { name: 'Report or suggest…' }).click();
+  await expect(page.locator('#account-menu')).not.toHaveAttribute('open');
   await page.getByRole('button', { name: /I have an idea/ }).click();
   await page.getByRole('radio', { name: 'The lobby and friends' }).check();
   await page.getByLabel(/What were you trying to do/).fill('I wanted to find a friend’s game by name.');
@@ -194,13 +209,13 @@ test('a signed-in player sends an idea from the lobby’s menu, without a seat o
 
   await expect(page.locator('#feedback-sent')).toHaveText('Thank you. Your idea reached the game’s operator.');
   expect(state.sent).toEqual([{ token: null, body: { kind: 'idea', where: 'lobby', problem: 'I wanted to find a friend’s game by name.', wish: 'A search box above Your games.', page: '/table/lobby.html' } }]);
+  await page.locator('#feedback-finish').click();
+  await expect(page.locator('#account-menu summary')).toBeFocused();
   expect(state.errors).toEqual([]);
 });
 
 test('a guest in the lobby is not offered the entry: it has no seat to send from', async ({ page }) => {
   const state = await lobby(page, { account: null });
-
-  await openMenu(page);
 
   await expect(page.locator('#feedback-open-nav')).toBeHidden();
   expect(state.errors).toEqual([]);
