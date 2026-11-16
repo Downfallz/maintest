@@ -16,9 +16,9 @@ on:
         type: boolean
         default: true
       release:
-        description: Whether to play the release profiles.
-        type: boolean
-        default: true
+        description: The release profiles to play, `all`, `webkit` (a pull request's, ADR 0190) or `none`.
+        type: string
+        default: all
   # The same inputs, with the same defaults: a dispatch that declared none would read each as empty, and an
   # empty input is equal to `false`, so a run asked by hand would skip the real engine and the release profiles.
   workflow_dispatch:
@@ -32,9 +32,10 @@ on:
         type: boolean
         default: true
       release:
-        description: Play the release profiles.
-        type: boolean
-        default: true
+        description: The release profiles to play.
+        type: choice
+        options: [all, webkit, none]
+        default: all
 permissions:
   contents: read
 jobs:
@@ -148,21 +149,31 @@ jobs:
           name: studio-browser-${{ matrix.project }}
           path: studio/browser/test-results
           retention-days: 7
+  # The complete matches in the release profiles (battle.release.config.js), one job per profile, side by side:
+  # one test at a time they took twenty-five minutes in one job, the longest of the run. A pull request plays
+  # WebKit alone, the one engine no other job plays; main and the nightly play the three (ADR 0190).
   battle-release:
-    if: inputs.release
+    name: battle release (${{ matrix.profile }})
+    if: inputs.release != 'none'
     runs-on: ubuntu-latest
-    # Two of the three profiles took nine minutes in a container on main after AU14 (complete matches are
-    # two minutes each); WebKit's system packages and the build come on top of the third.
-    timeout-minutes: 35
+    # A complete match takes two minutes on desktop and three on an emulated phone; WebKit's system packages
+    # and the build come on top.
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: ${{ fromJSON(inputs.release == 'webkit' && '["release-ios"]' || '["release-desktop","release-android","release-ios"]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Install release browser engines
+      - name: Install the profile's browser engine
         working-directory: studio/browser
+        env:
+          ENGINE: ${{ matrix.profile == 'release-ios' && 'webkit' || 'chromium' }}
         run: |
           npm ci --ignore-scripts
-          node node_modules/playwright/cli.js install --with-deps chromium webkit
+          node node_modules/playwright/cli.js install --with-deps "$ENGINE"
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           global-json-file: global.json
@@ -171,11 +182,12 @@ jobs:
           npm --prefix battle ci --ignore-scripts && npm --prefix battle run build
           dotnet build src/DownfallArena.Cli
           dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst
-      - name: Play complete matches in desktop, Android and iOS browser profiles
+      - name: Play complete matches in this profile
         working-directory: studio/browser
         env:
+          PROFILE: ${{ matrix.profile }}
           PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/playwright-report.json
-        run: node node_modules/playwright/cli.js test --config battle.release.config.js --retries=1 --reporter=dot,json
+        run: node node_modules/playwright/cli.js test --config battle.release.config.js --project="$PROFILE" --retries=1 --reporter=dot,json
       - name: Say what flaked
         if: ${{ !cancelled() }}
         run: |
@@ -188,6 +200,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: battle-release
+          name: battle-release-${{ matrix.profile }}
           path: studio/browser/test-results
           retention-days: 7

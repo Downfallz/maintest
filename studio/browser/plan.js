@@ -2,7 +2,8 @@
 // image and the showcase, decided from the paths a change touches. CI's `changes` job asks it on every run, so the `gate` check
 // always reports while a change no page reads plays no journey. A path nothing here names calls for nothing.
 //
-//   git diff --name-only <base> HEAD | node studio/browser/plan.js    # what those paths call for
+//   git diff --name-only <base> HEAD | node studio/browser/plan.js    # what those paths call for, on main
+//   ... | node studio/browser/plan.js --pull-request                    # the same, for a pull request (ADR 0190)
 //   node studio/browser/plan.js --all                                  # everything: a dispatch, the nightly run
 //   git diff --name-only origin/main... | node studio/browser/plan.js --gate   # the local gate's optional steps
 import { readdirSync, readFileSync } from 'node:fs';
@@ -97,9 +98,10 @@ const RULES = [
 
 /**
  * Decide what the changed paths call for. `specs` is every mock-host journey file the suite holds.
- * Returns `journeys` ('none', 'all', or the spec files separated by spaces) and four booleans.
+ * Returns `journeys` ('none', 'all', or the spec files separated by spaces), `release` ('none', 'webkit' or
+ * 'all': a pull request plays the release profiles' WebKit alone, main all three, ADR 0190) and three booleans.
  */
-export function plan(paths, specs) {
+export function plan(paths, specs, { pullRequest = false } = {}) {
   const changed = paths.map((line) => line.trim()).filter(Boolean);
   const called = changed.map((path) => RULES.find((rule) => rule.matches(path))?.calls(path) ?? {});
   const journeys = specs.filter((spec) => called.some((call) => call.journeys?.(spec)));
@@ -109,15 +111,21 @@ export function plan(paths, specs) {
   return {
     journeys: chosen,
     realEngine: called.some((call) => call.realEngine === true),
-    release: called.some((call) => call.release === true),
+    release: releaseProfiles(called.some((call) => call.release === true), pullRequest),
     image: changed.some((path) => !path.endsWith('.md') && carriedByTheImage(path)),
     showcase: changed.some(builtIntoTheShowcase),
   };
 }
 
+/** Which release profiles a run plays when its diff calls for them: on a pull request, the one engine no other job plays. */
+function releaseProfiles(called, pullRequest) {
+  if (!called) return 'none';
+  return pullRequest ? 'webkit' : 'all';
+}
+
 /** Everything: what a run that has no diff to read plays. */
 export function everything() {
-  return { journeys: 'all', realEngine: true, release: true, image: true, showcase: true };
+  return { journeys: 'all', realEngine: true, release: 'all', image: true, showcase: true };
 }
 
 // What the local gate (scripts/verify.sh) adds to the steps it always runs, each with the paths it reads: the
@@ -161,7 +169,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     const steps = gate(readFileSync(0, 'utf8').split('\n'));
     console.log(Object.entries(steps).map(([step, called]) => `${step}=${called}`).join('\n'));
   } else {
-    const planned = process.argv.includes('--all') ? everything() : plan(readFileSync(0, 'utf8').split('\n'), specs);
+    const pullRequest = process.argv.includes('--pull-request');
+    const planned = process.argv.includes('--all') ? everything() : plan(readFileSync(0, 'utf8').split('\n'), specs, { pullRequest });
     console.log(outputs(planned));
   }
 }

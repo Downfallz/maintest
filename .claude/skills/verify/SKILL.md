@@ -28,6 +28,6 @@ Rules:
 - The summary's `note storage tests` line means the storage tests were skipped: report them as skipped, not
   passed.
 - The summary's `note browser` line is what CI will play for this diff. When it names journeys, or says
-  `real-engine=true` or `release=true`, run `/browser-check` before `/ship`, or say they were left to CI.
+  `real-engine=true` or `release=webkit`, run `/browser-check` before `/ship`, or say they were left to CI.
 - Report a compact summary: each step, pass, fail or skip, and the counts (errors, warnings, tests passed,
   failed, skipped).

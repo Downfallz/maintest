@@ -14,11 +14,12 @@ journey is found before the pull request. Arguments: $ARGUMENTS (`--all` for eve
    ```bash
    git fetch origin main
    { git diff --name-only "$(git merge-base HEAD origin/main)"; git ls-files --others --exclude-standard; } \
-     | sort -u | node studio/browser/plan.js
+     | sort -u | node studio/browser/plan.js --pull-request
    ```
 
-   `journeys` is `none`, `all`, or spec files; `real-engine` and `release` are the two other jobs. Nothing called
-   for: say so and stop.
+   `journeys` is `none`, `all`, or spec files; `real-engine` is the other job; `release` is `none`, or `webkit`:
+   a pull request plays release-ios alone, and `main` the three profiles (ADR 0190). Nothing called for: say so
+   and stop.
 2. Prepare once: `npm --prefix studio/browser ci --ignore-scripts`, and the battle bundle
    (`npm --prefix battle ci --ignore-scripts && npm --prefix battle run build`) if `table/battle-build/` is
    missing or older than a change to `battle/` or `table/`. Chromium is preinstalled in a cloud session: never run `playwright install`; point the suite at it
@@ -32,7 +33,8 @@ journey is found before the pull request. Arguments: $ARGUMENTS (`--all` for eve
      (`dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst`: `data/dst/` is ignored by git and
      the host will not start without it), then
      `node node_modules/playwright/cli.js test --config table.config.js --trace off`.
-   - Release, when called for: only with WebKit installed; otherwise say it was left to CI.
+   - Release, when called for: `--config battle.release.config.js --project=release-ios`, only with WebKit
+     installed; otherwise say it was left to CI.
 4. Read the result when the task notifies, never by polling. `node studio/browser/flakes.js < <report>` names a
    test that passed only on a retry; locally nothing retries, so a failure that passes alone is a flake: say so
    and open a `flaky` issue in `/wrap-up`.

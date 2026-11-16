@@ -64,7 +64,10 @@ jobs:
           elif [[ "$status" == 0 ]]; then
             echo "$(wc -l < "$RUNNER_TEMP/changed.txt") changed path(s):"
             cat "$RUNNER_TEMP/changed.txt"
-            node studio/browser/plan.js < "$RUNNER_TEMP/changed.txt" | tee -a "$GITHUB_OUTPUT"
+            # A pull request plays the release profiles' WebKit alone; main plays the three (ADR 0190).
+            narrow=()
+            if [[ "$EVENT" == pull_request ]]; then narrow=(--pull-request); fi
+            node studio/browser/plan.js "${narrow[@]}" < "$RUNNER_TEMP/changed.txt" | tee -a "$GITHUB_OUTPUT"
           else
             exit "$status"
           fi
@@ -273,12 +276,12 @@ jobs:
   browser:
     name: browser
     needs: changes
-    if: needs.changes.outputs.journeys != 'none' || needs.changes.outputs.real-engine == 'true' || needs.changes.outputs.release == 'true'
+    if: needs.changes.outputs.journeys != 'none' || needs.changes.outputs.real-engine == 'true' || needs.changes.outputs.release != 'none'
     uses: ./.github/workflows/studio-browser.yml
     with:
       journeys: ${{ needs.changes.outputs.journeys }}
       real-engine: ${{ needs.changes.outputs.real-engine == 'true' }}
-      release: ${{ needs.changes.outputs.release == 'true' }}
+      release: ${{ needs.changes.outputs.release }}
 
   # The table's image, built and tried when the diff touches what it carries; on main it is also pushed, under
   # its commit, for the deployment below to name.

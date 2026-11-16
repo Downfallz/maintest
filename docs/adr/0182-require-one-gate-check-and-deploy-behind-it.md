@@ -1,7 +1,7 @@
 # 0182. Require one gate check, and deploy behind it
 
 Date: 2026-11-15
-Status: Accepted
+Status: Accepted. Amended by [0190](0190-play-the-release-profiles-webkit-alone-on-a-pull-request.md) (a pull request plays the release profiles' WebKit alone)
 
 ## Context
 
