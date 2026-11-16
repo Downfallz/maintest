@@ -171,6 +171,11 @@ export function sheetWords(answer, now = Date.now()) {
   return words;
 }
 
+/** A button for each idea merged into this one, opening its own sheet: where it is dismissed, or its sender stopped. */
+export function askLinks(answer, now = Date.now()) {
+  return (answer?.asks ?? []).map(ask => ({ id: ask.id, label: `Open the idea asked ${ago(ask.at, now)}, by ${askerLine(ask)}` }));
+}
+
 /** Who asked an idea merged into this one, inside a sentence. */
 function askerLine(ask) {
   if (ask.senderGone) return 'an account since deleted';
@@ -340,6 +345,12 @@ export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
     session.hidden = !answer.session;
     if (answer.session) session.href = answer.session;
     element('admin-feedback-joined').hidden = !answer.mergedInto;
+    element('admin-feedback-asks').replaceChildren(...askLinks(answer).map(({ id, label }) => {
+      const button = made('button', 'secondary', label);
+      button.type = 'button';
+      button.addEventListener('click', () => void openSheet(id));
+      return button;
+    }));
     drawActions(sheetActions(answer));
   }
 
@@ -378,7 +389,7 @@ export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
     open = null;
     element('admin-feedback-sheet-kind').textContent = 'Feedback';
     element('admin-feedback-sheet-name').textContent = '';
-    for (const id of ['admin-feedback-words', 'admin-feedback-facts', 'admin-feedback-position', 'admin-feedback-merge-into']) element(id).replaceChildren();
+    for (const id of ['admin-feedback-words', 'admin-feedback-facts', 'admin-feedback-position', 'admin-feedback-merge-into', 'admin-feedback-asks']) element(id).replaceChildren();
     element('admin-feedback-position-block').hidden = true;
     element('admin-feedback-session').hidden = true;
     element('admin-feedback-joined').hidden = true;

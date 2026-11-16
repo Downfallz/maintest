@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { askedLine, categoryFilters, choicesNote, categoryLabel, changeSaid, creatureLine, feedbackLine, feedbackPath, feedbackRows, mergeChoices, muteLine, planPrompt, positionSides, sheetActions, sheetFacts, sheetWords, statusLine, STATUS_FILTERS } from './admin-feedback.js';
+import { askedLine, askLinks, categoryFilters, choicesNote, categoryLabel, changeSaid, creatureLine, feedbackLine, feedbackPath, feedbackRows, mergeChoices, muteLine, planPrompt, positionSides, sheetActions, sheetFacts, sheetWords, statusLine, STATUS_FILTERS } from './admin-feedback.js';
 
 const NOW = Date.parse('2026-11-16T12:00:00Z');
 
@@ -142,4 +142,12 @@ test('an idea is merged into another open idea, never into itself, each said wit
   assert.equal(choicesNote(5, true), '');
   assert.equal(choicesNote(7, true), 'Only the first 100 open ideas are listed.');
   assert.equal(choicesNote(1, false), 'The open ideas could not be read. Close the sheet and open it again.');
+});
+
+test('each idea merged into a group opens its own sheet, where it can be dismissed and its sender stopped', () => {
+  assert.deepEqual(askLinks(idea, NOW), [
+    { id: 'b', label: 'Open the idea asked 1 d ago, by a guest' },
+    { id: 'c', label: 'Open the idea asked 1 h ago, by an account since deleted' },
+  ]);
+  assert.deepEqual(askLinks({ ...idea, asks: undefined }, NOW), []);
 });

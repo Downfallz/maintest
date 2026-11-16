@@ -450,6 +450,9 @@ test('an idea is merged into another, read with everyone who asked it, planned, 
   await expect(page.locator('#admin-feedback-facts')).toContainText('2 players since');
   await expect(page.locator('#admin-feedback-words')).toContainText('Let me watch a round again from the recap');
   await expect(page.locator('#admin-feedback-to-bug')).toBeHidden();
+  await page.locator('#admin-feedback-asks button').click();
+  await expect(page.locator('#admin-feedback-spam')).toBeVisible();
+  await page.locator('#admin-feedback-joined').click();
   await page.locator('#admin-feedback-close').click();
   await expect(page.locator('#admin-feedback-list li')).toHaveCount(2);
   await expect(page.locator('#admin-feedback-list li').first()).toContainText('asked by 2');
