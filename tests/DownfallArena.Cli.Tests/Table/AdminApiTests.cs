@@ -353,22 +353,42 @@ public sealed class AdminApiTests : IDisposable
     [Fact]
     public async Task A_pass_run_from_the_panel_keeps_the_tables_it_closed()
     {
+        // It failed now and then in a full run, never alone (#649), so the message says why: the pass's answer, the
+        // table as it stood, and the console's lines about it. The console is one for the whole process, and this test
+        // stays out of ConsoleOutput on purpose: run one at a time, it would no longer race what it failed beside.
+        // Only the lines naming its table are kept; another test's are not its story.
+        var said = new StringWriter();
+        var (output, error) = (Console.Out, Console.Error);
+        Console.SetOut(TextWriter.Synchronized(new Tee(output, said)));
+        Console.SetError(TextWriter.Synchronized(new Tee(error, said)));
         var clock = new MovableClock(DateTimeOffset.UtcNow);
         var admin = new AdminApi(_registry, _hosted.Composer, OperatorGate.WithToken(OperatorToken), clock, "Rules", _hosted.Stored);
-        var opened = JsonDocument.Parse(Text(await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy"}""", OperatorToken, principal: null))).RootElement;
-        var id = opened.GetProperty("id").GetString();
         var tend = Path.Combine(_hosted.RunsDirectory, "..", $"tend-{Guid.NewGuid():N}");
         try
         {
+            var opened = JsonDocument.Parse(Text(await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy"}""", OperatorToken, principal: null))).RootElement;
+            var id = opened.GetProperty("id").GetString().ShouldNotBeNull();
+            var table = _registry.Held(id);
             admin.Jobs = new JobsApi(new Infrastructure.Tables.FileTendLog(tend), clock, (now, progress) => TableTend.TendAsync(_registry, admin.Lobby, now, progress: progress));
             clock.Advance(TableRegistry.NeverBegunFor + TimeSpan.FromMinutes(5));
+            var seen = table is null
+                ? "not held once opened"
+                : $"touched {table.Touched:O}, begun {table.Session.HasBegun}, over {table.IsOver}, held {_registry.Held(id) is not null}, read just before the pass";
+            string Story() => string.Join('\n', said.ToString().Split('\n').Where(line => line.Contains(id, StringComparison.Ordinal)));
 
-            var run = JsonDocument.Parse(Text(await admin.HandleAsync("POST", JobsApi.TendRoute, "", OperatorToken, principal: null))).RootElement.GetProperty("run");
+            var answer = await admin.HandleAsync("POST", JobsApi.TendRoute, "", OperatorToken, principal: null);
 
-            run.GetProperty("neverBegan").EnumerateArray().Select(table => table.GetString()).ShouldBe([id]);
+            var after = $"held after the pass {_registry.Held(id) is not null}";
+            answer.Status.ShouldBe(200, $"{Text(answer)}; the table: {seen}; {after}; the console:\n{Story()}");
+            var run = JsonDocument.Parse(Text(answer)).RootElement.GetProperty("run");
+            run.GetProperty("neverBegan").EnumerateArray().Select(closed => closed.GetString()).ShouldBe(
+                [id],
+                $"outcome {(run.TryGetProperty("outcome", out var outcome) ? outcome : default)}, error {(run.TryGetProperty("error", out var failed) ? failed : default)}; the table: {seen}; {after}; the pass at {clock.GetUtcNow():O}; the console:\n{Story()}");
         }
         finally
         {
+            Console.SetOut(output);
+            Console.SetError(error);
             if (Directory.Exists(tend))
             {
                 Directory.Delete(tend, recursive: true);
@@ -770,6 +790,30 @@ public sealed class AdminApiTests : IDisposable
         new(_registry, _hosted.Composer, gate, TimeProvider.System, "Rules 2 creatures (a test)", _hosted.Stored, agents);
 
     private static string Text(StudioResponse response) => Encoding.UTF8.GetString(response.Body);
+
+    /// <summary>Writes to the console as before, and keeps a copy for the test's message.</summary>
+    private sealed class Tee(TextWriter first, TextWriter second) : TextWriter
+    {
+        public override Encoding Encoding => first.Encoding;
+
+        public override void Write(char value)
+        {
+            first.Write(value);
+            second.Write(value);
+        }
+
+        public override void Write(string? value)
+        {
+            first.Write(value);
+            second.Write(value);
+        }
+
+        public override void WriteLine(string? value)
+        {
+            first.WriteLine(value);
+            second.WriteLine(value);
+        }
+    }
 
     private sealed class MovableClock(DateTimeOffset start) : TimeProvider
     {

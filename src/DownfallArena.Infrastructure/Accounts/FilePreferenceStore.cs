@@ -18,11 +18,41 @@ public sealed class FilePreferenceStore : IPreferenceStore
 
     public string RootDirectory { get; }
 
-    public async Task<GamePreferences?> GetAsync(AccountId account, CancellationToken cancellationToken = default)
+    public async Task<GamePreferences?> GetAsync(AccountId account, CancellationToken cancellationToken = default) =>
+        await ReadAsync(FullPath(account), cancellationToken) is { } json ? PreferenceDocuments.Read(json) : null;
+
+    public async Task<TutorialProgress> GetTutorialsAsync(AccountId account, CancellationToken cancellationToken = default) =>
+        await ReadAsync(TutorialsPath(account), cancellationToken) is { } json ? PreferenceDocuments.ReadTutorials(json) : TutorialProgress.None;
+
+    public Task SaveTutorialsAsync(AccountId account, TutorialProgress tutorials, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(tutorials);
+        return WriteAsync(TutorialsPath(account), PreferenceDocuments.WriteTutorials(tutorials), cancellationToken);
+    }
+
+    public async Task SaveAsync(AccountId account, GamePreferences preferences, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(preferences);
+        await WriteAsync(FullPath(account), PreferenceDocuments.Write(preferences), cancellationToken);
+    }
+
+    public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)
+    {
+        // An account on a host where nobody saved anything yet has no directory to delete from.
+        if (Directory.Exists(Path.GetDirectoryName(FullPath(account))))
+        {
+            File.Delete(FullPath(account));
+            File.Delete(TutorialsPath(account));
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private static async Task<string?> ReadAsync(string path, CancellationToken cancellationToken)
     {
         try
         {
-            return PreferenceDocuments.Read(await File.ReadAllTextAsync(FullPath(account), cancellationToken));
+            return await File.ReadAllTextAsync(path, cancellationToken);
         }
         catch (Exception exception) when (exception is FileNotFoundException or DirectoryNotFoundException)
         {
@@ -30,21 +60,15 @@ public sealed class FilePreferenceStore : IPreferenceStore
         }
     }
 
-    public async Task SaveAsync(AccountId account, GamePreferences preferences, CancellationToken cancellationToken = default)
+    private static async Task WriteAsync(string path, string document, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(preferences);
-        var path = FullPath(account);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         var staged = $"{path}.{Guid.NewGuid():N}.tmp";
-        await File.WriteAllTextAsync(staged, PreferenceDocuments.Write(preferences), cancellationToken);
+        await File.WriteAllTextAsync(staged, document, cancellationToken);
         File.Move(staged, path, overwrite: true);
     }
 
-    public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)
-    {
-        File.Delete(FullPath(account));
-        return Task.CompletedTask;
-    }
-
     private string FullPath(AccountId account) => Path.Combine(RootDirectory, PreferenceDocuments.PathOf(account));
+
+    private string TutorialsPath(AccountId account) => Path.Combine(RootDirectory, PreferenceDocuments.TutorialsPathOf(account));
 }

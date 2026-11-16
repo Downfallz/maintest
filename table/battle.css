@@ -1768,7 +1768,8 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 #practice-brief h2, #concept-dialog h2 { margin: 4px 0 10px; font: 24px/1.15 var(--font-display); overflow-wrap: anywhere; }
 .practice-brief-goal { margin: 0 0 10px; color: #e6c88c; font-size: 15px; line-height: 1.4; overflow-wrap: anywhere; }
 .practice-brief-start, .practice-brief-note { margin: 0 0 8px; color: #c4d0c7; font-size: 13px; line-height: 1.4; }
-#practice-brief-begin, #concept-next { width: 100%; min-height: 44px; margin-top: 8px; }
+#practice-brief-begin, #practice-brief-skip, #concept-next { width: 100%; min-height: 44px; margin-top: 8px; }
+#practice-brief-skip[hidden] { display: none; }
 @media (max-width: 619px) {
   .practice-band { top: 4px; right: 4px; width: min(220px, calc(100% - 8px)); padding: 6px 8px; }
   .practice-band small#practice-goal { display: none; }
@@ -1790,6 +1791,9 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 .coach-end[hidden] { display: none; }
 .coach-end button, .coach-end a { display: inline-flex; align-items: center; min-height: 44px; padding: 4px 12px; font-size: 13px; }
 .coach-end a { color: var(--muted); }
+/* Where a sheet docks under the field (a phone), the field is too short to carry the card (#650): the card moves
+   into the sheet, at its top, and scrolls with what the sheet asks. */
+.coach.in-sheet { position: static; flex: 0 0 auto; width: auto; max-width: none; margin: 0; box-shadow: none; }
 /* Targets are chosen on the field itself: the coach card steps aside, and the creature it points at stays ringed. */
 #battle[data-combat="targets"] .coach { display: none; }
 /* On a phone a tutorial's band is one row, so the field under it stays in view: its place in the series, Restart

@@ -17,7 +17,7 @@ const creature = (number, health = 30) => ({ id: number, name: `Creature ${numbe
   currentInitiative: 5, isAlive: true, isStunned: false, isStunImmune: false, knownSpells: ['shock'], conditions: [], acquiredTiers: [] });
 
 async function mount(page, { assistedFirst = false } = {}) {
-  const state = { errors: [], writes: [], asked: 20, answered: 0, handedBack: false };
+  const state = { errors: [], writes: [], said: [], asked: 20, answered: 0, handedBack: false };
   page.on('pageerror', error => state.errors.push(error.message));
   const order = lesson.steps.map(step => step.at.creature);
   const view = () => {
@@ -47,6 +47,8 @@ async function mount(page, { assistedFirst = false } = {}) {
       if (request.method() === 'GET') return route.fulfill({ status: 404, json: { error: 'Scenario.NoPractice', message: 'None.' } });
       return route.fulfill({ json: { seat: 'player1', token: 'lesson', table: { id: 'practice-lesson', format: '3v3', seats: [{ seat: 'player1', name: 'Learner', kind: 'person' }, { seat: 'player2', name: 'Recorded opponent', kind: 'bot' }] }, practice: view().practice } });
     }
+    // What the page says of the account's progress (O4): skipped, or done once the host's view says so.
+    if (url.pathname.startsWith(`/api/tutorials/${id}/`) && request.method() === 'POST') { const what = url.pathname.split('/').at(-1); state.said.push(what); return route.fulfill({ json: { id, state: what === 'done' ? 'done' : 'skipped' } }); }
     if (url.pathname === '/api/me') return route.fulfill({ json: { accounts: 'dev', account: { id: 'acct_learnerlearnerlea', username: 'Learner' } } });
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: { rules: { roundCap: 12, combatDeclaration: 'AtActivation' }, cards: [{ id: 'shock', name: 'Shock', cost: 2, targeting: 'One enemy', effects: ['Damage 7'] }], packages: [] } });
     if (url.pathname.endsWith('/decision')) { state.writes.push(decided(request)); state.answered++; state.asked++; return route.fulfill({ status: 204 }); }
@@ -82,6 +84,15 @@ async function playStep(page, state, index, capture) {
   // The phase tips stay silent, and the spell choice opens by itself once the cards are read.
   await expect(page.locator('#help-dialog')).toBeHidden();
   await openSpells(page);
+  // Where the spell choice docks under the field, the card stands in the sheet and leaves the field clear (#650).
+  if (await page.evaluate(() => !matchMedia('(min-width: 760px), (orientation: landscape) and (max-height: 520px)').matches)) {
+    await expect(coach).toHaveClass(/in-sheet/);
+    expect(await page.evaluate(() => {
+      const card = document.getElementById('coach').getBoundingClientRect(), field = document.getElementById('battle-zone').getBoundingClientRect();
+      return card.top >= field.bottom - 1;
+    })).toBe(true);
+    await fitsViewport(page, '#coach-cards button');
+  }
   if (index === 0 && capture) await capture('coach-card');
   await page.locator('[data-spell="shock"]').click();
   // Targets are chosen on the field: the coach card steps aside, and the creature the step points at stays ringed.
@@ -109,6 +120,12 @@ test('tutorial 1 is played to its end: each step shows its coach card and opens 
   await expect(page.locator('#practice-brief')).toBeVisible();
   await expect(page.locator('#practice-brief-eyebrow')).toHaveText('TUTORIAL 1 OF 4');
   await expect(page.locator('#concept-dialog')).toBeHidden();
+  // The first card says what this is, and offers Start and Skip the tutorial (O4).
+  await expect(page.locator('#practice-brief-begin')).toHaveText('Start');
+  await expect(page.locator('#practice-brief-skip')).toHaveText('Skip the tutorial');
+  await expect(page.locator('#practice-brief-note')).toContainText('Learn to play');
+  await fitsViewport(page, '#practice-brief-begin, #practice-brief-skip');
+  await capture('first-card');
   await page.locator('#practice-brief-begin').click();
 
   for (let index = 0; index < lesson.steps.length; index++) await playStep(page, state, index, capture);
@@ -119,6 +136,8 @@ test('tutorial 1 is played to its end: each step shows its coach card and opens 
   await expect(page.locator('#practice-detail')).toHaveText('Tutorial complete');
   await expect(page.locator('#coach')).toHaveAttribute('data-done', 'true');
   await expect(page.locator('#practice-leave')).toBeVisible();
+  // The host said it is done: the page has the account keep it, once.
+  await expect.poll(() => state.said).toEqual(['done']);
   // The tempos of the next round are still answered for the person: no sheet opens for them.
   await expect(page.locator('#planning-dialog')).toBeHidden(); await expect(page.locator('#planning-open')).toBeHidden();
   await capture('tutorial-complete');
@@ -128,6 +147,11 @@ test('tutorial 1 is played to its end: each step shows its coach card and opens 
   await page.locator('#coach-continue').click();
   await expect(page.locator('#coach')).toBeHidden();
   await expect(band).toBeVisible();
+  // Leaving a finished tutorial is only leaving: nothing is said to be skipped.
+  await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: '<title>Home</title>' }));
+  await page.locator('#practice-leave').click();
+  await expect(page).toHaveTitle('Home');
+  expect(state.said).toEqual(['done']);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   expect(state.errors).toEqual([]);
 });
@@ -161,5 +185,31 @@ test('an assisted question is not drawn, and is the person\'s once the host hand
   await page.evaluate(() => window.notifyBattle());
   await expect(page.locator('#planning-dialog')).toBeVisible({ timeout: 15000 });
   await expect(page.locator('#planning-dialog')).toHaveAttribute('data-kind', 'Speed');
+  expect(state.errors).toEqual([]);
+});
+
+test('Skip the tutorial on the first card says it is skipped and leaves for the home page', async ({ page }) => {
+  const state = await mount(page);
+  await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: '<title>Home</title>' }));
+  await expect(page.locator('#practice-brief')).toBeVisible();
+
+  await page.locator('#practice-brief-skip').click();
+
+  await expect(page).toHaveTitle('Home');
+  expect(state.said).toEqual(['skip']);
+  expect(state.writes).toEqual([]); expect(state.errors).toEqual([]);
+});
+
+test('Leave before the end counts as skipping: the tutorial never opens by itself again', async ({ page }) => {
+  const state = await mount(page);
+  await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: '<title>Home</title>' }));
+  await page.locator('#practice-brief-begin').click();
+  await page.keyboard.press('Escape');
+  await fitsViewport(page, '#practice-leave');
+
+  await page.locator('#practice-leave').click();
+
+  await expect(page).toHaveTitle('Home');
+  expect(state.said).toEqual(['skip']);
   expect(state.errors).toEqual([]);
 });

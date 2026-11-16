@@ -383,6 +383,81 @@ public sealed class AccountApiTests : IDisposable
     }
 
     [Fact]
+    public async Task The_settings_say_the_tutorials_the_account_finished_and_skipped_and_saving_settings_leaves_them()
+    {
+        var api = await ApiAsync(AccountsMode.Development);
+        api.Preferences = new FilePreferenceStore(_root);
+        var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+        var id = await IdOf(api, session);
+        var fresh = Json(await api.HandleAsync("GET", "/api/account/preferences", "", Signed(session))).GetProperty("tutorials");
+
+        await api.NoteTutorialAsync(id, "sc-repo-tutorial-your-first-combat", TutorialState.Skipped, TestContext.Current.CancellationToken);
+        await api.HandleAsync("PUT", "/api/account/preferences", """{"pace":"auto","speed":2,"help":true,"reducedMotion":false}""", Signed(session));
+
+        (fresh.GetProperty("done").GetArrayLength(), fresh.GetProperty("skipped").GetArrayLength()).ShouldBe((0, 0));
+        var read = Json(await api.HandleAsync("GET", "/api/account/preferences", "", Signed(session)));
+        read.GetProperty("tutorials").GetProperty("skipped").EnumerateArray().Select(one => one.GetString()).ShouldBe(["sc-repo-tutorial-your-first-combat"]);
+        read.GetProperty("preferences").GetProperty("pace").GetString().ShouldBe("auto");
+    }
+
+    [Fact]
+    public async Task Skipping_a_tutorial_leaves_an_account_that_chose_no_settings_without_saved_ones()
+    {
+        var api = await ApiAsync(AccountsMode.Development);
+        api.Preferences = new FilePreferenceStore(_root);
+        var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+
+        await api.NoteTutorialAsync(await IdOf(api, session), "sc-repo-tutorial-your-first-combat", TutorialState.Skipped, TestContext.Current.CancellationToken);
+
+        Json(await api.HandleAsync("GET", "/api/account/preferences", "", Signed(session))).GetProperty("saved").GetBoolean().ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Deleting_the_account_forgets_its_tutorials()
+    {
+        var api = await ApiAsync(AccountsMode.Development);
+        var store = new FilePreferenceStore(_root);
+        api.Preferences = store;
+        var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+        var id = await IdOf(api, session);
+        await api.NoteTutorialAsync(id, "sc-repo-tutorial-your-first-combat", TutorialState.Done, TestContext.Current.CancellationToken);
+
+        await api.HandleAsync("DELETE", "/api/account", """{"username":"MarkF"}""", Signed(session));
+
+        (await store.GetTutorialsAsync(id, TestContext.Current.CancellationToken)).ShouldBe(TutorialProgress.None);
+    }
+
+    [Fact]
+    public async Task A_tutorial_noted_for_an_account_that_was_just_deleted_is_not_kept()
+    {
+        var api = await ApiAsync(AccountsMode.Development);
+        var store = new FilePreferenceStore(_root);
+        api.Preferences = store;
+        var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+        var id = await IdOf(api, session);
+        await api.HandleAsync("DELETE", "/api/account", """{"username":"MarkF"}""", Signed(session));
+
+        var noted = await api.NoteTutorialAsync(id, "sc-repo-tutorial-your-first-combat", TutorialState.Skipped, TestContext.Current.CancellationToken);
+
+        noted.ShouldBeNull();
+        (await store.GetTutorialsAsync(id, TestContext.Current.CancellationToken)).ShouldBe(TutorialProgress.None);
+    }
+
+    [Fact]
+    public async Task Tutorials_noted_at_once_for_one_account_are_all_kept()
+    {
+        var api = await ApiAsync(AccountsMode.Development);
+        var store = new FilePreferenceStore(_root);
+        api.Preferences = store;
+        var id = await IdOf(api, Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody)));
+        var tutorials = Enumerable.Range(1, 12).Select(order => $"sc-repo-tutorial-{order:00}").ToArray();
+
+        await Task.WhenAll(tutorials.Select(tutorial => api.NoteTutorialAsync(id, tutorial, TutorialState.Skipped, TestContext.Current.CancellationToken)));
+
+        (await store.GetTutorialsAsync(id, TestContext.Current.CancellationToken)).Skipped.ShouldBe(tutorials);
+    }
+
+    [Fact]
     public async Task A_typed_name_signs_in_as_the_same_account_each_time()
     {
         var api = await ApiAsync(AccountsMode.Development);

@@ -344,6 +344,14 @@ page shows.
 each one's `id`, `order`, `of`, `title`, `goal`, `round`, `seat`, `format` and `link`. A tutorial is opened as a
 practice by the routes above, and is never listed under Practice.
 
+Each tutorial also says its `state` for the account: `new`, `done` or `skipped`. `opens` is the link of the
+tutorial that opens by itself: the first of the series while it is new to the account, null otherwise, and null
+on a host that keeps no game settings. `POST /api/tutorials/<id>/skip` records that the account skipped a tutorial;
+the battle view says it for **Skip the tutorial** and for **Leave** before the end. `POST /api/tutorials/<id>/done`
+records that it finished one, and answers 409 `Tutorial.NotDone` unless the account's practice of it at this host
+says `done`. Both answer `{ id, state }`, 404 `Tutorial.NotFound` for an id that is no tutorial, and 404
+`Account.NoPreferences` on a host that keeps no game settings. Skipping a tutorial the account has finished leaves it done.
+
 While it plays, the host answers the person's assisted questions from the recorded answers, as the person's own
 decisions. At the first recorded answer that does not fit, it stops and gives every question back to the person.
 
@@ -434,7 +442,9 @@ friend's request or an invitation reaches a player who holds no seat (docs/table
 - A signed-in player's game settings (reading pace, speed, phase tips, less motion, opponent reactions; Step,
   1×, tips and reactions on by default) are `GET`/`PUT /api/account/preferences`, kept beside the accounts under
   `preferences/` and forgotten with the account; every new game starts from them and its own Match settings
-  override them for that game only (ADR 0140).
+  override them for that game only (ADR 0140). The `GET` also says the tutorials the account finished and
+  skipped (`tutorials.done`, `tutorials.skipped`, ADR 0187), kept in a document of their own beside the settings
+  (`preferences/<account>.tutorials.json`): skipping a tutorial saves no settings.
 
 #### Friends, and a table for a friend
 
