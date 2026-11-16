@@ -249,11 +249,12 @@ function roundsLine(rounds) {
 export function reproduceSaid(answer, sheet) {
   if (answer.ok) {
     const round = answer.body?.context?.round;
-    return { refused: false, line: `${Number.isInteger(round) ? `Round ${round}` : 'The round'} is cut, in the reporter's seat. Play it from the link.` };
+    const which = Number.isInteger(round) ? `Round ${round}` : 'The round';
+    return { refused: false, line: `${which} is cut, in the reporter's seat. Play it from the link.` };
   }
   const rounds = (answer.body?.rounds ?? []).filter(Number.isInteger);
   if (Array.isArray(answer.body?.rounds)) {
-    const offered = `round${rounds.length === 1 ? '' : 's'} ${roundsLine(rounds)}`;
+    const offered = (rounds.length === 1 ? 'round ' : 'rounds ') + roundsLine(rounds);
     // A practice is kept nowhere: what the report copied of it is all there is to cut, and the Scenarios tab cuts sessions.
     if (sheet?.context?.scenario && !sheet.context.table) {
       return { refused: true, line: rounds.length

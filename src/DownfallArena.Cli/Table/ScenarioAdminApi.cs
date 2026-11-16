@@ -81,7 +81,7 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
             asked = null;
         }
 
-        if (asked is not { Session: { Length: > 0 } session, Round: > 0 } || asked.Seat is not (null or "player1" or "player2")
+        if (asked is not { Session: { Length: > 0 } session, Round: > 0 } || (asked.Seat is not null && SlotOf(asked.Seat) is null)
             || asked.Title is { Length: > 80 } || asked.Goal is { Length: > 300 })
         {
             return Error("Scenario.Invalid", "Name a recorded session and a round from 1; the seat is player1 or player2, the title 80 characters at most and the goal 300.", 400);
@@ -93,7 +93,7 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
             return refused;
         }
 
-        var seat = asked.Seat == "player2" ? PlayerSlot.Player2 : PlayerSlot.Player1;
+        var seat = SlotOf(asked.Seat) ?? PlayerSlot.Player1;
         var kept = await KeepAsync(read.Source!.Value, asked.Round, seat, session, asked.Title, asked.Goal);
         if (kept.Refused is { } notCut)
         {
@@ -117,7 +117,7 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
     {
         ArgumentNullException.ThrowIfNull(context);
         // The seat is the reporter's: a cut in the other one would have the bot replay the reporter's own answers.
-        if (context.Round is not { } round || round < 1 || (context.Table is null && context.Scenario is null) || context.Seat is not ("player1" or "player2"))
+        if (context.Round is not { } round || round < 1 || (context.Table is null && context.Scenario is null) || SlotOf(context.Seat) is not { } seat)
         {
             return (Error(FeedbackErrors.NoPosition.Code, FeedbackErrors.NoPosition.Message, 409), null);
         }
@@ -128,7 +128,6 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
             return (refused, null);
         }
 
-        var seat = context.Seat == "player2" ? PlayerSlot.Player2 : PlayerSlot.Player1;
         return await KeepAsync(read.Source!.Value, round, seat, context.Table, $"Report {report}, round {round}", goal: null);
     }
 
@@ -283,6 +282,14 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
 
     /// <summary>Where a scenario is played: the link a signed-in player, or the operator, opens.</summary>
     public static string Link(string id) => $"/battle?scenario={id}";
+
+    /// <summary>A seat as a URL names it, <c>player1</c> or <c>player2</c>; none for any other word.</summary>
+    private static PlayerSlot? SlotOf(string? seat) => seat switch
+    {
+        "player1" => PlayerSlot.Player1,
+        "player2" => PlayerSlot.Player2,
+        _ => null,
+    };
 
     private static StudioResponse Error(string error, string message, int status) =>
         StudioResponse.OfJson(new { error, message }, ArtifactJson.LineOptions, status);
