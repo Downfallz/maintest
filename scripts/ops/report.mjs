@@ -38,10 +38,23 @@ const number = (value, digits = 2) => Number(value).toLocaleString('fr-CA', { ma
 const plural = (count, one, many = `${one}s`) => `${count} ${count <= 1 ? one : many}`;
 const usable = (reading) => reading !== undefined && reading !== null && reading.error === undefined;
 
-/** A console line as a public log may hold it: no email, id, token or query string, one line, short. */
+/**
+ * A console line without the names people chose: the host's audit lines name a player by the name they picked
+ * (`Account acct_… (name)`, `renamed from a to b`) and the operator by an admin's player name or sign-in
+ * (`by name.`, `by name:`, `shown to name.`), and a suspension carries the reason an operator wrote, in free text.
+ */
+function unnamed(line) {
+  return line
+    .replace(/\bsuspended( by \S+?)?: .*$/, 'suspended$1: <motif>')
+    .replace(/\b(acct_[A-Za-z0-9]+) \([^)]*\)/g, '$1 (<joueur>)')
+    .replace(/\brenamed from \S+ to \S+/g, 'renamed from <joueur> to <joueur>')
+    .replace(/\b(by|shown to) [^\s:]+?(?=\.?$|: )/g, '$1 <joueur>');
+}
+
+/** A console line as a public log may hold it: no name, email, id, token or query string, one line, short. */
 export function mask(line) {
   // A word with an @ in it is an address, or near enough: masked whole, in one pass over the words.
-  const words = String(line ?? '')
+  const words = unnamed(String(line ?? '').trim())
     .split(/(\s+)/)
     .map((word) => (word.includes('@') ? '<courriel>' : word))
     .join('');

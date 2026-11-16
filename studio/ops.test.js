@@ -147,6 +147,32 @@ test('an error line loses emails, ids, tokens and query strings before it reache
   assert.ok(mask('x'.repeat(400)).length <= 160);
 });
 
+test('an error line loses the player names and the free text an operator wrote before it reaches a public log', () => {
+  const lines = [
+    'Account acct_ab12cd34ef56gh78 (Zelda_42) suspended by marie-c: Zelda_42 failed to stop insulting Bob',
+    'Account acct_ab12cd34ef56gh78 renamed from Zelda_42 to Link-7 by marie-c.',
+    'Account acct_ab12cd34ef56gh78 (Zelda_42) deleted by marie-c.',
+    'Dead letters requeued by marie-c: 3.',
+    'Table 12: what its seats hold face down was shown to marie-c.',
+    'Session 12 cannot be played on: This account is suspended: Zelda_42 failed to stop insulting Bob',
+  ].map(mask);
+  for (const line of lines) assert.doesNotMatch(line, /Zelda|Link-7|marie-c|Bob/, line);
+  assert.equal(lines[0], 'Account acct_… (<joueur>) suspended by <joueur>: <motif>');
+  assert.equal(lines[1], 'Account acct_… renamed from <joueur> to <joueur> by <joueur>.');
+  assert.equal(lines[3], 'Dead letters requeued by <joueur>: 3.');
+  assert.equal(lines[5], 'Session 12 cannot be played on: This account is suspended: <motif>');
+});
+
+test('a line that names nobody keeps its words', () => {
+  for (const line of [
+    'Session 12 was written by another process: let go of, and picked up again at the next request.',
+    'Session 12 could not be closed: Unable to connect to the remote server',
+    'Session 12: player1 could not be notified: Response status code does not indicate success: 410 (Gone).',
+  ]) {
+    assert.equal(mask(line), line);
+  }
+});
+
 test('error lines that differ by an id alone are counted as one', () => {
   const rows = logLines(
     logs(
