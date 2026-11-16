@@ -31,6 +31,13 @@ export function stepLabel(subPhase) {
   return (subPhase ?? '').replace(/([a-z])([A-Z])/g, '$1 $2');
 }
 
+// A creature definition's name as a player reads it. The one base creature is named Main in the content; a
+// player reads it as a creature, which is also how the event log names one (Creature 4).
+const CREATURE = { Main: 'Creature' };
+export function creatureName(name) {
+  return CREATURE[name] ?? name ?? '';
+}
+
 // A Tier's level as a player reads it.
 export function stageLabel(level) {
   return `Stage ${level}`;

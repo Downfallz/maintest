@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test';
-import { returningBattlePlayer } from './battle-help-fixture.js';
+import { returningBattlePlayer, mutationTree } from './battle-help-fixture.js';
 import { startHost, stopHost } from './host.js';
 import { fitsViewport } from './fit.js';
+import { decided } from './decision.js';
 test.beforeEach(returningBattlePlayer);
 
 test('the real catalogue tree follows public purchases without acknowledging the reference', async ({ page, context }, info) => {
@@ -11,7 +12,7 @@ test('the real catalogue tree follows public purchases without acknowledging the
   page.on('pageerror', error => errors.push(error.message));
   try {
     await page.goto(join); await page.locator('#invitation-take').click();
-    await expect(page.locator('#table, #pass').filter({ visible: true }).first()).toBeVisible({ timeout: 20000 });
+    await page.waitForURL(/\/battle(?:\?|$)/, { timeout: 20000 }); // The accepted seat goes on to the battle view (ADR 0157).
     const tokens = await page.evaluate(() => JSON.parse(localStorage.getItem('downfall.table.seats')));
     const origin = new URL(join).origin, headers = { 'X-Seat-Token': tokens.player1 };
     const read = async () => (await context.request.get(`${origin}/api/seat/player1`, { headers })).json();
@@ -20,16 +21,19 @@ test('the real catalogue tree follows public purchases without acknowledging the
     page.on('request', request => {
       const url = new URL(request.url());
       if (url.searchParams.has('shown')) shown.push(url.searchParams.get('shown'));
-      if (url.pathname.endsWith('/decision')) writes.push(request.postDataJSON());
+      if (url.pathname.endsWith('/decision')) writes.push(decided(request));
     });
     await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true'); await expect(page.locator('#loading')).toBeHidden();
     await expect(page.locator('#upkeep-dialog')).toBeVisible(); await page.locator('#upkeep-close').click();
+    // The mutation tree opens by itself and acknowledges the asking (ADR 0138); the player closes it to read
+    // the public reference, whose own reads are counted from here.
+    await mutationTree(page); await page.locator('#planning-close').click(); await expect.poll(() => shown.length).toBe(1); shown.length = 0;
     await page.locator('#help-open').click(); await page.locator('#help-dialog [data-growth-open]').click();
     const initial = await read();
-    await expect(page.locator('#growth-next')).toHaveText(`Mutation opportunity this round · Round ${initial.board.nextEvolutionRound}`);
-    await expect(page.locator('#growth-tree > details')).toHaveCount(3);
+    await expect(page.locator('#atlas-progress')).toContainText(`Mutation opportunity this round · Round ${initial.board.nextEvolutionRound}`);
+    await expect(page.locator('#atlas-board .atlas-family')).toHaveCount(3);
     expect(shown).toEqual([]); expect(writes).toEqual([]);
-    await fitsViewport(page, '#growth-close, #growth-creature');
+    await fitsViewport(page, '#atlas-close, #atlas-creature');
     await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
     // Buy one offered tier through the battle; pass any remaining picks to reach the public reveal.
     const offer = initial.options.evolution.creatures.find(one => one.availableTiers.length);
@@ -41,37 +45,43 @@ test('the real catalogue tree follows public purchases without acknowledging the
     let next;
     await expect.poll(async () => { next = await read(); return next.waitingAsked; }).not.toBe(initial.waitingAsked);
     if (next.waitingFor === 'Evolution') {
-      await page.locator('#planning-open').click(); await page.locator('#planning-pass').click();
+      await mutationTree(page); await page.locator('#planning-pass').click();
       const passed = page.waitForResponse(response => response.url().endsWith('/decision') && response.request().method() === 'POST');
       await page.locator('#planning-confirm').click(); expect((await passed).status()).toBe(204);
     }
     await expect(page.locator('#growth-receipt')).toBeVisible({ timeout: 15000 });
     const count = shown.length, written = writes.length;
-    await page.locator('#growth-receipt [data-growth-open]').click(); await page.locator('#growth-creature').selectOption(String(offer.creature));
-    await expect(page.locator(`#growth-tree [data-package="${tier}"] > summary`)).toContainText('Acquired');
-    await page.locator('#growth-reveal-details summary').click(); await expect(page.locator('#growth-reveals')).toContainText(pack.name);
+    await page.locator('#growth-receipt [data-growth-open]').click(); await expect(page.locator('#growth-reveals')).toContainText(pack.name);
     for (const id of pack.spells) await expect(page.locator('#growth-reveals')).toContainText(catalogue.cards.find(card => card.id === id).name);
-    await page.locator(`#growth-tree [data-package="${tier}"] > details:not([data-package]) > summary`).first().click();
-    await fitsViewport(page, '#growth-close, #growth-creature');
+    await page.screenshot({ path: info.outputPath('mutation-reveal-real-host.png') });
+    // The reveal opens the full mutation tree on the bought mutation, its path lit and its spells as cards.
+    await page.locator('#growth-explore').click(); await page.locator('#atlas-creature').selectOption(String(offer.creature));
+    const bought = page.locator(`#atlas-board [data-package="${tier}"]`);
+    await expect(bought).toHaveAttribute('data-status', 'known'); await bought.click();
+    await expect(page.locator('#atlas-detail-body .atlas-card-name')).toHaveText(pack.name);
+    await expect(page.locator('#atlas-detail-body .spell-card')).toHaveCount(pack.spells.length);
+    await expect(page.locator('#atlas-detail-body .atlas-choose')).toHaveCount(0);
+    await fitsViewport(page, '#atlas-close, #atlas-creature');
     await page.screenshot({ path: info.outputPath('mutation-reference-real-host.png') });
-    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape'); if (await page.locator('#atlas-dialog').isVisible()) await page.keyboard.press('Escape');
+    // The reveal read, the team's tempos open by themselves (ADR 0150) and acknowledge their asking, once; the
+    // creature references read from here acknowledge nothing.
+    await expect(page.locator('#planning-dialog')).toHaveAttribute('data-kind', 'Speed');
+    await expect.poll(() => shown.length).toBe(count + 1); await page.locator('#planning-close').click();
     const revealed = await read();
     for (const creature of [revealed.board.allies.find(one => one.id === offer.creature), revealed.board.enemies[0]]) {
       await page.locator(`#actor-layer [data-creature="${creature.id}"]`).click();
       await expect(page.locator('#inspect-stats')).toHaveText(`${creature.health}/${creature.maxHealth} HP · ${creature.energy} energy · ${creature.totalDefense} defense · ${creature.currentInitiative} initiative`);
       await expect(page.locator('#inspect-context')).toHaveText(`Round ${revealed.board.roundNumber} · Current state`);
       for (const tier of creature.acquiredTiers) await expect(page.locator('#inspect-mutations')).toContainText(catalogue.packages.find(pack => pack.id === tier).name);
-      await expect(page.locator('#inspect-spells details')).toHaveCount(creature.knownSpells.length);
-      for (const spell of creature.knownSpells) await expect(page.locator(`#inspect-spells [data-inspect-spell="${spell}"] summary`)).toContainText(catalogue.cards.find(card => card.id === spell).name);
+      await expect(page.locator('#inspect-spells .inspect-spell')).toHaveCount(creature.knownSpells.length);
+      for (const spell of creature.knownSpells) await expect(page.locator(`#inspect-spells [data-inspect-spell="${spell}"] .spell-card-name`)).toHaveText(catalogue.cards.find(card => card.id === spell).name);
       const first = creature.knownSpells[0];
-      if (first) {
-        await page.locator(`#inspect-spells [data-inspect-spell="${first}"] summary`).click();
-        await expect(page.locator(`#inspect-spells [data-inspect-spell="${first}"]`)).toContainText(catalogue.cards.find(card => card.id === first).targeting);
-      }
+      if (catalogue.cards.find(card => card.id === first)?.targeting) await expect(page.locator(`#inspect-spells [data-inspect-spell="${first}"] .spell-card-target`)).toHaveText(catalogue.cards.find(card => card.id === first).targeting);
       await fitsViewport(page, '#inspect-close');
       if (creature.id === offer.creature) await page.screenshot({ path: info.outputPath('creature-inspection-real-host.jpg'), type: 'jpeg', quality: 85 });
       await page.keyboard.press('Escape');
     }
-    expect(shown.length).toBe(count); expect(writes.length).toBe(written); expect(errors).toEqual([]);
+    expect(shown.length).toBe(count + 1); expect(writes.length).toBe(written); expect(errors).toEqual([]);
   } finally { await page.close(); await stopHost(host); }
 });

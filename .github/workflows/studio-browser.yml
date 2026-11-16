@@ -1,28 +1,114 @@
 name: Studio browser
+
+# The browser suite: the mock-host journeys, the real-engine journeys and the release profiles. CI calls it with
+# what the diff calls for (ADR 0182, studio/browser/plan.js), on pull requests and on main; nightly.yml, and a run
+# asked by hand, play the whole matrix. It has no path filter of its own: the plan is the filter, and it is
+# decided inside a run so that the gate always reports.
 on:
-  pull_request:
-    paths:
-      - 'studio/**'
-      - 'table/**'
-      - 'battle/**'
-      - 'src/**'
-      - 'viewer/viewer.css'
-      - 'data/**'
-      - '.github/workflows/studio-browser.yml'
+  workflow_call:
+    inputs:
+      journeys:
+        description: The mock-host specs to play, separated by spaces; `all`, or `none`.
+        type: string
+        default: all
+      real-engine:
+        description: Whether to play the journeys against the real engine.
+        type: boolean
+        default: true
+      release:
+        description: Whether to play the release profiles.
+        type: boolean
+        default: true
+  # The same inputs, with the same defaults: a dispatch that declared none would read each as empty, and an
+  # empty input is equal to `false`, so a run asked by hand would skip the real engine and the release profiles.
   workflow_dispatch:
+    inputs:
+      journeys:
+        description: The mock-host specs to play, separated by spaces; `all`, or `none`.
+        type: string
+        default: all
+      real-engine:
+        description: Play the journeys against the real engine.
+        type: boolean
+        default: true
+      release:
+        description: Play the release profiles.
+        type: boolean
+        default: true
 permissions:
   contents: read
 jobs:
-  browser:
+  # The mock-host journeys, one job per Playwright project, side by side. As one step they took thirty-five to
+  # forty-seven minutes after AU14 and #504 (the complete-match replay waiting out a hidden list, fixed in #503,
+  # pushed them past sixty), with the real-engine journeys' eleven after them in a sixty-minute job. A project
+  # takes about a quarter of that; tablet runs only table.ux.spec.js, so it shares the desktop job. Desktop runs the
+  # most journeys, 476 with tablet's, which took 18 to 20 minutes and on a loaded runner ran past the thirty, so
+  # it is played in two halves (Playwright's --shard), each well inside the limit.
+  journeys:
+    name: journeys (${{ matrix.name }})
+    if: inputs.journeys != 'none'
     runs-on: ubuntu-latest
-    # The three projects of the five battle suites and the table suites took fourteen minutes on the run that
-    # added the complete loop (#432), and its real-host journeys, two of them a whole 3v3 match driven
-    # through the battle, were cut off at the twenty-minute budget that held since playback (#431). With the
-    # growth (AU8) and order (AU11) suites the mobile and desktop journeys alone took seventeen to twenty-five
-    # minutes depending on the runner, and the real-engine journeys after them were cut off at thirty (#458).
-    # AU13 brought the whole job to thirty-eight to forty minutes, and AU14's keyboard journeys and longer
-    # complete matches add about five more: forty-five would cut them off on a slow runner (#464).
-    timeout-minutes: 60
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: small-phone
+            projects: --project=small-phone
+          - name: phone
+            projects: --project=phone
+          - name: desktop and tablet 1/2
+            projects: --project=desktop --project=tablet --shard=1/2
+          - name: desktop and tablet 2/2
+            projects: --project=desktop --project=tablet --shard=2/2
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install browser test dependencies
+        working-directory: studio/browser
+        run: |
+          npm ci --ignore-scripts
+          node node_modules/playwright/cli.js install --with-deps chromium
+      # These journeys answer every request from a mock host (server.js and page routes): no .NET build.
+      - name: Build the isolated battle prototype
+        run: npm --prefix battle ci --ignore-scripts && npm --prefix battle run build
+      # One retry (ADR 0182): a journey that fails twice is red, one that passes the second time is green and
+      # named by the step below. The specs are the ones the diff calls for; a project or a shard they leave
+      # empty passes. Unquoted on purpose: each is several arguments.
+      - name: Verify the journeys of this project
+        working-directory: studio/browser
+        env:
+          PROJECTS: ${{ matrix.projects }}
+          SPECS: ${{ (inputs.journeys == 'all' || inputs.journeys == '') && ' ' || inputs.journeys }}
+          PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/playwright-report.json
+        run: node node_modules/playwright/cli.js test $SPECS $PROJECTS --retries=1 --pass-with-no-tests --reporter=dot,json
+      - name: Say what flaked
+        if: ${{ !cancelled() }}
+        run: |
+          if [[ -f "$RUNNER_TEMP/playwright-report.json" ]]; then
+            node studio/browser/flakes.js < "$RUNNER_TEMP/playwright-report.json"
+          else
+            echo "No Playwright report to read: no test ran."
+          fi
+      - name: Keep previews and failure traces
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: studio-browser-${{ strategy.job-index }}
+          path: studio/browser/test-results
+          retention-days: 7
+  # The practice, slot, push and complete-match journeys against the real engine, one job per project: each
+  # plays one table at a time (workers: 1), so the two projects only add up when they share a job.
+  real-engine:
+    name: real engine (${{ matrix.project }})
+    if: inputs.real-engine
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [table-phone, table-desktop]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -37,25 +123,33 @@ jobs:
           global-json-file: global.json
       - name: Build the isolated battle prototype
         run: npm --prefix battle ci --ignore-scripts && npm --prefix battle run build
-
       - name: Build the practice host and catalogue
         run: |
           dotnet build src/DownfallArena.Cli
           dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst
-      - name: Verify mobile and desktop journeys
-        working-directory: studio/browser
-        run: npm test
       - name: Verify practice journeys with the real engine
         working-directory: studio/browser
-        run: node node_modules/playwright/cli.js test --config table.config.js
+        env:
+          PROJECT: ${{ matrix.project }}
+          PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/playwright-report.json
+        run: node node_modules/playwright/cli.js test --config table.config.js --project="$PROJECT" --retries=1 --reporter=dot,json
+      - name: Say what flaked
+        if: ${{ !cancelled() }}
+        run: |
+          if [[ -f "$RUNNER_TEMP/playwright-report.json" ]]; then
+            node studio/browser/flakes.js < "$RUNNER_TEMP/playwright-report.json"
+          else
+            echo "No Playwright report to read: no test ran."
+          fi
       - name: Keep previews and failure traces
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: studio-browser
+          name: studio-browser-${{ matrix.project }}
           path: studio/browser/test-results
           retention-days: 7
   battle-release:
+    if: inputs.release
     runs-on: ubuntu-latest
     # Two of the three profiles took nine minutes in a container on main after AU14 (complete matches are
     # two minutes each); WebKit's system packages and the build come on top of the third.
@@ -79,7 +173,17 @@ jobs:
           dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst
       - name: Play complete matches in desktop, Android and iOS browser profiles
         working-directory: studio/browser
-        run: node node_modules/playwright/cli.js test --config battle.release.config.js
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/playwright-report.json
+        run: node node_modules/playwright/cli.js test --config battle.release.config.js --retries=1 --reporter=dot,json
+      - name: Say what flaked
+        if: ${{ !cancelled() }}
+        run: |
+          if [[ -f "$RUNNER_TEMP/playwright-report.json" ]]; then
+            node studio/browser/flakes.js < "$RUNNER_TEMP/playwright-report.json"
+          else
+            echo "No Playwright report to read: no test ran."
+          fi
       - name: Keep release measurements and screenshots
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

@@ -18,7 +18,7 @@ internal sealed class PlayedTable : IDisposable
 
     public PlayedTable(
         TableOpening opening,
-        TableSession session,
+        ITableSession session,
         TableApi api,
         IReadOnlyList<TableSeat> seats,
         TablePilot pilot,
@@ -50,7 +50,10 @@ internal sealed class PlayedTable : IDisposable
 
     public int EventStreamVersion { get; init; } = MatchTrace.CurrentEventStreamVersion;
 
-    public TableSession Session { get; }
+    /// <summary>The hash of the content the table is played on (ADR 0163), which its record keeps; none for a table built without one.</summary>
+    public string? Content { get; init; }
+
+    public ITableSession Session { get; }
 
     public TableApi Api { get; }
 
@@ -61,6 +64,12 @@ internal sealed class PlayedTable : IDisposable
     /// <summary>Seats explicitly offered in the player lobby; claims are serialized and recorded by the lobby.</summary>
     public IReadOnlyList<string> OpenSeats { get; set; } = [];
 
+    /// <summary>Opened as unranked (ADR 0155): its result is kept and listed, never rated on the ladder.</summary>
+    public bool Casual { get; set; }
+
+    /// <summary>How long a player asked has to answer before they lose (ADR 0169); none for a table without a limit.</summary>
+    public TimeSpan? TurnLimit { get; set; }
+
     /// <summary>The recording, or none for a table told to keep nothing.</summary>
     public PlaytestRun? Run { get; }
 
@@ -69,13 +78,93 @@ internal sealed class PlayedTable : IDisposable
 
     /// <summary>
     /// Writes the table down for a host that comes after this one (ADR 0091): the request, the match id, and
-    /// the tokens and codes its players hold. Called once the registry has minted the codes, which is the
-    /// moment all of it is known. Nothing for a table that records nothing.
+    /// the tokens and codes its players hold, and the index of the tables after it (ADR 0161). A table that
+    /// records nothing is still kept in the index, which is how its host finds and counts it.
     /// </summary>
-    public Task RecordAsync(JoinCodes codes, CancellationToken cancellationToken = default)
+    public async Task RecordAsync(CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(codes);
-        return Run is { } run && Request is { } request ? run.RecordAsync(TableRecord.Of(this, request, codes), cancellationToken) : Task.CompletedTask;
+        if (Request is not { } request)
+        {
+            return;
+        }
+
+        await (Run is { } run ? run.RecordAsync(TableRecord.Of(this, request), cancellationToken) : IndexedAsync(TableRecord.Of(this, request)));
+        Recorded?.Invoke();
+    }
+
+    /// <summary>
+    /// Raised once a write of the record has landed: what another process reads to see a seat reached, given or kept,
+    /// so what tells it to look (ADR 0165) is said after the write, never before it, when the look would find nothing.
+    /// </summary>
+    public event Action? Recorded;
+
+    /// <summary>
+    /// Marks how the table ended -- finished, or closed without finishing -- in its record, or, for a table that
+    /// records nothing, in the index alone. A write that fails is a line on the console.
+    /// </summary>
+    public async Task MarkAsync(string status, CancellationToken cancellationToken = default)
+    {
+        await MarkedAsync(status, cancellationToken);
+        Recorded?.Invoke();
+    }
+
+    private Task MarkedAsync(string status, CancellationToken cancellationToken)
+    {
+        if (Run is { } run)
+        {
+            return run.MarkAsync(status, cancellationToken);
+        }
+
+        TableRecord? indexed;
+        lock (_indexGate)
+        {
+            indexed = _indexed;
+
+            // Nothing indexed yet, which a table of two bots can end before: the first record says it.
+            _markedFirst ??= indexed is null ? status : null;
+        }
+
+        return indexed is not null && indexed.Status != status ? IndexedAsync(indexed with { Status = status }) : Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// The index a table that records nothing keeps itself in (ADR 0161), its record being held here and never
+    /// written; a recorded table is indexed by its run, after each record write.
+    /// </summary>
+    public Application.Tables.Ports.ITableIndex? Index
+    {
+        get => _indexer?.Index;
+        init => _indexer = value is null ? null : new TableIndexer(value, Id);
+    }
+
+    private readonly TableIndexer? _indexer;
+    private readonly Lock _indexGate = new();
+    private TableRecord? _indexed;
+    private string? _markedFirst;
+    private Task _indexing = Task.CompletedTask;
+
+    /// <summary>The record a table that records nothing would have written, into the index, after the one before it.</summary>
+    private Task IndexedAsync(TableRecord record)
+    {
+        if (Run is not null || _indexer is not { } indexer)
+        {
+            return Task.CompletedTask;
+        }
+
+        lock (_indexGate)
+        {
+            var before = _indexed;
+            var written = (before is null && _markedFirst is { } ended ? record with { Status = ended } : record).Over(before);
+            _indexed = written;
+            // Never cancelled by the table's own stopping: an index write is what lets the lobby see how it ended.
+            return _indexing = AfterAsync(_indexing, () => indexer.FollowAsync(before, written, CancellationToken.None));
+        }
+
+        static async Task AfterAsync(Task before, Func<Task> next)
+        {
+            await Task.WhenAny(before);
+            await next();
+        }
     }
 
     public DateTimeOffset CreatedAt { get; }
@@ -112,11 +201,11 @@ internal sealed class PlayedTable : IDisposable
             return;
         }
 
-        // Read before the cancellation, which can end the match synchronously: a driver let go of inside
-        // Cancel itself leaves the table reading as over by the time it is asked whether it was.
-        if (Run is { } run && !IsOver)
+        // Read before the cancellation, which ends the session at once: a table let go of inside Cancel
+        // itself reads as over by the time it is asked whether it was.
+        if (!IsOver)
         {
-            Closing = run.MarkAsync(TableRecord.Closed, CancellationToken.None);
+            Closing = MarkAsync(TableRecord.Closed, CancellationToken.None);
         }
 
         Dispose();
@@ -125,9 +214,9 @@ internal sealed class PlayedTable : IDisposable
     public void Touch(DateTimeOffset now) => Interlocked.Exchange(ref _touched, now.UtcTicks);
 
     /// <summary>
-    /// After the table is let go of: waits for its driver to stop and for every write of its recording to
-    /// land, so what is done to its run next is done after the match and not beside it. Bounded: a driver
-    /// that is not coming back must not hold the operator's request.
+    /// After the table is let go of: waits for its session to have stopped -- whatever step it was taking
+    /// finished -- and for every write of its recording to land, so what is done to its run next is done after
+    /// the match and not beside it. Bounded: a step that is not coming back must not hold the operator's request.
     /// </summary>
     public async Task QuiesceAsync(CancellationToken cancellationToken = default)
     {
@@ -149,22 +238,21 @@ internal sealed class PlayedTable : IDisposable
     {
         // Never cancelled by the table's own stopping: a listing reads a table that is being let go of, and
         // a disposed source is an exception where a null would do.
-        var board = await Session.Queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(Session.MatchId, PlayerSlot.Player1), CancellationToken.None);
+        var board = await Session.BoardAsync(PlayerSlot.Player1);
         return board.IsSuccess ? board.Value.RoundNumber : null;
     }
 
     /// <summary>
-    /// Stops the match if it is still being played and lets the session go. A seat waiting on a person is
-    /// released with a cancellation, which ends the driver without an outcome; the recording keeps what it
-    /// has, which is what an abandoned session is, and its record keeps saying open: letting a table go is
+    /// Stops the match if it is still being played and lets the session go, which ends it without an outcome;
+    /// the recording keeps what it has, which is what an abandoned session is, and its record keeps saying open: letting a table go is
     /// what a host does as it stops, and the next host rebuilds what it let go of. Closing a table for good
     /// is <see cref="Close" />. Once only: the registry lets a table go and a test holds it too, and neither
     /// should have to know about the other.
     /// </summary>
     /// <remarks>
-    /// The session is let go of once the driver has stopped, not now: the driver may be inside a command,
-    /// holding the gate the session disposes, and a gate disposed under it is an exception where an outcome
-    /// should be. Cancelling is what ends the driver; the outcome completing is what says it has.
+    /// The session is let go of once its match has stopped, not now: a step may be inside a command, and the
+    /// session lets its match go only once that step is over. Cancelling is what stops it; the outcome
+    /// completing is what says it has.
     /// </remarks>
     public void Dispose()
     {

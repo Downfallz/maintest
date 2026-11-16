@@ -433,6 +433,14 @@ hands it over under a fresh token and code, so an invitation already sent for it
 and place availability survive redeployment through the same recorded store as the decision journal, and a
 table that never began is closed after twenty hours nobody asked anything of it (ADR 0115).
 
+**Your turn**, above Your games, gathers every game against a player that waits for the player, the one whose time
+to answer runs out soonest first, and **Play next** opens that one; a game against a bot always waits for its player,
+so it is left to its group. The games stay in their groups below too, where the ones waiting for the player come
+first, in the same order. Every card of one's own says the day its game was created and whether it is ranked: a
+game between players, in 3v3, not opened unranked, each seat held by an account of its own (ADR 0124, 0171). A finished game's
+row says the same from the host's kept result: the day its table was opened, the day it finished, and Ranked or
+Unranked as the ladder counted it.
+
 ## Signing in (ADR 0122)
 
 `table --accounts google --google-client-id <id>` (or `DOWNFALL_GOOGLE_CLIENT_ID`) lets players sign in on the
@@ -449,9 +457,11 @@ an open place and accepting an invitation answer `401` to nobody, and a seat's t
 signed out, `403` for another account). A seat that belongs to nobody yet, from a link or a code handed out before,
 becomes the account's that first reaches it signed in. **Your games** is the host's list (`GET /api/lobby/mine`),
 the same on every device; the seats a browser saved before signing in are handed over once
-(`POST /api/lobby/adopt`). Cards name each side: a person by their player name, a bot by its label, an open place
-as *Open seat*. A seat link opened signed out goes to `/lobby?next=...` and comes back after the sign-in. The game page's masthead says the same under the seat's name ("You: MarkF · against Greedy (bot)"), asked of
-the host when the page starts and every half minute, so an opponent who takes the open place shows up by name. A card of an unfinished game says whose turn it is: *Your turn* in gold when one of this
+(`POST /api/lobby/adopt`). Cards name each side: a person by their player name, a bot by its level (*Easy*, *Medium*, *Hard*, tagged as a
+bot; ADR 0180), an open place as *Open seat*. A game against the bot is opened at the level the create dialog's
+*Bot difficulty* chose, Hard unless another; which bot each level seats is `learning/seatable.json`'s `levels`, and
+only the admin panel names the bot itself beside its level. A seat link opened signed out goes to `/lobby?next=...` and comes back after the sign-in. The game page's masthead says the same under the seat's name ("You: MarkF · against Hard (bot)"), asked of
+the host when the page starts and again a few seconds after the table changes (ADR 0164), so an opponent who takes the open place shows up by name. A card of an unfinished game says whose turn it is: *Your turn* in gold when one of this
 browser's seats is being asked, otherwise the name of the player the match is waiting on, or both players.
 
 The account menu's *Delete account…* (`DELETE /api/account {"username":"<their name>"}`) deletes the account once
@@ -501,6 +511,14 @@ deleting the account forget every device. The routes are `PUT`/`DELETE /api/acco
 The worker shows a notice unless a window on the page it opens is in front of somebody: a lobby notice over a
 game, a "your turn" over the lobby, neither over its own page; every open page is told a notice arrived, so a lobby
 reads its lists again at once.
+
+## Loading and offline (ADR 0166)
+
+The host reads each file once, sends it compressed (Brotli or gzip) with an `ETag`, and answers 304 when the
+browser's copy is current. Pages, scripts, styles and `sw.js` are revalidated on every load, so a deploy reaches
+every page at its next load; pictures and the font are kept a day. Every page with the navigation registers the
+service worker, which serves nothing from a cache but `offline.html`, shown when a page cannot be loaded at all;
+it reloads by itself when the network is back.
 
 ## Friends
 
@@ -593,6 +611,13 @@ The existing host still marks an accepted seat as arrived on authenticated reads
 [ADR 0126](../docs/adr/0126-answer-combat-questions-in-the-live-arena.md) and
 [the build instructions](../battle/README.md).
 
+Two people at a begun match send each other **reactions** from the header's 💬: a fixed set of eight short messages,
+never free text, one every four seconds a seat, shown as a bubble by the sender's side and once to the other player,
+even one sent while they were away. `battle-reactions.js` decides what shows; the host keeps the last eight with the
+table (`POST /api/seat/<seat>/reaction`, `reactions` in the seat's view). The player hides the opponent's for one game
+from the set, or for every game in Settings. No reaction is notified or counted in the bell
+([ADR 0173](../docs/adr/0173-let-players-react-with-a-fixed-set-of-messages.md)).
+
 The battle view's **History** drawer retains public events from the current and previous round, capped at 200.
 Attacks expand into actual applied effects and recorded before/after changes; reading history preserves
 command drafts and never sends a decision or `shown`. It is separate from animation playback, so skipping
@@ -611,3 +636,55 @@ spell declaration mode. First-use tips appear once per subject and can be muted;
 `battle-guidance.js` derives text from the current seat/offer and authoritative next mutation round.
 It does not acknowledge questions or send commands, and opening it preserves pending choices.
 See [AU2 and its verification](../battle/README.md#au2-objectives-and-contextual-help).
+
+## Routes
+
+One line per route the host serves, and who may call it: anyone, a signed-in **account**, the **seat** whose key
+or code the request carries, the **pilot** token, or the **operator** (the console's token, the platform's
+sign-in, or an account `--admins` names). How each behaves, with its flags and its ADR, is in
+[`docs/reference/commands.md`](../docs/reference/commands.md#table). A new route adds its line here and a host
+test (`.claude/rules/host.md`).
+
+| Route | Who | What |
+| --- | --- | --- |
+| `/`, `/lobby` | anyone | The player lobby (ADR 0115); `/lobby?token=...` redirects to admin; `/lobby?rematch=<accountId>\|bot\|hotseat&format=...` opens the create dialog on the same opponent. |
+| `/play` | seat | The game's doorway; `/play?replay=<id>` replays a finished session for the operator. |
+| `/battle` | seat | The battle view; `/battle?replay=<table>&seat=<seat>` a finished game's recap (ADR 0156); `/battle?scenario=<id>` a scenario's practice (ADR 0179). |
+| `/battle-lab` | anyone | The visual study on fictional frames (ADR 0123). |
+| `/admin?token=<operator token>` | operator | The admin panel (ADR 0081). |
+| `/pilot?token=<pilot token>` | pilot | The operator's own page for the seats of a console table. |
+| `/session/<id>` | anyone | A finished recorded session in the viewer. |
+| `/leaderboard`, `/stats` | anyone, account | The ladder (ADR 0124) and the player's own statistics (ADR 0168). |
+| `/offline.html` | anyone | The page the service worker keeps (ADR 0166). |
+| `GET /api/me` | anyone | Who is signed in, whether they are the operator, and the host's notice (ADR 0177). |
+| `DELETE /api/account` | account | Deletes the account. |
+| `GET`/`PUT /api/account/preferences` | account | Game settings (ADR 0140). |
+| `PUT`/`DELETE /api/account/push`, `POST /api/account/push/test` | account | This browser as one of the account's devices. |
+| `GET /api/lobby`, `GET /api/lobby/page/<open\|all>/<page>` | anyone | Counts, and the public tables eight at a time. |
+| `GET /api/lobby/events`, `GET /api/lobby/negotiate` | anyone | What changed: the stream (ADR 0164), or the relay's address (ADR 0165). |
+| `GET /api/lobby/mine`, `GET /api/lobby/opponents` | account | The player's tables and invitations; the eight latest opponents. |
+| `GET /api/lobby/finished/<bots\|players>/<page>` | account | Finished games, six at a time (ADR 0147). |
+| `POST /api/lobby/tables` | anyone, account | Opens a table: `opponent`, `friend`, `level` (ADR 0180), `ranked` (ADR 0155), `turnLimit` (ADR 0169), format. |
+| `POST /api/lobby/adopt` | account | Adopts the browser's saved seats into the account. |
+| `POST /api/lobby/tables/<id>/accept`, `.../decline` | account | The invited friend answers (ADR 0129). |
+| `DELETE`/`POST /api/lobby/tables/<id>/invitation`, `POST .../open`, `DELETE /api/lobby/tables/<id>` | account | The inviter cancels, re-invites, opens, or closes an unbegun table. |
+| `GET /api/lobby/tables/<table>/replay` | account | A finished game's replay, for an account that sat at it (ADR 0156). |
+| `GET /api/seat/<seat>/negotiate` | seat | The relay's address for a seat (ADR 0165). |
+| `POST /api/seat/<seat>/reaction` | seat | A reaction from the fixed set (ADR 0173). |
+| `GET /api/friends`, `POST /api/friends/requests`, `POST /api/friends/requests/<id>/accept`, `DELETE /api/friends/requests/<id>`, `DELETE /api/friends/<id>` | account | Friends (ADR 0129). |
+| `GET /api/scenarios`, `GET /api/scenarios/<id>`, `GET`/`POST /api/scenarios/<id>/practice` | account | Listed scenarios and their practice (ADR 0179). Only admin accounts open a repository scenario; every account opens a tutorial. |
+| `GET /api/tutorials` | account | The tutorials, in the order of the series, each opened as a practice (ADR 0187). |
+| `GET /api/leaderboard`, `GET /api/stats` | anyone, account | The ladder; the player's statistics. |
+| `POST /api/pilot/seats/player1` | pilot | Hands a seat over from a round (body `{"agent","round"}`). |
+| `POST /api/tables`, `GET /api/agents` | operator | Opens a table; the bots it may seat. |
+| `GET /api/sessions`, `DELETE /api/sessions`, `GET /api/sessions/<id>/replay` | operator | Recorded sessions. |
+| `GET /api/sessions/<id>/export`, `POST /api/sessions/export` | operator | Sessions as a zip `train-clone` reads. |
+| `GET /api/tables/<id>/diagnosis`, `POST .../diagnosis/replay`, `.../diagnosis/hidden`, `.../diagnosis/turn` | operator | A table's diagnosis (scenarios plan, S5b). |
+| `POST /api/tables/<id>/void` | operator | Voids a match with a reason (ADR 0176). |
+| `GET /api/admin/overview` | operator | The numbers at a glance. |
+| `GET /api/admin/players?q&sort&page`, `GET /api/admin/players/<id>`, `POST .../sign-out`, `POST .../rename`, `DELETE .../<id>`, `POST`/`DELETE .../<id>/suspension` | operator | Players (ADR 0174, ADR 0178). |
+| `GET /api/admin/jobs/tend?page`, `GET /api/admin/jobs/tend/<id>`, `POST /api/admin/jobs/tend` | operator | Tending runs, and a pass now (ADR 0162). |
+| `GET /api/admin/jobs/turns`, `POST /api/admin/jobs/turns/requeue`, `POST .../drop` | operator | Bot turns' queues and dead letters. |
+| `GET /api/admin/scenarios/rounds?session=<id>`, `GET`/`POST /api/admin/scenarios`, `DELETE /api/admin/scenarios/<id>`, `PUT /api/admin/scenarios/<id>/listing` | operator | Scenarios (ADR 0179); the repository's `scenarios/` files, its tutorials among them, are listed with them, read-only (S7, ADR 0187). |
+| `GET /api/admin/activity?page` | operator | What operators did. |
+| `GET`/`PUT /api/admin/settings` | operator | Registration and the notice (ADR 0177). |

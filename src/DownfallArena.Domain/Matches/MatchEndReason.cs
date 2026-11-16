@@ -13,4 +13,10 @@ public enum MatchEndReason
 
     /// <summary>A player conceded; the other player won on the spot (ADR 0087).</summary>
     Concession,
+
+    /// <summary>
+    /// A player asked to decide let the table's time to answer run out (ADR 0169): the other player won, or, when
+    /// both were asked and both let it run out, nobody did.
+    /// </summary>
+    TimedOut,
 }

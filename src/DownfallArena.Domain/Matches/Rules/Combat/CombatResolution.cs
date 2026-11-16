@@ -17,6 +17,7 @@ public sealed record CombatResolution
         IReadOnlyList<CreatureId> effectiveTargets,
         IReadOnlyList<TargetingFailure> droppedTargets,
         bool isCritical,
+        int? criticalRoll,
         Energy energySpent,
         IReadOnlyList<EffectOutcome> outcomes)
     {
@@ -25,6 +26,7 @@ public sealed record CombatResolution
         EffectiveTargets = effectiveTargets;
         DroppedTargets = droppedTargets;
         IsCritical = isCritical;
+        CriticalRoll = criticalRoll;
         EnergySpent = energySpent;
         Outcomes = outcomes;
     }
@@ -42,6 +44,13 @@ public sealed record CombatResolution
 
     public bool IsCritical { get; }
 
+    /// <summary>
+    /// The d20 face the Critical roll showed (ADR 0154): the cast was critical when it reached the threshold its
+    /// chance prints (ADR 0100). Null when the cast had no chance to crit -- a Quick creature, or a chance of zero --
+    /// and on a fizzle, which rolls nothing worth showing.
+    /// </summary>
+    public int? CriticalRoll { get; }
+
     public Energy EnergySpent { get; }
 
     public IReadOnlyList<EffectOutcome> Outcomes { get; }
@@ -50,7 +59,7 @@ public sealed record CombatResolution
     {
         ArgumentNullException.ThrowIfNull(action);
         ArgumentNullException.ThrowIfNull(reason);
-        return new CombatResolution(action, reason, [], [], false, Energy.Of(0), []);
+        return new CombatResolution(action, reason, [], [], false, null, Energy.Of(0), []);
     }
 
     public static CombatResolution Resolved(
@@ -59,13 +68,14 @@ public sealed record CombatResolution
         IReadOnlyList<TargetingFailure> droppedTargets,
         bool isCritical,
         Energy energySpent,
-        IReadOnlyList<EffectOutcome> outcomes)
+        IReadOnlyList<EffectOutcome> outcomes,
+        int? criticalRoll = null)
     {
         ArgumentNullException.ThrowIfNull(action);
         ArgumentNullException.ThrowIfNull(effectiveTargets);
         ArgumentNullException.ThrowIfNull(droppedTargets);
         ArgumentNullException.ThrowIfNull(energySpent);
         ArgumentNullException.ThrowIfNull(outcomes);
-        return new CombatResolution(action, null, effectiveTargets, droppedTargets, isCritical, energySpent, outcomes);
+        return new CombatResolution(action, null, effectiveTargets, droppedTargets, isCritical, criticalRoll, energySpent, outcomes);
     }
 }

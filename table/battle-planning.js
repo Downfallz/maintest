@@ -38,12 +38,16 @@ function createSinglePlanning({ connection, onChange, visible = () => true }) {
   }
   function receive(next) {
     const nextKey = askedKey(seat, next);
+    // A sent pick that left team picks kept the controls open: the seat's next Evolution asking continues there.
+    const continues = opened && answered === key && nextKey !== key && planningQuestion(next) && next.waitingFor === 'Evolution';
     if (nextKey !== key || !planningQuestion(next)) { key = nextKey; clear(); }
+    if (continues) { opened = true; error = ''; }
     latest = next;
     if (choice && !command()) choice = null;
     const groups = latest?.options?.tieOrder?.ties ?? [];
     tapped = tapped.filter(id => groups.some(group => group.includes(id)));
     emit();
+    if (continues && visible()) void shown();
   }
   function setOnline(value) { online = value; emit(); }
   function shown() {
@@ -83,7 +87,13 @@ function createSinglePlanning({ connection, onChange, visible = () => true }) {
       if (JSON.stringify(decision) !== JSON.stringify(command())) { error = 'The available choices changed. Review your selection.'; return; }
       const result = await connection.submit({ ...decision, asked });
       if (context !== generation) return;
-      if (result?.ok) { if (question === key) { answered = key; clear(); } }
+      if (result?.ok) {
+        if (question === key) {
+          // Picks are spent one at a time: a pick with more left keeps the tree open for the next one.
+          const more = decision.kind === 'Evolution' && !decision.pass && (latest.options?.evolution?.remainingPicks ?? 0) > 1;
+          answered = key; clear(); opened = more;
+        }
+      }
       else { clear(); error = result?.body?.message ?? 'The host could not confirm this choice. Check the refreshed board.'; }
     } catch {
       if (context === generation) { clear(); error = 'Connection lost. The choice may have arrived; check the refreshed board before trying again.'; }

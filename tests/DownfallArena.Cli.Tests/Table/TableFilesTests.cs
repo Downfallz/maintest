@@ -47,10 +47,31 @@ public sealed class TableFilesTests
         Files.Get("/sw.js").ContentType.ShouldContain("text/javascript");
         Files.Get("/manifest.webmanifest").ContentType.ShouldBe("application/manifest+json");
         Files.Get("/icon.svg").ContentType.ShouldBe("image/svg+xml");
+        Files.Get("/brand-mark.svg").ContentType.ShouldBe("image/svg+xml");
         var bitmap = Files.Get("/icon-192.png");
         bitmap.ContentType.ShouldBe("image/png");
         bitmap.Body.Take(4).ShouldBe([0x89, (byte)'P', (byte)'N', (byte)'G']);
         Files.Get("/icon-512.png").Status.ShouldBe(200);
+        Files.Get("/icon-maskable-192.png").Status.ShouldBe(200);
+        Files.Get("/icon-maskable-512.png").Status.ShouldBe(200);
+        // The worker names the badge Android masks into the status bar; unrouted, every push falls back to a blank one.
+        var badge = Files.Get("/notification-badge.png");
+        badge.ContentType.ShouldBe("image/png");
+        badge.Body.Take(4).ShouldBe([0x89, (byte)'P', (byte)'N', (byte)'G']);
+    }
+
+    /// <summary>The display face is the host's own file (ADR 0158): no page asks another site for a font.</summary>
+    [Fact]
+    public void The_display_face_is_served_as_woff2_bytes()
+    {
+        var font = Files.Get("/fonts/marcellus-latin-400.woff2");
+
+        font.Status.ShouldBe(200);
+        font.ContentType.ShouldBe("font/woff2");
+        Encoding.ASCII.GetString(font.Body, 0, 4).ShouldBe("wOF2");
+
+        // Read as text, a font comes back longer than its file and no browser can use it.
+        font.Body.Length.ShouldBe(14552);
     }
 
     /// <summary>The operator's pages are routes of this host too (ADR 0081), reached by name rather than by file.</summary>
@@ -64,6 +85,20 @@ public sealed class TableFilesTests
         served.Status.ShouldBe(200);
         Text(served).ShouldContain(module);
         Files.Get($"/{module}").Status.ShouldBe(200);
+    }
+
+    /// <summary>The admin panel's tabs are modules its own module imports (ADR 0174, A3), served beside it.</summary>
+    [Theory]
+    [InlineData("/admin-players.js")]
+    [InlineData("/admin-jobs.js")]
+    [InlineData("/admin-turns.js")]
+    [InlineData("/admin-void.js")]
+    [InlineData("/admin-settings.js")]
+    [InlineData("/admin-overview.js")]
+    [InlineData("/admin-activity.js")]
+    public void The_admin_panel_s_tab_modules_are_served(string module)
+    {
+        Files.Get(module).Status.ShouldBe(200);
     }
 
     /// <summary>
@@ -123,6 +158,10 @@ public sealed class TableFilesTests
     /// <summary>The scene's art is bytes, served as the image it is rather than decoded as text.</summary>
     [Theory]
     [InlineData("eclipse-battle")]
+    [InlineData("horizon/fallen-ledge")]
+    [InlineData("horizon/breach")]
+    [InlineData("horizon/shattered-sky")]
+    [InlineData("horizon/broken-floor")]
     [InlineData("creatures")]
     [InlineData("base-creature")]
     [InlineData("brute")]
@@ -136,6 +175,24 @@ public sealed class TableFilesTests
         image.ContentType.ShouldBe("image/webp");
         Encoding.ASCII.GetString(image.Body, 0, 4).ShouldBe("RIFF");
         Encoding.ASCII.GetString(image.Body, 8, 4).ShouldBe("WEBP");
+    }
+
+    /// <summary>
+    /// Every evolution illustration the page can ask for is served as the image it is, and none is left out: the
+    /// route table names each file of the folder and of its hybrids (ADR 0151, ADR 0152).
+    /// </summary>
+    [Fact]
+    public void Every_evolution_illustration_is_served_as_webp_bytes()
+    {
+        var folder = Path.Combine(Directory, "battle-art", "evolutions");
+        var files = System.IO.Directory.GetFiles(folder, "*.webp", SearchOption.AllDirectories)
+            .Select(file => Path.GetRelativePath(folder, file).Replace(Path.DirectorySeparatorChar, '/')).Order(StringComparer.Ordinal).ToList();
+
+        var served = Files.Routes.Where(route => route.StartsWith("/battle-art/evolutions/", StringComparison.Ordinal))
+            .Select(route => route["/battle-art/evolutions/".Length..]).Order(StringComparer.Ordinal).ToList();
+
+        served.ShouldBe(files);
+        files.ShouldAllBe(file => Encoding.ASCII.GetString(Files.Get($"/battle-art/evolutions/{file}").Body, 8, 4) == "WEBP");
     }
 
     /// <summary>A test module is not part of the page, and the host must not hand one out.</summary>

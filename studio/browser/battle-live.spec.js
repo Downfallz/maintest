@@ -32,7 +32,7 @@ async function mount(page, { size = 3, saved = true, search = '', resumeStatus =
     if (url.pathname === '/api/lobby/resume') return route.fulfill({ status: state.resumeStatus, json: { tables: invitation ? [] : [{ table: { id: 'table-a', format: '3v3' }, seats: [{ seat: 'player1', token: 'first' }, { seat: 'player2', token: 'second' }] }] } });
     if (url.pathname === '/api/lobby/invitations') return route.fulfill({ json: { invitations: invitation ? [{ kind: 'invitation' }] : [] } });
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [{ id: 'spell:host:v1', name: 'Host spell name' }], packages: [...packages.values()] } });
-    if (url.pathname.endsWith('/events')) return route.fulfill({ status: 200, contentType: 'text/event-stream', body: '' });
+    if (url.pathname.endsWith('/events')) return route.fulfill({ status: 200, contentType: 'text/event-stream', body: 'event: ready\ndata: 0\n\n' });
     if (/\/api\/seat\/player[12]$/.test(url.pathname)) return route.fulfill({ status: state.status, json: url.pathname.endsWith('player1') ? state.first : state.second });
     return route.fulfill({ status: 500, body: 'Unexpected request' });
   });
@@ -42,10 +42,48 @@ async function mount(page, { size = 3, saved = true, search = '', resumeStatus =
 }
 async function choose(page, seat = 1) {
   await page.locator('#seat-choices button').filter({ hasText: `Player ${seat}` }).click();
-  await expect(page.locator('#connection')).toHaveText('LIVE'); await expect(page.locator('#loading')).toBeHidden();
+  await expect(page.locator('#connection')).toHaveText(/^LIVE/); await expect(page.locator('#loading')).toBeHidden();
 }
-const fits = page => fitsViewport(page, '.creature, #switch-seat, #settings, #play-link');
-test('no seat is read before a viewpoint is chosen, and only the chosen one after', async ({ page }) => {
+const fits = page => fitsViewport(page, '.creature, #help-open, #settings');
+test('a new player reads in Step at 1x with tips, and a change in Match settings lasts for that game alone', async ({ page }) => {
+  // A new player: no game settings and no muted tips in this browser (ADR 0140).
+  await page.addInitScript(() => { localStorage.removeItem('downfall.arena.game-settings.v1'); localStorage.removeItem('downfall.arena.help.v1'); });
+  await mount(page); await choose(page);
+
+  // Tips are on: the first one shows itself and is closed like any other.
+  await expect(page.locator('#help-dialog')).toBeVisible(); await expect(page.locator('#help-mute')).not.toBeChecked();
+  await page.locator('#help-close').click();
+  await page.locator('#settings').click();
+  await expect(page.locator('#playback-preference')).toHaveValue('step');
+  await expect(page.locator('#playback-speed')).toHaveValue('1');
+  await page.selectOption('#playback-preference', 'auto');
+  await page.selectOption('#playback-speed', '2');
+  await page.getByRole('button', { name: 'Close settings' }).click();
+
+  const kept = () => page.evaluate(() => ({ globals: localStorage.getItem('downfall.arena.game-settings.v1'),
+    game: JSON.parse(localStorage.getItem('downfall.arena.game-overrides.v1') ?? '[]').find(one => one.game === 'table-a') }));
+  expect(await kept()).toEqual({ globals: null, game: { game: 'table-a', pace: 'auto', speed: 2, help: true, reducedMotion: false, reactions: true } });
+  await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true'); await choose(page);
+  await expect(page.locator('#playback-preference')).toHaveValue('auto');
+  await expect(page.locator('#playback-speed')).toHaveValue('2');
+});
+
+test('a game first opened with the player settings keeps them when those settings change later', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('downfall.arena.game-settings.v1', sessionStorage.getItem('next-settings')
+    ?? JSON.stringify({ pace: 'auto', speed: 1.5, help: false, reducedMotion: false })));
+  await mount(page); await choose(page);
+  await expect(page.locator('#playback-preference')).toHaveValue('auto');
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('downfall.arena.game-overrides.v1') ?? '')).toContain('"speed":1.5');
+
+  await page.evaluate(() => sessionStorage.setItem('next-settings', JSON.stringify({ pace: 'step', speed: 0.5, help: true, reducedMotion: true })));
+  await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true'); await choose(page);
+
+  await expect(page.locator('#playback-preference')).toHaveValue('auto');
+  await expect(page.locator('#playback-speed')).toHaveValue('1.5');
+  await expect(page.locator('#reduce-motion')).not.toBeChecked();
+});
+
+test('no seat is read before a seat is chosen, and only the chosen one after', async ({ page }) => {
   const state = await mount(page);
   expect(state.requests.some(one => one.path.startsWith('/api/seat/'))).toBe(false);
   await choose(page, 2);
@@ -62,10 +100,87 @@ test('the board is drawn from the chosen seat: its side, its round, its cursor',
   await expect(page.locator('#timeline [aria-current="step"]')).toContainText('Creature 2');
 });
 
+test('while the other side plays, the dock says whom it waits for, which creature is choosing and which of its own is next', async ({ page }, info) => {
+  const state = await mount(page); Object.assign(state.second, { waitingFor: null, waitingAsked: null });
+  await choose(page, 2);
+  await expect(page.locator('#battle')).toHaveAttribute('data-awaiting', 'action');
+  await expect(page.locator('#playback-pacing')).toHaveAttribute('data-kind', 'waiting'); await expect(page.locator('#playback-pacing')).toBeVisible();
+  await expect(page.locator('#reading-kind')).toHaveText("Opponent's turn"); await expect(page.locator('#reading-title')).toHaveText('Waiting for your opponent');
+  await expect(page.locator('#reading-detail')).toHaveText('Creature 2 is choosing its action · your Creature 4 plays next');
+  await expect(page.locator('#reading-dots')).toBeVisible(); await expect(page.locator('.command-dock .actor-summary')).toBeHidden();
+  await page.screenshot({ path: info.outputPath('waiting-on-opponent.png') });
+  // Its own question puts the dock back to the command.
+  Object.assign(state.second, { waitingFor: 'Action', waitingAsked: 12, board: { ...state.second.board, activationCursor: 3 } });
+  await page.evaluate(() => window.dispatchEvent(new Event('online')));
+  await page.reload(); await choose(page, 2);
+  await expect(page.locator('#battle')).toHaveAttribute('data-awaiting', ''); await expect(page.locator('#playback-pacing')).toBeHidden();
+});
+test('the header names the opponent with its rank and friendship, and its card adds a friend', async ({ page }, info) => {
+  const state = await mount(page); const asked = [];
+  let friends = { friends: [], incoming: [], outgoing: [] };
+  const seats = [{ seat: 'player1', kind: 'person', name: 'MarkF', account: 'acct_mark' }, { seat: 'player2', kind: 'person', name: 'bastien', account: 'acct_bastien' }];
+  await page.route('**/api/lobby/resume', route => route.fulfill({ json: { tables: [{ table: { id: 'table-a', format: '3v3', seats }, seats: [{ seat: 'player1', token: 'first' }, { seat: 'player2', token: 'second' }] }] } }));
+  await page.route('**/api/leaderboard', route => route.fulfill({ json: { players: [{ rank: 3, username: 'bastien', rating: 1532, wins: 5, losses: 4, draws: 1, provisional: false }] } }));
+  await page.route('**/api/friends', route => route.fulfill({ json: friends }));
+  await page.route('**/api/friends/requests', route => { asked.push(route.request().postDataJSON()); friends = { ...friends, outgoing: [{ id: 'acct_bastien' }] }; return route.fulfill({ json: { accepted: false } }); });
+  await page.reload(); await choose(page, 1);
+  const chip = page.locator('#opponent-open');
+  await expect(chip).toBeVisible(); await expect(page.locator('#opponent-name')).toHaveText('bastien');
+  await expect(page.locator('#opponent-badge')).toHaveText('#3'); await expect(page.locator('#opponent-heart')).toBeHidden();
+  await expect(page.locator('#enemy-label')).toHaveText('OPPONENT · BASTIEN'); await expect(page.locator('#enemy-label')).toBeVisible();
+  // On the round's line, never over the field, where it hid a creature in landscape.
+  const [chipBox, roundBox, field] = await Promise.all(['#opponent-open', '#battle .round', '#battle-zone'].map(one => page.locator(one).boundingBox()));
+  expect(chipBox.y + chipBox.height).toBeLessThanOrEqual(field.y); expect(Math.abs((chipBox.y + chipBox.height / 2) - (roundBox.y + roundBox.height / 2))).toBeLessThan(6);
+  // A narrow header folds the chip to its medallion, the rank and the heart still on it; the field's label names them.
+  await expect(page.locator('#opponent-name')).toBeVisible({ visible: page.viewportSize().width > 560 });
+  expect(await page.locator('#battle .round').evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
+  await fitsViewport(page, '#opponent-open, #history-open, #help-open, #settings');
+  await page.screenshot({ path: info.outputPath('opponent-header.png') });
+  await chip.click(); await expect(page.locator('#opponent-dialog')).toBeVisible();
+  await expect(page.locator('#opponent-rank')).toHaveText('#3 · 1532 rating · 5W 4L 1D');
+  await page.screenshot({ path: info.outputPath('opponent-card.png') });
+  await page.locator('#opponent-friend').click();
+  await expect(page.locator('#opponent-note')).toHaveText('Friend request sent'); await expect(page.locator('#opponent-friend')).toBeHidden();
+  expect(asked).toEqual([{ username: 'bastien' }]);
+  await page.keyboard.press('Escape'); await expect(chip).toBeFocused();
+  // A friend wears a heart in the header.
+  friends = { friends: [{ id: 'acct_bastien' }], incoming: [], outgoing: [] };
+  await chip.click(); await expect(page.locator('#opponent-note')).toHaveText('Your friend');
+  await page.keyboard.press('Escape'); await expect(page.locator('#opponent-heart')).toBeVisible();
+  expect(state.requests.filter(one => one.path.endsWith('/decision'))).toEqual([]);
+});
+test('a bot opponent is named as a bot, with no rank and no friend action', async ({ page }) => {
+  await mount(page);
+  await page.route('**/api/lobby/resume', route => route.fulfill({ json: { tables: [{ table: { id: 'table-a', format: '3v3',
+    seats: [{ seat: 'player1', kind: 'person', name: 'MarkF', account: 'acct_mark' }, { seat: 'player2', kind: 'bot', name: 'Lookahead' }] }, seats: [{ seat: 'player1', token: 'first' }] }] } }));
+  await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
+  await expect(page.locator('#opponent-name')).toHaveText('Lookahead'); await expect(page.locator('#opponent-badge')).toHaveText('BOT');
+  await page.locator('#opponent-open').click();
+  await expect(page.locator('#opponent-kind')).toHaveText('OPPONENT · BOT'); await expect(page.locator('#opponent-rank')).toHaveText('A bot · bots are not ranked');
+  await expect(page.locator('#opponent-friend')).toBeHidden();
+});
+test('an opponent who takes the open seat stays named when an older read of the ladder answers last', async ({ page }) => {
+  const state = await mount(page); state.first.waiting = true;
+  let seats = [{ seat: 'player1', kind: 'person', name: 'MarkF', account: 'acct_mark' }, { seat: 'player2', kind: 'open' }];
+  const held = [];
+  await page.route('**/api/lobby/resume', route => route.fulfill({ json: { tables: [{ table: { id: 'table-a', format: '3v3', seats }, seats: [{ seat: 'player1', token: 'first' }] }] } }));
+  // The read made when the seat is chosen hangs on the ladder until the match has begun.
+  await page.route('**/api/leaderboard', route => { if (held.length === 0) held.push(route); else return route.fulfill({ json: { players: [] } }); });
+  await page.route('**/api/friends', route => route.fulfill({ json: { friends: [], incoming: [], outgoing: [] } }));
+  await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
+  await expect(page.locator('#connection')).toHaveText(/^LIVE/); await expect(page.locator('#loading')).toBeHidden();
+  await expect(page.locator('#opponent-name')).toHaveText('Open seat'); await expect.poll(() => held.length).toBe(1);
+  seats = [seats[0], { seat: 'player2', kind: 'person', name: 'bastien', account: 'acct_bastien' }]; state.first.waiting = false;
+  await expect(page.locator('#opponent-name')).toHaveText('bastien', { timeout: 15000 });
+  await held[0].fulfill({ json: { players: [] } });
+  await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 200)));
+  await expect(page.locator('#opponent-name')).toHaveText('bastien');
+  await page.locator('#opponent-open').click(); await expect(page.locator('#opponent-rank')).toHaveText(/Unranked/);
+});
 test('inspecting a creature reads its stats and the catalogue\'s names for its spells', async ({ page }) => {
   await mount(page); await choose(page, 2);
   await page.locator('[data-creature="4"]').click();
-  await expect(page.locator('#inspect-spells summary')).toHaveText('Host spell name');
+  await expect(page.locator('#inspect-spells .spell-card-name')).toHaveText('Host spell name');
   await expect(page.locator('#inspect-stats')).toContainText('21/30 HP · 5 energy · 2 defense');
 });
 
@@ -76,10 +191,12 @@ test('the real host fields fit the viewport without a page error', async ({ page
   expect(errors).toEqual([]);
 });
 
-test('the preview writes nothing but the seat discovery, and never says a question was shown', async ({ page }) => {
+test('the page writes nothing but the seat discovery, and says the question was shown once, as its choice opens', async ({ page }) => {
   const state = await mount(page); await choose(page);
   await expect.poll(() => state.requests.filter(one => one.path.startsWith('/api/seat/')).length).toBeGreaterThan(0);
-  expect(state.requests.some(one => one.query.includes('shown='))).toBe(false);
+  // The spell choice opens by itself on the player's turn, which is the one acknowledgement (ADR 0149).
+  await expect(page.locator('#combat-dialog')).toBeVisible();
+  await expect.poll(() => state.requests.filter(one => one.query.includes('shown=')).map(one => one.query)).toEqual(['?since=83&shown=11']);
   expect(state.requests.filter(one => one.method !== 'GET').map(one => one.path)).toEqual(['/api/lobby/resume']);
 });
 
@@ -114,36 +231,33 @@ for (const size of [1, 2]) test(`${size}v${size} keeps opponents across the fiel
   await page.setViewportSize({ width: 844, height: 390 });
   await expect.poll(async () => (await page.locator('.creature.ally').first().boundingBox()).x).toBeLessThan(422); await fits(page);
 });
-test('switching viewpoint clears inspection before fetching another seat', async ({ page }) => {
-  const state = await mount(page); await choose(page); await page.locator('[data-creature="1"]').click(); await page.keyboard.press('Escape');
-  await page.locator('#switch-seat').click(); await expect(page.locator('.creature')).toHaveCount(0); await expect(page.locator('#inspect-name')).toBeEmpty();
-  expect(state.requests.some(one => one.path.includes('player2'))).toBe(false); await choose(page, 2); await expect(page.locator('[data-creature="4"]')).toHaveClass(/ally/);
-});
 for (const status of [401, 403]) test(`${status} clears private display and offers recovery`, async ({ page }) => {
   const state = await mount(page); await choose(page); await page.locator('[data-creature="1"]').click(); state.status = status;
   await expect(page.locator('.creature')).toHaveCount(0, { timeout: 10000 }); await expect(page.locator('#inspect-dialog')).toBeHidden(); await expect(page.locator('#inspect-name')).toBeEmpty();
-  await expect(page.locator('#timeline')).toBeEmpty(); await expect(page.locator('#play-link')).toBeHidden(); await expect(page.locator('#access-link')).toHaveText(status === 401 ? 'Sign in' : 'Open tables');
+  await expect(page.locator('#timeline')).toBeEmpty(); await expect(page.locator('#access-link')).toHaveText(status === 401 ? 'Sign in' : 'Lobby');
 });
 test('network failures mark the retained board stale and recover with a new snapshot', async ({ page }) => {
   const state = await mount(page); await choose(page); state.status = 503;
   await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'stale', { timeout: 10000 }); await expect(page.locator('.creature')).toHaveCount(6);
   state.status = 200; state.first.board.roundNumber = 5;
-  await expect(page.locator('#round-number')).toHaveText('05', { timeout: 10000 }); await expect(page.locator('#connection')).toHaveText('LIVE');
+  await expect(page.locator('#round-number')).toHaveText('05', { timeout: 10000 }); await expect(page.locator('#connection')).toHaveText(/^LIVE/);
 });
 test('an invitation is reviewed at the table and never claimed here', async ({ page }) => {
   const state = await mount(page, { saved: false, invitation: true, search: '?player1=invite' });
   await expect(page.locator('#access-link')).toHaveText('Review invitation'); await expect(page.locator('#access-link')).toHaveAttribute('href', '/play?player1=invite');
-  expect(state.requests.map(one => one.path).sort()).toEqual(['/api/lobby/invitations', '/api/lobby/resume', '/api/me']);
+  // The player's game settings (ADR 0140) may be read as on every page; the invitation is not.
+  expect(state.requests.map(one => one.path).filter(path => path !== '/api/account/preferences').sort()).toEqual(['/api/lobby/invitations', '/api/lobby/resume', '/api/me']);
 });
 test('a refused discovery sends the player to sign in, and back here afterwards', async ({ page }) => {
   await mount(page, { saved: false, search: '?player1=first', resumeStatus: 401 });
   await expect(page.locator('#access-link')).toHaveText('Sign in'); await expect(page.locator('#access-link')).toHaveAttribute('href', /next=.*battle/);
 });
 
-test('blocked storage still opens a linked seat, and the way back to the table keeps its token', async ({ page }) => {
+test('blocked storage still opens a linked seat, and an interrupted renderer offers the lobby', async ({ page }) => {
   await page.addInitScript(() => Object.defineProperty(window, 'localStorage', { get() { throw new Error('blocked'); } }));
   await mount(page, { saved: false, search: '?player1=first' }); await choose(page);
-  await expect(page.locator('#play-link')).toHaveAttribute('href', '/play?table=table-a&seat=player1&player1=first');
+  await page.locator('canvas').evaluate(canvas => canvas.dispatchEvent(new Event('webglcontextlost', { cancelable: true })));
+  await expect(page.locator('#access-link')).toHaveAttribute('href', '/');
 });
 test('missing art retains usable labelled figures', async ({ page }) => {
   await page.route('**/battle-art/*', route => route.abort()); await mount(page); await choose(page);
@@ -156,11 +270,12 @@ test('a hidden page clears inspection and reloads a fresh viewpoint on return', 
   await expect(page.locator('.creature')).toHaveCount(0); await expect(page.locator('#inspect-dialog')).toBeHidden(); await expect(page.locator('#inspect-name')).toBeEmpty();
   state.first.board.allies[0].health = 10;
   await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: false }); document.dispatchEvent(new Event('visibilitychange')); });
-  await expect(page.locator('[data-creature="1"] .creature-stats')).toContainText('10/30'); await expect(page.locator('#connection')).toHaveText('LIVE');
+  await expect(page.locator('[data-creature="1"] .creature-stats')).toContainText('10/30'); await expect(page.locator('#connection')).toHaveText(/^LIVE/);
 });
 
 test('the live dock and all six inspection targets fit short portrait and landscape', async ({ page }) => {
-  await mount(page); await choose(page);
+  // The dock shows once the self-opened spell choice is closed (ADR 0149).
+  await mount(page); await choose(page); await page.locator('#combat-dialog-close').click();
   for (const viewport of [{ width: 320, height: 568 }, { width: 844, height: 390 }, { width: 900, height: 700 }]) {
     await page.setViewportSize(viewport);
     await expect.poll(async () => Math.round((await page.locator('#phaser-mount canvas').boundingBox()).width)).toBe(viewport.width);
@@ -316,20 +431,19 @@ test('mixed builds keep their targets inside the viewport and say their appearan
   await page.screenshot({ path: info.outputPath('art5-landscape.png') });
 });
 
-test('a failed renderer retains a usable link to the same seat at the table', async ({ page }) => {
+test('a failed renderer offers to reload the scene, and the lobby, the classic table being archived', async ({ page }) => {
   await mount(page); await choose(page, 2);
-  const fallback = await page.locator('#play-link').getAttribute('href');
   await page.locator('canvas').evaluate(canvas => canvas.dispatchEvent(new Event('webglcontextlost', { cancelable: true })));
   await expect(page.locator('#load-title')).toHaveText('The renderer was interrupted');
-  await expect(page.locator('#access-link')).toHaveAttribute('href', fallback);
-  await expect(page.locator('#access-link')).toHaveText('Continue at table');
+  await expect(page.locator('#access-link')).toHaveAttribute('href', '/');
+  await expect(page.locator('#access-link')).toHaveText('Lobby'); await expect(page.locator('#retry')).toHaveText('Reload scene');
   await fitsViewport(page, '#access-link, #retry');
 });
 
 test('keyboard inspection and settings return focus and fit a short viewport', async ({ page }, info) => {
   await mount(page); await choose(page);
   await page.setViewportSize({ width: 720, height: 500 }); // CSS viewport of a 1440×1000 desktop at 200% zoom.
-  await fitsViewport(page, '.creature, #settings, #play-link'); await fitsBattlefield(page);
+  await fitsViewport(page, '.creature, #help-open, #settings'); await fitsBattlefield(page);
   const target = page.locator('.creature').first(); await target.focus(); await page.keyboard.press('Enter');
   await expect(page.locator('#inspect-dialog')).toBeVisible(); await page.keyboard.press('Escape'); await expect(target).toBeFocused();
   await page.locator('#settings').focus(); await page.keyboard.press('Enter');
@@ -339,7 +453,7 @@ test('keyboard inspection and settings return focus and fit a short viewport', a
 });
 
 test('cold scene resources and sampled frame intervals are recorded for release review', async ({ page }, info) => {
-  await mount(page); await choose(page);
+  const state = await mount(page); state.first.board.roundNumber = 1; await choose(page);
   const metrics = await page.evaluate(async () => {
     const intervals = []; let previous = performance.now();
     await new Promise(resolve => {
@@ -358,4 +472,75 @@ test('cold scene resources and sampled frame intervals are recorded for release 
   expect(metrics.resources.reduce((sum, entry) => sum + entry.decodedBytes, 0)).toBeLessThan(4 * 1024 * 1024);
   await writeFile(info.outputPath('release-metrics.json'), JSON.stringify(metrics, null, 2));
   await info.attach('release-metrics', { body: JSON.stringify(metrics, null, 2), contentType: 'application/json' });
+});
+
+test('the horizon falls once on 1 to 2 and settles on resume, replay and reduced motion', async ({ page }) => {
+  await mountSpellScene(page);
+  const present = (round, { reduced = false, replay = false } = {}) => page.evaluate(({ round, reduced, replay }) => {
+    window.artScene.present({ stage: 'decision', actor: null, target: null, targets: [], creatures: [], round }, reduced, 1, replay);
+  }, { round, reduced, replay });
+  const span = () => page.evaluate(() => {
+    const piece = window.artScene.children.getByName('horizon-span');
+    return { visible: piece.visible, angle: piece.angle };
+  });
+  await present(2);
+  expect((await span()).visible).toBe(false);
+  await present(1);
+  expect(await span()).toEqual({ visible: true, angle: 0 });
+  await present(2);
+  await page.clock.runFor(400);
+  const midway = await span();
+  expect(midway.visible).toBe(true);
+  expect(midway.angle).toBeGreaterThan(0);
+  await present(2);
+  expect((await span()).angle).toBe(midway.angle);
+  await page.clock.runFor(800);
+  expect((await span()).visible).toBe(false);
+  await present(1);
+  await present(2, { replay: true });
+  expect((await span()).visible).toBe(false);
+  await present(1);
+  await present(2, { reduced: true });
+  expect((await span()).visible).toBe(false);
+});
+
+test('a returning seat sees the round twelve ruins with the combat HUD on a landscape phone', async ({ page }, info) => {
+  test.skip(info.project.name !== 'phone');
+  await page.setViewportSize({ width: 844, height: 390 });
+  const state = await mount(page);
+  state.second.board.roundNumber = 12;
+  state.second.waitingFor = null;
+  state.second.waitingAsked = null;
+  await choose(page, 2);
+  await expect(page.locator('#round-number')).toHaveText('12');
+  await expect(page.locator('.creature')).toHaveCount(6);
+  await page.screenshot({ path: info.outputPath('horizon-live-landscape.png') });
+});
+
+test('horizon damage follows the displayed round in both directions and keeps spreading past twelve', async ({ page }) => {
+  await mountSpellScene(page);
+  const visible = () => page.evaluate(() => window.artScene.children.list
+    .filter(piece => piece.name.startsWith('horizon-') && piece.visible)
+    .map(piece => piece.name.slice(8)).sort());
+  const present = round => page.evaluate(round => window.artScene.present(
+    { stage: 'decision', target: null, actor: null, targets: [], creatures: [], round }, true, 1, true), round);
+  const stages = [
+    [1, ['pier', 'span']], [2, ['pier']], [4, ['fallen-ledge', 'pier']], [6, ['breach', 'fallen-ledge', 'pier']],
+    [8, ['breach', 'fallen-ledge']], [10, ['breach', 'fallen-ledge', 'shattered-sky']], [12, ['breach', 'broken-floor', 'fallen-ledge', 'shattered-sky']],
+    [14, ['breach', 'broken-floor', 'fallen-ledge', 'faults', 'shattered-sky']],
+  ];
+  for (const [round, pieces] of stages) {
+    await present(round);
+    await expect.poll(async () => { await page.clock.runFor(80); return visible(); }).toEqual(pieces);
+    await present(round + 1);
+    if (round !== 1) expect(await visible()).toEqual(pieces);
+  }
+  const commands = () => page.evaluate(() => window.artScene.children.getByName('horizon-faults').commandBuffer.length);
+  const first = await commands();
+  await present(16);
+  expect(await commands()).toBeGreaterThan(first);
+  await present(6);
+  expect(await visible()).toEqual(['breach', 'fallen-ledge', 'pier']);
+  await present(null);
+  expect(await visible()).toEqual([]);
 });

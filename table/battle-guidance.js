@@ -1,30 +1,47 @@
 import { phaseLabel, TEMPO_RULE } from './terms.js';
 import { activeTurn } from './presentation.js';
 import { creatureLabel } from './battle-live.js';
+import { timeLeft } from './players.js';
 
 export const HELP_PREFERENCE_KEY = 'downfall.arena.help.v1';
 const TOPICS = ['mutation', 'tempo', 'ties', 'action', 'intent', 'target'];
 const topicOf = { Evolution: 'mutation', Speed: 'tempo', TieOrder: 'ties', Action: 'action', Intent: 'intent', Target: 'target' };
 const count = (n, noun) => `${n} ${noun}${n === 1 ? '' : 's'}`;
 
-// Only generic instructional preferences cross sessions. No match, seat, question, token or choice is saved.
+// A tip explains its phase the first time that phase comes in each game: a player with tips on is taught in
+// every game, one with them off in none. Only the topics read and the game's id are kept, for the latest
+// games; no seat, question, token or choice is saved. Version 1 kept one list for the browser; its muted
+// choice carries over, its topics do not, so tips come back once in each game.
+const KEPT_GAMES = 20;
+const gameKey = value => typeof value === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(value) ? value : '';
 export function helpPreferences(storage) {
-  let muted = false, seen = new Set();
+  let muted = false, games = [], game = '';
   try {
     const value = JSON.parse(storage?.getItem(HELP_PREFERENCE_KEY) ?? 'null');
-    if (value?.version === 1) {
-      muted = value.muted === true;
-      seen = new Set(Array.isArray(value.seen) ? value.seen.filter(topic => TOPICS.includes(topic)) : []);
+    if (value?.version === 1 || value?.version === 2) muted = value.muted === true;
+    if (value?.version === 2 && Array.isArray(value.games)) {
+      games = value.games.filter(one => typeof one?.game === 'string' && gameKey(one.game) === one.game).slice(0, KEPT_GAMES)
+        .map(one => ({ game: one.game, seen: [...new Set(Array.isArray(one.seen) ? one.seen.filter(topic => TOPICS.includes(topic)) : [])] }));
     }
   } catch { /* Help works in memory when storage is unavailable or malformed. */ }
   function save() {
-    try { storage?.setItem(HELP_PREFERENCE_KEY, JSON.stringify({ version: 1, muted, seen: [...seen] })); } catch { /* Optional preference. */ }
+    try { storage?.setItem(HELP_PREFERENCE_KEY, JSON.stringify({ version: 2, muted, games })); } catch { /* Optional preference. */ }
   }
+  const seen = () => games.find(one => one.game === game)?.seen ?? [];
   return {
     muted: () => muted,
-    shouldShow: topic => TOPICS.includes(topic) && !muted && !seen.has(topic),
-    markSeen(topic) { if (TOPICS.includes(topic) && !seen.has(topic)) { seen.add(topic); save(); } },
+    shouldShow: topic => TOPICS.includes(topic) && !muted && !seen().includes(topic),
+    markSeen(topic) {
+      if (!TOPICS.includes(topic) || seen().includes(topic)) return;
+      const entry = games.find(one => one.game === game) ?? { game, seen: [] };
+      entry.seen.push(topic);
+      games = [entry, ...games.filter(one => one !== entry)].slice(0, KEPT_GAMES); save();
+    },
+    // The game the tips are counted for; none before a seat is chosen.
+    setGame(value) { game = gameKey(value); },
     setMuted(value) { muted = value === true; save(); },
+    // The game's settings decide (ADR 0140); only the topics already read stay this browser's own.
+    apply(value) { muted = value === true; },
   };
 }
 
@@ -53,9 +70,9 @@ function roundFlow(mode) {
 }
 const tips = {
   mutation: { title: 'What is a mutation?', lines: [
-    'A mutation develops your creature: new spells or a passive, plus initiative. Its card explains what the creature gains.',
-    'Picks are shared across your team. Each creature can acquire at most one mutation this opportunity. Both teams choose privately, then reveal together.',
-    'Open Choose mutation, select a creature and an offered card, then confirm the named mutation and recipient. Pass remaining picks gives up all your unused picks for this round.',
+    'A mutation develops your creature: new spells or a passive, plus initiative. Its branch explains what the creature gains.',
+    'Picks are shared across your team, and each creature takes at most one per Mutation phase. With 2 picks and 3 creatures, you choose which 2 mutate now; later Mutation phases bring new picks, so the one left out can mutate then. Both teams choose privately, then reveal together.',
+    'The mutation tree opens with the phase. Choose an eligible creature on the battlefield, preview a branch, then confirm the named mutation and recipient. The tree stays open while team picks remain. Pass remaining picks gives up all your unused picks for this round.',
   ] },
   tempo: { title: 'Choose how your team acts', lines: [TEMPO_RULE,
     'Open Team tempos and draft a tempo in every creature tab. Return to any tab to edit, then Confirm tempos once. All tempos reveal together.',
@@ -90,7 +107,7 @@ function objective(view, topic) {
     case 'mutation': {
       const offer = view.options?.evolution;
       if (offer?.remainingPicks === 0) return 'No team picks remain. Review your command.';
-      if (offer?.creatures?.length && !offer.creatures.some(one => one.availableTiers?.length)) return 'No mutations offered. Open Choose mutation to pass.';
+      if (offer?.creatures?.length && !offer.creatures.some(one => one.availableTiers?.length)) return 'No mutations offered. Open Mutation tree to pass.';
       const budget = Number.isInteger(offer?.remainingPicks) ? ` · ${count(offer.remainingPicks, 'team pick')} left` : '';
       return `Acquire a mutation${budget}.`;
     }
@@ -102,14 +119,14 @@ function objective(view, topic) {
     default: {
       if (view.playedByBot) return 'Your team is controlled by a bot. Follow its actions in History.';
       const turn = view.board.subPhase === 'Activation' ? activeTurn(view.board) : null;
-      if (turn && turn.slot.owner !== view.board.slot) return `${creatureLabel(view.board, turn.slot.creature)} (opponent) is acting. Follow History.`;
+      if (turn && turn.slot.owner !== view.board.slot) return `Waiting for your opponent: ${creatureLabel(view.board, turn.slot.creature)} is choosing its action.`;
       return 'Waiting for the next decision or the other team. History stays available.';
     }
   }
 }
 
 // Read only the selected seat's public context and current offer. No draft, hidden opponent plan or schedule arithmetic.
-export function battleGuidance(view, catalogue, { accepted = false, targeting = false, historical = false, online = true } = {}) {
+export function battleGuidance(view, catalogue, { accepted = false, targeting = false, historical = false, online = true, now = Date.now() } = {}) {
   if (!view?.board) return { available: false, topic: null, objective: 'Choose a viewpoint to play.', title: '', lines: [], round: '', context: '', next: '', phase: '', flow: [] };
   const board = view.board, waiting = Boolean(view.waiting && !view.over), mode = declaration(view, catalogue);
   const round = `Round ${board.roundNumber ?? '—'}${Number.isInteger(catalogue?.rules?.roundCap) ? ` of ${catalogue.rules.roundCap}` : ''}`;
@@ -117,6 +134,9 @@ export function battleGuidance(view, catalogue, { accepted = false, targeting = 
   let current = objective(view, topic);
   if (topic === 'mutation' && view.options?.evolution?.remainingPicks === 0) topic = null;
   if (targeting) current = `${creatureLabel(board, view.waitingCreature)}: select targets, then Confirm cast.`;
+  // A game between two players: how long this seat has before not answering loses it (ADR 0169).
+  const left = topic && !accepted ? timeLeft(view.answerBy, now) : null;
+  if (left) current = `${current} ${left} left to answer.`;
   if (accepted) current = 'Choice sent. Waiting for the next decision or the other team.';
   if (!online) current = 'Connection interrupted. Reconnect before choosing.';
   if (view.over) current = 'Match complete. Open Match result or History.';
@@ -132,3 +152,53 @@ export function battleGuidance(view, catalogue, { accepted = false, targeting = 
     context: waiting || historical ? '' : [phaseLabel(board.phase), actor].filter(Boolean).join(' · '),
     next, phase: waiting || historical || view.over ? '' : board.phase, flow: roundFlow(mode) };
 }
+
+// What the other side is choosing while this seat has nothing to answer, by the step the round is at.
+const THEIR_CHOICE = Object.freeze({
+  Evolution: 'Choosing their mutations', Speed: 'Setting their tempos', TieOrder: 'Ordering their tied creatures',
+  IntentSelection: 'Declaring their spells',
+});
+
+/**
+ * Whom this seat is waiting for, and on what, when the match is live and nothing is asked of it: the other
+ * player's creature taking its slot in combat, or the other player's command after this seat's is sent. Null
+ * while this seat has a question, before the match starts, once it is over, and between steps the host resolves
+ * by itself. `opponent` is the other seat's name as the table lists it; a bot "thinks", a person "chooses".
+ * In a game between two players the detail ends with how long the other side has left to answer (ADR 0169).
+ * @param {{ accepted?: boolean, opponent?: string | null, bot?: boolean, now?: number }} [options]
+ * @returns {Waited | null}
+ */
+export function waitingOn(view, options = {}) {
+  const { accepted = false, opponent = null, bot = false, now = Date.now() } = options;
+  const waited = waitingFor(view, { accepted, opponent, bot });
+  const left = waited && waited.kind !== 'seats' ? timeLeft(view.answerBy, now) : null;
+  return left ? { ...waited, detail: `${waited.detail} · ${left} left to answer` } : waited;
+}
+
+/** @typedef {{ kind: string, eyebrow: string, title: string, detail: string, creature: (number | null) }} Waited */
+
+/** @returns {Waited | null} */
+function waitingFor(view, { accepted, opponent, bot }) {
+  const board = view?.board;
+  // Before the match: the table waits for both players to reach their seats, and says so in the dock's card.
+  if (board && view.waiting && !view.over && !view.replay) {
+    return { kind: 'seats', eyebrow: 'Waiting room', title: opponent ? `Waiting for ${opponent}` : 'Waiting for your opponent',
+      detail: 'The match begins as soon as both players are seated. You can leave and come back: your seat is kept.', creature: null };
+  }
+  if (!board || view.over || view.waiting || view.replay || view.playedByBot) return null;
+  if (question(view) && !accepted) return null;
+  const who = opponent || 'your opponent';
+  const title = bot ? `${opponent || 'The bot'} is thinking` : `Waiting for ${who}`;
+  if (board.subPhase === 'Activation') {
+    const turn = activeTurn(board);
+    if (!turn || turn.slot.owner === board.slot) return null;
+    const mine = (board.timeline ?? []).slice(turn.position).find(slot => slot.owner === board.slot);
+    return { kind: 'action', eyebrow: "Opponent's turn", title,
+      detail: [`${creatureLabel(board, turn.slot.creature)} is choosing its action`, mine ? `your ${creatureLabel(board, mine.creature)} plays next` : 'your team has acted this round'].join(' · '),
+      creature: turn.slot.creature };
+  }
+  const choosing = THEIR_CHOICE[board.subPhase];
+  if (!choosing) return null;
+  return { kind: 'choice', eyebrow: accepted ? 'Your choice is in' : 'Their move', title, detail: choosing, creature: null };
+}
+

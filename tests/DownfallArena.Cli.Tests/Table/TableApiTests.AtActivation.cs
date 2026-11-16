@@ -86,17 +86,12 @@ public sealed partial class TableApiTests
     }
 
     /// <summary>
-    /// The actions the seat's feed shows resolved, once it shows the latest: the driver hands the answer to the
-    /// match after the tap is accepted, on its own thread, so the feed catches up a moment later.
+    /// The actions the seat's feed shows resolved. Read as soon as the tap has answered: a stepped table applies
+    /// a decision before the route answers it, so there is nothing to wait for.
     /// </summary>
-    private static async Task<IReadOnlyList<(int Actor, string? Spell)>> ResolvedAsync((TableApi Api, TableSession Session, HumanSeat Person, string Token) table)
+    private static async Task<IReadOnlyList<(int Actor, string? Spell)>> ResolvedAsync((TableApi Api, SteppedSession Session, SteppedPerson Person, string Token) table)
     {
         var resolved = new List<(int Actor, string? Spell)>();
-        for (var attempt = 0; attempt < 150 && table.Person.Waiting is null; attempt++)
-        {
-            await Task.Delay(20, TestContext.Current.CancellationToken);
-        }
-
         using var payload = JsonDocument.Parse(Text(await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token)));
         foreach (var entry in payload.RootElement.GetProperty("feed").EnumerateArray().Select(entry => entry.GetProperty("event")))
         {
@@ -111,7 +106,7 @@ public sealed partial class TableApiTests
     }
 
     /// <summary>The first spell the seat is served and the first legal target of it, as a page that takes the first of everything would post.</summary>
-    private static async Task ActFirst((TableApi Api, TableSession Session, HumanSeat Person, string Token) table)
+    private static async Task ActFirst((TableApi Api, SteppedSession Session, SteppedPerson Person, string Token) table)
     {
         using var payload = JsonDocument.Parse(Text(await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token)));
         var action = payload.RootElement.GetProperty("options").GetProperty("action");

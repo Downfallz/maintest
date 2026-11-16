@@ -10,6 +10,8 @@ namespace DownfallArena.Application.Catalogue;
 /// It is the same pair a print sheet carries and an artifact stamps. A session is reproducible against a hash
 /// <em>and</em> a rule set, or it is not reproducible (ADR 0054), and a deck and a screen that disagree about
 /// either are a playtest of neither.
+/// <para><see cref="SpellTypes" /> is every spell type in the order the domain declares them, which is the order a
+/// screen groups spells by: a page names no content, so it reads the order here rather than writing it.</para>
 /// </remarks>
 public sealed record CatalogueView(
     string ContentHash,
@@ -18,4 +20,5 @@ public sealed record CatalogueView(
     IReadOnlyList<PackageCard> Packages,
     IReadOnlyList<TalentBand> Trees,
     RoundShape Round,
-    IReadOnlyList<EffectCue> Effects);
+    IReadOnlyList<EffectCue> Effects,
+    IReadOnlyList<string>? SpellTypes = null);

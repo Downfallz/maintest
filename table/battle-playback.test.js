@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
+import { SETTLE_MS as SETTLE } from './battle-timing.js';
 import { createBattlePlayback, actionCue } from './battle-playback.js';
 const creature = (id, health = 20) => ({ id, health, maxHealth: 20, energy: 5, totalDefense: 2, isAlive: health > 0, name: `Creature ${id}` });
 const before = [creature(1), creature(2), creature(3)];
@@ -20,7 +21,14 @@ function harness() {
     onUpkeepHandled: round => handled.push(round) });
   return { queue, timers, handled, receive: (events, extra, options) => queue.receive(view(events, extra), cards, options),
     tick() { const [id, timer] = timers.entries().next().value; timers.delete(id); timer.fn(); },
-    drain() { while (timers.size) this.tick(); } };
+    // Drains the timers and, in Auto, gives the OK each action waits for, as the player would.
+    drain() {
+      for (;;) {
+        while (timers.size) this.tick();
+        const m = queue.model();
+        if (m.active && m.stage === 'resolved' && m.mode === 'auto' && !m.receipt) queue.advance(); else break;
+      }
+    } };
 }
 test('first snapshot is a baseline, including historical results', () => {
   const h = harness(); h.receive([event(2)], { feedNext: 9 }); assert.equal(h.queue.model().active, false);
@@ -45,6 +53,18 @@ test('a later poll repeating consumed sequences queues nothing again', () => {
 test('the summary after the queue drains is the last action\'s full result', () => {
   const h = harness(); h.receive([]); h.receive([event(4), event(6)]); h.drain();
   assert.match(h.queue.model().summary, /Strike.*critical.*Damage 7/);
+});
+test('the last result is a card of the action shown: its caster, spell, crit and chips by target', () => {
+  const h = harness(); h.receive([]); h.receive([event(4)]); h.drain();
+  const card = h.queue.model().result;
+  assert.equal(card.kind, 'own'); assert.equal(card.caster, 'Creature 1'); assert.equal(card.spell, 'Strike'); assert.equal(card.status, 'Critical');
+  assert.equal(card.round, 2); assert.equal(card.groups[0].target, 'Creature 2'); assert.equal(card.groups[0].chips.length, 1);
+});
+test('a skip makes the card the last result it reaches, and a reset forgets it', () => {
+  const h = harness(); h.receive([]);
+  h.receive([event(4), event(6, { resolution: { action: { actor: 1, spell: 'hit', targets: [3] } }, appliedOutcomes: [{ kind: 'DamageOutcome', target: 3, amount: 4 }] })]);
+  h.queue.skip(); assert.equal(h.queue.model().result.groups[0].target, 'Creature 3');
+  h.queue.reset(); assert.equal(h.queue.model().result, null);
 });
 test('arrivals during playback join behind the current action without restarting its windup', () => {
   const h = harness(); h.receive([]); h.receive([event(4)]); h.tick(); h.receive([event(5)]);
@@ -208,13 +228,13 @@ test('the live queue carries the card\'s visual and the harmful effects it was g
   assert.deepEqual(queue.model().cue.effects.map(effect => effect.wound), [true, false]);
 });
 
-for (const rate of [1, 1.5, 2]) test(`at ${rate}x every full-motion phase is scaled by the speed`, () => {
+for (const rate of [0.5, 1, 1.5, 2]) test(`at ${rate}x every full-motion phase is scaled by the speed`, () => {
   const h = harness(); h.queue.setRate(rate); h.receive([]); h.receive([event(10)]);
-  assert.equal([...h.timers.values()][0].ms, 420 / rate);
-  h.tick(); assert.equal([...h.timers.values()][0].ms, 850 / rate);
-  h.tick(); assert.equal([...h.timers.values()][0].ms, 250 / rate);
+  assert.equal([...h.timers.values()][0].ms, 840 / rate);
+  h.tick(); assert.equal([...h.timers.values()][0].ms, 1700 / rate);
+  h.tick(); assert.equal([...h.timers.values()][0].ms, SETTLE / rate, 'the own cast then settles at the speed');
 });
-for (const rate of [1, 1.5, 2]) test(`at ${rate}x a reduced-motion result is still shown for 650 ms`, () => {
+for (const rate of [0.5, 1, 1.5, 2]) test(`at ${rate}x a reduced-motion result is still shown for 650 ms`, () => {
   const h = harness(); h.queue.setRate(rate); h.queue.setReduced(true); h.receive([]); h.receive([event(10)]);
   assert.equal(h.queue.model().stage, 'impact'); assert.equal([...h.timers.values()][0].ms, 650);
 });
@@ -230,13 +250,13 @@ test('a callback scheduled before a speed change does nothing after it', () => {
 test('actions settled by a speed change are not replayed by the next poll', () => {
   const h = harness(); h.receive([]); h.receive([event(10), event(11)]); h.queue.setRate(2);
   h.receive([event(10), event(11)]); assert.equal(h.queue.model().active, false);
-  h.receive([event(12)]); assert.equal([...h.timers.values()][0].ms, 210);
+  h.receive([event(12)]); assert.equal([...h.timers.values()][0].ms, 420);
 });
 test('choosing the speed already playing leaves the action playing', () => {
   const h = harness(); h.queue.setRate(2); h.receive([]); h.receive([event(10)]);
   h.queue.setRate(2); assert.equal(h.queue.model().active, true);
 });
-test('a speed outside 1x, 1.5x and 2x plays at 1x', () => {
+test('a speed outside 0.5x, 1x, 1.5x and 2x plays at 1x', () => {
   const h = harness(); h.queue.setRate(2); h.queue.setRate(Infinity); assert.equal(h.queue.model().rate, 1);
 });
 
@@ -246,19 +266,40 @@ const energyEvent = sequence => upkeepEvent(sequence, 'RoundEnergyGranted', { gr
 const cleanupEvent = sequence => ({ sequence, event: { kind: 'ConditionsExpired', roundId: 2,
   expired: { 1: [{ effect: { kind: 'DefenseBuff', amount: 2 } }] } } });
 
-test('Step holds the exact applied frame until an explicit Next, with received, presented and read positions separate', () => {
-  const h = harness(); h.queue.setMode('step'); h.receive([]); h.receive([event(4), event(5)]);
+// An action the other team's creature took: the board's allies are creature 1 only.
+const incoming = (sequence, extras = {}) => event(sequence, { ...extras, resolution: { action: { actor: 2, spell: 'hit', targets: [1] }, isCritical: true },
+  appliedOutcomes: [{ kind: 'DamageOutcome', target: 1, amount: 7, critical: true }] });
+test('an incoming action holds its exact applied frame until an explicit Next, with received, presented and read positions separate', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]); h.receive([incoming(4), incoming(5)]);
   h.queue.advance(); assert.equal(h.queue.model().sequence, 4); // not during a windup
   h.drain(); assert.equal(h.queue.model().stage, 'resolved'); assert.equal(h.queue.model().sequence, 4);
   assert.equal(h.queue.model().read, null); assert.equal(h.queue.model().presented, 4);
   h.queue.advance(); assert.equal(h.queue.model().sequence, 5); assert.equal(h.queue.model().read, 4);
   h.drain(); h.queue.advance(); assert.equal(h.queue.model().active, false); assert.equal(h.queue.model().read, 5);
 });
-test('Auto resumes from a held Step without replaying its impact; a stale auto callback cannot bypass Step', () => {
+test('the player\'s own cast moves on by itself, in Step as in Auto', () => {
   const h = harness(); h.receive([]); h.receive([event(4), event(5)]); h.tick(); h.tick();
-  const stale = [...h.timers.values()][0].fn;
-  h.queue.setMode('step'); stale(); assert.equal(h.queue.model().sequence, 4); assert.equal(h.timers.size, 0);
-  h.queue.setMode('auto'); h.tick(); assert.equal(h.queue.model().sequence, 5); assert.equal(h.queue.model().stage, 'windup');
+  assert.equal(h.queue.model().asks, false); assert.equal([...h.timers.values()][0].ms, SETTLE);
+  assert.equal(h.queue.model().incoming, false);
+  h.tick(); assert.equal(h.queue.model().sequence, 5);
+  const step = harness(); step.queue.setMode('step'); step.receive([]); step.receive([event(4), event(5)]); step.tick(); step.tick();
+  assert.equal(step.queue.model().asks, false); assert.equal([...step.timers.values()][0].ms, SETTLE);
+  step.tick(); assert.equal(step.queue.model().sequence, 5);
+});
+test('in Auto as in Step an incoming action holds for the OK; switching pace never moves past it', () => {
+  const h = harness(); h.receive([]); h.receive([incoming(4), incoming(5)]); h.tick(); h.tick();
+  assert.equal(h.queue.model().stage, 'resolved'); assert.equal(h.timers.size, 0);
+  assert.equal(h.queue.model().asks, true); assert.equal(h.queue.model().canNext, true);
+  assert.equal(h.queue.model().incoming, true, 'an incoming action is read, never skipped');
+  h.queue.setMode('step'); h.queue.setMode('auto'); assert.equal(h.queue.model().sequence, 4); assert.equal(h.timers.size, 0);
+  h.queue.advance(); assert.equal(h.queue.model().sequence, 5); assert.equal(h.queue.model().stage, 'windup');
+  h.tick(); h.tick(); h.queue.advance(); assert.equal(h.queue.model().active, false, 'the OK on the last action returns to the present');
+});
+test('in Auto the turnover after an incoming last action waits for its OK, then reads by itself', () => {
+  const h = harness(); h.receive([]); h.receive([incoming(4), cleanupEvent(5), energyEvent(6), upkeepEvent(7)]);
+  h.tick(); h.tick(); assert.equal(h.queue.model().sequence, 4); assert.equal(h.timers.size, 0);
+  h.queue.advance(); assert.equal(h.queue.model().receipt.category, 'Aftermath'); assert.equal(h.queue.model().asks, false);
+  assert.equal([...h.timers.values()][0].ms, 3500); h.tick(); assert.equal(h.queue.model().receipt.category, 'Upkeep');
 });
 test('the own closing cast, meaningful aftermath and combined next upkeep are read in order', () => {
   const h = harness(); h.queue.setMode('step'); h.receive([]);
@@ -267,9 +308,13 @@ test('the own closing cast, meaningful aftermath and combined next upkeep are re
   h.receive([event(4), cleanupEvent(5), energyEvent(6), upkeepEvent(7)], { board: latest });
   assert.equal(h.queue.model().board.round, 2); assert.equal(h.queue.model().board.creatures[0].energy, 5);
   assert.equal(h.queue.model().board.creatures[0].knownSpells, undefined);
-  h.drain(); h.queue.advance();
-  assert.equal(h.queue.model().receipt.category, 'Aftermath'); assert.equal(h.queue.model().board.round, 2);
-  assert.equal(h.queue.model().board.phase, 'EndOfRound'); assert.deepEqual(h.queue.model().board.creatures, []);
+  h.drain();
+  assert.equal(h.queue.model().receipt.category, 'Aftermath', 'the own cast moved on by itself; Step holds the aftermath'); assert.equal(h.queue.model().board.round, 2);
+  assert.equal(h.queue.model().board.phase, 'EndOfRound');
+  // On the round's last action frame, nothing of the next round's board: creature 2 as the strike left it.
+  assert.equal(h.queue.model().board.creatures.find(one => one.id === '2').health, 13);
+  assert.equal(h.queue.model().board.creatures[0].energy, 5); assert.equal(h.queue.model().board.creatures[0].knownSpells, undefined);
+  assert.deepEqual(h.queue.model().paced.markers.map(one => [one.id, one.lines.map(line => line.text)]), [['1', ['Defense Buff ends']]]);
   h.queue.advance(); assert.equal(h.queue.model().receipt.category, 'Upkeep'); assert.equal(h.queue.model().board.round, 3);
   assert.match(h.queue.model().summary, /\+2 energy.*1 → 3/); assert.match(h.queue.model().summary, /No ongoing ticks/);
   assert.doesNotMatch(h.queue.model().summary, /unknown|not recorded/); assert.equal(h.queue.model().receipt.sections.length, 2);
@@ -293,13 +338,12 @@ test('legacy upkeep says the ordinary energy is unknown, not zero', () => {
   assert.match(h.queue.model().summary, /Ordinary round energy was not recorded/);
   assert.match(h.queue.model().summary, /No ongoing ticks/); assert.deepEqual(h.queue.model().board.creatures, []);
 });
-test('lethal upkeep precedes the match result even without another command', () => {
+test('lethal upkeep is read, and the match\'s end adds no step of its own: the result opens after it', () => {
   const h = harness(); h.queue.setMode('step'); h.receive([]);
   h.receive([energyEvent(4), upkeepEvent(5, 'OngoingEffectsApplied', { bleedTicks: [{ creature: 2, damage: 13 }] }),
     upkeepEvent(6, 'MatchEnded', { outcome: { winner: 'Player1', reason: 'Elimination' } })], { over: true });
   assert.equal(h.queue.model().receipt.category, 'Upkeep'); assert.match(h.queue.model().summary, /−13 HP/);
-  assert.equal(h.queue.model().cue, null); h.queue.advance();
-  assert.equal(h.queue.model().receipt.category, 'Result'); assert.equal(h.queue.model().board.phase, 'Match complete');
+  assert.equal(h.queue.model().cue, null); assert.equal(h.queue.model().remaining, 1);
   h.queue.advance(); assert.equal(h.queue.model().active, false);
 });
 test('empty cleanup has no pace step; immunity alone does', () => {
@@ -339,8 +383,8 @@ test('rotation, motion, speed and connection settles leave an unshown upkeep to 
     settle(h.queue); assert.equal(h.queue.model().active, false); assert.deepEqual(h.handled, []);
   }
 });
-test('what arrives under a dialog queues behind a held Step, while Auto settles it', () => {
-  const step = harness(); step.queue.setMode('step'); step.receive([]); step.receive([event(4)]); step.drain();
+test('what arrives under a dialog queues behind a receipt held in Step, while Auto settles it', () => {
+  const step = harness(); step.queue.setMode('step'); step.receive([]); step.receive([cleanupEvent(4)]); step.drain();
   step.receive([event(5), energyEvent(6)], {}, { animate: false });
   assert.equal(step.queue.model().sequence, 4); assert.equal(step.queue.model().remaining, 3); assert.deepEqual(step.handled, []);
   const auto = harness(); auto.receive([]); auto.receive([event(4)]);
@@ -353,8 +397,9 @@ test('a catch-up that never shows its upkeep leaves it to the upkeep notice', ()
   assert.equal(h.queue.model().active, false); assert.deepEqual(h.handled, []);
 });
 test('reduced motion retains Step pacing and resetting clears every receipt', () => {
-  const h = harness(); h.queue.setMode('step'); h.queue.setReduced(true); h.receive([]); h.receive([event(4), energyEvent(5)]);
+  const h = harness(); h.queue.setMode('step'); h.queue.setReduced(true); h.receive([]); h.receive([incoming(4), energyEvent(5)]);
   h.drain(); assert.equal(h.queue.model().sequence, 4); h.queue.advance(); assert.equal(h.queue.model().receipt.category, 'Upkeep');
+  h.drain(); assert.equal(h.queue.model().receipt.category, 'Upkeep', 'Step holds the upkeep');
   h.queue.reset(); assert.equal(h.queue.model().receipt, null); assert.equal(h.queue.model().presented, null); assert.equal(h.queue.model().read, null);
   h.receive([energyEvent(5)]); assert.equal(h.queue.model().active, false);
 });
@@ -371,4 +416,193 @@ test('opening-round introduction remains arrival-gated by the upkeep controller'
   const h = harness(); h.receive([], { waiting: {} });
   h.receive([{ ...energyEvent(4), event: { ...energyEvent(4).event, roundId: 1 } }]);
   assert.equal(h.queue.model().active, false);
+});
+test('an incoming action held in Auto keeps its hold when the next result arrives under a dialog', () => {
+  const h = harness(); h.receive([]); h.receive([incoming(4)]); h.tick(); h.tick();
+  assert.equal(h.queue.model().stage, 'resolved');
+  h.receive([incoming(5)], {}, { animate: false });
+  assert.equal(h.queue.model().sequence, 4, 'the held action is still the one being read');
+  assert.equal(h.queue.model().remaining, 2);
+  h.queue.advance(); assert.equal(h.queue.model().sequence, 5);
+});
+test('an upkeep read on its own round shows that round\'s creatures; one the board has moved past shows none', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]);
+  const latest = { ...view().board, roundNumber: 3, phase: 'Planning', subPhase: 'Evolution' };
+  h.receive([energyEvent(4), upkeepEvent(5)], { board: latest });
+  assert.equal(h.queue.model().receipt.category, 'Upkeep'); assert.equal(h.queue.model().board.round, 3);
+  assert.deepEqual(h.queue.model().board.creatures.map(one => one.id), ['1', '2', '3']);
+  const later = harness(); later.queue.setMode('step'); later.receive([]);
+  const moved = view().board; moved.roundNumber = 4;
+  later.receive([energyEvent(4), upkeepEvent(5)], { board: moved });
+  assert.deepEqual(later.queue.model().board.creatures, []);
+});
+test('a held upkeep keeps the board it arrived with when the same round\'s combat arrives behind it', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]);
+  h.receive([energyEvent(4), upkeepEvent(5)], { board: { ...view().board, roundNumber: 3, phase: 'Planning', subPhase: 'Evolution' } });
+  const health = () => h.queue.model().board.creatures.find(one => one.id === '2').health;
+  const before = health();
+
+  h.receive([], { board: { ...view().board, roundNumber: 3, enemies: [creature(2, 1), creature(3)] } });
+
+  assert.equal(h.queue.model().receipt.category, 'Upkeep');
+  assert.equal(health(), before, 'the combat after it is not read into the upkeep');
+});
+test('an upkeep that arrives once its round\'s combat has begun draws no borrowed board', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]);
+
+  h.receive([energyEvent(4), upkeepEvent(5)], { board: { ...view().board, roundNumber: 3 } });
+
+  assert.equal(h.queue.model().receipt.category, 'Upkeep');
+  assert.deepEqual(h.queue.model().board.creatures, []);
+});
+test('the reading card says whose action it is, what was cast and what came of it, in the board\'s names', () => {
+  const h = harness(); h.receive([]);
+  h.receive([incoming(4)], { board: { ...view().board, allies: [{ ...creature(1), name: 'Main' }], enemies: [{ ...creature(2, 13), name: 'Main' }, creature(3)] } });
+
+  const card = h.queue.model().reading;
+
+  assert.equal(card.kind, 'incoming'); assert.equal(card.title, 'Creature 2 · Strike');
+  assert.match(card.detail, /^Critical · .+ → Creature 1$/);
+});
+test('the reading card marks the player\'s own cast, a fizzle and a round summary', () => {
+  const own = harness(); own.receive([]); own.receive([event(4)]);
+  assert.equal(own.queue.model().reading.kind, 'own');
+  const fizzle = harness(); fizzle.receive([]);
+  fizzle.receive([event(4, { resolution: { action: { actor: 1, spell: 'hit', targets: [2] }, fizzled: true, fizzleReason: { message: 'Not enough energy' } }, appliedOutcomes: [] })]);
+  assert.match(fizzle.queue.model().reading.detail, /^Fizzled: /);
+  const summary = harness(); summary.queue.setMode('step'); summary.receive([]); summary.receive([cleanupEvent(4)]);
+  const { lines, ...reading } = summary.queue.model().reading;
+  assert.deepEqual(reading, { kind: 'summary', title: 'Aftermath', detail: '1 condition ended', round: 2 });
+  assert.match(lines.map(line => line.text).join(' · '), /DefenseBuff ends/);
+});
+test('an aftermath with no recorded action frame in its round reads by its plaques alone', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]);
+
+  h.receive([cleanupEvent(4)]);
+
+  assert.deepEqual(h.queue.model().board.creatures, []);
+  assert.equal(h.queue.model().paced.title, 'Aftermath'); assert.equal(h.queue.model().paced.markers.length, 1);
+});
+test('an aftermath reads on the round\'s latest action frame, even one settled without playing', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]);
+  h.receive([event(4)]); h.drain();
+  const deeper = event(5); deeper.event.frame = { ...deeper.event.frame, after: [creature(1), creature(2, 6), creature(3)] };
+
+  h.receive([deeper], {}, { animate: false });
+  h.receive([cleanupEvent(6)]);
+
+  assert.equal(h.queue.model().receipt.category, 'Aftermath');
+  assert.equal(h.queue.model().board.creatures.find(one => one.id === '2').health, 6, 'not the earlier cast\'s 13');
+});
+test('an aftermath after an unframed action draws no board rather than an older one', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]);
+  h.receive([event(4)]); h.drain();
+  const legacy = event(5); delete legacy.event.frame;
+
+  h.receive([legacy]);
+  h.receive([cleanupEvent(6)]);
+
+  assert.deepEqual(h.queue.model().board.creatures, []);
+});
+test('an opponent\'s action arriving under a dialog waits unplayed, and plays for its OK once the field is in view', () => {
+  const h = harness(); h.receive([]);
+
+  h.receive([incoming(4)], {}, { animate: false });
+
+  assert.equal(h.queue.model().active, true, 'results remain to be read');
+  assert.equal(h.queue.model().sequence, null, 'nothing plays under the dialog'); assert.equal(h.timers.size, 0);
+  h.queue.resume(); assert.equal(h.queue.model().sequence, 4);
+  h.tick(); h.tick(); assert.equal(h.queue.model().asks, true, 'it waits for its OK');
+});
+test('the player\'s own action arriving under a dialog still settles, as before', () => {
+  const h = harness(); h.receive([]);
+
+  h.receive([event(4)], {}, { animate: false });
+
+  assert.equal(h.queue.model().active, false);
+});
+test('a turnover arriving later under the same dialog stays behind an opponent\'s action still waiting to play', () => {
+  const h = harness(); h.receive([]);
+  h.receive([incoming(4)], {}, { animate: false });
+
+  h.receive([cleanupEvent(5)], {}, { animate: false });
+
+  assert.equal(h.queue.model().remaining, 2, 'neither was settled');
+  h.queue.resume(); assert.equal(h.queue.model().sequence, 4);
+});
+
+// Creature 3 has fallen: what ends on it, or what it gains, is not read on the field (History keeps it).
+const fallen = feed => ({ ...view(feed), board: { ...view().board, enemies: [creature(2, 13), creature(3, 0)] } });
+const ending = (sequence, expired) => ({ sequence, event: { kind: 'ConditionsExpired', roundId: 2, expired } });
+test('an aftermath reads only the creatures still standing', () => {
+  const h = harness(); h.queue.setMode('step'); h.queue.receive(fallen([]), cards);
+
+  h.queue.receive(fallen([ending(4, { 1: [{ effect: { kind: 'Bleed', amount: 1 } }], 3: [{ effect: { kind: 'Bleed', amount: 2 } }] })]), cards);
+
+  const model = h.queue.model();
+  assert.deepEqual(model.paced.markers.map(marker => marker.id), ['1']); assert.equal(model.paced.summary, '1 condition ended');
+  assert.equal(model.receipt.sections[0].items.length, 1);
+});
+test('an aftermath only on fallen creatures is not read at all', () => {
+  const h = harness(); h.queue.setMode('step'); h.queue.receive(fallen([]), cards);
+
+  h.queue.receive(fallen([ending(4, { 3: [{ effect: { kind: 'Bleed', amount: 2 } }] }),
+    { sequence: 5, event: { kind: 'StunImmunityGained', roundId: 2, creatures: [3] } }]), cards);
+
+  assert.equal(h.queue.model().active, false); assert.equal(h.queue.model().receipt, null);
+});
+test('an aftermath is read on the creatures standing at it, not on a later death in the same batch', () => {
+  const h = harness(); h.queue.setMode('step'); h.queue.receive(fallen([]), cards);
+  const lethal = event(6, { frame: { before, after: [creature(1), creature(2, 13), creature(3, 0)], timeline } });
+
+  h.queue.receive(fallen([event(4), ending(5, { 3: [{ effect: { kind: 'Bleed', amount: 2 } }] }), lethal]), cards);
+
+  assert.equal(h.queue.model().remaining, 3, 'the cast, the aftermath on creature 3 while it stood, and the lethal cast');
+});
+
+test('a page opened again plays what came after the last result it showed, and a first visit starts from the board', () => {
+  const missed = [event(4), event(6, { resolution: { action: { actor: 2, spell: 'hit', targets: [1] } } })];
+  const fresh = harness(); fresh.queue.receive(view([event(2), ...missed]), cards);
+  assert.equal(fresh.queue.model().active, false, 'nothing remembered: the first read is the baseline');
+
+  const back = harness(); back.queue.receive(view([event(2), ...missed]), cards, { since: 2 });
+  assert.deepEqual([back.queue.model().sequence, back.queue.model().remaining], [4, 2], 'the two actions after the last one shown play as they would have live');
+
+  const ahead = harness(); ahead.queue.receive(view([event(2), ...missed]), cards, { since: 6 });
+  assert.equal(ahead.queue.model().active, false, 'a mark at or past the feed\'s end is the baseline');
+});
+test('what a page closed now would resume after is the last result shown in full', () => {
+  const h = harness(); h.queue.setMode('step');
+  assert.equal(h.queue.model().watermark, null, 'nothing read yet');
+  h.receive([event(2)], { feedNext: 3 }); assert.equal(h.queue.model().watermark, 2);
+  h.receive([event(4), event(6)]); assert.equal(h.queue.model().watermark, 3, 'the action playing is not yet seen');
+  h.drain(); assert.equal(h.queue.model().watermark, 6);
+});
+test('a page closed on a held upkeep that took in a later part resumes from its first part', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]); h.receive([energyEvent(4)]);
+  h.receive([upkeepEvent(5, 'OngoingEffectsApplied', { bleedTicks: [{ creature: 2, damage: 3 }] })]);
+
+  assert.equal(h.queue.model().sequence, 5, 'one receipt holds both parts');
+  assert.equal(h.queue.model().watermark, 3, 'neither part is read yet');
+});
+
+test('an action that tried to crit hands the scene its d20: the face and whether it reached the threshold', () => {
+  const hit = { status: 'Critical', criticalRoll: 19, actor: { id: 1 }, effects: [{ target: { id: 2 }, tone: 'harm', text: 'Damage 6' }] };
+  assert.deepEqual(actionCue(hit).roll, { value: 19, critical: true, needed: null });
+  assert.deepEqual(actionCue({ ...hit, status: 'Resolved', criticalRoll: 4 }).roll, { value: 4, critical: false, needed: null });
+  // The face to reach is the card's (ADR 0100), so the die can say what the roll needed.
+  const cards = new Map([['bolt', { name: 'Bolt', criticalThreshold: 14 }]]);
+  assert.deepEqual(actionCue({ ...hit, status: 'Resolved', criticalRoll: 9, action: { spell: 'bolt', targets: [2] } }, cards).roll, { value: 9, critical: false, needed: 14 });
+  assert.equal(actionCue({ ...hit, status: 'Resolved', criticalRoll: null }).roll, null);
+  assert.equal(actionCue({ ...hit, status: 'Fizzled', criticalRoll: 12 }).roll, null);
+});
+test('an action queued under a dialog leaves the field and the order where they stood before it', () => {
+  const h = harness(); h.receive([]);
+  // The engine has already played the opponent's slot: its latest board has moved past it and counts the damage.
+  h.receive([incoming(4)], { board: { ...view().board, activationCursor: 2 } }, { animate: false });
+  const m = h.queue.model();
+  assert.equal(m.active, true); assert.equal(m.sequence, null);
+  assert.equal(m.board.cursor, 1, 'the queued action\'s slot is the one being played, not done');
+  assert.equal(m.board.creatures.find(one => one.id === '2')?.health ?? m.board.enemies.find(one => one.id === 2).health, 20);
+  h.queue.resume(); assert.equal(h.queue.model().sequence, 4);
 });

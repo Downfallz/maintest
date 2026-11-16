@@ -4,7 +4,7 @@ type Model = ReturnType<typeof battleGuidance>;
 const el = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const text = (id: string, value: string) => { if (el(id).textContent !== value) el(id).textContent = value; };
 
-export function guidanceControls(storage: Storage | null, beforeOpen: () => void, onVisibility: () => void) {
+export function guidanceControls(storage: Storage | null, beforeOpen: () => void, onVisibility: () => void, onMuted?: (muted: boolean) => void) {
   const dialog = el<HTMLDialogElement>('help-dialog'), preferences = helpPreferences(storage);
   const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-help-open]'));
   let model: Model | null = null, opener: HTMLElement | null = null, opening = false, key = '';
@@ -21,11 +21,15 @@ export function guidanceControls(storage: Storage | null, beforeOpen: () => void
   dialog.addEventListener('close', () => {
     onVisibility();
     const target = opener?.isConnected && !opener.matches(':disabled') && opener.getClientRects().length ? opener : el('help-open');
-    if (model?.available && !dialog.open) target.focus({ preventScroll: true });
+    // Closing the tip can open what it was explaining (the mutation tree), which takes focus itself.
+    const moved = document.activeElement !== document.body && !dialog.contains(document.activeElement);
+    if (model?.available && !dialog.open && !moved) target.focus({ preventScroll: true });
     opener = null;
   });
   el('help-mute').addEventListener('change', event => {
-    preferences.setMuted((event.target as HTMLInputElement).checked); onVisibility();
+    const muted = (event.target as HTMLInputElement).checked;
+    if (onMuted) { preferences.apply(muted); onMuted(muted); } else preferences.setMuted(muted);
+    onVisibility();
   });
 
   function render(next: Model, canAuto: boolean) {
@@ -58,5 +62,14 @@ export function guidanceControls(storage: Storage | null, beforeOpen: () => void
     // Callers only offer auto-help on the live, unobstructed board, after queued presentation has settled.
     if (!opening && !dialog.open && canAuto && preferences.shouldShow(next.topic)) open(el('help-open'));
   }
-  return { render };
+  // Whether a first-use tip is showing, opening, or still owed for the current subject: what opens by itself
+  // after the tip (the mutation tree) waits for it.
+  function pending() {
+    return opening || dialog.open || Boolean(model?.available && preferences.shouldShow(model.topic));
+  }
+  // Help on or off for this game, from its settings: tips already read stay read either way.
+  function setHelp(on: boolean) { preferences.apply(!on); el<HTMLInputElement>('help-mute').checked = !on; }
+  // Each game teaches its phases again (ADR 0142): what was read is counted per game.
+  function setGame(id: string | null) { preferences.setGame(id); }
+  return { render, pending, setHelp, setGame };
 }

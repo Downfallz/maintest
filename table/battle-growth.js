@@ -1,5 +1,5 @@
 import { cardsById } from './card.js';
-import { talentClasses, familyRoot } from './mat.js';
+import { talentClasses, familyRoot, talentPalette, classColour } from './mat.js';
 import { creatureLabel } from './battle-live.js';
 
 // A public reference: never pass evolutionChoices to talentClasses. Pending own picks belong only in
@@ -24,6 +24,15 @@ export function mutationReference(view, catalogue, selectedId) {
     next: !view?.over && Number.isInteger(board?.nextEvolutionRound) && board.nextEvolutionRound >= (board.roundNumber ?? 0) ? board.nextEvolutionRound : null };
 }
 
+const PAST_TEMPOS = ['TurnOrderResolution', 'TieOrder', 'IntentSelection', 'Activation', 'Cleanup', 'Finalization'];
+function tempoCommitted(board, round) {
+  if ((board.roundNumber ?? 0) > round || PAST_TEMPOS.includes(board.subPhase)) return true;
+  if (board.subPhase !== 'Speed') return false;
+  const given = new Set((board.speedChoices ?? []).map(one => one.creature));
+  const living = (board.allies ?? []).filter(one => one.isAlive !== false);
+  return living.length > 0 && living.every(one => given.has(one.id));
+}
+
 // The initial read is a baseline, including on reload/return from a hidden tab. Only a new public reveal
 // can announce an unlock; a private submission, catalogue change, or board diff alone cannot do it.
 export function createBattleGrowth() {
@@ -40,6 +49,8 @@ export function createBattleGrowth() {
       for (const entry of fresh) {
         if (entry.event?.kind !== 'PurchasesRevealed') continue;
         const rows = [];
+        const byId = new Map((catalogue?.packages ?? []).map(pack => [pack.id, pack]));
+        const palette = talentPalette(catalogue, cardsById(catalogue));
         for (const choice of entry.event.choices ?? []) {
           const pack = catalogue?.packages?.find(one => one.id === choice.tier);
           const creature = [...(view.board.allies ?? []), ...(view.board.enemies ?? [])].find(one => one.id === choice.creature);
@@ -55,15 +66,26 @@ export function createBattleGrowth() {
             const ids = pending.get(choice.creature) ?? new Set();
             spells.forEach(id => ids.add(id)); pending.set(choice.creature, ids);
           }
-          rows.push({ creature: choice.creature, name: creatureLabel(view.board, choice.creature),
+          // What a reader needs to tell the reveals apart at a glance: the family's colour, the stage it reached,
+          // and what it bought this round. An unpublished tier keeps its id and claims nothing else.
+          const root = pack ? familyRoot(pack, byId) : null;
+          const cards = spells.map(id => catalogue?.cards?.find(card => card.id === id));
+          rows.push({ creature: choice.creature, tier: choice.tier, name: creatureLabel(view.board, choice.creature),
             enemy: !view.board.allies?.some(one => one.id === choice.creature), mutation: pack?.name ?? choice.tier,
-            spells: spells.map(id => catalogue?.cards?.find(card => card.id === id)?.name ?? id) });
+            spells: spells.map((id, i) => cards[i]?.name ?? id),
+            stage: pack?.level ?? null, family: root?.name ?? null, colour: classColour(root?.id ?? choice.tier, palette),
+            initiative: Number.isFinite(pack?.initiativeBonus) ? pack.initiativeBonus : null, passives: pack?.passiveLines ?? [],
+            details: spells.map((id, i) => ({ name: cards[i]?.name ?? id, cost: cards[i]?.cost ?? null, targeting: cards[i]?.targeting ?? null })) });
         }
         // Catch-up keeps the latest public reveal. Every reveal remains available in History.
-        if (rows.length) receipt = { sequence: entry.sequence, round: entry.event.roundId ?? entry.round, rows };
+        if (rows.length) receipt = { sequence: entry.sequence, round: entry.event.roundId ?? entry.round, rows,
+          counts: { ours: rows.filter(row => !row.enemy).length, theirs: rows.filter(row => row.enemy).length } };
       }
     }
     seen = Math.max(seen ?? -1, end);
+    // The reveal is read before the tempos: once this seat has given every tempo, or the round has moved past
+    // them, its crests and receipt clear by themselves. A gap between two tempo askings is not a commit.
+    if (receipt && tempoCommitted(view.board, receipt.round)) receipt = null;
     // A board ahead of the feed (a purchase applied, its reveal not yet recorded) must not become the baseline
     // the reveal is compared with, or its new spells would read as already known.
     for (const one of [...(view.board.allies ?? []), ...(view.board.enemies ?? [])]) {

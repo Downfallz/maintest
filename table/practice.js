@@ -58,5 +58,6 @@ export async function mountPractice(document, location, storage, fetchImpl = (..
       list.disabled = false;
     }
   });
-  return { seats: state.seatToken ? [{ seat: 'player1', token: state.seatToken }] : [] };
+  // A scenario names the seat it is played from (ADR 0179); the recipes are always player1's.
+  return { seats: state.seatToken ? [{ seat: state.seat ?? 'player1', token: state.seatToken }] : [] };
 }

@@ -1,18 +1,37 @@
 import Phaser from 'phaser';
+import { ActingHalo, FOCUS } from './acting-halo';
+import { BattleHorizon } from './battle-horizon';
+import { DiceLayer } from './dice';
 import { placements, strikeApproach } from '../../table/battle-layout.js';
 import { CREATURE_ART, figureArt, figureGeometry } from '../../table/battle-art.js';
-import { DRAW_MS, STRIKE_MS, RETURN_MS, RETURN_DELAY_MS, playbackRate } from '../../table/battle-timing.js';
+import { DRAW_MS, STRIKE_MS, RETURN_MS, RETURN_DELAY_MS, MOTION_SCALE, playbackRate } from '../../table/battle-timing.js';
 import type { SceneFrame, Placement } from './types';
+import { UpkeepMarkers } from './upkeep-markers';
+import { MutationReveal } from './mutation-reveal';
 import { MutationCues } from './mutation-cues';
+import { CapstoneEffects } from './capstone-effects';
+import { EVOLUTION_REGISTRY } from '../../table/battle-evolution-art.js';
 import { SpellEffects, type EffectAnchor } from './spell-effects';
+import { ConditionAuras } from './condition-auras';
+import { aurasShown } from '../../table/battle-auras.js';
 
 const playing = (state: SceneFrame) => state.stage === 'windup' || state.stage === 'impact';
 
+// What a figure draws: an audited sprite (battle-art.js) or an evolution illustration (battle-evolution-art.js).
+// Both carry their canvas, silhouette and ground anchor, which is all the geometry reads.
+interface Art { key: string; width: number; height: number; bounds: readonly number[]; ground: readonly number[]; form?: string; id?: string }
+type SceneCreature = SceneFrame['creatures'][number];
+
 interface Figure {
+  id: string;
   image: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Ellipse; ring: Phaser.GameObjects.Ellipse;
-  cues: MutationCues; home: Placement; art: ReturnType<typeof figureArt>; enemy: boolean;
+  cues: MutationCues; home: Placement; art: Art; enemy: boolean; alive: boolean;
   // The form the creature asked for: when the art drew another, the accents shaped for the asked one stay hidden.
   form: string;
+  // The evolution illustration it asked for (ADR 0151), its capstone effects, and the appearance they were made for.
+  wanted: string | null; effects: CapstoneEffects; look: string; cueKey: string;
+  // Its lasting conditions, drawn on it beside the badges under it (battle-auras.js).
+  auras: ConditionAuras;
 }
 
 const GOLD = 0xeac88e;
@@ -26,8 +45,12 @@ const wrap = (value: number, span: number) => ((value % span) + span) % span;
 export class BattleScene extends Phaser.Scene {
   private figures = new Map<string, Figure>();
   private backdrop?: Phaser.GameObjects.Image;
+  private horizon?: BattleHorizon;
+  private replay = false;
   private motes: Phaser.GameObjects.Arc[] = [];
   private effects: Phaser.GameObjects.GameObject[] = [];
+  private upkeepMarkers = new UpkeepMarkers(this);
+  private mutationReveal = new MutationReveal(this);
   private spellEffects = new SpellEffects(this);
   private state!: SceneFrame;
   private reduced = false;
@@ -40,25 +63,59 @@ export class BattleScene extends Phaser.Scene {
   onResizeDuringPlayback: () => void = () => {};
   onImpact: () => void = () => {};
   onCancel: () => void = () => {};
+  // Which image a creature now shows: an evolution illustration's id, or `form:<form>` for an audited sprite.
+  onArtwork: (id: string, shown: string) => void = () => {};
+  // Which creature the acting halo lights now, or null (`#battle[data-halo]` for tests and tools).
+  onHalo: (id: string | null) => void = () => {};
+  private halo: ActingHalo | null = null;
+  // One blue halo per creature the turn order or a tie points at (SceneFrame.focus), made the first time it is lit.
+  private focusHalos = new Map<string, ActingHalo>();
+  // Which creatures the blue focus lights now (`#battle[data-focus-lit]` for tests and tools).
+  onFocus: (ids: string) => void = () => {};
+  private focusLit = '';
+  // What the lasting conditions draw on the figures now (`#battle[data-auras]` for tests and tools).
+  onAuras: (shown: string) => void = () => {};
+  private aurasShown = '';
+  private dice: DiceLayer | null = null;
+  // The dice on the field now, `id:value:tone` each (`#battle[data-dice]` for tests and tools).
+  onDice: (shown: string) => void = () => {};
+  private diceShown = '';
+  private haloId: string | null = null;
   assetFailed = false;
+  // Evolution illustrations load when a creature on the field first asks for one, never all at boot; one that
+  // fails stays failed for the page, and the figure keeps its audited sprite.
+  private loadingArt = new Set<string>();
+  private failedArt = new Set<string>();
 
   constructor(private assetRoot: string) { super('battle'); }
 
   preload() {
     this.load.image('battle-floor', `${this.assetRoot}eclipse-battle.webp`);
     for (const asset of CREATURE_ART) this.load.image(asset.key, `${this.assetRoot}${asset.file}`);
-    this.load.on('loaderror', () => { this.assetFailed = true; });
+    this.load.on('loaderror', (file: Phaser.Loader.File) => {
+      // A missing optional scenery plate leaves the earlier landscape in place.
+      if (String(file.key).startsWith('horizon-')) return;
+      if (!String(file.key).startsWith('evolution-')) { this.assetFailed = true; return; }
+      this.loadingArt.delete(String(file.key)); this.failedArt.add(String(file.key));
+    });
   }
 
   create() {
-    if (this.textures.exists('battle-floor')) this.backdrop = this.add.image(0, 0, 'battle-floor').setOrigin(.5, 0).setTint(0xb5bbc2).setDepth(-10);
+    if (this.textures.exists('battle-floor')) {
+      this.backdrop = this.add.image(0, 0, 'battle-floor').setOrigin(.5, 0).setTint(0xb5bbc2).setDepth(-10);
+      this.horizon = new BattleHorizon(this, this.backdrop, this.assetRoot);
+    }
     // A local vector fallback keeps the scene selectable if an image fails to load.
     const fallback = this.add.graphics();
     fallback.fillStyle(0x71867e).fillTriangle(40, 0, 0, 90, 80, 90);
     fallback.generateTexture('missing-figure', 80, 100);
     fallback.destroy();
+    this.halo = new ActingHalo(this);
+    this.dice = new DiceLayer(this);
     for (let index = 0; index < MOTES; index++) this.motes.push(this.add.circle(0, 0, index % 3 === 0 ? 2 : 1, GOLD, .24).setDepth(1000));
+    this.fitCamera();
     this.scale.on('resize', () => {
+      this.fitCamera();
       if (this.state && playing(this.state)) this.onResizeDuringPlayback();
       this.arrange();
     });
@@ -66,39 +123,80 @@ export class BattleScene extends Phaser.Scene {
     this.onReady();
   }
 
-  present(state: SceneFrame, reduced: boolean, rate: number) {
+  present(state: SceneFrame, reduced: boolean, rate: number, replay = false) {
     this.state = state;
     this.reduced = reduced;
     this.rate = playbackRate(rate);
     if (!this.ready) return;
-    const roster = JSON.stringify(state.creatures.map(one => [one.id, one.form, one.enemy, one.layers]));
+    this.horizon?.present(state.round ?? null, !reduced && !replay && !this.replay);
+    this.replay = replay;
+    // The roster is who stands where; what each one looks like changes in place, so a purchase can be seen to happen.
+    const roster = JSON.stringify(state.creatures.map(one => [one.id, one.enemy]));
     const rosterChanged = roster !== this.roster;
     if (rosterChanged) {
       this.clearMotion();
-      for (const figure of this.figures.values()) { figure.cues.destroy(); figure.image.destroy(); figure.shadow.destroy(); figure.ring.destroy(); }
+      for (const figure of this.figures.values()) { figure.cues.destroy(); figure.effects.destroy(); figure.auras.destroy(); figure.image.destroy(); figure.shadow.destroy(); figure.ring.destroy(); }
       this.figures.clear();
       this.roster = roster;
       this.makeFigures();
     }
+    for (const creature of state.creatures) this.dress(this.figures.get(creature.id)!, creature, !rosterChanged);
+    // A fallen creature carries nothing: its conditions end with it.
+    const auras = state.creatures.map(one => [one.id, this.figures.get(one.id)!.auras.set(one.isAlive ? one.statuses ?? [] : [])] as const);
+    const shown = aurasShown(auras);
+    if (shown !== this.aurasShown) { this.aurasShown = shown; this.onAuras(shown); }
     const changed = state.stage !== this.previous;
     if (changed && (state.stage === 'decision' || state.stage === 'resolved')) this.clearMotion();
     this.arrange(rosterChanged);
+    const focus = new Set(state.focus ?? []);
     for (const creature of state.creatures) {
       const figure = this.figures.get(creature.id)!;
       const acting = creature.id === state.actor;
-      const selected = creature.id === state.target || state.selected?.includes(creature.id) === true;
+      const selected = creature.id === state.mutationFocus || creature.id === state.target || state.selected?.includes(creature.id) === true;
       const legal = state.stage === 'targeting' && state.targets.includes(creature.id);
-      figure.ring.setStrokeStyle(selected ? 3 : 1.5, selected || acting ? GOLD : EMBER, selected || legal || acting ? .95 : .15);
-      figure.image.setAlpha(creature.isAlive ? 1 : .20);
+      const focused = focus.has(creature.id) && !selected;
+      let ringColour = EMBER;
+      if (focused) ringColour = FOCUS.tint;
+      else if (selected || acting) ringColour = GOLD;
+      figure.ring.setStrokeStyle(selected || focused ? 3 : 1.5, ringColour, selected || legal || acting || focused ? .95 : .15);
+      // While targets are chosen, whatever cannot be targeted steps back; the caster stays in full. What the blue
+      // focus points at stands out the same way, a little less: the rest of the field stays readable.
+      const aside = state.stage === 'targeting' && !legal && !selected && !acting;
+      const unlit = focus.size > 0 && !focused && !selected && !acting;
+      let alpha = 1;
+      if (!creature.isAlive) alpha = .20;
+      else if ((state.mutationFocus && !selected) || aside) alpha = .52;
+      else if (unlit) alpha = .62;
+      figure.image.setAlpha(alpha);
+      figure.alive = creature.isAlive;
       figure.shadow.setAlpha(creature.isAlive ? .55 : .2);
       this.followCues(figure);
     }
+    // The acting creature carries a halo, whatever the stage: it says whose slot it is without a word.
+    const actor = state.creatures.find(one => one.id === state.actor && one.isAlive);
+    const lit = actor ? this.figures.get(actor.id) ?? null : null;
+    this.halo?.show(lit);
+    if ((lit?.id ?? null) !== this.haloId) { this.haloId = lit?.id ?? null; this.onHalo(this.haloId); }
+    this.lightFocus(state.creatures.filter(one => focus.has(one.id) && one.isAlive).map(one => one.id));
+    const standing = (state.dice ?? []).filter(die => this.figures.get(die.id)?.alive);
+    this.dice?.show(standing, id => this.figures.get(id) ?? null, this.time.now);
+    // `id:value:tone`, then the tie a roll-off broke and its place in it (`tie1:2`) or the face a crit needed (`14+`).
+    const diceShown = standing.map(die => [`${die.id}:${die.value}:${die.tone}`, die.group ? `tie${die.group}:${die.place}` : '', die.needed ? `${die.needed}+` : '']
+      .filter(Boolean).join(':')).join(' ');
+    if (diceShown !== this.diceShown) { this.diceShown = diceShown; this.onDice(diceShown); }
     if (changed && !reduced && state.stage === 'windup') this.windup();
     if (changed && state.stage === 'impact') {
       this.onImpact();
       if (!reduced) this.impact();
     }
     this.previous = state.stage;
+  }
+
+  revealMutations(ids: string[]) {
+    for (const id of ids) {
+      const figure = this.figures.get(id);
+      if (figure) this.burst(figure, GOLD, false);
+    }
   }
 
   private makeFigures() {
@@ -110,19 +208,95 @@ export class BattleScene extends Phaser.Scene {
       const image = this.add.image(0, 0, art.key).setFlipX(enemy);
       // Team identity remains in labels, formation and targeting; preserve the approved art palette.
       const cues = new MutationCues(this, creature.layers ?? [], creature.id, creature.form);
-      this.figures.set(creature.id, { image, shadow, ring, art, enemy, cues, form: creature.form, home: { x: 0, y: 0, size: 0, hitWidth: 0 } });
+      this.figures.set(creature.id, { id: creature.id, image, shadow, ring, art, enemy, cues, form: creature.form, alive: creature.isAlive,
+        wanted: null, effects: new CapstoneEffects(this, []), auras: new ConditionAuras(this), look: '', cueKey: '', home: { x: 0, y: 0, size: 0, hitWidth: 0 } });
     }
   }
 
+  // A creature's appearance: its ART-5 accents, the evolution illustration it resolved to and its capstone effects
+  // (ADR 0151). Only what changed is rebuilt; a change of illustration fades the old one out over the new one.
+  private dress(figure: Figure, creature: SceneCreature, animate: boolean) {
+    const effects = creature.evolution?.capstoneEffectIds ?? [];
+    const look = JSON.stringify([creature.form, creature.layers ?? [], creature.evolution?.artworkId ?? null, effects]);
+    if (look === figure.look) return;
+    figure.look = look;
+    const cueKey = JSON.stringify([creature.form, creature.layers ?? []]);
+    if (cueKey !== figure.cueKey) {
+      if (figure.cueKey) { figure.cues.destroy(); figure.cues = new MutationCues(this, creature.layers ?? [], creature.id, creature.form); }
+      figure.cueKey = cueKey;
+    }
+    figure.form = creature.form;
+    if (JSON.stringify(figure.effects.ids) !== JSON.stringify(effects)) { figure.effects.destroy(); figure.effects = new CapstoneEffects(this, effects); }
+    figure.wanted = creature.evolution?.artworkId ?? null;
+    this.showArt(figure, animate);
+  }
+
+  // The illustration the figure asked for once it is loaded; until then, or if it never loads, the audited sprite of
+  // its form, which is always there. Geometry follows whichever image is drawn, by its own silhouette.
+  private showArt(figure: Figure, animate: boolean) {
+    // The ancestral Stage 0 is the audited base sprite the scene loads at boot, the same drawing: fetching its
+    // re-encoded twin would add a cold download to every opening board for no change on screen.
+    const asked = figure.wanted ? EVOLUTION_REGISTRY.art(figure.wanted) : null;
+    const wanted = asked && asked.stage > 0 ? asked : null;
+    let art: Art;
+    if (wanted && this.textures.exists(wanted.key)) art = wanted;
+    else {
+      if (wanted && !this.failedArt.has(wanted.key)) this.request(wanted);
+      art = figureArt(figure.form, (key: string) => this.textures.exists(key));
+    }
+    if (art.key !== figure.image.texture.key) {
+      if (animate && !this.reduced && figure.image.visible) {
+        const old = figure.image;
+        const ghost = this.add.image(old.x, old.y, old.texture.key).setOrigin(old.originX, old.originY).setScale(old.scaleX, old.scaleY)
+          .setFlipX(old.flipX).setAlpha(old.alpha).setDepth(old.depth + .0001);
+        this.effects.push(ghost);
+        this.tweens.add({ targets: ghost, alpha: 0, duration: 420, ease: 'Sine.Out', onComplete: () => ghost.destroy() });
+      }
+      figure.image.setTexture(art.key);
+    }
+    figure.art = art;
+    this.onArtwork(figure.id, art === wanted ? wanted.id : `form:${art.form ?? figure.form}`);
+  }
+
+  private request(asset: NonNullable<ReturnType<typeof EVOLUTION_REGISTRY.art>>) {
+    if (this.loadingArt.has(asset.key)) return;
+    this.loadingArt.add(asset.key);
+    this.load.image(asset.key, `${this.assetRoot}${asset.file}`);
+    this.load.once(`filecomplete-image-${asset.key}`, () => {
+      this.loadingArt.delete(asset.key);
+      const waiting = [...this.figures.values()].filter(figure => figure.wanted === asset.id);
+      for (const figure of waiting) this.showArt(figure, true);
+      if (waiting.length) this.arrange();
+    });
+    if (!this.load.isLoading()) this.load.start();
+  }
+
+  // The framebuffer uses device pixels; all art, animation distances and DOM targets share CSS coordinates.
+  private fitCamera() {
+    const { clientWidth: width, clientHeight: height } = this.game.canvas;
+    if (!width || !height) return;
+    this.cameras.main.setSize(this.scale.width, this.scale.height)
+      .setZoom(this.scale.width / width, this.scale.height / height).centerOn(width / 2, height / 2);
+  }
+
   private arrange(resetPositions = false) {
-    const { width, height } = this.scale;
+    const { displayWidth: width, displayHeight: height } = this.cameras.main;
     if (this.backdrop) {
       const source = this.backdrop.texture.getSourceImage();
       const factor = Math.max(width / source.width, height / source.height);
       this.backdrop.setDisplaySize(source.width * factor, source.height * factor).setPosition(width / 2, -(source.height * factor - height) * .35);
+      this.horizon?.layout(width, height);
     }
-    if (!this.figures.size) return;
-    const positions = placements(width, height, this.state.creatures.filter(one => !one.enemy).length, this.state.creatures.filter(one => one.enemy).length);
+    if (!this.figures.size) {
+      this.upkeepMarkers.present(this.state?.upkeep, new Map(), this.reduced);
+      this.mutationReveal.present(undefined, new Map(), this.reduced);
+      return;
+    }
+    // A docked sheet (a mutation, the tempos, a spell) shortens a phone's board, but a phone held upright keeps its
+    // two rows: the opposing formations of a wide screen would stack the captions on each other.
+    const portraitDraft = width < 620 && matchMedia('(orientation: portrait)').matches;
+    const positions = placements(width, height, this.state.creatures.filter(one => !one.enemy).length,
+      this.state.creatures.filter(one => one.enemy).length, portraitDraft ? true : undefined);
     const inFlight = playing(this.state);
     for (const [index, creature] of this.state.creatures.entries()) {
       const figure = this.figures.get(creature.id)!;
@@ -137,6 +311,9 @@ export class BattleScene extends Phaser.Scene {
       figure.ring.setPosition(home.x, home.y).setDisplaySize(home.size * .80, Math.max(14, home.size * .13)).setDepth(home.y - .5);
     }
     for (const figure of this.figures.values()) this.followCues(figure);
+    const homes = new Map(this.state.creatures.map((one, i) => [one.id, positions[i]]));
+    this.upkeepMarkers.present(this.state.upkeep, homes, this.reduced);
+    this.mutationReveal.present(this.state.upkeep ? undefined : this.state.reveal, homes, this.reduced);
     this.onLayout(positions);
   }
 
@@ -179,10 +356,17 @@ export class BattleScene extends Phaser.Scene {
       const target = this.figures.get(id);
       if (!target) continue;
       const { dx, dy } = actor ? strikeApproach(actor.home, target.home) : { dx: 0, dy: 0 };
-      this.tweens.add({ targets: target.image, x: target.home.x + dx * 18, y: target.home.y + dy * 18, angle: dx * 5, yoyo: true, duration: 140 / this.rate, ease: 'Quad.Out' });
+      this.tweens.add({ targets: target.image, x: target.home.x + dx * 18, y: target.home.y + dy * 18, angle: dx * 5, yoyo: true, duration: 140 * MOTION_SCALE / this.rate, ease: 'Quad.Out' });
       this.burst(target, 0xffd995, true);
     }
-    if (struck.length) this.cameras.main.shake(160 / this.rate, .003);
+    if (struck.length) this.cameras.main.shake(160 * MOTION_SCALE / this.rate, .003);
+  }
+
+  // The silhouette as drawn now, wherever the action has carried the image: its foot and its visible size.
+  private body(figure: Figure) {
+    const [left, top, right, bottom] = figure.art.bounds;
+    return { footX: figure.image.x, footY: figure.image.y, width: (right - left) * figure.image.scaleX,
+      height: (bottom - top) * figure.image.scaleY, depth: figure.image.depth };
   }
 
   private anchor(figure: Figure): EffectAnchor {
@@ -214,11 +398,11 @@ export class BattleScene extends Phaser.Scene {
       if (!self && cue.visual.delivery === 'melee' && cue.struck.includes(id) && actor) {
         const { dx, dy } = strikeApproach(actor.home, target.home);
         this.tweens.add({ targets: target.image, x: target.home.x + dx * 12, y: target.home.y + dy * 12,
-          angle: dx * 4, yoyo: true, duration: 140 / this.rate, ease: 'Quad.Out' });
+          angle: dx * 4, yoyo: true, duration: 140 * MOTION_SCALE / this.rate, ease: 'Quad.Out' });
       }
     }
     if (cue.visual.family === 'physical' && cue.contact.some(id => cue.struck.includes(id))) {
-      this.cameras.main.shake(120 / this.rate, .0015);
+      this.cameras.main.shake(120 * MOTION_SCALE / this.rate, .0015);
     }
   }
 
@@ -227,13 +411,13 @@ export class BattleScene extends Phaser.Scene {
     const x = target.home.x; const y = target.home.y - visibleHeight * .5;
     const ring = this.add.circle(x, y, 12).setStrokeStyle(4, color).setDepth(2000);
     this.effects.push(ring);
-    this.tweens.add({ targets: ring, scale: 5, alpha: 0, duration: 360 / this.rate });
+    this.tweens.add({ targets: ring, scale: 5, alpha: 0, duration: 360 * MOTION_SCALE / this.rate });
     if (!sparks) return;
     for (let i = 0; i < 14; i++) {
       const angle = i * Math.PI * 2 / 14;
       const spark = this.add.rectangle(x, y, 4, 13, i % 2 ? color : 0xcd6d43).setRotation(angle).setDepth(2001);
       this.effects.push(spark);
-      this.tweens.add({ targets: spark, x: x + Math.cos(angle) * 85, y: y + Math.sin(angle) * 65, alpha: 0, duration: (280 + i * 15) / this.rate });
+      this.tweens.add({ targets: spark, x: x + Math.cos(angle) * 85, y: y + Math.sin(angle) * 65, alpha: 0, duration: (280 + i * 15) * MOTION_SCALE / this.rate });
     }
   }
 
@@ -250,17 +434,34 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
-  update(time: number) {
-    if (!this.state) return;
-    const idle = !this.reduced && !playing(this.state);
-    let index = 0;
-    for (const figure of this.figures.values()) {
-      if (idle) figure.image.y = figure.home.y + Math.sin(time / 800 + index * 1.7) * 2;
-      this.followCues(figure);
-      index++;
+  // The blue halos follow the focus: one per creature lit, the others hidden, so a tie being ordered lights them all.
+  private lightFocus(ids: string[]) {
+    for (const [id, halo] of this.focusHalos) if (!ids.includes(id)) halo.show(null);
+    for (const id of ids) {
+      const figure = this.figures.get(id);
+      if (!figure) continue;
+      let halo = this.focusHalos.get(id);
+      if (!halo) { halo = new ActingHalo(this, FOCUS); this.focusHalos.set(id, halo); }
+      halo.show(figure);
     }
-    const width = Math.max(1, this.scale.width);
-    const height = Math.max(1, this.scale.height);
+    const lit = ids.join(' ');
+    if (lit !== this.focusLit) { this.focusLit = lit; this.onFocus(lit); }
+  }
+
+  update(time: number, delta: number) {
+    if (!this.state) return;
+    this.horizon?.update(delta * this.rate);
+    this.halo?.follow(time, this.reduced);
+    for (const halo of this.focusHalos.values()) halo.follow(time, this.reduced);
+    this.dice?.follow(time, this.reduced);
+    // Creatures stand still between actions: only a played action moves them.
+    for (const figure of this.figures.values()) {
+      this.followCues(figure);
+      figure.effects.follow(figure.image, figure.alive && figure.image.visible, time, this.reduced);
+      figure.auras.follow(this.body(figure), figure.alive && figure.image.visible, time, this.reduced);
+    }
+    const width = Math.max(1, this.cameras.main.displayWidth);
+    const height = Math.max(1, this.cameras.main.displayHeight);
     const drift = this.reduced ? 0 : time * .007;
     this.motes.forEach((mote, i) => {
       mote.setPosition(wrap(i * 131 + drift, width), wrap(i * 73 - drift * .7, height));

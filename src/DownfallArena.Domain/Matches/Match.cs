@@ -313,6 +313,36 @@ public sealed class Match : AggregateRoot<MatchId>
         return Result.Success();
     }
 
+    /// <summary>
+    /// Ends the match now for the players who let their time to answer run out (ADR 0169): the other player wins, or
+    /// nobody does when both ran out. Like a concession, it is a fact about the players and not the board, so the
+    /// round it lands in is left where it was. Which players were asked and for how long is the table's to know.
+    /// </summary>
+    public Result TimeOut(IReadOnlyCollection<PlayerSlot> late)
+    {
+        ArgumentNullException.ThrowIfNull(late);
+        if (State != MatchState.InProgress)
+        {
+            return Result.Failure(MatchErrors.NotInProgress);
+        }
+
+        var player1 = late.Contains(PlayerSlot.Player1);
+        var player2 = late.Contains(PlayerSlot.Player2);
+        if (!player1 && !player2)
+        {
+            return Result.Failure(MatchErrors.NobodyTimedOut);
+        }
+
+        PlayerSlot? winner = (player1, player2) switch
+        {
+            (true, true) => null,
+            (true, false) => PlayerSlot.Player2,
+            _ => PlayerSlot.Player1,
+        };
+        End(ActiveRound, new MatchOutcome(winner, MatchEndReason.TimedOut));
+        return Result.Success();
+    }
+
     private Round ActiveRound =>
         CurrentRound ?? throw new InvalidOperationException($"Match {Id} has no round in progress.");
 

@@ -15,7 +15,7 @@ internal sealed record TableDecisionBody
     /// Which asking this answers, as the seat payload's <c>waitingAsked</c> gave it. A decision belongs to one
     /// question and to no other: two clients on one token can both validate against the options of the first
     /// of two same-shaped questions, and the slower of them would otherwise answer the second -- spending a
-    /// pick nobody meant to spend, or handing the driver a choice that is no longer legal.
+    /// pick nobody meant to spend, or handing the match a choice that is no longer legal.
     /// </summary>
     public long? Asked { get; init; }
 
@@ -36,6 +36,13 @@ internal sealed record TableDecisionBody
     public IReadOnlyList<int>? Order { get; init; }
 
     public bool Pass { get; init; }
+
+    /// <summary>
+    /// How long the page had this question in front of the player, by its own clock, from the first time it drew it
+    /// to the tap; none from a page that did not draw it (inventory question 3). The host keeps its own measure, and
+    /// reads this only when it lost it.
+    /// </summary>
+    public long? ElapsedMs { get; init; }
 
     /// <summary>
     /// The decision this body names, or the reason it names none. A body that does not parse is refused here

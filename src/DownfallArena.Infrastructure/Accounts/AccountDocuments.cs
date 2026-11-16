@@ -28,7 +28,10 @@ internal static class AccountDocuments
         return key.Length >= SessionKeyBytes ? key : throw new InvalidDataException($"The session key holds {key.Length} bytes; it takes {SessionKeyBytes}.");
     }
 
-    public static string AccountPath(AccountId id) => $"accounts/{id.Value}.json";
+    /// <summary>The prefix every account record is under, which a listing reads.</summary>
+    public const string AccountsPrefix = "accounts/";
+
+    public static string AccountPath(AccountId id) => $"{AccountsPrefix}{id.Value}.json";
 
     public static string SubjectPath(ExternalIdentity identity) =>
         $"by-subject/{identity.Provider}/{Convert.ToBase64String(Encoding.UTF8.GetBytes(identity.Subject)).TrimEnd('=').Replace('+', '-').Replace('/', '_')}.json";
@@ -36,7 +39,12 @@ internal static class AccountDocuments
     public static string NamePath(Username username) => $"by-name/{username.Key}.json";
 
     public static string Write(Account account) => JsonSerializer.Serialize(
-        new AccountRecord(account.Id.Value, account.Identity.Provider, account.Identity.Subject, account.Username.Value, account.CreatedAt, account.Generation),
+        new AccountRecord(account.Id.Value, account.Identity.Provider, account.Identity.Subject, account.Username.Value, account.CreatedAt, account.Generation)
+        {
+            Suspension = account.Suspension is { } suspension
+                ? new SuspensionRecord(suspension.Reason, suspension.By, suspension.At)
+                : null,
+        },
         Web);
 
     public static Account ReadAccount(string json)
@@ -47,7 +55,12 @@ internal static class AccountDocuments
             new ExternalIdentity(record.Provider, record.Subject),
             Username.Restore(record.Username),
             record.CreatedAt,
-            record.Generation);
+            record.Generation)
+        {
+            Suspension = record.Suspension is { } suspension
+                ? new AccountSuspension(suspension.Reason, suspension.By, suspension.At)
+                : null,
+        };
     }
 
     public static string Write(UsernameReservation reservation) =>
@@ -67,7 +80,13 @@ internal static class AccountDocuments
         return AccountId.Parse(record.Account);
     }
 
-    private sealed record AccountRecord(string Id, string Provider, string Subject, string Username, DateTimeOffset CreatedAt, int Generation);
+    // Suspension is missing from a record written before ADR 0178, and from every account in good standing.
+    private sealed record AccountRecord(string Id, string Provider, string Subject, string Username, DateTimeOffset CreatedAt, int Generation)
+    {
+        public SuspensionRecord? Suspension { get; init; }
+    }
+
+    private sealed record SuspensionRecord(string Reason, string By, DateTimeOffset At);
 
     private sealed record NameRecord(string Username, string Account, DateTimeOffset ReservedAt);
 

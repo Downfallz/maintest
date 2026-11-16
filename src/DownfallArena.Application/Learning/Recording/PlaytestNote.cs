@@ -53,6 +53,13 @@ public sealed record PlaytestNote
     /// </summary>
     public long? ElapsedMs { get; init; }
 
+    /// <summary>
+    /// For a <see cref="NoteKind.Decision" />: <c>page</c> when <see cref="ElapsedMs" /> is the page's own measure, from
+    /// drawing the question to the tap, because the host had lost its stamp (a deploy, a table picked up again);
+    /// none when the host timed it, which is every decision before this was kept.
+    /// </summary>
+    public string? TimedBy { get; init; }
+
     /// <summary>For a <see cref="NoteKind.Refused" />: the code of the <see cref="DomainError" /> returned.</summary>
     public string? Code { get; init; }
 
@@ -94,6 +101,9 @@ public sealed record PlaytestNote
     /// </remarks>
     public long? Asked { get; init; }
 
+    /// <summary>What <see cref="TimedBy" /> says of a decision the page timed.</summary>
+    public const string PageTimed = "page";
+
     /// <summary>
     /// A decision that was accepted, timed from when its options were served. The elapsed time is read off the
     /// same <paramref name="timeProvider" /> as <see cref="At" />, so a test that moves the clock moves both
@@ -110,7 +120,11 @@ public sealed record PlaytestNote
     /// clock read at this point would put engine time inside a duration that measures a person reading a
     /// screen, and would date the note after the thing it records.
     /// </param>
-    public static PlaytestNote Decision(NotePlace where, DateTimeOffset? servedAt, DateTimeOffset acceptedAt, long? asked)
+    /// <param name="pageElapsedMs">
+    /// How long the page says it had the question in front of the player, by its own clock: the measure when nothing
+    /// on the host can say when the options were served, and marked as the page's.
+    /// </param>
+    public static PlaytestNote Decision(NotePlace where, DateTimeOffset? servedAt, DateTimeOffset acceptedAt, long? asked, long? pageElapsedMs = null)
     {
         ArgumentNullException.ThrowIfNull(where);
 
@@ -126,7 +140,8 @@ public sealed record PlaytestNote
             Kind = NoteKind.Decision,
             // Never negative: a served moment in the future is a clock that moved, not a decision taken before
             // it was asked, and a negative duration in a dataset is worse than a zero.
-            ElapsedMs = servedAt is { } served ? (long)Math.Max(0, (at - served).TotalMilliseconds) : null,
+            ElapsedMs = servedAt is { } served ? (long)Math.Max(0, (at - served).TotalMilliseconds) : pageElapsedMs is >= 0 ? pageElapsedMs : null,
+            TimedBy = servedAt is null && pageElapsedMs is >= 0 ? PageTimed : null,
             Asked = asked,
         };
     }

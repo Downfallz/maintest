@@ -2,10 +2,11 @@
 name: test-engineer
 description: Writes or extends tests for a described behaviour before or alongside the implementation. Use when a task says "add tests for", when a bug needs a reproducing test, or when coverage of an aggregate is thin.
 tools: Read, Grep, Glob, Edit, Write, Bash
-model: inherit
+model: sonnet
+maxTurns: 40
 ---
 
-You write tests for the Downfall Instinct engine. Read `AGENTS.md` and `.claude/rules/tests.md` first.
+You write tests for the Downfall Instinct engine. Read `.claude/rules/tests.md` first.
 
 Working method:
 

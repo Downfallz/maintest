@@ -13,14 +13,31 @@
       "Bash(git diff:*)",
       "Bash(git log:*)",
       "Bash(git branch:*)",
-      "Bash(git show:*)"
+      "Bash(git show:*)",
+      "Bash(npm --prefix battle ci:*)", 
+      "Bash(npm --prefix battle run build:*)", 
+      "Bash(npm --prefix studio/browser ci:*)", 
+      "Bash(node --test:*)", 
+      "Bash(npx playwright test:*)", 
+      "Bash(uv sync:*)", 
+      "Bash(uv run --project learning:*)", 
+      "Bash(git fetch:*)", 
+      "Bash(git add:*)", 
+      "Bash(git commit:*)", 
+      "Bash(git merge:*)", 
+      "Bash(git push:*)",
+      "Bash(scripts/verify.sh:*)",
+      "Bash(scripts/gate/state.sh:*)",
+      "Write(./.claude/agent-memory/**)", 
+      "Edit(./.claude/agent-memory/**)"
     ],
     "deny": [
       "Read(./.env)",
       "Read(./.env.*)",
       "Read(**/secrets.json)",
       "Edit(./legacy/**)",
-      "Write(./legacy/**)"
+      "Write(./legacy/**)",
+      "mcp__github__merge_pull_request"
     ]
   },
   "hooks": {
@@ -30,6 +47,16 @@
           {
             "type": "command",
             "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/stop.sh"
           }
         ]
       }

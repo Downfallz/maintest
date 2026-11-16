@@ -33,12 +33,16 @@ const effects = values => Array.isArray(values) ? values.map(effectText).join(',
 function rowsFor(guide, selected, legal, names, critical) {
   const rows = selected.filter(id => legal.candidates.includes(id)).map(id => {
     const row = guide.targets?.find(one => one.target === id);
-    return { target: id, plain: effects(row?.plain), critical: critical === 0 ? '' : effects(row?.critical) };
+    return { target: id, plain: effects(row?.plain), critical: critical === 0 ? '' : effects(row?.critical),
+      // The host's outcomes themselves, which the preview draws as the field's effect chips.
+      plainEffects: Array.isArray(row?.plain) ? row.plain : null, criticalEffects: critical === 0 || !Array.isArray(row?.critical) ? [] : row.critical };
   });
-  return groupTargetLines(rows).map(group => ({
-    name: group.targets.map(id => names.get(id) ?? `Creature ${id}`).join(', '),
-    plain: group.plain, critical: group.critical === group.plain ? '' : group.critical,
-  }));
+  return groupTargetLines(rows).map(group => {
+    const first = rows.find(row => row.target === group.targets[0]);
+    const same = group.critical === group.plain;
+    return { name: group.targets.map(id => names.get(id) ?? `Creature ${id}`).join(', '),
+      plain: group.plain, critical: same ? '' : group.critical, plainEffects: first.plainEffects, criticalEffects: same ? [] : first.criticalEffects };
+  });
 }
 function targetNote(model) {
   if (!model.target) return 'Targets are chosen when this hidden spell resolves. Earlier actions can change this estimate.';
@@ -56,16 +60,20 @@ export function battleTargetPreview(model) {
   const guide = model.reference.guidance.find(one => one.spell === spell);
   const note = targetNote(model);
   const base = { spell, cost: 'Cost preview unavailable', reason: '', critical: '', note, rows: [], caster: '',
+    costValue: null, energyAfter: null, critChance: null, casterEffects: [],
     caveat: 'Estimate before caps and stacking. Rolls can change outcomes; History records the actual result.' };
   if (!guide) return { ...base, reason: 'Preview unavailable for this question.' };
   const cost = Number.isFinite(guide.cost) && Number.isFinite(guide.energyAfterCost)
     ? `${guide.cost} energy → ${guide.energyAfterCost} after cost` : base.cost;
-  if (guide.unavailableReason) return { ...base, cost, reason: guide.unavailableReason };
+  const costs = { costValue: Number.isFinite(guide.cost) ? guide.cost : null, energyAfter: Number.isFinite(guide.energyAfterCost) ? guide.energyAfterCost : null };
+  if (guide.unavailableReason) return { ...base, ...costs, cost, reason: guide.unavailableReason };
   const critical = criticalChance(guide, model.reference.tempo);
   const names = new Map((model.reference.creatures ?? []).map(one => [one.id, one.name]));
   const rows = model.target && !model.emptyCast ? rowsFor(guide, model.picked, model.target.legalTargets, names, critical) : [];
   let caster = '';
   if (!model.emptyCast && guide.casterEffects?.length) caster = `On caster, once: ${guide.casterEffects.map(effectText).join(', ')}`;
   else if (model.target?.legalTargets.maxTargets === 0) caster = Array.isArray(guide.casterEffects) ? 'No effect on caster.' : 'Caster preview unavailable.';
-  return { ...base, cost, rows, caster, critical: Number.isFinite(critical) ? `${chance(critical)} critical at this tempo` : 'Critical chance unavailable for this tempo' };
+  return { ...base, ...costs, cost, rows, caster, critChance: Number.isFinite(critical) ? critical : null,
+    casterEffects: !model.emptyCast && Array.isArray(guide.casterEffects) ? guide.casterEffects : [],
+    critical: Number.isFinite(critical) ? `${chance(critical)} critical at this tempo` : 'Critical chance unavailable for this tempo' };
 }

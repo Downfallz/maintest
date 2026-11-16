@@ -5,6 +5,8 @@ import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
 import { createServer } from 'node:net';
+import { classicTable, archivedTable } from './classic-table-fixture.js';
+test.beforeEach(classicTable);
 
 // A host with push keys offers "your turn" on the phone (ADR 0118): the page registers the worker, asks the
 // host for its key, and shows the one button. The browser here has no push service to subscribe with, so the
@@ -100,7 +102,6 @@ test('a seat page on a host with keys registers the worker and offers the notice
   await page.locator('#settings').click();
   await expect(page.locator('#notices-toggle')).toHaveText(/Notify me when it's my turn|Notifications are blocked|Stop notifying me/);
   await expect(page.locator('#notices-problem')).toBeEmpty();
-  await expect(page.locator('#playtest-open')).toBeHidden();
   // An already opted-in endpoint may be rebound; subscriptions/test requests are never automatic.
   expect(battleWrites.every(method => method === 'PUT')).toBe(true);
 

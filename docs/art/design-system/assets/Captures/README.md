@@ -1,0 +1,1 @@
+Reference captures of the player lobby after the bone-and-soot pass (ADR 0158), desktop and phone: a local host, a made-up player name and one game against a bot. They show the branding, not a live multiplayer match.

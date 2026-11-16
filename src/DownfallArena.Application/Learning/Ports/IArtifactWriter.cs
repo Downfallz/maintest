@@ -9,6 +9,14 @@ public interface IArtifactWriter
     /// <summary>Writes one JSON document, replacing any previous one at that path.</summary>
     Task WriteJsonAsync<TValue>(string relativePath, TValue value, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Writes a document only if it is still the content read under <paramref name="expected" /> -- or, with
+    /// none, only if there is no document yet. Two writers that read the same content cannot both write after
+    /// it: the second is refused and reads again.
+    /// </summary>
+    /// <returns>The tag of what was written, or none when the document had moved.</returns>
+    Task<string?> WriteJsonIfAsync<TValue>(string relativePath, TValue value, string? expected, CancellationToken cancellationToken = default);
+
     /// <summary>Creates the JSON lines file at that path empty, replacing any previous one.</summary>
     Task StartJsonLinesAsync(string relativePath, CancellationToken cancellationToken = default);
 

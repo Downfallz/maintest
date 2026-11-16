@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { OPERATOR_KEY, adminTransport, declarationToShow, declarations, defaultFormat, defaultOpponent, deletionSaid, filenameOf, filterSessions, formatToShow, formats, openAsked, operatorToken, pageOf, said, seatable, sessionRows, signInNeeded, tableRows } from './admin.js';
+import { OPERATOR_KEY, adminTransport, declarationToShow, declarations, defaultFormat, defaultOpponent, deletionSaid, filenameOf, filterSessions, formatToShow, formats, openAsked, operatorToken, pageOf, said, seatable, sessionRows, signInNeeded, tableRows, tabOf, pagerLine, ADMIN_TABS } from './admin.js';
 
 function answering(status, body, seen = []) {
   return async (path, options) => {
@@ -89,6 +89,14 @@ test('a taken seat of a table being played offers a new invitation, and nothing 
   assert.equal(rows[0].seats[1].reinvite, null, 'a seat still offered has its code already');
   assert.equal(rows[0].seats[2].reinvite, null, "a bot's seat has nobody to invite");
   assert.equal(rows[1].seats[0].reinvite, null, 'a finished table has no seat left to come back to');
+});
+
+test('a bot a level seats is named with its level beside its own name, for the operator alone', () => {
+  const rows = tableRows({ tables: [{ id: 'a', seats: [{ slot: 'player1', seated: 'human:mk' }, { slot: 'player2', seated: 'lookahead-55', level: 'Hard' }] }] });
+
+  assert.equal(rows[0].seats[0].seated, 'human:mk');
+  assert.equal(rows[0].seats[1].seated, 'lookahead-55 · Hard');
+  assert.equal(seatable({ agents: [{ value: 'greedy', label: 'Greedy', level: 'Medium' }] })[1].label, 'Greedy · Medium');
 });
 
 test('an empty or missing list draws nothing', () => {
@@ -348,4 +356,36 @@ test('a finished table offers its replay beside its viewer link, and a table bei
   ] });
 
   assert.deepEqual(rows.map(row => [row.session, row.replay]), [['/session/done', '/play?replay=done'], [null, null]]);
+});
+
+test('the headquarters open the section the address names, and the Overview for any other', () => {
+  assert.deepEqual([...ADMIN_TABS], ['overview', 'tables', 'sessions', 'scenarios', 'players', 'jobs', 'activity', 'settings']);
+  assert.equal(tabOf('#sessions'), 'sessions');
+  assert.equal(tabOf('sessions'), 'sessions');
+  assert.equal(tabOf('#players'), 'players');
+  assert.equal(tabOf('#jobs'), 'jobs');
+  assert.equal(tabOf('#settings'), 'settings');
+  assert.equal(tabOf('#tables'), 'tables');
+  assert.equal(tabOf('#activity'), 'activity');
+  assert.equal(tabOf('#nothing'), 'overview');
+  assert.equal(tabOf(''), 'overview');
+  assert.equal(tabOf(undefined), 'overview');
+});
+
+test('a pager says how many it shows of how many and which page, in the singular for one', () => {
+  assert.equal(pagerLine(25, 25, { page: 1, pages: 2 }, 'table'), '25 tables · page 2 of 2');
+  assert.equal(pagerLine(1, 1, { page: 0, pages: 1 }, 'table'), '1 table · page 1 of 1');
+  assert.equal(pagerLine(3, 25, { page: 0, pages: 1 }, 'session'), '3 of 25 sessions · page 1 of 1');
+});
+
+test('a session says whether it is void, and under what, and whether it can be voided', () => {
+  const [voided, open] = sessionRows({ sessions: [
+    { id: 'v', player1: 'human:mk', player2: 'Greedy', over: true, voided: 'abuse', voidable: false },
+    { id: 'o', player1: 'human:mk', player2: 'Greedy', over: false, voidable: true },
+  ] });
+
+  assert.equal(voided.state, 'void: a player abused the game');
+  assert.equal(voided.voidable, false);
+  assert.equal(open.voidable, true);
+  assert.equal(open.voided, null);
 });

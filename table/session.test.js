@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { forget, heldSeats, isOperator, keeps, OPERATOR_KEY, operatorToken, playPath, replayOf, resumeTokens, seatsFromLocation, selectTableSeats, tableFromLocation } from './session.js';
+import { forget, heldSeats, isOperator, keeps, OPERATOR_KEY, operatorToken, playPath, replayMessage, replayOf, resumeTokens, seatsFromLocation, selectTableSeats, tableFromLocation } from './session.js';
 
 // What a browser's localStorage is, for the three lines of it this page uses.
 function storage(initial = {}) {
@@ -157,4 +157,12 @@ test('a replay link names its session and the seat it is seen from, Player 1 unl
   assert.deepEqual(replayOf('?replay=x&seat=player2'), { id: 'x', seat: 'player2' });
   assert.deepEqual(replayOf('?replay=x&seat=anyone'), { id: 'x', seat: 'player1' });
   assert.equal(replayOf('?player1=token'), null);
+});
+
+test('a refused replay asks a signed-out player to sign in, tells anybody else it is not theirs, and sends the operator back to the panel', () => {
+  assert.deepEqual([replayMessage('signin', false).link, replayMessage('signin', false).label], ['signin', 'Sign in']);
+  assert.equal(replayMessage('revoked', false).title, 'This match is not one of yours');
+  assert.equal(replayMessage('revoked', false).link, '/');
+  assert.equal(replayMessage('revoked', true).link, '/admin');
+  assert.equal(replayMessage('signin', true).title, 'This recording needs the operator');
 });

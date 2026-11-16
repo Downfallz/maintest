@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1519">
+  <title>Downfall Instinct · Offline</title>
+  <style>
+    :root { color-scheme: dark; --bone: #e8dfcc; --soot: #0b1519; --ember: #c9a45c; }
+    body { margin: 0; min-height: 100dvh; display: grid; place-items: center; background: var(--soot); color: var(--bone);
+      font: 16px/1.5 system-ui, sans-serif; text-align: center; padding: 16px; box-sizing: border-box; }
+    main { max-width: 26rem; }
+    h1 { font-size: 1.4rem; letter-spacing: .08em; margin: 0 0 .5rem; }
+    p { margin: 0 0 1rem; opacity: .85; }
+    button { font: inherit; color: var(--soot); background: var(--ember); border: 0; padding: .7rem 1.4rem; min-height: 44px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>DOWNFALL INSTINCT</h1>
+    <p id="offline-reason">The table cannot be reached right now. Your games are kept: they pick up where they stopped.</p>
+    <p id="offline-state" role="status">Waiting for the network…</p>
+    <button id="offline-retry" type="button">Try again</button>
+  </main>
+  <script>
+    // Shown by the service worker when a page could not be loaded (ADR 0166). It goes back to the page asked for as
+    // soon as the network is back, or when the player asks.
+    const retry = () => { document.getElementById('offline-state').textContent = 'Reconnecting…'; location.reload(); };
+    document.getElementById('offline-retry').addEventListener('click', retry);
+    addEventListener('online', retry);
+  </script>
+</body>
+</html>

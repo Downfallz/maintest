@@ -71,6 +71,7 @@ public sealed class ApplicationServiceCollectionExtensionsTests
         provider.GetRequiredService<IQueryHandler<GetBoardStateForPlayer, Result<PlayerBoardState>>>().ShouldBeOfType<GetBoardStateForPlayerHandler>();
         provider.GetRequiredService<IQueryHandler<GetPlayerOptions, Result<PlayerOptions>>>().ShouldBeOfType<GetPlayerOptionsHandler>();
         provider.GetRequiredService<MatchDriver>().ShouldNotBeNull();
+        provider.GetRequiredService<MatchStepper>().ShouldNotBeNull();
         provider.GetRequiredService<RandomAgent>().ShouldNotBeNull();
         provider.GetRequiredService<BatchRunner>().ShouldNotBeNull();
     }

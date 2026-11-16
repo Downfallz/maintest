@@ -1,6 +1,7 @@
 using System.Net;
 using DownfallArena.Cli.Hosting;
 using DownfallArena.Cli.Studio;
+using DownfallArena.Infrastructure.Learning;
 
 namespace DownfallArena.Cli.Table;
 
@@ -40,11 +41,12 @@ internal sealed class TableServer : IDisposable
     private readonly TimeProvider _clock;
     private readonly AccountApi? _accounts;
     private readonly LeaderboardApi? _leaderboard;
+    private readonly StatsApi? _stats;
     private readonly FriendsApi? _friends;
 
     /// <param name="accounts">The players' sign-in (ADR 0122), or none for a host with accounts off.</param>
     /// <param name="stored">The host's store, read for a session page whose table this process no longer has; none for a host that records nothing.</param>
-    public TableServer(string address, int port, TableRegistry registry, TableFiles files, AdminApi admin, TimeProvider clock, StoredSessions? stored = null, AccountApi? accounts = null, LeaderboardApi? leaderboard = null, FriendsApi? friends = null)
+    public TableServer(string address, int port, TableRegistry registry, TableFiles files, AdminApi admin, TimeProvider clock, StoredSessions? stored = null, AccountApi? accounts = null, LeaderboardApi? leaderboard = null, FriendsApi? friends = null, StatsApi? stats = null)
     {
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(files);
@@ -59,10 +61,23 @@ internal sealed class TableServer : IDisposable
         _accounts = accounts;
         _friends = friends;
         _leaderboard = leaderboard;
+        _stats = stats;
         _host = new HttpHost(address, port, AnswerAsync);
     }
 
     public string Url => _host.Url;
+
+    /// <summary>
+    /// Whether a job tends this host's tables (ADR 0162, <c>--tended</c>): a request then lets go of the tables this
+    /// process holds that nobody is at, and leaves closing the ones that never began to the job.
+    /// </summary>
+    public bool Tended { get; init; }
+
+    /// <summary>A player's side of the match scenarios (ADR 0179), on a host that keeps them and signs players in.</summary>
+    public ScenariosApi? Scenarios { get; init; }
+
+    /// <summary>The scenarios being practised in this process, found by their seats' tokens.</summary>
+    public ScenarioPractices? Practices { get; init; }
 
     /// <summary>
     /// Whether the host is still rebuilding the tables an earlier host left open (ADR 0091). It serves from the
@@ -97,11 +112,19 @@ internal sealed class TableServer : IDisposable
     /// </remarks>
     private async Task<StudioResponse> SessionPageAsync(string id)
     {
-        if (_registry.ById(id) is not { } table)
+        if (_registry.Held(id) is not { } table)
         {
-            // A table still being rebuilt is a match under way, and its stored trace holds both seats' boards: it
-            // is served once the host either holds it (and refuses it until it ends) or has given up on it.
-            return Starting ? StartingUp() : await StoredSessionPageAsync(id);
+            // A table nobody holds here is read off the store, unless its record says it is still open: its stored
+            // trace holds both seats' boards, and it is served once the table ends. Picking it up only to refuse
+            // the page would replay a match for nothing.
+            if (Starting)
+            {
+                return StartingUp();
+            }
+
+            return await StillOpenAsync(id)
+                ? StudioResponse.OfPlainText(409, "The session is still being played. Its trace carries both seats' boards, so it is served once the match has an outcome.")
+                : await StoredSessionPageAsync(id);
         }
 
         // Somebody reading the session is somebody at the table: the hour a finished table is kept for is
@@ -144,6 +167,24 @@ internal sealed class TableServer : IDisposable
     /// here -- there is no match in memory to leak a seat of -- so what the store has is what is shown, a
     /// partial trace included.
     /// </summary>
+    /// <summary>Whether a run's record says its table is open, or cannot be read to say it is not.</summary>
+    private async Task<bool> StillOpenAsync(string id)
+    {
+        if (_stored is not { } stored || !TableKeys.IsTableId(id))
+        {
+            return false;
+        }
+
+        try
+        {
+            return await stored.RecordAsync(id) is { Status: TableRecord.Open };
+        }
+        catch (Exception failure) when (TableLoader.Refuses(failure) || TableRegistry.StoreFails(failure))
+        {
+            return true;
+        }
+    }
+
     private async Task<StudioResponse> StoredSessionPageAsync(string id)
     {
         if (_stored is not { } stored || id.Length == 0 || id.Contains('/', StringComparison.Ordinal) || id.Contains('\\', StringComparison.Ordinal) || id == "." || id == "..")
@@ -174,13 +215,13 @@ internal sealed class TableServer : IDisposable
 
         if (JoinCodes.Names(path))
         {
-            return _registry.Codes.Answer(path);
+            return await _registry.AnswerAsync(path);
         }
 
         // Old seat links keep working; an ordinary visit opens the player lobby.
         if (path == "/" && request.Url?.Query is not { Length: > 0 })
         {
-            return _files.Get("/lobby");
+            return _files.Get("/lobby", request.Headers["If-None-Match"], request.Headers["Accept-Encoding"]);
         }
 
         // Bookmarks and invitations can carry seat capabilities in their query string.
@@ -194,12 +235,12 @@ internal sealed class TableServer : IDisposable
         {
             return request.Url?.Query.Contains("token=", StringComparison.Ordinal) == true
                 ? StudioResponse.OfRedirect(AdminApi.Page + request.Url.Query)
-                : _files.Get("/lobby");
+                : _files.Get("/lobby", request.Headers["If-None-Match"], request.Headers["Accept-Encoding"]);
         }
 
         if (!path.StartsWith("/api/", StringComparison.Ordinal) && !path.StartsWith(SessionPrefix, StringComparison.Ordinal))
         {
-            return _files.Get(path);
+            return _files.Get(path, request.Headers["If-None-Match"], request.Headers["Accept-Encoding"]);
         }
 
         // Both the API and the session page go behind the same-origin fence. The session page especially: it
@@ -218,9 +259,11 @@ internal sealed class TableServer : IDisposable
         }
 
         // A host whose admin panel nobody opens still lets go of finished tables nobody reads and of tables
-        // that never began and nobody came to (ADR 0115): any request may sweep, once a minute at most.
+        // that never began and nobody came to (ADR 0115): any request may sweep, once a minute at most. On a host
+        // a job tends, the job closes the tables that never began, and a request lets go of what this process
+        // holds and nothing else (ADR 0162).
         var now = _clock.GetUtcNow();
-        foreach (var gone in _registry.SweepIfDue(now))
+        foreach (var gone in Tended ? _registry.LetGoOfIdleIfDue(now) : await _registry.SweepIfDueAsync(now))
         {
             Console.WriteLine($"  Session {gone} let go of: finished and unread, or never begun and nobody came.");
         }
@@ -247,6 +290,20 @@ internal sealed class TableServer : IDisposable
                 : await _leaderboard.HandleAsync(method, account);
         }
 
+        if (StatsApi.Names(path))
+        {
+            return _stats is null
+                ? StudioResponse.OfPlainText(404, "This host keeps no statistics: players do not sign in here (--accounts off).")
+                : await _stats.HandleAsync(method, account);
+        }
+
+        if (ScenariosApi.Names(path))
+        {
+            return Scenarios is null
+                ? StudioResponse.OfPlainText(404, "This host keeps no scenarios to practise: it records nothing, or players do not sign in here.")
+                : await Scenarios.HandleAsync(method, path, account);
+        }
+
         var token = request.Headers[TableApi.TokenHeader];
 
         // A seat's own lobby routes find their seat by its token, and a token whose table is still being rebuilt
@@ -258,16 +315,32 @@ internal sealed class TableServer : IDisposable
 
         if (AdminApi.Names(path))
         {
-            return await _admin.HandleAsync(method, path, body, token, request.Headers[OperatorGate.PrincipalHeader], account);
+            return await _admin.HandleAsync(method, path, body, token, request.Headers[OperatorGate.PrincipalHeader], account, request.Url?.Query);
+        }
+
+        // A scenario's practice (ADR 0179) is found by its seat's token too, in this process's memory, and answers only
+        // the account that opened it: it is in no index and no store for another request to find.
+        if (Practices?.ByToken(token) is { } practice)
+        {
+            return _accounts is not null && (await _accounts.WhoAsync(account))?.Account.Id.ToString() == practice.Account
+                ? await practice.Play.Api.HandleAsync(method, path, body, token, request.Headers["If-None-Match"], request.Url?.Query)
+                : StudioResponse.OfPlainText(403, "This practice is another account's.");
         }
 
         // The token says which table, and the table's own API says the rest. A token no table holds is
         // answered as a missing one: which half of it was wrong is not information a stranger is given.
-        if (_registry.ByToken(token) is not { } table)
+        if (await _registry.ByTokenAsync(token) is not { } table)
         {
             if (Starting && !string.IsNullOrEmpty(token))
             {
                 return StartingUp();
+            }
+
+            // A seat of a void match is told why its match ended (ADR 0163), not shown a seat it lost: as JSON, so the
+            // operator's explanation (ADR 0176) reaches the page as the words they wrote, whatever those are.
+            if (await _registry.VoidSeatAsync(token) is { } voided)
+            {
+                return StudioResponse.OfJson(new { error = "Table.Void", message = voided }, ArtifactJson.LineOptions, status: 410);
             }
 
             return StudioResponse.OfPlainText(403, $"Every request carries the seat's own '{TableApi.TokenHeader}'.");
@@ -279,7 +352,7 @@ internal sealed class TableServer : IDisposable
         }
 
         table.Touch(now);
-        await _admin.Lobby.SeatReachedAsync(table, token);
+        await LobbyApi.SeatReachedAsync(table, token);
         return await table.Api.HandleAsync(method, path, body, token, request.Headers["If-None-Match"], request.Url?.Query);
     }
 
@@ -308,7 +381,7 @@ internal sealed class TableServer : IDisposable
         }
 
         // A finished table is only read now, and a seat nobody owned stays nobody's.
-        if (seat.Account is null && (table.IsOver || await _admin.Lobby.BindAsync(table, seat, player.Account.Id)))
+        if (seat.Account is null && (table.IsOver || await LobbyApi.BindAsync(table, seat, player.Account.Id)))
         {
             return null;
         }

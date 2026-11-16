@@ -690,9 +690,9 @@ function renderDetail() {
     parts.push(element('div', { className: 'banner error', textContent: `${item.path}: ${item.problem}` }));
   }
 
-  if (state.tab === 'spells') parts.push(spellEditor(), usedBy(item));
-  if (state.tab === 'creatures') parts.push(creatureEditor());
-  if (state.tab === 'talentTrees') parts.push(treeEditor());
+  if (state.tab === 'spells') parts.push(spellEditor(state.draft), usedBy(item));
+  if (state.tab === 'creatures') parts.push(creatureEditor(state.draft));
+  if (state.tab === 'talentTrees') parts.push(treeEditor(state.draft));
   if (state.tab === 'tiers') parts.push(tierEditor(), usedByTier(item));
 
   view.replaceChildren(...parts);
@@ -755,8 +755,7 @@ function pill(value, unit) {
   return element('span', { className: 'pill' }, [element('b', { textContent: String(value ?? '?') }), ` ${unit}`]);
 }
 
-function spellEditor() {
-  const draft = state.draft;
+function spellEditor(draft) {
   draft.targeting = draft.targeting || { origin: 'Enemy', scope: 'SingleTarget' };
   const card = element('div', { className: 'card' }, [element('h3', { textContent: 'Spell' })]);
   card.append(fields([
@@ -781,7 +780,7 @@ function spellEditor() {
   const effects = element('div', { className: 'card' }, [element('h3', { textContent: 'Effects' })]);
   const list = element('div');
   const redraw = () => {
-    list.replaceChildren(...(draft.effects || []).map((effect, index) => effectRow(effect, index, redraw)));
+    list.replaceChildren(...(draft.effects || []).map((effect, index) => effectRow(draft, effect, index, redraw)));
     list.append(element('div', { className: 'row' }, [
       miniButton('Add effect', () => {
         draft.effects = [...(draft.effects || []), { kind: 'Damage', amount: 1 }];
@@ -802,7 +801,7 @@ function spellEditor() {
   ]);
   const casterList = element('div');
   const redrawCaster = () => {
-    casterList.replaceChildren(...(draft.casterEffects || []).map((effect, index) => effectRow(effect, index, redrawCaster, 'casterEffects')));
+    casterList.replaceChildren(...(draft.casterEffects || []).map((effect, index) => effectRow(draft, effect, index, redrawCaster, 'casterEffects')));
     casterList.append(element('div', { className: 'row' }, [
       miniButton('Add caster effect', () => {
         draft.casterEffects = [...(draft.casterEffects || []), { kind: 'Heal', amount: 1 }];
@@ -863,8 +862,7 @@ function normalizeTargeting() {
   renderDetail();
 }
 
-function effectRow(effect, index, redraw, field = 'effects') {
-  const draft = state.draft;
+function effectRow(draft, effect, index, redraw, field = 'effects') {
   const shape = EFFECTS[effect.kind] || { amounts: [] };
   const row = element('div', { className: 'row' });
 
@@ -920,8 +918,7 @@ function defaultEffect(kind) {
   return effect;
 }
 
-function creatureEditor() {
-  const draft = state.draft;
+function creatureEditor(draft) {
   const trees = documentsOf('talentTrees');
   const treeIds = trees.map(tree => tree.id);
   const card = element('div', { className: 'card' }, [element('h3', { textContent: 'Creature' })]);
@@ -1074,8 +1071,7 @@ function refreshTierWarnings() {
 
 // ---------- the talent tree ----------
 
-function treeEditor() {
-  const draft = state.draft;
+function treeEditor(draft) {
   draft.root = draft.root || emptyNode('Root', 'Root');
   const identity = element('div', { className: 'card' }, [
     element('h3', { textContent: 'Talent tree' }),
@@ -2150,6 +2146,8 @@ function problemKey(problem) {
 
 async function save() {
   const item = state.selected;
+  if (!item) return;
+
   const knobs = balancePart();
   if (!knobs) return;
 
@@ -2749,7 +2747,7 @@ async function loadAudit() {
   const result = await act('Auditing the content', () => backend.audit());
   if (!result) return;
   state.audit = result;
-  renderAudit();
+  renderAudit(result);
   clearBanner();
 }
 
@@ -2811,8 +2809,7 @@ function selectSpell(id) {
   if (spell) select(spell.path);
 }
 
-function renderAudit() {
-  const result = state.audit;
+function renderAudit(result) {
   $('audit-body').replaceChildren(auditSummary(result), auditFindings(result.audit.findings), auditReach(result.audit.reach));
 }
 

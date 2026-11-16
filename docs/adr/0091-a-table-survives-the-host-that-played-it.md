@@ -2,7 +2,9 @@
 
 Date: 2026-10-02
 
-Status: Accepted. Amends [0080](0080-host-the-table-on-azure-container-apps.md) and [0081](0081-a-host-of-tables-found-by-their-tokens.md)
+Status: Superseded by [0159](0159-advance-a-table-by-submitted-decisions-over-its-journal.md). Amended
+[0080](0080-host-the-table-on-azure-container-apps.md) and [0081](0081-a-host-of-tables-found-by-their-tokens.md).
+The host still rebuilds a table this way at start until ADR 0159's phases 3 and 4 land.
 
 ## Context
 

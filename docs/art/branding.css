@@ -1,4 +1,13 @@
 /* Official UI palette. See docs/art/branding.md. */
+/* The display face (ADR 0158). Only the table's host serves the file; a page opened elsewhere falls back to the
+   serif named after it in --font-display. */
+@font-face {
+  font-family: "Marcellus";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/marcellus-latin-400.woff2') format('woff2');
+}
 :root {
   color-scheme: dark;
   --brand-slate: #0b1519;
@@ -12,6 +21,9 @@
   --brand-ember: #d39c85;
   --brand-wash: #352e25;
   --brand-on-accent: #0b1519;
+  --brand-soot: #070d10;
+  --brand-bone: #d8c7a7;
+  --brand-line-soft: #2a3a41;
   --ink: var(--brand-ivory);
   --muted: var(--brand-muted);
   --paper: var(--brand-slate);
@@ -26,6 +38,20 @@
   --accent-ink: var(--brand-on-accent);
   --accent-wash: var(--brand-wash);
   --accent-strong: var(--brand-gold-bright);
+  --soot: var(--brand-soot);
+  --bone: var(--brand-bone);
+  --line-soft: var(--brand-line-soft);
+  /* Bone and soot (ADR 0158): carved capitals for titles, sharp corners, one cut corner on what matters. */
+  --font-display: "Marcellus", "Trajan Pro", Georgia, serif;
+  --font-text: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --radius-sharp: 2px;
+  --radius-soft: 3px;
+  --cut: 12px;
+  /* Bone grain and soot smudges, drawn by the browser from two small SVG filters: no image to serve. */
+  --tex-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .85 0 0 0 0 .78 0 0 0 0 .65 0 0 0 .17 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E");
+  --tex-soot: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='700' height='700'%3E%3Cfilter id='s' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.008' numOctaves='4' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .01 0 0 0 0 .02 0 0 0 0 .03 2.4 0 0 0 -.95'/%3E%3C/filter%3E%3Crect width='700' height='700' filter='url(%23s)'/%3E%3C/svg%3E");
+  /* The rule under a title: the rune, then a bone hairline that fades out. */
+  --tex-rule: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='104 30 282 440'%3E%3Cg fill='%23d8c7a7'%3E%3Cpath d='M119 170 254 41 209 145 371 241 319 300 280 269 291 258Z'/%3E%3Cpath d='M164 215 304 307 244 338 299 373 267 459 171 341 231 277Z'/%3E%3C/g%3E%3C/svg%3E");
   /* Semantic colours are independent of the brand accents. */
   --ally: #96ccb0;
   --enemy: #e3a29a;

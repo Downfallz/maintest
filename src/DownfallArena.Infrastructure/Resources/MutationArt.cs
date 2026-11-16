@@ -30,6 +30,9 @@ public sealed class MutationArt
     public static readonly IReadOnlyList<string> Motifs =
         ["fissures", "plates", "crown", "talons", "fangs", "glands", "shards", "souls", "astral", "reinforcement", "precision", "circuit"];
 
+    /// <summary>An illustration or effect id as the page's registry spells it.</summary>
+    private static readonly System.Text.RegularExpressions.Regex PageId = new("^[a-z0-9]+(-[a-z0-9]+)*$", System.Text.RegularExpressions.RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -152,6 +155,23 @@ public sealed class MutationArt
             yield return $"{SourceFile}: '{package}' draws '{visual.Motif}', which is none of {string.Join(", ", Motifs)}.";
         }
 
+        // A capstone never changes the creature's image: it lends an effect. Every other package may name the
+        // illustration it draws. Both are the page's own ids, never a content id (ADR 0151).
+        if (tier.Level >= 4 && visual.Artwork is not null)
+        {
+            yield return $"{SourceFile}: '{package}' is a capstone and draws '{visual.Artwork}'; a capstone never changes the image, it lends an effect.";
+        }
+
+        if (tier.Level < 4 && visual.Effect is not null)
+        {
+            yield return $"{SourceFile}: '{package}' lends the effect '{visual.Effect}'; only a capstone lends an effect.";
+        }
+
+        foreach (var id in new[] { visual.Artwork, visual.Effect }.OfType<string>().Where(id => !PageId.IsMatch(id)))
+        {
+            yield return $"{SourceFile}: '{package}' names '{id}', which is not a page id: lowercase words joined by hyphens.";
+        }
+
         // A body is the root's: a branch drawn on another family's body would move a creature's silhouette with no
         // purchase to show for it.
         var root = RootOf(tier, tiers);
@@ -189,13 +209,20 @@ public sealed class MutationArt
         return null;
     }
 
-    /// <summary>The authored shape: the family, the empty string when left out so it is refused by name, and the motif, absent for a root.</summary>
+    /// <summary>
+    /// The authored shape: the family, the empty string when left out so it is refused by name, the motif, absent
+    /// for a root, and the illustration or capstone effect the page draws for it (ADR 0151).
+    /// </summary>
     private sealed record AuthoredVisual
     {
         public string Family { get; init; } = string.Empty;
 
         public string? Motif { get; init; }
 
-        public MutationVisual ToVisual() => new(Family, Motif);
+        public string? Artwork { get; init; }
+
+        public string? Effect { get; init; }
+
+        public MutationVisual ToVisual() => new(Family, Motif, Artwork, Effect);
     }
 }

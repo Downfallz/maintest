@@ -6,6 +6,7 @@ import * as transport from './transport.js';
 import * as seats from './seats.js';
 import * as session from './session.js';
 import * as invitation from './invitation.js';
+import * as players from './players.js';
 import * as push from './push.js';
 import * as card from './card.js';
 import * as board from './board.js';
@@ -76,7 +77,9 @@ function page() {
     querySelectorAll: selector => Object.values(nodes).flatMap(node => node.querySelectorAll(selector)),
   };
   for (const node of Object.values(nodes)) node.owner = document;
-  const context = vm.createContext({ ...transport, ...seats, ...session, ...invitation, ...push, ...card, ...board, ...hand, ...feed, ...timeline, ...mat, ...notes, ...ties, ...replay, ...guidance, ...practice, ...waiting, ...slot, ...presentation, ...terms, ...combatFx, ...feedback, ...outcome,
+  const context = vm.createContext({ ...transport, ...seats, ...session, ...invitation, ...players, ...push, ...card, ...board, ...hand, ...feed, ...timeline, ...mat, ...notes, ...ties, ...replay, ...guidance, ...practice, ...waiting, ...slot, ...presentation, ...terms, ...combatFx, ...feedback, ...outcome,
+    // These tests read the archived classic table (ADR 0157): its browser asked for it, so /play does not hand on to /battle.
+    preferredPresentation: () => 'table',
     document, storage: null, practice: null, URLSearchParams, console, innerHeight: 800, location: { search: '' }, setInterval: () => {},
     setTimeout: (action, delay) => { timers.set(++timerId, action); delays.set(timerId, delay); return timerId; }, clearTimeout: id => timers.delete(id),
   });
@@ -2358,23 +2361,31 @@ test('a hidden page acknowledges nothing, and the next poll in front of somebody
   assert.deepEqual(announced, [4]);
 });
 
-test('a streamed page reads on its own only every few seconds, and at once when asked', async () => {
+test('no clock reads the page: a read that failed is tried again, later each time, and only then', async () => {
   const p = page();
-  const polls = [];
-  p.context.poll = async () => { polls.push(Date.now()); };
-  p.state.live = new Set(['player1']);
-  p.state.polled = Date.now();
+  p.context.poll = async () => { throw new Error('offline'); };
+  p.context.connectionStatus = () => {};
+  p.context.setPhase = () => {};
 
-  p.context.tick(p.state);
-  await new Promise(resolve => setTimeout(resolve, 0));
-  assert.equal(polls.length, 0, 'the stream is open and the last read is fresh');
   await p.context.refresh(p.state);
-  assert.equal(polls.length, 1, 'a read the page asks for is never held back');
+  await p.context.refresh(p.state);
 
-  p.state.live = new Set();
-  p.context.tick(p.state);
-  await new Promise(resolve => setTimeout(resolve, 0));
-  assert.equal(polls.length, 2, 'no stream: the timer reads as it always did');
+  assert.deepEqual([...p.delays.entries()].filter(([id]) => p.timers.has(id)).map(([, delay]) => delay), [2000], 'one retry due, the second one later');
+});
+
+test('a finished match opens no stream again, and a seat with no stream opens none at all', async () => {
+  const p = page();
+  p.state.wake = new Set(); p.state.live = new Set();
+  let opened = 0;
+  const seat = { seat: 'player1', transport: { events: async () => { opened++; return { status: 200, ok: true }; } } };
+  p.state.seats = [seat];
+  p.state.views = [{ seat: 'player1', view: { ...p.view, over: true } }];
+
+  await p.context.watch(p.state, seat);
+  await p.context.watch(p.state, { seat: 'player2', transport: {} });
+
+  assert.equal(opened, 0);
+  assert.equal(p.timers.size, 0);
 });
 
 test('a read asked for while one is in flight is made once that one is done, not dropped', async () => {
@@ -2677,4 +2688,29 @@ test('a browser that keeps its seats links the live battle bare, with no token i
   p.context.storage = { getItem: key => kept.get(key) ?? null, setItem: (key, value) => kept.set(key, String(value)), removeItem: key => kept.delete(key) };
   p.context.settle([{ seat: 'player1', token: 'one' }]);
   assert.equal(p.nodes['battle-link'].href, '/battle');
+});
+
+test('/play hands accepted seats on to the battle view, naming the table the host says they sit at (ADR 0157)', async () => {
+  const p = page();
+  const replaced = [];
+  p.context.preferredPresentation = () => 'battle';
+  p.context.keeps = () => true;
+  p.context.location = { search: '', replace: url => replaced.push(url) };
+  p.context.fetch = async () => ({ ok: true, json: async () => ({ tables: [{ table: { id: 'other' }, seats: [{ seat: 'player1', token: 'old' }] }, { table: { id: 'new-game' }, seats: [{ seat: 'player2', token: 'accepted' }] }] }) });
+  p.context.enter([{ seat: 'player2', token: 'accepted' }], null);
+  await new Promise(resolve => setImmediate(resolve)); await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(replaced, ['/battle?table=new-game']);
+});
+
+test('both seats of a shared device stay at the classic table, the view with a handover between two players', async () => {
+  const p = page();
+  const replaced = [];
+  p.context.preferredPresentation = () => 'battle';
+  p.context.location = { search: '', replace: url => replaced.push(url) };
+  p.context.fetch = async () => ({ ok: true });
+  const started = [];
+  p.context.start = seats => started.push(seats.map(seat => seat.seat));
+  p.context.enter([{ seat: 'player1', token: 'one' }, { seat: 'player2', token: 'two' }], null);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(replaced, []); assert.deepEqual(started, [['player1', 'player2']]);
 });

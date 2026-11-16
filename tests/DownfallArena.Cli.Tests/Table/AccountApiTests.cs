@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Ports;
+using DownfallArena.Application.Hosting;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.Infrastructure.Accounts;
@@ -312,6 +313,76 @@ public sealed class AccountApiTests : IDisposable
     }
 
     [Fact]
+    public async Task An_account_that_saved_no_settings_reads_the_defaults_step_normal_speed_and_help()
+    {
+        var api = await ApiAsync(AccountsMode.Development);
+        api.Preferences = new FilePreferenceStore(_root);
+        var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+
+        var read = Json(await api.HandleAsync("GET", "/api/account/preferences", "", Signed(session)));
+
+        read.GetProperty("saved").GetBoolean().ShouldBeFalse();
+        read.GetProperty("preferences").GetProperty("pace").GetString().ShouldBe("step");
+        read.GetProperty("preferences").GetProperty("speed").GetDecimal().ShouldBe(1m);
+        read.GetProperty("preferences").GetProperty("help").GetBoolean().ShouldBeTrue();
+        read.GetProperty("preferences").GetProperty("reducedMotion").GetBoolean().ShouldBeFalse();
+        read.GetProperty("preferences").GetProperty("reactions").GetBoolean().ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task Saved_settings_are_read_back_by_the_account_and_by_nobody_else()
+    {
+        var api = await ApiAsync(AccountsMode.Development);
+        api.Preferences = new FilePreferenceStore(_root);
+        var mark = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+        var other = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"Other"}""", Nobody));
+
+        var saved = await api.HandleAsync("PUT", "/api/account/preferences", """{"pace":"auto","speed":1.5,"help":false,"reducedMotion":true,"reactions":false}""", Signed(mark));
+
+        saved.Status.ShouldBe(200);
+        var read = Json(await api.HandleAsync("GET", "/api/account/preferences", "", Signed(mark))).GetProperty("preferences");
+        read.GetProperty("pace").GetString().ShouldBe("auto");
+        read.GetProperty("speed").GetDecimal().ShouldBe(1.5m);
+        read.GetProperty("help").GetBoolean().ShouldBeFalse();
+        read.GetProperty("reducedMotion").GetBoolean().ShouldBeTrue();
+        read.GetProperty("reactions").GetBoolean().ShouldBeFalse();
+        Json(await api.HandleAsync("GET", "/api/account/preferences", "", Signed(other))).GetProperty("saved").GetBoolean().ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Settings_need_a_session_a_store_and_values_the_match_settings_offer()
+    {
+        var api = await ApiAsync(AccountsMode.Development);
+        var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+        var storeless = await api.HandleAsync("GET", "/api/account/preferences", "", Signed(session));
+        api.Preferences = new FilePreferenceStore(_root);
+
+        var nobody = await api.HandleAsync("GET", "/api/account/preferences", "", Nobody);
+        var badSpeed = await api.HandleAsync("PUT", "/api/account/preferences", """{"pace":"step","speed":3}""", Signed(session));
+        var badPace = await api.HandleAsync("PUT", "/api/account/preferences", """{"pace":"fast","speed":1}""", Signed(session));
+
+        storeless.Status.ShouldBe(404);
+        nobody.Status.ShouldBe(401);
+        badSpeed.Status.ShouldBe(400);
+        Json(badPace).GetProperty("error").GetString().ShouldBe("Account.PreferencesInvalid");
+    }
+
+    [Fact]
+    public async Task Deleting_the_account_forgets_its_settings()
+    {
+        var api = await ApiAsync(AccountsMode.Development);
+        var store = new FilePreferenceStore(_root);
+        api.Preferences = store;
+        var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+        var id = await IdOf(api, session);
+        await api.HandleAsync("PUT", "/api/account/preferences", """{"pace":"auto","speed":2,"help":true,"reducedMotion":false}""", Signed(session));
+
+        await api.HandleAsync("DELETE", "/api/account", """{"username":"MarkF"}""", Signed(session));
+
+        (await store.GetAsync(id, TestContext.Current.CancellationToken)).ShouldBeNull();
+    }
+
+    [Fact]
     public async Task A_typed_name_signs_in_as_the_same_account_each_time()
     {
         var api = await ApiAsync(AccountsMode.Development);
@@ -334,6 +405,64 @@ public sealed class AccountApiTests : IDisposable
     public async Task A_body_that_is_not_json_is_a_bad_request()
     {
         (await (await ApiAsync()).HandleAsync("POST", "/api/account/google", "{", Nobody)).Status.ShouldBe(400);
+    }
+
+    private async Task<AccountApi> ClosedAsync(AccountsMode mode = AccountsMode.Google)
+    {
+        var api = await ApiAsync(mode);
+        api.Settings = new HostSettingsCache(new FileHostSettingsStore(_root), _clock);
+        await api.Settings.SaveAsync(new HostSettings(RegistrationOpen: false, Notice: null, "mark", _clock.GetUtcNow()));
+        return api;
+    }
+
+    /// <summary>Closed means closed (ADR 0177): a sign-in with no account is refused, not asked for a name.</summary>
+    [Fact]
+    public async Task A_sign_in_with_no_account_is_refused_while_registration_is_closed()
+    {
+        var api = await ClosedAsync();
+
+        var answer = await api.HandleAsync("POST", "/api/account/google", $$"""{"credential":"{{GoodToken}}"}""", Nobody);
+
+        answer.Status.ShouldBe(409);
+        Json(answer).GetProperty("error").GetString().ShouldBe(AccountErrors.RegistrationClosed.Code);
+        Json(answer).TryGetProperty("ticket", out _).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task An_existing_account_signs_in_while_registration_is_closed()
+    {
+        await new AccountRegistry(_store, _clock).RegisterAsync(Mark, "MarkF", TestContext.Current.CancellationToken);
+        var api = await ClosedAsync();
+
+        var answer = await api.HandleAsync("POST", "/api/account/google", $$"""{"credential":"{{GoodToken}}"}""", Nobody);
+
+        answer.Status.ShouldBe(200);
+        Session(answer).ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task A_name_sent_with_a_ticket_from_before_the_closing_makes_no_account()
+    {
+        var api = await ApiAsync();
+        api.Settings = new HostSettingsCache(new FileHostSettingsStore(_root), _clock);
+        var ticket = await TicketAsync(api);
+        await api.Settings.SaveAsync(new HostSettings(RegistrationOpen: false, Notice: null, "mark", _clock.GetUtcNow()));
+
+        var answer = await api.HandleAsync("POST", "/api/account", $$"""{"ticket":"{{ticket}}","username":"MarkF"}""", Nobody);
+
+        answer.Status.ShouldBe(409);
+        Json(answer).GetProperty("error").GetString().ShouldBe(AccountErrors.RegistrationClosed.Code);
+        (await _store.FindBySubjectAsync(Mark, TestContext.Current.CancellationToken)).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task A_developer_s_host_signs_in_a_new_name_while_registration_is_closed()
+    {
+        var api = await ClosedAsync(AccountsMode.Development);
+
+        var answer = await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody);
+
+        answer.Status.ShouldBe(200);
     }
 
     public void Dispose()

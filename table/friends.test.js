@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { askedText, friendSections, REFRESH_EVERY } from './friends.js';
+import { askedText, friendSections } from './friends.js';
 
 const mark = { id: 'acct_mark', username: 'MarkF' };
 const bastien = { id: 'acct_bastien', username: 'bastien' };
@@ -29,8 +29,4 @@ test('asking says whether it was a request or an acceptance', () => {
   assert.equal(askedText({ accepted: false, other: bastien }), 'Asked. bastien will see your request.');
   assert.equal(askedText({ accepted: true, other: bastien }), 'bastien had already asked you: you are friends now.');
   assert.equal(askedText(undefined), '');
-});
-
-test('the list is read again once a half-minute at most', () => {
-  assert.equal(REFRESH_EVERY, 30000);
 });

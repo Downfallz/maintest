@@ -1,12 +1,21 @@
 using System.Text.Json;
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Friends;
+using DownfallArena.Application.Accounts.Players;
 using DownfallArena.Application.Accounts.Ports;
+using DownfallArena.Application.Admin;
 using DownfallArena.Application.Learning;
+using DownfallArena.Application.Learning.Ports;
+using DownfallArena.Application.Matches.Journaling;
+using DownfallArena.Application.Ports;
+using DownfallArena.Application.Tables.Ports;
+using DownfallArena.Application.Work;
 using DownfallArena.Cli.Hosting;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Infrastructure.Accounts;
+using DownfallArena.Infrastructure.Matches;
+using DownfallArena.Infrastructure.Tables;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DownfallArena.Cli.Table;
@@ -43,8 +52,13 @@ internal static class TableHost
         // A table told --no-record opens nothing and writes nothing: a rule tried out at a table should be
         // able to leave the disk as it found it.
         var store = options.Recording ? await ArtifactStores.OpenAsync(options.Record ?? DefaultRunsDirectory, stopping.Token) : null;
-        var agents = SeatableAgents.Read(WeightsDirectory);
-        using var registry = new TableRegistry();
+        var offered = SeatableAgents.Read(WeightsDirectory);
+        var levels = BotLevels.OfHost(offered);
+
+        // The operator can seat every bot a level seats (ADR 0180), Easy's included, which no list put forward.
+        IReadOnlyList<SeatableAgent> agents = [.. offered, .. levels.All
+            .Where(level => offered.All(agent => !string.Equals(agent.Value, level.Agent, StringComparison.OrdinalIgnoreCase)))
+            .Select(level => new SeatableAgent(level.Agent, level.Agent, Featured: false))];
 
         // "Your turn" to a seat's phone (ADR 0118), when the host has keys to sign it with: the file named, or
         // the hosted table's variable. A key pair that is not one is one line here, not a refusal per notice.
@@ -60,23 +74,58 @@ internal static class TableHost
         }
 
         using var sender = keys is null ? null : new WebPushSender(keys);
-        var push = keys is null ? null : new PushNotices(sender!, keys.PublicKey, clock) { Record = table => table.RecordAsync(registry.Codes) };
+        var push = keys is null ? null : new PushNotices(sender!, keys.PublicKey, clock) { Record = table => table.RecordAsync() };
         // Finished matches with an account in them, kept beside the accounts for a ladder (ADR 0122, stage 5).
         var results = options.Accounts != AccountsMode.Off && store is not null
             ? await ArtifactStores.OpenResultsAsync(options.Record ?? DefaultRunsDirectory, stopping.Token)
             : null;
+        // The index that lists and finds the tables (ADR 0161): Table Storage beside a container, files beside a
+        // directory, and this process's own for a host that keeps nothing or whose store's index cannot be opened.
+        var index = (store is null ? null : await OpenIndexAsync(options.Record ?? DefaultRunsDirectory, stopping.Token)) ?? new InMemoryTableIndex();
+        // Where the bots' turns are taken (ADR 0159, phase 5; ADR 0162): handed to a worker through a queue when the
+        // host is told so -- its own, or table-worker's in a process of its own -- and in this process otherwise.
+        var mode = TurnsOf(options);
+        if (mode == TurnsMode.Worker && !(store is not null && ArtifactStores.IsContainerUrl(options.Record ?? DefaultRunsDirectory)))
+        {
+            // A directory's queues are this process's own, and a host recording nothing has no store a worker could
+            // pick its tables up from: no table-worker could take a turn put on them.
+            Console.WriteLine(store is null
+                ? "  Turns: this host records nothing a worker could pick its tables up from, so the bots' turns are taken by a worker here (--turns worker needs --record <container-url>)."
+                : "  Turns: a directory has no queue another process reads, so the bots' turns are taken by a worker here (--turns worker needs --record <container-url>).");
+            mode = TurnsMode.Queue;
+        }
+
+        var channels = mode == TurnsMode.Process ? null : ArtifactStores.OpenChannels(options.Record ?? DefaultRunsDirectory, clock);
+        var turns = channels is null ? null : await OpenChannelAsync(channels, AgentTurnWorker.Queue, stopping.Token);
+        var contents = store is null ? null : await OpenContentsAsync(options.Record ?? DefaultRunsDirectory, stopping.Token);
         var composer = new TableComposer(services, rules, store)
         {
+            Contents = contents,
+            Turns = turns is null ? new InProcessAgentTurns(clock) : new QueuedAgentTurns(turns, clock) { Said = Console.WriteLine },
+            Index = index,
             Agents = agents,
+            Levels = levels,
             Push = push,
             Results = results,
             Basis = ReplayBasis.Of(EngineVersion.Current, services.GetRequiredService<IGameResources>(), rules),
         };
         var stored = store is null ? null : new StoredSessions(store);
+        // The tables this host holds, and the way to the others: picked up from their records when a request
+        // names them, on a host that records any.
+        using var registry = new TableRegistry(index) { Loader = stored is null ? null : new TableLoader(stored, composer, clock), Basis = composer.Basis };
 
         // The operator's door: the platform's login where the host is behind one, a printed token everywhere
         // else. The token is minted the way a pilot's is, and printed the way a pilot's is.
         var gate = options.PlatformAuth ? OperatorGate.BehindPlatform() : OperatorGate.WithToken(TableComposer.Token());
+        // The accounts that are the operator once signed in (ADR 0172), a third door beside either.
+        var (admins, adminProblem) = OperatorGate.ParseAdmins(options.Admins ?? Environment.GetEnvironmentVariable(AdminsEnvironment));
+        if (adminProblem is not null || (admins.Count > 0 && options.Accounts == AccountsMode.Off))
+        {
+            await Console.Error.WriteLineAsync(adminProblem ?? $"{AdminsEnvironment} names admin accounts, and this host signs nobody in: add '--accounts google' or '--accounts dev'.");
+            return 1;
+        }
+
+        gate = gate.WithAdmins(admins);
         var described = RuleSetFile.Describe(rules, options.Rules);
         // The players' sign-in (ADR 0122), kept beside the recordings. A Google sign-in without its client id is
         // one line here rather than a page whose button never draws.
@@ -95,6 +144,8 @@ internal static class TableHost
         var accounts = opened?.Api;
         FriendsApi? friends = null;
         Friends? friendships = null;
+        PlayersApi? players = null;
+        PlayerDirectory? directory = null;
         if (accounts is not null)
         {
             // The devices an account is told on (friends plan, stage 1), kept beside the accounts; with keys to
@@ -106,19 +157,127 @@ internal static class TableHost
             friendships = new Friends(await ArtifactStores.OpenFriendsAsync(options.Record ?? DefaultRunsDirectory, stopping.Token), opened!.Value.Store, clock);
             friends = new FriendsApi(friendships, accounts, accounts.Notices);
             accounts.ForgetFriends = id => friendships.ForgetAsync(id);
+            // The settings every new game of the account starts from (ADR 0140), beside the accounts too.
+            accounts.Preferences = await ArtifactStores.OpenPreferencesAsync(options.Record ?? DefaultRunsDirectory, stopping.Token);
+            // When each account last signed in and was last seen (ADR 0174), beside the accounts too, and the
+            // operator's list of players read from it, the accounts and the results.
+            accounts.Activity = new AccountActivityLog(await ArtifactStores.OpenActivityAsync(options.Record ?? DefaultRunsDirectory, stopping.Token), clock);
+            // The host's settings (ADR 0177), beside the accounts too: who may make an account, and the notice.
+            accounts.Settings = new HostSettingsCache(await ArtifactStores.OpenHostSettingsAsync(options.Record ?? DefaultRunsDirectory, stopping.Token), clock);
+            directory = new PlayerDirectory(opened.Value.Store, accounts.Activity, results, clock);
+            players = new PlayersApi(directory, accounts, results)
+            {
+                Friends = friendships,
+                // The operator's: the bot's own name, and the level a player knows it by (ADR 0180).
+                BotNamed = spec => levels.OperatorName(spec, LobbyApi.BotName(agents.FirstOrDefault(agent => string.Equals(agent.Value, spec, StringComparison.OrdinalIgnoreCase))?.Label ?? spec)),
+            };
         }
-        var admin = new AdminApi(registry, composer, gate, clock, described, stored, agents, push) { Accounts = accounts };
+        var admin = new AdminApi(registry, composer, gate, clock, described, stored, agents, push)
+        {
+            Accounts = accounts,
+            Players = players,
+            Settings = accounts?.Settings is { } settings ? new SettingsApi(settings, clock) : null,
+        };
         // A table opened for a friend (ADR 0129): the lobby checks the friendship and tells the friend's devices.
         admin.Lobby.Friends = friendships;
+        // A host the hourly job tends lets no request do the job's work (ADR 0162).
+        admin.Lobby.Tended = options.Tended;
         admin.Lobby.Notices = accounts?.Notices;
         // How a match ended, to each seat's account (stage 4), named as the cards name them.
         composer.Notices = accounts?.Notices;
+        // What the lobbies in view read on, instead of reading on a clock (ADR 0164).
+        // With a relay (ADR 0165), what changed is also said to every page and process through it, whichever replica
+        // they reach, and pages connect to it rather than to this process's streams.
+        var relay = WebPubSubRelay.FromEnvironment();
+        Console.WriteLine(relay is null
+            ? $"  Relay: none. Pages read this process's own streams, and it looks at the tables it holds every second for what other processes wrote ({WebPubSubRelay.Environment} names a Web PubSub endpoint)."
+            : "  Relay: on. Pages and processes hear what moved through Web PubSub, and nothing is looked at on a clock.");
+        var lobbyChanges = new LobbyChanges { Relay = relay };
+        composer.Lobby = lobbyChanges;
+        composer.Relay = relay;
+        admin.Lobby.Changes = lobbyChanges;
+        admin.Lobby.Relay = relay;
+        friends?.Changes = lobbyChanges;
+        // The bots' turn queues (A3b), when the turns go through them: their lengths and dead letters in the Jobs tab.
+        TurnQueues? queues = null;
+        if (channels is not null && turns is not null)
+        {
+            var poisoned = await OpenChannelAsync(channels, PoisonedWork.QueueOf(turns.Name), stopping.Token);
+            var letters = await OpenChannelAsync(channels, DeadLetter.QueueOf(turns.Name), stopping.Token);
+            queues = poisoned is null || letters is null ? null : new TurnQueues(turns, poisoned, letters);
+            admin.Turns = queues is null ? null : new TurnsApi(queues);
+        }
+
+        // The tending runs (A3), kept beside the recordings, and a pass run now from the panel: the hourly job's pass,
+        // over this process's tables, said through the relay as the job says it. A store of runs that cannot be opened
+        // leaves the panel without its Jobs tab, never the players without the host.
+        // The suspended accounts' seats (ADR 0178), which a pass run from the panel offers as the hourly job's does.
+        var suspendedSeats = opened is { } held ? new SuspendedSeats(held.Store, admin.Lobby) : null;
+        if (store is not null
+            && await TableTend.OpenLogAsync(() => ArtifactStores.OpenTendLogAsync(options.Record ?? DefaultRunsDirectory, stopping.Token)) is { } tendLog)
+        {
+            admin.Jobs = new JobsApi(tendLog, clock, async (now, progress) =>
+            {
+                var tended = await TableTend.TendAsync(registry, admin.Lobby, now, composer, clock, progress, suspendedSeats);
+                if (relay is not null)
+                {
+                    TableTend.Announce(relay, tended);
+                }
+
+                return tended;
+            });
+        }
+
+        // What operators do from the panel (A6), kept beside the recordings and read in the Activity tab. A log that
+        // cannot be opened leaves the actions on the console alone, never the panel without them.
+        var notes = store is null ? OperatorNotes.None : await OpenNotesAsync(options.Record ?? DefaultRunsDirectory, clock, stopping.Token);
+        admin.Notes = notes;
+        admin.Diagnosis = stored is null ? null : new TableDiagnosisApi(registry, composer, stored) { Turns = queues, Notes = notes };
+        players?.Notes = notes;
+        admin.Turns?.Notes = notes;
+        admin.Jobs?.Notes = notes;
+        admin.Settings?.Notes = notes;
+
+        // The Overview (A5): the numbers at a glance, each read from the source its own tab reads.
+        admin.Overview = new OverviewApi(registry, composer, clock)
+        {
+            Players = directory,
+            Results = results,
+            Tending = admin.Jobs?.Runs,
+            Turns = queues,
+            Settings = accounts?.Settings,
+        };
+
         composer.NameOf = accounts is null ? null : async id => (await accounts.AccountAsync(id))?.Username.Value;
         // The ladder (ADR 0124), read from the results the composer keeps; bots are named as the lobby names them.
         var leaderboard = accounts is null || results is null
             ? null
-            : new LeaderboardApi(results, accounts, clock, spec => LobbyApi.BotName(agents.FirstOrDefault(agent => string.Equals(agent.Value, spec, StringComparison.OrdinalIgnoreCase))?.Label ?? spec));
-        using var server = new TableServer(options.Bind, options.Port, registry, new TableFiles(TableDirectory), admin, clock, stored, accounts, leaderboard, friends);
+            : new LeaderboardApi(results, accounts, clock, levels.PlayerName);
+        // A player's own statistics (ADR 0168), read off the same results, named from this host's catalogue.
+        var stats = accounts is null || results is null ? null : new StatsApi(results, accounts, services.GetRequiredService<IGameResources>());
+        // The match scenarios (ADR 0179): cut by the operator from the recorded sessions and kept beside them, and
+        // practised by signed-in players in this process's memory, over the services built for their content.
+        // The repository's own (S7) are read beside them, each played on the content it carries.
+        var shipped = store is null ? RepositoryScenarios.None : RepositoryScenarios.Read(RepositoryScenarios.DefaultDirectory);
+        foreach (var one in shipped.All)
+        {
+            composer.Carry(one.Document.Content, one.Document.Schema!.Value);
+        }
+
+        var scenarioStore = store is null ? null : await OpenScenariosAsync(options.Record ?? DefaultRunsDirectory, clock, stopping.Token, shipped);
+        if (scenarioStore is not null && shipped.All.Count > 0)
+        {
+            Console.WriteLine($"  Scenarios from {RepositoryScenarios.DefaultDirectory}/: {string.Join(", ", shipped.All.Select(one => one.File))}.");
+        }
+
+        await using var practices = scenarioStore is null ? null : new ScenarioPractices(composer, scenarioStore, clock);
+        admin.Scenarios = scenarioStore is null || stored is null ? null : new ScenarioAdminApi(scenarioStore, stored, composer) { Notes = admin.Notes };
+        using var server = new TableServer(options.Bind, options.Port, registry, new TableFiles(TableDirectory), admin, clock, stored, accounts, leaderboard, friends, stats)
+        {
+            Tended = options.Tended,
+            Scenarios = scenarioStore is null || practices is null || accounts is null ? null : new ScenariosApi(scenarioStore, practices, accounts) { Admins = gate.Admins },
+            Practices = practices,
+        };
 
         Console.WriteLine($"Table on {server.Url}");
 
@@ -141,10 +300,18 @@ internal static class TableHost
                 ? "  Notices: on. A seat's page offers \"Notify me when it's my turn\"."
                 : "  Notices: on. A seat's page offers \"Notify me when it's my turn\"; the lobby offers \"Notify me on this device\" to a signed-in player.");
 
-        // The place of the table the command line asks for is held first: the rebuild below fills the host up
-        // to its bound, and a table composed into a full host would be recorded and announced with nothing
-        // answering to its codes. An empty host always has the place.
-        using var place = options.Lobby ? null : registry.Reserve() ?? throw new InvalidOperationException("An empty host has a place for its first table.");
+        Console.WriteLine(options.Tended
+            ? "  Tending: by the hourly job (table-tend). Requests close no table that never began and let no invitation go (ADR 0162)."
+            : "  Tending: on requests, once a minute at most. --tended leaves it to the hourly job (table-tend).");
+
+        // The place of the table the command line asks for is held first: a table composed into a host whose
+        // tables are as many as it takes would be recorded and announced with nothing answering to its codes.
+        using var place = options.Lobby ? null : await registry.ReserveAsync(stopping.Token);
+        if (!options.Lobby && place is null)
+        {
+            await Console.Error.WriteLineAsync($"The tables already open are as many as a host takes ({registry.Capacity}): close one from the admin panel (--lobby) first.");
+            return 1;
+        }
 
         ConsoleCancelEventHandler stop = (_, eventArgs) =>
         {
@@ -154,23 +321,28 @@ internal static class TableHost
         Console.CancelKeyPress += stop;
         try
         {
-            // Serving starts before the rebuild: the container's platform waits a minute for the port to answer
-            // and then restarts it (ADR 0080), and replaying every table an earlier host left open can take longer
-            // than that -- a host that rebuilt before serving never came up again. Until the rebuild is done the
-            // server answers a table it does not hold yet with "try again in a moment" (TableServer.Starting),
-            // which keeps what ADR 0091 asked of it: a page polling a seat never reads it as lost.
+            // Serving starts before the open tables are indexed: the container's platform waits a minute for the
+            // port to answer and then restarts it (ADR 0080). Until they are, the server answers a key it cannot
+            // place yet with "try again in a moment" (TableServer.Starting), which keeps what ADR 0091 asked of
+            // it: a page polling a seat never reads it as lost.
             server.Starting = true;
             var serving = server.RunAsync(stopping.Token);
+            var working = mode == TurnsMode.Worker && turns is not null
+                ? TakenByTheWorker(turns)
+                : await StartWorkersAsync(channels, turns, registry, clock, stopping.Token);
+
+            // What other processes write to the tables this host holds -- the worker's turns, the hourly job's
+            // expiries -- is heard through the relay when there is one, and looked for every second when there is not
+            // (ADR 0162, 0165). A host that records nothing shares its tables with nobody.
+            var watching = stored is null ? Task.CompletedTask : WatchAsync(new TableWatch(registry, clock), relay, clock, stopping.Token);
             if (serving.IsFaulted)
             {
                 await serving;
             }
 
-            // And before the table the command line asks for: that one is recorded as open the moment it is, and
-            // rebuilt after itself it would be the same match twice.
             if (stored is not null)
             {
-                foreach (var line in await TableRestorer.RestoreAsync(stored, composer, registry, clock, stopping.Token))
+                foreach (var line in await TableRestorer.RestoreAsync(stored, registry, stopping.Token))
                 {
                     Console.WriteLine($"  {line}");
                 }
@@ -180,23 +352,30 @@ internal static class TableHost
             if (place is not null)
             {
                 var table = await composer.ComposeAsync(TableRequest.Of(options, seed), stopping.Token);
-                registry.Add(table, place);
-                await table.RecordAsync(registry.Codes, stopping.Token);
-                Announce(server, registry, table);
+                await registry.AddAsync(table, place, stopping.Token);
+                await table.RecordAsync(stopping.Token);
+                Announce(server, table);
             }
 
             server.Starting = false;
             Console.WriteLine(gate.Token is { } token
                 ? $"  Admin: {server.Url}admin?token={token}"
                 : $"  Admin: {server.Url}admin, behind the platform's sign-in ({OperatorGate.PrincipalHeader} is trusted).");
+            if (gate.Admins.Count > 0)
+            {
+                Console.WriteLine($"  Admin accounts, once signed in: {string.Join(", ", gate.Admins)}.");
+            }
 
             Console.WriteLine(server.IsLoopback
                 ? $"  Only this machine can reach it.{Elsewhere()}"
                 : "  Reachable from this network. A seat is its code: anyone who has one plays that seat.");
 
             // Serving stops on Ctrl+C, which is also how a session that ended badly is left readable rather
-            // than vanishing: the host keeps serving after a match so its players can read the end screen.
+            // than vanishing: the host keeps serving after a match so its players can read the end screen. The
+            // workers stop with it.
             await serving;
+            await working;
+            await watching;
             return 0;
         }
         catch (System.Net.HttpListenerException exception)
@@ -222,7 +401,7 @@ internal static class TableHost
     /// that seat's player types. Everything a session needs to be joined and to be reproduced is on these
     /// lines, because the alternative is a playtest that nobody can place afterwards.
     /// </summary>
-    private static void Announce(TableServer server, TableRegistry registry, PlayedTable table)
+    private static void Announce(TableServer server, PlayedTable table)
     {
         Console.WriteLine(table.Run is { } run
             ? $"  Session {run.SessionId} into '{run.Location}'"
@@ -230,8 +409,8 @@ internal static class TableHost
 
         foreach (var seat in table.Seats)
         {
-            var who = seat.Person is null ? table.Session.Seat(seat.Slot).Seated.Name : "a person";
-            var join = registry.Codes.Of(seat) is { } code ? $" — joins at {server.Url[..^1]}{JoinCodes.Prefix}{code}" : string.Empty;
+            var who = seat.Person is null ? table.Session.SeatedName(seat.Slot) : "a person";
+            var join = seat.Code is { } code ? $" — joins at {server.Url[..^1]}{JoinCodes.Prefix}{code}" : string.Empty;
             Console.WriteLine($"  {seat.Name}: {who}{join}");
         }
 
@@ -253,6 +432,136 @@ internal static class TableHost
     }
 
     /// <summary>The addresses a phone could be told, so choosing one is not a trip to the network settings.</summary>
+    /// <summary>
+    /// The index of the tables, or none when it cannot be opened: the store refuses its identity the table data
+    /// role, which a deployment made before ADR 0161 lacks until its bootstrap is run again. A table is its
+    /// record and its journal; the index only finds them, and a host without one serves what it holds.
+    /// </summary>
+    /// <summary>
+    /// Where the match scenarios are kept (ADR 0179), or none when it cannot be opened: the host then cuts and serves
+    /// none, which is said, and plays every game as before.
+    /// </summary>
+    internal static async Task<ScenarioStore?> OpenScenariosAsync(string target, TimeProvider clock, CancellationToken cancellationToken, RepositoryScenarios? shipped = null)
+    {
+        try
+        {
+            return new ScenarioStore(await ArtifactStores.OpenScenariosAsync(target, cancellationToken), clock, shipped);
+        }
+        catch (Exception failure) when (failure is Azure.RequestFailedException or Azure.Identity.AuthenticationFailedException or IOException or UnauthorizedAccessException)
+        {
+            Console.WriteLine($"  The match scenarios cannot be kept ({failure.Message}): none can be cut or practised at this host.");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Where the content the tables began on is kept (ADR 0163), or none when it cannot be opened: the tables are then
+    /// replayed on this host's own content, as before, which is said.
+    /// </summary>
+    internal static async Task<IArtifactStore?> OpenContentsAsync(string target, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await ArtifactStores.OpenContentAsync(target, cancellationToken);
+        }
+        catch (Exception failure) when (failure is Azure.RequestFailedException or Azure.Identity.AuthenticationFailedException or IOException or UnauthorizedAccessException)
+        {
+            Console.WriteLine($"  The content the tables began on cannot be kept ({failure.Message}); a table picked up after the content changed is replayed on this host's (ADR 0163).");
+            return null;
+        }
+    }
+
+    /// <summary>The operator log (A6), or none when it cannot be opened, which the console says.</summary>
+    private static async Task<OperatorNotes> OpenNotesAsync(string target, TimeProvider clock, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return new OperatorNotes(new OperatorActions(await ArtifactStores.OpenOperatorLogAsync(target, cancellationToken), clock));
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is Azure.Identity.AuthenticationFailedException)
+        {
+            Console.WriteLine($"  The operator log could not be opened ({failure.Message}): what operators do is said on the console alone.");
+            return OperatorNotes.None;
+        }
+    }
+
+    private static async Task<ITableIndex?> OpenIndexAsync(string target, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await ArtifactStores.OpenIndexAsync(target, cancellationToken);
+        }
+        catch (Exception failure) when (failure is Azure.RequestFailedException or Azure.Identity.AuthenticationFailedException or IOException or UnauthorizedAccessException)
+        {
+            Console.WriteLine($"  The index of the tables could not be opened ({failure.Message}); the host keeps its own, which finds what this process holds and what it picks up (ADR 0161, infra/README.md).");
+            return null;
+        }
+    }
+
+    /// <summary>The variable that says where the bots' turns are taken when <c>--turns</c> does not: <c>process</c>, <c>queue</c> or <c>worker</c>.</summary>
+    public const string TurnsEnvironment = "DOWNFALL_TURNS";
+
+    /// <summary>Where the bots' turns are taken: as the command line says, or the variable, or in this process.</summary>
+    internal static TurnsMode TurnsOf(CliOptions options) =>
+        options.Turns ?? CliOptions.TryParseTurns(Environment.GetEnvironmentVariable(TurnsEnvironment)) ?? TurnsMode.Process;
+
+    /// <summary>The bots' turns put on the queue for table-worker, in a process of its own (ADR 0162): no worker here.</summary>
+    private static Task TakenByTheWorker(IWorkChannel turns)
+    {
+        Console.WriteLine($"  Turns: through the queue {turns.Name}, taken by {CliOptions.WorkerCommand} in a process of its own.");
+        return Task.CompletedTask;
+    }
+
+    /// <summary>A work queue, or none when it cannot be opened: the bots' turns are then taken in this process, which is said.</summary>
+    internal static async Task<IWorkChannel?> OpenChannelAsync(IWorkChannels channels, string name, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await channels.OpenAsync(name, cancellationToken);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is Azure.Identity.AuthenticationFailedException)
+        {
+            Console.WriteLine($"  The queue {name} could not be opened ({failure.Message}); the bots' turns are taken in this process.");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// The two workers of the queued turns (ADR 0159, phase 5): one takes the turns the queue says tables owe, the
+    /// other keeps for good what the first gave up on. In a host told <c>--turns queue</c>, and in
+    /// <c>table-worker</c> (ADR 0162); none when the turns are taken in this process.
+    /// </summary>
+    internal static async Task<Task> StartWorkersAsync(IWorkChannels? channels, IWorkChannel? turns, TableRegistry registry, TimeProvider clock, CancellationToken stopping)
+    {
+        if (channels is null || turns is null)
+        {
+            Console.WriteLine("  Turns: the bots' turns are taken in this process (--turns queue hands them to a worker).");
+            return Task.CompletedTask;
+        }
+
+        var poison = await channels.OpenAsync(PoisonedWork.QueueOf(turns.Name), stopping);
+        var deadLetters = await channels.OpenAsync(DeadLetter.QueueOf(turns.Name), stopping);
+        var worker = new AgentTurnWorker(turns, poison, (run, cancellationToken) => TakerAsync(registry, run, cancellationToken), clock)
+        {
+            Said = Console.WriteLine,
+        };
+        var keeper = new DeadLetterWorker(poison, deadLetters, clock, Environment.MachineName) { Said = Console.WriteLine };
+        Console.WriteLine($"  Turns: through the queue {turns.Name}, given up on after {AgentTurnWorker.MostDeliveries} deliveries onto {poison.Name}, kept for good on {deadLetters.Name}.");
+        return Task.WhenAll(worker.RunAsync(stopping), keeper.RunAsync(stopping));
+    }
+
+    /// <summary>
+    /// The table a queued turn is owed at, or none when it is gone; a store that is out is thrown, so the worker
+    /// retries the item, and gives up on it only as it gives up on any other failure.
+    /// </summary>
+    internal static async Task<IAgentTurnTaker?> TakerAsync(TableRegistry registry, string run, CancellationToken cancellationToken)
+    {
+        var found = await registry.FindAsync(run, cancellationToken);
+        return found.Unavailable is { } why
+            ? throw new IOException($"Session {run} could not be picked up: {why}")
+            : found.Table?.Session as IAgentTurnTaker;
+    }
+
     private static string Elsewhere()
     {
         var addresses = NetworkAddresses.OfThisMachine();
@@ -263,6 +572,9 @@ internal static class TableHost
 
     /// <summary>The variable the hosted table reads its Google client id from (ADR 0122).</summary>
     public const string GoogleClientIdEnvironment = "DOWNFALL_GOOGLE_CLIENT_ID";
+
+    /// <summary>The variable a host reads its admin accounts from when <c>--admins</c> is not given (ADR 0172).</summary>
+    public const string AdminsEnvironment = "DOWNFALL_ADMINS";
 
     private static string AccountsLocation(CliOptions options)
     {
@@ -279,4 +591,9 @@ internal static class TableHost
         var verifier = keys is null ? null : new GoogleIdTokenVerifier(googleClientId!, keys, clock);
         return (new AccountApi(new AccountRegistry(store, clock), sessions, options.Accounts, verifier, googleClientId), store);
     }
+
+    /// <summary>What another process wrote to the tables held, heard through the relay or looked for every second.</summary>
+    internal static Task WatchAsync(TableWatch watch, IChangeRelay? relay, TimeProvider clock, CancellationToken stopping) =>
+        relay is null ? watch.RunAsync(stopping) : new RelayListener(relay, watch, clock).RunAsync(stopping);
+
 }

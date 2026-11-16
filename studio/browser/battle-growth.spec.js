@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
+import { openSpells } from './battle-spells-fixture.js';
 import { returningBattlePlayer } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
+import { decided } from './decision.js';
 test.beforeEach(returningBattlePlayer);
 const creature = (id, name) => ({ id, name, isAlive: true, health: 20, maxHealth: 20, energy: 6,
   totalDefense: 0, currentInitiative: 0, conditions: [], acquiredTiers: [], knownSpells: ['focus'] });
@@ -24,6 +26,9 @@ async function mount(page, input = initial()) {
     localStorage.setItem('downfall.table.seats', JSON.stringify({ player1: 'seat' }));
     const original = window.fetch;
     window.fetch = (url, options) => String(url).endsWith('/events') ? Promise.resolve(new Response(new ReadableStream({ start(controller) {
+      // A host says it is still there every twenty seconds (ADR 0119): without it the page takes a quiet stream for a
+      // dropped one after 45 seconds (ADR 0164) and opens another, and a long test would notify the closed one.
+      const alive = setInterval(() => { try { controller.enqueue(new TextEncoder().encode(': keep-alive\n\n')); } catch { clearInterval(alive); } }, 20000);
       window.notifyBattle = () => controller.enqueue(new TextEncoder().encode('event: changed\ndata: 1\n\n'));
     } }), { headers: { 'Content-Type': 'text/event-stream' } })) : original(url, options);
   });
@@ -35,7 +40,7 @@ async function mount(page, input = initial()) {
       if (url.searchParams.has('shown')) { h.shown.push(url.searchParams.get('shown')); if (h.ack) await h.ack; }
       return route.fulfill({ status: h.status, json: h.view });
     }
-    if (url.pathname.endsWith('/decision')) { h.writes.push(route.request().postDataJSON()); return route.fulfill({ status: 204 }); }
+    if (url.pathname.endsWith('/decision')) { h.writes.push(decided(route.request())); return route.fulfill({ status: 204 }); }
     return route.fulfill({ status: 500 });
   });
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
@@ -59,36 +64,34 @@ function spellChoice(h, asked = 21) {
   Object.assign(h.view, { waitingFor: 'Action', waitingAsked: asked, waitingCreature: 1,
     options: { action: { spells: ['focus', 'devour'].map(spell => ({ spell, legalTargets: { candidates: [3], minTargets: 1, maxTargets: 1 } })) } } });
 }
-test('Help reference is read-only, keyboard navigable and excludes private pending picks', async ({ page }, info) => {
+test('Help reference opens the full mutation tree: read-only, keyboard navigable and without private pending picks', async ({ page }, info) => {
   const h = await mount(page); await h.reference();
-  await expect(page.locator('#growth-dialog')).toBeVisible(); await expect(page.locator('#growth-next')).toHaveText('Next mutation opportunity · Round 7');
-  await expect(page.locator('#growth-tree [data-package="predator"] > summary')).toContainText('Available');
-  await page.locator('#growth-creature').selectOption('2');
-  await expect(page.locator('#growth-progress')).toHaveText('No revealed mutations yet');
-  await expect(page.locator('#growth-tree')).not.toContainText('Picked');
-  const root = page.locator('#growth-tree [data-package="predator"] > summary');
-  const branch = page.locator('#growth-tree [data-package="predator"]');
-  await root.focus(); await page.keyboard.press('Enter'); await expect(branch).not.toHaveAttribute('open');
-  await page.keyboard.press('Enter'); await expect(branch).toHaveAttribute('open');
-  await page.locator('#growth-tree [data-package="upgrade"] > summary').click();
-  await page.locator('#growth-tree [data-package="cap"] > summary').first().click();
-  await expect(page.locator('#growth-tree')).toContainText('Requires one of: Stalker / Blighted');
-  await expect(page.locator('#growth-tree')).toContainText('For every creature of the side');
-  await fitsViewport(page, '#growth-close, #growth-creature');
-  await h.publish(); await expect(page.locator('#growth-tree [data-package="cap"]').first()).toHaveAttribute('open');
-  const cap = page.locator('#growth-tree [data-package="cap"]').first();
-  await cap.locator(':scope > summary').focus(); h.view.board.nextEvolutionRound = 8; await h.publish();
-  await expect(page.locator('#growth-next')).toHaveText('Next mutation opportunity · Round 8');
-  await expect(cap).toHaveAttribute('open'); await expect(cap.locator(':scope > summary')).toBeFocused();
-  await expect(page.locator('#growth-tree [data-package="cap"]').last()).not.toHaveAttribute('open');
-  expect(h.shown).toEqual([]); expect(h.writes).toEqual([]);
+  const board = page.locator('#atlas-board'), detail = page.locator('#atlas-detail-body'), progress = page.locator('#atlas-progress');
+  await expect(page.locator('#atlas-dialog')).toBeVisible(); await expect(progress).toContainText('Next mutation opportunity · Round 7');
+  await expect(board.locator('[data-package="predator"]')).toHaveAttribute('data-status', 'available');
+  await page.locator('#atlas-creature').selectOption('2');
+  await expect(progress).toContainText('No revealed mutations yet');
+  await expect(board.locator('[data-package="warped"]')).toHaveAttribute('data-status', 'future');
+  await expect(board).not.toContainText('Picked'); await expect(board.locator('[data-status="available"]')).toHaveCount(0);
+  const cap = board.locator('[data-package="cap"]');
+  await cap.focus(); await page.keyboard.press('Enter'); await expect(cap).toHaveAttribute('aria-pressed', 'true');
+  await expect(detail).toContainText('Requires one of: Stalker / Blighted');
+  await expect(detail).toContainText('For every creature of the side');
+  await fitsViewport(page, '#atlas-close, #atlas-creature');
+  // A poll keeps the creature, the open card and the focused mutation.
+  h.view.board.nextEvolutionRound = 8; await h.publish();
+  await expect(progress).toContainText('Next mutation opportunity · Round 8'); await expect(page.locator('#atlas-creature')).toHaveValue('2');
+  await expect(cap).toHaveAttribute('aria-pressed', 'true'); await expect(cap).toBeFocused(); await expect(detail).toContainText('Shared capstone');
+  expect(h.shown).toEqual(['10']); expect(h.writes).toEqual([]);
   await page.screenshot({ path: info.outputPath('mutation-reference.png') });
-  await page.keyboard.press('Escape'); await expect(page.locator('#help-dialog [data-growth-open]')).toBeFocused();
+  if (info.project.name !== 'desktop') { await page.keyboard.press('Escape'); await expect(page.locator('#atlas-detail')).toBeHidden(); }
+  await page.keyboard.press('Escape'); await expect(page.locator('#atlas-dialog')).toBeHidden();
+  await expect(page.locator('#help-dialog [data-growth-open]')).toBeFocused();
   expect(h.errors).toEqual([]);
 });
 test('reference over a mutation draft preserves its selection and does not acknowledge again', async ({ page }) => {
-  const h = await mount(page); await page.locator('#planning-open').click(); await page.locator('[data-mutation="predator"]').click();
-  await page.locator('#planning-dialog [data-help-open]').click(); await page.locator('#help-dialog [data-growth-open]').click();
+  const h = await mount(page); await expect(page.locator('#planning-dialog')).toBeVisible(); await page.locator('[data-mutation="predator"]').click();
+  await page.locator('#help-open').click(); await page.locator('#help-dialog [data-growth-open]').click();
   await h.publish(); await expect(page.locator('#planning-confirm')).toBeDisabled();
   expect(h.shown).toEqual(['10']); expect(h.writes).toEqual([]);
   await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
@@ -97,36 +100,81 @@ test('reference over a mutation draft preserves its selection and does not ackno
 });
 test('inspection selects the opponent and reveals its progress only after public purchase', async ({ page }) => {
   const h = await mount(page); await page.locator('.creature.enemy').click(); await page.locator('#inspect-growth').click();
-  await expect(page.locator('#growth-creature')).toHaveValue('3'); await expect(page.locator('#growth-progress')).toHaveText('No revealed mutations yet');
-  await expect(page.locator('#growth-tree [data-package="brute"] > summary')).toContainText('Not acquired');
-  await expect(page.locator('#growth-tree')).not.toContainText('Not offered this pick');
-  unlock(h); await h.publish(); await expect(page.locator('#growth-progress')).toHaveText('Brute · Stage 1');
-  await expect(page.locator('#growth-tree [data-package="brute"] > summary')).toContainText('Acquired');
-  await expect(page.locator('#growth-receipt')).toBeHidden(); expect(h.shown).toEqual([]); expect(h.writes).toEqual([]);
+  const brute = page.locator('#atlas-board [data-package="brute"]');
+  await expect(page.locator('#atlas-creature')).toHaveValue('3'); await expect(page.locator('#atlas-progress')).toContainText('No revealed mutations yet');
+  await expect(brute).toHaveAttribute('data-status', 'future');
+  await expect(page.locator('#atlas-board [data-status="available"]')).toHaveCount(0);
+  unlock(h); await h.publish(); await expect(page.locator('#atlas-progress')).toContainText('Brute · Stage 1');
+  await expect(brute).toHaveAttribute('data-status', 'known');
+  await expect(page.locator('#growth-receipt')).toBeHidden(); expect(h.shown).toEqual(['10']); expect(h.writes).toEqual([]);
   await page.keyboard.press('Escape'); await page.keyboard.press('Escape'); await expect(page.locator('#growth-receipt')).toBeVisible();
-  await page.locator('#growth-receipt [data-growth-open]').click(); await page.locator('#growth-reveal-details summary').click();
-  await expect(page.locator('#growth-reveals')).toContainText('First (Your team) · Predator · New: Devour');
-  await expect(page.locator('#growth-reveals')).toContainText('Rival (Opponent) · Brute'); expect(h.errors).toEqual([]);
+  await page.locator('#growth-receipt [data-growth-open]').click();
+  await expect(page.locator('#growth-reveals .reveal-group').first()).toContainText('First');
+  await expect(page.locator('#growth-reveals .reveal-group').first()).toContainText('+ Devour');
+  await expect(page.locator('#growth-reveals .reveal-group').last()).toContainText('Rival'); expect(h.errors).toEqual([]);
+});
+test('a reveal reads as one line and crests on the field, opens on cards by side, and each card leads to its path', async ({ page }, info) => {
+  const h = await mount(page); await page.locator('#planning-close').click(); unlock(h); await h.publish();
+  await expect(page.locator('#growth-receipt')).toBeVisible(); await expect(page.locator('#growth-receipt-summary')).toHaveText('You 1 · Opponent 1 · Round 3');
+  await expect(page.locator('#growth-announcement')).toHaveText(/First, your team: Predator, stage 1, new Devour\. Rival, opponent: Brute, stage 1\./);
+  await expect(page.locator('#battle')).toHaveAttribute('data-reveal', '1 3');
+  await fitsViewport(page, '#growth-receipt [data-growth-open], #growth-dismiss');
+  await page.locator('#growth-receipt [data-growth-open]').click();
+  await expect(page.locator('#growth-title')).toHaveText('Mutations revealed');
+  const [own, rival] = [page.locator('.reveal-group').first(), page.locator('.reveal-group').last()];
+  await expect(own.locator('h3')).toHaveText('Your team'); await expect(rival.locator('h3')).toHaveText('Opponent');
+  await expect(own.locator('.reveal-mutation')).toHaveText('Predator'); await expect(own.locator('.reveal-stage')).toHaveText('Stage 1');
+  await expect(own.locator('.reveal-spells')).toContainText('+ Devour'); await expect(own.locator('.reveal-spells')).toContainText('2 energy · One enemy');
+  await expect(own.locator('.reveal-meta')).toHaveText('+1 initiative');
+  await expect(rival.locator('.reveal-passive')).toHaveText('No new spell this time.');
+  await page.screenshot({ path: info.outputPath('mutation-reveal.jpg'), type: 'jpeg', quality: 85 });
+  // Each card's path opens the full mutation tree on that creature, the mutation in hand and its path lit.
+  await rival.getByRole('button', { name: "See Rival's mutation path" }).click();
+  await expect(page.locator('#growth-dialog')).toBeHidden(); await expect(page.locator('#atlas-dialog')).toBeVisible();
+  await expect(page.locator('#atlas-creature')).toHaveValue('3');
+  const tree = page.locator('#atlas-board');
+  await expect(tree.locator('[data-package="brute"]')).toHaveAttribute('data-path', 'true');
+  await expect(tree.locator('[data-package="brute"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(tree.locator('[data-package="predator"]')).not.toHaveAttribute('data-path', 'true');
+  await expect(page.locator('#atlas-detail-body .atlas-card-name')).toHaveText('Brute');
+  await expect(page.locator('#atlas-detail-body .spell-card')).toHaveCount(1);
+  await page.screenshot({ path: info.outputPath('mutation-path.jpg'), type: 'jpeg', quality: 85 });
+  await page.locator('#atlas-close').click(); await page.locator('#growth-receipt [data-growth-open]').click();
+  await page.locator('#growth-explore').click(); await expect(page.locator('#atlas-creature')).toHaveValue('1');
+  await expect(tree.locator('[data-package="predator"]')).toHaveAttribute('data-path', 'true');
+  await page.keyboard.press('Escape'); if (await page.locator('#atlas-dialog').isVisible()) await page.keyboard.press('Escape');
+  await page.locator('#growth-dismiss').click();
+  await expect(page.locator('#battle')).toHaveAttribute('data-reveal', ''); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});
+test('crests stay beside the docked spell choice and leave the field to its targets or to history', async ({ page }) => {
+  const h = await mount(page); await page.locator('#planning-close').click(); unlock(h); spellChoice(h); await h.publish();
+  // The spell choice opens by itself, docked: the field and its crests stay in view (ADR 0149).
+  await expect(page.locator('#combat-dialog')).toBeVisible(); await expect(page.locator('#battle')).toHaveAttribute('data-reveal', '1 3');
+  await page.locator('[data-spell="devour"]').click(); await expect(page.locator('#battle')).toHaveAttribute('data-reveal', '');
+  await page.locator('#combat-cancel').click(); await expect(page.locator('#battle')).toHaveAttribute('data-reveal', '1 3');
+  await page.locator('#history-open').click(); await expect(page.locator('#battle')).toHaveAttribute('data-reveal', '');
+  expect(h.errors).toEqual([]);
 });
 test('public unlock receipt and new spell badge appear once; reload is a silent baseline', async ({ page }) => {
   const h = await mount(page); unlock(h); spellChoice(h); await h.publish();
   await expect(page.locator('#growth-receipt')).toBeVisible(); await page.locator('#growth-dismiss').click();
   await h.publish(); await expect(page.locator('#growth-receipt')).toBeHidden();
-  await page.locator('#combat-open').click(); await expect(page.locator('[data-spell="devour"]')).toContainText('New · Available');
+  await openSpells(page); await expect(page.locator('[data-spell="devour"]')).toContainText('New · Available');
   await expect(page.locator('[data-spell="devour"]')).toHaveClass(/spell-new/); await expect(page.locator('[data-spell="focus"]')).not.toHaveClass(/spell-new/);
   await expect(page.locator('[data-spell="focus"]')).not.toContainText('New');
-  await page.locator('#combat-dialog-close').click(); await page.locator('#combat-open').click();
+  await page.locator('#combat-dialog-close').click(); await openSpells(page);
   await expect(page.locator('[data-spell="devour"]')).toContainText('New · Available');
-  spellChoice(h, 22); await h.publish(); await page.locator('#combat-open').click();
+  spellChoice(h, 22); await h.publish(); await openSpells(page);
   await expect(page.locator('[data-spell="devour"]')).not.toContainText('New');
   await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true'); await expect(page.locator('#loading')).toBeHidden();
-  await expect(page.locator('#growth-receipt')).toBeHidden(); await page.locator('#combat-open').click();
+  await expect(page.locator('#growth-receipt')).toBeHidden(); await openSpells(page);
   await expect(page.locator('[data-spell="devour"]')).not.toContainText('New'); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
 test('a pending acknowledgement cannot send through the reference and the target draft survives', async ({ page }) => {
-  const input = initial(); const h = await mount(page, input); unlock(h); spellChoice(h); await h.publish();
-  let release; h.ack = new Promise(resolve => { release = resolve; });
-  await page.locator('#combat-open').click(); await page.locator('[data-spell="devour"]').click();
+  // The choice opens, and is acknowledged, as soon as the question arrives (ADR 0149): the acknowledgement is held from then.
+  const input = initial(); const h = await mount(page, input); unlock(h); spellChoice(h);
+  let release; h.ack = new Promise(resolve => { release = resolve; }); await h.publish();
+  await openSpells(page); await page.locator('[data-spell="devour"]').click();
   await page.locator('.is-targetable').click(); await page.locator('#combat-confirm').click();
   await h.reference(); release(); await page.clock.runFor(50);
   expect(h.writes).toEqual([]); await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
@@ -135,42 +183,65 @@ test('a pending acknowledgement cannot send through the reference and the target
 });
 test('seat access loss clears open reference, pending receipts and private command context', async ({ page }) => {
   const h = await mount(page); unlock(h); await h.publish(); await h.reference();
-  h.status = 403; await h.publish(); await expect(page.locator('#growth-dialog')).not.toBeVisible();
-  await expect(page.locator('#growth-tree')).toBeEmpty(); await expect(page.locator('#growth-reveals')).toBeEmpty();
+  await expect(page.locator('#atlas-dialog')).toBeVisible();
+  h.status = 403; await h.publish(); await expect(page.locator('#atlas-dialog')).not.toBeVisible();
+  await expect(page.locator('#atlas-board')).toBeEmpty(); await expect(page.locator('#atlas-detail-body')).toBeEmpty(); await expect(page.locator('#growth-reveals')).toBeEmpty();
   await expect(page.locator('#growth-receipt')).toBeHidden(); expect(h.errors).toEqual([]);
 });
 test('multiclass reference keeps close and creature selection reachable in short screens and large text', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop', 'Viewport sweep runs once.');
   const input = initial(); input.board.allies[0].acquiredTiers = ['predator', 'brute', 'upgrade', 'cap'];
-  const h = await mount(page, input); await h.reference(); await expect(page.locator('#growth-progress')).toHaveText('Multiclass · Predator · Stage 4 / Brute · Stage 1');
+  const h = await mount(page, input); await h.reference(); await expect(page.locator('#atlas-progress')).toContainText('Multiclass · Predator · Stage 4 / Brute · Stage 1');
   for (const size of [{ width: 320, height: 568 }, { width: 844, height: 390 }]) {
-    await page.setViewportSize(size); await page.clock.runFor(150); await fitsViewport(page, '#growth-close, #growth-creature');
+    await page.setViewportSize(size); await page.clock.runFor(150); await fitsViewport(page, '#atlas-close, #atlas-creature');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
-  await page.setViewportSize({ width: 390, height: 844 }); await page.addStyleTag({ content: '#growth-body { font-size: 28px; }' });
-  await page.locator('#growth-tree > details').last().locator(':scope > summary').scrollIntoViewIfNeeded();
-  await expect(page.locator('#growth-tree > details').last().locator(':scope > summary')).toBeInViewport();
-  await fitsViewport(page, '#growth-close, #growth-creature'); expect(h.errors).toEqual([]);
+  await page.setViewportSize({ width: 390, height: 844 }); await page.addStyleTag({ content: '#atlas-dialog { font-size: 28px; }' });
+  const last = page.locator('#atlas-board .atlas-node').last();
+  await last.scrollIntoViewIfNeeded(); await expect(last).toBeInViewport();
+  await fitsViewport(page, '#atlas-close, #atlas-creature'); expect(h.errors).toEqual([]);
 });
 test('a future unlock waits behind a held closing cast and keeps its badge for the live spell choice', async ({ page }) => {
-  const h = await mount(page); await page.selectOption('#playback-mode', 'step');
+  const h = await mount(page); await page.locator('#planning-close').click(); await page.locator('#settings').click(); await page.selectOption('#playback-preference', 'step'); await page.getByRole('button', { name: 'Close settings' }).click();
   const before = structuredClone([...h.view.board.allies, ...h.view.board.enemies]);
   unlock(h); h.view.feed[0].sequence = 21; h.view.feedNext = 22;
   h.view.feed.unshift({ sequence: 20, event: { kind: 'CombatActionResolved', roundId: 2,
-    resolution: { action: { actor: 1, spell: 'focus', targets: [1] } }, appliedOutcomes: [],
+    // The opponent's closing cast: it holds for its OK, where the player's own would move on (ADR 0141).
+    resolution: { action: { actor: 4, spell: 'focus', targets: [4] } }, appliedOutcomes: [],
     frame: { before, after: before, timeline: [], rollOffs: [] } } });
   spellChoice(h, 22); await h.publish();
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '20');
-  await page.clock.runFor(1700); await expect(page.locator('#growth-receipt')).toBeHidden();
+  await page.clock.runFor(3400); await expect(page.locator('#growth-receipt')).toBeHidden();
   await expect(page.locator('#round-number')).toHaveText('02');
   await page.locator('[data-creature="1"]').click();
   await expect(page.locator('#inspect-spells')).not.toContainText('Devour');
   await page.getByRole('button', { name: 'Close inspection' }).click();
-  expect(h.shown).toEqual([]); expect(h.writes).toEqual([]);
-  await page.locator('#playback-skip').click();
+  expect(h.shown).toEqual(['10']); expect(h.writes).toEqual([]);
+  await page.locator('#playback-next').click();
   await expect(page.locator('#growth-receipt')).toBeVisible();
   await expect(page.locator('#growth-announcement')).toContainText('Devour');
-  await page.locator('#combat-open').click();
+  await openSpells(page);
   await expect(page.locator('[data-spell="devour"]')).toHaveClass(/spell-new/);
-  expect(h.shown).toEqual(['22']); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+  expect(h.shown).toEqual(['10', '22']); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});
+test('opening the team tempos by hand reads the reveal: its receipt and crests leave the field', async ({ page }) => {
+  const h = await mount(page); await page.locator('#planning-close').click();
+  unlock(h, { waitingFor: 'Speed', waitingAsked: 21, waitingCreature: 1, options: { speed: { missing: [1, 2] } } }); await h.publish();
+  await expect(page.locator('#growth-receipt')).toBeVisible(); await expect(page.locator('#battle')).not.toHaveAttribute('data-reveal', '');
+  await page.locator('#planning-open').click();
+  await expect(page.locator('#planning-dialog')).toHaveAttribute('data-kind', 'Speed'); await expect(page.locator('#planning-dialog')).toBeVisible();
+  await expect(page.locator('#growth-receipt')).toBeHidden(); await expect(page.locator('#battle')).toHaveAttribute('data-reveal', '');
+  // Read for good: closing the tempos does not bring it back.
+  await page.locator('#planning-close').click(); await page.clock.runFor(500); await expect(page.locator('#growth-receipt')).toBeHidden();
+  expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});
+for (const read of ['continue', 'see']) test(`the team's tempos wait for a fresh mutation reveal to be read, here with ${read === 'see' ? 'See' : 'Continue'}`, async ({ page }) => {
+  const h = await mount(page); await page.locator('#planning-close').click();
+  unlock(h, { waitingFor: 'Speed', waitingAsked: 21, waitingCreature: 1, options: { speed: { missing: [1, 2] } } }); await h.publish();
+  await expect(page.locator('#growth-receipt')).toBeVisible(); await page.clock.runFor(1500);
+  await expect(page.locator('#planning-dialog')).toBeHidden();
+  if (read === 'see') { await page.locator('#growth-receipt [data-growth-open]').click(); await page.locator('#growth-close').click(); }
+  else await page.locator('#growth-dismiss').click();
+  await expect(page.locator('#planning-dialog')).toHaveAttribute('data-kind', 'Speed'); await expect(page.locator('#planning-dialog')).toBeVisible();
+  expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });

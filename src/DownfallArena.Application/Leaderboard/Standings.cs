@@ -33,7 +33,7 @@ public sealed class Standings
             {
                 Rate(ratings, result);
             }
-            else if (AgainstABot(result) is { } bot)
+            else if (result.Voided is null && AgainstABot(result) is { } bot)
             {
                 var key = (bot.Account, bot.Agent);
                 var tally = bots.GetValueOrDefault(key);

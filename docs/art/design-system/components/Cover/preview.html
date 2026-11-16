@@ -1,0 +1,30 @@
+<!-- @dsCard height=288 -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Cover</title>
+<style>
+html,body{margin:0;height:288px;overflow:hidden}
+.cover{position:relative;width:960px;height:288px}
+svg{position:absolute;inset:0}
+.slab{fill:var(--line-soft)}.raised{fill:var(--raised)}.gold{fill:var(--gold)}.ember{fill:var(--brand-ember)}.bone{fill:var(--bone)}.edge{fill:var(--line)}
+.rule{stroke:var(--bone);stroke-width:1;opacity:.55}
+.text{position:absolute;left:40px;bottom:36px;max-width:440px}
+.name{font:400 88px/.95 var(--font-display);color:var(--bone);margin:0}
+.tag{font:400 13px/1.4 var(--font-text);color:var(--muted);margin:16px 0 0}
+</style></head>
+<body><div class="cover">
+<svg width="960" height="288" viewBox="0 0 960 288" aria-hidden="true">
+<!-- blocks: line-soft slab 180x240, gold 144x168, bone 92x176, ember 144x36, line 92x76; corners cut by cut-window 16, cut 12, cut-row 8
+     arrangement: a staggered stack of cut slabs rising from the foot, the bone one bleeding off the right edge like a carved stone
+     pattern: editorial hairlines (three bone rules at 55%, the rune rule's hairline) because the identity says "bone hairline under a title, borders not shadows"
+     scales: cut-window 16, cut 12, cut-row 8, cut-action 10; gaps 12 (cut) -->
+<polygon class="slab" points="520,48 684,48 700,64 700,288 520,288"/>
+<polygon class="ember" points="712,72 848,72 856,80 856,108 712,108"/>
+<polygon class="gold" points="712,120 844,120 856,132 856,288 712,288"/>
+<polygon class="bone" points="868,24 960,24 960,200 868,200"/>
+<polygon class="edge" points="868,212 950,212 960,222 960,288 868,288"/>
+<line class="rule" x1="480" y1="36" x2="960" y2="36"/>
+<line class="rule" x1="480" y1="114" x2="712" y2="114"/>
+<line class="rule" x1="480" y1="206" x2="520" y2="206"/>
+</svg>
+<div class="text"><p class="name">Downfall<br>Instinct</p><p class="tag">Slate, eclipse gold and copper ember, carved in bone and soot.</p></div>
+</div></body></html>

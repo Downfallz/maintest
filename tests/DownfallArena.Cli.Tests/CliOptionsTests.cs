@@ -279,6 +279,15 @@ public sealed class CliOptionsTests
         CliOptions.Parse(["table", "--accounts", "google", "--google-client-id", "1234.apps.googleusercontent.com"]).GoogleClientId.ShouldBe("1234.apps.googleusercontent.com");
     }
 
+    /// <summary>The accounts that are the operator once signed in (ADR 0172), taken as given and parsed by the gate.</summary>
+    [Fact]
+    public void A_table_with_accounts_names_its_admins_by_account_id()
+    {
+        CliOptions.Parse(["table", "--accounts", "google", "--admins", "acct_abcdefghijklmnop,acct_qrstuvwxyz234567"]).Admins
+            .ShouldBe("acct_abcdefghijklmnop,acct_qrstuvwxyz234567");
+        CliOptions.Parse(["table"]).Admins.ShouldBeNull();
+    }
+
     [Theory]
     [InlineData("table", "--accounts", "facebook")]
     [InlineData("play", "--accounts", "google")]
@@ -287,9 +296,86 @@ public sealed class CliOptionsTests
     [InlineData("table", "--accounts", "dev", "--bind", "0.0.0.0")]
     [InlineData("table", "--google-client-id", "1234")]
     [InlineData("table", "--accounts", "dev", "--google-client-id", "1234")]
+    [InlineData("table", "--admins", "acct_abcdefghijklmnop")]
+    [InlineData("table-tend", "--accounts", "dev", "--admins", "acct_abcdefghijklmnop")]
+    [InlineData("table", "--accounts", "dev", "--admins", "downfallz")]
     public void A_sign_in_the_table_cannot_have_is_refused_by_name(params string[] args)
     {
         Should.Throw<ArgumentException>(() => CliOptions.Parse(args)).Message.ShouldContain("--");
+    }
+
+    [Fact]
+    public void The_bots_turns_are_taken_where_the_table_is_told_and_nowhere_named_when_it_is_not()
+    {
+        CliOptions.Parse(["table"]).Turns.ShouldBeNull();
+        CliOptions.Parse(["table", "--turns", "process"]).Turns.ShouldBe(TurnsMode.Process);
+        CliOptions.Parse(["table", "--turns", "queue"]).Turns.ShouldBe(TurnsMode.Queue);
+        CliOptions.Parse(["table", "--turns", "worker"]).Turns.ShouldBe(TurnsMode.Worker);
+    }
+
+    [Theory]
+    [InlineData("queue", "Queue")]
+    [InlineData(" Worker ", "Worker")]
+    [InlineData("process", "Process")]
+    [InlineData("thread", null)]
+    [InlineData(null, null)]
+    public void The_variable_names_the_turns_as_the_option_does(string? text, string? turns)
+    {
+        var parsed = CliOptions.TryParseTurns(text)?.ToString();
+
+        parsed.ShouldBe(turns);
+    }
+
+    [Fact]
+    public void A_host_told_where_the_turns_are_taken_takes_them_there()
+    {
+        TableHost.TurnsOf(CliOptions.Parse(["table", "--turns", "worker"])).ShouldBe(TurnsMode.Worker);
+    }
+
+    [Fact]
+    public void The_worker_takes_a_store_and_may_tell_the_players_accounts_how_a_match_ended()
+    {
+        var options = CliOptions.Parse([CliOptions.WorkerCommand, "--record", "https://downfall.blob.core.windows.net/playtests", "--accounts", "google", "--push-keys", "keys.json"]);
+
+        options.Command.ShouldBe("table-worker");
+        options.Accounts.ShouldBe(AccountsMode.Google);
+        options.PushKeys.ShouldBe("keys.json");
+    }
+
+    [Fact]
+    public void A_host_is_told_a_job_tends_its_tables_and_tends_them_itself_otherwise()
+    {
+        CliOptions.Parse(["table", "--tended"]).Tended.ShouldBeTrue();
+        CliOptions.Parse(["table"]).Tended.ShouldBeFalse();
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["table-tend", "--tended"])).Message.ShouldContain("--tended");
+    }
+
+    [Theory]
+    [InlineData("table-worker", "--no-record")]
+    [InlineData("table-tend", "--no-record")]
+    public void The_worker_and_the_job_work_on_a_store_and_refuse_to_record_nothing(params string[] args)
+    {
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(args)).Message.ShouldContain("--no-record");
+    }
+
+    [Theory]
+    [InlineData("table", "--turns", "thread")]
+    [InlineData("table-worker", "--turns", "queue")]
+    [InlineData("play", "--turns", "queue")]
+    [InlineData("table", "--turns", "queue", "--practice")]
+    public void Turns_the_table_cannot_take_that_way_are_refused_by_name(params string[] args)
+    {
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(args)).Message.ShouldContain("--turns");
+    }
+
+    [Fact]
+    public void The_hourly_job_tends_a_store_and_may_read_the_players_friendships()
+    {
+        var options = CliOptions.Parse([CliOptions.TendCommand, "--record", "runs/playtest", "--accounts", "google"]);
+
+        options.Command.ShouldBe("table-tend");
+        options.Record.ShouldBe("runs/playtest");
+        options.Accounts.ShouldBe(AccountsMode.Google);
     }
 
     /// <summary>Asking for both is asking for opposite things, and is refused by name rather than resolved.</summary>
@@ -353,4 +439,53 @@ public sealed class CliOptionsTests
         Should.Throw<ArgumentException>(() => CliOptions.Parse(["table", "--handover", round]))
             .Message.ShouldContain("not a round to hand over on");
     }
+
+    [Fact]
+    public void A_cut_reads_its_session_round_seat_and_words_and_writes_scenario_json_by_default()
+    {
+        var options = CliOptions.Parse(["scenario-cut", "--session", "runs/playtest/x", "--round", "4", "--seat", "player2", "--title", "T", "--goal", "G", "--with-content"]);
+
+        (options.Session, options.Round, options.Seat, options.Title, options.Goal, options.WithContent, options.Output)
+            .ShouldBe(("runs/playtest/x", 4, "player2", "T", "G", true, "scenario.json"));
+    }
+
+    [Fact]
+    public void A_cut_needs_the_session_it_cuts() =>
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["scenario-cut", "--round", "4"])).Message.ShouldContain("--session");
+
+    [Fact]
+    public void A_check_needs_the_scenario_it_checks() =>
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["scenario-check"])).Message.ShouldContain("--scenario");
+
+    [Fact]
+    public void The_cut_s_options_belong_to_the_cut_alone() =>
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["table", "--round", "4"])).Message.ShouldContain("scenario-cut only");
+
+    [Fact]
+    public void A_generated_scenario_reads_its_bots_seed_round_and_words_and_names_its_own_file()
+    {
+        var options = CliOptions.Parse(["scenario-generate", "--p1", "greedy", "--p2", "random", "--seed", "5", "--round", "3", "--seat", "player2", "--title", "T", "--goal", "G"]);
+
+        (options.Player2Named, options.Seed, options.Round, options.Seat, options.Title, options.Goal, options.Output).ShouldBe((true, 5, 3, "player2", "T", "G", string.Empty));
+    }
+
+    [Fact]
+    public void A_generated_scenario_takes_no_session_and_always_carries_its_content()
+    {
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["scenario-generate", "--session", "s"])).Message.ShouldContain("scenario-generate");
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["scenario-generate", "--with-content"])).Message.ShouldContain("scenario-generate");
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["scenario-generate", "--seat", "player3"])).Message.ShouldContain("player3");
+    }
+
+    [Fact]
+    public void A_seat_is_one_of_the_two() =>
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["scenario-cut", "--session", "s", "--seat", "player3"])).Message.ShouldContain("player3");
+
+    [Fact]
+    public void A_practice_table_on_a_scenario_plays_the_scenario_s_own_seed_and_seats() =>
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["table", "--scenario", "s.json", "--seed", "3"])).Message.ShouldContain("--scenario");
+
+    [Fact]
+    public void Only_a_table_or_a_check_reads_a_scenario_file() =>
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["play", "--scenario", "s.json"])).Message.ShouldContain("--scenario");
 }

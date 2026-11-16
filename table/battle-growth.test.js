@@ -104,3 +104,32 @@ test('a board showing a purchase before its reveal is recorded does not swallow 
   growth.receive({ ...race(['old', 'new'], ['root']), feed: [reveal(20)], feedNext: 21 }, catalogue);
   assert.deepEqual(growth.receipt().rows[0].spells, ['Devour']); assert.deepEqual(growth.highlights(raceAction, true), ['new']);
 });
+test('a reveal row carries what its plaque and card show: family colour, stage, initiative, passives and spell costs', () => {
+  const content = { cards: [{ id: 'new', name: 'Devour', cost: 2, targeting: 'One enemy' }], packages: [
+    { id: 'root', name: 'Predator', level: 1, spells: ['old', 'new'], initiativeBonus: 1 },
+    { id: 'next', name: 'Stalker', level: 2, prerequisites: ['root'], spells: [], initiativeBonus: 2, passiveLines: ['Bleeds last longer'] }] };
+  const growth = createBattleGrowth(), v = view(); growth.receive(v, content); revealed(v);
+  v.board.enemies[0].acquiredTiers = ['root', 'next'];
+  v.feed[0] = reveal(10, [{ creature: 1, tier: 'root' }, { creature: 2, tier: 'next' }]);
+  growth.receive(v, content);
+  const [own, rival] = growth.receipt().rows;
+  assert.deepEqual([own.stage, own.family, own.initiative, own.passives], [1, 'Predator', 1, []]);
+  assert.deepEqual(own.details, [{ name: 'Devour', cost: 2, targeting: 'One enemy' }]);
+  assert.deepEqual([rival.mutation, rival.stage, rival.family, rival.passives], ['Stalker', 2, 'Predator', ['Bleeds last longer']]);
+  assert.equal(own.colour, rival.colour, 'one family, one colour');
+  assert.match(own.colour, /^(#|hsl)/);
+  assert.deepEqual(growth.receipt().counts, { ours: 1, theirs: 1 });
+});
+test('a reveal clears by itself once this seat has committed its tempos, or the round has moved on', () => {
+  const at = (v, subPhase, waitingFor, speedChoices = []) => ({ ...v, waitingFor, board: { ...v.board, subPhase, speedChoices } });
+  const growth = createBattleGrowth(), v = view(); growth.receive(v, catalogue); revealed(v);
+  growth.receive(at(v, 'Speed', 'Speed'), catalogue); assert.ok(growth.receipt(), 'still choosing tempos');
+  growth.receive(at(v, 'Speed', null), catalogue); assert.ok(growth.receipt(), 'a gap between tempo askings is not a commit');
+  growth.receive(at(v, 'Speed', null, [{ creature: 1, speed: 'Standard' }]), catalogue);
+  assert.equal(growth.receipt(), null, 'every own tempo given, the other seat still choosing');
+  const later = createBattleGrowth(), w = view(); later.receive(w, catalogue); revealed(w);
+  later.receive(at(w, 'Speed', 'Speed'), catalogue); later.receive(at(w, 'Activation', 'Action'), catalogue);
+  assert.equal(later.receipt(), null, 'combat began');
+  const evolving = createBattleGrowth(), x = view(); evolving.receive(x, catalogue); revealed(x);
+  evolving.receive(at(x, 'Evolution', 'Evolution'), catalogue); assert.ok(evolving.receipt(), 'a reveal read during Evolution waits for the tempos');
+});

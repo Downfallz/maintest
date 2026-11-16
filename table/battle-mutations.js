@@ -33,3 +33,29 @@ export function mutationChoices(view, catalogue, selectedId) {
   const remaining = Number.isInteger(offer?.remainingPicks) ? offer.remainingPicks : null;
   return { selected: selected?.id ?? null, roster, packages, faces: (selected?.ids ?? []).map(face), remaining };
 }
+
+const count = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+// The team's picks of this Mutation phase, spelled out for a first-time player: picks are the team's, each
+// creature takes one at most, and when there are fewer picks than creatures that could mutate, the player
+// chooses which ones do now; later Mutation phases bring new picks for any creature. `sent` is the pick the
+// seat sent that the host has not restated yet: its creature counts as picked and the budget as one less.
+export function pickPlan(view, sent = null) {
+  const offer = view?.options?.evolution, offered = offer?.remainingPicks;
+  if (!Number.isInteger(offered)) return null;
+  const allies = view?.board?.allies ?? [], picked = new Set((view?.board?.evolutionChoices ?? []).map(pick => pick.creature));
+  const sentCreature = sent?.creature;
+  if (Number.isInteger(sentCreature)) picked.add(sentCreature);
+  let left = Math.max(0, offered - (sent ? 1 : 0));
+  if (sent?.pass) left = 0;
+  const spent = allies.filter(one => picked.has(one.id)).length;
+  const open = allies.filter(one => one.isAlive !== false && !picked.has(one.id) &&
+    (offer?.creatures?.find(option => option.creature === one.id)?.availableTiers?.length ?? 0) > 0).length;
+  const budget = `${sent ? 'Pick sent · ' : ''}${count(left, 'team pick')} remaining`;
+  let rule = '';
+  if (left > 0 && open > left) {
+    const which = left === 1 ? 'one mutates' : `${left} mutate`;
+    rule = `${open} creatures can mutate, ${count(left, 'pick')} left: choose which ${which} now, one pick each. ` +
+      'Later Mutation phases bring new picks for any of them.';
+  } else if (left > 1 && open > 1) rule = 'One pick per creature.';
+  return { spent, left, open, budget, rule };
+}

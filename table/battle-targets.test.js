@@ -19,8 +19,10 @@ test('the host cost and remaining energy are exact even for an unaffordable hidd
 });
 test('only selected legal targets are described and identical effects group without repeating caster effects', () => {
   const m = model(); m.picked = [2, 4, 99];
-  assert.deepEqual(preview(m).rows, [{ name: 'Creature 2, Creature 4', plain: 'Damage 3', critical: 'Damage 6' }]);
+  assert.deepEqual(preview(m).rows, [{ name: 'Creature 2, Creature 4', plain: 'Damage 3', critical: 'Damage 6', plainEffects: [damage(3)], criticalEffects: [damage(6)] }]);
   assert.equal(preview(m).caster, 'On caster, once: Heal 4 · caster');
+  assert.deepEqual(preview(m).casterEffects, [{ kind: 'HealOutcome', amount: 4, onCaster: true }], 'the host\'s caster outcomes, for the chips');
+  assert.deepEqual([preview(m).costValue, preview(m).energyAfter, preview(m).critChance], [2, 3, .25], 'the host\'s cost, the energy left and the crit chance, as numbers');
 });
 for (const id of [1, 2, 4]) test(`the host preview identifies selected self, ally or enemy ${id}`, () => {
   const m = model(); m.picked = [id]; assert.equal(preview(m).rows[0].name, `Creature ${id}`);

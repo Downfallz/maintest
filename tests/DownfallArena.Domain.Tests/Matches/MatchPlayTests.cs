@@ -77,6 +77,40 @@ public sealed class MatchPlayTests
     }
 
     [Fact]
+    public void A_player_who_lets_their_time_run_out_loses_and_the_round_is_left_where_it_was()
+    {
+        var match = Table.Started();
+        Table.PassEvolution(match);
+
+        match.TimeOut([PlayerSlot.Player1]).IsSuccess.ShouldBeTrue();
+
+        match.State.ShouldBe(MatchState.Ended);
+        match.Outcome.ShouldBe(new MatchOutcome(PlayerSlot.Player2, MatchEndReason.TimedOut));
+        match.DomainEvents.OfType<MatchEnded>().Single().Outcome.ShouldBe(match.Outcome!);
+        match.DomainEvents.OfType<RoundEnded>().ShouldBeEmpty("the round is left where it was, not played out");
+    }
+
+    [Fact]
+    public void Both_players_letting_their_time_run_out_ends_the_match_with_no_winner()
+    {
+        var match = Table.Started();
+
+        match.TimeOut([PlayerSlot.Player1, PlayerSlot.Player2]).IsSuccess.ShouldBeTrue();
+
+        match.Outcome.ShouldBe(new MatchOutcome(null, MatchEndReason.TimedOut));
+    }
+
+    [Fact]
+    public void A_match_times_out_for_somebody_and_only_while_it_is_being_played()
+    {
+        var match = Table.Started();
+
+        match.TimeOut([]).Error.ShouldBe(MatchErrors.NobodyTimedOut);
+        match.State.ShouldBe(MatchState.InProgress);
+        Table.Empty().TimeOut([PlayerSlot.Player1]).Error.ShouldBe(MatchErrors.NotInProgress);
+    }
+
+    [Fact]
     public void A_creature_that_died_earlier_in_the_round_is_revealed_and_fizzles()
     {
         var match = Table.Started();

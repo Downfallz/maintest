@@ -7,21 +7,21 @@
 .table-card dl { grid-template-columns: auto 1fr; }
 .table-card .code { font-size: 20px; letter-spacing: 3px; color: var(--gold); }
 .table-card a, .session-list a { color: var(--gold); }
-.table-card .close, .secondary, .danger { margin-top: 12px; min-height: 40px; border: 1px solid var(--line); border-radius: 9px; padding: 8px 12px; background: var(--raised); color: var(--ink); font: inherit; }
+.table-card .close, .secondary, .danger { margin-top: 12px; min-height: 40px; border: 1px solid var(--line); border-radius: var(--radius-soft); padding: 8px 12px; background: var(--raised); color: var(--ink); font: inherit; }
 .danger { border-color: var(--refused); color: var(--refused); }
 button:disabled { opacity: 0.5; }
-input[type="text"] { font: inherit; min-height: 44px; border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; background: var(--raised); color: var(--ink); width: 10ch; }
-.sign-in { display: inline-block; margin: 18px 0 0; padding: 12px 18px; border: 1px solid var(--gold); border-radius: 9px; color: var(--gold); text-decoration: none; }
+input[type="text"] { font: inherit; min-height: 44px; border: 1px solid var(--line); border-radius: var(--radius-soft); padding: 10px 12px; background: var(--raised); color: var(--ink); width: 10ch; }
+.sign-in { display: inline-block; margin: 18px 0 0; padding: 12px 18px; border: 1px solid var(--gold); border-radius: var(--radius-soft); color: var(--gold); text-decoration: none; }
 .sessions { margin-top: 22px; max-width: none; }
 .list-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .list-head .secondary { margin-top: 0; }
 .selection-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 10px; }
 .selection-tools button { margin-top: 0; }
 .check { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; }
-.confirm { margin-top: 10px; padding: 12px; border: 1px solid var(--refused); border-radius: 9px; }
+.confirm { margin-top: 10px; padding: 12px; border: 1px solid var(--refused); border-radius: var(--radius-soft); }
 .confirm button { margin-top: 8px; margin-right: 8px; }
 .session-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
-.session-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; align-items: start; border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; background: var(--panel); font-size: 13px; }
+.session-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; align-items: start; border: 1px solid var(--line); border-radius: var(--radius-soft); padding: 10px 12px; background: var(--panel); font-size: 13px; }
 .session-row input[type="checkbox"] { width: 20px; height: 20px; margin-top: 2px; }
 .session-row .session-id { font-weight: 600; overflow-wrap: anywhere; }
 .session-row .session-links { display: flex; flex-wrap: wrap; gap: 4px 14px; }
@@ -35,3 +35,154 @@ input[type="text"] { font: inherit; min-height: 44px; border: 1px solid var(--li
 @media (max-width: 720px) {
   .list-head { flex-direction: column; align-items: stretch; }
 }
+
+/* Headquarters (docs/tabletop/admin-plan.md, A1): the shared header on top, the panel's own title row, then its
+   sections as tabs along one line, the same underline as the Settings window's; each section is part of the address. */
+.admin-page .admin-main { padding: 0 24px 40px; }
+.admin-title { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; padding: 32px 0 18px; }
+.admin-title h2 { margin: 6px 0 8px; font: 400 clamp(30px, 4vw, 44px)/1.1 var(--font-display); }
+.admin-title .eyebrow { margin: 0; color: var(--brand-ember); }
+.admin-title .muted { margin: 0; overflow-wrap: anywhere; }
+.admin-meta :is(output, span) { display: inline; }
+.admin-meta-label { margin-right: 4px; color: var(--gold); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+#tables-pages[hidden], #tables-empty[hidden] { display: none; }
+.admin-title .secondary { margin-top: 0; flex: none; }
+.admin-tabs { display: flex; gap: 4px; margin-bottom: 18px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+.admin-tabs a { flex: none; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 14px; border-bottom: 2px solid transparent;
+  color: var(--muted); font-weight: 650; text-decoration: none; }
+.admin-tabs a:hover { color: var(--ink); }
+.admin-tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--gold); }
+.admin-tabs a:focus-visible { outline: 2px solid var(--gold); outline-offset: -4px; }
+.tab-count { min-width: 22px; padding: 1px 7px; border-radius: 999px; background: var(--raised); color: var(--muted); font-size: 12px; text-align: center; }
+.tab-count:empty { display: none; }
+.admin-tabs a[aria-current="page"] .tab-count { color: var(--gold); }
+.admin-panel[hidden] { display: none; }
+.admin-panel > .no-god-view { margin-top: 0; }
+
+@media (max-width: 720px) {
+  .admin-page .admin-main { padding: 0 16px 32px; }
+  .admin-title { flex-direction: column; align-items: stretch; padding-top: 20px; }
+}
+
+/* Players (A2, ADR 0174): one table, a sheet that slides from the right. On a phone the table keeps the name, the
+   last visit, the games and the rating, and the sheet takes the whole screen. */
+.players { max-width: none; }
+.player-filters input[type="search"] { font: inherit; min-height: 44px; border: 1px solid var(--line); border-radius: var(--radius-soft); padding: 10px 12px; background: var(--raised); color: var(--ink); width: 22ch; max-width: 100%; }
+.player-table { margin-top: 12px; overflow-x: auto; }
+.player-table table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.player-table th { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.player-table td { padding: 6px 10px; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); white-space: nowrap; }
+.player-table :is(.player-games, .player-wins, .player-rating) { text-align: right; font-variant-numeric: tabular-nums; }
+.player-open { min-height: 40px; padding: 4px 0; border: 0; background: none; color: var(--gold); font: inherit; font-weight: 650; text-align: left; cursor: pointer; overflow-wrap: anywhere; white-space: normal; }
+.player-open:hover { text-decoration: underline; }
+#players-empty[hidden], #players-off[hidden], #players-on[hidden], #tab-players[hidden] { display: none; }
+.lobby-page .side-sheet { width: min(480px, 100vw); max-width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0 0 0 auto; padding: 0; overflow: hidden; --cut: 0px; }
+.side-sheet[open] { display: flex; flex-direction: column; }
+.player-facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 14px; margin: 0 0 18px; font-size: 14px; }
+.player-facts dt { color: var(--muted); }
+.player-facts dd { margin: 0; overflow-wrap: anywhere; }
+.player-recent { margin: 0 0 18px; padding-left: 20px; font-size: 13px; display: grid; gap: 4px; }
+.player-action { margin: 12px 0 0; padding: 12px 0 0; border-top: 1px solid var(--line); }
+.player-action p { margin: 0 0 8px; font-size: 13px; }
+.player-action label { display: grid; gap: 6px; font-size: 13px; }
+.player-action input[type="text"] { width: 100%; box-sizing: border-box; }
+.player-action > button { margin-top: 8px; }
+.player-delete { border-top-color: color-mix(in srgb, var(--refused) 40%, transparent); }
+
+@media (max-width: 720px) {
+  .player-table :is(.player-created, .player-signed-in, .player-wins) { display: none; }
+  .player-table :is(th, td) { padding: 6px 6px; }
+  .lobby-page .side-sheet { width: 100vw; }
+}
+#player-said:empty { display: none; }
+
+/* Jobs (A3): the totals over the runs, a failed run in the refusal colour, each table of a run on its own line. */
+.jobs-total { margin: 8px 0 0; font-size: 14px; }
+.jobs-total.warning { color: var(--refused); }
+#jobs-off[hidden], #jobs-on[hidden], #tab-jobs[hidden], #jobs-empty[hidden], #run-tables-empty[hidden], #run-error[hidden], #jobs-pass-confirm[hidden] { display: none; }
+.run-row.failed { border-color: var(--refused); }
+.run-row .run-error { color: var(--refused); }
+.run-row .player-open { min-height: 32px; }
+.run-tables { padding-left: 18px; }
+.run-tables li { overflow-wrap: anywhere; }
+.run-tables a { color: var(--gold); }
+#jobs-said:empty { display: none; }
+
+/* Bot turns (A3b): the three queues as counts side by side, a queue holding turns given up on in the warning colour,
+   and a letter's whole error as it was written. */
+.turns { margin-top: 22px; }
+.turn-queues { list-style: none; margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; }
+.turn-queue { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-soft); background: var(--panel); font-size: 13px; }
+.turn-queue-count { font-size: 22px; font-variant-numeric: tabular-nums; }
+.turn-queue.warning { border-color: var(--refused); }
+.turn-queue.warning .turn-queue-count { color: var(--refused); }
+.letter-row .run-error { color: var(--refused); overflow-wrap: anywhere; }
+.letter-error { margin: 0 0 14px; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius-soft); background: var(--raised); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 40vh; overflow-y: auto; }
+.letter-session { display: inline-block; margin: 0 0 14px; color: var(--gold); }
+#turns-on[hidden], #turns-empty[hidden], #turns-more[hidden], #turns-confirm[hidden], #letter-session[hidden] { display: none; }
+#turns-said:empty { display: none; }
+/* A selection checkbox is a box beside its words, not a field: the form inputs' 44px height is the label's to give. */
+.selection-tools label.check { display: inline-flex; flex-direction: row; align-items: center; gap: 8px; min-height: 44px; margin: 0; }
+.selection-tools label.check input[type="checkbox"] { width: 20px; height: 20px; min-height: 0; margin: 0; padding: 0; }
+
+/* Voiding a match (ADR 0176): the sheet's explanation is a box to write in, and what will happen is said in the
+   refusal colour before the button that does it. */
+#void-explanation { width: 100%; box-sizing: border-box; font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-soft); background: var(--raised); color: var(--ink); resize: vertical; }
+.void-count { margin: 4px 0 0; font-size: 12px; text-align: right; }
+.void-warning { margin: 14px 0 8px; color: var(--refused); font-size: 13px; }
+#void-said:empty { display: none; }
+.link-button { border: 0; padding: 0; background: none; font: inherit; cursor: pointer; text-decoration: underline; }
+.danger-link { color: var(--refused); }
+
+/* Settings (A4, ADR 0177): registration as two choices with what each means under them, and the notice as one line
+   with how much of it is used. */
+.settings-form { display: grid; gap: 10px; max-width: 60ch; }
+.settings-registration { margin: 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-soft); }
+.settings-registration legend { padding: 0 6px; font-weight: 600; }
+.settings-choice { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-right: 18px; }
+.settings-choice input { width: 20px; height: 20px; margin: 0; }
+.settings-registration p { margin: 4px 0 0; }
+.settings-notice { display: grid; gap: 6px; }
+.settings-notice input { font: inherit; min-height: 44px; border: 1px solid var(--line); border-radius: var(--radius-soft); padding: 10px 12px; background: var(--raised); color: var(--ink); width: 100%; box-sizing: border-box; }
+.settings-count { margin: 0; text-align: right; font-size: 13px; }
+.settings-count.refused { color: var(--refused); }
+.settings-form button { justify-self: start; }
+
+/* Suspension (A2b, ADR 0178): the reason as a few lines, and a suspended account said in the warning colour, in its
+   sheet and as a tag beside its name in the list. */
+.player-suspension textarea { font: inherit; display: block; width: 100%; box-sizing: border-box; margin-top: 6px; min-height: 72px; border: 1px solid var(--line); border-radius: var(--radius-soft); padding: 10px 12px; background: var(--raised); color: var(--ink); resize: vertical; }
+.player-suspended { padding: 10px 12px; border: 1px solid var(--refused); border-radius: var(--radius-soft); }
+.player-suspended p { margin: 0 0 8px; overflow-wrap: anywhere; }
+.status-tag.suspended { color: var(--refused); border: 1px solid var(--refused); padding: 1px 6px; font-size: 12px; }
+.status-tag.repository { color: var(--muted, #9aa59f); border: 1px solid currentColor; padding: 1px 6px; font-size: 12px; }
+.status-tag.listed { color: var(--gold); border: 1px solid var(--gold); padding: 1px 6px; font-size: 12px; }
+
+/* Overview (A5): one number a card, its label over it and what it counts under it, the whole card a link to the tab
+   that explains it; a card that needs the operator in the warning colour. */
+.overview-cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.overview-card { display: grid; gap: 4px; min-height: 44px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius-soft); color: var(--ink); text-decoration: none; background: color-mix(in srgb, var(--panel) 70%, transparent); }
+.overview-card:hover, .overview-card:focus-visible { border-color: var(--gold); }
+.overview-card.warning { border-color: var(--refused); }
+.overview-card.warning .overview-number { color: var(--refused); }
+.overview-label { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted, inherit); }
+.overview-number { font-size: 30px; line-height: 1.1; }
+.overview-detail { font-size: 13px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Activity (A6): one action a row, what was done first, who and when under it, its detail in small print. */
+.activity-what { overflow-wrap: anywhere; }
+.activity-target { font-family: var(--mono, monospace); font-size: 13px; }
+.activity-detail { margin-top: 2px; font-size: 13px; overflow-wrap: anywhere; }
+
+/* A scenario just cut (ADR 0179): its link, to open or copy. */
+.scenario-made { display: grid; gap: 6px; padding: 8px 10px; border: 1px solid #3f554d; border-radius: var(--radius-soft, 6px); }
+.scenario-made code { overflow-wrap: anywhere; font-size: 12px; }
+.scenario-made .session-links { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+
+/* The Diagnose sheet (scenarios plan, S5b): the table's facts as a list, its actions as a row. */
+.diagnosis-facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; margin: 0; font-size: 13px; }
+.diagnosis-facts dt { color: var(--muted, #9fb0a6); }
+.diagnosis-facts dd { margin: 0; overflow-wrap: anywhere; }
+.diagnosis-hidden { margin: 0; padding-left: 18px; font-size: 13px; overflow-wrap: anywhere; }
+.diagnosis-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 480px) { .diagnosis-facts { grid-template-columns: 1fr; } .diagnosis-facts dd { margin-bottom: 6px; } }

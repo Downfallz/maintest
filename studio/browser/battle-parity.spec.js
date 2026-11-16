@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test';
+import { openSpells } from './battle-spells-fixture.js';
+import { teamTempos } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
+import { decided } from './decision.js';
 
 // Cross-feature presentation acceptance. These are declared fixture responses, not a second game engine.
 // battle.loop.js separately plays both declaration modes against the actual host.
@@ -23,6 +26,9 @@ async function mount(page) {
     localStorage.setItem('downfall.table.seats', JSON.stringify({ player1: 'seat' }));
     const original = window.fetch;
     window.fetch = (url, options) => String(url).endsWith('/events') ? Promise.resolve(new Response(new ReadableStream({ start(controller) {
+      // A host says it is still there every twenty seconds (ADR 0119): without it the page takes a quiet stream for a
+      // dropped one after 45 seconds (ADR 0164) and opens another, and a long test would notify the closed one.
+      const alive = setInterval(() => { try { controller.enqueue(new TextEncoder().encode(': keep-alive\n\n')); } catch { clearInterval(alive); } }, 20000);
       window.notifyBattle = () => controller.enqueue(new TextEncoder().encode('event: changed\ndata: 1\n\n'));
     } }), { headers: { 'Content-Type': 'text/event-stream' } })) : original(url, options);
   });
@@ -37,7 +43,7 @@ async function mount(page) {
       return route.fulfill({ json: state.view });
     }
     if (url.pathname.endsWith('/decision')) {
-      const command = request.postDataJSON(); state.writes.push(command);
+      const command = decided(request); state.writes.push(command);
       if (command.kind === 'Evolution') {
         state.view.waitingFor = 'Speed'; state.view.options = { speed: { missing: [1, 2, 3] } };
         state.view.board.subPhase = 'Speed';
@@ -56,10 +62,16 @@ async function mount(page) {
   return state;
 }
 
-// Find controls with real Tab navigation: no locator.focus(), synthetic clicks, or pointer actions.
+// Find controls with real Tab navigation: no locator.focus(), synthetic clicks, or pointer actions. A control behind the
+// focus in the page's order is reached with Shift+Tab, as a person would, rather than by tabbing round the whole page.
 async function keyboardActivate(page, selector) {
   const target = page.locator(selector); await expect(target).toBeVisible(); await expect(target).toBeEnabled();
-  for (let n = 0; n < 100 && !await target.evaluate(node => node === document.activeElement); n++) await page.keyboard.press('Tab');
+  const behind = await target.evaluate(node => {
+    const active = document.activeElement;
+    return Boolean(active && active !== document.body && node.compareDocumentPosition(active) & Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+  const key = behind ? 'Shift+Tab' : 'Tab';
+  for (let n = 0; n < 100 && !await target.evaluate(node => node === document.activeElement); n++) await page.keyboard.press(key);
   await expect(target).toBeFocused(); await expect(target).toBeInViewport();
   await page.keyboard.press('Enter');
 }
@@ -74,36 +86,45 @@ async function combat(page, state) {
 }
 
 test('keyboard journey reads energy, compares a mutation, edits every tempo and reopens applied damage', async ({ page }, info) => {
-  test.setTimeout(120000);
+  // Every Tab repaints a desktop canvas rendered in software: a CI runner takes over twice the 45s a laptop does.
+  test.setTimeout(180000);
   const state = await mount(page);
   await expect(page.locator('#upkeep-body')).toContainText('+2 energy · 0 → 2');
   expect(state.shown).toEqual([]); await keyboardActivate(page, '#upkeep-close');
   await expect(page.locator('#help-title')).toHaveText('What is a mutation?');
-  await keyboardActivate(page, '#help-close'); await keyboardActivate(page, '#planning-open');
-  await keyboardActivate(page, '.mutation-details summary >> nth=1');
-  await expect(page.locator('.mutation-details').nth(1)).toContainText('Strike · 2 energy');
+  // Closing the tip opens the mutation tree by itself (ADR 0138).
+  await keyboardActivate(page, '#help-close'); await expect(page.locator('#planning-dialog')).toBeVisible();
   await keyboardActivate(page, '[data-mutation="Predator"]');
+  await expect(page.locator('.mutation-preview .spell-card[data-spell]').first()).toContainText('Strike');
+  await expect(page.locator('.mutation-preview .spell-chip-cost').first()).toHaveText('2 energy');
+  await keyboardActivate(page, '#mutation-atlas-open'); await expect(page.locator('#atlas-dialog')).toBeVisible();
+  // On a phone the first Escape folds the open card back into the tree, the next one closes it.
+  await page.keyboard.press('Escape'); if (await page.locator('#atlas-dialog').isVisible()) await page.keyboard.press('Escape');
+  await expect(page.locator('#atlas-dialog')).toBeHidden(); await expect(page.locator('#mutation-atlas-open')).toBeFocused();
   await expect(page.locator('#planning-selection')).toHaveText('Creature 1 · Predator');
   expect(state.writes).toEqual([]); await keyboardActivate(page, '#planning-confirm');
   await expect(page.locator('#help-title')).toHaveText('Choose how your team acts');
-  await keyboardActivate(page, '#help-close'); await keyboardActivate(page, '#planning-open');
+  // Closing the tip opens the team's tempos by themselves, docked as the mutation tree is (ADR 0150).
+  await keyboardActivate(page, '#help-close'); await expect(page.locator('#planning-dialog')).toHaveAttribute('data-kind', 'Speed');
+  await expect(page.locator('#planning-dialog')).toBeVisible();
   for (let i = 0; i < 3; i++) await keyboardActivate(page, '[data-speed="Standard"]');
   await keyboardActivate(page, '[data-tempo-tab="3"]');
   await page.keyboard.press('Home'); await expect(page.locator('[data-tempo-tab="1"]')).toBeFocused();
   await keyboardActivate(page, '[data-speed="Quick"]');
-  await keyboardActivate(page, '#planning-dialog [data-help-open]'); await page.keyboard.press('Escape');
-  await expect(page.locator('#planning-dialog [data-help-open]')).toBeFocused();
+  await keyboardActivate(page, '#help-open'); await page.keyboard.press('Escape');
+  await expect(page.locator('#help-open')).toBeFocused();
   await expect(page.locator('[data-tempo-tab="1"]')).toContainText('Instinct');
   expect(state.writes.length).toBe(1); await keyboardActivate(page, '#planning-confirm');
   await expect(page.locator('#planning-dialog')).toBeHidden();
   expect(state.writes.slice(1).map(one => one.speed)).toEqual(['Quick', 'Standard', 'Standard']);
-  await combat(page, state); await keyboardActivate(page, '#combat-open');
-  await keyboardActivate(page, '#combat-details-mode');
+  // The spell choice opens by itself on the player's turn (ADR 0149).
+  await combat(page, state); await expect(page.locator('#combat-dialog')).toBeVisible();
   await keyboardActivate(page, '[data-spell="strike"]');
   await keyboardActivate(page, '[data-creature="4"]');
   await expect(page.locator('[data-creature="4"]')).toHaveAttribute('aria-pressed', 'true');
   await keyboardActivate(page, '#combat-confirm');
-  expect(state.writes.at(-1)).toMatchObject({ spell: 'strike', targets: [4], asked: 20 });
+  // The cast is sent as Confirm is pressed; the host's mock records it a moment later.
+  await expect.poll(() => state.writes.at(-1)).toMatchObject({ spell: 'strike', targets: [4], asked: 20 });
   const after = roster.map(one => ({ ...one, health: one.id === 4 ? 13 : 20 }));
   state.view.feed = [{ sequence: 10, event: { kind: 'CombatActionResolved', roundId: 9,
     resolution: { action: { actor: 1, spell: 'strike', targets: [4] }, isCritical: false },
@@ -112,6 +133,9 @@ test('keyboard journey reads energy, compares a mutation, edits every tempo and 
   await page.evaluate(() => window.notifyBattle());
   await expect(page.locator('#playback-skip')).toBeHidden({ timeout: 10000 });
   await keyboardActivate(page, '#history-open');
+  // History opens on its summary; the cast is a key away there, and All events holds the full record.
+  await expect(page.locator('#history-summary [data-sequence="10"]')).toContainText('Strike');
+  await keyboardActivate(page, '#history-mode-events');
   await keyboardActivate(page, '#history-list [data-sequence="10"] summary');
   await expect(page.locator('#history-list [data-sequence="10"]')).toContainText('7');
   await keyboardActivate(page, '#history-list [data-sequence="10"] .history-inspect');
@@ -130,21 +154,21 @@ for (const size of [{ width: 320, height: 568 }, { width: 844, height: 390 }, { 
     await page.setViewportSize(size); const state = await mount(page);
     await fitsViewport(page, '#upkeep-close'); await page.locator('#upkeep-close').click();
     await fitsViewport(page, '#help-close'); await page.locator('#help-close').click();
-    await page.locator('#planning-open').click(); await page.locator('[data-mutation="Warped"]').click();
+    await expect(page.locator('#planning-dialog')).toBeVisible(); await page.locator('[data-mutation="Warped"]').click();
     await fitsViewport(page, '#planning-confirm, #planning-close');
     await expect(page.locator('[data-mutation="Warped"]')).toBeInViewport();
     await page.locator('#planning-confirm').click(); await page.locator('#help-close').click();
-    await page.locator('#planning-open').click();
+    await teamTempos(page);
     for (let i = 0; i < 3; i++) await page.locator('[data-speed="Standard"]').click();
     await fitsViewport(page, '#planning-confirm, #planning-close'); await page.locator('#planning-confirm').click();
     await expect(page.locator('#planning-dialog')).toBeHidden();
-    await combat(page, state); await page.locator('#combat-open').click(); await page.locator('#combat-details-mode').click();
+    await combat(page, state); await openSpells(page);
     const last = page.locator('[data-spell="spell-17"]'); await last.scrollIntoViewIfNeeded(); await expect(last).toBeInViewport();
-    await fitsViewport(page, '#combat-dialog-close, #combat-details-mode'); await page.keyboard.press('Escape');
+    await fitsViewport(page, '#combat-dialog-close'); await page.keyboard.press('Escape');
     await page.locator('#settings').click(); await page.locator('#concede-open').scrollIntoViewIfNeeded();
     await expect(page.locator('#concede-open')).toBeInViewport(); await page.keyboard.press('Escape');
     await page.locator('[data-creature="4"]').click();
-    await page.locator('#inspect-spells details').last().locator('summary').click();
+    const known = page.locator('#inspect-spells .inspect-spell').last(); await known.scrollIntoViewIfNeeded(); await expect(known).toBeInViewport();
     await fitsViewport(page, '#inspect-close'); await page.keyboard.press('Escape');
     expect(state.errors).toEqual([]);
   });

@@ -224,8 +224,72 @@ test('every page is told a notice arrived, shown or not', async () => {
   assert.equal(w.shown.length, 0, 'the lobby in front of somebody is the notice');
 });
 
-test('the worker caches nothing: it listens for no fetch', () => {
-  assert.equal(worker().handlers.fetch, undefined);
+// What a fetch event is, for the offline page (ADR 0166): its request's mode, a preload the browser may have
+// started, and what the worker answered with.
+function fetched(mode, { preloadResponse } = {}) {
+  let answered = null;
+  return { event: { request: { mode, url: 'https://table.example/battle' }, preloadResponse, respondWith: promise => { answered = promise; } }, answered: () => answered };
+}
+
+function offlineWorker({ network, cached = 'offline page' }) {
+  const deleted = [];
+  const caches = {
+    match: async url => (url === '/offline.html' ? cached : undefined),
+    open: async () => ({ add: async () => {} }),
+    keys: async () => ['downfall-offline-v0', 'downfall-offline-v1'],
+    delete: async name => { deleted.push(name); return true; },
+  };
+  const handlers = {};
+  const self = { addEventListener: (kind, handler) => { handlers[kind] = handler; }, skipWaiting: async () => {},
+    clients: { claim: async () => {} }, registration: { navigationPreload: { enable: async () => {} } } };
+  vm.runInContext(readFileSync(new URL('./sw.js', import.meta.url), 'utf8'), vm.createContext({ self, URL, caches, fetch: network, Response: { error: () => 'error' } }));
+  return { handlers, deleted };
+}
+
+test('a page that loads is the network\'s answer, untouched', async () => {
+  const w = offlineWorker({ network: async () => 'the page' });
+  const f = fetched('navigate');
+
+  w.handlers.fetch(f.event);
+
+  assert.equal(await f.answered(), 'the page');
+});
+
+test('a page the browser preloaded while the worker woke is that preload', async () => {
+  const w = offlineWorker({ network: async () => assert.fail('asked twice') });
+  const f = fetched('navigate', { preloadResponse: Promise.resolve('preloaded') });
+
+  w.handlers.fetch(f.event);
+
+  assert.equal(await f.answered(), 'preloaded');
+});
+
+test('a page that cannot be loaded at all is the offline page', async () => {
+  const w = offlineWorker({ network: async () => { throw new TypeError('offline'); } });
+  const f = fetched('navigate');
+
+  w.handlers.fetch(f.event);
+
+  assert.equal(await f.answered(), 'offline page');
+});
+
+test('nothing but a navigation is touched: scripts, the API and the art go to the network as before', () => {
+  const w = offlineWorker({ network: async () => assert.fail('not the worker\'s') });
+  for (const mode of ['cors', 'no-cors', 'same-origin']) {
+    const f = fetched(mode);
+    w.handlers.fetch(f.event);
+    assert.equal(f.answered(), null, `${mode} is not answered by the worker`);
+  }
+});
+
+test('activating keeps only the offline page\'s own cache', async () => {
+  const w = offlineWorker({ network: async () => 'x' });
+  let waited;
+
+  w.handlers.activate({ waitUntil: promise => { waited = promise; } });
+  await waited;
+
+  assert.deepEqual(w.deleted, ['downfall-offline-v0']);
 });
 
 test('a focused window on the lobby does not stand in for the notice: only the game does', async () => {

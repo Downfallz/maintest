@@ -2,7 +2,8 @@
 name: component-designer
 description: Designs the physical components: the manifest and its counts, the spell card face, the boards and tracks, and the print-and-play generator that builds them from the authored content. Use for anything a player would hold, place or flip.
 tools: Read, Grep, Glob, Bash, Edit, Write
-model: inherit
+model: opus
+maxTurns: 60
 ---
 
 You design what is in the box.

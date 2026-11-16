@@ -1,10 +1,13 @@
 using DownfallArena.Application.Agents;
 using DownfallArena.Application.Learning.Ports;
+using DownfallArena.Application.Matches.Journaling;
 using DownfallArena.Cli.Table;
 using DownfallArena.Cli.Tests.Studio;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Infrastructure.Learning;
+using DownfallArena.Infrastructure.Matches;
 using DownfallArena.Infrastructure.Resources.Authoring;
+using DownfallArena.Infrastructure.Tables;
 using Microsoft.Extensions.Hosting;
 
 namespace DownfallArena.Cli.Tests.Table;
@@ -41,22 +44,68 @@ internal sealed class HostedTables : IDisposable
     /// <param name="store">The store a recording host writes to, made over <see cref="RunsDirectory" />.</param>
     /// <param name="rules">The rules every table is composed with, <see cref="Rules" /> unless given.</param>
     /// <param name="push">The notices the tables send (ADR 0118), or none, which is the ordinary host of these tests.</param>
-    public HostedTables(Func<string, IArtifactStore>? store, RuleSet? rules = null, PushNotices? push = null, ReplayBasis? basis = null)
+    /// <param name="index">The index of the tables, a fresh one unless given: another host's, for two hosts over one store and one index.</param>
+    /// <param name="turns">Where the bots' turns are taken, this process unless given: a test that takes them itself.</param>
+    /// <param name="content">A change to the content before it is built: a host after a deploy that moved it.</param>
+    public HostedTables(Func<string, IArtifactStore>? store, RuleSet? rules = null, PushNotices? push = null, ReplayBasis? basis = null, InMemoryTableIndex? index = null, IAgentTurns? turns = null, Action<StudioContent>? content = null)
     {
+        Index = index ?? new InMemoryTableIndex();
         _content.Write("presentation/package-tags.json", PackageTags);
         _content.Write("presentation/spell-art.json", SpellArt);
         _content.Write("presentation/mutation-art.json", MutationArt);
+        content?.Invoke(_content);
         new ContentStore(_content.Path).Build(Path.Combine(_content.Path, "dst"));
         _host = CliHost.Build(
             new CliOptions { Command = "table", Output = "out.csv", SchemaPath = Path.Combine(_content.Path, "dst", "game.schema.json") },
             seed: 7,
             logMatchToConsole: false);
         var opened = store?.Invoke(RunsDirectory);
-        Composer = new TableComposer(_host.Services, rules ?? Rules, opened) { Push = push, Basis = basis };
+
+        // A store wrapped by a test still keeps its runs under the directory it was made over, and so does the journal.
+        var journal = opened is null or FileArtifactStore ? null : new FileDecisionJournal(RunsDirectory, TimeProvider.System);
+
+        // The content the tables began on, kept beside the runs as a host keeps it (ADR 0163), and shared by every host
+        // over the same runs.
+        ContentsDirectory = $"{(opened as FileArtifactStore)?.RootDirectory ?? RunsDirectory}-content";
+        var contents = opened is null ? null : new FileArtifactStore(ContentsDirectory);
+        Composer = turns is null
+            ? new TableComposer(_host.Services, rules ?? Rules, opened, journal) { Push = push, Basis = basis, Index = Index, Contents = contents }
+            : new TableComposer(_host.Services, rules ?? Rules, opened, journal) { Push = push, Basis = basis, Index = Index, Turns = turns, Contents = contents };
         Stored = opened is null ? null : new StoredSessions(opened);
     }
 
     public TableComposer Composer { get; }
+
+    /// <summary>Where the content the tables began on is kept (ADR 0163), beside the runs.</summary>
+    public string ContentsDirectory { get; }
+
+    /// <summary>The game schema the host's content was built into: what a command line names with <c>--schema</c>.</summary>
+    public string SchemaPath => Path.Combine(_content.Path, "dst", "game.schema.json");
+
+    /// <summary>
+    /// The index of the tables (ADR 0161) every registry of this host lists and finds by, and the composer's runs
+    /// write into: held in memory, and shared by a registry made again, as a store's index outlives its host.
+    /// </summary>
+    public InMemoryTableIndex Index { get; }
+
+    /// <summary>
+    /// A registry over this host's index, picking up recorded tables it does not hold when the host records: a host
+    /// as it serves. Made again, it is a host started over the same store.
+    /// </summary>
+    public TableRegistry Registry(int mostUnderWay = TableRegistry.MostUnderWay) =>
+        new(Index, mostUnderWay) { Loader = Stored is null ? null : new TableLoader(Stored, Composer, TimeProvider.System), Basis = Composer.Basis };
+
+    /// <summary>A registry made again over the same store, after the start-up pass a host makes (<see cref="TableRestorer" />).</summary>
+    public async Task<TableRegistry> RestartedAsync(int mostUnderWay = TableRegistry.MostUnderWay)
+    {
+        var registry = Registry(mostUnderWay);
+        if (Stored is not null)
+        {
+            await TableRestorer.RestoreAsync(Stored, registry, TestContext.Current.CancellationToken);
+        }
+
+        return registry;
+    }
 
     /// <summary>The store's sessions, or none for a host that records nothing.</summary>
     public StoredSessions? Stored { get; }
@@ -80,6 +129,17 @@ internal sealed class HostedTables : IDisposable
         _host.Dispose();
         _content.Dispose();
         DeleteRuns();
+        if (Directory.Exists(ContentsDirectory))
+        {
+            try
+            {
+                Directory.Delete(ContentsDirectory, recursive: true);
+            }
+            catch (IOException)
+            {
+                // Another host over the same runs is deleting it too, or still keeping its content.
+            }
+        }
     }
 
     /// <summary>

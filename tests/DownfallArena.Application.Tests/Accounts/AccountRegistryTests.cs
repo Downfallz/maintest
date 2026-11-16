@@ -234,6 +234,72 @@ public sealed class AccountRegistryTests
         _store.Accounts.ShouldNotContainKey(account.Id);
     }
 
+    [Fact]
+    public async Task A_renamed_account_holds_the_new_name_and_frees_the_old_one()
+    {
+        var registry = Registry();
+        var account = (await registry.RegisterAsync(Mark, "MarkF", Cancel)).Value;
+
+        var renamed = (await registry.RenameAsync(account.Id, "Marko", Cancel)).Value;
+
+        renamed.Username.Value.ShouldBe("Marko");
+        _store.Accounts[account.Id].ShouldBe(renamed);
+        _store.Names.Keys.ShouldBe(["marko"]);
+        (await registry.CheckUsernameAsync("MarkF", Cancel)).IsSuccess.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task A_rename_keeps_the_sessions_the_account_has()
+    {
+        var registry = Registry();
+        var account = (await registry.RegisterAsync(Mark, "MarkF", Cancel)).Value;
+
+        var renamed = (await registry.RenameAsync(account.Id, "Marko", Cancel)).Value;
+
+        renamed.Generation.ShouldBe(account.Generation);
+    }
+
+    [Fact]
+    public async Task A_rename_to_a_name_another_player_holds_is_refused_and_changes_nothing()
+    {
+        var registry = Registry();
+        var account = (await registry.RegisterAsync(Mark, "MarkF", Cancel)).Value;
+        await registry.RegisterAsync(Bastien, "Bastien", Cancel);
+
+        var renamed = await registry.RenameAsync(account.Id, "bastien", Cancel);
+
+        renamed.Error.ShouldBe(AccountErrors.UsernameTaken);
+        _store.Accounts[account.Id].Username.Value.ShouldBe("MarkF");
+        _store.Names["markf"].Account.ShouldBe(account.Id);
+    }
+
+    [Fact]
+    public async Task A_rename_that_changes_only_the_case_keeps_the_name_held()
+    {
+        var registry = Registry();
+        var account = (await registry.RegisterAsync(Mark, "MarkF", Cancel)).Value;
+
+        var renamed = (await registry.RenameAsync(account.Id, "markf", Cancel)).Value;
+
+        renamed.Username.Value.ShouldBe("markf");
+        _store.Names["markf"].Account.ShouldBe(account.Id);
+    }
+
+    [Fact]
+    public async Task A_rename_checks_the_name_as_a_registration_does()
+    {
+        var registry = Registry();
+        var account = (await registry.RegisterAsync(Mark, "MarkF", Cancel)).Value;
+
+        (await registry.RenameAsync(account.Id, "9lives", Cancel)).Error.ShouldBe(AccountErrors.UsernameInvalid);
+    }
+
+    [Fact]
+    public async Task Renaming_an_account_that_is_gone_is_refused()
+    {
+        (await Registry().RenameAsync(AccountId.New(), "Marko", Cancel)).Error.ShouldBe(AccountErrors.NotFound);
+    }
+
     private sealed class MovableClock(DateTimeOffset start) : TimeProvider
     {
         private DateTimeOffset _now = start;

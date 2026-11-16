@@ -1,7 +1,7 @@
 {
   "stamp": {
     "engineVersion": "abc123def456",
-    "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
+    "contentHash": "9e2bb5c641b2c7d97e89b6f064b235a74bb441f9acebe2d18f3963a8845b3cf4",
     "ruleSet": {
       "teamSize": 2,
       "energyPerRound": 2,
@@ -11,14 +11,14 @@
       "firstEvolutionRound": 1,
       "evolutionInterval": 2
     },
-    "featureSchema": "features:v8\u002Bf8655f8428df",
+    "featureSchema": "features:v9\u002B10612d95a59b",
     "player1Agent": "Random",
     "player2Agent": "Random",
     "baseSeed": 1
   },
-  "createdAt": "2026-09-24T01:26:55.0940865+00:00",
-  "schemaId": "features:v8\u002Bf8655f8428df",
-  "schemaVersion": "features:v8",
+  "createdAt": "2026-11-11T23:31:18.611806+00:00",
+  "schemaId": "features:v9\u002B10612d95a59b",
+  "schemaVersion": "features:v9",
   "featureNames": [
     "round_fraction",
     "phase",
@@ -48,6 +48,8 @@
     "own0_InitiativeBuff_remaining",
     "own0_InitiativeDebuff_amount",
     "own0_InitiativeDebuff_remaining",
+    "own0_DamageBuff_amount",
+    "own0_DamageBuff_remaining",
     "own0_knows_spell:guard:v1",
     "own0_knows_spell:strike:v1",
     "own0_owns_tier:guard:v1",
@@ -74,6 +76,8 @@
     "own1_InitiativeBuff_remaining",
     "own1_InitiativeDebuff_amount",
     "own1_InitiativeDebuff_remaining",
+    "own1_DamageBuff_amount",
+    "own1_DamageBuff_remaining",
     "own1_knows_spell:guard:v1",
     "own1_knows_spell:strike:v1",
     "own1_owns_tier:guard:v1",
@@ -100,6 +104,8 @@
     "enemy0_InitiativeBuff_remaining",
     "enemy0_InitiativeDebuff_amount",
     "enemy0_InitiativeDebuff_remaining",
+    "enemy0_DamageBuff_amount",
+    "enemy0_DamageBuff_remaining",
     "enemy0_knows_spell:guard:v1",
     "enemy0_knows_spell:strike:v1",
     "enemy0_owns_tier:guard:v1",
@@ -126,6 +132,8 @@
     "enemy1_InitiativeBuff_remaining",
     "enemy1_InitiativeDebuff_amount",
     "enemy1_InitiativeDebuff_remaining",
+    "enemy1_DamageBuff_amount",
+    "enemy1_DamageBuff_remaining",
     "enemy1_knows_spell:guard:v1",
     "enemy1_knows_spell:strike:v1",
     "enemy1_owns_tier:guard:v1"

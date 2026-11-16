@@ -21,6 +21,21 @@ internal sealed class MemoryArtifactWriter : IArtifactWriter
         return Task.CompletedTask;
     }
 
+    public Task<string?> WriteJsonIfAsync<TValue>(string relativePath, TValue value, string? expected, CancellationToken cancellationToken = default)
+    {
+        var current = Documents.TryGetValue(relativePath, out var document) ? Tag(document) : null;
+        if (current != expected)
+        {
+            return Task.FromResult<string?>(null);
+        }
+
+        Documents[relativePath] = value ?? throw new ArgumentNullException(nameof(value));
+        Writes.Add(relativePath);
+        return Task.FromResult<string?>(Tag(value));
+    }
+
+    private static string Tag(object document) => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(document).ToString(System.Globalization.CultureInfo.InvariantCulture);
+
     public Task StartJsonLinesAsync(string relativePath, CancellationToken cancellationToken = default)
     {
         Lines[relativePath] = [];

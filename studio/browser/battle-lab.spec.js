@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { WINDUP_MS, MOTION_SCALE } from '../../table/battle-timing.js';
 import { fitsViewport } from './fit.js';
 
 // One Phaser page at a time: under the runner's software rendering a 1440x1000 WebGL canvas is the heaviest
@@ -114,19 +115,20 @@ test('keyboard casting and skip need no live API', async ({ page }) => {
 test('reset during playback cancels pending results and a second cast resolves normally', async ({ page }) => {
   // The page's timers are the test's to run: a cast is then in flight for as long as the test says, and the
   // cancelled cues get their due time to fire, which a stale one would, on a board asked to forget it.
+  const castDuration = 1250 * MOTION_SCALE / Number(await page.locator('#playback-speed').inputValue());
   await pauseClock(page);
   await choose(page);
   await page.locator('#confirm').click();
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'windup');
   await page.locator('#reset').click();
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'decision');
-  await page.clock.runFor(2000);
+  await page.clock.fastForward(castDuration);
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'decision');
   await expect(page.locator('[data-creature="b1"] .creature-stats')).toContainText('18/24 HP');
   await expect(page.locator('[data-creature="b1"] .creature-result')).toHaveText('');
   await choose(page, 'b2');
   await page.locator('#confirm').click();
-  await page.clock.runFor(1250);
+  await page.clock.fastForward(castDuration);
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'resolved');
   await expect(page.locator('[data-creature="b1"] .creature-stats')).toContainText('18/24 HP');
   await expect(page.locator('[data-creature="b2"] .creature-stats')).toContainText('5/24 HP');
@@ -164,13 +166,13 @@ test('2× playback runs the timed cast at half its cues, with a skip on offer un
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'windup');
   await expect(page.locator('#skip')).toBeVisible();
   await expect(page.locator('#skip')).toBeFocused();
-  // The impact is due at 210 ms and the settled frame at 625 ms, half of 420 and 1250.
-  await page.clock.runFor(209);
+  const impactAt = WINDUP_MS / 2, finishAt = 1250 * MOTION_SCALE / 2;
+  await page.clock.runFor(impactAt - 1);
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'windup');
   await page.clock.runFor(1);
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'impact');
   await expect(page.locator('[data-creature="b1"] .creature-result')).toHaveText('-4 HP');
-  await page.clock.runFor(414);
+  await page.clock.runFor(finishAt - impactAt - 1);
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'impact');
   await page.clock.runFor(1);
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'resolved');
@@ -200,4 +202,22 @@ test('the command portrait uses current art and the retired sheet is never downl
   await expect(page.locator('#lab')).toHaveAttribute('data-ready', 'true');
   await expect(page.locator('#actor-portrait')).toHaveCSS('background-image', /brute\.webp/);
   expect(retired).toEqual([]);
+});
+
+test('the horizon study advances through every even round and resets on the six-creature board', async ({ page }, info) => {
+  // Seven collapses, each loading and fading its art, take 9 to 14 s on an idle desktop: a busy runner outlasts 30 s.
+  test.setTimeout(60000);
+  await page.goto('/table/battle-lab.html?study=horizon');
+  await expect(page.locator('#lab')).toHaveAttribute('data-ready', 'true');
+  await expect(page.locator('#round-number')).toHaveText('01');
+  for (const round of [2, 4, 6, 8, 10, 12, 14]) {
+    await page.getByRole('button', { name: 'Enter round ' + round, exact: true }).click();
+    await expect(page.locator('#round-number')).toHaveText(String(round).padStart(2, '0'));
+  }
+  await expect(page.locator('.creature')).toHaveCount(6);
+  await page.screenshot({ path: info.outputPath('horizon-aftermath.png') });
+  await page.locator('#choose').click();
+  await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'targeting');
+  await page.locator('#reset').click();
+  await expect(page.locator('#round-number')).toHaveText('01');
 });
