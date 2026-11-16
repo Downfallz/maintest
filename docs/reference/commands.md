@@ -49,7 +49,9 @@ git diff --name-only origin/main... | node scripts/review/reviewers.mjs   # the 
 
 What `/reviewers` reads to choose the agents under `.claude/agents` that review a change: `code-reviewer` for
 anything but markdown, then `domain-reviewer`, `host-reviewer`, `pages-reviewer`, `design-reviewer`, `copy-editor`,
-`infra-reviewer`, `security-reviewer` and `stats-reviewer` by the paths they own. Given the whole diff, it also
+`infra-reviewer`, `security-reviewer`, `stats-reviewer` and `rules-keeper` by the paths they own (the keeper:
+the domain, `game-rules.md`, the words, an ADR, the content, the hosted rule set, `rules/`, `table/terms.js`,
+`table/battle-guidance.js`, `battle/src/tempo.ts`, `showcase/guide.mjs` and `scenarios/tutorials/`). Given the whole diff, it also
 calls `design-reviewer` for a page script (`table/`, `studio/`, `viewer/`, not a test) whose added lines hold a
 raw colour, an inline style or a `className`. `legacy/` calls for nobody.
 `studio/reviewers.test.js` tests the choice, that every reviewer it names is an agent that lists no tool that
@@ -134,15 +136,32 @@ critical chance off the d20's twentieths and a creature with a chance of its own
 ### rules/build.mjs
 
 ```bash
-node scripts/rules/build.mjs            # build rules/ into table/rules.json, or list what it refuses and exit 1
-node scripts/rules/build.mjs --check    # exit 1 when table/rules.json is not the build of rules/
+node scripts/rules/build.mjs            # build rules/ into table/rules.json and rules.fr.json, or list what it refuses and exit 1
+node scripts/rules/build.mjs --check    # exit 1 when either file is not the build of rules/
 ```
 
 The official rulebook (ADR 0188, `rules/README.md`). It draws the book's values from the hosted rule set, the
 reference creature and the spells, refuses a duplicate or vanished id, an unresolved value, a retired word, a
-missing source, a dead `/rules#<id>` link and an unknown card, and writes the book as data. `table/rules.test.js`
-fails when the committed file is not its build; `UPDATE_INDEXES=1` with that test rewrites it too. The table serves
+missing source, a dead `/rules#<id>` link and an unknown card, and writes the book as data. It builds the French
+edition, `rules/fr/`, into `table/rules.fr.json`, and refuses a French book whose files, ids, order, sources, cards
+or changes differ from the English, or that uses an English word the French column replaced (ADR 0193).
+`table/rules.test.js` fails when a committed file is not its build; `UPDATE_INDEXES=1` with that test rewrites it too. The table serves
 the book at `/rules` (see [The lobby and the pages](#the-lobby-and-the-pages)).
+
+### rules/reach.mjs
+
+```bash
+git diff origin/main... | node scripts/rules/reach.mjs   # the sections of the book a change reaches, and why
+```
+
+What `/rules` and the `rules-keeper` start from. A section is reached by an ADR or a `game-rules.md` heading its
+`sources:` line cites, by a value it draws (a spell, a mutation, a field of the hosted rule set, a stat of the
+reference creature), by a spell or a mutation it names, and by a change to its own lines. The French edition's
+sections are read beside the English and marked `[fr]`. A path that calls for the
+keeper and reaches no section (the domain, the words, the pages' rule text) is listed to be read by hand. A line
+removed just above a heading counts for the section it ended. Input that is not a unified diff (nothing, or
+`--name-only`) is refused, never read as nothing reached. `table/rules-reach.test.js` tests it, and runs it on an
+excerpt of a past balance pass.
 
 ### studio
 
@@ -372,11 +391,12 @@ The seat's view says the lesson under `practice.tutorial`:
 
 - Its Overview, the tab it opens on, has the numbers at a glance (`GET /api/admin/overview`: players, games in
   progress and finished, open seats, invitations, games running out of time within a day, the last tending run,
-  bot turns waiting and given up on, registration), each card linking to its tab.
+  bot turns waiting and given up on, feedback waiting, registration), each card linking to its tab.
 - Its Activity tab lists what operators did from the panel, twenty a page, newest first
   (`GET /api/admin/activity?page`: each table opened, closed, reinvited or voided, session deleted or exported,
   player signed out, renamed, deleted, suspended or restored, tending pass, requeue or drop, settings save,
-  scenario cut, listed, taken off or removed, a table's hidden state revealed or its bot turn owed again, with
+  scenario cut, listed, taken off or removed, a table's hidden state revealed or its bot turn owed again, feedback
+  marked, moved to the other kind or dismissed as spam, a sender stopped or let through, with
   who and when), the last 1,000 kept beside the recordings under `operator/` (or the operator container).
 - Its Settings tab opens or closes registration and posts a notice
   (`GET`/`PUT /api/admin/settings {"registrationOpen","notice"}`, kept beside the accounts as
@@ -409,6 +429,37 @@ The seat's view says the lesson under `practice.tutorial`:
   - A second bug report on the same table and round, or a second idea within the hour, is merged into the first:
     200 `{"id","merged":true,"code":"Feedback.Merged"}`.
   - More than 100 new a day for the host: 429 `Feedback.HostFull`.
+  - A muted sender gets 403 `Feedback.Muted` once the body is checked, before the spam guards. The mute lasts 30
+    days, or until the operator lifts it. The operator sets it, or a third spam dismissal within 30 days does.
+- The operator's Feedback tab (docs/tabletop/feedback-plan.md, R3) lists it newest first, twenty a page
+  (`GET /api/admin/feedback?kind&status&category&page`: `kind` is `bug` or `idea`, `status` a status or `open`, the
+  tab's default, for what is not closed) and reads one (`GET /api/admin/feedback/<id>`: the words, what the page and
+  the host added, the position, the sender's mute, and `underWay` while its table is still played).
+  A filter naming no kind, status or category is refused 400 `Feedback.Invalid`. The sheet lists the `actions` that
+  apply to it, and the page shows only those.
+  `PUT /api/admin/feedback/<id>/status {"status","reason?","plan?"}` marks it `seen` (which reopens it), `reproduced`
+  (a bug report only) or `dismissed` with a reason of one line and at most 300 characters, `"reason":"spam"` being the
+  spam mark (400 `Feedback.Invalid` otherwise). An idea is also marked `planned` with its plan's path
+  (`docs/…-plan.md`, lowercase), `shipped` (which closes it) or `declined` with a reason of one line, which the players
+  who asked it read (which closes it too). The plan stays through any other status until another plan replaces it.
+  Closed again with the same status, it keeps the time it was first closed.
+  `POST .../<id>/merge {"into"}` merges an open idea into another open idea (feedback plan, I1). The merged idea leaves
+  the list but keeps its sender and words. Its group's sheet shows it under `asks`; its own sheet shows `mergedInto`.
+  Each sender counts once towards `askedBy`. An idea merged since is followed to the one its group became. A merge into
+  a bug report, into itself or into an idea already in its own group is 400 `Feedback.Invalid`; into a closed idea, 409
+  `Feedback.Closed`. A merged idea takes no status but dismissed, which takes it out of its group, and no kind (409
+  `Feedback.MergedAway`). An idea others joined stays an idea (409 `Feedback.Grouped`). The list filtered to ideas
+  sorts by `askedBy`, then by the newest ask.
+  `PUT .../<id>/kind {"kind"}` turns a bug report into an idea, or an idea into a bug report. It keeps the words,
+  position and sender and sets the status to seen. A closed one gets 409 `Feedback.Closed`.
+  `POST`/`DELETE .../<id>/mute` stops its sender for 30 days and lifts it (409 `Feedback.NoSender` for a deleted
+  account's, or an account's on a host that keeps no account activity). An account's mute is kept with its activity
+  record and dropped at its first write after the mute ends; a guest's is kept in the process's memory. Unknown
+  feedback is 404 `Feedback.NotFound`, and a store that fails 503 `Feedback.Unavailable`. Asked again, a change
+  writes nothing and notes nothing. Each change adds an Activity line (`feedback.status`, `feedback.convert`,
+  `feedback.spam`, `feedback.mute`, `feedback.unmute`, `feedback.merge`). A merged idea is deleted with the idea its
+  group became. The Overview's Feedback waiting card counts feedback
+  nobody has seen yet, in the warning colour while a bug report is new or the host is full for the day.
 
   A new one is kept and answers 201 `{"id","merged":false}`.
 - Each one is kept as one record beside the recordings, under `feedback/` (or the feedback container). A host that
@@ -434,7 +485,8 @@ The seat's view says the lesson under `practice.tutorial`:
 - `/rules` is the official rulebook (ADR 0188), open to anyone: `rules.html` reads `table/rules.json` and draws its
   contents, every part and section, the concept cards and What changed. `/rules#<id>` opens a section, a part, an
   id `rules/moved.json` redirects, or a concept card's section, at the top of the screen; the filter keeps the
-  sections whose title or text hold every word typed. **Rules** is in the main menu. The service worker keeps the
+  sections whose title or text hold every word typed. It reads in English or in French (`table/rules.fr.json`, ADR
+  0193): the language stored on the device, else the browser's, and two buttons switch. **Rules** is in the main menu. The service worker keeps the
   page and the book, asks the network first and gives its copy only when the host cannot be reached or, for the
   rulebook's own files, answers with a server error, as Cloudflare does for a host that is down (ADR 0191).
 - `/lobby?token=...` still redirects to admin.

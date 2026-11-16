@@ -2,6 +2,8 @@
 
 One or two sentences on what this PR changes and why. Link the issue or ADR if there is one.
 
+**Rulebook:** none, or the sections of `rules/` this change rewrites or makes stale, by id (`/rules`).
+
 ## Checklist
 
 - [ ] `dotnet build`, `dotnet test`, and `dotnet format --verify-no-changes` pass locally

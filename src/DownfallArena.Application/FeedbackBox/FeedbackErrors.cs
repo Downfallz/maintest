@@ -13,5 +13,19 @@ public static class FeedbackErrors
 
     public static readonly DomainError TooMany = new("Feedback.TooMany", "Five pieces of feedback a day is the most one player can send. Try again tomorrow.");
 
+    public static readonly DomainError Muted = new("Feedback.Muted", "Feedback from you is paused for now.");
+
+    public static DomainError NotFound(string id) => new("Feedback.NotFound", $"No feedback '{id}' at this host.");
+
+    public static readonly DomainError Closed = new("Feedback.Closed", "This feedback is closed: mark it seen to reopen it first.");
+
+    public static readonly DomainError MergedAway = new("Feedback.MergedAway", "This idea was merged into another one: change that one instead.");
+
+    public static readonly DomainError Grouped = new("Feedback.Grouped", "Other ideas were merged into this one, so it stays an idea.");
+
+    public static readonly DomainError NoSender = new("Feedback.NoSender", "Nobody can be muted for this feedback: its sender's account was deleted, or this host keeps no account activity.");
+
+    public static readonly DomainError Unavailable = new("Feedback.Unavailable", "The feedback could not be read just now. Try again in a few minutes.");
+
     public static readonly DomainError HostFull = new("Feedback.HostFull", "The game is taking no more feedback today. Try again tomorrow.");
 }

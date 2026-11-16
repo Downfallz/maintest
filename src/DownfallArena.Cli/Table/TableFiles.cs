@@ -83,11 +83,12 @@ internal sealed partial class TableFiles
             ["/stats.js"] = (Path.Combine(tableDirectory, "stats.js"), JavaScript),
             ["/stats.css"] = (Path.Combine(tableDirectory, "stats.css"), Css),
 
-            // The official rulebook (ADR 0188), open to anyone: the page, and the book built from rules/ it reads.
+            // The official rulebook (ADR 0188), open to anyone: the page, and the book built from rules/ it reads, in English and in French.
             ["/rules"] = (Path.Combine(tableDirectory, "rules.html"), StudioResponse.Html),
             ["/rules.js"] = (Path.Combine(tableDirectory, "rules.js"), JavaScript),
             ["/rules.css"] = (Path.Combine(tableDirectory, "rules.css"), Css),
             ["/rules.json"] = (Path.Combine(tableDirectory, "rules.json"), StudioResponse.Json),
+            ["/rules.fr.json"] = (Path.Combine(tableDirectory, "rules.fr.json"), StudioResponse.Json),
             ["/lobby.css"] = (Path.Combine(tableDirectory, "lobby.css"), Css),
             ["/table.css"] = (Path.Combine(tableDirectory, "table.css"), Css),
             ["/identity.css"] = (Path.Combine(tableDirectory, "identity.css"), Css),
@@ -215,6 +216,7 @@ internal sealed partial class TableFiles
             ["/admin-settings.js"] = (Path.Combine(tableDirectory, "admin-settings.js"), JavaScript),
             ["/admin-overview.js"] = (Path.Combine(tableDirectory, "admin-overview.js"), JavaScript),
             ["/admin-activity.js"] = (Path.Combine(tableDirectory, "admin-activity.js"), JavaScript),
+            ["/admin-feedback.js"] = (Path.Combine(tableDirectory, "admin-feedback.js"), JavaScript),
             ["/admin-scenarios.js"] = (Path.Combine(tableDirectory, "admin-scenarios.js"), JavaScript),
             ["/admin-diagnosis.js"] = (Path.Combine(tableDirectory, "admin-diagnosis.js"), JavaScript),
         };

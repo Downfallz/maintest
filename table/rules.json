@@ -1,4 +1,5 @@
 {
+  "language": "en",
   "drawnFrom": {
     "ruleSet": "docs/tabletop/playtest.rules.json",
     "rules": {
@@ -901,7 +902,7 @@
                   "strong": true
                 },
                 {
-                  "text": " There are three families, Brute, Warped and Predator, each a tree of four Stages. A Stage 1 mutation needs nothing. Every other one needs one named mutation of its family, a Stage below it: the Mutation Tree shows which. A creature may acquire a mutation it does not own when it owns what that mutation needs, and it may mix families by acquiring another family's Stage 1: two creatures may take the same mutation, and one creature may mix families. What a creature may acquire is read from what it owns as the step opens: a pick of this round opens nothing until the next mutation round."
+                  "text": " There are three families, Brute, Warped and Predator, each a tree of four Stages. A Stage 1 mutation needs nothing. Every other one needs one named mutation of its family, a Stage below it: the Mutation Tree shows which. A creature may acquire a mutation it does not own when it owns what that mutation needs, and it may mix families by acquiring another family's Stage 1. Two creatures may take the same mutation. What a creature may acquire is read from what it owns as the step opens: a pick of this round opens nothing until the next mutation round."
                 }
               ]
             },
@@ -1106,7 +1107,7 @@
                   "strong": true
                 },
                 {
-                  "text": " The creature that acquires it owns it, and every creature of its team holds its passive. It stacks: a teammate may acquire its own copy, and each copy gives every creature of the team its passive once more."
+                  "text": " The creature that acquires it owns it, and every creature of its team holds its passive. It stacks: a teammate may acquire its own copy, and each copy gives every creature of the team its passive once more. A copy keeps giving after the creature that acquired it is defeated: only the defeated creature's own Upkeep gains stop."
                 }
               ]
             },
@@ -2777,7 +2778,7 @@
                   "strong": true
                 },
                 {
-                  "text": " is what a capstone gives its creature, from the reveal that acquires it to the end of the match. It never counts down. A creature with two capstones holds both passives."
+                  "text": " is what a capstone gives, from the reveal that acquires it to the end of the match. It never counts down. Titan's and Apex's go to the creature that acquires them; Archmage's goes to every creature of its team. A creature holds every passive its own capstones give, and Archmage's once more for every copy its teammates own."
                 }
               ]
             },
@@ -2807,7 +2808,7 @@
                     "strong": true
                   },
                   {
-                    "text": " Every living creature of the team gains 1 Energy more, once for each copy the team owns, from the next round."
+                    "text": " Every living creature of the team gains 1 Energy more, once for each copy the team owns, from the next round. A copy keeps giving after the creature that acquired it is defeated."
                   }
                 ],
                 [
@@ -2921,6 +2922,20 @@
       "adrs": [
         "0076",
         "0187"
+      ]
+    },
+    {
+      "date": "2026-11-16",
+      "text": "Archmage's passive goes to every creature of its team, once for each copy, and a copy keeps giving after the creature that acquired it is defeated (ADR 0114).",
+      "adrs": [
+        "0114"
+      ]
+    },
+    {
+      "date": "2026-11-16",
+      "text": "The book reads in French too, with the same sections, numbers and cards; English and Français switch at the same section (ADR 0193).",
+      "adrs": [
+        "0193"
       ]
     }
   ]

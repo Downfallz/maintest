@@ -26,6 +26,12 @@ export const ACTION_LABELS = Object.freeze({
   'scenario.unlist': 'Took a scenario off Practice',
   'table.reveal': 'Revealed what a table\'s seats hold',
   'table.turn': 'Owed a table\'s bot turn again',
+  'feedback.status': 'Marked feedback',
+  'feedback.convert': 'Turned feedback into the other kind',
+  'feedback.spam': 'Dismissed feedback as spam',
+  'feedback.mute': 'Stopped feedback from a player',
+  'feedback.unmute': 'Let a player send feedback again',
+  'feedback.merge': 'Merged an idea into another',
 });
 
 const TABLE_ACTIONS = new Set(['table.open', 'table.close', 'table.reinvite', 'table.void', 'table.reveal', 'table.turn', 'sessions.delete', 'sessions.export']);

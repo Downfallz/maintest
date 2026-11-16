@@ -2,6 +2,7 @@
 
 Date: 2026-10-30
 Status: Accepted
+Rulebook: `energy-gain`, `capstones`, `passives`
 
 ## Context
 

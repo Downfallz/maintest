@@ -97,7 +97,12 @@ internal sealed partial class FeedbackApi(SendFeedback desk, TableRegistry regis
         if (answer.Refused is { } refused)
         {
             var retry = answer.RetryAfter is { } wait ? (long)Math.Ceiling(wait.TotalSeconds) : (long?)null;
-            var status = refused.Code == "Feedback.Invalid" ? 400 : 429;
+            var status = refused.Code switch
+            {
+                "Feedback.Invalid" => 400,
+                "Feedback.Muted" => 403,
+                _ => 429,
+            };
             var response = StudioResponse.OfJson(new { error = refused.Code, message = refused.Message, retryAfterSeconds = retry }, ArtifactJson.LineOptions, status: status);
             return retry is { } seconds
                 ? response with { Headers = [new KeyValuePair<string, string>("Retry-After", seconds.ToString(CultureInfo.InvariantCulture))] }

@@ -38,8 +38,9 @@ Every flag of `table` is in docs/reference/commands.md.
 
 ## Traps
 
-- No dependency, no build step, no CDN or remote font (ADR 0024). Tests use Node's own runner. One generated file:
-  `rules.json`, the rulebook built from `rules/` by `node scripts/rules/build.mjs` (ADR 0188), never edited by hand.
+- No dependency, no build step, no CDN or remote font (ADR 0024). Tests use Node's own runner. Two generated files:
+  `rules.json` and `rules.fr.json`, the rulebook built from `rules/` by `node scripts/rules/build.mjs` (ADR 0188,
+  0193), never edited by hand.
 - A new file is served only once it joins the host's file table (`src/DownfallArena.Cli/Table/TableFiles.cs`)
   and its test (`TableFilesTests`); a missing one is a 404 in production, not a failing page test.
 - `identity.css` stays last in every page's `<head>`.

@@ -108,6 +108,18 @@ public sealed class TableFilesTests
         book.Headers.ShouldNotBeNull().ShouldContain(new KeyValuePair<string, string>("Cache-Control", TableFiles.RevalidatedCache));
     }
 
+    /// <summary>The rulebook's French edition (rulebook-plan.md R6) is served beside the English, as JSON.</summary>
+    [Fact]
+    public void The_rulebook_s_french_edition_is_served_beside_the_english()
+    {
+        var book = Files.Get("/rules.fr.json");
+
+        book.Status.ShouldBe(200);
+        book.ContentType.ShouldBe(DownfallArena.Cli.Studio.StudioResponse.Json);
+        Text(book).ShouldContain("\"language\": \"fr\"");
+        book.Headers.ShouldNotBeNull().ShouldContain(new KeyValuePair<string, string>("Cache-Control", TableFiles.RevalidatedCache));
+    }
+
     /// <summary>The admin panel's tabs are modules its own module imports (ADR 0174, A3), served beside it.</summary>
     [Theory]
     [InlineData("/admin-players.js")]
@@ -117,6 +129,7 @@ public sealed class TableFilesTests
     [InlineData("/admin-settings.js")]
     [InlineData("/admin-overview.js")]
     [InlineData("/admin-activity.js")]
+    [InlineData("/admin-feedback.js")]
     public void The_admin_panel_s_tab_modules_are_served(string module)
     {
         Files.Get(module).Status.ShouldBe(200);

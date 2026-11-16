@@ -1,7 +1,7 @@
 # Plan: the official rulebook, one source the app reads and an agent keeps true
 
 Status: accepted, 2026-11-16 (the owner settled the questions at the end). R1 built (ADR 0188), R2 built, R3 built
-(ADR 0191), R4 built; R5 next.
+(ADR 0191), R4 built, R5 built, R6 built (ADR 0193); R7 next.
 
 ## What the owner asked for
 
@@ -193,8 +193,37 @@ and the app's edition; it keeps writing, the keeper keeps reading.
    the `rulebook-writer`'s prompt pointed at `rules/`, the lists in `CLAUDE.md` and `docs/reference/commands.md`.
    Tests: the reviewer rules on each path above, `prompts.test.js` on the new agent and skill. Tried once on a
    past balance pass: the keeper must name the sections it touched.
+   *Built (2026-11-16)*: `rules-keeper` is a read-only reviewer. `reviewers.mjs` calls it for the Domain,
+   `game-rules.md`, the glossary and the player's words, an ADR (not their index or template), `data/Spells`,
+   `Tiers`, `Creatures`, `TalentTrees` (which packages a creature is offered) and `balance`, the hosted rule set,
+   `rules/`, `terms.js`, `battle-guidance.js`, `battle/src/tempo.ts`, `showcase/guide.mjs` and
+   `scenarios/tutorials/`. Both it and `/rules` start from `scripts/rules/reach.mjs`,
+   which lists the sections a diff reaches and why: an ADR or a game-rules heading their `sources:` cite, a value
+   they draw, a spell or a mutation they name, their own lines. It also lists the paths it leaves to a reading by
+   hand. `/rules` has the `rulebook-writer` rewrite them and adds the `changes.md` line; `/stage` and `/wrap-up`
+   call it. The ADR template carries a `Rulebook:` line and the pull request's a **Rulebook:** line, and the `rulebook-writer` writes `rules/`.
+   Tests: `studio/reviewers.test.js`, `table/rules-reach.test.js` (the script run on an excerpt of #371's diff) and
+   `prompts.test.js`. Tried on #371 (Archmage shared, Titan and Apex raised): the keeper named 3.1, 3.4, 3.11,
+   3.12 and 5.3. It found the book still true on the numbers, with four gaps: a shared copy outliving its buyer
+   is not taught; 5.3's opening says a passive is its creature's own; `changes.md` and ADR 0114 lack their
+   line; the card says "side" where the book says "team". The fixes are left to issue #713. A `game-rules.md`
+   heading as broad as *Implemented* reaches every section that cites it, so a change under it lists many.
 6. **R6, French.** `rules/fr/`, the same ids, the French column of `player-terminology.md` as its words; the page
    in the language the account chose. Once the English is settled.
+   *Built (2026-11-16, ADR 0193)*: first, the English the keeper found wanting in #713: a shared Archmage copy
+   outlives its buyer (3.4, 5.3), 5.3's opening, the `changes.md` line and ADR 0114's `Rulebook:` line. Then
+   `rules/fr/`, every part, section, card and change in French, written by the `rulebook-writer`; the build writes
+   it to `table/rules.fr.json` and refuses a French book whose files, ids, order, sources, cards or changes differ
+   from the English, or that uses an English word the French column replaced. Spell and mutation names stay as the
+   battle shows them; Bleed, Stun and Regeneration keep the screen's words, glossed once. An account holds no
+   language (the owner chose so): `/rules` opens in the language stored on the device, else the browser's, and
+   **English** and **Français** switch at the same section. The worker keeps both books, `reach.mjs` lists the
+   French sections beside the English (`[fr]`), and the writer, the keeper and `/rules` keep both. Tests:
+   `rules.test.js` (a test per French refusal, the file in sync), `rules-page.test.js`, `rules-reach.test.js`,
+   `sw.test.js`, `TableFilesTests`, `rules.spec.js` (the switch, a browser in French) and `table.rules.js` (French
+   offline). Left: the battle, its cards and every other page stay English; #713's last point (the catalogue's
+   "side") and its domain test; the writer's notes on the English (the mutation card's initiative, an example's
+   unchecked facts) go to an issue.
 7. **R7, the public book.** The showcase renders `table/rules.json` under `/rules/` (and `/fr/regles/` once R6
    is built).
 

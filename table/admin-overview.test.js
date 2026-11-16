@@ -42,3 +42,12 @@ test('a source this host lacks has no card, one that did not answer keeps its ca
   assert.equal(cards.find(card => card.id === 'tending').detail, 'No run kept yet.');
   assert.equal(cards.find(card => card.id === 'finished').detail, 'The host could not read this just now.');
 });
+
+test('feedback waiting is a card, in the warning colour while a bug report is new or the host takes no more today', () => {
+  const calm = overviewCards({ feedback: { new: 2, newBugs: 0, lastDay: 3, full: false } }, NOW).find(card => card.id === 'feedback');
+  assert.deepEqual([calm.tab, calm.number, calm.detail, calm.warn], ['feedback', '2', '0 bug reports new · 3 sent in 24 hours', false]);
+
+  assert.equal(overviewCards({ feedback: { new: 1, newBugs: 1, lastDay: 1, full: false } }, NOW)[0].warn, true);
+  const full = overviewCards({ feedback: { new: 0, newBugs: 0, lastDay: 100, full: true } }, NOW)[0];
+  assert.deepEqual([full.detail, full.warn], ['The host takes no more feedback today.', true]);
+});

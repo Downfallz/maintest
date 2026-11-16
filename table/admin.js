@@ -15,6 +15,7 @@ import { mountTurns } from './admin-turns.js';
 import { mountVoid, voidLabel } from './admin-void.js';
 import { mountScenarios } from './admin-scenarios.js';
 import { mountDiagnosis } from './admin-diagnosis.js';
+import { mountFeedbackTab } from './admin-feedback.js';
 
 const POLL_MS = 2500;
 
@@ -272,7 +273,7 @@ export const SESSIONS_PER_PAGE = 20;
 
 // The headquarters' sections, each one part of the address (`/admin#sessions`), so a reload or a link opens it and
 // Back moves between them. The first is where the page opens.
-export const ADMIN_TABS = Object.freeze(['overview', 'tables', 'sessions', 'scenarios', 'players', 'jobs', 'activity', 'settings']);
+export const ADMIN_TABS = Object.freeze(['overview', 'tables', 'sessions', 'scenarios', 'feedback', 'players', 'jobs', 'activity', 'settings']);
 
 /** The section an address names, or the first one for an address that names none the page has. */
 export function tabOf(hash) {
@@ -714,6 +715,19 @@ async function start() {
   });
   openScenario = scenarios.open;
 
+  // The players' feedback (feedback plan, R3), on a host that keeps it: read when the panel opens, when its section is
+  // opened and on Refresh; a report's sheet opens Diagnose… on its table.
+  const feedback = mountFeedbackTab({
+    send: transport.request,
+    element,
+    openDiagnosis,
+    shown: available => {
+      element('tab-feedback').hidden = !available;
+      element('admin-feedback-off').hidden = available;
+      element('admin-feedback-on').hidden = !available;
+    },
+  });
+
   // The Overview (A5): the numbers at a glance, read when the panel opens, when its section is opened and on Refresh.
   const overview = mountOverview({ send: transport.request, element });
 
@@ -803,7 +817,7 @@ async function start() {
   element('sessions-refresh').addEventListener('click', redrawSessions);
   element('tables-previous').addEventListener('click', () => { tablesPage -= 1; drawTables(); });
   element('tables-next').addEventListener('click', () => { tablesPage += 1; drawTables(); });
-  element('admin-refresh').addEventListener('click', async () => { await redraw(); await redrawSessions(); await players.redraw(); await jobs.redraw(); await turnQueues.redraw(); await settings.redraw(); await overview.redraw(); await activity.redraw(); await scenarios.redraw(); });
+  element('admin-refresh').addEventListener('click', async () => { await redraw(); await redrawSessions(); await players.redraw(); await jobs.redraw(); await turnQueues.redraw(); await settings.redraw(); await overview.redraw(); await activity.redraw(); await scenarios.redraw(); await feedback.redraw(); });
   globalThis.addEventListener?.('hashchange', () => {
     showTab();
     if (tabOf(globalThis.location?.hash) === 'players') void players.redraw();
@@ -811,6 +825,7 @@ async function start() {
     if (tabOf(globalThis.location?.hash) === 'overview') void overview.redraw();
     if (tabOf(globalThis.location?.hash) === 'activity') void activity.redraw();
     if (tabOf(globalThis.location?.hash) === 'scenarios') void scenarios.redraw();
+    if (tabOf(globalThis.location?.hash) === 'feedback') void feedback.redraw();
     if (tabOf(globalThis.location?.hash) === 'jobs') {
       void jobs.redraw();
       void turnQueues.redraw();
@@ -847,6 +862,7 @@ async function start() {
   await overview.redraw();
   await activity.redraw();
   await scenarios.redraw();
+  await feedback.redraw();
   again();
 }
 

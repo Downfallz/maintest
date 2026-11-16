@@ -34,6 +34,7 @@ const CARDS = [
   { id: 'tending', tab: 'jobs', label: 'Last tending run', from: answer => answer?.jobs?.lastRun, draw: tendingCard },
   { id: 'turns', tab: 'jobs', label: 'Bot turns waiting', from: answer => answer?.jobs?.turns,
     draw: turns => ({ number: String(turns.waiting), detail: turns.failed ? `${plural(turns.failed, 'turn')} given up on` : 'None given up on', warn: turns.failed > 0 }) },
+  { id: 'feedback', tab: 'feedback', label: 'Feedback waiting', from: answer => answer?.feedback, draw: feedbackCard },
   { id: 'registration', tab: 'settings', label: 'Registration', from: answer => answer?.registration,
     draw: registration => ({
       number: registration.open ? 'Open' : 'Closed',
@@ -41,6 +42,14 @@ const CARDS = [
       warn: !registration.open,
     }) },
 ];
+
+// What nobody has looked at yet, in the warning colour while a bug report is new or the host takes no more today.
+function feedbackCard(feedback) {
+  const detail = feedback.full
+    ? 'The host takes no more feedback today.'
+    : [`${plural(feedback.newBugs, 'bug report')} new`, `${feedback.lastDay} sent in 24 hours`].join(' · ');
+  return { number: String(feedback.new), detail, warn: feedback.newBugs > 0 || feedback.full === true };
+}
 
 function tendingCard(run, now) {
   if (run.outcome === 'none') return { number: '—', detail: 'No run kept yet.' };

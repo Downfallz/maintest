@@ -101,8 +101,9 @@ and Speed, Quick, Standard or Planning as a capitalised label; or a sentence the
 The content studio is an authoring tool and keeps the content's own words (Tier, level) where they name the file
 being edited.
 
-French is documented here and not yet shipped: the pages have no localization layer, and this change does
-not introduce one.
+French ships in one place: the official rulebook's French edition (`rules/fr/`, ADR 0193), whose build refuses
+an English word where this page's FR column has another. The pages have no localization layer; `/rules` alone
+reads in French.
 
 ## Unchanged names
 
@@ -116,6 +117,11 @@ These keep their current words until a separate naming discussion settles them:
 
 Energy gain, Ongoing effects, Turn order resolution, Tie order, Intent selection, Activation, Cleanup,
 Finalization, Battlefield, Round, Match, Round recap, Critical hit, Passive, Capstone.
+
+Until then, the rulebook's French edition (`rules/fr/`, ADR 0193) writes them as: partie (Match), round,
+Résolution de l'ordre des tours, Ordre des égalités, Activation, Nettoyage (Cleanup), Clôture (Finalization),
+critique, passif, clé de voûte (Capstone); and, for words of its own, frise (timeline), départage (roll-off) and
+brèche (sunder). A French text elsewhere uses the same words.
 
 Historical records -- ADRs, journal entries, frozen experiment records, `spells.md` and the two
 `tier-evolution-*` documents -- keep the words they were written in.
