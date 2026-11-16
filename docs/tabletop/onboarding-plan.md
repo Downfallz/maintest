@@ -173,6 +173,9 @@ give what is said and when. It reuses everything ADR 0179 built, and the regress
    - The spec plays the lesson in the tutorial's file on a fixture board, with a mock host. No browser journey plays a
      tutorial on the real engine yet: O5's per-tutorial specs are the place for it.
    - A concept card names its rulebook section and does not link to it: the table serves no rulebook page.
+     Nothing holds a card's example numbers to the reference values either (#651).
+   - On a phone, with the spell choice docked, the coach card covers the low half of the field (#650). It
+     steps aside while targets are chosen.
    - Nothing is kept: a reloaded page opens the step's cards again.
    - Left to O4: the first card's **Start** and **Skip the tutorial**. The briefing still says **Begin**.
    - While the host answers an assisted question, the dock says the opponent is choosing. Saying "played for
