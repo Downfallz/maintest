@@ -205,44 +205,13 @@ public sealed class OperatorFeedback(IFeedbackStore store, FeedbackMutes mutes, 
             return Result.Failure<FeedbackStatusChange>(FeedbackErrors.MergedAway);
         }
 
-        var now = clock.GetUtcNow();
-        var idea = feedback.Kind == FeedbackKind.Idea;
-        var oneLine = reason is { Length: > 0 and <= LongestReason } && !reason.Any(char.IsControl);
-
-        // Closed again with the status it has keeps when it was closed: the 180 days run from the first time.
-        var closedAt = feedback.Status == status ? feedback.ClosedAt ?? now : now;
-        // The plan stays until another replaces it: a misclick on declined, then shipped, still names the plan.
-        var reopened = feedback with { Status = status, ClosedAt = null, Reason = null, SpamCounted = false };
-        Feedback changed;
-        switch (status)
+        var asked = Changed(feedback, status, reason, plan, clock.GetUtcNow());
+        if (asked.IsFailure)
         {
-            case FeedbackStatus.Seen:
-            case FeedbackStatus.Reproduced when !idea:
-                changed = reopened;
-                break;
-            case FeedbackStatus.Planned when idea && PlanPath.Is(plan):
-                changed = reopened with { Plan = plan };
-                break;
-            case FeedbackStatus.Planned when idea:
-                return Result.Failure<FeedbackStatusChange>(FeedbackErrors.Invalid("Planning names the plan's path in the repository: docs/…-plan.md."));
-            case FeedbackStatus.Shipped when idea:
-                changed = reopened with { ClosedAt = closedAt };
-                break;
-            case FeedbackStatus.Dismissed when oneLine:
-                changed = reopened with { ClosedAt = closedAt, Reason = reason, MergedInto = null };
-                break;
-            case FeedbackStatus.Declined when idea && oneLine:
-                changed = reopened with { ClosedAt = closedAt, Reason = reason };
-                break;
-            case FeedbackStatus.Dismissed:
-            case FeedbackStatus.Declined when idea:
-                return Result.Failure<FeedbackStatusChange>(FeedbackErrors.Invalid($"{(idea && status == FeedbackStatus.Declined ? "Declining" : "Dismissing")} says why, on one line of {LongestReason} characters at most."));
-            default:
-                return Result.Failure<FeedbackStatusChange>(FeedbackErrors.Invalid(idea
-                    ? "An idea is marked seen, planned, shipped, declined or dismissed here."
-                    : "A bug report is marked seen, reproduced or dismissed here."));
+            return Result.Failure<FeedbackStatusChange>(asked.Error);
         }
 
+        var changed = asked.Value;
         if (changed.Status == feedback.Status && changed.Reason == feedback.Reason && changed.Plan == feedback.Plan && changed.MergedInto == feedback.MergedInto)
         {
             return Result.Success(new FeedbackStatusChange(feedback, Changed: false, Muted: null));
@@ -255,6 +224,34 @@ public sealed class OperatorFeedback(IFeedbackStore store, FeedbackMutes mutes, 
         }
 
         return Result.Success(new FeedbackStatusChange(changed, Changed: true, Muted: null));
+    }
+
+    /// <summary>The feedback as the status asked leaves it, or why that status is refused for it.</summary>
+    private static Result<Feedback> Changed(Feedback feedback, FeedbackStatus status, string? reason, string? plan, DateTimeOffset now)
+    {
+        var idea = feedback.Kind == FeedbackKind.Idea;
+        var oneLine = reason is { Length: > 0 and <= LongestReason } && !reason.Any(char.IsControl);
+
+        // Closed again with the status it has keeps when it was closed: the 180 days run from the first time.
+        var closedAt = feedback.Status == status ? feedback.ClosedAt ?? now : now;
+
+        // The plan stays until another replaces it: a misclick on declined, then shipped, still names the plan.
+        var reopened = feedback with { Status = status, ClosedAt = null, Reason = null, SpamCounted = false };
+        return status switch
+        {
+            FeedbackStatus.Seen => Result.Success(reopened),
+            FeedbackStatus.Reproduced when !idea => Result.Success(reopened),
+            FeedbackStatus.Planned when idea && PlanPath.Is(plan) => Result.Success(reopened with { Plan = plan }),
+            FeedbackStatus.Planned when idea => Result.Failure<Feedback>(FeedbackErrors.Invalid("Planning names the plan's path in the repository: docs/…-plan.md.")),
+            FeedbackStatus.Shipped when idea => Result.Success(reopened with { ClosedAt = closedAt }),
+            FeedbackStatus.Dismissed when oneLine => Result.Success(reopened with { ClosedAt = closedAt, Reason = reason, MergedInto = null }),
+            FeedbackStatus.Declined when idea && oneLine => Result.Success(reopened with { ClosedAt = closedAt, Reason = reason }),
+            FeedbackStatus.Dismissed => Result.Failure<Feedback>(FeedbackErrors.Invalid($"Dismissing says why, on one line of {LongestReason} characters at most.")),
+            FeedbackStatus.Declined when idea => Result.Failure<Feedback>(FeedbackErrors.Invalid($"Declining says why, on one line of {LongestReason} characters at most.")),
+            _ => Result.Failure<Feedback>(FeedbackErrors.Invalid(idea
+                ? "An idea is marked seen, planned, shipped, declined or dismissed here."
+                : "A bug report is marked seen, reproduced or dismissed here.")),
+        };
     }
 
     /// <summary>The mute a third spam mark within 30 days earns its sender, or none when it is not the third or a mute holds already.</summary>
@@ -329,32 +326,9 @@ public sealed class OperatorFeedback(IFeedbackStore store, FeedbackMutes mutes, 
             return Result.Failure<FeedbackMerge>(FeedbackErrors.NotFound(into));
         }
 
-        if (idea.Kind != FeedbackKind.Idea || root.Kind != FeedbackKind.Idea)
+        if (await AgainAsync(idea, root, cancellationToken) is { } again)
         {
-            return Result.Failure<FeedbackMerge>(FeedbackErrors.Invalid("Only an idea is merged, and only into another idea."));
-        }
-
-        if (root.Id == idea.Id)
-        {
-            return Result.Failure<FeedbackMerge>(FeedbackErrors.Invalid("An idea is not merged into itself, nor into an idea merged into it."));
-        }
-
-        if (idea.MergedInto is not null && (await FeedbackGroups.RootAsync(store, idea, cancellationToken))?.Id == root.Id)
-        {
-            // Asked again after a cut, it finishes the group's list, which the checks read.
-            if (root.Joined.Contains(idea.Id, StringComparer.Ordinal))
-            {
-                return Result.Success(new FeedbackMerge(idea, root, Changed: false));
-            }
-
-            var finished = root with { Joined = [.. root.Joined, idea.Id] };
-            await store.SaveAsync(finished, cancellationToken);
-            return Result.Success(new FeedbackMerge(idea, finished, Changed: true));
-        }
-
-        if (idea.IsClosed || root.IsClosed)
-        {
-            return Result.Failure<FeedbackMerge>(FeedbackErrors.Closed);
+            return again;
         }
 
         // The group's list is written first, as the checks read it: a write cut short leaves it naming an idea too many,
@@ -379,6 +353,37 @@ public sealed class OperatorFeedback(IFeedbackStore store, FeedbackMutes mutes, 
         }
 
         return Result.Success(new FeedbackMerge(merged, grown, Changed: true));
+    }
+
+    /// <summary>
+    /// What a merge answers before it writes the merge itself: why it is refused, or, merged into this group already,
+    /// that nothing changed, the group's list finished first when a cut left the idea off it. None when it is to merge.
+    /// </summary>
+    private async Task<Result<FeedbackMerge>?> AgainAsync(Feedback idea, Feedback root, CancellationToken cancellationToken)
+    {
+        if (idea.Kind != FeedbackKind.Idea || root.Kind != FeedbackKind.Idea)
+        {
+            return Result.Failure<FeedbackMerge>(FeedbackErrors.Invalid("Only an idea is merged, and only into another idea."));
+        }
+
+        if (root.Id == idea.Id)
+        {
+            return Result.Failure<FeedbackMerge>(FeedbackErrors.Invalid("An idea is not merged into itself, nor into an idea merged into it."));
+        }
+
+        if (idea.MergedInto is not null && (await FeedbackGroups.RootAsync(store, idea, cancellationToken))?.Id == root.Id)
+        {
+            if (root.Joined.Contains(idea.Id, StringComparer.Ordinal))
+            {
+                return Result.Success(new FeedbackMerge(idea, root, Changed: false));
+            }
+
+            var finished = root with { Joined = [.. root.Joined, idea.Id] };
+            await store.SaveAsync(finished, cancellationToken);
+            return Result.Success(new FeedbackMerge(idea, finished, Changed: true));
+        }
+
+        return idea.IsClosed || root.IsClosed ? Result.Failure<FeedbackMerge>(FeedbackErrors.Closed) : null;
     }
 
     /// <summary>The ideas that joined this one: those its list names that still name it, as they came.</summary>
