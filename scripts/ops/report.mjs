@@ -44,7 +44,7 @@ const usable = (reading) => reading !== undefined && reading !== null && reading
 const OPERATOR = new RegExp(
   `\\b((?:${[
     'requeued', 'dropped', 'removed', 'saved', 'restored', 'deleted', 'suspended', 'everywhere', 'opened', 'again',
-    'Practice', 'run', 'voided', 'Session \\S+ closed', 'renamed from \\S+ to \\S+', 'round \\d+', 'keep \\S+ on \\S+',
+    'Practice', 'run', 'voided', 'Session \\S+ closed', 'renamed from \\S+ to \\S+', 'round \\d+', 'keep \\S+ on (?:the host|\\S+)',
   ].join('|')}) by|shown to) [^\\s:]+?(?=\\.?$|: | \\()`,
   'g',
 );

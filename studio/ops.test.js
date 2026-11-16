@@ -158,6 +158,7 @@ test('an error line loses the player names and the free text an operator wrote b
     'Account acct_ab12cd34ef56gh78 (Zelda_42) suspended by marie-c: insults\nZelda_42 failed to stop insulting Bob',
     'Account acct_ab12cd34ef56gh78 (Zelda_42) signed out everywhere by marie-c.',
     'The operator log could not keep suspend on acct_ab12cd34ef56gh78 by marie-c: Status: 503 (Server Busy)',
+    'The operator log could not keep settings on the host by marie-c: Status: 503 (Server Busy)',
     'Session 12 closed by marie-c.',
     'Scenario first-steps cut from session 12 at round 3 by marie-c.',
   ].map(mask);
@@ -172,6 +173,7 @@ test('an error line loses the player names and the free text an operator wrote b
     'Account acct_… (<joueur>) suspended by <joueur>: <motif>',
     'Account acct_… (<joueur>) signed out everywhere by <joueur>.',
     'The operator log could not keep suspend on acct_… by <joueur>: Status: 503 (Server Busy)',
+    'The operator log could not keep settings on the host by <joueur>: Status: 503 (Server Busy)',
     'Session 12 closed by <joueur>.',
     'Scenario first-steps cut from session 12 at round 3 by <joueur>.',
   ]);
