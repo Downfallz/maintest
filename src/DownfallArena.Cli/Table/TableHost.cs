@@ -250,9 +250,16 @@ internal static class TableHost
         admin.Jobs?.Notes = notes;
         admin.Settings?.Notes = notes;
 
+        // The Feedback tab (feedback plan, R3): the operator reads, marks and moves feedback, and mutes a sender; an
+        // account's mute is kept with its activity, a guest's in this process's memory.
+        var feedbackMutes = new FeedbackMutes(accounts?.Activity);
+        var operatorFeedback = feedback is null ? null : new OperatorFeedback(feedback, feedbackMutes, feedbackWrites, clock);
+        admin.Feedback = operatorFeedback is null ? null : new FeedbackAdminApi(operatorFeedback, stored) { Notes = notes };
+
         // The Overview (A5): the numbers at a glance, each read from the source its own tab reads.
         admin.Overview = new OverviewApi(registry, composer, clock)
         {
+            Feedback = operatorFeedback,
             Players = directory,
             Results = results,
             Tending = admin.Jobs?.Runs,
@@ -284,7 +291,7 @@ internal static class TableHost
 
         await using var practices = scenarioStore is null ? null : new ScenarioPractices(composer, scenarioStore, clock);
         admin.Scenarios = scenarioStore is null || stored is null ? null : new ScenarioAdminApi(scenarioStore, stored, composer) { Notes = admin.Notes };
-        var sendFeedback = feedback is null ? null : new SendFeedback(feedback, new GuestAddresses(), feedbackWrites, clock);
+        var sendFeedback = feedback is null ? null : new SendFeedback(feedback, new GuestAddresses(), feedbackWrites, clock, feedbackMutes);
         using var server = new TableServer(options.Bind, options.Port, registry, new TableFiles(TableDirectory), admin, clock, stored, accounts, leaderboard, friends, stats)
         {
             Feedback = sendFeedback is null ? null : new FeedbackApi(sendFeedback, registry) { Accounts = accounts, Practices = practices },

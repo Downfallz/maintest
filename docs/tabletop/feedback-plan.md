@@ -1,6 +1,6 @@
 # Plan: feedback, a bug report to a regression test and an idea to a plan
 
-Status: accepted, 2026-11-16 (the owner settled the questions at the end). R0, R1 and R2 are built; R3 is next.
+Status: accepted, 2026-11-16 (the owner settled the questions at the end). R0 to R3 are built; I1 is next.
 
 ## What the owner asked for
 
@@ -334,6 +334,22 @@ and they are the first thing every player can use.
    kind changed both ways with its words kept, a muted sender refused with `Feedback.Muted`, three spam marks in 30
    days muting, a mute ending after 30 days (`FeedbackAdminApiTests`), `admin-feedback.test.js`,
    `admin.ux.spec.js`.
+
+   *Built (2026-11-16)*: `OperatorFeedback` (Application) and `FeedbackAdminApi` behind the panel's gate:
+   `GET /api/admin/feedback` filtered by kind, status (`open`, the tab's default, for what is not closed) and
+   category, twenty a page; a sheet with the words, what the page and the host added, the position drawn read-only
+   as each side's creatures, the session's link and **Diagnose…** while its table is under way. *Seen* reopens,
+   *reproduced* is a bug report's, *dismissed* takes a reason, `spam` being the mark. Turning one kind into the other
+   keeps its words, position and sender, marks it seen, maps a category the other kind lacks to *something else*,
+   and refuses a closed one. A mute (`FeedbackMute`, 30 days, `FeedbackMutes`) is kept with an account's activity
+   record (ADR 0174), and a guest's in the process's memory, as its address count is; the third spam mark within
+   30 days mutes on its own. `SendFeedback` refuses a muted sender `403 Feedback.Muted` before its guards. The
+   Activity lines are `feedback.status`, `feedback.convert`, `feedback.spam`, `feedback.mute` and
+   `feedback.unmute`; the Overview's *Feedback waiting* card is in the warning colour while a bug report is new or
+   the host is full. The tab's ids are `admin-feedback-*`, since every page's Report or suggest sheet holds
+   `feedback-*`. The privacy panel and policy say the operator can stop a player's feedback for 30 days. Left: a
+   page learns it is muted only when it sends (R2's behaviour), and the list reads every record to filter, which
+   holds at the host's ceiling of 100 a day.
 5. **I1, ideas grouped.** **Merge into…**, *asked by N* and the sort by it, *planned* with a plan's path,
    *shipped*, *declined* with a reason, **Copy as a plan prompt**. Tests: a merge keeping every sender and adding
    to the count, a merged idea out of the list and read inside its target, a merge into a bug report or into

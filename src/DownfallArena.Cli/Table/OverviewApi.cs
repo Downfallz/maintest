@@ -2,6 +2,7 @@ using System.Text.Json;
 using DownfallArena.Application.Accounts.Players;
 using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.Application.Admin;
+using DownfallArena.Application.FeedbackBox;
 using DownfallArena.Application.Tables.Tending;
 using DownfallArena.Application.Work;
 using DownfallArena.Cli.Studio;
@@ -10,7 +11,7 @@ namespace DownfallArena.Cli.Table;
 
 /// <summary>
 /// Headquarters' Overview (admin plan, A5): the numbers at a glance, each from the source its own tab reads -- the
-/// players, the games under way and finished, what waits on players, the jobs, and registration. A source this host
+/// players, the games under way and finished, what waits on players, the jobs, the feedback, and registration. A source this host
 /// does not have is none (null); one that does not answer is <c>{"unavailable":true}</c>, an empty card rather than no
 /// overview.
 /// </summary>
@@ -34,6 +35,9 @@ internal sealed class OverviewApi(TableRegistry registry, TableComposer composer
 
     /// <summary>The host's settings (ADR 0177), on a host that signs players in.</summary>
     public HostSettingsCache? Settings { get; init; }
+
+    /// <summary>The players' feedback (feedback plan, R3), on a host that keeps it.</summary>
+    public OperatorFeedback? Feedback { get; init; }
 
     public static bool Names(string path) => path == Route;
 
@@ -61,6 +65,7 @@ internal sealed class OverviewApi(TableRegistry registry, TableComposer composer
                     lastRun = Tending is { } tending ? await TryAsync(async () => Run(await tending.LatestAsync())) : null,
                     turns = Turns is { } turns ? await TryAsync(async () => Queues(await turns.StatesAsync())) : null,
                 },
+                feedback = Feedback is { } feedback ? await TryAsync(async () => await feedback.WaitingAsync()) : null,
                 registration = Settings is { } settings ? new { open = (await settings.CurrentAsync()).RegistrationOpen } : null,
             },
             Web);

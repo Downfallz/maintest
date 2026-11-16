@@ -1,0 +1,340 @@
+// Headquarters' Feedback tab (docs/tabletop/feedback-plan.md, R3, ADR 0189): the bug reports and ideas players sent
+// with Report or suggest, newest first, twenty a page, filtered by kind, status and category. A row opens its sheet:
+// the player's words, what the page and the host added, the position drawn read-only, the status set by hand, a bug
+// report turned into an idea or back, Diagnose… on a table still under way, and the sender muted or let through. The
+// host keeps, guards and notes; this page asks and draws.
+
+import { ago } from './admin-players.js';
+import { BUG_CATEGORIES, IDEA_PLACES } from './feedback-sheet.js';
+import { stepLabel } from './terms.js';
+
+export const KIND_LABELS = Object.freeze({ bug: 'Bug report', idea: 'Idea' });
+
+export const STATUS_LABELS = Object.freeze({
+  new: 'New',
+  seen: 'Seen',
+  reproduced: 'Reproduced',
+  filed: 'Filed',
+  fixed: 'Fixed',
+  dismissed: 'Dismissed',
+  planned: 'Planned',
+  shipped: 'Shipped',
+  declined: 'Declined',
+});
+
+/** The reason that marks feedback as spam (Feedback.SpamReason), which counts against its sender. */
+export const SPAM = 'spam';
+
+/** What the status filter offers: what is still open first, which is where the tab opens. */
+export const STATUS_FILTERS = Object.freeze([
+  { value: 'open', label: 'Open' },
+  { value: 'new', label: 'New' },
+  { value: 'seen', label: 'Seen' },
+  { value: 'reproduced', label: 'Reproduced' },
+  { value: 'dismissed', label: 'Dismissed' },
+  { value: '', label: 'Every status' },
+]);
+
+/** A bug report's category or an idea's place as the player chose it, in the sheet's own words. */
+export function categoryLabel(kind, category) {
+  const offered = kind === 'idea' ? IDEA_PLACES : BUG_CATEGORIES;
+  return offered.find(one => one.value === category)?.label ?? category ?? '';
+}
+
+/** What the category filter offers: both kinds' values, each once, with the kind they belong to when only one has it. */
+export function categoryFilters() {
+  const values = [...new Set([...BUG_CATEGORIES, ...IDEA_PLACES].map(one => one.value))];
+  return [{ value: '', label: 'Every category' }, ...values.map(value => {
+    const bug = BUG_CATEGORIES.find(one => one.value === value);
+    const idea = IDEA_PLACES.find(one => one.value === value);
+    if (bug && idea) return { value, label: value === 'other' ? 'Something else' : idea.label };
+    return { value, label: bug ? `${bug.label} (bug)` : `${idea.label} (idea)` };
+  })];
+}
+
+/** The address of a page of the list, each filter left out when it is every one. */
+export function feedbackPath({ kind = '', status = 'open', category = '', page = 1 } = {}) {
+  const query = new URLSearchParams();
+  if (kind) query.set('kind', kind);
+  if (status) query.set('status', status);
+  if (category) query.set('category', category);
+  if (Number.isInteger(page) && page > 1) query.set('page', String(page));
+  const text = query.toString();
+  return text ? `/api/admin/feedback?${text}` : '/api/admin/feedback';
+}
+
+/** Where feedback was sent from, as one line: a table and round, a practice and round, or nowhere in a game. */
+export function placeLine(row) {
+  const round = Number.isInteger(row?.round) ? `, round ${row.round}` : '';
+  if (row?.table) return `Table ${row.table}${round}`;
+  if (row?.scenario) return `Practice ${row.scenario}${round}`;
+  return 'Outside a game';
+}
+
+/** One piece of feedback as a row of the list; a new bug report stands out. */
+export function feedbackRows(answer, now = Date.now()) {
+  return (answer?.feedback ?? []).map(row => ({
+    id: row.id,
+    kind: KIND_LABELS[row.kind] ?? row.kind,
+    category: categoryLabel(row.kind, row.category),
+    line: row.line ?? '',
+    place: placeLine(row),
+    status: statusLine(row),
+    when: ago(row.at, now),
+    more: row.additions > 0 ? `+${row.additions} more from the same player` : '',
+    warn: row.kind === 'bug' && row.status === 'new',
+  }));
+}
+
+/** A status as the sheet and the list say it, with the operator's reason when it was dismissed. */
+export function statusLine(feedback) {
+  const label = STATUS_LABELS[feedback?.status] ?? feedback?.status ?? '';
+  if (feedback?.status !== 'dismissed' || !feedback.reason) return label;
+  return feedback.reason === SPAM ? 'Dismissed as spam' : `${label}: ${feedback.reason}`;
+}
+
+/** What the pager under the list says. */
+export function feedbackLine(answer) {
+  const total = answer?.total ?? 0;
+  return `${total} piece${total === 1 ? '' : 's'} of feedback · page ${answer?.page ?? 1} of ${answer?.pages ?? 1}`;
+}
+
+const stamp = at => (at ? new Date(at).toISOString().replace('T', ' ').slice(0, 16) + ' UTC' : '');
+
+/** The facts the sheet lists, each a label and a line, from `GET /api/admin/feedback/<id>`. */
+export function sheetFacts(answer, now = Date.now()) {
+  const facts = [['Sent', `${ago(answer.at, now)} · ${stamp(answer.at)}`]];
+  if (answer.senderGone) facts.push(['From', 'An account since deleted']);
+  else facts.push(['From', answer.guest ? 'A guest, by their seat' : `Account ${answer.account}`]);
+  const context = answer.context;
+  if (context) {
+    const where = [placeLine(context), context.seat, context.subPhase ? stepLabel(context.subPhase) : null,
+      Number.isInteger(context.journalLength) ? `${context.journalLength} journal entries` : null].filter(Boolean);
+    facts.push(['Where', where.join(' · ')]);
+    const basis = [context.rules, context.content ? `content ${context.content.slice(0, 12)}` : null, context.engine ? `engine ${context.engine}` : null].filter(Boolean);
+    if (basis.length) facts.push(['Played on', basis.join(' · ')]);
+    if (Number.isInteger(context.practiceEntries)) facts.push(['Practice', `${context.practiceEntries} entries since the cut, copied`]);
+  }
+  if (answer.page) facts.push(['Page', answer.page]);
+  if (answer.browser) facts.push(['Browser', answer.browser]);
+  for (const error of answer.errors ?? []) facts.push(['Page error', error.where ? `${error.message} (${error.where})` : error.message]);
+  if (answer.mute) facts.push(['Muted', muteLine(answer.mute, now)]);
+  return facts;
+}
+
+/** The sender's mute as one line: until when, and whether the operator or the spam marks did it. */
+export function muteLine(mute, now = Date.now()) {
+  if (!mute) return '';
+  const days = Math.max(1, Math.ceil((new Date(mute.until).getTime() - now) / 86400000));
+  const why = mute.why === SPAM ? 'three marked as spam in 30 days' : `by ${mute.by}`;
+  return `No feedback from this player for ${days} more day${days === 1 ? '' : 's'} (${why}).`;
+}
+
+/** The player's words: what happened or the idea, what they expected or wished, then what they added later. */
+export function sheetWords(answer, now = Date.now()) {
+  const bug = answer.kind === 'bug';
+  const words = [{ label: bug ? 'What happened' : 'What they were trying to do', text: answer.text }];
+  if (answer.expected) words.push({ label: bug ? 'What they expected' : 'How they would like it', text: answer.expected });
+  for (const added of answer.additions ?? []) {
+    words.push({ label: `Added ${ago(added.at, now)}`, text: added.expected ? `${added.text}\n${added.expected}` : added.text });
+  }
+  return words;
+}
+
+const number = value => (typeof value === 'number' ? value : value?.value ?? '?');
+
+/** One creature of the position as a line: its name, health, energy, and what holds it. */
+export function creatureLine(creature) {
+  const held = [creature.isStunned ? 'stunned' : null, ...(creature.conditions ?? []).map(condition => condition?.effect?.kind ?? 'condition')].filter(Boolean);
+  const life = number(creature.health) <= 0 ? 'down' : `${number(creature.health)}/${number(creature.maxHealth)} health`;
+  return [creature.name ?? 'A creature', life, `${number(creature.energy)} energy`, held.length ? held.join(', ') : null].filter(Boolean).join(' · ');
+}
+
+/** The position the player attached, as two read-only sides: theirs first. None when nothing was attached. */
+export function positionSides(position, seat) {
+  if (!position || typeof position !== 'object') return [];
+  return [
+    { label: `The reporter's side${seat ? ` (${seat})` : ''}`, creatures: (position.allies ?? []).map(creatureLine) },
+    { label: 'The other side', creatures: (position.enemies ?? []).map(creatureLine) },
+  ];
+}
+
+/** Which of the sheet's buttons apply to this feedback as it stands. */
+export function sheetActions(answer) {
+  const bug = answer.kind === 'bug';
+  const closed = ['fixed', 'dismissed', 'shipped', 'declined'].includes(answer.status);
+  const muteable = !answer.senderGone;
+  return {
+    seen: answer.status !== 'seen',
+    reproduced: bug && answer.status !== 'reproduced',
+    dismiss: !closed,
+    spam: !closed,
+    toIdea: bug && !closed,
+    toBug: !bug && !closed,
+    diagnose: answer.underWay === true && Boolean(answer.context?.table),
+    mute: muteable && !answer.mute,
+    unmute: muteable && Boolean(answer.mute),
+  };
+}
+
+/** The words a sheet's change is told with. */
+export function changeSaid(answer, done) {
+  if (!answer.ok) return { refused: true, line: answer.body?.message ?? `The host answered ${answer.status}.` };
+  return { refused: false, line: done };
+}
+
+// ---- The tab itself. Everything above is pure and tested; this part only moves it onto the screen.
+
+function made(tag, className, text) {
+  const one = document.createElement(tag);
+  if (className) one.className = className;
+  if (text !== undefined) one.textContent = text;
+  return one;
+}
+
+function fill(select, options) {
+  select.replaceChildren(...options.map(({ value, label }) => {
+    const option = made('option', '', label);
+    option.value = value;
+    return option;
+  }));
+}
+
+/**
+ * Draws the Feedback tab and its sheet. `send(method, path, body)` is the admin transport's; `shown(available)` says
+ * whether this host keeps feedback; `openDiagnosis(row)` opens the Diagnose sheet on a table (S5b).
+ */
+export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
+  let page = 1;
+  let open = null;
+
+  fill(element('admin-feedback-kind'), [{ value: '', label: 'Every kind' }, { value: 'bug', label: 'Bug reports' }, { value: 'idea', label: 'Ideas' }]);
+  fill(element('admin-feedback-status'), STATUS_FILTERS);
+  fill(element('admin-feedback-category'), categoryFilters());
+
+  const filters = () => ({ kind: element('admin-feedback-kind').value, status: element('admin-feedback-status').value, category: element('admin-feedback-category').value, page });
+
+  async function redraw() {
+    const answer = await send('GET', feedbackPath(filters()));
+    if (answer.status === 404 && !answer.body?.error) {
+      shown(false);
+      return;
+    }
+    shown(true);
+    const told = element('admin-feedback-said');
+    if (!answer.ok) {
+      told.textContent = answer.body?.message ?? `The host answered ${answer.status}.`;
+      told.classList.add('refused');
+      return;
+    }
+    told.textContent = '';
+    told.classList.remove('refused');
+    page = answer.body.page ?? 1;
+    const rows = feedbackRows(answer.body);
+    element('admin-feedback-list').replaceChildren(...rows.map(row => {
+      const item = made('li', `session-row feedback-row${row.warn ? ' warning' : ''}`);
+      const button = made('button', 'feedback-open');
+      button.type = 'button';
+      button.dataset.feedback = row.id;
+      button.append(made('strong', '', `${row.kind} · ${row.category}`), made('span', 'feedback-line', row.line),
+        made('span', 'muted', [row.place, row.when, row.status, row.more].filter(Boolean).join(' · ')));
+      button.addEventListener('click', () => void openSheet(row.id));
+      item.append(button);
+      return item;
+    }));
+    element('admin-feedback-empty').hidden = rows.length > 0;
+    element('admin-feedback-count').textContent = feedbackLine(answer.body);
+    element('admin-feedback-previous').disabled = page <= 1;
+    element('admin-feedback-next').disabled = page >= (answer.body.pages ?? 1);
+  }
+
+  function said(line, refused = false) {
+    element('admin-feedback-sheet-said').textContent = line;
+    element('admin-feedback-sheet-said').classList.toggle('refused', refused);
+  }
+
+  function drawSheet(answer) {
+    open = answer;
+    element('admin-feedback-sheet-kind').textContent = `${KIND_LABELS[answer.kind] ?? answer.kind} · ${statusLine(answer)}`;
+    element('admin-feedback-sheet-name').textContent = categoryLabel(answer.kind, answer.category);
+    element('admin-feedback-words').replaceChildren(...sheetWords(answer).flatMap(({ label, text }) => [made('dt', '', label), made('dd', 'feedback-text', text)]));
+    element('admin-feedback-facts').replaceChildren(...sheetFacts(answer).flatMap(([label, line]) => [made('dt', '', label), made('dd', '', line)]));
+    const sides = positionSides(answer.context?.position, answer.context?.seat);
+    element('admin-feedback-position-block').hidden = sides.length === 0;
+    element('admin-feedback-position').replaceChildren(...sides.map(side => {
+      const block = made('section', 'feedback-side');
+      block.append(made('h4', '', side.label));
+      const list = made('ul');
+      list.append(...side.creatures.map(line => made('li', '', line)));
+      block.append(list);
+      return block;
+    }));
+    const session = element('admin-feedback-session');
+    session.hidden = !answer.session;
+    if (answer.session) session.href = answer.session;
+    const can = sheetActions(answer);
+    for (const [name, id] of Object.entries({ seen: 'admin-feedback-seen', reproduced: 'admin-feedback-reproduced', dismiss: 'admin-feedback-dismiss', spam: 'admin-feedback-spam',
+      toIdea: 'admin-feedback-to-idea', toBug: 'admin-feedback-to-bug', diagnose: 'admin-feedback-diagnose', mute: 'admin-feedback-mute', unmute: 'admin-feedback-unmute' })) {
+      element(id).hidden = !can[name];
+    }
+    element('admin-feedback-dismissing').hidden = !can.dismiss;
+  }
+
+  async function openSheet(id) {
+    said('Reading the feedback…');
+    const sheet = element('admin-feedback-sheet');
+    if (!sheet.open) sheet.showModal?.() ?? sheet.setAttribute('open', '');
+    const answer = await send('GET', `/api/admin/feedback/${encodeURIComponent(id)}`);
+    if (!answer.ok) {
+      said(answer.body?.message ?? `The host answered ${answer.status}.`, true);
+      return;
+    }
+    element('admin-feedback-reason').value = '';
+    drawSheet(answer.body);
+    said('');
+  }
+
+  async function change(method, suffix, body, done) {
+    if (!open) return;
+    const answer = await send(method, `/api/admin/feedback/${encodeURIComponent(open.id)}/${suffix}`, body);
+    const outcome = changeSaid(answer, done);
+    if (answer.ok) drawSheet(answer.body);
+    said(outcome.line, outcome.refused);
+    await redraw();
+  }
+
+  element('admin-feedback-close').addEventListener('click', () => element('admin-feedback-sheet').close?.());
+  element('admin-feedback-seen').addEventListener('click', () => void change('PUT', 'status', { status: 'seen' }, 'Marked seen.'));
+  element('admin-feedback-reproduced').addEventListener('click', () => void change('PUT', 'status', { status: 'reproduced' }, 'Marked reproduced.'));
+  element('admin-feedback-dismiss').addEventListener('click', () => {
+    const reason = element('admin-feedback-reason').value.trim();
+    if (!reason) {
+      said('Say why it is dismissed: the reason is kept with it.', true);
+      return;
+    }
+    void change('PUT', 'status', { status: 'dismissed', reason }, 'Dismissed.');
+  });
+  element('admin-feedback-spam').addEventListener('click', () => {
+    if (!globalThis.confirm?.('Dismiss this as spam? Three marked as spam in 30 days stop its sender from sending feedback.')) return;
+    void change('PUT', 'status', { status: 'dismissed', reason: SPAM }, 'Dismissed as spam.');
+  });
+  element('admin-feedback-to-idea').addEventListener('click', () => void change('PUT', 'kind', { kind: 'idea' }, 'It is an idea now, its words and position kept.'));
+  element('admin-feedback-to-bug').addEventListener('click', () => void change('PUT', 'kind', { kind: 'bug' }, 'It is a bug report now, its words kept.'));
+  element('admin-feedback-mute').addEventListener('click', () => {
+    if (!globalThis.confirm?.('Stop feedback from this player for 30 days? Report or suggest disappears for them.')) return;
+    void change('POST', 'mute', undefined, 'This player can send no feedback for 30 days.');
+  });
+  element('admin-feedback-unmute').addEventListener('click', () => void change('DELETE', 'mute', undefined, 'This player can send feedback again.'));
+  element('admin-feedback-diagnose').addEventListener('click', () => {
+    if (!open?.context?.table) return;
+    element('admin-feedback-sheet').close?.();
+    openDiagnosis?.({ id: open.context.table, players: '' });
+  });
+  for (const id of ['admin-feedback-kind', 'admin-feedback-status', 'admin-feedback-category']) {
+    element(id).addEventListener('change', () => { page = 1; void redraw(); });
+  }
+  element('admin-feedback-previous').addEventListener('click', () => { page -= 1; void redraw(); });
+  element('admin-feedback-next').addEventListener('click', () => { page += 1; void redraw(); });
+
+  return { redraw, open: openSheet };
+}

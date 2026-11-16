@@ -13,5 +13,13 @@ public static class FeedbackErrors
 
     public static readonly DomainError TooMany = new("Feedback.TooMany", "Five pieces of feedback a day is the most one player can send. Try again tomorrow.");
 
+    public static readonly DomainError Muted = new("Feedback.Muted", "Feedback from you is paused for now.");
+
+    public static DomainError NotFound(string id) => new("Feedback.NotFound", $"No feedback '{id}' at this host.");
+
+    public static readonly DomainError Closed = new("Feedback.Closed", "This feedback is closed: mark it seen to reopen it first.");
+
+    public static readonly DomainError NoSender = new("Feedback.NoSender", "Its sender's account was deleted: there is nobody to mute.");
+
     public static readonly DomainError HostFull = new("Feedback.HostFull", "The game is taking no more feedback today. Try again tomorrow.");
 }

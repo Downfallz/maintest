@@ -62,6 +62,29 @@ public sealed class AccountActivityLog
         }
     }
 
+    /// <summary>
+    /// Mutes the account from feedback, or lifts its mute when <paramref name="mute" /> is none, keeping its two times.
+    /// Answers false for an account none of whose activity is kept: one never seen is no account to mute.
+    /// </summary>
+    public async Task<bool> MuteFeedbackAsync(AccountId account, FeedbackBox.FeedbackMute? mute, CancellationToken cancellationToken = default)
+    {
+        await Writes.WaitAsync(cancellationToken);
+        try
+        {
+            if (await _store.FindAsync(account, cancellationToken) is not { } kept)
+            {
+                return false;
+            }
+
+            await _store.SaveAsync(kept with { FeedbackMute = mute }, cancellationToken);
+            return true;
+        }
+        finally
+        {
+            Writes.Release();
+        }
+    }
+
     private async Task WriteAsync(AccountId account, bool signedIn, CancellationToken cancellationToken)
     {
         await Writes.WaitAsync(cancellationToken);
@@ -76,7 +99,7 @@ public sealed class AccountActivityLog
                 return;
             }
 
-            await _store.SaveAsync(new AccountActivity(account, signedIn ? now : kept?.LastSignIn, now), cancellationToken);
+            await _store.SaveAsync(new AccountActivity(account, signedIn ? now : kept?.LastSignIn, now) { FeedbackMute = kept?.FeedbackMute }, cancellationToken);
             _seen[account] = now;
         }
         finally
