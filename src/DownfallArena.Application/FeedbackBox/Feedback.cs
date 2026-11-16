@@ -59,6 +59,12 @@ public sealed record Feedback
     /// <summary>The reason that marks feedback dismissed as spam, which counts against its sender.</summary>
     public const string SpamReason = "spam";
 
+    /// <summary>
+    /// Whether this spam mark has been counted towards its sender's mute. Written once the count is made, so a mark
+    /// whose count a failure cut short is counted when the operator asks again, and one counted is never counted twice.
+    /// </summary>
+    public bool SpamCounted { get; init; }
+
     /// <summary>Whether the operator dismissed it as spam.</summary>
     public bool IsSpam => Status == FeedbackStatus.Dismissed && Reason == SpamReason;
 

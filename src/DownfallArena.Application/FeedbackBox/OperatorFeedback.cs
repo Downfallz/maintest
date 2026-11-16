@@ -56,12 +56,28 @@ public sealed class OperatorFeedback(IFeedbackStore store, FeedbackMutes mutes, 
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(by);
         var set = await writes.OneAtATimeAsync(() => StatusAsync(id, status, reason?.Trim(), cancellationToken), cancellationToken);
-        if (set.IsFailure || !set.Value.Changed || !set.Value.Feedback.IsSpam)
+        if (set.IsFailure || !set.Value.Feedback.IsSpam || set.Value.Feedback.SpamCounted)
         {
             return set;
         }
 
-        return Result.Success(set.Value with { Muted = await MutedForSpamAsync(set.Value.Feedback, by, cancellationToken) });
+        // Counted outside the gate, then marked counted: a failure in between leaves it to count when asked again.
+        var muted = await MutedForSpamAsync(set.Value.Feedback, by, cancellationToken);
+        var counted = await writes.OneAtATimeAsync(() => CountedAsync(id, cancellationToken), cancellationToken);
+        return Result.Success(set.Value with { Feedback = counted ?? set.Value.Feedback, Muted = muted });
+    }
+
+    /// <summary>Marks a spam mark counted, as it is now; nothing when it is no longer one.</summary>
+    private async Task<Feedback?> CountedAsync(string id, CancellationToken cancellationToken)
+    {
+        if (await FindAsync(id, cancellationToken) is not { IsSpam: true, SpamCounted: false } marked)
+        {
+            return null;
+        }
+
+        var counted = marked with { SpamCounted = true };
+        await store.SaveAsync(counted, cancellationToken);
+        return counted;
     }
 
     /// <summary>A bug report the rules answered as designed becomes an idea, or an idea that names a rule gone wrong a bug report; its words, position and sender kept.</summary>
@@ -130,11 +146,11 @@ public sealed class OperatorFeedback(IFeedbackStore store, FeedbackMutes mutes, 
         {
             case FeedbackStatus.Seen:
             case FeedbackStatus.Reproduced when feedback.Kind == FeedbackKind.Bug:
-                changed = feedback with { Status = status, ClosedAt = null, Reason = null };
+                changed = feedback with { Status = status, ClosedAt = null, Reason = null, SpamCounted = false };
                 break;
             case FeedbackStatus.Dismissed when reason is { Length: > 0 and <= LongestReason } && !reason.Any(char.IsControl):
                 // Dismissed again for another reason keeps when it was closed: the 180 days run from the first time.
-                changed = feedback with { Status = status, ClosedAt = feedback.Status == FeedbackStatus.Dismissed ? feedback.ClosedAt ?? now : now, Reason = reason };
+                changed = feedback with { Status = status, ClosedAt = feedback.Status == FeedbackStatus.Dismissed ? feedback.ClosedAt ?? now : now, Reason = reason, SpamCounted = false };
                 break;
             case FeedbackStatus.Dismissed:
                 return Result.Failure<FeedbackStatusChange>(FeedbackErrors.Invalid($"Dismissing says why, on one line of {LongestReason} characters at most."));

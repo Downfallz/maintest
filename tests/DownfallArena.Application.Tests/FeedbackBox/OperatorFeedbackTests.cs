@@ -1,4 +1,5 @@
 using DownfallArena.Application.Accounts;
+using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.Application.FeedbackBox;
 using DownfallArena.Application.Tests.Support;
 using DownfallArena.SharedKernel.Identifiers;
@@ -325,5 +326,49 @@ public sealed class OperatorFeedbackTests : IDisposable
         }
 
         (await Desk().WaitingAsync(Cancel)).Full.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task A_third_spam_mark_whose_mute_could_not_be_written_mutes_when_asked_again()
+    {
+        var failing = new FailsOnce(_activity);
+        var desk = new OperatorFeedback(_store, new FeedbackMutes(new AccountActivityLog(failing, _clock)), _writes, _clock);
+        var marked = new List<Feedback>();
+        for (var index = 0; index < FeedbackMute.SpamMarks; index++)
+        {
+            marked.Add(await KeptAsync(FeedbackKind.Idea, Mark.Value, Mark.Value, "battle"));
+        }
+
+        await desk.SetStatusAsync(marked[0].Id, FeedbackStatus.Dismissed, Feedback.SpamReason, "mark", Cancel);
+        await desk.SetStatusAsync(marked[1].Id, FeedbackStatus.Dismissed, Feedback.SpamReason, "mark", Cancel);
+        failing.Armed = true;
+        await Should.ThrowAsync<IOException>(() => desk.SetStatusAsync(marked[2].Id, FeedbackStatus.Dismissed, Feedback.SpamReason, "mark", Cancel));
+
+        var again = (await desk.SetStatusAsync(marked[2].Id, FeedbackStatus.Dismissed, Feedback.SpamReason, "mark", Cancel)).Value;
+
+        (again.Changed, again.Muted?.Why, again.Feedback.SpamCounted).ShouldBe((false, FeedbackMute.BySpam, true));
+    }
+
+    /// <summary>An activity store whose next write fails once it is armed, as a storage hiccup would.</summary>
+    private sealed class FailsOnce(IAccountActivityStore inner) : IAccountActivityStore
+    {
+        public bool Armed { get; set; }
+
+        public Task<AccountActivity?> FindAsync(AccountId account, CancellationToken cancellationToken = default) => inner.FindAsync(account, cancellationToken);
+
+        public Task<IReadOnlyList<AccountActivity>> ListAsync(CancellationToken cancellationToken = default) => inner.ListAsync(cancellationToken);
+
+        public Task SaveAsync(AccountActivity activity, CancellationToken cancellationToken = default)
+        {
+            if (Armed)
+            {
+                Armed = false;
+                throw new IOException("The storage did not answer.");
+            }
+
+            return inner.SaveAsync(activity, cancellationToken);
+        }
+
+        public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default) => inner.ForgetAsync(account, cancellationToken);
     }
 }

@@ -317,7 +317,13 @@ export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
 
   async function change(method, suffix, body, done) {
     if (!open) return;
+    // The sheet this change was asked from: an answer that comes back once another was opened draws nothing on it.
+    const from = read;
     const answer = await send(method, `/api/admin/feedback/${encodeURIComponent(open.id)}/${suffix}`, body);
+    if (from !== read) {
+      await redraw();
+      return;
+    }
     const outcome = changeSaid(answer, done);
     if (answer.ok) drawSheet(answer.body);
     said(outcome.line, outcome.refused);

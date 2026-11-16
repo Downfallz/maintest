@@ -164,19 +164,9 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
         }
 
         var (kept, muted) = (changed.Value.Feedback, changed.Value.Muted);
-        if (!changed.Value.Changed)
+        if (changed.Value.Changed)
         {
-            return await SheetAsync(id);
-        }
-
-        Console.WriteLine($"  Feedback {id} marked {Name(kept.Status)}{(kept.Reason is null ? string.Empty : $" ({kept.Reason})")} by {operatorName}.");
-        if (kept.IsSpam)
-        {
-            await Notes.NoteAsync(operatorName, OperatorActions.FeedbackSpam, id);
-        }
-        else
-        {
-            await Notes.NoteAsync(operatorName, OperatorActions.FeedbackStatus, id, kept.Reason is null ? Name(kept.Status) : $"{Name(kept.Status)}: {kept.Reason}");
+            await NoteStatusAsync(id, kept, operatorName);
         }
 
         if (muted is not null)
@@ -186,6 +176,19 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
         }
 
         return await SheetAsync(id);
+    }
+
+    private async Task NoteStatusAsync(string id, Feedback kept, string operatorName)
+    {
+        Console.WriteLine($"  Feedback {id} marked {Name(kept.Status)}{(kept.Reason is null ? string.Empty : $" ({kept.Reason})")} by {operatorName}.");
+        if (kept.IsSpam)
+        {
+            await Notes.NoteAsync(operatorName, OperatorActions.FeedbackSpam, id);
+        }
+        else
+        {
+            await Notes.NoteAsync(operatorName, OperatorActions.FeedbackStatus, id, kept.Reason is null ? Name(kept.Status) : $"{Name(kept.Status)}: {kept.Reason}");
+        }
     }
 
     private async Task<StudioResponse> KindAsync(string id, string body, string operatorName)
