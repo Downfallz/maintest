@@ -31,6 +31,18 @@ test('a card says what its section in the book says: its title, its lines and it
   assert.equal(concepts.card('health').example, sections.find(one => one.id === 'winning').card.example);
 });
 
+// #682 pinned two rules on the cards a tutorial opens; the book keeps them. The ceiling is the engine's
+// (ADR 0076, `Creature.DefenseBuffCeiling`), not content the build can draw, so it is held to the engine here.
+test('the Health card says healing stops at the starting Health, and the Defense card the engine\'s ceiling on its buffs', () => {
+  assert.ok(concepts.card('health').lines.includes('Healing never takes a creature above the Health it started the match with.'));
+  const engine = readFileSync(join(root, 'src/DownfallArena.Domain/Matches/Creatures/Creature.cs'), 'utf8');
+  const ceiling = Number(/DefenseBuffCeiling = (\d+);/.exec(engine)?.[1]);
+  assert.ok(Number.isInteger(ceiling));
+  assert.ok(concepts.card('defense').lines.includes(`Defense buffs add at most ${ceiling} to it, however many it holds.`));
+  const resolving = sections.find(section => section.card?.id === 'defense');
+  assert.match(JSON.stringify(resolving.blocks), new RegExp(`count for ${ceiling} at most`));
+});
+
 test('a card links to its section of the rulebook, by the section\'s id, and names it as the book numbers it', () => {
   const tempo = sections.find(section => section.id === 'tempo');
   assert.deepEqual(concepts.card('tempo').rules, { section: 'tempo', href: '/rules#tempo', label: `Rules, ${tempo.number} ${tempo.title}` });

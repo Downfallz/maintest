@@ -662,7 +662,8 @@ See [AU2 and its verification](../battle/README.md#au2-objectives-and-contextual
 In a tutorial (ADR 0187) the lesson's steps take the tips' place. `battle-tutorial.js` reads the lesson the host
 says under `practice.tutorial`: the band's words, the coach card of the question asked, and the assisted questions
 the page does not draw. `concepts.js` reads the concept cards a step opens from the official rulebook,
-`rules.json` (rulebook-plan.md R4): it writes no card's text, and each card links to its section (`/rules#<id>`). See [A tutorial's coach](../battle/README.md#a-tutorials-coach).
+`rules.json` (rulebook-plan.md R4): it writes no card's text, and each card links to its section (`/rules#<id>`).
+See [A tutorial's coach](../battle/README.md#a-tutorials-coach).
 
 `lobby-tutorials.js` is the tutorials outside a game (onboarding-plan.md, O4), all of it read from
 `GET /api/tutorials`: the home page's **Learn to play** section, one card a tutorial with **New** or **Done**; the

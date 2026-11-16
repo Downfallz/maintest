@@ -36,7 +36,7 @@ public sealed class RulebookConceptCardsTests
         var sectionsWithCards = book.RootElement.GetProperty("parts").EnumerateArray()
             .SelectMany(part => part.GetProperty("sections").EnumerateArray())
             .Where(section => section.TryGetProperty("card", out var card) && card.ValueKind == JsonValueKind.Object)
-            .Select(section => section.GetProperty("card").GetProperty("id").GetString())
+            .Select(section => section.GetProperty("card").GetProperty("id").GetString()!)
             .ToList();
 
         var cards = CardsInTheBook();

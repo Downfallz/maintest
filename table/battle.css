@@ -1789,6 +1789,7 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 .concept-rulebook { margin: 0 0 8px; font-size: 12px; }
 /* The card's section in the rulebook, opened in a new tab so the battle stays on its question (rulebook-plan.md R4). */
 .concept-rulebook a, .help-rules a { display: inline-flex; align-items: center; min-height: 44px; color: var(--gold); text-underline-offset: 3px; }
+.concept-rulebook a:focus-visible, .help-rules a:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .help-rules { margin: 0; font-size: 13px; }
 .coach-end { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 .coach-end[hidden] { display: none; }

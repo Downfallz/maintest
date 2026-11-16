@@ -21,6 +21,7 @@ id: health
 title: Health
 At zero Health a creature is defeated, for the rest of the match.
 When a team has no creature left, the match ends at once, even in the middle of a round.
+Healing never takes a creature above the Health it started the match with.
 > A creature starts at {creature.health} Health. A hit of 7 leaves it at {max(0, creature.health - max(0, 7 - creature.defense))}.
 ```
 

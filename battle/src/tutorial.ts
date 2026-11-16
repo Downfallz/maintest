@@ -113,6 +113,7 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
     if (!card) return;
     text('concept-title', card.title); text('concept-example', card.example); text('concept-rulebook', card.rules.label);
     el<HTMLAnchorElement>('concept-rulebook').href = card.rules.href;
+    el('concept-rulebook').setAttribute('aria-label', `${card.rules.label}, opens in a new tab`);
     el('concept-lines').replaceChildren(...paragraphs(card.lines));
     text('concept-next', queue.length > 1 ? `Next card · ${queue[1].title}` : 'Back to the battle');
   }

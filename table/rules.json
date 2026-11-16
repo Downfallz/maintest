@@ -107,7 +107,8 @@
             "title": "Health",
             "lines": [
               "At zero Health a creature is defeated, for the rest of the match.",
-              "When a team has no creature left, the match ends at once, even in the middle of a round."
+              "When a team has no creature left, the match ends at once, even in the middle of a round.",
+              "Healing never takes a creature above the Health it started the match with."
             ],
             "example": "A creature starts at 30 Health. A hit of 7 leaves it at 23."
           }
@@ -1731,6 +1732,7 @@
             "title": "Defense",
             "lines": [
               "Defense lowers the damage of every hit a creature takes, never below zero.",
+              "Defense buffs add at most 10 to it, however many it holds.",
               "Only damage over time, applied at Upkeep, ignores it."
             ],
             "example": "A hit of 7 on a creature with 2 Defense deals 5. A creature starts at 0 Defense: the same hit on it deals 7."
@@ -2911,6 +2913,14 @@
       "adrs": [
         "0112",
         "0188"
+      ]
+    },
+    {
+      "date": "2026-11-16",
+      "text": "The tutorials' cards come from this book and link to their sections. The Health card says healing stops at the starting Health, and the Defense card that its buffs count for 10 at most (ADR 0076, ADR 0187).",
+      "adrs": [
+        "0076",
+        "0187"
       ]
     }
   ]

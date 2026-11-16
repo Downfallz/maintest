@@ -206,6 +206,7 @@ test('a concept card links to its section of the rulebook, which opens in a new 
   const health = cardOf(lesson.steps[0].concepts[0]);
   const link = page.locator('#concept-rulebook');
   await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link).toHaveAccessibleName(`Rules, ${health.section.number} ${health.section.title}, opens in a new tab`);
   await fitsViewport(page, '#concept-rulebook');
   const [tab] = await Promise.all([context.waitForEvent('page'), link.click()]);
   await tab.waitForLoadState();
