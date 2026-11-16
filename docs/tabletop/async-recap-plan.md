@@ -8,6 +8,9 @@ below is one pull request.
 A recap when a player comes back to an asynchronous game: after several hours away, they get the game's context
 back at once.
 
+The owner added: what is missing is often not the last action alone. It is what happened recently, and where the
+player stands in the game.
+
 ## What exists today
 
 A game between two players is played over days, one tap at a time (ADR 0169). This is what the table already does
@@ -28,27 +31,31 @@ for a player who comes back.
 
 So a player who comes back after a few hours either steps through every action one by one, or, after a long
 absence, lands on a board with no account of how it got there. Nothing says how long ago the last move was, what
-changed between the two teams, or what the player had chosen before they left.
+changed between the two teams, or what the player had chosen before they left. And a player who saw the last
+action, but not the game for two days, gets nothing at all: the context they lack is the game, not the gap.
 
 ## The recap
 
-One sheet, **Since your last visit**, opened over the battle view when a seat comes back to a game that moved
-without it. It fits one phone screen at 320 px and reads top to bottom:
+One sheet, **Where you are**, over the battle view. It tells where the game stands and what happened recently,
+whether or not the player saw it; what they did not see is marked as new. It fits one phone screen at 320 px and
+reads top to bottom:
 
 1. **Where the game is.** Against whom, the round and its step (Upkeep, Command, Combat, Aftermath), the last move
-   so many hours ago, and the time left to answer.
+   so many hours ago, and the time left to answer. Who leads: creatures standing and health, side by side.
 2. **The two teams now.** Each creature with its health and energy, the ones defeated while the player was away
-   marked, and the difference since the last visit (`−12 HP`).
-3. **What happened.** The rounds crossed, each in the history summary's words: the mutations revealed, each cast
-   (who, which spell, critical or not, what it did), the defeated creatures. Most recent last, the older rounds
-   folded.
+   marked, and the difference over the span the sheet tells (`−12 HP`).
+3. **What happened recently.** The last completed round and the round under way, and every earlier round the
+   player has not seen. Each in the history summary's words: the mutations revealed, each cast (who, which spell,
+   critical or not, what it did), the defeated creatures. Most recent last, the older rounds folded, what the
+   player has not seen marked **New**.
 4. **What you had chosen.** The seat's own choices still in force: the tempo of each creature this round, the spells
    it declared, the mutations it bought last.
 5. **What you are asked now.** The question in the words of the push notice (`Choose a spell`), and the reactions
    the opponent sent.
 
-Two buttons close it: **Go to my turn** settles the board on the present, and **Replay step by step** hands the
-same span to the existing playback. The journal gains a marker, **You left here**, at the seen sequence.
+Two buttons close it: **Go to my turn** settles the board on the present, and **Replay step by step** hands what
+was not seen to the existing playback (offered only when something was not seen). The journal gains a marker,
+**You left here**, at the seen sequence.
 
 The sheet reads only the seat's own feed and view: it shows what the seat could already read in the journal,
 gathered. The page computes no rule. It formats public events, as `table/battle-history.js` does today.
@@ -66,10 +73,13 @@ for the record's ETag. Its place in the store (a blob per seat, or a row in Tabl
 
 ### When the sheet opens
 
-It opens when the seat comes back after at least an hour (`seen.at`) and the feed holds at least one result the
-seat has not seen. It never opens over a question the player is answering, in a tutorial, in a practice game, in a
-replay, or for a device holding both seats (ADR 0120). Below the threshold, the catch-up plays as it does today. The
-journal's **Since your last visit** button opens it at any time while unseen results remain.
+It opens on its own when the seat comes back after at least an hour (`seen.at`) and the feed holds at least one
+result the seat has not seen. It never opens on its own over a question the player is answering, in a tutorial,
+in a practice game, in a replay, or for a device holding both seats (ADR 0120). Below the threshold, the
+catch-up plays as it does today.
+
+A **Where you are** button in the top bar, beside the round flow and the journal, opens it at any time in a game
+under way: a player who left the page open for two days, or who simply lost the thread, asks for it.
 
 ### The routes
 
@@ -94,13 +104,15 @@ journal's **Since your last visit** button opens it at any time while unseen res
    `battle-seen.js` sends it and reads the larger of the two. Tests: host tests for the route (a smaller sequence is
    ignored, another seat's key is refused, a replay writes nothing), the storage tests under Azurite, the Node tests
    of `battle-seen.js`. `table/README.md#routes` and docs/reference/commands.md.
-2. **R2, the recap model.** `table/battle-recap.js`: from the seat's feed after the seen sequence, the board now, the
-   seat's view and the time now, the five parts of the sheet as data. No page change yet. Tests: Node tests on
+2. **R2, the recap model.** `table/battle-recap.js`: from the seat's feed (the last completed round, the round under
+   way, and everything after the seen sequence), the board now, the seat's view and the time now, the five parts of
+   the sheet as data, with what was not seen marked. No page change yet. Tests: Node tests on
    recorded feeds: one cast, a round crossed, three rounds crossed, a creature defeated, a game that ended while the
-   player was away, the seat's own choices, nothing unseen.
+   player was away, the seat's own choices, nothing unseen (the recent rounds still told), the first round.
 3. **R3, the sheet in the battle view.** The dialog, its two buttons, the threshold, the cases where it never opens,
-   the journal's marker and button. Tests: Node tests of the threshold; a browser spec at 320 px and on desktop on
-   the mock host (open, Go to my turn, Replay step by step, never over a question); the battle bundle rebuilt.
+   the top bar's **Where you are** button, the journal's marker. Tests: Node tests of the threshold; a browser spec
+   at 320 px and on desktop on the mock host (opens on its own, opens from the button with nothing unseen, Go to my
+   turn, Replay step by step, never on its own over a question); the battle bundle rebuilt.
 4. **R4, the recap reaches the lobby and the notice.** The lobby's "Your turn" card and the inbox say
    `3 casts since your last visit · last move 5 h ago`; the push notice adds the count to its body. The host counts
    the results after the seen sequence; it reads no board. Tests: host tests of the notice's body, Node tests of the
@@ -109,9 +121,12 @@ journal's **Since your last visit** button opens it at any time while unseen res
 ## Questions the owner settled (2026-11-16)
 
 1. The sheet opens on its own after an hour away, with at least one result unseen. Below that, the catch-up plays
-   as it does today; the journal's button opens the sheet at any time.
+   as it does today. The top bar's button opens the sheet at any time.
 2. What a seat was shown is kept at the host, one record per seat, so the recap follows the player across devices
    (stage R1 and its ADR). The browser keeps its copy as a fallback.
 3. **Go to my turn** follows the sheet by default; **Replay step by step** is offered beside it.
 4. The lobby's "Your turn" card, the inbox and the push notice each carry a line of the recap (stage R4).
 5. Every game a person sits at gets the recap, against a player or a bot.
+6. Added by the owner after the questions: the context missing is often not the last action but what happened
+   recently and where the player stands. The sheet always tells the last completed round and the round under way,
+   seen or not, marks what was not seen, and opens from the top bar at any time.
