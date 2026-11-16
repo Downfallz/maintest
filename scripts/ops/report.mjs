@@ -1,6 +1,7 @@
 // The production report (ADR 0186): the readings scripts/ops/read.sh wrote, one JSON file each, turned into one
 // phone screen, in French, whose second line says what to look at first. ops-report.yml prints it to its log,
-// which a session reads and which is public, so it prints counts and masked lines, never a record.
+// which a session reads and which is public, so it prints counts and masked lines (no name a person chose, no
+// address, id, token or reason an operator wrote), never a record.
 //
 //   node scripts/ops/report.mjs <dir> [--now <ISO time>]
 
@@ -41,20 +42,21 @@ const usable = (reading) => reading !== undefined && reading !== null && reading
 /**
  * A console line without the names people chose: the host's audit lines name a player by the name they picked
  * (`Account acct_… (name)`, `renamed from a to b`) and the operator by an admin's player name or sign-in
- * (`by name.`, `by name:`, `shown to name.`), and a suspension carries the reason an operator wrote, in free text.
+ * (`by name.`, `by name:`, `by name (`, `shown to name.`), and a suspension's or a void's reason is free text an
+ * operator wrote. A word masked too many costs the report little; a name let through is in a public log.
  */
 function unnamed(line) {
   return line
-    .replace(/\bsuspended( by \S+?)?: .*$/, 'suspended$1: <motif>')
+    .replace(/\b(suspended by \S+?|account is suspended|voided by \S+ \([^)]*\)[^:]*): .*$/, '$1: <motif>')
     .replace(/\b(acct_[A-Za-z0-9]+) \([^)]*\)/g, '$1 (<joueur>)')
     .replace(/\brenamed from \S+ to \S+/g, 'renamed from <joueur> to <joueur>')
-    .replace(/\b(by|shown to) [^\s:]+?(?=\.?$|: )/g, '$1 <joueur>');
+    .replace(/\b(by|shown to) [^\s:]+?(?=\.?$|: | \()/g, '$1 <joueur>');
 }
 
 /** A console line as a public log may hold it: no name, email, id, token or query string, one line, short. */
 export function mask(line) {
   // A word with an @ in it is an address, or near enough: masked whole, in one pass over the words.
-  const words = unnamed(String(line ?? '').trim())
+  const words = unnamed(String(line ?? '').replace(/\s+/g, ' ').trim())
     .split(/(\s+)/)
     .map((word) => (word.includes('@') ? '<courriel>' : word))
     .join('');

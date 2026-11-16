@@ -69,6 +69,31 @@ public sealed class OperatorVoidTests : IDisposable
             reason => reason.By.ShouldNotBeNullOrWhiteSpace());
     }
 
+    /// <summary>
+    /// The console is read into a public log (ADR 0186): the explanation is free text the operator wrote, over
+    /// several lines and maybe naming a player, so it stays on the record and the operator log, not the console.
+    /// </summary>
+    [Fact]
+    public async Task A_void_says_its_category_on_the_console_but_not_the_operator_s_explanation()
+    {
+        var (id, _) = await OpenedAsync();
+        var said = new StringWriter();
+        var before = Console.Out;
+        Console.SetOut(said);
+        try
+        {
+            (await VoidAsync(id, Reason("abuse", "Zelda_42 kept stalling.\nThe bot failed to answer."))).Status.ShouldBe(200);
+        }
+        finally
+        {
+            Console.SetOut(before);
+        }
+
+        said.ToString().ShouldContain($"Session {id} voided by");
+        said.ToString().ShouldNotContain("Zelda_42");
+        said.ToString().ShouldNotContain("failed to answer");
+    }
+
     [Fact]
     public async Task A_seat_of_a_voided_match_is_told_the_operator_s_explanation()
     {

@@ -420,7 +420,7 @@ internal sealed class AdminApi
         // Every other process holding the table, finished or not, lets it go and answers its seats 410 (ADR 0165).
         _composer.Relay?.Table(id);
         await _composer.NotifyVoidAsync(id, record, reason.Value.Explanation);
-        Console.WriteLine($"  Session {id} voided by {operatorName} ({reason.Value.Category}){(withdrawn ? ", its result withdrawn" : string.Empty)}: {reason.Value.Explanation}");
+        Console.WriteLine($"  Session {id} voided by {operatorName} ({reason.Value.Category}){(withdrawn ? ", its result withdrawn" : string.Empty)}.");
         await Notes.NoteAsync(operatorName, OperatorActions.VoidMatch, id, $"{reason.Value.Category}: {reason.Value.Explanation}");
         return StudioResponse.OfJson(new { voided = true, withdrawn, category = reason.Value.Category }, ArtifactJson.LineOptions);
     }
