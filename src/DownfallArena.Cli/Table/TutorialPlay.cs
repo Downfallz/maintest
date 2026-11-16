@@ -222,6 +222,28 @@ internal sealed class TutorialPlay
             : null;
 
     /// <summary>
+    /// The recorded answer the seat is owed now, read before the gate (reading may move the session, which is not this
+    /// play's to hold); none once the tutorial is done, for a question that is the person's, or when the seat was
+    /// handed back, which is said here.
+    /// </summary>
+    private (Application.Matches.Decisions.PlayerDecision Decision, long Asked)? Next(Seat table)
+    {
+        var snapshot = table.Read();
+        if (snapshot is null || Finished(snapshot, table))
+        {
+            return null;
+        }
+
+        (Application.Matches.Decisions.PlayerDecision Decision, long Asked)? owed = null;
+        if (HandsBack(() => owed = Owed(snapshot)))
+        {
+            SayGaveBack();
+        }
+
+        return owed;
+    }
+
+    /// <summary>
     /// Gives the recorded answers while the seat is asked assisted questions, one of the match's turns each. An
     /// answer the match did not take, because the person's own got there first, the table was let go of or it
     /// could not be written, hands every question back to the person: the script no longer says what the seat
@@ -231,25 +253,8 @@ internal sealed class TutorialPlay
     {
         try
         {
-            while (true)
+            while (Next(table) is { } answer)
             {
-                // The seat is read before the gate: reading may move the session, which is not this play's to hold.
-                var snapshot = table.Read();
-                (Application.Matches.Decisions.PlayerDecision Decision, long Asked)? owed = null;
-                if (snapshot is not null && Finished(snapshot, table))
-                {
-                    break;
-                }
-
-                if (snapshot is not null && HandsBack(() => owed = Owed(snapshot)))
-                {
-                    SayGaveBack();
-                }
-
-                if (owed is not { } answer)
-                {
-                    break;
-                }
 
                 var taken = (await table.Decide(answer.Decision, answer.Asked)).Taken;
                 if (HandsBack(taken ? _assisted.Given : _assisted.HandBack))

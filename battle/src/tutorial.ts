@@ -23,9 +23,11 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
   // not over the field (battle.css); a plain practice keeps it on the field, where it comes back to.
   const band = el('practice-band'), bandHome = { parent: band.parentElement!, before: band.nextSibling };
   const header = document.querySelector<HTMLElement>('#battle .hud-top')!;
-  function dock(inHeader: boolean) {
-    if (inHeader && band.parentElement !== header) header.insertBefore(band, header.querySelector('.tools'));
-    else if (!inHeader && band.parentElement !== bandHome.parent) bandHome.parent.insertBefore(band, bandHome.before);
+  function toHeader() {
+    if (band.parentElement !== header) header.insertBefore(band, header.querySelector('.tools'));
+  }
+  function toField() {
+    if (band.parentElement !== bandHome.parent) bandHome.parent.insertBefore(band, bandHome.before);
   }
   // A sheet docks under the field unless the screen gives it a side (battle.css, the spell choice's own query).
   const beside = window.matchMedia('(min-width: 760px), (orientation: landscape) and (max-height: 520px)');
@@ -68,7 +70,11 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
   async function leaveTo(address: string) {
     // A tutorial not done is skipped (O4) before its practice is let go of, which the skip does not need.
     const skipping = leavingSkips(latest);
-    await Promise.race([(async () => { if (skipping) await say('skip'); await letGo(); })(), new Promise(resolve => setTimeout(resolve, SKIP_WAIT_MS))]);
+    const told = async () => {
+      if (skipping) await say('skip');
+      await letGo();
+    };
+    await Promise.race([told(), new Promise(resolve => setTimeout(resolve, SKIP_WAIT_MS))]);
     location.assign(address);
   }
   /**
@@ -128,7 +134,7 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
       text('practice-eyebrow', band.eyebrow); text('practice-title', band.title); text('practice-detail', band.detail);
       text('practice-brief-eyebrow', band.eyebrow); text('practice-restart', band.restart);
       el('practice-band').setAttribute('aria-label', 'Tutorial');
-      dock(true);
+      toHeader();
     }
     shown = lesson ? coachCard(view, { held }) : null;
     coach.hidden = !shown;
@@ -159,7 +165,7 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
   /** A new practice teaches its steps again. */
   function reset() {
     document.getElementById('battle')!.dataset.tutorial = ''; opened.clear(); key = ''; latest = null; doneSaid = false;
-    dock(false); text('practice-restart', 'Restart the round');
+    toField(); text('practice-restart', 'Restart the round');
     text('practice-brief-begin', 'Begin'); el('practice-brief-skip').hidden = true; el<HTMLButtonElement>('practice-brief-skip').disabled = false;
     if (dialog.open) dialog.close();
   }

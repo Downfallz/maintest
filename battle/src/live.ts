@@ -497,7 +497,10 @@ function render() {
   text('actor-name', playbackState.receipt ? playbackState.receipt.category : playbackState.active ? name(frame.actor) : headline(board));
   const phase = view ? stepLabel(board.subPhase) || 'Waiting for players' : '';
   text('actor-meta', playbackState.active ? playbackState.label : phase);
-  text('instruction', !view ? '' : playbackState.active ? playbackState.asks ? 'Read the result, then choose OK. Your next choice follows.' : 'Results are playing. Your next choice follows; Skip all shows the current board.' : lessonOverText(view) ?? mutation.prompt ?? guide.objective);
+  let instruction = '';
+  if (view && playbackState.active) instruction = playbackState.asks ? 'Read the result, then choose OK. Your next choice follows.' : 'Results are playing. Your next choice follows; Skip all shows the current board.';
+  else if (view) instruction = lessonOverText(view) ?? mutation.prompt ?? guide.objective;
+  text('instruction', instruction);
   $('instruction').hidden = Boolean(action.error || planning.model().error || replay.error);
   if (view && ready && !rendererFailed) $('loading').hidden = true;
   // What this seat has been shown so far, kept for the next time the page opens on it.
