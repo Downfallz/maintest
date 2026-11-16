@@ -336,7 +336,7 @@ declare on their own and do not change the engine's acting creature.
 ## Verification
 
 ```bash
-node --test studio/*.test.js table/*.test.js
+node --test studio/*.test.js table/*.test.js showcase/*.test.js
 dotnet build
 dotnet test
 dotnet format --verify-no-changes
@@ -440,6 +440,12 @@ first, in the same order. Every card of one's own says the day its game was crea
 game between players, in 3v3, not opened unranked, each seat held by an account of its own (ADR 0124, 0171). A finished game's
 row says the same from the host's kept result: the day its table was opened, the day it finished, and Ranked or
 Unranked as the ladder counted it.
+
+The lobby's footer (Copyright, About the game), the sign-in screen's Privacy policy, the account menu's Game website
+and Settings → Privacy link to the game website. Its origin and the game's own are named once in `site-origins.js`, and the showcase build
+reads both. A developer's or a laptop's table has no copy of the website, so these links open the published site on
+purpose. `lobby.html` repeats the website's origin in its static links, and `showcase/showcase.test.js` fails when
+one of them differs from the module.
 
 ## Signing in (ADR 0122)
 

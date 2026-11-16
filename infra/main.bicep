@@ -210,6 +210,7 @@ resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
     sku: {
       name: 'PerGB2018'
     }
+    // The public privacy policy promises this period (showcase/privacy.mjs); showcase/showcase.test.js holds them equal.
     retentionInDays: 30
     workspaceCapping: {
       dailyQuotaGb: json('0.5')
@@ -258,6 +259,7 @@ resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
 }
 
 // A week to take back a session deleted by mistake: recordings are small, and one is a playtest evening.
+// The public privacy policy promises these days (showcase/privacy.mjs); showcase/showcase.test.js holds them equal.
 resource blobs 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' = {
   parent: storage
   name: 'default'

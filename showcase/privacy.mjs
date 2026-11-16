@@ -1,6 +1,8 @@
 import { escape, layout, routes } from './layout.mjs';
 
 const address = 'contact@downfallinstinct.com';
+// What infra/main.bicep configures (the log workspace's retention, the blobs' soft delete); the test holds them equal.
+const retention = { logDays: 30, deletedBlobDays: 7 };
 const policies = {
   en: {
     label: 'Player information', date: 'Updated November 14, 2026',
@@ -26,7 +28,7 @@ const policies = {
       ]],
       ['providers', 'Service providers and retention', [
         'Cloudflare handles traffic for the public domains. Microsoft Azure hosts the game and stores account and game records. Google handles sign-in, and your browser’s push provider handles notifications if you enable them. In delivering or protecting a request, a provider can process technical information such as an IP address, the time, the requested page and browser information. Providers may process information outside Québec.',
-        'Account and activity records stay until the account is deleted. Settings can be changed, friendships removed and notifications disabled earlier. The configured retention for the game host’s console logs is 30 days. Deleted blobs can remain recoverable in Azure storage for seven days. Finished match records are kept for replays, results and bot improvement.',
+        `Account and activity records stay until the account is deleted. Settings can be changed, friendships removed and notifications disabled earlier. The configured retention for the game host’s console logs is ${retention.logDays} days. Deleted blobs can remain recoverable in Azure storage for ${retention.deletedBlobDays} days. Finished match records are kept for replays, results and bot improvement.`,
       ]],
       ['choices', 'Access, corrections and deletion', [
         'To delete your account, open Settings → Account on the game site and confirm with your player name. Your name is released, linked devices, friends, settings and account activity are removed, and seats in unfinished games become available to other players. Your public leaderboard entry disappears. Finished game records keep their internal player ID.',
@@ -59,7 +61,7 @@ const policies = {
       ]],
       ['providers', 'Les fournisseurs et la conservation', [
         'Cloudflare achemine le trafic des domaines publics. Microsoft Azure héberge le jeu et conserve les comptes et les parties. Google assure la connexion. Le service de notification de ton navigateur intervient si tu actives cette option. Pour acheminer ou protéger une requête, un fournisseur peut traiter des renseignements techniques comme l’adresse IP, l’heure, la page demandée et des informations sur le navigateur. Les fournisseurs peuvent traiter des renseignements à l’extérieur du Québec.',
-        'Les renseignements du compte et de son activité sont conservés jusqu’à sa suppression. Tu peux d’ici là modifier tes préférences, retirer un lien d’amitié ou désactiver les notifications. Les journaux de console de l’hébergement du jeu sont conservés 30 jours. Les objets supprimés du stockage Azure peuvent demeurer récupérables pendant sept jours. Les parties terminées sont conservées pour les reprises, les résultats et l’amélioration des adversaires automatisés.',
+        `Les renseignements du compte et de son activité sont conservés jusqu’à sa suppression. Tu peux d’ici là modifier tes préférences, retirer un lien d’amitié ou désactiver les notifications. Les journaux de console de l’hébergement du jeu sont conservés ${retention.logDays} jours. Les objets supprimés du stockage Azure peuvent demeurer récupérables pendant ${retention.deletedBlobDays} jours. Les parties terminées sont conservées pour les reprises, les résultats et l’amélioration des adversaires automatisés.`,
       ]],
       ['choices', 'Accéder, corriger ou supprimer', [
         'Pour supprimer ton compte, ouvre Settings → Account dans le jeu et confirme avec ton nom de joueur. Ton nom redevient disponible. Les appareils associés, les liens d’amitié, les préférences et l’activité de ton compte sont retirés. Tes places dans les parties en cours sont offertes à d’autres joueurs et ton entrée disparaît du classement public. Les parties terminées conservent leur identifiant de joueur interne.',

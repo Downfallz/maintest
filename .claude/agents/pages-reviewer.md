@@ -28,7 +28,7 @@ Look for, in this order:
 8. Reading changes on a timer instead of the host's streams or the relay (ADR 0164).
 9. Tests: the page's `*.test.js` for the behaviour, and the browser specs `studio/browser/plan.js` names.
 
-Run `node --test studio/*.test.js table/*.test.js` and report its result. Say which browser specs the change
+Run `node --test studio/*.test.js table/*.test.js showcase/*.test.js` and report its result. Say which browser specs the change
 calls for (`git diff --name-only <range> | node studio/browser/plan.js`); you do not run them.
 
 Report: a verdict in one line, then findings by severity, each with file:line, what a player sees, and a fix.

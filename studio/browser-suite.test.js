@@ -100,6 +100,7 @@ test('the showcase is deployed for its pages, the catalogue it renders and the a
     'docs/art/branding.css',
     'battle/src/cue-art.js',
     'table/battle-evolution-art.js',
+    'table/site-origins.js',
     'table/battle-art/horizon/breach.webp',
     'table/fonts/OFL.txt',
     '.github/workflows/showcase.yml',
@@ -109,7 +110,7 @@ test('the showcase is deployed for its pages, the catalogue it renders and the a
 });
 
 test('the showcase is not deployed for its readme, a page test, the balance or the rest of the table', () => {
-  for (const path of ['showcase/README.md', 'studio/showcase.test.js', 'table/battle-evolution-art.test.js', 'data/balance/knobs.json', 'data/TalentTrees/a.json', 'table/lobby.js', 'src/DownfallArena.Cli/Table/TableApi.cs']) {
+  for (const path of ['showcase/README.md', 'showcase/showcase.test.js', 'table/battle-evolution-art.test.js', 'data/balance/knobs.json', 'data/TalentTrees/a.json', 'table/lobby.js', 'src/DownfallArena.Cli/Table/TableApi.cs']) {
     assert.equal(plan([path], specs).showcase, false, path);
   }
 });

@@ -1,14 +1,60 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import test from 'node:test';
+import test, { after } from 'node:test';
+import { GAME_ORIGIN, SITE_ORIGIN } from '../table/site-origins.js';
 
-const root = fileURLToPath(new URL('../showcase/dist/', import.meta.url));
+// Built into a folder of its own, so running the tests leaves the working tree's showcase/dist as it was.
+const builder = fileURLToPath(new URL('./build.mjs', import.meta.url));
+const workingDist = fileURLToPath(new URL('./dist', import.meta.url));
+const stamp = () => [workingDist, join(workingDist, 'index.html')].map(path => existsSync(path) ? statSync(path).mtimeMs : null);
+const before = stamp();
+const root = join(mkdtempSync(join(tmpdir(), 'showcase-')), 'dist') + '/';
+after(() => rmSync(join(root, '..'), { recursive: true, force: true }));
+const environment = { ...process.env };
+delete environment.GAME_ORIGIN;
+execFileSync(process.execPath, [builder, root], { env: environment });
 const read = name => readFileSync(join(root, name), 'utf8');
-const game = 'https://play.downfallinstinct.com/';
-execFileSync(process.execPath, [fileURLToPath(new URL('../showcase/build.mjs', import.meta.url))], { env: { ...process.env, GAME_ORIGIN: game } });
+// The game's origin when nothing overrides it: the one the table names as its own.
+const game = GAME_ORIGIN;
+
+test('the build writes where it is told and leaves the working tree alone', () => {
+  assert.ok(statSync(join(root, 'index.html')).size > 0);
+  assert.deepEqual(stamp(), before);
+});
+
+// The build replaces its destination, so it refuses one that holds anything but an earlier build.
+test('the build refuses a folder that is not an earlier build, and leaves it as it was', () => {
+  const folder = mkdtempSync(join(tmpdir(), 'showcase-other-'));
+  try {
+    writeFileSync(join(folder, 'notes.txt'), 'keep me');
+    const refuses = target => assert.throws(
+      () => execFileSync(process.execPath, [builder, target], { env: environment, stdio: 'pipe' }), target);
+    refuses(folder);
+    refuses('--help');
+    // A site of another kind with the same two files at its root is still not this build.
+    writeFileSync(join(folder, 'index.html'), 'other site');
+    writeFileSync(join(folder, '_headers'), '/*');
+    refuses(folder);
+    // Nor is a folder that hides a stranger beneath a name the build writes.
+    const nested = mkdtempSync(join(tmpdir(), 'showcase-nested-'));
+    mkdirSync(join(nested, 'assets'));
+    writeFileSync(join(nested, 'assets', 'notes.txt'), 'keep me too');
+    try {
+      refuses(nested);
+      assert.equal(readFileSync(join(nested, 'assets', 'notes.txt'), 'utf8'), 'keep me too');
+    } finally {
+      rmSync(nested, { recursive: true, force: true });
+    }
+    assert.equal(readFileSync(join(folder, 'notes.txt'), 'utf8'), 'keep me');
+    assert.equal(readFileSync(join(folder, 'index.html'), 'utf8'), 'other site');
+  } finally {
+    rmSync(folder, { recursive: true, force: true });
+  }
+});
 
 for (const [lang, file, other] of [['en', 'index.html', '/fr/'], ['fr', 'fr/index.html', '/']]) {
   test(`${lang} ships its complete game introduction, artwork and two-way language navigation`, () => {
@@ -143,15 +189,54 @@ for (const [lang, documents] of Object.entries(pages)) {
   });
 }
 
-test('both the game sign-in and account privacy panel link to the public policy', () => {
-  for (const file of ['../table/lobby.html', '../table/navigation.js'])
-    assert.match(readFileSync(new URL(file, import.meta.url), 'utf8'), /href="https:\/\/downfallinstinct\.com\/privacy\/"/);
+const repository = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
+
+test('the game sign-in and account privacy panel link to the public policy on the apex', () => {
+  assert.ok(repository('table/lobby.html').includes(`href="${new URL('privacy/', SITE_ORIGIN).href}"`));
+  assert.match(repository('table/navigation.js'), /href="\$\{new URL\('privacy\/', SITE_ORIGIN\)\.href\}"/);
+  assert.match(repository('table/navigation.js'), /href="\$\{SITE_ORIGIN\}">Game website/);
 });
 
 test('the game lobby and repository point to their copyright notices', () => {
-  assert.match(readFileSync(new URL('../table/lobby.html', import.meta.url), 'utf8'), /href="https:\/\/downfallinstinct\.com\/copyright\/"/);
-  assert.match(readFileSync(new URL('../README.md', import.meta.url), 'utf8'), /\]\(COPYRIGHT\.md\)/);
-  assert.match(readFileSync(new URL('../COPYRIGHT.md', import.meta.url), 'utf8'), /table\/fonts\/OFL\.txt/);
+  assert.ok(repository('table/lobby.html').includes(`href="${new URL('copyright/', SITE_ORIGIN).href}"`));
+  assert.match(repository('README.md'), /\]\(COPYRIGHT\.md\)/);
+  assert.match(repository('COPYRIGHT.md'), /table\/fonts\/OFL\.txt/);
+});
+
+// One place names the two origins (#612). The apex exists only on Cloudflare Pages, so a developer's table
+// links to the published one on purpose; what must not happen is two sites disagreeing about each other.
+test('the table and the showcase name the same two origins, from one module', () => {
+  assert.equal(new URL(SITE_ORIGIN).href, SITE_ORIGIN);
+  assert.equal(new URL(GAME_ORIGIN).href, GAME_ORIGIN);
+  assert.equal(new URL(GAME_ORIGIN).hostname, `play.${new URL(SITE_ORIGIN).hostname}`);
+  for (const file of ['index.html', 'fr/mutations/index.html'])
+    assert.ok(read(file).includes(`<link rel="canonical" href="${new URL(file.replace('index.html', ''), SITE_ORIGIN).href}">`), file);
+  assert.match(repository('table/navigation.js'), /import \{ SITE_ORIGIN \} from '\.\/site-origins\.js';/);
+  const named = /https:\/\/(?:[a-z0-9-]+\.)*downfallinstinct\.com[^"'`\s<)]*/g;
+  const sources = readdirSync(new URL('../table/', import.meta.url))
+    .filter(name => /\.(?:html|js)$/.test(name) && !name.endsWith('.test.js') && name !== 'site-origins.js');
+  for (const name of sources)
+    for (const [url] of repository(`table/${name}`).matchAll(named))
+      assert.ok(url.startsWith(SITE_ORIGIN) || url.startsWith(GAME_ORIGIN), `${name} names ${url}`);
+  for (const name of readdirSync(new URL('./', import.meta.url)).filter(name => /\.m?js$/.test(name) && !name.endsWith('.test.js')))
+    assert.doesNotMatch(repository(`showcase/${name}`), /https:\/\/(?:play\.)?downfallinstinct\.com/, name);
+});
+
+// The policy promises what infra/main.bicep configures (#615): a change to either fails here, not in public.
+test('the privacy policy promises the retention periods main.bicep configures', () => {
+  const bicep = repository('infra/main.bicep');
+  const block = name => bicep.slice(bicep.indexOf(`resource ${name} `)).split(/\n}\n/)[0];
+  const logs = /retentionInDays: (\d+)/.exec(block('logs'))?.[1];
+  // A policy turned off keeps nothing, whatever its days say.
+  const blobs = /deleteRetentionPolicy: \{\s*enabled: true\s+days: (\d+)/.exec(block('blobs'))?.[1];
+  const containers = /containerDeleteRetentionPolicy: \{\s*enabled: true\s+days: (\d+)/.exec(block('blobs'))?.[1];
+  assert.ok(logs && blobs, 'main.bicep names the log and soft-delete retention');
+  assert.equal(containers, blobs, 'deleted blobs and deleted containers are kept the same time');
+  const policy = { en: read('privacy/index.html'), fr: read('fr/confidentialite/index.html') };
+  assert.ok(policy.en.includes(`console logs is ${logs} days`), 'en logs');
+  assert.ok(policy.en.includes(`recoverable in Azure storage for ${blobs} days`), 'en blobs');
+  assert.ok(policy.fr.includes(`journaux de console de l’hébergement du jeu sont conservés ${logs} jours`), 'fr logs');
+  assert.ok(policy.fr.includes(`récupérables pendant ${blobs} jours`), 'fr blobs');
 });
 
 test('the apex ships a strict content policy that every page keeps to', () => {

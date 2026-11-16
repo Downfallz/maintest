@@ -56,7 +56,7 @@ Look for, in this order:
 Leave to the others what is theirs: 320 px, touch, the service worker and a file missing from `TableFiles.cs` to
 `pages-reviewer`, the words to `copy-editor`. Report a finding in those areas only when it is a design choice.
 
-Run `node --test studio/*.test.js table/*.test.js` (it runs `sync-branding.mjs --check` and `table/branding.test.js`)
+Run `node --test studio/*.test.js table/*.test.js showcase/*.test.js` (it runs `sync-branding.mjs --check` and `table/branding.test.js`)
 and report its result. When the change is visual, say which screens to capture at 320 px and on a desktop, and
 which reference capture in `docs/art/images/branding/` it should match; you do not capture them.
 

@@ -122,7 +122,7 @@ run_step "dotnet restore" dotnet restore
 run_step "dotnet build" dotnet build --no-restore
 run_step "dotnet format" dotnet format --verify-no-changes --no-restore
 run_step "dotnet test" dotnet test --no-build
-run_step "page tests" node --test studio/*.test.js table/*.test.js
+run_step "page tests" node --test studio/*.test.js table/*.test.js showcase/*.test.js
 
 if called learning; then
   run_step "learning" learning_gate
