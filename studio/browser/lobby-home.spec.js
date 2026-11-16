@@ -360,10 +360,10 @@ test('removing a friend requires confirming the named player, and hides an empty
   expect(state.removals).toBe(1);
 });
 
-test('the account menu holds Settings and Sign out; the account\'s lasting actions wait at the foot of Settings, Account', async ({ page }, testInfo) => {
+test('the account menu holds Settings, Report or suggest and Sign out; the account\'s lasting actions wait at the foot of Settings, Account', async ({ page }, testInfo) => {
   const state = await home(page);
   await page.locator('#account-menu summary').click();
-  await expect(page.locator('#account-menu .account-menu button')).toHaveText(['Settings', 'Sign out']);
+  await expect(page.locator('#account-menu .account-menu button')).toHaveText(['Settings', 'Report or suggest…', 'Sign out']);
   await expect(page.locator('#account-menu-name')).toHaveText(player.username);
   await page.keyboard.press('Escape');
   await openAccountSettings(page, 'Account');

@@ -133,6 +133,7 @@ internal sealed partial class TableFiles
             ["/terms.js"] = (Path.Combine(tableDirectory, "terms.js"), JavaScript),
             ["/combat-fx.js"] = (Path.Combine(tableDirectory, "combat-fx.js"), JavaScript),
             ["/feedback.js"] = (Path.Combine(tableDirectory, "feedback.js"), JavaScript),
+            ["/feedback-sheet.js"] = (Path.Combine(tableDirectory, "feedback-sheet.js"), JavaScript),
 
             // An isolated design study with authored sample frames (ADR 0123); it never opens a seat or posts a
             // decision. Its renderer is a bundle built from battle/ into battle-build/, which is not committed: the

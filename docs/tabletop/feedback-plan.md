@@ -1,6 +1,6 @@
 # Plan: feedback, a bug report to a regression test and an idea to a plan
 
-Status: accepted, 2026-11-16 (the owner settled the questions at the end). R0 and R1 are built; R2 is next.
+Status: accepted, 2026-11-16 (the owner settled the questions at the end). R0, R1 and R2 are built; R3 is next.
 
 ## What the owner asked for
 
@@ -311,6 +311,23 @@ and they are the first thing every player can use.
    `feedback.test.js` (the sheet's model for both kinds, the errors kept to ten, nothing written to storage, each
    refusal's sentence, the entry hidden once muted), `terminology.test.js`, a browser spec sending a report from a
    seat and an idea from the lobby at 320 px.
+
+   *Built (2026-11-16)*: `table/feedback-sheet.js`, named so because `feedback.js` already holds the sound and
+   vibration cues. **Report or suggest…** sits in the battle view's Match settings, above Concede (Match settings
+   also opens in a practice, a tutorial and a replay), and on the result's last line. Outside a game it sits in the
+   account menu, beside Settings, on every page: a guest outside a game has no seat to send from, and the navigation
+   bar has no room for one more item on a laptop. In the battle view the account menu's entry opens the battle's own
+   sheet, with the seat on screen. The sheet asks the kind, then the three questions of each; Send stays off until
+   the required answer has ten characters; a refusal keeps the words; a sheet closed while it sends is emptied once
+   the host kept it. `403 Feedback.Muted` hides every entry for the page's life (`data-feedback-muted` on the root);
+   the host sends it from R3, which must answer it 403, not 429. The battle view and every other page with the menu,
+   the archived classic table included, catch their last ten errors in memory, each address's query cut. The *What we
+   keep* panel has its line, and the game website's privacy policy names feedback too, in English and French. Tests:
+   `feedback-sheet.test.js`, `studio/browser/feedback.spec.js` (a report from a seat with its position and error, a
+   refusal and a mute, a sheet closed while sending, the same entry from the account menu in a game, the result's
+   entry, an idea from the lobby's account menu, a guest offered nothing, the privacy line), at 320 px, 390 px and on
+   a desktop.
+
 4. **R3, the Feedback tab.** The list filtered by kind, a report's sheet with the position drawn read-only,
    Diagnose… on a table under way, the status by hand, **This is an idea** and **This is a bug**, **Dismiss as
    spam** and **Stop feedback from this player** (and lifting it), the Activity lines, the Overview card. Tests: a
