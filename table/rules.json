@@ -105,7 +105,7 @@
                     "strong": true
                   },
                   {
-                    "text": " Every living creature gains 2 Energy. Regeneration heals and damage over time deals its damage."
+                    "text": " Every living creature gains 2 Energy. Regeneration heals. Damage over time hurts."
                   }
                 ],
                 [
@@ -123,7 +123,7 @@
                     "strong": true
                   },
                   {
-                    "text": " The timeline is walked once, slot by slot. When one of your creatures' slot comes up, you choose its spell and its targets on the board as it stands, and the spell resolves at once, before the next creature acts."
+                    "text": " The timeline is walked once, slot by slot. When the slot of one of your creatures comes up, you choose its spell and its targets on the board as it stands. The spell resolves at once, before the next creature acts."
                   }
                 ],
                 [
@@ -132,7 +132,7 @@
                     "strong": true
                   },
                   {
-                    "text": " Lasting effects count down, and the next round begins."
+                    "text": " Conditions count down, and the next round begins."
                   }
                 ]
               ]
@@ -161,7 +161,7 @@
                     "strong": true
                   },
                   {
-                    "text": " Your mutations, your tempos and your tie orders are chosen hidden, at the same time as your opponent's. Your spells and their targets come later, at each creature's slot, when you know everything that has already happened this round."
+                    "text": " Your mutations, your tempos and your tie orders are chosen in secret, at the same time as your opponent's. Your spells and their targets come later, at each creature's slot, when you know everything that has already happened this round."
                   }
                 ],
                 [
@@ -170,7 +170,7 @@
                     "strong": true
                   },
                   {
-                    "text": " A mutation teaches a creature a set of spells, all at once, and raises its initiative by the mutation's bonus for the rest of the match: mutating is how a creature gets stronger, and how it gets faster. The last mutation of a family, its capstone, teaches no spell: it gives a passive instead."
+                    "text": " A mutation teaches a creature a set of spells, all at once, and raises its initiative by the mutation's bonus for the rest of the match. The last mutation of a family, its capstone, teaches no spell: it gives a passive instead."
                   }
                 ],
                 [

@@ -24,7 +24,7 @@ node scripts/rules/build.mjs --check    # is table/rules.json the build of rules
 ## The format
 
 A small subset of Markdown. The build refuses anything outside it: code, HTML, quotes, images, headings of a third
-level, a link out of the book other than `https://`.
+level, a link out of the book that does not start with `https://`.
 
 ````markdown
 # What you are trying to do {#the-goal}

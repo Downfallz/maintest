@@ -7,7 +7,7 @@ Status: Accepted (settled by the owner, docs/tabletop/rulebook-plan.md)
 
 The rulebook a player could read is a tabletop draft ([rulebook.md](../tabletop/rulebook.md)): it teaches hidden
 Intents where the hosted table plays `at-activation` (ADR 0112), it retypes every number of its examples, and
-its upkeep is a log of 26 re-reads by hand. The concept cards (ADR 0187) cite its sections by number and link
+keeping it true is a log of 26 re-reads by hand. The concept cards (ADR 0187) cite its sections by number and link
 nowhere, and no page, tip or tutorial is held to it. The owner asked for one official source, a page in the app
 that the cards link to, and a workflow that keeps the book true (rulebook-plan.md, questions 1 to 6).
 
@@ -21,10 +21,14 @@ an id removed keeps its redirect in `rules/moved.json`. Values are drawn, never 
 spell's file when the book is built. `scripts/rules/build.mjs`, with no Markdown package, reads a small subset
 (headings of two levels, paragraphs, lists, tables, bold, italics, links, a fenced `card`) and writes
 `table/rules.json` as data, never HTML. The file is committed and a test fails when it is out of date, as for the
-indexes of ADR 0184. The build refuses an id used twice or gone without a redirect, a value that does not resolve,
-a word the player's terminology replaced, a `sources:` line naming an ADR or a `game-rules.md` heading that does
-not exist, a link `/rules#<id>` from the pages, the battle or the tutorials to an id that is not a section, and a
-card whose id `ConceptCards.Ids` does not list.
+indexes of ADR 0184. The build refuses:
+
+- an id used twice, or gone without a redirect;
+- a value that does not resolve;
+- a word the player's terminology replaced;
+- a `sources:` line naming an ADR or a `game-rules.md` heading that does not exist;
+- a link `/rules#<id>` from the pages, the battle or the tutorials to an id that is not a section;
+- a card whose id `ConceptCards.Ids` does not list.
 
 ## Consequences
 
@@ -33,7 +37,7 @@ card whose id `ConceptCards.Ids` does not list.
 - Good: the page (R3), the cards (R4) and the showcase (R7) read one file, with no Markdown in the browser and
   no Node step in the image.
 - Bad: a change to a value the book draws makes `table/rules.json` stale until `node scripts/rules/build.mjs`
-  runs; the page tests say so.
+  runs; the pages' tests say so.
 - Bad: a second Markdown reader, for a subset. It refuses what it does not know rather than guess.
 - Neutral: the book records the rule set, the creature and the spells it drew from, not the content hash: that
   hash is computed by the engine, and a second implementation in the build would have to agree with it.

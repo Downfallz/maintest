@@ -138,9 +138,9 @@ and the app's edition; it keeps writing, the keeper keeps reading.
    the format in `rules/README.md`; `scripts/rules/build.mjs` writes `table/rules.json` (parts, sections, blocks
    as spans, cards, redirects, changes, and the rule set, creature and spells it drew from) and `--check`;
    `table/rules.test.js` has a test per refusal, the file in sync (`UPDATE_INDEXES=1` rewrites it) and its values
-   against the rule set. A vanished id is found against the committed file. Left: an id of `ConceptCards.Ids`
-   without its card is R4's C# test, once R2 has written every card; the book records what it drew from, not the
-   engine's content hash (ADR 0188); `changes.md` is read when it exists, and R2 starts it.
+   against the rule set. A vanished id is found against the committed file. Left: a card id of `ConceptCards.Ids`
+   with no card in the book is checked by R4's C# test, once R2 has written every card. The book records what it
+   drew from, not the engine's content hash (ADR 0188). `changes.md` is read when it exists; R2 starts it.
 2. **R2, the app's edition.** The rest of the book written by the `rulebook-writer` from `rulebook.md`, adapted as
    the table above says, with the copy-editor's read; `changes.md` started. `rulebook.md` frozen as the print
    draft, a line at its top pointing to `rules/`. Docs and content only. Tests: R1's, on the whole book.
