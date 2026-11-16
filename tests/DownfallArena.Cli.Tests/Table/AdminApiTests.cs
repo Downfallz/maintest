@@ -353,22 +353,32 @@ public sealed class AdminApiTests : IDisposable
     [Fact]
     public async Task A_pass_run_from_the_panel_keeps_the_tables_it_closed()
     {
+        // It failed now and then in a full run (#649): what the console said from the opening on, and the table as the
+        // pass found it, are in the message, so the next failure says why.
+        var said = new StringWriter();
+        var before = Console.Out;
+        Console.SetOut(TextWriter.Synchronized(new Tee(before, said)));
         var clock = new MovableClock(DateTimeOffset.UtcNow);
         var admin = new AdminApi(_registry, _hosted.Composer, OperatorGate.WithToken(OperatorToken), clock, "Rules", _hosted.Stored);
-        var opened = JsonDocument.Parse(Text(await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy"}""", OperatorToken, principal: null))).RootElement;
-        var id = opened.GetProperty("id").GetString();
         var tend = Path.Combine(_hosted.RunsDirectory, "..", $"tend-{Guid.NewGuid():N}");
         try
         {
+            var opened = JsonDocument.Parse(Text(await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy"}""", OperatorToken, principal: null))).RootElement;
+            var id = opened.GetProperty("id").GetString().ShouldNotBeNull();
+            var table = _registry.Held(id);
             admin.Jobs = new JobsApi(new Infrastructure.Tables.FileTendLog(tend), clock, (now, progress) => TableTend.TendAsync(_registry, admin.Lobby, now, progress: progress));
             clock.Advance(TableRegistry.NeverBegunFor + TimeSpan.FromMinutes(5));
+            var seen = table is null ? "not held once opened" : $"touched {table.Touched:O}, begun {table.Session.HasBegun}, over {table.IsOver}";
 
             var run = JsonDocument.Parse(Text(await admin.HandleAsync("POST", JobsApi.TendRoute, "", OperatorToken, principal: null))).RootElement.GetProperty("run");
 
-            run.GetProperty("neverBegan").EnumerateArray().Select(table => table.GetString()).ShouldBe([id]);
+            run.GetProperty("neverBegan").EnumerateArray().Select(closed => closed.GetString()).ShouldBe(
+                [id],
+                $"outcome {run.GetProperty("outcome")}, error {run.GetProperty("error")}; the table before the pass: {seen}, the pass at {clock.GetUtcNow():O}; the console:\n{said}");
         }
         finally
         {
+            Console.SetOut(before);
             if (Directory.Exists(tend))
             {
                 Directory.Delete(tend, recursive: true);
@@ -770,6 +780,30 @@ public sealed class AdminApiTests : IDisposable
         new(_registry, _hosted.Composer, gate, TimeProvider.System, "Rules 2 creatures (a test)", _hosted.Stored, agents);
 
     private static string Text(StudioResponse response) => Encoding.UTF8.GetString(response.Body);
+
+    /// <summary>Writes to the console as before, and keeps a copy for the test's message.</summary>
+    private sealed class Tee(TextWriter first, TextWriter second) : TextWriter
+    {
+        public override Encoding Encoding => first.Encoding;
+
+        public override void Write(char value)
+        {
+            first.Write(value);
+            second.Write(value);
+        }
+
+        public override void Write(string? value)
+        {
+            first.Write(value);
+            second.Write(value);
+        }
+
+        public override void WriteLine(string? value)
+        {
+            first.WriteLine(value);
+            second.WriteLine(value);
+        }
+    }
 
     private sealed class MovableClock(DateTimeOffset start) : TimeProvider
     {
