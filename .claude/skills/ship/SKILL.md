@@ -27,7 +27,9 @@ The standing orders in `CLAUDE.md`, in order. None of them is asked first.
      `UPDATE_INDEXES=1 dotnet test --project tests/DownfallArena.Architecture.Tests`, never edited by hand).
    - Then `/verify`, and push once for the whole round, with one exception. A push cancels the CI run still
      playing, and the minutes it spent are lost (`docs/engineering/ci-minutes-plan.md`): if that run has nothing
-     red yet, keep the commits unpushed until its result arrives as an event, then push them with that round.
+     red yet, the commits wait for its result and go with the round it opens. Schedule a check-in with
+     `send_later` for when the run should end (30 minutes), so a run that ends green with no event still wakes
+     the session, and nothing stays unpushed.
    - Reply to each thread with the commit that answers it, once it is on the branch, and resolve the thread.
    - An event that needs nothing: no answer.
 8. Ready means: every check finished and green, the `gate` check among them, no commit left unpushed, and no

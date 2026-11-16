@@ -159,7 +159,7 @@ test('a pull request plays no release profile for the engine, the content or wha
 // A Markdown-only pull request builds, runs Architecture.Tests (the instruction files, the ADRs, the generated
 // indexes) and the pages' own tests (the prompts, the rulebook), and nothing else (question 6).
 test('a pull request of Markdown alone runs the light build', () => {
-  for (const paths of [['docs/adr/0182-x.md'], ['AGENTS.md', 'table/README.md', '.claude/skills/ship/SKILL.md'], ['rules/02-the-round.md'], ['learning/README.md', 'infra/README.md']]) {
+  for (const paths of [['docs/adr/0182-x.md'], ['AGENTS.md', 'table/README.md', '.claude/skills/ship/SKILL.md'], ['docs/tabletop/plan.md', 'docs/README.md'], ['learning/README.md', 'infra/README.md']]) {
     assert.equal(plan(paths, specs, { pullRequest: true }).build, 'light', paths.join(' '));
   }
 });

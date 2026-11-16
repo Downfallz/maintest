@@ -170,6 +170,13 @@ test('ship answers a round of review with one push, and does not cancel a run th
   assert.match(events, /\bround\b/);
   assert.match(events, /push once/);
   assert.match(events, /cancels/);
-  // Only one line of the step pushes: the fixes of a thread, a check and a conflict all wait for it.
-  assert.equal(events.split('\n').filter((line) => /\bpush\b/i.test(line) && !/push once|cancels|Never push/.test(line)).length, 0);
+  // The thread, the check and the conflict are fixed in commits; the round's one push is a bullet of its own.
+  const bullets = events.split(/\n {3}- /).slice(1);
+  for (const kind of ['A review thread', 'A failing check', 'A conflict']) {
+    const bullet = bullets.find((text) => text.startsWith(kind));
+    assert.ok(bullet, kind);
+    assert.doesNotMatch(bullet, /\bpush/i, kind);
+  }
+  // A run held for is answered even when it ends green and sends nothing.
+  assert.match(events, /send_later/);
 });
