@@ -290,7 +290,8 @@ h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.0
 .rules-contents details ol { padding: 0 0 8px 14px; }
 .rules-contents a { display: flex; align-items: center; gap: 6px; min-height: 44px; color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
 .rules-contents > p { margin-top: 4px; border-top: 1px solid var(--line-soft); }
-.rules-number { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 2.2em; }
+.rules-number { color: var(--muted); font-variant-numeric: tabular-nums; }
+.rules-contents .rules-number { min-width: 2.2em; }
 .rules-text { min-width: 0; max-width: 820px; }
 .rules-book { min-width: 0; }
 .rules-book p, .rules-changes p { margin: 0 0 12px; }

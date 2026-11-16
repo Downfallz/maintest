@@ -202,23 +202,43 @@ for (const [lang, file, bookFile] of [['en', 'rules/index.html', 'rules.json'], 
   const book = JSON.parse(readFileSync(new URL(`../table/${bookFile}`, import.meta.url), 'utf8'));
 
   test(`${lang} publishes every part, section, block and card of the table's book, in its order`, () => {
-    const html = read(file), text = plain(html);
+    const html = read(file);
     assert.equal(book.language, lang);
     assert.match(html, new RegExp(`<html lang="${lang}">`));
+    assert.doesNotMatch(html, /<script|<iframe/);
     const order = [...html.matchAll(/<section class="rules-(?:part|section)" id="([^"]+)"/g)].map(m => m[1]);
     assert.deepEqual(order, book.parts.flatMap(part => [part.id, ...part.sections.map(section => section.id)]));
+    // Each part's opening and each section, read in its own slice of the page, so a dropped block cannot pass on
+    // the same words elsewhere; and every line in its order.
+    const slice = id => {
+      const at = html.indexOf(` id="${id}"`);
+      const next = html.slice(at + 1).search(/<section class="rules-(?:part|section)" id="/);
+      return plain(next === -1 ? html.slice(at) : html.slice(at, at + 1 + next));
+    };
+    const inOrder = (where, lines) => {
+      let from = 0;
+      for (const line of lines) {
+        const found = where.indexOf(line, from);
+        assert.ok(found >= 0, line);
+        from = found + line.length;
+      }
+    };
     for (const part of book.parts) {
-      assert.ok(text.includes(`${part.number} ${part.title}`), part.id);
-      for (const block of part.blocks) for (const line of blockTexts(block)) assert.ok(text.includes(line), `${part.id}: ${line}`);
+      inOrder(slice(part.id), [`${part.number} ${part.title}`, ...part.blocks.flatMap(blockTexts)]);
       for (const section of part.sections) {
-        assert.ok(text.includes(`${section.number} ${section.title}`), section.id);
-        for (const block of section.blocks)
-          for (const line of blockTexts(block)) assert.ok(text.includes(line), `${section.id}: ${line}`);
-        if (!section.card) continue;
-        for (const line of [section.card.title, ...section.card.lines, section.card.example])
-          assert.ok(text.includes(line), `${section.card.id}: ${line}`);
+        const card = section.card ? [section.card.title, ...section.card.lines, section.card.example] : [];
+        inOrder(slice(section.id), [`${section.number} ${section.title}`, ...section.blocks.flatMap(blockTexts), ...card]);
       }
     }
+  });
+
+  test(`${lang} writes no id of its own beyond those its anchors are kept from`, async () => {
+    const { PAGE_IDS } = await import('./rules.mjs');
+    const html = read(file);
+    const ofTheBook = new Set([...book.parts.flatMap(part => [part.id, ...part.sections.map(section => section.id)]),
+      ...Object.keys(book.moved), ...book.cards.map(entry => entry.id)]);
+    const own = [...html.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]).filter(id => !ofTheBook.has(id));
+    assert.deepEqual([...new Set(own)].sort(), [...PAGE_IDS].sort());
   });
 
   test(`${lang} lists the book's contents, its changes latest first, and lands a card's link on its section`, () => {

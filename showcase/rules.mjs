@@ -36,7 +36,7 @@ const card = (entry, words) => `<aside class="rules-card" aria-label="${escape(w
       ${entry.lines.map(line => `<p>${escape(line)}</p>`).join('')}<p class="rules-example">${escape(entry.example)}</p></aside>`;
 
 // The ids the page and its layout write: an alias never takes one, so the skip link and the contents stay theirs.
-const PAGE_IDS = ['top', 'main', 'rules-title', 'rules-contents', 'rules-contents-title', 'what-changed', 'rules-changes-title'];
+export const PAGE_IDS = ['top', 'main', 'rules-title', 'rules-contents', 'rules-contents-title', 'what-changed', 'rules-changes-title'];
 
 /**
  * The addresses that land on each part or section beside its own id: an id the book moved (moved.json) and a
