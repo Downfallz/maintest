@@ -132,15 +132,23 @@ complete runs.
    and `/retro` quotes them each week, so every stage after this one shows what it saved. Tested in
    `learning/tests` with a recorded API answer.
 
-   *Built (2026-11-16)*: `--minutes` and `--days` (7 by default). Each job is billed from its start to its end,
-   rounded up to the minute; a skipped job bills nothing; every attempt of a re-run is read; a job on a
-   self-hosted runner is counted apart, ready for M6. The runs are read one UTC day at a time, because the API
-   returns at most 1,000 runs a query. It reports the hosted minutes and a month's estimate, the minutes per
-   workflow, per CI run and per CI job group (the groups of "Where CI's minutes go"), and the cancelled runs'
-   share. `learning/tests/test_workflow_minutes.py` holds it, with run 43801390732 recorded: it bills the plan's
-   117 minutes. `/retro` step 2 quotes it, and `docs/reference/commands.md` names the flags. Its first reading,
-   2026-11-16 alone: 50 runs, 2,132 hosted minutes, 51.6 per CI run, 14 cancelled runs for 356 minutes. Left:
-   the deploy and showcase jobs fall in `other`; a group of their own when a stage needs it.
+   *Built (2026-11-16)*: `--minutes`, and `--days` (7 by default, whole UTC days ending yesterday). Each job is
+   billed from its start to its end, rounded up to the minute. A skipped job bills nothing, every attempt of a
+   re-run is read, and a job on a runner of the project's own is counted apart, ready for M6.
+
+   It reports the hosted minutes and a month's estimate, the minutes per workflow, per CI run and per CI job
+   group (the groups of "Where CI's minutes go"), and the cancelled jobs' share. The runs are read one day at a
+   time, because the API lists at most 1,000 runs a query. `learning/tests/test_workflow_minutes.py` holds it,
+   with run 43801390732 recorded: the meter bills it at the plan's 117 minutes, over its 12 jobs that ran.
+   `/retro` step 2 reports it, and `docs/reference/commands.md` names the flags.
+
+   The first reading, `--minutes --days 7` on 2026-11-16, for 2026-11-09 to 2026-11-15: 917 runs, 19,453 hosted
+   minutes (about 83,400 a month), 3,631 of them in cancelled jobs. It is one week, and most of it ran CI's old
+   layout, where the browser jobs were the "Studio browser" workflow's (11,848 minutes) and not CI's: CI's own
+   groups and its 16.7 minutes a run describe that layout, not today's. The first `/retro` with minutes is the
+   baseline.
+
+   Left: the deploy and showcase jobs fall in `other`. They get a group of their own when a stage needs it.
 2. **M2, the release profiles split and deduplicated.** ADR 0188 amends ADR 0182: a pull request plays the
    release profiles' WebKit alone; `main` and the nightly play all three. `battle-release` becomes one job per
    profile. `plan.js` and `browser-suite.test.js` hold it.
