@@ -112,8 +112,8 @@ public sealed class TableFilesTests
 
         page.Status.ShouldBe(200);
         page.ContentType.ShouldContain("text/html");
-        Text(page).ShouldContain("href=\"battle-lab.css\"");
-        Text(page).ShouldContain("src=\"battle-build/game.js\"");
+        Text(page).ShouldContain("href=\"battle-lab.css?v=");
+        Text(page).ShouldContain("src=\"battle-build/game.js?v=");
         Files.Get("/battle-lab.css").ContentType.ShouldContain("text/css");
         Files.Get("/battle-build/game.js").ContentType.ShouldContain("text/javascript");
     }
@@ -125,8 +125,8 @@ public sealed class TableFilesTests
         var page = Files.Get("/battle");
 
         page.Status.ShouldBe(200);
-        Text(page).ShouldContain("src=\"battle-build/live.js\"");
-        Text(page).ShouldContain("href=\"battle.css\"");
+        Text(page).ShouldContain("src=\"battle-build/live.js?v=");
+        Text(page).ShouldContain("href=\"battle.css?v=");
         Files.Get("/battle.css").ContentType.ShouldContain("text/css");
         Files.Get("/battle-services.js").ContentType.ShouldContain("text/javascript");
         Files.Get("/battle-inspection.js").ContentType.ShouldContain("text/javascript");
@@ -193,6 +193,55 @@ public sealed class TableFilesTests
 
         served.ShouldBe(files);
         files.ShouldAllBe(file => Encoding.ASCII.GetString(Files.Get($"/battle-art/evolutions/{file}").Body, 8, 4) == "WEBP");
+    }
+
+    /// <summary>
+    /// The battle's page names its bundle with the bundle's own tag, so a cache that kept yesterday's script cannot pair it with
+    /// today's page: the battle died at load on "Connecting…" when it did, after an element was renamed.
+    /// </summary>
+    [Fact]
+    public void A_page_names_its_scripts_and_styles_by_their_tags()
+    {
+        var bundle = Files.Get("/battle-build/live.js").Headers!.Single(header => header.Key == "ETag").Value;
+
+        var page = Text(Files.Get("/battle"));
+
+        page.ShouldContain($"src=\"battle-build/live.js?v={bundle[1..13]}\"");
+        page.ShouldNotContain("src=\"battle-build/live.js\"");
+    }
+
+    /// <summary>
+    /// A page's own module keeps its bare name: another module imports it by that name, and a stamped one beside it
+    /// would be a second copy of the module, run twice.
+    /// </summary>
+    [Fact]
+    public void A_page_module_another_module_imports_keeps_its_bare_name()
+    {
+        var page = Text(Files.Get("/"));
+
+        page.ShouldContain("src=\"navigation.js\"");
+        page.ShouldContain("href=\"identity.css?v=");
+    }
+
+    /// <summary>A new bundle is a new page: its names change, and so does its tag, so a browser's 304 cannot keep the old one.</summary>
+    [Fact]
+    public void A_changed_bundle_changes_the_page_that_names_it()
+    {
+        var folder = System.IO.Directory.CreateTempSubdirectory("table-files-").FullName;
+        System.IO.Directory.CreateDirectory(Path.Combine(folder, "battle-build"));
+        File.WriteAllText(Path.Combine(folder, "battle.html"), "<script type=\"module\" src=\"battle-build/live.js\"></script><link rel=\"stylesheet\" href=\"https://elsewhere.invalid/x.css\">");
+        File.WriteAllText(Path.Combine(folder, "battle-build", "live.js"), "export const deploy = 1;");
+        var files = new TableFiles(folder);
+        var before = files.Get("/battle");
+
+        File.WriteAllText(Path.Combine(folder, "battle-build", "live.js"), "export const deploy = 2;");
+        File.SetLastWriteTimeUtc(Path.Combine(folder, "battle-build", "live.js"), DateTime.UtcNow.AddMinutes(1));
+        var after = files.Get("/battle");
+
+        Text(after).ShouldNotBe(Text(before));
+        Text(after).ShouldContain("href=\"https://elsewhere.invalid/x.css\"");
+        after.Headers!.Single(header => header.Key == "ETag").Value.ShouldNotBe(before.Headers!.Single(header => header.Key == "ETag").Value);
+        System.IO.Directory.Delete(folder, recursive: true);
     }
 
     /// <summary>A test module is not part of the page, and the host must not hand one out.</summary>

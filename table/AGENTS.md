@@ -43,6 +43,8 @@ Every flag of `table` is in docs/reference/commands.md.
 - A new file is served only once it joins the host's file table (`src/DownfallArena.Cli/Table/TableFiles.cs`)
   and its test (`TableFilesTests`); a missing one is a 404 in production, not a failing page test.
 - `identity.css` stays last in every page's `<head>`.
+- The host serves a page with its stylesheets and `battle-build/` bundles named `?v=<tag>` (`TableFiles`), so a cache
+  cannot pair a page with another deploy's bundle. A module another module imports keeps its bare name.
 - 320 px wide first, 44 px touch targets, no document scrolling in the battle view.
 - The words a player reads come from docs/domain/player-terminology.md, not from the domain's own.
   `terminology.test.js` holds them to its EN column and refuses the legacy words and sentences it
