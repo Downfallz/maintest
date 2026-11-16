@@ -41,3 +41,6 @@
 - Second time (#612 range, then M2 00a47f8 -> 250b318): the author session pushed a fix mid-review; re-read `git log` before writing any finding up, not only before reporting.
 - A new item in the shared navigation (`table/navigation.js`, `headerContent`) breaks `lobby-home.spec.js`'s exact list of visible items and its desktop overflow check: run `lobby-home.spec.js` on every project when the header changes (R2 feedback).
 - The branch moved twice during a review again (#612, M2, R2): diff `<reviewed sha>..HEAD` before writing up a finding.
+- A page that reverses a built list for "latest first" (`changes.reverse()`, `.at(-1)` as latest) trusts an order the build neither sorts nor refuses; with one entry no test can tell: sort by the field, or make the build refuse disorder (R3 rulebook, table/rules.js:243).
+- A worker fallback widened from "no network" to "5xx" applies to every file in its list, shared styles included: every page, not just the one the ADR is about, then gets an older deploy's copy (R3 rulebook, table/sw.js unanswered).
+- Third time (#658, R1 feedback, R3): the tree moved mid-review on the coordinator's word; re-grep each finding against the current file before handback, and say which were checked.

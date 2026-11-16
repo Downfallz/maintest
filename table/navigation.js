@@ -22,6 +22,7 @@ const headerContent = `
       <button id="friends-open" type="button" data-home-dialog="friends-dialog" hidden>Friends <span id="friend-requests-badge" class="nav-badge" aria-label="Pending friend requests" hidden></span></button>
       <a id="leaderboard-link" href="/leaderboard" hidden>Leaderboard</a>
       <a id="stats-link" href="/stats" hidden>Your stats</a>
+      <a id="rules-link" href="/rules">Rules</a>
       <button id="join-open" type="button" data-home-dialog="join-dialog" hidden>Join with a code</button>
       <button id="app-settings-open" type="button" data-home-dialog="app-settings-dialog">Settings</button>
       <a id="nav-admin-link" href="/admin" hidden>Admin</a>
@@ -209,7 +210,7 @@ export function mountNavigation(doc, storage, { onInvite, onChange = () => {}, o
   header.innerHTML = headerContent;
   header.insertAdjacentHTML('afterend', '<p id="host-notice" class="host-notice" role="status" hidden></p>');
   doc.body.insertAdjacentHTML('beforeend', panels);
-  const current = { lobby: 'play-link-home', leaderboard: 'leaderboard-link', stats: 'stats-link', admin: 'nav-admin-link' }[page];
+  const current = { lobby: 'play-link-home', leaderboard: 'leaderboard-link', stats: 'stats-link', rules: 'rules-link', admin: 'nav-admin-link' }[page];
   if (current) el(current).setAttribute('aria-current', 'page');
   const navigation = mountHomeNavigation(doc);
   const devices = mountDevices(doc, { storage });

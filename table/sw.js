@@ -1,10 +1,21 @@
 // The table's service worker (ADR 0118): it shows the "your turn" the host pushes, and opens the game when
-// the notice is tapped. It serves no page of the table from a cache -- a deploy must reach every page on its next
-// load, and a worker holding yesterday's page would stop that. The one thing it keeps is the offline page (ADR 0166),
-// shown in place of the browser's own error when a page cannot be loaded at all.
+// the notice is tapped. It serves no page of the table from a cache while the network answers -- a deploy must reach
+// every page on its next load, and a worker holding yesterday's page would stop that. What it keeps is the offline
+// page (ADR 0166), shown in place of the browser's own error when a page cannot be loaded at all, and the rulebook
+// (ADR 0191), given only when the network cannot answer.
 
 const OFFLINE = '/offline.html';
-const CACHE = 'downfall-offline-v1';
+const CACHE = 'downfall-offline-v2';
+
+// The rulebook's page and everything it loads besides the menu, which it draws without: kept at install and refreshed
+// each time the network answers, so the rules a player last read can be read again with no network. Only a path whose
+// answer is the same for everyone may join: what is kept stays after a sign-out.
+const RULEBOOK = '/rules';
+const RULEBOOK_OWN = [RULEBOOK, '/rules.js', '/rules.css', '/rules.json'];
+// What it shares with every page: given only when the network cannot answer at all, never in place of a server error,
+// so that no other page is drawn with an older deploy's style.
+const RULEBOOK_SHARED = ['/table.css', '/lobby.css', '/identity.css', '/brand-mark.svg', '/fonts/marcellus-latin-400.woff2'];
+const RULEBOOK_FILES = [...RULEBOOK_OWN, ...RULEBOOK_SHARED];
 
 const ICON = '/icon-192.png';
 const BADGE = '/notification-badge.png';
@@ -111,27 +122,83 @@ function read(event) {
   }
 }
 
-// A navigation goes to the network as it always did -- through the preload the browser started while the worker woke,
-// when there is one -- and only a navigation that could not be answered at all is shown the offline page. Nothing
-// else the page asks for is touched.
-async function navigate(event) {
+// The path a request is kept under when it is one of the rulebook's, or null: same site, read, and named in the list.
+function rulebookPath(request) {
+  if (request.method && request.method !== 'GET') return null;
+  const url = new URL(request.url);
+  return url.origin === self.location.origin && RULEBOOK_FILES.includes(url.pathname) ? url.pathname : null;
+}
+
+// A successful answer is kept as the copy of its path; anything else is the network's to show, and never kept. A
+// redirected one is not a success here: a browser refuses it as the answer to a navigation.
+const keepable = response => Boolean(response?.ok) && !response.redirected;
+
+// A host that is down behind Cloudflare is an answer, a 52x, not a network error: for the rulebook it counts as no
+// answer at all, and the copy is given when there is one.
+const unanswered = response => (response?.status ?? 0) >= 500;
+
+async function keep(path, response) {
+  if (!keepable(response)) return;
   try {
-    return (await event.preloadResponse) ?? await fetch(event.request);
+    await (await caches.open(CACHE)).put(path, response);
   } catch {
-    return (await caches.match(OFFLINE)) ?? Response.error();
+    // A full or refused cache keeps the copy it had: the page itself was answered.
   }
 }
 
-// Only this one page, under one cache name: an older name is dropped, so nothing else is ever kept.
+// A navigation goes to the network as it always did -- through the preload the browser started while the worker woke,
+// when there is one -- and only a navigation that could not be answered at all is shown a kept page: the rulebook's
+// copy for the rulebook, the offline page for anything else.
+async function navigate(event) {
+  const path = rulebookPath(event.request);
+  try {
+    const response = (await event.preloadResponse) ?? await fetch(event.request);
+    if (path && keepable(response)) event.waitUntil(keep(path, response.clone()));
+    if (path && unanswered(response)) return (await caches.match(path)) ?? response;
+    return response;
+  } catch {
+    return (path && await caches.match(path)) ?? (await caches.match(OFFLINE)) ?? Response.error();
+  }
+}
+
+// One of the rulebook's files: the network's answer, its copy refreshed, or the copy when the network cannot answer.
+async function rulebookFile(event, path) {
+  try {
+    const response = await fetch(event.request);
+    if (keepable(response)) event.waitUntil(keep(path, response.clone()));
+    if (unanswered(response) && RULEBOOK_OWN.includes(path)) return (await caches.match(path)) ?? response;
+    return response;
+  } catch {
+    return (await caches.match(path)) ?? Response.error();
+  }
+}
+
+// The offline page must be kept, or the worker does not install; the rulebook is kept as well as it can be, so a host
+// that cannot serve one of its files still has a worker that shows its notices.
+async function install() {
+  const cache = await caches.open(CACHE);
+  await cache.add(OFFLINE);
+  await Promise.allSettled(RULEBOOK_FILES.map(async path => keep(path, await fetch(path))));
+  await self.skipWaiting();
+}
+
+// One cache name: an older name is dropped, so nothing else is ever kept.
 async function activate() {
   for (const name of await caches.keys()) if (name !== CACHE) await caches.delete(name);
   await self.registration.navigationPreload?.enable();
   await self.clients.claim();
 }
 
-self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.add(OFFLINE)).then(() => self.skipWaiting())));
+self.addEventListener('install', event => event.waitUntil(install()));
 self.addEventListener('activate', event => event.waitUntil(activate()));
-self.addEventListener('fetch', event => { if (event.request.mode === 'navigate') event.respondWith(navigate(event)); });
+self.addEventListener('fetch', event => {
+  if (event.request.mode === 'navigate') {
+    event.respondWith(navigate(event));
+    return;
+  }
+  const path = rulebookPath(event.request);
+  if (path) event.respondWith(rulebookFile(event, path));
+});
 self.addEventListener('push', event => event.waitUntil(onPush(read(event))));
 self.addEventListener('notificationclick', event => {
   event.notification.close();

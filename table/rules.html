@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1519" />
+  <title>Downfall Instinct — the rules</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
+  <link rel="stylesheet" href="table.css" />
+  <link rel="stylesheet" href="lobby.css" />
+  <link rel="stylesheet" href="rules.css" />
+  <link rel="stylesheet" href="identity.css" />
+  <script type="module" src="navigation.js"></script>
+</head>
+<body class="lobby-page rules-page">
+  <!-- The menu replaces this header when it loads; read offline, the brand alone leads home. -->
+  <header class="masthead lobby-header home-header" data-navigation="rules">
+    <a class="brand" href="/" aria-label="Downfall Instinct home"><span class="brand-mark" aria-hidden="true"></span><h1>Downfall Instinct</h1></a>
+  </header>
+  <main class="lobby-main rules-main">
+    <section class="lobby-hero rules-hero" aria-labelledby="rules-title">
+      <div><p class="eyebrow">The official rulebook</p><h2 id="rules-title">The rules.</h2><p class="hero-detail">How a match is played at this table, part by part. Every number is the one this table uses.</p></div>
+    </section>
+    <form id="rules-filter-form" class="rules-filter" role="search">
+      <label for="rules-filter">Find a rule</label>
+      <input id="rules-filter" type="search" autocomplete="off" spellcheck="false" placeholder="sunder, stun, tempo…" />
+      <output id="rules-status" class="muted" for="rules-filter" aria-live="polite"></output>
+    </form>
+    <p id="rules-loading" class="muted">Reading the rulebook…</p>
+    <p id="rules-problem" class="problem" role="alert" hidden></p>
+    <div class="rules-layout">
+      <nav id="rules-contents" class="rules-contents" aria-labelledby="rules-contents-title" tabindex="-1">
+        <h2 id="rules-contents-title">Contents</h2>
+        <ol id="rules-contents-list" class="rules-contents-parts"></ol>
+        <p class="rules-contents-changes"><a href="#what-changed">What changed</a></p>
+      </nav>
+      <div class="rules-text">
+        <article id="rules-book" class="rules-book" aria-labelledby="rules-title"></article>
+        <section id="what-changed" class="rules-changes" aria-labelledby="rules-changes-title">
+          <div id="rules-changes">
+            <h2 id="rules-changes-title" tabindex="-1">What changed</h2>
+            <ul id="rules-changes-list" class="rules-changes-list"></ul>
+          </div>
+          <p id="rules-drawn" class="rules-drawn muted"></p>
+        </section>
+      </div>
+    </div>
+  </main>
+  <script type="module" src="rules.js"></script>
+</body>
+</html>

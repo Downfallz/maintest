@@ -1,3 +1,5 @@
+using System.Text;
+using System.Text.RegularExpressions;
 using DownfallArena.Cli.Studio;
 
 namespace DownfallArena.Cli.Table;
@@ -10,7 +12,7 @@ namespace DownfallArena.Cli.Table;
 /// It answers with <see cref="StudioResponse" /> because the two hosts of this CLI give the same kind of
 /// answer; the type is named after the first host that needed it rather than after the pair.
 /// </remarks>
-internal sealed class TableFiles
+internal sealed partial class TableFiles
 {
     private const string JavaScript = "text/javascript; charset=utf-8";
 
@@ -80,6 +82,12 @@ internal sealed class TableFiles
             ["/stats"] = (Path.Combine(tableDirectory, "stats.html"), StudioResponse.Html),
             ["/stats.js"] = (Path.Combine(tableDirectory, "stats.js"), JavaScript),
             ["/stats.css"] = (Path.Combine(tableDirectory, "stats.css"), Css),
+
+            // The official rulebook (ADR 0188), open to anyone: the page, and the book built from rules/ it reads.
+            ["/rules"] = (Path.Combine(tableDirectory, "rules.html"), StudioResponse.Html),
+            ["/rules.js"] = (Path.Combine(tableDirectory, "rules.js"), JavaScript),
+            ["/rules.css"] = (Path.Combine(tableDirectory, "rules.css"), Css),
+            ["/rules.json"] = (Path.Combine(tableDirectory, "rules.json"), StudioResponse.Json),
             ["/lobby.css"] = (Path.Combine(tableDirectory, "lobby.css"), Css),
             ["/table.css"] = (Path.Combine(tableDirectory, "table.css"), Css),
             ["/identity.css"] = (Path.Combine(tableDirectory, "identity.css"), Css),
@@ -301,6 +309,11 @@ internal sealed class TableFiles
 
     private ServedFile Served(string path, string contentType)
     {
+        if (contentType == StudioResponse.Html)
+        {
+            return Page(path);
+        }
+
         var written = File.GetLastWriteTimeUtc(path);
         if (_served.TryGetValue(path, out var held) && held.Written == written)
         {
@@ -311,4 +324,52 @@ internal sealed class TableFiles
         _served[path] = made;
         return made;
     }
+
+    // A page names its stylesheets and the battle's bundles with the tag of the file it names
+    // (`battle-build/live.js?v=<tag>`), so the page and what it runs are the same deploy's. Every one of them is answered
+    // no-cache, but a cache between the host and the phone may keep a script longer than it was told, and a page of one
+    // deploy running the bundle of another dies at its first missing element: renaming `coach-continue` to `coach-again`
+    // left every battle on "Connecting…". The page's own modules are not stamped: one of them imports another by its
+    // bare name (`./navigation.js`), and a stamped name beside it would be a second copy of that module, run twice.
+    // The bundles import nothing by name.
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, StampedPage> _pages = new(StringComparer.Ordinal);
+
+    [GeneratedRegex("(?<lead>\\b(?:src|href)=\")(?<name>(?:battle-build/[^\"?#:]+\\.js|[^\"?#:]+\\.css))\"")]
+    private static partial Regex NamedAsset();
+
+    private ServedFile Page(string path)
+    {
+        var written = File.GetLastWriteTimeUtc(path);
+        if (_pages.TryGetValue(path, out var held) && held.Written == written && held.Names.All(one => TagOf(one.Route) == one.Tag))
+        {
+            return held.File;
+        }
+
+        var names = new List<(string Route, string? Tag)>();
+        var stamped = NamedAsset().Replace(File.ReadAllText(path), match =>
+        {
+            var route = "/" + match.Groups["name"].Value.TrimStart('/');
+            if (!_routes.ContainsKey(route))
+            {
+                return match.Value;
+            }
+
+            var tag = TagOf(route);
+            names.Add((route, tag));
+            return tag is null ? match.Value : $"{match.Groups["lead"].Value}{match.Groups["name"].Value}?v={tag[1..13]}\"";
+        });
+
+        var made = new StampedPage(written, [.. names], ServedFile.Of(Encoding.UTF8.GetBytes(stamped), written, compress: true));
+        _pages[path] = made;
+        return made.File;
+    }
+
+    // The tag of the file a route serves, or none while it is missing (the battle's bundle before it is built).
+    private string? TagOf(string route)
+    {
+        var (path, contentType) = _routes[route];
+        return File.Exists(path) ? Served(path, contentType).Tag : null;
+    }
+
+    private sealed record StampedPage(DateTime Written, IReadOnlyList<(string Route, string? Tag)> Names, ServedFile File);
 }

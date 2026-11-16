@@ -2,7 +2,7 @@
 
 Date: 2026-11-11
 
-Status: Accepted. Amends [0118](0118-your-turn-reaches-a-phone-nobody-is-looking-at.md) (the worker keeps one page)
+Status: Accepted. Amends [0118](0118-your-turn-reaches-a-phone-nobody-is-looking-at.md) (the worker keeps one page). Amended by [0191](0191-keep-the-rulebook-in-the-service-worker.md) (the worker keeps the rulebook too)
 
 ## Context
 
