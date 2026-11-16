@@ -1,5 +1,4 @@
 using DownfallArena.Application.Agents;
-using DownfallArena.Application.Catalogue;
 using DownfallArena.Application.Matches.Journaling;
 using DownfallArena.Application.Matches.Ports;
 using DownfallArena.Application.Matches.Projections;
@@ -68,7 +67,9 @@ internal sealed record ScenarioPlay(SteppedSession Session, TableApi Api, string
             label?.Tutorial?.Follow(session);
             session.Begin();
             label?.Tutorial?.Look();
-            var api = new TableApi(session, seats, CatalogueProjection.Build(resources, rules), stepped.Events)
+            // The catalogue as a table serves it, with how each card's cast is drawn: without it every cast plays as
+            // the neutral mark, and no creature lunges at its target.
+            var api = new TableApi(session, seats, new TableContent(services).Catalogue(rules), stepped.Events)
             {
                 Guide = new DecisionGuideProjection(resources, rules),
                 FeedStart = session.Journaled ?? 0,

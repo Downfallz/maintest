@@ -164,6 +164,28 @@ public sealed class ScenariosApiTests : IDisposable
     }
 
     /// <summary>
+    /// The battle lunges a creature at its target only for a card its art says is melee (ADR 0131): a practice's
+    /// catalogue carries that art as a table's does, or a tutorial's casts all play as the neutral mark, standing still.
+    /// </summary>
+    [Fact]
+    public async Task A_practice_s_catalogue_carries_how_each_card_s_cast_is_drawn()
+    {
+        var (_, scenario) = await CutAsync();
+        await using var practices = new ScenarioPractices(_hosted.Composer, _store, _clock);
+        var accounts = await AccountsAsync();
+        var api = new ScenariosApi(_store, practices, accounts);
+        var opened = Read(await api.HandleAsync("POST", $"{ScenariosApi.Prefix}/{scenario}/practice", await SignedInAsync(accounts, "learner")));
+        var practice = practices.ByToken(opened.GetProperty("token").GetString()).ShouldNotBeNull();
+
+        var answer = await practice.Play.Api.HandleAsync("GET", "/api/catalogue", "", practice.Play.Token);
+
+        answer.Status.ShouldBe(200);
+        var guard = Read(answer).GetProperty("cards").EnumerateArray().Single(card => card.GetProperty("id").GetString() == "spell:guard:v1").GetProperty("visual");
+        guard.GetProperty("family").GetString().ShouldBe("physical");
+        guard.GetProperty("delivery").GetString().ShouldBe("cast");
+    }
+
+    /// <summary>
     /// A host whose bots' turns go to a queue a worker takes (the deployed shape, --turns worker): a practice is in no
     /// index the worker could find it by, so its opponent answers in this process, or the practice would wait forever.
     /// </summary>
