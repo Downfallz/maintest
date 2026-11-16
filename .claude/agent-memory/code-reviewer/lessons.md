@@ -46,3 +46,6 @@
 - A page that reverses a built list for "latest first" (`changes.reverse()`, `.at(-1)` as latest) trusts an order the build neither sorts nor refuses; with one entry no test can tell: sort by the field, or make the build refuse disorder (R3 rulebook, table/rules.js:243).
 - A worker fallback widened from "no network" to "5xx" applies to every file in its list, shared styles included: every page, not just the one the ADR is about, then gets an older deploy's copy (R3 rulebook, table/sw.js unanswered).
 - Third time (#658, R1 feedback, R3): the tree moved mid-review on the coordinator's word; re-grep each finding against the current file before handback, and say which were checked.
+- A word-count guard on a skill's prose (prompts.test.js: no line names `push` but "push once") is broken by the author's own copy-edit ("then push them"): run `node --test` on the final HEAD after any prose edit to a skill a test reads (M4, ADR 0192, prompts.test.js:174).
+- A plan exemption keyed on a path (`data/README.md` read by test_knobs.py) is hidden by `git diff --name-only`'s default rename detection: a move out of the folder lists only the new path; `--no-renames` lists both (M4, changed-paths.sh).
+- Fourth time (#658, R1 feedback, R3, M4): the branch moved mid-review (uncommitted copy edits then a commit); name the HEAD the findings were checked on.
