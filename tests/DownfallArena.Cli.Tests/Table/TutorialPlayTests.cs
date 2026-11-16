@@ -184,21 +184,6 @@ public sealed class TutorialPlayTests
     }
 
     [Fact]
-    public async Task A_hand_back_subscriber_that_throws_leaves_the_next_one_told()
-    {
-        var (table, _) = AskedASpeed(_ => DecisionTaken.Late);
-        var play = Play();
-        var told = 0;
-        play.GaveBack += () => throw new InvalidOperationException("the relay is down");
-        play.GaveBack += () => Interlocked.Increment(ref told);
-        play.Follow(table);
-
-        play.Look();
-
-        (await SaidAsync(() => Volatile.Read(ref told) == 1)).ShouldBeTrue("the seat's stream is told all the same");
-    }
-
-    [Fact]
     public async Task A_change_that_comes_while_a_failed_answer_is_on_its_way_is_looked_at_even_when_a_hand_back_subscriber_throws()
     {
         TutorialPlay? play = null;

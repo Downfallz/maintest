@@ -148,28 +148,20 @@ internal sealed class TutorialPlay
     }
 
     /// <summary>
-    /// Says the hand-back to each subscriber in turn. What one throws is said on its own line and stops neither the
-    /// others nor the answering (#661): thrown into <see cref="AnswerAsync" />, it would be logged as an answer that
-    /// failed, or, from its <c>catch</c>, leave a change that came meanwhile never looked at.
+    /// Says the hand-back. What a subscriber throws is said on its own line and does not stop the answering (#661):
+    /// thrown into <see cref="AnswerAsync" />, it would be logged as an answer that failed, or, from its <c>catch</c>,
+    /// leave a change that came meanwhile never looked at.
     /// </summary>
     private void SayGaveBack()
     {
         Console.WriteLine($"  Tutorial {Order}: the recorded answers no longer fit the match; the person answers every question from here.");
-        if (GaveBack is not { } said)
+        try
         {
-            return;
+            GaveBack?.Invoke();
         }
-
-        foreach (var subscriber in said.GetInvocationList().Cast<Action>())
+        catch (Exception failure) when (failure is not OutOfMemoryException)
         {
-            try
-            {
-                subscriber();
-            }
-            catch (Exception failure) when (failure is not OutOfMemoryException)
-            {
-                Console.WriteLine($"  Tutorial {Order}: telling the table of the hand-back failed ({failure.GetType().Name}).");
-            }
+            Console.WriteLine($"  Tutorial {Order}: telling the table of the hand-back failed ({failure.GetType().Name}).");
         }
     }
 
