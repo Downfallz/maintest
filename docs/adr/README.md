@@ -210,5 +210,6 @@ UPDATE_INDEXES=1 dotnet test --project tests/DownfallArena.Architecture.Tests
 | [0185](0185-serve-the-public-showcase-from-cloudflare-pages.md) | Serve the public showcase from Cloudflare Pages | Proposed. Completes the apex decision left open in [0175](0175-serve-the-table-at-its-own-domain-behind-cloudflare.md). |
 | [0186](0186-read-production-through-an-identity-that-cannot-write.md) | Read production through an identity that cannot write | Accepted |
 | [0187](0187-teach-by-tutorials-cut-from-repository-scenarios.md) | Teach by tutorials cut from repository scenarios | Accepted |
+| [0188](0188-build-the-official-rulebook-from-rules.md) | Build the official rulebook from rules/ | Accepted (settled by the owner, docs/tabletop/rulebook-plan.md) |
 
 <!-- index:end -->

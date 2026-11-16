@@ -131,6 +131,18 @@ dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst
 Validate and consolidate content into `data/dst/game.schema.json` with a content hash (ADR 0009). It refuses a
 critical chance off the d20's twentieths and a creature with a chance of its own (ADR 0100).
 
+### rules/build.mjs
+
+```bash
+node scripts/rules/build.mjs            # build rules/ into table/rules.json, or list what it refuses and exit 1
+node scripts/rules/build.mjs --check    # exit 1 when table/rules.json is not the build of rules/
+```
+
+The official rulebook (ADR 0188, `rules/README.md`). It draws the book's values from the hosted rule set, the
+reference creature and the spells, refuses a duplicate or vanished id, an unresolved value, a retired word, a
+missing source, a dead `/rules#<id>` link and an unknown card, and writes the book as data. `table/rules.test.js`
+fails when the committed file is not its build; `UPDATE_INDEXES=1` with that test rewrites it too.
+
 ### studio
 
 ```bash

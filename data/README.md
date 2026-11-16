@@ -46,6 +46,10 @@ dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst
 The output, `data/dst/game.schema.json` and its SHA-256 in `game.schema.sha256`, is generated and ignored by git.
 Unknown JSON properties are errors, so a typo in a field name is caught at build time.
 
+The official rulebook (`rules/`, ADR 0188) draws its numbers from the reference creature, the spells and the
+hosted rule set. A change to any value it draws makes `table/rules.json` stale, and the pages' tests say so: rebuild
+it with `node scripts/rules/build.mjs`.
+
 The content studio edits all of this in a browser (`studio/README.md`):
 
 ```bash
