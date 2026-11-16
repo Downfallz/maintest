@@ -12,9 +12,9 @@ its Archmage passives give. Nobody decides anything. A defeated creature gains n
 Archmage is shared with the whole team: each copy a team owns gives every living creature of that team
 {tier:archmage:v1.upkeepEnergy} Energy more at every Upkeep, from the round after it was acquired.
 
-*Example.* Round 4 begins. Creature 1 has 1 Energy and Creature 2 has 4; Creature 3 is defeated. Creature 1 goes
+*Example.* Round 8 begins. Creature 1 has 1 Energy and Creature 2 has 4; Creature 3 is defeated. Creature 1 goes
 to {1 + rules.energyPerRound} and Creature 2 to {4 + rules.energyPerRound}. Creature 3 gains nothing. Had
-Creature 2 acquired Archmage on an earlier round, every living creature of its team would gain
+Creature 2 acquired Archmage in round 7, every living creature of its team would gain
 {rules.energyPerRound + tier:archmage:v1.upkeepEnergy}; with a second copy on the team,
 {rules.energyPerRound + 2 * tier:archmage:v1.upkeepEnergy}.
 
@@ -30,8 +30,8 @@ A spell costs Energy. It is spent when the spell resolves, never before.
 
 ## Ongoing effects {#ongoing-effects}
 
-*Upkeep.* Right after the Energy gain, the conditions that act at Upkeep act, in three passes, and the order
-changes results:
+*Upkeep.* Right after the Energy gain, the conditions that work at Upkeep apply, in three passes. The order
+matters:
 
 1. **Energy regeneration** gives its Energy. No spell of today's content applies one.
 2. **Regeneration** heals, never above the Health the creature started with.
@@ -61,7 +61,7 @@ Each team has {rules.evolutionPicksPerOpportunity} picks. One pick acquires one 
 creatures, and no creature climbs two Stages in one round. A team down to one living creature has one pick.
 
 Both players pick in secret, at the same time. Nothing changes until both are done; then every pick of both
-teams is revealed and acquired at once. A pick you do not want, you pass. The mutation tree opens with the step:
+teams is revealed and acquired at once. A pick you do not want, you pass. The Mutation Tree opens with the step:
 choose a creature, read a mutation, confirm it.
 
 **What a mutation is.** A named set of spells. Acquiring it teaches the creature every one of them at once,
@@ -126,7 +126,7 @@ sources: ADR 0101, ADR 0106, ADR 0114, game-rules#implemented
 *Command · Tempo.* For each of your living creatures that is not stunned, choose a tempo: **Instinct** or
 **Precision**. Both players choose in secret, and the tempos are revealed together.
 
-- **Instinct** acts before every Precision creature, and **cannot crit this round**, whatever its spell prints.
+- **Instinct** acts before every Precision creature, and **cannot roll a critical this round**, whatever its spell prints.
 - **Precision** acts after every Instinct creature, and keeps its critical roll.
 
 Choose Instinct to land a blow that does not need the dice, or to act before something that would defeat you.
@@ -145,7 +145,7 @@ sources: ADR 0010, ADR 0072, ADR 0112, game-rules#round-sequence-adr-0010
 id: tempo
 title: Tempo
 Each round, every creature that is not stunned takes a tempo: Instinct or Precision.
-Instinct acts before every Precision creature, and cannot crit this round.
+Instinct acts before every Precision creature, and cannot roll a critical this round.
 Precision acts after every Instinct creature, and keeps the critical roll.
 > An Instinct creature at {creature.initiative} initiative acts before a Precision creature at {creature.initiative + 4}.
 ```
@@ -169,7 +169,7 @@ the first place. Creatures on a number both teams rolled roll again; a number on
 roll-off decides which places each team holds. How a team orders its own creatures in its places is
 [the next step](#tie-order).
 
-*Example.* Both players gave Warped to Creatures 1, 2, 4 and 5, then Stormborn to Creatures 1 and 4. Creatures 1
+*Example.* Creatures 1, 2, 4 and 5 have acquired Warped, and Creatures 1 and 4 have since acquired Stormborn. Creatures 1
 and 4 read {creature.initiative + tier:occultist:v1.initiativeBonus + tier:elementalist:v1.initiativeBonus}
 initiative, Creatures 2 and 5 read {creature.initiative + tier:occultist:v1.initiativeBonus}, and Creatures 3
 and 6 read {creature.initiative}. Last round, an Ice Grip lowered Creature 2's initiative by
@@ -263,7 +263,7 @@ A creature's **Defense** is its base Defense plus its Defense buffs, which count
 there are, less its Defense debuffs, never below zero.
 
 A hit never goes past the Health left: a creature at 3 Health hit for 10 loses 3. A spell that changes nothing on
-a target, 0 damage through a Defense or a heal at full Health, simply did nothing to it.
+a target, 0 damage through a Defense or a heal at full Health, did nothing to it.
 
 *Example.* Creature 2 is Precision, at 4 Energy, and casts Incinerate on Creature 5: cost
 {spell:engulfing_flames:v1.energyCost}, damage {spell:engulfing_flames:v1.damage}, d20:
@@ -299,7 +299,7 @@ A creature's **damage bonus** is added to every hit it deals: Apex gives
 {tier:apex:v1.damageBonus}, and each damage buff on it adds its own number. It is added **before** the critical
 multiplies and before Defense is subtracted. It never touches a Bleed, a heal, or the caster's own line.
 
-*Example.* Creature 4 owns Apex and casts Blood Price on Creature 1, whose Defense is 3: damage
+*Example.* Creature 4 owns Apex, is Precision, and casts Blood Price on Creature 1, whose Defense is 3: damage
 {spell:hateful_sacrifice:v1.damage}, d20: {21 - spell:hateful_sacrifice:v1.criticalChance * 20}+. Add the bonus:
 {spell:hateful_sacrifice:v1.damage + tier:apex:v1.damageBonus}. On a critical,
 {floor((spell:hateful_sacrifice:v1.damage + tier:apex:v1.damageBonus) * rules.criticalMultiplier)}, less 3:
@@ -347,8 +347,8 @@ sources: ADR 0041, ADR 0072, game-rules#round-sequence-adr-0010
 *Aftermath · Finalization.* If this was round {rules.roundCap}, the match ends: the team with the **most
 Health left**, added over its creatures, wins, and equal totals are a draw. Otherwise the next round begins.
 
-*Example.* Round {rules.roundCap} ends with both teams standing. The first player's creatures have 11, 0 and 6
-Health: 17. The second player's have 4, 9 and 5: 18. **The second player wins**, with fewer creatures standing.
+*Example.* Round {rules.roundCap} ends with both teams standing. The first player's creatures have 4, 5 and 6
+Health: 15. The second player's have 18, 0 and 0: 18. **The second player wins**, with fewer creatures standing.
 Health decides, not survivors.
 
 sources: ADR 0011, ADR 0105, game-rules#match-lifecycle

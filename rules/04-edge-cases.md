@@ -9,7 +9,7 @@ its owner is not asked. The next turn comes.
 
 A creature cannot act when it was **defeated** or **stunned** earlier in the round. A creature in the round
 always has a spell it can cast, since Focus costs {spell:wait:v1.energyCost} Energy and targets its caster; a
-spell it cannot pay for now, or one with no legal target, is simply not offered.
+spell it cannot pay for now, or one with no legal target, is not offered.
 
 So a late turn is a risk: before it comes, your creature may be defeated or stunned, and the target you meant
 may be gone. That is the cost of acting late, and the reason Instinct exists.
@@ -32,10 +32,10 @@ It happens when the creature was defeated or stunned earlier in the round.
 Each spell resolves before the next turn comes, so **you always choose on the board as it is**, and nothing
 happens between your confirmation and the result: a target cannot be defeated in between.
 
-What changes is the board before your turn. A drain may have left your creature short of the spell you planned,
-and a defeated enemy leaves your spell with fewer targets. You choose again among what is offered.
+What changes is the board before your turn. A drain may have left your creature short of the spell you counted on,
+and a defeated enemy leaves your spell with fewer targets. You choose among what is offered.
 
-*Example.* Creature 1 has 3 Energy and plans Emberstorm, which costs {spell:meteor:v1.energyCost}. Before its
+*Example.* Creature 1 has 3 Energy and counts on Emberstorm, which costs {spell:meteor:v1.energyCost}. Before its
 turn, Creature 5 casts Soul Feast on it, which drains {spell:soul_devourer:v1.energyDrain} Energy: Creature 1 is
 left with {max(0, 3 - spell:soul_devourer:v1.energyDrain)}. At its turn, the app offers only the spells it can pay
 for now.
@@ -53,8 +53,8 @@ yet: it is skipped.
 
 **Stun immunity.** When a Stun ends at Cleanup, the creature **cannot be stunned for the next round**. A Stun
 that reaches a creature already stunned, or immune, is ignored: the spell's other effects still land, and the
-running Stun neither grows nor restarts. So every Stun ends, and after it the creature has a round no Stun can
-take: no creature can be kept stunned.
+running Stun neither grows nor restarts. So no creature can be kept stunned: every Stun is followed by a round in
+which it cannot be stunned.
 
 *Example.* In round 5, Creature 4 is hit by Crushing Stomp: Stun for {spell:crushing_stomp:v1.stun.durationRounds}
 rounds. It sits out the next {spell:crushing_stomp:v1.stun.durationRounds} rounds whole. At the Cleanup that ends
@@ -84,18 +84,15 @@ sources: ADR 0041, game-rules#implemented, game-rules#round-sequence-adr-0010
 
 When a **Precision** creature's spell resolves and the spell prints a critical chance, a d20 is rolled **once for
 the whole cast**. The spell prints the face it needs: d20: 11+ means 11 or more. An **Instinct** creature never
-rolls, and a spell that prints no chance never rolls. The chance on the spell is the whole chance: a creature
-adds {creature.criticalChance * 100}% of its own.
+rolls, and a spell that prints no chance never rolls. A creature's own chance is
+{creature.criticalChance * 100}%, so the spell's chance is the whole chance.
 
 A critical multiplies by {rules.criticalMultiplier}, dropping any fraction, **what the cast puts on a target's
 Health now**, and nothing else:
 
-| Multiplied | Not multiplied |
-| --- | --- |
-| The damage on a target, its damage bonus included | Anything on the caster's own line |
-| A heal on a target | Energy, given or taken |
-| | A lasting effect: a Bleed, a Regeneration, a Stun, a buff or a debuff |
-| | A sunder: it takes from the Defense, not from the hit |
+- **Multiplied:** the damage on a target, its damage bonus included, and a heal on a target.
+- **Not multiplied:** anything on the caster's own line; Energy, given or taken; a lasting effect, a Bleed, a
+  Regeneration, a Stun, a buff or a debuff; and a sunder, which takes from the Defense, not from the hit.
 
 The order is the one of [resolving a spell](#resolving-a-spell): add the damage bonus, multiply, then subtract
 the Defense.

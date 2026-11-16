@@ -56,7 +56,7 @@ the same when they do. This book draws every number from the rule set and the co
 | Energy per round | The Energy every living creature gains at Upkeep | {rules.energyPerRound} |
 | Picks per mutation round | The mutations a team may acquire on a mutation round | {rules.evolutionPicksPerOpportunity} |
 | First mutation round | The first round that offers mutations | {rules.firstEvolutionRound} |
-| Rounds between mutation rounds | {rules.evolutionInterval}: a mutation round every {rules.evolutionInterval} rounds | {rules.evolutionInterval} |
+| Rounds between mutation rounds | The gap from one mutation round to the next | {rules.evolutionInterval} |
 | Last round | The round after which the match ends on Health | {rules.roundCap} |
 | Critical multiplier | What a critical multiplies the damage and the healing by | {rules.criticalMultiplier} |
 

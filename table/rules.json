@@ -579,7 +579,7 @@
                   ],
                   [
                     {
-                      "text": "2: a mutation round every 2 rounds"
+                      "text": "The gap from one mutation round to the next"
                     }
                   ],
                   [
@@ -713,7 +713,7 @@
                   "emphasis": true
                 },
                 {
-                  "text": " Round 4 begins. Creature 1 has 1 Energy and Creature 2 has 4; Creature 3 is defeated. Creature 1 goes to 3 and Creature 2 to 6. Creature 3 gains nothing. Had Creature 2 acquired Archmage on an earlier round, every living creature of its team would gain 3; with a second copy on the team, 4."
+                  "text": " Round 8 begins. Creature 1 has 1 Energy and Creature 2 has 4; Creature 3 is defeated. Creature 1 goes to 3 and Creature 2 to 6. Creature 3 gains nothing. Had Creature 2 acquired Archmage in round 7, every living creature of its team would gain 3; with a second copy on the team, 4."
                 }
               ]
             }
@@ -748,7 +748,7 @@
                   "emphasis": true
                 },
                 {
-                  "text": " Right after the Energy gain, the conditions that act at Upkeep act, in three passes, and the order changes results:"
+                  "text": " Right after the Energy gain, the conditions that work at Upkeep apply, in three passes. The order matters:"
                 }
               ]
             },
@@ -876,7 +876,7 @@
               "type": "paragraph",
               "spans": [
                 {
-                  "text": "Both players pick in secret, at the same time. Nothing changes until both are done; then every pick of both teams is revealed and acquired at once. A pick you do not want, you pass. The mutation tree opens with the step: choose a creature, read a mutation, confirm it."
+                  "text": "Both players pick in secret, at the same time. Nothing changes until both are done; then every pick of both teams is revealed and acquired at once. A pick you do not want, you pass. The Mutation Tree opens with the step: choose a creature, read a mutation, confirm it."
                 }
               ]
             },
@@ -1177,7 +1177,7 @@
                     "text": " acts before every Precision creature, and "
                   },
                   {
-                    "text": "cannot crit this round",
+                    "text": "cannot roll a critical this round",
                     "strong": true
                   },
                   {
@@ -1239,7 +1239,7 @@
             "title": "Tempo",
             "lines": [
               "Each round, every creature that is not stunned takes a tempo: Instinct or Precision.",
-              "Instinct acts before every Precision creature, and cannot crit this round.",
+              "Instinct acts before every Precision creature, and cannot roll a critical this round.",
               "Precision acts after every Instinct creature, and keeps the critical roll."
             ],
             "example": "An Instinct creature at 5 initiative acts before a Precision creature at 9."
@@ -1335,7 +1335,7 @@
                   "emphasis": true
                 },
                 {
-                  "text": " Both players gave Warped to Creatures 1, 2, 4 and 5, then Stormborn to Creatures 1 and 4. Creatures 1 and 4 read 10 initiative, Creatures 2 and 5 read 7, and Creatures 3 and 6 read 5. Last round, an Ice Grip lowered Creature 2's initiative by 3: it reads 4 this round. Creatures 1 and 4 chose Instinct, the rest Precision. Creatures 1 and 4 tie, and roll 8 and 15: Creature 4 acts first, then Creature 1. Then the Precision creatures, by their initiative."
+                  "text": " Creatures 1, 2, 4 and 5 have acquired Warped, and Creatures 1 and 4 have since acquired Stormborn. Creatures 1 and 4 read 10 initiative, Creatures 2 and 5 read 7, and Creatures 3 and 6 read 5. Last round, an Ice Grip lowered Creature 2's initiative by 3: it reads 4 this round. Creatures 1 and 4 chose Instinct, the rest Precision. Creatures 1 and 4 tie, and roll 8 and 15: Creature 4 acts first, then Creature 1. Then the Precision creatures, by their initiative."
                 }
               ]
             }
@@ -1665,7 +1665,7 @@
               "type": "paragraph",
               "spans": [
                 {
-                  "text": "A hit never goes past the Health left: a creature at 3 Health hit for 10 loses 3. A spell that changes nothing on a target, 0 damage through a Defense or a heal at full Health, simply did nothing to it."
+                  "text": "A hit never goes past the Health left: a creature at 3 Health hit for 10 loses 3. A spell that changes nothing on a target, 0 damage through a Defense or a heal at full Health, did nothing to it."
                 }
               ]
             },
@@ -1771,7 +1771,7 @@
                   "emphasis": true
                 },
                 {
-                  "text": " Creature 4 owns Apex and casts Blood Price on Creature 1, whose Defense is 3: damage 11, d20: 11+. Add the bonus: 16. On a critical, 32, less 3: Creature 1 loses 29. Without one, 13. "
+                  "text": " Creature 4 owns Apex, is Precision, and casts Blood Price on Creature 1, whose Defense is 3: damage 11, d20: 11+. Add the bonus: 16. On a critical, 32, less 3: Creature 1 loses 29. Without one, 13. "
                 },
                 {
                   "text": "Add, multiply, subtract",
@@ -1926,7 +1926,7 @@
                   "emphasis": true
                 },
                 {
-                  "text": " Round 20 ends with both teams standing. The first player's creatures have 11, 0 and 6 Health: 17. The second player's have 4, 9 and 5: 18. "
+                  "text": " Round 20 ends with both teams standing. The first player's creatures have 4, 5 and 6 Health: 15. The second player's have 18, 0 and 0: 18. "
                 },
                 {
                   "text": "The second player wins",
@@ -2000,7 +2000,7 @@
                   "strong": true
                 },
                 {
-                  "text": " earlier in the round. A creature in the round always has a spell it can cast, since Focus costs 0 Energy and targets its caster; a spell it cannot pay for now, or one with no legal target, is simply not offered."
+                  "text": " earlier in the round. A creature in the round always has a spell it can cast, since Focus costs 0 Energy and targets its caster; a spell it cannot pay for now, or one with no legal target, is not offered."
                 }
               ]
             },
@@ -2066,7 +2066,7 @@
               "type": "paragraph",
               "spans": [
                 {
-                  "text": "What changes is the board before your turn. A drain may have left your creature short of the spell you planned, and a defeated enemy leaves your spell with fewer targets. You choose again among what is offered."
+                  "text": "What changes is the board before your turn. A drain may have left your creature short of the spell you counted on, and a defeated enemy leaves your spell with fewer targets. You choose among what is offered."
                 }
               ]
             },
@@ -2078,7 +2078,7 @@
                   "emphasis": true
                 },
                 {
-                  "text": " Creature 1 has 3 Energy and plans Emberstorm, which costs 3. Before its turn, Creature 5 casts Soul Feast on it, which drains 3 Energy: Creature 1 is left with 0. At its turn, the app offers only the spells it can pay for now."
+                  "text": " Creature 1 has 3 Energy and counts on Emberstorm, which costs 3. Before its turn, Creature 5 casts Soul Feast on it, which drains 3 Energy: Creature 1 is left with 0. At its turn, the app offers only the spells it can pay for now."
                 }
               ]
             }
@@ -2141,7 +2141,7 @@
                   "strong": true
                 },
                 {
-                  "text": ". A Stun that reaches a creature already stunned, or immune, is ignored: the spell's other effects still land, and the running Stun neither grows nor restarts. So every Stun ends, and after it the creature has a round no Stun can take: no creature can be kept stunned."
+                  "text": ". A Stun that reaches a creature already stunned, or immune, is ignored: the spell's other effects still land, and the running Stun neither grows nor restarts. So no creature can be kept stunned: every Stun is followed by a round in which it cannot be stunned."
                 }
               ]
             },
@@ -2250,7 +2250,7 @@
                   "strong": true
                 },
                 {
-                  "text": " creature never rolls, and a spell that prints no chance never rolls. The chance on the spell is the whole chance: a creature adds 0% of its own."
+                  "text": " creature never rolls, and a spell that prints no chance never rolls. A creature's own chance is 0%, so the spell's chance is the whole chance."
                 }
               ]
             },
@@ -2270,59 +2270,26 @@
               ]
             },
             {
-              "type": "table",
-              "header": [
+              "type": "list",
+              "ordered": false,
+              "items": [
                 [
                   {
-                    "text": "Multiplied"
+                    "text": "Multiplied:",
+                    "strong": true
+                  },
+                  {
+                    "text": " the damage on a target, its damage bonus included, and a heal on a target."
                   }
                 ],
                 [
                   {
-                    "text": "Not multiplied"
+                    "text": "Not multiplied:",
+                    "strong": true
+                  },
+                  {
+                    "text": " anything on the caster's own line; Energy, given or taken; a lasting effect, a Bleed, a Regeneration, a Stun, a buff or a debuff; and a sunder, which takes from the Defense, not from the hit."
                   }
-                ]
-              ],
-              "rows": [
-                [
-                  [
-                    {
-                      "text": "The damage on a target, its damage bonus included"
-                    }
-                  ],
-                  [
-                    {
-                      "text": "Anything on the caster's own line"
-                    }
-                  ]
-                ],
-                [
-                  [
-                    {
-                      "text": "A heal on a target"
-                    }
-                  ],
-                  [
-                    {
-                      "text": "Energy, given or taken"
-                    }
-                  ]
-                ],
-                [
-                  [],
-                  [
-                    {
-                      "text": "A lasting effect: a Bleed, a Regeneration, a Stun, a buff or a debuff"
-                    }
-                  ]
-                ],
-                [
-                  [],
-                  [
-                    {
-                      "text": "A sunder: it takes from the Defense, not from the hit"
-                    }
-                  ]
                 ]
               ]
             },
@@ -2406,7 +2373,7 @@
                   "strong": true
                 },
                 {
-                  "text": " is a lasting effect on a creature, with an amount and a number of rounds. Every one counts down at Cleanup and ends at zero, and the first countdown after it lands does not count ("
+                  "text": " is a lasting effect on a creature, with an amount and a number of rounds. Every one except a permanent one counts down at Cleanup and ends at zero, and the first countdown after it lands does not count ("
                 },
                 {
                   "text": "durations",
@@ -2664,7 +2631,7 @@
                   "strong": true
                 },
                 {
-                  "text": " condition never counts down: Contagion's Defense debuff, Wraithguard's first Defense buff. "
+                  "text": " condition never counts down: Contagion's Defense debuff, and the lasting one of Wraithguard's two Defense buffs. "
                 },
                 {
                   "text": "Stun immunity",
@@ -2813,103 +2780,58 @@
               ]
             },
             {
-              "type": "table",
-              "header": [
+              "type": "list",
+              "ordered": false,
+              "items": [
                 [
                   {
-                    "text": "Passive"
+                    "text": "Titan: every hit ignores 10 Defense.",
+                    "strong": true
+                  },
+                  {
+                    "text": " Its "
+                  },
+                  {
+                    "text": "sunder",
+                    "href": "#sunder"
+                  },
+                  {
+                    "text": ": each hit meets the target's Defense less 10, never below zero."
                   }
                 ],
                 [
                   {
-                    "text": "Capstone"
+                    "text": "Archmage, shared: Energy +1 at every Upkeep.",
+                    "strong": true
+                  },
+                  {
+                    "text": " Every living creature of the team gains 1 Energy more, once for each copy the team owns, from the next round."
                   }
                 ],
                 [
                   {
-                    "text": "What it does"
-                  }
-                ],
-                [
+                    "text": "Apex: Damage +5 on every hit.",
+                    "strong": true
+                  },
                   {
-                    "text": "What it never touches"
+                    "text": " It adds 5 to each hit, before the critical and before Defense: see "
+                  },
+                  {
+                    "text": "the damage bonus",
+                    "href": "#damage-bonus"
+                  },
+                  {
+                    "text": "."
                   }
                 ]
-              ],
-              "rows": [
-                [
-                  [
-                    {
-                      "text": "Every hit ignores 10 Defense"
-                    }
-                  ],
-                  [
-                    {
-                      "text": "Titan"
-                    }
-                  ],
-                  [
-                    {
-                      "text": "Its "
-                    },
-                    {
-                      "text": "sunder",
-                      "href": "#sunder"
-                    },
-                    {
-                      "text": ": each hit meets the target's Defense less 10, never below zero"
-                    }
-                  ],
-                  [
-                    {
-                      "text": "A Bleed, a heal, Energy, the caster's own line, and the target's Defense for anyone else"
-                    }
-                  ]
-                ],
-                [
-                  [
-                    {
-                      "text": "Energy +1 at every Upkeep"
-                    }
-                  ],
-                  [
-                    {
-                      "text": "Archmage, shared"
-                    }
-                  ],
-                  [
-                    {
-                      "text": "Every living creature of the team gains 1 Energy more, once for each copy the team owns, from the next round"
-                    }
-                  ],
-                  [
-                    {
-                      "text": "Anything else"
-                    }
-                  ]
-                ],
-                [
-                  [
-                    {
-                      "text": "Damage +5 on every hit"
-                    }
-                  ],
-                  [
-                    {
-                      "text": "Apex"
-                    }
-                  ],
-                  [
-                    {
-                      "text": "Adds 5 to each hit, before the critical and before Defense"
-                    }
-                  ],
-                  [
-                    {
-                      "text": "A Bleed, a heal, Energy, the caster's own line"
-                    }
-                  ]
-                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Neither Titan's nor Apex's passive touches a Bleed, a heal, Energy or the caster's own line."
+                }
               ]
             },
             {
@@ -2985,7 +2907,7 @@
   "changes": [
     {
       "date": "2026-11-16",
-      "text": "The official rulebook, the app's edition: a creature chooses its spell when its turn comes, and every number is drawn from the table's rule set and content (ADR 0112, ADR 0188).",
+      "text": "The official rulebook is the app's edition. A creature chooses its spell when its turn comes. Every number follows the table's rule set and content (ADR 0112, ADR 0188).",
       "adrs": [
         "0112",
         "0188"

@@ -4,8 +4,8 @@ Every condition, every way a match ends, and every passive, in one place.
 
 ## The conditions {#conditions}
 
-A **condition** is a lasting effect on a creature, with an amount and a number of rounds. Every one counts down
-at Cleanup and ends at zero, and the first countdown after it lands does not count
+A **condition** is a lasting effect on a creature, with an amount and a number of rounds. Every one except a
+permanent one counts down at Cleanup and ends at zero, and the first countdown after it lands does not count
 ([durations](#durations)). Conditions stack: a second one sits beside the first, except a Stun.
 
 | Condition | What it does | When |
@@ -26,7 +26,8 @@ Three sums, each floored at zero **after** the subtraction:
 - **Initiative** = base initiative + initiative buffs − initiative debuffs.
 - **Damage bonus** = what its passives give + its damage buffs.
 
-A **permanent** condition never counts down: Contagion's Defense debuff, Wraithguard's first Defense buff.
+A **permanent** condition never counts down: Contagion's Defense debuff, and the lasting one of
+Wraithguard's two Defense buffs.
 **Stun immunity** is not a condition: no spell gives it, and it lasts from the Cleanup that ends a Stun to the
 next. A defeated creature loses its conditions and takes no new one.
 
@@ -65,11 +66,14 @@ sources: ADR 0011, ADR 0083, ADR 0087, ADR 0105, ADR 0169, game-rules#match-life
 A **passive** is what a capstone gives its creature, from the reveal that acquires it to the end of the match. It
 never counts down. A creature with two capstones holds both passives.
 
-| Passive | Capstone | What it does | What it never touches |
-| --- | --- | --- | --- |
-| Every hit ignores {tier:titan:v1.sunder} Defense | Titan | Its [sunder](#sunder): each hit meets the target's Defense less {tier:titan:v1.sunder}, never below zero | A Bleed, a heal, Energy, the caster's own line, and the target's Defense for anyone else |
-| Energy +{tier:archmage:v1.upkeepEnergy} at every Upkeep | Archmage, shared | Every living creature of the team gains {tier:archmage:v1.upkeepEnergy} Energy more, once for each copy the team owns, from the next round | Anything else |
-| Damage +{tier:apex:v1.damageBonus} on every hit | Apex | Adds {tier:apex:v1.damageBonus} to each hit, before the critical and before Defense | A Bleed, a heal, Energy, the caster's own line |
+- **Titan: every hit ignores {tier:titan:v1.sunder} Defense.** Its [sunder](#sunder): each hit meets the
+  target's Defense less {tier:titan:v1.sunder}, never below zero.
+- **Archmage, shared: Energy +{tier:archmage:v1.upkeepEnergy} at every Upkeep.** Every living creature of the
+  team gains {tier:archmage:v1.upkeepEnergy} Energy more, once for each copy the team owns, from the next round.
+- **Apex: Damage +{tier:apex:v1.damageBonus} on every hit.** It adds {tier:apex:v1.damageBonus} to each hit,
+  before the critical and before Defense: see [the damage bonus](#damage-bonus).
+
+Neither Titan's nor Apex's passive touches a Bleed, a heal, Energy or the caster's own line.
 
 A **hit** is the damage a spell deals a target. A Bleed is not one, and neither is the caster's own line.
 
