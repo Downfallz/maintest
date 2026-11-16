@@ -334,11 +334,11 @@ practice by the routes above, and is never listed under Practice.
 
 Each tutorial also says its `state` for the account: `new`, `done` or `skipped`. `opens` is the link of the
 tutorial that opens by itself: the first of the series while it is new to the account, null otherwise, and null
-on a host that keeps no game settings. `POST /api/tutorials/<id>/skip` keeps that the account skipped a tutorial;
+on a host that keeps no game settings. `POST /api/tutorials/<id>/skip` records that the account skipped a tutorial;
 the battle view says it for **Skip the tutorial** and for **Leave** before the end. `POST /api/tutorials/<id>/done`
-keeps that it finished one, and answers 409 `Tutorial.NotDone` unless the account's practice of it at this host
+records that it finished one, and answers 409 `Tutorial.NotDone` unless the account's practice of it at this host
 says `done`. Both answer `{ id, state }`, 404 `Tutorial.NotFound` for an id that is no tutorial, and 404
-`Account.NoPreferences` on a host that keeps no game settings. A tutorial that is done stays done when skipped.
+`Account.NoPreferences` on a host that keeps no game settings. Skipping a tutorial the account has finished leaves it done.
 
 While it plays, the host answers the person's assisted questions from the recorded answers, as the person's own
 decisions. At the first recorded answer that does not fit, it stops and gives every question back to the person.

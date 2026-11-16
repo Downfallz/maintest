@@ -25,7 +25,8 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
 
   /**
    * On a phone the field over a docked sheet is too short to carry the card (#650): the card stands in the
-   * sheet, under its heading, and comes back to the field when the sheet closes.
+   * sheet, under the spell choice's heading or at the top of the command sheet, and comes back to the field
+   * when the sheet closes.
    */
   function place() {
     const combat = el<HTMLDialogElement>('combat-dialog'), planning = el<HTMLDialogElement>('planning-dialog');
@@ -41,20 +42,28 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
   async function say(what: 'skip' | 'done') {
     const path = progressPath(latest, what);
     if (!path) return;
-    try { await request(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}', keepalive: true }); } catch { /* Not kept: the tutorial opens by itself once more. */ }
+    try { await request(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}', keepalive: true }); }
+    // The host was not reached: a done is said again at the next change; a skip not kept opens the tutorial once more.
+    catch { if (what === 'done') doneSaid = false; }
   }
-  /** Leaving a tutorial that is not done is skipping it (O4): the host is told before the page goes. */
-  async function leave(event: Event) {
-    if (!leavingSkips(latest)) return;
+  // Leaving waits for the host's answer this long and no longer: a slow network must not hold the person in a
+  // tutorial they asked to leave, and the request, sent with keepalive, outlives the page.
+  const SKIP_WAIT_MS = 1500;
+  async function skipTo(address: string) {
+    await Promise.race([say('skip'), new Promise(resolve => setTimeout(resolve, SKIP_WAIT_MS))]);
+    location.assign(address);
+  }
+  /** Leaving a tutorial that is not done is skipping it (O4): the host is told before the page goes where the link leads. */
+  function leave(event: MouseEvent) {
+    // A click that opens the link elsewhere leaves this page, and the tutorial, where they are.
+    if (!leavingSkips(latest) || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
-    await say('skip');
-    location.assign('/');
+    void skipTo((event.currentTarget as HTMLAnchorElement).href);
   }
-  for (const id of ['practice-leave', 'coach-leave']) el(id).addEventListener('click', event => void leave(event));
-  el('practice-brief-skip').addEventListener('click', async () => {
+  for (const id of ['practice-leave', 'coach-leave']) el(id).addEventListener('click', leave);
+  el('practice-brief-skip').addEventListener('click', () => {
     el<HTMLButtonElement>('practice-brief-skip').disabled = true;
-    await say('skip');
-    location.assign('/');
+    void skipTo('/');
   });
 
   function draw() {

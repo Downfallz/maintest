@@ -28,9 +28,9 @@ export function firstTutorial(answer) {
 }
 
 /**
- * The tutorial to open now, by itself: the one the host says opens (`opens`), once a browser session. The host
- * stops saying it once the account finished, skipped or left it; the session's mark keeps a tutorial that could
- * not open, or a tab closed on it, from taking the home page away on every visit.
+ * The tutorial to open now, by itself: the one the host says opens (`opens`), once a tab (the mark is the tab's
+ * session storage). The host stops saying it once the account finished, skipped or left it; the mark keeps a
+ * tutorial that could not open from taking the home page away each time the person comes back to it.
  */
 export function opensByItself(answer, session) {
   const link = typeof answer?.opens === 'string' && answer.opens.startsWith('/battle?scenario=') ? answer.opens : null;
@@ -61,9 +61,9 @@ function made(doc, tag, text, className) {
 /**
  * Draws the Learn to play section for whoever is signed in, and opens the first tutorial for an account it is new
  * to: `setAccount(account)` reads the series again for them, and hides the section for nobody.
- * @param {{ request?: (path: string) => Promise<Response>, session?: Storage | null, go?: (link: string) => void, hash?: () => string }} [options]
+ * @param {{ request?: (path: string) => Promise<Response>, session?: Storage | null, go?: (link: string) => void, hash?: () => string, plain?: () => boolean }} [options]
  */
-export function mountTutorials(doc, { request = fetched, session = null, go = link => globalThis.location.assign(link), hash = () => globalThis.location?.hash ?? '' } = {}) {
+export function mountTutorials(doc, { request = fetched, session = null, go = link => globalThis.location.assign(link), hash = () => globalThis.location?.hash ?? '', plain = () => !globalThis.location?.search && !globalThis.location?.hash } = {}) {
   const section = doc.getElementById('learn-to-play');
   const cards = doc.getElementById('tutorial-cards');
   let reading = 0;
@@ -73,7 +73,9 @@ export function mountTutorials(doc, { request = fetched, session = null, go = li
     if (!section || !account) { if (section) section.hidden = true; return; }
     const answer = await series(request);
     if (ticket !== reading) return;
-    const first = opensByItself(answer, session);
+    // An address that asks for something (a rematch, the menu's Learn to play) is answered first: the tutorial
+    // waits for a plain visit.
+    const first = plain() ? opensByItself(answer, session) : null;
     if (first) { go(first); return; }
     const listed = tutorialCards(answer);
     cards.replaceChildren(...listed.map(card => {

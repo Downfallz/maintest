@@ -1,5 +1,5 @@
-// A tutorial in the battle view (ADR 0187, docs/tabletop/onboarding-plan.md, O3b, O4): what the band and the briefing say of it, the
-// lesson step the question asked shows, the concept cards that step opens, and the questions the host answers
+// A tutorial in the battle view (ADR 0187, docs/tabletop/onboarding-plan.md, O3b, O4): what the band and the
+// briefing say of it, the lesson step the question asked shows, the concept cards that step opens, and the questions the host answers
 // for the person, which the page does not draw. Pure: the host says the lesson under `practice.tutorial` of the
 // seat's view, and this reads it. Nothing is decided here: a step shows by the question the host asks.
 
@@ -39,7 +39,7 @@ export function tutorialBrief(lesson) {
   return {
     begin: 'Start',
     skip: lesson?.done ? null : 'Skip the tutorial',
-    note: 'A short lesson on a real board: nothing played here counts. Skip it now, or leave at any time. It stays under Learn to play.',
+    note: 'A short lesson on a real board: nothing played here counts. You can skip it now or leave at any time. You can play it again from Learn to play.',
   };
 }
 

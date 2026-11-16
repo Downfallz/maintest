@@ -897,11 +897,13 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
 if (typeof document !== 'undefined') {
   let storage = null;
   try { storage = globalThis.localStorage; } catch { /* Invitations still work without browser storage. */ }
+  // Read before the lobby answers the address and clears it: what the address asked for comes before a tutorial.
+  const plainVisit = !globalThis.location.search && !globalThis.location.hash;
   const lobby = mountLobby(document, globalThis.location, storage);
   const practiceList = mountPracticeList(document);
   let session = null;
   try { session = globalThis.sessionStorage; } catch { /* No tutorial opens by itself; Learn to play still lists them. */ }
-  const tutorials = mountTutorials(document, { session });
+  const tutorials = mountTutorials(document, { session, plain: () => plainVisit });
   const next = nextPath(globalThis.location.search);
   const navigation = mountNavigation(document, storage, {
     onInvite: lobby.invite,

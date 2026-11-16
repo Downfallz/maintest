@@ -9,7 +9,7 @@ const battle = {
 };
 const held = { table: battle, seats: [{ seat: 'player1', token: 'seat-token' }] };
 
-async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, notice = null, registrationClosed = false, games = null, finished = { players: [], bots: [] }, opponents = [], tutorials = null, opensTutorial = false, invitations = [], incoming = [challenger], publicTables = [battle], scenarios = null } = {}) {
+async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, notice = null, registrationClosed = false, games = null, finished = { players: [], bots: [] }, opponents = [], tutorials = null, opensTutorial = false, search = '', invitations = [], incoming = [challenger], publicTables = [battle], scenarios = null } = {}) {
   const state = { account, mode, meDown, offline: false, mineReads: 0, friendReads: 0, finishedReads: [], privateReads: [], release: null, invitations, publicTables,
     friends: { friends: [friend], incoming, outgoing: [] } };
   const errors = [];
@@ -108,7 +108,7 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
   });
   // A tutorial's own page is the battle view's to test: here it is only where the lobby leads.
   await page.route('**/battle?scenario=*', route => route.fulfill({ contentType: 'text/html', body: '<title>Tutorial</title>' }));
-  await page.goto('/table/lobby.html');
+  await page.goto(`/table/lobby.html${search}`);
   if (opensTutorial) return state;
   await expect(page.locator('body')).toHaveAttribute('data-home', account ? 'member' : mode === 'off' ? 'local' : 'guest');
   return state;
@@ -394,7 +394,7 @@ for (const file of ['leaderboard', 'battle', 'index']) {
     expect(await page.locator('#inbox-badge').evaluate(badge => badge.getBoundingClientRect().top >= 0)).toBe(true);
     await openNavigation(page);
     const nav = page.getByRole('navigation', { name: 'Main navigation' });
-    await expect(nav.locator(':scope > :visible')).toHaveText(['Lobby', /Friends/, 'Leaderboard', 'Your stats', 'Join with a code']);
+    await expect(nav.locator(':scope > :visible')).toHaveText(['Lobby', /Friends/, 'Learn to play', 'Leaderboard', 'Your stats', 'Join with a code']);
     const sharedStyle = await nav.evaluate(node => {
       const props = ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'padding', 'minHeight'];
       const styleOf = selector => props.map(prop => getComputedStyle(node.querySelector(selector))[prop]);
@@ -828,6 +828,15 @@ test('a new account\'s first visit opens tutorial 1, and the home page is its ow
   await expect(page.locator('body')).toHaveAttribute('data-home', 'member');
   await expect(page.locator('#learn-to-play .game-card')).toHaveCount(2);
   expect(new URL(page.url()).pathname).toBe('/table/lobby.html');
+  expect(state.errors).toEqual([]);
+});
+
+test('an address that asks for a rematch is answered before the first tutorial, which waits for a plain visit', async ({ page }) => {
+  const state = await home(page, { tutorials: series('new'), search: `?rematch=${friend.id}` });
+
+  await expect(page.locator('#create-dialog')).toBeVisible();
+  await expect(page.locator('#learn-to-play')).toBeVisible();
+  expect(new URL(page.url()).pathname).not.toBe('/battle');
   expect(state.errors).toEqual([]);
 });
 

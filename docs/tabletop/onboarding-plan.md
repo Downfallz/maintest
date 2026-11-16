@@ -196,14 +196,19 @@ give what is said and when. It reuses everything ADR 0179 built, and the regress
    The briefing is the first card: **Start** and **Skip the tutorial**. **Leave** before the end counts as a
    skip, or the home page would open the tutorial again at every visit. `table/lobby-tutorials.js` draws
    **Learn to play** on the home page (**New** or **Done**, **Play** or **Play again**), opens the first tutorial
-   for an account it is new to, once a browser session, and wires the main menu's **Learn to play** and the
+   for an account it is new to, once a tab, and wires the main menu's **Learn to play** and the
    settings' **Show the first tutorial again**, which opens tutorial 1 now.
 
    On a phone the coach card stands in the docked sheet, under its heading, and the field stays clear (#650).
 
-   - Every account that has neither finished nor skipped tutorial 1 gets it once, the accounts made before this
-     stage too: nothing says an account is new but its tutorials.
-   - A tab closed on the first tutorial opens it again at the next visit: only Skip, Leave and the end are kept.
+   - Every account that has neither finished nor skipped tutorial 1 gets it once, including accounts made before
+     this stage: the only sign that an account is new is its tutorials.
+   - If the tab is closed during the first tutorial, it opens again at the next visit. Only Skip, Leave and the
+     end are recorded.
+   - An address that asks for something (a rematch, a way back after sign-in, the menu's **Learn to play**) is
+     answered first: the tutorial waits for the next plain visit.
+   - A done the host could not be told (the network) is said again at the next change of the view; one the host
+     refuses is not.
    - The browser specs play on a mock host. The first visit on the real engine is O5's, with its per-tutorial specs.
 6. **O5, the series.** Tutorials 2, 3 and 4 written with the rulebook-writer and the copy-editor, each a scenario
    file cut by `scenario-generate`, each held by `ScenarioFileTests`. Tests: the files themselves, and one

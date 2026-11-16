@@ -650,7 +650,7 @@ section. See [A tutorial's coach](../battle/README.md#a-tutorials-coach).
 
 `lobby-tutorials.js` is the tutorials outside a game (onboarding-plan.md, O4), all of it read from
 `GET /api/tutorials`: the home page's **Learn to play** section, one card a tutorial with **New** or **Done**; the
-first tutorial opening by itself when the host says so (`opens`), once a browser session; the main menu's
+first tutorial opening by itself when the host says so (`opens`), once a tab; the main menu's
 **Learn to play**; and the settings' **Show the first tutorial again**, which opens tutorial 1 now.
 
 ## Routes
@@ -690,7 +690,7 @@ test (`.claude/rules/host.md`).
 | `GET /api/friends`, `POST /api/friends/requests`, `POST /api/friends/requests/<id>/accept`, `DELETE /api/friends/requests/<id>`, `DELETE /api/friends/<id>` | account | Friends (ADR 0129). |
 | `GET /api/scenarios`, `GET /api/scenarios/<id>`, `GET`/`POST /api/scenarios/<id>/practice` | account | Listed scenarios and their practice (ADR 0179). Only admin accounts open a repository scenario; every account opens a tutorial. |
 | `GET /api/tutorials` | account | The tutorials, in the order of the series, each opened as a practice, with the account's state for each and the one that opens by itself (ADR 0187). |
-| `POST /api/tutorials/<id>/skip`, `POST /api/tutorials/<id>/done` | account | Keeps that the account skipped a tutorial, or finished it once its practice at this host says so. |
+| `POST /api/tutorials/<id>/skip`, `POST /api/tutorials/<id>/done` | account | Records that the account skipped a tutorial, or finished it once its practice at this host says so. |
 | `GET /api/leaderboard`, `GET /api/stats` | anyone, account | The ladder; the player's statistics. |
 | `POST /api/pilot/seats/player1` | pilot | Hands a seat over from a round (body `{"agent","round"}`). |
 | `POST /api/tables`, `GET /api/agents` | operator | Opens a table; the bots it may seat. |

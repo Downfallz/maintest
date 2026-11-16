@@ -61,12 +61,23 @@ test('nothing opens by itself when the host names none, names another page, or t
 
 test('a new account is taken to the first tutorial, and the section is not drawn under it', async () => {
   const doc = page(), went = [];
-  const tutorials = mountTutorials(doc, { request: answering({ opens: first.link, tutorials: [first] }), session: memory(), go: link => went.push(link), hash: () => '' });
+  const tutorials = mountTutorials(doc, { request: answering({ opens: first.link, tutorials: [first] }), session: memory(), go: link => went.push(link), hash: () => '', plain: () => true });
 
   await tutorials.setAccount({ id: 'acct_1' });
 
   assert.deepEqual(went, [first.link]);
   assert.equal(doc.ids['learn-to-play'].hidden, true);
+});
+
+test('an address that asks for something is answered first: the tutorial does not take the page, and still opens at the next visit', async () => {
+  const doc = page(), went = [], session = memory();
+  const asked = mountTutorials(doc, { request: answering({ opens: first.link, tutorials: [first] }), session, go: link => went.push(link), hash: () => '', plain: () => false });
+
+  await asked.setAccount({ id: 'acct_1' });
+
+  assert.deepEqual(went, []);
+  assert.equal(doc.ids['learn-to-play'].hidden, false);
+  assert.equal(opensByItself({ opens: first.link }, session), first.link);
 });
 
 test('an account that skipped it finds the series under Learn to play, each to play', async () => {

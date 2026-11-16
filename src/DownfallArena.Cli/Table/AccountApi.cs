@@ -89,9 +89,10 @@ internal sealed class AccountApi
     public IPreferenceStore? Preferences { get; set; }
 
     // One writer at a time reads the Tutorials an account keeps, changes them and writes them back, each after
-    // the one before: the store replaces a document whole, and one replica is the most the table runs.
+    // the one before for that account: the store replaces a document whole, and one replica is the most the
+    // table runs. An account's line is let go of once its last change is through.
     private readonly Lock _noting = new();
-    private Task _noted = Task.CompletedTask;
+    private readonly Dictionary<AccountId, Task> _noted = [];
 
     /// <summary>The Tutorials the account finished and skipped (ADR 0187); null on a host that keeps no game settings.</summary>
     public async Task<TutorialProgress?> TutorialsAsync(AccountId account, CancellationToken cancellationToken = default) =>
@@ -108,33 +109,55 @@ internal sealed class AccountApi
             return null;
         }
 
-        Task<TutorialProgress> noting;
-        lock (_noting)
+        return await AfterTheLastAsync(account, async () =>
         {
-            noting = NoteAfterAsync(_noted, store, account, tutorial, state, cancellationToken);
-            _noted = noting;
-        }
+            var kept = await store.GetTutorialsAsync(account, cancellationToken);
+            var next = state switch
+            {
+                TutorialState.Done => kept.WithDone(tutorial),
+                TutorialState.Skipped => kept.WithSkipped(tutorial),
+                _ => kept,
+            };
+            if (next != kept)
+            {
+                await store.SaveTutorialsAsync(account, next, cancellationToken);
+            }
 
-        return await noting;
+            return next;
+        });
     }
 
-    private static async Task<TutorialProgress> NoteAfterAsync(Task before, IPreferenceStore store, AccountId account, string tutorial, TutorialState state, CancellationToken cancellationToken)
+    /// <summary>Runs a change to what the preference store keeps of an account after the one before it for that account, whoever asked for that one.</summary>
+    private async Task<T> AfterTheLastAsync<T>(AccountId account, Func<Task<T>> change)
     {
-        // The write before this one may have failed: that is its caller's to hear, not this one's.
-        await before.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
-        var kept = await store.GetTutorialsAsync(account, cancellationToken);
-        var next = state switch
+        Task<T> changing;
+        lock (_noting)
         {
-            TutorialState.Done => kept.WithDone(tutorial),
-            TutorialState.Skipped => kept.WithSkipped(tutorial),
-            _ => kept,
-        };
-        if (next != kept)
-        {
-            await store.SaveTutorialsAsync(account, next, cancellationToken);
+            changing = AfterAsync(_noted.GetValueOrDefault(account, Task.CompletedTask), change);
+            _noted[account] = changing;
         }
 
-        return next;
+        try
+        {
+            return await changing;
+        }
+        finally
+        {
+            lock (_noting)
+            {
+                if (_noted.GetValueOrDefault(account) == changing)
+                {
+                    _noted.Remove(account);
+                }
+            }
+        }
+    }
+
+    private static async Task<T> AfterAsync<T>(Task before, Func<Task<T>> change)
+    {
+        // The change before this one may have failed: that is its caller's to hear, not this one's.
+        await before.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+        return await change();
     }
 
     /// <summary>The host's settings (ADR 0177), whether a new player may make an account; none leaves registration open.</summary>
@@ -255,7 +278,13 @@ internal sealed class AccountApi
 
         if (Preferences is { } preferences)
         {
-            await preferences.ForgetAsync(id, cancellationToken);
+            // After any Tutorial being noted for the account: a note that read before the account went must not
+            // write its document back once it is gone.
+            await AfterTheLastAsync(id, async () =>
+            {
+                await preferences.ForgetAsync(id, cancellationToken);
+                return true;
+            });
         }
 
         if (Activity is { } activity)

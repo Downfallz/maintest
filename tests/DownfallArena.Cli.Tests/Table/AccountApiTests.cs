@@ -428,6 +428,20 @@ public sealed class AccountApiTests : IDisposable
     }
 
     [Fact]
+    public async Task Tutorials_noted_at_once_for_one_account_are_all_kept()
+    {
+        var api = await ApiAsync(AccountsMode.Development);
+        var store = new FilePreferenceStore(_root);
+        api.Preferences = store;
+        var id = await IdOf(api, Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody)));
+        var tutorials = Enumerable.Range(1, 12).Select(order => $"sc-repo-tutorial-{order:00}").ToArray();
+
+        await Task.WhenAll(tutorials.Select(tutorial => api.NoteTutorialAsync(id, tutorial, TutorialState.Skipped, TestContext.Current.CancellationToken)));
+
+        (await store.GetTutorialsAsync(id, TestContext.Current.CancellationToken)).Skipped.ShouldBe(tutorials);
+    }
+
+    [Fact]
     public async Task A_typed_name_signs_in_as_the_same_account_each_time()
     {
         var api = await ApiAsync(AccountsMode.Development);

@@ -1792,7 +1792,7 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 .coach-end button, .coach-end a { display: inline-flex; align-items: center; min-height: 44px; padding: 4px 12px; font-size: 13px; }
 .coach-end a { color: var(--muted); }
 /* Where a sheet docks under the field (a phone), the field is too short to carry the card (#650): the card moves
-   into the sheet, under its heading, and scrolls with what the sheet asks. */
+   into the sheet, at its top, and scrolls with what the sheet asks. */
 .coach.in-sheet { position: static; flex: 0 0 auto; width: auto; max-width: none; margin: 0; box-shadow: none; }
 /* Targets are chosen on the field itself: the coach card steps aside, and the creature it points at stays ringed. */
 #battle[data-combat="targets"] .coach { display: none; }

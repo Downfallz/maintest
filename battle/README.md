@@ -835,12 +835,13 @@ A practice whose view carries `practice.tutorial` is a tutorial (ADR 0187, docs/
 - The band says **Tutorial n of 4** where a practice says Practice. The briefing's eyebrow changes the same way. On a phone it is one
   row: its place in the series, **Restart the round** and **Leave**.
 - The briefing is the first card (O4): it says what a tutorial is, and offers **Start** and **Skip the tutorial**.
-  Skip, and **Leave** before the host says `done`, tell the host the account skipped it
-  (`POST /api/tutorials/<id>/skip`) and go to the home page: it never opens by itself again.
+  **Skip the tutorial**, and **Leave** before the host says `done`, each tell the host the account skipped it
+  (`POST /api/tutorials/<id>/skip`) and go to the home page. The tutorial never opens by itself again. Leaving
+  waits a second and a half for the host at most.
 - The coach card (`#coach`) shows the lesson step of the question asked: the step's place, its two lines, and one
   button per concept card. It stands low on a phone's field and in the top left corner on a wider screen. Where a
-  sheet docks under the field, the card stands in the sheet, under its heading (`.coach.in-sheet`, #650): the
-  field over a docked sheet is too short to carry it. It steps
+  sheet docks under the field, the card stands in the sheet (`.coach.in-sheet`, #650), under the spell choice's
+  heading or at the top of the command sheet. The field over a docked sheet is too short to carry it. The card steps
   aside while results are read and while targets are chosen on the field. What the step points at, a creature or
   a control (`CONTROLS`, held to the host's `LessonControls.Names`), carries `data-coach="true"` and a gold ring.
 - A step opens its concept cards (`#concept-dialog`, text from `table/concepts.js`) once, before the question's own
