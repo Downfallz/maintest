@@ -1,6 +1,7 @@
 # Plan: the official rulebook, one source the app reads and an agent keeps true
 
-Status: accepted, 2026-11-16 (the owner settled the questions at the end). R1 built (ADR 0188), R2 built; R3 next.
+Status: accepted, 2026-11-16 (the owner settled the questions at the end). R1 built (ADR 0188), R2 built, R3 built
+(ADR 0191); R4 next.
 
 ## What the owner asked for
 
@@ -159,6 +160,19 @@ and the app's edition; it keeps writing, the keeper keeps reading.
    in the menu. A host test for the route, the line in `table/README.md#routes` and `docs/reference/commands.md`.
    Tests: `rules-page.test.js` (contents built from the file, a deep link, the filter), a browser spec at 320 px,
    390 px and desktop, offline included.
+   *Built (2026-11-16, ADR 0191)*: `table/rules.html`, `rules.js` and `rules.css`, served at `/rules` with
+   `/rules.json` by `TableFiles`, open to anyone, and **Rules** in the main menu. The contents (each part a
+   `details` opening to its sections) come first on a phone, each section leading back to them, and stay beside
+   the text from 900 px. `/rules#<id>` lands on a section, a part, a redirect of `moved.json` (the address then
+   shows the new id) or a concept card's section, clears a filter that hides it and opens its part in the
+   contents. The filter reads titles, text, tables and cards, every word, without case or accents. What changed is
+   `changes.md`, latest first, and the foot says the numbers are drawn from the table's rule set and content. The
+   cards are drawn as the battle's dialog draws them. Offline amends ADR 0166: the worker keeps the page, the book,
+   the shared styles, the brand mark and the font, network first, its copy only when the host cannot be reached or answers with a server error (ADR 0191).
+   Tests: `table/rules-page.test.js`, the rulebook cases of `sw.test.js`, `TableFilesTests`, `rules.spec.js` at
+   320 px, 390 px and desktop, and `table.rules.js` offline on the real host. Left: the menu does not load offline
+   (its modules are not kept; the brand leads home); the page shows no `sources:` line, which is the trace, not the
+   player's book; the battle's **Read the rules** and the cards' links are R4's.
 4. **R4, the cards from the source.** `concepts.js` reads its cards from `table/rules.json`; `ConceptCards.Ids`
    held to it by a C# test; the card's label a link to `/rules#<id>` in a new tab; **Read the rules** in the
    Help dialog and a link per phase tip. Tests: `concepts.test.js` rewritten on the source, `battle-tutorial`'s

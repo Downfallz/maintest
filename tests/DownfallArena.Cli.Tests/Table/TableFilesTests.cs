@@ -87,6 +87,27 @@ public sealed class TableFilesTests
         Files.Get($"/{module}").Status.ShouldBe(200);
     }
 
+    /// <summary>
+    /// The official rulebook (ADR 0188, rulebook-plan.md R3) is a page anyone may read, signed in or not: the page,
+    /// its own script and style, and the book it reads, served as JSON and revalidated like every page.
+    /// </summary>
+    [Fact]
+    public void The_rulebook_is_served_with_its_script_its_style_and_the_book_it_reads()
+    {
+        var page = Files.Get("/rules");
+        var book = Files.Get("/rules.json");
+
+        page.Status.ShouldBe(200);
+        page.ContentType.ShouldBe(DownfallArena.Cli.Studio.StudioResponse.Html);
+        Text(page).ShouldContain("rules.js");
+        Files.Get("/rules.js").Status.ShouldBe(200);
+        Files.Get("/rules.css").ContentType.ShouldContain("text/css");
+        book.Status.ShouldBe(200);
+        book.ContentType.ShouldBe(DownfallArena.Cli.Studio.StudioResponse.Json);
+        Text(book).ShouldContain("\"parts\"");
+        book.Headers.ShouldNotBeNull().ShouldContain(new KeyValuePair<string, string>("Cache-Control", TableFiles.RevalidatedCache));
+    }
+
     /// <summary>The admin panel's tabs are modules its own module imports (ADR 0174, A3), served beside it.</summary>
     [Theory]
     [InlineData("/admin-players.js")]
