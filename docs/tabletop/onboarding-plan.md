@@ -165,8 +165,8 @@ give what is said and when. It reuses everything ADR 0179 built, and the regress
    `docs/tabletop/playtest.rules.json` and `data/Creatures/main.v1.json`. An example is built from `REFERENCE`,
    so a balance pass moves the card with it (#651). `table/battle-tutorial.js` reads `practice.tutorial`, and
    `battle/src/tutorial.ts` draws it: the band and the briefing say **Tutorial n of 4**, the coach card shows the
-   step of the question asked, and a step opens its concept cards once, before the spell choice. What a step points at is ringed. An
-   assisted question is not drawn, and the phase tips are silent while a tutorial plays. Once the host says
+   step of the question asked, and a step opens its concept cards once, before the spell choice. What a step
+   points at is ringed. An assisted question is not drawn, and the phase tips are silent while a tutorial plays. Once the host says
    `done`, the coach card says **Tutorial complete**, with **Keep playing** and **Leave the tutorial**.
    `LessonControls` names the five controls `pointsAt` may use (`spells`, `cast`, `command`, `order`,
    `history`); `TutorialLesson` refuses another, and the page's list is held to it. `battle-tutorial.spec.js`
