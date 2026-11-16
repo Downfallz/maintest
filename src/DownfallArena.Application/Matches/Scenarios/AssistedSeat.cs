@@ -31,9 +31,6 @@ public sealed class AssistedSeat
     /// <summary>Whether the recorded answers stopped fitting and the person answers every question from now on.</summary>
     public bool HandedBack { get; private set; }
 
-    /// <summary>Said once, when the seat goes back to the person.</summary>
-    public event EventHandler? GaveBack;
-
     /// <summary>The seat's recorded answers after a scenario's cut, given for the kinds the lesson does not teach.</summary>
     public static AssistedSeat Of(ScenarioCut scenario, PlayerSlot seat, TutorialLesson lesson)
     {
@@ -82,7 +79,6 @@ public sealed class AssistedSeat
 
         HandedBack = true;
         _script.Clear();
-        GaveBack?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>Says the match took the answer <see cref="Answer" /> last gave: it is taken off the script.</summary>

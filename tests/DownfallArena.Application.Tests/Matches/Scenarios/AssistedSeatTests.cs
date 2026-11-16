@@ -95,18 +95,15 @@ public sealed class AssistedSeatTests
     }
 
     [Fact]
-    public void A_recorded_answer_the_options_do_not_offer_hands_the_seat_back_for_good_and_says_so_once()
+    public void A_recorded_answer_the_options_do_not_offer_hands_the_seat_back_for_good()
     {
         var seat = SeatOf(Teaching(PlayerOptionsKind.Action), PlayerDecision.DeclareIntent(First, TestContent.Slam), PlayerDecision.DeclareIntent(First, TestContent.Strike));
-        var gaveBack = 0;
-        seat.GaveBack += (_, _) => gaveBack++;
         var view = IntentView(First, TestContent.Strike, TestContent.Guard);
 
         var answers = new[] { seat.Answer(view), seat.Answer(view) };
 
         answers.ShouldBe([null, null]);
         seat.HandedBack.ShouldBeTrue();
-        gaveBack.ShouldBe(1);
     }
 
     [Fact]
@@ -159,17 +156,15 @@ public sealed class AssistedSeatTests
     }
 
     [Fact]
-    public void A_seat_handed_back_by_whoever_submits_its_answers_stays_the_person_s_and_says_so_once()
+    public void A_seat_handed_back_by_whoever_submits_its_answers_stays_the_person_s()
     {
         var seat = SeatOf(Teaching(PlayerOptionsKind.Action), PlayerDecision.DeclareIntent(First, TestContent.Strike));
-        var said = 0;
-        seat.GaveBack += (_, _) => said++;
 
         seat.HandBack();
         seat.HandBack();
 
         seat.Answer(IntentView(First, TestContent.Strike)).ShouldBeNull();
-        (seat.HandedBack, said).ShouldBe((true, 1));
+        seat.HandedBack.ShouldBeTrue();
     }
 
     private static AssistedSeat SeatOf(TutorialLesson lesson, params PlayerDecision[] recorded) => new(lesson, recorded);
