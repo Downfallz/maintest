@@ -84,7 +84,8 @@ export function catchPageErrors(target, errors) {
   });
   target.addEventListener('unhandledrejection', event => {
     const reason = event.reason;
-    errors.add(reason instanceof Error ? reason.message : typeof reason === 'string' ? reason : String(reason ?? ''), null);
+    const message = reason instanceof Error ? reason.message : String(reason ?? '');
+    errors.add(message, null);
   });
 }
 
