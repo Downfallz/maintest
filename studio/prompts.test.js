@@ -160,3 +160,23 @@ test('the issue searches the skills give name issues or pull requests, which Git
   }
   assert.deepEqual(missing, []);
 });
+
+// A push while CI plays cancels the run, and every minute it spent: 22% of a week's minutes went that way
+// (docs/engineering/ci-minutes-plan.md, M4). /ship answers a round of review with one push.
+test('ship answers a round of review with one push, and does not cancel a run that can finish', () => {
+  const ship = readFileSync(join(root, '.claude/skills/ship/SKILL.md'), 'utf8');
+  const events = ship.slice(ship.indexOf('7. On each event'), ship.indexOf('\n8. '));
+  assert.ok(events.length > 0, 'step 7 is where the events are answered');
+  assert.match(events, /\bround\b/);
+  assert.match(events, /push once/);
+  assert.match(events, /cancels/);
+  // The thread, the check and the conflict are fixed in commits; the round's one push is a bullet of its own.
+  const bullets = events.split(/\n {3}- /).slice(1);
+  for (const kind of ['A review thread', 'A failing check', 'A conflict']) {
+    const bullet = bullets.find((text) => text.startsWith(kind));
+    assert.ok(bullet, kind);
+    assert.doesNotMatch(bullet, /\bpush/i, kind);
+  }
+  // A run held for is answered even when it ends green and sends nothing.
+  assert.match(events, /send_later/);
+});

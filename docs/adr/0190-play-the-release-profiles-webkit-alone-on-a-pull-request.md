@@ -1,7 +1,7 @@
 # 0190. Play the release profiles' WebKit alone on a pull request
 
 Date: 2026-11-16
-Status: Accepted (settled by the owner, docs/engineering/ci-minutes-plan.md question 3). Amends [0182](0182-require-one-gate-check-and-deploy-behind-it.md) (what a pull request plays)
+Status: Accepted (settled by the owner, docs/engineering/ci-minutes-plan.md question 3). Amends [0182](0182-require-one-gate-check-and-deploy-behind-it.md) (what a pull request plays). Amended by [0192](0192-narrow-what-a-pull-request-plays-and-builds.md) (which paths call for the release profiles on a pull request)
 
 ## Context
 
