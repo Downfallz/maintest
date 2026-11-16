@@ -9,6 +9,7 @@
 // No Markdown package: the book uses headings of two levels with a stable id, paragraphs, lists, tables, bold,
 // italics and links, and the build refuses anything else. `rules/README.md` is the format.
 
+import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, extname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -41,9 +42,48 @@ function filesUnder(root, folder) {
 
 const readJson = path => JSON.parse(readFileSync(path, 'utf8'));
 
-/** The ids a text links to as `/rules#<id>`. */
+/** The ids a text links to as `/rules#<id>`, `/rules/#<id>` or the same on a host. */
 export function linksIn(text) {
-  return [...text.matchAll(/(?<![\w.-])\/rules#([A-Za-z0-9_-]+)/g)].map(match => match[1]);
+  return [...text.matchAll(/(?<![\w.\/-])(?:https?:\/\/[\w.:-]+)?\/rules\/?#([A-Za-z0-9_-]+)/g)].map(match => match[1]);
+}
+
+/** Whether a path may hold a link to the rules: a page's source, never a test or the built book. */
+export function linksFrom(path) {
+  return LINKING_FILES.has(extname(path)) && !/\.(test|spec)\.[a-z]+$/.test(path) && path !== OUTPUT;
+}
+
+/**
+ * The ids a built book holds, sections, parts and redirects, or the error that keeps it from being read: a file
+ * with a merge conflict is settled by taking main's and rebuilding, never by hand.
+ */
+export function idsOf(text, source) {
+  try {
+    const book = JSON.parse(text);
+    return { ids: [...(book.parts ?? []).flatMap(part => [part.id, ...(part.sections ?? []).map(section => section.id)]), ...Object.keys(book.moved ?? {})] };
+  } catch {
+    return { ids: [], error: `${source} is not JSON: settle a conflict by taking main's file and rebuilding` };
+  }
+}
+
+// The ids an earlier book held: main's and the working file's. Main's is read from git, so a book rebuilt on a
+// branch cannot forget an id main still links to; a checkout without origin/main has the working file alone.
+function previousIds(root) {
+  const found = [];
+  const errors = [];
+  let main = null;
+  try {
+    main = execFileSync('git', ['show', `origin/main:${OUTPUT}`], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+  } catch {
+    main = null;
+  }
+  const working = existsSync(join(root, OUTPUT)) ? readFileSync(join(root, OUTPUT), 'utf8') : null;
+  for (const [text, source] of [[main, `origin/main:${OUTPUT}`], [working, OUTPUT]]) {
+    if (text === null) continue;
+    const { ids, error } = idsOf(text, source);
+    found.push(...ids);
+    if (error) errors.push(error);
+  }
+  return { ids: [...new Set(found)], errors };
 }
 
 /** A heading's anchor as GitHub writes it: lowercased, punctuation dropped, spaces as hyphens. */
@@ -62,8 +102,7 @@ export function readInputs(root) {
     .filter(line => /^#{1,6} /.test(line)).map(line => anchorOf(line.replace(/^#+ /, ''))));
   const conceptCards = readFileSync(join(root, 'src/DownfallArena.Application/Matches/Scenarios/ConceptCards.cs'), 'utf8');
   const conceptIds = (/Ids \{ get; \} =\s*\[([^\]]+)\]/.exec(conceptCards)?.[1].match(/"([a-z-]+)"/g) ?? []).map(id => id.slice(1, -1));
-  const links = LINKED_FROM.flatMap(folder => filesUnder(root, folder))
-    .filter(path => LINKING_FILES.has(extname(path)) && !/\.(test|spec)\.[a-z]+$/.test(path) && path !== OUTPUT)
+  const links = LINKED_FROM.flatMap(folder => filesUnder(root, folder)).filter(linksFrom)
     .flatMap(file => linksIn(readFileSync(join(root, file), 'utf8')).map(id => ({ file, id })));
   return {
     parts,
@@ -77,7 +116,7 @@ export function readInputs(root) {
     gameRules,
     conceptIds,
     links,
-    previous: existsSync(join(root, OUTPUT)) ? readJson(join(root, OUTPUT)) : null,
+    previous: previousIds(root),
   };
 }
 
@@ -192,6 +231,16 @@ export function retiredWords(terminology) {
       words.set(word, { player: player[0], pattern: new RegExp(`\\b${word.replace(/\s+/g, '\\s+')}s?\\b`, exact ? 'u' : 'iu') });
     }
   }
+  // The sentences the page rewrote ("Choose speed"), in any case, each with what replaced it.
+  let rewrites = false;
+  for (const line of terminology.split('\n')) {
+    const cells = line.startsWith('|') ? line.split('|').slice(1, -1).map(cell => cell.trim()) : null;
+    if (!cells) rewrites = false;
+    else if (cells[0] === 'Before') rewrites = true;
+    else if (rewrites && !/^-+$/.test(cells[0]) && cells[0].toLowerCase() !== cells[1].toLowerCase() && !words.has(cells[0])) {
+      words.set(cells[0], { player: cells[1], pattern: new RegExp(`\\b${cells[0].replace(/\s+/g, '\\s+')}\\b`, 'iu') });
+    }
+  }
   return words;
 }
 
@@ -199,6 +248,11 @@ export function retiredWords(terminology) {
 
 const HEADING = /^(#+)\s+(.*)$/;
 const LIST_ITEM = /^(-|\d+\.)\s+(.*)$/;
+// What opens a list in the middle of a paragraph: as in CommonMark, "-" or "1.", so a wrapped "2." stays prose.
+const LIST_START = /^(-|1\.)\s+/;
+// Markdown the subset does not read, which would otherwise pass for a paragraph: another list marker, a heading
+// with no space, a thematic break or a setext underline.
+const OUTSIDE = /^([*+]\s|#|-{3,}\s*$|={3,}\s*$|\*{3,}\s*$|_{3,}\s*$)/;
 const SEPARATOR = /^\|(\s*:?-+:?\s*\|)+$/;
 
 /** Builds the book from what `readInputs` read; `errors` lists every refusal, and the book is complete only without one. */
@@ -224,6 +278,7 @@ export function buildRules(given) {
     const text = raw.replace(/\{([^{}#][^{}]*)\}/g, (_, expression) => {
       try {
         const value = evaluate(expression.trim(), look);
+        if (typeof value === 'number' && !Number.isFinite(value)) throw new Error(`"${expression.trim()}" is not a finite number`);
         return typeof value === 'number' ? String(Number(value.toFixed(6))) : value;
       } catch (error) {
         errors.push(`${where}: ${error.message}`);
@@ -253,6 +308,7 @@ export function buildRules(given) {
       last = match.index + match[0].length;
     }
     if (last < text.length) out.push({ text: text.slice(last) });
+    if (out.some(span => !span.href && /\*|\[|\]\(/.test(span.text))) errors.push(`${where}: markup the subset does not read (a lone *, a [ or a titled link)`);
     return out;
   }
 
@@ -269,6 +325,7 @@ export function buildRules(given) {
   function card(lines, where) {
     const found = { id: null, title: null, lines: [], example: null };
     for (const line of lines) {
+      if (/\*|\[|\]\(/.test(line)) errors.push(`${where}: a card is plain text, with no markup`);
       const field = /^(id|title):\s*(.*)$/.exec(line);
       if (field) found[field[1]] = field[1] === 'id' ? field[2].trim() : resolve(field[2].trim(), where);
       else if (line.startsWith('> ')) found.example = resolve(line.slice(2).trim(), where);
@@ -304,7 +361,7 @@ export function buildRules(given) {
     const blocks = () => (section ?? part).blocks;
     const add = (block, where) => {
       if (section?.sources.length > 0 || section?.closed) {
-        errors.push(`${where}: section "${section.id}": its sources line is not its last`);
+        errors.push(`${where}: section "${section.id}": nothing follows its sources line but its card`);
       }
       blocks().push(block);
     };
@@ -337,7 +394,11 @@ export function buildRules(given) {
         else if (end < 0) errors.push(`${where}: a card is not closed`);
         else if (!section) errors.push(`${where}: a card belongs to a section`);
         else if (section.card) errors.push(`${where}: section "${section.id}" has two cards`);
-        else section.card = card(body, where);
+        else {
+          if (section.sources.length === 0) errors.push(`${where}: section "${section.id}": its card follows its sources line`);
+          section.card = card(body, where);
+          section.closed = true;
+        }
         at = end < 0 ? lines.length : end + 1;
         continue;
       }
@@ -353,6 +414,11 @@ export function buildRules(given) {
       }
       if (line.startsWith('>')) {
         errors.push(`${where}: a quote is outside the subset`);
+        at += 1;
+        continue;
+      }
+      if (OUTSIDE.test(line)) {
+        errors.push(`${where}: "${line.trim()}" is outside the subset; a list item starts with "- ", a heading with "# " and its {#id}`);
         at += 1;
         continue;
       }
@@ -380,7 +446,8 @@ export function buildRules(given) {
       }
       const paragraph = [];
       while (at < lines.length && lines[at].trim() && !HEADING.test(lines[at]) && !lines[at].startsWith('```')
-        && !/^sources:/.test(lines[at]) && !lines[at].startsWith('|') && !LIST_ITEM.test(lines[at]) && !lines[at].startsWith('>')) {
+        && !/^sources:/.test(lines[at]) && !lines[at].startsWith('|') && !LIST_START.test(lines[at]) && !lines[at].startsWith('>')
+        && !OUTSIDE.test(lines[at])) {
         paragraph.push(lines[at++].trim());
       }
       add({ type: 'paragraph', spans: spans(paragraph.join(' '), where) }, where);
@@ -408,16 +475,14 @@ export function buildRules(given) {
     else cards.push({ id: section.card.id, section: section.id });
   }
 
-  // An id never dies: one the previous build had is still a section, or moved.json says where it went.
+  // An id never dies: one main's book or the working one had is still a section, or moved.json says where it went.
   const moved = given.moved ?? {};
   for (const [from, to] of Object.entries(moved)) {
     if (ids.has(from)) errors.push(`rules/moved.json redirects "${from}", which is still a section`);
     if (!ids.has(to)) errors.push(`rules/moved.json sends "${from}" to "${to}", which is not a section`);
   }
-  const before = given.previous
-    ? [...(given.previous.parts ?? []).flatMap(part => [part.id, ...(part.sections ?? []).map(section => section.id)]), ...Object.keys(given.previous.moved ?? {})]
-    : [];
-  for (const id of before) {
+  errors.push(...(given.previous?.errors ?? []));
+  for (const id of given.previous?.ids ?? []) {
     if (!ids.has(id) && !Object.hasOwn(moved, id)) errors.push(`id "${id}" is gone and rules/moved.json does not redirect it`);
   }
 

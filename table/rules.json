@@ -46,7 +46,7 @@
                   "strong": true
                 },
                 {
-                  "text": ", for the rest of the match. You win when every creature of the other team is defeated. The match ends the moment that happens, even in the middle of a round: nothing after it resolves."
+                  "text": ", for the rest of the match. You win when every creature of the other team is defeated. The match ends the moment that happens, even in the middle of a round: nothing after it resolves. If both teams fall at once, the match is a draw."
                 }
               ]
             },
@@ -57,12 +57,22 @@
                   "text": "If round 20 ends with both teams still standing, the team with the most Health left, added over its creatures, wins. Equal totals are a draw."
                 }
               ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "A player may also concede at any time: the other player wins. A game between two players gives each a time to answer. A player who lets it run out loses; when both do, the match is a draw."
+                }
+              ]
             }
           ],
           "sources": [
             "ADR 0011",
             "ADR 0083",
+            "ADR 0087",
             "ADR 0105",
+            "ADR 0169",
             "game-rules#match-lifecycle"
           ],
           "card": {
@@ -70,7 +80,7 @@
             "title": "Health",
             "lines": [
               "At zero Health a creature is defeated, for the rest of the match.",
-              "A team with no creature left loses, at once, even in the middle of a round."
+              "When a team has no creature left, the match ends at once, even in the middle of a round."
             ],
             "example": "A creature starts at 30 Health. A hit of 7 leaves it at 23."
           }
@@ -114,7 +124,7 @@
                     "strong": true
                   },
                   {
-                    "text": " You choose a tempo for each of your creatures: Instinct or Precision. On the rounds that offer it, you also acquire mutations for your creatures."
+                    "text": " On the rounds that offer it, you first acquire mutations for your creatures. Then you choose a tempo for each of them, Instinct or Precision, and, where your creatures tie on the timeline, their order."
                   }
                 ],
                 [

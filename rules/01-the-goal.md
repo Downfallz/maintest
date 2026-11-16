@@ -6,18 +6,21 @@ Two players. Each commands a team of {rules.teamSize} creatures, and plays to de
 
 A creature starts at {creature.health} Health. At zero Health it is **defeated**, for the rest of the match.
 You win when every creature of the other team is defeated. The match ends the moment that happens, even in the
-middle of a round: nothing after it resolves.
+middle of a round: nothing after it resolves. If both teams fall at once, the match is a draw.
 
 If round {rules.roundCap} ends with both teams still standing, the team with the most Health left, added over its
 creatures, wins. Equal totals are a draw.
 
-sources: ADR 0011, ADR 0083, ADR 0105, game-rules#match-lifecycle
+A player may also concede at any time: the other player wins. A game between two players gives each a time to
+answer. A player who lets it run out loses; when both do, the match is a draw.
+
+sources: ADR 0011, ADR 0083, ADR 0087, ADR 0105, ADR 0169, game-rules#match-lifecycle
 
 ```card
 id: health
 title: Health
 At zero Health a creature is defeated, for the rest of the match.
-A team with no creature left loses, at once, even in the middle of a round.
+When a team has no creature left, the match ends at once, even in the middle of a round.
 > A creature starts at {creature.health} Health. A hit of 7 leaves it at {max(0, creature.health - max(0, 7 - creature.defense))}.
 ```
 
@@ -28,8 +31,8 @@ you through it:
 
 - **Upkeep.** Every living creature gains {rules.energyPerRound} Energy. Regeneration heals. Damage over time
   hurts.
-- **Command.** You choose a tempo for each of your creatures: Instinct or Precision. On the rounds that offer
-  it, you also acquire mutations for your creatures.
+- **Command.** On the rounds that offer it, you first acquire mutations for your creatures. Then you choose a
+  tempo for each of them, Instinct or Precision, and, where your creatures tie on the timeline, their order.
 - **Combat.** The timeline is walked once, slot by slot. When the slot of one of your creatures comes up, you
   choose its spell and its targets on the board as it stands. The spell resolves at once, before the next
   creature acts.

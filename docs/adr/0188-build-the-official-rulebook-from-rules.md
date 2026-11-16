@@ -38,6 +38,8 @@ indexes of ADR 0184. The build refuses:
   no Node step in the image.
 - Bad: a change to a value the book draws makes `table/rules.json` stale until `node scripts/rules/build.mjs`
   runs; the pages' tests say so.
+- Bad: an id is remembered by the built file. The build reads it on `origin/main` and in the working tree, so a
+  checkout with no `origin/main` checks against its own file alone; CI fetches the whole history.
 - Bad: a second Markdown reader, for a subset. It refuses what it does not know rather than guess.
 - Neutral: the book records the rule set, the creature and the spells it drew from, not the content hash: that
   hash is computed by the engine, and a second implementation in the build would have to agree with it.

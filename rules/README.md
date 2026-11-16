@@ -13,7 +13,8 @@ node scripts/rules/build.mjs            # rebuild table/rules.json, or list what
 node scripts/rules/build.mjs --check    # is table/rules.json the build of rules/?
 ```
 
-`table/rules.test.js`, in the gate, fails when the file is out of date.
+`table/rules.test.js`, in the gate, fails when the file is out of date. The file records the whole hosted rule set
+it was drawn from, so any change to `docs/tabletop/playtest.rules.json` calls for a rebuild too.
 
 ## The files
 
@@ -48,7 +49,9 @@ One to three lines.
 
 - **Ids.** Every heading ends with `{#id}`: lowercase words and hyphens, unique across the book. The id is the
   link (`/rules#winning`); numbers (1.1) are rendered and may change, ids never do. An id gone from the book
-  needs its line in `moved.json`, or the build refuses it.
+  needs its line in `moved.json`, or the build refuses it. The earlier ids are read from `table/rules.json` on
+  `origin/main` and in the working tree, so fetch `main` first. A conflict in `table/rules.json` is settled by
+  taking `main`'s file and rebuilding.
 - **Values.** `{...}` is drawn when the book is built: `rules.<field>` from the hosted rule set
   (`docs/tabletop/playtest.rules.json`), `creature.<stat>` from the reference creature
   (`data/Creatures/main.v1.json`, `health` reads `baseHealth`), `spell:<name>:vN.<field>` from the spell's file

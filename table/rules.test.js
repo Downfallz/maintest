@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildRules, evaluate, linksIn, readInputs, render } from '../scripts/rules/build.mjs';
+import { buildRules, evaluate, idsOf, linksFrom, linksIn, readInputs, render } from '../scripts/rules/build.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const committed = join(root, 'table/rules.json');
@@ -21,6 +21,11 @@ const terminology = `| Internal (domain, code, data) | Legacy player-facing | Pl
 | \`Speed.Quick\` | Quick | **Instinct** | **Instinct** |
 | Evolution | Evolution | **Evolution** | **Évolution** |
 | \`StartOfRound\` | Start | **Upkeep** | **Entretien** |
+
+| Before | After |
+| --- | --- |
+| Choose speed | Choose tempo |
+| Your spellbook | Your spellbook |
 `;
 
 const goal = `# What you are trying to do {#the-goal}
@@ -148,11 +153,18 @@ test('refuses a heading without its id, or an id that is not lowercase words and
 });
 
 test('refuses an id gone from the book that moved.json does not redirect, and a redirect to nowhere', () => {
-  const previous = { parts: [{ id: 'the-goal', sections: [{ id: 'winning' }, { id: 'the-end' }] }] };
+  const previous = { ids: ['the-goal', 'winning', 'the-end'] };
   refuses(inputs({ previous }), /id "the-end" is gone and rules\/moved\.json does not redirect it/);
   assert.deepEqual(errorsOf(inputs({ previous, moved: { 'the-end': 'winning' } })), []);
   refuses(inputs({ moved: { 'the-end': 'nowhere' } }), /moved\.json sends "the-end" to "nowhere", which is not a section/);
   refuses(inputs({ moved: { winning: 'a-round' } }), /moved\.json redirects "winning", which is still a section/);
+});
+
+test('the earlier ids are read from a built book, its redirects included, and a conflicted file is refused', () => {
+  const built = JSON.stringify({ parts: [{ id: 'the-goal', sections: [{ id: 'winning' }] }], moved: { 'the-end': 'winning' } });
+  assert.deepEqual(idsOf(built, 'x'), { ids: ['the-goal', 'winning', 'the-end'] });
+  assert.match(idsOf('<<<<<<< HEAD\n{}\n=======\n{}\n>>>>>>> main\n', 'table/rules.json').error, /table\/rules\.json is not JSON: settle a conflict by taking main's file and rebuilding/);
+  refuses(inputs({ previous: { ids: [], errors: ['table/rules.json is not JSON: settle a conflict by taking main\'s file and rebuilding'] } }), /not JSON/);
 });
 
 test('a link to a moved id still lands, and the redirects are in the built book', () => {
@@ -167,6 +179,7 @@ test('refuses a value that does not resolve, and a spell id that is not in data/
   refuses(withGoal('{spell:pummel:v1.energyCost}', '{spell:punch:v1.energyCost}'), /spell "spell:punch:v1" is not in data\//);
   refuses(withGoal('{spell:pummel:v1.damage}', '{spell:pummel:v1.heal}'), /"spell:pummel:v1\.heal" does not resolve/);
   refuses(withGoal('{rules.teamSize}', '{rules.teamSize +}'), /"rules\.teamSize \+"/);
+  refuses(withGoal('{rules.teamSize}', '{rules.teamSize / 0}'), /"rules\.teamSize \/ 0" is not a finite number/);
 });
 
 test('a spell\'s effect is read by its kind, and refused when the spell has two of that kind', () => {
@@ -184,6 +197,7 @@ test('refuses an engine word where the player\'s word exists, from the terminolo
   refuses(withGoal('*at its slot*', '*at its Quick slot*'), /"Quick": the player's word is Instinct/);
   refuses(withGoal('## A round {#a-round}', '## A Speed {#a-round}'), /"Speed": the player's word is Tempo/);
   refuses(withGoal('title: Health', 'title: Tier'), /"Tier": the player's word is Stage/);
+  refuses(withGoal('Two players', 'Choose speed for each creature. Two players'), /"Choose speed": the player's word is Choose tempo/);
   assert.deepEqual(errorsOf(withGoal('Two players', 'Two quick players at Evolution, at the start')), [], 'an everyday word, the player\'s own word and an ordinary Start are not refused');
 });
 
@@ -192,7 +206,8 @@ test('refuses a sources line naming an ADR or a heading that does not exist, and
   refuses(withGoal('game-rules#match-lifecycle', 'game-rules#nowhere'), /game-rules#nowhere is not a heading of docs\/domain\/game-rules\.md/);
   refuses(withGoal('sources: ADR 0010', 'sources: the engine'), /"the engine" is not an ADR or a game-rules heading/);
   refuses(withGoal('\nsources: ADR 0010\n', '\n'), /section "a-round" has no sources line/);
-  refuses(withGoal('sources: ADR 0010\n', 'sources: ADR 0010\n\nOne more line.\n'), /section "a-round": its sources line is not its last/);
+  refuses(withGoal('sources: ADR 0010\n', 'sources: ADR 0010\n\nOne more line.\n'), /section "a-round": nothing follows its sources line but its card/);
+  refuses(withGoal('sources: ADR 0011, game-rules#match-lifecycle\n', ''), /section "winning": its card follows its sources line/);
 });
 
 test('refuses a link to the rules, anywhere in the pages, to an id that is not a section', () => {
@@ -217,6 +232,20 @@ test('refuses Markdown outside the subset: code, HTML, deeper headings, quotes, 
   refuses(withGoal('See [winning](#winning)', 'See ![x](y.png)'), /image/);
   refuses(withGoal('(#winning)', '(../docs/x.md)'), /link to "\.\.\/docs\/x\.md"/);
   refuses(withGoal('{rules.teamSize}', '{ oops'), /brace/);
+});
+
+test('refuses Markdown that would pass for a paragraph: other list markers, breaks, setext and unspaced headings', () => {
+  for (const line of ['* one', '+ one', '---', '##Title', '***']) refuses(withGoal('Two players', `${line}\n\nTwo players`), /is outside the subset/);
+  refuses(withGoal('Two players, each', 'Title\n=====\n\nTwo players, each'), /"=====" is outside the subset/);
+  refuses(withGoal('[winning](#winning)', '[winning](#winning "title")'), /markup the subset does not read/);
+  refuses(withGoal('**Defeat**', '**Defeat'), /markup the subset does not read/);
+  refuses(withGoal('title: Health', 'title: **Health**'), /a card is plain text/);
+});
+
+test('a wrapped line that starts with a number other than 1 stays in its paragraph', () => {
+  const { book, errors } = buildRules(withGoal('Two players, each with', 'Two players, each\n2. with'));
+  assert.deepEqual(errors, []);
+  assert.deepEqual(book.parts[0].blocks.map(block => block.type), ['paragraph']);
 });
 
 test('the changes are dated lines, each with its ADR when it has one', () => {
@@ -258,8 +287,10 @@ test('the repository\'s book draws its values from the hosted rule set and the r
 });
 
 test('a link to the rules is /rules#<id>, wherever it is written; the pages\' tests are not read', () => {
-  assert.deepEqual(linksIn('<a href="/rules#tempo">Tempo</a>, `/rules#a-round`, "rules#nothing", /rules'), ['tempo', 'a-round']);
-  const { links, conceptIds } = readInputs(root);
-  assert.ok(links.every(link => !/\.(test|spec)\.[a-z]+$/.test(link.file) && link.file !== 'table/rules.json'));
-  assert.equal(conceptIds.length, 10);
+  assert.deepEqual(linksIn('<a href="/rules#tempo">Tempo</a>, `/rules#a-round`, "rules#nothing", /rules, /docs/rules#x'), ['tempo', 'a-round']);
+  assert.deepEqual(linksIn('href="https://table.example/rules#winning" and /rules/#a-round'), ['winning', 'a-round']);
+  assert.deepEqual(['table/x.js', 'battle/src/tutorial.ts', 'scenarios/tutorials/a.json', 'table/x.test.js', 'battle/src/x.spec.ts', 'table/rules.json', 'table/logo.png'].filter(linksFrom),
+    ['table/x.js', 'battle/src/tutorial.ts', 'scenarios/tutorials/a.json']);
+  const { conceptIds } = readInputs(root);
+  assert.ok(conceptIds.includes('health') && conceptIds.includes('tempo'));
 });
