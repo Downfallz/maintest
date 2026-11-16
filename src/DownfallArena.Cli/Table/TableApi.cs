@@ -91,6 +91,11 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
     /// <summary>The reactions the two seats send each other (ADR 0173), kept with the table's record when it has one.</summary>
     public TableReactions Reactions => LazyInitializer.EnsureInitialized(ref _reactions, () => new TableReactions(Clock, run));
 
+    private TableVisits? _visits;
+
+    /// <summary>What each seat was last shown of its game (ADR 0194), kept beside the table's record when it has one.</summary>
+    public TableVisits Visits => LazyInitializer.EnsureInitialized(ref _visits, () => new TableVisits(Clock, run));
+
     /// <summary>
     /// Whether the two seats may react to each other (ADR 0173): two people, the match begun, and not one account in
     /// both seats, which is one person on a shared device. Against a bot there is nobody to read a reaction.
@@ -113,6 +118,9 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
 
     /// <summary>When the table's time to answer runs out (ADR 0169), or none: a table without a limit, not begun or over.</summary>
     public Func<Task<DateTimeOffset?>>? AnswerBy { get; set; }
+
+    /// <summary>When the table's journal was last written, its last move (ADR 0169), or none: a table that keeps no journal.</summary>
+    public Func<Task<DateTimeOffset?>>? LastMove { get; set; }
 
     public int FeedStart { get; init; }
 
@@ -224,6 +232,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
             ("POST", [_, "decision"]) => await DecideAsync(holder, body),
             ("POST", [_, "concede"]) => await ConcedeAsync(holder),
             ("POST", [_, "reaction"]) => await ReactAsync(holder, body),
+            ("PUT", [_, "seen"]) => await SeenAsync(holder, body),
             _ => StudioResponse.OfPlainText(404, $"No such route: {method} {path}"),
         };
     }
@@ -462,6 +471,11 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
 
                 // When whoever is asked loses for not answering (ADR 0169): the page counts down to it.
                 answerBy = AnswerBy is { } answerBy ? await answerBy() : null,
+
+                // When the last move was, and what this seat was last shown of its game, and when (ADR 0194): what
+                // the recap tells a player coming back, whichever device they come back on.
+                lastMoveAt = LastMove is { } lastMove ? await lastMove() : null,
+                seen = Seen(await Visits.LastAsync(seat.Name)),
 
                 // Who the table is waiting for before it begins, or null: the page shows a room rather than a
                 // board nobody is asked anything on (ADR 0092).
@@ -790,6 +804,36 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
                 return StudioResponse.OfJson(new { error = sent.Refusal, message = "The reaction could not be kept. Try again." }, ArtifactJson.LineOptions, status: 503);
         }
     }
+
+    /// <summary>
+    /// The seat says what its page has shown it of the game, up to which feed sequence (ADR 0194): kept when it is
+    /// further than the mark kept, ignored otherwise, and answered with the mark kept. It is the seat's own word about
+    /// itself: it moves nothing on the table, wakes no page and sends no notice.
+    /// </summary>
+    private async Task<StudioResponse> SeenAsync(TableSeat seat, string body)
+    {
+        long? sequence;
+        try
+        {
+            sequence = JsonSerializer.Deserialize<TableSeenBody>(body, ArtifactJson.LineOptions)?.Sequence;
+        }
+        catch (JsonException)
+        {
+            sequence = null;
+        }
+
+        if (sequence is not { } shown || shown < 0)
+        {
+            return StudioResponse.OfJson(new { error = "Seen.Invalid", message = "Say what was shown as { \"sequence\": N }, N a feed sequence." }, ArtifactJson.LineOptions, status: 400);
+        }
+
+        return await Visits.ShownAsync(seat.Name, shown) is { } kept
+            ? StudioResponse.OfJson(new { seen = Seen(kept) }, ArtifactJson.LineOptions)
+            : StudioResponse.OfJson(new { error = "Seen.Busy", message = "What was shown could not be kept. Try again." }, ArtifactJson.LineOptions, status: 503);
+    }
+
+    private static object? Seen(LastVisit? visit) =>
+        visit is null ? null : new { sequence = visit.Sequence, at = visit.At };
 
     private static object Described(TableReaction reaction) =>
         new { sequence = reaction.Sequence, seat = reaction.Seat, reaction = reaction.Reaction, at = reaction.At };

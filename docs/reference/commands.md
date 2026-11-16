@@ -585,6 +585,18 @@ otherwise, refused against a bot and with one account in both seats), kept with 
 unless their settings hide them, and never notified, counted in the bell or recorded as an event of the match
 (ADR 0173).
 
+#### A seat's last visit
+
+The battle view tells the host the last feed sequence each seat was shown (`PUT /api/seat/<seat>/seen
+{"sequence":12}` under the seat's token), at most once every five seconds and once more when the page is hidden;
+a replay sends nothing. The host keeps the larger sequence with the time it was told, beside the table's record
+(`seen-player1.json`, `seen-player2.json`, written only over the version read), ignores a smaller one, and answers
+`{"seen":{"sequence","at"}}` with the mark kept; anything but a sequence of 0 or more is `400 Seen.Invalid`, and
+`503 Seen.Busy` when another process kept writing first. It moves nothing on the table and sends no notice. Each
+seat's view carries its own mark as `seen` (null before the first) and when the journal was last written as
+`lastMoveAt` (null for a table that keeps none). The page reads the larger of its browser's mark and the host's
+(ADR 0194).
+
 #### The ladder, formats and the time to answer
 
 - `/leaderboard` (`GET /api/leaderboard`) ranks the accounts by Glicko-2 over games between two of them

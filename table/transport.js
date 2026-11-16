@@ -41,6 +41,8 @@ export function httpTransport(seat, token, fetchImpl = globalThis.fetch.bind(glo
     concede: () => send('POST', `/api/seat/${seat}/concede`),
     // One of a fixed set of short messages for the other player (ADR 0173); never free text.
     react: reaction => send('POST', `/api/seat/${seat}/reaction`, { reaction }),
+    // The last feed sequence this seat was shown, kept by the host so another device knows it (ADR 0194).
+    seen: sequence => send('PUT', `/api/seat/${seat}/seen`, { sequence }),
     leave: () => send('POST', '/api/lobby/leave', {}),
 
     // Where "your turn" goes when nobody is looking at this page (ADR 0118): the host's key to subscribe
@@ -96,6 +98,8 @@ export function replayTransport(id, seat, token, fetchImpl = globalThis.fetch.bi
     session: () => answered(body => ({ over: true, begun: true, outcome: body.outcome })),
     catalogue: () => answered(body => body.catalogue),
     decide: refused, concede: refused, leave: refused, note: refused,
+    // A replay is read after the game: what it shows is no seat's visit, and nothing is said of it.
+    seen: async () => ({ status: 204, ok: false, body: null }),
   };
 }
 
