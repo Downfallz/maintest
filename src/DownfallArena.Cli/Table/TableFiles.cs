@@ -65,6 +65,7 @@ internal sealed class TableFiles
             ["/lobby.js"] = (Path.Combine(tableDirectory, "lobby.js"), JavaScript),
             ["/lobby-practice.js"] = (Path.Combine(tableDirectory, "lobby-practice.js"), JavaScript),
             ["/navigation.js"] = (Path.Combine(tableDirectory, "navigation.js"), JavaScript),
+            ["/site-origins.js"] = (Path.Combine(tableDirectory, "site-origins.js"), JavaScript),
             ["/account.js"] = (Path.Combine(tableDirectory, "account.js"), JavaScript),
             ["/devices.js"] = (Path.Combine(tableDirectory, "devices.js"), JavaScript),
             ["/game-preferences.js"] = (Path.Combine(tableDirectory, "game-preferences.js"), JavaScript),

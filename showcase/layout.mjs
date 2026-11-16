@@ -1,3 +1,5 @@
+import { SITE_ORIGIN } from '../table/site-origins.js';
+
 export const arrow = '<span class="arrow" aria-hidden="true"></span>';
 export const copyrightLine = '© 2026';
 const rune = '<img class="rune" src="/assets/brand-mark.svg" alt="" width="25" height="38">';
@@ -25,12 +27,12 @@ export function layout(c, kind, app, title, description, body, scripts = []) {
   <meta name="theme-color" content="#0b1519">
   <title>${escape(title)} — Downfall Instinct</title>
   <meta name="description" content="${escape(description)}">
-  <link rel="canonical" href="https://downfallinstinct.com${path[kind]}">
-  ${Object.entries(routes).map(([lang, paths]) => `<link rel="alternate" hreflang="${lang}" href="https://downfallinstinct.com${paths[kind]}">`).join('\n  ')}
+  <link rel="canonical" href="${new URL(path[kind], SITE_ORIGIN).href}">
+  ${Object.entries(routes).map(([lang, paths]) => `<link rel="alternate" hreflang="${lang}" href="${new URL(paths[kind], SITE_ORIGIN).href}">`).join('\n  ')}
   <meta property="og:type" content="website"><meta property="og:title" content="${escape(title)} — Downfall Instinct">
   <meta property="og:description" content="${escape(description)}">
-  <meta property="og:url" content="https://downfallinstinct.com${path[kind]}">
-  <meta property="og:image" content="https://downfallinstinct.com/assets/eclipse-battle.webp">
+  <meta property="og:url" content="${new URL(path[kind], SITE_ORIGIN).href}">
+  <meta property="og:image" content="${new URL('assets/eclipse-battle.webp', SITE_ORIGIN).href}">
   <link rel="icon" href="/assets/icon.svg" type="image/svg+xml">
   <link rel="preload" href="/fonts/marcellus-latin-400.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/branding.css"><link rel="stylesheet" href="/showcase.css">

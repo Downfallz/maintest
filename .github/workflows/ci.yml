@@ -162,7 +162,7 @@ jobs:
       - name: Test the static pages
         # Unquoted on purpose: `node --test` only expands a glob itself on Node 22+, and this workflow
         # pins no version, so the shell does it and the step works on whatever Node the runner ships.
-        run: node --test studio/*.test.js table/*.test.js
+        run: node --test studio/*.test.js table/*.test.js showcase/*.test.js
 
       - name: Format check
         run: dotnet format --verify-no-changes --no-restore
@@ -171,7 +171,7 @@ jobs:
       # static pages (ADR 0013 decision J, ADR 0015). The studio's and the table's modules do have tests now,
       # run by the step above, but Node's coverage does not reach Sonar (ADR 0024) -- so a page with tests and
       # a page without one measure the same here; the viewer still has no runner at all.
-      # The showcase is a static site of the same kind (ADR 0185), tested by studio/showcase.test.js. Its
+      # The showcase is a static site of the same kind (ADR 0185), tested by showcase/showcase.test.js. Its
       # copy, lore and privacy modules hold the English and French texts side by side under the same keys,
       # which the duplication detector reads as copies, so they are left out of it.
       # Sonar analyses all of them for bugs and code smells either way.

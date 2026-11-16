@@ -16,7 +16,7 @@ There is no watch server: rebuild after changing TypeScript or the shared table 
 ## A change here, or to table/battle-*, runs
 
 - `npm --prefix battle run build`, then the gate (`dotnet test` reads the bundle in `TableFilesTests`).
-- `node --test studio/*.test.js table/*.test.js`.
+- `node --test studio/*.test.js table/*.test.js showcase/*.test.js`.
 - The browser suite's battle specs, from `studio/browser`:
 
 ```bash

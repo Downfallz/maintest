@@ -45,6 +45,7 @@ const SHOWCASE_FILES = new Set([
   'docs/art/branding.css',
   'battle/src/cue-art.js',
   'table/battle-evolution.js',
+  'table/site-origins.js',
   'table/icon.svg',
   'table/brand-mark.svg',
   '.github/workflows/showcase.yml',

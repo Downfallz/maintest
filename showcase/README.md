@@ -33,9 +33,12 @@ node showcase/build.mjs
 python3 -m http.server 8080 --directory showcase/dist
 ```
 
-Open http://localhost:8080/ or http://localhost:8080/fr/. Run `node --test studio/showcase.test.js` to rebuild
-and check the eight localized pages, their navigation, the complete catalogue and the single disclosed hybrid. The build uses Node built-ins. The origin of the Play buttons
-can be overridden for a test deployment with `GAME_ORIGIN=https://your-game-host.example`.
+Open http://localhost:8080/ or http://localhost:8080/fr/. Run `node --test showcase/*.test.js` to build
+into a temporary folder and check the eight localized pages, their navigation, the complete catalogue and the single disclosed hybrid. The build uses Node built-ins.
+`node showcase/build.mjs <folder>` writes into another folder. Both origins, the apex and the game, are named once in
+`table/site-origins.js`. The origin of the Play buttons can be overridden for a test deployment with
+`GAME_ORIGIN=https://your-game-host.example`. The retention periods in the privacy policy are the ones
+`infra/main.bicep` configures, and the test fails when the two disagree.
 
 ## Publish the apex
 

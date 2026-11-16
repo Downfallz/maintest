@@ -1,5 +1,5 @@
 import { cp, mkdir, mkdtemp, rename, rm, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { EVOLUTION_REGISTRY } from '../table/battle-evolution-art.js';
 import { resolveEvolution } from '../table/battle-evolution.js';
@@ -11,10 +11,12 @@ import { routes } from './layout.mjs';
 import { specimenPath } from './lore.mjs';
 import { page } from './page.mjs';
 import { privacyPage } from './privacy.mjs';
+import { GAME_ORIGIN } from '../table/site-origins.js';
 
 const source = new URL('../', import.meta.url);
-const destination = fileURLToPath(new URL('./dist', import.meta.url));
-const application = new URL(process.env.GAME_ORIGIN || 'https://play.downfallinstinct.com');
+// The folder to write, `showcase/dist` by default; the tests name a temporary one so the working tree stays as it is.
+const destination = resolve(process.argv[2] || fileURLToPath(new URL('./dist', import.meta.url)));
+const application = new URL(process.env.GAME_ORIGIN || GAME_ORIGIN);
 if (application.protocol !== 'https:' || application.href !== application.origin + '/' || application.username || application.password)
   throw new Error('GAME_ORIGIN must be an HTTPS origin without credentials, path, query or fragment.');
 

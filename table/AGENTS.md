@@ -21,7 +21,7 @@ What the client may never decide is in docs/tabletop/playtest-app.md; the routes
 ## Commands
 
 ```bash
-node --test studio/*.test.js table/*.test.js                       # the pages' own tests; no install
+node --test studio/*.test.js table/*.test.js showcase/*.test.js        # the pages' own tests; no install
 dotnet run --project src/DownfallArena.Cli -- table --lobby         # serve the pages locally
 dotnet run --project src/DownfallArena.Cli -- table --practice      # the practice scenarios
 ```
@@ -30,7 +30,7 @@ Every flag of `table` is in docs/reference/commands.md.
 
 ## A change here runs
 
-- `node --test studio/*.test.js table/*.test.js`.
+- `node --test studio/*.test.js table/*.test.js showcase/*.test.js`.
 - The gate's `dotnet test`: `TableFilesTests` and `TablePageContentTests` in `tests/DownfallArena.Cli.Tests/Table`
   read these files.
 - A change to `battle-*` files: rebuild the bundle and run the battle specs (`battle/AGENTS.md`).

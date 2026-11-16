@@ -7,7 +7,7 @@ Playwright suite for the studio, the table and the battle view.
 ## Commands
 
 ```bash
-node --test studio/*.test.js table/*.test.js                            # the pages' own tests; no install
+node --test studio/*.test.js table/*.test.js showcase/*.test.js             # the pages' own tests; no install
 dotnet run --project src/DownfallArena.Cli -- studio                    # http://127.0.0.1:5099
 dotnet run --project src/DownfallArena.Cli -- studio --export site/data # what the published studio reads
 npm --prefix studio/browser ci --ignore-scripts && npm --prefix studio/browser test -- --trace off   # the browser suite
@@ -15,7 +15,7 @@ npm --prefix studio/browser ci --ignore-scripts && npm --prefix studio/browser t
 
 ## A change here runs
 
-- `node --test studio/*.test.js table/*.test.js`, and the gate.
+- `node --test studio/*.test.js table/*.test.js showcase/*.test.js`, and the gate.
 - A change a person sees: the studio's browser specs (`studio/browser`), phone (320 px and 390 px) and desktop.
 - A change to `browser/` itself: the specs it touches, and say which were run.
 - `git diff --name-only origin/main... | node studio/browser/plan.js` says what CI will play for a diff
