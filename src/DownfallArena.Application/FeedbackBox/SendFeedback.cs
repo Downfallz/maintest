@@ -7,9 +7,10 @@ namespace DownfallArena.Application.FeedbackBox;
 /// counted over both kinds (docs/tabletop/feedback-plan.md, "Against spam"): two minutes apart, five a day per sender,
 /// five a day per network address for a guest, a second report on the same position (or a second idea within the
 /// hour) merged into the first, and a ceiling for the whole host. Merged text counts against the sender's five a day
-/// as a sending does, though it adds no row. One write at a time (<see cref="FeedbackWrites" />).
+/// as a sending does, though it adds no row. One write at a time (<see cref="FeedbackWrites" />). Before them all, a
+/// sender the operator muted, or whose spam marks muted, is refused (<see cref="FeedbackMutes" />).
 /// </summary>
-public sealed class SendFeedback(IFeedbackStore store, GuestAddresses addresses, FeedbackWrites writes, TimeProvider clock)
+public sealed class SendFeedback(IFeedbackStore store, GuestAddresses addresses, FeedbackWrites writes, TimeProvider clock, FeedbackMutes? mutes = null)
 {
     public const int ShortestText = 10;
 
@@ -44,6 +45,11 @@ public sealed class SendFeedback(IFeedbackStore store, GuestAddresses addresses,
         if (Invalid(sent) is { } invalid)
         {
             return FeedbackAnswer.Refuse(FeedbackErrors.Invalid(invalid));
+        }
+
+        if (mutes is not null && await mutes.FindAsync(sent.Sender, sent.Account, clock.GetUtcNow(), cancellationToken) is not null)
+        {
+            return FeedbackAnswer.Refuse(FeedbackErrors.Muted);
         }
 
         return await writes.OneAtATimeAsync(

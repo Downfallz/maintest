@@ -29,6 +29,7 @@
       <a id="tab-tables" href="#tables" data-tab="tables">Tables <span id="tab-tables-count" class="tab-count"></span></a>
       <a id="tab-sessions" href="#sessions" data-tab="sessions">Sessions <span id="tab-sessions-count" class="tab-count"></span></a>
       <a id="tab-scenarios" href="#scenarios" data-tab="scenarios" hidden>Scenarios <span id="tab-scenarios-count" class="tab-count"></span></a>
+      <a id="tab-feedback" href="#feedback" data-tab="feedback" hidden>Feedback</a>
       <a id="tab-players" href="#players" data-tab="players" hidden>Players <span id="tab-players-count" class="tab-count"></span></a>
       <a id="tab-jobs" href="#jobs" data-tab="jobs" hidden>Jobs <span id="tab-jobs-count" class="tab-count"></span></a>
       <a id="tab-activity" href="#activity" data-tab="activity" hidden>Activity</a>
@@ -120,6 +121,28 @@
         <output id="scenarios-said" class="said"></output>
         <ol id="scenarios" class="session-list" aria-label="Scenarios"></ol>
         <p id="scenarios-empty" class="muted" hidden>No scenario yet.</p>
+      </section>
+    </section>
+    <section id="panel-feedback" class="admin-panel" aria-labelledby="tab-feedback" data-panel="feedback" hidden>
+      <p id="admin-feedback-off" class="muted">This host keeps no feedback. It was started with <code>--no-record</code>, or its feedback store could not be opened.</p>
+      <section id="admin-feedback-on" class="control players" aria-labelledby="admin-feedback-title" hidden>
+        <div class="list-head">
+          <h2 id="admin-feedback-title">Feedback</h2>
+        </div>
+        <p class="muted">The bug reports and ideas players sent with <em>Report or suggest</em>, newest first. Open one to read it with the position it was sent from, mark it, change its kind, or stop its sender. Only you read them.</p>
+        <div class="fields session-filters">
+          <label for="admin-feedback-kind">Kind<select id="admin-feedback-kind"></select></label>
+          <label for="admin-feedback-status">Status<select id="admin-feedback-status"></select></label>
+          <label for="admin-feedback-category">Category<select id="admin-feedback-category"></select></label>
+        </div>
+        <output id="admin-feedback-said" class="said"></output>
+        <ol id="admin-feedback-list" class="session-list" aria-label="Feedback"></ol>
+        <p id="admin-feedback-empty" class="muted" hidden>No feedback here.</p>
+        <nav class="session-pages" aria-label="Feedback pages">
+          <button id="admin-feedback-previous" type="button" class="secondary">← Newer</button>
+          <output id="admin-feedback-count" class="muted"></output>
+          <button id="admin-feedback-next" type="button" class="secondary">Older →</button>
+        </nav>
       </section>
     </section>
     <section id="panel-players" class="admin-panel" aria-labelledby="tab-players" data-panel="players" hidden>
@@ -284,6 +307,40 @@
           <button id="diagnosis-turn" type="button">Requeue the bot's turn</button>
           <button id="diagnosis-reveal" type="button" class="secondary">Reveal hidden state…</button>
           <button id="diagnosis-void" type="button" class="danger">Void…</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="admin-feedback-sheet" class="home-dialog side-sheet" aria-labelledby="admin-feedback-sheet-name">
+      <div class="dialog-heading">
+        <div><p id="admin-feedback-sheet-kind" class="eyebrow">Feedback</p><h2 id="admin-feedback-sheet-name">Feedback</h2></div>
+        <button id="admin-feedback-close" type="button" aria-label="Close">×</button>
+      </div>
+      <div class="home-dialog-body">
+        <dl id="admin-feedback-words" class="diagnosis-facts feedback-words"></dl>
+        <dl id="admin-feedback-facts" class="diagnosis-facts"></dl>
+        <section id="admin-feedback-position-block" class="feedback-position-block" aria-labelledby="admin-feedback-position-title" hidden>
+          <h3 id="admin-feedback-position-title">The position, as the player saw it</h3>
+          <div id="admin-feedback-position" class="feedback-position"></div>
+        </section>
+        <a id="admin-feedback-session" class="feedback-session" href="#" hidden>Open its session</a>
+        <output id="admin-feedback-sheet-said" class="said" tabindex="-1"></output>
+        <div class="diagnosis-actions">
+          <button id="admin-feedback-seen" type="button" class="secondary">Mark seen</button>
+          <button id="admin-feedback-reproduced" type="button" class="secondary">Mark reproduced</button>
+          <button id="admin-feedback-to-idea" type="button" class="secondary">This is an idea</button>
+          <button id="admin-feedback-to-bug" type="button" class="secondary">This is a bug</button>
+          <button id="admin-feedback-diagnose" type="button">Diagnose…</button>
+        </div>
+        <div id="admin-feedback-dismissing" class="player-action">
+          <label for="admin-feedback-reason">Reason for dismissing<input id="admin-feedback-reason" type="text" maxlength="300" placeholder="Works as the rules say." autocomplete="off" /></label>
+          <button id="admin-feedback-dismiss" type="button" class="secondary">Dismiss</button>
+          <button id="admin-feedback-spam" type="button" class="danger">Dismiss as spam…</button>
+        </div>
+        <div class="player-action">
+          <p class="muted">Stopping a player makes the host refuse their feedback for 30 days. A third spam dismissal within 30 days does the same.</p>
+          <button id="admin-feedback-mute" type="button" class="danger">Stop feedback from this player…</button>
+          <button id="admin-feedback-unmute" type="button" class="secondary">Let this player send feedback again</button>
         </div>
       </div>
     </dialog>

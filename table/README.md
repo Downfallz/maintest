@@ -715,7 +715,7 @@ test (`.claude/rules/host.md`).
 | `GET /api/lobby/tables/<table>/replay` | account | A finished game's replay, for an account that sat at it (ADR 0156). |
 | `GET /api/seat/<seat>/negotiate` | seat | The relay's address for a seat (ADR 0165). |
 | `POST /api/seat/<seat>/reaction` | seat | A reaction from the fixed set (ADR 0173). |
-| `POST /api/feedback` | seat, account | A bug report or an idea (ADR 0189), kept with the seat's context. `429` when a spam guard stops it; `200 Feedback.Merged` when it joins an earlier one. |
+| `POST /api/feedback` | seat, account | A bug report or an idea (ADR 0189), kept with the seat's context. `429` when a spam guard stops it; `403 Feedback.Muted` when the operator stopped its sender; `200 Feedback.Merged` when it joins an earlier one. |
 | `GET /api/friends`, `POST /api/friends/requests`, `POST /api/friends/requests/<id>/accept`, `DELETE /api/friends/requests/<id>`, `DELETE /api/friends/<id>` | account | Friends (ADR 0129). |
 | `GET /api/scenarios`, `GET /api/scenarios/<id>`, `GET`/`POST`/`DELETE /api/scenarios/<id>/practice` | account | Listed scenarios and their practice (ADR 0179): resumed, started from the cut, or let go of (204), which leaving a tutorial does. A tutorial that is done is not resumed. Only admin accounts open a repository scenario; every account opens a tutorial. |
 | `GET /api/tutorials` | account | The tutorials, in the order of the series, each opened as a practice, with the account's state for each and the one that opens by itself (ADR 0187). |
@@ -732,5 +732,6 @@ test (`.claude/rules/host.md`).
 | `GET /api/admin/jobs/tend?page`, `GET /api/admin/jobs/tend/<id>`, `POST /api/admin/jobs/tend` | operator | Tending runs, and a pass now (ADR 0162). |
 | `GET /api/admin/jobs/turns`, `POST /api/admin/jobs/turns/requeue`, `POST .../drop` | operator | Bot turns' queues and dead letters. |
 | `GET /api/admin/scenarios/rounds?session=<id>`, `GET`/`POST /api/admin/scenarios`, `DELETE /api/admin/scenarios/<id>`, `PUT /api/admin/scenarios/<id>/listing` | operator | Scenarios (ADR 0179); the repository's `scenarios/` files, its tutorials among them, are listed with them, read-only (S7, ADR 0187). |
+| `GET /api/admin/feedback?kind&status&category&page`, `GET /api/admin/feedback/<id>`, `PUT .../<id>/status`, `PUT .../<id>/kind`, `POST`/`DELETE .../<id>/mute` | operator | The Feedback tab (feedback plan, R3): the list, a sheet, the status by hand, a kind moved, a sender stopped. |
 | `GET /api/admin/activity?page` | operator | What operators did. |
 | `GET`/`PUT /api/admin/settings` | operator | Registration and the notice (ADR 0177). |

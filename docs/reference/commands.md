@@ -388,11 +388,12 @@ The seat's view says the lesson under `practice.tutorial`:
 
 - Its Overview, the tab it opens on, has the numbers at a glance (`GET /api/admin/overview`: players, games in
   progress and finished, open seats, invitations, games running out of time within a day, the last tending run,
-  bot turns waiting and given up on, registration), each card linking to its tab.
+  bot turns waiting and given up on, feedback waiting, registration), each card linking to its tab.
 - Its Activity tab lists what operators did from the panel, twenty a page, newest first
   (`GET /api/admin/activity?page`: each table opened, closed, reinvited or voided, session deleted or exported,
   player signed out, renamed, deleted, suspended or restored, tending pass, requeue or drop, settings save,
-  scenario cut, listed, taken off or removed, a table's hidden state revealed or its bot turn owed again, with
+  scenario cut, listed, taken off or removed, a table's hidden state revealed or its bot turn owed again, feedback
+  marked, moved to the other kind or dismissed as spam, a sender stopped or let through, with
   who and when), the last 1,000 kept beside the recordings under `operator/` (or the operator container).
 - Its Settings tab opens or closes registration and posts a notice
   (`GET`/`PUT /api/admin/settings {"registrationOpen","notice"}`, kept beside the accounts as
@@ -425,6 +426,26 @@ The seat's view says the lesson under `practice.tutorial`:
   - A second bug report on the same table and round, or a second idea within the hour, is merged into the first:
     200 `{"id","merged":true,"code":"Feedback.Merged"}`.
   - More than 100 new a day for the host: 429 `Feedback.HostFull`.
+  - A muted sender gets 403 `Feedback.Muted` once the body is checked, before the spam guards. The mute lasts 30
+    days, or until the operator lifts it. The operator sets it, or a third spam dismissal within 30 days does.
+- The operator's Feedback tab (docs/tabletop/feedback-plan.md, R3) lists it newest first, twenty a page
+  (`GET /api/admin/feedback?kind&status&category&page`: `kind` is `bug` or `idea`, `status` a status or `open`, the
+  tab's default, for what is not closed) and reads one (`GET /api/admin/feedback/<id>`: the words, what the page and
+  the host added, the position, the sender's mute, and `underWay` while its table is still played).
+  A filter naming no kind, status or category is refused 400 `Feedback.Invalid`. The sheet lists the `actions` that
+  apply to it, and the page shows only those.
+  `PUT /api/admin/feedback/<id>/status {"status","reason?"}` marks it `seen` (which reopens it), `reproduced` (a bug
+  report only) or `dismissed` with a reason of one line and at most 300 characters, `"reason":"spam"` being the spam
+  mark (400 `Feedback.Invalid` otherwise). Dismissed again, it keeps the time it was first closed.
+  `PUT .../<id>/kind {"kind"}` turns a bug report into an idea, or an idea into a bug report. It keeps the words,
+  position and sender and sets the status to seen. A closed one gets 409 `Feedback.Closed`.
+  `POST`/`DELETE .../<id>/mute` stops its sender for 30 days and lifts it (409 `Feedback.NoSender` for a deleted
+  account's, or an account's on a host that keeps no account activity). An account's mute is kept with its activity
+  record and dropped at its first write after the mute ends; a guest's is kept in the process's memory. Unknown
+  feedback is 404 `Feedback.NotFound`, and a store that fails 503 `Feedback.Unavailable`. Asked again, a change
+  writes nothing and notes nothing. Each change adds an Activity line (`feedback.status`, `feedback.convert`,
+  `feedback.spam`, `feedback.mute`, `feedback.unmute`). The Overview's Feedback waiting card counts feedback
+  nobody has seen yet, in the warning colour while a bug report is new or the host is full for the day.
 
   A new one is kept and answers 201 `{"id","merged":false}`.
 - Each one is kept as one record beside the recordings, under `feedback/` (or the feedback container). A host that
