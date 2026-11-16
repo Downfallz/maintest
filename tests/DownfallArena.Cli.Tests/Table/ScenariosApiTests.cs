@@ -640,7 +640,7 @@ public sealed class ScenariosApiTests : IDisposable
         bool? toldAsItHandedBack = null;
         play.Api.Changes.Bumped += () =>
         {
-            // Read before the test's own lock: the hand-back holds the tutorial's while it bumps.
+            // The hand-back bumps on its own thread, outside the tutorial's lock (#658): reading it here waits for nothing.
             var bump = (Environment.CurrentManagedThreadId, tutorial.Assisted.Count == 0);
             lock (gate)
             {

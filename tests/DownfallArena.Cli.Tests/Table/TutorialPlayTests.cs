@@ -49,6 +49,17 @@ public sealed class TutorialPlayTests
         return play.Assisted.Count == 0;
     }
 
+    /// <summary>Whether <paramref name="condition" /> holds within five seconds, read 50 ms apart.</summary>
+    private static async Task<bool> SaidAsync(Func<bool> condition)
+    {
+        for (var waited = 0; waited < 100 && !condition(); waited++)
+        {
+            await Task.Delay(50, TestContext.Current.CancellationToken);
+        }
+
+        return condition();
+    }
+
     [Fact]
     public async Task An_assisted_question_is_answered_with_the_recorded_answer_for_the_asking_it_was_read_at()
     {
@@ -77,7 +88,9 @@ public sealed class TutorialPlayTests
         (await HandedBackAsync(play)).ShouldBeTrue();
         sent.Count.ShouldBe(1);
 
-        // The view changed and the match did not: the pages are told through this, once.
+        // The view changed and the match did not: the pages are told through this, once. It is said after the
+        // tutorial's lock is left, so a moment after Assisted reads empty.
+        (await SaidAsync(() => Volatile.Read(ref said) == 1)).ShouldBeTrue();
         Volatile.Read(ref said).ShouldBe(1);
     }
 

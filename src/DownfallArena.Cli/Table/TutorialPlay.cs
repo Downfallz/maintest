@@ -217,8 +217,10 @@ internal sealed class TutorialPlay
         {
             while (true)
             {
+                // The seat is read before the gate: reading may move the session, which is not this play's to hold.
+                var snapshot = table.Read();
                 (Application.Matches.Decisions.PlayerDecision Decision, long Asked)? owed = null;
-                if (HandsBack(() => owed = table.Read() is { } snapshot ? Owed(snapshot) : null))
+                if (snapshot is not null && HandsBack(() => owed = Owed(snapshot)))
                 {
                     SayGaveBack();
                 }
