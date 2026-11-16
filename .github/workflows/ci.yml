@@ -36,10 +36,12 @@ jobs:
       actions: read
     outputs:
       journeys: ${{ steps.plan.outputs.journeys }}
+      journey-jobs: ${{ steps.plan.outputs.journey-jobs }}
       real-engine: ${{ steps.plan.outputs.real-engine }}
       release: ${{ steps.plan.outputs.release }}
       image: ${{ steps.plan.outputs.image }}
       showcase: ${{ steps.plan.outputs.showcase }}
+      build: ${{ steps.plan.outputs.build }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -64,7 +66,8 @@ jobs:
           elif [[ "$status" == 0 ]]; then
             echo "$(wc -l < "$RUNNER_TEMP/changed.txt") changed path(s):"
             cat "$RUNNER_TEMP/changed.txt"
-            # A pull request plays the release profiles' WebKit alone; main plays the three (ADR 0190).
+            # A pull request plays the release profiles' WebKit alone, and runs the light build when it changes
+            # Markdown alone; main plays the three profiles and the whole build (ADR 0190, 0192).
             narrow=()
             if [[ "$EVENT" == pull_request ]]; then narrow=(--pull-request); fi
             node studio/browser/plan.js "${narrow[@]}" < "$RUNNER_TEMP/changed.txt" | tee -a "$GITHUB_OUTPUT"
@@ -72,10 +75,16 @@ jobs:
             exit "$status"
           fi
 
+  # A pull request of Markdown alone runs the light build (ADR 0192): the build, Architecture.Tests (the
+  # instruction files, the ADRs, the generated indexes) and the pages' own tests (the prompts, the rulebook).
+  # Nothing else reads its paths, so the learning project, the emulator, the bundle, the format check, Sonar,
+  # the other tests, the content and the benchmark are left out; plan.js says which Markdown the learning tests read.
   build-and-test:
     name: Build, format check, test, analyse
+    needs: changes
     runs-on: ubuntu-latest
     env:
+      LIGHT_BUILD: ${{ needs.changes.outputs.build == 'light' }}
       AZURITE_BLOB_ENDPOINT: http://127.0.0.1:10000/devstoreaccount1
       AZURITE_QUEUE_ENDPOINT: http://127.0.0.1:10001/devstoreaccount1
       AZURITE_TABLE_ENDPOINT: http://127.0.0.1:10002/devstoreaccount1
@@ -88,8 +97,8 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          # Full history so SonarCloud can attribute new code and blame lines.
-          fetch-depth: 0
+          # Full history so SonarCloud can attribute new code and blame lines; the light build runs no analysis.
+          fetch-depth: ${{ needs.changes.outputs.build == 'light' && 1 || 0 }}
 
       # The learning project (learning/, ADR 0013) is gated here. It had a job of its own, which paid a runner's
       # minimum minute for ruff while this job ran pytest a second time (docs/engineering/ci-minutes-plan.md,
@@ -105,6 +114,7 @@ jobs:
       - name: Lint and test the learning project
         id: learning
         continue-on-error: true
+        if: env.LIGHT_BUILD != 'true'
         working-directory: learning
         env:
           UV_PROJECT_ENVIRONMENT: ${{ runner.temp }}/learning-venv
@@ -124,6 +134,7 @@ jobs:
       # release. Waited for here, every service, because a test that finds no emulator skips, and a skipped
       # test is green.
       - name: Start the storage emulator
+        if: env.LIGHT_BUILD != 'true'
         run: |
           docker run --detach --name azurite --publish 10000:10000 --publish 10001:10001 --publish 10002:10002 mcr.microsoft.com/azure-storage/azurite \
             azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --skipApiVersionCheck
@@ -140,6 +151,7 @@ jobs:
           done
 
       - name: Build the isolated battle prototype
+        if: env.LIGHT_BUILD != 'true'
         run: npm --prefix battle ci --ignore-scripts && npm --prefix battle run build
 
       - name: Set up .NET (version from global.json)
@@ -158,6 +170,7 @@ jobs:
         run: node --test studio/*.test.js table/*.test.js showcase/*.test.js
 
       - name: Format check
+        if: env.LIGHT_BUILD != 'true'
         run: dotnet format --verify-no-changes --no-restore
 
       # Coverage is not demanded of the composition root (wiring, exercised by running the app) nor of the
@@ -193,7 +206,7 @@ jobs:
       # a file's path from its project's folder: written from the repository root it matched nothing, and the
       # two issues stayed open on `main` while every pull request, which reads only its diff, was green.
       - name: Begin SonarCloud analysis
-        if: env.SONAR_TOKEN != ''
+        if: env.SONAR_TOKEN != '' && env.LIGHT_BUILD != 'true'
         run: >
           dotnet sonarscanner begin
           /k:"$SONAR_PROJECT_KEY"
@@ -216,21 +229,28 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Test with coverage
+        if: env.LIGHT_BUILD != 'true'
         run: dotnet test --no-build --configuration Release -- --coverage --coverage-output-format xml
 
+      - name: Test the instruction files and the layering
+        if: env.LIGHT_BUILD == 'true'
+        run: dotnet test --no-build --configuration Release --project tests/DownfallArena.Architecture.Tests
+
       - name: Build game content
+        if: env.LIGHT_BUILD != 'true'
         run: dotnet run --project tools/DownfallArena.DataBuilder --no-build --configuration Release -- data data/dst
 
       # The engine-change detector (ADR 0013): the benchmark seeds must replay to the committed digest of this content.
       - name: Verify benchmark digest
+        if: env.LIGHT_BUILD != 'true'
         run: dotnet run --project src/DownfallArena.Cli --no-build --configuration Release -- benchmark
 
       - name: End SonarCloud analysis
-        if: env.SONAR_TOKEN != '' && !cancelled()
+        if: env.SONAR_TOKEN != '' && env.LIGHT_BUILD != 'true' && !cancelled()
         run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
 
       - name: Report SonarCloud quality gate and issues
-        if: env.SONAR_TOKEN != '' && !cancelled()
+        if: env.SONAR_TOKEN != '' && env.LIGHT_BUILD != 'true' && !cancelled()
         env:
           SONAR_PULL_REQUEST: ${{ github.event.pull_request.number }}
           SONAR_BRANCH: ${{ github.head_ref || github.ref_name }}
@@ -266,6 +286,7 @@ jobs:
     uses: ./.github/workflows/studio-browser.yml
     with:
       journeys: ${{ needs.changes.outputs.journeys }}
+      journey-jobs: ${{ needs.changes.outputs.journey-jobs }}
       real-engine: ${{ needs.changes.outputs.real-engine == 'true' }}
       release: ${{ needs.changes.outputs.release }}
 

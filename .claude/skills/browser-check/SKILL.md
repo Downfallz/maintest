@@ -17,9 +17,10 @@ journey is found before the pull request. Arguments: $ARGUMENTS (`--all` for eve
      | sort -u | node studio/browser/plan.js --pull-request
    ```
 
-   `journeys` is `none`, `all`, or spec files; `real-engine` is the other job; `release` is `none` or `webkit`:
-   a pull request plays release-ios alone (without the flag, `all`: `main` plays the three profiles, ADR 0190). Nothing called for: say so
-   and stop.
+   `journeys` is `none`, `all`, or spec files (`journey-jobs`, the CI jobs they play in); `real-engine` is the
+   other job; `release` is `none` or `webkit`: a pull request plays release-ios alone, and not for `src/` or
+   `data/` (without the flag, `all`: `main` plays the three profiles, ADR 0190, 0192); `build` is `light` when CI
+   builds and runs `Architecture.Tests` alone. Nothing called for: say so and stop.
 2. Prepare once: `npm --prefix studio/browser ci --ignore-scripts`, and the battle bundle
    (`npm --prefix battle ci --ignore-scripts && npm --prefix battle run build`) if `table/battle-build/` is
    missing or older than a change to `battle/` or `table/`. Chromium is preinstalled in a cloud session: never run `playwright install`; point the suite at it

@@ -5,6 +5,7 @@
 //   git diff --name-only <base> HEAD | node studio/browser/plan.js    # what those paths call for, on main
 //   ... | node studio/browser/plan.js --pull-request                    # the same, for a pull request (ADR 0190)
 //   node studio/browser/plan.js --all                                  # everything: a dispatch, the nightly run
+//   node studio/browser/plan.js --journey-job 'desktop replays'        # that journeys job's Playwright arguments
 //   git diff --name-only origin/main... | node studio/browser/plan.js --gate   # the local gate's optional steps
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -61,6 +62,25 @@ const builtIntoTheShowcase = (path) =>
 // (ADR 0190), so the profiles it narrows away on other pull requests are not first played on main.
 const RELEASE_DEFINITION = new Set(['.github/workflows/studio-browser.yml', 'studio/browser/battle.release.config.js', 'studio/browser/plan.js']);
 
+// The heaviest desktop specs: a third of desktop's time, in three files. A shard splits by test count, so they
+// play in a job of their own and the rest of desktop in two halves without them (M3). A spec that grows that
+// heavy joins the pattern.
+const HEAVY = String.raw`battle-(playback|pacing|live)\.spec\.js`;
+const isHeavy = (spec) => new RegExp(HEAVY).test(spec);
+
+// The mock-host journeys' jobs, side by side in CI, each with the Playwright arguments it plays and the specs it
+// has something to play in. Tablet runs only table.ux.spec.js (playwright.config.js), so it shares a desktop half.
+export const JOURNEY_JOBS = [
+  { name: 'small-phone', arguments: ['--project=small-phone'], plays: () => true },
+  { name: 'phone', arguments: ['--project=phone'], plays: () => true },
+  { name: 'desktop replays', arguments: ['--project=desktop', `--grep=${HEAVY}`], plays: isHeavy },
+  ...[1, 2].map((shard) => ({
+    name: `desktop and tablet ${shard}/2`,
+    arguments: ['--project=desktop', '--project=tablet', `--grep-invert=${HEAVY}`, `--shard=${shard}/2`],
+    plays: (spec) => !isHeavy(spec),
+  })),
+];
+
 // The specs the release profiles play besides their own (battle.release.config.js).
 const RELEASE_FILES = new Set(['battle.loop.js', 'battle.release.config.js', 'battle-release.spec.js', 'battle-live.spec.js']);
 
@@ -79,7 +99,10 @@ function suiteFile(file) {
 }
 
 // The first rule a path matches says what it calls for: `journeys` chooses among the specs, and `realEngine`
-// and `release` ask for those jobs. A path no rule matches, or a rule that returns nothing, plays nothing.
+// and `release` ask for those jobs. `release: 'main'` asks for the release profiles on main alone: the engine and
+// the content are judged on a pull request by the real-engine journeys, and the release profiles are for what
+// WebKit renders and for the release job itself (M4). A path no rule matches, or a rule that returns nothing,
+// plays nothing.
 const RULES = [
   // Markdown is read by no page, no spec and no image; the pages' own tests are run by `node --test`.
   { matches: (path) => path.endsWith('.md'), calls: () => ({}) },
@@ -90,20 +113,25 @@ const RULES = [
   { matches: (path) => path.startsWith('table/'), calls: () => ({ journeys: isTableSpec, realEngine: true, release: true }) },
   { matches: (path) => path.startsWith('studio/'), calls: () => ({ journeys: isStudioSpec }) },
   { matches: (path) => path === 'viewer/viewer.css', calls: () => ({ journeys: anySpec }) },
-  { matches: (path) => path.startsWith('data/'), calls: () => ({ journeys: anySpec, realEngine: true, release: true }) },
+  { matches: (path) => path.startsWith('data/'), calls: () => ({ journeys: anySpec, realEngine: true, release: 'main' }) },
   // The tutorial journey plays the lesson of the tutorial files themselves.
   { matches: (path) => path.startsWith('scenarios/tutorials/'), calls: () => ({ journeys: (spec) => spec === 'battle-tutorial.spec.js' }) },
   { matches: (path) => CONSOLE_ONLY.has(path), calls: () => ({}) },
   {
     matches: (path) => path.startsWith('src/') || path.startsWith('tools/') || BUILD_FILES.has(path),
-    calls: () => ({ realEngine: true, release: true }),
+    calls: () => ({ realEngine: true, release: 'main' }),
   },
 ];
+
+// Markdown the learning tests read: the effect kinds of data/README.md (test_knobs.py), which the light build
+// does not run. Every other Markdown is read by Architecture.Tests or the pages' own tests, or by nothing.
+const readByTheFullBuild = (path) => path.startsWith('data/');
 
 /**
  * Decide what the changed paths call for. `specs` is every mock-host journey file the suite holds.
  * Returns `journeys` ('none', 'all', or the spec files separated by spaces), `release` ('none', 'webkit' or
- * 'all': a pull request plays the release profiles' WebKit alone, main all three, ADR 0190) and three booleans.
+ * 'all': a pull request plays the release profiles' WebKit alone, main all three, ADR 0190), `build` ('full', or
+ * 'light' for a pull request of Markdown alone, ADR 0192) and three booleans.
  */
 export function plan(paths, specs, { pullRequest = false } = {}) {
   const changed = paths.map((line) => line.trim()).filter(Boolean);
@@ -115,10 +143,21 @@ export function plan(paths, specs, { pullRequest = false } = {}) {
   return {
     journeys: chosen,
     realEngine: called.some((call) => call.realEngine === true),
-    release: releaseProfiles(called.some((call) => call.release === true), pullRequest && !changed.some((path) => RELEASE_DEFINITION.has(path))),
+    release: releaseProfiles(
+      called.some((call) => call.release === true || (!pullRequest && call.release === 'main')),
+      pullRequest && !changed.some((path) => RELEASE_DEFINITION.has(path)),
+    ),
     image: changed.some((path) => !path.endsWith('.md') && carriedByTheImage(path)),
     showcase: changed.some(builtIntoTheShowcase),
+    build: pullRequest && changed.length > 0 && changed.every((path) => path.endsWith('.md') && !readByTheFullBuild(path)) ? 'light' : 'full',
   };
+}
+
+/** The journeys jobs that have something to play: `journeys` is 'all', 'none', or spec files separated by spaces. */
+export function journeyJobs(journeys) {
+  if (journeys === 'all') return JOURNEY_JOBS.map((job) => job.name);
+  const planned = journeys.split(' ').filter((spec) => spec && spec !== 'none');
+  return JOURNEY_JOBS.filter((job) => planned.some(job.plays)).map((job) => job.name);
 }
 
 /** Which release profiles a run plays when its diff calls for them: narrowed, the one engine no other job plays. */
@@ -129,7 +168,7 @@ function releaseProfiles(called, narrowed) {
 
 /** Everything: what a run that has no diff to read plays. */
 export function everything() {
-  return { journeys: 'all', realEngine: true, release: 'all', image: true, showcase: true };
+  return { journeys: 'all', realEngine: true, release: 'all', image: true, showcase: true, build: 'full' };
 }
 
 // What the local gate (scripts/verify.sh) adds to the steps it always runs, each with the paths it reads: the
@@ -161,17 +200,28 @@ export function gate(paths) {
 export function outputs(planned) {
   return [
     `journeys=${planned.journeys}`,
+    `journey-jobs=${JSON.stringify(journeyJobs(planned.journeys))}`,
     `real-engine=${planned.realEngine}`,
     `release=${planned.release}`,
     `image=${planned.image}`,
     `showcase=${planned.showcase}`,
+    `build=${planned.build}`,
   ].join('\n');
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const here = dirname(fileURLToPath(import.meta.url));
   const specs = readdirSync(here).filter((file) => file.endsWith('.spec.js'));
-  if (process.argv.includes('--gate')) {
+  const job = process.argv.indexOf('--journey-job');
+  if (job >= 0) {
+    // One argument a line, for `mapfile`: the grep pattern is never split by the shell or matched as a glob.
+    const found = JOURNEY_JOBS.find((candidate) => candidate.name === process.argv[job + 1]);
+    if (!found) {
+      console.error(`No journeys job is named ${JSON.stringify(process.argv[job + 1])}.`);
+      process.exit(2);
+    }
+    console.log(found.arguments.join('\n'));
+  } else if (process.argv.includes('--gate')) {
     const steps = gate(readFileSync(0, 'utf8').split('\n'));
     console.log(Object.entries(steps).map(([step, called]) => `${step}=${called}`).join('\n'));
   } else {

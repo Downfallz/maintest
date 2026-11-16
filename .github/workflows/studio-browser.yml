@@ -11,6 +11,10 @@ on:
         description: The mock-host specs to play, separated by spaces; `all`, or `none`.
         type: string
         default: all
+      journey-jobs:
+        description: The journeys jobs that have something to play, as a JSON list of their names (plan.js); `all`.
+        type: string
+        default: all
       real-engine:
         description: Whether to play the journeys against the real engine.
         type: boolean
@@ -25,6 +29,10 @@ on:
     inputs:
       journeys:
         description: The mock-host specs to play, separated by spaces; `all`, or `none`.
+        type: string
+        default: all
+      journey-jobs:
+        description: The journeys jobs to start, as a JSON list of their names (plan.js); `all`.
         type: string
         default: all
       real-engine:
@@ -49,10 +57,13 @@ jobs:
   # play in a job of their own (--grep matches a test's file), and the rest in two halves without them (the same
   # pattern in --grep-invert), so every test plays once. Measured on 4 vCPU and two workers, 2026-11-16, the
   # three jobs' tests took 748, 660 and 699 seconds where the two halves' took 862 and 1,245
-  # (docs/engineering/ci-minutes-plan.md, M3). A spec that grows that heavy joins the pattern.
+  # (docs/engineering/ci-minutes-plan.md, M3). A spec that grows that heavy joins the pattern. The jobs, their
+  # arguments and the pattern are plan.js's (JOURNEY_JOBS), and CI starts only the jobs the planned specs play in
+  # (journey-jobs, M4): a pull request that touches no heavy spec does not set up `desktop replays` to play nothing.
   journeys:
     name: journeys (${{ matrix.name }})
-    if: inputs.journeys != 'none'
+    # An empty list is no matrix at all, which GitHub refuses: the job is skipped first.
+    if: inputs.journeys != 'none' && inputs.journey-jobs != '[]'
     runs-on: ubuntu-latest
     env:
       ENGINE: chromium
@@ -60,17 +71,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - name: small-phone
-            projects: --project=small-phone
-          - name: phone
-            projects: --project=phone
-          - name: desktop replays
-            projects: '--project=desktop --grep=battle-(playback|pacing|live)\.spec\.js'
-          - name: desktop and tablet 1/2
-            projects: '--project=desktop --project=tablet --grep-invert=battle-(playback|pacing|live)\.spec\.js --shard=1/2'
-          - name: desktop and tablet 2/2
-            projects: '--project=desktop --project=tablet --grep-invert=battle-(playback|pacing|live)\.spec\.js --shard=2/2'
+        name: ${{ fromJSON(inputs.journey-jobs == 'all' && '["small-phone","phone","desktop replays","desktop and tablet 1/2","desktop and tablet 2/2"]' || inputs.journey-jobs) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -107,15 +108,19 @@ jobs:
       - name: Build the isolated battle prototype
         run: npm --prefix battle ci --ignore-scripts && npm --prefix battle run build
       # One retry (ADR 0182): a journey that fails twice is red, one that passes the second time is green and
-      # named by the step below. The specs are the ones the diff calls for; a project or a shard they leave
-      # empty passes. Unquoted on purpose: each is several arguments.
+      # named by the step below. The specs are the ones the diff calls for; a shard they leave empty passes.
+      # SPECS is unquoted on purpose: it is several arguments. The job's own arguments come one a line from the
+      # plan, so its grep pattern reaches Playwright as it is written.
       - name: Verify the journeys of this project
         working-directory: studio/browser
         env:
-          PROJECTS: ${{ matrix.projects }}
+          NAME: ${{ matrix.name }}
           SPECS: ${{ (inputs.journeys == 'all' || inputs.journeys == '') && ' ' || inputs.journeys }}
           PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/playwright-report.json
-        run: node node_modules/playwright/cli.js test $SPECS $PROJECTS --retries=1 --pass-with-no-tests --reporter=dot,json
+        run: |
+          mapfile -t projects < <(node plan.js --journey-job "$NAME")
+          [[ ${#projects[@]} -gt 0 ]] || exit 1
+          node node_modules/playwright/cli.js test $SPECS "${projects[@]}" --retries=1 --pass-with-no-tests --reporter=dot,json
       - name: Say what flaked
         if: ${{ !cancelled() }}
         run: |

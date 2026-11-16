@@ -3,16 +3,17 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { everything, gate, outputs, plan } from './browser/plan.js';
+import { JOURNEY_JOBS, everything, gate, journeyJobs, outputs, plan } from './browser/plan.js';
 import { flaked } from './browser/flakes.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const specs = readdirSync(join(here, 'browser')).filter((file) => file.endsWith('.spec.js'));
-const nothing = { journeys: 'none', realEngine: false, release: 'none', image: false, showcase: false };
+const nothing = { journeys: 'none', realEngine: false, release: 'none', image: false, showcase: false, build: 'full' };
 
 test('a change of Markdown alone calls for nothing', () => {
   assert.deepEqual(plan(['docs/adr/0182-x.md', 'table/README.md', 'AGENTS.md', 'infra/README.md'], specs), nothing);
@@ -65,6 +66,7 @@ test("the pages' own tests play no journey", () => {
 
 test('the host plays the real engine and builds the image, without the mock journeys', () => {
   assert.deepEqual(plan(['src/DownfallArena.Cli/Table/TableApi.cs'], specs), { ...nothing, realEngine: true, release: 'all', image: true });
+  assert.deepEqual(plan(['src/DownfallArena.Cli/Table/TableApi.cs'], specs, { pullRequest: true }), { ...nothing, realEngine: true, image: true });
 });
 
 test('a console command no page reaches builds the image and plays nothing', () => {
@@ -123,7 +125,7 @@ test('several paths add up, and blank lines are not paths', () => {
 
 // A pull request plays the release profiles' WebKit alone; main and the nightly play the three (ADR 0190).
 test("a pull request plays the release profiles' WebKit alone", () => {
-  for (const path of ['battle/src/scene.ts', 'table/lobby.js', 'studio/browser/battle-live.spec.js', 'src/DownfallArena.Cli/Table/TableApi.cs', '.github/workflows/ci.yml']) {
+  for (const path of ['battle/src/scene.ts', 'table/lobby.js', 'table/battle-scene.js', 'studio/browser/battle-live.spec.js', 'studio/browser/battle.loop.js', '.github/workflows/ci.yml']) {
     assert.equal(plan([path], specs, { pullRequest: true }).release, 'webkit', path);
     assert.equal(plan([path], specs).release, 'all', path);
   }
@@ -137,13 +139,59 @@ test('a pull request that changes the release job itself plays all three profile
 });
 
 test('a pull request that calls for no release profile plays none, and the rest of its plan is the same', () => {
-  assert.deepEqual(plan(['docs/adr/0182-x.md'], specs, { pullRequest: true }), nothing);
+  assert.deepEqual(plan(['docs/adr/0182-x.md'], specs, { pullRequest: true }), { ...nothing, build: 'light' });
   const planned = plan(['data/Spells/pummel.json'], specs, { pullRequest: true });
-  assert.deepEqual(planned, { ...everything(), release: 'webkit' });
+  assert.deepEqual(planned, { ...everything(), release: 'none' });
+});
+
+// The engine and the content are judged on a pull request by the real-engine journeys; the release profiles are
+// called for by what WebKit renders and by the release job itself, and on main by all of it (M4).
+test('a pull request plays no release profile for the engine, the content or what builds them; main plays the three', () => {
+  for (const path of ['src/DownfallArena.Cli/Table/TableApi.cs', 'src/DownfallArena.Domain/Match.cs', 'data/Spells/pummel.json', 'data/balance/knobs.json', 'tools/DownfallArena.DataBuilder/Program.cs', 'global.json', 'Directory.Packages.props']) {
+    assert.equal(plan([path], specs, { pullRequest: true }).release, 'none', path);
+    assert.equal(plan([path], specs).release, 'all', path);
+  }
+  // With a path that does call for them, the pull request still plays WebKit.
+  assert.equal(plan(['src/DownfallArena.Domain/Match.cs', 'table/battle-scene.js'], specs, { pullRequest: true }).release, 'webkit');
+});
+
+// A Markdown-only pull request builds, runs Architecture.Tests (the instruction files, the ADRs, the generated
+// indexes) and the pages' own tests (the prompts, the rulebook), and nothing else (question 6).
+test('a pull request of Markdown alone runs the light build', () => {
+  for (const paths of [['docs/adr/0182-x.md'], ['AGENTS.md', 'table/README.md', '.claude/skills/ship/SKILL.md'], ['rules/02-the-round.md'], ['learning/README.md', 'infra/README.md']]) {
+    assert.equal(plan(paths, specs, { pullRequest: true }).build, 'light', paths.join(' '));
+  }
+});
+
+test('the full build runs for a path that is not Markdown, for Markdown the learning tests read, on main, and for an empty diff', () => {
+  assert.equal(plan(['docs/adr/0182-x.md', 'studio/catalogue.js'], specs, { pullRequest: true }).build, 'full');
+  assert.equal(plan(['docs/adr/0182-x.md', 'studio/catalogue.test.js'], specs, { pullRequest: true }).build, 'full');
+  // test_knobs.py reads data/README.md's table of effect kinds.
+  assert.equal(plan(['data/README.md'], specs, { pullRequest: true }).build, 'full');
+  assert.equal(plan(['docs/adr/0182-x.md'], specs).build, 'full');
+  assert.equal(plan([], specs, { pullRequest: true }).build, 'full');
+  assert.equal(everything().build, 'full');
+});
+
+// A journeys job the plan leaves empty used to start, set up, and play nothing (M3's note): the plan names the
+// jobs that have something to play.
+test('the journey jobs are the ones the planned specs play in', () => {
+  const names = JOURNEY_JOBS.map((job) => job.name);
+  const replays = 'desktop replays';
+  assert.deepEqual(journeyJobs('all'), names);
+  assert.deepEqual(journeyJobs('none'), []);
+  assert.deepEqual(journeyJobs('admin.ux.spec.js studio.spec.js'), names.filter((name) => name !== replays));
+  assert.deepEqual(journeyJobs('table.ux.spec.js'), names.filter((name) => name !== replays));
+  assert.deepEqual(journeyJobs('battle-live.spec.js'), ['small-phone', 'phone', replays]);
+  assert.deepEqual(journeyJobs('battle-live.spec.js battle-tutorial.spec.js'), names);
 });
 
 test('the plan is written as the outputs the workflow reads', () => {
-  assert.equal(outputs(everything()), 'journeys=all\nreal-engine=true\nrelease=all\nimage=true\nshowcase=true');
+  assert.equal(
+    outputs(everything()),
+    `journeys=all\njourney-jobs=${JSON.stringify(JOURNEY_JOBS.map((job) => job.name))}\nreal-engine=true\nrelease=all\nimage=true\nshowcase=true\nbuild=full`,
+  );
+  assert.match(outputs(nothing), /^journey-jobs=\[\]$/m);
 });
 
 test('a test that passed only on its retry is reported, and no other', () => {
@@ -244,19 +292,20 @@ function jobBlock(workflow, job) {
 }
 
 // Desktop and tablet were two halves of 13 and 21 minutes: a shard splits by test count, and three specs hold a
-// third of the time. Those play in a job of their own, the rest in two halves without them.
+// third of the time. Those play in a job of their own, the rest in two halves without them. The plan holds the
+// jobs (M4), so that it can leave out a job with nothing to play.
 test('the heaviest desktop specs play in a job of their own, and the rest in two halves, each test once', () => {
-  const entries = [...jobBlock(browserWorkflow(), 'journeys').matchAll(/- name: (.*)\n {12}projects: '?([^'\n]*)'?$/gm)]
-    .map((match) => ({ name: match[1], projects: match[2] }));
-  assert.deepEqual(entries.map((entry) => entry.name), ['small-phone', 'phone', 'desktop replays', 'desktop and tablet 1/2', 'desktop and tablet 2/2']);
-  assert.deepEqual(entries.slice(0, 2).map((entry) => entry.projects), ['--project=small-phone', '--project=phone']);
+  assert.deepEqual(JOURNEY_JOBS.map((job) => job.name), ['small-phone', 'phone', 'desktop replays', 'desktop and tablet 1/2', 'desktop and tablet 2/2']);
+  assert.deepEqual(JOURNEY_JOBS.slice(0, 2).map((job) => job.arguments), [['--project=small-phone'], ['--project=phone']]);
 
-  const [replays, ...halves] = entries.slice(2);
-  const heavy = /^--project=desktop --grep=(\S+)$/.exec(replays.projects);
-  assert.ok(heavy, 'the replays job plays the desktop project, filtered by its specs');
+  const [replays, ...halves] = JOURNEY_JOBS.slice(2);
+  assert.equal(replays.arguments.length, 2);
+  assert.equal(replays.arguments[0], '--project=desktop', 'the replays job plays the desktop project');
+  const heavy = /^--grep=(\S+)$/.exec(replays.arguments[1]);
+  assert.ok(heavy, 'the replays job is filtered by its specs');
   halves.forEach((half, index) => {
     // The same pattern inverted, so a test plays in the replays job or in a half, never in both or neither.
-    assert.equal(half.projects, `--project=desktop --project=tablet --grep-invert=${heavy[1]} --shard=${index + 1}/2`, half.name);
+    assert.deepEqual(half.arguments, ['--project=desktop', '--project=tablet', `--grep-invert=${heavy[1]}`, `--shard=${index + 1}/2`], half.name);
     assert.ok(half.name.endsWith(`${index + 1}/2`), `${half.name} is named for its shard`);
   });
 
@@ -264,7 +313,70 @@ test('the heaviest desktop specs play in a job of their own, and the rest in two
   const named = /^battle-\((.*)\)\\\.spec\\\.js$/.exec(heavy[1]);
   assert.ok(named, 'the pattern names battle specs by their file');
   for (const name of named[1].split('|')) assert.ok(specs.includes(`battle-${name}.spec.js`), name);
-  for (const spec of specs) assert.equal(new RegExp(heavy[1]).test(spec), named[1].split('|').some((name) => spec === `battle-${name}.spec.js`), spec);
+  for (const spec of specs) {
+    const isHeavy = named[1].split('|').some((name) => spec === `battle-${name}.spec.js`);
+    assert.equal(new RegExp(heavy[1]).test(spec), isHeavy, spec);
+    // The jobs the plan chooses for a spec are the ones whose arguments play it.
+    const jobs = journeyJobs(spec);
+    assert.equal(jobs.includes(replays.name), isHeavy, spec);
+    for (const half of halves) assert.equal(jobs.includes(half.name), !isHeavy, spec);
+  }
+});
+
+test("the journeys matrix is the plan's journey jobs, each playing the arguments the plan gives it", () => {
+  const workflow = browserWorkflow();
+  const block = jobBlock(workflow, 'journeys');
+  const matrix = /^ {8}name: \$\{\{ fromJSON\(inputs\.journey-jobs == 'all' && '(\[[^\]]*\])' \|\| inputs\.journey-jobs\) \}\}$/m.exec(block);
+  assert.ok(matrix, 'the journeys matrix names its jobs from the journey-jobs input on one line');
+  assert.deepEqual(JSON.parse(matrix[1]), JOURNEY_JOBS.map((job) => job.name));
+  assert.match(block, /^ {4}if: inputs\.journeys != 'none' && inputs\.journey-jobs != '\[\]'$/m);
+  assert.match(block, /mapfile -t projects < <\(node plan\.js --journey-job "\$NAME"\)/);
+  assert.match(block, /test \$SPECS "\$\{projects\[@\]\}" --retries=1 --pass-with-no-tests/);
+  // Declared for a call and for a run by hand, each with `all` by default, which the nightly matrix plays.
+  assert.equal([...workflow.matchAll(/^ {6}journey-jobs:\n(?: {8}.*\n)*? {8}default: all$/gm)].length, 2);
+  assert.match(ciWorkflow(), /^ {6}journey-jobs: \$\{\{ needs\.changes\.outputs\.journey-jobs \}\}$/m);
+  assert.match(ciWorkflow(), /^ {6}journey-jobs: \$\{\{ steps\.plan\.outputs\.journey-jobs \}\}$/m);
+});
+
+test('the plan prints the arguments of one journey job, and refuses a job it does not hold', () => {
+  const script = join(here, 'browser', 'plan.js');
+  for (const job of JOURNEY_JOBS) {
+    const printed = spawnSync(process.execPath, [script, '--journey-job', job.name], { encoding: 'utf8' });
+    assert.equal(printed.status, 0, job.name);
+    assert.deepEqual(printed.stdout.trimEnd().split('\n'), job.arguments, job.name);
+  }
+  const unknown = spawnSync(process.execPath, [script, '--journey-job', 'tablet'], { encoding: 'utf8' });
+  assert.notEqual(unknown.status, 0);
+  assert.equal(unknown.stdout, '');
+});
+
+// A Markdown-only pull request runs the light build: the build, Architecture.Tests and the pages' own tests (M4).
+test("build-and-test runs the light build when the plan says so: the build, Architecture.Tests and the pages' tests", () => {
+  const workflow = ciWorkflow();
+  assert.match(workflow, /^ {6}build: \$\{\{ steps\.plan\.outputs\.build \}\}$/m);
+  const block = jobBlock(workflow, 'build-and-test');
+  assert.match(block, /^ {4}needs: changes$/m);
+  assert.match(block, /^ {6}LIGHT_BUILD: \$\{\{ needs\.changes\.outputs\.build == 'light' \}\}$/m);
+
+  const steps = [...block.matchAll(/^ {6}- name: (.*)\n((?: {8}.*\n)*)/gm)].map((match) => ({ name: match[1], body: match[2] }));
+  const skipped = (step) => /^ {8}if: .*env\.LIGHT_BUILD != 'true'/m.test(step.body);
+  const lightOnly = (step) => /^ {8}if: .*env\.LIGHT_BUILD == 'true'/m.test(step.body);
+  assert.deepEqual(steps.filter((step) => !skipped(step)).map((step) => step.name), [
+    'Checkout',
+    'Set up .NET (version from global.json)',
+    'Restore packages and tools',
+    'Test the static pages',
+    'Build (warnings are errors)',
+    'Test the instruction files and the layering',
+    'Upload test results and coverage',
+    "Show the storage emulator's log",
+    'The learning project passed',
+  ]);
+  assert.deepEqual(steps.filter(lightOnly).map((step) => step.name), ['Test the instruction files and the layering']);
+  const architecture = steps.find(lightOnly);
+  assert.match(architecture.body, /dotnet test --no-build --configuration Release --project tests\/DownfallArena\.Architecture\.Tests$/m);
+  // Every Sonar step is off in the light build: an analysis without the tests' coverage would read as none.
+  for (const step of steps.filter((step) => step.name.includes('SonarCloud'))) assert.ok(skipped(step), step.name);
 });
 
 // Each browser job downloaded its engine, nothing cached: the install took 18 to 60 seconds a job. The system
