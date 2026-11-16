@@ -57,7 +57,7 @@ export const WORDS = {
     detail: 'Comment se joue une partie à cette table, chapitre par chapitre. Chaque nombre est celui qu’utilise cette table.',
     languages: 'Langue',
     filterLabel: 'Trouver une règle',
-    placeholder: 'sunder, stun, tempo…',
+    placeholder: 'brèche, stun, tempo…',
     loading: 'Lecture du livre de règles…',
     contents: 'Sommaire',
     whatChanged: 'Ce qui a changé',
