@@ -436,9 +436,11 @@ test('an idea is merged into another, read with everyone who asked it, planned, 
   await page.selectOption('#admin-feedback-kind', 'idea');
   await expect(page.locator('#admin-feedback-list li')).toHaveCount(3);
   await page.locator('#admin-feedback-list li', { hasText: 'Let me watch' }).locator('button').click();
+  await expect(page.locator('#admin-feedback-merge-pick')).toBeHidden();
+  await page.locator('#admin-feedback-merge').click();
   await expect(page.locator('#admin-feedback-merge-into option')).toHaveCount(3);
   await page.selectOption('#admin-feedback-merge-into', ideas.replay.id);
-  await page.locator('#admin-feedback-merge').click();
+  await page.locator('#admin-feedback-merge-confirm').click();
   await expect(page.locator('#admin-feedback-sheet-said')).toHaveText('Merged. It is read inside the idea it joined.');
   await expect(page.locator('#admin-feedback-facts')).toContainText('Merged into');
   await expect(page.locator('#admin-feedback-merge')).toBeHidden();

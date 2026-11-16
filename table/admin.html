@@ -343,13 +343,16 @@
           <button id="admin-feedback-shipped" type="button" class="secondary">Mark shipped</button>
         </div>
         <div id="admin-feedback-declining" class="player-action" hidden>
-          <label for="admin-feedback-decline-reason">Reason for declining, which its players will read<input id="admin-feedback-decline-reason" type="text" maxlength="300" placeholder="It does not fit a game for two players." autocomplete="off" /></label>
+          <label for="admin-feedback-decline-reason">Reason for declining, kept for the players who asked<input id="admin-feedback-decline-reason" type="text" maxlength="300" placeholder="It does not fit a game for two players." autocomplete="off" /></label>
           <button id="admin-feedback-declined" type="button" class="secondary">Decline</button>
         </div>
         <div id="admin-feedback-merging" class="player-action" hidden>
-          <label for="admin-feedback-merge-into">Another idea that asks the same thing<select id="admin-feedback-merge-into"></select></label>
-          <p id="admin-feedback-merge-note" class="muted"></p>
           <button id="admin-feedback-merge" type="button" class="secondary">Merge into…</button>
+          <div id="admin-feedback-merge-pick" hidden>
+            <label for="admin-feedback-merge-into">Another idea that asks the same thing<select id="admin-feedback-merge-into"></select></label>
+            <p id="admin-feedback-merge-note" class="muted"></p>
+            <button id="admin-feedback-merge-confirm" type="button" class="secondary">Merge</button>
+          </div>
         </div>
         <div id="admin-feedback-prompting" class="player-action" hidden>
           <label for="admin-feedback-prompt-text">The idea, in your words, for the plan prompt<textarea id="admin-feedback-prompt-text" rows="3" maxlength="1000"></textarea></label>

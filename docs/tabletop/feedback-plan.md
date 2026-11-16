@@ -360,9 +360,10 @@ and they are the first thing every player can use.
    to the count, a merged idea out of the list and read inside its target, a merge into a bug report or into
    itself refused, the prompt built from the operator's text (`admin-feedback.test.js`).
 
-   *Built (2026-11-16)*: a merged idea keeps its own record and names the idea it joined (`Feedback.MergedInto`).
-   So a merge writes one record, and the spam guards still count its sender. The group's idea is the end of that
-   chain, followed at each read (`FeedbackGroups`): a merge into an idea merged since joins the whole group.
+   *Built (2026-11-16)*: a merged idea keeps its own record, so the spam guards still count its sender, and names the
+   group's idea it joined (`Feedback.MergedInto`). The group's idea lists the ideas that joined it (`Feedback.Joined`).
+   Groups stay flat: merging an idea others joined moves them along, and a merge into an idea merged since joins its
+   group. A change to a group reads its records, never the whole store, under the write gate.
 
    *Asked by* counts each sender once and each deleted account apart (`FeedbackAsks`). The list filtered to ideas sorts
    by it, then by the newest ask. Merging a new idea marks it seen, so it leaves the Overview's count.
@@ -370,16 +371,17 @@ and they are the first thing every player can use.
    `POST /api/admin/feedback/<id>/merge` merges an open idea into an open idea. It refuses a bug report, the idea
    itself and its own group. A merged idea takes no status but dismissed, which takes it out of its group, so a flood
    merged by mistake is dismissed as spam and counted. It takes no kind (`Feedback.MergedAway`). An idea others
-   joined stays an idea (`Feedback.Grouped`), checked under the write gate so no merge lands in between. A player's
-   next idea within the hour is not added to one merged away.
+   joined stays an idea (`Feedback.Grouped`). A player's next idea within the hour is not added to one merged away.
 
    *Planned* takes a path shaped like the repository's plans (`PlanPath`). The plan stays until another replaces it.
    *Shipped* closes the idea; *declined* takes a reason of one line and closes it. The tending pass deletes a merged
-   idea with the idea its group became. The Activity line is `feedback.merge`.
+   idea with the group's idea, or once that one is no longer listed; one listed but unreadable keeps what joined it.
+   The Activity line is `feedback.merge`.
 
    **Copy as a plan prompt** writes the operator's words on one line with "Asked by N players since <date>". It shows
-   the prompt to select when the browser refuses the clipboard. **Merge into…** lists the first five pages of open
-   ideas, 100 at most, and says so when more are open. An idea's sheet reads every record kept, as the list does.
+   the prompt to select when the browser refuses the clipboard. **Merge into…** reads the open ideas when the
+   operator asks for them, the first five pages, 100 at most, and says so when more are open. An idea's sheet reads
+   every record kept, as the list does.
 
    Left: no undo for a merge. Merging again moves an idea to another group; dismissing takes it out. R8 will tell the
    players when their idea is shipped or declined.

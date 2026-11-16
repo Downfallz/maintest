@@ -3,9 +3,10 @@ using DownfallArena.Application.FeedbackBox.Ports;
 namespace DownfallArena.Application.FeedbackBox;
 
 /// <summary>
-/// Ideas grouped by merging (docs/tabletop/feedback-plan.md, I1). A merged idea names the one it joined, which may have
-/// been merged since: the group's idea is the end of that chain, followed at each read, so a merge writes one record.
-/// A chain that loops or names feedback no longer kept ends nowhere.
+/// Ideas grouped by merging (docs/tabletop/feedback-plan.md, I1). A merged idea names the group's idea it joined, and a
+/// merge moves the ideas that had joined it along, so a group is one idea and those that name it. The reads still follow
+/// a chain to its end, should a write have been cut short between two records; one that loops or names feedback no
+/// longer kept ends nowhere.
 /// </summary>
 internal static class FeedbackGroups
 {

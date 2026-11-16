@@ -1,4 +1,5 @@
 using DownfallArena.Application.FeedbackBox;
+using DownfallArena.Application.FeedbackBox.Ports;
 using Microsoft.Extensions.Time.Testing;
 
 namespace DownfallArena.Application.Tests.FeedbackBox;
@@ -57,5 +58,31 @@ public sealed class LetGoOfClosedFeedbackTests
 
         deleted.ShouldBe(2);
         _store.All.Select(one => one.Id).ShouldBe([open.Id, staying.Id], ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task A_merged_idea_whose_group_s_idea_cannot_be_read_is_kept()
+    {
+        var unreadable = Kept(FeedbackStatus.Seen, closed: null) with { Kind = FeedbackKind.Idea };
+        var joined = Kept(FeedbackStatus.Seen, closed: null) with { Kind = FeedbackKind.Idea, MergedInto = unreadable.Id };
+        await _store.SaveAsync(unreadable, Cancel);
+        await _store.SaveAsync(joined, Cancel);
+
+        var deleted = await new LetGoOfClosedFeedback(new Unreadable(_store, unreadable.Id), _clock).HandleAsync(Cancel);
+
+        deleted.ShouldBe(0, "a record listed but unreadable is not gone: what joined it stays");
+    }
+
+    /// <summary>A store that lists a record it cannot read, as a store does with a document that no longer parses.</summary>
+    private sealed class Unreadable(IFeedbackStore inner, string id) : IFeedbackStore
+    {
+        public Task<IReadOnlyList<string>> IdsAsync(CancellationToken cancellationToken = default) => inner.IdsAsync(cancellationToken);
+
+        public Task<Feedback?> FindAsync(string wanted, CancellationToken cancellationToken = default) =>
+            wanted == id ? Task.FromResult<Feedback?>(null) : inner.FindAsync(wanted, cancellationToken);
+
+        public Task SaveAsync(Feedback feedback, CancellationToken cancellationToken = default) => inner.SaveAsync(feedback, cancellationToken);
+
+        public Task DeleteAsync(string wanted, CancellationToken cancellationToken = default) => inner.DeleteAsync(wanted, cancellationToken);
     }
 }

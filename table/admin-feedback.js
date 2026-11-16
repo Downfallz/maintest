@@ -340,9 +340,7 @@ export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
     session.hidden = !answer.session;
     if (answer.session) session.href = answer.session;
     element('admin-feedback-joined').hidden = !answer.mergedInto;
-    const can = sheetActions(answer);
-    drawActions(can);
-    if (can.merge) void listChoices(answer.id);
+    drawActions(sheetActions(answer));
   }
 
   function drawActions(can) {
@@ -350,7 +348,8 @@ export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
     for (const [block, names] of Object.entries(BLOCKS)) element(block).hidden = !names.some(name => can[name]);
   }
 
-  // The ideas this one can join: every open idea, CHOICE_PAGES pages at most, read when its sheet offers the merge.
+  // The ideas this one can join: every open idea, CHOICE_PAGES pages at most, read when the operator asks to merge,
+  // since each page is a read of every record the host keeps.
   async function listChoices(id) {
     const asked = read;
     const select = element('admin-feedback-merge-into');
@@ -385,6 +384,7 @@ export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
     element('admin-feedback-joined').hidden = true;
     element('admin-feedback-prompt-said').textContent = '';
     element('admin-feedback-merge-note').textContent = '';
+    element('admin-feedback-merge-pick').hidden = true;
     drawActions(sheetActions(null));
   }
 
@@ -462,12 +462,17 @@ export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
   element('admin-feedback-declined').addEventListener('click', () => {
     const reason = element('admin-feedback-decline-reason').value.trim();
     if (!reason) {
-      said('Give a reason for declining it. The players who asked will read it.', true);
+      said('Give a reason for declining it. It is kept for the players who asked.', true);
       return;
     }
     void change('PUT', 'status', { status: 'declined', reason }, 'Declined.');
   });
   element('admin-feedback-merge').addEventListener('click', () => {
+    if (!open) return;
+    element('admin-feedback-merge-pick').hidden = false;
+    void listChoices(open.id);
+  });
+  element('admin-feedback-merge-confirm').addEventListener('click', () => {
     const select = element('admin-feedback-merge-into');
     if (!select.value) {
       said('Pick the idea to merge this one into.', true);

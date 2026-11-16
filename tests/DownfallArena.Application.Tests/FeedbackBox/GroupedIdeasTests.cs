@@ -98,6 +98,7 @@ public sealed class GroupedIdeasTests : IDisposable
         var joined = (await Desk().MergeAsync(late.Id, first.Id, Cancel)).Value;
 
         joined.Into.Id.ShouldBe(third.Id, "a merge into a merged idea joins the one its group became");
+        (await _store.FindAsync(first.Id, Cancel))!.MergedInto.ShouldBe(third.Id, "every merged idea names its group's idea itself");
         (await IdeasAsync()).Asks[third.Id].AskedBy.ShouldBe(4);
     }
 
@@ -261,44 +262,60 @@ public sealed class GroupedIdeasTests : IDisposable
     }
 
     [Fact]
-    public async Task An_idea_cannot_become_a_bug_report_while_another_is_merged_into_it()
+    public async Task Whether_others_joined_an_idea_is_read_off_its_own_record_not_the_whole_store()
     {
         var idea = await IdeaAsync("seat-a");
         var other = await IdeaAsync("seat-b");
-        var racing = new MergesWhileListing(_store);
-        var desk = new OperatorFeedback(racing, new FeedbackMutes(null), _writes, _clock);
-        racing.Merge = () => desk.MergeAsync(other.Id, idea.Id, Cancel);
+        var counting = new CountsListings(_store);
+        var desk = new OperatorFeedback(counting, new FeedbackMutes(null), _writes, _clock);
+        await desk.MergeAsync(other.Id, idea.Id, Cancel);
 
-        await desk.ChangeKindAsync(idea.Id, FeedbackKind.Bug, Cancel);
-        var merge = await racing.Merged!;
+        (await desk.ChangeKindAsync(idea.Id, FeedbackKind.Bug, Cancel)).Error.Code.ShouldBe("Feedback.Grouped");
 
-        racing.MergedWhileListing.ShouldBeFalse("the ideas merged into it are read under the write gate, so no merge lands in between");
-        (merge.IsFailure, (await _store.FindAsync(idea.Id, Cancel))!.Kind).ShouldBe((true, FeedbackKind.Bug));
+        counting.Listings.ShouldBe(0, "players' sending waits on the write gate: nothing under it reads every record");
+        (await _store.FindAsync(idea.Id, Cancel))!.Joined.ShouldBe([other.Id]);
     }
 
-    /// <summary>
-    /// A store whose first listing starts a merge and gives it a moment: the merge finishes there when nothing holds the
-    /// write gate, or waits for the gate when the listing is read under it.
-    /// </summary>
-    private sealed class MergesWhileListing(IFeedbackStore inner) : IFeedbackStore
+    [Fact]
+    public async Task An_idea_others_joined_takes_them_along_when_it_is_merged_and_dismissing_it_leaves_them()
     {
-        public Func<Task<DownfallArena.SharedKernel.Primitives.Result<FeedbackMerge>>>? Merge { get; set; }
+        var early = await IdeaAsync("seat-a");
+        var middle = await IdeaAsync("seat-b");
+        var group = await IdeaAsync("seat-c");
+        await Desk().MergeAsync(early.Id, middle.Id, Cancel);
+        await Desk().MergeAsync(middle.Id, group.Id, Cancel);
 
-        public Task<DownfallArena.SharedKernel.Primitives.Result<FeedbackMerge>>? Merged { get; private set; }
+        await Desk().SetStatusAsync(middle.Id, FeedbackStatus.Dismissed, Feedback.SpamReason, "mark", Cancel);
 
-        public bool MergedWhileListing { get; private set; }
+        (await _store.FindAsync(early.Id, Cancel))!.MergedInto.ShouldBe(group.Id);
+        (await _store.FindAsync(group.Id, Cancel))!.Joined.ShouldBe([early.Id]);
+        (await IdeasAsync()).Asks[group.Id].AskedBy.ShouldBe(2, "the honest player's idea stays in the group the spam left");
+    }
 
-        public async Task<IReadOnlyList<string>> IdsAsync(CancellationToken cancellationToken = default)
+    [Fact]
+    public async Task An_idea_moved_to_another_group_leaves_the_first()
+    {
+        var first = await IdeaAsync("seat-a");
+        var second = await IdeaAsync("seat-b");
+        var moving = await IdeaAsync("seat-c");
+        await Desk().MergeAsync(moving.Id, first.Id, Cancel);
+
+        await Desk().MergeAsync(moving.Id, second.Id, Cancel);
+
+        (await _store.FindAsync(first.Id, Cancel))!.Joined.ShouldBeEmpty();
+        (await _store.FindAsync(second.Id, Cancel))!.Joined.ShouldBe([moving.Id]);
+        (await Desk().ChangeKindAsync(first.Id, FeedbackKind.Bug, Cancel)).IsSuccess.ShouldBeTrue();
+    }
+
+    /// <summary>A store that counts how often every record is listed.</summary>
+    private sealed class CountsListings(IFeedbackStore inner) : IFeedbackStore
+    {
+        public int Listings { get; private set; }
+
+        public Task<IReadOnlyList<string>> IdsAsync(CancellationToken cancellationToken = default)
         {
-            var listed = await inner.IdsAsync(cancellationToken);
-            if (Merged is null && Merge is not null)
-            {
-                Merged = Merge();
-                await Task.WhenAny(Merged, Task.Delay(TimeSpan.FromMilliseconds(300), cancellationToken));
-                MergedWhileListing = Merged.IsCompleted;
-            }
-
-            return listed;
+            Listings++;
+            return inner.IdsAsync(cancellationToken);
         }
 
         public Task SaveAsync(Feedback feedback, CancellationToken cancellationToken = default) => inner.SaveAsync(feedback, cancellationToken);
