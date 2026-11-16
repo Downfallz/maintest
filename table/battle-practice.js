@@ -28,7 +28,7 @@ export function practiceBrief(label, seat) {
   return {
     title: label?.title || 'Practice',
     goal: label?.goal || 'No goal is set: play the position your way.',
-    start: `You play ${seat === 'player2' ? 'player 2' : 'player 1'} from the top of round ${label?.round ?? '—'}, against the recorded opponent.`,
+    start: `You play ${seat === 'player2' ? 'player 2' : 'player 1'} from the top of round ${label?.round ?? '—'}, against a bot.`,
     note: 'The recorded match is unchanged, and nothing played here counts: no rating, no statistics, no finished game.',
   };
 }

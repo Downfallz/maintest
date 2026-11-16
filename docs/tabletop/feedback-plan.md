@@ -1,6 +1,6 @@
 # Plan: feedback, a bug report to a regression test and an idea to a plan
 
-Status: accepted, 2026-11-16 (the owner settled the questions at the end). Nothing is built.
+Status: accepted, 2026-11-16 (the owner settled the questions at the end). R0 is built; R1 is next.
 
 ## What the owner asked for
 
@@ -277,6 +277,12 @@ and they are the first thing every player can use.
 1. **R0, the ADR and the words.** An ADR: what feedback keeps, who reads it, how long, that ideas stay with the
    host, and that only a redacted scenario leaves it, downloaded by the operator for a public issue they file by
    hand. Glossary: **Feedback**, **Bug report**, **Idea**, **Redacted scenario**, **Bug scenario**. No code.
+
+   *Built (2026-11-16)*: ADR 0189 and the five glossary terms. The ADR decides that feedback is kept at the
+   host, read by the operator only, and deleted 180 days after it is closed; that one budget guards against spam;
+   that ideas are never filed; and that a bug report leaves only as a redacted scenario the operator attaches by
+   hand. No code changed. R1 is next.
+
 2. **R1, feedback kept.** `Feedback`, `IFeedbackStore` and its two adapters, `POST /api/feedback` for both kinds
    from a seat key or a signed-in account, the host's context for a report (table, seat, round, sub-phase, journal
    length, content, rules, engine, the seat's view, a practice's entries), the guards against spam over both kinds

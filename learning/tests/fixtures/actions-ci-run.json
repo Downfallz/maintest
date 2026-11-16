@@ -1,0 +1,39 @@
+{
+  "_comment": "Two answers of the Actions API, recorded on 2026-11-16 for run 43801390732 (a complete pull-request run of CI, the plan's 117 billed minutes) and trimmed to the fields scripts/workflow-metrics.py reads: the run as /actions/runs lists it, and its jobs as /actions/runs/{id}/jobs?filter=all lists them.",
+  "runs": {
+    "total_count": 1,
+    "workflow_runs": [
+      {
+        "id": 43801390732,
+        "name": "CI",
+        "path": ".github/workflows/ci.yml",
+        "event": "pull_request",
+        "status": "completed",
+        "conclusion": "success",
+        "run_attempt": 1,
+        "created_at": "2026-11-16T04:00:00Z",
+        "updated_at": "2026-11-16T04:27:24Z"
+      }
+    ]
+  },
+  "jobs": {
+    "total_count": 15,
+    "jobs": [
+      {"id": 133082267036, "name": "What the diff calls for", "status": "completed", "conclusion": "success", "run_attempt": 1, "runner_group_name": "GitHub Actions", "labels": ["ubuntu-latest"], "started_at": "2026-11-16T04:00:03Z", "completed_at": "2026-11-16T04:00:11Z"},
+      {"id": 133082267281, "name": "Build, format check, test, analyse", "status": "completed", "conclusion": "success", "run_attempt": 1, "runner_group_name": "GitHub Actions", "labels": ["ubuntu-latest"], "started_at": "2026-11-16T04:00:02Z", "completed_at": "2026-11-16T04:08:42Z"},
+      {"id": 133082267288, "name": "Lint and test the learning project", "status": "completed", "conclusion": "success", "run_attempt": 1, "runner_group_name": "GitHub Actions", "labels": ["ubuntu-latest"], "started_at": "2026-11-16T04:00:02Z", "completed_at": "2026-11-16T04:00:19Z"},
+      {"id": 133082324527, "name": "image / Build and try the image", "status": "completed", "conclusion": "success", "run_attempt": 1, "runner_group_name": "GitHub Actions", "labels": ["ubuntu-latest"], "started_at": "2026-11-16T04:00:13Z", "completed_at": "2026-11-16T04:01:23Z"},
+      {"id": 133082324541, "name": "browser / real engine (table-desktop)", "status": "completed", "conclusion": "success", "run_attempt": 1, "runner_group_name": "GitHub Actions", "labels": ["ubuntu-latest"], "started_at": "2026-11-16T04:00:13Z", "completed_at": "2026-11-16T04:09:31Z"},
+      {"id": 133082324586, "name": "browser / battle-release", "status": "completed", "conclusion": "success", "run_attempt": 1, "runner_group_name": "GitHub Actions", "labels": ["ubuntu-latest"], "started_at": "2026-11-16T04:00:13Z", "completed_at": "2026-11-16T04:27:17Z"},
+      {"id": 133082324589, "name": "browser / journeys (phone)", "status": "completed", "conclusion": "success", "run_attempt": 1, "runner_group_name": "GitHub Actions", "labels": ["ubuntu-latest"], "started_at": "2026-11-16T04:00:13Z", "completed_at": "2026-11-16T04:12:04Z"},
+      {"id": 133082324601, "name": "browser / journeys (small-phone)", "status": "completed", "conclusion": "success", "run_attempt": 1, "runner_group_name": "GitHub Actions", "labels": ["ubuntu-latest"], "started_at": "2026-11-16T04:00:13Z", "completed_at": "2026-11-16T04:13:24Z"},
+      {"id": 133082324611, "name": "browser / journeys (desktop and tablet 1/2)", "status": "completed", "conclusion": "success", "run_attempt": 1, "runner_group_name": "GitHub Actions", "labels": ["ubuntu-latest"], "started_at": "2026-11-16T04:00:12Z", "completed_at": "2026-11-16T04:13:03Z"},
+      {"id": 133082324621, "name": "browser / real engine (table-phone)", "status": "completed", "conclusion": "success", "run_attempt": 1, "runner_group_name": "GitHub Actions", "labels": ["ubuntu-latest"], "started_at": "2026-11-16T04:00:13Z", "completed_at": "2026-11-16T04:04:42Z"},
+      {"id": 133082324671, "name": "browser / journeys (desktop and tablet 2/2)", "status": "completed", "conclusion": "success", "run_attempt": 1, "runner_group_name": "GitHub Actions", "labels": ["ubuntu-latest"], "started_at": "2026-11-16T04:00:13Z", "completed_at": "2026-11-16T04:20:51Z"},
+      {"id": 133091052129, "name": "gate", "status": "completed", "conclusion": "success", "run_attempt": 1, "runner_group_name": "GitHub Actions", "labels": ["ubuntu-latest"], "started_at": "2026-11-16T04:27:19Z", "completed_at": "2026-11-16T04:27:23Z"},
+      {"id": 133091086585, "name": "deploy", "status": "completed", "conclusion": "skipped", "run_attempt": 1, "started_at": "2026-11-16T04:27:24Z", "completed_at": "2026-11-16T04:27:24Z"},
+      {"id": 133091087143, "name": "showcase", "status": "completed", "conclusion": "skipped", "run_attempt": 1, "started_at": "2026-11-16T04:27:24Z", "completed_at": "2026-11-16T04:27:24Z"},
+      {"id": 133091087630, "name": "Say so when main is red", "status": "completed", "conclusion": "skipped", "run_attempt": 1, "labels": ["ubuntu-latest"], "started_at": "2026-11-16T04:27:24Z", "completed_at": "2026-11-16T04:27:24Z"}
+    ]
+  }
+}

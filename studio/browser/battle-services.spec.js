@@ -303,7 +303,7 @@ test('a scenario opens as practice from its cut, says so over the field, and res
   await expect(brief).toBeVisible();
   await expect(page.locator('#practice-brief-title')).toHaveText('Bleed after a stun');
   await expect(page.locator('#practice-brief-goal')).toHaveText('Keep Creature 5 alive');
-  await expect(page.locator('#practice-brief-start')).toHaveText('You play player 2 from the top of round 4, against the recorded opponent.');
+  await expect(page.locator('#practice-brief-start')).toHaveText('You play player 2 from the top of round 4, against a bot.');
   await page.screenshot({ path: info.outputPath('practice-brief.png') });
   await page.locator('#practice-brief-begin').click();
   await expect(brief).toBeHidden();

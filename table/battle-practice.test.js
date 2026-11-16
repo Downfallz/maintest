@@ -48,7 +48,7 @@ test('the briefing names the practice, what it asks, the seat played and where i
   assert.deepEqual(brief, {
     title: 'Bleed after a stun',
     goal: 'Keep Creature 2 alive',
-    start: 'You play player 2 from the top of round 4, against the recorded opponent.',
+    start: 'You play player 2 from the top of round 4, against a bot.',
     note: 'The recorded match is unchanged, and nothing played here counts: no rating, no statistics, no finished game.',
   });
 });
