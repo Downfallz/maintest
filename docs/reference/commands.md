@@ -136,14 +136,16 @@ critical chance off the d20's twentieths and a creature with a chance of its own
 ### rules/build.mjs
 
 ```bash
-node scripts/rules/build.mjs            # build rules/ into table/rules.json, or list what it refuses and exit 1
-node scripts/rules/build.mjs --check    # exit 1 when table/rules.json is not the build of rules/
+node scripts/rules/build.mjs            # build rules/ into table/rules.json and rules.fr.json, or list what it refuses and exit 1
+node scripts/rules/build.mjs --check    # exit 1 when either file is not the build of rules/
 ```
 
 The official rulebook (ADR 0188, `rules/README.md`). It draws the book's values from the hosted rule set, the
 reference creature and the spells, refuses a duplicate or vanished id, an unresolved value, a retired word, a
-missing source, a dead `/rules#<id>` link and an unknown card, and writes the book as data. `table/rules.test.js`
-fails when the committed file is not its build; `UPDATE_INDEXES=1` with that test rewrites it too. The table serves
+missing source, a dead `/rules#<id>` link and an unknown card, and writes the book as data. It builds the French
+edition, `rules/fr/`, into `table/rules.fr.json`, and refuses a French book whose files, ids, order, sources, cards
+or changes differ from the English, or that uses an English word the French column replaced (ADR 0193).
+`table/rules.test.js` fails when a committed file is not its build; `UPDATE_INDEXES=1` with that test rewrites it too. The table serves
 the book at `/rules` (see [The lobby and the pages](#the-lobby-and-the-pages)).
 
 ### rules/reach.mjs
@@ -154,7 +156,8 @@ git diff origin/main... | node scripts/rules/reach.mjs   # the sections of the b
 
 What `/rules` and the `rules-keeper` start from. A section is reached by an ADR or a `game-rules.md` heading its
 `sources:` line cites, by a value it draws (a spell, a mutation, a field of the hosted rule set, a stat of the
-reference creature), by a spell or a mutation it names, and by a change to its own lines. A path that calls for the
+reference creature), by a spell or a mutation it names, and by a change to its own lines. The French edition's
+sections are read beside the English and marked `[fr]`. A path that calls for the
 keeper and reaches no section (the domain, the words, the pages' rule text) is listed to be read by hand. A line
 removed just above a heading counts for the section it ended. Input that is not a unified diff (nothing, or
 `--name-only`) is refused, never read as nothing reached. `table/rules-reach.test.js` tests it, and runs it on an
@@ -450,7 +453,8 @@ The seat's view says the lesson under `practice.tutorial`:
 - `/rules` is the official rulebook (ADR 0188), open to anyone: `rules.html` reads `table/rules.json` and draws its
   contents, every part and section, the concept cards and What changed. `/rules#<id>` opens a section, a part, an
   id `rules/moved.json` redirects, or a concept card's section, at the top of the screen; the filter keeps the
-  sections whose title or text hold every word typed. **Rules** is in the main menu. The service worker keeps the
+  sections whose title or text hold every word typed. It reads in English or in French (`table/rules.fr.json`, ADR
+  0193): the language stored on the device, else the browser's, and two buttons switch. **Rules** is in the main menu. The service worker keeps the
   page and the book, asks the network first and gives its copy only when the host cannot be reached or, for the
   rulebook's own files, answers with a server error, as Cloudflare does for a host that is down (ADR 0191).
 - `/lobby?token=...` still redirects to admin.

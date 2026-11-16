@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readDiff, reach, sectionsOf } from '../scripts/rules/reach.mjs';
+import { readDiff, reach, report, sectionsOf } from '../scripts/rules/reach.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -222,6 +222,17 @@ test('what no section draws or cites is listed for a reading by hand, and the re
   const { sections, unmapped } = reached(diff);
   assert.deepEqual(sections.map(section => section.id), ['energy-gain', 'damage']);
   assert.deepEqual(unmapped, ['src/DownfallArena.Domain/Matches/Match.cs', 'table/terms.js']);
+});
+
+test('the French edition is reached beside the English, by its sources and its own lines, and marked [fr]', () => {
+  const french = [{ file: 'fr/01-the-goal.md', text: PARTS[0].text }, { file: 'fr/02-the-round.md', text: PARTS[1].text.replace('# The round', '# Le round').replace('## Energy gain', '## Gain d’Énergie') }];
+  const both = { ...given, sections: [...given.sections, ...sectionsOf(french)] };
+  const byAdr = reach(readDiff(diffOf('docs/adr/0114-a-shared-package-is-held-by-the-whole-side.md', { added: ['x'] })), both);
+  assert.deepEqual(byAdr.sections.map(section => [section.id, section.file]), [['energy-gain', '02-the-round.md'], ['energy-gain', 'fr/02-the-round.md']]);
+  assert.match(report(byAdr), /^2\.1 energy-gain \[fr\] \(Gain d’Énergie\): cites ADR 0114$/m);
+  const own = reach(readDiff(diffOf('rules/fr/02-the-round.md', { at: 5, added: ['Chaque créature vivante gagne.'] })), both);
+  assert.deepEqual(own.sections.map(section => [section.id, section.file, section.why]), [['energy-gain', 'fr/02-the-round.md', ['changed in the book']]]);
+  assert.deepEqual(own.unmapped, []);
 });
 
 test('on the real book, an excerpt of a past balance pass reaches the section that teaches the shared Archmage', () => {

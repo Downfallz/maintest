@@ -5,15 +5,15 @@ The rulebook a player reads, the app's edition (ADR 0188, [rulebook-plan.md](../
 the player's words ([player-terminology.md](../docs/domain/player-terminology.md)). The tabletop draft,
 [rulebook.md](../docs/tabletop/rulebook.md), is the base it is written from.
 
-`scripts/rules/build.mjs` builds it into `table/rules.json`, which is committed. After a change here, to a value it
-draws, or to an id the pages link to:
+`scripts/rules/build.mjs` builds it into `table/rules.json`, and its French edition, `fr/`, into
+`table/rules.fr.json`; both are committed. After a change here, to a value it draws, or to an id the pages link to:
 
 ```bash
-node scripts/rules/build.mjs            # rebuild table/rules.json, or list what it refuses
-node scripts/rules/build.mjs --check    # is table/rules.json the build of rules/?
+node scripts/rules/build.mjs            # rebuild table/rules.json and rules.fr.json, or list what it refuses
+node scripts/rules/build.mjs --check    # are both the build of rules/?
 ```
 
-`table/rules.test.js`, in the gate, fails when the file is out of date. The file records the whole hosted rule set
+`table/rules.test.js`, in the gate, fails when either file is out of date. The file records the whole hosted rule set
 it was drawn from, so any change to `docs/tabletop/playtest.rules.json` calls for a rebuild too.
 
 ## Keeping it true
@@ -35,6 +35,7 @@ line.
 - `NN-<name>.md`: one file a Part, in teaching order. The number is the file's place, never written in it.
 - `moved.json`: `{ "old-id": "new-id" }`, for a section removed or renamed, so an old link still lands.
 - `changes.md`: what changed for a player, one line each: `- YYYY-MM-DD: what changed (ADR NNNN).`
+- `fr/`: the French edition (ADR 0193), below.
 
 ## The format
 
@@ -81,3 +82,18 @@ One to three lines.
   one to three lines and its example. The battle's tutorials read it from here (`table/concepts.js`) and link it to
   its section, and `RulebookConceptCardsTests` holds the book's cards to `ConceptCards.Ids` both ways.
 - **Words.** The player's words only. An engine or legacy word that `player-terminology.md` replaced is refused.
+
+## The French edition
+
+`fr/` is the same book in French (ADR 0193): the same file names, and in each the same ids, the same sections in the
+same order, the same `sources:` lines and the same cards (`id:` and `title:` stay the field names), every value
+written as in English (the build writes a decimal comma). `fr/changes.md` opens with `# Ce qui a changé` and
+translates `changes.md` line for line, with the same dates and ADRs. The build refuses any difference.
+
+- **Words.** The French column of `player-terminology.md`: Entretien, Commandement, Combat, Retombées, Stade,
+  Grimoire, Précision, Évolution, Créature. The build refuses the English word where the French one differs, and the
+  engine's words as in English.
+- **Names.** Spells and mutations keep the names the battle shows, in English.
+- **A change to the English** is a change to the French in the same pull request: a section added, moved, re-sourced
+  or given a card fails the build until the French follows; a sentence reworded does not, so `reach.mjs` lists each
+  French section beside the English one, marked `[fr]`, and `/rules` rewrites both.

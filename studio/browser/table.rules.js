@@ -3,7 +3,8 @@ import { startHost, stopHost } from './host.js';
 
 // The rulebook offline (ADR 0191), on the real host: the service worker is at the root there, as in production. A
 // reader who opened the rules once reads them again, at any deep link, once the host cannot be reached at all; any
-// other page is still the offline page. The host is the reader's own each time, since the test stops it.
+// other page is still the offline page, and the other language of the book is kept too (R6). The host is the
+// reader's own each time, since the test stops it.
 
 test('the rulebook read once is read again at a deep link with the host gone, and any other page is the offline page', async ({ page }) => {
   const { host, join } = await startHost('at-activation');
@@ -19,6 +20,10 @@ test('the rulebook read once is read again at a deep link with the host gone, an
     await reader.goto(`${origin}/rules#sunder`);
 
     await expect(reader.locator('body')).toHaveAttribute('data-rules', 'ready');
+    await expect(reader.locator('#sunder h3')).toBeInViewport();
+    // The other language was kept too.
+    await reader.getByRole('button', { name: 'Français' }).click();
+    await expect(reader.locator('body')).toHaveAttribute('data-language', 'fr');
     await expect(reader.locator('#sunder h3')).toBeInViewport();
     await expect(reader.getByRole('link', { name: 'Downfall Instinct home' })).toBeVisible();
     await reader.goto(`${origin}/leaderboard`);

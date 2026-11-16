@@ -7,6 +7,8 @@
 // mutation, a field of the hosted rule set, a stat of the reference creature), by a spell or a mutation it names,
 // and by a change to its own lines. A path that calls for the keeper (scripts/review/reviewers.mjs) and reaches no
 // section is listed for a reading by hand: the domain, the words, the pages' rule text, a rule no section teaches.
+// The French edition (rules/fr/) is read beside the English: its sections cite and draw the same, so a change
+// reaches both, and the report marks the French ones [fr].
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -221,7 +223,8 @@ export function reach(changes, given) {
 
 /** The report: one line a section reached, then the paths to read by hand. */
 export function report({ sections, unmapped }) {
-  const lines = sections.map(section => `${section.number} ${section.id} (${section.title}): ${section.why.join(', ')}`);
+  const edition = section => (section.file.startsWith('fr/') ? ' [fr]' : '');
+  const lines = sections.map(section => `${section.number} ${section.id}${edition(section)} (${section.title}): ${section.why.join(', ')}`);
   if (sections.length === 0) lines.push('No section of the book draws or cites what this change touches.');
   if (unmapped.length > 0) lines.push('', 'Read by hand: no section draws or cites these.', ...unmapped.map(path => `- ${path}`));
   return `${lines.join('\n')}\n`;
@@ -229,9 +232,10 @@ export function report({ sections, unmapped }) {
 
 function main() {
   const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-  const rules = join(root, 'rules');
-  const parts = readdirSync(rules).filter(name => /^\d{2}-[a-z0-9-]+\.md$/.test(name)).sort()
-    .map(file => ({ file, text: readFileSync(join(rules, file), 'utf8') }));
+  // The English parts, then the French ones as `fr/<file>`, numbered as the English.
+  const partsIn = folder => (existsSync(join(root, folder)) ? readdirSync(join(root, folder)) : []).filter(name => /^\d{2}-[a-z0-9-]+\.md$/.test(name)).sort()
+    .map(file => ({ file, text: readFileSync(join(root, folder, file), 'utf8') }));
+  const french = partsIn('rules/fr').map(part => ({ ...part, file: `fr/${part.file}` }));
   const content = path => {
     const file = join(root, path);
     if (!existsSync(file)) return null;
@@ -241,7 +245,7 @@ function main() {
       return null;
     }
   };
-  const given = { sections: sectionsOf(parts), gameRules: readFileSync(join(root, GAME_RULES), 'utf8'), content };
+  const given = { sections: [...sectionsOf(partsIn('rules')), ...sectionsOf(french)], gameRules: readFileSync(join(root, GAME_RULES), 'utf8'), content };
   const input = readFileSync(0, 'utf8');
   const changes = readDiff(input);
   // Empty or bare paths must never read as "nothing reached": /rules would then write "Rulebook: none".

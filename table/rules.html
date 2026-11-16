@@ -21,26 +21,30 @@
   </header>
   <main class="lobby-main rules-main">
     <section class="lobby-hero rules-hero" aria-labelledby="rules-title">
-      <div><p class="eyebrow">The official rulebook</p><h2 id="rules-title">The rules.</h2><p class="hero-detail">How a match is played at this table, part by part. Every number is the one this table uses.</p></div>
+      <div><p class="eyebrow" data-words="eyebrow">The official rulebook</p><h2 id="rules-title" data-words="heading">The rules.</h2><p class="hero-detail" data-words="detail">How a match is played at this table, part by part. Every number is the one this table uses.</p></div>
+      <div id="rules-languages" class="rules-languages" role="group" aria-label="Language">
+        <button type="button" class="rules-language" data-language="en" lang="en" aria-pressed="true">English</button>
+        <button type="button" class="rules-language" data-language="fr" lang="fr" aria-pressed="false">Français</button>
+      </div>
     </section>
     <form id="rules-filter-form" class="rules-filter" role="search">
-      <label for="rules-filter">Find a rule</label>
+      <label for="rules-filter" data-words="filterLabel">Find a rule</label>
       <input id="rules-filter" type="search" autocomplete="off" spellcheck="false" placeholder="sunder, stun, tempo…" />
       <output id="rules-status" class="muted" for="rules-filter" aria-live="polite"></output>
     </form>
-    <p id="rules-loading" class="muted">Reading the rulebook…</p>
+    <p id="rules-loading" class="muted" data-words="loading">Reading the rulebook…</p>
     <p id="rules-problem" class="problem" role="alert" hidden></p>
     <div class="rules-layout">
       <nav id="rules-contents" class="rules-contents" aria-labelledby="rules-contents-title" tabindex="-1">
-        <h2 id="rules-contents-title">Contents</h2>
+        <h2 id="rules-contents-title" data-words="contents">Contents</h2>
         <ol id="rules-contents-list" class="rules-contents-parts"></ol>
-        <p class="rules-contents-changes"><a href="#what-changed">What changed</a></p>
+        <p class="rules-contents-changes"><a href="#what-changed" data-words="whatChanged">What changed</a></p>
       </nav>
       <div class="rules-text">
         <article id="rules-book" class="rules-book" aria-labelledby="rules-title"></article>
         <section id="what-changed" class="rules-changes" aria-labelledby="rules-changes-title">
           <div id="rules-changes">
-            <h2 id="rules-changes-title" tabindex="-1">What changed</h2>
+            <h2 id="rules-changes-title" tabindex="-1" data-words="whatChanged">What changed</h2>
             <ul id="rules-changes-list" class="rules-changes-list"></ul>
           </div>
           <p id="rules-drawn" class="rules-drawn muted"></p>

@@ -101,8 +101,9 @@ and Speed, Quick, Standard or Planning as a capitalised label; or a sentence the
 The content studio is an authoring tool and keeps the content's own words (Tier, level) where they name the file
 being edited.
 
-French is documented here and not yet shipped: the pages have no localization layer, and this change does
-not introduce one.
+French ships in one place: the official rulebook's French edition (`rules/fr/`, ADR 0193), whose build refuses
+an English word where this page's FR column has another. The pages have no localization layer; `/rules` alone
+reads in French.
 
 ## Unchanged names
 
