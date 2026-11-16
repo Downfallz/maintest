@@ -5,10 +5,11 @@ Status: Accepted (settled by the owner, docs/engineering/ci-minutes-plan.md ques
 
 ## Context
 
-The release job played two complete 3v3 matches in each of three profiles, one test at a time, in one job: 25 of
-its 27 minutes, the longest job of a complete run and every other job done 7 minutes before it. Two of the three
-profiles repeat what the real-engine journeys already play: release-desktop is table-desktop's Chromium at the
-same viewport, and release-android is Chromium on an emulated phone, as table-phone is. Only release-ios brings an
+One job played two complete 3v3 matches in each of three profiles, one test at a time. It took 27 minutes, 25
+of them in those matches. It was the longest job of a complete run: every other job finished 7 minutes before
+it. Two of the three profiles repeat the engine the real-engine journeys already play, Chromium:
+release-desktop is table-desktop's browser at the same viewport, and release-android is Chromium on an emulated
+phone, as table-phone is. Only release-ios brings an
 engine no other job plays, WebKit. A private repository is billed these minutes (the plan's budget), and every
 pull request waits for them.
 
@@ -30,8 +31,8 @@ one job per profile, side by side, each installing only its own engine and keepi
   deployment.
 - Bad: a change that breaks only the Chromium release profiles (their budgets in Chromium, the 1440 px release
   screenshots) is found after its merge, by `main`'s run, which then holds the deployment and opens `red-main`.
-- Bad: the three jobs on `main` each install, build the engine and the bundle: the same minutes as one job, a
-  little more set-up.
+- Bad: the three jobs on `main` each install, build the engine and the bundle: the same play minutes as one
+  job, plus two more set-ups, each a few billed minutes (not yet measured).
 - Neutral: the profiles the matrix names are held against `battle.release.config.js` by
   `studio/browser-suite.test.js`; a profile added there and not here fails that test.
 

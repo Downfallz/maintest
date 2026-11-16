@@ -256,6 +256,17 @@ def test_a_workflow_other_than_ci_counts_in_its_own_line_and_not_in_cis_groups(m
     assert result["per_ci_run"] == 1
 
 
+def test_each_release_profiles_job_counts_in_the_battle_release_group(metrics: ModuleType) -> None:
+    # ADR 0190: the release job is one job per profile, named after it; CI calls it as "browser".
+    workflow = (REPO_ROOT / ".github" / "workflows" / "studio-browser.yml").read_text()
+    job = workflow[workflow.index("\n  battle-release:\n") :]
+    name = next(line.split("name: ", 1)[1] for line in job.splitlines() if line.startswith("    name: "))
+
+    for profile in ("release-desktop", "release-android", "release-ios"):
+        shown = "browser / " + name.replace("${{ matrix.profile }}", profile)
+        assert metrics.job_group(shown) == "battle-release", shown
+
+
 def test_a_job_no_group_names_is_counted_as_other(metrics: ModuleType) -> None:
     api = FakeApi(
         {"2026-11-16": [run(1)]}, {1: [job("a new job", "2026-11-16T04:00:00Z", "2026-11-16T04:02:00Z")]}

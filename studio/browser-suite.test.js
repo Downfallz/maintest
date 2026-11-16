@@ -180,7 +180,7 @@ test('the local gate rebuilds the battle bundle for a table module the bundle ma
 });
 
 test('the local gate runs the learning project for what its lint and tests read', () => {
-  for (const path of ['learning/src/downfall_learning/clone.py', 'scripts/sweep-weight.py', 'scripts/iterate.sh', 'viewer/samples/evaluation.json', 'studio/value.fixture.json', 'data/README.md']) {
+  for (const path of ['learning/src/downfall_learning/clone.py', 'scripts/sweep-weight.py', 'scripts/iterate.sh', 'viewer/samples/evaluation.json', 'studio/value.fixture.json', 'data/README.md', '.github/workflows/studio-browser.yml']) {
     assert.deepEqual(gate([path]), { battle: false, learning: true, content: false }, path);
   }
 });

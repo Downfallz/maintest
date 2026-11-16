@@ -17,8 +17,8 @@ journey is found before the pull request. Arguments: $ARGUMENTS (`--all` for eve
      | sort -u | node studio/browser/plan.js --pull-request
    ```
 
-   `journeys` is `none`, `all`, or spec files; `real-engine` is the other job; `release` is `none`, or `webkit`:
-   a pull request plays release-ios alone, and `main` the three profiles (ADR 0190). Nothing called for: say so
+   `journeys` is `none`, `all`, or spec files; `real-engine` is the other job; `release` is `none` or `webkit`:
+   a pull request plays release-ios alone (without the flag, `all`: `main` plays the three profiles, ADR 0190). Nothing called for: say so
    and stop.
 2. Prepare once: `npm --prefix studio/browser ci --ignore-scripts`, and the battle bundle
    (`npm --prefix battle ci --ignore-scripts && npm --prefix battle run build`) if `table/battle-build/` is

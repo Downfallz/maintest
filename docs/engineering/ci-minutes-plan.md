@@ -155,11 +155,13 @@ complete runs.
 
    *Built (2026-11-16)*: the number became ADR 0190, 0188 being the rulebook's. `plan.js` returns `release` as
    `none`, `webkit` or `all`; `--pull-request`, which `ci.yml` passes on a pull request, narrows `all` to
-   `webkit`, and a push, the nightly and a run by hand play `all`. `studio-browser.yml` takes `release` as that
-   string (a choice when asked by hand), and `battle-release` is a matrix of one job per profile, each installing
-   its own engine and keeping its artifact `battle-release-<profile>`. `browser-suite.test.js` holds the plan on
-   a pull request and on `main`, the matrix's profiles against `battle.release.config.js`, and `ci.yml`'s flag.
-   `/browser-check` reads the pull request's plan.
+   `webkit`, and a push, the nightly and a run by hand play `all`. `studio-browser.yml` takes `release` as one
+   of those three values (a choice list when the run is started by hand), and `battle-release` is a matrix of
+   one job per profile, each installing its own engine and keeping its artifact `battle-release-<profile>`.
+   `browser-suite.test.js` holds the plan on a pull request and on `main`, the matrix's profiles against
+   `battle.release.config.js`, and `ci.yml`'s flag. The jobs are named `battle-release (<profile>)`, which the
+   meter's `battle-release` group reads (`test_workflow_minutes.py` holds it). `/browser-check` and
+   `scripts/verify.sh` read the pull request's plan.
 
    Not done: release-desktop is not dropped on `main` where table-desktop plays the same spec, since the owner
    keeps the three profiles before the deployment (question 3). Not measured: the saving; the first `/retro`
