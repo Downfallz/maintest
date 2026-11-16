@@ -833,3 +833,13 @@ python3 scripts/workflow-metrics.py
 ```
 
 The numbers of docs/engineering/ai-workflow-plan.md measured again: git readings first, `--github` for the rest.
+
+| Flag | Default | What it does |
+| --- | --- | --- |
+| `--last <n>` | 300 | The last pull requests merged on `origin/main` that the git readings and `--github` read |
+| `--github` | off | How long a pull request stays open, merged before green, CI on `main`. Needs `GITHUB_TOKEN` |
+| `--minutes` | off | The Actions minutes a private repository would be billed. Each job counts from start to end, rounded up to the minute. Reports per workflow and per group of CI's jobs, the cancelled jobs' share and a month's estimate. Jobs on a runner of the project's own are counted apart. Needs `GITHUB_TOKEN`, a session's or a person's: a workflow's own allows 1,000 requests an hour, about one busy week |
+| `--days <n>` | 7 | The window `--minutes` reads: whole UTC days ending yesterday |
+
+`/retro` reports `--minutes` each week (docs/engineering/ci-minutes-plan.md, M1), so each later stage shows the
+minutes it saved.
