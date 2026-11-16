@@ -211,5 +211,6 @@ UPDATE_INDEXES=1 dotnet test --project tests/DownfallArena.Architecture.Tests
 | [0186](0186-read-production-through-an-identity-that-cannot-write.md) | Read production through an identity that cannot write | Accepted |
 | [0187](0187-teach-by-tutorials-cut-from-repository-scenarios.md) | Teach by tutorials cut from repository scenarios | Accepted |
 | [0188](0188-build-the-official-rulebook-from-rules.md) | Build the official rulebook from rules/ | Accepted (settled by the owner, docs/tabletop/rulebook-plan.md) |
+| [0189](0189-keep-player-feedback-at-the-host-and-file-only-a-redacted-scenario.md) | Keep player feedback at the host and file only a redacted scenario | Accepted |
 
 <!-- index:end -->
