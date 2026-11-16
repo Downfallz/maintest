@@ -64,9 +64,11 @@ internal static class GeneratedIndexes
             return string.Empty;
         }
 
-        // A status may run over several lines: it ends at the blank line, the date or the section after it.
+        // A status may run over several lines: it ends at the blank line, the date, the template's Rulebook line or
+        // the section after it.
         var paragraph = lines.Skip(first).TakeWhile((line, index) => index == 0 || (line.Length > 0
             && !line.StartsWith("Date:", StringComparison.Ordinal)
+            && !line.StartsWith("Rulebook:", StringComparison.Ordinal)
             && !line.StartsWith('#')));
         return string.Join(' ', paragraph.Select(line => line.Trim()))["Status: ".Length..];
     }

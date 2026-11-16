@@ -96,6 +96,23 @@ public sealed partial class AdrFileTests
         }
     }
 
+    [Fact]
+    public void The_rulebook_line_under_the_status_is_not_part_of_it()
+    {
+        var record = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}", "0042-keep-it.md");
+        System.IO.Directory.CreateDirectory(Path.GetDirectoryName(record)!);
+        try
+        {
+            File.WriteAllLines(record, ["# 0042. Keep it", "", "Date: 2026-01-01", "Status: Accepted", "Rulebook: `tempo`", "", "## Context"]);
+
+            GeneratedIndexes.AdrTable([record]).ShouldEndWith("| [0042](0042-keep-it.md) | Keep it | Accepted |\n");
+        }
+        finally
+        {
+            System.IO.Directory.Delete(Path.GetDirectoryName(record)!, recursive: true);
+        }
+    }
+
     private static IEnumerable<string> Records() =>
         System.IO.Directory.EnumerateFiles(Directory, "*.md")
             .Where(path => RecordName().IsMatch(Path.GetFileName(path)) && Path.GetFileName(path) != Template);
