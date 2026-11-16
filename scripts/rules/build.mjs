@@ -229,7 +229,8 @@ function tableRows(text, isHeader) {
   return rows;
 }
 
-const wordPattern = (phrase, suffix, flags) => new RegExp(String.raw`\b${phrase.split(/\s+/).join(String.raw`\s+`)}${suffix}\b`, flags);
+const SPACES = String.raw`\s+`;
+const wordPattern = (phrase, suffix, flags) => new RegExp(String.raw`\b${phrase.split(/\s+/).join(SPACES)}${suffix}\b`, flags);
 
 // The words a row of the "Internal" tables retires: its legacy word, and the engine's names in its code spans.
 function rowCandidates(internal, legacy) {
@@ -325,19 +326,41 @@ class Build {
     return { text: label, href };
   }
 
+  // The markup that opens at `at`, as its span and where it ends, or null: **bold**, *italics*, [a link](href).
+  markup(text, at, where) {
+    if (text.startsWith('**', at)) {
+      const end = text.indexOf('**', at + 2);
+      return end > at + 2 ? { span: { text: text.slice(at + 2, end), strong: true }, next: end + 2 } : null;
+    }
+    if (text[at] === '*') {
+      const end = text.indexOf('*', at + 1);
+      return end > at + 1 ? { span: { text: text.slice(at + 1, end), emphasis: true }, next: end + 1 } : null;
+    }
+    const middle = text[at] === '[' ? text.indexOf('](', at + 1) : -1;
+    const end = middle > at + 1 ? text.indexOf(')', middle + 2) : -1;
+    const href = end > middle + 2 ? text.slice(middle + 2, end) : '';
+    if (!href || /\s/.test(href) || text.slice(at + 1, middle).includes(']')) return null;
+    return { span: this.link(text.slice(at + 1, middle), href, where), next: end + 1 };
+  }
+
   // Bold, italics and links, as spans of text.
   spans(raw, where) {
     const text = this.resolve(raw, where);
     const out = [];
-    let last = 0;
-    for (const match of text.matchAll(/\*\*([^*]+)\*\*|\*([^*]+)\*|\[([^\]]+)\]\(([^)\s]+)\)/g)) {
-      if (match.index > last) out.push({ text: text.slice(last, match.index) });
-      if (match[1] !== undefined) out.push({ text: match[1], strong: true });
-      else if (match[2] !== undefined) out.push({ text: match[2], emphasis: true });
-      else out.push(this.link(match[3], match[4], where));
-      last = match.index + match[0].length;
+    let plain = '';
+    let at = 0;
+    while (at < text.length) {
+      const found = text[at] === '*' || text[at] === '[' ? this.markup(text, at, where) : null;
+      if (!found) {
+        plain += text[at++];
+        continue;
+      }
+      if (plain) out.push({ text: plain });
+      out.push(found.span);
+      plain = '';
+      at = found.next;
     }
-    if (last < text.length) out.push({ text: text.slice(last) });
+    if (plain) out.push({ text: plain });
     if (out.some(span => !span.href && MARKUP_LEFT.test(span.text))) this.refuse(`${where}: markup the subset does not read (a lone *, a [ or a titled link)`);
     return out;
   }
