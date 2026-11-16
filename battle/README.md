@@ -156,6 +156,8 @@ opponent turns, sent choices, lost connections and recorded playback have separa
 The **Help** button opens the current explanation and a four-phase round guide. The next mutation
 opportunity comes from `board.nextEvolutionRound`; the guide follows the catalogue's declaration mode, where
 a stamp that names none plays hidden intents (ADR 0110), and names creatures the way the scene does.
+**Read the rules** opens the official rulebook in a new tab, at the section the tip shortens (`/rules#tempo`) or,
+with no tip, at the round (rulebook-plan.md R4); the build of the book refuses a link to a section it lacks.
 
 Each instructional subject opens automatically once in each game, after playback and other dialogs have settled
 ([ADR 0142](../docs/adr/0142-teach-each-phase-once-per-game.md)). **Phase tips** in Game settings turns them on
@@ -844,8 +846,11 @@ A practice whose view carries `practice.tutorial` is a tutorial (ADR 0187, docs/
   heading or at the top of the command sheet. The field over a docked sheet is too short to carry it. The card steps
   aside while results are read and while targets are chosen on the field. What the step points at, a creature or
   a control (`CONTROLS`, held to the host's `LessonControls.Names`), carries `data-coach="true"` and a gold ring.
-- A step opens its concept cards (`#concept-dialog`, text from `table/concepts.js`) once, before the question's own
-  sheet, one after the other. The coach card's buttons open a card again. Nothing is kept: a reload opens them again.
+- A step opens its concept cards (`#concept-dialog`) once, before the question's own sheet, one after the other.
+  The coach card's buttons open a card again. Nothing is kept: a reload opens them again. The cards are read from
+  the rulebook the table serves (`rules.json`, through `table/concepts.js`) once a tutorial shows; until then, or
+  when it cannot be read, a step shows without them. A card's label links to its section of `/rules`, in a new tab,
+  so the battle stays on its question (rulebook-plan.md R4).
 - An assisted question is not drawn: `withoutAssisted` gives the view without its question, so no sheet, command
   or tip shows for a question kind listed in `assisted`. Once the host hands the questions back, that list is empty.
 - The phase tips are silent (`battleGuidance` returns no topic in a tutorial). Help keeps the round guide.

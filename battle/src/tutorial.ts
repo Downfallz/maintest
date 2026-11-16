@@ -1,8 +1,8 @@
 import { coachCard, leavePath, leavingSkips, progressPath, tutorialBand, tutorialBrief, tutorialOf } from '../../table/battle-tutorial.js';
-import { conceptCard } from '../../table/concepts.js';
+import { NO_CONCEPTS, RULES_BOOK, loadConcepts } from '../../table/concepts.js';
 
 type Coach = NonNullable<ReturnType<typeof coachCard>>;
-type Concept = NonNullable<ReturnType<typeof conceptCard>>;
+type Concept = Coach['cards'][number];
 const el = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const text = (id: string, value: string) => { if (el(id).textContent !== value) el(id).textContent = value; };
 const paragraphs = (lines: readonly string[]) => lines.map(line => { const p = document.createElement('p'); p.textContent = line; return p; });
@@ -10,13 +10,28 @@ const paragraphs = (lines: readonly string[]) => lines.map(line => { const p = d
 /**
  * The coach of a tutorial (ADR 0187): the band's words, the card of the lesson step the question asked shows, and
  * the concept cards that step opens, once, before the question's own sheet. Nothing is kept: a card opens when its
- * step first shows on this page, and again from the coach card.
+ * step first shows on this page, and again from the coach card. The cards are read from the rulebook the table
+ * serves (rulebook-plan.md R4), and each links to its section in a new tab, so the battle stays on its question.
  */
 export function tutorialControls(onChange: () => void, request: (path: string, options?: RequestInit) => Promise<Response>) {
   const dialog = el<HTMLDialogElement>('concept-dialog'), coach = el('coach');
   let shown: Coach | null = null, key = '', queue: Concept[] = [], pointed: HTMLElement[] = [];
-  let latest: unknown = null, doneSaid = false;
+  let latest: unknown = null, doneSaid = false, concepts = NO_CONCEPTS, asked = false;
   const opened = new Set<string>();
+  /**
+   * Reads the rulebook's cards once a tutorial shows, and not in a game; until they are there a step shows without
+   * them. Read, the coach card is drawn again with them, and a step whose cards have not opened yet opens them. Not
+   * read (offline, the host not reached), the next practice asks again.
+   */
+  async function readConcepts() {
+    if (asked) return;
+    asked = true;
+    concepts = await loadConcepts(async () => {
+      const response = await request(new URL(RULES_BOOK, document.baseURI).href);
+      return response.ok ? response.json() : null;
+    });
+    if (concepts.all.length) { key = ''; onChange(); }
+  }
   // Where the card stands on the field, to come back to from a sheet.
   const home = { parent: coach.parentElement!, before: coach.nextSibling };
   // In a tutorial the band stands in the header, in place of the opponent, History, Help and the notifications,
@@ -96,7 +111,8 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
   function draw() {
     const card = queue[0];
     if (!card) return;
-    text('concept-title', card.title); text('concept-example', card.example); text('concept-rulebook', card.rulebook.label);
+    text('concept-title', card.title); text('concept-example', card.example); text('concept-rulebook', card.rules.label);
+    el<HTMLAnchorElement>('concept-rulebook').href = card.rules.href;
     el('concept-lines').replaceChildren(...paragraphs(card.lines));
     text('concept-next', queue.length > 1 ? `Next card · ${queue[1].title}` : 'Back to the battle');
   }
@@ -121,7 +137,7 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
   /** Draws the band and the coach card for this view; `canAuto` says the field is clear for a card to open by itself. */
   function render(view: unknown, { held, canAuto }: { held: boolean; canAuto: boolean }) {
     const lesson = tutorialOf(view);
-    if (lesson) latest = view;
+    if (lesson) { latest = view; void readConcepts(); }
     if (lesson) {
       const brief = tutorialBrief(lesson);
       text('practice-brief-begin', brief.begin); text('practice-brief-note', brief.note);
@@ -136,7 +152,7 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
       el('practice-band').setAttribute('aria-label', 'Tutorial');
       toHeader();
     }
-    shown = lesson ? coachCard(view, { held }) : null;
+    shown = lesson ? coachCard(view, { held, concepts }) : null;
     coach.hidden = !shown;
     coach.dataset.done = String(shown?.done === true);
     const nextKey = shown?.key ?? '';
@@ -165,6 +181,7 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
   /** A new practice teaches its steps again. */
   function reset() {
     document.getElementById('battle')!.dataset.tutorial = ''; opened.clear(); key = ''; latest = null; doneSaid = false;
+    if (!concepts.all.length) asked = false;
     toField(); text('practice-restart', 'Restart the round');
     text('practice-brief-begin', 'Begin'); el('practice-brief-skip').hidden = true; el<HTMLButtonElement>('practice-brief-skip').disabled = false;
     if (dialog.open) dialog.close();

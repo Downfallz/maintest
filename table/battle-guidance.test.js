@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { battleGuidance, helpPreferences, HELP_PREFERENCE_KEY, waitingOn } from './battle-guidance.js';
 const catalogue = { rules: { roundCap: 17, combatDeclaration: 'AtActivation' } };
 const view = (kind = 'Evolution', extras = {}) => ({ board: { roundNumber: 1, phase: 'Planning', subPhase: 'Evolution', slot: 'Player1', nextEvolutionRound: 1, allies: [{ id: 1, name: 'First' }], enemies: [], timeline: [] }, waitingFor: kind, waitingAsked: 12, waitingCreature: 1,
@@ -190,4 +191,24 @@ test('a tutorial keeps the phase tips silent, and Help still says the question a
   assert.equal(helpPreferences(null).shouldShow(g.topic), false);
   // A plain practice is taught by the tips, as a game is.
   assert.equal(battleGuidance(view('Action', { practice: { scenario: 'sc-1', title: 'Bleed', round: 1 } }), catalogue).topic, 'action');
+});
+
+// Help reads the rules (rulebook-plan.md R4): each phase tip links to the section of the official book it
+// shortens, and Help with no tip to the round; the link opens a new tab, so the battle stays where it is.
+test('each phase tip links to its section of the rulebook, and Help with no tip to the round', () => {
+  const book = JSON.parse(readFileSync(new URL('./rules.json', import.meta.url), 'utf8'));
+  const ids = new Set(book.parts.flatMap(part => [part.id, ...part.sections.map(section => section.id)]));
+  const expected = { Evolution: ['mutation', 'evolution'], Speed: ['tempo', 'tempo'], TieOrder: ['ties', 'tie-order'], Action: ['action', 'your-turn'], Intent: ['intent', 'your-turn'], Target: ['target', 'targets'] };
+  for (const [kind, [topic, section]] of Object.entries(expected)) {
+    const g = battleGuidance(view(kind), catalogue);
+    assert.equal(g.topic, topic, kind);
+    assert.equal(g.rules, `/rules#${section}`, kind);
+    assert.ok(ids.has(section), `${kind}: #${section} is not in the book`);
+  }
+  const quiet = battleGuidance(view('Action', { waiting: true }), catalogue);
+  assert.equal(quiet.topic, null); assert.equal(quiet.rules, '/rules#the-round');
+  assert.ok(ids.has('the-round'));
+  const lesson = { order: 1, of: 4, title: 'Your first combat', teaches: ['Action'], assisted: [], steps: [{ at: { kind: 'Action', round: 1 }, says: ['A line.'], concepts: [] }], shown: 0, done: false };
+  assert.equal(battleGuidance(view('Action', { practice: { scenario: 'sc-repo-tutorial-a', title: 'A', round: 1, tutorial: lesson } }), catalogue).rules, '/rules#the-round');
+  assert.equal(battleGuidance(null, catalogue).rules, null);
 });

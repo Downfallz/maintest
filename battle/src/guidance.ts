@@ -43,6 +43,8 @@ export function guidanceControls(storage: Storage | null, beforeOpen: () => void
     text('help-title', next.title); text('help-round', next.round); text('help-context', next.context);
     text('help-objective', next.objective); text('help-next', next.next);
     el('help-next').hidden = !next.next;
+    // The rules of the tip shown, or of the round, in a new tab: the battle stays on its question.
+    if (next.rules && el<HTMLAnchorElement>('help-rules').getAttribute('href') !== next.rules) el<HTMLAnchorElement>('help-rules').href = next.rules;
     el<HTMLInputElement>('help-mute').checked = preferences.muted();
     const nextKey = JSON.stringify([next.lines, next.flow, next.phase]);
     if (nextKey !== key) {

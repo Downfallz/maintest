@@ -1786,7 +1786,10 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 [data-coach="true"]:not(:focus-visible) { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: var(--radius-soft); }
 .concept-lines p { margin: 0 0 8px; font-size: 15px; line-height: 1.4; }
 .concept-example { margin: 4px 0 8px; padding-left: 10px; border-left: 2px solid var(--gold); color: #e6c88c; font-size: 14px; line-height: 1.4; }
-.concept-rulebook { margin: 0 0 8px; color: var(--muted); font-size: 12px; }
+.concept-rulebook { margin: 0 0 8px; font-size: 12px; }
+/* The card's section in the rulebook, opened in a new tab so the battle stays on its question (rulebook-plan.md R4). */
+.concept-rulebook a, .help-rules a { display: inline-flex; align-items: center; min-height: 44px; color: var(--gold); text-underline-offset: 3px; }
+.help-rules { margin: 0; font-size: 13px; }
 .coach-end { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 .coach-end[hidden] { display: none; }
 .coach-end button, .coach-end a { display: inline-flex; align-items: center; min-height: 44px; padding: 4px 12px; font-size: 13px; }

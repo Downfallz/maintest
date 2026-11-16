@@ -3,9 +3,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { conceptsOf } from './concepts.js';
 import { CONTROLS, assistedQuestion, coachCard, leavePath, lessonOverText, leavingSkips, lessonStep, pastTheLesson, progressPath, tutorialBand, tutorialBrief, tutorialOf, withoutAssisted } from './battle-tutorial.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const concepts = conceptsOf(JSON.parse(readFileSync(join(root, 'table/rules.json'), 'utf8')));
 const step = (creature, concepts, pointsAt, kind = 'Action', round = 2) =>
   ({ at: { kind, round, creature }, says: [`Line for ${creature}.`, 'A second line.'], concepts, pointsAt });
 const lesson = (extra = {}) => ({ order: 1, of: 4, title: 'Your first combat', teaches: ['Action'], assisted: ['Evolution', 'Speed', 'TieOrder', 'Intent', 'Target'],
@@ -87,13 +89,23 @@ test('no step shows without a question, at an assisted one, or once the match is
 });
 
 test('the coach card says the step, its lines, its concept cards and the creature it points at', () => {
-  const card = coachCard(view(asked('Action', 2)));
+  const card = coachCard(view(asked('Action', 2)), { concepts });
   assert.equal(card.key, 'step:0');
   assert.equal(card.eyebrow, 'STEP 1 OF 3');
   assert.deepEqual(card.lines, ['Line for 2.', 'A second line.']);
   assert.deepEqual(card.cards.map(one => one.title), ['Health']);
   assert.equal(card.creature, '4');
   assert.equal(card.control, null);
+  assert.deepEqual(coachCard(view(asked('Action', 1), lesson(), 3), { concepts }).cards.map(one => one.id), ['defense', 'health']);
+});
+
+// The cards come from the rulebook the page loads (rulebook-plan.md R4): before it is read, or when it cannot be,
+// the step still shows, its lines and what it points at, without them.
+test('a step shows without its cards until the rulebook is read', () => {
+  const before = coachCard(view(asked('Action', 2)));
+  assert.deepEqual(before.cards, []);
+  assert.deepEqual(before.lines, ['Line for 2.', 'A second line.']);
+  assert.equal(before.creature, '4');
 });
 
 test('a step that points at a control names its element, and an unknown control points at nothing', () => {

@@ -64,5 +64,6 @@ One to three lines.
 - **Sources.** Every section ends with its `sources:` line: the ADRs and the `game-rules.md` headings (as
   `game-rules#<anchor>`) it gives a reading of. Only its card may follow it.
 - **Cards.** A section a concept card summarises carries it, once: its id from `ConceptCards.Ids`, its title,
-  one to three lines and its example.
+  one to three lines and its example. The battle's tutorials read it from here (`table/concepts.js`) and link it to
+  its section, and `RulebookConceptCardsTests` holds the book's cards to `ConceptCards.Ids` both ways.
 - **Words.** The player's words only. An engine or legacy word that `player-terminology.md` replaced is refused.
