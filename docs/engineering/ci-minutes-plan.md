@@ -204,7 +204,7 @@ complete runs.
    *Built (2026-11-16)*: ADR 0192 amends ADR 0182 and ADR 0190. In `plan.js`, `src/`, `tools/`, `data/` and the
    engine's build files call for the release profiles on `main` alone (`release: 'main'`). On a pull request they
    are called for by `battle/`, `table/`, the release specs and fixtures, the workflows and the release job's
-   definition. The whole of `table/` stays, not `table/battle-*` alone as the shape said, because the release
+   definition. The whole of `table/` stays, not `table/battle-*` alone as the shape's item 2 said, because the release
    profiles play the lobby too (`lobby rollout` in `battle.release.config.js`).
 
    `plan.js --pull-request` returns `build=light` when every path is Markdown that only `Architecture.Tests` and the

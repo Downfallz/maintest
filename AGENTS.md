@@ -81,7 +81,7 @@ battle bundle, the Python side and DataBuilder when the diff calls for them, the
 - `battle/` or `table/battle-*` changed: rebuild the bundle and run the battle browser specs (`battle/AGENTS.md`).
 - CI runs these, then sends the build and the coverage reports (C# and Python) to SonarCloud with the scanner for
   .NET (`.config/dotnet-tools.json`). The Sonar quality gate covers C#, Python, shell scripts, and workflows, and
-  must pass on every pull request but a Markdown-only one, which runs the light build (ADR 0192).
+  must pass on every pull request. A Markdown-only pull request runs the light build, without Sonar (ADR 0192).
 - A storage test skipped for want of Azurite is reported as skipped, never as passed.
 - Docs the change makes stale are updated in the same change: the glossary, ADRs, the area's `AGENTS.md`,
   `docs/reference/commands.md` for a command, a flag or a route, `table/README.md` for a route.

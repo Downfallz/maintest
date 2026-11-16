@@ -25,9 +25,9 @@ The standing orders in `CLAUDE.md`, in order. None of them is asked first.
      retry a test to get green; a flaky one is a `flaky` issue (`/wrap-up`).
    - A conflict: `git fetch origin main && git merge origin/main`, settled (a generated index is rebuilt with
      `UPDATE_INDEXES=1 dotnet test --project tests/DownfallArena.Architecture.Tests`, never edited by hand).
-   - Then `/verify`, and push once for the whole round. A push while CI's run plays cancels it, and every minute
-     it spent is lost (`docs/engineering/ci-minutes-plan.md`): when that run is still playing and nothing in it is
-     red yet, the commits wait for its result, which arrives as an event, and go with that round's.
+   - Then `/verify`, and push once for the whole round, with one exception. A push cancels the CI run still
+     playing, and the minutes it spent are lost (`docs/engineering/ci-minutes-plan.md`): if that run has nothing
+     red yet, keep the commits unpushed until its result arrives as an event, then push them with that round.
    - Reply to each thread with the commit that answers it, once it is on the branch, and resolve the thread.
    - An event that needs nothing: no answer.
 8. Ready means: every check finished and green, the `gate` check among them, no commit left unpushed, and no

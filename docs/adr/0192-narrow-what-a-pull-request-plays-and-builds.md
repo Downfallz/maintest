@@ -16,11 +16,15 @@ to play nothing. A private repository is billed every one of those minutes.
 
 On a pull request, the release profiles are called for by what WebKit renders and by the release job itself:
 `battle/`, `table/`, the release specs and fixtures, the workflows and the release job's definition. `src/`,
-`tools/`, `data/` and the files the engine is built from call for them on `main` alone, where the three profiles
-still play before the deployment. A pull request whose every path is Markdown that no test outside
-`Architecture.Tests` and the pages' own tests reads (`data/README.md` is read by the learning tests) runs the light
-build: `build-and-test` builds, runs `Architecture.Tests` and the pages' tests, and skips the rest, Sonar included.
-`main` always runs the whole build. The plan (`studio/browser/plan.js`) says both (`release`, `build`), and holds
+`tools/`, `data/` and the build files (`global.json`, `Directory.Build.props`, `Directory.Packages.props`,
+`DownfallArena.slnx`) call for them on `main` alone, where the three profiles still play before the deployment.
+
+A pull request that changes only Markdown runs the light build, when no test outside `Architecture.Tests` and the
+pages' own tests reads those files (`data/README.md` is read by the learning tests). `build-and-test` then builds,
+runs `Architecture.Tests` and the pages' tests, and skips the rest, Sonar included. `main` always runs the whole
+build.
+
+The plan (`studio/browser/plan.js`) says both (`release`, `build`), and holds
 the journeys jobs with their Playwright arguments (`JOURNEY_JOBS`): CI starts only the jobs the planned specs play
 in (`journey-jobs`). `gate` is still the one required check.
 
@@ -34,8 +38,8 @@ in (`journey-jobs`). `gate` is still the one required check.
   lost, but the pull request shows no Sonar result.
 - Bad: `build-and-test` now waits for the `changes` job (a checkout with history, about half a minute) before it
   starts.
-- Neutral: a Markdown file that a test outside the light build starts to read joins `plan.js`'s list, held by
-  `studio/browser-suite.test.js`, as a path a job starts to read always does (ADR 0167).
+- Neutral: when a test outside the light build starts to read a Markdown file, that file joins `plan.js`'s
+  list, and `studio/browser-suite.test.js` holds it, as for any path a job starts to read (ADR 0167).
 
 ## Alternatives considered
 
