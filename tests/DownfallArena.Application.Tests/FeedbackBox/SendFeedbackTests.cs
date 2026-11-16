@@ -12,22 +12,11 @@ public sealed class SendFeedbackTests : IDisposable
 
     private static CancellationToken Cancel => TestContext.Current.CancellationToken;
 
-    private readonly List<SendFeedback> _desks = [];
+    private readonly FeedbackWrites _writes = new();
 
-    private SendFeedback Desk()
-    {
-        var desk = new SendFeedback(_store, _addresses, _clock);
-        _desks.Add(desk);
-        return desk;
-    }
+    private SendFeedback Desk() => new(_store, _addresses, _writes, _clock);
 
-    public void Dispose()
-    {
-        foreach (var desk in _desks)
-        {
-            desk.Dispose();
-        }
-    }
+    public void Dispose() => _writes.Dispose();
 
     private static FeedbackSent Report(string sender = "acct_1", int round = 3, string? account = "acct_1", string? address = null) => new()
     {
@@ -198,6 +187,41 @@ public sealed class SendFeedbackTests : IDisposable
 
         (again.Refused, again.Id).ShouldBe((null, first.Id));
         _store.All.Single().Additions.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Text_added_late_to_yesterday_s_report_still_counts_within_the_day()
+    {
+        var first = await SentAsync(Report());
+        _clock.Advance(SendFeedback.Day - SendFeedback.Apart - TimeSpan.FromMinutes(1));
+        var merged = await Desk().HandleAsync(Report() with { Text = "Still happens on this round." }, Cancel);
+        _clock.Advance(TimeSpan.FromSeconds(90));
+
+        var soon = await Desk().HandleAsync(Report(round: 9) with { Text = "A different problem on another round." }, Cancel);
+
+        (merged.Id, soon.Refused!.Code).ShouldBe((first.Id, "Feedback.TooSoon"));
+    }
+
+    [Fact]
+    public async Task Too_many_is_refused_until_the_oldest_counted_one_leaves_the_day()
+    {
+        for (var round = 1; round <= 5; round++)
+        {
+            await SentAsync(Report(round: round));
+        }
+
+        var refused = await Desk().HandleAsync(Report(round: 9), Cancel);
+
+        refused.RetryAfter.ShouldBe(SendFeedback.Day - (SendFeedback.Apart * 5));
+    }
+
+    [Fact]
+    public async Task A_browser_named_at_length_is_cut_not_refused()
+    {
+        var answer = await Desk().HandleAsync(Report() with { Browser = new string('b', 900) }, Cancel);
+
+        answer.Refused.ShouldBeNull();
+        _store.All.Single().Browser!.Length.ShouldBe(500);
     }
 
     [Fact]

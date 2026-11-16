@@ -213,9 +213,10 @@ internal static class TableHost
         // The players' bug reports and ideas (ADR 0189), kept beside the recordings in a store of their own; a pass
         // lets go of what was closed 180 days ago.
         var feedback = store is null ? null : await OpenFeedbackAsync(options.Record ?? DefaultRunsDirectory, stopping.Token);
+        using var feedbackWrites = new FeedbackWrites();
         if (feedback is not null && accounts is not null)
         {
-            var forget = new ForgetFeedbackAccount(feedback);
+            var forget = new ForgetFeedbackAccount(feedback, feedbackWrites);
             accounts.ForgetFeedback = id => forget.HandleAsync(id.ToString());
         }
 
@@ -283,7 +284,7 @@ internal static class TableHost
 
         await using var practices = scenarioStore is null ? null : new ScenarioPractices(composer, scenarioStore, clock);
         admin.Scenarios = scenarioStore is null || stored is null ? null : new ScenarioAdminApi(scenarioStore, stored, composer) { Notes = admin.Notes };
-        using var sendFeedback = feedback is null ? null : new SendFeedback(feedback, new GuestAddresses(), clock);
+        var sendFeedback = feedback is null ? null : new SendFeedback(feedback, new GuestAddresses(), feedbackWrites, clock);
         using var server = new TableServer(options.Bind, options.Port, registry, new TableFiles(TableDirectory), admin, clock, stored, accounts, leaderboard, friends, stats)
         {
             Feedback = sendFeedback is null ? null : new FeedbackApi(sendFeedback, registry) { Accounts = accounts, Practices = practices },

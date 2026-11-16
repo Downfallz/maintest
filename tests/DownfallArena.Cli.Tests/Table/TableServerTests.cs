@@ -193,7 +193,8 @@ public sealed class TableServerTests : IAsyncDisposable
     public async Task Feedback_sent_from_a_seat_as_the_page_sends_it_is_kept_and_a_host_keeping_none_has_no_route()
     {
         var store = new Infrastructure.FeedbackBox.FileFeedbackStore(Path.Combine(_hosted.RunsDirectory, "..", $"feedback-{Guid.NewGuid():N}"));
-        using var desk = new Application.FeedbackBox.SendFeedback(store, new Application.FeedbackBox.GuestAddresses(), _clock);
+        using var writes = new Application.FeedbackBox.FeedbackWrites();
+        var desk = new Application.FeedbackBox.SendFeedback(store, new Application.FeedbackBox.GuestAddresses(), writes, _clock);
         var url = Serve(OperatorGate.BehindPlatform(), feedback: new FeedbackApi(desk, _registry));
         var table = await Opened();
 

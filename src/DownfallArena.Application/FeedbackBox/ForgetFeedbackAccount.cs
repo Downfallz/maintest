@@ -6,15 +6,20 @@ namespace DownfallArena.Application.FeedbackBox;
 /// An account deleted (ADR 0189): its feedback keeps its text and loses the account, and the sender it was counted
 /// against becomes one that names nobody.
 /// </summary>
-public sealed class ForgetFeedbackAccount(IFeedbackStore store)
+public sealed class ForgetFeedbackAccount(IFeedbackStore store, FeedbackWrites writes)
 {
     /// <summary>What a deleted account's feedback is counted against from then on.</summary>
     public const string Gone = "deleted";
 
     /// <summary>Drops the account from each piece of feedback it sent, and answers how many it had.</summary>
-    public async Task<int> HandleAsync(string account, CancellationToken cancellationToken = default)
+    public Task<int> HandleAsync(string account, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(account);
+        return writes.OneAtATimeAsync(() => ForgetAsync(account, cancellationToken), cancellationToken);
+    }
+
+    private async Task<int> ForgetAsync(string account, CancellationToken cancellationToken)
+    {
         var forgotten = 0;
         foreach (var id in await store.IdsAsync(cancellationToken))
         {

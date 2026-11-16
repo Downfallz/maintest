@@ -392,12 +392,16 @@ The seat's view says the lesson under `practice.tutorial`:
   one of `rules`, `battle`, `lobby` or `other`. The text holds 10 to 2,000 characters (400 `Feedback.Invalid`).
 - The host adds what the page cannot be trusted to send: the table, the seat, the round, sub-phase and journal
   length, the content, rules and engine, and, when `attach` is true, the seat's own view. For a practice it adds the
-  scenario's id and the practice's journal since its cut. The page's address is kept without its query, with the
-  page's last ten errors.
+  scenario's id and the practice's journal since its cut. The page is kept as its path alone, and its last ten
+  errors without the queries of the addresses they quote. A store that fails answers 503 `Feedback.Unavailable`; on a host where nobody signs in,
+  feedback without a seat is answered 403 `Feedback.SeatRequired`. The same words sent again within two minutes
+  answer the id already kept.
 - Spam guards, for both kinds:
-  - Two sends less than two minutes apart: 429 `Feedback.TooSoon`, with `retryAfterSeconds` and `Retry-After`.
+  - Two sends less than two minutes apart: 429 `Feedback.TooSoon`, with `retryAfterSeconds` and `Retry-After`
+    (each refusal below says how long to wait too).
   - More than five a day per sender, and for a guest more than five a day per network address (counted in memory
-    only): 429 `Feedback.TooMany`.
+    only, the address Cloudflare saw only when the request came through Cloudflare): 429
+    `Feedback.TooMany`.
   - A second bug report on the same table and round, or a second idea within the hour, is merged into the first:
     200 `{"id","merged":true,"code":"Feedback.Merged"}`.
   - More than 100 new a day for the host: 429 `Feedback.HostFull`.

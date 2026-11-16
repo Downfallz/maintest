@@ -25,7 +25,8 @@ public sealed class ForgetFeedbackAccountTests
         await store.SaveAsync(Sent("acct_gone", 1), Cancel);
         await store.SaveAsync(Sent("acct_kept", 2), Cancel);
 
-        var forgotten = await new ForgetFeedbackAccount(store).HandleAsync("acct_gone", Cancel);
+        using var writes = new FeedbackWrites();
+        var forgotten = await new ForgetFeedbackAccount(store, writes).HandleAsync("acct_gone", Cancel);
 
         forgotten.ShouldBe(1);
         var gone = store.All.Single(one => one.Text.Length > 0 && one.Account is null);

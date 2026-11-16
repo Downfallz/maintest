@@ -34,11 +34,7 @@ public sealed class FeedbackApiTests : IDisposable
 
     public void Dispose()
     {
-        foreach (var desk in _desks)
-        {
-            desk.Dispose();
-        }
-
+        _writes.Dispose();
         _registry.Dispose();
         _hosted.Dispose();
         if (Directory.Exists(_root))
@@ -53,14 +49,10 @@ public sealed class FeedbackApiTests : IDisposable
 
     private static readonly AccountRequest SignedOut = new(null, Secure: false);
 
-    private readonly List<SendFeedback> _desks = [];
+    private readonly FeedbackWrites _writes = new();
 
-    private FeedbackApi Api(AccountApi? accounts = null, ScenarioPractices? practices = null)
-    {
-        var desk = new SendFeedback(_feedback, _addresses, _clock);
-        _desks.Add(desk);
-        return new FeedbackApi(desk, _registry) { Accounts = accounts, Practices = practices };
-    }
+    private FeedbackApi Api(AccountApi? accounts = null, ScenarioPractices? practices = null) =>
+        new(new SendFeedback(_feedback, _addresses, _writes, _clock), _registry) { Accounts = accounts, Practices = practices };
 
     private static string Report(bool attach = true, string happened = "The bleed did not tick after the stun.") =>
         JsonSerializer.Serialize(new
@@ -318,7 +310,7 @@ public sealed class FeedbackApiTests : IDisposable
     public async Task A_deleted_account_s_feedback_keeps_its_text_and_loses_the_account()
     {
         var accounts = await AccountsAsync();
-        var forget = new ForgetFeedbackAccount(_feedback);
+        var forget = new ForgetFeedbackAccount(_feedback, _writes);
         accounts.ForgetFeedback = id => forget.HandleAsync(id.ToString());
         var player = await SignedInAsync(accounts, "dreamer");
         var id = Read(await Api(accounts).HandleAsync("POST", Idea(), token: null, player, Address, null)).GetProperty("id").GetString()!;

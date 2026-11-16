@@ -6,13 +6,11 @@ namespace DownfallArena.Application.FeedbackBox;
 /// Keeps a bug report or an idea a player sent (ADR 0189), behind the guards against spam, checked in this order and
 /// counted over both kinds (docs/tabletop/feedback-plan.md, "Against spam"): two minutes apart, five a day per sender,
 /// five a day per network address for a guest, a second report on the same position (or a second idea within the
-/// hour) merged into the first, and a ceiling for the whole host. One sending at a time: a burst of requests sent at
-/// once would otherwise each read the same history and pass every guard. The API runs one process (ADR 0189).
+/// hour) merged into the first, and a ceiling for the whole host. Merged text counts against the sender's five a day
+/// as a sending does, though it adds no row. One write at a time (<see cref="FeedbackWrites" />).
 /// </summary>
-public sealed class SendFeedback(IFeedbackStore store, GuestAddresses addresses, TimeProvider clock) : IDisposable
+public sealed class SendFeedback(IFeedbackStore store, GuestAddresses addresses, FeedbackWrites writes, TimeProvider clock)
 {
-    private readonly SemaphoreSlim _gate = new(1, 1);
-
     public const int ShortestText = 10;
 
     public const int LongestText = 2000;
@@ -48,24 +46,17 @@ public sealed class SendFeedback(IFeedbackStore store, GuestAddresses addresses,
             return FeedbackAnswer.Refuse(FeedbackErrors.Invalid(invalid));
         }
 
-        await _gate.WaitAsync(cancellationToken);
-        try
-        {
-            return await GuardedAsync(sent, cancellationToken);
-        }
-        finally
-        {
-            _gate.Release();
-        }
+        return await writes.OneAtATimeAsync(() => GuardedAsync(sent, cancellationToken), cancellationToken);
     }
-
-    public void Dispose() => _gate.Dispose();
 
     private async Task<FeedbackAnswer> GuardedAsync(FeedbackSent sent, CancellationToken cancellationToken)
     {
         var now = clock.GetUtcNow();
-        var recent = await RecentAsync(now, cancellationToken);
-        var mine = recent.Where(one => one.Sender == sent.Sender).ToList();
+        var read = await RecentAsync(now, cancellationToken);
+        var recent = read.Where(one => one.At > now - Day).ToList();
+
+        // A sender's feedback is what they wrote in the day: sent in it, or sent the day before and added to in it.
+        var mine = read.Where(one => one.Sender == sent.Sender && one.LastWritten > now - Day).ToList();
 
         // A page that lost the answer sends the same words again: it is told they were kept, not that it was too soon.
         if (mine.FirstOrDefault(one => one.Text == sent.Text!.Trim() || one.Additions.Any(addition => addition.Text == sent.Text!.Trim())) is { } repeated
@@ -80,9 +71,13 @@ public sealed class SendFeedback(IFeedbackStore store, GuestAddresses addresses,
             return FeedbackAnswer.Refuse(FeedbackErrors.TooSoon(Apart - (now - then)), Apart - (now - then));
         }
 
-        if (mine.Count + mine.Sum(one => one.Additions.Count(addition => addition.At > now - Day)) >= PerSender)
+        var written = mine.Where(one => one.At > now - Day).Select(one => one.At)
+            .Concat(mine.SelectMany(one => one.Additions).Select(addition => addition.At).Where(at => at > now - Day))
+            .Order()
+            .ToList();
+        if (written.Count >= PerSender)
         {
-            return FeedbackAnswer.Refuse(FeedbackErrors.TooMany, Day);
+            return FeedbackAnswer.Refuse(FeedbackErrors.TooMany, written[^PerSender] + Day - now);
         }
 
         var guest = sent.Account is null && sent.Address is not null;
@@ -102,7 +97,7 @@ public sealed class SendFeedback(IFeedbackStore store, GuestAddresses addresses,
 
         if (recent.Count >= PerHost)
         {
-            return FeedbackAnswer.Refuse(FeedbackErrors.HostFull, Day);
+            return FeedbackAnswer.Refuse(FeedbackErrors.HostFull, recent.Min(one => one.At) + Day - now);
         }
 
         var feedback = new Feedback
@@ -115,8 +110,8 @@ public sealed class SendFeedback(IFeedbackStore store, GuestAddresses addresses,
             Category = sent.Category!,
             Text = text,
             Expected = expected,
-            Page = Trimmed(sent.Page),
-            Browser = Trimmed(sent.Browser),
+            Page = Trimmed(sent.Page) is { } page ? Line(page) : null,
+            Browser = Trimmed(sent.Browser) is { } browser ? Line(browser) : null,
             Errors = [.. sent.Errors.TakeLast(MostErrors).Select(error => new PageError(Line(error.Message), Trimmed(error.Where) is { } where ? Line(where) : null))],
             Context = sent.Context,
         };
@@ -133,13 +128,16 @@ public sealed class SendFeedback(IFeedbackStore store, GuestAddresses addresses,
         }
     }
 
-    /// <summary>The feedback sent in the last day, read off the ids first so nothing older is opened.</summary>
+    /// <summary>
+    /// The feedback sent in the last two days, read off the ids first so nothing older is opened: what was merged into
+    /// the day before's still counts while its additions are within the day.
+    /// </summary>
     private async Task<List<Feedback>> RecentAsync(DateTimeOffset now, CancellationToken cancellationToken)
     {
         var recent = new List<Feedback>();
         foreach (var id in await store.IdsAsync(cancellationToken))
         {
-            if (Feedback.SentAt(id) is not { } at || at <= now - Day)
+            if (Feedback.SentAt(id) is not { } at || at <= now - Day - Day)
             {
                 break;
             }
@@ -182,9 +180,7 @@ public sealed class SendFeedback(IFeedbackStore store, GuestAddresses addresses,
             return $"The second answer holds {LongestText} characters at most.";
         }
 
-        return (sent.Page?.Length ?? 0) > LongestLine || (sent.Browser?.Length ?? 0) > LongestLine
-            ? $"The page and the browser hold {LongestLine} characters at most."
-            : null;
+        return null;
     }
 
     private static string? Trimmed(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();

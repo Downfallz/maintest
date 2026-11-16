@@ -294,13 +294,18 @@ and they are the first thing every player can use.
 
    *Built (2026-11-16)*: `Feedback`, `FeedbackKind`, `FeedbackStatus` and the port `IFeedbackStore` in Application
    (`FeedbackBox/`), the file and blob adapters in a `feedback` directory or container beside the recordings, and
-   `POST /api/feedback` (`FeedbackApi`). The guards are `SendFeedback`; a guest's address is counted by
-   `GuestAddresses`, hashed with a salt the process draws. The address is the one Cloudflare saw, else the last one
-   the ingress added.
-   A sender is the account, or a hash of the seat's key, never the key; the page's address is kept without its query.
-   The tending pass, hourly or from the panel, deletes what was closed 180 days ago (`LetGoOfClosedFeedback`), and
-   deleting an account removes the account from its feedback (`ForgetFeedbackAccount`). Left to R3: `Feedback.Muted` and the
-   spam marks, since nothing can mute before the tab exists. Left to R2: the *What we keep* line.
+   `POST /api/feedback` (`FeedbackApi`). The guards are `SendFeedback`, one write at a time in the process
+   (`FeedbackWrites`), so a burst sent at once cannot pass them all. Text merged into earlier feedback counts
+   against the five a day, though it adds no row. The same words sent again within two minutes are told they were
+   kept, so a page that lost its answer is not told it was too soon. A guest's address is counted by
+   `GuestAddresses`, hashed with a salt the process draws (`RequestAddress`): the one Cloudflare saw when the peer
+   is Cloudflare, else the last hop the ingress added, an IPv6 address by its /64. A sender is the account, or a
+   hash of the seat's key, never the key. The page is kept as its path alone, and the errors without their
+   addresses' queries. The tending pass, hourly or from the panel, deletes what was closed 180 days ago
+   (`LetGoOfClosedFeedback`). Deleting an account removes the account from its feedback first
+   (`ForgetFeedbackAccount`). Left to R3: `Feedback.Muted` and the spam marks, since nothing can mute before the
+   tab exists. Left to R2: the *What we keep* line.
+
 3. **R2, Report or suggest.** The entry in the battle view's menu, on the recap, in a practice and in the lobby's
    menu; the sheet's two choices and their fields; the page's error catcher; the *What we keep* line. Tests:
    `feedback.test.js` (the sheet's model for both kinds, the errors kept to ten, nothing written to storage, each
