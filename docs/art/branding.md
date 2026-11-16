@@ -82,7 +82,7 @@ After editing the source, run:
 
 ```sh
 node scripts/sync-branding.mjs
-node --test studio/*.test.js table/*.test.js
+node --test studio/*.test.js table/*.test.js showcase/*.test.js
 ```
 
 The synchronizer writes a clearly marked token block at the start of `table/table.css`,

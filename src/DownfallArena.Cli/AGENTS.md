@@ -21,7 +21,7 @@ dotnet run --project src/DownfallArena.Cli -- studio
 - The gate, with the battle bundle built first: `TableFilesTests` reads it.
 - Its tests are in `tests/DownfallArena.Cli.Tests` (`Table/` for the table host, the rest for the console
   and the studio). A route has a host test.
-- A change the pages read: `node --test studio/*.test.js table/*.test.js` and the browser specs it reaches.
+- A change the pages read: `node --test studio/*.test.js table/*.test.js showcase/*.test.js` and the browser specs it reaches.
 - A change to the benchmark's agents or content: `benchmark` (CI verifies the digest; `--write` regenerates it).
 
 ## Traps

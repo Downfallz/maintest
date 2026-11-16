@@ -7,6 +7,7 @@
 - Practices (ScenarioPractices) live in the API process's memory by ADR 0179: rule questions 4-5 are answered by that ADR, but a POST practice retry replaces the practice and resets anything kept on it (O3a: tutorial `done`/`shown`).
 - A background answerer that only logs a failure, without handing the seat back, leaves a question the page is told not to draw: check every failure path ends in a state the page can act on (O3a).
 - A hand-back changes the view, not the match: it reaches the stream only through `tutorial.GaveBack += api.Changes.Bump` (ScenarioPlay.cs:69); the #646 test fails if that line goes, so keep it when ScenarioPlay is reworked (#646).
+- A build script that takes an output folder and `rm -r`s it before a rename (showcase/build.mjs) deletes whatever path it is given, `.` included: check the guard whenever a destination becomes an argument (#613).
 - A test that reads a bot-vs-bot table "under way" races the match's end; hold it with a person seat (`Person!.Arrive()` + `Session.Begin()`), and assert `IsOver` false after the read (#598).
 - A finished table stays held (swept after FinishedFor), so `TableRegistry.OpenAsync` drops it via `IsOver` from both the held list and the index list; an "ended is not counted" test is deterministic once `Session.Outcome` completes (#598).
 - A new table/*.js needs no new host test: TableFilesTests.Every_module_beside_the_page_is_served fails on any module missing from TableFiles.cs; check the Dockerfile copies it (COPY table/*.js) only for a new subdirectory (O3b).
