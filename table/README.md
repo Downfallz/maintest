@@ -638,6 +638,16 @@ table (`POST /api/seat/<seat>/reaction`, `reactions` in the seat's view). The pl
 from the set, or for every game in Settings. No reaction is notified or counted in the bell
 ([ADR 0173](../docs/adr/0173-let-players-react-with-a-fixed-set-of-messages.md)).
 
+**Report or suggest…**, in Match settings above Concede and on the result's last line, opens one sheet
+([ADR 0189](../docs/adr/0189-keep-player-feedback-at-the-host-and-file-only-a-redacted-scenario.md)) whose first question is *Something is wrong* or
+*I have an idea*. A report asks a category, what happened and what was expected, with **Attach this position**
+ticked while a seat is on screen; an idea asks what it is about, what got in the way and how the player would like
+it. `feedback-sheet.js` sends it to `POST /api/feedback` with the seat's key, the page's path and, for a report, the
+last ten errors the page caught, held in memory and never written to the device. **Send** stays off until the required answer has ten characters.
+A refusal reads as a sentence and keeps the words; `403 Feedback.Muted`, which the host sends once the Feedback tab can mute (R3), hides every entry for the page's life. A
+signed-in player also finds it in the account menu on every page: there the battle view's own sheet answers it with
+the seat on screen, and any other page sends it as the account, without a position.
+
 The battle view's **History** drawer retains public events from the current and previous round, capped at 200.
 Attacks expand into actual applied effects and recorded before/after changes; reading history preserves
 command drafts and never sends a decision or `shown`. It is separate from animation playback, so skipping

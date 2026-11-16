@@ -1,7 +1,7 @@
 # Plan: CI that fits a private repository's minutes, and a shorter wait on every pull request
 
 Status: accepted in part, 2026-11-16. The owner settled questions 1, 2, 3, 5 and 6; question 4 (Sonar) is open.
-M1 (the meter), M2 (the release profiles split) and M3 (the wait evened out) are built.
+M1 (the meter), M2 (the release profiles split), M3 (the wait evened out) and M4 (the narrower plan) are built.
 
 ## What the owner asked for
 
@@ -200,6 +200,31 @@ complete runs.
 4. **M4, the narrower plan and one push per review round.** `src/` and `data/` no longer call for the release
    profiles on a pull request; a Markdown-only diff runs the light build; `/ship` pushes once per round. Tests in
    `browser-suite.test.js`, and `prompts.test.js` for the skill.
+
+   *Built (2026-11-16)*: ADR 0192 amends ADR 0182 and ADR 0190. In `plan.js`, `src/`, `tools/`, `data/` and the
+   engine's build files call for the release profiles on `main` alone (`release: 'main'`). On a pull request they
+   are called for by `battle/`, `table/`, the release specs and fixtures, the workflows and the release job's
+   definition. The whole of `table/` stays, not `table/battle-*` alone as the shape's item 2 said, because the release
+   profiles play the lobby too (`lobby rollout` in `battle.release.config.js`).
+
+   `plan.js --pull-request` returns `build=light` when every path is Markdown that only `Architecture.Tests` and the
+   pages' own tests read; `data/README.md` is read by `test_knobs.py`, so it gets the full build. `build-and-test`
+   now needs `changes`. In the light build it checks out one commit, builds, runs the pages' tests and
+   `Architecture.Tests`, and skips the learning project, the emulator, the bundle, the format check, Sonar, the
+   other tests, the content and the benchmark. `main` always runs the full build.
+
+   M3's leftover is settled in the plan too. `JOURNEY_JOBS` holds the five journeys jobs with their Playwright
+   arguments and the specs each plays, and `journey-jobs` names the jobs the planned specs play in. A pull request
+   that touches no heavy spec starts no `desktop replays`, and one that touches only heavy specs starts no
+   desktop half. Each job reads its arguments with `plan.js --journey-job`, one per line, so the grep pattern
+   reaches Playwright intact. Listed locally, the three desktop jobs hold 100, 216 and 215 of desktop and tablet's
+   531 tests, so every test is in exactly one. `/ship` answers a round of review with one push: a run that is
+   still playing and has nothing red keeps its commits until its result arrives. `browser-suite.test.js` holds
+   the plan, the matrix, the CLI and the light build's steps, and `prompts.test.js` holds the skill's one push.
+
+   Not measured: the minutes saved, which the first `/retro` after the merge reads with M1's meter, and whether the
+   light build and an empty `journey-jobs` behave on GitHub as the tests read the YAML. Only a pull request run
+   shows that, and this one, which changes code, runs the full build.
 5. **M5, the nightly when `main` moved, and Sonar where the owner settles it.** `nightly.yml` stops on an
    unchanged `main`; the Sonar steps follow the owner's answer.
 6. **M6, a runner of the project's own.** An ADR (which jobs, which machine, who can run on it, the fallback to

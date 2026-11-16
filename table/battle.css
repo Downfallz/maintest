@@ -764,7 +764,7 @@
 /* The battle page does not load table.css, so the navigation header's mark draws the rune itself; the HUD's own mark
    gets it from battle-lab.css. */
 .battle-page .home-header .brand-mark { display: block; width: 32px; height: 38px; flex: 0 0 auto; background: url('/brand-mark.svg') center / contain no-repeat; }
-.battle-page .navigation-panels dialog { margin: auto; }
+.battle-page :is(.navigation-panels, .feedback-panels) dialog { margin: auto; }
 
 /* On short landscape screens the menu and the player's button sit at the right end of the match toolbar, where the
    lobby keeps them. */
@@ -1358,6 +1358,11 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 #match-dialog .match-footer #match-rematch { flex: 1 1 100%; }
 #match-dialog .match-footer #match-replay, #match-dialog .match-footer #match-lobby { flex: 1 1 0; border: 1px solid var(--line); background: #172a30; color: var(--ink); }
 #match-dialog .match-footer #match-rematch[hidden] { display: none; }
+/* Report or suggest is the quiet last line of the result: it never competes with playing again. */
+#match-dialog .match-footer #feedback-open-match { flex: 1 1 100%; min-height: 44px; border: 0; background: transparent; color: var(--muted); font-weight: 400; }
+/* The footer's own display outweighs the shared mute rule (lobby.css): a muted player's entry goes here too. */
+html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { display: none; }
+#match-dialog .match-footer #feedback-open-match:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
 @media (min-width: 560px) { #match-dialog .match-footer #match-rematch { flex: 1.4 1 0; } }
 /* A creature's effects (upkeep ticks, a spell's outcomes, its place in the order) read above its head, not over its
    body; a stage squeezed under a docked sheet keeps them at the top of the head, inside the field. */

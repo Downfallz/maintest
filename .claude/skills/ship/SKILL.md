@@ -19,14 +19,19 @@ The standing orders in `CLAUDE.md`, in order. None of them is asked first.
 4. Subscribe to its activity (`subscribe_pr_activity`).
 5. Ask Codex: a comment `@codex review`, unless Codex has already started on this pull request.
 6. Then end the turn. Events arrive on their own; never poll or sleep for them.
-7. On each event:
-   - A review thread: fix it in a new commit and reply with what changed, or reply why not. Resolve the thread
-     once it is answered. Every finding gets one of the two.
-   - A failing check: read its log (`get_job_logs`), fix the cause, push. Never skip, disable or retry a test to
-     get green; a flaky one is a `flaky` issue (`/wrap-up`).
-   - A conflict: `git fetch origin main && git merge origin/main`, settle it (a generated index is rebuilt with
-     `UPDATE_INDEXES=1 dotnet test --project tests/DownfallArena.Architecture.Tests`, never edited by hand),
-     `/verify`, push.
+7. On each event, answer the round: every thread and failing check that has arrived and is not yet answered.
+   - A review thread: fix it in a new commit, or reply why not. Every finding gets one of the two.
+   - A failing check: read its log (`get_job_logs`) and fix the cause in a new commit. Never skip, disable or
+     retry a test to get green; a flaky one is a `flaky` issue (`/wrap-up`).
+   - A conflict: `git fetch origin main && git merge origin/main`, settled (a generated index is rebuilt with
+     `UPDATE_INDEXES=1 dotnet test --project tests/DownfallArena.Architecture.Tests`, never edited by hand).
+   - Then `/verify`, and push once for the whole round, with one exception. A push cancels the CI run still
+     playing, and the minutes it spent are lost (`docs/engineering/ci-minutes-plan.md`): if that run has nothing
+     red yet, the commits wait for its result and go with the round it opens. Schedule a check-in with
+     `send_later` for when the run should end (30 minutes), so a run that ends green with no event still wakes
+     the session, and nothing stays unpushed.
+   - Reply to each thread with the commit that answers it, once it is on the branch, and resolve the thread.
    - An event that needs nothing: no answer.
-8. Ready means: every check finished and green, the `gate` check among them, and no thread unanswered. Only then
-   tell the owner it is ready, in French, with the link. Never merge: the owner merges.
+8. Ready means: every check finished and green, the `gate` check among them, no commit left unpushed, and no
+   thread unanswered. Only then tell the owner it is ready, in French, with the link. Never merge: the owner
+   merges.

@@ -40,7 +40,7 @@ changed_paths() {
   local base
   base="$(git merge-base HEAD origin/main 2> /dev/null)" || return 1
   # NUL-separated, so a path with a quote or a non-ASCII letter reaches plan.js as it is, not quoted.
-  { git diff -z --name-only "$base"; git ls-files -z --others --exclude-standard; } | tr '\0' '\n' | sort -u
+  { git diff -z --name-only --no-renames "$base"; git ls-files -z --others --exclude-standard; } | tr '\0' '\n' | sort -u
   return 0
 }
 
