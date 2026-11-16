@@ -17,7 +17,7 @@ const RULE_SET = 'docs/tabletop/playtest.rules.json';
 const CREATURE = 'data/Creatures/main.v1.json';
 const GAME_RULES = 'docs/domain/game-rules.md';
 
-const HEADING = /^(#{1,2}) (.*?)\s*\{#([a-z0-9-]+)\}\s*$/;
+const HEADING = /^(#{1,2}) ([^{]*)\{#([a-z0-9-]+)\}\s*$/;
 // The anchor the build gives a game-rules heading (scripts/rules/build.mjs).
 const anchorOf = heading => heading.trim().toLowerCase().replace(/[^a-z0-9 -]/g, '').replaceAll(' ', '-');
 const escape = text => text.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
@@ -38,7 +38,8 @@ export function sectionsOf(parts) {
       const heading = fenced ? null : HEADING.exec(line);
       if (heading) {
         if (current) current.to = at;
-        const [, marks, title, id] = heading;
+        const [, marks, spaced, id] = heading;
+        const title = spaced.trim();
         const number = marks.length === 1 ? `${index + 1}` : `${index + 1}.${++count}`;
         current = { id, number, title, file, from: at + 1, to: lines.length, text: '', sources: [] };
         found.push(current);
@@ -130,42 +131,69 @@ const statOf = key => (/^base[A-Z]/.test(key) ? `${key[4].toLowerCase()}${key.sl
 function contentOf(path, content, kind) {
   const read = content(path);
   if (read?.id) return read;
-  const name = /([a-z0-9_]+)\.(v\d+)\.json$/.exec(path);
+  const name = /^([a-z0-9_]+)\.(v\d+)\.json$/.exec(path.slice(path.lastIndexOf('/') + 1));
   return name ? { id: `${kind}:${name[1]}:${name[2]}` } : null;
+}
+
+/** An ADR reaches the sections whose sources cite it. */
+function byAdr({ path }, section) {
+  const adr = /^docs\/adr\/(\d{4})-/.exec(path);
+  return adr && section.sources.includes(`ADR ${adr[1]}`) ? [`cites ADR ${adr[1]}`] : [];
+}
+
+/** game-rules reaches the sections whose sources cite a heading it changed. */
+function byGameRules(change, section, gameRules) {
+  if (change.path !== GAME_RULES) return [];
+  return [...headingsChanged(gameRules, change)]
+    .filter(anchor => section.sources.includes(`game-rules#${anchor}`))
+    .map(anchor => `cites game-rules#${anchor}`);
+}
+
+const CONTENT_KINDS = [
+  ['data/Spells/', 'spell'],
+  ['data/Tiers/', 'tier'],
+];
+
+/** A spell or a mutation reaches the sections that draw it or name it, by its new name or its old one. */
+function byContent(change, section, content) {
+  const kind = CONTENT_KINDS.find(([folder]) => change.path.startsWith(folder))?.[1];
+  const definition = kind && change.path.endsWith('.json') ? contentOf(change.path, content, kind) : null;
+  if (!definition) return [];
+  const reasons = section.text.includes(`${definition.id}.`) ? [`draws ${definition.id}`] : [];
+  // A renamed spell or mutation is still named by its old name where the book has not caught up.
+  const names = new Set([definition.name, ...namesIn(change.removed)].filter(Boolean));
+  for (const name of names) if (new RegExp(String.raw`\b${escape(name)}\b`).test(section.text)) reasons.push(`names ${name}`);
+  return reasons;
+}
+
+/** The rule set or the reference creature reaches the sections that draw a value the change moved. */
+function byValues(change, section) {
+  if (change.path !== RULE_SET && change.path !== CREATURE) return [];
+  const prefix = change.path === RULE_SET ? 'rules' : 'creature';
+  const shown = [...keysChanged(change)];
+  const keys = prefix === 'creature' ? shown.map(statOf).filter(Boolean) : shown;
+  const draws = key => new RegExp(String.raw`\b${prefix}\.${key}\b`).test(section.text);
+  // No key in sight (a hunk of brackets alone): every value the section draws from the file may have moved.
+  const moved = shown.length > 0 ? keys : [...section.text.matchAll(new RegExp(String.raw`\b${prefix}\.(\w+)`, 'g'))].map(match => match[1]);
+  return [...new Set(moved)].filter(draws).map(key => `draws ${prefix}.${key}`);
+}
+
+/** A change to the book reaches the sections whose lines it touched. */
+function byOwnLines(change, section) {
+  if (change.path !== `rules/${section.file}`) return [];
+  const lines = touched(change, section.rows, row => HEADING.test(row));
+  return [...lines].some(line => line >= section.from && line <= section.to) ? ['changed in the book'] : [];
 }
 
 /** What reaches a section, for one changed path: the reasons, or none. */
 function reasonsFor(change, section, { gameRules, content }) {
-  const { path } = change;
-  const reasons = [];
-  const adr = /^docs\/adr\/(\d{4})-/.exec(path);
-  if (adr && section.sources.includes(`ADR ${adr[1]}`)) reasons.push(`cites ADR ${adr[1]}`);
-  if (path === GAME_RULES) {
-    for (const anchor of headingsChanged(gameRules, change)) {
-      if (section.sources.includes(`game-rules#${anchor}`)) reasons.push(`cites game-rules#${anchor}`);
-    }
-  }
-  const kind = path.startsWith('data/Spells/') ? 'spell' : path.startsWith('data/Tiers/') ? 'tier' : null;
-  const definition = kind && path.endsWith('.json') ? contentOf(path, content, kind) : null;
-  if (definition) {
-    if (section.text.includes(`${definition.id}.`)) reasons.push(`draws ${definition.id}`);
-    // A renamed spell or mutation is still named by its old name where the book has not caught up.
-    const names = new Set([definition.name, ...namesIn(change.removed)].filter(Boolean));
-    for (const name of names) if (new RegExp(String.raw`\b${escape(name)}\b`).test(section.text)) reasons.push(`names ${name}`);
-  }
-  if (path === RULE_SET || path === CREATURE) {
-    const prefix = path === RULE_SET ? 'rules' : 'creature';
-    const shown = [...keysChanged(change)];
-    const keys = shown.map(key => (prefix === 'creature' ? statOf(key) : key)).filter(Boolean);
-    // No key in sight (a hunk of brackets alone): every value the section draws from the file may have moved.
-    const drawn = keys.length > 0 || shown.length > 0 ? keys : [...new Set([...section.text.matchAll(new RegExp(String.raw`\b${prefix}\.(\w+)`, 'g'))].map(match => match[1]))];
-    for (const key of drawn) if (new RegExp(String.raw`\b${prefix}\.${key}\b`).test(section.text)) reasons.push(`draws ${prefix}.${key}`);
-  }
-  const own = path === `rules/${section.file}` ? touched(change, section.rows, row => HEADING.test(row)) : new Set();
-  if ([...own].some(line => line >= section.from && line <= section.to)) {
-    reasons.push('changed in the book');
-  }
-  return reasons;
+  return [
+    ...byAdr(change, section),
+    ...byGameRules(change, section, gameRules),
+    ...byContent(change, section, content),
+    ...byValues(change, section),
+    ...byOwnLines(change, section),
+  ];
 }
 
 /**
