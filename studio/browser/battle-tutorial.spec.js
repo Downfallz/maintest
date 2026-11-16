@@ -106,6 +106,8 @@ async function playStep(page, state, index, capture) {
       return card.top >= field.bottom - 1;
     })).toBe(true);
     await fitsViewport(page, '#coach-cards button');
+    // Its concept cards stand on the step's row, above its lines, so the sheet keeps its choices in view (#670).
+    expect(await page.evaluate(() => document.getElementById('coach-cards').getBoundingClientRect().bottom <= document.getElementById('coach-lines').getBoundingClientRect().top + 1)).toBe(true);
   }
   if (index === 0 && capture) await capture('coach-card');
   await page.locator('[data-spell="shock"]').click();
@@ -205,23 +207,23 @@ test('a concept card links to its section of the rulebook, which opens in a new 
   await serveTheRules(context);
   await page.locator('#practice-brief-begin').click();
   await expect(page.locator('#concept-dialog')).toBeVisible({ timeout: 15000 });
-  const health = cardOf(lesson.steps[0].concepts[0]);
+  const first = cardOf(lesson.steps[0].concepts[0]);
   const link = page.locator('#concept-rulebook');
   await expect(link).toHaveAttribute('target', '_blank');
-  await expect(link).toHaveAccessibleName(`Rules, ${health.section.number} ${health.section.title}, opens in a new tab`);
+  await expect(link).toHaveAccessibleName(`Rules, ${first.section.number} ${first.section.title}, opens in a new tab`);
   await fitsViewport(page, '#concept-rulebook');
   const [tab] = await Promise.all([context.waitForEvent('page'), link.click()]);
   await tab.waitForLoadState();
-  expect(new URL(tab.url()).hash).toBe(`#${health.section.id}`);
+  expect(new URL(tab.url()).hash).toBe(`#${first.section.id}`);
   await expect(tab.locator('body')).toHaveAttribute('data-rules', 'ready');
-  await expect(tab.locator(`#${health.section.id} h3`)).toBeInViewport();
-  await expect(tab.locator(`#${health.section.id}`)).toContainText(health.title);
+  await expect(tab.locator(`#${first.section.id} h3`)).toBeInViewport();
+  await expect(tab.locator(`#${first.section.id}`)).toContainText(first.title);
   // The battle is where it was: the same card, the same question, nothing sent.
   await page.bringToFront();
   expect(new URL(page.url()).pathname).toBe('/table/battle.html');
   await expect(page.locator('#concept-dialog')).toBeVisible();
-  await expect(page.locator('#concept-title')).toHaveText(health.title);
-  await page.locator('#concept-next').click();
+  await expect(page.locator('#concept-title')).toHaveText(first.title);
+  for (let card = 0; card < lesson.steps[0].concepts.length; card++) await page.locator('#concept-next').click();
   await expect(page.locator('#concept-dialog')).toBeHidden();
   await openSpells(page);
   await expect(page.locator('#coach-step')).toHaveText(`STEP 1 OF ${lesson.steps.length}`);
@@ -243,7 +245,7 @@ test('a step whose rulebook arrives late still opens its cards before the spell 
   await expect(page.locator('#concept-dialog')).toBeVisible({ timeout: 15000 });
   await expect(page.locator('#concept-title')).toHaveText(cardOf(lesson.steps[0].concepts[0]).title);
   await expect(page.locator('#combat-dialog')).toBeHidden();
-  await page.locator('#concept-next').click();
+  for (let card = 0; card < lesson.steps[0].concepts.length; card++) await page.locator('#concept-next').click();
   await openSpells(page);
   expect(state.writes).toEqual([]); expect(state.errors).toEqual([]);
 });

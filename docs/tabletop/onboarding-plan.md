@@ -1,6 +1,6 @@
 # Onboarding: tutorials played on the table, and concept cards
 
-Status: accepted, 2026-11-15. O1, O2, O3a, O3b and O4 built (ADR 0187); O5 next.
+Status: accepted, 2026-11-15. O1 to O5 built (ADR 0187): the series of four is played on the table.
 
 ## What the owner asked for
 
@@ -86,10 +86,10 @@ give what is said and when. It reuses everything ADR 0179 built, and the regress
 
 | # | Title | What it teaches | Played for the person |
 | --- | --- | --- | --- |
-| 1 | Your first combat | Intent, targets, Energy, Health, Defense, the fizzle | Evolution, Tempo, Tie order |
-| 2 | Who acts first | Tempo, initiative, the critical, Tie order | Evolution |
+| 1 | Your first combat | Choosing a spell, targets, Energy, Health, Defense | Evolution, Tempo, Tie order |
+| 2 | Who acts first | Tempo, initiative, the critical, Tie order, the skipped turn | Evolution |
 | 3 | Grow by mutating | Evolution, mutations, the Mutation Tree, the initiative bonus | Nothing |
-| 4 | A whole match | Conditions and their countdown, the stun's immunity, the round cap | Nothing; the bot plays on to the end |
+| 4 | To the end | Conditions and their countdown, the stun's immunity, the end of a match | Nothing; the match is played to its end |
 
 - **Starting and starting again.** A new account's first visit opens tutorial 1 at once. It must read as a
   tutorial from the first second, and leave in one tap: the band says **Tutorial 1 of 4** where a practice says
@@ -218,9 +218,42 @@ give what is said and when. It reuses everything ADR 0179 built, and the regress
    - **Learn to play** is in the account menu, with Settings, not in the main menu's bar: a seventh entry pushed
      a long player name off a 1241 px screen, and a tutorial is a signed-in account's anyway.
    - The browser specs play on a mock host. The first visit on the real engine is O5's, with its per-tutorial specs.
+   - **Learn to play** stands in the account menu, not in the main menu's bar as this plan says: whether to put it
+     in the bar and fold the menu later than 1240 px is the owner's (#669).
+   - On a 320 px phone the coach card in the docked sheet leaves one spell card in view (#670): judged at O5,
+     below.
 6. **O5, the series.** Tutorials 2, 3 and 4 written with the rulebook-writer and the copy-editor, each a scenario
    file cut by `scenario-generate`, each held by `ScenarioFileTests`. Tests: the files themselves, and one
    browser spec per tutorial played to its end.
+
+   *Built (2026-11-16)*: three files under `scenarios/tutorials/`, each a greedy 3v3 under the hosted table's
+   rules, cut by `scenario-generate`, with four steps:
+
+   | # | File | Cut | Steps |
+   | --- | --- | --- | --- |
+   | 2 | `who-acts-first.json` | seed 5, round 4 | the tempos (Tempo), the tie (Initiative), a Precision cast (Critical), a skipped turn (A skipped turn) |
+   | 3 | `grow-by-mutating.json` | seed 5, round 3 | the Mutation (Mutation), the tempos (Initiative), the tie, the spell it brings |
+   | 4 | `to-the-end.json` | seed 3, round 5, to the match's end in round 8 | Regeneration and Bleed (Conditions), the stun (Conditions, A skipped turn), the end of a match (Health) |
+
+   Tutorial 1's first step also opens **Choosing a spell** (`intent`), and tutorial 2 the skipped turn (`fizzle`):
+   R4 gave the two cards the hosted table's rules, so they have a place (question 7). Tutorial 4 is the end of a
+   match, not a whole one, and is called **To the end** (question 8). `TutorialFileTests` holds the series: four
+   files, in order, each teaching what the table above says.
+
+   `battle.tutorials.js`, a real-engine journey, plays each tutorial on a host that records, signed in as a new
+   dev account, with the person's recorded answers: every step's coach card shows, the host says the lesson is
+   done, the account keeps it, and the home page says **Done**. Tutorial 1 is reached by the first visit.
+
+   #670, judged: at 320 × 740 the card in a docked sheet hid most of the tempos and left one spell card in view.
+   In the sheet, the concept cards now stand on the step's row where they fit, and the lessons say less: one
+   screen line a sentence, most of them. The first choice of every sheet the series opens is at least half in
+   view at 320 px (the journey checks it at 390 px), and the mock journey holds the cards above the lines.
+
+   - The lines are the copy-editor's and the rulebook-writer's first pass; they state facts the file's own
+     content holds (what Regeneration does, the stun's immunity), which stay true until the file is cut again.
+   - A person who plays something else than the recorded answers reads steps written for the recorded board:
+     the steps still show by the question asked (ADR 0187).
+   - **Learn to play** in the main menu's bar stays the owner's (#669).
 
 ## Questions for the owner
 
@@ -246,3 +279,10 @@ give what is said and when. It reuses everything ADR 0179 built, and the regress
 4. A tutorial is done when its last step is shown and its round ends, win or lose.
 5. Signed-in accounts first; guests in a later plan.
 6. The concept cards open in the tutorials only.
+
+## Questions the owner settled (2026-11-16)
+
+7. **Choosing a spell** (the `intent` card) opens at tutorial 1's first step, and **A skipped turn** (`fizzle`)
+   in tutorial 2 and again in tutorial 4, with the stun.
+8. Tutorial 4 is cut at round 5 of its match and played to the end: the conditions, the stun and the end of a
+   match, in about four rounds, not a whole match.
