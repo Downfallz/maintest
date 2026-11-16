@@ -21,13 +21,18 @@ export function tutorialOf(view) {
   return lesson && Number.isInteger(lesson.order) && Array.isArray(lesson.steps) && lesson.steps.length ? lesson : null;
 }
 
-/** What the band over the field says in a tutorial: its place in the series, its title, and how far the person is. */
+/**
+ * What the band says in a tutorial, in the header where the opponent, History, Help and the notifications stand in a
+ * game: its place in the series, its title, how far the person is, and what its restart is called (once the tutorial
+ * is done, it is played again from its cut).
+ */
 export function tutorialBand(lesson) {
   const steps = list(lesson?.steps).length, shown = Math.min(steps, Math.max(1, lesson?.shown ?? 0));
   return {
     eyebrow: `TUTORIAL ${lesson?.order ?? '—'} OF ${Math.max(lesson?.of ?? 0, lesson?.order ?? 0) || '—'}`,
     title: lesson?.title || 'Tutorial',
     detail: lesson?.done ? 'Tutorial complete' : `Step ${shown} of ${steps}`,
+    restart: lesson?.done ? 'Play again' : 'Restart the round',
   };
 }
 
@@ -49,6 +54,16 @@ export function leavingSkips(view) {
   return Boolean(lesson && !lesson.done);
 }
 
+/**
+ * Where the page lets go of the view's tutorial when the person leaves it, skipped or done: the host keeps no
+ * practice of it, and the next time it opens it starts from its cut. None outside a tutorial: a plain practice
+ * stays to be resumed.
+ */
+export function leavePath(view) {
+  const id = tutorialOf(view) ? view.practice.scenario : null;
+  return typeof id === 'string' && id ? `/api/scenarios/${encodeURIComponent(id)}/practice` : null;
+}
+
 /** Where the page says the account skipped (`skip`) or finished (`done`) the view's tutorial; none outside a tutorial. */
 export function progressPath(view, what) {
   const id = tutorialOf(view) ? view.practice.scenario : null;
@@ -61,9 +76,28 @@ export function assistedQuestion(view) {
   return Boolean(lesson && view.waitingFor && list(lesson.assisted).includes(view.waitingFor));
 }
 
-/** The view as the page draws it: an assisted question is not the person's, so the view asks and offers nothing. */
+/**
+ * Whether the view asks a question in a tutorial the host says is done: the lesson is over, the host answers nothing
+ * more, and the person is not to play on. Only its end card, Play again and Leave remain.
+ */
+export function pastTheLesson(view) {
+  return Boolean(tutorialOf(view)?.done && view.waitingFor);
+}
+
+/**
+ * What the dock says once the tutorial is done, in place of waiting for a decision that will not come; none before,
+ * and none outside a tutorial.
+ */
+export function lessonOverText(view) {
+  return tutorialOf(view)?.done ? 'Tutorial complete. Play it again, or leave.' : null;
+}
+
+/**
+ * The view as the page draws it: an assisted question is not the person's, and once the tutorial is done no question
+ * is, so the view asks and offers nothing.
+ */
 export function withoutAssisted(view) {
-  return assistedQuestion(view) ? { ...view, waitingFor: null, waitingAsked: null, waitingCreature: null, options: {} } : view;
+  return assistedQuestion(view) || pastTheLesson(view) ? { ...view, waitingFor: null, waitingAsked: null, waitingCreature: null, options: {} } : view;
 }
 
 const pointer = step => {
@@ -99,6 +133,6 @@ export function coachCard(view, { held = false } = {}) {
   }
   if (!lesson.done) return null;
   return { key: 'done', done: true, eyebrow: 'TUTORIAL COMPLETE',
-    lines: [`You finished ${lesson.title || 'the tutorial'}.`, 'Play on, restart the round, or leave: nothing played here counts.'],
+    lines: [`You finished ${lesson.title || 'the tutorial'}.`, 'Play it again, or leave: nothing played here counts.'],
     cards: [], creature: null, control: null };
 }

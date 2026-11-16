@@ -5,18 +5,19 @@
 
 /** @typedef {{ id: string, title: string, lines: readonly string[], example: string, rulebook: { section: string, anchor: string, label: string } }} ConceptCard */
 
-// The reference values an example quotes: the reference creature (data/Creatures/main.v1.json) and the hosted
-// table's rule set (docs/tabletop/playtest.rules.json), as the rulebook's setup table (3.1) gives them. They change
-// when the game is balanced, so an example is built from them, not typed with their numbers, and concepts.test.js
-// holds them to those two files (#651).
-export const REFERENCE = Object.freeze({ health: 30, defense: 0, initiative: 5, energyPerRound: 2, criticalMultiplier: 2 });
+// The reference values a card quotes: the reference creature (data/Creatures/main.v1.json), the hosted table's rule
+// set (docs/tabletop/playtest.rules.json), as the rulebook's setup table (3.1) gives them, and the engine's ceiling on
+// Defense buffs (ADR 0076, `Creature.DefenseBuffCeiling`). They change when the game is balanced, so a card is built
+// from them, not typed with their numbers, and concepts.test.js holds them to those files (#651).
+export const REFERENCE = Object.freeze({ health: 30, defense: 0, initiative: 5, energyPerRound: 2, criticalMultiplier: 2, defenseBuffCeiling: 10 });
 
 // The cards as they are written: one block a card, blocks apart by a blank line. A block's first line is its id,
 // its title, the rulebook section, that section's anchor and its heading; then its lines; then its example, after >.
-const written = ({ health, defense, initiative, energyPerRound, criticalMultiplier }) => `
+const written = ({ health, defense, initiative, energyPerRound, criticalMultiplier, defenseBuffCeiling }) => `
 health | Health | Part 1 | part-1-what-you-are-trying-to-do | Part 1: What you are trying to do
 At zero Health a creature is defeated, for the rest of the match.
 A team with no creature left loses, at once, even in the middle of a round.
+Healing never takes a creature above the Health it started the match with.
 > A creature starts at ${health} Health. A hit of 7 leaves it at ${Math.max(0, health - Math.max(0, 7 - defense))}.
 
 energy | Energy | 5.1 | 51-energy-gain | 5.1 Energy gain
@@ -26,6 +27,7 @@ A spell costs Energy. It is spent when the spell resolves, never before.
 
 defense | Defense | 5.8 | 58-resolving-an-action | 5.8 Resolving an action
 Defense lowers the damage of every hit a creature takes, never below zero.
+Defense buffs add at most ${defenseBuffCeiling} to it, however many it holds.
 Only damage over time, applied at Upkeep, ignores it.
 > A hit of 7 on a creature with ${defense + 2} Defense deals ${Math.max(0, 5 - defense)}. A creature starts at ${defense} Defense: the same hit on it deals ${Math.max(0, 7 - defense)}.
 

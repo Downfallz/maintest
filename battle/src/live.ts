@@ -39,7 +39,7 @@ import { replayOf, operatorToken, replayMessage } from '../../table/session.js';
 import { httpTransport, replayTransport } from '../../table/transport.js';
 import { battleSeats, seatPath } from '../../table/battle-seats.js';
 import { openPractice, practiceBand, practiceBrief, practiceOf } from '../../table/battle-practice.js';
-import { withoutAssisted } from '../../table/battle-tutorial.js';
+import { lessonOverText, tutorialOf, withoutAssisted } from '../../table/battle-tutorial.js';
 import { tutorialControls } from './tutorial.js';
 import { createLiveConnection } from '../../table/battle-live.js';
 import { signInPath } from '../../table/account.js';
@@ -479,7 +479,9 @@ function render() {
   // Nothing asked of this seat while the other side plays or chooses: the dock says so, whom for and on what,
   // in the reading card's place, rather than a line of status text.
   const other = selected?.table.seats?.find(one => one.seat !== selected?.seat);
+  // A tutorial that is done waits on nobody: its end card says what is left, Play again or Leave.
   const awaiting = view && visible() && !playbackState.active && !orderReading && !replay.active && !targeting && !action.opened && !planning.model().opened && !rendererFailed
+    && !tutorialOf(view)?.done
     ? waitingOn(view, { accepted: action.accepted || planning.model().accepted, opponent: other && other.kind !== 'open' && other.name !== 'Player' ? other.name : null, bot: other?.kind === 'bot' })
     : null;
   $('battle').dataset.awaiting = awaiting?.kind ?? '';
@@ -495,7 +497,10 @@ function render() {
   text('actor-name', playbackState.receipt ? playbackState.receipt.category : playbackState.active ? name(frame.actor) : headline(board));
   const phase = view ? stepLabel(board.subPhase) || 'Waiting for players' : '';
   text('actor-meta', playbackState.active ? playbackState.label : phase);
-  text('instruction', !view ? '' : playbackState.active ? playbackState.asks ? 'Read the result, then choose OK. Your next choice follows.' : 'Results are playing. Your next choice follows; Skip all shows the current board.' : mutation.prompt ?? guide.objective);
+  let instruction = '';
+  if (view && playbackState.active) instruction = playbackState.asks ? 'Read the result, then choose OK. Your next choice follows.' : 'Results are playing. Your next choice follows; Skip all shows the current board.';
+  else if (view) instruction = lessonOverText(view) ?? mutation.prompt ?? guide.objective;
+  text('instruction', instruction);
   $('instruction').hidden = Boolean(action.error || planning.model().error || replay.error);
   if (view && ready && !rendererFailed) $('loading').hidden = true;
   // What this seat has been shown so far, kept for the next time the page opens on it.

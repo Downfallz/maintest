@@ -41,23 +41,31 @@ test('every rulebook anchor is a heading of the rulebook, under the section the 
   }
 });
 
-test('the reference values the cards quote match the hosted table\'s rule set and the reference creature', () => {
+test('the reference values the cards quote match the hosted table\'s rule set, the reference creature and the engine', () => {
   const rules = JSON.parse(readFileSync(join(root, 'docs/tabletop/playtest.rules.json'), 'utf8'));
   const creature = JSON.parse(readFileSync(join(root, 'data/Creatures/main.v1.json'), 'utf8'));
+  const engine = readFileSync(join(root, 'src/DownfallArena.Domain/Matches/Creatures/Creature.cs'), 'utf8');
   assert.deepEqual({ ...REFERENCE }, {
     health: creature.baseHealth,
     defense: creature.baseDefense,
     initiative: creature.baseInitiative,
     energyPerRound: rules.energyPerRound,
     criticalMultiplier: rules.criticalMultiplier,
+    defenseBuffCeiling: Number(/DefenseBuffCeiling = (\d+);/.exec(engine)?.[1]),
   });
+});
+
+test('the Health card says healing stops at the starting Health, and the Defense card the ceiling on its buffs', () => {
+  assert.ok(conceptCard('health').lines.includes('Healing never takes a creature above the Health it started the match with.'));
+  assert.ok(conceptCard('defense').lines.includes('Defense buffs add at most 10 to it, however many it holds.'));
+  assert.ok(conceptsFor({ ...REFERENCE, defenseBuffCeiling: 8 }).find(card => card.id === 'defense').lines.includes('Defense buffs add at most 8 to it, however many it holds.'));
 });
 
 test('a card reads the reference values it is given, and only the cards that quote a value change', () => {
   const quotedBy = {
-    health: ['health'], defense: ['health', 'defense'], initiative: ['initiative', 'tempo', 'mutation'], energyPerRound: ['energy'], criticalMultiplier: ['critical'],
+    health: ['health'], defense: ['health', 'defense'], initiative: ['initiative', 'tempo', 'mutation'], energyPerRound: ['energy'], criticalMultiplier: ['critical'], defenseBuffCeiling: [],
   };
-  const moved = { health: 40, defense: 1, initiative: 6, energyPerRound: 3, criticalMultiplier: 1.5 };
+  const moved = { health: 40, defense: 1, initiative: 6, energyPerRound: 3, criticalMultiplier: 1.5, defenseBuffCeiling: 8 };
   const examples = cards => Object.fromEntries(cards.map(card => [card.id, card.example]));
   const today = examples(conceptsFor(REFERENCE));
   assert.deepEqual(today, examples(CONCEPTS));
