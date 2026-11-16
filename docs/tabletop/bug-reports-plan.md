@@ -72,8 +72,35 @@ journal's length, so the operator knows where the player stood when they wrote.
 A report is kept 180 days after it is closed (fixed or dismissed), then the tending pass lets it go. A deleted
 account's reports keep their text and lose the account.
 
-A seat or an account sends five reports a day at most (`429 Report.TooMany`). A report is personal data: the
-*What we keep* panel says so, in one line.
+A report is personal data: the *What we keep* panel says so, in one line.
+
+### Against spam
+
+Asked by the owner on 2026-11-16: a player must not be able to flood the tab. Five guards, checked by the host in
+this order, each refusal a `429` with a code and a sentence the sheet shows:
+
+1. **One at a time.** Two minutes at least between two reports of one sender (`Report.TooSoon`, with the seconds
+   left). A sender is the account when signed in, else the seat's key.
+2. **Five a day.** Five reports a day per sender (`Report.TooMany`).
+3. **Five a day per address, for guests.** A guest opens a table, and so a new seat, in one request, so the seat
+   alone bounds nothing. A guest's reports are also counted per network address, five a day across every seat it
+   holds. The address is counted in the process's memory, hashed, and never kept with the report.
+4. **Once per position.** A second report from the same sender, table and round is not a new report: its text is
+   added to the first one (`Report.Merged`, answered 200 with the first report's id), so a player who taps twice
+   leaves one row.
+5. **A host-wide ceiling.** Past 100 new reports in a day the host takes no more (`Report.HostFull`) and the
+   Overview's card says so in the warning colour. A flood from many senders costs the operator one look, not a
+   thousand rows.
+
+The operator has the last word. **Dismiss as spam** on a report counts against its sender; a sender with three
+reports dismissed as spam in 30 days, or one the operator mutes from the sheet (**Stop reports from this player**),
+no longer sees **Report a problem**: the host answers `403 Report.Muted` and the page hides the entry. A mute is
+lifted from the sheet, or ends on its own after 30 days. Mutes and spam marks are lines in the Activity tab
+(`report.spam`, `report.mute`, `report.unmute`). An account's mute is kept with its activity record (ADR 0174); a
+guest's dies with its seat.
+
+The sheet itself discourages noise without a captcha: **Send** waits until what happened holds 10 characters, and
+the sheet says what the host will attach, so a player knows a short report is enough.
 
 ## The operator's side: the Reports tab
 
@@ -88,9 +115,9 @@ A row opens the sheet:
 - the table: a link to its session, and **Diagnose…** when it is still under way (S5b, reused, not rebuilt);
 - **Reproduce**: cuts a scenario at the top of the reported round, in the reporter's seat, through the existing
   `POST /api/admin/scenarios`. Its title is *Report <id>, round N* and its goal is empty, so no player's words
-  reach a file that may become public; the operator may write both. The answer is the practice link: the operator plays the round and sees the bug, or does not. A report from a
-  practice is cut from its copied entries instead. A round the journal does not offer answers with the rounds it
-  does, as the scenarios sheet already says;
+  reach a file that may become public; the operator may write both. The answer is the practice link: the operator
+  plays the round and sees the bug, or does not. A report from a practice is cut from its copied entries instead. A
+  round the journal does not offer answers with the rounds it does, as the scenarios sheet already says;
 - **File an issue** (below);
 - the status, changed by hand: *seen*, *reproduced*, *dismissed* with a reason. *Filed* and *fixed* are set by
   the issue.
@@ -168,9 +195,10 @@ you reported on <date> is fixed", once (`AccountNotices`). A guest's report tell
 
 | Route | Who | What |
 | --- | --- | --- |
-| `POST /api/reports` | seat, account | Sends a report: `{"category","happened","expected?","attach","page","errors"}`; `429 Report.TooMany` past five a day. |
+| `POST /api/reports` | seat, account | Sends a report: `{"category","happened","expected?","attach","page","errors"}`; `429` `Report.TooSoon`, `Report.TooMany` or `Report.HostFull`, `403 Report.Muted`, `200 Report.Merged` (see "Against spam"). |
 | `GET /api/admin/reports?status&category&page`, `GET /api/admin/reports/<id>` | operator | The Reports tab and one report's sheet. |
-| `PUT /api/admin/reports/<id>/status {"status","reason?","issue?"}` | operator | Seen, reproduced, dismissed with a reason, filed with the issue's number. |
+| `PUT /api/admin/reports/<id>/status {"status","reason?","issue?"}` | operator | Seen, reproduced, dismissed with a reason (`spam` among them), filed with the issue's number. |
+| `POST`/`DELETE /api/admin/reports/<id>/mute` | operator | Stops the report's sender from reporting for 30 days; lifts it. |
 | `POST /api/admin/reports/<id>/reproduce` | operator | Cuts the scenario at the reported round, in the reporter's seat; answers the practice link. |
 | `GET /api/admin/reports/<id>/scenario.zip` | operator | The redacted scenario, as a zip to attach to the issue. |
 
@@ -183,16 +211,19 @@ Each stage is one pull request that leaves the gate green.
    **Bug report**, **Redacted scenario**, **Bug scenario**. No code.
 2. **R1, the report kept.** `BugReport`, `IBugReports` and its two adapters, `POST /api/reports` from a seat key
    or a signed-in account, the host's context (table, seat, round, sub-phase, journal length, content, rules,
-   engine, the seat's view, a practice's entries), the daily bound, the 180 days in the tending pass. Tests:
-   `ReportsApiTests` (from a seat, from an account, signed out and seatless refused, the bound, a practice's
+   engine, the seat's view, a practice's entries), the guards against spam (two minutes apart, five a day per
+   sender, five a day per address for guests, merged per position, the host's ceiling), the 180 days in the
+   tending pass. Tests: `ReportsApiTests` (from a seat, from an account, signed out and seatless refused, each
+   guard refused or merged with its code, a guest's new seat still counted against its address, a practice's
    entries copied, the other seat's hidden state absent from the position), the adapters' tests on Azurite.
 3. **R2, Report a problem.** The sheet in the battle view's menu, on the recap, in a practice and in the lobby's
    menu; the page's error catcher; the *What we keep* line. Tests: `report.test.js` (the sheet's model, the errors
-   kept to ten, nothing written to storage), `terminology.test.js`, a browser spec sending one from a seat and one
-   from the lobby at 320 px.
+   kept to ten, nothing written to storage, each refusal's sentence, the entry hidden once muted),
+   `terminology.test.js`, a browser spec sending one from a seat and one from the lobby at 320 px.
 4. **R3, the Reports tab.** The list, the sheet with the position drawn read-only, Diagnose… on a table under way,
-   the status by hand, the Activity lines, the Overview card. Tests: `ReportAdminApiTests`,
-   `admin-reports.test.js`, `admin.ux.spec.js`.
+   the status by hand, **Dismiss as spam** and **Stop reports from this player** (and lifting it), the Activity
+   lines, the Overview card. Tests: a muted sender refused with `Report.Muted`, three spam marks in 30 days muting,
+   a mute ending after 30 days (`ReportAdminApiTests`), `admin-reports.test.js`, `admin.ux.spec.js`.
 5. **R4, Reproduce.** The button over `ScenarioAdminApi`: the cut at the reported round in the reporter's seat,
    from the session or from a practice's copied entries, the practice link. Tests: a report on a recorded greedy
    3v3 cut and opened as a practice on its board; a round the journal does not offer; a practice's report cut.
@@ -224,3 +255,5 @@ Each stage is one pull request that leaves the gate green.
    written in the scenario file.
 5. **The player is told:** yes, a notice in the bell once the report is fixed (R8).
 6. **A closed report is kept** 180 days, then the tending pass lets it go.
+7. **Against spam** (asked after the first six): two minutes between reports, five a day per sender and per guest
+   address, one report per position, a ceiling of 100 a day for the host, and the operator's spam mark and mute.
