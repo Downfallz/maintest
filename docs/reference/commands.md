@@ -345,7 +345,7 @@ each one's `id`, `order`, `of`, `title`, `goal`, `round`, `seat`, `format` and `
 practice by the routes above, and is never listed under Practice. Once a tutorial is done the host answers nothing
 more for the person and the page draws no question: its end card offers Play again and Leave. A done tutorial is
 not resumed, and leaving one, done or not, lets go of its practice (`DELETE`), so it opens from its cut the next
-time.
+time; a done one is kept done for the account first, whether or not the page's own `done` got there before.
 
 Each tutorial also says its `state` for the account: `new`, `done` or `skipped`. `opens` is the link of the
 tutorial that opens by itself: the first of the series while it is new to the account, null otherwise, and null

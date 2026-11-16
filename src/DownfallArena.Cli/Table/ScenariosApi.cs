@@ -69,11 +69,9 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
         var answer = (method, segments) switch
         {
             ("GET", [_]) => await DescribeAsync(id),
-            ("GET", [_, "practice"]) => await practices.ResumeAsync(account, id) is { } current
-                ? Opened(current, name)
-                : Error("Scenario.NoPractice", "You have no practice of this scenario open.", 404),
+            ("GET", [_, "practice"]) => await ResumeAsync(who.Account.Id, id, name),
             ("POST", [_, "practice"]) => await OpenAsync(id, account, name),
-            ("DELETE", [_, "practice"]) => await ForgetAsync(account, id),
+            ("DELETE", [_, "practice"]) => await ForgetAsync(who.Account.Id, id),
             _ => NoRoute(method, path),
         };
         return Renewed(answer, who.Renewed);
@@ -195,10 +193,33 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
         };
     }
 
-    /// <summary>Lets go of the account's practice of the scenario, as the page does when the person leaves a tutorial: 204 either way.</summary>
-    private async Task<StudioResponse> ForgetAsync(string account, string id)
+    /// <summary>
+    /// Keeps that the account finished a tutorial when its practice here says so, before that practice is let go of:
+    /// the page says it too, but a Leave or a reload can reach the host first, and once the practice is gone nothing
+    /// shows it was done.
+    /// </summary>
+    private async Task KeepDoneAsync(AccountId account, string id)
     {
-        await practices.ForgetAsync(account, id);
+        if (store.Teaches(id) && (await practices.CurrentAsync(account.ToString(), id))?.Play.Api.Practice?.Tutorial is { Done: true })
+        {
+            await accounts.NoteTutorialAsync(account, id, TutorialState.Done);
+        }
+    }
+
+    /// <summary>The account's practice of the scenario to go on with; a tutorial that is done is kept done and let go of.</summary>
+    private async Task<StudioResponse> ResumeAsync(AccountId account, string id, string name)
+    {
+        await KeepDoneAsync(account, id);
+        return await practices.ResumeAsync(account.ToString(), id) is { } current
+            ? Opened(current, name)
+            : Error("Scenario.NoPractice", "You have no practice of this scenario open.", 404);
+    }
+
+    /// <summary>Lets go of the account's practice of the scenario, as the page does when the person leaves a tutorial: 204 either way.</summary>
+    private async Task<StudioResponse> ForgetAsync(AccountId account, string id)
+    {
+        await KeepDoneAsync(account, id);
+        await practices.ForgetAsync(account.ToString(), id);
         return new StudioResponse(204, StudioResponse.Plain, []);
     }
 

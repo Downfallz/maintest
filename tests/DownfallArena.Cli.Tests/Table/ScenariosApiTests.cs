@@ -673,6 +673,26 @@ public sealed class ScenariosApiTests : IDisposable
         practices.ByToken(play.Token).ShouldBeNull();
     }
 
+    [Theory]
+    [InlineData("DELETE")]
+    [InlineData("GET")]
+    public async Task A_finished_tutorial_let_go_of_before_the_page_said_done_is_kept_done(string method)
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var (api, accounts) = await KeepingAsync(store, practices);
+        var learner = await SignedInAsync(accounts, "learner");
+        var play = await OpenTutorialAsync(store, practices, "learner");
+        await AnswerTheLessonAsync(store, play);
+        await WaitingForAsync(play, one => one.GetProperty("practice").GetProperty("tutorial").GetProperty("done").GetBoolean());
+
+        // A Leave, or a reload, reaches the host before the page's own word that the tutorial is done.
+        await api.HandleAsync(method, $"{ScenariosApi.Prefix}/{Tutorial}/practice", learner);
+
+        practices.Count.ShouldBe(0);
+        Standing(await api.HandleAsync("GET", ScenariosApi.TutorialsRoute, learner)).ShouldBe((null, "done"));
+    }
+
     [Fact]
     public async Task Leaving_another_scenario_leaves_the_account_s_practice_where_it_is()
     {
