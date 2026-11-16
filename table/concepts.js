@@ -1,15 +1,14 @@
 // The concept cards (ADR 0187, docs/tabletop/onboarding-plan.md): what one rule word means, in three lines at
 // most, with one example on the reference creature and values (`REFERENCE`), and the rulebook section it
-// summarises. The rulebook
-// (docs/tabletop/rulebook.md) stays the source: a card is its summary in the player's words. A lesson step opens
-// the cards it names by these ids, which the host holds a lesson to (`ConceptCards.Ids`).
+// summarises. The rulebook (docs/tabletop/rulebook.md) stays the source: a card is its summary in the player's
+// words. A lesson step opens the cards it names by these ids, which the host holds a lesson to (`ConceptCards.Ids`).
 
 /** @typedef {{ id: string, title: string, lines: readonly string[], example: string, rulebook: { section: string, anchor: string, label: string } }} ConceptCard */
 
-// The reference values an example quotes: the reference creature's (data/Creatures/main.v1.json) and the hosted
-// table's rule set's (docs/tabletop/playtest.rules.json), as the rulebook's setup table (3.1) gives them. They move
-// when the game is balanced, so an example is written from them rather than with their numbers, and
-// concepts.test.js holds them to those two files (#651).
+// The reference values an example quotes: the reference creature (data/Creatures/main.v1.json) and the hosted
+// table's rule set (docs/tabletop/playtest.rules.json), as the rulebook's setup table (3.1) gives them. They change
+// when the game is balanced, so an example is built from them, not typed with their numbers, and concepts.test.js
+// holds them to those two files (#651).
 export const REFERENCE = Object.freeze({ health: 30, defense: 0, initiative: 5, energyPerRound: 2, criticalMultiplier: 2 });
 
 // The cards as they are written: one block a card, blocks apart by a blank line. A block's first line is its id,
@@ -28,19 +27,19 @@ A spell costs Energy. It is spent when the spell resolves, never before.
 defense | Defense | 5.8 | 58-resolving-an-action | 5.8 Resolving an action
 Defense lowers the damage of every hit a creature takes, never below zero.
 Only damage over time, applied at Upkeep, ignores it.
-> A hit of 7 on a creature with 2 Defense deals 5. A creature starts at ${defense} Defense: the same hit on it deals ${Math.max(0, 7 - defense)}.
+> A hit of 7 on a creature with ${defense + 2} Defense deals ${Math.max(0, 5 - defense)}. A creature starts at ${defense} Defense: the same hit on it deals ${Math.max(0, 7 - defense)}.
 
 initiative | Initiative | 5.5 | 55-turn-order-resolution | 5.5 Turn order resolution
 Initiative orders the creatures inside their tempo: the highest acts first.
 A creature starts with its base initiative. Each mutation adds its bonus, for the rest of the match.
 A tie between the two teams is settled by a d20 roll-off.
-> Two Precision creatures at 7 and 5 initiative: the one at 7 acts first.
+> Two Precision creatures at ${initiative + 2} and ${initiative} initiative: the one at ${initiative + 2} acts first.
 
 tempo | Tempo | 5.4 | 54-tempo | 5.4 Tempo
 Each round, every creature that is not stunned takes a tempo: Instinct or Precision.
 Instinct acts before every Precision creature, and cannot crit this round.
 Precision acts after every Instinct creature, and keeps the critical roll.
-> An Instinct creature at 5 initiative acts before a Precision creature at 9.
+> An Instinct creature at ${initiative} initiative acts before a Precision creature at ${initiative + 4}.
 
 critical | Critical | 6.7 | 67-the-critical-roll | 6.7 The critical roll
 A Precision creature rolls a d20 when its spell resolves, against the number the spell prints.
