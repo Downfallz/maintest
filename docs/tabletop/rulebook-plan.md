@@ -193,20 +193,20 @@ and the app's edition; it keeps writing, the keeper keeps reading.
    the `rulebook-writer`'s prompt pointed at `rules/`, the lists in `CLAUDE.md` and `docs/reference/commands.md`.
    Tests: the reviewer rules on each path above, `prompts.test.js` on the new agent and skill. Tried once on a
    past balance pass: the keeper must name the sections it touched.
-   *Built (2026-11-16)*: `rules-keeper`, read only, called by `reviewers.mjs` for the Domain, `game-rules.md`, the
-   glossary and the player's words, an ADR (not their index or template), `data/Spells`, `Tiers`, `Creatures`,
-   `TalentTrees` (which packages a creature is offered) and `balance`, the hosted rule set, `rules/`, `terms.js`,
-   `battle-guidance.js` and `scenarios/tutorials/`. Both it and `/rules` start from `scripts/rules/reach.mjs`,
+   *Built (2026-11-16)*: `rules-keeper` is a read-only reviewer. `reviewers.mjs` calls it for the Domain,
+   `game-rules.md`, the glossary and the player's words, an ADR (not their index or template), `data/Spells`,
+   `Tiers`, `Creatures`, `TalentTrees` (which packages a creature is offered) and `balance`, the hosted rule set,
+   `rules/`, `terms.js`, `battle-guidance.js` and `scenarios/tutorials/`. Both it and `/rules` start from `scripts/rules/reach.mjs`,
    which lists the sections a diff reaches and why: an ADR or a game-rules heading their `sources:` cite, a value
    they draw, a spell or a mutation they name, their own lines. It also lists the paths it leaves to a reading by
    hand. `/rules` has the `rulebook-writer` rewrite them and adds the `changes.md` line; `/stage` and `/wrap-up`
-   call it. The ADR and pull request templates carry **Rulebook:**, and the `rulebook-writer` writes `rules/`.
+   call it. The ADR template carries a `Rulebook:` line and the pull request's a **Rulebook:** line, and the `rulebook-writer` writes `rules/`.
    Tests: `studio/reviewers.test.js`, `table/rules-reach.test.js` (it runs the script once on #371's diff) and
    `prompts.test.js`. Tried on #371 (Archmage shared, Titan and Apex raised): the keeper named 3.1, 3.4, 3.11,
    3.12 and 5.3. It found the book still true on the numbers, with four gaps: a shared copy outliving its buyer
    is not taught; 5.3's opening says a passive is its creature's own; `changes.md` and ADR 0114 lack their
-   line; the card says "side" where the book says "team". Left to an issue: those fixes. A heading of
-   `game-rules.md` as wide as *Implemented* reaches every section that cites it.
+   line; the card says "side" where the book says "team". The fixes are left to an issue. A `game-rules.md`
+   heading as broad as *Implemented* reaches every section that cites it, so a change under it lists many.
 6. **R6, French.** `rules/fr/`, the same ids, the French column of `player-terminology.md` as its words; the page
    in the language the account chose. Once the English is settled.
 7. **R7, the public book.** The showcase renders `table/rules.json` under `/rules/` (and `/fr/regles/` once R6

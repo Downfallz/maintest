@@ -27,7 +27,8 @@ the `rulebook-writer`, and adds the line to `changes.md`. Both start from the se
 git diff origin/main... | node scripts/rules/reach.mjs
 ```
 
-An ADR says which sections it changes on its **Rulebook:** line, and a pull request on its own.
+An ADR names the sections it changes on its `Rulebook:` line. A pull request names them on its **Rulebook:**
+line.
 
 ## The files
 

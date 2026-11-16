@@ -12,7 +12,7 @@ word, a rule added) is rewritten here, in the same pull request as the change th
 1. The range: the argument, or `origin/main...HEAD` after `git fetch origin main`.
 2. The sections it reaches: `git diff <range> | node scripts/rules/reach.mjs`. It prints one line a section
    (its number, id and why) and the paths it leaves to a reading by hand. Nothing listed and nothing to read
-   by hand: say so, write **Rulebook: none** in the pull request, and stop.
+   by hand: say so, write **Rulebook:** none in the pull request, and stop.
 3. The keeper's reading: the `rules-keeper` findings of `/reviewers`, if it ran on this range; otherwise run
    `rules-keeper` on the range, in the foreground. Check each finding against the file and line it cites, as
    `/reviewers` does.
@@ -21,7 +21,7 @@ word, a rule added) is rewritten here, in the same pull request as the change th
    the ADRs and game-rules headings it now reads. A section renamed or removed keeps its old id in
    `rules/moved.json`. A rule no section teaches gets a section in the Part the keeper named.
 5. The record: a line in `rules/changes.md` for what a player would notice (`- YYYY-MM-DD: what changed (ADR
-   NNNN).`). A new ADR's **Rulebook:** line names the sections by id, or says "none".
+   NNNN).`). A new ADR's `Rulebook:` line names the sections by id, or says "none".
 6. The page text: a phase tip (`table/battle-guidance.js`), a term (`table/terms.js`) or a tutorial step
    (`scenarios/tutorials/`) the keeper found against the book is fixed in the same change.
 7. Rebuild and test:
