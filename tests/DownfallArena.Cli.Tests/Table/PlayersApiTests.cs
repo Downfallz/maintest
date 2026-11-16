@@ -13,6 +13,7 @@ namespace DownfallArena.Cli.Tests.Table;
 /// The operator's players (ADR 0174): the list, an account's sheet, and the three things the operator does to an
 /// account. Accounts are signed in by name (<c>--accounts dev</c>), so each test reads as players arriving.
 /// </summary>
+[Collection(ConsoleOutput.Name)]
 public sealed class PlayersApiTests : IDisposable
 {
     private static readonly DateTimeOffset Start = new(2026, 11, 13, 20, 0, 0, TimeSpan.Zero);
@@ -170,6 +171,33 @@ public sealed class PlayersApiTests : IDisposable
         var suspension = Json(await Players(accounts).HandleAsync("GET", $"{PlayersApi.Prefix}/{mark.Id}", "", null, "op")).GetProperty("player").GetProperty("suspension");
         suspension.GetProperty("reason").GetString().ShouldBe("Spamming invitations to strangers.");
         suspension.GetProperty("by").GetString().ShouldBe("op");
+    }
+
+    /// <summary>
+    /// The console is read into a public log (ADR 0186): the reason is free text the operator wrote, over several
+    /// lines and maybe naming another player, so it stays on the account and the operator log, not the console.
+    /// </summary>
+    [Fact]
+    public async Task A_suspension_is_said_on_the_console_without_its_reason()
+    {
+        var accounts = await AccountsAsync();
+        var mark = await SignInAsync(accounts, "Mark");
+        var said = new StringWriter();
+        var before = Console.Out;
+        Console.SetOut(said);
+        try
+        {
+            var body = """{"reason":"Insulted Zelda_42.\nThe report failed to reach him."}""";
+            (await Players(accounts).HandleAsync("POST", $"{PlayersApi.Prefix}/{mark.Id}/suspension", body, null, "op")).Status.ShouldBe(200);
+        }
+        finally
+        {
+            Console.SetOut(before);
+        }
+
+        said.ToString().ShouldContain($"Account {mark.Id} (Mark) suspended by op.");
+        said.ToString().ShouldNotContain("Zelda_42");
+        said.ToString().ShouldNotContain("failed to reach");
     }
 
     [Theory]
