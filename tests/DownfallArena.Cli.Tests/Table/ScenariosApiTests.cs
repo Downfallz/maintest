@@ -394,6 +394,9 @@ public sealed class ScenariosApiTests : IDisposable
         listed.EnumerateArray().Select(one => (one.GetProperty("id").GetString(), one.GetProperty("source").GetString(), one.GetProperty("file").GetString()))
             .ShouldBe([
                 ("sc-repo-greedy-1v1-round-3", "repository", "greedy-1v1-round-3.json"),
+                ("sc-repo-tutorial-grow-by-mutating", "repository", "tutorials/grow-by-mutating.json"),
+                ("sc-repo-tutorial-to-the-end", "repository", "tutorials/to-the-end.json"),
+                ("sc-repo-tutorial-who-acts-first", "repository", "tutorials/who-acts-first.json"),
                 ("sc-repo-tutorial-your-first-combat", "repository", "tutorials/your-first-combat.json"),
                 (cut, "cut", null),
             ]);
@@ -456,6 +459,9 @@ public sealed class ScenariosApiTests : IDisposable
 
     private const string Tutorial = "sc-repo-tutorial-your-first-combat";
 
+    /// <summary>The series the repository ships (docs/tabletop/onboarding-plan.md, O5), in its order.</summary>
+    private static readonly string[] Series = [Tutorial, "sc-repo-tutorial-who-acts-first", "sc-repo-tutorial-grow-by-mutating", "sc-repo-tutorial-to-the-end"];
+
     [Fact]
     public async Task A_signed_in_account_finds_the_tutorials_in_series_order_with_their_links()
     {
@@ -467,9 +473,11 @@ public sealed class ScenariosApiTests : IDisposable
         var answer = await api.HandleAsync("GET", ScenariosApi.TutorialsRoute, await SignedInAsync(accounts, "learner"));
 
         answer.Status.ShouldBe(200, Encoding.UTF8.GetString(answer.Body));
-        var listed = Read(answer).GetProperty("tutorials").EnumerateArray().ShouldHaveSingleItem();
+        var series = Read(answer).GetProperty("tutorials").EnumerateArray().ToList();
+        series.Select(one => (one.GetProperty("id").GetString(), one.GetProperty("order").GetInt32())).ShouldBe(Series.Select((id, index) => ((string?)id, index + 1)));
+        var listed = series[0];
         (listed.GetProperty("id").GetString(), listed.GetProperty("order").GetInt32(), listed.GetProperty("of").GetInt32(), listed.GetProperty("title").GetString())
-            .ShouldBe((Tutorial, 1, 1, "Your first combat"));
+            .ShouldBe((Tutorial, 1, 4, "Your first combat"));
         (listed.GetProperty("round").GetInt32(), listed.GetProperty("seat").GetString(), listed.GetProperty("link").GetString())
             .ShouldBe((2, "player1", $"/battle?scenario={Tutorial}"));
         listed.TryGetProperty("goal", out _).ShouldBeTrue();
@@ -489,7 +497,7 @@ public sealed class ScenariosApiTests : IDisposable
         var answer = await api.HandleAsync("GET", ScenariosApi.TutorialsRoute, await SignedInAsync(accounts, "learner"));
 
         answer.Status.ShouldBe(200);
-        Read(answer).GetProperty("tutorials").EnumerateArray().Select(one => one.GetProperty("id").GetString()).ShouldBe([Tutorial]);
+        Read(answer).GetProperty("tutorials").EnumerateArray().Select(one => one.GetProperty("id").GetString()).ShouldBe(Series);
     }
 
     [Fact]
@@ -595,7 +603,7 @@ public sealed class ScenariosApiTests : IDisposable
         var listed = Read(await admin.HandleAsync("GET", ScenarioAdminApi.Route, "", "operator")).GetProperty("scenarios").EnumerateArray().ToList();
 
         listed.Select(one => (one.GetProperty("id").GetString(), one.GetProperty("tutorial").ValueKind == JsonValueKind.Null ? (int?)null : one.GetProperty("tutorial").GetInt32()))
-            .ShouldBe([("sc-repo-greedy-1v1-round-3", null), (Tutorial, 1), (cut, null)]);
+            .ShouldBe([("sc-repo-greedy-1v1-round-3", null), ("sc-repo-tutorial-grow-by-mutating", 3), ("sc-repo-tutorial-to-the-end", 4), ("sc-repo-tutorial-who-acts-first", 2), (Tutorial, 1), (cut, null)]);
     }
 
     [Fact]
@@ -610,7 +618,7 @@ public sealed class ScenariosApiTests : IDisposable
         view.GetProperty("waitingFor").GetString().ShouldBe("Action");
         (view.GetProperty("board").GetProperty("roundNumber").GetInt32(), view.GetProperty("waitingCreature").GetInt32()).ShouldBe((2, 2));
         var tutorial = view.GetProperty("practice").GetProperty("tutorial");
-        (tutorial.GetProperty("order").GetInt32(), tutorial.GetProperty("of").GetInt32(), tutorial.GetProperty("title").GetString()).ShouldBe((1, 1, "Your first combat"));
+        (tutorial.GetProperty("order").GetInt32(), tutorial.GetProperty("of").GetInt32(), tutorial.GetProperty("title").GetString()).ShouldBe((1, 4, "Your first combat"));
         tutorial.GetProperty("teaches").EnumerateArray().Select(one => one.GetString()).ShouldBe(["Action"]);
         tutorial.GetProperty("assisted").EnumerateArray().Select(one => one.GetString()).ShouldBe(["Evolution", "Speed", "TieOrder", "Intent", "Target"]);
         tutorial.GetProperty("steps").GetArrayLength().ShouldBe(3);
