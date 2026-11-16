@@ -3,7 +3,6 @@ paths:
   - "table/**"
   - "studio/**"
   - "viewer/**"
-  - "showcase/**"
 ---
 
 # Static page rules

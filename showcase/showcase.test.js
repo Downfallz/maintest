@@ -10,7 +10,8 @@ import { GAME_ORIGIN, SITE_ORIGIN } from '../table/site-origins.js';
 // Built into a folder of its own, so running the tests leaves the working tree's showcase/dist as it was.
 const builder = fileURLToPath(new URL('./build.mjs', import.meta.url));
 const workingDist = fileURLToPath(new URL('./dist', import.meta.url));
-const before = existsSync(workingDist) ? statSync(workingDist).mtimeMs : null;
+const stamp = () => [workingDist, join(workingDist, 'index.html')].map(path => existsSync(path) ? statSync(path).mtimeMs : null);
+const before = stamp();
 const root = join(mkdtempSync(join(tmpdir(), 'showcase-')), 'dist') + '/';
 after(() => rmSync(join(root, '..'), { recursive: true, force: true }));
 const environment = { ...process.env };
@@ -22,7 +23,7 @@ const game = GAME_ORIGIN;
 
 test('the build writes where it is told and leaves the working tree alone', () => {
   assert.ok(statSync(join(root, 'index.html')).size > 0);
-  assert.equal(existsSync(workingDist) ? statSync(workingDist).mtimeMs : null, before);
+  assert.deepEqual(stamp(), before);
 });
 
 // The build replaces its destination, so it refuses one that holds anything but an earlier build.
@@ -30,11 +31,16 @@ test('the build refuses a folder that is not an earlier build, and leaves it as 
   const folder = mkdtempSync(join(tmpdir(), 'showcase-other-'));
   try {
     writeFileSync(join(folder, 'notes.txt'), 'keep me');
-    for (const target of [folder, '--help']) {
-      assert.throws(() => execFileSync(process.execPath, [builder, target], { env: environment, stdio: 'pipe' }), target);
-    }
+    const refuses = target => assert.throws(
+      () => execFileSync(process.execPath, [builder, target], { env: environment, stdio: 'pipe' }), target);
+    refuses(folder);
+    refuses('--help');
+    // A site of another kind with the same two files at its root is still not this build.
+    writeFileSync(join(folder, 'index.html'), 'other site');
+    writeFileSync(join(folder, '_headers'), '/*');
+    refuses(folder);
     assert.equal(readFileSync(join(folder, 'notes.txt'), 'utf8'), 'keep me');
-    assert.ok(!existsSync(join(folder, 'index.html')));
+    assert.equal(readFileSync(join(folder, 'index.html'), 'utf8'), 'other site');
   } finally {
     rmSync(folder, { recursive: true, force: true });
   }
@@ -178,6 +184,7 @@ const repository = path => readFileSync(new URL(`../${path}`, import.meta.url), 
 test('the game sign-in and account privacy panel link to the public policy on the apex', () => {
   assert.ok(repository('table/lobby.html').includes(`href="${new URL('privacy/', SITE_ORIGIN).href}"`));
   assert.match(repository('table/navigation.js'), /href="\$\{new URL\('privacy\/', SITE_ORIGIN\)\.href\}"/);
+  assert.match(repository('table/navigation.js'), /href="\$\{SITE_ORIGIN\}">Game website/);
 });
 
 test('the game lobby and repository point to their copyright notices', () => {
@@ -210,8 +217,9 @@ test('the privacy policy promises the retention periods main.bicep configures', 
   const bicep = repository('infra/main.bicep');
   const block = name => bicep.slice(bicep.indexOf(`resource ${name} `)).split(/\n}\n/)[0];
   const logs = /retentionInDays: (\d+)/.exec(block('logs'))?.[1];
-  const blobs = /deleteRetentionPolicy: \{[^}]*days: (\d+)/.exec(block('blobs'))?.[1];
-  const containers = /containerDeleteRetentionPolicy: \{[^}]*days: (\d+)/.exec(block('blobs'))?.[1];
+  // A policy turned off keeps nothing, whatever its days say.
+  const blobs = /deleteRetentionPolicy: \{\s*enabled: true\s+days: (\d+)/.exec(block('blobs'))?.[1];
+  const containers = /containerDeleteRetentionPolicy: \{\s*enabled: true\s+days: (\d+)/.exec(block('blobs'))?.[1];
   assert.ok(logs && blobs, 'main.bicep names the log and soft-delete retention');
   assert.equal(containers, blobs, 'deleted blobs and deleted containers are kept the same time');
   const policy = { en: read('privacy/index.html'), fr: read('fr/confidentialite/index.html') };
