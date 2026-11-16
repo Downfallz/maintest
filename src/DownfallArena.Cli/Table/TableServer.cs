@@ -319,7 +319,7 @@ internal sealed class TableServer : IDisposable
             // A seat whose table is still being rebuilt would read as no seat at all.
             return Starting && !string.IsNullOrEmpty(token)
                 ? StartingUp()
-                : await Feedback.HandleAsync(method, body, token, account, AddressOf(request), request.UserAgent);
+                : await Feedback.HandleAsync(method, body, token, account, RequestAddress.Of(request), request.UserAgent);
         }
 
         // A seat's own lobby routes find their seat by its token, and a token whose table is still being rebuilt
@@ -370,26 +370,6 @@ internal sealed class TableServer : IDisposable
         table.Touch(now);
         await LobbyApi.SeatReachedAsync(table, token);
         return await table.Api.HandleAsync(method, path, body, token, request.Headers["If-None-Match"], request.Url?.Query);
-    }
-
-    /// <summary>
-    /// The address a request came from, for the guests' feedback budget (ADR 0189): the one Cloudflare saw, which it
-    /// sets itself and the API answers alone once its fence is on (ADR 0175); else the last one the platform's ingress
-    /// added; else the connection's.
-    /// </summary>
-    internal static string? AddressOf(HttpListenerRequest request)
-    {
-        if (request.Headers["CF-Connecting-IP"] is { Length: > 0 } cloudflare)
-        {
-            return cloudflare.Trim();
-        }
-
-        if (request.Headers["X-Forwarded-For"] is { Length: > 0 } forwarded)
-        {
-            return forwarded.Split(',')[^1].Trim();
-        }
-
-        return request.RemoteEndPoint?.Address.ToString();
     }
 
     private static StudioResponse StartingUp() =>

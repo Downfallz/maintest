@@ -71,6 +71,11 @@ public sealed class BlobFeedbackStore : IFeedbackStore
         {
             return null;
         }
+        catch (Exception exception) when (exception is System.Text.Json.JsonException or InvalidDataException)
+        {
+            // A record that cannot be read is skipped, never the route: one bad record must not refuse every sender.
+            return null;
+        }
     }
 
     public async Task DeleteAsync(string id, CancellationToken cancellationToken = default)

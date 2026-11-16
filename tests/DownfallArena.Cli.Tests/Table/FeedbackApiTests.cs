@@ -34,6 +34,11 @@ public sealed class FeedbackApiTests : IDisposable
 
     public void Dispose()
     {
+        foreach (var desk in _desks)
+        {
+            desk.Dispose();
+        }
+
         _registry.Dispose();
         _hosted.Dispose();
         if (Directory.Exists(_root))
@@ -48,8 +53,14 @@ public sealed class FeedbackApiTests : IDisposable
 
     private static readonly AccountRequest SignedOut = new(null, Secure: false);
 
-    private FeedbackApi Api(AccountApi? accounts = null, ScenarioPractices? practices = null) =>
-        new(new SendFeedback(_feedback, _addresses, _clock), _registry) { Accounts = accounts, Practices = practices };
+    private readonly List<SendFeedback> _desks = [];
+
+    private FeedbackApi Api(AccountApi? accounts = null, ScenarioPractices? practices = null)
+    {
+        var desk = new SendFeedback(_feedback, _addresses, _clock);
+        _desks.Add(desk);
+        return new FeedbackApi(desk, _registry) { Accounts = accounts, Practices = practices };
+    }
 
     private static string Report(bool attach = true, string happened = "The bleed did not tick after the stun.") =>
         JsonSerializer.Serialize(new
@@ -60,7 +71,7 @@ public sealed class FeedbackApiTests : IDisposable
             expected = "One damage in the upkeep.",
             attach,
             page = "https://play.example/battle?player1=secret-key",
-            errors = new[] { new { message = "TypeError: x is undefined", where = "battle.js:12" } },
+            errors = new[] { new { message = "TypeError: x is undefined at https://play.example/battle?player1=secret-key", where = "battle.js:12" } },
         });
 
     private static string Idea() =>
@@ -111,9 +122,9 @@ public sealed class FeedbackApiTests : IDisposable
         answer.Status.ShouldBe(201, Encoding.UTF8.GetString(answer.Body));
         var kept = await KeptAsync(answer);
         (kept.Kind, kept.Status, kept.Category, kept.Account, kept.Browser).ShouldBe((FeedbackKind.Bug, FeedbackStatus.New, "rules", null, "Firefox/140"));
-        kept.Page.ShouldBe("https://play.example/battle", "a page's query can carry a seat's key");
+        kept.Page.ShouldBe("/battle", "a page's query can carry a seat's key");
         kept.Sender.ShouldNotContain(seat.Token);
-        kept.Errors.Single().ShouldBe(new PageError("TypeError: x is undefined", "battle.js:12"));
+        kept.Errors.Single().ShouldBe(new PageError("TypeError: x is undefined at https://play.example/battle", "battle.js:12"), "an error quoting a seat link loses its key");
         var context = kept.Context.ShouldNotBeNull();
         (context.Table, context.Seat, context.Round).ShouldBe((table.Id, seat.Name, 1));
         context.SubPhase.ShouldNotBeNull();
@@ -182,13 +193,34 @@ public sealed class FeedbackApiTests : IDisposable
     }
 
     [Fact]
+    public async Task An_error_list_holding_nothing_is_read_as_no_error()
+    {
+        var table = await BegunAsync();
+        var body = Report().Replace("\"errors\":[{", "\"errors\":[null,{", StringComparison.Ordinal);
+
+        var answer = await Api().HandleAsync("POST", body, table.Seats[0].Token, SignedOut, Address, null);
+
+        answer.Status.ShouldBe(201, Encoding.UTF8.GetString(answer.Body));
+        (await KeptAsync(answer)).Errors.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task On_a_host_where_nobody_signs_in_feedback_without_a_seat_is_told_to_come_from_a_game()
+    {
+        var answer = await Api().HandleAsync("POST", Idea(), token: null, SignedOut, Address, null);
+
+        answer.Status.ShouldBe(403);
+        Read(answer).GetProperty("error").GetString().ShouldBe("Feedback.SeatRequired");
+    }
+
+    [Fact]
     public async Task Feedback_sent_again_too_soon_is_refused_with_the_seconds_to_wait()
     {
         var table = await BegunAsync();
         await Api().HandleAsync("POST", Report(), table.Seats[0].Token, SignedOut, Address, null);
         _clock.Advance(TimeSpan.FromSeconds(20));
 
-        var again = await Api().HandleAsync("POST", Idea(), table.Seats[0].Token, SignedOut, Address, null);
+        var again = await Api().HandleAsync("POST", Report(happened: "Something else went wrong too."), table.Seats[0].Token, SignedOut, Address, null);
 
         again.Status.ShouldBe(429);
         Read(again).GetProperty("error").GetString().ShouldBe("Feedback.TooSoon");

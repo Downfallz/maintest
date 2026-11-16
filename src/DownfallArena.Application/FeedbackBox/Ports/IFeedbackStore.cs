@@ -12,7 +12,7 @@ public interface IFeedbackStore
     /// <summary>Every kept id, the newest first: a listing that reads no record, and that says when each was sent.</summary>
     Task<IReadOnlyList<string>> IdsAsync(CancellationToken cancellationToken = default);
 
-    /// <summary>The feedback by its id, or null when none is kept under it.</summary>
+    /// <summary>The feedback by its id, or null when none is kept under it or what is kept cannot be read.</summary>
     Task<Feedback?> FindAsync(string id, CancellationToken cancellationToken = default);
 
     /// <summary>Lets the feedback go; nothing when none is kept under the id.</summary>

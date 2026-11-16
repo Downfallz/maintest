@@ -383,22 +383,29 @@ The seat's view says the lesson under `practice.tutorial`:
 
 #### Feedback
 
-- `POST /api/feedback` keeps a bug report or an idea (ADR 0189, docs/tabletop/feedback-plan.md), from the seat
-  whose key the request carries or from a signed-in account; signed out and without a seat it is answered 401
-  `Feedback.SignInRequired`, and a seat that is another account's 403 `Feedback.NotYourSeat`. A bug report is
-  `{"kind":"bug","category","happened","expected?","attach","page","errors"}`, its category one of `rules`,
-  `looks`, `stuck` or `other`; an idea `{"kind":"idea","where","problem","wish?","page"}`, its `where` one of
-  `rules`, `battle`, `lobby` or `other`. The text holds 10 to 2,000 characters (400 `Feedback.Invalid`).
-- The host adds what the page cannot be trusted with: the table, the seat, the round, sub-phase and journal length,
-  the content, rules and engine, and, when `attach` is true, the seat's own view; from a practice, the scenario's id
-  and the practice's journal since its cut. The page's address is kept without its query, and its last ten errors.
-- Against spam, over both kinds: two minutes apart (429 `Feedback.TooSoon`, with `retryAfterSeconds` and
-  `Retry-After`), five a day per sender and, for a guest, five a day per network address counted in memory only
-  (429 `Feedback.TooMany`), a second report on the same table and round, or a second idea within the hour, merged
-  into the first (200 `{"id","merged":true,"code":"Feedback.Merged"}`), and 100 new a day for the host (429
-  `Feedback.HostFull`). A kept one answers 201 `{"id","merged":false}`.
-- Kept one record each beside the recordings under `feedback/` (or the feedback container). A host recording
-  nothing takes none (404). Deleting an account drops it from its feedback and keeps the text.
+- `POST /api/feedback` keeps a bug report or an idea (ADR 0189, docs/tabletop/feedback-plan.md). It comes from
+  the seat whose key the request carries, or from a signed-in account. A request that is signed out and has no
+  seat is answered 401 `Feedback.SignInRequired`; a seat that belongs to another account, 403
+  `Feedback.NotYourSeat`.
+- A bug report is `{"kind":"bug","category","happened","expected?","attach","page","errors"}`, its category one of
+  `rules`, `looks`, `stuck` or `other`. An idea is `{"kind":"idea","where","problem","wish?","page"}`, its `where`
+  one of `rules`, `battle`, `lobby` or `other`. The text holds 10 to 2,000 characters (400 `Feedback.Invalid`).
+- The host adds what the page cannot be trusted to send: the table, the seat, the round, sub-phase and journal
+  length, the content, rules and engine, and, when `attach` is true, the seat's own view. For a practice it adds the
+  scenario's id and the practice's journal since its cut. The page's address is kept without its query, with the
+  page's last ten errors.
+- Spam guards, for both kinds:
+  - Two sends less than two minutes apart: 429 `Feedback.TooSoon`, with `retryAfterSeconds` and `Retry-After`.
+  - More than five a day per sender, and for a guest more than five a day per network address (counted in memory
+    only): 429 `Feedback.TooMany`.
+  - A second bug report on the same table and round, or a second idea within the hour, is merged into the first:
+    200 `{"id","merged":true,"code":"Feedback.Merged"}`.
+  - More than 100 new a day for the host: 429 `Feedback.HostFull`.
+
+  A new one is kept and answers 201 `{"id","merged":false}`.
+- Each one is kept as one record beside the recordings, under `feedback/` (or the feedback container). A host that
+  records nothing keeps none and answers 404. Deleting an account removes the account from its feedback and keeps
+  the text.
 
 #### The lobby and the pages
 

@@ -17,7 +17,7 @@ namespace DownfallArena.Cli.Table;
 /// player attaches it, the seat's own view, or a practice's entries since its cut. The guards against spam are
 /// <see cref="SendFeedback" />'s.
 /// </summary>
-internal sealed class FeedbackApi(SendFeedback desk, TableRegistry registry)
+internal sealed partial class FeedbackApi(SendFeedback desk, TableRegistry registry)
 {
     public const string Route = "/api/feedback";
 
@@ -51,7 +51,7 @@ internal sealed class FeedbackApi(SendFeedback desk, TableRegistry registry)
 
         if (posted?.Kind is not ("bug" or "idea"))
         {
-            return Problem(400, "Feedback.Invalid", "Feedback is a bug report (\"kind\":\"bug\") or an idea (\"kind\":\"idea\").");
+            return Problem(400, "Feedback.Invalid", "Send a bug report (\"kind\":\"bug\") or an idea (\"kind\":\"idea\").");
         }
 
         var signedIn = Accounts is null ? null : (await Accounts.WhoAsync(account))?.Account.Id.ToString();
@@ -63,7 +63,9 @@ internal sealed class FeedbackApi(SendFeedback desk, TableRegistry registry)
 
         if (signedIn is null && from.Context is null)
         {
-            return Problem(401, "Feedback.SignInRequired", "Sign in, or send it from a game you are playing.");
+            return Accounts is null
+                ? Problem(403, "Feedback.SeatRequired", "Send your feedback from a game you are playing.")
+                : Problem(401, "Feedback.SignInRequired", "Sign in, or send your feedback from a game you are playing.");
         }
 
         var bug = posted.Kind == "bug";
@@ -78,11 +80,20 @@ internal sealed class FeedbackApi(SendFeedback desk, TableRegistry registry)
             Expected = bug ? posted.Expected : posted.Wish,
             Page = PageOf(posted.Page),
             Browser = browser,
-            Errors = bug ? [.. (posted.Errors ?? []).Select(error => new PageError(error.Message ?? string.Empty, error.Where))] : [],
+            Errors = bug ? [.. (posted.Errors ?? []).OfType<FeedbackBodyError>().Select(error => new PageError(WithoutQueries(error.Message) ?? string.Empty, WithoutQueries(error.Where)))] : [],
             Context = bug ? from.Context : from.Context is { } context ? new FeedbackContext { Table = context.Table, Scenario = context.Scenario, Round = context.Round } : null,
         };
 
-        var answer = await desk.HandleAsync(sent);
+        FeedbackAnswer answer;
+        try
+        {
+            answer = await desk.HandleAsync(sent);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is Azure.Identity.AuthenticationFailedException)
+        {
+            Console.WriteLine($"  Feedback could not be kept: {failure.Message}");
+            return Problem(503, "Feedback.Unavailable", "Your feedback could not be kept just now. Try again in a few minutes.");
+        }
         if (answer.Refused is { } refused)
         {
             var retry = answer.RetryAfter is { } wait ? (long)Math.Ceiling(wait.TotalSeconds) : (long?)null;
@@ -111,7 +122,7 @@ internal sealed class FeedbackApi(SendFeedback desk, TableRegistry registry)
         {
             if (practice.Account != signedIn)
             {
-                return (null, Problem(403, "Feedback.NotYourSeat", "This practice is another account's."));
+                return (null, Problem(403, "Feedback.NotYourSeat", "This practice belongs to another account."));
             }
 
             var moment = await practice.Play.Api.MomentAsync(token, attach);
@@ -160,17 +171,26 @@ internal sealed class FeedbackApi(SendFeedback desk, TableRegistry registry)
     /// <summary>A guest is counted against a hash of its seat's key: the key itself is a secret and is never kept.</summary>
     private static string SeatSender(string token) => $"seat-{Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(token)))[..16]}";
 
-    /// <summary>The page's address without its query, which can carry a seat's key.</summary>
+    /// <summary>
+    /// The page's path alone: its query and fragment can carry a seat's key, a join code's path is one, and an address
+    /// of another site is no page of this host's. What the operator's tab will show as a link is a path of the host's.
+    /// </summary>
     private static string? PageOf(string? page)
     {
-        if (string.IsNullOrWhiteSpace(page))
+        if (string.IsNullOrWhiteSpace(page) || !Uri.TryCreate(new Uri("https://host.invalid"), page.Trim(), out var address))
         {
             return null;
         }
 
-        var cut = page.IndexOfAny(['?', '#']);
-        return cut < 0 ? page : page[..cut];
+        var path = address.AbsolutePath;
+        return JoinCodes.Names(path) ? JoinCodes.Prefix : path;
     }
+
+    /// <summary>An error's words with each address's query and fragment cut, since a seat link carries its key in one.</summary>
+    private static string? WithoutQueries(string? text) => text is null ? null : Queries().Replace(text, string.Empty);
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"[?#][^\s'"")]*")]
+    private static partial System.Text.RegularExpressions.Regex Queries();
 
     private static StudioResponse Problem(int status, string error, string message) =>
         StudioResponse.OfJson(new { error, message }, ArtifactJson.LineOptions, status: status);

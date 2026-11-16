@@ -6,10 +6,13 @@ namespace DownfallArena.Application.FeedbackBox;
 /// Keeps a bug report or an idea a player sent (ADR 0189), behind the guards against spam, checked in this order and
 /// counted over both kinds (docs/tabletop/feedback-plan.md, "Against spam"): two minutes apart, five a day per sender,
 /// five a day per network address for a guest, a second report on the same position (or a second idea within the
-/// hour) merged into the first, and a ceiling for the whole host.
+/// hour) merged into the first, and a ceiling for the whole host. One sending at a time: a burst of requests sent at
+/// once would otherwise each read the same history and pass every guard. The API runs one process (ADR 0189).
 /// </summary>
-public sealed class SendFeedback(IFeedbackStore store, GuestAddresses addresses, TimeProvider clock)
+public sealed class SendFeedback(IFeedbackStore store, GuestAddresses addresses, TimeProvider clock) : IDisposable
 {
+    private readonly SemaphoreSlim _gate = new(1, 1);
+
     public const int ShortestText = 10;
 
     public const int LongestText = 2000;
@@ -45,9 +48,31 @@ public sealed class SendFeedback(IFeedbackStore store, GuestAddresses addresses,
             return FeedbackAnswer.Refuse(FeedbackErrors.Invalid(invalid));
         }
 
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            return await GuardedAsync(sent, cancellationToken);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public void Dispose() => _gate.Dispose();
+
+    private async Task<FeedbackAnswer> GuardedAsync(FeedbackSent sent, CancellationToken cancellationToken)
+    {
         var now = clock.GetUtcNow();
         var recent = await RecentAsync(now, cancellationToken);
         var mine = recent.Where(one => one.Sender == sent.Sender).ToList();
+
+        // A page that lost the answer sends the same words again: it is told they were kept, not that it was too soon.
+        if (mine.FirstOrDefault(one => one.Text == sent.Text!.Trim() || one.Additions.Any(addition => addition.Text == sent.Text!.Trim())) is { } repeated
+            && now - repeated.LastWritten < Apart)
+        {
+            return FeedbackAnswer.MergedInto(repeated.Id);
+        }
 
         var last = mine.Count == 0 ? (DateTimeOffset?)null : mine.Max(one => one.LastWritten);
         if (last is { } then && now - then < Apart)

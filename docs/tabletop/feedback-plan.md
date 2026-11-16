@@ -295,11 +295,12 @@ and they are the first thing every player can use.
    *Built (2026-11-16)*: `Feedback`, `FeedbackKind`, `FeedbackStatus` and the port `IFeedbackStore` in Application
    (`FeedbackBox/`), the file and blob adapters in a `feedback` directory or container beside the recordings, and
    `POST /api/feedback` (`FeedbackApi`). The guards are `SendFeedback`; a guest's address is counted by
-   `GuestAddresses`, hashed with a salt the process draws (the one Cloudflare saw, else the last the ingress added).
+   `GuestAddresses`, hashed with a salt the process draws. The address is the one Cloudflare saw, else the last one
+   the ingress added.
    A sender is the account, or a hash of the seat's key, never the key; the page's address is kept without its query.
    The tending pass, hourly or from the panel, deletes what was closed 180 days ago (`LetGoOfClosedFeedback`), and
-   deleting an account drops it from its feedback (`ForgetFeedbackAccount`). Left to R3: `Feedback.Muted` and the
-   spam marks, since nothing mutes before the tab exists; the *What we keep* line is R2's.
+   deleting an account removes the account from its feedback (`ForgetFeedbackAccount`). Left to R3: `Feedback.Muted` and the
+   spam marks, since nothing can mute before the tab exists. Left to R2: the *What we keep* line.
 3. **R2, Report or suggest.** The entry in the battle view's menu, on the recap, in a practice and in the lobby's
    menu; the sheet's two choices and their fields; the page's error catcher; the *What we keep* line. Tests:
    `feedback.test.js` (the sheet's model for both kinds, the errors kept to ten, nothing written to storage, each

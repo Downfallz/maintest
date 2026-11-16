@@ -272,6 +272,13 @@ internal sealed class AccountApi
             await release(id);
         }
 
+        // Its feedback loses the account before the account goes (ADR 0189): a store that fails here leaves the
+        // account in place, and its player can delete it again, rather than feedback naming an account that is gone.
+        if (ForgetFeedback is { } feedback)
+        {
+            await feedback(id);
+        }
+
         // The account goes first, so a request that resolved its name a moment ago finds nobody once it reaches the
         // friendship lock; what the account was still on is cleaned up after, under that same lock.
         var deleted = await _registry.DeleteAsync(id, cancellationToken);
@@ -300,11 +307,6 @@ internal sealed class AccountApi
         if (Activity is { } activity)
         {
             await activity.ForgetAsync(id, cancellationToken);
-        }
-
-        if (ForgetFeedback is { } feedback)
-        {
-            await feedback(id);
         }
 
         return deleted;

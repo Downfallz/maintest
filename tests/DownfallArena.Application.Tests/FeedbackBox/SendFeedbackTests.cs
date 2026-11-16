@@ -4,7 +4,7 @@ using Microsoft.Extensions.Time.Testing;
 namespace DownfallArena.Application.Tests.FeedbackBox;
 
 /// <summary>The guards against spam (docs/tabletop/feedback-plan.md, "Against spam"), over bug reports and ideas together.</summary>
-public sealed class SendFeedbackTests
+public sealed class SendFeedbackTests : IDisposable
 {
     private readonly FakeTimeProvider _clock = new(new DateTimeOffset(2026, 11, 16, 12, 0, 0, TimeSpan.Zero));
     private readonly KeptFeedback _store = new();
@@ -12,7 +12,22 @@ public sealed class SendFeedbackTests
 
     private static CancellationToken Cancel => TestContext.Current.CancellationToken;
 
-    private SendFeedback Desk() => new(_store, _addresses, _clock);
+    private readonly List<SendFeedback> _desks = [];
+
+    private SendFeedback Desk()
+    {
+        var desk = new SendFeedback(_store, _addresses, _clock);
+        _desks.Add(desk);
+        return desk;
+    }
+
+    public void Dispose()
+    {
+        foreach (var desk in _desks)
+        {
+            desk.Dispose();
+        }
+    }
 
     private static FeedbackSent Report(string sender = "acct_1", int round = 3, string? account = "acct_1", string? address = null) => new()
     {
@@ -171,5 +186,28 @@ public sealed class SendFeedbackTests
         await Desk().HandleAsync(Report() with { Errors = errors }, Cancel);
 
         _store.All.Single().Errors.Select(error => error.Message).ShouldBe(Enumerable.Range(3, 10).Select(index => $"Error {index}"));
+    }
+
+    [Fact]
+    public async Task The_same_words_sent_again_after_a_lost_answer_are_told_they_were_kept()
+    {
+        var first = await Desk().HandleAsync(Report(), Cancel);
+        _clock.Advance(TimeSpan.FromSeconds(15));
+
+        var again = await Desk().HandleAsync(Report(), Cancel);
+
+        (again.Refused, again.Id).ShouldBe((null, first.Id));
+        _store.All.Single().Additions.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task A_burst_sent_at_once_keeps_one_and_refuses_the_rest()
+    {
+        var desk = Desk();
+
+        var answers = await Task.WhenAll(Enumerable.Range(1, 20).Select(round => Task.Run(() => desk.HandleAsync(Report(round: round) with { Text = $"The bleed did not tick, try {round}." }, Cancel), Cancel)));
+
+        answers.Count(answer => answer.Refused is null).ShouldBe(1);
+        _store.All.Count.ShouldBe(1);
     }
 }

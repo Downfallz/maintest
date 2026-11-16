@@ -57,7 +57,7 @@ public sealed class FileFeedbackStore : IFeedbackStore
         {
             return FeedbackDocuments.Read(await File.ReadAllTextAsync(Path.Combine(Directory, FeedbackDocuments.NameOf(id)), cancellationToken));
         }
-        catch (Exception exception) when (exception is FileNotFoundException or DirectoryNotFoundException)
+        catch (Exception exception) when (exception is FileNotFoundException or DirectoryNotFoundException or System.Text.Json.JsonException or InvalidDataException)
         {
             return null;
         }
