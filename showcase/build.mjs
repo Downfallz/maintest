@@ -1,6 +1,6 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { cp, mkdir, mkdtemp, rename, rm, writeFile } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { EVOLUTION_REGISTRY } from '../table/battle-evolution-art.js';
 import { resolveEvolution } from '../table/battle-evolution.js';
@@ -56,8 +56,14 @@ try {
       [path.privacy, privacyPage(c, application.href)], [path.copyright, copyrightPage(c, application.href)]]
       .map(([route, html]) => [route.slice(1) + 'index.html', html]);
   });
-  const written = new Set([...assets.map(([, to]) => to), ...documents.map(([to]) => to)].map(to => to.split('/')[0]));
-  const strangers = existsSync(destination) ? readdirSync(destination).filter(entry => !written.has(entry)) : [];
+  // Every file already there must be one this build writes, at any depth: the folder is removed whole below.
+  const written = new Set([...assets.map(([, to]) => to), ...documents.map(([to]) => to)].map(to => to.split(sep).join('/')));
+  const strangers = existsSync(destination)
+    ? readdirSync(destination, { recursive: true, withFileTypes: true })
+      .filter(entry => !entry.isDirectory())
+      .map(entry => relative(destination, join(entry.parentPath, entry.name)).split(sep).join('/'))
+      .filter(path => !written.has(path))
+    : [];
   if (strangers.length)
     throw new Error(`${destination} holds ${strangers.join(', ')}, which this build does not write; it would replace the folder.`);
   const directories = new Set([...assets.map(([, to]) => dirname(to)), ...documents.map(([to]) => dirname(to))]);

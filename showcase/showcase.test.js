@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -39,6 +39,16 @@ test('the build refuses a folder that is not an earlier build, and leaves it as 
     writeFileSync(join(folder, 'index.html'), 'other site');
     writeFileSync(join(folder, '_headers'), '/*');
     refuses(folder);
+    // Nor is a folder that hides a stranger beneath a name the build writes.
+    const nested = mkdtempSync(join(tmpdir(), 'showcase-nested-'));
+    mkdirSync(join(nested, 'assets'));
+    writeFileSync(join(nested, 'assets', 'notes.txt'), 'keep me too');
+    try {
+      refuses(nested);
+      assert.equal(readFileSync(join(nested, 'assets', 'notes.txt'), 'utf8'), 'keep me too');
+    } finally {
+      rmSync(nested, { recursive: true, force: true });
+    }
     assert.equal(readFileSync(join(folder, 'notes.txt'), 'utf8'), 'keep me');
     assert.equal(readFileSync(join(folder, 'index.html'), 'utf8'), 'other site');
   } finally {
