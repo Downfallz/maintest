@@ -616,6 +616,78 @@ public sealed class ScenariosApiTests : IDisposable
         done.GetProperty("over").GetBoolean().ShouldBeFalse("the last step's round ended, not the match");
     }
 
+    [Fact]
+    public async Task A_tutorial_done_answers_nothing_more_for_the_person_so_the_match_waits_at_the_next_round()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var play = await OpenTutorialAsync(store, practices, "learner");
+        await AnswerTheLessonAsync(store, play);
+
+        var done = await WaitingForAsync(play, one => one.GetProperty("practice").GetProperty("tutorial").GetProperty("done").GetBoolean()
+            && one.GetProperty("waitingFor").ValueKind == JsonValueKind.String);
+        await Task.Delay(500, Cancel);
+        var later = await WaitingForAsync(play, _ => true);
+
+        // The next round's first question (its mutations) is an assisted one: before, it was answered, and so were the
+        // tempos after it, and that round's combat played on under the tutorial's end.
+        (done.GetProperty("board").GetProperty("roundNumber").GetInt32(), done.GetProperty("board").GetProperty("phase").GetString()).ShouldBe((3, "Planning"));
+        (later.GetProperty("waitingFor").GetString(), later.GetProperty("waitingAsked").GetInt64()).ShouldBe((done.GetProperty("waitingFor").GetString(), done.GetProperty("waitingAsked").GetInt64()));
+    }
+
+    [Fact]
+    public async Task A_finished_tutorial_is_not_resumed_and_opens_from_its_cut_the_next_time()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var (api, accounts) = await KeepingAsync(store, practices);
+        var learner = await SignedInAsync(accounts, "learner");
+        var play = await OpenTutorialAsync(store, practices, "learner");
+        await AnswerTheLessonAsync(store, play);
+        await WaitingForAsync(play, one => one.GetProperty("practice").GetProperty("tutorial").GetProperty("done").GetBoolean());
+        (await api.HandleAsync("POST", $"{ScenariosApi.TutorialsRoute}/{Tutorial}/done", learner)).Status.ShouldBe(200);
+
+        var reopened = await api.HandleAsync("GET", $"{ScenariosApi.Prefix}/{Tutorial}/practice", learner);
+
+        reopened.Status.ShouldBe(404);
+        practices.Count.ShouldBe(0);
+        practices.ByToken(play.Token).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Leaving_a_practice_lets_go_of_it_and_the_next_one_starts_from_the_cut()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var (api, accounts) = await KeepingAsync(store, practices);
+        var learner = await SignedInAsync(accounts, "learner");
+        var play = await OpenTutorialAsync(store, practices, "learner");
+
+        var left = await api.HandleAsync("DELETE", $"{ScenariosApi.Prefix}/{Tutorial}/practice", learner);
+        var again = await api.HandleAsync("DELETE", $"{ScenariosApi.Prefix}/{Tutorial}/practice", learner);
+        var resumed = await api.HandleAsync("GET", $"{ScenariosApi.Prefix}/{Tutorial}/practice", learner);
+        var nobody = await api.HandleAsync("DELETE", $"{ScenariosApi.Prefix}/{Tutorial}/practice", new AccountRequest(null, Secure: false));
+
+        (left.Status, again.Status, resumed.Status, nobody.Status).ShouldBe((204, 204, 404, 401));
+        practices.Count.ShouldBe(0);
+        practices.ByToken(play.Token).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Leaving_another_scenario_leaves_the_account_s_practice_where_it_is()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var (api, accounts) = await KeepingAsync(store, practices);
+        var learner = await SignedInAsync(accounts, "learner");
+        var play = await OpenTutorialAsync(store, practices, "learner");
+
+        var left = await api.HandleAsync("DELETE", $"{ScenariosApi.Prefix}/sc-repo-greedy-1v1-round-3/practice", learner);
+
+        left.Status.ShouldBe(204);
+        practices.ByToken(play.Token).ShouldNotBeNull();
+    }
+
     /// <summary>Answers the three questions tutorial 1 teaches with the recorded answers, as a person following the lesson does.</summary>
     private static async Task<IReadOnlyList<Application.Matches.Decisions.PlayerDecision>> AnswerTheLessonAsync(ScenarioStore store, ScenarioPlay play)
     {
@@ -748,43 +820,22 @@ public sealed class ScenariosApiTests : IDisposable
     }
 
     [Fact]
-    public async Task A_tutorial_whose_taught_answers_leave_the_script_hands_every_question_back_and_tells_the_seat_s_stream()
+    public async Task A_tutorial_whose_taught_answers_leave_the_script_is_done_all_the_same_and_answers_nothing_after()
     {
         var store = Shipping();
         await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
         var play = await OpenTutorialAsync(store, practices, "learner");
-        var tutorial = play.Api.Practice.ShouldNotBeNull().Tutorial.ShouldNotBeNull();
-        var gate = new Lock();
-        (int Thread, bool HandedBack) lastBump = default;
-        bool? toldAsItHandedBack = null;
-        play.Api.Changes.Bumped += () =>
-        {
-            // The hand-back bumps on its own thread, outside the tutorial's lock (#658): reading it here waits for nothing.
-            var bump = (Environment.CurrentManagedThreadId, tutorial.Assisted.Count == 0);
-            lock (gate)
-            {
-                lastBump = bump;
-            }
-        };
 
-        // Said after the table's own handler: the stream was told by the hand-back itself, not by the match moving.
-        tutorial.GaveBack += () =>
-        {
-            lock (gate)
-            {
-                toldAsItHandedBack = lastBump == (Environment.CurrentManagedThreadId, true);
-            }
-        };
+        var done = await WaitAsAsync(play, "spell:wait:v1");
+        await Task.Delay(500, Cancel);
+        var later = Read(await play.Api.HandleAsync("GET", "/api/seat/player1", "", play.Token));
 
-        var handedBack = await WaitAsAsync(play, "spell:wait:v1");
-
-        handedBack.GetProperty("over").GetBoolean().ShouldBeFalse();
-        handedBack.GetProperty("waitingFor").GetString().ShouldBeOneOf(["Evolution", "Speed", "TieOrder", "Intent", "Target"], handedBack.ToString());
-        (await EventuallyAsync(() => { lock (gate) { return toldAsItHandedBack is not null; } })).ShouldBeTrue();
-        lock (gate)
-        {
-            toldAsItHandedBack.ShouldBe(true, "the seat's stream is told when every question goes back to the person");
-        }
+        done.GetProperty("over").GetBoolean().ShouldBeFalse();
+        done.GetProperty("board").GetProperty("roundNumber").GetInt32().ShouldBe(3);
+        // The question after the lesson is still asked, unanswered, and the page draws none once it is done: the
+        // recorded answers are not given past the lesson, so they never get the chance to stop fitting.
+        (later.GetProperty("waitingFor").GetString(), later.GetProperty("waitingAsked").GetInt64()).ShouldBe((done.GetProperty("waitingFor").GetString(), done.GetProperty("waitingAsked").GetInt64()));
+        later.GetProperty("practice").GetProperty("tutorial").GetProperty("assisted").GetArrayLength().ShouldBeGreaterThan(0);
     }
 
     /// <summary>Whether <paramref name="condition" /> holds within five seconds, read 50 ms apart.</summary>
@@ -814,16 +865,17 @@ public sealed class ScenariosApiTests : IDisposable
 
     /// <summary>
     /// Answers every Action the person's seat is asked, each creature casting <paramref name="spell" /> on itself,
-    /// until the seat's view says no question is assisted any more; at most 40 answers. Returns that view.
+    /// until the seat's view says the tutorial is done and asks the question after it; at most 40 answers. Returns that view.
     /// </summary>
     private static async Task<JsonElement> WaitAsAsync(ScenarioPlay play, string spell)
     {
-        static bool HandedBack(JsonElement view) => view.GetProperty("practice").GetProperty("tutorial").GetProperty("assisted").GetArrayLength() == 0;
+        static bool Finished(JsonElement view) => view.GetProperty("practice").GetProperty("tutorial").GetProperty("done").GetBoolean()
+            && view.GetProperty("waitingFor").ValueKind == JsonValueKind.String;
         long? before = null;
         for (var answered = 0; answered < 40; answered++)
         {
-            var view = await WaitingForAsync(play, one => HandedBack(one) || (one.GetProperty("waitingFor").GetString() == "Action" && one.GetProperty("waitingAsked").GetInt64() != before));
-            if (HandedBack(view))
+            var view = await WaitingForAsync(play, one => Finished(one) || (one.GetProperty("waitingFor").GetString() == "Action" && one.GetProperty("waitingAsked").GetInt64() != before));
+            if (Finished(view))
             {
                 return view;
             }
@@ -835,7 +887,7 @@ public sealed class ScenariosApiTests : IDisposable
         }
 
         var last = Read(await play.Api.HandleAsync("GET", "/api/seat/player1", "", play.Token));
-        HandedBack(last).ShouldBeTrue($"the recorded answers still fit after 40 answers: {last}");
+        Finished(last).ShouldBeTrue($"the tutorial is not done after 40 answers: {last}");
         return last;
     }
 

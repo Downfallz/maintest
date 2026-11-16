@@ -1,4 +1,4 @@
-import { coachCard, leavingSkips, progressPath, tutorialBand, tutorialBrief, tutorialOf } from '../../table/battle-tutorial.js';
+import { coachCard, leavePath, leavingSkips, progressPath, tutorialBand, tutorialBrief, tutorialOf } from '../../table/battle-tutorial.js';
 import { conceptCard } from '../../table/concepts.js';
 
 type Coach = NonNullable<ReturnType<typeof coachCard>>;
@@ -14,11 +14,19 @@ const paragraphs = (lines: readonly string[]) => lines.map(line => { const p = d
  */
 export function tutorialControls(onChange: () => void, request: (path: string, options?: RequestInit) => Promise<Response>) {
   const dialog = el<HTMLDialogElement>('concept-dialog'), coach = el('coach');
-  let shown: Coach | null = null, key = '', queue: Concept[] = [], pointed: HTMLElement[] = [], dismissed = false;
+  let shown: Coach | null = null, key = '', queue: Concept[] = [], pointed: HTMLElement[] = [];
   let latest: unknown = null, doneSaid = false;
   const opened = new Set<string>();
   // Where the card stands on the field, to come back to from a sheet.
   const home = { parent: coach.parentElement!, before: coach.nextSibling };
+  // In a tutorial the band stands in the header, in place of the opponent, History, Help and the notifications,
+  // not over the field (battle.css); a plain practice keeps it on the field, where it comes back to.
+  const band = el('practice-band'), bandHome = { parent: band.parentElement!, before: band.nextSibling };
+  const header = document.querySelector<HTMLElement>('#battle .hud-top')!;
+  function dock(inHeader: boolean) {
+    if (inHeader && band.parentElement !== header) header.insertBefore(band, header.querySelector('.tools'));
+    else if (!inHeader && band.parentElement !== bandHome.parent) bandHome.parent.insertBefore(band, bandHome.before);
+  }
   // A sheet docks under the field unless the screen gives it a side (battle.css, the spell choice's own query).
   const beside = window.matchMedia('(min-width: 760px), (orientation: landscape) and (max-height: 520px)');
   beside.addEventListener('change', () => onChange());
@@ -47,24 +55,36 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
     // The host was not reached: a done is said again at the next change; a skip not kept opens the tutorial once more.
     catch { if (what === 'done') doneSaid = false; }
   }
+  /** Lets go of the tutorial's practice at the host: the next time it opens, it starts from its cut. */
+  async function letGo() {
+    const path = leavePath(latest);
+    if (!path) return;
+    // Not let go of, it ends by itself after an idle hour, and a done one is not resumed: the page goes on either way.
+    try { await request(path, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: '{}', keepalive: true }); } catch { /* The host was not reached. */ }
+  }
   // Leaving waits for the host's answer this long and no longer: a slow network must not hold the person in a
-  // tutorial they asked to leave, and the request, sent with keepalive, outlives the page.
+  // tutorial they asked to leave, and the requests, sent with keepalive, outlive the page.
   const SKIP_WAIT_MS = 1500;
-  async function skipTo(address: string) {
-    await Promise.race([say('skip'), new Promise(resolve => setTimeout(resolve, SKIP_WAIT_MS))]);
+  async function leaveTo(address: string) {
+    // A tutorial not done is skipped (O4) before its practice is let go of, which the skip does not need.
+    const skipping = leavingSkips(latest);
+    await Promise.race([(async () => { if (skipping) await say('skip'); await letGo(); })(), new Promise(resolve => setTimeout(resolve, SKIP_WAIT_MS))]);
     location.assign(address);
   }
-  /** Leaving a tutorial that is not done is skipping it (O4): the host is told before the page goes where the link leads. */
+  /**
+   * Leaving a tutorial, done or not, lets go of its practice, and one not done is skipped (O4): the host is told
+   * before the page goes where the link leads.
+   */
   function leave(event: MouseEvent) {
     // A click that opens the link elsewhere leaves this page, and the tutorial, where they are.
-    if (!leavingSkips(latest) || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    if (!leavePath(latest) || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
-    void skipTo((event.currentTarget as HTMLAnchorElement).href);
+    void leaveTo((event.currentTarget as HTMLAnchorElement).href);
   }
   for (const id of ['practice-leave', 'coach-leave']) el(id).addEventListener('click', leave);
   el('practice-brief-skip').addEventListener('click', () => {
     el<HTMLButtonElement>('practice-brief-skip').disabled = true;
-    void skipTo('/');
+    void leaveTo('/');
   });
 
   function draw() {
@@ -81,8 +101,8 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
   }
   el('concept-next').addEventListener('click', () => { queue.shift(); if (queue.length) draw(); else dialog.close(); });
   dialog.addEventListener('close', () => { queue = []; onChange(); });
-  // The end card is read once: Keep playing puts it away, and the band keeps saying the tutorial is complete.
-  el('coach-continue').addEventListener('click', () => { dismissed = true; onChange(); });
+  // A tutorial done is not played on: its end card stays, with Play again, which starts it over from its cut, and Leave.
+  el('coach-again').addEventListener('click', () => el('practice-restart').click());
 
   function point(card: Coach | null) {
     const next = [card?.creature ? document.querySelector<HTMLElement>(`#actor-layer [data-creature="${card.creature}"]`) : null,
@@ -106,11 +126,11 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
       document.getElementById('battle')!.dataset.tutorial = String(lesson.order);
       const band = tutorialBand(lesson);
       text('practice-eyebrow', band.eyebrow); text('practice-title', band.title); text('practice-detail', band.detail);
-      text('practice-brief-eyebrow', band.eyebrow);
+      text('practice-brief-eyebrow', band.eyebrow); text('practice-restart', band.restart);
       el('practice-band').setAttribute('aria-label', 'Tutorial');
+      dock(true);
     }
     shown = lesson ? coachCard(view, { held }) : null;
-    if (shown?.done && dismissed) shown = null;
     coach.hidden = !shown;
     coach.dataset.done = String(shown?.done === true);
     const nextKey = shown?.key ?? '';
@@ -138,7 +158,8 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
   const pending = () => dialog.open || owed();
   /** A new practice teaches its steps again. */
   function reset() {
-    document.getElementById('battle')!.dataset.tutorial = ''; opened.clear(); key = ''; dismissed = false; latest = null; doneSaid = false;
+    document.getElementById('battle')!.dataset.tutorial = ''; opened.clear(); key = ''; latest = null; doneSaid = false;
+    dock(false); text('practice-restart', 'Restart the round');
     text('practice-brief-begin', 'Begin'); el('practice-brief-skip').hidden = true; el<HTMLButtonElement>('practice-brief-skip').disabled = false;
     if (dialog.open) dialog.close();
   }

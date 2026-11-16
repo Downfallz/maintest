@@ -8,8 +8,10 @@ namespace DownfallArena.Cli.Table;
 /// <summary>
 /// A player's side of the match scenarios (docs/tabletop/scenarios-plan.md, S4, ADR 0179). A signed-in account reads
 /// what a scenario is (<c>GET /api/scenarios/&lt;id&gt;</c>), opens its practice from the cut in place of whatever
-/// practice it had (<c>POST /api/scenarios/&lt;id&gt;/practice</c>), and finds the one it has again
-/// (<c>GET .../practice</c>), which is how a reloaded page resumes it. <c>GET /api/scenarios</c> lists the scenarios the
+/// practice it had (<c>POST /api/scenarios/&lt;id&gt;/practice</c>), finds the one it has again
+/// (<c>GET .../practice</c>), which is how a reloaded page resumes it, and lets go of it (<c>DELETE .../practice</c>),
+/// which is what leaving a tutorial does. A tutorial that is done is not resumed: it is let go of, and opens from its
+/// cut the next time. <c>GET /api/scenarios</c> lists the scenarios the
 /// operator listed under Practice (S6); one left off the list still opens by its link. Signed out, every route answers 401.
 /// A scenario the repository ships opens for the host's admin accounts alone (<see cref="Admins" />), except its
 /// tutorials (ADR 0187, onboarding-plan.md O3a): <c>GET /api/tutorials</c> lists them, in the order of the series, to
@@ -67,10 +69,11 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
         var answer = (method, segments) switch
         {
             ("GET", [_]) => await DescribeAsync(id),
-            ("GET", [_, "practice"]) => await practices.CurrentAsync(account, id) is { } current
+            ("GET", [_, "practice"]) => await practices.ResumeAsync(account, id) is { } current
                 ? Opened(current, name)
                 : Error("Scenario.NoPractice", "You have no practice of this scenario open.", 404),
             ("POST", [_, "practice"]) => await OpenAsync(id, account, name),
+            ("DELETE", [_, "practice"]) => await ForgetAsync(account, id),
             _ => NoRoute(method, path),
         };
         return Renewed(answer, who.Renewed);
@@ -192,6 +195,13 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
         };
     }
 
+    /// <summary>Lets go of the account's practice of the scenario, as the page does when the person leaves a tutorial: 204 either way.</summary>
+    private async Task<StudioResponse> ForgetAsync(string account, string id)
+    {
+        await practices.ForgetAsync(account, id);
+        return new StudioResponse(204, StudioResponse.Plain, []);
+    }
+
     private async Task<StudioResponse> OpenAsync(string id, string account, string name)
     {
         var (opened, refused) = await practices.OpenAsync(id, account);
@@ -200,7 +210,7 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
 
     /// <summary>
     /// The practice's seat as the battle view opens a seat: its token and a table to name it by, the person against the
-    /// recorded opponent, and what the practice is.
+    /// practice bot (the source's recorded answers while they fit), and what the practice is.
     /// </summary>
     private static StudioResponse Opened(ScenarioPractices.Practice practice, string name)
     {
@@ -217,7 +227,7 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
                 // is a new game whose rounds have not been shown yet; a resumed one is the same game.
                 id = $"practice-{play.Session.MatchId}",
                 format = play.Session.Rules.Format.ToString(),
-                seats = new[] { new { seat, name, kind = "person" }, new { seat = other, name = "Recorded opponent", kind = "bot" } },
+                seats = new[] { new { seat, name, kind = "person" }, new { seat = other, name = "Practice bot", kind = "bot" } },
             },
             practice = play.Api.Practice,
         }, ArtifactJson.LineOptions);

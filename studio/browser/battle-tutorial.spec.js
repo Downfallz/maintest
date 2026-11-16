@@ -17,7 +17,7 @@ const creature = (number, health = 30) => ({ id: number, name: `Creature ${numbe
   currentInitiative: 5, isAlive: true, isStunned: false, isStunImmune: false, knownSpells: ['shock'], conditions: [], acquiredTiers: [] });
 
 async function mount(page, { assistedFirst = false } = {}) {
-  const state = { errors: [], writes: [], said: [], asked: 20, answered: 0, handedBack: false };
+  const state = { errors: [], writes: [], said: [], left: 0, opened: 0, asked: 20, answered: 0, handedBack: false };
   page.on('pageerror', error => state.errors.push(error.message));
   const order = lesson.steps.map(step => step.at.creature);
   const view = () => {
@@ -45,7 +45,10 @@ async function mount(page, { assistedFirst = false } = {}) {
     const request = route.request(), url = new URL(request.url());
     if (url.pathname === `/api/scenarios/${id}/practice`) {
       if (request.method() === 'GET') return route.fulfill({ status: 404, json: { error: 'Scenario.NoPractice', message: 'None.' } });
-      return route.fulfill({ json: { seat: 'player1', token: 'lesson', table: { id: 'practice-lesson', format: '3v3', seats: [{ seat: 'player1', name: 'Learner', kind: 'person' }, { seat: 'player2', name: 'Recorded opponent', kind: 'bot' }] }, practice: view().practice } });
+      // Leaving lets go of the practice, so the next time it opens it starts from its cut.
+      if (request.method() === 'DELETE') { state.left++; return route.fulfill({ status: 204 }); }
+      state.opened++;
+      return route.fulfill({ json: { seat: 'player1', token: 'lesson', table: { id: 'practice-lesson', format: '3v3', seats: [{ seat: 'player1', name: 'Learner', kind: 'person' }, { seat: 'player2', name: 'Practice bot', kind: 'bot' }] }, practice: view().practice } });
     }
     // What the page says of the account's progress (O4): skipped, or done once the host's view says so.
     if (url.pathname.startsWith(`/api/tutorials/${id}/`) && request.method() === 'POST') { const what = url.pathname.split('/').at(-1); state.said.push(what); return route.fulfill({ json: { id, state: what === 'done' ? 'done' : 'skipped' } }); }
@@ -116,6 +119,9 @@ test('tutorial 1 is played to its end: each step shows its coach card and opens 
   await expect(page.locator('#practice-eyebrow')).toHaveText('TUTORIAL 1 OF 4');
   await expect(page.locator('#practice-title')).toHaveText('Your first combat');
   await expect(page.locator('#practice-leave')).toHaveAttribute('href', '/');
+  // The band stands in the header, in place of what a tutorial has no use for, not over the field.
+  await expect(page.locator('#battle .hud-top > #practice-band')).toHaveCount(1);
+  for (const id of ['#opponent-open', '#history-open', '#help-open']) await expect(page.locator(id)).toBeHidden();
   // It opens on its briefing, which says it is a tutorial too; nothing of the lesson shows behind it.
   await expect(page.locator('#practice-brief')).toBeVisible();
   await expect(page.locator('#practice-brief-eyebrow')).toHaveText('TUTORIAL 1 OF 4');
@@ -138,20 +144,20 @@ test('tutorial 1 is played to its end: each step shows its coach card and opens 
   await expect(page.locator('#practice-leave')).toBeVisible();
   // The host said it is done: the page has the account keep it, once.
   await expect.poll(() => state.said).toEqual(['done']);
-  // The tempos of the next round are still answered for the person: no sheet opens for them.
+  // The lesson is not played on: the next round's question is not drawn, whoever was to answer it.
   await expect(page.locator('#planning-dialog')).toBeHidden(); await expect(page.locator('#planning-open')).toBeHidden();
+  await expect(page.locator('#combat-open')).toBeHidden();
+  await expect(page.locator('#practice-restart')).toHaveText('Play again');
   await capture('tutorial-complete');
-  await fitsViewport(page, '#coach-continue, #coach-leave, #practice-restart, #practice-leave');
+  await fitsViewport(page, '#coach-again, #coach-leave, #practice-restart, #practice-leave');
+  await expect(page.locator('#coach-again')).toHaveText('Play again');
   await expect(page.locator('#coach-leave')).toHaveAttribute('href', '/');
-  // Keep playing puts the end card away; the band still says where the person is, with Leave.
-  await page.locator('#coach-continue').click();
-  await expect(page.locator('#coach')).toBeHidden();
-  await expect(band).toBeVisible();
-  // Leaving a finished tutorial is only leaving: nothing is said to be skipped.
+  // Leaving a finished tutorial is not skipping it, and lets go of its practice: it opens from its cut the next time.
   await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: '<title>Home</title>' }));
-  await page.locator('#practice-leave').click();
+  await page.locator('#coach-leave').click();
   await expect(page).toHaveTitle('Home');
   expect(state.said).toEqual(['done']);
+  expect(state.left).toBe(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   expect(state.errors).toEqual([]);
 });
@@ -197,6 +203,7 @@ test('Skip the tutorial on the first card says it is skipped and leaves for the 
 
   await expect(page).toHaveTitle('Home');
   expect(state.said).toEqual(['skip']);
+  expect(state.left).toBe(1);
   expect(state.writes).toEqual([]); expect(state.errors).toEqual([]);
 });
 
@@ -215,5 +222,24 @@ test('Leave before the end counts as skipping: the tutorial never opens by itsel
 
   await expect(page).toHaveTitle('Home');
   expect(state.said).toEqual(['skip']);
+  // Its practice is let go of too: the next time it opens, it starts from its cut.
+  expect(state.left).toBe(1);
+  expect(state.errors).toEqual([]);
+});
+
+test('Play again on the end card starts the tutorial over from its cut', async ({ page }) => {
+  test.setTimeout(120000);
+  const state = await mount(page);
+  await page.locator('#practice-brief-begin').click();
+  for (let index = 0; index < lesson.steps.length; index++) await playStep(page, state, index);
+  await expect(page.locator('#coach-step')).toHaveText('TUTORIAL COMPLETE');
+  const opened = state.opened;
+
+  state.answered = 0;
+  await page.locator('#coach-again').click();
+
+  await expect.poll(() => state.opened).toBe(opened + 1);
+  await expect(page.locator('#practice-brief')).toBeVisible();
+  await expect(page.locator('#practice-restart')).toHaveText('Restart the round');
   expect(state.errors).toEqual([]);
 });
