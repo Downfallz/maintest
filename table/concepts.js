@@ -1,7 +1,9 @@
 // The concept cards (ADR 0187, docs/tabletop/onboarding-plan.md): what one rule word means, in three lines at
 // most, with one example on the reference creature and values (`REFERENCE`), and the rulebook section it
-// summarises. The rulebook (docs/tabletop/rulebook.md) stays the source: a card is its summary in the player's
-// words. A lesson step opens the cards it names by these ids, which the host holds a lesson to (`ConceptCards.Ids`).
+// summarises. Until R4 (docs/tabletop/rulebook-plan.md) these cards keep their own text and cite the frozen
+// tabletop draft (docs/tabletop/rulebook.md); the official book, `rules/`, already carries each card in its
+// section. A lesson step opens the cards it names by these ids, which the host holds a lesson to
+// (`ConceptCards.Ids`).
 
 /** @typedef {{ id: string, title: string, lines: readonly string[], example: string, rulebook: { section: string, anchor: string, label: string } }} ConceptCard */
 

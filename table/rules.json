@@ -762,7 +762,7 @@
                     "strong": true
                   },
                   {
-                    "text": " gives its Energy. No spell of today's content applies one."
+                    "text": " gives its Energy."
                   }
                 ],
                 [
@@ -900,7 +900,7 @@
                   "strong": true
                 },
                 {
-                  "text": " There are three families, Brute, Warped and Predator, each a tree of four Stages. A Stage 1 mutation needs nothing. Every other one needs a mutation exactly one Stage below it. A creature may acquire a mutation it does not own when it owns what that mutation needs, whatever family it comes from: two creatures may take the same mutation, and one creature may mix families. What a creature may acquire is read from what it owns as the step opens: a pick of this round opens nothing until the next mutation round."
+                  "text": " There are three families, Brute, Warped and Predator, each a tree of four Stages. A Stage 1 mutation needs nothing. Every other one needs one named mutation of its family, a Stage below it: the Mutation Tree shows which. A creature may acquire a mutation it does not own when it owns what that mutation needs, and it may mix families by acquiring another family's Stage 1: two creatures may take the same mutation, and one creature may mix families. What a creature may acquire is read from what it owns as the step opens: a pick of this round opens nothing until the next mutation round."
                 }
               ]
             },
@@ -1335,7 +1335,7 @@
                   "emphasis": true
                 },
                 {
-                  "text": " Creatures 1, 2, 4 and 5 have acquired Warped, and Creatures 1 and 4 have since acquired Stormborn. Creatures 1 and 4 read 10 initiative, Creatures 2 and 5 read 7, and Creatures 3 and 6 read 5. Last round, an Ice Grip lowered Creature 2's initiative by 3: it reads 4 this round. Creatures 1 and 4 chose Instinct, the rest Precision. Creatures 1 and 4 tie, and roll 8 and 15: Creature 4 acts first, then Creature 1. Then the Precision creatures, by their initiative."
+                  "text": " Creatures 1, 2, 4 and 5 have acquired Warped, and Creatures 1 and 4 have since acquired Stormborn. Creatures 1 and 4 read 10 initiative, Creatures 2 and 5 read 7, and Creatures 3 and 6 read 5. Last round, an Ice Grip lowered Creature 2's initiative by 3: it reads 4 this round. Creatures 1 and 4 chose Instinct, the rest Precision. Creatures 1 and 4 tie, and roll 8 and 15: Creature 4 acts first, then Creature 1. Then the Precision creatures, by their initiative: Creature 5, then Creatures 3 and 6, which tie between the teams and roll off as well, and Creature 2 last."
                 }
               ]
             }
@@ -1829,7 +1829,7 @@
                   "emphasis": true
                 },
                 {
-                  "text": " Creature 3 owns Titan and casts Dominate, damage 7, on Creature 5, which holds Alpha Roar's Defense of 4, and on Creature 4, with no Defense. With no critical, both lose 7. A caster with no sunder would have dealt Creature 5 only 3."
+                  "text": " Creature 3 owns Titan and casts Dominate, damage 7, on Creature 5, which holds Alpha Roar's Defense of 4, and on Creature 4, at its base Defense of 0. With no critical, both lose 7. A caster with no sunder would have dealt Creature 5 only 3."
                 }
               ]
             }
@@ -2250,7 +2250,7 @@
                   "strong": true
                 },
                 {
-                  "text": " creature never rolls, and a spell that prints no chance never rolls. A creature's own chance is 0%, so the spell's chance is the whole chance."
+                  "text": " creature never rolls, and a spell that prints no chance never rolls. A creature's own chance, 0%, is added to the spell's."
                 }
               ]
             },
@@ -2453,7 +2453,7 @@
                   ],
                   [
                     {
-                      "text": "Gives its amount of Energy; no spell of today's content applies one"
+                      "text": "Gives its amount of Energy"
                     }
                   ],
                   [
@@ -2525,7 +2525,7 @@
                   ],
                   [
                     {
-                      "text": "Raises initiative; no spell of today's content applies one"
+                      "text": "Raises initiative"
                     }
                   ],
                   [

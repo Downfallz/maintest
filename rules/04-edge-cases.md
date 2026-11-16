@@ -84,8 +84,8 @@ sources: ADR 0041, game-rules#implemented, game-rules#round-sequence-adr-0010
 
 When a **Precision** creature's spell resolves and the spell prints a critical chance, a d20 is rolled **once for
 the whole cast**. The spell prints the face it needs: d20: 11+ means 11 or more. An **Instinct** creature never
-rolls, and a spell that prints no chance never rolls. A creature's own chance is
-{creature.criticalChance * 100}%, so the spell's chance is the whole chance.
+rolls, and a spell that prints no chance never rolls. A creature's own chance,
+{creature.criticalChance * 100}%, is added to the spell's.
 
 A critical multiplies by {rules.criticalMultiplier}, dropping any fraction, **what the cast puts on a target's
 Health now**, and nothing else:
@@ -99,7 +99,7 @@ the Defense.
 
 *Example.* Creature 2 is Precision and casts Vital Surge on Creature 3, which has {creature.health - 12} of
 {creature.health} Health: heal {spell:restorative_gush:v1.heal}, d20:
-{21 - spell:restorative_gush:v1.criticalChance * 20}+. The d20 shows a critical: the heal becomes
+{21 - (creature.criticalChance + spell:restorative_gush:v1.criticalChance) * 20}+. The d20 shows a critical: the heal becomes
 {floor(spell:restorative_gush:v1.heal * rules.criticalMultiplier)}, and Creature 3 goes to
 {min(creature.health, creature.health - 12 + floor(spell:restorative_gush:v1.heal * rules.criticalMultiplier))}.
 A heal never goes past the Health a creature started with.

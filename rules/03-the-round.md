@@ -33,7 +33,7 @@ A spell costs Energy. It is spent when the spell resolves, never before.
 *Upkeep.* Right after the Energy gain, the conditions that work at Upkeep apply, in three passes. The order
 matters:
 
-1. **Energy regeneration** gives its Energy. No spell of today's content applies one.
+1. **Energy regeneration** gives its Energy.
 2. **Regeneration** heals, never above the Health the creature started with.
 3. **Bleed** deals its damage. **A Bleed ignores Defense**: it is the only damage in the game that does.
 
@@ -69,8 +69,9 @@ and raises its base initiative by the mutation's bonus, for the rest of the matc
 thing that ever moves a base initiative: acquiring is how a creature gets stronger, and also how it gets faster.
 
 **Which mutation.** There are three families, Brute, Warped and Predator, each a tree of four Stages. A Stage 1
-mutation needs nothing. Every other one needs a mutation exactly one Stage below it. A creature may acquire a
-mutation it does not own when it owns what that mutation needs, whatever family it comes from: two creatures may
+mutation needs nothing. Every other one needs one named mutation of its family, a Stage below it: the Mutation
+Tree shows which. A creature may acquire a mutation it does not own when it owns what that mutation needs, and
+it may mix families by acquiring another family's Stage 1: two creatures may
 take the same mutation, and one creature may mix families. What a creature may acquire is read from what it
 owns as the step opens: a pick of this round opens nothing until the next mutation round.
 
@@ -176,7 +177,8 @@ and 6 read {creature.initiative}. Last round, an Ice Grip lowered Creature 2's i
 {spell:frostbite:v1.initiativeDebuff}: it reads
 {max(0, creature.initiative + tier:occultist:v1.initiativeBonus - spell:frostbite:v1.initiativeDebuff)} this round.
 Creatures 1 and 4 chose Instinct, the rest Precision. Creatures 1 and 4 tie, and roll 8 and 15: Creature 4 acts
-first, then Creature 1. Then the Precision creatures, by their initiative.
+first, then Creature 1. Then the Precision creatures, by their initiative: Creature 5, then Creatures 3 and 6,
+which tie between the teams and roll off as well, and Creature 2 last.
 
 sources: ADR 0036, ADR 0059, ADR 0063, game-rules#round-sequence-adr-0010
 
@@ -267,20 +269,20 @@ a target, 0 damage through a Defense or a heal at full Health, did nothing to it
 
 *Example.* Creature 2 is Precision, at 4 Energy, and casts Incinerate on Creature 5: cost
 {spell:engulfing_flames:v1.energyCost}, damage {spell:engulfing_flames:v1.damage}, d20:
-{21 - spell:engulfing_flames:v1.criticalChance * 20}+. Creature 5 cast Carapace last round: its Defense is
-{spell:full_plate:v1.defenseBuff}.
+{21 - (creature.criticalChance + spell:engulfing_flames:v1.criticalChance) * 20}+. Creature 5 cast Carapace last round: its Defense is
+{creature.defense + spell:full_plate:v1.defenseBuff}.
 
 - Pay: Creature 2 goes to {4 - spell:engulfing_flames:v1.energyCost} Energy.
 - The d20 is a critical: {spell:engulfing_flames:v1.damage} × {rules.criticalMultiplier} =
   {floor(spell:engulfing_flames:v1.damage * rules.criticalMultiplier)}.
 - Less the Defense: Creature 5 loses
-  {max(0, floor(spell:engulfing_flames:v1.damage * rules.criticalMultiplier) - spell:full_plate:v1.defenseBuff)},
+  {max(0, floor(spell:engulfing_flames:v1.damage * rules.criticalMultiplier) - (creature.defense + spell:full_plate:v1.defenseBuff))},
   and goes from {creature.health} to
-  {max(0, creature.health - max(0, floor(spell:engulfing_flames:v1.damage * rules.criticalMultiplier) - spell:full_plate:v1.defenseBuff))}
+  {max(0, creature.health - max(0, floor(spell:engulfing_flames:v1.damage * rules.criticalMultiplier) - (creature.defense + spell:full_plate:v1.defenseBuff)))}
   Health.
 
 Had the roll missed, it would have lost
-{max(0, spell:engulfing_flames:v1.damage - spell:full_plate:v1.defenseBuff)}. **Multiply first, subtract
+{max(0, spell:engulfing_flames:v1.damage - (creature.defense + spell:full_plate:v1.defenseBuff))}. **Multiply first, subtract
 second**: the other order gives a number the game never deals.
 
 sources: ADR 0033, ADR 0035, ADR 0076, ADR 0083, ADR 0101, game-rules#round-sequence-adr-0010
@@ -300,7 +302,7 @@ A creature's **damage bonus** is added to every hit it deals: Apex gives
 multiplies and before Defense is subtracted. It never touches a Bleed, a heal, or the caster's own line.
 
 *Example.* Creature 4 owns Apex, is Precision, and casts Blood Price on Creature 1, whose Defense is 3: damage
-{spell:hateful_sacrifice:v1.damage}, d20: {21 - spell:hateful_sacrifice:v1.criticalChance * 20}+. Add the bonus:
+{spell:hateful_sacrifice:v1.damage}, d20: {21 - (creature.criticalChance + spell:hateful_sacrifice:v1.criticalChance) * 20}+. Add the bonus:
 {spell:hateful_sacrifice:v1.damage + tier:apex:v1.damageBonus}. On a critical,
 {floor((spell:hateful_sacrifice:v1.damage + tier:apex:v1.damageBonus) * rules.criticalMultiplier)}, less 3:
 Creature 1 loses
@@ -323,11 +325,12 @@ Titan's passive is a **sunder**: every hit its creature deals meets the target's
 with no Defense it does nothing. It moves no Defense: the target's Defense is the same against everyone else.
 
 *Example.* Creature 3 owns Titan and casts Dominate, damage {spell:chain_slash:v1.damage}, on Creature 5, which
-holds Alpha Roar's Defense of {spell:thundering_seal:v1.defenseBuff}, and on Creature 4, with no Defense. With no
+holds Alpha Roar's Defense of {creature.defense + spell:thundering_seal:v1.defenseBuff}, and on Creature 4, at its base Defense of
+{creature.defense}. With no
 critical, both lose
-{max(0, spell:chain_slash:v1.damage - max(0, spell:thundering_seal:v1.defenseBuff - tier:titan:v1.sunder))}. A
+{max(0, spell:chain_slash:v1.damage - max(0, creature.defense + spell:thundering_seal:v1.defenseBuff - tier:titan:v1.sunder))}. A
 caster with no sunder would have dealt Creature 5 only
-{max(0, spell:chain_slash:v1.damage - spell:thundering_seal:v1.defenseBuff)}.
+{max(0, spell:chain_slash:v1.damage - creature.defense - spell:thundering_seal:v1.defenseBuff)}.
 
 sources: ADR 0106, game-rules#round-sequence-adr-0010
 

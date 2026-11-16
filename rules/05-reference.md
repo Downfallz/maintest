@@ -12,11 +12,11 @@ permanent one counts down at Cleanup and ends at zero, and the first countdown a
 | --- | --- | --- |
 | **Bleed** | Deals its amount, **ignoring Defense** | Upkeep, after Regeneration |
 | **Regeneration** | Heals its amount, never above the starting Health | Upkeep, before Bleed |
-| **Energy regeneration** | Gives its amount of Energy; no spell of today's content applies one | Upkeep, first |
+| **Energy regeneration** | Gives its amount of Energy | Upkeep, first |
 | **Stun** | No tempo, no turn; a second one is ignored, and so is one in the round after a Stun ends | The whole round |
 | **Defense buff** | Raises Defense; all of them count for 10 at most | Every hit the creature takes |
 | **Defense debuff** | Lowers Defense | Every hit the creature takes |
-| **Initiative buff** | Raises initiative; no spell of today's content applies one | When the timeline is built |
+| **Initiative buff** | Raises initiative | When the timeline is built |
 | **Initiative debuff** | Lowers initiative | When the timeline is built |
 | **Damage buff** | Adds to the creature's damage bonus | Every hit the creature deals |
 
