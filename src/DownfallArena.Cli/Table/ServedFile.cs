@@ -13,9 +13,11 @@ internal sealed record ServedFile(DateTime Written, string Tag, byte[] Raw, byte
     /// <summary>Below this, compressing costs more than it saves.</summary>
     public const int Smallest = 1024;
 
-    public static ServedFile Read(string path, DateTime written, bool compress)
+    public static ServedFile Read(string path, DateTime written, bool compress) => Of(File.ReadAllBytes(path), written, compress);
+
+    /// <summary>Bytes the host made rather than read as they are, such as a page whose names it stamped.</summary>
+    public static ServedFile Of(byte[] raw, DateTime written, bool compress)
     {
-        var raw = File.ReadAllBytes(path);
         var tag = $"\"{Convert.ToHexStringLower(SHA256.HashData(raw))[..32]}\"";
         return compress && raw.Length >= Smallest
             ? new ServedFile(written, tag, raw, Compressed(raw, stream => new BrotliStream(stream, CompressionLevel.Optimal)), Compressed(raw, stream => new GZipStream(stream, CompressionLevel.Optimal)))
