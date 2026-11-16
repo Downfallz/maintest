@@ -206,7 +206,7 @@ internal sealed class PlayersApi
             return Refused(suspended.Error);
         }
 
-        Console.WriteLine($"  Account {account.Id.Value} ({account.Username.Value}) suspended by {operatorName}: {suspension.Value.Reason}");
+        Console.WriteLine($"  Account {account.Id.Value} ({account.Username.Value}) suspended by {operatorName}.");
         await Notes.NoteAsync(operatorName, OperatorActions.Suspend, account.Id.Value, $"{account.Username.Value}: {suspension.Value.Reason}");
         return Answer(new { suspension = Describe(suspended.Value.Suspension) });
     }

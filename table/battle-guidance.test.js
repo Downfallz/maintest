@@ -180,3 +180,14 @@ test('in a game between two players, the seat asked and the seat waiting both re
   const theirs = view(null, { answerBy, board: { ...view().board, subPhase: 'Speed' } });
   assert.match(waitingOn(theirs, { opponent: 'bastien', now }).detail, /Setting their tempos · 5 h left to answer$/);
 });
+// In a tutorial the lesson's steps take the phase tips' place (ADR 0187): no tip is owed, Help keeps the round.
+test('a tutorial keeps the phase tips silent, and Help still says the question and the round', () => {
+  const lesson = { order: 1, of: 4, title: 'Your first combat', teaches: ['Action'], assisted: [], steps: [{ at: { kind: 'Action', round: 1 }, says: ['A line.'], concepts: [] }], shown: 0, done: false };
+  const g = battleGuidance(view('Action', { practice: { scenario: 'sc-repo-tutorial-a', title: 'Your first combat', round: 1, tutorial: lesson } }), catalogue);
+  assert.equal(g.topic, null); assert.equal(g.title, 'Round guide'); assert.deepEqual(g.lines, []);
+  assert.match(g.objective, /choose a spell, then targets/); assert.equal(g.flow.length, 4);
+  assert.equal(g.context, 'Command · First');
+  assert.equal(helpPreferences(null).shouldShow(g.topic), false);
+  // A plain practice is taught by the tips, as a game is.
+  assert.equal(battleGuidance(view('Action', { practice: { scenario: 'sc-1', title: 'Bleed', round: 1 } }), catalogue).topic, 'action');
+});
