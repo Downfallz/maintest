@@ -20,7 +20,7 @@ it was drawn from, so any change to `docs/tabletop/playtest.rules.json` calls fo
 
 The tests refuse what a machine can find. What only a reading finds, the `rules-keeper` reviewer reads: `/reviewers`
 calls it for a change to the domain, `game-rules.md`, the words, an ADR, the content, the hosted rule set, this
-folder, or the rule text of the pages and the tutorials. `/rules` then rewrites the sections it found stale, with
+folder, or the rule text of the pages, the battle, the showcase and the tutorials. `/rules` then rewrites the sections it found stale, with
 the `rulebook-writer`, and adds the line to `changes.md`. Both start from the sections a change reaches:
 
 ```bash

@@ -48,6 +48,7 @@ export function sectionsOf(parts) {
     for (const section of found.filter(section => section.file === file)) {
       const own = lines.slice(section.from - 1, section.to);
       section.text = own.join('\n');
+      Object.defineProperty(section, 'rows', { value: lines }); // the whole file, to place a removal; not reported
       const sources = own.find(line => line.startsWith('sources:'));
       section.sources = sources ? sources.slice('sources:'.length).split(',').map(source => source.trim()).filter(Boolean) : [];
     }
@@ -55,7 +56,10 @@ export function sectionsOf(parts) {
   return found;
 }
 
-/** The paths of a unified diff, each with the lines it removes and adds and the lines of the new file it changed. */
+/**
+ * The paths of a unified diff, each with the lines it removes and adds, the lines of the new file it adds
+ * (`lines`), and where in the new file it removes some (`removedAt`: the line that now follows them).
+ */
 export function readDiff(text) {
   const changes = [];
   let current = null;
@@ -64,7 +68,7 @@ export function readDiff(text) {
     const header = /^diff --git a\/(.+) b\/(.+)$/.exec(row);
     const hunk = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(row);
     if (header) {
-      current = { path: header[2], added: [], removed: [], lines: new Set() };
+      current = { path: header[2], added: [], removed: [], lines: new Set(), removedAt: new Set() };
       changes.push(current);
     } else if (!current || row.startsWith('+++ ') || row.startsWith('--- ')) {
       continue;
@@ -75,7 +79,7 @@ export function readDiff(text) {
       current.lines.add(line++);
     } else if (row.startsWith('-')) {
       current.removed.push(row.slice(1));
-      current.lines.add(line);
+      current.removedAt.add(line);
     } else if (row.startsWith(' ')) {
       line++;
     }
@@ -83,23 +87,41 @@ export function readDiff(text) {
   return changes;
 }
 
+/**
+ * The lines of a file a change touched: those it adds, and where it removes some. Lines removed just above a heading,
+ * or at the end, were the end of what came before: git writes the removal of a section's last paragraph there.
+ */
+function touched(change, rows, isHeading) {
+  const lines = new Set(change.lines);
+  for (const at of change.removedAt) {
+    const above = at > 1 && (at > rows.length || isHeading(rows[at - 1]));
+    lines.add(above ? at - 1 : at);
+  }
+  return lines;
+}
+
 /** The anchors of the game-rules headings that hold the given lines, every level, and the headings a change rewrote. */
 function headingsChanged(gameRules, change) {
   const anchors = new Set(change.removed.concat(change.added).filter(row => /^#{1,6} /.test(row)).map(row => anchorOf(row.replace(/^#+ /, ''))));
   const stack = [];
-  gameRules.split('\n').forEach((row, at) => {
+  const rows = gameRules.split('\n');
+  const lines = touched(change, rows, row => /^#{1,6} /.test(row));
+  rows.forEach((row, at) => {
     const heading = /^(#{1,6}) (.*)$/.exec(row);
     if (heading) {
       stack.length = Math.min(stack.length, heading[1].length - 1);
       stack[heading[1].length - 1] = anchorOf(heading[2]);
     }
-    if (change.lines.has(at + 1)) for (const anchor of stack.filter(Boolean)) anchors.add(anchor);
+    if (lines.has(at + 1)) for (const anchor of stack.filter(Boolean)) anchors.add(anchor);
   });
   return anchors;
 }
 
 /** The keys of a JSON file a change rewrites: `"energyPerRound": 3` gives energyPerRound. */
 const keysChanged = change => new Set(change.removed.concat(change.added).flatMap(row => [...row.matchAll(/"(\w+)"\s*:/g)].map(match => match[1])));
+
+/** The names a change removes: `"name": "Heavy Strike"`. */
+const namesIn = rows => rows.flatMap(row => [.../"name"\s*:\s*"([^"]+)"/.exec(row) ?? []].slice(1));
 
 /** The creature's stat a key holds, as the book draws it: baseHealth is creature.health. */
 const statOf = key => (/^base[A-Z]/.test(key) ? `${key[4].toLowerCase()}${key.slice(5)}` : null);
@@ -127,15 +149,20 @@ function reasonsFor(change, section, { gameRules, content }) {
   const definition = kind && path.endsWith('.json') ? contentOf(path, content, kind) : null;
   if (definition) {
     if (section.text.includes(`${definition.id}.`)) reasons.push(`draws ${definition.id}`);
-    if (definition.name && new RegExp(String.raw`\b${escape(definition.name)}\b`).test(section.text)) reasons.push(`names ${definition.name}`);
+    // A renamed spell or mutation is still named by its old name where the book has not caught up.
+    const names = new Set([definition.name, ...namesIn(change.removed)].filter(Boolean));
+    for (const name of names) if (new RegExp(String.raw`\b${escape(name)}\b`).test(section.text)) reasons.push(`names ${name}`);
   }
   if (path === RULE_SET || path === CREATURE) {
     const prefix = path === RULE_SET ? 'rules' : 'creature';
-    const keys = [...keysChanged(change)].map(key => (prefix === 'creature' ? statOf(key) : key)).filter(Boolean);
-    const drawn = keys.length > 0 ? keys : [...new Set([...section.text.matchAll(new RegExp(String.raw`\b${prefix}\.(\w+)`, 'g'))].map(match => match[1]))];
+    const shown = [...keysChanged(change)];
+    const keys = shown.map(key => (prefix === 'creature' ? statOf(key) : key)).filter(Boolean);
+    // No key in sight (a hunk of brackets alone): every value the section draws from the file may have moved.
+    const drawn = keys.length > 0 || shown.length > 0 ? keys : [...new Set([...section.text.matchAll(new RegExp(String.raw`\b${prefix}\.(\w+)`, 'g'))].map(match => match[1]))];
     for (const key of drawn) if (new RegExp(String.raw`\b${prefix}\.${key}\b`).test(section.text)) reasons.push(`draws ${prefix}.${key}`);
   }
-  if (path === `rules/${section.file}` && [...change.lines].some(line => line >= section.from && line <= section.to)) {
+  const own = path === `rules/${section.file}` ? touched(change, section.rows, row => HEADING.test(row)) : new Set();
+  if ([...own].some(line => line >= section.from && line <= section.to)) {
     reasons.push('changed in the book');
   }
   return reasons;
@@ -187,7 +214,14 @@ function main() {
     }
   };
   const given = { sections: sectionsOf(parts), gameRules: readFileSync(join(root, GAME_RULES), 'utf8'), content };
-  process.stdout.write(report(reach(readDiff(readFileSync(0, 'utf8')), given)));
+  const input = readFileSync(0, 'utf8');
+  const changes = readDiff(input);
+  // Empty or bare paths must never read as "nothing reached": /rules would then write "Rulebook: none".
+  if (!input.startsWith('diff --git ') || changes.length === 0) {
+    console.error('reach.mjs: the input is not a unified diff. Pipe `git diff <range>` into it, not --name-only; fetch main first.');
+    process.exit(1);
+  }
+  process.stdout.write(report(reach(changes, given)));
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) main();

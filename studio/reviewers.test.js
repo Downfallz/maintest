@@ -202,6 +202,8 @@ test('the book itself, and the rule text of the pages and the tutorials, get the
   for (const path of ['table/terms.js', 'table/battle-guidance.js']) {
     assert.deepEqual(reviewersFor([path]), ['code-reviewer', 'pages-reviewer', 'rules-keeper'], path);
   }
+  assert.deepEqual(reviewersFor(['battle/src/tempo.ts']), ['code-reviewer', 'pages-reviewer', 'design-reviewer', 'rules-keeper']);
+  assert.deepEqual(reviewersFor(['showcase/guide.mjs']), ['code-reviewer', 'rules-keeper']);
   assert.deepEqual(reviewersFor(['scenarios/tutorials/your-first-combat.json']), ['code-reviewer', 'rules-keeper']);
 });
 

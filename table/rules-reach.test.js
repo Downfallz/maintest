@@ -102,6 +102,47 @@ test('a unified diff gives each path, the lines it adds and removes, and where i
   assert.deepEqual(change.removed, ['old']);
   assert.deepEqual(change.added, ['new', 'newer']);
   assert.deepEqual([...change.lines], [6, 7]);
+  assert.deepEqual([...change.removedAt], [6]);
+});
+
+test('a rule removed from the end of a section reaches that section, not the one whose heading follows', () => {
+  // As git writes it: the last paragraph of Match lifecycle and its blank line go, just above Round sequence.
+  const rules = [
+    'diff --git a/docs/domain/game-rules.md b/docs/domain/game-rules.md',
+    '--- a/docs/domain/game-rules.md',
+    '+++ b/docs/domain/game-rules.md',
+    '@@ -5,5 +5,3 @@',
+    ' A match ends.',
+    ' ',
+    '-A match also ends at the round cap.',
+    '-',
+    ' ## Round sequence',
+  ].join('\n');
+  assert.deepEqual(ids(rules), ['winning']);
+  // The same in the book: the end of Energy gain removed, just above the Damage heading.
+  const book = [
+    'diff --git a/rules/02-the-round.md b/rules/02-the-round.md',
+    '--- a/rules/02-the-round.md',
+    '+++ b/rules/02-the-round.md',
+    '@@ -7,5 +7,3 @@',
+    ' sources: ADR 0114, game-rules#round-sequence',
+    ' ',
+    '-A line.',
+    '-',
+    ' ## Damage {#damage}',
+  ].join('\n');
+  assert.deepEqual(ids(book), ['energy-gain']);
+});
+
+test('input that is not a unified diff is refused, never read as nothing reached', () => {
+  const script = join(root, 'scripts/rules/reach.mjs');
+  for (const input of ['', 'rules/03-the-round.md\ndata/Tiers/titan.v1.json\n']) {
+    assert.throws(
+      () => execFileSync('node', [script], { cwd: root, input, encoding: 'utf8', stdio: 'pipe' }),
+      error => error.status === 1 && /not a unified diff/.test(error.stderr),
+      JSON.stringify(input),
+    );
+  }
 });
 
 test('an ADR reaches the sections that cite it, and no other', () => {
@@ -139,6 +180,18 @@ test('the reference creature reaches the sections that draw the stat it changes'
   assert.deepEqual(ids(diffOf('data/Creatures/main.v1.json', { removed: ['  "baseSpeed": 3,'], added: ['  "baseSpeed": 4,'] })), []);
 });
 
+test('a creature change that moves no stat reaches no section by its stats, and is read by hand', () => {
+  const diff = diffOf('data/Creatures/main.v1.json', { removed: ['  "startingSpellIds": ["a"],'], added: ['  "startingSpellIds": ["b"],'] });
+  assert.deepEqual(reached(diff), { sections: [], unmapped: ['data/Creatures/main.v1.json'] });
+});
+
+test('a renamed spell reaches the sections that still name it by its old name', () => {
+  const diff = diffOf('data/Spells/brawler/heavy_strike.v1.json', { removed: ['  "name": "Heavy Strike",'], added: ['  "name": "Crushing Blow",'] });
+  const renamed = new Map([['data/Spells/brawler/heavy_strike.v1.json', { id: 'spell:heavy_strike:v1', name: 'Crushing Blow' }]]);
+  const { sections } = reach(readDiff(diff), { ...given, content: path => renamed.get(path) ?? null });
+  assert.deepEqual(sections[0].why, ['draws spell:heavy_strike:v1', 'names Heavy Strike']);
+});
+
 test('game-rules reaches the sections that cite the heading it changes, or the heading it renames', () => {
   assert.deepEqual(ids(diffOf('docs/domain/game-rules.md', { at: 9, removed: ['Upkeep first.'], added: ['Upkeep comes first.'] })), [
     'energy-gain',
@@ -171,11 +224,11 @@ test('what no section draws or cites is listed for a reading by hand, and the re
   assert.deepEqual(unmapped, ['src/DownfallArena.Domain/Matches/Match.cs', 'table/terms.js']);
 });
 
-test('on the real book, a past balance pass reaches the section that teaches the shared Archmage', () => {
+test('on the real book, an excerpt of a past balance pass reaches the section that teaches the shared Archmage', () => {
   // Commit 0532e592 (#371) shared Archmage with the whole side (ADR 0114) and raised Titan's sunder.
   const diff = [
     diffOf('docs/adr/0114-a-shared-package-is-held-by-the-whole-side.md', { added: ['# 0114. A shared package is held by the whole side'] }),
-    diffOf('data/Tiers/archmage.v1.json', { added: ['  "shared": true,'] }),
+    diffOf('data/Tiers/archmage.v1.json', { added: ['  "sharedWithTeam": true,'] }),
     diffOf('data/Tiers/titan.v1.json', { removed: ['    "sunder": 2'], added: ['    "sunder": 10'] }),
   ].join('\n');
   const output = execFileSync('node', [join(root, 'scripts/rules/reach.mjs')], { cwd: root, input: diff, encoding: 'utf8' });

@@ -49,7 +49,7 @@ const BRAND_TOOLS = new Set(['scripts/sync-branding.mjs', 'scripts/matte-opaque-
 
 // What the rules are made of (docs/tabletop/rulebook-plan.md, R5): the domain that plays them, their specification
 // and words, the decisions, the content and the hosted rule set the book draws from, the book, and the rule text the
-// pages and the tutorials show. The ADRs' generated index and their template decide nothing.
+// pages, the battle's tempo lines, the showcase's field guide and the tutorials show. The ADRs' generated index and their template decide nothing.
 const RULES_SOURCES = [
   'src/DownfallArena.Domain/',
   'data/Spells/',
@@ -67,6 +67,8 @@ const RULES_FILES = new Set([
   'docs/tabletop/playtest.rules.json',
   'table/terms.js',
   'table/battle-guidance.js',
+  'battle/src/tempo.ts',
+  'showcase/guide.mjs',
 ]);
 const AN_ADR = /^docs\/adr\/(?!0000-)\d{4}-[^/]+\.md$/;
 

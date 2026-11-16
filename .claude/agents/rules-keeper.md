@@ -17,7 +17,8 @@ Start from the sections the change reaches: `git diff <range> | node scripts/rul
 section an ADR, a game-rules heading, a spell, a mutation, a field of the rule set or a stat of the reference
 creature reaches through its `sources:` line or the values it draws, and the paths no section draws or cites.
 Read each section it lists in `rules/`, and read the paths it leaves to you by hand: the domain's rules, the
-words, the tutorials' steps (`scenarios/tutorials/`), `table/terms.js` and `table/battle-guidance.js`.
+words, the tutorials' steps (`scenarios/tutorials/`), `table/terms.js`, `table/battle-guidance.js`, the tempo lines
+of `battle/src/tempo.ts` and the showcase's field guide (`showcase/guide.mjs`).
 
 The tests already refuse what a machine can find (`table/rules.test.js`): a value that does not resolve, a
 retired word, a source that does not exist, a dead link, a missing card. A balance pass moves a drawn number by

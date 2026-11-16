@@ -51,7 +51,7 @@ What `/reviewers` reads to choose the agents under `.claude/agents` that review 
 anything but markdown, then `domain-reviewer`, `host-reviewer`, `pages-reviewer`, `design-reviewer`, `copy-editor`,
 `infra-reviewer`, `security-reviewer`, `stats-reviewer` and `rules-keeper` by the paths they own (the keeper:
 the domain, `game-rules.md`, the words, an ADR, the content, the hosted rule set, `rules/`, `table/terms.js`,
-`table/battle-guidance.js` and `scenarios/tutorials/`). Given the whole diff, it also
+`table/battle-guidance.js`, `battle/src/tempo.ts`, `showcase/guide.mjs` and `scenarios/tutorials/`). Given the whole diff, it also
 calls `design-reviewer` for a page script (`table/`, `studio/`, `viewer/`, not a test) whose added lines hold a
 raw colour, an inline style or a `className`. `legacy/` calls for nobody.
 `studio/reviewers.test.js` tests the choice, that every reviewer it names is an agent that lists no tool that
@@ -155,8 +155,10 @@ git diff origin/main... | node scripts/rules/reach.mjs   # the sections of the b
 What `/rules` and the `rules-keeper` start from. A section is reached by an ADR or a `game-rules.md` heading its
 `sources:` line cites, by a value it draws (a spell, a mutation, a field of the hosted rule set, a stat of the
 reference creature), by a spell or a mutation it names, and by a change to its own lines. A path that calls for the
-keeper and reaches no section (the domain, the words, the pages' rule text) is listed to be read by hand.
-`table/rules-reach.test.js` tests it, and runs it once on a past balance pass.
+keeper and reaches no section (the domain, the words, the pages' rule text) is listed to be read by hand. A line
+removed just above a heading counts for the section it ended. Input that is not a unified diff (nothing, or
+`--name-only`) is refused, never read as nothing reached. `table/rules-reach.test.js` tests it, and runs it on an
+excerpt of a past balance pass.
 
 ### studio
 
