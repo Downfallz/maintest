@@ -206,7 +206,7 @@ and the app's edition; it keeps writing, the keeper keeps reading.
    `prompts.test.js`. Tried on #371 (Archmage shared, Titan and Apex raised): the keeper named 3.1, 3.4, 3.11,
    3.12 and 5.3. It found the book still true on the numbers, with four gaps: a shared copy outliving its buyer
    is not taught; 5.3's opening says a passive is its creature's own; `changes.md` and ADR 0114 lack their
-   line; the card says "side" where the book says "team". The fixes are left to an issue. A `game-rules.md`
+   line; the card says "side" where the book says "team". The fixes are left to issue #713. A `game-rules.md`
    heading as broad as *Implemented* reaches every section that cites it, so a change under it lists many.
 6. **R6, French.** `rules/fr/`, the same ids, the French column of `player-terminology.md` as its words; the page
    in the language the account chose. Once the English is settled.
