@@ -358,3 +358,25 @@ body.classic-page:has(#table:not([hidden])) .home-header .brand { display: flex;
 .game-meta .game-ranked.ranked { color: var(--gold); font-weight: 650; }
 .game-row .status-tag.ranked { color: var(--gold); border-color: var(--gold); }
 .casual-tag.ranked { color: var(--gold); border-color: var(--gold); }
+
+/* Report or suggest (ADR 0189): one sheet, its two kinds asked first, then three questions. A muted player's
+   entries are gone wherever they stand. */
+html[data-feedback-muted] [data-feedback-open] { display: none; }
+.feedback-kinds { display: grid; gap: 12px; }
+.feedback-kinds button { display: grid; gap: 4px; width: 100%; min-height: 64px; padding: 14px 16px; text-align: left; }
+.feedback-kinds small, .feedback-attach small, .feedback-dialog label small { color: var(--muted); font-size: 12px; font-weight: 400; }
+.feedback-choices { display: grid; gap: 2px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.feedback-choices legend { margin: 0 0 6px; padding: 0; color: var(--muted); font-size: 12px; }
+/* The battle view's settings lay a label out as a row with a rule under it; the sheet's labels are the lobby's. */
+.feedback-dialog label { display: block; padding: 0; border-bottom: 0; }
+.feedback-dialog label small { display: inline; margin: 0; }
+.lobby-page .feedback-choice, .lobby-page .feedback-attach { display: flex; justify-content: flex-start; align-items: center; gap: 12px; min-height: 44px; margin: 0; color: var(--ink); font-size: 14px; }
+.lobby-page .feedback-choice input, .lobby-page .feedback-attach input { flex: none; width: 22px; min-height: 22px; margin: 0; }
+.lobby-page .feedback-attach { margin-top: 14px; }
+.feedback-attach span { display: grid; gap: 2px; }
+.feedback-dialog textarea { box-sizing: border-box; width: 100%; min-height: 88px; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius-soft); font: inherit; color: var(--ink); background: var(--paper); resize: vertical; }
+.feedback-dialog textarea:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+.feedback-dialog .dialog-actions { margin-top: 18px; }
+.feedback-dialog .dialog-actions button { min-height: 44px; }
+.feedback-dialog #feedback-note { margin: 14px 0 0; font-size: 13px; }
+.feedback-sent { margin: 0; color: var(--ink); font-size: 15px; line-height: 1.6; }

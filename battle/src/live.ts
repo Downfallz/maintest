@@ -45,6 +45,11 @@ import { createLiveConnection } from '../../table/battle-live.js';
 import { signInPath } from '../../table/account.js';
 import { seatLabel } from '../../table/invitation.js';
 import { phaseLabel, stepLabel, tempoLabel } from '../../table/terms.js';
+import { catchPageErrors, createPageErrors, mountFeedback } from '../../table/feedback-sheet.js';
+
+// The page's own errors, kept from the start for a bug report sent from it (ADR 0189).
+const pageErrors = createPageErrors();
+catchPageErrors(window, pageErrors);
 
 interface Choice { seat: string; token: string; table: { id: string; format: string; round?: number; seats?: { seat: string; name: string; kind?: string; account?: string }[] } }
 interface Creature { form: string; description: string; id: string; name: string; label: string; enemy: boolean; health: number; maxHealth: number; energy: number;
@@ -105,7 +110,7 @@ const connection = createLiveConnection({ onState: status, onView: (served: View
 } });
 const visible = () => ready && !rendererFailed && !document.hidden &&
   !document.querySelector('.navigation-panels dialog[open]') &&
-  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog', 'atlas-dialog', 'opponent-dialog', 'reactions-dialog', 'practice-brief', 'concept-dialog'].some(id => $<HTMLDialogElement>(id).open) &&
+  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog', 'atlas-dialog', 'opponent-dialog', 'reactions-dialog', 'practice-brief', 'concept-dialog', 'feedback-dialog'].some(id => $<HTMLDialogElement>(id).open) &&
   // A revealed turn order holds the field until Continue: what arrives meanwhile waits for it.
   !orderUI.isReading();
 let tabStorage: Storage | null = null;
@@ -148,6 +153,10 @@ const reactionsUI = reactionControls(reactions, {
   opponentName: () => opponentCard(opponent.seat, opponent.ladder, opponent.friends).name || 'Opponent',
   onShown: shown => { keepForGame({ reactions: shown }); reactions.setShown(shown); },
 });
+// Report or suggest (ADR 0189): from the settings and the result, sent with the seat on screen, which lets the host
+// attach the round and the position; a recording is no seat, and its feedback is the account's.
+mountFeedback(document, { request, token: () => selected?.token ?? null, inGame: () => Boolean(selected?.token),
+  errors: pageErrors, fallbackFocus: () => $('settings'), onClose: () => render() });
 const inspectionUI = inspectionControls();
 const historyUI = historyControls(history, () => playback.skip(), () => render());
 // The mutation reveal last read: opened with See and closed, or set aside with Continue.

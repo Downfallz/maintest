@@ -1358,6 +1358,8 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 #match-dialog .match-footer #match-rematch { flex: 1 1 100%; }
 #match-dialog .match-footer #match-replay, #match-dialog .match-footer #match-lobby { flex: 1 1 0; border: 1px solid var(--line); background: #172a30; color: var(--ink); }
 #match-dialog .match-footer #match-rematch[hidden] { display: none; }
+/* Report or suggest is the quiet last line of the result: it never competes with playing again. */
+#match-dialog .match-footer #feedback-open-match { flex: 1 1 100%; border: 0; background: transparent; color: var(--muted); font-weight: 400; }
 @media (min-width: 560px) { #match-dialog .match-footer #match-rematch { flex: 1.4 1 0; } }
 /* A creature's effects (upkeep ticks, a spell's outcomes, its place in the order) read above its head, not over its
    body; a stage squeezed under a docked sheet keeps them at the top of the head, inside the field. */

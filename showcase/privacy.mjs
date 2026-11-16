@@ -5,7 +5,7 @@ const address = 'contact@downfallinstinct.com';
 const retention = { logDays: 30, deletedBlobDays: 7 };
 const policies = {
   en: {
-    label: 'Player information', date: 'Updated November 14, 2026',
+    label: 'Player information', date: 'Updated November 16, 2026',
     intro: 'You can read the showcase and explore mutations without an account. When you sign in to play, the game needs a small account record to recognise you, keep your seats and run your matches.',
     index: 'On this page', contact: 'Privacy contact', responsibility: 'The person responsible for privacy at Downfall Instinct handles questions, access requests, corrections and complaints at this address.',
     sections: [
@@ -22,6 +22,7 @@ const policies = {
         'The game keeps your seats, invitations, match actions, results and the last few preset reactions under your player ID. These records let participants replay their finished games, let you see your personal statistics and help the developer improve the bots.',
         'Other players can see your player name when they play or interact with you. The public ranked leaderboard shows player names, ratings, results and last-played dates. Your detailed personal statistics and your individual lobby are for your account.',
         'Friendships and requests are kept so the two players can respond or remove the connection. The game saves your settings, your last sign-in and a recent activity time updated at most once an hour. The operator can see account activity and game counts, administer accounts and investigate problems. If an account is suspended, the reason and time of suspension are recorded.',
+        'If you send a bug report or an idea with Report or suggest, the game keeps your words, the page you sent it from, your browser’s name and the page’s last errors, and, for a report sent from a game, its round and the position your seat could see. Only the operator reads it. It is deleted 180 days after it is closed.',
       ]],
       ['notifications', 'Optional notifications', [
         'If you enable notifications on a device, the game stores that browser’s push endpoint and encryption keys. Your browser’s push service delivers events such as a turn or an invitation. This is optional and uses no email address. Turn off notifications in the game to remove that subscription, or use Sign out everywhere to remove the account’s registered devices.',
@@ -38,7 +39,7 @@ const policies = {
     ],
   },
   fr: {
-    label: 'Renseignements des joueurs', date: 'Mise à jour le 14 novembre 2026',
+    label: 'Renseignements des joueurs', date: 'Mise à jour le 16 novembre 2026',
     intro: 'Tu peux lire la vitrine et explorer les mutations sans compte. Quand tu te connectes pour jouer, le jeu a besoin de quelques renseignements pour te reconnaître, te redonner tes places et gérer tes parties.',
     index: 'Dans cette politique', contact: 'Nous joindre', responsibility: 'La personne responsable de la protection des renseignements personnels chez Downfall Instinct répond aux questions, aux demandes d’accès ou de rectification et aux plaintes à cette adresse.',
     sections: [
@@ -55,6 +56,7 @@ const policies = {
         'Le jeu associe à ton identifiant de joueur tes places, tes invitations, tes actions en partie, tes résultats et les dernières réactions prédéfinies. Ces enregistrements permettent aux participants de revoir leurs parties terminées, de te présenter tes statistiques personnelles et d’aider le développeur à améliorer les adversaires automatisés.',
         'Les autres joueurs peuvent voir ton nom de joueur quand ils jouent ou interagissent avec toi. Le classement public affiche les noms de joueur, les cotes, les résultats et la date de la dernière partie jouée. Tes statistiques personnelles détaillées et ton salon individuel sont réservés à ton compte.',
         'Les liens d’amitié et les demandes sont conservés pour permettre aux deux joueurs de répondre ou de retirer le lien. Le jeu conserve tes préférences, ta dernière connexion et une heure d’activité récente mise à jour au plus une fois par heure. La personne qui exploite le jeu peut voir l’activité des comptes et le nombre de parties, administrer les comptes et examiner les problèmes. En cas de suspension, le motif et le moment de la suspension sont consignés.',
+        'Si tu signales un problème ou proposes une idée avec Report or suggest, le jeu conserve tes mots, la page d’où tu l’envoies, le nom de ton navigateur et les dernières erreurs de la page et, pour un signalement envoyé d’une partie, sa manche et la position que ta place voyait. Seule la personne qui exploite le jeu le lit. Il est supprimé 180 jours après sa fermeture.',
       ]],
       ['notifications', 'Les notifications facultatives', [
         'Si tu actives les notifications sur un appareil, le jeu conserve l’adresse de livraison du navigateur et ses clés de chiffrement. Le service de notification du navigateur peut alors t’aviser lors de ton tour ou d’une invitation. Cette option est facultative et ne requiert aucune adresse courriel. Désactive les notifications dans le jeu pour retirer cet abonnement, ou utilise « Sign out everywhere » pour retirer les appareils inscrits à ton compte.',
@@ -75,7 +77,7 @@ const policies = {
 export function privacyPage(c, app) {
   const p = policies[c.lang];
   return layout(c, 'privacy', app, c.privacy, p.intro, `<div class="policy contain">
-    <header><p class="kicker">${p.label}</p><h1>${c.privacy}</h1><p class="policy-date"><time datetime="2026-11-14">${p.date}</time></p><p class="lead">${escape(p.intro)}</p></header>
+    <header><p class="kicker">${p.label}</p><h1>${c.privacy}</h1><p class="policy-date"><time datetime="2026-11-16">${p.date}</time></p><p class="lead">${escape(p.intro)}</p></header>
     <div class="policy-grid"><nav aria-label="${p.index}"><h2>${p.index}</h2>
       ${[...p.sections.map(([id, title]) => [id, title]), ['contact', p.contact]].map(([id, title]) => `<a href="#${id}">${title}</a>`).join('')}</nav>
       <div class="policy-body">${p.sections.map(([id, title, paragraphs]) => `<section id="${id}"><h2>${title}</h2>${paragraphs.map(s => `<p>${escape(s)}</p>`).join('')}</section>`).join('')}
