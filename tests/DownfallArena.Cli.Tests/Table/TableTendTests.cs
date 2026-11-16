@@ -11,6 +11,7 @@ namespace DownfallArena.Cli.Tests.Table;
 /// The hourly job (ADR 0162, phase 6): one pass of the work that is due on the tables, from a process that holds
 /// none of them, and no bot turn taken by the tables it picks up.
 /// </summary>
+[Collection(ConsoleOutput.Name)]
 public sealed class TableTendTests : IDisposable
 {
     private readonly HostedTables _hosted = new(directory => new FileArtifactStore(directory), turns: new NoAgentTurns());

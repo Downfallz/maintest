@@ -29,5 +29,7 @@ dotnet run --project src/DownfallArena.Cli -- studio
 - `Table/` follows `.claude/rules/host.md`: who may call a route, the journal written before the answer, more
   than one process serving a table.
 - Without Azurite the storage tests are skipped, not passed: say so.
+- A test that needs a table under way holds it with a person seat that has arrived (`Arrive()`, then
+  `Session.Begin()`): two bots play without waiting and can finish before the read (#598).
 - A flag or a route is described in docs/reference/commands.md and table/README.md, not in `AGENTS.md`.
 - `--format` and `--declaration` are refused by `benchmark` (and `--declaration` by `studio` and `--practice`).
