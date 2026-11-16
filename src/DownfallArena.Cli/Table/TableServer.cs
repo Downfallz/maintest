@@ -76,6 +76,9 @@ internal sealed class TableServer : IDisposable
     /// <summary>A player's side of the match scenarios (ADR 0179), on a host that keeps them and signs players in.</summary>
     public ScenariosApi? Scenarios { get; init; }
 
+    /// <summary>Where players send bug reports and ideas (ADR 0189), on a host that keeps them.</summary>
+    public FeedbackApi? Feedback { get; init; }
+
     /// <summary>The scenarios being practised in this process, found by their seats' tokens.</summary>
     public ScenarioPractices? Practices { get; init; }
 
@@ -305,6 +308,19 @@ internal sealed class TableServer : IDisposable
         }
 
         var token = request.Headers[TableApi.TokenHeader];
+
+        if (FeedbackApi.Names(path))
+        {
+            if (Feedback is null)
+            {
+                return StudioResponse.OfPlainText(404, "This host keeps no feedback: it records nothing.");
+            }
+
+            // A seat whose table is still being rebuilt would read as no seat at all.
+            return Starting && !string.IsNullOrEmpty(token)
+                ? StartingUp()
+                : await Feedback.HandleAsync(method, body, token, account, RequestAddress.Of(request), request.UserAgent);
+        }
 
         // A seat's own lobby routes find their seat by its token, and a token whose table is still being rebuilt
         // would read as spent: the page would forget a seat it still has.

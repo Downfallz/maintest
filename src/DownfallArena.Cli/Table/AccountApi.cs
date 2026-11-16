@@ -85,6 +85,9 @@ internal sealed class AccountApi
     /// <summary>What deleting an account does to its friendships (ADR 0129): no link to it left on anybody's list. Set by the host that keeps them.</summary>
     public Func<AccountId, Task>? ForgetFriends { get; set; }
 
+    /// <summary>What deleting an account does to its feedback (ADR 0189): its text is kept, the account dropped. Set by the host that keeps it.</summary>
+    public Func<AccountId, Task>? ForgetFeedback { get; set; }
+
     /// <summary>Where each account's game settings are kept (ADR 0140); null on a host that keeps none.</summary>
     public IPreferenceStore? Preferences { get; set; }
 
@@ -267,6 +270,13 @@ internal sealed class AccountApi
         if (ReleaseSeats is { } release)
         {
             await release(id);
+        }
+
+        // Its feedback loses the account before the account goes (ADR 0189): a store that fails here leaves the
+        // account in place, and its player can delete it again, rather than feedback naming an account that is gone.
+        if (ForgetFeedback is { } feedback)
+        {
+            await feedback(id);
         }
 
         // The account goes first, so a request that resolved its name a moment ago finds nobody once it reaches the

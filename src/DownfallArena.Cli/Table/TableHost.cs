@@ -4,6 +4,8 @@ using DownfallArena.Application.Accounts.Friends;
 using DownfallArena.Application.Accounts.Players;
 using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.Application.Admin;
+using DownfallArena.Application.FeedbackBox;
+using DownfallArena.Application.FeedbackBox.Ports;
 using DownfallArena.Application.Learning;
 using DownfallArena.Application.Learning.Ports;
 using DownfallArena.Application.Matches.Journaling;
@@ -208,6 +210,16 @@ internal static class TableHost
             admin.Turns = queues is null ? null : new TurnsApi(queues);
         }
 
+        // The players' bug reports and ideas (ADR 0189), kept beside the recordings in a store of their own; a pass
+        // lets go of what was closed 180 days ago.
+        var feedback = store is null ? null : await OpenFeedbackAsync(options.Record ?? DefaultRunsDirectory, stopping.Token);
+        using var feedbackWrites = new FeedbackWrites();
+        if (feedback is not null && accounts is not null)
+        {
+            var forget = new ForgetFeedbackAccount(feedback, feedbackWrites);
+            accounts.ForgetFeedback = id => forget.HandleAsync(id.ToString());
+        }
+
         // The tending runs (A3), kept beside the recordings, and a pass run now from the panel: the hourly job's pass,
         // over this process's tables, said through the relay as the job says it. A store of runs that cannot be opened
         // leaves the panel without its Jobs tab, never the players without the host.
@@ -218,7 +230,7 @@ internal static class TableHost
         {
             admin.Jobs = new JobsApi(tendLog, clock, async (now, progress) =>
             {
-                var tended = await TableTend.TendAsync(registry, admin.Lobby, now, composer, clock, progress, suspendedSeats);
+                var tended = await TableTend.TendAsync(registry, admin.Lobby, now, composer, clock, progress, suspendedSeats, feedback is null ? null : new LetGoOfClosedFeedback(feedback, clock));
                 if (relay is not null)
                 {
                     TableTend.Announce(relay, tended);
@@ -272,8 +284,10 @@ internal static class TableHost
 
         await using var practices = scenarioStore is null ? null : new ScenarioPractices(composer, scenarioStore, clock);
         admin.Scenarios = scenarioStore is null || stored is null ? null : new ScenarioAdminApi(scenarioStore, stored, composer) { Notes = admin.Notes };
+        var sendFeedback = feedback is null ? null : new SendFeedback(feedback, new GuestAddresses(), feedbackWrites, clock);
         using var server = new TableServer(options.Bind, options.Port, registry, new TableFiles(TableDirectory), admin, clock, stored, accounts, leaderboard, friends, stats)
         {
+            Feedback = sendFeedback is null ? null : new FeedbackApi(sendFeedback, registry) { Accounts = accounts, Practices = practices },
             Tended = options.Tended,
             Scenarios = scenarioStore is null || practices is null || accounts is null ? null : new ScenariosApi(scenarioStore, practices, accounts) { Admins = gate.Admins },
             Practices = practices,
@@ -467,6 +481,20 @@ internal static class TableHost
         catch (Exception failure) when (failure is Azure.RequestFailedException or Azure.Identity.AuthenticationFailedException or IOException or UnauthorizedAccessException)
         {
             Console.WriteLine($"  The content the tables began on cannot be kept ({failure.Message}); a table picked up after the content changed is replayed on this host's (ADR 0163).");
+            return null;
+        }
+    }
+
+    /// <summary>Where feedback is kept (ADR 0189), or none when it cannot be opened: the host then takes none, which is said.</summary>
+    internal static async Task<IFeedbackStore?> OpenFeedbackAsync(string target, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await ArtifactStores.OpenFeedbackAsync(target, cancellationToken);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is Azure.Identity.AuthenticationFailedException)
+        {
+            Console.WriteLine($"  Feedback cannot be kept ({failure.Message}): players can send none at this host.");
             return null;
         }
     }

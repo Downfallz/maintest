@@ -384,6 +384,36 @@ The seat's view says the lesson under `practice.tutorial`:
   while every existing account signs in and a dev host is unaffected, and the notice, one line of at most 200
   characters, rides on `/api/me` and shows under the header of every page but the game itself (ADR 0177).
 
+#### Feedback
+
+- `POST /api/feedback` keeps a bug report or an idea (ADR 0189, docs/tabletop/feedback-plan.md). It comes from
+  the seat whose key the request carries, or from a signed-in account. A request that is signed out and has no
+  seat is answered 401 `Feedback.SignInRequired`; a seat that belongs to another account, 403
+  `Feedback.NotYourSeat`.
+- A bug report is `{"kind":"bug","category","happened","expected?","attach","page","errors"}`, its category one of
+  `rules`, `looks`, `stuck` or `other`. An idea is `{"kind":"idea","where","problem","wish?","page"}`, its `where`
+  one of `rules`, `battle`, `lobby` or `other`. The text holds 10 to 2,000 characters (400 `Feedback.Invalid`).
+- The host adds what the page cannot be trusted to send: the table, the seat, the round, sub-phase and journal
+  length, the content, rules and engine, and, when `attach` is true, the seat's own view. For a practice it adds the
+  scenario's id and the practice's journal since its cut. The page is kept as its path alone, and its last ten
+  errors without the queries of the addresses they quote. A store that fails answers 503 `Feedback.Unavailable`; on a host where nobody signs in,
+  feedback without a seat is answered 403 `Feedback.SeatRequired`. The same words sent again within two minutes
+  answer the id already kept.
+- Spam guards, for both kinds:
+  - Two sends less than two minutes apart: 429 `Feedback.TooSoon`, with `retryAfterSeconds` and `Retry-After`
+    (each refusal below says how long to wait too).
+  - More than five a day per sender, and for a guest more than five a day per network address (counted in memory
+    only, the address Cloudflare saw only when the request came through Cloudflare): 429
+    `Feedback.TooMany`.
+  - A second bug report on the same table and round, or a second idea within the hour, is merged into the first:
+    200 `{"id","merged":true,"code":"Feedback.Merged"}`.
+  - More than 100 new a day for the host: 429 `Feedback.HostFull`.
+
+  A new one is kept and answers 201 `{"id","merged":false}`.
+- Each one is kept as one record beside the recordings, under `feedback/` (or the feedback container). A host that
+  records nothing keeps none and answers 404. Deleting an account removes the account from its feedback and keeps
+  the text.
+
 #### The lobby and the pages
 
 - `/` and `/lobby` serve the player lobby (ADR 0115): saved browser seats, public summaries and explicitly open
@@ -564,6 +594,7 @@ One pass of what is due on the tables, then exit (ADR 0162), kept as a run for t
   for whoever it still asks, its result kept and its seats told with `--push-keys`, and the player asked at a
   game whose time reaches its last quarter in the pass told so once (ADR 0169);
 - every begun game with a seat its player left and no move for a day ended with that seat conceding (ADR 0170).
+- every piece of feedback closed more than 180 days ago deleted (ADR 0189).
 
 What the hourly job runs. The tables it picks up take no bot turn.
 

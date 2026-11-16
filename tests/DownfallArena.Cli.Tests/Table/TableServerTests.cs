@@ -189,6 +189,34 @@ public sealed class TableServerTests : IAsyncDisposable
         _registry.HeldTables().Count.ShouldBe(1);
     }
 
+    [Fact]
+    public async Task Feedback_sent_from_a_seat_as_the_page_sends_it_is_kept_and_a_host_keeping_none_has_no_route()
+    {
+        var store = new Infrastructure.FeedbackBox.FileFeedbackStore(Path.Combine(_hosted.RunsDirectory, "..", $"feedback-{Guid.NewGuid():N}"));
+        using var writes = new Application.FeedbackBox.FeedbackWrites();
+        var desk = new Application.FeedbackBox.SendFeedback(store, new Application.FeedbackBox.GuestAddresses(), writes, _clock);
+        var url = Serve(OperatorGate.BehindPlatform(), feedback: new FeedbackApi(desk, _registry));
+        var table = await Opened();
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{url}api/feedback");
+        request.Headers.Add(TableApi.TokenHeader, table.Seats[0].Token);
+        request.Content = JsonContent.Create(new { kind = "idea", where = "battle", problem = "I wanted to see the last round again." });
+        var kept = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        kept.StatusCode.ShouldBe(HttpStatusCode.Created);
+        (await store.IdsAsync(TestContext.Current.CancellationToken)).Count.ShouldBe(1);
+        Directory.Delete(store.Directory, recursive: true);
+    }
+
+    [Fact]
+    public async Task A_host_that_keeps_no_feedback_has_no_feedback_route()
+    {
+        var url = Serve(OperatorGate.BehindPlatform());
+
+        using var content = JsonContent.Create(new { kind = "idea" });
+        (await _client.PostAsync($"{url}api/feedback", content, TestContext.Current.CancellationToken)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
     /// <summary>A close is a write, and the page sends it the way the same-origin fence takes a write.</summary>
     [Fact]
     public async Task A_close_sent_as_the_page_sends_it_takes_the_table_off_the_host()
@@ -454,10 +482,10 @@ public sealed class TableServerTests : IAsyncDisposable
         (await Get($"{url}api/seat/player1", "a-token-of-a-table-not-rebuilt-yet")).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
 
-    private string Serve(OperatorGate gate, bool tended = false)
+    private string Serve(OperatorGate gate, bool tended = false, FeedbackApi? feedback = null)
     {
         var admin = new AdminApi(_registry, _hosted.Composer, gate, _clock, "Rules 2 creatures (a test)", _hosted.Stored);
-        _server = new TableServer(HttpHost.Loopback, FreePort(), _registry, new TableFiles(Path.Combine(AppContext.BaseDirectory, "table")), admin, _clock, _hosted.Stored) { Tended = tended };
+        _server = new TableServer(HttpHost.Loopback, FreePort(), _registry, new TableFiles(Path.Combine(AppContext.BaseDirectory, "table")), admin, _clock, _hosted.Stored) { Tended = tended, Feedback = feedback };
         _serving = _server.RunAsync(_stopping.Token);
         return _server.Url;
     }

@@ -1040,6 +1040,33 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
 
     private static readonly DomainError NoRoundsLeft = new("Table.MatchOver", "This match has no round left to change a seat for.");
 
+    /// <summary>
+    /// Where the seat a token names stands, for the feedback its player sends (ADR 0189): its round, sub-phase and the
+    /// journal's length, and, when asked, its own view -- the board this seat's page is served, which holds nothing the
+    /// seat may not see. None for a token that names no seat here.
+    /// </summary>
+    internal async Task<SeatMoment?> MomentAsync(string? token, bool position)
+    {
+        if (Holder(token) is not { } seat)
+        {
+            return null;
+        }
+
+        var snapshot = await session.SnapshotAsync(seat.Slot);
+        if (snapshot.IsFailure)
+        {
+            return new SeatMoment(seat, null, null, null, null);
+        }
+
+        var board = snapshot.Value.Board;
+        return new SeatMoment(
+            seat,
+            board.RoundNumber,
+            board.SubPhase?.ToString(),
+            snapshot.Value.Journaled,
+            position ? JsonSerializer.SerializeToElement(board, ArtifactJson.LineOptions) : null);
+    }
+
     private async Task<(int? Round, RoundSubPhase? SubPhase)> WhereAsync(PlayerSlot slot)
     {
         var board = await session.BoardAsync(slot);

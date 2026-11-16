@@ -1,5 +1,6 @@
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Friends;
+using DownfallArena.Application.FeedbackBox;
 using DownfallArena.Application.Learning;
 using DownfallArena.Application.Tables.Ports;
 using DownfallArena.Application.Tables.Tending;
@@ -35,6 +36,9 @@ internal static class TableTend
 
         /// <summary>The suspended accounts whose seats were offered to other players, a day after (ADR 0178).</summary>
         public IReadOnlyList<string> Released { get; init; } = [];
+
+        /// <summary>How much closed feedback was let go of, 180 days after it was closed (ADR 0189).</summary>
+        public int FeedbackLetGo { get; init; }
     }
 
     /// <summary>How often the job runs (infra/main.bicep): the warning is sent by the one pass of that interval that finds a quarter left.</summary>
@@ -98,10 +102,14 @@ internal static class TableTend
                 ? null
                 : await OpenSuspendedAsync(target, lobby);
 
+            // Feedback closed 180 days ago is let go of (ADR 0189); a store that cannot be opened costs that alone.
+            var feedbackStore = await TableHost.OpenFeedbackAsync(target, CancellationToken.None);
+            var feedback = feedbackStore is null ? null : new LetGoOfClosedFeedback(feedbackStore, clock);
+
             // Every run is kept for the admin panel's Jobs tab (A3), the one that failed too. A log that cannot be
             // opened costs the run its record, never the pass: the tables are tended all the same.
             var log = await OpenLogAsync(() => ArtifactStores.OpenTendLogAsync(target));
-            var (tended, _) = await RecordedAsync(log, TendTrigger.Schedule, by: null, clock, (now, progress) => TendAsync(registry, lobby, now, composer, clock, progress, suspended));
+            var (tended, _) = await RecordedAsync(log, TendTrigger.Schedule, by: null, clock, (now, progress) => TendAsync(registry, lobby, now, composer, clock, progress, suspended, feedback));
             if (relay is not null)
             {
                 Announce(relay, tended);
@@ -127,6 +135,11 @@ internal static class TableTend
             foreach (var id in tended.Released)
             {
                 Console.WriteLine($"  Account {id}: suspended a day ago, its seats in unfinished games offered to other players.");
+            }
+
+            if (tended.FeedbackLetGo > 0)
+            {
+                Console.WriteLine($"  Feedback: {tended.FeedbackLetGo} closed more than {Feedback.KeptClosed.TotalDays:0} days ago let go of.");
             }
 
             foreach (var id in tended.Warned)
@@ -235,11 +248,12 @@ internal static class TableTend
         }
     }
 
-    /// <summary>One pass: the sweep, the invitations that ran out, the games whose player's time ran out, the games whose open seat nobody took, then the players whose time reaches its last quarter.</summary>
+    /// <summary>One pass: the sweep, the invitations that ran out, the games whose player's time ran out, the games whose open seat nobody took, the players whose time reaches its last quarter, then the feedback closed long enough ago.</summary>
     /// <param name="composer">What reads a table's last move; none, and no game is timed out.</param>
     /// <param name="progress">Told what the pass has done after each stage, so a pass that stops partway is known by what it did.</param>
     /// <param name="suspended">The suspended accounts' seats (ADR 0178); none on a host that signs nobody in.</param>
-    internal static async Task<Tended> TendAsync(TableRegistry registry, LobbyApi lobby, DateTimeOffset now, TableComposer? composer = null, TimeProvider? clock = null, Action<Tended>? progress = null, SuspendedSeats? suspended = null)
+    /// <param name="feedback">What lets go of feedback closed 180 days ago (ADR 0189); none on a host that keeps none.</param>
+    internal static async Task<Tended> TendAsync(TableRegistry registry, LobbyApi lobby, DateTimeOffset now, TableComposer? composer = null, TimeProvider? clock = null, Action<Tended>? progress = null, SuspendedSeats? suspended = null, LetGoOfClosedFeedback? feedback = null)
     {
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(lobby);
@@ -260,6 +274,12 @@ internal static class TableTend
             done = done with { Abandoned = await AbandonedSeats.EndAsync(registry, composer, now, clock ?? TimeProvider.System) };
             progress?.Invoke(done);
             done = done with { Warned = await TurnTimeouts.WarnAsync(registry, composer, now, Interval) };
+            progress?.Invoke(done);
+        }
+
+        if (feedback is not null)
+        {
+            done = done with { FeedbackLetGo = await feedback.HandleAsync() };
             progress?.Invoke(done);
         }
 
