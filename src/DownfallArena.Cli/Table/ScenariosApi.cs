@@ -1,5 +1,6 @@
 using DownfallArena.Cli.Studio;
 using DownfallArena.Infrastructure.Learning;
+using DownfallArena.SharedKernel.Identifiers;
 
 namespace DownfallArena.Cli.Table;
 
@@ -21,7 +22,7 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
     /// not exist for anybody else. A host that names none is reached by its operator's token alone, and any account
     /// it signs in opens one. A tutorial is not the panel's: every signed-in account opens it.
     /// </summary>
-    public IReadOnlySet<DownfallArena.SharedKernel.Identifiers.AccountId> Admins { get; init; } = new HashSet<DownfallArena.SharedKernel.Identifiers.AccountId>();
+    public IReadOnlySet<AccountId> Admins { get; init; } = new HashSet<AccountId>();
 
     public const string Prefix = "/api/scenarios";
 
@@ -60,7 +61,7 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
                 ? Opened(current, name)
                 : Error("Scenario.NoPractice", "You have no practice of this scenario open.", 404),
             ("POST", [_, "practice"]) => await OpenAsync(id, account, name),
-            _ => Error("Scenario.NoRoute", $"No such route: {method} {path}", 404),
+            _ => NoRoute(method, path),
         };
         return Renewed(answer, who.Renewed);
     }
@@ -70,15 +71,17 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
     {
         if (method != "GET")
         {
-            return Error("Scenario.NoRoute", $"No such route: {method} {path}", 404);
+            return NoRoute(method, path);
         }
 
         return path == Prefix ? await ListedAsync() : Tutorials();
     }
 
     /// <summary>Whether a scenario the repository ships, and not a tutorial, is kept from an account that is not an admin's.</summary>
-    private bool Hidden(string id, DownfallArena.SharedKernel.Identifiers.AccountId account) =>
+    private bool Hidden(string id, AccountId account) =>
         store.Ships(id) && !store.Teaches(id) && Admins.Count > 0 && !Admins.Contains(account);
+
+    private static StudioResponse NoRoute(string method, string path) => Error("Scenario.NoRoute", $"No such route: {method} {path}", 404);
 
     /// <summary>The answer, with the account's renewed session cookie when it was renewed.</summary>
     private static StudioResponse Renewed(StudioResponse answer, string? renewed) =>

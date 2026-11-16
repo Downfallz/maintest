@@ -483,6 +483,25 @@ public sealed class ScenariosApiTests : IDisposable
     }
 
     [Fact]
+    public async Task A_session_due_for_renewal_is_renewed_on_a_list_and_on_a_scenario()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var accounts = new AccountApi(new AccountRegistry(_accounts, _clock), new AccountSessions(await _accounts.SessionKeyAsync(Cancel), _clock), AccountsMode.Development);
+        var api = new ScenariosApi(store, practices, accounts);
+        var learner = await SignedInAsync(accounts, "learner");
+        _clock.Advance(AccountSessions.RenewAfter);
+
+        var listed = await api.HandleAsync("GET", ScenariosApi.TutorialsRoute, learner);
+        var described = await api.HandleAsync("GET", $"{ScenariosApi.Prefix}/{Tutorial}", learner);
+
+        string? Renewed(StudioResponse answer) => answer.Headers?.SingleOrDefault(header => header.Key == "Set-Cookie").Value;
+        (listed.Status, described.Status).ShouldBe((200, 200));
+        Renewed(listed).ShouldNotBeNull().ShouldStartWith(AccountSessions.Cookie + "=");
+        Renewed(described).ShouldNotBeNull().ShouldStartWith(AccountSessions.Cookie + "=");
+    }
+
+    [Fact]
     public async Task A_host_that_ships_no_tutorial_lists_none()
     {
         await using var practices = new ScenarioPractices(_hosted.Composer, _store, _clock);
@@ -694,7 +713,9 @@ public sealed class ScenariosApiTests : IDisposable
             sent.Status.ShouldBe(204, Encoding.UTF8.GetString(sent.Body));
         }
 
-        return await WaitingForAsync(play, HandedBack);
+        var last = Read(await play.Api.HandleAsync("GET", "/api/seat/player1", "", play.Token));
+        HandedBack(last).ShouldBeTrue($"the recorded answers still fit after 40 answers: {last}");
+        return last;
     }
 
     /// <summary>The tutorial opened as a practice by a player of this name.</summary>
