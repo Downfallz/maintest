@@ -764,7 +764,7 @@
 /* The battle page does not load table.css, so the navigation header's mark draws the rune itself; the HUD's own mark
    gets it from battle-lab.css. */
 .battle-page .home-header .brand-mark { display: block; width: 32px; height: 38px; flex: 0 0 auto; background: url('/brand-mark.svg') center / contain no-repeat; }
-.battle-page .navigation-panels dialog { margin: auto; }
+.battle-page :is(.navigation-panels, .feedback-panels) dialog { margin: auto; }
 
 /* On short landscape screens the menu and the player's button sit at the right end of the match toolbar, where the
    lobby keeps them. */

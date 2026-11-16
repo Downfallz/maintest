@@ -292,7 +292,7 @@
 }
 @media (prefers-reduced-motion: reduce) { .home-page { scroll-behavior: auto; } }
 
-.navigation-panels { display: contents; }
+.navigation-panels, .feedback-panels { display: contents; }
 #friend-count { color: var(--muted); font-size: .85em; }
 #friend-count:not(:empty)::before { content: "("; }
 #friend-count:not(:empty)::after { content: ")"; }

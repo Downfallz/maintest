@@ -134,10 +134,12 @@ test('in a game, the account menu’s entry opens the battle’s own sheet, sent
 test('the result offers the entry on a quiet line of its own', async ({ page }, info) => {
   await seat(page);
 
-  await page.evaluate(() => document.getElementById('match-dialog').showModal());
-
   const entry = page.locator('#feedback-open-match');
-  await expect(entry).toBeVisible();
+  // The board arriving late may draw over a result opened by hand: it is opened again until it stays.
+  await expect(async () => {
+    await page.evaluate(() => { const result = document.getElementById('match-dialog'); if (!result.open) result.showModal(); });
+    await expect(entry).toBeVisible({ timeout: 1000 });
+  }).toPass();
   const [box, replay] = await Promise.all([entry.boundingBox(), page.locator('#match-replay').boundingBox()]);
   expect(box.height).toBeGreaterThanOrEqual(44);
   expect(box.y).toBeGreaterThan(replay.y);
