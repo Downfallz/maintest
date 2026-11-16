@@ -46,4 +46,50 @@ public abstract class PreferenceStoreContract
         (await store.GetAsync(gone, Cancel)).ShouldBeNull();
         (await store.GetAsync(kept, Cancel)).ShouldBe(GamePreferences.Default);
     }
+
+    [Fact]
+    public async Task An_account_that_kept_no_tutorial_has_none_done_or_skipped()
+    {
+        var store = await StoreAsync();
+
+        (await store.GetTutorialsAsync(AccountId.New(), Cancel)).ShouldBe(TutorialProgress.None);
+    }
+
+    [Fact]
+    public async Task Tutorials_done_and_skipped_read_back_as_saved_and_leave_the_account_without_settings()
+    {
+        var store = await StoreAsync();
+        var account = AccountId.New();
+        var kept = TutorialProgress.None.WithDone("sc-repo-tutorial-your-first-combat").WithSkipped("sc-repo-tutorial-who-acts-first");
+
+        await store.SaveTutorialsAsync(account, kept, Cancel);
+
+        (await store.GetTutorialsAsync(account, Cancel)).ShouldBe(kept);
+        (await store.GetAsync(account, Cancel)).ShouldBeNull("skipping a tutorial chooses no settings");
+    }
+
+    [Fact]
+    public async Task Saving_settings_leaves_the_tutorials_as_they_were()
+    {
+        var store = await StoreAsync();
+        var account = AccountId.New();
+        var kept = TutorialProgress.None.WithSkipped("sc-repo-tutorial-your-first-combat");
+        await store.SaveTutorialsAsync(account, kept, Cancel);
+
+        await store.SaveAsync(account, GamePreferences.Default, Cancel);
+
+        (await store.GetTutorialsAsync(account, Cancel)).ShouldBe(kept);
+    }
+
+    [Fact]
+    public async Task Forgetting_an_account_forgets_its_tutorials_too()
+    {
+        var store = await StoreAsync();
+        var account = AccountId.New();
+        await store.SaveTutorialsAsync(account, TutorialProgress.None.WithDone("sc-repo-tutorial-your-first-combat"), Cancel);
+
+        await store.ForgetAsync(account, Cancel);
+
+        (await store.GetTutorialsAsync(account, Cancel)).ShouldBe(TutorialProgress.None);
+    }
 }

@@ -5,6 +5,7 @@ import { mountInbox } from './inbox.js';
 import { operatorToken } from './session.js';
 import { mountGameSettings } from './game-preferences.js';
 import { SITE_ORIGIN } from './site-origins.js';
+import { mountShowAgain } from './lobby-tutorials.js';
 
 const headerContent = `
     <a class="brand" href="/" aria-label="Downfall Instinct home"><span class="brand-mark" aria-hidden="true"></span><h1>Downfall Instinct</h1></a>
@@ -12,6 +13,7 @@ const headerContent = `
     <nav id="home-navigation" class="home-navigation" aria-label="Main navigation">
       <a id="play-link-home" href="/">Lobby</a>
       <button id="friends-open" type="button" data-home-dialog="friends-dialog" hidden>Friends <span id="friend-requests-badge" class="nav-badge" aria-label="Pending friend requests" hidden></span></button>
+      <a id="learn-link" href="/#learn-to-play" hidden>Learn to play</a>
       <a id="leaderboard-link" href="/leaderboard" hidden>Leaderboard</a>
       <a id="stats-link" href="/stats" hidden>Your stats</a>
       <button id="join-open" type="button" data-home-dialog="join-dialog" hidden>Join with a code</button>
@@ -44,9 +46,10 @@ const panels = `<div class="navigation-panels lobby-page home-page">
     <label for="game-settings-help"><span>Phase tips<small>Explain each phase the first time it comes in each game</small></span><input id="game-settings-help" type="checkbox"></label>
     <label for="game-settings-motion"><span>Less motion<small>Keep the scene still</small></span><input id="game-settings-motion" type="checkbox"></label>
     <label for="game-settings-reactions"><span>Opponent reactions<small>Show the set messages a player sends during a game · yours are always sent</small></span><input id="game-settings-reactions" type="checkbox"></label>
-    </fieldset><p id="game-settings-where" class="muted"></p><p id="game-settings-problem" class="problem" role="alert" hidden></p></form></section>
+    </fieldset><p id="game-settings-where" class="muted"></p><p id="game-settings-problem" class="problem" role="alert" hidden></p></form>
+    <div id="tutorial-again-row" class="app-settings-row" hidden><div><strong>Tutorials</strong><small>Opens the first tutorial now. The others are under Learn to play.</small></div><button id="tutorial-again" type="button" class="secondary">Show the first tutorial again</button></div><p id="tutorial-again-problem" class="problem" role="alert" hidden></p></section>
     <section id="app-settings-notifications" class="app-settings-pane" role="tabpanel" aria-labelledby="app-settings-tab-notifications" hidden><section id="device-panel" class="lobby-panel device-panel" aria-labelledby="device-heading" hidden><h2 id="device-heading">Be told on this device</h2><p id="device-hint" class="muted"></p><div class="device-actions"><button id="device-toggle" type="button" class="primary"></button><button id="device-test" type="button" class="secondary" hidden>Send a test</button></div><p id="device-problem" class="problem" role="alert" hidden></p><output id="device-result" class="muted" hidden></output></section><p id="device-unavailable" class="muted">Notifications are not available right now. Your games and invitations are always available here.</p></section>
-    <section id="app-settings-privacy" class="app-settings-pane" role="tabpanel" aria-labelledby="app-settings-tab-privacy" hidden><section id="privacy-panel" class="lobby-panel privacy-panel" aria-labelledby="privacy-heading"><h2 id="privacy-heading">What we keep</h2><p>Your player name, an internal id, and the number Google gives your account, so you are you when you come back. Not your email, your real name or your photo.</p><p>Who your friends are, and who asked whom, until one of you removes the other. If you ask to be notified on a device, where to reach that browser, until you stop it or sign out everywhere.</p><p>Your game settings (reading pace, speed, phase tips, less motion, opponent reactions), until you change them or delete your account.</p><p>When you last signed in and when you last used the site, to the hour, so the host can see who still plays, until you delete your account.</p><p>The reactions sent during a game (a few set messages, never free text) are kept with that game's record, the last few of them.</p><p>The games your seats play are recorded under the internal id, to replay them, to improve the bots, and to count your statistics, which only you see.</p><p>Delete your account any time from Settings, Account: your name is freed, your seats in unfinished games are offered to other players, and finished games keep only the id.</p><p>The host's operator sees your name, those two times and how many games you played, and can sign you out everywhere, rename you, or delete your account.</p><p><a href="${new URL('privacy/', SITE_ORIGIN).href}">Read the full privacy policy</a></p></section></section>
+    <section id="app-settings-privacy" class="app-settings-pane" role="tabpanel" aria-labelledby="app-settings-tab-privacy" hidden><section id="privacy-panel" class="lobby-panel privacy-panel" aria-labelledby="privacy-heading"><h2 id="privacy-heading">What we keep</h2><p>Your player name, an internal id, and the number Google gives your account, so you are you when you come back. Not your email, your real name or your photo.</p><p>Who your friends are, and who asked whom, until one of you removes the other. If you ask to be notified on a device, where to reach that browser, until you stop it or sign out everywhere.</p><p>Your game settings (reading pace, speed, phase tips, less motion, opponent reactions) and which tutorials you finished or skipped, until you change them or delete your account.</p><p>When you last signed in and when you last used the site, to the hour, so the host can see who still plays, until you delete your account.</p><p>The reactions sent during a game (a few set messages, never free text) are kept with that game's record, the last few of them.</p><p>The games your seats play are recorded under the internal id, to replay them, to improve the bots, and to count your statistics, which only you see.</p><p>Delete your account any time from Settings, Account: your name is freed, your seats in unfinished games are offered to other players, and finished games keep only the id.</p><p>The host's operator sees your name, those two times and how many games you played, and can sign you out everywhere, rename you, or delete your account.</p><p><a href="${new URL('privacy/', SITE_ORIGIN).href}">Read the full privacy policy</a></p></section></section>
     <section id="app-settings-account" class="app-settings-pane" role="tabpanel" aria-labelledby="app-settings-tab-account" hidden>
       <div class="app-settings-identity"><span id="app-settings-initial" class="account-initial" aria-hidden="true"></span><div><strong id="app-settings-name"></strong><small>Your player name, as your opponents and friends see it</small></div></div>
       <div class="app-settings-danger" aria-labelledby="app-settings-danger-title"><h3 id="app-settings-danger-title">Sessions and account</h3>
@@ -175,6 +178,7 @@ function mountHomeNavigation(doc, win = globalThis) {
       if (!account && ['notifications', 'account'].includes(tabs.find(tab => tab.getAttribute('aria-selected') === 'true')?.dataset.settingsTab)) showTab('game');
       el('leaderboard-link').hidden = mode === 'off';
       el('stats-link').hidden = !account;
+      el('learn-link').hidden = !account;
       if (identity !== (account?.id ?? null)) {
         closePanels(false);
         if (el('action-dialog').open) el('action-dialog').close('cancel');
@@ -204,6 +208,7 @@ export function mountNavigation(doc, storage, { onInvite, onChange = () => {}, o
   const navigation = mountHomeNavigation(doc);
   const devices = mountDevices(doc, { storage });
   const gameSettings = mountGameSettings(doc, storage);
+  const showAgain = mountShowAgain(doc);
   // The bell's actions are the Friends panel's and the lobby's: a friend accepted there is read again here, and
   // the page that mounted the navigation is told what changed.
   let friends = null;
@@ -252,6 +257,7 @@ export function mountNavigation(doc, storage, { onInvite, onChange = () => {}, o
       navigation.setAccount(account, mode);
       devices.setAccount(account);
       gameSettings.setAccount(account);
+      showAgain.setAccount(account);
       friends.setAccount(account);
       inbox.setAccount(account);
       onChange(account, mode);

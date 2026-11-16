@@ -7,6 +7,7 @@ export { turnOf } from './players.js';
 export { codePath } from './navigation.js';
 import { activateSeats, savedSeats } from './session.js';
 import { mountPracticeList } from './lobby-practice.js';
+import { mountTutorials } from './lobby-tutorials.js';
 
 export function visibleTables(tables, mine, all = false) {
   const held = new Set(mine.map(entry => entry.table.id));
@@ -898,6 +899,9 @@ if (typeof document !== 'undefined') {
   try { storage = globalThis.localStorage; } catch { /* Invitations still work without browser storage. */ }
   const lobby = mountLobby(document, globalThis.location, storage);
   const practiceList = mountPracticeList(document);
+  let session = null;
+  try { session = globalThis.sessionStorage; } catch { /* No tutorial opens by itself; Learn to play still lists them. */ }
+  const tutorials = mountTutorials(document, { session });
   const next = nextPath(globalThis.location.search);
   const navigation = mountNavigation(document, storage, {
     onInvite: lobby.invite,
@@ -910,6 +914,8 @@ if (typeof document !== 'undefined') {
       document.getElementById('hero-eyebrow').textContent = account ? `Welcome back, ${account.username}` : 'Your games';
       lobby.setAccount(account, mode);
       practiceList.setAccount(account);
+      // A tutorial is a signed-in account's (ADR 0187); the first opens by itself for an account it is new to.
+      void tutorials.setAccount(account);
     },
   });
   lobby.onOutstanding(navigation.setOutstanding);

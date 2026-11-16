@@ -9,7 +9,7 @@ const battle = {
 };
 const held = { table: battle, seats: [{ seat: 'player1', token: 'seat-token' }] };
 
-async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, notice = null, registrationClosed = false, games = null, finished = { players: [], bots: [] }, opponents = [], invitations = [], incoming = [challenger], publicTables = [battle], scenarios = null } = {}) {
+async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, notice = null, registrationClosed = false, games = null, finished = { players: [], bots: [] }, opponents = [], tutorials = null, opensTutorial = false, invitations = [], incoming = [challenger], publicTables = [battle], scenarios = null } = {}) {
   const state = { account, mode, meDown, offline: false, mineReads: 0, friendReads: 0, finishedReads: [], privateReads: [], release: null, invitations, publicTables,
     friends: { friends: [friend], incoming, outgoing: [] } };
   const errors = [];
@@ -93,6 +93,11 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
       state.scenarioReads = (state.scenarioReads ?? 0) + 1;
       return state.account ? json({ scenarios }) : route.fulfill({ status: 401, json: { message: 'Sign in to practise a scenario.' } });
     }
+    // The series as the host says it for this account (O4); a function reads the state a test changes.
+    if (path === '/api/tutorials' && tutorials) {
+      state.tutorialReads = (state.tutorialReads ?? 0) + 1;
+      return state.account ? json(typeof tutorials === 'function' ? tutorials(state) : tutorials) : route.fulfill({ status: 401, json: { message: 'Sign in to practise a scenario.' } });
+    }
     if (path === '/api/account/preferences') {
       if (!state.account) return route.fulfill({ status: 401, json: { message: 'Sign in first.' } });
       if (state.holdPreferences) await state.holdPreferences;
@@ -101,7 +106,10 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
     }
     return route.fulfill({ status: 404, json: { message: `Unexpected ${path}` } });
   });
+  // A tutorial's own page is the battle view's to test: here it is only where the lobby leads.
+  await page.route('**/battle?scenario=*', route => route.fulfill({ contentType: 'text/html', body: '<title>Tutorial</title>' }));
   await page.goto('/table/lobby.html');
+  if (opensTutorial) return state;
   await expect(page.locator('body')).toHaveAttribute('data-home', account ? 'member' : mode === 'off' ? 'local' : 'guest');
   return state;
 }
@@ -804,4 +812,79 @@ test('a first sign-in while registration is closed is told so, and the operator\
   await expect(page.locator('#name-dialog')).not.toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath('home-registration-closed.jpg'), fullPage: true, type: 'jpeg', quality: 85, animations: 'disabled' });
+});
+
+const firstTutorial = { id: 'sc-repo-tutorial-your-first-combat', order: 1, of: 4, title: 'Your first combat', goal: 'Cast a spell with each of your creatures.', round: 2, seat: 'player1', format: '3v3', link: '/battle?scenario=sc-repo-tutorial-your-first-combat' };
+const secondTutorial = { id: 'sc-repo-tutorial-who-acts-first', order: 2, of: 4, title: 'Who acts first', goal: 'Choose a tempo.', round: 2, seat: 'player1', format: '3v3', link: '/battle?scenario=sc-repo-tutorial-who-acts-first' };
+const series = (first, second = 'new') => ({ opens: first === 'new' ? firstTutorial.link : null, tutorials: [{ ...firstTutorial, state: first }, { ...secondTutorial, state: second }] });
+
+test('a new account\'s first visit opens tutorial 1, and the home page is its own again on the way back', async ({ page }) => {
+  const state = await home(page, { tutorials: series('new'), opensTutorial: true });
+
+  await expect(page).toHaveTitle('Tutorial');
+  expect(new URL(page.url()).search).toBe('?scenario=sc-repo-tutorial-your-first-combat');
+  // Back at the home page in the same visit, before the host has heard of a skip: it does not take the page again.
+  await page.goto('/table/lobby.html');
+  await expect(page.locator('body')).toHaveAttribute('data-home', 'member');
+  await expect(page.locator('#learn-to-play .game-card')).toHaveCount(2);
+  expect(new URL(page.url()).pathname).toBe('/table/lobby.html');
+  expect(state.errors).toEqual([]);
+});
+
+test('a skipped tutorial never opens by itself again: it waits under Learn to play, and in the main menu', async ({ page }, info) => {
+  const state = await home(page, { tutorials: series('skipped', 'done') });
+  const section = page.locator('#learn-to-play');
+
+  await expect(section).toBeVisible();
+  expect(new URL(page.url()).pathname).toBe('/table/lobby.html');
+  const cards = section.locator('.game-card');
+  await expect(cards.nth(0).locator('h3')).toHaveText('Your first combat');
+  await expect(cards.nth(0)).toContainText('Tutorial 1 of 4');
+  await expect(cards.nth(0).locator('.status-tag')).toHaveText('New');
+  await expect(cards.nth(0).locator('a')).toHaveText('Play →');
+  await expect(cards.nth(1).locator('.status-tag')).toHaveText('Done');
+  await section.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: info.outputPath('lobby-learn.png') });
+  await noOverflow(page);
+  await openNavigation(page);
+  await expect(page.locator('#learn-link')).toBeVisible();
+  await expect(page.locator('#learn-link')).toHaveAttribute('href', '/#learn-to-play');
+  expect(state.errors).toEqual([]);
+});
+
+test('a finished tutorial is played again from Learn to play', async ({ page }) => {
+  await home(page, { tutorials: series('done', 'done') });
+  const card = page.locator('#learn-to-play .game-card').first();
+
+  await expect(card.locator('a')).toHaveText('Play again →');
+  await card.locator('a').click();
+
+  await expect(page).toHaveTitle('Tutorial');
+  expect(new URL(page.url()).search).toBe('?scenario=sc-repo-tutorial-your-first-combat');
+});
+
+test('the settings show the first tutorial again, whatever the account did with it', async ({ page }) => {
+  const state = await home(page, { tutorials: series('skipped') });
+  const dialog = await openAccountSettings(page);
+  const again = dialog.getByRole('button', { name: 'Show the first tutorial again' });
+
+  await expect(again).toBeVisible();
+  const box = await again.boundingBox();
+  expect(box.height).toBeGreaterThanOrEqual(44);
+  await noOverflow(page);
+  await again.click();
+
+  await expect(page).toHaveTitle('Tutorial');
+  expect(state.errors).toEqual([]);
+});
+
+test('a guest is not asked for the tutorials: no Learn to play, in the page or the menu, and nothing in the settings', async ({ page }) => {
+  const state = await home(page, { account: null, tutorials: series('new') });
+
+  await expect(page.locator('#learn-to-play')).toBeHidden();
+  await openNavigation(page);
+  await expect(page.locator('#learn-link')).toBeHidden();
+  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Settings' }).click();
+  await expect(page.locator('#tutorial-again-row')).toBeHidden();
+  expect(state.tutorialReads ?? 0).toBe(0);
 });

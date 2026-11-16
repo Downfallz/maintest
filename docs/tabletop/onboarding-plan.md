@@ -1,6 +1,6 @@
 # Onboarding: tutorials played on the table, and concept cards
 
-Status: accepted, 2026-11-15. O1, O2, O3a and O3b built (ADR 0187); O4 next.
+Status: accepted, 2026-11-15. O1, O2, O3a, O3b and O4 built (ADR 0187); O5 next.
 
 ## What the owner asked for
 
@@ -175,8 +175,8 @@ give what is said and when. It reuses everything ADR 0179 built, and the regress
    - The spec plays the lesson in the tutorial's file on a fixture board, with a mock host. No browser journey plays a
      tutorial on the real engine yet: O5's per-tutorial specs are the place for it.
    - A concept card names its rulebook section and does not link to it: the table serves no rulebook page.
-   - On a phone, with the spell choice docked, the coach card covers the low half of the field (#650). It
-     steps aside while targets are chosen.
+   - On a phone, with the spell choice docked, the coach card covers the low half of the field (#650, settled
+     at O4). It steps aside while targets are chosen.
    - Nothing is kept: a reloaded page opens the step's cards again.
    - Left to O4: the first card's **Start** and **Skip the tutorial**. The briefing still says **Begin**.
    - While the host answers an assisted question, the dock says the opponent is choosing. Saying "played for
@@ -186,6 +186,25 @@ give what is said and when. It reuses everything ADR 0179 built, and the regress
    tutorial again**, and a new account's first visit opening tutorial 1 with Start and Skip the tutorial. Tests:
    Cli tests on the preference, `lobby-tutorials.test.js`, and the browser specs for the first visit, Skip (never
    opened again), Leave, and playing one again.
+
+   *Built (2026-11-16)*: the account keeps its tutorials done and skipped (`TutorialProgress`) in a document of
+   its own beside its game settings, so skipping one saves no settings; `GET /api/account/preferences` says them.
+   `GET /api/tutorials` says each tutorial's state for the account and which one opens by itself: the first,
+   while it is new. `POST /api/tutorials/<id>/skip` keeps a skip. `POST /api/tutorials/<id>/done` keeps the end,
+   only while the host's own practice says `done`.
+
+   The briefing is the first card: **Start** and **Skip the tutorial**. **Leave** before the end counts as a
+   skip, or the home page would open the tutorial again at every visit. `table/lobby-tutorials.js` draws
+   **Learn to play** on the home page (**New** or **Done**, **Play** or **Play again**), opens the first tutorial
+   for an account it is new to, once a browser session, and wires the main menu's **Learn to play** and the
+   settings' **Show the first tutorial again**, which opens tutorial 1 now.
+
+   On a phone the coach card stands in the docked sheet, under its heading, and the field stays clear (#650).
+
+   - Every account that has neither finished nor skipped tutorial 1 gets it once, the accounts made before this
+     stage too: nothing says an account is new but its tutorials.
+   - A tab closed on the first tutorial opens it again at the next visit: only Skip, Leave and the end are kept.
+   - The browser specs play on a mock host. The first visit on the real engine is O5's, with its per-tutorial specs.
 6. **O5, the series.** Tutorials 2, 3 and 4 written with the rulebook-writer and the copy-editor, each a scenario
    file cut by `scenario-generate`, each held by `ScenarioFileTests`. Tests: the files themselves, and one
    browser spec per tutorial played to its end.

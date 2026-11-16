@@ -88,6 +88,55 @@ internal sealed class AccountApi
     /// <summary>Where each account's game settings are kept (ADR 0140); null on a host that keeps none.</summary>
     public IPreferenceStore? Preferences { get; set; }
 
+    // One writer at a time reads the Tutorials an account keeps, changes them and writes them back, each after
+    // the one before: the store replaces a document whole, and one replica is the most the table runs.
+    private readonly Lock _noting = new();
+    private Task _noted = Task.CompletedTask;
+
+    /// <summary>The Tutorials the account finished and skipped (ADR 0187); null on a host that keeps no game settings.</summary>
+    public async Task<TutorialProgress?> TutorialsAsync(AccountId account, CancellationToken cancellationToken = default) =>
+        Preferences is { } store ? await store.GetTutorialsAsync(account, cancellationToken) : null;
+
+    /// <summary>
+    /// Keeps that the account finished or skipped a Tutorial, and answers what it keeps now; null on a host that
+    /// keeps no game settings. Said twice, it is kept once; a Tutorial finished is never skipped again.
+    /// </summary>
+    public async Task<TutorialProgress?> NoteTutorialAsync(AccountId account, string tutorial, TutorialState state, CancellationToken cancellationToken = default)
+    {
+        if (Preferences is not { } store)
+        {
+            return null;
+        }
+
+        Task<TutorialProgress> noting;
+        lock (_noting)
+        {
+            noting = NoteAfterAsync(_noted, store, account, tutorial, state, cancellationToken);
+            _noted = noting;
+        }
+
+        return await noting;
+    }
+
+    private static async Task<TutorialProgress> NoteAfterAsync(Task before, IPreferenceStore store, AccountId account, string tutorial, TutorialState state, CancellationToken cancellationToken)
+    {
+        // The write before this one may have failed: that is its caller's to hear, not this one's.
+        await before.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+        var kept = await store.GetTutorialsAsync(account, cancellationToken);
+        var next = state switch
+        {
+            TutorialState.Done => kept.WithDone(tutorial),
+            TutorialState.Skipped => kept.WithSkipped(tutorial),
+            _ => kept,
+        };
+        if (next != kept)
+        {
+            await store.SaveTutorialsAsync(account, next, cancellationToken);
+        }
+
+        return next;
+    }
+
     /// <summary>The host's settings (ADR 0177), whether a new player may make an account; none leaves registration open.</summary>
     public HostSettingsCache? Settings { get; set; }
 
@@ -491,7 +540,8 @@ internal sealed class AccountApi
         }
 
         var saved = await store.GetAsync(who.Account.Id);
-        return Answer(new { preferences = DescribePreferences(saved ?? GamePreferences.Default), saved = saved is not null }, who.Renewed);
+        var tutorials = await store.GetTutorialsAsync(who.Account.Id);
+        return Answer(new { preferences = DescribePreferences(saved ?? GamePreferences.Default), saved = saved is not null, tutorials = new { done = tutorials.Done, skipped = tutorials.Skipped } }, who.Renewed);
     }
 
     /// <summary>Replaces the account's settings; a game already open keeps what it was set to.</summary>

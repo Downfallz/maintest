@@ -829,13 +829,18 @@ to sign in.
 
 ## A tutorial's coach
 
-A practice whose view carries `practice.tutorial` is a tutorial (ADR 0187, docs/tabletop/onboarding-plan.md, O3b).
+A practice whose view carries `practice.tutorial` is a tutorial (ADR 0187, docs/tabletop/onboarding-plan.md, O3b and O4).
 `table/battle-tutorial.js` (pure, `battle-tutorial.test.js`) reads the lesson, and `src/tutorial.ts` draws it:
 
 - The band says **Tutorial n of 4** where a practice says Practice. The briefing's eyebrow changes the same way. On a phone it is one
   row: its place in the series, **Restart the round** and **Leave**.
+- The briefing is the first card (O4): it says what a tutorial is, and offers **Start** and **Skip the tutorial**.
+  Skip, and **Leave** before the host says `done`, tell the host the account skipped it
+  (`POST /api/tutorials/<id>/skip`) and go to the home page: it never opens by itself again.
 - The coach card (`#coach`) shows the lesson step of the question asked: the step's place, its two lines, and one
-  button per concept card. It stands low on a phone's field and in the top left corner on a wider screen. It steps
+  button per concept card. It stands low on a phone's field and in the top left corner on a wider screen. Where a
+  sheet docks under the field, the card stands in the sheet, under its heading (`.coach.in-sheet`, #650): the
+  field over a docked sheet is too short to carry it. It steps
   aside while results are read and while targets are chosen on the field. What the step points at, a creature or
   a control (`CONTROLS`, held to the host's `LessonControls.Names`), carries `data-coach="true"` and a gold ring.
 - A step opens its concept cards (`#concept-dialog`, text from `table/concepts.js`) once, before the question's own
@@ -844,7 +849,8 @@ A practice whose view carries `practice.tutorial` is a tutorial (ADR 0187, docs/
   or tip shows for a question kind listed in `assisted`. Once the host hands the questions back, that list is empty.
 - The phase tips are silent (`battleGuidance` returns no topic in a tutorial). Help keeps the round guide.
 - Once the host says `done`, the coach card says **Tutorial complete**, with **Keep playing** and **Leave the
-  tutorial**; the band keeps saying it.
+  tutorial**; the band keeps saying it. The page tells the host once (`POST /api/tutorials/<id>/done`), and the
+  account keeps it.
 
 `battle-tutorial.spec.js` plays tutorial 1's own lesson to its end on a fixture board, at 320 px, 390 px and
 desktop.
