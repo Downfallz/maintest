@@ -171,18 +171,27 @@ complete runs.
 3. **M3, the wait evened out.** Desktop in three shards, Playwright's browsers cached, the learning job folded
    into `build-and-test` (`browser-suite.test.js` holds the gate's `needs`).
 
-   *Built (2026-11-16)*: desktop and tablet play in three shards (`desktop and tablet 1/3` to `3/3`), about 173
-   of their 520 tests each: a shard splits by test count, and the two halves had put the complete-match replays
-   (battle-playback, battle-live) together. Each of the nine browser jobs restores `~/.cache/ms-playwright` with
-   `actions/cache`, keyed by the runner's image, Playwright's version and the engine, then runs `install
-   --with-deps` as before: the system packages are installed every time, the engine downloaded only on a miss.
-   The learning job is gone: `build-and-test` runs ruff (check and format) before the build and pytest once,
-   whose coverage Sonar imports, and the gate no longer needs `learning`. `browser-suite.test.js` holds the
-   shards, the cache before every install, and ruff and pytest in `build-and-test`; the meter keeps its
-   `learning` group for the runs before this one.
+   *Built (2026-11-16)*: not three shards. Measured locally (4 vCPU, two workers, as CI's public runner), the
+   desktop and tablet tests take 2,107 seconds, and a third of that is three specs: battle-playback (393),
+   battle-pacing (194) and battle-live (161). A shard splits by test count, so the two halves held 862 and 1,245
+   seconds of tests (13 and 21 minutes on CI), and three shards would have held 560, 1,092 and 454: battle-live and
+   battle-playback in the same one. Those three specs now play in a job of their own, `desktop replays` (748
+   seconds, filtered with `--grep` on their file names). The rest play in two halves with the same pattern in
+   `--grep-invert` (660 and 699 seconds), so every test plays once. A spec that grows that heavy joins the pattern.
 
-   Not measured: what the three shards take, and the minutes the cache saves. The first `/retro` after the merge
-   reads them with M1's meter. A heavier spec could still unbalance them; moving it is the plan's other option.
+   Every browser job (journeys, real engine, battle-release) restores `~/.cache/ms-playwright` with
+   `actions/cache/restore`, keyed by the runner's image, Playwright's version and the job's one `ENGINE`. It then
+   runs `install --with-deps` as before: the system packages are installed every time, and the engine is
+   downloaded only on a miss. A miss is saved straight after the install, before the battle build or a spec runs
+   any code. The learning job is gone: `build-and-test` lints and tests the learning project in one step before
+   the .NET build. The step goes on when it fails, so the .NET steps still run, and the job's last step fails the
+   job. pytest runs once, and Sonar imports its coverage. The gate no longer needs `learning`.
+   `browser-suite.test.js` holds the split, the cache around every install, and the learning step. The meter
+   keeps its `learning` group so that runs from before this change still count.
+
+   Not measured: the three jobs' minutes on CI, and the minutes the cache saves. The first `/retro` after the
+   merge reads them with M1's meter.
+
 4. **M4, the narrower plan and one push per review round.** `src/` and `data/` no longer call for the release
    profiles on a pull request; a Markdown-only diff runs the light build; `/ship` pushes once per round. Tests in
    `browser-suite.test.js`, and `prompts.test.js` for the skill.

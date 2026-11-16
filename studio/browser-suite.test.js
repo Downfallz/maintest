@@ -243,15 +243,28 @@ function jobBlock(workflow, job) {
   return next < 0 ? workflow.slice(start) : workflow.slice(start, start + 1 + next);
 }
 
-test('desktop and tablet play in three shards, and every other project in one job', () => {
-  const shards = [...jobBlock(browserWorkflow(), 'journeys').matchAll(/projects: (.*)$/gm)].map((match) => match[1]);
-  assert.deepEqual(shards, [
-    '--project=small-phone',
-    '--project=phone',
-    '--project=desktop --project=tablet --shard=1/3',
-    '--project=desktop --project=tablet --shard=2/3',
-    '--project=desktop --project=tablet --shard=3/3',
-  ]);
+// Desktop and tablet were two halves of 13 and 21 minutes: a shard splits by test count, and three specs hold a
+// third of the time. Those play in a job of their own, the rest in two halves without them.
+test('the heaviest desktop specs play in a job of their own, and the rest in two halves, each test once', () => {
+  const entries = [...jobBlock(browserWorkflow(), 'journeys').matchAll(/- name: (.*)\n {12}projects: '?([^'\n]*)'?$/gm)]
+    .map((match) => ({ name: match[1], projects: match[2] }));
+  assert.deepEqual(entries.map((entry) => entry.name), ['small-phone', 'phone', 'desktop replays', 'desktop and tablet 1/2', 'desktop and tablet 2/2']);
+  assert.deepEqual(entries.slice(0, 2).map((entry) => entry.projects), ['--project=small-phone', '--project=phone']);
+
+  const [replays, ...halves] = entries.slice(2);
+  const heavy = /^--project=desktop --grep=(\S+)$/.exec(replays.projects);
+  assert.ok(heavy, 'the replays job plays the desktop project, filtered by its specs');
+  halves.forEach((half, index) => {
+    // The same pattern inverted, so a test plays in the replays job or in a half, never in both or neither.
+    assert.equal(half.projects, `--project=desktop --project=tablet --grep-invert=${heavy[1]} --shard=${index + 1}/2`, half.name);
+    assert.ok(half.name.endsWith(`${index + 1}/2`), `${half.name} is named for its shard`);
+  });
+
+  // Every spec the pattern names is one that exists, so a renamed spec does not leave the job empty.
+  const named = /^battle-\((.*)\)\\\.spec\\\.js$/.exec(heavy[1]);
+  assert.ok(named, 'the pattern names battle specs by their file');
+  for (const name of named[1].split('|')) assert.ok(specs.includes(`battle-${name}.spec.js`), name);
+  for (const spec of specs) assert.equal(new RegExp(heavy[1]).test(spec), named[1].split('|').some((name) => spec === `battle-${name}.spec.js`), spec);
 });
 
 // Each browser job downloaded its engine, nothing cached: the install took 18 to 60 seconds a job. The system
