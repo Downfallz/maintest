@@ -53,6 +53,21 @@ public sealed record Feedback
 
     public IReadOnlyList<FeedbackAddition> Additions { get; init; } = [];
 
+    /// <summary>Why the operator dismissed it, or declined it; <see cref="SpamReason" /> marks it as spam. None while open.</summary>
+    public string? Reason { get; init; }
+
+    /// <summary>The reason that marks feedback dismissed as spam, which counts against its sender.</summary>
+    public const string SpamReason = "spam";
+
+    /// <summary>
+    /// Whether this spam mark has been counted towards its sender's mute. Written once the count is made, so a mark
+    /// whose count a failure cut short is counted when the operator asks again, and one counted is never counted twice.
+    /// </summary>
+    public bool SpamCounted { get; init; }
+
+    /// <summary>Whether the operator dismissed it as spam.</summary>
+    public bool IsSpam => Status == FeedbackStatus.Dismissed && Reason == SpamReason;
+
     /// <summary>Whether the operator closed it: fixed, shipped, declined or dismissed.</summary>
     public bool IsClosed => Status is FeedbackStatus.Fixed or FeedbackStatus.Shipped or FeedbackStatus.Declined or FeedbackStatus.Dismissed;
 

@@ -1,6 +1,6 @@
 # Plan: feedback, a bug report to a regression test and an idea to a plan
 
-Status: accepted, 2026-11-16 (the owner settled the questions at the end). R0, R1 and R2 are built; R3 is next.
+Status: accepted, 2026-11-16 (the owner settled the questions at the end). R0 to R3 are built; I1 is next.
 
 ## What the owner asked for
 
@@ -334,6 +334,27 @@ and they are the first thing every player can use.
    kind changed both ways with its words kept, a muted sender refused with `Feedback.Muted`, three spam marks in 30
    days muting, a mute ending after 30 days (`FeedbackAdminApiTests`), `admin-feedback.test.js`,
    `admin.ux.spec.js`.
+
+   *Built (2026-11-16)*: `OperatorFeedback` (Application) and `FeedbackAdminApi` behind the panel's gate:
+   `GET /api/admin/feedback` filtered by kind, status (`open`, the tab's default, for what is not closed) and
+   category, twenty a page; a sheet with the words, what the page and the host added, the position drawn read-only
+   as each side's creatures, the session's link, **Diagnose…** while its table is under way, and the `actions` that
+   apply, which the page shows and decides none of. *Seen* reopens, *reproduced* is a bug report's, *dismissed* takes
+   a one-line reason, `spam` being the mark. Turning a report into the other kind keeps its words, position and
+   sender and marks it seen. A category the other kind lacks becomes *something else*. A closed one is refused.
+   Every change asked again writes and notes nothing, so a phone's retry adds no Activity line and re-mutes nobody;
+   dismissed again, it keeps the time it was first closed. A mute (`FeedbackMute`, owned by Accounts, 30 days) is
+   kept with an account's activity record (ADR 0174) and dropped at its first write after the mute ends; a guest's
+   is kept in the process's memory, as its address count is, so a restart lifts it. The third spam mark within 30
+   days mutes on its own, counted outside the write gate so players' sending never waits on it. `SendFeedback`
+   refuses a muted sender `403 Feedback.Muted` before its guards. The Activity lines are `feedback.status`,
+   `feedback.convert`, `feedback.spam`, `feedback.mute` and `feedback.unmute`; a spam mark and the mute it earns
+   are noted at one instant, so their order between them is not kept. The Overview's *Feedback waiting* card is in
+   the warning colour while a bug report is new or the host is full. The tab's ids start with `admin-feedback-`,
+   because every page's Report or suggest sheet already uses `feedback-`. The privacy panel and policy say the
+   operator can stop a player's feedback for 30 days. Left: a page learns that its player is muted only when it
+   sends (R2's behaviour). The list, the Overview and the spam count read every record kept: up to 100 a day, each
+   kept until 180 days after it is closed, so a few thousand at most, read by the operator alone.
 5. **I1, ideas grouped.** **Merge into…**, *asked by N* and the sort by it, *planned* with a plan's path,
    *shipped*, *declined* with a reason, **Copy as a plan prompt**. Tests: a merge keeping every sender and adding
    to the count, a merged idea out of the list and read inside its target, a merge into a bug report or into

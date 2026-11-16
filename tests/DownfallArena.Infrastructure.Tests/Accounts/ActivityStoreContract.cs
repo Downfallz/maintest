@@ -34,6 +34,20 @@ public abstract class ActivityStoreContract
     }
 
     [Fact]
+    public async Task An_account_s_mute_from_feedback_reads_back_with_its_times_and_goes_once_lifted()
+    {
+        var store = await StoreAsync();
+        var account = AccountId.New();
+        var muted = new AccountActivity(account, Now, Now) { FeedbackMute = FeedbackMute.Begun(Now, "mark", FeedbackMute.BySpam) };
+
+        await store.SaveAsync(muted, Cancel);
+        (await store.FindAsync(account, Cancel)).ShouldBe(muted);
+
+        await store.SaveAsync(muted with { FeedbackMute = null }, Cancel);
+        (await store.FindAsync(account, Cancel)).ShouldBe(new AccountActivity(account, Now, Now));
+    }
+
+    [Fact]
     public async Task Every_account_kept_is_listed_and_a_forgotten_one_is_not()
     {
         var store = await StoreAsync();
