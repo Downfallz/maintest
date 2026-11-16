@@ -91,6 +91,32 @@ jobs:
           # Full history so SonarCloud can attribute new code and blame lines.
           fetch-depth: 0
 
+      # The learning project (learning/, ADR 0013) is gated here. It had a job of its own, which paid a runner's
+      # minimum minute for ruff while this job ran pytest a second time (docs/engineering/ci-minutes-plan.md,
+      # M3). It runs first and goes on when it fails, so a failure on either side hides nothing: every .NET step
+      # still runs, and the job's last step fails the job. Each command runs whatever the one before it said, so a
+      # lint error does not hide a test, nor the coverage report the Sonar analysis of this job imports.
+      #
+      # The virtual environment lives outside the checkout, so nothing under learning/ is generated. Only the
+      # locked wheels of the dependencies are installed, so no build script of any package runs, and the tests
+      # import the project from src/ (pyproject pythonpath). ../scripts holds Python tools that import this
+      # project (sweep-weight.py, ADR 0037) and are not part of it: they are linted under its ruff configuration
+      # so they cannot drift.
+      - name: Lint and test the learning project
+        id: learning
+        continue-on-error: true
+        working-directory: learning
+        env:
+          UV_PROJECT_ENVIRONMENT: ${{ runner.temp }}/learning-venv
+        run: |
+          pipx install uv==0.8.17
+          uv sync --locked --no-build --no-install-project
+          status=0
+          "$UV_PROJECT_ENVIRONMENT/bin/ruff" check . ../scripts || status=1
+          "$UV_PROJECT_ENVIRONMENT/bin/ruff" format --check . ../scripts || status=1
+          "$UV_PROJECT_ENVIRONMENT/bin/pytest" --cov=downfall_learning --cov=tests --cov-report=xml:"$RUNNER_TEMP/learning-coverage.xml" -q || status=1
+          exit "$status"
+
       # The storage emulator the blob and table adapters are tested against (ADR 0080, ADR 0161). Without it
       # those tests skip and say so; here they run. Started by hand rather than as a service container, because
       # a service takes no arguments and the emulator needs one: it refuses a request whose API version is newer
@@ -133,30 +159,6 @@ jobs:
 
       - name: Format check
         run: dotnet format --verify-no-changes --no-restore
-
-      # The learning project (learning/, ADR 0013) is gated here. It had a job of its own, which paid a runner's
-      # minimum minute for ruff while this job ran pytest a second time (docs/engineering/ci-minutes-plan.md,
-      # M3). Its failure does not stop the .NET steps, so one run still says both: the step goes on, and the
-      # job's last step fails it. The coverage report is for the Sonar analysis of this job, so the quality
-      # gate sees the Python code with its coverage.
-      #
-      # The virtual environment lives outside the checkout, so nothing under learning/ is generated. Only the
-      # locked wheels of the dependencies are installed, so no build script of any package runs, and the tests
-      # import the project from src/ (pyproject pythonpath). ../scripts holds Python tools that import this
-      # project (sweep-weight.py, ADR 0037) and are not part of it: they are linted under its ruff configuration
-      # so they cannot drift.
-      - name: Lint and test the learning project
-        id: learning
-        continue-on-error: true
-        working-directory: learning
-        env:
-          UV_PROJECT_ENVIRONMENT: ${{ runner.temp }}/learning-venv
-        run: |
-          pipx install uv==0.8.17
-          uv sync --locked --no-build --no-install-project
-          "$UV_PROJECT_ENVIRONMENT/bin/ruff" check . ../scripts
-          "$UV_PROJECT_ENVIRONMENT/bin/ruff" format --check . ../scripts
-          "$UV_PROJECT_ENVIRONMENT/bin/pytest" --cov=downfall_learning --cov=tests --cov-report=xml:"$RUNNER_TEMP/learning-coverage.xml" -q
 
       # Coverage is not demanded of the composition root (wiring, exercised by running the app) nor of the
       # static pages (ADR 0013 decision J, ADR 0015). The studio's and the table's modules do have tests now,

@@ -78,8 +78,9 @@ jobs:
       # Playwright's browsers are kept between runs, keyed by the runner's image, Playwright's version and the
       # engine (the job's ENGINE), so a run downloads an engine only when one of those moved. The system packages
       # are installed every time (`--with-deps`): a fresh runner has none, and the cache keeps only the browsers.
-      # A miss is saved straight after the install, before the battle build or a spec runs any code, so what the
-      # cache holds is what Playwright downloaded.
+      # A miss is saved straight after the install, before the battle build and the specs run. What keeps a pull
+      # request from planting a browser is the cache's scope: its run saves under its own ref, which main never
+      # reads, and a pull request reads main's.
       - name: Install the test dependencies and name the browsers' cache
         id: playwright
         working-directory: studio/browser
@@ -150,8 +151,9 @@ jobs:
       # Playwright's browsers are kept between runs, keyed by the runner's image, Playwright's version and the
       # engine (the job's ENGINE), so a run downloads an engine only when one of those moved. The system packages
       # are installed every time (`--with-deps`): a fresh runner has none, and the cache keeps only the browsers.
-      # A miss is saved straight after the install, before the battle build or a spec runs any code, so what the
-      # cache holds is what Playwright downloaded.
+      # A miss is saved straight after the install, before the battle build and the specs run. What keeps a pull
+      # request from planting a browser is the cache's scope: its run saves under its own ref, which main never
+      # reads, and a pull request reads main's.
       - name: Install the test dependencies and name the browsers' cache
         id: playwright
         working-directory: studio/browser
@@ -228,8 +230,9 @@ jobs:
       # Playwright's browsers are kept between runs, keyed by the runner's image, Playwright's version and the
       # engine (the job's ENGINE), so a run downloads an engine only when one of those moved. The system packages
       # are installed every time (`--with-deps`): a fresh runner has none, and the cache keeps only the browsers.
-      # A miss is saved straight after the install, before the battle build or a spec runs any code, so what the
-      # cache holds is what Playwright downloaded.
+      # A miss is saved straight after the install, before the battle build and the specs run. What keeps a pull
+      # request from planting a browser is the cache's scope: its run saves under its own ref, which main never
+      # reads, and a pull request reads main's.
       - name: Install the test dependencies and name the browsers' cache
         id: playwright
         working-directory: studio/browser

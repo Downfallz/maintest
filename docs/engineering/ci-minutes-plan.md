@@ -182,15 +182,20 @@ complete runs.
    Every browser job (journeys, real engine, battle-release) restores `~/.cache/ms-playwright` with
    `actions/cache/restore`, keyed by the runner's image, Playwright's version and the job's one `ENGINE`. It then
    runs `install --with-deps` as before: the system packages are installed every time, and the engine is
-   downloaded only on a miss. A miss is saved straight after the install, before the battle build or a spec runs
-   any code. The learning job is gone: `build-and-test` lints and tests the learning project in one step before
-   the .NET build. The step goes on when it fails, so the .NET steps still run, and the job's last step fails the
-   job. pytest runs once, and Sonar imports its coverage. The gate no longer needs `learning`.
+   downloaded only on a miss. A miss is saved straight after the install, before the battle build and the specs.
+   The learning job is gone: `build-and-test` lints and tests the learning project in one step, first after the
+   checkout. Each command runs whatever the one before it said, and the step goes on when it fails, so every .NET
+   step still runs, and the job's last step fails the job. pytest runs once, and Sonar imports its coverage. The
+   gate no longer needs `learning`.
    `browser-suite.test.js` holds the split, the cache around every install, and the learning step. The meter
    keeps its `learning` group so that runs from before this change still count.
 
    Not measured: the three jobs' minutes on CI, and the minutes the cache saves. The first `/retro` after the
    merge reads them with M1's meter.
+
+   Left to M4: a pull request that plans journeys without the three heavy specs still starts `desktop replays`,
+   which plays nothing (`--pass-with-no-tests`) after its set-up, a minute or two. Every journeys job already does
+   the same when the plan leaves its project or half empty; the plan is where a job with nothing to play is cut.
 
 4. **M4, the narrower plan and one push per review round.** `src/` and `data/` no longer call for the release
    profiles on a pull request; a Markdown-only diff runs the light build; `/ship` pushes once per round. Tests in

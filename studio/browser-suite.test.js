@@ -304,8 +304,15 @@ test('the learning project is linted and tested once, in build-and-test, and its
   const pytest = block.indexOf('bin/pytest"');
   assert.ok(check >= 0 && format > check && pytest > format, 'ruff check, ruff format, then pytest');
   assert.equal([...block.matchAll(/bin\/pytest"/g)].length, 1, 'pytest runs once');
-  assert.ok(pytest < block.indexOf('dotnet build'), 'the learning project answers before the build');
+  // First after the checkout, so no failing .NET step skips it.
+  const steps = [...block.matchAll(/^ {6}- name: (.*)$/gm)].map((match) => match[1]);
+  assert.deepEqual(steps.slice(0, 2), ['Checkout', 'Lint and test the learning project']);
   assert.match(block, /- name: Lint and test the learning project\n {8}id: learning\n {8}continue-on-error: true\n/);
+  // Each command runs whatever the one before it said: a lint error hides neither the tests nor the coverage.
+  for (const command of ['ruff" check . ../scripts', 'ruff" format --check . ../scripts', '-q']) {
+    assert.match(block, new RegExp(`${command.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} \\|\\| status=1$`, 'm'), command);
+  }
+  assert.match(block, /^ {10}exit "\$status"$/m);
   // It goes on when it fails, so the .NET steps still run; the job's last step is what fails it.
   const last = block.lastIndexOf('      - name: ');
   assert.match(block.slice(last), /^ {6}- name: .*\n {8}if: \$\{\{ !cancelled\(\) && steps\.learning\.outcome == 'failure' \}\}\n {8}run: \|\n(?: {10}.*\n)*? {10}exit 1\n/);
