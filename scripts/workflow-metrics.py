@@ -4,16 +4,20 @@
 From git alone: pull requests per week, their size, the files most of them touch, the size of AGENTS.md and
 how often it changes, and ADR numbers used twice. With --github and a token in GITHUB_TOKEN (a workflow's own
 token is enough): how long a pull request stays open, how many were merged before every check finished, and
-how CI on main fares. Standard library only, so it runs in a session, a workflow or a laptop alike.
+how CI on main fares. With --minutes and the same token: the Actions minutes the last days would be billed on
+a private repository, per workflow and per group of CI's jobs (docs/engineering/ci-minutes-plan.md, M1).
+Standard library only, so it runs in a session, a workflow or a laptop alike.
 
     python3 scripts/workflow-metrics.py                 # the last 300 pull requests on origin/main
     python3 scripts/workflow-metrics.py --last 100 --github   # the repository is origin's, read from git
+    python3 scripts/workflow-metrics.py --minutes --days 7    # the week's billed minutes
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import re
 import statistics
@@ -21,7 +25,7 @@ import subprocess
 import urllib.parse
 import urllib.request
 from collections import Counter
-from datetime import datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 PR_NUMBER = re.compile(r"\(#(\d+)\)$")
@@ -164,19 +168,122 @@ def github_report(repo: str, prs: list[dict], token: str) -> dict:
     }
 
 
+CI_WORKFLOW = ".github/workflows/ci.yml"
+# CI's jobs in the groups docs/engineering/ci-minutes-plan.md reads, first match wins. A job of a called
+# workflow is named "<caller job> / <job>", so a pattern matches anywhere in the name; a job none names is
+# "other".
+JOB_GROUPS = (
+    ("journeys", re.compile(r"\bjourneys\b")),
+    ("battle-release", re.compile(r"\bbattle-release\b")),
+    ("real engine", re.compile(r"\breal engine\b")),
+    ("build-and-test", re.compile(r"^Build, format check, test, analyse$")),
+    ("learning", re.compile(r"^Lint and test the learning project$")),
+    ("image", re.compile(r"^image /")),
+    ("changes, gate, main-health", re.compile(r"^(What the diff calls for|gate|Say so when main is red)$")),
+)
+
+
+def job_group(name: str) -> str:
+    return next((group for group, pattern in JOB_GROUPS if pattern.search(name)), "other")
+
+
+def billed_minutes(job: dict) -> int:
+    """From the job's start to its end, rounded up to the minute, as a hosted runner is billed. A job skipped
+    or never started bills nothing."""
+    started, completed = job.get("started_at"), job.get("completed_at")
+    if job.get("conclusion") == "skipped" or not started or not completed:
+        return 0
+    return math.ceil(max(0.0, (utc(completed) - utc(started)).total_seconds()) / 60)
+
+
+def self_hosted(job: dict) -> bool:
+    return "self-hosted" in (job.get("labels") or [])
+
+
+def paged(path: str, key: str, token: str) -> list[dict]:
+    items: list[dict] = []
+    page = 1
+    while True:
+        answer = github(f"{path}&per_page=100&page={page}", token)
+        batch = answer.get(key, [])
+        items += batch
+        if len(batch) < 100 or len(items) >= answer.get("total_count", 0):
+            return items
+        page += 1
+
+
+def completed_runs(repo: str, days: int, token: str, today: date) -> list[dict]:
+    """The runs created over the last days, UTC, one day at a time: the API returns at most 1,000 runs for a
+    query, and a busy week holds about that many."""
+    runs: list[dict] = []
+    for back in range(days - 1, -1, -1):
+        day = (today - timedelta(days=back)).isoformat()
+        runs += paged(f"/repos/{repo}/actions/runs?created={day}", "workflow_runs", token)
+    return [run for run in runs if run.get("status") == "completed"]
+
+
+def minutes_report(repo: str, days: int, token: str, today: date) -> dict:
+    """Billed hosted minutes per workflow and per CI job group. Re-run attempts are billed, so every attempt's
+    jobs are read; a runner of the project's own is not billed by GitHub and is counted apart."""
+    by_workflow: Counter[str] = Counter()
+    ci_groups: Counter[str] = Counter()
+    hosted = own = cancelled = cancelled_runs = ci_runs = 0
+    runs = completed_runs(repo, days, token, today)
+    for run in runs:
+        jobs = paged(f"/repos/{repo}/actions/runs/{segment(run['id'])}/jobs?filter=all", "jobs", token)
+        is_ci = run.get("path") == CI_WORKFLOW
+        ci_runs += is_ci
+        run_minutes = 0
+        for job in jobs:
+            minutes = billed_minutes(job)
+            if self_hosted(job):
+                own += minutes
+                continue
+            run_minutes += minutes
+            if is_ci and minutes:
+                ci_groups[job_group(job["name"])] += minutes
+        hosted += run_minutes
+        by_workflow[run.get("name") or run.get("path", "?")] += run_minutes
+        if run.get("conclusion") == "cancelled":
+            cancelled_runs += 1
+            cancelled += run_minutes
+    return {
+        "days": days,
+        "since": (today - timedelta(days=days - 1)).isoformat(),
+        "runs": len(runs),
+        "hosted": hosted,
+        "month_estimate": round(hosted * 30 / days),
+        "self_hosted": own,
+        "cancelled_runs": cancelled_runs,
+        "cancelled": cancelled,
+        "by_workflow": dict(by_workflow.most_common()),
+        "ci_by_group": dict(ci_groups.most_common()),
+        "per_ci_run": round(sum(ci_groups.values()) / ci_runs, 1) if ci_runs else 0,
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--last", type=int, default=300)
     parser.add_argument("--github", action="store_true", help="also read GitHub (needs GITHUB_TOKEN)")
+    parser.add_argument(
+        "--minutes", action="store_true", help="also the billed Actions minutes (needs GITHUB_TOKEN)"
+    )
+    parser.add_argument("--days", type=int, default=7, help="the window --minutes reads, in days (UTC)")
     args = parser.parse_args()
+    token = os.environ.get("GITHUB_TOKEN", "")
+    for flag in ("github", "minutes"):
+        if getattr(args, flag) and not token:
+            raise SystemExit(f"--{flag} needs a token in GITHUB_TOKEN")
+    if args.days < 1:
+        raise SystemExit("--days must be at least 1")
 
     prs = merged_pull_requests(args.last)
     report = {"git": git_report(prs)}
     if args.github:
-        token = os.environ.get("GITHUB_TOKEN", "")
-        if not token:
-            raise SystemExit("--github needs a token in GITHUB_TOKEN")
         report["github"] = github_report(origin_repository(), prs, token)
+    if args.minutes:
+        report["minutes"] = minutes_report(origin_repository(), args.days, token, datetime.now(UTC).date())
     print(json.dumps(report, indent=2))
 
 

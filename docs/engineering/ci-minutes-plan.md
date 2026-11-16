@@ -1,7 +1,7 @@
 # Plan: CI that fits a private repository's minutes, and a shorter wait on every pull request
 
 Status: accepted in part, 2026-11-16. The owner settled questions 1, 2, 3, 5 and 6; question 4 (Sonar) is open.
-Nothing is built.
+M1 (the meter) is built.
 
 ## What the owner asked for
 
@@ -131,6 +131,16 @@ complete runs.
 1. **M1, the meter.** `workflow-metrics.py --minutes` reports billed minutes per workflow and per CI job group,
    and `/retro` quotes them each week, so every stage after this one shows what it saved. Tested in
    `learning/tests` with a recorded API answer.
+
+   *Built (2026-11-16)*: `--minutes` and `--days` (7 by default). Each job is billed from its start to its end,
+   rounded up to the minute; a skipped job bills nothing; every attempt of a re-run is read; a job on a
+   self-hosted runner is counted apart, ready for M6. The runs are read one UTC day at a time, because the API
+   returns at most 1,000 runs a query. It reports the hosted minutes and a month's estimate, the minutes per
+   workflow, per CI run and per CI job group (the groups of "Where CI's minutes go"), and the cancelled runs'
+   share. `learning/tests/test_workflow_minutes.py` holds it, with run 43801390732 recorded: it bills the plan's
+   117 minutes. `/retro` step 2 quotes it, and `docs/reference/commands.md` names the flags. Its first reading,
+   2026-11-16 alone: 50 runs, 2,132 hosted minutes, 51.6 per CI run, 14 cancelled runs for 356 minutes. Left:
+   the deploy and showcase jobs fall in `other`; a group of their own when a stage needs it.
 2. **M2, the release profiles split and deduplicated.** ADR 0188 amends ADR 0182: a pull request plays the
    release profiles' WebKit alone; `main` and the nightly play all three. `battle-release` becomes one job per
    profile. `plan.js` and `browser-suite.test.js` hold it.
