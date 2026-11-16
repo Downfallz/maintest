@@ -93,6 +93,51 @@ public sealed class TutorialPlayTests
         (await HandedBackAsync(play)).ShouldBeTrue();
     }
 
+    /// <summary>
+    /// Whether, when the play says it gave the seat back, another thread reads <see cref="TutorialPlay.Assisted" />
+    /// within two seconds: as a subscriber that takes its own lock does while a bump from the match waits on it.
+    /// </summary>
+    private static async Task<bool> ReadableWhenGivenBackAsync(TutorialPlay play, TutorialPlay.Seat table)
+    {
+        var readable = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        play.GaveBack += () => readable.TrySetResult(Task.Run(() => play.Assisted).Wait(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken));
+        play.Follow(table);
+
+        play.Look();
+
+        return await readable.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task A_late_answer_s_hand_back_is_said_once_the_tutorial_is_readable_from_another_thread()
+    {
+        var (table, _) = AskedASpeed(_ => DecisionTaken.Late);
+
+        var readable = await ReadableWhenGivenBackAsync(Play(), table);
+
+        readable.ShouldBeTrue("a GaveBack subscriber runs outside the tutorial's lock");
+    }
+
+    [Fact]
+    public async Task A_failed_answer_s_hand_back_is_said_once_the_tutorial_is_readable_from_another_thread()
+    {
+        var (table, _) = AskedASpeed(_ => throw new IOException("the journal is out"));
+
+        var readable = await ReadableWhenGivenBackAsync(Play(), table);
+
+        readable.ShouldBeTrue("a GaveBack subscriber runs outside the tutorial's lock");
+    }
+
+    [Fact]
+    public async Task A_script_run_out_s_hand_back_is_said_once_the_tutorial_is_readable_from_another_thread()
+    {
+        var (table, _) = AskedASpeed(_ => new DecisionTaken(true, false));
+
+        var readable = await ReadableWhenGivenBackAsync(Play(), table);
+
+        readable.ShouldBeTrue("a GaveBack subscriber runs outside the tutorial's lock");
+    }
+
     [Fact]
     public void Before_anything_goes_wrong_every_kind_the_lesson_does_not_teach_is_assisted() =>
         Play().Assisted.ShouldBe(["Evolution", "Speed", "TieOrder", "Intent", "Target"]);

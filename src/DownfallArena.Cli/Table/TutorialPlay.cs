@@ -105,7 +105,8 @@ internal sealed class TutorialPlay
 
     /// <summary>
     /// Said once, when every question goes back to the person: what the seat's view says of the lesson changed
-    /// without the match moving, so whoever tells the pages a table changed is told here.
+    /// without the match moving, so whoever tells the pages a table changed is told here. Said on the thread that
+    /// handed back, outside this play's lock: a subscriber may take its own lock and read the play.
     /// </summary>
     public event Action? GaveBack;
 
@@ -127,14 +128,27 @@ internal sealed class TutorialPlay
         session.Changed += Look;
     }
 
-    internal void Follow(Seat table)
+    internal void Follow(Seat table) => _table = table;
+
+    /// <summary>
+    /// Runs <paramref name="step" /> on the assisted seat under the gate, and says whether that step is the one that
+    /// handed the seat back. The hand-back is said by <see cref="SayGaveBack" /> once the gate is left: its
+    /// subscribers bump the table, whose own subscribers may take their locks and read this play (#658).
+    /// </summary>
+    private bool HandsBack(Action step)
     {
-        _table = table;
-        _assisted.GaveBack += (_, _) =>
+        lock (_gate)
         {
-            Console.WriteLine($"  Tutorial {Order}: the recorded answers no longer fit the match; the person answers every question from here.");
-            GaveBack?.Invoke();
-        };
+            var before = _assisted.HandedBack;
+            step();
+            return !before && _assisted.HandedBack;
+        }
+    }
+
+    private void SayGaveBack()
+    {
+        Console.WriteLine($"  Tutorial {Order}: the recorded answers no longer fit the match; the person answers every question from here.");
+        GaveBack?.Invoke();
     }
 
     /// <summary>
@@ -203,10 +217,10 @@ internal sealed class TutorialPlay
         {
             while (true)
             {
-                (Application.Matches.Decisions.PlayerDecision Decision, long Asked)? owed;
-                lock (_gate)
+                (Application.Matches.Decisions.PlayerDecision Decision, long Asked)? owed = null;
+                if (HandsBack(() => owed = table.Read() is { } snapshot ? Owed(snapshot) : null))
                 {
-                    owed = table.Read() is { } snapshot ? Owed(snapshot) : null;
+                    SayGaveBack();
                 }
 
                 if (owed is not { } answer)
@@ -215,16 +229,9 @@ internal sealed class TutorialPlay
                 }
 
                 var taken = (await table.Decide(answer.Decision, answer.Asked)).Taken;
-                lock (_gate)
+                if (HandsBack(taken ? _assisted.Given : _assisted.HandBack))
                 {
-                    if (taken)
-                    {
-                        _assisted.Given();
-                    }
-                    else
-                    {
-                        _assisted.HandBack();
-                    }
+                    SayGaveBack();
                 }
             }
         }
@@ -232,9 +239,9 @@ internal sealed class TutorialPlay
         {
             // The table says what it could not do when its own step fails; the question is the person's to answer.
             Console.WriteLine($"  Tutorial {Order}: an assisted question could not be answered ({failure.GetType().Name}).");
-            lock (_gate)
+            if (HandsBack(_assisted.HandBack))
             {
-                _assisted.HandBack();
+                SayGaveBack();
             }
         }
         finally
