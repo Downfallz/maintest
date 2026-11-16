@@ -51,16 +51,20 @@ function recordedAnswers(file) {
     const key = `${one.kind}:${one.creature ?? ''}`;
     queues.set(key, [...(queues.get(key) ?? []), one]);
   }
-  return (kind, creature) => queues.get(`${kind}:${creature ?? ''}`)?.shift() ?? null;
+  const next = (kind, creature) => queues.get(`${kind}:${creature ?? ''}`)?.shift() ?? null;
+  // The answer a question would take, left in place.
+  next.peek = (kind, creature) => queues.get(`${kind}:${creature ?? ''}`)?.[0] ?? null;
+  return next;
 }
 
 async function answerEvolution(page, view, next) {
   await mutationTree(page);
   const offered = view.options.evolution.creatures.filter(one => one.availableTiers.length);
-  const pick = offered.map(one => ({ one, recorded: next('Evolution', one.creature) })).find(({ one, recorded }) => recorded && one.availableTiers.includes(recorded.tier));
-  if (!pick) { await page.locator('#planning-pass').click(); await confirm(page, '#planning-confirm'); return; }
-  await page.locator(`#planning-creatures [data-creature="${pick.one.creature}"]`).click();
-  await page.locator(`[data-mutation="${pick.recorded.tier}"]`).first().click();
+  const one = offered.find(creature => creature.availableTiers.includes(next.peek('Evolution', creature.creature)?.tier));
+  if (!one) { await page.locator('#planning-pass').click(); await confirm(page, '#planning-confirm'); return; }
+  const recorded = next('Evolution', one.creature);
+  await page.locator(`#planning-creatures [data-creature="${one.creature}"]`).click();
+  await page.locator(`[data-mutation="${recorded.tier}"]`).first().click();
   await confirm(page, '#planning-confirm');
 }
 
@@ -73,6 +77,14 @@ async function answerSpeed(page, next) {
   // One confirmation sends every creature's tempo, one decision each: the sheet closes once all are sent.
   await confirm(page, '#planning-confirm');
   await expect(page.locator('#planning-dialog')).toBeHidden({ timeout: 20000 });
+}
+
+// The order the page proposes is kept; it must be the recorded one, or the rest of the lesson plays another match.
+async function answerTieOrder(page, next) {
+  const recorded = next('TieOrder', null);
+  const sent = page.waitForRequest(request => request.url().endsWith('/decision') && request.method() === 'POST');
+  await page.locator('#planning-keep').click(); await confirm(page, '#planning-confirm');
+  if (recorded) expect((await sent).postDataJSON().order).toEqual(recorded.order);
 }
 
 async function answerAction(page, view, next) {
@@ -141,11 +153,10 @@ async function playLesson(page, tutorial, seat, info) {
     for (const line of lesson.steps[Number(step[1]) - 1].says) await expect(page.locator('#coach-lines')).toContainText(line);
     await fitsViewport(page, '#coach-cards button, #practice-leave');
     // Where the sheet docks under the field, the card stands in it and leaves the sheet's first choice in view (#670).
-    const sheet = await page.locator('#planning-dialog').isVisible() || await page.locator('#combat-dialog').isVisible();
-    if (sheet && await page.evaluate(() => !matchMedia('(min-width: 760px), (orientation: landscape) and (max-height: 520px)').matches)) {
+    if (await page.evaluate(() => !matchMedia('(min-width: 760px), (orientation: landscape) and (max-height: 520px)').matches)) {
       await expect(page.locator('#coach')).toHaveClass(/in-sheet/);
-      const first = { Speed: '[data-speed]', Evolution: '[data-mutation]', TieOrder: '#planning-keep', Action: '[data-spell]' }[view.waitingFor];
-      await expect(page.locator(first).first()).toBeInViewport({ ratio: 0.5 });
+      const first = { Speed: '[data-speed]', Evolution: '[data-mutation]', Action: '[data-spell]' }[view.waitingFor];
+      if (first) await expect(page.locator(first).first()).toBeInViewport({ ratio: 0.5 });
     }
     await page.screenshot({ path: info.outputPath(`step-${step[1]}.png`) });
   };
@@ -162,10 +173,12 @@ async function playLesson(page, tutorial, seat, info) {
     // An assisted question is answered by the host, never drawn: the person answers the kinds the lesson teaches.
     await expect.poll(() => lesson.teaches.includes(seat.latest?.waitingFor), { timeout: 15000 }).toBe(true);
     const view = structuredClone(seat.latest);
+    // The question's sheet open, as the person sees it, before its step is read.
+    if (view.waitingFor === 'Action') await openSpells(page); else await mutationTree(page);
     await coach(view);
     if (view.waitingFor === 'Evolution') await answerEvolution(page, view, next);
     else if (view.waitingFor === 'Speed') await answerSpeed(page, next);
-    else if (view.waitingFor === 'TieOrder') { await page.locator('#planning-open').click({ timeout: 2000 }).catch(() => {}); await page.locator('#planning-keep').click(); await confirm(page, '#planning-confirm'); }
+    else if (view.waitingFor === 'TieOrder') await answerTieOrder(page, next);
     else await answerAction(page, view, next);
     await expect.poll(() => seat.latest?.waitingAsked, { timeout: 15000 }).not.toBe(view.waitingAsked);
   }
@@ -200,7 +213,9 @@ for (const tutorial of series) test(`tutorial ${tutorial.file.tutorial.order}, $
   await page.locator('#practice-brief-begin').click();
   await playLesson(page, tutorial, seat, info);
   expect((await kept).status()).toBe(200);
-  // Left, the home page says it is done, and opens nothing by itself.
+  // Left, the home page says it is done, and opens nothing by itself. A lesson that ends the match ends under its
+  // result, which is closed first.
+  if (await page.locator('#match-dialog').isVisible()) await page.keyboard.press('Escape');
   await page.locator('#coach-leave').click();
   await page.waitForURL(`${origin}/`);
   const card = page.locator(`#tutorial-cards [data-tutorial="${tutorial.id}"]`);

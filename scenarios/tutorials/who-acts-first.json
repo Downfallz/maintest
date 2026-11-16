@@ -48,7 +48,7 @@
           "creature": 1
         },
         "says": [
-          "A Precision spell can land a critical.",
+          "A Precision creature's spell can land a critical.",
           "A critical doubles what the spell does."
         ],
         "concepts": [

@@ -83,5 +83,5 @@ dotnet run --project src/DownfallArena.Cli -- scenario-check --scenario scenario
 | `greedy-1v1-round-3.json` | A test scenario: a greedy 1v1 mirror on seed 5, taken over as player 1 at the top of round 3. |
 | `tutorials/your-first-combat.json` | Tutorial 1: a greedy 3v3 on seed 5 under the hosted table's rules, taken over as player 1 at the top of round 2, with three lesson steps on the person's three actions. |
 | `tutorials/who-acts-first.json` | Tutorial 2: a greedy 3v3 on seed 5, at the top of round 4; the person chooses the tempos, the tie order and the spells. |
-| `tutorials/grow-by-mutating.json` | Tutorial 3: a greedy 3v3 on seed 5, at the top of round 3; the person also chooses the Mutations. |
+| `tutorials/grow-by-mutating.json` | Tutorial 3: a greedy 3v3 on seed 5, at the top of round 3; the person also chooses the mutations. |
 | `tutorials/to-the-end.json` | Tutorial 4: a greedy 3v3 on seed 3 at the top of round 5, played to the match's end in round 8: the conditions, the stun and the end of a match. |

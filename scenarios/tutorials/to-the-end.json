@@ -48,7 +48,7 @@
         },
         "says": [
           "A stunned creature takes no tempo this round.",
-          "Then it cannot be stunned for one round."
+          "When the Stun ends, it cannot be stunned the next round."
         ],
         "concepts": [
           "conditions",
@@ -63,7 +63,7 @@
         },
         "says": [
           "A match ends when a team has no creature standing.",
-          "After the last round, the most Health left wins."
+          "After the last round, the team with the most Health left wins."
         ],
         "concepts": [
           "health"

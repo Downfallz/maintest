@@ -1,7 +1,7 @@
 {
   "format": "downfall.scenario.v1",
   "title": "Grow by mutating",
-  "goal": "Give two creatures a Mutation, then cast the spells it brings.",
+  "goal": "Give two creatures a mutation, then cast the spells it brings.",
   "seat": "player1",
   "tutorial": {
     "order": 3,
@@ -19,7 +19,7 @@
           "round": 3
         },
         "says": [
-          "Every other round, two creatures may each take a Mutation.",
+          "Every other round, two creatures may each acquire a mutation.",
           "It brings new spells and more initiative."
         ],
         "concepts": [
@@ -35,7 +35,7 @@
           "round": 3
         },
         "says": [
-          "A Mutation's initiative counts inside its tempo.",
+          "A mutation's initiative counts inside its tempo.",
           "At one tempo, the higher initiative acts first."
         ],
         "concepts": [
@@ -48,7 +48,7 @@
           "round": 3
         },
         "says": [
-          "Same initiative: you choose who acts first."
+          "Same initiative on your team: you choose who acts first."
         ],
         "concepts": [],
         "pointsAt": {
@@ -62,7 +62,7 @@
           "creature": 1
         },
         "says": [
-          "A Mutation's spells are yours from this round.",
+          "A mutation's spells are yours from this round.",
           "Look for them in the spell choice."
         ],
         "concepts": [],

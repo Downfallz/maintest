@@ -108,6 +108,8 @@ async function playStep(page, state, index, capture) {
     await fitsViewport(page, '#coach-cards button');
     // Its concept cards stand on the step's row, above its lines, so the sheet keeps its choices in view (#670).
     expect(await page.evaluate(() => document.getElementById('coach-cards').getBoundingClientRect().bottom <= document.getElementById('coach-lines').getBoundingClientRect().top + 1)).toBe(true);
+    // Laid out in the sheet, a hidden card is still hidden.
+    expect(await page.evaluate(() => { const card = document.getElementById('coach'); card.hidden = true; const shown = getComputedStyle(card).display; card.hidden = false; return shown; })).toBe('none');
   }
   if (index === 0 && capture) await capture('coach-card');
   await page.locator('[data-spell="shock"]').click();

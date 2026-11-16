@@ -207,10 +207,10 @@ public sealed class TutorialFileTests
 
     /// <summary>
     /// The series of docs/tabletop/onboarding-plan.md (O5): four tutorials in the rulebook's order from the combat
-    /// out, each handing the person one more kind of question, the last two every kind.
+    /// out, the first two each teaching some kinds of question, the last two every kind.
     /// </summary>
     [Fact]
-    public void The_repository_ships_the_series_of_four_each_teaching_more_than_the_one_before()
+    public void The_repository_ships_the_series_of_four_in_order_with_what_each_teaches()
     {
         var series = System.IO.Directory.GetFiles(Directory, "*.json")
             .Select(file => ScenarioFile.Read(File.ReadAllText(file)).Tutorial.ShouldNotBeNull())
