@@ -59,6 +59,10 @@ test('first mutation tip explains team picks, highlights Command and acknowledge
   await expect(page.locator('#help-flow [aria-current]')).toContainText('Command');
   await expect(page.locator('#help-round')).toHaveText('Round 1 of 12');
   await expect(page.locator('#help-close')).toBeFocused(); await fitsViewport(page, '#help-close');
+  // The tip's section of the official rulebook, in a new tab, so the battle stays on its question (rulebook-plan.md R4).
+  await expect(page.locator('#help-rules')).toHaveText('Read the rules');
+  await expect(page.locator('#help-rules')).toHaveAttribute('href', '/rules#evolution');
+  await expect(page.locator('#help-rules')).toHaveAttribute('target', '_blank');
   await page.screenshot({ path: info.outputPath('mutation-guide.jpg'), type: 'jpeg', quality: 85 });
   expect(h.state.shown).toEqual([]); expect(h.state.writes).toEqual([]);
   // Closing the tip opens the tree it explained (ADR 0138), which acknowledges the asking and takes focus.
@@ -107,6 +111,7 @@ test('mute prevents future tips, keeps History, and Help reopens the current sub
   await page.locator('#playback-next').click(); await expect(page.locator('#help-dialog')).toBeHidden();
   await page.locator('#history-open').click(); await expect(page.locator('#history-list details')).toHaveCount(1); await page.locator('#history-close').click();
   await page.locator('#help-open').click(); await expect(page.locator('#help-title')).toHaveText('Choose how your team acts');
+  await expect(page.locator('#help-rules')).toHaveAttribute('href', '/rules#tempo');
   // With no tip to read first, the team's tempos opened by themselves and acknowledged their asking (ADR 0150).
   await expect(page.locator('#help-mute')).toBeChecked(); expect(h.state.shown).toEqual(['11', '12']); expect(h.state.errors).toEqual([]);
 });

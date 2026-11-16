@@ -291,6 +291,7 @@ sources: ADR 0033, ADR 0035, ADR 0076, ADR 0083, ADR 0101, game-rules#round-sequ
 id: defense
 title: Defense
 Defense lowers the damage of every hit a creature takes, never below zero.
+Defense buffs add at most 10 to it, however many it holds.
 Only damage over time, applied at Upkeep, ignores it.
 > A hit of 7 on a creature with {creature.defense + 2} Defense deals {max(0, 5 - creature.defense)}. A creature starts at {creature.defense} Defense: the same hit on it deals {max(0, 7 - creature.defense)}.
 ```

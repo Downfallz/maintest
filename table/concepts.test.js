@@ -1,101 +1,108 @@
-// The concept cards (ADR 0187, docs/tabletop/onboarding-plan.md, O3b): every card is complete, names a rulebook
-// section that exists, and the set is the one a lesson may name (`ConceptCards.Ids`, which `TutorialLesson` checks).
+// The concept cards (ADR 0187, onboarding-plan.md O3b), read from the official rulebook (ADR 0188,
+// rulebook-plan.md R4): every card the book carries, with its words as the book draws them, the section it sits
+// in as its link, and nothing a page writes itself. The host holds the same set to `ConceptCards.Ids`
+// (`RulebookConceptCardsTests`).
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CONCEPTS, REFERENCE, conceptCard, conceptCards, conceptsFor } from './concepts.js';
+import { NO_CONCEPTS, RULES_BOOK, conceptsOf, loadConcepts } from './concepts.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const rulebook = readFileSync(join(root, 'docs/tabletop/rulebook.md'), 'utf8');
+const book = JSON.parse(readFileSync(join(root, 'table/rules.json'), 'utf8'));
+const sections = book.parts.flatMap(part => part.sections);
+const concepts = conceptsOf(book);
 
-// A heading's anchor as GitHub writes it: lowercased, punctuation dropped, spaces as hyphens.
-const anchorOf = heading => heading.toLowerCase().replace(/[^a-z0-9 -]/g, '').replace(/ /g, '-');
-const headings = new Map(rulebook.split('\n').filter(line => /^#{2,3} /.test(line)).map(line => line.replace(/^#+ /, '')).map(text => [anchorOf(text), text]));
-
-test('the cards are the concepts a lesson may name, in the host\'s order', () => {
+test('the cards are the ones the rulebook carries, in its order, and the host may name them all', () => {
+  assert.deepEqual(concepts.all.map(card => card.id), book.cards.map(card => card.id));
   const source = readFileSync(join(root, 'src/DownfallArena.Application/Matches/Scenarios/ConceptCards.cs'), 'utf8');
   const listed = /Ids \{ get; \} =\s*\[([^\]]+)\]/.exec(source)?.[1].match(/"([a-z]+)"/g).map(id => id.slice(1, -1));
-  assert.equal(listed?.length, 10);
-  assert.deepEqual(CONCEPTS.map(card => card.id), listed);
+  assert.deepEqual(concepts.all.map(card => card.id).sort(), [...listed].sort());
 });
 
-test('every card has a title, one to three lines, an example and a rulebook section', () => {
-  for (const card of CONCEPTS) {
-    assert.match(card.title, /\S/, card.id);
-    assert.ok(card.lines.length >= 1 && card.lines.length <= 3, `${card.id}: ${card.lines.length} lines`);
-    for (const line of card.lines) assert.ok(line.trim() && line.length <= 160, `${card.id}: ${line}`);
-    assert.ok(card.example.trim() && card.example.length <= 200, `${card.id}: example`);
-    assert.match(card.rulebook.section, /^(Part \d|\d\.\d+)$/, card.id);
+test('a card says what its section in the book says: its title, its lines and its example', () => {
+  for (const card of concepts.all) {
+    const section = sections.find(one => one.card?.id === card.id);
+    assert.deepEqual({ title: card.title, lines: card.lines, example: card.example },
+      { title: section.card.title, lines: section.card.lines, example: section.card.example }, card.id);
   }
+  assert.equal(concepts.card('health').example, sections.find(one => one.id === 'winning').card.example);
 });
 
-test('every rulebook anchor is a heading of the rulebook, under the section the card names', () => {
-  for (const card of CONCEPTS) {
-    const heading = headings.get(card.rulebook.anchor);
-    assert.ok(heading, `${card.id}: no heading for #${card.rulebook.anchor}`);
-    assert.ok(heading.startsWith(card.rulebook.section), `${card.id}: ${heading}`);
-    assert.equal(card.rulebook.label, `Rulebook, ${heading.replace(/^Part (\d)\. /, 'Part $1: ')}`);
-  }
-});
-
-test('the reference values the cards quote match the hosted table\'s rule set, the reference creature and the engine', () => {
-  const rules = JSON.parse(readFileSync(join(root, 'docs/tabletop/playtest.rules.json'), 'utf8'));
-  const creature = JSON.parse(readFileSync(join(root, 'data/Creatures/main.v1.json'), 'utf8'));
+// #682 pinned two rules on the cards a tutorial opens; the book keeps them. The ceiling is the engine's
+// (ADR 0076, `Creature.DefenseBuffCeiling`), not content the build can draw, so it is held to the engine here.
+test('the Health card says healing stops at the starting Health, and the Defense card the engine\'s ceiling on its buffs', () => {
+  assert.ok(concepts.card('health').lines.includes('Healing never takes a creature above the Health it started the match with.'));
   const engine = readFileSync(join(root, 'src/DownfallArena.Domain/Matches/Creatures/Creature.cs'), 'utf8');
-  assert.deepEqual({ ...REFERENCE }, {
-    health: creature.baseHealth,
-    defense: creature.baseDefense,
-    initiative: creature.baseInitiative,
-    energyPerRound: rules.energyPerRound,
-    criticalMultiplier: rules.criticalMultiplier,
-    defenseBuffCeiling: Number(/DefenseBuffCeiling = (\d+);/.exec(engine)?.[1]),
-  });
+  const ceiling = Number(/DefenseBuffCeiling = (\d+);/.exec(engine)?.[1]);
+  assert.ok(Number.isInteger(ceiling));
+  assert.ok(concepts.card('defense').lines.includes(`Defense buffs add at most ${ceiling} to it, however many it holds.`));
+  const resolving = sections.find(section => section.card?.id === 'defense');
+  assert.match(JSON.stringify(resolving.blocks), new RegExp(`count for ${ceiling} at most`));
 });
 
-test('the Health card says healing stops at the starting Health, and the Defense card the ceiling on its buffs', () => {
-  assert.ok(conceptCard('health').lines.includes('Healing never takes a creature above the Health it started the match with.'));
-  assert.ok(conceptCard('defense').lines.includes('Defense buffs add at most 10 to it, however many it holds.'));
-  assert.ok(conceptsFor({ ...REFERENCE, defenseBuffCeiling: 8 }).find(card => card.id === 'defense').lines.includes('Defense buffs add at most 8 to it, however many it holds.'));
+test('a card links to its section of the rulebook, by the section\'s id, and names it as the book numbers it', () => {
+  const tempo = sections.find(section => section.id === 'tempo');
+  assert.deepEqual(concepts.card('tempo').rules, { section: 'tempo', href: '/rules#tempo', label: `Rules, ${tempo.number} ${tempo.title}` });
+  // A card whose id is not its section's: the link is the section, which the page lands on and the build checks.
+  const order = sections.find(section => section.card?.id === 'initiative');
+  assert.equal(concepts.card('initiative').rules.href, `/rules#${order.id}`);
+  for (const card of concepts.all) assert.match(card.rules.href, /^\/rules#[a-z0-9-]+$/, card.id);
 });
 
-test('a card reads the reference values it is given, and only the cards that quote a value change', () => {
-  const quotedBy = {
-    health: ['health'], defense: ['health', 'defense'], initiative: ['initiative', 'tempo', 'mutation'], energyPerRound: ['energy'], criticalMultiplier: ['critical'], defenseBuffCeiling: [],
-  };
-  const moved = { health: 40, defense: 1, initiative: 6, energyPerRound: 3, criticalMultiplier: 1.5, defenseBuffCeiling: 8 };
-  const examples = cards => Object.fromEntries(cards.map(card => [card.id, card.example]));
-  const today = examples(conceptsFor(REFERENCE));
-  assert.deepEqual(today, examples(CONCEPTS));
-  for (const [value, ids] of Object.entries(quotedBy)) {
-    const other = examples(conceptsFor({ ...REFERENCE, [value]: moved[value] }));
-    assert.deepEqual(Object.keys(today).filter(id => today[id] !== other[id]), ids, value);
-  }
-  const all = examples(conceptsFor(moved));
-  assert.equal(all.health, 'A creature starts at 40 Health. A hit of 7 leaves it at 34.');
-  assert.equal(all.energy, 'A creature at 1 Energy gains 3 at Upkeep and has 4: enough for a spell that costs 4.');
-  assert.equal(all.defense, 'A hit of 7 on a creature with 3 Defense deals 4. A creature starts at 1 Defense: the same hit on it deals 6.');
-  assert.equal(all.critical, 'A spell prints d20: 11+. A roll of 14 is a critical: its 7 damage becomes 10.');
-  assert.equal(conceptsFor({ ...REFERENCE, health: 5 })[0].example, 'A creature starts at 5 Health. A hit of 7 leaves it at 0.');
-  assert.equal(all.initiative, 'Two Precision creatures at 8 and 6 initiative: the one at 8 acts first.');
-  assert.equal(all.tempo, 'An Instinct creature at 6 initiative acts before a Precision creature at 10.');
-  assert.equal(all.mutation, 'A creature at 6 base initiative takes a mutation with a bonus of 1: it knows new spells and acts at 7.');
+test('the book a page reads moves the cards: no word or number of a card is written in the page', () => {
+  const moved = structuredClone(book);
+  const winning = moved.parts.flatMap(part => part.sections).find(section => section.id === 'winning');
+  winning.card = { ...winning.card, title: 'Life', lines: ['One line.'], example: 'A creature starts at 40 Health.' };
+  winning.number = '9.9';
+  const card = conceptsOf(moved).card('health');
+  assert.deepEqual({ title: card.title, lines: card.lines, example: card.example, label: card.rules.label },
+    { title: 'Life', lines: ['One line.'], example: 'A creature starts at 40 Health.', label: 'Rules, 9.9 Winning' });
+  const source = readFileSync(join(root, 'table/concepts.js'), 'utf8');
+  for (const one of concepts.all) for (const line of [...one.lines, one.example]) assert.ok(!source.includes(line), `${one.id}: ${line}`);
+});
+
+test('a book that cannot be read gives no card, and a malformed card is left out', () => {
+  for (const nothing of [null, undefined, 'x', {}, { parts: 'x' }, { parts: [{ sections: null }] }]) assert.deepEqual(conceptsOf(nothing).all, []);
+  const odd = { parts: [{ sections: [
+    { id: 'a', number: '1.1', title: 'A', card: { id: 'health', title: '', lines: ['x'], example: 'y' } },
+    { id: 'b', number: '1.2', title: 'B', card: { id: 'energy', title: 'Energy', lines: 'x', example: 'y' } },
+    { id: 'c', number: '1.3', title: 'C', card: { id: 'Tempo!', title: 'Tempo', lines: ['x'], example: 'y' } },
+    { id: 'd', number: '1.4', title: 'D', card: { id: 'defense', title: 'Defense', lines: ['x', 3], example: 'y' } },
+    { id: 'e', number: '1.5', title: 'E', card: { id: 'critical', title: 'Critical', lines: ['x'], example: 'y' } },
+    { id: 'f', number: '1.6', title: 'F', card: { id: 'critical', title: 'Again', lines: ['x'], example: 'y' } },
+    { id: 'g', number: '1.7', title: 'G', card: null },
+  ] }] };
+  assert.deepEqual(conceptsOf(odd).all.map(card => [card.id, card.title]), [['critical', 'Critical']]);
+  assert.deepEqual(NO_CONCEPTS.all, []);
+  assert.equal(NO_CONCEPTS.card('health'), null);
 });
 
 test('a card is found by its id, and nothing else passes for one', () => {
-  assert.equal(conceptCard('defense').title, 'Defense');
-  assert.equal(conceptCard('toString'), null);
-  assert.equal(conceptCard(undefined), null);
+  assert.equal(concepts.card('defense').title, 'Defense');
+  assert.equal(concepts.card('toString'), null);
+  assert.equal(concepts.card(undefined), null);
 });
 
 test('a step\'s cards come in the order it names them, once each, the unknown left out', () => {
-  assert.deepEqual(conceptCards(['defense', 'nothing', 'health', 'defense']).map(card => card.id), ['defense', 'health']);
-  assert.deepEqual(conceptCards(null), []);
+  assert.deepEqual(concepts.cards(['defense', 'nothing', 'health', 'defense']).map(card => card.id), ['defense', 'health']);
+  assert.deepEqual(concepts.cards(null), []);
+  assert.deepEqual(NO_CONCEPTS.cards(['health']), []);
 });
 
 test('the cards cannot be changed by a page', () => {
-  assert.throws(() => { CONCEPTS[0].title = 'x'; }, TypeError);
-  assert.throws(() => { CONCEPTS[0].lines.push('x'); }, TypeError);
+  assert.throws(() => { concepts.all[0].title = 'x'; }, TypeError);
+  assert.throws(() => { concepts.all[0].lines.push('x'); }, TypeError);
+  assert.throws(() => { concepts.all[0].rules.href = 'x'; }, TypeError);
+  assert.throws(() => { concepts.all.push(concepts.all[0]); }, TypeError);
+});
+
+test('the page loads the book it is served beside, and goes on with no card when it cannot', async () => {
+  assert.equal(RULES_BOOK, 'rules.json');
+  const loaded = await loadConcepts(async () => book);
+  assert.deepEqual(loaded.all.map(card => card.id), concepts.all.map(card => card.id));
+  assert.equal(await loadConcepts(async () => { throw new Error('offline'); }), NO_CONCEPTS);
+  assert.equal(await loadConcepts(async () => null), NO_CONCEPTS);
 });

@@ -69,30 +69,34 @@ function roundFlow(mode) {
     { phase: 'EndOfRound', title: phaseLabel('EndOfRound'), text: 'Temporary conditions count down or expire according to their duration. The next round begins if the match continues.' },
   ];
 }
+// Each tip shortens a section of the official rulebook (rulebook-plan.md R4), which Help links to; Help with no tip
+// links to the round. The ids are the book's, which its build holds every link of a page to. The book teaches the
+// spell chosen at the turn (ADR 0112): the hidden-intent tips link nowhere rather than to a page that says otherwise.
+const ROUND_RULES = '/rules#the-round';
 const tips = {
-  mutation: { title: 'What is a mutation?', lines: [
+  mutation: { title: 'What is a mutation?', rules: '/rules#evolution', lines: [
     'A mutation develops your creature: new spells or a passive, plus initiative. Its branch explains what the creature gains.',
     'Picks are shared across your team, and each creature takes at most one per Mutation phase. With 2 picks and 3 creatures, you choose which 2 mutate now; later Mutation phases bring new picks, so the one left out can mutate then. Both teams choose privately, then reveal together.',
     'The mutation tree opens with the phase. Choose an eligible creature on the battlefield, preview a branch, then confirm the named mutation and recipient. The tree stays open while team picks remain. Pass remaining picks gives up all your unused picks for this round.',
   ] },
-  tempo: { title: 'Choose how your team acts', lines: [TEMPO_RULE,
+  tempo: { title: 'Choose how your team acts', rules: '/rules#tempo', lines: [TEMPO_RULE,
     'Open Team tempos and draft a tempo in every creature tab. Return to any tab to edit, then Confirm tempos once. All tempos reveal together.',
     'Check the creature’s spells and energy when deciding. Choosing a tempo does not choose a spell.',
   ] },
-  ties: { title: 'Order your tied creatures', lines: [
+  ties: { title: 'Order your tied creatures', rules: '/rules#tie-order', lines: [
     'The dice settle places between teams. You decide the order within your own tied groups.',
     'Open Order ties, choose an order or keep the current order, then Confirm choice. Both teams’ orders reveal together.',
   ] },
-  action: { title: 'Choose a spell on your turn', lines: [
+  action: { title: 'Choose a spell on your turn', rules: '/rules#your-turn', lines: [
     'Open Choose spell and select an offered spell. Its legal targets appear on the battlefield.',
     'Select targets, then Confirm cast. A spell without targets still needs confirmation. No hidden spell declaration is required in this mode.',
     'History explains the applied result after the action resolves; a spell preview is not a guaranteed outcome.',
   ] },
-  intent: { title: 'Declare a hidden spell', lines: [
+  intent: { title: 'Declare a hidden spell', rules: null, lines: [
     'Open Choose spell, select a spell, then use Declare to confirm your intent. The opponent cannot see it before its reveal.',
     'You choose targets later, when this creature’s spell is revealed. A plan that cannot be paid for or resolved at that time may fizzle.',
   ] },
-  target: { title: 'Choose targets for the revealed spell', lines: [
+  target: { title: 'Choose targets for the revealed spell', rules: null, lines: [
     'Your spell is already declared. Open Choose targets, select legal creatures on the field, then Confirm cast.',
     'Tap a selected creature again to deselect it. Follow the offered target count; a targetless spell still needs confirmation.',
   ] },
@@ -128,7 +132,7 @@ function objective(view, topic) {
 
 // Read only the selected seat's public context and current offer. No draft, hidden opponent plan or schedule arithmetic.
 export function battleGuidance(view, catalogue, { accepted = false, targeting = false, historical = false, online = true, now = Date.now() } = {}) {
-  if (!view?.board) return { available: false, topic: null, objective: 'Choose a viewpoint to play.', title: '', lines: [], round: '', context: '', next: '', phase: '', flow: [] };
+  if (!view?.board) return { available: false, topic: null, objective: 'Choose a viewpoint to play.', title: '', lines: [], rules: null, round: '', context: '', next: '', phase: '', flow: [] };
   const board = view.board, waiting = Boolean(view.waiting && !view.over), mode = declaration(view, catalogue);
   const round = `Round ${board.roundNumber ?? '—'}${Number.isInteger(catalogue?.rules?.roundCap) ? ` of ${catalogue.rules.roundCap}` : ''}`;
   let topic = waiting || view.over || historical || accepted ? null : question(view);
@@ -151,6 +155,7 @@ export function battleGuidance(view, catalogue, { accepted = false, targeting = 
     ? board.nextEvolutionRound > board.roundNumber ? `Next mutation opportunity: round ${board.nextEvolutionRound}.`
       : board.nextEvolutionRound === board.roundNumber ? 'Mutation opportunity this round.' : '' : '';
   return { available: true, topic: silent ? null : topic, objective: current, title: tip?.title ?? 'Round guide', lines: tip?.lines ?? [],
+    rules: tip ? tip.rules : ROUND_RULES,
     round: waiting ? 'Match not started' : historical ? 'Recorded results' : round,
     context: waiting || historical ? '' : [phaseLabel(board.phase), actor].filter(Boolean).join(' · '),
     next, phase: waiting || historical || view.over ? '' : board.phase, flow: roundFlow(mode) };

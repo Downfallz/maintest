@@ -3,7 +3,7 @@
 // for the person, which the page does not draw. Pure: the host says the lesson under `practice.tutorial` of the
 // seat's view, and this reads it. Nothing is decided here: a step shows by the question the host asks.
 
-import { conceptCards } from './concepts.js';
+import { NO_CONCEPTS } from './concepts.js';
 
 /**
  * The controls a step may point at (`pointsAt.control`), each with the element it names in the battle view. The
@@ -120,19 +120,22 @@ export function lessonStep(view) {
 /**
  * The coach card: the step of the question asked, its lines, the concept cards it opens and what it points at;
  * the tutorial's end once the host says it is done; nothing otherwise, and nothing while `held` (results being
- * read, a recorded board: the question is not on the field yet).
- * @param {{ held?: boolean }} [options]
+ * read, a recorded board: the question is not on the field yet). The cards are those of the rulebook the page
+ * read (`concepts`, concepts.js); before it is read the step shows without them.
+ * @param {{ held?: boolean, concepts?: import('./concepts.js').Concepts }} [options]
  */
-export function coachCard(view, { held = false } = {}) {
+export function coachCard(view, { held = false, concepts = NO_CONCEPTS } = {}) {
   const lesson = tutorialOf(view);
   if (!lesson || held) return null;
   const at = lessonStep(view);
   if (at) {
     return { key: `step:${at.index}`, done: false, eyebrow: `STEP ${at.index + 1} OF ${lesson.steps.length}`,
-      lines: list(at.step.says).filter(line => typeof line === 'string').slice(0, 2), cards: conceptCards(at.step.concepts), ...pointer(at.step) };
+      lines: list(at.step.says).filter(line => typeof line === 'string').slice(0, 2), cards: concepts.cards(at.step.concepts),
+      // The cards the step names, read or not: while the book is read, the question's sheet waits for them.
+      names: list(at.step.concepts).filter(id => typeof id === 'string').length, ...pointer(at.step) };
   }
   if (!lesson.done) return null;
   return { key: 'done', done: true, eyebrow: 'TUTORIAL COMPLETE',
     lines: [`You finished ${lesson.title || 'the tutorial'}.`, 'Play it again, or leave: nothing played here counts.'],
-    cards: [], creature: null, control: null };
+    cards: [], names: 0, creature: null, control: null };
 }

@@ -11,12 +11,18 @@ import { decided } from './decision.js';
 test.describe.configure({ mode: 'default' });
 const file = JSON.parse(readFileSync(new URL('../../scenarios/tutorials/your-first-combat.json', import.meta.url), 'utf8'));
 const lesson = file.tutorial;
+// The cards are read from the official rulebook the table serves (rulebook-plan.md R4), as the page reads it.
+const book = JSON.parse(readFileSync(new URL('../../table/rules.json', import.meta.url), 'utf8'));
+const cardOf = id => {
+  const section = book.parts.flatMap(part => part.sections).find(one => one.card?.id === id);
+  return { ...section.card, section };
+};
 const id = 'sc-repo-tutorial-your-first-combat';
 const legal = candidates => ({ candidates, minTargets: 1, maxTargets: 1 });
 const creature = (number, health = 30) => ({ id: number, name: `Creature ${number}`, health, maxHealth: 30, energy: 4, totalDefense: number === 5 ? 2 : 0,
   currentInitiative: 5, isAlive: true, isStunned: false, isStunImmune: false, knownSpells: ['shock'], conditions: [], acquiredTiers: [] });
 
-async function mount(page, { assistedFirst = false } = {}) {
+async function mount(page, { assistedFirst = false, book = null } = {}) {
   const state = { errors: [], writes: [], said: [], left: 0, opened: 0, asked: 20, answered: 0, handedBack: false };
   page.on('pageerror', error => state.errors.push(error.message));
   const order = lesson.steps.map(step => step.at.creature);
@@ -58,6 +64,8 @@ async function mount(page, { assistedFirst = false } = {}) {
     if (url.pathname === '/api/seat/player1') return route.fulfill({ json: view() });
     return route.fulfill({ status: 404, json: {} });
   });
+  // The rulebook the cards are read from, held until the test lets it through.
+  if (book) await page.route('**/table/rules.json', async route => { await book; await route.continue(); });
   await page.goto(`/table/battle.html?scenario=${id}`);
   await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true', { timeout: 20000 });
   return state;
@@ -70,8 +78,11 @@ async function playStep(page, state, index, capture) {
   await expect(dialog).toBeVisible({ timeout: 15000 });
   await expect(page.locator('#combat-dialog')).toBeHidden();
   for (let card = 0; card < step.concepts.length; card++) {
-    await expect(page.locator('#concept-title')).toHaveText(new RegExp(`^${step.concepts[card]}$`, 'i'));
-    await expect(page.locator('#concept-rulebook')).toHaveText(/^Rulebook, /);
+    const written = cardOf(step.concepts[card]);
+    await expect(page.locator('#concept-title')).toHaveText(written.title);
+    await expect(page.locator('#concept-example')).toHaveText(written.example);
+    await expect(page.locator('#concept-rulebook')).toHaveText(`Rules, ${written.section.number} ${written.section.title}`);
+    await expect(page.locator('#concept-rulebook')).toHaveAttribute('href', `/rules#${written.section.id}`);
     await fitsViewport(page, '#concept-next');
     if (index === 0 && card === 0 && capture) await capture('concept-card');
     await page.locator('#concept-next').click();
@@ -172,10 +183,68 @@ test('a concept card opens again from the coach card, and closes with Escape', a
   await fitsViewport(page, '#coach-cards button');
   await page.locator('#coach-cards [data-concept="health"]').click();
   await expect(page.locator('#concept-dialog')).toBeVisible();
-  await expect(page.locator('#concept-title')).toHaveText('Health');
+  await expect(page.locator('#concept-title')).toHaveText(cardOf('health').title);
   await expect(page.locator('#concept-next')).toHaveText('Back to the battle');
   await page.locator('#concept-next').click();
   await expect(page.locator('#concept-dialog')).toBeHidden();
+  expect(state.writes).toEqual([]); expect(state.errors).toEqual([]);
+});
+
+// The table serves the rulebook at its root (/rules, ADR 0191); this server serves the table under /table/, so the
+// tab a card opens is given the real page and what it reads from table/.
+async function serveTheRules(context) {
+  await context.route(url => /^\/(rules|[\w-]+\.(js|css|json|svg|png|webmanifest))$/.test(url.pathname), route => {
+    const path = new URL(route.request().url()).pathname;
+    return route.fulfill({ path: new URL(`../../table${path === '/rules' ? '/rules.html' : path}`, import.meta.url).pathname });
+  });
+  await context.route('**/api/me', route => route.fulfill({ json: { accounts: 'google', account: null, googleClientId: 'test-client', operator: false, notice: null } }));
+}
+
+test('a concept card links to its section of the rulebook, which opens in a new tab and leaves the battle on its question', async ({ page, context }) => {
+  const state = await mount(page);
+  await serveTheRules(context);
+  await page.locator('#practice-brief-begin').click();
+  await expect(page.locator('#concept-dialog')).toBeVisible({ timeout: 15000 });
+  const health = cardOf(lesson.steps[0].concepts[0]);
+  const link = page.locator('#concept-rulebook');
+  await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link).toHaveAccessibleName(`Rules, ${health.section.number} ${health.section.title}, opens in a new tab`);
+  await fitsViewport(page, '#concept-rulebook');
+  const [tab] = await Promise.all([context.waitForEvent('page'), link.click()]);
+  await tab.waitForLoadState();
+  expect(new URL(tab.url()).hash).toBe(`#${health.section.id}`);
+  await expect(tab.locator('body')).toHaveAttribute('data-rules', 'ready');
+  await expect(tab.locator(`#${health.section.id} h3`)).toBeInViewport();
+  await expect(tab.locator(`#${health.section.id}`)).toContainText(health.title);
+  // The battle is where it was: the same card, the same question, nothing sent.
+  await page.bringToFront();
+  expect(new URL(page.url()).pathname).toBe('/table/battle.html');
+  await expect(page.locator('#concept-dialog')).toBeVisible();
+  await expect(page.locator('#concept-title')).toHaveText(health.title);
+  await page.locator('#concept-next').click();
+  await expect(page.locator('#concept-dialog')).toBeHidden();
+  await openSpells(page);
+  await expect(page.locator('#coach-step')).toHaveText(`STEP 1 OF ${lesson.steps.length}`);
+  expect(state.writes).toEqual([]); expect(state.errors).toEqual([]);
+});
+
+// The cards are read from the book once a tutorial shows (rulebook-plan.md R4): on a slow connection the question's
+// own sheet waits for the book, so the step's cards still open first.
+test('a step whose rulebook arrives late still opens its cards before the spell choice', async ({ page }) => {
+  let release;
+  const state = await mount(page, { book: new Promise(resolve => { release = resolve; }) });
+  await page.locator('#practice-brief-begin').click();
+  await expect(page.locator('#coach')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('#coach-cards')).toBeHidden();
+  // Long enough for the sheet to open by itself, were it not waiting.
+  await page.waitForTimeout(1500);
+  await expect(page.locator('#combat-dialog')).toBeHidden();
+  release();
+  await expect(page.locator('#concept-dialog')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('#concept-title')).toHaveText(cardOf(lesson.steps[0].concepts[0]).title);
+  await expect(page.locator('#combat-dialog')).toBeHidden();
+  await page.locator('#concept-next').click();
+  await openSpells(page);
   expect(state.writes).toEqual([]); expect(state.errors).toEqual([]);
 });
 

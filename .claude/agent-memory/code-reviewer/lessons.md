@@ -51,3 +51,5 @@
 - A word-count guard on a skill's prose (prompts.test.js: no line names `push` but "push once") is broken by the author's own copy-edit ("then push them"): run `node --test` on the final HEAD after any prose edit to a skill a test reads (M4, ADR 0192, prompts.test.js:174).
 - A plan exemption keyed on a path (`data/README.md` read by test_knobs.py) is hidden by `git diff --name-only`'s default rename detection: a move out of the folder lists only the new path; `--no-renames` lists both (M4, changed-paths.sh).
 - Fourth time (#658, R1 feedback, R3, M4): the branch moved mid-review (uncommitted copy edits then a commit); name the HEAD the findings were checked on.
+- A gate that reads a source loaded in the background (`tutorialUI.pending()` reading the cards from `rules.json`) must stay closed while the load runs: an empty source reads as "nothing owed", and the sheet opens first (R4, battle/src/tutorial.ts).
+- A test project that never compiled cannot have run: its new tests are unverified until `dotnet build` is green (R4, CS8620, RulebookConceptCardsTests).

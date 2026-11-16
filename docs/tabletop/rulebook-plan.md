@@ -1,7 +1,7 @@
 # Plan: the official rulebook, one source the app reads and an agent keeps true
 
 Status: accepted, 2026-11-16 (the owner settled the questions at the end). R1 built (ADR 0188), R2 built, R3 built
-(ADR 0191); R4 next.
+(ADR 0191), R4 built; R5 next.
 
 ## What the owner asked for
 
@@ -177,6 +177,17 @@ and the app's edition; it keeps writing, the keeper keeps reading.
    held to it by a C# test; the card's label a link to `/rules#<id>` in a new tab; **Read the rules** in the
    Help dialog and a link per phase tip. Tests: `concepts.test.js` rewritten on the source, `battle-tutorial`'s
    spec checking that a card's link opens the section in a new tab and leaves the battle on the same question.
+   *Built (2026-11-16)*: `table/concepts.js` writes no card: `conceptsOf(book)` reads them from `table/rules.json`,
+   in the book's order, each with its section as its link (`/rules#<section>`, the id the build checks) and its
+   label as the book numbers it (`Rules, 3.5 Tempo`). The battle reads the book once a tutorial shows, not in a
+   game: the book is 95 KB, and the live bundle had 14 KB of room. Until the book is read, or when it cannot be, a
+   step shows without its cards. The card's label is a link opening a new tab. Each phase tip names its section, and
+   Help's **Read the rules** opens it, or the round with no tip. `RulebookConceptCardsTests` holds the book's
+   cards to `ConceptCards.Ids` both ways. Tests: `concepts.test.js` on the book, `battle-tutorial.test.js` and
+   `battle-guidance.test.js`, the card's link in `battle-tutorial.spec.js` (a new tab on its section, the battle
+   on the same card and question) and the tip's link in `battle-guidance.spec.js`. Left: the tutorials' own steps
+   (`scenarios/tutorials/`) and `terms.js` cite no section yet; R5's keeper reads them. The hidden-intent tip links
+   to *Your creature's turn*, because the book teaches no hidden intent. The cards stay English until R6.
 5. **R5, the keeper.** The `rules-keeper` agent, its rule in `reviewers.mjs` with its tests in
    `studio/reviewers.test.js`, the `/rules` skill, the **Rulebook:** line in the ADR and pull request templates,
    the `rulebook-writer`'s prompt pointed at `rules/`, the lists in `CLAUDE.md` and `docs/reference/commands.md`.

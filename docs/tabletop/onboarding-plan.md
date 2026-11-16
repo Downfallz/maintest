@@ -163,7 +163,8 @@ give what is said and when. It reuses everything ADR 0179 built, and the regress
    the reference values, and the rulebook section. `concepts.test.js` holds them to `ConceptCards.Ids` and to
    the rulebook's headings. It also holds `REFERENCE`, the values an example quotes, to
    `docs/tabletop/playtest.rules.json` and `data/Creatures/main.v1.json`. An example is built from `REFERENCE`,
-   so a balance pass moves the card with it (#651). `table/battle-tutorial.js` reads `practice.tutorial`, and
+   so a balance pass moves the card with it (#651). Since rulebook-plan.md R4 the cards and their numbers are read
+   from the official rulebook, and `REFERENCE` is gone. `table/battle-tutorial.js` reads `practice.tutorial`, and
    `battle/src/tutorial.ts` draws it: the band and the briefing say **Tutorial n of 4**, the coach card shows the
    step of the question asked, and a step opens its concept cards once, before the spell choice. What a step
    points at is ringed. An assisted question is not drawn, and the phase tips are silent while a tutorial plays. Once the host says
@@ -179,6 +180,7 @@ give what is said and when. It reuses everything ADR 0179 built, and the regress
    - The spec plays the lesson in the tutorial's file on a fixture board, with a mock host. No browser journey plays a
      tutorial on the real engine yet: O5's per-tutorial specs are the place for it.
    - A concept card names its rulebook section and does not link to it: the table serves no rulebook page.
+     Settled by rulebook-plan.md R4: the cards are read from the official book and link to `/rules#<section>`.
    - On a phone, with the spell choice docked, the coach card covers the low half of the field (#650, settled
      at O4). It steps aside while targets are chosen.
    - Nothing is kept: a reloaded page opens the step's cards again.
