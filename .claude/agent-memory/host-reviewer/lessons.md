@@ -22,3 +22,6 @@
 - A guard read-then-write over a store (count recent, then save) needs a gate in the process; the API runs maxReplicas 1 (infra/main.bicep), so a SemaphoreSlim suffices, but the hourly job and ForgetAsync paths stay outside it (R1 feedback).
 - A rate guard that refuses a repeat (TooSoon) makes a phone's retry after a timeout read as a failure though the first was kept: ask for an idempotency key or answer the kept id on an identical repeat (R1 feedback).
 - `CF-Connecting-IP` is spoofable while `onlyCloudflare` is false (its default, infra/main.bicep:45): believe it only from a Cloudflare peer (R1 feedback).
+- A practice's feedback with attach carries the journal since the cut (FeedbackApi.cs:139, ScenarioPlay.SinceTheCutAsync), both seats' decisions: page copy promising "nothing of your opponent's hidden choices" is false there; operator-only, so copy, not a leak (R2).
+- FeedbackApi answers every SendFeedback refusal but Invalid as 429 (FeedbackApi.cs:100); a page branch on `403 Feedback.Muted` is dead until R3 adds the code: check the status the host really sends before approving a page's refusal map (R2).
+- The working tree can move under a review (another session fixing other findings): review `origin/main...HEAD`, say which findings the uncommitted edits already address (R2).

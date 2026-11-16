@@ -90,7 +90,7 @@ export function catchPageErrors(target, errors) {
 
 const DID_NOT_ANSWER = 'The host did not answer. Your words are kept here: try again.';
 
-/** The sentence a refusal reads as. The host's codes are stable (FeedbackErrors, FeedbackApi); its words are not shown raw. */
+/** The sentence a refusal reads as. The host's codes are stable (FeedbackErrors, FeedbackApi); its words are shown only for Invalid, which names the field. */
 export function refusalSentence(status, answer) {
   switch (answer?.error) {
     case 'Feedback.TooSoon': {
@@ -109,14 +109,15 @@ export function refusalSentence(status, answer) {
   }
 }
 
-/** Whether the host has stopped this player's feedback: the entry is then hidden for the page's life. */
+/** Whether the host has stopped this player's feedback (R3 adds the mute): the entry is then hidden for the page's life. */
 export function mutedBy(status, answer) {
   return status === 403 && answer?.error === 'Feedback.Muted';
 }
 
-/** What the sheet says once the host kept it, or added it to what the player sent before. */
-export function sentSentence(kind, answer) {
-  if (answer?.merged) return kind === 'idea' ? 'Added to the idea you sent within the hour.' : 'Added to the report you sent from this round.';
+/** What the sheet says once the host kept it, or added it to what the player sent before: the same report from this round, or the same words sent again. */
+export function sentSentence(kind, answer, { inGame = false } = {}) {
+  if (answer?.merged && kind === 'idea') return 'Added to the idea you sent within the hour.';
+  if (answer?.merged) return inGame ? 'Added to the report you sent from this round.' : 'Added to the report you sent a moment ago.';
   return `Thank you. Your ${kind === 'idea' ? 'idea' : 'report'} reached the game’s operator.`;
 }
 
@@ -135,7 +136,7 @@ const sheet = `<div class="feedback-panels lobby-page home-page">
         <fieldset class="feedback-choices"><legend>What went wrong?</legend>${choices('feedback-category', BUG_CATEGORIES)}</fieldset>
         <label for="feedback-happened">What happened <small>· ${SHORTEST} characters at least</small></label><textarea id="feedback-happened" rows="4" maxlength="${LONGEST}"></textarea>
         <label for="feedback-expected">What you expected <small>· optional</small></label><textarea id="feedback-expected" rows="3" maxlength="${LONGEST}"></textarea>
-        <label id="feedback-attach-row" class="feedback-attach" for="feedback-attach"><input id="feedback-attach" type="checkbox" checked><span>Attach this position<small>What your seat sees now, nothing of your opponent’s hidden choices</small></span></label>
+        <label id="feedback-attach-row" class="feedback-attach" for="feedback-attach"><input id="feedback-attach" type="checkbox" checked><span>Attach this position<small>What your seat sees now; in a practice, also every move since it began</small></span></label>
       </div>
       <div id="feedback-idea-fields" hidden>
         <fieldset class="feedback-choices"><legend>What is it about?</legend>${choices('feedback-where', IDEA_PLACES)}</fieldset>
@@ -162,7 +163,7 @@ const TITLES = { bug: 'Something is wrong', idea: 'I have an idea', sent: 'Sent'
  *   inGame?: () => boolean, errors?: ReturnType<typeof createPageErrors>, page?: () => string,
  *   fallbackFocus?: () => HTMLElement | null, onClose?: () => void }} [options]
  */
-export function mountFeedback(doc, { request = (...args) => fetch(...args), token = () => null, inGame = () => false, errors = createPageErrors(),
+export function mountFeedback(doc, { request = (path, init) => fetch(path, { ...init, signal: AbortSignal.timeout(15000) }), token = () => null, inGame = () => false, errors = createPageErrors(),
   page = () => doc.defaultView?.location.pathname ?? '/', fallbackFocus = () => null, onClose = () => {} } = {}) {
   doc.body.insertAdjacentHTML('beforeend', sheet);
   const el = id => doc.getElementById(id);
@@ -250,7 +251,7 @@ export function mountFeedback(doc, { request = (...args) => fetch(...args), toke
     }
     if (kept) {
       step = 'sent';
-      el('feedback-sent').textContent = sentSentence(kind, answer);
+      el('feedback-sent').textContent = sentSentence(kind, answer, { inGame: Boolean(inGame()) });
       render();
       el('feedback-finish').focus();
       return;

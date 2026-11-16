@@ -317,12 +317,13 @@ and they are the first thing every player can use.
    also opens in a practice, a tutorial and a replay), and on the result's last line; in the lobby's menu it is
    offered to a signed-in player only, since a guest outside a game has no seat to send from. The sheet asks the
    kind, then the three questions of each; Send stays off until the required answer has ten characters; a refusal
-   keeps the words; `403 Feedback.Muted` hides every entry for the page's life (`data-feedback-muted` on the root).
-   The battle view and the pages under the menu each catch their last ten errors in memory. The *What we keep* panel
-   has its line. Tests: `feedback-sheet.test.js`, `studio/browser/feedback.spec.js` (a report from a seat with its
-   position and error, a refusal and a mute, the result's entry, an idea from the lobby, a guest offered nothing, the
-   privacy line), at 320 px, 390 px and on a desktop. The game website's privacy policy names feedback too, in
-   English and French. The archived classic table offers no entry.
+   keeps the words; `403 Feedback.Muted` hides every entry for the page's life (`data-feedback-muted` on the root);
+   the host sends it from R3, which must answer it 403, not 429. The battle view and the pages under the menu each
+   catch their last ten errors in memory. The *What we keep* panel has its line. Tests: `feedback-sheet.test.js`,
+   `studio/browser/feedback.spec.js` (a report from a seat with its position and error, a refusal and a mute, the
+   result's entry, an idea from the lobby, a guest offered nothing, the privacy line), at 320 px, 390 px and on a
+   desktop. The game website's privacy policy names feedback too, in English and French. The archived classic table
+   offers no entry.
 
 4. **R3, the Feedback tab.** The list filtered by kind, a report's sheet with the position drawn read-only,
    Diagnose… on a table under way, the status by hand, **This is an idea** and **This is a bug**, **Dismiss as

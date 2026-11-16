@@ -129,7 +129,8 @@ test('only the mute hides the entry', () => {
 test('a kept piece of feedback thanks the player, and a merged one says where it went', () => {
   assert.equal(sentSentence('bug', { merged: false }), 'Thank you. Your report reached the game’s operator.');
   assert.equal(sentSentence('idea', { merged: false }), 'Thank you. Your idea reached the game’s operator.');
-  assert.equal(sentSentence('bug', { merged: true }), 'Added to the report you sent from this round.');
+  assert.equal(sentSentence('bug', { merged: true }, { inGame: true }), 'Added to the report you sent from this round.');
+  assert.equal(sentSentence('bug', { merged: true }), 'Added to the report you sent a moment ago.', 'outside a game, only the same words sent again merge');
   assert.equal(sentSentence('idea', { merged: true }), 'Added to the idea you sent within the hour.');
 });
 
