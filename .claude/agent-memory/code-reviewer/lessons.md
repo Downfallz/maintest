@@ -53,3 +53,6 @@
 - Fourth time (#658, R1 feedback, R3, M4): the branch moved mid-review (uncommitted copy edits then a commit); name the HEAD the findings were checked on.
 - A gate that reads a source loaded in the background (`tutorialUI.pending()` reading the cards from `rules.json`) must stay closed while the load runs: an empty source reads as "nothing owed", and the sheet opens first (R4, battle/src/tutorial.ts).
 - A test project that never compiled cannot have run: its new tests are unverified until `dotnet build` is green (R4, CS8620, RulebookConceptCardsTests).
+- A new ADR file must land with its row in docs/adr/README.md, which is generated (`UPDATE_INDEXES=1`) and held by AdrFileTests.The_readme_lists_every_record_as_its_file_states_it: grep the index for the new number (R6, ADR 0193, branch ccr-13a4b767-rs5x7g).
+- A page that fetches on a button tap and draws whatever answers last (no request token) lets an earlier tap's slow answer overwrite a later choice, and a stored preference written before the fetch succeeds disagrees with what is shown: check every async switch for "latest wins" (R6, table/rules.js load()).
+- A retired-word list applied to a second language must be read against that language: English "Tier" with /iu refuses French "tiers" (a third) (R6, retiredWords fr).

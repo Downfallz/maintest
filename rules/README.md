@@ -93,7 +93,8 @@ translates `changes.md` line for line, with the same dates and ADRs. The build r
 - **Words.** The French column of `player-terminology.md`: Entretien, Commandement, Combat, Retombées, Stade,
   Grimoire, Précision, Évolution, Créature. The build refuses the English word where the French one differs, and the
   engine's words as in English.
-- **Names.** Spells and mutations keep the names the battle shows, in English.
+- **Names.** Spells and mutations keep the names the battle shows, in English, and so do the conditions the
+  screen names (Bleed, Regeneration, Stun), each glossed in French once where a Part first uses it.
 - **A change to the English** is a change to the French in the same pull request: a section added, moved, re-sourced
   or given a card fails the build until the French follows; a sentence reworded does not, so `reach.mjs` lists each
   French section beside the English one, marked `[fr]`, and `/rules` rewrites both.

@@ -131,7 +131,7 @@ test('the filter keeps the sections that hold the words, and a deep link clears 
 
   await expect(page.locator('#sunder')).toBeVisible();
   await expect(page.locator('#winning')).toBeHidden();
-  await expect(page.locator('#rules-status')).toContainText(`of ${sections.length} hold those words`);
+  await expect(page.locator('#rules-status')).toContainText(new RegExp(`of ${sections.length} holds? those words`));
   await page.getByLabel('Find a rule').fill('zzzz nothing');
   await expect(page.locator('#rules-status')).toHaveText('No rule holds those words. Try another word.');
   await page.evaluate(() => { location.hash = 'winning'; });
@@ -209,6 +209,22 @@ test('the switch reads the book in French at the same section, and the choice st
   await expect(page.locator('body')).toHaveAttribute('data-language', 'en');
   await expect(page.locator('#tempo h3')).toContainText(`${tempo.number} ${tempo.title}`);
   expect(errors).toEqual([]);
+});
+
+test('a French book that cannot be read leaves the English one, in English, and the choice is not kept', async ({ page }) => {
+  await guest(page);
+  await page.route('**/rules.fr.json', route => route.fulfill({ status: 503, body: 'down' }));
+  await open(page, '#tempo');
+
+  await page.getByRole('button', { name: 'Français' }).click();
+
+  await expect(page.locator('#rules-problem')).toHaveText('Could not read the rulebook. Check your connection and reload the page.');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await expect(page.getByRole('button', { name: 'English' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#tempo h3')).toContainText(`${tempo.number} ${tempo.title}`);
+  await page.getByRole('button', { name: 'English' }).click();
+  await expect(page.locator('#rules-problem')).toBeHidden();
+  expect(await page.evaluate(() => localStorage.getItem('downfall.language'))).toBe('en');
 });
 
 test.describe('a browser in French', () => {

@@ -282,7 +282,8 @@ export function retiredWords(terminology, language = 'en') {
     if (!player[0]) continue;
     for (const word of rowCandidates(internal, legacy)) {
       if (!word || SKIPPED.has(word) || player.includes(word) || words.has(word)) continue;
-      const exact = EVERYDAY.has(word) || /[a-z][A-Z]/.test(word);
+      // In French every word is refused as written: "tiers" and "stage" are French words too.
+      const exact = language === 'fr' || EVERYDAY.has(word) || /[a-z][A-Z]/.test(word);
       words.set(word, { player: player[0], pattern: wordPattern(word, 's?', exact ? 'u' : 'iu') });
     }
   }
@@ -290,7 +291,7 @@ export function retiredWords(terminology, language = 'en') {
     for (const [, , en, fr] of rows) {
       const [english] = bold(en);
       const [french] = bold(fr);
-      if (english && french && english !== french && !words.has(english)) words.set(english, { player: french, pattern: wordPattern(english, 's?', 'iu') });
+      if (english && french && english !== french && !words.has(english)) words.set(english, { player: french, pattern: wordPattern(english, 's?', 'u') });
     }
     return words;
   }
@@ -486,6 +487,15 @@ class PartReader {
     const lines = text.split('\n');
     let at = 0;
     while (at < lines.length) at = this.block(lines, at, `${this.build.folder}/${this.file}:${at + 1}`);
+    // Each section's own lines, as written, for the French edition's check; not part of the built book.
+    const raw = new Map();
+    let current = null;
+    for (const line of lines) {
+      const heading = /^## .*\{#([^}]+)\}\s*$/.exec(line);
+      if (heading) current = heading[1];
+      if (current) raw.set(current, `${raw.get(current) ?? ''}\n${line}`);
+    }
+    Object.defineProperty(this.part, 'raw', { value: raw });
     this.finish();
     return this.part;
   }
@@ -652,6 +662,8 @@ function readChanges(text, build) {
 }
 
 const listed = ids => (ids.length > 0 ? ids.join(', ') : 'none');
+// The values a section's lines draw, sorted, so a translation may move them but never type one or drop one.
+const valuesOf = text => [...(text ?? '').matchAll(/\{([^{}#][^{}]*)\}/g)].map(match => match[1].replace(/\s+/g, '')).sort();
 const cardOf = section => section.card?.id ?? 'none';
 
 // The French part holds the English part's sections, in its order, each citing the same sources and carrying the
@@ -669,6 +681,9 @@ function checkPart(english, french, where, build) {
     if (!original) continue;
     if (section.sources.join() !== original.sources.join()) build.refuse(`${where}: section "${section.id}" cites ${listed(section.sources)}; the English cites ${listed(original.sources)}`);
     if (cardOf(section) !== cardOf(original)) build.refuse(`${where}: section "${section.id}" carries card ${cardOf(section)}; the English carries ${cardOf(original)}`);
+    const frenchValues = valuesOf(french.raw?.get(section.id));
+    const englishValues = valuesOf(english.raw?.get(section.id));
+    if (frenchValues.join('\n') !== englishValues.join('\n')) build.refuse(`${where}: section "${section.id}" draws ${listed(frenchValues)}; the English draws ${listed(englishValues)}`);
   }
 }
 

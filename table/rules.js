@@ -44,7 +44,7 @@ export const WORDS = {
     cardLabel: title => `Concept card: ${title}`,
     linkTo: (number, title) => `Link to ${number} ${title}`,
     total: (parts, sections) => `${parts} parts, ${count(sections, 'section', 'sections')}`,
-    kept: (sections, total) => `${count(sections, 'section', 'sections')} of ${total} hold those words`,
+    kept: (sections, total) => `${count(sections, 'section', 'sections')} of ${total} ${sections === 1 ? 'holds' : 'hold'} those words`,
     noMatch: 'No rule holds those words. Try another word.',
     problem: 'Could not read the rulebook. Check your connection and reload the page.',
     drawn: date => `Every number in this book is drawn from the rule set and the content this table plays${date ? `. Last changed ${date}.` : '.'}`,
@@ -454,27 +454,49 @@ async function load(doc, win = globalThis) {
   const language = languageOf({ stored: stored(win), languages: win.navigator?.languages ?? [win.navigator?.language] });
   translatePage(doc, language);
   let rules = null;
+  // Each request for a book takes a ticket; only the latest one's answer is drawn, so two quick taps end on the
+  // second, and the first load never covers a book the reader chose meanwhile.
+  let latest = 0;
+  const show = book => {
+    if (rules) rules.show(book);
+    else rules = mountRules(doc, book, win);
+  };
   for (const button of doc.querySelectorAll('[data-language]')) {
     button.addEventListener('click', async () => {
       const chosen = button.dataset.language;
-      keep(win, chosen);
-      if (rules?.book.language === chosen) return;
+      const ticket = ++latest;
+      if (rules?.book.language === chosen) {
+        keep(win, chosen);
+        translatePage(doc, chosen);
+        doc.getElementById('rules-problem').hidden = true;
+        return;
+      }
       try {
         const book = await bookIn(chosen);
-        if (rules) rules.show(book);
-        else rules = mountRules(doc, book, win);
+        if (ticket !== latest) return;
+        // Kept only once its book is read: a choice that cannot be read must not be the next visit's.
+        keep(win, chosen);
+        show(book);
       } catch {
-        translatePage(doc, chosen);
-        trouble(doc, chosen);
+        if (ticket !== latest) return;
+        const shown = rules?.book.language ?? language;
+        translatePage(doc, shown);
+        trouble(doc, shown);
       }
     });
   }
-  try {
-    const book = await bookIn(language);
-    rules ??= mountRules(doc, book, win);
-  } catch {
-    if (!rules) trouble(doc, language);
+  const ticket = ++latest;
+  // The language's book, else the other one: a book the worker kept is better than none.
+  for (const each of [language, ...LANGUAGES.filter(one => one !== language)]) {
+    try {
+      const book = await bookIn(each);
+      if (ticket === latest || !rules) show(book);
+      return;
+    } catch {
+      // The next language's book.
+    }
   }
+  if (!rules) trouble(doc, language);
 }
 
 if (typeof document !== 'undefined') void load(document);

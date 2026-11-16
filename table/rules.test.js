@@ -352,6 +352,16 @@ test('refuses in French an English player\'s word the French replaced, and the e
   assert.deepEqual(errorsOf(withFrench('Deux joueurs', 'Deux joueurs en Évolution, en Précision, avec un Tempo')), []);
 });
 
+test('refuses a French section that types a number the English draws, or drops a value', () => {
+  refuses(withFrench('{creature.health} Santé. **Battez**', '30 Santé. **Battez**'), /section "winning" draws creature\.health, max\(0,creature\.health-7\); the English draws creature\.health, creature\.health, max/);
+  assert.deepEqual(errorsOf(withFrench('chaque créature gagne {rules.energyPerRound} Énergie', 'l’Énergie de chaque créature augmente de {rules.energyPerRound}')), [], 'a value may move in the sentence');
+});
+
+test('refuses an engine word in French only as written, for "tiers" and "stage" are French words', () => {
+  assert.deepEqual(errorsOf(withFrench('Deux joueurs', 'Un tiers des joueurs, en stage,')), []);
+  refuses(withFrench('Deux joueurs', 'Un Tier des joueurs'), /"Tier": the player's word is Stade/);
+});
+
 test('refuses a French link to an id that is not a section, and the French values as the English ones', () => {
   refuses(withFrench('(#winning)', '(#gagner)'), /rules\/fr\/01-the-goal\.md:\d+: a link to #gagner, which is not a section/);
   refuses(withFrench('{rules.teamSize}', '{rules.taille}'), /rules\/fr\/01-the-goal\.md:\d+: "rules\.taille" does not resolve/);

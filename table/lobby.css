@@ -45,7 +45,7 @@
 .lobby-filters { display: flex; gap: 8px; margin: -2px 0 16px; padding: 0; border: 0; min-width: 0; }
 .lobby-filters > legend { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .lobby-filters button { border-radius: var(--radius-soft); font-size: 12px; padding: 8px 14px; }
-.lobby-filters button[aria-pressed="true"] { color: var(--gold); border-color: var(--gold); background: color-mix(in srgb, var(--gold) 5.1%, transparent); }
+.lobby-filters button[aria-pressed="true"], .rules-language[aria-pressed="true"] { color: var(--gold); border-color: var(--gold); background: color-mix(in srgb, var(--gold) 5.1%, transparent); }
 .lobby-filters button span { color: var(--muted); }
 /* Your games page six at a time; the pager stays one line, its buttons full-size targets. */
 /* A list's entries as rows (Find an opponent, finished games): one line on a wide screen (what and its state, who,

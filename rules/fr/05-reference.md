@@ -67,7 +67,7 @@ sources: ADR 0011, ADR 0083, ADR 0087, ADR 0105, ADR 0169, game-rules#match-life
 Un **passif** est ce que donne une clé de voûte, de la révélation qui l’acquiert jusqu’à la fin de la partie. Il ne
 décompte jamais. Ceux de Titan et d’Apex vont à la créature qui les acquiert ; celui d’Archmage va à chaque créature
 de son équipe. Une créature détient chaque passif que donnent ses propres clés de voûte, et celui d’Archmage une fois
-de plus pour chaque exemplaire que possède son équipe.
+de plus pour chaque exemplaire que possèdent ses coéquipières.
 
 - **Titan : chaque coup ignore {tier:titan:v1.sunder} de Défense.** Sa [brèche](#sunder) : chaque coup rencontre
   la Défense de la cible diminuée de {tier:titan:v1.sunder}, jamais en dessous de zéro.

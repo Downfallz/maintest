@@ -71,8 +71,8 @@ thing that ever moves a base initiative: acquiring is how a creature gets strong
 **Which mutation.** There are three families, Brute, Warped and Predator, each a tree of four Stages. A Stage 1
 mutation needs nothing. Every other one needs one named mutation of its family, a Stage below it: the Mutation
 Tree shows which. A creature may acquire a mutation it does not own when it owns what that mutation needs, and
-it may mix families by acquiring another family's Stage 1: two creatures may
-take the same mutation, and one creature may mix families. What a creature may acquire is read from what it
+it may mix families by acquiring another family's Stage 1. Two creatures may take the same mutation. What a
+creature may acquire is read from what it
 owns as the step opens: a pick of this round opens nothing until the next mutation round.
 
 *Example.* Round {rules.firstEvolutionRound}. Every creature knows Strike and Focus and has

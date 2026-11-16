@@ -244,7 +244,7 @@
           "type": "paragraph",
           "spans": [
             {
-              "text": "L’application est la table. Elle tient le compte de chaque nombre, lance chaque dé et joue chaque étape que personne ne décide. Vous prenez les décisions ; cette Partie dit ce que vous voyez pendant que vous les prenez."
+              "text": "L’application est la table. Elle tient le compte de chaque nombre, lance chaque dé et joue chaque étape que personne ne décide. Vous prenez les décisions ; ce chapitre dit ce que vous voyez pendant que vous les prenez."
             }
           ]
         }
@@ -911,7 +911,7 @@
                   "strong": true
                 },
                 {
-                  "text": " Il y a trois familles, Brute, Warped et Predator, chacune un arbre de quatre Stades. Une mutation de Stade 1 ne demande rien. Chaque autre demande une mutation nommée de sa famille, un Stade en dessous : l’Arbre des mutations montre laquelle. Une créature peut acquérir une mutation qu’elle ne possède pas quand elle possède ce que cette mutation demande, et elle peut mêler les familles en acquérant le Stade 1 d’une autre famille : deux créatures peuvent prendre la même mutation, et une créature peut mêler les familles. Ce qu’une créature peut acquérir se lit d’après ce qu’elle possède à l’ouverture de l’étape : un choix de ce round n’ouvre rien avant le round de mutation suivant."
+                  "text": " Il y a trois familles, Brute, Warped et Predator, chacune un arbre de quatre Stades. Une mutation de Stade 1 ne demande rien. Chaque autre demande une mutation nommée de sa famille, un Stade en dessous : l’Arbre des mutations montre laquelle. Une créature peut acquérir une mutation qu’elle ne possède pas quand elle possède ce que cette mutation demande, et elle peut mêler les familles en acquérant le Stade 1 d’une autre famille. Deux créatures peuvent prendre la même mutation. Ce qu’une créature peut acquérir se lit d’après ce qu’elle possède à l’ouverture de l’étape : un choix de ce round n’ouvre rien avant le round de mutation suivant."
                 }
               ]
             },
@@ -2012,7 +2012,7 @@
                   "strong": true
                 },
                 {
-                  "text": " plus tôt dans le round. Une créature dans le round a toujours un sort qu’elle peut lancer, puisque le coût en Énergie de Focus est de 0 et qu’il cible son lanceur ; un sort qu’elle ne peut pas payer maintenant, ou un sort sans cible légale, n’est pas proposé."
+                  "text": " plus tôt dans le round. Une créature qui est dans le round peut toujours lancer un sort : Focus coûte 0 d’Énergie et cible son lanceur. Un sort qu’elle ne peut pas payer maintenant, ou qui n’a aucune cible légale, n’est pas proposé."
                 }
               ]
             },
@@ -2153,7 +2153,7 @@
                   "strong": true
                 },
                 {
-                  "text": ". Un Stun qui atteint une créature déjà étourdie, ou immunisée, est ignoré : les autres effets du sort s’appliquent quand même, et le Stun en cours ni ne s’allonge ni ne recommence. Aucune créature ne peut donc rester étourdie : chaque Stun est suivi d’un round où elle ne peut pas être étourdie."
+                  "text": ". Un Stun qui atteint une créature déjà étourdie, ou immunisée, est ignoré : les autres effets du sort s’appliquent quand même, et le Stun en cours ni ne s’allonge ni ne recommence. Aucune créature ne peut donc être étourdie sans interruption : chaque Stun est suivi d’un round où elle ne peut pas être étourdie."
                 }
               ]
             },
@@ -2796,7 +2796,7 @@
                   "strong": true
                 },
                 {
-                  "text": " est ce que donne une clé de voûte, de la révélation qui l’acquiert jusqu’à la fin de la partie. Il ne décompte jamais. Ceux de Titan et d’Apex vont à la créature qui les acquiert ; celui d’Archmage va à chaque créature de son équipe. Une créature détient chaque passif que donnent ses propres clés de voûte, et celui d’Archmage une fois de plus pour chaque exemplaire que possède son équipe."
+                  "text": " est ce que donne une clé de voûte, de la révélation qui l’acquiert jusqu’à la fin de la partie. Il ne décompte jamais. Ceux de Titan et d’Apex vont à la créature qui les acquiert ; celui d’Archmage va à chaque créature de son équipe. Une créature détient chaque passif que donnent ses propres clés de voûte, et celui d’Archmage une fois de plus pour chaque exemplaire que possèdent ses coéquipières."
                 }
               ]
             },
@@ -2947,6 +2947,13 @@
       "text": "Le passif d’Archmage va à chaque créature de son équipe, une fois pour chaque exemplaire, et un exemplaire continue de donner après que la créature qui l’a acquis est vaincue (ADR 0114).",
       "adrs": [
         "0114"
+      ]
+    },
+    {
+      "date": "2026-11-16",
+      "text": "Le livre se lit aussi en français, avec les mêmes sections, les mêmes nombres et les mêmes cartes ; English et Français basculent à la même section (ADR 0193).",
+      "adrs": [
+        "0193"
       ]
     }
   ]

@@ -10,8 +10,8 @@ Chaque exemple utilise les nombres de cette table et les vrais sorts.
 plus l’Énergie que lui donnent les passifs d’Archmage. Personne ne décide rien. Une créature vaincue ne gagne rien,
 ni maintenant ni jamais.
 
-Archmage est partagé avec toute l’équipe : chaque exemplaire que possède une équipe ajoute {tier:archmage:v1.upkeepEnergy} à
-l’Énergie que gagne chaque créature vivante de cette équipe à chaque Entretien, à partir du round qui
+Archmage est partagé avec toute l’équipe : chaque exemplaire que possède une équipe ajoute
+{tier:archmage:v1.upkeepEnergy} à l’Énergie que gagne chaque créature vivante de cette équipe à chaque Entretien, à partir du round qui
 suit son acquisition.
 
 *Exemple.* Le round 8 commence. La Créature 1 a 1 point d’Énergie et la Créature 2 en a 4 ; la Créature 3 est
@@ -78,7 +78,7 @@ plus forte, et aussi celle dont elle devient plus rapide.
 mutation de Stade 1 ne demande rien. Chaque autre demande une mutation nommée de sa famille, un Stade en dessous :
 l’Arbre des mutations montre laquelle. Une créature peut acquérir une mutation qu’elle ne possède pas quand elle
 possède ce que cette mutation demande, et elle peut mêler les familles en acquérant le Stade 1 d’une autre
-famille : deux créatures peuvent prendre la même mutation, et une créature peut mêler les familles. Ce qu’une
+famille. Deux créatures peuvent prendre la même mutation. Ce qu’une
 créature peut acquérir se lit d’après ce qu’elle possède à l’ouverture de l’étape : un choix de ce round n’ouvre
 rien avant le round de mutation suivant.
 

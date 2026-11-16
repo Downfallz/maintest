@@ -1,7 +1,7 @@
 # Ce que montre l’écran {#the-screen}
 
 L’application est la table. Elle tient le compte de chaque nombre, lance chaque dé et joue chaque étape que personne
-ne décide. Vous prenez les décisions ; cette Partie dit ce que vous voyez pendant que vous les prenez.
+ne décide. Vous prenez les décisions ; ce chapitre dit ce que vous voyez pendant que vous les prenez.
 
 ## Vos créatures et les leurs {#the-creatures}
 

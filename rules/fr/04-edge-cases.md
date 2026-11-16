@@ -7,9 +7,9 @@ Voici les règles que l’on lit de travers. Chacune est une règle, pas une exc
 Une créature qui ne peut pas agir quand vient son tour est **sautée** : rien ne se résout pour elle, elle ne dépense
 rien, et rien n’est demandé à son propriétaire. Le tour suivant vient.
 
-Une créature ne peut pas agir quand elle a été **vaincue** ou **étourdie** plus tôt dans le round. Une créature dans
-le round a toujours un sort qu’elle peut lancer, puisque le coût en Énergie de Focus est de
-{spell:wait:v1.energyCost} et qu’il cible son lanceur ; un sort qu’elle ne peut pas payer maintenant, ou un sort sans cible légale, n’est pas proposé.
+Une créature ne peut pas agir quand elle a été **vaincue** ou **étourdie** plus tôt dans le round. Une créature qui est
+dans le round peut toujours lancer un sort : Focus coûte {spell:wait:v1.energyCost} d’Énergie et cible son
+lanceur. Un sort qu’elle ne peut pas payer maintenant, ou qui n’a aucune cible légale, n’est pas proposé.
 
 Un tour tardif est donc un risque : avant qu’il vienne, votre créature peut être vaincue ou étourdie, et la cible que
 vous visiez peut avoir disparu. C’est le prix d’agir tard, et la raison d’être d’Instinct.
@@ -57,8 +57,8 @@ encore venu : elle est sautée.
 
 **L’immunité au Stun.** Quand un Stun se termine au Nettoyage, la créature **ne peut pas être étourdie au round
 suivant**. Un Stun qui atteint une créature déjà étourdie, ou immunisée, est ignoré : les autres effets du sort
-s’appliquent quand même, et le Stun en cours ni ne s’allonge ni ne recommence. Aucune créature ne peut donc rester
-étourdie : chaque Stun est suivi d’un round où elle ne peut pas être étourdie.
+s’appliquent quand même, et le Stun en cours ni ne s’allonge ni ne recommence. Aucune créature ne peut donc être
+étourdie sans interruption : chaque Stun est suivi d’un round où elle ne peut pas être étourdie.
 
 *Exemple.* Au round 5, la Créature 4 est touchée par Crushing Stomp : Stun pendant
 {spell:crushing_stomp:v1.stun.durationRounds} rounds. Elle passe en entier les

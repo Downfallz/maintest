@@ -118,5 +118,10 @@ These keep their current words until a separate naming discussion settles them:
 Energy gain, Ongoing effects, Turn order resolution, Tie order, Intent selection, Activation, Cleanup,
 Finalization, Battlefield, Round, Match, Round recap, Critical hit, Passive, Capstone.
 
+Until then, the rulebook's French edition (`rules/fr/`, ADR 0193) writes them as: partie (Match), round,
+Résolution de l'ordre des tours, Ordre des égalités, Activation, Nettoyage (Cleanup), Clôture (Finalization),
+critique, passif, clé de voûte (Capstone); and, for words of its own, frise (timeline), départage (roll-off) and
+brèche (sunder). A French text elsewhere uses the same words.
+
 Historical records -- ADRs, journal entries, frozen experiment records, `spells.md` and the two
 `tier-evolution-*` documents -- keep the words they were written in.
