@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CONTROLS, assistedQuestion, coachCard, leavingSkips, lessonStep, progressPath, tutorialBand, tutorialBrief, tutorialOf, withoutAssisted } from './battle-tutorial.js';
+import { CONTROLS, assistedQuestion, coachCard, leavePath, lessonOverText, leavingSkips, lessonStep, pastTheLesson, progressPath, tutorialBand, tutorialBrief, tutorialOf, withoutAssisted } from './battle-tutorial.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const step = (creature, concepts, pointsAt, kind = 'Action', round = 2) =>
@@ -22,9 +22,10 @@ test('a game and a plain practice have no lesson', () => {
 });
 
 test('the band says Tutorial n of the series where a practice says Practice, and how far the person is', () => {
-  assert.deepEqual(tutorialBand(lesson()), { eyebrow: 'TUTORIAL 1 OF 4', title: 'Your first combat', detail: 'Step 1 of 3' });
+  assert.deepEqual(tutorialBand(lesson()), { eyebrow: 'TUTORIAL 1 OF 4', title: 'Your first combat', detail: 'Step 1 of 3', restart: 'Restart the round' });
   assert.equal(tutorialBand(lesson({ shown: 2 })).detail, 'Step 2 of 3');
-  assert.equal(tutorialBand(lesson({ shown: 3, done: true })).detail, 'Tutorial complete');
+  // Done, it is played again from its cut, not on.
+  assert.deepEqual(tutorialBand(lesson({ shown: 3, done: true })), { eyebrow: 'TUTORIAL 1 OF 4', title: 'Your first combat', detail: 'Tutorial complete', restart: 'Play again' });
   // A series the host counts short of this tutorial's place still reads as a whole.
   assert.equal(tutorialBand(lesson({ order: 3, of: 1 })).eyebrow, 'TUTORIAL 3 OF 3');
 });
@@ -45,6 +46,24 @@ test('once every question is handed back, the person is asked every kind', () =>
   const tempo = view(asked('Speed', 1), lesson({ assisted: [] }));
   assert.equal(assistedQuestion(tempo), false);
   assert.equal(withoutAssisted(tempo), tempo);
+});
+
+test('once the tutorial is done no question is the person\'s: the lesson is not played on', () => {
+  for (const kind of ['Action', 'Speed', 'Evolution']) {
+    const after = view(asked(kind, 1), lesson({ shown: 3, done: true }), 3);
+    assert.equal(pastTheLesson(after), true, kind);
+    assert.deepEqual(withoutAssisted(after), { ...after, waitingFor: null, waitingAsked: null, waitingCreature: null, options: {} });
+  }
+  // Handed back or not: the host answers nothing past the lesson, and the page draws nothing either.
+  assert.equal(withoutAssisted(view(asked('Speed', 1), lesson({ assisted: [], done: true }), 3)).waitingFor, null);
+  assert.equal(pastTheLesson(view({}, lesson({ done: true }))), false);
+  assert.equal(pastTheLesson(view(asked('Action', 2))), false);
+});
+
+test('once the tutorial is done the dock says so, in place of waiting for a decision', () => {
+  assert.equal(lessonOverText(view({}, lesson({ done: true }))), 'Tutorial complete. Play it again, or leave.');
+  assert.equal(lessonOverText(view()), null);
+  assert.equal(lessonOverText({ board: {} }), null);
 });
 
 test('a game\'s question is never taken for an assisted one', () => {
@@ -94,6 +113,7 @@ test('a tutorial the host says is done ends on its own card, and a later step st
   assert.equal(done.key, 'done');
   assert.equal(done.eyebrow, 'TUTORIAL COMPLETE');
   assert.match(done.lines[0], /Your first combat/);
+  assert.equal(done.lines[1], 'Play it again, or leave: nothing played here counts.');
   assert.equal(coachCard(view(asked('Action', 2), lesson({ done: true }))).key, 'step:0');
 });
 
@@ -124,6 +144,13 @@ test('leaving a tutorial before its end is skipping it; leaving a game or a plai
   assert.equal(leavingSkips(view()), true);
   assert.equal(leavingSkips({ board: {} }), false);
   assert.equal(leavingSkips({ practice: { scenario: 'sc-1', title: 'Bleed', round: 4 } }), false);
+});
+
+test('leaving a tutorial, done or not, lets go of its practice; a game or a plain practice is left where it is', () => {
+  assert.equal(leavePath(view()), '/api/scenarios/sc-repo-tutorial-your-first-combat/practice');
+  assert.equal(leavePath(view({}, lesson({ done: true }))), '/api/scenarios/sc-repo-tutorial-your-first-combat/practice');
+  assert.equal(leavePath({ board: {} }), null);
+  assert.equal(leavePath({ practice: { scenario: 'sc-1', title: 'Bleed', round: 4 } }), null);
 });
 
 test('the account\'s progress is said for the view\'s tutorial, skipped or done, and for nothing else', () => {

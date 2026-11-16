@@ -334,7 +334,7 @@ says its place in the series (`"tutorial": 1`), and every signed-in account open
 
 Its link `/battle?scenario=<id>` a signed-in player opens as practice (`GET /api/scenarios/<id>`,
 `GET`/`POST /api/scenarios/<id>/practice`: resumed, or started from the cut in place of the account's last
-practice; in this process's memory, never recorded, indexed or in the ladder, one an account, 200 at most, let
+practice; `DELETE /api/scenarios/<id>/practice` lets go of it, 204 whether there was one or not; in this process's memory, never recorded, indexed or in the ladder, one an account, 200 at most, let
 go of after an idle hour, gone with a restart), the battle view saying it is practice in a band with Briefing,
 Restart the round and Leave, and opening a practice started from its cut on a briefing card (its title, goal,
 seat and round). `GET /api/scenarios` lists the scenarios listed under Practice, which a signed-in player's home
@@ -342,7 +342,10 @@ page shows.
 
 `GET /api/tutorials` lists the tutorials to any signed-in account (401 signed out), in the order of the series:
 each one's `id`, `order`, `of`, `title`, `goal`, `round`, `seat`, `format` and `link`. A tutorial is opened as a
-practice by the routes above, and is never listed under Practice.
+practice by the routes above, and is never listed under Practice. Once a tutorial is done the host answers nothing
+more for the person and the page draws no question: its end card offers Play again and Leave. A done tutorial is
+not resumed, and leaving one, done or not, lets go of its practice (`DELETE`), so it opens from its cut the next
+time; a done one is kept done for the account first, whether or not the page's own `done` got there before.
 
 Each tutorial also says its `state` for the account: `new`, `done` or `skipped`. `opens` is the link of the
 tutorial that opens by itself: the first of the series while it is new to the account, null otherwise, and null
@@ -864,3 +867,13 @@ python3 scripts/workflow-metrics.py
 ```
 
 The numbers of docs/engineering/ai-workflow-plan.md measured again: git readings first, `--github` for the rest.
+
+| Flag | Default | What it does |
+| --- | --- | --- |
+| `--last <n>` | 300 | The last pull requests merged on `origin/main` that the git readings and `--github` read |
+| `--github` | off | How long a pull request stays open, merged before green, CI on `main`. Needs `GITHUB_TOKEN` |
+| `--minutes` | off | The Actions minutes a private repository would be billed. Each job counts from start to end, rounded up to the minute. Reports per workflow and per group of CI's jobs, the cancelled jobs' share and a month's estimate. Jobs on a runner of the project's own are counted apart. Needs `GITHUB_TOKEN`, a session's or a person's: a workflow's own allows 1,000 requests an hour, about one busy week |
+| `--days <n>` | 7 | The window `--minutes` reads: whole UTC days ending yesterday |
+
+`/retro` reports `--minutes` each week (docs/engineering/ci-minutes-plan.md, M1), so each later stage shows the
+minutes it saved.

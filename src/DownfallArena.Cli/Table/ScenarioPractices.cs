@@ -68,6 +68,55 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
     }
 
     /// <summary>
+    /// The account's practice of a scenario to go on with, as a reloaded page asks for it: the one it has, except a
+    /// tutorial that is done, which is let go of so the next time it opens it starts from its cut.
+    /// </summary>
+    public async Task<Practice?> ResumeAsync(string account, string scenario)
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            await SweepAsync();
+            if (!_byAccount.TryGetValue(account, out var practice) || practice.Scenario != scenario)
+            {
+                return null;
+            }
+
+            if (practice.Play.Api.Practice?.Tutorial is { Done: true })
+            {
+                await StopAsync(practice);
+                return null;
+            }
+
+            return practice;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    /// <summary>Lets go of the account's practice of a scenario, when it is the one it has: whether there was one.</summary>
+    public async Task<bool> ForgetAsync(string account, string scenario)
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            if (!_byAccount.TryGetValue(account, out var practice) || practice.Scenario != scenario)
+            {
+                return false;
+            }
+
+            await StopAsync(practice);
+            return true;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    /// <summary>
     /// A new practice of the scenario for the account, from its cut, in place of whatever practice the account had:
     /// the practice, or why there is none.
     /// </summary>

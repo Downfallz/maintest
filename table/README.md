@@ -689,7 +689,7 @@ test (`.claude/rules/host.md`).
 | `POST /api/seat/<seat>/reaction` | seat | A reaction from the fixed set (ADR 0173). |
 | `POST /api/feedback` | seat, account | A bug report or an idea (ADR 0189), kept with the seat's context. `429` when a spam guard stops it; `200 Feedback.Merged` when it joins an earlier one. |
 | `GET /api/friends`, `POST /api/friends/requests`, `POST /api/friends/requests/<id>/accept`, `DELETE /api/friends/requests/<id>`, `DELETE /api/friends/<id>` | account | Friends (ADR 0129). |
-| `GET /api/scenarios`, `GET /api/scenarios/<id>`, `GET`/`POST /api/scenarios/<id>/practice` | account | Listed scenarios and their practice (ADR 0179). Only admin accounts open a repository scenario; every account opens a tutorial. |
+| `GET /api/scenarios`, `GET /api/scenarios/<id>`, `GET`/`POST`/`DELETE /api/scenarios/<id>/practice` | account | Listed scenarios and their practice (ADR 0179): resumed, started from the cut, or let go of (204), which leaving a tutorial does. A tutorial that is done is not resumed. Only admin accounts open a repository scenario; every account opens a tutorial. |
 | `GET /api/tutorials` | account | The tutorials, in the order of the series, each opened as a practice, with the account's state for each and the one that opens by itself (ADR 0187). |
 | `POST /api/tutorials/<id>/skip`, `POST /api/tutorials/<id>/done` | account | Records that the account skipped a tutorial, or finished it once its practice at this host says so. |
 | `GET /api/leaderboard`, `GET /api/stats` | anyone, account | The ladder; the player's statistics. |

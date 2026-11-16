@@ -167,7 +167,11 @@ give what is said and when. It reuses everything ADR 0179 built, and the regress
    `battle/src/tutorial.ts` draws it: the band and the briefing say **Tutorial n of 4**, the coach card shows the
    step of the question asked, and a step opens its concept cards once, before the spell choice. What a step
    points at is ringed. An assisted question is not drawn, and the phase tips are silent while a tutorial plays. Once the host says
-   `done`, the coach card says **Tutorial complete**, with **Keep playing** and **Leave the tutorial**.
+   `done`, the coach card says **Tutorial complete**, with **Play again** and **Leave the tutorial**: the host
+   answers nothing more for the person and the page draws no question, so a lesson is not played on. Leaving a
+   tutorial, done or not, lets go of its practice, and a done one is not resumed: it opens from its cut the next
+   time. In a tutorial the band stands in the header, in place of the opponent, History, Help and the
+   notifications, not over the field.
    `LessonControls` names the five controls `pointsAt` may use (`spells`, `cast`, `command`, `order`,
    `history`); `TutorialLesson` refuses another, and the page's list is held to it. `battle-tutorial.spec.js`
    plays tutorial 1's own lesson to its end at 320 px, 390 px and desktop.

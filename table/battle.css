@@ -1796,15 +1796,39 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 .coach.in-sheet { position: static; flex: 0 0 auto; width: auto; max-width: none; margin: 0; box-shadow: none; }
 /* Targets are chosen on the field itself: the coach card steps aside, and the creature it points at stays ringed. */
 #battle[data-combat="targets"] .coach { display: none; }
-/* On a phone a tutorial's band is one row, so the field under it stays in view: its place in the series, Restart
-   the round and Leave. The coach card says the step, and the briefing its title. */
-@media (max-width: 700px) {
-  #battle[data-tutorial]:not([data-tutorial=""]) .practice-band { display: flex; align-items: center; gap: 8px; left: 4px; width: auto; padding: 2px 8px; }
-  #battle[data-tutorial]:not([data-tutorial=""]) .practice-band .eyebrow { flex: 1; }
-  #battle[data-tutorial]:not([data-tutorial=""]) .practice-band strong, #battle[data-tutorial]:not([data-tutorial=""]) .practice-band small, #battle[data-tutorial]:not([data-tutorial=""]) #practice-brief-open { display: none; }
-  #battle[data-tutorial]:not([data-tutorial=""]) .practice-actions { margin-top: 0; }
+/* A tutorial's band stands in the header, not over the field: there it hid the top row of creatures, worst on a phone
+   held upright. It takes the place of what a tutorial has no use for: the opponent, History, Help, the reactions and
+   the notifications. It says its place in the series (and the step, where there is room), Restart the round (Play
+   again once it is done) and Leave. */
+#battle[data-tutorial]:not([data-tutorial=""]) :is(#opponent-open, #history-open, #help-open, #reactions-open) { display: none; }
+.battle-page:has(#battle[data-tutorial]:not([data-tutorial=""])) .home-header .inbox-button { display: none; }
+#battle .hud-top > .practice-band { position: static; flex: 1 1 auto; display: flex; align-items: center; gap: 10px; width: auto; min-width: 0; margin: 0 0 0 8px; padding: 0 0 0 10px;
+  border: 0; border-left: 2px solid var(--gold); border-radius: 0; background: none; box-shadow: none; }
+#battle .hud-top > .practice-band[hidden] { display: none; }
+#battle .hud-top > .practice-band .eyebrow { flex: none; white-space: nowrap; }
+#battle .hud-top > .practice-band strong, #battle .hud-top > .practice-band #practice-goal { display: none; }
+#battle .hud-top > .practice-band small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+#battle .hud-top > .practice-band .practice-actions { flex: none; margin: 0 0 0 auto; gap: 4px; }
+#battle .hud-top > .practice-band .practice-actions :is(button, a) { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
+@container hud (min-width: 900px) { #battle .hud-top > .practice-band strong { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; } }
+/* In a narrower header (a phone, or a sheet docked beside it), the band keeps its place in the series and its two ways
+   out: the step is on the coach card, the title on the briefing, and Restart the round is its icon, named for whoever
+   cannot see it. */
+@container hud (max-width: 640px) {
+  #battle .hud-top > .practice-band { gap: 4px; margin-left: 4px; padding-left: 8px; }
+  #battle .hud-top > .practice-band small, #battle .hud-top > .practice-band #practice-brief-open { display: none; }
+  #battle .hud-top > .practice-band .eyebrow { font-size: 9px; letter-spacing: 1px; }
+  #battle .hud-top > .practice-band #practice-restart { width: 44px; padding: 0; border: 0; background: transparent; color: #d8dfd6; font-size: 0; }
+  #battle .hud-top > .practice-band #practice-restart::before { content: '↻'; font-size: 22px; line-height: 1; }
+  #battle .hud-top > .practice-band #practice-leave { padding: 0 6px; }
 }
-#battle[data-tutorial]:not([data-tutorial=""]) .practice-actions button, #battle[data-tutorial]:not([data-tutorial=""]) .practice-actions a { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
+/* A phone held upright folds the site's menu and the player's button into the header's right end: without the
+   notifications, they take two buttons' width, and the band the rest. Where even that is short (a 320 px phone), its
+   place in the series goes too: the briefing and the coach card say it. */
+@media (max-width: 619px) and (orientation: portrait) {
+  .battle-page[data-home="member"] #battle[data-tutorial]:not([data-tutorial=""]) .hud-top { padding-right: 96px; }
+}
+@container hud (max-width: 260px) { #battle .hud-top > .practice-band .eyebrow { display: none; } }
 /* Wider than a phone, the creatures stand low on the field: the coach card takes the top left corner, across from the band. */
 @media (min-width: 701px) {
   .coach { left: 8px; right: auto; top: 8px; bottom: auto; width: min(360px, 42%); margin: 0; }

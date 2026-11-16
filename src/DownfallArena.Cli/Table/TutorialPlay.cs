@@ -14,6 +14,8 @@ namespace DownfallArena.Cli.Table;
 /// An assisted answer is submitted as the person's own, through the gate any decision goes through, so the seat
 /// stays its person's and a question handed back needs no seat change. Between the question asked and its answer
 /// the seat's view says the question; <see cref="Assisted" /> tells the page which kinds it is not to draw.
+/// Once the tutorial is <see cref="Done" />, nothing more is answered: the match waits at the next question, which
+/// the page does not draw either, so the lesson ends where it ends and is not played on.
 /// </remarks>
 internal sealed class TutorialPlay
 {
@@ -162,9 +164,10 @@ internal sealed class TutorialPlay
             return;
         }
 
-        lock (_gate)
+        // A tutorial done answers nothing more: the lesson is not played on.
+        if (Finished(snapshot, table))
         {
-            Note(snapshot, table.Over());
+            return;
         }
 
         // The script is read by one answering at a time: a change that comes while an answer is on its way to
@@ -199,11 +202,46 @@ internal sealed class TutorialPlay
         _done |= over || snapshot.Board.State == MatchState.Ended || (_shown[^1] && round > _lesson.Steps[^1].Round);
     }
 
+    /// <summary>
+    /// Notes what the seat is asked and says whether the tutorial is done: once it is, nothing more is answered for
+    /// the person, so the match waits at the question after the lesson and the page offers no more play.
+    /// </summary>
+    private bool Finished(SeatSnapshot snapshot, Seat table)
+    {
+        lock (_gate)
+        {
+            Note(snapshot, table.Over());
+            return _done;
+        }
+    }
+
     /// <summary>The recorded answer the seat's question is owed, with the asking it answers; none for a question that is the person's.</summary>
     private (Application.Matches.Decisions.PlayerDecision Decision, long Asked)? Owed(SeatSnapshot snapshot) =>
         snapshot.Waiting is { } waiting && _assisted.Answer(new SeatView(snapshot.Board, snapshot.Options, new SeatQuestion(waiting.Kind, waiting.Creature))) is { } decision
             ? (decision, waiting.Asked)
             : null;
+
+    /// <summary>
+    /// The recorded answer the seat is owed now, read before the gate (reading may move the session, which is not this
+    /// play's to hold); none once the tutorial is done, for a question that is the person's, or when the seat was
+    /// handed back, which is said here.
+    /// </summary>
+    private (Application.Matches.Decisions.PlayerDecision Decision, long Asked)? Next(Seat table)
+    {
+        var snapshot = table.Read();
+        if (snapshot is null || Finished(snapshot, table))
+        {
+            return null;
+        }
+
+        (Application.Matches.Decisions.PlayerDecision Decision, long Asked)? owed = null;
+        if (HandsBack(() => owed = Owed(snapshot)))
+        {
+            SayGaveBack();
+        }
+
+        return owed;
+    }
 
     /// <summary>
     /// Gives the recorded answers while the seat is asked assisted questions, one of the match's turns each. An
@@ -215,20 +253,8 @@ internal sealed class TutorialPlay
     {
         try
         {
-            while (true)
+            while (Next(table) is { } answer)
             {
-                // The seat is read before the gate: reading may move the session, which is not this play's to hold.
-                var snapshot = table.Read();
-                (Application.Matches.Decisions.PlayerDecision Decision, long Asked)? owed = null;
-                if (snapshot is not null && HandsBack(() => owed = Owed(snapshot)))
-                {
-                    SayGaveBack();
-                }
-
-                if (owed is not { } answer)
-                {
-                    break;
-                }
 
                 var taken = (await table.Decide(answer.Decision, answer.Asked)).Taken;
                 if (HandsBack(taken ? _assisted.Given : _assisted.HandBack))
