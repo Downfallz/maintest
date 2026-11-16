@@ -111,6 +111,7 @@ test('each refusal reads as a sentence the player can act on', () => {
   assert.equal(refusalSentence(429, { error: 'Feedback.HostFull' }), 'The game is taking no more feedback today. Try again tomorrow.');
   assert.equal(refusalSentence(403, { error: 'Feedback.Muted' }), 'Your feedback is paused for now.');
   assert.equal(refusalSentence(401, { error: 'Feedback.SignInRequired' }), 'Sign in to send feedback, or send it from a game you are playing.');
+  assert.equal(refusalSentence(401, { error: 'Feedback.SignInRequired' }, { inGame: true }), 'Sign in to send feedback from this seat.');
   assert.equal(refusalSentence(403, { error: 'Feedback.SeatRequired' }), 'Send your feedback from a game you are playing.');
   assert.equal(refusalSentence(403, { error: 'Feedback.NotYourSeat' }), 'This seat belongs to another player.');
   assert.equal(refusalSentence(400, { error: 'Feedback.Invalid', message: 'Write between 10 and 2000 characters.' }), 'Write between 10 and 2000 characters.');

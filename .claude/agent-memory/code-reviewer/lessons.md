@@ -39,3 +39,5 @@
 - A CI job given a `name:` (a matrix's `battle release (<profile>)`) must be grepped against `scripts/workflow-metrics.py`'s JOB_GROUPS: the rename filed the release minutes under "other" (M2, ADR 0190, 00a47f8; fixed in 250b318 with a test reading the name).
 - Narrowing what a pull request plays (release=webkit) must keep the full set for the paths that define the narrowed job (its workflow, its Playwright config, plan.js): otherwise the PR that edits release-desktop's job or project never runs it before main (M2, ADR 0190, plan.js).
 - Second time (#612 range, then M2 00a47f8 -> 250b318): the author session pushed a fix mid-review; re-read `git log` before writing any finding up, not only before reporting.
+- A new item in the shared navigation (`table/navigation.js`, `headerContent`) breaks `lobby-home.spec.js`'s exact list of visible items and its desktop overflow check: run `lobby-home.spec.js` on every project when the header changes (R2 feedback).
+- The branch moved twice during a review again (#612, M2, R2): diff `<reviewed sha>..HEAD` before writing up a finding.

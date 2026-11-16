@@ -91,7 +91,7 @@ export function catchPageErrors(target, errors) {
 const DID_NOT_ANSWER = 'The host did not answer. Your words are kept here: try again.';
 
 /** The sentence a refusal reads as. The host's codes are stable (FeedbackErrors, FeedbackApi); its words are shown only for Invalid, which names the field. */
-export function refusalSentence(status, answer) {
+export function refusalSentence(status, answer, { inGame = false } = {}) {
   switch (answer?.error) {
     case 'Feedback.TooSoon': {
       const seconds = Math.max(1, Number(answer.retryAfterSeconds) || 120);
@@ -100,7 +100,7 @@ export function refusalSentence(status, answer) {
     case 'Feedback.TooMany': return 'You can send five a day. Try again tomorrow.';
     case 'Feedback.HostFull': return 'The game is taking no more feedback today. Try again tomorrow.';
     case 'Feedback.Muted': return 'Your feedback is paused for now.';
-    case 'Feedback.SignInRequired': return 'Sign in to send feedback, or send it from a game you are playing.';
+    case 'Feedback.SignInRequired': return inGame ? 'Sign in to send feedback from this seat.' : 'Sign in to send feedback, or send it from a game you are playing.';
     case 'Feedback.SeatRequired': return 'Send your feedback from a game you are playing.';
     case 'Feedback.NotYourSeat': return 'This seat belongs to another player.';
     case 'Feedback.Invalid': return answer.message || 'Check what you wrote and try again.';
@@ -217,7 +217,9 @@ export function mountFeedback(doc, { request = (path, init) => fetch(path, { ...
   dialog.addEventListener('close', () => {
     if (step === 'sent') { draft = feedbackDraft(); fill(); }
     step = 'choose'; refuse(null);
-    const back = opener?.getClientRects().length ? opener : fallbackFocus();
+    // A button in a closed <details> keeps its boxes in some browsers (content-visibility): only one shown takes focus.
+    const shown = node => Boolean(node) && (node.checkVisibility ? node.checkVisibility() : node.getClientRects().length > 0);
+    const back = shown(opener) ? opener : fallbackFocus();
     opener = null;
     back?.focus({ preventScroll: true });
     onClose();
@@ -256,7 +258,7 @@ export function mountFeedback(doc, { request = (path, init) => fetch(path, { ...
       el('feedback-finish').focus();
       return;
     }
-    refuse(refusalSentence(status, answer));
+    refuse(refusalSentence(status, answer, { inGame: Boolean(inGame()) }));
     render();
   });
   doc.addEventListener('click', event => {

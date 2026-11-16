@@ -1360,6 +1360,8 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 #match-dialog .match-footer #match-rematch[hidden] { display: none; }
 /* Report or suggest is the quiet last line of the result: it never competes with playing again. */
 #match-dialog .match-footer #feedback-open-match { flex: 1 1 100%; min-height: 44px; border: 0; background: transparent; color: var(--muted); font-weight: 400; }
+/* The footer's own display outweighs the shared mute rule (lobby.css): a muted player's entry goes here too. */
+html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { display: none; }
 #match-dialog .match-footer #feedback-open-match:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
 @media (min-width: 560px) { #match-dialog .match-footer #match-rematch { flex: 1.4 1 0; } }
 /* A creature's effects (upkeep ticks, a spell's outcomes, its place in the order) read above its head, not over its

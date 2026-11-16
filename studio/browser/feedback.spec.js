@@ -164,7 +164,8 @@ test('a refusal keeps the words, and a muted player loses the entry', async ({ p
   await page.locator('#feedback-close').click();
   await expect(page.locator('#feedback-open-settings')).toBeHidden();
   await expect(page.locator('#settings-dialog .settings-feedback')).toBeHidden();
-  await expect(page.locator('#feedback-open-match')).toBeHidden();
+  // The result's entry is hidden by the same rule, whether or not the result is open.
+  expect(await page.locator('#feedback-open-match').evaluate(node => getComputedStyle(node).display)).toBe('none');
   expect(state.sent.map(one => one.body.kind)).toEqual(['idea', 'idea']);
 });
 
