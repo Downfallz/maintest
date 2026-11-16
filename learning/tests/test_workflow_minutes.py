@@ -12,6 +12,7 @@ import importlib.util
 import json
 import subprocess
 import sys
+import urllib.error
 from collections.abc import Callable
 from datetime import date
 from types import ModuleType
@@ -24,7 +25,7 @@ from conftest import REPO_ROOT
 SCRIPT = REPO_ROOT / "scripts" / "workflow-metrics.py"
 RECORDED = json.loads((REPO_ROOT / "learning" / "tests" / "fixtures" / "actions-ci-run.json").read_text())
 REPO = "owner/name"
-TODAY = date(2026, 11, 16)
+TODAY = date(2026, 11, 17)
 
 
 def load_script() -> ModuleType:
@@ -158,11 +159,18 @@ def test_a_job_on_a_runner_of_our_own_is_counted_apart_from_the_hosted_minutes(m
     assert result["ci_by_group"] == {"changes, gate, main-health": 1}
 
 
-def test_a_cancelled_runs_minutes_are_billed_and_also_counted_as_thrown_away(metrics: ModuleType) -> None:
+def test_a_cancelled_jobs_minutes_are_billed_and_also_counted_as_thrown_away(metrics: ModuleType) -> None:
     runs = [run(1), run(2, conclusion="cancelled")]
     jobs = {
         1: [job("gate", "2026-11-16T04:00:00Z", "2026-11-16T04:00:30Z")],
-        2: [job("browser / battle-release", "2026-11-16T04:00:00Z", "2026-11-16T04:07:30Z")],
+        2: [
+            job(
+                "browser / battle-release",
+                "2026-11-16T04:00:00Z",
+                "2026-11-16T04:07:30Z",
+                conclusion="cancelled",
+            )
+        ],
     }
 
     result = report(metrics, FakeApi({"2026-11-16": runs}, jobs))
@@ -170,6 +178,68 @@ def test_a_cancelled_runs_minutes_are_billed_and_also_counted_as_thrown_away(met
     assert result["hosted"] == 9
     assert result["cancelled_runs"] == 1
     assert result["cancelled"] == 8
+
+
+def test_every_attempt_of_a_rerun_is_billed_and_a_cancelled_first_attempt_is_counted(
+    metrics: ModuleType,
+) -> None:
+    jobs = [
+        job("gate", "2026-11-16T04:00:00Z", "2026-11-16T04:03:00Z", conclusion="cancelled", run_attempt=1),
+        job("gate", "2026-11-16T05:00:00Z", "2026-11-16T05:02:00Z", run_attempt=2),
+    ]
+    api = FakeApi({"2026-11-16": [run(1, run_attempt=2)]}, {1: jobs})
+
+    result = report(metrics, api)
+
+    assert result["hosted"] == 5
+    assert result["cancelled"] == 3
+    assert result["cancelled_runs"] == 1
+
+
+def test_a_runner_of_our_own_named_by_a_custom_label_alone_is_not_counted_as_hosted(
+    metrics: ModuleType,
+) -> None:
+    own = job(
+        "browser / journeys (phone)",
+        "2026-11-16T04:00:00Z",
+        "2026-11-16T04:04:00Z",
+        runner_group_name="Default",
+        labels=["downfall-heavy"],
+    )
+    api = FakeApi({"2026-11-16": [run(1)]}, {1: [own]})
+
+    result = report(metrics, api)
+
+    assert result["hosted"] == 0
+    assert result["self_hosted"] == 4
+
+
+def test_a_run_listed_twice_while_the_list_moves_is_counted_once(metrics: ModuleType) -> None:
+    api = FakeApi(
+        {"2026-11-16": [run(1), run(1)]}, {1: [job("gate", "2026-11-16T04:00:00Z", "2026-11-16T04:00:30Z")]}
+    )
+
+    result = report(metrics, api)
+
+    assert result["runs"] == 1
+    assert result["hosted"] == 1
+
+
+def test_a_skipped_run_is_not_asked_for_its_jobs(metrics: ModuleType) -> None:
+    api = FakeApi({"2026-11-16": [run(1, conclusion="skipped")]}, {})
+
+    result = report(metrics, api)
+
+    assert result["hosted"] == 0
+    assert not any("/jobs?" in path for path in api.paths)
+
+
+def test_the_api_refusing_halfway_stops_with_the_day_it_reached(metrics: ModuleType) -> None:
+    def refusing(path: str, token: str) -> dict:
+        raise urllib.error.HTTPError(path, 403, "rate limit exceeded", None, None)  # type: ignore[arg-type]
+
+    with pytest.raises(SystemExit, match=r"403.*2026-11-16"):
+        report(metrics, refusing)
 
 
 def test_a_workflow_other_than_ci_counts_in_its_own_line_and_not_in_cis_groups(metrics: ModuleType) -> None:
@@ -204,7 +274,7 @@ def test_a_run_still_playing_is_left_out(metrics: ModuleType) -> None:
     assert not any("/jobs?" in path for path in api.paths)
 
 
-def test_the_runs_are_read_one_day_at_a_time_so_the_apis_thousand_results_never_cut_a_week(
+def test_the_window_is_whole_days_ending_yesterday_read_one_at_a_time(
     metrics: ModuleType,
 ) -> None:
     api = FakeApi({}, {})
@@ -214,6 +284,7 @@ def test_the_runs_are_read_one_day_at_a_time_so_the_apis_thousand_results_never_
     asked = [path.split("created=")[1].split("&")[0] for path in api.paths]
     assert asked == ["2026-11-14", "2026-11-15", "2026-11-16"]
     assert result["since"] == "2026-11-14"
+    assert result["until"] == "2026-11-16"
 
 
 def test_a_day_of_more_than_a_hundred_runs_reads_the_next_page(metrics: ModuleType) -> None:
@@ -249,3 +320,31 @@ def test_minutes_without_a_token_stops_before_asking_anything() -> None:
 
     assert result.returncode != 0
     assert "--minutes needs a token in GITHUB_TOKEN" in result.stderr
+
+
+def test_minutes_over_no_day_is_refused() -> None:
+    result = subprocess.run(
+        [sys.executable, str(SCRIPT), "--minutes", "--days", "0"],
+        capture_output=True,
+        text=True,
+        check=False,
+        cwd=REPO_ROOT,
+        env={"PATH": "", "GITHUB_TOKEN": "token"},
+    )
+
+    assert result.returncode != 0
+    assert "--days must be at least 1" in result.stderr
+
+
+def test_a_hosted_job_with_an_empty_runner_group_is_still_hosted(metrics: ModuleType) -> None:
+    pages = job(
+        "Build the site and deploy it", "2026-11-16T04:00:00Z", "2026-11-16T04:00:40Z", runner_group_name=""
+    )
+    api = FakeApi(
+        {"2026-11-16": [run(1, name="Publish the studio", path=".github/workflows/pages.yml")]}, {1: [pages]}
+    )
+
+    result = report(metrics, api)
+
+    assert result["hosted"] == 1
+    assert result["self_hosted"] == 0
