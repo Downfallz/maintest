@@ -7,7 +7,8 @@
 # commit lands, and a run that a newer push replaced in the queue never looked at its commit at all.
 #
 # Inputs (environment): EVENT (github.event_name), BEFORE (github.event.before, a push's previous head),
-# GH_TOKEN and GH_REPO for the query of the last green run. Needs the history (fetch-depth: 0).
+# GH_TOKEN and GH_REPO for the query of the last green run. Needs the history (fetch-depth: 0). A rename is read as
+# both of its paths (--no-renames): the plan answers for the path a file leaves as well as the one it takes.
 set -euo pipefail
 
 known() {
@@ -19,7 +20,7 @@ known() {
 case "${EVENT:-}" in
   pull_request)
     # The checkout is the merge of the pull request into its base: its first parent is the base.
-    git diff --name-only HEAD^1 HEAD
+    git diff --name-only --no-renames HEAD^1 HEAD
     ;;
   push)
     base="$(gh api "repos/${GH_REPO}/actions/workflows/ci.yml/runs?branch=main&event=push&status=success&per_page=1" \
@@ -31,7 +32,7 @@ case "${EVENT:-}" in
       exit 3
     fi
     echo "Changed since $base" >&2
-    git diff --name-only "$base" HEAD
+    git diff --name-only --no-renames "$base" HEAD
     ;;
   *)
     exit 3

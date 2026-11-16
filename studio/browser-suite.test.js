@@ -3,8 +3,9 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import { readdirSync, readFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -428,4 +429,36 @@ test('the learning project is linted and tested once, in build-and-test, and its
   // It goes on when it fails, so the .NET steps still run; the job's last step is what fails it.
   const last = block.lastIndexOf('      - name: ');
   assert.match(block.slice(last), /^ {6}- name: .*\n {8}if: \$\{\{ !cancelled\(\) && steps\.learning\.outcome == 'failure' \}\}\n {8}run: \|\n(?: {10}.*\n)*? {10}exit 1\n/);
+});
+
+// A rename is a deletion and an addition: git's rename detection would print the new name alone, and a code file
+// renamed to Markdown would read as a Markdown-only diff and get the light build (M4's security review).
+test('the changed paths of a pull request name both sides of a rename', () => {
+  const repository = mkdtempSync(join(tmpdir(), 'changed-paths-'));
+  try {
+    const git = (...args) => execFileSync('git', ['-C', repository, '-c', 'user.name=t', '-c', 'user.email=t@example.invalid', ...args], { encoding: 'utf8' });
+    git('init', '-q');
+    mkdirSync(join(repository, 'src'));
+    writeFileSync(join(repository, 'src', 'Table.cs'), 'class Table {}\n'.repeat(20));
+    git('add', '.');
+    git('commit', '-q', '-m', 'base');
+    git('mv', 'src/Table.cs', 'src/Table.md');
+    git('commit', '-q', '-m', 'rename');
+
+    const script = join(here, '..', '.github', 'scripts', 'changed-paths.sh');
+    const printed = spawnSync('bash', [script], { cwd: repository, encoding: 'utf8', env: { ...process.env, EVENT: 'pull_request' } });
+    assert.equal(printed.status, 0, printed.stderr);
+    const paths = printed.stdout.split('\n').filter(Boolean).sort();
+    assert.deepEqual(paths, ['src/Table.cs', 'src/Table.md']);
+    assert.equal(plan(paths, specs, { pullRequest: true }).build, 'full');
+  } finally {
+    rmSync(repository, { recursive: true, force: true });
+  }
+});
+
+test('every diff the changed paths are read from turns rename detection off', () => {
+  const script = readFileSync(join(here, '..', '.github', 'scripts', 'changed-paths.sh'), 'utf8');
+  const diffs = [...script.matchAll(/git diff [^\n]*/g)].map((match) => match[0]);
+  assert.equal(diffs.length, 2);
+  for (const diff of diffs) assert.match(diff, /--no-renames/, diff);
 });
