@@ -104,6 +104,9 @@ test('the coach card says the step, its lines, its concept cards and the creatur
 test('a step shows without its cards until the rulebook is read', () => {
   const before = coachCard(view(asked('Action', 2)));
   assert.deepEqual(before.cards, []);
+  // It still says it names a card, so the question's sheet waits for the book.
+  assert.equal(before.names, 1);
+  assert.equal(coachCard(view(asked('Action', 1), lesson(), 3)).names, 2);
   assert.deepEqual(before.lines, ['Line for 2.', 'A second line.']);
   assert.equal(before.creature, '4');
 });

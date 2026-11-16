@@ -198,13 +198,15 @@ test('a tutorial keeps the phase tips silent, and Help still says the question a
 test('each phase tip links to its section of the rulebook, and Help with no tip to the round', () => {
   const book = JSON.parse(readFileSync(new URL('./rules.json', import.meta.url), 'utf8'));
   const ids = new Set(book.parts.flatMap(part => [part.id, ...part.sections.map(section => section.id)]));
-  const expected = { Evolution: ['mutation', 'evolution'], Speed: ['tempo', 'tempo'], TieOrder: ['ties', 'tie-order'], Action: ['action', 'your-turn'], Intent: ['intent', 'your-turn'], Target: ['target', 'targets'] };
+  const expected = { Evolution: ['mutation', 'evolution'], Speed: ['tempo', 'tempo'], TieOrder: ['ties', 'tie-order'], Action: ['action', 'your-turn'] };
   for (const [kind, [topic, section]] of Object.entries(expected)) {
     const g = battleGuidance(view(kind), catalogue);
     assert.equal(g.topic, topic, kind);
     assert.equal(g.rules, `/rules#${section}`, kind);
     assert.ok(ids.has(section), `${kind}: #${section} is not in the book`);
   }
+  // The book teaches the spell chosen at the turn: a hidden-intent tip links nowhere rather than contradict it.
+  for (const kind of ['Intent', 'Target']) assert.equal(battleGuidance(view(kind), { rules: { combatDeclaration: 'HiddenIntent' } }).rules, null, kind);
   const quiet = battleGuidance(view('Action', { waiting: true }), catalogue);
   assert.equal(quiet.topic, null); assert.equal(quiet.rules, '/rules#the-round');
   assert.ok(ids.has('the-round'));

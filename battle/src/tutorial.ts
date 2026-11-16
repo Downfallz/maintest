@@ -16,7 +16,7 @@ const paragraphs = (lines: readonly string[]) => lines.map(line => { const p = d
 export function tutorialControls(onChange: () => void, request: (path: string, options?: RequestInit) => Promise<Response>) {
   const dialog = el<HTMLDialogElement>('concept-dialog'), coach = el('coach');
   let shown: Coach | null = null, key = '', queue: Concept[] = [], pointed: HTMLElement[] = [];
-  let latest: unknown = null, doneSaid = false, concepts = NO_CONCEPTS, asked = false;
+  let latest: unknown = null, doneSaid = false, concepts = NO_CONCEPTS, asked = false, reading = false;
   const opened = new Set<string>();
   /**
    * Reads the rulebook's cards once a tutorial shows, and not in a game; until they are there a step shows without
@@ -25,12 +25,15 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
    */
   async function readConcepts() {
     if (asked) return;
-    asked = true;
+    asked = true; reading = true;
     concepts = await loadConcepts(async () => {
       const response = await request(new URL(RULES_BOOK, document.baseURI).href);
       return response.ok ? response.json() : null;
     });
-    if (concepts.all.length) { key = ''; onChange(); }
+    reading = false;
+    // Drawn again either way: with its cards, or, the book not read, the question's sheet no longer waits for them.
+    if (concepts.all.length) key = '';
+    onChange();
   }
   // Where the card stands on the field, to come back to from a sheet.
   const home = { parent: coach.parentElement!, before: coach.nextSibling };
@@ -177,8 +180,12 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
     if (shown && owed() && canAuto && open(shown.cards)) opened.add(shown.key);
   }
   const owed = () => Boolean(shown?.cards.length && !opened.has(shown.key));
-  /** Whether a concept card is open or still to open for the step shown: the question's own sheet waits for it. */
-  const pending = () => dialog.open || owed();
+  /**
+   * Whether a concept card is open or still to open for the step shown: the question's own sheet waits for it, and
+   * for the book while it is read (the request's own timeout bounds that), so a slow book never opens the cards
+   * behind the sheet.
+   */
+  const pending = () => dialog.open || owed() || (reading && Boolean(shown?.names) && !opened.has(shown!.key));
   /** A new practice teaches its steps again. */
   function reset() {
     document.getElementById('battle')!.dataset.tutorial = ''; opened.clear(); key = ''; latest = null; doneSaid = false;

@@ -46,3 +46,5 @@
 - A page that reverses a built list for "latest first" (`changes.reverse()`, `.at(-1)` as latest) trusts an order the build neither sorts nor refuses; with one entry no test can tell: sort by the field, or make the build refuse disorder (R3 rulebook, table/rules.js:243).
 - A worker fallback widened from "no network" to "5xx" applies to every file in its list, shared styles included: every page, not just the one the ADR is about, then gets an older deploy's copy (R3 rulebook, table/sw.js unanswered).
 - Third time (#658, R1 feedback, R3): the tree moved mid-review on the coordinator's word; re-grep each finding against the current file before handback, and say which were checked.
+- A gate that reads a source loaded in the background (`tutorialUI.pending()` reading the cards from `rules.json`) must stay closed while the load runs: an empty source reads as "nothing owed", and the sheet opens first (R4, battle/src/tutorial.ts).
+- A test project that never compiled cannot have run: its new tests are unverified until `dotnet build` is green (R4, CS8620, RulebookConceptCardsTests).

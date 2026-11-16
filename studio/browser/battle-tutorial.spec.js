@@ -22,7 +22,7 @@ const legal = candidates => ({ candidates, minTargets: 1, maxTargets: 1 });
 const creature = (number, health = 30) => ({ id: number, name: `Creature ${number}`, health, maxHealth: 30, energy: 4, totalDefense: number === 5 ? 2 : 0,
   currentInitiative: 5, isAlive: true, isStunned: false, isStunImmune: false, knownSpells: ['shock'], conditions: [], acquiredTiers: [] });
 
-async function mount(page, { assistedFirst = false } = {}) {
+async function mount(page, { assistedFirst = false, book = null } = {}) {
   const state = { errors: [], writes: [], said: [], left: 0, opened: 0, asked: 20, answered: 0, handedBack: false };
   page.on('pageerror', error => state.errors.push(error.message));
   const order = lesson.steps.map(step => step.at.creature);
@@ -64,6 +64,8 @@ async function mount(page, { assistedFirst = false } = {}) {
     if (url.pathname === '/api/seat/player1') return route.fulfill({ json: view() });
     return route.fulfill({ status: 404, json: {} });
   });
+  // The rulebook the cards are read from, held until the test lets it through.
+  if (book) await page.route('**/table/rules.json', async route => { await book; await route.continue(); });
   await page.goto(`/table/battle.html?scenario=${id}`);
   await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true', { timeout: 20000 });
   return state;
@@ -223,6 +225,26 @@ test('a concept card links to its section of the rulebook, which opens in a new 
   await expect(page.locator('#concept-dialog')).toBeHidden();
   await openSpells(page);
   await expect(page.locator('#coach-step')).toHaveText(`STEP 1 OF ${lesson.steps.length}`);
+  expect(state.writes).toEqual([]); expect(state.errors).toEqual([]);
+});
+
+// The cards are read from the book once a tutorial shows (rulebook-plan.md R4): on a slow connection the question's
+// own sheet waits for the book, so the step's cards still open first.
+test('a step whose rulebook arrives late still opens its cards before the spell choice', async ({ page }) => {
+  let release;
+  const state = await mount(page, { book: new Promise(resolve => { release = resolve; }) });
+  await page.locator('#practice-brief-begin').click();
+  await expect(page.locator('#coach')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('#coach-cards')).toBeHidden();
+  // Long enough for the sheet to open by itself, were it not waiting.
+  await page.waitForTimeout(1500);
+  await expect(page.locator('#combat-dialog')).toBeHidden();
+  release();
+  await expect(page.locator('#concept-dialog')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('#concept-title')).toHaveText(cardOf(lesson.steps[0].concepts[0]).title);
+  await expect(page.locator('#combat-dialog')).toBeHidden();
+  await page.locator('#concept-next').click();
+  await openSpells(page);
   expect(state.writes).toEqual([]); expect(state.errors).toEqual([]);
 });
 

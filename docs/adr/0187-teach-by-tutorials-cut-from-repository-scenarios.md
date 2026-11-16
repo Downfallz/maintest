@@ -1,7 +1,8 @@
 # 0187. Teach by tutorials cut from repository scenarios
 
 Date: 2026-11-15
-Status: Accepted
+Status: Accepted, amended by [0188](0188-build-the-official-rulebook-from-rules.md): the concept cards' text is
+written in the official rulebook, and the pages read it from there (rulebook-plan.md R4)
 
 ## Context
 

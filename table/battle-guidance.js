@@ -70,7 +70,8 @@ function roundFlow(mode) {
   ];
 }
 // Each tip shortens a section of the official rulebook (rulebook-plan.md R4), which Help links to; Help with no tip
-// links to the round. The ids are the book's, which its build holds every link of a page to.
+// links to the round. The ids are the book's, which its build holds every link of a page to. The book teaches the
+// spell chosen at the turn (ADR 0112): the hidden-intent tips link nowhere rather than to a page that says otherwise.
 const ROUND_RULES = '/rules#the-round';
 const tips = {
   mutation: { title: 'What is a mutation?', rules: '/rules#evolution', lines: [
@@ -91,11 +92,11 @@ const tips = {
     'Select targets, then Confirm cast. A spell without targets still needs confirmation. No hidden spell declaration is required in this mode.',
     'History explains the applied result after the action resolves; a spell preview is not a guaranteed outcome.',
   ] },
-  intent: { title: 'Declare a hidden spell', rules: '/rules#your-turn', lines: [
+  intent: { title: 'Declare a hidden spell', rules: null, lines: [
     'Open Choose spell, select a spell, then use Declare to confirm your intent. The opponent cannot see it before its reveal.',
     'You choose targets later, when this creature’s spell is revealed. A plan that cannot be paid for or resolved at that time may fizzle.',
   ] },
-  target: { title: 'Choose targets for the revealed spell', rules: '/rules#targets', lines: [
+  target: { title: 'Choose targets for the revealed spell', rules: null, lines: [
     'Your spell is already declared. Open Choose targets, select legal creatures on the field, then Confirm cast.',
     'Tap a selected creature again to deselect it. Follow the offered target count; a targetless spell still needs confirmation.',
   ] },
@@ -154,7 +155,7 @@ export function battleGuidance(view, catalogue, { accepted = false, targeting = 
     ? board.nextEvolutionRound > board.roundNumber ? `Next mutation opportunity: round ${board.nextEvolutionRound}.`
       : board.nextEvolutionRound === board.roundNumber ? 'Mutation opportunity this round.' : '' : '';
   return { available: true, topic: silent ? null : topic, objective: current, title: tip?.title ?? 'Round guide', lines: tip?.lines ?? [],
-    rules: tip?.rules ?? ROUND_RULES,
+    rules: tip ? tip.rules : ROUND_RULES,
     round: waiting ? 'Match not started' : historical ? 'Recorded results' : round,
     context: waiting || historical ? '' : [phaseLabel(board.phase), actor].filter(Boolean).join(' · '),
     next, phase: waiting || historical || view.over ? '' : board.phase, flow: roundFlow(mode) };
