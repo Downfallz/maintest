@@ -34,8 +34,8 @@ uv run --project learning ruff check learning           # what CI runs, with ruf
 cd learning && uv run pytest                            # the tests, with coverage in CI
 ```
 
-CI runs ruff and pytest in their own job and imports the Python coverage into the SonarCloud analysis, so
-the quality gate covers the Python code like the C# code. Dependabot keeps `uv.lock` current.
+CI runs ruff and pytest in `build-and-test`, before the .NET build, and imports the Python coverage into the
+SonarCloud analysis, so the quality gate covers the Python code like the C# code. Dependabot keeps `uv.lock` current.
 
 ## Reading artifacts
 

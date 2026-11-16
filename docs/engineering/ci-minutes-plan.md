@@ -1,7 +1,7 @@
 # Plan: CI that fits a private repository's minutes, and a shorter wait on every pull request
 
 Status: accepted in part, 2026-11-16. The owner settled questions 1, 2, 3, 5 and 6; question 4 (Sonar) is open.
-M1 (the meter) and M2 (the release profiles split) are built.
+M1 (the meter), M2 (the release profiles split) and M3 (the wait evened out) are built.
 
 ## What the owner asked for
 
@@ -170,6 +170,33 @@ complete runs.
    minutes, holds WebKit's job with its retry. M4 narrows which paths call for the release profiles at all.
 3. **M3, the wait evened out.** Desktop in three shards, Playwright's browsers cached, the learning job folded
    into `build-and-test` (`browser-suite.test.js` holds the gate's `needs`).
+
+   *Built (2026-11-16)*: not three shards. Measured locally (4 vCPU, two workers, as CI's public runner), the
+   desktop and tablet tests take 2,107 seconds, and a third of that is three specs: battle-playback (393),
+   battle-pacing (194) and battle-live (161). A shard splits by test count, so the two halves held 862 and 1,245
+   seconds of tests (13 and 21 minutes on CI), and three shards would have held 560, 1,092 and 454: battle-live and
+   battle-playback in the same one. Those three specs now play in a job of their own, `desktop replays` (748
+   seconds, filtered with `--grep` on their file names). The rest play in two halves with the same pattern in
+   `--grep-invert` (660 and 699 seconds), so every test plays once. A spec that grows that heavy joins the pattern.
+
+   Every browser job (journeys, real engine, battle-release) restores `~/.cache/ms-playwright` with
+   `actions/cache/restore`, keyed by the runner's image, Playwright's version and the job's one `ENGINE`. It then
+   runs `install --with-deps` as before: the system packages are installed every time, and the engine is
+   downloaded only on a miss. A miss is saved straight after the install, before the battle build and the specs.
+   The learning job is gone: `build-and-test` lints and tests the learning project in one step, first after the
+   checkout. Each command runs whatever the one before it said, and the step goes on when it fails, so every .NET
+   step still runs, and the job's last step fails the job. pytest runs once, and Sonar imports its coverage. The
+   gate no longer needs `learning`.
+   `browser-suite.test.js` holds the split, the cache around every install, and the learning step. The meter
+   keeps its `learning` group so that runs from before this change still count.
+
+   Not measured: the three jobs' minutes on CI, and the minutes the cache saves. The first `/retro` after the
+   merge reads them with M1's meter.
+
+   Left to M4: a pull request that plans journeys without the three heavy specs still starts `desktop replays`,
+   which plays nothing (`--pass-with-no-tests`) after its set-up, a minute or two. Every journeys job already does
+   the same when the plan leaves its project or half empty; the plan is where a job with nothing to play is cut.
+
 4. **M4, the narrower plan and one push per review round.** `src/` and `data/` no longer call for the release
    profiles on a pull request; a Markdown-only diff runs the light build; `/ship` pushes once per round. Tests in
    `browser-suite.test.js`, and `prompts.test.js` for the skill.
