@@ -233,7 +233,7 @@ export function report({ sections, unmapped }) {
 function main() {
   const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
   // The English parts, then the French ones as `fr/<file>`, numbered as the English.
-  const partsIn = folder => (existsSync(join(root, folder)) ? readdirSync(join(root, folder)) : []).filter(name => /^\d{2}-[a-z0-9-]+\.md$/.test(name)).sort()
+  const partsIn = folder => (existsSync(join(root, folder)) ? readdirSync(join(root, folder)) : []).filter(name => /^\d{2}-[a-z0-9-]+\.md$/.test(name)).sort((a, b) => a.localeCompare(b))
     .map(file => ({ file, text: readFileSync(join(root, folder, file), 'utf8') }));
   const french = partsIn('rules/fr').map(part => ({ ...part, file: `fr/${part.file}` }));
   const content = path => {

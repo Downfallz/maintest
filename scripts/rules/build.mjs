@@ -98,7 +98,7 @@ const anchorOf = heading => heading.trim().toLowerCase().replace(/[^a-z0-9 -]/g,
 
 // An edition's part files, in their order, and its changes, or null when it has none.
 function editionIn(folder) {
-  const parts = readdirSync(folder).filter(name => /^\d{2}-[a-z0-9-]+\.md$/.test(name)).sort()
+  const parts = readdirSync(folder).filter(name => /^\d{2}-[a-z0-9-]+\.md$/.test(name)).sort((a, b) => a.localeCompare(b))
     .map(file => ({ file, text: readFileSync(join(folder, file), 'utf8') }));
   const changes = existsSync(join(folder, 'changes.md')) ? readFileSync(join(folder, 'changes.md'), 'utf8') : null;
   return { parts, changes };
@@ -663,7 +663,7 @@ function readChanges(text, build) {
 
 const listed = ids => (ids.length > 0 ? ids.join(', ') : 'none');
 // The values a section's lines draw, sorted, so a translation may move them but never type one or drop one.
-const valuesOf = text => [...(text ?? '').matchAll(/\{([^{}#][^{}]*)\}/g)].map(match => match[1].replace(/\s+/g, '')).sort();
+const valuesOf = text => [...(text ?? '').matchAll(/\{([^{}#][^{}]*)\}/g)].map(match => match[1].replace(/\s+/g, '')).sort((a, b) => a.localeCompare(b));
 const cardOf = section => section.card?.id ?? 'none';
 
 // The French part holds the English part's sections, in its order, each citing the same sources and carrying the
