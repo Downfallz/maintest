@@ -204,7 +204,11 @@ test('Leave before the end counts as skipping: the tutorial never opens by itsel
   const state = await mount(page);
   await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: '<title>Home</title>' }));
   await page.locator('#practice-brief-begin').click();
+  // The step's concept card opens once the board is drawn: it is put away once it is there, not before, or it
+  // opens over Leave a moment later (a slow desktop canvas on a CI runner).
+  await expect(page.locator('#concept-dialog')).toBeVisible({ timeout: 15000 });
   await page.keyboard.press('Escape');
+  await expect(page.locator('#concept-dialog')).toBeHidden();
   await fitsViewport(page, '#practice-leave');
 
   await page.locator('#practice-leave').click();
