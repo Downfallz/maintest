@@ -74,6 +74,11 @@ test('content plays everything', () => {
   assert.deepEqual(plan(['data/Spells/pummel.json'], specs), everything());
 });
 
+test('a tutorial file plays the tutorial journey, which reads its lesson', () => {
+  assert.deepEqual(plan(['scenarios/tutorials/your-first-combat.json'], specs), { ...nothing, journeys: 'battle-tutorial.spec.js', image: true });
+  assert.deepEqual(plan(['scenarios/greedy-1v1-round-3.json'], specs), { ...nothing, image: true });
+});
+
 test('the infrastructure builds the image and plays nothing', () => {
   assert.deepEqual(plan(['infra/main.bicep'], specs), { ...nothing, image: true });
   assert.deepEqual(plan(['Dockerfile'], specs), { ...nothing, image: true });
