@@ -650,7 +650,7 @@ section. See [A tutorial's coach](../battle/README.md#a-tutorials-coach).
 
 `lobby-tutorials.js` is the tutorials outside a game (onboarding-plan.md, O4), all of it read from
 `GET /api/tutorials`: the home page's **Learn to play** section, one card a tutorial with **New** or **Done**; the
-first tutorial opening by itself when the host says so (`opens`), once a tab; the main menu's
+first tutorial opening by itself when the host says so (`opens`), once a tab; the account menu's
 **Learn to play**; and the settings' **Show the first tutorial again**, which opens tutorial 1 now.
 
 ## Routes

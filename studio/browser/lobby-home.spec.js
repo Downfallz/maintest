@@ -394,7 +394,7 @@ for (const file of ['leaderboard', 'battle', 'index']) {
     expect(await page.locator('#inbox-badge').evaluate(badge => badge.getBoundingClientRect().top >= 0)).toBe(true);
     await openNavigation(page);
     const nav = page.getByRole('navigation', { name: 'Main navigation' });
-    await expect(nav.locator(':scope > :visible')).toHaveText(['Lobby', /Friends/, 'Learn to play', 'Leaderboard', 'Your stats', 'Join with a code']);
+    await expect(nav.locator(':scope > :visible')).toHaveText(['Lobby', /Friends/, 'Leaderboard', 'Your stats', 'Join with a code']);
     const sharedStyle = await nav.evaluate(node => {
       const props = ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'padding', 'minHeight'];
       const styleOf = selector => props.map(prop => getComputedStyle(node.querySelector(selector))[prop]);
@@ -840,7 +840,7 @@ test('an address that asks for a rematch is answered before the first tutorial, 
   expect(state.errors).toEqual([]);
 });
 
-test('a skipped tutorial never opens by itself again: it waits under Learn to play, and in the main menu', async ({ page }, info) => {
+test('a skipped tutorial never opens by itself again: it waits under Learn to play, and in the account menu', async ({ page }, info) => {
   const state = await home(page, { tutorials: series('skipped', 'done') });
   const section = page.locator('#learn-to-play');
 
@@ -855,9 +855,11 @@ test('a skipped tutorial never opens by itself again: it waits under Learn to pl
   await section.scrollIntoViewIfNeeded();
   await page.screenshot({ path: info.outputPath('lobby-learn.png') });
   await noOverflow(page);
-  await openNavigation(page);
+  // The account menu leads there from every page: it holds what is a signed-in player's, as it holds Settings.
+  await page.locator('#account-menu summary').click();
   await expect(page.locator('#learn-link')).toBeVisible();
   await expect(page.locator('#learn-link')).toHaveAttribute('href', '/#learn-to-play');
+  expect((await page.locator('#learn-link').boundingBox()).height).toBeGreaterThanOrEqual(44);
   expect(state.errors).toEqual([]);
 });
 
@@ -891,8 +893,8 @@ test('a guest is not asked for the tutorials: no Learn to play, in the page or t
   const state = await home(page, { account: null, tutorials: series('new') });
 
   await expect(page.locator('#learn-to-play')).toBeHidden();
-  await openNavigation(page);
   await expect(page.locator('#learn-link')).toBeHidden();
+  await openNavigation(page);
   await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Settings' }).click();
   await expect(page.locator('#tutorial-again-row')).toBeHidden();
   expect(state.tutorialReads ?? 0).toBe(0);

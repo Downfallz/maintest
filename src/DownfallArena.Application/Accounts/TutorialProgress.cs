@@ -28,10 +28,15 @@ public sealed record TutorialProgress
         return new TutorialProgress(finished, [.. Ids(skipped).Except(finished, StringComparer.Ordinal)]);
     }
 
-    public TutorialState StateOf(string tutorial) =>
-        Done.Contains(tutorial, StringComparer.Ordinal) ? TutorialState.Done
-        : Skipped.Contains(tutorial, StringComparer.Ordinal) ? TutorialState.Skipped
-        : TutorialState.New;
+    public TutorialState StateOf(string tutorial)
+    {
+        if (Done.Contains(tutorial, StringComparer.Ordinal))
+        {
+            return TutorialState.Done;
+        }
+
+        return Skipped.Contains(tutorial, StringComparer.Ordinal) ? TutorialState.Skipped : TutorialState.New;
+    }
 
     /// <summary>The same progress with this Tutorial finished: it is no longer one that was skipped.</summary>
     public TutorialProgress WithDone(string tutorial) => Of(Done.Append(tutorial), Skipped);

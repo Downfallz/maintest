@@ -13,7 +13,6 @@ const headerContent = `
     <nav id="home-navigation" class="home-navigation" aria-label="Main navigation">
       <a id="play-link-home" href="/">Lobby</a>
       <button id="friends-open" type="button" data-home-dialog="friends-dialog" hidden>Friends <span id="friend-requests-badge" class="nav-badge" aria-label="Pending friend requests" hidden></span></button>
-      <a id="learn-link" href="/#learn-to-play" hidden>Learn to play</a>
       <a id="leaderboard-link" href="/leaderboard" hidden>Leaderboard</a>
       <a id="stats-link" href="/stats" hidden>Your stats</a>
       <button id="join-open" type="button" data-home-dialog="join-dialog" hidden>Join with a code</button>
@@ -21,7 +20,7 @@ const headerContent = `
       <a id="nav-admin-link" href="/admin" hidden>Admin</a>
     </nav>
     <button id="inbox-open" class="inbox-button" type="button" data-home-dialog="inbox-dialog" aria-label="Notifications · nothing waiting" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0-6 6v3.6L4.4 15.5A1 1 0 0 0 5.3 17h13.4a1 1 0 0 0 .9-1.5L18 12.6V9a6 6 0 0 0-6-6Z"/><path d="M9.5 19.5a2.6 2.6 0 0 0 5 0"/></svg><span id="inbox-badge" class="nav-badge inbox-badge" aria-hidden="true" hidden></span></button>
-    <div id="account" class="account" hidden><details id="account-menu"><summary class="account-chip" aria-label="Your account"><span id="account-initial" class="account-initial" aria-hidden="true"></span><span id="account-name"></span></summary><div class="account-menu"><p class="account-menu-who"><small>Signed in as</small><strong id="account-menu-name"></strong></p><button id="account-settings" type="button" data-home-dialog="app-settings-dialog">Settings</button><a class="site-link" href="${SITE_ORIGIN}">Game website <span aria-hidden="true">→</span></a><button id="sign-out" type="button">Sign out</button><p id="account-problem" role="alert" hidden></p></div></details></div>
+    <div id="account" class="account" hidden><details id="account-menu"><summary class="account-chip" aria-label="Your account"><span id="account-initial" class="account-initial" aria-hidden="true"></span><span id="account-name"></span></summary><div class="account-menu"><p class="account-menu-who"><small>Signed in as</small><strong id="account-menu-name"></strong></p><button id="account-settings" type="button" data-home-dialog="app-settings-dialog">Settings</button><a id="learn-link" class="site-link" href="/#learn-to-play">Learn to play</a><a class="site-link" href="${SITE_ORIGIN}">Game website <span aria-hidden="true">→</span></a><button id="sign-out" type="button">Sign out</button><p id="account-problem" role="alert" hidden></p></div></details></div>
 `;
 const panels = `<div class="navigation-panels lobby-page home-page">
   <dialog id="friends-dialog" class="home-dialog" aria-labelledby="friends-dialog-title"><div class="dialog-heading"><div><p class="eyebrow">Your circle</p><h2 id="friends-dialog-title">Friends</h2></div><button type="button" data-home-close aria-label="Close friends">×</button></div><div class="home-dialog-body"><section id="friends-panel" class="lobby-panel friends-panel" aria-labelledby="friends-heading" hidden>
@@ -178,7 +177,6 @@ function mountHomeNavigation(doc, win = globalThis) {
       if (!account && ['notifications', 'account'].includes(tabs.find(tab => tab.getAttribute('aria-selected') === 'true')?.dataset.settingsTab)) showTab('game');
       el('leaderboard-link').hidden = mode === 'off';
       el('stats-link').hidden = !account;
-      el('learn-link').hidden = !account;
       if (identity !== (account?.id ?? null)) {
         closePanels(false);
         if (el('action-dialog').open) el('action-dialog').close('cancel');

@@ -30,8 +30,9 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
    */
   function place() {
     const combat = el<HTMLDialogElement>('combat-dialog'), planning = el<HTMLDialogElement>('planning-dialog');
-    const docked = document.getElementById('battle')!.dataset.docked === 'true' && !beside.matches;
-    const sheet = !docked ? null : combat.open ? combat : planning.open ? planning : null;
+    // Only a card that shows: a game, a plain practice and a tutorial between two steps leave the sheets as they are.
+    const docked = Boolean(shown) && document.getElementById('battle')!.dataset.docked === 'true' && !beside.matches;
+    const sheet = docked ? [combat, planning].find(one => one.open) ?? null : null;
     if (sheet === combat && coach.previousElementSibling?.id !== 'combat-heading') el('combat-heading').after(coach);
     else if (sheet === planning && coach.parentElement !== planning) planning.prepend(coach);
     else if (!sheet && coach.parentElement !== home.parent) home.parent.insertBefore(coach, home.before);
