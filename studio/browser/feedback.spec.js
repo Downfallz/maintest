@@ -8,9 +8,10 @@ const player = { id: 'acct_aaaaaaaaaaaaaaaa', username: 'MarcF' };
 const creature = id => ({ id, name: `Creature ${id}`, health: 30, maxHealth: 30, energy: 2, totalDefense: 1,
   currentInitiative: 5, isAlive: true, conditions: [], knownSpells: [], acquiredTiers: [] });
 
-function answering(state, route) {
+async function answering(state, route) {
   const request = route.request();
   state.sent.push({ body: request.postDataJSON(), token: request.headers()['x-seat-token'] ?? null });
+  if (state.hold) await state.hold;
   const answer = state.answers.shift() ?? { status: 201, json: { id: 'fb_1', merged: false } };
   return route.fulfill(answer);
 }
@@ -148,8 +149,32 @@ test('a refusal keeps the words, and a muted player loses the entry', async ({ p
   await expect(page.locator('#feedback-refusal')).toHaveText('Your feedback is paused for now.');
   await page.locator('#feedback-close').click();
   await expect(page.locator('#feedback-open-settings')).toBeHidden();
+  await expect(page.locator('#settings-dialog .settings-feedback')).toBeHidden();
   await expect(page.locator('#feedback-open-match')).toBeHidden();
   expect(state.sent.map(one => one.body.kind)).toEqual(['idea', 'idea']);
+});
+
+test('a sheet closed while it sends is empty when it opens again, once the host kept it', async ({ page }) => {
+  const state = await seat(page);
+  let release;
+  state.hold = new Promise(resolve => { release = resolve; });
+  await page.locator('#settings').click();
+  await page.locator('#feedback-open-settings').click();
+  await page.getByRole('button', { name: /Something is wrong/ }).click();
+  await page.getByRole('radio', { name: 'It is stuck or slow' }).check();
+  await page.getByLabel(/What happened/).fill('The board froze after my tempo.');
+  await page.locator('#feedback-send').click();
+  await expect.poll(() => state.sent.length).toBe(1);
+
+  await page.locator('#feedback-close').click();
+  release();
+  await expect.poll(() => page.evaluate(() => document.getElementById('feedback-happened').value)).toBe('');
+  await page.locator('#feedback-open-settings').click();
+
+  await expect(page.locator('#feedback-kinds')).toBeVisible();
+  await expect(page.locator('#feedback-sent')).toBeHidden();
+  await page.getByRole('button', { name: /Something is wrong/ }).click();
+  await expect(page.getByLabel(/What happened/)).toHaveValue('');
 });
 
 test('a signed-in player sends an idea from the lobby’s menu, without a seat or a position', async ({ page }, info) => {

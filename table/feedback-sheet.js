@@ -20,6 +20,8 @@ export const SHORTEST = 10;
 export const LONGEST = 2000;
 const KEPT_ERRORS = 10;
 const LONGEST_ERROR = 500;
+// An address's query and fragment, as the host cuts them (FeedbackApi.WithoutQueries): a seat link carries its key in one.
+const QUERIES = /[?#][^\s'")]*/g;
 
 /** A sheet nobody has filled yet: no kind chosen, and the position attached when there is one. */
 export function feedbackDraft() {
@@ -52,8 +54,8 @@ export function feedbackBody(draft, { page, errors, inGame }) {
 /** The line under the fields: what the host and the page add, so a player knows a few words are enough. */
 export function attachedNote(kind, { inGame, attach = false }) {
   if (kind === 'idea') return inGame ? 'We add the page, and the game and round you send it from.' : 'We add the page you send it from.';
-  if (!inGame) return 'We add the page and its last errors: a few words are enough.';
-  return `We add the game, the round, ${attach ? 'this position, ' : ''}the page and its last errors: a few words are enough.`;
+  if (!inGame) return 'We add the page and its last errors. A few words are enough.';
+  return `We add the game, the round, ${attach ? 'this position, ' : ''}the page and its last errors. A few words are enough.`;
 }
 
 /** The page's last ten errors, newest last, held in memory only. */
@@ -61,7 +63,7 @@ export function createPageErrors(limit = KEPT_ERRORS) {
   const kept = [];
   return {
     add(message, where) {
-      kept.push({ message: (String(message ?? '') || 'Unknown error').slice(0, LONGEST_ERROR), where: where ?? null });
+      kept.push({ message: (String(message ?? '').replace(QUERIES, '') || 'Unknown error').slice(0, LONGEST_ERROR), where: where ?? null });
       if (kept.length > limit) kept.splice(0, kept.length - limit);
     },
     list: () => kept.map(one => ({ ...one })),
@@ -95,7 +97,7 @@ export function refusalSentence(status, answer) {
       const seconds = Math.max(1, Number(answer.retryAfterSeconds) || 120);
       return `You sent feedback a moment ago. Try again in ${seconds} second${seconds === 1 ? '' : 's'}: your words are kept here.`;
     }
-    case 'Feedback.TooMany': return 'Five a day is the most one player can send. Try again tomorrow.';
+    case 'Feedback.TooMany': return 'You can send five a day. Try again tomorrow.';
     case 'Feedback.HostFull': return 'The game is taking no more feedback today. Try again tomorrow.';
     case 'Feedback.Muted': return 'Your feedback is paused for now.';
     case 'Feedback.SignInRequired': return 'Sign in to send feedback, or send it from a game you are playing.';
@@ -238,14 +240,21 @@ export function mountFeedback(doc, { request = (...args) => fetch(...args), toke
     } finally {
       sending = false;
     }
-    if (status === 200 || status === 201) {
+    const kept = status === 200 || status === 201;
+    if (mutedBy(status, answer)) doc.documentElement.dataset.feedbackMuted = 'true';
+    // Closed while it was sending: what was kept leaves the sheet, what was refused stays to be sent again.
+    if (!dialog.open) {
+      if (kept) { draft = feedbackDraft(); fill(); }
+      render();
+      return;
+    }
+    if (kept) {
       step = 'sent';
       el('feedback-sent').textContent = sentSentence(kind, answer);
       render();
       el('feedback-finish').focus();
       return;
     }
-    if (mutedBy(status, answer)) doc.documentElement.dataset.feedbackMuted = 'true';
     refuse(refusalSentence(status, answer));
     render();
   });

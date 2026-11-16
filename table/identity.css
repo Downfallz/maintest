@@ -147,6 +147,7 @@ html dialog { --cut: 16px; }
 #settings-dialog .settings-feedback { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin: 18px 0 0; padding-top: 14px; border-top: 1px solid var(--line-soft); }
 #settings-dialog .settings-feedback p { margin: 0; color: var(--muted); font-size: 12px; }
 #settings-dialog #feedback-open-settings { width: auto; min-height: 44px; }
+html[data-feedback-muted] #settings-dialog .settings-feedback { display: none; }
 #settings-dialog #concede-open { width: auto; background: transparent; border-color: color-mix(in srgb, var(--refused) 45%, transparent); color: var(--refused); }
 .presentation-choice select { flex: 1 1 200px; max-width: 320px; }
 .presentation-choice small { flex: 1 1 100%; }

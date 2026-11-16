@@ -78,6 +78,12 @@ test('an error’s message is cut to the host’s line, and a blank one is still
   assert.deepEqual(errors.list()[1], { message: 'Unknown error', where: null });
 });
 
+test('an error’s words lose any address’s query, which can carry a seat’s key', () => {
+  const errors = createPageErrors();
+  errors.add('Failed to load https://table.example/battle?seat=abc123#key=secret, then gave up', null);
+  assert.equal(errors.list()[0].message, 'Failed to load https://table.example/battle then gave up');
+});
+
 test('the catcher keeps a script error with its file and line, and a rejection with its reason', () => {
   const listeners = {};
   const target = { addEventListener: (name, listener) => { listeners[name] = listener; } };
@@ -101,7 +107,7 @@ test('nothing of the sheet or its errors is written to the device', () => {
 test('each refusal reads as a sentence the player can act on', () => {
   assert.equal(refusalSentence(429, { error: 'Feedback.TooSoon', retryAfterSeconds: 75 }), 'You sent feedback a moment ago. Try again in 75 seconds: your words are kept here.');
   assert.equal(refusalSentence(429, { error: 'Feedback.TooSoon', retryAfterSeconds: 1 }), 'You sent feedback a moment ago. Try again in 1 second: your words are kept here.');
-  assert.equal(refusalSentence(429, { error: 'Feedback.TooMany' }), 'Five a day is the most one player can send. Try again tomorrow.');
+  assert.equal(refusalSentence(429, { error: 'Feedback.TooMany' }), 'You can send five a day. Try again tomorrow.');
   assert.equal(refusalSentence(429, { error: 'Feedback.HostFull' }), 'The game is taking no more feedback today. Try again tomorrow.');
   assert.equal(refusalSentence(403, { error: 'Feedback.Muted' }), 'Your feedback is paused for now.');
   assert.equal(refusalSentence(401, { error: 'Feedback.SignInRequired' }), 'Sign in to send feedback, or send it from a game you are playing.');
@@ -128,9 +134,9 @@ test('a kept piece of feedback thanks the player, and a merged one says where it
 });
 
 test('the sheet says what the host adds, so a short report is enough', () => {
-  assert.equal(attachedNote('bug', { inGame: true, attach: true }), 'We add the game, the round, this position, the page and its last errors: a few words are enough.');
-  assert.equal(attachedNote('bug', { inGame: true, attach: false }), 'We add the game, the round, the page and its last errors: a few words are enough.');
-  assert.equal(attachedNote('bug', { inGame: false, attach: true }), 'We add the page and its last errors: a few words are enough.');
+  assert.equal(attachedNote('bug', { inGame: true, attach: true }), 'We add the game, the round, this position, the page and its last errors. A few words are enough.');
+  assert.equal(attachedNote('bug', { inGame: true, attach: false }), 'We add the game, the round, the page and its last errors. A few words are enough.');
+  assert.equal(attachedNote('bug', { inGame: false, attach: true }), 'We add the page and its last errors. A few words are enough.');
   assert.equal(attachedNote('idea', { inGame: true }), 'We add the page, and the game and round you send it from.');
   assert.equal(attachedNote('idea', { inGame: false }), 'We add the page you send it from.');
 });
