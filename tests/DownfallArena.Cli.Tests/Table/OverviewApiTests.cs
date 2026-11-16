@@ -48,6 +48,13 @@ public sealed class OverviewApiTests : IDisposable
         return Json(answer);
     }
 
+    private async Task<PlayedTable> OpenAsync(AdminApi admin, string request)
+    {
+        var opened = await admin.HandleAsync("POST", "/api/tables", request, Token, principal: null);
+        opened.Status.ShouldBe(201);
+        return (await _registry.ByIdAsync(Json(opened).GetProperty("id").GetString()!, TestContext.Current.CancellationToken)).ShouldNotBeNull();
+    }
+
     [Fact]
     public async Task A_host_with_no_account_and_no_job_says_none_for_them_and_counts_its_tables()
     {
@@ -63,16 +70,35 @@ public sealed class OverviewApiTests : IDisposable
         overview.GetProperty("waiting").GetProperty("openSeats").GetInt32().ShouldBe(0);
     }
 
+    /// <summary>
+    /// A person who has reached their seat against a bot holds the game in progress: the bot waits for their answer.
+    /// Two bots would not do: they play without waiting, and their game can end before the overview is read (#598).
+    /// </summary>
     [Fact]
-    public async Task A_game_between_bots_under_way_is_counted_in_progress_against_bots()
+    public async Task A_game_against_a_bot_under_way_is_counted_in_progress_against_bots()
     {
         var admin = Admin(new OverviewApi(_registry, _hosted.Composer, TimeProvider.System));
-        (await admin.HandleAsync("POST", "/api/tables", """{"player1":"greedy","player2":"random"}""", Token, principal: null)).Status.ShouldBe(201);
+        var table = await OpenAsync(admin, """{"player1":"person","player2":"greedy"}""");
+        table.Seats[0].Person!.Arrive();
+        table.Session.Begin();
 
         var games = (await OverviewAsync(admin)).GetProperty("games").GetProperty("inProgress");
 
+        table.IsOver.ShouldBeFalse("the bot waits for the person, so the game is still under way");
         games.GetProperty("againstBots").GetInt32().ShouldBe(1);
         games.GetProperty("againstPlayers").GetInt32().ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task A_game_between_bots_that_has_ended_is_no_longer_counted_in_progress()
+    {
+        var admin = Admin(new OverviewApi(_registry, _hosted.Composer, TimeProvider.System));
+        var table = await OpenAsync(admin, """{"player1":"greedy","player2":"random"}""");
+        await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(60), TestContext.Current.CancellationToken);
+
+        var games = (await OverviewAsync(admin)).GetProperty("games").GetProperty("inProgress");
+
+        games.GetProperty("againstBots").GetInt32().ShouldBe(0);
     }
 
     [Fact]
