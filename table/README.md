@@ -648,6 +648,11 @@ says under `practice.tutorial`: the band's words, the coach card of the question
 the page does not draw. `concepts.js` holds the ten concept cards a step opens, each a summary of a rulebook
 section. See [A tutorial's coach](../battle/README.md#a-tutorials-coach).
 
+`lobby-tutorials.js` is the tutorials outside a game (onboarding-plan.md, O4), all of it read from
+`GET /api/tutorials`: the home page's **Learn to play** section, one card a tutorial with **New** or **Done**; the
+first tutorial opening by itself when the host says so (`opens`), once a tab; the account menu's
+**Learn to play**; and the settings' **Show the first tutorial again**, which opens tutorial 1 now.
+
 ## Routes
 
 One line per route the host serves, and who may call it: anyone, a signed-in **account**, the **seat** whose key
@@ -669,7 +674,7 @@ test (`.claude/rules/host.md`).
 | `/offline.html` | anyone | The page the service worker keeps (ADR 0166). |
 | `GET /api/me` | anyone | Who is signed in, whether they are the operator, and the host's notice (ADR 0177). |
 | `DELETE /api/account` | account | Deletes the account. |
-| `GET`/`PUT /api/account/preferences` | account | Game settings (ADR 0140). |
+| `GET`/`PUT /api/account/preferences` | account | Game settings (ADR 0140); the `GET` also says the tutorials done and skipped (ADR 0187). |
 | `PUT`/`DELETE /api/account/push`, `POST /api/account/push/test` | account | This browser as one of the account's devices. |
 | `GET /api/lobby`, `GET /api/lobby/page/<open\|all>/<page>` | anyone | Counts, and the public tables eight at a time. |
 | `GET /api/lobby/events`, `GET /api/lobby/negotiate` | anyone | What changed: the stream (ADR 0164), or the relay's address (ADR 0165). |
@@ -684,7 +689,8 @@ test (`.claude/rules/host.md`).
 | `POST /api/seat/<seat>/reaction` | seat | A reaction from the fixed set (ADR 0173). |
 | `GET /api/friends`, `POST /api/friends/requests`, `POST /api/friends/requests/<id>/accept`, `DELETE /api/friends/requests/<id>`, `DELETE /api/friends/<id>` | account | Friends (ADR 0129). |
 | `GET /api/scenarios`, `GET /api/scenarios/<id>`, `GET`/`POST /api/scenarios/<id>/practice` | account | Listed scenarios and their practice (ADR 0179). Only admin accounts open a repository scenario; every account opens a tutorial. |
-| `GET /api/tutorials` | account | The tutorials, in the order of the series, each opened as a practice (ADR 0187). |
+| `GET /api/tutorials` | account | The tutorials, in the order of the series, each opened as a practice, with the account's state for each and the one that opens by itself (ADR 0187). |
+| `POST /api/tutorials/<id>/skip`, `POST /api/tutorials/<id>/done` | account | Records that the account skipped a tutorial, or finished it once its practice at this host says so. |
 | `GET /api/leaderboard`, `GET /api/stats` | anyone, account | The ladder; the player's statistics. |
 | `POST /api/pilot/seats/player1` | pilot | Hands a seat over from a round (body `{"agent","round"}`). |
 | `POST /api/tables`, `GET /api/agents` | operator | Opens a table; the bots it may seat. |

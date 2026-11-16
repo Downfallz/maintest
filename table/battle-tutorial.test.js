@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CONTROLS, assistedQuestion, coachCard, lessonStep, tutorialBand, tutorialOf, withoutAssisted } from './battle-tutorial.js';
+import { CONTROLS, assistedQuestion, coachCard, leavingSkips, lessonStep, progressPath, tutorialBand, tutorialBrief, tutorialOf, withoutAssisted } from './battle-tutorial.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const step = (creature, concepts, pointsAt, kind = 'Action', round = 2) =>
@@ -106,4 +106,29 @@ test('the controls a step may point at are the ones the host holds a lesson to',
 test('every control names an element of the battle page', () => {
   const page = readFileSync(join(root, 'table/battle.html'), 'utf8');
   for (const id of Object.values(CONTROLS)) assert.ok(page.includes(`id="${id}"`), id);
+});
+
+test('a tutorial\'s first card offers Start and Skip the tutorial, and says where it stays', () => {
+  const brief = tutorialBrief(lesson());
+  assert.equal(brief.begin, 'Start');
+  assert.equal(brief.skip, 'Skip the tutorial');
+  assert.match(brief.note, /Learn to play/);
+});
+
+test('a tutorial that is done is not skipped: its card offers no Skip, and leaving it is only leaving', () => {
+  assert.equal(tutorialBrief(lesson({ done: true })).skip, null);
+  assert.equal(leavingSkips(view({}, lesson({ done: true }))), false);
+});
+
+test('leaving a tutorial before its end is skipping it; leaving a game or a plain practice is not', () => {
+  assert.equal(leavingSkips(view()), true);
+  assert.equal(leavingSkips({ board: {} }), false);
+  assert.equal(leavingSkips({ practice: { scenario: 'sc-1', title: 'Bleed', round: 4 } }), false);
+});
+
+test('the account\'s progress is said for the view\'s tutorial, skipped or done, and for nothing else', () => {
+  assert.equal(progressPath(view(), 'skip'), '/api/tutorials/sc-repo-tutorial-your-first-combat/skip');
+  assert.equal(progressPath(view(), 'done'), '/api/tutorials/sc-repo-tutorial-your-first-combat/done');
+  assert.equal(progressPath(view(), 'forget'), null);
+  assert.equal(progressPath({ practice: { scenario: 'sc-1' } }, 'skip'), null);
 });

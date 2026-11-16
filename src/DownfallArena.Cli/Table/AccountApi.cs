@@ -88,6 +88,85 @@ internal sealed class AccountApi
     /// <summary>Where each account's game settings are kept (ADR 0140); null on a host that keeps none.</summary>
     public IPreferenceStore? Preferences { get; set; }
 
+    // One writer at a time reads the Tutorials an account keeps, changes them and writes them back, each after
+    // the one before for that account: the store replaces a document whole, and one replica is the most the
+    // table runs. An account's line is let go of once its last change is through.
+    private readonly Lock _noting = new();
+    private readonly Dictionary<AccountId, Task> _noted = [];
+
+    /// <summary>The Tutorials the account finished and skipped (ADR 0187); null on a host that keeps no game settings.</summary>
+    public async Task<TutorialProgress?> TutorialsAsync(AccountId account, CancellationToken cancellationToken = default) =>
+        Preferences is { } store ? await store.GetTutorialsAsync(account, cancellationToken) : null;
+
+    /// <summary>
+    /// Keeps that the account finished or skipped a Tutorial, and answers what it keeps now; null on a host that
+    /// keeps no game settings, and for an account that is gone. Said twice, it is kept once; a Tutorial finished is never skipped again.
+    /// </summary>
+    public async Task<TutorialProgress?> NoteTutorialAsync(AccountId account, string tutorial, TutorialState state, CancellationToken cancellationToken = default)
+    {
+        if (Preferences is not { } store)
+        {
+            return null;
+        }
+
+        return await AfterTheLastAsync<TutorialProgress?>(account, async () =>
+        {
+            // A request that signed in a moment before its account was deleted reaches this after the deletion
+            // forgot the account's documents: it must not write one back.
+            if (await _registry.FindAsync(account, cancellationToken) is null)
+            {
+                return null;
+            }
+
+            var kept = await store.GetTutorialsAsync(account, cancellationToken);
+            var next = state switch
+            {
+                TutorialState.Done => kept.WithDone(tutorial),
+                TutorialState.Skipped => kept.WithSkipped(tutorial),
+                _ => kept,
+            };
+            if (next != kept)
+            {
+                await store.SaveTutorialsAsync(account, next, cancellationToken);
+            }
+
+            return next;
+        });
+    }
+
+    /// <summary>Runs a change to what the preference store keeps of an account after the one before it for that account, whoever asked for that one.</summary>
+    private async Task<T> AfterTheLastAsync<T>(AccountId account, Func<Task<T>> change)
+    {
+        Task<T> changing;
+        lock (_noting)
+        {
+            changing = AfterAsync(_noted.GetValueOrDefault(account, Task.CompletedTask), change);
+            _noted[account] = changing;
+        }
+
+        try
+        {
+            return await changing;
+        }
+        finally
+        {
+            lock (_noting)
+            {
+                if (_noted.GetValueOrDefault(account) == changing)
+                {
+                    _noted.Remove(account);
+                }
+            }
+        }
+    }
+
+    private static async Task<T> AfterAsync<T>(Task before, Func<Task<T>> change)
+    {
+        // The change before this one may have failed: that is its caller's to hear, not this one's.
+        await before.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+        return await change();
+    }
+
     /// <summary>The host's settings (ADR 0177), whether a new player may make an account; none leaves registration open.</summary>
     public HostSettingsCache? Settings { get; set; }
 
@@ -206,7 +285,13 @@ internal sealed class AccountApi
 
         if (Preferences is { } preferences)
         {
-            await preferences.ForgetAsync(id, cancellationToken);
+            // After any Tutorial being noted for the account: a note that read before the account went must not
+            // write its document back once it is gone.
+            await AfterTheLastAsync(id, async () =>
+            {
+                await preferences.ForgetAsync(id, cancellationToken);
+                return true;
+            });
         }
 
         if (Activity is { } activity)
@@ -491,7 +576,8 @@ internal sealed class AccountApi
         }
 
         var saved = await store.GetAsync(who.Account.Id);
-        return Answer(new { preferences = DescribePreferences(saved ?? GamePreferences.Default), saved = saved is not null }, who.Renewed);
+        var tutorials = await store.GetTutorialsAsync(who.Account.Id);
+        return Answer(new { preferences = DescribePreferences(saved ?? GamePreferences.Default), saved = saved is not null, tutorials = new { done = tutorials.Done, skipped = tutorials.Skipped } }, who.Renewed);
     }
 
     /// <summary>Replaces the account's settings; a game already open keeps what it was set to.</summary>

@@ -1,5 +1,5 @@
-// A tutorial in the battle view (ADR 0187, docs/tabletop/onboarding-plan.md, O3b): what the band says of it, the
-// lesson step the question asked shows, the concept cards that step opens, and the questions the host answers
+// A tutorial in the battle view (ADR 0187, docs/tabletop/onboarding-plan.md, O3b, O4): what the band and the
+// briefing say of it, the lesson step the question asked shows, the concept cards that step opens, and the questions the host answers
 // for the person, which the page does not draw. Pure: the host says the lesson under `practice.tutorial` of the
 // seat's view, and this reads it. Nothing is decided here: a step shows by the question the host asks.
 
@@ -29,6 +29,30 @@ export function tutorialBand(lesson) {
     title: lesson?.title || 'Tutorial',
     detail: lesson?.done ? 'Tutorial complete' : `Step ${shown} of ${steps}`,
   };
+}
+
+/**
+ * What the briefing adds in a tutorial (O4): it says what this is and how to get out of it, **Start** in place of
+ * Begin, and **Skip the tutorial** until the tutorial is done.
+ */
+export function tutorialBrief(lesson) {
+  return {
+    begin: 'Start',
+    skip: lesson?.done ? null : 'Skip the tutorial',
+    note: 'A short lesson on a real board: nothing played here counts. You can skip it now or leave at any time. You can play it again from Learn to play.',
+  };
+}
+
+/** Whether leaving now is skipping: a tutorial the host has not said is done. It never opens by itself again. */
+export function leavingSkips(view) {
+  const lesson = tutorialOf(view);
+  return Boolean(lesson && !lesson.done);
+}
+
+/** Where the page says the account skipped (`skip`) or finished (`done`) the view's tutorial; none outside a tutorial. */
+export function progressPath(view, what) {
+  const id = tutorialOf(view) ? view.practice.scenario : null;
+  return typeof id === 'string' && id && (what === 'skip' || what === 'done') ? `/api/tutorials/${encodeURIComponent(id)}/${what}` : null;
 }
 
 /** Whether the question the view asks is one the host answers for the person, from the recorded answers. */

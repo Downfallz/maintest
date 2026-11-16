@@ -1,3 +1,4 @@
+using DownfallArena.Application.Accounts;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Infrastructure.Learning;
 using DownfallArena.SharedKernel.Identifiers;
@@ -12,7 +13,10 @@ namespace DownfallArena.Cli.Table;
 /// operator listed under Practice (S6); one left off the list still opens by its link. Signed out, every route answers 401.
 /// A scenario the repository ships opens for the host's admin accounts alone (<see cref="Admins" />), except its
 /// tutorials (ADR 0187, onboarding-plan.md O3a): <c>GET /api/tutorials</c> lists them, in the order of the series, to
-/// any signed-in account, and any signed-in account opens one as a practice by the same routes.
+/// any signed-in account, and any signed-in account opens one as a practice by the same routes. The list says where
+/// the account stands with each (new, done, skipped) and which one opens by itself (O4): the first of the series
+/// while it is new. <c>POST /api/tutorials/&lt;id&gt;/skip</c> keeps that the account skipped one, and
+/// <c>POST /api/tutorials/&lt;id&gt;/done</c> that it finished one, once this host's own practice of it says so.
 /// </summary>
 internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practices, AccountApi accounts)
 {
@@ -29,7 +33,8 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
     /// <summary>The tutorials, for any signed-in account.</summary>
     public const string TutorialsRoute = "/api/tutorials";
 
-    public static bool Names(string path) => path == Prefix || path == TutorialsRoute || path.StartsWith(Prefix + "/", StringComparison.Ordinal);
+    public static bool Names(string path) =>
+        path == Prefix || path == TutorialsRoute || path.StartsWith(Prefix + "/", StringComparison.Ordinal) || path.StartsWith(TutorialsRoute + "/", StringComparison.Ordinal);
 
     public async Task<StudioResponse> HandleAsync(string method, string path, AccountRequest request)
     {
@@ -42,7 +47,12 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
 
         if (path is Prefix or TutorialsRoute)
         {
-            return Renewed(await ListAsync(method, path), who.Renewed);
+            return Renewed(await ListAsync(method, path, who.Account.Id), who.Renewed);
+        }
+
+        if (path.StartsWith(TutorialsRoute + "/", StringComparison.Ordinal))
+        {
+            return Renewed(await NoteAsync(method, path, who.Account.Id), who.Renewed);
         }
 
         var segments = path[(Prefix.Length + 1)..].Split('/');
@@ -67,15 +77,50 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
     }
 
     /// <summary>The scenarios listed under Practice, or the tutorials: a read alone.</summary>
-    private async Task<StudioResponse> ListAsync(string method, string path)
+    private async Task<StudioResponse> ListAsync(string method, string path, AccountId account)
     {
         if (method != "GET")
         {
             return NoRoute(method, path);
         }
 
-        return path == Prefix ? await ListedAsync() : Tutorials();
+        return path == Prefix ? await ListedAsync() : Tutorials(await accounts.TutorialsAsync(account));
     }
+
+    /// <summary>
+    /// Keeps that the account skipped a Tutorial, or finished it. Skipped is the person's to say. Done is this
+    /// host's: it is kept only while the account's practice of that Tutorial, in this process, says it is done.
+    /// </summary>
+    private async Task<StudioResponse> NoteAsync(string method, string path, AccountId account)
+    {
+        var segments = path[(TutorialsRoute.Length + 1)..].Split('/');
+        if (method != "POST" || segments is not [var id, "skip" or "done"])
+        {
+            return NoRoute(method, path);
+        }
+
+        if (!store.Teaches(id))
+        {
+            return Error("Tutorial.NotFound", "This tutorial does not exist.", 404);
+        }
+
+        var state = segments[1] == "done" ? TutorialState.Done : TutorialState.Skipped;
+        if (state == TutorialState.Done && (await practices.CurrentAsync(account.ToString(), id))?.Play.Api.Practice?.Tutorial is not { Done: true })
+        {
+            return Error("Tutorial.NotDone", "This tutorial is not finished yet.", 409);
+        }
+
+        return await accounts.NoteTutorialAsync(account, id, state) is { } kept
+            ? StudioResponse.OfJson(new { id, state = Named(kept.StateOf(id)) }, ArtifactJson.LineOptions)
+            : Error("Account.NoPreferences", "This host keeps no game settings.", 404);
+    }
+
+    private static string Named(TutorialState state) => state switch
+    {
+        TutorialState.Done => "done",
+        TutorialState.Skipped => "skipped",
+        _ => "new",
+    };
 
     /// <summary>Whether a scenario the repository ships, and not a tutorial, is kept from an account that is not an admin's.</summary>
     private bool Hidden(string id, AccountId account) =>
@@ -99,12 +144,18 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
         return StudioResponse.OfJson(new { scenarios = listed }, ArtifactJson.LineOptions);
     }
 
-    /// <summary>The tutorials the repository ships, in the order of the series, each as a player reads it with its place.</summary>
-    private StudioResponse Tutorials()
+    /// <summary>
+    /// The tutorials the repository ships, in the order of the series, each as a player reads it with its place and
+    /// where the account stands with it. <c>opens</c> is the one that opens by itself: the first of the series while
+    /// it is new to the account, and none on a host that keeps no game settings, which could not keep it skipped.
+    /// </summary>
+    private StudioResponse Tutorials(TutorialProgress? kept)
     {
         var series = store.Tutorials;
+        var first = series.Count > 0 && series[0].Document.Tutorial!.Order == 1 && kept?.StateOf(series[0].Id) == TutorialState.New ? series[0].Id : null;
         return StudioResponse.OfJson(new
         {
+            opens = first is null ? null : $"/battle?scenario={first}",
             tutorials = series.Select(one =>
             {
                 var cut = one.Document.Scenario.Cut;
@@ -119,6 +170,7 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
                     seat = ScenarioCommands.SeatName(one.Document.Seat),
                     format = one.Document.Scenario.Source.Rules.Format.ToString(),
                     link = $"/battle?scenario={one.Id}",
+                    state = Named((kept ?? TutorialProgress.None).StateOf(one.Id)),
                 };
             }).ToArray(),
         }, ArtifactJson.LineOptions);

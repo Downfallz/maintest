@@ -24,12 +24,36 @@ public sealed class BlobPreferenceStore : IPreferenceStore
         return new BlobPreferenceStore(container);
     }
 
-    public async Task<GamePreferences?> GetAsync(AccountId account, CancellationToken cancellationToken = default)
+    public async Task<GamePreferences?> GetAsync(AccountId account, CancellationToken cancellationToken = default) =>
+        await ReadAsync(PreferenceDocuments.PathOf(account), cancellationToken) is { } json ? PreferenceDocuments.Read(json) : null;
+
+    public Task SaveAsync(AccountId account, GamePreferences preferences, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(preferences);
+        return WriteAsync(PreferenceDocuments.PathOf(account), PreferenceDocuments.Write(preferences), cancellationToken);
+    }
+
+    public async Task<TutorialProgress> GetTutorialsAsync(AccountId account, CancellationToken cancellationToken = default) =>
+        await ReadAsync(PreferenceDocuments.TutorialsPathOf(account), cancellationToken) is { } json ? PreferenceDocuments.ReadTutorials(json) : TutorialProgress.None;
+
+    public Task SaveTutorialsAsync(AccountId account, TutorialProgress tutorials, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(tutorials);
+        return WriteAsync(PreferenceDocuments.TutorialsPathOf(account), PreferenceDocuments.WriteTutorials(tutorials), cancellationToken);
+    }
+
+    public async Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)
+    {
+        await _container.DeleteBlobIfExistsAsync(PreferenceDocuments.PathOf(account), cancellationToken: cancellationToken);
+        await _container.DeleteBlobIfExistsAsync(PreferenceDocuments.TutorialsPathOf(account), cancellationToken: cancellationToken);
+    }
+
+    private async Task<string?> ReadAsync(string path, CancellationToken cancellationToken)
     {
         try
         {
-            var download = await _container.GetBlobClient(PreferenceDocuments.PathOf(account)).DownloadContentAsync(cancellationToken);
-            return PreferenceDocuments.Read(download.Value.Content.ToString());
+            var download = await _container.GetBlobClient(path).DownloadContentAsync(cancellationToken);
+            return download.Value.Content.ToString();
         }
         catch (RequestFailedException exception) when (exception.Status == 404)
         {
@@ -37,15 +61,9 @@ public sealed class BlobPreferenceStore : IPreferenceStore
         }
     }
 
-    public async Task SaveAsync(AccountId account, GamePreferences preferences, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(preferences);
-        await _container.GetBlobClient(PreferenceDocuments.PathOf(account)).UploadAsync(
-            BinaryData.FromString(PreferenceDocuments.Write(preferences)),
+    private async Task WriteAsync(string path, string document, CancellationToken cancellationToken) =>
+        await _container.GetBlobClient(path).UploadAsync(
+            BinaryData.FromString(document),
             new BlobUploadOptions { HttpHeaders = new BlobHttpHeaders { ContentType = "application/json" } },
             cancellationToken);
-    }
-
-    public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default) =>
-        _container.DeleteBlobIfExistsAsync(PreferenceDocuments.PathOf(account), cancellationToken: cancellationToken);
 }

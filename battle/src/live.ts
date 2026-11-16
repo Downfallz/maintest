@@ -154,7 +154,7 @@ const historyUI = historyControls(history, () => playback.skip(), () => render()
 let revealRead: number | null = null;
 const revealUnread = () => { const receipt = growth.receipt() as { sequence: number } | null; return Boolean(receipt) && receipt!.sequence !== revealRead; };
 const growthUI = growthControls(growth, () => playback.skip(), () => render(), atlasUI);
-const tutorialUI = tutorialControls(() => render());
+const tutorialUI = tutorialControls(() => render(), request);
 const helpUI = guidanceControls(storage, () => playback.skip(), () => render(), muted => keepForGame({ help: !muted }));
 function inspectCreature(id: string) {
   inspected = id; renderInspection(); $<HTMLDialogElement>('inspect-dialog').showModal();

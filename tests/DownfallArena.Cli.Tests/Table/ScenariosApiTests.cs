@@ -608,6 +608,17 @@ public sealed class ScenariosApiTests : IDisposable
         var store = Shipping();
         await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
         var play = await OpenTutorialAsync(store, practices, "learner");
+        var recorded = await AnswerTheLessonAsync(store, play);
+
+        var done = await WaitingForAsync(play, one => one.GetProperty("practice").GetProperty("tutorial").GetProperty("done").GetBoolean());
+        recorded.Count.ShouldBe(3);
+        done.GetProperty("practice").GetProperty("tutorial").GetProperty("shown").GetInt32().ShouldBe(3);
+        done.GetProperty("over").GetBoolean().ShouldBeFalse("the last step's round ended, not the match");
+    }
+
+    /// <summary>Answers the three questions tutorial 1 teaches with the recorded answers, as a person following the lesson does.</summary>
+    private static async Task<IReadOnlyList<Application.Matches.Decisions.PlayerDecision>> AnswerTheLessonAsync(ScenarioStore store, ScenarioPlay play)
+    {
         var recorded = (await store.GetAsync(Tutorial, Cancel)).ShouldNotBeNull().Scenario.After.OfType<DecisionEntry>()
             .Where(entry => entry.Decision.Slot == Domain.Matches.PlayerSlot.Player1 && entry.Decision.Decision.Kind == PlayerOptionsKind.Action)
             .Select(entry => entry.Decision.Decision).Take(3).ToList();
@@ -622,10 +633,118 @@ public sealed class ScenariosApiTests : IDisposable
             sent.Status.ShouldBe(204, Encoding.UTF8.GetString(sent.Body));
         }
 
-        var done = await WaitingForAsync(play, one => one.GetProperty("practice").GetProperty("tutorial").GetProperty("done").GetBoolean());
-        recorded.Count.ShouldBe(3);
-        done.GetProperty("practice").GetProperty("tutorial").GetProperty("shown").GetInt32().ShouldBe(3);
-        done.GetProperty("over").GetBoolean().ShouldBeFalse("the last step's round ended, not the match");
+        return recorded;
+    }
+
+    /// <summary>The scenarios' API over accounts whose game settings, and so whose tutorials done and skipped, are kept.</summary>
+    private async Task<(ScenariosApi Api, AccountApi Accounts)> KeepingAsync(ScenarioStore store, ScenarioPractices practices)
+    {
+        var accounts = await AccountsAsync();
+        accounts.Preferences = new FilePreferenceStore(_root);
+        return (new ScenariosApi(store, practices, accounts), accounts);
+    }
+
+    private static (string? Opens, string? State) Standing(StudioResponse listed) =>
+        (Read(listed).GetProperty("opens").GetString(), Read(listed).GetProperty("tutorials")[0].GetProperty("state").GetString());
+
+    [Fact]
+    public async Task The_first_tutorial_is_new_to_an_account_and_is_the_one_that_opens_by_itself()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var (api, accounts) = await KeepingAsync(store, practices);
+
+        var listed = await api.HandleAsync("GET", ScenariosApi.TutorialsRoute, await SignedInAsync(accounts, "learner"));
+
+        Standing(listed).ShouldBe(($"/battle?scenario={Tutorial}", "new"));
+    }
+
+    [Fact]
+    public async Task A_skipped_tutorial_never_opens_by_itself_again_for_that_account_alone()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var (api, accounts) = await KeepingAsync(store, practices);
+        var learner = await SignedInAsync(accounts, "learner");
+
+        var skipped = await api.HandleAsync("POST", $"{ScenariosApi.TutorialsRoute}/{Tutorial}/skip", learner);
+        var again = await api.HandleAsync("POST", $"{ScenariosApi.TutorialsRoute}/{Tutorial}/skip", learner);
+
+        (skipped.Status, again.Status).ShouldBe((200, 200));
+        Read(skipped).GetProperty("state").GetString().ShouldBe("skipped");
+        Standing(await api.HandleAsync("GET", ScenariosApi.TutorialsRoute, learner)).ShouldBe((null, "skipped"));
+        Standing(await api.HandleAsync("GET", ScenariosApi.TutorialsRoute, await SignedInAsync(accounts, "other"))).ShouldBe(($"/battle?scenario={Tutorial}", "new"));
+    }
+
+    [Fact]
+    public async Task A_tutorial_is_not_kept_done_while_this_host_s_practice_of_it_is_not()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var (api, accounts) = await KeepingAsync(store, practices);
+        var learner = await SignedInAsync(accounts, "learner");
+
+        var unopened = await api.HandleAsync("POST", $"{ScenariosApi.TutorialsRoute}/{Tutorial}/done", learner);
+        await OpenTutorialAsync(store, practices, "learner");
+        var unfinished = await api.HandleAsync("POST", $"{ScenariosApi.TutorialsRoute}/{Tutorial}/done", learner);
+
+        (unopened.Status, unfinished.Status).ShouldBe((409, 409));
+        Read(unfinished).GetProperty("error").GetString().ShouldBe("Tutorial.NotDone");
+        Standing(await api.HandleAsync("GET", ScenariosApi.TutorialsRoute, learner)).State.ShouldBe("new");
+    }
+
+    [Fact]
+    public async Task A_tutorial_played_to_its_end_is_kept_done_even_after_it_was_skipped_and_skipping_it_again_leaves_it_done()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var (api, accounts) = await KeepingAsync(store, practices);
+        var learner = await SignedInAsync(accounts, "learner");
+        await api.HandleAsync("POST", $"{ScenariosApi.TutorialsRoute}/{Tutorial}/skip", learner);
+        var play = await OpenTutorialAsync(store, practices, "learner");
+        await AnswerTheLessonAsync(store, play);
+        await WaitingForAsync(play, one => one.GetProperty("practice").GetProperty("tutorial").GetProperty("done").GetBoolean());
+
+        var done = await api.HandleAsync("POST", $"{ScenariosApi.TutorialsRoute}/{Tutorial}/done", learner);
+        var skipped = await api.HandleAsync("POST", $"{ScenariosApi.TutorialsRoute}/{Tutorial}/skip", learner);
+
+        done.Status.ShouldBe(200, Encoding.UTF8.GetString(done.Body));
+        (Read(done).GetProperty("state").GetString(), Read(skipped).GetProperty("state").GetString()).ShouldBe(("done", "done"));
+        Standing(await api.HandleAsync("GET", ScenariosApi.TutorialsRoute, learner)).ShouldBe((null, "done"));
+    }
+
+    [Fact]
+    public async Task Progress_is_kept_for_a_tutorial_alone_by_a_signed_in_account_with_a_post()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var (api, accounts) = await KeepingAsync(store, practices);
+        var learner = await SignedInAsync(accounts, "learner");
+
+        var plain = await api.HandleAsync("POST", $"{ScenariosApi.TutorialsRoute}/sc-repo-greedy-1v1-round-3/skip", learner);
+        var unknown = await api.HandleAsync("POST", $"{ScenariosApi.TutorialsRoute}/{Tutorial}/forget", learner);
+        var read = await api.HandleAsync("GET", $"{ScenariosApi.TutorialsRoute}/{Tutorial}/skip", learner);
+        var nobody = await api.HandleAsync("POST", $"{ScenariosApi.TutorialsRoute}/{Tutorial}/skip", new AccountRequest(null, Secure: false));
+
+        (plain.Status, unknown.Status, read.Status, nobody.Status).ShouldBe((404, 404, 404, 401));
+        Read(plain).GetProperty("error").GetString().ShouldBe("Tutorial.NotFound");
+        ScenariosApi.Names($"{ScenariosApi.TutorialsRoute}/{Tutorial}/skip").ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task A_host_that_keeps_no_game_settings_opens_no_tutorial_by_itself_and_keeps_none_skipped()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var accounts = await AccountsAsync();
+        var api = new ScenariosApi(store, practices, accounts);
+        var learner = await SignedInAsync(accounts, "learner");
+
+        var skipped = await api.HandleAsync("POST", $"{ScenariosApi.TutorialsRoute}/{Tutorial}/skip", learner);
+
+        skipped.Status.ShouldBe(404);
+        Read(skipped).GetProperty("error").GetString().ShouldBe("Account.NoPreferences");
+        Standing(await api.HandleAsync("GET", ScenariosApi.TutorialsRoute, learner)).ShouldBe((null, "new"));
     }
 
     [Fact]
