@@ -17,7 +17,7 @@ const written = ({ health, defense, initiative, energyPerRound, criticalMultipli
 health | Health | Part 1 | part-1-what-you-are-trying-to-do | Part 1: What you are trying to do
 At zero Health a creature is defeated, for the rest of the match.
 A team with no creature left loses, at once, even in the middle of a round.
-> A creature starts at ${health} Health. A hit of 7 leaves it at ${health - 7}.
+> A creature starts at ${health} Health. A hit of 7 leaves it at ${Math.max(0, health - Math.max(0, 7 - defense))}.
 
 energy | Energy | 5.1 | 51-energy-gain | 5.1 Energy gain
 Every living creature gains Energy at Upkeep, when a round begins.
@@ -45,7 +45,7 @@ critical | Critical | 6.7 | 67-the-critical-roll | 6.7 The critical roll
 A Precision creature rolls a d20 when its spell resolves, against the number the spell prints.
 On a critical, the spell's damage and healing on its targets are multiplied.
 An Instinct creature never rolls.
-> A spell prints d20: 11+. A roll of 14 is a critical: its 7 damage becomes ${7 * criticalMultiplier}.
+> A spell prints d20: 11+. A roll of 14 is a critical: its 7 damage becomes ${Math.floor(7 * criticalMultiplier)}.
 
 intent | Intent | 5.6 | 56-intent-selection | 5.6 Intent selection
 An intent is the spell a creature will cast, declared hidden before the turns begin.

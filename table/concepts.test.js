@@ -55,9 +55,9 @@ test('the reference values the cards quote match the hosted table\'s rule set an
 
 test('a card reads the reference values it is given, and only the cards that quote a value change', () => {
   const quotedBy = {
-    health: ['health'], defense: ['defense'], initiative: ['initiative', 'tempo', 'mutation'], energyPerRound: ['energy'], criticalMultiplier: ['critical'],
+    health: ['health'], defense: ['health', 'defense'], initiative: ['initiative', 'tempo', 'mutation'], energyPerRound: ['energy'], criticalMultiplier: ['critical'],
   };
-  const moved = { health: 40, defense: 1, initiative: 6, energyPerRound: 3, criticalMultiplier: 3 };
+  const moved = { health: 40, defense: 1, initiative: 6, energyPerRound: 3, criticalMultiplier: 1.5 };
   const examples = cards => Object.fromEntries(cards.map(card => [card.id, card.example]));
   const today = examples(conceptsFor(REFERENCE));
   assert.deepEqual(today, examples(CONCEPTS));
@@ -66,10 +66,11 @@ test('a card reads the reference values it is given, and only the cards that quo
     assert.deepEqual(Object.keys(today).filter(id => today[id] !== other[id]), ids, value);
   }
   const all = examples(conceptsFor(moved));
-  assert.equal(all.health, 'A creature starts at 40 Health. A hit of 7 leaves it at 33.');
+  assert.equal(all.health, 'A creature starts at 40 Health. A hit of 7 leaves it at 34.');
   assert.equal(all.energy, 'A creature at 1 Energy gains 3 at Upkeep and has 4: enough for a spell that costs 4.');
   assert.equal(all.defense, 'A hit of 7 on a creature with 3 Defense deals 4. A creature starts at 1 Defense: the same hit on it deals 6.');
-  assert.equal(all.critical, 'A spell prints d20: 11+. A roll of 14 is a critical: its 7 damage becomes 21.');
+  assert.equal(all.critical, 'A spell prints d20: 11+. A roll of 14 is a critical: its 7 damage becomes 10.');
+  assert.equal(conceptsFor({ ...REFERENCE, health: 5 })[0].example, 'A creature starts at 5 Health. A hit of 7 leaves it at 0.');
   assert.equal(all.initiative, 'Two Precision creatures at 8 and 6 initiative: the one at 8 acts first.');
   assert.equal(all.tempo, 'An Instinct creature at 6 initiative acts before a Precision creature at 10.');
   assert.equal(all.mutation, 'A creature at 6 base initiative takes a mutation with a bonus of 1: it knows new spells and acts at 7.');
