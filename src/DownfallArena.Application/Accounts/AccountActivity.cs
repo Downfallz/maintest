@@ -1,4 +1,3 @@
-using DownfallArena.Application.FeedbackBox;
 using DownfallArena.SharedKernel.Identifiers;
 
 namespace DownfallArena.Application.Accounts;

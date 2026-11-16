@@ -64,26 +64,23 @@ public sealed class AccountActivityLog
 
     /// <summary>
     /// Mutes the account from feedback, or lifts its mute when <paramref name="mute" /> is none, keeping its two times.
-    /// Answers false for an account none of whose activity is kept: one never seen is no account to mute.
+    /// An account none of whose activity is kept yet gets a record holding the mute alone.
     /// </summary>
-    public async Task<bool> MuteFeedbackAsync(AccountId account, FeedbackBox.FeedbackMute? mute, CancellationToken cancellationToken = default)
+    public async Task MuteFeedbackAsync(AccountId account, FeedbackMute? mute, CancellationToken cancellationToken = default)
     {
         await Writes.WaitAsync(cancellationToken);
         try
         {
-            if (await _store.FindAsync(account, cancellationToken) is not { } kept)
-            {
-                return false;
-            }
-
-            await _store.SaveAsync(kept with { FeedbackMute = mute }, cancellationToken);
-            return true;
+            var kept = await _store.FindAsync(account, cancellationToken) ?? new AccountActivity(account, null, null);
+            await _store.SaveAsync(kept with { FeedbackMute = Holding(mute, _clock.GetUtcNow()) }, cancellationToken);
         }
         finally
         {
             Writes.Release();
         }
     }
+
+    private static FeedbackMute? Holding(FeedbackMute? mute, DateTimeOffset now) => mute is not null && mute.HoldsAt(now) ? mute : null;
 
     private async Task WriteAsync(AccountId account, bool signedIn, CancellationToken cancellationToken)
     {
@@ -99,7 +96,8 @@ public sealed class AccountActivityLog
                 return;
             }
 
-            await _store.SaveAsync(new AccountActivity(account, signedIn ? now : kept?.LastSignIn, now) { FeedbackMute = kept?.FeedbackMute }, cancellationToken);
+            // A mute from feedback is carried while it holds, and dropped at the first write after it ends.
+            await _store.SaveAsync(new AccountActivity(account, signedIn ? now : kept?.LastSignIn, now) { FeedbackMute = Holding(kept?.FeedbackMute, now) }, cancellationToken);
             _seen[account] = now;
         }
         finally

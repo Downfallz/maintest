@@ -1,11 +1,14 @@
 using System.Text;
 using System.Text.Json;
+using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Admin;
 using DownfallArena.Application.FeedbackBox;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
+using DownfallArena.Infrastructure.Accounts;
 using DownfallArena.Infrastructure.Admin;
 using DownfallArena.Infrastructure.FeedbackBox;
+using DownfallArena.SharedKernel.Identifiers;
 using Microsoft.Extensions.Time.Testing;
 
 namespace DownfallArena.Cli.Tests.Table;
@@ -55,7 +58,7 @@ public sealed class FeedbackAdminApiTests : IDisposable
     private AdminApi Admin() =>
         new(_registry, _hosted.Composer, OperatorGate.WithToken(Token), _clock, "Rules", _hosted.Stored)
         {
-            Feedback = new FeedbackAdminApi(new OperatorFeedback(_feedback, _mutes, _writes, _clock), _hosted.Stored) { Notes = new OperatorNotes(_actions) },
+            Feedback = new FeedbackAdminApi(new OperatorFeedback(_feedback, _mutes, _writes, _clock), _hosted.Stored, _clock) { Notes = new OperatorNotes(_actions) },
         };
 
     private FeedbackApi Players() => new(new SendFeedback(_feedback, new GuestAddresses(), _writes, _clock, _mutes), _registry);
@@ -204,7 +207,10 @@ public sealed class FeedbackAdminApiTests : IDisposable
         var sheet = Read(await AskAsync("GET", $"{FeedbackAdminApi.Route}/{ids[0]}"));
         sheet.GetProperty("mute").GetProperty("why").GetString().ShouldBe(FeedbackMute.BySpam);
         (await Players().HandleAsync("POST", Report(), table.Seats[0].Token, SignedOut, Address, null)).Status.ShouldBe(403);
-        (await ActivityAsync()).ShouldBe([$"feedback.mute {ids[2]} 3 marked as spam in 30 days", $"feedback.spam {ids[2]}", $"feedback.spam {ids[1]}", $"feedback.spam {ids[0]}"]);
+        // The mark and the mute it earned are noted in one request, at one instant: their order between them is not kept.
+        var noted = await ActivityAsync();
+        noted[..2].ShouldBe([$"feedback.mute {ids[2]} 3 marked as spam in 30 days", $"feedback.spam {ids[2]}"], ignoreOrder: true);
+        noted[2..].ShouldBe([$"feedback.spam {ids[1]}", $"feedback.spam {ids[0]}"]);
     }
 
     [Fact]
@@ -229,4 +235,58 @@ public sealed class FeedbackAdminApiTests : IDisposable
         (await AskAsync("POST", $"{FeedbackAdminApi.Route}/{unknown}/mute")).Status.ShouldBe(404);
         (await AskAsync("PATCH", FeedbackAdminApi.Route)).Status.ShouldBe(404);
     }
+
+    [Fact]
+    public async Task A_filter_that_names_nothing_the_host_knows_is_refused()
+    {
+        (await AskAsync("GET", FeedbackAdminApi.Route, query: "status=closed")).Status.ShouldBe(400);
+        (await AskAsync("GET", FeedbackAdminApi.Route, query: "kind=bugs")).Status.ShouldBe(400);
+        (await AskAsync("GET", FeedbackAdminApi.Route, query: "category=weather")).Status.ShouldBe(400);
+        (await AskAsync("GET", FeedbackAdminApi.Route, query: "kind=bug&status=open&category=looks")).Status.ShouldBe(200);
+    }
+
+    [Fact]
+    public async Task A_spam_mark_asked_again_is_noted_once()
+    {
+        var table = await BegunAsync();
+        var id = await SentAsync(table, Report());
+
+        await AskAsync("PUT", $"{FeedbackAdminApi.Route}/{id}/status", new { status = "dismissed", reason = Feedback.SpamReason });
+        var again = Read(await AskAsync("PUT", $"{FeedbackAdminApi.Route}/{id}/status", new { status = "dismissed", reason = Feedback.SpamReason }));
+
+        again.GetProperty("spam").GetBoolean().ShouldBeTrue();
+        (await ActivityAsync()).ShouldBe([$"feedback.spam {id}"]);
+    }
+
+    [Fact]
+    public async Task The_sheet_says_which_of_its_actions_apply()
+    {
+        var table = await BegunAsync();
+        var id = await SentAsync(table, Report());
+
+        Actions(Read(await AskAsync("GET", $"{FeedbackAdminApi.Route}/{id}"))).ShouldBe(["seen", "reproduced", "dismiss", "spam", "toIdea", "diagnose", "mute"]);
+        Actions(Read(await AskAsync("PUT", $"{FeedbackAdminApi.Route}/{id}/status", new { status = "dismissed", reason = "A duplicate." }))).ShouldBe(["seen", "reproduced", "diagnose", "mute"]);
+        Actions(Read(await AskAsync("POST", $"{FeedbackAdminApi.Route}/{id}/mute"))).ShouldBe(["seen", "reproduced", "diagnose", "unmute"]);
+    }
+
+    [Fact]
+    public async Task A_signed_in_sender_is_muted_in_its_activity_record_and_noted_once()
+    {
+        var activity = new FileActivityStore(Path.Combine(_root, "accounts"));
+        var account = AccountId.New();
+        var id = Feedback.NewId(_clock.GetUtcNow());
+        await _feedback.SaveAsync(new Feedback { Id = id, Kind = FeedbackKind.Idea, At = _clock.GetUtcNow(), Sender = account.Value, Account = account.Value, Category = "lobby", Text = "Invite a friend by name." }, Cancel);
+        var admin = new AdminApi(_registry, _hosted.Composer, OperatorGate.WithToken(Token), _clock, "Rules", _hosted.Stored)
+        {
+            Feedback = new FeedbackAdminApi(new OperatorFeedback(_feedback, new FeedbackMutes(new AccountActivityLog(activity, _clock)), _writes, _clock), _hosted.Stored, _clock) { Notes = new OperatorNotes(_actions) },
+        };
+
+        (await admin.HandleAsync("POST", $"{FeedbackAdminApi.Route}/{id}/mute", string.Empty, Token, principal: null)).Status.ShouldBe(200);
+        (await admin.HandleAsync("POST", $"{FeedbackAdminApi.Route}/{id}/mute", string.Empty, Token, principal: null)).Status.ShouldBe(200);
+
+        (await activity.FindAsync(account, Cancel)).ShouldNotBeNull().FeedbackMute.ShouldNotBeNull().Why.ShouldBe(FeedbackMute.ByOperator);
+        (await ActivityAsync()).ShouldBe([$"feedback.mute {id} 30 days"]);
+    }
+
+    private static string[] Actions(JsonElement sheet) => [.. sheet.GetProperty("actions").EnumerateArray().Select(action => action.GetString()!)];
 }

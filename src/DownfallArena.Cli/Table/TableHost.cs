@@ -254,7 +254,7 @@ internal static class TableHost
         // account's mute is kept with its activity, a guest's in this process's memory.
         var feedbackMutes = new FeedbackMutes(accounts?.Activity);
         var operatorFeedback = feedback is null ? null : new OperatorFeedback(feedback, feedbackMutes, feedbackWrites, clock);
-        admin.Feedback = operatorFeedback is null ? null : new FeedbackAdminApi(operatorFeedback, stored) { Notes = notes };
+        admin.Feedback = operatorFeedback is null ? null : new FeedbackAdminApi(operatorFeedback, stored, clock) { Notes = notes };
 
         // The Overview (A5): the numbers at a glance, each read from the source its own tab reads.
         admin.Overview = new OverviewApi(registry, composer, clock)

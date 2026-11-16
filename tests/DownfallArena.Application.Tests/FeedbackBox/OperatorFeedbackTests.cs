@@ -64,10 +64,10 @@ public sealed class OperatorFeedbackTests : IDisposable
     {
         var report = await KeptAsync(category: "rules");
 
-        var idea = (await Desk().ChangeKindAsync(report.Id, FeedbackKind.Idea, Cancel)).Value;
+        var idea = (await Desk().ChangeKindAsync(report.Id, FeedbackKind.Idea, Cancel)).Value.Feedback;
         (idea.Kind, idea.Status, idea.Category, idea.Text, idea.Expected, idea.Context).ShouldBe((FeedbackKind.Idea, FeedbackStatus.Seen, "rules", report.Text, report.Expected, report.Context));
 
-        var back = (await Desk().ChangeKindAsync(report.Id, FeedbackKind.Bug, Cancel)).Value;
+        var back = (await Desk().ChangeKindAsync(report.Id, FeedbackKind.Bug, Cancel)).Value.Feedback;
         (back.Kind, back.Text, back.Expected, back.Context, back.Sender).ShouldBe((FeedbackKind.Bug, report.Text, report.Expected, report.Context, report.Sender));
         (await _store.FindAsync(report.Id, Cancel))!.Kind.ShouldBe(FeedbackKind.Bug);
     }
@@ -77,7 +77,7 @@ public sealed class OperatorFeedbackTests : IDisposable
     {
         var report = await KeptAsync(category: "stuck");
 
-        (await Desk().ChangeKindAsync(report.Id, FeedbackKind.Idea, Cancel)).Value.Category.ShouldBe("other");
+        (await Desk().ChangeKindAsync(report.Id, FeedbackKind.Idea, Cancel)).Value.Feedback.Category.ShouldBe("other");
     }
 
     [Fact]
@@ -122,7 +122,7 @@ public sealed class OperatorFeedbackTests : IDisposable
         var answer = await Sender().HandleAsync(Sent(report.Sender, null), Cancel);
 
         answer.Refused!.Code.ShouldBe("Feedback.Muted");
-        (await Desk().UnmuteAsync(report.Id, Cancel)).IsSuccess.ShouldBeTrue();
+        (await Desk().UnmuteAsync(report.Id, Cancel)).Value.Changed.ShouldBeTrue();
         _clock.Advance(SendFeedback.Apart);
         (await Sender().HandleAsync(Sent(report.Sender, null), Cancel)).Refused.ShouldBeNull();
     }
@@ -177,7 +177,7 @@ public sealed class OperatorFeedbackTests : IDisposable
     {
         var idea = await KeptAsync(FeedbackKind.Idea, Mark.Value, Mark.Value, "battle");
 
-        var mute = (await Desk().MuteAsync(idea.Id, "mark", Cancel)).Value;
+        var mute = (await Desk().MuteAsync(idea.Id, "mark", Cancel)).Value.Mute;
 
         _activity.Kept[Mark].ShouldBe(new AccountActivity(Mark, null, new DateTimeOffset(2026, 11, 16, 12, 0, 0, TimeSpan.Zero)) { FeedbackMute = mute });
         var anotherProcess = new FeedbackMutes(new AccountActivityLog(_activity, _clock));
@@ -188,7 +188,7 @@ public sealed class OperatorFeedbackTests : IDisposable
     public async Task Being_seen_keeps_an_account_s_mute()
     {
         var idea = await KeptAsync(FeedbackKind.Idea, Mark.Value, Mark.Value, "battle");
-        var mute = (await Desk().MuteAsync(idea.Id, "mark", Cancel)).Value;
+        var mute = (await Desk().MuteAsync(idea.Id, "mark", Cancel)).Value.Mute;
         _clock.Advance(TimeSpan.FromHours(2));
 
         await new AccountActivityLog(_activity, _clock).SeenAsync(Mark, Cancel);
@@ -230,5 +230,100 @@ public sealed class OperatorFeedbackTests : IDisposable
         await Desk().SetStatusAsync(seen.Id, FeedbackStatus.Seen, null, "mark", Cancel);
 
         (await Desk().WaitingAsync(Cancel)).ShouldBe(new FeedbackWaiting(New: 2, NewBugs: 1, LastDay: 3, Full: false));
+    }
+
+    [Fact]
+    public async Task A_status_asked_again_changes_nothing_and_keeps_when_it_was_closed()
+    {
+        var report = await KeptAsync();
+        var first = (await Desk().SetStatusAsync(report.Id, FeedbackStatus.Dismissed, "Works as the rules say.", "mark", Cancel)).Value;
+        _clock.Advance(TimeSpan.FromDays(3));
+
+        var again = (await Desk().SetStatusAsync(report.Id, FeedbackStatus.Dismissed, "Works as the rules say.", "mark", Cancel)).Value;
+        var otherReason = (await Desk().SetStatusAsync(report.Id, FeedbackStatus.Dismissed, "A duplicate.", "mark", Cancel)).Value;
+
+        (first.Changed, again.Changed, otherReason.Changed).ShouldBe((true, false, true));
+        otherReason.Feedback.ClosedAt.ShouldBe(first.Feedback.ClosedAt, "the 180 days run from the first time it was closed");
+    }
+
+    [Fact]
+    public async Task A_spam_mark_asked_again_does_not_mute_a_sender_the_operator_let_through()
+    {
+        var marked = new List<Feedback> { await KeptAsync(), await KeptAsync(), await KeptAsync() };
+        foreach (var one in marked)
+        {
+            await Desk().SetStatusAsync(one.Id, FeedbackStatus.Dismissed, Feedback.SpamReason, "mark", Cancel);
+        }
+
+        await Desk().UnmuteAsync(marked[0].Id, Cancel);
+
+        (await Desk().SetStatusAsync(marked[2].Id, FeedbackStatus.Dismissed, Feedback.SpamReason, "mark", Cancel)).Value.ShouldBe(
+            new FeedbackStatusChange((await _store.FindAsync(marked[2].Id, Cancel))!, Changed: false, Muted: null));
+        (await Desk().MuteOfAsync(marked[0], Cancel)).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task A_dismissal_s_reason_is_one_line()
+    {
+        var report = await KeptAsync();
+
+        (await Desk().SetStatusAsync(report.Id, FeedbackStatus.Dismissed, "Spam.\n  Feedback marked seen by someone else.", "mark", Cancel)).Error.Code.ShouldBe("Feedback.Invalid");
+    }
+
+    [Fact]
+    public async Task Muting_again_keeps_the_mute_that_holds_and_lifting_none_changes_nothing()
+    {
+        var report = await KeptAsync();
+
+        (await Desk().UnmuteAsync(report.Id, Cancel)).Value.Changed.ShouldBeFalse();
+        var first = (await Desk().MuteAsync(report.Id, "mark", Cancel)).Value;
+        _clock.Advance(TimeSpan.FromHours(1));
+        var again = (await Desk().MuteAsync(report.Id, "ops", Cancel)).Value;
+
+        (first.Changed, again.Changed, again.Mute).ShouldBe((true, false, first.Mute));
+    }
+
+    [Fact]
+    public async Task An_account_none_of_whose_activity_is_kept_yet_is_muted_all_the_same()
+    {
+        var stranger = AccountId.New();
+        var idea = await KeptAsync(FeedbackKind.Idea, stranger.Value, stranger.Value, "battle");
+
+        var mute = (await Desk().MuteAsync(idea.Id, "mark", Cancel)).Value.Mute;
+
+        _activity.Kept[stranger].ShouldBe(new AccountActivity(stranger, null, null) { FeedbackMute = mute });
+    }
+
+    [Fact]
+    public async Task An_account_s_mute_is_dropped_at_the_first_write_after_it_ends()
+    {
+        var idea = await KeptAsync(FeedbackKind.Idea, Mark.Value, Mark.Value, "battle");
+        await Desk().MuteAsync(idea.Id, "mark", Cancel);
+        _clock.Advance(FeedbackMute.Lasts);
+
+        await new AccountActivityLog(_activity, _clock).SeenAsync(Mark, Cancel);
+
+        _activity.Kept[Mark].FeedbackMute.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task On_a_host_that_keeps_no_account_activity_an_account_s_sender_cannot_be_muted()
+    {
+        var idea = await KeptAsync(FeedbackKind.Idea, Mark.Value, Mark.Value, "battle");
+        var desk = new OperatorFeedback(_store, new FeedbackMutes(null), _writes, _clock);
+
+        desk.CanMute(idea).ShouldBeFalse();
+        (await desk.MuteAsync(idea.Id, "mark", Cancel)).Error.Code.ShouldBe("Feedback.NoSender");
+    }
+
+    [Fact]
+    public async Task The_host_is_full_at_a_hundred_sent_in_a_day()
+    {
+        for (var index = 0; index < SendFeedback.PerHost; index++)
+        {
+            await KeptAsync();
+        }
+
+        (await Desk().WaitingAsync(Cancel)).Full.ShouldBeTrue();
     }
 }

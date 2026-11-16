@@ -191,7 +191,11 @@ input[type="text"] { font: inherit; min-height: 44px; border: 1px solid var(--li
    report in the warning colour. The sheet draws the position as each side's creatures, read-only. */
 .feedback-open { display: grid; gap: 2px; width: 100%; min-height: 44px; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .feedback-line { overflow-wrap: anywhere; }
+.feedback-row:hover, .feedback-row:focus-within { border-color: var(--gold); }
+.feedback-open:focus-visible { outline: 2px solid var(--gold); outline-offset: -4px; }
+.feedback-row.warning { border-color: var(--refused); }
 .feedback-row.warning strong { color: var(--refused); }
+#panel-feedback button, #admin-feedback-sheet button { min-height: 44px; }
 .feedback-text { white-space: pre-wrap; }
 .feedback-words { margin-bottom: 12px; }
 .feedback-position-block h3 { margin: 12px 0 6px; font-size: 14px; }

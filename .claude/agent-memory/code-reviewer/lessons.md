@@ -53,3 +53,5 @@
 - Fourth time (#658, R1 feedback, R3, M4): the branch moved mid-review (uncommitted copy edits then a commit); name the HEAD the findings were checked on.
 - A gate that reads a source loaded in the background (`tutorialUI.pending()` reading the cards from `rules.json`) must stay closed while the load runs: an empty source reads as "nothing owed", and the sheet opens first (R4, battle/src/tutorial.ts).
 - A test project that never compiled cannot have run: its new tests are unverified until `dotnet build` is green (R4, CS8620, RulebookConceptCardsTests).
+- Two operator notes written in one request share the clock's instant, and OperatorAction ids break the tie on 3 random bytes: a test asserting their exact Activity order fails about half the runs (5 of 6 here); assert the tied pair unordered (R3 feedback, FeedbackAdminApiTests.cs:207, ccr-2da1fb9a-awuj42).
+- An operator-facing sentence about what a player sees ("Stopping a player hides Report or suggest") must be checked against the player page: R2's sheet hides the entry only after a 403 on send, for the page's life (R3 feedback, admin.html, admin-feedback.js).

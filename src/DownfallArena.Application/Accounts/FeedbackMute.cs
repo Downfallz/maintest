@@ -1,9 +1,10 @@
-namespace DownfallArena.Application.FeedbackBox;
+namespace DownfallArena.Application.Accounts;
 
 /// <summary>
 /// A sender stopped from sending feedback (docs/tabletop/feedback-plan.md, "Against spam"): by the operator from a
 /// sheet, or on its own once three of the sender's were dismissed as spam within <see cref="SpamWindow" />. It ends on
-/// its own <see cref="Lasts" /> after it began, or when the operator lifts it.
+/// its own <see cref="Lasts" /> after it began, or when the operator lifts it. Owned by Accounts, since an account's is
+/// kept with its activity record (ADR 0174); a guest's is held by <c>FeedbackMutes</c>.
 /// </summary>
 /// <param name="Why"><see cref="ByOperator" /> or <see cref="BySpam" />.</param>
 public sealed record FeedbackMute(DateTimeOffset At, DateTimeOffset Until, string By, string Why)

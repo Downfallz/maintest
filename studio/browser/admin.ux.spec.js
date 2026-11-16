@@ -309,9 +309,9 @@ const feedbackReport = {
   context: { table: '20261116-110000-a-long-table-id', seat: 'player1', round: 3, subPhase: 'Upkeep', journalLength: 42, content: 'f3e8a42ddbd02c11', rules: 'Rules 3v3', engine: 'abc', position: {
     allies: [{ name: 'Ravager', health: 7, maxHealth: 10, energy: 2, isStunned: true, conditions: [{ effect: { kind: 'Bleed' } }] }],
     enemies: [{ name: 'Warden', health: 12, maxHealth: 12, energy: 1, isStunned: false, conditions: [] }] } },
-  session: '/session/20261116-110000-a-long-table-id', underWay: true,
+  session: '/session/20261116-110000-a-long-table-id', underWay: true, actions: ['seen', 'reproduced', 'dismiss', 'spam', 'toIdea', 'diagnose', 'mute'],
 };
-const feedbackRow = one => ({ id: one.id, kind: one.kind, category: one.category, line: one.text.slice(0, 120), status: one.status, reason: one.reason, at: one.at,
+const feedbackRow = one => ({ id: one.id, kind: one.kind, category: one.category, line: one.text.slice(0, 120), status: one.status, reason: one.reason, spam: one.reason === 'spam', at: one.at,
   table: one.context?.table ?? null, round: one.context?.round ?? null, additions: 0 });
 
 test('a host that keeps no feedback shows no Feedback tab', async ({ page }) => {
@@ -322,7 +322,10 @@ test('a host that keeps no feedback shows no Feedback tab', async ({ page }) => 
 
 test('a bug report is read beside its position, turned into an idea, dismissed as spam, and its sender stopped', async ({ page }, info) => {
   let sheet = { ...feedbackReport };
-  const idea = { ...feedbackReport, id: '20261116T100000000Z-def456', kind: 'idea', category: 'lobby', text: 'I wanted to invite a friend by name.', context: null, session: null, underWay: false };
+  const idea = { ...feedbackReport, id: '20261116T100000000Z-def456', kind: 'idea', category: 'lobby', text: 'I wanted to invite a friend by name.', context: null, session: null, underWay: false, actions: [] };
+  // What the host offers, as FeedbackAdminApi decides it, for the sheet as it now stands.
+  const offered = one => [one.status !== 'seen' && 'seen', one.kind === 'bug' && one.status !== 'reproduced' && 'reproduced',
+    ...(one.status === 'dismissed' ? [] : ['dismiss', 'spam', one.kind === 'bug' ? 'toIdea' : 'toBug']), one.underWay && 'diagnose', one.mute ? 'unmute' : 'mute'].filter(Boolean);
   const asked = [];
   await page.route(/\/api\/admin\/feedback(\?.*)?$/, route => {
     asked.push(`GET ${new URL(route.request().url()).search}`);
@@ -335,7 +338,8 @@ test('a bug report is read beside its position, turned into an idea, dismissed a
     asked.push(`${request.method()} ${path.replace(feedbackReport.id, 'id')}${body && Object.keys(body).length ? ` ${JSON.stringify(body)}` : ''}`);
     if (path.endsWith('/kind')) sheet = { ...sheet, kind: body.kind, status: 'seen' };
     if (path.endsWith('/status')) sheet = { ...sheet, status: body.status, reason: body.reason ?? null };
-    if (path.endsWith('/mute')) sheet = { ...sheet, mute: request.method() === 'POST' ? { at: new Date().toISOString(), until: new Date(Date.now() + 30 * 86400000).toISOString(), by: 'operator', why: 'operator' } : null };
+    if (path.endsWith('/mute')) sheet = { ...sheet, mute: request.method() === 'POST' ? { at: new Date().toISOString(), until: new Date(Date.now() + 30 * 86400000).toISOString(), by: 'operator', why: 'operator', daysLeft: 30 } : null };
+    sheet = { ...sheet, spam: sheet.reason === 'spam', actions: offered(sheet) };
     return route.fulfill({ json: sheet });
   });
   await page.route('**/api/admin/overview', route => route.fulfill({ json: { ...overview, feedback: { new: 2, newBugs: 1, lastDay: 2, full: false } } }));
@@ -364,7 +368,8 @@ test('a bug report is read beside its position, turned into an idea, dismissed a
   await page.screenshot({ path: info.outputPath('admin-feedback-sheet.png') });
 
   await page.locator('#admin-feedback-to-idea').click();
-  await expect(page.locator('#admin-feedback-sheet-said')).toHaveText('It is an idea now, its words and position kept.');
+  await expect(page.locator('#admin-feedback-sheet-said')).toHaveText('Now an idea. Its words and position are kept.');
+  await expect(page.locator('#admin-feedback-sheet-said')).toBeFocused();
   await expect(page.locator('#admin-feedback-sheet-kind')).toHaveText('Idea · Seen');
   await expect(page.locator('#admin-feedback-to-bug')).toBeVisible();
   await expect(page.locator('#admin-feedback-reproduced')).toBeHidden();
@@ -376,7 +381,7 @@ test('a bug report is read beside its position, turned into an idea, dismissed a
   await expect(page.locator('#admin-feedback-spam')).toBeHidden();
 
   await page.locator('#admin-feedback-mute').click();
-  await expect(page.locator('#admin-feedback-facts')).toContainText('No feedback from this player for 30 more days (by operator).');
+  await expect(page.locator('#admin-feedback-facts')).toContainText('This player can send no feedback for 30 more days (by operator).');
   await page.locator('#admin-feedback-unmute').click();
   await expect(page.locator('#admin-feedback-mute')).toBeVisible();
 

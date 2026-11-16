@@ -2,10 +2,13 @@ using System.Text;
 using System.Text.Json;
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Ports;
+using DownfallArena.Application.FeedbackBox;
+using DownfallArena.Application.FeedbackBox.Ports;
 using DownfallArena.Application.Hosting;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.Infrastructure.Accounts;
+using DownfallArena.Infrastructure.FeedbackBox;
 
 namespace DownfallArena.Cli.Tests.Table;
 
@@ -99,6 +102,45 @@ public sealed class OverviewApiTests : IDisposable
         var games = (await OverviewAsync(admin)).GetProperty("games").GetProperty("inProgress");
 
         games.GetProperty("againstBots").GetInt32().ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Feedback_nobody_has_looked_at_is_counted_with_the_bug_reports_among_it()
+    {
+        var store = new FileFeedbackStore(Path.Combine(_root, "feedback"));
+        var now = DateTimeOffset.UtcNow;
+        await store.SaveAsync(new Feedback { Id = Feedback.NewId(now), Kind = FeedbackKind.Bug, At = now, Sender = "seat-a", Category = "rules", Text = "The bleed did not tick." }, TestContext.Current.CancellationToken);
+        await store.SaveAsync(new Feedback { Id = Feedback.NewId(now.AddSeconds(-1)), Kind = FeedbackKind.Idea, At = now.AddSeconds(-1), Sender = "seat-a", Category = "battle", Text = "Show the last round again." }, TestContext.Current.CancellationToken);
+        using var writes = new FeedbackWrites();
+        var admin = Admin(new OverviewApi(_registry, _hosted.Composer, TimeProvider.System) { Feedback = new OperatorFeedback(store, new FeedbackMutes(null), writes, TimeProvider.System) });
+
+        var feedback = (await OverviewAsync(admin)).GetProperty("feedback");
+
+        (feedback.GetProperty("new").GetInt32(), feedback.GetProperty("newBugs").GetInt32(), feedback.GetProperty("lastDay").GetInt32(), feedback.GetProperty("full").GetBoolean()).ShouldBe((2, 1, 2, false));
+    }
+
+    [Fact]
+    public async Task A_feedback_store_that_does_not_answer_leaves_only_its_card_empty()
+    {
+        using var writes = new FeedbackWrites();
+        var admin = Admin(new OverviewApi(_registry, _hosted.Composer, TimeProvider.System) { Feedback = new OperatorFeedback(new Unreadable(), new FeedbackMutes(null), writes, TimeProvider.System) });
+
+        var overview = await OverviewAsync(admin);
+
+        overview.GetProperty("feedback").GetProperty("unavailable").GetBoolean().ShouldBeTrue();
+        overview.GetProperty("waiting").TryGetProperty("unavailable", out _).ShouldBeFalse();
+    }
+
+    /// <summary>A feedback store whose storage does not answer.</summary>
+    private sealed class Unreadable : IFeedbackStore
+    {
+        public Task SaveAsync(Feedback feedback, CancellationToken cancellationToken = default) => throw new IOException("The disk is gone.");
+
+        public Task<IReadOnlyList<string>> IdsAsync(CancellationToken cancellationToken = default) => throw new IOException("The disk is gone.");
+
+        public Task<Feedback?> FindAsync(string id, CancellationToken cancellationToken = default) => throw new IOException("The disk is gone.");
+
+        public Task DeleteAsync(string id, CancellationToken cancellationToken = default) => throw new IOException("The disk is gone.");
     }
 
     [Fact]

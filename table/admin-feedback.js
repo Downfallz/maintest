@@ -81,7 +81,7 @@ export function feedbackRows(answer, now = Date.now()) {
     place: placeLine(row),
     status: statusLine(row),
     when: ago(row.at, now),
-    more: row.additions > 0 ? `+${row.additions} more from the same player` : '',
+    more: row.additions > 0 ? `${row.additions} added later` : '',
     warn: row.kind === 'bug' && row.status === 'new',
   }));
 }
@@ -90,7 +90,7 @@ export function feedbackRows(answer, now = Date.now()) {
 export function statusLine(feedback) {
   const label = STATUS_LABELS[feedback?.status] ?? feedback?.status ?? '';
   if (feedback?.status !== 'dismissed' || !feedback.reason) return label;
-  return feedback.reason === SPAM ? 'Dismissed as spam' : `${label}: ${feedback.reason}`;
+  return feedback.spam === true ? 'Dismissed as spam' : `${label}: ${feedback.reason}`;
 }
 
 /** What the pager under the list says. */
@@ -98,6 +98,8 @@ export function feedbackLine(answer) {
   const total = answer?.total ?? 0;
   return `${total} piece${total === 1 ? '' : 's'} of feedback · page ${answer?.page ?? 1} of ${answer?.pages ?? 1}`;
 }
+
+const plural = (count, one, many = `${one}s`) => `${count} ${count === 1 ? one : many}`;
 
 const stamp = at => (at ? new Date(at).toISOString().replace('T', ' ').slice(0, 16) + ' UTC' : '');
 
@@ -109,25 +111,25 @@ export function sheetFacts(answer, now = Date.now()) {
   const context = answer.context;
   if (context) {
     const where = [placeLine(context), context.seat, context.subPhase ? stepLabel(context.subPhase) : null,
-      Number.isInteger(context.journalLength) ? `${context.journalLength} journal entries` : null].filter(Boolean);
+      Number.isInteger(context.journalLength) ? plural(context.journalLength, 'journal entry', 'journal entries') : null].filter(Boolean);
     facts.push(['Where', where.join(' · ')]);
     const basis = [context.rules, context.content ? `content ${context.content.slice(0, 12)}` : null, context.engine ? `engine ${context.engine}` : null].filter(Boolean);
     if (basis.length) facts.push(['Played on', basis.join(' · ')]);
-    if (Number.isInteger(context.practiceEntries)) facts.push(['Practice', `${context.practiceEntries} entries since the cut, copied`]);
+    if (Number.isInteger(context.practiceEntries)) facts.push(['Practice', `${plural(context.practiceEntries, 'entry', 'entries')} since the cut, copied`]);
   }
   if (answer.page) facts.push(['Page', answer.page]);
   if (answer.browser) facts.push(['Browser', answer.browser]);
   for (const error of answer.errors ?? []) facts.push(['Page error', error.where ? `${error.message} (${error.where})` : error.message]);
-  if (answer.mute) facts.push(['Muted', muteLine(answer.mute, now)]);
+  if (answer.mute) facts.push(['Muted', muteLine(answer.mute)]);
   return facts;
 }
 
-/** The sender's mute as one line: until when, and whether the operator or the spam marks did it. */
-export function muteLine(mute, now = Date.now()) {
+/** The sender's mute as one line: how many days the host says are left, and whether the operator or the spam marks did it. */
+export function muteLine(mute) {
   if (!mute) return '';
-  const days = Math.max(1, Math.ceil((new Date(mute.until).getTime() - now) / 86400000));
-  const why = mute.why === SPAM ? 'three marked as spam in 30 days' : `by ${mute.by}`;
-  return `No feedback from this player for ${days} more day${days === 1 ? '' : 's'} (${why}).`;
+  const days = Math.max(1, mute.daysLeft ?? 1);
+  const why = mute.why === SPAM ? 'three dismissed as spam in 30 days' : `by ${mute.by}`;
+  return `This player can send no feedback for ${plural(days, 'more day')} (${why}).`;
 }
 
 /** The player's words: what happened or the idea, what they expected or wished, then what they added later. */
@@ -159,22 +161,13 @@ export function positionSides(position, seat) {
   ];
 }
 
-/** Which of the sheet's buttons apply to this feedback as it stands. */
+/** The sheet's buttons, by the names the host offers them under (`actions`), each shown only when the host offers it. */
+export const SHEET_ACTIONS = Object.freeze(['seen', 'reproduced', 'dismiss', 'spam', 'toIdea', 'toBug', 'diagnose', 'mute', 'unmute']);
+
+/** Which of the sheet's buttons apply to this feedback as it stands: what the host says, and nothing else. */
 export function sheetActions(answer) {
-  const bug = answer.kind === 'bug';
-  const closed = ['fixed', 'dismissed', 'shipped', 'declined'].includes(answer.status);
-  const muteable = !answer.senderGone;
-  return {
-    seen: answer.status !== 'seen',
-    reproduced: bug && answer.status !== 'reproduced',
-    dismiss: !closed,
-    spam: !closed,
-    toIdea: bug && !closed,
-    toBug: !bug && !closed,
-    diagnose: answer.underWay === true && Boolean(answer.context?.table),
-    mute: muteable && !answer.mute,
-    unmute: muteable && Boolean(answer.mute),
-  };
+  const offered = new Set(Array.isArray(answer?.actions) ? answer.actions : []);
+  return Object.fromEntries(SHEET_ACTIONS.map(name => [name, offered.has(name)]));
 }
 
 /** The words a sheet's change is told with. */
@@ -207,15 +200,23 @@ function fill(select, options) {
 export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
   let page = 1;
   let open = null;
+  // Each listing and each sheet read is numbered, so an answer that comes back after a later one is dropped.
+  let listed = 0;
+  let read = 0;
 
   fill(element('admin-feedback-kind'), [{ value: '', label: 'Every kind' }, { value: 'bug', label: 'Bug reports' }, { value: 'idea', label: 'Ideas' }]);
   fill(element('admin-feedback-status'), STATUS_FILTERS);
   fill(element('admin-feedback-category'), categoryFilters());
 
+  const BUTTONS = { seen: 'admin-feedback-seen', reproduced: 'admin-feedback-reproduced', dismiss: 'admin-feedback-dismiss', spam: 'admin-feedback-spam',
+    toIdea: 'admin-feedback-to-idea', toBug: 'admin-feedback-to-bug', diagnose: 'admin-feedback-diagnose', mute: 'admin-feedback-mute', unmute: 'admin-feedback-unmute' };
+
   const filters = () => ({ kind: element('admin-feedback-kind').value, status: element('admin-feedback-status').value, category: element('admin-feedback-category').value, page });
 
   async function redraw() {
+    const asked = ++listed;
     const answer = await send('GET', feedbackPath(filters()));
+    if (asked !== listed) return;
     if (answer.status === 404 && !answer.body?.error) {
       shown(false);
       return;
@@ -272,19 +273,39 @@ export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
     const session = element('admin-feedback-session');
     session.hidden = !answer.session;
     if (answer.session) session.href = answer.session;
-    const can = sheetActions(answer);
-    for (const [name, id] of Object.entries({ seen: 'admin-feedback-seen', reproduced: 'admin-feedback-reproduced', dismiss: 'admin-feedback-dismiss', spam: 'admin-feedback-spam',
-      toIdea: 'admin-feedback-to-idea', toBug: 'admin-feedback-to-bug', diagnose: 'admin-feedback-diagnose', mute: 'admin-feedback-mute', unmute: 'admin-feedback-unmute' })) {
-      element(id).hidden = !can[name];
-    }
+    drawActions(sheetActions(answer));
+  }
+
+  function drawActions(can) {
+    for (const name of SHEET_ACTIONS) element(BUTTONS[name]).hidden = !can[name];
     element('admin-feedback-dismissing').hidden = !can.dismiss;
   }
 
+  // Emptied before the host answers, so nothing of the sheet opened before can be read or acted on meanwhile.
+  function emptySheet() {
+    open = null;
+    element('admin-feedback-sheet-kind').textContent = 'Feedback';
+    element('admin-feedback-sheet-name').textContent = '';
+    for (const id of ['admin-feedback-words', 'admin-feedback-facts', 'admin-feedback-position']) element(id).replaceChildren();
+    element('admin-feedback-position-block').hidden = true;
+    element('admin-feedback-session').hidden = true;
+    drawActions(sheetActions(null));
+  }
+
+  // A button the change hid takes the focus with it: it moves to what the sheet says, so the place is not lost.
+  function keepFocus() {
+    const focused = document.activeElement;
+    if (!focused || focused === document.body || focused.hidden || focused.closest('[hidden]')) element('admin-feedback-sheet-said').focus();
+  }
+
   async function openSheet(id) {
+    const asked = ++read;
+    emptySheet();
     said('Reading the feedback…');
     const sheet = element('admin-feedback-sheet');
     if (!sheet.open) sheet.showModal?.() ?? sheet.setAttribute('open', '');
     const answer = await send('GET', `/api/admin/feedback/${encodeURIComponent(id)}`);
+    if (asked !== read) return;
     if (!answer.ok) {
       said(answer.body?.message ?? `The host answered ${answer.status}.`, true);
       return;
@@ -300,6 +321,7 @@ export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
     const outcome = changeSaid(answer, done);
     if (answer.ok) drawSheet(answer.body);
     said(outcome.line, outcome.refused);
+    keepFocus();
     await redraw();
   }
 
@@ -309,19 +331,19 @@ export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
   element('admin-feedback-dismiss').addEventListener('click', () => {
     const reason = element('admin-feedback-reason').value.trim();
     if (!reason) {
-      said('Say why it is dismissed: the reason is kept with it.', true);
+      said('Give a reason for dismissing it. It is kept with the feedback.', true);
       return;
     }
     void change('PUT', 'status', { status: 'dismissed', reason }, 'Dismissed.');
   });
   element('admin-feedback-spam').addEventListener('click', () => {
-    if (!globalThis.confirm?.('Dismiss this as spam? Three marked as spam in 30 days stop its sender from sending feedback.')) return;
+    if (!globalThis.confirm?.('Dismiss this as spam? A third spam dismissal within 30 days stops its sender from sending feedback for 30 days.')) return;
     void change('PUT', 'status', { status: 'dismissed', reason: SPAM }, 'Dismissed as spam.');
   });
-  element('admin-feedback-to-idea').addEventListener('click', () => void change('PUT', 'kind', { kind: 'idea' }, 'It is an idea now, its words and position kept.'));
-  element('admin-feedback-to-bug').addEventListener('click', () => void change('PUT', 'kind', { kind: 'bug' }, 'It is a bug report now, its words kept.'));
+  element('admin-feedback-to-idea').addEventListener('click', () => void change('PUT', 'kind', { kind: 'idea' }, 'Now an idea. Its words and position are kept.'));
+  element('admin-feedback-to-bug').addEventListener('click', () => void change('PUT', 'kind', { kind: 'bug' }, 'Now a bug report. Its words are kept.'));
   element('admin-feedback-mute').addEventListener('click', () => {
-    if (!globalThis.confirm?.('Stop feedback from this player for 30 days? Report or suggest disappears for them.')) return;
+    if (!globalThis.confirm?.('Stop feedback from this player for 30 days? The host will refuse what they send.')) return;
     void change('POST', 'mute', undefined, 'This player can send no feedback for 30 days.');
   });
   element('admin-feedback-unmute').addEventListener('click', () => void change('DELETE', 'mute', undefined, 'This player can send feedback again.'));

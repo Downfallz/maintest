@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Admin;
 using DownfallArena.Application.FeedbackBox;
 using DownfallArena.Cli.Studio;
@@ -12,9 +13,10 @@ namespace DownfallArena.Cli.Table;
 /// <c>GET .../&lt;id&gt;</c> is one sheet, the position the player attached included; <c>PUT .../&lt;id&gt;/status
 /// {"status","reason?"}</c> marks it seen, reproduced or dismissed (<c>"reason":"spam"</c> is the spam mark);
 /// <c>PUT .../&lt;id&gt;/kind {"kind"}</c> turns a bug report into an idea or back; <c>POST</c> and <c>DELETE
-/// .../&lt;id&gt;/mute</c> stop its sender from sending feedback for 30 days, and lift it. Each change is an Activity line.
+/// .../&lt;id&gt;/mute</c> stop its sender from sending feedback for 30 days, and lift it. Each change is an Activity line;
+/// asked again, a change writes and notes nothing. The sheet says which of its actions apply, so the page decides none.
 /// </summary>
-internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions? stored)
+internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions? stored, TimeProvider clock)
 {
     public const string Route = "/api/admin/feedback";
 
@@ -26,6 +28,19 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
     public static bool Names(string path) => path == Route || path.StartsWith(Route + "/", StringComparison.Ordinal);
 
     public async Task<StudioResponse> HandleAsync(string method, string path, string body, string operatorName, string? query = null)
+    {
+        try
+        {
+            return await RouteAsync(method, path, body, operatorName, query);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is JsonException or Azure.Identity.AuthenticationFailedException)
+        {
+            Console.WriteLine($"  The feedback could not be read or written: {failure.Message}");
+            return Error(FeedbackErrors.Unavailable.Code, FeedbackErrors.Unavailable.Message, 503);
+        }
+    }
+
+    private async Task<StudioResponse> RouteAsync(string method, string path, string body, string operatorName, string? query)
     {
         var parts = path[Route.Length..].Trim('/').Split('/');
         return (method, parts) switch
@@ -42,13 +57,15 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
 
     private async Task<StudioResponse> ListAsync(System.Collections.Specialized.NameValueCollection asked)
     {
-        FeedbackKind? kind = asked["kind"] switch { "bug" => FeedbackKind.Bug, "idea" => FeedbackKind.Idea, _ => null };
-        var status = asked["status"];
-        var filter = new FeedbackFilter(
-            kind,
-            status is { Length: > 0 } && status != "open" ? StatusOf(status) : null,
-            asked["category"] is { Length: > 0 } category ? category : null,
-            OpenOnly: status == "open");
+        // A filter that names nothing the host knows is refused, not read as no filter: a typo would list everything.
+        var (kind, status, category) = (asked["kind"] ?? string.Empty, asked["status"] ?? string.Empty, asked["category"] ?? string.Empty);
+        if ((kind.Length > 0 && KindOf(kind) is null) || (status.Length > 0 && status != "open" && StatusOf(status) is null)
+            || (category.Length > 0 && !SendFeedback.BugCategories.Concat(SendFeedback.IdeaPlaces).Contains(category, StringComparer.Ordinal)))
+        {
+            return Refused(FeedbackErrors.Invalid("Filter by a kind (bug, idea), a status or open, and a category the sheet offers."));
+        }
+
+        var filter = new FeedbackFilter(KindOf(kind), status is { Length: > 0 } and not "open" ? StatusOf(status) : null, category.Length > 0 ? category : null, OpenOnly: status == "open");
         var page = await feedback.PageAsync(filter, int.TryParse(asked["page"], out var number) ? number : 1);
         return StudioResponse.OfJson(
             new
@@ -61,6 +78,7 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
                     line = FirstLine(one.Text),
                     status = Name(one.Status),
                     reason = one.Reason,
+                    spam = one.IsSpam,
                     at = one.At,
                     table = one.Context?.Table,
                     scenario = one.Context?.Scenario,
@@ -85,6 +103,8 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
         var mute = await feedback.MuteOfAsync(one);
         var table = one.Context?.Table;
         var record = table is null || stored is null ? null : await stored.RecordAsync(table);
+        var underWay = record is { Status: TableRecord.Open, Void: false };
+        var now = clock.GetUtcNow();
         return StudioResponse.OfJson(
             new
             {
@@ -93,6 +113,7 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
                 category = one.Category,
                 status = Name(one.Status),
                 reason = one.Reason,
+                spam = one.IsSpam,
                 at = one.At,
                 closedAt = one.ClosedAt,
                 text = one.Text,
@@ -104,7 +125,7 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
                 account = one.Account,
                 guest = one.Account is null && one.Sender != ForgetFeedbackAccount.Gone,
                 senderGone = one.Sender == ForgetFeedbackAccount.Gone,
-                mute = mute is null ? null : new { at = mute.At, until = mute.Until, by = mute.By, why = mute.Why },
+                mute = mute is null ? null : new { at = mute.At, until = mute.Until, by = mute.By, why = mute.Why, daysLeft = (int)Math.Ceiling((mute.Until - now).TotalDays) },
                 context = one.Context is not { } context ? null : new
                 {
                     table = context.Table,
@@ -122,7 +143,8 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
                 session = table is null ? null : $"/session/{Uri.EscapeDataString(table)}",
 
                 // Diagnose… is offered while the table it was sent from is still under way (scenarios plan, S5b).
-                underWay = record is { Status: TableRecord.Open, Void: false },
+                underWay,
+                actions = Actions(one, mute, underWay),
             },
             Web);
     }
@@ -142,6 +164,11 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
         }
 
         var (kept, muted) = (changed.Value.Feedback, changed.Value.Muted);
+        if (!changed.Value.Changed)
+        {
+            return await SheetAsync(id);
+        }
+
         Console.WriteLine($"  Feedback {id} marked {Name(kept.Status)}{(kept.Reason is null ? string.Empty : $" ({kept.Reason})")} by {operatorName}.");
         if (kept.IsSpam)
         {
@@ -163,23 +190,21 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
 
     private async Task<StudioResponse> KindAsync(string id, string body, string operatorName)
     {
-        FeedbackKind? kind = Read<KindBody>(body)?.Kind switch { "bug" => FeedbackKind.Bug, "idea" => FeedbackKind.Idea, _ => null };
-        if (kind is null)
+        if (KindOf(Read<KindBody>(body)?.Kind) is not { } kind)
         {
             return Refused(FeedbackErrors.Invalid("Name a kind: bug or idea."));
         }
 
-        var before = await feedback.FindAsync(id);
-        var changed = await feedback.ChangeKindAsync(id, kind.Value);
+        var changed = await feedback.ChangeKindAsync(id, kind);
         if (changed.IsFailure)
         {
             return Refused(changed.Error);
         }
 
-        if (before is not null && before.Kind != kind)
+        if (changed.Value.Was is { } was)
         {
             Console.WriteLine($"  Feedback {id} turned into {(kind == FeedbackKind.Bug ? "a bug report" : "an idea")} by {operatorName}.");
-            await Notes.NoteAsync(operatorName, OperatorActions.FeedbackConvert, id, $"{Name(before.Kind)} → {Name(kind.Value)}");
+            await Notes.NoteAsync(operatorName, OperatorActions.FeedbackConvert, id, $"{Name(was)} → {Name(kind)}");
         }
 
         return await SheetAsync(id);
@@ -193,8 +218,12 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
             return Refused(muted.Error);
         }
 
-        Console.WriteLine($"  Feedback from the sender of {id} muted until {muted.Value.Until:u} by {operatorName}.");
-        await Notes.NoteAsync(operatorName, OperatorActions.FeedbackMute, id, $"{FeedbackMute.Lasts.TotalDays:0} days");
+        if (muted.Value.Changed)
+        {
+            Console.WriteLine($"  Feedback from the sender of {id} muted until {muted.Value.Mute!.Until:u} by {operatorName}.");
+            await Notes.NoteAsync(operatorName, OperatorActions.FeedbackMute, id, $"{FeedbackMute.Lasts.TotalDays:0} days");
+        }
+
         return await SheetAsync(id);
     }
 
@@ -206,10 +235,52 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
             return Refused(lifted.Error);
         }
 
-        Console.WriteLine($"  Feedback from the sender of {id} let through again by {operatorName}.");
-        await Notes.NoteAsync(operatorName, OperatorActions.FeedbackUnmute, id);
+        if (lifted.Value.Changed)
+        {
+            Console.WriteLine($"  Feedback from the sender of {id} let through again by {operatorName}.");
+            await Notes.NoteAsync(operatorName, OperatorActions.FeedbackUnmute, id);
+        }
+
         return await SheetAsync(id);
     }
+
+    /// <summary>
+    /// What the sheet offers on this feedback as it stands, by the names the page knows its buttons by: marks and moves
+    /// while it is open, Diagnose… while its table is played, and the mute or its lifting while a sender can hold one.
+    /// </summary>
+    private string[] Actions(Feedback one, FeedbackMute? mute, bool underWay)
+    {
+        var bug = one.Kind == FeedbackKind.Bug;
+        var offered = new List<string>();
+        if (one.Status != FeedbackStatus.Seen)
+        {
+            offered.Add("seen");
+        }
+
+        if (bug && one.Status != FeedbackStatus.Reproduced)
+        {
+            offered.Add("reproduced");
+        }
+
+        if (!one.IsClosed)
+        {
+            offered.AddRange(["dismiss", "spam", bug ? "toIdea" : "toBug"]);
+        }
+
+        if (underWay && one.Context?.Table is not null)
+        {
+            offered.Add("diagnose");
+        }
+
+        if (feedback.CanMute(one))
+        {
+            offered.Add(mute is null ? "mute" : "unmute");
+        }
+
+        return [.. offered];
+    }
+
+    private static FeedbackKind? KindOf(string? named) => named switch { "bug" => FeedbackKind.Bug, "idea" => FeedbackKind.Idea, _ => null };
 
     /// <summary>A status named as the routes name it, lowercase; none for a word no status is.</summary>
     private static FeedbackStatus? StatusOf(string named) =>
@@ -243,6 +314,7 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
     {
         "Feedback.NotFound" => 404,
         "Feedback.Closed" or "Feedback.NoSender" => 409,
+        "Feedback.Unavailable" => 503,
         _ => 400,
     });
 

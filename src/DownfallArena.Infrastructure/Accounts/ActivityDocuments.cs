@@ -1,6 +1,5 @@
 using System.Text.Json;
 using DownfallArena.Application.Accounts;
-using DownfallArena.Application.FeedbackBox;
 using DownfallArena.SharedKernel.Identifiers;
 
 namespace DownfallArena.Infrastructure.Accounts;
