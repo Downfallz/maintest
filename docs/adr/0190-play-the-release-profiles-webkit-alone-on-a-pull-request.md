@@ -17,7 +17,8 @@ pull request waits for them.
 
 The plan (`studio/browser/plan.js`) says which release profiles a run plays: `none`, `webkit` or `all`. A pull
 request whose diff calls for the release profiles plays `webkit`, release-ios alone (`plan.js --pull-request`, from
-`ci.yml`); a push to `main`, the nightly matrix and a run asked by hand play `all`. The release job is a matrix of
+`ci.yml`); a push to `main`, the nightly matrix, a run asked by hand, and a pull request that changes the
+release job's own definition (`studio-browser.yml`, `battle.release.config.js`, `plan.js`) play `all`. The release job is a matrix of
 one job per profile, side by side, each installing only its own engine and keeping its own artifact
 (`battle-release-<profile>`). Everything else in ADR 0182 stands: `gate` is still the one required check, and on
 `main` the deployment still waits for the three profiles.
@@ -33,6 +34,8 @@ one job per profile, side by side, each installing only its own engine and keepi
   screenshots) is found after its merge, by `main`'s run, which then holds the deployment and opens `red-main`.
 - Bad: the three jobs on `main` each install, build the engine and the bundle: the same play minutes as one
   job, plus two more set-ups, each a few billed minutes (not yet measured).
+- Bad: each job's timeout drops from 35 to 25 minutes on the same estimate; the first runs on `main` say
+  whether WebKit's job, the slowest, fits with its retry.
 - Neutral: the profiles the matrix names are held against `battle.release.config.js` by
   `studio/browser-suite.test.js`; a profile added there and not here fails that test.
 

@@ -155,7 +155,8 @@ complete runs.
 
    *Built (2026-11-16)*: the number became ADR 0190, 0188 being the rulebook's. `plan.js` returns `release` as
    `none`, `webkit` or `all`; `--pull-request`, which `ci.yml` passes on a pull request, narrows `all` to
-   `webkit`, and a push, the nightly and a run by hand play `all`. `studio-browser.yml` takes `release` as one
+   `webkit`, and a push, the nightly, a run by hand and a pull request that changes the release job's own
+   definition (its workflow, its configuration, `plan.js`) play `all`. `studio-browser.yml` takes `release` as one
    of those three values (a choice list when the run is started by hand), and `battle-release` is a matrix of
    one job per profile, each installing its own engine and keeping its artifact `battle-release-<profile>`.
    `browser-suite.test.js` holds the plan on a pull request and on `main`, the matrix's profiles against
@@ -164,8 +165,9 @@ complete runs.
    `scripts/verify.sh` read the pull request's plan.
 
    Not done: release-desktop is not dropped on `main` where table-desktop plays the same spec, since the owner
-   keeps the three profiles before the deployment (question 3). Not measured: the saving; the first `/retro`
-   after the merge reads it with M1's meter. M4 narrows which paths call for the release profiles at all.
+   keeps the three profiles before the deployment (question 3). Not measured: the saving, which the first
+   `/retro` after the merge reads with M1's meter, and whether the per-profile timeout, cut from 35 to 25
+   minutes, holds WebKit's job with its retry. M4 narrows which paths call for the release profiles at all.
 3. **M3, the wait evened out.** Desktop in three shards, Playwright's browsers cached, the learning job folded
    into `build-and-test` (`browser-suite.test.js` holds the gate's `needs`).
 4. **M4, the narrower plan and one push per review round.** `src/` and `data/` no longer call for the release

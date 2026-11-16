@@ -123,9 +123,16 @@ test('several paths add up, and blank lines are not paths', () => {
 
 // A pull request plays the release profiles' WebKit alone; main and the nightly play the three (ADR 0190).
 test("a pull request plays the release profiles' WebKit alone", () => {
-  for (const path of ['battle/src/scene.ts', 'table/lobby.js', 'studio/browser/battle-live.spec.js', 'src/DownfallArena.Cli/Table/TableApi.cs', '.github/workflows/studio-browser.yml']) {
+  for (const path of ['battle/src/scene.ts', 'table/lobby.js', 'studio/browser/battle-live.spec.js', 'src/DownfallArena.Cli/Table/TableApi.cs', '.github/workflows/ci.yml']) {
     assert.equal(plan([path], specs, { pullRequest: true }).release, 'webkit', path);
     assert.equal(plan([path], specs).release, 'all', path);
+  }
+});
+
+// A change to how the release job is defined is played in every profile before it reaches main.
+test('a pull request that changes the release job itself plays all three profiles', () => {
+  for (const path of ['.github/workflows/studio-browser.yml', 'studio/browser/battle.release.config.js', 'studio/browser/plan.js']) {
+    assert.equal(plan([path, 'battle/src/scene.ts'], specs, { pullRequest: true }).release, 'all', path);
   }
 });
 

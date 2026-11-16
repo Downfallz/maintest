@@ -57,6 +57,10 @@ const builtIntoTheShowcase = (path) =>
   !path.endsWith('.test.js') &&
   (SHOWCASE_FILES.has(path) || SHOWCASE_FOLDERS.some((folder) => path.startsWith(folder)) || /^table\/battle-[a-z-]*art\.js$/.test(path));
 
+// What defines the release job itself: a pull request that changes one plays every profile, not WebKit alone
+// (ADR 0190), so the profiles it narrows away on other pull requests are not first played on main.
+const RELEASE_DEFINITION = new Set(['.github/workflows/studio-browser.yml', 'studio/browser/battle.release.config.js', 'studio/browser/plan.js']);
+
 // The specs the release profiles play besides their own (battle.release.config.js).
 const RELEASE_FILES = new Set(['battle.loop.js', 'battle.release.config.js', 'battle-release.spec.js', 'battle-live.spec.js']);
 
@@ -111,16 +115,16 @@ export function plan(paths, specs, { pullRequest = false } = {}) {
   return {
     journeys: chosen,
     realEngine: called.some((call) => call.realEngine === true),
-    release: releaseProfiles(called.some((call) => call.release === true), pullRequest),
+    release: releaseProfiles(called.some((call) => call.release === true), pullRequest && !changed.some((path) => RELEASE_DEFINITION.has(path))),
     image: changed.some((path) => !path.endsWith('.md') && carriedByTheImage(path)),
     showcase: changed.some(builtIntoTheShowcase),
   };
 }
 
-/** Which release profiles a run plays when its diff calls for them: on a pull request, the one engine no other job plays. */
-function releaseProfiles(called, pullRequest) {
+/** Which release profiles a run plays when its diff calls for them: narrowed, the one engine no other job plays. */
+function releaseProfiles(called, narrowed) {
   if (!called) return 'none';
-  return pullRequest ? 'webkit' : 'all';
+  return narrowed ? 'webkit' : 'all';
 }
 
 /** Everything: what a run that has no diff to read plays. */
