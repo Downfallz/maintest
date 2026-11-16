@@ -35,12 +35,15 @@ const card = (entry, words) => `<aside class="rules-card" aria-label="${escape(w
       <p class="kicker">${escape(words.conceptCard)}</p><h4>${escape(entry.title)}</h4>
       ${entry.lines.map(line => `<p>${escape(line)}</p>`).join('')}<p class="rules-example">${escape(entry.example)}</p></aside>`;
 
+// The ids the page and its layout write: an alias never takes one, so the skip link and the contents stay theirs.
+const PAGE_IDS = ['top', 'main', 'rules-title', 'rules-contents', 'rules-contents-title', 'what-changed', 'rules-changes-title'];
+
 /**
  * The addresses that land on each part or section beside its own id: an id the book moved (moved.json) and a
  * concept card's id, each where the table's page lands it (targetOf), and only when the book has no such id.
  */
 function aliasesOf(book) {
-  const own = new Set(book.parts.flatMap(part => [part.id, ...part.sections.map(section => section.id)]));
+  const own = new Set([...PAGE_IDS, ...book.parts.flatMap(part => [part.id, ...part.sections.map(section => section.id)])]);
   const aliases = new Map();
   for (const alias of [...Object.keys(book.moved ?? {}), ...(book.cards ?? []).map(entry => entry.id)]) {
     if (own.has(alias)) continue;

@@ -240,12 +240,12 @@ for (const [lang, file, bookFile] of [['en', 'rules/index.html', 'rules.json'], 
   });
 }
 
-test('the public book lands a moved id on its section and anchors a card only where the book has no such id', async () => {
+test('the public book lands a moved id on its section and anchors a card only where the book and the page have no such id', async () => {
   const { rulesPage } = await import('./rules.mjs');
   const { english } = await import('./copy.mjs');
   const span = text => ({ text });
   const book = {
-    language: 'en', drawnFrom: {}, moved: { 'old-tempo': 'older-tempo', 'older-tempo': 'tempo', 'gone-loop': 'gone-loop-2', 'gone-loop-2': 'gone-loop' },
+    language: 'en', drawnFrom: {}, moved: { 'old-tempo': 'older-tempo', 'older-tempo': 'tempo', 'gone-loop': 'gone-loop-2', 'gone-loop-2': 'gone-loop', 'what-changed': 'tempo' },
     cards: [{ id: 'tempo', section: 'tempo' }, { id: 'speed', section: 'tempo' }],
     changes: [{ date: '2026-11-01', text: 'First <change> & "quoted".', adrs: [] }],
     parts: [{ id: 'the-round', number: 3, title: 'The round', blocks: [], sections: [

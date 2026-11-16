@@ -235,7 +235,8 @@ h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.0
 .policy-date { margin-bottom: 14px; }
 .policy header .lead { max-width: 65ch; }
 .policy-grid { display: grid; grid-template-columns: minmax(160px, .52fr) minmax(0, 1.48fr); align-items: start; gap: clamp(20px, 4vw, 70px); border-top: 1px solid var(--line); margin-top: 30px; padding-top: 26px; }
-.policy-grid nav { display: grid; padding: 17px; background: var(--paper); border-left: 2px solid var(--gold); }
+.policy-grid nav { display: grid; }
+.policy-grid nav, .rules-contents { padding: 17px; background: var(--paper); border-left: 2px solid var(--gold); }
 .policy-grid nav h2 { font-size: 22px; margin: 0 0 9px; }
 .policy-grid nav a { color: var(--muted); padding: 7px 0; font-size: 14px; }
 .policy-grid nav a:hover { color: var(--gold); }
@@ -276,7 +277,9 @@ h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.0
 .rules-intro h1 { font-size: clamp(48px, 6.5vw, 104px); line-height: 1.01; margin: 13px 0 19px; }
 .rules-intro .lead { max-width: 65ch; }
 .rules-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; margin-top: 28px; }
-.rules-contents { align-self: start; padding: 14px 17px; background: var(--paper); border-left: 2px solid var(--gold); scroll-margin-top: 16px; }
+.rules-contents { align-self: start; scroll-margin-top: 16px; }
+/* The contents scroll on a wide screen: a ring kept inside the box is not clipped by it. */
+.rules-contents :focus-visible { outline-offset: -2px; }
 .rules-contents h2 { font-size: 22px; margin: 0 0 6px; }
 .rules-contents ol { list-style: none; margin: 0; padding: 0; }
 .rules-contents > ol > li + li { border-top: 1px solid var(--line-soft); }

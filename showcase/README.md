@@ -18,10 +18,11 @@ The game website link in the account menu and the guest lobby footer lead back t
    Keep the fair-play and privacy commitments beside the creator’s note. Close with solo bot difficulties,
    friendly formats, ranked 3v3, private statistics, and a direct link to the public leaderboard.
 5. Publish the official rulebook at `/rules/` and `/fr/regles/`: the book the game opens at `/rules`, the same
-   `table/rules.json` and `rules.fr.json` (ADR 0188, 0193), drawn once at build time as static HTML, with its
-   contents, a fragment per part, section and concept card (`/rules/#tempo`), an id the book moved landing where
-   it moved, and what changed. The book's words and numbers are its own: the showcase adds the page around it.
-   Rebuild the book (`node scripts/rules/build.mjs`) before the showcase when `rules/` changed.
+   `table/rules.json` and `rules.fr.json` (ADR 0188, 0193). It is drawn once at build time as static HTML, with its
+   contents, a fragment per part, section and concept card (`/rules/#tempo`), and what changed. An old id that the
+   book has since moved lands on its new place. The showcase changes none of the book's words or numbers; it adds
+   only the page around them. Rebuild the book (`node scripts/rules/build.mjs`) before the showcase when `rules/`
+   changed.
 6. Publish the full policy at `/privacy/` and `/fr/confidentialite/`. Link it from every page, from the signed-out lobby
    and from Settings → Privacy in the app. Privacy requests go to contact@downfallinstinct.com.
    The footer also links to a separate copyright notice at `/copyright/` or `/fr/droit-auteur/`, covering the
@@ -58,8 +59,8 @@ The one-time setup (the API token, the account variable, the custom domain) is i
 **Actions, Publish the showcase, Run workflow**, on `main` only. A prior Pages deployment can be restored independently of the game.
 
 What the build reads, and so what calls for a deployment: `showcase/**`, `data/{Creatures,Spells,Tiers,presentation}/**`,
-`docs/art/branding.css`, `table/rules.json`, `table/rules.fr.json`, `table/rules.js`, `battle/src/cue-art.js`, `table/battle-*art.js`, `table/battle-evolution.js`, `table/battle-art/**`,
-`table/fonts/**`, `table/icon.svg` and `table/brand-mark.svg`. A build that starts to read another path adds it to
+`docs/art/branding.css`, `table/rules.json`, `table/rules.fr.json`, `table/rules.js`, `battle/src/cue-art.js`,
+`table/battle-*art.js`, `table/battle-evolution.js`, `table/battle-art/**`, `table/fonts/**`, `table/icon.svg` and `table/brand-mark.svg`. A build that starts to read another path adds it to
 `plan.js` and its test. With Azure Static Web Apps, upload the same contents of `showcase/dist` as a prebuilt static site.
 
 [Direct Upload with CI](https://developers.cloudflare.com/pages/how-to/use-direct-upload-with-continuous-integration/) ·

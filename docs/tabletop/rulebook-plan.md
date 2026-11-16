@@ -224,21 +224,21 @@ and the app's edition; it keeps writing, the keeper keeps reading.
    offline). Left: the battle, its cards and every other page stay English; #713's last point (the catalogue's
    "side") and its domain test; the writer's notes on the English (the mutation card's initiative, an example's
    unchecked facts) go to an issue.
-7. **R7, the public book.** The showcase renders `table/rules.json` under `/rules/` (and `/fr/regles/` once R6
-   is built).
+7. **R7, the public book.** The showcase renders `table/rules.json` under `/rules/` (and `/fr/regles/`).
    *Built (2026-11-16)*: `showcase/rules.mjs` draws `table/rules.json` at `/rules/` and `table/rules.fr.json` at
-   `/fr/regles/`, as static HTML with no script, the strict content policy kept. The words are the table's page's
-   own (`WORDS`, `contentsOf`, `latestFirst` and `targetOf` from `table/rules.js`): the contents first on a phone
-   and beside the text from 900 px, every part, section and card, the changes latest first, and the line saying
-   where the numbers come from. A section, a part, a concept card and an id of `moved.json` are each a fragment,
-   so `/rules/#tempo` lands without a script; a card or a redirect sharing a section's id adds no anchor. The page
-   links to the game's own `/rules`, and **Rules** joins the header, the footer and the duel on the home page; the
-   header's links now give way to the footer under 920 px, not 850, so the six fit unwrapped. `plan.js` deploys the
-   showcase when either book or `table/rules.js` changes. Tests: `showcase.test.js` (each book whole and in order,
-   its contents, changes and card anchors, the routes and fragments of every page, a moved id and a hostile link
-   on a fixture) and `browser-suite.test.js`. Left: no filter on the public page (it would be the site's second
-   script for what the browser's own find does), and no browser spec, for the showcase has none; the widths were
-   checked by hand at 320, 390, 850 to 1300 px.
+   `/fr/regles/`, as static HTML with no script, under the showcase's strict content policy. Its words are the
+   table's page's own (`WORDS`, `contentsOf`, `latestFirst` and `targetOf` from `table/rules.js`). The contents come
+   first on a phone and stay beside the text from 900 px; then every part, section and card, the changes latest
+   first, and where the numbers come from. A section, a part, a concept card and a moved id (`moved.json`) are each
+   a fragment, so `/rules/#tempo` lands without a script. A card or a redirect that shares an id of the book or
+   the page adds no anchor. The page links to the game's own `/rules`. **Rules** joins the header, the footer and
+   the home page's duel. The header's links now give way to the footer under 920 px, not 850, so the six fit on
+   one line. `plan.js` deploys the showcase when either book or `table/rules.js` changes.
+   Tests: `showcase.test.js` (each book whole and in order, its contents, changes and card anchors, the routes and
+   fragments of every page, a moved id and a refused link on a fixture) and `browser-suite.test.js`.
+   Left: no filter on the public page, because it would be the site's second script for what the browser's own
+   find already does. No browser spec either, because the showcase has none. Widths were checked by hand at 320,
+   390 and 850 to 1300 px.
 
 ## Questions for the owner
 
