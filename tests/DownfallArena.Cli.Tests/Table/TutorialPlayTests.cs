@@ -91,7 +91,8 @@ public sealed class TutorialPlayTests
         // The view changed and the match did not: the pages are told through this, once. It is said after the
         // tutorial's lock is left, so a moment after Assisted reads empty.
         (await SaidAsync(() => Volatile.Read(ref said) == 1)).ShouldBeTrue();
-        Volatile.Read(ref said).ShouldBe(1);
+        await Task.Delay(200, TestContext.Current.CancellationToken);
+        Volatile.Read(ref said).ShouldBe(1, "a second word would come in the moment after the first");
     }
 
     [Fact]
