@@ -1,6 +1,7 @@
 using DownfallArena.Application.Agents;
 using DownfallArena.Application.Catalogue;
 using DownfallArena.Application.Matches.Journaling;
+using DownfallArena.Application.Matches.Ports;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Application.Matches.Scenarios;
 using DownfallArena.Domain.Matches;
@@ -20,6 +21,16 @@ namespace DownfallArena.Cli.Table;
 /// </summary>
 internal sealed record ScenarioPlay(SteppedSession Session, TableApi Api, string Token, PlayerSlot Seat)
 {
+    /// <summary>The playthrough's journal, kept in memory: the match's entries before the cut, then what was played since.</summary>
+    public IDecisionJournal? Journal { get; init; }
+
+    /// <summary>How many of the journal's entries are the match's before the cut.</summary>
+    public int Cut { get; init; }
+
+    /// <summary>What was played since the cut, as journal entries; none when there is no journal.</summary>
+    public async Task<IReadOnlyList<IJournalEntry>> SinceTheCutAsync(CancellationToken cancellationToken = default) =>
+        Journal is { } journal ? [.. (await journal.ReadAsync(Run, cancellationToken)).Entries.Skip(Cut)] : [];
+
     private const string Run = "scenario";
 
     /// <param name="label">What the seat's view says the table is, so the page shows it as practice; none at the local table.</param>
@@ -69,7 +80,7 @@ internal sealed record ScenarioPlay(SteppedSession Session, TableApi Api, string
                 tutorial.GaveBack += api.Changes.Bump;
             }
 
-            return new ScenarioPlay(session, api, token, document.Seat);
+            return new ScenarioPlay(session, api, token, document.Seat) { Journal = journal, Cut = started.Value.Entries.Count };
         }
         catch
         {

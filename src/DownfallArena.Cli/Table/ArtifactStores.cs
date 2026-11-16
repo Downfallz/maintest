@@ -5,6 +5,7 @@ using Azure.Storage.Blobs;
 using Azure.Storage.Queues;
 using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.Application.Admin.Ports;
+using DownfallArena.Application.FeedbackBox.Ports;
 using DownfallArena.Application.Hosting.Ports;
 using DownfallArena.Application.Learning.Ports;
 using DownfallArena.Application.Matches.Ports;
@@ -12,6 +13,7 @@ using DownfallArena.Application.Ports;
 using DownfallArena.Application.Tables.Ports;
 using DownfallArena.Infrastructure.Accounts;
 using DownfallArena.Infrastructure.Admin;
+using DownfallArena.Infrastructure.FeedbackBox;
 using DownfallArena.Infrastructure.Learning;
 using DownfallArena.Infrastructure.Matches;
 using DownfallArena.Infrastructure.Tables;
@@ -135,6 +137,28 @@ internal static class ArtifactStores
             ? new BlobContainerClient(uri, new StorageSharedKeyCredential(DevelopmentAccount, DevelopmentKey))
             : new BlobContainerClient(uri, new DefaultAzureCredential());
         return await BlobOperatorLog.OpenAsync(container, cancellationToken);
+    }
+
+    /// <summary>The container feedback is kept in (ADR 0189), next to the recordings' one.</summary>
+    public const string FeedbackContainer = "feedback";
+
+    /// <summary>Where the players' feedback is kept (ADR 0189): a directory or a container of its own beside the recordings.</summary>
+    public static async Task<IFeedbackStore> OpenFeedbackAsync(string target, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(target);
+        if (!IsContainerUrl(target))
+        {
+            var runs = Path.GetFullPath(target).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return new FileFeedbackStore(Path.Combine(Path.GetDirectoryName(runs) ?? runs, FeedbackContainer));
+        }
+
+        var recordings = new Uri(target, UriKind.Absolute);
+        var path = recordings.AbsolutePath.TrimEnd('/');
+        var uri = new UriBuilder(recordings) { Path = $"{path[..path.LastIndexOf('/')]}/{FeedbackContainer}", Query = string.Empty }.Uri;
+        var container = IsEmulator(uri)
+            ? new BlobContainerClient(uri, new StorageSharedKeyCredential(DevelopmentAccount, DevelopmentKey))
+            : new BlobContainerClient(uri, new DefaultAzureCredential());
+        return await BlobFeedbackStore.OpenAsync(container, cancellationToken);
     }
 
     /// <summary>The container the content tables began on is kept in, next to the recordings' one (ADR 0163).</summary>

@@ -381,6 +381,25 @@ The seat's view says the lesson under `practice.tutorial`:
   while every existing account signs in and a dev host is unaffected, and the notice, one line of at most 200
   characters, rides on `/api/me` and shows under the header of every page but the game itself (ADR 0177).
 
+#### Feedback
+
+- `POST /api/feedback` keeps a bug report or an idea (ADR 0189, docs/tabletop/feedback-plan.md), from the seat
+  whose key the request carries or from a signed-in account; signed out and without a seat it is answered 401
+  `Feedback.SignInRequired`, and a seat that is another account's 403 `Feedback.NotYourSeat`. A bug report is
+  `{"kind":"bug","category","happened","expected?","attach","page","errors"}`, its category one of `rules`,
+  `looks`, `stuck` or `other`; an idea `{"kind":"idea","where","problem","wish?","page"}`, its `where` one of
+  `rules`, `battle`, `lobby` or `other`. The text holds 10 to 2,000 characters (400 `Feedback.Invalid`).
+- The host adds what the page cannot be trusted with: the table, the seat, the round, sub-phase and journal length,
+  the content, rules and engine, and, when `attach` is true, the seat's own view; from a practice, the scenario's id
+  and the practice's journal since its cut. The page's address is kept without its query, and its last ten errors.
+- Against spam, over both kinds: two minutes apart (429 `Feedback.TooSoon`, with `retryAfterSeconds` and
+  `Retry-After`), five a day per sender and, for a guest, five a day per network address counted in memory only
+  (429 `Feedback.TooMany`), a second report on the same table and round, or a second idea within the hour, merged
+  into the first (200 `{"id","merged":true,"code":"Feedback.Merged"}`), and 100 new a day for the host (429
+  `Feedback.HostFull`). A kept one answers 201 `{"id","merged":false}`.
+- Kept one record each beside the recordings under `feedback/` (or the feedback container). A host recording
+  nothing takes none (404). Deleting an account drops it from its feedback and keeps the text.
+
 #### The lobby and the pages
 
 - `/` and `/lobby` serve the player lobby (ADR 0115): saved browser seats, public summaries and explicitly open
@@ -561,6 +580,7 @@ One pass of what is due on the tables, then exit (ADR 0162), kept as a run for t
   for whoever it still asks, its result kept and its seats told with `--push-keys`, and the player asked at a
   game whose time reaches its last quarter in the pass told so once (ADR 0169);
 - every begun game with a seat its player left and no move for a day ended with that seat conceding (ADR 0170).
+- every piece of feedback closed more than 180 days ago deleted (ADR 0189).
 
 What the hourly job runs. The tables it picks up take no bot turn.
 

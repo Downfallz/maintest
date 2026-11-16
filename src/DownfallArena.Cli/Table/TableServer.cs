@@ -76,6 +76,9 @@ internal sealed class TableServer : IDisposable
     /// <summary>A player's side of the match scenarios (ADR 0179), on a host that keeps them and signs players in.</summary>
     public ScenariosApi? Scenarios { get; init; }
 
+    /// <summary>Where players send bug reports and ideas (ADR 0189), on a host that keeps them.</summary>
+    public FeedbackApi? Feedback { get; init; }
+
     /// <summary>The scenarios being practised in this process, found by their seats' tokens.</summary>
     public ScenarioPractices? Practices { get; init; }
 
@@ -306,6 +309,19 @@ internal sealed class TableServer : IDisposable
 
         var token = request.Headers[TableApi.TokenHeader];
 
+        if (FeedbackApi.Names(path))
+        {
+            if (Feedback is null)
+            {
+                return StudioResponse.OfPlainText(404, "This host keeps no feedback: it records nothing.");
+            }
+
+            // A seat whose table is still being rebuilt would read as no seat at all.
+            return Starting && !string.IsNullOrEmpty(token)
+                ? StartingUp()
+                : await Feedback.HandleAsync(method, body, token, account, AddressOf(request), request.UserAgent);
+        }
+
         // A seat's own lobby routes find their seat by its token, and a token whose table is still being rebuilt
         // would read as spent: the page would forget a seat it still has.
         if (Starting && path.StartsWith(LobbyApi.Prefix + "/", StringComparison.Ordinal))
@@ -354,6 +370,26 @@ internal sealed class TableServer : IDisposable
         table.Touch(now);
         await LobbyApi.SeatReachedAsync(table, token);
         return await table.Api.HandleAsync(method, path, body, token, request.Headers["If-None-Match"], request.Url?.Query);
+    }
+
+    /// <summary>
+    /// The address a request came from, for the guests' feedback budget (ADR 0189): the one Cloudflare saw, which it
+    /// sets itself and the API answers alone once its fence is on (ADR 0175); else the last one the platform's ingress
+    /// added; else the connection's.
+    /// </summary>
+    internal static string? AddressOf(HttpListenerRequest request)
+    {
+        if (request.Headers["CF-Connecting-IP"] is { Length: > 0 } cloudflare)
+        {
+            return cloudflare.Trim();
+        }
+
+        if (request.Headers["X-Forwarded-For"] is { Length: > 0 } forwarded)
+        {
+            return forwarded.Split(',')[^1].Trim();
+        }
+
+        return request.RemoteEndPoint?.Address.ToString();
     }
 
     private static StudioResponse StartingUp() =>

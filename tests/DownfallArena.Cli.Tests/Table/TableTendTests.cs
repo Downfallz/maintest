@@ -1,9 +1,12 @@
 using DownfallArena.Application.Accounts;
+using DownfallArena.Application.FeedbackBox;
 using DownfallArena.Application.Matches.Journaling;
 using DownfallArena.Cli.Table;
+using DownfallArena.Infrastructure.FeedbackBox;
 using DownfallArena.Infrastructure.Learning;
 using DownfallArena.Infrastructure.Matches;
 using DownfallArena.SharedKernel.Identifiers;
+using Microsoft.Extensions.Time.Testing;
 
 namespace DownfallArena.Cli.Tests.Table;
 
@@ -43,6 +46,21 @@ public sealed class TableTendTests : IDisposable
         tended.Swept.ShouldBe([table.Id]);
         tended.Expired.ShouldBe(0);
         (await _hosted.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Closed);
+    }
+
+    [Fact]
+    public async Task A_pass_lets_go_of_feedback_closed_more_than_180_days_ago()
+    {
+        using var job = await _hosted.RestartedAsync();
+        var now = new DateTimeOffset(2026, 11, 16, 3, 0, 0, TimeSpan.Zero);
+        var store = new FileFeedbackStore(Path.Combine(_own, "feedback"));
+        var sent = now.AddDays(-400);
+        await store.SaveAsync(new Feedback { Id = Feedback.NewId(sent), Kind = FeedbackKind.Bug, Status = FeedbackStatus.Fixed, At = sent, ClosedAt = now.AddDays(-181), Sender = "acct_1", Category = "rules", Text = "The bleed did not tick." }, Cancel);
+
+        var tended = await TableTend.TendAsync(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System), now, feedback: new LetGoOfClosedFeedback(store, new FakeTimeProvider(now)));
+
+        tended.FeedbackLetGo.ShouldBe(1);
+        (await store.IdsAsync(Cancel)).ShouldBeEmpty();
     }
 
     [Fact]

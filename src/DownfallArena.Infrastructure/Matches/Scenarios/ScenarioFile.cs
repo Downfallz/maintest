@@ -152,6 +152,16 @@ public static class ScenarioFile
         _ => throw new InvalidDataException($"The scenario's tutorial names creature {creature}: a creature's number is 1 or more."),
     };
 
+    /// <summary>
+    /// Entries as the journal's own lines, their times at the epoch as a scenario file writes them: what a bug report
+    /// from a practice copies of it (ADR 0189), since a practice is kept nowhere.
+    /// </summary>
+    public static IReadOnlyList<JsonElement> JournalLinesOf(IReadOnlyList<IJournalEntry> entries)
+    {
+        ArgumentNullException.ThrowIfNull(entries);
+        return [.. Lines(entries).Select(line => JsonSerializer.SerializeToElement(line))];
+    }
+
     /// <summary>Each entry as the journal's own line, so the file and <c>decisions.jsonl</c> never disagree on one.</summary>
     private static JsonNode[] Lines(IReadOnlyList<IJournalEntry> entries) =>
         [.. Encoding.UTF8.GetString(JournalLines.Write(JournalPosition.Start, entries, DateTimeOffset.UnixEpoch))
