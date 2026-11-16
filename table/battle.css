@@ -1802,7 +1802,15 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 .coach-end a { color: var(--muted); }
 /* Where a sheet docks under the field (a phone), the field is too short to carry the card (#650): the card moves
    into the sheet, at its top, and scrolls with what the sheet asks. */
+/* In the sheet, the concept cards stand on the step's row where they fit, not on a row of their own: on a 320 px
+   phone the card left one spell, or none of the tempos, in view under it (#670). Two cards that do not fit beside
+   the step go under it, as before. */
 .coach.in-sheet { position: static; flex: 0 0 auto; width: auto; max-width: none; margin: 0; box-shadow: none; }
+.coach.in-sheet:not([hidden]) { display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; }
+.coach.in-sheet #coach-step { flex: 1 0 auto; white-space: nowrap; }
+.coach.in-sheet .coach-cards { order: 1; margin-left: auto; }
+.coach.in-sheet .coach-lines { order: 2; flex: 1 0 100%; }
+.coach.in-sheet .coach-end { order: 3; flex: 1 0 100%; }
 /* Targets are chosen on the field itself: the coach card steps aside, and the creature it points at stays ringed. */
 #battle[data-combat="targets"] .coach { display: none; }
 /* A tutorial's band stands in the header, not over the field: there it hid the top row of creatures, worst on a phone

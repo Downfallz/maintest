@@ -21,6 +21,7 @@
           "One enemy is wounded. Strike it."
         ],
         "concepts": [
+          "intent",
           "health"
         ],
         "pointsAt": {
