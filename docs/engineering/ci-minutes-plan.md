@@ -1,7 +1,7 @@
 # Plan: CI that fits a private repository's minutes, and a shorter wait on every pull request
 
 Status: accepted in part, 2026-11-16. The owner settled questions 1, 2, 3, 5 and 6; question 4 (Sonar) is open.
-M1 (the meter) and M2 (the release profiles split) are built.
+M1 (the meter), M2 (the release profiles split) and M3 (the wait evened out) are built.
 
 ## What the owner asked for
 
@@ -170,6 +170,19 @@ complete runs.
    minutes, holds WebKit's job with its retry. M4 narrows which paths call for the release profiles at all.
 3. **M3, the wait evened out.** Desktop in three shards, Playwright's browsers cached, the learning job folded
    into `build-and-test` (`browser-suite.test.js` holds the gate's `needs`).
+
+   *Built (2026-11-16)*: desktop and tablet play in three shards (`desktop and tablet 1/3` to `3/3`), about 173
+   of their 520 tests each: a shard splits by test count, and the two halves had put the complete-match replays
+   (battle-playback, battle-live) together. Each of the nine browser jobs restores `~/.cache/ms-playwright` with
+   `actions/cache`, keyed by the runner's image, Playwright's version and the engine, then runs `install
+   --with-deps` as before: the system packages are installed every time, the engine downloaded only on a miss.
+   The learning job is gone: `build-and-test` runs ruff (check and format) before the build and pytest once,
+   whose coverage Sonar imports, and the gate no longer needs `learning`. `browser-suite.test.js` holds the
+   shards, the cache before every install, and ruff and pytest in `build-and-test`; the meter keeps its
+   `learning` group for the runs before this one.
+
+   Not measured: what the three shards take, and the minutes the cache saves. The first `/retro` after the merge
+   reads them with M1's meter. A heavier spec could still unbalance them; moving it is the plan's other option.
 4. **M4, the narrower plan and one push per review round.** `src/` and `data/` no longer call for the release
    profiles on a pull request; a Markdown-only diff runs the light build; `/ship` pushes once per round. Tests in
    `browser-suite.test.js`, and `prompts.test.js` for the skill.

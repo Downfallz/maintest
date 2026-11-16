@@ -230,3 +230,54 @@ test('CI asks for the narrower plan on a pull request alone', () => {
   assert.match(workflow, /if \[\[ "\$EVENT" == pull_request \]\]; then narrow=\(--pull-request\); fi/);
   assert.match(workflow, /node studio\/browser\/plan\.js "\$\{narrow\[@\]\}" < "\$RUNNER_TEMP\/changed\.txt"/);
 });
+
+// The wait evened out (docs/engineering/ci-minutes-plan.md, M3).
+const browserWorkflow = () => readFileSync(join(here, '..', '.github', 'workflows', 'studio-browser.yml'), 'utf8');
+const ciWorkflow = () => readFileSync(join(here, '..', '.github', 'workflows', 'ci.yml'), 'utf8');
+
+// A job's block: from its key under `jobs:` to the next job's key.
+function jobBlock(workflow, job) {
+  const start = workflow.search(new RegExp(`^ {2}${job}:$`, 'm'));
+  assert.ok(start >= 0, `the job ${job} is in the workflow`);
+  const next = workflow.slice(start + 1).search(/^ {2}[a-z][a-z-]*:$/m);
+  return next < 0 ? workflow.slice(start) : workflow.slice(start, start + 1 + next);
+}
+
+test('desktop and tablet play in three shards, and every other project in one job', () => {
+  const shards = [...jobBlock(browserWorkflow(), 'journeys').matchAll(/projects: (.*)$/gm)].map((match) => match[1]);
+  assert.deepEqual(shards, [
+    '--project=small-phone',
+    '--project=phone',
+    '--project=desktop --project=tablet --shard=1/3',
+    '--project=desktop --project=tablet --shard=2/3',
+    '--project=desktop --project=tablet --shard=3/3',
+  ]);
+});
+
+// Each browser job downloaded its engine, nothing cached: twenty to sixty seconds a job. The system packages
+// are still installed every time (`--with-deps`), since a runner's image does not keep them.
+test("every job that installs a browser restores Playwright's browsers first, keyed by its version and the engine", () => {
+  const workflow = browserWorkflow();
+  for (const job of ['journeys', 'real-engine', 'battle-release']) {
+    const block = jobBlock(workflow, job);
+    const restore = block.search(/uses: actions\/cache@[0-9a-f]{40} # v\d/);
+    const install = block.indexOf('playwright/cli.js install --with-deps');
+    assert.ok(restore >= 0, `${job} restores the browsers`);
+    assert.ok(install > restore, `${job} installs after the restore, so a cached engine is not downloaded again`);
+    assert.match(block, /path: ~\/\.cache\/ms-playwright/, job);
+    assert.match(block, /key: \$\{\{ steps\.playwright\.outputs\.key \}\}/, job);
+    assert.match(block, /require\('\.\/node_modules\/playwright\/package\.json'\)\.version/, job);
+    assert.match(block, /key=playwright-\$ImageOS-\$version-\$ENGINE/, job);
+  }
+});
+
+// The learning project's own job billed a minute to run ruff, then build-and-test ran pytest again for Sonar.
+test('the learning project is linted and tested once, in build-and-test', () => {
+  const workflow = ciWorkflow();
+  assert.doesNotMatch(workflow, /^ {2}learning:$/m);
+  const block = jobBlock(workflow, 'build-and-test');
+  assert.match(block, /ruff" check \. \.\.\/scripts/);
+  assert.match(block, /ruff" format --check \. \.\.\/scripts/);
+  assert.equal([...block.matchAll(/bin\/pytest"/g)].length, 1, 'pytest runs once');
+  assert.ok(block.indexOf('ruff" check') < block.indexOf('dotnet build'), 'ruff answers before the build');
+});
