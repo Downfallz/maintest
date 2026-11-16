@@ -9,7 +9,7 @@ namespace DownfallArena.Cli.Table;
 
 /// <summary>
 /// "Your turn", sent to a seat's phone when the match asks it something and nobody is looking (ADR 0118). A
-/// page in front of somebody says so within a poll (<c>?shown=</c>, <see cref="DecisionClock" />), and a seat
+/// page in front of somebody says so once it drew it (<c>?shown=</c>, <see cref="DecisionClock" />), and a seat
 /// whose page said so gets no notice; a seat whose page is asleep, closed or on another app gets one after a
 /// short grace, and its service worker shows it. One notice an asking at most: the next asking comes only
 /// after this one is answered.
@@ -17,8 +17,9 @@ namespace DownfallArena.Cli.Table;
 internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProvider clock, TimeSpan? grace = null)
 {
     /// <summary>
-    /// How long a question waits for its page before a notice goes. A page polls every 700 ms and acknowledges
-    /// the asking it draws on the poll after, so two seconds is a page that is not there, not one that is slow.
+    /// How long a question waits for its page before a notice goes. A page in view is told of the question by its
+    /// stream (ADR 0119), reads it at once and acknowledges it once drawn (ADR 0164), so two seconds is a page that
+    /// is not there, not one that is slow.
     /// </summary>
     public static readonly TimeSpan Grace = TimeSpan.FromSeconds(2);
 
@@ -31,7 +32,7 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
 
     // The last asking each seat's page said it drew, kept on the seat's own lifetime: a table let go of takes
     // its seats, and their entries, with it.
-    private readonly ConditionalWeakTable<HumanSeat, StrongBox<long>> _shown = [];
+    private readonly ConditionalWeakTable<ISeatPerson, StrongBox<long>> _shown = [];
 
     // The endpoints a push service said were gone. A browser keeps its subscription when the service drops it,
     // and a page sends it again on every load; answering those with 410 is how the page learns to make a new
@@ -61,7 +62,7 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
     }
 
     /// <summary>A page has drawn this asking in front of somebody: no notice for it.</summary>
-    public void Shown(TableSeat seat, HumanSeat.Question question)
+    public void Shown(TableSeat seat, Asking question)
     {
         ArgumentNullException.ThrowIfNull(seat);
         ArgumentNullException.ThrowIfNull(question);
@@ -128,7 +129,7 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
     /// a browser may hold several (ADR 0115), and the question is at the one that asked. The id is the session's
     /// public name, on the session page's address already; no token travels.
     /// </summary>
-    public static string Payload(HumanSeat.Question question, int? round, TableSeat seat, string table)
+    public static string Payload(Asking question, int? round, TableSeat seat, string table)
     {
         ArgumentNullException.ThrowIfNull(question);
         ArgumentNullException.ThrowIfNull(seat);
@@ -147,7 +148,7 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
         return JsonSerializer.Serialize(new { title = "Your turn", body, url = $"/play?table={Uri.EscapeDataString(table)}", tag = $"turn:{seat.Name}", asked = question.Asked }, Web);
     }
 
-    private async Task NoticeAsync(PlayedTable table, TableSeat seat, HumanSeat.Question question, int? round)
+    private async Task NoticeAsync(PlayedTable table, TableSeat seat, Asking question, int? round)
     {
         try
         {

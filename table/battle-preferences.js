@@ -1,15 +1,14 @@
 const key = 'downfall.presentation';
 
-// This browser's presentation preference is independent of account and seat capabilities.
+// The battle view is the game (ADR 0157). The classic table is archived: it is still served at /play, for an
+// admin replay, the practice scenarios, and a browser that asked for it by storing `classic` under this key, which
+// is how its own tests reach it. Any other value, an older `table` or `battle` choice included, plays the battle.
 export function preferredPresentation(storage) {
-  try {
-    const value = storage?.getItem(key);
-    return value === 'battle' || value === 'arena' ? 'battle' : 'table';
-  }
-  catch { return 'table'; }
+  try { return storage?.getItem(key) === 'classic' ? 'table' : 'battle'; }
+  catch { return 'battle'; }
 }
 export function savePresentation(storage, value) {
-  try { storage?.setItem(key, value === 'battle' ? 'battle' : 'table'); }
-  catch { /* The visible selection still applies for this visit. */ }
+  try { storage?.setItem(key, value === 'table' ? 'classic' : 'battle'); }
+  catch { /* The battle view is the default anyway. */ }
 }
-export function presentationPath(value) { return value === 'battle' ? '/battle' : '/play'; }
+export function presentationPath(value) { return value === 'table' ? '/play' : '/battle'; }

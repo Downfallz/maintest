@@ -11,12 +11,13 @@ function availability(id, model, card, guide) {
   return `Plan · ${amount} · may fizzle`;
 }
 
+// The crit chance as the card's chip shows it, and what it holds for: this turn's tempo, from the host's guide, or
+// the card's own stat, which says which tempo crits and the face of the d20 the table rolls.
 function critical(card, guide) {
   const value = guide?.chosenSpeed === 'Quick' ? guide.quickCriticalChance : guide?.standardCriticalChance;
-  if (Number.isFinite(value)) return value > 0 ? `${chance(value)} crit · current` : '';
-  // The card's own stat says which tempo crits and the face of the d20 the table rolls.
+  if (Number.isFinite(value)) return value > 0 ? { value: chance(value), hint: 'at this tempo' } : null;
   const stat = cardStats(card)[0];
-  return stat ? `${stat.value} crit · ${stat.hint} · catalogue` : '';
+  return stat ? { value: stat.value, hint: `${stat.hint} · catalogue` } : null;
 }
 
 // The host's guide knows the cost of an offered spell the catalogue does not carry.
@@ -29,9 +30,11 @@ function paletteOf(catalogue, cards) {
   if (!palettes.has(catalogue)) palettes.set(catalogue, talentPalette(catalogue, cards));
   return palettes.get(catalogue);
 }
-// Groups follow the catalogue's own order of types, so every creature reads them the same way; unknown last.
+// Groups follow the order the host gives its spell types in (the domain's own: attacks first, then defences), then
+// any other type in the catalogue's order, so every creature reads them the same way; unknown last. The page names
+// no type itself.
 function typeRank(catalogue) {
-  const order = [...new Set((catalogue?.cards ?? []).map(card => card.type).filter(Boolean))];
+  const order = [...new Set([...(catalogue?.spellTypes ?? []), ...(catalogue?.cards ?? []).map(card => card.type).filter(Boolean)])];
   return type => type === OTHER ? Infinity : order.indexOf(type);
 }
 
@@ -45,7 +48,7 @@ export function battleSpellbook(model, catalogue) {
     if (!groups.has(type)) groups.set(type, []);
     groups.get(type).push({ id, name: card?.name ?? id, type, creatureClass: card?.creatureClass ?? '',
       colour: card?.creatureClass ? classColour(card.creatureClass, palette) : null,
-      cost: cost(card, guide), critical: critical(card, guide), offered: model.spells.includes(id),
+      cost: cost(card, guide), crit: critical(card, guide), offered: model.spells.includes(id),
       availability: availability(id, model, card, guide),
       details: cardDetails(card), criticalNote: card?.criticalNote ?? '', missing: !card });
   }

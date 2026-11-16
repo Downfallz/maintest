@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
+import { openSpells } from './battle-spells-fixture.js';
 import { returningBattlePlayer } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
+import { WINDUP_MS, IMPACT_MS } from '../../table/battle-timing.js';
 test.beforeEach(returningBattlePlayer);
 const creature = (id, health = 20) => ({ id, name: `Creature ${id}`, health, maxHealth: 20, energy: 4,
   totalDefense: 2, isAlive: health > 0, knownSpells: ['strike'], conditions: [], acquiredTiers: [] });
@@ -21,6 +23,9 @@ async function mount(page, feed = [entry(10)]) {
     localStorage.setItem('downfall.table.seats', JSON.stringify({ player1: 'seat' }));
     const original = window.fetch;
     window.fetch = (url, options) => String(url).endsWith('/events') ? Promise.resolve(new Response(new ReadableStream({ start(controller) {
+      // A host says it is still there every twenty seconds (ADR 0119): without it the page takes a quiet stream for a
+      // dropped one after 45 seconds (ADR 0164) and opens another, and a long test would notify the closed one.
+      const alive = setInterval(() => { try { controller.enqueue(new TextEncoder().encode(': keep-alive\n\n')); } catch { clearInterval(alive); } }, 20000);
       window.notifyBattle = () => controller.enqueue(new TextEncoder().encode('event: changed\ndata: 1\n\n'));
     } }), { headers: { 'Content-Type': 'text/event-stream' } })) : original(url, options);
   });
@@ -44,7 +49,12 @@ async function mount(page, feed = [entry(10)]) {
   await page.goto('/table/battle.html'); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
   // Freeze before connecting: advancing an active poll can leave a zero-delay owed refresh
   // suspended just as the fixture publishes its first notification.
-  await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#connection')).toHaveText('LIVE');
+  await expect(page.locator('#loading')).toBeHidden();
+  // The mutation phase opens its tree by itself (ADR 0138). These journeys read the journal beside a covered
+  // question, so the player closes the tree first, and acknowledgements are counted from there.
+  await expect(page.locator('#planning-dialog')).toBeVisible(); await page.locator('#planning-close').click();
+  await expect.poll(() => state.shown).toEqual(['11']); state.shown.length = 0;
+  await expect(page.locator('#connection')).toHaveText(/^LIVE/);
   // Discovery POSTs the saved capabilities to resume; measure journal writes after this baseline.
   state.writes.length = 0;
   const publish = async (feed, extra = {}) => {
@@ -68,10 +78,61 @@ test('initial history shows confirmed attacks with accessible details and no hid
   await page.keyboard.press('Escape'); await expect(page.locator('#history-open')).toBeFocused();
   expect(h.state.shown).toEqual([]); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });
+test('History opens on a summary of each round, and All events holds the full record', async ({ page }, info) => {
+  await page.addInitScript(() => { if (!sessionStorage.getItem('summary-test')) { sessionStorage.setItem('summary-test', '1'); localStorage.removeItem('downfall.battle.history-view.v1'); } });
+  const h = await mount(page, [entry(10), { ...entry(11), event: { ...entry(11).event, resolution: { action: { actor: 1, spell: 'strike', targets: [4] }, isCritical: false },
+    appliedOutcomes: [{ kind: 'DamageOutcome', target: 4, amount: 5 }] } }, { sequence: 12, event: { kind: 'RoundStarted', roundId: 2 } }]);
+  await page.locator('#history-open').click();
+  const dialog = page.locator('#history-dialog');
+  await expect(dialog).toHaveAttribute('data-view', 'summary');
+  await expect(page.locator('#history-mode-summary')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#history-list')).toBeHidden(); await expect(page.locator('#history-filters')).toBeHidden();
+  const card = page.locator('.summary-round'); await expect(card).toHaveCount(1); await expect(card.locator('h3')).toHaveText('Round 2');
+  const casts = card.locator('.summary-casts > li'); await expect(casts).toHaveCount(2);
+  await expect(casts.nth(0)).toHaveAttribute('data-side', 'Opponent'); await expect(casts.nth(0)).toContainText('Creature 4');
+  await expect(casts.nth(0).locator('.summary-status')).toHaveText('Crit'); await expect(casts.nth(0)).toContainText('Damage 7');
+  await expect(casts.nth(1)).toHaveAttribute('data-side', 'Your team'); await expect(casts.nth(1).locator('.summary-status')).toHaveCount(0);
+  await fitsViewport(page, '#history-close');
+  await page.screenshot({ path: info.outputPath('history-summary.png') });
+  // A cast opens its own record, and Back returns to it in the summary.
+  await casts.nth(0).locator('.summary-cast').click();
+  await expect(dialog).toHaveAttribute('data-view', 'events'); await expect(page.locator('#history-detail')).toContainText('Applied effects');
+  await page.locator('#history-back').click();
+  await expect(dialog).toHaveAttribute('data-view', 'summary'); await expect(casts.nth(0).locator('.summary-cast')).toBeFocused();
+  // All events of a round is the full journal filtered to it, and the reader's choice is kept.
+  await card.getByRole('button', { name: 'All events of round 2' }).click();
+  await expect(dialog).toHaveAttribute('data-view', 'events'); await expect(page.locator('#history-filter-round')).toHaveValue('2');
+  await expect(rows(page)).toHaveCount(2); expect(h.state.writes).toEqual([]);
+  await page.locator('#history-close').click(); await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
+  await expect(page.locator('#history-open')).toBeEnabled(); await page.locator('#history-open').click();
+  await expect(page.locator('#history-dialog')).toHaveAttribute('data-view', 'events');
+  // A filter in All events that excludes a cast does not stop the summary from opening it.
+  await page.locator('#history-filters > summary').click(); await page.selectOption('#history-filter-kind', 'RoundStarted');
+  await page.locator('#history-mode-summary').click(); await expect(page.locator('#history-dialog')).toHaveAttribute('data-view', 'summary');
+  await page.locator('.summary-cast').first().click();
+  await expect(page.locator('#history-detail')).toContainText('Applied effects'); await expect(page.locator('#history-filter-kind')).toHaveValue('');
+  // A round's All events opens its whole journal, whatever kind was filtered before.
+  await page.locator('#history-back').click(); await page.locator('#history-mode-events').click();
+  await page.selectOption('#history-filter-kind', 'RoundStarted'); await page.locator('#history-mode-summary').click();
+  await page.getByRole('button', { name: 'All events of round 2' }).click();
+  await expect(page.locator('#history-filter-kind')).toHaveValue(''); await expect(rows(page)).toHaveCount(2);
+  expect(h.state.errors).toEqual([]);
+});
+test('a new event keeps the keyboard focus on the summary cast being read', async ({ page }) => {
+  await page.addInitScript(() => localStorage.removeItem('downfall.battle.history-view.v1'));
+  const h = await mount(page, [entry(10)]);
+  await page.locator('#history-open').click(); await expect(page.locator('#history-dialog')).toHaveAttribute('data-view', 'summary');
+  const cast = page.locator('#history-summary [data-sequence="10"]'); await cast.focus();
+  await h.publish([entry(10), entry(11)]); await expect(page.locator('.summary-casts > li')).toHaveCount(2);
+  await expect(cast).toBeFocused();
+  await page.keyboard.press('Enter'); await expect(page.locator('#history-detail')).toContainText('event 10');
+  expect(h.state.errors).toEqual([]);
+});
 test('skip and duplicate polls keep every action without replaying it', async ({ page }) => {
   const h = await mount(page); await h.publish([entry(11), entry(12)]);
-  await expect(page.locator('#playback-skip')).toBeVisible(); await page.locator('#history-open').click();
-  await expect(page.locator('#playback-skip')).toBeHidden(); await expect(rows(page)).toHaveCount(3);
+  // An opponent's actions offer no Skip (ADR 0139); opening History is the reader's own way past them.
+  await expect(page.locator('#battle')).toHaveAttribute('data-reading', 'true'); await page.locator('#history-open').click();
+  await expect(page.locator('#battle')).toHaveAttribute('data-reading', 'false'); await expect(rows(page)).toHaveCount(3);
   await h.publish([entry(12), entry(10)]); await expect(rows(page)).toHaveCount(3);
   await page.locator('#history-close').click(); await page.locator('#history-open').click(); await expect(rows(page)).toHaveCount(3);
   expect(h.state.errors).toEqual([]);
@@ -79,13 +140,13 @@ test('skip and duplicate polls keep every action without replaying it', async ({
 test('reading preserves an open draft and does not acknowledge a new question', async ({ page }) => {
   const h = await mount(page); await page.locator('#planning-open').click();
   await expect.poll(() => h.state.shown).toEqual(['11']); await page.locator('[data-mutation="root"]').click();
-  await page.locator('#planning-dialog [data-history-open]').click();
+  await page.locator('#history-open').click();
   await expect(page.locator('#planning-confirm')).toBeDisabled();
   await h.publish([entry(10)]); await page.locator('#history-close').click();
-  await expect(page.locator('#planning-dialog [data-history-open]')).toBeFocused();
+  await expect(page.locator('#history-open')).toBeFocused();
   await expect(page.locator('#planning-selection')).toHaveText('Creature 1 · Warden');
   await expect(page.locator('#planning-confirm')).toBeEnabled();
-  await page.locator('#planning-dialog [data-history-open]').click();
+  await page.locator('#history-open').click();
   await h.publish([entry(11)], { waitingAsked: 20 }); await expect(rows(page)).toHaveCount(2);
   expect(h.state.shown).toEqual(['11']); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });
@@ -102,9 +163,8 @@ test('new events preserve expanded details, keyboard focus and reading position'
   await expect.poll(() => page.locator('#history-list').evaluate(node => node.scrollHeight - node.scrollTop - node.clientHeight)).toBeLessThan(2);
   expect(h.state.errors).toEqual([]);
 });
-for (const reason of ['seat', 'hidden', 'revoked']) test(`${reason} erases all journal surfaces and pending updates`, async ({ page }) => {
+for (const reason of ['hidden', 'revoked']) test(`${reason} erases all journal surfaces and pending updates`, async ({ page }) => {
   const h = await mount(page); await page.locator('#history-open').click();
-  if (reason === 'seat') { await page.locator('#history-close').click(); await page.locator('#switch-seat').click(); }
   if (reason === 'hidden') await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')); });
   if (reason === 'revoked') { h.state.status = 403; await page.evaluate(() => window.notifyBattle()); }
   await expect(rows(page)).toHaveCount(0); await expect(page.locator('#history-dialog')).toBeHidden();
@@ -116,7 +176,7 @@ test('two-round retention is explicit and capped while viewport controls stay re
   test.skip(info.project.name !== 'desktop', 'Viewport sweep runs once.');
   const h = await mount(page, Array.from({ length: 205 }, (_, i) => entry(i + 1)));
   for (const size of [{ width: 320, height: 568 }, { width: 844, height: 390 }]) {
-    await page.setViewportSize(size); await page.clock.runFor(150); await fitsViewport(page, '#history-open, #switch-seat, #settings');
+    await page.setViewportSize(size); await page.clock.runFor(150); await fitsViewport(page, '#history-open, #help-open, #settings');
     await page.locator('#history-open').click(); await expect(rows(page)).toHaveCount(200);
     await expect(page.locator('#history-limit')).toContainText('Older entries are not included');
     await fitsViewport(page, '#history-close'); await page.locator('#history-close').click();
@@ -131,7 +191,7 @@ test('a selected spell and field target survive reading the journal', async ({ p
   await h.publish([], { board: { ...h.state.view.board, phase: 'Combat', subPhase: 'Activation' },
     waitingFor: 'Action', waitingAsked: 12, options: { action: { creature: 1,
       spells: [{ spell: 'strike', legalTargets: { candidates: [4, 5, 6], minTargets: 1, maxTargets: 1 } }] } } });
-  await page.locator('#combat-open').click(); await page.locator('[data-spell="strike"]').click();
+  await openSpells(page); await page.locator('[data-spell="strike"]').click();
   await page.locator('[data-creature="4"]').click(); await expect(page.locator('#combat-confirm')).toBeEnabled();
   await page.locator('#history-open').click(); await expect(page.locator('#combat-confirm')).toBeDisabled();
   await h.publish([entry(10)]); await page.locator('#history-close').click();
@@ -140,20 +200,30 @@ test('a selected spell and field target survive reading the journal', async ({ p
   await expect(page.locator('#history-open')).toBeFocused();
   expect(h.state.shown).toEqual(['12']); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });
-test('actions arriving while the journal is open settle on the board and stay readable', async ({ page }) => {
+test('an opponent\'s actions arriving while the journal is open are written there, and wait to play until it closes', async ({ page }) => {
   const h = await mount(page); await page.locator('#history-open').click();
   await h.publish([entry(11), entry(12)]); await expect(rows(page)).toHaveCount(3);
-  await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'decision');
-  await expect(page.locator('#playback-skip')).toBeHidden();
+  // Nothing plays under the journal (ADR 0144): the actions wait, unplayed, for the field.
+  await expect(page.locator('#battle')).toHaveAttribute('data-reading', 'true'); await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '');
   await page.locator('#history-close').click();
-  await expect(page.locator('#playback-result')).toBeVisible();
-  await expect(page.locator('#result-text')).toContainText('Creature 4 (opponent) · Strike → Creature 1');
+  await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '11');
+  await expect(page.locator('#reading-kind')).toContainText("Opponent's action");
   expect(h.state.errors).toEqual([]);
 });
 test('the action result opens the journal over itself and takes the focus back', async ({ page }) => {
   const h = await mount(page); await h.publish([entry(11)]);
-  await page.locator('#playback-skip').click(); await page.locator('#playback-result').click();
+  // The opponent's action is read to its end and confirmed with OK (ADR 0139).
+  await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '11'); await page.clock.runFor(WINDUP_MS + IMPACT_MS);
+  await page.locator('#playback-next').click(); await page.locator('#playback-result').click();
   await expect(page.locator('#result-dialog')).toBeVisible();
+  // The last result is drawn as the journal draws a cast: whose, which spell, the crit, and the chips by target.
+  const card = page.locator('#result-dialog .result-card');
+  await expect(card).toHaveAttribute('data-kind', 'incoming'); await expect(card).toHaveAttribute('data-status', 'Critical');
+  await expect(card.locator('.result-card-who')).toHaveText('Creature 4'); await expect(card.locator('.result-card-what')).toHaveText('Strike');
+  await expect(card.locator('.result-card-status')).toHaveText('Crit'); await expect(card.locator('.result-card-target')).toHaveText('Creature 1');
+  await expect(card.locator('.effect-chip')).toHaveCount(1);
+  await fitsViewport(page, '#result-dialog [data-history-open], #result-dialog .close');
+  await page.screenshot({ path: test.info().outputPath('last-result.png') });
   await page.locator('#result-dialog [data-history-open]').click(); await expect(rows(page)).toHaveCount(2);
   await page.keyboard.press('Escape');
   await expect(page.locator('#result-dialog [data-history-open]')).toBeFocused();
@@ -264,7 +334,8 @@ test('reload makes earlier rounds available through an explicit seat history rea
   await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true'); await expect(page.locator('#loading')).toBeHidden();
   await page.locator('#history-open').click(); await expect(page.locator('#history-list [data-sequence="1"]')).toHaveCount(0);
   h.state.historyFeed = [old, recent]; await page.locator('#history-earlier').click();
-  await expect(page.locator('#history-list [data-sequence="1"]')).toHaveCount(1); expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
+  // The reloaded page opened the mutation tree again (ADR 0138); the history reads acknowledged nothing.
+  await expect(page.locator('#history-list [data-sequence="1"]')).toHaveCount(1); expect(h.state.shown).toEqual(['11']); expect(h.state.errors).toEqual([]);
 });
 test('unread counts stay reachable in the closed journal launcher and clear when it is opened', async ({ page }) => {
   const h = await mount(page);
@@ -289,7 +360,7 @@ test('Back returns focus to the inspected row and the kind filter speaks player 
 test('a covered question stays unacknowledged while an event is inspected and earlier rounds load', async ({ page }) => {
   const h = await mount(page); h.state.historyFeed = [{ ...entry(1), event: { ...entry(1).event, roundId: 1 } }];
   await page.locator('#planning-open').click(); await expect.poll(() => h.state.shown).toEqual(['11']);
-  await page.locator('#planning-dialog [data-history-open]').click();
+  await page.locator('#history-open').click();
   await rows(page).first().locator('summary').click(); await rows(page).first().getByRole('button', { name: 'Inspect event' }).click();
   await page.locator('#history-earlier').click(); await expect(page.locator('#history-list [data-sequence="1"]')).toHaveCount(1);
   await h.publish([], { waitingAsked: 12 }); await page.clock.runFor(200);

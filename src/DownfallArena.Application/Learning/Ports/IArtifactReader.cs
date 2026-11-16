@@ -16,4 +16,7 @@ public interface IArtifactReader
 
     /// <summary>The text at that path, or <c>null</c> when nothing was written there.</summary>
     Task<string?> ReadTextAsync(string relativePath, CancellationToken cancellationToken = default);
+
+    /// <summary>A document and the tag of the content read, or none when there is no such document.</summary>
+    Task<TaggedText?> ReadTaggedAsync(string relativePath, CancellationToken cancellationToken = default);
 }

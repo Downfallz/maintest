@@ -1,5 +1,4 @@
 import { createBattleServices } from '../../table/battle-services.js';
-import { TAPPED } from '../../table/notes.js';
 import { createFeedback } from '../../table/feedback.js';
 const el = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 export function serviceControls(controller: ReturnType<typeof createBattleServices>, storage: Storage | null) {
@@ -11,27 +10,8 @@ export function serviceControls(controller: ReturnType<typeof createBattleServic
   });
   el('notices-toggle').addEventListener('click', () => { void controller.toggle(); });
   el('notices-test').addEventListener('click', () => { void controller.test(); });
-  el('note-buttons').replaceChildren(...TAPPED.map(({ kind, label }: { kind: string; label: string }) => {
-    const button = document.createElement('button'); button.type = 'button'; button.textContent = label;
-    button.addEventListener('click', () => { void controller.note(kind); }); return button;
-  }));
-  el('comment-save').addEventListener('click', async () => {
-    const box = el<HTMLTextAreaElement>('end-comment'), value = box.value;
-    if (await controller.note('Comment', value) && box.value === value) box.value = '';
-  });
-  // A draft belongs to its seat. Coming back to the page reloads the same seat, and its view is missing until
-  // the first answer: the draft and its dialog wait for it. Another seat, or none, starts empty.
-  let draftOwner: string | null = null;
   function render() {
     const model = controller.model();
-    if (model.owner !== draftOwner) { draftOwner = model.owner; el<HTMLTextAreaElement>('end-comment').value = ''; el<HTMLDialogElement>('notes-dialog').close(); }
-    else if (model.loaded && !model.notes) { el<HTMLDialogElement>('notes-dialog').close(); el<HTMLTextAreaElement>('end-comment').value = ''; }
-    el('playtest-open').hidden = !model.notes;
-    el('match-notes').hidden = !model.comment;
-    el('playtest-notes').hidden = !model.notes;
-    el('comment-form').hidden = !model.comment;
-    el('noted').textContent = model.noteText;
-    for (const button of el('notes-dialog').querySelectorAll<HTMLButtonElement>('#note-buttons button, #comment-save')) button.disabled = !model.canNote;
     el('notices-tools').hidden = model.notice.hidden;
     el<HTMLButtonElement>('notices-toggle').disabled = model.notice.disabled;
     el('notices-toggle').textContent = model.notice.label;
@@ -40,7 +20,5 @@ export function serviceControls(controller: ReturnType<typeof createBattleServic
     el('notices-test').hidden = !model.testShown;
     el<HTMLButtonElement>('notices-test').disabled = !model.canTest;
   }
-  el('playtest-open').addEventListener('click', () => { el<HTMLDialogElement>('settings-dialog').close(); el<HTMLDialogElement>('notes-dialog').showModal(); });
-  el('match-notes').addEventListener('click', () => el<HTMLDialogElement>('notes-dialog').showModal());
   return { render };
 }

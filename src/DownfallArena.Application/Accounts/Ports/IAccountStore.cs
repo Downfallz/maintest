@@ -11,6 +11,12 @@ public interface IAccountStore
 {
     Task<Account?> FindAsync(AccountId id, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Every account, in no particular order: what the operator's list of players reads (ADR 0174). It reads each
+    /// one, which is what a host of tens to hundreds of accounts affords.
+    /// </summary>
+    Task<IReadOnlyList<Account>> ListAsync(CancellationToken cancellationToken = default);
+
     /// <summary>Writes the account whole, replacing what was there.</summary>
     Task SaveAsync(Account account, CancellationToken cancellationToken = default);
 

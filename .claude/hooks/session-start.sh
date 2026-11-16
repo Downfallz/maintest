@@ -159,4 +159,17 @@ else
   echo "[session-start] WARNING: dotnet restore failed. Check network access to api.nuget.org."
 fi
 
+# The storage tests skip themselves without an emulator (scripts/gate/azurite.sh). The endpoints are kept for the
+# session's commands, so a `dotnet test` run by hand reaches the emulator as the gate's does.
+# shellcheck source=../../scripts/gate/azurite.sh
+source "$PROJECT_DIR/scripts/gate/azurite.sh"
+start_azurite "[session-start]"
+if [[ -n "${CLAUDE_ENV_FILE:-}" ]]; then
+  for variable in AZURITE_BLOB_ENDPOINT AZURITE_QUEUE_ENDPOINT AZURITE_TABLE_ENDPOINT; do
+    if [[ -n "${!variable:-}" ]]; then
+      echo "export $variable=${!variable}" >> "$CLAUDE_ENV_FILE"
+    fi
+  done
+fi
+
 exit 0

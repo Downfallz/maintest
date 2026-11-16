@@ -35,6 +35,7 @@ internal sealed class StoredSessions(IArtifactStore store)
     public async Task<StoredSession> DescribeAsync(string id, CancellationToken cancellationToken = default)
     {
         var manifest = await ManifestAsync(id, cancellationToken);
+        var record = await TableRecordAsync(id, cancellationToken);
         return new StoredSession(
             id,
             manifest?.CreatedAt,
@@ -43,7 +44,25 @@ internal sealed class StoredSessions(IArtifactStore store)
             manifest?.Stamp.BaseSeed,
             manifest?.Matches ?? 0,
             manifest?.Steps ?? 0,
-            store.LocationOf(id));
+            store.LocationOf(id))
+        {
+            Table = record is not null,
+            Void = record?.Void == true,
+            VoidCategory = record?.VoidReason?.Category,
+        };
+    }
+
+    // A record that cannot be read lists the session without one: it is still exported and deleted by name.
+    private async Task<TableRecord?> TableRecordAsync(string id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await RecordAsync(id, cancellationToken);
+        }
+        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or Azure.RequestFailedException)
+        {
+            return null;
+        }
     }
 
     /// <summary>
@@ -113,6 +132,14 @@ internal sealed class StoredSessions(IArtifactStore store)
 
     public Task<bool> DeleteAsync(string id, CancellationToken cancellationToken = default) => store.DeleteAsync(id, cancellationToken);
 
+    /// <summary>Closes a table no host holds, through its record and the index (<see cref="PlaytestRun.CloseRecordAsync" />).</summary>
+    public Task<bool> CloseAsync(string id, Application.Tables.Ports.ITableIndex index, CancellationToken cancellationToken = default) =>
+        PlaytestRun.CloseRecordAsync(store, id, index, cancellationToken);
+
+    /// <summary>Voids a table through its record, with the operator's reason (<see cref="PlaytestRun.VoidRecordAsync" />).</summary>
+    public Task<bool> VoidAsync(string id, Application.Tables.Ports.ITableIndex? index, Application.Accounts.MatchVoid reason, CancellationToken cancellationToken = default) =>
+        PlaytestRun.VoidRecordAsync(store, id, index, reason, cancellationToken);
+
     /// <summary>
     /// The session's match trace and the catalogue its table served, as the store holds them. A table plays one
     /// match, so its run holds one trace; null for either when it was never written.
@@ -127,36 +154,21 @@ internal sealed class StoredSessions(IArtifactStore store)
     /// <summary>The table's record, or none when the run was never a table of a host that wrote one (ADR 0091).</summary>
     public async Task<TableRecord?> RecordAsync(string id, CancellationToken cancellationToken = default)
     {
+        var text = await store.Reader(id).ReadTextAsync(TableRecord.File, cancellationToken);
+        return text is null ? null : RecordOf(text);
+    }
+
+    /// <summary>A table's record as it is written, or none for text that is not one.</summary>
+    public static TableRecord? RecordOf(string text)
+    {
         try
         {
-            var text = await store.Reader(id).ReadTextAsync(TableRecord.File, cancellationToken);
-            return text is null ? null : JsonSerializer.Deserialize<TableRecord>(text, ArtifactJson.DocumentOptions);
+            return JsonSerializer.Deserialize<TableRecord>(text, ArtifactJson.DocumentOptions);
         }
         catch (Exception failure) when (failure is JsonException or ArgumentException)
         {
             return null;
         }
-    }
-
-    /// <summary>Every decision the table took, in order; empty when none was written.</summary>
-    public async Task<IReadOnlyList<JournalEntry>> JournalAsync(string id, CancellationToken cancellationToken = default)
-    {
-        var text = await store.Reader(id).ReadTextAsync(DecisionJournal.File, cancellationToken);
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return [];
-        }
-
-        var entries = new List<JournalEntry>();
-        foreach (var line in text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        {
-            if (JsonSerializer.Deserialize<JournalEntry>(line, ArtifactJson.LineOptions) is { } entry)
-            {
-                entries.Add(entry);
-            }
-        }
-
-        return entries;
     }
 
     private async Task<RunManifest?> ManifestAsync(string id, CancellationToken cancellationToken)
@@ -176,4 +188,14 @@ internal sealed class StoredSessions(IArtifactStore store)
 }
 
 /// <summary>One run as the store describes it. Agents and seed are the stamp's; null when the run has no readable manifest.</summary>
-internal sealed record StoredSession(string Id, DateTimeOffset? CreatedAt, string? Player1Agent, string? Player2Agent, int? Seed, int Matches, int Steps, string Location);
+internal sealed record StoredSession(string Id, DateTimeOffset? CreatedAt, string? Player1Agent, string? Player2Agent, int? Seed, int Matches, int Steps, string Location)
+{
+    /// <summary>Whether the run was a table of a host that wrote its record: the one kind the operator can void.</summary>
+    public bool Table { get; init; }
+
+    /// <summary>Whether the table ended as a void match, on its own (ADR 0163) or by the operator (ADR 0176).</summary>
+    public bool Void { get; init; }
+
+    /// <summary>The category the operator voided it under (ADR 0176); null for a table voided on its own, or not void.</summary>
+    public string? VoidCategory { get; init; }
+}

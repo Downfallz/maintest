@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Text.Json;
 using DownfallArena.Cli.Hosting;
 using DownfallArena.Cli.Table;
+using DownfallArena.Infrastructure.Learning;
 
 namespace DownfallArena.Cli.Tests.Table;
 
@@ -14,12 +15,17 @@ namespace DownfallArena.Cli.Tests.Table;
 public sealed class TableServerTests : IAsyncDisposable
 {
     private readonly HostedTables _hosted = new(recording: true);
-    private readonly TableRegistry _registry = new();
+    private readonly TableRegistry _registry;
     private readonly Clock _clock = new();
     private readonly CancellationTokenSource _stopping = new();
     private readonly HttpClient _client = new(new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
     private TableServer? _server;
     private Task? _serving;
+
+    public TableServerTests()
+    {
+        _registry = _hosted.Registry();
+    }
 
     public async ValueTask DisposeAsync()
     {
@@ -180,7 +186,7 @@ public sealed class TableServerTests : IAsyncDisposable
         var opened = await _client.SendAsync(request, TestContext.Current.CancellationToken);
 
         opened.StatusCode.ShouldBe(HttpStatusCode.Created);
-        _registry.All().Count.ShouldBe(1);
+        _registry.HeldTables().Count.ShouldBe(1);
     }
 
     /// <summary>A close is a write, and the page sends it the way the same-origin fence takes a write.</summary>
@@ -196,7 +202,7 @@ public sealed class TableServerTests : IAsyncDisposable
         var closed = await _client.SendAsync(request, TestContext.Current.CancellationToken);
 
         closed.StatusCode.ShouldBe(HttpStatusCode.NoContent);
-        _registry.ById(table.Id).ShouldBeNull();
+        _registry.Held(table.Id).ShouldBeNull();
         (await Get($"{url}api/seat/player1", table.Seats[0].Token)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
 
@@ -233,8 +239,69 @@ public sealed class TableServerTests : IAsyncDisposable
         // Any request sweeps; this one is a stranger's, which is as good a sweep as any.
         (await Get($"{url}api/session", token: null)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
 
-        _registry.ById(finished.Id).ShouldNotBeNull("it was read twenty minutes ago, not an hour ago");
+        _registry.Held(finished.Id).ShouldNotBeNull("it was read twenty minutes ago, not an hour ago");
         (await Get($"{url}session/{finished.Id}", token: null)).StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    /// <summary>
+    /// On a host the hourly job tends (ADR 0162), a request still lets go of the finished tables this process holds,
+    /// and closes no table it does not hold: that is the job's.
+    /// </summary>
+    [Fact]
+    public async Task On_a_host_a_job_tends_a_request_lets_go_of_what_it_holds_and_closes_nothing_else()
+    {
+        var url = Serve(OperatorGate.BehindPlatform(), tended: true);
+        var finished = await Opened(HostedTables.Bots);
+        await finished.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        await Finished(finished);
+        var elsewhere = await NeverBegunElsewhereAsync();
+        _clock.Now = elsewhere.CreatedAt + TableRegistry.NeverBegunFor + TableRegistry.FinishedFor;
+
+        (await Get($"{url}index.html", token: null)).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        // The page itself is served before the sweep; the next request finds the table gone.
+        (await Get($"{url}api/session", token: null)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        _registry.Held(finished.Id).ShouldBeNull();
+        (await _hosted.Stored!.RecordAsync(elsewhere.Id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Open, "closing it is the job's");
+    }
+
+    /// <summary>A table another process opened and wrote down, nobody came to, and nobody here holds.</summary>
+    private async Task<PlayedTable> NeverBegunElsewhereAsync()
+    {
+        using var other = _hosted.Registry();
+        var table = await _hosted.Composer.ComposeAsync(HostedTables.OnePerson, TestContext.Current.CancellationToken);
+        using (var place = (await other.ReserveAsync(TestContext.Current.CancellationToken)).ShouldNotBeNull())
+        {
+            await other.AddAsync(table, place, TestContext.Current.CancellationToken);
+        }
+
+        await table.RecordAsync(TestContext.Current.CancellationToken);
+        return table;
+    }
+
+    /// <summary>
+    /// A seat of a void match is told why its match ended (ADR 0163), with 410 rather than a seat it lost; a key that
+    /// names the table and no seat of it learns nothing more than before.
+    /// </summary>
+    [Fact]
+    public async Task A_seat_of_a_void_match_is_told_it_ended_and_a_stranger_is_not()
+    {
+        var url = Serve(OperatorGate.BehindPlatform());
+        var table = await Opened(HostedTables.OnePerson);
+        await table.RecordAsync(TestContext.Current.CancellationToken);
+        _registry.LetGo(table.Id).ShouldBeTrue();
+        var record = (await _hosted.Stored!.RecordAsync(table.Id, TestContext.Current.CancellationToken)).ShouldNotBeNull();
+        await new FileArtifactStore(_hosted.RunsDirectory).Writer(table.Id)
+            .WriteJsonAsync(TableRecord.File, record with { Status = TableRecord.Closed, Void = true }, TestContext.Current.CancellationToken);
+
+        var seat = await Get($"{url}api/seat/player1", table.Seats[0].Token);
+        var stranger = await Get($"{url}api/seat/player1", TableKeys.For(table.Id));
+
+        seat.StatusCode.ShouldBe(HttpStatusCode.Gone);
+        var said = JsonDocument.Parse(await seat.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)).RootElement;
+        said.GetProperty("error").GetString().ShouldBe("Table.Void");
+        said.GetProperty("message").GetString().ShouldBe(TableComposer.VoidNotice);
+        stranger.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
 
     /// <summary>A host whose lobby nobody opens still lets go: any request sweeps, by the host's clock.</summary>
@@ -251,7 +318,7 @@ public sealed class TableServerTests : IAsyncDisposable
 
         // The page itself is served before the sweep; the next request finds the table gone.
         (await Get($"{url}api/session", token: null)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
-        _registry.ById(finished.Id).ShouldBeNull();
+        _registry.Held(finished.Id).ShouldBeNull();
     }
 
     /// <summary>The operator's page moved; a link printed before it did still arrives, token and all.</summary>
@@ -278,13 +345,36 @@ public sealed class TableServerTests : IAsyncDisposable
         var finished = await Opened(HostedTables.Bots);
         await finished.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
         await Finished(finished);
-        _registry.Remove(finished.Id).ShouldBeTrue();
+        (await _registry.RemoveAsync(finished.Id, TestContext.Current.CancellationToken)).ShouldBeTrue();
 
         var page = await Get($"{url}session/{finished.Id}", token: null);
 
         page.StatusCode.ShouldBe(HttpStatusCode.OK);
         (await page.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)).ShouldContain("manifest.json");
         (await Get($"{url}session/no-such-session", token: null)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
+    /// <summary>
+    /// A seat of a table an earlier host left open answers here: the host picks the table up from its record at the
+    /// request that names it (ADR 0159, ADR 0161), and a page coming back finds its game rather than a refusal.
+    /// </summary>
+    [Fact]
+    public async Task A_seat_of_a_table_an_earlier_host_left_open_answers_at_this_one()
+    {
+        var url = Serve(OperatorGate.BehindPlatform());
+        PlayedTable table;
+        using (var earlier = _hosted.Registry())
+        {
+            using var place = (await earlier.ReserveAsync(TestContext.Current.CancellationToken)).ShouldNotBeNull();
+            table = await _hosted.Composer.ComposeAsync(HostedTables.OnePerson, TestContext.Current.CancellationToken);
+            await earlier.AddAsync(table, place, TestContext.Current.CancellationToken);
+            await table.RecordAsync(TestContext.Current.CancellationToken);
+        }
+
+        var answer = await Get($"{url}api/seat/player1", table.Seats[0].Token);
+
+        answer.StatusCode.ShouldBe(HttpStatusCode.OK);
+        _registry.Held(table.Id).ShouldNotBeNull();
     }
 
     /// <summary>On a host where players sign in, a seat answers its own account only, and the first to reach an unowned one signed in owns it (ADR 0122).</summary>
@@ -364,18 +454,19 @@ public sealed class TableServerTests : IAsyncDisposable
         (await Get($"{url}api/seat/player1", "a-token-of-a-table-not-rebuilt-yet")).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
 
-    private string Serve(OperatorGate gate)
+    private string Serve(OperatorGate gate, bool tended = false)
     {
         var admin = new AdminApi(_registry, _hosted.Composer, gate, _clock, "Rules 2 creatures (a test)", _hosted.Stored);
-        _server = new TableServer(HttpHost.Loopback, FreePort(), _registry, new TableFiles(Path.Combine(AppContext.BaseDirectory, "table")), admin, _clock, _hosted.Stored);
+        _server = new TableServer(HttpHost.Loopback, FreePort(), _registry, new TableFiles(Path.Combine(AppContext.BaseDirectory, "table")), admin, _clock, _hosted.Stored) { Tended = tended };
         _serving = _server.RunAsync(_stopping.Token);
         return _server.Url;
     }
 
     private async Task<PlayedTable> Opened(TableRequest? request = null)
     {
+        using var place = (await _registry.ReserveAsync(TestContext.Current.CancellationToken)).ShouldNotBeNull();
         var table = await _hosted.Composer.ComposeAsync(request ?? HostedTables.OnePerson, TestContext.Current.CancellationToken);
-        _registry.TryAdd(table).ShouldBeTrue();
+        await _registry.AddAsync(table, place, TestContext.Current.CancellationToken);
         return table;
     }
 

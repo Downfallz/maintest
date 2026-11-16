@@ -114,12 +114,12 @@ function clock() {
   return { queued, cancelled, playback, fire: () => queued.forEach(job => job.callback()) };
 }
 
-test('a playback schedules the impact then the settled frame, halved at 2× and at 1× for any other speed', () => {
+test('a playback schedules the impact then the settled frame, halved at 2× and at 1× for an unknown speed', () => {
   const { queued, playback } = clock();
   playback.play(() => {});
   playback.play(() => {}, { speed: 2 });
   playback.play(() => {}, { speed: 3 });
-  assert.deepEqual(queued.map(job => job.delay), [420, 1250, 210, 625, 420, 1250]);
+  assert.deepEqual(queued.map(job => job.delay), [840, 2500, 420, 1250, 840, 2500]);
 });
 
 test('delayed callbacks cannot change a reset or a newer playback', () => {
@@ -131,7 +131,7 @@ test('delayed callbacks cannot change a reset or a newer playback', () => {
   assert.deepEqual(received, []);
   assert.deepEqual(cancelled, [1, 2]);
   playback.play(action => received.push(action.type), { speed: 2 });
-  assert.deepEqual(queued.slice(2).map(job => job.delay), [210, 625]);
+  assert.deepEqual(queued.slice(2).map(job => job.delay), [420, 1250]);
   fire();
   assert.deepEqual(received, ['impact', 'finish']);
 });
@@ -159,7 +159,7 @@ test('the default scheduler is the clock of the moment a cue is posted, not of t
   } finally {
     Object.assign(globalThis, real);
   }
-  assert.deepEqual(queued, [420, 1250]);
+  assert.deepEqual(queued, [840, 2500]);
   assert.deepEqual(cleared, [1, 2]);
 });
 

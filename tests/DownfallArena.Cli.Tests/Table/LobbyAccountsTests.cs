@@ -4,7 +4,6 @@ using DownfallArena.Application.Accounts;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.Infrastructure.Accounts;
-using DownfallArena.Infrastructure.Learning;
 
 namespace DownfallArena.Cli.Tests.Table;
 
@@ -12,7 +11,7 @@ namespace DownfallArena.Cli.Tests.Table;
 public sealed class LobbyAccountsTests : IDisposable
 {
     private readonly HostedTables _hosted = new(recording: true);
-    private readonly TableRegistry _registry = new();
+    private readonly TableRegistry _registry;
     private readonly string _accountsRoot = Path.Combine(Path.GetTempPath(), $"lobby-accounts-{Guid.CreateVersion7():N}");
     private readonly FileAccountStore _store;
     private readonly AccountRegistry _accounts;
@@ -20,6 +19,7 @@ public sealed class LobbyAccountsTests : IDisposable
 
     public LobbyAccountsTests()
     {
+        _registry = _hosted.Registry();
         _store = new FileAccountStore(_accountsRoot);
         _accounts = new AccountRegistry(_store, TimeProvider.System);
     }
@@ -40,7 +40,48 @@ public sealed class LobbyAccountsTests : IDisposable
     private async Task<(PlayedTable Table, JsonElement Opened)> OpenAsync(SignedIn player, string opponent = "person")
     {
         var opened = Read(await (await LobbyAsync()).HandleAsync("POST", "/api/lobby/tables", $$"""{"opponent":"{{opponent}}"}""", player: player));
-        return (_registry.ById(opened.GetProperty("table").GetProperty("id").GetString()!)!, opened);
+        return ((await _registry.ByIdAsync(opened.GetProperty("table").GetProperty("id").GetString()!, Cancel))!, opened);
+    }
+
+    /// <summary>A ranked game is 3v3 (ADR 0171): another format is refused, and a ranked game that names none is 3v3.</summary>
+    [Fact]
+    public async Task A_ranked_game_is_3v3_and_another_format_is_refused()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var lobby = await LobbyAsync();
+
+        var refused = await lobby.HandleAsync("POST", "/api/lobby/tables", """{"opponent":"person","format":"1v1"}""", player: mark);
+        var unnamed = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", """{"opponent":"person"}""", player: mark));
+
+        refused.Status.ShouldBe(400);
+        Read(refused).GetProperty("error").GetString().ShouldBe("Lobby.RankedFormat");
+        unnamed.GetProperty("table").GetProperty("format").GetString().ShouldBe("3v3");
+    }
+
+    [Fact]
+    public async Task An_unranked_game_between_players_is_played_in_the_format_chosen()
+    {
+        var mark = await PlayerAsync("MarkF");
+
+        var opened = Read(await (await LobbyAsync()).HandleAsync("POST", "/api/lobby/tables", """{"opponent":"person","format":"1v1","ranked":false}""", player: mark));
+
+        opened.GetProperty("table").GetProperty("format").GetString().ShouldBe("1v1");
+        opened.GetProperty("table").GetProperty("casual").GetBoolean().ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// A game on a shared device is unranked from the start (ADR 0171): any format is allowed, and a seat its player
+    /// leaves and another account takes must not make it a ranked game.
+    /// </summary>
+    [Fact]
+    public async Task A_game_on_a_shared_device_is_opened_unranked_in_any_format()
+    {
+        var mark = await PlayerAsync("MarkF");
+
+        var opened = Read(await (await LobbyAsync()).HandleAsync("POST", "/api/lobby/tables", """{"opponent":"hotseat","format":"1v1"}""", player: mark));
+
+        opened.GetProperty("table").GetProperty("format").GetString().ShouldBe("1v1");
+        opened.GetProperty("table").GetProperty("casual").GetBoolean().ShouldBeTrue();
     }
 
     [Fact]
@@ -85,10 +126,8 @@ public sealed class LobbyAccountsTests : IDisposable
 
         table.Seats[0].Account.ShouldBe(mark.Account.Id);
         table.Seats[1].Account.ShouldBe(bastien.Account.Id);
-        using var after = new HostedTables(_ => new FileArtifactStore(_hosted.RunsDirectory));
-        using var restored = new TableRegistry();
-        await TableRestorer.RestoreAsync(after.Stored!, after.Composer, restored, TimeProvider.System, Cancel);
-        var rebuilt = restored.ById(table.Id).ShouldNotBeNull();
+        using var restored = await _hosted.RestartedAsync();
+        var rebuilt = (await restored.ByIdAsync(table.Id, Cancel)).ShouldNotBeNull();
         rebuilt.Seats.Select(seat => seat.Account).ShouldBe([mark.Account.Id, bastien.Account.Id]);
         restored.Dispose();
         await rebuilt.QuiesceAsync(Cancel);
@@ -101,7 +140,7 @@ public sealed class LobbyAccountsTests : IDisposable
         await OpenAsync(mark);
         await OpenAsync(mark, opponent: "bot");
 
-        var tables = Read(await (await LobbyAsync()).HandleAsync("GET", "/api/lobby", "")).GetProperty("tables").EnumerateArray()
+        var tables = Read(await (await LobbyAsync()).HandleAsync("GET", "/api/lobby/page/all/1", "")).GetProperty("items").EnumerateArray()
             .Select(table => table.GetProperty("seats").EnumerateArray().Select(seat => $"{seat.GetProperty("kind").GetString()}:{seat.GetProperty("name").GetString()}").ToArray())
             .ToList();
 
@@ -114,8 +153,8 @@ public sealed class LobbyAccountsTests : IDisposable
     {
         var (table, _) = await OpenAsync(await PlayerAsync("MarkF"), opponent: "bot");
         var lobby = await LobbyAsync();
-        static bool[] Turns(JsonElement listed) => [.. listed.GetProperty("tables")[0].GetProperty("seats").EnumerateArray().Select(seat => seat.GetProperty("turn").GetBoolean())];
-        Turns(Read(await lobby.HandleAsync("GET", "/api/lobby", ""))).ShouldBe([false, false]);
+        static bool[] Turns(JsonElement listed) => [.. listed.GetProperty("items")[0].GetProperty("seats").EnumerateArray().Select(seat => seat.GetProperty("turn").GetBoolean())];
+        Turns(Read(await lobby.HandleAsync("GET", "/api/lobby/page/all/1", ""))).ShouldBe([false, false]);
 
         table.Seats[0].Person!.Arrive();
         table.Session.Begin();
@@ -124,7 +163,7 @@ public sealed class LobbyAccountsTests : IDisposable
             await Task.Delay(20, Cancel);
         }
 
-        Turns(Read(await lobby.HandleAsync("GET", "/api/lobby", ""))).ShouldBe([true, false]);
+        Turns(Read(await lobby.HandleAsync("GET", "/api/lobby/page/all/1", ""))).ShouldBe([true, false]);
     }
 
     [Fact]
@@ -180,7 +219,7 @@ public sealed class LobbyAccountsTests : IDisposable
         var adopted = Read(await (await LobbyAsync()).HandleAsync("POST", "/api/lobby/adopt", JsonSerializer.Serialize(new { tokens = new[] { saved, theirs.Seats[0].Token } }), player: mark));
 
         adopted.GetProperty("tables").GetArrayLength().ShouldBe(1);
-        _registry.ByToken(saved)!.Seats[0].Account.ShouldBe(mark.Account.Id);
+        (await _registry.ByTokenAsync(saved, Cancel))!.Seats[0].Account.ShouldBe(mark.Account.Id);
         theirs.Seats[0].Account.ShouldBe(bastien.Account.Id);
     }
 
@@ -199,9 +238,54 @@ public sealed class LobbyAccountsTests : IDisposable
         offered.ShouldBe(1);
         marks.Seats[0].Account.ShouldBeNull();
         marks.OpenSeats.ShouldContain("player1");
-        _registry.ByToken(token).ShouldBeNull();
+        (await _registry.ByTokenAsync(token, Cancel)).ShouldBeNull();
         theirs.Seats[0].Account.ShouldBe(bastien.Account.Id);
         (await _hosted.Stored!.RecordAsync(marks.Id, Cancel)).ShouldNotBeNull().Seats.Single(seat => seat.Slot == "player1").Account.ShouldBeNull();
+    }
+
+    /// <summary>
+    /// A suspended account's seats are kept a day for its player (ADR 0178), then the tending pass offers them to
+    /// other players as a deleted account's are; a later pass finds none left to offer, and writes no account.
+    /// </summary>
+    [Fact]
+    public async Task A_suspended_account_s_seats_are_offered_to_other_players_a_day_later()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var (marks, _) = await OpenAsync(mark);
+        var at = DateTimeOffset.UtcNow;
+        var suspended = (await _accounts.SuspendAsync(mark.Account.Id, AccountSuspension.Create("Spamming invitations to strangers.", "op", at).Value, Cancel)).Value;
+        var seats = new SuspendedSeats(_store, await LobbyAsync());
+
+        var early = await seats.ReleaseAsync(at + AccountSuspension.SeatsKeptFor - TimeSpan.FromMinutes(1));
+        var kept = marks.Seats[0].Account;
+        var due = await seats.ReleaseAsync(at + AccountSuspension.SeatsKeptFor);
+        var later = await seats.ReleaseAsync(at + AccountSuspension.SeatsKeptFor + TimeSpan.FromHours(1));
+
+        early.ShouldBeEmpty();
+        kept.ShouldBe(mark.Account.Id);
+        due.ShouldBe([mark.Account.Id.Value]);
+        marks.Seats[0].Account.ShouldBeNull();
+        marks.OpenSeats.ShouldContain("player1");
+        later.ShouldBeEmpty();
+        (await _accounts.FindAsync(mark.Account.Id, Cancel)).ShouldBe(suspended);
+    }
+
+    /// <summary>An account restored before the pass keeps its seats, as does one suspended again since, for its own day.</summary>
+    [Fact]
+    public async Task A_restored_or_newly_suspended_account_keeps_its_seats()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var (marks, _) = await OpenAsync(mark);
+        var at = DateTimeOffset.UtcNow;
+        await _accounts.SuspendAsync(mark.Account.Id, AccountSuspension.Create("Spamming invitations to strangers.", "op", at).Value, Cancel);
+        await _accounts.RestoreAsync(mark.Account.Id, Cancel);
+        await _accounts.SuspendAsync(mark.Account.Id, AccountSuspension.Create("Suspended again, for another reason.", "op", at.AddHours(20)).Value, Cancel);
+        var seats = new SuspendedSeats(_store, await LobbyAsync());
+
+        var released = await seats.ReleaseAsync(at + AccountSuspension.SeatsKeptFor);
+
+        released.ShouldBeEmpty();
+        marks.Seats[0].Account.ShouldBe(mark.Account.Id);
     }
 
     [Theory]

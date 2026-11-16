@@ -17,6 +17,14 @@ dotnet run --project src/DownfallArena.Cli -- table --lobby
 
 Open the printed host URL at `/battle-lab`. For a static preview after building:
 `python3 -m http.server 8765`, then `/table/battle-lab.html` on that server.
+For the horizon study, open `/battle-lab?study=horizon` (static preview: `/table/battle-lab.html?study=horizon`).
+Use **Enter round 2** and the subsequent even-round buttons to advance. **Reset scene** returns to round 1.
+The right leg of the arch and its span collapse at 2. At 4 a section of the far ledge gives way between the teams.
+Storm clouds gather over the collapsing city at 6, and the remaining pier falls at 8.
+The eclipse splits at 10 and wide chasms cut through the center of the floor at 12. Another fissure opens on each later even round.
+The live battle uses the displayed round. Odd rounds keep the previous damage. Reduced motion and replay navigation
+show the settled view. The additional WebP tiles load on demand, starting one round before their reveal.
+
 Rebuild after changing TypeScript or the imported shared table modules; there is no watch server.
 
 `build` type-checks and emits `table/battle-build/game.js` and `live.js`, legal comments and the Phaser MIT license.
@@ -75,7 +83,7 @@ performance still require release measurement.
 node --test studio/*.test.js table/*.test.js
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium
-npm --prefix studio/browser test -- battle-lab.spec.js battle-live.spec.js battle-combat.spec.js battle-playback.spec.js battle-loop.spec.js battle-history.spec.js battle-guidance.spec.js battle-upkeep.spec.js battle-spellbook.spec.js battle-mutations.spec.js battle-tempo.spec.js battle-pacing.spec.js battle-growth.spec.js battle-order.spec.js battle-targets.spec.js battle-inspection.spec.js battle-services.spec.js battle-parity.spec.js
+npm --prefix studio/browser test -- battle-lab.spec.js battle-live.spec.js battle-combat.spec.js battle-playback.spec.js battle-loop.spec.js battle-history.spec.js battle-guidance.spec.js battle-upkeep.spec.js battle-spellbook.spec.js battle-mutations.spec.js battle-evolution.spec.js battle-tempo.spec.js battle-pacing.spec.js battle-growth.spec.js battle-order.spec.js battle-targets.spec.js battle-inspection.spec.js battle-services.spec.js battle-parity.spec.js battle-reactions.spec.js
 dotnet build
 dotnet test --no-build
 dotnet format --verify-no-changes
@@ -94,13 +102,14 @@ text on the latest board. Result details remain available in an accessible overl
 Android GPU/performance, screen readers and high zoom remain future acceptance.
 
 A7 completes planning and the match result in the scene shell ([ADR 0128](../docs/adr/0128-complete-the-game-loop-in-the-arena.md)).
-`table/battle-planning.js` fences mutation, tempo and tie drafts; `src/planning.ts` renders offered mutation
-cards with explicit confirmation and a separate reference tree (AU4). AU5 adds editable team tempo tabs and one
+`table/battle-planning.js` fences mutation, tempo and tie drafts; `src/planning.ts` renders the private mutation tree
+with explicit confirmation and a separate read-only reference (AU4). AU5 adds editable team tempo tabs and one
 confirmation over the host's sequential questions, with simultaneous reveal still owned by the host (ADR 0135).
 `table/battle-match.js` and `src/match.ts` provide two-round upkeep/aftermath review,
 concession, the host outcome and a manual whole-match replay. Replay steps distinguish recorded action frames,
 labelled reference frames and missing battlefield snapshots. `/battle?replay=<session>&seat=player2` opens a
-finished recording using the same operator authorization as `/play?replay=...`.
+finished recording off `GET /api/lobby/tables/<table>/replay`: any for the operator, by the admin panel's token or
+the platform's sign-in, or a player's own game by their account. The lobby's finished games open it ([ADR 0156](../docs/adr/0156-replay-a-finished-game-in-the-battle-view-for-its-players.md)).
 
 `node node_modules/playwright/cli.js test --config table.config.js battle.loop.js` (from `studio/browser`)
 plays complete 3v3 games in both declarations, reads recorded sessions, and checks two independent seats'
@@ -148,16 +157,17 @@ The **Help** button opens the current explanation and a four-phase round guide. 
 opportunity comes from `board.nextEvolutionRound`; the guide follows the catalogue's declaration mode, where
 a stamp that names none plays hidden intents (ADR 0110), and names creatures the way the scene does.
 
-Each instructional subject opens automatically once, after playback and other dialogs have settled.
-**Do not show phase tips again** mutes future automatic tips; Help remains available from the timeline,
-planning/combat choices and settings. Generic seen-subject/mute preferences use
-`downfall.arena.help.v1`; no seat, token, match, question or choice is persisted. Denied storage falls
+Each instructional subject opens automatically once in each game, after playback and other dialogs have settled
+([ADR 0142](../docs/adr/0142-teach-each-phase-once-per-game.md)). **Phase tips** in Game settings turns them on
+or off for every new game; **Do not show phase tips in this game** mutes them for this game only (ADR 0140).
+Help remains available from the timeline, planning/combat choices and settings. The subjects read are kept
+per game, for the latest twenty games, under `downfall.arena.help.v1`; no seat, token, question or choice is persisted. Denied storage falls
 back to the current page's memory. Opening Help preserves drafts, restores focus on close and never
 acknowledges a question or sends a command. Access loss clears its text.
 
 `table/battle-guidance.js` derives this read-only model; `src/guidance.ts` owns the native dialog.
 The UI's pass label now says **Pass remaining picks**, matching the engine's existing whole-round pass.
-The AU3b receipt precedes first-use tips; mutation cards are covered by AU4 below and team tempos by AU5.
+The AU3b receipt precedes first-use tips; the mutation chooser is covered by AU4 below and team tempos by AU5.
 
 `battle-guidance.spec.js` covers default-on first-use behavior, persistence, mute/reopen, pending commands,
 waiting/access loss, playback boundaries, both declaration modes, short orientations and enlarged text.
@@ -172,7 +182,7 @@ acquired tiers, two branch slots and an owner-only capstone accent. `mutation-cu
 transform, retains static cues under reduced motion, and suppresses them if the requested sprite is missing.
 The live suite checks all nine branch pairs and lifecycle behavior with the production scene.
 
-ART-6 adds [playback polish](../docs/art/battle-polish.md): shared timings, live 1×/1.5×/2× playback and
+ART-6 adds [playback polish](../docs/art/battle-polish.md): shared timings, live 0.5×/1×/1.5×/2× playback and
 opt-in synthesized sound. `audio.ts` owns one short voice, cancels pending resumes, and is shared with the
 lab. Reduced motion keeps a 650 ms readable result at every speed. The playback suite exercises the
 production audio owner and instrumented browser audio alongside the renderer.
@@ -236,6 +246,15 @@ underneath continues to update; the inspection stays on its selected event until
 or returns to Latest. Closing returns focus and preserves the command draft. This is manual journal
 inspection; AU7 still owns playback pacing.
 
+**Summary** is the view History opens on: one card a round, the latest first, with the mutations revealed,
+each spell in order with its caster's side, a Crit or Fizzled mark and its applied effects (four, then a count),
+the creatures defeated, the turns skipped and the result. `historySummary` builds it from the same public rows,
+so it never says more than the journal. A cast opens its own inspection; a round's **All events** opens the full
+journal filtered to it. The reader's choice of view is kept on the device (`downfall.battle.history-view.v1`);
+an inspected event is always read in the full journal. While the summary is open every loaded round is on
+screen, so new events are read at once. On a phone the closed launcher marks unread events with a dot, not a
+count: two rounds hold fifty events.
+
 **Load earlier rounds** explicitly calls the existing selected-seat `history()` read from zero. Its
 response only replaces the reading page: it cannot rewind the live cursor, board, options or playback.
 Requests are single-flight and generation-fenced after close, Latest, viewpoint/access loss and hiding.
@@ -264,36 +283,47 @@ Captures: [desktop, recorded-event fixture with live rollover](../docs/tabletop/
 
 ## AU4: compare offered mutations
 
-`Choose mutation` opens the host's available cards for the selected creature, with three columns on
-desktop and stacked cards on phones. Cards show family colour and name, stage, authored tags,
-initiative gain and spell names/previews. Each separate Details disclosure includes spell cost,
-targeting, effects and caster/critical text. Passive-only and shared capstones retain the catalogue's
-passive lines without invented tags or spells. Later offers may contain any number of upgrades and
-multiclass roots; missing catalogue records remain selectable by host id with explicit unknown details.
+The mutation phase opens its private tree by itself once the board is clear: after the upkeep receipt, the
+turn order and a first-use tip ([ADR 0138](../docs/adr/0138-open-the-mutation-tree-with-the-mutation-phase.md)).
+A pick that leaves team picks keeps the tree open on the next creature with offers and its remaining picks;
+the last pick or a pass closes it. A note opens the tree and scrolls with it: a token per pick of the phase (filled while unspent)
+and the count left; when fewer picks remain than creatures that could take one, a line says the player chooses which
+mutate now, one pick each, and that later Mutation phases bring new picks for any of them (`pickPlan`). Tap an eligible ally, or use **Mutation tree** after closing it, to reopen.
+The graph docks below the scene on phones and beside it on wider screens, always at its full height: there is
+no Expand or Compact. Its header holds **Full mutation tree** and **Pass remaining picks**; Help and History stay in
+the field's header, which a docked sheet leaves in view. A short portrait keeps the confirmation in reach by letting
+the creature tabs give way: tapping a creature on the field switches the recipient there. Each selectable node corresponds to an offer from the host. Acquired paths and connections
+use catalogue prerequisites, including shared capstones. Unknown offers stay selectable by id.
 
-Creature tabs and the confirmation footer stay visible while cards scroll. The budget is capped by
-the number of creatures with host offers; defeated and already-picked creatures explain their state.
-Selecting a card changes only the local draft. Acquire names its recipient and mutation and spends
-one team pick; changing creature clears that draft. Pass explicitly gives up all remaining team picks.
-The full Mutation Tree is a separate, read-only disclosure during Evolution; AU8 also exposes a
-public reference outside this phase. Same-question polls preserve disclosures, focus and scroll.
+Selecting a branch previews its initiative, its spells as compact spell cards, passives and what it opens. Phaser previews
+available art only for that creature in the private command. Public inspection and replay keep their
+recorded forms. Confirm spends one team pick. Switching creatures clears the draft, and passing requires
+explicit confirmation for all remaining team picks. **Full mutation tree** opens the whole tree full
+screen ([ADR 0146](../docs/adr/0146-one-full-mutation-tree.md)), on the mutation in hand when one is drafted,
+with nothing selected otherwise; an offer can be chosen from its card there, by a **Choose** under its name that
+stays pinned to the top of the card while its spells scroll. AU8 also exposes a public reference outside this phase.
 
-`table/battle-mutations.js` projects this model using the existing card and mutation helpers;
-`src/mutations.ts` renders it. The existing planning controller still owns acknowledgement,
+`table/battle-mutations.js` supplies the host-filtered offers. `src/mutation-tree.ts` draws the graph
+and `src/mutation-scene.ts` projects the private preview. The existing planning controller still owns acknowledgement,
 host legality checks and duplicate/stale-command protection. `battle-mutations.spec.js` covers
 comparison, late offers, recipient changes, passive capstones, missing content, effective budgets,
 poll stability, pending acknowledgement and small/landscape layouts. `battle.loop.js` exercises the
 chooser in complete real-host matches, including two-seat private choices.
 
-Real-host opening cards: [desktop](../docs/tabletop/images/battle-mutations/desktop.jpg) ·
+Original AU4 card layout: [desktop](../docs/tabletop/images/battle-mutations/desktop.jpg) ·
 [phone](../docs/tabletop/images/battle-mutations/phone.jpg).
 
 ## AU5: team tempo drafts
 
-**Team tempos** opens a tab for every remaining eligible creature. Choose Instinct or Precision for each,
-return to edit any tab, then **Confirm tempos** once. The compact spell reference shows cost and Precision
-critical chance; current-creature guidance and catalogue-only references are explicitly distinguished.
-The footer stays reachable while the choices and references scroll.
+The team's tempos open by themselves with their phase, once per asking, and dock where the mutation sheet docks:
+a sheet under the field on a phone, a panel at its side on a wider screen
+([ADR 0150](../docs/adr/0150-open-the-team-tempos-with-their-phase.md)). Closing them leaves **Team tempos** in
+the dock. They show a tab for every remaining eligible creature, wearing the tempo drafted for it (Instinct's bolt
+in gold, Precision's star in blue, or "Not chosen"). Choose Instinct or Precision for each from two tempo cards,
+return to edit any tab, then **Confirm tempos** once. The creature in hand carries the spell choice's energy chip,
+and its known spells are the spell choice's cards, with the Precision crit chance on their crit chip. Current
+creature guidance and catalogue-only values are labelled apart. The footer stays reachable while the choices and
+cards scroll.
 
 `table/battle-tempo.js` owns the draft and frozen batch; `src/tempo.ts` owns the tabs and references. The first
 acknowledged creature's timing includes the team's draft time. Each later asking is acknowledged before its
@@ -308,20 +338,35 @@ See [ADR 0135](../docs/adr/0135-draft-team-tempos-before-sequential-confirmation
 
 ## AU9: compact grouped spellbook
 
+The spell choice opens by itself on the player's turn, once per asking and only on an unobstructed board, and docks
+beside the field as the mutation choice does: a sheet under it on a phone, a panel at its side on a wider screen
+([ADR 0149](../docs/adr/0149-open-the-spell-choice-with-the-players-turn.md)). Closing it leaves **Choose spell** in
+the dock. Groups follow the spell types in the order the host serves them (the domain's: attacks first). Right under
+the acting creature's name, three chips say what it plays with: its place in the turn order, its tempo (Instinct or
+Precision, with the rule in its title) and the energy it has to spend. Nothing sits above the name, and no context
+line, sentence or toggle under the chips: the round and phase are in the field's header, and choosing then targeting
+is what the panel shows. Only a hidden intent, whose targets come later, keeps a sentence. The spells are the one
+scroller: the panel itself never scrolls, so a long swipe cannot carry its header out of sight.
+
 Combat choices group the current creature's known/offered spells by the served card type, with family
 accents from the shared talent palette. Compact cards show cost (including zero), positive critical chance
 and availability. Current question guidance supplies current chances and unavailable reasons when present;
 catalogue-only chances are labelled. An offered hidden intent that lacks energy remains selectable with
 its shortfall and possible fizzle. Card cost, colour and ownership never create or revoke host offers.
 
-**Full details** switches the whole reference to complete names, targeting, target/caster effects and critical
-notes, including unavailable cards. Unknown catalogue entries keep their raw identity and remain playable
+Every card shows the whole reference in full, the spellbook's only mode: complete names, targeting, target/caster
+effects and critical notes, including unavailable cards. Unknown catalogue entries keep their raw identity and remain playable
 when offered. Actor, round, phase, tempo and energy stay beside the scrollable list; the explicit declaration
 footer stays outside it. In at-activation mode, selecting still opens field targeting and casting still needs
 confirmation. Double-tapping a card never submits a spell.
 
+Each card is the shared spell card (`src/spell-card.ts`, ADR 0146) built of spans inside its button: the
+name with cost and crit-chance chips (the current tempo's chance when the host's guide gives one, the
+catalogue's with its tempo and d20 face otherwise), the targeting line, and the effect lines
+with the icon of the stat each moves.
+
 `table/battle-spellbook.js` derives the reference; `src/spellbook.ts` owns keyed HTML rows. Availability polls
-update existing nodes, preserving focus, scroll, details mode and card positions. The same asking retains
+update existing nodes, preserving focus, scroll and card positions. The same asking retains
 browsing when returning from field targets. A new asking, creature, seat, hidden page or access loss clears
 the reference and its local state. Nothing is persisted. Group/type fallback never guesses from effect prose.
 
@@ -333,13 +378,30 @@ journeys continue exercising the same decision protocol. AU10 adds selected-targ
 
 ## AU7: pace results and round turnover
 
-Presentation settings select **Auto** (default) or **Step**, and so does the reading toolbar under the board; the choice
-is independent of Help, reduced motion and animation speed, and lasts for the page (it is not stored).
-An action still animates in Step, then holds its exact applied frame until **Next result**. **Auto** resumes
-without replaying the impact. **Skip to present**, opening a live choice, rotation (an orientation change, not every resize), a motion/speed change or
-connection loss immediately restores the authoritative board. In Step, results that arrive while a
-dialog covers the board queue behind the held one; in Auto they settle rather than play unseen. These presentation controls never submit or
+Match settings (the gear in the header) select **Step** (default) or **Auto**; the choice
+is independent of Help, reduced motion and animation speed. A new game starts from the player's **Game
+settings** (under the player's name in the account menu, or in the main menu when signed out; kept with the
+account when signed in, in the browser otherwise; Step, 1×, tips on by default), and the match settings change that game alone ([ADR 0140](../docs/adr/0140-keep-game-settings-with-the-account.md)).
+**Skip all** is offered while two or more results remain, never while an incoming action waits for its OK
+([ADR 0141](../docs/adr/0141-never-hold-the-player-s-own-cast.md)).
+Every incoming action, in either pace, animates and then holds its exact applied frame until the player's
+**OK** (**Next** while more follows); only then comes the next action, the turnover or the live board
+([ADR 0139](../docs/adr/0139-confirm-every-action-before-the-next-choice.md)). The player's own casts
+move on by themselves in either pace; Step holds the turnover receipts (aftermath, upkeep, result) for **Next**,
+Auto plays them by itself. While results remain, the action, mutation and
+result entries are withdrawn and nothing opens by itself. **Skip all**, rotation (an orientation change, not every resize), a motion/speed change or
+connection loss immediately restores the authoritative board. Results that arrive while a dialog
+covers the board queue behind a held item (an incoming action, or a receipt in Step); otherwise they settle rather than play unseen. While results are read the dock is one card, in the dock's own row so the field never resizes: whose action
+it was (opponent's, the player's own, or a round summary, with how many more follow), what was cast, what came of
+it, and **OK**/**Next** and **Skip all** beside it. These presentation controls never submit or
 acknowledge a question. Selecting a live command still explicitly opens and acknowledges that command.
+
+When nothing is asked of the seat because the other side is playing, the dock is that same card, in the
+opponent's accent with a quiet "thinking" pulse: **Waiting for** the other player by name (a bot "is
+thinking"), which of their creatures is choosing its action and which of the player's own plays next; or,
+once the player's command is sent, what the other side is still choosing (mutations, tempos, tie order,
+hidden spells). **Last result** stays one tap away on it. `waitingOn` in `table/battle-guidance.js` decides it
+from the public board alone.
 
 The same ordered queue now contains closing casts, meaningful condition expiry/immunity, ordinary energy,
 ongoing effects and the match result. Adjacent energy/ongoing records for the same round share a receipt,
@@ -348,16 +410,28 @@ remain recorded facts. A missing ordinary-energy record is explicitly unknown. R
 arrival-gated introductory receipt.
 
 Action frames supply their own round, phase, creatures, resources, known spells and timeline. Turnover
-records do not contain an exact battlefield: the scene shows a labelled text receipt with **no creature stats
-or spellbook** instead of borrowing future values. The next command may be opened at any time; this first
-skips the historical display. The journal and round notes retain all received facts.
+records do not contain an exact battlefield, so they read on a recorded one, never a later board
+([ADR 0143](../docs/adr/0143-read-the-turnover-on-the-field.md)): an aftermath on its round's last action frame,
+an upkeep on the board it arrived with while that board is still before combat. A plaque on each creature says
+what ended or changed, and the reading card gives one line, opening the full receipt. Without such a board the
+plaques stand by name alone. The match's end adds no step of its own: once its last result is read, the match
+result opens by itself, once per seat ([ADR 0145](../docs/adr/0145-end-the-match-in-one-moment.md)). The journal and round notes retain all received facts.
+
+Every effect on a creature is one chip (`table/effect-chips.js`, drawn by `chipElement`): the icon of what moved
+and the amount, a drop for damage with a CRIT mark when critical, a heart for healing, a bolt for energy, a
+condition's own icon for a condition applied, the same dimmed for one ending. Spell outcomes at impact, upkeep
+ticks and aftermath ends all use it, above the creature and in the reading card, where they gather by the
+creature they landed on. The engine's words stay in each chip, unseen, for screen readers and History.
 
 Received sequence, presented sequence and the last explicit **Next** are separate. Auto/Skip do not claim
 an item was explicitly read. A presented upkeep, or one the player passes over with Skip or by opening a live choice, suppresses the
 duplicate automatic upkeep modal (the existing tab-local marker); a rotation, a motion/speed change, a lost
 connection or a catch-up never showed it, so its upkeep modal still opens; receipts that arrive under an open draft/reference remain available
-through the deferred upkeep notice. No receipt facts, frames or drafts are persisted. First reads/reconnects
-baseline existing events. More than twelve new casts, more than two rounds in one response, or more than
+through the deferred upkeep notice. No receipt facts, frames or drafts are persisted. A first read baselines
+existing events, unless this browser showed the seat before: it keeps the last sequence shown per table and seat
+(`table/battle-seen.js`, the twenty newest games), and a page opened or brought back after that plays what came
+after it, the opponent's actions held for their OK, before the player's own choice
+([ADR 0148](../docs/adr/0148-play-what-a-closed-page-missed.md)). More than twelve new casts, more than two rounds in one response, or more than
 sixty queued new items fall back to the latest board and summary; History remains the reading surface for
 that backlog. An unframed legacy cast also falls back to confirmed text, without invented animation.
 AU8 unlock receipts stay hidden during paced history; opening a live spell choice after Skip retains its new-spell badge.
@@ -373,23 +447,34 @@ are recorded-event browser fixtures, not real-match screenshots.
 
 ## AU8: growth reference and new abilities
 
-Help and creature inspection open a persistent **Mutation Tree** over the current draft. Inspection
+Help and creature inspection open the full-screen **mutation tree** (`src/mutation-atlas.ts`,
+[ADR 0146](../docs/adr/0146-one-full-mutation-tree.md)) over the current draft. Inspection
 selects its creature; the reference can switch between both rosters. It reuses AU4's authored
 prerequisite forest, including every all-of/any-of edge, spell details, initiative and exact shared
 passive wording. Acquired tiers determine family/stage progress and multiclass summaries. Only a
 current host Evolution offer marks a mutation Available; the next opportunity is the host's
 `nextEvolutionRound`, never a client schedule. Its inclusive current-round value says "this round",
-not "next"; finished matches offer no further opportunity. Unknown content and schedule remain explicit.
+not "next"; finished matches offer no further opportunity. Unknown content and schedule remain explicit. On a phone the
+tree shows one family at a time: a slim tab with a triangle stands at each side that still has families, nudging the
+way a swipe goes, and a tap moves one family over; it steps aside while a mutation's card is open.
 
 The standalone reference shows current **public** ownership. Pending own picks remain Picked only
 in AU4's private command tree; they never enter public progress or receipts. Opening, exploring or
-closing either reference does not acknowledge or submit a question. Native disclosures, a labelled
-creature select and fixed Close control work by keyboard and on small/short screens. Unchanged polls
-preserve expanded nodes, focus and scroll. Closing restores the covering Help/inspection and draft.
+closing either reference does not acknowledge or submit a question. Families are columns (swiped on a
+phone), stages are rows, and a node opens its card: status, initiative, requirement, passives, spell cards
+with cost, crit chance and effect icons, and the mutations it opens. On a phone the card is a bottom sheet
+that Escape folds back first. A labelled creature select and a fixed Close work by keyboard and on
+small/short screens. Polls keep the creature, the open card and focus; closing restores the covering
+Help/inspection and draft.
 
-`table/battle-growth.js` observes only new `PurchasesRevealed` feed events. A compact, dismissible receipt
-names the new abilities/mutations; opening it gives the public team details in the tree without forcing
-a modal. During catch-up it retains the latest reveal; History retains all public events. Its first
+`table/battle-growth.js` observes only new `PurchasesRevealed` feed events. The reveal is read in three
+depths. On the battlefield, `src/mutation-reveal.ts` stands a Phaser crest above each creature that
+mutated: the mutation in its family's colour, the stage reached and its new spells. The crests stay while
+the field is uncovered, below the floating receipt. That receipt is one dismissible line, "Mutations
+revealed" with the count per side, and the status line under it speaks every reveal in full. **See**
+opens the reveal sheet: one card per creature, grouped by side, with stage, initiative, new spells with
+their cost and targets, and passives. Each card's **See its path** opens the full tree on that creature with
+the revealed mutation's path lit from its family root. During catch-up it retains the latest reveal; History retains all public events. Its first
 read is always a baseline, including reload, visibility return and seat switch, so historical unlocks
 never masquerade as new ones. No extra storage, request, engine rule or host acknowledgement is added.
 Private submission events and board changes alone cannot create a receipt. Access loss clears all facts.
@@ -411,6 +496,9 @@ The target dock keeps the creature/spell, legal count, change/cancel controls an
 fixed beside a keyboard-scrollable estimate. Only this asking's host guidance supplies cost, energy after
 cost, plain/critical outcomes and caster effects. Selected legal targets with equal outcomes group together;
 caster effects appear once. Zero critical chance at the selected tempo suppresses impossible critical rows.
+The estimate wears the spell card's design: the spell's name with a cost chip (and the energy left) and the
+crit chance at this tempo, then each target's outcomes as the field's effect chips, its crit outcomes beside
+them, and the caster's once.
 Hidden intentions show the cost and explain that targeting happens at resolution; they never bind targets.
 
 Missing guidance, missing target outcomes and targetless caster previews have explicit unavailable messages;
@@ -440,8 +528,16 @@ the presented board, so recorded replay retains its own round, order, rolls and 
 reference during live action playback explicitly settles that queue, like History. Missing initiatives
 or rolls remain unrecorded; no local sort, simulated die or current-stat fallback supplies them.
 
-A newly observed public TimelineBuilt event queues one reveal summary. It waits for both teams' tie
-ordering, action playback and open dialogs/drafts to finish, then appears before the next first-use tip.
+A newly observed public TimelineBuilt event queues one reveal. A seat that comes back to the page (a hidden tab
+shown again, a reload) counts as newly observed every order built after the last sequence it was shown
+(`battle-seen.js`, ADR 0148). That seat is often the one whose creature acts first: the one told it is its turn.
+An order not yet read holds that mark below it until Continue, so leaving mid-read shows it again. Its spell
+choice opens only once the order is read. It waits for both teams' tie
+ordering, action playback and open dialogs/drafts to finish, then reads on the field before the next first-use
+tip ([ADR 0144](../docs/adr/0144-read-the-turn-order-on-the-field.md)): a numbered badge on each creature, gold
+for Instinct and blue for Precision, and the dock's card with each team's tempos, whether a d20 broke a tie, and
+**Continue**. The card opens the full order. Until Continue nothing else plays: an opponent's action that
+arrives meanwhile waits, unplayed, then plays and holds for its OK.
 Reading Order manually consumes that pending reveal. Initial load, reload/reconnect and recorded sessions
 are baselines, not a new announcement; duplicate events do not repeat it. Advancing beyond the round or
 losing the seat clears it. No reveal preference or private data is persisted. The History entries for
@@ -462,18 +558,97 @@ round during match replay. Captures in `docs/tabletop/images/battle-order/` iden
 Captures from the recorded-roll browser fixture: [desktop](../docs/tabletop/images/battle-order/desktop-fixture.jpg) · [phone](../docs/tabletop/images/battle-order/phone-fixture.jpg).
 
 
+## The opponent on the round's line
+
+Beside the round number in the header, a chip names who the player is up against (it sat over the field at first,
+and hid a creature in landscape): a person by their player name with
+their place on the ladder (ADR 0124) and a heart when they are a friend (ADR 0129), a bot by its name with **BOT**.
+It opens a card with the rank in full (place, rating and record, or unranked, or provisional), whether they are a
+friend, and **Add friend** (or **Accept friend request**, which is asking back) when they are not. The chip reads
+the table's seat summaries, `GET /api/leaderboard` and `GET /api/friends`, when a seat is chosen, again when the
+opponent takes an open seat, and when its card opens; a page that cannot read the ladder or the friends says
+nothing about them rather than guessing. `table/battle-opponent.js` decides what it says. Where the header is narrow (a
+phone held upright, or the spell choice docked beside it) the chip folds to the opponent's medallion wearing its rank
+and heart, and the field's team label ("OPPONENT · NAME") still names them; on the smallest phones the round's
+phase gives up its place, since the command dock names it too.
+
+## Reactions
+
+Between two people, the header's **💬** opens a fixed set of eight short messages (Hello, Good luck, Well played,
+Nice move, Oops, Thinking, Thanks, Good game); one tap sends it and closes the set ([ADR 0173](../docs/adr/0173-let-players-react-with-a-fixed-set-of-messages.md)).
+It shows at once as a bubble on this seat's side, and the other player's newest one as a bubble by theirs, with how
+long ago it was sent when they were away. A seat reacts once every four seconds; the set says so. The set also hides
+the opponent's reactions for this game; Settings, in the menu, hides them for every game. No reaction is offered
+against a bot, in a replay, or on a device holding both seats. `table/battle-reactions.js` decides what shows and
+when; `src/reactions.ts` draws it. No notification is sent for a reaction and the bell counts none.
+
+## Evolution illustrations and capstone effects
+
+Each creature is drawn as the evolution its purchases resolve to
+([ADR 0151](../docs/adr/0151-show-each-creature-as-its-evolution.md)). The pieces:
+
+- **Resolver** (`table/battle-evolution.js`), pure.
+  - Stage 0 shows the ancestral creature.
+  - With Stage 1 only, the latest Stage 1 shows.
+  - With Stage 2, the family holding the most mutations shows its latest Stage 2.
+  - The first Stage 3 bought is the identity for good.
+  - A registered hybrid of that Stage 3 may show instead ([ADR 0152](../docs/adr/0152-choose-a-stage-3-hybrid-by-influence.md)).
+    Its Ultimate shows once a Stage 2 carries each other influence drawn for it. Otherwise one influence shows:
+    own-family Stage 2, then another family's Stage 2, then another family's Stage 1, the latest bought first
+    within each. A double influence shows its first, as no double portrait is drawn.
+  - Capstones never change the image.
+- **Purchase log** (`table/battle-chronology.js`). It keeps the feed's `PurchasesRevealed` picks in order, so
+  every frame, live or replayed, orders what it says the creature owns by when each purchase was made. The
+  acquired-tier set's order is never used.
+- **Registry** (`table/battle-evolution-art.js`). Each illustration's file, canvas, silhouette bounds and ground
+  anchor; the approved hybrids, the twelve Predator portraits of `table/battle-predator-hybrid-art.js` and the twelve
+  Warped portraits of `table/battle-warped-hybrid-art.js`, each naming the Stage 3 it varies and the influence it
+  shows (another line's illustrations, a family, or the Ultimate); the
+  capstone effects and their composition order. Which package draws
+  which illustration comes with the catalogue's packages (`visual.artwork`, `visual.effect`), authored in
+  `data/presentation/mutation-art.json`.
+- **Scene.**
+  - It loads an illustration only when a creature on the field asks for one, and keeps the audited sprite until
+    it arrives, or for good if it fails.
+  - The ancestral Stage 0 is the audited base sprite already loaded at boot; its twin in `evolutions/` is not
+    fetched.
+  - It fades a changed image out over the new one, except under reduced motion.
+  - It draws capstone effects (`src/capstone-effects.ts`) around whatever image shows, still under reduced
+    motion.
+  - Each creature button carries `data-artwork` (resolved), `data-artwork-shown` (drawn) and `data-capstones`.
+- **Inspection.** The portrait shows the same illustration once it has loaded.
+
+`battle-evolution.test.js`, `battle-chronology.test.js` and `battle-evolution-art.test.js` cover the precedence
+rules, hybrids, capstones, replay sequences, missing chronology, the registry and silhouette scaling.
+`battle-evolution.spec.js` covers lazy loading, the fallback for an image that fails, a purchase changing the
+image in place, a Predator hybrid and an Ultimate on the field, a single-influence hybrid and an Ultimate of each
+Warped line on the field, and capstone effects with and without reduced motion.
+
 ## AU12: public creature inspection
 
 Every ally and opponent, including defeated creatures and missing-art fallbacks, opens a reference with
 stable scene/journal identity, current defense/initiative, conditions and named spell/caster sources.
 Fresh conditions, permanent effects, remaining countdowns and immunity keep the shared board semantics.
-Desktop captions also expose defense, initiative and compact condition/passive cues; narrow/short layouts
-keep these in the inspection and accessible label so the field's target names remain legible.
+Every caption, on every screen, carries a badge row under the full name: initiative, defense with a
+shield when above zero, and one icon per kind of condition (`src/condition-icons.ts`). The icon comes
+from the host's effect cue, the stat the effect moves and whether it is a loss, so the page names no
+effect: a health loss is a drop, a gain a heart, defense a shield up or cracked, a stun a star. The
+numbers and the engine's words are in each badge's title, the accessible label and the inspection; the
+status tag above is placed from the caption's measured height. A new round seen live is announced by a
+short banner at the top of the field that fades by itself.
+
+The reference reads as a sheet, in the same visual language as the mutation tree and the spell choice: the
+creature's figure and name, its stats as four tiles (health with its bar, energy, defense, initiative) wearing
+the field's icons, and each status and condition as a card with its icon in a medallion coloured by what it
+moves, its duration and its source. A screen reader hears the stats as one sentence. It covers the field, full
+screen on a phone: nothing is chosen from it.
 
 Acquired mutations come only from `acquiredTiers`, independently of `knownSpells`. Each mutation shows its
-Stage, authored tags, initiative bonus and exact passive wording, including shared capstones. Known spell
-disclosures show cost, targeting, target/caster effects and catalogue critical details, with acquired sources
-where recorded. A known spell never marks a mutation acquired or reveals an intention. Missing catalogue
+Stage and initiative bonus as chips, authored tags as pills, and exact passive wording, including shared
+capstones. Known spells are dealt as the spell choice's own cards (`src/spell-card.ts`), in its order, attacks
+first: cost and crit chips (the crit naming its tempo and d20 face), targeting, effect lines with their icons,
+then the mutation that taught it where recorded. They answer `[data-inspect-spell]`, never the spell choice's
+`[data-spell]`. A known spell never marks a mutation acquired or reveals an intention. Missing catalogue
 entries keep their identifiers and explicitly unavailable detail. Aggregate passive badges reuse `board.js`.
 
 **Read action in History** opens the exact last public cast made by that creature, including fizzles and
@@ -483,9 +658,9 @@ Historical references label their latest loaded cast and filter by the displayed
 claim a complete search across unloaded history or show a future action. An unavailable
 historical cast stays unlinked. Private submissions cannot populate this cache, and losing the seat clears it.
 
-`table/battle-inspection.js` owns the pure reference, `battle/src/inspection.ts` owns stable disclosures and
-a bounded scrollable body with fixed identity/stats and Close. Ordinary polls retain focus, open spells and
-reading position. Opening references never sends or acknowledges a decision. The Mutation Tree launcher is
+`table/battle-inspection.js` owns the pure reference, `battle/src/inspection.ts` owns stable cards and
+a bounded scrollable body with fixed identity and Close. Ordinary polls retain focus, the cards already dealt
+and reading position. Opening references never sends or acknowledges a decision. The Mutation Tree launcher is
 available on current inspections; historical inspections display recorded ownership instead of opening a
 current-state tree. If a text-only turnover arrives while the inspection is open, its last recorded frame
 stays explicitly labelled **Pinned reference** until closed. No unrecorded stats or spellbook are supplied.
@@ -505,9 +680,29 @@ Captures: [desktop reference (recorded-event fixture)](../docs/tabletop/images/b
 
 The Match result card says Victory, Defeat or Draw from the host's outcome, its reason and each side's
 final survivors and HP. Unknown legacy fields stay unavailable; health never determines the winner in the
-client. Console opens the shared History. Match replay now reaches the host's final public snapshot after
-all recorded actions/cleanup, then returns to the scorecard. Empty feeds keep a readable error on that card;
-legacy frameless events remain text-only. Recorded-session replay still requires the operator token.
+client. It reads like the other sheets ([ADR 0153](../docs/adr/0153-play-the-same-game-again-from-the-end-card.md)):
+- a crest in the result's colour, and the round in the eyebrow;
+- each team a card of how many stand and the health it kept as a bar, whose whole line is its accessible name;
+- one row of pills.
+
+Below the teams, the battle report (`battle/src/match.ts`) names the creature of the match and tables what each
+creature did. A tap on a creature, its name or its portrait, shows its illustration large over the result, as the
+inspection's portrait does; a tap on the picture or Escape gives the report back. On a phone the rows hide their
+portraits to keep the figures readable, and the name alone is the way in.
+
+The first pill plays the same game again (`rematchPlan`, `table/outcome.js`). **Rematch** against the bot or on a
+shared device opens the same table at once. **Invite to rematch** keeps a friend's seat, or opens the lobby on a
+player who is not a friend. Then come **Replay the match** and **Lobby**; History stays in the field's header.
+Match replay now reaches the host's final public snapshot after
+all recorded actions/cleanup, then returns to the scorecard. Its dock says where it stands (round, step and a thin
+progress bar, before or after the recorded action) and draws each step as the last result is drawn
+(`battle/src/result-card.ts`): a cast as the journal's summary draws it, whose cast in its side's colour, the spell,
+a CRIT or FIZZLE badge and the field's chips gathered by the creature they landed on; an upkeep, an aftermath, a
+reveal or the result under its own title. On a phone the controls sit under the card in one row: the arrows,
+the round between them, and Result. The last result sheet (`#result-dialog`, from the dock's Last result) draws
+the same card from the playback's `result` (`readingCard` of the item last shown), a turnover with every line
+of its receipt. Empty feeds keep a readable error on that card;
+legacy frameless events remain text-only. A recorded session replays for the operator, or for the players who sat at it (ADR 0156).
 
 Settings offers selection vibration through the existing feedback helper, independently of the battle view's
 session-only sound opt-in. Notification controls use the seat transport, `push.js` status/key helpers and
@@ -516,20 +711,18 @@ subscription is rebound to every held seat of the selected table so the host's s
 still applies; no other seat's board is fetched. Unsupported/denied browsers explain the limitation.
 Late service replies cannot repaint or submit additional requests for a replaced seat.
 
-Playtest notes use `notes.js` and the authenticated `/api/notes` route: Lookup/Misplay during recorded play,
-with a comment box after the match. Unrecorded sessions and operator replay show no note controls. Double
-clicks are fenced; failures are visible. An unsaved comment survives same-seat suspension/reconnection;
-it clears for another table/seat, revoked access or a loaded unrecorded view.
+The battle view no longer offers playtest notes (Lookup, Misplay) or the end-of-match comment: nobody used
+them. The classic table and the host's `/api/notes` route keep them.
 
 One verified accepted seat resumes directly. Two held seats still require viewpoint selection; explicitly
 switching viewpoints always clears the board and asks. Linked invitations still go to classic acceptance,
 and existing account sign-in and revocation remain authoritative. A8 #437 is still open: its rollout
 preference, refined renderer recovery and asset-budget enforcement are not yet on main.
 
-`battle-services.spec.js` covers result variants, empty replay, seat selection/privacy, recording-only notes,
+`battle-services.spec.js` covers result variants, empty replay, seat selection/privacy, the absence of notes,
 notification availability/opt-in/testing, haptics, access loss and short viewports. Controller tests cover
 late service replies and shared-device endpoint rebinding. The real-host complete-match journeys compare
-the final scorecard and replay frame to the engine, save notes to `notes.jsonl`, and exercise operator replay.
+the final scorecard and replay frame to the engine and exercise operator replay.
 
 Captures: [desktop result (browser fixture)](../docs/tabletop/images/battle-services/desktop-fixture.jpg) ·
 [phone result (real engine, at-activation)](../docs/tabletop/images/battle-services/phone-real-host.jpg).
@@ -554,3 +747,82 @@ release browser gates ([ADR 0136](../docs/adr/0136-gate-the-arena-release-behind
 Sound is ART-6's ([ADR 0134](../docs/adr/0134-polish-confirmed-playback-with-opt-in-sound.md)). See the
 [acceptance record](../docs/tabletop/battle-release-acceptance.md) for budgets, repeatable browser measurements
 and the physical-device checks still pending.
+
+## Header and dock simplification
+
+The live view keeps its header to the round, its phase beside it, History, Help (`?`) and one gear for every
+match setting: motion, sound, reading mode, playback speed, vibration, notifications and concede.
+The "choose viewpoint" switch, the upkeep-and-aftermath review overlay, the dock's link back to the table and the
+"provisional artwork" footer are gone; the seat is named in the dock for assistive technology only, the header
+already showing whose seat it is. At rest the dock reads as a docked sheet: the sheets' panel, gold edge and rounded
+top, the phase in their serif with its step as a chip, a quiet dot for a live connection (the word Live is kept for
+assistive technology), at most two lines of instruction and one pill for the next step. **Next result** and
+**Skip** float over the bottom of the battlefield only while results play, because a row appearing in the grid would
+resize the scene, and a resize cancels playback. On a phone the header is 48px (44px on short screens), and the
+site's menu and the player's button sit at its right end, where the lobby keeps them.
+
+Each figure stands above its caption (`placements` lifts it by up to 34px, as the stage has room), so the name,
+badges and stats hang under its feet, not over its body. A creature's effect chips (upkeep ticks, a spell's
+outcomes, its place in the order) sit above its head. The acting creature carries a gold halo: a saturated gold rim around
+its own silhouette (its image filled with gold just behind it) and a pool of light at its feet (`src/acting-halo.ts`), breathing
+slowly and still under reduced motion;
+`#battle[data-halo]` names it.
+
+The field shows the dice ([ADR 0154](../docs/adr/0154-record-the-critical-roll-as-a-d20-face.md), `src/dice.ts`): a small
+hexagonal d20 beside a creature's head, with each roll-off's last throw while the revealed order is read (ivory) and a
+caster's critical roll as its action lands (gold when it crit, slate when it fell short). It tumbles in and settles,
+still under reduced motion, and leaves with the reading or the result; `#battle[data-dice]` names what stands.
+Each die says what it was for. The dice of one tie (`rollOffDice`: the creatures tied on tempo and initiative) are
+ringed in that tie's colour and joined by a dashed line with "vs" on it, and each reads where its creature finished in
+the tie (1st, 2nd). A critical roll reads the face it needed under it, from the spell's card (`Crit on 14+`, then
+`Crit! 14+` or `Needed 14+`). `data-dice` adds `tie<group>:<place>` or `<face>+` to each die.
+
+While an opponent's action waits unplayed (arrived under the turn order or another dialog), the field and the order
+strip show its round as it stood before that action, not the engine's latest board.
+
+The order strip shows each place as a badge in its tempo's colour (a tick once played), never a number run into the
+name, with a quiet chevron between places, read left to right. Each place also says its initiative (⚡) and carries a
+small d20 mark when a roll-off placed it. A tap on a place lights its creature on the field in ice blue (a rim around
+its silhouette, a pool at its feet and a blue caption line, the rest of the field a little dimmed; never the acting
+gold) and opens a card at the top of the field saying why it holds its place (`orderReason` in
+`table/battle-order.js`): its rank, its tempo band, its initiative against its neighbours', and the tie that placed it,
+with the d20s a roll-off threw and their rerolls, or the owner's choice in a tie of one team. The card stands on the
+side of the field away from the creature it lights, offers **Inspect ↗** for the full sheet, and a second tap, its ×
+or Escape puts the light out. The order sheet's creature links still open the inspection. The order sheet reads like the other sheets: the round
+under a TURN ORDER eyebrow, each tempo band a chip, each creature a card with its place badge, its state and its facts
+as chips and its d20 roll in gold, and one Continue.
+
+While the seat orders its ties the field shows them in the same blue (`tieMarks`): each tied creature of its own wears
+the place it takes now as a numbered badge, or a ? breathing while it is still to place, and a tap on it on the field
+places it as its pill does; the opponent's places in those ties wear their number muted.
+
+The order of tied creatures docks like the mutation pick and the team's tempos, the field above it: each tie is a card
+with its shared places as gold badges and who takes each now, the creatures still to place as pills tapped in acting
+order, and the dice and the opponent's fixed places in small type. Keep current order and Start again are pills;
+**Inspect turn order** opens the order sheet. History and Help stay in the field's header.
+
+## Lasting conditions on the figure
+
+The badges under a creature name every condition it carries. The figure adds at most two of them
+(`table/battle-auras.js`, pure, tested by `battle-auras.test.js`), each in its own place so they never cover each
+other:
+
+- **Above the head:** a stun, as three small stars circling it.
+- **On the body:** the one condition that matters most to its life, in this order: a bleed (drops falling from
+  the body), a regeneration (pale motes rising), defense lowered (an ember shell, faltering), defense raised (a
+  thin pale shell, breathing).
+
+Energy, initiative and damage changes stay on the badges alone. A fallen creature carries nothing. The scene
+draws them (`src/condition-auras.ts`) from the frame's `statuses`, the badges' own icon keys, animated from its
+update clock like the capstone effects, and still under reduced motion. `#battle[data-auras]` says what is drawn
+(`1:stun+health-loss 2:defense-gain`).
+
+## A match scenario's practice
+
+`/battle?scenario=<id>` opens a match scenario as practice (ADR 0179, docs/tabletop/scenarios-plan.md, S4).
+`table/battle-practice.js` (pure, `battle-practice.test.js`) reads the id, asks the host for the account's practice
+of it (`GET /api/scenarios/<id>/practice`) and starts one from the cut when there is none (`POST`), and words the band.
+The page opens the seat the host answers with, without the lobby's seat discovery: a practice is in no index. A band
+in the field's top right corner (`#practice-band`) says it is practice, where it began and that the recorded match is
+unchanged; **Restart the round** starts it again from the cut, **Leave** goes to the lobby. Signed out, the page asks
+to sign in.

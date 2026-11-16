@@ -372,9 +372,9 @@ The script takes every tuning knob as a flag (`--matches`, `--value-alpha`, `--v
 `--clone-epochs`, `--clone-alpha`, `--validation`), passed through to the learners, so a run is tuned from
 the command line and its `--help` explains each in plain words; `docs/learning/explained.md` has the table.
 
-The same turn runs unattended in `.github/workflows/iterate.yml` (Actions -> "Learning loop"): on a push to
-`main` that touches `src/`, `data/`, `learning/`, `benchmarks/` or the script, on a pull request that changes
-`learning/experiments/`, weekly, and on demand. The knobs come from `learning/experiments/next.json`, so an
+The same turn runs unattended in `.github/workflows/iterate.yml` (Actions -> "Learning loop"): on a pull request
+that changes `learning/experiments/next.json`, weekly on Monday, and on demand. A push to `main` no longer runs it
+(ADR 0167): most merges moved nothing it measures, and each one cost a full turn. The knobs come from `learning/experiments/next.json`, so an
 experiment is committed rather than typed; a workflow input, when a dispatch fills one in, wins over the file
 for that run, and `explore` set to `off` skips the exploring dataset. The report table goes in the run
 summary, under the file's `why`; `report.html`, `report.json`, the evaluations and the two policies are the
@@ -438,4 +438,4 @@ These are the balance signals the roadmap asks the loop to show every time. `rep
 deltas for every evaluation both runs hold and lists the stamp axes that differ (content, engine, rules,
 schema); agents and seeds are expected to differ between evaluations and are not axes of a report.
 
-Then one entry in `journal.md`: what changed, the numbers, the decision.
+Then one entry under `journal/` (`journal.md` says how): what changed, the numbers, the decision.

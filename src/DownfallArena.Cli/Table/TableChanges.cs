@@ -3,7 +3,7 @@ namespace DownfallArena.Cli.Table;
 /// <summary>
 /// That something about a table changed, for the pages waiting to hear it (ADR 0119): a question asked or
 /// answered, a seat reached or left, the match begun or over. It says nothing of what changed -- the seat
-/// route says that, one seat at a time -- only that a page should ask again now rather than on its next poll.
+/// route says that, one seat at a time -- only that a page should ask again now (ADR 0164: the page has no poll of its own to wait for).
 /// </summary>
 internal sealed class TableChanges
 {
@@ -36,6 +36,12 @@ internal sealed class TableChanges
         }
     }
 
+    /// <summary>
+    /// Raised after each change and once more as the table is let go of, outside the lock: what the lobby's own
+    /// stream (<see cref="LobbyChanges" />) reads a table's changes from, without waiting on every table.
+    /// </summary>
+    public event Action? Bumped;
+
     public void Bump()
     {
         TaskCompletionSource waiting;
@@ -52,6 +58,7 @@ internal sealed class TableChanges
         }
 
         waiting.TrySetResult();
+        Bumped?.Invoke();
     }
 
     /// <summary>The table is let go of: whoever waits is woken, and told nothing more is coming.</summary>
@@ -60,11 +67,17 @@ internal sealed class TableChanges
         TaskCompletionSource waiting;
         lock (_gate)
         {
+            if (_closed)
+            {
+                return;
+            }
+
             _closed = true;
             waiting = _next;
         }
 
         waiting.TrySetResult();
+        Bumped?.Invoke();
     }
 
     /// <summary>

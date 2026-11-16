@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { addressAfter, invitationPlan, invitationText, spentLink } from './invitation.js';
+import { addressAfter, battleAddress, invitationPlan, invitationText, spentLink } from './invitation.js';
 
 const table = { id: 't1', format: '3v3', waiting: true, round: null };
 const invitation = (seat, token, at = table) => ({ token, kind: 'invitation', seat, table: at });
@@ -103,4 +103,11 @@ test('the address a spent code sends the browser to is told from any other', () 
   assert.equal(spentLink('?invitation=spent'), true);
   assert.equal(spentLink('?player2=beef'), false);
   assert.equal(spentLink(''), false);
+});
+
+test('a seat /play opened goes on to the battle view, naming its table, with its keys only when nothing is kept', () => {
+  const seats = [{ seat: 'player2', token: 'beef' }];
+  assert.equal(battleAddress(seats, null, true), '/battle');
+  assert.equal(battleAddress(seats, 't1', true), '/battle?table=t1');
+  assert.equal(battleAddress(seats, null, false), '/battle?player2=beef');
 });

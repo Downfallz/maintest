@@ -206,15 +206,20 @@ Each stage is one pull request, built, tested, formatted, with the node tests wh
    recordings keep the id only. The lobby says what is kept ("What we keep") and offers *Delete account…* in the
    account menu.
 5. **Results for a ladder.** *Built*: when a recorded match with at least one account ends, the host keeps a
-   `MatchResult` beside the accounts, at `results/<yyyy-MM>/<matchId>.json` (`IMatchResults`, a file and a blob
-   adapter): when it finished, format, declaration, content hash, rounds, the winning seat (or a draw), and each
+   `MatchResult`: as a file beside the accounts on a laptop (`results/<yyyy-MM>/<matchId>.json`), and on Azure in
+   the table `matchresults`, by match and again by each account that held a seat, so a player's pages read their
+   own partition (ADR 0168; the result blobs kept before it are copied in at the first start): when it finished, format, declaration, content hash, rounds, the winning seat (or a draw), and each
    seat's account id or bot spec, never a name. `Ranked` says whether it counts on a ladder of people: two seats,
    each its own account. An abandoned match leaves no result. The seats' accounts are in `table.json` too, so an
    exported session carries ids and no names.
 
 Built since, by its own ADR: the leaderboard ([ADR 0124](../adr/0124-rank-players-with-glicko-2-over-ranked-results.md),
 `/leaderboard`): Glicko-2 over person-vs-person games only, a separate record against each bot, shared-device and
-abandoned matches unranked. Planned next: friends, and inviting one of them to a table ([friends-plan.md](friends-plan.md)), which is
+abandoned matches unranked. A player's own statistics (`/stats`, `GET /api/stats`, [ADR 0168](../adr/0168-keep-match-results-in-azure-table-storage.md)):
+the record overall, against players and bots and by format, the streaks and average length, and the creatures, mutations
+and spells they played, computed when asked from the results in their own partition. A result keeps what each seat played
+(`MatchResult.Teams`: each creature, its mutations, whether it stood at the end, and its resolved casts) from the final
+board and the match's events; a result kept before has none, and counts in the record only. Only the player sees theirs. Planned next: friends, and inviting one of them to a table ([friends-plan.md](friends-plan.md)), which is
 also where an account gets devices of its own for notices. Later, each its own plan: a profile page with a player's
 history, "your turn" sent to every device of an account instead of each seat (ADR 0118), a rename, and letting the
 operator open a table for a named player.

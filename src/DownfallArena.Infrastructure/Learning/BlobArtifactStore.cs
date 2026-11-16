@@ -1,6 +1,7 @@
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using DownfallArena.Application.Learning.Ports;
+using DownfallArena.Infrastructure.Matches;
 
 namespace DownfallArena.Infrastructure.Learning;
 
@@ -20,6 +21,12 @@ public sealed class BlobArtifactStore : IArtifactStore
 
     /// <summary>The container's URL, without a credential in it.</summary>
     public Uri Uri => _container.Uri;
+
+    /// <summary>
+    /// The decision journal of this store's runs (ADR 0159): each run's <c>decisions.jsonl</c>, in the same
+    /// container and under the same prefix as the run's other files.
+    /// </summary>
+    public BlobDecisionJournal Journal(TimeProvider clock) => new(_container, clock);
 
     public static async Task<BlobArtifactStore> OpenAsync(BlobContainerClient container, CancellationToken cancellationToken = default)
     {

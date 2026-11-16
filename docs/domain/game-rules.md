@@ -101,6 +101,9 @@ listed in [spells.md](spells.md).
   Health wins; equality is a draw (ADR 0011).
 - A Player may concede at any point of a Match in progress: it ends on the spot, the other Player wins, and
   the Round is left where it was, with no cleanup (ADR 0087).
+- A game between two Players gives each a time to answer, chosen when its table is opened. A Player asked to decide
+  who lets it run out loses; when both were asked and both let it run out, the Match is a draw (ADR 0169).
+  The Round is left where it was, as for a concession.
 
 ### Round sequence (ADR 0010)
 

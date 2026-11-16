@@ -1,6 +1,7 @@
 import { createBattlePlanning } from '../../table/battle-planning.js';
-import { mutationChoices } from '../../table/battle-mutations.js';
-import { mutationCards } from './mutations';
+import { mutationChoices, pickPlan } from '../../table/battle-mutations.js';
+import { mutationTree } from './mutation-tree';
+import type { atlasControls, AtlasView } from './mutation-atlas';
 import { tempoControls } from './tempo';
 import { battleTieGroups } from '../../table/battle-order.js';
 import { untapped, orderOf } from '../../table/ties.js';
@@ -16,29 +17,74 @@ function button(label: string, action: () => void) {
 }
 function line(value: string) { const node = document.createElement('p'); node.textContent = value; return node; }
 
-export function planningControls(controller: Controller, name: (id: unknown) => string, beforeOpen: () => void) {
+// The mutation pick, the team's tempos and the order of tied creatures dock beside the field (ADR 0138, ADR 0150):
+// each is about creatures the field shows.
+const docked = (kind: string | undefined) => kind === 'Evolution' || kind === 'Speed' || kind === 'TieOrder';
+
+export function planningControls(controller: Controller, name: (id: unknown) => string, beforeOpen: () => void, inspect: (id: string) => void,
+  atlas: ReturnType<typeof atlasControls>) {
   const dialog = el<HTMLDialogElement>('planning-dialog');
+  let tree: ReturnType<typeof mutationTree> | null = null;
   const tempos = tempoControls(controller, name);
-  let creature: number | null = null, rendered = '', lastCatalogue: Catalogue | null = null;
+  let creature: number | null = null, rendered = '', lastCatalogue: Catalogue | null = null, question = '';
   el('planning-open').addEventListener('click', () => { beforeOpen(); controller.open(); });
   el('planning-close').addEventListener('click', () => controller.close());
   el('planning-confirm').addEventListener('click', () => { void controller.submit(); });
   dialog.addEventListener('cancel', event => { event.preventDefault(); controller.close(); });
 
+  function selectCreature(id: number) {
+    if (id === creature) return;
+    creature = id; rendered = ''; controller.choose(null);
+  }
+  // A creature tapped while the draft cannot change (sending, or a failed acknowledgement)
+  // is inspected instead: the tap never does nothing, and never drops the draft being sent.
+  function openCreature(id: number) {
+    if (!controller.model().opened) { beforeOpen(); controller.open(); }
+    if (controller.model().canEdit) selectCreature(id);
+    else inspect(String(id));
+  }
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && dialog.open && docked(dialog.dataset.kind) && !document.querySelector('dialog:modal')) {
+      event.preventDefault(); controller.close();
+    }
+  });
+  const pickNote = document.createElement('p'); pickNote.id = 'planning-pick-rule'; pickNote.hidden = true;
   function mutations(model: ReturnType<Controller['model']>, catalogue: Catalogue | null) {
     const choices = mutationChoices(model.latest, catalogue, creature);
     creature = choices.selected;
     el('planning-creatures').replaceChildren(...choices.roster.map((one: { id: number; name: string; context: string }) => {
-      const node = button(`${one.name} · ${one.context}`, () => {
-        if (one.id === creature) return;
-        creature = one.id; rendered = ''; controller.choose(null);
-      });
+      const node = button(one.name, () => selectCreature(one.id));
+      node.setAttribute('aria-label', `${one.name} · ${one.context}`);
+      if (!one.context.endsWith('available')) { const status = document.createElement('small'); status.textContent = one.context; node.append(status); }
       node.dataset.creature = String(one.id); node.setAttribute('aria-pressed', String(one.id === creature)); return node;
     }));
-    el('planning-choices').replaceChildren(...mutationCards(choices, catalogue, tier => controller.choose({ creature, tier })));
-    const pass = button('Pass remaining picks', () => controller.choose({ pass: true })); pass.id = 'planning-pass'; el('planning-choices').append(pass);
-    const budget = choices.remaining == null ? 'Team pick count unavailable' : `${choices.remaining} team pick${choices.remaining === 1 ? '' : 's'} available`;
-    el('planning-help').textContent = `${budget}. One mutation per creature this opportunity. Select a card, then confirm. Pass gives up all remaining team picks this round.`;
+    tree?.dispose();
+    tree = mutationTree(choices, catalogue, tier => controller.choose({ creature, tier }));
+    el('planning-choices').replaceChildren(pickNote, tree.graph);
+    el('mutation-preview-region').replaceChildren(tree.pane);
+    // The whole tree opens full screen on the mutation in hand; an offer can be chosen from its card there.
+    // The atlas covers the field and so holds the draft (canEdit is false under it); it offers the choice
+    // whenever the draft could take one, and makes it only once it has closed.
+    const view = (id: number | null): AtlasView | null => {
+      const now = controller.model();
+      if (!now.opened || now.latest?.waitingFor !== 'Evolution') return null;
+      const shown = mutationChoices(now.latest, catalogue, id);
+      const subject = shown.roster.find((one: { id: number }) => one.id === shown.selected);
+      return { title: `${subject?.name ?? 'Creature'} · Mutation tree`, eyebrow: 'MUTATION TREE · YOUR PICK', packages: shown.packages,
+        roster: shown.roster.map((one: { id: number; name: string; context: string }) => ({ id: String(one.id), name: `${one.name} · ${one.context}` })),
+        creature: String(shown.selected), focus: now.choice?.creature === shown.selected ? now.choice?.tier ?? null : null,
+        choose: now.available && !now.sending ? tier => { selectCreature(shown.selected); controller.choose({ creature: shown.selected, tier }); } : undefined };
+    };
+    // The sheet's own header holds what the whole pick is about: the full tree to read, and passing what is left.
+    const full = button('Full mutation tree', () => { const shown = view(creature); if (shown) atlas.open(shown, catalogue, full, next => view(Number(next))); }); full.id = 'mutation-atlas-open'; full.className = 'planning-action atlas-open';
+    const pass = button('Pass remaining picks', () => controller.choose({ pass: true })); pass.id = 'planning-pass'; pass.className = 'planning-action';
+    el('planning-tools').replaceChildren(full, pass);
+    if (creature != null) {
+      const actions = document.createElement('div'); actions.className = 'planning-actions';
+      const inspectButton = button('Inspect creature', () => inspect(String(creature)));
+      inspectButton.id = 'mutation-inspect'; inspectButton.className = 'planning-action'; actions.append(inspectButton);
+      el('planning-choices').append(actions);
+    }
   }
   type Assignment = { id: number; position: number | null };
   type Fixed = { position: number; label: string; roll: string };
@@ -49,29 +95,54 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     if (detail.opponentOrderOpen) return `Opponent places stay fixed: ${detail.fixed.map(one => '#' + one.position).join(', ')} · their order is revealed with yours`;
     return `Opponent places stay fixed: ${detail.fixed.map(fixedText).join(' · ')}`;
   }
+  // Each tie a card: the places it shares as the order's badges with who takes each now, the creatures still to place
+  // as pills to tap in acting order, and what the dice and the opponent fixed, in small type under them.
   function ties(model: ReturnType<Controller['model']>) {
     el('planning-creatures').replaceChildren();
-    el('planning-help').textContent = 'Your team keeps its allocated places. Choose which creature takes each place within a tie, then confirm. Opponent positions stay fixed; both teams reveal together.';
+    el('planning-help').textContent = 'Tap your tied creatures in the order they act. Your team keeps its places; the opponent keeps theirs, and both reveal together.';
     const groups = model.latest.options.tieOrder?.ties ?? [];
     const context = battleTieGroups(model.latest, model.tapped);
+    const note = (value: string, className: string) => { const node = line(value); node.className = className; return node; };
     const rows = untapped(groups, model.tapped).map((left: number[], index: number) => {
-      const row = document.createElement('section'); row.append(line(`Tie ${index + 1}: ${orderOf([groups[index]], model.tapped).map(name).join(' → ')}`));
-      row.className = 'tie-group';
+      const row = document.createElement('section'); row.className = 'tie-group';
       const detail = context[index];
-      row.append(line(detail.places.length ? `Your fixed places: ${detail.places.join(', ')}` : 'Positions not available in this snapshot.'),
-        line(detail.rolled ? 'Recorded d20 rolls allocated these team places. Your choice changes only their occupants.' : 'No d20 roll recorded for these creatures; a same-team-only tie needs none.'),
-        line(detail.assignments.map(assignmentText).join(' · ')));
-      if (detail.fixed.length) row.append(line(opponentPlacesText(detail)));
-      if (left.length > 1) for (const id of left) { const node = button(name(id), () => controller.order(id)); node.dataset.tie = String(id); row.append(node); }
+      const head = document.createElement('div'); head.className = 'tie-head';
+      const title = document.createElement('h3'); title.textContent = `Tie ${index + 1}`;
+      const roll = document.createElement('span'); roll.className = 'tie-roll'; roll.dataset.rolled = String(Boolean(detail.rolled));
+      roll.textContent = detail.rolled ? 'd20 rolled' : 'Same team';
+      head.append(title, roll);
+      const places = document.createElement('div'); places.className = 'tie-places';
+      places.append(...detail.assignments.map((one: Assignment) => {
+        const slot = document.createElement('span'); slot.className = 'tie-place';
+        const badge = document.createElement('span'); badge.className = 'tie-badge'; badge.textContent = one.position == null ? '?' : String(one.position);
+        const who = document.createElement('span'); who.textContent = name(one.id); slot.append(badge, who); return slot;
+      }));
+      // The same facts in words, for assistive technology and anyone reading closely.
+      row.append(head, places, note(detail.assignments.map(assignmentText).join(' · '), 'tie-assignments unseen'),
+        note(detail.places.length ? `Your fixed places: ${detail.places.join(', ')}` : 'Positions not available in this snapshot.', 'tie-note'),
+        note(detail.rolled ? 'Recorded d20 rolls allocated these team places. Your choice changes only their occupants.' : 'No d20 roll recorded for these creatures; a same-team-only tie needs none.', 'tie-note'));
+      if (detail.fixed.length) row.append(note(opponentPlacesText(detail), 'tie-note tie-opponent'));
+      if (left.length > 1) {
+        const pills = document.createElement('div'); pills.className = 'tie-pills';
+        const hint = document.createElement('p'); hint.className = 'tie-hint'; hint.textContent = `Tap who acts first · ${orderOf([groups[index]], model.tapped).map(name).join(' → ')}`;
+        for (const id of left) { const node = button(name(id), () => controller.order(id)); node.dataset.tie = String(id); node.className = 'planning-action'; pills.append(node); }
+        row.append(hint, pills);
+      }
       return row;
     });
-    const keep = button('Keep current order', () => controller.choose({ keep: true })); keep.id = 'planning-keep';
-    el('planning-choices').replaceChildren(...rows, keep, button('Start again', () => controller.restart()));
+    const actions = document.createElement('div'); actions.className = 'planning-actions tie-actions';
+    const keep = button('Keep current order', () => controller.choose({ keep: true })); keep.id = 'planning-keep'; keep.className = 'planning-action';
+    const again = button('Start again', () => controller.restart()); again.className = 'planning-action';
+    actions.append(keep, again);
+    el('planning-choices').replaceChildren(...rows, actions);
   }
   const headings: Record<string, string> = { Evolution: 'Choose mutation', Speed: 'Team tempos', TieOrder: 'Order ties' };
   function closeChoices() {
+    if (!tree && !dialog.open && !rendered) return;
+    tree?.dispose(); tree = null;
+    el('planning-tools').replaceChildren(); el('mutation-preview-region').replaceChildren(); el('mutation-preview-region').hidden = true;
     if (dialog.open) dialog.close();
-    rendered = ''; creature = null;
+    rendered = ''; creature = null; question = '';
     el('planning-choices').replaceChildren(); el('planning-creatures').replaceChildren();
   }
   // The same selection is drawn pressed wherever it sits: a mutation button, a tempo, pass or the dice order.
@@ -121,38 +192,77 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     if (focused?.dataset.speed) return `[data-speed="${focused.dataset.speed}"]`;
     return focused?.dataset.tempoTab ? `[data-tempo-tab="${focused.dataset.tempoTab}"]` : null;
   }
+  // The team's picks are the budget a player spends here. Between a sent pick and the next asking the count is
+  // the one the host has not restated yet, so it says the pick went and what is left after it. The note at the
+  // top of the tree spells the budget out: a token per pick of the phase, filled while unspent, and, when there
+  // are fewer picks than creatures that could take one, that the player chooses which mutate now and that later
+  // phases bring new picks. It scrolls with the tree, so it costs a short sheet none of the tree's fixed room.
+  function pickBudget(model: ReturnType<Controller['model']>) {
+    const sent = model.accepted && !model.available ? model.choice ?? {} : null;
+    const plan = pickPlan(model.latest, sent);
+    el('planning-help').textContent = plan?.budget ?? 'Team pick count unavailable';
+    pickNote.hidden = !plan?.left;
+    if (!plan) { pickNote.replaceChildren(); return; }
+    const pips = document.createElement('span'); pips.className = 'pick-pips'; pips.setAttribute('aria-hidden', 'true');
+    for (let index = 0; index < plan.spent + plan.left; index++) {
+      const pip = document.createElement('span'); pip.className = 'pick-pip'; pip.dataset.spent = String(index < plan.spent); pips.append(pip);
+    }
+    pickNote.replaceChildren(pips, document.createTextNode(plan.rule));
+  }
+  // Where a keyboard starts in the mutation sheet: the recipient tab, or the tree when a short sheet hides them.
+  function focusStart() {
+    [dialog.querySelector<HTMLElement>('#planning-creatures [aria-pressed="true"]'), ...dialog.querySelectorAll<HTMLElement>('#planning-choices button:not(:disabled)')]
+      .find(node => node && node.getClientRects().length > 0)?.focus({ preventScroll: true });
+  }
+  // A keyboard starts the tempo sheet on the tempo drafted for the creature in hand, else its first tempo.
+  function tempoStart() {
+    (dialog.querySelector<HTMLElement>('#planning-choices [data-speed][aria-pressed="true"]') ?? dialog.querySelector<HTMLElement>('#planning-choices [data-speed]'))?.focus({ preventScroll: true });
+  }
   function confirmLabel(model: ReturnType<Controller['model']>) {
     if (model.sending) return 'Sending…';
-    if (model.choice?.tier) return 'Acquire · 1 pick';
+    if (model.choice?.tier) return 'Confirm ' + (lastCatalogue?.packages?.find(pack => pack.id === model.choice.tier)?.name ?? model.choice.tier);
     if (model.choice?.pass) return 'Pass all remaining picks';
     return model.tempo ? `Confirm tempos · ${model.tempo.chosen}/${model.tempo.total}` : 'Confirm choice';
   }
   function render(model: ReturnType<Controller['model']>, catalogue: Catalogue | null) {
     const label = headings[model.latest?.waitingFor as string] ?? 'Order ties';
     el('planning-order').hidden = !model.opened || model.latest?.waitingFor !== 'TieOrder';
-    el('planning-open').hidden = !model.available || model.opened; el('planning-open').textContent = label;
+    el('planning-open').hidden = !model.available || model.opened; el('planning-open').textContent = model.latest?.waitingFor === 'Evolution' ? 'Mutation tree ↗' : label;
     el<HTMLButtonElement>('planning-open').disabled = model.sending;
     el('planning-error').textContent = model.error; el('planning-error').hidden = !model.error || model.opened;
     el('planning-dialog-error').textContent = model.error;
     el<HTMLButtonElement>('planning-close').disabled = model.sending;
     if (!model.opened) { closeChoices(); return; }
     dialog.dataset.kind = model.latest.waitingFor;
-    el('planning-heading').textContent = label;
-    dialog.dataset.kind = model.latest.waitingFor;
+    if (model.latest.waitingFor !== 'Evolution') el('planning-tools').replaceChildren();
+    el('planning-heading').textContent = model.latest.waitingFor === 'Evolution' ? 'Mutation tree' : label;
+    // The seat's next asking after a pick arrives in the open sheet: the creature that took the pick has nothing
+    // left to offer, so the next creature with offers is shown, and a keyboard starts there again.
+    const continued = dialog.open && question !== '' && model.question !== question && model.latest.waitingFor === 'Evolution';
+    if (continued && !mutationChoices(model.latest, catalogue, creature).faces.length) creature = null;
+    question = model.question;
     rebuild(model, catalogue);
-    for (const node of Array.from(el('planning-choices').querySelectorAll<HTMLButtonElement>('button'))) {
-      node.disabled = !model.canEdit || node.dataset.offered === 'false';
-      node.setAttribute('aria-pressed', String(isPressed(node, model.choice)));
-      if (node.dataset.mutation) node.querySelector('.mutation-select-label')!.textContent = isPressed(node, model.choice) ? 'Selected · confirm below' : 'Select mutation';
+    for (const node of [...el('planning-tools').querySelectorAll<HTMLButtonElement>('button'), ...el('planning-choices').querySelectorAll<HTMLButtonElement>('button')]) {
+      // Inspecting and reading the full tree never edit the draft, so they stay available while sending.
+      const reading = node.id === 'mutation-inspect' || node.id === 'mutation-atlas-open';
+      node.disabled = !reading && (!model.canEdit || node.dataset.offered === 'false');
+      if (!reading) node.setAttribute('aria-pressed', String(isPressed(node, model.choice)));
     }
     for (const node of Array.from(el('planning-creatures').querySelectorAll<HTMLButtonElement>('button'))) node.disabled = !model.canEdit;
+    el('mutation-preview-region').hidden = model.latest.waitingFor !== 'Evolution' || !model.choice?.tier;
+    tree?.select(model.choice?.tier ?? null);
     el('planning-selection').textContent = selectionText(model, catalogue);
     el<HTMLButtonElement>('planning-confirm').disabled = !model.canSubmit;
     el('planning-confirm').textContent = confirmLabel(model);
     // The accessible name starts with the visible label (WCAG 2.5.3) and adds the recipient; while sending it is the label.
-    if (model.choice?.tier && !model.sending) el('planning-confirm').setAttribute('aria-label', `Acquire · 1 pick: ${selectionText(model, catalogue)}`);
+    if (model.choice?.tier && !model.sending) el('planning-confirm').setAttribute('aria-label', `${confirmLabel(model)} · 1 pick · ${name(model.choice.creature)}`);
     else el('planning-confirm').removeAttribute('aria-label');
-    if (!dialog.open) dialog.showModal();
+    if (model.latest.waitingFor === 'Evolution') pickBudget(model);
+    if (!dialog.open) {
+      if (model.latest.waitingFor === 'Evolution') { dialog.show(); focusStart(); }
+      else if (model.latest.waitingFor === 'Speed') { dialog.show(); tempoStart(); }
+      else { dialog.show(); dialog.querySelector<HTMLElement>('#planning-choices [data-tie], #planning-keep')?.focus({ preventScroll: true }); }
+    } else if (continued && (!dialog.contains(document.activeElement) || (document.activeElement as HTMLButtonElement).disabled)) focusStart();
   }
-  return { render };
+  return { render, openCreature, recipient: () => creature };
 }

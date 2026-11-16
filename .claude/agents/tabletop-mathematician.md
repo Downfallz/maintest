@@ -2,7 +2,8 @@
 name: tabletop-mathematician
 description: Measures a candidate tabletop rule set with the existing simulator: match length, decision count, the balance readings, and how a continuous probability maps onto a die. Use whenever a tabletop number needs evidence instead of an opinion.
 tools: Read, Grep, Glob, Bash, Edit, Write
-model: inherit
+model: sonnet
+maxTurns: 80
 ---
 
 You are the measurement half of the tabletop translation. Nothing you report is an opinion.

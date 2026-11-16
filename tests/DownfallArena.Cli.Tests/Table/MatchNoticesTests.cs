@@ -14,12 +14,12 @@ namespace DownfallArena.Cli.Tests.Table;
 /// </summary>
 public sealed class MatchNoticesTests : IDisposable
 {
-    private const string Key = "BAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0A";
-    private const string Auth = "AAECAwQFBgcICQoLDA0ODw";
+    private const string Key = InMemoryDeviceStore.Key;
+    private const string Auth = InMemoryDeviceStore.Auth;
 
     private readonly HostedTables _hosted = new(recording: true);
-    private readonly Sender _sender = new();
-    private readonly AccountDevices _devices = new(new InMemoryDevices(), TimeProvider.System);
+    private readonly RecordedPush _sender = new();
+    private readonly AccountDevices _devices = new(new InMemoryDeviceStore(), TimeProvider.System);
     private readonly Dictionary<AccountId, string> _names = [];
 
     private static CancellationToken Cancel => TestContext.Current.CancellationToken;
@@ -34,6 +34,7 @@ public sealed class MatchNoticesTests : IDisposable
         Notices = new AccountNotices(_sender, _devices),
         NameOf = id => Task.FromResult(_names.GetValueOrDefault(id)),
         Agents = [new SeatableAgent("greedy", "Greedy — the plain one", Featured: true)],
+        Index = _hosted.Index,
     };
 
     private async Task<AccountId> PlayerAsync(string name)
@@ -96,15 +97,17 @@ public sealed class MatchNoticesTests : IDisposable
     }
 
     [Fact]
-    public async Task A_bot_s_seat_is_told_nothing_and_the_person_is_told_against_the_bot_by_its_name()
+    public async Task A_bot_s_seat_is_told_nothing_and_the_person_is_told_against_the_bot_by_its_level()
     {
         var table = await Composer().ComposeAsync(OnePerson, Cancel);
         table.Seats[0].Account = await PlayerAsync("MarkF");
 
         await FinishedAsync(table);
 
-        var (_, body) = _sender.Sent.ShouldHaveSingleItem() is var sent ? NoticeTo("MarkF") : default;
-        body.ShouldMatch("Greedy");
+        _sender.Sent.ShouldHaveSingleItem();
+        // A player knows a bot by its level, never its name (ADR 0180): Greedy is Medium.
+        NoticeTo("MarkF").Body.ShouldMatch("Medium bot");
+        NoticeTo("MarkF").Body.ShouldNotContain("Greedy");
         table.Dispose();
     }
 
@@ -128,20 +131,24 @@ public sealed class MatchNoticesTests : IDisposable
     [Fact]
     public async Task A_notice_that_cannot_be_sent_does_not_keep_the_recording_from_finishing()
     {
-        using var registry = new TableRegistry();
+        using var registry = _hosted.Registry();
         var composer = Composer();
         composer.NameOf = _ => throw new IOException("The account store went away.");
         var table = await composer.ComposeAsync(TwoPeople, Cancel);
         table.Seats[0].Account = await PlayerAsync("MarkF");
         table.Seats[1].Account = await PlayerAsync("bastien");
-        registry.TryAdd(table).ShouldBeTrue();
-        await table.RecordAsync(registry.Codes, Cancel);
+        using (var place = (await registry.ReserveAsync(Cancel)).ShouldNotBeNull())
+        {
+            await registry.AddAsync(table, place, Cancel);
+        }
+
+        await table.RecordAsync(Cancel);
 
         await FinishedAsync(table);
 
         (await _hosted.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Finished, "the files are written before anybody is told");
         _sender.Sent.ShouldBeEmpty("the names could not be read, so no notice went out, and nothing else broke");
-        registry.Remove(table.Id);
+        await registry.RemoveAsync(table.Id, Cancel);
     }
 
     [Fact]
@@ -156,52 +163,4 @@ public sealed class MatchNoticesTests : IDisposable
     }
 
     public void Dispose() => _hosted.Dispose();
-
-    private sealed class Sender : IPushSender
-    {
-        public List<(string Endpoint, string Payload, string Topic)> Sent { get; } = [];
-
-        public Task<bool> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
-        {
-            lock (Sent)
-            {
-                Sent.Add((to.Endpoint, payload, topic));
-            }
-
-            return Task.FromResult(true);
-        }
-    }
-
-    private sealed class InMemoryDevices : IDeviceStore
-    {
-        private readonly Dictionary<AccountId, IReadOnlyList<PushDevice>> _held = [];
-
-        public Task<IReadOnlyList<PushDevice>> ListAsync(AccountId account, CancellationToken cancellationToken = default)
-        {
-            lock (_held)
-            {
-                return Task.FromResult(_held.TryGetValue(account, out var devices) ? devices : []);
-            }
-        }
-
-        public Task SaveAsync(AccountId account, IReadOnlyList<PushDevice> devices, CancellationToken cancellationToken = default)
-        {
-            lock (_held)
-            {
-                _held[account] = [.. devices];
-            }
-
-            return Task.CompletedTask;
-        }
-
-        public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)
-        {
-            lock (_held)
-            {
-                _held.Remove(account);
-            }
-
-            return Task.CompletedTask;
-        }
-    }
 }

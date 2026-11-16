@@ -2,7 +2,8 @@
 
 Date: 2026-09-27
 
-Status: Accepted
+Status: Accepted. Amended by [0172](0172-let-named-player-accounts-be-the-operator.md): a player account the host
+names by its id is the operator once signed in, beside the token and the platform's sign-in.
 
 Amended 2026-10-02: the lobby is the **admin panel**, at `/admin` (`/lobby` redirects). The game is not open,
 so the page is what its one operator does with the host rather than a room players wait in: it opens tables,

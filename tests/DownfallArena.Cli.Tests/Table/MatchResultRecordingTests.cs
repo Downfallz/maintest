@@ -16,7 +16,7 @@ public sealed class MatchResultRecordingTests : IDisposable
     private static CancellationToken Cancel => TestContext.Current.CancellationToken;
 
     private TableComposer Composer(IMatchResults? results = null) =>
-        new(_hosted.Services, HostedTables.Rules, new FileArtifactStore(_hosted.RunsDirectory)) { Results = results ?? _results };
+        new(_hosted.Services, HostedTables.Rules, new FileArtifactStore(_hosted.RunsDirectory)) { Results = results ?? _results, Index = _hosted.Index };
 
     /// <summary>A person's seat its understudy plays to the end: a seat with a person in it that finishes on its own.</summary>
     private static TableRequest PlayedByTheUnderstudy => new(null, AgentSpec.Parse("greedy"), Who: null, Handover: 999, Seed: 7);
@@ -54,6 +54,41 @@ public sealed class MatchResultRecordingTests : IDisposable
         table.Dispose();
     }
 
+    /// <summary>
+    /// What each seat played is kept with the result, for its players' statistics: every creature of both teams off
+    /// the final board, and the casts that resolved, credited to the creature that cast them.
+    /// </summary>
+    [Fact]
+    public async Task A_finished_table_records_what_each_seat_played_and_cast()
+    {
+        var table = await Composer().ComposeAsync(PlayedByTheUnderstudy, Cancel);
+        table.Seats[0].Account = AccountId.New();
+
+        await FinishedAsync(table);
+
+        var teams = _results.All.ShouldHaveSingleItem().Teams;
+        var size = HostedTables.Rules.TeamSize;
+        teams.Count(creature => creature.Seat == "player1").ShouldBe(size);
+        teams.Count(creature => creature.Seat == "player2").ShouldBe(size);
+        teams.ShouldAllBe(creature => creature.Creature.StartsWith("creature:", StringComparison.Ordinal));
+        teams.SelectMany(creature => creature.Casts.Values).Sum().ShouldBeGreaterThan(0);
+        teams.SelectMany(creature => creature.Casts.Keys).ShouldAllBe(spell => spell.StartsWith("spell:", StringComparison.Ordinal));
+        table.Dispose();
+    }
+
+    [Fact]
+    public async Task A_table_opened_as_unranked_records_its_result_as_casual()
+    {
+        var table = await Composer().ComposeAsync(PlayedByTheUnderstudy, Cancel);
+        table.Seats[0].Account = AccountId.New();
+        table.Casual = true;
+
+        await FinishedAsync(table);
+
+        _results.All.ShouldHaveSingleItem().Casual.ShouldBeTrue();
+        table.Dispose();
+    }
+
     [Fact]
     public async Task A_finished_table_nobody_with_an_account_played_records_nothing()
     {
@@ -70,14 +105,37 @@ public sealed class MatchResultRecordingTests : IDisposable
     {
         var table = await Composer(new Failing()).ComposeAsync(PlayedByTheUnderstudy, Cancel);
         table.Seats[0].Account = AccountId.New();
-        using var registry = new TableRegistry();
-        registry.TryAdd(table).ShouldBeTrue();
-        await table.RecordAsync(registry.Codes, Cancel);
+        using var registry = _hosted.Registry();
+        await AddedAsync(registry, table);
+        await table.RecordAsync(Cancel);
 
         await FinishedAsync(table);
 
         var record = (await new StoredSessions(new FileArtifactStore(_hosted.RunsDirectory)).RecordAsync(table.Id, Cancel)).ShouldNotBeNull();
         record.Status.ShouldBe(TableRecord.Open);
+        table.Dispose();
+    }
+
+    /// <summary>
+    /// The operator voids a match as it ends, before its closer keeps its result (ADR 0176): the void found no result to
+    /// withdraw, so the closer reads the record after its write and keeps its result void, never counting.
+    /// </summary>
+    [Fact]
+    public async Task A_match_the_operator_voided_as_it_ended_keeps_its_result_void()
+    {
+        var table = await Composer().ComposeAsync(PlayedByTheUnderstudy, Cancel);
+        table.Seats[0].Account = AccountId.New();
+        using var registry = _hosted.Registry();
+        await AddedAsync(registry, table);
+        await table.RecordAsync(Cancel);
+        var reason = MatchVoid.Create("engine", "The engine resolved one spell twice in a row.", "operator", DateTimeOffset.UtcNow).Value;
+        await PlaytestRun.VoidRecordAsync(new FileArtifactStore(_hosted.RunsDirectory), table.Id, index: null, reason, Cancel);
+
+        await FinishedAsync(table);
+
+        var kept = _results.All.ShouldHaveSingleItem();
+        kept.Voided.ShouldBe(reason);
+        kept.Ranked.ShouldBeFalse();
         table.Dispose();
     }
 
@@ -89,13 +147,19 @@ public sealed class MatchResultRecordingTests : IDisposable
         var table = await composer.ComposeAsync(PlayedByTheUnderstudy, Cancel);
         table.Seats[0].Account = account;
         await FinishedAsync(table);
-        using var registry = new TableRegistry();
-        registry.TryAdd(table).ShouldBeTrue();
+        using var registry = _hosted.Registry();
+        await AddedAsync(registry, table);
 
         var offered = await new LobbyApi(registry, composer, TimeProvider.System).ReleaseAsync(account);
 
         offered.ShouldBe(0);
         table.Seats[0].Account.ShouldBe(account);
+    }
+
+    private static async Task AddedAsync(TableRegistry registry, PlayedTable table)
+    {
+        using var place = (await registry.ReserveAsync(Cancel)).ShouldNotBeNull();
+        await registry.AddAsync(table, place, Cancel);
     }
 
     public void Dispose() => _hosted.Dispose();
@@ -107,9 +171,10 @@ public sealed class MatchResultRecordingTests : IDisposable
         public Task<IReadOnlyList<MatchResult>> ListAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<MatchResult>>([]);
     }
 
+    /// <summary>Results kept once a match, as every store keeps them: kept again, a result replaces the one before.</summary>
     private sealed class Kept : IMatchResults
     {
-        private readonly List<MatchResult> _kept = [];
+        private readonly Dictionary<string, MatchResult> _kept = [];
 
         public IReadOnlyList<MatchResult> All
         {
@@ -117,7 +182,7 @@ public sealed class MatchResultRecordingTests : IDisposable
             {
                 lock (_kept)
                 {
-                    return [.. _kept];
+                    return [.. _kept.Values];
                 }
             }
         }
@@ -126,7 +191,7 @@ public sealed class MatchResultRecordingTests : IDisposable
         {
             lock (_kept)
             {
-                _kept.Add(result);
+                _kept[result.MatchId] = result;
             }
 
             return Task.CompletedTask;

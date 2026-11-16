@@ -48,21 +48,6 @@ test('a late worker does not bind a subscription after access loss', async () =>
   h.scope.navigator.serviceWorker.ready = new Promise(resolve => { done = resolve; });
   await tick(); h.control.reset(); done(h.registration); await tick(); assert.deepEqual(h.calls, []);
 });
-test('notes are recording-only and comments are end-only; failed notes remain retryable', async () => {
-  const h = harness(); await tick();
-  assert.equal(await h.control.note('Comment', 'too soon'), false); assert.deepEqual(h.calls, []);
-  await h.control.note('Lookup'); assert.deepEqual(h.calls, [{ kind: 'Lookup', text: '' }]); assert.match(h.control.model().noteText, /looked a rule/);
-  h.control.receive({ recording: true, over: true }); await h.control.note('Comment', '  '); assert.match(h.control.model().noteText, /nothing/);
-  h.transport.note = async () => { throw Error('offline'); }; assert.equal(await h.control.note('Misplay'), false); assert.match(h.control.model().noteText, /Could not save/);
-  h.control.receive({ recording: false, over: true }); assert.equal(h.control.model().notes, false); await h.control.note('Lookup'); assert.equal(h.calls.length, 1);
-  h.control.receive({ recording: true, replay: true, over: true }); assert.equal(h.control.model().notes, false);
-});
-test('double taps send one note and a late result cannot repaint another seat', async () => {
-  const h = harness(); let done; h.transport.note = () => new Promise(resolve => { done = resolve; });
-  const pending = h.control.note('Comment', 'not ended'); assert.equal(await pending, false);
-  const sending = h.control.note('Lookup'); assert.equal(await h.control.note('Lookup'), false);
-  h.control.reset(); done({ ok: true }); assert.equal(await sending, false); assert.equal(h.control.model().noteText, '');
-});
 test('the model names the seat it belongs to and says when its view has not arrived yet', () => {
   const control = createBattleServices({ onChange() {}, scope: {} });
   control.reset({}, [], 'one:player1');

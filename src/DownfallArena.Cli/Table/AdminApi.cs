@@ -1,4 +1,6 @@
 using System.Text.Json;
+using DownfallArena.Application.Accounts;
+using DownfallArena.Application.Admin;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Infrastructure.Learning;
@@ -73,42 +75,53 @@ internal sealed class AdminApi
         _rules = rules;
         _stored = stored;
         _agents = agents ?? [];
-        Lobby = new LobbyApi(registry, composer, clock, push);
+        Lobby = new LobbyApi(registry, composer, clock, push) { Replay = stored is null ? null : id => ReplayAsync(stored, id) };
     }
 
+    /// <summary>The operator's list of players (ADR 0174), on a host that signs players in; none otherwise.</summary>
+    public PlayersApi? Players { get; init; }
+
+    /// <summary>The operator's jobs (A3): the tending runs and a pass run now, on a host that records; none otherwise.</summary>
+    public JobsApi? Jobs { get; set; }
+
+    /// <summary>The bots' turn queues (A3b), on a host whose turns go through queues; none otherwise.</summary>
+    public TurnsApi? Turns { get; set; }
+
+    /// <summary>What operators do from the panel (A6), noted beside each action's console line, and the Activity tab.</summary>
+    public OperatorNotes Notes { get; set; } = OperatorNotes.None;
+
+    /// <summary>The Overview tab (A5): the numbers at a glance.</summary>
+    public OverviewApi? Overview { get; set; }
+
+    /// <summary>The diagnosis of a table in progress (scenarios plan, S5b), on a host that records its tables.</summary>
+    public TableDiagnosisApi? Diagnosis { get; set; }
+
+    /// <summary>The match scenarios (ADR 0179), on a host that records the sessions they are cut from.</summary>
+    public ScenarioAdminApi? Scenarios { get; set; }
+
+    /// <summary>The Settings tab (ADR 0177), on a host that signs players in: registration and the notice.</summary>
+    public SettingsApi? Settings { get; set; }
+
     public static bool Names(string path) =>
-        path == MePath || Under(path, Prefix) || Under(path, SessionsPrefix) || LobbyApi.Names(path);
+        path == MePath || Under(path, Prefix) || Under(path, SessionsPrefix) || PlayersApi.Names(path) || JobsApi.Names(path) || SettingsApi.Names(path) || OverviewApi.Names(path) || ActivityApi.Names(path) || ScenarioAdminApi.Names(path) || LobbyApi.Names(path);
 
     private static bool Under(string path, string prefix) => path == prefix || path.StartsWith(prefix + "/", StringComparison.Ordinal);
 
-    public async Task<StudioResponse> HandleAsync(string method, string path, string body, string? token, string? principal, AccountRequest? account = null)
+    public async Task<StudioResponse> HandleAsync(string method, string path, string body, string? token, string? principal, AccountRequest? account = null, string? query = null)
     {
         ArgumentNullException.ThrowIfNull(path);
+        // Who is signed in, asked once: the player a lobby route acts for, and an admin account the gate admits
+        // (ADR 0172).
+        var player = Accounts is null || account is null ? null : await Accounts.WhoAsync(account);
+        var operatorName = _gate.Admit(token, principal, player?.Account);
         if (LobbyApi.Names(path))
         {
-            var player = Accounts is null || account is null ? null : await Accounts.WhoAsync(account);
-            return await Lobby.HandleAsync(method, path, body, token, player);
+            return await LobbyAsync(method, path, body, token, player, operatorName);
         }
 
-        var operatorName = _gate.Admit(token, principal);
         if (path == MePath)
         {
-            // Not a refusal when it is nobody's: the table page asks this to know whether to show the way back
-            // to the panel, and a player's page must read "no" rather than an error.
-            // The player half answers the same question for the home page: whether this host signs players in,
-            // how, and as whom. The operator and the player are two sign-ins and one request can carry both.
-            var player = Accounts is null || account is null ? null : await Accounts.WhoAsync(account);
-            var me = StudioResponse.OfJson(
-                new
-                {
-                    @operator = operatorName is not null,
-                    admin = Page,
-                    accounts = AccountApi.Named(Accounts?.Mode ?? AccountsMode.Off),
-                    googleClientId = Accounts?.GoogleClientId,
-                    account = player is null ? null : AccountApi.Describe(player.Account),
-                },
-                ArtifactJson.LineOptions);
-            return player?.Renewed is { } renewed ? me with { Headers = [new KeyValuePair<string, string>("Set-Cookie", renewed)] } : me;
+            return await MeAsync(operatorName, player);
         }
 
         if (operatorName is null)
@@ -116,8 +129,15 @@ internal sealed class AdminApi
             return Refused();
         }
 
+        // Before the sweep below: a pass run from the Jobs tab sweeps itself, and keeps what it closed only if nothing
+        // closed it a moment before.
+        if (await SectionAsync(method, path, body, query, operatorName) is { } section)
+        {
+            return section;
+        }
+
         // The one moment memory is about to be spent, so the one moment tables nobody is at are let go of.
-        foreach (var gone in _registry.Sweep(_clock.GetUtcNow()))
+        foreach (var gone in await _registry.SweepAsync(_clock.GetUtcNow()))
         {
             Console.WriteLine($"  Session {gone} let go of: nobody has asked for it in a while.");
         }
@@ -134,10 +154,123 @@ internal sealed class AdminApi
         {
             ("GET", "") => await ListAsync(),
             ("POST", "") => await OpenAsync(body, operatorName),
-            ("DELETE", { Length: > 0 } id) => await LobbyApi.ExclusivelyAsync(() => Task.FromResult(Close(id, operatorName))),
+            ("DELETE", { Length: > 0 } id) => await LobbyApi.ExclusivelyAsync(() => CloseAsync(id, operatorName)),
+            ("POST", _) when Voided(rest) is { } voided => await LobbyApi.ExclusivelyAsync(() => VoidAsync(voided, body, operatorName)),
             ("POST", _) when Reinvited(rest) is { } seat => await LobbyApi.ExclusivelyAsync(() => ReinviteAsync(seat.Table, seat.Slot, operatorName)),
             _ => StudioResponse.OfPlainText(404, $"No such route: {method} {path}"),
         };
+    }
+
+    /// <summary>The tabs' own routes (ADR 0174, 0177, A3 to A6), or null for a route of none of them.</summary>
+    private async Task<StudioResponse?> SectionAsync(string method, string path, string body, string? query, string operatorName) =>
+        await PeopleAsync(method, path, body, query, operatorName) ?? await HostAsync(method, path, body, query, operatorName);
+
+    /// <summary>The Players tab's routes, and the Activity tab's: what is done to accounts, and who did what.</summary>
+    private async Task<StudioResponse?> PeopleAsync(string method, string path, string body, string? query, string operatorName)
+    {
+        if (PlayersApi.Names(path))
+        {
+            return Players is null
+                ? StudioResponse.OfPlainText(404, "Players do not sign in at this host (--accounts off), so it has no players to list.")
+                : await Players.HandleAsync(method, path, body, query, operatorName);
+        }
+
+        if (ActivityApi.Names(path))
+        {
+            return Notes.Actions is { } actions
+                ? await new ActivityApi(actions).HandleAsync(method, query)
+                : StudioResponse.OfPlainText(404, "This host keeps no operator log: it records nothing (--no-record), or the log could not be opened.");
+        }
+
+        return null;
+    }
+
+    /// <summary>The routes of the host's own state: the Overview, the Jobs tab with its turn queues, and the Settings tab.</summary>
+    private async Task<StudioResponse?> HostAsync(string method, string path, string body, string? query, string operatorName)
+    {
+        if (TurnsApi.Names(path))
+        {
+            return Turns is null
+                ? StudioResponse.OfPlainText(404, "This host takes the bots' turns in its own process, so it has no turn queues.")
+                : await Turns.HandleAsync(method, path, body, operatorName);
+        }
+
+        if (TableDiagnosisApi.Names(path))
+        {
+            return Diagnosis is null
+                ? StudioResponse.OfPlainText(404, "This host records nothing (--no-record), so it has no table record or journal to diagnose.")
+                : await Diagnosis.HandleAsync(method, path, operatorName);
+        }
+
+        if (ScenarioAdminApi.Names(path))
+        {
+            return Scenarios is null
+                ? StudioResponse.OfPlainText(404, "This host keeps no scenarios: it records nothing (--no-record), so it has no session to cut one from.")
+                : await Scenarios.HandleAsync(method, path, body, operatorName, query);
+        }
+
+        if (OverviewApi.Names(path))
+        {
+            return Overview is null
+                ? StudioResponse.OfPlainText(404, "This host has no overview.")
+                : await Overview.HandleAsync(method);
+        }
+
+        if (SettingsApi.Names(path))
+        {
+            return Settings is null
+                ? StudioResponse.OfPlainText(404, "Players do not sign in at this host (--accounts off), so it has no registration to open or close.")
+                : await Settings.HandleAsync(method, body, operatorName);
+        }
+
+        if (JobsApi.Names(path))
+        {
+            return Jobs is null
+                ? StudioResponse.OfPlainText(404, "This host keeps no tending runs: it records nothing (--no-record), or their store could not be opened.")
+                : await Jobs.HandleAsync(method, path, query, operatorName);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// A lobby route. A finished game's replay is the operator's to read as well as its players' (ADR 0156), by the
+    /// panel's token, the platform's sign-in or an admin account alike, and whatever game it was: the pages ask this
+    /// one route.
+    /// </summary>
+    private async Task<StudioResponse> LobbyAsync(string method, string path, string body, string? token, SignedIn? player, string? operatorName)
+    {
+        if (method == "GET" && LobbyApi.ReplayRoute(path) is { } replayed && _stored is { } recorded && operatorName is not null)
+        {
+            return await ReplayAsync(recorded, replayed);
+        }
+
+        return await Lobby.HandleAsync(method, path, body, token, player);
+    }
+
+    /// <summary>
+    /// Whose request this is. Not a refusal when it is nobody's: the table page asks this to know whether to show the
+    /// way back to the panel, and a player's page must read "no" rather than an error. The player half answers the
+    /// same question for the home page: whether this host signs players in, how, and as whom. The operator and the
+    /// player are two sign-ins and one request can carry both, and an admin account is both at once.
+    /// </summary>
+    private async Task<StudioResponse> MeAsync(string? operatorName, SignedIn? player)
+    {
+        // The host's notice (ADR 0177) rides on the one request every page with the header makes.
+        var settings = Accounts?.Settings is { } held ? await held.CurrentAsync() : null;
+        var me = StudioResponse.OfJson(
+            new
+            {
+                @operator = operatorName is not null,
+                admin = Page,
+                accounts = AccountApi.Named(Accounts?.Mode ?? AccountsMode.Off),
+                googleClientId = Accounts?.GoogleClientId,
+                account = player is null ? null : AccountApi.Describe(player.Account),
+                notice = settings?.Notice,
+                registrationOpen = settings?.RegistrationOpen ?? true,
+            },
+            ArtifactJson.LineOptions);
+        return player?.Renewed is { } renewed ? me with { Headers = [new KeyValuePair<string, string>("Set-Cookie", renewed)] } : me;
     }
 
     /// <summary>
@@ -165,10 +298,25 @@ internal sealed class AdminApi
                 declarations = new[] { CombatDeclarationText.HiddenIntent, CombatDeclarationText.AtActivation },
                 declaration = CombatDeclarationText.Of(_composer.Rules.CombatDeclaration),
                 recording = _composer.Records,
-                agents = _agents.Select(agent => new { value = agent.Value, label = agent.Label, featured = agent.Featured }).ToArray(),
-                tables = await Task.WhenAll(_registry.All().Select(DescribedAsync)),
+                agents = _agents.Select(agent => new { value = agent.Value, label = agent.Label, featured = agent.Featured, level = _composer.Levels.Of(agent.Value)?.Name }).ToArray(),
+                tables = await Task.WhenAll((await TablesAsync()).Select(DescribedAsync)),
             },
             ArtifactJson.LineOptions);
+
+    /// <summary>
+    /// Every table the operator manages, newest first: the open tables of the index, picked up when this host does
+    /// not hold them yet, and the finished ones this host still holds. One that cannot be picked up is the
+    /// stored sessions' to show.
+    /// </summary>
+    private async Task<IReadOnlyList<PlayedTable>> TablesAsync()
+    {
+        var held = _registry.HeldTables();
+        var heldIds = held.Select(table => table.Id).ToHashSet(StringComparer.Ordinal);
+        var picked = await Task.WhenAll((await _registry.OpenAsync())
+            .Where(listed => !heldIds.Contains(listed.Id))
+            .Select(listed => _registry.ByIdAsync(listed.Id)));
+        return [.. held.Concat(picked.OfType<PlayedTable>()).DistinctBy(table => table.Id).OrderByDescending(table => table.CreatedAt)];
+    }
 
     /// <summary>The formats a chooser is offered: the shortlist, and this host's own when it is not on it.</summary>
     private IEnumerable<MatchFormat> Formats() =>
@@ -186,7 +334,7 @@ internal sealed class AdminApi
 
         // The place is taken before composing, because composing opens the recording and starts the match: a
         // table refused afterwards would have written a run nobody played.
-        using var reservation = _registry.Reserve();
+        using var reservation = await _registry.ReserveAsync();
         if (reservation is null)
         {
             return Full();
@@ -204,9 +352,20 @@ internal sealed class AdminApi
             return StudioResponse.OfPlainText(400, failure.Message);
         }
 
-        _registry.Add(table, reservation);
-        await table.RecordAsync(_registry.Codes);
-        Console.WriteLine($"  Session {table.Id} opened by {operatorName}: {string.Join(", ", table.Seats.Select(seat => $"{seat.Name} {(seat.Person is null ? table.Session.Seat(seat.Slot).Seated.Name : $"code {_registry.Codes.Of(seat)}")}"))}");
+        try
+        {
+            await _registry.AddAsync(table, reservation);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure))
+        {
+            table.Dispose();
+            return StudioResponse.OfPlainText(503, $"The table could not be opened: {failure.Message}");
+        }
+
+        await table.RecordAsync();
+        var seated = string.Join(", ", table.Seats.Select(seat => $"{seat.Name} {(seat.Person is null ? table.Session.SeatedName(seat.Slot) : $"code {seat.Code}")}"));
+        Console.WriteLine($"  Session {table.Id} opened by {operatorName}: {seated}");
+        await Notes.NoteAsync(operatorName, OperatorActions.OpenTable, table.Id, string.Join(", ", table.Seats.Select(seat => $"{seat.Name} {(seat.Person is null ? table.Session.SeatedName(seat.Slot) : "a person")}")));
         return StudioResponse.OfJson(await DescribedAsync(table), ArtifactJson.LineOptions, status: 201);
     }
 
@@ -217,6 +376,73 @@ internal sealed class AdminApi
             status: 409);
 
     /// <summary>The table and seat of <c>&lt;id&gt;/seats/&lt;seat&gt;/invite</c>, or null for any other path.</summary>
+    private static string? Voided(string rest) => rest.Split('/') is [{ Length: > 0 } table, "void"] ? table : null;
+
+    /// <summary>
+    /// Voids a match for the operator, in progress or finished, with the reason they give (ADR 0176): the table let go of
+    /// if this host holds it, its record closed and marked void with the reason, a result kept for it marked void too so
+    /// it counts nowhere, and its players told with the explanation. Refused without a reason, and for a match already void.
+    /// </summary>
+    private async Task<StudioResponse> VoidAsync(string id, string body, string operatorName)
+    {
+        var asked = string.IsNullOrWhiteSpace(body) ? null : JsonSerializer.Deserialize<VoidBody>(body, ArtifactJson.LineOptions);
+        var reason = MatchVoid.Create(asked?.Category, asked?.Explanation, operatorName, _clock.GetUtcNow());
+        if (reason.IsFailure)
+        {
+            return Problem(400, reason.Error.Code, reason.Error.Message);
+        }
+
+        if (_stored is not { } stored || await stored.RecordAsync(id) is not { } record)
+        {
+            return Problem(404, "Admin.NoTable", $"No table '{id}' is recorded at this host.");
+        }
+
+        if (record.Void)
+        {
+            // A void is final, but one whose result a failing store left counting is finished now, under its own reason.
+            return await WithdrawResultAsync(id, record.VoidReason ?? reason.Value)
+                ? StudioResponse.OfJson(new { voided = true, withdrawn = true, category = (record.VoidReason ?? reason.Value).Category }, ArtifactJson.LineOptions)
+                : Problem(409, "Admin.AlreadyVoid", $"Table '{id}' is already void. A void is final.");
+        }
+
+        // The result is withdrawn before the record says void, so a store that fails in between leaves a record not void
+        // yet, which the operator voids again; and after, for a closer that kept the result in between: it reads the
+        // record after its write, so either it sees the void and marks its result, or this sees its result.
+        await _registry.RemoveAsync(id);
+        var withdrawn = await WithdrawResultAsync(id, reason.Value);
+        var voided = await stored.VoidAsync(id, _composer.Index, reason.Value);
+        withdrawn = await WithdrawResultAsync(id, reason.Value) || withdrawn;
+        if (!voided)
+        {
+            return Problem(409, "Admin.AlreadyVoid", $"Table '{id}' is already void. A void is final.");
+        }
+
+        // Every other process holding the table, finished or not, lets it go and answers its seats 410 (ADR 0165).
+        _composer.Relay?.Table(id);
+        await _composer.NotifyVoidAsync(id, record, reason.Value.Explanation);
+        Console.WriteLine($"  Session {id} voided by {operatorName} ({reason.Value.Category}){(withdrawn ? ", its result withdrawn" : string.Empty)}: {reason.Value.Explanation}");
+        await Notes.NoteAsync(operatorName, OperatorActions.VoidMatch, id, $"{reason.Value.Category}: {reason.Value.Explanation}");
+        return StudioResponse.OfJson(new { voided = true, withdrawn, category = reason.Value.Category }, ArtifactJson.LineOptions);
+    }
+
+    /// <summary>The result kept for the table, marked void with the reason so it counts nowhere (ADR 0176); false when none was kept.</summary>
+    private async Task<bool> WithdrawResultAsync(string id, MatchVoid reason)
+    {
+        if (_composer.Results is not { } results
+            || (await results.ListAsync()).FirstOrDefault(result => result.Table == id && result.Voided is null) is not { } kept)
+        {
+            return false;
+        }
+
+        await results.RecordAsync(kept with { Voided = reason });
+        return true;
+    }
+
+    private static StudioResponse Problem(int status, string code, string message) =>
+        StudioResponse.OfJson(new { error = code, message }, ArtifactJson.LineOptions, status: status);
+
+    private sealed record VoidBody(string? Category, string? Explanation);
+
     private static (string Table, string Slot)? Reinvited(string rest)
     {
         var parts = rest.Split('/');
@@ -230,7 +456,7 @@ internal sealed class AdminApi
     /// </summary>
     private async Task<StudioResponse> ReinviteAsync(string id, string slot, string operatorName)
     {
-        if (_registry.ById(id) is not { IsOver: false } table)
+        if (await _registry.ByIdAsync(id) is not { IsOver: false } table)
         {
             return StudioResponse.OfPlainText(404, $"No unfinished table '{id}' at this host.");
         }
@@ -242,7 +468,7 @@ internal sealed class AdminApi
 
         var previous = _registry.KeysOf(seat);
         var arrived = seat.Person!.HasArrived;
-        if (!_registry.Rekey(table, seat, SeatKeys.Offered()))
+        if (!await _registry.RekeyAsync(table, seat, SeatKeys.Offered(table.Id)))
         {
             return StudioResponse.OfPlainText(404, $"No unfinished table '{id}' at this host.");
         }
@@ -250,13 +476,13 @@ internal sealed class AdminApi
         seat.Person.Depart();
         try
         {
-            await table.RecordAsync(_registry.Codes);
+            await table.RecordAsync();
         }
         catch (Exception failure)
         {
             // Whatever failed, memory goes back to what the record still says: a seat rekeyed here and not on
             // the store would let the cut-off device back in after a redeploy, and kill the invitation passed on.
-            _registry.Rekey(table, seat, previous);
+            _registry.Restore(table, seat, previous);
             if (arrived)
             {
                 seat.Person.Arrive();
@@ -271,18 +497,20 @@ internal sealed class AdminApi
         }
 
         Console.WriteLine($"  Session {id}: {slot} invited again by {operatorName}.");
-        var code = _registry.Codes.Of(seat);
+        await Notes.NoteAsync(operatorName, OperatorActions.Reinvite, id, slot);
+        var code = seat.Code;
         return StudioResponse.OfJson(new { slot, code, join = code is null ? null : $"{JoinCodes.Prefix}{code}", link = $"/?{seat.Name}={seat.Key}" }, ArtifactJson.LineOptions);
     }
 
-    private StudioResponse Close(string id, string operatorName)
+    private async Task<StudioResponse> CloseAsync(string id, string operatorName)
     {
-        if (!_registry.Remove(id))
+        if (!await _registry.RemoveAsync(id))
         {
             return StudioResponse.OfPlainText(404, $"No table '{id}' at this host.");
         }
 
         Console.WriteLine($"  Session {id} closed by {operatorName}.");
+        await Notes.NoteAsync(operatorName, OperatorActions.CloseTable, id);
         return new StudioResponse(204, StudioResponse.Plain, []);
     }
 
@@ -305,12 +533,12 @@ internal sealed class AdminApi
             case ("DELETE", ""):
                 return await DeleteAsync(stored, Ids(body, out var problem), problem, operatorName);
             case ("POST", "export"):
-                return await ExportAsync(stored, Ids(body, out var asked), asked, "sessions");
+                return await ExportAsync(stored, Ids(body, out var asked), asked, "sessions", operatorName);
             default:
                 if (method == "GET" && rest.EndsWith("/export", StringComparison.Ordinal))
                 {
                     var id = rest[..^"/export".Length];
-                    return await ExportAsync(stored, [id], problem: null, id);
+                    return await ExportAsync(stored, [id], problem: null, id, operatorName);
                 }
 
                 if (method == "GET" && rest.EndsWith("/replay", StringComparison.Ordinal))
@@ -383,26 +611,53 @@ internal sealed class AdminApi
             // A table still being played is closed first: its match is stopped and its codes stop answering.
             // And then waited for: a checkpoint or a note still on its way would otherwise land after the
             // deletion and bring the run back, on the blob store as a prefix and here as a directory.
-            var table = _registry.ById(id);
-            var closed = _registry.Remove(id);
-            if (closed && table is not null)
+            // Only a table held here is closed first: one nobody holds writes nothing, and picking it up to close
+            // it would replay a match for a run about to go.
+            var table = _registry.Held(id);
+            var closed = table is not null && await _registry.RemoveAsync(id);
+            if (closed)
             {
-                await table.QuiesceAsync();
+                await table!.QuiesceAsync();
             }
 
+            var record = await RecordOrNoneAsync(stored, id);
             var removed = await stored.DeleteAsync(id);
+            if (record is not null)
+            {
+                // Out of the index for good, whatever it still listed: a table nobody could pick up is listed
+                // until its record says otherwise, and its record is gone.
+                await _registry.DeletedAsync(id, record.CreatedAt);
+            }
+
             (closed || removed ? deleted : missing).Add(id);
         }
 
         if (deleted.Count > 0)
         {
             Console.WriteLine($"  Sessions deleted by {operatorName}: {string.Join(", ", deleted)}.");
+            foreach (var id in deleted)
+            {
+                await Notes.NoteAsync(operatorName, OperatorActions.DeleteSessions, id);
+            }
         }
 
         return StudioResponse.OfJson(new { deleted, missing }, ArtifactJson.LineOptions);
     }
 
-    private async Task<StudioResponse> ExportAsync(StoredSessions stored, IReadOnlyList<string> ids, string? problem, string name)
+    /// <summary>A run's table record, or none when it has none or it cannot be read.</summary>
+    private static async Task<TableRecord?> RecordOrNoneAsync(StoredSessions stored, string id)
+    {
+        try
+        {
+            return await stored.RecordAsync(id);
+        }
+        catch (Exception failure) when (TableLoader.Refuses(failure))
+        {
+            return null;
+        }
+    }
+
+    private async Task<StudioResponse> ExportAsync(StoredSessions stored, IReadOnlyList<string> ids, string? problem, string name, string operatorName)
     {
         if (problem is not null)
         {
@@ -411,7 +666,7 @@ internal sealed class AdminApi
 
         // A run being written is not a run to export: a checkpoint half written, or a line half appended,
         // would travel as a file. It is exportable once its match is over, or once its table is closed.
-        var live = ids.Where(id => _registry.ById(id) is { IsOver: false }).ToList();
+        var live = ids.Where(id => _registry.Held(id) is { IsOver: false }).ToList();
         if (live.Count > 0)
         {
             return StudioResponse.OfJson(
@@ -424,6 +679,11 @@ internal sealed class AdminApi
         if (exported.Count == 0)
         {
             return StudioResponse.OfPlainText(404, $"Nothing to export: no session named {string.Join(", ", missing)} holds any file.");
+        }
+
+        foreach (var id in exported)
+        {
+            await Notes.NoteAsync(operatorName, OperatorActions.ExportSessions, id);
         }
 
         return new StudioResponse(200, Zip, zip, [new KeyValuePair<string, string>("Content-Disposition", $"attachment; filename=\"{name}.zip\"")]);
@@ -460,7 +720,7 @@ internal sealed class AdminApi
     /// <summary>One stored run as the panel lists it, with what its table says when this host still has it.</summary>
     private object Described(StoredSession session)
     {
-        var table = _registry.ById(session.Id);
+        var table = _registry.Held(session.Id);
         return new
         {
             id = session.Id,
@@ -473,6 +733,9 @@ internal sealed class AdminApi
             location = session.Location,
             live = table is not null,
             over = table?.IsOver ?? session.Matches > 0,
+            // Whether the operator can void it (ADR 0176): a table's run that is not void yet.
+            voidable = session.Table && !session.Void,
+            voided = session.Void ? session.VoidCategory ?? "engine" : null,
             session = $"/session/{session.Id}",
             replay = (table?.IsOver ?? session.Matches > 0) ? ReplayPath(session.Id) : null,
             export = $"{SessionsPrefix}/{session.Id}/export",
@@ -502,10 +765,13 @@ internal sealed class AdminApi
             seats = table.Seats.Select(seat => new
             {
                 slot = seat.Name,
-                seated = table.Session.Seat(seat.Slot).Seated.Name,
+                seated = table.Session.SeatedName(seat.Slot),
+
+                // The level a player knows this bot by (ADR 0180), beside its own name: the operator sees both.
+                level = seat.Person is null ? _composer.Levels.Of(table.Session.SeatedName(seat.Slot))?.Name : null,
                 hasPerson = seat.Person is not null,
-                code = _registry.Codes.Of(seat),
-                join = _registry.Codes.Of(seat) is { } code ? $"{JoinCodes.Prefix}{code}" : null,
+                code = seat.Code,
+                join = seat.Code is { } code ? $"{JoinCodes.Prefix}{code}" : null,
                 link = seat.Key is { } key ? $"/?{seat.Name}={key}" : null,
 
                 // Somebody's browser holds it (ADR 0116): no link reaches it, and a new invitation is the way

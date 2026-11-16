@@ -21,6 +21,7 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
 
         using var provider = services.BuildServiceProvider();
         provider.GetRequiredService<IMatchRepository>().ShouldBeOfType<InMemoryMatchRepository>();
+        provider.GetRequiredService<IDecisionJournal>().ShouldBeOfType<InMemoryDecisionJournal>();
         provider.GetRequiredService<IMatchRepository>().ShouldBeSameAs(provider.GetRequiredService<IMatchRepository>());
         provider.GetRequiredService<IRandomSource>().ShouldBeOfType<SeededRandomSource>().Seed.ShouldBe(99);
         provider.GetRequiredService<IRandomSourceFactory>().ShouldBeOfType<SeededRandomSourceFactory>();

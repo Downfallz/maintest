@@ -4,33 +4,37 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0b1519" />
-  <title>Downfall Instinct — tactical creature combat</title>
+  <title>Downfall Instinct — Player lobby</title>
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="icon" href="/icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="/icon-192.png" />
   <meta name="mobile-web-app-capable" content="yes" />
   <link rel="stylesheet" href="table.css" />
   <link rel="stylesheet" href="lobby.css" />
+  <link rel="stylesheet" href="identity.css" />
 </head>
 <body class="lobby-page home-page" data-home="loading">
   <header class="masthead lobby-header home-header" data-navigation="lobby"></header>
   <main class="lobby-main">
-    <section id="welcome-intro" class="welcome-intro" aria-labelledby="intro-title">
-      <div class="intro-copy"><p class="eyebrow">Adapt. Evolve. Survive.</p><h2 id="intro-title">Build your creatures.<br>Outplay your rival.</h2><p class="intro-description">A turn-based tactical duel in a world on the edge. Command three creatures, shape their mutations, and make every spell count.</p><div class="intro-actions"><a class="primary" href="#sign-in-panel">Play Downfall Instinct <span aria-hidden="true">→</span></a><a href="#how-it-plays">How it plays <span aria-hidden="true">↓</span></a></div><p class="intro-caption">Play in your browser · Solo or against another player</p></div>
-      <div class="intro-art" role="img" aria-label="Three mutated creatures face the golden eclipse among the ruins"><img class="intro-beast intro-brute" src="battle-art/brute.webp" alt="" /><img class="intro-beast intro-predator" src="battle-art/predator.webp" alt="" /><img class="intro-beast intro-warped" src="battle-art/warped.webp" alt="" /></div>
-      <ol id="how-it-plays" class="how-it-plays"><li><span class="step-number">01</span><div><h3>Shape your team</h3><p>Choose mutations as the battle unfolds. Give each creature its own spells and strengths.</p></div></li><li><span class="step-number">02</span><div><h3>Time your attack</h3><p>Manage your energy and choose when to act. Timing can change the next exchange.</p></div></li><li><span class="step-number">03</span><div><h3>Make your move</h3><p>Pick a spell and its targets. Adapt to your opponent and fight for the last creature standing.</p></div></li></ol>
-    </section>
-    <section id="sign-in-panel" class="lobby-panel sign-in-panel" aria-labelledby="sign-in-heading" hidden>
-      <div><p class="eyebrow">Play Downfall Instinct</p><h2 id="sign-in-heading">Your next battle starts here.</h2><p class="muted">Sign in, choose your player name, and start playing.</p></div>
-      <div class="sign-in-actions">
-        <div id="google-button" class="google-button" hidden></div>
-        <form id="dev-sign-in" hidden><label for="dev-username">Developer sign-in: any player name</label><div class="code-row"><input id="dev-username" name="dev-username" autocomplete="off" spellcheck="false" maxlength="20" required /><button type="submit">Sign in →</button></div></form>
-        <p id="sign-in-problem" class="problem" role="alert" hidden></p>
+    <section id="sign-in-panel" class="sign-in-panel" aria-labelledby="sign-in-heading" hidden>
+      <div class="sign-in-content">
+        <p class="eyebrow">Player lobby · Beta</p>
+        <h2 id="sign-in-heading">Sign in to play.</h2>
+        <p class="muted">Start a battle or pick up where you left off.</p>
+        <div class="sign-in-actions">
+          <div id="google-button" class="google-button" hidden></div>
+          <form id="dev-sign-in" hidden>
+            <label for="dev-username">Developer sign-in: any player name</label>
+            <div class="code-row"><input id="dev-username" name="dev-username" autocomplete="off" spellcheck="false" maxlength="20" required /><button type="submit">Sign in →</button></div>
+          </form>
+          <p id="sign-in-problem" class="problem" role="alert" hidden></p>
+        </div>
+        <a class="sign-in-policy" href="https://downfallinstinct.com/privacy/">Privacy policy</a>
       </div>
+      <div class="sign-in-art" aria-hidden="true"></div>
     </section>
     <div id="home-games" hidden>
-      <section class="lobby-hero" aria-labelledby="welcome"><div><p id="hero-eyebrow" class="eyebrow">Your games</p><h2 id="welcome">Your next battle.</h2><p class="hero-detail">Continue a match, challenge a friend, or start something new.</p></div><button id="new-table" class="primary" type="button">＋ New battle</button></section>
-      <label class="presentation-choice" for="presentation">Game view <select id="presentation"><option value="table">Table · classic</option><option value="battle">Battle view · preview</option></select><small>Applies when opening a game here. You can return to the table from the battle view.</small></label>
+      <section class="lobby-hero" aria-labelledby="welcome"><div><p class="eyebrow"><span id="hero-eyebrow">Your games</span> · Beta</p><h2 id="welcome">Your next battle.</h2><p class="hero-detail">Continue a match, challenge a friend, or start something new.</p></div><button id="new-table" class="primary" type="button">＋ New battle</button></section>
       <output id="lobby-status" class="lobby-status muted" aria-live="polite">Finding games…</output>
       <p id="lobby-problem" class="problem" role="alert" hidden></p>
       <div class="lobby-games">
@@ -40,22 +44,40 @@
         </section>
         <section id="my-games-section" aria-labelledby="mine-heading" class="lobby-section">
           <div class="section-heading"><h2 id="mine-heading">Your games <span id="mine-count" class="lobby-count"></span></h2></div>
-          <div id="my-tables" class="lobby-grid"><p class="empty-state">Finding your games…</p></div>
+          <div id="your-turn" hidden></div>
+          <fieldset class="lobby-filters"><legend>Show games</legend><button id="mine-ongoing" type="button" aria-pressed="true" aria-controls="my-tables">Ongoing <span id="ongoing-count"></span></button><button id="mine-finished" type="button" aria-pressed="false" aria-controls="my-tables">Finished <span id="finished-count"></span></button></fieldset>
+          <div id="my-tables" class="mine-groups"><p class="empty-state">Finding your games…</p></div>
+        </section>
+        <section id="opponents" aria-labelledby="opponents-heading" class="lobby-section" hidden>
+          <div class="section-heading"><h2 id="opponents-heading">Recent opponents <span id="opponents-count" class="lobby-count"></span></h2><span class="muted">Challenge a friend again, or ask to be friends first</span></div>
+          <div id="opponent-cards" class="opponent-strip" tabindex="0" aria-label="Recent opponents, scroll sideways for more"></div>
+        </section>
+        <section id="practice-scenarios" aria-labelledby="practice-heading" class="lobby-section" hidden>
+          <div class="section-heading"><h2 id="practice-heading">Practice <span id="practice-count" class="lobby-count"></span></h2><span class="muted">Set positions to play from; nothing you play here counts</span></div>
+          <div id="practice-cards" class="lobby-grid"></div>
         </section>
         <section aria-labelledby="tables-heading" class="lobby-section">
           <div class="section-heading"><h2 id="tables-heading">Find an opponent <span id="tables-count" class="lobby-count"></span></h2></div>
           <fieldset class="lobby-filters"><legend>Show tables</legend><button id="filter-open" type="button" aria-pressed="true">Open seats</button><button id="filter-all" type="button" aria-pressed="false">All ongoing</button></fieldset>
-          <div id="open-tables" class="lobby-grid"><p class="empty-state">Finding open tables…</p></div>
+          <div id="open-tables" class="lobby-list"><p class="empty-state">Finding open tables…</p></div>
         </section>
       </div>
     </div>
   </main>
-  <footer class="home-footer"><span>Downfall Instinct</span><span>Mutate. Adapt. Strike.</span></footer>
+  <footer class="home-footer"><span>Downfall Instinct · © 2026</span><div class="home-footer-links"><a href="https://downfallinstinct.com/copyright/">Copyright</a><a href="https://downfallinstinct.com/">About the game <span aria-hidden="true">→</span></a></div></footer>
   <dialog id="create-dialog" aria-labelledby="create-title">
     <form id="create-table"><div class="dialog-heading"><div><p class="eyebrow">A new battle</p><h2 id="create-title">Create a table</h2></div><button id="create-close" type="button" class="secondary" aria-label="Close new table">×</button></div>
-      <label for="opponent">Who are you playing?</label><select id="opponent" name="opponent"><option value="person">Another player · open seat</option><option value="friend">A friend · seat kept for them</option><option value="bot">Solo · the strongest bot</option><option value="hotseat">Two players · shared device</option></select>
-      <div id="friend-row" hidden><label for="friend">Which friend?</label><select id="friend" name="friend"></select></div>
-      <label for="format">Creatures per side</label><select id="format" name="format"></select>
+      <div id="create-tabs" class="create-tabs" role="tablist" aria-label="Kind of game"><button id="create-pvp" type="button" role="tab" aria-selected="true" aria-controls="create-pvp-panel">PvP<small>Against a player</small></button><button id="create-solo" type="button" role="tab" aria-selected="false" aria-controls="create-solo-panel">Solo<small>Against a bot</small></button></div>
+      <div id="create-solo-panel" class="create-panel" role="tabpanel" aria-labelledby="create-solo" hidden>
+        <label for="bot-level">Bot difficulty</label><select id="bot-level" name="bot-level"><option value="easy">Easy · makes mistakes</option><option value="medium">Medium · plays it straight</option><option value="hard" selected>Hard · the strongest</option></select>
+      </div>
+      <div id="create-pvp-panel" class="create-panel" role="tabpanel" aria-labelledby="create-pvp">
+        <label for="opponent">Who are you playing?</label><select id="opponent" name="opponent"><option value="person">Another player · open seat</option><option value="friend">A friend · seat kept for them</option><option value="hotseat">Two players · shared device</option></select>
+        <div id="friend-row" hidden><label for="friend">Which friend?</label><select id="friend" name="friend"></select></div>
+        <label id="ranked-row" class="ranked-row" for="ranked"><span>Ranked<small>Counts on the leaderboard and in your statistics, always 3v3. Turn it off for a friendly or practice game in any format.</small></span><input id="ranked" name="ranked" type="checkbox" checked></label>
+      </div>
+      <label for="format">Creatures per side<small id="format-note" class="field-note" hidden>Ranked games are 3v3.</small></label><select id="format" name="format"></select>
+      <div id="turn-limit-row" hidden><label for="turn-limit">Time to answer<small class="field-note">A player who lets it run out loses the game.</small></label><select id="turn-limit" name="turn-limit"><option value="24">A day</option><option value="72" selected>Three days</option><option value="168">A week</option></select></div>
       <p id="create-help" class="muted">You take the first seat. Another player can join from this lobby or with your invitation.</p>
       <p id="create-problem" class="problem" role="alert" hidden></p>
       <div class="dialog-actions"><button id="create-cancel" type="button" class="secondary">Cancel</button><button id="create-submit" class="primary" type="submit">Create &amp; play →</button></div>

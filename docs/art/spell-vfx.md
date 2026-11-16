@@ -25,7 +25,7 @@ No biological motif is assigned to the Necrotic/Revenant branch. No spirit is a 
 
 ## Timing and integrity
 
-- Use the existing 420 ms windup, 850 ms impact frame and 250 ms settlement. Quills travel during the
+- Use the existing 840 ms windup, 1700 ms impact frame and 500 ms settlement. Quills travel during the
   final 300 ms of windup. Local impact vectors fade over 600 ms, inside the impact frame.
 - Apply motifs only to confirmed outcome recipients, once per creature except a separate self-cost wound.
   A caster receiving its own Bonewall shows both the blood cost and the ward.

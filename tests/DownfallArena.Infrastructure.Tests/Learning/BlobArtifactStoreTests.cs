@@ -34,6 +34,27 @@ public sealed class BlobArtifactStoreTests
     }
 
     [Fact]
+    public async Task A_document_is_written_on_a_condition_only_over_the_blob_its_writer_read()
+    {
+        var store = await Store();
+        var writer = store.Writer("run-c");
+        var reader = store.Reader("run-c");
+
+        var first = await writer.WriteJsonIfAsync("table.json", new { Revision = 1 }, expected: null, TestContext.Current.CancellationToken);
+        var again = await writer.WriteJsonIfAsync("table.json", new { Revision = 1 }, expected: null, TestContext.Current.CancellationToken);
+        var read = (await reader.ReadTaggedAsync("table.json", TestContext.Current.CancellationToken)).ShouldNotBeNull();
+        var second = await writer.WriteJsonIfAsync("table.json", new { Revision = 2 }, read.Tag, TestContext.Current.CancellationToken);
+        var late = await writer.WriteJsonIfAsync("table.json", new { Revision = 3 }, read.Tag, TestContext.Current.CancellationToken);
+
+        first.ShouldBe(read.Tag);
+        again.ShouldBeNull();
+        second.ShouldNotBeNull();
+        late.ShouldBeNull();
+        (await reader.ReadTaggedAsync("table.json", TestContext.Current.CancellationToken)).ShouldNotBeNull().Tag.ShouldBe(second);
+        (await reader.ReadTaggedAsync("absent.json", TestContext.Current.CancellationToken)).ShouldBeNull();
+    }
+
+    [Fact]
     public async Task Lines_append_to_one_blob_and_starting_it_again_empties_it()
     {
         var store = await Store();

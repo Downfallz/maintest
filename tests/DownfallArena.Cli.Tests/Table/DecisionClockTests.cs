@@ -13,11 +13,11 @@ namespace DownfallArena.Cli.Tests.Table;
 public sealed class DecisionClockTests
 {
     private static readonly DateTimeOffset Start = new(2026, 9, 17, 20, 30, 0, TimeSpan.Zero);
-    private static readonly HumanSeat.Question Evolution = new(PlayerOptionsKind.Evolution, Creature: null, Asked: 1);
-    private static readonly HumanSeat.Question SpeedOfOne = new(PlayerOptionsKind.Speed, CreatureId.From(1), Asked: 2);
+    private static readonly Asking Evolution = new(PlayerOptionsKind.Evolution, Creature: null, Asked: 1);
+    private static readonly Asking SpeedOfOne = new(PlayerOptionsKind.Speed, CreatureId.From(1), Asked: 2);
 
     /// <summary>The same shape asked again, which is a different question.</summary>
-    private static readonly HumanSeat.Question EvolutionAgain = new(PlayerOptionsKind.Evolution, Creature: null, Asked: 3);
+    private static readonly Asking EvolutionAgain = new(PlayerOptionsKind.Evolution, Creature: null, Asked: 3);
 
     [Fact]
     public void A_decision_is_timed_from_when_its_question_was_first_served()

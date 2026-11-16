@@ -90,8 +90,30 @@ internal sealed record CliOptions
     /// </summary>
     public AccountsMode Accounts { get; init; }
 
+    /// <summary>
+    /// Where the turns a table's bots owe are taken (ADR 0159, phase 5; ADR 0162): through a queue to a worker in this
+    /// process (<c>--turns queue</c>), through a queue to <c>table-worker</c> in another (<c>--turns worker</c>), or in
+    /// this process as each is owed (<c>--turns process</c>, the default). <c>DOWNFALL_TURNS</c> says it when the command
+    /// line does not. The queues are the storage account's beside a container of recordings, and this process's own
+    /// beside a directory, which no other process can reach.
+    /// </summary>
+    public TurnsMode? Turns { get; init; }
+
+    /// <summary>
+    /// Whether a job tends this host's tables (<c>--tended</c>, ADR 0162): the hourly <c>table-tend</c> closes the tables
+    /// that never began and lets go of the invitations nobody answered, so no request does. A request still lets
+    /// go of the tables this process holds that nobody is at.
+    /// </summary>
+    public bool Tended { get; init; }
+
     /// <summary>The Google client id the sign-in is for; <c>DOWNFALL_GOOGLE_CLIENT_ID</c> when not given. Public, not a secret.</summary>
     public string? GoogleClientId { get; init; }
+
+    /// <summary>
+    /// The accounts that are the operator when signed in, by their ids, comma-separated (ADR 0172);
+    /// <c>DOWNFALL_ADMINS</c> when not given.
+    /// </summary>
+    public string? Admins { get; init; }
 
     /// <summary>
     /// Who is playing, as initials. It goes into the run stamp as <c>human:&lt;initials&gt;</c>, so
@@ -147,6 +169,29 @@ internal sealed record CliOptions
     /// </summary>
     public string? Export { get; init; }
 
+    /// <summary>
+    /// A match scenario file (docs/tabletop/scenarios-plan.md, stage S3): what <c>scenario-check</c> checks, and what
+    /// <c>table --scenario</c> opens as practice. None otherwise.
+    /// </summary>
+    public string? Scenario { get; init; }
+
+    /// <summary>The recorded session directory <c>scenario-cut</c> cuts, <c>runs/playtest/&lt;id&gt;</c>.</summary>
+    public string? Session { get; init; }
+
+    /// <summary>The round <c>scenario-cut</c> and <c>scenario-generate</c> cut at the top of; none lists the rounds offered.</summary>
+    public int? Round { get; init; }
+
+    /// <summary>The seat a person plays in the scenario <c>scenario-cut</c> writes: <c>player1</c> by default.</summary>
+    public string? Seat { get; init; }
+
+    /// <summary>What the scenario is called, and what a person playing it is asked to try.</summary>
+    public string? Title { get; init; }
+
+    public string? Goal { get; init; }
+
+    /// <summary>Whether <c>scenario-cut</c> writes the content into the file, so it plays where that content was never kept.</summary>
+    public bool WithContent { get; init; }
+
     public const string DefaultSchemaPath = "data/dst/game.schema.json";
 
     public const string DefaultBenchmarks = "benchmarks";
@@ -155,7 +200,22 @@ internal sealed record CliOptions
 
     public const int DefaultPort = 5099;
 
-    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table|push-keys [--seed N] [--matches N] [--format 3v3|2v2|1v1] [--declaration hidden-intent|at-activation] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--slot-log file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth] [--push-keys file] [--accounts off|google|dev] [--google-client-id id]";
+    /// <summary>One pass of the work that is due on the tables, and then nothing: what the hourly job runs (ADR 0162).</summary>
+    public const string TendCommand = "table-tend";
+
+    /// <summary>The bots' turns the queue says tables owe, taken until stopped: what the worker app runs (ADR 0162).</summary>
+    public const string WorkerCommand = "table-worker";
+
+    /// <summary>A recorded session cut at the top of a round into a scenario file (docs/tabletop/scenarios-plan.md, S3).</summary>
+    public const string ScenarioCutCommand = "scenario-cut";
+
+    /// <summary>A scenario file rebuilt and held to its boards: whether it still holds on this engine.</summary>
+    public const string ScenarioCheckCommand = "scenario-check";
+
+    /// <summary>A match of two bots played and cut at the top of a round into a scenario file (S7): one for <c>scenarios/</c>.</summary>
+    public const string ScenarioGenerateCommand = "scenario-generate";
+
+    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table|table-tend|table-worker|push-keys|scenario-cut|scenario-check|scenario-generate [--seed N] [--matches N] [--format 3v3|2v2|1v1] [--declaration hidden-intent|at-activation] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--slot-log file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth] [--push-keys file] [--accounts off|google|dev] [--google-client-id id] [--admins acct_...] [--turns process|queue|worker] [--tended] [--scenario file] [--session dir] [--round N] [--seat player1|player2] [--title text] [--goal text] [--with-content]";
 
     /// <summary>Every option this command line takes. Anything else is a typo, and says so by name.</summary>
     private const string RecordOption = "--record";
@@ -176,17 +236,30 @@ internal sealed record CliOptions
 
     private const string AccountsOption = "--accounts";
 
+    private const string TurnsOption = "--turns";
+
+    private const string TendedOption = "--tended";
+
     private const string GoogleClientIdOption = "--google-client-id";
+    private const string AdminsOption = "--admins";
 
     private const string DeclarationOption = "--declaration";
 
     private const string SlotLogOption = "--slot-log";
 
+    private const string ScenarioOption = "--scenario";
+
+    private const string WithContentOption = "--with-content";
+
+    /// <summary>What <c>scenario-cut</c> reads; <c>scenario-generate</c> takes them too, but for the session.</summary>
+    private static readonly string[] CutOptions = ["--session", "--round", "--seat", "--title", "--goal"];
+
     private static readonly string[] Known =
     [
         SeedOption, "--matches", "--out", "--schema", RecordOption, "--traces", "--trace", "--p1", "--p2",
         "--seeds", "--benchmarks", "--data", "--port", "--export", HandoverOption, "--rules", "--bind",
-        "--who", FormatOption, DeclarationOption, SlotLogOption, PushKeysOption, AccountsOption, GoogleClientIdOption,
+        "--who", FormatOption, DeclarationOption, SlotLogOption, PushKeysOption, AccountsOption, GoogleClientIdOption, TurnsOption,
+        AdminsOption, ScenarioOption, "--session", "--round", "--seat", "--title", "--goal",
     ];
 
     private static readonly string[] PracticeConflicts = [RecordOption, "--trace", "--rules", SeedOption, HandoverOption, "--p1", "--p2", FormatOption, DeclarationOption];
@@ -210,7 +283,7 @@ internal sealed record CliOptions
             Command = command,
             Seed = values.TryGetValue(SeedOption, out var seed) ? int.Parse(seed, CultureInfo.InvariantCulture) : null,
             Matches = values.TryGetValue("--matches", out var matches) ? int.Parse(matches, CultureInfo.InvariantCulture) : 100,
-            Output = values.GetValueOrDefault("--out") ?? (command == "evaluate" ? "evaluation.json" : "simulation.csv"),
+            Output = values.GetValueOrDefault("--out") ?? command switch { "evaluate" => "evaluation.json", ScenarioCutCommand => "scenario.json", ScenarioGenerateCommand => string.Empty, _ => "simulation.csv" },
             SchemaPath = values.GetValueOrDefault("--schema") ?? DefaultSchemaPath,
             Record = values.GetValueOrDefault(RecordOption),
             Trace = values.GetValueOrDefault("--trace"),
@@ -229,9 +302,12 @@ internal sealed record CliOptions
             Practice = flags.Contains(PracticeOption),
             Lobby = flags.Contains(LobbyOption),
             PlatformAuth = flags.Contains(PlatformAuthOption),
+            Tended = flags.Contains(TendedOption),
             PushKeys = values.GetValueOrDefault(PushKeysOption),
             Accounts = values.TryGetValue(AccountsOption, out var accounts) ? ParseAccounts(accounts) : AccountsMode.Off,
             GoogleClientId = values.GetValueOrDefault(GoogleClientIdOption),
+            Admins = values.GetValueOrDefault(AdminsOption),
+            Turns = values.TryGetValue(TurnsOption, out var turns) ? ParseTurns(turns) : null,
             Bind = values.TryGetValue("--bind", out var bind) ? HttpHost.Bindable(bind) : HttpHost.Loopback,
             Seeds = values.GetValueOrDefault("--seeds"),
             Benchmarks = values.GetValueOrDefault("--benchmarks") ?? DefaultBenchmarks,
@@ -239,6 +315,13 @@ internal sealed record CliOptions
             Data = values.GetValueOrDefault("--data") ?? DefaultData,
             Port = values.TryGetValue("--port", out var port) ? ParsePort(port) : DefaultPort,
             Export = values.GetValueOrDefault("--export"),
+            Scenario = values.GetValueOrDefault(ScenarioOption),
+            Session = values.GetValueOrDefault("--session"),
+            Round = values.TryGetValue("--round", out var round) ? ParseRound(round) : null,
+            Seat = values.GetValueOrDefault("--seat"),
+            Title = values.GetValueOrDefault("--title"),
+            Goal = values.GetValueOrDefault("--goal"),
+            WithContent = flags.Contains(WithContentOption),
         };
     }
 
@@ -264,9 +347,34 @@ internal sealed record CliOptions
             return "'--platform-auth' is for table only: it says a platform in front of the host signs the operator in.";
         }
 
-        if (values.ContainsKey(PushKeysOption) && command != "table")
+        if (ScenarioContradiction(command, values, flags) is { } scenario)
         {
-            return "'--push-keys' is for table only: it names the keys a table signs its notices with.";
+            return scenario;
+        }
+
+        if (flags.Contains(TendedOption) && (command != "table" || flags.Contains(PracticeOption)))
+        {
+            return "'--tended' is for table only, and not --practice: it says the hourly job tends the tables, so no request does.";
+        }
+
+        if (values.ContainsKey(PushKeysOption) && command is not ("table" or WorkerCommand))
+        {
+            return "'--push-keys' is for table and table-worker only: it names the keys a table signs its notices with.";
+        }
+
+        if (flags.Contains("--no-record") && command is (TendCommand or WorkerCommand))
+        {
+            return $"'--no-record' is not for {command}: it works on the tables a store holds, '--record' or {TableHost.DefaultRunsDirectory}.";
+        }
+
+        if (values.TryGetValue(TurnsOption, out var turned) && (command != "table" || flags.Contains(PracticeOption)))
+        {
+            return "'--turns' is for table only, and not --practice: it says where the bots' turns are taken.";
+        }
+
+        if (turned is not null)
+        {
+            ParseTurns(turned);
         }
 
         if (AccountsContradiction(command, values, flags) is { } accounts)
@@ -332,7 +440,61 @@ internal sealed record CliOptions
     }
 
     /// <summary>The options that carry nothing after them, so the scanner does not swallow the next argument.</summary>
-    private static readonly HashSet<string> Valueless = new(StringComparer.Ordinal) { "--write", "--no-record", PracticeOption, LobbyOption, PlatformAuthOption };
+    private static readonly HashSet<string> Valueless = new(StringComparer.Ordinal) { "--write", "--no-record", PracticeOption, LobbyOption, PlatformAuthOption, TendedOption, WithContentOption };
+
+    /// <summary>
+    /// What the scenario options ask for that they cannot have: <c>--scenario</c> is the file a check or a practice table
+    /// reads, the cut's options describe the cut alone, and a practice table on a scenario records nothing and seats
+    /// nobody the scenario does not.
+    /// </summary>
+    private static string? ScenarioContradiction(string command, Dictionary<string, string> values, HashSet<string> flags)
+    {
+        if (values.ContainsKey(ScenarioOption) && command is not ("table" or ScenarioCheckCommand))
+        {
+            return "'--scenario' is for table and scenario-check only: it names the scenario file to play or to check.";
+        }
+
+        if (values.ContainsKey(ScenarioOption) && command == "table"
+            && (flags.Contains(PracticeOption) || flags.Contains(LobbyOption) || PracticeConflicts.Any(values.ContainsKey)))
+        {
+            return "'table --scenario' plays the scenario's own rules, seed and seats, and records nothing: it takes none of --practice, --lobby, --record, --rules, --seed, --handover, --p1, --p2, --format or --declaration.";
+        }
+
+        if (command == ScenarioCheckCommand && !values.ContainsKey(ScenarioOption))
+        {
+            return "'scenario-check' needs '--scenario <file>'.";
+        }
+
+        if (command == ScenarioGenerateCommand)
+        {
+            return values.ContainsKey("--session") || flags.Contains(WithContentOption)
+                ? "'scenario-generate' plays its own match and always carries its content: it takes neither --session nor --with-content."
+                : SeatContradiction(values);
+        }
+
+        if ((CutOptions.Any(values.ContainsKey) || flags.Contains(WithContentOption)) && command != ScenarioCutCommand)
+        {
+            return "'--session', '--round', '--seat', '--title', '--goal' and '--with-content' are for scenario-cut only (scenario-generate takes the last four of the first five).";
+        }
+
+        if (command == ScenarioCutCommand && !values.ContainsKey("--session"))
+        {
+            return "'scenario-cut' needs '--session <runs/playtest/id>'.";
+        }
+
+        return SeatContradiction(values);
+    }
+
+    private static string? SeatContradiction(Dictionary<string, string> values) =>
+        values.TryGetValue("--seat", out var seat) && seat is not ("player1" or "player2")
+            ? $"'--seat' is player1 or player2, not '{seat}'."
+            : null;
+
+    private static int ParseRound(string text)
+    {
+        var round = int.Parse(text, CultureInfo.InvariantCulture);
+        return round >= 1 ? round : throw new ArgumentException($"'--round' is a round of the match, from 1: '{text}' is not one.");
+    }
 
     /// <summary>
     /// What a sign-in cannot be had with. Accounts live beside the recordings, so a host that records nothing, or
@@ -340,14 +502,19 @@ internal sealed record CliOptions
     /// </summary>
     private static string? AccountsContradiction(string command, Dictionary<string, string> values, HashSet<string> flags)
     {
+        if (AdminsContradiction(command, values) is { } admins)
+        {
+            return admins;
+        }
+
         if (!values.TryGetValue(AccountsOption, out var accounts))
         {
             return values.ContainsKey(GoogleClientIdOption) ? "'--google-client-id' goes with '--accounts google'." : null;
         }
 
-        if (command != "table")
+        if (command is not ("table" or TendCommand or WorkerCommand))
         {
-            return "'--accounts' is for table only: it says how players sign in.";
+            return "'--accounts' is for table, table-tend and table-worker only: it says how players sign in.";
         }
 
         var mode = ParseAccounts(accounts);
@@ -365,6 +532,35 @@ internal sealed record CliOptions
             ? "'--google-client-id' goes with '--accounts google'."
             : null;
     }
+
+    /// <summary>What admin accounts cannot be had with (ADR 0172): a host that signs nobody in, or an id that is not one.</summary>
+    private static string? AdminsContradiction(string command, Dictionary<string, string> values)
+    {
+        if (!values.TryGetValue(AdminsOption, out var admins))
+        {
+            return null;
+        }
+
+        if (command != "table" || ParseAccounts(values.GetValueOrDefault(AccountsOption) ?? "off") == AccountsMode.Off)
+        {
+            return "'--admins' is for table only, with '--accounts google' or '--accounts dev': it names the accounts that are the operator once signed in.";
+        }
+
+        return OperatorGate.ParseAdmins(admins).Problem is { } problem ? $"'--admins': {problem}" : null;
+    }
+
+    /// <summary>Where <c>--turns</c> says the bots' turns are taken; anything else is one line, not a stack.</summary>
+    internal static TurnsMode ParseTurns(string text) =>
+        TryParseTurns(text) ?? throw new ArgumentException($"'--turns' takes process, queue or worker, not '{text}'.", nameof(text));
+
+    /// <summary>Where a <c>--turns</c> value, or <c>DOWNFALL_TURNS</c>, says the bots' turns are taken; none for anything else.</summary>
+    internal static TurnsMode? TryParseTurns(string? text) => text?.Trim().ToLowerInvariant() switch
+    {
+        "process" => TurnsMode.Process,
+        "queue" => TurnsMode.Queue,
+        "worker" => TurnsMode.Worker,
+        _ => null,
+    };
 
     private static AccountsMode ParseAccounts(string text) => text switch
     {

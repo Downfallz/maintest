@@ -15,7 +15,8 @@ namespace DownfallArena.Application.Tests.Support;
 /// </summary>
 internal static class Handlers
 {
-    public static MatchDriver Driver(MatchWorkflow workflow) =>
+    /// <param name="together">Whether both seats are asked their speeds and intents at once, as at a table (ADR 0111).</param>
+    public static MatchDriver Driver(MatchWorkflow workflow, bool together = false) =>
         new(
             new MatchCommandHandlers(
                 new SubmitEvolutionChoiceHandler(workflow),
@@ -26,7 +27,10 @@ internal static class Handlers
                 new SubmitActionHandler(workflow)),
             new MatchQueryHandlers(
                 new GetBoardStateForPlayerHandler(workflow),
-                new GetPlayerOptionsHandler(workflow, TestContent.Resources)));
+                new GetPlayerOptionsHandler(workflow, TestContent.Resources)))
+        {
+            AsksSpeedsAndIntentsTogether = together,
+        };
 
     /// <summary>
     /// The agent registry over the test content; the heuristic weights come from a substitute that returns the

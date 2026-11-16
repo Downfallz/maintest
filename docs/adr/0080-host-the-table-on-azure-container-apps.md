@@ -2,7 +2,7 @@
 
 Date: 2026-09-27
 
-Status: Accepted
+Status: Accepted, amended by [0175](0175-serve-the-table-at-its-own-domain-behind-cloudflare.md)
 
 ## Context
 

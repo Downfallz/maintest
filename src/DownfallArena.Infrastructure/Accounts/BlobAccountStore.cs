@@ -34,6 +34,21 @@ public sealed class BlobAccountStore : IAccountStore
     public async Task<Account?> FindAsync(AccountId id, CancellationToken cancellationToken = default) =>
         await ReadAsync(AccountDocuments.AccountPath(id), cancellationToken) is { } read ? AccountDocuments.ReadAccount(read.Json) : null;
 
+    public async Task<IReadOnlyList<Account>> ListAsync(CancellationToken cancellationToken = default)
+    {
+        var accounts = new List<Account>();
+        await foreach (var item in _container.GetBlobsAsync(BlobTraits.None, BlobStates.None, AccountDocuments.AccountsPrefix, cancellationToken))
+        {
+            // An account deleted between the listing and its read is not listed.
+            if (await ReadAsync(item.Name, cancellationToken) is { } read)
+            {
+                accounts.Add(AccountDocuments.ReadAccount(read.Json));
+            }
+        }
+
+        return accounts;
+    }
+
     public async Task SaveAsync(Account account, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(account);

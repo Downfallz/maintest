@@ -84,6 +84,11 @@ public sealed class TableComposerTests
                     ? Task.FromException(new IOException("The store is out."))
                     : inner.WriteJsonAsync(relativePath, value, cancellationToken);
 
+            public Task<string?> WriteJsonIfAsync<TValue>(string relativePath, TValue value, string? expected, CancellationToken cancellationToken = default) =>
+                relativePath.StartsWith("traces/", StringComparison.Ordinal)
+                    ? Task.FromException<string?>(new IOException("The store is out."))
+                    : inner.WriteJsonIfAsync(relativePath, value, expected, cancellationToken);
+
             public Task StartJsonLinesAsync(string relativePath, CancellationToken cancellationToken = default) =>
                 inner.StartJsonLinesAsync(relativePath, cancellationToken);
 

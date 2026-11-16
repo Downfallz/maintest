@@ -1,0 +1,42 @@
+name: Create the missing labels
+
+# `.github/labels.json` declares the labels the sessions and CI put on issues (`studio/prompts.test.js` holds
+# the prompts to it). This creates on GitHub the ones the repository does not have yet, when the file changes
+# on main and on demand. It only adds: a label that exists is not recoloured or redescribed, and one the file
+# does not name is not deleted, so a label made by hand in the portal stays as it is.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/labels.json
+      - .github/scripts/ensure-labels.sh
+      - .github/workflows/labels.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  labels:
+    name: labels
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency:
+      group: labels
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      # Labels are written through the issues permission.
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Create the labels the repository does not have
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: .github/scripts/ensure-labels.sh

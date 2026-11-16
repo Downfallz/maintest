@@ -5,20 +5,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#0b1519" />
     <title>Downfall Instinct — admin</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="table.css" />
     <link rel="stylesheet" href="pilot.css" />
+    <link rel="stylesheet" href="lobby.css" />
     <link rel="stylesheet" href="admin.css" />
+    <link rel="stylesheet" href="identity.css" />
   </head>
-  <body>
-    <header class="masthead">
-      <div class="brand"><span class="brand-mark" aria-hidden="true">D</span><div><span class="eyebrow">The host</span><h1>Admin</h1></div></div>
-      <div class="session-state"><span class="seat-label">Rules</span><output id="rules">Connecting…</output></div>
-    </header>
+  <body class="lobby-page admin-page">
+    <header class="masthead lobby-header home-header" data-navigation="admin"></header>
 
-    <main id="admin" hidden>
+    <main class="lobby-main admin-main">
+    <section class="admin-title" aria-labelledby="admin-title">
+      <div>
+        <p class="eyebrow">The host</p><h2 id="admin-title">Headquarters</h2>
+        <p class="admin-meta muted"><span class="admin-meta-label">Rules</span> <output id="rules">Connecting…</output> <span aria-hidden="true">·</span> <span id="recording"></span></p>
+      </div>
+      <button id="admin-refresh" type="button" class="secondary">Refresh</button>
+    </section>
+    <nav id="admin-tabs" class="admin-tabs" aria-label="Headquarters sections">
+      <a id="tab-overview" href="#overview" data-tab="overview">Overview <span id="tab-overview-count" class="tab-count"></span></a>
+      <a id="tab-tables" href="#tables" data-tab="tables">Tables <span id="tab-tables-count" class="tab-count"></span></a>
+      <a id="tab-sessions" href="#sessions" data-tab="sessions">Sessions <span id="tab-sessions-count" class="tab-count"></span></a>
+      <a id="tab-scenarios" href="#scenarios" data-tab="scenarios" hidden>Scenarios <span id="tab-scenarios-count" class="tab-count"></span></a>
+      <a id="tab-players" href="#players" data-tab="players" hidden>Players <span id="tab-players-count" class="tab-count"></span></a>
+      <a id="tab-jobs" href="#jobs" data-tab="jobs" hidden>Jobs <span id="tab-jobs-count" class="tab-count"></span></a>
+      <a id="tab-activity" href="#activity" data-tab="activity" hidden>Activity</a>
+      <a id="tab-settings" href="#settings" data-tab="settings" hidden>Settings <span id="tab-settings-count" class="tab-count"></span></a>
+    </nav>
+
+    <div id="admin" hidden>
+    <section id="panel-overview" class="admin-panel" aria-labelledby="tab-overview" data-panel="overview">
+      <h2 class="visually-hidden">Overview</h2>
+      <output id="overview-said" class="said"></output>
+      <ul id="overview-cards" class="overview-cards" aria-label="The host at a glance"></ul>
+    </section>
+    <section id="panel-tables" class="admin-panel" aria-labelledby="tab-tables" data-panel="tables" hidden>
       <p class="muted no-god-view">
         Open a table, read each seat's code to its player, and hand a seat over from its pilot page. This page
-        shows who is at each table, never what they hold. <span id="recording"></span>
+        shows who is at each table, never what they hold.
       </p>
 
       <section class="control" aria-labelledby="open-title">
@@ -37,7 +63,14 @@
 
       <h2 class="list-title">Tables under way</h2>
       <section id="tables" class="seats tables" aria-label="Tables"></section>
-
+      <p id="tables-empty" class="muted" hidden>No table is being played. Open one above, or wait for players to open theirs in the lobby.</p>
+      <nav id="tables-pages" class="session-pages" aria-label="Table pages">
+        <button id="tables-previous" type="button" class="secondary">← Newer</button>
+        <output id="tables-count" class="muted"></output>
+        <button id="tables-next" type="button" class="secondary">Older →</button>
+      </nav>
+    </section>
+    <section id="panel-sessions" class="admin-panel" aria-labelledby="tab-sessions" data-panel="sessions" hidden>
       <section class="control sessions" aria-labelledby="sessions-title">
         <div class="list-head">
           <h2 id="sessions-title">Recorded sessions</h2>
@@ -76,11 +109,288 @@
           <button id="sessions-next" type="button" class="secondary">Older →</button>
         </nav>
       </section>
-    </main>
+    </section>
+    <section id="panel-scenarios" class="admin-panel" aria-labelledby="tab-scenarios" data-panel="scenarios" hidden>
+      <p id="scenarios-off" class="muted">This host keeps no scenarios: it records nothing (<code>--no-record</code>), so it has no session to cut one from.</p>
+      <section id="scenarios-on" class="control players" aria-labelledby="scenarios-title" hidden>
+        <div class="list-head">
+          <h2 id="scenarios-title">Scenarios</h2>
+        </div>
+        <p class="muted">Recorded sessions cut at the top of a round. A signed-in player opens a scenario's link as practice: from that round, against the recorded opponent, with nothing recorded and the session untouched. Cut one from a session's row with <em>practice from a round…</em>. <em>List under Practice</em> offers it on every signed-in player's home page; one left off still opens by its link. A scenario marked <em>Repository</em> is a file of the repository's <code>scenarios/</code> directory: it is played from here, and added or removed there.</p>
+        <output id="scenarios-said" class="said"></output>
+        <ol id="scenarios" class="session-list" aria-label="Scenarios"></ol>
+        <p id="scenarios-empty" class="muted" hidden>No scenario yet.</p>
+      </section>
+    </section>
+    <section id="panel-players" class="admin-panel" aria-labelledby="tab-players" data-panel="players" hidden>
+      <p id="players-off" class="muted">This host signs nobody in (<code>--accounts off</code>), so it has no players to list.</p>
+      <section id="players-on" class="control players" aria-labelledby="players-title" hidden>
+        <div class="list-head">
+          <h2 id="players-title">Players</h2>
+        </div>
+        <p class="muted">Every account, with when it last signed in and was last seen (kept to the hour), its finished games and its rating. Open a player for their sheet: sign them out everywhere, rename them, or delete the account.</p>
+        <div class="fields player-filters">
+          <label for="players-search">Search<input id="players-search" type="search" placeholder="A name, or part of one" autocomplete="off" /></label>
+          <label for="players-sort">Sort by<select id="players-sort"></select></label>
+        </div>
+        <output id="players-said" class="said"></output>
+        <div class="player-table">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Player</th>
+                <th scope="col" class="player-created">Created</th>
+                <th scope="col" class="player-signed-in">Last sign-in</th>
+                <th scope="col" class="player-seen">Last seen</th>
+                <th scope="col" class="player-games">Games</th>
+                <th scope="col" class="player-wins">Wins</th>
+                <th scope="col" class="player-rating">Rating</th>
+              </tr>
+            </thead>
+            <tbody id="players"></tbody>
+          </table>
+        </div>
+        <p id="players-empty" class="muted" hidden></p>
+        <nav class="session-pages" aria-label="Player pages">
+          <button id="players-previous" type="button" class="secondary">← Previous</button>
+          <output id="players-count" class="muted"></output>
+          <button id="players-next" type="button" class="secondary">Next →</button>
+        </nav>
+      </section>
+    </section>
+    <section id="panel-jobs" class="admin-panel" aria-labelledby="tab-jobs" data-panel="jobs" hidden>
+      <p id="jobs-off" class="muted">This host keeps no tending runs (it records nothing, <code>--no-record</code>) and takes its bots' turns in its own process, so it has no jobs to show.</p>
+      <section id="jobs-on" class="control players" aria-labelledby="jobs-title" hidden>
+        <div class="list-head">
+          <h2 id="jobs-title">Tending runs</h2>
+          <button id="jobs-pass" type="button" class="secondary">Run a pass now</button>
+        </div>
+        <p class="muted">Each pass closes the tables that never began, lets go of the invitations nobody answered, ends the games whose player let their time run out or left their seat, and warns the players whose time is running low. The hourly job runs one; a pass run here does the same work over this host's tables, and both are kept, the last 500.</p>
+        <div id="jobs-pass-confirm" class="confirm" hidden>
+          <p>Run a pass now? It ends and closes what is due, as the hourly job would.</p>
+          <button id="jobs-pass-yes" type="button" class="danger">Run the pass</button>
+          <button id="jobs-pass-no" type="button" class="secondary">Cancel</button>
+        </div>
+        <p id="jobs-day" class="jobs-total"></p>
+        <p id="jobs-week" class="jobs-total muted"></p>
+        <output id="jobs-said" class="said"></output>
+        <ol id="jobs-runs" class="session-list" aria-label="Tending runs"></ol>
+        <p id="jobs-empty" class="muted" hidden>No run is kept yet. The hourly job keeps one each time it runs, and so does Run a pass now.</p>
+        <nav class="session-pages" aria-label="Run pages">
+          <button id="jobs-previous" type="button" class="secondary">← Newer</button>
+          <output id="jobs-count" class="muted"></output>
+          <button id="jobs-next" type="button" class="secondary">Older →</button>
+        </nav>
+      </section>
+      <section id="turns-on" class="control players turns" aria-labelledby="turns-title" hidden>
+        <div class="list-head">
+          <h2 id="turns-title">Bot turns</h2>
+          <button id="turns-refresh" type="button" class="secondary">Refresh</button>
+        </div>
+        <p class="muted">The turns tables owe their bots go through a queue a worker takes them from. A turn that fails five times waits on the poison queue for half a minute, then is kept as a dead letter. Requeue puts its turn back as a new one; a table that is over, closed or gone owes nothing, so its turn is simply done with.</p>
+        <ul id="turns-queues" class="turn-queues" aria-label="Turn queues"></ul>
+        <div class="selection-tools">
+          <label class="check"><input id="turns-all" type="checkbox" /> Select all shown</label>
+          <button id="turns-requeue" type="button" disabled>Requeue selected</button>
+          <button id="turns-requeue-all" type="button" class="secondary">Requeue every letter</button>
+          <button id="turns-drop" type="button" class="danger" disabled>Drop selected…</button>
+        </div>
+        <div id="turns-confirm" class="confirm" hidden>
+          <p id="turns-confirm-line"></p>
+          <button id="turns-drop-yes" type="button" class="danger">Drop</button>
+          <button id="turns-drop-no" type="button" class="secondary">Keep them</button>
+        </div>
+        <output id="turns-said" class="said"></output>
+        <ol id="turns-letters" class="session-list" aria-label="Dead letters"></ol>
+        <p id="turns-empty" class="muted" hidden>No dead letter: every turn given up on has been dealt with.</p>
+        <p id="turns-more" class="muted" hidden></p>
+      </section>
+    </section>
+    <section id="panel-activity" class="admin-panel" aria-labelledby="tab-activity" data-panel="activity" hidden>
+      <p id="activity-off" class="muted">This host keeps no operator log (it records nothing, <code>--no-record</code>), so what operators do is said on its console alone.</p>
+      <section id="activity-on" class="control players" aria-labelledby="activity-title" hidden>
+        <div class="list-head">
+          <h2 id="activity-title">Activity</h2>
+        </div>
+        <p class="muted">What operators did from this panel, newest first: who, what, on which table or account, and when. The last thousand actions are kept.</p>
+        <output id="activity-said" class="said"></output>
+        <ol id="activity" class="session-list" aria-label="Operators' actions"></ol>
+        <p id="activity-empty" class="muted" hidden>Nothing done from the panel yet.</p>
+        <nav class="session-pages" aria-label="Activity pages">
+          <button id="activity-previous" type="button" class="secondary">← Newer</button>
+          <output id="activity-count" class="muted"></output>
+          <button id="activity-next" type="button" class="secondary">Older →</button>
+        </nav>
+      </section>
+    </section>
+    <section id="panel-settings" class="admin-panel" aria-labelledby="tab-settings" data-panel="settings" hidden>
+      <p id="settings-off" class="muted">This host signs nobody in (<code>--accounts off</code>), so it has no registration to open or close.</p>
+      <section id="settings-on" class="control players" aria-labelledby="settings-title" hidden>
+        <div class="list-head">
+          <h2 id="settings-title">Settings</h2>
+        </div>
+        <p class="muted">Kept for the whole host and read by each of its processes within a minute.</p>
+        <form id="settings-form" class="settings-form">
+          <fieldset class="settings-registration">
+            <legend>Registration</legend>
+            <label class="settings-choice"><input id="settings-open" type="radio" name="registration" value="open" /> Open</label>
+            <label class="settings-choice"><input id="settings-closed" type="radio" name="registration" value="closed" /> Closed</label>
+            <p id="settings-registration-line" class="muted"></p>
+          </fieldset>
+          <label for="settings-notice" class="settings-notice">Notice under every page's header
+            <input id="settings-notice" type="text" maxlength="200" placeholder="None" autocomplete="off" aria-describedby="settings-notice-count" />
+          </label>
+          <p id="settings-notice-count" class="muted settings-count"></p>
+          <button id="settings-save" type="submit" class="primary">Save settings</button>
+          <output id="settings-said" class="said"></output>
+          <p id="settings-saved" class="muted"></p>
+        </form>
+      </section>
+    </section>
+    </div>
+
+    <dialog id="void-sheet" class="home-dialog side-sheet" aria-labelledby="void-sheet-name">
+      <div class="dialog-heading">
+        <div><p class="eyebrow">Void the match</p><h2 id="void-sheet-name">Table</h2></div>
+        <button id="void-cancel" type="button" aria-label="Keep the match">×</button>
+      </div>
+      <div class="home-dialog-body">
+        <p id="void-players" class="muted"></p>
+        <div class="player-action">
+          <label for="void-category">Why<select id="void-category"></select></label>
+        </div>
+        <div class="player-action">
+          <label for="void-explanation">Explanation, as the players will read it<textarea id="void-explanation" rows="5" maxlength="500" placeholder="The match stopped answering after a host restart, so it ends without a result."></textarea></label>
+          <p id="void-count" class="muted void-count"></p>
+        </div>
+        <p id="void-warning" class="void-warning"></p>
+        <output id="void-said" class="said refused"></output>
+        <button id="void-submit" type="button" class="danger" disabled>Void the match</button>
+      </div>
+    </dialog>
+
+    <dialog id="diagnosis-sheet" class="home-dialog side-sheet" aria-labelledby="diagnosis-sheet-name">
+      <div class="dialog-heading">
+        <div><p class="eyebrow">Diagnose the table</p><h2 id="diagnosis-sheet-name">Table</h2></div>
+        <button id="diagnosis-close" type="button" aria-label="Close">×</button>
+      </div>
+      <div class="home-dialog-body">
+        <dl id="diagnosis-facts" class="diagnosis-facts"></dl>
+        <output id="diagnosis-said" class="said"></output>
+        <ul id="diagnosis-hidden" class="diagnosis-hidden" aria-label="What the seats hold face down" hidden></ul>
+        <div class="diagnosis-actions">
+          <button id="diagnosis-refresh" type="button" class="secondary">Refresh</button>
+          <button id="diagnosis-replay" type="button">Check replay</button>
+          <button id="diagnosis-turn" type="button">Requeue the bot's turn</button>
+          <button id="diagnosis-reveal" type="button" class="secondary">Reveal hidden state…</button>
+          <button id="diagnosis-void" type="button" class="danger">Void…</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="scenario-sheet" class="home-dialog side-sheet" aria-labelledby="scenario-sheet-name">
+      <div class="dialog-heading">
+        <div><p class="eyebrow">Practice from a round</p><h2 id="scenario-sheet-name">Session</h2></div>
+        <button id="scenario-cancel" type="button" aria-label="Close">×</button>
+      </div>
+      <div class="home-dialog-body">
+        <p id="scenario-players" class="muted"></p>
+        <div class="player-action">
+          <label for="scenario-round">Start at the top of<select id="scenario-round"></select></label>
+          <label for="scenario-seat">The player plays<select id="scenario-seat"><option value="player1">player1</option><option value="player2">player2</option></select></label>
+        </div>
+        <div class="player-action">
+          <label for="scenario-title">Title<input id="scenario-title" type="text" maxlength="80" placeholder="Round 4" /></label>
+          <label for="scenario-goal">Goal, as the player will read it<textarea id="scenario-goal" rows="3" maxlength="300" placeholder="Keep your second creature alive through the bleed."></textarea></label>
+        </div>
+        <output id="scenario-said" class="said"></output>
+        <div id="scenario-made" class="scenario-made" hidden></div>
+        <button id="scenario-submit" type="button" disabled>Cut the scenario</button>
+      </div>
+    </dialog>
+
+    <dialog id="letter-sheet" class="home-dialog side-sheet" aria-labelledby="letter-sheet-name">
+      <div class="dialog-heading">
+        <div><p class="eyebrow">Dead letter</p><h2 id="letter-sheet-name">Letter</h2></div>
+        <button id="letter-sheet-close" type="button" aria-label="Close the letter">×</button>
+      </div>
+      <div class="home-dialog-body">
+        <dl id="letter-facts" class="player-facts"></dl>
+        <a id="letter-session" class="letter-session" hidden>Open the table's session</a>
+        <h3>Error</h3>
+        <pre id="letter-error" class="letter-error"></pre>
+        <button id="letter-requeue" type="button">Requeue this turn</button>
+      </div>
+    </dialog>
+
+    <dialog id="run-sheet" class="home-dialog side-sheet" aria-labelledby="run-sheet-name">
+      <div class="dialog-heading">
+        <div><p class="eyebrow">Tending run</p><h2 id="run-sheet-name">Run</h2></div>
+        <button id="run-sheet-close" type="button" aria-label="Close the run's sheet">×</button>
+      </div>
+      <div class="home-dialog-body">
+        <dl id="run-facts" class="player-facts"></dl>
+        <p id="run-error" class="problem" hidden></p>
+        <h3>Tables</h3>
+        <ul id="run-tables" class="player-recent run-tables"></ul>
+        <p id="run-tables-empty" class="muted" hidden>It touched no table.</p>
+      </div>
+    </dialog>
+
+    <dialog id="player-sheet" class="home-dialog side-sheet player-sheet" aria-labelledby="player-sheet-name">
+      <div class="dialog-heading">
+        <div><p class="eyebrow">Player</p><h2 id="player-sheet-name">Player</h2></div>
+        <button id="player-sheet-close" type="button" aria-label="Close the player's sheet">×</button>
+      </div>
+      <div class="home-dialog-body">
+        <dl id="player-facts" class="player-facts"></dl>
+        <h3>Last games</h3>
+        <ol id="player-recent" class="player-recent"></ol>
+        <p id="player-recent-empty" class="muted" hidden>No finished game yet.</p>
+        <h3>Actions</h3>
+        <output id="player-said" class="said"></output>
+        <div class="player-action">
+          <p class="muted">Ends every session the account holds and forgets its devices. The player signs in again.</p>
+          <button id="player-signout" type="button" class="secondary">Sign out everywhere</button>
+          <div id="player-signout-confirm" class="confirm" hidden>
+            <p id="player-signout-line"></p>
+            <button id="player-signout-yes" type="button" class="danger">Sign out everywhere</button>
+            <button id="player-signout-no" type="button" class="secondary">Cancel</button>
+          </div>
+        </div>
+        <div class="player-action player-suspension">
+          <div id="player-suspended" class="player-suspended" hidden>
+            <p id="player-suspended-line"></p>
+            <button id="player-restore" type="button" class="secondary">Restore the account</button>
+          </div>
+          <div id="player-suspend-form">
+            <p class="muted">Keeps the player out: every session ends, signing in is refused with the reason below, and their seats in unfinished games are offered to other players a day later unless the account is restored first.</p>
+            <label for="player-suspend-reason">Reason the player reads (10 to 300 characters)<textarea id="player-suspend-reason" rows="3" maxlength="300" autocomplete="off"></textarea></label>
+            <button id="player-suspend" type="button" class="danger" disabled>Suspend the account</button>
+            <div id="player-suspend-confirm" class="confirm" hidden>
+              <p id="player-suspend-line"></p>
+              <button id="player-suspend-yes" type="button" class="danger">Suspend</button>
+              <button id="player-suspend-no" type="button" class="secondary">Cancel</button>
+            </div>
+          </div>
+        </div>
+        <div class="player-action">
+          <label for="player-rename-name">New name<input id="player-rename-name" type="text" maxlength="20" autocomplete="off" /></label>
+          <button id="player-rename" type="button" class="secondary">Rename</button>
+        </div>
+        <div class="player-action player-delete">
+          <p class="muted">Deletes the account as its player would: its seats in unfinished games are offered to others, its name is freed, and its friends, devices, settings and activity go. Its finished games stay, unnamed.</p>
+          <label for="player-delete-name">Type the player's name to confirm<input id="player-delete-name" type="text" autocomplete="off" /></label>
+          <button id="player-delete" type="button" class="danger" disabled>Delete the account</button>
+        </div>
+      </div>
+    </dialog>
 
     <p id="problem" class="problem" hidden></p>
     <a id="sign-in" class="sign-in" hidden>Sign in to manage the tables</a>
+    </main>
 
     <script type="module" src="admin.js"></script>
+    <script type="module" src="navigation.js"></script>
   </body>
 </html>

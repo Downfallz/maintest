@@ -7,27 +7,15 @@ using DownfallArena.SharedKernel.Identifiers;
 namespace DownfallArena.Cli.Table;
 
 /// <summary>
-/// Plays the preparation through ordinary gates, then permanently hands the seat to its person. A recipe at the
-/// slot (ADR 0110) is played through <see cref="DecideAction" />: its speeds put the creature that sets the board
-/// up before the one the person plays, and its spells give that creature the energy the recipe is about.
+/// Plays a practice recipe's preparation through ordinary gates: both seats up to the question the scenario hands
+/// its person (<see cref="PracticeScenario.HandsOver" />), and the other seat after it. A recipe at the slot
+/// (ADR 0110) is played through <see cref="DecideAction" />: its speeds put the creature that sets the board up
+/// before the one the person plays, and its spells give that creature the energy the recipe is about.
 /// </summary>
-internal sealed class PracticeAgent(PracticeScenario scenario, IPlayerAgent fallback, HumanSeat? person = null) : IPlayerAgent
+internal sealed class PracticeAgent(PracticeScenario scenario, IPlayerAgent fallback) : IPlayerAgent
 {
-    private bool _handedOver;
-
-    private bool Human(PlayerBoardState board, PlayerOptionsKind kind, CreatureId? creature = null)
-    {
-        _handedOver |= person is not null && board.RoundNumber >= scenario.Round && kind == scenario.Question
-            && (creature is null || scenario.AllyIndex is not { } index || creature == board.Allies[index].Id);
-        return _handedOver;
-    }
-
     public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options)
     {
-        if (Human(board, PlayerOptionsKind.Evolution))
-        {
-            return person!.DecideEvolution(board, options);
-        }
         if (board.RoundNumber > scenario.Round)
         {
             return fallback.DecideEvolution(board, options);
@@ -90,11 +78,6 @@ internal sealed class PracticeAgent(PracticeScenario scenario, IPlayerAgent fall
 
     public Speed DecideSpeed(PlayerBoardState board, CreatureId creature)
     {
-        if (Human(board, PlayerOptionsKind.Speed))
-        {
-            return person!.DecideSpeed(board, creature);
-        }
-
         var first = board.Allies[0].Id == creature;
         var mine = board.Slot == PlayerSlot.Player1;
         var quick = scenario.Id switch
@@ -108,15 +91,14 @@ internal sealed class PracticeAgent(PracticeScenario scenario, IPlayerAgent fall
         return quick ? Speed.Quick : Speed.Standard;
     }
 
-    public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options) =>
-        Human(board, PlayerOptionsKind.TieOrder) ? person!.DecideTieOrder(board, options) : options.AsRolled;
+    public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        return options.AsRolled;
+    }
 
     public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption)
     {
-        if (Human(board, PlayerOptionsKind.Intent))
-        {
-            return person!.DecideIntent(board, intentOption);
-        }
         if (board.RoundNumber > scenario.Round)
         {
             return fallback.DecideIntent(board, intentOption);
@@ -136,10 +118,6 @@ internal sealed class PracticeAgent(PracticeScenario scenario, IPlayerAgent fall
     {
         ArgumentNullException.ThrowIfNull(board);
         ArgumentNullException.ThrowIfNull(options);
-        if (Human(board, PlayerOptionsKind.Action, options.Actor))
-        {
-            return person!.DecideAction(board, options);
-        }
         if (board.RoundNumber > scenario.Round)
         {
             return fallback.DecideAction(board, options);
@@ -214,7 +192,9 @@ internal sealed class PracticeAgent(PracticeScenario scenario, IPlayerAgent fall
             _ => "wait",
         };
 
-    public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options) =>
-        Human(board, PlayerOptionsKind.Target, options.Actor) ? person!.DecideTargets(board, options)
-            : [.. options.LegalTargets.Candidates.Take(options.LegalTargets.MaxTargets)];
+    public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        return [.. options.LegalTargets.Candidates.Take(options.LegalTargets.MaxTargets)];
+    }
 }

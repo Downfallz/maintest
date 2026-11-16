@@ -6,6 +6,16 @@
 // whoever holds the token the console printed, or whoever the platform in front of the host signed in. The
 // game is not open yet, so the operator opens every table and the players, who never sign in, join by code.
 
+import { mountJobs } from './admin-jobs.js';
+import { mountSettings } from './admin-settings.js';
+import { mountOverview } from './admin-overview.js';
+import { mountActivity } from './admin-activity.js';
+import { mountPlayers } from './admin-players.js';
+import { mountTurns } from './admin-turns.js';
+import { mountVoid, voidLabel } from './admin-void.js';
+import { mountScenarios } from './admin-scenarios.js';
+import { mountDiagnosis } from './admin-diagnosis.js';
+
 const POLL_MS = 2500;
 
 // Where this browser keeps the operator's token once a link brought it, so the table page can show the way
@@ -22,7 +32,8 @@ export function seatable(answer) {
   const offered = Array.isArray(answer?.agents) && answer.agents.length > 0
     ? answer.agents
     : [{ value: 'greedy', label: 'Greedy — the baseline' }, { value: 'random', label: 'Random' }];
-  return [PERSON, ...offered.map(agent => ({ value: agent.value, label: agent.label ?? agent.value, featured: agent.featured === true }))];
+  // A bot a level seats says which (ADR 0180): the operator sees what a player chose as well as what it is.
+  return [PERSON, ...offered.map(agent => ({ value: agent.value, label: agent.level ? `${agent.label ?? agent.value} · ${agent.level}` : agent.label ?? agent.value, featured: agent.featured === true }))];
 }
 
 // The formats a chooser offers, read off the host's answer: how many creatures a side brings, and how many
@@ -130,6 +141,8 @@ export function adminTransport(token, fetchImpl = globalThis.fetch.bind(globalTh
   }
 
   return {
+    // Any route of the panel, for a tab that reads its own (the Players tab, admin-players.js).
+    request: send,
     list: () => send('GET', '/api/tables'),
     open: request => send('POST', '/api/tables', request),
     close: id => send('DELETE', `/api/tables/${encodeURIComponent(id)}`),
@@ -187,7 +200,8 @@ export function tableRows(list) {
     declaration: table.declaration ?? null,
     seats: (table.seats ?? []).map(seat => ({
       slot: seat.slot,
-      seated: seat.seated ?? 'nobody',
+      // A bot's own name, and the level a player knows it by (ADR 0180): "lookahead-55 · Hard".
+      seated: seat.level ? `${seat.seated ?? 'nobody'} · ${seat.level}` : seat.seated ?? 'nobody',
       code: seat.code ?? null,
       join: seat.join ?? null,
       link: seat.link ?? null,
@@ -233,6 +247,9 @@ export function sessionRows(answer) {
     // Exportable once it is no longer being written: the host refuses a live one.
     export: session.live === true ? null : session.export,
     location: session.location ?? null,
+    // A table's run not void yet can be voided by the operator (ADR 0176); a void one says under what.
+    voidable: session.voidable === true,
+    voided: session.voided ?? null,
   }));
 }
 
@@ -253,7 +270,24 @@ export function pageOf(rows, page, size = SESSIONS_PER_PAGE) {
 
 export const SESSIONS_PER_PAGE = 20;
 
+// The headquarters' sections, each one part of the address (`/admin#sessions`), so a reload or a link opens it and
+// Back moves between them. The first is where the page opens.
+export const ADMIN_TABS = Object.freeze(['overview', 'tables', 'sessions', 'scenarios', 'players', 'jobs', 'activity', 'settings']);
+
+/** The section an address names, or the first one for an address that names none the page has. */
+export function tabOf(hash) {
+  const named = String(hash ?? '').replace(/^#/, '');
+  return ADMIN_TABS.includes(named) ? named : ADMIN_TABS[0];
+}
+
+/** What a list's pager says: how many it shows of how many, and which page of how many. */
+export function pagerLine(kept, total, shown, noun) {
+  const counted = kept === total ? `${total}` : `${kept} of ${total}`;
+  return `${counted} ${noun}${total === 1 ? '' : 's'} · page ${shown.page + 1} of ${shown.pages}`;
+}
+
 function sessionState(session) {
+  if (session.voided) return `void: ${voidLabel(session.voided).toLowerCase()}`;
   if (session.live) return 'live on this host';
   return session.over ? 'finished' : 'not finished';
 }
@@ -365,21 +399,51 @@ function card(row, transport, redraw) {
   if (row.replay) list.append(...line('Replay', anchor(row.replay, 'action by action')));
   if (row.location) list.append(...line('Written to', document.createTextNode(row.location)));
 
-  box.append(name, state, list);
-  if (row.closable) {
-    const close = document.createElement('button');
-    close.type = 'button';
-    close.className = 'close';
-    close.textContent = 'Close this table';
-    close.addEventListener('click', async () => {
-      close.disabled = true;
-      await transport.close(row.id);
-      await redraw();
-    });
-    box.append(close);
-  }
+  box.append(name, state, list, ...cardActions(row, transport, redraw));
   return box;
 }
+
+// What a table card offers under its facts: voiding it with a reason (ADR 0176) and closing it, while it is open.
+function cardActions(row, transport, redraw) {
+  if (!row.closable) return [];
+  const actions = [];
+  if (openDiagnosis) {
+    const diagnose = document.createElement('button');
+    diagnose.type = 'button';
+    diagnose.className = 'close';
+    diagnose.textContent = 'Diagnose…';
+    diagnose.addEventListener('click', () => openDiagnosis({ id: row.id, players: row.seats.map(seat => `${seat.slot}: ${seat.seated}`).join(' · ') }));
+    actions.push(diagnose);
+  }
+  if (openVoid) {
+    const voiding = document.createElement('button');
+    voiding.type = 'button';
+    voiding.className = 'close danger';
+    voiding.textContent = 'Void…';
+    voiding.addEventListener('click', () => openVoid({ id: row.id, players: row.seats.map(seat => `${seat.slot}: ${seat.seated}`).join(' · '), over: false }));
+    actions.push(voiding);
+  }
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'close';
+  close.textContent = 'Close this table';
+  close.addEventListener('click', async () => {
+    close.disabled = true;
+    await transport.close(row.id);
+    await redraw();
+  });
+  actions.push(close);
+  return actions;
+}
+
+// The Void sheet's opener, once the page has mounted it (ADR 0176): a table card and a session row offer it.
+let openVoid = null;
+
+// The scenario sheet's opener (ADR 0179), once the page has mounted it: a session row not being played offers it.
+let openScenario = null;
+
+// The Diagnose sheet's opener (scenarios plan, S5b), once the page has mounted it: a table card offers it.
+let openDiagnosis = null;
 
 function sessionItem(row, transport) {
   const item = document.createElement('li');
@@ -410,6 +474,22 @@ function sessionItem(row, transport) {
     });
     links.append(save);
   }
+  if (row.voidable && openVoid) {
+    const voiding = document.createElement('button');
+    voiding.type = 'button';
+    voiding.className = 'link-button danger-link';
+    voiding.textContent = 'void…';
+    voiding.addEventListener('click', () => openVoid({ id: row.id, players: row.players, over: row.finished }));
+    links.append(voiding);
+  }
+  if (!row.live && openScenario) {
+    const practise = document.createElement('button');
+    practise.type = 'button';
+    practise.className = 'link-button';
+    practise.textContent = 'practice from a round…';
+    practise.addEventListener('click', () => openScenario({ id: row.id, players: row.players }));
+    links.append(practise);
+  }
   if (row.location) links.append(Object.assign(document.createElement('span'), { className: 'muted', textContent: row.location }));
   body.append(id, facts, links);
   item.append(check, body);
@@ -438,7 +518,8 @@ async function saveZip(answer) {
 async function start() {
   const token = operatorToken(globalThis.location?.search ?? '', kept());
   if (globalThis.location?.search && globalThis.history?.replaceState) {
-    globalThis.history.replaceState(null, '', globalThis.location.pathname);
+    // The token leaves the address; the section it names stays, so a link to /admin?token=…#sessions opens Sessions.
+    globalThis.history.replaceState(null, '', globalThis.location.pathname + (globalThis.location.hash ?? ''));
   }
   const transport = adminTransport(token);
   const problem = element('problem');
@@ -450,6 +531,9 @@ async function start() {
   // The last listing of the store, and the page of it on screen.
   let sessions = [];
   let page = 0;
+  // The tables as the last answer listed them, and the page of them on screen.
+  let tables = [];
+  let tablesPage = 0;
 
   function fillDeclarations(answer) {
     const list = declarations(answer);
@@ -520,8 +604,128 @@ async function start() {
     fillPickers(answer.body);
     element('rules').textContent = answer.body?.rules ?? '';
     element('recording').textContent = answer.body?.recording ? 'Sessions are recorded.' : 'Nothing is recorded (--no-record).';
-    element('tables').replaceChildren(...tableRows(answer.body).map(row => card(row, transport, redraw)));
+    tables = tableRows(answer.body);
+    drawTables();
     element('admin').hidden = false;
+  }
+
+  function drawPager(name, shown, line) {
+    element(`${name}-count`).textContent = line;
+    element(`${name}-previous`).disabled = shown.page === 0;
+    element(`${name}-next`).disabled = shown.page >= shown.pages - 1;
+  }
+
+  function drawTables() {
+    const shown = pageOf(tables, tablesPage);
+    tablesPage = shown.page;
+    element('tables').replaceChildren(...shown.rows.map(row => card(row, transport, redraw)));
+    drawPager('tables', shown, pagerLine(tables.length, tables.length, shown, 'table'));
+    // No table is a sentence, not a pager over nothing.
+    element('tables-empty').hidden = tables.length > 0;
+    element('tables-pages').hidden = tables.length === 0;
+    element('tab-tables-count').textContent = String(tables.length);
+  }
+
+  // The accounts (ADR 0174), on a host that signs players in: read when the panel opens, when its section is opened
+  // and on Refresh, never on the clock -- a listing reads every account.
+  const players = mountPlayers({
+    send: transport.request,
+    element,
+    shown: available => {
+      element('tab-players').hidden = !available;
+      element('players-off').hidden = available;
+      element('players-on').hidden = !available;
+    },
+  });
+
+  // Voiding a match (ADR 0176): from a table card or a session row, said under the sessions once done.
+  openVoid = mountVoid({
+    send: transport.request,
+    element,
+    after: async line => {
+      await redraw();
+      await redrawSessions();
+      const told = element('sessions-said');
+      told.textContent = line;
+      told.classList.remove('refused');
+    },
+  }).open;
+
+  // The tending runs (A3), on a host that records: read when the panel opens, when its section is opened and on
+  // Refresh, never on the clock.
+  // The tab shows when the host keeps either: its tending runs, or its bots' turn queues (A3b). Its mark says when
+  // either has something waiting on the operator: a failed run, or a turn given up on.
+  const jobsTab = { runs: false, turns: false, runsWarn: false, turnsWarn: false };
+  const drawJobsTab = () => {
+    element('tab-jobs').hidden = !(jobsTab.runs || jobsTab.turns);
+    element('jobs-off').hidden = jobsTab.runs || jobsTab.turns;
+    element('tab-jobs-count').textContent = jobsTab.runsWarn || jobsTab.turnsWarn ? '!' : '';
+  };
+  const jobs = mountJobs({
+    send: transport.request,
+    element,
+    shown: available => { jobsTab.runs = available; element('jobs-on').hidden = !available; drawJobsTab(); },
+    warn: on => { jobsTab.runsWarn = on; drawJobsTab(); },
+  });
+  const turnQueues = mountTurns({
+    send: transport.request,
+    element,
+    shown: available => { jobsTab.turns = available; element('turns-on').hidden = !available; drawJobsTab(); },
+    warn: on => { jobsTab.turnsWarn = on; drawJobsTab(); },
+  });
+
+  // The host's settings (ADR 0177), on a host that signs players in: registration and the notice. The tab is marked
+  // while registration is closed, the one setting that turns players away.
+  const settings = mountSettings({
+    send: transport.request,
+    element,
+    shown: available => {
+      element('tab-settings').hidden = !available;
+      element('settings-off').hidden = available;
+      element('settings-on').hidden = !available;
+    },
+    warn: closed => { element('tab-settings-count').textContent = closed ? '!' : ''; },
+  });
+
+  // What operators did (A6), on a host that keeps the log: read when the panel opens, when its section is opened and on
+  // Refresh.
+  const activity = mountActivity({
+    send: transport.request,
+    element,
+    shown: available => {
+      element('tab-activity').hidden = !available;
+      element('activity-off').hidden = available;
+      element('activity-on').hidden = !available;
+    },
+  });
+
+  // Diagnosing a table in progress (scenarios plan, S5b): from its card, the Void sheet one button away.
+  openDiagnosis = mountDiagnosis({ send: transport.request, element, openVoid, after: redraw }).open;
+
+  // The match scenarios (ADR 0179), on a host that keeps them: cut from a session row, listed in their tab.
+  const scenarios = mountScenarios({
+    send: transport.request,
+    element,
+    shown: available => {
+      element('tab-scenarios').hidden = !available;
+      element('scenarios-off').hidden = available;
+      element('scenarios-on').hidden = !available;
+    },
+  });
+  openScenario = scenarios.open;
+
+  // The Overview (A5): the numbers at a glance, read when the panel opens, when its section is opened and on Refresh.
+  const overview = mountOverview({ send: transport.request, element });
+
+  // The section the address names is the one shown; following a section's link changes the address, so Back and a
+  // reload keep it.
+  function showTab() {
+    const shown = tabOf(globalThis.location?.hash);
+    for (const panel of document.querySelectorAll('[data-panel]')) panel.hidden = panel.dataset.panel !== shown;
+    for (const tab of document.querySelectorAll('[data-tab]')) {
+      if (tab.dataset.tab === shown) tab.setAttribute('aria-current', 'page');
+      else tab.removeAttribute('aria-current');
+    }
   }
 
   function selected() {
@@ -554,9 +758,8 @@ async function start() {
     const shown = pageOf(kept, page);
     page = shown.page;
     element('sessions').replaceChildren(...shown.rows.map(row => sessionItem(row, transport)));
-    element('sessions-count').textContent = `${kept.length} of ${sessions.length} session${sessions.length === 1 ? '' : 's'} · page ${shown.page + 1} of ${shown.pages}`;
-    element('sessions-previous').disabled = shown.page === 0;
-    element('sessions-next').disabled = shown.page >= shown.pages - 1;
+    drawPager('sessions', shown, `${kept.length} of ${pagerLine(sessions.length, sessions.length, shown, 'session')}`);
+    element('tab-sessions-count').textContent = String(sessions.length);
     element('sessions-all').checked = false;
     armTools();
   }
@@ -598,6 +801,22 @@ async function start() {
     armTools();
   });
   element('sessions-refresh').addEventListener('click', redrawSessions);
+  element('tables-previous').addEventListener('click', () => { tablesPage -= 1; drawTables(); });
+  element('tables-next').addEventListener('click', () => { tablesPage += 1; drawTables(); });
+  element('admin-refresh').addEventListener('click', async () => { await redraw(); await redrawSessions(); await players.redraw(); await jobs.redraw(); await turnQueues.redraw(); await settings.redraw(); await overview.redraw(); await activity.redraw(); await scenarios.redraw(); });
+  globalThis.addEventListener?.('hashchange', () => {
+    showTab();
+    if (tabOf(globalThis.location?.hash) === 'players') void players.redraw();
+    if (tabOf(globalThis.location?.hash) === 'settings') void settings.redraw();
+    if (tabOf(globalThis.location?.hash) === 'overview') void overview.redraw();
+    if (tabOf(globalThis.location?.hash) === 'activity') void activity.redraw();
+    if (tabOf(globalThis.location?.hash) === 'scenarios') void scenarios.redraw();
+    if (tabOf(globalThis.location?.hash) === 'jobs') {
+      void jobs.redraw();
+      void turnQueues.redraw();
+    }
+  });
+  showTab();
   element('sessions-export').addEventListener('click', async () => saveZip(await transport.exportSessions(selected())));
   element('sessions-delete').addEventListener('click', () => {
     const ids = selected();
@@ -621,6 +840,13 @@ async function start() {
   const again = () => setTimeout(() => void redraw().finally(again), POLL_MS);
   await redraw();
   await redrawSessions();
+  await players.redraw();
+  await jobs.redraw();
+  await turnQueues.redraw();
+  await settings.redraw();
+  await overview.redraw();
+  await activity.redraw();
+  await scenarios.redraw();
   again();
 }
 

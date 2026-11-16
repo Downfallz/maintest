@@ -152,6 +152,34 @@ public sealed class RunRecorderTests
         recorder.Matches.ShouldBe(1);
     }
 
+    /// <summary>
+    /// A match rebuilt from its journal is played again from its start, through the same wrapped agents (ADR
+    /// 0159). What was recorded of it the first time is let go of first, or every step would be there twice and
+    /// a seat that changed hands would be stamped as changing twice.
+    /// </summary>
+    [Fact]
+    public async Task A_match_forgotten_keeps_none_of_its_steps_and_none_of_its_seat_changes()
+    {
+        var store = new MatchStore();
+        var match = store.Started(Rules, new TestRandom(3));
+        var writer = new MemoryArtifactWriter();
+        var recorder = Recorder(writer, traces: null);
+        await Handlers.Driver(store.Workflow).PlayAsync(
+            match.Id,
+            recorder.Wrap(match.Id, new RandomAgent(new TestRandom(1))),
+            recorder.Wrap(match.Id, new RandomAgent(new TestRandom(2))),
+            TestContext.Current.CancellationToken);
+        recorder.Reseated(PlayerSlot.Player1, "greedy", 3);
+        recorder.Stamp.ShouldNotBe(Stamp);
+
+        recorder.Forget(match.Id);
+        await recorder.MatchPlayedAsync(match.Id, 7, PlayerBoardStateProjection.Build(match, PlayerSlot.Player1), TestContext.Current.CancellationToken);
+
+        recorder.Stamp.ShouldBe(Stamp);
+        writer.LinesOf<StepRecord>(RunRecorder.StepsFile).ShouldBeEmpty();
+        writer.LinesOf<EpisodeRecord>(RunRecorder.EpisodesFile).ShouldAllBe(episode => episode.Steps == 0);
+    }
+
     [Fact]
     public async Task Invalid_inputs_are_rejected()
     {

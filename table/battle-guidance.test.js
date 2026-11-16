@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { battleGuidance, helpPreferences, HELP_PREFERENCE_KEY } from './battle-guidance.js';
+import { battleGuidance, helpPreferences, HELP_PREFERENCE_KEY, waitingOn } from './battle-guidance.js';
 const catalogue = { rules: { roundCap: 17, combatDeclaration: 'AtActivation' } };
 const view = (kind = 'Evolution', extras = {}) => ({ board: { roundNumber: 1, phase: 'Planning', subPhase: 'Evolution', slot: 'Player1', nextEvolutionRound: 1, allies: [{ id: 1, name: 'First' }], enemies: [], timeline: [] }, waitingFor: kind, waitingAsked: 12, waitingCreature: 1,
   options: { evolution: { remainingPicks: 2, creatures: [{ creature: 1, availableTiers: ['root'] }] } }, ...extras });
@@ -14,7 +14,7 @@ test('mutation guidance uses the team offer and explains the actual pass semanti
 test('depleted picks and empty offers never tell the player to buy an unavailable mutation', () => {
   const depleted = battleGuidance(view('Evolution', { options: { evolution: { remainingPicks: 0 } } }), catalogue);
   assert.equal(depleted.topic, null); assert.match(depleted.objective, /No team picks remain/);
-  assert.match(battleGuidance(view('Evolution', { options: { evolution: { remainingPicks: 1, creatures: [{ creature: 1, availableTiers: [] }] } } }), catalogue).objective, /No mutations offered\. Open Choose mutation to pass/);
+  assert.match(battleGuidance(view('Evolution', { options: { evolution: { remainingPicks: 1, creatures: [{ creature: 1, availableTiers: [] }] } } }), catalogue).objective, /No mutations offered\. Open Mutation tree to pass/);
 });
 test('the next mutation comes from the board on an even round, not a client schedule', () => {
   const input = view(null); input.board.roundNumber = 2; input.board.nextEvolutionRound = 6;
@@ -55,7 +55,7 @@ test('opponent turns use public order without reading unrevealed plans', () => {
   input.board.timeline = [{ creature: 4, owner: 'Player2' }]; input.board.activationCursor = 0;
   input.board.intents = [{ spell: 'SECRET' }]; input.board.evolutionChoices = [{ tier: 'SECRET' }];
   const g = battleGuidance(input, catalogue);
-  assert.equal(g.topic, null); assert.match(g.objective, /Creature 4 \(opponent\)/); assert.doesNotMatch(text(g), /SECRET/);
+  assert.equal(g.topic, null); assert.match(g.objective, /Waiting for your opponent: Creature 4 is choosing its action/); assert.doesNotMatch(text(g), /SECRET/);
 });
 test('historical playback never carries the next live purchase budget or round into its help', () => {
   const g = battleGuidance(view(), catalogue, { historical: true });
@@ -81,11 +81,37 @@ function store(initial) {
   const writes = []; let data = initial;
   return { writes, getItem: () => data, setItem: (key, value) => { assert.equal(key, HELP_PREFERENCE_KEY); writes.push(value); data = value; } };
 }
-test('tips are once per subject across creatures, rounds and reloads', () => {
-  const storage = store(null), p = helpPreferences(storage);
+test('tips are once per subject in a game, across creatures, rounds and reloads', () => {
+  const storage = store(null), p = helpPreferences(storage); p.setGame('table-a');
   assert.equal(p.shouldShow('mutation'), true); p.markSeen('mutation'); p.markSeen('mutation');
   assert.equal(p.shouldShow('mutation'), false); assert.equal(p.shouldShow('tempo'), true);
-  assert.equal(storage.writes.length, 1); assert.equal(helpPreferences(storage).shouldShow('mutation'), false);
+  const reloaded = helpPreferences(storage); reloaded.setGame('table-a');
+  assert.equal(storage.writes.length, 1); assert.equal(reloaded.shouldShow('mutation'), false);
+});
+test('every game teaches its phases again', () => {
+  const storage = store(null), p = helpPreferences(storage); p.setGame('table-a'); p.markSeen('mutation');
+
+  p.setGame('table-b');
+
+  assert.equal(p.shouldShow('mutation'), true);
+  p.setGame('table-a'); assert.equal(p.shouldShow('mutation'), false);
+});
+test('a browser that read every tip once before still mutes them if it chose to, and is taught again if not', () => {
+  const read = store(JSON.stringify({ version: 1, muted: false, seen: ['mutation', 'tempo'] }));
+  const muted = store(JSON.stringify({ version: 1, muted: true, seen: [] }));
+
+  const p = helpPreferences(read); p.setGame('table-a');
+
+  assert.equal(p.shouldShow('mutation'), true);
+  assert.equal(helpPreferences(muted).muted(), true);
+});
+test('only the latest games keep the tips they read', () => {
+  const storage = store(null), p = helpPreferences(storage);
+  for (let game = 0; game < 25; game++) { p.setGame(`table-${game}`); p.markSeen('tempo'); }
+
+  const kept = JSON.parse(storage.writes.at(-1)).games;
+
+  assert.equal(kept.length, 20); assert.equal(kept[0].game, 'table-24');
 });
 test('muting only instructional tips leaves reopening Help independent of the preference', () => {
   const storage = store(null), p = helpPreferences(storage); p.setMuted(true);
@@ -94,12 +120,63 @@ test('muting only instructional tips leaves reopening Help independent of the pr
   p.setMuted(false); assert.equal(p.shouldShow('tempo'), true);
 });
 test('stored values are bounded generic preferences, never arbitrary identities or payloads', () => {
-  const storage = store(JSON.stringify({ version: 1, seen: ['SECRET', 'mutation', 'mutation'], muted: 'true', token: 'SECRET' }));
-  const p = helpPreferences(storage); p.markSeen('tempo'); p.markSeen('SECRET');
-  assert.deepEqual(JSON.parse(storage.writes.at(-1)), { version: 1, muted: false, seen: ['mutation', 'tempo'] });
+  const storage = store(JSON.stringify({ version: 2, muted: 'true', token: 'SECRET',
+    games: [{ game: 'table-a', seen: ['SECRET', 'mutation', 'mutation'], token: 'SECRET' }, { game: '../x', seen: ['tempo'] }] }));
+  const p = helpPreferences(storage); p.setGame('table-a'); p.markSeen('tempo'); p.markSeen('SECRET');
+  assert.deepEqual(JSON.parse(storage.writes.at(-1)), { version: 2, muted: false, games: [{ game: 'table-a', seen: ['mutation', 'tempo'] }] });
 });
 test('blocked, malformed and older preference versions keep Help usable in memory', () => {
   for (const storage of [null, store('broken'), store('{"version":0,"muted":true}'), { getItem() { throw Error(); }, setItem() { throw Error(); } }]) {
     const p = helpPreferences(storage); assert.equal(p.shouldShow('action'), true); p.markSeen('action'); assert.equal(p.shouldShow('action'), false); p.setMuted(true); assert.equal(p.muted(), true);
   }
+});
+
+// A live round in combat where the opponent's creature 4 holds the slot and this seat's creature 2 comes later.
+const combat = (cursor = 1, extras = {}) => ({ board: { roundNumber: 2, phase: 'Combat', subPhase: 'Activation', slot: 'Player1', activationCursor: cursor,
+  allies: [{ id: 1, name: 'Creature 1' }, { id: 2, name: 'Creature 2' }], enemies: [{ id: 4, name: 'Creature 4' }, { id: 5, name: 'Creature 5' }],
+  timeline: [{ creature: 1, owner: 'Player1' }, { creature: 4, owner: 'Player2' }, { creature: 5, owner: 'Player2' }, { creature: 2, owner: 'Player1' }] },
+waitingFor: null, waitingAsked: null, ...extras });
+
+test('while the opponent\'s creature takes its slot, the seat is told whom it waits for, on which creature, and its own next', () => {
+  assert.deepEqual(waitingOn(combat(), { opponent: 'bastien' }), { kind: 'action', eyebrow: "Opponent's turn", title: 'Waiting for bastien',
+    detail: 'Creature 4 is choosing its action · your Creature 2 plays next', creature: 4 });
+  assert.equal(waitingOn(combat(), { opponent: 'Lookahead', bot: true }).title, 'Lookahead is thinking');
+  assert.equal(waitingOn(combat()).title, 'Waiting for your opponent', 'a seat whose opponent has no name yet');
+  const last = combat(2, { board: { ...combat().board, activationCursor: 2, timeline: combat().board.timeline.slice(0, 3) } });
+  assert.match(waitingOn(last).detail, /your team has acted this round$/);
+});
+
+test('nothing is waited on during this seat\'s own slot, its own question or after the end; before the start, the waiting room', () => {
+  assert.equal(waitingOn(combat(0)), null);
+  // Before the match the card is the waiting room's, whoever the opponent will be.
+  const room = waitingOn({ ...combat(), waiting: { seats: [] } });
+  assert.equal(room.kind, 'seats'); assert.equal(room.title, 'Waiting for your opponent');
+  assert.equal(waitingOn({ ...combat(), waiting: { seats: [] } }, { opponent: 'bastien' }).title, 'Waiting for bastien');
+  assert.equal(waitingOn(combat(1, { waitingFor: 'Action', waitingAsked: 9 })), null);
+  assert.equal(waitingOn(combat(1, { waiting: true })).kind, 'seats');
+  assert.equal(waitingOn(combat(1, { over: true })), null);
+  assert.equal(waitingOn({ ...combat(), board: { ...combat().board, subPhase: 'Cleanup' } }), null, 'the host resolves cleanup by itself');
+});
+
+test('once this seat\'s command is sent, it is told what the other side is still choosing', () => {
+  const planning = view('Evolution');
+
+  assert.equal(waitingOn(planning), null, 'its own mutation question is still open');
+  assert.deepEqual(waitingOn(planning, { accepted: true, opponent: 'bastien' }), { kind: 'choice', eyebrow: 'Your choice is in', title: 'Waiting for bastien', detail: 'Choosing their mutations', creature: null });
+  assert.equal(waitingOn({ ...view('Speed'), waitingFor: null, waitingAsked: null, board: { ...planning.board, subPhase: 'Speed' } }).detail, 'Setting their tempos');
+});
+
+test('the dock says whom it waits for in plain words instead of sending the player to History', () => {
+  assert.equal(battleGuidance(combat(), catalogue).objective, 'Waiting for your opponent: Creature 4 is choosing its action.');
+});
+
+
+test('in a game between two players, the seat asked and the seat waiting both read how long is left to answer', () => {
+  const now = Date.parse('2026-11-12T00:00:00Z'), answerBy = '2026-11-12T05:30:00Z';
+
+  assert.match(battleGuidance(view('Evolution', { answerBy }), catalogue, { now }).objective, / 5 h left to answer\.$/);
+  assert.doesNotMatch(battleGuidance(view('Evolution', { answerBy }), catalogue, { now, accepted: true }).objective, /left to answer/, 'a choice sent asks nothing more');
+  assert.doesNotMatch(battleGuidance(view('Evolution'), catalogue, { now }).objective, /left to answer/, 'a game without a time to answer');
+  const theirs = view(null, { answerBy, board: { ...view().board, subPhase: 'Speed' } });
+  assert.match(waitingOn(theirs, { opponent: 'bastien', now }).detail, /Setting their tempos · 5 h left to answer$/);
 });

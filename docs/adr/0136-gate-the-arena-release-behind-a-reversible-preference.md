@@ -1,4 +1,4 @@
-# 0136 — Gate the arena release behind a reversible preference
+# 0136. Gate the arena release behind a reversible preference
 
 Date: 2026-11-05
 

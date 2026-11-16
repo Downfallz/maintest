@@ -62,6 +62,23 @@ public sealed class CombatExecutionTests
     }
 
     /// <summary>
+    /// What the target's defense took from a hit is a fact of the hit, not of the health it met: the applied outcome
+    /// keeps it however much the remaining health capped what landed.
+    /// </summary>
+    [Fact]
+    public void A_hit_applied_keeps_what_the_targets_defense_blocked()
+    {
+        var creatures = Arena.FourCreatures();
+        Arena.Find(creatures, Arena.Wraith).TakeDamage(18);
+        var action = CombatAction.Bind(new CombatIntent(Arena.Knight, Arena.Strike), [Arena.Wraith]);
+        var resolution = CombatResolution.Resolved(action, [Arena.Wraith], [], false, Energy.Of(0), [new DamageOutcome(Arena.Wraith, 7, false) { Blocked = 3 }]);
+
+        var applied = CombatExecution.Apply(resolution, creatures);
+
+        applied.ShouldHaveSingleItem().ShouldBe(new DamageOutcome(Arena.Wraith, 2, false) { Blocked = 3 });
+    }
+
+    /// <summary>
     /// A drain takes what is there and reports what it took (ADR 0035), the same way damage and healing do: a
     /// spell that drains two from an empty pool did nothing, and nothing is what the recorder must count.
     /// </summary>

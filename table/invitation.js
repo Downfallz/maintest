@@ -93,3 +93,14 @@ export function addressAfter(path, seats, kept) {
   const query = new URLSearchParams(seats.map(({ seat, token }) => [seat, token]));
   return `${path}?${query}`;
 }
+
+/**
+ * Where /play sends the seats it opened (ADR 0157): the battle view, naming their table so a browser that holds
+ * seats in other games too opens this one, and carrying the seats themselves only when this browser keeps nothing.
+ */
+export function battleAddress(seats, table, kept) {
+  const query = new URLSearchParams(kept ? [] : seats.map(({ seat, token }) => [seat, token]));
+  if (table) query.set('table', table);
+  const text = query.toString();
+  return text ? `/battle?${text}` : '/battle';
+}

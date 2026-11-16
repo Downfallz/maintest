@@ -154,7 +154,7 @@ const replayed = JSON.stringify({
   feed: [{ sequence: 3, event: { kind: 'RoundEnded' } }, { sequence: 9, event: { kind: 'CombatActionResolved' } }],
 });
 
-test('a replay asks the host for its session once, with the operator token, and serves it as a finished seat', async () => {
+test('a replay asks the host for its session once, carrying the operator token it holds, and serves it as a finished seat', async () => {
   const { calls, fetchImpl } = stub({ status: 200, body: replayed });
   const transport = replayTransport('20261031 x', 'player2', 'op', fetchImpl);
 
@@ -162,7 +162,7 @@ test('a replay asks the host for its session once, with the operator token, and 
   await transport.seat(10);
 
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].path, '/api/sessions/20261031%20x/replay');
+  assert.equal(calls[0].path, '/api/lobby/tables/20261031%20x/replay');
   assert.equal(calls[0].options.headers['X-Seat-Token'], 'op');
   assert.equal(seat.body.over, true);
   assert.equal(seat.body.replay, true);
@@ -186,6 +186,17 @@ test('a replay decides nothing, and asks again after a refusal', async () => {
   assert.equal(decided.ok, false);
 });
 
+test('without the operator token, a replay asks the same route bare: a platform sign-in or a player\'s account answers it', async () => {
+  const { calls, fetchImpl } = stub({ status: 200, body: replayed });
+  const transport = replayTransport('20261031 x', 'player1', null, fetchImpl);
+
+  const seat = await transport.seat(0);
+
+  assert.equal(calls[0].path, '/api/lobby/tables/20261031%20x/replay');
+  assert.deepEqual(calls[0].options.headers, {});
+  assert.deepEqual(seat.body.board.allies, [{ id: 1 }]);
+});
+
 test('server-sent events are cut at the blank line, comments dropped, and the unfinished one kept for later', () => {
   const parsed = parseEvents('event: ready\ndata: 3\n\n: keep-alive\n\nevent: changed\ndata: 4\n\nevent: chan');
 
@@ -198,13 +209,15 @@ test('the events call reads the stream under the seat token and tells of each ch
   const calls = [];
   const chunks = ['event: ready\ndata: 1\n\n', ': keep-alive\n\nevent: changed\nda', 'ta: 2\n\n'].map(text => new TextEncoder().encode(text));
   const body = { getReader: () => ({ read: async () => (chunks.length ? { value: chunks.shift(), done: false } : { value: undefined, done: true }) }) };
-  const transport = httpTransport('player1', 'cafe', async (path, options) => { calls.push({ path, options }); return { status: 200, ok: true, body }; });
+  const transport = httpTransport('player1', 'cafe', async (path, options) => { calls.push({ path, options }); return path.endsWith('/negotiate') ? { status: 404, ok: false } : { status: 200, ok: true, body }; });
   const heard = [];
 
   const answer = await transport.events(event => heard.push(event), new AbortController().signal);
 
-  assert.equal(calls[0].path, '/api/seat/player1/events');
-  assert.equal(calls[0].options.headers['X-Seat-Token'], 'cafe');
+  // A host without a relay (ADR 0165) is asked first, and read through its own stream.
+  assert.equal(calls[0].path, '/api/seat/player1/negotiate');
+  assert.equal(calls[1].path, '/api/seat/player1/events');
+  assert.equal(calls[1].options.headers['X-Seat-Token'], 'cafe');
   assert.deepEqual(heard, [{ event: 'ready', data: '1' }, { event: 'changed', data: '2' }]);
   assert.equal(answer.ok, true);
 });
@@ -213,4 +226,16 @@ test('a stream the host refuses is answered as refused, with nothing read', asyn
   const transport = httpTransport('player1', 'cafe', async () => ({ status: 403, ok: false, body: null }));
 
   assert.deepEqual(await transport.events(() => assert.fail('nothing to hear'), new AbortController().signal), { status: 403, ok: false });
+});
+
+test('a reaction is posted to the seat by its name alone (ADR 0173)', async () => {
+  const { calls, fetchImpl } = stub({ status: 200, body: '{"reaction":{"sequence":1}}' });
+  const transport = httpTransport('player2', 'abc', fetchImpl);
+
+  await transport.react('good-game');
+
+  assert.equal(calls[0].path, '/api/seat/player2/reaction');
+  assert.equal(calls[0].options.method, 'POST');
+  assert.equal(calls[0].options.headers['X-Seat-Token'], 'abc');
+  assert.equal(calls[0].options.body, '{"reaction":"good-game"}');
 });

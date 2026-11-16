@@ -164,7 +164,7 @@ it as one script that does "a day's worth of manual typing" for you and leaves a
    entropy (how many different spells were cast: low means one dominant spell) and the fizzle rate. With
    `--against`, a second table of deltas and the stamp axis that moved.
 
-Then one entry in [journal.md](journal.md): what changed, the numbers, the decision (keep, tune, revert).
+Then one entry under [journal/](journal.md): what changed, the numbers, the decision (keep, tune, revert).
 
 ### Seeing the results without uploading anything
 

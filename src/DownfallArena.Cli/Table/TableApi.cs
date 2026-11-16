@@ -31,11 +31,11 @@ namespace DownfallArena.Cli.Table;
 /// still the only thing that says what is legal. And it never invents a refusal: a tap that arrives after the
 /// screen moved on is late, not illegal, and says so with a 409 the page can act on.
 /// </remarks>
-internal sealed class TableApi(TableSession session, MatchQueryHandlers queries, IReadOnlyList<TableSeat> seats, CatalogueView catalogue, MatchTraceRecorder events, PlaytestRun? run = null, TablePilot? pilot = null)
+internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> seats, CatalogueView catalogue, MatchTraceRecorder events, PlaytestRun? run = null, TablePilot? pilot = null)
 {
     public DecisionGuideProjection? Guide { get; init; }
 
-    private readonly ChangeWatcher _watcher = new(session, seats, events);
+    private readonly ChangeWatcher _watcher = new(session, seats);
 
     /// <summary>
     /// That this table changed, for the pages streaming it (ADR 0119): a question asked, which the seats say
@@ -50,29 +50,18 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     public void Detach() => _watcher.Detach();
 
     /// <summary>
-    /// What moves the version on its own, without a route: a seat asked, an entry recorded for this match --
-    /// the recorder is the host's and records every table's, so each watcher keeps to its own match -- and the
-    /// outcome. Unsubscribed with the table, or a host would hold every table it ever played through the
-    /// recorder.
+    /// What moves the version on its own, without a route: a seat asked, what the seats read changing -- an
+    /// entry recorded for a driven match, a step kept for a stepped one -- and the outcome. Unsubscribed with
+    /// the table, or the seats and the session would hold every watcher a page ever opened.
     /// </summary>
     private sealed class ChangeWatcher
     {
-        private readonly MatchTraceRecorder _events;
-        private readonly Action<MatchId> _recorded;
+        private readonly ITableSession _session;
 
-        public ChangeWatcher(TableSession session, IReadOnlyList<TableSeat> seats, MatchTraceRecorder events)
+        public ChangeWatcher(ITableSession session, IReadOnlyList<TableSeat> seats)
         {
-            _events = events;
+            _session = session;
             var changes = Changes;
-            var matchId = session.MatchId;
-            _recorded = recorded =>
-            {
-                if (recorded == matchId)
-                {
-                    changes.Bump();
-                }
-            };
-            events.EntryRecorded += _recorded;
             foreach (var seat in seats)
             {
                 if (seat.Person is { } person)
@@ -81,6 +70,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
                 }
             }
 
+            session.Changed += changes.Bump;
             session.Outcome.ContinueWith(_ => changes.Bump(), CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         }
 
@@ -88,31 +78,52 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
 
         public void Detach()
         {
-            _events.EntryRecorded -= _recorded;
+            _session.Changed -= Changes.Bump;
             Changes.Close();
         }
     }
+
+    /// <summary>What the reactions' cooldown is measured with (ADR 0173).</summary>
+    public TimeProvider Clock { get; init; } = TimeProvider.System;
+
+    private TableReactions? _reactions;
+
+    /// <summary>The reactions the two seats send each other (ADR 0173), kept with the table's record when it has one.</summary>
+    public TableReactions Reactions => LazyInitializer.EnsureInitialized(ref _reactions, () => new TableReactions(Clock, run));
+
+    /// <summary>
+    /// Whether the two seats may react to each other (ADR 0173): two people, the match begun, and not one account in
+    /// both seats, which is one person on a shared device. Against a bot there is nobody to read a reaction.
+    /// </summary>
+    private bool Reacting =>
+        session.HasBegun && seats.Count == 2 && seats.All(seat => seat.Person is not null)
+        && !(seats[0].Account is { } account && seats[1].Account == account);
 
     /// <summary>The bots the pilot may seat, as the host offers them (<see cref="SeatableAgents" />); the page adds the seat's own person.</summary>
     public IReadOnlyList<SeatableAgent> Agents { get; init; } = [];
 
     /// <summary>
-    /// The join code of a seat, once the registry has minted them: what a seat waiting for the other player is
-    /// shown so it can be passed on (ADR 0092). Null until the table is registered, which is before any page
-    /// can reach it.
+    /// Writes the table's record as it stands, once the registry holds the table and has minted its codes: what
+    /// a person reaching their seat, and the match beginning, are kept in. None for a table nobody records.
     /// </summary>
-    public Func<TableSeat, string?>? CodeOf { get; set; }
+    public Func<Task>? Record { get; set; }
 
     /// <summary>The notices sent to a seat nobody is looking at (ADR 0118): told which askings a page has drawn.</summary>
     public PushNotices? Push { get; init; }
 
+    /// <summary>When the table's time to answer runs out (ADR 0169), or none: a table without a limit, not begun or over.</summary>
+    public Func<Task<DateTimeOffset?>>? AnswerBy { get; set; }
+
     public int FeedStart { get; init; }
+
+    /// <summary>What a match scenario's practice is (ADR 0179), served in the seat's view so the page shows it as practice; none for a game.</summary>
+    public PracticeLabel? Practice { get; init; }
 
     public const string TokenHeader = "X-Seat-Token";
 
     /// <summary>
-    /// Whether the match reached an outcome. Stronger than "stopped being played" on purpose: a driver task
-    /// that faulted or was cancelled is also complete, and the session page is fenced on this because the
+    /// Whether the match reached an outcome. Stronger than "stopped being played" on purpose: a session
+    /// that failed or was let go of is also complete, and the session page is fenced on this because the
     /// trace it carries holds both seats' boards. Nothing about a match that broke says the hidden half of it
     /// may now be read.
     /// </summary>
@@ -165,7 +176,10 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
             return StudioResponse.OfPlainText(403, $"Every request carries the seat's own '{TokenHeader}'.");
         }
 
-        Arrived(holder);
+        if (Arrived(holder) && Record is { } record)
+        {
+            await RecordedAsync(record);
+        }
 
         if (path == "/api/session" && method == "GET")
         {
@@ -206,8 +220,10 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         {
             ("GET", [_]) => await SeatAsync(holder, Since(query), Shown(query)),
             ("GET", [_, "events"]) => Events(),
+            ("GET", [_, "negotiate"]) => await NegotiateAsync(),
             ("POST", [_, "decision"]) => await DecideAsync(holder, body),
             ("POST", [_, "concede"]) => await ConcedeAsync(holder),
+            ("POST", [_, "reaction"]) => await ReactAsync(holder, body),
             _ => StudioResponse.OfPlainText(404, $"No such route: {method} {path}"),
         };
     }
@@ -218,6 +234,30 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     /// changes. It says what to ask, not what was asked: the seat route still answers one seat at a time. It
     /// ends when the browser goes, when the table is let go of, or once the match is over and said so.
     /// </summary>
+    /// <summary>
+    /// Where this seat's page connects to hear its table move through the relay (ADR 0165), when this host has one;
+    /// 404 otherwise, and the page reads <see cref="Events" /> instead. The address is the service's own, signed for
+    /// this table's group and nothing else, and good for a while.
+    /// </summary>
+    public Func<CancellationToken, Task<Uri>>? Negotiate { get; set; }
+
+    private async Task<StudioResponse> NegotiateAsync()
+    {
+        if (Negotiate is not { } negotiate)
+        {
+            return StudioResponse.OfPlainText(404, "This host relays nothing: read the seat's events.");
+        }
+
+        try
+        {
+            return StudioResponse.OfJson(new { url = (await negotiate(CancellationToken.None)).AbsoluteUri }, ArtifactJson.LineOptions);
+        }
+        catch (Exception failure) when (failure is Azure.RequestFailedException or HttpRequestException or Azure.Identity.AuthenticationFailedException)
+        {
+            return StudioResponse.OfPlainText(503, $"The relay could not be reached: {failure.Message}");
+        }
+    }
+
     private StudioResponse Events() =>
         StudioResponse.OfStream(
             "text/event-stream; charset=utf-8",
@@ -275,106 +315,6 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
 
     private static PlayerSlot Other(PlayerSlot slot) => slot == PlayerSlot.Player1 ? PlayerSlot.Player2 : PlayerSlot.Player1;
 
-    /// <summary>
-    /// How many of a board's intents are still face down. A round keeps every intent it was given
-    /// (<c>Round.IntentsOf</c>) and tracks what has been turned over separately, in the actions the activation
-    /// cursor has reached, so the count of the one is not the count of the other from the first reveal
-    /// onwards. Subtracting here is what keeps the number and the reveal strip from contradicting each other
-    /// on the same screen: three face down beside two of them face up is a table nobody would believe.
-    /// </summary>
-    private static int StillFaceDown(PlayerBoardState board)
-    {
-        var revealed = board.RevealedActions.Select(action => action.Actor).ToHashSet();
-        return board.Intents.Count(intent => !revealed.Contains(intent.Actor));
-    }
-
-    /// <summary>
-    /// A seat's board with the picks, speeds and intents its person has answered and the match does not have yet.
-    /// Both seats are asked theirs at once and the answers reach the match together once both are done (ADR 0111,
-    /// ADR 0117); until then the board would show a player none of what they have just chosen, which is the very
-    /// thing they choose the next creature's on (ADR 0039). Once the match has an answer, its own copy is the one shown.
-    /// </summary>
-    private static PlayerBoardState WithAnswers(PlayerBoardState board, HumanSeat? person)
-    {
-        var given = person?.Given(board.RoundNumber) ?? [];
-        if (given.Count == 0)
-        {
-            return board;
-        }
-
-        var picks = Unsent(board, given);
-        var speeds = given
-            .Where(answer => answer.Kind == PlayerOptionsKind.Speed && !board.SpeedChoices.Any(choice => choice.Creature == answer.Creature))
-            .Select(answer => new SpeedChoice(answer.Creature!.Value, answer.Speed!.Value));
-        var intents = given
-            .Where(answer => answer.Kind == PlayerOptionsKind.Intent && !board.Intents.Any(intent => intent.Actor == answer.Creature))
-            .Select(answer => new CombatIntent(answer.Creature!.Value, answer.Spell!));
-        return board with
-        {
-            EvolutionChoices = [.. board.EvolutionChoices, .. picks.Choices],
-            HasPassedEvolution = board.HasPassedEvolution || picks.Passed,
-            SpeedChoices = [.. board.SpeedChoices, .. speeds],
-            Intents = [.. board.Intents, .. intents],
-        };
-    }
-
-    /// <summary>
-    /// The options a seat is offered once the picks its person has answered and the match does not have yet are
-    /// taken out of them: each takes a pick and its creature (<see cref="EvolutionOptions.After" />), and a seat that
-    /// has passed or has no pick left is asked nothing more. Served to the page and checked against an answer, so a
-    /// second pick can neither be offered nor take the creature the first one went to (ADR 0117).
-    /// </summary>
-    private static PlayerOptions WithAnswers(PlayerOptions options, PlayerBoardState board, HumanSeat? person)
-    {
-        if (options.Evolution is not { } evolution)
-        {
-            return options;
-        }
-
-        var picks = Unsent(board, person?.Given(board.RoundNumber) ?? []);
-        foreach (var choice in picks.Choices)
-        {
-            evolution = evolution.After(choice);
-        }
-
-        return picks.Passed || evolution.RemainingPicks <= 0
-            ? new PlayerOptions { Kind = PlayerOptionsKind.Waiting, SubPhase = options.SubPhase }
-            : options with { Evolution = evolution };
-    }
-
-    /// <summary>The picks and the pass a person has answered that the match's board does not carry yet.</summary>
-    private static (IReadOnlyList<EvolutionChoice> Choices, bool Passed) Unsent(PlayerBoardState board, IReadOnlyList<PlayerDecision> given)
-    {
-        var evolution = given.Where(answer => answer.Kind == PlayerOptionsKind.Evolution).ToList();
-        var choices = evolution
-            .Where(answer => answer is { IsPass: false, Creature: { } creature } && !board.EvolutionChoices.Any(choice => choice.Creature == creature))
-            .Select(answer => new EvolutionChoice(answer.Creature!.Value, answer.Tier!))
-            .ToList();
-        return (choices, !board.HasPassedEvolution && evolution.Any(answer => answer.IsPass));
-    }
-
-    /// <summary>
-    /// Whether an answer can have set a command off, which is when the trace is worth waiting for and keeping.
-    /// One of a seat's picks, speeds or intents does not until its last, and the last does not while the other
-    /// person is still being asked theirs: the answers reach the match together (ADR 0111, ADR 0117). Waiting for a
-    /// trace that cannot grow costs the player its whole bound, a quarter of a second a tap with the buttons held,
-    /// and the checkpoint it writes is the one already written. A seat's last pick is its pass or the one that
-    /// spends the picks it was offered, which are the options the answer was checked against.
-    /// </summary>
-    private bool SetsOff(TableSeat seat, HumanSeat person, PlayerDecision decision, PlayerOptions options, int? round)
-    {
-        var last = decision.Kind switch
-        {
-            PlayerOptionsKind.Evolution => decision.IsPass || options.Evolution?.RemainingPicks <= 1,
-            PlayerOptionsKind.Speed => person.Given(round).Count(given => given.Kind == decision.Kind) >= (options.Speed?.Missing.Count ?? 0),
-            PlayerOptionsKind.Intent => person.Given(round).Count(given => given.Kind == decision.Kind) >= (options.Intent?.Creatures.Count ?? 0),
-            _ => (bool?)null,
-        };
-        return last is not { } settles || (settles && Seat(Other(seat.Slot))?.Person?.Waiting?.Kind != decision.Kind);
-    }
-
-    private TableSeat? Seat(PlayerSlot slot) => seats.FirstOrDefault(seat => seat.Slot == slot);
-
     private TableSeat? Holder(string? token) =>
         string.IsNullOrWhiteSpace(token) ? null : seats.FirstOrDefault(seat => string.Equals(seat.Token, token, StringComparison.Ordinal));
 
@@ -388,7 +328,8 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     /// A request on a seat is its person reaching it. The match begins when every person has (ADR 0092): a
     /// bot's seat needs nobody, and a table of bots began when it was composed.
     /// </summary>
-    private void Arrived(TableSeat holder)
+    /// <returns>Whether a person has just reached their seat, which the table's record says from then on.</returns>
+    private bool Arrived(TableSeat holder)
     {
         var arrived = holder.Person is { HasArrived: false };
         holder.Person?.Arrive();
@@ -401,6 +342,24 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         if (arrived)
         {
             Changes.Bump();
+        }
+
+        return arrived;
+    }
+
+    /// <summary>
+    /// Writes the table's record, and never fails the request for it: the person has reached their seat and the
+    /// match may have begun whether or not the store took it. A table picked up again without it waits again.
+    /// </summary>
+    private static async Task RecordedAsync(Func<Task> record)
+    {
+        try
+        {
+            await record();
+        }
+        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or JsonException or ObjectDisposedException or Azure.RequestFailedException)
+        {
+            Console.WriteLine($"  A seat's arrival could not be written into its table's record: {failure.Message}");
         }
     }
 
@@ -417,8 +376,8 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
                 seats = seats.Where(seat => seat.Person is { HasArrived: false }).Select(seat => new
                 {
                     slot = seat.Name,
-                    code = CodeOf?.Invoke(seat),
-                    join = CodeOf?.Invoke(seat) is { } code ? $"{JoinCodes.Prefix}{code}" : null,
+                    code = seat.Code,
+                    join = seat.Code is { } code ? $"{JoinCodes.Prefix}{code}" : null,
                     // Kept for a friend (ADR 0129): no code to read out, and the room says who it waits for instead.
                     invited = seat.InvitedAccount is not null ? true : (bool?)null,
                     declined = seat.DeclinedBy is not null ? true : (bool?)null,
@@ -449,67 +408,28 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
             ? asked
             : null;
 
-    /// <summary>
-    /// The question the seat is blocked on, with the board and the options that go with it, read as one.
-    /// </summary>
-    /// <remarks>
-    /// The question is what the seat is asked rather than what the sub-phase allows: a person acts when their
-    /// own seat is asked, and the two differ while the other seat is still deciding. The three are read in
-    /// separate steps and the match does not wait for a poll in between. The other seat resolves its action
-    /// the moment it binds it (ADR 0083), so the match can reach this seat's next question during the reads,
-    /// and a second device on the same seat can answer the question during them. Either way a question would
-    /// be served beside options that are not its own. So the question is read again once the options are in,
-    /// and the reads are repeated until it has not moved: it can only move on a decision, so this ends.
-    /// </remarks>
-    private async Task<Result<(HumanSeat.Question? Waiting, PlayerBoardState Board, PlayerOptions Options)>> SnapshotAsync(TableSeat seat)
-    {
-        while (true)
-        {
-            var waiting = seat.Person?.Waiting;
-            var board = await queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(session.MatchId, seat.Slot));
-            if (board.IsFailure)
-            {
-                return Result.Failure<(HumanSeat.Question?, PlayerBoardState, PlayerOptions)>(board.Error);
-            }
-
-            var options = await queries.GetPlayerOptions.HandleAsync(new GetPlayerOptions(session.MatchId, seat.Slot));
-            if (options.IsFailure)
-            {
-                return Result.Failure<(HumanSeat.Question?, PlayerBoardState, PlayerOptions)>(options.Error);
-            }
-
-            if (seat.Person?.Waiting?.Asked == waiting?.Asked)
-            {
-                return Result.Success((waiting, board.Value, options.Value));
-            }
-        }
-    }
-
     private async Task<StudioResponse> SeatAsync(TableSeat seat, int since, long? shown)
     {
         // Practice starts at its prepared question; setup rounds must not open a replay over that question.
         since = Math.Max(since, FeedStart);
 
-        var snapshot = await SnapshotAsync(seat);
+        var snapshot = await session.SnapshotAsync(seat.Slot);
         if (snapshot.IsFailure)
         {
             return StudioResponse.OfPlainText(500, snapshot.Error.Message);
         }
 
-        var (waiting, answered, served) = snapshot.Value;
-        var board = WithAnswers(answered, seat.Person);
-        var options = WithAnswers(served, answered, seat.Person);
-
-        // How many cards the other side has face down, and nothing else about them. At a table that number is
-        // public -- face-down cards are countable -- so it is served, as a count computed here rather than as
-        // a list the client is trusted not to read (ADR 0054).
-        var opponent = await queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(session.MatchId, Other(seat.Slot)));
+        var (waiting, board, options, opponentIntents, journaled) = snapshot.Value;
 
         // Everything the host looked at this poll: the slice from the cursor onwards. What the seat may be told
         // of it is a subset, and where to resume is the end of the slice rather than the end of that subset.
         // Through the session when there is one: closing hands the trace over and the recorder forgets the
         // match, while these two are still reading the end of it on their screens.
-        var examined = run is { } recording ? recording.Entries(session.MatchId, since) : events.EntriesOf(session.MatchId, since);
+        // And no further than the match this board is of, as its journal holds it: an entry past it may be of a
+        // step that is never written, and a page that was shown it would hold a cursor past entries recorded
+        // again under the same numbers.
+        var recorded = run is { } recording ? recording.Entries(session.MatchId, since) : events.EntriesOf(session.MatchId, since);
+        var examined = journaled is { } kept && kept - since < recorded.Count ? [.. recorded.Take(Math.Max(0, kept - since))] : recorded;
 
         // The moment this seat was shown what it is being asked, which is what a decision's duration is
         // measured from. Only the page's own acknowledgement of *this* asking counts. Anything else leaves the
@@ -540,12 +460,15 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
                 waitingAsked = waiting?.Asked,
                 playedByBot = seat.Person is null,
 
+                // When whoever is asked loses for not answering (ADR 0169): the page counts down to it.
+                answerBy = AnswerBy is { } answerBy ? await answerBy() : null,
+
                 // Who the table is waiting for before it begins, or null: the page shows a room rather than a
                 // board nobody is asked anything on (ADR 0092).
                 waiting = WaitingRoom(),
 
-                // Over on the board as well as on the driver: a concession ends the match on the board first,
-                // and the driver says so only once the seat it was asking has let it go (ADR 0087).
+                // Over on the board as well as on the session: the board says it the moment the match ends,
+                // whoever reads the outcome after (ADR 0087).
                 over = session.IsOver || board.State == MatchState.Ended,
                 outcome = Outcome(board.Outcome),
 
@@ -553,7 +476,13 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
                 // the page has to know: buttons that post a note into a 409 are worse than no buttons, because
                 // a player who taps one believes the thing they noticed was written down.
                 recording = run is not null,
-                opponentIntents = opponent.IsSuccess ? StillFaceDown(WithAnswers(opponent.Value, Seat(Other(seat.Slot))?.Person)) : 0,
+
+                // A match scenario's practice (ADR 0179): the page shows it as one, the official result untouched.
+                practice = Practice,
+                opponentIntents,
+
+                // The reactions the two players sent each other (ADR 0173): never part of the match's feed or trace.
+                reactions = await ReactionsViewAsync(),
 
                 // What has happened, as this seat may be told it: the boards the trace keeps beside every
                 // event are dropped here and the other seat's hidden decisions never reach the wire
@@ -584,38 +513,34 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     }
 
     /// <summary>
-    /// The seat gives the match up (ADR 0087). The command ends the match behind the driver's lock; every seat
-    /// a person holds is then released, because the driver is blocked inside one of them waiting for a tap that
-    /// is not coming, and it reads the outcome once it is let go. Where the match had got to is read before,
-    /// for the note: afterwards there is only the end. Only the person playing the seat now can give it up: a
+    /// The seat gives the match up (ADR 0087), which the session ends the match by. Where the match had got to
+    /// is read before, for the note: afterwards there is only the end. Only the person playing the seat now can give it up: a
     /// token whose person is waiting for a handover (<c>--handover</c>, a swap) is watching a bot play, and a
     /// match a bot is playing is not theirs to end yet.
     /// </summary>
     private async Task<StudioResponse> ConcedeAsync(TableSeat seat)
     {
-        if (seat.Person is not { } person || !ReferenceEquals(session.Seat(seat.Slot).Seated.Agent, person))
+        if (!session.PlayedByItsPerson(seat.Slot))
         {
             return StudioResponse.OfPlainText(409, $"{seat.Name} is played by a bot; it decides for itself.");
         }
 
-        // Declared before the match is ended, and held until the note is written: ending the match releases the
-        // driver, and the session would otherwise close itself with this note still on its way.
+        // Declared before the match is ended, and held until the note is written: the session would otherwise
+        // close itself the moment the match has an outcome, with this note still on its way.
         using var accepting = run?.Accepting();
         var (round, subPhase) = await WhereAsync(seat.Slot);
-        var conceded = await session.Concede.HandleAsync(new Concede(session.MatchId, seat.Slot));
+        var conceded = await session.ConcedeAsync(seat.Slot);
+        if (conceded.IsFailure && conceded.Error == SeatErrors.PlayedByABot)
+        {
+            // The seat passed to a bot while the concession waited for the match: the answer the check above gives.
+            return StudioResponse.OfPlainText(409, $"{seat.Name} is played by a bot; it decides for itself.");
+        }
+
         if (conceded.IsFailure)
         {
             return Refused(conceded.Error);
         }
 
-        foreach (var held in seats)
-        {
-            held.Person?.Release();
-        }
-
-        // A table given up while it waited for its players begins now, so the driver reads the end and the
-        // session closes; it would otherwise wait for a player who is never coming to a match that is over.
-        session.Begin();
         Changes.Bump();
 
         await NoteConcessionAsync(seat.Slot, round, subPhase);
@@ -671,13 +596,13 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
             return StudioResponse.OfPlainText(400, problem);
         }
 
-        var snapshot = await SnapshotAsync(seat);
+        var snapshot = await session.SnapshotAsync(seat.Slot);
         if (snapshot.IsFailure)
         {
             return StudioResponse.OfPlainText(500, snapshot.Error.Message);
         }
 
-        var options = WithAnswers(snapshot.Value.Options, snapshot.Value.Board, person);
+        var options = snapshot.Value.Options;
         var check = PlayerDecisionCheck.Validate(options, decision);
         if (check.IsFailure)
         {
@@ -695,8 +620,8 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
             return await RefuseAsync(seat.Slot, Late);
         }
 
-        // Where this decision is being made, taken before it is handed over. Submitting releases the driver,
-        // which moves the round on, so anything read afterwards is where the match *went*: the step in
+        // Where this decision is being made, taken before it is handed over. Handing it over moves the match
+        // on, so anything read afterwards is where the match *went*: the step in
         // steps.jsonl carries where it was, and the two files this session says are aligned would disagree
         // about where every decision happened. The sub-phase is the one the options themselves name -- these
         // are the options the decision was just validated against, so it is the question's own answer to
@@ -705,38 +630,36 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         var round = (await WhereAsync(seat.Slot)).Round;
         var answered = waiting;
 
-        // And when this seat's screen was served, read now rather than after the submit. Submitting releases
-        // the driver, which can ask this seat the next question and have a poll stamp it before the recording
-        // gets here -- and a seat has one stamp, so the new question's replaces the answered one's. Read
+        // And when this seat's screen was served, read now rather than after the decision is handed over: the
+        // match can then ask this seat the next question and have a poll stamp it before the recording gets
+        // here -- and a seat has one stamp, so the new question's replaces the answered one's. Read
         // afterwards, the decision would be timed at nothing.
         var servedAt = run?.ServedAt(seat.Slot, answered);
-
-
-        // How far the trace has got before this decision is handed over, so the checkpoint that follows can
-        // tell whether the driver has applied it yet.
-        var traced = run?.TraceLength(session.MatchId) ?? 0;
 
         // Declared before the decision is handed over, and held until its note is written. The match can end
         // on this very tap, and the host would otherwise close the session while this thread is still on its
         // way to writing it down -- showing a finished session whose last decision is missing.
         using var accepting = run?.Accepting();
 
-        // Checked against the options, and still refused: the seat moved on between the two. That is the race
-        // the driver would have thrown on, answered as the late tap it is.
-        // The moment of acceptance, read *before* the seat is answered and kept only if it was. After the
-        // submit is too late: it releases the driver, and this thread can lose the processor between the two,
-        // so the clock would then read once a whole command had run -- dating the note after the thing it
-        // records and putting engine time inside a duration that measures a person. Read first, it is at worst
-        // a few instructions early, and it cannot contain any of the engine, which is the error worth having.
+        // Checked against the options, and still refused: the seat moved on between the two, and the tap is
+        // answered as the late one it is.
+        // The moment of acceptance, read *before* the decision is handed over and kept only if it was taken.
+        // After is too late: the clock would then read once a whole command had run -- dating the note after
+        // the thing it records and putting engine time inside a duration that measures a person. Read first,
+        // it is at worst a few instructions early, and it cannot contain any of the engine, which is the error
+        // worth having.
         var acceptedAt = run?.Now();
-        if (!person.Submit(decision, asking))
+        var taken = await session.DecideAsync(seat.Slot, decision, asking);
+        if (!taken.Taken)
         {
             return await RefuseAsync(seat.Slot, Late);
         }
 
-        var accepted = acceptedAt is { } moment ? new AcceptedDecision(answered, servedAt, moment) : null;
+        // A day at most: a page's clock that says more is a tab left open, not a decision being read.
+        var pageElapsed = posted.ElapsedMs is >= 0 and <= PageElapsedAtMost ? posted.ElapsedMs : null;
+        var accepted = acceptedAt is { } moment ? new AcceptedDecision(answered, servedAt, moment) { PageElapsedMs = pageElapsed } : null;
 
-        await RecordAsync(seat.Slot, round, subPhase, accepted, traced, SetsOff(seat, person, decision, options, round));
+        await RecordAsync(seat.Slot, round, subPhase, accepted, taken.SetsOff);
 
         // The other seat sees this decision's effects on its next read; its page is told to read now.
         Changes.Bump();
@@ -750,7 +673,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     /// moved on would be refused as late. A lost line goes to the console, where it is the operator's problem
     /// rather than the player's.
     /// </summary>
-    private async Task RecordAsync(PlayerSlot slot, int? round, RoundSubPhase? subPhase, AcceptedDecision? accepted, int traced, bool setsOff)
+    private async Task RecordAsync(PlayerSlot slot, int? round, RoundSubPhase? subPhase, AcceptedDecision? accepted, bool setsOff)
     {
         if (run is not { } recording || accepted is null)
         {
@@ -765,16 +688,18 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
                 return;
             }
 
-            // The trace, as far as the match has got -- and not until the command this decision caused has
-            // finished raising everything it raises.
-            await SettledAsync(recording, slot, traced);
-            await recording.CheckpointAsync(session.MatchId, CancellationToken.None);
+            // The trace, as far as the journal holds the match: the decision was written and applied before
+            // the session answered, and whatever the bots do after it is checkpointed with the next one.
+            await recording.CheckpointAsync(session.MatchId, session.Journaled, CancellationToken.None);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
         {
             await Console.Error.WriteLineAsync($"The session could not record a decision of {TableSeat.NameOf(slot)}: {exception.Message}");
         }
     }
+
+    // The longest a page may say it had a question in front of somebody (inventory question 3).
+    private const long PageElapsedAtMost = 24 * 60 * 60 * 1000;
 
     private static readonly DomainError Late = new("Seat.NotWaiting", "This seat is not waiting for that decision any more.");
 
@@ -831,23 +756,49 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     }
 
     /// <summary>
-    /// Waits until the engine has finished the command this decision caused, so what is checkpointed next is
-    /// the whole of it and not the first event of it.
+    /// A reaction this seat sends the other (ADR 0173): one of the catalogue's, one every few seconds at most, and only
+    /// between two people. Both pages read it on the change it makes; no notice is sent for it.
     /// </summary>
-    /// <remarks>
-    /// Two things in sequence, and neither is enough alone. The trace growing says the command has *started*:
-    /// submitting only queues the driver, so until then this thread is ahead of it. Then a read through the
-    /// table's gate says it has *finished* -- the driver holds that gate for a whole command, saving and
-    /// dispatching inside it (<c>MatchWorkflow.CommitAsync</c>), so a read that comes back is that command
-    /// having let go. One command raises several events, and watching the trace alone would stop at the first
-    /// of them and checkpoint while the rest were still being dispatched. The gate is the completion signal
-    /// the host would otherwise have had to invent, and it was already there.
-    /// </remarks>
-    private async Task SettledAsync(PlaytestRun recording, PlayerSlot slot, int traced)
+    private async Task<StudioResponse> ReactAsync(TableSeat seat, string body)
     {
-        await recording.WaitForTraceAsync(session.MatchId, traced, CancellationToken.None);
-        await WhereAsync(slot);
+        if (!Reacting)
+        {
+            return StudioResponse.OfJson(new { error = "Reaction.Unavailable", message = "Reactions are only sent between two players at a begun match." }, ArtifactJson.LineOptions, status: 409);
+        }
+
+        string? reaction;
+        try
+        {
+            reaction = JsonSerializer.Deserialize<TableReactionBody>(body, ArtifactJson.LineOptions)?.Reaction;
+        }
+        catch (JsonException exception)
+        {
+            return StudioResponse.OfPlainText(400, exception.Message);
+        }
+
+        var sent = await Reactions.SendAsync(seat.Name, reaction);
+        switch (sent.Refusal)
+        {
+            case null:
+                Changes.Bump();
+                return StudioResponse.OfJson(new { reaction = Described(sent.Reaction!) }, ArtifactJson.LineOptions);
+            case "Reaction.Unknown":
+                return StudioResponse.OfJson(new { error = sent.Refusal, message = $"'{reaction}' is not a reaction. One of: {string.Join(", ", TableReactions.Catalogue)}." }, ArtifactJson.LineOptions, status: 400);
+            case "Reaction.TooSoon":
+                return StudioResponse.OfJson(new { error = sent.Refusal, message = "Wait a moment before reacting again.", retryAfterMs = (long)Math.Ceiling(sent.Wait.TotalMilliseconds) }, ArtifactJson.LineOptions, status: 429);
+            default:
+                return StudioResponse.OfJson(new { error = sent.Refusal, message = "The reaction could not be kept. Try again." }, ArtifactJson.LineOptions, status: 503);
+        }
     }
+
+    private static object Described(TableReaction reaction) =>
+        new { sequence = reaction.Sequence, seat = reaction.Seat, reaction = reaction.Reaction, at = reaction.At };
+
+    /// <summary>What a seat's view says of the reactions: whether it may send one, and the last few, both seats'.</summary>
+    private async Task<object> ReactionsViewAsync() =>
+        Reacting
+            ? new { available = true, cooldownMs = (long)TableReactions.Cooldown.TotalMilliseconds, recent = (await Reactions.RecentAsync()).Select(Described).ToArray() }
+            : new { available = false, cooldownMs = (long)TableReactions.Cooldown.TotalMilliseconds, recent = Array.Empty<object>() };
 
     /// <summary>
     /// Where in the match a note is about to be written, read off the seat's own board. A board that cannot be
@@ -866,11 +817,12 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     /// stage 6).
     /// </para>
     /// <para>
-    /// A round is named rather than an instant, and one the match has not reached. The driver asks a seat for
+    /// A round is named rather than an instant, and one the match has not reached. The match asks a seat for
     /// several decisions inside one sub-phase — a speed for each creature, then an intent for each — so a
     /// seat changing hands between two of them would split that sub-phase between two players and make the
-    /// round unreadable. Naming a future round makes that impossible rather than unlikely: the seat holds the
-    /// swap and applies it against the board, so it lands where a round begins however long the request took.
+    /// round unreadable. Naming a future round makes that impossible rather than unlikely: the swap is written
+    /// where the decisions are and read against each board, so it lands where a round begins however long the
+    /// request took.
     /// </para>
     /// </remarks>
     private async Task<StudioResponse> PilotAsync(string method, string rest, string body, string? token)
@@ -916,26 +868,10 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
             return Refused(new DomainError(NoSuchAgent, $"Nobody called '{wanted}' can sit in {TableSeat.NameOf(slot)}."));
         }
 
-        // Nothing about the seat is read here. The round it has reached, who is sitting in it and whether the
-        // swap is taken are one answer from one locked step inside the seat: read separately, a pending swap
-        // landing in between would name the wrong occupant as the one replaced, against a round the match had
-        // already left.
-        var seat = session.Seat(slot);
-        var outcome = seat.SwapAt(next, round);
-        if (outcome.Taken)
-        {
-            // Written where it was asked, so a rebuilt table asks for it at the same point of the match.
-            run?.Journal.SwapAsked(slot, wanted, round);
-        }
-
+        var outcome = await session.SwapAsync(slot, next, wanted, round);
         if (!outcome.Taken)
         {
-            var floor = outcome.Reached is { } reached ? reached + 1 : 1;
-            return Refused(new DomainError(
-                MidRound,
-                outcome.Reached is { } playing
-                    ? $"Round {playing} is being played; a seat changes hands at the top of a round, so name {floor} or later."
-                    : "A seat changes hands at the top of a round, so name round 1 or later."));
+            return NotTaken(outcome);
         }
 
         // Checked again, now that the seat has taken it. A match that ended while the agent was being resolved
@@ -950,6 +886,22 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         await NoteSwapAsync(slot, outcome.Reached, new SeatChange(held, next.Name, round));
         Changes.Bump();
         return StudioResponse.OfJson(new { slot = TableSeat.NameOf(slot), from = held, to = next.Name, round }, ArtifactJson.LineOptions);
+    }
+
+    /// <summary>Why a seat did not take a swap: the match ended meanwhile, or the round named is one the seat has reached.</summary>
+    private StudioResponse NotTaken(SwapOutcome outcome)
+    {
+        if (session.IsOver)
+        {
+            return Refused(NoRoundsLeft);
+        }
+
+        var floor = outcome.Reached is { } reached ? reached + 1 : 1;
+        return Refused(new DomainError(
+            MidRound,
+            outcome.Reached is { } playing
+                ? $"Round {playing} is being played; a seat changes hands at the top of a round, so name {floor} or later."
+                : "A seat changes hands at the top of a round, so name round 1 or later."));
     }
 
     /// <summary>
@@ -993,15 +945,14 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     /// <summary>One seat as the pilot sees it. Named fields only: see <see cref="ViewAsync" />.</summary>
     private object Flying(TableSeat seat)
     {
-        var occupied = session.Seat(seat.Slot);
         var waiting = seat.Person?.Waiting;
-        var pending = occupied.Pending;
+        var pending = session.Pending(seat.Slot);
         return new
         {
             slot = TableSeat.NameOf(seat.Slot),
             // Who is deciding for this seat now, by the name a record calls them: the same string every step's
             // `decidedBy` carries, so the screen and the dataset cannot disagree about who played.
-            seated = occupied.Seated.Name,
+            seated = session.SeatedName(seat.Slot),
             // Whether this seat has a person at all, which is what says it can be handed back to one.
             hasPerson = seat.Person is not null,
             // The kind of decision being asked and of which creature -- never the options, and never what was
@@ -1069,7 +1020,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         try
         {
             // The round is the seat's own, read as the swap was taken. A board read here would be after the
-            // fact: the driver can enter the round this names before it answers, and the note would then say
+            // fact: the bots can take the match into the round this names before it answers, and the note would then say
             // it was asked for at or after the round it lands at. There is no sub-phase, because a swap is not
             // made at one -- it is an operator's action against a round.
             await recording.SeatedAsync(session.MatchId, slot, round, change, CancellationToken.None);
@@ -1091,7 +1042,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
 
     private async Task<(int? Round, RoundSubPhase? SubPhase)> WhereAsync(PlayerSlot slot)
     {
-        var board = await queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(session.MatchId, slot));
+        var board = await session.BoardAsync(slot);
         return board.IsSuccess ? (board.Value.RoundNumber, board.Value.SubPhase) : (null, null);
     }
 }

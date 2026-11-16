@@ -13,7 +13,7 @@ namespace DownfallArena.Cli.Table;
 /// never answers two seats in one payload, and that two devices later is a change of who holds which token
 /// rather than a change of what the host serves (<c>docs/tabletop/playtest-app.md</c> §4).
 /// </remarks>
-internal sealed record TableSeat(PlayerSlot Slot, string Token, HumanSeat? Person)
+internal sealed record TableSeat(PlayerSlot Slot, string Token, ISeatPerson? Person)
 {
     /// <summary>Replaced when its player explicitly leaves, revoking their previous access.</summary>
     public string Token { get; set; } = Token;
@@ -28,6 +28,13 @@ internal sealed record TableSeat(PlayerSlot Slot, string Token, HumanSeat? Perso
 
     /// <summary>Whether a browser holds this seat's token: it took the invitation, or the lobby handed it over.</summary>
     public bool Taken { get; set; }
+
+    /// <summary>
+    /// The short code a person types to reach this seat's invitation (<see cref="JoinCodes" />), or none: a bot's
+    /// seat, a taken one, one kept for a friend. One of the seat's keys, taken in the index of the tables before
+    /// the seat is given it (ADR 0161), and written into the table's record with the rest of them.
+    /// </summary>
+    public string? Code { get; set; }
 
     /// <summary>
     /// Where the browser holding this seat asked its notices to be sent (ADR 0118), or none. One of the seat's
@@ -64,6 +71,23 @@ internal sealed record TableSeat(PlayerSlot Slot, string Token, HumanSeat? Perso
     /// while the seat is kept for a friend (ADR 0129): that invitation is accepted signed in, never by a key.
     /// </summary>
     public string? Key => Person is null || Taken || InvitedAccount is not null ? null : Invitation ?? Token;
+
+    /// <summary>
+    /// The seat's keys replaced by these, code included. The registry's to call for a table it holds, since it
+    /// finds seats by their keys; a table not registered yet may be given its keys directly.
+    /// </summary>
+    public void Given(SeatKeys keys)
+    {
+        ArgumentNullException.ThrowIfNull(keys);
+        Token = keys.Token;
+        Invitation = keys.Invitation;
+        Taken = keys.Taken;
+        Code = keys.Code;
+        Push = keys.Push;
+        Account = keys.Account;
+        InvitedAccount = keys.InvitedAccount;
+        InvitedAt = keys.InvitedAt;
+    }
 
     /// <summary>The name a URL and a page use for a slot.</summary>
     public static string NameOf(PlayerSlot slot) => slot == PlayerSlot.Player1 ? "player1" : "player2";

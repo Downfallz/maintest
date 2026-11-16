@@ -5,7 +5,6 @@ using DownfallArena.Application.Accounts.Friends;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.Infrastructure.Accounts;
-using DownfallArena.Infrastructure.Learning;
 using DownfallArena.SharedKernel.Identifiers;
 
 namespace DownfallArena.Cli.Tests.Table;
@@ -21,7 +20,7 @@ public sealed class LobbyInvitationsTests : IDisposable
     private const string Auth = "AAECAwQFBgcICQoLDA0ODw";
 
     private readonly HostedTables _hosted = new(recording: true);
-    private readonly TableRegistry _registry = new();
+    private readonly TableRegistry _registry;
     private readonly string _root = Path.Combine(Path.GetTempPath(), $"lobby-invitations-{Guid.CreateVersion7():N}");
     private readonly MovableClock _clock = new(new DateTimeOffset(2026, 11, 4, 20, 0, 0, TimeSpan.Zero));
     private readonly FileAccountStore _store;
@@ -33,6 +32,7 @@ public sealed class LobbyInvitationsTests : IDisposable
 
     public LobbyInvitationsTests()
     {
+        _registry = _hosted.Registry();
         _store = new FileAccountStore(_root);
         _accounts = new AccountRegistry(_store, _clock);
         _friends = new Friends(new FileFriendStore(_root), _store, _clock);
@@ -66,6 +66,43 @@ public sealed class LobbyInvitationsTests : IDisposable
         (await _friends.AcceptAsync(other.Account.Id, one.Account.Id, Cancel)).IsSuccess.ShouldBeTrue();
     }
 
+    [Fact]
+    public async Task An_invitation_that_ran_out_is_let_go_of_by_the_hourly_job_in_another_process_and_the_host_sees_it()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var bastien = await PlayerAsync("bastien");
+        await BefriendAsync(mark, bastien);
+        var table = await InvitedTableAsync(mark, bastien);
+        _clock.Advance(LobbyApi.InvitationFor);
+
+        // The job: a registry of its own over the same store and index, and a lobby over it.
+        using var job = await _hosted.RestartedAsync();
+        var tended = await TableTend.TendAsync(job, new LobbyApi(job, _hosted.Composer, _clock) { Friends = _friends }, _clock.GetUtcNow());
+
+        tended.Expired.ShouldBe(1);
+        var stored = (await _hosted.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull();
+        stored.Seats.Single(seat => seat.Slot == "player2").InvitedAccount.ShouldBeNull();
+        (await table.Run!.RewrittenAsync(Cancel)).ShouldNotBeNull("the host that held the table lets it go at its next look");
+    }
+
+    [Fact]
+    public async Task On_a_host_the_job_tends_an_invitation_that_ran_out_is_not_listed_nor_in_the_way_and_is_left_to_the_job()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var bastien = await PlayerAsync("bastien");
+        await BefriendAsync(mark, bastien);
+        (await LobbyAsync()).Tended = true;
+        var table = await InvitedTableAsync(mark, bastien);
+        _clock.Advance(LobbyApi.InvitationFor);
+
+        var listed = (await MineAsync(bastien)).GetProperty("invitations").GetArrayLength();
+        var another = await OpenForAsync(mark, bastien);
+
+        listed.ShouldBe(0, "it ran out");
+        another.Status.ShouldBe(201, "an invitation that ran out stands in nobody's way");
+        table.Seats[1].InvitedAccount.ShouldBe(bastien.Account.Id, "letting it go is the hourly job's");
+    }
+
     private static JsonElement Read(StudioResponse response) => JsonDocument.Parse(Encoding.UTF8.GetString(response.Body)).RootElement.Clone();
 
     private async Task<StudioResponse> OpenForAsync(SignedIn inviter, SignedIn friend) =>
@@ -75,7 +112,7 @@ public sealed class LobbyInvitationsTests : IDisposable
     {
         var opened = await OpenForAsync(inviter, friend);
         opened.Status.ShouldBe(201);
-        return _registry.ById(Read(opened).GetProperty("table").GetProperty("id").GetString()!)!;
+        return (await _registry.ByIdAsync(Read(opened).GetProperty("table").GetProperty("id").GetString()!, Cancel))!;
     }
 
     private async Task<JsonElement> MineAsync(SignedIn player) => Read(await (await LobbyAsync()).HandleAsync("GET", "/api/lobby/mine", "", player: player));
@@ -101,8 +138,8 @@ public sealed class LobbyInvitationsTests : IDisposable
         seat.InvitedAccount.ShouldBe(bastien.Account.Id);
         seat.Taken.ShouldBeFalse();
         seat.Key.ShouldBeNull("no code and no link name a seat kept for a friend");
-        _registry.Codes.Of(seat).ShouldBeNull();
-        var listed = Read(await lobby.HandleAsync("GET", "/api/lobby", "")).GetProperty("tables")[0];
+        seat.Code.ShouldBeNull();
+        var listed = Read(await lobby.HandleAsync("GET", "/api/lobby/page/all/1", "")).GetProperty("items")[0];
         listed.GetProperty("openSeats").GetInt32().ShouldBe(0);
         listed.GetProperty("seats")[1].GetProperty("kind").GetString().ShouldBe("invited");
         listed.GetProperty("seats")[1].GetProperty("name").GetString().ShouldBe("bastien");
@@ -162,7 +199,7 @@ public sealed class LobbyInvitationsTests : IDisposable
         first.Status.ShouldBe(201);
         second.Status.ShouldBe(409);
         Read(second).GetProperty("error").GetString().ShouldBe("Lobby.InvitationOutstanding");
-        _registry.All().Count.ShouldBe(1, "the refused table was never opened");
+        _registry.HeldTables().Count.ShouldBe(1, "the refused table was never opened");
     }
 
     [Fact]
@@ -231,7 +268,7 @@ public sealed class LobbyInvitationsTests : IDisposable
 
         answers.Count(answer => answer.Status == 201).ShouldBe(1);
         answers.Count(answer => answer.Status == 409).ShouldBe(5);
-        _registry.All().Count.ShouldBe(1);
+        _registry.HeldTables().Count.ShouldBe(1);
     }
 
     [Fact]
@@ -254,7 +291,7 @@ public sealed class LobbyInvitationsTests : IDisposable
         var other = await InvitedTableAsync(mark, bastien);
         (await ActAsync("DELETE", other, "", third)).Status.ShouldBe(403);
         (await ActAsync("DELETE", other, "", mark)).Status.ShouldBe(204);
-        _registry.ById(other.Id).ShouldBeNull();
+        (await _registry.ByIdAsync(other.Id, Cancel)).ShouldBeNull();
         (await MineAsync(bastien)).GetProperty("invitations").GetArrayLength().ShouldBe(0);
     }
 
@@ -263,7 +300,7 @@ public sealed class LobbyInvitationsTests : IDisposable
     {
         var mark = await PlayerAsync("MarkF");
         var opened = Read(await (await LobbyAsync()).HandleAsync("POST", "/api/lobby/tables", """{"opponent":"bot"}""", player: mark));
-        var table = _registry.ById(opened.GetProperty("table").GetProperty("id").GetString()!)!;
+        var table = (await _registry.ByIdAsync(opened.GetProperty("table").GetProperty("id").GetString()!, Cancel))!;
         table.Seats[0].Person!.Arrive();
         table.Session.Begin();
 
@@ -271,7 +308,7 @@ public sealed class LobbyInvitationsTests : IDisposable
 
         closed.Status.ShouldBe(409);
         Read(closed).GetProperty("error").GetString().ShouldBe("Lobby.Begun");
-        _registry.ById(table.Id).ShouldNotBeNull();
+        (await _registry.ByIdAsync(table.Id, Cancel)).ShouldNotBeNull();
     }
 
     [Fact]
@@ -316,7 +353,7 @@ public sealed class LobbyInvitationsTests : IDisposable
         opened.Seats[1].InvitedAccount.ShouldBeNull("the friend was waiting on a player who is gone");
         opened.OpenSeats.ShouldBe(["player2", "player1"], "both places are anybody's now, as ADR 0122 offers a deleted account's seats");
         (await MineAsync(bastien)).GetProperty("invitations").GetArrayLength().ShouldBe(0);
-        _registry.ById(keptForMark.Id).ShouldNotBeNull("Bastien's table stays, with its seat kept for nobody");
+        (await _registry.ByIdAsync(keptForMark.Id, Cancel)).ShouldNotBeNull("Bastien's table stays, with its seat kept for nobody");
         keptForMark.Seats[1].InvitedAccount.ShouldBeNull();
         var bastiens = (await MineAsync(bastien)).GetProperty("tables").EnumerateArray().Single(entry => entry.GetProperty("table").GetProperty("id").GetString() == keptForMark.Id).GetProperty("invited");
         bastiens.GetProperty("free").GetBoolean().ShouldBeTrue("kept for nobody now, with the ways out on the card");
@@ -331,17 +368,53 @@ public sealed class LobbyInvitationsTests : IDisposable
         await BefriendAsync(mark, bastien);
         var table = await InvitedTableAsync(mark, bastien);
 
-        using var after = new HostedTables(_ => new FileArtifactStore(_hosted.RunsDirectory));
-        using var restored = new TableRegistry();
-        await TableRestorer.RestoreAsync(after.Stored!, after.Composer, restored, _clock, Cancel);
+        using var restored = await _hosted.RestartedAsync();
 
-        var rebuilt = restored.ById(table.Id).ShouldNotBeNull();
+        var rebuilt = (await restored.ByIdAsync(table.Id, Cancel)).ShouldNotBeNull();
         rebuilt.Seats[1].InvitedAccount.ShouldBe(bastien.Account.Id);
         rebuilt.Seats[1].InvitedAt.ShouldBe(table.Seats[1].InvitedAt);
         rebuilt.Seats[1].Key.ShouldBeNull();
         rebuilt.Seats[0].Account.ShouldBe(mark.Account.Id);
         restored.Dispose();
         await rebuilt.QuiesceAsync(Cancel);
+    }
+
+    [Fact]
+    public async Task An_invitation_and_its_decline_tell_both_players_lobbies_and_the_public_lists_to_read_again()
+    {
+        var changes = new LobbyChanges();
+        (await LobbyAsync()).Changes = changes;
+        _hosted.Composer.Lobby = changes;
+        var mark = await PlayerAsync("MarkF");
+        var bastien = await PlayerAsync("bastien");
+        await BefriendAsync(mark, bastien);
+
+        var table = await InvitedTableAsync(mark, bastien);
+        var invited = (changes.VersionOf(mark.Account.Id), changes.VersionOf(bastien.Account.Id), changes.Version);
+        (await ActAsync("POST", table, "/decline", bastien)).Status.ShouldBe(200);
+
+        invited.Item1.ShouldBeGreaterThan(0);
+        invited.Item2.ShouldBeGreaterThan(0, "the friend's bell shows the invitation without a poll");
+        invited.Item3.ShouldBeGreaterThan(0);
+        changes.VersionOf(mark.Account.Id).ShouldBeGreaterThan(invited.Item1, "the inviter's lobby shows the decline");
+        changes.VersionOf(bastien.Account.Id).ShouldBeGreaterThan(invited.Item2);
+    }
+
+    [Fact]
+    public async Task A_change_of_a_table_that_moves_nothing_a_lobby_shows_tells_no_lobby()
+    {
+        var changes = new LobbyChanges();
+        (await LobbyAsync()).Changes = changes;
+        _hosted.Composer.Lobby = changes;
+        var mark = await PlayerAsync("MarkF");
+        var bastien = await PlayerAsync("bastien");
+        await BefriendAsync(mark, bastien);
+        var table = await InvitedTableAsync(mark, bastien);
+        var before = (changes.Version, changes.VersionOf(mark.Account.Id), changes.VersionOf(bastien.Account.Id));
+
+        table.Api.Changes.Bump();
+
+        (changes.Version, changes.VersionOf(mark.Account.Id), changes.VersionOf(bastien.Account.Id)).ShouldBe(before, "a step of a match reaches its seats, not every lobby");
     }
 
     public void Dispose()

@@ -1,0 +1,67 @@
+name: Publish the showcase
+
+# The public site at the apex (ADR 0185): `node showcase/build.mjs`, uploaded to Cloudflare Pages. CI calls this
+# on main once its gate is green, and only when the diff touches what the build reads (studio/browser/plan.js),
+# so a commit that fails the gate never reaches downfallinstinct.com. It is a workflow of its own so that CI's
+# `contents: read` is all it is granted, and so that a deployment can be asked by hand (Run workflow) for the
+# first deployment of infra/README.md. By hand or not, only `main` deploys: a branch the gate never judged does
+# not reach the apex. The way back to an older site is Cloudflare's Rollback, or a revert merged through the gate.
+#
+# The API token is the one secret, scoped to Cloudflare Pages edit on one account. Until the account variable
+# exists the job is skipped, so main stays green on a fork or before anybody has set Cloudflare up.
+
+on:
+  workflow_call:
+    secrets:
+      CLOUDFLARE_API_TOKEN:
+        required: false
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # The Pages project the site is uploaded to, created by the first deployment when it does not exist.
+  PROJECT: downfallinstinct-showcase
+
+jobs:
+  publish:
+    name: Build the showcase and deploy it
+    if: vars.CLOUDFLARE_ACCOUNT_ID != '' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # One deployment at a time, never one cancelled half-way (ADR 0182): a site half uploaded is worse than the
+    # next one waiting a minute. GitHub keeps one run waiting and drops an older waiting one; the newer run
+    # builds a later main, which holds the dropped one's changes.
+    concurrency:
+      group: deploy-showcase
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The Node the Dockerfile uses. The build needs nothing but its built-ins, so nothing is installed.
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+
+      - name: Build
+        run: node showcase/build.mjs
+
+      # `pages deploy` refuses a project that does not exist, so the first deployment creates it; the dashboard
+      # would only create one by asking for a folder to be uploaded by hand. The name is matched exactly, and a
+      # listing that fails stops the step rather than being read as "no such project". The action runs these lines
+      # with /bin/sh, so they are POSIX. Wrangler is pinned: the action installs whatever version it is given,
+      # and `latest` is not a version.
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: 4.156.0
+          preCommands: |
+            projects="$(npx wrangler pages project list --json)" && { printf '%s' "$projects" | jq -e --arg p "$PROJECT" 'any(.[]; ."Project Name" == $p)' > /dev/null || npx wrangler pages project create "$PROJECT" --production-branch=main; }
+          command: pages deploy showcase/dist --project-name=${{ env.PROJECT }} --branch=main --commit-hash=${{ github.sha }} --commit-dirty=true

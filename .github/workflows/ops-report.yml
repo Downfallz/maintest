@@ -1,0 +1,53 @@
+name: Read the table in production
+
+# The production report (ADR 0186): the table's answer, its revisions, restarts and 5xx answers, the tending job's
+# runs, the queues, the turns given up on, the console's error lines and the month's cost, printed to the log,
+# which a session reads (`/ops`) and which is public, so it holds counts and masked lines. Every morning before the
+# digest, and on demand. It signs in with the ops identity, which can read the resource group and write nothing;
+# until that identity's variable exists it reads the table alone and says how to give it one.
+
+on:
+  schedule:
+    # 10:23 UTC: 5:23 in Montreal in winter, before the morning digest at 6:40.
+    - cron: '23 10 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    name: ops-report
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: ops
+    concurrency:
+      group: ops-report
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Sign in to Azure as the ops identity
+        if: vars.AZURE_OPS_CLIENT_ID != ''
+        uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ vars.AZURE_OPS_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Read
+        env:
+          AZURE: ${{ vars.AZURE_OPS_CLIENT_ID != '' && '1' || '0' }}
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          NAME_PREFIX: ${{ vars.TABLE_NAME_PREFIX }}
+          TABLE_DOMAIN: ${{ vars.TABLE_DOMAIN }}
+        run: scripts/ops/read.sh "$RUNNER_TEMP/ops"
+
+      - name: Report
+        run: node scripts/ops/report.mjs "$RUNNER_TEMP/ops"

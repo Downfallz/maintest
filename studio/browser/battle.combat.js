@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
-import { returningBattlePlayer } from './battle-help-fixture.js';
+import { openSpells } from './battle-spells-fixture.js';
+import { returningBattlePlayer, readResults } from './battle-help-fixture.js';
 import { startHost, stopHost } from './host.js';
+import { decided } from './decision.js';
 test.beforeEach(returningBattlePlayer);
 
 for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaration}: battle combat commands resolve through the real engine`, async ({ page, context }, info) => {
@@ -8,7 +10,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
   const { host, join } = await startHost(declaration);
   try {
     await page.goto(join); await page.locator('#invitation-take').click();
-    await expect(page.locator('#table, #pass').filter({ visible: true }).first()).toBeVisible({ timeout: 20000 });
+    await page.waitForURL(/\/battle(?:\?|$)/, { timeout: 20000 }); // The accepted seat goes on to the battle view (ADR 0157).
     const tokens = await page.evaluate(() => JSON.parse(localStorage.getItem('downfall.table.seats')));
     const origin = new URL(join).origin, headers = { 'X-Seat-Token': tokens.player1 };
     const read = async () => (await context.request.get(`${origin}/api/seat/player1`, { headers })).json();
@@ -32,7 +34,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     page.on('request', request => {
       const url = new URL(request.url());
       if (url.searchParams.has('shown')) shown.push(Number(url.searchParams.get('shown')));
-      if (url.pathname.endsWith('/decision')) sent.push({ command: request.postDataJSON(), seen: [...shown] });
+      if (url.pathname.endsWith('/decision')) sent.push({ command: decided(request), seen: [...shown] });
     });
     page.on('response', async response => {
       if (/\/api\/seat\/player1(?:\?|$)/.test(response.url()) && response.ok()) {
@@ -61,15 +63,20 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
       if (await planning(view)) continue;
       expect(['Action', 'Intent', 'Target']).toContain(view.waitingFor);
       await expect.poll(() => snapshots.at(-1), { timeout: 10000 }).toBe(view.waitingAsked);
-      // A round's public order is revealed once, before its first combat question, and covers the board
-      // until it is read (AU11). Reading it writes nothing.
-      if (!orderRounds.has(view.board.roundNumber)) {
+      // A round's public order is revealed once, before its first combat question, and holds the field
+      // until Continue (AU11, ADR 0144). Reading it writes nothing.
+      const readOrder = async () => {
+        if (orderRounds.has(view.board.roundNumber)) return;
         const beforeShown = shown.length, beforeSent = sent.length;
-        await expect(page.locator('#order-dialog')).toBeVisible({ timeout: 20000 });
-        await page.locator('#order-close').click(); orderRounds.add(view.board.roundNumber);
-        expect(shown.length).toBe(beforeShown); expect(sent.length).toBe(beforeSent);
-      }
-      await page.locator('#combat-open').click();
+        await expect(page.locator('#order-continue')).toBeVisible({ timeout: 20000 });
+        await page.locator('#order-continue').click(); orderRounds.add(view.board.roundNumber);
+        // The field it held is free again, so the spell choice opens and acknowledges this asking (ADR 0149): that
+        // is the one thing said to the host, and nothing is sent.
+        expect(shown.slice(beforeShown).every(asked => Number(asked) === view.waitingAsked)).toBe(true);
+        expect(shown.length - beforeShown).toBeLessThanOrEqual(1); expect(sent.length).toBe(beforeSent);
+      };
+      await readResults(page, readOrder); await readOrder();
+      await openSpells(page);
       let spell = null;
       if (view.waitingFor !== 'Target') {
         const options = view.waitingFor === 'Action' ? view.options.action.spells.map(one => one.spell)
@@ -90,7 +97,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
       const guide = view.guidance?.find(one => one.spell === selectedSpell);
       const estimate = page.locator(view.waitingFor === 'Intent' ? '#intent-preview' : '#combat-preview');
       await expect(estimate).toContainText('Estimate');
-      if (guide) await expect(estimate).toContainText(`${guide.cost} energy → ${guide.energyAfterCost} after cost`);
+      if (guide) await expect(estimate).toContainText(`${guide.cost} energy → ${guide.energyAfterCost} left`);
       else await expect(estimate).toContainText('Preview unavailable for this question');
       const response = page.waitForResponse(response => response.url().endsWith('/decision') && response.request().method() === 'POST');
       await page.locator(view.waitingFor === 'Intent' ? '#combat-declare' : '#combat-confirm').click();
@@ -115,9 +122,8 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
         expect(shown.creatures.find(creature => creature.id === one.id)?.text).toBe(`${one.health}/${one.maxHealth} HP · ${one.energy} EN`);
       }
     }
-    // The last playback can finish and open upkeep between isVisible() and click(). Observe its
-    // completion instead of racing a transient Skip button underneath the next round's receipt.
-    await expect(page.locator('#playback-skip')).toBeHidden({ timeout: 20000 });
+    // Each confirmed action waits for its OK (ADR 0139); read them all as a player would.
+    await readResults(page);
     const after = await nextQuestion();
     await expect.poll(() => snapshots.at(-1), { timeout: 10000 }).toBe(after.waitingAsked);
     for (const one of [...after.board.allies, ...after.board.enemies]) {

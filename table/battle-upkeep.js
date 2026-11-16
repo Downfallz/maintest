@@ -1,5 +1,6 @@
 import { roundEnergyGrants, upkeepTicks, upkeepText, retainRoundEvents } from './feed.js';
 import { creatureLabel } from './battle-live.js';
+import { tickChip } from './effect-chips.js';
 
 export const missingRoundEnergy = 'Ordinary round energy was not recorded. Its actual gain is unknown.';
 const roundOf = entry => entry.event?.roundId ?? entry.round;
@@ -46,8 +47,11 @@ export function createBattleUpkeep(storage) {
     const round = view.board.roundNumber ?? 0;
     entries = retainRoundEvents(entries, (view.feed ?? []).filter(entry => ['RoundEnergyGranted', 'OngoingEffectsApplied'].includes(entry.event?.kind)), round);
     if (round > observed) {
-      // Joining an already advanced match is not an observed round transition.
-      if ((round === 1 && !view.over) || observed > 0) pendingRound = round;
+      // Joining an already advanced match is not an observed round transition. Neither is reaching a round
+      // whose combat has begun (a page opened mid-round, or back after rounds away): its upkeep is long past
+      // and stays in History rather than interrupting the turn the player came back to.
+      const begun = ['IntentSelection', 'Activation', 'Cleanup', 'Finalization'].includes(view.board.subPhase);
+      if (!begun && ((round === 1 && !view.over) || observed > 0)) pendingRound = round;
       else mark(round);
       observed = round;
     }
@@ -62,4 +66,26 @@ export function createBattleUpkeep(storage) {
     if (pendingRound <= round) pendingRound = 0;
   }
   return { reset, clear, receive, model, presented };
+}
+
+// Compact presentation shares the recorded deltas with the full receipt. One marker per recipient
+// avoids covering one creature with several badges when recovery and bleed tick together.
+export function upkeepDisplay(energy, ongoing, energyNote = '') {
+  const count = energy.length;
+  const subjects = count === 1 ? '1 creature' : `${count} creatures`;
+  let energySummary = energyNote;
+  if (count) {
+    energySummary = energy.every(row => row.amount === energy[0].amount)
+      ? `+${energy[0].amount} energy each · ${subjects}` : `Round energy · ${subjects}`;
+  }
+  const summary = [energySummary];
+  const markers = new Map();
+  for (const row of [...energy, ...ongoing]) {
+    const id = String(row.creature);
+    if (!markers.has(id)) markers.set(id, { id, name: row.label, side: row.side, lines: [] });
+    markers.get(id).lines.push({ text: `${row.sign}${row.amount} ${row.unit === 'energy' ? 'EN' : 'HP'}`, tone: row.tone, chip: tickChip(row) });
+  }
+  if (ongoing.length === 1) summary.push(`${ongoing[0].label} · ${ongoing[0].text}`);
+  if (ongoing.length > 1) summary.push(`${ongoing.length} ongoing effects`);
+  return { summary: summary.filter(Boolean).join(' · '), markers: [...markers.values()] };
 }

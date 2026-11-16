@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { classicTable } from './classic-table-fixture.js';
 
 // What a test expects follows the layout's own widths (table.css: 760 and 1100), not a project's name.
 const widthOf = page => page.viewportSize().width;
@@ -40,6 +41,7 @@ const catalogue = {
   effects: [{ kind: 'DefenseDebuff', glyph: '◇', harmful: true }, { kind: 'Bleed', glyph: '♥', harmful: true }, { kind: 'Regeneration', glyph: '♥', harmful: false }],
 };
 
+test.beforeEach(classicTable);
 test.beforeEach(async ({ page }) => {
   await page.route('**/api/catalogue', route => route.fulfill({ json: catalogue }));
   await page.route('**/api/seat/player1**', route => route.fulfill({ json: view }));
@@ -202,12 +204,12 @@ test('the classic match ignores game shortcuts while its player menu owns focus'
   await page.reload();
   await expect(page.locator('#account-name')).toHaveText('Marc');
   await expect(page.locator('.speed-spell')).toHaveCount(6);
-  const menu = page.locator('#home-menu-toggle');
-  if (await menu.isVisible()) await menu.click();
-  await page.locator('#data-open').click();
+  // Signed in, Settings opens from the account menu.
+  await page.locator('#account-menu summary').click();
+  await page.locator('#account-settings').click();
   await page.keyboard.press('1');
   await page.keyboard.press('Escape');
-  await expect(page.locator('#data-dialog')).toBeHidden();
+  await expect(page.locator('#app-settings-dialog')).toBeHidden();
   await expect(page.locator('.speed-spell')).toHaveCount(6);
   expect(decisions).toEqual([]);
 });
@@ -586,7 +588,7 @@ test('a session opened from the admin panel goes straight to its replay, and its
   const feed = [{ sequence: 10, round: 1, subPhase: 'Activation', event: { kind: 'CombatActionResolved', roundId: 1,
     resolution: { action: { actor: 1, spell: cards[3].id, targets: [2] } }, appliedOutcomes: [{ kind: 'DamageOutcome', target: 2, amount: 7 }], frame } }];
   let asked = 0;
-  await page.route('**/api/sessions/finished-one/replay', route => {
+  await page.route('**/api/lobby/tables/finished-one/replay', route => {
     asked += 1;
     return route.fulfill({ json: { id: 'finished-one', outcome: { winner: 'player2', reason: 'Elimination' }, catalogue,
       boards: { player1: view.board, player2: { ...view.board, allies: view.board.enemies, enemies: view.board.allies } }, feed } });
@@ -712,7 +714,8 @@ for (const candidates of [[2, 3, 4], [1, 5, 6], [1, 2, 5]]) {
     await page.route('**/api/seat/player1**', route => route.fulfill({ json: view }));
     await expect(page.locator('#decision')).toHaveAttribute('data-kind', 'Speed');
     await expect(page.locator('#mini-board')).not.toHaveClass(/targeting/);
-    expect((await page.locator('#mini-board .mini-creature').first().boundingBox()).height).toBeLessThan(72);
+    // Every poll redraws the chips, so one reading can land on a chip that has no box yet: read until one has.
+    await expect.poll(async () => (await page.locator('#mini-board .mini-creature').first().boundingBox())?.height ?? Infinity).toBeLessThan(72);
   });
 }
 

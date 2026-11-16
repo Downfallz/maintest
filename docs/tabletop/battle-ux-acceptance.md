@@ -36,8 +36,8 @@ implementation PR for each row. Test paths are under `studio/browser/` unless st
 | Upkeep detail | Covered | `battle-upkeep.spec.js`: non-default/passive/zero energy, zero healing, lethal ticks, expired conditions, missing data |
 | Round turnover | Covered | `battle-pacing.spec.js`: closing casts → aftermath → upkeep; no future-round values under old actions; real-host turnover captures |
 | Activity console | Covered | `battle-history.spec.js`: historical paging, filters, reload, stale reads, kept focus and pinned events |
-| Mutation chooser | Covered | `battle-mutations.spec.js`: three roots, later offers, shared budget, depleted picks and keyboard selection; real-host cards |
-| Mutation reference | Covered | `battle-growth.spec.js` / `battle.growth.js`: read-only tree, actual public reveal, ownership and hidden choices |
+| Mutation chooser | Covered | `battle-mutations.spec.js`: three roots, later offers, shared budget, depleted picks and keyboard selection; real-host mutation tree |
+| Mutation reference | Covered | `battle-growth.spec.js` / `battle.growth.js`: full-screen tree (ADR 0146), revealed paths lit, actual public reveal, ownership and hidden choices |
 | Team tempo draft | Covered | `battle-tempo.spec.js`: 1/2/3 eligible creatures, edit before one confirm, partial/lost responses and explicit continuation |
 | Tempo consequences | Covered | Current/catalogue critical values, cost/energy and Instinct/Precision labels; AU14 revisits the first draft with keyboard Home |
 | Initiative / ties | Covered | `battle-order.spec.js` and real-host loop: same-team order, rerolls, public reveal, historical order and defeated actors |
@@ -49,6 +49,24 @@ implementation PR for each row. Test paths are under `studio/browser/` unless st
 | Privacy / reconnect | Automated coverage | Two independent actual-host browser contexts; stale read/write fences, one/two-seat choice, revocation, hidden-tab resets and retained same-seat comment |
 | Service tools | Covered on main; release scope partial | `battle-services.spec.js`, `table.push.js`: optional feedback, denied/unsupported notices, both-seat suppression, recorded-only notes; A8 still open |
 | Viewport / accessibility | Partial | AU14 keyboard journey and short-view sweep pass; native zoom, assistive technology and physical device checks remain below |
+
+### Upkeep presentation after AU14
+
+The opening receipt docks below the battlefield. Its summary and Phaser markers use recorded
+energy and ongoing-effect amounts, including zero. Details expands the original rows with links to
+current creature inspection. Continue still hands off to the next eligible AU guide.
+A paced upkeep without an exact historical board shows named event markers without live stats.
+Auto, Step, Skip, History and round review retain their existing roles.
+
+### Mutation presentation after AU14
+
+After the upkeep and first-use guide, the mutation phase opens the private mutation tree by itself
+(ADR 0138), and eligible allies switch it directly from the battlefield. It stays open across the seat's
+picks while team picks remain. The docked tree connects acquired mutations and current offers using the
+catalogue prerequisites. A branch previews the selected creature's appearance and unlocks in the
+local command. Confirm sends the AU decision through the existing asking and acknowledgement.
+Public forms and unlock cues follow the host reveal. The full reference, inspection, pass and
+keyboard paths remain available.
 
 ## Cross-cutting matrix
 

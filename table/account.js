@@ -21,13 +21,26 @@ export function signInPath(here) {
 /** The page to go back to after signing in: only a seat or an invitation of this host, never another site. */
 export function nextPath(search) {
   const next = new URLSearchParams(search ?? '').get('next');
-  if (next && /^\/arena(?:[?#]|$)/.test(next)) return '/battle' + next.slice('/arena'.length);
-  return next && /^\/(?:play|battle(?:[?#]|$)|j\/|\?)/.test(next) && !next.startsWith('//') ? next : null;
+  if (!next) return null;
+  if (next === '/arena' || next.startsWith('/arena?') || next.startsWith('/arena#')) return '/battle' + next.slice('/arena'.length);
+  if (next === '/battle' || next.startsWith('/battle?') || next.startsWith('/battle#')) return next;
+  if (next.startsWith('/play') || next.startsWith('/j/') || next.startsWith('/?')) return next;
+  return null;
 }
 
 /** The player half of /api/me, with off for an older host that does not say. */
 export function accountState(me) {
   return { mode: me?.accounts ?? 'off', account: me?.account ?? null, clientId: me?.googleClientId ?? null };
+}
+
+/**
+ * The operator's notice (ADR 0177) as /api/me carries it, or null for none: one line under the header of every page
+ * but the game itself, where nothing is added over the board.
+ */
+export function noticeText(me, page) {
+  if (page === 'classic' || page === 'battle') return null;
+  const line = typeof me?.notice === 'string' ? me.notice.trim() : '';
+  return line || null;
 }
 
 export async function accountRequest(path, body, fetchImpl = globalThis.fetch.bind(globalThis), method = body === undefined ? 'GET' : 'POST') {
@@ -170,26 +183,35 @@ export function mountAccount(doc, { request = accountRequest, readMe = () => req
       el('account-name').textContent = state.account.username;
       el('account-menu').querySelector('summary').setAttribute('aria-label', `Account: ${state.account.username}`);
       el('account-initial').textContent = state.account.username.slice(0, 1).toUpperCase();
+      // The menu and Settings' Account tab name the player too, when the page has them.
+      if (el('account-menu-name')) el('account-menu-name').textContent = state.account.username;
+      if (el('app-settings-name')) {
+        el('app-settings-name').textContent = state.account.username;
+        el('app-settings-initial').textContent = state.account.username.slice(0, 1).toUpperCase();
+      }
     }
     onChange(state.account, state.mode);
     return state;
   }
 
+  // Sign out sits in the account menu; Sign out everywhere in Settings, Account, which says its own problems.
   for (const [id, everywhere] of [['sign-out', false], ['sign-out-everywhere', true]]) {
+    if (!el(id)) continue;
+    const problemId = everywhere && el('app-settings-account-problem') ? 'app-settings-account-problem' : 'account-problem';
     el(id).addEventListener('click', async () => {
-      say('account-problem');
+      say(problemId);
       const title = everywhere ? 'Sign out everywhere?' : 'Sign out on this device?';
       const detail = everywhere ? 'You will need to sign in again on every device.' : 'You can sign in again to resume your games.';
       el('account-menu').open = false;
-      el('account-menu').querySelector('summary').focus();
+      if (!everywhere) el('account-menu').querySelector('summary').focus();
       if (!await confirmAction(doc, title, detail, everywhere ? 'Sign out everywhere' : 'Sign out')) return;
       el(id).disabled = true;
       try {
         await request('/api/account/signout', { everywhere });
         await refresh();
       } catch (error) {
-        el('account-menu').open = true;
-        say('account-problem', error.message);
+        if (!everywhere) el('account-menu').open = true;
+        say(problemId, error.message);
       } finally { el(id).disabled = false; }
     });
   }

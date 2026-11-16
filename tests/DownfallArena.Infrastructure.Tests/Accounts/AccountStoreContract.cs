@@ -18,6 +18,22 @@ public abstract class AccountStoreContract
         new(AccountId.New(), Mark, Username.Create(name).Value, Now, Generation: 1);
 
     [Fact]
+    public async Task A_suspension_reads_back_as_it_was_saved_and_a_restore_clears_it()
+    {
+        var store = await StoreAsync();
+        var account = AnAccount();
+        var suspension = new AccountSuspension("Spamming invitations to strangers.", "mark", Now);
+        await store.SaveAsync(account with { Suspension = suspension }, Cancel);
+
+        var suspended = (await store.FindAsync(account.Id, Cancel)).ShouldNotBeNull();
+        await store.SaveAsync(suspended with { Suspension = null }, Cancel);
+        var restored = (await store.FindAsync(account.Id, Cancel)).ShouldNotBeNull();
+
+        suspended.Suspension.ShouldBe(suspension);
+        restored.Suspension.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task An_account_reads_back_as_it_was_saved_and_a_later_save_replaces_it()
     {
         var store = await StoreAsync();
@@ -32,6 +48,37 @@ public abstract class AccountStoreContract
         read.Username.Value.ShouldBe("MarkF");
         read.CreatedAt.ShouldBe(Now);
         read.Generation.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task Every_account_saved_is_listed_once_and_a_deleted_one_is_not()
+    {
+        var store = await StoreAsync();
+        var mark = AnAccount("MarkF");
+        var julie = AnAccount("Julie");
+        var gone = AnAccount("Gone");
+        foreach (var account in new[] { mark, julie, gone })
+        {
+            await store.SaveAsync(account, Cancel);
+        }
+
+        await store.SaveAsync(mark with { Generation = 3 }, Cancel);
+        await store.DeleteAsync(gone.Id, Cancel);
+        await store.TryReserveUsernameAsync(new UsernameReservation(mark.Username, mark.Id, Now), Cancel);
+        await store.SessionKeyAsync(Cancel);
+
+        var listed = await store.ListAsync(Cancel);
+
+        listed.Select(account => account.Id).ShouldBe([mark.Id, julie.Id], ignoreOrder: true);
+        listed.Single(account => account.Id == mark.Id).Generation.ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task A_store_with_no_account_lists_none()
+    {
+        var store = await StoreAsync();
+
+        (await store.ListAsync(Cancel)).ShouldBeEmpty();
     }
 
     [Fact]

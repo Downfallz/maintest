@@ -2,6 +2,8 @@ import { test, expect } from '@playwright/test';
 import { spawn } from 'node:child_process';
 import { resolve } from 'node:path';
 import { createServer } from 'node:net';
+import { classicTable, archivedTable } from './classic-table-fixture.js';
+test.beforeEach(classicTable);
 
 // A table that chooses each spell at its slot (ADR 0110), played by a person against Greedy through the real
 // engine: nothing is declared, and when a creature's turn comes its player taps a card, picks that spell's
@@ -103,13 +105,13 @@ test('a person plays their creatures\' actions at the slot, a card then its targ
 
 // Two devices open the same code: the first to accept takes the seat, and the code then reaches nothing.
 test('a code accepted on one device is spent for every other', async ({ browser }) => {
-  const first = await browser.newContext();
+  const first = await browser.newContext(); await first.addInitScript(archivedTable);
   const page = await first.newPage();
   await page.goto(join);
   // The match above took this host's seat already, unless it failed before accepting: either way one accept.
   if (await page.locator('#invitation-take').isVisible()) await page.locator('#invitation-take').click();
 
-  const second = await browser.newContext();
+  const second = await browser.newContext(); await second.addInitScript(archivedTable);
   const other = await second.newPage();
   await other.goto(join);
   await expect(other.locator('#invitation-title')).toHaveText('This invitation can no longer be used');

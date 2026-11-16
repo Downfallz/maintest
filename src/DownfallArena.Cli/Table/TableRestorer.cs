@@ -1,77 +1,81 @@
 namespace DownfallArena.Cli.Table;
 
 /// <summary>
-/// Rebuilds every recorded open table when a host starts. A game that began does not expire during a pause.
-/// Finished and explicitly closed records are left alone, as are runs with no table record, and a table that
-/// never began and was opened longer ago than <see cref="TableRegistry.NeverBegunFor" /> (ADR 0115). A replay
-/// that no longer fits the current engine or content is reported and preserved for the operator, and marked, so a
-/// host on the same engine, content and rules does not replay it again.
+/// What a host does with the recorded tables as it starts (ADR 0159, ADR 0161): nothing is replayed -- a table is
+/// picked up at the first request that names it (<see cref="TableLoader" />) -- but the index is put back in line
+/// with the records, which is what lists and finds them, and the keys minted before a key named its table are told
+/// to the registry, for the life of their table.
 /// </summary>
+/// <remarks>
+/// The index is put right from the records here because it can be behind them: a record written before the index
+/// existed, or an index write that failed, which for a table that ended is its last and is never put right by a
+/// next one. Every open record is put back, and every table the index lists whose record is not open any more is
+/// taken out of it.
+/// </remarks>
 internal static class TableRestorer
 {
-    /// <summary>Rebuilds what can be rebuilt, into the registry, and says what happened to each, one line a table.</summary>
-    public static async Task<IReadOnlyList<string>> RestoreAsync(StoredSessions stored, TableComposer composer, TableRegistry registry, TimeProvider clock, CancellationToken cancellationToken = default)
+    /// <summary>Puts the index back in line with the records and the legacy keys into the registry, and says how many, in one line.</summary>
+    public static async Task<IReadOnlyList<string>> RestoreAsync(StoredSessions stored, TableRegistry registry, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(stored);
-        ArgumentNullException.ThrowIfNull(composer);
         ArgumentNullException.ThrowIfNull(registry);
-        ArgumentNullException.ThrowIfNull(clock);
 
         var said = new List<string>();
-        var now = clock.GetUtcNow();
+        var open = new HashSet<string>(StringComparer.Ordinal);
         foreach (var id in (await stored.ListAsync(cancellationToken)).Select(session => session.Id))
         {
-            // A table this host already holds is its own, and open: rebuilt beside itself it would be the same
-            // match twice, under the same id and the same tokens.
-            if (registry.ById(id) is not null || await stored.RecordAsync(id, cancellationToken) is not { Status: TableRecord.Open } record)
+            if (await ReadAsync(stored, id, said, cancellationToken) is not { Record: { Status: TableRecord.Open } record })
             {
                 continue;
             }
 
-            if (record.RefusedUnder is { } refused && refused == composer.Basis)
+            await new TableIndexer(registry.Index, id).FollowAsync(null, record, cancellationToken);
+            foreach (var key in record.Seats.SelectMany(seat => new[] { seat.Token, seat.Invitation }).Append(record.PilotToken).OfType<string>())
             {
-                // Replayed and refused before under this very engine, content and rules: it would be refused again,
-                // and only after the time a replay takes. It stays open for the operator (ADR 0115).
-                said.Add($"Session {record.Id} left as it was: its replay was refused before, under this engine, content and rules.");
-                continue;
+                registry.Remember(key, id);
             }
 
-            var journal = await stored.JournalAsync(id, cancellationToken);
-            if (!DecisionJournal.HoldsDecision(journal) && now - record.CreatedAt >= TableRegistry.NeverBegunFor)
-            {
-                // A table that never began is let go of by the sweep after the same time (ADR 0115); one the
-                // host before this one never got to sweep is left as it is, not marked, and not rebuilt.
-                said.Add($"Session {record.Id} left as it was: it never began, and was opened at {record.CreatedAt:u}.");
-                continue;
-            }
-
-            PlayedTable? table;
-            try
-            {
-                table = await composer.ResumeAsync(record, journal, cancellationToken);
-            }
-            catch (Exception failure) when (failure is ArgumentException or IOException or System.Text.Json.JsonException or InvalidDataException or InvalidOperationException)
-            {
-                said.Add($"Session {record.Id} was not rebuilt: {failure.Message}");
-                continue;
-            }
-
-            if (table is null)
-            {
-                continue;
-            }
-
-            if (!registry.TryRestore(table, record.Seats.ToDictionary(seat => seat.Slot, seat => seat.Code, StringComparer.Ordinal)))
-            {
-                table.Dispose();
-                said.Add($"Session {record.Id} was not rebuilt: this host has as many tables under way as it takes.");
-                continue;
-            }
-
-            table.Touch(now);
-            said.Add($"Session {record.Id} rebuilt from {journal.Count} recorded decisions; its seats answer to the links and codes they had.");
+            open.Add(id);
         }
 
+        var closed = 0;
+        foreach (var listed in await registry.Index.OpenAsync(0, TableRegistry.Listing, cancellationToken))
+        {
+            if (open.Contains(listed.Table))
+            {
+                continue;
+            }
+
+            // Listed, and not open in its record: it ended, or its run is gone. Out of the index at the record's
+            // revision, or for good when there is no record left to say anything. A record that cannot be read
+            // says neither, and the entry is left as it is: a store out for a moment must not end a table for good.
+            var read = await ReadAsync(stored, listed.Table, said, cancellationToken);
+            if (read is not { } reading || reading.Record is { Status: TableRecord.Open })
+            {
+                continue;
+            }
+
+            await registry.Index.CloseAsync(listed.Table, listed.CreatedAt, reading.Record?.Revision ?? long.MaxValue, cancellationToken);
+            closed++;
+        }
+
+        said.Add($"{open.Count} open table{(open.Count == 1 ? string.Empty : "s")} indexed{(closed > 0 ? $", {closed} no longer open taken out of the index" : string.Empty)}; each is picked up at the first request that names it.");
         return said;
     }
+
+    /// <summary>A run's record as read, none in it when the run has none; no reading at all when it could not be read.</summary>
+    private static async Task<Reading?> ReadAsync(StoredSessions stored, string id, List<string> said, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return new Reading(await stored.RecordAsync(id, cancellationToken));
+        }
+        catch (Exception failure) when (TableLoader.Refuses(failure) || TableRegistry.StoreFails(failure))
+        {
+            said.Add($"Session {id} was not indexed: {failure.Message}");
+            return null;
+        }
+    }
+
+    private sealed record Reading(TableRecord? Record);
 }

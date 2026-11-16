@@ -6,10 +6,10 @@ no content IDs return to page code, and no timing or audio changes a domain resu
 
 ## Playback
 
-The live settings now offer 1×, 1.5× and 2× playback. One normalized rate drives the queue and renderer;
+The live settings now offer 0.5×, 1×, 1.5× and 2× playback. All motion was later slowed to half its first pace (`MOTION_SCALE = 2`): today's 2× is the former 1×, and 0.5× is a quarter of it. One normalized rate drives the queue and renderer;
 projectile launch/arrival, melee anticipation and impact cannot choose independent clocks. The standard
-420 ms windup, 850 ms outcome and 250 ms interval remain the default. The caster returns home over 360 ms
-after a 60 ms impact hold. These timings and the 600 ms effect lifetime live in `battle-timing.js`.
+840 ms windup, 1700 ms outcome and 500 ms interval are the default. The caster returns home over 720 ms
+after a 120 ms impact hold. These timings and the 1200 ms effect lifetime live in `battle-timing.js`. Creatures no longer bob between actions: they stand still until an action moves them.
 
 A speed change during playback settles the entire pending queue to its latest authoritative board and
 invalidates pending callbacks. It never repeats consumed events, predicts targets or delays a command.

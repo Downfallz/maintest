@@ -77,3 +77,22 @@ test('keeping the dice order sets the taps aside so the rows show the order that
 test('a hidden page opens no planning controls and acknowledges nothing', () => {
   const h = harness(); h.hide(); h.control.open(); assert.equal(h.control.model().opened, false); assert.deepEqual(h.shown, []);
 });
+const nextPick = () => ({ ...evolution(), waitingAsked: 12, board: { allies: [{ id: 1 }, { id: 2 }] },
+  options: { evolution: { remainingPicks: 1, creatures: [{ creature: 2, availableTiers: ['root'] }] } } });
+test('a pick that leaves team picks keeps the mutation controls open into the next asking, which it acknowledges', async () => {
+  const h = harness(); h.control.open(); h.control.choose({ creature: 1, tier: 'root' }); await h.control.submit();
+  assert.equal(h.control.model().opened, true); assert.equal(h.control.model().canEdit, false); assert.equal(h.control.model().choice, null);
+  h.receive(nextPick()); await Promise.resolve();
+  assert.equal(h.control.model().opened, true); assert.equal(h.control.model().canEdit, true);
+  assert.deepEqual(h.shown, [11, 12]);
+  h.control.choose({ creature: 2, tier: 'root' }); await h.control.submit();
+  assert.equal(h.control.model().opened, false, 'the last pick closes the controls');
+  assert.deepEqual(h.writes.map(one => one.asked), [11, 12]);
+});
+test('a pass, or a next view that asks nothing more of this seat, closes the mutation controls', async () => {
+  const passed = harness(); passed.control.open(); passed.control.choose({ pass: true }); await passed.control.submit();
+  assert.equal(passed.control.model().opened, false);
+  const done = harness(); done.control.open(); done.control.choose({ creature: 1, tier: 'root' }); await done.control.submit();
+  done.receive({ ...evolution(), waitingAsked: null, waitingFor: null }); assert.equal(done.control.model().opened, false);
+  done.receive(nextPick()); assert.equal(done.control.model().opened, false, 'a later asking is opened again by the page, not kept');
+});

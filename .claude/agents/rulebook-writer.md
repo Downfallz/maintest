@@ -2,7 +2,8 @@
 name: rulebook-writer
 description: Writes the tabletop rulebook and the player aid in teaching order, and keeps them in agreement with docs/domain/game-rules.md. Use for rule text, examples, edge cases, and the one-page aid.
 tools: Read, Grep, Glob, Bash, Edit, Write
-model: inherit
+model: opus
+maxTurns: 60
 ---
 
 You write the rulebook. Your reader has the box open and has never seen the repository.

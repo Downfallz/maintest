@@ -12,7 +12,7 @@
 <body>
   <main class="battle-shell" id="lab" data-stage="decision" data-ready="false">
     <header class="hud-top">
-      <a class="brand" href="/" aria-label="Downfall Instinct — back to lobby"><span aria-hidden="true">◈</span><div>DOWNFALL <b>INSTINCT</b><small>THE LAST LIGHT</small></div></a>
+      <a class="brand" href="/" aria-label="Downfall Instinct — back to lobby"><span class="battle-brand-mark" aria-hidden="true"></span><div>DOWNFALL <b>INSTINCT</b><small>THE LAST LIGHT</small></div></a>
       <div class="round"><span>ROUND <b id="round-number"></b></span><small id="round-phase"></small></div>
       <div class="tools"><button id="reset" type="button" title="Reset scene" aria-label="Reset scene">↻</button><button id="fullscreen" type="button" title="Fullscreen" aria-label="Enter fullscreen"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button><button id="settings" type="button" title="Settings" aria-label="Open settings">☷</button></div>
     </header>
@@ -27,7 +27,7 @@
     <section class="command-dock" aria-label="Combat commands">
       <div class="actor-summary"><div id="actor-portrait" class="portrait" aria-hidden="true"></div><div><p class="eyebrow">ACTING NOW</p><h1 id="actor-name"></h1><p id="actor-meta"></p></div><button id="inspect" type="button" aria-label="Inspect selected creature"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor"/><path d="M12 10v7m0-11v1" stroke="currentColor" stroke-width="1.5"/></svg></button></div>
       <div class="action-choice"><button id="choose" type="button" aria-pressed="false" disabled><span class="action-icon" aria-hidden="true">↗</span><span><strong id="action-label"></strong><small>Choose a target</small></span><kbd>1</kbd></button></div>
-      <div class="decision"><p id="instruction" role="status" aria-live="polite">Preparing the scene…</p><div class="decision-buttons"><button id="cancel" type="button" hidden>Back</button><button id="confirm" type="button" class="primary" disabled></button><button id="skip" type="button" hidden>Skip animation</button></div></div>
+      <div class="decision"><p id="instruction" role="status" aria-live="polite">Preparing the scene…</p><div class="decision-buttons"><button id="cancel" type="button" hidden>Back</button><button id="horizon-round" type="button" class="primary" hidden></button><button id="confirm" type="button" class="primary" disabled></button><button id="skip" type="button" hidden>Skip animation</button></div></div>
     </section>
     <footer><span>PHASER STUDY <b>02</b></span><span>Illustrative scenario · provisional art</span><span class="desktop-note">No live match</span></footer>
   </main>
@@ -35,7 +35,7 @@
     <form method="dialog"><button class="close" aria-label="Close settings">×</button></form><p class="eyebrow">PRESENTATION</p><h2 id="settings-title">Make it yours</h2>
     <label><span>Less motion<small>Still frames, no camera shake</small></span><input id="reduce-motion" type="checkbox"></label>
     <label><span>Impact sound<small>Off until you enable it</small></span><input id="sound" type="checkbox"></label>
-    <label><span>Playback speed</span><select id="playback-speed"><option value="1">1×</option><option value="2">2×</option></select></label>
+    <label><span>Playback speed</span><select id="playback-speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label>
     <p class="dialog-note">A fixed scene for testing feel and composition. All outcomes are authored samples. This is not a live match.</p>
   </dialog>
   <dialog id="inspect-dialog" aria-labelledby="inspect-name"><form method="dialog"><button class="close" aria-label="Close creature details">×</button></form><p class="eyebrow">CREATURE</p><h2 id="inspect-name"></h2><p id="inspect-stats"></p><p id="inspect-effects"></p></dialog>

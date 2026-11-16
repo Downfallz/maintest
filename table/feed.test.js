@@ -378,3 +378,13 @@ test('replay and round retention preserve the ordinary grant before the ongoing 
   assert.equal(replay[1].ticks[0].amount, 9);
   assert.equal(replay[0].frame, undefined);
 });
+
+test('a resolved action carries the d20 face its critical roll showed, and a fizzle or an older record carries none', () => {
+  const rolled = { sequence: 3, round: 2, event: { ...resolved, roundId: 2, resolution: { ...resolved.resolution, isCritical: true, criticalRoll: 18 } } };
+  const board = { subPhase: 'Activation', roundNumber: 2 };
+  assert.equal(lastResolved([rolled], board, cards).criticalRoll, 18);
+  const older = { sequence: 3, round: 2, event: { ...resolved, roundId: 2 } };
+  assert.equal(lastResolved([older], board, cards).criticalRoll, null);
+  const fizzled = { sequence: 3, round: 2, event: { ...resolved, roundId: 2, resolution: { ...resolved.resolution, fizzled: true, criticalRoll: 7 } } };
+  assert.equal(lastResolved([fizzled], board, cards).criticalRoll, null);
+});

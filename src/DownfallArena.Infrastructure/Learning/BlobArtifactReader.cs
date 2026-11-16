@@ -33,6 +33,20 @@ public sealed class BlobArtifactReader : IArtifactReader
         return names;
     }
 
+    public async Task<TaggedText?> ReadTaggedAsync(string relativePath, CancellationToken cancellationToken = default)
+    {
+        var blob = _container.GetBlobClient(BlobArtifactNames.Resolve(Prefix, relativePath));
+        try
+        {
+            var content = await blob.DownloadContentAsync(cancellationToken);
+            return new TaggedText(content.Value.Content.ToString(), content.Value.Details.ETag.ToString());
+        }
+        catch (RequestFailedException exception) when (exception.Status == 404)
+        {
+            return null;
+        }
+    }
+
     public async Task<string?> ReadTextAsync(string relativePath, CancellationToken cancellationToken = default)
     {
         var blob = _container.GetBlobClient(BlobArtifactNames.Resolve(Prefix, relativePath));

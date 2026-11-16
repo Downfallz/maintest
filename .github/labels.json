@@ -1,0 +1,8 @@
+{
+  "follow-up": "Work a session left: a loose end of a stage or a review",
+  "flaky": "A test that passed only on a retry",
+  "ops": "A portal, a setting, the deployed app",
+  "proposal": "An idea nobody asked for yet, filed by /proposals",
+  "red-main": "Opened by CI while main is red",
+  "red-nightly": "Opened by CI while the nightly is red"
+}

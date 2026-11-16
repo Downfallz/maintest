@@ -56,7 +56,9 @@ public static class ResolutionRules
 
         // The roll is drawn whatever the speed, so that a Quick cast consumes the same randomness a Standard
         // one does: the choice changes the outcome, not the stream every later cast in the match reads from.
-        var isCritical = random.NextDouble() < CriticalChanceOf(actor, spell, speed);
+        var draw = random.NextDouble();
+        var chance = CriticalChanceOf(actor, spell, speed);
+        var isCritical = draw < chance;
         var multiplier = isCritical ? rules.CriticalMultiplier : 1.0;
         var damageBonus = actor.DamageBonus;
         var sunder = actor.Passive.Sunder;
@@ -81,7 +83,31 @@ public static class ResolutionRules
         // Marked, because the target alone cannot say: a Self-targeted spell puts ordinary outcomes here too.
         outcomes.AddRange(spell.CasterEffects.Select(effect => Outcome(effect, actor, multiplier: 1.0, isCritical, damageBonus: 0, sunder: 0) with { OnCaster = true }));
 
-        return CombatResolution.Resolved(action, effectiveTargets, [.. report.PerTargetFailures], isCritical, spell.Stats.Cost, outcomes);
+        return CombatResolution.Resolved(action, effectiveTargets, [.. report.PerTargetFailures], isCritical, spell.Stats.Cost, outcomes, CriticalFace(draw, chance, isCritical));
+    }
+
+    /// <summary>
+    /// The d20 face a Critical roll shows (ADR 0154), read off the same draw that decided it: the draw's twentieth,
+    /// counted down from 20, so a lower draw is a higher face. A chance of k twentieths crits from the face 21 - k up
+    /// (ADR 0100), which the face always agrees with: the draw alone decides the critical, and a draw on the edge of
+    /// a twentieth that floating point puts on the other side of the threshold shows the threshold's face, or the one
+    /// under it. Null when there was no chance to crit.
+    /// </summary>
+    public static int? CriticalFace(double draw, double chance, bool isCritical)
+    {
+        if (chance <= 0)
+        {
+            return null;
+        }
+
+        var needed = Math.Clamp(21 - (int)Math.Round(chance * 20, MidpointRounding.AwayFromZero), 1, 20);
+        var face = Math.Clamp(20 - (int)Math.Floor(draw * 20), 1, 20);
+        if (isCritical && face < needed)
+        {
+            return needed;
+        }
+
+        return !isCritical && face >= needed ? Math.Max(1, needed - 1) : face;
     }
 
     /// <summary>
@@ -116,13 +142,23 @@ public static class ResolutionRules
     private static EffectOutcome Outcome(Effect effect, CreatureSnapshot target, double multiplier, bool isCritical, int damageBonus, int sunder) =>
         effect switch
         {
-            Damage damage => new DamageOutcome(target.Id, Math.Max(0, Multiplied(damage.Amount + damageBonus, multiplier) - Math.Max(0, target.TotalDefense.Value - sunder)), isCritical),
+            Damage damage => Hit(target, Multiplied(damage.Amount + damageBonus, multiplier), isCritical, sunder),
             Heal heal => new HealOutcome(target.Id, Multiplied(heal.Amount, multiplier)),
             EnergyGain energy => new EnergyOutcome(target.Id, energy.Amount),
             EnergyDrain drain => new EnergyDrainOutcome(target.Id, drain.Amount),
             LastingEffect lasting => new ConditionOutcome(target.Id, lasting),
             _ => throw new InvalidOperationException($"Effect '{effect.GetType().Name}' has no resolution rule."),
         };
+
+    /// <summary>
+    /// A hit met by the target's total defense less the caster's sunder: what gets through, and what the defense took.
+    /// </summary>
+    private static DamageOutcome Hit(CreatureSnapshot target, int hit, bool isCritical, int sunder)
+    {
+        var defense = Math.Max(0, target.TotalDefense.Value - sunder);
+        var through = Math.Max(0, hit - defense);
+        return new DamageOutcome(target.Id, through, isCritical) { Blocked = hit - through };
+    }
 
     /// <summary>
     /// The floored product, capped at the largest damage a creature can take so a huge multiplier cannot overflow.

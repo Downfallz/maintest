@@ -8,7 +8,7 @@ namespace DownfallArena.Cli.Table;
 /// </summary>
 /// <remarks>
 /// The moment that counts is the moment the options were <em>served to somebody looking at them</em>, not the
-/// moment the engine asked them. The driver may ask a seat while nobody is looking at the screen, and in
+/// moment the engine asked them. The match may ask a seat while nobody is looking at the screen, and in
 /// hotseat the page polls both seats on a timer while only one of them is on screen and the other is behind
 /// the pass-the-device screen: a duration started by a background poll would measure the handover -- the walk
 /// round the table, picking the phone up, tapping ready -- and not the decision. So only a poll that says it
@@ -31,7 +31,7 @@ internal sealed class DecisionClock(TimeProvider clock)
     /// Records that a seat has been shown what it is being asked. A seat waiting for nothing is forgotten,
     /// which is what makes the next question a new one rather than a continuation of the last.
     /// </summary>
-    public void Served(PlayerSlot slot, HumanSeat.Question? question)
+    public void Served(PlayerSlot slot, Asking? question)
     {
         lock (_gate)
         {
@@ -55,12 +55,12 @@ internal sealed class DecisionClock(TimeProvider clock)
     /// </summary>
     /// <remarks>
     /// Read before the decision is handed over, and that is the whole reason this is separate from
-    /// <see cref="Answered" />. Submitting releases the driver, which can ask the seat the next question and
+    /// <see cref="Answered" />. Handing it over moves the match on, which can ask the seat the next question and
     /// have a poll stamp it before the host has finished writing the first one down -- and a stamp is one per
     /// seat, so the new question's stamp replaces the answered one's. Reading it first means the race can cost
     /// the *next* duration a poll of accuracy, and never costs this one its whole duration.
     /// </remarks>
-    public DateTimeOffset? ServedAt(PlayerSlot slot, HumanSeat.Question? question)
+    public DateTimeOffset? ServedAt(PlayerSlot slot, Asking? question)
     {
         lock (_gate)
         {
@@ -75,7 +75,7 @@ internal sealed class DecisionClock(TimeProvider clock)
     /// own serving. The question has to be named: if the next one has already been stamped, that stamp is the
     /// next one's and taking it would leave that decision timed from nothing.
     /// </summary>
-    public void Answered(PlayerSlot slot, HumanSeat.Question? answered)
+    public void Answered(PlayerSlot slot, Asking? answered)
     {
         lock (_gate)
         {
@@ -86,5 +86,5 @@ internal sealed class DecisionClock(TimeProvider clock)
         }
     }
 
-    private sealed record Stamped(HumanSeat.Question Question, DateTimeOffset At);
+    private sealed record Stamped(Asking Question, DateTimeOffset At);
 }

@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
   </ItemGroup>
 
   <!-- The repository's authored content, so a test proves it builds and loads. -->
@@ -18,6 +19,12 @@
     <Content Include="..\..\viewer\samples\**\*" Link="samples\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\benchmarks\benchmark-seeds.json" Link="benchmarks\benchmark-seeds.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\learning\weights\**\*.json" Link="weights\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- The repository's match scenarios (scenarios/): each must still rebuild on the engine (ADR 0179). -->
+  <ItemGroup>
+    <Content Include="..\..\scenarios\*.json" Link="scenarios\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\scenarios\tutorials\*.json" Link="scenarios\tutorials\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

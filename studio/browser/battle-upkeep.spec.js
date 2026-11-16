@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { WINDUP_MS, IMPACT_MS } from '../../table/battle-timing.js';
 import { fitsViewport } from './fit.js';
 const creature = (id, health = 20) => ({ id, name: id === 1 ? 'Warden' : `Creature ${id}`, health, maxHealth: 20, energy: 7,
   totalDefense: 2, isAlive: health > 0, knownSpells: ['strike'], conditions: [], acquiredTiers: [] });
@@ -10,7 +11,7 @@ const energy = round => ({ sequence: round * 10, round: round + 1, event: { kind
 const ongoing = (round, ticks = false) => ({ sequence: round * 10 + 1, round: round + 1, event: { kind: 'OngoingEffectsApplied', roundId: round,
   ...(ticks ? { energyRegenerationTicks: [{ creature: 1, gained: 2 }], regenerationTicks: [{ creature: 1, healed: 0 }], bleedTicks: [{ creature: 1, damage: 7 }] } : {}) } });
 async function mount(page, { waiting = null, round = 1, feed = [energy(round), ongoing(round)], tips = false } = {}) {
-  const state = { errors: [], writes: [], shown: [], status: 200, view: { board: { slot: 'Player1', roundNumber: round, phase: 'Planning', subPhase: 'Evolution',
+  const state = { errors: [], writes: [], shown: [], served: 0, status: 200, view: { board: { slot: 'Player1', roundNumber: round, phase: 'Planning', subPhase: 'Evolution',
     nextEvolutionRound: round, allies: roster.slice(0, 3), enemies: roster.slice(3), timeline: [] }, waiting,
     waitingFor: 'Evolution', waitingAsked: 11, waitingCreature: 1,
     options: { evolution: { remainingPicks: 2, creatures: [{ creature: 1, availableTiers: ['root'] }] } }, feed, feedNext: round * 10 + 2 } };
@@ -19,19 +20,25 @@ async function mount(page, { waiting = null, round = 1, feed = [energy(round), o
   await page.addInitScript(({ tips }) => {
     localStorage.setItem('downfall.table.seats', JSON.stringify({ player1: 'seat' }));
     if (!tips) localStorage.setItem('downfall.arena.help.v1', JSON.stringify({ version: 1, muted: true, seen: [] }));
+    // A returning player who reads in Auto (ADR 0140); tips stay as each test asks.
+    localStorage.setItem('downfall.arena.game-settings.v1', JSON.stringify({ pace: 'auto', speed: 1, help: Boolean(tips), reducedMotion: false }));
     const original = window.fetch;
     window.fetch = (url, options) => String(url).endsWith('/events') ? Promise.resolve(new Response(new ReadableStream({ start(controller) {
+      // A host says it is still there every twenty seconds (ADR 0119): without it the page takes a quiet stream for a
+      // dropped one after 45 seconds (ADR 0164) and opens another, and a long test would notify the closed one.
+      const alive = setInterval(() => { try { controller.enqueue(new TextEncoder().encode(': keep-alive\n\n')); } catch { clearInterval(alive); } }, 20000);
       window.notifyBattle = () => controller.enqueue(new TextEncoder().encode('event: changed\ndata: 1\n\n'));
     } }), { headers: { 'Content-Type': 'text/event-stream' } })) : original(url, options);
   }, { tips });
   await page.route('**/api/**', async route => {
     const request = route.request(), url = new URL(request.url());
-    if (request.method() !== 'GET') state.writes.push(url.pathname);
+    // Discovering the seats posts their tokens to read them, at load and again when the opponent is seated.
+    if (request.method() !== 'GET' && url.pathname !== '/api/lobby/resume') state.writes.push(url.pathname);
     if (url.pathname === '/api/lobby/resume') return route.fulfill({ json: { tables: [{ table: { id: 'a', format: '3v3' }, seats: [{ seat: 'player1', token: 'seat' }] }] } });
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: { rules: { energyPerRound: 99, combatDeclaration: 'AtActivation' }, cards: [{ id: 'strike', name: 'Strike', cost: 2 }], packages: [{ id: 'root', name: 'Warden', level: 1, spells: ['strike'] }] } });
     if (url.pathname === '/api/seat/player1') {
       if (url.searchParams.has('shown')) state.shown.push(url.searchParams.get('shown'));
-      return route.fulfill({ status: state.status, json: state.view });
+      await route.fulfill({ status: state.status, json: state.view }); state.served++; return;
     }
     return route.fulfill({ status: 500 });
   });
@@ -43,7 +50,11 @@ async function mount(page, { waiting = null, round = 1, feed = [energy(round), o
   state.writes.length = 0;
   const publish = async (feed, extra = {}) => {
     state.view = { ...state.view, ...extra, feed, feedNext: Math.max(state.view.feedNext, ...feed.map(one => one.sequence + 1)) };
+    const served = state.served;
     await page.evaluate(() => window.notifyBattle());
+    // A change told while a read is in flight is owed one more read, which the page schedules at no delay: a paused
+    // clock runs it only when it is moved, and a loaded machine is when the two overlap.
+    await expect.poll(async () => { if (state.served > served) return true; await page.clock.runFor(0); return false; }).toBe(true);
   };
   return { state, publish };
 }
@@ -58,7 +69,13 @@ test('arrivals gate one grouped receipt, then the mutation tip, without acknowle
   await expect(page.locator('#upkeep-body')).toContainText('+0 energy · 2 → 2');
   await expect(page.locator('#upkeep-body')).toContainText('No ongoing effects ticked');
   await expect(page.locator('#upkeep-body')).not.toContainText('99');
-  await fitsViewport(page, '#upkeep-close');
+  await expect(page.locator('#upkeep-body')).toBeHidden();
+  await expect(page.locator('#upkeep-intro')).toHaveText('Round energy · 6 creatures');
+  await page.clock.runFor(350);
+  const sheet = await page.locator('#upkeep-dialog').boundingBox();
+  const zone = await page.locator('#battle-zone').boundingBox();
+  expect(sheet.y).toBeGreaterThanOrEqual(zone.y + zone.height);
+  await fitsViewport(page, '#upkeep-close, #upkeep-details');
   await page.screenshot({ path: info.outputPath('upkeep-receipt.jpg'), type: 'jpeg', quality: 85 });
   expect(h.state.shown).toEqual([]); expect(h.state.writes).toEqual([]);
   await close(page); await expect(page.locator('#help-title')).toHaveText('What is a mutation?');
@@ -67,6 +84,7 @@ test('arrivals gate one grouped receipt, then the mutation tip, without acknowle
 test('inspection is current while receipt and journal retain historical zero healing and lethal damage', async ({ page }) => {
   const h = await mount(page, { feed: [energy(1), ongoing(1, true)] });
   await h.publish([], { board: { ...h.state.view.board, allies: [creature(1, 0), ...roster.slice(1, 3)] } });
+  await page.locator('#upkeep-details').click();
   await page.getByRole('button', { name: 'Inspect Warden · Your team', exact: true }).first().click();
   await expect(page.locator('#inspect-stats')).toHaveText(/^0\/20 HP/); await expect(page.locator('#inspect-effects')).toContainText('Defeated');
   await expect(page.locator('#inspect-effects')).not.toContainText('Bleed'); await page.keyboard.press('Escape');
@@ -74,17 +92,18 @@ test('inspection is current while receipt and journal retain historical zero hea
   await expect(rows).toHaveCount(3); await expect(rows.nth(0)).toContainText('Energy from effects +2');
   await expect(rows.nth(1)).toContainText('Healing over time +0'); await expect(rows.nth(2)).toContainText('Ongoing damage −7');
   await h.publish([]); await expect(rows).toHaveCount(3);
-  await page.locator('#upkeep-dialog [data-history-open]').click();
+  await page.locator('#upkeep-dialog [data-history-open]').click(); await page.locator('#history-mode-events').click();
   await page.locator('#history-list details').last().locator('summary').click();
   await expect(page.locator('#history-list')).toContainText('Healing over time +0');
+  // Closing the receipt opens the mutation tree (ADR 0138): that, not the receipt, acknowledges the asking.
   await page.locator('#history-close').click(); await close(page);
-  await page.locator('#round-review').click(); await expect(page.locator('#round-notes')).toContainText('+5 energy');
-  await expect(page.locator('#round-notes')).toContainText('Healing over time +0'); expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
+  await expect.poll(() => h.state.shown).toEqual(['11']); expect(h.state.errors).toEqual([]);
 });
 test('inspection reads current conditions while the receipt keeps the damage of a bleed since expired', async ({ page }) => {
   const h = await mount(page, { feed: [energy(1), ongoing(1, true)] });
   const warden = conditions => ({ ...creature(1, 13), conditions });
   await h.publish([], { board: { ...h.state.view.board, allies: [warden([{ effect: { kind: 'Bleed', amountPerRound: 7 }, remainingRounds: 1 }]), ...roster.slice(1, 3)] } });
+  await page.locator('#upkeep-details').click();
   const inspect = page.getByRole('button', { name: 'Inspect Warden · Your team', exact: true }).first();
   await inspect.click(); await expect(page.locator('#inspect-effects')).toContainText(/Bleed 7 · 1 round(?!s)/); await page.keyboard.press('Escape');
   // The bleed has run out; a defense with its own countdown is what the creature carries now.
@@ -97,20 +116,24 @@ test('inspection reads current conditions while the receipt keeps the damage of 
 });
 test('closing attack playback finishes before the next-round receipt and phase tip', async ({ page }) => {
   const h = await mount(page, { round: 2, feed: [], tips: true });
-  await page.locator('#help-close').click();
+  await page.locator('#help-close').click(); await page.locator('#planning-close').click();
   const attack = { sequence: 25, round: 3, event: { kind: 'CombatActionResolved', roundId: 2,
     resolution: { action: { actor: 4, spell: 'strike', targets: [1] }, isCritical: false }, appliedOutcomes: [{ kind: 'DamageOutcome', target: 1, amount: 7 }],
     frame: { before: roster, after: roster.map(one => creature(one.id, one.id === 1 ? 13 : 20)), timeline: [], rollOffs: [] } } };
   await h.publish([attack, energy(3), ongoing(3)], { board: { ...h.state.view.board, roundNumber: 3 }, waitingFor: 'Speed', waitingAsked: 12, options: { speed: { missing: [1, 2, 3] } } });
-  await expect(page.locator('#playback-skip')).toBeVisible(); await expect(page.locator('#upkeep-dialog')).toBeHidden();
-  await expect(page.locator('#help-dialog')).toBeHidden();
-  await page.locator('#playback-mode').selectOption('step'); await page.clock.runFor(1700);
-  await page.locator('#playback-next').click(); await expect(page.locator('#playback-receipt')).toContainText('+5 energy');
+  await expect(page.locator('#playback-next')).toBeVisible(); await expect(page.locator('#playback-skip')).toBeHidden();
+  await expect(page.locator('#upkeep-dialog')).toBeHidden(); await expect(page.locator('#help-dialog')).toBeHidden();
+  await page.locator('#settings').click(); await page.selectOption('#playback-preference', 'step'); await page.getByRole('button', { name: 'Close settings' }).click(); await page.clock.runFor(WINDUP_MS + IMPACT_MS);
+  await page.locator('#playback-next').click(); await expect(page.locator('#reading-title')).toHaveText('Upkeep');
+  await expect(page.locator('#result-text')).toContainText('+5 energy');
   await expect(page.locator('#upkeep-dialog')).toBeHidden();
   await page.locator('#playback-next').click();
   await expect(page.locator('#help-title')).toHaveText('Choose how your team acts');
-  await page.locator('#help-close').click(); await page.locator('#playback-result').click();
-  await expect(page.locator('#result-text')).toContainText('base 3'); expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
+  // The tip read, the team's tempos open by themselves (ADR 0150) and acknowledge their asking; the last result is
+  // still a tap away once they are closed.
+  await page.locator('#help-close').click(); await expect(page.locator('#planning-dialog')).toHaveAttribute('data-kind', 'Speed');
+  await page.locator('#planning-close').click(); await page.locator('#playback-result').click();
+  await expect(page.locator('#result-text')).toContainText('base 3'); expect(h.state.shown).toEqual(['11', '12']); expect(h.state.errors).toEqual([]);
 });
 test('polls, hidden-tab reconnection and reload do not repeat the same receipt', async ({ page }) => {
   const h = await mount(page); await close(page); await h.publish([]);
@@ -120,33 +143,37 @@ test('polls, hidden-tab reconnection and reload do not repeat the same receipt',
   await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#upkeep-dialog')).toBeHidden();
   h.state.view.feed = [energy(1), ongoing(1)]; await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
   await expect(page.locator('#loading')).toBeHidden();
-  await expect(page.locator('#upkeep-dialog')).toBeHidden();
+  await expect(page.locator('#upkeep-dialog')).toBeHidden(); await page.locator('#planning-close').click();
   await h.publish([energy(2), ongoing(2)], { board: { ...h.state.view.board, roundNumber: 2 } });
-  await expect(page.locator('#playback-receipt')).toBeVisible(); await expect(page.locator('#round-number')).toHaveText('02');
+  await expect(page.locator('#reading-title')).toHaveText('Upkeep'); await expect(page.locator('#round-number')).toHaveText('02');
   await expect(page.locator('#upkeep-dialog')).toBeHidden();
-  expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
+  // The tree opened once before the reload and once after; neither receipt acknowledged anything.
+  expect(h.state.shown).toEqual(['11', '11']); expect(h.state.errors).toEqual([]);
 });
 test('a legacy receipt states missing ordinary energy alongside actual effects', async ({ page }) => {
   const h = await mount(page, { feed: [ongoing(1, true)] });
   await expect(page.locator('#upkeep-body')).toContainText('actual gain is unknown');
   await expect(page.locator('#upkeep-body')).toContainText('Ongoing damage −7');
   await expect(page.locator('#upkeep-body')).not.toContainText('99');
-  await close(page); await page.locator('#round-review').click(); await expect(page.locator('#round-notes')).toContainText('actual gain is unknown');
+  await close(page);
   expect(h.state.errors).toEqual([]);
 });
 test('an existing draft delays the receipt and closing settings unblocks it without a write', async ({ page }) => {
   const h = await mount(page, { feed: [energy(1)] });
-  await page.locator('#planning-open').click(); await page.locator('[data-mutation="root"]').click();
+  await expect(page.locator('#planning-dialog')).toBeVisible(); await page.locator('[data-mutation="root"]').click();
   await h.publish([ongoing(1)]); await expect(page.locator('#upkeep-dialog')).toBeHidden();
   await expect(page.locator('#planning-selection')).toHaveText('Warden · Warden');
   await page.locator('#planning-close').click(); await expect(page.locator('#upkeep-dialog')).toBeVisible();
   await close(page); await page.locator('#settings').click();
   await h.publish([energy(2), ongoing(2)], { board: { ...h.state.view.board, roundNumber: 2 } });
+  // The round arrives under the settings, not after them: under a dialog it settles instead of playing unseen.
+  await expect(page.locator('#round-number')).toHaveText('02');
   await expect(page.locator('#upkeep-dialog')).toBeHidden(); await page.keyboard.press('Escape');
   await expect(page.locator('#upkeep-dialog')).toBeVisible(); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });
 for (const reason of ['revoked', 'hidden', 'renderer']) test(`${reason} clears the receipt and inspection`, async ({ page }) => {
   const h = await mount(page); await expect(page.locator('#upkeep-dialog')).toBeVisible();
+  await page.locator('#upkeep-details').click();
   await page.getByRole('button', { name: 'Inspect Warden · Your team', exact: true }).click();
   if (reason === 'revoked') { h.state.status = 403; await page.evaluate(() => window.notifyBattle()); }
   if (reason === 'hidden') await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')); });
@@ -157,6 +184,7 @@ for (const reason of ['revoked', 'hidden', 'renderer']) test(`${reason} clears t
 test('Continue stays reachable in short landscape and at 200 percent text', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop', 'Viewport sweep runs once.');
   const h = await mount(page, { feed: [energy(1), ongoing(1, true)] });
+  await page.locator('#upkeep-details').click();
   for (const size of [{ width: 320, height: 568 }, { width: 844, height: 390 }]) {
     await page.setViewportSize(size); await page.clock.runFor(150); await fitsViewport(page, '#upkeep-close');
     await page.locator('#upkeep-body section').last().scrollIntoViewIfNeeded();
@@ -168,18 +196,18 @@ test('Continue stays reachable in short landscape and at 200 percent text', asyn
 });
 
 test('connection loss settles an animation without opening the queued receipt offline', async ({ page }) => {
-  const h = await mount(page, { round: 2, feed: [] });
+  const h = await mount(page, { round: 2, feed: [] }); await page.locator('#planning-close').click();
   const attack = { sequence: 25, event: { kind: 'CombatActionResolved', roundId: 2,
     resolution: { action: { actor: 4, spell: 'strike', targets: [1] } }, appliedOutcomes: [],
     frame: { before: roster, after: roster, timeline: [], rollOffs: [] } } };
   await h.publish([attack, energy(3), ongoing(3)], { board: { ...h.state.view.board, roundNumber: 3 } });
-  await expect(page.locator('#playback-skip')).toBeVisible();
+  await expect(page.locator('#playback-next')).toBeVisible();
   h.state.status = 500; await page.evaluate(() => window.notifyBattle());
   await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'stale');
-  await expect(page.locator('#playback-skip')).toBeHidden(); await expect(page.locator('#upkeep-dialog')).toBeHidden();
+  await expect(page.locator('#playback-next')).toBeHidden(); await expect(page.locator('#upkeep-dialog')).toBeHidden();
   h.state.status = 200; await h.publish([]);
   await expect(page.locator('#upkeep-dialog')).toBeVisible(); await expect(page.locator('#upkeep-title')).toHaveText('Round 3 · Upkeep');
-  expect(h.state.writes).toEqual([]); expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
+  expect(h.state.writes).toEqual([]); expect(h.state.shown).toEqual(['11']); expect(h.state.errors).toEqual([]);
 });
 
 test('a newer round never replaces the receipt currently being read under History', async ({ page }) => {
@@ -190,5 +218,5 @@ test('a newer round never replaces the receipt currently being read under Histor
   await page.locator('#history-close').click(); await close(page);
   await expect(page.locator('#upkeep-dialog')).toBeVisible(); await expect(page.locator('#upkeep-title')).toHaveText('Round 2 · Upkeep');
   await close(page); await h.publish([]); await expect(page.locator('#upkeep-dialog')).toBeHidden();
-  expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
+  await expect.poll(() => h.state.shown).toEqual(['11']); expect(h.state.errors).toEqual([]);
 });
