@@ -31,6 +31,7 @@ export const ACTION_LABELS = Object.freeze({
   'feedback.spam': 'Dismissed feedback as spam',
   'feedback.mute': 'Stopped feedback from a player',
   'feedback.unmute': 'Let a player send feedback again',
+  'feedback.merge': 'Merged an idea into another',
 });
 
 const TABLE_ACTIONS = new Set(['table.open', 'table.close', 'table.reinvite', 'table.void', 'table.reveal', 'table.turn', 'sessions.delete', 'sessions.export']);

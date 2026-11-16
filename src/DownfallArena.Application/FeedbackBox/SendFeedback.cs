@@ -161,7 +161,7 @@ public sealed class SendFeedback(IFeedbackStore store, GuestAddresses addresses,
 
     /// <summary>
     /// The open feedback this is one more word on: a report on the same position sent within the day, or an idea within
-    /// the hour. Never older: what is added comes within a day of the sending, so the two days read hold every addition
+    /// the hour that was not merged into another, whose group may be closed already. Never older: what is added comes within a day of the sending, so the two days read hold every addition
     /// of the day.
     /// </summary>
     private static Feedback? Merging(FeedbackSent sent, List<Feedback> mine, DateTimeOffset now) => sent.Kind switch
@@ -169,7 +169,7 @@ public sealed class SendFeedback(IFeedbackStore store, GuestAddresses addresses,
         FeedbackKind.Bug when sent.Context?.Place is { } place =>
             mine.FirstOrDefault(one => one.Kind == FeedbackKind.Bug && !one.IsClosed && one.Context?.Place == place && now - one.At < Day),
         FeedbackKind.Idea =>
-            mine.FirstOrDefault(one => one.Kind == FeedbackKind.Idea && !one.IsClosed && now - one.At < IdeaMerged),
+            mine.FirstOrDefault(one => one.Kind == FeedbackKind.Idea && !one.IsClosed && one.MergedInto is null && now - one.At < IdeaMerged),
         _ => null,
     };
 

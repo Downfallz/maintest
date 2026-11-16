@@ -318,6 +318,7 @@
       </div>
       <div class="home-dialog-body">
         <dl id="admin-feedback-words" class="diagnosis-facts feedback-words"></dl>
+        <div id="admin-feedback-asks" class="diagnosis-actions"></div>
         <dl id="admin-feedback-facts" class="diagnosis-facts"></dl>
         <section id="admin-feedback-position-block" class="feedback-position-block" aria-labelledby="admin-feedback-position-title" hidden>
           <h3 id="admin-feedback-position-title">The position, as the player saw it</h3>
@@ -337,6 +338,29 @@
           <button id="admin-feedback-dismiss" type="button" class="secondary">Dismiss</button>
           <button id="admin-feedback-spam" type="button" class="danger">Dismiss as spam…</button>
         </div>
+        <div id="admin-feedback-planning" class="player-action" hidden>
+          <label for="admin-feedback-plan">The plan's path<input id="admin-feedback-plan" type="text" maxlength="200" placeholder="docs/tabletop/replay-plan.md" autocomplete="off" spellcheck="false" /></label>
+          <button id="admin-feedback-planned" type="button" class="secondary">Mark planned</button>
+          <button id="admin-feedback-shipped" type="button" class="secondary">Mark shipped</button>
+        </div>
+        <div id="admin-feedback-declining" class="player-action" hidden>
+          <label for="admin-feedback-decline-reason">Reason for declining, kept for the players who asked<input id="admin-feedback-decline-reason" type="text" maxlength="300" placeholder="It does not fit a game for two players." autocomplete="off" /></label>
+          <button id="admin-feedback-declined" type="button" class="secondary">Decline</button>
+        </div>
+        <div id="admin-feedback-merging" class="player-action" hidden>
+          <button id="admin-feedback-merge" type="button" class="secondary">Merge into…</button>
+          <div id="admin-feedback-merge-pick" hidden>
+            <label for="admin-feedback-merge-into">Another idea that asks the same thing<select id="admin-feedback-merge-into"></select></label>
+            <p id="admin-feedback-merge-note" class="muted"></p>
+            <button id="admin-feedback-merge-confirm" type="button" class="secondary">Merge</button>
+          </div>
+        </div>
+        <div id="admin-feedback-prompting" class="player-action" hidden>
+          <label for="admin-feedback-prompt-text">The idea, in your words, for the plan prompt<textarea id="admin-feedback-prompt-text" rows="3" maxlength="1000"></textarea></label>
+          <button id="admin-feedback-prompt" type="button" class="secondary">Copy as a plan prompt</button>
+          <output id="admin-feedback-prompt-said" class="feedback-text feedback-prompt"></output>
+        </div>
+        <button id="admin-feedback-joined" type="button" class="secondary" hidden>Open the idea it joined</button>
         <div class="player-action">
           <p class="muted">Stopping a player makes the host refuse their feedback for 30 days. A third spam dismissal within 30 days does the same.</p>
           <button id="admin-feedback-mute" type="button" class="danger">Stop feedback from this player…</button>

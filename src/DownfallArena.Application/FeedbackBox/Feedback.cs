@@ -56,6 +56,22 @@ public sealed record Feedback
     /// <summary>Why the operator dismissed it, or declined it; <see cref="SpamReason" /> marks it as spam. None while open.</summary>
     public string? Reason { get; init; }
 
+    /// <summary>
+    /// For an idea the operator merged into another, the group's idea it joined, never one merged itself: it leaves the
+    /// list and is read inside that one,
+    /// its sender and words kept, and it counts towards how many asked (docs/tabletop/feedback-plan.md, I1). None otherwise.
+    /// </summary>
+    public string? MergedInto { get; init; }
+
+    /// <summary>
+    /// For an idea others were merged into, their ids: kept under the write gate with each one's
+    /// <see cref="MergedInto" />, so a change to the group reads these records and never the whole store.
+    /// </summary>
+    public IReadOnlyList<string> Joined { get; init; } = [];
+
+    /// <summary>For an idea planned, or shipped since, the path of the plan it went into (<c>docs/…-plan.md</c>). None otherwise.</summary>
+    public string? Plan { get; init; }
+
     /// <summary>The reason that marks feedback dismissed as spam, which counts against its sender.</summary>
     public const string SpamReason = "spam";
 
