@@ -103,20 +103,27 @@ const plural = (count, one, many = `${one}s`) => `${count} ${count === 1 ? one :
 
 const stamp = at => (at ? new Date(at).toISOString().replace('T', ' ').slice(0, 16) + ' UTC' : '');
 
+/** Who sent it, as the sheet says it: a guest, an account, or one deleted since. */
+function senderLine(answer) {
+  if (answer.senderGone) return 'An account since deleted';
+  return answer.guest ? 'A guest, by their seat' : `Account ${answer.account}`;
+}
+
+/** What the host added about where it was sent from, each a label and a line. */
+function contextFacts(context) {
+  const where = [placeLine(context), context.seat, context.subPhase ? stepLabel(context.subPhase) : null,
+    Number.isInteger(context.journalLength) ? plural(context.journalLength, 'journal entry', 'journal entries') : null].filter(Boolean);
+  const facts = [['Where', where.join(' · ')]];
+  const basis = [context.rules, context.content ? `content ${context.content.slice(0, 12)}` : null, context.engine ? `engine ${context.engine}` : null].filter(Boolean);
+  if (basis.length) facts.push(['Played on', basis.join(' · ')]);
+  if (Number.isInteger(context.practiceEntries)) facts.push(['Practice', `${plural(context.practiceEntries, 'entry', 'entries')} since the cut, copied`]);
+  return facts;
+}
+
 /** The facts the sheet lists, each a label and a line, from `GET /api/admin/feedback/<id>`. */
 export function sheetFacts(answer, now = Date.now()) {
-  const facts = [['Sent', `${ago(answer.at, now)} · ${stamp(answer.at)}`]];
-  if (answer.senderGone) facts.push(['From', 'An account since deleted']);
-  else facts.push(['From', answer.guest ? 'A guest, by their seat' : `Account ${answer.account}`]);
-  const context = answer.context;
-  if (context) {
-    const where = [placeLine(context), context.seat, context.subPhase ? stepLabel(context.subPhase) : null,
-      Number.isInteger(context.journalLength) ? plural(context.journalLength, 'journal entry', 'journal entries') : null].filter(Boolean);
-    facts.push(['Where', where.join(' · ')]);
-    const basis = [context.rules, context.content ? `content ${context.content.slice(0, 12)}` : null, context.engine ? `engine ${context.engine}` : null].filter(Boolean);
-    if (basis.length) facts.push(['Played on', basis.join(' · ')]);
-    if (Number.isInteger(context.practiceEntries)) facts.push(['Practice', `${plural(context.practiceEntries, 'entry', 'entries')} since the cut, copied`]);
-  }
+  const facts = [['Sent', `${ago(answer.at, now)} · ${stamp(answer.at)}`], ['From', senderLine(answer)]];
+  if (answer.context) facts.push(...contextFacts(answer.context));
   if (answer.page) facts.push(['Page', answer.page]);
   if (answer.browser) facts.push(['Browser', answer.browser]);
   for (const error of answer.errors ?? []) facts.push(['Page error', error.where ? `${error.message} (${error.where})` : error.message]);
@@ -156,7 +163,7 @@ export function creatureLine(creature) {
 export function positionSides(position, seat) {
   if (!position || typeof position !== 'object') return [];
   return [
-    { label: `The reporter's side${seat ? ` (${seat})` : ''}`, creatures: (position.allies ?? []).map(creatureLine) },
+    { label: seat ? `The reporter's side (${seat})` : 'The reporter\'s side', creatures: (position.allies ?? []).map(creatureLine) },
     { label: 'The other side', creatures: (position.enemies ?? []).map(creatureLine) },
   ];
 }
