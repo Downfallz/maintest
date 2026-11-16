@@ -2,7 +2,8 @@
    the concept cards drawn as the battle draws them (battle.css, #concept-dialog). */
 .rules-hero { padding-bottom: 18px; }
 /* English or French: two buttons, the pressed one the book shown, pressed as the lobby's filters are (lobby.css). */
-.rules-languages { flex: none; align-self: flex-start; display: flex; gap: 6px; }
+.rules-languages { flex: none; align-self: flex-start; display: flex; gap: 6px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.rules-languages > legend { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .rules-language { min-width: 44px; padding: 0 14px; color: var(--muted); }
 .rules-filter { display: grid; gap: 6px; max-width: 520px; margin-bottom: 18px; }
 .rules-filter label { font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); font-weight: 650; }

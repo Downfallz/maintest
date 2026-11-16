@@ -277,22 +277,9 @@ const bold = cell => [...(cell ?? '').matchAll(/\*\*([^*]+)\*\*/g)].map(match =>
 export function retiredWords(terminology, language = 'en') {
   const words = new Map();
   const rows = tableRows(terminology, first => first.startsWith('Internal'));
-  for (const [internal, legacy, en, fr] of rows) {
-    const player = bold(language === 'fr' ? fr : en);
-    if (!player[0]) continue;
-    for (const word of rowCandidates(internal, legacy)) {
-      if (!word || SKIPPED.has(word) || player.includes(word) || words.has(word)) continue;
-      // In French every word is refused as written: "tiers" and "stage" are French words too.
-      const exact = language === 'fr' || EVERYDAY.has(word) || /[a-z][A-Z]/.test(word);
-      words.set(word, { player: player[0], pattern: wordPattern(word, 's?', exact ? 'u' : 'iu') });
-    }
-  }
+  for (const [internal, legacy, en, fr] of rows) retireRow(words, rowCandidates(internal, legacy), bold(language === 'fr' ? fr : en), language);
   if (language === 'fr') {
-    for (const [, , en, fr] of rows) {
-      const [english] = bold(en);
-      const [french] = bold(fr);
-      if (english && french && english !== french && !words.has(english)) words.set(english, { player: french, pattern: wordPattern(english, 's?', 'u') });
-    }
+    for (const [, , en, fr] of rows) retireEnglish(words, bold(en)[0], bold(fr)[0]);
     return words;
   }
   // The sentences the page rewrote ("Choose speed"), in any case, each with what replaced it.
@@ -300,6 +287,22 @@ export function retiredWords(terminology, language = 'en') {
     if (before.toLowerCase() !== after.toLowerCase() && !words.has(before)) words.set(before, { player: after, pattern: wordPattern(before, '', 'iu') });
   }
   return words;
+}
+
+// A row's engine and legacy words, each refused for the row's player's word.
+function retireRow(words, candidates, player, language) {
+  if (!player[0]) return;
+  for (const word of candidates) {
+    if (!word || SKIPPED.has(word) || player.includes(word) || words.has(word)) continue;
+    // In French every word is refused as written: "tiers" and "stage" are French words too.
+    const exact = language === 'fr' || EVERYDAY.has(word) || /[a-z][A-Z]/.test(word);
+    words.set(word, { player: player[0], pattern: wordPattern(word, 's?', exact ? 'u' : 'iu') });
+  }
+}
+
+// In French, an English player's word the French column replaced (Upkeep for Entretien).
+function retireEnglish(words, english, french) {
+  if (english && french && english !== french && !words.has(english)) words.set(english, { player: french, pattern: wordPattern(english, 's?', 'u') });
 }
 
 // --- the Markdown subset ------------------------------------------------------------------------------------------
@@ -755,18 +758,18 @@ function main() {
     for (const error of errors) console.error(error);
     process.exit(1);
   }
-  const outputs = [[OUTPUT, book], ...(french ? [[OUTPUT_FR, french]] : [])];
+  const outputs = [{ file: OUTPUT, built: book }, ...(french ? [{ file: OUTPUT_FR, built: french }] : [])];
   if (process.argv.includes('--check')) {
-    const stale = outputs.filter(([path, built]) => (existsSync(join(root, path)) ? readFileSync(join(root, path), 'utf8') : '') !== render(built));
-    for (const [path] of stale) console.error(`${path} is not the build of rules/: run node scripts/rules/build.mjs`);
+    const stale = outputs.filter(({ file, built }) => (existsSync(join(root, file)) ? readFileSync(join(root, file), 'utf8') : '') !== render(built));
+    for (const { file } of stale) console.error(`${file} is not the build of rules/: run node scripts/rules/build.mjs`);
     if (stale.length > 0) process.exit(1);
-    console.log(`${outputs.map(([path]) => path).join(' and ')}: up to date.`);
+    console.log(`${outputs.map(({ file }) => file).join(' and ')}: up to date.`);
     return;
   }
-  for (const [path, built] of outputs) {
-    writeFileSync(join(root, path), render(built));
+  for (const { file, built } of outputs) {
+    writeFileSync(join(root, file), render(built));
     const sections = built.parts.reduce((count, part) => count + part.sections.length, 0);
-    console.log(`${relative(root, join(root, path))}: ${built.parts.length} parts, ${sections} sections, ${built.cards.length} cards.`);
+    console.log(`${relative(root, join(root, file))}: ${built.parts.length} parts, ${sections} sections, ${built.cards.length} cards.`);
   }
 }
 

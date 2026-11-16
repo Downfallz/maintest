@@ -47,7 +47,7 @@ export const WORDS = {
     kept: (sections, total) => `${count(sections, 'section', 'sections')} of ${total} ${sections === 1 ? 'holds' : 'hold'} those words`,
     noMatch: 'No rule holds those words. Try another word.',
     problem: 'Could not read the rulebook. Check your connection and reload the page.',
-    drawn: date => `Every number in this book is drawn from the rule set and the content this table plays${date ? `. Last changed ${date}.` : '.'}`,
+    drawn: date => 'Every number in this book is drawn from the rule set and the content this table plays' + (date ? `. Last changed ${date}.` : '.'),
     date: (year, month, day) => `${day} ${['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][month - 1]} ${year}`,
   },
   fr: {
@@ -69,7 +69,7 @@ export const WORDS = {
     kept: (sections, total) => `${compte(sections, 'section', 'sections')} sur ${total} ${sections > 1 ? 'contiennent' : 'contient'} ces mots`,
     noMatch: 'Aucune règle ne contient ces mots. Essayez un autre mot.',
     problem: 'Impossible de lire le livre de règles. Vérifiez votre connexion et rechargez la page.',
-    drawn: date => `Chaque nombre de ce livre vient des règles et du contenu de cette table${date ? `. Dernière modification le ${date}.` : '.'}`,
+    drawn: date => 'Chaque nombre de ce livre vient des règles et du contenu de cette table' + (date ? `. Dernière modification le ${date}.` : '.'),
     date: (year, month, day) => `${day === 1 ? '1er' : day} ${['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'][month - 1]} ${year}`,
   },
 };
@@ -336,7 +336,6 @@ export function translatePage(doc, language) {
   doc.title = words.documentTitle;
   for (const element of doc.querySelectorAll('[data-words]')) element.textContent = words[element.dataset.words];
   doc.getElementById('rules-filter').placeholder = words.placeholder;
-  doc.getElementById('rules-languages').setAttribute('aria-label', words.languages);
   for (const button of doc.querySelectorAll('[data-language]')) button.setAttribute('aria-pressed', String(button.dataset.language === language));
 }
 

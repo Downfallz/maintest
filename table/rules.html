@@ -22,10 +22,11 @@
   <main class="lobby-main rules-main">
     <section class="lobby-hero rules-hero" aria-labelledby="rules-title">
       <div><p class="eyebrow" data-words="eyebrow">The official rulebook</p><h2 id="rules-title" data-words="heading">The rules.</h2><p class="hero-detail" data-words="detail">How a match is played at this table, part by part. Every number is the one this table uses.</p></div>
-      <div id="rules-languages" class="rules-languages" role="group" aria-label="Language">
+      <fieldset id="rules-languages" class="rules-languages">
+        <legend data-words="languages">Language</legend>
         <button type="button" class="rules-language" data-language="en" lang="en" aria-pressed="true">English</button>
         <button type="button" class="rules-language" data-language="fr" lang="fr" aria-pressed="false">Français</button>
-      </div>
+      </fieldset>
     </section>
     <form id="rules-filter-form" class="rules-filter" role="search">
       <label for="rules-filter" data-words="filterLabel">Find a rule</label>
