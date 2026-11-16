@@ -49,6 +49,17 @@ public sealed class TutorialPlayTests
         return play.Assisted.Count == 0;
     }
 
+    /// <summary>Whether <paramref name="condition" /> holds within five seconds, read 50 ms apart.</summary>
+    private static async Task<bool> SaidAsync(Func<bool> condition)
+    {
+        for (var waited = 0; waited < 100 && !condition(); waited++)
+        {
+            await Task.Delay(50, TestContext.Current.CancellationToken);
+        }
+
+        return condition();
+    }
+
     [Fact]
     public async Task An_assisted_question_is_answered_with_the_recorded_answer_for_the_asking_it_was_read_at()
     {
@@ -77,8 +88,11 @@ public sealed class TutorialPlayTests
         (await HandedBackAsync(play)).ShouldBeTrue();
         sent.Count.ShouldBe(1);
 
-        // The view changed and the match did not: the pages are told through this, once.
-        Volatile.Read(ref said).ShouldBe(1);
+        // The view changed and the match did not: the pages are told through this, once. It is said after the
+        // tutorial's lock is left, so a moment after Assisted reads empty.
+        (await SaidAsync(() => Volatile.Read(ref said) == 1)).ShouldBeTrue();
+        await Task.Delay(200, TestContext.Current.CancellationToken);
+        Volatile.Read(ref said).ShouldBe(1, "a second word would come in the moment after the first");
     }
 
     [Fact]
@@ -91,6 +105,51 @@ public sealed class TutorialPlayTests
         play.Look();
 
         (await HandedBackAsync(play)).ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// Whether, when the play says it gave the seat back, another thread reads <see cref="TutorialPlay.Assisted" />
+    /// within two seconds: as a subscriber that takes its own lock does while a bump from the match waits on it.
+    /// </summary>
+    private static async Task<bool> ReadableWhenGivenBackAsync(TutorialPlay play, TutorialPlay.Seat table)
+    {
+        var readable = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        play.GaveBack += () => readable.TrySetResult(Task.Run(() => play.Assisted).Wait(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken));
+        play.Follow(table);
+
+        play.Look();
+
+        return await readable.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task A_late_answer_s_hand_back_is_said_once_the_tutorial_is_readable_from_another_thread()
+    {
+        var (table, _) = AskedASpeed(_ => DecisionTaken.Late);
+
+        var readable = await ReadableWhenGivenBackAsync(Play(), table);
+
+        readable.ShouldBeTrue("a GaveBack subscriber runs outside the tutorial's lock");
+    }
+
+    [Fact]
+    public async Task A_failed_answer_s_hand_back_is_said_once_the_tutorial_is_readable_from_another_thread()
+    {
+        var (table, _) = AskedASpeed(_ => throw new IOException("the journal is out"));
+
+        var readable = await ReadableWhenGivenBackAsync(Play(), table);
+
+        readable.ShouldBeTrue("a GaveBack subscriber runs outside the tutorial's lock");
+    }
+
+    [Fact]
+    public async Task A_script_run_out_s_hand_back_is_said_once_the_tutorial_is_readable_from_another_thread()
+    {
+        var (table, _) = AskedASpeed(_ => new DecisionTaken(true, false));
+
+        var readable = await ReadableWhenGivenBackAsync(Play(), table);
+
+        readable.ShouldBeTrue("a GaveBack subscriber runs outside the tutorial's lock");
     }
 
     [Fact]
