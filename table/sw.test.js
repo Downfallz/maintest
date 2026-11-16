@@ -301,12 +301,12 @@ test('nothing but a navigation and the rulebook is touched: scripts, the API and
   }
 });
 
-test('installing keeps the offline page and the rulebook: the page, its script, its style and the book', async () => {
+test('installing keeps the offline page and the rulebook: the page, its script, its style and the book in both languages', async () => {
   const w = offlineWorker({ network: async path => answer(`installed ${path}`) });
 
   await install(w);
 
-  for (const path of ['/offline.html', '/rules', '/rules.js', '/rules.css', '/rules.json', '/identity.css', '/brand-mark.svg']) {
+  for (const path of ['/offline.html', '/rules', '/rules.js', '/rules.css', '/rules.json', '/rules.fr.json', '/identity.css', '/brand-mark.svg']) {
     assert.ok(w.store.has(path), `${path} is kept`);
   }
 });

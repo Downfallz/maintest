@@ -36,6 +36,8 @@ itself. Do not report those. Report what only a reading finds:
    section, or a section's id a page links to that the change should rename (with its `moved.json` line).
 5. **The record**: a change a player would notice with no line in `rules/changes.md`; an ADR with no
    `Rulebook:` line, or one that says "none" for a decision a section teaches.
+6. **The French edition**: a section of `rules/fr/` (marked `[fr]` by `reach.mjs`) that no longer says what its
+   English section says, or uses an English word where `player-terminology.md`'s French column has another.
 
 A rule that the book and `docs/domain/game-rules.md` state differently is a bug in one of the two: say which, by
 the code that plays it. Never propose the domain's word where the player's word exists.

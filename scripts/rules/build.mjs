@@ -3,8 +3,12 @@
 // find wrong, and writes `table/rules.json`, the parts, sections, blocks and cards as data, never HTML. The file is
 // committed (ADR 0184); table/rules.test.js fails when it is out of date.
 //
-//   node scripts/rules/build.mjs            # write table/rules.json, or list what it refuses and exit 1
-//   node scripts/rules/build.mjs --check    # exit 1 when table/rules.json is not the build of rules/
+//   node scripts/rules/build.mjs            # write table/rules.json and rules.fr.json, or list what it refuses
+//   node scripts/rules/build.mjs --check    # exit 1 when either file is not the build of rules/
+//
+// The French edition (rules/fr/, rulebook-plan.md R6) is the same book in French: the same files, ids, sources and
+// cards, its values drawn the same way and written the French way, and the French column of player-terminology.md
+// as its words. It is built into table/rules.fr.json, beside the English.
 //
 // No Markdown package: the book uses headings of two levels with a stable id, paragraphs, lists, tables, bold,
 // italics and links, and the build refuses anything else. `rules/README.md` is the format.
@@ -17,6 +21,7 @@ import { fileURLToPath } from 'node:url';
 const RULE_SET = 'docs/tabletop/playtest.rules.json';
 const CREATURE = 'data/Creatures/main.v1.json';
 const OUTPUT = 'table/rules.json';
+const OUTPUT_FR = 'table/rules.fr.json';
 
 // Where a link to the rules may be written: the pages, the battle view and the tutorials.
 const LINKED_FROM = ['table', 'battle/src', 'scenarios/tutorials'];
@@ -49,7 +54,7 @@ export function linksIn(text) {
 
 /** Whether a path may hold a link to the rules: a page's source, never a test or the built book. */
 export function linksFrom(path) {
-  return LINKING_FILES.has(extname(path)) && !/\.(test|spec)\.[a-z]+$/.test(path) && path !== OUTPUT;
+  return LINKING_FILES.has(extname(path)) && !/\.(test|spec)\.[a-z]+$/.test(path) && path !== OUTPUT && path !== OUTPUT_FR;
 }
 
 /**
@@ -91,13 +96,20 @@ function previousIds(root) {
 /** A heading's anchor as GitHub writes it: lowercased, punctuation dropped, spaces as hyphens. */
 const anchorOf = heading => heading.trim().toLowerCase().replace(/[^a-z0-9 -]/g, '').replaceAll(' ', '-');
 
+// An edition's part files, in their order, and its changes, or null when it has none.
+function editionIn(folder) {
+  const parts = readdirSync(folder).filter(name => /^\d{2}-[a-z0-9-]+\.md$/.test(name)).sort((a, b) => a.localeCompare(b))
+    .map(file => ({ file, text: readFileSync(join(folder, file), 'utf8') }));
+  const changes = existsSync(join(folder, 'changes.md')) ? readFileSync(join(folder, 'changes.md'), 'utf8') : null;
+  return { parts, changes };
+}
+
 /** Everything the build reads, from the repository at `root`. */
 export function readInputs(root) {
   const rules = join(root, 'rules');
-  const parts = readdirSync(rules).filter(name => /^\d{2}-[a-z0-9-]+\.md$/.test(name)).sort()
-    .map(file => ({ file, text: readFileSync(join(rules, file), 'utf8') }));
+  const { parts, changes } = editionIn(rules);
   const moved = existsSync(join(rules, 'moved.json')) ? readJson(join(rules, 'moved.json')) : {};
-  const changes = existsSync(join(rules, 'changes.md')) ? readFileSync(join(rules, 'changes.md'), 'utf8') : null;
+  const french = existsSync(join(rules, 'fr')) ? editionIn(join(rules, 'fr')) : null;
   const byId = folder => new Map(filesUnder(root, folder).filter(path => path.endsWith('.json'))
     .map(path => readJson(join(root, path))).map(item => [item.id, item]));
   const spells = byId('data/Spells');
@@ -112,6 +124,7 @@ export function readInputs(root) {
     parts,
     moved,
     changes,
+    french,
     ruleSet: { path: RULE_SET, values: readJson(join(root, RULE_SET)) },
     creature: readJson(join(root, CREATURE)),
     spells,
@@ -254,23 +267,42 @@ function rowCandidates(internal, legacy) {
   return [(open < 0 ? legacy : legacy.slice(0, open)).trim(), ...codes.filter(word => /^[A-Z][A-Za-z]+$/.test(word))];
 }
 
-/** The engine and legacy words of docs/domain/player-terminology.md, each with the player's word that replaced it. */
-export function retiredWords(terminology) {
+const bold = cell => [...(cell ?? '').matchAll(/\*\*([^*]+)\*\*/g)].map(match => match[1]);
+
+/**
+ * The engine and legacy words of docs/domain/player-terminology.md, each with the player's word that replaced it.
+ * In French (`fr`), the player's word is the French column's, and an English player's word the French one
+ * replaced (Upkeep, Spellbook, Stage) is refused too.
+ */
+export function retiredWords(terminology, language = 'en') {
   const words = new Map();
-  for (const [internal, legacy, en] of tableRows(terminology, first => first.startsWith('Internal'))) {
-    const player = [...en.matchAll(/\*\*([^*]+)\*\*/g)].map(match => match[1]);
-    if (!player[0]) continue;
-    for (const word of rowCandidates(internal, legacy)) {
-      if (!word || SKIPPED.has(word) || player.includes(word) || words.has(word)) continue;
-      const exact = EVERYDAY.has(word) || /[a-z][A-Z]/.test(word);
-      words.set(word, { player: player[0], pattern: wordPattern(word, 's?', exact ? 'u' : 'iu') });
-    }
+  const rows = tableRows(terminology, first => first.startsWith('Internal'));
+  for (const [internal, legacy, en, fr] of rows) retireRow(words, rowCandidates(internal, legacy), bold(language === 'fr' ? fr : en), language);
+  if (language === 'fr') {
+    for (const [, , en, fr] of rows) retireEnglish(words, bold(en)[0], bold(fr)[0]);
+    return words;
   }
   // The sentences the page rewrote ("Choose speed"), in any case, each with what replaced it.
   for (const [before, after] of tableRows(terminology, first => first === 'Before')) {
     if (before.toLowerCase() !== after.toLowerCase() && !words.has(before)) words.set(before, { player: after, pattern: wordPattern(before, '', 'iu') });
   }
   return words;
+}
+
+// A row's engine and legacy words, each refused for the row's player's word.
+function retireRow(words, candidates, player, language) {
+  if (!player[0]) return;
+  for (const word of candidates) {
+    if (!word || SKIPPED.has(word) || player.includes(word) || words.has(word)) continue;
+    // In French every word is refused as written: "tiers" and "stage" are French words too.
+    const exact = language === 'fr' || EVERYDAY.has(word) || /[a-z][A-Z]/.test(word);
+    words.set(word, { player: player[0], pattern: wordPattern(word, 's?', exact ? 'u' : 'iu') });
+  }
+}
+
+// In French, an English player's word the French column replaced (Upkeep for Entretien).
+function retireEnglish(words, english, french) {
+  if (english && french && english !== french && !words.has(english)) words.set(english, { player: french, pattern: wordPattern(english, 's?', 'u') });
 }
 
 // --- the Markdown subset ------------------------------------------------------------------------------------------
@@ -292,13 +324,15 @@ const opensBlock = line => !line.trim() || HEADING.test(line) || line.startsWith
 
 /** What one build of the book collects: its refusals, the spells it read and the links inside the book. */
 class Build {
-  constructor(given) {
+  constructor(given, { language = 'en', folder = 'rules', errors = [] } = {}) {
     this.given = given;
-    this.errors = [];
+    this.language = language;
+    this.folder = folder;
+    this.errors = errors;
     this.used = new Set();
     this.usedMutations = new Set();
     this.look = lookup(given, this.used, this.usedMutations);
-    this.retired = retiredWords(given.terminology);
+    this.retired = retiredWords(given.terminology, language);
     this.conceptIds = new Set(given.conceptIds);
     this.bookLinks = [];
   }
@@ -318,7 +352,8 @@ class Build {
       const value = evaluate(expression, this.look);
       if (typeof value !== 'number') return value;
       if (!Number.isFinite(value)) throw new Error(`"${expression}" is not a finite number`);
-      return String(Number(value.toFixed(6)));
+      const written = String(Number(value.toFixed(6)));
+      return this.language === 'fr' ? written.replace('.', ',') : written;
     } catch (error) {
       this.refuse(`${where}: ${error.message}`);
       return '';
@@ -454,7 +489,16 @@ class PartReader {
   read(text) {
     const lines = text.split('\n');
     let at = 0;
-    while (at < lines.length) at = this.block(lines, at, `rules/${this.file}:${at + 1}`);
+    while (at < lines.length) at = this.block(lines, at, `${this.build.folder}/${this.file}:${at + 1}`);
+    // Each section's own lines, as written, for the French edition's check; not part of the built book.
+    const raw = new Map();
+    let current = null;
+    for (const line of lines) {
+      const heading = /^## .*\{#([^}]+)\}\s*$/.exec(line);
+      if (heading) current = heading[1];
+      if (current) raw.set(current, `${raw.get(current) ?? ''}\n${line}`);
+    }
+    Object.defineProperty(this.part, 'raw', { value: raw });
     this.finish();
     return this.part;
   }
@@ -561,9 +605,9 @@ class PartReader {
   }
 
   finish() {
-    if (this.part.title === null) this.refuse(`rules/${this.file}: a part file opens with its heading of level 1`);
+    if (this.part.title === null) this.refuse(`${this.build.folder}/${this.file}: a part file opens with its heading of level 1`);
     for (const section of this.part.sections) {
-      if (section.sources.length === 0) this.refuse(`rules/${this.file}: section "${section.id}" has no sources line`);
+      if (section.sources.length === 0) this.refuse(`${this.build.folder}/${this.file}: section "${section.id}" has no sources line`);
     }
   }
 }
@@ -604,22 +648,89 @@ function checkLinks(given, ids, moved, build) {
 
 // rules/changes.md: one dated line per change a player would notice.
 function readChanges(text, build) {
+  const file = `${build.folder}/changes.md`;
   const changes = [];
   for (const line of (text ?? '').split('\n').map(one => one.trim()).filter(one => one && !one.startsWith('#'))) {
     const change = /^- (\d{4}-\d{2}-\d{2}): (.+)$/.exec(line);
     if (!change) {
-      build.refuse(`rules/changes.md: "${line}" is not "- YYYY-MM-DD: what changed"`);
+      build.refuse(`${file}: "${line}" is not "- YYYY-MM-DD: what changed"`);
       continue;
     }
     const adrs = [...change[2].matchAll(/ADR (\d{4})/g)].map(match => match[1]);
-    for (const adr of adrs.filter(one => !build.given.adrs.has(one))) build.refuse(`rules/changes.md: ADR ${adr} does not exist`);
-    build.words(change[2], 'rules/changes.md');
+    for (const adr of adrs.filter(one => !build.given.adrs.has(one))) build.refuse(`${file}: ADR ${adr} does not exist`);
+    build.words(change[2], file);
     changes.push({ date: change[1], text: change[2], adrs });
   }
   return changes;
 }
 
-/** Builds the book from what `readInputs` read; `errors` lists every refusal, and the book is complete only without one. */
+const listed = ids => (ids.length > 0 ? ids.join(', ') : 'none');
+// The values a section's lines draw, sorted, so a translation may move them but never type one or drop one.
+const valuesOf = text => [...(text ?? '').matchAll(/\{([^{}#][^{}]*)\}/g)].map(match => match[1].replace(/\s+/g, '')).sort((a, b) => a.localeCompare(b));
+const cardOf = section => section.card?.id ?? 'none';
+
+// The French part holds the English part's sections, in its order, each citing the same sources and carrying the
+// same card: a translation, never another book.
+function checkPart(english, french, where, build) {
+  if (french.id !== english.id) build.refuse(`${where}: the part's id is "${french.id}"; the English part's is "${english.id}"`);
+  const englishIds = english.sections.map(section => section.id);
+  const frenchIds = french.sections.map(section => section.id);
+  for (const id of englishIds.filter(id => !frenchIds.includes(id))) build.refuse(`${where}: section "${id}" is missing; the French edition has every section`);
+  for (const id of frenchIds.filter(id => !englishIds.includes(id))) build.refuse(`${where}: section "${id}" is not in the English edition`);
+  const shared = englishIds.filter(id => frenchIds.includes(id));
+  if (shared.join() !== frenchIds.filter(id => englishIds.includes(id)).join()) build.refuse(`${where}: the sections are not in the English order (${shared.join(', ')})`);
+  for (const section of french.sections) {
+    const original = english.sections.find(one => one.id === section.id);
+    if (!original) continue;
+    if (section.sources.join() !== original.sources.join()) build.refuse(`${where}: section "${section.id}" cites ${listed(section.sources)}; the English cites ${listed(original.sources)}`);
+    if (cardOf(section) !== cardOf(original)) build.refuse(`${where}: section "${section.id}" carries card ${cardOf(section)}; the English carries ${cardOf(original)}`);
+    const frenchValues = valuesOf(french.raw?.get(section.id));
+    const englishValues = valuesOf(english.raw?.get(section.id));
+    if (frenchValues.join('\n') !== englishValues.join('\n')) build.refuse(`${where}: section "${section.id}" draws ${listed(frenchValues)}; the English draws ${listed(englishValues)}`);
+  }
+}
+
+// rules/fr/changes.md: the English lines translated, one for one, with the same dates and ADRs.
+function checkChanges(english, french, build) {
+  if (french.length !== english.length) build.refuse(`rules/fr/changes.md has ${french.length} lines; rules/changes.md has ${english.length}`);
+  french.forEach((change, at) => {
+    const original = english[at];
+    if (original && (change.date !== original.date || change.adrs.join() !== original.adrs.join())) {
+      build.refuse(`rules/fr/changes.md, line ${at + 1}: ${change.date} (${listed(change.adrs)}); the English line is ${original.date} (${listed(original.adrs)})`);
+    }
+  });
+}
+
+function bookOf(given, build, parts, cards, moved, changes) {
+  return {
+    language: build.language,
+    drawnFrom: { ruleSet: given.ruleSet.path, rules: given.ruleSet.values, creature: given.creature.id, spells: [...build.used].sort((a, b) => a.localeCompare(b)), mutations: [...build.usedMutations].sort((a, b) => a.localeCompare(b)) },
+    parts,
+    cards,
+    moved,
+    changes,
+  };
+}
+
+// The French edition, read like the English and held to it; its refusals join the English's.
+function buildFrench(given, english, ids, errors) {
+  const build = new Build(given, { language: 'fr', folder: 'rules/fr', errors });
+  const files = given.parts.map(part => part.file);
+  for (const file of files.filter(file => !given.french.parts.some(part => part.file === file))) build.refuse(`rules/fr/${file} is missing; the French edition has every part`);
+  for (const { file } of given.french.parts.filter(part => !files.includes(part.file))) build.refuse(`rules/fr/${file} has no English part`);
+  const parts = given.french.parts.map(({ file, text }) => new PartReader(build, file, files.indexOf(file) + 1).read(text)).filter(part => part.number > 0);
+  for (const part of parts) checkPart(english.parts[part.number - 1], part, `rules/fr/${files[part.number - 1]}`, build);
+  for (const { id, where } of build.bookLinks.filter(link => !ids.has(link.id))) build.refuse(`${where}: a link to #${id}, which is not a section`);
+  const changes = readChanges(given.french.changes, build);
+  checkChanges(english.changes, changes, build);
+  const cards = parts.flatMap(part => part.sections).filter(section => section.card?.id).map(section => ({ id: section.card.id, section: section.id }));
+  return bookOf(given, build, parts, cards, english.moved, changes);
+}
+
+/**
+ * Builds the book from what `readInputs` read, and its French edition when there is one (`french`, else null);
+ * `errors` lists every refusal of both, and the books are complete only without one.
+ */
 export function buildRules(given) {
   const build = new Build(given);
   const parts = given.parts.map(({ file, text }, index) => new PartReader(build, file, index + 1).read(text));
@@ -628,14 +739,9 @@ export function buildRules(given) {
   const moved = given.moved ?? {};
   checkLinks(given, ids, moved, build);
   const changes = readChanges(given.changes, build);
-  const book = {
-    drawnFrom: { ruleSet: given.ruleSet.path, rules: given.ruleSet.values, creature: given.creature.id, spells: [...build.used].sort((a, b) => a.localeCompare(b)), mutations: [...build.usedMutations].sort((a, b) => a.localeCompare(b)) },
-    parts,
-    cards,
-    moved,
-    changes,
-  };
-  return { book, errors: build.errors };
+  const book = bookOf(given, build, parts, cards, moved, changes);
+  const french = given.french ? buildFrench(given, book, ids, build.errors) : null;
+  return { book, french, errors: build.errors };
 }
 
 /** The committed file's text: two-space JSON and a final newline, so a diff reads line by line. */
@@ -647,25 +753,24 @@ export function render(book) {
 
 function main() {
   const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-  const { book, errors } = buildRules(readInputs(root));
+  const { book, french, errors } = buildRules(readInputs(root));
   if (errors.length > 0) {
     for (const error of errors) console.error(error);
     process.exit(1);
   }
-  const output = join(root, OUTPUT);
-  const built = render(book);
+  const outputs = [{ file: OUTPUT, built: book }, ...(french ? [{ file: OUTPUT_FR, built: french }] : [])];
   if (process.argv.includes('--check')) {
-    const current = existsSync(output) ? readFileSync(output, 'utf8') : '';
-    if (current !== built) {
-      console.error(`${OUTPUT} is not the build of rules/: run node scripts/rules/build.mjs`);
-      process.exit(1);
-    }
-    console.log(`${OUTPUT} is up to date.`);
+    const stale = outputs.filter(({ file, built }) => (existsSync(join(root, file)) ? readFileSync(join(root, file), 'utf8') : '') !== render(built));
+    for (const { file } of stale) console.error(`${file} is not the build of rules/: run node scripts/rules/build.mjs`);
+    if (stale.length > 0) process.exit(1);
+    console.log(`${outputs.map(({ file }) => file).join(' and ')}: up to date.`);
     return;
   }
-  writeFileSync(output, built);
-  const sections = book.parts.reduce((count, part) => count + part.sections.length, 0);
-  console.log(`${relative(root, output)}: ${book.parts.length} parts, ${sections} sections, ${book.cards.length} cards.`);
+  for (const { file, built } of outputs) {
+    writeFileSync(join(root, file), render(built));
+    const sections = built.parts.reduce((count, part) => count + part.sections.length, 0);
+    console.log(`${relative(root, join(root, file))}: ${built.parts.length} parts, ${sections} sections, ${built.cards.length} cards.`);
+  }
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) main();

@@ -1,0 +1,2960 @@
+{
+  "language": "fr",
+  "drawnFrom": {
+    "ruleSet": "docs/tabletop/playtest.rules.json",
+    "rules": {
+      "teamSize": 3,
+      "energyPerRound": 2,
+      "evolutionPicksPerOpportunity": 2,
+      "firstEvolutionRound": 1,
+      "evolutionInterval": 2,
+      "roundCap": 20,
+      "criticalMultiplier": 2,
+      "combatDeclaration": "at-activation"
+    },
+    "creature": "creature:main:v1",
+    "spells": [
+      "spell:adrenaline_tonic:v1",
+      "spell:chain_slash:v1",
+      "spell:crushing_stomp:v1",
+      "spell:engulfing_flames:v1",
+      "spell:frostbite:v1",
+      "spell:full_plate:v1",
+      "spell:hateful_sacrifice:v1",
+      "spell:healing_screech:v1",
+      "spell:heavy_strike:v1",
+      "spell:latch:v1",
+      "spell:meteor:v1",
+      "spell:restorative_gush:v1",
+      "spell:soul_devourer:v1",
+      "spell:summon_minions:v1",
+      "spell:thundering_seal:v1",
+      "spell:toxic_waves:v1",
+      "spell:wait:v1"
+    ],
+    "mutations": [
+      "tier:apex:v1",
+      "tier:archmage:v1",
+      "tier:brute:v1",
+      "tier:elementalist:v1",
+      "tier:occultist:v1",
+      "tier:prowler:v1",
+      "tier:titan:v1"
+    ]
+  },
+  "parts": [
+    {
+      "id": "the-goal",
+      "number": 1,
+      "title": "Ce que vous cherchez à faire",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "spans": [
+            {
+              "text": "Deux joueurs. Chacun commande une équipe de 3 créatures, et joue pour vaincre l’autre équipe."
+            }
+          ]
+        }
+      ],
+      "sections": [
+        {
+          "id": "winning",
+          "number": "1.1",
+          "title": "Gagner",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Une créature commence avec une Santé de 30. À zéro point de Santé, elle est "
+                },
+                {
+                  "text": "vaincue",
+                  "strong": true
+                },
+                {
+                  "text": ", pour le reste de la partie. Vous gagnez quand chaque créature de l’autre équipe est vaincue. La partie se termine à l’instant où cela arrive, même au milieu d’un round : rien de ce qui suit ne se résout. Si les deux équipes tombent en même temps, la partie est nulle."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Si le round 20 se termine avec les deux équipes encore debout, l’équipe à qui il reste le plus de Santé, additionnée sur ses créatures, gagne. À totaux égaux, la partie est nulle."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Un joueur peut aussi abandonner à tout moment : l’autre joueur gagne. Une partie entre deux joueurs donne à chacun un temps pour répondre. Un joueur qui le laisse s’écouler perd ; quand les deux le font, la partie est nulle."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0011",
+            "ADR 0083",
+            "ADR 0087",
+            "ADR 0105",
+            "ADR 0169",
+            "game-rules#match-lifecycle"
+          ],
+          "card": {
+            "id": "health",
+            "title": "Santé",
+            "lines": [
+              "À zéro point de Santé, une créature est vaincue, pour le reste de la partie.",
+              "Quand une équipe n’a plus de créature, la partie se termine aussitôt, même au milieu d’un round.",
+              "Un soin ne porte jamais une créature au-dessus de la Santé avec laquelle elle a commencé la partie."
+            ],
+            "example": "Une créature commence avec une Santé de 30. Un coup de 7 la laisse à 23."
+          }
+        },
+        {
+          "id": "a-round",
+          "number": "1.2",
+          "title": "Un round",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Une partie est une suite de rounds. Chaque round se lit "
+                },
+                {
+                  "text": "Entretien → Commandement → Combat → Retombées",
+                  "strong": true
+                },
+                {
+                  "text": ", et l’application vous y guide :"
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                [
+                  {
+                    "text": "Entretien.",
+                    "strong": true
+                  },
+                  {
+                    "text": " L’Énergie de chaque créature vivante augmente de 2. La Regeneration (régénération) soigne. Les dégâts dans la durée blessent."
+                  }
+                ],
+                [
+                  {
+                    "text": "Commandement.",
+                    "strong": true
+                  },
+                  {
+                    "text": " Aux rounds qui le proposent, vous acquérez d’abord des mutations pour vos créatures. Puis vous choisissez un tempo pour chacune d’elles, Instinct ou Précision, et, là où vos créatures sont à égalité sur la frise, leur ordre."
+                  }
+                ],
+                [
+                  {
+                    "text": "Combat.",
+                    "strong": true
+                  },
+                  {
+                    "text": " La frise est parcourue une fois, place par place. Quand vient la place d’une de vos créatures, vous choisissez son sort et ses cibles sur le plateau tel qu’il est. Le sort se résout aussitôt, avant que la créature suivante agisse."
+                  }
+                ],
+                [
+                  {
+                    "text": "Retombées.",
+                    "strong": true
+                  },
+                  {
+                    "text": " Les états décomptent, et le round suivant commence."
+                  }
+                ]
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0010",
+            "ADR 0083",
+            "ADR 0112",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": null
+        },
+        {
+          "id": "what-makes-the-game",
+          "number": "1.3",
+          "title": "Ce qui fait le jeu",
+          "blocks": [
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                [
+                  {
+                    "text": "Vous vous engagez avant de voir.",
+                    "strong": true
+                  },
+                  {
+                    "text": " Vos mutations, vos tempos et vos ordres d’égalité se choisissent en secret, en même temps que ceux de votre adversaire. Vos sorts et leurs cibles viennent plus tard, à la place de chaque créature, quand vous savez tout ce qui s’est déjà passé dans ce round."
+                  }
+                ],
+                [
+                  {
+                    "text": "Vous grandissez en mutant.",
+                    "strong": true
+                  },
+                  {
+                    "text": " Une mutation apprend à une créature un ensemble de sorts, tous à la fois, et augmente son initiative du bonus de la mutation pour le reste de la partie. La dernière mutation d’une famille, sa clé de voûte, n’apprend aucun sort : elle donne un passif à la place."
+                  }
+                ],
+                [
+                  {
+                    "text": "Rien n’est réservé.",
+                    "strong": true
+                  },
+                  {
+                    "text": " L’Énergie d’un sort est dépensée quand il se résout. Une créature peut être vaincue, étourdie ou drainée avant que sa place vienne, et alors elle ne lance rien ce round-là."
+                  }
+                ]
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0056",
+            "ADR 0063",
+            "ADR 0089",
+            "ADR 0101",
+            "ADR 0112"
+          ],
+          "card": null
+        }
+      ]
+    },
+    {
+      "id": "the-screen",
+      "number": 2,
+      "title": "Ce que montre l’écran",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "spans": [
+            {
+              "text": "L’application est la table. Elle tient le compte de chaque nombre, lance chaque dé et joue chaque étape que personne ne décide. Vous prenez les décisions ; ce chapitre dit ce que vous voyez pendant que vous les prenez."
+            }
+          ]
+        }
+      ],
+      "sections": [
+        {
+          "id": "the-creatures",
+          "number": "2.1",
+          "title": "Vos créatures et les leurs",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Chaque équipe a 3 créatures. Celles du premier joueur sont numérotées de 1 à 3, celles du second de 4 à 6. Les numéros ne changent jamais, et l’historique nomme chaque créature par son numéro : Créature 4."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Chaque créature montre, aux deux joueurs :"
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                [
+                  {
+                    "text": "sa "
+                  },
+                  {
+                    "text": "Santé",
+                    "strong": true
+                  },
+                  {
+                    "text": ", et la Santé avec laquelle elle a commencé ;"
+                  }
+                ],
+                [
+                  {
+                    "text": "son "
+                  },
+                  {
+                    "text": "Énergie",
+                    "strong": true
+                  },
+                  {
+                    "text": ", qui paie ses sorts ;"
+                  }
+                ],
+                [
+                  {
+                    "text": "sa "
+                  },
+                  {
+                    "text": "Défense",
+                    "strong": true
+                  },
+                  {
+                    "text": ", qui réduit chaque coup qu’elle reçoit ;"
+                  }
+                ],
+                [
+                  {
+                    "text": "son "
+                  },
+                  {
+                    "text": "initiative",
+                    "strong": true
+                  },
+                  {
+                    "text": ", qui la place sur la frise ;"
+                  }
+                ],
+                [
+                  {
+                    "text": "ses "
+                  },
+                  {
+                    "text": "états",
+                    "strong": true
+                  },
+                  {
+                    "text": ", chacun avec les rounds qu’il lui reste ;"
+                  }
+                ],
+                [
+                  {
+                    "text": "ses "
+                  },
+                  {
+                    "text": "mutations",
+                    "strong": true
+                  },
+                  {
+                    "text": ", et les sorts qu’elles lui ont appris : son grimoire."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Rien d’une créature n’est caché. Ce qui est caché, c’est un choix pas encore révélé : une mutation choisie ce round, un tempo, un ordre d’égalité. Chacun est révélé aux deux joueurs à la fois."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Chaque créature commence la partie de la même façon : une Santé de 30, une Énergie de 0, une Défense de 0 et une initiative de 5, et elle connaît deux sorts, Strike et Focus. Tout ce qui les distinguera est une décision que vous n’avez pas encore prise."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0011",
+            "ADR 0042",
+            "ADR 0089",
+            "game-rules#match-lifecycle"
+          ],
+          "card": null
+        },
+        {
+          "id": "what-the-app-does",
+          "number": "2.2",
+          "title": "Ce que l’application fait pour vous",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Les étapes que personne ne décide sont jouées pour vous, et l’historique enregistre chacune d’elles :"
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                [
+                  {
+                    "text": "L’Entretien.",
+                    "strong": true
+                  },
+                  {
+                    "text": " Le gain d’Énergie de chaque créature, sa Regeneration et son Bleed (saignement)."
+                  }
+                ],
+                [
+                  {
+                    "text": "La frise.",
+                    "strong": true
+                  },
+                  {
+                    "text": " L’ordre des tours, construit à partir des tempos et des initiatives, avec les départages au d20 qui tranchent une égalité entre les équipes."
+                  }
+                ],
+                [
+                  {
+                    "text": "Les dés.",
+                    "strong": true
+                  },
+                  {
+                    "text": " Chaque jet de critique, sur un d20 que l’écran montre."
+                  }
+                ],
+                [
+                  {
+                    "text": "Le décompte.",
+                    "strong": true
+                  },
+                  {
+                    "text": " Chaque état décompte pendant les Retombées, et se termine à zéro."
+                  }
+                ],
+                [
+                  {
+                    "text": "La fin.",
+                    "strong": true
+                  },
+                  {
+                    "text": " La partie se termine à l’instant où une équipe est vaincue, ou quand le dernier round se termine."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Quand l’application vous demande quelque chose, elle ne propose que ce que les règles permettent : les mutations qu’une créature peut acquérir, les sorts qu’elle peut payer maintenant, les cibles qu’un sort peut prendre. Un choix qu’elle ne propose pas n’est pas un choix légal."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "La fenêtre "
+                },
+                {
+                  "text": "Help",
+                  "strong": true
+                },
+                {
+                  "text": " parcourt le round où vous êtes. L’historique explique chaque résultat après sa résolution."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0010",
+            "ADR 0063",
+            "ADR 0083",
+            "ADR 0112",
+            "ADR 0154",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": null
+        },
+        {
+          "id": "the-numbers",
+          "number": "2.3",
+          "title": "Les nombres de cette table",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "La table joue un seul jeu de règles. Ses nombres ne sont pas des règles : ils bougent quand le jeu est équilibré, et le jeu se joue de la même façon quand ils bougent. Ce livre tire chaque nombre du jeu de règles et du contenu, et bouge donc avec eux."
+                }
+              ]
+            },
+            {
+              "type": "table",
+              "header": [
+                [
+                  {
+                    "text": "Valeur"
+                  }
+                ],
+                [
+                  {
+                    "text": "Ce qu’elle décide"
+                  }
+                ],
+                [
+                  {
+                    "text": "Cette table"
+                  }
+                ]
+              ],
+              "rows": [
+                [
+                  [
+                    {
+                      "text": "Taille d’équipe"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Les créatures que chaque joueur commande"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "3"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Énergie par round"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "L’Énergie que chaque créature vivante gagne à l’Entretien"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "2"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Choix par round de mutation"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Les mutations qu’une équipe peut acquérir à un round de mutation"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "2"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Premier round de mutation"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Le premier round qui propose des mutations"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "1"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Rounds entre deux rounds de mutation"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "L’écart d’un round de mutation au suivant"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "2"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Dernier round"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Le round après lequel la partie se termine sur la Santé"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "20"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Multiplicateur de critique"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Ce par quoi un critique multiplie les dégâts et les soins"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "2"
+                    }
+                  ]
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Le dé ne change jamais : c’est un "
+                },
+                {
+                  "text": "d20",
+                  "strong": true
+                },
+                {
+                  "text": ", pour le jet de critique comme pour le départage. Chaque chance de critique qu’un sort indique est un nombre entier de vingtièmes, si bien que chaque sort qui lance le dé indique la face qu’il lui faut."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0011",
+            "ADR 0056",
+            "ADR 0100",
+            "ADR 0105",
+            "game-rules#implemented"
+          ],
+          "card": null
+        }
+      ]
+    },
+    {
+      "id": "the-round",
+      "number": 3,
+      "title": "Le round, étape par étape",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "spans": [
+            {
+              "text": "Chaque round parcourt les mêmes étapes, dans cet ordre, jamais à rebours : "
+            },
+            {
+              "text": "Entretien → Commandement → Combat → Retombées",
+              "strong": true
+            },
+            {
+              "text": ". Chaque section ci-dessous est une étape. Elle dit quand elle vient, qui décide, et ce qui se passe. Chaque exemple utilise les nombres de cette table et les vrais sorts."
+            }
+          ]
+        }
+      ],
+      "sections": [
+        {
+          "id": "energy-gain",
+          "number": "3.1",
+          "title": "Gain d’Énergie",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Entretien.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Le round commence, et l’Énergie de chaque créature "
+                },
+                {
+                  "text": "vivante",
+                  "strong": true
+                },
+                {
+                  "text": " augmente de 2, plus l’Énergie que lui donnent les passifs d’Archmage. Personne ne décide rien. Une créature vaincue ne gagne rien, ni maintenant ni jamais."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Archmage est partagé avec toute l’équipe : chaque exemplaire que possède une équipe ajoute 1 à l’Énergie que gagne chaque créature vivante de cette équipe à chaque Entretien, à partir du round qui suit son acquisition."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Exemple.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Le round 8 commence. La Créature 1 a 1 point d’Énergie et la Créature 2 en a 4 ; la Créature 3 est vaincue. La Créature 1 passe à 3 et la Créature 2 à 6. La Créature 3 ne gagne rien. Si la Créature 2 avait acquis Archmage au round 7, chaque créature vivante de son équipe gagnerait 3 ; avec un second exemplaire dans l’équipe, 4."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0010",
+            "ADR 0101",
+            "ADR 0114",
+            "ADR 0132",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": {
+            "id": "energy",
+            "title": "Énergie",
+            "lines": [
+              "Chaque créature vivante gagne de l’Énergie à l’Entretien, quand un round commence.",
+              "Un sort coûte de l’Énergie. Elle est dépensée quand le sort se résout, jamais avant."
+            ],
+            "example": "Une créature à 1 point d’Énergie en gagne 2 à l’Entretien et en a 3 : assez pour un sort qui coûte 3."
+          }
+        },
+        {
+          "id": "ongoing-effects",
+          "number": "3.2",
+          "title": "Effets en cours",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Entretien.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Juste après le gain d’Énergie, les états qui agissent à l’Entretien s’appliquent, en trois passes. L’ordre compte :"
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": true,
+              "items": [
+                [
+                  {
+                    "text": "La "
+                  },
+                  {
+                    "text": "régénération d’Énergie",
+                    "strong": true
+                  },
+                  {
+                    "text": " donne son Énergie."
+                  }
+                ],
+                [
+                  {
+                    "text": "La "
+                  },
+                  {
+                    "text": "Regeneration",
+                    "strong": true
+                  },
+                  {
+                    "text": " soigne, jamais au-dessus de la Santé avec laquelle la créature a commencé."
+                  }
+                ],
+                [
+                  {
+                    "text": "Le "
+                  },
+                  {
+                    "text": "Bleed",
+                    "strong": true
+                  },
+                  {
+                    "text": " inflige ses dégâts. "
+                  },
+                  {
+                    "text": "Un Bleed ignore la Défense",
+                    "strong": true
+                  },
+                  {
+                    "text": " : ce sont les seuls dégâts du jeu à le faire."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Une créature qui a deux états d’un même type subit les deux. Le soin vient exprès avant le saignement : une Regeneration peut faire passer une créature au travers d’un Bleed qui, sans elle, la vaincrait."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Un Bleed peut terminer la partie.",
+                  "strong": true
+                },
+                {
+                  "text": " Quand la passe du Bleed laisse une équipe sans créature vivante, la partie se termine là, avant que rien ne soit choisi. Deux équipes vaincues par la même passe, c’est une partie nulle."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Exemple.",
+                  "emphasis": true
+                },
+                {
+                  "text": " La Créature 5 est à 1 point de Santé, avec une Regeneration de 4 venue de Vital Echo et un Bleed de 3 venu de Void Pulse. Sa Défense est de 3. La Regeneration la soigne jusqu’à 5. Le Bleed inflige 3, et sa Défense ne compte pas : sa Santé finit à 2. Dans l’autre ordre, le Bleed l’aurait vaincue avant que le soin arrive."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0019",
+            "ADR 0020",
+            "ADR 0083",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": null
+        },
+        {
+          "id": "evolution",
+          "number": "3.3",
+          "title": "Mutations",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Commandement · Évolution.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Seulement à un round de mutation : le round 1, puis tous les 2 rounds. À tout autre round, cette étape ne demande rien à personne et le round passe aux tempos."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Chaque équipe a 2 choix. Un choix acquiert une mutation pour une de vos créatures "
+                },
+                {
+                  "text": "vivantes",
+                  "strong": true
+                },
+                {
+                  "text": ", et "
+                },
+                {
+                  "text": "une créature acquiert au plus une mutation par round",
+                  "strong": true
+                },
+                {
+                  "text": " : vos choix vont à des créatures différentes, et aucune créature ne monte de deux Stades en un round. Une équipe réduite à une créature vivante a un seul choix."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Les deux joueurs choisissent en secret, en même temps. Rien ne change tant que les deux n’ont pas fini ; alors chaque choix des deux équipes est révélé et acquis à la fois. Un choix dont vous ne voulez pas, vous le passez. L’Arbre des mutations s’ouvre avec l’étape : choisissez une créature, lisez une mutation, confirmez-la."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Ce qu’est une mutation.",
+                  "strong": true
+                },
+                {
+                  "text": " Un ensemble de sorts qui porte un nom. L’acquérir apprend à la créature chacun de ces sorts à la fois, et augmente son initiative de base du bonus de la mutation, pour le reste de la partie. Ce bonus est la seule chose qui fasse jamais bouger une initiative de base : acquérir est la façon dont une créature devient plus forte, et aussi celle dont elle devient plus rapide."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Quelle mutation.",
+                  "strong": true
+                },
+                {
+                  "text": " Il y a trois familles, Brute, Warped et Predator, chacune un arbre de quatre Stades. Une mutation de Stade 1 ne demande rien. Chaque autre demande une mutation nommée de sa famille, un Stade en dessous : l’Arbre des mutations montre laquelle. Une créature peut acquérir une mutation qu’elle ne possède pas quand elle possède ce que cette mutation demande, et elle peut mêler les familles en acquérant le Stade 1 d’une autre famille. Deux créatures peuvent prendre la même mutation. Ce qu’une créature peut acquérir se lit d’après ce qu’elle possède à l’ouverture de l’étape : un choix de ce round n’ouvre rien avant le round de mutation suivant."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Exemple.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Round 1. Chaque créature connaît Strike et Focus et a une initiative de 5. Le premier joueur choisit Brute pour la Créature 1 et Warped pour la Créature 2. Il voudrait aussi Oppressor pour la Créature 1, mais elle demande Brute, que la Créature 1 ne possède pas encore, et la Créature 1 a déjà son choix. En même temps, le second joueur choisit Predator pour la Créature 4 et Brute pour la Créature 5. Les deux ont fini, et les quatre mutations sont acquises ensemble :"
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                [
+                  {
+                    "text": "Créature 1, Brute : Pummel et Brace, et une initiative de 6."
+                  }
+                ],
+                [
+                  {
+                    "text": "Créature 2, Warped : Shock et Revitalize, et une initiative de 7."
+                  }
+                ],
+                [
+                  {
+                    "text": "Créature 4, Predator : Venom Claw et Quill, et une initiative de 8."
+                  }
+                ],
+                [
+                  {
+                    "text": "Créature 5, Brute : Pummel et Brace, et une initiative de 6."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Oppressor attend la Créature 1 jusqu’au round 3, le round de mutation suivant."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0056",
+            "ADR 0057",
+            "ADR 0059",
+            "ADR 0066",
+            "ADR 0089",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": {
+            "id": "mutation",
+            "title": "Mutation",
+            "lines": [
+              "Une mutation donne à une créature de nouveaux sorts et un bonus d’initiative, pour le reste de la partie.",
+              "La dernière mutation d’une famille, sa clé de voûte, donne un passif à la place de sorts.",
+              "À un round de mutation, l’équipe partage ses choix, et une créature prend au plus une mutation."
+            ],
+            "example": "Une créature à une initiative de base de 5 acquiert Brute, au bonus de 1 : elle connaît de nouveaux sorts et agit à 6."
+          }
+        },
+        {
+          "id": "capstones",
+          "number": "3.4",
+          "title": "Clés de voûte",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Chaque famille se termine par une mutation de Stade 4, sa "
+                },
+                {
+                  "text": "clé de voûte",
+                  "strong": true
+                },
+                {
+                  "text": ". Une clé de voûte demande "
+                },
+                {
+                  "text": "n’importe laquelle",
+                  "strong": true
+                },
+                {
+                  "text": " des mutations de Stade 3 de sa famille. Elle n’apprend aucun sort et n’ajoute pas d’initiative. Elle donne un "
+                },
+                {
+                  "text": "passif",
+                  "strong": true
+                },
+                {
+                  "text": " à la place, détenu de la révélation qui l’acquiert jusqu’à la fin de la partie :"
+                }
+              ]
+            },
+            {
+              "type": "table",
+              "header": [
+                [
+                  {
+                    "text": "Clé de voûte"
+                  }
+                ],
+                [
+                  {
+                    "text": "Famille"
+                  }
+                ],
+                [
+                  {
+                    "text": "Demande l’une de"
+                  }
+                ],
+                [
+                  {
+                    "text": "Son passif"
+                  }
+                ]
+              ],
+              "rows": [
+                [
+                  [
+                    {
+                      "text": "Titan"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Brute"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Ravager, Colossus, Tyrant"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Chaque coup ignore 10 de Défense"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Archmage"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Warped"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Cataclysm, Revenant, Transcendent"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Énergie +1 à chaque Entretien, pour chaque créature de l’équipe"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Apex"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Predator"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Blightweaver, Deathstalker, Soulreaver"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Dégâts +5 à chaque coup"
+                    }
+                  ]
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Archmage est partagé.",
+                  "strong": true
+                },
+                {
+                  "text": " La créature qui l’acquiert le possède, et chaque créature de son équipe détient son passif. Il se cumule : un coéquipier peut acquérir son propre exemplaire, et chaque exemplaire donne une fois de plus son passif à chaque créature de l’équipe. Un exemplaire continue de donner après que la créature qui l’a acquis est vaincue : seuls s’arrêtent les gains d’Entretien propres à la créature vaincue."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Comment joue chaque passif : voir "
+                },
+                {
+                  "text": "les passifs",
+                  "href": "#passives"
+                },
+                {
+                  "text": "."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0101",
+            "ADR 0106",
+            "ADR 0114",
+            "game-rules#implemented"
+          ],
+          "card": null
+        },
+        {
+          "id": "tempo",
+          "number": "3.5",
+          "title": "Tempo",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Commandement · Tempo.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Pour chacune de vos créatures vivantes qui n’est pas étourdie, choisissez un tempo : "
+                },
+                {
+                  "text": "Instinct",
+                  "strong": true
+                },
+                {
+                  "text": " ou "
+                },
+                {
+                  "text": "Précision",
+                  "strong": true
+                },
+                {
+                  "text": ". Les deux joueurs choisissent en secret, et les tempos sont révélés ensemble."
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                [
+                  {
+                    "text": "Instinct",
+                    "strong": true
+                  },
+                  {
+                    "text": " agit avant chaque créature en Précision, et "
+                  },
+                  {
+                    "text": "ne peut pas obtenir de critique ce round",
+                    "strong": true
+                  },
+                  {
+                    "text": ", quoi que son sort indique."
+                  }
+                ],
+                [
+                  {
+                    "text": "Précision",
+                    "strong": true
+                  },
+                  {
+                    "text": " agit après chaque créature en Instinct, et garde son jet de critique."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Choisissez Instinct pour porter un coup qui n’a pas besoin des dés, ou pour agir avant quelque chose qui vous vaincrait. Choisissez Précision quand le critique est ce que vous espérez, ou quand vous voulez que le plateau change avant d’agir. Un tempo ne choisit aucun sort : le sort se choisit quand vient le tour de la créature."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Une créature étourdie ne prend pas de tempo.",
+                  "strong": true
+                },
+                {
+                  "text": " Elle n’est pas dans le round : pas de tempo, pas de tour, rien qu’elle puisse lancer. Une créature vaincue n’est pas dans le round non plus."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Exemple.",
+                  "emphasis": true
+                },
+                {
+                  "text": " La Créature 4 a été étourdie au round précédent. Le second joueur choisit des tempos pour les Créatures 5 et 6 seulement ; le premier joueur pour les Créatures 1, 2 et 3. Cinq tempos sont révélés, et le round aura cinq tours, pas six."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0010",
+            "ADR 0072",
+            "ADR 0112",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": {
+            "id": "tempo",
+            "title": "Tempo",
+            "lines": [
+              "À chaque round, chaque créature qui n’est pas étourdie prend un tempo : Instinct ou Précision.",
+              "Instinct agit avant chaque créature en Précision, et ne peut pas obtenir de critique ce round.",
+              "Précision agit après chaque créature en Instinct, et garde le jet de critique."
+            ],
+            "example": "Une créature en Instinct à une initiative de 5 agit avant une créature en Précision à 9."
+          }
+        },
+        {
+          "id": "turn-order",
+          "number": "3.6",
+          "title": "L’ordre des tours",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Commandement · Résolution de l’ordre des tours.",
+                  "emphasis": true
+                },
+                {
+                  "text": " L’application construit la "
+                },
+                {
+                  "text": "frise",
+                  "strong": true
+                },
+                {
+                  "text": " du round, un tour pour chaque créature qui a un tempo :"
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": true,
+              "items": [
+                [
+                  {
+                    "text": "Les créatures en Instinct d’abord, la plus haute initiative en premier."
+                  }
+                ],
+                [
+                  {
+                    "text": "Puis les créatures en Précision, de la même façon."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "L’initiative d’une créature est son initiative de base, augmentée de ses renforts d’initiative et diminuée de ses malus d’initiative, jamais en dessous de zéro. Elle est lue une fois, quand la frise est construite : un malus qui arrive pendant le combat change l’ordre du round suivant, pas celui-ci."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Instinct vient toujours en premier. Une créature en Instinct à une initiative de 0 agit avant une créature en Précision à 20."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Une égalité entre les équipes",
+                  "strong": true
+                },
+                {
+                  "text": " se tranche par un "
+                },
+                {
+                  "text": "départage",
+                  "strong": true
+                },
+                {
+                  "text": " : chaque créature à égalité lance un d20, et le plus haut jet prend la première place. Les créatures sur un nombre que les deux équipes ont obtenu relancent ; un nombre qu’une seule équipe a obtenu tient. Le départage décide quelles places chaque équipe occupe. Comment une équipe ordonne ses propres créatures dans ses places, c’est "
+                },
+                {
+                  "text": "l’étape suivante",
+                  "href": "#tie-order"
+                },
+                {
+                  "text": "."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Exemple.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Les Créatures 1, 2, 4 et 5 ont acquis Warped, et les Créatures 1 et 4 ont depuis acquis Stormborn. Les Créatures 1 et 4 ont une initiative de 10, les Créatures 2 et 5 de 7, et les Créatures 3 et 6 de 5. Au round précédent, un Ice Grip a diminué l’initiative de la Créature 2 de 3 : elle est de 4 ce round. Les Créatures 1 et 4 ont choisi Instinct, les autres Précision. Les Créatures 1 et 4 sont à égalité, et obtiennent 8 et 15 : la Créature 4 agit en premier, puis la Créature 1. Puis les créatures en Précision, par leur initiative : la Créature 5, puis les Créatures 3 et 6, à égalité entre les équipes, qui se départagent aussi, et la Créature 2 en dernier."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0036",
+            "ADR 0059",
+            "ADR 0063",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": {
+            "id": "initiative",
+            "title": "Initiative",
+            "lines": [
+              "L’initiative ordonne les créatures à l’intérieur de leur tempo : la plus haute agit en premier.",
+              "Une créature commence avec son initiative de base. Chaque mutation ajoute son bonus, pour le reste de la partie.",
+              "Une égalité entre les deux équipes se tranche par un départage au d20."
+            ],
+            "example": "Deux créatures en Précision à une initiative de 7 et de 5 : celle à 7 agit en premier."
+          }
+        },
+        {
+          "id": "tie-order",
+          "number": "3.7",
+          "title": "Ordonner vos égalités",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Commandement · Ordre des égalités.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Là où votre équipe occupe deux places ou plus dans une même égalité, vous choisissez laquelle de vos créatures à égalité prend quelle place. Les places de l’autre équipe ne bougent pas. Une égalité que votre équipe occupe seule est aussi à vous d’ordonner, sans jet. Les deux joueurs ordonnent en secret, et les ordres sont révélés ensemble. Un round sans une telle égalité ne demande rien à personne."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Exemple.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Les Créatures 3, 5 et 6 sont à égalité dans le groupe Précision et obtiennent 11, 11 et 2. Les deux équipes ont obtenu 11, donc les Créatures 3 et 5 relancent : 4 et 17. Les places vont au second joueur, puis au premier, puis au second. Le second joueur en occupe deux et veut que la Créature 6 agisse en premier : la Créature 6 prend la première place, la Créature 3 la deuxième, la Créature 5 la troisième."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0063",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": null
+        },
+        {
+          "id": "your-turn",
+          "number": "3.8",
+          "title": "Le tour de votre créature",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Combat · Activation.",
+                  "emphasis": true
+                },
+                {
+                  "text": " La frise est parcourue une fois, tour par tour. Quand vient le tour d’une de vos créatures, vous choisissez son "
+                },
+                {
+                  "text": "sort",
+                  "strong": true
+                },
+                {
+                  "text": " et ses "
+                },
+                {
+                  "text": "cibles",
+                  "strong": true
+                },
+                {
+                  "text": ", sur le plateau tel qu’il est, et vous confirmez. Le sort se résout aussitôt, avant le tour suivant. Le sort et ses cibles deviennent publics ensemble."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Rien n’est déclaré à l’avance. Vous choisissez parmi les sorts que la créature connaît et peut payer maintenant, et vous choisissez en sachant tout ce qui s’est passé dans ce round. Chaque créature connaît Focus, dont le coût en Énergie est de 0 et qui ne cible que son lanceur : une créature dans le round a toujours un sort à lancer."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Rien n’est réservé.",
+                  "strong": true
+                },
+                {
+                  "text": " L’Énergie est dépensée quand le sort se résout. Jusqu’à ce que vienne son tour, une créature peut être vaincue, étourdie ou drainée. Une créature vaincue ou étourdie avant son tour est "
+                },
+                {
+                  "text": "sautée",
+                  "href": "#skipped-turn"
+                },
+                {
+                  "text": "."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0083",
+            "ADR 0110",
+            "ADR 0112",
+            "game-rules#implemented",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": {
+            "id": "intent",
+            "title": "Choisir un sort",
+            "lines": [
+              "Aucun sort n’est déclaré à l’avance : une créature choisit son sort quand vient son tour.",
+              "Vous choisissez le sort et ses cibles sur le plateau tel qu’il est, et il se résout aussitôt."
+            ],
+            "example": "Une créature dont l’Énergie est de 3 peut, à son tour, lancer n’importe quel sort qu’elle connaît et qui coûte 3 ou moins."
+          }
+        },
+        {
+          "id": "targets",
+          "number": "3.9",
+          "title": "Cibles",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Un sort dit qui il peut cibler :"
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                [
+                  {
+                    "text": "Soi",
+                    "strong": true
+                  },
+                  {
+                    "text": " : le lanceur, et seulement le lanceur."
+                  }
+                ],
+                [
+                  {
+                    "text": "Allié",
+                    "strong": true
+                  },
+                  {
+                    "text": " : n’importe quelle créature vivante de votre équipe, "
+                  },
+                  {
+                    "text": "lanceur compris",
+                    "strong": true
+                  },
+                  {
+                    "text": "."
+                  }
+                ],
+                [
+                  {
+                    "text": "Ennemi",
+                    "strong": true
+                  },
+                  {
+                    "text": " : n’importe quelle créature vivante de l’autre équipe."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Un sort pour une cible en prend exactement une. Un sort pour plusieurs en prend "
+                },
+                {
+                  "text": "une ou plus, jusqu’à son maximum",
+                  "strong": true
+                },
+                {
+                  "text": " : Emberstorm, pour plusieurs ennemis, peut n’en prendre qu’un. Une créature vaincue ne peut pas être une cible, et aucune créature ne peut être désignée deux fois par un même lancer."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Exemple.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Le tour de la Créature 6 vient, et son sort est Brace, pour un allié : elle peut se cibler elle-même ou cibler la Créature 4, mais pas la Créature 5, vaincue plus tôt dans ce round. Puis la Créature 3 lance Emberstorm alors que deux ennemis sont debout : elle peut en désigner un ou les deux."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0083",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": null
+        },
+        {
+          "id": "resolving-a-spell",
+          "number": "3.10",
+          "title": "Résoudre un sort",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Un sort se résout entièrement avant que vienne le tour suivant, dans cet ordre :"
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": true,
+              "items": [
+                [
+                  {
+                    "text": "Payer.",
+                    "strong": true
+                  },
+                  {
+                    "text": " L’Énergie du lanceur baisse du coût du sort."
+                  }
+                ],
+                [
+                  {
+                    "text": "Lancer le dé de critique",
+                    "strong": true
+                  },
+                  {
+                    "text": ", une fois pour tout le lancer, si le lanceur est en Précision et que le sort indique une chance. Voir "
+                  },
+                  {
+                    "text": "le jet de critique",
+                    "href": "#the-critical-roll"
+                  },
+                  {
+                    "text": "."
+                  }
+                ],
+                [
+                  {
+                    "text": "Chaque effet, sur chaque cible.",
+                    "strong": true
+                  },
+                  {
+                    "text": " Un "
+                  },
+                  {
+                    "text": "coup",
+                    "strong": true
+                  },
+                  {
+                    "text": ", ce sont les dégâts du sort, plus le "
+                  },
+                  {
+                    "text": "bonus de dégâts",
+                    "strong": true
+                  },
+                  {
+                    "text": " du lanceur, multipliés sur un critique, moins la "
+                  },
+                  {
+                    "text": "Défense",
+                    "strong": true
+                  },
+                  {
+                    "text": " de la cible, jamais en dessous de zéro. Un soin ne dépasse jamais la Santé avec laquelle une créature a commencé. Un drain d’Énergie prend au plus ce que la cible a. Un effet durable devient un "
+                  },
+                  {
+                    "text": "état",
+                    "href": "#conditions"
+                  },
+                  {
+                    "text": "."
+                  }
+                ],
+                [
+                  {
+                    "text": "La ligne du lanceur",
+                    "strong": true
+                  },
+                  {
+                    "text": ", si le sort en a une, une fois pour tout le lancer. Les dégâts qu’elle inflige sont réduits par la propre Défense du lanceur, et ne prennent jamais de bonus de dégâts ni de critique."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "La "
+                },
+                {
+                  "text": "Défense",
+                  "strong": true
+                },
+                {
+                  "text": " d’une créature est sa Défense de base plus ses renforts de Défense, qui comptent pour 10 au plus quel que soit leur nombre, moins ses malus de Défense, jamais en dessous de zéro."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Un coup ne va jamais au-delà de la Santé qui reste : une créature à 3 points de Santé touchée pour 10 en perd 3. Un sort qui ne change rien sur une cible, 0 dégât à travers une Défense ou un soin à Santé pleine, ne lui a rien fait."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Exemple.",
+                  "emphasis": true
+                },
+                {
+                  "text": " La Créature 2 est en Précision, à 4 points d’Énergie, et lance Incinerate sur la Créature 5 : coût 3, dégâts 10, d20 : 14+. La Créature 5 a lancé Carapace au round précédent : sa Défense est de 7."
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                [
+                  {
+                    "text": "Payer : l’Énergie de la Créature 2 passe à 1."
+                  }
+                ],
+                [
+                  {
+                    "text": "Le d20 donne un critique : 10 × 2 = 20."
+                  }
+                ],
+                [
+                  {
+                    "text": "Moins la Défense : la Créature 5 perd 13, et sa Santé passe de 30 à 17."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Si le jet avait échoué, elle aurait perdu 3. "
+                },
+                {
+                  "text": "Multipliez d’abord, soustrayez ensuite",
+                  "strong": true
+                },
+                {
+                  "text": " : l’autre ordre donne un nombre que le jeu n’inflige jamais."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0033",
+            "ADR 0035",
+            "ADR 0076",
+            "ADR 0083",
+            "ADR 0101",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": {
+            "id": "defense",
+            "title": "Défense",
+            "lines": [
+              "La Défense réduit les dégâts de chaque coup que reçoit une créature, jamais en dessous de zéro.",
+              "Les renforts de Défense y ajoutent au plus 10, quel que soit leur nombre.",
+              "Seuls les dégâts dans la durée, appliqués à l’Entretien, l’ignorent."
+            ],
+            "example": "Un coup de 7 sur une créature à 2 de Défense inflige 5. Une créature commence à 0 de Défense : le même coup sur elle inflige 7."
+          }
+        },
+        {
+          "id": "damage-bonus",
+          "number": "3.11",
+          "title": "Le bonus de dégâts",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Le "
+                },
+                {
+                  "text": "bonus de dégâts",
+                  "strong": true
+                },
+                {
+                  "text": " d’une créature s’ajoute à chaque coup qu’elle porte : Apex donne 5, et chaque renfort de dégâts sur elle ajoute son propre nombre. Il s’ajoute "
+                },
+                {
+                  "text": "avant",
+                  "strong": true
+                },
+                {
+                  "text": " que le critique multiplie et avant que la Défense soit soustraite. Il ne touche jamais un Bleed, un soin, ni la ligne du lanceur."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Exemple.",
+                  "emphasis": true
+                },
+                {
+                  "text": " La Créature 4 possède Apex, est en Précision, et lance Blood Price sur la Créature 1, dont la Défense est de 3 : dégâts 11, d20 : 11+. Ajoutez le bonus : 16. Sur un critique, 32, moins 3 : la Créature 1 perd 29. Sans critique, 13. "
+                },
+                {
+                  "text": "Ajoutez, multipliez, soustrayez",
+                  "strong": true
+                },
+                {
+                  "text": ", dans cet ordre."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Exemple, renforts de dégâts.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Alpha Roar a donné à la Créature 5 un renfort de dégâts de 2, et Overdrive un autre de 1. Son Strike, à 3, inflige 6 à une créature sans Défense. Les renforts de dégâts se cumulent : ajoutez-les tous."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0101",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": null
+        },
+        {
+          "id": "sunder",
+          "number": "3.12",
+          "title": "La brèche",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Le passif de Titan est une "
+                },
+                {
+                  "text": "brèche",
+                  "strong": true
+                },
+                {
+                  "text": " : chaque coup que porte sa créature rencontre la Défense de la cible diminuée de 10, jamais en dessous de zéro. Une brèche retire de la Défense ; elle n’ajoute jamais de dégâts, et contre une cible sans Défense elle ne fait rien. Elle ne déplace aucune Défense : la Défense de la cible reste la même face à tous les autres."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Exemple.",
+                  "emphasis": true
+                },
+                {
+                  "text": " La Créature 3 possède Titan et lance Dominate, dégâts 7, sur la Créature 5, qui détient la Défense d’Alpha Roar, 4, et sur la Créature 4, à sa Défense de base de 0. Sans critique, les deux perdent 7. Un lanceur sans brèche n’aurait infligé à la Créature 5 que 3."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0106",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": null
+        },
+        {
+          "id": "cleanup",
+          "number": "3.13",
+          "title": "Nettoyage",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Retombées · Nettoyage.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Chaque tour est venu, et les deux équipes sont encore debout. Chaque état décompte d’un round, et un état à zéro se termine. Un état appliqué "
+                },
+                {
+                  "text": "ce",
+                  "strong": true
+                },
+                {
+                  "text": " round ne décompte pas encore : il dure pour le reste de ce round, puis pour chaque round qu’il indique. Voir "
+                },
+                {
+                  "text": "les durées",
+                  "href": "#durations"
+                },
+                {
+                  "text": "."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Une créature vivante dont le Stun (étourdissement) se termine ici ne peut pas être étourdie au round suivant. Voir "
+                },
+                {
+                  "text": "l’étourdissement",
+                  "href": "#stunned"
+                },
+                {
+                  "text": "."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0041",
+            "ADR 0072",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": null
+        },
+        {
+          "id": "finalization",
+          "number": "3.14",
+          "title": "La fin du round",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Retombées · Clôture.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Si c’était le round 20, la partie se termine : l’équipe à qui il reste "
+                },
+                {
+                  "text": "le plus de Santé",
+                  "strong": true
+                },
+                {
+                  "text": ", additionnée sur ses créatures, gagne, et à totaux égaux la partie est nulle. Sinon, le round suivant commence."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Exemple.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Le round 20 se termine avec les deux équipes debout. Les créatures du premier joueur ont 4, 5 et 6 points de Santé : 15. Celles du second ont 18, 0 et 0 : 18. "
+                },
+                {
+                  "text": "Le second joueur gagne",
+                  "strong": true
+                },
+                {
+                  "text": ", avec moins de créatures debout. C’est la Santé qui décide, pas les survivants."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0011",
+            "ADR 0105",
+            "game-rules#match-lifecycle"
+          ],
+          "card": null
+        }
+      ]
+    },
+    {
+      "id": "edge-cases",
+      "number": 4,
+      "title": "Cas limites",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "spans": [
+            {
+              "text": "Voici les règles que l’on lit de travers. Chacune est une règle, pas une exception."
+            }
+          ]
+        }
+      ],
+      "sections": [
+        {
+          "id": "skipped-turn",
+          "number": "4.1",
+          "title": "Un tour sauté",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Une créature qui ne peut pas agir quand vient son tour est "
+                },
+                {
+                  "text": "sautée",
+                  "strong": true
+                },
+                {
+                  "text": " : rien ne se résout pour elle, elle ne dépense rien, et rien n’est demandé à son propriétaire. Le tour suivant vient."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Une créature ne peut pas agir quand elle a été "
+                },
+                {
+                  "text": "vaincue",
+                  "strong": true
+                },
+                {
+                  "text": " ou "
+                },
+                {
+                  "text": "étourdie",
+                  "strong": true
+                },
+                {
+                  "text": " plus tôt dans le round. Une créature qui est dans le round peut toujours lancer un sort : Focus coûte 0 d’Énergie et cible son lanceur. Un sort qu’elle ne peut pas payer maintenant, ou qui n’a aucune cible légale, n’est pas proposé."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Un tour tardif est donc un risque : avant qu’il vienne, votre créature peut être vaincue ou étourdie, et la cible que vous visiez peut avoir disparu. C’est le prix d’agir tard, et la raison d’être d’Instinct."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Exemple.",
+                  "emphasis": true
+                },
+                {
+                  "text": " La Créature 1 est en Précision et la Créature 5 en Instinct. La Créature 5 agit en premier et lance Crushing Stomp sur la Créature 1, ce qui l’étourdit. Quand vient le tour de la Créature 1, elle est sautée, et ne dépense pas d’Énergie."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0083",
+            "ADR 0110",
+            "ADR 0112",
+            "game-rules#implemented",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": {
+            "id": "fizzle",
+            "title": "Un tour sauté",
+            "lines": [
+              "Une créature qui ne peut pas agir quand vient son tour est sautée : rien ne se résout, et rien n’est dépensé.",
+              "Cela arrive quand la créature a été vaincue ou étourdie plus tôt dans le round."
+            ],
+            "example": "Une créature étourdie par un tour précédent est sautée quand vient le sien, et garde toute son Énergie."
+          }
+        },
+        {
+          "id": "the-board-changes",
+          "number": "4.2",
+          "title": "Le plateau change entre deux tours",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Chaque sort se résout avant que vienne le tour suivant, donc "
+                },
+                {
+                  "text": "vous choisissez toujours sur le plateau tel qu’il est",
+                  "strong": true
+                },
+                {
+                  "text": ", et rien ne se passe entre votre confirmation et le résultat : une cible ne peut pas être vaincue entre-temps."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Ce qui change, c’est le plateau avant votre tour. Un drain a pu laisser votre créature à court du sort sur lequel vous comptiez, et un ennemi vaincu laisse votre sort avec moins de cibles. Vous choisissez parmi ce qui est proposé."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Exemple.",
+                  "emphasis": true
+                },
+                {
+                  "text": " La Créature 1 a 3 points d’Énergie et compte sur Emberstorm, qui coûte 3. Avant son tour, la Créature 5 lance Soul Feast sur elle, qui réduit son Énergie de 3 : l’Énergie de la Créature 1 tombe à 0. À son tour, l’application ne propose que les sorts qu’elle peut payer maintenant."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0035",
+            "ADR 0083",
+            "ADR 0112",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": null
+        },
+        {
+          "id": "stunned",
+          "number": "4.3",
+          "title": "Une créature étourdie passe le round",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Une créature sous "
+                },
+                {
+                  "text": "Stun",
+                  "strong": true
+                },
+                {
+                  "text": " ne prend pas de tempo, n’a pas de tour, et ne lance rien pendant chaque round que dure le Stun. Elle gagne encore son Énergie à l’Entretien et subit encore son Bleed et sa Regeneration. Elle peut encore acquérir une mutation, puisque les mutations viennent avant les tempos. Elle peut encore être ciblée, soignée et vaincue."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Un Stun qui arrive "
+                },
+                {
+                  "text": "pendant",
+                  "strong": true
+                },
+                {
+                  "text": " le combat coûte aussi à cette créature son tour de ce round, si son tour n’est pas encore venu : elle est sautée."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "L’immunité au Stun.",
+                  "strong": true
+                },
+                {
+                  "text": " Quand un Stun se termine au Nettoyage, la créature "
+                },
+                {
+                  "text": "ne peut pas être étourdie au round suivant",
+                  "strong": true
+                },
+                {
+                  "text": ". Un Stun qui atteint une créature déjà étourdie, ou immunisée, est ignoré : les autres effets du sort s’appliquent quand même, et le Stun en cours ni ne s’allonge ni ne recommence. Aucune créature ne peut donc être étourdie sans interruption : chaque Stun est suivi d’un round où elle ne peut pas être étourdie."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Exemple.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Au round 5, la Créature 4 est touchée par Crushing Stomp : Stun pendant 2 rounds. Elle passe en entier les 2 rounds suivants. Au Nettoyage qui termine le Stun, elle devient immunisée pour un round. Un autre Crushing Stomp sur elle pendant qu’elle est étourdie, ou immunisée, inflige ses dégâts et n’étourdit rien."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0041",
+            "ADR 0072",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": null
+        },
+        {
+          "id": "durations",
+          "number": "4.4",
+          "title": "Combien de temps dure un état",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Lisez les rounds d’un état comme "
+                },
+                {
+                  "text": "autant de rounds suivants",
+                  "strong": true
+                },
+                {
+                  "text": ". Un état appliqué ce round dure jusqu’à la fin de ce round, puis pendant les rounds qu’il indique : le premier décompte après son arrivée ne compte pas. Un Bleed d’un round inflige ses dégâts une fois, à l’Entretien suivant. Un Stun de 2 rounds retire les deux rounds suivants."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Un état ne recommence jamais : un second du même type se place à côté du premier, et chacun décompte de son côté. Seul le Stun est différent : un second est "
+                },
+                {
+                  "text": "ignoré",
+                  "href": "#stunned"
+                },
+                {
+                  "text": "."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Exemple.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Au round 5, la Créature 3 lance Infestation sur trois ennemis : un Bleed de 2 pendant 3 rounds sur chacun. Il n’inflige rien au round 5. Chaque cible subit ensuite 2 à l’Entretien de chacun des 3 rounds suivants, quelle que soit sa Défense : 6 en tout."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0041",
+            "game-rules#implemented",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": null
+        },
+        {
+          "id": "the-critical-roll",
+          "number": "4.5",
+          "title": "Le jet de critique",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Quand le sort d’une créature en "
+                },
+                {
+                  "text": "Précision",
+                  "strong": true
+                },
+                {
+                  "text": " se résout et que le sort indique une chance de critique, un d20 est lancé "
+                },
+                {
+                  "text": "une fois pour tout le lancer",
+                  "strong": true
+                },
+                {
+                  "text": ". Le sort indique la face qu’il lui faut : d20 : 11+ signifie 11 ou plus. Une créature en "
+                },
+                {
+                  "text": "Instinct",
+                  "strong": true
+                },
+                {
+                  "text": " ne lance jamais le dé, et un sort qui n’indique aucune chance ne lance jamais le dé. La chance propre à la créature, 0 %, s’ajoute à celle du sort."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Un critique multiplie par 2, en laissant tomber toute fraction, "
+                },
+                {
+                  "text": "ce que le lancer met maintenant sur la Santé d’une cible",
+                  "strong": true
+                },
+                {
+                  "text": ", et rien d’autre :"
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                [
+                  {
+                    "text": "Multiplié :",
+                    "strong": true
+                  },
+                  {
+                    "text": " les dégâts sur une cible, son bonus de dégâts compris, et un soin sur une cible."
+                  }
+                ],
+                [
+                  {
+                    "text": "Non multiplié :",
+                    "strong": true
+                  },
+                  {
+                    "text": " tout ce qui est sur la ligne du lanceur ; l’Énergie, donnée ou prise ; un effet durable, un Bleed, une Regeneration, un Stun, un renfort ou un malus ; et une brèche, qui prend sur la Défense, pas sur le coup."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "L’ordre est celui de "
+                },
+                {
+                  "text": "la résolution d’un sort",
+                  "href": "#resolving-a-spell"
+                },
+                {
+                  "text": " : ajoutez le bonus de dégâts, multipliez, puis soustrayez la Défense."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Exemple.",
+                  "emphasis": true
+                },
+                {
+                  "text": " La Créature 2 est en Précision et lance Vital Surge sur la Créature 3, dont la Santé est de 18 sur 30 : soin 10, d20 : 11+. Le d20 donne un critique : le soin devient 20, et la Créature 3 passe à 30. Un soin ne dépasse jamais la Santé avec laquelle une créature a commencé."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0033",
+            "ADR 0042",
+            "ADR 0100",
+            "ADR 0154",
+            "game-rules#implemented",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": {
+            "id": "critical",
+            "title": "Critique",
+            "lines": [
+              "Une créature en Précision lance un d20 quand son sort se résout, contre le nombre que le sort indique.",
+              "Sur un critique, les dégâts et les soins du sort sur ses cibles sont multipliés.",
+              "Une créature en Instinct ne lance jamais le dé."
+            ],
+            "example": "Un sort indique d20 : 11+. Un jet de 14 est un critique : ses 7 dégâts deviennent 14."
+          }
+        }
+      ]
+    },
+    {
+      "id": "reference",
+      "number": 5,
+      "title": "Référence",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "spans": [
+            {
+              "text": "Chaque état, chaque façon dont une partie se termine, et chaque passif, en un seul endroit."
+            }
+          ]
+        }
+      ],
+      "sections": [
+        {
+          "id": "conditions",
+          "number": "5.1",
+          "title": "Les états",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Un "
+                },
+                {
+                  "text": "état",
+                  "strong": true
+                },
+                {
+                  "text": " est un effet durable sur une créature, avec une valeur et un nombre de rounds. Chacun, sauf un état permanent, décompte au Nettoyage et se termine à zéro, et le premier décompte après son arrivée ne compte pas ("
+                },
+                {
+                  "text": "les durées",
+                  "href": "#durations"
+                },
+                {
+                  "text": "). Les états se cumulent : un second se place à côté du premier, sauf un Stun."
+                }
+              ]
+            },
+            {
+              "type": "table",
+              "header": [
+                [
+                  {
+                    "text": "État"
+                  }
+                ],
+                [
+                  {
+                    "text": "Ce qu’il fait"
+                  }
+                ],
+                [
+                  {
+                    "text": "Quand"
+                  }
+                ]
+              ],
+              "rows": [
+                [
+                  [
+                    {
+                      "text": "Bleed",
+                      "strong": true
+                    },
+                    {
+                      "text": " (saignement)"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Inflige sa valeur, "
+                    },
+                    {
+                      "text": "en ignorant la Défense",
+                      "strong": true
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Entretien, après la Regeneration"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Regeneration",
+                      "strong": true
+                    },
+                    {
+                      "text": " (régénération)"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Soigne sa valeur, jamais au-dessus de la Santé de départ"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Entretien, avant le Bleed"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Régénération d’Énergie",
+                      "strong": true
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Donne sa valeur en Énergie"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Entretien, en premier"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Stun",
+                      "strong": true
+                    },
+                    {
+                      "text": " (étourdissement)"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Pas de tempo, pas de tour ; un second est ignoré, tout comme celui qui arrive au round suivant la fin d’un Stun"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Tout le round"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Renfort de Défense",
+                      "strong": true
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Augmente la Défense ; tous ensemble comptent pour 10 au plus"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Chaque coup que la créature reçoit"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Malus de Défense",
+                      "strong": true
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Diminue la Défense"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Chaque coup que la créature reçoit"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Renfort d’initiative",
+                      "strong": true
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Augmente l’initiative"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Quand la frise est construite"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Malus d’initiative",
+                      "strong": true
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Diminue l’initiative"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Quand la frise est construite"
+                    }
+                  ]
+                ],
+                [
+                  [
+                    {
+                      "text": "Renfort de dégâts",
+                      "strong": true
+                    }
+                  ],
+                  [
+                    {
+                      "text": "S’ajoute au bonus de dégâts de la créature"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "Chaque coup que la créature porte"
+                    }
+                  ]
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Trois sommes, chacune ramenée à zéro "
+                },
+                {
+                  "text": "après",
+                  "strong": true
+                },
+                {
+                  "text": " la soustraction si elle tombe en dessous :"
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                [
+                  {
+                    "text": "Défense",
+                    "strong": true
+                  },
+                  {
+                    "text": " = Défense de base + renforts de Défense, 10 au plus, − malus de Défense."
+                  }
+                ],
+                [
+                  {
+                    "text": "Initiative",
+                    "strong": true
+                  },
+                  {
+                    "text": " = initiative de base + renforts d’initiative − malus d’initiative."
+                  }
+                ],
+                [
+                  {
+                    "text": "Bonus de dégâts",
+                    "strong": true
+                  },
+                  {
+                    "text": " = ce que donnent ses passifs + ses renforts de dégâts."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Un état "
+                },
+                {
+                  "text": "permanent",
+                  "strong": true
+                },
+                {
+                  "text": " ne décompte jamais : le malus de Défense de Contagion, et le durable des deux renforts de Défense de Wraithguard. "
+                },
+                {
+                  "text": "L’immunité au Stun",
+                  "strong": true
+                },
+                {
+                  "text": " n’est pas un état : aucun sort ne la donne, et elle dure du Nettoyage qui termine un Stun jusqu’au suivant. Une créature vaincue perd ses états et n’en prend aucun nouveau."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0019",
+            "ADR 0020",
+            "ADR 0035",
+            "ADR 0036",
+            "ADR 0041",
+            "ADR 0072",
+            "ADR 0076",
+            "ADR 0101",
+            "game-rules#implemented"
+          ],
+          "card": {
+            "id": "conditions",
+            "title": "États",
+            "lines": [
+              "Un état est un effet durable sur une créature, avec une valeur et un nombre de rounds.",
+              "Il décompte pendant les Retombées de chaque round, et se termine à zéro.",
+              "Une créature étourdie passe chaque round que dure le Stun. Ensuite, elle ne peut plus être étourdie pendant un round."
+            ],
+            "example": "Le Bleed de Latch inflige 2 à chacun des 3 prochains Entretiens, quelle que soit la Défense."
+          }
+        },
+        {
+          "id": "the-end-of-a-match",
+          "number": "5.2",
+          "title": "La fin d’une partie",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Une partie se termine de l’une de ces façons, chacune vérifiée à son propre moment :"
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": true,
+              "items": [
+                [
+                  {
+                    "text": "Une équipe est vaincue",
+                    "strong": true
+                  },
+                  {
+                    "text": ", aussitôt, sur le sort ou le Bleed qui vainc sa dernière créature. Rien de ce qui suit ne se résout : plus aucun tour, pas de Nettoyage. L’autre équipe gagne."
+                  }
+                ],
+                [
+                  {
+                    "text": "Les deux équipes à la fois",
+                    "strong": true
+                  },
+                  {
+                    "text": ", c’est une partie nulle. Cela peut arriver : une seule passe de Bleed peut vider les deux équipes, et la ligne du lanceur d’un sort peut vaincre son lanceur au moment où il vainc le dernier ennemi."
+                  }
+                ],
+                [
+                  {
+                    "text": "Le dernier round",
+                    "strong": true
+                  },
+                  {
+                    "text": ", le round 20, se termine avec les deux équipes debout : l’équipe à qui il reste le plus de Santé gagne, et à totaux égaux la partie est nulle."
+                  }
+                ],
+                [
+                  {
+                    "text": "Un joueur abandonne",
+                    "strong": true
+                  },
+                  {
+                    "text": " : l’autre gagne."
+                  }
+                ],
+                [
+                  {
+                    "text": "Un joueur laisse s’écouler son temps pour répondre",
+                    "strong": true
+                  },
+                  {
+                    "text": " : il perd. Quand les deux le font, la partie est nulle."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Exemple.",
+                  "emphasis": true
+                },
+                {
+                  "text": " Round 11. Il ne reste au second joueur que la Créature 4, avec une Santé de 3 et sans Défense. Le premier tour est celui de la Créature 2, qui lance Strike sur elle : la Créature 4 est vaincue, et "
+                },
+                {
+                  "text": "le premier joueur gagne tout de suite",
+                  "strong": true
+                },
+                {
+                  "text": ". Aucun autre tour ne vient, et rien ne décompte."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0011",
+            "ADR 0083",
+            "ADR 0087",
+            "ADR 0105",
+            "ADR 0169",
+            "game-rules#match-lifecycle"
+          ],
+          "card": null
+        },
+        {
+          "id": "passives",
+          "number": "5.3",
+          "title": "Les passifs",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Un "
+                },
+                {
+                  "text": "passif",
+                  "strong": true
+                },
+                {
+                  "text": " est ce que donne une clé de voûte, de la révélation qui l’acquiert jusqu’à la fin de la partie. Il ne décompte jamais. Ceux de Titan et d’Apex vont à la créature qui les acquiert ; celui d’Archmage va à chaque créature de son équipe. Une créature détient chaque passif que donnent ses propres clés de voûte, et celui d’Archmage une fois de plus pour chaque exemplaire que possèdent ses coéquipières."
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                [
+                  {
+                    "text": "Titan : chaque coup ignore 10 de Défense.",
+                    "strong": true
+                  },
+                  {
+                    "text": " Sa "
+                  },
+                  {
+                    "text": "brèche",
+                    "href": "#sunder"
+                  },
+                  {
+                    "text": " : chaque coup rencontre la Défense de la cible diminuée de 10, jamais en dessous de zéro."
+                  }
+                ],
+                [
+                  {
+                    "text": "Archmage, partagé : Énergie +1 à chaque Entretien.",
+                    "strong": true
+                  },
+                  {
+                    "text": " Le gain d’Énergie de chaque créature vivante de l’équipe augmente de 1, une fois pour chaque exemplaire que possède l’équipe, à partir du round suivant. Un exemplaire continue de donner après que la créature qui l’a acquis est vaincue."
+                  }
+                ],
+                [
+                  {
+                    "text": "Apex : Dégâts +5 à chaque coup.",
+                    "strong": true
+                  },
+                  {
+                    "text": " Il ajoute 5 à chaque coup, avant le critique et avant la Défense : voir "
+                  },
+                  {
+                    "text": "le bonus de dégâts",
+                    "href": "#damage-bonus"
+                  },
+                  {
+                    "text": "."
+                  }
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Ni le passif de Titan ni celui d’Apex ne touchent un Bleed, un soin, l’Énergie ou la ligne du lanceur."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Un "
+                },
+                {
+                  "text": "coup",
+                  "strong": true
+                },
+                {
+                  "text": ", ce sont les dégâts qu’un sort inflige à une cible. Un Bleed n’en est pas un, la ligne du lanceur non plus."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0101",
+            "ADR 0106",
+            "ADR 0114",
+            "game-rules#implemented"
+          ],
+          "card": null
+        }
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "id": "health",
+      "section": "winning"
+    },
+    {
+      "id": "energy",
+      "section": "energy-gain"
+    },
+    {
+      "id": "mutation",
+      "section": "evolution"
+    },
+    {
+      "id": "tempo",
+      "section": "tempo"
+    },
+    {
+      "id": "initiative",
+      "section": "turn-order"
+    },
+    {
+      "id": "intent",
+      "section": "your-turn"
+    },
+    {
+      "id": "defense",
+      "section": "resolving-a-spell"
+    },
+    {
+      "id": "fizzle",
+      "section": "skipped-turn"
+    },
+    {
+      "id": "critical",
+      "section": "the-critical-roll"
+    },
+    {
+      "id": "conditions",
+      "section": "conditions"
+    }
+  ],
+  "moved": {},
+  "changes": [
+    {
+      "date": "2026-11-16",
+      "text": "Le livre de règles officiel est l’édition de l’application. Une créature choisit son sort quand vient son tour. Chaque nombre suit le jeu de règles et le contenu de la table (ADR 0112, ADR 0188).",
+      "adrs": [
+        "0112",
+        "0188"
+      ]
+    },
+    {
+      "date": "2026-11-16",
+      "text": "Les cartes des tutoriels viennent de ce livre et renvoient à leurs sections. La carte Santé dit que le soin s’arrête à la Santé de départ, et la carte Défense que ses renforts comptent pour 10 au plus (ADR 0076, ADR 0187).",
+      "adrs": [
+        "0076",
+        "0187"
+      ]
+    },
+    {
+      "date": "2026-11-16",
+      "text": "Le passif d’Archmage va à chaque créature de son équipe, une fois pour chaque exemplaire, et un exemplaire continue de donner après que la créature qui l’a acquis est vaincue (ADR 0114).",
+      "adrs": [
+        "0114"
+      ]
+    },
+    {
+      "date": "2026-11-16",
+      "text": "Le livre se lit aussi en français, avec les mêmes sections, les mêmes nombres et les mêmes cartes ; English et Français basculent à la même section (ADR 0193).",
+      "adrs": [
+        "0193"
+      ]
+    }
+  ]
+}

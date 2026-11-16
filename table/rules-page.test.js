@@ -1,13 +1,15 @@
 // The rulebook's page (/rules, docs/tabletop/rulebook-plan.md R3): its contents are built from table/rules.json,
 // a deep link lands on a section by its id, a redirect or a card, and the filter keeps the sections whose title
-// or text holds every word typed. The page reads the book; it never writes a rule of its own.
+// or text holds every word typed. The page reads the book; it never writes a rule of its own. It reads it in English
+// or in French (R6): the language stored on the device, else the browser's, and a switch between them.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { contentsOf, targetOf, matching, normalized, spanText, changeText, latestFirst } from './rules.js';
+import { contentsOf, targetOf, matching, normalized, spanText, changeText, latestFirst, languageOf, bookFile, WORDS } from './rules.js';
 
 const book = JSON.parse(readFileSync(new URL('./rules.json', import.meta.url), 'utf8'));
+const french = JSON.parse(readFileSync(new URL('./rules.fr.json', import.meta.url), 'utf8'));
 const page = readFileSync(new URL('./rules.html', import.meta.url), 'utf8');
 
 // A small book in the built file's shape, so a test reads what it asserts.
@@ -160,6 +162,48 @@ test('the page loads its own script and style, the navigation, and identity.css 
 test('the page reads the book by a relative path, so it works at /rules and under /table/', () => {
   const script = readFileSync(new URL('./rules.js', import.meta.url), 'utf8');
 
-  assert.match(script, /fetch\('rules\.json'/);
-  assert.doesNotMatch(script, /fetch\('\/rules\.json'/);
+  assert.match(script, /'rules\.json'/);
+  assert.match(script, /'rules\.fr\.json'/);
+  assert.doesNotMatch(script, /'\/rules(\.fr)?\.json'/);
+});
+
+test('the language is the one stored on the device, else the browser\'s first English or French, else English', () => {
+  assert.equal(languageOf({ stored: 'fr', languages: ['en-CA'] }), 'fr');
+  assert.equal(languageOf({ stored: 'en', languages: ['fr-CA'] }), 'en');
+  assert.equal(languageOf({ stored: null, languages: ['fr-CA', 'en-US'] }), 'fr');
+  assert.equal(languageOf({ stored: null, languages: ['de-DE', 'FR'] }), 'fr', 'the first language the book is written in');
+  assert.equal(languageOf({ stored: 'de', languages: ['es-ES'] }), 'en', 'neither: English');
+  assert.equal(languageOf({}), 'en');
+});
+
+test('each language reads its own book, by a relative path', () => {
+  assert.equal(bookFile('en'), 'rules.json');
+  assert.equal(bookFile('fr'), 'rules.fr.json');
+  assert.equal(bookFile('de'), 'rules.json');
+});
+
+test('the French book is the English one in French: the same parts, sections, numbers and cards', () => {
+  assert.equal(french.language, 'fr');
+  assert.deepEqual(contentsOf(french).map(part => [part.id, part.number, part.sections.map(section => [section.id, section.number])]),
+    contentsOf(book).map(part => [part.id, part.number, part.sections.map(section => [section.id, section.number])]));
+  assert.deepEqual(french.cards, book.cards);
+  for (const card of french.cards) assert.equal(targetOf(french, `#${card.id}`)?.id, card.section, card.id);
+});
+
+test('the page says the same things in English and in French', () => {
+  assert.deepEqual(Object.keys(WORDS.fr).sort(), Object.keys(WORDS.en).sort());
+  for (const [key, english] of Object.entries(WORDS.en)) assert.equal(typeof WORDS.fr[key], typeof english, key);
+});
+
+test('a change reads in French with its date in French', () => {
+  assert.equal(changeText({ date: '2026-11-16', text: 'Le livre officiel.' }, 'fr'), '16 novembre 2026 · Le livre officiel.');
+  assert.equal(changeText({ date: '2026-02-01', text: 'x' }, 'fr'), '1er février 2026 · x');
+});
+
+test('every word of the page that the French translates has its place in rules.html', () => {
+  const keys = [...page.matchAll(/data-words="([^"]+)"/g)].map(match => match[1]);
+  assert.ok(keys.length >= 6);
+  for (const key of keys) assert.equal(typeof WORDS.en[key], 'string', key);
+  assert.match(page, /data-language="en"[^>]*lang="en"|lang="en"[^>]*data-language="en"/);
+  assert.match(page, /data-language="fr"[^>]*lang="fr"|lang="fr"[^>]*data-language="fr"/);
 });

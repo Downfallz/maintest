@@ -11,7 +11,7 @@ const CACHE = 'downfall-offline-v2';
 // each time the network answers, so the rules a player last read can be read again with no network. Only a path whose
 // answer is the same for everyone may join: what is kept stays after a sign-out.
 const RULEBOOK = '/rules';
-const RULEBOOK_OWN = [RULEBOOK, '/rules.js', '/rules.css', '/rules.json'];
+const RULEBOOK_OWN = [RULEBOOK, '/rules.js', '/rules.css', '/rules.json', '/rules.fr.json'];
 // What it shares with every page: given only when the network cannot answer at all, never in place of a server error,
 // so that no other page is drawn with an older deploy's style.
 const RULEBOOK_SHARED = ['/table.css', '/lobby.css', '/identity.css', '/brand-mark.svg', '/fonts/marcellus-latin-400.woff2'];

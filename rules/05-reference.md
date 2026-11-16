@@ -63,13 +63,15 @@ sources: ADR 0011, ADR 0083, ADR 0087, ADR 0105, ADR 0169, game-rules#match-life
 
 ## The passives {#passives}
 
-A **passive** is what a capstone gives its creature, from the reveal that acquires it to the end of the match. It
-never counts down. A creature with two capstones holds both passives.
+A **passive** is what a capstone gives, from the reveal that acquires it to the end of the match. It never counts
+down. Titan's and Apex's go to the creature that acquires them; Archmage's goes to every creature of its team. A
+creature holds every passive its own capstones give, and Archmage's once more for every copy its teammates own.
 
 - **Titan: every hit ignores {tier:titan:v1.sunder} Defense.** Its [sunder](#sunder): each hit meets the
   target's Defense less {tier:titan:v1.sunder}, never below zero.
 - **Archmage, shared: Energy +{tier:archmage:v1.upkeepEnergy} at every Upkeep.** Every living creature of the
   team gains {tier:archmage:v1.upkeepEnergy} Energy more, once for each copy the team owns, from the next round.
+  A copy keeps giving after the creature that acquired it is defeated.
 - **Apex: Damage +{tier:apex:v1.damageBonus} on every hit.** It adds {tier:apex:v1.damageBonus} to each hit,
   before the critical and before Defense: see [the damage bonus](#damage-bonus).
 

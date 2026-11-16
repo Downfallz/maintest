@@ -19,9 +19,10 @@ word, a rule added) is rewritten here, in the same pull request as the change th
 4. The rewrite: one `rulebook-writer` call with the findings that hold, the sections to rewrite by id, and the
    format (`rules/README.md`). Values drawn, never typed; the player's words; a section's `sources:` line names
    the ADRs and game-rules headings it now reads. A section renamed or removed keeps its old id in
-   `rules/moved.json`. A rule no section teaches gets a section in the Part the keeper named.
+   `rules/moved.json`. A rule no section teaches gets a section in the Part the keeper named. The French
+   edition follows in the same call: every section rewritten is rewritten in `rules/fr/` too (ADR 0193).
 5. The record: a line in `rules/changes.md` for what a player would notice (`- YYYY-MM-DD: what changed (ADR
-   NNNN).`). A new ADR's `Rulebook:` line names the sections by id, or says "none".
+   NNNN).`), and its translation in `rules/fr/changes.md`. A new ADR's `Rulebook:` line names the sections by id, or says "none".
 6. The page text: a phase tip (`table/battle-guidance.js`), a term (`table/terms.js`) or a tutorial step
    (`scenarios/tutorials/`) the keeper found against the book is fixed in the same change.
 7. Rebuild and test:

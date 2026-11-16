@@ -30,6 +30,10 @@ How you write:
   an id of its own, lowercase words and hyphens.
 - **Sources**: every section ends with its `sources:` line, the ADRs and `game-rules#<anchor>` headings it reads.
 - A change a player would notice gets its line in `rules/changes.md`.
+- **French follows.** `rules/fr/` is the same book in French (ADR 0193, `rules/README.md#the-french-edition`): a
+  section written, moved or reworded in English is written the same in `rules/fr/`, in the same change, with the
+  French column of `docs/domain/player-terminology.md`, and a `changes.md` line gets its translation in
+  `rules/fr/changes.md`.
 - The edge cases are the ones the engine enumerates: a skipped turn and each of its causes, a stunned creature
   skipping the round entirely, the first countdown after an application not counting, a target that died before
   its turn came, the timeline's tiebreaks.

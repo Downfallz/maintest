@@ -1,8 +1,80 @@
 // The official rulebook's page (/rules, ADR 0188, docs/tabletop/rulebook-plan.md R3): the book built from rules/
 // into rules.json, drawn as it is, with its contents, a deep link per section, a filter and what changed. The page
 // writes no rule: every word and number is the book's, and the book draws its numbers from the table's rule set.
+// The book is read in English or in French (R6): rules.json or rules.fr.json, the same book in two languages.
 
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+export const LANGUAGES = ['en', 'fr'];
+// The language chosen on this page, kept on the device: an account holds no language yet.
+const STORED_LANGUAGE = 'downfall.language';
+
+/** The language the page opens in: the one stored on the device, else the browser's first English or French. */
+export function languageOf({ stored, languages } = {}) {
+  if (LANGUAGES.includes(stored)) return stored;
+  for (const tag of languages ?? []) {
+    const base = String(tag ?? '').toLowerCase().split('-')[0];
+    if (LANGUAGES.includes(base)) return base;
+  }
+  return 'en';
+}
+
+/** The book a language reads, by a relative path, so the page works at /rules and under /table/. */
+export function bookFile(language) {
+  return language === 'fr' ? 'rules.fr.json' : 'rules.json';
+}
+
+// A count and its noun: English says "0 sections", French "0 section".
+const count = (number, one, many) => `${number} ${number === 1 ? one : many}`;
+const compte = (number, one, many) => `${number} ${number <= 1 ? one : many}`;
+
+/** The page's own words, in each language; the rules themselves are the book's. */
+export const WORDS = {
+  en: {
+    documentTitle: 'Downfall Instinct — the rules',
+    eyebrow: 'The official rulebook',
+    heading: 'The rules.',
+    detail: 'How a match is played at this table, part by part. Every number is the one this table uses.',
+    languages: 'Language',
+    filterLabel: 'Find a rule',
+    placeholder: 'sunder, stun, tempo…',
+    loading: 'Reading the rulebook…',
+    contents: 'Contents',
+    whatChanged: 'What changed',
+    introduction: 'Introduction',
+    conceptCard: 'Concept card',
+    cardLabel: title => `Concept card: ${title}`,
+    linkTo: (number, title) => `Link to ${number} ${title}`,
+    total: (parts, sections) => `${parts} parts, ${count(sections, 'section', 'sections')}`,
+    kept: (sections, total) => `${count(sections, 'section', 'sections')} of ${total} ${sections === 1 ? 'holds' : 'hold'} those words`,
+    noMatch: 'No rule holds those words. Try another word.',
+    problem: 'Could not read the rulebook. Check your connection and reload the page.',
+    drawn: date => 'Every number in this book is drawn from the rule set and the content this table plays' + (date ? `. Last changed ${date}.` : '.'),
+    date: (year, month, day) => `${day} ${['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][month - 1]} ${year}`,
+  },
+  fr: {
+    documentTitle: 'Downfall Instinct — les règles',
+    eyebrow: 'Le livre de règles officiel',
+    heading: 'Les règles.',
+    detail: 'Comment se joue une partie à cette table, chapitre par chapitre. Chaque nombre est celui qu’utilise cette table.',
+    languages: 'Langue',
+    filterLabel: 'Trouver une règle',
+    placeholder: 'brèche, stun, tempo…',
+    loading: 'Lecture du livre de règles…',
+    contents: 'Sommaire',
+    whatChanged: 'Ce qui a changé',
+    introduction: 'Introduction',
+    conceptCard: 'Carte concept',
+    cardLabel: title => `Carte concept : ${title}`,
+    linkTo: (number, title) => `Lien vers ${number} ${title}`,
+    total: (parts, sections) => `${compte(parts, 'chapitre', 'chapitres')}, ${compte(sections, 'section', 'sections')}`,
+    kept: (sections, total) => `${compte(sections, 'section', 'sections')} sur ${total} ${sections > 1 ? 'contiennent' : 'contient'} ces mots`,
+    noMatch: 'Aucune règle ne contient ces mots. Essayez un autre mot.',
+    problem: 'Impossible de lire le livre de règles. Vérifiez votre connexion et rechargez la page.',
+    drawn: date => 'Chaque nombre de ce livre vient des règles et du contenu de cette table' + (date ? `. Dernière modification le ${date}.` : '.'),
+    date: (year, month, day) => `${day === 1 ? '1er' : day} ${['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'][month - 1]} ${year}`,
+  },
+};
+
+const wordsOf = language => WORDS[language] ?? WORDS.en;
 
 /** A text as the filter compares it: lower case, without accents, its spaces collapsed. */
 export function normalized(text) {
@@ -101,10 +173,15 @@ export function latestFirst(changes) {
   return [...(changes ?? [])].sort((a, b) => b.date.localeCompare(a.date));
 }
 
-/** A change as the page lists it: its date in words, then what changed. */
-export function changeText(change) {
+/** A change's date in words, in the book's language. */
+function dateText(change, language) {
   const [year, month, day] = change.date.split('-').map(Number);
-  return `${day} ${MONTHS[month - 1]} ${year} · ${change.text}`;
+  return wordsOf(language).date(year, month, day);
+}
+
+/** A change as the page lists it: its date in words, then what changed. */
+export function changeText(change, language = 'en') {
+  return `${dateText(change, language)} · ${change.text}`;
 }
 
 // --- drawing --------------------------------------------------------------------------------------------------------
@@ -162,12 +239,12 @@ function drawBlock(doc, block) {
 }
 
 // A concept card, as the battle draws it in a tutorial: its title, its lines and its example.
-function drawCard(doc, card) {
+function drawCard(doc, card, words) {
   const aside = node(doc, 'aside', 'rules-card');
-  aside.setAttribute('aria-label', `Concept card: ${card.title}`);
+  aside.setAttribute('aria-label', words.cardLabel(card.title));
   const lines = node(doc, 'div', 'concept-lines');
   lines.append(...card.lines.map(line => node(doc, 'p', null, line)));
-  aside.append(node(doc, 'p', 'eyebrow', 'Concept card'), node(doc, 'h4', 'rules-card-title', card.title), lines, node(doc, 'p', 'concept-example', card.example));
+  aside.append(node(doc, 'p', 'eyebrow', words.conceptCard), node(doc, 'h4', 'rules-card-title', card.title), lines, node(doc, 'p', 'concept-example', card.example));
   return aside;
 }
 
@@ -179,28 +256,29 @@ function heading(doc, tag, number, title) {
 }
 
 // The section's own address, beside its heading rather than in it, so the heading reads as its title alone.
-function anchorTo(doc, id, number, title) {
+function anchorTo(doc, id, number, title, words) {
   const anchor = node(doc, 'a', 'rules-anchor', '#');
   anchor.href = `#${id}`;
-  anchor.setAttribute('aria-label', `Link to ${number} ${title}`);
+  anchor.setAttribute('aria-label', words.linkTo(number, title));
   return anchor;
 }
 
-function backToContents(doc) {
-  const link = node(doc, 'a', 'rules-to-contents', 'Contents');
+function backToContents(doc, words) {
+  const link = node(doc, 'a', 'rules-to-contents', words.contents);
   link.href = '#rules-contents';
   return link;
 }
 
 /** The book, every part and section with its blocks and card, into the page's article. */
 export function drawBook(doc, book) {
+  const words = wordsOf(book.language);
   const article = doc.getElementById('rules-book');
   const parts = book.parts.map(part => {
     const element = node(doc, 'section', 'rules-part');
     element.id = part.id;
     element.dataset.part = part.id;
     const partHead = node(doc, 'div', 'rules-part-head');
-    partHead.append(heading(doc, 'h2', part.number, part.title), anchorTo(doc, part.id, part.number, part.title));
+    partHead.append(heading(doc, 'h2', part.number, part.title), anchorTo(doc, part.id, part.number, part.title, words));
     element.append(partHead, ...part.blocks.map(block => drawBlock(doc, block)));
     for (const section of part.sections) {
       const entry = node(doc, 'section', 'rules-section');
@@ -208,10 +286,10 @@ export function drawBook(doc, book) {
       entry.dataset.section = section.id;
       const head = node(doc, 'div', 'rules-section-head');
       const links = node(doc, 'div', 'rules-section-links');
-      links.append(anchorTo(doc, section.id, section.number, section.title), backToContents(doc));
+      links.append(anchorTo(doc, section.id, section.number, section.title, words), backToContents(doc, words));
       head.append(heading(doc, 'h3', section.number, section.title), links);
       entry.append(head, ...section.blocks.map(block => drawBlock(doc, block)));
-      if (section.card) entry.append(drawCard(doc, section.card));
+      if (section.card) entry.append(drawCard(doc, section.card, words));
       element.append(entry);
     }
     return element;
@@ -227,7 +305,7 @@ export function drawBook(doc, book) {
     summary.append(node(doc, 'span', 'rules-number', String(part.number)), doc.createTextNode(` ${part.title}`));
     const list = node(doc, 'ol', 'rules-contents-sections');
     const opening = node(doc, 'li');
-    const openingLink = node(doc, 'a', null, 'Introduction');
+    const openingLink = node(doc, 'a', null, words.introduction);
     openingLink.href = `#${part.id}`;
     opening.append(openingLink);
     list.append(opening, ...part.sections.map(section => {
@@ -246,15 +324,24 @@ export function drawBook(doc, book) {
 
   const changes = doc.getElementById('rules-changes-list');
   const ordered = latestFirst(book.changes);
-  changes.replaceChildren(...ordered.map(change => node(doc, 'li', null, changeText(change))));
+  changes.replaceChildren(...ordered.map(change => node(doc, 'li', null, changeText(change, book.language))));
   const latest = ordered[0];
-  doc.getElementById('rules-drawn').textContent = `Every number in this book is drawn from the rule set and the content this table plays${latest ? `. Last changed ${changeText(latest).split(' · ')[0]}.` : '.'}`;
+  doc.getElementById('rules-drawn').textContent = words.drawn(latest ? dateText(latest, book.language) : null);
 }
 
-const SECTION_COUNT = count => `${count} section${count === 1 ? '' : 's'}`;
+/** The page's own words in a language: the document's language and title, and every element marked data-words. */
+export function translatePage(doc, language) {
+  const words = wordsOf(language);
+  doc.documentElement.lang = LANGUAGES.includes(language) ? language : 'en';
+  doc.title = words.documentTitle;
+  for (const element of doc.querySelectorAll('[data-words]')) element.textContent = words[element.dataset.words];
+  doc.getElementById('rules-filter').placeholder = words.placeholder;
+  for (const button of doc.querySelectorAll('[data-language]')) button.setAttribute('aria-pressed', String(button.dataset.language === language));
+}
 
 /** Shows what the filter keeps, in the book and in the contents, and says how much that is. */
 export function applyFilter(doc, book, query) {
+  const words = wordsOf(book.language);
   const kept = matching(book, query);
   const total = book.parts.reduce((sum, part) => sum + part.sections.length, 0);
   for (const element of doc.querySelectorAll('#rules-book [data-section], #rules-contents-list [data-section]')) {
@@ -267,9 +354,9 @@ export function applyFilter(doc, book, query) {
   }
   doc.getElementById('rules-changes').hidden = Boolean(kept);
   const status = doc.getElementById('rules-status');
-  if (!kept) status.textContent = `${book.parts.length} parts, ${SECTION_COUNT(total)}`;
-  else if (kept.sections.size === 0 && kept.parts.size === 0) status.textContent = 'No rule holds those words. Try another word.';
-  else status.textContent = `${SECTION_COUNT(kept.sections.size)} of ${total} hold those words`;
+  if (!kept) status.textContent = words.total(book.parts.length, total);
+  else if (kept.sections.size === 0 && kept.parts.size === 0) status.textContent = words.noMatch;
+  else status.textContent = words.kept(kept.sections.size, total);
   return kept;
 }
 
@@ -300,37 +387,115 @@ export function land(doc, book, hash, { win = globalThis, focus = true } = {}) {
   return target;
 }
 
+/**
+ * Draws the book and listens to the filter and the address; `show` draws another book in its place (the other
+ * language), keeping what is typed in the filter and the section in the address.
+ */
 export function mountRules(doc, book, win = globalThis) {
-  drawBook(doc, book);
+  const state = { book };
   const filter = doc.getElementById('rules-filter');
-  filter.addEventListener('input', () => applyFilter(doc, book, filter.value));
+  filter.addEventListener('input', () => applyFilter(doc, state.book, filter.value));
   doc.getElementById('rules-filter-form').addEventListener('submit', event => {
     event.preventDefault();
     const first = doc.querySelector('#rules-book [data-section]:not([hidden])');
     if (!first) return;
     // The address already there fires no hashchange: the landing is then the page's own.
-    if (decoded(win.location.hash) === first.id) land(doc, book, win.location.hash, { win });
+    if (decoded(win.location.hash) === first.id) land(doc, state.book, win.location.hash, { win });
     else win.location.hash = first.id;
   });
-  applyFilter(doc, book, filter.value);
-  win.addEventListener('hashchange', () => land(doc, book, win.location.hash, { win }));
-  doc.getElementById('rules-loading').hidden = true;
-  doc.body.dataset.rules = 'ready';
-  // The book arrives after the browser looked for the anchor, so the first landing is the page's own.
-  if (win.location.hash) land(doc, book, win.location.hash, { win, focus: false });
+  win.addEventListener('hashchange', () => land(doc, state.book, win.location.hash, { win }));
+  const show = shown => {
+    state.book = shown;
+    translatePage(doc, shown.language);
+    drawBook(doc, shown);
+    applyFilter(doc, shown, filter.value);
+    doc.getElementById('rules-problem').hidden = true;
+    doc.getElementById('rules-loading').hidden = true;
+    doc.body.dataset.rules = 'ready';
+    doc.body.dataset.language = shown.language ?? 'en';
+    // The book arrives after the browser looked for the anchor, so the landing is the page's own.
+    if (win.location.hash) land(doc, shown, win.location.hash, { win, focus: false });
+  };
+  show(book);
+  return { show, get book() { return state.book; } };
 }
 
-async function load(doc) {
+function stored(win) {
   try {
-    const response = await fetch('rules.json', { credentials: 'same-origin' });
-    if (!response.ok) throw new Error(`The host answered ${response.status}.`);
-    mountRules(doc, await response.json());
+    return win.localStorage?.getItem(STORED_LANGUAGE) ?? null;
   } catch {
-    doc.getElementById('rules-loading').hidden = true;
-    const problem = doc.getElementById('rules-problem');
-    problem.textContent = 'Could not read the rulebook. Check your connection and reload the page.';
-    problem.hidden = false;
+    return null;
   }
+}
+
+function keep(win, language) {
+  try {
+    win.localStorage?.setItem(STORED_LANGUAGE, language);
+  } catch {
+    // A browser that keeps nothing still shows the language chosen, until the page is left.
+  }
+}
+
+async function bookIn(language) {
+  const response = await fetch(bookFile(language), { credentials: 'same-origin' });
+  if (!response.ok) throw new Error(`The host answered ${response.status}.`);
+  return response.json();
+}
+
+function trouble(doc, language) {
+  doc.getElementById('rules-loading').hidden = true;
+  const problem = doc.getElementById('rules-problem');
+  problem.textContent = wordsOf(language).problem;
+  problem.hidden = false;
+}
+
+async function load(doc, win = globalThis) {
+  const language = languageOf({ stored: stored(win), languages: win.navigator?.languages ?? [win.navigator?.language] });
+  translatePage(doc, language);
+  let rules = null;
+  // Each request for a book takes a ticket; only the latest one's answer is drawn, so two quick taps end on the
+  // second, and the first load never covers a book the reader chose meanwhile.
+  let latest = 0;
+  const show = book => {
+    if (rules) rules.show(book);
+    else rules = mountRules(doc, book, win);
+  };
+  for (const button of doc.querySelectorAll('[data-language]')) {
+    button.addEventListener('click', async () => {
+      const chosen = button.dataset.language;
+      const ticket = ++latest;
+      if (rules?.book.language === chosen) {
+        keep(win, chosen);
+        translatePage(doc, chosen);
+        doc.getElementById('rules-problem').hidden = true;
+        return;
+      }
+      try {
+        const book = await bookIn(chosen);
+        if (ticket !== latest) return;
+        // Kept only once its book is read: a choice that cannot be read must not be the next visit's.
+        keep(win, chosen);
+        show(book);
+      } catch {
+        if (ticket !== latest) return;
+        const shown = rules?.book.language ?? language;
+        translatePage(doc, shown);
+        trouble(doc, shown);
+      }
+    });
+  }
+  const ticket = ++latest;
+  // The language's book, else the other one: a book the worker kept is better than none.
+  for (const each of [language, ...LANGUAGES.filter(one => one !== language)]) {
+    try {
+      const book = await bookIn(each);
+      if (ticket === latest || !rules) show(book);
+      return;
+    } catch {
+      // The next language's book.
+    }
+  }
+  if (!rules) trouble(doc, language);
 }
 
 if (typeof document !== 'undefined') void load(document);

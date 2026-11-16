@@ -1,7 +1,7 @@
 // The official rulebook (ADR 0188, docs/tabletop/rulebook-plan.md R1): `rules/` is built into `table/rules.json` by
 // scripts/rules/build.mjs. Each refusal of the build has its test on a small book written here; the committed file
 // is the build of the repository's book (UPDATE_INDEXES=1 rewrites it, as for ADR 0184's indexes); and its values
-// are the hosted rule set's and the reference creature's.
+// are the hosted rule set's and the reference creature's. The French edition (rules/fr/, R6) is held to the English.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -12,6 +12,7 @@ import { buildRules, evaluate, idsOf, linksFrom, linksIn, readInputs, render } f
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const committed = join(root, 'table/rules.json');
+const committedFrench = join(root, 'table/rules.fr.json');
 
 const terminology = `| Internal (domain, code, data) | Legacy player-facing | Player-facing EN | Player-facing FR |
 | --- | --- | --- | --- |
@@ -278,6 +279,105 @@ test('the book says what it was drawn from', () => {
   assert.deepEqual(book.drawnFrom, { ruleSet: 'docs/tabletop/playtest.rules.json', rules: { teamSize: 3, energyPerRound: 2, criticalMultiplier: 2 }, creature: 'creature:main:v1', spells: ['spell:pummel:v1'], mutations: [] });
 });
 
+const but = `# Ce que vous cherchez à faire {#the-goal}
+
+Deux joueurs, chacun avec {rules.teamSize} créatures.
+
+## Gagner {#winning}
+
+Une créature commence à {creature.health} Santé. **Battez** toutes les créatures de l’autre équipe.
+
+sources: ADR 0011, game-rules#match-lifecycle
+
+\`\`\`card
+id: health
+title: Santé
+À zéro Santé, une créature est vaincue.
+> Une créature commence à {creature.health} Santé. Un coup de 7 la laisse à {max(0, creature.health - 7)}.
+\`\`\`
+
+## Un round {#a-round}
+
+- Entretien : chaque créature gagne {rules.energyPerRound} Énergie.
+- Combat : *à son tour*, une créature lance un sort. Voir [gagner](#winning).
+
+| Valeur | Référence |
+| --- | --- |
+| Multiplicateur critique | {rules.criticalMultiplier} |
+
+Pummel coûte {spell:pummel:v1.energyCost} et inflige {spell:pummel:v1.damage}.
+
+sources: ADR 0010
+`;
+
+/** The small book with its French edition; each French test changes one thing in the French. */
+const withFrench = (from = '', to = '', overrides = {}) => inputs({ french: { parts: [{ file: '01-the-goal.md', text: but.replace(from, to) }], changes: null }, ...overrides });
+
+test('the French edition builds beside the English: the same ids, numbers, sources and cards, in French', () => {
+  const { book, french, errors } = buildRules(withFrench());
+  assert.deepEqual(errors, []);
+  assert.equal(book.language, 'en');
+  assert.equal(french.language, 'fr');
+  assert.deepEqual(french.parts[0].sections.map(section => [section.id, section.number, section.title]), [['winning', '1.1', 'Gagner'], ['a-round', '1.2', 'Un round']]);
+  assert.deepEqual(french.parts[0].sections[0].card, { id: 'health', title: 'Santé', lines: ['À zéro Santé, une créature est vaincue.'], example: 'Une créature commence à 30 Santé. Un coup de 7 la laisse à 23.' });
+  assert.deepEqual(french.cards, book.cards);
+  assert.deepEqual(french.drawnFrom, book.drawnFrom);
+  assert.equal(buildRules(inputs()).french, null, 'no rules/fr, no French book');
+});
+
+test('the French edition writes a decimal the French way', () => {
+  const { french } = buildRules(withFrench('', '', { ruleSet: { path: 'x', values: { teamSize: 3, energyPerRound: 2, criticalMultiplier: 1.5 } } }));
+  assert.ok(JSON.stringify(french).includes('"1,5"'));
+});
+
+test('refuses a French part or section missing, added, renamed or out of the English order', () => {
+  refuses(inputs({ french: { parts: [], changes: null } }), /rules\/fr\/01-the-goal\.md is missing; the French edition has every part/);
+  refuses(inputs({ french: { parts: [{ file: '01-the-goal.md', text: but }, { file: '02-more.md', text: '# Plus {#more}\n' }], changes: null } }), /rules\/fr\/02-more\.md has no English part/);
+  refuses(withFrench('{#the-goal}', '{#le-but}'), /the part's id is "le-but"; the English part's is "the-goal"/);
+  refuses(withFrench('{#a-round}', '{#un-round}'), /section "a-round" is missing/);
+  refuses(withFrench('{#a-round}', '{#un-round}'), /section "un-round" is not in the English edition/);
+  const swapped = but.replace(/## Gagner[\s\S]*?(?=## Un round)/, '') + but.match(/## Gagner[\s\S]*?(?=## Un round)/)[0];
+  refuses(inputs({ french: { parts: [{ file: '01-the-goal.md', text: swapped }], changes: null } }), /the sections are not in the English order/);
+});
+
+test('refuses a French section citing other sources or carrying another card than the English', () => {
+  refuses(withFrench('sources: ADR 0010', 'sources: ADR 0011'), /section "a-round" cites ADR 0011; the English cites ADR 0010/);
+  refuses(withFrench('```card\nid: health\ntitle: Santé\nÀ zéro Santé, une créature est vaincue.\n> Une créature commence à {creature.health} Santé. Un coup de 7 la laisse à {max(0, creature.health - 7)}.\n```\n', ''), /section "winning" carries card none; the English carries health/);
+});
+
+test('refuses in French an English player\'s word the French replaced, and the engine\'s words as in English', () => {
+  refuses(withFrench('- Entretien :', '- Upkeep :'), /rules\/fr\/01-the-goal\.md:\d+: "Upkeep": the player's word is Entretien/);
+  refuses(withFrench('Un round', 'Un Stage'), /"Stage": the player's word is Stade/);
+  refuses(withFrench('Deux joueurs', 'Deux joueurs prennent un Tier'), /"Tier": the player's word is Stade/);
+  assert.deepEqual(errorsOf(withFrench('Deux joueurs', 'Deux joueurs en Évolution, en Précision, avec un Tempo')), []);
+});
+
+test('refuses a French section that types a number the English draws, or drops a value', () => {
+  refuses(withFrench('{creature.health} Santé. **Battez**', '30 Santé. **Battez**'), /section "winning" draws creature\.health, max\(0,creature\.health-7\); the English draws creature\.health, creature\.health, max/);
+  assert.deepEqual(errorsOf(withFrench('chaque créature gagne {rules.energyPerRound} Énergie', 'l’Énergie de chaque créature augmente de {rules.energyPerRound}')), [], 'a value may move in the sentence');
+});
+
+test('refuses an engine word in French only as written, for "tiers" and "stage" are French words', () => {
+  assert.deepEqual(errorsOf(withFrench('Deux joueurs', 'Un tiers des joueurs, en stage,')), []);
+  refuses(withFrench('Deux joueurs', 'Un Tier des joueurs'), /"Tier": the player's word is Stade/);
+});
+
+test('refuses a French link to an id that is not a section, and the French values as the English ones', () => {
+  refuses(withFrench('(#winning)', '(#gagner)'), /rules\/fr\/01-the-goal\.md:\d+: a link to #gagner, which is not a section/);
+  refuses(withFrench('{rules.teamSize}', '{rules.taille}'), /rules\/fr\/01-the-goal\.md:\d+: "rules\.taille" does not resolve/);
+});
+
+test('the French changes are the English lines translated, one for one, with their dates and ADRs', () => {
+  const english = '# What changed\n\n- 2026-11-20: Tempo is chosen at the slot (ADR 0010).\n- 2026-11-21: A typo.\n';
+  const given = changes => withFrench('', '', { changes: english, french: { parts: [{ file: '01-the-goal.md', text: but }], changes } });
+  const { french, errors } = buildRules(given('# Ce qui a changé\n\n- 2026-11-20: Le tempo se choisit au tour (ADR 0010).\n- 2026-11-21: Une coquille.\n'));
+  assert.deepEqual(errors, []);
+  assert.deepEqual(french.changes[0], { date: '2026-11-20', text: 'Le tempo se choisit au tour (ADR 0010).', adrs: ['0010'] });
+  refuses(given('- 2026-11-20: Le tempo se choisit au tour (ADR 0010).\n'), /rules\/fr\/changes\.md has 1 lines; rules\/changes\.md has 2/);
+  refuses(given('- 2026-11-20: Le tempo (ADR 0011).\n- 2026-11-21: Une coquille.\n'), /rules\/fr\/changes\.md, line 1: 2026-11-20 \(0011\); the English line is 2026-11-20 \(0010\)/);
+  refuses(given('- hier: Une coquille.\n- 2026-11-21: Une coquille.\n'), /rules\/fr\/changes\.md: "- hier: Une coquille\." is not/);
+});
+
 test('the repository\'s book builds with no error', () => {
   assert.deepEqual(buildRules(readInputs(root)).errors, []);
 });
@@ -288,6 +388,15 @@ test('table/rules.json is the build of rules/ (UPDATE_INDEXES=1 rewrites it)', (
   const built = render(book);
   if (process.env.UPDATE_INDEXES === '1') writeFileSync(committed, built);
   assert.equal(readFileSync(committed, 'utf8'), built, 'run: node scripts/rules/build.mjs');
+});
+
+test('table/rules.fr.json is the build of rules/fr/ (UPDATE_INDEXES=1 rewrites it)', () => {
+  const { french, errors } = buildRules(readInputs(root));
+  assert.deepEqual(errors, []);
+  assert.ok(french, 'rules/fr/ holds the French edition');
+  const built = render(french);
+  if (process.env.UPDATE_INDEXES === '1') writeFileSync(committedFrench, built);
+  assert.equal(readFileSync(committedFrench, 'utf8'), built, 'run: node scripts/rules/build.mjs');
 });
 
 test('the repository\'s book draws its values from the hosted rule set and the reference creature', () => {
@@ -304,7 +413,7 @@ test('the repository\'s book draws its values from the hosted rule set and the r
 test('a link to the rules is /rules#<id>, wherever it is written; the pages\' tests are not read', () => {
   assert.deepEqual(linksIn('<a href="/rules#tempo">Tempo</a>, `/rules#a-round`, "rules#nothing", /rules, /docs/rules#x'), ['tempo', 'a-round']);
   assert.deepEqual(linksIn('href="https://table.example/rules#winning" and /rules/#a-round'), ['winning', 'a-round']);
-  assert.deepEqual(['table/x.js', 'battle/src/tutorial.ts', 'scenarios/tutorials/a.json', 'table/x.test.js', 'battle/src/x.spec.ts', 'table/rules.json', 'table/logo.png'].filter(linksFrom),
+  assert.deepEqual(['table/x.js', 'battle/src/tutorial.ts', 'scenarios/tutorials/a.json', 'table/x.test.js', 'battle/src/x.spec.ts', 'table/rules.json', 'table/rules.fr.json', 'table/logo.png'].filter(linksFrom),
     ['table/x.js', 'battle/src/tutorial.ts', 'scenarios/tutorials/a.json']);
   const { conceptIds } = readInputs(root);
   assert.ok(conceptIds.includes('health') && conceptIds.includes('tempo'));
