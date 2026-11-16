@@ -1,12 +1,14 @@
 // The concept cards (ADR 0187, docs/tabletop/onboarding-plan.md, O3b): every card is complete, names a rulebook
 // section that exists, and the set is the one a lesson may name (`ConceptCards.Ids`, which `TutorialLesson` checks).
+// The numbers an example takes from the reference values are the hosted table's rule set and the reference
+// creature's, and move with them (#651).
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CONCEPTS, conceptCard, conceptCards } from './concepts.js';
+import { CONCEPTS, REFERENCE, conceptCard, conceptCards, conceptsFor } from './concepts.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const rulebook = readFileSync(join(root, 'docs/tabletop/rulebook.md'), 'utf8');
@@ -39,6 +41,38 @@ test('every rulebook anchor is a heading of the rulebook, under the section the 
     assert.ok(heading.startsWith(card.rulebook.section), `${card.id}: ${heading}`);
     assert.equal(card.rulebook.label, `Rulebook, ${heading.replace(/^Part (\d)\. /, 'Part $1: ')}`);
   }
+});
+
+test('the reference values the cards quote are the hosted table\'s rule set and the reference creature\'s', () => {
+  const rules = JSON.parse(readFileSync(join(root, 'docs/tabletop/playtest.rules.json'), 'utf8'));
+  const creature = JSON.parse(readFileSync(join(root, 'data/Creatures/main.v1.json'), 'utf8'));
+  assert.deepEqual({ ...REFERENCE }, {
+    health: creature.baseHealth,
+    defense: creature.baseDefense,
+    initiative: creature.baseInitiative,
+    energyPerRound: rules.energyPerRound,
+    criticalMultiplier: rules.criticalMultiplier,
+  });
+});
+
+test('a card written on other reference values reads them, and only the cards that quote a value move with it', () => {
+  const quotedBy = {
+    health: ['health'], defense: ['defense'], initiative: ['mutation'], energyPerRound: ['energy'], criticalMultiplier: ['critical'],
+  };
+  const moved = { health: 40, defense: 1, initiative: 6, energyPerRound: 3, criticalMultiplier: 3 };
+  const examples = cards => Object.fromEntries(cards.map(card => [card.id, card.example]));
+  const today = examples(conceptsFor(REFERENCE));
+  assert.deepEqual(today, examples(CONCEPTS));
+  for (const [value, ids] of Object.entries(quotedBy)) {
+    const other = examples(conceptsFor({ ...REFERENCE, [value]: moved[value] }));
+    assert.deepEqual(Object.keys(today).filter(id => today[id] !== other[id]), ids, value);
+  }
+  const all = examples(conceptsFor(moved));
+  assert.equal(all.health, 'A creature starts at 40 Health. A hit of 7 leaves it at 33.');
+  assert.equal(all.energy, 'A creature at 1 Energy gains 3 at Upkeep and has 4: enough for a spell that costs 4.');
+  assert.equal(all.defense, 'A hit of 7 on a creature with 2 Defense deals 5. A creature starts at 1 Defense: the same hit on it deals 6.');
+  assert.equal(all.critical, 'A spell prints d20: 11+. A roll of 14 is a critical: its 7 damage becomes 21.');
+  assert.equal(all.mutation, 'A creature at 6 base initiative takes a mutation with a bonus of 1: it knows new spells and acts at 7.');
 });
 
 test('a card is found by its id, and nothing else passes for one', () => {

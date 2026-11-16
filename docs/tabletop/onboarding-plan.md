@@ -161,7 +161,9 @@ give what is said and when. It reuses everything ADR 0179 built, and the regress
 
    *Built (2026-11-15)*: `table/concepts.js` holds the ten cards: a title, three lines at most, one example on
    the reference values, and the rulebook section. `concepts.test.js` holds them to `ConceptCards.Ids` and to
-   the rulebook's headings. `table/battle-tutorial.js` reads `practice.tutorial`, and `battle/src/tutorial.ts`
+   the rulebook's headings, and the numbers an example takes from the reference values to
+   `docs/tabletop/playtest.rules.json` and `data/Creatures/main.v1.json`: an example is written from `REFERENCE`,
+   so a balance pass moves the card with it (#651). `table/battle-tutorial.js` reads `practice.tutorial`, and `battle/src/tutorial.ts`
    draws it: the band and the briefing say **Tutorial n of 4**, the coach card shows the step of the question
    asked, and a step opens its concept cards once, before the spell choice. What a step points at is ringed. An
    assisted question is not drawn, and the phase tips are silent while a tutorial plays. Once the host says
