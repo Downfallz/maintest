@@ -134,26 +134,33 @@ jobs:
       - name: Format check
         run: dotnet format --verify-no-changes --no-restore
 
-      # The learning project (learning/, ADR 0013) is gated here: ruff before the build, pytest further down,
-      # whose coverage Sonar imports. It had a job of its own, billed a minute to run ruff while this one ran
-      # pytest again (docs/engineering/ci-minutes-plan.md, M3). The virtual environment lives outside the
-      # checkout, so nothing under learning/ is generated; only the locked wheels of the dependencies are
-      # installed, so no build script of any package runs, and the tests import the project from src/
-      # (pyproject pythonpath). ../scripts holds Python tools that import this project (sweep-weight.py,
-      # ADR 0037) and are not part of it: they are linted under its ruff configuration so they cannot drift.
-      - name: Lint and format check the learning project
+      # The learning project (learning/, ADR 0013) is gated here. It had a job of its own, which paid a runner's
+      # minimum minute for ruff while this job ran pytest a second time (docs/engineering/ci-minutes-plan.md,
+      # M3). Its failure does not stop the .NET steps, so one run still says both: the step goes on, and the
+      # job's last step fails it. The coverage report is for the Sonar analysis of this job, so the quality
+      # gate sees the Python code with its coverage.
+      #
+      # The virtual environment lives outside the checkout, so nothing under learning/ is generated. Only the
+      # locked wheels of the dependencies are installed, so no build script of any package runs, and the tests
+      # import the project from src/ (pyproject pythonpath). ../scripts holds Python tools that import this
+      # project (sweep-weight.py, ADR 0037) and are not part of it: they are linted under its ruff configuration
+      # so they cannot drift.
+      - name: Lint and test the learning project
+        id: learning
+        continue-on-error: true
         working-directory: learning
+        env:
+          UV_PROJECT_ENVIRONMENT: ${{ runner.temp }}/learning-venv
         run: |
           pipx install uv==0.8.17
-          export UV_PROJECT_ENVIRONMENT="$RUNNER_TEMP/learning-venv"
-          echo "UV_PROJECT_ENVIRONMENT=$UV_PROJECT_ENVIRONMENT" >> "$GITHUB_ENV"
           uv sync --locked --no-build --no-install-project
           "$UV_PROJECT_ENVIRONMENT/bin/ruff" check . ../scripts
           "$UV_PROJECT_ENVIRONMENT/bin/ruff" format --check . ../scripts
+          "$UV_PROJECT_ENVIRONMENT/bin/pytest" --cov=downfall_learning --cov=tests --cov-report=xml:"$RUNNER_TEMP/learning-coverage.xml" -q
 
       # Coverage is not demanded of the composition root (wiring, exercised by running the app) nor of the
       # static pages (ADR 0013 decision J, ADR 0015). The studio's and the table's modules do have tests now,
-      # run by the step above, but Node's coverage does not reach Sonar (ADR 0024) -- so a page with tests and
+      # run by the pages' step above, but Node's coverage does not reach Sonar (ADR 0024) -- so a page with tests and
       # a page without one measure the same here; the viewer still has no runner at all.
       # The showcase is a static site of the same kind (ADR 0185), tested by showcase/showcase.test.js. Its
       # copy, lore and privacy modules hold the English and French texts side by side under the same keys,
@@ -216,13 +223,6 @@ jobs:
       - name: Verify benchmark digest
         run: dotnet run --project src/DownfallArena.Cli --no-build --configuration Release -- benchmark
 
-      # The Python side's tests, and the coverage report the Sonar analysis of this job imports, so the
-      # quality gate sees the Python code with its coverage.
-      - name: Test the learning project with coverage
-        working-directory: learning
-        run: |
-          "$UV_PROJECT_ENVIRONMENT/bin/pytest" --cov=downfall_learning --cov=tests --cov-report=xml:"$RUNNER_TEMP/learning-coverage.xml" -q
-
       - name: End SonarCloud analysis
         if: env.SONAR_TOKEN != '' && !cancelled()
         run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
@@ -247,6 +247,13 @@ jobs:
       - name: Show the storage emulator's log
         if: failure()
         run: docker logs azurite || true
+
+      # The learning step went on when it failed, so the .NET steps still ran; this is where the job says so.
+      - name: The learning project passed
+        if: ${{ !cancelled() && steps.learning.outcome == 'failure' }}
+        run: |
+          echo "The learning project's lint or tests failed: see the step 'Lint and test the learning project'." >&2
+          exit 1
 
   # The browser suite (studio-browser.yml), for what the diff calls for: on a pull request, and on main, where
   # a journey red after a merge used to be found by the next pull request.

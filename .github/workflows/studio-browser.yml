@@ -51,6 +51,8 @@ jobs:
     name: journeys (${{ matrix.name }})
     if: inputs.journeys != 'none'
     runs-on: ubuntu-latest
+    env:
+      ENGINE: chromium
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -71,27 +73,32 @@ jobs:
         with:
           persist-credentials: false
       # Playwright's browsers are kept between runs, keyed by the runner's image, Playwright's version and the
-      # engine, so a run downloads an engine only when one of those moved. The system packages are installed
-      # every time (`--with-deps`): a fresh runner has none, and the cache keeps only the browsers.
-      - name: Install browser test dependencies
+      # engine (the job's ENGINE), so a run downloads an engine only when one of those moved. The system packages
+      # are installed every time (`--with-deps`): a fresh runner has none, and the cache keeps only the browsers.
+      # A miss is saved straight after the install, before the battle build or a spec runs any code, so what the
+      # cache holds is what Playwright downloaded.
+      - name: Install the test dependencies and name the browsers' cache
         id: playwright
         working-directory: studio/browser
-        env:
-          ENGINE: chromium
         run: |
           npm ci --ignore-scripts
           version=$(node -p "require('./node_modules/playwright/package.json').version")
           echo "key=playwright-$ImageOS-$version-$ENGINE" >> "$GITHUB_OUTPUT"
       - name: Restore Playwright's browsers
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: browsers
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: ${{ steps.playwright.outputs.key }}
       - name: Install the browser engine and its system packages
         working-directory: studio/browser
-        env:
-          ENGINE: chromium
         run: node node_modules/playwright/cli.js install --with-deps "$ENGINE"
+      - name: Keep Playwright's browsers for the next run
+        if: steps.browsers.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.playwright.outputs.key }}
       # These journeys answer every request from a mock host (server.js and page routes): no .NET build.
       - name: Build the isolated battle prototype
         run: npm --prefix battle ci --ignore-scripts && npm --prefix battle run build
@@ -126,6 +133,8 @@ jobs:
     name: real engine (${{ matrix.project }})
     if: inputs.real-engine
     runs-on: ubuntu-latest
+    env:
+      ENGINE: chromium
     timeout-minutes: 25
     strategy:
       fail-fast: false
@@ -136,27 +145,32 @@ jobs:
         with:
           persist-credentials: false
       # Playwright's browsers are kept between runs, keyed by the runner's image, Playwright's version and the
-      # engine, so a run downloads an engine only when one of those moved. The system packages are installed
-      # every time (`--with-deps`): a fresh runner has none, and the cache keeps only the browsers.
-      - name: Install browser test dependencies
+      # engine (the job's ENGINE), so a run downloads an engine only when one of those moved. The system packages
+      # are installed every time (`--with-deps`): a fresh runner has none, and the cache keeps only the browsers.
+      # A miss is saved straight after the install, before the battle build or a spec runs any code, so what the
+      # cache holds is what Playwright downloaded.
+      - name: Install the test dependencies and name the browsers' cache
         id: playwright
         working-directory: studio/browser
-        env:
-          ENGINE: chromium
         run: |
           npm ci --ignore-scripts
           version=$(node -p "require('./node_modules/playwright/package.json').version")
           echo "key=playwright-$ImageOS-$version-$ENGINE" >> "$GITHUB_OUTPUT"
       - name: Restore Playwright's browsers
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: browsers
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: ${{ steps.playwright.outputs.key }}
       - name: Install the browser engine and its system packages
         working-directory: studio/browser
-        env:
-          ENGINE: chromium
         run: node node_modules/playwright/cli.js install --with-deps "$ENGINE"
+      - name: Keep Playwright's browsers for the next run
+        if: steps.browsers.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.playwright.outputs.key }}
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           global-json-file: global.json
@@ -195,6 +209,8 @@ jobs:
     name: battle-release (${{ matrix.profile }})
     if: inputs.release != 'none'
     runs-on: ubuntu-latest
+    env:
+      ENGINE: ${{ matrix.profile == 'release-ios' && 'webkit' || 'chromium' }}
     # A complete match takes two minutes on desktop and three on an emulated phone; WebKit's system packages
     # and the build come on top.
     timeout-minutes: 25
@@ -207,27 +223,32 @@ jobs:
         with:
           persist-credentials: false
       # Playwright's browsers are kept between runs, keyed by the runner's image, Playwright's version and the
-      # engine, so a run downloads an engine only when one of those moved. The system packages are installed
-      # every time (`--with-deps`): a fresh runner has none, and the cache keeps only the browsers.
-      - name: Install browser test dependencies
+      # engine (the job's ENGINE), so a run downloads an engine only when one of those moved. The system packages
+      # are installed every time (`--with-deps`): a fresh runner has none, and the cache keeps only the browsers.
+      # A miss is saved straight after the install, before the battle build or a spec runs any code, so what the
+      # cache holds is what Playwright downloaded.
+      - name: Install the test dependencies and name the browsers' cache
         id: playwright
         working-directory: studio/browser
-        env:
-          ENGINE: ${{ matrix.profile == 'release-ios' && 'webkit' || 'chromium' }}
         run: |
           npm ci --ignore-scripts
           version=$(node -p "require('./node_modules/playwright/package.json').version")
           echo "key=playwright-$ImageOS-$version-$ENGINE" >> "$GITHUB_OUTPUT"
       - name: Restore Playwright's browsers
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: browsers
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: ${{ steps.playwright.outputs.key }}
       - name: Install the browser engine and its system packages
         working-directory: studio/browser
-        env:
-          ENGINE: ${{ matrix.profile == 'release-ios' && 'webkit' || 'chromium' }}
         run: node node_modules/playwright/cli.js install --with-deps "$ENGINE"
+      - name: Keep Playwright's browsers for the next run
+        if: steps.browsers.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.playwright.outputs.key }}
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           global-json-file: global.json

@@ -239,7 +239,7 @@ const ciWorkflow = () => readFileSync(join(here, '..', '.github', 'workflows', '
 function jobBlock(workflow, job) {
   const start = workflow.search(new RegExp(`^ {2}${job}:$`, 'm'));
   assert.ok(start >= 0, `the job ${job} is in the workflow`);
-  const next = workflow.slice(start + 1).search(/^ {2}[a-z][a-z-]*:$/m);
+  const next = workflow.slice(start + 1).search(/^ {2}[a-z][a-z0-9_-]*:$/m);
   return next < 0 ? workflow.slice(start) : workflow.slice(start, start + 1 + next);
 }
 
@@ -254,30 +254,46 @@ test('desktop and tablet play in three shards, and every other project in one jo
   ]);
 });
 
-// Each browser job downloaded its engine, nothing cached: twenty to sixty seconds a job. The system packages
-// are still installed every time (`--with-deps`), since a runner's image does not keep them.
+// Each browser job downloaded its engine, nothing cached: the install took 18 to 60 seconds a job. The system
+// packages are still installed every time (`--with-deps`), since a runner's image does not keep them.
 test("every job that installs a browser restores Playwright's browsers first, keyed by its version and the engine", () => {
   const workflow = browserWorkflow();
-  for (const job of ['journeys', 'real-engine', 'battle-release']) {
+  const jobs = [...workflow.slice(workflow.indexOf('\njobs:')).matchAll(/^ {2}([a-z][a-z0-9_-]*):$/gm)].map((match) => match[1])
+    .filter((job) => jobBlock(workflow, job).includes('playwright/cli.js install'));
+  assert.deepEqual(jobs, ['journeys', 'real-engine', 'battle-release']);
+  for (const job of jobs) {
     const block = jobBlock(workflow, job);
-    const restore = block.search(/uses: actions\/cache@[0-9a-f]{40} # v\d/);
-    const install = block.indexOf('playwright/cli.js install --with-deps');
+    const restore = block.search(/uses: actions\/cache\/restore@[0-9a-f]{40} # v\d/);
+    const install = block.indexOf('playwright/cli.js install --with-deps "$ENGINE"');
+    const save = block.search(/uses: actions\/cache\/save@[0-9a-f]{40} # v\d/);
     assert.ok(restore >= 0, `${job} restores the browsers`);
     assert.ok(install > restore, `${job} installs after the restore, so a cached engine is not downloaded again`);
-    assert.match(block, /path: ~\/\.cache\/ms-playwright/, job);
-    assert.match(block, /key: \$\{\{ steps\.playwright\.outputs\.key \}\}/, job);
+    // Saved before any build or spec runs code, so the cache holds what Playwright downloaded and nothing else.
+    assert.ok(save > install && save < block.indexOf('npm --prefix battle'), `${job} saves straight after the install`);
+    assert.match(block, /if: steps\.browsers\.outputs\.cache-hit != 'true'/, job);
+    assert.equal([...block.matchAll(/path: ~\/\.cache\/ms-playwright/g)].length, 2, job);
+    assert.equal([...block.matchAll(/key: \$\{\{ steps\.playwright\.outputs\.key \}\}/g)].length, 2, job);
     assert.match(block, /require\('\.\/node_modules\/playwright\/package\.json'\)\.version/, job);
     assert.match(block, /key=playwright-\$ImageOS-\$version-\$ENGINE/, job);
+    // One ENGINE a job, so the key and the install cannot name different engines.
+    assert.equal([...block.matchAll(/^ +ENGINE: /gm)].length, 1, `${job} sets ENGINE once`);
+    assert.match(block, /^ {4}env:\n {6}ENGINE: /m, `${job} sets ENGINE for the whole job`);
   }
 });
 
-// The learning project's own job billed a minute to run ruff, then build-and-test ran pytest again for Sonar.
-test('the learning project is linted and tested once, in build-and-test', () => {
+// The learning project's own job paid a minute to run ruff, then build-and-test ran pytest again for Sonar.
+test('the learning project is linted and tested once, in build-and-test, and its failure fails the job', () => {
   const workflow = ciWorkflow();
   assert.doesNotMatch(workflow, /^ {2}learning:$/m);
   const block = jobBlock(workflow, 'build-and-test');
-  assert.match(block, /ruff" check \. \.\.\/scripts/);
-  assert.match(block, /ruff" format --check \. \.\.\/scripts/);
+  const check = block.indexOf('ruff" check . ../scripts');
+  const format = block.indexOf('ruff" format --check . ../scripts');
+  const pytest = block.indexOf('bin/pytest"');
+  assert.ok(check >= 0 && format > check && pytest > format, 'ruff check, ruff format, then pytest');
   assert.equal([...block.matchAll(/bin\/pytest"/g)].length, 1, 'pytest runs once');
-  assert.ok(block.indexOf('ruff" check') < block.indexOf('dotnet build'), 'ruff answers before the build');
+  assert.ok(pytest < block.indexOf('dotnet build'), 'the learning project answers before the build');
+  assert.match(block, /- name: Lint and test the learning project\n {8}id: learning\n {8}continue-on-error: true\n/);
+  // It goes on when it fails, so the .NET steps still run; the job's last step is what fails it.
+  const last = block.lastIndexOf('      - name: ');
+  assert.match(block.slice(last), /^ {6}- name: .*\n {8}if: \$\{\{ !cancelled\(\) && steps\.learning\.outcome == 'failure' \}\}\n {8}run: \|\n(?: {10}.*\n)*? {10}exit 1\n/);
 });
