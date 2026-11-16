@@ -806,9 +806,9 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
     }
 
     /// <summary>
-    /// The seat says what its page has shown it of the game, up to which feed sequence (ADR 0194): kept when it is
-    /// further than the mark kept, ignored otherwise, and answered with the mark kept. It is the seat's own word about
-    /// itself: it moves nothing on the table, wakes no page and sends no notice.
+    /// The seat reports the last feed sequence its page showed (ADR 0194): kept when larger than the mark kept, ignored
+    /// otherwise; the answer is the mark kept. It is the seat's own word about itself: it moves nothing on the table,
+    /// wakes no page and sends no notice.
     /// </summary>
     private async Task<StudioResponse> SeenAsync(TableSeat seat, string body)
     {

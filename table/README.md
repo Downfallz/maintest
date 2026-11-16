@@ -642,10 +642,11 @@ from the set, or for every game in Settings. No reaction is notified or counted 
 ([ADR 0173](../docs/adr/0173-let-players-react-with-a-fixed-set-of-messages.md)).
 
 What a seat was last shown follows the player from one device to another
-([ADR 0194](../docs/adr/0194-keep-what-each-seat-was-last-shown-beside-the-table.md)): `battle-seen.js` keeps the mark in this
-browser and puts it to the host (`PUT /api/seat/<seat>/seen`) at once, then at most once every five seconds and once
-more when the page is hidden; a replay sends nothing. The seat's view carries the host's mark (`seen`) and when the
-last move was (`lastMoveAt`), and the page reads the larger of the two marks.
+([ADR 0194](../docs/adr/0194-keep-what-each-seat-was-last-shown-beside-the-table.md)):
+`battle-seen.js` keeps the mark in this browser and sends it to the host (`PUT /api/seat/<seat>/seen`) at once, then
+at most once every five seconds and once more when the page is hidden; a replay sends nothing. The seat's view
+carries the host's mark (`seen`) and the time of the last move (`lastMoveAt`), and the page reads the larger of the
+two marks.
 
 **Report or suggest…**, in Match settings above Concede and on the result's last line, opens one sheet
 ([ADR 0189](../docs/adr/0189-keep-player-feedback-at-the-host-and-file-only-a-redacted-scenario.md)) whose first question is *Something is wrong* or

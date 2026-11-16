@@ -35,7 +35,7 @@ internal sealed class TableVisits(TimeProvider clock, IVisitKeeper? keeper = nul
 
     /// <summary>
     /// The seat was shown up to <paramref name="sequence" />: kept, with the time now, when it is further than the mark
-    /// kept. The mark kept afterwards; none when another process kept writing first every time.
+    /// kept. The mark kept afterwards; none when every retry lost the race to another process.
     /// </summary>
     public async Task<LastVisit?> ShownAsync(string seat, long sequence, CancellationToken cancellationToken = default)
     {

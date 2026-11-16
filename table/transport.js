@@ -11,8 +11,9 @@ export function httpTransport(seat, token, fetchImpl = globalThis.fetch.bind(glo
   if (seat !== 'player1' && seat !== 'player2') throw new Error(`'${seat}' is neither player1 nor player2.`);
   if (!token) throw new Error('A transport needs the seat token the host printed.');
 
-  async function send(method, path, body) {
+  async function send(method, path, body, { keepalive = false } = {}) {
     const options = { method, headers: { 'X-Seat-Token': token } };
+    if (keepalive) options.keepalive = true;
     // Every write says it is JSON, a concession included: the host's same-origin fence takes a write without
     // that header as a form another site posted, and refuses it (HttpHost.CrossSite).
     if (method !== 'GET') {
@@ -42,7 +43,8 @@ export function httpTransport(seat, token, fetchImpl = globalThis.fetch.bind(glo
     // One of a fixed set of short messages for the other player (ADR 0173); never free text.
     react: reaction => send('POST', `/api/seat/${seat}/reaction`, { reaction }),
     // The last feed sequence this seat was shown, kept by the host so another device knows it (ADR 0194).
-    seen: sequence => send('PUT', `/api/seat/${seat}/seen`, { sequence }),
+    // Kept alive, because the last one is sent as the page is hidden and may outlive it.
+    seen: sequence => send('PUT', `/api/seat/${seat}/seen`, { sequence }, { keepalive: true }),
     leave: () => send('POST', '/api/lobby/leave', {}),
 
     // Where "your turn" goes when nobody is looking at this page (ADR 0118): the host's key to subscribe

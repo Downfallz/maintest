@@ -86,7 +86,7 @@ let restartPractice = false;
 let rendererFailed = false;
 // The seat being shown, as this browser remembers what it saw of it, and the last mark kept for it.
 let seenGame: string | null = null, seenKept: number | null = null;
-// What tells the host the mark too, so another device of this seat knows it (ADR 0194).
+// Also tells the host the mark, so another device of this seat knows it (ADR 0194).
 let seenSender: ReturnType<typeof createSeenSender> | null = null;
 const nodes = new Map<string, HTMLButtonElement>();
 // What the scene drew for a creature whose button the page has not made yet.

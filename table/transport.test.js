@@ -250,6 +250,8 @@ test('what a seat was shown is put to the seat as the last feed sequence (ADR 01
   assert.equal(calls[0].options.method, 'PUT');
   assert.equal(calls[0].options.headers['X-Seat-Token'], 'abc');
   assert.equal(calls[0].options.body, '{"sequence":12}');
+  // Sent as the page is hidden too: the browser keeps the request going after the page goes.
+  assert.equal(calls[0].options.keepalive, true);
 });
 
 test('a replay says nothing of what it showed: it asks the host nothing', async () => {
