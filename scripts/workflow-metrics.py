@@ -180,6 +180,7 @@ JOB_GROUPS = (
     ("battle-release", re.compile(r"\bbattle-release\b")),
     ("real engine", re.compile(r"\breal engine\b")),
     ("build-and-test", re.compile(r"^Build, format check, test, analyse$")),
+    # The learning project's own job, folded into build-and-test by M3: kept for the runs before it.
     ("learning", re.compile(r"^Lint and test the learning project$")),
     ("image", re.compile(r"^image /")),
     ("changes, gate, main-health", re.compile(r"^(What the diff calls for|gate|Say so when main is red)$")),

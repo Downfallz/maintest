@@ -43,12 +43,19 @@ jobs:
   # forty-seven minutes after AU14 and #504 (the complete-match replay waiting out a hidden list, fixed in #503,
   # pushed them past sixty), with the real-engine journeys' eleven after them in a sixty-minute job. A project
   # takes about a quarter of that; tablet runs only table.ux.spec.js, so it shares the desktop job. Desktop runs the
-  # most journeys, 476 with tablet's, which took 18 to 20 minutes and on a loaded runner ran past the thirty, so
-  # it is played in two halves (Playwright's --shard), each well inside the limit.
+  # most journeys, 520 with tablet's, which took 18 to 20 minutes and on a loaded runner ran past the thirty. It
+  # was played in two halves (Playwright's --shard), which took 13 and 21 minutes, because a shard splits by test
+  # count and three specs hold a third of the time: battle-playback, battle-pacing and battle-live. Those three
+  # play in a job of their own (--grep matches a test's file), and the rest in two halves without them (the same
+  # pattern in --grep-invert), so every test plays once. Measured on 4 vCPU and two workers, 2026-11-16, the
+  # three jobs' tests took 748, 660 and 699 seconds where the two halves' took 862 and 1,245
+  # (docs/engineering/ci-minutes-plan.md, M3). A spec that grows that heavy joins the pattern.
   journeys:
     name: journeys (${{ matrix.name }})
     if: inputs.journeys != 'none'
     runs-on: ubuntu-latest
+    env:
+      ENGINE: chromium
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -58,19 +65,44 @@ jobs:
             projects: --project=small-phone
           - name: phone
             projects: --project=phone
+          - name: desktop replays
+            projects: '--project=desktop --grep=battle-(playback|pacing|live)\.spec\.js'
           - name: desktop and tablet 1/2
-            projects: --project=desktop --project=tablet --shard=1/2
+            projects: '--project=desktop --project=tablet --grep-invert=battle-(playback|pacing|live)\.spec\.js --shard=1/2'
           - name: desktop and tablet 2/2
-            projects: --project=desktop --project=tablet --shard=2/2
+            projects: '--project=desktop --project=tablet --grep-invert=battle-(playback|pacing|live)\.spec\.js --shard=2/2'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Install browser test dependencies
+      # Playwright's browsers are kept between runs, keyed by the runner's image, Playwright's version and the
+      # engine (the job's ENGINE), so a run downloads an engine only when one of those moved. The system packages
+      # are installed every time (`--with-deps`): a fresh runner has none, and the cache keeps only the browsers.
+      # A miss is saved straight after the install, before the battle build and the specs run. What keeps a pull
+      # request from planting a browser is the cache's scope: its run saves under its own ref, which main never
+      # reads, and a pull request reads main's.
+      - name: Install the test dependencies and name the browsers' cache
+        id: playwright
         working-directory: studio/browser
         run: |
           npm ci --ignore-scripts
-          node node_modules/playwright/cli.js install --with-deps chromium
+          version=$(node -p "require('./node_modules/playwright/package.json').version")
+          echo "key=playwright-$ImageOS-$version-$ENGINE" >> "$GITHUB_OUTPUT"
+      - name: Restore Playwright's browsers
+        id: browsers
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.playwright.outputs.key }}
+      - name: Install the browser engine and its system packages
+        working-directory: studio/browser
+        run: node node_modules/playwright/cli.js install --with-deps "$ENGINE"
+      - name: Keep Playwright's browsers for the next run
+        if: steps.browsers.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.playwright.outputs.key }}
       # These journeys answer every request from a mock host (server.js and page routes): no .NET build.
       - name: Build the isolated battle prototype
         run: npm --prefix battle ci --ignore-scripts && npm --prefix battle run build
@@ -105,6 +137,8 @@ jobs:
     name: real engine (${{ matrix.project }})
     if: inputs.real-engine
     runs-on: ubuntu-latest
+    env:
+      ENGINE: chromium
     timeout-minutes: 25
     strategy:
       fail-fast: false
@@ -114,11 +148,34 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Install browser test dependencies
+      # Playwright's browsers are kept between runs, keyed by the runner's image, Playwright's version and the
+      # engine (the job's ENGINE), so a run downloads an engine only when one of those moved. The system packages
+      # are installed every time (`--with-deps`): a fresh runner has none, and the cache keeps only the browsers.
+      # A miss is saved straight after the install, before the battle build and the specs run. What keeps a pull
+      # request from planting a browser is the cache's scope: its run saves under its own ref, which main never
+      # reads, and a pull request reads main's.
+      - name: Install the test dependencies and name the browsers' cache
+        id: playwright
         working-directory: studio/browser
         run: |
           npm ci --ignore-scripts
-          node node_modules/playwright/cli.js install --with-deps chromium
+          version=$(node -p "require('./node_modules/playwright/package.json').version")
+          echo "key=playwright-$ImageOS-$version-$ENGINE" >> "$GITHUB_OUTPUT"
+      - name: Restore Playwright's browsers
+        id: browsers
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.playwright.outputs.key }}
+      - name: Install the browser engine and its system packages
+        working-directory: studio/browser
+        run: node node_modules/playwright/cli.js install --with-deps "$ENGINE"
+      - name: Keep Playwright's browsers for the next run
+        if: steps.browsers.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.playwright.outputs.key }}
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           global-json-file: global.json
@@ -157,6 +214,8 @@ jobs:
     name: battle-release (${{ matrix.profile }})
     if: inputs.release != 'none'
     runs-on: ubuntu-latest
+    env:
+      ENGINE: ${{ matrix.profile == 'release-ios' && 'webkit' || 'chromium' }}
     # A complete match takes two minutes on desktop and three on an emulated phone; WebKit's system packages
     # and the build come on top.
     timeout-minutes: 25
@@ -168,13 +227,34 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Install the profile's browser engine
+      # Playwright's browsers are kept between runs, keyed by the runner's image, Playwright's version and the
+      # engine (the job's ENGINE), so a run downloads an engine only when one of those moved. The system packages
+      # are installed every time (`--with-deps`): a fresh runner has none, and the cache keeps only the browsers.
+      # A miss is saved straight after the install, before the battle build and the specs run. What keeps a pull
+      # request from planting a browser is the cache's scope: its run saves under its own ref, which main never
+      # reads, and a pull request reads main's.
+      - name: Install the test dependencies and name the browsers' cache
+        id: playwright
         working-directory: studio/browser
-        env:
-          ENGINE: ${{ matrix.profile == 'release-ios' && 'webkit' || 'chromium' }}
         run: |
           npm ci --ignore-scripts
-          node node_modules/playwright/cli.js install --with-deps "$ENGINE"
+          version=$(node -p "require('./node_modules/playwright/package.json').version")
+          echo "key=playwright-$ImageOS-$version-$ENGINE" >> "$GITHUB_OUTPUT"
+      - name: Restore Playwright's browsers
+        id: browsers
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.playwright.outputs.key }}
+      - name: Install the browser engine and its system packages
+        working-directory: studio/browser
+        run: node node_modules/playwright/cli.js install --with-deps "$ENGINE"
+      - name: Keep Playwright's browsers for the next run
+        if: steps.browsers.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.playwright.outputs.key }}
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           global-json-file: global.json

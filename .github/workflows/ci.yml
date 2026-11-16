@@ -72,42 +72,6 @@ jobs:
             exit "$status"
           fi
 
-  # The learning project (learning/, ADR 0013) has its own gate: ruff and pytest under uv.
-  learning:
-    name: Lint and test the learning project
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: learning
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      # The virtual environment lives outside the checkout, so nothing under learning/ is generated.
-      - name: Install uv
-        run: |
-          pipx install uv==0.8.17
-          echo "UV_PROJECT_ENVIRONMENT=$RUNNER_TEMP/learning-venv" >> "$GITHUB_ENV"
-
-      # Only the locked wheels of the dependencies are installed, so no build script of any package runs; the
-      # tests import the project from src/ (pyproject pythonpath) and the tools run from that environment.
-      - name: Install the dependencies from the lock file
-        run: uv sync --locked --no-build --no-install-project
-
-      # ../scripts holds Python tools that import this project (sweep-weight.py, ADR 0037) and are not
-      # part of it. They are linted under this project's ruff configuration so they cannot drift from
-      # the style the rest of the Python here is held to.
-      - name: Lint and format check
-        run: |
-          "$UV_PROJECT_ENVIRONMENT/bin/ruff" check . ../scripts
-          "$UV_PROJECT_ENVIRONMENT/bin/ruff" format --check . ../scripts
-
-      - name: Test with coverage
-        run: |
-          "$UV_PROJECT_ENVIRONMENT/bin/pytest" --cov=downfall_learning --cov=tests --cov-report=term
-
   build-and-test:
     name: Build, format check, test, analyse
     runs-on: ubuntu-latest
@@ -126,6 +90,32 @@ jobs:
           persist-credentials: false
           # Full history so SonarCloud can attribute new code and blame lines.
           fetch-depth: 0
+
+      # The learning project (learning/, ADR 0013) is gated here. It had a job of its own, which paid a runner's
+      # minimum minute for ruff while this job ran pytest a second time (docs/engineering/ci-minutes-plan.md,
+      # M3). It runs first and goes on when it fails, so a failure on either side hides nothing: every .NET step
+      # still runs, and the job's last step fails the job. Each command runs whatever the one before it said, so a
+      # lint error does not hide a test, nor the coverage report the Sonar analysis of this job imports.
+      #
+      # The virtual environment lives outside the checkout, so nothing under learning/ is generated. Only the
+      # locked wheels of the dependencies are installed, so no build script of any package runs, and the tests
+      # import the project from src/ (pyproject pythonpath). ../scripts holds Python tools that import this
+      # project (sweep-weight.py, ADR 0037) and are not part of it: they are linted under its ruff configuration
+      # so they cannot drift.
+      - name: Lint and test the learning project
+        id: learning
+        continue-on-error: true
+        working-directory: learning
+        env:
+          UV_PROJECT_ENVIRONMENT: ${{ runner.temp }}/learning-venv
+        run: |
+          pipx install uv==0.8.17
+          uv sync --locked --no-build --no-install-project
+          status=0
+          "$UV_PROJECT_ENVIRONMENT/bin/ruff" check . ../scripts || status=1
+          "$UV_PROJECT_ENVIRONMENT/bin/ruff" format --check . ../scripts || status=1
+          "$UV_PROJECT_ENVIRONMENT/bin/pytest" --cov=downfall_learning --cov=tests --cov-report=xml:"$RUNNER_TEMP/learning-coverage.xml" -q || status=1
+          exit "$status"
 
       # The storage emulator the blob and table adapters are tested against (ADR 0080, ADR 0161). Without it
       # those tests skip and say so; here they run. Started by hand rather than as a service container, because
@@ -172,7 +162,7 @@ jobs:
 
       # Coverage is not demanded of the composition root (wiring, exercised by running the app) nor of the
       # static pages (ADR 0013 decision J, ADR 0015). The studio's and the table's modules do have tests now,
-      # run by the step above, but Node's coverage does not reach Sonar (ADR 0024) -- so a page with tests and
+      # run by the pages' step above, but Node's coverage does not reach Sonar (ADR 0024) -- so a page with tests and
       # a page without one measure the same here; the viewer still has no runner at all.
       # The showcase is a static site of the same kind (ADR 0185), tested by showcase/showcase.test.js. Its
       # copy, lore and privacy modules hold the English and French texts side by side under the same keys,
@@ -235,17 +225,6 @@ jobs:
       - name: Verify benchmark digest
         run: dotnet run --project src/DownfallArena.Cli --no-build --configuration Release -- benchmark
 
-      # The learning job is the gate for the Python side; this run only produces the coverage report the
-      # Sonar analysis of this job imports, so the quality gate sees the Python code with its coverage.
-      - name: Test the learning project for its coverage report
-        working-directory: learning
-        env:
-          UV_PROJECT_ENVIRONMENT: ${{ runner.temp }}/learning-venv
-        run: |
-          pipx install uv==0.8.17
-          uv sync --locked --no-build --no-install-project
-          "$UV_PROJECT_ENVIRONMENT/bin/pytest" --cov=downfall_learning --cov=tests --cov-report=xml:"$RUNNER_TEMP/learning-coverage.xml" -q
-
       - name: End SonarCloud analysis
         if: env.SONAR_TOKEN != '' && !cancelled()
         run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
@@ -270,6 +249,13 @@ jobs:
       - name: Show the storage emulator's log
         if: failure()
         run: docker logs azurite || true
+
+      # The learning step went on when it failed, so the .NET steps still ran; this is where the job says so.
+      - name: The learning project passed
+        if: ${{ !cancelled() && steps.learning.outcome == 'failure' }}
+        run: |
+          echo "The learning project's lint or tests failed: see the step 'Lint and test the learning project'." >&2
+          exit 1
 
   # The browser suite (studio-browser.yml), for what the diff calls for: on a pull request, and on main, where
   # a journey red after a merge used to be found by the next pull request.
@@ -302,7 +288,7 @@ jobs:
   gate:
     name: gate
     runs-on: ubuntu-latest
-    needs: [changes, learning, build-and-test, browser, image]
+    needs: [changes, build-and-test, browser, image]
     if: always()
     timeout-minutes: 5
     steps:
