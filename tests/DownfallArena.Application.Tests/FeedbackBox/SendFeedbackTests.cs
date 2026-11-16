@@ -225,6 +225,33 @@ public sealed class SendFeedbackTests : IDisposable
     }
 
     [Fact]
+    public async Task A_report_a_day_old_takes_no_more_text_and_the_next_one_is_a_row_of_its_own()
+    {
+        var first = await SentAsync(Report());
+        _clock.Advance(TimeSpan.FromHours(23));
+        await SentAsync(Report() with { Text = "Still happens on this round." });
+        _clock.Advance(TimeSpan.FromHours(23));
+
+        var later = await Desk().HandleAsync(Report() with { Text = "And again, two days on." }, Cancel);
+
+        (later.Merged, later.Id == first.Id).ShouldBe((false, false));
+        _store.All.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task Feedback_that_reaches_the_gate_after_its_account_was_deleted_names_nobody()
+    {
+        var writes = new FeedbackWrites();
+        await new ForgetFeedbackAccount(_store, writes).HandleAsync("acct_1", Cancel);
+
+        await new SendFeedback(_store, _addresses, writes, _clock).HandleAsync(Report(), Cancel);
+
+        var kept = _store.All.Single();
+        (kept.Account, kept.Sender).ShouldBe((null, ForgetFeedbackAccount.Gone));
+        writes.Dispose();
+    }
+
+    [Fact]
     public async Task A_burst_sent_at_once_keeps_one_and_refuses_the_rest()
     {
         var desk = Desk();

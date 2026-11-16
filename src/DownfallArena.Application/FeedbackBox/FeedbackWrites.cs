@@ -8,6 +8,15 @@ namespace DownfallArena.Application.FeedbackBox;
 public sealed class FeedbackWrites : IDisposable
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly HashSet<string> _forgotten = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Whether the account was deleted in this process: a sending that read its account before the deletion reaches the
+    /// gate after it, and must not write the account back. Read and written inside the gate only.
+    /// </summary>
+    internal bool IsForgotten(string? account) => account is not null && _forgotten.Contains(account);
+
+    internal void Forget(string account) => _forgotten.Add(account);
 
     /// <summary>Runs the write once every write before it has finished.</summary>
     public async Task<T> OneAtATimeAsync<T>(Func<Task<T>> write, CancellationToken cancellationToken = default)

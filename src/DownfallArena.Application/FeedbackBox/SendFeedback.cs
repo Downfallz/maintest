@@ -46,7 +46,9 @@ public sealed class SendFeedback(IFeedbackStore store, GuestAddresses addresses,
             return FeedbackAnswer.Refuse(FeedbackErrors.Invalid(invalid));
         }
 
-        return await writes.OneAtATimeAsync(() => GuardedAsync(sent, cancellationToken), cancellationToken);
+        return await writes.OneAtATimeAsync(
+            () => GuardedAsync(writes.IsForgotten(sent.Account) ? sent with { Account = null, Sender = ForgetFeedbackAccount.Gone } : sent, cancellationToken),
+            cancellationToken);
     }
 
     private async Task<FeedbackAnswer> GuardedAsync(FeedbackSent sent, CancellationToken cancellationToken)
@@ -151,11 +153,15 @@ public sealed class SendFeedback(IFeedbackStore store, GuestAddresses addresses,
         return recent;
     }
 
-    /// <summary>The open feedback this is one more word on: a report on the same position, or an idea within the hour.</summary>
+    /// <summary>
+    /// The open feedback this is one more word on: a report on the same position sent within the day, or an idea within
+    /// the hour. Never older: what is added comes within a day of the sending, so the two days read hold every addition
+    /// of the day.
+    /// </summary>
     private static Feedback? Merging(FeedbackSent sent, List<Feedback> mine, DateTimeOffset now) => sent.Kind switch
     {
         FeedbackKind.Bug when sent.Context?.Place is { } place =>
-            mine.FirstOrDefault(one => one.Kind == FeedbackKind.Bug && !one.IsClosed && one.Context?.Place == place),
+            mine.FirstOrDefault(one => one.Kind == FeedbackKind.Bug && !one.IsClosed && one.Context?.Place == place && now - one.At < Day),
         FeedbackKind.Idea =>
             mine.FirstOrDefault(one => one.Kind == FeedbackKind.Idea && !one.IsClosed && now - one.At < IdeaMerged),
         _ => null,

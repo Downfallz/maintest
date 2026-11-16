@@ -20,6 +20,7 @@ public sealed class ForgetFeedbackAccount(IFeedbackStore store, FeedbackWrites w
 
     private async Task<int> ForgetAsync(string account, CancellationToken cancellationToken)
     {
+        writes.Forget(account);
         var forgotten = 0;
         foreach (var id in await store.IdsAsync(cancellationToken))
         {
