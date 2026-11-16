@@ -182,6 +182,9 @@ test('a sheet closed while it sends is empty when it opens again, once the host 
   await page.getByLabel(/What happened/).fill('The board froze after my tempo.');
   await page.locator('#feedback-send').click();
   await expect.poll(() => state.sent.length).toBe(1);
+  // While it is sent, the draft cannot change under the words already on their way.
+  await expect(page.getByLabel(/What happened/)).toBeDisabled();
+  await expect(page.locator('#feedback-back')).toBeDisabled();
 
   await page.locator('#feedback-close').click();
   release();

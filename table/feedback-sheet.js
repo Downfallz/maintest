@@ -182,6 +182,8 @@ export function mountFeedback(doc, { request = (path, init) => fetch(path, { ...
     el('feedback-note').hidden = step !== 'bug' && step !== 'idea';
     el('feedback-note').textContent = step === 'bug' || step === 'idea' ? attachedNote(step, { inGame: game, attach: draft.attach }) : '';
     el('feedback-send').disabled = sending || !feedbackReady(draft);
+    // What is being sent is the draft as it stood: nothing changes it until the host answers.
+    for (const field of dialog.querySelectorAll('#feedback-form :is(input, textarea), #feedback-back')) field.disabled = sending;
   }
   function refuse(sentence) {
     el('feedback-refusal').textContent = sentence ?? '';
