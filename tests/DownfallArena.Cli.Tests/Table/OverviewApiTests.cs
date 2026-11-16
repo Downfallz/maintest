@@ -94,7 +94,7 @@ public sealed class OverviewApiTests : IDisposable
     {
         var admin = Admin(new OverviewApi(_registry, _hosted.Composer, TimeProvider.System));
         var table = await OpenAsync(admin, """{"player1":"greedy","player2":"random"}""");
-        await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(60), TestContext.Current.CancellationToken);
+        (await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue("the bots played their game to its end");
 
         var games = (await OverviewAsync(admin)).GetProperty("games").GetProperty("inProgress");
 
