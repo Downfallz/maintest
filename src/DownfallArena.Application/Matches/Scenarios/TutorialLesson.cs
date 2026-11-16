@@ -109,6 +109,11 @@ public sealed record TutorialLesson
             return TutorialErrors.PointsAtBoth(number);
         }
 
+        if (step.PointsAt?.Control is { } control && !string.IsNullOrWhiteSpace(control) && !LessonControls.Has(control))
+        {
+            return TutorialErrors.UnknownControl(number, control);
+        }
+
         for (var earlier = 0; earlier < index; earlier++)
         {
             // A step about any creature shows at each creature's question of its kind and round.
