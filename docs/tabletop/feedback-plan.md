@@ -363,7 +363,9 @@ and they are the first thing every player can use.
    *Built (2026-11-16)*: a merged idea keeps its own record, so the spam guards still count its sender, and names the
    group's idea it joined (`Feedback.MergedInto`). The group's idea lists the ideas that joined it (`Feedback.Joined`).
    Groups stay flat: merging an idea others joined moves them along, and a merge into an idea merged since joins its
-   group. A change to a group reads its records, never the whole store, under the write gate.
+   group. A change to a group, and an idea's sheet, read its records, never the whole store. The group's list is
+   written first, so a merge cut short leaves it naming an idea too many, which the reads skip, and asked again it
+   finishes.
 
    *Asked by* counts each sender once and each deleted account apart (`FeedbackAsks`). The list filtered to ideas sorts
    by it, then by the newest ask. Merging a new idea marks it seen, so it leaves the Overview's count.
@@ -380,8 +382,7 @@ and they are the first thing every player can use.
 
    **Copy as a plan prompt** writes the operator's words on one line with "Asked by N players since <date>". It shows
    the prompt to select when the browser refuses the clipboard. **Merge into…** reads the open ideas when the
-   operator asks for them, the first five pages, 100 at most, and says so when more are open. An idea's sheet reads
-   every record kept, as the list does.
+   operator asks for them, the first five pages, 100 at most, and says so when more are open.
 
    Left: no undo for a merge. Merging again moves an idea to another group; dismissing takes it out. R8 will tell the
    players when their idea is shipped or declined.

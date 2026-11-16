@@ -307,6 +307,50 @@ public sealed class GroupedIdeasTests : IDisposable
         (await Desk().ChangeKindAsync(first.Id, FeedbackKind.Bug, Cancel)).IsSuccess.ShouldBeTrue();
     }
 
+    [Fact]
+    public async Task A_merge_cut_short_by_the_store_and_asked_again_leaves_a_whole_group()
+    {
+        var group = await IdeaAsync("seat-a");
+        var idea = await IdeaAsync("seat-b");
+        var failing = new FailsOnSave(_store, failOn: 2);
+        var desk = new OperatorFeedback(failing, new FeedbackMutes(null), _writes, _clock);
+        await Should.ThrowAsync<IOException>(() => desk.MergeAsync(idea.Id, group.Id, Cancel));
+
+        var again = (await desk.MergeAsync(idea.Id, group.Id, Cancel)).Value;
+
+        again.Changed.ShouldBeTrue("the retry finishes what the cut left, and is noted");
+        (await desk.ChangeKindAsync(group.Id, FeedbackKind.Bug, Cancel)).Error.Code.ShouldBe("Feedback.Grouped");
+        (await desk.GroupAsync(group, Cancel)).Merged.Select(one => one.Id).ShouldBe([idea.Id]);
+    }
+
+    [Fact]
+    public async Task A_list_naming_an_idea_that_left_does_not_hold_the_group_s_idea()
+    {
+        var group = await IdeaAsync("seat-a");
+        var left = await IdeaAsync("seat-b");
+        await _store.SaveAsync((await _store.FindAsync(group.Id, Cancel))! with { Joined = [left.Id] }, Cancel);
+
+        var changed = await Desk().ChangeKindAsync(group.Id, FeedbackKind.Bug, Cancel);
+
+        changed.IsSuccess.ShouldBeTrue("only ideas that still name it hold it an idea");
+        (await Desk().GroupAsync(left, Cancel)).Into.ShouldBeNull();
+    }
+
+    /// <summary>A store whose Nth save fails, as a storage hiccup between two records would.</summary>
+    private sealed class FailsOnSave(IFeedbackStore inner, int failOn) : IFeedbackStore
+    {
+        private int _saves;
+
+        public Task SaveAsync(Feedback feedback, CancellationToken cancellationToken = default) =>
+            ++_saves == failOn ? throw new IOException("The storage did not answer.") : inner.SaveAsync(feedback, cancellationToken);
+
+        public Task<IReadOnlyList<string>> IdsAsync(CancellationToken cancellationToken = default) => inner.IdsAsync(cancellationToken);
+
+        public Task<Feedback?> FindAsync(string id, CancellationToken cancellationToken = default) => inner.FindAsync(id, cancellationToken);
+
+        public Task DeleteAsync(string id, CancellationToken cancellationToken = default) => inner.DeleteAsync(id, cancellationToken);
+    }
+
     /// <summary>A store that counts how often every record is listed.</summary>
     private sealed class CountsListings(IFeedbackStore inner) : IFeedbackStore
     {
