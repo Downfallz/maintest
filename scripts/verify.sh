@@ -96,7 +96,7 @@ else
   echo "$(printf '%s' "$PATHS" | grep -c .) path(s) changed against origin/main."
   # A plan that cannot be read is not a diff that calls for nothing.
   if ! STEPS="$(printf '%s\n' "$PATHS" | node studio/browser/plan.js --gate)" \
-    || ! JOURNEYS="$(printf '%s\n' "$PATHS" | node studio/browser/plan.js | paste -sd ' ' -)"; then
+    || ! JOURNEYS="$(printf '%s\n' "$PATHS" | node studio/browser/plan.js --pull-request | paste -sd ' ' -)"; then
     echo "studio/browser/plan.js could not read the diff: nothing was run." >&2
     exit 1
   fi

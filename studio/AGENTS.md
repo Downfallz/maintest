@@ -18,8 +18,8 @@ npm --prefix studio/browser ci --ignore-scripts && npm --prefix studio/browser t
 - `node --test studio/*.test.js table/*.test.js showcase/*.test.js`, and the gate.
 - A change a person sees: the studio's browser specs (`studio/browser`), phone (320 px and 390 px) and desktop.
 - A change to `browser/` itself: the specs it touches, and say which were run.
-- `git diff --name-only origin/main... | node studio/browser/plan.js` says what CI will play for a diff
-  (ADR 0182): the specs, the real-engine and release jobs, the image.
+- `git diff --name-only origin/main... | node studio/browser/plan.js --pull-request` says what CI will play for a
+  pull request (ADR 0182, 0190): the specs, the real-engine job, the release profiles, the image.
 
 ## Traps
 

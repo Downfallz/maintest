@@ -18,8 +18,10 @@ would put two sound switches in one settings dialog. The rest of A8 stands, as
   missing art, reduced motion, keyboard/focus, rollout and recovery.
 - `cd studio/browser && node node_modules/playwright/cli.js test --config battle.release.config.js`:
   complete normal 3v3 games, short round-cap games, recorded replay and two independent seats in desktop
-  Chromium, Android touch emulation and iOS WebKit, with sound enabled. Install `chromium webkit` first.
-- CI artifact `battle-release`: screenshots, failure traces and `release-metrics.json` per profile.
+  Chromium, Android touch emulation and iOS WebKit, with sound enabled. Install `chromium webkit` first;
+  `--project=release-ios` plays one profile. CI plays one job per profile, and on a pull request WebKit alone
+  (ADR 0190).
+- CI artifacts `battle-release-<profile>`: screenshots, failure traces and `release-metrics.json`.
 
 The frame sample measures 89 requestAnimationFrame intervals on the loaded board. It is a diagnostic,
 not a pass/fail FPS claim or a sustained GPU benchmark. Software rendering and CI load affect it.
