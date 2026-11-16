@@ -12,6 +12,8 @@ namespace DownfallArena.Cli.Tests.Table;
 /// A Tutorial's assisted answers at the host when the match does not take one (docs/tabletop/onboarding-plan.md,
 /// O3a): the question must not be left to nobody, so every question goes back to the person.
 /// </summary>
+/// <remarks>In <see cref="ConsoleOutput" />: one test reads what the play says on the console.</remarks>
+[Collection(ConsoleOutput.Name)]
 public sealed class TutorialPlayTests
 {
     private static readonly CreatureId First = CreatureId.From(1);
@@ -150,6 +152,85 @@ public sealed class TutorialPlayTests
         var readable = await ReadableWhenGivenBackAsync(Play(), table);
 
         readable.ShouldBeTrue("a GaveBack subscriber runs outside the tutorial's lock");
+    }
+
+    [Fact]
+    public async Task A_hand_back_subscriber_that_throws_is_said_on_its_own_line_and_not_as_an_answer_that_failed()
+    {
+        var (table, _) = AskedASpeed(_ => DecisionTaken.Late);
+        var play = Play();
+        play.GaveBack += () => throw new InvalidOperationException("the relay is down");
+        play.Follow(table);
+        var said = new StringWriter();
+        var before = Console.Out;
+        Console.SetOut(TextWriter.Synchronized(said));
+        bool told;
+        try
+        {
+            play.Look();
+
+            told = await SaidAsync(() => said.ToString().Contains("telling the table of the hand-back failed", StringComparison.Ordinal));
+            // The answering goes on after the line: a word that it failed would come in the moment after.
+            await Task.Delay(200, TestContext.Current.CancellationToken);
+        }
+        finally
+        {
+            Console.SetOut(before);
+        }
+
+        told.ShouldBeTrue(said.ToString());
+        said.ToString().ShouldContain("Tutorial 1: telling the table of the hand-back failed (InvalidOperationException).");
+        said.ToString().ShouldNotContain("could not be answered", customMessage: "the answer was given; only telling the table failed");
+    }
+
+    [Fact]
+    public async Task A_hand_back_subscriber_that_throws_leaves_the_next_one_told()
+    {
+        var (table, _) = AskedASpeed(_ => DecisionTaken.Late);
+        var play = Play();
+        var told = 0;
+        play.GaveBack += () => throw new InvalidOperationException("the relay is down");
+        play.GaveBack += () => Interlocked.Increment(ref told);
+        play.Follow(table);
+
+        play.Look();
+
+        (await SaidAsync(() => Volatile.Read(ref told) == 1)).ShouldBeTrue("the seat's stream is told all the same");
+    }
+
+    [Fact]
+    public async Task A_change_that_comes_while_a_failed_answer_is_on_its_way_is_looked_at_even_when_a_hand_back_subscriber_throws()
+    {
+        TutorialPlay? play = null;
+        var failed = 0;
+        var lookedAgain = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var (asked, _) = AskedASpeed(_ =>
+        {
+            // The match changes while the answer is on its way: the play is busy answering, so it is to look again after.
+            play!.Look();
+            Volatile.Write(ref failed, 1);
+            throw new IOException("the journal is out");
+        });
+        var table = asked with
+        {
+            Read = () =>
+            {
+                if (Volatile.Read(ref failed) == 1)
+                {
+                    lookedAgain.TrySetResult();
+                }
+
+                return asked.Read();
+            },
+        };
+        play = Play();
+        play.GaveBack += () => throw new InvalidOperationException("the relay is down");
+        play.Follow(table);
+
+        play.Look();
+
+        var looked = await Task.WhenAny(lookedAgain.Task, Task.Delay(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken)) == lookedAgain.Task;
+        looked.ShouldBeTrue("the change that came while the play was answering is looked at once the answering ends");
     }
 
     [Fact]
