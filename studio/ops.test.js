@@ -154,10 +154,12 @@ test('an error line loses the player names and the free text an operator wrote b
     'Account acct_ab12cd34ef56gh78 (Zelda_42) deleted by marie-c.',
     'Dead letters requeued by marie-c: 3.',
     'Table 12: what its seats hold face down was shown to marie-c.',
-    'Session 12 cannot be played on: This account is suspended: Zelda_42 failed to stop insulting Bob',
     'Session 12 voided by marie-c (engine), its result withdrawn: Zelda_42 lost to an engine error.',
     'Account acct_ab12cd34ef56gh78 (Zelda_42) suspended by marie-c: insults\nZelda_42 failed to stop insulting Bob',
     'Account acct_ab12cd34ef56gh78 (Zelda_42) signed out everywhere by marie-c.',
+    'The operator log could not keep suspend on acct_ab12cd34ef56gh78 by marie-c: Status: 503 (Server Busy)',
+    'Session 12 closed by marie-c.',
+    'Scenario first-steps cut from session 12 at round 3 by marie-c.',
   ].map(mask);
   for (const line of lines) assert.doesNotMatch(line, /Zelda|Link-7|marie-c|Bob|engine error/, line);
   assert.deepEqual(lines, [
@@ -166,10 +168,12 @@ test('an error line loses the player names and the free text an operator wrote b
     'Account acct_… (<joueur>) deleted by <joueur>.',
     'Dead letters requeued by <joueur>: 3.',
     'Table 12: what its seats hold face down was shown to <joueur>.',
-    'Session 12 cannot be played on: This account is suspended: <motif>',
     'Session 12 voided by <joueur> (engine), its result withdrawn: <motif>',
     'Account acct_… (<joueur>) suspended by <joueur>: <motif>',
     'Account acct_… (<joueur>) signed out everywhere by <joueur>.',
+    'The operator log could not keep suspend on acct_… by <joueur>: Status: 503 (Server Busy)',
+    'Session 12 closed by <joueur>.',
+    'Scenario first-steps cut from session 12 at round 3 by <joueur>.',
   ]);
 });
 
@@ -179,6 +183,8 @@ test('a line that names nobody keeps its words', () => {
     'Session 12 could not be closed: Unable to connect to the remote server',
     'Session 12 could not be voided: The blob could not be written.',
     'Session 12 was voided by another process: let go of.',
+    'Session 12 could not be closed: Unable to read data from the transport connection: Connection reset by peer.',
+    'Session 12 could not be picked up for now: The operation was canceled by user.',
     'Session 12: player1 could not be notified: Response status code does not indicate success: 410 (Gone).',
   ]) {
     assert.equal(mask(line), line);

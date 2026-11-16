@@ -1,7 +1,8 @@
 // The production report (ADR 0186): the readings scripts/ops/read.sh wrote, one JSON file each, turned into one
 // phone screen, in French, whose second line says what to look at first. ops-report.yml prints it to its log,
 // which a session reads and which is public, so it prints counts and masked lines (no name a person chose, no
-// address, id, token or reason an operator wrote), never a record.
+// address, id, token, suspension reason or void explanation), never a record. A host settings notice is shown to
+// every player, so it is printed as it is.
 //
 //   node scripts/ops/report.mjs <dir> [--now <ISO time>]
 
@@ -39,18 +40,27 @@ const number = (value, digits = 2) => Number(value).toLocaleString('fr-CA', { ma
 const plural = (count, one, many = `${one}s`) => `${count} ${count <= 1 ? one : many}`;
 const usable = (reading) => reading !== undefined && reading !== null && reading.error === undefined;
 
+// The words before an operator's name in the host's audit lines, and no others: "reset by peer." is not a person.
+const OPERATOR = new RegExp(
+  `\\b((?:${[
+    'requeued', 'dropped', 'removed', 'saved', 'restored', 'deleted', 'suspended', 'everywhere', 'opened', 'again',
+    'Practice', 'run', 'voided', 'Session \\S+ closed', 'renamed from \\S+ to \\S+', 'round \\d+', 'keep \\S+ on \\S+',
+  ].join('|')}) by|shown to) [^\\s:]+?(?=\\.?$|: | \\()`,
+  'g',
+);
+
 /**
  * A console line without the names people chose: the host's audit lines name a player by the name they picked
  * (`Account acct_… (name)`, `renamed from a to b`) and the operator by an admin's player name or sign-in
- * (`by name.`, `by name:`, `by name (`, `shown to name.`), and a suspension's or a void's reason is free text an
- * operator wrote. A word masked too many costs the report little; a name let through is in a public log.
+ * (`requeued by name:`, `voided by name (`, `shown to name.`), and a suspension's or a void's reason is free text
+ * an operator wrote (the host no longer prints them; an older image did).
  */
 function unnamed(line) {
   return line
-    .replace(/\b(suspended by \S+?|account is suspended|voided by \S+ \([^)]*\)[^:]*): .*$/, '$1: <motif>')
+    .replace(/\b(suspended by \S+?|voided by \S+ \([^)]*\)[^:]*): .*$/, '$1: <motif>')
     .replace(/\b(acct_[A-Za-z0-9]+) \([^)]*\)/g, '$1 (<joueur>)')
     .replace(/\brenamed from \S+ to \S+/g, 'renamed from <joueur> to <joueur>')
-    .replace(/\b(by|shown to) [^\s:]+?(?=\.?$|: | \()/g, '$1 <joueur>');
+    .replace(OPERATOR, '$1 <joueur>');
 }
 
 /** A console line as a public log may hold it: no name, email, id, token or query string, one line, short. */

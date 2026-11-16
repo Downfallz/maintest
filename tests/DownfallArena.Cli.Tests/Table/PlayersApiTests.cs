@@ -13,6 +13,7 @@ namespace DownfallArena.Cli.Tests.Table;
 /// The operator's players (ADR 0174): the list, an account's sheet, and the three things the operator does to an
 /// account. Accounts are signed in by name (<c>--accounts dev</c>), so each test reads as players arriving.
 /// </summary>
+[Collection(ConsoleOutput.Name)]
 public sealed class PlayersApiTests : IDisposable
 {
     private static readonly DateTimeOffset Start = new(2026, 11, 13, 20, 0, 0, TimeSpan.Zero);

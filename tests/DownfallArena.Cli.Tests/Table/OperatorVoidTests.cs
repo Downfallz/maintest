@@ -13,6 +13,7 @@ namespace DownfallArena.Cli.Tests.Table;
 /// The operator voids a match, in progress or finished, with a reason (ADR 0176): the record keeps it, the seats are
 /// answered with the explanation, and a kept result is marked void so it counts nowhere.
 /// </summary>
+[Collection(ConsoleOutput.Name)]
 public sealed class OperatorVoidTests : IDisposable
 {
     private const string Token = "token-of-the-operator";
