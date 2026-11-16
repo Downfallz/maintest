@@ -643,6 +643,11 @@ spell declaration mode. First-use tips appear once per subject and can be muted;
 It does not acknowledge questions or send commands, and opening it preserves pending choices.
 See [AU2 and its verification](../battle/README.md#au2-objectives-and-contextual-help).
 
+In a tutorial (ADR 0187) the lesson's steps take the tips' place. `battle-tutorial.js` reads the lesson the host
+says under `practice.tutorial`: the band's words, the coach card of the question asked, and the assisted questions
+the page does not draw. `concepts.js` holds the ten concept cards a step opens, each a summary of a rulebook
+section. See [A tutorial's coach](../battle/README.md#a-tutorials-coach).
+
 ## Routes
 
 One line per route the host serves, and who may call it: anyone, a signed-in **account**, the **seat** whose key
@@ -655,7 +660,7 @@ test (`.claude/rules/host.md`).
 | --- | --- | --- |
 | `/`, `/lobby` | anyone | The player lobby (ADR 0115); `/lobby?token=...` redirects to admin; `/lobby?rematch=<accountId>\|bot\|hotseat&format=...` opens the create dialog on the same opponent. |
 | `/play` | seat | The game's doorway; `/play?replay=<id>` replays a finished session for the operator. |
-| `/battle` | seat | The battle view; `/battle?replay=<table>&seat=<seat>` a finished game's recap (ADR 0156); `/battle?scenario=<id>` a scenario's practice (ADR 0179). |
+| `/battle` | seat | The battle view; `/battle?replay=<table>&seat=<seat>` a finished game's recap (ADR 0156); `/battle?scenario=<id>` a scenario's practice (ADR 0179), a tutorial with its coach and concept cards (ADR 0187). |
 | `/battle-lab` | anyone | The visual study on fictional frames (ADR 0123). |
 | `/admin?token=<operator token>` | operator | The admin panel (ADR 0081). |
 | `/pilot?token=<pilot token>` | pilot | The operator's own page for the seats of a console table. |

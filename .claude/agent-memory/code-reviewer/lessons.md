@@ -15,3 +15,4 @@
 - The branch can move while you review (the author session keeps pushing): re-run `git log origin/main..HEAD` before reporting and re-run the tests on the final HEAD (#612/#613/#615, 21748d4 -> 034f8ea).
 - Widening a path-scoped rule's `paths:` to a new folder makes every line of it apply there: read the rule against the folder (pages.md "no build step" now covers showcase/, which has build.mjs) (#613).
 - A "replace the destination" guard keyed on two file names (index.html + _headers) still wipes a folder that has those plus anything else: prefer a marker the build itself writes (#613, showcase/build.mjs).
+- When the browser suite runs in the checkout, gate a copy instead: `git archive HEAD | tar -x` into the scratchpad, copy `table/battle-build` in BEFORE `dotnet build` (the Cli bundle tests read it from the build output), symlink `battle/node_modules` for `npm run build` (O3b, branch ccr-56e5b0ba-aqo26a).

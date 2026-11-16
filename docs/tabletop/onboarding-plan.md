@@ -1,6 +1,6 @@
 # Onboarding: tutorials played on the table, and concept cards
 
-Status: accepted, 2026-11-15. O1, O2 and O3a built (ADR 0187); O3b next.
+Status: accepted, 2026-11-15. O1, O2, O3a and O3b built (ADR 0187); O4 next.
 
 ## What the owner asked for
 
@@ -158,6 +158,28 @@ give what is said and when. It reuses everything ADR 0179 built, and the regress
    concept cards a step opens, the phase tips silent while a tutorial plays. Tests: `concepts.test.js` (every
    concept complete, every rulebook anchor present in `rulebook.md`), `battle-tutorial.test.js`, and a browser
    spec playing tutorial 1 to its end at 320 px.
+
+   *Built (2026-11-15)*: `table/concepts.js` holds the ten cards: a title, three lines at most, one example on
+   the reference values, and the rulebook section. `concepts.test.js` holds them to `ConceptCards.Ids` and to
+   the rulebook's headings. `table/battle-tutorial.js` reads `practice.tutorial`, and `battle/src/tutorial.ts`
+   draws it: the band and the briefing say **Tutorial n of 4**, the coach card shows the step of the question
+   asked, and a step opens its concept cards once, before the spell choice. What a step points at is ringed. An
+   assisted question is not drawn, and the phase tips are silent while a tutorial plays. Once the host says
+   `done`, the coach card says **Tutorial complete**, with **Keep playing** and **Leave the tutorial**.
+   `LessonControls` names the five controls `pointsAt` may use (`spells`, `cast`, `command`, `order`,
+   `history`); `TutorialLesson` refuses another, and the page's list is held to it. `battle-tutorial.spec.js`
+   plays tutorial 1's own lesson to its end at 320 px, 390 px and desktop.
+
+   - The spec plays the lesson in the tutorial's file on a fixture board, with a mock host. No browser journey plays a
+     tutorial on the real engine yet: O5's per-tutorial specs are the place for it.
+   - A concept card names its rulebook section and does not link to it: the table serves no rulebook page.
+     Nothing holds a card's example numbers to the reference values either (#651).
+   - On a phone, with the spell choice docked, the coach card covers the low half of the field (#650). It
+     steps aside while targets are chosen.
+   - Nothing is kept: a reloaded page opens the step's cards again.
+   - Left to O4: the first card's **Start** and **Skip the tutorial**. The briefing still says **Begin**.
+   - While the host answers an assisted question, the dock says the opponent is choosing. Saying "played for
+     you" there is not built.
 5. **O4, progress and the first visit.** The account's tutorials done and skipped (`/api/account/preferences`,
    ADR 0140), the home page's **Learn to play** section, the main menu entry, the settings' **Show the first
    tutorial again**, and a new account's first visit opening tutorial 1 with Start and Skip the tutorial. Tests:

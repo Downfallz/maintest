@@ -86,6 +86,8 @@ const RULES = [
   { matches: (path) => path.startsWith('studio/'), calls: () => ({ journeys: isStudioSpec }) },
   { matches: (path) => path === 'viewer/viewer.css', calls: () => ({ journeys: anySpec }) },
   { matches: (path) => path.startsWith('data/'), calls: () => ({ journeys: anySpec, realEngine: true, release: true }) },
+  // The tutorial journey plays the lesson of the tutorial files themselves.
+  { matches: (path) => path.startsWith('scenarios/tutorials/'), calls: () => ({ journeys: (spec) => spec === 'battle-tutorial.spec.js' }) },
   { matches: (path) => CONSOLE_ONLY.has(path), calls: () => ({}) },
   {
     matches: (path) => path.startsWith('src/') || path.startsWith('tools/') || BUILD_FILES.has(path),
