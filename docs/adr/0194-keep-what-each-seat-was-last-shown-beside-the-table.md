@@ -42,8 +42,11 @@ the larger of the two.
 - Good: a seen write never touches the table's record, so it cannot make a decision retry. It goes through the run's
   writer, which takes writes in turn, so it can delay the table's next write by one small write.
 - Good: the view says how long ago the last move was, which the lobby, the notice and the recap need (stages R2-R4).
-- Bad: one more small read per seat view, and at most one write every five seconds for each watching page. Two
-  small blobs per table, deleted with its run.
+- Bad: one more small read per seat view, made beside the read of the last move, which the time to answer now reads
+  from too; and at most one write every five seconds for each watching page. Two small blobs per table, deleted with
+  its run.
+- Bad: when a player last looked at a game is personal data, kept exactly with the run, as the journal keeps
+  when they decided, and deleted with it.
 - Bad: the sequence is the seat's own word. A page that claims to have seen more than it was served only hides
   results from its own recap; the host does not bound it by the feed, because a process can lag the one that served
   the page.

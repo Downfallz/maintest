@@ -122,6 +122,9 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
     /// <summary>When the table's journal was last written, its last move (ADR 0169), or none: a table that keeps no journal.</summary>
     public Func<Task<DateTimeOffset?>>? LastMove { get; set; }
 
+    /// <summary>When the time to answer runs out, from the last move the seat's view read once (<see cref="LastMove" />).</summary>
+    public Func<DateTimeOffset?, DateTimeOffset?>? AnswerByFrom { get; set; }
+
     public int FeedStart { get; init; }
 
     /// <summary>What a match scenario's practice is (ADR 0179), served in the seat's view so the page shows it as practice; none for a game.</summary>
@@ -430,6 +433,12 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
 
         var (waiting, board, options, opponentIntents, journaled) = snapshot.Value;
 
+        // The two reads beside the table's, side by side: when the last move was, and what this seat was last shown.
+        var moving = LastMoveAtAsync();
+        var visiting = LastVisitAsync(seat);
+        await Task.WhenAll(moving, visiting);
+        var (moveRead, lastMove) = await moving;
+
         // Everything the host looked at this poll: the slice from the cursor onwards. What the seat may be told
         // of it is a subset, and where to resume is the end of the slice rather than the end of that subset.
         // Through the session when there is one: closing hands the trace over and the recorder forgets the
@@ -470,12 +479,13 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
                 playedByBot = seat.Person is null,
 
                 // When whoever is asked loses for not answering (ADR 0169): the page counts down to it.
-                answerBy = AnswerBy is { } answerBy ? await answerBy() : null,
+                // Read from the last move this view read; none when the journal could not be asked.
+                answerBy = !moveRead ? null : AnswerByFrom is { } answerByFrom ? answerByFrom(lastMove) : AnswerBy is { } answerBy ? await answerBy() : null,
 
                 // When the last move was, and what this seat was last shown of its game, and when (ADR 0194): what
                 // the recap tells a player coming back, whichever device they come back on.
-                lastMoveAt = await LastMoveAtAsync(),
-                seen = Seen(await LastVisitAsync(seat)),
+                lastMoveAt = lastMove,
+                seen = Seen(await visiting),
 
                 // Who the table is waiting for before it begins, or null: the page shows a room rather than a
                 // board nobody is asked anything on (ADR 0092).
@@ -863,17 +873,17 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
     }
 
-    /// <summary>When the last move was, for the view, or none when the journal cannot be asked.</summary>
-    private async Task<DateTimeOffset?> LastMoveAtAsync()
+    /// <summary>When the last move was, for the view, and whether the journal could be asked at all.</summary>
+    private async Task<(bool Read, DateTimeOffset? At)> LastMoveAtAsync()
     {
         try
         {
-            return LastMove is { } lastMove ? await lastMove() : null;
+            return (true, LastMove is { } lastMove ? await lastMove() : null);
         }
         catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or Azure.RequestFailedException)
         {
             Console.WriteLine($"  When the last move was could not be read: {failure.Message}");
-            return null;
+            return (false, null);
         }
     }
 

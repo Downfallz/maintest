@@ -71,9 +71,5 @@ export function createSeenSender({ send, now = () => Date.now(), later = (run, m
       if (timer !== null) { cancel(timer); timer = null; }
       due();
     },
-    stop() {
-      if (timer !== null) { cancel(timer); timer = null; }
-      held = null;
-    },
   };
 }
