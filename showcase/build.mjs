@@ -1,3 +1,4 @@
+import { existsSync, readdirSync } from 'node:fs';
 import { cp, mkdir, mkdtemp, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,7 +16,15 @@ import { GAME_ORIGIN } from '../table/site-origins.js';
 
 const source = new URL('../', import.meta.url);
 // The folder to write, `showcase/dist` by default; the tests name a temporary one so the working tree stays as it is.
-const destination = resolve(process.argv[2] || fileURLToPath(new URL('./dist', import.meta.url)));
+// The build replaces that folder, so it takes only one that is absent, empty or an earlier build.
+const argument = process.argv[2];
+if (argument?.startsWith('-')) throw new Error(`Usage: node showcase/build.mjs [folder]; ${argument} is not a folder.`);
+const destination = resolve(argument || fileURLToPath(new URL('./dist', import.meta.url)));
+if (existsSync(destination)) {
+  const entries = readdirSync(destination);
+  if (entries.length && !(entries.includes('index.html') && entries.includes('_headers')))
+    throw new Error(`${destination} holds something other than a showcase build; the build would replace it.`);
+}
 const application = new URL(process.env.GAME_ORIGIN || GAME_ORIGIN);
 if (application.protocol !== 'https:' || application.href !== application.origin + '/' || application.username || application.password)
   throw new Error('GAME_ORIGIN must be an HTTPS origin without credentials, path, query or fragment.');

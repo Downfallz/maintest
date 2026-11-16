@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -23,6 +23,21 @@ const game = GAME_ORIGIN;
 test('the build writes where it is told and leaves the working tree alone', () => {
   assert.ok(statSync(join(root, 'index.html')).size > 0);
   assert.equal(existsSync(workingDist) ? statSync(workingDist).mtimeMs : null, before);
+});
+
+// The build replaces its destination, so it refuses one that holds anything but an earlier build.
+test('the build refuses a folder that is not an earlier build, and leaves it as it was', () => {
+  const folder = mkdtempSync(join(tmpdir(), 'showcase-other-'));
+  try {
+    writeFileSync(join(folder, 'notes.txt'), 'keep me');
+    for (const target of [folder, '--help']) {
+      assert.throws(() => execFileSync(process.execPath, [builder, target], { env: environment, stdio: 'pipe' }), target);
+    }
+    assert.equal(readFileSync(join(folder, 'notes.txt'), 'utf8'), 'keep me');
+    assert.ok(!existsSync(join(folder, 'index.html')));
+  } finally {
+    rmSync(folder, { recursive: true, force: true });
+  }
 });
 
 for (const [lang, file, other] of [['en', 'index.html', '/fr/'], ['fr', 'fr/index.html', '/']]) {

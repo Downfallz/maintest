@@ -442,10 +442,10 @@ row says the same from the host's kept result: the day its table was opened, the
 Unranked as the ladder counted it.
 
 The lobby's footer (Copyright, About the game), the sign-in screen's Privacy policy, the account menu's Game website
-and Settings → Privacy link to the game website at the apex, named once in `site-origins.js` with the game's own
-origin (the showcase build reads both). A developer's or a laptop's table has no apex of its own, so these links open
-the published site on purpose. `lobby.html` repeats the apex in its static links, and `showcase/showcase.test.js`
-fails when any of them disagrees with the module.
+and Settings → Privacy link to the game website. Its origin and the game's own are named once in `site-origins.js`, and the showcase build
+reads both. A developer's or a laptop's table has no copy of the website, so these links open the published site on
+purpose. `lobby.html` repeats the website's origin in its static links, and `showcase/showcase.test.js` fails when
+one of them differs from the module.
 
 ## Signing in (ADR 0122)
 

@@ -76,7 +76,7 @@ battle bundle, the Python side and DataBuilder when the diff calls for them, the
 
 - Build, tests, and format check pass before any task is declared done.
 - `learning/` changed: also its ruff check, `ruff format --check`, and pytest.
-- `studio/` or `table/` changed: also `node --test studio/*.test.js table/*.test.js showcase/*.test.js`.
+- `studio/`, `table/` or `showcase/` changed: also `node --test studio/*.test.js table/*.test.js showcase/*.test.js`.
 - `battle/` or `table/battle-*` changed: rebuild the bundle and run the battle browser specs (`battle/AGENTS.md`).
 - CI runs these, then sends the build and the coverage reports (C# and Python) to SonarCloud with the scanner for
   .NET (`.config/dotnet-tools.json`). The Sonar quality gate covers C#, Python, shell scripts, and workflows, and

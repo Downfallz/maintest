@@ -6,3 +6,5 @@
 - A seat's asking (`JournaledStepper.Asking`) moves only on that seat's own decisions: a Late from DecideAsync on a seat answered in the background means someone else answered it, so the state moved; never drop the re-look on Late (O3a, TutorialPlay.AnswerAsync).
 - Practices (ScenarioPractices) live in the API process's memory by ADR 0179: rule questions 4-5 are answered by that ADR, but a POST practice retry replaces the practice and resets anything kept on it (O3a: tutorial `done`/`shown`).
 - A background answerer that only logs a failure, without handing the seat back, leaves a question the page is told not to draw: check every failure path ends in a state the page can act on (O3a).
+- A new table/*.js module needs only its TableFiles.cs row: `Every_module_beside_the_page_is_served` catches a missing one by pattern, JS is served no-cache, the Dockerfile copies table/ whole, and table/README.md#routes lists pages, not modules (#612).
+- A build script that takes an output folder and `rm -r`s it before a rename (showcase/build.mjs) deletes whatever path it is given, `.` included: check the guard whenever a destination becomes an argument (#613).

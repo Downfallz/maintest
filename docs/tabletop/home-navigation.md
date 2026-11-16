@@ -34,9 +34,9 @@ a viewpoint before either private board is read.
 | Account avatar/name | Who is signed in, Settings, Game website, and Sign out (confirmed) on this device | Signed-in players |
 | Bell (Notifications) | Dialog of what waits for the player, each with its action (below) | Signed-in players |
 
-Game website, the lobby footer's Copyright and About the game, and the privacy links open the game website at the
-apex (`table/site-origins.js`, which the showcase build reads too). It is the published site on every host, a
-developer's included: there is no local apex.
+These links open the published game website on every host, a developer's included: the account menu's Game
+website, the lobby footer's Copyright and About the game, and the privacy links. There is no local copy. The
+website's origin is named once, in `table/site-origins.js`, which the showcase build reads too.
 
 Settings gathers what a player sets once rather than visits: its tabs are **Game** (the reading pace, speed, phase
 tips and less motion every new game starts from, ADR 0140), **Notifications** (the device controls or an
