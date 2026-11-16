@@ -44,7 +44,7 @@ const readJson = path => JSON.parse(readFileSync(path, 'utf8'));
 
 /** The ids a text links to as `/rules#<id>`, `/rules/#<id>` or the same on a host. */
 export function linksIn(text) {
-  return [...text.matchAll(/(?<![\w.\/-])(?:https?:\/\/[\w.:-]+)?\/rules\/?#([A-Za-z0-9_-]+)/g)].map(match => match[1]);
+  return [...text.matchAll(/(?<![\w./-])(?:https?:\/\/[\w.:-]+)?\/rules\/?#([\w-]+)/g)].map(match => match[1]);
 }
 
 /** Whether a path may hold a link to the rules: a page's source, never a test or the built book. */
@@ -72,7 +72,9 @@ function previousIds(root) {
   const errors = [];
   let main = null;
   try {
-    main = execFileSync('git', ['show', `origin/main:${OUTPUT}`], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    // NOSONAR below: javascript:S4036, git found on PATH. The command and its arguments are fixed, and nothing the
+    // book holds reaches them; scripts/digest/digest.mjs reads git the same way.
+    main = execFileSync('git', ['show', `origin/main:${OUTPUT}`], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }); // NOSONAR
   } catch {
     main = null;
   }
@@ -87,7 +89,7 @@ function previousIds(root) {
 }
 
 /** A heading's anchor as GitHub writes it: lowercased, punctuation dropped, spaces as hyphens. */
-const anchorOf = heading => heading.trim().toLowerCase().replace(/[^a-z0-9 -]/g, '').replace(/ /g, '-');
+const anchorOf = heading => heading.trim().toLowerCase().replace(/[^a-z0-9 -]/g, '').replaceAll(' ', '-');
 
 /** Everything the build reads, from the repository at `root`. */
 export function readInputs(root) {
@@ -129,13 +131,20 @@ const FUNCTIONS = { max: Math.max, min: Math.min, floor: Math.floor };
  * `+ - * /`, parentheses, and `max`, `min`, `floor`. `look` answers a name, or undefined. Throws on anything else.
  */
 export function evaluate(expression, look) {
-  const tokens = expression.match(/\s*(\d+(?:\.\d+)?|[A-Za-z][A-Za-z0-9_]*(?::[A-Za-z0-9_]+)*(?:\.[A-Za-z][A-Za-z0-9_]*)*|[-+*/(),]|\S)/g)?.map(token => token.trim()) ?? [];
+  const tokens = expression.match(/\d+(?:\.\d+)?|[A-Za-z][\w:.]*|[-+*/(),]|\S/g) ?? [];
   let at = 0;
   const fail = () => { throw new Error(`"${expression}" is not a value`); };
   const peek = () => tokens[at];
   const take = expected => (tokens[at] === expected ? (at += 1, true) : false);
   const number = value => (typeof value === 'number' && Number.isFinite(value) ? value : fail());
 
+  function call(name) {
+    const run = Object.hasOwn(FUNCTIONS, name) ? FUNCTIONS[name] : fail();
+    const args = [number(sum())];
+    while (take(',')) args.push(number(sum()));
+    if (!take(')')) fail();
+    return run(...args);
+  }
   function factor() {
     const token = tokens[at++];
     if (token === undefined) fail();
@@ -147,13 +156,7 @@ export function evaluate(expression, look) {
       return value;
     }
     if (!/^[A-Za-z]/.test(token)) fail();
-    if (take('(')) {
-      const call = Object.hasOwn(FUNCTIONS, token) ? FUNCTIONS[token] : fail();
-      const args = [number(sum())];
-      while (take(',')) args.push(number(sum()));
-      if (!take(')')) fail();
-      return call(...args);
-    }
+    if (take('(')) return call(token);
     const value = look(token);
     if (value === undefined) throw new Error(`"${token}" does not resolve`);
     return value;
@@ -177,25 +180,32 @@ export function evaluate(expression, look) {
 const capital = word => word.charAt(0).toUpperCase() + word.slice(1);
 const scalar = value => (typeof value === 'number' || typeof value === 'string' ? value : undefined);
 
+// A spell's field (`energyCost`, `name`) or one of its effects by kind (`damage`, `bleed.durationRounds`).
+function spellValue(definition, name, path) {
+  const parts = path.split('.');
+  if (parts.length > 2) return undefined;
+  const [first, field] = parts;
+  if (parts.length === 1 && scalar(definition[first]) !== undefined) return definition[first];
+  const kind = capital(first);
+  const effects = (definition.effects ?? []).filter(effect => effect.kind === kind);
+  if (effects.length > 1) throw new Error(`"${name}" names one of ${effects.length === 2 ? 'two' : effects.length} ${kind} effects`);
+  const [effect] = effects;
+  if (!effect) return undefined;
+  return scalar(effect[field ?? ('amount' in effect ? 'amount' : 'amountPerRound')]);
+}
+
 /** Answers a name from the rule set, the reference creature and the spells, and notes each spell it read. */
 function lookup({ ruleSet, creature, spells }, used) {
   return name => {
     if (name.startsWith('rules.')) return scalar(ruleSet.values[name.slice(6)]);
     if (name.startsWith('creature.')) return scalar(creature[`base${capital(name.slice(9))}`]);
-    const spell = /^(spell:[a-z0-9_]+:v\d+)\.(.+)$/.exec(name);
+    const spell = /^(spell:[a-z0-9_]+:v\d+)\.([\w.]+)$/.exec(name);
     if (!spell) return undefined;
     const [, id, path] = spell;
     const definition = spells.get(id);
     if (!definition) throw new Error(`spell "${id}" is not in data/`);
     used.add(id);
-    const [first, field, ...rest] = path.split('.');
-    if (rest.length > 0) return undefined;
-    if (field === undefined && scalar(definition[first]) !== undefined) return definition[first];
-    const effects = (definition.effects ?? []).filter(effect => effect.kind === capital(first));
-    if (effects.length > 1) throw new Error(`"${name}" names one of ${effects.length === 2 ? 'two' : effects.length} ${capital(first)} effects`);
-    const [effect] = effects;
-    if (!effect) return undefined;
-    return scalar(effect[field ?? ('amount' in effect ? 'amount' : 'amountPerRound')]);
+    return spellValue(definition, name, path);
   };
 }
 
@@ -206,315 +216,386 @@ function lookup({ ruleSet, creature, spells }, used) {
 const EVERYDAY = new Set(['Speed', 'Quick', 'Standard', 'Planning']);
 const SKIPPED = new Set(['Main', 'Start', 'End']);
 
+/** The rows of the page's tables whose header's first cell passes `isHeader`, as their trimmed cells. */
+function tableRows(text, isHeader) {
+  const rows = [];
+  let inTable = false;
+  for (const line of text.split('\n')) {
+    const cells = line.startsWith('|') ? line.split('|').slice(1, -1).map(cell => cell.trim()) : null;
+    if (!cells) inTable = false;
+    else if (isHeader(cells[0])) inTable = true;
+    else if (inTable && !/^-+$/.test(cells[0])) rows.push(cells);
+  }
+  return rows;
+}
+
+const wordPattern = (phrase, suffix, flags) => new RegExp(String.raw`\b${phrase.split(/\s+/).join(String.raw`\s+`)}${suffix}\b`, flags);
+
+// The words a row of the "Internal" tables retires: its legacy word, and the engine's names in its code spans.
+function rowCandidates(internal, legacy) {
+  const open = legacy.indexOf(' (');
+  const codes = [...internal.matchAll(/`([^`]+)`/g)].map(match => match[1].split('.').at(-1));
+  return [(open < 0 ? legacy : legacy.slice(0, open)).trim(), ...codes.filter(word => /^[A-Z][A-Za-z]+$/.test(word))];
+}
+
 /** The engine and legacy words of docs/domain/player-terminology.md, each with the player's word that replaced it. */
 export function retiredWords(terminology) {
   const words = new Map();
-  let inTable = false;
-  for (const line of terminology.split('\n')) {
-    if (!line.startsWith('|')) {
-      inTable = false;
-      continue;
-    }
-    const cells = line.split('|').slice(1, -1).map(cell => cell.trim());
-    if (cells[0].startsWith('Internal')) {
-      inTable = true;
-      continue;
-    }
-    if (!inTable || /^-+$/.test(cells[0])) continue;
-    const [internal, legacy, en] = cells;
-    const player = [...en.matchAll(/\*\*(.+?)\*\*/g)].map(match => match[1]);
-    const candidates = [legacy.replace(/\s*\(.*\)$/, '').trim(),
-      ...[...internal.matchAll(/`([^`]+)`/g)].map(match => match[1].split('.').at(-1)).filter(word => /^[A-Z][A-Za-z]+$/.test(word))];
-    for (const word of candidates) {
-      if (!word || SKIPPED.has(word) || player.includes(word) || words.has(word) || !player[0]) continue;
+  for (const [internal, legacy, en] of tableRows(terminology, first => first.startsWith('Internal'))) {
+    const player = [...en.matchAll(/\*\*([^*]+)\*\*/g)].map(match => match[1]);
+    if (!player[0]) continue;
+    for (const word of rowCandidates(internal, legacy)) {
+      if (!word || SKIPPED.has(word) || player.includes(word) || words.has(word)) continue;
       const exact = EVERYDAY.has(word) || /[a-z][A-Z]/.test(word);
-      words.set(word, { player: player[0], pattern: new RegExp(`\\b${word.replace(/\s+/g, '\\s+')}s?\\b`, exact ? 'u' : 'iu') });
+      words.set(word, { player: player[0], pattern: wordPattern(word, 's?', exact ? 'u' : 'iu') });
     }
   }
   // The sentences the page rewrote ("Choose speed"), in any case, each with what replaced it.
-  let rewrites = false;
-  for (const line of terminology.split('\n')) {
-    const cells = line.startsWith('|') ? line.split('|').slice(1, -1).map(cell => cell.trim()) : null;
-    if (!cells) rewrites = false;
-    else if (cells[0] === 'Before') rewrites = true;
-    else if (rewrites && !/^-+$/.test(cells[0]) && cells[0].toLowerCase() !== cells[1].toLowerCase() && !words.has(cells[0])) {
-      words.set(cells[0], { player: cells[1], pattern: new RegExp(`\\b${cells[0].replace(/\s+/g, '\\s+')}\\b`, 'iu') });
-    }
+  for (const [before, after] of tableRows(terminology, first => first === 'Before')) {
+    if (before.toLowerCase() !== after.toLowerCase() && !words.has(before)) words.set(before, { player: after, pattern: wordPattern(before, '', 'iu') });
   }
   return words;
 }
 
 // --- the Markdown subset ------------------------------------------------------------------------------------------
 
-const HEADING = /^(#+)\s+(.*)$/;
-const LIST_ITEM = /^(-|\d+\.)\s+(.*)$/;
+const HEADING = /^(#+) (.*)$/;
+const LIST_ITEM = /^(-|\d+\.) (.*)$/;
 // What opens a list in the middle of a paragraph: as in CommonMark, "-" or "1.", so a wrapped "2." stays prose.
-const LIST_START = /^(-|1\.)\s+/;
+const LIST_START = /^(-|1\.) /;
+const SEPARATOR = /^\|( *:?-+:? *\|)+$/;
+const MARKUP_LEFT = /\*|\[|\]\(/;
+
 // Markdown the subset does not read, which would otherwise pass for a paragraph: another list marker, a heading
 // with no space, a thematic break or a setext underline.
-const OUTSIDE = /^([*+]\s|#|-{3,}\s*$|={3,}\s*$|\*{3,}\s*$|_{3,}\s*$)/;
-const SEPARATOR = /^\|(\s*:?-+:?\s*\|)+$/;
+const isOutside = line => /^[*+] /.test(line) || line.startsWith('#') || /^(-{3,}|={3,}|\*{3,}|_{3,}) *$/.test(line);
 
-/** Builds the book from what `readInputs` read; `errors` lists every refusal, and the book is complete only without one. */
-export function buildRules(given) {
-  const errors = [];
-  const used = new Set();
-  const look = lookup(given, used);
-  const retired = retiredWords(given.terminology);
-  const conceptIds = new Set(given.conceptIds);
-  const bookLinks = [];
+// A line that opens a block of its own, and so ends a paragraph.
+const opensBlock = line => !line.trim() || HEADING.test(line) || line.startsWith('```') || line.startsWith('sources:')
+  || line.startsWith('|') || LIST_START.test(line) || line.startsWith('>') || isOutside(line);
 
-  function words(text, where) {
-    for (const [word, { player, pattern }] of retired) {
-      if (pattern.test(text)) errors.push(`${where}: "${word}": the player's word is ${player}`);
+/** What one build of the book collects: its refusals, the spells it read and the links inside the book. */
+class Build {
+  constructor(given) {
+    this.given = given;
+    this.errors = [];
+    this.used = new Set();
+    this.look = lookup(given, this.used);
+    this.retired = retiredWords(given.terminology);
+    this.conceptIds = new Set(given.conceptIds);
+    this.bookLinks = [];
+  }
+
+  refuse(message) {
+    this.errors.push(message);
+  }
+
+  words(text, where) {
+    for (const [word, { player, pattern }] of this.retired) {
+      if (pattern.test(text)) this.refuse(`${where}: "${word}": the player's word is ${player}`);
     }
   }
 
-  // A line's values drawn and its markup checked: the text a player reads, or null when it cannot be read.
-  function resolve(raw, where) {
-    if (raw.includes('`')) errors.push(`${where}: code is outside the subset`);
-    if (/<[A-Za-z/!]/.test(raw)) errors.push(`${where}: HTML is outside the subset`);
-    if (raw.includes('![')) errors.push(`${where}: an image is outside the subset`);
-    const text = raw.replace(/\{([^{}#][^{}]*)\}/g, (_, expression) => {
-      try {
-        const value = evaluate(expression.trim(), look);
-        if (typeof value === 'number' && !Number.isFinite(value)) throw new Error(`"${expression.trim()}" is not a finite number`);
-        return typeof value === 'number' ? String(Number(value.toFixed(6))) : value;
-      } catch (error) {
-        errors.push(`${where}: ${error.message}`);
-        return '';
-      }
-    });
-    if (/[{}]/.test(text)) errors.push(`${where}: an unmatched brace`);
-    words(text, where);
+  value(expression, where) {
+    try {
+      const value = evaluate(expression, this.look);
+      if (typeof value !== 'number') return value;
+      if (!Number.isFinite(value)) throw new Error(`"${expression}" is not a finite number`);
+      return String(Number(value.toFixed(6)));
+    } catch (error) {
+      this.refuse(`${where}: ${error.message}`);
+      return '';
+    }
+  }
+
+  // A line's values drawn and its markup checked: the text a player reads.
+  resolve(raw, where) {
+    if (raw.includes('`')) this.refuse(`${where}: code is outside the subset`);
+    if (/<[A-Za-z/!]/.test(raw)) this.refuse(`${where}: HTML is outside the subset`);
+    if (raw.includes('![')) this.refuse(`${where}: an image is outside the subset`);
+    const text = raw.replace(/\{([^{}#][^{}]*)\}/g, (_, expression) => this.value(expression.trim(), where));
+    if (/[{}]/.test(text)) this.refuse(`${where}: an unmatched brace`);
+    this.words(text, where);
     return text;
   }
 
+  link(label, href, where) {
+    if (href.startsWith('#')) this.bookLinks.push({ id: href.slice(1), where });
+    else if (!href.startsWith('https://')) this.refuse(`${where}: a link to "${href}" leaves the book; link a section (#id) or a page (https://)`);
+    return { text: label, href };
+  }
+
   // Bold, italics and links, as spans of text.
-  function spans(raw, where) {
-    const text = resolve(raw, where);
+  spans(raw, where) {
+    const text = this.resolve(raw, where);
     const out = [];
     let last = 0;
-    for (const match of text.matchAll(/\*\*(.+?)\*\*|\*(.+?)\*|\[([^\]]+)\]\(([^)\s]+)\)/g)) {
+    for (const match of text.matchAll(/\*\*([^*]+)\*\*|\*([^*]+)\*|\[([^\]]+)\]\(([^)\s]+)\)/g)) {
       if (match.index > last) out.push({ text: text.slice(last, match.index) });
       if (match[1] !== undefined) out.push({ text: match[1], strong: true });
       else if (match[2] !== undefined) out.push({ text: match[2], emphasis: true });
-      else {
-        const href = match[4];
-        if (href.startsWith('#')) bookLinks.push({ id: href.slice(1), where });
-        else if (!href.startsWith('https://')) errors.push(`${where}: a link to "${href}" leaves the book; link a section (#id) or a page (https://)`);
-        out.push({ text: match[3], href });
-      }
+      else out.push(this.link(match[3], match[4], where));
       last = match.index + match[0].length;
     }
     if (last < text.length) out.push({ text: text.slice(last) });
-    if (out.some(span => !span.href && /\*|\[|\]\(/.test(span.text))) errors.push(`${where}: markup the subset does not read (a lone *, a [ or a titled link)`);
+    if (out.some(span => !span.href && MARKUP_LEFT.test(span.text))) this.refuse(`${where}: markup the subset does not read (a lone *, a [ or a titled link)`);
     return out;
   }
 
-  function heading(rest, where) {
-    const match = /^(.*?)\s*\{#([^}]*)\}\s*$/.exec(rest);
-    if (!match) {
-      errors.push(`${where}: heading "${rest}" has no {#id}`);
-      return { title: resolve(rest, where), id: null };
+  heading(rest, where) {
+    const trimmed = rest.trim();
+    const open = trimmed.lastIndexOf('{#');
+    if (open < 0 || !trimmed.endsWith('}')) {
+      this.refuse(`${where}: heading "${trimmed}" has no {#id}`);
+      return { title: this.resolve(trimmed, where), id: null };
     }
-    if (!ID.test(match[2])) errors.push(`${where}: id "${match[2]}" is not lowercase words and hyphens`);
-    return { title: resolve(match[1], where), id: match[2] };
+    const id = trimmed.slice(open + 2, -1);
+    if (!ID.test(id)) this.refuse(`${where}: id "${id}" is not lowercase words and hyphens`);
+    return { title: this.resolve(trimmed.slice(0, open).trim(), where), id };
   }
 
-  function card(lines, where) {
+  card(lines, where) {
     const found = { id: null, title: null, lines: [], example: null };
     for (const line of lines) {
-      if (/\*|\[|\]\(/.test(line)) errors.push(`${where}: a card is plain text, with no markup`);
-      const field = /^(id|title):\s*(.*)$/.exec(line);
-      if (field) found[field[1]] = field[1] === 'id' ? field[2].trim() : resolve(field[2].trim(), where);
-      else if (line.startsWith('> ')) found.example = resolve(line.slice(2).trim(), where);
-      else if (line.trim()) found.lines.push(resolve(line.trim(), where));
+      if (MARKUP_LEFT.test(line)) this.refuse(`${where}: a card is plain text, with no markup`);
+      const field = /^(id|title):(.*)$/.exec(line);
+      if (field?.[1] === 'id') found.id = field[2].trim();
+      else if (field) found.title = this.resolve(field[2].trim(), where);
+      else if (line.startsWith('> ')) found.example = this.resolve(line.slice(2).trim(), where);
+      else if (line.trim()) found.lines.push(this.resolve(line.trim(), where));
     }
-    const name = found.id ?? '?';
-    if (!found.id) errors.push(`${where}: a card has no id`);
-    else if (!conceptIds.has(found.id)) errors.push(`${where}: card "${found.id}" is not in ConceptCards.Ids`);
-    if (!found.title) errors.push(`${where}: card "${name}" has no title`);
-    if (found.lines.length < 1 || found.lines.length > 3) errors.push(`${where}: card "${name}" has ${found.lines.length} lines; one to three`);
-    if (!found.example) errors.push(`${where}: card "${name}" has no example`);
+    this.checkCard(found, where);
     return found;
   }
 
-  function sources(text, where) {
+  checkCard(found, where) {
+    const name = found.id ?? '?';
+    if (!found.id) this.refuse(`${where}: a card has no id`);
+    else if (!this.conceptIds.has(found.id)) this.refuse(`${where}: card "${found.id}" is not in ConceptCards.Ids`);
+    if (!found.title) this.refuse(`${where}: card "${name}" has no title`);
+    if (found.lines.length < 1 || found.lines.length > 3) this.refuse(`${where}: card "${name}" has ${found.lines.length} lines; one to three`);
+    if (!found.example) this.refuse(`${where}: card "${name}" has no example`);
+  }
+
+  source(source, where) {
+    const adr = /^ADR (\d{4})$/.exec(source);
+    const rule = /^game-rules#([a-z0-9-]+)$/.exec(source);
+    if (adr && !this.given.adrs.has(adr[1])) this.refuse(`${where}: ADR ${adr[1]} does not exist`);
+    else if (rule && !this.given.gameRules.has(rule[1])) this.refuse(`${where}: game-rules#${rule[1]} is not a heading of docs/domain/game-rules.md`);
+    else if (!adr && !rule) this.refuse(`${where}: "${source}" is not an ADR or a game-rules heading`);
+  }
+
+  sources(text, where) {
     const named = text.split(',').map(source => source.trim()).filter(Boolean);
-    for (const source of named) {
-      const adr = /^ADR (\d{4})$/.exec(source);
-      const rule = /^game-rules#([a-z0-9-]+)$/.exec(source);
-      if (adr) {
-        if (!given.adrs.has(adr[1])) errors.push(`${where}: ADR ${adr[1]} does not exist`);
-      } else if (rule) {
-        if (!given.gameRules.has(rule[1])) errors.push(`${where}: game-rules#${rule[1]} is not a heading of docs/domain/game-rules.md`);
-      } else errors.push(`${where}: "${source}" is not an ADR or a game-rules heading`);
-    }
+    for (const source of named) this.source(source, where);
     return named;
   }
+}
 
-  function parsePart({ file, text }, index) {
-    const lines = text.split('\n');
-    const part = { id: null, number: index + 1, title: null, blocks: [], sections: [] };
-    let section = null;
-    const blocks = () => (section ?? part).blocks;
-    const add = (block, where) => {
-      if (section?.sources.length > 0 || section?.closed) {
-        errors.push(`${where}: section "${section.id}": nothing follows its sources line but its card`);
-      }
-      blocks().push(block);
-    };
-    let at = 0;
-    while (at < lines.length) {
-      const line = lines[at];
-      const where = `rules/${file}:${at + 1}`;
-      if (!line.trim()) {
-        at += 1;
-        continue;
-      }
-      const head = HEADING.exec(line);
-      if (head) {
-        const level = head[1].length;
-        const { title, id } = heading(head[2], where);
-        if (level === 1 && part.title === null && section === null && part.blocks.length === 0) Object.assign(part, { id, title });
-        else if (level === 1) errors.push(`${where}: a part file has one heading of level 1, its first line`);
-        else if (level === 2) {
-          if (part.title === null) errors.push(`${where}: the part's heading of level 1 comes first`);
-          section = { id, number: `${part.number}.${part.sections.length + 1}`, title, blocks: [], sources: [], card: null };
-          part.sections.push(section);
-        } else errors.push(`${where}: a heading of level ${level} is outside the subset; a part has sections, a section has none`);
-        at += 1;
-        continue;
-      }
-      if (line.startsWith('```')) {
-        const end = lines.indexOf('```', at + 1);
-        const body = lines.slice(at + 1, end < 0 ? lines.length : end);
-        if (line.trim() !== '```card') errors.push(`${where}: a code block is outside the subset; only a card is fenced`);
-        else if (end < 0) errors.push(`${where}: a card is not closed`);
-        else if (!section) errors.push(`${where}: a card belongs to a section`);
-        else if (section.card) errors.push(`${where}: section "${section.id}" has two cards`);
-        else {
-          if (section.sources.length === 0) errors.push(`${where}: section "${section.id}": its card follows its sources line`);
-          section.card = card(body, where);
-          section.closed = true;
-        }
-        at = end < 0 ? lines.length : end + 1;
-        continue;
-      }
-      if (/^sources:/.test(line)) {
-        if (!section) errors.push(`${where}: a sources line belongs to a section`);
-        else {
-          if (section.sources.length > 0) errors.push(`${where}: section "${section.id}" has two sources lines`);
-          section.sources = sources(line.slice('sources:'.length), where);
-          section.closed = true;
-        }
-        at += 1;
-        continue;
-      }
-      if (line.startsWith('>')) {
-        errors.push(`${where}: a quote is outside the subset`);
-        at += 1;
-        continue;
-      }
-      if (OUTSIDE.test(line)) {
-        errors.push(`${where}: "${line.trim()}" is outside the subset; a list item starts with "- ", a heading with "# " and its {#id}`);
-        at += 1;
-        continue;
-      }
-      if (line.startsWith('|')) {
-        const rows = [];
-        while (at < lines.length && lines[at].startsWith('|')) rows.push(lines[at++]);
-        const cells = row => row.trim().replace(/^\||\|$/g, '').split('|').map(cell => spans(cell.trim(), where));
-        if (rows.length < 2 || !SEPARATOR.test(rows[1].trim())) errors.push(`${where}: a table needs its header and a separator line`);
-        add({ type: 'table', header: cells(rows[0]), rows: rows.slice(2).map(cells) }, where);
-        continue;
-      }
-      const item = LIST_ITEM.exec(line);
-      if (item) {
-        const ordered = item[1] !== '-';
-        const items = [];
-        while (at < lines.length) {
-          const next = LIST_ITEM.exec(lines[at]);
-          if (next) items.push(next[2]);
-          else if (/^\s+\S/.test(lines[at]) && items.length > 0) items[items.length - 1] += ` ${lines[at].trim()}`;
-          else break;
-          at += 1;
-        }
-        add({ type: 'list', ordered, items: items.map(text => spans(text, where)) }, where);
-        continue;
-      }
-      const paragraph = [];
-      while (at < lines.length && lines[at].trim() && !HEADING.test(lines[at]) && !lines[at].startsWith('```')
-        && !/^sources:/.test(lines[at]) && !lines[at].startsWith('|') && !LIST_START.test(lines[at]) && !lines[at].startsWith('>')
-        && !OUTSIDE.test(lines[at])) {
-        paragraph.push(lines[at++].trim());
-      }
-      add({ type: 'paragraph', spans: spans(paragraph.join(' '), where) }, where);
-    }
-    if (part.title === null) errors.push(`rules/${file}: a part file opens with its heading of level 1`);
-    for (const one of part.sections) {
-      if (one.sources.length === 0) errors.push(`rules/${file}: section "${one.id}" has no sources line`);
-      delete one.closed;
-    }
-    return part;
+/** One part file read line by line: each block reader takes the lines it owns and leaves the next one. */
+class PartReader {
+  constructor(build, file, number) {
+    this.build = build;
+    this.file = file;
+    this.part = { id: null, number, title: null, blocks: [], sections: [] };
+    this.section = null;
+    this.closed = false;
   }
 
-  const parts = given.parts.map(parsePart);
+  refuse(message) {
+    this.build.refuse(message);
+  }
 
-  // The ids: one a part or a section, each once; the cards, each in one section.
+  add(block, where) {
+    if (this.closed) this.refuse(`${where}: section "${this.section.id}": nothing follows its sources line but its card`);
+    (this.section ?? this.part).blocks.push(block);
+  }
+
+  read(text) {
+    const lines = text.split('\n');
+    let at = 0;
+    while (at < lines.length) at = this.block(lines, at, `rules/${this.file}:${at + 1}`);
+    this.finish();
+    return this.part;
+  }
+
+  block(lines, at, where) {
+    const line = lines[at];
+    if (!line.trim()) return at + 1;
+    if (HEADING.test(line)) return this.heading(line, at, where);
+    if (line.startsWith('```')) return this.fence(lines, at, where);
+    if (line.startsWith('sources:')) return this.sources(line, at, where);
+    if (line.startsWith('>')) return this.outside('a quote is outside the subset', at, where);
+    if (isOutside(line)) return this.outside(`"${line.trim()}" is outside the subset; a list item starts with "- ", a heading with "# " and its {#id}`, at, where);
+    if (line.startsWith('|')) return this.table(lines, at, where);
+    if (LIST_ITEM.test(line)) return this.list(lines, at, where);
+    return this.paragraph(lines, at, where);
+  }
+
+  outside(message, at, where) {
+    this.refuse(`${where}: ${message}`);
+    return at + 1;
+  }
+
+  heading(line, at, where) {
+    const [, marks, rest] = HEADING.exec(line);
+    const { title, id } = this.build.heading(rest, where);
+    if (marks.length === 1) this.partHeading(title, id, where);
+    else if (marks.length === 2) this.sectionHeading(title, id, where);
+    else this.refuse(`${where}: a heading of level ${marks.length} is outside the subset; a part has sections, a section has none`);
+    return at + 1;
+  }
+
+  partHeading(title, id, where) {
+    if (this.part.title === null && this.section === null && this.part.blocks.length === 0) Object.assign(this.part, { id, title });
+    else this.refuse(`${where}: a part file has one heading of level 1, its first line`);
+  }
+
+  sectionHeading(title, id, where) {
+    if (this.part.title === null) this.refuse(`${where}: the part's heading of level 1 comes first`);
+    this.section = { id, number: `${this.part.number}.${this.part.sections.length + 1}`, title, blocks: [], sources: [], card: null };
+    this.closed = false;
+    this.part.sections.push(this.section);
+  }
+
+  fence(lines, at, where) {
+    const end = lines.indexOf('```', at + 1);
+    const next = end < 0 ? lines.length : end + 1;
+    if (lines[at].trim() !== '```card') this.refuse(`${where}: a code block is outside the subset; only a card is fenced`);
+    else if (end < 0) this.refuse(`${where}: a card is not closed`);
+    else this.placeCard(lines.slice(at + 1, end), where);
+    return next;
+  }
+
+  placeCard(body, where) {
+    const { section } = this;
+    if (!section) return this.refuse(`${where}: a card belongs to a section`);
+    if (section.card) return this.refuse(`${where}: section "${section.id}" has two cards`);
+    if (section.sources.length === 0) this.refuse(`${where}: section "${section.id}": its card follows its sources line`);
+    section.card = this.build.card(body, where);
+    this.closed = true;
+    return undefined;
+  }
+
+  sources(line, at, where) {
+    const { section } = this;
+    if (!section) this.refuse(`${where}: a sources line belongs to a section`);
+    else {
+      if (section.sources.length > 0) this.refuse(`${where}: section "${section.id}" has two sources lines`);
+      section.sources = this.build.sources(line.slice('sources:'.length), where);
+      this.closed = true;
+    }
+    return at + 1;
+  }
+
+  table(lines, at, where) {
+    const rows = [];
+    let next = at;
+    while (next < lines.length && lines[next].startsWith('|')) rows.push(lines[next++]);
+    const cells = row => row.trim().slice(1, row.trim().endsWith('|') ? -1 : undefined).split('|').map(cell => this.build.spans(cell.trim(), where));
+    if (rows.length < 2 || !SEPARATOR.test(rows[1].trim())) this.refuse(`${where}: a table needs its header and a separator line`);
+    this.add({ type: 'table', header: cells(rows[0]), rows: rows.slice(2).map(cells) }, where);
+    return next;
+  }
+
+  list(lines, at, where) {
+    const ordered = !lines[at].startsWith('-');
+    const items = [];
+    let next = at;
+    for (; next < lines.length; next += 1) {
+      const item = LIST_ITEM.exec(lines[next]);
+      if (item) items.push(item[2]);
+      else if (/^ +\S/.test(lines[next])) items[items.length - 1] += ` ${lines[next].trim()}`;
+      else break;
+    }
+    this.add({ type: 'list', ordered, items: items.map(text => this.build.spans(text, where)) }, where);
+    return next;
+  }
+
+  paragraph(lines, at, where) {
+    const text = [lines[at].trim()];
+    let next = at + 1;
+    while (next < lines.length && !opensBlock(lines[next])) text.push(lines[next++].trim());
+    this.add({ type: 'paragraph', spans: this.build.spans(text.join(' '), where) }, where);
+    return next;
+  }
+
+  finish() {
+    if (this.part.title === null) this.refuse(`rules/${this.file}: a part file opens with its heading of level 1`);
+    for (const section of this.part.sections) {
+      if (section.sources.length === 0) this.refuse(`rules/${this.file}: section "${section.id}" has no sources line`);
+    }
+  }
+}
+
+// The ids: one a part or a section, each once.
+function sectionIds(parts, build) {
   const ids = new Set();
   for (const id of parts.flatMap(part => [part.id, ...part.sections.map(section => section.id)]).filter(Boolean)) {
-    if (ids.has(id)) errors.push(`id "${id}" is used twice`);
+    if (ids.has(id)) build.refuse(`id "${id}" is used twice`);
     ids.add(id);
   }
+  return ids;
+}
+
+// The cards, each in one section.
+function cardsOf(parts, build) {
   const cards = [];
-  for (const section of parts.flatMap(part => part.sections)) {
-    if (!section.card?.id) continue;
-    if (cards.some(one => one.id === section.card.id)) errors.push(`card "${section.card.id}" is in two sections`);
+  for (const section of parts.flatMap(part => part.sections).filter(one => one.card?.id)) {
+    if (cards.some(one => one.id === section.card.id)) build.refuse(`card "${section.card.id}" is in two sections`);
     else cards.push({ id: section.card.id, section: section.id });
   }
+  return cards;
+}
 
-  // An id never dies: one main's book or the working one had is still a section, or moved.json says where it went.
-  const moved = given.moved ?? {};
+// An id never dies: one main's book or the working one had is still a section, or moved.json says where it went;
+// and every link, in the book or from the pages, lands on a section.
+function checkLinks(given, ids, moved, build) {
   for (const [from, to] of Object.entries(moved)) {
-    if (ids.has(from)) errors.push(`rules/moved.json redirects "${from}", which is still a section`);
-    if (!ids.has(to)) errors.push(`rules/moved.json sends "${from}" to "${to}", which is not a section`);
+    if (ids.has(from)) build.refuse(`rules/moved.json redirects "${from}", which is still a section`);
+    if (!ids.has(to)) build.refuse(`rules/moved.json sends "${from}" to "${to}", which is not a section`);
   }
-  errors.push(...(given.previous?.errors ?? []));
-  for (const id of given.previous?.ids ?? []) {
-    if (!ids.has(id) && !Object.hasOwn(moved, id)) errors.push(`id "${id}" is gone and rules/moved.json does not redirect it`);
-  }
+  for (const error of given.previous?.errors ?? []) build.refuse(error);
+  const lands = id => ids.has(id) || Object.hasOwn(moved, id);
+  for (const id of (given.previous?.ids ?? []).filter(id => !lands(id))) build.refuse(`id "${id}" is gone and rules/moved.json does not redirect it`);
+  for (const { id, where } of build.bookLinks.filter(link => !ids.has(link.id))) build.refuse(`${where}: a link to #${id}, which is not a section`);
+  for (const { file, id } of given.links.filter(link => !lands(link.id))) build.refuse(`${file} links to /rules#${id}, which is not a section`);
+}
 
-  for (const { id, where } of bookLinks) {
-    if (!ids.has(id)) errors.push(`${where}: a link to #${id}, which is not a section`);
-  }
-  for (const { file, id } of given.links) {
-    if (!ids.has(id) && !Object.hasOwn(moved, id)) errors.push(`${file} links to /rules#${id}, which is not a section`);
-  }
-
+// rules/changes.md: one dated line per change a player would notice.
+function readChanges(text, build) {
   const changes = [];
-  for (const line of (given.changes ?? '').split('\n')) {
-    if (!line.trim() || line.startsWith('#')) continue;
-    const change = /^- (\d{4}-\d{2}-\d{2}): (.+)$/.exec(line.trim());
+  for (const line of (text ?? '').split('\n').map(one => one.trim()).filter(one => one && !one.startsWith('#'))) {
+    const change = /^- (\d{4}-\d{2}-\d{2}): (.+)$/.exec(line);
     if (!change) {
-      errors.push(`rules/changes.md: "${line.trim()}" is not "- YYYY-MM-DD: what changed"`);
+      build.refuse(`rules/changes.md: "${line}" is not "- YYYY-MM-DD: what changed"`);
       continue;
     }
     const adrs = [...change[2].matchAll(/ADR (\d{4})/g)].map(match => match[1]);
-    for (const adr of adrs.filter(adr => !given.adrs.has(adr))) errors.push(`rules/changes.md: ADR ${adr} does not exist`);
-    words(change[2], 'rules/changes.md');
+    for (const adr of adrs.filter(one => !build.given.adrs.has(one))) build.refuse(`rules/changes.md: ADR ${adr} does not exist`);
+    build.words(change[2], 'rules/changes.md');
     changes.push({ date: change[1], text: change[2], adrs });
   }
+  return changes;
+}
 
+/** Builds the book from what `readInputs` read; `errors` lists every refusal, and the book is complete only without one. */
+export function buildRules(given) {
+  const build = new Build(given);
+  const parts = given.parts.map(({ file, text }, index) => new PartReader(build, file, index + 1).read(text));
+  const ids = sectionIds(parts, build);
+  const cards = cardsOf(parts, build);
+  const moved = given.moved ?? {};
+  checkLinks(given, ids, moved, build);
+  const changes = readChanges(given.changes, build);
   const book = {
-    drawnFrom: { ruleSet: given.ruleSet.path, rules: given.ruleSet.values, creature: given.creature.id, spells: [...used].sort() },
+    drawnFrom: { ruleSet: given.ruleSet.path, rules: given.ruleSet.values, creature: given.creature.id, spells: [...build.used].sort((a, b) => a.localeCompare(b)) },
     parts,
     cards,
     moved,
     changes,
   };
-  return { book, errors };
+  return { book, errors: build.errors };
 }
 
 /** The committed file's text: two-space JSON and a final newline, so a diff reads line by line. */
@@ -524,7 +605,7 @@ export function render(book) {
 
 // --- the command --------------------------------------------------------------------------------------------------
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+function main() {
   const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
   const { book, errors } = buildRules(readInputs(root));
   if (errors.length > 0) {
@@ -540,8 +621,11 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
       process.exit(1);
     }
     console.log(`${OUTPUT} is up to date.`);
-  } else {
-    writeFileSync(output, built);
-    console.log(`${relative(root, output)}: ${book.parts.length} parts, ${book.parts.reduce((n, part) => n + part.sections.length, 0)} sections, ${book.cards.length} cards.`);
+    return;
   }
+  writeFileSync(output, built);
+  const sections = book.parts.reduce((count, part) => count + part.sections.length, 0);
+  console.log(`${relative(root, output)}: ${book.parts.length} parts, ${sections} sections, ${book.cards.length} cards.`);
 }
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) main();
