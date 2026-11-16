@@ -38,8 +38,13 @@ public sealed class FilePreferenceStore : IPreferenceStore
 
     public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)
     {
-        File.Delete(FullPath(account));
-        File.Delete(TutorialsPath(account));
+        // An account on a host where nobody saved anything yet has no directory to delete from.
+        if (Directory.Exists(Path.GetDirectoryName(FullPath(account))))
+        {
+            File.Delete(FullPath(account));
+            File.Delete(TutorialsPath(account));
+        }
+
         return Task.CompletedTask;
     }
 

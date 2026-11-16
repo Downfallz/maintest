@@ -100,7 +100,7 @@ internal sealed class AccountApi
 
     /// <summary>
     /// Keeps that the account finished or skipped a Tutorial, and answers what it keeps now; null on a host that
-    /// keeps no game settings. Said twice, it is kept once; a Tutorial finished is never skipped again.
+    /// keeps no game settings, and for an account that is gone. Said twice, it is kept once; a Tutorial finished is never skipped again.
     /// </summary>
     public async Task<TutorialProgress?> NoteTutorialAsync(AccountId account, string tutorial, TutorialState state, CancellationToken cancellationToken = default)
     {
@@ -109,8 +109,15 @@ internal sealed class AccountApi
             return null;
         }
 
-        return await AfterTheLastAsync(account, async () =>
+        return await AfterTheLastAsync<TutorialProgress?>(account, async () =>
         {
+            // A request that signed in a moment before its account was deleted reaches this after the deletion
+            // forgot the account's documents: it must not write one back.
+            if (await _registry.FindAsync(account, cancellationToken) is null)
+            {
+                return null;
+            }
+
             var kept = await store.GetTutorialsAsync(account, cancellationToken);
             var next = state switch
             {

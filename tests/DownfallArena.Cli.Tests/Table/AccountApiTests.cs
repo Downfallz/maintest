@@ -428,6 +428,22 @@ public sealed class AccountApiTests : IDisposable
     }
 
     [Fact]
+    public async Task A_tutorial_noted_for_an_account_that_was_just_deleted_is_not_kept()
+    {
+        var api = await ApiAsync(AccountsMode.Development);
+        var store = new FilePreferenceStore(_root);
+        api.Preferences = store;
+        var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+        var id = await IdOf(api, session);
+        await api.HandleAsync("DELETE", "/api/account", """{"username":"MarkF"}""", Signed(session));
+
+        var noted = await api.NoteTutorialAsync(id, "sc-repo-tutorial-your-first-combat", TutorialState.Skipped, TestContext.Current.CancellationToken);
+
+        noted.ShouldBeNull();
+        (await store.GetTutorialsAsync(id, TestContext.Current.CancellationToken)).ShouldBe(TutorialProgress.None);
+    }
+
+    [Fact]
     public async Task Tutorials_noted_at_once_for_one_account_are_all_kept()
     {
         var api = await ApiAsync(AccountsMode.Development);

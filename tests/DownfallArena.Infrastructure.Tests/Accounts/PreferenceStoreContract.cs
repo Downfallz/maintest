@@ -48,6 +48,14 @@ public abstract class PreferenceStoreContract
     }
 
     [Fact]
+    public async Task Forgetting_an_account_where_nothing_was_ever_saved_does_nothing()
+    {
+        var store = await StoreAsync();
+
+        await store.ForgetAsync(AccountId.New(), Cancel);
+    }
+
+    [Fact]
     public async Task An_account_that_kept_no_tutorial_has_none_done_or_skipped()
     {
         var store = await StoreAsync();
