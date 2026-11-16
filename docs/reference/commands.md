@@ -141,7 +141,8 @@ node scripts/rules/build.mjs --check    # exit 1 when table/rules.json is not th
 The official rulebook (ADR 0188, `rules/README.md`). It draws the book's values from the hosted rule set, the
 reference creature and the spells, refuses a duplicate or vanished id, an unresolved value, a retired word, a
 missing source, a dead `/rules#<id>` link and an unknown card, and writes the book as data. `table/rules.test.js`
-fails when the committed file is not its build; `UPDATE_INDEXES=1` with that test rewrites it too.
+fails when the committed file is not its build; `UPDATE_INDEXES=1` with that test rewrites it too. The table serves
+the book at `/rules` (see [The lobby and the pages](#the-lobby-and-the-pages)).
 
 ### studio
 
@@ -429,7 +430,13 @@ The seat's view says the lesson under `practice.tutorial`:
 - `/play` serves the game.
 - The table's files are read once, sent compressed with an ETag and answered 304 when unchanged, pages and
   scripts revalidated on every load and pictures kept a day, and the service worker every page registers keeps
-  one page, `/offline.html`, shown when a page cannot be loaded at all (ADR 0166).
+  one page, `/offline.html`, shown when a page cannot be loaded at all (ADR 0166), and the rulebook (ADR 0191).
+- `/rules` is the official rulebook (ADR 0188), open to anyone: `rules.html` reads `table/rules.json` and draws its
+  contents, every part and section, the concept cards and What changed. `/rules#<id>` opens a section, a part, an
+  id `rules/moved.json` redirects, or a concept card's section, at the top of the screen; the filter keeps the
+  sections whose title or text hold every word typed. **Rules** is in the main menu. The service worker keeps the
+  page and the book, asks the network first and gives its copy only when the host cannot be reached or, for the
+  rulebook's own files, answers with a server error, as Cloudflare does for a host that is down (ADR 0191).
 - `/lobby?token=...` still redirects to admin.
 - The table page shows an Admin link to whoever `/api/me` says is the operator.
 

@@ -1,0 +1,72 @@
+/* The rulebook (/rules): the contents first on a phone, beside the text on a wide screen; the book's own blocks;
+   the concept cards drawn as the battle draws them (battle.css, #concept-dialog). */
+.rules-hero { padding-bottom: 18px; }
+.rules-filter { display: grid; gap: 6px; max-width: 520px; margin-bottom: 18px; }
+.rules-filter label { font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); font-weight: 650; }
+.rules-filter input { min-height: 44px; width: 100%; padding: 10px 12px; font: 16px var(--font-text); color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-sharp); }
+.rules-filter input:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.rules-filter output { font-size: 13px; min-height: 18px; }
+
+.rules-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+.rules-contents { padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--radius-soft); background: var(--paper-glass); align-self: start; scroll-margin-top: 16px; }
+.rules-contents h2 { margin: 0 0 8px; font: 400 20px var(--font-display); color: var(--bone); }
+.rules-contents ol { list-style: none; margin: 0; padding: 0; }
+.rules-contents-parts > li + li { border-top: 1px solid var(--line-soft); }
+.rules-contents summary { display: flex; align-items: center; gap: 6px; min-height: 44px; cursor: pointer; font-weight: 650; list-style: none; }
+.rules-contents summary::-webkit-details-marker { display: none; }
+.rules-contents summary::after { content: "+"; margin-left: auto; padding-left: 8px; color: var(--muted); font-weight: 400; }
+.rules-contents details[open] > summary::after { content: "\2212"; }
+.rules-contents-sections { padding: 0 0 8px 14px; }
+.rules-contents a { display: flex; align-items: center; gap: 6px; min-height: 44px; color: var(--ink); text-decoration: none; overflow-wrap: anywhere; }
+.rules-contents a:hover { color: var(--gold); }
+.rules-contents a[aria-current] { color: var(--gold); font-weight: 650; }
+.rules-contents-changes { margin: 4px 0 0; border-top: 1px solid var(--line-soft); }
+.rules-number { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 2.2em; }
+
+.rules-text { min-width: 0; max-width: 820px; }
+.rules-book { min-width: 0; line-height: 1.6; }
+.rules-part { margin-bottom: 28px; scroll-margin-top: 16px; }
+.rules-part h2 { margin: 0; padding-bottom: 8px; font: 400 26px/1.2 var(--font-display); color: var(--bone); }
+.rules-section { margin: 22px 0 0; scroll-margin-top: 16px; }
+.rules-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.rules-section h3 { margin: 0 0 6px; font: 400 20px/1.25 var(--font-display); color: var(--bone); }
+:is(.rules-part, .rules-section) :is(h2, h3) .rules-number { margin-right: 4px; }
+:is(.rules-part, .rules-section) :is(h2, h3):focus { outline: none; }
+:is(.rules-part, .rules-section) :is(h2, h3):focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; }
+.rules-part-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 0 10px; border-bottom: 1px solid var(--line); }
+.rules-section-links { flex: none; display: flex; align-items: center; gap: 4px; }
+.rules-anchor { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; color: var(--muted); text-decoration: none; font-size: 15px; }
+.rules-anchor:hover { color: var(--gold); }
+.rules-to-contents { flex: none; display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; font-size: 12px; color: var(--muted); }
+.rules-book p { margin: 0 0 10px; }
+.rules-book :is(ul, ol) { margin: 0 0 12px; padding-left: 22px; }
+.rules-book li + li { margin-top: 6px; }
+.rules-book a { color: var(--gold); }
+.rules-table { overflow-x: auto; margin: 0 0 14px; border: 1px solid var(--line); border-radius: var(--radius-soft); background: var(--panel); }
+.rules-table table { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.45; }
+.rules-table th { text-align: left; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); font-weight: 650; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.rules-table td { padding: 10px 12px; vertical-align: top; border-bottom: 1px solid var(--line-soft); }
+.rules-table tr:last-child td { border-bottom: 0; }
+
+.rules-card { max-width: 380px; margin: 14px 0 6px; padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--radius-soft); background: var(--panel); }
+.rules-card .eyebrow { margin: 0; color: var(--gold); font-size: 10px; letter-spacing: 1.6px; text-transform: uppercase; }
+.rules-card-title { margin: 4px 0 8px; font: 400 22px/1.15 var(--font-display); color: var(--bone); overflow-wrap: anywhere; }
+.rules-card .concept-lines p { margin: 0 0 8px; font-size: 15px; line-height: 1.4; }
+.rules-card .concept-example { margin: 4px 0 0; padding-left: 10px; border-left: 2px solid var(--gold); color: var(--gold); font-size: 14px; line-height: 1.4; }
+
+.rules-changes { margin-top: 36px; padding-top: 18px; border-top: 1px solid var(--line); scroll-margin-top: 16px; }
+.rules-changes h2 { margin: 0 0 10px; font: 400 22px var(--font-display); color: var(--bone); }
+.rules-changes-list { margin: 0 0 14px; padding-left: 20px; line-height: 1.55; }
+.rules-drawn { font-size: 13px; }
+
+/* Wide enough for both: the contents stay beside the text, and a section needs no way back to them. */
+@media (min-width: 900px) {
+  .rules-layout { grid-template-columns: 280px minmax(0, 1fr); gap: 36px; }
+  .rules-contents { position: sticky; top: 16px; max-height: calc(100dvh - 32px); overflow-y: auto; }
+  .rules-to-contents { display: none; }
+}
+@media (max-width: 420px) {
+  .rules-part h2 { font-size: 23px; }
+  .rules-table table { font-size: 13px; }
+  .rules-table :is(th, td) { padding: 8px; }
+}

@@ -80,6 +80,12 @@ internal sealed class TableFiles
             ["/stats"] = (Path.Combine(tableDirectory, "stats.html"), StudioResponse.Html),
             ["/stats.js"] = (Path.Combine(tableDirectory, "stats.js"), JavaScript),
             ["/stats.css"] = (Path.Combine(tableDirectory, "stats.css"), Css),
+
+            // The official rulebook (ADR 0188), open to anyone: the page, and the book built from rules/ it reads.
+            ["/rules"] = (Path.Combine(tableDirectory, "rules.html"), StudioResponse.Html),
+            ["/rules.js"] = (Path.Combine(tableDirectory, "rules.js"), JavaScript),
+            ["/rules.css"] = (Path.Combine(tableDirectory, "rules.css"), Css),
+            ["/rules.json"] = (Path.Combine(tableDirectory, "rules.json"), StudioResponse.Json),
             ["/lobby.css"] = (Path.Combine(tableDirectory, "lobby.css"), Css),
             ["/table.css"] = (Path.Combine(tableDirectory, "table.css"), Css),
             ["/identity.css"] = (Path.Combine(tableDirectory, "identity.css"), Css),

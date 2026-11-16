@@ -22,3 +22,6 @@
 - A guard read-then-write over a store (count recent, then save) needs a gate in the process; the API runs maxReplicas 1 (infra/main.bicep), so a SemaphoreSlim suffices, but the hourly job and ForgetAsync paths stay outside it (R1 feedback).
 - A rate guard that refuses a repeat (TooSoon) makes a phone's retry after a timeout read as a failure though the first was kept: ask for an idempotency key or answer the kept id on an identical repeat (R1 feedback).
 - `CF-Connecting-IP` is spoofable while `onlyCloudflare` is false (its default, infra/main.bicep:45): believe it only from a Cloudflare peer (R1 feedback).
+- A static-only route (TableFiles entry) answers questions 3-7 trivially; the checks that bite are the csproj `Content` (a new extension, e.g. table/rules.json, is not in the `*.js/*.css` globs) and `.dockerignore`, an allowlist where `table/` ships whole (R3 rulebook).
+- A service worker fallback "when the host cannot be reached" fires only on a network error: behind Cloudflare an unreachable origin is a 52x response, passed through; the local browser spec that stops the host cannot see that difference (R3 rulebook, ADR 0191).
+- A worker that keeps a navigation's response must refuse `response.redirected`: a redirected copy served later to a navigation is a network error in Chromium (R3 rulebook).

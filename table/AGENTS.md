@@ -6,7 +6,7 @@ What the client may never decide is in docs/tabletop/playtest-app.md; the routes
 ## What is here
 
 - The lobby and home (`/`, `/lobby`, ADR 0115), the admin panel (`/admin`), the pilot page, the leaderboard
-  and the statistics, the offline page and the service worker (ADR 0166).
+  and the statistics, the rulebook (`/rules`, ADR 0188), the offline page and the service worker (ADR 0166, 0191).
 - `presentation.js`: the pure seat-to-presentation boundary shared with the live battle work.
 - `identity.css`, loaded last by every page, owns the shared bone-and-soot parts: buttons, cards, windows,
   headers (ADR 0158, docs/art/branding.md). `fonts/` holds the display face the host serves.

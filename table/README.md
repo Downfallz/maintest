@@ -523,8 +523,22 @@ reads its lists again at once.
 The host reads each file once, sends it compressed (Brotli or gzip) with an `ETag`, and answers 304 when the
 browser's copy is current. Pages, scripts, styles and `sw.js` are revalidated on every load, so a deploy reaches
 every page at its next load; pictures and the font are kept a day. Every page with the navigation registers the
-service worker, which serves nothing from a cache but `offline.html`, shown when a page cannot be loaded at all;
-it reloads by itself when the network is back.
+service worker, which serves nothing from a cache but `offline.html`, shown when a page cannot be loaded at all
+(it reloads by itself when the network is back), and the rulebook (ADR 0191): `/rules`, its script and style,
+`rules.json`, the shared styles, the brand mark and the font are kept at install and refreshed whenever the network
+answers, and given only when it cannot answer; the rulebook's own files also when the host answers with a server
+error (a 52x from Cloudflare for a host that is down), never the shared ones, which other pages draw with.
+Offline, the rulebook draws without the menu, the brand alone leading home.
+
+## The rulebook (ADR 0188)
+
+`/rules` is the official rulebook, open to anyone, signed in or not, and **Rules** in the main menu. It reads
+`rules.json`, which `node scripts/rules/build.mjs` builds from `rules/`, and writes no rule of its own. The contents
+come first on a phone, each section leading back to them, and stay beside the text on a wide screen. `/rules#<id>`
+opens a section, a part, an id `rules/moved.json` redirects (the address shows the id it moved to), or a concept
+card's section, at the top of the screen; the browser's back returns where the reader was. The filter keeps the
+sections whose title, text or card hold every word typed, without case or accents. What changed lists
+`rules/changes.md`, the latest first.
 
 ## Friends
 
@@ -671,6 +685,7 @@ test (`.claude/rules/host.md`).
 | `/pilot?token=<pilot token>` | pilot | The operator's own page for the seats of a console table. |
 | `/session/<id>` | anyone | A finished recorded session in the viewer. |
 | `/leaderboard`, `/stats` | anyone, account | The ladder (ADR 0124) and the player's own statistics (ADR 0168). |
+| `/rules`, `/rules.json` | anyone | The official rulebook (ADR 0188) and the book it reads; `/rules#<id>` opens a section. |
 | `/offline.html` | anyone | The page the service worker keeps (ADR 0166). |
 | `GET /api/me` | anyone | Who is signed in, whether they are the operator, and the host's notice (ADR 0177). |
 | `DELETE /api/account` | account | Deletes the account. |
