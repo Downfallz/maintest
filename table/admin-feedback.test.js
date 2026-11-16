@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { categoryFilters, categoryLabel, changeSaid, creatureLine, feedbackLine, feedbackPath, feedbackRows, muteLine, positionSides, sheetActions, sheetFacts, sheetWords, statusLine } from './admin-feedback.js';
+import { askedLine, categoryFilters, categoryLabel, changeSaid, creatureLine, feedbackLine, feedbackPath, feedbackRows, mergeChoices, muteLine, planPrompt, positionSides, sheetActions, sheetFacts, sheetWords, statusLine, STATUS_FILTERS } from './admin-feedback.js';
 
 const NOW = Date.parse('2026-11-16T12:00:00Z');
 
@@ -82,4 +82,59 @@ test('a mute says how long it lasts and why, and a change says what the host ans
   assert.equal(muteLine({ daysLeft: 1, why: 'operator', by: 'mark' }), 'This player can send no feedback for 1 more day (by mark).');
   assert.deepEqual(changeSaid({ ok: true, body: {} }, 'Marked seen.'), { refused: false, line: 'Marked seen.' });
   assert.deepEqual(changeSaid({ ok: false, status: 409, body: { message: 'This feedback is closed.' } }, 'x'), { refused: true, line: 'This feedback is closed.' });
+});
+
+const idea = {
+  id: '20261116T100000000Z-aaa111', kind: 'idea', category: 'battle', status: 'seen', reason: null, plan: null, at: '2026-11-14T10:00:00Z',
+  text: 'I wanted to see the last round again but could not.', expected: 'A replay button.', additions: [],
+  account: 'acct_1', guest: false, senderGone: false, mute: null, context: null, askedBy: 3, since: '2026-11-14T10:00:00Z',
+  asks: [
+    { id: 'b', at: '2026-11-15T12:00:00Z', text: 'Let me watch a round again.', expected: null, additions: [], account: null, guest: true, senderGone: false },
+    { id: 'c', at: '2026-11-16T11:00:00Z', text: 'A replay, please.', expected: 'From the recap.', additions: [{ at: '2026-11-16T11:30:00Z', text: 'Or from the menu.', expected: null }], account: null, guest: false, senderGone: true },
+  ],
+  mergedInto: null, actions: ['planned', 'shipped', 'dismiss', 'spam', 'declined', 'merge', 'prompt'],
+};
+
+test('an idea says how many asked and since when, in its row and on its sheet', () => {
+  assert.equal(askedLine(3, '2026-11-14T10:00:00Z'), 'Asked by 3 players since 2026-11-14');
+  assert.equal(askedLine(1, '2026-11-14T10:00:00Z'), 'Asked by 1 player since 2026-11-14');
+  const [row] = feedbackRows({ feedback: [{ id: 'a', kind: 'idea', category: 'battle', line: 'Replays.', status: 'planned', plan: 'docs/tabletop/replay-plan.md', at: '2026-11-16T11:00:00Z', askedBy: 3, additions: 0 }] }, NOW);
+  assert.equal(row.asked, 'asked by 3');
+  assert.equal(row.status, 'Planned: docs/tabletop/replay-plan.md');
+
+  const facts = Object.fromEntries(sheetFacts(idea, NOW));
+  assert.equal(facts['Asked by'], '3 players since 2026-11-14');
+  assert.equal(facts['Merged into'], undefined);
+  assert.equal(Object.fromEntries(sheetFacts({ ...idea, mergedInto: { id: 'z', line: 'Replays of a round.', status: 'planned' } }, NOW))['Merged into'], 'Replays of a round.');
+});
+
+test('a sheet reads the words of every idea merged into it, each with who asked', () => {
+  assert.deepEqual(sheetWords(idea, NOW).map(word => word.label), [
+    'What they were trying to do', 'How they would like it', 'Also asked 1 d ago, by a guest', 'Also asked 1 h ago, by an account since deleted',
+  ]);
+  assert.equal(sheetWords(idea, NOW)[3].text, 'A replay, please.\nFrom the recap.\nOr from the menu.');
+});
+
+test('an idea\'s statuses are offered as filters and said with their plan or reason', () => {
+  assert.deepEqual(STATUS_FILTERS.map(one => one.value), ['open', 'new', 'seen', 'reproduced', 'planned', 'shipped', 'declined', 'dismissed', '']);
+  assert.equal(statusLine({ status: 'declined', reason: 'Not for this game.' }), 'Declined: Not for this game.');
+  assert.equal(statusLine({ status: 'shipped', plan: 'docs/tabletop/replay-plan.md' }), 'Shipped');
+  const can = sheetActions(idea);
+  assert.deepEqual([can.planned, can.shipped, can.declined, can.merge, can.prompt, can.toBug], [true, true, true, true, true, false]);
+});
+
+test('the plan prompt is built from the operator\'s words, never the player\'s, with how many asked', () => {
+  assert.equal(planPrompt('  ', idea), null);
+  assert.equal(planPrompt('Let a player\nwatch the last round again', idea),
+    '/new-plan Let a player watch the last round again. Asked by 3 players since 2026-11-14.');
+  assert.equal(planPrompt('Replays from the recap?', { ...idea, askedBy: 1 }), '/new-plan Replays from the recap? Asked by 1 player since 2026-11-14.');
+});
+
+test('an idea is merged into another open idea, never into itself, each said with how many asked it', () => {
+  const choices = mergeChoices([
+    { id: 'a', kind: 'idea', line: 'Replays.', askedBy: 2 },
+    { id: idea.id, kind: 'idea', line: 'This one.', askedBy: 3 },
+    { id: 'r', kind: 'bug', line: 'A bug.' },
+  ], idea.id);
+  assert.deepEqual(choices, [{ value: 'a', label: 'Replays. (asked by 2)' }]);
 });

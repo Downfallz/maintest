@@ -18,15 +18,64 @@ public sealed class OperatorFeedback(IFeedbackStore store, FeedbackMutes mutes, 
 
     public const int LongestReason = 300;
 
-    /// <summary>A page of what the filter keeps, newest first; a page past the last is the last.</summary>
+    /// <summary>
+    /// A page of what the filter keeps, newest first; ideas alone by how many asked, then by the newest ask, so what many
+    /// players want comes first. A page past the last is the last.
+    /// </summary>
     public async Task<FeedbackPage> PageAsync(FeedbackFilter filter, int page, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(filter);
-        var kept = (await AllAsync(cancellationToken)).Where(filter.Keeps).ToList();
+        var all = await AllAsync(cancellationToken);
+        var asks = FeedbackGroups.Of(all)
+            .Where(group => group.Value[0].Kind == FeedbackKind.Idea)
+            .ToDictionary(group => group.Key, group => FeedbackGroups.AsksOf(group.Value), StringComparer.Ordinal);
+        var kept = all.Where(filter.Keeps).ToList();
+        if (filter.Kind == FeedbackKind.Idea)
+        {
+            kept = [.. kept
+                .OrderByDescending(one => asks.GetValueOrDefault(one.Id)?.AskedBy ?? 1)
+                .ThenByDescending(one => asks.GetValueOrDefault(one.Id)?.Latest ?? one.LastWritten)
+                .ThenByDescending(one => one.Id, StringComparer.Ordinal)];
+        }
+
         var pages = Math.Max(1, (kept.Count + PerPage - 1) / PerPage);
         var shown = Math.Clamp(page, 1, pages);
-        return new FeedbackPage([.. kept.Skip((shown - 1) * PerPage).Take(PerPage)], kept.Count, shown, pages);
+        var rows = kept.Skip((shown - 1) * PerPage).Take(PerPage).ToList();
+        return new FeedbackPage(rows, kept.Count, shown, pages, rows.Where(one => asks.ContainsKey(one.Id)).ToDictionary(one => one.Id, one => asks[one.Id], StringComparer.Ordinal));
     }
+
+    /// <summary>
+    /// An idea's group as its sheet reads it: the ideas merged into it and how many asked, or the idea it was merged into.
+    /// A bug report is never grouped, so it reads nothing more.
+    /// </summary>
+    public async Task<FeedbackGroup> GroupAsync(Feedback feedback, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(feedback);
+        if (feedback.Kind == FeedbackKind.Bug)
+        {
+            return new FeedbackGroup(null, [], FeedbackGroups.AsksOf([feedback]));
+        }
+
+        if (feedback.MergedInto is not null)
+        {
+            return new FeedbackGroup(await FeedbackGroups.RootAsync(store, feedback, cancellationToken), [], FeedbackGroups.AsksOf([feedback]));
+        }
+
+        var group = FeedbackGroups.Of(await AllAsync(cancellationToken)).GetValueOrDefault(feedback.Id) ?? [feedback];
+        return new FeedbackGroup(null, [.. group.Where(one => one.Id != feedback.Id)], FeedbackGroups.AsksOf(group));
+    }
+
+    /// <summary>
+    /// Merges an idea into another: it leaves the list and is read inside that one, its sender and words kept, and counts
+    /// towards how many asked. An idea merged since is followed to the one its group became. Only an open idea is merged,
+    /// into another open idea and never into itself or its own group. Merged again into the same group, nothing changes.
+    /// </summary>
+    public Task<Result<FeedbackMerge>> MergeAsync(string id, string into, CancellationToken cancellationToken = default) =>
+        writes.OneAtATimeAsync(() => MergingAsync(id, into, cancellationToken), cancellationToken);
+
+    /// <summary>Marks an idea planned, with the path of the plan it went into (<see cref="PlanPath" />); that reopens it when it was closed.</summary>
+    public Task<Result<FeedbackStatusChange>> PlanAsync(string id, string? plan, CancellationToken cancellationToken = default) =>
+        writes.OneAtATimeAsync(() => StatusAsync(id, FeedbackStatus.Planned, null, plan?.Trim(), cancellationToken), cancellationToken);
 
     public Task<Feedback?> FindAsync(string id, CancellationToken cancellationToken = default) =>
         Feedback.IsId(id) ? store.FindAsync(id, cancellationToken) : Task.FromResult<Feedback?>(null);
@@ -48,14 +97,15 @@ public sealed class OperatorFeedback(IFeedbackStore store, FeedbackMutes mutes, 
     }
 
     /// <summary>
-    /// Marks it seen, which reopens it when it was dismissed; reproduced, for a bug report; or dismissed, with a reason of
-    /// one line, <see cref="Feedback.SpamReason" /> marking it as spam. The status it already has, with the same reason,
-    /// changes nothing.
+    /// Marks it seen, which reopens it when it was closed; reproduced, for a bug report; shipped or declined, for an idea,
+    /// declining with a reason its players read; or dismissed, with a reason of one line,
+    /// <see cref="Feedback.SpamReason" /> marking it as spam. Planned is <see cref="PlanAsync" />'s, since it names a plan.
+    /// The status it already has, with the same reason, changes nothing. An idea merged into another takes none.
     /// </summary>
     public async Task<Result<FeedbackStatusChange>> SetStatusAsync(string id, FeedbackStatus status, string? reason, string by, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(by);
-        var set = await writes.OneAtATimeAsync(() => StatusAsync(id, status, reason?.Trim(), cancellationToken), cancellationToken);
+        var set = await writes.OneAtATimeAsync(() => StatusAsync(id, status, reason?.Trim(), plan: null, cancellationToken), cancellationToken);
         if (set.IsFailure || !set.Value.Feedback.IsSpam || set.Value.Feedback.SpamCounted)
         {
             return set;
@@ -80,9 +130,20 @@ public sealed class OperatorFeedback(IFeedbackStore store, FeedbackMutes mutes, 
         return counted;
     }
 
-    /// <summary>A bug report the rules answered as designed becomes an idea, or an idea that names a rule gone wrong a bug report; its words, position and sender kept.</summary>
-    public Task<Result<FeedbackKindChange>> ChangeKindAsync(string id, FeedbackKind kind, CancellationToken cancellationToken = default) =>
-        writes.OneAtATimeAsync(() => KindAsync(id, kind, cancellationToken), cancellationToken);
+    /// <summary>
+    /// A bug report the rules answered as designed becomes an idea, or an idea that names a rule gone wrong a bug report;
+    /// its words, position and sender kept. An idea others were merged into stays one: a bug report is never grouped.
+    /// Whether any were is read before the write gate, as the spam count is, so players' sending never waits on it.
+    /// </summary>
+    public async Task<Result<FeedbackKindChange>> ChangeKindAsync(string id, FeedbackKind kind, CancellationToken cancellationToken = default)
+    {
+        if (kind == FeedbackKind.Bug && (await AllAsync(cancellationToken)).Any(one => one.MergedInto == id))
+        {
+            return Result.Failure<FeedbackKindChange>(FeedbackErrors.Grouped);
+        }
+
+        return await writes.OneAtATimeAsync(() => KindAsync(id, kind, cancellationToken), cancellationToken);
+    }
 
     /// <summary>Stops the feedback's sender from sending more for <see cref="FeedbackMute.Lasts" />; a mute that holds already is kept as it is.</summary>
     public async Task<Result<FeedbackMuteChange>> MuteAsync(string id, string by, CancellationToken cancellationToken = default)
@@ -133,34 +194,54 @@ public sealed class OperatorFeedback(IFeedbackStore store, FeedbackMutes mutes, 
         return new FeedbackWaiting(waiting.Count, waiting.Count(one => one.Kind == FeedbackKind.Bug), lastDay, lastDay >= SendFeedback.PerHost);
     }
 
-    private async Task<Result<FeedbackStatusChange>> StatusAsync(string id, FeedbackStatus status, string? reason, CancellationToken cancellationToken)
+    private async Task<Result<FeedbackStatusChange>> StatusAsync(string id, FeedbackStatus status, string? reason, string? plan, CancellationToken cancellationToken)
     {
         if (await FindAsync(id, cancellationToken) is not { } feedback)
         {
             return Result.Failure<FeedbackStatusChange>(FeedbackErrors.NotFound(id));
         }
 
+        if (feedback.MergedInto is not null)
+        {
+            return Result.Failure<FeedbackStatusChange>(FeedbackErrors.MergedAway);
+        }
+
         var now = clock.GetUtcNow();
+        var idea = feedback.Kind == FeedbackKind.Idea;
+        var oneLine = reason is { Length: > 0 and <= LongestReason } && !reason.Any(char.IsControl);
+
+        // Closed again with the status it has keeps when it was closed: the 180 days run from the first time.
+        var closedAt = feedback.Status == status ? feedback.ClosedAt ?? now : now;
+        var reopened = feedback with { Status = status, ClosedAt = null, Reason = null, Plan = null, SpamCounted = false };
         Feedback changed;
         switch (status)
         {
             case FeedbackStatus.Seen:
-            case FeedbackStatus.Reproduced when feedback.Kind == FeedbackKind.Bug:
-                changed = feedback with { Status = status, ClosedAt = null, Reason = null, SpamCounted = false };
+            case FeedbackStatus.Reproduced when !idea:
+                changed = reopened;
                 break;
-            case FeedbackStatus.Dismissed when reason is { Length: > 0 and <= LongestReason } && !reason.Any(char.IsControl):
-                // Dismissed again for another reason keeps when it was closed: the 180 days run from the first time.
-                changed = feedback with { Status = status, ClosedAt = feedback.Status == FeedbackStatus.Dismissed ? feedback.ClosedAt ?? now : now, Reason = reason, SpamCounted = false };
+            case FeedbackStatus.Planned when idea && PlanPath.Is(plan):
+                changed = reopened with { Plan = plan };
+                break;
+            case FeedbackStatus.Planned when idea:
+                return Result.Failure<FeedbackStatusChange>(FeedbackErrors.Invalid("Planning names the plan's path in the repository: docs/…-plan.md."));
+            case FeedbackStatus.Shipped when idea:
+                changed = reopened with { ClosedAt = closedAt, Plan = feedback.Plan };
+                break;
+            case FeedbackStatus.Dismissed when oneLine:
+            case FeedbackStatus.Declined when idea && oneLine:
+                changed = reopened with { ClosedAt = closedAt, Reason = reason };
                 break;
             case FeedbackStatus.Dismissed:
-                return Result.Failure<FeedbackStatusChange>(FeedbackErrors.Invalid($"Dismissing says why, on one line of {LongestReason} characters at most."));
+            case FeedbackStatus.Declined when idea:
+                return Result.Failure<FeedbackStatusChange>(FeedbackErrors.Invalid($"{(idea && status == FeedbackStatus.Declined ? "Declining" : "Dismissing")} says why, on one line of {LongestReason} characters at most."));
             default:
-                return Result.Failure<FeedbackStatusChange>(FeedbackErrors.Invalid(feedback.Kind == FeedbackKind.Bug
-                    ? "A bug report is marked seen, reproduced or dismissed here."
-                    : "An idea is marked seen or dismissed here."));
+                return Result.Failure<FeedbackStatusChange>(FeedbackErrors.Invalid(idea
+                    ? "An idea is marked seen, planned, shipped, declined or dismissed here."
+                    : "A bug report is marked seen, reproduced or dismissed here."));
         }
 
-        if (changed.Status == feedback.Status && changed.Reason == feedback.Reason)
+        if (changed.Status == feedback.Status && changed.Reason == feedback.Reason && changed.Plan == feedback.Plan)
         {
             return Result.Success(new FeedbackStatusChange(feedback, Changed: false, Muted: null));
         }
@@ -197,6 +278,11 @@ public sealed class OperatorFeedback(IFeedbackStore store, FeedbackMutes mutes, 
             return Result.Failure<FeedbackKindChange>(FeedbackErrors.NotFound(id));
         }
 
+        if (feedback.MergedInto is not null)
+        {
+            return Result.Failure<FeedbackKindChange>(FeedbackErrors.MergedAway);
+        }
+
         if (feedback.Kind == kind)
         {
             return Result.Success(new FeedbackKindChange(feedback, Was: null));
@@ -217,6 +303,44 @@ public sealed class OperatorFeedback(IFeedbackStore store, FeedbackMutes mutes, 
         };
         await store.SaveAsync(changed, cancellationToken);
         return Result.Success(new FeedbackKindChange(changed, feedback.Kind));
+    }
+
+    private async Task<Result<FeedbackMerge>> MergingAsync(string id, string into, CancellationToken cancellationToken)
+    {
+        if (await FindAsync(id, cancellationToken) is not { } idea)
+        {
+            return Result.Failure<FeedbackMerge>(FeedbackErrors.NotFound(id));
+        }
+
+        if (await FindAsync(into, cancellationToken) is not { } target || await FeedbackGroups.RootAsync(store, target, cancellationToken) is not { } root)
+        {
+            return Result.Failure<FeedbackMerge>(FeedbackErrors.NotFound(into));
+        }
+
+        if (idea.Kind != FeedbackKind.Idea || root.Kind != FeedbackKind.Idea)
+        {
+            return Result.Failure<FeedbackMerge>(FeedbackErrors.Invalid("Only an idea is merged, and only into another idea."));
+        }
+
+        if (root.Id == idea.Id)
+        {
+            return Result.Failure<FeedbackMerge>(FeedbackErrors.Invalid("An idea is not merged into itself, nor into an idea merged into it."));
+        }
+
+        if (idea.MergedInto == root.Id)
+        {
+            return Result.Success(new FeedbackMerge(idea, root, Changed: false));
+        }
+
+        if (idea.IsClosed || root.IsClosed)
+        {
+            return Result.Failure<FeedbackMerge>(FeedbackErrors.Closed);
+        }
+
+        // Merging is reading it: a new idea merged no longer waits in the Overview's count.
+        var merged = idea with { MergedInto = root.Id, Status = idea.Status == FeedbackStatus.New ? FeedbackStatus.Seen : idea.Status };
+        await store.SaveAsync(merged, cancellationToken);
+        return Result.Success(new FeedbackMerge(merged, root, Changed: true));
     }
 
     /// <summary>The feedback, read once, when its sender can be muted; or why not.</summary>

@@ -1,8 +1,10 @@
 // Headquarters' Feedback tab (docs/tabletop/feedback-plan.md, R3, ADR 0189): the bug reports and ideas players sent
 // with Report or suggest, newest first, twenty a page, filtered by kind, status and category. A row opens its sheet:
 // the player's words, what the page and the host added, the position drawn read-only, the status set by hand, a bug
-// report turned into an idea or back, Diagnose… on a table still under way, and the sender muted or let through. The
-// host keeps, guards and notes; this page asks and draws.
+// report turned into an idea or back, Diagnose… on a table still under way, and the sender muted or let through. An
+// idea (I1) is merged into another, read with every idea merged into it and how many asked, planned with its plan's
+// path, shipped or declined, and copied as a plan prompt in the operator's own words. The host keeps, guards and
+// notes; this page asks and draws.
 
 import { ago } from './admin-players.js';
 import { BUG_CATEGORIES, IDEA_PLACES } from './feedback-sheet.js';
@@ -31,6 +33,9 @@ export const STATUS_FILTERS = Object.freeze([
   { value: 'new', label: 'New' },
   { value: 'seen', label: 'Seen' },
   { value: 'reproduced', label: 'Reproduced' },
+  { value: 'planned', label: 'Planned' },
+  { value: 'shipped', label: 'Shipped' },
+  { value: 'declined', label: 'Declined' },
   { value: 'dismissed', label: 'Dismissed' },
   { value: '', label: 'Every status' },
 ]);
@@ -82,15 +87,17 @@ export function feedbackRows(answer, now = Date.now()) {
     status: statusLine(row),
     when: ago(row.at, now),
     more: row.additions > 0 ? `${row.additions} added later` : '',
+    asked: Number.isInteger(row.askedBy) ? `asked by ${row.askedBy}` : '',
     warn: row.kind === 'bug' && row.status === 'new',
   }));
 }
 
-/** A status as the sheet and the list say it, with the operator's reason when it was dismissed. */
+/** A status as the sheet and the list say it: with the operator's reason when dismissed or declined, with its plan when planned. */
 export function statusLine(feedback) {
   const label = STATUS_LABELS[feedback?.status] ?? feedback?.status ?? '';
-  if (feedback?.status !== 'dismissed' || !feedback.reason) return label;
-  return feedback.spam === true ? 'Dismissed as spam' : `${label}: ${feedback.reason}`;
+  if (feedback?.status === 'planned' && feedback.plan) return `${label}: ${feedback.plan}`;
+  if (!['dismissed', 'declined'].includes(feedback?.status) || !feedback.reason) return label;
+  return feedback.status === 'dismissed' && feedback.spam === true ? 'Dismissed as spam' : `${label}: ${feedback.reason}`;
 }
 
 /** What the pager under the list says. */
@@ -100,6 +107,13 @@ export function feedbackLine(answer) {
 }
 
 const plural = (count, one, many = `${one}s`) => `${count} ${count === 1 ? one : many}`;
+
+const day = at => (at ? new Date(at).toISOString().slice(0, 10) : '');
+
+/** How many asked an idea, the ideas merged into it counted, and since the first of them asked. */
+export function askedLine(askedBy, since) {
+  return `Asked by ${plural(askedBy, 'player')} since ${day(since)}`;
+}
 
 const stamp = at => (at ? new Date(at).toISOString().replace('T', ' ').slice(0, 16) + ' UTC' : '');
 
@@ -123,6 +137,8 @@ function contextFacts(context) {
 /** The facts the sheet lists, each a label and a line, from `GET /api/admin/feedback/<id>`. */
 export function sheetFacts(answer, now = Date.now()) {
   const facts = [['Sent', `${ago(answer.at, now)} · ${stamp(answer.at)}`], ['From', senderLine(answer)]];
+  if (Number.isInteger(answer.askedBy)) facts.push(['Asked by', askedLine(answer.askedBy, answer.since).slice('Asked by '.length)]);
+  if (answer.mergedInto) facts.push(['Merged into', answer.mergedInto.line]);
   if (answer.context) facts.push(...contextFacts(answer.context));
   if (answer.page) facts.push(['Page', answer.page]);
   if (answer.browser) facts.push(['Browser', answer.browser]);
@@ -147,7 +163,34 @@ export function sheetWords(answer, now = Date.now()) {
   for (const added of answer.additions ?? []) {
     words.push({ label: `Added ${ago(added.at, now)}`, text: added.expected ? `${added.text}\n${added.expected}` : added.text });
   }
+  for (const ask of answer.asks ?? []) {
+    const said = [ask.text, ask.expected, ...(ask.additions ?? []).flatMap(added => [added.text, added.expected])].filter(Boolean);
+    words.push({ label: `Also asked ${ago(ask.at, now)}, by ${askerLine(ask)}`, text: said.join('\n') });
+  }
   return words;
+}
+
+/** Who asked an idea merged into this one, inside a sentence. */
+function askerLine(ask) {
+  if (ask.senderGone) return 'an account since deleted';
+  return ask.guest ? 'a guest' : `account ${ask.account}`;
+}
+
+/**
+ * The plan prompt for `/new-plan`: the operator's words on one line, never the player's pasted unread, and how many
+ * asked since when. None until the operator wrote something.
+ */
+export function planPrompt(words, answer) {
+  const text = String(words ?? '').replace(/\s+/g, ' ').trim();
+  if (!text) return null;
+  const ended = /[.!?]$/.test(text) ? text : `${text}.`;
+  return `/new-plan ${ended} ${askedLine(answer?.askedBy ?? 1, answer?.since ?? answer?.at)}.`;
+}
+
+/** The ideas this one can be merged into, from the list's rows: every other idea, each with how many asked it. */
+export function mergeChoices(rows, id) {
+  return (rows ?? []).filter(row => row.kind === 'idea' && row.id !== id)
+    .map(row => ({ value: row.id, label: Number.isInteger(row.askedBy) ? `${row.line} (asked by ${row.askedBy})` : row.line }));
 }
 
 const number = value => (typeof value === 'number' ? value : value?.value ?? '?');
@@ -169,7 +212,8 @@ export function positionSides(position, seat) {
 }
 
 /** The sheet's buttons, by the names the host offers them under (`actions`), each shown only when the host offers it. */
-export const SHEET_ACTIONS = Object.freeze(['seen', 'reproduced', 'dismiss', 'spam', 'toIdea', 'toBug', 'diagnose', 'mute', 'unmute']);
+export const SHEET_ACTIONS = Object.freeze(['seen', 'reproduced', 'dismiss', 'spam', 'toIdea', 'toBug', 'diagnose', 'mute', 'unmute',
+  'planned', 'shipped', 'declined', 'merge', 'prompt']);
 
 /** Which of the sheet's buttons apply to this feedback as it stands: what the host says, and nothing else. */
 export function sheetActions(answer) {
@@ -216,7 +260,12 @@ export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
   fill(element('admin-feedback-category'), categoryFilters());
 
   const BUTTONS = { seen: 'admin-feedback-seen', reproduced: 'admin-feedback-reproduced', dismiss: 'admin-feedback-dismiss', spam: 'admin-feedback-spam',
-    toIdea: 'admin-feedback-to-idea', toBug: 'admin-feedback-to-bug', diagnose: 'admin-feedback-diagnose', mute: 'admin-feedback-mute', unmute: 'admin-feedback-unmute' };
+    toIdea: 'admin-feedback-to-idea', toBug: 'admin-feedback-to-bug', diagnose: 'admin-feedback-diagnose', mute: 'admin-feedback-mute', unmute: 'admin-feedback-unmute',
+    planned: 'admin-feedback-planned', shipped: 'admin-feedback-shipped', declined: 'admin-feedback-declined', merge: 'admin-feedback-merge', prompt: 'admin-feedback-prompt' };
+
+  // The blocks an idea's actions sit in, each shown while one of its buttons is.
+  const BLOCKS = { 'admin-feedback-dismissing': ['dismiss'], 'admin-feedback-planning': ['planned', 'shipped'], 'admin-feedback-declining': ['declined'],
+    'admin-feedback-merging': ['merge'], 'admin-feedback-prompting': ['prompt'] };
 
   const filters = () => ({ kind: element('admin-feedback-kind').value, status: element('admin-feedback-status').value, category: element('admin-feedback-category').value, page });
 
@@ -245,7 +294,7 @@ export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
       button.type = 'button';
       button.dataset.feedback = row.id;
       button.append(made('strong', '', `${row.kind} · ${row.category}`), made('span', 'feedback-line', row.line),
-        made('span', 'muted', [row.place, row.when, row.status, row.more].filter(Boolean).join(' · ')));
+        made('span', 'muted', [row.place, row.when, row.status, row.asked, row.more].filter(Boolean).join(' · ')));
       button.addEventListener('click', () => void openSheet(row.id));
       item.append(button);
       return item;
@@ -280,12 +329,32 @@ export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
     const session = element('admin-feedback-session');
     session.hidden = !answer.session;
     if (answer.session) session.href = answer.session;
-    drawActions(sheetActions(answer));
+    element('admin-feedback-joined').hidden = !answer.mergedInto;
+    const can = sheetActions(answer);
+    drawActions(can);
+    if (can.merge) void listChoices(answer.id);
   }
 
   function drawActions(can) {
     for (const name of SHEET_ACTIONS) element(BUTTONS[name]).hidden = !can[name];
-    element('admin-feedback-dismissing').hidden = !can.dismiss;
+    for (const [block, names] of Object.entries(BLOCKS)) element(block).hidden = !names.some(name => can[name]);
+  }
+
+  // The ideas this one can join: every open idea, five pages at most, read when its sheet offers the merge.
+  async function listChoices(id) {
+    const asked = read;
+    const select = element('admin-feedback-merge-into');
+    fill(select, [{ value: '', label: 'Reading the open ideas…' }]);
+    const rows = [];
+    for (let number = 1, pages = 1; number <= Math.min(pages, 5); number += 1) {
+      const answer = await send('GET', feedbackPath({ kind: 'idea', status: 'open', page: number }));
+      if (asked !== read || !answer.ok) break;
+      rows.push(...(answer.body.feedback ?? []));
+      pages = answer.body.pages ?? 1;
+    }
+    if (asked !== read) return;
+    const choices = mergeChoices(rows, id);
+    fill(select, choices.length ? [{ value: '', label: 'Pick an idea' }, ...choices] : [{ value: '', label: 'No other open idea' }]);
   }
 
   // Emptied before the host answers, so nothing of the sheet opened before can be read or acted on meanwhile.
@@ -293,9 +362,11 @@ export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
     open = null;
     element('admin-feedback-sheet-kind').textContent = 'Feedback';
     element('admin-feedback-sheet-name').textContent = '';
-    for (const id of ['admin-feedback-words', 'admin-feedback-facts', 'admin-feedback-position']) element(id).replaceChildren();
+    for (const id of ['admin-feedback-words', 'admin-feedback-facts', 'admin-feedback-position', 'admin-feedback-merge-into']) element(id).replaceChildren();
     element('admin-feedback-position-block').hidden = true;
     element('admin-feedback-session').hidden = true;
+    element('admin-feedback-joined').hidden = true;
+    element('admin-feedback-prompt-said').textContent = '';
     drawActions(sheetActions(null));
   }
 
@@ -317,7 +388,8 @@ export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
       said(answer.body?.message ?? `The host answered ${answer.status}.`, true);
       return;
     }
-    element('admin-feedback-reason').value = '';
+    for (const field of ['admin-feedback-reason', 'admin-feedback-decline-reason', 'admin-feedback-prompt-text']) element(field).value = '';
+    element('admin-feedback-plan').value = answer.body.plan ?? '';
     drawSheet(answer.body);
     said('');
   }
@@ -360,6 +432,50 @@ export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
     void change('POST', 'mute', undefined, 'This player can send no feedback for 30 days.');
   });
   element('admin-feedback-unmute').addEventListener('click', () => void change('DELETE', 'mute', undefined, 'This player can send feedback again.'));
+  element('admin-feedback-planned').addEventListener('click', () => {
+    const plan = element('admin-feedback-plan').value.trim();
+    if (!plan) {
+      said('Name the plan\'s path in the repository, such as docs/tabletop/replay-plan.md.', true);
+      return;
+    }
+    void change('PUT', 'status', { status: 'planned', plan }, `Planned in ${plan}.`);
+  });
+  element('admin-feedback-shipped').addEventListener('click', () => void change('PUT', 'status', { status: 'shipped' }, 'Marked shipped.'));
+  element('admin-feedback-declined').addEventListener('click', () => {
+    const reason = element('admin-feedback-decline-reason').value.trim();
+    if (!reason) {
+      said('Give a reason for declining it. The players who asked will read it.', true);
+      return;
+    }
+    void change('PUT', 'status', { status: 'declined', reason }, 'Declined.');
+  });
+  element('admin-feedback-merge').addEventListener('click', () => {
+    const select = element('admin-feedback-merge-into');
+    if (!select.value) {
+      said('Pick the idea to merge this one into.', true);
+      return;
+    }
+    const label = select.selectedOptions?.[0]?.textContent ?? select.value;
+    if (!globalThis.confirm?.(`Merge this idea into "${label}"? It leaves the list and is read inside that one, its player counted.`)) return;
+    void change('POST', 'merge', { into: select.value }, 'Merged. It is read inside the idea it joined.');
+  });
+  element('admin-feedback-joined').addEventListener('click', () => {
+    if (open?.mergedInto?.id) void openSheet(open.mergedInto.id);
+  });
+  element('admin-feedback-prompt').addEventListener('click', async () => {
+    const prompt = planPrompt(element('admin-feedback-prompt-text').value, open);
+    if (!prompt) {
+      said('Write the idea in your own words first: the prompt never carries a player\'s words unread.', true);
+      return;
+    }
+    element('admin-feedback-prompt-said').textContent = prompt;
+    try {
+      await navigator.clipboard.writeText(prompt);
+      said('The plan prompt is copied. Paste it into a new session.');
+    } catch {
+      said('The browser did not let the page copy it: select the prompt below and copy it.', true);
+    }
+  });
   element('admin-feedback-diagnose').addEventListener('click', () => {
     if (!open?.context?.table) return;
     element('admin-feedback-sheet').close?.();

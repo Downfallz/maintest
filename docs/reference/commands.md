@@ -434,9 +434,17 @@ The seat's view says the lesson under `practice.tutorial`:
   the host added, the position, the sender's mute, and `underWay` while its table is still played).
   A filter naming no kind, status or category is refused 400 `Feedback.Invalid`. The sheet lists the `actions` that
   apply to it, and the page shows only those.
-  `PUT /api/admin/feedback/<id>/status {"status","reason?"}` marks it `seen` (which reopens it), `reproduced` (a bug
-  report only) or `dismissed` with a reason of one line and at most 300 characters, `"reason":"spam"` being the spam
-  mark (400 `Feedback.Invalid` otherwise). Dismissed again, it keeps the time it was first closed.
+  `PUT /api/admin/feedback/<id>/status {"status","reason?","plan?"}` marks it `seen` (which reopens it), `reproduced`
+  (a bug report only) or `dismissed` with a reason of one line and at most 300 characters, `"reason":"spam"` being the
+  spam mark (400 `Feedback.Invalid` otherwise). An idea is also marked `planned` with its plan's path
+  (`docs/…-plan.md`, lowercase), `shipped` (which keeps the plan and closes it) or `declined` with a reason of one line
+  its players read (which closes it). Closed again with the same status, it keeps the time it was first closed.
+  `POST .../<id>/merge {"into"}` merges an open idea into another open idea (feedback plan, I1): it leaves the list,
+  keeps its sender and words, is read inside the one it joined (`asks` on that sheet, `mergedInto` on its own), and
+  counts towards `askedBy`, each sender once. An idea merged since is followed to the one its group became. A merge
+  into a bug report, into itself or into an idea merged into it is 400 `Feedback.Invalid`; into a closed one 409
+  `Feedback.Closed`. A merged idea takes no status or kind (409 `Feedback.MergedAway`), and an idea others joined
+  stays an idea (409 `Feedback.Grouped`). The list filtered to ideas sorts by `askedBy`, then by the newest ask.
   `PUT .../<id>/kind {"kind"}` turns a bug report into an idea, or an idea into a bug report. It keeps the words,
   position and sender and sets the status to seen. A closed one gets 409 `Feedback.Closed`.
   `POST`/`DELETE .../<id>/mute` stops its sender for 30 days and lifts it (409 `Feedback.NoSender` for a deleted
@@ -444,7 +452,8 @@ The seat's view says the lesson under `practice.tutorial`:
   record and dropped at its first write after the mute ends; a guest's is kept in the process's memory. Unknown
   feedback is 404 `Feedback.NotFound`, and a store that fails 503 `Feedback.Unavailable`. Asked again, a change
   writes nothing and notes nothing. Each change adds an Activity line (`feedback.status`, `feedback.convert`,
-  `feedback.spam`, `feedback.mute`, `feedback.unmute`). The Overview's Feedback waiting card counts feedback
+  `feedback.spam`, `feedback.mute`, `feedback.unmute`, `feedback.merge`). A merged idea is deleted with the idea its
+  group became. The Overview's Feedback waiting card counts feedback
   nobody has seen yet, in the warning colour while a bug report is new or the host is full for the day.
 
   A new one is kept and answers 201 `{"id","merged":false}`.

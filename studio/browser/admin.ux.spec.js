@@ -391,6 +391,81 @@ test('a bug report is read beside its position, turned into an idea, dismissed a
   expect(asked.filter(line => !line.startsWith('GET ?'))).toEqual(['GET id', 'PUT id/kind {"kind":"idea"}', 'PUT id/status {"status":"dismissed","reason":"spam"}', 'POST id/mute', 'DELETE id/mute']);
 });
 
+// Ideas grouped (feedback plan, I1): the ideas listed by how many asked, one merged into another, the group read on
+// one sheet, planned with its plan's path, and copied as a plan prompt in the operator's own words.
+test('an idea is merged into another, read with everyone who asked it, planned, and copied as a plan prompt', async ({ page, context }, info) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {});
+  const ago = minutes => new Date(Date.now() - minutes * 60000).toISOString();
+  const base = { kind: 'idea', category: 'battle', reason: null, plan: null, expected: null, additions: [], page: '/battle', browser: 'Firefox/140',
+    errors: [], account: null, guest: true, senderGone: false, mute: null, context: null, session: null, underWay: false, asks: [], mergedInto: null };
+  const ideas = {
+    replay: { ...base, id: '20261116T090000000Z-aaa111', status: 'seen', at: ago(600), text: 'I wanted to see the last round again but could not find a way to.' },
+    watch: { ...base, id: '20261116T100000000Z-bbb222', status: 'new', at: ago(120), text: 'Let me watch a round again from the recap, it went too fast to follow.' },
+    names: { ...base, id: '20261116T110000000Z-ccc333', status: 'new', at: ago(60), text: 'I wanted to invite a friend by name, not by a code.', category: 'lobby' },
+  };
+  const groupOf = id => Object.values(ideas).filter(one => one.mergedInto?.id === id);
+  // The sheet as FeedbackAdminApi answers it: how many asked, the ideas merged into it, and the actions that apply.
+  const sheetOf = one => {
+    if (one.mergedInto) return { ...one, askedBy: 1, since: one.at, actions: ['mute'] };
+    const asks = groupOf(one.id);
+    const closed = ['shipped', 'declined', 'dismissed'].includes(one.status);
+    return { ...one, askedBy: 1 + asks.length, since: one.at, asks: asks.map(ask => ({ id: ask.id, at: ask.at, text: ask.text, expected: null, additions: [], account: null, guest: true, senderGone: false })),
+      actions: [one.status !== 'seen' && 'seen', 'planned', one.status !== 'shipped' && 'shipped', ...(closed ? [] : ['dismiss', 'spam', 'declined', asks.length ? null : 'toBug', 'merge']), 'prompt', 'mute'].filter(Boolean) };
+  };
+  const asked = [];
+  await page.route(/\/api\/admin\/feedback(\?.*)?$/, route => {
+    const listed = Object.values(ideas).filter(one => !one.mergedInto).map(sheetOf)
+      .sort((a, b) => b.askedBy - a.askedBy || Date.parse(b.at) - Date.parse(a.at))
+      .map(one => ({ ...feedbackRow(one), plan: one.plan, askedBy: one.askedBy }));
+    return route.fulfill({ json: { feedback: listed, total: listed.length, page: 1, pages: 1, perPage: 20 } });
+  });
+  await page.route(/\/api\/admin\/feedback\/[^?]+$/, route => {
+    const request = route.request();
+    const [id, change] = new URL(request.url()).pathname.replace('/api/admin/feedback/', '').split('/');
+    const one = Object.values(ideas).find(idea => idea.id === id);
+    const body = request.method() === 'GET' ? null : request.postDataJSON();
+    if (change) asked.push(`${request.method()} ${change} ${JSON.stringify(body)}`);
+    if (change === 'merge') Object.assign(one, { mergedInto: { id: body.into, line: ideas.replay.text, status: 'seen' }, status: 'seen' });
+    if (change === 'status') Object.assign(one, { status: body.status, plan: body.plan ?? null });
+    return route.fulfill({ json: sheetOf(one) });
+  });
+  page.on('dialog', dialog => dialog.accept());
+  await page.reload();
+
+  await page.locator('#tab-feedback').click();
+  await page.selectOption('#admin-feedback-kind', 'idea');
+  await expect(page.locator('#admin-feedback-list li')).toHaveCount(3);
+  await page.locator('#admin-feedback-list li', { hasText: 'Let me watch' }).locator('button').click();
+  await expect(page.locator('#admin-feedback-merge-into option')).toHaveCount(3);
+  await page.selectOption('#admin-feedback-merge-into', ideas.replay.id);
+  await page.locator('#admin-feedback-merge').click();
+  await expect(page.locator('#admin-feedback-sheet-said')).toHaveText('Merged. It is read inside the idea it joined.');
+  await expect(page.locator('#admin-feedback-facts')).toContainText('Merged into');
+  await expect(page.locator('#admin-feedback-merge')).toBeHidden();
+
+  await page.locator('#admin-feedback-joined').click();
+  await expect(page.locator('#admin-feedback-facts')).toContainText('2 players since');
+  await expect(page.locator('#admin-feedback-words')).toContainText('Let me watch a round again from the recap');
+  await expect(page.locator('#admin-feedback-to-bug')).toBeHidden();
+  await page.locator('#admin-feedback-close').click();
+  await expect(page.locator('#admin-feedback-list li')).toHaveCount(2);
+  await expect(page.locator('#admin-feedback-list li').first()).toContainText('asked by 2');
+
+  await page.locator('#admin-feedback-list li').first().locator('button').click();
+  await page.fill('#admin-feedback-plan', 'docs/tabletop/replay-plan.md');
+  await page.locator('#admin-feedback-planned').click();
+  await expect(page.locator('#admin-feedback-sheet-kind')).toHaveText('Idea · Planned: docs/tabletop/replay-plan.md');
+  await page.locator('#admin-feedback-prompt').click();
+  await expect(page.locator('#admin-feedback-sheet-said')).toHaveClass(/refused/);
+  await page.fill('#admin-feedback-prompt-text', 'Let a player watch the last round again');
+  await page.locator('#admin-feedback-prompt').click();
+  await expect(page.locator('#admin-feedback-prompt-said')).toHaveText(/^\/new-plan Let a player watch the last round again\. Asked by 2 players since \d{4}-\d{2}-\d{2}\.$/);
+  expect(await page.evaluate(() => { const body = document.querySelector('#admin-feedback-sheet .home-dialog-body'); return body.scrollWidth <= body.clientWidth; })).toBe(true);
+  await page.screenshot({ path: info.outputPath('admin-feedback-idea.png') });
+
+  expect(asked).toEqual([`POST merge {"into":"${ideas.replay.id}"}`, 'PUT status {"status":"planned","plan":"docs/tabletop/replay-plan.md"}']);
+});
+
 // The Jobs tab (A3): the tending runs, the totals over them, a pass run now and a run's sheet.
 const tendRun = (hoursAgo, extra = {}) => {
   const started = new Date(Date.parse('2026-11-13T18:00:00Z') - hoursAgo * 3600000);

@@ -40,4 +40,22 @@ public sealed class LetGoOfClosedFeedbackTests
         gone.ShouldBe(1);
         _store.All.Select(one => one.Id).ShouldBe([recent.Id, open.Id], ignoreOrder: true);
     }
+
+    [Fact]
+    public async Task A_merged_idea_goes_with_the_idea_it_joined_and_stays_while_that_one_is_open()
+    {
+        var shipped = Kept(FeedbackStatus.Shipped, _clock.GetUtcNow().AddDays(-181)) with { Kind = FeedbackKind.Idea };
+        var gone = Kept(FeedbackStatus.Seen, closed: null) with { Kind = FeedbackKind.Idea, MergedInto = shipped.Id };
+        var open = Kept(FeedbackStatus.Planned, closed: null) with { Kind = FeedbackKind.Idea };
+        var staying = Kept(FeedbackStatus.Seen, closed: null) with { Kind = FeedbackKind.Idea, MergedInto = open.Id };
+        foreach (var feedback in new[] { shipped, gone, open, staying })
+        {
+            await _store.SaveAsync(feedback, Cancel);
+        }
+
+        var deleted = await new LetGoOfClosedFeedback(_store, _clock).HandleAsync(Cancel);
+
+        deleted.ShouldBe(2);
+        _store.All.Select(one => one.Id).ShouldBe([open.Id, staying.Id], ignoreOrder: true);
+    }
 }

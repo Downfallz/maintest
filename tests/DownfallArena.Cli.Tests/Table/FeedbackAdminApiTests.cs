@@ -288,5 +288,66 @@ public sealed class FeedbackAdminApiTests : IDisposable
         (await ActivityAsync()).ShouldBe([$"feedback.mute {id} 30 days"]);
     }
 
+    [Fact]
+    public async Task An_idea_merged_into_another_keeps_its_sender_and_is_read_inside_it()
+    {
+        var first = await SentAsync(await BegunAsync(), Idea());
+        var second = await SentAsync(await BegunAsync(), Idea().Replace("could not", "found no way", StringComparison.Ordinal));
+
+        var merged = Read(await AskAsync("POST", $"{FeedbackAdminApi.Route}/{second}/merge", new { into = first }));
+
+        merged.GetProperty("mergedInto").GetProperty("id").GetString().ShouldBe(first);
+        Actions(merged).ShouldBe(["mute"]);
+        var row = Read(await AskAsync("GET", FeedbackAdminApi.Route, query: "kind=idea")).GetProperty("feedback").EnumerateArray().ShouldHaveSingleItem();
+        (row.GetProperty("id").GetString(), row.GetProperty("askedBy").GetInt32()).ShouldBe((first, 2));
+        var sheet = Read(await AskAsync("GET", $"{FeedbackAdminApi.Route}/{first}"));
+        sheet.GetProperty("askedBy").GetInt32().ShouldBe(2);
+        var ask = sheet.GetProperty("asks").EnumerateArray().ShouldHaveSingleItem();
+        (ask.GetProperty("id").GetString(), ask.GetProperty("text").GetString(), ask.GetProperty("guest").GetBoolean()).ShouldBe((second, "I wanted to see the last round again and found no way.", true));
+        Actions(sheet).ShouldBe(["seen", "planned", "shipped", "dismiss", "spam", "declined", "merge", "prompt", "diagnose", "mute"]);
+        (await ActivityAsync()).ShouldBe([$"feedback.merge {second} into {first}"]);
+    }
+
+    [Fact]
+    public async Task A_merge_into_a_bug_report_or_into_itself_is_refused_and_merged_again_is_noted_once()
+    {
+        var table = await BegunAsync();
+        var report = await SentAsync(table, Report());
+        var idea = await SentAsync(table, Idea());
+        var other = await SentAsync(await BegunAsync(), Idea());
+
+        (await AskAsync("POST", $"{FeedbackAdminApi.Route}/{idea}/merge", new { into = report })).Status.ShouldBe(400);
+        (await AskAsync("POST", $"{FeedbackAdminApi.Route}/{idea}/merge", new { into = idea })).Status.ShouldBe(400);
+        (await AskAsync("POST", $"{FeedbackAdminApi.Route}/{idea}/merge", new { })).Status.ShouldBe(400);
+        (await AskAsync("POST", $"{FeedbackAdminApi.Route}/{idea}/merge", new { into = other })).Status.ShouldBe(200);
+        (await AskAsync("POST", $"{FeedbackAdminApi.Route}/{idea}/merge", new { into = other })).Status.ShouldBe(200);
+        (await AskAsync("PUT", $"{FeedbackAdminApi.Route}/{idea}/status", new { status = "seen" })).Status.ShouldBe(409);
+        (await AskAsync("PUT", $"{FeedbackAdminApi.Route}/{other}/kind", new { kind = "bug" })).Status.ShouldBe(409);
+
+        (await ActivityAsync()).ShouldBe([$"feedback.merge {idea} into {other}"]);
+    }
+
+    [Fact]
+    public async Task An_idea_is_planned_with_its_plan_shipped_or_declined_with_a_reason_and_noted()
+    {
+        var table = await BegunAsync();
+        var idea = await SentAsync(table, Idea());
+
+        (await AskAsync("PUT", $"{FeedbackAdminApi.Route}/{idea}/status", new { status = "planned", plan = "README.md" })).Status.ShouldBe(400);
+        var planned = Read(await AskAsync("PUT", $"{FeedbackAdminApi.Route}/{idea}/status", new { status = "planned", plan = "docs/tabletop/replay-plan.md" }));
+        (planned.GetProperty("status").GetString(), planned.GetProperty("plan").GetString()).ShouldBe(("planned", "docs/tabletop/replay-plan.md"));
+        (await AskAsync("PUT", $"{FeedbackAdminApi.Route}/{idea}/status", new { status = "declined" })).Status.ShouldBe(400);
+        var declined = Read(await AskAsync("PUT", $"{FeedbackAdminApi.Route}/{idea}/status", new { status = "declined", reason = "Not for this game." }));
+        (declined.GetProperty("status").GetString(), declined.GetProperty("reason").GetString()).ShouldBe(("declined", "Not for this game."));
+        Read(await AskAsync("PUT", $"{FeedbackAdminApi.Route}/{idea}/status", new { status = "shipped" })).GetProperty("status").GetString().ShouldBe("shipped");
+
+        (await ActivityAsync()).ShouldBe([
+            $"feedback.status {idea} shipped",
+            $"feedback.status {idea} declined: Not for this game.",
+            $"feedback.status {idea} planned: docs/tabletop/replay-plan.md",
+        ]);
+        Read(await AskAsync("GET", FeedbackAdminApi.Route, query: "kind=idea&status=shipped")).GetProperty("total").GetInt32().ShouldBe(1);
+    }
+
     private static string[] Actions(JsonElement sheet) => [.. sheet.GetProperty("actions").EnumerateArray().Select(action => action.GetString()!)];
 }

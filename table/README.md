@@ -732,6 +732,6 @@ test (`.claude/rules/host.md`).
 | `GET /api/admin/jobs/tend?page`, `GET /api/admin/jobs/tend/<id>`, `POST /api/admin/jobs/tend` | operator | Tending runs, and a pass now (ADR 0162). |
 | `GET /api/admin/jobs/turns`, `POST /api/admin/jobs/turns/requeue`, `POST .../drop` | operator | Bot turns' queues and dead letters. |
 | `GET /api/admin/scenarios/rounds?session=<id>`, `GET`/`POST /api/admin/scenarios`, `DELETE /api/admin/scenarios/<id>`, `PUT /api/admin/scenarios/<id>/listing` | operator | Scenarios (ADR 0179); the repository's `scenarios/` files, its tutorials among them, are listed with them, read-only (S7, ADR 0187). |
-| `GET /api/admin/feedback?kind&status&category&page`, `GET /api/admin/feedback/<id>`, `PUT .../<id>/status`, `PUT .../<id>/kind`, `POST`/`DELETE .../<id>/mute` | operator | The Feedback tab (feedback plan, R3): the list, a sheet, the status by hand, a kind moved, a sender stopped. |
+| `GET /api/admin/feedback?kind&status&category&page`, `GET /api/admin/feedback/<id>`, `PUT .../<id>/status`, `PUT .../<id>/kind`, `POST .../<id>/merge`, `POST`/`DELETE .../<id>/mute` | operator | The Feedback tab (feedback plan, R3, I1): the list, a sheet, the status by hand (an idea planned, shipped or declined), a kind moved, an idea merged into another, a sender stopped. |
 | `GET /api/admin/activity?page` | operator | What operators did. |
 | `GET`/`PUT /api/admin/settings` | operator | Registration and the notice (ADR 0177). |

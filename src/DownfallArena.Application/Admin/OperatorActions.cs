@@ -36,6 +36,7 @@ public sealed class OperatorActions(IOperatorLog log, TimeProvider clock)
     public const string FeedbackSpam = "feedback.spam";
     public const string FeedbackMute = "feedback.mute";
     public const string FeedbackUnmute = "feedback.unmute";
+    public const string FeedbackMerge = "feedback.merge";
 
     /// <summary>Notes what an operator did, now.</summary>
     public async Task<OperatorAction> RecordAsync(string by, string action, string? target, string? detail, CancellationToken cancellationToken = default)
