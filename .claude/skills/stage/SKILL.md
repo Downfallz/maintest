@@ -22,7 +22,8 @@ One stage, one session, one pull request (the standing orders in `CLAUDE.md`).
 5. Tests first, red, then the code, then green (AGENTS.md, "How to work on a task"). Use `test-engineer` for
    tests and `domain-reviewer` after a domain change.
 6. `/verify`, and `/browser-check` when it names journeys. Then `/reviewers` on the diff, and fix what it
-   sorts as fix now, or say why not.
+   sorts as fix now, or say why not. When it ran `rules-keeper`, `/rules` brings the book in line in this pull
+   request.
 7. Mark the stage in its plan: a `*Built (<date>)*:` paragraph under the stage's line, saying what was built and
    what was left, as W0 to W3 in `docs/engineering/ai-workflow-plan.md` do. Update the plan's `Status:` line.
 8. `/ship`. Once it is merged, or past 300,000 tokens, `/wrap-up`.

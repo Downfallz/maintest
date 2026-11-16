@@ -47,6 +47,29 @@ const addsStyle = (path, added) =>
 // What makes the brand and the art: the palette's synchronizer and the matte of the art.
 const BRAND_TOOLS = new Set(['scripts/sync-branding.mjs', 'scripts/matte-opaque-art.py', 'scripts/design-system/build.mjs']);
 
+// What the rules are made of (docs/tabletop/rulebook-plan.md, R5): the domain that plays them, their specification
+// and words, the decisions, the content and the hosted rule set the book draws from, the book, and the rule text the
+// pages and the tutorials show. The ADRs' generated index and their template decide nothing.
+const RULES_SOURCES = [
+  'src/DownfallArena.Domain/',
+  'data/Spells/',
+  'data/Tiers/',
+  'data/Creatures/',
+  'data/TalentTrees/',
+  'data/balance/',
+  'rules/',
+  'scenarios/tutorials/',
+];
+const RULES_FILES = new Set([
+  'docs/domain/game-rules.md',
+  'docs/domain/glossary.md',
+  'docs/domain/player-terminology.md',
+  'docs/tabletop/playtest.rules.json',
+  'table/terms.js',
+  'table/battle-guidance.js',
+]);
+const AN_ADR = /^docs\/adr\/(?!0000-)\d{4}-[^/]+\.md$/;
+
 // What decides which jobs CI and the local gate run (ADR 0182).
 const GATE_FILES = new Set(['studio/browser/plan.js', 'studio/browser/flakes.js', 'scripts/verify.sh']);
 
@@ -115,6 +138,7 @@ const RULES = [
       ].includes(path),
   ],
   ['stats-reviewer', (path) => under(path, 'learning/', 'docs/learning/', 'models/', 'benchmarks/', 'data/balance/')],
+  ['rules-keeper', (path) => under(path, ...RULES_SOURCES) || RULES_FILES.has(path) || AN_ADR.test(path)],
 ];
 
 export const REVIEWERS = RULES.map(([name]) => name);

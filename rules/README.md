@@ -16,6 +16,19 @@ node scripts/rules/build.mjs --check    # is table/rules.json the build of rules
 `table/rules.test.js`, in the gate, fails when the file is out of date. The file records the whole hosted rule set
 it was drawn from, so any change to `docs/tabletop/playtest.rules.json` calls for a rebuild too.
 
+## Keeping it true
+
+The tests refuse what a machine can find. What only a reading finds, the `rules-keeper` reviewer reads: `/reviewers`
+calls it for a change to the domain, `game-rules.md`, the words, an ADR, the content, the hosted rule set, this
+folder, or the rule text of the pages and the tutorials. `/rules` then rewrites the sections it found stale, with
+the `rulebook-writer`, and adds the line to `changes.md`. Both start from the sections a change reaches:
+
+```bash
+git diff origin/main... | node scripts/rules/reach.mjs
+```
+
+An ADR says which sections it changes on its **Rulebook:** line, and a pull request on its own.
+
 ## The files
 
 - `NN-<name>.md`: one file a Part, in teaching order. The number is the file's place, never written in it.

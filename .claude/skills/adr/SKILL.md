@@ -23,6 +23,8 @@ description: Create a new Architecture Decision Record in docs/adr from the temp
    - Decision: one paragraph, active voice ("We will ...").
    - Consequences: good, bad, and neutral. Be honest about the bad ones.
    - Alternatives considered: one line each with why it lost.
+   - `Rulebook:` the ids of the sections of `rules/` the decision changes, or `none`. A section it changes is
+     rewritten in the same pull request (`/rules`), and its `sources:` line cites this ADR.
 4. Status starts as `Proposed` unless the user says it is already agreed, then `Accepted`.
 5. If the ADR supersedes or amends another, say so on both `Status:` lines. Then rebuild the table in
    `docs/adr/README.md`; never edit it by hand, and settle a conflict in it the same way:

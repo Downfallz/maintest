@@ -14,8 +14,13 @@ test('an engine change gets the code reviewer alone', () => {
   assert.deepEqual(reviewersFor(['src/DownfallArena.Application/Matches/PlayRound.cs']), ['code-reviewer']);
 });
 
-test('a domain change also gets the domain reviewer', () => {
-  assert.deepEqual(reviewersFor(['src/DownfallArena.Domain/Matches/Match.cs']), ['code-reviewer', 'domain-reviewer']);
+test('a domain change also gets the domain reviewer, and the rules keeper: the domain holds the rules', () => {
+  assert.deepEqual(reviewersFor(['src/DownfallArena.Domain/Matches/Match.cs']), [
+    'code-reviewer',
+    'domain-reviewer',
+    'rules-keeper',
+  ]);
+  assert.deepEqual(reviewersFor(['src/DownfallArena.SharedKernel/Result.cs']), ['code-reviewer', 'domain-reviewer']);
 });
 
 test('a route change gets the host reviewer, and the security reviewer when it signs someone in', () => {
@@ -172,6 +177,40 @@ test('an agent, a skill or a rule is behaviour: it gets the code reviewer beside
   for (const path of ['.claude/agents/host-reviewer.md', '.claude/skills/ship/SKILL.md', '.claude/rules/host.md']) {
     assert.deepEqual(reviewersFor([path]), ['code-reviewer', 'copy-editor'], path);
   }
+});
+
+test('what the rules are made of gets the rules keeper', () => {
+  assert.deepEqual(reviewersFor(['docs/domain/game-rules.md']), ['copy-editor', 'rules-keeper']);
+  assert.deepEqual(reviewersFor(['docs/domain/glossary.md']), ['copy-editor', 'rules-keeper']);
+  assert.deepEqual(reviewersFor(['docs/domain/player-terminology.md']), ['copy-editor', 'rules-keeper']);
+  assert.deepEqual(reviewersFor(['docs/adr/0114-a-shared-package-is-held-by-the-whole-side.md']), ['copy-editor', 'rules-keeper']);
+  for (const path of [
+    'data/Spells/base/heavy_strike.v1.json',
+    'data/Tiers/titan.v1.json',
+    'data/Creatures/main.v1.json',
+    'data/TalentTrees/talent_tree.v1.json',
+    'docs/tabletop/playtest.rules.json',
+  ]) {
+    assert.deepEqual(reviewersFor([path]), ['code-reviewer', 'rules-keeper'], path);
+  }
+  assert.deepEqual(reviewersFor(['data/balance/knobs.json']), ['code-reviewer', 'stats-reviewer', 'rules-keeper']);
+});
+
+test('the book itself, and the rule text of the pages and the tutorials, get the rules keeper', () => {
+  assert.deepEqual(reviewersFor(['rules/03-the-round.md']), ['copy-editor', 'rules-keeper']);
+  assert.deepEqual(reviewersFor(['rules/moved.json']), ['code-reviewer', 'rules-keeper']);
+  for (const path of ['table/terms.js', 'table/battle-guidance.js']) {
+    assert.deepEqual(reviewersFor([path]), ['code-reviewer', 'pages-reviewer', 'rules-keeper'], path);
+  }
+  assert.deepEqual(reviewersFor(['scenarios/tutorials/your-first-combat.json']), ['code-reviewer', 'rules-keeper']);
+});
+
+test('an index of the ADRs, the template, the print draft or another page script is not a rules change', () => {
+  assert.deepEqual(reviewersFor(['docs/adr/README.md']), ['copy-editor']);
+  assert.deepEqual(reviewersFor(['docs/adr/0000-template.md']), ['copy-editor']);
+  assert.deepEqual(reviewersFor(['docs/tabletop/rulebook.md']), ['copy-editor']);
+  assert.deepEqual(reviewersFor(['table/lobby.js']), ['code-reviewer', 'pages-reviewer']);
+  assert.deepEqual(reviewersFor(['scenarios/greedy-1v1-round-3.json']), ['code-reviewer']);
 });
 
 test('the frozen prototypes call for nobody', () => {

@@ -1,0 +1,193 @@
+// Which sections of the official rulebook a change reaches (docs/tabletop/rulebook-plan.md, R5), so the /rules
+// skill and the rules-keeper start from the sections and not from a reading of the whole book:
+//
+//   git diff origin/main... | node scripts/rules/reach.mjs
+//
+// A section is reached by an ADR or a game-rules heading its `sources:` line cites, by a value it draws (a spell, a
+// mutation, a field of the hosted rule set, a stat of the reference creature), by a spell or a mutation it names,
+// and by a change to its own lines. A path that calls for the keeper (scripts/review/reviewers.mjs) and reaches no
+// section is listed for a reading by hand: the domain, the words, the pages' rule text, a rule no section teaches.
+
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { reviewersFor } from '../review/reviewers.mjs';
+
+const RULE_SET = 'docs/tabletop/playtest.rules.json';
+const CREATURE = 'data/Creatures/main.v1.json';
+const GAME_RULES = 'docs/domain/game-rules.md';
+
+const HEADING = /^(#{1,2}) (.*?)\s*\{#([a-z0-9-]+)\}\s*$/;
+// The anchor the build gives a game-rules heading (scripts/rules/build.mjs).
+const anchorOf = heading => heading.trim().toLowerCase().replace(/[^a-z0-9 -]/g, '').replaceAll(' ', '-');
+const escape = text => text.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+
+/**
+ * The book's parts and sections, in its order: each with its number, its file and lines (`from`, `to`, counted from
+ * 1), its text and its sources. A part's own lines are its opening, before its first section.
+ */
+export function sectionsOf(parts) {
+  const found = [];
+  parts.forEach(({ file, text }, index) => {
+    const lines = text.split('\n');
+    let fenced = false;
+    let count = 0;
+    let current = null;
+    lines.forEach((line, at) => {
+      if (line.startsWith('```')) fenced = !fenced;
+      const heading = fenced ? null : HEADING.exec(line);
+      if (heading) {
+        if (current) current.to = at;
+        const [, marks, title, id] = heading;
+        const number = marks.length === 1 ? `${index + 1}` : `${index + 1}.${++count}`;
+        current = { id, number, title, file, from: at + 1, to: lines.length, text: '', sources: [] };
+        found.push(current);
+      }
+    });
+    if (current) current.to = lines.length;
+    for (const section of found.filter(section => section.file === file)) {
+      const own = lines.slice(section.from - 1, section.to);
+      section.text = own.join('\n');
+      const sources = own.find(line => line.startsWith('sources:'));
+      section.sources = sources ? sources.slice('sources:'.length).split(',').map(source => source.trim()).filter(Boolean) : [];
+    }
+  });
+  return found;
+}
+
+/** The paths of a unified diff, each with the lines it removes and adds and the lines of the new file it changed. */
+export function readDiff(text) {
+  const changes = [];
+  let current = null;
+  let line = 0;
+  for (const row of text.split('\n')) {
+    const header = /^diff --git a\/(.+) b\/(.+)$/.exec(row);
+    const hunk = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(row);
+    if (header) {
+      current = { path: header[2], added: [], removed: [], lines: new Set() };
+      changes.push(current);
+    } else if (!current || row.startsWith('+++ ') || row.startsWith('--- ')) {
+      continue;
+    } else if (hunk) {
+      line = Number(hunk[1]);
+    } else if (row.startsWith('+')) {
+      current.added.push(row.slice(1));
+      current.lines.add(line++);
+    } else if (row.startsWith('-')) {
+      current.removed.push(row.slice(1));
+      current.lines.add(line);
+    } else if (row.startsWith(' ')) {
+      line++;
+    }
+  }
+  return changes;
+}
+
+/** The anchors of the game-rules headings that hold the given lines, every level, and the headings a change rewrote. */
+function headingsChanged(gameRules, change) {
+  const anchors = new Set(change.removed.concat(change.added).filter(row => /^#{1,6} /.test(row)).map(row => anchorOf(row.replace(/^#+ /, ''))));
+  const stack = [];
+  gameRules.split('\n').forEach((row, at) => {
+    const heading = /^(#{1,6}) (.*)$/.exec(row);
+    if (heading) {
+      stack.length = Math.min(stack.length, heading[1].length - 1);
+      stack[heading[1].length - 1] = anchorOf(heading[2]);
+    }
+    if (change.lines.has(at + 1)) for (const anchor of stack.filter(Boolean)) anchors.add(anchor);
+  });
+  return anchors;
+}
+
+/** The keys of a JSON file a change rewrites: `"energyPerRound": 3` gives energyPerRound. */
+const keysChanged = change => new Set(change.removed.concat(change.added).flatMap(row => [...row.matchAll(/"(\w+)"\s*:/g)].map(match => match[1])));
+
+/** The creature's stat a key holds, as the book draws it: baseHealth is creature.health. */
+const statOf = key => (/^base[A-Z]/.test(key) ? `${key[4].toLowerCase()}${key.slice(5)}` : null);
+
+/** The id a content file has, from its text or, once it is deleted, from its name. */
+function contentOf(path, content, kind) {
+  const read = content(path);
+  if (read?.id) return read;
+  const name = /([a-z0-9_]+)\.(v\d+)\.json$/.exec(path);
+  return name ? { id: `${kind}:${name[1]}:${name[2]}` } : null;
+}
+
+/** What reaches a section, for one changed path: the reasons, or none. */
+function reasonsFor(change, section, { gameRules, content }) {
+  const { path } = change;
+  const reasons = [];
+  const adr = /^docs\/adr\/(\d{4})-/.exec(path);
+  if (adr && section.sources.includes(`ADR ${adr[1]}`)) reasons.push(`cites ADR ${adr[1]}`);
+  if (path === GAME_RULES) {
+    for (const anchor of headingsChanged(gameRules, change)) {
+      if (section.sources.includes(`game-rules#${anchor}`)) reasons.push(`cites game-rules#${anchor}`);
+    }
+  }
+  const kind = path.startsWith('data/Spells/') ? 'spell' : path.startsWith('data/Tiers/') ? 'tier' : null;
+  const definition = kind && path.endsWith('.json') ? contentOf(path, content, kind) : null;
+  if (definition) {
+    if (section.text.includes(`${definition.id}.`)) reasons.push(`draws ${definition.id}`);
+    if (definition.name && new RegExp(String.raw`\b${escape(definition.name)}\b`).test(section.text)) reasons.push(`names ${definition.name}`);
+  }
+  if (path === RULE_SET || path === CREATURE) {
+    const prefix = path === RULE_SET ? 'rules' : 'creature';
+    const keys = [...keysChanged(change)].map(key => (prefix === 'creature' ? statOf(key) : key)).filter(Boolean);
+    const drawn = keys.length > 0 ? keys : [...new Set([...section.text.matchAll(new RegExp(String.raw`\b${prefix}\.(\w+)`, 'g'))].map(match => match[1]))];
+    for (const key of drawn) if (new RegExp(String.raw`\b${prefix}\.${key}\b`).test(section.text)) reasons.push(`draws ${prefix}.${key}`);
+  }
+  if (path === `rules/${section.file}` && [...change.lines].some(line => line >= section.from && line <= section.to)) {
+    reasons.push('changed in the book');
+  }
+  return reasons;
+}
+
+/**
+ * The sections the changes reach, in the book's order, each with why; and the paths that call for the keeper but
+ * reach no section, for a reading by hand.
+ */
+export function reach(changes, given) {
+  const reached = new Map();
+  const reaching = new Set();
+  for (const change of changes) {
+    for (const section of given.sections) {
+      const reasons = reasonsFor(change, section, given);
+      if (reasons.length === 0) continue;
+      reaching.add(change.path);
+      const why = reached.get(section) ?? [];
+      reached.set(section, [...new Set([...why, ...reasons])]);
+    }
+  }
+  const sections = given.sections.filter(section => reached.has(section)).map(section => ({ ...section, why: reached.get(section) }));
+  const unmapped = changes
+    .map(change => change.path)
+    .filter(path => !reaching.has(path) && reviewersFor([path]).includes('rules-keeper'));
+  return { sections, unmapped };
+}
+
+/** The report: one line a section reached, then the paths to read by hand. */
+export function report({ sections, unmapped }) {
+  const lines = sections.map(section => `${section.number} ${section.id} (${section.title}): ${section.why.join(', ')}`);
+  if (sections.length === 0) lines.push('No section of the book draws or cites what this change touches.');
+  if (unmapped.length > 0) lines.push('', 'Read by hand: no section draws or cites these.', ...unmapped.map(path => `- ${path}`));
+  return `${lines.join('\n')}\n`;
+}
+
+function main() {
+  const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+  const rules = join(root, 'rules');
+  const parts = readdirSync(rules).filter(name => /^\d{2}-[a-z0-9-]+\.md$/.test(name)).sort()
+    .map(file => ({ file, text: readFileSync(join(rules, file), 'utf8') }));
+  const content = path => {
+    const file = join(root, path);
+    if (!existsSync(file)) return null;
+    try {
+      return JSON.parse(readFileSync(file, 'utf8'));
+    } catch {
+      return null;
+    }
+  };
+  const given = { sections: sectionsOf(parts), gameRules: readFileSync(join(root, GAME_RULES), 'utf8'), content };
+  process.stdout.write(report(reach(readDiff(readFileSync(0, 'utf8')), given)));
+}
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) main();
