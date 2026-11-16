@@ -81,7 +81,7 @@ internal sealed partial class FeedbackApi(SendFeedback desk, TableRegistry regis
             Page = PageOf(posted.Page),
             Browser = browser,
             Errors = bug ? [.. (posted.Errors ?? []).OfType<FeedbackBodyError>().Select(error => new PageError(WithoutQueries(error.Message) ?? string.Empty, WithoutQueries(error.Where)))] : [],
-            Context = bug ? from.Context : from.Context is { } context ? new FeedbackContext { Table = context.Table, Scenario = context.Scenario, Round = context.Round } : null,
+            Context = bug ? from.Context : from.Context is { } context ? new FeedbackContext { Table = context.Table, Scenario = context.Scenario, Seat = context.Seat, Round = context.Round } : null,
         };
 
         FeedbackAnswer answer;

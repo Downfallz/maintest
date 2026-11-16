@@ -162,6 +162,29 @@ public static class ScenarioFile
         return [.. Lines(entries).Select(line => JsonSerializer.SerializeToElement(line))];
     }
 
+    /// <summary>
+    /// The entries journal lines hold, the inverse of <see cref="JournalLinesOf" />: what Reproduce reads a practice's
+    /// copied entries back as (docs/tabletop/feedback-plan.md, R4). <see cref="InvalidDataException" /> for a line that is
+    /// not one.
+    /// </summary>
+    public static IReadOnlyList<IJournalEntry> EntriesOf(IReadOnlyList<JsonElement> lines)
+    {
+        ArgumentNullException.ThrowIfNull(lines);
+        if (lines.Any(line => line.ValueKind != JsonValueKind.Object))
+        {
+            throw new InvalidDataException("A copied entry is not a journal line: each is one JSON object.");
+        }
+
+        try
+        {
+            return Entries([.. lines.Select(line => JsonNode.Parse(line.GetRawText())!)]);
+        }
+        catch (Exception failure) when (failure is not OperationCanceledException and not InvalidDataException)
+        {
+            throw new InvalidDataException($"The copied entries are not journal lines: {failure.Message}", failure);
+        }
+    }
+
     /// <summary>Each entry as the journal's own line, so the file and <c>decisions.jsonl</c> never disagree on one.</summary>
     private static JsonNode[] Lines(IReadOnlyList<IJournalEntry> entries) =>
         [.. Encoding.UTF8.GetString(JournalLines.Write(JournalPosition.Start, entries, DateTimeOffset.UnixEpoch))

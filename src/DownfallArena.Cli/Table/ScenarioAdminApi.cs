@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DownfallArena.Application.Admin;
+using DownfallArena.Application.FeedbackBox;
 using DownfallArena.Application.Matches.Journaling;
 using DownfallArena.Application.Matches.Scenarios;
 using DownfallArena.Cli.Studio;
@@ -92,20 +93,92 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
             return refused;
         }
 
-        var (content, source, entries) = read.Source!.Value;
-        var resources = content.Services.GetRequiredService<IGameResources>();
-        var cut = await content.Services.GetRequiredService<ScenarioCutter>().CutAsync(source, entries, asked.Round);
-        if (cut.IsFailure)
+        var seat = asked.Seat == "player2" ? PlayerSlot.Player2 : PlayerSlot.Player1;
+        var kept = await KeepAsync(read.Source!.Value, asked.Round, seat, session, asked.Title, asked.Goal);
+        if (kept.Refused is { } notCut)
         {
-            var offered = await content.Services.GetRequiredService<ScenarioRounds>().ReadAsync(source, entries);
-            return StudioResponse.OfJson(new { error = cut.Error.Code, message = cut.Error.Message, rounds = offered.Rounds.Select(one => one.Round).ToArray() }, ArtifactJson.LineOptions, 409);
+            return notCut;
         }
 
-        var seat = asked.Seat == "player2" ? PlayerSlot.Player2 : PlayerSlot.Player1;
-        var id = await store.PutAsync(new ScenarioDocument(cut.Value, seat, resources.Version, session, Application.Learning.EngineVersion.Current.ToString(), asked.Title, asked.Goal));
+        var id = kept.Id!;
         Console.WriteLine($"  Scenario {id} cut from session {session} at round {asked.Round} by {operatorName}.");
         await Notes.NoteAsync(operatorName, OperatorActions.CutScenario, id, $"session {session}, round {asked.Round}, {ScenarioCommands.SeatName(seat)}");
         return StudioResponse.OfJson(new { id, link = Link(id) }, ArtifactJson.LineOptions, 201);
+    }
+
+    /// <summary>
+    /// The scenario a bug report asks for (docs/tabletop/feedback-plan.md, R4): cut at the top of the reported round, in
+    /// the reporter's seat, from the table's recorded session, or, for a report sent from a practice, from the scenario
+    /// it was opened from followed by the entries the report copied. Its title names the report and its goal is empty,
+    /// so no player's words reach a file that may become public. The scenario kept, or the answer that says why it is
+    /// not; the caller notes it.
+    /// </summary>
+    public async Task<(StudioResponse? Refused, string? Id)> ReproduceAsync(FeedbackContext context, string report)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        // The seat is the reporter's: a cut in the other one would have the bot replay the reporter's own answers.
+        if (context.Round is not { } round || round < 1 || (context.Table is null && context.Scenario is null) || context.Seat is not ("player1" or "player2"))
+        {
+            return (Error(FeedbackErrors.NoPosition.Code, FeedbackErrors.NoPosition.Message, 409), null);
+        }
+
+        var read = context.Table is { } table ? await SourceAsync(table) : await PracticeSourceAsync(context.Scenario!, context.PracticeEntries ?? []);
+        if (read.Refused is { } refused)
+        {
+            return (refused, null);
+        }
+
+        var seat = context.Seat == "player2" ? PlayerSlot.Player2 : PlayerSlot.Player1;
+        return await KeepAsync(read.Source!.Value, round, seat, context.Table, $"Report {report}, round {round}", goal: null);
+    }
+
+    /// <summary>The source cut at the top of a round and kept, or the rounds it offers when that one is not among them.</summary>
+    private async Task<(StudioResponse? Refused, string? Id)> KeepAsync((TableContent Content, JournaledMatch Match, IReadOnlyList<IJournalEntry> Entries) read, int round, PlayerSlot seat, string? session, string? title, string? goal)
+    {
+        var (content, source, entries) = read;
+        var resources = content.Services.GetRequiredService<IGameResources>();
+        var cut = await content.Services.GetRequiredService<ScenarioCutter>().CutAsync(source, entries, round);
+        if (cut.IsFailure)
+        {
+            var offered = await content.Services.GetRequiredService<ScenarioRounds>().ReadAsync(source, entries);
+            return (StudioResponse.OfJson(new { error = cut.Error.Code, message = cut.Error.Message, rounds = offered.Rounds.Select(one => one.Round).ToArray() }, ArtifactJson.LineOptions, 409), null);
+        }
+
+        return (null, await store.PutAsync(new ScenarioDocument(cut.Value, seat, resources.Version, session, Application.Learning.EngineVersion.Current.ToString(), title, goal)));
+    }
+
+    /// <summary>
+    /// A practice as a scenario is cut from it: the scenario it was opened from, rebuilt from its own match with the
+    /// entries before its cut, as the practice's journal began, then the entries the report copied.
+    /// </summary>
+    private async Task<(StudioResponse? Refused, (TableContent Content, JournaledMatch Match, IReadOnlyList<IJournalEntry> Entries)? Source)> PracticeSourceAsync(string scenario, IReadOnlyList<JsonElement> copied)
+    {
+        if (await store.GetAsync(scenario) is not { } document)
+        {
+            // 409, not 404: the report is there, the scenario its practice was opened from is not.
+            return (Error("Scenario.NotFound", $"The scenario '{scenario}' this practice was opened from is no longer kept at this host.", 409), null);
+        }
+
+        var (content, _) = await composer.PlayedOnAsync(document.Content);
+        if (!string.Equals(content.Version, document.Content, StringComparison.Ordinal))
+        {
+            return (Error("Scenario.ContentGone", $"The content this practice was played on ({document.Content}) is not kept at this host.", 409), null);
+        }
+
+        IReadOnlyList<IJournalEntry> since;
+        try
+        {
+            since = ScenarioFile.EntriesOf(copied);
+        }
+        catch (InvalidDataException failure)
+        {
+            Console.WriteLine($"  The entries a practice's report copied cannot be read: {failure.Message}");
+            return (Error("Scenario.Invalid", "The entries this report copied from its practice cannot be read.", 409), null);
+        }
+
+        // The practice's journal began with the scenario's own entries, a seat that changed hands at the source left out.
+        var before = document.Scenario.Before.Where(entry => entry is not SeatChangeEntry);
+        return (null, (content, document.Scenario.Source, [.. before, .. since]));
     }
 
     /// <summary>The rounds a recorded session can be cut at, and why its journal stopped rebuilding when it did.</summary>
@@ -202,7 +275,14 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
         return new StudioResponse(204, StudioResponse.Plain, []);
     }
 
-    private static string Link(string id) => $"/battle?scenario={id}";
+    /// <summary>Whether a scenario is still kept under its id: the one a report's Reproduce cut may have been removed since.</summary>
+    public async Task<bool> KeepsAsync(string id) => await store.GetAsync(id) is not null;
+
+    /// <summary>Lets go of a scenario Reproduce cut and nobody keeps, as removing it from the tab does, with no Activity line.</summary>
+    public async Task ForgetAsync(string id) => await store.DeleteAsync(id);
+
+    /// <summary>Where a scenario is played: the link a signed-in player, or the operator, opens.</summary>
+    public static string Link(string id) => $"/battle?scenario={id}";
 
     private static StudioResponse Error(string error, string message, int status) =>
         StudioResponse.OfJson(new { error, message }, ArtifactJson.LineOptions, status);
