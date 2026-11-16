@@ -8,7 +8,9 @@ description: End a stage's session - loose ends become GitHub issues, the stage 
 A loose end written only in chat is lost. This turns the session's into issues, then stops.
 
 1. Gather the loose ends: what the session's messages left open, the `Not verified` and `skipped` of the gate,
-   flaky tests, the steps left to the owner, review findings put off. One issue each.
+   flaky tests, the steps left to the owner, review findings put off. One issue each. When the stage's diff calls
+   for `rules-keeper` (`git diff origin/main... | node scripts/review/reviewers.mjs`) and the stage's pull request is
+   still open, run `/rules` first; a section it could not rewrite is a loose end.
 2. Look for an open issue that already holds it (`gh api -X GET search/issues -f q='repo:Downfallz/maintest is:issue is:open <words>'`)
    and add to it rather than opening a second.
 3. Open the rest with `issue_write`: a title that says the problem, a body with the evidence (the path, the test

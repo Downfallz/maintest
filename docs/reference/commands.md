@@ -49,7 +49,9 @@ git diff --name-only origin/main... | node scripts/review/reviewers.mjs   # the 
 
 What `/reviewers` reads to choose the agents under `.claude/agents` that review a change: `code-reviewer` for
 anything but markdown, then `domain-reviewer`, `host-reviewer`, `pages-reviewer`, `design-reviewer`, `copy-editor`,
-`infra-reviewer`, `security-reviewer` and `stats-reviewer` by the paths they own. Given the whole diff, it also
+`infra-reviewer`, `security-reviewer`, `stats-reviewer` and `rules-keeper` by the paths they own (the keeper:
+the domain, `game-rules.md`, the words, an ADR, the content, the hosted rule set, `rules/`, `table/terms.js`,
+`table/battle-guidance.js`, `battle/src/tempo.ts`, `showcase/guide.mjs` and `scenarios/tutorials/`). Given the whole diff, it also
 calls `design-reviewer` for a page script (`table/`, `studio/`, `viewer/`, not a test) whose added lines hold a
 raw colour, an inline style or a `className`. `legacy/` calls for nobody.
 `studio/reviewers.test.js` tests the choice, that every reviewer it names is an agent that lists no tool that
@@ -143,6 +145,20 @@ reference creature and the spells, refuses a duplicate or vanished id, an unreso
 missing source, a dead `/rules#<id>` link and an unknown card, and writes the book as data. `table/rules.test.js`
 fails when the committed file is not its build; `UPDATE_INDEXES=1` with that test rewrites it too. The table serves
 the book at `/rules` (see [The lobby and the pages](#the-lobby-and-the-pages)).
+
+### rules/reach.mjs
+
+```bash
+git diff origin/main... | node scripts/rules/reach.mjs   # the sections of the book a change reaches, and why
+```
+
+What `/rules` and the `rules-keeper` start from. A section is reached by an ADR or a `game-rules.md` heading its
+`sources:` line cites, by a value it draws (a spell, a mutation, a field of the hosted rule set, a stat of the
+reference creature), by a spell or a mutation it names, and by a change to its own lines. A path that calls for the
+keeper and reaches no section (the domain, the words, the pages' rule text) is listed to be read by hand. A line
+removed just above a heading counts for the section it ended. Input that is not a unified diff (nothing, or
+`--name-only`) is refused, never read as nothing reached. `table/rules-reach.test.js` tests it, and runs it on an
+excerpt of a past balance pass.
 
 ### studio
 

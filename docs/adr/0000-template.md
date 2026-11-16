@@ -2,6 +2,7 @@
 
 Date: YYYY-MM-DD
 Status: Proposed | Accepted | Deprecated | Superseded by [NNNN](NNNN-slug.md)
+Rulebook: none | the sections of `rules/` this decision changes, by id (`energy-gain`, `tempo`)
 
 ## Context
 
