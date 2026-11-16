@@ -1,6 +1,6 @@
 # Plan: the official rulebook, one source the app reads and an agent keeps true
 
-Status: accepted, 2026-11-16 (the owner settled the questions at the end). Nothing is built; R1 next.
+Status: accepted, 2026-11-16 (the owner settled the questions at the end). R1 built (ADR 0188); R2 next.
 
 ## What the owner asked for
 
@@ -134,6 +134,13 @@ and the app's edition; it keeps writing, the keeper keeps reading.
    ids are stable. The format, `scripts/rules/build.mjs`, `rules.test.js` with every refusal above, and one Part
    (Part 1, the goal) as the fixture. Tests: one per refusal, the generated file in sync, the values drawn from
    the rule set.
+   *Built (2026-11-16, ADR 0188)*: `rules/01-the-goal.md` (three sections, the `health` card), `rules/moved.json`,
+   the format in `rules/README.md`; `scripts/rules/build.mjs` writes `table/rules.json` (parts, sections, blocks
+   as spans, cards, redirects, changes, and the rule set, creature and spells it drew from) and `--check`;
+   `table/rules.test.js` has a test per refusal, the file in sync (`UPDATE_INDEXES=1` rewrites it) and its values
+   against the rule set. A vanished id is found against the committed file. Left: an id of `ConceptCards.Ids`
+   without its card is R4's C# test, once R2 has written every card; the book records what it drew from, not the
+   engine's content hash (ADR 0188); `changes.md` is read when it exists, and R2 starts it.
 2. **R2, the app's edition.** The rest of the book written by the `rulebook-writer` from `rulebook.md`, adapted as
    the table above says, with the copy-editor's read; `changes.md` started. `rulebook.md` frozen as the print
    draft, a line at its top pointing to `rules/`. Docs and content only. Tests: R1's, on the whole book.

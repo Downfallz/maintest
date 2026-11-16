@@ -1,0 +1,208 @@
+{
+  "drawnFrom": {
+    "ruleSet": "docs/tabletop/playtest.rules.json",
+    "rules": {
+      "teamSize": 3,
+      "energyPerRound": 2,
+      "evolutionPicksPerOpportunity": 2,
+      "firstEvolutionRound": 1,
+      "evolutionInterval": 2,
+      "roundCap": 20,
+      "criticalMultiplier": 2,
+      "combatDeclaration": "at-activation"
+    },
+    "creature": "creature:main:v1",
+    "spells": []
+  },
+  "parts": [
+    {
+      "id": "the-goal",
+      "number": 1,
+      "title": "What you are trying to do",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "spans": [
+            {
+              "text": "Two players. Each commands a team of 3 creatures, and plays to defeat the other team."
+            }
+          ]
+        }
+      ],
+      "sections": [
+        {
+          "id": "winning",
+          "number": "1.1",
+          "title": "Winning",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "A creature starts at 30 Health. At zero Health it is "
+                },
+                {
+                  "text": "defeated",
+                  "strong": true
+                },
+                {
+                  "text": ", for the rest of the match. You win when every creature of the other team is defeated. The match ends the moment that happens, even in the middle of a round: nothing after it resolves."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "If round 20 ends with both teams still standing, the team with the most Health left, added over its creatures, wins. Equal totals are a draw."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0011",
+            "ADR 0083",
+            "ADR 0105",
+            "game-rules#match-lifecycle"
+          ],
+          "card": {
+            "id": "health",
+            "title": "Health",
+            "lines": [
+              "At zero Health a creature is defeated, for the rest of the match.",
+              "A team with no creature left loses, at once, even in the middle of a round."
+            ],
+            "example": "A creature starts at 30 Health. A hit of 7 leaves it at 23."
+          }
+        },
+        {
+          "id": "a-round",
+          "number": "1.2",
+          "title": "A round",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "A match is a sequence of rounds. Each round reads "
+                },
+                {
+                  "text": "Upkeep → Command → Combat → Aftermath",
+                  "strong": true
+                },
+                {
+                  "text": ", and the app walks you through it:"
+                }
+              ]
+            },
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                [
+                  {
+                    "text": "Upkeep.",
+                    "strong": true
+                  },
+                  {
+                    "text": " Every living creature gains 2 Energy. Regeneration heals and damage over time deals its damage."
+                  }
+                ],
+                [
+                  {
+                    "text": "Command.",
+                    "strong": true
+                  },
+                  {
+                    "text": " You choose a tempo for each of your creatures: Instinct or Precision. On the rounds that offer it, you also acquire mutations for your creatures."
+                  }
+                ],
+                [
+                  {
+                    "text": "Combat.",
+                    "strong": true
+                  },
+                  {
+                    "text": " The timeline is walked once, slot by slot. When one of your creatures' slot comes up, you choose its spell and its targets on the board as it stands, and the spell resolves at once, before the next creature acts."
+                  }
+                ],
+                [
+                  {
+                    "text": "Aftermath.",
+                    "strong": true
+                  },
+                  {
+                    "text": " Lasting effects count down, and the next round begins."
+                  }
+                ]
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0010",
+            "ADR 0083",
+            "ADR 0112",
+            "game-rules#round-sequence-adr-0010"
+          ],
+          "card": null
+        },
+        {
+          "id": "what-makes-the-game",
+          "number": "1.3",
+          "title": "What makes the game",
+          "blocks": [
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                [
+                  {
+                    "text": "You commit before you see.",
+                    "strong": true
+                  },
+                  {
+                    "text": " Your mutations, your tempos and your tie orders are chosen hidden, at the same time as your opponent's. Your spells and their targets come later, at each creature's slot, when you know everything that has already happened this round."
+                  }
+                ],
+                [
+                  {
+                    "text": "You grow by mutating.",
+                    "strong": true
+                  },
+                  {
+                    "text": " A mutation teaches a creature a set of spells, all at once, and raises its initiative by the mutation's bonus for the rest of the match: mutating is how a creature gets stronger, and how it gets faster. The last mutation of a family, its capstone, teaches no spell: it gives a passive instead."
+                  }
+                ],
+                [
+                  {
+                    "text": "Nothing is a reservation.",
+                    "strong": true
+                  },
+                  {
+                    "text": " A spell's Energy is spent when it resolves. A creature can be defeated, stunned or drained before its slot comes up, and then it casts nothing that round."
+                  }
+                ]
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0056",
+            "ADR 0063",
+            "ADR 0089",
+            "ADR 0101",
+            "ADR 0112"
+          ],
+          "card": null
+        }
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "id": "health",
+      "section": "winning"
+    }
+  ],
+  "moved": {},
+  "changes": []
+}
