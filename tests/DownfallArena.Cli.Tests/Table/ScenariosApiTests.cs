@@ -606,6 +606,56 @@ public sealed class ScenariosApiTests : IDisposable
         var done = await WaitingForAsync(play, one => one.GetProperty("practice").GetProperty("tutorial").GetProperty("done").GetBoolean());
         recorded.Count.ShouldBe(3);
         done.GetProperty("practice").GetProperty("tutorial").GetProperty("shown").GetInt32().ShouldBe(3);
+        done.GetProperty("over").GetBoolean().ShouldBeFalse("the last step's round ended, not the match");
+    }
+
+    [Fact]
+    public async Task A_tutorial_whose_taught_answers_leave_the_script_hands_every_question_back_and_tells_the_seat_s_stream()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var play = await OpenTutorialAsync(store, practices, "learner");
+        var tutorial = play.Api.Practice.ShouldNotBeNull().Tutorial.ShouldNotBeNull();
+        var gate = new Lock();
+        (int Thread, bool HandedBack) lastBump = default;
+        bool? toldAsItHandedBack = null;
+        play.Api.Changes.Bumped += () =>
+        {
+            lock (gate)
+            {
+                lastBump = (Environment.CurrentManagedThreadId, tutorial.Assisted.Count == 0);
+            }
+        };
+
+        // Said after the table's own handler: the stream was told by the hand-back itself, not by the match moving.
+        tutorial.GaveBack += () =>
+        {
+            lock (gate)
+            {
+                toldAsItHandedBack = lastBump == (Environment.CurrentManagedThreadId, true);
+            }
+        };
+
+        var handedBack = await WaitAsAsync(play, "spell:wait:v1");
+
+        handedBack.GetProperty("over").GetBoolean().ShouldBeFalse();
+        handedBack.GetProperty("waitingFor").GetString().ShouldBeOneOf(["Evolution", "Speed", "TieOrder", "Intent", "Target"], handedBack.ToString());
+        (await EventuallyAsync(() => { lock (gate) { return toldAsItHandedBack is not null; } })).ShouldBeTrue();
+        lock (gate)
+        {
+            toldAsItHandedBack.ShouldBe(true, "the seat's stream is told when every question goes back to the person");
+        }
+    }
+
+    /// <summary>Whether <paramref name="condition" /> holds within five seconds, read 50 ms apart.</summary>
+    private static async Task<bool> EventuallyAsync(Func<bool> condition)
+    {
+        for (var waited = 0; waited < 100 && !condition(); waited++)
+        {
+            await Task.Delay(50, Cancel);
+        }
+
+        return condition();
     }
 
     [Fact]
@@ -620,6 +670,31 @@ public sealed class ScenariosApiTests : IDisposable
         var view = Read(await practice.Play.Api.HandleAsync("GET", "/api/seat/player1", "", practice.Play.Token));
 
         view.GetProperty("practice").GetProperty("tutorial").ValueKind.ShouldBe(JsonValueKind.Null);
+    }
+
+    /// <summary>
+    /// Answers every Action the person's seat is asked, each creature casting <paramref name="spell" /> on itself,
+    /// until the seat's view says no question is assisted any more; at most 40 answers. Returns that view.
+    /// </summary>
+    private static async Task<JsonElement> WaitAsAsync(ScenarioPlay play, string spell)
+    {
+        static bool HandedBack(JsonElement view) => view.GetProperty("practice").GetProperty("tutorial").GetProperty("assisted").GetArrayLength() == 0;
+        long? before = null;
+        for (var answered = 0; answered < 40; answered++)
+        {
+            var view = await WaitingForAsync(play, one => HandedBack(one) || (one.GetProperty("waitingFor").GetString() == "Action" && one.GetProperty("waitingAsked").GetInt64() != before));
+            if (HandedBack(view))
+            {
+                return view;
+            }
+
+            before = view.GetProperty("waitingAsked").GetInt64();
+            var creature = view.GetProperty("waitingCreature").GetInt32();
+            var sent = await play.Api.HandleAsync("POST", "/api/seat/player1/decision", JsonSerializer.Serialize(new { asked = before, kind = "Action", creature, spell, targets = new[] { creature } }), play.Token);
+            sent.Status.ShouldBe(204, Encoding.UTF8.GetString(sent.Body));
+        }
+
+        return await WaitingForAsync(play, HandedBack);
     }
 
     /// <summary>The tutorial opened as a practice by a player of this name.</summary>

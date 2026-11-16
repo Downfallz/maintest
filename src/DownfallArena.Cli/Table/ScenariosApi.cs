@@ -41,13 +41,12 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
 
         if (path is Prefix or TutorialsRoute)
         {
-            var listed = method != "GET" ? Error("Scenario.NoRoute", $"No such route: {method} {path}", 404) : path == Prefix ? await ListedAsync() : Tutorials();
-            return who.Renewed is { } fresh ? listed with { Headers = [.. listed.Headers ?? [], new KeyValuePair<string, string>("Set-Cookie", fresh)] } : listed;
+            return Renewed(await ListAsync(method, path), who.Renewed);
         }
 
         var segments = path[(Prefix.Length + 1)..].Split('/');
         var id = segments[0];
-        if (!ScenarioStore.Names(id) || (store.Ships(id) && !store.Teaches(id) && Admins.Count > 0 && !Admins.Contains(who.Account.Id)))
+        if (!ScenarioStore.Names(id) || Hidden(id, who.Account.Id))
         {
             return Error("Scenario.NotFound", "This scenario does not exist, or was removed.", 404);
         }
@@ -63,8 +62,27 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
             ("POST", [_, "practice"]) => await OpenAsync(id, account, name),
             _ => Error("Scenario.NoRoute", $"No such route: {method} {path}", 404),
         };
-        return who.Renewed is { } renewed ? answer with { Headers = [.. answer.Headers ?? [], new KeyValuePair<string, string>("Set-Cookie", renewed)] } : answer;
+        return Renewed(answer, who.Renewed);
     }
+
+    /// <summary>The scenarios listed under Practice, or the tutorials: a read alone.</summary>
+    private async Task<StudioResponse> ListAsync(string method, string path)
+    {
+        if (method != "GET")
+        {
+            return Error("Scenario.NoRoute", $"No such route: {method} {path}", 404);
+        }
+
+        return path == Prefix ? await ListedAsync() : Tutorials();
+    }
+
+    /// <summary>Whether a scenario the repository ships, and not a tutorial, is kept from an account that is not an admin's.</summary>
+    private bool Hidden(string id, DownfallArena.SharedKernel.Identifiers.AccountId account) =>
+        store.Ships(id) && !store.Teaches(id) && Admins.Count > 0 && !Admins.Contains(account);
+
+    /// <summary>The answer, with the account's renewed session cookie when it was renewed.</summary>
+    private static StudioResponse Renewed(StudioResponse answer, string? renewed) =>
+        renewed is null ? answer : answer with { Headers = [.. answer.Headers ?? [], new KeyValuePair<string, string>("Set-Cookie", renewed)] };
 
     private async Task<StudioResponse> DescribeAsync(string id) =>
         await store.GetAsync(id) is { } document
