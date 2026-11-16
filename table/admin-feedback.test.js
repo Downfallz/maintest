@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { askedLine, categoryFilters, categoryLabel, changeSaid, creatureLine, feedbackLine, feedbackPath, feedbackRows, mergeChoices, muteLine, planPrompt, positionSides, sheetActions, sheetFacts, sheetWords, statusLine, STATUS_FILTERS } from './admin-feedback.js';
+import { askedLine, categoryFilters, choicesNote, categoryLabel, changeSaid, creatureLine, feedbackLine, feedbackPath, feedbackRows, mergeChoices, muteLine, planPrompt, positionSides, sheetActions, sheetFacts, sheetWords, statusLine, STATUS_FILTERS } from './admin-feedback.js';
 
 const NOW = Date.parse('2026-11-16T12:00:00Z');
 
@@ -98,6 +98,7 @@ const idea = {
 test('an idea says how many asked and since when, in its row and on its sheet', () => {
   assert.equal(askedLine(3, '2026-11-14T10:00:00Z'), 'Asked by 3 players since 2026-11-14');
   assert.equal(askedLine(1, '2026-11-14T10:00:00Z'), 'Asked by 1 player since 2026-11-14');
+  assert.equal(askedLine(2, null), 'Asked by 2 players', 'no date the host did not send');
   const [row] = feedbackRows({ feedback: [{ id: 'a', kind: 'idea', category: 'battle', line: 'Replays.', status: 'planned', plan: 'docs/tabletop/replay-plan.md', at: '2026-11-16T11:00:00Z', askedBy: 3, additions: 0 }] }, NOW);
   assert.equal(row.asked, 'asked by 3');
   assert.equal(row.status, 'Planned: docs/tabletop/replay-plan.md');
@@ -118,7 +119,8 @@ test('a sheet reads the words of every idea merged into it, each with who asked'
 test('an idea\'s statuses are offered as filters and said with their plan or reason', () => {
   assert.deepEqual(STATUS_FILTERS.map(one => one.value), ['open', 'new', 'seen', 'reproduced', 'planned', 'shipped', 'declined', 'dismissed', '']);
   assert.equal(statusLine({ status: 'declined', reason: 'Not for this game.' }), 'Declined: Not for this game.');
-  assert.equal(statusLine({ status: 'shipped', plan: 'docs/tabletop/replay-plan.md' }), 'Shipped');
+  assert.equal(statusLine({ status: 'shipped', plan: 'docs/tabletop/replay-plan.md' }), 'Shipped: docs/tabletop/replay-plan.md');
+  assert.equal(statusLine({ status: 'shipped', plan: null }), 'Shipped');
   const can = sheetActions(idea);
   assert.deepEqual([can.planned, can.shipped, can.declined, can.merge, can.prompt, can.toBug], [true, true, true, true, true, false]);
 });
@@ -137,4 +139,7 @@ test('an idea is merged into another open idea, never into itself, each said wit
     { id: 'r', kind: 'bug', line: 'A bug.' },
   ], idea.id);
   assert.deepEqual(choices, [{ value: 'a', label: 'Replays. (asked by 2)' }]);
+  assert.equal(choicesNote(5, true), '');
+  assert.equal(choicesNote(7, true), 'Only the first 100 open ideas are listed.');
+  assert.equal(choicesNote(1, false), 'The open ideas could not be read. Close the sheet and open it again.');
 });

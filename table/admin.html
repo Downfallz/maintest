@@ -347,11 +347,12 @@
           <button id="admin-feedback-declined" type="button" class="secondary">Decline</button>
         </div>
         <div id="admin-feedback-merging" class="player-action" hidden>
-          <label for="admin-feedback-merge-into">Another idea asking the same<select id="admin-feedback-merge-into"></select></label>
+          <label for="admin-feedback-merge-into">Another idea that asks the same thing<select id="admin-feedback-merge-into"></select></label>
+          <p id="admin-feedback-merge-note" class="muted"></p>
           <button id="admin-feedback-merge" type="button" class="secondary">Merge into…</button>
         </div>
         <div id="admin-feedback-prompting" class="player-action" hidden>
-          <label for="admin-feedback-prompt-text">The idea, in your own words<textarea id="admin-feedback-prompt-text" rows="3" maxlength="1000"></textarea></label>
+          <label for="admin-feedback-prompt-text">The idea, in your words, for the plan prompt<textarea id="admin-feedback-prompt-text" rows="3" maxlength="1000"></textarea></label>
           <button id="admin-feedback-prompt" type="button" class="secondary">Copy as a plan prompt</button>
           <output id="admin-feedback-prompt-said" class="feedback-text feedback-prompt"></output>
         </div>

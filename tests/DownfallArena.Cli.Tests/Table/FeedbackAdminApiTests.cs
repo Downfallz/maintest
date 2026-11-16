@@ -297,7 +297,8 @@ public sealed class FeedbackAdminApiTests : IDisposable
         var merged = Read(await AskAsync("POST", $"{FeedbackAdminApi.Route}/{second}/merge", new { into = first }));
 
         merged.GetProperty("mergedInto").GetProperty("id").GetString().ShouldBe(first);
-        Actions(merged).ShouldBe(["mute"]);
+        Actions(merged).ShouldBe(["dismiss", "spam", "mute"]);
+        merged.GetProperty("askedBy").ValueKind.ShouldBe(JsonValueKind.Null, "a merged idea is counted in the one it joined");
         var row = Read(await AskAsync("GET", FeedbackAdminApi.Route, query: "kind=idea")).GetProperty("feedback").EnumerateArray().ShouldHaveSingleItem();
         (row.GetProperty("id").GetString(), row.GetProperty("askedBy").GetInt32()).ShouldBe((first, 2));
         var sheet = Read(await AskAsync("GET", $"{FeedbackAdminApi.Route}/{first}"));
@@ -339,7 +340,8 @@ public sealed class FeedbackAdminApiTests : IDisposable
         (await AskAsync("PUT", $"{FeedbackAdminApi.Route}/{idea}/status", new { status = "declined" })).Status.ShouldBe(400);
         var declined = Read(await AskAsync("PUT", $"{FeedbackAdminApi.Route}/{idea}/status", new { status = "declined", reason = "Not for this game." }));
         (declined.GetProperty("status").GetString(), declined.GetProperty("reason").GetString()).ShouldBe(("declined", "Not for this game."));
-        Read(await AskAsync("PUT", $"{FeedbackAdminApi.Route}/{idea}/status", new { status = "shipped" })).GetProperty("status").GetString().ShouldBe("shipped");
+        var shipped = Read(await AskAsync("PUT", $"{FeedbackAdminApi.Route}/{idea}/status", new { status = "shipped" }));
+        (shipped.GetProperty("status").GetString(), shipped.GetProperty("plan").GetString()).ShouldBe(("shipped", "docs/tabletop/replay-plan.md"));
 
         (await ActivityAsync()).ShouldBe([
             $"feedback.status {idea} shipped",

@@ -92,10 +92,10 @@ export function feedbackRows(answer, now = Date.now()) {
   }));
 }
 
-/** A status as the sheet and the list say it: with the operator's reason when dismissed or declined, with its plan when planned. */
+/** A status as the sheet and the list say it: with the operator's reason when dismissed or declined, with its plan when planned or shipped. */
 export function statusLine(feedback) {
   const label = STATUS_LABELS[feedback?.status] ?? feedback?.status ?? '';
-  if (feedback?.status === 'planned' && feedback.plan) return `${label}: ${feedback.plan}`;
+  if (['planned', 'shipped'].includes(feedback?.status) && feedback.plan) return `${label}: ${feedback.plan}`;
   if (!['dismissed', 'declined'].includes(feedback?.status) || !feedback.reason) return label;
   return feedback.status === 'dismissed' && feedback.spam === true ? 'Dismissed as spam' : `${label}: ${feedback.reason}`;
 }
@@ -112,7 +112,8 @@ const day = at => (at ? new Date(at).toISOString().slice(0, 10) : '');
 
 /** How many asked an idea, the ideas merged into it counted, and since the first of them asked. */
 export function askedLine(askedBy, since) {
-  return `Asked by ${plural(askedBy, 'player')} since ${day(since)}`;
+  const first = day(since);
+  return first ? `Asked by ${plural(askedBy, 'player')} since ${first}` : `Asked by ${plural(askedBy, 'player')}`;
 }
 
 const stamp = at => (at ? new Date(at).toISOString().replace('T', ' ').slice(0, 16) + ' UTC' : '');
@@ -185,6 +186,15 @@ export function planPrompt(words, answer) {
   if (!text) return null;
   const ended = /[.!?]$/.test(text) ? text : `${text}.`;
   return `/new-plan ${ended} ${askedLine(answer?.askedBy ?? 1, answer?.since ?? answer?.at)}.`;
+}
+
+/** The pages of open ideas the merge picker reads at most: twenty a page. */
+export const CHOICE_PAGES = 5;
+
+/** What the merge picker says under its list: that more ideas are open than it read, or that it could not read them. */
+export function choicesNote(pages, read) {
+  if (!read) return 'The open ideas could not be read. Close the sheet and open it again.';
+  return pages > CHOICE_PAGES ? `Only the first ${CHOICE_PAGES * 20} open ideas are listed.` : '';
 }
 
 /** The ideas this one can be merged into, from the list's rows: every other idea, each with how many asked it. */
@@ -340,21 +350,28 @@ export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
     for (const [block, names] of Object.entries(BLOCKS)) element(block).hidden = !names.some(name => can[name]);
   }
 
-  // The ideas this one can join: every open idea, five pages at most, read when its sheet offers the merge.
+  // The ideas this one can join: every open idea, CHOICE_PAGES pages at most, read when its sheet offers the merge.
   async function listChoices(id) {
     const asked = read;
     const select = element('admin-feedback-merge-into');
     fill(select, [{ value: '', label: 'Reading the open ideas…' }]);
+    element('admin-feedback-merge-note').textContent = '';
     const rows = [];
-    for (let number = 1, pages = 1; number <= Math.min(pages, 5); number += 1) {
+    let pages = 1;
+    let readAll = true;
+    for (let number = 1; number <= Math.min(pages, CHOICE_PAGES); number += 1) {
       const answer = await send('GET', feedbackPath({ kind: 'idea', status: 'open', page: number }));
-      if (asked !== read || !answer.ok) break;
+      if (asked !== read) return;
+      if (!answer.ok) {
+        readAll = false;
+        break;
+      }
       rows.push(...(answer.body.feedback ?? []));
       pages = answer.body.pages ?? 1;
     }
-    if (asked !== read) return;
     const choices = mergeChoices(rows, id);
     fill(select, choices.length ? [{ value: '', label: 'Pick an idea' }, ...choices] : [{ value: '', label: 'No other open idea' }]);
+    element('admin-feedback-merge-note').textContent = choicesNote(pages, readAll);
   }
 
   // Emptied before the host answers, so nothing of the sheet opened before can be read or acted on meanwhile.
@@ -367,6 +384,7 @@ export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
     element('admin-feedback-session').hidden = true;
     element('admin-feedback-joined').hidden = true;
     element('admin-feedback-prompt-said').textContent = '';
+    element('admin-feedback-merge-note').textContent = '';
     drawActions(sheetActions(null));
   }
 

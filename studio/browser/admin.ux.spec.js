@@ -406,7 +406,7 @@ test('an idea is merged into another, read with everyone who asked it, planned, 
   const groupOf = id => Object.values(ideas).filter(one => one.mergedInto?.id === id);
   // The sheet as FeedbackAdminApi answers it: how many asked, the ideas merged into it, and the actions that apply.
   const sheetOf = one => {
-    if (one.mergedInto) return { ...one, askedBy: 1, since: one.at, actions: ['mute'] };
+    if (one.mergedInto) return { ...one, askedBy: null, since: null, actions: ['dismiss', 'spam', 'mute'] };
     const asks = groupOf(one.id);
     const closed = ['shipped', 'declined', 'dismissed'].includes(one.status);
     return { ...one, askedBy: 1 + asks.length, since: one.at, asks: asks.map(ask => ({ id: ask.id, at: ask.at, text: ask.text, expected: null, additions: [], account: null, guest: true, senderGone: false })),
@@ -442,6 +442,7 @@ test('an idea is merged into another, read with everyone who asked it, planned, 
   await expect(page.locator('#admin-feedback-sheet-said')).toHaveText('Merged. It is read inside the idea it joined.');
   await expect(page.locator('#admin-feedback-facts')).toContainText('Merged into');
   await expect(page.locator('#admin-feedback-merge')).toBeHidden();
+  await expect(page.locator('#admin-feedback-spam')).toBeVisible();
 
   await page.locator('#admin-feedback-joined').click();
   await expect(page.locator('#admin-feedback-facts')).toContainText('2 players since');

@@ -105,7 +105,7 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
 
         var mute = await feedback.MuteOfAsync(one);
         var group = await feedback.GroupAsync(one);
-        var idea = one.Kind == FeedbackKind.Idea;
+        var counted = one.Kind == FeedbackKind.Idea && one.MergedInto is null;
         var table = one.Context?.Table;
         var record = table is null || stored is null ? null : await stored.RecordAsync(table);
         var underWay = record is { Status: TableRecord.Open, Void: false };
@@ -126,9 +126,10 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
                 additions = Additions(one),
                 plan = one.Plan,
 
-                // Ideas grouped (I1): how many asked, the ideas merged into this one, or the one it was merged into.
-                askedBy = idea ? group.Asks.AskedBy : (int?)null,
-                since = idea ? group.Asks.Since : (DateTimeOffset?)null,
+                // Ideas grouped (I1): how many asked, the ideas merged into this one, or the one it was merged into, which
+                // counts it.
+                askedBy = counted ? group.Asks.AskedBy : (int?)null,
+                since = counted ? group.Asks.Since : (DateTimeOffset?)null,
                 asks = group.Merged.Select(ask => new
                 {
                     id = ask.Id,
@@ -298,13 +299,17 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
     /// <summary>
     /// What the sheet offers on this feedback as it stands, by the names the page knows its buttons by: marks and moves
     /// while it is open, an idea's plan, shipping, merge and plan prompt, Diagnose… while its table is played, and the
-    /// mute or its lifting while a sender can hold one. An idea merged into another offers only its sender's mute: it is
-    /// changed through the one it joined.
+    /// mute or its lifting while a sender can hold one. An idea merged into another is changed through the one it joined:
+    /// it offers only its dismissal, as spam or not, which takes it out of the group, and its sender's mute.
     /// </summary>
     private string[] Actions(Feedback one, FeedbackMute? mute, bool underWay, FeedbackGroup group)
     {
         var offered = new List<string>();
-        if (one.MergedInto is null)
+        if (one.MergedInto is not null)
+        {
+            offered.AddRange(["dismiss", "spam"]);
+        }
+        else
         {
             offered.AddRange(one.Kind == FeedbackKind.Bug ? BugActions(one) : IdeaActions(one, group));
             if (underWay && one.Context?.Table is not null)

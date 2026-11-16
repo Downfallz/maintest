@@ -437,14 +437,16 @@ The seat's view says the lesson under `practice.tutorial`:
   `PUT /api/admin/feedback/<id>/status {"status","reason?","plan?"}` marks it `seen` (which reopens it), `reproduced`
   (a bug report only) or `dismissed` with a reason of one line and at most 300 characters, `"reason":"spam"` being the
   spam mark (400 `Feedback.Invalid` otherwise). An idea is also marked `planned` with its plan's path
-  (`docs/…-plan.md`, lowercase), `shipped` (which keeps the plan and closes it) or `declined` with a reason of one line
-  its players read (which closes it). Closed again with the same status, it keeps the time it was first closed.
-  `POST .../<id>/merge {"into"}` merges an open idea into another open idea (feedback plan, I1): it leaves the list,
-  keeps its sender and words, is read inside the one it joined (`asks` on that sheet, `mergedInto` on its own), and
-  counts towards `askedBy`, each sender once. An idea merged since is followed to the one its group became. A merge
-  into a bug report, into itself or into an idea merged into it is 400 `Feedback.Invalid`; into a closed one 409
-  `Feedback.Closed`. A merged idea takes no status or kind (409 `Feedback.MergedAway`), and an idea others joined
-  stays an idea (409 `Feedback.Grouped`). The list filtered to ideas sorts by `askedBy`, then by the newest ask.
+  (`docs/…-plan.md`, lowercase), `shipped` (which closes it) or `declined` with a reason of one line, which the players
+  who asked it read (which closes it too). The plan stays through any other status until another plan replaces it.
+  Closed again with the same status, it keeps the time it was first closed.
+  `POST .../<id>/merge {"into"}` merges an open idea into another open idea (feedback plan, I1). The merged idea leaves
+  the list but keeps its sender and words. Its group's sheet shows it under `asks`; its own sheet shows `mergedInto`.
+  Each sender counts once towards `askedBy`. An idea merged since is followed to the one its group became. A merge into
+  a bug report, into itself or into an idea already in its own group is 400 `Feedback.Invalid`; into a closed idea, 409
+  `Feedback.Closed`. A merged idea takes no status but dismissed, which takes it out of its group, and no kind (409
+  `Feedback.MergedAway`). An idea others joined stays an idea (409 `Feedback.Grouped`). The list filtered to ideas
+  sorts by `askedBy`, then by the newest ask.
   `PUT .../<id>/kind {"kind"}` turns a bug report into an idea, or an idea into a bug report. It keeps the words,
   position and sender and sets the status to seen. A closed one gets 409 `Feedback.Closed`.
   `POST`/`DELETE .../<id>/mute` stops its sender for 30 days and lifts it (409 `Feedback.NoSender` for a deleted

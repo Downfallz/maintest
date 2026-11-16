@@ -150,7 +150,7 @@ input[type="text"] { font: inherit; min-height: 44px; border: 1px solid var(--li
 
 /* Suspension (A2b, ADR 0178): the reason as a few lines, and a suspended account said in the warning colour, in its
    sheet and as a tag beside its name in the list. */
-.player-suspension textarea { font: inherit; display: block; width: 100%; box-sizing: border-box; margin-top: 6px; min-height: 72px; border: 1px solid var(--line); border-radius: var(--radius-soft); padding: 10px 12px; background: var(--raised); color: var(--ink); resize: vertical; }
+.player-suspension textarea, #admin-feedback-prompt-text { font: inherit; display: block; width: 100%; box-sizing: border-box; margin-top: 6px; min-height: 72px; border: 1px solid var(--line); border-radius: var(--radius-soft); padding: 10px 12px; background: var(--raised); color: var(--ink); resize: vertical; }
 .player-suspended { padding: 10px 12px; border: 1px solid var(--refused); border-radius: var(--radius-soft); }
 .player-suspended p { margin: 0 0 8px; overflow-wrap: anywhere; }
 .status-tag.suspended { color: var(--refused); border: 1px solid var(--refused); padding: 1px 6px; font-size: 12px; }
@@ -202,8 +202,7 @@ input[type="text"] { font: inherit; min-height: 44px; border: 1px solid var(--li
 .feedback-position { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); font-size: 13px; }
 .feedback-side h4 { margin: 0 0 4px; font-size: 13px; }
 .feedback-side ul { margin: 0; padding-left: 18px; overflow-wrap: anywhere; }
-/* An idea's plan prompt (I1): the operator's words in a box like the suspension's, the prompt shown whole to select. */
-#admin-feedback-prompt-text { font: inherit; display: block; width: 100%; box-sizing: border-box; min-height: 72px; border: 1px solid var(--line); border-radius: var(--radius-soft); padding: 10px 12px; background: var(--raised); color: var(--ink); resize: vertical; }
+/* An idea's plan prompt (I1): the operator's words in the suspension's box (above), the prompt shown whole to select. */
 #admin-feedback-merge-into { width: 100%; min-height: 44px; }
 .feedback-prompt { display: block; margin-top: 8px; overflow-wrap: anywhere; user-select: all; font-size: 13px; }
 .feedback-session { display: inline-block; margin: 8px 0; min-height: 44px; line-height: 44px; }

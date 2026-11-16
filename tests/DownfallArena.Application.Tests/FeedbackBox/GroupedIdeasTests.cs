@@ -1,4 +1,5 @@
 using DownfallArena.Application.FeedbackBox;
+using DownfallArena.Application.FeedbackBox.Ports;
 using Microsoft.Extensions.Time.Testing;
 
 namespace DownfallArena.Application.Tests.FeedbackBox;
@@ -202,5 +203,108 @@ public sealed class GroupedIdeasTests : IDisposable
         await Desk().MergeAsync(second.Id, first.Id, Cancel);
 
         (await Desk().WaitingAsync(Cancel)).New.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task A_plan_is_kept_until_another_plan_replaces_it()
+    {
+        var idea = await IdeaAsync("seat-a");
+        await Desk().PlanAsync(idea.Id, Plan, Cancel);
+
+        await Desk().SetStatusAsync(idea.Id, FeedbackStatus.Declined, "A misclick.", "mark", Cancel);
+        await Desk().SetStatusAsync(idea.Id, FeedbackStatus.Seen, null, "mark", Cancel);
+        var shipped = (await Desk().SetStatusAsync(idea.Id, FeedbackStatus.Shipped, null, "mark", Cancel)).Value.Feedback;
+
+        shipped.Plan.ShouldBe(Plan);
+        (await Desk().PlanAsync(idea.Id, "docs/tabletop/replay-again-plan.md", Cancel)).Value.Feedback.Plan.ShouldBe("docs/tabletop/replay-again-plan.md");
+    }
+
+    [Fact]
+    public async Task An_idea_merged_into_its_group_by_another_road_changes_nothing()
+    {
+        var first = await IdeaAsync("seat-a");
+        var second = await IdeaAsync("seat-b");
+        var third = await IdeaAsync("seat-c");
+        await Desk().MergeAsync(third.Id, second.Id, Cancel);
+        await Desk().MergeAsync(second.Id, first.Id, Cancel);
+
+        var again = (await Desk().MergeAsync(third.Id, first.Id, Cancel)).Value;
+
+        (again.Changed, again.Into.Id).ShouldBe((false, first.Id));
+    }
+
+    [Fact]
+    public async Task A_merged_idea_dismissed_as_spam_leaves_its_group_and_counts_against_its_sender()
+    {
+        var first = await IdeaAsync("seat-a");
+        var flood = await IdeaAsync("seat-b");
+        await Desk().MergeAsync(flood.Id, first.Id, Cancel);
+
+        var dismissed = (await Desk().SetStatusAsync(flood.Id, FeedbackStatus.Dismissed, Feedback.SpamReason, "mark", Cancel)).Value.Feedback;
+
+        (dismissed.MergedInto, dismissed.IsSpam, dismissed.SpamCounted).ShouldBe((null, true, true));
+        (await IdeasAsync()).Asks[first.Id].AskedBy.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task A_player_s_next_idea_is_not_folded_into_one_merged_away()
+    {
+        var first = await IdeaAsync("seat-a");
+        var mine = await IdeaAsync("seat-b");
+        await Desk().MergeAsync(mine.Id, first.Id, Cancel);
+        _clock.Advance(SendFeedback.Apart);
+
+        var answer = await new SendFeedback(_store, new GuestAddresses(), _writes, _clock).HandleAsync(
+            new FeedbackSent { Kind = FeedbackKind.Idea, Sender = "seat-b", Category = "lobby", Text = "I wanted to invite a friend by name." }, Cancel);
+
+        answer.Merged.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task An_idea_cannot_become_a_bug_report_while_another_is_merged_into_it()
+    {
+        var idea = await IdeaAsync("seat-a");
+        var other = await IdeaAsync("seat-b");
+        var racing = new MergesWhileListing(_store);
+        var desk = new OperatorFeedback(racing, new FeedbackMutes(null), _writes, _clock);
+        racing.Merge = () => desk.MergeAsync(other.Id, idea.Id, Cancel);
+
+        await desk.ChangeKindAsync(idea.Id, FeedbackKind.Bug, Cancel);
+        var merge = await racing.Merged!;
+
+        racing.MergedWhileListing.ShouldBeFalse("the ideas merged into it are read under the write gate, so no merge lands in between");
+        (merge.IsFailure, (await _store.FindAsync(idea.Id, Cancel))!.Kind).ShouldBe((true, FeedbackKind.Bug));
+    }
+
+    /// <summary>
+    /// A store whose first listing starts a merge and gives it a moment: the merge finishes there when nothing holds the
+    /// write gate, or waits for the gate when the listing is read under it.
+    /// </summary>
+    private sealed class MergesWhileListing(IFeedbackStore inner) : IFeedbackStore
+    {
+        public Func<Task<DownfallArena.SharedKernel.Primitives.Result<FeedbackMerge>>>? Merge { get; set; }
+
+        public Task<DownfallArena.SharedKernel.Primitives.Result<FeedbackMerge>>? Merged { get; private set; }
+
+        public bool MergedWhileListing { get; private set; }
+
+        public async Task<IReadOnlyList<string>> IdsAsync(CancellationToken cancellationToken = default)
+        {
+            var listed = await inner.IdsAsync(cancellationToken);
+            if (Merged is null && Merge is not null)
+            {
+                Merged = Merge();
+                await Task.WhenAny(Merged, Task.Delay(TimeSpan.FromMilliseconds(300), cancellationToken));
+                MergedWhileListing = Merged.IsCompleted;
+            }
+
+            return listed;
+        }
+
+        public Task SaveAsync(Feedback feedback, CancellationToken cancellationToken = default) => inner.SaveAsync(feedback, cancellationToken);
+
+        public Task<Feedback?> FindAsync(string id, CancellationToken cancellationToken = default) => inner.FindAsync(id, cancellationToken);
+
+        public Task DeleteAsync(string id, CancellationToken cancellationToken = default) => inner.DeleteAsync(id, cancellationToken);
     }
 }
