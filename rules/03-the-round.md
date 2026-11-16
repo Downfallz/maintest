@@ -116,7 +116,8 @@ reveal that acquires it to the end of the match:
 
 **Archmage is shared.** The creature that acquires it owns it, and every creature of its team holds its
 passive. It stacks: a teammate may acquire its own copy, and each copy gives every creature of the team its
-passive once more.
+passive once more. A copy keeps giving after the creature that acquired it is defeated: only the defeated
+creature's own Upkeep gains stop.
 
 How each passive plays is in [the passives](#passives).
 

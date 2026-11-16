@@ -1106,7 +1106,7 @@
                   "strong": true
                 },
                 {
-                  "text": " The creature that acquires it owns it, and every creature of its team holds its passive. It stacks: a teammate may acquire its own copy, and each copy gives every creature of the team its passive once more."
+                  "text": " The creature that acquires it owns it, and every creature of its team holds its passive. It stacks: a teammate may acquire its own copy, and each copy gives every creature of the team its passive once more. A copy keeps giving after the creature that acquired it is defeated: only the defeated creature's own Upkeep gains stop."
                 }
               ]
             },
@@ -2777,7 +2777,7 @@
                   "strong": true
                 },
                 {
-                  "text": " is what a capstone gives its creature, from the reveal that acquires it to the end of the match. It never counts down. A creature with two capstones holds both passives."
+                  "text": " is what a capstone gives, from the reveal that acquires it to the end of the match. It never counts down. Titan's and Apex's go to the creature that acquires them; Archmage's goes to every creature of its team. A creature holds every passive its own capstones give, and Archmage's once more for every copy its team owns."
                 }
               ]
             },
@@ -2807,7 +2807,7 @@
                     "strong": true
                   },
                   {
-                    "text": " Every living creature of the team gains 1 Energy more, once for each copy the team owns, from the next round."
+                    "text": " Every living creature of the team gains 1 Energy more, once for each copy the team owns, from the next round. A copy keeps giving after the creature that acquired it is defeated."
                   }
                 ],
                 [
@@ -2921,6 +2921,13 @@
       "adrs": [
         "0076",
         "0187"
+      ]
+    },
+    {
+      "date": "2026-11-16",
+      "text": "Archmage's passive goes to every creature of its team, once for each copy, and a copy keeps giving after the creature that acquired it is defeated (ADR 0114).",
+      "adrs": [
+        "0114"
       ]
     }
   ]
