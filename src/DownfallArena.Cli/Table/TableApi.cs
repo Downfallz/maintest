@@ -474,8 +474,8 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
 
                 // When the last move was, and what this seat was last shown of its game, and when (ADR 0194): what
                 // the recap tells a player coming back, whichever device they come back on.
-                lastMoveAt = LastMove is { } lastMove ? await lastMove() : null,
-                seen = Seen(await Visits.LastAsync(seat.Name)),
+                lastMoveAt = await LastMoveAtAsync(),
+                seen = Seen(await LastVisitAsync(seat)),
 
                 // Who the table is waiting for before it begins, or null: the page shows a room rather than a
                 // board nobody is asked anything on (ADR 0092).
@@ -827,13 +827,62 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
             return StudioResponse.OfJson(new { error = "Seen.Invalid", message = "Say what was shown as { \"sequence\": N }, N a feed sequence." }, ArtifactJson.LineOptions, status: 400);
         }
 
-        return await Visits.ShownAsync(seat.Name, shown) is { } kept
+        LastVisit? kept;
+        try
+        {
+            kept = await Visits.ShownAsync(seat.Name, HolderOf(seat), shown);
+        }
+        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or Azure.RequestFailedException)
+        {
+            Console.WriteLine($"  What {seat.Name} was shown could not be kept: {failure.Message}");
+            kept = null;
+        }
+
+        return kept is not null
             ? StudioResponse.OfJson(new { seen = Seen(kept) }, ArtifactJson.LineOptions)
             : StudioResponse.OfJson(new { error = "Seen.Busy", message = "What was shown could not be kept. Try again." }, ArtifactJson.LineOptions, status: 503);
     }
 
     private static object? Seen(LastVisit? visit) =>
         visit is null ? null : new { sequence = visit.Sequence, at = visit.At };
+
+    /// <summary>
+    /// The seat's last visit for the view, or none when the store cannot be read: the board is what the page needs,
+    /// and a mark it lacks only marks more as new.
+    /// </summary>
+    private async Task<LastVisit?> LastVisitAsync(TableSeat seat)
+    {
+        try
+        {
+            return await Visits.LastAsync(seat.Name, HolderOf(seat));
+        }
+        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or Azure.RequestFailedException)
+        {
+            Console.WriteLine($"  What {seat.Name} was last shown could not be read: {failure.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>When the last move was, for the view, or none when the journal cannot be asked.</summary>
+    private async Task<DateTimeOffset?> LastMoveAtAsync()
+    {
+        try
+        {
+            return LastMove is { } lastMove ? await lastMove() : null;
+        }
+        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or Azure.RequestFailedException)
+        {
+            Console.WriteLine($"  When the last move was could not be read: {failure.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// A stamp of the seat's key, never the key itself: what a last visit is kept under, so a seat offered again under
+    /// a fresh key (ADR 0170) starts with none.
+    /// </summary>
+    private static string HolderOf(TableSeat seat) =>
+        Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(seat.Token)))[..16];
 
     private static object Described(TableReaction reaction) =>
         new { sequence = reaction.Sequence, seat = reaction.Seat, reaction = reaction.Reaction, at = reaction.At };

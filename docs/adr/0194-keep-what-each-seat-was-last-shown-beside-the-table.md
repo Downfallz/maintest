@@ -19,7 +19,9 @@ and the seat's view does not carry it yet.
 We will keep, for each seat of a table, its **last visit**: the last feed sequence the seat was shown and when the
 host was told, in a small document of its own beside the table's record, `seen-player1.json` and `seen-player2.json`
 (`TableVisits`, through the same artifact store as `reactions.json`, ADR 0173: a file on a developer's machine, a
-blob on Azure, a dictionary for a table nobody records).
+blob on Azure, a dictionary for a table nobody records). The mark carries a stamp of the seat's key, a hash and never
+the key: a seat offered again gets a fresh key (ADR 0170), so the next player is not served the mark of the one who
+left, nor when that player last looked, and their first mark replaces it.
 
 The page sends it with `PUT /api/seat/<seat>/seen {"sequence": N}` under the seat's token: at once, then at most
 every five seconds, and once more when hidden, as a request kept alive past the page. It sends nothing for a replay.
@@ -29,12 +31,16 @@ nothing: it is not a change of the table, it wakes no page and sends no notice.
 
 The seat's view gains `seen: { sequence, at }` (none before the first) and `lastMoveAt`, the time the journal was
 last written (none for a table that keeps no journal). The view reads the record on every read rather than holding
-it, so a second API replica never serves an older mark. The browser keeps its copy and reads the larger of the two.
+it, so a second API replica never serves an older mark. A store that fails leaves both none and the board served;
+the write then answers `503 Seen.Busy`, as it does when every retry lost to another process, and it gives up when the
+mark it read went away meanwhile, so a run being deleted is not brought back. The browser keeps its copy and reads
+the larger of the two.
 
 ## Consequences
 
 - Good: the recap follows the player from one device to another, and survives a cleared browser and a deploy.
-- Good: a seen write never touches the table's record, so it cannot refuse or delay a decision.
+- Good: a seen write never touches the table's record, so it cannot make a decision retry. It goes through the run's
+  writer, which takes writes in turn, so it can delay the table's next write by one small write.
 - Good: the view says how long ago the last move was, which the lobby, the notice and the recap need (stages R2-R4).
 - Bad: one more small read per seat view, and at most one write every five seconds for each watching page. Two
   small blobs per table, deleted with its run.

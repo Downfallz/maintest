@@ -145,12 +145,43 @@ public sealed class TableSeenApiTests : IDisposable
         await rebuilt.QuiesceAsync(Cancel);
     }
 
-    private async Task<PlayedTable> BegunAsync()
+    [Fact]
+    public async Task A_seat_taken_by_another_player_has_none_of_the_previous_players_last_visit()
     {
-        var table = await _hosted.Composer.ComposeAsync(HostedTables.TwoPeople, Cancel);
-        using (var place = (await _registry.ReserveAsync(Cancel)).ShouldNotBeNull())
+        var table = await BegunAsync();
+        await SeenAsync(table, 0, """{ "sequence": 9 }""");
+
+        // A seat offered again gets a fresh key (ADR 0170): the player who takes it is another person.
+        table.Seats[0].Token = "a-fresh-key-for-the-next-player";
+
+        (await SeatAsync(table, 0)).GetProperty("seen").ValueKind.ShouldBe(JsonValueKind.Null);
+    }
+
+    [Fact]
+    public async Task A_store_that_fails_leaves_the_board_readable_and_refuses_the_mark_with_a_code()
+    {
+        using var hosted = new HostedTables(directory => new RecordRefused(new FileArtifactStore(directory), "seen-player1.json") { ReadsRefused = true, Refusing = true }, turns: new NoAgentTurns());
+        using var registry = hosted.Registry();
+        var table = await BegunAsync(hosted, registry);
+
+        var view = await SeatAsync(table, 0);
+        var answer = await SeenAsync(table, 0, """{ "sequence": 2 }""");
+
+        view.GetProperty("seen").ValueKind.ShouldBe(JsonValueKind.Null);
+        answer.Status.ShouldBe(503);
+        using var refusal = JsonDocument.Parse(answer.Body);
+        refusal.RootElement.GetProperty("error").GetString().ShouldBe("Seen.Busy");
+        await table.QuiesceAsync(Cancel);
+    }
+
+    private Task<PlayedTable> BegunAsync() => BegunAsync(_hosted, _registry);
+
+    private static async Task<PlayedTable> BegunAsync(HostedTables hosted, TableRegistry registry)
+    {
+        var table = await hosted.Composer.ComposeAsync(HostedTables.TwoPeople, Cancel);
+        using (var place = (await registry.ReserveAsync(Cancel)).ShouldNotBeNull())
         {
-            await _registry.AddAsync(table, place, Cancel);
+            await registry.AddAsync(table, place, Cancel);
         }
 
         // Each person reaches their seat through the route, which is what the table's record keeps of it.

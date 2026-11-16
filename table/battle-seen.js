@@ -35,8 +35,8 @@ export function saveSeen(storage, game, sequence) {
 /**
  * Tells the host what this seat was shown (ADR 0194), on the moments the page remembers it: at once, then at most
  * once every `SEND_EVERY_MS`, the last mark held for the end of the wait, and at once when the page is hidden
- * (`flush`). The wait is one-shot and only follows a mark; nothing is sent on a clock. A refused send is sent again
- * with the next mark.
+ * (`flush`). The wait is one-shot and only follows a mark; nothing is sent on a clock. A refused mark is held again,
+ * for the next mark, the end of the next wait or the page hidden.
  * @param {{ send: (sequence: number) => unknown, now?: () => number,
  *   later?: (run: () => void, ms: number) => unknown, cancel?: (id: any) => void }} options
  */
@@ -45,7 +45,10 @@ export function createSeenSender({ send, now = () => Date.now(), later = (run, m
   function deliver(sequence) {
     const before = sent;
     sent = sequence; sentAt = now();
-    const refused = () => { if (sent === sequence) sent = before; };
+    const refused = () => {
+      if (sent === sequence) sent = before;
+      if (held === null || held < sequence) held = sequence;
+    };
     let answer;
     try { answer = send(sequence); } catch { refused(); return; }
     Promise.resolve(answer).then(result => { if (!result?.ok) refused(); }, refused);
@@ -58,9 +61,9 @@ export function createSeenSender({ send, now = () => Date.now(), later = (run, m
   return {
     shown(sequence) {
       if (!Number.isInteger(sequence) || sequence < 0) return;
-      if (sequence <= Math.max(sent ?? -1, held ?? -1)) return;
+      if (sequence <= (sent ?? -1) || sequence < (held ?? -1)) return;
       const waited = now() - sentAt;
-      if (timer === null && waited >= SEND_EVERY_MS) { deliver(sequence); return; }
+      if (timer === null && waited >= SEND_EVERY_MS) { held = null; deliver(sequence); return; }
       held = sequence;
       if (timer === null) timer = later(due, SEND_EVERY_MS - waited);
     },

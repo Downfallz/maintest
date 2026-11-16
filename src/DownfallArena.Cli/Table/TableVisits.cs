@@ -19,48 +19,64 @@ internal sealed class TableVisits(TimeProvider clock, IVisitKeeper? keeper = nul
     private readonly Lock _held = new();
     private readonly Dictionary<string, LastVisit> _visits = [];
 
-    /// <summary>The seat's last visit, or none before its page said what it was shown.</summary>
-    public async Task<LastVisit?> LastAsync(string seat, CancellationToken cancellationToken = default)
+    /// <summary>The seat's last visit under <paramref name="holder" />, or none before its page said what it was shown.</summary>
+    public async Task<LastVisit?> LastAsync(string seat, string holder, CancellationToken cancellationToken = default)
     {
+        LastVisit? visit;
         if (keeper is null)
         {
             lock (_held)
             {
-                return _visits.GetValueOrDefault(seat);
+                visit = _visits.GetValueOrDefault(seat);
             }
         }
+        else
+        {
+            visit = (await keeper.VisitAsync(seat, cancellationToken)).Visit;
+        }
 
-        return (await keeper.VisitAsync(seat, cancellationToken)).Visit;
+        return visit?.Holder == holder ? visit : null;
     }
 
     /// <summary>
-    /// The seat was shown up to <paramref name="sequence" />: kept, with the time now, when it is further than the mark
-    /// kept. The mark kept afterwards; none when every retry lost the race to another process.
+    /// The seat, held under <paramref name="holder" />, was shown up to <paramref name="sequence" />: kept, with the
+    /// time now, when it is further than the mark kept, or when that mark is another holder's. The mark kept
+    /// afterwards; none when every retry lost the race to another process, or the record went away meanwhile.
     /// </summary>
-    public async Task<LastVisit?> ShownAsync(string seat, long sequence, CancellationToken cancellationToken = default)
+    public async Task<LastVisit?> ShownAsync(string seat, string holder, long sequence, CancellationToken cancellationToken = default)
     {
         if (keeper is null)
         {
             lock (_held)
             {
-                if (_visits.GetValueOrDefault(seat) is { } held && held.Sequence >= sequence)
+                if (_visits.GetValueOrDefault(seat) is { } held && held.Holder == holder && held.Sequence >= sequence)
                 {
                     return held;
                 }
 
-                return _visits[seat] = new LastVisit(sequence, clock.GetUtcNow());
+                return _visits[seat] = new LastVisit(sequence, clock.GetUtcNow(), holder);
             }
         }
 
+        var existed = false;
         for (var attempt = 0; attempt < Attempts; attempt++)
         {
             var (kept, tag) = await keeper.VisitAsync(seat, cancellationToken);
-            if (kept is not null && kept.Sequence >= sequence)
+
+            // There was a mark and now there is none: the table's run was deleted meanwhile, and writing would bring a
+            // file of it back.
+            if (existed && tag is null)
+            {
+                return null;
+            }
+
+            existed |= tag is not null;
+            if (kept is not null && kept.Holder == holder && kept.Sequence >= sequence)
             {
                 return kept;
             }
 
-            var visit = new LastVisit(sequence, clock.GetUtcNow());
+            var visit = new LastVisit(sequence, clock.GetUtcNow(), holder);
             if (await keeper.WriteVisitIfAsync(seat, visit, tag, cancellationToken) is not null)
             {
                 return visit;

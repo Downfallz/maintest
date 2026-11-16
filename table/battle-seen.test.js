@@ -127,3 +127,17 @@ test('a mark is sent again once a refused send is over, and a stopped sender sen
   assert.deepEqual(sent, [3, 3]);
   assert.equal(time.pending(), 0);
 });
+
+test('a refused mark is held, so the page hidden next sends it again', async () => {
+  const time = clock();
+  const sent = [];
+  let refuse = true;
+  const seen = createSeenSender({ send: sequence => { sent.push(sequence); return Promise.resolve({ ok: !refuse }); }, now: time.now, later: time.later, cancel: time.cancel });
+  seen.shown(6);
+  await Promise.resolve(); await Promise.resolve();
+  refuse = false;
+
+  seen.flush();
+
+  assert.deepEqual(sent, [6, 6]);
+});
