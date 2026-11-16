@@ -237,10 +237,38 @@ def completed_runs(repo: str, days: int, token: str, today: date) -> list[dict]:
     return list(runs.values())
 
 
+def run_jobs(repo: str, run: dict, token: str) -> list[dict]:
+    """Every attempt's jobs: a re-run attempt is billed too."""
+    try:
+        return paged(f"/repos/{repo}/actions/runs/{segment(run['id'])}/jobs?filter=all", "jobs", token)
+    except urllib.error.HTTPError as error:
+        day = run.get("created_at", "?")[:10]
+        raise SystemExit(
+            f"the Actions API answered {error.code} while reading the jobs of a run of {day}"
+        ) from error
+
+
+def tally_run(jobs: list[dict], is_ci: bool, ci_groups: Counter[str]) -> tuple[int, int, int]:
+    """One run's hosted minutes, the share of them in cancelled jobs, and its minutes on a runner of our own;
+    a CI run's hosted minutes are also added to their job groups."""
+    hosted = cancelled = own = 0
+    for job in jobs:
+        minutes = billed_minutes(job)
+        if self_hosted(job):
+            own += minutes
+            continue
+        hosted += minutes
+        if job.get("conclusion") == "cancelled":
+            cancelled += minutes
+        if is_ci and minutes:
+            ci_groups[job_group(job["name"])] += minutes
+    return hosted, cancelled, own
+
+
 def minutes_report(repo: str, days: int, token: str, today: date) -> dict:
-    """Billed hosted minutes per workflow and per CI job group. Re-run attempts are billed, so every attempt's
-    jobs are read; a job cancelled counts as thrown away, whatever a later attempt did; a runner of the
-    project's own is not billed by GitHub and is counted apart. A skipped run started no job."""
+    """Billed hosted minutes per workflow and per CI job group. A job cancelled counts as thrown away,
+    whatever a later attempt did; a runner of the project's own is not billed by GitHub and is counted apart.
+    A skipped run started no job, and is not asked for its jobs."""
     by_workflow: Counter[str] = Counter()
     ci_groups: Counter[str] = Counter()
     hosted = own = cancelled = cancelled_runs = ci_runs = 0
@@ -248,30 +276,14 @@ def minutes_report(repo: str, days: int, token: str, today: date) -> dict:
     for run in runs:
         if run.get("conclusion") == "skipped":
             continue
-        try:
-            jobs = paged(f"/repos/{repo}/actions/runs/{segment(run['id'])}/jobs?filter=all", "jobs", token)
-        except urllib.error.HTTPError as error:
-            day = run.get("created_at", "?")[:10]
-            raise SystemExit(
-                f"the Actions API answered {error.code} while reading the jobs of a run of {day}"
-            ) from error
         is_ci = run.get("path") == CI_WORKFLOW
         ci_runs += is_ci
-        run_minutes = run_cancelled = 0
-        for job in jobs:
-            minutes = billed_minutes(job)
-            if self_hosted(job):
-                own += minutes
-                continue
-            run_minutes += minutes
-            if job.get("conclusion") == "cancelled":
-                run_cancelled += minutes
-            if is_ci and minutes:
-                ci_groups[job_group(job["name"])] += minutes
-        hosted += run_minutes
-        by_workflow[run.get("name") or run.get("path", "?")] += run_minutes
+        run_hosted, run_cancelled, run_own = tally_run(run_jobs(repo, run, token), is_ci, ci_groups)
+        hosted += run_hosted
+        own += run_own
         cancelled += run_cancelled
         cancelled_runs += bool(run_cancelled) or run.get("conclusion") == "cancelled"
+        by_workflow[run.get("name") or run.get("path", "?")] += run_hosted
     return {
         "days": days,
         "since": (today - timedelta(days=days)).isoformat(),
