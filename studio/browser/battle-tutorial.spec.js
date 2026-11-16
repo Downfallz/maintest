@@ -95,6 +95,9 @@ async function playStep(page, state, index, capture) {
 }
 
 test('tutorial 1 is played to its end: each step shows its coach card and opens its concept cards', async ({ page }, info) => {
+  // Three steps, each with its cards, its spell and its target: a software-rendered desktop canvas on a CI runner
+  // took more than the default thirty seconds to play them all.
+  test.setTimeout(120000);
   const state = await mount(page);
   const capture = name => page.screenshot({ path: info.outputPath(`${name}.png`) });
   const band = page.locator('#practice-band');
