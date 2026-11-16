@@ -39,6 +39,8 @@ import { replayOf, operatorToken, replayMessage } from '../../table/session.js';
 import { httpTransport, replayTransport } from '../../table/transport.js';
 import { battleSeats, seatPath } from '../../table/battle-seats.js';
 import { openPractice, practiceBand, practiceBrief, practiceOf } from '../../table/battle-practice.js';
+import { withoutAssisted } from '../../table/battle-tutorial.js';
+import { tutorialControls } from './tutorial.js';
 import { createLiveConnection } from '../../table/battle-live.js';
 import { signInPath } from '../../table/account.js';
 import { seatLabel } from '../../table/invitation.js';
@@ -82,8 +84,10 @@ const nodes = new Map<string, HTMLButtonElement>();
 const shownArt = new Map<string, string>();
 const name = (id: unknown) => creatures.find(one => one.id === String(id))?.label ?? `Creature ${id}`;
 const seatName = (seat: string): string => seatLabel(seat);
-const connection = createLiveConnection({ onState: status, onView: (next: View | null, content: Catalogue | null) => {
+const connection = createLiveConnection({ onState: status, onView: (served: View | null, content: Catalogue | null) => {
   receiving = true;
+  // A tutorial's assisted questions are answered by the host (ADR 0187): the page draws nothing of them.
+  const next = served ? withoutAssisted(served) as View : served;
   // The match begins once everyone is seated: an opponent who took an open seat is named from then on.
   if (view?.waiting && next && !next.waiting) void loadOpponent(true);
   try {
@@ -101,7 +105,7 @@ const connection = createLiveConnection({ onState: status, onView: (next: View |
 } });
 const visible = () => ready && !rendererFailed && !document.hidden &&
   !document.querySelector('.navigation-panels dialog[open]') &&
-  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog', 'atlas-dialog', 'opponent-dialog', 'reactions-dialog', 'practice-brief'].some(id => $<HTMLDialogElement>(id).open) &&
+  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog', 'atlas-dialog', 'opponent-dialog', 'reactions-dialog', 'practice-brief', 'concept-dialog'].some(id => $<HTMLDialogElement>(id).open) &&
   // A revealed turn order holds the field until Continue: what arrives meanwhile waits for it.
   !orderUI.isReading();
 let tabStorage: Storage | null = null;
@@ -150,6 +154,7 @@ const historyUI = historyControls(history, () => playback.skip(), () => render()
 let revealRead: number | null = null;
 const revealUnread = () => { const receipt = growth.receipt() as { sequence: number } | null; return Boolean(receipt) && receipt!.sequence !== revealRead; };
 const growthUI = growthControls(growth, () => playback.skip(), () => render(), atlasUI);
+const tutorialUI = tutorialControls(() => render());
 const helpUI = guidanceControls(storage, () => playback.skip(), () => render(), muted => keepForGame({ help: !muted }));
 function inspectCreature(id: string) {
   inspected = id; renderInspection(); $<HTMLDialogElement>('inspect-dialog').showModal();
@@ -557,6 +562,8 @@ function render() {
     if (!reduced()) scene.revealMutations(reveal.rows.map((row: {creature: number}) => String(row.creature)));
   }
   orderUI.render(order, Boolean(view) && !view?.waiting && !rendererFailed, canAuto() && !upkeep.model().pending, view?.waiting && !view.over ? null : board);
+  // A tutorial's coach (ADR 0187): the step of the question asked, and its concept cards before the question's sheet.
+  tutorialUI.render(rendererFailed ? null : view, { held: playbackState.active || replay.active, canAuto: canAuto() && !upkeep.model().pending && !orderReveal.model().pending });
   helpUI.render(guide, canAuto() && !upkeep.model().pending && !orderReveal.model().pending);
   // The mutation phase opens its tree by itself once the board is unobstructed: after the upkeep receipt, the
   // turn order and a first-use tip, never in the waiting room or over another dialog or playback. Once per asking: a player who
@@ -567,14 +574,14 @@ function render() {
   // The tempos wait for a fresh mutation reveal to be read first (See, then closed, or Continue): the field shows who
   // mutated into what, which the docked sheet would crowd. The dock's Team tempos opens them at any time.
   else if (asked.available && ['Evolution', 'Speed'].includes(asked.latest?.waitingFor) && !asked.latest.waiting && mutationOpened !== asked.question
-    && (asked.latest.waitingFor !== 'Speed' || !revealUnread()) && canAuto() && !upkeep.model().pending && !orderReveal.model().pending && !helpUI.pending()) { mutationOpened = asked.question; planning.open(); }
+    && (asked.latest.waitingFor !== 'Speed' || !revealUnread()) && canAuto() && !upkeep.model().pending && !orderReveal.model().pending && !helpUI.pending() && !tutorialUI.pending()) { mutationOpened = asked.question; planning.open(); }
   // The player's spell choice opens by itself in the same way, docked beside the field (ADR 0149): once per asking,
   // after whatever the board still had to show. Closing it leaves Choose spell in the dock.
   const fight = combat.model();
   if (fight.opened) spellOpened = fight.question;
   // A refusal the host gave is read first, in the dock: opening the choice would clear it.
   else if (fight.available && !fight.error && ['Action', 'Intent', 'Target'].includes(fight.waitingFor) && spellOpened !== fight.question
-    && canAuto() && !upkeep.model().pending && !orderReveal.model().pending && !helpUI.pending()) { spellOpened = fight.question; combat.open(); }
+    && canAuto() && !upkeep.model().pending && !orderReveal.model().pending && !helpUI.pending() && !tutorialUI.pending()) { spellOpened = fight.question; combat.open(); }
   // The match's end is one moment: once its last result is read, the result opens by itself, once per seat.
   const seatKey = selected ? `${selected.table.id}:${selected.seat}` : '';
   if (view?.over && seatKey && matchShown !== seatKey && !replay.active && !match.model().active && canAuto()) { matchShown = seatKey; matchUI.open(); }
@@ -734,7 +741,8 @@ async function discover(autoResume = true) {
   text('access-link', 'Lobby'); $<HTMLAnchorElement>('access-link').href = '/';
   // A match scenario's practice (ADR 0179): the account's practice of it, resumed, or one started from its cut.
   const scenario = practiceOf(location.search);
-  $('practice-band').hidden = true;
+  $('practice-band').hidden = true; tutorialUI.reset();
+  text('practice-eyebrow', 'PRACTICE'); text('practice-brief-eyebrow', 'PRACTICE'); $('practice-band').setAttribute('aria-label', 'Practice');
   if (scenario) {
     const fresh = restartPractice; restartPractice = false;
     text('load-title', 'Opening the practice'); text('load-detail', 'Setting the board at the top of its round…'); $('loading').hidden = false;
@@ -746,6 +754,8 @@ async function discover(autoResume = true) {
       $('practice-goal').hidden = !band.goal; $('practice-band').hidden = false;
       const brief = practiceBrief(opened.practice, opened.seat);
       text('practice-brief-title', brief.title); text('practice-brief-goal', brief.goal); text('practice-brief-start', brief.start); text('practice-brief-note', brief.note);
+      // A tutorial reads as one from the first second (ADR 0187): the band and the briefing say its place in the series.
+      tutorialUI.render({ practice: opened.practice }, { held: true, canAuto: false });
       heldSeats = [opened]; choose(opened);
       // A practice started from its cut opens on its briefing, before its first question; a resumed one goes on where it was.
       if (opened.fresh) $<HTMLDialogElement>('practice-brief').showModal();

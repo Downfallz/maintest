@@ -33,6 +33,9 @@ public static class TutorialErrors
     public static DomainError PointsAtBoth(int step) =>
         new("Tutorial.PointsAtBoth", $"Step {step} points at both a creature and a control, or at neither. It points at one or the other.");
 
+    public static DomainError UnknownControl(int step, string control) =>
+        new("Tutorial.UnknownControl", $"Step {step} points at the control '{control}', which is not one of: {string.Join(", ", LessonControls.Names)}.");
+
     public static DomainError SameQuestion(int step, int earlier) =>
         new("Tutorial.SameQuestion", $"Step {step} is set at the same question as step {earlier}. A question has at most one step.");
 
