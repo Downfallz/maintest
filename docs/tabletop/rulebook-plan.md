@@ -1,7 +1,7 @@
 # Plan: the official rulebook, one source the app reads and an agent keeps true
 
 Status: accepted, 2026-11-16 (the owner settled the questions at the end). R1 built (ADR 0188), R2 built, R3 built
-(ADR 0191), R4 built, R5 built; R6 next.
+(ADR 0191), R4 built, R5 built, R6 built (ADR 0193); R7 next.
 
 ## What the owner asked for
 
@@ -210,6 +210,20 @@ and the app's edition; it keeps writing, the keeper keeps reading.
    heading as broad as *Implemented* reaches every section that cites it, so a change under it lists many.
 6. **R6, French.** `rules/fr/`, the same ids, the French column of `player-terminology.md` as its words; the page
    in the language the account chose. Once the English is settled.
+   *Built (2026-11-16, ADR 0193)*: first, the English the keeper found wanting in #713: a shared Archmage copy
+   outlives its buyer (3.4, 5.3), 5.3's opening, the `changes.md` line and ADR 0114's `Rulebook:` line. Then
+   `rules/fr/`, every part, section, card and change in French, written by the `rulebook-writer`; the build writes
+   it to `table/rules.fr.json` and refuses a French book whose files, ids, order, sources, cards or changes differ
+   from the English, or that uses an English word the French column replaced. Spell and mutation names stay as the
+   battle shows them; Bleed, Stun and Regeneration keep the screen's words, glossed once. An account holds no
+   language (the owner chose so): `/rules` opens in the language stored on the device, else the browser's, and
+   **English** and **Français** switch at the same section. The worker keeps both books, `reach.mjs` lists the
+   French sections beside the English (`[fr]`), and the writer, the keeper and `/rules` keep both. Tests:
+   `rules.test.js` (a test per French refusal, the file in sync), `rules-page.test.js`, `rules-reach.test.js`,
+   `sw.test.js`, `TableFilesTests`, `rules.spec.js` (the switch, a browser in French) and `table.rules.js` (French
+   offline). Left: the battle, its cards and every other page stay English; #713's last point (the catalogue's
+   "side") and its domain test; the writer's notes on the English (the mutation card's initiative, an example's
+   unchecked facts) go to an issue.
 7. **R7, the public book.** The showcase renders `table/rules.json` under `/rules/` (and `/fr/regles/` once R6
    is built).
 
