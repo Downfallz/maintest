@@ -24,8 +24,10 @@ journey is found before the pull request. Arguments: $ARGUMENTS (`--all` for eve
    runs those two and skips the rest. Nothing called for: say so and stop.
 2. Prepare once: `npm --prefix studio/browser ci --ignore-scripts`, and the battle bundle
    (`npm --prefix battle ci --ignore-scripts && npm --prefix battle run build`) if `table/battle-build/` is
-   missing or older than a change to `battle/` or `table/`. Chromium is preinstalled in a cloud session: never run `playwright install`; point the suite at it
-   with `STUDIO_CHROMIUM=/opt/pw-browsers/chromium` when it does not find it on its own.
+   missing or older than a change to `battle/` or `table/`. Chromium is preinstalled in a cloud session: never run `playwright install`.
+   Leave `STUDIO_CHROMIUM` unset there: Playwright finds its headless shell under `PLAYWRIGHT_BROWSERS_PATH`, the
+   engine CI plays. The full Chrome at `/opt/pw-browsers/chromium` fails a navigation that ends on an empty 404,
+   where the headless shell loads it (#741). The real-engine specs also need `DOTNET_ROOT` (`/usr/lib/dotnet`).
 3. Run in the background (`run_in_background`), one command per job, and keep working while they run:
    - Journeys, from `studio/browser`:
      `node node_modules/playwright/cli.js test <specs, or nothing for all> --trace off --reporter=dot,json`

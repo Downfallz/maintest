@@ -373,6 +373,32 @@ test('a failed request releases the busy state and shows a recoverable error', a
   assert.equal(p.nodes.decision.attributes['aria-busy'], 'false');
 });
 
+// #772, #741: between the host's 204 and the next read, the sheet was drawn again from the question just answered,
+// its buttons enabled, so a second tap on a slow phone (or a test's next look) answered a question already gone.
+for (const [kind, ask, tap, decision] of [
+  ['Evolution', { evolution: { creatures: [{ creature: 1, availableTiers: ['tier:one:v1'] }] } }, 'evolution-pass', { kind: 'Evolution', pass: true }],
+  ['TieOrder', { tieOrder: { ties: [[1, 3]] } }, 'tie-keep', { kind: 'TieOrder', order: [1, 3] }],
+]) {
+  test(`an accepted ${kind} answer is not offered again while the next question is read`, async () => {
+    const p = page(); const sent = []; let reading = 0;
+    p.view.waitingFor = kind; p.view.waitingCreature = kind === 'Evolution' ? 1 : null; p.view.options = ask;
+    p.current.transport.decide = async posted => { sent.push(posted); return { ok: true }; };
+    p.draw(); await p.state.announced;
+    // The read after the answer has left and not come back: what is on screen is the question just answered.
+    p.current.transport.seat = () => { reading += 1; return new Promise(() => {}); };
+    void p.context.submit(p.state, p.current, decision);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    assert.equal(sent.length, 1);
+    assert.equal(reading, 1, 'the next question is being read');
+    const again = p.nodes.choices.querySelectorAll('[data-focus]').find(node => node.dataset.focus === tap);
+    assert.ok(again, `${tap} is still drawn while the next question is read`);
+    assert.equal(again.disabled, true, `${tap} is not offered a second time`);
+    assert.equal(p.nodes.decision.attributes['aria-busy'], 'true');
+    await p.context.submit(p.state, p.current, decision);
+    assert.equal(sent.length, 1, 'a second tap posts nothing');
+  });
+}
+
 test('overlapping refreshes make one seat request at a time, the second once the first is answered', async () => {
   const p = page(); let finish; let calls = 0;
   p.current.transport.seat = () => { calls += 1; return new Promise(resolve => { finish = resolve; }); };
@@ -616,7 +642,8 @@ test('a second tap or Enter on the chosen card declares it', async () => {
   await held(p).children[1].events.click();
   assert.equal(sent.length, 1);
   assert.deepEqual(JSON.parse(JSON.stringify(sent[0])), { kind: 'Intent', creature: 1, spell: 'two', asked: 1 });
-  p.view.waitingAsked = 2; p.draw();
+  // The next question is the host's, read after the answer: the one answered is not answered twice (#772).
+  p.view.waitingAsked = 2; await p.context.refresh(p.state);
   held(p).children[0].events.click();
   await held(p).children[0].events.keydown(key);
   assert.equal(sent.length, 2);

@@ -17,6 +17,10 @@ test('the real catalogue tree follows public purchases without acknowledging the
     const origin = new URL(join).origin, headers = { 'X-Seat-Token': tokens.player1 };
     const read = async () => (await context.request.get(`${origin}/api/seat/player1`, { headers })).json();
     const catalogue = await (await context.request.get(`${origin}/api/catalogue`, { headers })).json();
+    // The battle again in a tab of its own (#776): the Upkeep sheet opens by itself once a round in a tab, and
+    // the tab that took the seat may or may not have shown it already, depending on how fast it drew. The seat
+    // is kept in localStorage, which a new tab shares; the sheet's mark is in sessionStorage, which it does not.
+    await page.close(); page = await context.newPage(); page.on('pageerror', error => errors.push(error.message));
     await page.goto(`${origin}/battle`);
     page.on('request', request => {
       const url = new URL(request.url());
