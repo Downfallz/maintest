@@ -175,6 +175,7 @@ public sealed class PlayersApiTests : IDisposable
     /// <summary>
     /// The console is read into a public log (ADR 0186): the reason is free text the operator wrote, over several
     /// lines and maybe naming another player, so it stays on the account and the operator log, not the console.
+    /// Read through the players' own sink: the operator log's failure line is not (#756).
     /// </summary>
     [Fact]
     public async Task A_suspension_is_said_on_the_console_without_its_reason()

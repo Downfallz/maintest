@@ -17,6 +17,8 @@ namespace DownfallArena.Cli.Table;
 /// the seat's view says the question; <see cref="Assisted" /> tells the page which kinds it is not to draw.
 /// Once the tutorial is <see cref="Done" />, nothing more is answered: the match waits at the next question, which
 /// the page does not draw either, so the lesson ends where it ends and is not played on.
+/// The play is sent to the page as it is (<c>practice.tutorial</c>): a public member the page must not read is
+/// <see cref="System.Text.Json.Serialization.JsonIgnoreAttribute" />, as <see cref="Said" /> is.
 /// </remarks>
 internal sealed class TutorialPlay
 {

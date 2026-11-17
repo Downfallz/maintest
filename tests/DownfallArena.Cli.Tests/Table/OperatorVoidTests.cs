@@ -73,6 +73,7 @@ public sealed class OperatorVoidTests : IDisposable
     /// <summary>
     /// The console is read into a public log (ADR 0186): the explanation is free text the operator wrote, over
     /// several lines and maybe naming a player, so it stays on the record and the operator log, not the console.
+    /// Read through the admin's own sink: the composer's and the operator log's failure lines are not (#756).
     /// </summary>
     [Fact]
     public async Task A_void_says_its_category_on_the_console_but_not_the_operator_s_explanation()

@@ -47,9 +47,9 @@ internal static class TableTend
     /// <param name="said">Where the pass's lines go: the console unless a test reads them (#756). Failures stay on the console's error stream.</param>
     public static async Task<int> RunAsync(IServiceProvider services, CliOptions options, RuleSet rules, Action<string>? said = null)
     {
-        said ??= Console.WriteLine;
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(options);
+        said ??= Console.WriteLine;
         var clock = services.GetRequiredService<TimeProvider>();
         var target = options.Record ?? TableHost.DefaultRunsDirectory;
         PushKeys? keys;
