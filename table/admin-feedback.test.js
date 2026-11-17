@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ADDRESS_LIMIT, askedLine, askLinks, categoryFilters, choicesNote, categoryLabel, changeSaid, closedIssues, creatureLine, downloadNote, feedbackLine, feedbackPath, feedbackRows, filedSaid, fixedReports, issueAddress, issueNumber, issuesPath, mergeChoices, muteLine, planPrompt, positionSides, reproduceSaid, sheetActions, sheetFacts, sheetWords, statusLine, STATUS_FILTERS } from './admin-feedback.js';
+import { ADDRESS_LIMIT, askedLine, askLinks, categoryFilters, choicesNote, categoryLabel, changeSaid, closedIssues, creatureLine, downloadNote, feedbackLine, feedbackPath, feedbackRows, filedSaid, fixedReports, issueAddress, issueLink, issueNumber, issuesPath, mergeChoices, muteLine, planPrompt, positionSides, reproduceSaid, sheetActions, sheetFacts, sheetWords, statusLine, STATUS_FILTERS } from './admin-feedback.js';
 
 const NOW = Date.parse('2026-11-16T12:00:00Z');
 
@@ -219,11 +219,19 @@ test('a report sent outside a game is filed with no round and no scenario to dro
 });
 
 test('the issue\'s number is read as typed, with its hash or as its address', () => {
-  assert.equal(issueNumber('731'), 731);
-  assert.equal(issueNumber(' #731 '), 731);
-  assert.equal(issueNumber('https://github.com/Downfallz/maintest/issues/731'), 731);
-  assert.equal(issueNumber('https://github.com/Downfallz/maintest/issues/731#issuecomment-1'), 731);
-  for (const typed of ['', 'seven', '0', '-3', '7.5', 'https://github.com/Downfallz/maintest/pull/731']) assert.equal(issueNumber(typed), null, typed);
+  assert.equal(issueNumber('731', 'Downfallz/maintest'), 731);
+  assert.equal(issueNumber(' #731 ', 'Downfallz/maintest'), 731);
+  assert.equal(issueNumber('https://github.com/Downfallz/maintest/issues/731', 'Downfallz/maintest'), 731);
+  assert.equal(issueNumber('https://github.com/downfallz/maintest/issues/731#issuecomment-1', 'Downfallz/maintest'), 731);
+  for (const typed of ['', 'seven', '0', '-3', '7.5', 'https://github.com/Downfallz/maintest/pull/731', 'https://github.com/someone/else/issues/731']) {
+    assert.equal(issueNumber(typed, 'Downfallz/maintest'), null, typed);
+  }
+});
+
+test('a filed report links its issue, so a mistyped number shows before it marks the wrong report fixed', () => {
+  assert.equal(issueLink({ ...filed, issue: 731 }), 'https://github.com/Downfallz/maintest/issues/731');
+  assert.equal(issueLink(filed), null);
+  assert.equal(issueLink({ ...filed, issue: 731, repository: null }), null);
 });
 
 test('a report filed reads filed #N and fixed #N, and both are filters', () => {
@@ -233,8 +241,10 @@ test('a report filed reads filed #N and fixed #N, and both are filters', () => {
   assert.equal(filedSaid({ ok: false, status: 400, body: { message: 'Filing names the issue\'s number, as GitHub gave it.' } }).refused, true);
 });
 
-test('the tab reads the repository\'s closed issues filed from reports, in one request', () => {
-  assert.equal(issuesPath('Downfallz/maintest'), 'https://api.github.com/repos/Downfallz/maintest/issues?state=closed&labels=from-report&per_page=100');
+test('the tab reads the closed issues filed from reports, updated since the oldest filed report was sent, a page at a time', () => {
+  assert.equal(issuesPath('Downfallz/maintest', '2026-11-01T08:00:00Z'),
+    'https://api.github.com/repos/Downfallz/maintest/issues?state=closed&labels=from-report&sort=updated&direction=desc&per_page=100&page=1&since=2026-11-01T08%3A00%3A00.000Z');
+  assert.equal(issuesPath('Downfallz/maintest', null, 3), 'https://api.github.com/repos/Downfallz/maintest/issues?state=closed&labels=from-report&sort=updated&direction=desc&per_page=100&page=3');
   assert.equal(issuesPath(null), null);
 });
 

@@ -422,11 +422,11 @@ and they are the first thing every player can use.
    holding a name refused), the zip holding one `scenario.json` that rebuilds, the address built under 8 KB
    (`admin-feedback.test.js`), `studio/prompts.test.js` for the label.
 
-   *Built (2026-11-17)*: `RedactedScenario` (Application) gives the scenario Reproduce kept the report's id as its
-   run and session, and a match id drawn from it (`MatchOf`). It keeps the answers after the cut only up to the
+   *Built (2026-11-17)*: `RedactedScenario` (Application) takes the scenario that Reproduce kept and gives it the
+   report's id as its run and session, and a match id drawn from that id (`MatchOf`). It keeps the answers after the cut only up to the
    journal's length when the player wrote; a practice's report keeps every entry it copied. Its `Check` reads the file
-   as written and refuses one whose source is not the report's, whose journal keeps a time, or that holds a name it is
-   given as a word of its own, whatever its case. The carried content is left out of that reading. It says what it
+   as written and refuses a file whose source is not the report's, whose journal keeps a time, or that holds, as a word
+   of its own and in any case, any name it is given. The carried content is left out of that reading. It says what it
    found ("an account"), never the name. `GET /api/admin/feedback/<id>/scenario.zip` writes the file with its content
    and checks it against the report's sender, account and table, the session's ids, and, from the table's record,
    every seat's key, code, invitation and account, the pilot's key, and the players' names. It answers
@@ -437,18 +437,24 @@ and they are the first thing every player can use.
    **File an issue** opens `bug_from_report.yml` (labels `bug` and `from-report`) pre-filled by its field ids: the report's
    id, the category, the player's words, the round, step and seat, the engine, content and rules, the page's errors,
    and where to drop the zip. The title names the report and its category, never the player's words, and no table id,
-   account or key is in the address. Past 8,000 characters the longest of the words and the errors is cut by a quarter,
-   marked with an ellipsis, until it fits. The issue's number is pasted back, as typed or as its address, and the
-   report reads *Filed #N* (`feedback.file`). Opening the tab reads the filed reports, then asks GitHub's public API
-   once for the closed `from-report` issues, the last 100. Each report whose issue was closed as completed is marked
-   *fixed* (`feedback.status`). One closed as not planned stays filed for the operator. `fixed` is refused on a report
-   never filed (`Feedback.NotFiled`). The repository is `FeedbackAdminApi.Repository`. `bug`, `enhancement` and
+   account or key is in the address. Past 8,000 characters, the longest of the player's words, what they expected and
+   the page's errors is cut by a quarter and marked with an ellipsis, and this repeats until the address fits. The
+   operator pastes back the issue's number, or its address in the same repository, and the report reads *Filed #N*
+   (`feedback.file`), its sheet linking the issue so a mistyped number shows. Opening the tab reads the filed reports,
+   then asks GitHub's public API for the closed `from-report` issues updated since the oldest of them was sent, a
+   hundred a page and five pages at most. A report whose issue was closed as completed is marked *fixed*
+   (`feedback.status`). A report whose issue was closed as not planned stays filed. `fixed` is refused on a report
+   never filed (`Feedback.NotFiled`).
+
+   The repository is `FeedbackAdminApi.Repository`. `bug`, `enhancement` and
    `from-report` are declared in `.github/labels.json`. A test holds every label an issue form puts on its issue to that
    file. The *What we keep* panel and the privacy policy, in English and French, say a bug may be described in a public
    issue in the operator's words, with nothing that names the player.
 
-   Left: a player's name that is also a word of the content the journal names (a spell called like the player) refuses
-   the download, and the sheet says a player's name is held. Nothing reads a filed issue past the last 100 closed.
+   Left: when a player's name is also a word the journal holds (a spell id such as `spell:pummel:v1` for a player
+   called Pummel), the download is refused and the sheet says a player's name is held. The content the file includes
+   is not read, but the journal's ids are. Past 500 closed issues updated since the oldest filed report, the older
+   ones are not read.
 8. **R6, bug scenarios and their tests.** `scenarios/bugs/` read by the host and listed as *Bug #N*;
    `ScenarioFileTests` asking a bug file's answers only up to its reported point; the `BugScenario` test helper;
    `scenario-import` and `scenario-check --trace`. Tests: `RepositoryScenariosTests` (a bug file listed),

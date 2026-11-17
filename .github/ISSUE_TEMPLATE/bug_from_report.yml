@@ -1,13 +1,14 @@
 name: Bug from a player's report
 description: Filed by the operator from a bug report in the admin panel's Feedback tab (docs/tabletop/feedback-plan.md, R5).
+# The panel fills the title in: "Report <id>: <category>, round N".
 title: "Report "
 labels: [bug, from-report]
 body:
   - type: markdown
     attributes:
       value: |
-        This issue is public. The panel filled it from a player's report: read every field, and edit the player's words
-        before submitting. No account, table id or seat key belongs here.
+        This issue is public. The panel filled it from a player's report. Read every field and edit the player's words
+        before you submit. No account, table id or seat key belongs here.
   - type: input
     id: report
     attributes:
@@ -52,4 +53,4 @@ body:
     id: scenario
     attributes:
       label: Scenario
-      description: Drop the report's zip here, downloaded from the panel with Download the scenario. It holds the redacted scenario.json.
+      description: Drop the zip here. Get it from the panel with Download the scenario. It holds the redacted scenario.json.

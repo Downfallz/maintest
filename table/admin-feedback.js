@@ -334,12 +334,22 @@ export function issueAddress(sheet) {
   }
 }
 
-/** The issue's number as the operator pasted it: the number, with or without its hash, or the issue's address. None otherwise. */
-export function issueNumber(typed) {
+/**
+ * The issue's number as the operator pasted it: the number, with or without its hash, or the address of an issue in
+ * the repository the report is filed in. None otherwise, an issue of another repository among them.
+ */
+export function issueNumber(typed, repository) {
   const text = String(typed ?? '').trim();
-  const found = /^#?(\d+)$/.exec(text) ?? /^https:\/\/github\.com\/[^/]+\/[^/]+\/issues\/(\d+)(?:[#?].*)?$/.exec(text);
-  const number = found ? Number(found[1]) : NaN;
+  const address = /^https:\/\/github\.com\/([^/]+\/[^/]+)\/issues\/(\d+)(?:[#?].*)?$/.exec(text);
+  const inRepository = address && repository && address[1].toLowerCase() === String(repository).toLowerCase();
+  const found = /^#?(\d+)$/.exec(text)?.[1] ?? (inRepository ? address[2] : null);
+  const number = found ? Number(found) : NaN;
   return Number.isSafeInteger(number) && number > 0 ? number : null;
+}
+
+/** The address of the issue a report was filed as, for the operator to check it is the right one. None until filed. */
+export function issueLink(sheet) {
+  return sheet?.repository && Number.isInteger(sheet.issue) ? `https://github.com/${sheet.repository}/issues/${sheet.issue}` : null;
 }
 
 /** What Mark filed is told with. */
@@ -349,9 +359,18 @@ export function filedSaid(answer) {
     : changeSaid(answer);
 }
 
-/** GitHub's public API for the repository's closed issues filed from reports: one request, no credential on a public repository. */
-export function issuesPath(repository) {
-  return repository ? `https://api.github.com/repos/${repository}/issues?state=closed&labels=from-report&per_page=100` : null;
+/** How many pages of closed issues the tab reads at most, a hundred a page: GitHub answers sixty requests an hour without a credential. */
+export const ISSUE_PAGES = 5;
+
+/**
+ * A page of GitHub's public API for the repository's closed issues filed from reports, the last updated first, and only
+ * those updated since the oldest filed report was sent: an issue filed for it was updated since. No credential on a
+ * public repository.
+ */
+export function issuesPath(repository, since = null, page = 1) {
+  if (!repository) return null;
+  const from = since && !Number.isNaN(Date.parse(since)) ? `&since=${encodeURIComponent(new Date(since).toISOString())}` : '';
+  return `https://api.github.com/repos/${repository}/issues?state=closed&labels=from-report&sort=updated&direction=desc&per_page=100&page=${page}${from}`;
 }
 
 /** The issues GitHub's answer says were closed as done: not a pull request, and not closed as not planned. */
@@ -493,6 +512,13 @@ export function mountFeedbackTab({ send, download, github = globalThis.fetch?.bi
     const reproduction = element('admin-feedback-reproduction');
     reproduction.hidden = !answer.reproduction?.link;
     if (answer.reproduction?.link) reproduction.href = answer.reproduction.link;
+    const filedAs = element('admin-feedback-issue-link');
+    const link = issueLink(answer);
+    filedAs.hidden = !link;
+    if (link) {
+      filedAs.href = link;
+      filedAs.textContent = `Open issue #${answer.issue} on GitHub (opens a new tab)`;
+    }
     const issue = element('admin-feedback-issue');
     const address = issueAddress(answer);
     issue.hidden = !address;
@@ -549,6 +575,7 @@ export function mountFeedbackTab({ send, download, github = globalThis.fetch?.bi
     element('admin-feedback-position-block').hidden = true;
     element('admin-feedback-session').hidden = true;
     element('admin-feedback-reproduction').hidden = true;
+    element('admin-feedback-issue-link').hidden = true;
     element('admin-feedback-joined').hidden = true;
     element('admin-feedback-prompt-said').textContent = '';
     element('admin-feedback-merge-note').textContent = '';
@@ -633,7 +660,7 @@ export function mountFeedbackTab({ send, download, github = globalThis.fetch?.bi
     }
   });
   element('admin-feedback-filed').addEventListener('click', () => {
-    const issue = issueNumber(element('admin-feedback-issue-number').value);
+    const issue = issueNumber(element('admin-feedback-issue-number').value, open?.repository);
     if (!issue) {
       said('Paste the issue\'s number, or its address, as GitHub gave it once submitted.', true);
       return;
@@ -740,11 +767,16 @@ export function mountFeedbackTab({ send, download, github = globalThis.fetch?.bi
         pages = answer.body.pages ?? 1;
       }
       if (rows.length === 0 || !issuesPath(repository)) return;
-      let closed;
+      const since = rows.map(row => row.at).filter(Boolean).sort()[0] ?? null;
+      const closed = new Set();
       try {
-        const answer = await github(issuesPath(repository));
-        if (!answer.ok) throw new Error(`GitHub answered ${answer.status}`);
-        closed = closedIssues(await answer.json());
+        for (let number = 1; number <= ISSUE_PAGES; number += 1) {
+          const answer = await github(issuesPath(repository, since, number));
+          if (!answer.ok) throw new Error(`GitHub answered ${answer.status}`);
+          const issues = await answer.json();
+          for (const issue of closedIssues(issues)) closed.add(issue);
+          if (!Array.isArray(issues) || issues.length < 100) break;
+        }
       } catch {
         const told = element('admin-feedback-said');
         told.textContent = 'GitHub could not be asked whether the filed issues are closed. The reports stay filed until it can.';
