@@ -326,6 +326,7 @@
         </section>
         <a id="admin-feedback-session" class="feedback-session" href="#" hidden>Open its session</a>
         <a id="admin-feedback-reproduction" class="feedback-session" href="#" hidden>Play the reported round</a>
+        <a id="admin-feedback-issue-link" class="feedback-session" href="#" target="_blank" rel="noopener noreferrer" hidden>Open its issue on GitHub (opens a new tab)</a>
         <output id="admin-feedback-sheet-said" class="said" tabindex="-1"></output>
         <div class="diagnosis-actions">
           <button id="admin-feedback-reproduce" type="button" class="secondary">Reproduce the round</button>
@@ -334,6 +335,16 @@
           <button id="admin-feedback-to-idea" type="button" class="secondary">This is an idea</button>
           <button id="admin-feedback-to-bug" type="button" class="secondary">This is a bug</button>
           <button id="admin-feedback-diagnose" type="button">Diagnose…</button>
+        </div>
+        <p id="admin-feedback-download-note" class="muted" aria-live="polite" hidden></p>
+        <div id="admin-feedback-filing" class="player-action" hidden>
+          <p class="muted">The issue is public. Download the redacted scenario. Open the issue, read and edit what it says, attach the zip and submit. Then paste the issue's number here.</p>
+          <button id="admin-feedback-download" type="button" class="secondary">Download the scenario</button>
+          <div id="admin-feedback-filing-issue">
+            <a id="admin-feedback-issue" class="feedback-session" href="#" target="_blank" rel="noopener noreferrer" hidden>File an issue on GitHub (opens a new tab)</a>
+            <label for="admin-feedback-issue-number">The issue's number<input id="admin-feedback-issue-number" type="text" inputmode="numeric" maxlength="120" placeholder="731" autocomplete="off" spellcheck="false" /></label>
+            <button id="admin-feedback-filed" type="button" class="secondary">Mark filed</button>
+          </div>
         </div>
         <div id="admin-feedback-dismissing" class="player-action">
           <label for="admin-feedback-reason">Reason for dismissing<input id="admin-feedback-reason" type="text" maxlength="300" placeholder="Works as the rules say." autocomplete="off" /></label>

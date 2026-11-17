@@ -1,6 +1,9 @@
 {
-  "follow-up": "Work a session left: a loose end of a stage or a review",
+  "bug": "Something does not behave as the rules or the pages say",
+  "enhancement": "A rule, engine or tooling proposal from the feature form",
   "flaky": "A test that passed only on a retry",
+  "follow-up": "Work a session left: a loose end of a stage or a review",
+  "from-report": "Filed by the operator from a player's bug report in the panel's Feedback tab",
   "ops": "A portal, a setting, the deployed app",
   "proposal": "An idea nobody asked for yet, filed by /proposals",
   "red-main": "Opened by CI while main is red",

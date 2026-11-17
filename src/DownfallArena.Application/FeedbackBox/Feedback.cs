@@ -78,6 +78,12 @@ public sealed record Feedback
     /// </summary>
     public string? Reproduction { get; init; }
 
+    /// <summary>
+    /// For a bug report filed, the number of the public issue the operator filed it as (docs/tabletop/feedback-plan.md,
+    /// R5); its closing marks the report fixed. Kept until another number replaces it. None until it is filed.
+    /// </summary>
+    public int? Issue { get; init; }
+
     /// <summary>The reason that marks feedback dismissed as spam, which counts against its sender.</summary>
     public const string SpamReason = "spam";
 

@@ -78,6 +78,13 @@ test('an error’s message is cut to the host’s line, and a blank one is still
   assert.deepEqual(errors.list()[1], { message: 'Unknown error', where: null });
 });
 
+test('an error’s message is never cut inside an emoji, which would leave half of it', () => {
+  const errors = createPageErrors();
+  errors.add(`${'x'.repeat(499)}😀 and more`, null);
+  assert.equal(errors.list()[0].message, 'x'.repeat(499));
+  assert.doesNotThrow(() => encodeURIComponent(errors.list()[0].message));
+});
+
 test('an error’s words lose any address’s query, which can carry a seat’s key', () => {
   const errors = createPageErrors();
   errors.add('Failed to load https://table.example/battle?seat=abc123#key=secret, then gave up', null);
