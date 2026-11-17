@@ -44,13 +44,17 @@ const slotName = slot => typeof slot === 'string' && slot ? slot.toLowerCase() :
  * one: the recent rounds are then told with nothing marked new. `opponent` is the name the header gives the other seat.
  * A round the feed holds nothing of is told with `recorded: false`, so the sheet never reads a gap as a quiet round;
  * loading the feed back to `seen` is the caller's.
- * @param {{ view: any, feed: any[], seen: number | null, now: number, catalogue?: any, opponent?: string | null }} input
+ * `seenAt` is when that was (the seat view's `seen.at` by default): the reactions sent since are marked new.
+ * @param {{ view: any, feed: any[], seen: number | null, seenAt?: string | null, now: number, catalogue?: any,
+ *   opponent?: string | null }} input
  */
-export function buildRecap({ view, feed, seen, now, catalogue = null, opponent = null }) {
+export function buildRecap({ view, feed, seen, seenAt = view?.seen?.at ?? null, now, catalogue = null, opponent = null }) {
   const board = view?.board ?? {};
-  const entries = (Array.isArray(feed) ? feed : []).filter(entry => isInt(entry?.sequence) && entry.sequence >= 0)
-    .sort((a, b) => a.sequence - b.sequence);
+  // One entry a sequence: a feed merged from the live window and a page loaded back holds some twice.
+  const entries = [...new Map((Array.isArray(feed) ? feed : []).filter(entry => isInt(entry?.sequence) && entry.sequence >= 0)
+    .map(entry => [entry.sequence, entry])).values()].sort((a, b) => a.sequence - b.sequence);
   const isNew = sequence => isInt(seen) && sequence > seen;
+  const bled = bledOut(entries, board);
   const over = Boolean(view?.over) || board.state === 'Ended';
 
   const current = Math.max(board.roundNumber ?? 0, ...entries.map(roundOf).filter(isInt));
@@ -67,9 +71,9 @@ export function buildRecap({ view, feed, seen, now, catalogue = null, opponent =
 
   const rounds = [...told].sort((a, b) => a - b).map(round => tellRound(round, rows.filter(row => row.round === round), {
     isNew, folded: round < (completed ?? current), completed: ended.includes(round) || (over && round === current),
-    recorded: entries.some(entry => roundOf(entry) === round) }));
+    recorded: entries.some(entry => roundOf(entry) === round), bled: bled.filter(one => one.round === round) }));
 
-  const teams = teamsNow(board, entries.filter(entry => roundOf(entry) >= span), isNew);
+  const teams = teamsNow(board, entries.filter(entry => roundOf(entry) >= span), isNew, bled);
   const side = team => ({ standing: team.filter(one => !one.defeated).length, total: team.length,
     health: team.filter(one => !one.defeated).reduce((sum, one) => sum + (one.health ?? 0), 0) });
   const sides = { you: side(teams.you), opponent: side(teams.opponent) };
@@ -90,7 +94,7 @@ export function buildRecap({ view, feed, seen, now, catalogue = null, opponent =
     teams,
     rounds,
     chosen: chosenBy(board, entries, current, catalogue),
-    asked: { question: over ? null : questionText(view?.waitingFor), reactions: reactionsFrom(view, now) },
+    asked: { question: over ? null : questionText(view?.waitingFor), reactions: reactionsFrom(view, seenAt, now) },
   };
 }
 
@@ -98,7 +102,7 @@ export function buildRecap({ view, feed, seen, now, catalogue = null, opponent =
 const newLines = round => [...round.mutations, ...round.casts, ...round.skipped, ...round.defeated, ...(round.result ? [round.result] : [])]
   .filter(line => line.unseen).length;
 
-function tellRound(round, rows, { isNew, folded, completed, recorded }) {
+function tellRound(round, rows, { isNew, folded, completed, recorded, bled }) {
   const told = { round, state: completed ? 'completed' : 'under way', folded, recorded, unseen: false,
     mutations: [], casts: [], skipped: [], defeated: [], result: null };
   for (const row of rows) {
@@ -112,17 +116,44 @@ function tellRound(round, rows, { isNew, folded, completed, recorded }) {
     told.defeated.push(...summary.defeated.map(one => ({ ...one, unseen })));
     if (summary.result) told.result = { text: summary.result, unseen };
   }
+  for (const one of bled) {
+    const unseen = isNew(one.sequence);
+    told.unseen ||= unseen;
+    told.defeated.push({ creature: one.label, side: one.side, unseen });
+  }
   return told;
+}
+
+const castFrames = entries => entries.filter(entry => entry.event?.kind === 'CombatActionResolved' && Array.isArray(entry.event.frame?.before));
+
+// The creatures an ongoing effect defeated at an Upkeep: no cast frame records their fall, so the fall is the first
+// Upkeep after the last frame that shows them standing whose bleed ticks name them. Read only for a creature the
+// board says is defeated: the feed records the tick, never the health it left.
+function bledOut(entries, board) {
+  const frames = castFrames(entries);
+  const fellInCast = id => frames.some(entry => entry.event.frame.before.find(one => one.id === id)?.isAlive !== false
+    && entry.event.frame.after?.find(one => one.id === id)?.isAlive === false);
+  const allies = new Set((board.allies ?? []).map(one => one.id));
+  return [...(board.allies ?? []), ...(board.enemies ?? [])].filter(one => one.isAlive === false && !fellInCast(one.id)).flatMap(one => {
+    const standing = frames.filter(entry => [...entry.event.frame.before, ...(entry.event.frame.after ?? [])]
+      .some(seen => seen.id === one.id && seen.isAlive !== false)).map(entry => entry.sequence);
+    const after = standing.length ? Math.max(...standing) : -1;
+    const tick = entries.find(entry => entry.sequence > after && entry.event?.kind === 'OngoingEffectsApplied'
+      && (entry.event.bleedTicks ?? []).some(bleed => bleed.creature === one.id));
+    return tick ? [{ id: one.id, sequence: tick.sequence, round: roundOf(tick), label: creatureLabel(board, one.id),
+      side: allies.has(one.id) ? 'Your team' : 'Opponent' }] : [];
+  });
 }
 
 // Each creature as the board has it now, the ones defeated while away marked, and the health it gained or lost
 // since the first recorded cast of the span: the frames are the only recorded health the feed holds.
-function teamsNow(board, spanEntries, isNew) {
-  const frames = spanEntries.filter(entry => entry.event?.kind === 'CombatActionResolved' && Array.isArray(entry.event.frame?.before));
+// A creature an Upkeep's bleed defeated while away is marked as one a cast defeated.
+function teamsNow(board, spanEntries, isNew, bled) {
+  const frames = castFrames(spanEntries);
   const startOf = id => frames.map(entry => entry.event.frame.before.find(one => one.id === id)).find(Boolean);
   const fell = new Set(frames.filter(entry => isNew(entry.sequence)).flatMap(entry => (entry.event.frame.after ?? [])
     .filter(after => after.isAlive === false && entry.event.frame.before.find(one => one.id === after.id)?.isAlive !== false)
-    .map(after => after.id)));
+    .map(after => after.id)).concat(bled.filter(one => isNew(one.sequence)).map(one => one.id)));
   const creature = one => {
     const start = startOf(one.id);
     return { id: String(one.id), label: creatureLabel(board, one.id), health: one.health, maxHealth: one.maxHealth,
@@ -152,7 +183,8 @@ function chosenBy(board, entries, current, catalogue) {
   const intents = board.intents?.length ? board.intents
     : own('IntentSubmitted').filter(entry => roundOf(entry) === current).map(entry => entry.event.intent);
   const bought = own('EvolutionChoiceSubmitted');
-  const last = bought.length ? Math.max(...bought.map(roundOf)) : null;
+  const rounds = bought.map(roundOf).filter(isInt);
+  const last = rounds.length ? Math.max(...rounds) : null;
   const picks = last !== null ? bought.filter(entry => roundOf(entry) === last).map(entry => entry.event.choice)
     : board.evolutionChoices?.length ? board.evolutionChoices : [];
   return {
@@ -163,8 +195,8 @@ function chosenBy(board, entries, current, catalogue) {
 }
 
 // The reactions the other seat sent, the newest last; those sent since the last visit marked new.
-function reactionsFrom(view, now) {
-  const since = Date.parse(view?.seen?.at ?? '');
+function reactionsFrom(view, seenAt, now) {
+  const since = Date.parse(seenAt ?? '');
   const recent = Array.isArray(view?.reactions?.recent) ? view.reactions.recent : [];
   return recent.filter(one => one?.seat !== view?.seat).flatMap(one => {
     const known = REACTIONS.find(reaction => reaction.id === one.reaction);

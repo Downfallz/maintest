@@ -109,14 +109,15 @@ test('the seat\'s own choices still in force are told: its tempos this round and
 
 test('a spell declared face down is the seat\'s own and is told; the other seat\'s hidden choices never are', () => {
   const { board } = recorded.boards.round4Combat;
-  const declared = { ...board, intents: [{ actor: 1, spell: 'spell:healing_screech:v1' }] };
-  const theirs = { sequence: 128, round: 4, subPhase: 'Speed', event: { kind: 'SpeedChoiceSubmitted', roundId: 4, slot: 'Player2', choice: { creature: 4, speed: 'Quick' } } };
-  const feed = [...recorded.feed.filter(entry => entry.sequence <= 129), theirs];
+  const declared = { ...board, speedChoices: [], intents: [{ actor: 1, spell: 'spell:healing_screech:v1' }] };
+  const submitted = (sequence, slot, creature, speed) => ({ sequence, round: 4, subPhase: 'Speed',
+    event: { kind: 'SpeedChoiceSubmitted', roundId: 4, slot, choice: { creature, speed } } });
+  const feed = [...recorded.feed.filter(entry => entry.sequence <= 124), submitted(125, 'Player1', 3, 'Quick'), submitted(126, 'Player2', 4, 'Standard')];
 
-  const recap = buildRecap({ view: { seat: 'player1', board: declared, seen: null }, feed, seen: 129, now: NOW, catalogue: recorded.catalogue });
+  const recap = buildRecap({ view: { seat: 'player1', board: declared }, feed, seen: 126, now: NOW, catalogue: recorded.catalogue });
 
   assert.deepEqual(recap.chosen.spells, [{ creature: 'Creature 1', spell: 'Vital Echo' }]);
-  assert.ok(recap.chosen.tempos.every(one => one.creature !== 'Creature 4'));
+  assert.deepEqual(recap.chosen.tempos, [{ creature: 'Creature 3', tempo: 'Instinct' }]);
 });
 
 test('the seat\'s own submissions are found whatever case its slot is written in, and none without a slot', () => {
@@ -196,4 +197,49 @@ test('the recap carries the journal\'s public words only, never a raw event', ()
   const recap = at('round4Combat', 14);
 
   assert.doesNotMatch(JSON.stringify(recap), /SpeedChoiceSubmitted|CombatActionResolved|spell:|tier:/);
+});
+
+test('a creature an Upkeep\'s bleed defeated while away is marked fallen and told in that round', () => {
+  const { sequence, board } = recorded.boards.round4Tempo;
+  const bledBoard = { ...board, enemies: board.enemies.map(one => one.id === 4 ? { ...one, health: 0, isAlive: false } : one) };
+  const feed = recorded.feed.filter(entry => entry.sequence <= sequence).map(entry => entry.sequence === 119
+    ? { ...entry, event: { ...entry.event, bleedTicks: [{ creature: 4, damage: 24 }] } } : entry);
+
+  const recap = buildRecap({ view: { seat: 'player1', board: bledBoard }, feed, seen: 114, now: NOW, catalogue: recorded.catalogue });
+
+  assert.equal(recap.teams.opponent.find(one => one.id === '4').fellWhileAway, true);
+  assert.deepEqual(recap.rounds.find(one => one.round === 4).defeated, [{ creature: 'Creature 4', side: 'Opponent', unseen: true }]);
+  assert.equal(recap.unseen, 1);
+});
+
+test('a feed holding some entries twice tells and counts each once', () => {
+  const { sequence, board } = recorded.boards.round2Tempo;
+  const feed = recorded.feed.filter(entry => entry.sequence <= sequence);
+  const twice = [...feed, ...feed.filter(entry => entry.sequence > 30)];
+
+  const recap = buildRecap({ view: { seat: 'player1', board }, feed: twice, seen: 35, now: NOW, catalogue: recorded.catalogue });
+
+  assert.equal(recap.rounds[0].casts.length, 6);
+  assert.equal(recap.unseen, 1);
+});
+
+test('the reactions are marked new from the time of the last visit the caller gives, as the rounds are from its sequence', () => {
+  const recent = [{ sequence: 1, seat: 'player2', reaction: 'hello', at: hoursAgo(2) }];
+
+  const recap = at('round4Tempo', 14, { seen: null, reactions: { available: true, recent } });
+  const told = buildRecap({ view: { seat: 'player1', board: recorded.boards.round4Tempo.board, reactions: { recent } },
+    feed: [], seen: 14, seenAt: hoursAgo(3), now: NOW });
+
+  assert.equal(recap.asked.reactions[0].unseen, false);
+  assert.equal(told.asked.reactions[0].unseen, true);
+});
+
+test('a purchase without a round does not hide the mutations the board holds', () => {
+  const { board } = recorded.boards.round4Combat;
+  const feed = [{ sequence: 3, event: { kind: 'EvolutionChoiceSubmitted', slot: 'Player1', choice: { creature: 1, tier: 'tier:brute:v1' } } }];
+
+  const recap = buildRecap({ view: { seat: 'player1', board: { ...board, evolutionChoices: [{ creature: 2, tier: 'tier:brute:v1' }] } },
+    feed, seen: 3, now: NOW, catalogue: recorded.catalogue });
+
+  assert.deepEqual(recap.chosen.mutations, { round: 4, picks: [{ creature: 'Creature 2', mutation: 'Brute' }] });
 });

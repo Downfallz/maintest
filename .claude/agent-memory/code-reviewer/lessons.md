@@ -71,3 +71,8 @@
 - A kept reference to an object another tab can delete (Feedback.Reproduction -> a scenario) renders a dead link on every sheet read: resolve it at read time or clear it on delete (R4 Reproduce, FeedbackAdminApi.cs:129).
 - A link from one origin's localized page into a page that picks its language from device storage or the browser (table/rules.js languageOf) drops the reader's language: the other origin's storage is not shared, and /rules reads no query. Check every cross-origin "open in the game" link for what it carries (R7, showcase/rules.mjs:86).
 - Sixth time: the branch moved mid-review (R7, 62d66c9 -> 90f87db, PAGE_IDS added); findings re-checked on the final HEAD.
+- A "never shows the other seat's X" test whose fixture fills the primary source (board.speedChoices) never reaches the fallback that holds the filter: delete the filter and re-run; all 15 still passed (R2 recap, battle-recap.test.js:89, 15469d8).
+- "Defeated while away" keyed on CombatActionResolved frames misses a bleed death at Upkeep (UpkeepRules.OngoingEffects -> TakeDamage, then EndIfEliminated): check every defeat reader against OngoingEffectsApplied (R2 recap, battle-recap.js teamsNow, 15469d8).
+- A pure builder over a feed the page merges (live + loaded) must dedupe by sequence as createBattleHistory does: a doubled tail doubled the casts and `unseen` (R2 recap, 15469d8).
+- CI lints `scripts/` with learning's ruff (`ruff check . ../scripts` from learning/, ci.yml:125): a one-off generator added there (recap-fixture.py, 26 errors and unformatted) fails the build; run ruff on any new scripts/*.py (R2 recap, 89b59e1).
+- Seventh time: the branch moved mid-review (R2 recap, 15469d8 -> 89b59e1); findings re-checked on 89b59e1.

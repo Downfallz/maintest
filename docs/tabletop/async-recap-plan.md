@@ -126,9 +126,9 @@ under way: a player who left the page open for two days, or who simply lost the 
    parts, and `unseen`, the count of lines marked new, for R3's threshold and R4's count:
    - `where`: the opponent, the round and its step, how long ago the last move was, the time left, the result, each
      side's creatures standing and health, and who leads (a count: creatures standing, then health).
-   - `teams`: each creature now, whether it is defeated or fell while away, and its health change since the first
-     recorded cast of the span the sheet tells. Frames are the only recorded health in a feed, so an Upkeep before
-     that cast is not counted.
+   - `teams`: each creature now, whether it is defeated or fell while away (to a cast, or to a bleed at an Upkeep),
+     and its health change since the first recorded cast of the span the sheet tells. Frames are the only recorded
+     health in a feed, so an Upkeep before that cast is not counted.
    - `rounds`: the last completed round, the round under way, and every round with something not seen, oldest
      first. Older rounds are folded. Each line uses the history summary's words and is marked `unseen`. A round the
      feed holds nothing of is `recorded: false`.
@@ -136,7 +136,8 @@ under way: a player who left the page open for two days, or who simply lost the 
    - `asked`: the question in the push notice's words, and the opponent's reactions, those sent since the last
      visit marked new.
 
-   A seat with no last visit is told the recent rounds, with nothing marked new. Tests: `battle-recap.test.js` on
+   A seat with no last visit is told the recent rounds, with nothing marked new. A feed holding an entry twice
+   tells it once. Tests: `battle-recap.test.js` on
    a recorded match, `battle-recap.fixture.json` (play --seed 1 as seat player1, rebuilt by
    `scripts/recap-fixture.py`, kept out of the image). The glossary gains *Recap*. Left to R3: the sheet, its
    words in docs/domain/player-terminology.md, the threshold on `seen.at`, and loading the feed back to `seen`
