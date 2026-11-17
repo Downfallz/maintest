@@ -89,8 +89,10 @@ jobs:
       AZURITE_QUEUE_ENDPOINT: http://127.0.0.1:10001/devstoreaccount1
       AZURITE_TABLE_ENDPOINT: http://127.0.0.1:10002/devstoreaccount1
       # Sonar steps are skipped when the token is absent (forks, or the secret not configured yet). The token
-      # itself is set only on the three Sonar steps, never on the job: every other step runs the pull request's
-      # own code (#709). The scanner's begin step keeps no token for the build it wraps; its end step is given it again.
+      # itself is set only on the three Sonar steps that read it, so the build, the tests and the light build do
+      # not carry it in their environment (#709). That narrows its exposure; it does not isolate it from the pull
+      # request's code, which runs earlier in this job on the same runner. The scanner's begin step does not
+      # write the token to disk for the build it wraps, which is why the end step is given it again.
       HAS_SONAR: ${{ secrets.SONAR_TOKEN != '' }}
       SONAR_PROJECT_KEY: Downfallz_maintest
       SONAR_ORGANIZATION: downfallz

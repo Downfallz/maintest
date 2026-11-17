@@ -1,0 +1,1 @@
+- Moving a secret from job env to step env does not keep it from the PR's code: an earlier step in the same job can write $GITHUB_ENV (BASH_ENV) or $GITHUB_PATH, and the secret step runs checkout scripts and PR-pinned tools; review the claim, not just the YAML (#709, branch claude/sonar-token-scope-limit-09mlmn).
