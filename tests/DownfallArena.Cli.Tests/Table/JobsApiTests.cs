@@ -68,6 +68,38 @@ public sealed class JobsApiTests : IDisposable
     }
 
     [Fact]
+    public async Task A_second_pass_asked_while_one_runs_is_told_so()
+    {
+        var held = new TaskCompletionSource<TableTend.Tended>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var jobs = Jobs((_, _) => held.Task);
+        var first = jobs.HandleAsync("POST", JobsApi.TendRoute, null, "mk");
+
+        var second = await jobs.HandleAsync("POST", JobsApi.TendRoute, null, "mk");
+        held.SetResult(new TableTend.Tended([], 0));
+
+        second.Status.ShouldBe(409);
+        Json(second).GetProperty("error").GetString().ShouldBe("Jobs.Passing");
+        (await first).Status.ShouldBe(200);
+    }
+
+    /// <summary>
+    /// One pass at a time is each host's own: two of them in one process -- the test classes, which run side by
+    /// side -- do not turn each other away (#666).
+    /// </summary>
+    [Fact]
+    public async Task Two_hosts_in_one_process_each_run_their_own_pass()
+    {
+        var held = new TaskCompletionSource<TableTend.Tended>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var first = Jobs((_, _) => held.Task).HandleAsync("POST", JobsApi.TendRoute, null, "mk");
+
+        var second = await Jobs().HandleAsync("POST", JobsApi.TendRoute, null, "mk");
+        held.SetResult(new TableTend.Tended([], 0));
+
+        second.Status.ShouldBe(200);
+        (await first).Status.ShouldBe(200);
+    }
+
+    [Fact]
     public async Task A_run_s_sheet_is_read_by_its_id()
     {
         var kept = Run(Now, ["late"]);
