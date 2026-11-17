@@ -38,11 +38,11 @@ An area marked * has its own `AGENTS.md` (and a `CLAUDE.md` that imports it): re
 | `battle/` * | The Phaser/TypeScript battle view; builds into the ignored `table/battle-build/`. |
 | `learning/` * | The Python training project (uv, ruff, pytest) and the heuristic weights files. See docs/learning/. |
 | `scenarios/` | Match scenarios the admin panel lists and plays, one file each, and the tutorials under `tutorials/` (`scenarios/README.md`, ADR 0179, 0187). |
-| `rules/` | The official rulebook, the app's edition: one Markdown file a Part, built into `table/rules.json`, and its French edition `rules/fr/` into `table/rules.fr.json` (ADR 0188, 0193, `rules/README.md`). |
+| `rules/` | The official rulebook, the app's edition, in English and French, built into `table/rules*.json` (ADR 0188, 0193). See `rules/README.md`. |
 | `models/` | Trained policies (`policy.json`, small, committed with their evaluation). See `models/README.md`. |
 | `infra/` * | The hosted table on Azure behind Cloudflare: `main.bicep`, `bootstrap.sh`, `README.md` (ADR 0080-0082, 0162, 0175). |
 | `Dockerfile` | The table's image, built and tried by `.github/workflows/image.yml` before it is pushed and deployed. |
-| `scripts/` | The local gate's `verify.sh` and `gate/`, the learning loop's `iterate.sh` and readers, `spells-report/`, `design-system/`, `review/` (the reviewers a diff calls for), `digest/` (the morning digest), `ops/` (the production report), `workflow-metrics.py` (docs/reference/commands.md). |
+| `scripts/` | The gate's `verify.sh`, the learning loop's `iterate.sh` and readers, the reports and the reviewers' picker. See `scripts/README.md`. |
 | `tests/` | One test project per layer, plus `Cli.Tests` (the hosts) and `Architecture.Tests` (layering and these files). |
 | `docs/` | Indexed in `docs/README.md`: every plan, the ADRs, the domain, the tabletop, art, learning, engineering. |
 | `docs/reference/commands.md` | Every command, flag and route, one heading per command. |

@@ -12,6 +12,7 @@ public sealed class InstructionFileTests
     private const int MaximumLines = 200;
     private const int MaximumBytes = 12 * 1024;
     private const int MaximumLineLength = 300;
+    private const int MaximumMapRowLength = 200;
 
     private static readonly string[] Areas =
     [
@@ -50,6 +51,22 @@ public sealed class InstructionFileTests
             .Select(line => $"line {line.Number}: {line.Length} characters");
 
         longLines.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void Root_agents_map_rows_stay_one_short_line_each()
+    {
+        // A map row names a directory and points to where its detail lives; a row that lists every subfolder
+        // is what spent the byte budget (#676).
+        var longRows = File.ReadAllLines(Path.Combine(Root, "AGENTS.md"), Encoding.UTF8)
+            .Select((line, index) => (Number: index + 1, Line: line))
+            .SkipWhile(line => line.Line != "## Repository map")
+            .TakeWhile(line => !line.Line.StartsWith("The tests:", StringComparison.Ordinal))
+            .Where(line => line.Line.StartsWith("| `", StringComparison.Ordinal))
+            .Where(line => line.Line.Length > MaximumMapRowLength)
+            .Select(line => $"line {line.Number}: {line.Line.Length} characters");
+
+        longRows.ShouldBeEmpty();
     }
 
     [Fact]
