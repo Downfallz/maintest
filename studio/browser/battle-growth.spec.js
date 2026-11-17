@@ -104,7 +104,7 @@ test('inspection selects the opponent and reveals its progress only after public
   await expect(page.locator('#atlas-creature')).toHaveValue('3'); await expect(page.locator('#atlas-progress')).toContainText('No revealed mutations yet');
   await expect(brute).toHaveAttribute('data-status', 'future');
   await expect(page.locator('#atlas-board [data-status="available"]')).toHaveCount(0);
-  unlock(h); await h.publish(); await expect(page.locator('#atlas-progress')).toContainText('Brute · Stage 1');
+  unlock(h); await h.publish(); await expect(page.locator('#atlas-progress')).toContainText(/Brute · Stage I\b/);
   await expect(brute).toHaveAttribute('data-status', 'known');
   await expect(page.locator('#growth-receipt')).toBeHidden(); expect(h.shown).toEqual(['10']); expect(h.writes).toEqual([]);
   await page.keyboard.press('Escape'); await page.keyboard.press('Escape'); await expect(page.locator('#growth-receipt')).toBeVisible();
@@ -116,14 +116,14 @@ test('inspection selects the opponent and reveals its progress only after public
 test('a reveal reads as one line and crests on the field, opens on cards by side, and each card leads to its path', async ({ page }, info) => {
   const h = await mount(page); await page.locator('#planning-close').click(); unlock(h); await h.publish();
   await expect(page.locator('#growth-receipt')).toBeVisible(); await expect(page.locator('#growth-receipt-summary')).toHaveText('You 1 · Opponent 1 · Round 3');
-  await expect(page.locator('#growth-announcement')).toHaveText(/First, your team: Predator, stage 1, new Devour\. Rival, opponent: Brute, stage 1\./);
+  await expect(page.locator('#growth-announcement')).toHaveText(/First, your team: Predator, Stage I, new Devour\. Rival, opponent: Brute, Stage I\./);
   await expect(page.locator('#battle')).toHaveAttribute('data-reveal', '1 3');
   await fitsViewport(page, '#growth-receipt [data-growth-open], #growth-dismiss');
   await page.locator('#growth-receipt [data-growth-open]').click();
   await expect(page.locator('#growth-title')).toHaveText('Mutations revealed');
   const [own, rival] = [page.locator('.reveal-group').first(), page.locator('.reveal-group').last()];
   await expect(own.locator('h3')).toHaveText('Your team'); await expect(rival.locator('h3')).toHaveText('Opponent');
-  await expect(own.locator('.reveal-mutation')).toHaveText('Predator'); await expect(own.locator('.reveal-stage')).toHaveText('Stage 1');
+  await expect(own.locator('.reveal-mutation')).toHaveText('Predator'); await expect(own.locator('.reveal-stage')).toHaveText('Stage I');
   await expect(own.locator('.reveal-spells')).toContainText('+ Devour'); await expect(own.locator('.reveal-spells')).toContainText('2 energy · One enemy');
   await expect(own.locator('.reveal-meta')).toHaveText('+1 initiative');
   await expect(rival.locator('.reveal-passive')).toHaveText('No new spell this time.');
@@ -191,7 +191,7 @@ test('seat access loss clears open reference, pending receipts and private comma
 test('multiclass reference keeps close and creature selection reachable in short screens and large text', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop', 'Viewport sweep runs once.');
   const input = initial(); input.board.allies[0].acquiredTiers = ['predator', 'brute', 'upgrade', 'cap'];
-  const h = await mount(page, input); await h.reference(); await expect(page.locator('#atlas-progress')).toContainText('Multiclass · Predator · Stage 4 / Brute · Stage 1');
+  const h = await mount(page, input); await h.reference(); await expect(page.locator('#atlas-progress')).toContainText('Multiclass · Predator · Stage IV / Brute · Stage I');
   for (const size of [{ width: 320, height: 568 }, { width: 844, height: 390 }]) {
     await page.setViewportSize(size); await page.clock.runFor(150); await fitsViewport(page, '#atlas-close, #atlas-creature');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

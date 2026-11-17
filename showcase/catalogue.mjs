@@ -3,23 +3,24 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fieldNotes, spellNamesFr } from './field-notes.mjs';
 
-const data = fileURLToPath(new URL('../data/', import.meta.url));
-const read = async file => JSON.parse(await readFile(join(data, file), 'utf8'));
+const content = fileURLToPath(new URL('../data/', import.meta.url));
 const shortId = id => id.split(':')[1];
-const versionless = id => id.split(':').slice(0, 2).join(':');
 
-async function entries(directory) {
-  const files = await readdir(join(data, directory), { recursive: true });
-  return Promise.all(files.filter(file => file.endsWith('.json')).sort().map(file => read(join(directory, file))));
-}
-
-export async function loadCatalogue() {
-  const [tiers, spells, artwork, creature] = await Promise.all([
-    entries('Tiers'), entries('Spells'), read('presentation/mutation-art.json'), read('Creatures/main.v1.json'),
+// The content folder is data/ unless a test names a copy. A reference is a versioned id or, like a creature's
+// starting spells, an alias that aliases.json pins to one (ADR 0009). As in the content builder's AliasResolver, a
+// versioned id is taken as written; the guide shows the version a reference names.
+export async function loadCatalogue(data = content) {
+  const read = async file => JSON.parse(await readFile(join(data, file), 'utf8'));
+  const entries = async directory => {
+    const files = await readdir(join(data, directory), { recursive: true });
+    return Promise.all(files.filter(file => file.endsWith('.json')).sort().map(file => read(join(directory, file))));
+  };
+  const [tiers, spells, artwork, creature, aliases] = await Promise.all([
+    entries('Tiers'), entries('Spells'), read('presentation/mutation-art.json'), read('Creatures/main.v1.json'), read('aliases.json'),
   ]);
-  const available = new Map(spells.filter(s => s.enabled !== false).map(s => [versionless(s.id), s]));
-  const spell = id => {
-    const s = available.get(versionless(id));
+  const available = new Map(spells.filter(s => s.enabled !== false).map(s => [s.id, s]));
+  const spell = reference => {
+    const id = /:v\d+$/.test(reference) ? reference : aliases[reference] ?? reference, s = available.get(id);
     if (!s) throw new Error(`Missing playable spell ${id}`);
     return { id: s.id, name: s.name, fr: spellNamesFr[shortId(s.id)] ?? s.name,
       cost: s.energyCost, critical: s.criticalChance, target: s.targeting.origin, count: s.targeting.maxTargets, effects: s.effects, casterEffects: s.casterEffects ?? [] };

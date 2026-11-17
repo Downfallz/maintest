@@ -1,3 +1,5 @@
+import { stageLabel } from './terms.js';
+
 // The three bodies, in the order a tie between them is broken (ADR 0133). Which package belongs to which body,
 // and what it draws on it, comes with the catalogue's packages: level and visual, published beside the content.
 // The page names no package; a package nobody drew, and an older host that serves none, leave no trace.
@@ -34,7 +36,7 @@ export function creatureAppearance(creature, packages) {
     .filter(([cue]) => cue?.motif).map(([cue, slot]) => ({ ...cue, slot }));
   // Said in the catalogue's words, the package names a player bought, never the renderer's motif names.
   return { form: dominant.family, layers,
-    description: `${BODIES[dominant.family]} body${layers.map(cue => ` · ${cue.name} (stage ${cue.stage})`).join('')}` };
+    description: BODIES[dominant.family] + ' body' + layers.map(cue => ' · ' + cue.name + ' (' + stageLabel(cue.stage) + ')').join('') };
 }
 export function creatureForm(creature, packages) { return creatureAppearance(creature, packages).form; }
 

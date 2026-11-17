@@ -308,7 +308,7 @@ test('each creature shows the body its acquired packages give it, mixed builds i
   await expect(page.locator('[data-creature="1"]')).toHaveAttribute('data-form', 'predator', { timeout: 10000 });
   await page.locator('[data-creature="1"]').click();
   await expect(page.locator('#inspect-name')).toHaveText('Creature 1');
-  await expect(page.locator('#inspect-appearance')).toHaveText(`Appearance: Predator body · ${packages.get('tier:plague_doctor:v1').name} (stage 2)`);
+  await expect(page.locator('#inspect-appearance')).toHaveText(`Appearance: Predator body · ${packages.get('tier:plague_doctor:v1').name} (Stage II)`);
 });
 
 test('ART-3 missing individual sprite preserves inspection and healthy assets', async ({ page }) => {
@@ -427,7 +427,7 @@ test('mixed builds keep their targets inside the viewport and say their appearan
   await fits(page);
   await page.screenshot({ path: info.outputPath('art5-six-creatures.png') });
   await page.locator('[data-creature="3"]').click();
-  await expect(page.locator('#inspect-appearance')).toHaveText(`Appearance: Warped body · ${packages.get('tier:lich:v1').name} (stage 3) · ${packages.get('tier:archmage:v1').name} (stage 4)`);
+  await expect(page.locator('#inspect-appearance')).toHaveText(`Appearance: Warped body · ${packages.get('tier:lich:v1').name} (Stage III) · ${packages.get('tier:archmage:v1').name} (Stage IV)`);
   await page.getByRole('button', { name: 'Close inspection' }).click();
   await page.setViewportSize({ width: 844, height: 390 });
   await fits(page);

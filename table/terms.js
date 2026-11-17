@@ -38,9 +38,20 @@ export function creatureName(name) {
   return CREATURE[name] ?? name ?? '';
 }
 
-// A Tier's level as a player reads it.
+// A Tier's level as a player reads it: in Roman numerals (docs/domain/player-terminology.md). A level without
+// one (none, or past the four the families hold) reads as written, so a page never shows an empty Stage.
+const NUMERALS = ['', 'I', 'II', 'III', 'IV'];
+export function stageNumeral(level) {
+  return NUMERALS[level] || String(level ?? '?');
+}
+
 export function stageLabel(level) {
-  return `Stage ${level}`;
+  return `Stage ${stageNumeral(level)}`;
+}
+
+// The four Stages a family climbs, in order, as the Mutation Tree's help reads them.
+export function stageClimb() {
+  return [1, 2, 3, 4].map(stageLabel).join(' → ');
 }
 
 // The one-line rule every tempo hint repeats.

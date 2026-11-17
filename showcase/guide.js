@@ -41,8 +41,10 @@ function update() {
     item.append(link);
     list.append(item);
   }
-  empty.hidden = list.children.length > 0;
-  status.textContent = list.children.length ? (french ? 'Formes trouvées' : 'Matching forms') + ' · ' + list.children.length : empty.textContent;
+  const found = list.children.length;
+  empty.hidden = found > 0;
+  const label = french ? 'Formes trouvées' : 'Matching forms';
+  status.textContent = found ? label + ' · ' + found : empty.textContent;
 }
 input.addEventListener('input', update);
 clear.addEventListener('click', () => { input.value = ''; update(); input.focus(); });

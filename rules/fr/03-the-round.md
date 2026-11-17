@@ -75,9 +75,9 @@ est la seule chose qui fasse jamais bouger une initiative de base : acquérir es
 plus forte, et aussi celle dont elle devient plus rapide.
 
 **Quelle mutation.** Il y a trois familles, Brute, Warped et Predator, chacune un arbre de quatre Stades. Une
-mutation de Stade 1 ne demande rien. Chaque autre demande une mutation nommée de sa famille, un Stade en dessous :
+mutation de Stade I ne demande rien. Chaque autre demande une mutation nommée de sa famille, un Stade en dessous :
 l’Arbre des mutations montre laquelle. Une créature peut acquérir une mutation qu’elle ne possède pas quand elle
-possède ce que cette mutation demande, et elle peut mêler les familles en acquérant le Stade 1 d’une autre
+possède ce que cette mutation demande, et elle peut mêler les familles en acquérant le Stade I d’une autre
 famille. Deux créatures peuvent prendre la même mutation. Ce qu’une
 créature peut acquérir se lit d’après ce qu’elle possède à l’ouverture de l’étape : un choix de ce round n’ouvre
 rien avant le round de mutation suivant.
@@ -111,8 +111,8 @@ La dernière mutation d’une famille, sa clé de voûte, donne un passif à la 
 
 ## Clés de voûte {#capstones}
 
-Chaque famille se termine par une mutation de Stade 4, sa **clé de voûte**. Une clé de voûte demande **n’importe
-laquelle** des mutations de Stade 3 de sa famille. Elle n’apprend aucun sort et n’ajoute pas d’initiative. Elle
+Chaque famille se termine par une mutation de Stade IV, sa **clé de voûte**. Une clé de voûte demande **n’importe
+laquelle** des mutations de Stade III de sa famille. Elle n’apprend aucun sort et n’ajoute pas d’initiative. Elle
 donne un **passif** à la place, détenu de la révélation qui l’acquiert jusqu’à la fin de la partie :
 
 | Clé de voûte | Famille | Demande l’une de | Son passif |

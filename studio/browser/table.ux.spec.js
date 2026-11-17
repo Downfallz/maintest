@@ -288,7 +288,7 @@ test('the Mutation Tree lays its families out without overlap or sideways pannin
   }
   await page.screenshot({ path: info.outputPath('talent-atlas.png'), animations: 'disabled' });
   await page.locator('.tree-node').filter({ hasText: 'East Master 2' }).click();
-  await expect(page.locator('.talent-inspector')).toContainText('East Master 2 · Stage 3');
+  await expect(page.locator('.talent-inspector')).toContainText('East Master 2 · Stage III');
   await expect(page.locator('.talent-inspector .talent-class')).toBeInViewport();
 });
 

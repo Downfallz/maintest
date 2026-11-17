@@ -911,7 +911,7 @@
                   "strong": true
                 },
                 {
-                  "text": " Il y a trois familles, Brute, Warped et Predator, chacune un arbre de quatre Stades. Une mutation de Stade 1 ne demande rien. Chaque autre demande une mutation nommée de sa famille, un Stade en dessous : l’Arbre des mutations montre laquelle. Une créature peut acquérir une mutation qu’elle ne possède pas quand elle possède ce que cette mutation demande, et elle peut mêler les familles en acquérant le Stade 1 d’une autre famille. Deux créatures peuvent prendre la même mutation. Ce qu’une créature peut acquérir se lit d’après ce qu’elle possède à l’ouverture de l’étape : un choix de ce round n’ouvre rien avant le round de mutation suivant."
+                  "text": " Il y a trois familles, Brute, Warped et Predator, chacune un arbre de quatre Stades. Une mutation de Stade I ne demande rien. Chaque autre demande une mutation nommée de sa famille, un Stade en dessous : l’Arbre des mutations montre laquelle. Une créature peut acquérir une mutation qu’elle ne possède pas quand elle possède ce que cette mutation demande, et elle peut mêler les familles en acquérant le Stade I d’une autre famille. Deux créatures peuvent prendre la même mutation. Ce qu’une créature peut acquérir se lit d’après ce qu’elle possède à l’ouverture de l’étape : un choix de ce round n’ouvre rien avant le round de mutation suivant."
                 }
               ]
             },
@@ -990,7 +990,7 @@
               "type": "paragraph",
               "spans": [
                 {
-                  "text": "Chaque famille se termine par une mutation de Stade 4, sa "
+                  "text": "Chaque famille se termine par une mutation de Stade IV, sa "
                 },
                 {
                   "text": "clé de voûte",
@@ -1004,7 +1004,7 @@
                   "strong": true
                 },
                 {
-                  "text": " des mutations de Stade 3 de sa famille. Elle n’apprend aucun sort et n’ajoute pas d’initiative. Elle donne un "
+                  "text": " des mutations de Stade III de sa famille. Elle n’apprend aucun sort et n’ajoute pas d’initiative. Elle donne un "
                 },
                 {
                   "text": "passif",
@@ -2926,6 +2926,11 @@
   ],
   "moved": {},
   "changes": [
+    {
+      "date": "2026-11-17",
+      "text": "Un Stade s’écrit en chiffres romains, du Stade I au Stade IV, comme l’écrivent la table et le guide des mutations.",
+      "adrs": []
+    },
     {
       "date": "2026-11-16",
       "text": "Le livre de règles officiel est l’édition de l’application. Une créature choisit son sort quand vient son tour. Chaque nombre suit le jeu de règles et le contenu de la table (ADR 0112, ADR 0188).",

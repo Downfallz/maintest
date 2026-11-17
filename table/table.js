@@ -23,7 +23,7 @@ import { askedKey, validTargets, emptyCastAllowed, combatDecision } from './slot
 import { activeTurn, boardPresentation, decisionView, presentedView } from './presentation.js';
 import { practice, storage } from './startup.js';
 import { preferredPresentation } from './battle-preferences.js';
-import { SPEEDS, TEMPO_RULE, phaseLabel, stageLabel, stepLabel, tempoLabel } from './terms.js';
+import { SPEEDS, TEMPO_RULE, phaseLabel, stageClimb, stageLabel, stepLabel, tempoLabel } from './terms.js';
 
 // The page renders what the host serves and submits what a player taps. It holds no rule: which spells are
 // castable, which targets are legal and how many, whose turn it is -- all of that arrives in `options`, built
@@ -2154,7 +2154,7 @@ function renderMat(state, current) {
   heading.append(context);
   const help = document.createElement('p');
   help.className = 'muted';
-  help.textContent = 'Stage 1 → Stage 2 → Stage 3 → Stage 4. A Stage 4 capstone opens from any Stage 3 of its family and gives a passive instead of spells. Select a mutation to inspect it. Lines show required mutations; one pick acquires the whole mutation.';
+  help.textContent = `${stageClimb()}. A ${stageLabel(4)} capstone opens from any ${stageLabel(3)} of its family and gives a passive instead of spells. Select a mutation to inspect it. Lines show required mutations; one pick acquires the whole mutation.`;
   const picker = document.createElement('div');
   picker.className = 'creature-picker';
   picker.setAttribute('aria-label', 'Inspect mutation progress');

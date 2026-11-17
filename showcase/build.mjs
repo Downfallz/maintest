@@ -3,13 +3,13 @@ import { cp, mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/pro
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { EVOLUTION_REGISTRY } from '../table/battle-evolution-art.js';
-import { resolveEvolution } from '../table/battle-evolution.js';
 import { loadCatalogue } from './catalogue.mjs';
 import { english, french } from './copy.mjs';
 import { copyrightPage } from './copyright.mjs';
 import { guidePage } from './guide.mjs';
 import { routes } from './layout.mjs';
 import { specimenPath } from './lore.mjs';
+import { observe } from './observation.mjs';
 import { page } from './page.mjs';
 import { privacyPage } from './privacy.mjs';
 import { rulesPage } from './rules.mjs';
@@ -29,17 +29,7 @@ const catalogue = await loadCatalogue();
 // The table's rulebook, the files its own page reads (ADR 0188, 0193): the showcase publishes the same book.
 const books = Object.fromEntries(await Promise.all([['en', 'rules.json'], ['fr', 'rules.fr.json']].map(async ([lang, file]) =>
   [lang, JSON.parse(await readFile(new URL(`table/${file}`, source), 'utf8'))])));
-const packages = new Map(catalogue.nodes.map(t => [t.id, t]));
-const owned = [];
-const specimen = [EVOLUTION_REGISTRY.base()];
-for (const shortId of specimenPath) {
-  const id = `tier:${shortId}:v1`, node = packages.get(id);
-  if (!node || !node.prerequisites.every(p => owned.includes(p)) || (node.anyOf.length && !node.anyOf.some(p => owned.includes(p))))
-    throw new Error(`Unreachable observation step ${id}`);
-  owned.push(id);
-  const visual = resolveEvolution({ acquiredTiers: owned }, packages, { log: { order: () => owned } });
-  specimen.push(EVOLUTION_REGISTRY.art(visual.artworkId));
-}
+const { specimen } = observe(catalogue, specimenPath);
 // Publish only the ordinary forms and this observation's artwork. The remaining hybrids are discovered in play.
 const portraits = new Set([...specimen.map(art => art.file),
   ...catalogue.nodes.filter(t => t.visual.artwork).map(t => EVOLUTION_REGISTRY.art(t.visual.artwork).file)]);

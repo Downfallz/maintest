@@ -120,7 +120,7 @@ export function atlasControls(onVisibility: () => void) {
       column.dataset.family = rootId; columns.push(column);
       const held = members.filter(pack => pack.status === 'known').reduce((top, pack) => Math.max(top, pack.level), 0);
       const head = node('header', '', 'atlas-family-head');
-      head.append(sigil(root.visual?.family ?? root.name.toLowerCase()), node('strong', root.name), node('small', held ? `Stage ${held} held` : 'Not started'));
+      head.append(sigil(root.visual?.family ?? root.name.toLowerCase()), node('strong', root.name), node('small', held ? `${stageLabel(held)} held` : 'Not started'));
       const links = document.createElementNS(svgNS, 'svg'); links.classList.add('atlas-links'); links.setAttribute('aria-hidden', 'true');
       column.append(links, head);
       // One line per stage, each mutation under the ones it grows from, so its links run straight down.

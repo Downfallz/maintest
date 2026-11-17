@@ -172,8 +172,8 @@ test('later offers compare multiple upgrades and multiclass roots without forcin
   const h = await mount(page, { content, ids: ['future', 'upgrade2', 'root1', 'root2'], allies: [{ ...roster[0], acquiredTiers: ['root0'] }] });
   await expect(page.locator('[data-mutation]')).toHaveCount(4);
   await expect(page.locator('[data-mutation="root0"]')).toHaveCount(0);
-  await expect(page.locator('[data-mutation="future"]')).toHaveAccessibleName(/Brute · Stage 2/);
-  await expect(page.locator('[data-mutation="root2"]')).toHaveAccessibleName(/Warped · Stage 1/);
+  await expect(page.locator('[data-mutation="future"]')).toHaveAccessibleName(/Brute · Stage II\b/);
+  await expect(page.locator('[data-mutation="root2"]')).toHaveAccessibleName(/Warped · Stage I\b/);
   await expect(page.locator('.mutation-node[data-status=known]')).toContainText('Brute');
   await page.locator('[data-mutation="future"]').click(); await page.clock.runFor(200);
   await page.screenshot({ path: info.outputPath('mutation-later.jpg'), type: 'jpeg', quality: 90 });
