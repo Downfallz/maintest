@@ -289,9 +289,11 @@ test('live playback shows the necromantic recipients apart from the caster blood
   await expect(page.locator('[data-creature="5"] .creature-effect')).toContainText('Bleed 2');
   await expect(page.locator('[data-creature="6"] .creature-effect')).toBeEmpty();
   await fits(page); await page.screenshot({ path: info.outputPath('art4-live-necromancy.png') });
-  // The player's own cast plays out and moves on by itself (ADR 0141).
-  await page.clock.runFor(WINDUP_MS + IMPACT_MS + SETTLE_MS);
-  await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'decision');
+  // The player's own cast plays out and moves on by itself (ADR 0141). The clock jumps from one of the playback's
+  // timers to the next, the impact's end and then the settle, rather than drawing every frame of the 1440 × 1000
+  // scene in software between them: that took a loaded runner past the test's 30 seconds (#749).
+  await page.clock.fastForward(IMPACT_MS); await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'resolved');
+  await page.clock.fastForward(SETTLE_MS); await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'decision');
   expect(h.errors).toEqual([]);
 });
 
