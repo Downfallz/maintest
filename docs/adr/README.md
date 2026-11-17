@@ -197,7 +197,7 @@ UPDATE_INDEXES=1 dotnet test --project tests/DownfallArena.Architecture.Tests
 | [0172](0172-let-named-player-accounts-be-the-operator.md) | Let named player accounts be the operator | Accepted. Amends [0081](0081-a-host-of-tables-found-by-their-tokens.md) |
 | [0173](0173-let-players-react-with-a-fixed-set-of-messages.md) | Let players react with a fixed set of messages, and notify nobody of one | Accepted |
 | [0174](0174-keep-when-each-account-last-signed-in-and-was-seen.md) | Keep when each account last signed in and was last seen | Accepted |
-| [0175](0175-serve-the-table-at-its-own-domain-behind-cloudflare.md) | Serve the table at its own domain, behind Cloudflare | Accepted. Amends [0080](0080-host-the-table-on-azure-container-apps.md); its apex is decided in [0185](0185-serve-the-public-showcase-from-cloudflare-pages.md) |
+| [0175](0175-serve-the-table-at-its-own-domain-behind-cloudflare.md) | Serve the table at its own domain, behind Cloudflare | Accepted. Amends [0080](0080-host-the-table-on-azure-container-apps.md). The apex it leaves open is decided in [0185](0185-serve-the-public-showcase-from-cloudflare-pages.md): Cloudflare Pages serves the public showcase there. |
 | [0176](0176-let-the-operator-void-a-match-with-a-reason.md) | Let the operator void a match with a reason, and withdraw a finished one's result | Accepted. Amends [0163](0163-keep-a-table-on-the-content-it-began-on-and-void-what-no-longer-replays.md) and [0168](0168-keep-match-results-in-azure-table-storage.md) |
 | [0177](0177-let-the-operator-close-registration-and-post-a-notice.md) | Let the operator close registration and post a notice | Accepted |
 | [0178](0178-let-the-operator-suspend-an-account.md) | Let the operator suspend an account | Accepted |
