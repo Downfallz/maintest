@@ -22,3 +22,7 @@
 *.csproj text
 *.props text
 *.targets text
+
+# The reviewers' memory is lines appended by pull requests in flight: a local merge keeps both sides' lines
+# (new lessons go to one file per branch, so this only covers MEMORY.md and lessons.md).
+.claude/agent-memory/** merge=union
