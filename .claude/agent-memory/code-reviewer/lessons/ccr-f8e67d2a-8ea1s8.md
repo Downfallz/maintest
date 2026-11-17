@@ -1,0 +1,5 @@
+# code-reviewer lessons (branch ccr-f8e67d2a-8ea1s8)
+
+- A value threaded into an existing notice or listing (casts into PushNotices.Payload, recap into /api/lobby/mine) tested only at its pure formatter: pass `null` at the call site and loosen the guard's pattern (`[{ Person: not null } seat]` -> `[{ } seat, ..]`); both mutations passed all 85 tests (R4 recap, PushNotices.cs:182, LobbyApi.cs:1589, e18869f).
+- Second time (R1 recap, then R4): a per-view storage read added to a listing route multiplies by the rows: /api/lobby/mine now reads the journal's last write and the seat's visit for every begun own table, on every inbox refresh, and the journal read duplicates DescribeAsync's AnswerByAsync; belongs in `.claude/rules/host.md` ("count round trips per row") (R4 recap, LobbyApi.RecapAsync, e18869f).
+- A non-essential read added inside a fire-and-forget notice's try (SinceVisitAsync before SendAsync) turns its failure into a lost notice via the outer catch-all: degrade the extra to null instead (R4 recap, PushNotices.cs:182, e18869f).
