@@ -45,6 +45,22 @@ public sealed class OperatorActionsTests
         past.Actions.Select(action => action.Target).ShouldBe(["t-4", "t-3", "t-2", "t-1", "t-0"]);
     }
 
+    [Fact]
+    public async Task Actions_noted_at_one_instant_are_read_newest_first_in_the_order_they_were_noted()
+    {
+        // One request notes a spam mark and the mute it earned at one instant (#674): the tab shows the mute on top.
+        var actions = new OperatorActions(_log, new FixedTimeProvider(FixedTimeProvider.Default));
+        for (var index = 0; index < 12; index++)
+        {
+            await actions.RecordAsync("mark", OperatorActions.OpenTable, $"t-{index}", null, Cancel);
+        }
+
+        var page = await actions.PageAsync(1, Cancel);
+
+        page.Actions.Select(action => action.Target).ShouldBe([.. Enumerable.Range(0, 12).Reverse().Select(index => $"t-{index}")]);
+        page.Actions.ShouldAllBe(action => action.At == FixedTimeProvider.Default);
+    }
+
     private sealed class Kept : IOperatorLog
     {
         private readonly List<OperatorAction> _kept = [];
