@@ -32,7 +32,7 @@ async function mount(page, { assistedFirst = false, book = null, upkeepAtEnd = f
       allies: [1, 2, 3].map(number => creature(number)), enemies: [creature(4, Math.max(1, 9 - 3 * state.answered)), creature(5), creature(6)],
       timeline: done || assisted ? [] : [{ creature: order[state.answered], owner: 'Player1', speed: 'Standard' }], speedChoices: [] };
     const tutorial = { order: lesson.order, of: 4, title: lesson.title, teaches: lesson.teaches,
-      assisted: state.handedBack ? [] : ['Evolution', 'Speed', 'TieOrder', 'Intent', 'Target'], steps: lesson.steps, shown: Math.min(order.length, state.answered + (assisted ? 0 : 1)), done };
+      assisted: state.handedBack ? [] : ['Evolution', 'Speed', 'TieOrder', 'Intent', 'Target'], steps: lesson.steps, shown: Math.min(order.length, state.answered + (assisted ? 0 : 1)), done: done && !state.notYetDone };
     const question = assisted || (done && state.handedBack) ? { waitingFor: 'Speed', waitingAsked: state.asked, waitingCreature: 1, options: { speed: { missing: [1, 2, 3] } } }
       : done ? { waitingFor: null }
         : { waitingFor: 'Action', waitingAsked: state.asked, waitingCreature: order[state.answered], options: { action: { actor: order[state.answered], spells: [{ spell: 'shock', legalTargets: legal([4, 5, 6]) }] } } };
@@ -206,6 +206,32 @@ test('a tutorial done opens nothing over its end card: the next round\'s upkeep 
   await page.locator('#coach-leave').click({ timeout: 5000 });
   await expect(page).toHaveTitle('Home');
   expect(state.said).toEqual(['done']);
+  expect(state.errors).toEqual([]);
+});
+
+test('an upkeep already open when the tutorial is done is put away: the end card and its Leave are in front', async ({ page }) => {
+  // The host notes the lesson done apart from the seat's view (TutorialPlay), so one view can bring the next round's
+  // upkeep before another says the lesson is done (#771). Read under Settings, that upkeep opens on its own once
+  // Settings closes; the view that says done must not leave it over the end card.
+  test.setTimeout(120000);
+  const state = await mount(page, { upkeepAtEnd: true });
+  state.holdEnd = true;
+  await page.locator('#practice-brief-begin').click();
+  for (let index = 0; index < lesson.steps.length; index++) await playStep(page, state, index);
+  await page.locator('#settings').click();
+  await expect(page.locator('#settings-dialog')).toBeVisible();
+  state.held = null; state.notYetDone = true;
+  await page.evaluate(() => window.notifyBattle());
+  await expect(page.locator('#round-number')).toContainText('3');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#upkeep-dialog')).toBeVisible();
+  state.notYetDone = false;
+  await page.evaluate(() => window.notifyBattle());
+  await expect(page.locator('#coach-step')).toHaveText('TUTORIAL COMPLETE');
+  await expect(page.locator('#upkeep-dialog')).toBeHidden();
+  await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: '<title>Home</title>' }));
+  await page.locator('#coach-leave').click({ timeout: 5000 });
+  await expect(page).toHaveTitle('Home');
   expect(state.errors).toEqual([]);
 });
 

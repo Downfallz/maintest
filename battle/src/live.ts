@@ -597,8 +597,11 @@ function render() {
   const canAuto = () => ready && !rendererFailed && !document.hidden && !recapPending && $('battle').dataset.connection === 'live' &&
     !playbackState.active && !replay.active && !action.target && !action.sending &&
     !planning.model().opened && !planning.model().sending && !document.querySelector('dialog[open]') && !orderUI.isOpening() && !orderUI.isReading();
-  // A tutorial done keeps its end card in front: the next round's upkeep and turn order wait (#771).
+  // A tutorial done keeps its end card in front (#771): the next round's upkeep counts as read, and put away if it
+  // opened before the host said the lesson was done; its turn order does not open by itself.
   const roundHeld = holdsTheNextRound(view);
+  if (roundHeld && upkeep.model().pending) upkeep.presented();
+  if (roundHeld && $<HTMLDialogElement>('upkeep-dialog').open) queueMicrotask(() => $<HTMLDialogElement>('upkeep-dialog').close());
   upkeepUI.render(canAuto() && !roundHeld);
   const liveMarkers = upkeepUI.markers(board.round);
   if (liveMarkers) text('round-phase', 'UPKEEP');
