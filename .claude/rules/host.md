@@ -21,9 +21,12 @@ paths:
   (`Feedback.Unavailable`, `Jobs.Failed`) with a fixed message; the exception goes to the console. What escapes
   is answered 500 `Host.Unexpected` by `HttpHost`, which never puts the exception's text in the answer (#692).
 - A guard that reads and then writes (a count, a limit, a claim) runs under one gate in the API process, or two
-  requests both read the old value and both write.
-- `HttpHost` reads at most 64 KB of body and answers 413 `Host.BodyTooLarge` past it (#691). A route that needs
-  more says why where its host is built, as the studio does.
+  requests both read the old value and both write (#692).
+- `HttpHost` reads at most 64 KB of body and answers 413 `Host.BodyTooLarge` past it (#691). The largest table
+  body is feedback, about 40 KB at worst in UTF-8. A host that needs more says why where it is built, as the studio does.
+- A console line is one line (the ops report reads it a line at a time) and names an operator as `by <name>:`,
+  `by <name>.` or `by <name> (`, the shapes `mask()` in `scripts/ops/report.mjs` hides. It never prints a
+  path that carries a credential (`/j/<code>`).
 - A new route has a host test in `tests/DownfallArena.Cli.Tests/Table`, a line in `table/README.md#routes`,
   and its behaviour in `docs/reference/commands.md`.
 - What a seat holds face down never reaches the other seat's view, a log, or a notification.

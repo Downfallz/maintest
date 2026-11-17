@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
 using DownfallArena.Cli.Studio;
+using DownfallArena.Cli.Table;
 
 namespace DownfallArena.Cli.Hosting;
 
@@ -25,7 +26,6 @@ internal sealed class HttpHost : IDisposable
 
     private readonly HttpListener _listener = new();
     private readonly Func<HttpListenerRequest, string, Task<StudioResponse>> _answer;
-    private readonly int _maxBodyBytes;
 
     /// <summary>
     /// The largest body a host reads when it is not told otherwise. Every table route takes a few hundred bytes
@@ -45,7 +45,7 @@ internal sealed class HttpHost : IDisposable
         ArgumentOutOfRangeException.ThrowIfLessThan(maxBodyBytes, 1);
 
         _answer = answer;
-        _maxBodyBytes = maxBodyBytes;
+        MaxBodyBytes = maxBodyBytes;
         IsLoopback = OnlyThisMachine(address);
 
         // Plain HTTP, and it stays plain. HTTPS here would mean a certificate two phones on a home network
@@ -85,6 +85,9 @@ internal sealed class HttpHost : IDisposable
         $"http://{(Bindable(address, wildcardNeedsReservation) == AnyInterface ? "+" : address)}:{port}/";
 
     public string Url { get; }
+
+    /// <summary>The largest body this host reads into memory.</summary>
+    public int MaxBodyBytes { get; }
 
     /// <summary>Whether only this machine can reach it, which is what the table has to say out loud.</summary>
     public bool IsLoopback { get; }
@@ -199,19 +202,37 @@ internal sealed class HttpHost : IDisposable
 
     private async Task HandleAsync(HttpListenerContext context)
     {
-        StudioResponse response;
+        string? body;
         try
         {
-            response = await ReadBodyAsync(context.Request, _maxBodyBytes) is { } body
-                ? await _answer(context.Request, body)
-                : Problem(413, "Host.BodyTooLarge", $"A request body is at most {_maxBodyBytes} bytes.");
+            body = await ReadBodyAsync(context.Request, MaxBodyBytes);
         }
-        catch (Exception exception)
+        catch (Exception exception) when (exception is HttpListenerException or ObjectDisposedException or IOException)
         {
-            // A route that throws is a bug. Its text can name a storage account, a blob path or a file on this
-            // machine (#692), so it goes to the console, which the operator reads, and never to the answer.
-            Console.Error.WriteLine($"  {context.Request.HttpMethod} {context.Request.Url?.AbsolutePath} failed: {exception}");
-            response = Problem(500, "Host.Unexpected", "Something went wrong on the host. The request was not completed.");
+            // The browser went away mid-request; there is nobody left to answer.
+            context.Response.Abort();
+            return;
+        }
+
+        StudioResponse response;
+        if (body is null)
+        {
+            response = Problem(413, "Host.BodyTooLarge", $"The request is too large. The limit is {MaxBodyBytes} bytes.");
+        }
+        else
+        {
+            try
+            {
+                response = await _answer(context.Request, body);
+            }
+            catch (Exception exception)
+            {
+                // A route that throws is a bug. Its text can name a storage account, a blob path or a file on
+                // this machine (#692), so it goes to the console, which the operator reads, and never to the
+                // answer. One line, because the ops report reads the console a line at a time.
+                Console.Error.WriteLine($"  {context.Request.HttpMethod} {Loggable(context.Request.Url?.AbsolutePath)} failed: {OneLine(exception)}");
+                response = Problem(500, "Host.Unexpected", "Something went wrong on the host. Try again later.");
+            }
         }
 
         try
@@ -262,7 +283,8 @@ internal sealed class HttpHost : IDisposable
             return null;
         }
 
-        var buffer = new byte[limit + 1];
+        // One byte past what may be read, so a body that runs over is seen to; no more than the length announced.
+        var buffer = new byte[request.ContentLength64 >= 0 ? request.ContentLength64 + 1 : limit + 1];
         var read = 0;
         int last;
         while (read < buffer.Length && (last = await request.InputStream.ReadAsync(buffer.AsMemory(read))) > 0)
@@ -270,8 +292,17 @@ internal sealed class HttpHost : IDisposable
             read += last;
         }
 
-        return read > limit ? null : request.ContentEncoding.GetString(buffer, 0, read);
+        // A byte order mark is dropped, as a StreamReader would have: a script can send one, and JSON refuses it.
+        return read > limit ? null : request.ContentEncoding.GetString(buffer, 0, read).TrimStart('\uFEFF');
     }
+
+    /// <summary>A path as the console may hold it: a join code is a seat's credential, so it is never written.</summary>
+    internal static string? Loggable(string? path) =>
+        path is not null && JoinCodes.Names(path) ? $"{JoinCodes.Prefix}…" : path;
+
+    /// <summary>An exception as one console line: its type and message, without the stack or a line break.</summary>
+    internal static string OneLine(Exception exception) =>
+        $"{exception.GetType().Name}: {exception.Message}".ReplaceLineEndings(" ");
 
     private static StudioResponse Problem(int status, string code, string message) =>
         StudioResponse.OfJson(new { error = code, message }, JsonSerializerOptions.Web, status);

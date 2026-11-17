@@ -32,11 +32,14 @@ internal sealed class StudioServer : IDisposable
         // The studio saves whole content files, and the balance knobs alone are past 128 KB: the table's limit
         // would refuse them. It answers this machine only, so the limit here is a guard against a mistake rather
         // than against a guest.
-        _host = new HttpHost(HttpHost.Loopback, port, AnswerAsync, MaxBodyBytes);
+        _host = new HttpHost(HttpHost.Loopback, port, AnswerAsync, BodyLimit);
     }
 
     /// <summary>The largest body the studio reads: a content file, with room to grow.</summary>
-    internal const int MaxBodyBytes = 4 * 1024 * 1024;
+    private const int BodyLimit = 4 * 1024 * 1024;
+
+    /// <summary>The largest body the studio's host reads, as it was built.</summary>
+    internal int MaxBodyBytes => _host.MaxBodyBytes;
 
     public string Url => _host.Url;
 
