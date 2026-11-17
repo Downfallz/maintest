@@ -207,10 +207,8 @@ public sealed class FeedbackAdminApiTests : IDisposable
         var sheet = Read(await AskAsync("GET", $"{FeedbackAdminApi.Route}/{ids[0]}"));
         sheet.GetProperty("mute").GetProperty("why").GetString().ShouldBe(FeedbackMute.BySpam);
         (await Players().HandleAsync("POST", Report(), table.Seats[0].Token, SignedOut, Address, null)).Status.ShouldBe(403);
-        // The mark and the mute it earned are noted in one request, at one instant: their order between them is not kept.
-        var noted = await ActivityAsync();
-        noted[..2].ShouldBe([$"feedback.mute {ids[2]} 3 marked as spam in 30 days", $"feedback.spam {ids[2]}"], ignoreOrder: true);
-        noted[2..].ShouldBe([$"feedback.spam {ids[1]}", $"feedback.spam {ids[0]}"]);
+        // The mark and the mute it earned are noted in one request, at one instant: the mute, noted second, reads on top (#674).
+        (await ActivityAsync()).ShouldBe([$"feedback.mute {ids[2]} 3 marked as spam in 30 days", $"feedback.spam {ids[2]}", $"feedback.spam {ids[1]}", $"feedback.spam {ids[0]}"]);
     }
 
     [Fact]

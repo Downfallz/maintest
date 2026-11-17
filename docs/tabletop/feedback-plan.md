@@ -349,7 +349,7 @@ and they are the first thing every player can use.
    days mutes on its own, counted outside the write gate so players' sending never waits on it. `SendFeedback`
    refuses a muted sender `403 Feedback.Muted` before its guards. The Activity lines are `feedback.status`,
    `feedback.convert`, `feedback.spam`, `feedback.mute` and `feedback.unmute`; a spam mark and the mute it earns
-   are noted at one instant, so their order between them is not kept. The Overview's *Feedback waiting* card is in
+   are noted at one instant, and read in the order noted: the mute above the mark that earned it (#674). The Overview's *Feedback waiting* card is in
    the warning colour while a bug report is new or the host is full. The tab's ids start with `admin-feedback-`,
    because every page's Report or suggest sheet already uses `feedback-`. The privacy panel and policy say the
    operator can stop a player's feedback for 30 days. Left: a page learns that its player is muted only when it
