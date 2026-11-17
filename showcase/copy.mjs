@@ -6,6 +6,11 @@ export const english = {
   pitch: 'You and your opponent start with the same three creatures. During the duel, one might grow armour while another learns to heal. You can also develop both abilities on the same creature.',
   playNote: 'Beta · Free to play · No ads · No in-game purchases',
   storyLink: 'From the creator', copyright: 'Copyright',
+  rules: 'Rules', readRules: 'Read the rules',
+  rulesDescription: 'The official rulebook of Downfall Instinct: how a match is played, part by part, with the numbers the game uses.',
+  rulesLead: 'How a match is played, part by part. It is the book the game opens from its menu, and every number in it is the one the game plays.',
+  rulesInGame: 'Open the rules in the game',
+  rulesDrawn: date => 'Every number in this book is drawn from the rule set and the content the game plays' + (date ? `. Last changed ${date}.` : '.'),
   explore: 'How to play', specimen: 'Colossus', specimenLine: 'Brute lineage · Stage III',
   duelTitle: 'How a round works', duelLead: 'You win by taking down the opposing team. A well-timed heal can keep a wounded ally alive long enough to take its turn.',
   moves: [
@@ -49,6 +54,11 @@ export const french = {
   pitch: 'Ton adversaire et toi commencez avec les trois mêmes créatures. En plein duel, l’une peut se couvrir de plaques et une autre apprendre à soigner. Tu peux aussi développer les deux capacités chez la même bête.',
   playNote: 'Bêta · Gratuit · Sans pub · Sans achats intégrés',
   storyLink: 'Le créateur', copyright: 'Droit d’auteur',
+  rules: 'Règles', readRules: 'Lire les règles',
+  rulesDescription: 'Le livre de règles officiel de Downfall Instinct : comment se joue une partie, chapitre par chapitre, avec les nombres du jeu.',
+  rulesLead: 'Comment se joue une partie, chapitre par chapitre. C’est le livre que le jeu ouvre depuis son menu, et chaque nombre y est celui du jeu.',
+  rulesInGame: 'Ouvrir les règles dans le jeu',
+  rulesDrawn: date => 'Chaque nombre de ce livre vient des règles et du contenu du jeu' + (date ? `. Dernière modification le ${date}.` : '.'),
   explore: 'Comment jouer', specimen: 'Colosse', specimenLine: 'Lignée Brute · Stade III',
   duelTitle: 'Comment se joue un round', duelLead: 'Tu gagnes en éliminant l’équipe adverse. Un soin au bon moment peut garder un allié blessé en vie assez longtemps pour qu’il joue son tour.',
   moves: [

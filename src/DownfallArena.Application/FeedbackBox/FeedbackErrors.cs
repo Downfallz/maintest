@@ -23,6 +23,10 @@ public static class FeedbackErrors
 
     public static readonly DomainError Grouped = new("Feedback.Grouped", "Other ideas were merged into this one, so it stays an idea.");
 
+    public static readonly DomainError NotABug = new("Feedback.NotABug", "Only a bug report is reproduced: turn this idea into a bug report first.");
+
+    public static readonly DomainError NoPosition = new("Feedback.NoPosition", "This report does not say the round and seat it was sent from, at a table or in a practice: there is nothing to cut.");
+
     public static readonly DomainError NoSender = new("Feedback.NoSender", "Nobody can be muted for this feedback: its sender's account was deleted, or this host keeps no account activity.");
 
     public static readonly DomainError Unavailable = new("Feedback.Unavailable", "The feedback could not be read just now. Try again in a few minutes.");

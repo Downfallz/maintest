@@ -34,7 +34,7 @@ public sealed class TutorialFileTests
         var step = lesson.Steps[0];
         (step.Kind, step.Round, step.Creature).ShouldBe((PlayerOptionsKind.Action, 2, CreatureId.From(2)));
         step.Says.Count.ShouldBe(2);
-        step.Concepts.ShouldBe(["health"]);
+        step.Concepts.ShouldBe(["intent", "health"]);
         step.PointsAt.ShouldBe(new LessonPointer(CreatureId.From(4), null));
     }
 
@@ -203,6 +203,27 @@ public sealed class TutorialFileTests
         }
 
         orders.Order().ShouldBe(Enumerable.Range(1, orders.Count));
+    }
+
+    /// <summary>
+    /// The series of docs/tabletop/onboarding-plan.md (O5): four tutorials in the rulebook's order from the combat
+    /// out, the first two each teaching some kinds of question, the last two every kind.
+    /// </summary>
+    [Fact]
+    public void The_repository_ships_the_series_of_four_in_order_with_what_each_teaches()
+    {
+        var series = System.IO.Directory.GetFiles(Directory, "*.json")
+            .Select(file => ScenarioFile.Read(File.ReadAllText(file)).Tutorial.ShouldNotBeNull())
+            .OrderBy(lesson => lesson.Order)
+            .Select(lesson => (lesson.Order, lesson.Title, Teaches: lesson.Teaches.Order().ToArray()))
+            .ToList();
+
+        PlayerOptionsKind[] everything = [PlayerOptionsKind.Evolution, PlayerOptionsKind.Speed, PlayerOptionsKind.TieOrder, PlayerOptionsKind.Action];
+        series.Select(one => (one.Order, one.Title)).ShouldBe([(1, "Your first combat"), (2, "Who acts first"), (3, "Grow by mutating"), (4, "To the end")]);
+        series[0].Teaches.ShouldBe([PlayerOptionsKind.Action]);
+        series[1].Teaches.ShouldBe([PlayerOptionsKind.Speed, PlayerOptionsKind.TieOrder, PlayerOptionsKind.Action]);
+        series[2].Teaches.ShouldBe(everything);
+        series[3].Teaches.ShouldBe(everything);
     }
 
     private static async Task<Result> ReachAsync(string text)

@@ -298,8 +298,8 @@ test('the operators\' actions are listed twenty a page, newest first, a table\'s
   await expect(page.locator('#activity li')).toHaveCount(3);
 });
 
-// The Feedback tab (feedback plan, R3): a bug report's sheet with its position, moved to an idea, dismissed as spam,
-// its sender stopped; each answer the host's.
+// The Feedback tab (feedback plan, R3): a bug report's sheet with its position, its round cut as a scenario (R4), moved
+// to an idea, dismissed as spam, its sender stopped; each answer the host's.
 const feedbackReport = {
   id: '20261116T113000000Z-abc123', kind: 'bug', category: 'rules', status: 'new', reason: null, at: new Date(Date.now() - 30 * 60000).toISOString(),
   text: 'The bleed did not tick after the stun, and the creature that should have bled at the top of the round kept every point of its health.',
@@ -309,7 +309,7 @@ const feedbackReport = {
   context: { table: '20261116-110000-a-long-table-id', seat: 'player1', round: 3, subPhase: 'Upkeep', journalLength: 42, content: 'f3e8a42ddbd02c11', rules: 'Rules 3v3', engine: 'abc', position: {
     allies: [{ name: 'Ravager', health: 7, maxHealth: 10, energy: 2, isStunned: true, conditions: [{ effect: { kind: 'Bleed' } }] }],
     enemies: [{ name: 'Warden', health: 12, maxHealth: 12, energy: 1, isStunned: false, conditions: [] }] } },
-  session: '/session/20261116-110000-a-long-table-id', underWay: true, actions: ['seen', 'reproduced', 'dismiss', 'spam', 'toIdea', 'diagnose', 'mute'],
+  session: '/session/20261116-110000-a-long-table-id', underWay: true, actions: ['reproduce', 'seen', 'reproduced', 'dismiss', 'spam', 'toIdea', 'diagnose', 'mute'],
 };
 const feedbackRow = one => ({ id: one.id, kind: one.kind, category: one.category, line: one.text.slice(0, 120), status: one.status, reason: one.reason, spam: one.reason === 'spam', at: one.at,
   table: one.context?.table ?? null, round: one.context?.round ?? null, additions: 0 });
@@ -320,11 +320,11 @@ test('a host that keeps no feedback shows no Feedback tab', async ({ page }) => 
   await expect(page.locator('#admin-feedback-off')).toBeVisible();
 });
 
-test('a bug report is read beside its position, turned into an idea, dismissed as spam, and its sender stopped', async ({ page }, info) => {
+test('a bug report is read beside its position, its round cut, turned into an idea, dismissed as spam, and its sender stopped', async ({ page }, info) => {
   let sheet = { ...feedbackReport };
   const idea = { ...feedbackReport, id: '20261116T100000000Z-def456', kind: 'idea', category: 'lobby', text: 'I wanted to invite a friend by name.', context: null, session: null, underWay: false, actions: [] };
   // What the host offers, as FeedbackAdminApi decides it, for the sheet as it now stands.
-  const offered = one => [one.status !== 'seen' && 'seen', one.kind === 'bug' && one.status !== 'reproduced' && 'reproduced',
+  const offered = one => [one.kind === 'bug' && 'reproduce', one.status !== 'seen' && 'seen', one.kind === 'bug' && one.status !== 'reproduced' && 'reproduced',
     ...(one.status === 'dismissed' ? [] : ['dismiss', 'spam', one.kind === 'bug' ? 'toIdea' : 'toBug']), one.underWay && 'diagnose', one.mute ? 'unmute' : 'mute'].filter(Boolean);
   const asked = [];
   await page.route(/\/api\/admin\/feedback(\?.*)?$/, route => {
@@ -336,6 +336,7 @@ test('a bug report is read beside its position, turned into an idea, dismissed a
     const path = new URL(request.url()).pathname.replace('/api/admin/feedback/', '');
     const body = request.method() === 'GET' || request.method() === 'DELETE' ? null : request.postDataJSON();
     asked.push(`${request.method()} ${path.replace(feedbackReport.id, 'id')}${body && Object.keys(body).length ? ` ${JSON.stringify(body)}` : ''}`);
+    if (path.endsWith('/reproduce')) sheet = { ...sheet, reproduction: { id: 'sc-20261116-113500-0a1b2c3d', link: '/battle?scenario=sc-20261116-113500-0a1b2c3d' } };
     if (path.endsWith('/kind')) sheet = { ...sheet, kind: body.kind, status: 'seen' };
     if (path.endsWith('/status')) sheet = { ...sheet, status: body.status, reason: body.reason ?? null };
     if (path.endsWith('/mute')) sheet = { ...sheet, mute: request.method() === 'POST' ? { at: new Date().toISOString(), until: new Date(Date.now() + 30 * 86400000).toISOString(), by: 'operator', why: 'operator', daysLeft: 30 } : null };
@@ -367,12 +368,18 @@ test('a bug report is read beside its position, turned into an idea, dismissed a
   expect(await page.evaluate(() => { const body = document.querySelector('#admin-feedback-sheet .home-dialog-body'); return body.scrollWidth <= body.clientWidth; })).toBe(true);
   await page.screenshot({ path: info.outputPath('admin-feedback-sheet.png') });
 
+  await expect(page.locator('#admin-feedback-reproduction')).toBeHidden();
+  await page.locator('#admin-feedback-reproduce').click();
+  await expect(page.locator('#admin-feedback-sheet-said')).toHaveText('Round 3 is cut, in the reporter\'s seat. Play it from the link.');
+  await expect(page.locator('#admin-feedback-reproduction')).toHaveAttribute('href', '/battle?scenario=sc-20261116-113500-0a1b2c3d');
+
   await page.locator('#admin-feedback-to-idea').click();
   await expect(page.locator('#admin-feedback-sheet-said')).toHaveText('Now an idea. Its words and position are kept.');
   await expect(page.locator('#admin-feedback-sheet-said')).toBeFocused();
   await expect(page.locator('#admin-feedback-sheet-kind')).toHaveText('Idea · Seen');
   await expect(page.locator('#admin-feedback-to-bug')).toBeVisible();
   await expect(page.locator('#admin-feedback-reproduced')).toBeHidden();
+  await expect(page.locator('#admin-feedback-reproduce')).toBeHidden();
 
   await page.locator('#admin-feedback-dismiss').click();
   await expect(page.locator('#admin-feedback-sheet-said')).toHaveClass(/refused/);
@@ -388,7 +395,7 @@ test('a bug report is read beside its position, turned into an idea, dismissed a
   await page.locator('#admin-feedback-close').click();
   await page.selectOption('#admin-feedback-kind', 'bug');
   await expect.poll(() => asked.at(-1)).toBe('GET ?kind=bug&status=open');
-  expect(asked.filter(line => !line.startsWith('GET ?'))).toEqual(['GET id', 'PUT id/kind {"kind":"idea"}', 'PUT id/status {"status":"dismissed","reason":"spam"}', 'POST id/mute', 'DELETE id/mute']);
+  expect(asked.filter(line => !line.startsWith('GET ?'))).toEqual(['GET id', 'POST id/reproduce', 'PUT id/kind {"kind":"idea"}', 'PUT id/status {"status":"dismissed","reason":"spam"}', 'POST id/mute', 'DELETE id/mute']);
 });
 
 // Ideas grouped (feedback plan, I1): the ideas listed by how many asked, one merged into another, the group read on

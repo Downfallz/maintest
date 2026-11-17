@@ -13,7 +13,9 @@ namespace DownfallArena.Cli.Table;
 /// <c>GET .../&lt;id&gt;</c> is one sheet, the position the player attached included; <c>PUT .../&lt;id&gt;/status
 /// {"status","reason?"}</c> marks it seen, reproduced or dismissed (<c>"reason":"spam"</c> is the spam mark);
 /// <c>PUT .../&lt;id&gt;/kind {"kind"}</c> turns a bug report into an idea or back; <c>POST</c> and <c>DELETE
-/// .../&lt;id&gt;/mute</c> stop its sender from sending feedback for 30 days, and lift it. Each change is an Activity line;
+/// .../&lt;id&gt;/mute</c> stop its sender from sending feedback for 30 days, and lift it; <c>POST .../&lt;id&gt;/reproduce</c>
+/// cuts a bug report's round as a match scenario in its sender's seat (R4) and answers the sheet with its link. Each
+/// change is an Activity line;
 /// asked again, a change writes and notes nothing. The sheet says which of its actions apply, so the page decides none.
 /// </summary>
 internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions? stored, TimeProvider clock)
@@ -24,6 +26,9 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
 
     /// <summary>What operators do from the panel (A6): every change to feedback is noted with the rest.</summary>
     public OperatorNotes Notes { get; set; } = OperatorNotes.None;
+
+    /// <summary>The Scenarios tab's cutting (R4), through which Reproduce cuts; none on a host that keeps no scenarios.</summary>
+    public ScenarioAdminApi? Scenarios { get; set; }
 
     public static bool Names(string path) => path == Route || path.StartsWith(Route + "/", StringComparison.Ordinal);
 
@@ -50,6 +55,7 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
             ("PUT", [var id, "status"]) => await StatusAsync(id, body, operatorName),
             ("PUT", [var id, "kind"]) => await KindAsync(id, body, operatorName),
             ("POST", [var id, "merge"]) => await MergeAsync(id, body, operatorName),
+            ("POST", [var id, "reproduce"]) when Scenarios is not null => await ReproduceAsync(id, operatorName),
             ("POST", [var id, "mute"]) => await MuteAsync(id, operatorName),
             ("DELETE", [var id, "mute"]) => await UnmuteAsync(id, operatorName),
             _ => Error("Feedback.NoRoute", $"No such route: {method} {path}", 404),
@@ -110,6 +116,10 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
         var record = table is null || stored is null ? null : await stored.RecordAsync(table);
         var underWay = record is { Status: TableRecord.Open, Void: false };
         var now = clock.GetUtcNow();
+
+        // A scenario removed from the Scenarios tab since is linked no more, and Reproduce cuts it again; a report turned
+        // into an idea links none while it is one.
+        var reproduction = one is { Kind: FeedbackKind.Bug, Reproduction: { } cut } && Scenarios is not null && await Scenarios.KeepsAsync(cut) ? cut : null;
         return StudioResponse.OfJson(
             new
             {
@@ -125,6 +135,9 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
                 expected = one.Expected,
                 additions = Additions(one),
                 plan = one.Plan,
+
+                // The scenario Reproduce cut from it (R4), to play from the sheet.
+                reproduction = reproduction is null ? null : new { id = reproduction, link = ScenarioAdminApi.Link(reproduction) },
 
                 // Ideas grouped (I1): how many asked, the ideas merged into this one, or the one it was merged into, which
                 // counts it.
@@ -262,6 +275,61 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
         return await SheetAsync(id);
     }
 
+    /// <summary>
+    /// Cuts the reported round as a scenario in the reporter's seat (R4), and keeps it with the report. Asked again while
+    /// that scenario is kept, it cuts nothing and notes nothing; two presses at once each cut, and the one that keeps
+    /// its scenario second lets its own go, so a phone's double tap leaves one scenario and one line. A round the
+    /// journal does not offer is answered with the rounds it does, as the Scenarios tab answers it.
+    /// </summary>
+    private async Task<StudioResponse> ReproduceAsync(string id, string operatorName)
+    {
+        if (await feedback.FindAsync(id) is not { } one)
+        {
+            return Refused(FeedbackErrors.NotFound(id));
+        }
+
+        if (one.Kind != FeedbackKind.Bug)
+        {
+            return Refused(FeedbackErrors.NotABug);
+        }
+
+        if (one.Reproduction is { } kept && await Scenarios!.KeepsAsync(kept))
+        {
+            return await SheetAsync(id);
+        }
+
+        var (refused, scenario) = await Scenarios!.ReproduceAsync(one.Context ?? new FeedbackContext(), id);
+        if (refused is not null)
+        {
+            return refused;
+        }
+
+        Result<Feedback> reproduced;
+        try
+        {
+            reproduced = await feedback.ReproducedAsync(id, scenario!, Scenarios.KeepsAsync);
+        }
+        catch
+        {
+            // The report could not keep it: the retry cuts again, so this one would be nobody's.
+            await Scenarios.ForgetAsync(scenario!);
+            throw;
+        }
+
+        if (reproduced.IsFailure || reproduced.Value.Reproduction != scenario)
+        {
+            // Refused since, or another press kept its scenario first: this cut is nobody's.
+            await Scenarios.ForgetAsync(scenario!);
+            return reproduced.IsFailure ? Refused(reproduced.Error) : await SheetAsync(id);
+        }
+
+        var context = one.Context!;
+        var detail = $"{scenario}, round {context.Round}, {context.Seat}";
+        Console.WriteLine($"  Feedback {id} reproduced as scenario {detail} by {operatorName}.");
+        await Notes.NoteAsync(operatorName, OperatorActions.FeedbackReproduce, id, detail);
+        return await SheetAsync(id);
+    }
+
     private async Task<StudioResponse> MuteAsync(string id, string operatorName)
     {
         var muted = await feedback.MuteAsync(id, operatorName);
@@ -312,6 +380,11 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
         else
         {
             offered.AddRange(one.Kind == FeedbackKind.Bug ? BugActions(one) : IdeaActions(one, group));
+            if (one.Kind == FeedbackKind.Bug && Scenarios is not null && Cuttable(one.Context))
+            {
+                offered.Add("reproduce");
+            }
+
             if (underWay && one.Context?.Table is not null)
             {
                 offered.Add("diagnose");
@@ -376,6 +449,10 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
         yield return "prompt";
     }
 
+    /// <summary>Whether a report names a round of a table or a practice, and the seat, which Reproduce cuts at and in.</summary>
+    private static bool Cuttable(FeedbackContext? context) =>
+        context is { Round: > 0, Seat: "player1" or "player2" } && (context.Table ?? context.Scenario) is not null;
+
     private static object[] Additions(Feedback one) =>
         [.. one.Additions.Select(addition => new { at = addition.At, text = addition.Text, expected = addition.Expected })];
 
@@ -412,7 +489,7 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
     private static StudioResponse Refused(DomainError error) => Error(error.Code, error.Message, error.Code switch
     {
         "Feedback.NotFound" => 404,
-        "Feedback.Closed" or "Feedback.NoSender" or "Feedback.MergedAway" or "Feedback.Grouped" => 409,
+        "Feedback.Closed" or "Feedback.NoSender" or "Feedback.MergedAway" or "Feedback.Grouped" or "Feedback.NotABug" or "Feedback.NoPosition" => 409,
         "Feedback.Unavailable" => 503,
         _ => 400,
     });

@@ -78,8 +78,8 @@ test('content plays everything', () => {
   assert.deepEqual(plan(['data/Spells/pummel.json'], specs), everything());
 });
 
-test('a tutorial file plays the tutorial journey, which reads its lesson', () => {
-  assert.deepEqual(plan(['scenarios/tutorials/your-first-combat.json'], specs), { ...nothing, journeys: 'battle-tutorial.spec.js', image: true });
+test('a tutorial file plays the tutorial journey, which reads its lesson, and the real engine, which plays it to its end', () => {
+  assert.deepEqual(plan(['scenarios/tutorials/your-first-combat.json'], specs), { ...nothing, journeys: 'battle-tutorial.spec.js', realEngine: true, image: true });
   assert.deepEqual(plan(['scenarios/greedy-1v1-round-3.json'], specs), { ...nothing, image: true });
 });
 
@@ -95,7 +95,7 @@ test('the workflows that play the journeys play everything', () => {
 });
 
 // The showcase is deployed for what its build reads (ADR 0185), and only for that.
-test('the showcase is deployed for its pages, the catalogue it renders and the art it copies', () => {
+test('the showcase is deployed for its pages, the catalogue and the rulebook it renders and the art it copies', () => {
   for (const path of [
     'showcase/page.mjs',
     'showcase/_headers',
@@ -105,6 +105,9 @@ test('the showcase is deployed for its pages, the catalogue it renders and the a
     'battle/src/cue-art.js',
     'table/battle-evolution-art.js',
     'table/site-origins.js',
+    'table/rules.json',
+    'table/rules.fr.json',
+    'table/rules.js',
     'table/battle-art/horizon/breach.webp',
     'table/fonts/OFL.txt',
     '.github/workflows/showcase.yml',
@@ -113,8 +116,8 @@ test('the showcase is deployed for its pages, the catalogue it renders and the a
   }
 });
 
-test('the showcase is not deployed for its readme, a page test, the balance or the rest of the table', () => {
-  for (const path of ['showcase/README.md', 'showcase/showcase.test.js', 'table/battle-evolution-art.test.js', 'data/balance/knobs.json', 'data/TalentTrees/a.json', 'table/lobby.js', 'src/DownfallArena.Cli/Table/TableApi.cs']) {
+test('the showcase is not deployed for its readme, a page test, the balance, the book\'s sources or the rest of the table', () => {
+  for (const path of ['showcase/README.md', 'showcase/showcase.test.js', 'table/battle-evolution-art.test.js', 'data/balance/knobs.json', 'data/TalentTrees/a.json', 'table/lobby.js', 'table/rules.css', 'table/rules.html', 'rules/03-the-round.md', 'src/DownfallArena.Cli/Table/TableApi.cs']) {
     assert.equal(plan([path], specs).showcase, false, path);
   }
 });

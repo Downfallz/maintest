@@ -14,7 +14,7 @@ a:hover { color: var(--accent-strong); }
 .mast .contain { height: 74px; }
 .wordmark { display: inline-flex; align-items: center; gap: 12px; font: 400 clamp(16px, 1.65vw, 24px)/1.05 var(--font-display); letter-spacing: .06em; text-transform: uppercase; color: var(--bone); }
 .rune { width: 25px; height: 38px; object-fit: contain; }
-.mast nav { display: flex; gap: clamp(14px, 1.8vw, 26px); margin-left: auto; }
+.mast nav { display: flex; gap: clamp(12px, 1.6vw, 26px); margin-left: auto; white-space: nowrap; }
 .mast nav a, .language, .nav-play, .discover, .foot-links a { display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; }
 .mast nav a, .language, .foot-links a { color: var(--muted); }
 .mast a:hover, .foot a:hover { color: var(--accent-strong); }
@@ -94,11 +94,14 @@ h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.0
 .foot .rune { height: 25px; width: 18px; }
 .foot-brand { display: grid; gap: 4px; flex: none; }
 .foot-brand small { color: var(--muted); font-size: 12px; }
+/* Six links on one line, unwrapped, need about 920 px; narrower, the footer carries them. */
+@media (max-width: 920px) {
+  .mast nav { display: none; }
+  .language { margin-left: auto; }
+}
 @media (max-width: 850px) {
   .contain { width: 90%; }
-  .mast nav { display: none; }
   .story { grid-template-columns: 1fr; gap: 32px; }
-  .language { margin-left: auto; }
   .hero-copy { width: 53%; }
   .section-head { display: grid; gap: 14px; }
   .section-head .lead { max-width: 56ch; }
@@ -232,7 +235,8 @@ h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.0
 .policy-date { margin-bottom: 14px; }
 .policy header .lead { max-width: 65ch; }
 .policy-grid { display: grid; grid-template-columns: minmax(160px, .52fr) minmax(0, 1.48fr); align-items: start; gap: clamp(20px, 4vw, 70px); border-top: 1px solid var(--line); margin-top: 30px; padding-top: 26px; }
-.policy-grid nav { display: grid; padding: 17px; background: var(--paper); border-left: 2px solid var(--gold); }
+.policy-grid nav { display: grid; }
+.policy-grid nav, .rules-contents { padding: 17px; background: var(--paper); border-left: 2px solid var(--gold); }
 .policy-grid nav h2 { font-size: 22px; margin: 0 0 9px; }
 .policy-grid nav a { color: var(--muted); padding: 7px 0; font-size: 14px; }
 .policy-grid nav a:hover { color: var(--gold); }
@@ -265,4 +269,60 @@ h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.0
 @media (max-width: 400px) {
   .spell-list { grid-template-columns: 1fr; }
   .outline-button { white-space: normal; }
+}
+/* The public book (/rules/, /fr/regles/): the table's rulebook drawn at build time. The contents come first on a
+   phone, each section leading back to them, and stay beside the text from 900 px, as on the table's page. */
+.rules-page { padding-block: clamp(30px, 5vw, 75px); }
+.rules-intro { max-width: 820px; padding-bottom: 26px; border-bottom: 1px solid var(--line); }
+.rules-intro h1 { font-size: clamp(48px, 6.5vw, 104px); line-height: 1.01; margin: 13px 0 19px; }
+.rules-intro .lead { max-width: 65ch; }
+.rules-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; margin-top: 28px; }
+.rules-contents { align-self: start; scroll-margin-top: 16px; }
+/* The contents scroll on a wide screen: a ring kept inside the box is not clipped by it. */
+.rules-contents :focus-visible { outline-offset: -2px; }
+.rules-contents h2 { font-size: 22px; margin: 0 0 6px; }
+.rules-contents ol { list-style: none; margin: 0; padding: 0; }
+.rules-contents > ol > li + li { border-top: 1px solid var(--line-soft); }
+.rules-contents summary { display: flex; align-items: center; gap: 6px; min-height: 44px; cursor: pointer; color: var(--bone); list-style: none; }
+.rules-contents summary::-webkit-details-marker { display: none; }
+.rules-contents summary::after { content: '+'; margin-left: auto; padding-left: 8px; color: var(--muted); }
+.rules-contents details[open] > summary::after { content: '\2212'; }
+.rules-contents details ol { padding: 0 0 8px 14px; }
+.rules-contents a { display: flex; align-items: center; gap: 6px; min-height: 44px; color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
+.rules-contents > p { margin-top: 4px; border-top: 1px solid var(--line-soft); }
+.rules-number { color: var(--muted); font-variant-numeric: tabular-nums; }
+.rules-contents .rules-number { min-width: 2.2em; }
+.rules-text { min-width: 0; max-width: 820px; }
+.rules-book { min-width: 0; }
+.rules-book p, .rules-changes p { margin: 0 0 12px; }
+.rules-book :is(ul, ol) { margin: 0 0 14px; padding-left: 22px; }
+.rules-book li + li { margin-top: 6px; }
+.rules-book a, .rules-contents > p a { color: var(--gold); }
+.rules-part { margin-bottom: 36px; scroll-margin-top: 16px; }
+.rules-section { margin-top: 26px; scroll-margin-top: 16px; }
+.rules-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.rules-part > .rules-head { margin-bottom: 12px; border-bottom: 1px solid var(--line); }
+.rules-book h2 { margin: 0; padding-bottom: 8px; font-size: clamp(27px, 3vw, 38px); line-height: 1.15; letter-spacing: -.02em; }
+.rules-book h3 { margin: 0 0 6px; font-size: clamp(21px, 2vw, 26px); line-height: 1.25; color: var(--bone); }
+.rules-links { flex: none; display: flex; align-items: center; gap: 4px; }
+.rules-anchor, .rules-to-contents { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; color: var(--muted); font-size: 13px; }
+.rules-table { overflow-x: auto; margin: 0 0 16px; border: 1px solid var(--line); background: var(--paper); }
+.rules-table table { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.45; }
+.rules-table th { text-align: left; color: var(--muted); font-size: 11px; font-weight: 650; letter-spacing: .12em; text-transform: uppercase; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.rules-table td { padding: 10px 12px; vertical-align: top; border-bottom: 1px solid var(--line-soft); }
+.rules-table tr:last-child td { border-bottom: 0; }
+.rules-card { max-width: 400px; margin: 16px 0 8px; padding: 16px 18px; background: var(--tex-grain), var(--paper); border-top: 2px solid var(--brand-ember); }
+.rules-card h4 { margin: 6px 0 8px; font: 400 22px/1.15 var(--font-display); color: var(--bone); }
+.rules-card p:not(.kicker) { margin: 0 0 8px; font-size: 15px; line-height: 1.45; }
+.rules-card .rules-example { padding-left: 10px; border-left: 2px solid var(--gold); color: var(--gold); font-size: 14px; }
+.rules-changes { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line); scroll-margin-top: 16px; }
+.rules-changes h2 { font-size: clamp(25px, 2.6vw, 34px); margin: 0 0 12px; }
+.rules-changes ul { margin: 0 0 16px; padding-left: 20px; color: var(--muted); }
+.rules-changes li + li { margin-top: 8px; }
+.rules-changes time { color: var(--ink); }
+.rules-drawn { color: var(--muted); font-size: 13px; }
+@media (min-width: 900px) {
+  .rules-layout { grid-template-columns: 280px minmax(0, 1fr); gap: clamp(32px, 4vw, 64px); }
+  .rules-contents { position: sticky; top: 16px; max-height: calc(100dvh - 32px); overflow-y: auto; }
+  .rules-to-contents { display: none; }
 }

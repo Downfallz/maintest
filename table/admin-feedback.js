@@ -4,7 +4,8 @@
 // report turned into an idea or back, Diagnose… on a table still under way, and the sender muted or let through. An
 // idea (I1) is merged into another, read with every idea merged into it and how many asked, planned with its plan's
 // path, shipped or declined, and copied as a plan prompt in the operator's own words. The host keeps, guards and
-// notes; this page asks and draws.
+// notes; this page asks and draws. A bug report's Reproduce (R4) cuts its round as a scenario in the reporter's seat,
+// and the sheet links the round to play.
 
 import { ago } from './admin-players.js';
 import { BUG_CATEGORIES, IDEA_PLACES } from './feedback-sheet.js';
@@ -227,13 +228,44 @@ export function positionSides(position, seat) {
 }
 
 /** The sheet's buttons, by the names the host offers them under (`actions`), each shown only when the host offers it. */
-export const SHEET_ACTIONS = Object.freeze(['seen', 'reproduced', 'dismiss', 'spam', 'toIdea', 'toBug', 'diagnose', 'mute', 'unmute',
+export const SHEET_ACTIONS = Object.freeze(['reproduce', 'seen', 'reproduced', 'dismiss', 'spam', 'toIdea', 'toBug', 'diagnose', 'mute', 'unmute',
   'planned', 'shipped', 'declined', 'merge', 'prompt']);
 
 /** Which of the sheet's buttons apply to this feedback as it stands: what the host says, and nothing else. */
 export function sheetActions(answer) {
   const offered = new Set(Array.isArray(answer?.actions) ? answer.actions : []);
   return Object.fromEntries(SHEET_ACTIONS.map(name => [name, offered.has(name)]));
+}
+
+/** A list of rounds as a sentence says it: "2", "2 and 3", "1, 2 and 3". */
+function roundsLine(rounds) {
+  return rounds.length < 2 ? rounds.join('') : `${rounds.slice(0, -1).join(', ')} and ${rounds.at(-1)}`;
+}
+
+/**
+ * What Reproduce is told with: where the round was cut and that the link plays it, or why it was not, with the rounds
+ * the journal offers when the reported one is not among them (`409`, as the Scenarios tab answers it).
+ */
+export function reproduceSaid(answer, sheet) {
+  if (answer.ok) {
+    const round = answer.body?.context?.round;
+    const which = Number.isInteger(round) ? `Round ${round}` : 'The round';
+    return { refused: false, line: `${which} is cut, in the reporter's seat. Play it from the link.` };
+  }
+  const rounds = (answer.body?.rounds ?? []).filter(Number.isInteger);
+  if (Array.isArray(answer.body?.rounds)) {
+    const offered = (rounds.length === 1 ? 'round ' : 'rounds ') + roundsLine(rounds);
+    // A practice is kept nowhere: what the report copied of it is all there is to cut, and the Scenarios tab cuts sessions.
+    if (sheet?.context?.scenario && !sheet.context.table) {
+      return { refused: true, line: rounds.length
+        ? `The reported round cannot be cut from what this report copied of its practice, which reaches ${offered} only.`
+        : 'The reported round cannot be cut from what this report copied of its practice.' };
+    }
+    return { refused: true, line: rounds.length
+      ? `The reported round cannot be cut. The match's journal offers ${offered}: cut one from the Scenarios tab.`
+      : 'The reported round cannot be cut, and the match\'s journal offers no round.' };
+  }
+  return changeSaid(answer);
 }
 
 /** The words a sheet's change is told with. */
@@ -274,7 +306,7 @@ export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
   fill(element('admin-feedback-status'), STATUS_FILTERS);
   fill(element('admin-feedback-category'), categoryFilters());
 
-  const BUTTONS = { seen: 'admin-feedback-seen', reproduced: 'admin-feedback-reproduced', dismiss: 'admin-feedback-dismiss', spam: 'admin-feedback-spam',
+  const BUTTONS = { reproduce: 'admin-feedback-reproduce', seen: 'admin-feedback-seen', reproduced: 'admin-feedback-reproduced', dismiss: 'admin-feedback-dismiss', spam: 'admin-feedback-spam',
     toIdea: 'admin-feedback-to-idea', toBug: 'admin-feedback-to-bug', diagnose: 'admin-feedback-diagnose', mute: 'admin-feedback-mute', unmute: 'admin-feedback-unmute',
     planned: 'admin-feedback-planned', shipped: 'admin-feedback-shipped', declined: 'admin-feedback-declined', merge: 'admin-feedback-merge', prompt: 'admin-feedback-prompt' };
 
@@ -344,6 +376,9 @@ export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
     const session = element('admin-feedback-session');
     session.hidden = !answer.session;
     if (answer.session) session.href = answer.session;
+    const reproduction = element('admin-feedback-reproduction');
+    reproduction.hidden = !answer.reproduction?.link;
+    if (answer.reproduction?.link) reproduction.href = answer.reproduction.link;
     element('admin-feedback-joined').hidden = !answer.mergedInto;
     element('admin-feedback-asks').replaceChildren(...askLinks(answer).map(({ id, label }) => {
       const button = made('button', 'secondary', label);
@@ -392,6 +427,7 @@ export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
     for (const id of ['admin-feedback-words', 'admin-feedback-facts', 'admin-feedback-position', 'admin-feedback-merge-into', 'admin-feedback-asks']) element(id).replaceChildren();
     element('admin-feedback-position-block').hidden = true;
     element('admin-feedback-session').hidden = true;
+    element('admin-feedback-reproduction').hidden = true;
     element('admin-feedback-joined').hidden = true;
     element('admin-feedback-prompt-said').textContent = '';
     element('admin-feedback-merge-note').textContent = '';
@@ -423,6 +459,7 @@ export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
     said('');
   }
 
+  // `done` is the sentence said after a change that went through, or a function that builds it from the answer.
   async function change(method, suffix, body, done) {
     if (!open) return;
     // The sheet this change was asked from: an answer that comes back once another was opened draws nothing on it.
@@ -432,7 +469,7 @@ export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
       await redraw();
       return;
     }
-    const outcome = changeSaid(answer, done);
+    const outcome = typeof done === 'function' ? done(answer) : changeSaid(answer, done);
     if (answer.ok) drawSheet(answer.body);
     said(outcome.line, outcome.refused);
     keepFocus();
@@ -440,6 +477,19 @@ export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
   }
 
   element('admin-feedback-close').addEventListener('click', () => element('admin-feedback-sheet').close?.());
+  // A cut replays the match and takes seconds: the button waits for it, so one tap is one cut.
+  element('admin-feedback-reproduce').addEventListener('click', async () => {
+    const button = element('admin-feedback-reproduce');
+    if (button.disabled) return;
+    button.disabled = true;
+    said('Cutting the round…');
+    try {
+      const sheet = open;
+      await change('POST', 'reproduce', undefined, answer => reproduceSaid(answer, sheet));
+    } finally {
+      button.disabled = false;
+    }
+  });
   element('admin-feedback-seen').addEventListener('click', () => void change('PUT', 'status', { status: 'seen' }, 'Marked seen.'));
   element('admin-feedback-reproduced').addEventListener('click', () => void change('PUT', 'status', { status: 'reproduced' }, 'Marked reproduced.'));
   element('admin-feedback-dismiss').addEventListener('click', () => {

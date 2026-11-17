@@ -116,8 +116,8 @@ test('the published CSS has its local font and battlefield layers', () => {
 });
 
 const pages = {
-  en: ['index.html', 'mutations/index.html', 'privacy/index.html', 'copyright/index.html'],
-  fr: ['fr/index.html', 'fr/mutations/index.html', 'fr/confidentialite/index.html', 'fr/droit-auteur/index.html'],
+  en: ['index.html', 'mutations/index.html', 'privacy/index.html', 'copyright/index.html', 'rules/index.html'],
+  fr: ['fr/index.html', 'fr/mutations/index.html', 'fr/confidentialite/index.html', 'fr/droit-auteur/index.html', 'fr/regles/index.html'],
 };
 
 for (const [lang, documents] of Object.entries(pages)) {
@@ -131,6 +131,8 @@ for (const [lang, documents] of Object.entries(pages)) {
       assert.ok(html.includes(`href="${policyRoute}"`), file);
       const rightsRoute = '/' + documents[3].replace('index.html', '');
       assert.ok(html.includes(`href="${rightsRoute}"`), file);
+      const rulesRoute = '/' + documents[4].replace('index.html', '');
+      assert.ok(html.includes(`href="${rulesRoute}"`), file);
       const otherFile = pages[lang === 'en' ? 'fr' : 'en'][index];
       assert.equal(/<a class="language"[^>]* href="([^"]+)"/.exec(html)?.[1], '/' + otherFile.replace('index.html', ''));
       for (const [, href] of html.matchAll(/\b(?:href|src)="([^"]+)"/g)) {
@@ -188,6 +190,101 @@ for (const [lang, documents] of Object.entries(pages)) {
     assert.doesNotMatch(notice, /<script|<iframe/);
   });
 }
+
+// The public book (docs/tabletop/rulebook-plan.md R7): the table's rulebook, the same file, drawn as static HTML.
+const plain = html => html.replace(/<[^>]+>/g, '').replaceAll('&lt;', '<').replaceAll('&quot;', '"').replaceAll('&amp;', '&');
+const spanText = spans => spans.map(span => span.text).join('');
+const blockTexts = block => block.type === 'paragraph' ? [spanText(block.spans)]
+  : block.type === 'list' ? block.items.map(spanText)
+    : [...block.header, ...block.rows.flat()].map(spanText);
+
+for (const [lang, file, bookFile] of [['en', 'rules/index.html', 'rules.json'], ['fr', 'fr/regles/index.html', 'rules.fr.json']]) {
+  const book = JSON.parse(readFileSync(new URL(`../table/${bookFile}`, import.meta.url), 'utf8'));
+
+  test(`${lang} publishes every part, section, block and card of the table's book, in its order`, () => {
+    const html = read(file);
+    assert.equal(book.language, lang);
+    assert.match(html, new RegExp(`<html lang="${lang}">`));
+    assert.doesNotMatch(html, /<script|<iframe/);
+    const order = [...html.matchAll(/<section class="rules-(?:part|section)" id="([^"]+)"/g)].map(m => m[1]);
+    assert.deepEqual(order, book.parts.flatMap(part => [part.id, ...part.sections.map(section => section.id)]));
+    // Each part's opening and each section, read in its own slice of the page, so a dropped block cannot pass on
+    // the same words elsewhere; and every line in its order.
+    const slice = id => {
+      const at = html.indexOf(` id="${id}"`);
+      const next = html.slice(at + 1).search(/<section class="rules-(?:part|section)" id="/);
+      return plain(next === -1 ? html.slice(at) : html.slice(at, at + 1 + next));
+    };
+    const inOrder = (where, lines) => {
+      let from = 0;
+      for (const line of lines) {
+        const found = where.indexOf(line, from);
+        assert.ok(found >= 0, line);
+        from = found + line.length;
+      }
+    };
+    for (const part of book.parts) {
+      inOrder(slice(part.id), [`${part.number} ${part.title}`, ...part.blocks.flatMap(blockTexts)]);
+      for (const section of part.sections) {
+        const card = section.card ? [section.card.title, ...section.card.lines, section.card.example] : [];
+        inOrder(slice(section.id), [`${section.number} ${section.title}`, ...section.blocks.flatMap(blockTexts), ...card]);
+      }
+    }
+  });
+
+  test(`${lang} writes no id of its own beyond those its anchors are kept from`, async () => {
+    const { PAGE_IDS } = await import('./rules.mjs');
+    const html = read(file);
+    const ofTheBook = new Set([...book.parts.flatMap(part => [part.id, ...part.sections.map(section => section.id)]),
+      ...Object.keys(book.moved), ...book.cards.map(entry => entry.id)]);
+    const own = [...html.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]).filter(id => !ofTheBook.has(id));
+    assert.deepEqual([...new Set(own)].sort(), [...PAGE_IDS].sort());
+  });
+
+  test(`${lang} lists the book's contents, its changes latest first, and lands a card's link on its section`, () => {
+    const html = read(file), text = plain(html);
+    const contents = html.match(/<nav id="rules-contents"[\s\S]*?<\/nav>/)?.[0] ?? '';
+    const linked = [...contents.matchAll(/href="#([^"]+)"/g)].map(m => m[1]);
+    for (const part of book.parts) for (const id of [part.id, ...part.sections.map(section => section.id)]) assert.ok(linked.includes(id), id);
+    const dates = [...html.matchAll(/<li><time datetime="(\d{4}-\d{2}-\d{2})">/g)].map(m => m[1]);
+    assert.equal(dates.length, book.changes.length);
+    assert.deepEqual(dates, [...dates].sort().reverse());
+    for (const change of book.changes) assert.ok(text.includes(change.text), change.text);
+    for (const card of book.cards) {
+      const at = html.indexOf(`id="${card.id}"`), section = html.indexOf(`<section class="rules-section" id="${card.section}"`);
+      assert.ok(at >= section && section >= 0, card.id);
+      const next = html.indexOf('<section class="rules-section"', section + 1);
+      assert.ok(next === -1 || at < next, card.id);
+    }
+    assert.ok(html.includes(`href="${new URL('rules', game).href}"`), 'the table\'s own page, where the numbers are played');
+  });
+}
+
+test('the public book lands a moved id on its section and anchors a card only where the book and the page have no such id', async () => {
+  const { rulesPage } = await import('./rules.mjs');
+  const { english } = await import('./copy.mjs');
+  const span = text => ({ text });
+  const book = {
+    language: 'en', drawnFrom: {}, moved: { 'old-tempo': 'older-tempo', 'older-tempo': 'tempo', 'gone-loop': 'gone-loop-2', 'gone-loop-2': 'gone-loop', 'what-changed': 'tempo' },
+    cards: [{ id: 'tempo', section: 'tempo' }, { id: 'speed', section: 'tempo' }],
+    changes: [{ date: '2026-11-01', text: 'First <change> & "quoted".', adrs: [] }],
+    parts: [{ id: 'the-round', number: 3, title: 'The round', blocks: [], sections: [
+      { id: 'tempo', number: '3.5', title: 'Tempo', sources: [], blocks: [{ type: 'paragraph', spans: [span('See '), { text: 'turn order', href: '#tempo' }, { text: ' and ', strong: true }, { text: 'this', href: 'javascript:alert(1)' }]}],
+        card: { id: 'tempo', title: 'Tempo', lines: ['One line.'], example: 'An example.' } },
+    ]}],
+  };
+  const html = rulesPage(english, book, game);
+  const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]);
+  assert.equal(new Set(ids).size, ids.length);
+  for (const id of ['old-tempo', 'older-tempo', 'speed']) assert.ok(ids.includes(id), id);
+  assert.ok(!ids.includes('gone-loop'), 'a redirect that lands nowhere is left out');
+  const section = html.slice(html.indexOf('<section class="rules-section" id="tempo"'));
+  assert.ok(section.includes('id="old-tempo"') && section.includes('id="speed"'));
+  assert.ok(html.includes('First &lt;change> &amp; &quot;quoted&quot;.'));
+  assert.ok(html.includes('<a href="#tempo">turn order</a>'));
+  assert.ok(html.includes('<strong> and </strong>'));
+  assert.doesNotMatch(html, /javascript:/);
+});
 
 const repository = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
