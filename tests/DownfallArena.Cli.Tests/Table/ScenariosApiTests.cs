@@ -92,10 +92,14 @@ public sealed class ScenariosApiTests : IDisposable
     public async Task A_scenario_cut_and_removed_is_noted_in_the_operators_activity()
     {
         var (session, first) = await CutAsync();
-        var actions = new OperatorActions(new FileOperatorLog(_root), TimeProvider.System);
+        // A clock of the test's own, moved between the two: two lines noted in the same millisecond sort by a random
+        // suffix, and a fast runner notes these two within one.
+        var noting = new FakeTimeProvider(new DateTimeOffset(2026, 11, 14, 4, 0, 0, TimeSpan.Zero));
+        var actions = new OperatorActions(new FileOperatorLog(_root), noting);
         var admin = new ScenarioAdminApi(_store, _hosted.Stored!, _hosted.Composer) { Notes = new OperatorNotes(actions) };
 
         var cut = await admin.HandleAsync("POST", ScenarioAdminApi.Route, JsonSerializer.Serialize(new { session, round = 2 }), "mark");
+        noting.Advance(TimeSpan.FromSeconds(1));
         var removed = await admin.HandleAsync("DELETE", $"{ScenarioAdminApi.Route}/{first}", "", "mark");
 
         (cut.Status, removed.Status).ShouldBe((201, 204));
@@ -338,10 +342,13 @@ public sealed class ScenariosApiTests : IDisposable
     public async Task Listing_and_taking_off_are_noted_in_the_operators_activity()
     {
         var (_, scenario) = await CutAsync();
-        var actions = new OperatorActions(new FileOperatorLog(_root), TimeProvider.System);
+        // Moved between the two, as above: the two lines would otherwise share a millisecond.
+        var noting = new FakeTimeProvider(new DateTimeOffset(2026, 11, 14, 4, 0, 0, TimeSpan.Zero));
+        var actions = new OperatorActions(new FileOperatorLog(_root), noting);
         var admin = new ScenarioAdminApi(_store, _hosted.Stored!, _hosted.Composer) { Notes = new OperatorNotes(actions) };
 
         await admin.HandleAsync("PUT", $"{ScenarioAdminApi.Route}/{scenario}/listing", """{"listed":true}""", "mark");
+        noting.Advance(TimeSpan.FromSeconds(1));
         await admin.HandleAsync("PUT", $"{ScenarioAdminApi.Route}/{scenario}/listing", """{"listed":false}""", "mark");
 
         (await actions.PageAsync(1, Cancel)).Actions.Select(one => (one.Action, one.Target)).ShouldBe([(OperatorActions.UnlistScenario, scenario), (OperatorActions.ListScenario, scenario)]);
