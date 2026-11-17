@@ -113,8 +113,8 @@ const shows = page => page.evaluate(() => {
   const step = shown('coach') ? document.getElementById('coach-step')?.textContent.trim() ?? '' : null;
   return {
     step, done: step === 'TUTORIAL COMPLETE',
-    cards: shown('concept-dialog'), reading: battle.getAttribute('data-reading') === 'true',
-    sheet: shown('planning-dialog') || shown('combat-dialog') || battle.getAttribute('data-combat') === 'targets',
+    cards: shown('concept-dialog'), reading: battle.dataset.reading === 'true',
+    sheet: shown('planning-dialog') || shown('combat-dialog') || battle.dataset.combat === 'targets',
     command: shown('planning-open') || shown('combat-open'),
     press: ['upkeep-close', 'order-continue', 'playback-next'].find(id => shown(id) && document.getElementById(id).getAttribute('aria-disabled') !== 'true') ?? null,
   };
