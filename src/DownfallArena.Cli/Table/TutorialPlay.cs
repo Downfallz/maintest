@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Application.Matches.Scenarios;
@@ -47,6 +48,8 @@ internal sealed class TutorialPlay
     }
 
     /// <summary>Where its console lines go (ADR 0186; said on the thread that answers): the host's console unless a test reads them (#756).</summary>
+    /// <remarks>Never written to the page: the play is sent as it is (<c>practice.tutorial</c>).</remarks>
+    [JsonIgnore]
     public Action<string> Said { get; init; } = Console.WriteLine;
 
     /// <summary>Its place in the series, from 1.</summary>
