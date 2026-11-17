@@ -113,7 +113,7 @@ const RULES = [
   { matches: (path) => WORKFLOWS.has(path), calls: () => ({ journeys: anySpec, realEngine: true, release: true }) },
   { matches: (path) => path.startsWith('studio/browser/'), calls: (path) => suiteFile(path.slice('studio/browser/'.length)) },
   { matches: (path) => path.startsWith('battle/'), calls: () => ({ journeys: isBattleSpec, realEngine: true, release: true }) },
-  { matches: (path) => /^(table|studio)\/.*\.test\.js$/.test(path), calls: () => ({}) },
+  { matches: (path) => /^(table|studio)\/.*\.(test\.js|fixture\.json)$/.test(path), calls: () => ({}) },
   { matches: (path) => path.startsWith('table/'), calls: () => ({ journeys: isTableSpec, realEngine: true, release: true }) },
   { matches: (path) => path.startsWith('studio/'), calls: () => ({ journeys: isStudioSpec }) },
   { matches: (path) => path === 'viewer/viewer.css', calls: () => ({ journeys: anySpec }) },
@@ -185,7 +185,7 @@ const isCode = (path) => !path.endsWith('.md');
 const GATE_STEPS = {
   battle: (path) =>
     isCode(path) &&
-    (path.startsWith('battle/') || (path.startsWith('table/') && !path.startsWith('table/battle-build/') && !path.endsWith('.test.js'))),
+    (path.startsWith('battle/') || (path.startsWith('table/') && !path.startsWith('table/battle-build/') && !path.endsWith('.test.js') && !path.endsWith('.fixture.json'))),
   learning: (path) =>
     (isCode(path) && (path.startsWith('learning/') || path.startsWith('scripts/') || path.startsWith('viewer/samples/'))) ||
     path === 'studio/value.fixture.json' ||

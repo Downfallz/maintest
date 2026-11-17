@@ -1,0 +1,5 @@
+- A "never shows the other seat's X" test whose fixture fills the primary source (board.speedChoices) never reaches the fallback that holds the filter: delete the filter and re-run; all 15 still passed (R2 recap, battle-recap.test.js:89, 15469d8).
+- "Defeated while away" keyed on CombatActionResolved frames misses a bleed death at Upkeep (UpkeepRules.OngoingEffects -> TakeDamage, then EndIfEliminated): check every defeat reader against OngoingEffectsApplied (R2 recap, battle-recap.js teamsNow, 15469d8).
+- A pure builder over a feed the page merges (live + loaded) must dedupe by sequence as createBattleHistory does: a doubled tail doubled the casts and `unseen` (R2 recap, 15469d8).
+- CI lints `scripts/` with learning's ruff (`ruff check . ../scripts` from learning/, ci.yml:125): a one-off generator added there (recap-fixture.py, 26 errors and unformatted) fails the build; run ruff on any new scripts/*.py (R2 recap, 89b59e1).
+- Seventh time: the branch moved mid-review (R2 recap, 15469d8 -> 89b59e1); findings re-checked on 89b59e1.

@@ -63,6 +63,7 @@ test('a studio page plays the studio and the identity, and builds nothing', () =
 test("the pages' own tests play no journey", () => {
   assert.deepEqual(plan(['studio/catalogue.test.js'], specs), nothing);
   assert.deepEqual(plan(['table/presentation.test.js'], specs), { ...nothing, image: true });
+  assert.deepEqual(plan(['table/battle-recap.fixture.json'], specs), { ...nothing, image: true });
 });
 
 test('the host plays the real engine and builds the image, without the mock journeys', () => {
@@ -224,7 +225,7 @@ test('a test that passed only on its retry is reported, and no other', () => {
 test('the local gate adds nothing for markdown, a page test or a hook alone', () => {
   const none = { battle: false, learning: false, content: false };
   assert.deepEqual(gate([]), none);
-  assert.deepEqual(gate(['docs/adr/0182-x.md', 'learning/README.md', 'battle/README.md', 'table/lobby.test.js', '.claude/hooks/stop.sh']), none);
+  assert.deepEqual(gate(['docs/adr/0182-x.md', 'learning/README.md', 'battle/README.md', 'table/lobby.test.js', 'table/battle-recap.fixture.json', '.claude/hooks/stop.sh']), none);
 });
 
 test('the local gate rebuilds the battle bundle for a change to the battle view', () => {

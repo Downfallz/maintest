@@ -1,7 +1,7 @@
 # Plan: the recap when a player comes back to an asynchronous game
 
-Status: accepted, 2026-11-16 (the owner settled the questions at the end). R1 is built; each stage below is one
-pull request.
+Status: accepted, 2026-11-16 (the owner settled the questions at the end). R1 and R2 are built; each stage below
+is one pull request.
 
 ## What the owner asked for
 
@@ -120,6 +120,28 @@ under way: a player who left the page open for two days, or who simply lost the 
    the sheet as data, with what was not seen marked. No page change yet. Tests: Node tests on
    recorded feeds: one cast, a round crossed, three rounds crossed, a creature defeated, a game that ended while the
    player was away, the seat's own choices, nothing unseen (the recent rounds still told), the first round.
+
+   *Built (2026-11-17)*: `buildRecap` in `table/battle-recap.js`, served by the host (`TableFiles`). It takes the
+   seat's view and feed, the seen sequence, the time now, the catalogue and the opponent's name. It returns five
+   parts, and `unseen`, the count of lines marked new, for R3's threshold and R4's count:
+   - `where`: the opponent, the round and its step, how long ago the last move was, the time left, the result, each
+     side's creatures standing and health, and who leads (a count: creatures standing, then health).
+   - `teams`: each creature now, whether it is defeated or fell while away (to a cast, or to a bleed at an Upkeep),
+     and its health change since the first recorded cast of the span the sheet tells. Frames are the only recorded
+     health in a feed, so an Upkeep before that cast is not counted.
+   - `rounds`: the last completed round, the round under way, and every round with something not seen, oldest
+     first. Older rounds are folded. Each line uses the history summary's words and is marked `unseen`. A round the
+     feed holds nothing of is `recorded: false`.
+   - `chosen`: the tempos, the spells declared face down, and the mutations bought last.
+   - `asked`: the question in the push notice's words, and the opponent's reactions, those sent since the last
+     visit marked new.
+
+   A seat with no last visit is told the recent rounds, with nothing marked new. A feed holding an entry twice
+   tells it once. Tests: `battle-recap.test.js` on
+   a recorded match, `battle-recap.fixture.json` (play --seed 1 as seat player1, rebuilt by
+   `scripts/recap-fixture.py`, kept out of the image). The glossary gains *Recap*. Left to R3: the sheet, its
+   words in docs/domain/player-terminology.md, the threshold on `seen.at`, and loading the feed back to `seen`
+   (the live journal keeps two rounds).
 3. **R3, the sheet in the battle view.** The dialog, its two buttons, the threshold, the cases where it never opens,
    the top bar's **Where you are** button, the journal's marker. Tests: Node tests of the threshold; a browser spec
    at 320 px and on desktop on the mock host (opens on its own, opens from the button with nothing unseen, Go to my

@@ -967,6 +967,17 @@ as written. It fails when a palette colour has no usage note, or a note has no c
 folder to the design system's page (docs/art/branding.md#design-system) with `/design-system`; it prints the
 pictures to upload.
 
+### recap-fixture.py
+
+```bash
+dotnet run --project src/DownfallArena.Cli -- play --seed 1 --trace artifacts/recap-match.trace.json
+python3 scripts/recap-fixture.py
+```
+
+Rebuilds the recorded match the recap's tests read (`table/battle-recap.test.js`) from the trace in the ignored
+`artifacts/`: seat player1's feed of a few rounds, frames trimmed to the stats the recap reads, and the board at a
+few named moments. Its paths are fixed. Run it when an event's shape changes, and read the tests' numbers again.
+
 ### workflow-metrics.py
 
 ```bash

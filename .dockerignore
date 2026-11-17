@@ -25,6 +25,7 @@
 **/obj/
 data/dst/
 table/*.test.js
+table/*.fixture.json
 table/README.md
 
 # Build the browser bundle in its own stage.
