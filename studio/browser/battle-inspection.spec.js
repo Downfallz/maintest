@@ -77,7 +77,7 @@ test('inspect allies, conditions, acquired passives and complete spell faces wit
   await expect(conditions).toHaveText(['Immune to stun', 'Bleed 2 · new · first countdown pending · from Skullbeast · 3 · Strike', 'DefenseBuff 2 · permanent', 'Regeneration 1 · 1 round']);
   expect(await conditions.evaluateAll(nodes => nodes.map(node => node.dataset.cue))).toEqual(['stun', 'health-loss', 'other', 'health-gain']);
   const shared = page.locator('#inspect-mutations [data-inspect-mutation="cap"]');
-  await expect(shared.locator('.inspect-chip')).toHaveText(['Stage 4', 'Initiative +0']);
+  await expect(shared.locator('.inspect-chip')).toHaveText(['Stage IV', 'Initiative +0']);
   await expect(shared).toContainText('For every creature of the side');
   // Known spells are the spell choice's cards: cost and crit chips, targeting, effect lines, and their teacher.
   const strike = page.locator('#inspect-spells [data-inspect-spell="strike"]');

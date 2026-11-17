@@ -2,7 +2,7 @@
 
 Date: 2026-11-13
 
-Status: Proposed. Completes the apex decision left open in [0175](0175-serve-the-table-at-its-own-domain-behind-cloudflare.md).
+Status: Accepted. Completes the apex decision left open in [0175](0175-serve-the-table-at-its-own-domain-behind-cloudflare.md).
 
 ## Context
 

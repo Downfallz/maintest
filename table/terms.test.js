@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { SPEEDS, decisionLabel, phaseLabel, stageLabel, stepLabel, tempoLabel } from './terms.js';
+import { SPEEDS, decisionLabel, phaseLabel, stageLabel, stageNumeral, stepLabel, tempoLabel } from './terms.js';
 
 test('a served speed reads as its tempo, and the chooser still sends the engine values in play order', () => {
   assert.equal(tempoLabel('Quick'), 'Instinct');
@@ -28,6 +28,12 @@ test('a sub-phase reads as its words, with the speed step as the tempo', () => {
   assert.equal(stepLabel(undefined), '');
 });
 
-test('a level reads as its stage', () => {
-  assert.equal(stageLabel(2), 'Stage 2');
+test('a level reads as its stage, in Roman numerals', () => {
+  assert.equal(stageLabel(2), 'Stage II');
+  assert.deepEqual([1, 2, 3, 4].map(stageNumeral), ['I', 'II', 'III', 'IV']);
+});
+
+test('a level with no numeral reads as written', () => {
+  assert.equal(stageNumeral(0), '0');
+  assert.equal(stageLabel(undefined), 'Stage ?');
 });

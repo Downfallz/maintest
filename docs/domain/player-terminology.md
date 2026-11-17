@@ -13,13 +13,16 @@ apocalyptic battle; the words carry that fantasy and stay short, plain and easy 
 | --- | --- | --- | --- |
 | Tier (`tier:...` ids, `data/Tiers/`) | Package | **Mutation** | **Mutation** |
 | Tier prerequisite graph | Talent atlas | **Mutation Tree** | **Arbre des mutations** |
-| Tier `level` | Tier (Tier 2) | **Stage** (Stage 2) | **Stade** (Stade 2) |
+| Tier `level` | Tier (Tier 2) | **Stage** (Stage II) | **Stade** (Stade II) |
 | Evolution | Evolution | **Evolution** | **Évolution** |
 | Speed (`Speed` choice) | Speed | **Tempo** | **Tempo** |
 | `Speed.Quick` | Quick | **Instinct** | **Instinct** |
 | `Speed.Standard` | Standard | **Precision** | **Précision** |
 | A Creature's known Spells (the hand) | Spellbook | **Spellbook** | **Grimoire** |
 | The base creature definition (`creature:main:v1`, named `Main`) | Main | **Creature**, numbered by id (Creature 4) | **Créature** (Créature 4) |
+
+A Stage is written in Roman numerals, I to IV, in both languages: Stage III, Stade IV. The domain and the data
+keep the number (`level: 3`); only what a player reads turns it into a numeral (`stageLabel` in `table/terms.js`).
 
 Use the words naturally in a sentence rather than as literal substitutions:
 
@@ -30,7 +33,7 @@ Use the words naturally in a sentence rather than as literal substitutions:
 | Owned packages | Acquired mutations |
 | Buy a package | Acquire a mutation |
 | Package acquired | Mutation acquired |
-| Tier 2 | Stage 2 |
+| Tier 2 | Stage II |
 | Choose speed | Choose tempo |
 | Speeds revealed | Tempos revealed |
 | Talent atlas | Mutation Tree |

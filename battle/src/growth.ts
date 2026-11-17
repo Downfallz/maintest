@@ -1,3 +1,4 @@
+import { stageLabel } from '../../table/terms.js';
 import { mutationReference, createBattleGrowth } from '../../table/battle-growth.js';
 import type { Catalogue } from './planning';
 import type { atlasControls, AtlasView } from './mutation-atlas';
@@ -17,7 +18,7 @@ const signed = (value: number) => `${value > 0 ? '+' : ''}${value}`;
 function revealCard(row: Row, open: (creature: number, tier: string, source: HTMLElement) => void) {
   const card = document.createElement('li'); card.className = 'reveal-card'; card.style.setProperty('--mutation-colour', row.colour);
   const head = document.createElement('div'); head.className = 'reveal-head';
-  head.append(text('span', row.name, 'reveal-creature'), text('span', row.stage == null ? '' : `Stage ${row.stage}`, 'reveal-stage'));
+  head.append(text('span', row.name, 'reveal-creature'), text('span', row.stage == null ? '' : stageLabel(row.stage), 'reveal-stage'));
   const meta = [row.family && row.family !== row.mutation ? `${row.family} path` : '', row.initiative ? `${signed(row.initiative)} initiative` : ''].filter(Boolean).join(' · ');
   card.append(head, text('p', row.mutation, 'reveal-mutation'));
   if (meta) card.append(text('p', meta, 'reveal-meta'));
@@ -52,7 +53,7 @@ export function growthControls(growth: Growth, beforeOpen: () => void, onVisibil
     const subject = model.roster.find(one => one.id === model.selected);
     const next = model.over ? 'Match complete · no further mutation opportunities'
       : model.next == null ? '' : model.next === model.current ? `Mutation opportunity this round · Round ${model.next}` : `Next mutation opportunity · Round ${model.next}`;
-    const held = model.families.length ? `${model.families.length > 1 ? 'Multiclass · ' : ''}${model.families.map(one => `${one.name} · Stage ${one.stage}`).join(' / ')}` : 'No revealed mutations yet';
+    const held = model.families.length ? `${model.families.length > 1 ? 'Multiclass · ' : ''}${model.families.map(one => `${one.name} · ${stageLabel(one.stage)}`).join(' / ')}` : 'No revealed mutations yet';
     return { title: subject ? `${subject.name}${subject.enemy ? ' · Opponent' : ''}` : 'Mutation tree', eyebrow: 'MUTATION TREE · PUBLIC GROWTH',
       progress: [held, next].filter(Boolean).join(' · '), packages: model.packages, creature: String(model.selected), focus,
       roster: model.roster.map(one => ({ id: String(one.id), name: `${one.enemy ? 'Opponent' : 'Your team'} · ${one.name}${one.alive ? '' : ' · Defeated'}` })) };
@@ -100,7 +101,7 @@ export function growthControls(growth: Growth, beforeOpen: () => void, onVisibil
       el('growth-receipt-summary').textContent = receipt ? [...counts, `Round ${receipt.round}`].join(' · ') : '';
       // The status line speaks every reveal in full; the visible receipt stays one readable line.
       el('growth-announcement').textContent = receipt ? `Round ${receipt.round} mutations revealed. ${receipt.rows.map(row =>
-        `${row.name}, ${row.enemy ? 'opponent' : 'your team'}: ${row.mutation}${row.stage == null ? '' : `, stage ${row.stage}`}${row.spells.length ? `, new ${row.spells.join(', ')}` : ''}`).join('. ')}.` : '';
+        `${row.name}, ${row.enemy ? 'opponent' : 'your team'}: ${row.mutation}${row.stage == null ? '' : `, ${stageLabel(row.stage)}`}${row.spells.length ? `, new ${row.spells.join(', ')}` : ''}`).join('. ')}.` : '';
       const groups = receipt ? [['Your team', receipt.rows.filter(row => !row.enemy)], ['Opponent', receipt.rows.filter(row => row.enemy)]] as const : [];
       el('growth-reveals').replaceChildren(...groups.filter(([, rows]) => rows.length).map(([label, rows]) => {
         const group = document.createElement('section'); group.className = 'reveal-group';

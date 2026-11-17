@@ -74,13 +74,17 @@ const policies = {
   },
 };
 
+const paragraph = text => `<p>${escape(text)}</p>`;
+const section = ([id, title, paragraphs]) => `<section id="${id}"><h2>${title}</h2>${paragraphs.map(paragraph).join('')}</section>`;
+const indexLink = ([id, title]) => `<a href="#${id}">${title}</a>`;
+
 export function privacyPage(c, app) {
   const p = policies[c.lang];
   return layout(c, 'privacy', app, c.privacy, p.intro, `<div class="policy contain">
     <header><p class="kicker">${p.label}</p><h1>${c.privacy}</h1><p class="policy-date"><time datetime="2026-11-16">${p.date}</time></p><p class="lead">${escape(p.intro)}</p></header>
     <div class="policy-grid"><nav aria-label="${p.index}"><h2>${p.index}</h2>
-      ${[...p.sections.map(([id, title]) => [id, title]), ['contact', p.contact]].map(([id, title]) => `<a href="#${id}">${title}</a>`).join('')}</nav>
-      <div class="policy-body">${p.sections.map(([id, title, paragraphs]) => `<section id="${id}"><h2>${title}</h2>${paragraphs.map(s => `<p>${escape(s)}</p>`).join('')}</section>`).join('')}
+      ${[...p.sections, ['contact', p.contact]].map(indexLink).join('')}</nav>
+      <div class="policy-body">${p.sections.map(section).join('')}
         <section id="contact"><h2>${p.contact}</h2><p>${p.responsibility}</p><a class="editorial-link" href="mailto:${address}">${address}</a></section>
         <a class="editorial-link" href="${routes[c.lang].home}">← Downfall Instinct</a>
       </div></div></div>`);

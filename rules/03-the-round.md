@@ -68,10 +68,10 @@ choose a creature, read a mutation, confirm it.
 and raises its base initiative by the mutation's bonus, for the rest of the match. That bonus is the only
 thing that ever moves a base initiative: acquiring is how a creature gets stronger, and also how it gets faster.
 
-**Which mutation.** There are three families, Brute, Warped and Predator, each a tree of four Stages. A Stage 1
+**Which mutation.** There are three families, Brute, Warped and Predator, each a tree of four Stages. A Stage I
 mutation needs nothing. Every other one needs one named mutation of its family, a Stage below it: the Mutation
 Tree shows which. A creature may acquire a mutation it does not own when it owns what that mutation needs, and
-it may mix families by acquiring another family's Stage 1. Two creatures may take the same mutation. What a
+it may mix families by acquiring another family's Stage I. Two creatures may take the same mutation. What a
 creature may acquire is read from what it
 owns as the step opens: a pick of this round opens nothing until the next mutation round.
 
@@ -104,8 +104,8 @@ On a mutation round, the team shares its picks, and a creature takes at most one
 
 ## Capstones {#capstones}
 
-Each family closes with a Stage 4 mutation, its **capstone**. A capstone needs **any one** of its family's
-Stage 3 mutations. It teaches no spell and adds no initiative. It gives a **passive** instead, held from the
+Each family closes with a Stage IV mutation, its **capstone**. A capstone needs **any one** of its family's
+Stage III mutations. It teaches no spell and adds no initiative. It gives a **passive** instead, held from the
 reveal that acquires it to the end of the match:
 
 | Capstone | Family | Needs one of | Its passive |

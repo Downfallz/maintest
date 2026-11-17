@@ -1,9 +1,9 @@
 import { escape, layout } from './layout.mjs';
 import { cuePath, STROKED } from '../battle/src/cue-art.js';
 import { lore } from './lore.mjs';
+import { stageNumeral } from '../table/terms.js';
 
 const families = ['brute', 'predator', 'warped'];
-const romans = ['', 'I', 'II', 'III', 'IV'];
 const key = id => id.split(':')[1];
 const name = (entry, lang) => lang === 'fr' ? entry.fr : entry.name;
 
@@ -38,12 +38,16 @@ function describeEffect(e, lang) {
   return parts.join(' ');
 }
 
+// Who a spell reaches, by origin: one target, then several.
+const targetWords = {
+  en: { Self: ['Self'], Ally: ['1 ally', n => `Up to ${n} allies`], Enemy: ['1 enemy', n => `Up to ${n} enemies`] },
+  fr: { Self: ['Soi-même'], Ally: ['1 allié', n => `Jusqu’à ${n} alliés`], Enemy: ['1 ennemi', n => `Jusqu’à ${n} ennemis`] },
+};
+
 function targetText(s, lang) {
-  const fr = lang === 'fr';
-  if (s.target === 'Self') return fr ? 'Soi-même' : 'Self';
-  const ally = s.target === 'Ally';
-  if (s.count === 1) return fr ? (ally ? '1 allié' : '1 ennemi') : (ally ? '1 ally' : '1 enemy');
-  return fr ? `Jusqu’à ${s.count} ${ally ? 'alliés' : 'ennemis'}` : `Up to ${s.count} ${ally ? 'allies' : 'enemies'}`;
+  const words = targetWords[lang];
+  const [one, several] = words[s.target] ?? words.Enemy;
+  return s.target === 'Self' || s.count === 1 ? one : several(s.count);
 }
 
 function spell(s, lang) {
@@ -67,16 +71,24 @@ function passive(t, lang) {
   throw new Error(`No field note for passive ${t.id}`);
 }
 
+function initiativeChip(initiative) {
+  if (!initiative) return '';
+  const gain = initiative > 0;
+  return `<span class="spell-chip initiative">${icon(gain ? 'initiative-gain' : 'initiative-loss')}${gain ? '+' : ''}${initiative} initiative</span>`;
+}
+
 function entry(t, lang, byId) {
   const l = lore[lang], n = escape(name(t, lang)), id = 'form-' + key(t.id);
   const parentLinks = ids => ids.map(id => `<a href="#form-${key(id)}">${escape(name(byId.get(id), lang))}</a>`).join(' · ');
-  const need = t.anyOf.length ? `${l.afterAny} · ${parentLinks(t.anyOf)}` : t.prerequisites.length ? `${l.next} · ${parentLinks(t.prerequisites)}` : l.roots;
+  let need = l.roots;
+  if (t.anyOf.length) need = `${l.afterAny} · ${parentLinks(t.anyOf)}`;
+  else if (t.prerequisites.length) need = `${l.next} · ${parentLinks(t.prerequisites)}`;
   return `<details class="form-entry" id="${id}" data-form="${n}">
-    <summary><span class="roman">${romans[t.level]}</span><strong>${n}</strong><span class="form-teaser">${t.passive ? l.passive : t.spells.map(s => escape(name(s, lang))).join(' · ')}</span></summary>
+    <summary><span class="roman">${stageNumeral(t.level)}</span><strong>${n}</strong><span class="form-teaser">${t.passive ? l.passive : t.spells.map(s => escape(name(s, lang))).join(' · ')}</span></summary>
     <div class="field-entry ${t.passive ? 'passive-entry' : ''}">
       ${t.visual.artwork ? `<div class="field-art"><img src="/assets/evolutions/${t.visual.artwork}.webp" alt="" width="450" height="300" loading="lazy" decoding="async"></div>` : ''}
       <div><div class="mutation-facts"><p class="requirement">${need}</p>
-        ${t.initiative ? `<span class="spell-chip initiative">${icon(t.initiative > 0 ? 'initiative-gain' : 'initiative-loss')}${t.initiative > 0 ? '+' : ''}${t.initiative} initiative</span>` : ''}</div><p class="anatomy">${escape(t.notes[lang])}</p>
+        ${initiativeChip(t.initiative)}</div><p class="anatomy">${escape(t.notes[lang])}</p>
       ${t.passive ? `<p class="passive-rule">${passive(t, lang)}</p>` : `<ul class="spell-list">${t.spells.map(s => spell(s, lang)).join('')}</ul>`}</div>
     </div></details>`;
 }
@@ -84,6 +96,8 @@ function entry(t, lang, byId) {
 function familySection(family, lang, byId, i) {
   const l = lore[lang], nodes = [...byId.values()].filter(t => t.visual.family === family);
   const root = nodes.find(t => t.level === 1), cap = nodes.find(t => t.level === 4);
+  if (!root) throw new Error(`No root for family ${family}`);
+  if (!cap) throw new Error(`No capstone for family ${family}`);
   const pairs = nodes.filter(t => t.level === 2).map(t => [t, nodes.find(child => child.level === 3 && child.prerequisites.includes(t.id))]);
   const link = t => `<a href="#form-${key(t.id)}">${escape(name(t, lang))}</a>`;
   return `<section class="family-record" id="family-${family}" aria-labelledby="title-${family}">

@@ -329,7 +329,7 @@ test('a package card names its level, its initiative and every spell it teaches'
   p.view.options = { evolution: { remainingPicks: 2, creatures: [{ creature: 1, availableTiers: ['tier:one:v1', 'tier:two:v1'] }] } }; p.draw();
   const text = p.nodes.choices.textContent;
   assert.match(text, /First package/);
-  assert.match(text, /Stage 1/);
+  assert.match(text, /Stage I\b/);
   assert.match(text, /\+1 initiative/);
   assert.match(text, /First card/);
   assert.match(text, /no initiative/);
@@ -662,7 +662,7 @@ test('the talent reference follows the inspected creature and the class filter i
   const p = page(); talentFixture(p); p.state.inspectClass = 'tier:two:v1'; p.draw();
   const toolbar = p.nodes.mat.children[0];
   const south = p.nodes.mat.children[2];
-  assert.match(south.textContent, /Second package · Stage 2/);
+  assert.match(south.textContent, /Second package · Stage II\b/);
   assert.match(south.textContent, /Requires: First package/);
   toolbar.children[2].children[1].events.click();
   assert.match(p.nodes.mat.children[2].textContent, /✓ Mutation acquired/);
@@ -790,7 +790,7 @@ test('on a phone, choosing a package in the atlas brings its spells up with a wa
   const inspector = p.nodes.mat.children[2];
   assert.equal(inspector.scrolledIntoView, true);
   assert.equal(inspector.children[0].className, 'atlas-back reference-link');
-  assert.match(inspector.textContent, /First package · Stage 1/);
+  assert.match(inspector.textContent, /First package · Stage I\b/);
   p.state.rendered = null; p.draw();
   assert.equal(p.nodes.mat.children[2].scrolledIntoView, undefined);
 });
@@ -2064,7 +2064,7 @@ function capstoneFixture(p) {
 test('a capstone lane says any one of its packages opens it and shows its passive instead of spells', () => {
   const p = page(); talentFixture(p); capstoneFixture(p); p.state.inspectClass = 'tier:cap:v1'; p.draw();
   const lane = p.nodes.mat.children[2];
-  assert.match(lane.textContent, /Capstone · Stage 3/);
+  assert.match(lane.textContent, /Capstone · Stage III\b/);
   assert.match(lane.textContent, /Requires one of: Second package \/ First package/);
   assert.match(lane.textContent, /Held while owned · Immune to stun/);
   const section = lane.children[1];
@@ -2072,7 +2072,7 @@ test('a capstone lane says any one of its packages opens it and shows its passiv
   assert.equal(section.children.some(child => child.className === 'talent-tier'), false);
   p.state.inspectClass = 'tier:two:v1'; p.draw();
   assert.equal(p.nodes.mat.children[2].children[1].children.some(child => child.className === 'talent-tier'), true);
-  assert.match(p.nodes.mat.children[0].textContent, /Stage 4/);
+  assert.match(p.nodes.mat.children[0].textContent, /Stage IV/);
 });
 
 test('a capstone offer card prints its passive and its any-of requirement', () => {

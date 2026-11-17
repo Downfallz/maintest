@@ -2154,7 +2154,7 @@ function renderMat(state, current) {
   heading.append(context);
   const help = document.createElement('p');
   help.className = 'muted';
-  help.textContent = 'Stage 1 → Stage 2 → Stage 3 → Stage 4. A Stage 4 capstone opens from any Stage 3 of its family and gives a passive instead of spells. Select a mutation to inspect it. Lines show required mutations; one pick acquires the whole mutation.';
+  help.textContent = 'Stage I → Stage II → Stage III → Stage IV. A Stage IV capstone opens from any Stage III of its family and gives a passive instead of spells. Select a mutation to inspect it. Lines show required mutations; one pick acquires the whole mutation.';
   const picker = document.createElement('div');
   picker.className = 'creature-picker';
   picker.setAttribute('aria-label', 'Inspect mutation progress');

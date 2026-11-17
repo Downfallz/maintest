@@ -902,7 +902,7 @@
                   "strong": true
                 },
                 {
-                  "text": " There are three families, Brute, Warped and Predator, each a tree of four Stages. A Stage 1 mutation needs nothing. Every other one needs one named mutation of its family, a Stage below it: the Mutation Tree shows which. A creature may acquire a mutation it does not own when it owns what that mutation needs, and it may mix families by acquiring another family's Stage 1. Two creatures may take the same mutation. What a creature may acquire is read from what it owns as the step opens: a pick of this round opens nothing until the next mutation round."
+                  "text": " There are three families, Brute, Warped and Predator, each a tree of four Stages. A Stage I mutation needs nothing. Every other one needs one named mutation of its family, a Stage below it: the Mutation Tree shows which. A creature may acquire a mutation it does not own when it owns what that mutation needs, and it may mix families by acquiring another family's Stage I. Two creatures may take the same mutation. What a creature may acquire is read from what it owns as the step opens: a pick of this round opens nothing until the next mutation round."
                 }
               ]
             },
@@ -981,7 +981,7 @@
               "type": "paragraph",
               "spans": [
                 {
-                  "text": "Each family closes with a Stage 4 mutation, its "
+                  "text": "Each family closes with a Stage IV mutation, its "
                 },
                 {
                   "text": "capstone",
@@ -995,7 +995,7 @@
                   "strong": true
                 },
                 {
-                  "text": " of its family's Stage 3 mutations. It teaches no spell and adds no initiative. It gives a "
+                  "text": " of its family's Stage III mutations. It teaches no spell and adds no initiative. It gives a "
                 },
                 {
                   "text": "passive",
@@ -2908,6 +2908,11 @@
   ],
   "moved": {},
   "changes": [
+    {
+      "date": "2026-11-17",
+      "text": "A Stage is written in Roman numerals, Stage I to Stage IV, as the table and the field guide write it.",
+      "adrs": []
+    },
     {
       "date": "2026-11-16",
       "text": "The official rulebook is the app's edition. A creature chooses its spell when its turn comes. Every number follows the table's rule set and content (ADR 0112, ADR 0188).",

@@ -130,7 +130,7 @@ test('a capstone is drawn on its owner only, in the capstone slot', () => {
 });
 
 test('the appearance is said in the catalogue\'s package names, never the motif names', () => {
-  assert.equal(appearance(['occultist', 'necromancer', 'lich', 'archmage']).description, 'Warped body · Revenant (stage 3) · Archmage (stage 4)');
+  assert.equal(appearance(['occultist', 'necromancer', 'lich', 'archmage']).description, 'Warped body · Revenant (Stage III) · Archmage (Stage IV)');
   assert.equal(appearance([]).description, 'Unmutated');
 });
 

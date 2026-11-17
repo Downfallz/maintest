@@ -2,7 +2,8 @@
 
 Date: 2026-11-13
 
-Status: Accepted. Amends [0080](0080-host-the-table-on-azure-container-apps.md)
+Status: Accepted. Amends [0080](0080-host-the-table-on-azure-container-apps.md). The apex it leaves open is decided in
+[0185](0185-serve-the-public-showcase-from-cloudflare-pages.md): Cloudflare Pages serves the public showcase there.
 
 ## Context
 

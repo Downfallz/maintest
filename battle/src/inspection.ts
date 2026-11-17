@@ -1,3 +1,4 @@
+import { stageLabel } from '../../table/terms.js';
 import { creatureInspection } from '../../table/battle-inspection.js';
 import { cardsById } from '../../table/card.js';
 import { conditionKey, iconElement } from './condition-icons';
@@ -120,7 +121,7 @@ export function inspectionControls() {
         const item = node('li', '', 'inspect-mutation'); item.dataset.inspectMutation = String(pack.id);
         const head = node('div', '', 'inspect-mutation-head'); head.append(node('strong', pack.name));
         const chips = node('span', '', 'inspect-mutation-chips');
-        if (pack.stage != null) chips.append(node('span', `Stage ${pack.stage}`, 'inspect-chip stage'));
+        if (pack.stage != null) chips.append(node('span', stageLabel(pack.stage), 'inspect-chip stage'));
         const initiative = node('span', '', 'inspect-chip initiative');
         initiative.append(iconElement('initiative-gain'), document.createTextNode(pack.initiative == null ? 'Initiative unavailable' : `Initiative ${pack.initiative >= 0 ? '+' : ''}${pack.initiative}`));
         chips.append(initiative); head.append(chips); item.append(head);
