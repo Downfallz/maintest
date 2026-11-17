@@ -52,8 +52,7 @@ public sealed class InProcessAgentTurnsTests
         await table.TakenAtLeast(1).WaitAsync(TimeSpan.FromSeconds(10), Cancel);
         await Task.Delay(50, Cancel);
         var beforeTheWait = table.Taken;
-        clock.Advance(InProcessAgentTurns.FirstRetry);
-        await table.Finished.WaitAsync(TimeSpan.FromSeconds(10), Cancel);
+        await AdvancedUntilAsync(clock, table.Finished);
 
         beforeTheWait.ShouldBe(1);
         table.Taken.ShouldBe(2);
@@ -71,6 +70,22 @@ public sealed class InProcessAgentTurnsTests
         await Task.Delay(100, Cancel);
 
         table.Taken.ShouldBe(0);
+    }
+
+    /// <summary>
+    /// The fake clock moved on by the first wait until <paramref name="done" />: when the turn's wait sets its timer is
+    /// not the test's to know, and a clock moved before it is set never fires it (seen on #759's CI run).
+    /// </summary>
+    private static async Task AdvancedUntilAsync(FakeTimeProvider clock, Task done)
+    {
+        var giveUp = Task.Delay(TimeSpan.FromSeconds(10), Cancel);
+        while (!done.IsCompleted && !giveUp.IsCompleted)
+        {
+            clock.Advance(InProcessAgentTurns.FirstRetry);
+            await Task.WhenAny(done, Task.Delay(10, Cancel));
+        }
+
+        await done.WaitAsync(TimeSpan.Zero, Cancel);
     }
 
     /// <summary>A table whose turns go as scripted, the last one repeated, counting how many are taken at once.</summary>
