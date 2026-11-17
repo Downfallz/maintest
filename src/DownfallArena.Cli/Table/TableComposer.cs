@@ -504,7 +504,7 @@ internal sealed class TableComposer
             Push?.Watch(table);
             Lobby?.Watch(table);
             api.AnswerBy = () => TurnTimeouts.AnswerByAsync(table, this);
-            api.LastMove = async () => (await LastMoveAsync(table.Id))?.At;
+            api.LastMove = async () => (await LastMoveAsync(table.Id, CancellationToken.None))?.At;
             api.AnswerByFrom = lastMove => TurnTimeouts.AnswerBy(table, lastMove);
             if (Relay is { } relay)
             {
