@@ -124,6 +124,9 @@ public sealed class JobsApiTests : IDisposable
         var answer = await Jobs((_, _) => throw new IOException("the store is out")).HandleAsync("POST", JobsApi.TendRoute, null, "mk");
 
         answer.Status.ShouldBe(503);
+        var said = Encoding.UTF8.GetString(answer.Body);
+        said.ShouldContain("Jobs.Failed");
+        said.ShouldNotContain("the store is out", Case.Insensitive);
         var kept = (await _log.FindAsync((await _log.IdsAsync(Cancel)).ShouldHaveSingleItem(), Cancel)).ShouldNotBeNull();
         kept.Outcome.ShouldBe(TendOutcome.Failed);
         kept.By.ShouldBe("mk");

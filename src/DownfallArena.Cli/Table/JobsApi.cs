@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using DownfallArena.Application.Admin;
 using DownfallArena.Application.Tables.Ports;
 using DownfallArena.Application.Tables.Tending;
+using DownfallArena.Cli.Hosting;
 using DownfallArena.Cli.Studio;
 
 namespace DownfallArena.Cli.Table;
@@ -132,7 +133,10 @@ internal sealed class JobsApi
         }
         catch (Exception failure) when (TableRegistry.StoreFails(failure))
         {
-            return Problem(503, "Jobs.Failed", $"The pass stopped: {failure.Message}. Its run is kept as failed.");
+            // The store's text can name an account or a blob path: the console has it, the answer does not (#755).
+            // "run by <name>: " is how the ops report's mask finds an operator's name (scripts/ops/report.mjs).
+            await Console.Error.WriteLineAsync($"  Tending pass stopped, run by {operatorName}: {HttpHost.OneLine(failure)}");
+            return Problem(503, "Jobs.Failed", "The tending pass stopped: the store could not be read or written. The run is recorded as failed.");
         }
         finally
         {

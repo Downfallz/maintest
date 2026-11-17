@@ -29,8 +29,17 @@ internal sealed class StudioServer : IDisposable
         _viewerDirectory = viewerDirectory;
         // The loopback address, never anything else: this API writes content files, deletes them, and takes a
         // path from a request, which is what ADR 0023 refused to expose.
-        _host = new HttpHost(HttpHost.Loopback, port, AnswerAsync);
+        // The studio saves whole content files, and the balance knobs alone are past 128 KB: the table's limit
+        // would refuse them. It answers this machine only, so the limit here is a guard against a mistake rather
+        // than against a guest.
+        _host = new HttpHost(HttpHost.Loopback, port, AnswerAsync, BodyLimit);
     }
+
+    /// <summary>The largest body the studio reads: a content file, with room to grow.</summary>
+    private const int BodyLimit = 4 * 1024 * 1024;
+
+    /// <summary>The largest body the studio's host reads, as it was built.</summary>
+    internal int MaxBodyBytes => _host.MaxBodyBytes;
 
     public string Url => _host.Url;
 

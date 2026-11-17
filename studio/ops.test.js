@@ -161,6 +161,7 @@ test('an error line loses the player names and the free text an operator wrote b
     'The operator log could not keep settings on the host by marie-c: Status: 503 (Server Busy)',
     'Session 12 closed by marie-c.',
     'Scenario first-steps cut from session 12 at round 3 by marie-c.',
+    'Tending pass stopped, run by marie-c: IOException: the store is out',
   ].map(mask);
   for (const line of lines) assert.doesNotMatch(line, /Zelda|Link-7|marie-c|Bob|engine error/, line);
   assert.deepEqual(lines, [
@@ -176,6 +177,7 @@ test('an error line loses the player names and the free text an operator wrote b
     'The operator log could not keep settings on the host by <joueur>: Status: 503 (Server Busy)',
     'Session 12 closed by <joueur>.',
     'Scenario first-steps cut from session 12 at round 3 by <joueur>.',
+    'Tending pass stopped, run by <joueur>: IOException: the store is out',
   ]);
 });
 

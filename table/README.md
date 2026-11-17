@@ -703,6 +703,9 @@ sign-in, or an account `--admins` names). How each behaves, with its flags and i
 [`docs/reference/commands.md`](../docs/reference/commands.md#table). A new route adds its line here and a host
 test (`.claude/rules/host.md`).
 
+Every table route reads a body of at most 64 KB (the studio's host allows 4 MB): a longer one is answered 413 `Host.BodyTooLarge` before it reaches the
+route. A route that throws is answered 500 `Host.Unexpected`, and the exception goes to the console only.
+
 | Route | Who | What |
 | --- | --- | --- |
 | `/`, `/lobby` | anyone | The player lobby (ADR 0115); `/lobby?token=...` redirects to admin; `/lobby?rematch=<accountId>\|bot\|hotseat&format=...` opens the create dialog on the same opponent. |

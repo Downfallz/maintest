@@ -1,4 +1,7 @@
+using System.Net;
+using System.Net.Sockets;
 using DownfallArena.Cli.Hosting;
+using DownfallArena.Cli.Studio;
 
 namespace DownfallArena.Cli.Tests.Hosting;
 
@@ -145,5 +148,217 @@ public sealed class HttpHostTests
 
         host.Url.ShouldBe("http://192.168.1.12:5100/");
         host.IsLoopback.ShouldBeFalse();
+    }
+    /// <summary>
+    /// A body is read into memory, so one far larger than any route takes would let a guest run the one API
+    /// replica out of memory (#691). The length it announces is enough to refuse it before reading.
+    /// </summary>
+    [Fact]
+    public async Task A_body_announced_past_the_limit_is_refused_with_413_and_never_reaches_a_route()
+    {
+        var reached = false;
+        await using var running = Running.Start(16, (_, _) =>
+        {
+            reached = true;
+            return Task.FromResult(StudioResponse.OfPlainText(200, "read"));
+        });
+
+        using var answer = await running.Client.PostAsync(running.Url, new StringContent(new string('x', 64)), Cancel);
+
+        answer.StatusCode.ShouldBe(HttpStatusCode.RequestEntityTooLarge);
+        (await answer.Content.ReadAsStringAsync(Cancel)).ShouldContain("Host.BodyTooLarge");
+        reached.ShouldBeFalse();
+    }
+
+    /// <summary>A chunked body announces no length, so the host stops reading at the limit rather than trusting it.</summary>
+    [Fact]
+    public async Task A_chunked_body_past_the_limit_is_refused_with_413_once_the_limit_is_read()
+    {
+        var reached = false;
+        await using var running = Running.Start(16, (_, _) =>
+        {
+            reached = true;
+            return Task.FromResult(StudioResponse.OfPlainText(200, "read"));
+        });
+        using var request = new HttpRequestMessage(HttpMethod.Post, running.Url) { Content = new StringContent(new string('x', 64)) };
+        request.Headers.TransferEncodingChunked = true;
+
+        using var answer = await running.Client.SendAsync(request, Cancel);
+
+        answer.StatusCode.ShouldBe(HttpStatusCode.RequestEntityTooLarge);
+        reached.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task A_body_within_the_limit_reaches_the_route_whole()
+    {
+        await using var running = Running.Start(16, (_, body) => Task.FromResult(StudioResponse.OfPlainText(200, body)));
+
+        using var answer = await running.Client.PostAsync(running.Url, new StringContent(new string('x', 16)), Cancel);
+
+        answer.StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await answer.Content.ReadAsStringAsync(Cancel)).ShouldBe(new string('x', 16));
+    }
+
+    /// <summary>
+    /// A route that throws is a bug, and the exception's text can name a storage account, a blob path or a file
+    /// on the host (#692): the answer is a stable code, and the text goes to the console only.
+    /// </summary>
+    [Fact]
+    public async Task A_route_that_throws_answers_500_with_a_stable_code_and_not_the_exception_s_text()
+    {
+        await using var running = Running.Start(16, (_, _) => throw new InvalidOperationException("https://secret.blob.core.windows.net/tables/t1 failed"));
+
+        using var answer = await running.Client.GetAsync(running.Url, Cancel);
+
+        answer.StatusCode.ShouldBe(HttpStatusCode.InternalServerError);
+        var text = await answer.Content.ReadAsStringAsync(Cancel);
+        text.ShouldContain("Host.Unexpected");
+        text.ShouldNotContain("secret");
+    }
+
+    [Fact]
+    public async Task A_body_one_byte_past_the_limit_is_refused()
+    {
+        await using var running = Running.Start(16, (_, body) => Task.FromResult(StudioResponse.OfPlainText(200, body)));
+
+        using var answer = await running.Client.PostAsync(running.Url, new StringContent(new string('x', 17)), Cancel);
+
+        answer.StatusCode.ShouldBe(HttpStatusCode.RequestEntityTooLarge);
+    }
+
+    /// <summary>
+    /// A host that drained the rest of the body to keep the connection would read for as long as the client
+    /// sends: a client that announces a gigabyte and keeps sending would hold a thread and the bandwidth past the
+    /// 413. The host answers before reading the body, and the connection is closed, not drained.
+    /// </summary>
+    [Fact]
+    public async Task A_client_that_keeps_sending_past_the_limit_is_answered_and_cut_off()
+    {
+        await using var running = Running.Start(16, (_, _) => Task.FromResult(StudioResponse.OfPlainText(200, "read")));
+        var url = new Uri(running.Url);
+        using var client = new TcpClient();
+        await client.ConnectAsync(url.Host, url.Port, Cancel);
+        var stream = client.GetStream();
+        var head = $"POST / HTTP/1.1\r\nHost: {url.Authority}\r\nContent-Type: application/json\r\nContent-Length: 1000000000\r\n\r\n";
+        await stream.WriteAsync(System.Text.Encoding.ASCII.GetBytes(head), Cancel);
+        using var stopSending = CancellationTokenSource.CreateLinkedTokenSource(Cancel);
+        var sending = Task.Run(async () =>
+        {
+            var chunk = new byte[1024];
+            try
+            {
+                while (!stopSending.IsCancellationRequested)
+                {
+                    await stream.WriteAsync(chunk, stopSending.Token);
+                    await Task.Delay(5, stopSending.Token);
+                }
+            }
+            catch (Exception exception) when (exception is IOException or OperationCanceledException or ObjectDisposedException)
+            {
+                // The host closed the connection, which is what the test waits for.
+            }
+        }, CancellationToken.None);
+
+        var said = await ReadUntilClosedAsync(stream, TimeSpan.FromSeconds(5));
+        await stopSending.CancelAsync();
+        await sending;
+
+        said.Closed.ShouldBeTrue("the host should close a connection whose body is past the limit, not drain it");
+        said.Text.ShouldStartWith("HTTP/1.1 413");
+    }
+
+    /// <summary>A script that saves its JSON with a byte order mark is read as a browser's body would be.</summary>
+    [Fact]
+    public async Task A_byte_order_mark_is_dropped_from_the_body()
+    {
+        await using var running = Running.Start(16, (_, body) => Task.FromResult(StudioResponse.OfPlainText(200, body)));
+        var bytes = new byte[] { 0xEF, 0xBB, 0xBF, (byte)'{', (byte)'}' };
+
+        using var answer = await running.Client.PostAsync(running.Url, new ByteArrayContent(bytes), Cancel);
+
+        (await answer.Content.ReadAsStringAsync(Cancel)).ShouldBe("{}");
+    }
+
+    /// <summary>A join code is a seat's credential: the console line of a route that throws does not carry it.</summary>
+    [Fact]
+    public void A_join_code_never_reaches_the_console()
+    {
+        HttpHost.Loggable("/j/ABCD-1234").ShouldBe("/j/…");
+        HttpHost.Loggable("/api/tables").ShouldBe("/api/tables");
+    }
+
+    /// <summary>The ops report reads the console a line at a time: a stack trace would be twenty error lines.</summary>
+    [Fact]
+    public void An_exception_is_written_on_one_line_without_its_stack()
+    {
+        var thrown = new InvalidOperationException("first\nsecond");
+
+        HttpHost.OneLine(thrown).ShouldBe("InvalidOperationException: first second");
+    }
+
+    private static async Task<(bool Closed, string Text)> ReadUntilClosedAsync(NetworkStream stream, TimeSpan patience)
+    {
+        using var waiting = CancellationTokenSource.CreateLinkedTokenSource(Cancel);
+        waiting.CancelAfter(patience);
+        var said = new MemoryStream();
+        var buffer = new byte[4096];
+        try
+        {
+            int read;
+            while ((read = await stream.ReadAsync(buffer, waiting.Token)) > 0)
+            {
+                said.Write(buffer, 0, read);
+            }
+
+            return (true, System.Text.Encoding.ASCII.GetString(said.ToArray()));
+        }
+        catch (IOException)
+        {
+            return (true, System.Text.Encoding.ASCII.GetString(said.ToArray()));
+        }
+        catch (OperationCanceledException) when (!Cancel.IsCancellationRequested)
+        {
+            return (false, System.Text.Encoding.ASCII.GetString(said.ToArray()));
+        }
+    }
+
+    private static CancellationToken Cancel => TestContext.Current.CancellationToken;
+
+    /// <summary>A host listening on a free loopback port for one test, stopped when the test ends.</summary>
+    private sealed class Running : IAsyncDisposable
+    {
+        private readonly HttpHost _host;
+        private readonly CancellationTokenSource _stopping = new();
+        private readonly Task _serving;
+
+        private Running(HttpHost host)
+        {
+            _host = host;
+            _serving = host.RunAsync(_stopping.Token);
+        }
+
+        public HttpClient Client { get; } = new();
+
+        public string Url => _host.Url;
+
+        public static Running Start(int maxBodyBytes, Func<HttpListenerRequest, string, Task<StudioResponse>> answer) =>
+            new(new HttpHost(HttpHost.Loopback, FreePort(), answer, maxBodyBytes));
+
+        public async ValueTask DisposeAsync()
+        {
+            Client.Dispose();
+            await _stopping.CancelAsync();
+            await _serving;
+            _host.Dispose();
+            _stopping.Dispose();
+        }
+
+        private static int FreePort()
+        {
+            using var probe = new TcpListener(IPAddress.Loopback, 0);
+            probe.Start();
+            return ((IPEndPoint)probe.LocalEndpoint).Port;
+        }
     }
 }

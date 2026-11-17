@@ -274,6 +274,10 @@ dotnet run --project src/DownfallArena.Cli -- table --rules <file> --p2 greedy
 Two people at one screen, or one against a bot (ADR 0054). The table's routes, one line each, are in
 [`table/README.md`](../../table/README.md#routes); this section keeps how each behaves.
 
+Every route reads a body of at most 64 KB and answers a longer one 413 `Host.BodyTooLarge` (the studio's host
+allows 4 MB). A route that throws answers 500 `Host.Unexpected`; the exception goes to the console, one line,
+never to the answer.
+
 #### Seats, network and recording
 
 - `--handover N` starts as bots and hands over at round N.
