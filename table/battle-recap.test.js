@@ -243,3 +243,18 @@ test('a purchase without a round does not hide the mutations the board holds', (
 
   assert.deepEqual(recap.chosen.mutations, { round: 4, picks: [{ creature: 'Creature 2', mutation: 'Brute' }] });
 });
+
+test('a creature that survived one bleed and fell to the next is told fallen at the later Upkeep', () => {
+  const { sequence, board } = recorded.boards.round4Tempo;
+  const bledBoard = { ...board, enemies: board.enemies.map(one => one.id === 4 ? { ...one, health: 0, isAlive: false } : one) };
+  const bleeding = entry => ({ ...entry, event: { ...entry.event, bleedTicks: [{ creature: 4, damage: 12 }] } });
+  const feed = recorded.feed.filter(entry => entry.sequence <= 112 || (entry.sequence > 114 && entry.sequence <= sequence))
+    .filter(entry => entry.event.kind !== 'CombatActionResolved' || entry.sequence < 100)
+    .map(entry => entry.sequence === 80 || entry.sequence === 119 ? bleeding(entry) : entry);
+
+  const recap = buildRecap({ view: { seat: 'player1', board: bledBoard }, feed, seen: 100, now: NOW, catalogue: recorded.catalogue });
+
+  assert.equal(recap.teams.opponent.find(one => one.id === '4').fellWhileAway, true);
+  assert.deepEqual(recap.rounds.find(one => one.round === 4).defeated, [{ creature: 'Creature 4', side: 'Opponent', unseen: true }]);
+  assert.deepEqual(recap.rounds.find(one => one.round === 3)?.defeated ?? [], []);
+});

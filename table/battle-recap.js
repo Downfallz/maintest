@@ -126,7 +126,7 @@ function tellRound(round, rows, { isNew, folded, completed, recorded, bled }) {
 
 const castFrames = entries => entries.filter(entry => entry.event?.kind === 'CombatActionResolved' && Array.isArray(entry.event.frame?.before));
 
-// The creatures an ongoing effect defeated at an Upkeep: no cast frame records their fall, so the fall is the first
+// The creatures an ongoing effect defeated at an Upkeep: no cast frame records their fall, so the fall is the last
 // Upkeep after the last frame that shows them standing whose bleed ticks name them. Read only for a creature the
 // board says is defeated: the feed records the tick, never the health it left.
 function bledOut(entries, board) {
@@ -138,7 +138,8 @@ function bledOut(entries, board) {
     const standing = frames.filter(entry => [...entry.event.frame.before, ...(entry.event.frame.after ?? [])]
       .some(seen => seen.id === one.id && seen.isAlive !== false)).map(entry => entry.sequence);
     const after = standing.length ? Math.max(...standing) : -1;
-    const tick = entries.find(entry => entry.sequence > after && entry.event?.kind === 'OngoingEffectsApplied'
+    // The last such tick: a defeated creature takes no more, and an earlier one it may have survived.
+    const tick = entries.findLast(entry => entry.sequence > after && entry.event?.kind === 'OngoingEffectsApplied'
       && (entry.event.bleedTicks ?? []).some(bleed => bleed.creature === one.id));
     return tick ? [{ id: one.id, sequence: tick.sequence, round: roundOf(tick), label: creatureLabel(board, one.id),
       side: allies.has(one.id) ? 'Your team' : 'Opponent' }] : [];
