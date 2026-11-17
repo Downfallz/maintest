@@ -39,11 +39,16 @@ async function mount(page, { waiting = null, round = 1, feed = [energy(round), o
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: { rules: { energyPerRound: 99, combatDeclaration: 'AtActivation' }, cards: [{ id: 'strike', name: 'Strike', cost: 2 }], packages: [{ id: 'root', name: 'Warden', level: 1, spells: ['strike'] }] } });
     if (url.pathname === '/api/seat/player1') {
       if (url.searchParams.has('shown')) state.shown.push(url.searchParams.get('shown'));
-      // A host answers with the board it had when it was asked. A read held here is answered only once the board has
-      // changed under it: the read that was still on its way when the change was told.
-      const view = state.view;
-      if (state.hold) { state.hold = false; state.held = true; await expect.poll(() => state.view !== view).toBe(true); }
-      await route.fulfill({ status: state.status, json: view }); state.answered = view; return;
+      // A host answers with the board it had when it was asked. A board read held here is answered only once the board
+      // has changed under it: the read that was still on its way when the change was told. An acknowledgement reaches
+      // no board, so it never says a change arrived.
+      const view = state.view, board = !url.searchParams.has('shown');
+      if (board && state.hold) {
+        state.hold = false; state.held = true;
+        try { await expect.poll(() => state.view !== view).toBe(true); } finally { await route.fulfill({ status: state.status, json: view }); }
+        state.answered = view; return;
+      }
+      await route.fulfill({ status: state.status, json: view }); if (board) state.answered = view; return;
     }
     return route.fulfill({ status: 500 });
   });
@@ -139,7 +144,9 @@ test('closing attack playback finishes before the next-round receipt and phase t
   await h.publish([attack, energy(3), ongoing(3)], { board: { ...h.state.view.board, roundNumber: 3 }, waitingFor: 'Speed', waitingAsked: 12, options: { speed: { missing: [1, 2, 3] } } });
   await expect(page.locator('#playback-next')).toBeVisible(); await expect(page.locator('#playback-skip')).toBeHidden();
   await expect(page.locator('#upkeep-dialog')).toBeHidden(); await expect(page.locator('#help-dialog')).toBeHidden();
-  await page.locator('#settings').click(); await page.selectOption('#playback-preference', 'step'); await page.getByRole('button', { name: 'Close settings' }).click(); await page.clock.runFor(WINDUP_MS + IMPACT_MS);
+  await page.locator('#settings').click(); await page.selectOption('#playback-preference', 'step'); await page.getByRole('button', { name: 'Close settings' }).click();
+  // From the windup's timer to the impact's, rather than every software frame between them (#749).
+  await page.clock.fastForward(WINDUP_MS); await page.clock.fastForward(IMPACT_MS);
   await page.locator('#playback-next').click(); await expect(page.locator('#reading-title')).toHaveText('Upkeep');
   await expect(page.locator('#result-text')).toContainText('+5 energy');
   await expect(page.locator('#upkeep-dialog')).toBeHidden();

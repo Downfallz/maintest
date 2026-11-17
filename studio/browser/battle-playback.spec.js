@@ -120,7 +120,9 @@ for (const kind of ['fizzle', 'support', 'legacy']) test(`${kind} keeps the real
 test('the dock\'s instruction is back once the last action has settled', async ({ page }) => {
   const h = await mount(page); await h.publish([entry(10)]);
   await expect(page.locator('#battle')).toHaveAttribute('data-reading', 'true');
-  await page.clock.runFor(3200); await expect(page.locator('#playback-skip')).toBeHidden();
+  // From each of the playback's timers to the next, rather than every software frame of the scene between them (#749).
+  for (const step of [WINDUP_MS, IMPACT_MS, SETTLE_MS]) await page.clock.fastForward(step);
+  await expect(page.locator('#playback-skip')).toBeHidden();
   // The spell choice is back by itself (ADR 0149); closed, it leaves the dock's instruction and last result.
   await expect(page.locator('#combat-dialog')).toBeVisible(); await page.locator('#combat-dialog-close').click();
   await expect(page.locator('#playback-result')).toBeVisible();
@@ -139,7 +141,8 @@ for (const reason of ['hidden', 'revoked']) test(`${reason} clears private playb
   if (reason === 'hidden') await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')); });
   if (reason === 'revoked') { h.state.status = 403; await page.evaluate(() => window.notifyBattle()); }
   await expect(page.locator('#result-text')).toBeEmpty(); await expect(page.locator('.creature')).toHaveCount(0);
-  await page.clock.runFor(3000); await expect(page.locator('#result-text')).toBeEmpty();
+  // One jump past every timer the playback had pending: a callback that was not fenced would fire and move the stage.
+  await page.clock.fastForward(3000); await expect(page.locator('#result-text')).toBeEmpty();
   await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'decision');
   if (reason === 'hidden') {
     h.state.view.feed = [entry(10), entry(11)]; h.state.view.feedNext = 12;
@@ -289,9 +292,10 @@ test('live playback shows the necromantic recipients apart from the caster blood
   await expect(page.locator('[data-creature="5"] .creature-effect')).toContainText('Bleed 2');
   await expect(page.locator('[data-creature="6"] .creature-effect')).toBeEmpty();
   await fits(page); await page.screenshot({ path: info.outputPath('art4-live-necromancy.png') });
-  // The player's own cast plays out and moves on by itself (ADR 0141). The clock jumps from one of the playback's
-  // timers to the next, the impact's end and then the settle, rather than drawing every frame of the 1440 × 1000
-  // scene in software between them: that took a loaded runner past the test's 30 seconds (#749).
+  // The player's own cast plays out and moves on by itself (ADR 0141). The 900 ms above crossed the windup, so one
+  // jump of the impact's length passes its end, and the settle that end schedules is due one settle later. Jumps fire
+  // the playback's timers without drawing every frame of the 1440 × 1000 scene in software between them, which took
+  // a loaded runner past the test's 30 seconds (#749).
   await page.clock.fastForward(IMPACT_MS); await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'resolved');
   await page.clock.fastForward(SETTLE_MS); await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'decision');
   expect(h.errors).toEqual([]);
