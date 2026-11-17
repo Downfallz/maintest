@@ -1,6 +1,6 @@
 # Plan: feedback, a bug report to a regression test and an idea to a plan
 
-Status: accepted, 2026-11-16 (the owner settled the questions at the end). R0 to R4 and I1 are built; R5 is next.
+Status: accepted, 2026-11-16 (the owner settled the questions at the end). R0 to R5 and I1 are built; R6 is next.
 
 ## What the owner asked for
 
@@ -421,6 +421,34 @@ and they are the first thing every player can use.
    and *fixed* read from GitHub. Tests: `RedactedScenarioTests` (every id replaced, times at the epoch, a file
    holding a name refused), the zip holding one `scenario.json` that rebuilds, the address built under 8 KB
    (`admin-feedback.test.js`), `studio/prompts.test.js` for the label.
+
+   *Built (2026-11-17)*: `RedactedScenario` (Application) gives the scenario Reproduce kept the report's id as its
+   run and session, and a match id drawn from it (`MatchOf`). It keeps the answers after the cut only up to the
+   journal's length when the player wrote; a practice's report keeps every entry it copied. Its `Check` reads the file
+   as written and refuses one whose source is not the report's, whose journal keeps a time, or that holds a name it is
+   given as a word of its own, whatever its case. The carried content is left out of that reading. It says what it
+   found ("an account"), never the name. `GET /api/admin/feedback/<id>/scenario.zip` writes the file with its content
+   and checks it against the report's sender, account and table, the session's ids, and, from the table's record,
+   every seat's key, code, invitation and account, the pilot's key, and the players' names. It answers
+   `report-<id>.zip` holding one `scenario.json`, and notes `feedback.download`. A report from a table still under way
+   is refused (`Feedback.UnderWay`), and the sheet says the scenario comes once the game is over: R4's cut may hold the
+   other seat's face-down choices of a round still played.
+
+   **File an issue** opens `bug_from_report.yml` (labels `bug` and `from-report`) pre-filled by its field ids: the report's
+   id, the category, the player's words, the round, step and seat, the engine, content and rules, the page's errors,
+   and where to drop the zip. The title names the report and its category, never the player's words, and no table id,
+   account or key is in the address. Past 8,000 characters the longest of the words and the errors is cut by a quarter,
+   marked with an ellipsis, until it fits. The issue's number is pasted back, as typed or as its address, and the
+   report reads *Filed #N* (`feedback.file`). Opening the tab reads the filed reports, then asks GitHub's public API
+   once for the closed `from-report` issues, the last 100. Each report whose issue was closed as completed is marked
+   *fixed* (`feedback.status`). One closed as not planned stays filed for the operator. `fixed` is refused on a report
+   never filed (`Feedback.NotFiled`). The repository is `FeedbackAdminApi.Repository`. `bug`, `enhancement` and
+   `from-report` are declared in `.github/labels.json`. A test holds every label an issue form puts on its issue to that
+   file. The *What we keep* panel and the privacy policy, in English and French, say a bug may be described in a public
+   issue in the operator's words, with nothing that names the player.
+
+   Left: a player's name that is also a word of the content the journal names (a spell called like the player) refuses
+   the download, and the sheet says a player's name is held. Nothing reads a filed issue past the last 100 closed.
 8. **R6, bug scenarios and their tests.** `scenarios/bugs/` read by the host and listed as *Bug #N*;
    `ScenarioFileTests` asking a bug file's answers only up to its reported point; the `BugScenario` test helper;
    `scenario-import` and `scenario-check --trace`. Tests: `RepositoryScenariosTests` (a bug file listed),

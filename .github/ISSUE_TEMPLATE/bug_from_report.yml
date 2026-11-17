@@ -1,0 +1,55 @@
+name: Bug from a player's report
+description: Filed by the operator from a bug report in the admin panel's Feedback tab (docs/tabletop/feedback-plan.md, R5).
+title: "Report "
+labels: [bug, from-report]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This issue is public. The panel filled it from a player's report: read every field, and edit the player's words
+        before submitting. No account, table id or seat key belongs here.
+  - type: input
+    id: report
+    attributes:
+      label: Report
+      description: The report's id in the Feedback tab.
+    validations:
+      required: true
+  - type: input
+    id: category
+    attributes:
+      label: Category
+      description: What the player said went wrong.
+  - type: textarea
+    id: happened
+    attributes:
+      label: What happened
+      description: The player's words, edited by the operator.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What was expected
+      description: The player's words, and the rule from docs/domain/game-rules.md or the rulebook if it can be quoted.
+  - type: input
+    id: where
+    attributes:
+      label: Where
+      description: The round, the step and the seat the report was sent from.
+  - type: input
+    id: played
+    attributes:
+      label: Played on
+      description: The engine's commit, the content hash and the rules.
+  - type: textarea
+    id: errors
+    attributes:
+      label: The page's errors
+      description: The last errors the page caught, if any.
+      render: text
+  - type: textarea
+    id: scenario
+    attributes:
+      label: Scenario
+      description: Drop the report's zip here, downloaded from the panel with Download the scenario. It holds the redacted scenario.json.

@@ -5,7 +5,10 @@
 // idea (I1) is merged into another, read with every idea merged into it and how many asked, planned with its plan's
 // path, shipped or declined, and copied as a plan prompt in the operator's own words. The host keeps, guards and
 // notes; this page asks and draws. A bug report's Reproduce (R4) cuts its round as a scenario in the reporter's seat,
-// and the sheet links the round to play.
+// and the sheet links the round to play. Once the game is over (R5) the sheet downloads that scenario redacted, as a
+// zip to attach to a public issue, opens GitHub's new-issue form pre-filled for the operator to read and submit, keeps
+// the issue's number as filed #N, and marks the report fixed when the tab finds that issue closed on GitHub. The host
+// never writes to GitHub.
 
 import { ago } from './admin-players.js';
 import { BUG_CATEGORIES, IDEA_PLACES } from './feedback-sheet.js';
@@ -34,6 +37,8 @@ export const STATUS_FILTERS = Object.freeze([
   { value: 'new', label: 'New' },
   { value: 'seen', label: 'Seen' },
   { value: 'reproduced', label: 'Reproduced' },
+  { value: 'filed', label: 'Filed' },
+  { value: 'fixed', label: 'Fixed' },
   { value: 'planned', label: 'Planned' },
   { value: 'shipped', label: 'Shipped' },
   { value: 'declined', label: 'Declined' },
@@ -96,6 +101,7 @@ export function feedbackRows(answer, now = Date.now()) {
 /** A status as the sheet and the list say it: with the operator's reason when dismissed or declined, with its plan when planned or shipped. */
 export function statusLine(feedback) {
   const label = STATUS_LABELS[feedback?.status] ?? feedback?.status ?? '';
+  if (['filed', 'fixed'].includes(feedback?.status) && Number.isInteger(feedback.issue)) return `${label} #${feedback.issue}`;
   if (['planned', 'shipped'].includes(feedback?.status) && feedback.plan) return `${label}: ${feedback.plan}`;
   if (!['dismissed', 'declined'].includes(feedback?.status) || !feedback.reason) return label;
   return feedback.status === 'dismissed' && feedback.spam === true ? 'Dismissed as spam' : `${label}: ${feedback.reason}`;
@@ -228,7 +234,7 @@ export function positionSides(position, seat) {
 }
 
 /** The sheet's buttons, by the names the host offers them under (`actions`), each shown only when the host offers it. */
-export const SHEET_ACTIONS = Object.freeze(['reproduce', 'seen', 'reproduced', 'dismiss', 'spam', 'toIdea', 'toBug', 'diagnose', 'mute', 'unmute',
+export const SHEET_ACTIONS = Object.freeze(['reproduce', 'download', 'file', 'seen', 'reproduced', 'dismiss', 'spam', 'toIdea', 'toBug', 'diagnose', 'mute', 'unmute',
   'planned', 'shipped', 'declined', 'merge', 'prompt']);
 
 /** Which of the sheet's buttons apply to this feedback as it stands: what the host says, and nothing else. */
@@ -274,6 +280,100 @@ export function changeSaid(answer, done) {
   return { refused: false, line: done };
 }
 
+/** How long the new-issue address may grow: a pre-filled address stays usable under about 8 KB. */
+export const ADDRESS_LIMIT = 8000;
+
+/** The issue form a bug report is filed with (`.github/ISSUE_TEMPLATE/bug_from_report.yml`): it labels it `bug` and `from-report`. */
+export const ISSUE_TEMPLATE = 'bug_from_report.yml';
+
+/** A text cut to a length, marked where it was cut. */
+function cut(text, length) {
+  return text.length <= length ? text : `${text.slice(0, Math.max(0, length - 1))}…`;
+}
+
+/** Where a report was sent from, as the issue says it: the round, the step and the seat, never the table's id. */
+function issueWhere(context) {
+  if (!context) return 'Outside a game';
+  const where = [Number.isInteger(context.round) ? `Round ${context.round}` : null, context.subPhase, context.seat].filter(Boolean).join(', ');
+  return context.scenario && !context.table ? `${where}, in a practice` : where;
+}
+
+/**
+ * GitHub's new-issue form for a bug report, pre-filled from its sheet by the form's field ids (`bug_from_report.yml`):
+ * the category, the player's words, where it happened, the engine and content it was played on, the page's errors, and
+ * where to drop the downloaded zip. No table id, account or seat key: the operator reads and edits what becomes public
+ * before submitting. Under `ADDRESS_LIMIT`, the longest of the player's words and the errors cut first. None without a
+ * repository to file in.
+ */
+export function issueAddress(sheet) {
+  if (!sheet?.repository) return null;
+  const context = sheet.context ?? null;
+  const category = categoryLabel('bug', sheet.category);
+  const round = Number.isInteger(context?.round) ? `, round ${context.round}` : '';
+  const additions = sheet.additions ?? [];
+  const fields = {
+    template: ISSUE_TEMPLATE,
+    title: `Report ${sheet.id}: ${category.charAt(0).toLowerCase()}${category.slice(1)}${round}`,
+    report: sheet.id,
+    category,
+    happened: [sheet.text, ...additions.map(added => added.text)].filter(Boolean).join('\n'),
+    expected: [sheet.expected, ...additions.map(added => added.expected)].filter(Boolean).join('\n'),
+    where: issueWhere(context),
+    played: [context?.engine ? `Engine ${context.engine}` : null, context?.content ? `content ${context.content}` : null, context?.rules].filter(Boolean).join(' · '),
+    errors: (sheet.errors ?? []).map(error => (error.where ? `${error.message} (${error.where})` : error.message)).join('\n'),
+    scenario: sheet.reproduction ? `Drop report-${sheet.id}.zip here, downloaded from the panel.` : '',
+  };
+  const address = () => `https://github.com/${sheet.repository}/issues/new?${Object.entries(fields)
+    .filter(([, value]) => value).map(([name, value]) => `${name}=${encodeURIComponent(value)}`).join('&')}`;
+  for (let built = address(); ; built = address()) {
+    if (built.length <= ADDRESS_LIMIT) return built;
+    const longest = ['happened', 'expected', 'errors'].filter(name => fields[name].length > 1)
+      .sort((one, other) => encodeURIComponent(fields[other]).length - encodeURIComponent(fields[one]).length)[0];
+    if (!longest) return built;
+    fields[longest] = cut(fields[longest], Math.floor(fields[longest].length * 0.75));
+  }
+}
+
+/** The issue's number as the operator pasted it: the number, with or without its hash, or the issue's address. None otherwise. */
+export function issueNumber(typed) {
+  const text = String(typed ?? '').trim();
+  const found = /^#?(\d+)$/.exec(text) ?? /^https:\/\/github\.com\/[^/]+\/[^/]+\/issues\/(\d+)(?:[#?].*)?$/.exec(text);
+  const number = found ? Number(found[1]) : NaN;
+  return Number.isSafeInteger(number) && number > 0 ? number : null;
+}
+
+/** What Mark filed is told with. */
+export function filedSaid(answer) {
+  return answer.ok
+    ? { refused: false, line: `Filed as #${answer.body?.issue}. The report reads fixed once the issue is closed.` }
+    : changeSaid(answer);
+}
+
+/** GitHub's public API for the repository's closed issues filed from reports: one request, no credential on a public repository. */
+export function issuesPath(repository) {
+  return repository ? `https://api.github.com/repos/${repository}/issues?state=closed&labels=from-report&per_page=100` : null;
+}
+
+/** The issues GitHub's answer says were closed as done: not a pull request, and not closed as not planned. */
+export function closedIssues(answer) {
+  const issues = Array.isArray(answer) ? answer : [];
+  return new Set(issues.filter(issue => issue?.state === 'closed' && !issue.pull_request && issue.state_reason !== 'not_planned')
+    .map(issue => issue.number).filter(Number.isInteger));
+}
+
+/** The reports filed as an issue now closed: the ones the tab marks fixed. */
+export function fixedReports(rows, closed) {
+  return (rows ?? []).filter(row => row.status === 'filed' && closed.has(row.issue)).map(row => row.id);
+}
+
+/** Why a bug report's sheet offers no download, when it says anything. */
+export function downloadNote(sheet) {
+  const can = sheetActions(sheet);
+  if (sheet?.kind !== 'bug' || can.download) return '';
+  if (sheet.reproduction && sheet.underWay) return 'The scenario can be downloaded once the game it was sent from is over: nothing a seat holds face down reaches a public issue.';
+  return !sheet.reproduction && can.reproduce ? 'Reproduce the round first: its scenario is what the issue carries.' : '';
+}
+
 // ---- The tab itself. Everything above is pure and tested; this part only moves it onto the screen.
 
 function made(tag, className, text) {
@@ -291,13 +391,27 @@ function fill(select, options) {
   }));
 }
 
+/** Hands the browser a downloaded file to save, under the name the host gave it. */
+function save(answer) {
+  const url = URL.createObjectURL(answer.blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = answer.filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 /**
- * Draws the Feedback tab and its sheet. `send(method, path, body)` is the admin transport's; `shown(available)` says
- * whether this host keeps feedback; `openDiagnosis(row)` opens the Diagnose sheet on a table (S5b).
+ * Draws the Feedback tab and its sheet. `send(method, path, body)` is the admin transport's and `download(method, path)`
+ * its way to fetch a file; `github(address)` is the browser's fetch, which reads GitHub's public API; `shown(available)`
+ * says whether this host keeps feedback; `openDiagnosis(row)` opens the Diagnose sheet on a table (S5b).
  */
-export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
+export function mountFeedbackTab({ send, download, github = globalThis.fetch?.bind(globalThis), element, shown, openDiagnosis }) {
   let page = 1;
   let open = null;
+  let checking = false;
   // Each listing and each sheet read is numbered, so an answer that comes back after a later one is dropped.
   let listed = 0;
   let read = 0;
@@ -306,12 +420,12 @@ export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
   fill(element('admin-feedback-status'), STATUS_FILTERS);
   fill(element('admin-feedback-category'), categoryFilters());
 
-  const BUTTONS = { reproduce: 'admin-feedback-reproduce', seen: 'admin-feedback-seen', reproduced: 'admin-feedback-reproduced', dismiss: 'admin-feedback-dismiss', spam: 'admin-feedback-spam',
+  const BUTTONS = { reproduce: 'admin-feedback-reproduce', download: 'admin-feedback-download', file: 'admin-feedback-filed', seen: 'admin-feedback-seen', reproduced: 'admin-feedback-reproduced', dismiss: 'admin-feedback-dismiss', spam: 'admin-feedback-spam',
     toIdea: 'admin-feedback-to-idea', toBug: 'admin-feedback-to-bug', diagnose: 'admin-feedback-diagnose', mute: 'admin-feedback-mute', unmute: 'admin-feedback-unmute',
     planned: 'admin-feedback-planned', shipped: 'admin-feedback-shipped', declined: 'admin-feedback-declined', merge: 'admin-feedback-merge', prompt: 'admin-feedback-prompt' };
 
   // The blocks an idea's actions sit in, each shown while one of its buttons is.
-  const BLOCKS = { 'admin-feedback-dismissing': ['dismiss'], 'admin-feedback-planning': ['planned', 'shipped'], 'admin-feedback-declining': ['declined'],
+  const BLOCKS = { 'admin-feedback-filing': ['download', 'file'], 'admin-feedback-filing-issue': ['file'], 'admin-feedback-dismissing': ['dismiss'], 'admin-feedback-planning': ['planned', 'shipped'], 'admin-feedback-declining': ['declined'],
     'admin-feedback-merging': ['merge'], 'admin-feedback-prompting': ['prompt'] };
 
   const filters = () => ({ kind: element('admin-feedback-kind').value, status: element('admin-feedback-status').value, category: element('admin-feedback-category').value, page });
@@ -379,6 +493,13 @@ export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
     const reproduction = element('admin-feedback-reproduction');
     reproduction.hidden = !answer.reproduction?.link;
     if (answer.reproduction?.link) reproduction.href = answer.reproduction.link;
+    const issue = element('admin-feedback-issue');
+    const address = issueAddress(answer);
+    issue.hidden = !address;
+    if (address) issue.href = address;
+    const note = downloadNote(answer);
+    element('admin-feedback-download-note').textContent = note;
+    element('admin-feedback-download-note').hidden = !note;
     element('admin-feedback-joined').hidden = !answer.mergedInto;
     element('admin-feedback-asks').replaceChildren(...askLinks(answer).map(({ id, label }) => {
       const button = made('button', 'secondary', label);
@@ -454,6 +575,7 @@ export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
       return;
     }
     for (const field of ['admin-feedback-reason', 'admin-feedback-decline-reason', 'admin-feedback-prompt-text']) element(field).value = '';
+    element('admin-feedback-issue-number').value = Number.isInteger(answer.body.issue) ? String(answer.body.issue) : '';
     element('admin-feedback-plan').value = answer.body.plan ?? '';
     drawSheet(answer.body);
     said('');
@@ -489,6 +611,34 @@ export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
     } finally {
       button.disabled = false;
     }
+  });
+  // The redacted scenario is built and checked by the host, which refuses one that still names a person or a session.
+  element('admin-feedback-download').addEventListener('click', async () => {
+    const button = element('admin-feedback-download');
+    if (!open || button.disabled) return;
+    button.disabled = true;
+    said('Redacting the scenario…');
+    try {
+      const from = read;
+      const answer = await download('GET', `/api/admin/feedback/${encodeURIComponent(open.id)}/scenario.zip`);
+      if (from !== read) return;
+      if (!answer.ok) {
+        said(answer.body?.message ?? `The host answered ${answer.status}.`, true);
+        return;
+      }
+      save(answer);
+      said(`Saved ${answer.filename}. Attach it to the issue: GitHub takes a zip, not a .json.`);
+    } finally {
+      button.disabled = false;
+    }
+  });
+  element('admin-feedback-filed').addEventListener('click', () => {
+    const issue = issueNumber(element('admin-feedback-issue-number').value);
+    if (!issue) {
+      said('Paste the issue\'s number, or its address, as GitHub gave it once submitted.', true);
+      return;
+    }
+    void change('PUT', 'status', { status: 'filed', issue }, filedSaid);
   });
   element('admin-feedback-seen').addEventListener('click', () => void change('PUT', 'status', { status: 'seen' }, 'Marked seen.'));
   element('admin-feedback-reproduced').addEventListener('click', () => void change('PUT', 'status', { status: 'reproduced' }, 'Marked reproduced.'));
@@ -571,5 +721,43 @@ export function mountFeedbackTab({ send, element, shown, openDiagnosis }) {
   element('admin-feedback-previous').addEventListener('click', () => { page -= 1; void redraw(); });
   element('admin-feedback-next').addEventListener('click', () => { page += 1; void redraw(); });
 
-  return { redraw, open: openSheet };
+  /**
+   * Marks fixed the reports filed as an issue GitHub now says is closed as done: the filed reports, then one request to
+   * GitHub's public API, then one change each. Asked when the tab opens. GitHub not answering leaves them filed, and a
+   * line says so.
+   */
+  async function checkFixed() {
+    if (checking || !github) return;
+    checking = true;
+    try {
+      const rows = [];
+      let repository = null;
+      for (let number = 1, pages = 1; number <= Math.min(pages, CHOICE_PAGES); number += 1) {
+        const answer = await send('GET', feedbackPath({ kind: 'bug', status: 'filed', page: number }));
+        if (!answer.ok) return;
+        rows.push(...(answer.body.feedback ?? []));
+        repository = answer.body.repository ?? repository;
+        pages = answer.body.pages ?? 1;
+      }
+      if (rows.length === 0 || !issuesPath(repository)) return;
+      let closed;
+      try {
+        const answer = await github(issuesPath(repository));
+        if (!answer.ok) throw new Error(`GitHub answered ${answer.status}`);
+        closed = closedIssues(await answer.json());
+      } catch {
+        const told = element('admin-feedback-said');
+        told.textContent = 'GitHub could not be asked whether the filed issues are closed. The reports stay filed until it can.';
+        told.classList.add('refused');
+        return;
+      }
+      const fixed = fixedReports(rows, closed);
+      for (const id of fixed) await send('PUT', `/api/admin/feedback/${encodeURIComponent(id)}/status`, { status: 'fixed' });
+      if (fixed.length) await redraw();
+    } finally {
+      checking = false;
+    }
+  }
+
+  return { redraw, open: openSheet, checkFixed };
 }

@@ -150,6 +150,22 @@ test('every label an agent or a skill names is one the repository declares', () 
   for (const label of ['follow-up', 'flaky', 'ops', 'proposal']) assert.ok(named.has(label), `${label} is read`);
 });
 
+test('every label an issue form puts on its issue is one the repository declares', () => {
+  const declared = Object.keys(JSON.parse(readFileSync(join(root, '.github/labels.json'), 'utf8')));
+  const forms = readdirSync(join(root, '.github/ISSUE_TEMPLATE')).filter(name => name.endsWith('.yml') && name !== 'config.yml');
+  const unknown = [];
+  const named = new Set();
+  for (const form of forms) {
+    const labels = /^labels:\s*\[([^\]]*)\]/m.exec(readFileSync(join(root, '.github/ISSUE_TEMPLATE', form), 'utf8'))?.[1] ?? '';
+    for (const label of labels.split(',').map(one => one.trim().replace(/^["']|["']$/g, '')).filter(Boolean)) {
+      named.add(label);
+      if (!declared.includes(label)) unknown.push(`${form}: ${label}`);
+    }
+  }
+  assert.deepEqual(unknown, []);
+  assert.ok(named.has('from-report'), 'the form a report is filed with labels it from-report');
+});
+
 test('the issue searches the skills give name issues or pull requests, which GitHub requires', () => {
   const missing = [];
   for (const prompt of prompts()) {

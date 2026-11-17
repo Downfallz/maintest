@@ -77,7 +77,14 @@ public sealed class OperatorFeedback(IFeedbackStore store, FeedbackMutes mutes, 
 
     /// <summary>Marks an idea planned, with the path of the plan it went into (<see cref="PlanPath" />); that reopens it when it was closed.</summary>
     public Task<Result<FeedbackStatusChange>> PlanAsync(string id, string? plan, CancellationToken cancellationToken = default) =>
-        writes.OneAtATimeAsync(() => StatusAsync(id, FeedbackStatus.Planned, null, plan?.Trim(), cancellationToken), cancellationToken);
+        writes.OneAtATimeAsync(() => StatusAsync(id, FeedbackStatus.Planned, null, plan?.Trim(), issue: null, cancellationToken), cancellationToken);
+
+    /// <summary>
+    /// Marks a bug report filed as the public issue the operator filed it as (R5), which reopens it when it was closed.
+    /// Filed again under the same number, nothing changes; another number replaces a mistyped one.
+    /// </summary>
+    public Task<Result<FeedbackStatusChange>> FileAsync(string id, int? issue, CancellationToken cancellationToken = default) =>
+        writes.OneAtATimeAsync(() => StatusAsync(id, FeedbackStatus.Filed, null, plan: null, issue, cancellationToken), cancellationToken);
 
     public Task<Feedback?> FindAsync(string id, CancellationToken cancellationToken = default) =>
         Feedback.IsId(id) ? store.FindAsync(id, cancellationToken) : Task.FromResult<Feedback?>(null);
@@ -108,7 +115,7 @@ public sealed class OperatorFeedback(IFeedbackStore store, FeedbackMutes mutes, 
     public async Task<Result<FeedbackStatusChange>> SetStatusAsync(string id, FeedbackStatus status, string? reason, string by, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(by);
-        var set = await writes.OneAtATimeAsync(() => StatusAsync(id, status, reason?.Trim(), plan: null, cancellationToken), cancellationToken);
+        var set = await writes.OneAtATimeAsync(() => StatusAsync(id, status, reason?.Trim(), plan: null, issue: null, cancellationToken), cancellationToken);
         if (set.IsFailure || !set.Value.Feedback.IsSpam || set.Value.Feedback.SpamCounted)
         {
             return set;
@@ -227,7 +234,7 @@ public sealed class OperatorFeedback(IFeedbackStore store, FeedbackMutes mutes, 
         return new FeedbackWaiting(waiting.Count, waiting.Count(one => one.Kind == FeedbackKind.Bug), lastDay, lastDay >= SendFeedback.PerHost);
     }
 
-    private async Task<Result<FeedbackStatusChange>> StatusAsync(string id, FeedbackStatus status, string? reason, string? plan, CancellationToken cancellationToken)
+    private async Task<Result<FeedbackStatusChange>> StatusAsync(string id, FeedbackStatus status, string? reason, string? plan, int? issue, CancellationToken cancellationToken)
     {
         if (await FindAsync(id, cancellationToken) is not { } feedback)
         {
@@ -241,14 +248,14 @@ public sealed class OperatorFeedback(IFeedbackStore store, FeedbackMutes mutes, 
             return Result.Failure<FeedbackStatusChange>(FeedbackErrors.MergedAway);
         }
 
-        var asked = Changed(feedback, status, reason, plan, clock.GetUtcNow());
+        var asked = Changed(feedback, status, reason, plan, issue, clock.GetUtcNow());
         if (asked.IsFailure)
         {
             return Result.Failure<FeedbackStatusChange>(asked.Error);
         }
 
         var changed = asked.Value;
-        if (changed.Status == feedback.Status && changed.Reason == feedback.Reason && changed.Plan == feedback.Plan && changed.MergedInto == feedback.MergedInto)
+        if (changed.Status == feedback.Status && changed.Reason == feedback.Reason && changed.Plan == feedback.Plan && changed.MergedInto == feedback.MergedInto && changed.Issue == feedback.Issue)
         {
             return Result.Success(new FeedbackStatusChange(feedback, Changed: false, Muted: null));
         }
@@ -263,7 +270,7 @@ public sealed class OperatorFeedback(IFeedbackStore store, FeedbackMutes mutes, 
     }
 
     /// <summary>The feedback as the status asked leaves it, or why that status is refused for it.</summary>
-    private static Result<Feedback> Changed(Feedback feedback, FeedbackStatus status, string? reason, string? plan, DateTimeOffset now)
+    private static Result<Feedback> Changed(Feedback feedback, FeedbackStatus status, string? reason, string? plan, int? issue, DateTimeOffset now)
     {
         var idea = feedback.Kind == FeedbackKind.Idea;
         var oneLine = reason is { Length: > 0 and <= LongestReason } && !reason.Any(char.IsControl);
@@ -277,6 +284,12 @@ public sealed class OperatorFeedback(IFeedbackStore store, FeedbackMutes mutes, 
         {
             FeedbackStatus.Seen => Result.Success(reopened),
             FeedbackStatus.Reproduced when !idea => Result.Success(reopened),
+            FeedbackStatus.Filed when !idea && issue is > 0 => Result.Success(reopened with { Issue = issue }),
+            FeedbackStatus.Filed when !idea => Result.Failure<Feedback>(FeedbackErrors.Invalid("Filing names the issue's number, as GitHub gave it.")),
+
+            // Fixed is the issue's: the panel marks it once the issue it was filed as is closed as completed.
+            FeedbackStatus.Fixed when !idea && feedback.Issue is not null => Result.Success(reopened with { ClosedAt = closedAt }),
+            FeedbackStatus.Fixed when !idea => Result.Failure<Feedback>(FeedbackErrors.NotFiled),
             FeedbackStatus.Planned when idea && PlanPath.Is(plan) => Result.Success(reopened with { Plan = plan }),
             FeedbackStatus.Planned when idea => Result.Failure<Feedback>(FeedbackErrors.Invalid("Planning names the plan's path in the repository: docs/…-plan.md.")),
             FeedbackStatus.Shipped when idea => Result.Success(reopened with { ClosedAt = closedAt }),
@@ -286,7 +299,7 @@ public sealed class OperatorFeedback(IFeedbackStore store, FeedbackMutes mutes, 
             FeedbackStatus.Declined when idea => Result.Failure<Feedback>(FeedbackErrors.Invalid($"Declining says why, on one line of {LongestReason} characters at most.")),
             _ => Result.Failure<Feedback>(FeedbackErrors.Invalid(idea
                 ? "An idea is marked seen, planned, shipped, declined or dismissed here."
-                : "A bug report is marked seen, reproduced or dismissed here.")),
+                : "A bug report is marked seen, reproduced, filed with its issue, fixed or dismissed here.")),
         };
     }
 
