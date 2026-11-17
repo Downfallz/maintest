@@ -32,6 +32,10 @@ internal sealed class TableReactions(TimeProvider clock, IReactionKeeper? keeper
     private IReadOnlyList<TableReaction>? _items;
     private string? _tag;
 
+    // The file was read once and is gone since: the operator deleted the table's run, and a write would bring a file
+    // of it back (#739). Nothing is written for this table again.
+    private bool _gone;
+
     /// <summary>The reactions kept, oldest first; read from the record the first time they are asked for.</summary>
     public async Task<IReadOnlyList<TableReaction>> RecentAsync(CancellationToken cancellationToken = default)
     {
@@ -43,7 +47,10 @@ internal sealed class TableReactions(TimeProvider clock, IReactionKeeper? keeper
         return await InTurn(() => LoadedAsync(cancellationToken));
     }
 
-    /// <summary>Sends <paramref name="reaction" /> for <paramref name="seat" />, or says why it was not sent.</summary>
+    /// <summary>
+    /// Sends <paramref name="reaction" /> for <paramref name="seat" />, or says why it was not sent: busy, too, once the
+    /// file read before has gone, as the table's run was deleted.
+    /// </summary>
     public async Task<ReactionSent> SendAsync(string seat, string? reaction, CancellationToken cancellationToken = default)
     {
         if (reaction is null || !Catalogue.Contains(reaction, StringComparer.Ordinal))
@@ -59,6 +66,11 @@ internal sealed class TableReactions(TimeProvider clock, IReactionKeeper? keeper
         for (var attempt = 1; ; attempt++)
         {
             var items = await LoadedAsync(cancellationToken);
+            if (_gone)
+            {
+                return ReactionSent.Busy;
+            }
+
             var now = clock.GetUtcNow();
             if (items.LastOrDefault(one => one.Seat == seat) is { } last && now - last.At < Cooldown)
             {
@@ -127,6 +139,7 @@ internal sealed class TableReactions(TimeProvider clock, IReactionKeeper? keeper
 
         var (read, tag) = await keeper.ReactionsAsync(cancellationToken);
         IReadOnlyList<TableReaction> kept = [.. read.Where(one => Catalogue.Contains(one.Reaction, StringComparer.Ordinal)).OrderBy(one => one.Sequence).TakeLast(Kept)];
+        _gone |= _tag is not null && tag is null;
         _tag = tag;
         Volatile.Write(ref _items, kept);
         return kept;

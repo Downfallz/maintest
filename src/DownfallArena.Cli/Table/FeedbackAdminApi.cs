@@ -69,7 +69,7 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
             ("PUT", [var id, "kind"]) => await KindAsync(id, body, operatorName),
             ("POST", [var id, "merge"]) => await MergeAsync(id, body, operatorName),
             ("POST", [var id, "reproduce"]) when Scenarios is not null => await ReproduceAsync(id, operatorName),
-            ("POST", [var id, "scenario.zip"]) when Scenarios is not null => NotKept(await ScenarioZipAsync(id, operatorName)),
+            ("POST", [var id, "scenario.zip"]) when Scenarios is not null => (await ScenarioZipAsync(id, operatorName)).NotKept(),
             ("POST", [var id, "mute"]) => await MuteAsync(id, operatorName),
             ("DELETE", [var id, "mute"]) => await UnmuteAsync(id, operatorName),
             _ => Error("Feedback.NoRoute", $"No such route: {method} {path}", 404),
@@ -406,13 +406,6 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
         await Notes.NoteAsync(operatorName, OperatorActions.FeedbackDownload, id, one.Reproduction);
         return new StudioResponse(200, ZipType, bytes.ToArray(), [new KeyValuePair<string, string>("Content-Disposition", $"attachment; filename=\"report-{id}.zip\"")]);
     }
-
-    /// <summary>
-    /// A download's answer, the file or its refusal, kept by no cache: Cloudflare keeps a <c>.zip</c> by its extension
-    /// when the host says nothing, and would serve it past the panel's gate.
-    /// </summary>
-    private static StudioResponse NotKept(StudioResponse answer) =>
-        answer with { Headers = [.. answer.Headers ?? [], new KeyValuePair<string, string>("Cache-Control", "no-store, private")] };
 
     /// <summary>Whether the table a report was sent from is still played: open and not voided.</summary>
     private async Task<bool> UnderWayAsync(Feedback one) =>

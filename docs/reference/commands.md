@@ -319,7 +319,8 @@ The host plays many tables at once, each found by its own tokens (ADR 0081).
   characters; its record closed and marked void, its seats answered 410 with the explanation, a kept result
   marked void and counted nowhere, its finished-games card tagged Voided; final, ADR 0176).
 - It exports one or several as a zip of run directories `train-clone` reads (`GET /api/sessions/<id>/export`,
-  `POST /api/sessions/export {"ids":[...]}`).
+  `POST /api/sessions/export {"ids":[...]}`), answered `Cache-Control: no-store, private`, refusals too, so no
+  cache keeps it past the panel's gate.
 
 #### The admin panel: Players
 

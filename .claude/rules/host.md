@@ -22,6 +22,19 @@ paths:
   is answered 500 `Host.Unexpected` by `HttpHost`, which never puts the exception's text in the answer (#692).
 - A guard that reads and then writes (a count, a limit, a claim) runs under one gate in the API process, or two
   requests both read the old value and both write (#692).
+- No store-wide read (`AllAsync`, one blob read a record) under a gate the players' requests wait on: the guard
+  reads a flag or a list kept on the record (`Feedback.Joined`, #724).
+- An operator action that writes several records writes first the record the guards read, and asked again it
+  finishes the rest: a cut leaves that record naming one too many, which the reads skip
+  (`OperatorFeedback.MergingAsync`, #724).
+- A listing route counts its storage reads per row: one read added to each table of `GET /api/lobby/mine` is paid
+  on every account change (#724).
+- A conditional write refused because the file moved, which then finds no file where it read one, gives up: the
+  operator deleted the run, and writing would bring a file of it back (`TableVisits`, `TableReactions`, #739).
+- One `OperatorActions` per host, built by `TableHost.OpenNotesAsync` and handed to every admin API: its ids keep
+  the operator log's order only within one instance (#748).
+- A route that answers a file, or whose path ends in an extension, sends `Cache-Control: no-store, private`
+  (`StudioResponse.NotKept`) unless it is a `TableFiles` entry: Cloudflare caches by extension (#752).
 - `HttpHost` reads at most 64 KB of body and answers 413 `Host.BodyTooLarge` past it (#691). The largest table
   body is feedback, about 40 KB at worst in UTF-8. A host that needs more says why where it is built, as the studio does.
 - A console line is one line (the ops report reads it a line at a time) and names an operator as `by <name>:`,
@@ -30,4 +43,9 @@ paths:
 - A new route has a host test in `tests/DownfallArena.Cli.Tests/Table`, a line in `table/README.md#routes`,
   and its behaviour in `docs/reference/commands.md`.
 - What a seat holds face down never reaches the other seat's view, a log, or a notification.
+- Anything kept per seat is reset, or keyed by the seat's key (`TableApi.HolderOf`), when the seat changes hands
+  (ADR 0170): the newcomer is never served the leaver's state (#739).
+- A field added to the seat view degrades to null when its store fails; it never fails the board read (#739).
+- A second reader of a seat's feed applies the seat view's limits, from `FeedStart` to `session.Journaled`
+  (`TableApi.SinceVisitAsync`), or it counts entries the page never shows (#724).
 - Storage tests need Azurite; without it they are skipped. Report them as skipped.

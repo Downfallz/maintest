@@ -56,6 +56,38 @@ public sealed class TableReactionsTests
     }
 
     [Fact]
+    public async Task A_reaction_sent_while_the_run_is_deleted_does_not_bring_its_file_back()
+    {
+        var keeper = new Keeper();
+        keeper.Elsewhere(new TableReaction(1, "player2", "hello", Start));
+        var reactions = new TableReactions(new Clock(Start), keeper);
+        await reactions.RecentAsync(Cancel);
+        keeper.Delete();
+
+        var sent = await reactions.SendAsync("player1", "good-luck", Cancel);
+
+        sent.Reaction.ShouldBeNull();
+        keeper.Exists.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task A_reaction_sent_after_the_run_was_deleted_and_read_again_does_not_bring_its_file_back()
+    {
+        var keeper = new Keeper();
+        keeper.Elsewhere(new TableReaction(1, "player2", "hello", Start));
+        var reactions = new TableReactions(new Clock(Start), keeper);
+        await reactions.RecentAsync(Cancel);
+        keeper.Delete();
+        reactions.Stale();
+        await reactions.RecentAsync(Cancel);
+
+        var sent = await reactions.SendAsync("player1", "good-luck", Cancel);
+
+        sent.Reaction.ShouldBeNull();
+        keeper.Exists.ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task A_kept_reaction_the_set_no_longer_offers_is_not_served()
     {
         var keeper = new Keeper();
@@ -85,6 +117,15 @@ public sealed class TableReactionsTests
         {
             Kept = [.. Kept, reaction];
             _version++;
+        }
+
+        public bool Exists => _version > 0;
+
+        /// <summary>The operator deletes the run: the file is gone, and a write expecting its tag is refused.</summary>
+        public void Delete()
+        {
+            Kept = [];
+            _version = 0;
         }
 
         public Task<(IReadOnlyList<TableReaction> Items, string? Tag)> ReactionsAsync(CancellationToken cancellationToken = default) =>

@@ -543,12 +543,12 @@ internal sealed class AdminApi
             case ("DELETE", ""):
                 return await DeleteAsync(stored, Ids(body, out var problem), problem, operatorName);
             case ("POST", "export"):
-                return await ExportAsync(stored, Ids(body, out var asked), asked, "sessions", operatorName);
+                return (await ExportAsync(stored, Ids(body, out var asked), asked, "sessions", operatorName)).NotKept();
             default:
                 if (method == "GET" && rest.EndsWith("/export", StringComparison.Ordinal))
                 {
                     var id = rest[..^"/export".Length];
-                    return await ExportAsync(stored, [id], problem: null, id, operatorName);
+                    return (await ExportAsync(stored, [id], problem: null, id, operatorName)).NotKept();
                 }
 
                 if (method == "GET" && rest.EndsWith("/replay", StringComparison.Ordinal))
