@@ -17,7 +17,7 @@ import { createBattlePlayback } from '../../table/battle-playback.js';
 import { createBattleHistory } from '../../table/battle-history.js';
 import { historyControls } from './history';
 import { battleGuidance, waitingOn } from '../../table/battle-guidance.js';
-import { saveSeen, seenSince } from '../../table/battle-seen.js';
+import { createSeenSender, saveSeen, seenSince } from '../../table/battle-seen.js';
 import { friendAction, opponentCard, opponentOf } from '../../table/battle-opponent.js';
 import { guidanceControls } from './guidance';
 import { effectiveSettings, gameOverride, loadSettings, localSettings, saveGameOverride } from '../../table/game-preferences.js';
@@ -57,7 +57,9 @@ interface Creature { form: string; description: string; id: string; name: string
   knownSpells?: string[]; conditions: { effect: { kind?: string; $type?: string; amount?: number }; remainingRounds: number | null }[];
   evolution?: { artworkId: string | null; artworkFile: string | null; capstoneEffectIds: string[] } }
 interface View { board: object; over: boolean; waiting: unknown; waitingFor: string | null;
-  outcome?: { winner?: string; reason?: string }; answerBy?: string | null }
+  outcome?: { winner?: string; reason?: string }; answerBy?: string | null;
+  // What the host kept of this seat's last visit, and when the last move was (ADR 0194).
+  seen?: { sequence: number; at: string } | null; lastMoveAt?: string | null }
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const text = (id: string, value: string) => { if ($(id).textContent !== value) $(id).textContent = value; };
 const audio = new BattleAudio();
@@ -84,6 +86,8 @@ let restartPractice = false;
 let rendererFailed = false;
 // The seat being shown, as this browser remembers what it saw of it, and the last mark kept for it.
 let seenGame: string | null = null, seenKept: number | null = null;
+// Also tells the host the mark, so another device of this seat knows it (ADR 0194).
+let seenSender: ReturnType<typeof createSeenSender> | null = null;
 const nodes = new Map<string, HTMLButtonElement>();
 // What the scene drew for a creature whose button the page has not made yet.
 const shownArt = new Map<string, string>();
@@ -99,12 +103,12 @@ const connection = createLiveConnection({ onState: status, onView: (served: View
     view = next; catalogue = content ?? catalogue;
     if (next) services.receive(next);
     reactions.receive(next);
-    history.receive(next, catalogue); upkeep.receive(next); orderReveal.receive(next, { since: seenGame ? seenSince(storage, seenGame) : null }); growth.receive(next, catalogue);
+    history.receive(next, catalogue); upkeep.receive(next); orderReveal.receive(next, { since: seenGame ? seenSince(storage, seenGame, next?.seen) : null }); growth.receive(next, catalogue);
     combat.receive(next); planning.receive(next); match.receive(next, catalogue);
     playback.receive(next, new Map(catalogue?.cards?.map(card => [card.id, card]) ?? []),
       { effects: catalogue?.effects ?? [], packages: new Map(catalogue?.packages?.map(pack => [pack.id, pack]) ?? []), animate: visible() && !combat.model().target && !planning.model().opened && !match.model().active,
         // A page opened again plays what happened while it was closed, from the last result this browser showed.
-        since: seenGame ? seenSince(storage, seenGame) : null });
+        since: seenGame ? seenSince(storage, seenGame, next?.seen) : null });
   } finally { receiving = false; }
   render();
 } });
@@ -517,7 +521,7 @@ function render() {
   const unreadOrder = orderReveal.model().unread;
   const watermark = playbackState.watermark === null ? null : Number.isInteger(unreadOrder) ? Math.min(playbackState.watermark, unreadOrder - 1) : playbackState.watermark;
   if (seenGame && view && !replay.active && watermark !== null && watermark !== seenKept) {
-    seenKept = watermark; saveSeen(storage, seenGame, seenKept);
+    seenKept = watermark; saveSeen(storage, seenGame, seenKept); seenSender?.shown(seenKept);
   }
   if (!view) inspected = null;
   renderInspection();
@@ -736,6 +740,7 @@ function choose(choice: Choice) {
   upkeep.reset(`${choice.table.id}:${choice.seat}`); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(choice.seat); planning.reset(choice.seat); match.reset(choice.seat);
   helpUI.setGame(choice.table.id); applySettings();
   const transport = httpTransport(choice.seat, choice.token, request);
+  seenSender?.flush(); seenSender = createSeenSender({ send: sequence => transport.seen(sequence) });
   connection.start(transport, catalogue);
   services.reset(transport, heldSeats.filter(one => one.table.id === choice.table.id).map(one => httpTransport(one.seat, one.token, request)), `${choice.table.id}:${choice.seat}`);
   // A device holding both seats is two people side by side: they have no use for reactions.
@@ -748,6 +753,7 @@ async function discover(autoResume = true) {
   if (rendererFailed) return;
   const ticket = ++discovering;
   $('loading').hidden = true;
+  seenSender?.flush(); seenSender = null;
   connection.stop(); services.reset(); reactions.reset(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); selected = null; seenGame = null; opponent = { seat: null, ladder: null, friends: null }; drawOpponent(); helpUI.setGame(null); view = null; catalogue = null; render();
   $('retry').hidden = true; $('seat-choices').replaceChildren();
   text('perspective', 'YOUR TEAM'); text('connection', 'Connecting…');
@@ -901,7 +907,7 @@ scene.onResizeDuringPlayback = () => { if (dockMoved) { dockMoved = false; retur
 // keeps the orientation (a browser bar, a dragged window) re-lays out the held frame and keeps it.
 matchMedia('(orientation: portrait)').addEventListener('change', () => { if (playback.model().active) playback.skip(); });
 // The board goes with the page's eyes; the catalogue stays, it cannot change while the host runs.
-function suspend() { audio.stop(); discovering++; connection.stop(); view = null; upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); render(); text('connection', 'Paused'); }
+function suspend() { seenSender?.flush(); audio.stop(); discovering++; connection.stop(); view = null; upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); render(); text('connection', 'Paused'); }
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) suspend(); else if (selected) choose(selected); else void discover();
 });

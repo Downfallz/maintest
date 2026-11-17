@@ -91,6 +91,11 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
     /// <summary>The reactions the two seats send each other (ADR 0173), kept with the table's record when it has one.</summary>
     public TableReactions Reactions => LazyInitializer.EnsureInitialized(ref _reactions, () => new TableReactions(Clock, run));
 
+    private TableVisits? _visits;
+
+    /// <summary>What each seat was last shown of its game (ADR 0194), kept beside the table's record when it has one.</summary>
+    public TableVisits Visits => LazyInitializer.EnsureInitialized(ref _visits, () => new TableVisits(Clock, run));
+
     /// <summary>
     /// Whether the two seats may react to each other (ADR 0173): two people, the match begun, and not one account in
     /// both seats, which is one person on a shared device. Against a bot there is nobody to read a reaction.
@@ -113,6 +118,12 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
 
     /// <summary>When the table's time to answer runs out (ADR 0169), or none: a table without a limit, not begun or over.</summary>
     public Func<Task<DateTimeOffset?>>? AnswerBy { get; set; }
+
+    /// <summary>When the table's journal was last written, its last move (ADR 0169), or none: a table that keeps no journal.</summary>
+    public Func<Task<DateTimeOffset?>>? LastMove { get; set; }
+
+    /// <summary>When the time to answer runs out, from the last move the seat's view read once (<see cref="LastMove" />).</summary>
+    public Func<DateTimeOffset?, DateTimeOffset?>? AnswerByFrom { get; set; }
 
     public int FeedStart { get; init; }
 
@@ -224,6 +235,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
             ("POST", [_, "decision"]) => await DecideAsync(holder, body),
             ("POST", [_, "concede"]) => await ConcedeAsync(holder),
             ("POST", [_, "reaction"]) => await ReactAsync(holder, body),
+            ("PUT", [_, "seen"]) => await SeenAsync(holder, body),
             _ => StudioResponse.OfPlainText(404, $"No such route: {method} {path}"),
         };
     }
@@ -421,6 +433,12 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
 
         var (waiting, board, options, opponentIntents, journaled) = snapshot.Value;
 
+        // The two reads beside the table's, side by side: when the last move was, and what this seat was last shown.
+        var moving = LastMoveAtAsync();
+        var visiting = LastVisitAsync(seat);
+        await Task.WhenAll(moving, visiting);
+        var (moveRead, lastMove) = await moving;
+
         // Everything the host looked at this poll: the slice from the cursor onwards. What the seat may be told
         // of it is a subset, and where to resume is the end of the slice rather than the end of that subset.
         // Through the session when there is one: closing hands the trace over and the recorder forgets the
@@ -461,7 +479,13 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
                 playedByBot = seat.Person is null,
 
                 // When whoever is asked loses for not answering (ADR 0169): the page counts down to it.
-                answerBy = AnswerBy is { } answerBy ? await answerBy() : null,
+                // Read from the last move this view read; none when the journal could not be asked.
+                answerBy = !moveRead ? null : AnswerByFrom is { } answerByFrom ? answerByFrom(lastMove) : AnswerBy is { } answerBy ? await answerBy() : null,
+
+                // When the last move was, and what this seat was last shown of its game, and when (ADR 0194): what
+                // the recap tells a player coming back, whichever device they come back on.
+                lastMoveAt = lastMove,
+                seen = Seen(await visiting),
 
                 // Who the table is waiting for before it begins, or null: the page shows a room rather than a
                 // board nobody is asked anything on (ADR 0092).
@@ -790,6 +814,85 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
                 return StudioResponse.OfJson(new { error = sent.Refusal, message = "The reaction could not be kept. Try again." }, ArtifactJson.LineOptions, status: 503);
         }
     }
+
+    /// <summary>
+    /// The seat reports the last feed sequence its page showed (ADR 0194): kept when larger than the mark kept, ignored
+    /// otherwise; the answer is the mark kept. It is the seat's own word about itself: it moves nothing on the table,
+    /// wakes no page and sends no notice.
+    /// </summary>
+    private async Task<StudioResponse> SeenAsync(TableSeat seat, string body)
+    {
+        long? sequence;
+        try
+        {
+            sequence = JsonSerializer.Deserialize<TableSeenBody>(body, ArtifactJson.LineOptions)?.Sequence;
+        }
+        catch (JsonException)
+        {
+            sequence = null;
+        }
+
+        if (sequence is not { } shown || shown < 0)
+        {
+            return StudioResponse.OfJson(new { error = "Seen.Invalid", message = "Say what was shown as { \"sequence\": N }, N a feed sequence." }, ArtifactJson.LineOptions, status: 400);
+        }
+
+        LastVisit? kept;
+        try
+        {
+            kept = await Visits.ShownAsync(seat.Name, HolderOf(seat), shown);
+        }
+        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or Azure.RequestFailedException)
+        {
+            Console.WriteLine($"  What {seat.Name} was shown could not be kept: {failure.Message}");
+            kept = null;
+        }
+
+        return kept is not null
+            ? StudioResponse.OfJson(new { seen = Seen(kept) }, ArtifactJson.LineOptions)
+            : StudioResponse.OfJson(new { error = "Seen.Busy", message = "What was shown could not be kept. Try again." }, ArtifactJson.LineOptions, status: 503);
+    }
+
+    private static object? Seen(LastVisit? visit) =>
+        visit is null ? null : new { sequence = visit.Sequence, at = visit.At };
+
+    /// <summary>
+    /// The seat's last visit for the view, or none when the store cannot be read: the board is what the page needs,
+    /// and a mark it lacks only marks more as new.
+    /// </summary>
+    private async Task<LastVisit?> LastVisitAsync(TableSeat seat)
+    {
+        try
+        {
+            return await Visits.LastAsync(seat.Name, HolderOf(seat));
+        }
+        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or Azure.RequestFailedException)
+        {
+            Console.WriteLine($"  What {seat.Name} was last shown could not be read: {failure.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>When the last move was, for the view, and whether the journal could be asked at all.</summary>
+    private async Task<(bool Read, DateTimeOffset? At)> LastMoveAtAsync()
+    {
+        try
+        {
+            return (true, LastMove is { } lastMove ? await lastMove() : null);
+        }
+        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or Azure.RequestFailedException)
+        {
+            Console.WriteLine($"  When the last move was could not be read: {failure.Message}");
+            return (false, null);
+        }
+    }
+
+    /// <summary>
+    /// A stamp of the seat's key, never the key itself: what a last visit is kept under, so a seat offered again under
+    /// a fresh key (ADR 0170) starts with none.
+    /// </summary>
+    private static string HolderOf(TableSeat seat) =>
+        Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(seat.Token)))[..16];
 
     private static object Described(TableReaction reaction) =>
         new { sequence = reaction.Sequence, seat = reaction.Seat, reaction = reaction.Reaction, at = reaction.At };

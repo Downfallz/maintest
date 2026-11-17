@@ -33,7 +33,7 @@ namespace DownfallArena.Cli.Table;
 /// (<c>docs/tabletop/app-roadmap.md</c>, "A recorded session whose content no longer exists"). A bot run needs
 /// neither: it is never interrupted by dinner, and it is regenerated from a seed and a hash.
 /// </remarks>
-internal sealed class PlaytestRun : IReactionKeeper
+internal sealed class PlaytestRun : IReactionKeeper, IVisitKeeper
 {
     public const string NotesFile = "notes.jsonl";
     public const string CatalogueFile = "catalogue.json";
@@ -1028,6 +1028,18 @@ internal sealed class PlaytestRun : IReactionKeeper
 
     /// <summary>The reactions file: the last few reactions, oldest first.</summary>
     private sealed record Reactions(IReadOnlyList<TableReaction> Items);
+
+    /// <summary>Where a seat's last visit is kept (ADR 0194), beside the session: one document a seat, so two seats never race for one tag.</summary>
+    public static string SeenFile(string seat) => $"seen-{seat}.json";
+
+    public async Task<(LastVisit? Visit, string? Tag)> VisitAsync(string seat, CancellationToken cancellationToken = default)
+    {
+        var read = await _reader.ReadTaggedAsync(SeenFile(seat), cancellationToken);
+        return (read is null ? null : DocumentOf<LastVisit>(read.Text), read?.Tag);
+    }
+
+    public Task<string?> WriteVisitIfAsync(string seat, LastVisit visit, string? expected, CancellationToken cancellationToken = default) =>
+        _writer.WriteJsonIfAsync(SeenFile(seat), visit, expected, cancellationToken);
 
     /// <summary>
     /// Waits for everything on its way into the files to land: every decision being accepted, then a write

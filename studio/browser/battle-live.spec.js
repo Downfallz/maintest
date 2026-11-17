@@ -197,7 +197,10 @@ test('the page writes nothing but the seat discovery, and says the question was 
   // The spell choice opens by itself on the player's turn, which is the one acknowledgement (ADR 0149).
   await expect(page.locator('#combat-dialog')).toBeVisible();
   await expect.poll(() => state.requests.filter(one => one.query.includes('shown=')).map(one => one.query)).toEqual(['?since=83&shown=11']);
-  expect(state.requests.filter(one => one.method !== 'GET').map(one => one.path)).toEqual(['/api/lobby/resume']);
+  // What the seat was shown is put to the host (ADR 0194): its own word, which decides nothing.
+  const seen = '/api/seat/player1/seen';
+  expect(state.requests.filter(one => one.method !== 'GET' && one.path !== seen).map(one => one.path)).toEqual(['/api/lobby/resume']);
+  await expect.poll(() => state.requests.filter(one => one.path === seen).map(one => one.method)).toContain('PUT');
 });
 
 test('a notification on the stream refreshes the board at once, ahead of the poll', async ({ page }) => {

@@ -35,6 +35,8 @@ async function mount(page, { over = true, recording = true, outcome = { winner: 
   }, { both, permission, unsupported });
   await page.route('**/api/**', async route => {
     const req = route.request(), url = new URL(req.url()); state.reads.push({ path: url.pathname, query: url.search, token: req.headers()['x-seat-token'] });
+    // The seat's seen mark (ADR 0194) is its own word, not a decision, and is answered as the host answers it.
+    if (url.pathname.endsWith('/seen')) return route.fulfill({ json: { seen: { sequence: 0, at: new Date().toISOString() } } });
     if (req.method() !== 'GET' && !url.pathname.endsWith('/resume')) state.writes.push({ path: url.pathname, method: req.method(), body: req.postDataJSON(), token: req.headers()['x-seat-token'] });
     if (url.pathname === '/api/me') return route.fulfill({ json: { accounts: 'dev', account } });
     if (url.pathname === '/api/friends') return route.fulfill({ json: { friends, incoming: [], outgoing: [] } });

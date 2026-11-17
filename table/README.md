@@ -641,6 +641,13 @@ table (`POST /api/seat/<seat>/reaction`, `reactions` in the seat's view). The pl
 from the set, or for every game in Settings. No reaction is notified or counted in the bell
 ([ADR 0173](../docs/adr/0173-let-players-react-with-a-fixed-set-of-messages.md)).
 
+What a seat was last shown follows the player from one device to another
+([ADR 0194](../docs/adr/0194-keep-what-each-seat-was-last-shown-beside-the-table.md)):
+`battle-seen.js` keeps the mark in this browser and sends it to the host (`PUT /api/seat/<seat>/seen`) at once, then
+at most once every five seconds and once more when the page is hidden; a replay sends nothing. The seat's view
+carries the host's mark (`seen`) and the time of the last move (`lastMoveAt`), and the page reads the larger of the
+two marks.
+
 **Report or suggest…**, in Match settings above Concede and on the result's last line, opens one sheet
 ([ADR 0189](../docs/adr/0189-keep-player-feedback-at-the-host-and-file-only-a-redacted-scenario.md)) whose first question is *Something is wrong* or
 *I have an idea*. A report asks a category, what happened and what was expected, with **Attach this position**
@@ -718,6 +725,7 @@ test (`.claude/rules/host.md`).
 | `GET /api/lobby/tables/<table>/replay` | account | A finished game's replay, for an account that sat at it (ADR 0156). |
 | `GET /api/seat/<seat>/negotiate` | seat | The relay's address for a seat (ADR 0165). |
 | `POST /api/seat/<seat>/reaction` | seat | A reaction from the fixed set (ADR 0173). |
+| `PUT /api/seat/<seat>/seen` | seat | The last feed sequence this seat was shown (ADR 0194); ignored when not larger than the one kept, answered with the one kept. `400 Seen.Invalid` for anything but `{"sequence": N}`, N ≥ 0; `503 Seen.Busy` when it could not be kept. |
 | `POST /api/feedback` | seat, account | A bug report or an idea (ADR 0189), kept with the seat's context. `429` when a spam guard stops it; `403 Feedback.Muted` when the operator stopped its sender; `200 Feedback.Merged` when it joins an earlier one. |
 | `GET /api/friends`, `POST /api/friends/requests`, `POST /api/friends/requests/<id>/accept`, `DELETE /api/friends/requests/<id>`, `DELETE /api/friends/<id>` | account | Friends (ADR 0129). |
 | `GET /api/scenarios`, `GET /api/scenarios/<id>`, `GET`/`POST`/`DELETE /api/scenarios/<id>/practice` | account | Listed scenarios and their practice (ADR 0179): resumed, started from the cut, or let go of (204), which leaving a tutorial does. A tutorial that is done is not resumed. Only admin accounts open a repository scenario; every account opens a tutorial. |

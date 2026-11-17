@@ -59,7 +59,7 @@ export function createBattleOrderReveal() {
   // `since` is the last sequence this seat was shown before the page was closed or hidden (battle-seen.js): on the
   // first read, an order built after it is revealed as it would have been live, instead of being taken as the
   // baseline. The creature acting first is the seat told it is its turn, the one most likely to come back to it.
-  function receive(view, { since = null } = {}) {
+  function receive(view, { since = /** @type {number | null} */ (null) } = {}) {
     if (!view?.board) { reset(); return; }
     latest = view;
     const entries = (view.feed ?? []).filter(entry => Number.isInteger(entry.sequence));
