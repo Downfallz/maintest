@@ -43,9 +43,32 @@ test('a mutation shows the version of a spell it names, not the last one on disk
 test('a mutation naming a disabled version of a spell fails the build by name', async () => {
   const folder = content();
   const lich = readJson(join(folder, 'Tiers/lich.v1.json'));
+  const named = readJson(join(folder, `Spells/sorcerer/necromancer/${lich.spells[0].split(':')[1]}.v1.json`));
+  const disabled = named.id.replace(':v1', ':v2');
+  writeJson(join(folder, 'Spells/zz-disabled.v2.json'), { ...named, id: disabled, enabled: false });
+  writeJson(join(folder, 'Tiers/lich.v1.json'), { ...lich, spells: [disabled] });
+
+  await assert.rejects(loadCatalogue(folder), new RegExp(`Missing playable spell ${disabled}`));
+});
+
+test('a mutation naming a version that does not exist fails the build by name', async () => {
+  const folder = content();
+  const lich = readJson(join(folder, 'Tiers/lich.v1.json'));
   writeJson(join(folder, 'Tiers/lich.v1.json'), { ...lich, spells: [lich.spells[0].replace(':v1', ':v9')] });
 
   await assert.rejects(loadCatalogue(folder), /Missing playable spell spell:[a-z_]+:v9/);
+});
+
+test('a versioned id is taken as written, before any alias, as the content builder takes it', async () => {
+  const folder = content();
+  const aliases = readJson(join(folder, 'aliases.json'));
+  writeJson(join(folder, 'aliases.json'), { ...aliases, 'spell:heavy_strike:v1': 'spell:wait:v1' });
+  const creature = readJson(join(folder, 'Creatures/main.v1.json'));
+  writeJson(join(folder, 'Creatures/main.v1.json'), { ...creature, startingSpellIds: ['spell:heavy_strike:v1'] });
+
+  const catalogue = await loadCatalogue(folder);
+
+  assert.deepEqual(catalogue.baseSpells.map(s => s.id), ['spell:heavy_strike:v1']);
 });
 
 test('the observation follows a mutation that moved to v2', async () => {

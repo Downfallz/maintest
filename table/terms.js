@@ -49,5 +49,10 @@ export function stageLabel(level) {
   return `Stage ${stageNumeral(level)}`;
 }
 
+// The four Stages a family climbs, in order, as the Mutation Tree's help reads them.
+export function stageClimb() {
+  return [1, 2, 3, 4].map(stageLabel).join(' → ');
+}
+
 // The one-line rule every tempo hint repeats.
 export const TEMPO_RULE = 'Instinct acts before Precision; only Precision can crit.';
