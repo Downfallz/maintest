@@ -230,7 +230,7 @@ internal sealed class HttpHost : IDisposable
                 // A route that throws is a bug. Its text can name a storage account, a blob path or a file on
                 // this machine (#692), so it goes to the console, which the operator reads, and never to the
                 // answer. One line, because the ops report reads the console a line at a time.
-                Console.Error.WriteLine($"  {context.Request.HttpMethod} {Loggable(context.Request.Url?.AbsolutePath)} failed: {OneLine(exception)}");
+                await Console.Error.WriteLineAsync($"  {context.Request.HttpMethod} {Loggable(context.Request.Url?.AbsolutePath)} failed: {OneLine(exception)}");
                 response = Problem(500, "Host.Unexpected", "Something went wrong on the host. Try again later.");
             }
         }
