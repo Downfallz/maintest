@@ -30,8 +30,11 @@ Verify by reading the code and the tests, not the description. Run the host test
 for want of Azurite is reported as skipped.
 
 Your memory, under `.claude/agent-memory/host-reviewer/`, is the only thing you write. Keep in it what recurs:
-a finding you made twice, a trap of this host that is not in the rules. One line each, with the pull request
-it came from. Read it before you start; if a lesson belongs in `.claude/rules/host.md`, say so in your report.
+a finding you made twice, a trap of this host that is not in the rules. One line each, with the pull request it came from.
+Read it before you start: `MEMORY.md`, `lessons.md` and every file in `lessons/`. Write a new lesson only in
+`lessons/<branch>.md`, named after the current branch with `/` turned into `-` (`git branch --show-current`),
+never in `MEMORY.md` or `lessons.md`: pull requests in flight then never touch the same file, and `/retro`
+folds `lessons/` into `lessons.md`. If a lesson belongs in `.claude/rules/host.md`, say so in your report.
 
 Report: a verdict in one line (approve / request changes), then findings by severity, each with file:line, the
 failure it causes, and a concrete fix. No praise, no summary of the change.

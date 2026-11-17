@@ -265,5 +265,7 @@ test('a reviewer that keeps a memory keeps it in the repository, and its prompt 
     const body = readFileSync(join(root, '.claude/agents', `${name}.md`), 'utf8');
     assert.ok(body.includes(`\`.claude/agent-memory/${name}/\``), `${name} names its memory folder`);
     assert.ok(body.includes('is the only thing you write'), `${name} holds its writes to it`);
+    // One file per branch: two pull requests in flight never append to the same file, so the memory never conflicts.
+    assert.ok(body.includes('`lessons/<branch>.md`'), `${name} writes a lesson in its branch's own file`);
   }
 });

@@ -28,6 +28,9 @@ a week, and fixes the instruction that let them. A finding seen once is noise; s
    - The issues opened in the week (`gh api -X GET search/issues -f q='repo:Downfallz/maintest is:issue created:>=<date>'`),
      the ones labelled `flaky` and `follow-up` first.
    - What the reviewers with a memory wrote this week (`git log --since='7 days ago' -p -- .claude/agent-memory/`).
+     Then fold each `.claude/agent-memory/<agent>/lessons/*.md` into that agent's `lessons.md` (a lesson already
+     there becomes its "Second time" line) or into the rule step 5 writes, and delete the folded file, in the
+     retro's own pull request: sessions only ever add files there, so the fold never conflicts with them.
 4. Group the findings by what went wrong, not by file: "a route without its line in `table/README.md`",
    "a test that waits on a clock". Keep a group seen in at least two pull requests or issues.
 5. For each group kept, the smallest change that would have prevented it, in the file that loads where it

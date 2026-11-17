@@ -31,4 +31,5 @@ their word for it.
    a finding with its file. In the pull request's `## Notes for the reviewer`, the same three lists in English.
 
 `code-reviewer` and `host-reviewer` keep a memory under `.claude/agent-memory/` (the W5 trial in
-`docs/engineering/ai-workflow-plan.md`). What they write there is committed with the change, like any file.
+`docs/engineering/ai-workflow-plan.md`). What they write there, one `lessons/<branch>.md` file each, is
+committed with the change, like any file; `/retro` folds those files into `lessons.md`.
