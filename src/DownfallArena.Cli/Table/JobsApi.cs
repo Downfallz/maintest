@@ -23,8 +23,9 @@ internal sealed class JobsApi
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
     };
 
-    // One pass at a time from this process: a second click while one runs is told so rather than queued behind it.
-    private static readonly SemaphoreSlim Passing = new(1, 1);
+    // One pass at a time per host (each host builds one JobsApi). A second click during a pass is refused, not queued.
+    // Not static: two hosts in one process, as in the test classes, would refuse each other.
+    private int _passing;
 
     private readonly ITendLog _log;
     private readonly TimeProvider _clock;
@@ -116,7 +117,7 @@ internal sealed class JobsApi
 
     private async Task<StudioResponse> PassAsync(string operatorName)
     {
-        if (!await Passing.WaitAsync(TimeSpan.Zero))
+        if (Interlocked.Exchange(ref _passing, 1) != 0)
         {
             return Problem(409, "Jobs.Passing", "A pass is already running. Its run shows here once it ends.");
         }
@@ -135,7 +136,7 @@ internal sealed class JobsApi
         }
         finally
         {
-            Passing.Release();
+            Volatile.Write(ref _passing, 0);
         }
     }
 

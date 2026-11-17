@@ -689,7 +689,7 @@ internal sealed class TableRegistry : IDisposable
 
     private async Task<List<(string Id, bool NeverBegan)>> SweptAsync(DateTimeOffset now, CancellationToken cancellationToken)
     {
-        List<(string Id, bool NeverBegan)> swept = [.. LetGoOfIdleTables(now).Select(table => (table.Id, !table.IsFinished))];
+        List<(string Id, bool NeverBegan)> swept = [.. LetGoOfIdleTables(now).Select(gone => (gone.Table.Id, gone.NeverBegan))];
         if (Loader is { } loader)
         {
             foreach (var listed in await ListedAsync(cancellationToken))
@@ -709,26 +709,32 @@ internal sealed class TableRegistry : IDisposable
     /// The half of the sweep that is this process's own: lets go of the tables it holds that nobody is at any more
     /// (see the class remarks), and touches nothing it does not hold. What a worker, which tends nothing, does.
     /// </summary>
-    public IReadOnlyList<string> LetGoOfIdle(DateTimeOffset now) => [.. LetGoOfIdleTables(now).Select(table => table.Id)];
+    public IReadOnlyList<string> LetGoOfIdle(DateTimeOffset now) => [.. LetGoOfIdleTables(now).Select(gone => gone.Table.Id)];
 
-    private List<PlayedTable> LetGoOfIdleTables(DateTimeOffset now)
+    /// <remarks>
+    /// Whether a table never began is read here, before it is closed: closing it cancels its session, which can end
+    /// at once, and a table read after that is already over, so it looks like a finished game (#679).
+    /// </remarks>
+    private List<(PlayedTable Table, bool NeverBegan)> LetGoOfIdleTables(DateTimeOffset now)
     {
-        List<PlayedTable> gone = [];
+        List<(PlayedTable Table, bool NeverBegan)> gone = [];
         lock (_gate)
         {
             foreach (var table in _byId.Values.ToList())
             {
                 var idle = now - table.Touched;
-                if ((table.IsFinished && idle >= FinishedFor) || (!table.IsOver && !table.Session.HasBegun && idle >= NeverBegunFor))
+                var finished = table.IsFinished && idle >= FinishedFor;
+                var neverBegan = !table.IsOver && !table.Session.HasBegun && idle >= NeverBegunFor;
+                if (finished || neverBegan)
                 {
                     _byId.Remove(table.Id);
                     Forget(table);
-                    gone.Add(table);
+                    gone.Add((table, neverBegan));
                 }
             }
         }
 
-        foreach (var table in gone)
+        foreach (var (table, _) in gone)
         {
             table.Close();
         }
