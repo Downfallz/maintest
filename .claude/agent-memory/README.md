@@ -9,6 +9,6 @@ on every merge. `/retro` folds the week's `lessons/` files into `<agent>/lessons
 them; `MEMORY.md` and `lessons.md` change only there. `.gitattributes` merges this folder with `merge=union`, as
 a safety net for a local merge.
 
-This is a trial (stage W5 of `docs/engineering/ai-workflow-plan.md`): whether a cloud session's reviewer writes
-here, and whether the next session's reviewer reads it. A lesson that holds is moved into `.claude/rules/` or an
-area's `AGENTS.md`, where every session reads it, and removed from here.
+This was the trial of stage W5 of `docs/engineering/ai-workflow-plan.md`, and it held: a cloud session's reviewer
+writes here and the next session's reviewer reads it (issue #601). A lesson that holds is moved into
+`.claude/rules/`, an area's `AGENTS.md` or the agent's prompt, where every session reads it, and removed from here.

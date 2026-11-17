@@ -13,7 +13,7 @@
   `archivist` answers "what is decided about X?" with ADR numbers. `product-scout` and `ops-analyst` propose
   features and what to automate in operations, for `/proposals`. `/reviewers` picks the reviewers a diff calls
   for (`scripts/review/reviewers.mjs`), runs them and checks each finding. `code-reviewer` and `host-reviewer` keep a memory
-  under `.claude/agent-memory/` (a trial).
+  under `.claude/agent-memory/` (proven in cloud sessions, W5).
 - For the board game translation (`docs/tabletop/plan.md`):
   `boardgame-director` (what survives the table), `tabletop-mathematician` (measures a candidate rule set),
   `component-designer` (what is in the box), `rulebook-writer` (the official rulebook, `rules/`, and the player aid),
