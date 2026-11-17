@@ -179,7 +179,7 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
                 return;
             }
 
-            var since = await table.Api.SinceVisitAsync(seat.Name);
+            var since = await table.Api.SinceVisitAsync(seat.Name, withLastMove: false);
             if (await sender.SendAsync(subscription, Payload(question, round, seat, table.Id, since.Casts), Topic))
             {
                 // Said, so a host's log shows what reached a phone and what did not.

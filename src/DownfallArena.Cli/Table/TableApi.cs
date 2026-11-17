@@ -877,9 +877,10 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
     /// <summary>
     /// What happened since the seat's last visit, as the lobby, the inbox and "Your turn" say it (async recap plan,
     /// R4): the spells cast that the seat may see past the mark it was last shown, and when the last move was. Read
-    /// from the seat's own feed, as the seat's view would serve it; no board is read.
+    /// from the seat's own feed, as the seat's view would serve it; no board is read. <paramref name="withLastMove" />
+    /// false leaves the journal unasked, for a reader that only says the casts (the notice).
     /// </summary>
-    public async Task<SinceVisit> SinceVisitAsync(string seatName)
+    public async Task<SinceVisit> SinceVisitAsync(string seatName, bool withLastMove = true)
     {
         var seat = seats.FirstOrDefault(one => one.Name == seatName);
         if (seat is null)
@@ -887,7 +888,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
             return new SinceVisit(null, null);
         }
 
-        var moving = LastMoveAtAsync();
+        var moving = withLastMove ? LastMoveAtAsync() : Task.FromResult<(bool, DateTimeOffset?)>((false, null));
         var visit = await LastVisitAsync(seat);
         var (_, lastMove) = await moving;
         if (visit is null)
@@ -895,7 +896,8 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
             return new SinceVisit(null, lastMove);
         }
 
-        var since = (int)Math.Min(int.MaxValue, visit.Sequence + 1);
+        // From where the seat's view starts, as it does: a practice's feed begins at its prepared question.
+        var since = Math.Max((int)Math.Min(int.MaxValue, visit.Sequence + 1), FeedStart);
         var recorded = run is { } recording ? recording.Entries(session.MatchId, since) : events.EntriesOf(session.MatchId, since);
 
         // No further than the journal holds, as the seat's view stops: a cast past it may be of a step never written.
