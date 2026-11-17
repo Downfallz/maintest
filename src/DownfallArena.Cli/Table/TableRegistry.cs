@@ -713,7 +713,7 @@ internal sealed class TableRegistry : IDisposable
 
     /// <remarks>
     /// Whether a table never began is read here, before it is closed: closing it cancels its session, which can end
-    /// at once, and a table read after that is over and reads as a finished game (#679).
+    /// at once, and a table read after that is already over, so it looks like a finished game (#679).
     /// </remarks>
     private List<(PlayedTable Table, bool NeverBegan)> LetGoOfIdleTables(DateTimeOffset now)
     {

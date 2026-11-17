@@ -23,8 +23,8 @@ internal sealed class JobsApi
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
     };
 
-    // One pass at a time from this host, which builds one JobsApi: a second click while one runs is told so rather
-    // than queued behind it. Not static: two hosts in one process, as the test classes are, would turn each other away.
+    // One pass at a time per host (each host builds one JobsApi). A second click during a pass is refused, not queued.
+    // Not static: two hosts in one process, as in the test classes, would refuse each other.
     private int _passing;
 
     private readonly ITendLog _log;

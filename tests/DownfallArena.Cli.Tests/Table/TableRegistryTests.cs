@@ -241,8 +241,8 @@ public sealed class TableRegistryTests : IDisposable
 
     /// <summary>
     /// Whether a table never began is read before it is closed: closing one cancels its session, which can end it at
-    /// once, and a table read after that is over and reads as a finished game (#679, #649). Ten tables in one sweep
-    /// make the race that one table lost now and then a loss every time.
+    /// once, and a table read after that is already over, so it looks like a finished game (#679, #649). Ten tables
+    /// in one sweep make the race that one table lost now and then a loss every time.
     /// </summary>
     [Fact]
     public async Task Every_table_a_sweep_closes_unbegun_is_one_that_never_began()

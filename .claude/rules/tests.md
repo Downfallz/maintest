@@ -13,7 +13,7 @@ paths:
   `Support/` folder when construction gets noisy.
 - Application tests: substitute ports with NSubstitute, assert on the interaction that matters.
 - Read what a host says through a sink it is given (`Action<string> Said`, a `TextWriter`), never by swapping
-  `Console.Out`: it is one writer for the whole process, and classes run side by side. A class that must swap
+  `Console.Out`: it is one writer for the whole process, and test classes run in parallel. A class that must swap
   it carries `[Collection(ConsoleOutput.Name)]` (`ConsoleOutputTests` holds it, #656).
 - Never delete or skip a failing test to get green. Fix the code or fix the test, and say which.
 - If a layering rule changes, update `tests/DownfallArena.Architecture.Tests` in the same change as the ADR.
