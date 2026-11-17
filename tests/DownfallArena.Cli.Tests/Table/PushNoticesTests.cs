@@ -167,6 +167,20 @@ public sealed class PushNoticesTests : IDisposable
         atTheSlot.GetProperty("tag").GetString().ShouldBe("turn:player2");
     }
 
+    [Theory]
+    [InlineData(3, "Round 4: choose a spell. 3 casts since your last visit.")]
+    [InlineData(1, "Round 4: choose a spell. 1 cast since your last visit.")]
+    [InlineData(0, "Round 4: choose a spell.")]
+    [InlineData(null, "Round 4: choose a spell.")]
+    public void The_body_says_how_many_spells_were_cast_since_the_last_visit(int? casts, string body)
+    {
+        var seat = new TableSeat(Domain.Matches.PlayerSlot.Player1, "token", new SteppedPerson());
+
+        var notice = JsonDocument.Parse(PushNotices.Payload(new Asking(Application.Matches.Projections.PlayerOptionsKind.Action, null, 9), 4, seat, "t", casts)).RootElement;
+
+        notice.GetProperty("body").GetString().ShouldBe(body);
+    }
+
     [Fact]
     public async Task One_phone_holding_both_seats_is_hotseat_and_is_not_notified()
     {

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { seatsOf, timeLeft, turnOf, versusLine } from './players.js';
+import { seatsOf, sinceVisitLine, timeLeft, turnOf, versusLine } from './players.js';
 
 const mark = { seat: 'player1', kind: 'person', name: 'MarkF' };
 
@@ -41,4 +41,18 @@ test('whose turn it is says how long they have left to answer in a game between 
   assert.equal(turnOf(table(true), ['player1'], now).text, 'Your turn · 1 d 5 h left');
   assert.equal(turnOf(table(false), ['player1'], now).text, "Bastien's turn · 1 d 5 h left");
   assert.equal(turnOf({ ...table(true), answerBy: null }, ['player1'], now).text, 'Your turn');
+});
+
+test('the recap line says the casts since the last visit and how long ago the last move was', () => {
+  const now = Date.parse('2026-11-17T12:00:00Z');
+  assert.equal(sinceVisitLine({ casts: 3, lastMoveAt: '2026-11-17T07:00:00Z' }, now), '3 casts since your last visit · last move 5 h ago');
+  assert.equal(sinceVisitLine({ casts: 1, lastMoveAt: '2026-11-17T11:59:30Z' }, now), '1 cast since your last visit · last move just now');
+});
+
+test('the recap line leaves out a count of none and a last move the host does not know', () => {
+  const now = Date.parse('2026-11-17T12:00:00Z');
+  assert.equal(sinceVisitLine({ casts: 0, lastMoveAt: '2026-11-15T12:00:00Z' }, now), 'Last move 2 d ago');
+  assert.equal(sinceVisitLine({ casts: null, lastMoveAt: null }, now), null);
+  assert.equal(sinceVisitLine({ casts: 2, lastMoveAt: null }, now), '2 casts since your last visit');
+  assert.equal(sinceVisitLine(null, now), null);
 });

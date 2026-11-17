@@ -2,7 +2,7 @@ import { preferredPresentation, presentationPath } from './battle-preferences.js
 import { nextPath } from './account.js';
 import { onLobbyChange } from './changes.js';
 import { mountNavigation } from './navigation.js';
-import { turnOf } from './players.js';
+import { sinceVisitLine, turnOf } from './players.js';
 export { turnOf } from './players.js';
 export { codePath } from './navigation.js';
 import { activateSeats, savedSeats } from './session.js';
@@ -404,6 +404,9 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     line.setAttribute('aria-label', sides.map(side => side.name).join(' versus '));
     root.append(top, line);
     if (turn) root.append(node('p', turn.mine ? `${turn.text} · ${tableState(table)}` : turn.text, `game-turn${turn.mine ? ' mine' : ''}`));
+    // What happened since this player's last visit, on their own turn (async recap plan, R4).
+    const since = turn?.mine ? sinceVisitLine(entry?.recap) : null;
+    if (since) root.append(node('p', since, 'game-since'));
     // When it was created and whether it counts on the ladder, on every card of one's own.
     if (entry) {
       const created = createdOn(table.createdAt);
@@ -524,7 +527,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
       play.setAttribute('aria-label', `Play ${entry.table.format} table ${entry.table.id}`);
       play.addEventListener('click', () => enter(entry));
       return row({ heading: `${entry.table.format} battle`, tag: isRanked(entry.table) ? 'Ranked' : 'Unranked', tone: isRanked(entry.table) ? 'ranked' : '',
-        sides: versus(entry.table).map(side => ({ ...side, you: held.includes(side.seat) })), detail: `${turnOf(entry.table, held).text} · ${tableState(entry.table)}`, action: play, className: 'mine' });
+        sides: versus(entry.table).map(side => ({ ...side, you: held.includes(side.seat) })), detail: [`${turnOf(entry.table, held).text} · ${tableState(entry.table)}`, sinceVisitLine(entry.recap)].filter(Boolean).join(' · '), action: play, className: 'mine' });
     }));
     root.append(head, rows);
     return root;

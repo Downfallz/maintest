@@ -1,7 +1,7 @@
 import { accountRequest } from './account.js';
 import { accountMoved, backoff, onLobbyChange, signedInChanged } from './changes.js';
 import { preferredPresentation, presentationPath } from './battle-preferences.js';
-import { turnOf } from './players.js';
+import { sinceVisitLine, turnOf } from './players.js';
 import { activateSeats } from './session.js';
 
 // What waits for a signed-in player, wherever they are in the app: the games against another person where it is their turn, the
@@ -31,14 +31,15 @@ function personAgainst(table, held) {
  * then the invitations they received, then the friend requests, then their own invitations a friend declined.
  * `mine` and `invitations` are `GET /api/lobby/mine`'s; `friends` is `GET /api/friends`'s.
  */
-export function inboxItems({ mine = [], invitations = [], friends = null } = {}) {
+export function inboxItems({ mine = [], invitations = [], friends = null } = {}, now = Date.now()) {
   const items = [];
   for (const entry of mine) {
     const held = (entry.seats ?? []).map(seat => seat.seat), against = personAgainst(entry.table, held);
     if (against && turnOf(entry.table, held)?.mine) {
       const round = Number.isInteger(entry.table.round) ? ` · Round ${entry.table.round}` : '';
+      const since = sinceVisitLine(entry.recap, now);
       items.push({ kind: 'turn', key: `turn:${entry.table.id}`, title: `Your turn against ${against}`,
-        detail: `${entry.table.format ?? ''} battle${round}`.trim(), seats: entry.seats });
+        detail: `${`${entry.table.format ?? ''} battle${round}`.trim()}${since ? ` · ${since}` : ''}`, seats: entry.seats });
     }
   }
   for (const invitation of invitations) {

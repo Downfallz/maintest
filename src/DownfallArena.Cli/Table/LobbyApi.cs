@@ -1559,6 +1559,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 table = await DescribeAsync(table),
                 seats = table.Seats.Where(seat => seat.Account == account).Select(seat => new { seat = seat.Name, token = seat.Token }).ToArray(),
                 invited = table.IsOver || !Inviter(table, account.Value) ? null : await InvitedOfAsync(table, table.Seats.FirstOrDefault(seat => seat.Person is not null && !seat.Taken) ?? table.Seats[1]),
+                recap = await RecapAsync(table, account.Value),
             }));
 
         // The tables waiting for this account (ADR 0129): each with who asked, and since when.
@@ -1576,6 +1577,22 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 };
             }));
         return Json(new { tables, invitations, ongoingPerKind = OngoingPerKind });
+    }
+
+    /// <summary>
+    /// The recap's line on the account's card (async recap plan, R4): the casts since its seat's last visit and when
+    /// the last move was. None for a game over or not begun, and for a device holding both seats (ADR 0120), which
+    /// was there for every move.
+    /// </summary>
+    private static async Task<object?> RecapAsync(PlayedTable table, AccountId account)
+    {
+        if (table.IsOver || !table.Session.HasBegun || table.Seats.Where(seat => seat.Account == account).ToArray() is not [{ Person: not null } seat])
+        {
+            return null;
+        }
+
+        var since = await table.Api.SinceVisitAsync(seat.Name);
+        return new { casts = since.Casts, lastMoveAt = since.LastMoveAt };
     }
 
     /// <summary>

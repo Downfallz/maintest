@@ -180,6 +180,30 @@ public sealed class LobbyAccountsTests : IDisposable
         listed[0].GetProperty("seats")[0].GetProperty("token").GetString().ShouldBe(mine.Seats[0].Token);
     }
 
+    /// <summary>The recap's line on the card (async recap plan, R4): nothing before the match begins, then the casts since the last visit.</summary>
+    [Fact]
+    public async Task Your_game_under_way_carries_the_casts_since_your_last_visit()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var (table, _) = await OpenAsync(mark, opponent: "bot");
+        var lobby = await LobbyAsync();
+        var before = Read(await lobby.HandleAsync("GET", "/api/lobby/mine", "", player: mark)).GetProperty("tables")[0];
+        table.Seats[0].Person!.Arrive();
+        table.Session.Begin();
+        for (var attempt = 0; attempt < 250 && table.Seats[0].Person!.Waiting is null; attempt++)
+        {
+            await Task.Delay(20, Cancel);
+        }
+
+        var unvisited = Read(await lobby.HandleAsync("GET", "/api/lobby/mine", "", player: mark)).GetProperty("tables")[0];
+        (await table.Api.HandleAsync("PUT", "/api/seat/player1/seen", """{ "sequence": 0 }""", table.Seats[0].Token)).Status.ShouldBe(200);
+        var visited = Read(await lobby.HandleAsync("GET", "/api/lobby/mine", "", player: mark)).GetProperty("tables")[0];
+
+        before.GetProperty("recap").ValueKind.ShouldBe(JsonValueKind.Null);
+        unvisited.GetProperty("recap").GetProperty("casts").ValueKind.ShouldBe(JsonValueKind.Null, "no last visit, nothing to count from");
+        visited.GetProperty("recap").GetProperty("casts").GetInt32().ShouldBe(0, "nobody has cast yet");
+    }
+
     [Fact]
     public async Task A_player_does_not_take_the_other_place_of_a_table_they_already_play()
     {

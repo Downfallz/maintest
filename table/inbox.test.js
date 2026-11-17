@@ -52,3 +52,13 @@ test('the badge counts up to nine, then says 9+, and the bell says how much wait
   assert.equal(bellLabel(2), 'Notifications · 2 waiting');
   assert.equal(bellLabel(0), 'Notifications · nothing waiting');
 });
+
+test('a turn waiting says what happened since the last visit', () => {
+  const now = Date.parse('2026-11-17T12:00:00Z');
+  const mine = [{ table: table('a', [{ ...me, turn: true }, { seat: 'player2', kind: 'person', name: 'Bastien' }]), seats: [{ seat: 'player1', token: 't1' }],
+    recap: { casts: 3, lastMoveAt: '2026-11-17T07:00:00Z' } }];
+
+  const [item] = inboxItems({ mine }, now);
+
+  assert.equal(item.detail, '3v3 battle · Round 4 · 3 casts since your last visit · last move 5 h ago');
+});

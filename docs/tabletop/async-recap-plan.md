@@ -1,7 +1,7 @@
 # Plan: the recap when a player comes back to an asynchronous game
 
-Status: accepted, 2026-11-16 (the owner settled the questions at the end). R1, R2 and R3 are built; each stage
-below is one pull request.
+Status: accepted, 2026-11-16 (the owner settled the questions at the end). R1 to R4 are built; each stage below
+was one pull request.
 
 ## What the owner asked for
 
@@ -171,6 +171,15 @@ under way: a player who left the page open for two days, or who simply lost the 
    `3 casts since your last visit · last move 5 h ago`; the push notice adds the count to its body. The host counts
    the results after the seen sequence; it reads no board. Tests: host tests of the notice's body, Node tests of the
    card's line.
+
+   *Built (2026-11-17)*: `TableApi.SinceVisitAsync` counts the casts (`CombatActionResolved`) the seat may see in its
+   feed past its last visit, and reads when the last move was; no board is read, and a seat with no last visit has
+   no count. `GET /api/lobby/mine` carries it as `recap: { casts, lastMoveAt }` on a game under way at one seat of the
+   account (none for a device holding both). `sinceVisitLine` (`table/players.js`) says it, `3 casts since your last
+   visit · last move 5 h ago`, on the lobby's own "Your turn" cards, in the Your turn band and in the inbox; a count
+   of none is left out. The push notice adds `3 casts since your last visit.` to its body. Tests:
+   `TableApiTests.SinceVisit`, `LobbyAccountsTests`, `PushNoticesTests`, and the Node tests of `players.js` and
+   `inbox.js`. The words joined docs/domain/player-terminology.md.
 
 ## Questions the owner settled (2026-11-16)
 

@@ -13,6 +13,7 @@ using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Application.Matches.Queries;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Domain.Matches;
+using DownfallArena.Domain.Matches.Events;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Infrastructure.Learning;
 using DownfallArena.SharedKernel.Identifiers;
@@ -871,6 +872,33 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
             Console.WriteLine($"  What {seat.Name} was last shown could not be read: {failure.Message}");
             return null;
         }
+    }
+
+    /// <summary>
+    /// What happened since the seat's last visit, as the lobby, the inbox and "Your turn" say it (async recap plan,
+    /// R4): the spells cast that the seat may see past the mark it was last shown, and when the last move was. Read
+    /// from the seat's own feed, as the seat's view would serve it; no board is read.
+    /// </summary>
+    public async Task<SinceVisit> SinceVisitAsync(string seatName)
+    {
+        var seat = seats.FirstOrDefault(one => one.Name == seatName);
+        if (seat is null)
+        {
+            return new SinceVisit(null, null);
+        }
+
+        var moving = LastMoveAtAsync();
+        var visit = await LastVisitAsync(seat);
+        var (_, lastMove) = await moving;
+        if (visit is null)
+        {
+            return new SinceVisit(null, lastMove);
+        }
+
+        var since = (int)Math.Min(int.MaxValue, visit.Sequence + 1);
+        var recorded = run is { } recording ? recording.Entries(session.MatchId, since) : events.EntriesOf(session.MatchId, since);
+        var casts = SeatFeedProjection.Build(recorded, seat.Slot, since).Count(entry => entry.Event is CombatActionResolved);
+        return new SinceVisit(casts, lastMove);
     }
 
     /// <summary>When the last move was, for the view, and whether the journal could be asked at all.</summary>

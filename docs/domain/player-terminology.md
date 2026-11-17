@@ -96,6 +96,7 @@ The recap a player reads on coming back to a game (docs/tabletop/async-recap-pla
 | Play the unseen actions back one at a time | **Replay step by step** | **Revoir pas à pas** |
 | The journal's mark where the Last visit ended | **You left here** | **Vous en étiez ici** |
 | A line the seat was not shown | **New** | **Nouveau** |
+| The recap's line on a Your turn card, in the inbox and in the notice | **3 casts since your last visit · last move 5 h ago** | **3 sorts lancés depuis votre dernière visite · dernier coup il y a 5 h** |
 
 ## Presentation and identifiers
 
