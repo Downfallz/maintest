@@ -17,4 +17,5 @@ paths:
   or its minutes fall in `other`.
 - `main` deploys behind the gate. Its runs queue and are never cancelled half-way.
 - No secret is echoed, written to a step summary or passed on a command line.
+- A secret is set in the `env` of the step that reads it, never in a job's or the workflow's `env` (#709).
 - A workflow that pushes pushes a branch and proposes it; it never pushes to `main`.

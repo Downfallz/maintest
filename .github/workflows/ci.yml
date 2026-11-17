@@ -88,8 +88,12 @@ jobs:
       AZURITE_BLOB_ENDPOINT: http://127.0.0.1:10000/devstoreaccount1
       AZURITE_QUEUE_ENDPOINT: http://127.0.0.1:10001/devstoreaccount1
       AZURITE_TABLE_ENDPOINT: http://127.0.0.1:10002/devstoreaccount1
-      # Sonar steps are skipped when the token is absent (forks, or the secret not configured yet).
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      # Sonar steps are skipped when the token is absent (forks, or the secret not configured yet). The token
+      # itself is set only on the three Sonar steps that read it, so the build, the tests and the light build do
+      # not carry it in their environment (#709). That narrows its exposure; it does not isolate it from the pull
+      # request's code, which runs earlier in this job on the same runner. The scanner's begin step does not
+      # write the token to disk for the build it wraps, which is why the end step is given it again.
+      HAS_SONAR: ${{ secrets.SONAR_TOKEN != '' }}
       SONAR_PROJECT_KEY: Downfallz_maintest
       SONAR_ORGANIZATION: downfallz
     steps:
@@ -206,7 +210,9 @@ jobs:
       # a file's path from its project's folder: written from the repository root it matched nothing, and the
       # two issues stayed open on `main` while every pull request, which reads only its diff, was green.
       - name: Begin SonarCloud analysis
-        if: env.SONAR_TOKEN != '' && env.LIGHT_BUILD != 'true'
+        if: env.HAS_SONAR == 'true' && env.LIGHT_BUILD != 'true'
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: >
           dotnet sonarscanner begin
           /k:"$SONAR_PROJECT_KEY"
@@ -246,12 +252,15 @@ jobs:
         run: dotnet run --project src/DownfallArena.Cli --no-build --configuration Release -- benchmark
 
       - name: End SonarCloud analysis
-        if: env.SONAR_TOKEN != '' && env.LIGHT_BUILD != 'true' && !cancelled()
+        if: env.HAS_SONAR == 'true' && env.LIGHT_BUILD != 'true' && !cancelled()
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
 
       - name: Report SonarCloud quality gate and issues
-        if: env.SONAR_TOKEN != '' && env.LIGHT_BUILD != 'true' && !cancelled()
+        if: env.HAS_SONAR == 'true' && env.LIGHT_BUILD != 'true' && !cancelled()
         env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_PULL_REQUEST: ${{ github.event.pull_request.number }}
           SONAR_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: .github/scripts/sonar-report.sh
