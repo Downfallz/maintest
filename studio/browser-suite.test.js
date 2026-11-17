@@ -38,7 +38,7 @@ test('a real-engine journey plays the real engine and no mock journey', () => {
 });
 
 test('a fixture or the mock host plays everything', () => {
-  for (const file of ['server.js', 'battle-help-fixture.js', 'playwright.config.js', 'package-lock.json', 'plan.js']) {
+  for (const file of ['server.js', 'origin.js', 'dotnet.js', 'battle-help-fixture.js', 'playwright.config.js', 'package-lock.json', 'plan.js']) {
     assert.deepEqual(plan([`studio/browser/${file}`], specs), { ...nothing, journeys: 'all', realEngine: true, release: 'all' }, file);
   }
 });
