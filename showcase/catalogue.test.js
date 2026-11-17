@@ -66,6 +66,17 @@ test('the observation follows a mutation that moved to v2', async () => {
   assert.equal(specimen.length, specimenPath.length + 1);
 });
 
+test('an observation step two enabled versions answer fails the build as ambiguous', async () => {
+  const folder = content();
+  const occultist = readJson(join(folder, 'Tiers/occultist.v1.json'));
+  writeJson(join(folder, 'Tiers/occultist.v2.json'), { ...occultist, id: 'tier:occultist:v2' });
+  const art = readJson(join(folder, 'presentation/mutation-art.json'));
+  writeJson(join(folder, 'presentation/mutation-art.json'), { ...art, 'tier:occultist:v2': art['tier:occultist:v1'] });
+
+  const catalogue = await loadCatalogue(folder);
+  assert.throws(() => observe(catalogue, specimenPath), /Ambiguous observation step occultist: tier:occultist:v1, tier:occultist:v2/);
+});
+
 test('an observation step no enabled mutation answers fails the build by name', async () => {
   const catalogue = await loadCatalogue();
   assert.throws(() => observe(catalogue, ['occultist', 'nobody']), /Unreachable observation step nobody/);

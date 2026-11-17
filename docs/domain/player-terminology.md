@@ -22,7 +22,8 @@ apocalyptic battle; the words carry that fantasy and stay short, plain and easy 
 | The base creature definition (`creature:main:v1`, named `Main`) | Main | **Creature**, numbered by id (Creature 4) | **Créature** (Créature 4) |
 
 A Stage is written in Roman numerals, I to IV, in both languages: Stage III, Stade IV. The domain and the data
-keep the number (`level: 3`); only what a player reads turns it into a numeral (`stageLabel` in `table/terms.js`).
+keep the number (`level: 3`); only what a player reads turns it into a numeral (`stageLabel` in `table/terms.js`). The studio is for
+authors, who edit the `level` itself, so it keeps the number (Stage 3).
 
 Use the words naturally in a sentence rather than as literal substitutions:
 
