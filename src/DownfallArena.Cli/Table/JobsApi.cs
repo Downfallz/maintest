@@ -132,7 +132,9 @@ internal sealed class JobsApi
         }
         catch (Exception failure) when (TableRegistry.StoreFails(failure))
         {
-            return Problem(503, "Jobs.Failed", $"The pass stopped: {failure.Message}. Its run is kept as failed.");
+            // The store's text can name an account or a blob path: the console has it, the answer does not (#755).
+            Console.Error.WriteLine($"  Tending pass run by {operatorName} stopped: {failure}");
+            return Problem(503, "Jobs.Failed", "The pass stopped: the store could not be read or written. Its run is kept as failed.");
         }
         finally
         {

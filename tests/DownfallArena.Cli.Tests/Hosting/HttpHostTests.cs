@@ -1,4 +1,7 @@
+using System.Net;
+using System.Net.Sockets;
 using DownfallArena.Cli.Hosting;
+using DownfallArena.Cli.Studio;
 
 namespace DownfallArena.Cli.Tests.Hosting;
 
@@ -145,5 +148,111 @@ public sealed class HttpHostTests
 
         host.Url.ShouldBe("http://192.168.1.12:5100/");
         host.IsLoopback.ShouldBeFalse();
+    }
+    /// <summary>
+    /// A body is read into memory, so one far larger than any route takes would let a guest run the one API
+    /// replica out of memory (#691). The length it announces is enough to refuse it before reading.
+    /// </summary>
+    [Fact]
+    public async Task A_body_announced_past_the_limit_is_refused_with_413_and_never_reaches_a_route()
+    {
+        var reached = false;
+        await using var running = Running.Start(16, (_, _) =>
+        {
+            reached = true;
+            return Task.FromResult(StudioResponse.OfPlainText(200, "read"));
+        });
+
+        using var answer = await running.Client.PostAsync(running.Url, new StringContent(new string('x', 64)), Cancel);
+
+        answer.StatusCode.ShouldBe(HttpStatusCode.RequestEntityTooLarge);
+        (await answer.Content.ReadAsStringAsync(Cancel)).ShouldContain("Host.BodyTooLarge");
+        reached.ShouldBeFalse();
+    }
+
+    /// <summary>A chunked body announces no length, so the host stops reading at the limit rather than trusting it.</summary>
+    [Fact]
+    public async Task A_chunked_body_past_the_limit_is_refused_with_413_once_the_limit_is_read()
+    {
+        var reached = false;
+        await using var running = Running.Start(16, (_, _) =>
+        {
+            reached = true;
+            return Task.FromResult(StudioResponse.OfPlainText(200, "read"));
+        });
+        using var request = new HttpRequestMessage(HttpMethod.Post, running.Url) { Content = new StringContent(new string('x', 64)) };
+        request.Headers.TransferEncodingChunked = true;
+
+        using var answer = await running.Client.SendAsync(request, Cancel);
+
+        answer.StatusCode.ShouldBe(HttpStatusCode.RequestEntityTooLarge);
+        reached.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task A_body_within_the_limit_reaches_the_route_whole()
+    {
+        await using var running = Running.Start(16, (_, body) => Task.FromResult(StudioResponse.OfPlainText(200, body)));
+
+        using var answer = await running.Client.PostAsync(running.Url, new StringContent(new string('x', 16)), Cancel);
+
+        answer.StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await answer.Content.ReadAsStringAsync(Cancel)).ShouldBe(new string('x', 16));
+    }
+
+    /// <summary>
+    /// A route that throws is a bug, and the exception's text can name a storage account, a blob path or a file
+    /// on the host (#692): the answer is a stable code, and the text goes to the console only.
+    /// </summary>
+    [Fact]
+    public async Task A_route_that_throws_answers_500_with_a_stable_code_and_not_the_exception_s_text()
+    {
+        await using var running = Running.Start(16, (_, _) => throw new InvalidOperationException("https://secret.blob.core.windows.net/tables/t1 failed"));
+
+        using var answer = await running.Client.GetAsync(running.Url, Cancel);
+
+        answer.StatusCode.ShouldBe(HttpStatusCode.InternalServerError);
+        var text = await answer.Content.ReadAsStringAsync(Cancel);
+        text.ShouldContain("Host.Unexpected");
+        text.ShouldNotContain("secret");
+    }
+
+    private static CancellationToken Cancel => TestContext.Current.CancellationToken;
+
+    /// <summary>A host listening on a free loopback port for one test, stopped when the test ends.</summary>
+    private sealed class Running : IAsyncDisposable
+    {
+        private readonly HttpHost _host;
+        private readonly CancellationTokenSource _stopping = new();
+        private readonly Task _serving;
+
+        private Running(HttpHost host)
+        {
+            _host = host;
+            _serving = host.RunAsync(_stopping.Token);
+        }
+
+        public HttpClient Client { get; } = new();
+
+        public string Url => _host.Url;
+
+        public static Running Start(int maxBodyBytes, Func<HttpListenerRequest, string, Task<StudioResponse>> answer) =>
+            new(new HttpHost(HttpHost.Loopback, FreePort(), answer, maxBodyBytes));
+
+        public async ValueTask DisposeAsync()
+        {
+            Client.Dispose();
+            await _stopping.CancelAsync();
+            await _serving;
+            _host.Dispose();
+            _stopping.Dispose();
+        }
+
+        private static int FreePort()
+        {
+            using var probe = new TcpListener(IPAddress.Loopback, 0);
+            probe.Start();
+            return ((IPEndPoint)probe.LocalEndpoint).Port;
+        }
     }
 }

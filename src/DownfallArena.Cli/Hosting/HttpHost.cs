@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using System.Text.Json;
 using DownfallArena.Cli.Studio;
 
 namespace DownfallArena.Cli.Hosting;
@@ -24,14 +25,27 @@ internal sealed class HttpHost : IDisposable
 
     private readonly HttpListener _listener = new();
     private readonly Func<HttpListenerRequest, string, Task<StudioResponse>> _answer;
+    private readonly int _maxBodyBytes;
 
-    public HttpHost(string address, int port, Func<HttpListenerRequest, string, Task<StudioResponse>> answer)
+    /// <summary>
+    /// The largest body a host reads when it is not told otherwise. Every table route takes a few hundred bytes
+    /// (a plan, a note, a sign-in credential, a feedback text), so 64 KB is far past any of them and far short of
+    /// what would hurt the one API replica (#691).
+    /// </summary>
+    public const int DefaultMaxBodyBytes = 64 * 1024;
+
+    /// <param name="maxBodyBytes">
+    /// The largest body read into memory; a longer one is answered 413 <c>Host.BodyTooLarge</c> and never reaches a route.
+    /// </param>
+    public HttpHost(string address, int port, Func<HttpListenerRequest, string, Task<StudioResponse>> answer, int maxBodyBytes = DefaultMaxBodyBytes)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(port, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(port, 65535);
         ArgumentNullException.ThrowIfNull(answer);
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxBodyBytes, 1);
 
         _answer = answer;
+        _maxBodyBytes = maxBodyBytes;
         IsLoopback = OnlyThisMachine(address);
 
         // Plain HTTP, and it stays plain. HTTPS here would mean a certificate two phones on a home network
@@ -188,11 +202,16 @@ internal sealed class HttpHost : IDisposable
         StudioResponse response;
         try
         {
-            response = await _answer(context.Request, await ReadBodyAsync(context.Request));
+            response = await ReadBodyAsync(context.Request, _maxBodyBytes) is { } body
+                ? await _answer(context.Request, body)
+                : Problem(413, "Host.BodyTooLarge", $"A request body is at most {_maxBodyBytes} bytes.");
         }
         catch (Exception exception)
         {
-            response = StudioResponse.OfPlainText(500, exception.Message);
+            // A route that throws is a bug. Its text can name a storage account, a blob path or a file on this
+            // machine (#692), so it goes to the console, which the operator reads, and never to the answer.
+            Console.Error.WriteLine($"  {context.Request.HttpMethod} {context.Request.Url?.AbsolutePath} failed: {exception}");
+            response = Problem(500, "Host.Unexpected", "Something went wrong on the host. The request was not completed.");
         }
 
         try
@@ -226,14 +245,34 @@ internal sealed class HttpHost : IDisposable
         }
     }
 
-    private static async Task<string> ReadBodyAsync(HttpListenerRequest request)
+    /// <summary>
+    /// The body as text, or <c>null</c> when it is longer than <paramref name="limit" /> bytes. A length announced
+    /// past the limit is refused before a byte is read; a chunked body announces none, so reading stops one byte
+    /// past the limit whatever the client says.
+    /// </summary>
+    private static async Task<string?> ReadBodyAsync(HttpListenerRequest request, int limit)
     {
         if (!request.HasEntityBody)
         {
             return string.Empty;
         }
 
-        using var reader = new StreamReader(request.InputStream, request.ContentEncoding);
-        return await reader.ReadToEndAsync();
+        if (request.ContentLength64 > limit)
+        {
+            return null;
+        }
+
+        var buffer = new byte[limit + 1];
+        var read = 0;
+        int last;
+        while (read < buffer.Length && (last = await request.InputStream.ReadAsync(buffer.AsMemory(read))) > 0)
+        {
+            read += last;
+        }
+
+        return read > limit ? null : request.ContentEncoding.GetString(buffer, 0, read);
     }
+
+    private static StudioResponse Problem(int status, string code, string message) =>
+        StudioResponse.OfJson(new { error = code, message }, JsonSerializerOptions.Web, status);
 }
