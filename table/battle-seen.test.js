@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createSeenSender, saveSeen, seenSince, SEND_EVERY_MS } from './battle-seen.js';
+import { createSeenSender, saveSeen, seenSince, SEND_EVERY_MS, presentAt, savePresent } from './battle-seen.js';
 
 function storage() {
   const values = new Map();
@@ -137,4 +137,23 @@ test('a refused mark is held, so the page hidden next sends it again', async () 
   seen.flush();
 
   assert.deepEqual(sent, [6, 6]);
+});
+
+test('the time a seat was last on screen is kept for each game, the newest only', () => {
+  const store = new Map();
+  const storage = { getItem: key => store.get(key) ?? null, setItem: (key, value) => store.set(key, value) };
+  savePresent(storage, 'a:player1', Date.parse('2026-11-17T10:00:00Z'));
+  savePresent(storage, 'b:player2', Date.parse('2026-11-17T11:00:00Z'));
+  savePresent(storage, 'a:player1', Date.parse('2026-11-17T12:00:00Z'));
+
+  assert.equal(presentAt(storage, 'a:player1'), '2026-11-17T12:00:00.000Z');
+  assert.equal(presentAt(storage, 'b:player2'), '2026-11-17T11:00:00.000Z');
+  assert.equal(presentAt(storage, 'c:player1'), null);
+  assert.equal(JSON.parse(store.get('downfall.battle.present.v1')).length, 2);
+});
+
+test('a refused or broken store reads as never seen', () => {
+  assert.equal(presentAt(null, 'a:player1'), null);
+  assert.equal(presentAt({ getItem: () => '{oops' }, 'a:player1'), null);
+  savePresent({ getItem: () => null, setItem: () => { throw new Error('full'); } }, 'a:player1', Date.now());
 });

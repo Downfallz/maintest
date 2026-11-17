@@ -1852,3 +1852,70 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 }
 /* A short screen (a phone held sideways) scrolls the card, so its way back stays in reach. */
 #concept-dialog { max-height: calc(100dvh - 32px); overflow-y: auto; }
+
+/* The recap, Where you are (docs/tabletop/async-recap-plan.md, R3): one sheet over the battle view, read top to
+   bottom on a phone, its body scrolling between the header and the two buttons. What the seat had not seen is
+   marked New in gold. The round in the header opens it, a gold dot under the round saying so. */
+#battle #recap-open { min-width: 0; min-height: 44px; margin: 0; padding: 0; border: 0; border-radius: var(--radius-sharp); background: transparent; color: inherit; font-family: inherit; text-transform: none; cursor: pointer; }
+#battle #recap-open:disabled { cursor: default; opacity: 1; }
+#battle #recap-open:not(:disabled):hover, #battle #recap-open:focus-visible { background: #ffffff10; }
+/* A gold dot under the round says it opens: the round's own width, nothing added to the header. */
+#battle #recap-open .recap-pin { display: none; }
+#battle #recap-open:not(:disabled) .recap-pin { display: block; width: 5px; height: 5px; border-radius: 50%; background: var(--gold); align-self: center; }
+.recap-dialog { width: min(560px, calc(100vw - 16px)); max-height: calc(100dvh - 16px); padding: 0; display: none; flex-direction: column;
+  border: 1px solid #b7986866; border-radius: var(--radius-soft); background: #13232a; color: #f2eee2; box-shadow: 0 18px 40px #000a; overflow: hidden; }
+.recap-dialog[open] { display: flex; }
+.recap-dialog::backdrop { background: #050b0dcc; }
+.recap-dialog .unseen { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.recap-header { padding: 14px 16px 10px; border-bottom: 1px solid #ffffff14; }
+.recap-header .eyebrow { margin: 0; }
+.recap-header h2 { margin: 2px 0 4px; font: 24px var(--font-display); color: var(--gold); }
+.recap-header p:not(.eyebrow) { margin: 0; font-size: 14px; }
+#recap-timing { color: var(--muted); font-size: 13px; }
+.recap-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 16px 12px; }
+.recap-section { padding: 10px 0; border-bottom: 1px solid #ffffff10; }
+.recap-section:last-child { border-bottom: 0; }
+.recap-section h3 { margin: 0 0 8px; font: 15px var(--font-display); letter-spacing: .5px; color: var(--gold); }
+.recap-section h4 { margin: 0 0 4px; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recap-result { margin: 0 0 8px; font: 600 17px var(--font-text); }
+.recap-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.recap-side { display: grid; gap: 2px; min-width: 0; padding: 8px 10px; border: 1px solid color-mix(in srgb, var(--ally) 45%, transparent); border-radius: var(--radius-soft); background: #1b2e34; font-size: 13px; }
+.recap-side[data-side="opponent"] { border-color: color-mix(in srgb, var(--enemy) 45%, transparent); }
+.recap-side strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 15px var(--font-display); }
+.recap-leader { margin: 8px 0 0; font-size: 14px; }
+.recap-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.recap-team, .recap-lines { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.recap-creature { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; min-width: 0; font-size: 13px; }
+.recap-creature strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.recap-creature[data-defeated="true"] { color: var(--muted); }
+.recap-creature[data-defeated="true"] strong { text-decoration: line-through; }
+.recap-stats { color: #c7cec6; }
+.recap-change.loss { color: var(--enemy); }
+.recap-change.gain { color: var(--ally); }
+.recap-count { margin: 0 0 8px; color: var(--muted); font-size: 13px; }
+.recap-round { margin: 0 0 8px; border: 1px solid #ffffff18; border-radius: var(--radius-soft); background: #172a30; }
+.recap-round[data-unseen="true"] { border-color: #b7986888; }
+.recap-round summary { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 10px; cursor: pointer; }
+.recap-round summary strong { font: 15px var(--font-display); }
+.recap-round-state { color: var(--muted); font-size: 12px; }
+.recap-round .recap-lines { padding: 0 10px 10px; }
+.recap-lines li { font-size: 14px; line-height: 1.35; }
+.recap-lines li small { display: block; color: var(--muted); font-size: 12px; }
+.recap-who { font-weight: 600; }
+.recap-cast[data-side="Opponent"] .recap-who { color: var(--enemy); }
+.recap-cast[data-side="Your team"] .recap-who { color: var(--ally); }
+.recap-quiet { color: var(--muted); }
+.recap-new { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: var(--radius-sharp); background: var(--gold); color: var(--accent-ink); font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; vertical-align: 1px; }
+.recap-question { margin: 0 0 6px; font: 600 16px var(--font-text); }
+.recap-question[data-asked="false"] { font: 14px var(--font-text); color: var(--muted); }
+.recap-reactions .reaction-glyph { font-size: 18px; }
+.recap-footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding: 10px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid #ffffff14; }
+.recap-footer button { min-height: 44px; padding: 8px 16px; font: 15px/1.2 var(--font-display); }
+.recap-footer button[hidden] { display: none; }
+@media (max-width: 400px) {
+  .recap-header, .recap-body, .recap-footer { padding-left: 12px; padding-right: 12px; }
+  .recap-footer button { flex: 1 1 100%; }
+}
+/* The journal's mark where the seat left off. */
+.history-left-here { display: flex; align-items: center; gap: 8px; margin: 6px 0; color: var(--gold); font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+.history-left-here::before, .history-left-here::after { content: ''; flex: 1; border-top: 1px dashed currentColor; }

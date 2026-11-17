@@ -15,7 +15,10 @@ function storedView(): View {
   try { return localStorage.getItem(VIEW_KEY) === 'events' ? 'events' : 'summary'; } catch { return 'summary'; }
 }
 
-export function historyControls(controller: ReturnType<typeof createBattleHistory>, beforeOpen: () => void, onVisibility: () => void) {
+// `leftAt` is the last sequence the seat had been shown when it came back (ADR 0194): the journal marks the place,
+// You left here, before the first event after it, when one is loaded.
+export function historyControls(controller: ReturnType<typeof createBattleHistory>, beforeOpen: () => void, onVisibility: () => void,
+  leftAt: () => number | null = () => null) {
   const dialog = el<HTMLDialogElement>('history-dialog'), list = el('history-list'), digest = el('history-summary');
   const entries = new Map<number, HTMLElement>();
   let opener: HTMLElement | null = null, active = false, key = '', reviewKey = '', summaryKey = '';
@@ -29,6 +32,16 @@ export function historyControls(controller: ReturnType<typeof createBattleHistor
   el('history-mode-events').addEventListener('click', () => choose('events'));
   const detail = el('history-detail');
   const launchers = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-history-open]'));
+  const marker = textNode('p', 'You left here', 'history-left-here'), castMarker = textNode('li', 'You left here', 'history-left-here');
+  // Before the first loaded row after the mark, and only when a row before it is loaded too: at the edge of what is
+  // loaded, the place is not known.
+  function placeMarker(container: HTMLElement, rows: { sequence: number }[], nodeOf: (sequence: number) => Element | null, marker: HTMLElement) {
+    const mark = leftAt();
+    const after = Number.isInteger(mark) ? rows.find(row => row.sequence > mark!) : undefined;
+    const target = after && rows.some(row => row.sequence <= mark!) ? nodeOf(after.sequence) : null;
+    if (!target) { if (container.contains(marker)) marker.remove(); return; }
+    if (marker.nextElementSibling !== target) target.before(marker);
+  }
   const close = () => dialog.close();
   function open(event: Event) {
     if (!active || dialog.open) return;
@@ -202,6 +215,10 @@ export function historyControls(controller: ReturnType<typeof createBattleHistor
     const rounds = historySummary(model.all);
     digest.replaceChildren(...(rounds.length ? rounds.map(roundCard)
       : [textNode('p', model.waiting ? 'The match begins when everyone is seated.' : 'No spells or mutations yet. All events lists every phase.', 'summary-empty')]));
+    // In the summary the place is the first cast after the mark: the casts are the lines a sequence names.
+    const casts = Array.from(digest.querySelectorAll<HTMLElement>('.summary-cast[data-sequence]'));
+    const castRows = casts.map(button => ({ sequence: Number(button.dataset.sequence) })).sort((a, b) => a.sequence - b.sequence);
+    placeMarker(digest, castRows, sequence => digest.querySelector(`.summary-cast[data-sequence="${sequence}"]`)?.closest('li') ?? null, castMarker);
     digest.scrollTop = scroll;
     if (!focused) return;
     const again = sequence ? digest.querySelector<HTMLElement>(`[data-sequence="${sequence}"]`)
@@ -265,12 +282,14 @@ export function historyControls(controller: ReturnType<typeof createBattleHistor
     const scroll = list.scrollTop;
     const ids = new Set(rows.map(row => row.sequence));
     const focused = list.contains(document.activeElement);
+    if (list.contains(marker)) marker.remove();
     for (const [id, node] of entries) if (!ids.has(id)) { node.remove(); entries.delete(id); }
     // Existing nodes are untouched: open details, keyboard focus and deliberate scroll survive polling.
     rows.forEach((row, index) => {
       let node = entries.get(row.sequence);
       if (!node) { node = entryNode(row); entries.set(row.sequence, node); list.insertBefore(node, list.children[index] ?? null); }
     });
+    placeMarker(list, rows, sequence => entries.get(sequence) ?? null, marker);
     if (focused && !list.contains(document.activeElement)) el('history-close').focus({ preventScroll: true });
     if (dialog.open && following && !model.loading && !model.browsing && !model.review && !Object.values(model.filters).some(Boolean)) {
       list.scrollTop = list.scrollHeight; controller.read(); el('history-new').hidden = true; el('history-latest').hidden = false; el('history-unread').textContent = ''; el('history-unread').dataset.count = '';

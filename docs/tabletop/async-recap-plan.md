@@ -1,7 +1,7 @@
 # Plan: the recap when a player comes back to an asynchronous game
 
-Status: accepted, 2026-11-16 (the owner settled the questions at the end). R1 and R2 are built; each stage below
-is one pull request.
+Status: accepted, 2026-11-16 (the owner settled the questions at the end). R1, R2 and R3 are built; each stage
+below is one pull request.
 
 ## What the owner asked for
 
@@ -146,6 +146,27 @@ under way: a player who left the page open for two days, or who simply lost the 
    the top bar's **Where you are** button, the journal's marker. Tests: Node tests of the threshold; a browser spec
    at 320 px and on desktop on the mock host (opens on its own, opens from the button with nothing unseen, Go to my
    turn, Replay step by step, never on its own over a question); the battle bundle rebuilt.
+
+   *Built (2026-11-17)*: `battle/src/recap.ts` draws the sheet in `recap-dialog`, over the field, from `buildRecap`.
+   `recapOpensOnItsOwn` (`table/battle-recap.js`) is the threshold: an hour away and a line not seen. Away runs
+   from the later of the host's `seen.at`, which moves only with the mark, and the last time this browser had the
+   seat on screen (`savePresent`, written as the page is hidden). It never opens over a question being answered, in a practice, a tutorial or a replay, before everyone
+   is seated, or on a device that holds both seats. The threshold is read once, as the page opens on the seat and
+   before the playback reads the view. The catch-up waits behind the sheet, and so does every other sheet.
+   **Go to my turn**, and Escape, settle the board on the present; in a match that ended while away the button
+   reads **See the result** and opens it. **Replay step by step** is offered when the playback holds the
+   opponent's actions; closing the sheet lets them play, each waiting for its OK. A catch-up past the playback's
+   bounds (more than 12 actions or two rounds) is settled as before, and the sheet and the journal tell it. The
+   round in the header opens the sheet in a game under way (a gold dot under it says so: a button of its own did
+   not fit at 320 px) and marks new what the page has not shown. The page gathers
+   the feed it receives, and loads it back to the last visit (`connection.history()`) when the live window does
+   not reach it. History marks **You left here** before the first event after the visit, in All events and in the
+   summary. A round before the one on the board now reads as completed even when the feed holds no end for it.
+   The words joined docs/domain/player-terminology.md, and the live bundle's raw budget rose by 64 KiB
+   (docs/tabletop/battle-release-acceptance.md). Tests: Node tests of the threshold, and `battle-recap.spec.js` at
+   320 px and on desktop. The spec covers the sheet opening on its own, Go to my turn, Replay step by step, the
+   header with nothing unseen, a match over, below the hour and over the question, and the journal's marker.
+   Left to R4: the lobby, the inbox and the push notice.
 4. **R4, the recap reaches the lobby and the notice.** The lobby's "Your turn" card and the inbox say
    `3 casts since your last visit · last move 5 h ago`; the push notice adds the count to its body. The host counts
    the results after the seen sequence; it reads no board. Tests: host tests of the notice's body, Node tests of the

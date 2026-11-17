@@ -24,6 +24,27 @@ export function questionText(waitingFor) {
   return QUESTIONS[waitingFor] ?? 'Decide';
 }
 
+/** How long a seat stays away before the sheet opens on its own when it comes back (owner, 2026-11-16). */
+export const AWAY_MS = 60 * 60 * 1000;
+
+/**
+ * Whether the sheet opens on its own as the seat comes back: after at least an hour away, with at least one line not
+ * seen. Away is measured from the later of the host's last visit (`seenAt`, when the seat's mark last moved) and
+ * `presentAt`, when this browser last had the seat on screen: a page left open with nothing new moves no mark.
+ * Never in a tutorial or a practice, in a replay, before everyone is seated, or for a device holding both seats
+ * (ADR 0120): those read the catch-up as they do today, and the top bar's button opens the sheet at any time. It is
+ * decided before any question's sheet opens, so it never opens over one.
+ * @param {{ view: any, recap: { unseen: number } | null, seenAt?: string | null, presentAt?: string | null,
+ *   now: number, hotseat?: boolean }} input
+ */
+export function recapOpensOnItsOwn({ view, recap, seenAt = view?.seen?.at ?? null, presentAt = null, now, hotseat = false }) {
+  if (!view || !recap || hotseat) return false;
+  if (view.replay || view.practice || (view.waiting && !view.over)) return false;
+  const at = Date.parse(seenAt ?? ''), present = Date.parse(presentAt ?? '');
+  if (!Number.isFinite(at)) return false;
+  return now - Math.max(at, Number.isFinite(present) ? present : at) >= AWAY_MS && recap.unseen > 0;
+}
+
 /** A creature's health over the span the sheet tells, as its line says it: `−12 HP`, `+3 HP`, or nothing. */
 export function healthChangeText(change) {
   if (!Number.isFinite(change) || change === 0) return '';
@@ -71,7 +92,9 @@ export function buildRecap({ view, feed, seen, seenAt = view?.seen?.at ?? null, 
   const span = told.size ? Math.min(...told) : current;
 
   const rounds = [...told].sort((a, b) => a - b).map(round => tellRound(round, rows.filter(row => row.round === round), {
-    isNew, folded: round < (completed ?? current), completed: ended.includes(round) || (over && round === current),
+    isNew, folded: round < (completed ?? current),
+    // A round before the one on the board is over, whether or not the feed holds its end.
+    completed: ended.includes(round) || round < current || (over && round === current),
     recorded: entries.some(entry => roundOf(entry) === round), bled: bled.filter(one => one.round === round) }));
 
   const teams = teamsNow(board, entries.filter(entry => roundOf(entry) >= span), isNew, bled);

@@ -584,6 +584,26 @@ the opponent's reactions for this game; Settings, in the menu, hides them for ev
 against a bot, in a replay, or on a device holding both seats. `table/battle-reactions.js` decides what shows and
 when; `src/reactions.ts` draws it. No notification is sent for a reaction and the bell counts none.
 
+## The recap
+
+**Where you are** ([async-recap-plan.md](../docs/tabletop/async-recap-plan.md), R3) is one sheet over the field. It
+tells where the game stands and who leads, and the two teams now with each creature's health change. It tells the
+last completed round, the round under way, and every round with something the seat has not seen: those lines are
+marked **New**, and older rounds are folded. Then the seat's own choices still in force, and what it is asked now
+with the opponent's reactions. `table/battle-recap.js` builds it from the seat's own view and feed; `src/recap.ts`
+draws it.
+
+It opens on its own when the seat comes back after an hour away (from the later of the host's last visit, ADR 0194, and this browser's last sight of the seat) and a line the
+seat has not seen. It opens before any question sheet, and the catch-up waits until it is closed. It never opens in
+a practice, a tutorial or a replay, before everyone is seated, or on a device that holds both seats. The round in
+the header opens it at any time in a game under way, and marks **New** every line this page has not shown yet.
+
+**Go to my turn**, and Escape, settle the board on the present; in a match that ended while the seat was away the
+button reads **See the result**. **Replay step by step** is offered when the playback holds the opponent's actions,
+and plays them as they would have played live. History marks **You left here** before the first event after the
+visit. The live window keeps two rounds: the page loads the feed back to the last visit when the sheet needs it.
+`battle-recap.spec.js` covers it at 320 px and on desktop.
+
 ## Evolution illustrations and capstone effects
 
 Each creature is drawn as the evolution its purchases resolve to

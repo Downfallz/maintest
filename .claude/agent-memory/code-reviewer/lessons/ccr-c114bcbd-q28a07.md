@@ -1,0 +1,4 @@
+- A "time away" read from the host's `seen.at` measures the last time the mark advanced, not the last visit: the seen sender only sends on a new sequence (battle-seen.js:64), so an hour idle on an open page then a short hide reads as an hour away (R3 recap, recapOpensOnItsOwn, 6bcdc7b).
+- A new 44 px button in the battle header's `.tools` pushes `#settings` past 320 px (x 291 + 44): run `fitsViewport` on the header tools at small-phone for every header addition; the author's own new check went red on 6bcdc7b (R3 recap, battle-recap.spec.js:114).
+- A "wait to open on its own" flag (recapPending) must be cleared by the manual open too, or closing the manual sheet reopens it on the next render (R3 recap, live.ts openRecap).
+- Ninth time: the branch moved mid-review (eb9b145 -> 6bcdc7b); findings checked on 6bcdc7b. Belongs in the code-reviewer agent prompt.

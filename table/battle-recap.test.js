@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { buildRecap, healthChangeText, questionText } from './battle-recap.js';
+import { AWAY_MS, buildRecap, healthChangeText, questionText, recapOpensOnItsOwn } from './battle-recap.js';
 
 // A recorded 3v3 match (play --seed 1) as seat player1 reads it: its feed and its board at named moments.
 const recorded = JSON.parse(readFileSync(new URL('./battle-recap.fixture.json', import.meta.url), 'utf8'));
@@ -257,4 +257,64 @@ test('a creature that survived one bleed and fell to the next is told fallen at 
   assert.equal(recap.teams.opponent.find(one => one.id === '4').fellWhileAway, true);
   assert.deepEqual(recap.rounds.find(one => one.round === 4).defeated, [{ creature: 'Creature 4', side: 'Opponent', unseen: true }]);
   assert.deepEqual(recap.rounds.find(one => one.round === 3)?.defeated ?? [], []);
+});
+
+// The threshold the owner settled: an hour away and something not seen opens the sheet on its own; below it, or
+// with nothing new, the catch-up plays as it does today.
+const coming = (hours, extras = {}) => ({ seat: 'player1', board: {}, over: false, waiting: null,
+  seen: { sequence: 14, at: hoursAgo(hours) }, ...extras });
+const opens = (view, unseen = 3, options = {}) => recapOpensOnItsOwn({ view, recap: { unseen }, now: NOW, ...options });
+
+test('the sheet opens on its own after an hour away with a line not seen', () => {
+  assert.equal(opens(coming(1)), true);
+  assert.equal(opens(coming(30)), true);
+  assert.equal(recapOpensOnItsOwn({ view: coming(0), recap: { unseen: 1 }, now: NOW + AWAY_MS }), true);
+});
+
+test('below the hour, or with nothing unseen, the sheet waits for the button', () => {
+  assert.equal(opens(coming(0.99)), false);
+  assert.equal(opens(coming(5), 0), false);
+  assert.equal(opens(coming(5), 3, { recap: null }), false);
+});
+
+test('a seat the host never kept a visit for, or kept one with no time, is not told it was away', () => {
+  assert.equal(opens(coming(5, { seen: null })), false);
+  assert.equal(opens(coming(5, { seen: { sequence: 3, at: 'never' } })), false);
+});
+
+test('the time away is the one given over the seat view\'s', () => {
+  assert.equal(opens(coming(0.1), 3, { seenAt: hoursAgo(2) }), true);
+  assert.equal(opens(coming(5), 3, { seenAt: hoursAgo(0.5) }), false);
+});
+
+test('the time away runs from the later of the host\'s last visit and this browser\'s last sight of the seat', () => {
+  // A page left open for hours with nothing new, hidden ten seconds while the opponent moved: not away.
+  assert.equal(opens(coming(5), 3, { presentAt: hoursAgo(0.01) }), false);
+  assert.equal(opens(coming(5), 3, { presentAt: hoursAgo(2) }), true);
+  assert.equal(opens(coming(0.2), 3, { presentAt: hoursAgo(4) }), false);
+  assert.equal(opens(coming(5), 3, { presentAt: 'never' }), true);
+});
+
+test('the sheet never opens on its own in a practice, a tutorial or a replay', () => {
+  assert.equal(opens(coming(5, { practice: { scenario: 'flank' } })), false);
+  assert.equal(opens(coming(5, { practice: { scenario: 'first', tutorial: { lesson: 1 } } })), false);
+  assert.equal(opens(coming(5, { replay: true, over: true })), false);
+});
+
+test('a device holding both seats, or a table still waiting for its players, gets no sheet on its own', () => {
+  assert.equal(opens(coming(5), 3, { hotseat: true }), false);
+  assert.equal(opens(coming(5, { waiting: { seats: ['player2'] } })), false);
+});
+
+test('a game that ended while the seat was away still opens on its result', () => {
+  assert.equal(opens(coming(5, { over: true, outcome: { winner: 'Player2' } })), true);
+});
+
+test('a round before the one on the board is told as completed even when the feed holds no end for it', () => {
+  const { sequence, board } = recorded.boards.round2Tempo;
+  const feed = recorded.feed.filter(entry => entry.sequence <= sequence && entry.event?.kind !== 'RoundEnded');
+  const view = { seat: 'player1', board, waitingFor: 'Speed', seen: null, over: false };
+  const recap = buildRecap({ view, feed, seen: null, now: NOW, catalogue: recorded.catalogue });
+
+  assert.deepEqual(recap.rounds.map(one => [one.round, one.state]), [[1, 'completed'], [2, 'under way']]);
 });
