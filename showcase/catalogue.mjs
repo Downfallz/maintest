@@ -6,6 +6,17 @@ import { fieldNotes, spellNamesFr } from './field-notes.mjs';
 const content = fileURLToPath(new URL('../data/', import.meta.url));
 const shortId = id => id.split(':')[1];
 
+// The guide anchors an entry by its short id (form-lich, spell-drain), and the field notes are keyed by it, so two
+// versions of one mutation, or of one spell the guide shows, would print one anchor twice: links and search would
+// reach only the first. Refused here, as the observation refuses an ambiguous step.
+function refuseTwoVersions(kind, ids) {
+  const byShort = new Map();
+  for (const id of new Set(ids)) byShort.set(shortId(id), [...byShort.get(shortId(id)) ?? [], id]);
+  for (const [short, versions] of byShort) {
+    if (versions.length > 1) throw new Error(`Two enabled versions of ${kind} ${short}: ${versions.sort().join(', ')}`);
+  }
+}
+
 // The content folder is data/ unless a test names a copy. A reference is a versioned id or, like a creature's
 // starting spells, an alias that aliases.json pins to one (ADR 0009). As in the content builder's AliasResolver, a
 // versioned id is taken as written; the guide shows the version a reference names.
@@ -32,5 +43,8 @@ export async function loadCatalogue(data = content) {
       anyOf: t.anyOf ?? [], visual: artwork[t.id], spells: t.spells.map(spell), notes: { en: notes[1], fr: notes[2] },
       passive: t.passive, shared: t.sharedWithTeam === true };
   });
-  return { nodes, baseSpells: creature.startingSpellIds.map(spell) };
+  const baseSpells = creature.startingSpellIds.map(spell);
+  refuseTwoVersions('tier', nodes.map(t => t.id));
+  refuseTwoVersions('spell', [...baseSpells, ...nodes.flatMap(t => t.spells)].map(s => s.id));
+  return { nodes, baseSpells };
 }

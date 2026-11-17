@@ -89,15 +89,45 @@ test('the observation follows a mutation that moved to v2', async () => {
   assert.equal(specimen.length, specimenPath.length + 1);
 });
 
-test('an observation step two enabled versions answer fails the build as ambiguous', async () => {
+test('two enabled versions of a mutation fail the build, as the guide would print one anchor twice', async () => {
   const folder = content();
-  const occultist = readJson(join(folder, 'Tiers/occultist.v1.json'));
-  writeJson(join(folder, 'Tiers/occultist.v2.json'), { ...occultist, id: 'tier:occultist:v2' });
+  const lich = readJson(join(folder, 'Tiers/lich.v1.json'));
+  writeJson(join(folder, 'Tiers/lich.v2.json'), { ...lich, id: 'tier:lich:v2' });
   const art = readJson(join(folder, 'presentation/mutation-art.json'));
-  writeJson(join(folder, 'presentation/mutation-art.json'), { ...art, 'tier:occultist:v2': art['tier:occultist:v1'] });
+  writeJson(join(folder, 'presentation/mutation-art.json'), { ...art, 'tier:lich:v2': art['tier:lich:v1'] });
+
+  await assert.rejects(loadCatalogue(folder), /Two enabled versions of tier lich: tier:lich:v1, tier:lich:v2/);
+});
+
+test('a disabled older version of a mutation is not a second version', async () => {
+  const folder = content();
+  const lich = readJson(join(folder, 'Tiers/lich.v1.json'));
+  writeJson(join(folder, 'Tiers/lich.v2.json'), { ...lich, id: 'tier:lich:v2', enabled: false });
 
   const catalogue = await loadCatalogue(folder);
-  assert.throws(() => observe(catalogue, specimenPath), /Ambiguous observation step occultist: tier:occultist:v1, tier:occultist:v2/);
+
+  assert.deepEqual(catalogue.nodes.filter(t => t.id.startsWith('tier:lich:')).map(t => t.id), ['tier:lich:v1']);
+});
+
+test('two versions of a spell shown in the guide fail the build, as the guide would print one anchor twice', async () => {
+  const folder = content();
+  const lich = readJson(join(folder, 'Tiers/lich.v1.json'));
+  const short = lich.spells[0].split(':')[1];
+  const named = readJson(join(folder, `Spells/sorcerer/necromancer/${short}.v1.json`));
+  writeJson(join(folder, 'Spells/zz-later.v2.json'), { ...named, id: `spell:${short}:v2` });
+  const necromancer = readJson(join(folder, 'Tiers/necromancer.v1.json'));
+  writeJson(join(folder, 'Tiers/necromancer.v1.json'), { ...necromancer, spells: [`spell:${short}:v2`] });
+
+  await assert.rejects(loadCatalogue(folder), new RegExp(`Two enabled versions of spell ${short}: spell:${short}:v1, spell:${short}:v2`));
+});
+
+test('an observation step two enabled versions answer fails the build as ambiguous', async () => {
+  // The catalogue already refuses two enabled versions; the observation keeps its own guard for a catalogue built otherwise.
+  const catalogue = await loadCatalogue();
+  const occultist = catalogue.nodes.find(t => t.id === 'tier:occultist:v1');
+  const nodes = [...catalogue.nodes, { ...occultist, id: 'tier:occultist:v2' }];
+
+  assert.throws(() => observe({ ...catalogue, nodes }, specimenPath), /Ambiguous observation step occultist: tier:occultist:v1, tier:occultist:v2/);
 });
 
 test('an observation step no enabled mutation answers fails the build by name', async () => {
