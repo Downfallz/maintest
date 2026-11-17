@@ -1,6 +1,6 @@
 # Plan: feedback, a bug report to a regression test and an idea to a plan
 
-Status: accepted, 2026-11-16 (the owner settled the questions at the end). R0 to R4 and I1 are built; R5 is next.
+Status: accepted, 2026-11-16 (the owner settled the questions at the end). R0 to R5 and I1 are built; R6 is next.
 
 ## What the owner asked for
 
@@ -267,7 +267,7 @@ you reported on <date> is fixed", once (`AccountNotices`). A guest's report tell
 | `POST /api/admin/feedback/<id>/merge {"into"}` | operator | Merges an idea into another. |
 | `POST`/`DELETE /api/admin/feedback/<id>/mute` | operator | Stops the sender from sending feedback for 30 days; lifts it. |
 | `POST /api/admin/feedback/<id>/reproduce` | operator | Cuts the scenario at the reported round, in the reporter's seat; answers the practice link. |
-| `GET /api/admin/feedback/<id>/scenario.zip` | operator | The redacted scenario, as a zip to attach to the issue. |
+| `POST /api/admin/feedback/<id>/scenario.zip` | operator | The redacted scenario, as a zip to attach to the issue (a POST since R5 was built). |
 
 ## Stages
 
@@ -349,7 +349,7 @@ and they are the first thing every player can use.
    days mutes on its own, counted outside the write gate so players' sending never waits on it. `SendFeedback`
    refuses a muted sender `403 Feedback.Muted` before its guards. The Activity lines are `feedback.status`,
    `feedback.convert`, `feedback.spam`, `feedback.mute` and `feedback.unmute`; a spam mark and the mute it earns
-   are noted at one instant, so their order between them is not kept. The Overview's *Feedback waiting* card is in
+   are noted at one instant, and read in the order noted: the mute above the mark that earned it (#674). The Overview's *Feedback waiting* card is in
    the warning colour while a bug report is new or the host is full. The tab's ids start with `admin-feedback-`,
    because every page's Report or suggest sheet already uses `feedback-`. The privacy panel and policy say the
    operator can stop a player's feedback for 30 days. Left: a page learns that its player is muted only when it
@@ -421,6 +421,52 @@ and they are the first thing every player can use.
    and *fixed* read from GitHub. Tests: `RedactedScenarioTests` (every id replaced, times at the epoch, a file
    holding a name refused), the zip holding one `scenario.json` that rebuilds, the address built under 8 KB
    (`admin-feedback.test.js`), `studio/prompts.test.js` for the label.
+
+   *Built (2026-11-17)*: `RedactedScenario` (Application) takes the scenario that Reproduce kept and gives it the
+   report's id as its run and session, and a match id drawn from that id (`MatchOf`). It keeps the answers after the
+   cut only up to the journal's length when the player wrote; a practice's report keeps every entry it copied. Its
+   `Check` reads the file as written and refuses a file whose source is not the report's, whose journal keeps a time,
+   or that holds, as a word of its own and in any case, any name it is given. It does not read the carried content or
+   the fields' names, and it reads a content id (`spell:pummel:v1`) as one word, never as the name inside it.
+   It says what it found ("an account"), never the name.
+
+   `POST /api/admin/feedback/<id>/scenario.zip` writes the file with its content and checks it against the report's
+   sender, account and table, the session's ids, and, from the table's record, every seat's key, code, invitation and
+   account, the pilot's key, and the players' names. It answers `report-<id>.zip` holding one `scenario.json`, and
+   notes `feedback.download`. The route is a POST, not the GET the routes table above named, since a download writes an
+   Activity line. Every answer says
+   `Cache-Control: no-store, private`, since Cloudflare keeps a `.zip` by its extension. A report from a table still
+   under way is refused (`Feedback.UnderWay`), and so is one whose scenario was cut from a table still under way, as a
+   practice's may be. R4's cut may hold the other seat's face-down choices of a round still played. The sheet says
+   the scenario comes once the game is over.
+
+   **File an issue** opens `bug_from_report.yml` (labels `bug` and `from-report`) pre-filled by its field ids: the
+   report's id, the category, the round, step and seat, the engine, content and rules, the page's errors, and where to
+   drop the zip. Unlike what "The issue" above says, the player's words are not pre-filled. The operator writes what
+   happened from the sheet, so no word of the player's reaches GitHub, even in an address, before the operator wrote
+   it. That is the privacy policy's promise. The title names the report and its category, and no table id, account or
+   key is in the address. Past 8,000 characters, the page's errors are cut by a quarter, never inside a character, and
+   marked with an ellipsis, until the address fits.
+
+   The operator pastes back the issue's number, or its address in the same repository, and the report reads *Filed #N*
+   (`feedback.file`). Its sheet links the issue, so a mistyped number shows. The number stays through the statuses set
+   after it. Opening the tab, once in ten minutes at most after GitHub last answered, reads the open bug reports that
+   name an issue (`filed=true`). It then asks
+   GitHub's public API for the closed `from-report` issues updated since the oldest of them was sent: a hundred a page,
+   five pages at most. A report whose issue was closed as completed is marked *fixed* (`feedback.status`). One whose
+   issue was closed as not planned, or as a duplicate, stays open. `fixed` is refused on a report never filed
+   (`Feedback.NotFiled`).
+
+   The repository is `FeedbackAdminApi.Repository`. `bug`, `enhancement` and `from-report` are declared in
+   `.github/labels.json`, which the labels workflow creates on GitHub once merged. A test holds every label an issue
+   form puts on its issue to that file. The *What we keep* panel and the privacy policy, in English and French, say a
+   bug may be described in a public issue in the operator's words, with nothing that names the player.
+
+   Left: a player named like a word the journal holds on its own (`person`, `player1`) cannot have the scenario
+   downloaded, and the sheet says a player's name is held. Past 500 closed issues updated since the oldest open filed
+   report, or past 100 open filed reports, the rest are not read. A report whose table's record is missing or cannot
+   be read is not held as under way: no host can pick that table up and play it (ADR 0159). The repository is a constant, not the host's
+   configuration. No browser spec plays the new buttons yet.
 8. **R6, bug scenarios and their tests.** `scenarios/bugs/` read by the host and listed as *Bug #N*;
    `ScenarioFileTests` asking a bug file's answers only up to its reported point; the `BugScenario` test helper;
    `scenario-import` and `scenario-check --trace`. Tests: `RepositoryScenariosTests` (a bug file listed),

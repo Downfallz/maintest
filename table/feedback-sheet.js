@@ -58,12 +58,15 @@ export function attachedNote(kind, { inGame, attach = false }) {
   return `We add the game, the round, ${attach ? 'this position, ' : ''}the page and its last errors. A few words are enough.`;
 }
 
+/** A text cut where it may have split an emoji in two: the half left alone is dropped, so it still encodes. */
+const whole = text => text.replace(/[\uD800-\uDBFF]$/, '');
+
 /** The page's last ten errors, newest last, held in memory only. */
 export function createPageErrors(limit = KEPT_ERRORS) {
   const kept = [];
   return {
     add(message, where) {
-      kept.push({ message: (String(message ?? '').replace(QUERIES, '') || 'Unknown error').slice(0, LONGEST_ERROR), where: where ?? null });
+      kept.push({ message: whole((String(message ?? '').replace(QUERIES, '') || 'Unknown error').slice(0, LONGEST_ERROR)), where: where ?? null });
       if (kept.length > limit) kept.splice(0, kept.length - limit);
     },
     list: () => kept.map(one => ({ ...one })),

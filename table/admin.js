@@ -152,6 +152,8 @@ export function adminTransport(token, fetchImpl = globalThis.fetch.bind(globalTh
     deleteSessions: ids => send('DELETE', '/api/sessions', { ids }),
     exportSessions: ids => download('POST', '/api/sessions/export', { ids }),
     exportSession: id => download('GET', `/api/sessions/${encodeURIComponent(id)}/export`),
+    // Any file of the panel, for a tab that fetches its own (the Feedback tab's redacted scenario, admin-feedback.js).
+    fetchFile: download,
   };
 }
 
@@ -719,6 +721,7 @@ async function start() {
   // opened and on Refresh; a report's sheet opens Diagnose… on its table.
   const feedback = mountFeedbackTab({
     send: transport.request,
+    download: transport.fetchFile,
     element,
     openDiagnosis,
     shown: available => {
@@ -825,7 +828,7 @@ async function start() {
     if (tabOf(globalThis.location?.hash) === 'overview') void overview.redraw();
     if (tabOf(globalThis.location?.hash) === 'activity') void activity.redraw();
     if (tabOf(globalThis.location?.hash) === 'scenarios') void scenarios.redraw();
-    if (tabOf(globalThis.location?.hash) === 'feedback') void feedback.redraw();
+    if (tabOf(globalThis.location?.hash) === 'feedback') void feedback.redraw().then(() => feedback.checkFixed());
     if (tabOf(globalThis.location?.hash) === 'jobs') {
       void jobs.redraw();
       void turnQueues.redraw();
@@ -863,6 +866,7 @@ async function start() {
   await activity.redraw();
   await scenarios.redraw();
   await feedback.redraw();
+  if (tabOf(globalThis.location?.hash) === 'feedback') void feedback.checkFixed();
   again();
 }
 

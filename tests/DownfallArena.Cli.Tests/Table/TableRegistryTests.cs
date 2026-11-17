@@ -239,6 +239,33 @@ public sealed class TableRegistryTests : IDisposable
         registry.HeldTables().ShouldBeEmpty("the finished table is let go of all the same");
     }
 
+    /// <summary>
+    /// Whether a table never began is read before it is closed: closing one cancels its session, which can end it at
+    /// once, and a table read after that is already over, so it looks like a finished game (#679, #649). One sweep of
+    /// ten tables lost that race about three times in four; five sweeps in a row make losing it all but certain.
+    /// </summary>
+    [Fact]
+    public async Task Every_table_a_sweep_closes_unbegun_is_one_that_never_began()
+    {
+        using var registry = _hosted.Registry();
+        List<string> opened = [];
+        List<string> closed = [];
+
+        for (var sweep = 0; sweep < 5; sweep++)
+        {
+            List<PlayedTable> idle = [];
+            for (var table = 0; table < 10; table++)
+            {
+                idle.Add(await Added(registry, await Composed(HostedTables.OnePerson)));
+            }
+
+            opened.AddRange(idle.Select(table => table.Id));
+            closed.AddRange(await registry.SweepNeverBegunAsync(idle.Max(table => table.CreatedAt) + TableRegistry.NeverBegunFor, TestContext.Current.CancellationToken));
+        }
+
+        closed.ShouldBe(opened, ignoreOrder: true);
+    }
+
     [Fact]
     public async Task A_finished_table_is_let_go_of_an_hour_after_the_last_request_and_a_live_one_is_not()
     {

@@ -57,8 +57,8 @@ function recordedAnswers(file) {
   return next;
 }
 
+// Each answer acts on the sheet the lesson opened before its step was read, and opens nothing again.
 async function answerEvolution(page, view, next) {
-  await mutationTree(page);
   const offered = view.options.evolution.creatures.filter(one => one.availableTiers.length);
   const one = offered.find(creature => creature.availableTiers.includes(next.peek('Evolution', creature.creature)?.tier));
   if (!one) { await page.locator('#planning-pass').click(); await confirm(page, '#planning-confirm'); return; }
@@ -69,7 +69,6 @@ async function answerEvolution(page, view, next) {
 }
 
 async function answerSpeed(page, next) {
-  await teamTempos(page);
   for (const tab of await page.locator('[data-tempo-tab]').evaluateAll(nodes => nodes.map(node => node.dataset.tempoTab))) {
     await page.locator(`[data-tempo-tab="${tab}"]`).click();
     await page.locator(`[data-speed="${next('Speed', Number(tab))?.speed ?? 'Standard'}"]`).click();
@@ -88,7 +87,6 @@ async function answerTieOrder(page, next) {
 }
 
 async function answerAction(page, view, next) {
-  await openSpells(page);
   const offered = view.options.action.spells, recorded = next('Action', view.waitingCreature);
   const spell = offered.find(one => one.spell === recorded?.spell) ?? offered.find(one => !one.spell.includes('wait')) ?? offered[0];
   await page.locator(`[data-spell="${spell.spell}"]`).click();
@@ -98,35 +96,49 @@ async function answerAction(page, view, next) {
   await confirm(page, '#combat-confirm');
 }
 
-const done = async page => (await page.locator('#coach-step').textContent())?.trim() === 'TUTORIAL COMPLETE' && await page.locator('#coach').isVisible();
-// What the person is asked shows: its sheet, which a step's concept cards hold back until they are read, or the
-// command that opens it, once it has stood a moment with no card to read (a sheet that does not open by itself).
-const sheetShown = async page => {
-  for (const id of ['#planning-dialog', '#combat-dialog']) if (await page.locator(id).isVisible()) return true;
-  return (await page.locator('#battle').getAttribute('data-combat')) === 'targets';
-};
-const commandShown = async page => await page.locator('#planning-open').isVisible() || await page.locator('#combat-open').isVisible();
+// What the battle shows, in one in-page read. The lesson is read in a loop that runs some seventy times, and every
+// separate read is a round trip to a page rendering a 1440x1000 canvas in software, recorded by the trace CI keeps:
+// read one at a time, a dozen a poll, they cost 30 s of tutorial 4's 204 s, and a CI runner took it past its 230 s
+// (#735). Visible as Playwright reads it: a box, and not hidden.
+//   step: the coach's step line, null while the coach is hidden; done: it says the lesson is complete.
+//   cards: a step's concept cards wait to be read.
+//   sheet: what the person is asked shows, its sheet or the targets on the field; command: the button that opens
+//   it, for a sheet that does not open by itself. press: the button that reads on (upkeep, order, result's OK).
+const shows = page => page.evaluate(() => {
+  const shown = id => {
+    const node = document.getElementById(id), box = node?.getBoundingClientRect();
+    return Boolean(box?.width && box.height) && !['hidden', 'collapse'].includes(getComputedStyle(node).visibility);
+  };
+  const battle = document.getElementById('battle');
+  const step = shown('coach') ? document.getElementById('coach-step')?.textContent.trim() ?? '' : null;
+  return {
+    step, done: step === 'TUTORIAL COMPLETE',
+    cards: shown('concept-dialog'), reading: battle.dataset.reading === 'true',
+    sheet: shown('planning-dialog') || shown('combat-dialog') || battle.dataset.combat === 'targets',
+    command: shown('planning-open') || shown('combat-open'),
+    press: ['upkeep-close', 'order-continue', 'playback-next'].find(id => shown(id) && document.getElementById(id).getAttribute('aria-disabled') !== 'true') ?? null,
+  };
+});
 
 // Reads what the battle shows until the person is asked something or the lesson is done: the upkeep, each
-// result's OK, the revealed order's Continue, and the concept cards a step opens, each one read.
+// result's OK, the revealed order's Continue, and the concept cards a step opens, each one read. What is asked
+// shows as its sheet, which a step's concept cards hold back until they are read, or as the command that opens
+// it, once that has stood a moment with no card to read.
 async function readUntilAsked(page, onCards) {
   const end = Date.now() + 60000;
   let commandSince = null;
   for (;;) {
-    if (await done(page)) return;
-    if (await page.locator('#concept-dialog').isVisible()) { commandSince = null; await onCards(); continue; }
-    if (await page.locator('#battle').getAttribute('data-reading') !== 'true') {
-      if (await sheetShown(page)) return;
-      if (await commandShown(page)) { commandSince ??= Date.now(); if (Date.now() - commandSince > 1500) return; }
+    const now = await shows(page);
+    if (now.done) return;
+    if (now.cards) { commandSince = null; await onCards(); continue; }
+    if (!now.reading) {
+      if (now.sheet) return;
+      if (now.command) { commandSince ??= Date.now(); if (Date.now() - commandSince > 1500) return; }
       else commandSince = null;
     }
     if (Date.now() > end) throw new Error('Timed out before the next question of the lesson');
-    let pressed = false;
-    for (const id of ['#upkeep-close', '#order-continue', '#playback-next']) {
-      const button = page.locator(id);
-      if (await button.isVisible() && await button.getAttribute('aria-disabled') !== 'true') { await button.click({ timeout: 2000 }).catch(() => {}); pressed = true; break; }
-    }
-    if (!pressed) await page.waitForTimeout(100);
+    if (now.press) await page.locator(`#${now.press}`).click({ timeout: 2000 }).catch(() => {});
+    else await page.waitForTimeout(100);
   }
 }
 
@@ -145,8 +157,7 @@ function seatViews(page) {
 async function playLesson(page, tutorial, seat, info) {
   const lesson = tutorial.file.tutorial, next = recordedAnswers(tutorial.file), shown = new Set(), opened = [];
   const coach = async view => {
-    if (!await page.locator('#coach').isVisible()) return;
-    const step = /^STEP (\d+) OF (\d+)$/.exec((await page.locator('#coach-step').textContent())?.trim() ?? '');
+    const step = /^STEP (\d+) OF (\d+)$/.exec((await shows(page)).step ?? '');
     if (!step || shown.has(Number(step[1]))) return;
     shown.add(Number(step[1]));
     expect(Number(step[2])).toBe(lesson.steps.length);
@@ -169,12 +180,13 @@ async function playLesson(page, tutorial, seat, info) {
   };
   for (let turn = 0; turn < 120; turn++) {
     await readUntilAsked(page, readCards);
-    if (await done(page)) break;
+    if ((await shows(page)).done) break;
     // An assisted question is answered by the host, never drawn: the person answers the kinds the lesson teaches.
     await expect.poll(() => lesson.teaches.includes(seat.latest?.waitingFor), { timeout: 15000 }).toBe(true);
     const view = structuredClone(seat.latest);
     // The question's sheet open, as the person sees it, before its step is read.
-    if (view.waitingFor === 'Action') await openSpells(page); else await mutationTree(page);
+    if (view.waitingFor === 'Action') await openSpells(page);
+    else if (view.waitingFor === 'Speed') await teamTempos(page); else await mutationTree(page);
     await coach(view);
     if (view.waitingFor === 'Evolution') await answerEvolution(page, view, next);
     else if (view.waitingFor === 'Speed') await answerSpeed(page, next);

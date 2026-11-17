@@ -27,6 +27,15 @@ public static class FeedbackErrors
 
     public static readonly DomainError NoPosition = new("Feedback.NoPosition", "This report does not say the round and seat it was sent from, at a table or in a practice: there is nothing to cut.");
 
+    /// <summary>A redacted scenario that still names the session, keeps a time, or holds a person: it is not offered (R5).</summary>
+    public static DomainError NotRedacted(string message) => new("Feedback.NotRedacted", message);
+
+    public static readonly DomainError NotReproduced = new("Feedback.NotReproduced", "This report's round was not reproduced, or its scenario was removed since: reproduce it first.");
+
+    public static readonly DomainError UnderWay = new("Feedback.UnderWay", "The game this report was sent from is still being played: its scenario is offered once it is over, so nothing a seat holds face down reaches a public issue.");
+
+    public static readonly DomainError NotFiled = new("Feedback.NotFiled", "Only a bug report filed as an issue is marked fixed, by its issue.");
+
     public static readonly DomainError NoSender = new("Feedback.NoSender", "Nobody can be muted for this feedback: its sender's account was deleted, or this host keeps no account activity.");
 
     public static readonly DomainError Unavailable = new("Feedback.Unavailable", "The feedback could not be read just now. Try again in a few minutes.");

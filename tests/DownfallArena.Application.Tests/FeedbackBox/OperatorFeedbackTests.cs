@@ -382,6 +382,55 @@ public sealed class OperatorFeedbackTests : IDisposable
         (again.Changed, again.Muted?.Why, again.Feedback.SpamCounted).ShouldBe((false, FeedbackMute.BySpam, true));
     }
 
+    [Fact]
+    public async Task A_bug_report_is_filed_with_its_issue_s_number_and_filed_again_under_the_same_changes_nothing()
+    {
+        var report = await KeptAsync();
+
+        var filed = (await Desk().FileAsync(report.Id, 731, Cancel)).Value;
+        var again = (await Desk().FileAsync(report.Id, 731, Cancel)).Value;
+
+        (filed.Changed, filed.Feedback.Status, filed.Feedback.Issue, filed.Feedback.IsClosed).ShouldBe((true, FeedbackStatus.Filed, 731, false));
+        again.Changed.ShouldBeFalse();
+        (await _store.FindAsync(report.Id, Cancel))!.Issue.ShouldBe(731);
+    }
+
+    [Fact]
+    public async Task Another_number_replaces_a_mistyped_one()
+    {
+        var report = await KeptAsync();
+        await Desk().FileAsync(report.Id, 713, Cancel);
+
+        var filed = (await Desk().FileAsync(report.Id, 731, Cancel)).Value;
+
+        (filed.Changed, filed.Feedback.Issue).ShouldBe((true, 731));
+    }
+
+    [Fact]
+    public async Task Filing_names_a_number_and_an_idea_is_not_filed()
+    {
+        var report = await KeptAsync();
+        var idea = await KeptAsync(FeedbackKind.Idea, category: "battle");
+
+        (await Desk().FileAsync(report.Id, null, Cancel)).Error.Code.ShouldBe("Feedback.Invalid");
+        (await Desk().FileAsync(report.Id, 0, Cancel)).Error.Code.ShouldBe("Feedback.Invalid");
+        (await Desk().FileAsync(idea.Id, 731, Cancel)).Error.Code.ShouldBe("Feedback.Invalid");
+    }
+
+    [Fact]
+    public async Task A_filed_report_is_fixed_by_its_issue_and_closed_and_one_never_filed_is_not()
+    {
+        var filed = await KeptAsync();
+        var unfiled = await KeptAsync();
+        await Desk().FileAsync(filed.Id, 731, Cancel);
+
+        var fixedReport = (await Desk().SetStatusAsync(filed.Id, FeedbackStatus.Fixed, null, "mark", Cancel)).Value.Feedback;
+        var refused = await Desk().SetStatusAsync(unfiled.Id, FeedbackStatus.Fixed, null, "mark", Cancel);
+
+        (fixedReport.Status, fixedReport.Issue, fixedReport.IsClosed, fixedReport.ClosedAt).ShouldBe((FeedbackStatus.Fixed, 731, true, _clock.GetUtcNow()));
+        refused.Error.Code.ShouldBe("Feedback.NotFiled");
+    }
+
     /// <summary>An activity store whose next write fails once it is armed, as a storage hiccup would.</summary>
     private sealed class FailsOnce(IAccountActivityStore inner) : IAccountActivityStore
     {

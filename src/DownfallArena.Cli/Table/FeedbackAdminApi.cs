@@ -14,15 +14,28 @@ namespace DownfallArena.Cli.Table;
 /// {"status","reason?"}</c> marks it seen, reproduced or dismissed (<c>"reason":"spam"</c> is the spam mark);
 /// <c>PUT .../&lt;id&gt;/kind {"kind"}</c> turns a bug report into an idea or back; <c>POST</c> and <c>DELETE
 /// .../&lt;id&gt;/mute</c> stop its sender from sending feedback for 30 days, and lift it; <c>POST .../&lt;id&gt;/reproduce</c>
-/// cuts a bug report's round as a match scenario in its sender's seat (R4) and answers the sheet with its link. Each
-/// change is an Activity line;
+/// cuts a bug report's round as a match scenario in its sender's seat (R4) and answers the sheet with its link;
+/// <c>POST .../&lt;id&gt;/scenario.zip</c> answers that scenario redacted, to attach to a public issue (R5), and
+/// <c>PUT .../&lt;id&gt;/status {"status":"filed","issue"}</c> keeps the issue's number, which <c>fixed</c> follows once the
+/// issue is closed. Each change is an Activity line;
 /// asked again, a change writes and notes nothing. The sheet says which of its actions apply, so the page decides none.
 /// </summary>
 internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions? stored, TimeProvider clock)
 {
     public const string Route = "/api/admin/feedback";
 
+    /// <summary>
+    /// The public repository a bug report is filed in (<c>owner/name</c>): the sheet builds GitHub's new-issue address on
+    /// it, and the tab reads its closed issues there. The host itself never writes to GitHub (ADR 0189).
+    /// </summary>
+    public const string Repository = "Downfallz/maintest";
+
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web);
+
+    /// <summary>The one file a downloaded report's zip holds.</summary>
+    private const string ScenarioFileName = "scenario.json";
+
+    private const string ZipType = "application/zip";
 
     /// <summary>What operators do from the panel (A6): every change to feedback is noted with the rest.</summary>
     public OperatorNotes Notes { get; set; } = OperatorNotes.None;
@@ -56,6 +69,7 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
             ("PUT", [var id, "kind"]) => await KindAsync(id, body, operatorName),
             ("POST", [var id, "merge"]) => await MergeAsync(id, body, operatorName),
             ("POST", [var id, "reproduce"]) when Scenarios is not null => await ReproduceAsync(id, operatorName),
+            ("POST", [var id, "scenario.zip"]) when Scenarios is not null => NotKept(await ScenarioZipAsync(id, operatorName)),
             ("POST", [var id, "mute"]) => await MuteAsync(id, operatorName),
             ("DELETE", [var id, "mute"]) => await UnmuteAsync(id, operatorName),
             _ => Error("Feedback.NoRoute", $"No such route: {method} {path}", 404),
@@ -72,7 +86,8 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
             return Refused(FeedbackErrors.Invalid("Filter by a kind (bug, idea), a status or open, and a category the sheet offers."));
         }
 
-        var filter = new FeedbackFilter(KindOf(kind), status is { Length: > 0 } and not "open" ? StatusOf(status) : null, category.Length > 0 ? category : null, OpenOnly: status == "open");
+        var filter = new FeedbackFilter(KindOf(kind), status is { Length: > 0 } and not "open" ? StatusOf(status) : null, category.Length > 0 ? category : null, OpenOnly: status == "open",
+            FiledOnly: asked["filed"] == "true");
         var page = await feedback.PageAsync(filter, int.TryParse(asked["page"], out var number) ? number : 1);
         return StudioResponse.OfJson(
             new
@@ -92,12 +107,16 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
                     round = one.Context?.Round,
                     additions = one.Additions.Count,
                     plan = one.Plan,
+                    issue = one.Issue,
                     askedBy = page.Asks.GetValueOrDefault(one.Id)?.AskedBy,
                 }).ToArray(),
                 total = page.Total,
                 page = page.Page,
                 pages = page.Pages,
                 perPage = OperatorFeedback.PerPage,
+
+                // Where the filed reports' issues are read, so the tab marks fixed what GitHub says is closed (R5).
+                repository = Repository,
             },
             Web);
     }
@@ -113,8 +132,7 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
         var group = await feedback.GroupAsync(one);
         var counted = one.Kind == FeedbackKind.Idea && one.MergedInto is null;
         var table = one.Context?.Table;
-        var record = table is null || stored is null ? null : await stored.RecordAsync(table);
-        var underWay = record is { Status: TableRecord.Open, Void: false };
+        var underWay = await UnderWayAsync(one);
         var now = clock.GetUtcNow();
 
         // A scenario removed from the Scenarios tab since is linked no more, and Reproduce cuts it again; a report turned
@@ -135,6 +153,10 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
                 expected = one.Expected,
                 additions = Additions(one),
                 plan = one.Plan,
+
+                // The public issue it was filed as (R5), and the repository the sheet files it in.
+                issue = one.Issue,
+                repository = Repository,
 
                 // The scenario Reproduce cut from it (R4), to play from the sheet.
                 reproduction = reproduction is null ? null : new { id = reproduction, link = ScenarioAdminApi.Link(reproduction) },
@@ -181,7 +203,7 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
 
                 // Diagnose… is offered while the table it was sent from is still under way (scenarios plan, S5b).
                 underWay,
-                actions = Actions(one, mute, underWay, group),
+                actions = Actions(one, mute, underWay, group, reproduction is not null),
             },
             Web);
     }
@@ -191,12 +213,15 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
         var asked = Read<StatusBody>(body);
         if (asked?.Status is not { } named || StatusOf(named) is not { } status)
         {
-            return Refused(FeedbackErrors.Invalid("Name a status: seen, reproduced or dismissed; for an idea planned, shipped or declined."));
+            return Refused(FeedbackErrors.Invalid("Name a status: seen, reproduced, filed, fixed or dismissed; for an idea planned, shipped or declined."));
         }
 
-        var changed = status == FeedbackStatus.Planned
-            ? await feedback.PlanAsync(id, asked.Plan)
-            : await feedback.SetStatusAsync(id, status, asked.Reason, operatorName);
+        var changed = status switch
+        {
+            FeedbackStatus.Planned => await feedback.PlanAsync(id, asked.Plan),
+            FeedbackStatus.Filed => await feedback.FileAsync(id, asked.Issue),
+            _ => await feedback.SetStatusAsync(id, status, asked.Reason, operatorName),
+        };
         if (changed.IsFailure)
         {
             return Refused(changed.Error);
@@ -224,9 +249,18 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
         {
             await Notes.NoteAsync(operatorName, OperatorActions.FeedbackSpam, id);
         }
+        else if (kept.Status == FeedbackStatus.Filed)
+        {
+            await Notes.NoteAsync(operatorName, OperatorActions.FeedbackFile, id, $"#{kept.Issue}");
+        }
         else
         {
-            var why = kept.Status == FeedbackStatus.Planned ? kept.Plan : kept.Reason;
+            var why = kept.Status switch
+            {
+                FeedbackStatus.Planned => kept.Plan,
+                FeedbackStatus.Fixed => $"#{kept.Issue}",
+                _ => kept.Reason,
+            };
             await Notes.NoteAsync(operatorName, OperatorActions.FeedbackStatus, id, why is null ? Name(kept.Status) : $"{Name(kept.Status)}: {why}");
         }
     }
@@ -330,6 +364,60 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
         return await SheetAsync(id);
     }
 
+    /// <summary>
+    /// The scenario a bug report's Reproduce cut, redacted and zipped as <c>report-&lt;id&gt;.zip</c> holding one
+    /// <c>scenario.json</c> (R5): what the operator attaches to the public issue by hand, since GitHub attaches a zip and
+    /// not a <c>.json</c>. Refused while the report's table is under way, so nothing a seat holds face down that round
+    /// reaches the issue, and refused when the file still names the session or holds a person. Each download is noted:
+    /// it is what leaves the host. A POST since it writes that line, which the host's cross-site fence holds to the panel
+    /// even in a browser that does not say where a request comes from.
+    /// </summary>
+    private async Task<StudioResponse> ScenarioZipAsync(string id, string operatorName)
+    {
+        if (await feedback.FindAsync(id) is not { } one)
+        {
+            return Refused(FeedbackErrors.NotFound(id));
+        }
+
+        if (one.Kind != FeedbackKind.Bug)
+        {
+            return Refused(FeedbackErrors.NotABug);
+        }
+
+        if (await UnderWayAsync(one))
+        {
+            return Refused(FeedbackErrors.UnderWay);
+        }
+
+        var (refused, file) = await Scenarios!.RedactedAsync(one);
+        if (refused is not null)
+        {
+            return refused;
+        }
+
+        using var bytes = new MemoryStream();
+        using (var zip = new System.IO.Compression.ZipArchive(bytes, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+        {
+            await using var entry = await zip.CreateEntry(ScenarioFileName).OpenAsync();
+            await entry.WriteAsync(System.Text.Encoding.UTF8.GetBytes(file!));
+        }
+
+        Console.WriteLine($"  The scenario of feedback {id} downloaded redacted by {operatorName}.");
+        await Notes.NoteAsync(operatorName, OperatorActions.FeedbackDownload, id, one.Reproduction);
+        return new StudioResponse(200, ZipType, bytes.ToArray(), [new KeyValuePair<string, string>("Content-Disposition", $"attachment; filename=\"report-{id}.zip\"")]);
+    }
+
+    /// <summary>
+    /// A download's answer, the file or its refusal, kept by no cache: Cloudflare keeps a <c>.zip</c> by its extension
+    /// when the host says nothing, and would serve it past the panel's gate.
+    /// </summary>
+    private static StudioResponse NotKept(StudioResponse answer) =>
+        answer with { Headers = [.. answer.Headers ?? [], new KeyValuePair<string, string>("Cache-Control", "no-store, private")] };
+
+    /// <summary>Whether the table a report was sent from is still played: open and not voided.</summary>
+    private async Task<bool> UnderWayAsync(Feedback one) =>
+        one.Context?.Table is { } table && stored is not null && await stored.RecordAsync(table) is { Status: TableRecord.Open, Void: false };
+
     private async Task<StudioResponse> MuteAsync(string id, string operatorName)
     {
         var muted = await feedback.MuteAsync(id, operatorName);
@@ -370,33 +458,39 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
     /// mute or its lifting while a sender can hold one. An idea merged into another is changed through the one it joined:
     /// it offers only its dismissal, as spam or not, which takes it out of the group, and its sender's mute.
     /// </summary>
-    private string[] Actions(Feedback one, FeedbackMute? mute, bool underWay, FeedbackGroup group)
+    private string[] Actions(Feedback one, FeedbackMute? mute, bool underWay, FeedbackGroup group, bool reproduced)
     {
-        var offered = new List<string>();
-        if (one.MergedInto is not null)
-        {
-            offered.AddRange(["dismiss", "spam"]);
-        }
-        else
-        {
-            offered.AddRange(one.Kind == FeedbackKind.Bug ? BugActions(one) : IdeaActions(one, group));
-            if (one.Kind == FeedbackKind.Bug && Scenarios is not null && Cuttable(one.Context))
-            {
-                offered.Add("reproduce");
-            }
-
-            if (underWay && one.Context?.Table is not null)
-            {
-                offered.Add("diagnose");
-            }
-        }
-
+        var offered = one.MergedInto is not null ? ["dismiss", "spam"] : OpenActions(one, underWay, group, reproduced);
         if (feedback.CanMute(one))
         {
             offered.Add(mute is null ? "mute" : "unmute");
         }
 
         return [.. offered];
+    }
+
+    /// <summary>What a piece of feedback not merged into another offers, its sender's mute aside.</summary>
+    private List<string> OpenActions(Feedback one, bool underWay, FeedbackGroup group, bool reproduced)
+    {
+        var bug = one.Kind == FeedbackKind.Bug;
+        List<string> offered = [.. bug ? BugActions(one) : IdeaActions(one, group)];
+        if (bug && Scenarios is not null && Cuttable(one.Context))
+        {
+            offered.Add("reproduce");
+        }
+
+        // The scenario leaves the host only once the game it was cut from is over (R5).
+        if (bug && reproduced && !underWay)
+        {
+            offered.Add("download");
+        }
+
+        if (underWay && one.Context?.Table is not null)
+        {
+            offered.Add("diagnose");
+        }
+
+        return offered;
     }
 
     private static IEnumerable<string> BugActions(Feedback one)
@@ -416,6 +510,9 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
             yield return "dismiss";
             yield return "spam";
             yield return "toIdea";
+
+            // Filed again names another issue, so it is offered while filed too.
+            yield return "file";
         }
     }
 
@@ -489,7 +586,8 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
     private static StudioResponse Refused(DomainError error) => Error(error.Code, error.Message, error.Code switch
     {
         "Feedback.NotFound" => 404,
-        "Feedback.Closed" or "Feedback.NoSender" or "Feedback.MergedAway" or "Feedback.Grouped" or "Feedback.NotABug" or "Feedback.NoPosition" => 409,
+        "Feedback.Closed" or "Feedback.NoSender" or "Feedback.MergedAway" or "Feedback.Grouped" or "Feedback.NotABug" or "Feedback.NoPosition"
+            or "Feedback.NotReproduced" or "Feedback.UnderWay" or "Feedback.NotFiled" or "Feedback.NotRedacted" => 409,
         "Feedback.Unavailable" => 503,
         _ => 400,
     });
@@ -497,7 +595,7 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
     private static StudioResponse Error(string code, string message, int status) =>
         StudioResponse.OfJson(new { error = code, message }, Web, status: status);
 
-    private sealed record StatusBody(string? Status, string? Reason, string? Plan);
+    private sealed record StatusBody(string? Status, string? Reason, string? Plan, int? Issue);
 
     private sealed record MergeBody(string? Into);
 

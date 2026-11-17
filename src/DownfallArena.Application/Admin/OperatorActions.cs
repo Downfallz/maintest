@@ -38,6 +38,11 @@ public sealed class OperatorActions(IOperatorLog log, TimeProvider clock)
     public const string FeedbackUnmute = "feedback.unmute";
     public const string FeedbackMerge = "feedback.merge";
     public const string FeedbackReproduce = "feedback.reproduce";
+    public const string FeedbackDownload = "feedback.download";
+    public const string FeedbackFile = "feedback.file";
+
+    private readonly Lock _gate = new();
+    private DateTimeOffset _lastStamp = DateTimeOffset.MinValue;
 
     /// <summary>Notes what an operator did, now.</summary>
     public async Task<OperatorAction> RecordAsync(string by, string action, string? target, string? detail, CancellationToken cancellationToken = default)
@@ -45,9 +50,26 @@ public sealed class OperatorActions(IOperatorLog log, TimeProvider clock)
         ArgumentException.ThrowIfNullOrWhiteSpace(by);
         ArgumentException.ThrowIfNullOrWhiteSpace(action);
         var at = clock.GetUtcNow();
-        var noted = new OperatorAction(OperatorAction.NewId(at), at, by, action, target, detail);
+        var noted = new OperatorAction(OperatorAction.NewId(Stamp(at)), at, by, action, target, detail);
         await log.RecordAsync(noted, cancellationToken);
         return noted;
+    }
+
+    /// <summary>
+    /// The time an action's id carries: when it was taken, or a millisecond past the id this instance gave last
+    /// (a host builds one, <c>TableHost.OpenNotesAsync</c>, and every panel shares it). Ids sort newest first, and
+    /// two actions of one request share an instant: without this, their random tails would order them, and the
+    /// Activity tab could show a mute below the spam mark that earned it (#674). <see cref="OperatorAction.At" />
+    /// keeps the clock's own time. Between processes, their clocks order them.
+    /// </summary>
+    private DateTimeOffset Stamp(DateTimeOffset at)
+    {
+        var milliseconds = at.AddTicks(-(at.Ticks % TimeSpan.TicksPerMillisecond));
+        lock (_gate)
+        {
+            _lastStamp = milliseconds > _lastStamp ? milliseconds : _lastStamp.AddMilliseconds(1);
+            return _lastStamp;
+        }
     }
 
     /// <summary>A page of the kept actions, newest first, counted from one; a page past the last is the last.</summary>
