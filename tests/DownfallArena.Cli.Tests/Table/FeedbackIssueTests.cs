@@ -5,6 +5,7 @@ using DownfallArena.Application.Admin;
 using DownfallArena.Application.Agents;
 using DownfallArena.Application.FeedbackBox;
 using DownfallArena.Application.Matches.Journaling;
+using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.Domain.Matches;
@@ -360,14 +361,20 @@ public sealed class FeedbackIssueTests : IDisposable
         after.ShouldAllBe(entry => entry is DecisionEntry && ((DecisionEntry)entry).Decision.Slot == PlayerSlot.Player2);
     }
 
-    /// <summary>The seat's view once the bots have played round 1 and the person, taking over, is asked in round 2.</summary>
-    private static async Task<JsonElement> AskedInRoundTwoAsync(PlayedTable table)
+    /// <summary>
+    /// The seat's view once the bots have played round 1, the person, taking over, is asked in round 2, and the bot in
+    /// the other seat has journaled its speeds for the round: it answers in the background, not when the person is asked.
+    /// </summary>
+    private async Task<JsonElement> AskedInRoundTwoAsync(PlayedTable table)
     {
         var seat = table.Seats[0];
         for (var waited = 0; waited < 300; waited++)
         {
             var view = Read(await table.Api.HandleAsync("GET", $"/api/seat/{seat.Name}", string.Empty, seat.Token));
-            if (view.GetProperty("board").GetProperty("roundNumber").GetInt32() == 2 && view.TryGetProperty("waitingAsked", out var asked) && asked.ValueKind == JsonValueKind.Number)
+            var decisions = (await _hosted.Composer.JournalAsync(table.Id, Cancel))?.Decisions ?? [];
+            var botSpeeds = decisions.Reverse().TakeWhile(one => one.Slot == PlayerSlot.Player2 && one.Decision.Kind == PlayerOptionsKind.Speed).Count();
+            if (view.GetProperty("board").GetProperty("roundNumber").GetInt32() == 2 && view.TryGetProperty("waitingAsked", out var asked) && asked.ValueKind == JsonValueKind.Number
+                && botSpeeds == ThreeASide.TeamSize)
             {
                 return view;
             }
@@ -375,7 +382,7 @@ public sealed class FeedbackIssueTests : IDisposable
             await Task.Delay(100, Cancel);
         }
 
-        throw new TimeoutException("The person's seat was never asked in round 2.");
+        throw new TimeoutException("The person's seat was never asked in round 2 with the other seat's speeds journaled.");
     }
 
     private static async Task FinishedAsync(PlayedTable table)

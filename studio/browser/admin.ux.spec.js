@@ -406,7 +406,8 @@ test('a reproduced report is downloaded, filed as an issue and marked fixed once
   const scenario = 'sc-20261116-113500-0a1b2c3d';
   let sheet = { ...feedbackReport, underWay: false, repository, issue: null, reproduction: { id: scenario, link: `/battle?scenario=${scenario}` } };
   // What the host offers, as FeedbackAdminApi decides it: the download once reproduced and over, filing while open.
-  const offered = one => [one.status !== 'fixed' && 'download', one.status !== 'fixed' && 'file', one.status !== 'seen' && 'seen', 'dismiss', 'spam', 'toIdea', 'mute'].filter(Boolean);
+  const offered = one => [one.status !== 'seen' && 'seen', one.status !== 'reproduced' && 'reproduced',
+    ...(['fixed', 'dismissed'].includes(one.status) ? [] : ['dismiss', 'spam', 'toIdea', 'file']), 'reproduce', 'download', 'mute'].filter(Boolean);
   sheet = { ...sheet, actions: offered(sheet) };
   const asked = [];
   await page.route(/\/api\/admin\/feedback(\?.*)?$/, route => {
