@@ -6,9 +6,9 @@ import { fieldNotes, spellNamesFr } from './field-notes.mjs';
 const content = fileURLToPath(new URL('../data/', import.meta.url));
 const shortId = id => id.split(':')[1];
 
-// The guide anchors an entry by its short id (form-lich, spell-drain), and the field notes are keyed by it, so two
-// versions of one mutation, or of one spell the guide shows, would print one anchor twice: links and search would
-// reach only the first. Refused here, as the observation refuses an ambiguous step.
+// The guide anchors each entry by its short id (form-lich, spell-drain), and the field notes are keyed by it. Two
+// versions of one mutation, or of one spell the guide shows, would share that anchor, and links and search would
+// reach only the first. The catalogue refuses them, as the observation refuses an ambiguous step.
 function refuseTwoVersions(kind, ids) {
   const byShort = new Map();
   for (const id of new Set(ids)) byShort.set(shortId(id), [...byShort.get(shortId(id)) ?? [], id]);
@@ -36,7 +36,10 @@ export async function loadCatalogue(data = content) {
     return { id: s.id, name: s.name, fr: spellNamesFr[shortId(s.id)] ?? s.name,
       cost: s.energyCost, critical: s.criticalChance, target: s.targeting.origin, count: s.targeting.maxTargets, effects: s.effects, casterEffects: s.casterEffects ?? [] };
   };
-  const nodes = tiers.filter(t => t.enabled !== false).map(t => {
+  const enabled = tiers.filter(t => t.enabled !== false);
+  // Before the field entries, so a second version without its artwork is told the real problem.
+  refuseTwoVersions('tier', enabled.map(t => t.id));
+  const nodes = enabled.map(t => {
     const notes = fieldNotes[shortId(t.id)];
     if (!notes || !artwork[t.id]) throw new Error(`Missing field entry for ${t.id}`);
     return { id: t.id, name: t.name, fr: notes[0], level: t.level, initiative: t.initiativeBonus, prerequisites: t.prerequisites,
@@ -44,7 +47,6 @@ export async function loadCatalogue(data = content) {
       passive: t.passive, shared: t.sharedWithTeam === true };
   });
   const baseSpells = creature.startingSpellIds.map(spell);
-  refuseTwoVersions('tier', nodes.map(t => t.id));
   refuseTwoVersions('spell', [...baseSpells, ...nodes.flatMap(t => t.spells)].map(s => s.id));
   return { nodes, baseSpells };
 }
