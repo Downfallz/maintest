@@ -374,17 +374,17 @@ test('a failed request releases the busy state and shows a recoverable error', a
 });
 
 // #772, #741: between the host's 204 and the next read, the sheet was drawn again from the question just answered,
-// its buttons enabled, so a second tap on a slow phone (or a test's next look) answered a question already gone.
+// with its buttons enabled. A second tap on a slow phone, or a test's next look, then answered a question that was gone.
 for (const [kind, ask, tap, decision] of [
   ['Evolution', { evolution: { creatures: [{ creature: 1, availableTiers: ['tier:one:v1'] }] } }, 'evolution-pass', { kind: 'Evolution', pass: true }],
   ['TieOrder', { tieOrder: { ties: [[1, 3]] } }, 'tie-keep', { kind: 'TieOrder', order: [1, 3] }],
 ]) {
-  test(`an accepted ${kind} answer is not offered again while the next question is read`, async () => {
+  test(`after an accepted ${kind} answer, its buttons stay disabled while the next question is read`, async () => {
     const p = page(); const sent = []; let reading = 0;
     p.view.waitingFor = kind; p.view.waitingCreature = kind === 'Evolution' ? 1 : null; p.view.options = ask;
     p.current.transport.decide = async posted => { sent.push(posted); return { ok: true }; };
     p.draw(); await p.state.announced;
-    // The read after the answer has left and not come back: what is on screen is the question just answered.
+    // The read after the answer has been sent and has not returned, so the screen still shows the question just answered.
     p.current.transport.seat = () => { reading += 1; return new Promise(() => {}); };
     void p.context.submit(p.state, p.current, decision);
     await new Promise(resolve => setTimeout(resolve, 0));
@@ -398,6 +398,22 @@ for (const [kind, ask, tap, decision] of [
     assert.equal(sent.length, 1, 'a second tap posts nothing');
   });
 }
+
+test('an accepted answer holds back only its own asking: another drawn since is answerable', async () => {
+  const p = page(); const sent = [];
+  p.view.waitingFor = 'Evolution'; p.view.options = { evolution: { creatures: [{ creature: 1, availableTiers: ['tier:one:v1'] }] } };
+  p.current.transport.decide = async posted => { sent.push(posted); return { ok: true }; };
+  p.draw(); await p.state.announced;
+  await p.context.submit(p.state, p.current, { kind: 'Evolution', pass: true });
+  // Another question, then one under the same key again (a host whose count started over): each is answerable.
+  for (const asked of [2, 1]) {
+    p.state.views = p.state.rawViews = [{ ...p.current, view: { ...p.view, waitingAsked: asked } }]; p.draw();
+    const pass = p.nodes.choices.querySelectorAll('[data-focus]').find(node => node.dataset.focus === 'evolution-pass');
+    assert.notEqual(pass.disabled, true, `asking ${asked} is offered`);
+  }
+  await p.context.submit(p.state, p.state.views[0], { kind: 'Evolution', pass: true });
+  assert.equal(sent.length, 2);
+});
 
 test('overlapping refreshes make one seat request at a time, the second once the first is answered', async () => {
   const p = page(); let finish; let calls = 0;
@@ -642,7 +658,7 @@ test('a second tap or Enter on the chosen card declares it', async () => {
   await held(p).children[1].events.click();
   assert.equal(sent.length, 1);
   assert.deepEqual(JSON.parse(JSON.stringify(sent[0])), { kind: 'Intent', creature: 1, spell: 'two', asked: 1 });
-  // The next question is the host's, read after the answer: the one answered is not answered twice (#772).
+  // The host's next question is read after the answer, so the question already answered is not answered twice (#772).
   p.view.waitingAsked = 2; await p.context.refresh(p.state);
   held(p).children[0].events.click();
   await held(p).children[0].events.keydown(key);

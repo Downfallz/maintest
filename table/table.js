@@ -846,6 +846,8 @@ function render(state, views) {
     state.evolving = null;
     state.inspectCreature = null;
     state.ordered = [];
+    // An accepted answer holds only while its own asking is drawn: once another is, nothing is held back.
+    state.accepted = null;
     // A new asking starts at the creature it names first, not at the tab the last one was left on.
     state.tempoFocus = null;
     element('decision').scrollTop = 0;
@@ -2823,8 +2825,8 @@ function renderDecision(state, current) {
   const asking = element('asking');
   const choices = element('choices');
   element('decision').classList.toggle('match-finished', Boolean(view.over));
-  // Answered and accepted, the question stays on screen until the next read replaces it, but nothing on it is
-  // offered: a tap there would answer a question the host has already moved past (#772).
+  // Once its answer is accepted, the question stays on screen until the next read replaces it. Its controls are
+  // disabled: a tap would answer a question the host has already moved past (#772).
   const settled = state.accepted === askedKey(current.seat, view);
   element('decision').setAttribute('aria-busy', String(settled || Boolean(state.sending)));
   element('decision-guide').replaceChildren();
@@ -4054,8 +4056,8 @@ async function submit(state, current, decision) {
   // The guard is here and not only on the buttons, because there is no undo: on a slow connection a rapid
   // double tap posted twice, one call committing the decision and the other coming back 409, which showed the
   // player an error for a declaration that had in fact been accepted.
-  // And an asking the host has already accepted an answer to is not answered again: until the next read brings the
-  // next question, the sheet is drawn from that one, and a second tap would post to a question already gone.
+  // An asking the host has already accepted an answer to is not answered again. Until the next read brings the next
+  // question, the sheet is still drawn from the old one, and a second tap would post to a question that is gone.
   if (state.sending || state.playback || state.step || state.accepted === askedKey(current.seat, current.view)) {
     return;
   }

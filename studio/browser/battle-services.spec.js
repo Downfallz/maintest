@@ -238,8 +238,8 @@ test('on a phone held upright the round\'s header is the only one: the menu and 
   await page.locator('.home-header .account-chip').click(); await expect(page.locator('.home-header .account-menu')).toBeInViewport();
 });
 
-// Where a rematch goes is what these tests check, not the page there, which this server does not serve. A stand-in
-// answers it: an empty 404 loads in the headless shell but fails the navigation in a full Chrome (#741).
+// These tests check where a rematch goes, not the page there, which this server does not serve. A stand-in page
+// answers the request, because an empty 404 loads in the headless shell but fails the navigation in a full Chrome (#741).
 async function standIn(page) {
   await page.route(url => ['/battle', '/lobby'].includes(url.pathname), route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Next</title>' }));
 }
