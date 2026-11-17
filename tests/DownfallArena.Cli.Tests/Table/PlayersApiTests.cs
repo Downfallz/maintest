@@ -13,7 +13,6 @@ namespace DownfallArena.Cli.Tests.Table;
 /// The operator's players (ADR 0174): the list, an account's sheet, and the three things the operator does to an
 /// account. Accounts are signed in by name (<c>--accounts dev</c>), so each test reads as players arriving.
 /// </summary>
-[Collection(ConsoleOutput.Name)]
 public sealed class PlayersApiTests : IDisposable
 {
     private static readonly DateTimeOffset Start = new(2026, 11, 13, 20, 0, 0, TimeSpan.Zero);
@@ -51,8 +50,8 @@ public sealed class PlayersApiTests : IDisposable
         };
     }
 
-    private PlayersApi Players(AccountApi accounts) =>
-        new(new PlayerDirectory(_store, accounts.Activity!, _results, _clock), accounts, _results);
+    private PlayersApi Players(AccountApi accounts, Action<string>? said = null) =>
+        new(new PlayerDirectory(_store, accounts.Activity!, _results, _clock), accounts, _results) { Said = said ?? (_ => { }) };
 
     private static async Task<(AccountRequest Request, string Id)> SignInAsync(AccountApi accounts, string name)
     {
@@ -182,22 +181,15 @@ public sealed class PlayersApiTests : IDisposable
     {
         var accounts = await AccountsAsync();
         var mark = await SignInAsync(accounts, "Mark");
-        var said = new StringWriter();
-        var before = Console.Out;
-        Console.SetOut(said);
-        try
-        {
-            var body = """{"reason":"Insulted Zelda_42.\nThe report failed to reach him."}""";
-            (await Players(accounts).HandleAsync("POST", $"{PlayersApi.Prefix}/{mark.Id}/suspension", body, null, "op")).Status.ShouldBe(200);
-        }
-        finally
-        {
-            Console.SetOut(before);
-        }
+        var said = new List<string>();
+        var body = """{"reason":"Insulted Zelda_42.\nThe report failed to reach him."}""";
 
-        said.ToString().ShouldContain($"Account {mark.Id} (Mark) suspended by op.");
-        said.ToString().ShouldNotContain("Zelda_42");
-        said.ToString().ShouldNotContain("failed to reach");
+        (await Players(accounts, said.Add).HandleAsync("POST", $"{PlayersApi.Prefix}/{mark.Id}/suspension", body, null, "op")).Status.ShouldBe(200);
+
+        var line = said.ShouldHaveSingleItem();
+        line.ShouldContain($"Account {mark.Id} (Mark) suspended by op.");
+        line.ShouldNotContain("Zelda_42");
+        line.ShouldNotContain("failed to reach");
     }
 
     [Theory]

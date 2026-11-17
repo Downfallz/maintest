@@ -46,6 +46,9 @@ internal sealed class TutorialPlay
             step.PointsAt is { } pointer ? new Pointer(pointer.Creature?.Value, pointer.Control) : null))];
     }
 
+    /// <summary>Where its console lines go (ADR 0186; said on the thread that answers): the host's console unless a test reads them (#756).</summary>
+    public Action<string> Said { get; init; } = Console.WriteLine;
+
     /// <summary>Its place in the series, from 1.</summary>
     public int Order => _lesson.Order;
 
@@ -154,14 +157,14 @@ internal sealed class TutorialPlay
     /// </summary>
     private void SayGaveBack()
     {
-        Console.WriteLine($"  Tutorial {Order}: the recorded answers no longer fit the match; the person answers every question from here.");
+        Said($"  Tutorial {Order}: the recorded answers no longer fit the match; the person answers every question from here.");
         try
         {
             GaveBack?.Invoke();
         }
         catch (Exception failure) when (failure is not OutOfMemoryException)
         {
-            Console.WriteLine($"  Tutorial {Order}: telling the table of the hand-back failed ({failure.GetType().Name}).");
+            Said($"  Tutorial {Order}: telling the table of the hand-back failed ({failure.GetType().Name}).");
         }
     }
 
@@ -278,7 +281,7 @@ internal sealed class TutorialPlay
         catch (Exception failure) when (failure is not OutOfMemoryException)
         {
             // The table says what it could not do when its own step fails; the question is the person's to answer.
-            Console.WriteLine($"  Tutorial {Order}: an assisted question could not be answered ({failure.GetType().Name}).");
+            Said($"  Tutorial {Order}: an assisted question could not be answered ({failure.GetType().Name}).");
             if (HandsBack(_assisted.HandBack))
             {
                 SayGaveBack();

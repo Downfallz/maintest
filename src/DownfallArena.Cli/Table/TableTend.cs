@@ -44,8 +44,10 @@ internal static class TableTend
     /// <summary>How often the job runs (infra/main.bicep): the warning is sent by the one pass of that interval that finds a quarter left.</summary>
     internal static readonly TimeSpan Interval = TimeSpan.FromHours(1);
 
-    public static async Task<int> RunAsync(IServiceProvider services, CliOptions options, RuleSet rules)
+    /// <param name="said">Where the pass's lines go: the console unless a test reads them (#756). Failures stay on the console's error stream.</param>
+    public static async Task<int> RunAsync(IServiceProvider services, CliOptions options, RuleSet rules, Action<string>? said = null)
     {
+        said ??= Console.WriteLine;
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(options);
         var clock = services.GetRequiredService<TimeProvider>();
@@ -116,35 +118,35 @@ internal static class TableTend
                 await Task.WhenAny(relay.SentAsync(), Task.Delay(TimeSpan.FromSeconds(10), clock));
             }
 
-            Console.WriteLine($"Tended '{target}': {tended.Swept.Count} table{(tended.Swept.Count == 1 ? string.Empty : "s")} that never began closed, {tended.Expired} invitation{(tended.Expired == 1 ? string.Empty : "s")} that ran out let go of, {tended.TimedOut.Count} game{(tended.TimedOut.Count == 1 ? string.Empty : "s")} timed out, {tended.Abandoned.Count} left by a player ended.");
+            said($"Tended '{target}': {tended.Swept.Count} table{(tended.Swept.Count == 1 ? string.Empty : "s")} that never began closed, {tended.Expired} invitation{(tended.Expired == 1 ? string.Empty : "s")} that ran out let go of, {tended.TimedOut.Count} game{(tended.TimedOut.Count == 1 ? string.Empty : "s")} timed out, {tended.Abandoned.Count} left by a player ended.");
             foreach (var id in tended.Swept)
             {
-                Console.WriteLine($"  Session {id} closed: it never began.");
+                said($"  Session {id} closed: it never began.");
             }
 
             foreach (var id in tended.TimedOut)
             {
-                Console.WriteLine($"  Session {id} ended: its player let their time to answer run out.");
+                said($"  Session {id} ended: its player let their time to answer run out.");
             }
 
             foreach (var id in tended.Abandoned)
             {
-                Console.WriteLine($"  Session {id} ended: nobody took the seat its player left.");
+                said($"  Session {id} ended: nobody took the seat its player left.");
             }
 
             foreach (var id in tended.Released)
             {
-                Console.WriteLine($"  Account {id}: suspended a day ago, its seats in unfinished games offered to other players.");
+                said($"  Account {id}: suspended a day ago, its seats in unfinished games offered to other players.");
             }
 
             if (tended.FeedbackLetGo > 0)
             {
-                Console.WriteLine($"  Feedback: {tended.FeedbackLetGo} closed more than {Feedback.KeptClosed.TotalDays:0} days ago let go of.");
+                said($"  Feedback: {tended.FeedbackLetGo} closed more than {Feedback.KeptClosed.TotalDays:0} days ago let go of.");
             }
 
             foreach (var id in tended.Warned)
             {
-                Console.WriteLine($"  Session {id}: its player was told a quarter of their time to answer is left.");
+                said($"  Session {id}: its player was told a quarter of their time to answer is left.");
             }
 
             return 0;

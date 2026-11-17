@@ -13,7 +13,6 @@ namespace DownfallArena.Cli.Tests.Table;
 /// The operator voids a match, in progress or finished, with a reason (ADR 0176): the record keeps it, the seats are
 /// answered with the explanation, and a kept result is marked void so it counts nowhere.
 /// </summary>
-[Collection(ConsoleOutput.Name)]
 public sealed class OperatorVoidTests : IDisposable
 {
     private const string Token = "token-of-the-operator";
@@ -23,12 +22,13 @@ public sealed class OperatorVoidTests : IDisposable
     private readonly Kept _results = new();
     private readonly TableRegistry _registry;
     private readonly AdminApi _admin;
+    private readonly List<string> _said = [];
 
     public OperatorVoidTests()
     {
         _registry = _hosted.Registry();
         var composer = new TableComposer(_hosted.Services, HostedTables.Rules, new FileArtifactStore(_hosted.RunsDirectory)) { Results = _results, Index = _hosted.Index };
-        _admin = new AdminApi(_registry, composer, OperatorGate.WithToken(Token), TimeProvider.System, "Rules", _hosted.Stored);
+        _admin = new AdminApi(_registry, composer, OperatorGate.WithToken(Token), TimeProvider.System, "Rules", _hosted.Stored) { Said = _said.Add };
     }
 
     public void Dispose()
@@ -78,21 +78,11 @@ public sealed class OperatorVoidTests : IDisposable
     public async Task A_void_says_its_category_on_the_console_but_not_the_operator_s_explanation()
     {
         var (id, _) = await OpenedAsync();
-        var said = new StringWriter();
-        var before = Console.Out;
-        Console.SetOut(said);
-        try
-        {
-            (await VoidAsync(id, Reason("abuse", "Zelda_42 kept stalling.\nThe bot failed to answer."))).Status.ShouldBe(200);
-        }
-        finally
-        {
-            Console.SetOut(before);
-        }
 
-        said.ToString().ShouldContain($"Session {id} voided by");
-        said.ToString().ShouldNotContain("Zelda_42");
-        said.ToString().ShouldNotContain("failed to answer");
+        (await VoidAsync(id, Reason("abuse", "Zelda_42 kept stalling.\nThe bot failed to answer."))).Status.ShouldBe(200);
+
+        _said.ShouldContain(line => line.StartsWith($"  Session {id} voided by", StringComparison.Ordinal));
+        _said.ShouldAllBe(line => !line.Contains("Zelda_42") && !line.Contains("failed to answer"));
     }
 
     [Fact]

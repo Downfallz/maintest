@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using DownfallArena.Application.Matches.Decisions;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Application.Matches.Scenarios;
@@ -12,14 +13,12 @@ namespace DownfallArena.Cli.Tests.Table;
 /// A Tutorial's assisted answers at the host when the match does not take one (docs/tabletop/onboarding-plan.md,
 /// O3a): the question must not be left to nobody, so every question goes back to the person.
 /// </summary>
-/// <remarks>In <see cref="ConsoleOutput" />: one test reads what the play says on the console.</remarks>
-[Collection(ConsoleOutput.Name)]
 public sealed class TutorialPlayTests
 {
     private static readonly CreatureId First = CreatureId.From(1);
 
-    private static TutorialPlay Play() =>
-        new(Lesson(), new AssistedSeat(Lesson(), [PlayerDecision.ChooseSpeed(First, Speed.Quick)]), PlayerSlot.Player1, of: 1);
+    private static TutorialPlay Play(Action<string>? said = null) =>
+        new(Lesson(), new AssistedSeat(Lesson(), [PlayerDecision.ChooseSpeed(First, Speed.Quick)]), PlayerSlot.Player1, of: 1) { Said = said ?? (_ => { }) };
 
     private static TutorialLesson Lesson() =>
         TutorialLesson.Create(1, "Your first combat", [PlayerOptionsKind.Action], [new LessonStep(PlayerOptionsKind.Action, 2, null, ["Pick a spell."], [])]).Value;
@@ -158,29 +157,20 @@ public sealed class TutorialPlayTests
     public async Task A_hand_back_subscriber_that_throws_is_said_on_its_own_line_and_not_as_an_answer_that_failed()
     {
         var (table, _) = AskedASpeed(_ => DecisionTaken.Late);
-        var play = Play();
+        // Said on the thread that answers, so read through a queue that takes lines from any thread.
+        var said = new ConcurrentQueue<string>();
+        var play = Play(said.Enqueue);
         play.GaveBack += () => throw new InvalidOperationException("the relay is down");
         play.Follow(table);
-        var said = new StringWriter();
-        var before = Console.Out;
-        Console.SetOut(TextWriter.Synchronized(said));
-        bool told;
-        try
-        {
-            play.Look();
 
-            told = await SaidAsync(() => said.ToString().Contains("telling the table of the hand-back failed", StringComparison.Ordinal));
-            // The answering goes on after the line: a word that it failed would come in the moment after.
-            await Task.Delay(200, TestContext.Current.CancellationToken);
-        }
-        finally
-        {
-            Console.SetOut(before);
-        }
+        play.Look();
 
-        told.ShouldBeTrue(said.ToString());
-        said.ToString().ShouldContain("Tutorial 1: telling the table of the hand-back failed (InvalidOperationException).");
-        said.ToString().ShouldNotContain("could not be answered", customMessage: "the answer was given; only telling the table failed");
+        var told = await SaidAsync(() => said.Any(line => line.Contains("telling the table of the hand-back failed", StringComparison.Ordinal)));
+        // The answering goes on after the line: a word that it failed would come in the moment after.
+        await Task.Delay(200, TestContext.Current.CancellationToken);
+        told.ShouldBeTrue(string.Join(Environment.NewLine, said));
+        said.ShouldContain("  Tutorial 1: telling the table of the hand-back failed (InvalidOperationException).");
+        said.ShouldNotContain(line => line.Contains("could not be answered", StringComparison.Ordinal), customMessage: "the answer was given; only telling the table failed");
     }
 
     [Fact]
