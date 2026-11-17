@@ -37,6 +37,23 @@ test('a round crossed while away is told in full, every cast in it new, and neit
   assert.equal(recap.unseen, 6);
 });
 
+test('the count of what is new counts every line marked new: each mutation revealed and each creature defeated', () => {
+  const recap = at('round4Tempo', 14);
+
+  const lines = recap.rounds.flatMap(one => [...one.mutations, ...one.casts, ...one.skipped, ...one.defeated]);
+  assert.equal(recap.unseen, lines.filter(line => line.unseen).length);
+  assert.equal(recap.unseen, 22);
+});
+
+test('a round the feed holds nothing of is told as not recorded, never as a quiet round', () => {
+  const { sequence, board } = recorded.boards.round4Tempo;
+  const feed = recorded.feed.filter(entry => entry.sequence > 114 && entry.sequence <= sequence);
+
+  const recap = buildRecap({ view: { seat: 'player1', board }, feed, seen: 120, now: NOW, catalogue: recorded.catalogue });
+
+  assert.deepEqual(recap.rounds.map(one => [one.round, one.recorded]), [[3, false], [4, true]]);
+});
+
 test('three rounds crossed are all told, most recent last, the older ones folded', () => {
   const recap = at('round4Tempo', 14);
 
@@ -100,6 +117,25 @@ test('a spell declared face down is the seat\'s own and is told; the other seat\
 
   assert.deepEqual(recap.chosen.spells, [{ creature: 'Creature 1', spell: 'Vital Echo' }]);
   assert.ok(recap.chosen.tempos.every(one => one.creature !== 'Creature 4'));
+});
+
+test('the seat\'s own submissions are found whatever case its slot is written in, and none without a slot', () => {
+  const { board } = recorded.boards.round2Tempo;
+  const feed = recorded.feed.filter(entry => entry.sequence <= 51);
+  const read = slot => buildRecap({ view: { seat: 'player1', board: { ...board, slot } }, feed, seen: 51, now: NOW, catalogue: recorded.catalogue }).chosen.mutations;
+
+  assert.deepEqual(read('player1'), { round: 1, picks: [{ creature: 'Creature 2', mutation: 'Brute' }, { creature: 'Creature 1', mutation: 'Warped' }] });
+  assert.equal(read(undefined), null);
+});
+
+test('a spell or mutation the catalogue does not name is said as unknown, never by its content id', () => {
+  const { board } = recorded.boards.round4Combat;
+  const declared = { ...board, intents: [{ actor: 1, spell: 'spell:not_in_catalogue:v1' }] };
+
+  const recap = buildRecap({ view: { seat: 'player1', board: declared }, feed: recorded.feed.filter(entry => entry.sequence <= 129), seen: 129, now: NOW, catalogue: { cards: [], packages: [] } });
+
+  assert.deepEqual(recap.chosen.spells, [{ creature: 'Creature 1', spell: 'Unknown spell' }]);
+  assert.ok(recap.chosen.mutations.picks.every(one => one.mutation === 'Unknown mutation'));
 });
 
 test('with nothing unseen the last completed round and the round under way are still told, nothing marked new', () => {

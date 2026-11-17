@@ -32,13 +32,18 @@ export function healthChangeText(change) {
 
 const roundOf = entry => entry?.event?.roundId ?? entry?.round;
 const isInt = Number.isInteger;
-const spellName = (id, catalogue) => catalogue?.cards?.find(card => card.id === id)?.name ?? id ?? 'Unknown spell';
-const mutationName = (id, catalogue) => catalogue?.packages?.find(pack => pack.id === id)?.name ?? id ?? 'Unknown mutation';
+// A content id is the domain's word, never the player's: a name the catalogue lacks is said as unknown.
+const spellName = (id, catalogue) => catalogue?.cards?.find(card => card.id === id)?.name ?? 'Unknown spell';
+const mutationName = (id, catalogue) => catalogue?.packages?.find(pack => pack.id === id)?.name ?? 'Unknown mutation';
+// The feed and the board write a slot by its enum name (Player1); a seat is named in lower case (player1).
+const slotName = slot => typeof slot === 'string' && slot ? slot.toLowerCase() : null;
 
 /**
  * The five parts of the sheet. `feed` is the seat's feed, at least the last completed round, the round under way and
  * everything after `seen`; `seen` the last sequence the seat was shown (seenSince), null when it was never told of
  * one: the recent rounds are then told with nothing marked new. `opponent` is the name the header gives the other seat.
+ * A round the feed holds nothing of is told with `recorded: false`, so the sheet never reads a gap as a quiet round;
+ * loading the feed back to `seen` is the caller's.
  * @param {{ view: any, feed: any[], seen: number | null, now: number, catalogue?: any, opponent?: string | null }} input
  */
 export function buildRecap({ view, feed, seen, now, catalogue = null, opponent = null }) {
@@ -61,7 +66,8 @@ export function buildRecap({ view, feed, seen, now, catalogue = null, opponent =
   const span = told.size ? Math.min(...told) : current;
 
   const rounds = [...told].sort((a, b) => a - b).map(round => tellRound(round, rows.filter(row => row.round === round), {
-    isNew, folded: round < (completed ?? current), completed: ended.includes(round) || (over && round === current) }));
+    isNew, folded: round < (completed ?? current), completed: ended.includes(round) || (over && round === current),
+    recorded: entries.some(entry => roundOf(entry) === round) }));
 
   const teams = teamsNow(board, entries.filter(entry => roundOf(entry) >= span), isNew);
   const side = team => ({ standing: team.filter(one => !one.defeated).length, total: team.length,
@@ -71,7 +77,7 @@ export function buildRecap({ view, feed, seen, now, catalogue = null, opponent =
 
   return {
     seen: isInt(seen) ? seen : null,
-    unseen: rows.filter(row => isNew(row.sequence) && TOLD.has(row.kind)).length,
+    unseen: rounds.reduce((sum, one) => sum + newLines(one), 0),
     span,
     where: {
       opponent: opponent ?? null,
@@ -88,11 +94,12 @@ export function buildRecap({ view, feed, seen, now, catalogue = null, opponent =
   };
 }
 
-// What the sheet tells of a round, and counts as new: the journal summary's lines.
-const TOLD = new Set(['PurchasesRevealed', 'CombatActionResolved', 'SlotSkipped', 'MatchEnded']);
+// The lines of a round the sheet marks new: what R3's threshold and R4's count read.
+const newLines = round => [...round.mutations, ...round.casts, ...round.skipped, ...round.defeated, ...(round.result ? [round.result] : [])]
+  .filter(line => line.unseen).length;
 
-function tellRound(round, rows, { isNew, folded, completed }) {
-  const told = { round, state: completed ? 'completed' : 'under way', folded, unseen: false,
+function tellRound(round, rows, { isNew, folded, completed, recorded }) {
+  const told = { round, state: completed ? 'completed' : 'under way', folded, recorded, unseen: false,
     mutations: [], casts: [], skipped: [], defeated: [], result: null };
   for (const row of rows) {
     const summary = historySummary([row])[0];
@@ -137,8 +144,8 @@ function leaderOf({ you, opponent }) {
 // it bought last. Read from its board, then its own submissions; another seat's never reach this seat's feed, and a
 // submission naming another slot is left out all the same.
 function chosenBy(board, entries, current, catalogue) {
-  const slot = board.slot;
-  const own = kind => entries.filter(entry => entry.event?.kind === kind && entry.event.slot === slot);
+  const slot = slotName(board.slot);
+  const own = kind => slot === null ? [] : entries.filter(entry => entry.event?.kind === kind && slotName(entry.event.slot) === slot);
   const label = id => creatureLabel(board, id);
   const speeds = board.speedChoices?.length ? board.speedChoices
     : own('SpeedChoiceSubmitted').filter(entry => roundOf(entry) === current).map(entry => entry.event.choice);
