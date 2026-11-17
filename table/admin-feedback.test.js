@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { askedLine, askLinks, categoryFilters, choicesNote, categoryLabel, changeSaid, creatureLine, feedbackLine, feedbackPath, feedbackRows, mergeChoices, muteLine, planPrompt, positionSides, reproduceSaid, sheetActions, sheetFacts, sheetWords, statusLine, STATUS_FILTERS } from './admin-feedback.js';
+import { ADDRESS_LIMIT, askedLine, askLinks, categoryFilters, choicesNote, categoryLabel, changeSaid, closedIssues, creatureLine, downloadNote, feedbackLine, feedbackPath, feedbackRows, filedSaid, fixedReports, issueAddress, issueLink, issueNumber, issuesPath, mergeChoices, muteLine, planPrompt, positionSides, reproduceSaid, sheetActions, sheetFacts, sheetWords, statusLine, STATUS_FILTERS } from './admin-feedback.js';
 
 const NOW = Date.parse('2026-11-16T12:00:00Z');
 
@@ -21,6 +21,7 @@ test('the list\'s address leaves out every filter that is every one, and the fir
   assert.equal(feedbackPath({ status: '' }), '/api/admin/feedback');
   assert.equal(feedbackPath(), '/api/admin/feedback?status=open');
   assert.equal(feedbackPath({ kind: 'idea', status: 'new', category: 'battle', page: 2 }), '/api/admin/feedback?kind=idea&status=new&category=battle&page=2');
+  assert.equal(feedbackPath({ kind: 'bug', filed: true }), '/api/admin/feedback?kind=bug&status=open&filed=true');
 });
 
 test('a row says the kind and category in the sheet\'s words, where it came from, and a new bug report stands out', () => {
@@ -133,7 +134,7 @@ test('a sheet reads the words of every idea merged into it, each with who asked'
 });
 
 test('an idea\'s statuses are offered as filters and said with their plan or reason', () => {
-  assert.deepEqual(STATUS_FILTERS.map(one => one.value), ['open', 'new', 'seen', 'reproduced', 'planned', 'shipped', 'declined', 'dismissed', '']);
+  assert.deepEqual(STATUS_FILTERS.map(one => one.value), ['open', 'new', 'seen', 'reproduced', 'filed', 'fixed', 'planned', 'shipped', 'declined', 'dismissed', '']);
   assert.equal(statusLine({ status: 'declined', reason: 'Not for this game.' }), 'Declined: Not for this game.');
   assert.equal(statusLine({ status: 'shipped', plan: 'docs/tabletop/replay-plan.md' }), 'Shipped: docs/tabletop/replay-plan.md');
   assert.equal(statusLine({ status: 'shipped', plan: null }), 'Shipped');
@@ -166,4 +167,110 @@ test('each idea merged into a group opens its own sheet, where it can be dismiss
     { id: 'c', label: 'Open the idea asked 1 h ago, by an account since deleted' },
   ]);
   assert.deepEqual(askLinks({ ...idea, asks: undefined }, NOW), []);
+});
+
+// ---- R5: the redacted scenario and the issue.
+
+const filed = { ...report, repository: 'Downfallz/maintest', issue: null, reproduction: { id: 'sc-1', link: '/battle?scenario=sc-1' }, underWay: false,
+  actions: ['reproduce', 'download', 'seen', 'reproduced', 'dismiss', 'spam', 'toIdea', 'file', 'mute'] };
+
+const fields = address => Object.fromEntries(new URL(address).searchParams);
+
+test('File an issue opens GitHub\'s form for a report, pre-filled with what the operator reads before it becomes public', () => {
+  const address = issueAddress(filed);
+
+  assert.ok(address.startsWith('https://github.com/Downfallz/maintest/issues/new?'));
+  const asked = fields(address);
+  assert.equal(asked.template, 'bug_from_report.yml');
+  assert.equal(asked.title, 'Report 20261116T113000000Z-abc123: the rules did something wrong, round 3');
+  assert.equal(asked.report, '20261116T113000000Z-abc123');
+  assert.equal(asked.category, 'The rules did something wrong');
+  assert.equal(Object.hasOwn(asked, 'happened'), false, 'the player\'s words stay in the panel: the operator writes the issue');
+  assert.equal(Object.hasOwn(asked, 'expected'), false);
+  assert.ok(!address.includes('bleed'), 'no word of the player\'s reaches GitHub before the operator writes it');
+  assert.equal(asked.where, 'Round 3, Speed, player1');
+  assert.equal(asked.played, 'Engine 1.2.3 · content abcdef0123456789 · Rules 3v3');
+  assert.equal(asked.errors, 'TypeError: x is undefined (battle.js:12)');
+  assert.equal(asked.scenario, 'Drop report-20261116T113000000Z-abc123.zip here, downloaded from the panel.');
+  assert.equal(Object.hasOwn(asked, 'table'), false);
+  assert.ok(!address.includes('deadbeef'), 'the table\'s id is not in the address');
+});
+
+test('the address stays under 8 KB, the page\'s errors cut and marked', () => {
+  const long = { ...filed, errors: Array.from({ length: 10 }, (_, at) => ({ message: `TypeError ${at}: ${'é'.repeat(300)}`, where: 'https://play.example/battle.js:12' })) };
+
+  const address = issueAddress(long);
+
+  assert.ok(address.length <= ADDRESS_LIMIT, `${address.length} characters`);
+  const asked = fields(address);
+  assert.ok(asked.errors.startsWith('TypeError 0: é'));
+  assert.ok(asked.errors.endsWith('…'));
+  const emoji = issueAddress({ ...filed, errors: Array.from({ length: 10 }, () => ({ message: 'a😀'.repeat(400), where: null })) });
+  assert.ok(emoji.length <= ADDRESS_LIMIT, 'an emoji is never cut in half');
+  assert.equal(asked.title, 'Report 20261116T113000000Z-abc123: the rules did something wrong, round 3');
+});
+
+test('a report sent outside a game is filed with no round and no scenario to drop', () => {
+  const asked = fields(issueAddress({ ...filed, context: null, errors: [], expected: null, additions: [], reproduction: null }));
+
+  assert.equal(asked.title, 'Report 20261116T113000000Z-abc123: the rules did something wrong');
+  assert.equal(asked.where, 'Outside a game');
+  assert.equal(Object.hasOwn(asked, 'errors'), false);
+  assert.equal(Object.hasOwn(asked, 'scenario'), false);
+  assert.equal(issueAddress({ ...filed, repository: null }), null);
+});
+
+test('the issue\'s number is read as typed, with its hash or as its address', () => {
+  assert.equal(issueNumber('731', 'Downfallz/maintest'), 731);
+  assert.equal(issueNumber(' #731 ', 'Downfallz/maintest'), 731);
+  assert.equal(issueNumber('https://github.com/Downfallz/maintest/issues/731', 'Downfallz/maintest'), 731);
+  assert.equal(issueNumber('https://github.com/downfallz/maintest/issues/731#issuecomment-1', 'Downfallz/maintest'), 731);
+  for (const typed of ['', 'seven', '0', '-3', '7.5', 'https://github.com/Downfallz/maintest/pull/731', 'https://github.com/someone/else/issues/731']) {
+    assert.equal(issueNumber(typed, 'Downfallz/maintest'), null, typed);
+  }
+});
+
+test('a filed report links its issue, so a mistyped number shows before it marks the wrong report fixed', () => {
+  assert.equal(issueLink({ ...filed, issue: 731 }), 'https://github.com/Downfallz/maintest/issues/731');
+  assert.equal(issueLink(filed), null);
+  assert.equal(issueLink({ ...filed, issue: 731, repository: null }), null);
+});
+
+test('a report filed reads filed #N and fixed #N, and both are filters', () => {
+  assert.equal(statusLine({ status: 'filed', issue: 731 }), 'Filed #731');
+  assert.equal(statusLine({ status: 'fixed', issue: 731 }), 'Fixed #731');
+  assert.equal(statusLine({ status: 'reproduced', issue: 731 }), 'Reproduced · filed #731');
+  assert.equal(filedSaid({ ok: true, body: { issue: 731 } }).line, 'Filed as #731. The report reads fixed once the issue is closed.');
+  assert.equal(filedSaid({ ok: false, status: 400, body: { message: 'Filing names the issue\'s number, as GitHub gave it.' } }).refused, true);
+});
+
+test('the tab reads the closed issues filed from reports, updated since the oldest filed report was sent, a page at a time', () => {
+  assert.equal(issuesPath('Downfallz/maintest', '2026-11-01T08:00:00Z'),
+    'https://api.github.com/repos/Downfallz/maintest/issues?state=closed&labels=from-report&sort=updated&direction=desc&per_page=100&page=1&since=2026-11-01T08%3A00%3A00.000Z');
+  assert.equal(issuesPath('Downfallz/maintest', null, 3), 'https://api.github.com/repos/Downfallz/maintest/issues?state=closed&labels=from-report&sort=updated&direction=desc&per_page=100&page=3');
+  assert.equal(issuesPath(null), null);
+});
+
+test('an issue closed as completed fixes the reports filed as it; one closed as not planned, a pull request or one still open does not', () => {
+  const closed = closedIssues([
+    { number: 731, state: 'closed', state_reason: 'completed' },
+    { number: 732, state: 'closed', state_reason: 'not_planned' },
+    { number: 733, state: 'closed', state_reason: 'completed', pull_request: {} },
+    { number: 734, state: 'open', state_reason: null },
+    { number: 735, state: 'closed', state_reason: null },
+    { number: 736, state: 'closed', state_reason: 'duplicate' },
+  ]);
+
+  assert.deepEqual([...closed].sort(), [731, 735]);
+  assert.deepEqual(fixedReports([{ id: 'a', status: 'filed', issue: 731 }, { id: 'b', status: 'filed', issue: 732 }, { id: 'c', status: 'fixed', issue: 735 },
+    { id: 'd', status: 'new' }, { id: 'e', status: 'reproduced', issue: 735 }, { id: 'f', status: 'dismissed', issue: 731 }], closed), ['a', 'e']);
+  assert.deepEqual([...closedIssues({ message: 'API rate limit exceeded' })], []);
+});
+
+test('the download is offered once the game is over, and the sheet says why while it is not', () => {
+  assert.deepEqual([sheetActions(filed).download, sheetActions(filed).file], [true, true]);
+  assert.equal(downloadNote(filed), '');
+  assert.equal(downloadNote({ ...filed, underWay: true, actions: ['file'] }), 'The scenario can be downloaded once the game it was sent from is over: nothing a seat holds face down reaches a public issue.');
+  assert.equal(downloadNote({ ...filed, reproduction: null, actions: ['reproduce', 'file'] }), 'Reproduce the round first: its scenario is what the issue carries.');
+  assert.equal(downloadNote({ ...filed, kind: 'idea', reproduction: null, actions: [] }), '');
 });

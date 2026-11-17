@@ -162,7 +162,7 @@ public sealed class FeedbackAdminApiTests : IDisposable
         var table = await BegunAsync();
         var id = await SentAsync(table, Report());
 
-        (await AskAsync("PUT", $"{FeedbackAdminApi.Route}/{id}/status", new { status = "fixed" })).Status.ShouldBe(400);
+        (await AskAsync("PUT", $"{FeedbackAdminApi.Route}/{id}/status", new { status = "shipped" })).Status.ShouldBe(400);
         (await AskAsync("PUT", $"{FeedbackAdminApi.Route}/{id}/status", new { status = "dismissed" })).Status.ShouldBe(400);
         Read(await AskAsync("PUT", $"{FeedbackAdminApi.Route}/{id}/status", new { status = "reproduced" })).GetProperty("status").GetString().ShouldBe("reproduced");
         var dismissed = Read(await AskAsync("PUT", $"{FeedbackAdminApi.Route}/{id}/status", new { status = "dismissed", reason = "Works as the rules say." }));
@@ -262,7 +262,7 @@ public sealed class FeedbackAdminApiTests : IDisposable
         var table = await BegunAsync();
         var id = await SentAsync(table, Report());
 
-        Actions(Read(await AskAsync("GET", $"{FeedbackAdminApi.Route}/{id}"))).ShouldBe(["seen", "reproduced", "dismiss", "spam", "toIdea", "diagnose", "mute"]);
+        Actions(Read(await AskAsync("GET", $"{FeedbackAdminApi.Route}/{id}"))).ShouldBe(["seen", "reproduced", "dismiss", "spam", "toIdea", "file", "diagnose", "mute"]);
         Actions(Read(await AskAsync("PUT", $"{FeedbackAdminApi.Route}/{id}/status", new { status = "dismissed", reason = "A duplicate." }))).ShouldBe(["seen", "reproduced", "diagnose", "mute"]);
         Actions(Read(await AskAsync("POST", $"{FeedbackAdminApi.Route}/{id}/mute"))).ShouldBe(["seen", "reproduced", "diagnose", "unmute"]);
     }

@@ -38,6 +38,8 @@ public sealed class OperatorActions(IOperatorLog log, TimeProvider clock)
     public const string FeedbackUnmute = "feedback.unmute";
     public const string FeedbackMerge = "feedback.merge";
     public const string FeedbackReproduce = "feedback.reproduce";
+    public const string FeedbackDownload = "feedback.download";
+    public const string FeedbackFile = "feedback.file";
 
     private readonly Lock _gate = new();
     private DateTimeOffset _lastStamp = DateTimeOffset.MinValue;

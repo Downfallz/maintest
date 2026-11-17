@@ -274,6 +274,89 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
         return new StudioResponse(204, StudioResponse.Plain, []);
     }
 
+    /// <summary>
+    /// The scenario a bug report's Reproduce cut, redacted as it may leave the host for a public issue
+    /// (docs/tabletop/feedback-plan.md, R5): written as <c>scenario.json</c> with its content, the session's ids replaced
+    /// by the report's, the source's answers stopped where the player wrote, then checked against every id, key and name
+    /// the report and its table hold. The file, or the answer that says why it is not offered.
+    /// </summary>
+    public async Task<(StudioResponse? Refused, string? File)> RedactedAsync(Feedback report)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+        if (report.Reproduction is not { } id || await store.GetAsync(id) is not { } document)
+        {
+            return (Error(FeedbackErrors.NotReproduced.Code, FeedbackErrors.NotReproduced.Message, 409), null);
+        }
+
+        // A scenario cut from a table still played, as a practice's may be, holds what its seats keep face down there.
+        foreach (var source in new[] { document.Session, document.Scenario.Source.Run }.OfType<string>().Distinct(StringComparer.Ordinal))
+        {
+            if (TableKeys.IsTableId(source) && await stored.RecordAsync(source) is { Status: TableRecord.Open, Void: false })
+            {
+                return (Error(FeedbackErrors.UnderWay.Code, FeedbackErrors.UnderWay.Message, 409), null);
+            }
+        }
+
+        if ((document.Schema ?? await SchemaOfAsync(document.Content)) is not { } schema)
+        {
+            return (Error("Scenario.ContentGone", $"The content this scenario was cut on ({document.Content}) is not kept at this host: the file could not carry it.", 409), null);
+        }
+
+        // A practice's report copied its entries up to when the player wrote; a table's journal went on after it.
+        var context = report.Context;
+        var scenario = RedactedScenario.Of(document.Scenario, report.Id, context?.Table is null ? null : context.JournalLength);
+        var file = ScenarioFile.Write(new ScenarioDocument(scenario, document.Seat, document.Content, report.Id, document.Engine, document.Title, document.Goal, schema));
+        var redacted = RedactedScenario.Check(file, report.Id, await NamesAsync(report, document));
+        return redacted.IsFailure ? (Error(redacted.Error.Code, redacted.Error.Message, 409), null) : (null, file);
+    }
+
+    /// <summary>The content kept under a hash, as a scenario file carries it; none when this host keeps no such content.</summary>
+    private async Task<JsonElement?> SchemaOfAsync(string version)
+    {
+        var (content, _) = await composer.PlayedOnAsync(version);
+        return string.Equals(content.Version, version, StringComparison.Ordinal) && content.Services.GetService<GameContentFile>() is { } file
+            ? await ScenarioContent.CarriedAsync(file.SchemaPath)
+            : null;
+    }
+
+    /// <summary>
+    /// What a redacted scenario must not hold, each with what it is: the report's sender and account, the session's ids,
+    /// and, for a report from a table, every key, code and account its seats hold, and their players' names.
+    /// </summary>
+    private async Task<List<(string What, string? Name)>> NamesAsync(Feedback report, ScenarioDocument document)
+    {
+        var accounts = new List<string?> { report.Account };
+        var names = new List<(string What, string? Name)>
+        {
+            ("the table", report.Context?.Table),
+            ("the session", document.Session),
+            ("the session", document.Scenario.Source.Run),
+            ("the session's match", document.Scenario.Source.MatchId.ToString()),
+        };
+        if (report.Context?.Table is { } table && await stored.RecordAsync(table) is { } record)
+        {
+            names.AddRange([("the session's match", record.Match), ("the pilot's key", record.PilotToken)]);
+            foreach (var seat in record.Seats)
+            {
+                names.AddRange([("a seat's key", seat.Token), ("a seat's code", seat.Code), ("a seat's invitation", seat.Invitation)]);
+                accounts.AddRange([seat.Account, seat.InvitedAccount, seat.DeclinedBy]);
+            }
+        }
+
+        foreach (var account in accounts.OfType<string>().Distinct(StringComparer.Ordinal))
+        {
+            names.Add(("an account", account));
+            if (composer.NameOf is { } nameOf && SharedKernel.Identifiers.AccountId.TryParse(account, out var id))
+            {
+                names.Add(("a player's name", await nameOf(id)));
+            }
+        }
+
+        // A signed-in player's sender is their account, said above; a guest's is a hash of its seat's key.
+        names.Add(("the report's sender", report.Sender));
+        return names;
+    }
+
     /// <summary>Whether a scenario is still kept under its id: the one a report's Reproduce cut may have been removed since.</summary>
     public async Task<bool> KeepsAsync(string id) => await store.GetAsync(id) is not null;
 
