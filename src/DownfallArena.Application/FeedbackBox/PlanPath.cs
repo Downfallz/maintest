@@ -13,8 +13,8 @@ public static class PlanPath
     public const int Longest = 200;
 
     private const string Root = "docs";
-    private const string File = "plan.md";
-    private const string Suffix = "-" + File;
+    private const string PlanFile = "plan.md";
+    private const string Suffix = "-" + PlanFile;
 
     public static bool Is(string? path)
     {
@@ -28,7 +28,7 @@ public static class PlanPath
     }
 
     private static bool IsPlanFile(string name) =>
-        name == File || (name.EndsWith(Suffix, StringComparison.Ordinal) && IsWord(name[..^Suffix.Length]));
+        name == PlanFile || (name.EndsWith(Suffix, StringComparison.Ordinal) && IsWord(name[..^Suffix.Length]));
 
     private static bool IsWord(string part) => part.Length > 0 && part.All(c => c is (>= 'a' and <= 'z') or (>= '0' and <= '9') or '-');
 }

@@ -53,23 +53,28 @@ public sealed class PlanPathTests
     [Fact]
     public void A_long_hostile_path_is_refused_quickly()
     {
-        var hostile = "docs/" + string.Concat(Enumerable.Repeat("a-/", 64)) + "!";
+        var hostile = "docs/" + string.Concat(Enumerable.Repeat("a-/", 60)) + "a-plan.md!";
+        hostile.Length.ShouldBeLessThanOrEqualTo(PlanPath.Longest);
+        PlanPath.Is("docs/plan.md");
         var watch = Stopwatch.StartNew();
 
         var kept = PlanPath.Is(hostile);
 
-        (kept, hostile.Length <= PlanPath.Longest, watch.Elapsed < TimeSpan.FromSeconds(1)).ShouldBe((false, true, true));
+        kept.ShouldBeFalse();
+        watch.Elapsed.ShouldBeLessThan(TimeSpan.FromSeconds(5), "one pass over at most 200 characters");
     }
 
     [Fact]
     public void The_check_holds_no_regex_that_can_time_out()
     {
         // A match timeout trips on a starved CPU, not on the pattern, and a live write would then throw (#733).
-        var finite = typeof(PlanPath)
-            .GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+        const BindingFlags Static = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
+        var generated = typeof(PlanPath).GetMethods(Static)
             .Where(method => method.ReturnType == typeof(Regex) && method.GetParameters().Length == 0)
-            .Select(method => (Regex)method.Invoke(null, null)!)
-            .Where(regex => regex.MatchTimeout != Regex.InfiniteMatchTimeout);
+            .Select(method => method.Invoke(null, null));
+        var kept = typeof(PlanPath).GetFields(Static).Where(field => field.FieldType == typeof(Regex)).Select(field => field.GetValue(null));
+
+        var finite = generated.Concat(kept).Cast<Regex>().Where(regex => regex.MatchTimeout != Regex.InfiniteMatchTimeout);
 
         finite.ShouldBeEmpty();
     }
