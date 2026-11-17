@@ -1,6 +1,6 @@
 # Plan: the recap when a player comes back to an asynchronous game
 
-Status: accepted, 2026-11-16 (the owner settled the questions at the end). R1 is built; each stage below is one
+Status: accepted, 2026-11-16 (the owner settled the questions at the end). R1 and R2 are built; each stage below is one
 pull request.
 
 ## What the owner asked for
@@ -120,6 +120,20 @@ under way: a player who left the page open for two days, or who simply lost the 
    the sheet as data, with what was not seen marked. No page change yet. Tests: Node tests on
    recorded feeds: one cast, a round crossed, three rounds crossed, a creature defeated, a game that ended while the
    player was away, the seat's own choices, nothing unseen (the recent rounds still told), the first round.
+
+   *Built (2026-11-17)*: `buildRecap` in `table/battle-recap.js`, served by the host (`TableFiles`), takes the seat's
+   view, its feed, the seen sequence, the time now, the catalogue and the opponent's name, and returns the sheet's
+   five parts: `where` (opponent, round, step, the last move so long ago, the time left, the result, each side's
+   creatures standing and health, and who leads), `teams` (each creature now, defeated, fallen while away, and its
+   health change since the first recorded cast of the span the sheet tells: the frames are the only recorded health
+   a feed holds, so an Upkeep before that cast is not counted), `rounds` (the last completed round, the round under
+   way and every round with something not seen, oldest first, the older ones folded, each line in the history
+   summary's words and marked `unseen`), `chosen` (tempos, spells declared face down, the mutations bought last)
+   and `asked` (the question in the push notice's words, the opponent's reactions, those sent since the last visit
+   marked new), with `unseen`, the count of lines marked new, for R3's threshold. A seat with no last visit is told
+   the recent rounds with nothing marked new. Tests: `battle-recap.test.js` on a recorded match
+   (`battle-recap.fixture.json`, play --seed 1 as seat player1, kept out of the image). The glossary's *Recap*.
+   Left to R3: the sheet, its words in docs/domain/player-terminology.md, and the threshold on `seen.at`.
 3. **R3, the sheet in the battle view.** The dialog, its two buttons, the threshold, the cases where it never opens,
    the top bar's **Where you are** button, the journal's marker. Tests: Node tests of the threshold; a browser spec
    at 320 px and on desktop on the mock host (opens on its own, opens from the button with nothing unseen, Go to my
