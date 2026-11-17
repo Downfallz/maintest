@@ -73,3 +73,29 @@ export function createSeenSender({ send, now = () => Date.now(), later = (run, m
     },
   };
 }
+
+const PRESENT_KEY = 'downfall.battle.present.v1';
+
+/**
+ * Remembers when this browser last had `game` (a table and seat) on screen, as the page is hidden or closed: the
+ * recap measures time away from it as well as from the host's last visit, whose time moves only with the mark.
+ * @param {Storage | null | undefined} storage
+ * @param {string} game
+ * @param {number} at
+ */
+export function savePresent(storage, game, at) {
+  if (!game || !Number.isFinite(at)) return;
+  let kept = [];
+  try { const value = JSON.parse(storage?.getItem(PRESENT_KEY) ?? 'null'); if (Array.isArray(value)) kept = value; } catch { /* Started again. */ }
+  kept = kept.filter(one => one && typeof one.game === 'string' && one.game !== game);
+  try { storage?.setItem(PRESENT_KEY, JSON.stringify([{ game, at: new Date(at).toISOString() }, ...kept].slice(0, KEPT))); } catch { /* The host's visit alone measures. */ }
+}
+
+/** When this browser last had `game` on screen, or null. */
+export function presentAt(storage, game) {
+  try {
+    const value = JSON.parse(storage?.getItem(PRESENT_KEY) ?? 'null');
+    const found = Array.isArray(value) ? value.find(one => one?.game === game) : null;
+    return typeof found?.at === 'string' ? found.at : null;
+  } catch { return null; }
+}

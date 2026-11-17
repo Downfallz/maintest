@@ -28,18 +28,21 @@ export function questionText(waitingFor) {
 export const AWAY_MS = 60 * 60 * 1000;
 
 /**
- * Whether the sheet opens on its own as the seat comes back: after at least an hour since its last visit (`seenAt`,
- * the host's), with at least one line not seen. Never over a question the player is answering, in a tutorial or a
- * practice, in a replay, before everyone is seated, or for a device holding both seats (ADR 0120): those read the
- * catch-up as they do today, and the top bar's button opens the sheet at any time.
- * @param {{ view: any, recap: { unseen: number } | null, seenAt?: string | null, now: number, hotseat?: boolean,
- *   answering?: boolean }} input
+ * Whether the sheet opens on its own as the seat comes back: after at least an hour away, with at least one line not
+ * seen. Away is measured from the later of the host's last visit (`seenAt`, when the seat's mark last moved) and
+ * `presentAt`, when this browser last had the seat on screen: a page left open with nothing new moves no mark.
+ * Never in a tutorial or a practice, in a replay, before everyone is seated, or for a device holding both seats
+ * (ADR 0120): those read the catch-up as they do today, and the top bar's button opens the sheet at any time. It is
+ * decided before any question's sheet opens, so it never opens over one.
+ * @param {{ view: any, recap: { unseen: number } | null, seenAt?: string | null, presentAt?: string | null,
+ *   now: number, hotseat?: boolean }} input
  */
-export function recapOpensOnItsOwn({ view, recap, seenAt = view?.seen?.at ?? null, now, hotseat = false, answering = false }) {
-  if (!view || !recap || hotseat || answering) return false;
+export function recapOpensOnItsOwn({ view, recap, seenAt = view?.seen?.at ?? null, presentAt = null, now, hotseat = false }) {
+  if (!view || !recap || hotseat) return false;
   if (view.replay || view.practice || (view.waiting && !view.over)) return false;
-  const at = Date.parse(seenAt ?? '');
-  return Number.isFinite(at) && now - at >= AWAY_MS && recap.unseen > 0;
+  const at = Date.parse(seenAt ?? ''), present = Date.parse(presentAt ?? '');
+  if (!Number.isFinite(at)) return false;
+  return now - Math.max(at, Number.isFinite(present) ? present : at) >= AWAY_MS && recap.unseen > 0;
 }
 
 /** A creature's health over the span the sheet tells, as its line says it: `−12 HP`, `+3 HP`, or nothing. */

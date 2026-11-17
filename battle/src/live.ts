@@ -19,7 +19,7 @@ import { historyControls } from './history';
 import { buildRecap, recapOpensOnItsOwn } from '../../table/battle-recap.js';
 import { recapControls } from './recap';
 import { battleGuidance, waitingOn } from '../../table/battle-guidance.js';
-import { createSeenSender, saveSeen, seenSince } from '../../table/battle-seen.js';
+import { createSeenSender, presentAt, savePresent, saveSeen, seenSince } from '../../table/battle-seen.js';
 import { friendAction, opponentCard, opponentOf } from '../../table/battle-opponent.js';
 import { guidanceControls } from './guidance';
 import { effectiveSettings, gameOverride, loadSettings, localSettings, saveGameOverride } from '../../table/game-preferences.js';
@@ -191,7 +191,9 @@ function gather(feed: unknown) {
   if (!Array.isArray(feed)) return;
   for (const entry of feed as FeedEntry[]) if (Number.isInteger(entry?.sequence)) recapFeed.set(entry.sequence, entry);
 }
+// The seat on screen until now: the time away the recap measures starts here too.
 function resetRecap() {
+  if (seenGame && view) savePresent(storage, seenGame, Date.now());
   recapUI.dismiss(); recapFeed = new Map(); recapBack = null; recapDecided = false; recapPending = false;
   recapSeen = null; recapSeenAt = null; recapLoad++;
 }
@@ -207,7 +209,7 @@ function comingBack(next: View) {
   recapDecided = true;
   recapBack = seenSince(storage, seenGame!, next.seen);
   const now = Date.now(), recap = buildRecap({ view: next, feed: [...recapFeed.values()], seen: recapBack, now, catalogue, opponent: opponentName() });
-  recapPending = recapOpensOnItsOwn({ view: next, recap, now, hotseat: hotseat(), answering: combat.model().opened || planning.model().opened });
+  recapPending = recapOpensOnItsOwn({ view: next, recap, now, presentAt: presentAt(storage, seenGame!), hotseat: hotseat() });
 }
 function drawRecap() {
   if (!view) return;
@@ -218,6 +220,8 @@ function drawRecap() {
 // this page has shown so far when the button opens it. The live window keeps two rounds: older is loaded back.
 function openRecap(source: HTMLElement | null, seen: number | null, seenAt: string | null) {
   if (!view || recapUI.isOpen()) return;
+  // Opened by hand while it waited to open on its own: it is not opened a second time after it closes.
+  recapPending = false;
   recapSeen = seen; recapSeenAt = seenAt;
   drawRecap(); recapUI.open(source);
   void loadBack();
@@ -801,7 +805,7 @@ function choose(choice: Choice) {
   $('loading').hidden = true;
   $('seat-choices').replaceChildren(); $('retry').hidden = true;
   text('perspective', seatName(choice.seat).toUpperCase());
-  seenGame = `${choice.table.id}:${choice.seat}`; seenKept = null; resetRecap();
+  resetRecap(); seenGame = `${choice.table.id}:${choice.seat}`; seenKept = null;
   opponent = { seat: opponentOf(choice.table, choice.seat), ladder: null, friends: null }; drawOpponent(); void loadOpponent();
   upkeep.reset(`${choice.table.id}:${choice.seat}`); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(choice.seat); planning.reset(choice.seat); match.reset(choice.seat);
   helpUI.setGame(choice.table.id); applySettings();

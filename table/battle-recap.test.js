@@ -287,8 +287,15 @@ test('the time away is the one given over the seat view\'s', () => {
   assert.equal(opens(coming(5), 3, { seenAt: hoursAgo(0.5) }), false);
 });
 
-test('the sheet never opens on its own over a question being answered, a practice, a tutorial or a replay', () => {
-  assert.equal(opens(coming(5), 3, { answering: true }), false);
+test('the time away runs from the later of the host\'s last visit and this browser\'s last sight of the seat', () => {
+  // A page left open for hours with nothing new, hidden ten seconds while the opponent moved: not away.
+  assert.equal(opens(coming(5), 3, { presentAt: hoursAgo(0.01) }), false);
+  assert.equal(opens(coming(5), 3, { presentAt: hoursAgo(2) }), true);
+  assert.equal(opens(coming(0.2), 3, { presentAt: hoursAgo(4) }), false);
+  assert.equal(opens(coming(5), 3, { presentAt: 'never' }), true);
+});
+
+test('the sheet never opens on its own in a practice, a tutorial or a replay', () => {
   assert.equal(opens(coming(5, { practice: { scenario: 'flank' } })), false);
   assert.equal(opens(coming(5, { practice: { scenario: 'first', tutorial: { lesson: 1 } } })), false);
   assert.equal(opens(coming(5, { replay: true, over: true })), false);
