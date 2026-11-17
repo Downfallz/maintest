@@ -238,12 +238,17 @@ test('on a phone held upright the round\'s header is the only one: the menu and 
   await page.locator('.home-header .account-chip').click(); await expect(page.locator('.home-header .account-menu')).toBeInViewport();
 });
 
+// These tests check where a rematch goes, not the page there, which this server does not serve. A stand-in page
+// answers the request, because an empty 404 loads in the headless shell but fails the navigation in a full Chrome (#741).
+async function standIn(page) {
+  await page.route(url => ['/battle', '/lobby'].includes(url.pathname), route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Next</title>' }));
+}
 test('Rematch against the bot opens the same game at once, on a new table', async ({ page }, info) => {
   const h = await mount(page, { opponent: { seat: 'player2', kind: 'bot', name: 'Lookahead' } }); await matchResult(page);
   await expect(page.locator('#match-rematch')).toHaveText('Rematch');
   await fitsViewport(page, '#match-rematch, #match-replay, #match-lobby');
   await page.screenshot({ path: info.outputPath('final-result-rematch.jpg'), type: 'jpeg', quality: 85 });
-  await page.locator('#match-rematch').click();
+  await standIn(page); await page.locator('#match-rematch').click();
   await page.waitForURL(/\/battle\?player1=next$/);
   expect(h.writes).toEqual([{ path: '/api/lobby/tables', method: 'POST', body: { opponent: 'bot', format: '3v3' }, token: undefined }]);
 });
@@ -257,12 +262,14 @@ test('a rematch the host refuses stays on the card in its own words', async ({ p
 test('a friend is invited to the rematch at once; anyone else opens the lobby on them', async ({ page }) => {
   const friend = { seat: 'player2', kind: 'person', name: 'Bastien', account: 'acct_bastienbastienba' };
   let h = await mount(page, { opponent: friend, friends: [{ id: friend.account, username: 'Bastien' }] }); await matchResult(page);
-  await expect(page.locator('#match-rematch')).toHaveText('Invite to rematch'); await page.locator('#match-rematch').click();
+  await expect(page.locator('#match-rematch')).toHaveText('Invite to rematch');
+  await standIn(page); await page.locator('#match-rematch').click();
   await page.waitForURL(/\/battle\?player1=next$/);
   expect(h.writes).toEqual([{ path: '/api/lobby/tables', method: 'POST', body: { opponent: 'friend', friend: friend.account, format: '3v3' }, token: undefined }]);
   await page.unrouteAll({ behavior: 'ignoreErrors' });
   h = await mount(page, { opponent: friend }); await matchResult(page);
-  await expect(page.locator('#match-rematch')).toHaveText('Invite to rematch'); await page.locator('#match-rematch').click();
+  await expect(page.locator('#match-rematch')).toHaveText('Invite to rematch');
+  await standIn(page); await page.locator('#match-rematch').click();
   await page.waitForURL(/\/lobby\?rematch=acct_bastienbastienba&format=3v3$/); expect(h.writes).toEqual([]);
 });
 

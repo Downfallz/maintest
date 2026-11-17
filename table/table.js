@@ -846,6 +846,8 @@ function render(state, views) {
     state.evolving = null;
     state.inspectCreature = null;
     state.ordered = [];
+    // An accepted answer holds only while its own asking is drawn: once another is, nothing is held back.
+    state.accepted = null;
     // A new asking starts at the creature it names first, not at the tab the last one was left on.
     state.tempoFocus = null;
     element('decision').scrollTop = 0;
@@ -2823,6 +2825,10 @@ function renderDecision(state, current) {
   const asking = element('asking');
   const choices = element('choices');
   element('decision').classList.toggle('match-finished', Boolean(view.over));
+  // Once its answer is accepted, the question stays on screen until the next read replaces it. Its controls are
+  // disabled: a tap would answer a question the host has already moved past (#772).
+  const settled = state.accepted === askedKey(current.seat, view);
+  element('decision').setAttribute('aria-busy', String(settled || Boolean(state.sending)));
   element('decision-guide').replaceChildren();
   element('problem').hidden = !state.error;
   element('problem').textContent = state.error;
@@ -2891,6 +2897,7 @@ function renderDecision(state, current) {
   element('decision-guide').replaceChildren(...(view.waitingFor === 'Intent'
     ? [] : [guidancePanel(document, view, state.chosen, state.picked)]));
   choices.replaceChildren(...buttons);
+  if (settled) for (const control of choices.querySelectorAll('button')) control.disabled = true;
 }
 
 // While an opponent action is read, the sheet's heading is that action's -- its turn, its caster, its spell --
@@ -4049,7 +4056,9 @@ async function submit(state, current, decision) {
   // The guard is here and not only on the buttons, because there is no undo: on a slow connection a rapid
   // double tap posted twice, one call committing the decision and the other coming back 409, which showed the
   // player an error for a declaration that had in fact been accepted.
-  if (state.sending || state.playback || state.step) {
+  // An asking the host has already accepted an answer to is not answered again. Until the next read brings the next
+  // question, the sheet is still drawn from the old one, and a second tap would post to a question that is gone.
+  if (state.sending || state.playback || state.step || state.accepted === askedKey(current.seat, current.view)) {
     return;
   }
 
@@ -4075,6 +4084,7 @@ async function submit(state, current, decision) {
     state.chosen = null;
     state.ordered = [];
     state.error = '';
+    state.accepted = askedKey(current.seat, current.view);
     if (current.view.askedAs === 'Action') state.answered = `${current.seat}/${current.view.waitingAsked}`;
     state.stepSeen ??= new Map();
     state.stepSeen.set(current.seat, Math.max(state.stepSeen.get(current.seat) ?? -1, latestResolution(current.view.roundEvents) ?? -1));

@@ -30,6 +30,9 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
       return true;
     };
     const sent = [], shown = [], snapshots = [], frames = new Map();
+    // A new tab, as in battle.growth.js (#776): the tab that took the seat may already have shown this round's Upkeep
+    // sheet, which a tab shows once (sessionStorage); a new tab shares the seat (localStorage) and not that mark.
+    await page.close(); page = await context.newPage();
     await page.goto(`${origin}/battle`);
     page.on('request', request => {
       const url = new URL(request.url());
