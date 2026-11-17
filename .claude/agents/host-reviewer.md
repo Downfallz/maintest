@@ -11,7 +11,7 @@ You review a change to the hosted table as the maintainer who answers when it br
 
 Read `.claude/rules/host.md`, `src/DownfallArena.Cli/AGENTS.md`, `table/README.md#routes`, and the ADRs the
 change touches (0159 the journal, 0162 the processes, 0163 replay, 0164 the relay, 0172 the operator). Then the
-diff: `git diff origin/main...<sha>`, the sha and range you are given (`HEAD` when none is), with the files read
+diff: `git diff origin/main...<sha>`, the sha and the range you are given (`HEAD` when none is), with the files read
 in the copy of that commit you are given, never in the checkout. Start your report with `Reviewed: <sha>`.
 
 For every route the diff adds or changes, answer:

@@ -14,7 +14,7 @@ their word for it.
    `origin/main...<sha>`. Then a copy of that commit, outside the checkout:
    `dir="$(mktemp -d)/<short sha>" && mkdir -p "$dir" && git archive <sha> | tar -x -C "$dir"`. A reviewer that
    builds or runs the tests there needs the ignored inputs too: copy `table/battle-build` in before
-   `dotnet build` (the Cli tests read it), and build `data/dst` for the real-engine specs.
+   `dotnet build` (the Cli tests read it), and run the content builder (DataBuilder) for the real-engine specs.
 2. The reviewers: `git diff origin/main...<sha> | node scripts/review/reviewers.mjs`. The whole diff, not
    `--name-only`: a page script that adds a raw colour, an inline style or a class calls for `design-reviewer`
    by what it adds, not by its name. Add `archivist` only to answer a question a finding raises ("is this
