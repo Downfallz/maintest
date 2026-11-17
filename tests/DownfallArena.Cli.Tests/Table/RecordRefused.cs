@@ -5,10 +5,12 @@ namespace DownfallArena.Cli.Tests.Table;
 
 /// <summary>
 /// A store whose writes of <c>table.json</c> fail while <see cref="Refusing" /> is set, as a storage outage fails a
-/// seat change, and whose reads of it fail while <see cref="ReadsRefused" /> is.
+/// seat change, and whose reads of it fail while <see cref="ReadsRefused" /> is; or of another document, when named.
 /// </summary>
-internal sealed class RecordRefused(IArtifactStore inner) : IArtifactStore
+internal sealed class RecordRefused(IArtifactStore inner, string? file = null) : IArtifactStore
 {
+    public string File { get; } = file ?? TableRecord.File;
+
     public bool Refusing { get; set; }
 
     public bool ReadsRefused { get; set; }
@@ -34,18 +36,18 @@ internal sealed class RecordRefused(IArtifactStore inner) : IArtifactStore
         public Task<TaggedText?> ReadTaggedAsync(string relativePath, CancellationToken cancellationToken = default) =>
             Refused(relativePath) ? Task.FromException<TaggedText?>(new IOException("The store is out.")) : inner.ReadTaggedAsync(relativePath, cancellationToken);
 
-        private bool Refused(string relativePath) => store.ReadsRefused && relativePath.EndsWith(TableRecord.File, StringComparison.Ordinal);
+        private bool Refused(string relativePath) => store.ReadsRefused && relativePath.EndsWith(store.File, StringComparison.Ordinal);
     }
 
     private sealed class Refuser(RecordRefused store, IArtifactWriter inner) : IArtifactWriter
     {
         public Task WriteJsonAsync<TValue>(string relativePath, TValue value, CancellationToken cancellationToken = default) =>
-            store.Refusing && relativePath.EndsWith(TableRecord.File, StringComparison.Ordinal)
+            store.Refusing && relativePath.EndsWith(store.File, StringComparison.Ordinal)
                 ? Task.FromException(new IOException("The store is out."))
                 : inner.WriteJsonAsync(relativePath, value, cancellationToken);
 
         public Task<string?> WriteJsonIfAsync<TValue>(string relativePath, TValue value, string? expected, CancellationToken cancellationToken = default) =>
-            store.Refusing && relativePath.EndsWith(TableRecord.File, StringComparison.Ordinal)
+            store.Refusing && relativePath.EndsWith(store.File, StringComparison.Ordinal)
                 ? Task.FromException<string?>(new IOException("The store is out."))
                 : inner.WriteJsonIfAsync(relativePath, value, expected, cancellationToken);
 

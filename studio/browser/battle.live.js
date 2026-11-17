@@ -56,7 +56,10 @@ test('the real host supplies the battle and external decisions update it without
   await expect(battle.locator('#planning-dialog')).toHaveAttribute('data-kind', 'Speed', { timeout: 15000 });
   await expect(battle.locator('#planning-dialog')).toBeVisible();
   const speed = (await (await context.request.get(`${origin}/api/seat/player1`, { headers })).json()).waitingAsked;
-  expect(requests.filter(one => one.method !== 'GET').map(one => new URL(one.url).pathname)).toEqual(['/api/lobby/resume']);
+  // What the seat was shown is its own word, kept at the host (ADR 0194): a write that decides nothing.
+  const writes = requests.filter(one => one.method !== 'GET'), seen = '/api/seat/player1/seen';
+  expect(writes.filter(one => new URL(one.url).pathname !== seen).map(one => new URL(one.url).pathname)).toEqual(['/api/lobby/resume']);
+  expect(writes.filter(one => new URL(one.url).pathname === seen).every(one => one.method === 'PUT')).toBe(true);
   const shown = requests.map(one => new URL(one.url).searchParams.get('shown')).filter(Boolean).map(Number);
   expect(shown.filter(asked => !evolutions.has(asked) && asked !== speed)).toEqual([]);
   await battle.close();
