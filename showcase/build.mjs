@@ -1,5 +1,5 @@
 import { existsSync, readdirSync } from 'node:fs';
-import { cp, mkdir, mkdtemp, rename, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { EVOLUTION_REGISTRY } from '../table/battle-evolution-art.js';
@@ -12,6 +12,7 @@ import { routes } from './layout.mjs';
 import { specimenPath } from './lore.mjs';
 import { page } from './page.mjs';
 import { privacyPage } from './privacy.mjs';
+import { rulesPage } from './rules.mjs';
 import { GAME_ORIGIN } from '../table/site-origins.js';
 
 const source = new URL('../', import.meta.url);
@@ -25,6 +26,9 @@ if (application.protocol !== 'https:' || application.href !== application.origin
   throw new Error('GAME_ORIGIN must be an HTTPS origin without credentials, path, query or fragment.');
 
 const catalogue = await loadCatalogue();
+// The table's rulebook, the files its own page reads (ADR 0188, 0193): the showcase publishes the same book.
+const books = Object.fromEntries(await Promise.all([['en', 'rules.json'], ['fr', 'rules.fr.json']].map(async ([lang, file]) =>
+  [lang, JSON.parse(await readFile(new URL(`table/${file}`, source), 'utf8'))])));
 const packages = new Map(catalogue.nodes.map(t => [t.id, t]));
 const owned = [];
 const specimen = [EVOLUTION_REGISTRY.base()];
@@ -53,7 +57,7 @@ try {
   const documents = [english, french].flatMap(c => {
     const path = routes[c.lang];
     return [[path.home, page(c, specimen, application.href)], [path.guide, guidePage(c, catalogue, application.href)],
-      [path.privacy, privacyPage(c, application.href)], [path.copyright, copyrightPage(c, application.href)]]
+      [path.rules, rulesPage(c, books[c.lang], application.href)], [path.privacy, privacyPage(c, application.href)], [path.copyright, copyrightPage(c, application.href)]]
       .map(([route, html]) => [route.slice(1) + 'index.html', html]);
   });
   // Every file already there must be one this build writes, at any depth: the folder is removed whole below.

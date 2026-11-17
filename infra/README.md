@@ -141,8 +141,8 @@ the apex is then down until step 6.
 
 4. **GitHub, Actions, Publish the showcase, Run workflow**, on `main` (any other branch is skipped). Wait for a green
    run. From then on, a merge that touches the showcase deploys it, behind the gate.
-5. **Check the deployment** on https://downfallinstinct-showcase.pages.dev/: open `/`, `/fr/`, `/mutations/`, `/privacy/`
-   and `/copyright/`, and follow Play. In the browser's developer tools, check that the page's response has a
+5. **Check the deployment** on https://downfallinstinct-showcase.pages.dev/: open `/`, `/fr/`, `/mutations/`, `/rules/`,
+   `/privacy/` and `/copyright/`, and follow Play. In the browser's developer tools, check that the page's response has a
    `Content-Security-Policy` header. If it is missing, stop here.
 6. **Move the apex.** The old project, built by Cloudflare's Git integration, still serves it.
    **Workers & Pages, the old project, Custom domains**: remove `downfallinstinct.com`. Then **Workers & Pages,

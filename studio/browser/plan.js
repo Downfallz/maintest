@@ -42,12 +42,16 @@ const IMAGE_FILES = new Set([
 const IMAGE_FOLDERS = ['infra/', 'src/', 'tools/', 'data/', 'table/', 'battle/', 'learning/weights/', 'models/', 'scenarios/'];
 
 // What `node showcase/build.mjs` reads (ADR 0185), and what deploys it: the pages, the catalogue it renders,
-// the branding, the art and the modules that resolve it. Its own tests and its README are not read by the build.
+// the rulebook it publishes (the table's built book and the module that reads it), the branding, the art and the
+// modules that resolve it. Its own tests and its README are not read by the build.
 const SHOWCASE_FILES = new Set([
   'docs/art/branding.css',
   'battle/src/cue-art.js',
   'table/battle-evolution.js',
   'table/site-origins.js',
+  'table/rules.json',
+  'table/rules.fr.json',
+  'table/rules.js',
   'table/icon.svg',
   'table/brand-mark.svg',
   '.github/workflows/showcase.yml',
