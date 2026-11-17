@@ -141,6 +141,8 @@ public sealed class RedactedScenarioTests
     {
         RedactedScenario.Check(Redacted(title: "spell:pummel:v1 then creature:mark:v1"), Report, [("a player's name", "pummel"), ("a player's name", "Mark")]).IsSuccess.ShouldBeTrue();
         RedactedScenario.Check(Redacted(title: "Pummel: it did not tick"), Report, [("a player's name", "pummel")]).IsFailure.ShouldBeTrue();
+        RedactedScenario.Check(Redacted(title: "Sent by:Mark"), Report, [("a player's name", "Mark")]).IsFailure.ShouldBeTrue();
+        RedactedScenario.Check(Redacted(title: "Mark:round3"), Report, [("a player's name", "Mark")]).IsFailure.ShouldBeTrue();
     }
 
     [Fact]

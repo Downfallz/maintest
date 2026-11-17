@@ -86,7 +86,8 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
             return Refused(FeedbackErrors.Invalid("Filter by a kind (bug, idea), a status or open, and a category the sheet offers."));
         }
 
-        var filter = new FeedbackFilter(KindOf(kind), status is { Length: > 0 } and not "open" ? StatusOf(status) : null, category.Length > 0 ? category : null, OpenOnly: status == "open");
+        var filter = new FeedbackFilter(KindOf(kind), status is { Length: > 0 } and not "open" ? StatusOf(status) : null, category.Length > 0 ? category : null, OpenOnly: status == "open",
+            FiledOnly: asked["filed"] == "true");
         var page = await feedback.PageAsync(filter, int.TryParse(asked["page"], out var number) ? number : 1);
         return StudioResponse.OfJson(
             new
@@ -368,7 +369,8 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
     /// <c>scenario.json</c> (R5): what the operator attaches to the public issue by hand, since GitHub attaches a zip and
     /// not a <c>.json</c>. Refused while the report's table is under way, so nothing a seat holds face down that round
     /// reaches the issue, and refused when the file still names the session or holds a person. Each download is noted:
-    /// it is what leaves the host. A POST, so another site's link cannot write that line through the operator's cookie.
+    /// it is what leaves the host. A POST since it writes that line, which the host's cross-site fence holds to the panel
+    /// even in a browser that does not say where a request comes from.
     /// </summary>
     private async Task<StudioResponse> ScenarioZipAsync(string id, string operatorName)
     {

@@ -21,6 +21,7 @@ test('the list\'s address leaves out every filter that is every one, and the fir
   assert.equal(feedbackPath({ status: '' }), '/api/admin/feedback');
   assert.equal(feedbackPath(), '/api/admin/feedback?status=open');
   assert.equal(feedbackPath({ kind: 'idea', status: 'new', category: 'battle', page: 2 }), '/api/admin/feedback?kind=idea&status=new&category=battle&page=2');
+  assert.equal(feedbackPath({ kind: 'bug', filed: true }), '/api/admin/feedback?kind=bug&status=open&filed=true');
 });
 
 test('a row says the kind and category in the sheet\'s words, where it came from, and a new bug report stands out', () => {

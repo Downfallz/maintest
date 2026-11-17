@@ -114,10 +114,13 @@ public static class RedactedScenario
     };
 
     /// <summary>
-    /// Whether a text holds a name as a word of its own: neither a letter, a digit, '_' nor '-' on either side, and not
-    /// a part of a content id the journal names (<c>spell:pummel:v1</c>), which a ':' joins to its neighbours.
+    /// Whether a text holds a name as a word of its own: neither a letter, a digit, '_' nor '-' on either side. A content
+    /// id the journal names (<c>spell:pummel:v1</c>) is read as one word, never as the name inside it.
     /// </summary>
     private static bool Holds(string text, string name) =>
         text.Contains(name, StringComparison.OrdinalIgnoreCase)
-        && Regex.IsMatch(text, $@"(?<![\p{{L}}\p{{N}}_:-]){Regex.Escape(name)}(?![\p{{L}}\p{{N}}_-]|:[\p{{L}}\p{{N}}])", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
+        && Regex.IsMatch(ContentIds.Replace(text, " "), $@"(?<![\p{{L}}\p{{N}}_-]){Regex.Escape(name)}(?![\p{{L}}\p{{N}}_-])", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
+
+    /// <summary>A versioned content id, <c>kind:name:vN</c>, as the content and the journal write them.</summary>
+    private static readonly Regex ContentIds = new(@"(?<![\p{L}\p{N}_:-])[a-z][a-z0-9-]*:[a-z0-9_-]+:v\d+(?![\p{L}\p{N}_:-])", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
 }

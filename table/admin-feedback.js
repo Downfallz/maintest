@@ -63,12 +63,13 @@ export function categoryFilters() {
   })];
 }
 
-/** The address of a page of the list, each filter left out when it is every one. */
-export function feedbackPath({ kind = '', status = 'open', category = '', page = 1 } = {}) {
+/** The address of a page of the list, each filter left out when it is every one; `filed` keeps what names an issue. */
+export function feedbackPath({ kind = '', status = 'open', category = '', filed = false, page = 1 } = {}) {
   const query = new URLSearchParams();
   if (kind) query.set('kind', kind);
   if (status) query.set('status', status);
   if (category) query.set('category', category);
+  if (filed) query.set('filed', 'true');
   if (Number.isInteger(page) && page > 1) query.set('page', String(page));
   const text = query.toString();
   return text ? `/api/admin/feedback?${text}` : '/api/admin/feedback';
@@ -759,12 +760,11 @@ export function mountFeedbackTab({ send, download, github = globalThis.fetch?.bi
     // Once in ten minutes at most: each look reads every record kept, and GitHub answers sixty requests an hour.
     if (checking || !github || Date.now() - checked < CHECK_EVERY) return;
     checking = true;
-    checked = Date.now();
     try {
       const rows = [];
       let repository = null;
       for (let number = 1, pages = 1; number <= Math.min(pages, CHOICE_PAGES); number += 1) {
-        const answer = await send('GET', feedbackPath({ kind: 'bug', status: 'open', page: number }));
+        const answer = await send('GET', feedbackPath({ kind: 'bug', status: 'open', filed: true, page: number }));
         if (!answer.ok) return;
         rows.push(...(answer.body.feedback ?? []).filter(row => Number.isInteger(row.issue)));
         repository = answer.body.repository ?? repository;
@@ -781,6 +781,8 @@ export function mountFeedbackTab({ send, download, github = globalThis.fetch?.bi
           for (const issue of closedIssues(issues)) closed.add(issue);
           if (!Array.isArray(issues) || issues.length < 100) break;
         }
+        // Counted from GitHub's answer: a look the host or GitHub could not answer is tried again at the next opening.
+        checked = Date.now();
       } catch {
         const told = element('admin-feedback-said');
         told.textContent = 'GitHub could not be asked whether the filed issues are closed. The reports stay filed until it can.';

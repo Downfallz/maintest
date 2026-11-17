@@ -227,14 +227,15 @@ public sealed class FeedbackIssueTests : IDisposable
 
         var seat = table.Seats[0];
         (await table.Api.HandleAsync("GET", $"/api/seat/{seat.Name}", string.Empty, seat.Token)).Status.ShouldBe(200);
-        var (finished, _, cut, _) = await ReproducedAsync();
-        var fromLiveTable = await _scenarios.PutAsync(cut with { Session = table.Id, Scenario = cut.Scenario with { Source = cut.Scenario.Source with { Run = table.Id } } }, Cancel);
-        var report = await ReportedAsync(new FeedbackContext { Scenario = "sc-20261116-120000-0a1b2c3d", Seat = "player2", Round = 2 });
+        var (_, _, cut, practised) = await ReproducedAsync();
+
+        // A practice's cut keeps no session, as Reproduce writes it: only its source's run names the table.
+        var fromLiveTable = await _scenarios.PutAsync(cut with { Session = null, Scenario = cut.Scenario with { Source = cut.Scenario.Source with { Run = table.Id } } }, Cancel);
+        var report = await ReportedAsync(new FeedbackContext { Scenario = practised, Seat = "player2", Round = 2 });
         await _feedback.SaveAsync(report with { Reproduction = fromLiveTable }, Cancel);
 
         var refused = await AskAsync("POST", report.Id, "scenario.zip");
 
-        finished.ShouldNotBeNull();
         (refused.Status, Read(refused).GetProperty("error").GetString()).ShouldBe((409, "Feedback.UnderWay"));
     }
 
@@ -278,6 +279,20 @@ public sealed class FeedbackIssueTests : IDisposable
         var row = list.GetProperty("feedback").EnumerateArray().ShouldHaveSingleItem();
         (row.GetProperty("id").GetString(), row.GetProperty("issue").GetInt32()).ShouldBe((report.Id, 731));
         (await ActivityAsync()).ShouldBe([$"feedback.file {report.Id} #731"]);
+    }
+
+    [Fact]
+    public async Task The_list_keeps_the_open_reports_that_name_an_issue_whatever_their_status()
+    {
+        var filed = await ReportedAsync(new FeedbackContext { Table = "20261116-120000-deadbeef", Seat = "player1", Round = 2 });
+        await ReportedAsync(new FeedbackContext { Table = "20261116-120000-deadbeef", Seat = "player1", Round = 3 });
+        await AskAsync("PUT", filed.Id, "status", new { status = "filed", issue = 731 });
+        await AskAsync("PUT", filed.Id, "status", new { status = "reproduced" });
+
+        var list = Read(await Tab().HandleAsync("GET", FeedbackAdminApi.Route, string.Empty, "mark", "kind=bug&status=open&filed=true"));
+
+        var row = list.GetProperty("feedback").EnumerateArray().ShouldHaveSingleItem();
+        (row.GetProperty("id").GetString(), row.GetProperty("status").GetString(), row.GetProperty("issue").GetInt32()).ShouldBe((filed.Id, "reproduced", 731));
     }
 
     [Fact]

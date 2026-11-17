@@ -427,14 +427,14 @@ and they are the first thing every player can use.
    cut only up to the journal's length when the player wrote; a practice's report keeps every entry it copied. Its
    `Check` reads the file as written and refuses a file whose source is not the report's, whose journal keeps a time,
    or that holds, as a word of its own and in any case, any name it is given. It does not read the carried content or
-   the fields' names, and a word a ':' joins to its neighbours is part of a content id (`spell:pummel:v1`), not a name.
+   the fields' names, and it reads a content id (`spell:pummel:v1`) as one word, never as the name inside it.
    It says what it found ("an account"), never the name.
 
    `POST /api/admin/feedback/<id>/scenario.zip` writes the file with its content and checks it against the report's
    sender, account and table, the session's ids, and, from the table's record, every seat's key, code, invitation and
    account, the pilot's key, and the players' names. It answers `report-<id>.zip` holding one `scenario.json`, and
-   notes `feedback.download`. The route is a POST, not the GET the routes table above named: a download writes an
-   Activity line, and a GET another site links to would carry the operator's cookie. Every answer says
+   notes `feedback.download`. The route is a POST, not the GET the routes table above named, since a download writes an
+   Activity line. Every answer says
    `Cache-Control: no-store, private`, since Cloudflare keeps a `.zip` by its extension. A report from a table still
    under way is refused (`Feedback.UnderWay`), and so is one whose scenario was cut from a table still under way, as a
    practice's may be. R4's cut may hold the other seat's face-down choices of a round still played. The sheet says
@@ -450,7 +450,8 @@ and they are the first thing every player can use.
 
    The operator pastes back the issue's number, or its address in the same repository, and the report reads *Filed #N*
    (`feedback.file`). Its sheet links the issue, so a mistyped number shows. The number stays through the statuses set
-   after it. Opening the tab, once in ten minutes at most, reads the open bug reports that name an issue. It then asks
+   after it. Opening the tab, once in ten minutes at most after GitHub last answered, reads the open bug reports that
+   name an issue (`filed=true`). It then asks
    GitHub's public API for the closed `from-report` issues updated since the oldest of them was sent: a hundred a page,
    five pages at most. A report whose issue was closed as completed is marked *fixed* (`feedback.status`). One whose
    issue was closed as not planned, or as a duplicate, stays open. `fixed` is refused on a report never filed
@@ -463,7 +464,8 @@ and they are the first thing every player can use.
 
    Left: a player named like a word the journal holds on its own (`person`, `player1`) cannot have the scenario
    downloaded, and the sheet says a player's name is held. Past 500 closed issues updated since the oldest open filed
-   report, or past 100 open bug reports, the rest are not read. The repository is a constant, not the host's
+   report, or past 100 open filed reports, the rest are not read. A report whose table's record is missing or cannot
+   be read is not held as under way: no host can pick that table up and play it (ADR 0159). The repository is a constant, not the host's
    configuration. No browser spec plays the new buttons yet.
 8. **R6, bug scenarios and their tests.** `scenarios/bugs/` read by the host and listed as *Bug #N*;
    `ScenarioFileTests` asking a bug file's answers only up to its reported point; the `BugScenario` test helper;
