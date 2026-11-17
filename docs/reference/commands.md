@@ -453,13 +453,26 @@ The seat's view says the lesson under `practice.tutorial`:
   sorts by `askedBy`, then by the newest ask.
   `PUT .../<id>/kind {"kind"}` turns a bug report into an idea, or an idea into a bug report. It keeps the words,
   position and sender and sets the status to seen. A closed one gets 409 `Feedback.Closed`.
+  `POST .../<id>/reproduce` cuts a bug report's round as a match scenario (feedback plan, R4). The cut is at the top of
+  the reported round, in the reporter's seat, through the Scenarios tab's own cutting. It reads the table's recorded
+  session. For a report from a practice, it reads the scenario the practice was opened from, then the entries the
+  report copied. Its title is `Report <id>, round N` and its goal is empty. It answers the sheet, whose `reproduction`
+  is `{"id","link"}`, the link being `/battle?scenario=<id>`. The status does not change. Asked again while that
+  scenario still exists, it cuts nothing and answers the same sheet. An idea is 409 `Feedback.NotABug`, and a report
+  sent outside a round 409 `Feedback.NoPosition`. A round the journal does not offer is 409
+  `Scenario.RoundUnavailable`, with `rounds` listing the rounds it does offer. The source answers as the Scenarios tab
+  does: 404 `Scenario.NoSession`, 409 `Scenario.NoRules` or `Scenario.ContentGone`; for a practice, 409
+  `Scenario.NotFound` when the scenario it was opened from is gone, and 409 `Scenario.Invalid` when its copied entries
+  cannot be read. A report sent without its seat is 409 `Feedback.NoPosition` too: it is never cut in the other one.
+  The sheet links the scenario while it is kept, and only on a bug report. A host that keeps no scenarios has no such
+  route (404).
   `POST`/`DELETE .../<id>/mute` stops its sender for 30 days and lifts it (409 `Feedback.NoSender` for a deleted
   account's, or an account's on a host that keeps no account activity). An account's mute is kept with its activity
   record and dropped at its first write after the mute ends; a guest's is kept in the process's memory. Unknown
   feedback is 404 `Feedback.NotFound`, and a store that fails 503 `Feedback.Unavailable`. Asked again, a change
   writes nothing and notes nothing. Each change adds an Activity line (`feedback.status`, `feedback.convert`,
-  `feedback.spam`, `feedback.mute`, `feedback.unmute`, `feedback.merge`). A merged idea is deleted with the idea its
-  group became. The Overview's Feedback waiting card counts feedback
+  `feedback.spam`, `feedback.mute`, `feedback.unmute`, `feedback.merge`, `feedback.reproduce`). A merged idea is
+  deleted with the idea its group became. The Overview's Feedback waiting card counts feedback
   nobody has seen yet, in the warning colour while a bug report is new or the host is full for the day.
 
   A new one is kept and answers 201 `{"id","merged":false}`.

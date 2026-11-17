@@ -1,6 +1,6 @@
 # Plan: feedback, a bug report to a regression test and an idea to a plan
 
-Status: accepted, 2026-11-16 (the owner settled the questions at the end). R0 to R3 and I1 are built; R4 is next.
+Status: accepted, 2026-11-16 (the owner settled the questions at the end). R0 to R4 and I1 are built; R5 is next.
 
 ## What the owner asked for
 
@@ -390,6 +390,32 @@ and they are the first thing every player can use.
 6. **R4, Reproduce.** The button over `ScenarioAdminApi`: the cut at the reported round in the reporter's seat,
    from the session or from a practice's copied entries, the practice link. Tests: a report on a recorded greedy
    3v3 cut and opened as a practice on its board; a round the journal does not offer; a practice's report cut.
+
+   *Built (2026-11-16)*: `POST /api/admin/feedback/<id>/reproduce` cuts through `ScenarioAdminApi`, as the Scenarios
+   tab does, and answers the sheet. A report from a table is cut from its recorded session. A report from a practice
+   is cut from the scenario the practice was opened from. The cut keeps that scenario's entries before its cut, then
+   the entries the report copied (`ScenarioFile.EntriesOf`). A report that copied none offers that scenario's own
+   round alone. The new scenario keeps the table's session (none for a practice), the title *Report <id>, round N*
+   and no goal. The report keeps the scenario's id (`Feedback.Reproduction`), and its sheet links it as **Play the
+   reported round**.
+
+   Asked again while that scenario still exists, Reproduce cuts nothing and writes no Activity line. Two presses at
+   once both cut; the second to reach the report finds the first one's scenario and lets its own go, so one scenario
+   and one line remain, and the page's button waits for its answer. Once the scenario was removed from the Scenarios
+   tab, the sheet links it no more and Reproduce cuts again. The status stays the operator's to set once they have
+   played the round. A round the journal does not offer answers 409 with the rounds it does, and the sheet says them.
+   An idea is refused (`Feedback.NotABug`), and so is a report that names no round or no seat (`Feedback.NoPosition`):
+   a cut in the other seat would have the bot replay the reporter's own answers. Neither offers the button. An idea
+   sent from a seat now keeps the seat with its table and round, so one turned into a bug report can be cut. The
+   Activity line is `feedback.reproduce`, with the scenario, round and seat.
+
+   A scenario cut from the practice of a repository scenario does not carry that scenario's content. It plays only
+   while the repository scenario still ships.
+
+   Left to R5: the redacted scenario is read from the scenario the report keeps. A report from a table still under
+   way is cut with the entries already journaled after the cut, the other seat's face-down choices of that round
+   among them, as any cut from the Scenarios tab is: the scenario is the operator's, but the redacted one must not
+   carry them.
 7. **R5, the redacted scenario and the issue.** `RedactedScenario`, **Download the scenario** as a zip, the issue
    form `bug_from_report.yml`, the `from-report` label, **File an issue** with its pre-filled address, *filed #N*,
    and *fixed* read from GitHub. Tests: `RedactedScenarioTests` (every id replaced, times at the epoch, a file

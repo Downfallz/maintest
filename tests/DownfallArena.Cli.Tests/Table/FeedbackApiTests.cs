@@ -148,6 +148,18 @@ public sealed class FeedbackApiTests : IDisposable
     }
 
     [Fact]
+    public async Task An_idea_from_a_seat_keeps_where_it_was_sent_from_and_no_position()
+    {
+        var table = await BegunAsync();
+        var seat = table.Seats[0];
+
+        var kept = await KeptAsync(await Api().HandleAsync("POST", Idea(), seat.Token, SignedOut, Address, null));
+
+        var context = kept.Context.ShouldNotBeNull();
+        (context.Table, context.Seat, context.Round, context.Position, context.Content).ShouldBe((table.Id, seat.Name, 1, null, null));
+    }
+
+    [Fact]
     public async Task An_idea_from_a_signed_in_account_is_kept_under_the_account()
     {
         var accounts = await AccountsAsync();

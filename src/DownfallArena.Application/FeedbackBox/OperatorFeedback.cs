@@ -142,6 +142,42 @@ public sealed class OperatorFeedback(IFeedbackStore store, FeedbackMutes mutes, 
     public Task<Result<FeedbackKindChange>> ChangeKindAsync(string id, FeedbackKind kind, CancellationToken cancellationToken = default) =>
         writes.OneAtATimeAsync(() => KindAsync(id, kind, cancellationToken), cancellationToken);
 
+    /// <summary>
+    /// Keeps on a bug report the scenario <b>Reproduce</b> cut from it (R4), so the sheet links it and the operator's
+    /// next press plays it again rather than cutting another. Only a bug report is reproduced; its status is the
+    /// operator's to set once they have played the round. When another press kept a scenario since, one
+    /// <paramref name="stillKept" /> finds, that one stays and the report is answered as it is: the caller lets its own
+    /// cut go, so two presses at once leave one scenario.
+    /// </summary>
+    public Task<Result<Feedback>> ReproducedAsync(string id, string scenario, Func<string, Task<bool>> stillKept, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(scenario);
+        ArgumentNullException.ThrowIfNull(stillKept);
+        return writes.OneAtATimeAsync(() => ReproducingAsync(id, scenario, stillKept, cancellationToken), cancellationToken);
+    }
+
+    private async Task<Result<Feedback>> ReproducingAsync(string id, string scenario, Func<string, Task<bool>> stillKept, CancellationToken cancellationToken)
+    {
+        if (await FindAsync(id, cancellationToken) is not { } feedback)
+        {
+            return Result.Failure<Feedback>(FeedbackErrors.NotFound(id));
+        }
+
+        if (feedback.Kind != FeedbackKind.Bug)
+        {
+            return Result.Failure<Feedback>(FeedbackErrors.NotABug);
+        }
+
+        if (feedback.Reproduction is { } kept && (kept == scenario || await stillKept(kept)))
+        {
+            return Result.Success(feedback);
+        }
+
+        var reproduced = feedback with { Reproduction = scenario };
+        await store.SaveAsync(reproduced, cancellationToken);
+        return Result.Success(reproduced);
+    }
+
     /// <summary>Stops the feedback's sender from sending more for <see cref="FeedbackMute.Lasts" />; a mute that holds already is kept as it is.</summary>
     public async Task<Result<FeedbackMuteChange>> MuteAsync(string id, string by, CancellationToken cancellationToken = default)
     {

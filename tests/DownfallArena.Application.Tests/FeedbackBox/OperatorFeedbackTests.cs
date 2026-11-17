@@ -61,6 +61,39 @@ public sealed class OperatorFeedbackTests : IDisposable
     };
 
     [Fact]
+    public async Task A_bug_report_keeps_the_scenario_cut_from_it_and_its_status()
+    {
+        var report = await KeptAsync();
+
+        var reproduced = await Desk().ReproducedAsync(report.Id, "sc-20261116-120000-0a1b2c3d", _ => Task.FromResult(false), Cancel);
+
+        (reproduced.Value.Reproduction, reproduced.Value.Status).ShouldBe(("sc-20261116-120000-0a1b2c3d", FeedbackStatus.New));
+        (await _store.FindAsync(report.Id, Cancel))!.Reproduction.ShouldBe("sc-20261116-120000-0a1b2c3d");
+    }
+
+    [Fact]
+    public async Task A_scenario_another_press_kept_stays_and_one_since_removed_is_replaced()
+    {
+        var report = await KeptAsync();
+        await Desk().ReproducedAsync(report.Id, "sc-20261116-120000-00000001", _ => Task.FromResult(false), Cancel);
+
+        var second = await Desk().ReproducedAsync(report.Id, "sc-20261116-120000-00000002", _ => Task.FromResult(true), Cancel);
+        var third = await Desk().ReproducedAsync(report.Id, "sc-20261116-120000-00000003", _ => Task.FromResult(false), Cancel);
+
+        (second.Value.Reproduction, third.Value.Reproduction).ShouldBe(("sc-20261116-120000-00000001", "sc-20261116-120000-00000003"));
+    }
+
+    [Fact]
+    public async Task An_idea_is_not_reproduced()
+    {
+        var idea = await KeptAsync(FeedbackKind.Idea, category: "battle");
+
+        var refused = await Desk().ReproducedAsync(idea.Id, "sc-20261116-120000-0a1b2c3d", _ => Task.FromResult(false), Cancel);
+
+        refused.Error.ShouldBe(FeedbackErrors.NotABug);
+    }
+
+    [Fact]
     public async Task A_bug_report_turned_into_an_idea_and_back_keeps_its_words_and_its_position()
     {
         var report = await KeptAsync(category: "rules");

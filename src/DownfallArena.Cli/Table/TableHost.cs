@@ -291,6 +291,9 @@ internal static class TableHost
 
         await using var practices = scenarioStore is null ? null : new ScenarioPractices(composer, scenarioStore, clock);
         admin.Scenarios = scenarioStore is null || stored is null ? null : new ScenarioAdminApi(scenarioStore, stored, composer) { Notes = admin.Notes };
+
+        // Reproduce (feedback plan, R4) cuts a bug report's round through the Scenarios tab's own cutting.
+        admin.Feedback?.Scenarios = admin.Scenarios;
         var sendFeedback = feedback is null ? null : new SendFeedback(feedback, new GuestAddresses(), feedbackWrites, clock, feedbackMutes);
         using var server = new TableServer(options.Bind, options.Port, registry, new TableFiles(TableDirectory), admin, clock, stored, accounts, leaderboard, friends, stats)
         {

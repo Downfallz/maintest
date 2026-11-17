@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { askedLine, askLinks, categoryFilters, choicesNote, categoryLabel, changeSaid, creatureLine, feedbackLine, feedbackPath, feedbackRows, mergeChoices, muteLine, planPrompt, positionSides, sheetActions, sheetFacts, sheetWords, statusLine, STATUS_FILTERS } from './admin-feedback.js';
+import { askedLine, askLinks, categoryFilters, choicesNote, categoryLabel, changeSaid, creatureLine, feedbackLine, feedbackPath, feedbackRows, mergeChoices, muteLine, planPrompt, positionSides, reproduceSaid, sheetActions, sheetFacts, sheetWords, statusLine, STATUS_FILTERS } from './admin-feedback.js';
 
 const NOW = Date.parse('2026-11-16T12:00:00Z');
 
@@ -14,7 +14,7 @@ const report = {
     allies: [{ name: 'Ravager', health: 7, maxHealth: 10, energy: 2, isStunned: true, conditions: [{ effect: { kind: 'Bleed' } }] }],
     enemies: [{ name: 'Warden', health: 0, maxHealth: 12, energy: 0, isStunned: false, conditions: [] }],
   } },
-  session: '/session/20261116-110000-deadbeef', underWay: true, actions: ['seen', 'reproduced', 'dismiss', 'spam', 'toIdea', 'diagnose', 'mute'],
+  session: '/session/20261116-110000-deadbeef', underWay: true, actions: ['reproduce', 'seen', 'reproduced', 'dismiss', 'spam', 'toIdea', 'diagnose', 'mute'],
 };
 
 test('the list\'s address leaves out every filter that is every one, and the first page', () => {
@@ -71,7 +71,8 @@ test('the position is drawn as the reporter\'s side then the other, a creature a
 
 test('the sheet shows the buttons the host offers, and none it does not', () => {
   const bug = sheetActions(report);
-  assert.deepEqual([bug.seen, bug.reproduced, bug.toIdea, bug.toBug, bug.diagnose, bug.mute, bug.unmute], [true, true, true, false, true, true, false]);
+  assert.deepEqual([bug.reproduce, bug.seen, bug.reproduced, bug.toIdea, bug.toBug, bug.diagnose, bug.mute, bug.unmute], [true, true, true, true, false, true, true, false]);
+  assert.equal(sheetActions({ ...report, actions: ['seen'] }).reproduce, false, 'a report sent outside a round has nothing to cut');
 
   assert.deepEqual(Object.values(sheetActions({ ...report, actions: ['bogus'] })).filter(Boolean), []);
   assert.deepEqual(Object.values(sheetActions(null)).filter(Boolean), [], 'a sheet still being read offers nothing');
@@ -82,6 +83,21 @@ test('a mute says how long it lasts and why, and a change says what the host ans
   assert.equal(muteLine({ daysLeft: 1, why: 'operator', by: 'mark' }), 'This player can send no feedback for 1 more day (by mark).');
   assert.deepEqual(changeSaid({ ok: true, body: {} }, 'Marked seen.'), { refused: false, line: 'Marked seen.' });
   assert.deepEqual(changeSaid({ ok: false, status: 409, body: { message: 'This feedback is closed.' } }, 'x'), { refused: true, line: 'This feedback is closed.' });
+});
+
+test('Reproduce says the round it cut, the rounds the journal offers instead, or what the host refused', () => {
+  assert.deepEqual(reproduceSaid({ ok: true, body: { ...report, reproduction: { id: 'sc-1', link: '/battle?scenario=sc-1' } } }),
+    { refused: false, line: 'Round 3 is cut, in the reporter\'s seat. Play it from the link.' });
+  assert.deepEqual(reproduceSaid({ ok: false, status: 409, body: { error: 'Scenario.RoundUnavailable', message: 'x', rounds: [1, 2, 3] } }),
+    { refused: true, line: 'The reported round cannot be cut. The match\'s journal offers rounds 1, 2 and 3: cut one from the Scenarios tab.' });
+  assert.equal(reproduceSaid({ ok: false, status: 409, body: { message: 'x', rounds: [2] } }).line,
+    'The reported round cannot be cut. The match\'s journal offers round 2: cut one from the Scenarios tab.');
+  assert.equal(reproduceSaid({ ok: false, status: 409, body: { message: 'x', rounds: [] } }).line, 'The reported round cannot be cut, and the match\'s journal offers no round.');
+  const practice = { ...report, context: { scenario: 'sc-1', seat: 'player2', round: 3 } };
+  assert.equal(reproduceSaid({ ok: false, status: 409, body: { message: 'x', rounds: [2] } }, practice).line,
+    'The reported round cannot be cut from what this report copied of its practice, which reaches round 2 only.');
+  assert.deepEqual(reproduceSaid({ ok: false, status: 409, body: { error: 'Feedback.NoPosition', message: 'This report was not sent from a round.' } }),
+    { refused: true, line: 'This report was not sent from a round.' });
 });
 
 const idea = {

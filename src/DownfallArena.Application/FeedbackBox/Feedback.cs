@@ -72,6 +72,12 @@ public sealed record Feedback
     /// <summary>For an idea planned, or shipped since, the path of the plan it went into (<c>docs/…-plan.md</c>). None otherwise.</summary>
     public string? Plan { get; init; }
 
+    /// <summary>
+    /// For a bug report, the match scenario **Reproduce** cut from it at the reported round, in its sender's seat
+    /// (docs/tabletop/feedback-plan.md, R4): the scenario's id in the host's store. None until the operator asked.
+    /// </summary>
+    public string? Reproduction { get; init; }
+
     /// <summary>The reason that marks feedback dismissed as spam, which counts against its sender.</summary>
     public const string SpamReason = "spam";
 
