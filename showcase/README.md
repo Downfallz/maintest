@@ -41,6 +41,8 @@ python3 -m http.server 8080 --directory showcase/dist
 
 Open http://localhost:8080/ or http://localhost:8080/fr/. Run `node --test showcase/*.test.js`. It builds
 into a temporary folder and checks the ten localized pages, their navigation, the complete catalogue, the whole rulebook and the single disclosed hybrid. The build uses Node built-ins.
+The guide anchors each entry by its short id (`#form-lich`). The build therefore refuses two enabled versions
+of one mutation, or of one spell the guide shows.
 `node showcase/build.mjs <folder>` writes into another folder and replaces it, so it refuses one that holds
 anything the build does not write. Both origins, the apex and the game, are named once in
 `table/site-origins.js`. The origin of the Play buttons can be overridden for a test deployment with
