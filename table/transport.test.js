@@ -239,3 +239,27 @@ test('a reaction is posted to the seat by its name alone (ADR 0173)', async () =
   assert.equal(calls[0].options.headers['X-Seat-Token'], 'abc');
   assert.equal(calls[0].options.body, '{"reaction":"good-game"}');
 });
+
+test('what a seat was shown is put to the seat as the last feed sequence (ADR 0194)', async () => {
+  const { calls, fetchImpl } = stub({ status: 200, body: '{"seen":{"sequence":12}}' });
+  const transport = httpTransport('player1', 'abc', fetchImpl);
+
+  await transport.seen(12);
+
+  assert.equal(calls[0].path, '/api/seat/player1/seen');
+  assert.equal(calls[0].options.method, 'PUT');
+  assert.equal(calls[0].options.headers['X-Seat-Token'], 'abc');
+  assert.equal(calls[0].options.body, '{"sequence":12}');
+  // Sent as the page is hidden too: the browser keeps the request going after the page goes.
+  assert.equal(calls[0].options.keepalive, true);
+});
+
+test('a replay says nothing of what it showed: it asks the host nothing', async () => {
+  const { calls, fetchImpl } = stub({ status: 200, body: replayed });
+  const transport = replayTransport('x', 'player1', null, fetchImpl);
+
+  const answer = await transport.seen(4);
+
+  assert.equal(calls.length, 0);
+  assert.equal(answer.ok, false);
+});

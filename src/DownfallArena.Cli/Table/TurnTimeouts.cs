@@ -35,6 +35,18 @@ internal static class TurnTimeouts
     }
 
     /// <summary>
+    /// When a table's time to answer runs out, from its last move read already (<paramref name="lastMove" />, none for a
+    /// table whose journal holds none): what the seat's view says, without asking the journal a second time.
+    /// </summary>
+    internal static DateTimeOffset? AnswerBy(PlayedTable table, DateTimeOffset? lastMove)
+    {
+        ArgumentNullException.ThrowIfNull(table);
+        return table.TurnLimit is not { } limit || table.IsOver || !table.Session.HasBegun
+            ? null
+            : (lastMove ?? table.Session.BegunAt ?? table.CreatedAt) + limit;
+    }
+
+    /// <summary>
     /// Whether this pass is the one to warn a table's player (ADR 0169): a quarter of the limit or less is left, and
     /// it was more than that an interval of the job ago. The job runs once an interval, so one pass lands there.
     /// </summary>

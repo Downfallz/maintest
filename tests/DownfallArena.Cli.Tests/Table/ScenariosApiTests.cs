@@ -92,7 +92,8 @@ public sealed class ScenariosApiTests : IDisposable
     public async Task A_scenario_cut_and_removed_is_noted_in_the_operators_activity()
     {
         var (session, first) = await CutAsync();
-        var actions = new OperatorActions(new FileOperatorLog(_root), TimeProvider.System);
+        // The test's clock stands still: the cut and the removal are noted at one instant, and read in the order noted (#674).
+        var actions = new OperatorActions(new FileOperatorLog(_root), _clock);
         var admin = new ScenarioAdminApi(_store, _hosted.Stored!, _hosted.Composer) { Notes = new OperatorNotes(actions) };
 
         var cut = await admin.HandleAsync("POST", ScenarioAdminApi.Route, JsonSerializer.Serialize(new { session, round = 2 }), "mark");
@@ -338,7 +339,8 @@ public sealed class ScenariosApiTests : IDisposable
     public async Task Listing_and_taking_off_are_noted_in_the_operators_activity()
     {
         var (_, scenario) = await CutAsync();
-        var actions = new OperatorActions(new FileOperatorLog(_root), TimeProvider.System);
+        // The test's clock stands still: the listing and the taking off are noted at one instant, and read in the order noted (#674).
+        var actions = new OperatorActions(new FileOperatorLog(_root), _clock);
         var admin = new ScenarioAdminApi(_store, _hosted.Stored!, _hosted.Composer) { Notes = new OperatorNotes(actions) };
 
         await admin.HandleAsync("PUT", $"{ScenarioAdminApi.Route}/{scenario}/listing", """{"listed":true}""", "mark");
@@ -918,15 +920,16 @@ public sealed class ScenariosApiTests : IDisposable
         var play = await OpenTutorialAsync(store, practices, "learner");
         var tutorial = play.Api.Practice.ShouldNotBeNull().Tutorial.ShouldNotBeNull();
         var gate = new Lock();
-        (int Thread, bool HandedBack) lastBump = default;
+        // The last bump each thread made: the match may move on another thread meanwhile, and its bump is its own (#683).
+        var lastBumpOn = new Dictionary<int, bool>();
         bool? toldAsItHandedBack = null;
         play.Api.Changes.Bumped += () =>
         {
             // The hand-back bumps on its own thread, outside the tutorial's lock (#658): reading it here waits for nothing.
-            var bump = (Environment.CurrentManagedThreadId, tutorial.Assisted.Count == 0);
+            var handedBack = tutorial.Assisted.Count == 0;
             lock (gate)
             {
-                lastBump = bump;
+                lastBumpOn[Environment.CurrentManagedThreadId] = handedBack;
             }
         };
 
@@ -934,9 +937,13 @@ public sealed class ScenariosApiTests : IDisposable
         // itself, on the thread that handed back, and not by the match moving.
         tutorial.GaveBack += () =>
         {
+            // The match moves on another thread after the hand-back's bump and before this reads it, as it can in a full run.
+            var other = new Thread(play.Api.Changes.Bump);
+            other.Start();
+            other.Join();
             lock (gate)
             {
-                toldAsItHandedBack = lastBump == (Environment.CurrentManagedThreadId, true);
+                toldAsItHandedBack = lastBumpOn.GetValueOrDefault(Environment.CurrentManagedThreadId);
             }
         };
 
