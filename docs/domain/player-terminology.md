@@ -88,8 +88,9 @@ The recap a player reads on coming back to a game (docs/tabletop/async-recap-pla
 | --- | --- | --- |
 | Recap (`recap-dialog`) | **Where you are** | **Où vous en êtes** |
 | Settle the board on the present | **Go to my turn** | **Aller à mon tour** |
-| Hand what was not seen to the playback | **Replay step by step** | **Revoir pas à pas** |
-| The journal's mark at the Last visit | **You left here** | **Vous en étiez ici** |
+| The same, in a match that ended while away | **See the result** | **Voir le résultat** |
+| Play the unseen actions back one at a time | **Replay step by step** | **Revoir pas à pas** |
+| The journal's mark where the Last visit ended | **You left here** | **Vous en étiez ici** |
 | A line the seat was not shown | **New** | **Nouveau** |
 
 ## Presentation and identifiers

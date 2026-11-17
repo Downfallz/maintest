@@ -33,7 +33,6 @@ export function historyControls(controller: ReturnType<typeof createBattleHistor
   const detail = el('history-detail');
   const launchers = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-history-open]'));
   const marker = textNode('p', 'You left here', 'history-left-here'), castMarker = textNode('li', 'You left here', 'history-left-here');
-  for (const one of [marker, castMarker]) one.setAttribute('role', 'separator');
   // Before the first loaded row after the mark, and only when a row before it is loaded too: at the edge of what is
   // loaded, the place is not known.
   function placeMarker(container: HTMLElement, rows: { sequence: number }[], nodeOf: (sequence: number) => Element | null, marker: HTMLElement) {

@@ -26,7 +26,7 @@ const feed = [
 ];
 const hoursAgo = hours => new Date(Date.now() - hours * 3600000).toISOString();
 
-async function mount(page, { seen = 1, away = 3, entries = feed } = {}) {
+async function mount(page, { seen = 1, away = 3, entries = feed, extra = {} } = {}) {
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await page.addInitScript(() => {
     localStorage.setItem('downfall.table.seats', JSON.stringify({ player1: 'seat' }));
@@ -42,7 +42,7 @@ async function mount(page, { seen = 1, away = 3, entries = feed } = {}) {
       allies: board.slice(0, 3), enemies: board.slice(3), timeline },
     waitingFor: 'Action', waitingAsked: 5, waitingCreature: 3, answerBy: hoursAgo(-20), lastMoveAt: hoursAgo(away - 0.5),
     options: { action: { creature: 3, spells: [{ spell: 'strike', legalTargets }] } },
-    seen: seen === null ? null : { sequence: seen, at: hoursAgo(away) }, feed: entries, feedNext: 5 } };
+    seen: seen === null ? null : { sequence: seen, at: hoursAgo(away) }, feed: entries, feedNext: 5, ...extra } };
   await page.route('**/api/**', route => {
     const request = route.request(), url = new URL(request.url());
     if (url.pathname === '/api/me') return route.fulfill({ json: { accounts: 'dev', account: null } });
@@ -110,6 +110,9 @@ test('the header opens the sheet at any time; with nothing unseen it still tells
   await expect(page.locator('#recap-dialog .recap-new')).toHaveCount(0);
   await expect(page.locator('#recap-replay')).toBeHidden();
   await fitsViewport(page, '#recap-go');
+  await page.keyboard.press('Escape');
+  await fitsViewport(page, '#recap-open, #history-open, #help-open, #settings');
+  await page.locator('#recap-open').click();
   await page.screenshot({ path: info.outputPath('recap-from-header.png') });
   await page.keyboard.press('Escape');
   await expect(sheet(page)).toBeHidden();
@@ -127,6 +130,18 @@ test('below an hour away the catch-up plays as before, and the sheet never opens
   }
   await expect(page.locator('#combat-dialog')).toBeVisible();
   await expect(sheet(page)).toBeHidden();
+  expect(h.errors).toEqual([]);
+});
+
+test('a match that ended while the seat was away opens on its result, and the button leads to it', async ({ page }) => {
+  const h = await mount(page, { extra: { over: true, outcome: { winner: 'Player2', reason: 'Conceded' }, waitingFor: null, options: null, answerBy: null } });
+
+  await expect(sheet(page)).toBeVisible();
+  await expect(page.locator('#recap-question')).toHaveText('The match is over.');
+  await expect(page.locator('#match-dialog')).toBeHidden();
+  await page.locator('#recap-go').filter({ hasText: 'See the result' }).click();
+
+  await expect(page.locator('#match-dialog')).toBeVisible();
   expect(h.errors).toEqual([]);
 });
 

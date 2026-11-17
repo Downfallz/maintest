@@ -1873,10 +1873,10 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 .recap-section:last-child { border-bottom: 0; }
 .recap-section h3 { margin: 0 0 8px; font: 15px var(--font-display); letter-spacing: .5px; color: var(--gold); }
 .recap-section h4 { margin: 0 0 4px; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.recap-result { margin: 0 0 8px; font: 18px var(--font-display); }
+.recap-result { margin: 0 0 8px; font: 600 17px var(--font-text); }
 .recap-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.recap-side { display: grid; gap: 2px; min-width: 0; padding: 8px 10px; border: 1px solid #7fb6a466; border-radius: var(--radius-soft); background: #1b2e34; font-size: 13px; }
-.recap-side[data-side="opponent"] { border-color: #d98b6f66; }
+.recap-side { display: grid; gap: 2px; min-width: 0; padding: 8px 10px; border: 1px solid color-mix(in srgb, var(--ally) 45%, transparent); border-radius: var(--radius-soft); background: #1b2e34; font-size: 13px; }
+.recap-side[data-side="opponent"] { border-color: color-mix(in srgb, var(--enemy) 45%, transparent); }
 .recap-side strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 15px var(--font-display); }
 .recap-leader { margin: 8px 0 0; font-size: 14px; }
 .recap-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -1886,8 +1886,8 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 .recap-creature[data-defeated="true"] { color: var(--muted); }
 .recap-creature[data-defeated="true"] strong { text-decoration: line-through; }
 .recap-stats { color: #c7cec6; }
-.recap-change.loss { color: #e59a86; }
-.recap-change.gain { color: #8fd0b4; }
+.recap-change.loss { color: var(--enemy); }
+.recap-change.gain { color: var(--ally); }
 .recap-count { margin: 0 0 8px; color: var(--muted); font-size: 13px; }
 .recap-round { margin: 0 0 8px; border: 1px solid #ffffff18; border-radius: var(--radius-soft); background: #172a30; }
 .recap-round[data-unseen="true"] { border-color: #b7986888; }
@@ -1898,12 +1898,12 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 .recap-lines li { font-size: 14px; line-height: 1.35; }
 .recap-lines li small { display: block; color: var(--muted); font-size: 12px; }
 .recap-who { font-weight: 600; }
-.recap-cast[data-side="Opponent"] .recap-who { color: #f0b9a6; }
-.recap-cast[data-side="Your team"] .recap-who { color: #a9d8c7; }
+.recap-cast[data-side="Opponent"] .recap-who { color: var(--enemy); }
+.recap-cast[data-side="Your team"] .recap-who { color: var(--ally); }
 .recap-quiet { color: var(--muted); }
-.recap-new { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 8px; background: var(--gold); color: #13232a; font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; vertical-align: 1px; }
-.recap-question { margin: 0 0 6px; font: 17px var(--font-display); }
-.recap-question[data-asked="false"] { font: 14px system-ui, sans-serif; color: var(--muted); }
+.recap-new { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: var(--radius-sharp); background: var(--gold); color: var(--accent-ink); font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; vertical-align: 1px; }
+.recap-question { margin: 0 0 6px; font: 600 16px var(--font-text); }
+.recap-question[data-asked="false"] { font: 14px var(--font-text); color: var(--muted); }
 .recap-reactions .reaction-glyph { font-size: 18px; }
 .recap-footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding: 10px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid #ffffff14; }
 .recap-footer button { min-height: 44px; padding: 8px 16px; font: 15px/1.2 var(--font-display); }

@@ -135,6 +135,8 @@ export function recapControls({ onGo, onReplay, onClose }: { onGo: () => void; o
     el('recap-unseen').textContent = recap.unseen ? `${recap.unseen} new since your last visit` : 'Nothing new since your last visit';
     chosenBy(recap); asked(recap, waitingOn);
     el('recap-replay').hidden = !replay;
+    // A match that ended while the seat was away has no turn to go to: the button leads to its result.
+    el('recap-go').textContent = recap.where.over ? 'See the result' : 'Go to my turn';
     dialog.dataset.unseen = String(recap.unseen);
   }
   function open(source: HTMLElement | null) {
