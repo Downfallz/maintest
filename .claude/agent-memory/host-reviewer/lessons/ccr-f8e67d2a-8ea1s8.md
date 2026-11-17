@@ -1,2 +1,4 @@
+- A second reader of a seat's feed (TableApi.SinceVisitAsync beside the view) must copy the view's clips, `Journaled` and `FeedStart`, or its count runs past what the page shows; R4 added the `Journaled` clip in a follow-up commit (R4 async recap).
 - A static payload test (`PushNotices.Payload`) pins the words, not the wiring: dropping the argument at the call in NoticeAsync leaves every test green; ask for one test through the notice path (R4 async recap).
+- `LobbyApi.DescribeAsync` already reads `composer.LastMoveAsync` (uncaught) for timed tables; a decoration that reads the last move again doubles the journal reads of every `/api/lobby/mine` (R4 async recap).
 - HEAD can move during a review (a fix commit pushed by the authoring session): note `git rev-parse HEAD` at the start and re-diff before reporting (R4 async recap).

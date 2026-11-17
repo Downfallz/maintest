@@ -533,7 +533,7 @@ internal sealed class AdminApi
     {
         if (_stored is not { } stored)
         {
-            return StudioResponse.OfJson(new { error = "Admin.NotRecording", message = "This host records nothing (--no-record), so there is no session to list, export or delete." }, ArtifactJson.LineOptions, status: 404);
+            return StudioResponse.OfJson(new { error = "Admin.NotRecording", message = "This host records nothing (--no-record), so there is no session to list, export or delete." }, ArtifactJson.LineOptions, status: 404).NotKept();
         }
 
         switch (method, rest)
