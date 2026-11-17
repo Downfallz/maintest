@@ -601,7 +601,8 @@ function render() {
   // opened before the host said the lesson was done; its turn order does not open by itself.
   const roundHeld = holdsTheNextRound(view);
   if (roundHeld && upkeep.model().pending) upkeep.presented();
-  if (roundHeld && $<HTMLDialogElement>('upkeep-dialog').open) queueMicrotask(() => $<HTMLDialogElement>('upkeep-dialog').close());
+  // Closed at once, so this render shows no upkeep marker either; its close event comes as a task, after this render.
+  if (roundHeld && $<HTMLDialogElement>('upkeep-dialog').open) $<HTMLDialogElement>('upkeep-dialog').close();
   upkeepUI.render(canAuto() && !roundHeld);
   const liveMarkers = upkeepUI.markers(board.round);
   if (liveMarkers) text('round-phase', 'UPKEEP');
