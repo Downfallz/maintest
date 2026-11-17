@@ -1,7 +1,7 @@
 # Plan: the recap when a player comes back to an asynchronous game
 
-Status: accepted, 2026-11-16 (the owner settled the questions at the end). Nothing here is built yet; each stage
-below is one pull request.
+Status: accepted, 2026-11-16 (the owner settled the questions at the end). R1 is built; each stage below is one
+pull request.
 
 ## What the owner asked for
 
@@ -104,6 +104,17 @@ under way: a player who left the page open for two days, or who simply lost the 
    `battle-seen.js` sends it and reads the larger of the two. Tests: host tests for the route (a smaller sequence is
    ignored, another seat's key is refused, a replay writes nothing), the storage tests under Azurite, the Node tests
    of `battle-seen.js`. `table/README.md#routes` and docs/reference/commands.md.
+
+   *Built (2026-11-16)*: ADR 0194. `TableVisits` keeps each seat's **last visit** (`LastVisit`: the sequence and
+   when), beside the table's record as `seen-player1.json` and `seen-player2.json` through the run's artifact store
+   (a file, a blob, or memory for a table nobody records), only a larger sequence, written only over the version
+   read and read again on a conflict. `PUT /api/seat/<seat>/seen` answers the mark kept (`400 Seen.Invalid`,
+   `503 Seen.Busy`) and moves nothing on the table. The seat's view reads the record on every read and carries
+   `seen` and `lastMoveAt`. `battle-seen.js` reads the larger of the two marks. It sends its own at once, then at
+   most once every five seconds, and once more, kept alive, when the page is hidden (`createSeenSender`); a
+   replay's transport sends nothing. Tests: `TableSeenApiTests`, `TableVisitsTests`, `TableVisitsBlobTests` (Azurite), and the Node
+   tests of `battle-seen.js` and `transport.js`. Left to R2: the glossary's *Recap*; nothing reads `seen.at` or
+   `lastMoveAt` yet.
 2. **R2, the recap model.** `table/battle-recap.js`: from the seat's feed (the last completed round, the round under
    way, and everything after the seen sequence), the board now, the seat's view and the time now, the five parts of
    the sheet as data, with what was not seen marked. No page change yet. Tests: Node tests on

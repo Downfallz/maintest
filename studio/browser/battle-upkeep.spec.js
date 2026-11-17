@@ -33,7 +33,8 @@ async function mount(page, { waiting = null, round = 1, feed = [energy(round), o
   await page.route('**/api/**', async route => {
     const request = route.request(), url = new URL(request.url());
     // Discovering the seats posts their tokens to read them, at load and again when the opponent is seated.
-    if (request.method() !== 'GET' && url.pathname !== '/api/lobby/resume') state.writes.push(url.pathname);
+    // The seat's seen mark (ADR 0194) is its own word, not a decision.
+    if (request.method() !== 'GET' && url.pathname !== '/api/lobby/resume' && !url.pathname.endsWith('/seen')) state.writes.push(url.pathname);
     if (url.pathname === '/api/lobby/resume') return route.fulfill({ json: { tables: [{ table: { id: 'a', format: '3v3' }, seats: [{ seat: 'player1', token: 'seat' }] }] } });
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: { rules: { energyPerRound: 99, combatDeclaration: 'AtActivation' }, cards: [{ id: 'strike', name: 'Strike', cost: 2 }], packages: [{ id: 'root', name: 'Warden', level: 1, spells: ['strike'] }] } });
     if (url.pathname === '/api/seat/player1') {
