@@ -39,6 +39,8 @@ export function recapControls({ onGo, onReplay, onClose }: { onGo: () => void; o
   el('recap-go').addEventListener('click', () => { chosen = 'go'; dialog.close(); });
   el('recap-replay').addEventListener('click', () => { chosen = 'replay'; dialog.close(); });
   dialog.addEventListener('close', () => {
+    // A sheet opened again starts from its own folding, not the last reader's.
+    el('recap-rounds').replaceChildren();
     const choice = chosen; chosen = null;
     if (choice === 'quiet') return;
     if (choice === 'replay') onReplay(); else onGo();
@@ -131,7 +133,17 @@ export function recapControls({ onGo, onReplay, onClose }: { onGo: () => void; o
     where(recap);
     team('recap-yours', recap.teams.you); team('recap-theirs', recap.teams.opponent);
     el('recap-theirs-title').textContent = recap.where.opponent ?? 'Opponent';
-    el('recap-rounds').replaceChildren(...recap.rounds.map(round));
+    // A refresh while the sheet is read keeps the rounds the reader opened or folded, and the focus on its round.
+    const rounds = el('recap-rounds');
+    const was = new Map(Array.from(rounds.querySelectorAll<HTMLDetailsElement>('details.recap-round')).map(card => [card.dataset.round, card.open]));
+    const focused = (document.activeElement as HTMLElement | null)?.closest<HTMLElement>('details.recap-round');
+    const focusedRound = focused && rounds.contains(focused) ? focused.dataset.round : null;
+    rounds.replaceChildren(...recap.rounds.map(one => {
+      const card = round(one), open = was.get(String(one.round));
+      if (open !== undefined) card.open = open;
+      return card;
+    }));
+    if (focusedRound) rounds.querySelector<HTMLElement>(`details.recap-round[data-round="${focusedRound}"] > summary`)?.focus({ preventScroll: true });
     el('recap-unseen').textContent = recap.unseen ? `${recap.unseen} new since your last visit` : 'Nothing new since your last visit';
     chosenBy(recap); asked(recap, waitingOn);
     el('recap-replay').hidden = !replay;

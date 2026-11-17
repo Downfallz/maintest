@@ -145,6 +145,23 @@ test('a match that ended while the seat was away opens on its result, and the bu
   expect(h.errors).toEqual([]);
 });
 
+test('what arrives while the sheet is read leaves the rounds as the reader folded them, and the focus where it was', async ({ page }) => {
+  const h = await mount(page);
+  await expect(sheet(page)).toBeVisible();
+  const current = page.locator('details.recap-round[data-round="2"]');
+  await expect(current).toHaveAttribute('open', '');
+  await current.locator('summary').click();
+  await expect(current).not.toHaveAttribute('open', '');
+
+  h.state.view = { ...h.state.view, reactions: { available: true, recent: [{ sequence: 9, seat: 'player2', reaction: 'nice-move', at: new Date().toISOString() }] } };
+  await page.evaluate(() => window.notifyBattle());
+
+  await expect(page.locator('#recap-reactions')).toContainText('Nice move!');
+  await expect(current).not.toHaveAttribute('open', '');
+  await expect(current.locator('summary')).toBeFocused();
+  expect(h.errors).toEqual([]);
+});
+
 test('the journal marks where the seat left off', async ({ page }) => {
   await mount(page);
   await page.locator('#recap-go').click();
