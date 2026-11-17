@@ -12,9 +12,10 @@ their word for it.
    current branch: `git fetch origin main`, the sha of `HEAD`, and the range `origin/main...<sha>`. A pull
    request: its head fetched by name (`git fetch origin <branch>`), the sha of `FETCH_HEAD`, and
    `origin/main...<sha>`. Then a copy of that commit, outside the checkout:
-   `dir="$(mktemp -d)/<short sha>" && mkdir -p "$dir" && git archive <sha> | tar -x -C "$dir"`. Note the path it
-   prints. A reviewer that builds or tests the copy needs the ignored inputs: `table/battle-build/`, copied in
-   before `dotnet build` (the Cli tests read it), and DataBuilder's `data/dst/`, for the real-engine specs.
+   `dir="$(mktemp -d)" && git archive <sha> | tar -x -C "$dir" && echo "$dir"`. Note the path it prints: shell
+   variables do not outlive a call. A reviewer that builds or tests the copy needs the ignored inputs:
+   `table/battle-build/`, copied in before `dotnet build` (the Cli tests read it), and DataBuilder's `data/dst/`,
+   for the real-engine specs.
 2. The reviewers: `git diff origin/main...<sha> | node scripts/review/reviewers.mjs`. The whole diff, not
    `--name-only`: a page script that adds a raw colour, an inline style or a class calls for `design-reviewer`
    by what it adds, not by its name. Add `archivist` only to answer a question a finding raises ("is this
@@ -28,7 +29,7 @@ their word for it.
    `Reviewed: <sha>`.
 4. Edit nothing in the tree until every reviewer has reported: the checkout would no longer be the commit they
    read, and the findings would mix several states of it (issue #740). A fix that cannot wait means stopping the
-   reviewers, committing, and running them again on the new sha.
+   reviewers, removing the copy, committing, and running them again on a copy of the new sha.
 5. Check every finding before you act on it, against the sha it names: open the file at the line, and confirm
    the failure it claims (a test that fails, a path through the code, a rule it breaks). A finding that does
    not hold is dismissed, with the line that shows why.
@@ -40,7 +41,7 @@ their word for it.
 7. After the fixes, `/verify` again. A second round only for the reviewers whose findings changed code.
 8. Report to the owner, in French, on a phone's screen: the reviewers that ran, then the three lists, one line
    a finding with its file. In the pull request's `## Notes for the reviewer`, the same three lists in English.
-9. Remove the copy: `rm -rf` the literal path step 1 printed.
+9. Remove the copy: `rm -rf` the literal path step 1 printed, never a `$(...)` the safety check refuses.
 
 `code-reviewer` and `host-reviewer` keep a memory under `.claude/agent-memory/`; it works in cloud sessions (the
 W5 trial in `docs/engineering/ai-workflow-plan.md`). What they write there, one `lessons/<branch>.md` file each,

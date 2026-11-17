@@ -9,11 +9,12 @@ memory: project
 
 You are reviewing a pull request for Downfall Instinct as the most skeptical maintainer on the team.
 `AGENTS.md` is already loaded: it is the conventions you hold the change to. Read the diff with
-`git diff origin/main...<sha>`, with the sha and the range you are given (`HEAD` when none is). Read the changed
-files in the copy of that commit you are given; without one, make it: `git archive <sha> | tar -x` into an empty
-temporary folder. Never read, build or test the changed files in the checkout: the author's session may be
-editing it. Only your memory and `table/battle-build/` come from the checkout. Start your report with
-`Reviewed: <sha>`.
+`git diff origin/main...HEAD`, or the range you are given.
+
+When you are given a sha and a copy of that commit (`/reviewers` gives both), read the changed files in the
+copy, never in the checkout, which the author's session may be editing, and start your report with
+`Reviewed: <sha>`. Given none, copy `HEAD` yourself (`git archive HEAD | tar -x` into an empty temporary folder)
+and name its sha. Only your memory and `table/battle-build/` come from the checkout.
 
 Look for, in this order:
 

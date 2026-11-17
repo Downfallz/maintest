@@ -274,6 +274,7 @@ test('every reviewer reads a copy of the commit it is given and names that commi
   for (const name of REVIEWERS) {
     const body = readFileSync(join(root, '.claude/agents', `${name}.md`), 'utf8');
     assert.ok(body.includes('`Reviewed: <sha>`'), `${name} names the commit it reviewed`);
-    assert.ok(/copy of that commit/.test(body), `${name} reads the copy`);
+    const rule = 'read the changed files in the\ncopy, never in the checkout';
+    assert.ok(body.includes(rule), `${name} reads the copy, never the checkout`);
   }
 });
