@@ -13,6 +13,7 @@ using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Application.Matches.Queries;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Domain.Matches;
+using DownfallArena.Domain.Matches.Events;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Infrastructure.Learning;
 using DownfallArena.SharedKernel.Identifiers;
@@ -871,6 +872,47 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
             Console.WriteLine($"  What {seat.Name} was last shown could not be read: {failure.Message}");
             return null;
         }
+    }
+
+    /// <summary>
+    /// What happened since the seat's last visit, as the lobby, the inbox and "Your turn" say it (async recap plan,
+    /// R4): the spells cast that the seat may see past the mark it was last shown, and when the last move was. Read
+    /// from the seat's own feed, as the seat's view would serve it; no board is read. <paramref name="withLastMove" />
+    /// false leaves the journal unasked, for a reader that only says the casts (the notice).
+    /// </summary>
+    public async Task<SinceVisit> SinceVisitAsync(string seatName, bool withLastMove = true)
+    {
+        var seat = seats.FirstOrDefault(one => one.Name == seatName);
+        if (seat is null)
+        {
+            return new SinceVisit(null, null);
+        }
+
+        var moving = withLastMove ? LastMoveAtAsync() : Task.FromResult<(bool, DateTimeOffset?)>((false, null));
+        var visit = await LastVisitAsync(seat);
+        var (_, lastMove) = await moving;
+        if (visit is null)
+        {
+            return new SinceVisit(null, lastMove);
+        }
+
+        var since = Math.Max((int)Math.Min(int.MaxValue, visit.Sequence + 1), FeedStart);
+        var recorded = run is { } recording ? recording.Entries(session.MatchId, since) : events.EntriesOf(session.MatchId, since);
+        return new SinceVisit(CastsAfter(recorded, seat.Slot, visit.Sequence, FeedStart, session.Journaled), lastMove);
+    }
+
+    /// <summary>
+    /// The casts a seat may see in <paramref name="recorded" /> (the entries from the first one counted onwards) past
+    /// <paramref name="seen" />, bounded as the seat's view is: from <paramref name="feedStart" />, where a practice's
+    /// feed begins at its prepared question, and no further than <paramref name="journaled" /> entries, since a cast
+    /// past what the journal holds may be of a step never written.
+    /// </summary>
+    internal static int CastsAfter(IReadOnlyList<TraceEntry> recorded, PlayerSlot slot, long seen, int feedStart, int? journaled)
+    {
+        ArgumentNullException.ThrowIfNull(recorded);
+        var since = Math.Max((int)Math.Min(int.MaxValue, seen + 1), feedStart);
+        var counted = recorded.Where(entry => entry.Sequence >= since && (journaled is not { } kept || entry.Sequence < kept)).ToList();
+        return SeatFeedProjection.Build(counted, slot, since).Count(entry => entry.Event is CombatActionResolved);
     }
 
     /// <summary>When the last move was, for the view, and whether the journal could be asked at all.</summary>

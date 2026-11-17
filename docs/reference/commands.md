@@ -549,7 +549,8 @@ The seat's view says the lesson under `practice.tutorial`:
 
 `--push-keys <file>` (or `DOWNFALL_PUSH_KEYS`) lets a seat's phone be told "your turn" when nobody is looking at
 its page, a Web Push the page's service worker shows (ADR 0118; `push-keys` prints a pair; https or localhost
-only; a device holding both seats is told nothing, ADR 0120).
+only; a device holding both seats is told nothing, ADR 0120). After a last visit, the notice says how many spells
+were cast since (`Round 4: choose a spell. 3 casts since your last visit.`).
 
 With push keys too, a signed-in player's lobby offers "Notify me on this device" (`PUT`/`DELETE /api/account/push`,
 `POST /api/account/push/test`): the browser becomes one of the account's devices, five at most, kept beside the
@@ -588,7 +589,9 @@ friend's request or an invitation reaches a player who holds no seat (docs/table
   (`POST .../invitation {"friend"}`), opens it to everyone (`POST .../open`) or closes the unbegun table
   (`DELETE /api/lobby/tables/<id>`, for whoever holds every taken seat).
 - `GET /api/lobby/mine` lists the tables waiting for the player under `invitations` and says `invited` on their
-  own.
+  own. A game under way that waits for the player at one seat carries `recap`: `casts` (the spells cast since the
+  seat's last visit, counting only those it may see; null before a first visit, ADR 0194) and `lastMoveAt` (when the
+  last move was).
 - The friend's devices are told of the invitation, the inviter's of its answer, each seat's account of how the
   match ended and of the opponent leaving a begun match (stage 4).
 

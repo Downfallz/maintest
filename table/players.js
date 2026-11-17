@@ -1,3 +1,5 @@
+import { sentAgo } from './battle-reactions.js';
+
 // Who plays whom, as the game page's masthead says it (ADR 0122): the names the lobby gives each seat, read from
 // the host, said from the point of view of the seats this page holds.
 
@@ -66,4 +68,18 @@ export function timeLeft(answerBy, now = Date.now()) {
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours} h`;
   return hours % 24 === 0 ? `${hours / 24} d` : `${Math.floor(hours / 24)} d ${hours % 24} h`;
+}
+
+/**
+ * The recap's line on a "Your turn" card and in the inbox (async recap plan, R4), from the host's `recap` on the
+ * entry (`{ casts, lastMoveAt }`): `3 casts since your last visit · last move 5 h ago`. The count only when there
+ * were casts, and the last move only when the host knows it; null when there is nothing to say. In lower case, as it
+ * follows a ` · ` in the inbox and the Your turn band; a line standing alone capitalises it.
+ */
+export function sinceVisitLine(recap, now = Date.now()) {
+  if (!recap) return null;
+  const parts = [];
+  if (Number.isInteger(recap.casts) && recap.casts > 0) parts.push(`${recap.casts} ${recap.casts === 1 ? 'cast' : 'casts'} since your last visit`);
+  if (recap.lastMoveAt && Number.isFinite(Date.parse(recap.lastMoveAt))) parts.push(`last move ${sentAgo(recap.lastMoveAt, now) || 'just now'}`);
+  return parts.length === 0 ? null : parts.join(' · ');
 }

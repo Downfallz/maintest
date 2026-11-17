@@ -180,6 +180,90 @@ public sealed class LobbyAccountsTests : IDisposable
         listed[0].GetProperty("seats")[0].GetProperty("token").GetString().ShouldBe(mine.Seats[0].Token);
     }
 
+    /// <summary>The recap's line on the card (async recap plan, R4): nothing before the match begins, then the casts since the last visit.</summary>
+    [Fact]
+    public async Task Your_game_under_way_carries_the_casts_since_your_last_visit()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var (table, _) = await OpenAsync(mark, opponent: "bot");
+        var lobby = await LobbyAsync();
+        var before = Read(await lobby.HandleAsync("GET", "/api/lobby/mine", "", player: mark)).GetProperty("tables")[0];
+        table.Seats[0].Person!.Arrive();
+        table.Session.Begin();
+        for (var attempt = 0; attempt < 250 && table.Seats[0].Person!.Waiting is null; attempt++)
+        {
+            await Task.Delay(20, Cancel);
+        }
+
+        var unvisited = Read(await lobby.HandleAsync("GET", "/api/lobby/mine", "", player: mark)).GetProperty("tables")[0];
+        (await table.Api.HandleAsync("PUT", "/api/seat/player1/seen", """{ "sequence": 0 }""", table.Seats[0].Token)).Status.ShouldBe(200);
+        var visited = Read(await lobby.HandleAsync("GET", "/api/lobby/mine", "", player: mark)).GetProperty("tables")[0];
+
+        before.GetProperty("recap").ValueKind.ShouldBe(JsonValueKind.Null);
+        unvisited.GetProperty("recap").GetProperty("casts").ValueKind.ShouldBe(JsonValueKind.Null, "no last visit, nothing to count from");
+        visited.GetProperty("recap").GetProperty("casts").GetInt32().ShouldBe(0, "nobody has cast yet");
+    }
+
+    /// <summary>The card shows the recap on the account's turn only: a seat that has answered and waits for the other player has none.</summary>
+    [Fact]
+    public async Task Your_game_carries_no_recap_while_the_other_player_is_the_one_asked()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var bastien = await PlayerAsync("bastien");
+        var (table, _) = await OpenAsync(mark);
+        var lobby = await LobbyAsync();
+        (await lobby.HandleAsync("POST", $"/api/lobby/tables/{table.Id}/join", "{}", player: bastien)).Status.ShouldBe(200);
+        table.Seats[0].Person!.Arrive();
+        table.Seats[1].Person!.Arrive();
+        table.Session.Begin();
+        var asked = await WaitingAsync(table.Seats[0]);
+        await WaitingAsync(table.Seats[1]);
+        var onTurn = Read(await lobby.HandleAsync("GET", "/api/lobby/mine", "", player: mark)).GetProperty("tables")[0];
+        var pass = $$"""{"kind":"Evolution","pass":true,"asked":{{asked.Asked}}}""";
+        (await table.Api.HandleAsync("POST", "/api/seat/player1/decision", pass, table.Seats[0].Token)).Status.ShouldBe(204);
+        for (var attempt = 0; attempt < 250 && table.Seats[0].Person!.Waiting is not null; attempt++)
+        {
+            await Task.Delay(20, Cancel);
+        }
+
+        var answered = Read(await lobby.HandleAsync("GET", "/api/lobby/mine", "", player: mark)).GetProperty("tables")[0];
+
+        onTurn.GetProperty("recap").ValueKind.ShouldBe(JsonValueKind.Object, "asked: the card shows the recap");
+        table.Seats[0].Person!.Waiting.ShouldBeNull("the seat answered and waits for the other player");
+        answered.GetProperty("recap").ValueKind.ShouldBe(JsonValueKind.Null);
+    }
+
+    [Fact]
+    public async Task Your_game_on_a_shared_device_carries_no_recap_for_an_account_holding_both_seats()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var (table, _) = await OpenAsync(mark, opponent: "hotseat");
+        var lobby = await LobbyAsync();
+        table.Seats.ShouldAllBe(seat => seat.Account == mark.Account.Id);
+        table.Seats[0].Person!.Arrive();
+        table.Seats[1].Person!.Arrive();
+        table.Session.Begin();
+        for (var attempt = 0; attempt < 250 && !table.Seats.Any(seat => seat.Person!.Waiting is not null); attempt++)
+        {
+            await Task.Delay(20, Cancel);
+        }
+
+        var listed = Read(await lobby.HandleAsync("GET", "/api/lobby/mine", "", player: mark)).GetProperty("tables")[0];
+
+        table.Seats.ShouldContain(seat => seat.Person!.Waiting != null, "a seat is asked, so only the two seats make the recap null");
+        listed.GetProperty("recap").ValueKind.ShouldBe(JsonValueKind.Null);
+    }
+
+    private static async Task<Asking> WaitingAsync(TableSeat seat)
+    {
+        for (var attempt = 0; attempt < 250 && seat.Person!.Waiting is null; attempt++)
+        {
+            await Task.Delay(20, Cancel);
+        }
+
+        return seat.Person!.Waiting.ShouldNotBeNull();
+    }
+
     [Fact]
     public async Task A_player_does_not_take_the_other_place_of_a_table_they_already_play()
     {
