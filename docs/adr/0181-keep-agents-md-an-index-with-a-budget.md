@@ -42,3 +42,6 @@ touches the area. Concerns that span directories with no common parent are path-
 - `tests/DownfallArena.Architecture.Tests/InstructionFileTests.cs` holds the budget, checks each area's
   `CLAUDE.md` imports its `AGENTS.md`, and checks each `docs/**/*plan*.md` is listed in `docs/README.md`.
 - `.claude/rules/docs.md` points new commands at `docs/reference/commands.md`.
+- 2026-11-17 (#676): a row of the repository map stays under 200 characters, held by the same test. A row names
+  its directory and points to where the detail lives; the `scripts/` row, which listed every subfolder, had left
+  the file 50 bytes under its budget. `scripts/README.md` holds that detail now.

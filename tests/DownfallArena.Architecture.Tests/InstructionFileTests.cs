@@ -58,14 +58,19 @@ public sealed class InstructionFileTests
     {
         // A map row names a directory and points to where its detail lives; a row that lists every subfolder
         // is what spent the byte budget (#676).
-        var longRows = File.ReadAllLines(Path.Combine(Root, "AGENTS.md"), Encoding.UTF8)
+        var rows = File.ReadAllLines(Path.Combine(Root, "AGENTS.md"), Encoding.UTF8)
             .Select((line, index) => (Number: index + 1, Line: line))
             .SkipWhile(line => line.Line != "## Repository map")
             .TakeWhile(line => !line.Line.StartsWith("The tests:", StringComparison.Ordinal))
             .Where(line => line.Line.StartsWith("| `", StringComparison.Ordinal))
+            .ToList();
+
+        var longRows = rows
             .Where(line => line.Line.Length > MaximumMapRowLength)
             .Select(line => $"line {line.Number}: {line.Line.Length} characters");
 
+        // A renamed heading or a reshaped table would otherwise select no row, and pass.
+        rows.ShouldContain(row => row.Line.StartsWith("| `src/DownfallArena.Domain` |", StringComparison.Ordinal));
         longRows.ShouldBeEmpty();
     }
 

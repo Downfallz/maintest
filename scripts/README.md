@@ -5,11 +5,12 @@ The scripts the gate, the learning loop and the reports run. Each command, with 
 
 | Path | What it is |
 | --- | --- |
-| `verify.sh`, `gate/` | The local gate (`/verify`), the storage emulator it starts, and the record of the last green gate. |
+| `verify.sh`, `gate/` | The local gate (`/verify`): `verify.sh`, the storage emulator it starts, and the record of the last green gate. |
 | `iterate.sh` | The learning loop, one turn at a time (docs/learning/). |
-| `build-tiers.py`, `declaration-reading.py`, `slot-choices.py`, `sweep-weight.py` | The learning loop's readers and one-off measurements. |
+| `declaration-reading.py`, `slot-choices.py`, `sweep-weight.py` | The learning loop's readers and one-off measurements. |
+| `build-tiers.py` | The one-time tier migration from the talent tree, kept reproducible. |
 | `review/` | The reviewers a diff calls for (`/reviewers`). |
-| `rules/` | The rulebook's build and the sections a diff reaches (`/rules`, `rules/README.md`). |
+| `rules/` | The rulebook's build and the sections a diff reaches (`/rules`, [rules/README.md](../rules/README.md)). |
 | `digest/` | The morning digest (`/digest`). |
 | `ops/` | The production report (`/ops`, ADR 0186). |
 | `spells-report/` | The spells the bots cast and leave (`/spells-report`). |

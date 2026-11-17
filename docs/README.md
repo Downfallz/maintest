@@ -57,6 +57,7 @@
 | [tabletop/battle-ux-acceptance.md](tabletop/battle-ux-acceptance.md) | AU14: the cross-feature acceptance of the battle view. |
 | [tabletop/battle-release-acceptance.md](tabletop/battle-release-acceptance.md) | A8 (ADR 0136): the rollout preference, budgets and release profiles; physical and new-player gates remain open. ADR 0132 versions event streams: new tables record ordinary energy, resumed legacy tables omit it before sequencing, preserving feed and checkpoint indices. |
 | [../studio/README.md](../studio/README.md) | The content studio: browse, edit, version and try the game content. |
+| [../scripts/README.md](../scripts/README.md) | The scripts: the gate, the learning loop's readers, the reports, what lives where. |
 | [../viewer/README.md](../viewer/README.md) | The viewer: traces, batches, evaluations, training runs and comparisons. |
 
 Conventions for writing docs are in `.claude/rules/docs.md` and apply to humans too.

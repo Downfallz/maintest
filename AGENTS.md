@@ -3,7 +3,7 @@
 Instructions for AI coding agents (Claude Code, Copilot, Cursor, Codex, ...) working in this repository.
 Humans: this is also the shortest accurate description of how we work here. Keep it current.
 
-This file is an index with a budget (ADR 0181): under 200 lines, under 12 KB, no line over 300 characters, held by
+This file is an index with a budget (ADR 0181): under 200 lines, under 12 KB, no line over 300 characters, a map row under 200, held by
 `InstructionFileTests`. Detail lives with what it is about: an area's `AGENTS.md`, `.claude/rules/`, the docs.
 
 ## What this project is
@@ -42,7 +42,7 @@ An area marked * has its own `AGENTS.md` (and a `CLAUDE.md` that imports it): re
 | `models/` | Trained policies (`policy.json`, small, committed with their evaluation). See `models/README.md`. |
 | `infra/` * | The hosted table on Azure behind Cloudflare: `main.bicep`, `bootstrap.sh`, `README.md` (ADR 0080-0082, 0162, 0175). |
 | `Dockerfile` | The table's image, built and tried by `.github/workflows/image.yml` before it is pushed and deployed. |
-| `scripts/` | The gate's `verify.sh`, the learning loop's `iterate.sh` and readers, the reports and the reviewers' picker. See `scripts/README.md`. |
+| `scripts/` | The gate's `verify.sh`, the learning loop's `iterate.sh` and readers, the reports and the reviewer picker. See `scripts/README.md`. |
 | `tests/` | One test project per layer, plus `Cli.Tests` (the hosts) and `Architecture.Tests` (layering and these files). |
 | `docs/` | Indexed in `docs/README.md`: every plan, the ADRs, the domain, the tabletop, art, learning, engineering. |
 | `docs/reference/commands.md` | Every command, flag and route, one heading per command. |

@@ -106,7 +106,7 @@ text, for the owner to accept or cut:
 
 - `AGENTS.md` becomes an index: what the project is, one line per directory, the eight commands of the gate,
   the architecture rules, the conventions, the definition of done. Under 200 lines and 12 KB, no line over
-  300 characters. A test holds the budget.
+  300 characters, a map row under 200 (#676). A test holds the budget.
 - Each area gets its own `AGENTS.md`, with a one-line `CLAUDE.md` beside it that imports it, as the root
   does: `table/`, `battle/`, `studio/`, `learning/`, `infra/`, `src/DownfallArena.Cli/`. It holds that area's
   commands, the tests a change there must run, and its traps. Claude Code loads a directory's `CLAUDE.md`
