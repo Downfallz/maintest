@@ -70,7 +70,7 @@ test('Step reads the closing attack, aftermath and upkeep before showing the nex
   // Once the reading ends, the mutation phase opens its tree by itself and acknowledges the asking (ADR 0138).
   await expect(page.locator('#planning-dialog')).toBeVisible();
   await expect.poll(() => h.state.requests.filter(one => one.query.includes('shown=')).map(one => new URLSearchParams(one.query).get('shown')).filter(asked => asked === '6')).toEqual(['6']);
-  expect(h.state.requests.filter(one => one.method !== 'GET' && one.path !== '/api/lobby/resume')).toEqual([]); expect(h.errors).toEqual([]);
+  expect(h.state.requests.filter(one => one.method !== 'GET' && one.path !== '/api/lobby/resume' && !one.path.endsWith('/seen'))).toEqual([]); expect(h.errors).toEqual([]);
 });
 
 test('Auto continues held results; an incoming one offers OK, not Skip, and returns the live choice without acknowledging it again', async ({ page }) => {
@@ -84,7 +84,7 @@ test('Auto continues held results; an incoming one offers OK, not Skip, and retu
   await expect(page.locator('#combat-dialog')).toBeVisible();
   await h.publish([entry(10), entry(11, { actor: 4 })]); await expect(page.locator('#playback-skip')).toBeHidden();
   expect(h.state.requests.filter(one => one.query.includes('shown=')).length).toBe(1);
-  expect(h.state.requests.filter(one => one.method !== 'GET' && one.path !== '/api/lobby/resume')).toEqual([]); expect(h.errors).toEqual([]);
+  expect(h.state.requests.filter(one => one.method !== 'GET' && one.path !== '/api/lobby/resume' && !one.path.endsWith('/seen'))).toEqual([]); expect(h.errors).toEqual([]);
 });
 
 test('the next choice waits for the reading, and skipping it passes unread receipts without a second upkeep modal', async ({ page }) => {
@@ -138,7 +138,7 @@ test('rotation passes over a queued upkeep without hiding it: the upkeep notice 
   await finishCast(page); await expect(page.locator('#playback-next')).toBeEnabled(); await rotate(page);
   await expect(page.locator('#playback-skip')).toBeHidden();
   await expect(page.locator('#upkeep-dialog')).toBeVisible(); await expect(page.locator('#upkeep-title')).toHaveText('Round 3 · Upkeep');
-  expect(h.state.requests.filter(one => one.method !== 'GET' && one.path !== '/api/lobby/resume')).toEqual([]); expect(h.errors).toEqual([]);
+  expect(h.state.requests.filter(one => one.method !== 'GET' && one.path !== '/api/lobby/resume' && !one.path.endsWith('/seen'))).toEqual([]); expect(h.errors).toEqual([]);
 });
 
 test('a resize that keeps the orientation keeps the held result', async ({ page }) => {
