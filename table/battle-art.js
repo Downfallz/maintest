@@ -36,7 +36,7 @@ export function creatureAppearance(creature, packages) {
     .filter(([cue]) => cue?.motif).map(([cue, slot]) => ({ ...cue, slot }));
   // Said in the catalogue's words, the package names a player bought, never the renderer's motif names.
   return { form: dominant.family, layers,
-    description: `${BODIES[dominant.family]} body${layers.map(cue => ` · ${cue.name} (${stageLabel(cue.stage)})`).join('')}` };
+    description: BODIES[dominant.family] + ' body' + layers.map(cue => ' · ' + cue.name + ' (' + stageLabel(cue.stage) + ')').join('') };
 }
 export function creatureForm(creature, packages) { return creatureAppearance(creature, packages).form; }
 
