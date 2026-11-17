@@ -51,7 +51,7 @@ test('the recap line says the casts since the last visit and how long ago the la
 
 test('the recap line leaves out a count of none and a last move the host does not know', () => {
   const now = Date.parse('2026-11-17T12:00:00Z');
-  assert.equal(sinceVisitLine({ casts: 0, lastMoveAt: '2026-11-15T12:00:00Z' }, now), 'Last move 2 d ago');
+  assert.equal(sinceVisitLine({ casts: 0, lastMoveAt: '2026-11-15T12:00:00Z' }, now), 'last move 2 d ago');
   assert.equal(sinceVisitLine({ casts: null, lastMoveAt: null }, now), null);
   assert.equal(sinceVisitLine({ casts: 2, lastMoveAt: null }, now), '2 casts since your last visit');
   assert.equal(sinceVisitLine(null, now), null);

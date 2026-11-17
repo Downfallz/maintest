@@ -896,14 +896,23 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
             return new SinceVisit(null, lastMove);
         }
 
-        // From where the seat's view starts, as it does: a practice's feed begins at its prepared question.
         var since = Math.Max((int)Math.Min(int.MaxValue, visit.Sequence + 1), FeedStart);
         var recorded = run is { } recording ? recording.Entries(session.MatchId, since) : events.EntriesOf(session.MatchId, since);
+        return new SinceVisit(CastsAfter(recorded, seat.Slot, visit.Sequence, FeedStart, session.Journaled), lastMove);
+    }
 
-        // No further than the journal holds, as the seat's view stops: a cast past it may be of a step never written.
-        var examined = session.Journaled is { } kept && kept - since < recorded.Count ? [.. recorded.Take(Math.Max(0, kept - since))] : recorded;
-        var casts = SeatFeedProjection.Build(examined, seat.Slot, since).Count(entry => entry.Event is CombatActionResolved);
-        return new SinceVisit(casts, lastMove);
+    /// <summary>
+    /// The casts a seat may see in <paramref name="recorded" /> (the entries from the first one counted onwards) past
+    /// <paramref name="seen" />, bounded as the seat's view is: from <paramref name="feedStart" />, where a practice's
+    /// feed begins at its prepared question, and no further than <paramref name="journaled" /> entries, since a cast
+    /// past what the journal holds may be of a step never written.
+    /// </summary>
+    internal static int CastsAfter(IReadOnlyList<TraceEntry> recorded, PlayerSlot slot, long seen, int feedStart, int? journaled)
+    {
+        ArgumentNullException.ThrowIfNull(recorded);
+        var since = Math.Max((int)Math.Min(int.MaxValue, seen + 1), feedStart);
+        var counted = recorded.Where(entry => entry.Sequence >= since && (journaled is not { } kept || entry.Sequence < kept)).ToList();
+        return SeatFeedProjection.Build(counted, slot, since).Count(entry => entry.Event is CombatActionResolved);
     }
 
     /// <summary>When the last move was, for the view, and whether the journal could be asked at all.</summary>

@@ -178,8 +178,9 @@ under way: a player who left the page open for two days, or who simply lost the 
    `recap: { casts, lastMoveAt }` on a game that waits for the account at one seat (none for a device holding both).
    `sinceVisitLine` (`table/players.js`) says it, `3 casts since your last visit · last move 5 h ago` (`1 cast` for
    one), on the lobby's "Your turn" cards (the band and the cards) and in the inbox. When no spell was cast, the
-   count is left out and only the last move shows. The push notice adds `3 casts since your last visit.` to its
-   body. Tests: `TableApiTests.SinceVisit`, `LobbyAccountsTests`, `PushNoticesTests`, and the Node tests of
+   count is left out and only the last move shows. The "Your turn" notice adds `3 casts since your last visit.` to
+   its body, and goes without it when the count cannot be read; the reminder that the time to answer runs short
+   carries no count. Tests: `TableApiTests.SinceVisit`, `LobbyAccountsTests`, `PushNoticesTests`, and the Node tests of
    `players.js` and `inbox.js`. The words joined docs/domain/player-terminology.md.
 
 ## Questions the owner settled (2026-11-16)

@@ -157,6 +157,20 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
         return JsonSerializer.Serialize(new { title = "Your turn", body, url = $"/play?table={Uri.EscapeDataString(table)}", tag = $"turn:{seat.Name}", asked = question.Asked }, Web);
     }
 
+    // The count is a line added to the notice, never a reason to lose it: whatever its read throws, the notice goes without it.
+    private static async Task<int?> CastsAsync(PlayedTable table, TableSeat seat)
+    {
+        try
+        {
+            return (await table.Api.SinceVisitAsync(seat.Name, withLastMove: false)).Casts;
+        }
+        catch (Exception failure)
+        {
+            Console.WriteLine($"  Session {table.Id}: the casts since {seat.Name}'s last visit could not be counted: {failure.Message}");
+            return null;
+        }
+    }
+
     private async Task NoticeAsync(PlayedTable table, TableSeat seat, Asking question, int? round)
     {
         try
@@ -179,8 +193,7 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
                 return;
             }
 
-            var since = await table.Api.SinceVisitAsync(seat.Name, withLastMove: false);
-            if (await sender.SendAsync(subscription, Payload(question, round, seat, table.Id, since.Casts), Topic))
+            if (await sender.SendAsync(subscription, Payload(question, round, seat, table.Id, await CastsAsync(table, seat)), Topic))
             {
                 // Said, so a host's log shows what reached a phone and what did not.
                 Console.WriteLine($"  Session {table.Id}: {seat.Name} notified of asking {question.Asked}.");

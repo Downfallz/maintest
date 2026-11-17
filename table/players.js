@@ -73,14 +73,13 @@ export function timeLeft(answerBy, now = Date.now()) {
 /**
  * The recap's line on a "Your turn" card and in the inbox (async recap plan, R4), from the host's `recap` on the
  * entry (`{ casts, lastMoveAt }`): `3 casts since your last visit · last move 5 h ago`. The count only when there
- * were casts, and the last move only when the host knows it; null when there is nothing to say.
+ * were casts, and the last move only when the host knows it; null when there is nothing to say. In lower case, as it
+ * follows a ` · ` in the inbox and the Your turn band; a line standing alone capitalises it.
  */
 export function sinceVisitLine(recap, now = Date.now()) {
   if (!recap) return null;
   const parts = [];
   if (Number.isInteger(recap.casts) && recap.casts > 0) parts.push(`${recap.casts} ${recap.casts === 1 ? 'cast' : 'casts'} since your last visit`);
   if (recap.lastMoveAt && Number.isFinite(Date.parse(recap.lastMoveAt))) parts.push(`last move ${sentAgo(recap.lastMoveAt, now) || 'just now'}`);
-  if (parts.length === 0) return null;
-  const line = parts.join(' · ');
-  return line[0].toUpperCase() + line.slice(1);
+  return parts.length === 0 ? null : parts.join(' · ');
 }

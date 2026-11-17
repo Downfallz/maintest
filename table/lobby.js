@@ -406,7 +406,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     if (turn) root.append(node('p', turn.mine ? `${turn.text} · ${tableState(table)}` : turn.text, `game-turn${turn.mine ? ' mine' : ''}`));
     // What happened since this player's last visit, on their own turn (async recap plan, R4).
     const since = turn?.mine ? sinceVisitLine(entry?.recap) : null;
-    if (since) root.append(node('p', since, 'game-since'));
+    if (since) root.append(node('p', since[0].toUpperCase() + since.slice(1), 'game-since'));
     // When it was created and whether it counts on the ladder, on every card of one's own.
     if (entry) {
       const created = createdOn(table.createdAt);
