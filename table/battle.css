@@ -1856,7 +1856,7 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 /* The recap, Where you are (docs/tabletop/async-recap-plan.md, R3): one sheet over the battle view, read top to
    bottom on a phone, its body scrolling between the header and the two buttons. What the seat had not seen is
    marked New in gold. The round in the header opens it, a gold dot under the round saying so. */
-#battle #recap-open { min-height: 44px; margin: 0; padding: 0 4px; border: 0; border-radius: var(--radius-sharp); background: transparent; color: inherit; font: inherit; cursor: pointer; }
+#battle #recap-open { min-width: 0; min-height: 44px; margin: 0; padding: 0; border: 0; border-radius: var(--radius-sharp); background: transparent; color: inherit; font-family: inherit; text-transform: none; cursor: pointer; }
 #battle #recap-open:disabled { cursor: default; opacity: 1; }
 #battle #recap-open:not(:disabled):hover, #battle #recap-open:focus-visible { background: #ffffff10; }
 /* A gold dot under the round says it opens: the round's own width, nothing added to the header. */
