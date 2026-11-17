@@ -339,7 +339,7 @@ public sealed class ScenariosApiTests : IDisposable
     public async Task Listing_and_taking_off_are_noted_in_the_operators_activity()
     {
         var (_, scenario) = await CutAsync();
-        // The test's clock stands still: the cut and the removal are noted at one instant, and read in the order noted (#674).
+        // The test's clock stands still: the listing and the taking off are noted at one instant, and read in the order noted (#674).
         var actions = new OperatorActions(new FileOperatorLog(_root), _clock);
         var admin = new ScenarioAdminApi(_store, _hosted.Stored!, _hosted.Composer) { Notes = new OperatorNotes(actions) };
 
@@ -923,7 +923,6 @@ public sealed class ScenariosApiTests : IDisposable
         // The last bump each thread made: the match may move on another thread meanwhile, and its bump is its own (#683).
         var lastBumpOn = new Dictionary<int, bool>();
         bool? toldAsItHandedBack = null;
-        var movedMeanwhile = 0;
         play.Api.Changes.Bumped += () =>
         {
             // The hand-back bumps on its own thread, outside the tutorial's lock (#658): reading it here waits for nothing.
@@ -932,20 +931,16 @@ public sealed class ScenariosApiTests : IDisposable
             {
                 lastBumpOn[Environment.CurrentManagedThreadId] = handedBack;
             }
-
-            // The match moves on another thread between the hand-back's bump and its word, once, as it can in a full run.
-            if (handedBack && Interlocked.Exchange(ref movedMeanwhile, 1) == 0)
-            {
-                var other = new Thread(play.Api.Changes.Bump);
-                other.Start();
-                other.Join();
-            }
         };
 
         // Said after the table's own handler, wired when the practice started: the stream was told by the hand-back
         // itself, on the thread that handed back, and not by the match moving.
         tutorial.GaveBack += () =>
         {
+            // The match moves on another thread after the hand-back's bump and before this reads it, as it can in a full run.
+            var other = new Thread(play.Api.Changes.Bump);
+            other.Start();
+            other.Join();
             lock (gate)
             {
                 toldAsItHandedBack = lastBumpOn.GetValueOrDefault(Environment.CurrentManagedThreadId);

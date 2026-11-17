@@ -54,10 +54,11 @@ public sealed class OperatorActions(IOperatorLog log, TimeProvider clock)
     }
 
     /// <summary>
-    /// The time an action's id carries: when it was taken, or a millisecond past the id this process gave last.
-    /// Ids sort newest first, and two actions of one request share an instant: without this, their random tails
-    /// would order them, and the Activity tab could show a mute above the spam mark that earned it (#674).
-    /// <see cref="OperatorAction.At" /> keeps the clock's own time. Between processes, their clocks order them.
+    /// The time an action's id carries: when it was taken, or a millisecond past the id this instance gave last
+    /// (a host builds one, <c>TableHost.OpenNotesAsync</c>, and every panel shares it). Ids sort newest first, and
+    /// two actions of one request share an instant: without this, their random tails would order them, and the
+    /// Activity tab could show a mute below the spam mark that earned it (#674). <see cref="OperatorAction.At" />
+    /// keeps the clock's own time. Between processes, their clocks order them.
     /// </summary>
     private DateTimeOffset Stamp(DateTimeOffset at)
     {
