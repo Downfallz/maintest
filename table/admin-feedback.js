@@ -341,7 +341,7 @@ export function issueNumber(typed, repository) {
   const address = /^https:\/\/github\.com\/([^/]+\/[^/]+)\/issues\/(\d+)(?:[#?].*)?$/.exec(text);
   const inRepository = address && repository && address[1].toLowerCase() === String(repository).toLowerCase();
   const found = /^#?(\d+)$/.exec(text)?.[1] ?? (inRepository ? address[2] : null);
-  const number = found ? Number(found) : NaN;
+  const number = found ? Number(found) : Number.NaN;
   return Number.isSafeInteger(number) && number > 0 ? number : null;
 }
 
@@ -771,7 +771,7 @@ export function mountFeedbackTab({ send, download, github = globalThis.fetch?.bi
         pages = answer.body.pages ?? 1;
       }
       if (rows.length === 0 || !issuesPath(repository)) return;
-      const since = rows.map(row => row.at).filter(Boolean).sort()[0] ?? null;
+      const since = rows.map(row => row.at).filter(Boolean).sort((one, other) => Date.parse(one) - Date.parse(other))[0] ?? null;
       const closed = new Set();
       try {
         for (let number = 1; number <= ISSUE_PAGES; number += 1) {
