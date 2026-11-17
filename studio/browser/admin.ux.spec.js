@@ -398,6 +398,80 @@ test('a bug report is read beside its position, its round cut, turned into an id
   expect(asked.filter(line => !line.startsWith('GET ?'))).toEqual(['GET id', 'POST id/reproduce', 'PUT id/kind {"kind":"idea"}', 'PUT id/status {"status":"dismissed","reason":"spam"}', 'POST id/mute', 'DELETE id/mute']);
 });
 
+// Filing (feedback plan, R5): a reproduced report from a game that is over is downloaded redacted, filed on GitHub's
+// new-issue form pre-filled without the player's words or the table's id, marked filed with the issue's address, and
+// marked fixed once GitHub says that issue was closed as done.
+test('a reproduced report is downloaded, filed as an issue and marked fixed once GitHub closes it', async ({ page }, info) => {
+  const repository = 'Downfallz/maintest';
+  const scenario = 'sc-20261116-113500-0a1b2c3d';
+  let sheet = { ...feedbackReport, underWay: false, repository, issue: null, reproduction: { id: scenario, link: `/battle?scenario=${scenario}` } };
+  // What the host offers, as FeedbackAdminApi decides it: the download once reproduced and over, filing while open.
+  const offered = one => [one.status !== 'fixed' && 'download', one.status !== 'fixed' && 'file', one.status !== 'seen' && 'seen', 'dismiss', 'spam', 'toIdea', 'mute'].filter(Boolean);
+  sheet = { ...sheet, actions: offered(sheet) };
+  const asked = [];
+  await page.route(/\/api\/admin\/feedback(\?.*)?$/, route => {
+    const search = new URL(route.request().url()).search;
+    asked.push(`GET ${search}`);
+    return route.fulfill({ json: { feedback: [{ ...feedbackRow(sheet), issue: sheet.issue }], total: 1, page: 1, pages: 1, perPage: 20, repository } });
+  });
+  await page.route(/\/api\/admin\/feedback\/[^?]+$/, async route => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname.replace('/api/admin/feedback/', '').replace(feedbackReport.id, 'id');
+    const body = request.method() === 'GET' ? null : request.postDataJSON();
+    asked.push(`${request.method()} ${path}${body && Object.keys(body).length ? ` ${JSON.stringify(body)}` : ''}`);
+    if (path === 'id/scenario.zip') {
+      return route.fulfill({ status: 200, contentType: 'application/zip', headers: { 'Content-Disposition': `attachment; filename="report-${feedbackReport.id}.zip"` }, body: Buffer.from('PK\x05\x06' + '\0'.repeat(18), 'binary') });
+    }
+    if (path === 'id/status') sheet = { ...sheet, status: body.status, issue: body.issue ?? sheet.issue };
+    sheet = { ...sheet, actions: offered(sheet) };
+    return route.fulfill({ json: sheet });
+  });
+  const github = [];
+  await page.route('https://api.github.com/**', route => {
+    github.push(new URL(route.request().url()).pathname);
+    return route.fulfill({ headers: { 'Access-Control-Allow-Origin': '*' }, json: [{ number: 731, state: 'closed', state_reason: 'completed' }, { number: 732, state: 'closed', state_reason: 'not_planned' }] });
+  });
+  await page.reload();
+
+  await page.locator('#tab-feedback').click();
+  await page.locator('#admin-feedback-list li').first().locator('button').click();
+  await expect(page.locator('#admin-feedback-sheet-kind')).toHaveText('Bug report · New');
+  await expect(page.locator('#admin-feedback-filing')).toBeVisible();
+  await expect(page.locator('#admin-feedback-download-note')).toBeHidden();
+  const issue = await page.locator('#admin-feedback-issue').getAttribute('href');
+  expect(issue.startsWith(`https://github.com/${repository}/issues/new?template=bug_from_report.yml&`)).toBe(true);
+  expect(decodeURIComponent(issue)).toContain(`Drop report-${feedbackReport.id}.zip here`);
+  expect(decodeURIComponent(issue)).not.toContain(feedbackReport.context.table);
+  expect(decodeURIComponent(issue)).not.toContain('bleed');
+  expect(await page.evaluate(() => { const body = document.querySelector('#admin-feedback-sheet .home-dialog-body'); return body.scrollWidth <= body.clientWidth; })).toBe(true);
+  await page.locator('#admin-feedback-filing').scrollIntoViewIfNeeded();
+  await page.screenshot({ path: info.outputPath('admin-feedback-filing.png') });
+
+  const saving = page.waitForEvent('download');
+  await page.locator('#admin-feedback-download').click();
+  expect((await saving).suggestedFilename()).toBe(`report-${feedbackReport.id}.zip`);
+  await expect(page.locator('#admin-feedback-sheet-said')).toHaveText(`Saved report-${feedbackReport.id}.zip. Attach it to the issue: GitHub takes a zip, not a .json.`);
+
+  await page.fill('#admin-feedback-issue-number', 'https://github.com/someone/else/issues/731');
+  await page.locator('#admin-feedback-filed').click();
+  await expect(page.locator('#admin-feedback-sheet-said')).toHaveClass(/refused/);
+  await page.fill('#admin-feedback-issue-number', `https://github.com/${repository}/issues/731`);
+  await page.locator('#admin-feedback-filed').click();
+  await expect(page.locator('#admin-feedback-sheet-said')).toHaveText('Filed as #731. The report reads fixed once the issue is closed.');
+  await expect(page.locator('#admin-feedback-sheet-kind')).toHaveText('Bug report · Filed #731');
+  await expect(page.locator('#admin-feedback-issue-link')).toHaveAttribute('href', `https://github.com/${repository}/issues/731`);
+
+  // The tab, opened again, asks GitHub whether the filed issues are closed, and marks fixed the one closed as done.
+  await page.locator('#admin-feedback-close').click();
+  await page.evaluate(() => { location.hash = '#overview'; });
+  await page.locator('#tab-feedback').click();
+  await expect.poll(() => sheet.status).toBe('fixed');
+  expect(github).toEqual([`/repos/${repository}/issues`]);
+  await expect(page.locator('#admin-feedback-list li').first()).toContainText('Fixed');
+  expect(asked.filter(line => !line.startsWith('GET ?') && line !== 'GET id')).toEqual(['POST id/scenario.zip', 'PUT id/status {"status":"filed","issue":731}', 'PUT id/status {"status":"fixed"}']);
+  expect(asked).toContain('GET ?kind=bug&status=open&filed=true');
+});
+
 // Ideas grouped (feedback plan, I1): the ideas listed by how many asked, one merged into another, the group read on
 // one sheet, planned with its plan's path, and copied as a plan prompt in the operator's own words.
 test('an idea is merged into another, read with everyone who asked it, planned, and copied as a plan prompt', async ({ page, context }, info) => {

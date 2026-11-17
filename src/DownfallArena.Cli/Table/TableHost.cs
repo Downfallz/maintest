@@ -254,7 +254,6 @@ internal static class TableHost
         // account's mute is kept with its activity, a guest's in this process's memory.
         var feedbackMutes = new FeedbackMutes(accounts?.Activity);
         var operatorFeedback = feedback is null ? null : new OperatorFeedback(feedback, feedbackMutes, feedbackWrites, clock);
-        admin.Feedback = operatorFeedback is null ? null : new FeedbackAdminApi(operatorFeedback, stored, clock) { Notes = notes };
 
         // The Overview (A5): the numbers at a glance, each read from the source its own tab reads.
         admin.Overview = new OverviewApi(registry, composer, clock)
@@ -292,8 +291,7 @@ internal static class TableHost
         await using var practices = scenarioStore is null ? null : new ScenarioPractices(composer, scenarioStore, clock);
         admin.Scenarios = scenarioStore is null || stored is null ? null : new ScenarioAdminApi(scenarioStore, stored, composer) { Notes = admin.Notes };
 
-        // Reproduce (feedback plan, R4) cuts a bug report's round through the Scenarios tab's own cutting.
-        admin.Feedback?.Scenarios = admin.Scenarios;
+        admin.Feedback = FeedbackTab(operatorFeedback, stored, admin.Scenarios, notes, clock);
         var sendFeedback = feedback is null ? null : new SendFeedback(feedback, new GuestAddresses(), feedbackWrites, clock, feedbackMutes);
         using var server = new TableServer(options.Bind, options.Port, registry, new TableFiles(TableDirectory), admin, clock, stored, accounts, leaderboard, friends, stats)
         {
@@ -465,6 +463,14 @@ internal static class TableHost
     /// Where the match scenarios are kept (ADR 0179), or none when it cannot be opened: the host then cuts and serves
     /// none, which is said, and plays every game as before.
     /// </summary>
+    /// <summary>
+    /// The Feedback tab the panel serves, none on a host that keeps no feedback. Its Reproduce (feedback plan, R4) cuts a
+    /// bug report's round through the Scenarios tab's own cutting, so it is built once that tab is: without it the route
+    /// is a 404 and the sheet offers no Reproduce.
+    /// </summary>
+    internal static FeedbackAdminApi? FeedbackTab(OperatorFeedback? feedback, StoredSessions? stored, ScenarioAdminApi? scenarios, OperatorNotes notes, TimeProvider clock) =>
+        feedback is null ? null : new FeedbackAdminApi(feedback, stored, clock) { Notes = notes, Scenarios = scenarios };
+
     internal static async Task<ScenarioStore?> OpenScenariosAsync(string target, TimeProvider clock, CancellationToken cancellationToken, RepositoryScenarios? shipped = null)
     {
         try

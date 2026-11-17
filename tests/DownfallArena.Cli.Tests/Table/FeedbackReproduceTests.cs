@@ -125,6 +125,21 @@ public sealed class FeedbackReproduceTests : IDisposable
         (await ActivityAsync()).ShouldBe([$"feedback.reproduce {id} {scenario}, round 2, player2"]);
     }
 
+    /// <summary>The tab as the table host composes it (#737): its Reproduce reaches the Scenarios tab's cutting.</summary>
+    [Fact]
+    public async Task The_feedback_tab_the_host_composes_offers_and_cuts_a_report_s_round()
+    {
+        var id = await ReportedAsync(new FeedbackContext { Table = await PlayedAsync(), Seat = "player2", Round = 2 });
+        var tab = TableHost.FeedbackTab(new OperatorFeedback(_feedback, new FeedbackMutes(null), _writes, _clock), _hosted.Stored, Cutting(), new OperatorNotes(_actions), _clock).ShouldNotBeNull();
+
+        var sheet = Read(await tab.HandleAsync("GET", $"{FeedbackAdminApi.Route}/{id}", string.Empty, "mark"));
+        var cut = await tab.HandleAsync("POST", $"{FeedbackAdminApi.Route}/{id}/reproduce", string.Empty, "mark");
+
+        sheet.GetProperty("actions").EnumerateArray().Select(one => one.GetString()).ShouldContain("reproduce");
+        cut.Status.ShouldBe(200, Encoding.UTF8.GetString(cut.Body));
+        Read(cut).GetProperty("reproduction").GetProperty("link").GetString().ShouldStartWith("/battle?scenario=");
+    }
+
     [Fact]
     public async Task Reproduce_asked_again_answers_the_scenario_it_cut_and_notes_nothing_more()
     {
