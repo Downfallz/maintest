@@ -173,13 +173,14 @@ under way: a player who left the page open for two days, or who simply lost the 
    card's line.
 
    *Built (2026-11-17)*: `TableApi.SinceVisitAsync` counts the casts (`CombatActionResolved`) the seat may see in its
-   feed past its last visit, and reads when the last move was; no board is read, and a seat with no last visit has
-   no count. `GET /api/lobby/mine` carries it as `recap: { casts, lastMoveAt }` on a game under way at one seat of the
-   account (none for a device holding both). `sinceVisitLine` (`table/players.js`) says it, `3 casts since your last
-   visit · last move 5 h ago`, on the lobby's own "Your turn" cards, in the Your turn band and in the inbox; a count
-   of none is left out. The push notice adds `3 casts since your last visit.` to its body. Tests:
-   `TableApiTests.SinceVisit`, `LobbyAccountsTests`, `PushNoticesTests`, and the Node tests of `players.js` and
-   `inbox.js`. The words joined docs/domain/player-terminology.md.
+   feed past its last visit, no further than the journal holds. It also reads when the last move was. No board is
+   read, and a seat with no last visit has no count. `GET /api/lobby/mine` carries it as
+   `recap: { casts, lastMoveAt }` on a game that waits for the account at one seat (none for a device holding both).
+   `sinceVisitLine` (`table/players.js`) says it, `3 casts since your last visit · last move 5 h ago` (`1 cast` for
+   one), on the lobby's "Your turn" cards (the band and the cards) and in the inbox. When no spell was cast, the
+   count is left out and only the last move shows. The push notice adds `3 casts since your last visit.` to its
+   body. Tests: `TableApiTests.SinceVisit`, `LobbyAccountsTests`, `PushNoticesTests`, and the Node tests of
+   `players.js` and `inbox.js`. The words joined docs/domain/player-terminology.md.
 
 ## Questions the owner settled (2026-11-16)
 

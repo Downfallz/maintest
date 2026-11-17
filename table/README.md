@@ -440,7 +440,7 @@ first, in the same order. Every card of one's own says the day its game was crea
 game between players, in 3v3, not opened unranked, each seat held by an account of its own (ADR 0124, 0171). A game
 waiting for the player also says what happened since their last visit (ADR 0194), the same line in the inbox:
 *3 casts since your last visit · last move 5 h ago*. The host counts the casts in the seat's own feed past the mark
-it was last shown; no count before a first visit, and none for a device holding both seats. A finished game's
+it was last shown. There is no count before a first visit, and no line for a device holding both seats. A finished game's
 row says the same from the host's kept result: the day its table was opened, the day it finished, and Ranked or
 Unranked as the ladder counted it.
 
@@ -495,8 +495,8 @@ included: the host still sends one when the battle view's controls were not open
 worker keeps it quiet while a battle view at that table is visible and focused, so an installed app being played is not told what it
 shows; a tap on a notice brings a battle view already open at that table to the front and leaves it there. A page hidden
 behind another app or a locked screen counts as nobody looking, even while it still runs. The notice says
-"your turn", the round and the question, and, after a last visit, how many spells were cast since
-(*Round 4: choose a spell. 3 casts since your last visit.*), nothing else. On an iPhone the button says to add the table to the home screen
+"your turn", the round and the question. After a last visit it also says how many spells were cast since
+(*Round 4: choose a spell. 3 casts since your last visit.*). Nothing else. On an iPhone the button says to add the table to the home screen
 first. Every seat page makes the offer once, in a bar at the bottom of the screen, and its answer is remembered
 by the browser; the button stays in the Match panel and in the waiting room. The second player to arrive never
 waits in a room, so the bar is where they are asked. Where no notice can reach, the Match panel says why instead of
@@ -576,7 +576,7 @@ not begun may do. A rebuilt table (ADR 0091) still waits for the friend. Cards n
 `POST /api/lobby/tables/<id>/accept`, `/decline`, `DELETE /api/lobby/tables/<id>/invitation`,
 `POST /api/lobby/tables/<id>/invitation {"friend"}`, `POST /api/lobby/tables/<id>/open`, `DELETE /api/lobby/tables/<id>`;
 `GET /api/lobby/mine` adds `invitations` and each own table's `invited`, and `recap` (`{ casts, lastMoveAt }`) on a
-game under way at one seat.
+game under way that waits for the player at one seat.
 
 When a match ends, each seat's account is told how, against the other side by name (*Victory · You won against
 bastien*, *Defeat · bastien won*, *A draw*); a bot's seat is told nothing, and one account holding both seats of a
@@ -721,7 +721,7 @@ test (`.claude/rules/host.md`).
 | `PUT`/`DELETE /api/account/push`, `POST /api/account/push/test` | account | This browser as one of the account's devices. |
 | `GET /api/lobby`, `GET /api/lobby/page/<open\|all>/<page>` | anyone | Counts, and the public tables eight at a time. |
 | `GET /api/lobby/events`, `GET /api/lobby/negotiate` | anyone | What changed: the stream (ADR 0164), or the relay's address (ADR 0165). |
-| `GET /api/lobby/mine`, `GET /api/lobby/opponents` | account | The player's tables and invitations, a game under way with the casts since the last visit; the eight latest opponents. |
+| `GET /api/lobby/mine`, `GET /api/lobby/opponents` | account | The player's tables and invitations (a game waiting for the player carries its recap: the casts since the last visit); the eight latest opponents. |
 | `GET /api/lobby/finished/<bots\|players>/<page>` | account | Finished games, six at a time (ADR 0147). |
 | `POST /api/lobby/tables` | anyone, account | Opens a table: `opponent`, `friend`, `level` (ADR 0180), `ranked` (ADR 0155), `turnLimit` (ADR 0169), format. |
 | `POST /api/lobby/adopt` | account | Adopts the browser's saved seats into the account. |

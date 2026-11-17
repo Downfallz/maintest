@@ -589,8 +589,9 @@ friend's request or an invitation reaches a player who holds no seat (docs/table
   (`POST .../invitation {"friend"}`), opens it to everyone (`POST .../open`) or closes the unbegun table
   (`DELETE /api/lobby/tables/<id>`, for whoever holds every taken seat).
 - `GET /api/lobby/mine` lists the tables waiting for the player under `invitations` and says `invited` on their
-  own. A game under way at one of the player's seats carries `recap`: `casts`, the spells cast that the seat may see
-  since its last visit (null before a first one, ADR 0194), and `lastMoveAt`.
+  own. A game under way that waits for the player at one seat carries `recap`: `casts` (the spells cast since the
+  seat's last visit, counting only those it may see; null before a first visit, ADR 0194) and `lastMoveAt` (when the
+  last move was).
 - The friend's devices are told of the invitation, the inviter's of its answer, each seat's account of how the
   match ended and of the opponent leaving a begun match (stage 4).
 

@@ -897,7 +897,10 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
 
         var since = (int)Math.Min(int.MaxValue, visit.Sequence + 1);
         var recorded = run is { } recording ? recording.Entries(session.MatchId, since) : events.EntriesOf(session.MatchId, since);
-        var casts = SeatFeedProjection.Build(recorded, seat.Slot, since).Count(entry => entry.Event is CombatActionResolved);
+
+        // No further than the journal holds, as the seat's view stops: a cast past it may be of a step never written.
+        var examined = session.Journaled is { } kept && kept - since < recorded.Count ? [.. recorded.Take(Math.Max(0, kept - since))] : recorded;
+        var casts = SeatFeedProjection.Build(examined, seat.Slot, since).Count(entry => entry.Event is CombatActionResolved);
         return new SinceVisit(casts, lastMove);
     }
 

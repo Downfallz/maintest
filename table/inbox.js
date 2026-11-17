@@ -39,7 +39,7 @@ export function inboxItems({ mine = [], invitations = [], friends = null } = {},
       const round = Number.isInteger(entry.table.round) ? ` · Round ${entry.table.round}` : '';
       const since = sinceVisitLine(entry.recap, now);
       items.push({ kind: 'turn', key: `turn:${entry.table.id}`, title: `Your turn against ${against}`,
-        detail: `${`${entry.table.format ?? ''} battle${round}`.trim()}${since ? ` · ${since}` : ''}`, seats: entry.seats });
+        detail: [`${entry.table.format ?? ''} battle${round}`.trim(), since].filter(Boolean).join(' · '), seats: entry.seats });
     }
   }
   for (const invitation of invitations) {

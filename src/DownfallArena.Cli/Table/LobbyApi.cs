@@ -1581,12 +1581,13 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
     /// <summary>
     /// The recap's line on the account's card (async recap plan, R4): the casts since its seat's last visit and when
-    /// the last move was. None for a game over or not begun, and for a device holding both seats (ADR 0120), which
-    /// was there for every move.
+    /// the last move was. Only on the account's turn, the one card that shows it, so the list reads no more than it
+    /// shows. None for a game over or not begun, and for a device holding both seats (ADR 0120), which was there for
+    /// every move.
     /// </summary>
     private static async Task<object?> RecapAsync(PlayedTable table, AccountId account)
     {
-        if (table.IsOver || !table.Session.HasBegun || table.Seats.Where(seat => seat.Account == account).ToArray() is not [{ Person: not null } seat])
+        if (table.IsOver || !table.Session.HasBegun || table.Seats.Where(seat => seat.Account == account).ToArray() is not [{ Person.Waiting: not null } seat])
         {
             return null;
         }
