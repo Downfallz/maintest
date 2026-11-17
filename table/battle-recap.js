@@ -61,7 +61,8 @@ export function buildRecap({ view, feed, seen, seenAt = view?.seen?.at ?? null, 
   const ended = entries.filter(entry => entry.event?.kind === 'RoundEnded').map(roundOf).filter(isInt);
   // The last round that ended before this one; a feed that starts later still knows the round before is over.
   const before = ended.filter(round => round < current);
-  const completed = before.length ? Math.max(...before) : current > 1 ? current - 1 : null;
+  let completed = current > 1 ? current - 1 : null;
+  if (before.length) completed = Math.max(...before);
 
   // The journal's public rows, in order; a row it does not tell is not the recap's either.
   const rows = entries.map(entry => historyEntry(entry, board, catalogue)).filter(Boolean);
@@ -186,8 +187,8 @@ function chosenBy(board, entries, current, catalogue) {
   const bought = own('EvolutionChoiceSubmitted');
   const rounds = bought.map(roundOf).filter(isInt);
   const last = rounds.length ? Math.max(...rounds) : null;
-  const picks = last !== null ? bought.filter(entry => roundOf(entry) === last).map(entry => entry.event.choice)
-    : board.evolutionChoices?.length ? board.evolutionChoices : [];
+  const picks = last === null ? board.evolutionChoices ?? []
+    : bought.filter(entry => roundOf(entry) === last).map(entry => entry.event.choice);
   return {
     tempos: speeds.filter(Boolean).map(one => ({ creature: label(one.creature), tempo: tempoLabel(one.speed) })),
     spells: intents.filter(Boolean).map(one => ({ creature: label(one.actor), spell: spellName(one.spell, catalogue) })),

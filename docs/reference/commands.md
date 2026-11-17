@@ -949,13 +949,13 @@ pictures to upload.
 ### recap-fixture.py
 
 ```bash
-dotnet run --project src/DownfallArena.Cli -- play --seed 1 --trace match.trace.json
-python3 scripts/recap-fixture.py match.trace.json data/dst/game.schema.json table/battle-recap.fixture.json
+dotnet run --project src/DownfallArena.Cli -- play --seed 1 --trace artifacts/recap-match.trace.json
+python3 scripts/recap-fixture.py
 ```
 
-Rebuilds the recorded match the recap's tests read (`table/battle-recap.test.js`): seat player1's feed of a few
-rounds, frames trimmed to the stats the recap reads, and the board at a few named moments. Run it when an event's
-shape changes, and read the tests' numbers again.
+Rebuilds the recorded match the recap's tests read (`table/battle-recap.test.js`) from the trace in the ignored
+`artifacts/`: seat player1's feed of a few rounds, frames trimmed to the stats the recap reads, and the board at a
+few named moments. Its paths are fixed. Run it when an event's shape changes, and read the tests' numbers again.
 
 ### workflow-metrics.py
 

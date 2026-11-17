@@ -1,8 +1,9 @@
 """Rebuild table/battle-recap.fixture.json, the recorded match the recap's tests read.
 
-    dotnet run --project src/DownfallArena.Cli -- play --seed 1 --trace match.trace.json
-    python3 scripts/recap-fixture.py match.trace.json data/dst/game.schema.json \
-        table/battle-recap.fixture.json
+    dotnet run --project src/DownfallArena.Cli -- play --seed 1 --trace artifacts/recap-match.trace.json
+    python3 scripts/recap-fixture.py
+
+Its paths are fixed under the repository: the trace in the ignored artifacts/, the built content, the fixture.
 
 The trace is filtered as SeatVisibility filters seat player1's feed: the other seat's hidden decisions are
 dropped. Frames keep the stats the recap reads, and the board is kept at a few named moments
@@ -10,8 +11,12 @@ dropped. Frames keep the stats the recap reads, and the board is kept at a few n
 """
 
 import json
-import sys
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+TRACE = ROOT / "artifacts" / "recap-match.trace.json"
+SCHEMA = ROOT / "data" / "dst" / "game.schema.json"
+FIXTURE = ROOT / "table" / "battle-recap.fixture.json"
 
 PRIVATE = {
     "IntentSubmitted",
@@ -111,10 +116,10 @@ def named_moments(entries: list[dict]) -> dict[str, int]:
     return moments
 
 
-def main(trace_path: str, schema_path: str, out_path: str) -> None:
-    with Path(trace_path).open(encoding="utf-8") as trace_file:
+def main() -> None:
+    with TRACE.open(encoding="utf-8") as trace_file:
         entries = json.load(trace_file)["entries"]
-    with Path(schema_path).open(encoding="utf-8") as schema_file:
+    with SCHEMA.open(encoding="utf-8") as schema_file:
         schema = json.load(schema_file)
     feed = seat_feed(entries)
     by_sequence = {entry["sequence"]: entry for entry in entries}
@@ -132,9 +137,9 @@ def main(trace_path: str, schema_path: str, out_path: str) -> None:
         "packages": [{"id": one["id"], "name": one["name"]} for one in schema["tiers"]],
     }
     fixture = {"note": NOTE, "catalogue": catalogue, "feed": feed, "boards": boards}
-    with Path(out_path).open("w", encoding="utf-8") as out_file:
+    with FIXTURE.open("w", encoding="utf-8") as out_file:
         json.dump(fixture, out_file, separators=(",", ":"))
 
 
 if __name__ == "__main__":
-    main(*sys.argv[1:4])
+    main()
