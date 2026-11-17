@@ -15,7 +15,7 @@ namespace DownfallArena.Cli.Table;
 /// <c>PUT .../&lt;id&gt;/kind {"kind"}</c> turns a bug report into an idea or back; <c>POST</c> and <c>DELETE
 /// .../&lt;id&gt;/mute</c> stop its sender from sending feedback for 30 days, and lift it; <c>POST .../&lt;id&gt;/reproduce</c>
 /// cuts a bug report's round as a match scenario in its sender's seat (R4) and answers the sheet with its link;
-/// <c>GET .../&lt;id&gt;/scenario.zip</c> answers that scenario redacted, to attach to a public issue (R5), and
+/// <c>POST .../&lt;id&gt;/scenario.zip</c> answers that scenario redacted, to attach to a public issue (R5), and
 /// <c>PUT .../&lt;id&gt;/status {"status":"filed","issue"}</c> keeps the issue's number, which <c>fixed</c> follows once the
 /// issue is closed. Each change is an Activity line;
 /// asked again, a change writes and notes nothing. The sheet says which of its actions apply, so the page decides none.
@@ -69,7 +69,7 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
             ("PUT", [var id, "kind"]) => await KindAsync(id, body, operatorName),
             ("POST", [var id, "merge"]) => await MergeAsync(id, body, operatorName),
             ("POST", [var id, "reproduce"]) when Scenarios is not null => await ReproduceAsync(id, operatorName),
-            ("GET", [var id, "scenario.zip"]) when Scenarios is not null => await ScenarioZipAsync(id, operatorName),
+            ("POST", [var id, "scenario.zip"]) when Scenarios is not null => NotKept(await ScenarioZipAsync(id, operatorName)),
             ("POST", [var id, "mute"]) => await MuteAsync(id, operatorName),
             ("DELETE", [var id, "mute"]) => await UnmuteAsync(id, operatorName),
             _ => Error("Feedback.NoRoute", $"No such route: {method} {path}", 404),
@@ -368,7 +368,7 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
     /// <c>scenario.json</c> (R5): what the operator attaches to the public issue by hand, since GitHub attaches a zip and
     /// not a <c>.json</c>. Refused while the report's table is under way, so nothing a seat holds face down that round
     /// reaches the issue, and refused when the file still names the session or holds a person. Each download is noted:
-    /// it is what leaves the host.
+    /// it is what leaves the host. A POST, so another site's link cannot write that line through the operator's cookie.
     /// </summary>
     private async Task<StudioResponse> ScenarioZipAsync(string id, string operatorName)
     {
@@ -404,6 +404,13 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
         await Notes.NoteAsync(operatorName, OperatorActions.FeedbackDownload, id, one.Reproduction);
         return new StudioResponse(200, ZipType, bytes.ToArray(), [new KeyValuePair<string, string>("Content-Disposition", $"attachment; filename=\"report-{id}.zip\"")]);
     }
+
+    /// <summary>
+    /// A download's answer, the file or its refusal, kept by no cache: Cloudflare keeps a <c>.zip</c> by its extension
+    /// when the host says nothing, and would serve it past the panel's gate.
+    /// </summary>
+    private static StudioResponse NotKept(StudioResponse answer) =>
+        answer with { Headers = [.. answer.Headers ?? [], new KeyValuePair<string, string>("Cache-Control", "no-store, private")] };
 
     /// <summary>Whether the table a report was sent from is still played: open and not voided.</summary>
     private async Task<bool> UnderWayAsync(Feedback one) =>

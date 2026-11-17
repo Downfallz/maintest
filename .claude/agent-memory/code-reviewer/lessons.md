@@ -69,3 +69,6 @@
 - A kept reference to an object another tab can delete (Feedback.Reproduction -> a scenario) renders a dead link on every sheet read: resolve it at read time or clear it on delete (R4 Reproduce, FeedbackAdminApi.cs:129).
 - A link from one origin's localized page into a page that picks its language from device storage or the browser (table/rules.js languageOf) drops the reader's language: the other origin's storage is not shared, and /rules reads no query. Check every cross-origin "open in the game" link for what it carries (R7, showcase/rules.mjs:86).
 - Sixth time: the branch moved mid-review (R7, 62d66c9 -> 90f87db, PAGE_IDS added); findings re-checked on the final HEAD.
+- A length cut with `text.slice(0, n)` before `encodeURIComponent` splits a surrogate pair (an emoji at the cut) and throws `URI malformed`: probe every cut-to-fit loop with emoji text (R5, table/admin-feedback.js issueAddress, bc3d38f).
+- GitHub's issue `state_reason` has `duplicate` besides `completed`/`not_planned`/`reopened`: a "closed as done" filter written as `!== 'not_planned'` counts duplicates as fixed (R5, closedIssues, bc3d38f).
+- Seventh time: the author session edited the checkout mid-review (R5: the form, the docs, admin-feedback.js/html, uncommitted on bc3d38f); findings named against HEAD from a `git archive` copy.

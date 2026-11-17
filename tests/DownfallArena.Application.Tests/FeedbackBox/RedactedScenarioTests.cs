@@ -137,6 +137,13 @@ public sealed class RedactedScenarioTests
     }
 
     [Fact]
+    public void A_name_that_is_part_of_a_content_id_the_journal_names_is_not_a_name_it_holds()
+    {
+        RedactedScenario.Check(Redacted(title: "spell:pummel:v1 then creature:mark:v1"), Report, [("a player's name", "pummel"), ("a player's name", "Mark")]).IsSuccess.ShouldBeTrue();
+        RedactedScenario.Check(Redacted(title: "Pummel: it did not tick"), Report, [("a player's name", "pummel")]).IsFailure.ShouldBeTrue();
+    }
+
+    [Fact]
     public void An_empty_name_is_not_looked_for_and_a_file_that_is_not_a_scenario_is_refused()
     {
         RedactedScenario.Check(Redacted(), Report, [("a player's name", null), ("a seat's key", "")]).IsSuccess.ShouldBeTrue();

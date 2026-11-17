@@ -288,6 +288,15 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
             return (Error(FeedbackErrors.NotReproduced.Code, FeedbackErrors.NotReproduced.Message, 409), null);
         }
 
+        // A scenario cut from a table still played, as a practice's may be, holds what its seats keep face down there.
+        foreach (var source in new[] { document.Session, document.Scenario.Source.Run }.OfType<string>().Distinct(StringComparer.Ordinal))
+        {
+            if (TableKeys.IsTableId(source) && await stored.RecordAsync(source) is { Status: TableRecord.Open, Void: false })
+            {
+                return (Error(FeedbackErrors.UnderWay.Code, FeedbackErrors.UnderWay.Message, 409), null);
+            }
+        }
+
         if ((document.Schema ?? await SchemaOfAsync(document.Content)) is not { } schema)
         {
             return (Error("Scenario.ContentGone", $"The content this scenario was cut on ({document.Content}) is not kept at this host: the file could not carry it.", 409), null);

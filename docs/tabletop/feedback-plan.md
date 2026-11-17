@@ -267,7 +267,7 @@ you reported on <date> is fixed", once (`AccountNotices`). A guest's report tell
 | `POST /api/admin/feedback/<id>/merge {"into"}` | operator | Merges an idea into another. |
 | `POST`/`DELETE /api/admin/feedback/<id>/mute` | operator | Stops the sender from sending feedback for 30 days; lifts it. |
 | `POST /api/admin/feedback/<id>/reproduce` | operator | Cuts the scenario at the reported round, in the reporter's seat; answers the practice link. |
-| `GET /api/admin/feedback/<id>/scenario.zip` | operator | The redacted scenario, as a zip to attach to the issue. |
+| `POST /api/admin/feedback/<id>/scenario.zip` | operator | The redacted scenario, as a zip to attach to the issue (a POST since R5 was built). |
 
 ## Stages
 
@@ -423,38 +423,48 @@ and they are the first thing every player can use.
    (`admin-feedback.test.js`), `studio/prompts.test.js` for the label.
 
    *Built (2026-11-17)*: `RedactedScenario` (Application) takes the scenario that Reproduce kept and gives it the
-   report's id as its run and session, and a match id drawn from that id (`MatchOf`). It keeps the answers after the cut only up to the
-   journal's length when the player wrote; a practice's report keeps every entry it copied. Its `Check` reads the file
-   as written and refuses a file whose source is not the report's, whose journal keeps a time, or that holds, as a word
-   of its own and in any case, any name it is given. The carried content is left out of that reading. It says what it
-   found ("an account"), never the name. `GET /api/admin/feedback/<id>/scenario.zip` writes the file with its content
-   and checks it against the report's sender, account and table, the session's ids, and, from the table's record,
-   every seat's key, code, invitation and account, the pilot's key, and the players' names. It answers
-   `report-<id>.zip` holding one `scenario.json`, and notes `feedback.download`. A report from a table still under way
-   is refused (`Feedback.UnderWay`), and the sheet says the scenario comes once the game is over: R4's cut may hold the
-   other seat's face-down choices of a round still played.
+   report's id as its run and session, and a match id drawn from that id (`MatchOf`). It keeps the answers after the
+   cut only up to the journal's length when the player wrote; a practice's report keeps every entry it copied. Its
+   `Check` reads the file as written and refuses a file whose source is not the report's, whose journal keeps a time,
+   or that holds, as a word of its own and in any case, any name it is given. It does not read the carried content or
+   the fields' names, and a word a ':' joins to its neighbours is part of a content id (`spell:pummel:v1`), not a name.
+   It says what it found ("an account"), never the name.
 
-   **File an issue** opens `bug_from_report.yml` (labels `bug` and `from-report`) pre-filled by its field ids: the report's
-   id, the category, the player's words, the round, step and seat, the engine, content and rules, the page's errors,
-   and where to drop the zip. The title names the report and its category, never the player's words, and no table id,
-   account or key is in the address. Past 8,000 characters, the longest of the player's words, what they expected and
-   the page's errors is cut by a quarter and marked with an ellipsis, and this repeats until the address fits. The
-   operator pastes back the issue's number, or its address in the same repository, and the report reads *Filed #N*
-   (`feedback.file`), its sheet linking the issue so a mistyped number shows. Opening the tab reads the filed reports,
-   then asks GitHub's public API for the closed `from-report` issues updated since the oldest of them was sent, a
-   hundred a page and five pages at most. A report whose issue was closed as completed is marked *fixed*
-   (`feedback.status`). A report whose issue was closed as not planned stays filed. `fixed` is refused on a report
-   never filed (`Feedback.NotFiled`).
+   `POST /api/admin/feedback/<id>/scenario.zip` writes the file with its content and checks it against the report's
+   sender, account and table, the session's ids, and, from the table's record, every seat's key, code, invitation and
+   account, the pilot's key, and the players' names. It answers `report-<id>.zip` holding one `scenario.json`, and
+   notes `feedback.download`. The route is a POST, not the GET the routes table above named: a download writes an
+   Activity line, and a GET another site links to would carry the operator's cookie. Every answer says
+   `Cache-Control: no-store, private`, since Cloudflare keeps a `.zip` by its extension. A report from a table still
+   under way is refused (`Feedback.UnderWay`), and so is one whose scenario was cut from a table still under way, as a
+   practice's may be. R4's cut may hold the other seat's face-down choices of a round still played. The sheet says
+   the scenario comes once the game is over.
 
-   The repository is `FeedbackAdminApi.Repository`. `bug`, `enhancement` and
-   `from-report` are declared in `.github/labels.json`. A test holds every label an issue form puts on its issue to that
-   file. The *What we keep* panel and the privacy policy, in English and French, say a bug may be described in a public
-   issue in the operator's words, with nothing that names the player.
+   **File an issue** opens `bug_from_report.yml` (labels `bug` and `from-report`) pre-filled by its field ids: the
+   report's id, the category, the round, step and seat, the engine, content and rules, the page's errors, and where to
+   drop the zip. Unlike what "The issue" above says, the player's words are not pre-filled. The operator writes what
+   happened from the sheet, so no word of the player's reaches GitHub, even in an address, before the operator wrote
+   it. That is the privacy policy's promise. The title names the report and its category, and no table id, account or
+   key is in the address. Past 8,000 characters, the page's errors are cut by a quarter, never inside a character, and
+   marked with an ellipsis, until the address fits.
 
-   Left: when a player's name is also a word the journal holds (a spell id such as `spell:pummel:v1` for a player
-   called Pummel), the download is refused and the sheet says a player's name is held. The content the file includes
-   is not read, but the journal's ids are. Past 500 closed issues updated since the oldest filed report, the older
-   ones are not read.
+   The operator pastes back the issue's number, or its address in the same repository, and the report reads *Filed #N*
+   (`feedback.file`). Its sheet links the issue, so a mistyped number shows. The number stays through the statuses set
+   after it. Opening the tab, once in ten minutes at most, reads the open bug reports that name an issue. It then asks
+   GitHub's public API for the closed `from-report` issues updated since the oldest of them was sent: a hundred a page,
+   five pages at most. A report whose issue was closed as completed is marked *fixed* (`feedback.status`). One whose
+   issue was closed as not planned, or as a duplicate, stays open. `fixed` is refused on a report never filed
+   (`Feedback.NotFiled`).
+
+   The repository is `FeedbackAdminApi.Repository`. `bug`, `enhancement` and `from-report` are declared in
+   `.github/labels.json`, which the labels workflow creates on GitHub once merged. A test holds every label an issue
+   form puts on its issue to that file. The *What we keep* panel and the privacy policy, in English and French, say a
+   bug may be described in a public issue in the operator's words, with nothing that names the player.
+
+   Left: a player named like a word the journal holds on its own (`person`, `player1`) cannot have the scenario
+   downloaded, and the sheet says a player's name is held. Past 500 closed issues updated since the oldest open filed
+   report, or past 100 open bug reports, the rest are not read. The repository is a constant, not the host's
+   configuration. No browser spec plays the new buttons yet.
 8. **R6, bug scenarios and their tests.** `scenarios/bugs/` read by the host and listed as *Bug #N*;
    `ScenarioFileTests` asking a bug file's answers only up to its reported point; the `BugScenario` test helper;
    `scenario-import` and `scenario-check --trace`. Tests: `RepositoryScenariosTests` (a bug file listed),

@@ -184,8 +184,9 @@ test('File an issue opens GitHub\'s form for a report, pre-filled with what the 
   assert.equal(asked.title, 'Report 20261116T113000000Z-abc123: the rules did something wrong, round 3');
   assert.equal(asked.report, '20261116T113000000Z-abc123');
   assert.equal(asked.category, 'The rules did something wrong');
-  assert.equal(asked.happened, 'The bleed did not tick after the stun.\nIt happened again.');
-  assert.equal(asked.expected, 'One damage in the upkeep.');
+  assert.equal(Object.hasOwn(asked, 'happened'), false, 'the player\'s words stay in the panel: the operator writes the issue');
+  assert.equal(Object.hasOwn(asked, 'expected'), false);
+  assert.ok(!address.includes('bleed'), 'no word of the player\'s reaches GitHub before the operator writes it');
   assert.equal(asked.where, 'Round 3, Speed, player1');
   assert.equal(asked.played, 'Engine 1.2.3 · content abcdef0123456789 · Rules 3v3');
   assert.equal(asked.errors, 'TypeError: x is undefined (battle.js:12)');
@@ -194,16 +195,17 @@ test('File an issue opens GitHub\'s form for a report, pre-filled with what the 
   assert.ok(!address.includes('deadbeef'), 'the table\'s id is not in the address');
 });
 
-test('the address stays under 8 KB, the longest words cut first and marked', () => {
-  const long = { ...filed, text: 'x'.repeat(2000), expected: 'y'.repeat(2000), additions: Array.from({ length: 6 }, (_, at) => ({ at: '2026-11-16T11:40:00Z', text: `${at} ${'z'.repeat(1990)}`, expected: 'w'.repeat(1000) })),
-    errors: Array.from({ length: 10 }, (_, at) => ({ message: `TypeError ${at}: ${'é'.repeat(300)}`, where: 'https://play.example/battle.js:12' })) };
+test('the address stays under 8 KB, the page\'s errors cut and marked', () => {
+  const long = { ...filed, errors: Array.from({ length: 10 }, (_, at) => ({ message: `TypeError ${at}: ${'é'.repeat(300)}`, where: 'https://play.example/battle.js:12' })) };
 
   const address = issueAddress(long);
 
   assert.ok(address.length <= ADDRESS_LIMIT, `${address.length} characters`);
   const asked = fields(address);
-  assert.ok(asked.happened.startsWith('x'.repeat(100)));
-  assert.ok(asked.happened.endsWith('…'));
+  assert.ok(asked.errors.startsWith('TypeError 0: é'));
+  assert.ok(asked.errors.endsWith('…'));
+  const emoji = issueAddress({ ...filed, errors: Array.from({ length: 10 }, () => ({ message: 'a😀'.repeat(400), where: null })) });
+  assert.ok(emoji.length <= ADDRESS_LIMIT, 'an emoji is never cut in half');
   assert.equal(asked.title, 'Report 20261116T113000000Z-abc123: the rules did something wrong, round 3');
 });
 
@@ -212,7 +214,6 @@ test('a report sent outside a game is filed with no round and no scenario to dro
 
   assert.equal(asked.title, 'Report 20261116T113000000Z-abc123: the rules did something wrong');
   assert.equal(asked.where, 'Outside a game');
-  assert.equal(Object.hasOwn(asked, 'expected'), false);
   assert.equal(Object.hasOwn(asked, 'errors'), false);
   assert.equal(Object.hasOwn(asked, 'scenario'), false);
   assert.equal(issueAddress({ ...filed, repository: null }), null);
@@ -237,6 +238,7 @@ test('a filed report links its issue, so a mistyped number shows before it marks
 test('a report filed reads filed #N and fixed #N, and both are filters', () => {
   assert.equal(statusLine({ status: 'filed', issue: 731 }), 'Filed #731');
   assert.equal(statusLine({ status: 'fixed', issue: 731 }), 'Fixed #731');
+  assert.equal(statusLine({ status: 'reproduced', issue: 731 }), 'Reproduced · filed #731');
   assert.equal(filedSaid({ ok: true, body: { issue: 731 } }).line, 'Filed as #731. The report reads fixed once the issue is closed.');
   assert.equal(filedSaid({ ok: false, status: 400, body: { message: 'Filing names the issue\'s number, as GitHub gave it.' } }).refused, true);
 });
@@ -255,10 +257,12 @@ test('an issue closed as completed fixes the reports filed as it; one closed as 
     { number: 733, state: 'closed', state_reason: 'completed', pull_request: {} },
     { number: 734, state: 'open', state_reason: null },
     { number: 735, state: 'closed', state_reason: null },
+    { number: 736, state: 'closed', state_reason: 'duplicate' },
   ]);
 
   assert.deepEqual([...closed].sort(), [731, 735]);
-  assert.deepEqual(fixedReports([{ id: 'a', status: 'filed', issue: 731 }, { id: 'b', status: 'filed', issue: 732 }, { id: 'c', status: 'fixed', issue: 735 }, { id: 'd', status: 'new' }], closed), ['a']);
+  assert.deepEqual(fixedReports([{ id: 'a', status: 'filed', issue: 731 }, { id: 'b', status: 'filed', issue: 732 }, { id: 'c', status: 'fixed', issue: 735 },
+    { id: 'd', status: 'new' }, { id: 'e', status: 'reproduced', issue: 735 }, { id: 'f', status: 'dismissed', issue: 731 }], closed), ['a', 'e']);
   assert.deepEqual([...closedIssues({ message: 'API rate limit exceeded' })], []);
 });
 

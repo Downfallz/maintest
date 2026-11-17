@@ -136,11 +136,12 @@ public sealed class FeedbackIssueTests : IDisposable
     {
         var (report, table, cut, scenario) = await ReproducedAsync();
 
-        var answer = await AskAsync("GET", report.Id, "scenario.zip");
+        var answer = await AskAsync("POST", report.Id, "scenario.zip");
 
         answer.Status.ShouldBe(200, Encoding.UTF8.GetString(answer.Body));
         answer.ContentType.ShouldBe("application/zip");
         answer.Headers.ShouldNotBeNull().ShouldContain(new KeyValuePair<string, string>("Content-Disposition", $"attachment; filename=\"report-{report.Id}.zip\""));
+        answer.Headers.ShouldContain(new KeyValuePair<string, string>("Cache-Control", "no-store, private"));
         var text = Unzipped(answer);
         text.ShouldNotContain(table);
         text.ShouldNotContain(cut.Scenario.Source.MatchId.ToString());
@@ -159,7 +160,7 @@ public sealed class FeedbackIssueTests : IDisposable
         var (report, _, _, _) = await ReproducedAsync();
         var path = Path.Combine(_root, "scenario.json");
         Directory.CreateDirectory(_root);
-        await File.WriteAllTextAsync(path, Unzipped(await AskAsync("GET", report.Id, "scenario.zip")), Cancel);
+        await File.WriteAllTextAsync(path, Unzipped(await AskAsync("POST", report.Id, "scenario.zip")), Cancel);
 
         var held = await ScenarioCommands.CheckAsync(new CliOptions { Command = CliOptions.ScenarioCheckCommand, Output = "unused", Scenario = path, SchemaPath = Path.Combine(_root, "none.json") });
 
@@ -173,7 +174,7 @@ public sealed class FeedbackIssueTests : IDisposable
         var named = await _scenarios.PutAsync(cut with { Title = $"Sent by {Account}" }, Cancel);
         await _feedback.SaveAsync(report with { Reproduction = named }, Cancel);
 
-        var refused = await AskAsync("GET", report.Id, "scenario.zip");
+        var refused = await AskAsync("POST", report.Id, "scenario.zip");
 
         (refused.Status, Read(refused).GetProperty("error").GetString()).ShouldBe((409, "Feedback.NotRedacted"));
         Read(refused).GetProperty("message").GetString().ShouldBe("The scenario still holds an account: it is not offered.");
@@ -186,7 +187,7 @@ public sealed class FeedbackIssueTests : IDisposable
         var report = await ReportedAsync(new FeedbackContext { Table = await PlayedAsync(), Seat = "player1", Round = 2 });
         var idea = await ReportedAsync(new FeedbackContext { Table = "20261116-120000-deadbeef", Seat = "player1", Round = 2 }, FeedbackKind.Idea);
 
-        var (notReproduced, notABug) = (await AskAsync("GET", report.Id, "scenario.zip"), await AskAsync("GET", idea.Id, "scenario.zip"));
+        var (notReproduced, notABug) = (await AskAsync("POST", report.Id, "scenario.zip"), await AskAsync("POST", idea.Id, "scenario.zip"));
 
         (notReproduced.Status, Read(notReproduced).GetProperty("error").GetString()).ShouldBe((409, "Feedback.NotReproduced"));
         (notABug.Status, Read(notABug).GetProperty("error").GetString()).ShouldBe((409, "Feedback.NotABug"));
@@ -208,10 +209,46 @@ public sealed class FeedbackIssueTests : IDisposable
         var report = await ReportedAsync(new FeedbackContext { Table = table.Id, Seat = seat.Name, Round = 1 });
         await _feedback.SaveAsync(report with { Reproduction = "sc-20261116-120000-0a1b2c3d" }, Cancel);
 
-        var refused = await AskAsync("GET", report.Id, "scenario.zip");
+        var refused = await AskAsync("POST", report.Id, "scenario.zip");
 
         (refused.Status, Read(refused).GetProperty("error").GetString()).ShouldBe((409, "Feedback.UnderWay"));
         Actions(Read(await AskAsync("GET", report.Id))).ShouldNotContain("download");
+    }
+
+    [Fact]
+    public async Task A_report_from_a_practice_cut_from_a_table_still_under_way_offers_no_scenario()
+    {
+        using var registry = _hosted.Registry();
+        var table = await _hosted.Composer.ComposeAsync(HostedTables.OnePerson, Cancel);
+        using (var place = (await registry.ReserveAsync(Cancel)).ShouldNotBeNull())
+        {
+            await registry.AddAsync(table, place, Cancel);
+        }
+
+        var seat = table.Seats[0];
+        (await table.Api.HandleAsync("GET", $"/api/seat/{seat.Name}", string.Empty, seat.Token)).Status.ShouldBe(200);
+        var (finished, _, cut, _) = await ReproducedAsync();
+        var fromLiveTable = await _scenarios.PutAsync(cut with { Session = table.Id, Scenario = cut.Scenario with { Source = cut.Scenario.Source with { Run = table.Id } } }, Cancel);
+        var report = await ReportedAsync(new FeedbackContext { Scenario = "sc-20261116-120000-0a1b2c3d", Seat = "player2", Round = 2 });
+        await _feedback.SaveAsync(report with { Reproduction = fromLiveTable }, Cancel);
+
+        var refused = await AskAsync("POST", report.Id, "scenario.zip");
+
+        finished.ShouldNotBeNull();
+        (refused.Status, Read(refused).GetProperty("error").GetString()).ShouldBe((409, "Feedback.UnderWay"));
+    }
+
+    [Fact]
+    public async Task A_download_is_asked_for_with_a_post_and_never_kept_by_a_cache()
+    {
+        var (report, _, _, _) = await ReproducedAsync();
+
+        var asGet = await AskAsync("GET", report.Id, "scenario.zip");
+        var refused = await AskAsync("POST", Feedback.NewId(_clock.GetUtcNow()), "scenario.zip");
+
+        asGet.Status.ShouldBe(404);
+        refused.Headers.ShouldNotBeNull().ShouldContain(new KeyValuePair<string, string>("Cache-Control", "no-store, private"));
+        (await ActivityAsync()).ShouldNotContain(line => line.StartsWith("feedback.download", StringComparison.Ordinal));
     }
 
     [Fact]

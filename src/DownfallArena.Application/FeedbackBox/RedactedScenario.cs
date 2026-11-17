@@ -98,29 +98,26 @@ public static class RedactedScenario
             line.ValueKind != JsonValueKind.Object || !line.TryGetProperty("at", out var at)
             || (at.ValueKind == JsonValueKind.String && DateTimeOffset.TryParse(at.GetString(), System.Globalization.CultureInfo.InvariantCulture, out var time) && time == DateTimeOffset.UnixEpoch));
 
-    /// <summary>Every name and text the file holds, the content it carries left out.</summary>
-    private static IEnumerable<string> Words(JsonElement root)
-    {
-        foreach (var property in root.EnumerateObject().Where(property => property.Name != Schema))
-        {
-            yield return property.Name;
-            foreach (var word in Texts(property.Value))
-            {
-                yield return word;
-            }
-        }
-    }
+    /// <summary>
+    /// Every text the file holds, the content it carries left out. Not its fields' names: the format's own words
+    /// (<c>seat</c>, <c>kind</c>) are no one's.
+    /// </summary>
+    private static IEnumerable<string> Words(JsonElement root) =>
+        root.EnumerateObject().Where(property => property.Name != Schema).SelectMany(property => Texts(property.Value));
 
     private static IEnumerable<string> Texts(JsonElement element) => element.ValueKind switch
     {
         JsonValueKind.String => [element.GetString()!],
         JsonValueKind.Array => element.EnumerateArray().SelectMany(Texts),
-        JsonValueKind.Object => element.EnumerateObject().SelectMany(property => Texts(property.Value).Prepend(property.Name)),
+        JsonValueKind.Object => element.EnumerateObject().SelectMany(property => Texts(property.Value)),
         _ => [],
     };
 
-    /// <summary>Whether a text holds a name as a word of its own: neither a letter, a digit, '_' nor '-' on either side.</summary>
+    /// <summary>
+    /// Whether a text holds a name as a word of its own: neither a letter, a digit, '_' nor '-' on either side, and not
+    /// a part of a content id the journal names (<c>spell:pummel:v1</c>), which a ':' joins to its neighbours.
+    /// </summary>
     private static bool Holds(string text, string name) =>
         text.Contains(name, StringComparison.OrdinalIgnoreCase)
-        && Regex.IsMatch(text, $@"(?<![\p{{L}}\p{{N}}_-]){Regex.Escape(name)}(?![\p{{L}}\p{{N}}_-])", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
+        && Regex.IsMatch(text, $@"(?<![\p{{L}}\p{{N}}_:-]){Regex.Escape(name)}(?![\p{{L}}\p{{N}}_-]|:[\p{{L}}\p{{N}}])", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
 }

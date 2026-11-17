@@ -466,24 +466,27 @@ The seat's view says the lesson under `practice.tutorial`:
   cannot be read. A report sent without its seat is 409 `Feedback.NoPosition` too: it is never cut in the other one.
   The sheet links the scenario while it is kept, and only on a bug report. A host that keeps no scenarios has no such
   route (404).
-  `GET .../<id>/scenario.zip` returns that scenario redacted (feedback plan, R5), as `report-<id>.zip` holding one
-  `scenario.json` to attach to a public issue. The file includes the scenario's content. Its source's session, run and match are
-  the report's own id (the match a GUID drawn from it), every journal line's time is the epoch, and the source's
-  entries after the cut stop at the journal's length when the player wrote (a practice's report keeps every entry it
-  copied). The file is then checked. It is refused with 409 `Feedback.NotRedacted` if it still names the session,
-  keeps a time, or holds as a word of its own the report's table, an account, a seat's key, code or invitation, the
-  pilot's key or a player's name. The content it includes is not read. The error says what the file holds, never the
-  name. A report from a table still
-  under way is 409 `Feedback.UnderWay`, so nothing a seat holds face down reaches the issue. An idea is 409
+  `POST .../<id>/scenario.zip` returns that scenario redacted (feedback plan, R5), as `report-<id>.zip` holding one
+  `scenario.json` to attach to a public issue. It is a POST, so another site's link cannot make the operator's browser
+  ask for it, and every answer says `Cache-Control: no-store, private`, so no cache keeps it past the panel's gate.
+  The file includes the scenario's content. Its source's session, run and match are the report's own id (the match a
+  GUID drawn from it), every journal line's time is the epoch, and the source's entries after the cut stop at the
+  journal's length when the player wrote (a practice's report keeps every entry it copied). The file is then checked.
+  It is refused with 409 `Feedback.NotRedacted` if it still names the session, keeps a time, or holds as a word of its
+  own the report's table, an account, a seat's key, code or invitation, the pilot's key or a player's name. The
+  content it includes and the fields' names are not read, and a word joined by a ':' is part of a content id, not a
+  name. The error says what the file holds, never the name. A report from a table still under way, or whose scenario
+  was cut from one, is 409 `Feedback.UnderWay`, so nothing a seat holds face down reaches the issue. An idea is 409
   `Feedback.NotABug`, and a report not reproduced, or whose scenario was removed since, 409 `Feedback.NotReproduced`.
   Each download is an Activity line, `feedback.download`, with the scenario's id. The sheet offers `download` once the
   game is over.
   `PUT .../<id>/status {"status":"filed","issue":N}` keeps on an open bug report the number of the issue the operator
-  filed it as (400 `Feedback.Invalid` without a number above 0); a second call with another number replaces it.
-  `{"status":"fixed"}` closes a filed report (409 `Feedback.NotFiled` for one never filed). The tab sends it when
-  GitHub's public API says the issue was closed as completed. The list and the sheet carry `issue` and `repository` (`owner/name`, where the
-  sheet's **File an issue** opens GitHub's form `bug_from_report.yml`). The Activity lines are `feedback.file` with
-  `#N`, and `feedback.status` with `fixed: #N`.
+  filed it as (400 `Feedback.Invalid` without a number above 0); a second call with another number replaces it. The
+  number stays through the statuses set after it. `{"status":"fixed"}` closes a report that names an issue (409
+  `Feedback.NotFiled` for one never filed). The tab sends it when GitHub's public API says the issue was closed as
+  completed. The list and the sheet carry `issue` and `repository` (`owner/name`, where the sheet's **File an issue**
+  opens GitHub's form `bug_from_report.yml`). The Activity lines are `feedback.file` with `#N`, and `feedback.status`
+  with `fixed: #N`.
   `POST`/`DELETE .../<id>/mute` stops its sender for 30 days and lifts it (409 `Feedback.NoSender` for a deleted
   account's, or an account's on a host that keeps no account activity). An account's mute is kept with its activity
   record and dropped at its first write after the mute ends; a guest's is kept in the process's memory. Unknown

@@ -102,6 +102,7 @@ export function feedbackRows(answer, now = Date.now()) {
 export function statusLine(feedback) {
   const label = STATUS_LABELS[feedback?.status] ?? feedback?.status ?? '';
   if (['filed', 'fixed'].includes(feedback?.status) && Number.isInteger(feedback.issue)) return `${label} #${feedback.issue}`;
+  if (Number.isInteger(feedback?.issue) && !['dismissed', 'declined'].includes(feedback.status)) return `${label} · filed #${feedback.issue}`;
   if (['planned', 'shipped'].includes(feedback?.status) && feedback.plan) return `${label}: ${feedback.plan}`;
   if (!['dismissed', 'declined'].includes(feedback?.status) || !feedback.reason) return label;
   return feedback.status === 'dismissed' && feedback.spam === true ? 'Dismissed as spam' : `${label}: ${feedback.reason}`;
@@ -286,9 +287,10 @@ export const ADDRESS_LIMIT = 8000;
 /** The issue form a bug report is filed with (`.github/ISSUE_TEMPLATE/bug_from_report.yml`): it labels it `bug` and `from-report`. */
 export const ISSUE_TEMPLATE = 'bug_from_report.yml';
 
-/** A text cut to a length, marked where it was cut. */
+/** A text cut to a length in characters, never inside one (an emoji is two halves), marked where it was cut. */
 function cut(text, length) {
-  return text.length <= length ? text : `${text.slice(0, Math.max(0, length - 1))}…`;
+  const characters = Array.from(text);
+  return characters.length <= length ? text : `${characters.slice(0, Math.max(0, length - 1)).join('')}…`;
 }
 
 /** Where a report was sent from, as the issue says it: the round, the step and the seat, never the table's id. */
@@ -300,24 +302,21 @@ function issueWhere(context) {
 
 /**
  * GitHub's new-issue form for a bug report, pre-filled from its sheet by the form's field ids (`bug_from_report.yml`):
- * the category, the player's words, where it happened, the engine and content it was played on, the page's errors, and
- * where to drop the downloaded zip. No table id, account or seat key: the operator reads and edits what becomes public
- * before submitting. Under `ADDRESS_LIMIT`, the longest of the player's words and the errors cut first. None without a
- * repository to file in.
+ * the report, the category, where it happened, the engine and content it was played on, the page's errors, and where
+ * to drop the downloaded zip. Not the player's words: the operator writes what happened from the sheet, so none of
+ * them reaches GitHub, not even its address, before the operator wrote it (the privacy policy's promise). No table id,
+ * account or seat key either. Under `ADDRESS_LIMIT`, the errors cut. None without a repository to file in.
  */
 export function issueAddress(sheet) {
   if (!sheet?.repository) return null;
   const context = sheet.context ?? null;
   const category = categoryLabel('bug', sheet.category);
   const round = Number.isInteger(context?.round) ? `, round ${context.round}` : '';
-  const additions = sheet.additions ?? [];
   const fields = {
     template: ISSUE_TEMPLATE,
     title: `Report ${sheet.id}: ${category.charAt(0).toLowerCase()}${category.slice(1)}${round}`,
     report: sheet.id,
     category,
-    happened: [sheet.text, ...additions.map(added => added.text)].filter(Boolean).join('\n'),
-    expected: [sheet.expected, ...additions.map(added => added.expected)].filter(Boolean).join('\n'),
     where: issueWhere(context),
     played: [context?.engine ? `Engine ${context.engine}` : null, context?.content ? `content ${context.content}` : null, context?.rules].filter(Boolean).join(' · '),
     errors: (sheet.errors ?? []).map(error => (error.where ? `${error.message} (${error.where})` : error.message)).join('\n'),
@@ -327,10 +326,8 @@ export function issueAddress(sheet) {
     .filter(([, value]) => value).map(([name, value]) => `${name}=${encodeURIComponent(value)}`).join('&')}`;
   for (let built = address(); ; built = address()) {
     if (built.length <= ADDRESS_LIMIT) return built;
-    const longest = ['happened', 'expected', 'errors'].filter(name => fields[name].length > 1)
-      .sort((one, other) => encodeURIComponent(fields[other]).length - encodeURIComponent(fields[one]).length)[0];
-    if (!longest) return built;
-    fields[longest] = cut(fields[longest], Math.floor(fields[longest].length * 0.75));
+    if (Array.from(fields.errors).length <= 1) return built;
+    fields.errors = cut(fields.errors, Math.floor(Array.from(fields.errors).length * 0.75));
   }
 }
 
@@ -373,16 +370,17 @@ export function issuesPath(repository, since = null, page = 1) {
   return `https://api.github.com/repos/${repository}/issues?state=closed&labels=from-report&sort=updated&direction=desc&per_page=100&page=${page}${from}`;
 }
 
-/** The issues GitHub's answer says were closed as done: not a pull request, and not closed as not planned. */
+/** The issues GitHub's answer says were closed as done: not a pull request, not closed as not planned or as a duplicate. */
 export function closedIssues(answer) {
   const issues = Array.isArray(answer) ? answer : [];
-  return new Set(issues.filter(issue => issue?.state === 'closed' && !issue.pull_request && issue.state_reason !== 'not_planned')
+  // Completed, or none for an issue closed before GitHub kept a reason; never not planned nor a duplicate of another.
+  return new Set(issues.filter(issue => issue?.state === 'closed' && !issue.pull_request && (issue.state_reason ?? 'completed') === 'completed')
     .map(issue => issue.number).filter(Number.isInteger));
 }
 
-/** The reports filed as an issue now closed: the ones the tab marks fixed. */
+/** The open reports filed as an issue now closed, whatever the operator marked them since: the ones the tab marks fixed. */
 export function fixedReports(rows, closed) {
-  return (rows ?? []).filter(row => row.status === 'filed' && closed.has(row.issue)).map(row => row.id);
+  return (rows ?? []).filter(row => Number.isInteger(row.issue) && !['fixed', 'dismissed'].includes(row.status) && closed.has(row.issue)).map(row => row.id);
 }
 
 /** Why a bug report's sheet offers no download, when it says anything. */
@@ -410,6 +408,9 @@ function fill(select, options) {
   }));
 }
 
+/** How long the tab waits before it asks GitHub again whether the filed issues are closed. */
+const CHECK_EVERY = 10 * 60 * 1000;
+
 /** Hands the browser a downloaded file to save, under the name the host gave it. */
 function save(answer) {
   const url = URL.createObjectURL(answer.blob);
@@ -431,6 +432,7 @@ export function mountFeedbackTab({ send, download, github = globalThis.fetch?.bi
   let page = 1;
   let open = null;
   let checking = false;
+  let checked = -Infinity;
   // Each listing and each sheet read is numbered, so an answer that comes back after a later one is dropped.
   let listed = 0;
   let read = 0;
@@ -647,7 +649,7 @@ export function mountFeedbackTab({ send, download, github = globalThis.fetch?.bi
     said('Redacting the scenario…');
     try {
       const from = read;
-      const answer = await download('GET', `/api/admin/feedback/${encodeURIComponent(open.id)}/scenario.zip`);
+      const answer = await download('POST', `/api/admin/feedback/${encodeURIComponent(open.id)}/scenario.zip`);
       if (from !== read) return;
       if (!answer.ok) {
         said(answer.body?.message ?? `The host answered ${answer.status}.`, true);
@@ -749,20 +751,22 @@ export function mountFeedbackTab({ send, download, github = globalThis.fetch?.bi
   element('admin-feedback-next').addEventListener('click', () => { page += 1; void redraw(); });
 
   /**
-   * Marks fixed the reports filed as an issue GitHub now says is closed as done: the filed reports, then one request to
-   * GitHub's public API, then one change each. Asked when the tab opens. GitHub not answering leaves them filed, and a
-   * line says so.
+   * Marks fixed the open reports filed as an issue GitHub now says is closed as done: the open bug reports that name an
+   * issue, then GitHub's public API a page at a time, then one change each. Asked when the tab opens, once in ten
+   * minutes at most. GitHub not answering leaves them filed, and a line says so.
    */
   async function checkFixed() {
-    if (checking || !github) return;
+    // Once in ten minutes at most: each look reads every record kept, and GitHub answers sixty requests an hour.
+    if (checking || !github || Date.now() - checked < CHECK_EVERY) return;
     checking = true;
+    checked = Date.now();
     try {
       const rows = [];
       let repository = null;
       for (let number = 1, pages = 1; number <= Math.min(pages, CHOICE_PAGES); number += 1) {
-        const answer = await send('GET', feedbackPath({ kind: 'bug', status: 'filed', page: number }));
+        const answer = await send('GET', feedbackPath({ kind: 'bug', status: 'open', page: number }));
         if (!answer.ok) return;
-        rows.push(...(answer.body.feedback ?? []));
+        rows.push(...(answer.body.feedback ?? []).filter(row => Number.isInteger(row.issue)));
         repository = answer.body.repository ?? repository;
         pages = answer.body.pages ?? 1;
       }
