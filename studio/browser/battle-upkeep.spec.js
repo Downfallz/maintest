@@ -11,7 +11,7 @@ const energy = round => ({ sequence: round * 10, round: round + 1, event: { kind
 const ongoing = (round, ticks = false) => ({ sequence: round * 10 + 1, round: round + 1, event: { kind: 'OngoingEffectsApplied', roundId: round,
   ...(ticks ? { energyRegenerationTicks: [{ creature: 1, gained: 2 }], regenerationTicks: [{ creature: 1, healed: 0 }], bleedTicks: [{ creature: 1, damage: 7 }] } : {}) } });
 async function mount(page, { waiting = null, round = 1, feed = [energy(round), ongoing(round)], tips = false } = {}) {
-  const state = { errors: [], writes: [], shown: [], served: 0, status: 200, view: { board: { slot: 'Player1', roundNumber: round, phase: 'Planning', subPhase: 'Evolution',
+  const state = { errors: [], writes: [], shown: [], answered: null, status: 200, view: { board: { slot: 'Player1', roundNumber: round, phase: 'Planning', subPhase: 'Evolution',
     nextEvolutionRound: round, allies: roster.slice(0, 3), enemies: roster.slice(3), timeline: [] }, waiting,
     waitingFor: 'Evolution', waitingAsked: 11, waitingCreature: 1,
     options: { evolution: { remainingPicks: 2, creatures: [{ creature: 1, availableTiers: ['root'] }] } }, feed, feedNext: round * 10 + 2 } };
@@ -39,7 +39,16 @@ async function mount(page, { waiting = null, round = 1, feed = [energy(round), o
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: { rules: { energyPerRound: 99, combatDeclaration: 'AtActivation' }, cards: [{ id: 'strike', name: 'Strike', cost: 2 }], packages: [{ id: 'root', name: 'Warden', level: 1, spells: ['strike'] }] } });
     if (url.pathname === '/api/seat/player1') {
       if (url.searchParams.has('shown')) state.shown.push(url.searchParams.get('shown'));
-      await route.fulfill({ status: state.status, json: state.view }); state.served++; return;
+      // A host answers with the board it had when it was asked. A board read held here is answered only once the board
+      // has changed under it: the read that was still on its way when the change was told. An acknowledgement reaches
+      // no board, so it never says a change arrived.
+      const view = state.view, board = !url.searchParams.has('shown');
+      if (board && state.hold) {
+        state.hold = false; state.held = true;
+        try { await expect.poll(() => state.view !== view).toBe(true); } finally { await route.fulfill({ status: state.status, json: view }); }
+        state.answered = view; return;
+      }
+      await route.fulfill({ status: state.status, json: view }); if (board) state.answered = view; return;
     }
     return route.fulfill({ status: 500 });
   });
@@ -47,15 +56,17 @@ async function mount(page, { waiting = null, round = 1, feed = [energy(round), o
   await page.goto('/table/battle.html'); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
   // Freeze before connecting, as the history and playback fixtures do: pausing later fast-forwards the first
   // poll, and a notification landing while it is in flight owes a zero-delay refresh that a paused clock strands.
-  await expect(page.locator('#loading')).toBeHidden();
+  // The loading card is put away before the first read is asked: only the board it brought says it arrived (#768).
+  await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#connection')).toHaveText(/^LIVE/);
   state.writes.length = 0;
   const publish = async (feed, extra = {}) => {
     state.view = { ...state.view, ...extra, feed, feedNext: Math.max(state.view.feedNext, ...feed.map(one => one.sequence + 1)) };
-    const served = state.served;
+    const published = state.view;
     await page.evaluate(() => window.notifyBattle());
     // A change told while a read is in flight is owed one more read, which the page schedules at no delay: a paused
-    // clock runs it only when it is moved, and a loaded machine is when the two overlap.
-    await expect.poll(async () => { if (state.served > served) return true; await page.clock.runFor(0); return false; }).toBe(true);
+    // clock runs it only when it is moved, and a loaded machine is when the two overlap. The read in flight answers
+    // with the board it was asked for, so only a read that carried this one says the change arrived (#768).
+    await expect.poll(async () => { if (state.answered === published) return true; await page.clock.runFor(0); return false; }).toBe(true);
   };
   return { state, publish };
 }
@@ -100,6 +111,15 @@ test('inspection is current while receipt and journal retain historical zero hea
   await page.locator('#history-close').click(); await close(page);
   await expect.poll(() => h.state.shown).toEqual(['11']); expect(h.state.errors).toEqual([]);
 });
+test('a change told while a read is on its way reaches the board the read did not carry', async ({ page }) => {
+  const h = await mount(page);
+  // Under load, the first board can still be on its way when the scene is ready (#768): a read asked before the
+  // change is answered after it, with the board it was asked for, and the change's notice is owed one more read.
+  h.state.hold = true; await page.evaluate(() => window.notifyBattle()); await expect.poll(() => h.state.held).toBe(true);
+  await h.publish([], { board: { ...h.state.view.board, allies: [creature(1, 0), ...roster.slice(1, 3)] } });
+  await expect(page.locator('[data-creature="1"]')).toHaveAttribute('aria-label', /Warden, 0 of 20 HP/);
+  expect(h.state.errors).toEqual([]);
+});
 test('inspection reads current conditions while the receipt keeps the damage of a bleed since expired', async ({ page }) => {
   const h = await mount(page, { feed: [energy(1), ongoing(1, true)] });
   const warden = conditions => ({ ...creature(1, 13), conditions });
@@ -124,7 +144,9 @@ test('closing attack playback finishes before the next-round receipt and phase t
   await h.publish([attack, energy(3), ongoing(3)], { board: { ...h.state.view.board, roundNumber: 3 }, waitingFor: 'Speed', waitingAsked: 12, options: { speed: { missing: [1, 2, 3] } } });
   await expect(page.locator('#playback-next')).toBeVisible(); await expect(page.locator('#playback-skip')).toBeHidden();
   await expect(page.locator('#upkeep-dialog')).toBeHidden(); await expect(page.locator('#help-dialog')).toBeHidden();
-  await page.locator('#settings').click(); await page.selectOption('#playback-preference', 'step'); await page.getByRole('button', { name: 'Close settings' }).click(); await page.clock.runFor(WINDUP_MS + IMPACT_MS);
+  await page.locator('#settings').click(); await page.selectOption('#playback-preference', 'step'); await page.getByRole('button', { name: 'Close settings' }).click();
+  // From the windup's timer to the impact's, rather than every software frame between them (#749).
+  await page.clock.fastForward(WINDUP_MS); await page.clock.fastForward(IMPACT_MS);
   await page.locator('#playback-next').click(); await expect(page.locator('#reading-title')).toHaveText('Upkeep');
   await expect(page.locator('#result-text')).toContainText('+5 energy');
   await expect(page.locator('#upkeep-dialog')).toBeHidden();
