@@ -584,6 +584,21 @@ the opponent's reactions for this game; Settings, in the menu, hides them for ev
 against a bot, in a replay, or on a device holding both seats. `table/battle-reactions.js` decides what shows and
 when; `src/reactions.ts` draws it. No notification is sent for a reaction and the bell counts none.
 
+## The recap
+
+**Where you are** ([async-recap-plan.md](../docs/tabletop/async-recap-plan.md), R3) is one sheet over the field: where
+the game stands and who leads, the two teams now with each creature's health change, the last completed round, the
+round under way and every round with something the seat had not seen (marked **New**, older rounds folded), the
+seat's own choices still in force, and what it is asked now with the opponent's reactions. `table/battle-recap.js`
+builds it from the seat's own view and feed; `src/recap.ts` draws it. It opens on its own when the seat comes back
+after an hour away (the host's last visit, ADR 0194) with a line not seen, before any question's sheet, and holds
+the catch-up behind it. Never in a practice, a tutorial, a replay, before everyone is seated or on a device holding
+both seats. **Go to my turn** (and Escape) settles the board on the present; **Replay step by step** is offered when
+the playback holds the opponent's actions, and plays them as they would have live. The header's **📍** opens it at
+any time in a game under way, marking new what this page has not shown. The live window keeps two rounds: the
+page loads the feed back to the last visit when the sheet needs it. History marks **You left here** before the first
+event after the visit. `battle-recap.spec.js` covers it at 320 px and on desktop.
+
 ## Evolution illustrations and capstone effects
 
 Each creature is drawn as the evolution its purchases resolve to

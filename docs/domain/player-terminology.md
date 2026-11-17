@@ -80,6 +80,18 @@ anyone. Only a table started with hidden intents (`HiddenIntent`) declares a spe
 before Activation. Player guidance keeps that distinction. The tabletop rulebook still teaches hidden
 intents and says so in its opening box.
 
+## Coming back to a game
+
+The recap a player reads on coming back to a game (docs/tabletop/async-recap-plan.md):
+
+| What the page shows | Player-facing EN | Player-facing FR |
+| --- | --- | --- |
+| Recap (`recap-dialog`) | **Where you are** | **Où vous en êtes** |
+| Settle the board on the present | **Go to my turn** | **Aller à mon tour** |
+| Hand what was not seen to the playback | **Replay step by step** | **Revoir pas à pas** |
+| The journal's mark at the Last visit | **You left here** | **Vous en étiez ici** |
+| A line the seat was not shown | **New** | **Nouveau** |
+
 ## Presentation and identifiers
 
 These names are presentation only. Nothing below is renamed, and no game rule, balance value or simulation

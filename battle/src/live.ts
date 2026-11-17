@@ -16,6 +16,8 @@ import { upkeepControls } from './upkeep';
 import { createBattlePlayback } from '../../table/battle-playback.js';
 import { createBattleHistory } from '../../table/battle-history.js';
 import { historyControls } from './history';
+import { buildRecap, recapOpensOnItsOwn } from '../../table/battle-recap.js';
+import { recapControls } from './recap';
 import { battleGuidance, waitingOn } from '../../table/battle-guidance.js';
 import { createSeenSender, saveSeen, seenSince } from '../../table/battle-seen.js';
 import { friendAction, opponentCard, opponentOf } from '../../table/battle-opponent.js';
@@ -59,7 +61,7 @@ interface Creature { form: string; description: string; id: string; name: string
 interface View { board: object; over: boolean; waiting: unknown; waitingFor: string | null;
   outcome?: { winner?: string; reason?: string }; answerBy?: string | null;
   // What the host kept of this seat's last visit, and when the last move was (ADR 0194).
-  seen?: { sequence: number; at: string } | null; lastMoveAt?: string | null }
+  seen?: { sequence: number; at: string } | null; lastMoveAt?: string | null; feed?: unknown[] }
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const text = (id: string, value: string) => { if ($(id).textContent !== value) $(id).textContent = value; };
 const audio = new BattleAudio();
@@ -88,6 +90,13 @@ let rendererFailed = false;
 let seenGame: string | null = null, seenKept: number | null = null;
 // Also tells the host the mark, so another device of this seat knows it (ADR 0194).
 let seenSender: ReturnType<typeof createSeenSender> | null = null;
+// The recap (docs/tabletop/async-recap-plan.md): the seat's feed gathered since the page opened on it, loaded back to
+// the last visit when the live window does not reach it; the mark of that visit, read once as the seat comes back; and
+// whether the sheet waits to open on its own, which holds the catch-up behind it until a button is chosen.
+type FeedEntry = { sequence: number } & Record<string, unknown>;
+let recapFeed = new Map<number, FeedEntry>(), recapBack: number | null = null, recapDecided = false, recapPending = false;
+// The last visit the open sheet marks New from, and whether the feed was loaded back to it.
+let recapSeen: number | null = null, recapSeenAt: string | null = null, recapLoad = 0;
 const nodes = new Map<string, HTMLButtonElement>();
 // What the scene drew for a creature whose button the page has not made yet.
 const shownArt = new Map<string, string>();
@@ -101,6 +110,10 @@ const connection = createLiveConnection({ onState: status, onView: (served: View
   if (view?.waiting && next && !next.waiting) void loadOpponent(true);
   try {
     view = next; catalogue = content ?? catalogue;
+    gather(next?.feed);
+    // Coming back to the seat: its last visit, read once, opens the sheet on its own after an hour away with
+    // something not seen. Decided before the playback reads the view, so the catch-up waits behind the sheet.
+    if (next && seenGame && !recapDecided) comingBack(next);
     if (next) services.receive(next);
     reactions.receive(next);
     history.receive(next, catalogue); upkeep.receive(next); orderReveal.receive(next, { since: seenGame ? seenSince(storage, seenGame, next?.seen) : null }); growth.receive(next, catalogue);
@@ -110,11 +123,12 @@ const connection = createLiveConnection({ onState: status, onView: (served: View
         // A page opened again plays what happened while it was closed, from the last result this browser showed.
         since: seenGame ? seenSince(storage, seenGame, next?.seen) : null });
   } finally { receiving = false; }
+  if (recapUI.isOpen()) drawRecap();
   render();
 } });
-const visible = () => ready && !rendererFailed && !document.hidden &&
+const visible = () => ready && !rendererFailed && !document.hidden && !recapPending &&
   !document.querySelector('.navigation-panels dialog[open]') &&
-  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog', 'atlas-dialog', 'opponent-dialog', 'reactions-dialog', 'practice-brief', 'concept-dialog', 'feedback-dialog'].some(id => $<HTMLDialogElement>(id).open) &&
+  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog', 'atlas-dialog', 'opponent-dialog', 'reactions-dialog', 'practice-brief', 'concept-dialog', 'feedback-dialog', 'recap-dialog'].some(id => $<HTMLDialogElement>(id).open) &&
   // A revealed turn order holds the field until Continue: what arrives meanwhile waits for it.
   !orderUI.isReading();
 let tabStorage: Storage | null = null;
@@ -162,13 +176,60 @@ const reactionsUI = reactionControls(reactions, {
 mountFeedback(document, { request, token: () => selected?.token ?? null, inGame: () => Boolean(selected?.token),
   errors: pageErrors, fallbackFocus: () => $('settings'), onClose: () => render() });
 const inspectionUI = inspectionControls();
-const historyUI = historyControls(history, () => playback.skip(), () => render());
+const historyUI = historyControls(history, () => playback.skip(), () => render(), () => recapBack);
+// Go to my turn settles the board on the present, as the playback's own Skip all does; Replay step by step leaves
+// what the sheet held back to the playback, which plays it once the field is in view.
+const recapUI = recapControls({ onGo: () => passOver(), onReplay: () => {}, onClose: () => render() });
+$('recap-open').addEventListener('click', event => openRecap(event.currentTarget as HTMLElement, seenKept ?? recapBack, view?.seen?.at ?? null));
 // The mutation reveal last read: opened with See and closed, or set aside with Continue.
 let revealRead: number | null = null;
 const revealUnread = () => { const receipt = growth.receipt() as { sequence: number } | null; return Boolean(receipt) && receipt!.sequence !== revealRead; };
 const growthUI = growthControls(growth, () => playback.skip(), () => render(), atlasUI);
 const tutorialUI = tutorialControls(() => render(), request);
 const helpUI = guidanceControls(storage, () => playback.skip(), () => render(), muted => keepForGame({ help: !muted }));
+function gather(feed: unknown) {
+  if (!Array.isArray(feed)) return;
+  for (const entry of feed as FeedEntry[]) if (Number.isInteger(entry?.sequence)) recapFeed.set(entry.sequence, entry);
+}
+function resetRecap() {
+  recapUI.dismiss(); recapFeed = new Map(); recapBack = null; recapDecided = false; recapPending = false;
+  recapSeen = null; recapSeenAt = null; recapLoad++;
+}
+// A device holding both seats is two people side by side (ADR 0120): neither comes back to the game.
+const hotseat = () => Boolean(selected) && heldSeats.filter(one => one.table.id === selected!.table.id).length > 1;
+const opponentName = () => {
+  const card = opponentCard(opponent.seat, opponent.ladder, opponent.friends);
+  return card.kind === 'person' || card.kind === 'bot' ? card.name : null;
+};
+const recapOf = (seen: number | null, seenAt: string | null) => buildRecap({ view, feed: [...recapFeed.values()], seen, seenAt,
+  now: Date.now(), catalogue, opponent: opponentName() });
+function comingBack(next: View) {
+  recapDecided = true;
+  recapBack = seenSince(storage, seenGame!, next.seen);
+  const now = Date.now(), recap = buildRecap({ view: next, feed: [...recapFeed.values()], seen: recapBack, now, catalogue, opponent: opponentName() });
+  recapPending = recapOpensOnItsOwn({ view: next, recap, now, hotseat: hotseat(), answering: combat.model().opened || planning.model().opened });
+}
+function drawRecap() {
+  if (!view) return;
+  const name = opponentName();
+  recapUI.render(recapOf(recapSeen, recapSeenAt), { replay: playback.model().active, waitingOn: `${name ?? 'your opponent'} is playing` });
+}
+// The sheet marks New from the visit it is about: the one the seat came back from when it opens on its own, what
+// this page has shown so far when the button opens it. The live window keeps two rounds: older is loaded back.
+function openRecap(source: HTMLElement | null, seen: number | null, seenAt: string | null) {
+  if (!view || recapUI.isOpen()) return;
+  recapSeen = seen; recapSeenAt = seenAt;
+  drawRecap(); recapUI.open(source);
+  void loadBack();
+}
+async function loadBack() {
+  if (!Number.isInteger(recapSeen) || (recapFeed.size && Math.min(...recapFeed.keys()) <= recapSeen! + 1)) return;
+  const ticket = ++recapLoad;
+  const answer = await connection.history() as { ok?: boolean; body?: { feed?: unknown } } | null;
+  if (ticket !== recapLoad || !answer?.ok) return;
+  gather(answer.body?.feed);
+  if (recapUI.isOpen()) drawRecap();
+}
 function inspectCreature(id: string) {
   inspected = id; renderInspection(); $<HTMLDialogElement>('inspect-dialog').showModal();
 }
@@ -529,7 +590,7 @@ function render() {
 
   if (targeting && !wasTargeting) (document.querySelector<HTMLButtonElement>('.is-targetable:not(:disabled)') ?? $<HTMLButtonElement>('combat-confirm')).focus({ preventScroll: true });
   wasTargeting = targeting;
-  const canAuto = () => ready && !rendererFailed && !document.hidden && $('battle').dataset.connection === 'live' &&
+  const canAuto = () => ready && !rendererFailed && !document.hidden && !recapPending && $('battle').dataset.connection === 'live' &&
     !playbackState.active && !replay.active && !action.target && !action.sending &&
     !planning.model().opened && !planning.model().sending && !document.querySelector('dialog[open]') && !orderUI.isOpening() && !orderUI.isReading();
   upkeepUI.render(canAuto());
@@ -583,6 +644,11 @@ function render() {
   // A tutorial's coach (ADR 0187): the step of the question asked, and its concept cards before the question's sheet.
   tutorialUI.render(rendererFailed ? null : view, { held: playbackState.active || replay.active, canAuto: canAuto() && !upkeep.model().pending && !orderReveal.model().pending });
   helpUI.render(guide, canAuto() && !upkeep.model().pending && !orderReveal.model().pending);
+  // The recap waits for the field to be free, then opens on its own once, before any question's sheet.
+  $('recap-open').hidden = !view || view.over || Boolean(view.waiting) || Boolean((view as { replay?: unknown }).replay) || rendererFailed;
+  if (recapPending && view && ready && !rendererFailed && !document.hidden && !document.querySelector('dialog[open]')) {
+    recapPending = false; openRecap(null, recapBack, view.seen?.at ?? null);
+  }
   // The mutation phase opens its tree by itself once the board is unobstructed: after the upkeep receipt, the
   // turn order and a first-use tip, never in the waiting room or over another dialog or playback. Once per asking: a player who
   // closes it reopens it from the battlefield or the dock (ADR 0138).
@@ -735,7 +801,7 @@ function choose(choice: Choice) {
   $('loading').hidden = true;
   $('seat-choices').replaceChildren(); $('retry').hidden = true;
   text('perspective', seatName(choice.seat).toUpperCase());
-  seenGame = `${choice.table.id}:${choice.seat}`; seenKept = null;
+  seenGame = `${choice.table.id}:${choice.seat}`; seenKept = null; resetRecap();
   opponent = { seat: opponentOf(choice.table, choice.seat), ladder: null, friends: null }; drawOpponent(); void loadOpponent();
   upkeep.reset(`${choice.table.id}:${choice.seat}`); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(choice.seat); planning.reset(choice.seat); match.reset(choice.seat);
   helpUI.setGame(choice.table.id); applySettings();
@@ -753,7 +819,7 @@ async function discover(autoResume = true) {
   if (rendererFailed) return;
   const ticket = ++discovering;
   $('loading').hidden = true;
-  seenSender?.flush(); seenSender = null;
+  seenSender?.flush(); seenSender = null; resetRecap();
   connection.stop(); services.reset(); reactions.reset(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); selected = null; seenGame = null; opponent = { seat: null, ladder: null, friends: null }; drawOpponent(); helpUI.setGame(null); view = null; catalogue = null; render();
   $('retry').hidden = true; $('seat-choices').replaceChildren();
   text('perspective', 'YOUR TEAM'); text('connection', 'Connecting…');
@@ -833,7 +899,7 @@ scene.onArtwork = (id, shown) => { const node = nodes.get(id); if (node) node.da
 scene.onReady = () => { ready = true; $('battle').dataset.ready = 'true'; $('battle').dataset.assetFallback = String(scene.assetFailed); render(); };
 function failRenderer() {
   audio.stop();
-  discovering++; rendererFailed = true; ready = false; view = null; connection.stop(); services.reset(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset();
+  discovering++; rendererFailed = true; ready = false; view = null; resetRecap(); connection.stop(); services.reset(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset();
   render(); $('loading').hidden = false; text('load-title', 'The renderer was interrupted'); text('load-detail', 'Reload to restore the scene: your seat and the match wait for you.');
   // The classic table is archived (ADR 0157): reloading the scene is the way back, and the lobby lists the game.
   text('access-link', 'Lobby'); $<HTMLAnchorElement>('access-link').href = '/';
@@ -907,7 +973,7 @@ scene.onResizeDuringPlayback = () => { if (dockMoved) { dockMoved = false; retur
 // keeps the orientation (a browser bar, a dragged window) re-lays out the held frame and keeps it.
 matchMedia('(orientation: portrait)').addEventListener('change', () => { if (playback.model().active) playback.skip(); });
 // The board goes with the page's eyes; the catalogue stays, it cannot change while the host runs.
-function suspend() { seenSender?.flush(); audio.stop(); discovering++; connection.stop(); view = null; upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); render(); text('connection', 'Paused'); }
+function suspend() { seenSender?.flush(); resetRecap(); audio.stop(); discovering++; connection.stop(); view = null; upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); render(); text('connection', 'Paused'); }
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) suspend(); else if (selected) choose(selected); else void discover();
 });

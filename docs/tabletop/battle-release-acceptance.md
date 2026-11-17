@@ -33,7 +33,7 @@ browser's text-only zoom or assistive technology.
 | Resource | Measured bytes on main `53af584a` | Enforced limit |
 | --- | ---: | ---: |
 | Art a visit loads (background and four creature bodies) | 1,528,370 | 2,097,152 |
-| Live JavaScript | 1,556,221 | 1,703,936 (raised from 1,638,400, below) |
+| Live JavaScript | 1,556,221 | 1,769,472 (raised twice from 1,638,400, below) |
 | Live JavaScript, gzip estimate | 430,283 | 524,288 |
 
 The retired three-form sheet (`creatures.webp`, 487,084 bytes) is still served but no longer loaded, so the
@@ -45,6 +45,10 @@ d20s on the field (ADR 0154) and the History summary, 1,242 bytes under the limi
 broke which tie, and the face a critical roll needed, made it 1,640,170 (458,455 gzip). Phaser remains most of
 the bundle; the game code around it keeps growing with each battle feature, so the raw limit rises by 64 KiB. The
 gzip limit (524,288) is unchanged.
+
+**Raised to 1,769,472 bytes (1,728 KiB), 2026-11-17.** Main measured 1,697,712 bytes, 6,224 under the limit. The
+recap's sheet (docs/tabletop/async-recap-plan.md, R3), with the recap model it draws, made it 1,710,602 (483,583
+gzip). The raw limit rises by 64 KiB again; the gzip limit (524,288) is unchanged.
 The download budget does not bound GPU memory. No remote fonts or audio downloads are needed.
 
 | Surface | Current coverage | Release limitation |

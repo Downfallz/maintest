@@ -20,7 +20,7 @@
     <header class="hud-top">
       <a class="brand" href="/" aria-label="Downfall Instinct — back to lobby"><span class="battle-brand-mark" aria-hidden="true"></span><div>DOWNFALL <b>INSTINCT</b><small>BATTLE VIEW · PREVIEW</small></div></a>
       <div class="round"><span>ROUND <b id="round-number">—</b></span><small id="round-phase"></small></div><button id="opponent-open" class="opponent-chip" type="button" aria-haspopup="dialog" hidden><span class="opponent-avatar" id="opponent-avatar" aria-hidden="true"></span><span class="opponent-text"><span class="opponent-vs">VS</span><strong id="opponent-name"></strong></span><span id="opponent-badge" class="opponent-badge" hidden></span><span id="opponent-heart" class="opponent-heart" title="Your friend" hidden>♥</span></button>
-      <div class="tools"><button id="reactions-open" type="button" aria-label="Send a reaction" aria-haspopup="dialog" hidden><span aria-hidden="true">💬</span></button><button id="history-open" type="button" data-history-open aria-label="Open match history" aria-describedby="history-preview history-unread" disabled><span>History<span id="history-unread"></span></span><small id="history-preview">No match loaded</small></button><button id="help-open" type="button" data-help-open aria-label="Help and round guide" disabled>?</button><button id="settings" type="button" title="Match settings" aria-label="Open match settings">⚙</button></div>
+      <div class="tools"><button id="recap-open" type="button" aria-label="Where you are" aria-haspopup="dialog" title="Where you are" hidden><span aria-hidden="true">📍</span></button><button id="reactions-open" type="button" aria-label="Send a reaction" aria-haspopup="dialog" hidden><span aria-hidden="true">💬</span></button><button id="history-open" type="button" data-history-open aria-label="Open match history" aria-describedby="history-preview history-unread" disabled><span>History<span id="history-unread"></span></span><small id="history-preview">No match loaded</small></button><button id="help-open" type="button" data-help-open aria-label="Help and round guide" disabled>?</button><button id="settings" type="button" title="Match settings" aria-label="Open match settings">⚙</button></div>
     </header>
     <nav class="timeline-wrap" aria-label="Activation order"><button id="order-open" data-order-open type="button" aria-label="Inspect turn order" disabled>Order ↗</button><ol id="timeline"></ol><span id="no-timeline">Waiting for a board</span></nav>
     <section id="battle-zone" aria-label="Battlefield">
@@ -66,6 +66,17 @@
     <header class="upkeep-header"><div><h2 id="upkeep-title"></h2><p id="upkeep-intro"></p></div><button id="upkeep-close" type="button" autofocus>Continue</button></header>
     <div class="upkeep-tools"><button id="upkeep-details" type="button" aria-controls="upkeep-body" aria-expanded="false">Details</button><button type="button" data-history-open>History</button></div>
     <div id="upkeep-body" class="upkeep-scroll" hidden></div>
+  </dialog>
+  <dialog id="recap-dialog" class="recap-dialog" aria-labelledby="recap-title" aria-describedby="recap-context">
+    <header class="recap-header"><p class="eyebrow">YOUR GAME</p><h2 id="recap-title">Where you are</h2><p id="recap-context"></p><p id="recap-timing"></p></header>
+    <div id="recap-body" class="recap-body" tabindex="0" aria-label="The recap">
+      <section class="recap-section" aria-labelledby="recap-where-title"><h3 id="recap-where-title" class="unseen">Who leads</h3><p id="recap-result" class="recap-result" hidden></p><div id="recap-sides" class="recap-sides"></div><p id="recap-leader" class="recap-leader"></p></section>
+      <section class="recap-section" aria-labelledby="recap-teams-title"><h3 id="recap-teams-title">The two teams</h3><div class="recap-teams"><div><h4>You</h4><ul id="recap-yours" class="recap-team"></ul></div><div><h4 id="recap-theirs-title">Opponent</h4><ul id="recap-theirs" class="recap-team"></ul></div></div></section>
+      <section class="recap-section" aria-labelledby="recap-rounds-title"><h3 id="recap-rounds-title">What happened recently</h3><p id="recap-unseen" class="recap-count"></p><div id="recap-rounds"></div></section>
+      <section class="recap-section" aria-labelledby="recap-chosen-title"><h3 id="recap-chosen-title">What you had chosen</h3><ul id="recap-chosen" class="recap-lines"></ul></section>
+      <section class="recap-section" aria-labelledby="recap-asked-title"><h3 id="recap-asked-title">What you are asked now</h3><p id="recap-question" class="recap-question"></p><ul id="recap-reactions" class="recap-lines recap-reactions" aria-label="Your opponent's reactions" hidden></ul></section>
+    </div>
+    <footer class="recap-footer"><button id="recap-replay" type="button" hidden>Replay step by step</button><button id="recap-go" class="primary" type="button">Go to my turn</button></footer>
   </dialog>
   <dialog id="reactions-dialog" class="reactions-dialog" aria-labelledby="reactions-title">
     <header class="reactions-header"><h2 id="reactions-title">React</h2><button id="reactions-close" type="button" aria-label="Close reactions">×</button></header>
