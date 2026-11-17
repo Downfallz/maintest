@@ -22,7 +22,7 @@ const legal = candidates => ({ candidates, minTargets: 1, maxTargets: 1 });
 const creature = (number, health = 30) => ({ id: number, name: `Creature ${number}`, health, maxHealth: 30, energy: 4, totalDefense: number === 5 ? 2 : 0,
   currentInitiative: 5, isAlive: true, isStunned: false, isStunImmune: false, knownSpells: ['shock'], conditions: [], acquiredTiers: [] });
 
-async function mount(page, { assistedFirst = false, book = null } = {}) {
+async function mount(page, { assistedFirst = false, book = null, upkeepAtEnd = false } = {}) {
   const state = { errors: [], writes: [], said: [], left: 0, opened: 0, asked: 20, answered: 0, handedBack: false };
   page.on('pageerror', error => state.errors.push(error.message));
   const order = lesson.steps.map(step => step.at.creature);
@@ -32,11 +32,16 @@ async function mount(page, { assistedFirst = false, book = null } = {}) {
       allies: [1, 2, 3].map(number => creature(number)), enemies: [creature(4, Math.max(1, 9 - 3 * state.answered)), creature(5), creature(6)],
       timeline: done || assisted ? [] : [{ creature: order[state.answered], owner: 'Player1', speed: 'Standard' }], speedChoices: [] };
     const tutorial = { order: lesson.order, of: 4, title: lesson.title, teaches: lesson.teaches,
-      assisted: state.handedBack ? [] : ['Evolution', 'Speed', 'TieOrder', 'Intent', 'Target'], steps: lesson.steps, shown: Math.min(order.length, state.answered + (assisted ? 0 : 1)), done };
+      assisted: state.handedBack ? [] : ['Evolution', 'Speed', 'TieOrder', 'Intent', 'Target'], steps: lesson.steps, shown: Math.min(order.length, state.answered + (assisted ? 0 : 1)), done: done && !state.notYetDone };
     const question = assisted || (done && state.handedBack) ? { waitingFor: 'Speed', waitingAsked: state.asked, waitingCreature: 1, options: { speed: { missing: [1, 2, 3] } } }
       : done ? { waitingFor: null }
         : { waitingFor: 'Action', waitingAsked: state.asked, waitingCreature: order[state.answered], options: { action: { actor: order[state.answered], spells: [{ spell: 'shock', legalTargets: legal([4, 5, 6]) }] } } };
-    return { over: false, recording: false, feed: [], feedNext: 0, practice: { scenario: id, title: file.title, goal: file.goal, round: 2, tutorial }, board, ...question };
+    // The round the lesson ends on opens with its upkeep, as the host's view says it.
+    const feed = done && upkeepAtEnd ? [
+      { sequence: 1, event: { kind: 'RoundEnergyGranted', roundId: 3, grants: [1, 2, 3, 4, 5, 6].map(one => ({ creature: one, gained: 2, before: 2, after: 4, baseRequested: 2, passiveRequested: 0 })) } },
+      { sequence: 2, event: { kind: 'OngoingEffectsApplied', roundId: 3, energyRegenerationTicks: [], regenerationTicks: [], bleedTicks: [] } },
+    ] : [];
+    return { over: false, recording: false, feed, feedNext: feed.length, practice: { scenario: id, title: file.title, goal: file.goal, round: 2, tutorial }, board, ...question };
   };
   await page.addInitScript(() => {
     const original = window.fetch;
@@ -60,8 +65,10 @@ async function mount(page, { assistedFirst = false, book = null } = {}) {
     if (url.pathname.startsWith(`/api/tutorials/${id}/`) && request.method() === 'POST') { const what = url.pathname.split('/').at(-1); state.said.push(what); return route.fulfill({ json: { id, state: what === 'done' ? 'done' : 'skipped' } }); }
     if (url.pathname === '/api/me') return route.fulfill({ json: { accounts: 'dev', account: { id: 'acct_learnerlearnerlea', username: 'Learner' } } });
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: { rules: { roundCap: 12, combatDeclaration: 'AtActivation' }, cards: [{ id: 'shock', name: 'Shock', cost: 2, targeting: 'One enemy', effects: ['Damage 7'] }], packages: [] } });
+    // Held, the last answer is written but the view that says the lesson is done waits for the test to let it through.
+    if (url.pathname.endsWith('/decision') && state.holdEnd && state.answered + 1 === order.length) state.held = view();
     if (url.pathname.endsWith('/decision')) { state.writes.push(decided(request)); state.answered++; state.asked++; return route.fulfill({ status: 204 }); }
-    if (url.pathname === '/api/seat/player1') return route.fulfill({ json: view() });
+    if (url.pathname === '/api/seat/player1') return route.fulfill({ json: state.held ?? view() });
     return route.fulfill({ status: 404, json: {} });
   });
   // The rulebook the cards are read from, held until the test lets it through.
@@ -174,6 +181,57 @@ test('tutorial 1 is played to its end: each step shows its coach card and opens 
   expect(state.said).toEqual(['done']);
   expect(state.left).toBe(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  expect(state.errors).toEqual([]);
+});
+
+test('a tutorial done opens nothing over its end card: the next round\'s upkeep waits, and Leave answers', async ({ page }) => {
+  // The view that says the lesson is done brings the next round's upkeep. It arrives under Settings, so its results
+  // settle unplayed and the upkeep is left to its own notice, as on a busy machine (#771): closing Settings must
+  // not open it over the end card, where it held Leave until the test timed out.
+  test.setTimeout(120000);
+  const state = await mount(page, { upkeepAtEnd: true });
+  state.holdEnd = true;
+  await page.locator('#practice-brief-begin').click();
+  for (let index = 0; index < lesson.steps.length; index++) await playStep(page, state, index);
+  await page.locator('#settings').click();
+  await expect(page.locator('#settings-dialog')).toBeVisible();
+  state.held = null;
+  await page.evaluate(() => window.notifyBattle());
+  await expect(page.locator('#practice-detail')).toHaveText('Tutorial complete');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#settings-dialog')).toBeHidden();
+  await expect(page.locator('#coach-step')).toHaveText('TUTORIAL COMPLETE');
+  await expect(page.locator('#upkeep-dialog')).toBeHidden();
+  await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: '<title>Home</title>' }));
+  await page.locator('#coach-leave').click({ timeout: 5000 });
+  await expect(page).toHaveTitle('Home');
+  expect(state.said).toEqual(['done']);
+  expect(state.errors).toEqual([]);
+});
+
+test('an upkeep already open when the tutorial is done is put away: the end card and its Leave are in front', async ({ page }) => {
+  // The host notes the lesson done apart from the seat's view (TutorialPlay), so one view can bring the next round's
+  // upkeep before another says the lesson is done (#771). Read under Settings, that upkeep opens on its own once
+  // Settings closes; the view that says done must not leave it over the end card.
+  test.setTimeout(120000);
+  const state = await mount(page, { upkeepAtEnd: true });
+  state.holdEnd = true;
+  await page.locator('#practice-brief-begin').click();
+  for (let index = 0; index < lesson.steps.length; index++) await playStep(page, state, index);
+  await page.locator('#settings').click();
+  await expect(page.locator('#settings-dialog')).toBeVisible();
+  state.held = null; state.notYetDone = true;
+  await page.evaluate(() => window.notifyBattle());
+  await expect(page.locator('#round-number')).toContainText('3');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#upkeep-dialog')).toBeVisible();
+  state.notYetDone = false;
+  await page.evaluate(() => window.notifyBattle());
+  await expect(page.locator('#coach-step')).toHaveText('TUTORIAL COMPLETE');
+  await expect(page.locator('#upkeep-dialog')).toBeHidden();
+  await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: '<title>Home</title>' }));
+  await page.locator('#coach-leave').click({ timeout: 5000 });
+  await expect(page).toHaveTitle('Home');
   expect(state.errors).toEqual([]);
 });
 

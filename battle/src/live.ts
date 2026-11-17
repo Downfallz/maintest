@@ -41,7 +41,7 @@ import { replayOf, operatorToken, replayMessage } from '../../table/session.js';
 import { httpTransport, replayTransport } from '../../table/transport.js';
 import { battleSeats, seatPath } from '../../table/battle-seats.js';
 import { openPractice, practiceBand, practiceBrief, practiceOf } from '../../table/battle-practice.js';
-import { lessonOverText, tutorialOf, withoutAssisted } from '../../table/battle-tutorial.js';
+import { holdsTheNextRound, lessonOverText, tutorialOf, withoutAssisted } from '../../table/battle-tutorial.js';
 import { tutorialControls } from './tutorial.js';
 import { createLiveConnection } from '../../table/battle-live.js';
 import { signInPath } from '../../table/account.js';
@@ -597,7 +597,13 @@ function render() {
   const canAuto = () => ready && !rendererFailed && !document.hidden && !recapPending && $('battle').dataset.connection === 'live' &&
     !playbackState.active && !replay.active && !action.target && !action.sending &&
     !planning.model().opened && !planning.model().sending && !document.querySelector('dialog[open]') && !orderUI.isOpening() && !orderUI.isReading();
-  upkeepUI.render(canAuto());
+  // A tutorial done keeps its end card in front (#771): the next round's upkeep counts as read, and put away if it
+  // opened before the host said the lesson was done; its turn order does not open by itself.
+  const roundHeld = holdsTheNextRound(view);
+  if (roundHeld && upkeep.model().pending) upkeep.presented();
+  // Closed at once, so this render shows no upkeep marker either; its close event comes as a task, after this render.
+  if (roundHeld && $<HTMLDialogElement>('upkeep-dialog').open) $<HTMLDialogElement>('upkeep-dialog').close();
+  upkeepUI.render(canAuto() && !roundHeld);
   const liveMarkers = upkeepUI.markers(board.round);
   if (liveMarkers) text('round-phase', 'UPKEEP');
   const markers = replay.active ? undefined : playbackState.paced?.markers ?? liveMarkers;
@@ -644,7 +650,7 @@ function render() {
     lastMutationReveal = reveal.sequence;
     if (!reduced()) scene.revealMutations(reveal.rows.map((row: {creature: number}) => String(row.creature)));
   }
-  orderUI.render(order, Boolean(view) && !view?.waiting && !rendererFailed, canAuto() && !upkeep.model().pending, view?.waiting && !view.over ? null : board);
+  orderUI.render(order, Boolean(view) && !view?.waiting && !rendererFailed, canAuto() && !roundHeld && !upkeep.model().pending, view?.waiting && !view.over ? null : board);
   // A tutorial's coach (ADR 0187): the step of the question asked, and its concept cards before the question's sheet.
   tutorialUI.render(rendererFailed ? null : view, { held: playbackState.active || replay.active, canAuto: canAuto() && !upkeep.model().pending && !orderReveal.model().pending });
   helpUI.render(guide, canAuto() && !upkeep.model().pending && !orderReveal.model().pending);

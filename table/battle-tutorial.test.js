@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { conceptsOf } from './concepts.js';
-import { CONTROLS, assistedQuestion, coachCard, leavePath, lessonOverText, leavingSkips, lessonStep, pastTheLesson, progressPath, tutorialBand, tutorialBrief, tutorialOf, withoutAssisted } from './battle-tutorial.js';
+import { CONTROLS, assistedQuestion, coachCard, holdsTheNextRound, leavePath, lessonOverText, leavingSkips, lessonStep, pastTheLesson, progressPath, tutorialBand, tutorialBrief, tutorialOf, withoutAssisted } from './battle-tutorial.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const concepts = conceptsOf(JSON.parse(readFileSync(join(root, 'table/rules.json'), 'utf8')));
@@ -60,6 +60,16 @@ test('once the tutorial is done no question is the person\'s: the lesson is not 
   assert.equal(withoutAssisted(view(asked('Speed', 1), lesson({ assisted: [], done: true }), 3)).waitingFor, null);
   assert.equal(pastTheLesson(view({}, lesson({ done: true }))), false);
   assert.equal(pastTheLesson(view(asked('Action', 2))), false);
+});
+
+test('once the tutorial is done the next round opens nothing by itself over the end card (#771)', () => {
+  // Its upkeep or its turn order would hold Play again and Leave behind a window: only the end card remains.
+  assert.equal(holdsTheNextRound(view({}, lesson({ done: true }), 3)), true);
+  assert.equal(holdsTheNextRound(view(asked('Speed', 1), lesson({ shown: 3, done: true }), 3)), true);
+  // Before the end, and outside a tutorial, the round reads as in any game.
+  assert.equal(holdsTheNextRound(view(asked('Action', 2))), false);
+  assert.equal(holdsTheNextRound({ board: {} }), false);
+  assert.equal(holdsTheNextRound(null), false);
 });
 
 test('once the tutorial is done the dock says so, in place of waiting for a decision', () => {

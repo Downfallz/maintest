@@ -85,6 +85,14 @@ export function pastTheLesson(view) {
 }
 
 /**
+ * Whether the round after the lesson is held: once the tutorial is done, its upkeep and its turn order do not open
+ * by themselves, for a window would stand over the end card and hold its Play again and Leave (#771).
+ */
+export function holdsTheNextRound(view) {
+  return Boolean(tutorialOf(view)?.done);
+}
+
+/**
  * What the dock says once the tutorial is done, in place of waiting for a decision that will not come; none before,
  * and none outside a tutorial.
  */

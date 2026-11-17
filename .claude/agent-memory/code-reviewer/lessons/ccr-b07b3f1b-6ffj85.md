@@ -1,0 +1,2 @@
+- A "do not open by itself" guard (`upkeepUI.render(canAuto && !held)`) leaves the window that opened just before the guard turned on: ask what closes an already-open one, and whether the pending flag behind it is cleared (#771, live.ts:603-605, round 1 -> 3ee88a0).
+- A fix that clears a pending flag alongside a no-auto-open guard is untested when the spec only asserts the window stays hidden: the guard alone hides it, so delete the clear and the spec still passes; ask for an assertion on what the flag gates (#771, live.ts:603, 3ee88a0).
