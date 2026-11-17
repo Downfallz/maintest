@@ -98,8 +98,8 @@ async function answerAction(page, view, next) {
 
 // What the battle shows, in one in-page read. The lesson is read in a loop that runs some seventy times, and every
 // separate read is a round trip to a page rendering a 1440x1000 canvas in software, recorded by the trace CI keeps:
-// read a dozen at a time, they took about a quarter of tutorial 4's 204 s, and it outlasted its 230 s on a CI
-// runner (#735). Visible as Playwright reads it: a box, and not hidden.
+// read one at a time, a dozen a poll, they cost 30 s of tutorial 4's 204 s, and a CI runner took it past its 230 s
+// (#735). Visible as Playwright reads it: a box, and not hidden.
 //   step: the coach's step line, null while the coach is hidden; done: it says the lesson is complete.
 //   cards: a step's concept cards wait to be read.
 //   sheet: what the person is asked shows, its sheet or the targets on the field; command: the button that opens
