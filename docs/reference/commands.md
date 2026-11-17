@@ -182,8 +182,9 @@ GAME_ORIGIN=https://your-game-host.example node showcase/build.mjs
 ```
 
 Builds the public showcase into `showcase/dist`, or into the folder you pass as its one argument. The build
-replaces that folder, so it refuses one that holds anything the build does not write. The output is eight localized
-pages, their assets and the `_headers` file Cloudflare Pages serves (showcase/README.md, ADR 0185). `GAME_ORIGIN`
+replaces that folder, so it refuses one that holds anything the build does not write. The output is ten localized
+pages, their assets and the `_headers` file Cloudflare Pages serves (showcase/README.md, ADR 0185). The two
+rulebook pages are drawn from `table/rules.json` and `rules.fr.json`. `GAME_ORIGIN`
 sets the origin of the Play links. It must be a bare HTTPS origin, with no path, query or credentials. The default,
 and the game website's origin the table links to, come from `table/site-origins.js`. `node --test showcase/*.test.js`
 builds the showcase into a temporary folder and checks the result, leaving `showcase/dist` as it was. CI runs the

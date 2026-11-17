@@ -53,6 +53,7 @@ export function page(c, specimen, app) {
     <section id="duel" class="duel" aria-labelledby="duel-title"><div class="section contain">
       <p class="kicker">${c.game}</p><h2 id="duel-title">${c.duelTitle}</h2><p class="lead">${c.duelLead}</p>
       <ol class="moves">${c.moves.map(([name, description], index) => `<li><span aria-hidden="true">${roman[index]}</span><h3>${name}</h3><p>${description}</p></li>`).join('')}</ol>
+      <a class="editorial-link" href="${routes[c.lang].rules}">${c.readRules} <span aria-hidden="true">→</span></a>
     </div></section>
     ${battlefield(c)}
     ${mutationStory(c, specimen)}

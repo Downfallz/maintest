@@ -13,8 +13,10 @@ node scripts/rules/build.mjs            # rebuild table/rules.json and rules.fr.
 node scripts/rules/build.mjs --check    # are both the build of rules/?
 ```
 
-`table/rules.test.js`, in the gate, fails when either file is out of date. The file records the whole hosted rule set
-it was drawn from, so any change to `docs/tabletop/playtest.rules.json` calls for a rebuild too.
+The table's page (`/rules`) reads them, and the showcase publishes them at `/rules/` and `/fr/regles/` on the
+public site (`showcase/rules.mjs`). `table/rules.test.js`, in the gate, fails when either file is out of date.
+The file records the whole hosted rule set it was drawn from, so any change to
+`docs/tabletop/playtest.rules.json` calls for a rebuild too.
 
 ## Keeping it true
 
