@@ -14,6 +14,10 @@ Before reviewing, read `.claude/rules/domain.md`, `docs/domain/glossary.md`, and
 Review the diff (`git diff origin/main...HEAD`, the range you are given, or the files you are pointed at) against
 these questions, in order:
 
+When you are given a sha and a copy of that commit (`/reviewers` gives both), read the changed files in the
+copy, never in the checkout, which the author's session may be editing, and start your report with
+`Reviewed: <sha>`.
+
 1. Language: does every type, method, and property use a glossary term? List any invented or ambiguous word.
 2. Invariants: for each state change, which invariant protects it, and where is it enforced? Flag any
    invariant enforced outside the aggregate, or a public setter that bypasses it.

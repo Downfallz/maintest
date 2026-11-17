@@ -254,8 +254,9 @@ most, started by a clock, an API call or a GitHub event. One is added at a time.
 - A design system read from `table/identity.css` and `docs/art/branding.md`, so a mock-up wears the real identity.
   It lives in the Claude app, as a Design System artifact private to the owner
   (<https://claude.ai/artifact/2wUm1qzLpxW4m69UVhe9PR>, `docs/art/branding.md#design-system`).
-  `scripts/design-system/build.mjs` builds it from the repository and `/design-system` republishes it in place. `design-reviewer` reads a change against the same
-  two files and the art docs, and looks first for what it could reuse.
+  `scripts/design-system/build.mjs` builds it from the repository and `/design-system` republishes it in place.
+  `design-reviewer` reads a change against `table/identity.css`, `docs/art/branding.md` and the art docs, and looks
+  first for what it could reuse.
 - A new screen is mocked first, as a page the owner opens on the phone, then sent to a session.
 - A pull request that changes a page carries screenshots at 320, 390 and 1440 px; the Playwright projects
   exist. Visual baselines for a few screens are an option: the suite has none.
@@ -328,12 +329,12 @@ Each stage is one pull request with its tests, and leaves the gate green.
    on 2026-11-16 (docs/tabletop/rulebook-plan.md, R5): the official rulebook against what the rules are made of.
    The memory trial:
    `code-reviewer` and `host-reviewer` carry `memory: project`, which turns Write and Edit on; their prompt holds
-   them to `.claude/agent-memory/<agent>/`, committed with the change. *Proven in cloud sessions (2026-11-17,
-   issue #601)*: both reviewers, run in the foreground, write their lessons there and the files are committed
-   (from #604 for `code-reviewer`, #660 for `host-reviewer`), and the next session's reviewer reads them:
-   `code-reviewer` counted one lesson across eight pull requests, from #658 to #745. That lesson, the branch moving
-   under a reviewer, became a step of `/reviewers` and of both prompts (issue #740): the session commits first,
-   each reviewer reads a `git archive` copy of a named sha and says it, and the session edits nothing until they
+   them to `.claude/agent-memory/<agent>/`, committed with the change. *Proven in cloud sessions
+   (2026-11-17, issue #601)*. Both reviewers, run in the foreground, write their lessons there, and the files
+   are committed (from #604 for `code-reviewer`, #660 for `host-reviewer`). The next session's reviewer reads them: `code-reviewer` found the
+   same lesson in eight pull requests, from #658 to #745. That lesson, the branch moving under a reviewer, became
+   a step of `/reviewers` and a line of every reviewer's prompt (issue #740): the session commits first, each
+   reviewer reads a `git archive` copy of a named sha and says which, and the session edits nothing until they
    have all reported. The memory writes are allowed in `.claude/settings.json`; the reviewers still run in the
    foreground, since a background agent is refused the other tools not allowed there. `/code-review ultra`, Claude
    Code's own deep review, is the owner's to run.
@@ -373,11 +374,11 @@ Each stage is one pull request with its tests, and leaves the gate green.
    rule, skill, agent or test that would have prevented it, and records the week under
    `docs/engineering/retros/`. `table/terminology.test.js` reads the tables of `player-terminology.md`: `terms.js`
    matches the EN column, and no page, script sentence or battle label uses a legacy word the column replaced. Left to the
-   owner: the Cowork project, made in the Claude app. The design system is made: standalone Claude Design closes
+   owner: the Cowork project, made in the Claude app. The design system is made. Standalone Claude Design closes
    on 2026-12-14 and `/design-sync` is the owner's to start, so it was made in Claude from `table/identity.css`
-   and `docs/art/branding.md`, and lives where the Design section says (issue #630). Not built: the monthly and weekly scheduled runs (one at a
-   time, once the digest has run for a week), and `.claude-plugin/marketplace.json`, which waits for a Cowork
-   project that would use it.
+   and `docs/art/branding.md`. It lives where the Design section says (issue #630). Not built: the monthly and
+   weekly scheduled runs (one at a time, once the digest has run for a week), and
+   `.claude-plugin/marketplace.json`, which waits for a Cowork project that would use it.
 
 ## Left out, and why
 

@@ -13,6 +13,10 @@ Read `rules/README.md` (the format), `docs/domain/player-terminology.md` (the pl
 `docs/tabletop/rulebook-plan.md` section "The workflow that keeps it true". Then the diff on
 the range you are given (`origin/main...HEAD` when none is), and the pull request's text if you have it.
 
+When you are given a sha and a copy of that commit (`/reviewers` gives both), read the changed files in the
+copy, never in the checkout, which the author's session may be editing, and start your report with
+`Reviewed: <sha>`.
+
 Start from the sections the change reaches: `git diff <range> | node scripts/rules/reach.mjs`. It lists each
 section an ADR, a game-rules heading, a spell, a mutation, a field of the rule set or a stat of the reference
 creature reaches through its `sources:` line or the values it draws, and the paths no section draws or cites.

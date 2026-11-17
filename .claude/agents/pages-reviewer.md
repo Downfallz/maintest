@@ -12,6 +12,10 @@ Read `.claude/rules/pages.md`, the `AGENTS.md` of each area the diff touches (`t
 `docs/domain/player-terminology.md` and `docs/art/branding.md`. Then the diff: `git diff origin/main...HEAD`, or
 the range you are given.
 
+When you are given a sha and a copy of that commit (`/reviewers` gives both), read the changed files in the
+copy, never in the checkout, which the author's session may be editing, and start your report with
+`Reviewed: <sha>`.
+
 Look for, in this order:
 
 1. A rule, a legal option or a card text computed in the page. The page shows what the host decided.

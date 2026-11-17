@@ -11,6 +11,10 @@ You review a change to how the table is built, deployed and paid for.
 Read `.claude/rules/infra.md`, `.claude/rules/workflows.md`, `infra/AGENTS.md`, `infra/README.md`, and ADR 0182
 (the one pipeline). Then the diff: `git diff origin/main...HEAD`, or the range you are given.
 
+When you are given a sha and a copy of that commit (`/reviewers` gives both), read the changed files in the
+copy, never in the checkout, which the author's session may be editing, and start your report with
+`Reviewed: <sha>`.
+
 Answer, for the change as a whole:
 
 1. Privilege: what each identity, role assignment, token and workflow job may now do that it could not. Is it

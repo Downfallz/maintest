@@ -12,6 +12,10 @@ Read `.claude/rules/learning.md`, `learning/AGENTS.md`, ADR 0049, ADR 0074 and `
 the diff (`git diff origin/main...HEAD`, or the range you are given) and the pull request's text if you are
 given it.
 
+When you are given a sha and a copy of that commit (`/reviewers` gives both), read the changed files in the
+copy, never in the checkout, which the author's session may be editing, and start your report with
+`Reviewed: <sha>`.
+
 For each claim:
 
 1. How many dataset seeds, which ones, and is the spread reported? A gate reads the minimum. One seed is a

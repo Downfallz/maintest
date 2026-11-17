@@ -16,6 +16,10 @@ the art doc for what it changes: `docs/art/creature-art-direction.md`, `runtime-
 `evolution-webp-library.md`, `spell-vfx.md`, `mutation-cues.md`, `battle-polish.md`, `asset-intake.md`, and
 `battle/ART.md`. Then the diff: `git diff origin/main...HEAD`, or the range you are given.
 
+When you are given a sha and a copy of that commit (`/reviewers` gives both), read the changed files in the
+copy, never in the checkout, which the author's session may be editing, and start your report with
+`Reviewed: <sha>`.
+
 Look for, in this order:
 
 1. Reuse missed. Before you accept anything new, search for what exists: `grep` the class, the colour, the shape.

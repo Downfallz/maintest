@@ -13,6 +13,10 @@ Read `.claude/rules/host.md`, `.claude/rules/infra.md`, `.claude/rules/workflows
 seats and the operator (`grep -l -i -E 'sign-in|operator|seat key|token' docs/adr/*.md`). Then the diff:
 `git diff origin/main...HEAD`, or the range you are given.
 
+When you are given a sha and a copy of that commit (`/reviewers` gives both), read the changed files in the
+copy, never in the checkout, which the author's session may be editing, and start your report with
+`Reviewed: <sha>`.
+
 For each thing the diff lets someone do, answer who can do it, with what, and what stops anyone else:
 
 1. Authentication: where a token, a cookie, a seat key or a join code is read, compared (in constant time) and
