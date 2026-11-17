@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Cli.Table;
 using Microsoft.Extensions.Time.Testing;
 
@@ -179,6 +180,77 @@ public sealed class PushNoticesTests : IDisposable
         var notice = JsonDocument.Parse(PushNotices.Payload(new Asking(Application.Matches.Projections.PlayerOptionsKind.Action, null, 9), 4, seat, "t", casts)).RootElement;
 
         notice.GetProperty("body").GetString().ShouldBe(body);
+    }
+
+    [Fact]
+    public async Task A_notice_sent_after_the_last_visit_and_some_casts_carries_the_count_in_its_body()
+    {
+        var (table, _) = await Seated();
+        table.Seats[0].Push = Phone;
+        await Arrive(table);
+        var person = table.Seats[0].Person!;
+        var marked = false;
+        Asking? next = null;
+        for (var attempt = 0; attempt < 1500 && next is null; attempt++)
+        {
+            var waiting = person.Waiting;
+            if (waiting is null)
+            {
+                await Task.Delay(10, TestContext.Current.CancellationToken);
+                continue;
+            }
+
+            if (waiting.Kind == PlayerOptionsKind.Intent && !marked)
+            {
+                var shown = (await ViewAsync(table)).GetProperty("feed").EnumerateArray().Max(entry => entry.GetProperty("sequence").GetInt32());
+                (await table.Api.HandleAsync("PUT", "/api/seat/player1/seen", $$"""{ "sequence": {{shown}} }""", table.Seats[0].Token)).Status.ShouldBe(200);
+                marked = true;
+            }
+
+            var casts = (await table.Api.SinceVisitAsync("player1")).Casts;
+            if (marked && casts > 0 && waiting.Kind is PlayerOptionsKind.Evolution or PlayerOptionsKind.Speed)
+            {
+                next = waiting;
+                continue;
+            }
+
+            await AnswerAsync(table, waiting);
+        }
+
+        next.ShouldNotBeNull("the seat is asked again after casts");
+        await Task.Delay(20, TestContext.Current.CancellationToken);
+        var count = (await table.Api.SinceVisitAsync("player1")).Casts.ShouldNotBeNull();
+        count.ShouldBeGreaterThan(0);
+        _clock.Advance(Grace);
+
+        var (_, payload) = await _sender.Next();
+
+        JsonDocument.Parse(payload).RootElement.GetProperty("body").GetString()
+            .ShouldEndWith(count == 1 ? "1 cast since your last visit." : $"{count} casts since your last visit.");
+    }
+
+    private static async Task<JsonElement> ViewAsync(PlayedTable table)
+    {
+        var served = await table.Api.HandleAsync("GET", "/api/seat/player1", "", table.Seats[0].Token);
+        return JsonDocument.Parse(System.Text.Encoding.UTF8.GetString(served.Body)).RootElement.Clone();
+    }
+
+    /// <summary>The first legal answer to the question, read off the options the seat is served, as a page would post it.</summary>
+    private static async Task AnswerAsync(PlayedTable table, Asking waiting)
+    {
+        var options = (await ViewAsync(table)).GetProperty("options");
+        var creature = waiting.Creature?.Value;
+        var body = waiting.Kind switch
+        {
+            PlayerOptionsKind.Evolution => """{"kind":"Evolution","pass":true}""",
+            PlayerOptionsKind.Speed => $$"""{"kind":"Speed","creature":{{creature}},"speed":"Quick"}""",
+            PlayerOptionsKind.TieOrder => $$"""{"kind":"TieOrder","order":{{options.GetProperty("tieOrder").GetProperty("asRolled").GetRawText()}}}""",
+            PlayerOptionsKind.Intent => $$"""{"kind":"Intent","creature":{{creature}},"spell":{{options.GetProperty("intent").GetProperty("creatures").EnumerateArray().First(one => one.GetProperty("creature").GetInt32() == creature).GetProperty("castableSpells")[0].GetRawText()}}}""",
+            PlayerOptionsKind.Target => $$"""{"kind":"Target","creature":{{creature}},"targets":[{{options.GetProperty("target").GetProperty("legalTargets").GetProperty("candidates")[0].GetInt32()}}]}""",
+            _ => throw new InvalidOperationException($"Unexpected question {waiting.Kind}."),
+        };
+        var answer = await table.Api.HandleAsync("POST", "/api/seat/player1/decision", body.Insert(1, $"\"asked\":{waiting.Asked},"), table.Seats[0].Token);
+        answer.Status.ShouldBe(204, System.Text.Encoding.UTF8.GetString(answer.Body));
     }
 
     [Fact]
