@@ -43,7 +43,7 @@ export function recapControls({ onGo, onReplay, onClose }: { onGo: () => void; o
     if (choice === 'quiet') return;
     if (choice === 'replay') onReplay(); else onGo();
     onClose();
-    if (opener?.isConnected && !opener.hidden && opener.getClientRects().length) opener.focus({ preventScroll: true });
+    if (opener?.isConnected && !opener.matches(':disabled') && opener.getClientRects().length) opener.focus({ preventScroll: true });
     opener = null;
   });
 

@@ -649,7 +649,7 @@ function render() {
   tutorialUI.render(rendererFailed ? null : view, { held: playbackState.active || replay.active, canAuto: canAuto() && !upkeep.model().pending && !orderReveal.model().pending });
   helpUI.render(guide, canAuto() && !upkeep.model().pending && !orderReveal.model().pending);
   // The recap waits for the field to be free, then opens on its own once, before any question's sheet.
-  $('recap-open').hidden = !view || view.over || Boolean(view.waiting) || Boolean((view as { replay?: unknown }).replay) || rendererFailed;
+  $<HTMLButtonElement>('recap-open').disabled = !view || view.over || Boolean(view.waiting) || Boolean((view as { replay?: unknown }).replay) || rendererFailed || Boolean(tutorialOf(view));
   if (recapPending && view && ready && !rendererFailed && !document.hidden && !document.querySelector('dialog[open]')) {
     recapPending = false; openRecap(null, recapBack, view.seen?.at ?? null);
   }

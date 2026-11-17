@@ -1817,7 +1817,7 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
    held upright. It takes the place of what a tutorial has no use for: the opponent, History, Help, the reactions and
    the notifications. It says its place in the series (and the step, where there is room), Restart the round (Play
    again once it is done) and Leave. */
-#battle[data-tutorial]:not([data-tutorial=""]) :is(#opponent-open, #history-open, #help-open, #reactions-open, #recap-open) { display: none; }
+#battle[data-tutorial]:not([data-tutorial=""]) :is(#opponent-open, #history-open, #help-open, #reactions-open) { display: none; }
 .battle-page:has(#battle[data-tutorial]:not([data-tutorial=""])) .home-header .inbox-button { display: none; }
 #battle .hud-top > .practice-band { position: static; flex: 1 1 auto; display: flex; align-items: center; gap: 10px; width: auto; min-width: 0; margin: 0 0 0 8px; padding: 0 0 0 10px;
   border: 0; border-left: 2px solid var(--gold); border-radius: 0; background: none; box-shadow: none; }
@@ -1855,9 +1855,13 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 
 /* The recap, Where you are (docs/tabletop/async-recap-plan.md, R3): one sheet over the battle view, read top to
    bottom on a phone, its body scrolling between the header and the two buttons. What the seat had not seen is
-   marked New in gold. Its button stands in the header beside History. */
-#battle #recap-open { min-width: 44px; min-height: 44px; font-size: 19px; padding: 4px 9px; }
-#battle #recap-open[hidden] { display: none; }
+   marked New in gold. The round in the header opens it, a gold dot under the round saying so. */
+#battle #recap-open { min-height: 44px; margin: 0; padding: 0 4px; border: 0; border-radius: var(--radius-sharp); background: transparent; color: inherit; font: inherit; cursor: pointer; }
+#battle #recap-open:disabled { cursor: default; opacity: 1; }
+#battle #recap-open:not(:disabled):hover, #battle #recap-open:focus-visible { background: #ffffff10; }
+/* A gold dot under the round says it opens: the round's own width, nothing added to the header. */
+#battle #recap-open .recap-pin { display: none; }
+#battle #recap-open:not(:disabled) .recap-pin { display: block; width: 5px; height: 5px; border-radius: 50%; background: var(--gold); align-self: center; }
 .recap-dialog { width: min(560px, calc(100vw - 16px)); max-height: calc(100dvh - 16px); padding: 0; display: none; flex-direction: column;
   border: 1px solid #b7986866; border-radius: var(--radius-soft); background: #13232a; color: #f2eee2; box-shadow: 0 18px 40px #000a; overflow: hidden; }
 .recap-dialog[open] { display: flex; }

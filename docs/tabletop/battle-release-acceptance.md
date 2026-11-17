@@ -47,8 +47,8 @@ the bundle; the game code around it keeps growing with each battle feature, so t
 gzip limit (524,288) is unchanged.
 
 **Raised to 1,769,472 bytes (1,728 KiB), 2026-11-17.** Main measured 1,697,712 bytes, 6,224 under the limit. The
-recap's sheet (docs/tabletop/async-recap-plan.md, R3) and the recap model it draws brought it to 1,710,602 bytes
-(483,583 gzip). The raw limit rises by 64 KiB again; the gzip limit (524,288) is unchanged.
+recap's sheet (docs/tabletop/async-recap-plan.md, R3) and the recap model it draws brought it to 1,711,206 bytes
+(483,705 gzip). The raw limit rises by 64 KiB again; the gzip limit (524,288) is unchanged.
 The download budget does not bound GPU memory. No remote fonts or audio downloads are needed.
 
 | Surface | Current coverage | Release limitation |

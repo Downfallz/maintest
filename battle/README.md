@@ -593,10 +593,10 @@ marked **New**, and older rounds are folded. Then the seat's own choices still i
 with the opponent's reactions. `table/battle-recap.js` builds it from the seat's own view and feed; `src/recap.ts`
 draws it.
 
-It opens on its own when the seat comes back after an hour away (the host's last visit, ADR 0194) and a line the
+It opens on its own when the seat comes back after an hour away (from the later of the host's last visit, ADR 0194, and this browser's last sight of the seat) and a line the
 seat has not seen. It opens before any question sheet, and the catch-up waits until it is closed. It never opens in
-a practice, a tutorial or a replay, before everyone is seated, or on a device that holds both seats. The header's
-**📍** opens it at any time in a game under way, and marks **New** every line this page has not shown yet.
+a practice, a tutorial or a replay, before everyone is seated, or on a device that holds both seats. The round in
+the header opens it at any time in a game under way, and marks **New** every line this page has not shown yet.
 
 **Go to my turn**, and Escape, settle the board on the present; in a match that ended while the seat was away the
 button reads **See the result**. **Replay step by step** is offered when the playback holds the opponent's actions,

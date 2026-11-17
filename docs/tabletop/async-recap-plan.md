@@ -148,15 +148,17 @@ under way: a player who left the page open for two days, or who simply lost the 
    turn, Replay step by step, never on its own over a question); the battle bundle rebuilt.
 
    *Built (2026-11-17)*: `battle/src/recap.ts` draws the sheet in `recap-dialog`, over the field, from `buildRecap`.
-   `recapOpensOnItsOwn` (`table/battle-recap.js`) is the threshold: an hour since the host's `seen.at` and a line
-   not seen. It never opens over a question being answered, in a practice, a tutorial or a replay, before everyone
+   `recapOpensOnItsOwn` (`table/battle-recap.js`) is the threshold: an hour away and a line not seen. Away runs
+   from the later of the host's `seen.at`, which moves only with the mark, and the last time this browser had the
+   seat on screen (`savePresent`, written as the page is hidden). It never opens over a question being answered, in a practice, a tutorial or a replay, before everyone
    is seated, or on a device that holds both seats. The threshold is read once, as the page opens on the seat and
    before the playback reads the view. The catch-up waits behind the sheet, and so does every other sheet.
    **Go to my turn**, and Escape, settle the board on the present; in a match that ended while away the button
    reads **See the result** and opens it. **Replay step by step** is offered when the playback holds the
    opponent's actions; closing the sheet lets them play, each waiting for its OK. A catch-up past the playback's
    bounds (more than 12 actions or two rounds) is settled as before, and the sheet and the journal tell it. The
-   header's **📍** opens the sheet in a game under way and marks new what the page has not shown. The page gathers
+   round in the header opens the sheet in a game under way (a gold dot under it says so: a button of its own did
+   not fit at 320 px) and marks new what the page has not shown. The page gathers
    the feed it receives, and loads it back to the last visit (`connection.history()`) when the live window does
    not reach it. History marks **You left here** before the first event after the visit, in All events and in the
    summary. A round before the one on the board now reads as completed even when the feed holds no end for it.
