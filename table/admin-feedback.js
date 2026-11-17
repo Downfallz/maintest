@@ -323,8 +323,10 @@ export function issueAddress(sheet) {
     errors: (sheet.errors ?? []).map(error => (error.where ? `${error.message} (${error.where})` : error.message)).join('\n'),
     scenario: sheet.reproduction ? `Drop report-${sheet.id}.zip here, downloaded from the panel.` : '',
   };
-  const address = () => `https://github.com/${sheet.repository}/issues/new?${Object.entries(fields)
-    .filter(([, value]) => value).map(([name, value]) => `${name}=${encodeURIComponent(value)}`).join('&')}`;
+  const address = () => {
+    const query = Object.entries(fields).filter(([, value]) => value).map(([name, value]) => `${name}=${encodeURIComponent(value)}`).join('&');
+    return `https://github.com/${sheet.repository}/issues/new?${query}`;
+  };
   for (let built = address(); ; built = address()) {
     if (built.length <= ADDRESS_LIMIT) return built;
     if (Array.from(fields.errors).length <= 1) return built;
@@ -790,7 +792,8 @@ export function mountFeedbackTab({ send, download, github = globalThis.fetch?.bi
         return;
       }
       const fixed = fixedReports(rows, closed);
-      for (const id of fixed) await send('PUT', `/api/admin/feedback/${encodeURIComponent(id)}/status`, { status: 'fixed' });
+      // The host writes feedback one change at a time, whatever order these arrive in.
+      await Promise.all(fixed.map(id => send('PUT', `/api/admin/feedback/${encodeURIComponent(id)}/status`, { status: 'fixed' })));
       if (fixed.length) await redraw();
     } finally {
       checking = false;

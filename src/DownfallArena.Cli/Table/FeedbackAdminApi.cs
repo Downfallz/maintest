@@ -460,37 +460,37 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
     /// </summary>
     private string[] Actions(Feedback one, FeedbackMute? mute, bool underWay, FeedbackGroup group, bool reproduced)
     {
-        var offered = new List<string>();
-        if (one.MergedInto is not null)
-        {
-            offered.AddRange(["dismiss", "spam"]);
-        }
-        else
-        {
-            offered.AddRange(one.Kind == FeedbackKind.Bug ? BugActions(one) : IdeaActions(one, group));
-            if (one.Kind == FeedbackKind.Bug && Scenarios is not null && Cuttable(one.Context))
-            {
-                offered.Add("reproduce");
-            }
-
-            // The scenario leaves the host only once the game it was cut from is over (R5).
-            if (one.Kind == FeedbackKind.Bug && reproduced && !underWay)
-            {
-                offered.Add("download");
-            }
-
-            if (underWay && one.Context?.Table is not null)
-            {
-                offered.Add("diagnose");
-            }
-        }
-
+        var offered = one.MergedInto is not null ? ["dismiss", "spam"] : OpenActions(one, underWay, group, reproduced);
         if (feedback.CanMute(one))
         {
             offered.Add(mute is null ? "mute" : "unmute");
         }
 
         return [.. offered];
+    }
+
+    /// <summary>What a piece of feedback not merged into another offers, its sender's mute aside.</summary>
+    private List<string> OpenActions(Feedback one, bool underWay, FeedbackGroup group, bool reproduced)
+    {
+        var bug = one.Kind == FeedbackKind.Bug;
+        List<string> offered = [.. bug ? BugActions(one) : IdeaActions(one, group)];
+        if (bug && Scenarios is not null && Cuttable(one.Context))
+        {
+            offered.Add("reproduce");
+        }
+
+        // The scenario leaves the host only once the game it was cut from is over (R5).
+        if (bug && reproduced && !underWay)
+        {
+            offered.Add("download");
+        }
+
+        if (underWay && one.Context?.Table is not null)
+        {
+            offered.Add("diagnose");
+        }
+
+        return offered;
     }
 
     private static IEnumerable<string> BugActions(Feedback one)
