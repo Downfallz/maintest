@@ -24,17 +24,18 @@ paths:
   requests both read the old value and both write (#692).
 - No store-wide read (`AllAsync`, one blob read a record) under a gate the players' requests wait on: the guard
   reads a flag or a list kept on the record (`Feedback.Joined`, #724).
-- An operator action that writes several records writes first the record the guards read, and asked again it
-  finishes the rest: a cut leaves that record naming one too many, which the reads skip
+- An operator action that writes several records writes first the record the guards read. If the action is cut
+  short, asking again finishes the rest; until then that record names one record too many, which the reads skip
   (`OperatorFeedback.MergingAsync`, #724).
-- A listing route counts its storage reads per row: one read added to each table of `GET /api/lobby/mine` is paid
-  on every account change (#724).
-- A conditional write refused because the file moved, which then finds no file where it read one, gives up: the
-  operator deleted the run, and writing would bring a file of it back (`TableVisits`, `TableReactions`, #739).
-- One `OperatorActions` per host, built by `TableHost.OpenNotesAsync` and handed to every admin API: its ids keep
-  the operator log's order only within one instance (#748).
+- A listing route counts its storage reads per row. One read added to each table of `GET /api/lobby/mine` is paid
+  on every account change, as the inbox fetches it again each time (#724).
+- When a conditional write is refused because the file moved, read it again. If a file read before is gone, the
+  operator deleted the run: give up, as a write would bring the file back (`TableVisits`, `TableReactions`, #739).
+  A file never written has no such guard yet (#789).
+- Build one `OperatorActions` per host, in `TableHost.OpenNotesAsync`, and hand it to every admin API. Its ids keep
+  the operator log in order only within one instance (#748).
 - A route that answers a file, or whose path ends in an extension, sends `Cache-Control: no-store, private`
-  (`StudioResponse.NotKept`) unless it is a `TableFiles` entry: Cloudflare caches by extension (#752).
+  (`StudioResponse.NotKept`), unless it is a `TableFiles` entry. Cloudflare caches by extension (#752).
 - `HttpHost` reads at most 64 KB of body and answers 413 `Host.BodyTooLarge` past it (#691). The largest table
   body is feedback, about 40 KB at worst in UTF-8. A host that needs more says why where it is built, as the studio does.
 - A console line is one line (the ops report reads it a line at a time) and names an operator as `by <name>:`,
@@ -46,6 +47,6 @@ paths:
 - Anything kept per seat is reset, or keyed by the seat's key (`TableApi.HolderOf`), when the seat changes hands
   (ADR 0170): the newcomer is never served the leaver's state (#739).
 - A field added to the seat view degrades to null when its store fails; it never fails the board read (#739).
-- A second reader of a seat's feed applies the seat view's limits, from `FeedStart` to `session.Journaled`
+- A second reader of a seat's feed applies the seat view's two limits, `FeedStart` and `session.Journaled`
   (`TableApi.SinceVisitAsync`), or it counts entries the page never shows (#724).
 - Storage tests need Azurite; without it they are skipped. Report them as skipped.

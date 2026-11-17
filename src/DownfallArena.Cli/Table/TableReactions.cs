@@ -32,8 +32,8 @@ internal sealed class TableReactions(TimeProvider clock, IReactionKeeper? keeper
     private IReadOnlyList<TableReaction>? _items;
     private string? _tag;
 
-    // The file was read once and is gone since: the operator deleted the table's run, and a write would bring a file
-    // of it back (#739). Nothing is written for this table again.
+    // The file was read once and is gone now. The operator deleted the table's run, and a write would recreate the
+    // file (#739). Nothing is written for this table again.
     private bool _gone;
 
     /// <summary>The reactions kept, oldest first; read from the record the first time they are asked for.</summary>
@@ -48,8 +48,8 @@ internal sealed class TableReactions(TimeProvider clock, IReactionKeeper? keeper
     }
 
     /// <summary>
-    /// Sends <paramref name="reaction" /> for <paramref name="seat" />, or says why it was not sent: busy, too, once the
-    /// file read before has gone, as the table's run was deleted.
+    /// Sends <paramref name="reaction" /> for <paramref name="seat" />, or says why it was not sent. Once the file read
+    /// earlier has gone, because the operator deleted the table's run, every send is refused as gone.
     /// </summary>
     public async Task<ReactionSent> SendAsync(string seat, string? reaction, CancellationToken cancellationToken = default)
     {
@@ -68,7 +68,7 @@ internal sealed class TableReactions(TimeProvider clock, IReactionKeeper? keeper
             var items = await LoadedAsync(cancellationToken);
             if (_gone)
             {
-                return ReactionSent.Busy;
+                return ReactionSent.Gone;
             }
 
             var now = clock.GetUtcNow();

@@ -319,8 +319,8 @@ The host plays many tables at once, each found by its own tokens (ADR 0081).
   characters; its record closed and marked void, its seats answered 410 with the explanation, a kept result
   marked void and counted nowhere, its finished-games card tagged Voided; final, ADR 0176).
 - It exports one or several as a zip of run directories `train-clone` reads (`GET /api/sessions/<id>/export`,
-  `POST /api/sessions/export {"ids":[...]}`), answered `Cache-Control: no-store, private`, refusals too, so no
-  cache keeps it past the panel's gate.
+  `POST /api/sessions/export {"ids":[...]}`). The zip, and its 404 and 409, are sent with
+  `Cache-Control: no-store, private`, so no cache serves it to someone the panel's gate would refuse.
 
 #### The admin panel: Players
 
@@ -623,7 +623,8 @@ everywhere, while the admin panel shows both (ADR 0180).
 
 Two people at a begun match send each other reactions, one of a fixed set of eight short messages and never
 free text (`POST /api/seat/<seat>/reaction {"reaction":"well-played"}`, one every four seconds a seat, 429
-otherwise, refused against a bot and with one account in both seats), kept with the table's record
+otherwise, refused against a bot and with one account in both seats, 409 `Reaction.Gone` once the operator
+deleted the table's run, 503 `Reaction.Busy` when it could not be kept), kept with the table's record
 (`reactions.json`, the last eight), served in each seat's view as `reactions`, shown once to the other player
 unless their settings hide them, and never notified, counted in the bell or recorded as an event of the match
 (ADR 0173).

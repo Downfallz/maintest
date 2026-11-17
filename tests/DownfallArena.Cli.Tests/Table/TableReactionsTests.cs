@@ -66,7 +66,7 @@ public sealed class TableReactionsTests
 
         var sent = await reactions.SendAsync("player1", "good-luck", Cancel);
 
-        sent.Reaction.ShouldBeNull();
+        sent.Refusal.ShouldBe("Reaction.Gone");
         keeper.Exists.ShouldBeFalse();
     }
 
@@ -83,7 +83,7 @@ public sealed class TableReactionsTests
 
         var sent = await reactions.SendAsync("player1", "good-luck", Cancel);
 
-        sent.Reaction.ShouldBeNull();
+        sent.Refusal.ShouldBe("Reaction.Gone");
         keeper.Exists.ShouldBeFalse();
     }
 

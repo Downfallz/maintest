@@ -8,6 +8,9 @@ internal sealed record ReactionSent(TableReaction? Reaction, string? Refusal, Ti
     /// <summary>Another process kept writing the table's reactions first, every time this one tried.</summary>
     public static ReactionSent Busy { get; } = new(null, "Reaction.Busy", TimeSpan.Zero);
 
+    /// <summary>The file read earlier has gone: the operator deleted the table's run, and nothing is kept for it again.</summary>
+    public static ReactionSent Gone { get; } = new(null, "Reaction.Gone", TimeSpan.Zero);
+
     public static ReactionSent Of(TableReaction reaction) => new(reaction, null, TimeSpan.Zero);
 
     public static ReactionSent TooSoon(TimeSpan wait) => new(null, "Reaction.TooSoon", wait);
