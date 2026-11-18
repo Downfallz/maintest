@@ -23,7 +23,11 @@ export function rest(game: Phaser.Game, scene: Phaser.Scene & Restful, onRest: (
     // scene's update would run on a half-built state, so the step waits until the caller is done. `resetDelta` makes
     // the first step after a sleep one frame long for the scene's own clock (the horizon, the ambience); the tweens'
     // clock caps a long gap by itself. A loop its page stopped (the bench's film, stepped by hand) stays stopped.
-    queueMicrotask(() => { if (resting || game.loop.running || !game.loop.started) return; game.loop.resetDelta(); game.loop.wake(); });
+    queueMicrotask(() => {
+      if (resting || game.loop.running || !game.loop.started) return;
+      game.loop.resetDelta();
+      game.loop.wake();
+    });
   };
   scene.stir = wake;
   // A tween is added from whatever starts it, a board or a file that arrived: each one wakes the loop to play it.

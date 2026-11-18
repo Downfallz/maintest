@@ -45,15 +45,15 @@ const MOTES = 24;
 const wrap = (value: number, span: number) => ((value % span) + span) % span;
 
 export class BattleScene extends Phaser.Scene implements Restful {
-  private figures = new Map<string, Figure>();
+  private readonly figures = new Map<string, Figure>();
   private backdrop?: Phaser.GameObjects.Image;
   private horizon?: BattleHorizon;
   private replay = false;
-  private motes: Phaser.GameObjects.Arc[] = [];
+  private readonly motes: Phaser.GameObjects.Arc[] = [];
   private effects: Phaser.GameObjects.GameObject[] = [];
-  private upkeepMarkers = new UpkeepMarkers(this);
-  private mutationReveal = new MutationReveal(this);
-  private spellEffects = new SpellEffects(this);
+  private readonly upkeepMarkers = new UpkeepMarkers(this);
+  private readonly mutationReveal = new MutationReveal(this);
+  private readonly spellEffects = new SpellEffects(this);
   private state!: SceneFrame;
   private reduced = false;
   private rate = 1;
@@ -75,7 +75,7 @@ export class BattleScene extends Phaser.Scene implements Restful {
   onHalo: (id: string | null) => void = () => {};
   private halo: ActingHalo | null = null;
   // One blue halo per creature the turn order or a tie points at (SceneFrame.focus), made the first time it is lit.
-  private focusHalos = new Map<string, ActingHalo>();
+  private readonly focusHalos = new Map<string, ActingHalo>();
   // Which creatures the blue focus lights now (`#battle[data-focus-lit]` for tests and tools).
   onFocus: (ids: string) => void = () => {};
   private focusLit = '';
@@ -97,8 +97,8 @@ export class BattleScene extends Phaser.Scene implements Restful {
   assetFailed = false;
   // Evolution illustrations load when a creature on the field first asks for one, never all at boot; one that
   // fails stays failed for the page, and the figure keeps its audited sprite.
-  private loadingArt = new Set<string>();
-  private failedArt = new Set<string>();
+  private readonly loadingArt = new Set<string>();
+  private readonly failedArt = new Set<string>();
 
   constructor(private assetRoot: string) { super('battle'); }
 

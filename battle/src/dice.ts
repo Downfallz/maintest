@@ -50,22 +50,26 @@ export class DiceLayer {
       const spot = spotOf(die.id);
       if (!spot) continue;
       const current = this.shown.get(die.key);
-      if (current) { current.spot = spot; continue; }
-      const shape = this.scene.add.graphics(), label = this.scene.add.text(0, 0, '', { fontFamily: 'Georgia, serif', fontStyle: 'bold', color: TONES[die.tone].text })
-        .setOrigin(.5).setResolution(SHARP);
-      const words = this.captionOf(die, false);
-      const caption = words === null ? null : this.scene.add.text(0, 0, words, {
-        fontFamily: 'system-ui, sans-serif', fontStyle: 'bold', color: this.captionColour(die, false),
-        backgroundColor: '#0b1519d9', padding: { x: 6, y: 2 },
-      }).setOrigin(.5, 0).setResolution(SHARP);
-      const box = this.scene.add.container(0, 0, caption ? [shape, label, caption] : [shape, label]).setDepth(2000);
-      // A die is born on the first frame that draws it. A board that wakes a resting loop arrives before the loop's
-      // clock moves again, so a die born at the stale time would already be settled when it is first drawn.
-      this.shown.set(die.key, { die, box, shape, label, caption, born: Number.NaN, spot, drawn: '', at: { x: 0, y: 0, size: 0 } });
+      if (current) current.spot = spot;
+      else this.shown.set(die.key, this.make(die, spot));
     }
     const groups = new Set([...this.shown.values()].map(one => one.die.group).filter((group): group is number => Boolean(group)));
     for (const [group, text] of this.versus) if (!groups.has(group)) { text.destroy(); this.versus.delete(group); }
     if (!this.shown.size) this.links.clear();
+  }
+
+  private make(die: Die, spot: Spot): Shown {
+    const shape = this.scene.add.graphics(), label = this.scene.add.text(0, 0, '', { fontFamily: 'Georgia, serif', fontStyle: 'bold', color: TONES[die.tone].text })
+      .setOrigin(.5).setResolution(SHARP);
+    const words = this.captionOf(die, false);
+    const caption = words === null ? null : this.scene.add.text(0, 0, words, {
+      fontFamily: 'system-ui, sans-serif', fontStyle: 'bold', color: this.captionColour(die, false),
+      backgroundColor: '#0b1519d9', padding: { x: 6, y: 2 },
+    }).setOrigin(.5, 0).setResolution(SHARP);
+    const box = this.scene.add.container(0, 0, caption ? [shape, label, caption] : [shape, label]).setDepth(2000);
+    // A die is born on the first frame that draws it. A board that wakes a resting loop arrives before the loop's
+    // clock moves again, so a die born at the stale time would already be settled when it is first drawn.
+    return { die, box, shape, label, caption, born: Number.NaN, spot, drawn: '', at: { x: 0, y: 0, size: 0 } };
   }
 
   /** Whether a die still tumbles in: its number runs until it settles. */
