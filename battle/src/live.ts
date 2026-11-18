@@ -173,7 +173,7 @@ const reactionsUI = reactionControls(reactions, {
 });
 // Report or suggest (ADR 0189): from the settings and the result, sent with the seat on screen, which lets the host
 // attach the round and the position; a recording is no seat, and its feedback is the account's.
-mountFeedback(document, { request, token: () => selected?.token ?? null, inGame: () => Boolean(selected?.token),
+const feedbackUI = mountFeedback(document, { request, token: () => selected?.token ?? null, inGame: () => Boolean(selected?.token),
   errors: pageErrors, fallbackFocus: () => $('settings'), onClose: () => render() });
 const inspectionUI = inspectionControls();
 const historyUI = historyControls(history, () => playback.skip(), () => render(), () => recapBack);
@@ -808,6 +808,8 @@ function choose(choice: Choice) {
   if (rendererFailed) return;
   discovering++;
   selected = choice;
+  // A muted player is not offered Report or suggest (#717): the host is asked again for the seat now on screen.
+  void feedbackUI.ask();
   $('loading').hidden = true;
   $('seat-choices').replaceChildren(); $('retry').hidden = true;
   text('perspective', seatName(choice.seat).toUpperCase());
@@ -830,7 +832,7 @@ async function discover(autoResume = true) {
   const ticket = ++discovering;
   $('loading').hidden = true;
   seenSender?.flush(); seenSender = null; resetRecap();
-  connection.stop(); services.reset(); reactions.reset(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); selected = null; seenGame = null; opponent = { seat: null, ladder: null, friends: null }; drawOpponent(); helpUI.setGame(null); view = null; catalogue = null; render();
+  connection.stop(); services.reset(); reactions.reset(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); selected = null; void feedbackUI.ask(); seenGame = null; opponent = { seat: null, ladder: null, friends: null }; drawOpponent(); helpUI.setGame(null); view = null; catalogue = null; render();
   $('retry').hidden = true; $('seat-choices').replaceChildren();
   text('perspective', 'YOUR TEAM'); text('connection', 'Connecting…');
   text('load-title', 'Opening your battle'); text('load-detail', 'Verifying the seats saved in this browser…');

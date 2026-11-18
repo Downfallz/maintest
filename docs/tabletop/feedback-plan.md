@@ -1,6 +1,6 @@
 # Plan: feedback, a bug report to a regression test and an idea to a plan
 
-Status: accepted, 2026-11-16 (the owner settled the questions at the end). R0 to R5 and I1 are built; R6 is next.
+Status: accepted, 2026-11-16 (the owner settled the questions at the end). R0 to R6 and I1 are built; R7 is next.
 
 ## What the owner asked for
 
@@ -132,9 +132,9 @@ together: one sender, one budget.
 
 The operator has the last word. **Dismiss as spam** on a report or an idea counts against its sender; a sender
 with three dismissed as spam in 30 days, or one the operator mutes from the sheet (**Stop feedback from this
-player**), no longer sees **Report or suggest**: the host answers `403 Feedback.Muted` and the page hides the
-entry. A mute is lifted from the sheet, or ends on its own after 30 days. Mutes and spam marks are lines in the
-Activity tab (`feedback.spam`, `feedback.mute`, `feedback.unmute`). An account's mute is kept with its activity
+player**), no longer sees **Report or suggest**. The page asks the host when it loads (`GET /api/feedback`). The
+host answers `403 Feedback.Muted`, and the page hides the entry before the player writes (#717). A mute is lifted
+from the sheet, or ends on its own after 30 days. Mutes and spam marks are lines in the Activity tab (`feedback.spam`, `feedback.mute`, `feedback.unmute`). An account's mute is kept with its activity
 record (ADR 0174); a guest's dies with its seat.
 
 The sheet itself discourages noise without a captcha: **Send** waits until the required text holds 10 characters, and
@@ -260,6 +260,7 @@ you reported on <date> is fixed", once (`AccountNotices`). A guest's report tell
 
 | Route | Who | What |
 | --- | --- | --- |
+| `GET /api/feedback` | anyone | Whether the signed-in account, else the seat the key names, is muted: `403 Feedback.Muted` or `204` (#717). |
 | `POST /api/feedback` | seat, account | Sends a bug report `{"kind":"bug","category","happened","expected?","attach","page","errors"}` or an idea `{"kind":"idea","where","problem","wish?","page"}`; `429` `Feedback.TooSoon`, `Feedback.TooMany` or `Feedback.HostFull`, `403 Feedback.Muted`, `200 Feedback.Merged` (see "Against spam"). |
 | `GET /api/admin/feedback?kind&status&category&page`, `GET /api/admin/feedback/<id>` | operator | The Feedback tab and one sheet. |
 | `PUT /api/admin/feedback/<id>/status {"status","reason?","issue?","plan?"}` | operator | Seen, reproduced, filed with the issue's number, planned with the plan's path, shipped, declined or dismissed with a reason (`spam` among them). |
@@ -352,8 +353,8 @@ and they are the first thing every player can use.
    are noted at one instant, and read in the order noted: the mute above the mark that earned it (#674). The Overview's *Feedback waiting* card is in
    the warning colour while a bug report is new or the host is full. The tab's ids start with `admin-feedback-`,
    because every page's Report or suggest sheet already uses `feedback-`. The privacy panel and policy say the
-   operator can stop a player's feedback for 30 days. Left: a page learns that its player is muted only when it
-   sends (R2's behaviour). The list, the Overview and the spam count read every record kept: up to 100 a day, each
+   operator can stop a player's feedback for 30 days. Until #717 a page learned that its player was muted only when
+   it sent (R2's behaviour); `GET /api/feedback` now answers before the player writes. The list, the Overview and the spam count read every record kept: up to 100 a day, each
    kept until 180 days after it is closed, so a few thousand at most, read by the operator alone.
 5. **I1, ideas grouped.** **Merge into…**, *asked by N* and the sort by it, *planned* with a plan's path,
    *shipped*, *declined* with a reason, **Copy as a plan prompt**. Tests: a merge keeping every sender and adding
@@ -472,6 +473,37 @@ and they are the first thing every player can use.
    `scenario-import` and `scenario-check --trace`. Tests: `RepositoryScenariosTests` (a bug file listed),
    `CliOptionsTests`, a zip refused when it is not redacted or does not rebuild, and one bug file with its test,
    made from a recorded greedy match.
+
+   *Built (2026-11-18)*: `RepositoryScenarios` reads `scenarios/bugs/<issue>-<slug>.json` under the id
+   `sc-repo-bug-<file name>`, and the Scenarios tab marks it *Bug #N* (`"bug"` in `GET /api/admin/scenarios`). A file
+   there not named after its issue (from 1, no leading zero) or with a `tutorial` block is left out, and so is a file
+   elsewhere whose name makes a bug's id. `scenario-import --zip <file> --issue <N> [--out file]` takes a zip holding one
+   `scenario.json` and nothing else. It refuses the zip unless `RedactedScenario.Check` passes on its own report id, the
+   scenario carries its content, has no lesson, and rebuilds with its answers applying. Then it writes
+   `scenarios/bugs/<N>-<slug>.json` as this engine writes a scenario, so an unknown field is dropped, never over an
+   existing file unless `--out` names it, and never under `bugs/` named after another issue. The slug is the operator's
+   title, or `round-N` for the title Reproduce gives. It cannot check the players' names again, which the host checked
+   at download, so a session imports only a zip the operator's own account attached (R7's skill checks the author).
+   It says when the carried content is not the repository's, and refuses a content hash that is not one, since it names
+   a temporary directory.
+   `scenario-check` now also replays the answers after the cut, as `ScenarioFileTests` does, and `--trace` (a flag
+   there, a file everywhere else) prints each seat's creatures at the cut and after each entry, with the entry.
+
+   `ScenarioFileTests` reads `scenarios/bugs/` with the rest. It asks a bug file's answers to apply only up to the
+   reported point because R5's redaction already stops them there: the file holds nothing after it. A fix that changes
+   what the player could do before that point shortens the file's `after`, as `scenarios/README.md` says.
+   `BugScenario.ReplayAsync(file, entries)` (Infrastructure.Tests, `Matches/Bugs/`) rebuilds a file at its cut, replays
+   that many entries, each of which must apply, and hands back both seats' boards and the events raised past the cut.
+   `ExampleBugTests` follows it on a redacted greedy 1v1 (seed 5, round 3): an action costs its caster the spell's energy.
+   That example is no issue, so its file is kept beside the test, not under `scenarios/bugs/`, where the host would
+   list a bug that does not exist. Tests: `RepositoryScenariosTests`, `CliOptionsTests`, `ScenarioImportTests` (a zip
+   refused when not redacted, when it does not rebuild, when it holds anything else, or when its content names a path;
+   the default file and its refusal the second time; a name under `bugs/` that is another issue's; an unknown field
+   dropped; the trace's lines), `ScenariosApiTests` (the `bug` field through the route, a bug scenario closed to a
+   non-admin, and the pinned lists of shipped files that leave `bugs/` out), and `admin-scenarios.test.js`.
+
+   Left to R7: no file is under `scenarios/bugs/` yet; the first real report is R7's test. The trace prints the board,
+   not the hidden choices or the timeline.
 9. **R7, the /repro skill.** `.claude/skills/repro/`, `scenarios/README.md`, the command reference. Tested by its
    first real report: a bug filed from the panel, turned into a file under `scenarios/bugs/` and a test that was
    red before its fix.

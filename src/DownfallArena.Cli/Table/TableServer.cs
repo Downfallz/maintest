@@ -316,8 +316,9 @@ internal sealed class TableServer : IDisposable
                 return StudioResponse.OfPlainText(404, "This host keeps no feedback: it records nothing.");
             }
 
-            // A seat whose table is still being rebuilt would read as no seat at all.
-            return Starting && !string.IsNullOrEmpty(token)
+            // A seat whose table is still being rebuilt would read as no seat at all. Asking whether one is muted reads
+            // no table, so it is answered at once (#717).
+            return Starting && !string.IsNullOrEmpty(token) && method != "GET"
                 ? StartingUp()
                 : await Feedback.HandleAsync(method, body, token, account, RequestAddress.Of(request), request.UserAgent);
         }

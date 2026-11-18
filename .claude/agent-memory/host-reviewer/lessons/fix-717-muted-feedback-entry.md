@@ -1,0 +1,3 @@
+- A GET branch added at the top of a POST handler (FeedbackApi GET /api/feedback) skips the POST's `StoreFails` catch: the account's activity read escapes to 500 Host.Unexpected; check every new branch for its own catch (#717).
+- A question asked from `navigation.js` or `mountFeedback` runs on every page load: count the storage reads it adds per view for a signed-in player (WhoAsync + activity record for GET /api/feedback, #717).
+- A host test that covers only the guest branch of a seat-or-account check leaves the account branch (activity record) unpinned: ask for one signed-in case (#717).

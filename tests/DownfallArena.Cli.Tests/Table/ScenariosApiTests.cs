@@ -373,10 +373,13 @@ public sealed class ScenariosApiTests : IDisposable
         (await api.HandleAsync("GET", ScenariosApi.Prefix, new AccountRequest(null, Secure: false))).Status.ShouldBe(401);
     }
 
-    /// <summary>The repository's scenarios as the host reads them (S7), over a composer offered the content each carries.</summary>
-    private ScenarioStore Shipping()
+    /// <summary>
+    /// The repository's scenarios as the host reads them (S7), or those of <paramref name="directory" />, over a composer
+    /// offered the content each carries.
+    /// </summary>
+    private ScenarioStore Shipping(string? directory = null)
     {
-        var shipped = RepositoryScenarios.Read(Path.Combine(AppContext.BaseDirectory, "scenarios"));
+        var shipped = RepositoryScenarios.Read(directory ?? Path.Combine(AppContext.BaseDirectory, "scenarios"));
         foreach (var one in shipped.All)
         {
             _hosted.Composer.Carry(one.Document.Content, one.Document.Schema!.Value);
@@ -393,7 +396,8 @@ public sealed class ScenariosApiTests : IDisposable
 
         var listed = Read(await admin.HandleAsync("GET", ScenarioAdminApi.Route, "", "operator")).GetProperty("scenarios");
 
-        listed.EnumerateArray().Select(one => (one.GetProperty("id").GetString(), one.GetProperty("source").GetString(), one.GetProperty("file").GetString()))
+        // The bug scenarios of scenarios/bugs/ come and go with their issues (R6): the list is pinned without them.
+        listed.EnumerateArray().Where(one => !IsBug(one)).Select(one => (one.GetProperty("id").GetString(), one.GetProperty("source").GetString(), one.GetProperty("file").GetString()))
             .ShouldBe([
                 ("sc-repo-greedy-1v1-round-3", "repository", "greedy-1v1-round-3.json"),
                 ("sc-repo-tutorial-grow-by-mutating", "repository", "tutorials/grow-by-mutating.json"),
@@ -441,6 +445,48 @@ public sealed class ScenariosApiTests : IDisposable
         (await store.GetAsync("sc-repo-greedy-1v1-round-3", Cancel)).ShouldNotBeNull();
         offered.GetProperty("scenarios").GetArrayLength().ShouldBe(0);
     }
+
+    [Fact]
+    public async Task The_operator_s_list_names_the_issue_a_bug_scenario_reproduces_and_no_issue_for_the_others()
+    {
+        var shipped = BugsShipped();
+        var (_, cut) = await CutAsync();
+        var admin = new ScenarioAdminApi(Shipping(shipped), _hosted.Stored!, _hosted.Composer);
+
+        var listed = Read(await admin.HandleAsync("GET", ScenarioAdminApi.Route, "", "operator")).GetProperty("scenarios").EnumerateArray().ToList();
+
+        listed.Select(one => (one.GetProperty("id").GetString(), one.GetProperty("bug").ValueKind == JsonValueKind.Null ? (int?)null : one.GetProperty("bug").GetInt32()))
+            .ShouldBe([("sc-repo-plain", null), ("sc-repo-bug-812-a-bleed", 812), (cut, null)]);
+    }
+
+    [Fact]
+    public async Task On_a_host_that_names_admin_accounts_only_they_open_a_bug_scenario()
+    {
+        var store = Shipping(BugsShipped());
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var accounts = await AccountsAsync();
+        var admin = await SignedInAsync(accounts, "keeper");
+        var keeper = (await accounts.WhoAsync(admin, Cancel)).ShouldNotBeNull().Account.Id;
+        var api = new ScenariosApi(store, practices, accounts) { Admins = new HashSet<SharedKernel.Identifiers.AccountId> { keeper } };
+
+        var refused = await api.HandleAsync("POST", $"{ScenariosApi.Prefix}/sc-repo-bug-812-a-bleed/practice", await SignedInAsync(accounts, "learner"));
+        var opened = await api.HandleAsync("POST", $"{ScenariosApi.Prefix}/sc-repo-bug-812-a-bleed/practice", admin);
+
+        (refused.Status, opened.Status).ShouldBe((404, 200));
+    }
+
+    /// <summary>A scenarios directory of its own: one plain file, and the same one as the bug scenario of issue 812.</summary>
+    private string BugsShipped()
+    {
+        var directory = Path.Combine(_root, "shipped");
+        Directory.CreateDirectory(Path.Combine(directory, "bugs"));
+        var greedy = Path.Combine(AppContext.BaseDirectory, "scenarios", "greedy-1v1-round-3.json");
+        File.Copy(greedy, Path.Combine(directory, "plain.json"));
+        File.Copy(greedy, Path.Combine(directory, "bugs", "812-a-bleed.json"));
+        return directory;
+    }
+
+    private static bool IsBug(JsonElement row) => row.GetProperty("bug").ValueKind != JsonValueKind.Null;
 
     [Fact]
     public async Task On_a_host_that_names_admin_accounts_only_they_open_a_scenario_the_repository_ships()
@@ -604,7 +650,7 @@ public sealed class ScenariosApiTests : IDisposable
 
         var listed = Read(await admin.HandleAsync("GET", ScenarioAdminApi.Route, "", "operator")).GetProperty("scenarios").EnumerateArray().ToList();
 
-        listed.Select(one => (one.GetProperty("id").GetString(), one.GetProperty("tutorial").ValueKind == JsonValueKind.Null ? (int?)null : one.GetProperty("tutorial").GetInt32()))
+        listed.Where(one => !IsBug(one)).Select(one => (one.GetProperty("id").GetString(), one.GetProperty("tutorial").ValueKind == JsonValueKind.Null ? (int?)null : one.GetProperty("tutorial").GetInt32()))
             .ShouldBe([("sc-repo-greedy-1v1-round-3", null), ("sc-repo-tutorial-grow-by-mutating", 3), ("sc-repo-tutorial-to-the-end", 4), ("sc-repo-tutorial-who-acts-first", 2), (Tutorial, 1), (cut, null)]);
     }
 

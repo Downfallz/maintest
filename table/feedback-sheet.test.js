@@ -8,6 +8,7 @@ import {
   createPageErrors,
   feedbackBody,
   feedbackDraft,
+  feedbackMuteAsked,
   feedbackReady,
   attachedNote,
   mutedBy,
@@ -132,6 +133,38 @@ test('only the mute hides the entry', () => {
   assert.equal(mutedBy(403, { error: 'Feedback.Muted' }), true);
   assert.equal(mutedBy(403, { error: 'Feedback.NotYourSeat' }), false);
   assert.equal(mutedBy(429, { error: 'Feedback.TooMany' }), false);
+});
+
+// The host's answer to `GET /api/feedback`, recording what the page asked (#717).
+const asking = (status, json) => {
+  const asked = [];
+  const request = async (path, init) => {
+    asked.push([path, init.method, init.headers?.['X-Seat-Token'] ?? null]);
+    return { status, json: async () => { if (json === undefined) throw new SyntaxError('no body'); return json; } };
+  };
+  return { asked, request };
+};
+
+test('the page asks the host, with the seat on screen, whether its player is muted before they write (#717)', async () => {
+  const host = asking(403, { error: 'Feedback.Muted' });
+
+  assert.equal(await feedbackMuteAsked(host.request, 'seat-key'), true);
+  assert.deepEqual(host.asked, [['/api/feedback', 'GET', 'seat-key']]);
+});
+
+test('a player the host lets through, asked as the account without a seat, is not muted', async () => {
+  const host = asking(204);
+
+  assert.equal(await feedbackMuteAsked(host.request, null), false);
+  assert.deepEqual(host.asked, [['/api/feedback', 'GET', null]]);
+});
+
+test('a host that is starting or cannot check says neither, and the page stays as it was', async () => {
+  assert.equal(await feedbackMuteAsked(asking(503, { error: 'Feedback.Unavailable' }).request, 'seat-key'), null);
+});
+
+test('a host that does not answer says neither, and the page stays as it was', async () => {
+  assert.equal(await feedbackMuteAsked(async () => { throw new TypeError('offline'); }, null), null);
 });
 
 test('a kept piece of feedback thanks the player, and a merged one says where it went', () => {

@@ -113,9 +113,27 @@ export function refusalSentence(status, answer, { inGame = false } = {}) {
   }
 }
 
-/** Whether the host has stopped this player's feedback (R3 adds the mute): the entry is then hidden for the page's life. */
+/** Whether the host has stopped this player's feedback (R3 adds the mute): the entry is then hidden. */
 export function mutedBy(status, answer) {
   return status === 403 && answer?.error === 'Feedback.Muted';
+}
+
+/**
+ * Asks the host, before the player writes, whether the seat on screen or the account is muted (#717): true on
+ * `403 Feedback.Muted`, false on 204, and null when the host said neither (it did not answer, or is starting), which
+ * leaves the page as it was.
+ * @param {(path: string, init: RequestInit) => Promise<Response>} request
+ * @param {string | null} seat
+ */
+export async function feedbackMuteAsked(request, seat) {
+  try {
+    const response = await request('/api/feedback', { method: 'GET', headers: seat ? { 'X-Seat-Token': seat } : {} });
+    if (response.status === 204) return false;
+    const answer = await response.json().catch(() => null);
+    return mutedBy(response.status, answer) ? true : null;
+  } catch {
+    return null;
+  }
 }
 
 /** What the sheet says once the host kept it, or added it to what the player sent before: the same report from this round, or the same words sent again. */
@@ -161,7 +179,8 @@ const TITLES = { bug: 'Something is wrong', idea: 'I have an idea', sent: 'Sent'
 /**
  * The sheet, added to the page once, opened by any element marked `data-feedback-open`. `token` names the seat the
  * page plays, if any, and `inGame` whether a position can be attached. A mute hides every entry through the root's
- * `data-feedback-muted`, whatever else shows or hides them.
+ * `data-feedback-muted`, whatever else shows or hides them. The page asks the host whether its player is muted once
+ * mounted, and again through `ask()` when the seat on screen changes, so a muted player is never offered the sheet.
  * @param {Document} doc
  * @param {{ request?: (path: string, init: RequestInit) => Promise<Response>, token?: () => string | null,
  *   inGame?: () => boolean, errors?: ReturnType<typeof createPageErrors>, page?: () => string,
@@ -172,7 +191,7 @@ export function mountFeedback(doc, { request = (path, init) => fetch(path, { ...
   doc.body.insertAdjacentHTML('beforeend', sheet);
   const el = id => doc.getElementById(id);
   const dialog = el('feedback-dialog');
-  let draft = feedbackDraft(), step = 'choose', sending = false, opener = null;
+  let draft = feedbackDraft(), step = 'choose', sending = false, opener = null, asking = 0;
 
   function render() {
     const game = Boolean(inGame());
@@ -250,7 +269,8 @@ export function mountFeedback(doc, { request = (path, init) => fetch(path, { ...
       sending = false;
     }
     const kept = status === 200 || status === 201;
-    if (mutedBy(status, answer)) doc.documentElement.dataset.feedbackMuted = 'true';
+    // A refusal is the host's latest word: a question still on its way is not read over it.
+    if (mutedBy(status, answer)) { asking++; doc.documentElement.dataset.feedbackMuted = 'true'; }
     // Closed while it was sending: what was kept leaves the sheet, what was refused stays to be sent again.
     if (!dialog.open) {
       if (kept) { draft = feedbackDraft(); fill(); }
@@ -275,8 +295,19 @@ export function mountFeedback(doc, { request = (path, init) => fetch(path, { ...
     dialog.showModal();
     el('feedback-bug').focus();
   });
+  // The latest answer wins: a seat the host lets through after a muted one shows the entries again, and an answer
+  // to an earlier question, about a seat no longer on screen, is not read.
+  async function ask() {
+    const mine = ++asking;
+    const muted = await feedbackMuteAsked(request, token());
+    if (mine !== asking) return;
+    if (muted === true) doc.documentElement.dataset.feedbackMuted = 'true';
+    else if (muted === false) delete doc.documentElement.dataset.feedbackMuted;
+  }
   render();
+  void ask();
   return {
+    ask,
     isOpen: () => dialog.open,
     muted: () => doc.documentElement.dataset.feedbackMuted === 'true',
   };
