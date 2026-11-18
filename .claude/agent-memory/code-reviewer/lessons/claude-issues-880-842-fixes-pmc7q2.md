@@ -1,0 +1,2 @@
+- A loop-sleep change (#842) is proven per wake path by mutation: removing the frame dedupe, the resize wake and the zoom sync each turned its new spec red; and Phaser's TweenManager runs on `Date.now` with its own lag smoothing (`maxLag` 500, `lagSkip` 33), not on `loop.resetDelta` (e20850c).
+- DOM listeners on `#phaser-mount` never fire in the battle pages: the mount is `aria-hidden` with nothing focusable, and `#actor-layer` is drawn over it; an input reaches the scene through `present` (e20850c).

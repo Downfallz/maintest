@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { onNextFrame } from './next-frame';
+import { rest, type Restful } from './rest';
 
 // Limit supersampling on large displays. A phone-sized battlefield can use its native 2×–3× density.
 function renderSize(mount: HTMLElement) {
@@ -10,9 +11,10 @@ function renderSize(mount: HTMLElement) {
 
 // Starting the renderer, once for both pages: the game on its mount, sized by the stage itself rather than the
 // window (mobile browser chrome and rotation need not trigger the window's resize), and the two ways it can
-// fail: the context lost under it, or a scene that never reaches ready.
-export function bootScene(scene: Phaser.Scene, mount: HTMLElement, { onContextLost, onNeverReady, isReady }:
-  { onContextLost: () => void; onNeverReady: () => void; isReady: () => boolean }) {
+// fail: the context lost under it, or a scene that never reaches ready. Once ready, a still field is drawn less
+// often (rest.ts). `onRest` reports it, and the pages set `data-resting` from it for the specs and tools.
+export function bootScene(scene: Phaser.Scene & Restful, mount: HTMLElement, { onContextLost, onNeverReady, isReady, onRest = () => {}, moving }:
+  { onContextLost: () => void; onNeverReady: () => void; isReady: () => boolean; onRest?: (resting: boolean) => void; moving?: () => boolean }) {
   const game = new Phaser.Game({ type: Phaser.AUTO, parent: mount, backgroundColor: '#17272b',
     scale: { mode: Phaser.Scale.NONE, ...renderSize(mount) },
     render: { antialias: true, roundPixels: false }, fps: { target: 60, forceSetTimeOut: false },
@@ -20,8 +22,10 @@ export function bootScene(scene: Phaser.Scene, mount: HTMLElement, { onContextLo
   const resize = () => {
     if (!mount.clientWidth || !mount.clientHeight) return;
     const { width, height } = renderSize(mount);
-    if (game.scale.width !== width || game.scale.height !== height) game.scale.resize(width, height);
+    // A resized canvas is blank until the next frame is drawn, so a resting field is drawn at once.
+    if (game.scale.width !== width || game.scale.height !== height) { resting?.wake(); game.scale.resize(width, height); }
   };
+  let resting: ReturnType<typeof rest> | undefined;
   const nextResize = onNextFrame(resize);
   const observer = new ResizeObserver(nextResize);
   // Moving to another display or changing browser zoom can change density at the same CSS size.
@@ -36,6 +40,7 @@ export function bootScene(scene: Phaser.Scene, mount: HTMLElement, { onContextLo
     densityQuery?.removeEventListener('change', observeDensity);
   });
   game.events.once(Phaser.Core.Events.READY, () => {
+    resting = rest(game, scene, onRest, moving);
     observer.observe(mount);
     observeDensity();
     game.canvas.addEventListener('webglcontextlost', event => { event.preventDefault(); onContextLost(); });

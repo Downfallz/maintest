@@ -122,6 +122,23 @@ test('the portrait says it zooms, shows the illustration over the card and gives
   await page.keyboard.press('Escape'); await expect(page.locator('#inspect-dialog')).toBeHidden();
   expect(h.writes ?? []).toEqual([]); expect(h.errors).toEqual([]);
 });
+test('a zoom opened on the sprite takes the illustration when it arrives', async ({ page }) => {
+  // The test holds the illustration back until the zoom is open. On a loaded machine the illustration arrived after
+  // the zoom had copied the sprite, so the zoom kept the sprite while the portrait behind it changed (#880).
+  let release; const held = new Promise(done => { release = done; });
+  await page.route('**/battle-art/evolutions/**', async route => { await held; await route.continue(); });
+  const h = await mount(page);
+  await page.locator('#actor-layer [data-creature="1"]').click(); await expect(page.locator('#inspect-dialog')).toBeVisible();
+  const portrait = page.locator('#inspect-portrait'), picture = page.locator('#inspect-zoom-close');
+  const background = locator => locator.evaluate(node => node.style.backgroundImage);
+  expect(await background(portrait)).toBe('url("battle-art/base-creature.webp")');
+  await portrait.click(); await expect(page.locator('#inspect-zoom')).toBeVisible();
+  expect(await background(picture)).toBe('url("battle-art/base-creature.webp")');
+  release();
+  await expect.poll(() => background(portrait)).toBe('url("battle-art/evolutions/base-creature.webp")');
+  expect(await background(picture)).toBe('url("battle-art/evolutions/base-creature.webp")');
+  expect(h.errors).toEqual([]);
+});
 test('same-creature polls keep the spell cards, keyboard focus and reading position', async ({ page }) => {
   const h = await mount(page); await page.locator('#actor-layer [data-creature="1"]').click();
   const body = page.locator('#inspect-body'), strike = page.locator('#inspect-spells [data-inspect-spell="strike"]');

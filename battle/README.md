@@ -891,6 +891,24 @@ A practice whose view carries `practice.tutorial` is a tutorial (ADR 0187, docs/
 `battle-tutorial.spec.js` plays tutorial 1's own lesson to its end on a fixture board, at 320 px, 390 px and
 desktop.
 
+## The resting loop
+
+The game loop never stops, but a still field is drawn less often (`src/rest.ts`, #842). At sixty frames a second
+over a field where only the ambience breathes, a phone pays in battery, and a page whose canvas is drawn in software
+leaves no frame for the rest of the page, so a browser test waits for a click to become stable. The scene's `busy()`
+keeps the field at its full rate while any of these runs: a tween, a camera effect, the effects kit's particles or
+objects, a die tumbling, the horizon giving way, a file loading. On the bench, a play in progress does too.
+
+Two seconds after the last movement (`SETTLE_MS`) the field rests: the game is stepped one animation frame in four
+(`REST_EVERY`), fifteen frames a second on a sixty-hertz screen. The halos' breath, the motes, the capstone effects
+and the auras are ambience: they go on at that rate, on their own clock (`ambient`), at the same pace. Movement is
+looked for on every animation frame, so a cast starts at the full rate, and a board that only changes what stands
+on the field is drawn within four frames. A resize is drawn at once.
+
+`data-resting` is set on `#battle` (the seat) and on `#lab` (the lab and the bench) while the field rests. The
+bench's film steps the game by hand and is left alone. Motion that should play at the full rate goes through a
+tween or the effects kit, or is counted in `busy()`.
+
 ## The effects kit
 
 A spell's entry in the spell art may carry a `staging` (ADR 0196, `data/README.md`): a list of beats. The view

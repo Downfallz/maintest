@@ -201,7 +201,8 @@ that extends it.
    - Frame time is not measured: BC10.
 
 5. **BC5, the movement.** Anticipation, strike, recoil, the hit reaction, the death, the return, and a slow breath
-   at rest. Tests: no breath under reduced motion; the timings still agree with `table/battle-timing.js` at every
+   at rest. Since #842 a still field is drawn one frame in four (`battle/README.md`, "The resting loop"): a breath
+   at rest plays at that rate, or is counted as movement and costs the full rate, measured in BC10. Tests: no breath under reduced motion; the timings still agree with `table/battle-timing.js` at every
    playback rate; a skip settles the figures.
 6. **BC6, the physical spells and the two base actions.** 17 stagings. Tests: the film strips, the browser specs
    the change touches, one staging per spell in the data.

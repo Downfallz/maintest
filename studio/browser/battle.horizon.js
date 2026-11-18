@@ -21,7 +21,14 @@ for (const [round, art] of [[2, []], [4, ['fallen-ledge']], [6, ['breach']], [12
       await expect(page.locator('#round-number')).toHaveText(String(round).padStart(2, '0'));
       await expect(page.locator('.creature').first()).toBeVisible();
       await Promise.all(art.map(file => expect.poll(() => loaded).toContain('/battle-art/horizon/' + file + '.webp')));
-      // The handover is an even-round tempo choice; close its sheet to see the entire playing surface.
+      // The handover is an even-round tempo choice. Close its sheet to see the whole playing surface. If the page loads
+      // while the host is still playing up to the handover, the round's upkeep receipt opens first, and the tempos
+      // wait until it is read: under load that receipt was open when the click on #planning-close timed out (#880).
+      // The journey closes it, as a player would.
+      await expect(async () => {
+        if (await page.locator('#upkeep-dialog').isVisible()) await page.locator('#upkeep-close').click({ timeout: 5000 });
+        await expect(page.locator('#planning-dialog')).toBeVisible({ timeout: 2000 });
+      }).toPass({ timeout: 30000 });
       await page.locator('#planning-close').click();
       await expect(page.locator('#planning-dialog')).toBeHidden();
       await page.screenshot({ path: info.outputPath('live-round-' + round + '.jpg'), type: 'jpeg', quality: 86 });

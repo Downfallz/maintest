@@ -236,6 +236,8 @@ try {
     isReady: () => ready,
     onContextLost: () => fail('The graphics context was interrupted. Reload to reopen the scene.'),
     onNeverReady: () => fail('The scene could not finish loading. Check the connection and reload.'),
+    onRest: resting => { if (resting) lab.dataset.resting = 'true'; else delete lab.dataset.resting; },
+    moving: playing,
   });
 } catch { fail('The renderer could not start. Reload the scene or use another browser.'); }
 

@@ -90,7 +90,13 @@ export function inspectionControls() {
       portrait.style.backgroundImage = sprite;
       if (model.artworkFile) {
         const wanted = model.artworkFile, image = new Image();
-        image.onload = () => { if (portrait.dataset.artwork === wanted) portrait.style.backgroundImage = `url("battle-art/${wanted}")`; };
+        // The zoom shows what the portrait shows. Opened on the sprite, the zoom switches to the illustration when that
+        // arrives (#880).
+        image.onload = () => {
+          if (portrait.dataset.artwork !== wanted) return;
+          portrait.style.backgroundImage = `url("battle-art/${wanted}")`;
+          if (!zoom.hidden) picture.style.backgroundImage = portrait.style.backgroundImage;
+        };
         image.src = `battle-art/${wanted}`;
       }
     } else if (!model.artworkFile) portrait.style.backgroundImage = sprite;

@@ -112,6 +112,24 @@ test('keyboard casting and skip need no live API', async ({ page }) => {
   expect(apiRequests).toEqual([]);
 });
 
+test('a still field rests at a lower rate and a cast plays at the full one', async ({ page }) => {
+  // A still field is drawn one frame in four (#842): the halos' breath and the motes are ambience, and go on.
+  // The field rests two seconds after the last movement; a loaded runner reaches that later, hence the 15 s.
+  const lab = page.locator('#lab'), rested = { timeout: 15000 };
+  await expect(lab).toHaveAttribute('data-resting', 'true', rested);
+  await choose(page);
+  await page.locator('#confirm').click();
+  // The cast's tweens are movement: the field leaves its rest for as long as they play.
+  await expect(lab).not.toHaveAttribute('data-resting', 'true');
+  await expect(lab).toHaveAttribute('data-stage', 'resolved', rested);
+  await expect(lab).toHaveAttribute('data-resting', 'true', rested);
+  // A resize is drawn at once, at the full rate, then the field rests again.
+  const size = page.viewportSize();
+  await page.setViewportSize({ width: size.width - 40, height: size.height });
+  await expect(lab).not.toHaveAttribute('data-resting', 'true');
+  await expect(lab).toHaveAttribute('data-resting', 'true', rested);
+});
+
 test('reset during playback cancels pending results and a second cast resolves normally', async ({ page }) => {
   // The page's timers are the test's to run: a cast is then in flight for as long as the test says, and the
   // cancelled cues get their due time to fire, which a stale one would, on a board asked to forget it.
