@@ -99,7 +99,7 @@ test('dismissal survives polls, next creature and reload; a new subject gets its
   await close(page); await h.publish([], { waitingAsked: 14, waitingCreature: 3 });
   // Only the docked sheets acknowledged, on the askings they opened for: the mutation tree on Evolution, the team's
   // tempos on Speed once their tip was read (ADR 0150). No tip did.
-  await expect(page.locator('#help-dialog')).toBeHidden(); expect(h.state.shown).toContain('12');
+  await expect(page.locator('#help-dialog')).toBeHidden(); await expect.poll(() => h.state.shown).toContain('12');
   await expect.poll(() => h.state.shown.some(one => ['13', '14'].includes(one))).toBe(true);
   expect(h.state.shown.filter(one => !['11', '12', '13', '14'].includes(one))).toEqual([]); expect(h.state.errors).toEqual([]);
 });
@@ -115,7 +115,7 @@ test('mute prevents future tips, keeps History, and Help reopens the current sub
   await page.locator('#help-open').click(); await expect(page.locator('#help-title')).toHaveText('Choose how your team acts');
   await expect(page.locator('#help-rules')).toHaveAttribute('href', '/rules#tempo');
   // With no tip to read first, the team's tempos opened by themselves and acknowledged their asking (ADR 0150).
-  await expect(page.locator('#help-mute')).toBeChecked(); expect(h.state.shown).toEqual(['11', '12']); expect(h.state.errors).toEqual([]);
+  await expect(page.locator('#help-mute')).toBeChecked(); await expect.poll(() => h.state.shown).toEqual(['11', '12']); expect(h.state.errors).toEqual([]);
 });
 test('manual Help preserves a mutation draft and fences a delayed acknowledgement', async ({ page }) => {
   const h = await mount(page); let release; h.state.ack = new Promise(resolve => { release = resolve; });
@@ -186,7 +186,7 @@ test('Help preserves a spell and selected field target without another acknowled
   await expect(page.locator('#combat-confirm')).toBeEnabled(); await expect(page.locator('#help-open')).toBeFocused();
   // Help adds no acknowledgement: the action's one is from opening combat. Whether the tree that opened after
   // the first tip acknowledged the Evolution asking before the next question replaced it is a race, not the subject.
-  expect(h.state.shown.filter(one => one === '12')).toEqual(['12']); expect(h.state.shown.filter(one => !['11', '12'].includes(one))).toEqual([]);
+  await expect.poll(() => h.state.shown.filter(one => one === '12')).toEqual(['12']); expect(h.state.shown.filter(one => !['11', '12'].includes(one))).toEqual([]);
   expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });
 
@@ -196,7 +196,7 @@ test('an unseen tip waits until the player closes another dialog', async ({ page
   await expect(page.locator('#help-dialog')).toBeHidden(); await expect(page.locator('#history-dialog')).toBeVisible();
   await page.locator('#history-close').click(); await expect(page.locator('#help-dialog')).toBeVisible();
   await expect(page.locator('#help-title')).toHaveText('Choose how your team acts');
-  expect(h.state.shown).toEqual(['11']); expect(h.state.errors).toEqual([]);
+  await expect.poll(() => h.state.shown).toEqual(['11']); expect(h.state.errors).toEqual([]);
 });
 
 test('blocked preference storage keeps first-use help and in-memory dismissal working', async ({ page }) => {
@@ -212,7 +212,7 @@ test('blocked preference storage keeps first-use help and in-memory dismissal wo
   const h = await mount(page); await expect(page.locator('#help-dialog')).toBeVisible(); await close(page);
   await h.publish([], { waitingAsked: 12 }); await expect(page.locator('#help-dialog')).toBeHidden();
   await page.locator('#help-open').click(); await expect(page.locator('#help-dialog')).toBeVisible();
-  expect(h.state.shown).toContain('12'); expect(h.state.shown.filter(one => !['11', '12'].includes(one))).toEqual([]); expect(h.state.errors).toEqual([]);
+  await expect.poll(() => h.state.shown).toContain('12'); expect(h.state.shown.filter(one => !['11', '12'].includes(one))).toEqual([]); expect(h.state.errors).toEqual([]);
 });
 test('a hidden-intent table, whose catalogue names no declaration, teaches hidden spells from the first tip', async ({ page }) => {
   const h = await mount(page, { mode: null });

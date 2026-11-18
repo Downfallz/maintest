@@ -86,7 +86,7 @@ test('a battlefield creature opens three branches and only explicit confirmation
   await page.clock.runFor(150);
   await fitsViewport(page, '#planning-creatures, #planning-confirm, #planning-close');
   await page.screenshot({ path: info.outputPath('mutation-opening.jpg'), type: 'jpeg', quality: 90 });
-  expect(h.state.shown).toEqual(['11']); expect(h.state.writes).toEqual([]);
+  await expect.poll(() => h.state.shown).toEqual(['11']); expect(h.state.writes).toEqual([]);
   await page.locator('#planning-confirm').dblclick();
   await expect.poll(() => h.state.writes.length).toBe(1);
   expect(h.state.writes[0]).toEqual({ kind: 'Evolution', creature: 2, tier: 'root1', asked: 11 }); expect(h.state.errors).toEqual([]);
@@ -100,7 +100,7 @@ test('polls and selection preserve detail nodes, focus and deliberate scroll', a
   expect(await page.locator('#planning-choices').evaluate(node => node.scrollTop)).toBe(scroll);
   await expect(page.locator('.mutation-preview .spell-card')).toHaveAttribute('data-spell', 'spell2');
   await h.publish(); await expect(page.locator('[data-mutation="root2"]')).toHaveAttribute('aria-pressed', 'true');
-  expect(h.state.shown).toEqual(['11']); expect(h.state.errors).toEqual([]);
+  await expect.poll(() => h.state.shown).toEqual(['11']); expect(h.state.errors).toEqual([]);
 });
 test('a keyboard switch of creature keeps focus on the tab that was chosen', async ({ page }) => {
   const h = await mount(page); const tab = page.locator('#planning-creatures [data-creature="2"]');
@@ -238,7 +238,7 @@ test('a creature tapped while the pick is being sent is inspected, not left dead
 
 test('the mutation phase opens its tree by itself, once per asking', async ({ page }) => {
   const h = await mount(page);
-  await expect(page.locator('#planning-open')).toBeHidden(); expect(h.state.shown).toEqual(['11']); expect(h.state.writes).toEqual([]);
+  await expect(page.locator('#planning-open')).toBeHidden(); await expect.poll(() => h.state.shown).toEqual(['11']); expect(h.state.writes).toEqual([]);
   await page.locator('#planning-close').click(); await expect(page.locator('#planning-dialog')).toBeHidden();
   await h.publish(); await page.clock.runFor(100);
   await expect(page.locator('#planning-dialog')).toBeHidden(); await expect(page.locator('#planning-open')).toBeVisible();

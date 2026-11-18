@@ -132,7 +132,7 @@ test('hiding a page cancels targeting and resuming does not acknowledge unseen c
   await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')); });
   await expect(page.locator('#combat-targets')).toBeHidden(); await expect(page.locator('#combat-title')).toBeEmpty();
   await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: false }); document.dispatchEvent(new Event('visibilitychange')); });
-  await expect(page.locator('#combat-open')).toBeVisible(); expect(state.shown).toEqual([11]); expect(state.writes).toEqual([]);
+  await expect(page.locator('#combat-open')).toBeVisible(); await expect.poll(() => state.shown).toEqual([11]); expect(state.writes).toEqual([]);
 });
 
 test('failed acknowledgement disables choices and asks for an explicit reopen', async ({ page }) => {
@@ -142,7 +142,7 @@ test('failed acknowledgement disables choices and asks for an explicit reopen', 
   await expect(page.locator('[data-spell="bolt"]')).toBeDisabled(); expect(state.writes).toEqual([]);
   state.shownStatus = 200; await page.locator('#combat-dialog-close').click(); await bolt(page);
   await page.locator('[data-creature="4"]').click(); await page.locator('#combat-confirm').click();
-  await expect.poll(() => state.writes.length).toBe(1); expect(state.shown).toEqual([11, 11]);
+  await expect.poll(() => state.writes.length).toBe(1); await expect.poll(() => state.shown).toEqual([11, 11]);
 });
 
 test('too few candidates expose an explicit empty cast without partial target buttons', async ({ page }) => {
