@@ -41,7 +41,9 @@ async function mount(page, { kind = 'Evolution', replay = false, over = false, r
   await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
   if (refused) return state;
   await expect(page.locator('#loading')).toBeHidden();
-  await expect(page.locator('#loading')).toBeHidden(); return state;
+  // A replay reads a recording and never connects; a seat is connected once its first board arrived (#785).
+  if (!replay) await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live');
+  return state;
 }
 test('an offered branch previews before it is confirmed, beside a read-only full tree', async ({ page }, info) => {
   // The mutation phase opens its tree by itself, which acknowledges the asking (ADR 0138).

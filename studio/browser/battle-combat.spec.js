@@ -39,7 +39,7 @@ async function mount(page, { kind = 'Action', targets = legal([4, 5, 6]), shownS
     return route.fulfill({ status: 500, body: 'Unexpected request' });
   });
   await page.goto('/table/battle.html'); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
-  await expect(page.locator('#loading')).toBeHidden(); return state;
+  await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live'); return state;
 }
 async function bolt(page) { await openSpells(page); await page.locator('[data-spell="bolt"]').click(); }
 
