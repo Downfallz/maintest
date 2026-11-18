@@ -128,9 +128,12 @@ const RULES = [
   },
 ];
 
-// Markdown the learning tests read: the effect kinds of data/README.md (test_knobs.py), which the light build
-// does not run. Every other Markdown is read by Architecture.Tests or the pages' own tests, or by nothing.
-const readByTheFullBuild = (path) => path.startsWith('data/');
+// Markdown a test reads with something the light build leaves out: the effect kinds of data/README.md
+// (test_knobs.py, the learning tests), and the craft book, whose engine names studio/battle-craft.test.js holds
+// to the Phaser types the battle installs. Every other Markdown is read by Architecture.Tests or the pages' own
+// tests, or by nothing.
+const CRAFT_BOOK = 'docs/art/battle-craft.md';
+const readByTheFullBuild = (path) => path.startsWith('data/') || path === CRAFT_BOOK;
 
 /**
  * Decide what the changed paths call for. `specs` is every mock-host journey file the suite holds.

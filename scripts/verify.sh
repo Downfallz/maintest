@@ -111,8 +111,9 @@ called() {
 source "$ROOT/scripts/gate/azurite.sh"
 start_azurite "[verify]"
 
-# The host's route tests read the bundle, so it is built when it is missing as well as when battle/ changed.
-if called battle || [[ ! -d table/battle-build ]]; then
+# The host's route tests read the bundle, so it is built when it is missing as well as when battle/ changed. The
+# craft book's test reads the Phaser types the same install brings (studio/battle-craft.test.js).
+if called battle || [[ ! -d table/battle-build || ! -f battle/node_modules/phaser/types/phaser.d.ts ]]; then
   run_step "battle bundle" bash -c 'npm --prefix battle ci --ignore-scripts && npm --prefix battle run build'
 else
   skip_step "battle bundle" "built, and battle/ unchanged on this branch (rebuild it after merging main)"
