@@ -90,23 +90,26 @@ function repositorySources(folder = '') {
   for (const entry of readdirSync(join(root, folder), { withFileTypes: true })) {
     const path = folder ? `${folder}/${entry.name}` : entry.name;
     if (entry.isDirectory()) {
-      if (!/^(\.|node_modules$|battle-build$|legacy$|bin$|obj$|dist$)/.test(entry.name)) found.push(...repositorySources(path));
-    } else if (/\.(m?js|ts)$/.test(entry.name)) found.push(path);
+      if (!/^(\.|node_modules$|battle-build$|legacy$|artifacts$|bin$|obj$|dist$)/.test(entry.name)) found.push(...repositorySources(path));
+    } else if (/\.(m?js|ts|html)$/.test(entry.name)) found.push(path);
   }
   return found;
 }
 
-// A file that reads player-terminology.md's tables: it names the page and splits or matches a table row.
-const PAGE = 'player-terminology' + '.md';
-const ROW = new RegExp(String.raw`split\(['"]\\?\|['"]\)|startsWith\(['"]\|`);
-const READER = 'terminology' + '.mjs';
-const readsTables = text => text.includes(PAGE) && ROW.test(text);
-const importsReader = text => text.includes(`/${READER}'`);
+// A file whose code, its comments aside, names player-terminology.md loads it, however it then parses it. Only the
+// reviewer picker names it as a path a diff touches, with its test; it reads no table.
+const PAGE = 'player-terminology';
+const NAMES_THE_PATH = new Set(['scripts/review/reviewers.mjs', 'studio/reviewers.test.js']);
+const code = text => text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/<!--[\s\S]*?-->/g, '').replace(/(^|[^:\\])\/\/.*$/gm, '$1');
+const importsReader = text => /from\s+['"][./]*(scripts\/)?terminology\.mjs['"]/.test(text);
 
-test('one reader reads the tables of player-terminology.md, and every scanner goes through it', () => {
+test('one reader loads player-terminology.md, and every scanner goes through it', () => {
   const texts = new Map(repositorySources().map(path => [path, readFileSync(join(root, path), 'utf8')]));
-  const ownParsers = [...texts].filter(([path, text]) => readsTables(text) && !importsReader(text) && path !== `scripts/${READER}`);
-  assert.deepEqual(ownParsers.map(([path]) => path), [], 'a scanner parses the page itself: import scripts/terminology.mjs');
+  const ownReaders = [...texts]
+    .filter(([path, text]) => code(text).includes(PAGE) && !importsReader(text))
+    .map(([path]) => path)
+    .filter(path => path !== 'scripts/terminology.mjs' && !NAMES_THE_PATH.has(path));
+  assert.deepEqual(ownReaders, [], 'a scanner loads the page itself: import scripts/terminology.mjs');
   const users = [...texts].filter(([, text]) => importsReader(text)).map(([path]) => path).sort();
   assert.deepEqual(users, Object.keys(scanners()).sort(), 'a new scanner joins scanners() below, so the Before test reads it');
 });

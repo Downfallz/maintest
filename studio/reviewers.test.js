@@ -287,7 +287,7 @@ test('empty input, or a line that is no path, is refused, never read as no revie
   for (const input of ['', '\n', '  \n\n', 'fatal: bad revision \'origin/main...x\'\n', 'commit 1234abc\nAuthor: someone\n']) {
     assert.throws(
       () => execFileSync('node', [script], { cwd: root, input, encoding: 'utf8', stdio: 'pipe' }),
-      error => error.status === 1 && /not a diff/.test(error.stderr),
+      error => error.status === 1 && /no path received/.test(error.stderr),
       JSON.stringify(input),
     );
   }
@@ -296,4 +296,9 @@ test('empty input, or a line that is no path, is refused, never read as no revie
 test('a path list that calls for nobody still answers, with no reviewer', () => {
   const output = execFileSync('node', [join(root, 'scripts/review/reviewers.mjs')], { cwd: root, input: 'legacy/old.js\n', encoding: 'utf8' });
   assert.equal(output, '');
+});
+
+test('a path with a space in its name is still a path', () => {
+  const output = execFileSync('node', [join(root, 'scripts/review/reviewers.mjs')], { cwd: root, input: 'docs/a note.md\n', encoding: 'utf8' });
+  assert.equal(output, 'copy-editor\n');
 });
