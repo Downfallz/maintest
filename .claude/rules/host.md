@@ -17,6 +17,8 @@ paths:
 - A table replays on the content and rules it began on (ADR 0163). A change that breaks replay of a recorded
   journal voids open matches in production: say so in the pull request.
 - Expected failures answer a stable, namespaced error code (`Lobby.TooManyGames`), never an exception's text.
+- A change about exception text greps `\.Message` over `src/DownfallArena.Cli` and reads every hit, rather than trusting
+  a list: an issue's list came from one reading (#828).
 - A route catches its store's failures (`TableRegistry.StoreFails`) and answers a namespaced code
   (`Feedback.Unavailable`, `Jobs.Failed`) with a fixed message; the exception goes to the console. What escapes
   is answered 500 `Host.Unexpected` by `HttpHost`, which never puts the exception's text in the answer (#692).

@@ -362,8 +362,10 @@ internal sealed class AdminApi
         catch (Exception failure) when (failure is ArgumentException or IOException or JsonException or InvalidDataException)
         {
             // A weights file that is not there, a policy trained under another schema: the operator naming
-            // the wrong thing, answered as such rather than as a broken host.
-            return StudioResponse.OfPlainText(400, failure.Message);
+            // the wrong thing, answered as such rather than as a broken host. Its message carries the host's
+            // path or a store's words, so the console gets it and the page a sentence (#828).
+            Console.WriteLine($"  A table could not be opened: {HttpHost.OneLine(failure)}");
+            return StudioResponse.OfPlainText(400, "The table could not be opened: a weights or policy file a seat names is missing or cannot be read. The console says which.");
         }
 
         try

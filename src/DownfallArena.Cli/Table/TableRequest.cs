@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DownfallArena.Application.Agents;
+using DownfallArena.Cli.Hosting;
 using DownfallArena.Domain.Matches;
 
 namespace DownfallArena.Cli.Table;
@@ -54,7 +55,9 @@ internal sealed record TableRequest(AgentSpec? Player1, AgentSpec? Player2, stri
         }
         catch (JsonException exception)
         {
-            problem = exception.Message;
+            // The parser's message names the host's own types: the console gets it, the page a sentence (#828).
+            Console.WriteLine($"  A request to open a table could not be read: {HttpHost.OneLine(exception)}");
+            problem = "The request body is not the JSON a table is opened with.";
             return Nothing;
         }
 

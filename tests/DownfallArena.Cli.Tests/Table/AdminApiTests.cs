@@ -220,6 +220,18 @@ public sealed class AdminApiTests : IDisposable
         _registry.HeldTables().ShouldBeEmpty();
     }
 
+    [Fact]
+    public async Task A_table_that_cannot_be_composed_does_not_say_the_host_s_path()
+    {
+        var admin = Admin(OperatorGate.WithToken(OperatorToken));
+
+        var answer = await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"heuristic:/srv/secret-place/nowhere.json"}""", OperatorToken, null);
+
+        answer.Status.ShouldBe(400);
+        Text(answer).ShouldNotContain("secret-place");
+        Text(answer).ShouldBe("The table could not be opened: a weights or policy file a seat names is missing or cannot be read. The console says which.");
+    }
+
     /// <summary>
     /// Refused before it is composed: a table composed and then refused would have opened a recording and
     /// written a run nobody played.

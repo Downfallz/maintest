@@ -83,6 +83,14 @@ public sealed class TableRequestTests
     }
 
     [Fact]
+    public void A_body_that_is_not_json_is_said_without_the_parser_s_words()
+    {
+        TableRequest.Parse("{", out var problem);
+
+        problem.ShouldBe("The request body is not the JSON a table is opened with.");
+    }
+
+    [Fact]
     public void The_command_line_s_table_seats_a_person_where_no_agent_was_named()
     {
         var options = CliOptions.Parse(["table", "--p2", "greedy", "--who", "mk", "--handover", "5"]);
