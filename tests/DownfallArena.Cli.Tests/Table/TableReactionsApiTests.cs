@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
+using DownfallArena.Infrastructure.Learning;
 using DownfallArena.SharedKernel.Identifiers;
 
 namespace DownfallArena.Cli.Tests.Table;
@@ -179,20 +180,77 @@ public sealed class TableReactionsApiTests : IDisposable
         Directory.EnumerateFiles(_hosted.RunsDirectory, PlaytestRun.ReactionsFile, SearchOption.AllDirectories).ShouldBeEmpty();
     }
 
-    private async Task<PlayedTable> BegunAsync(TableRequest request)
+    [Fact]
+    public async Task A_first_reaction_to_a_run_the_operator_deleted_is_refused_and_keeps_no_file()
     {
-        var table = await Opened(request);
+        var table = await BegunAsync(HostedTables.TwoPeople);
+        await table.QuiesceAsync(Cancel);
+        (await _hosted.Stored!.DeleteAsync(table.Id, Cancel)).ShouldBeTrue();
+
+        var refused = await ReactAsync(table, 0, "hello");
+
+        refused.Status.ShouldBe(409, Text(refused));
+        using var body = JsonDocument.Parse(Text(refused));
+        body.RootElement.GetProperty("error").GetString().ShouldBe("Reaction.Gone");
+        Directory.Exists(Path.Combine(_hosted.RunsDirectory, table.Run!.SessionId)).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task A_store_that_fails_leaves_the_board_readable_and_refuses_the_reaction_with_a_code()
+    {
+        using var hosted = new HostedTables(directory => new RecordRefused(new FileArtifactStore(directory), PlaytestRun.ReactionsFile) { ReadsRefused = true, Refusing = true });
+        using var registry = hosted.Registry();
+        var table = await BegunAsync(hosted, registry, HostedTables.TwoPeople);
+
+        var view = await SeatAsync(table, 0);
+        var refused = await ReactAsync(table, 0, "hello");
+
+        view.GetProperty("reactions").ValueKind.ShouldBe(JsonValueKind.Null);
+        refused.Status.ShouldBe(503, Text(refused));
+        using var body = JsonDocument.Parse(Text(refused));
+        body.RootElement.GetProperty("error").GetString().ShouldBe("Reaction.Busy");
+        await table.QuiesceAsync(Cancel);
+    }
+
+    [Fact]
+    public async Task A_record_still_being_written_is_waited_for_before_a_first_reaction_is_judged()
+    {
+        RecordHeld? store = null;
+        using var hosted = new HostedTables(directory => store = new RecordHeld(new FileArtifactStore(directory)));
+        using var registry = hosted.Registry();
+        var table = await Opened(hosted, registry, HostedTables.TwoPeople);
+        store!.Hold();
+        var recording = table.RecordAsync(Cancel);
+
+        var recorded = table.Run!.RecordedAsync(Cancel);
+        await Task.Delay(100, Cancel);
+        var waited = !recorded.IsCompleted;
+        store.Release();
+        await recording;
+
+        waited.ShouldBeTrue();
+        (await recorded).ShouldBeTrue();
+        await table.QuiesceAsync(Cancel);
+    }
+
+    private Task<PlayedTable> BegunAsync(TableRequest request) => BegunAsync(_hosted, _registry, request);
+
+    private static async Task<PlayedTable> BegunAsync(HostedTables hosted, TableRegistry registry, TableRequest request)
+    {
+        var table = await Opened(hosted, registry, request);
         await SeatAsync(table, 0);
         await SeatAsync(table, 1);
         table.Session.HasBegun.ShouldBeTrue();
         return table;
     }
 
-    private async Task<PlayedTable> Opened(TableRequest request)
+    private Task<PlayedTable> Opened(TableRequest request) => Opened(_hosted, _registry, request);
+
+    private static async Task<PlayedTable> Opened(HostedTables hosted, TableRegistry registry, TableRequest request)
     {
-        var table = await _hosted.Composer.ComposeAsync(request, Cancel);
-        using var place = (await _registry.ReserveAsync(Cancel)).ShouldNotBeNull();
-        await _registry.AddAsync(table, place, Cancel);
+        var table = await hosted.Composer.ComposeAsync(request, Cancel);
+        using var place = (await registry.ReserveAsync(Cancel)).ShouldNotBeNull();
+        await registry.AddAsync(table, place, Cancel);
         return table;
     }
 

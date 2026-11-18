@@ -10,14 +10,19 @@ const creature = id => ({ id, name: `Creature ${id}`, health: 30, maxHealth: 30,
 
 async function answering(state, route) {
   const request = route.request();
+  // Asked before the player writes whether they are muted (#717): 204 unless the test mutes them.
+  if (request.method() === 'GET') {
+    state.asked.push(request.headers()['x-seat-token'] ?? null);
+    return state.muted ? route.fulfill({ status: 403, json: { error: 'Feedback.Muted' } }) : route.fulfill({ status: 204, body: '' });
+  }
   state.sent.push({ body: request.postDataJSON(), token: request.headers()['x-seat-token'] ?? null });
   if (state.hold) await state.hold;
   const answer = state.answers.shift() ?? { status: 201, json: { id: 'fb_1', merged: false } };
   return route.fulfill(answer);
 }
 
-async function seat(page, { account = null } = {}) {
-  const state = { sent: [], answers: [], errors: [] };
+async function seat(page, { account = null, muted = false } = {}) {
+  const state = { sent: [], answers: [], errors: [], asked: [], muted };
   page.on('pageerror', error => state.errors.push(error.message));
   await returningBattlePlayer({ context: page.context() });
   await page.addInitScript(() => {
@@ -47,8 +52,8 @@ async function seat(page, { account = null } = {}) {
   return state;
 }
 
-async function lobby(page, { account = player } = {}) {
-  const state = { sent: [], answers: [], errors: [] };
+async function lobby(page, { account = player, muted = false } = {}) {
+  const state = { sent: [], answers: [], errors: [], asked: [], muted };
   page.on('pageerror', error => state.errors.push(error.message));
   await page.route('**/api/**', async route => {
     const path = new URL(route.request().url()).pathname;
@@ -169,6 +174,29 @@ test('a refusal keeps the words, and a muted player loses the entry', async ({ p
   // The result's entry is hidden by the same rule, whether or not the result is open.
   expect(await page.locator('#feedback-open-match').evaluate(node => getComputedStyle(node).display)).toBe('none');
   expect(state.sent.map(one => one.body.kind)).toEqual(['idea', 'idea']);
+});
+
+test('a player the host says is muted is offered no entry in a game before they write (#717)', async ({ page }) => {
+  const state = await seat(page, { muted: true });
+
+  await expect.poll(() => state.asked).toContain('first');
+  await page.locator('#settings').click();
+
+  await expect(page.locator('#settings-dialog')).toBeVisible();
+  await expect(page.locator('#feedback-open-settings')).toBeHidden();
+  await expect(page.locator('#settings-dialog .settings-feedback')).toBeHidden();
+  expect(await page.locator('#feedback-open-match').evaluate(node => getComputedStyle(node).display)).toBe('none');
+  expect(state.sent).toEqual([]);
+});
+
+test('a signed-in player the host says is muted finds no entry in the lobby’s account menu (#717)', async ({ page }) => {
+  const state = await lobby(page, { muted: true });
+
+  await expect.poll(() => state.asked.length).toBeGreaterThan(0);
+  await page.locator('#account-menu summary').click();
+
+  await expect(page.locator('#account-menu [data-feedback-open]')).toBeHidden();
+  expect(state.asked).toEqual([null]);
 });
 
 test('a sheet closed while it sends is empty when it opens again, once the host kept it', async ({ page }) => {

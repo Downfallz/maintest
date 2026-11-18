@@ -1,6 +1,7 @@
 using System.Text.Json;
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Admin;
+using DownfallArena.Cli.Hosting;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Infrastructure.Learning;
@@ -372,7 +373,8 @@ internal sealed class AdminApi
         catch (Exception failure) when (TableRegistry.StoreFails(failure))
         {
             table.Dispose();
-            return StudioResponse.OfPlainText(503, $"The table could not be opened: {failure.Message}");
+            Said($"  A table could not be opened by {operatorName}: {HttpHost.OneLine(failure)}");
+            return StudioResponse.OfPlainText(503, "The table could not be opened: the store did not answer. The host's console says why.");
         }
 
         await table.RecordAsync();
@@ -503,7 +505,8 @@ internal sealed class AdminApi
 
             if (failure is IOException or UnauthorizedAccessException or Azure.RequestFailedException)
             {
-                return StudioResponse.OfPlainText(503, $"The new invitation could not be saved, so the seat keeps its old one: {failure.Message}");
+                Said($"  Session {table.Id}: a new invitation for {seat.Name} could not be saved: {HttpHost.OneLine(failure)}");
+                return StudioResponse.OfPlainText(503, "The new invitation could not be saved, so the seat keeps its old one. The host's console says why.");
             }
 
             throw;

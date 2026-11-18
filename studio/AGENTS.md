@@ -29,8 +29,14 @@ npm --prefix studio/browser ci --ignore-scripts && npm --prefix studio/browser t
 - A spec, a fixture or a job that starts to read another path says so in `browser/plan.js` and
   `browser-suite.test.js`: CI plays only what the plan names, and the nightly matrix is what finds a gap.
 - CI retries a journey once and `browser/flakes.js` names what passed only then; locally nothing retries.
+- `battle-journeys.test.js` holds the battle specs (`battle-*`, not the real-engine `battle.*.js`) to two rules for a
+  loaded runner. Where a test only needs the playback's stages, jump between its timers with `fastForward`; a test
+  that runs the fake clock 1 s or more frame by frame gets `test.setTimeout(60000)` (#784). To know the first board
+  arrived, wait for `data-connection` to be `live`, never for the hidden `#loading` card (#785).
 - In a cloud session Chromium is preinstalled: do not run `playwright install` again, and pass `--trace off`.
 - Each checkout serves the pages on a port derived from its path (`browser/origin.js`). A running server is
   reused only when its `/__root` answer names this checkout (#711). `STUDIO_BROWSER_PORT` sets the port.
 - The real-engine journeys start the host with `browser/dotnet.js`. It uses the `dotnet` under `DOTNET_ROOT`
   when set, else the one on `PATH` (#707).
+- A team's tempos are one asking per creature, sent one after another from one sheet: a real-engine journey's step
+  that answers them ends once the round leaves its tempos (`browser/battle-step.js`), not when the asking changes (#787).

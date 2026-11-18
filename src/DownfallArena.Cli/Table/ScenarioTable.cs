@@ -52,7 +52,7 @@ internal sealed class ScenarioTable(CliOptions options, string schema, ScenarioD
                         }
                         catch (Exception exception) when (exception is InvalidDataException or OperationCanceledException)
                         {
-                            return StudioResponse.OfPlainText(409, $"The scenario could not be started again: {exception.Message}");
+                            return PracticeTable.Refused("started again", exception);
                         }
 
                         return State();

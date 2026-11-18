@@ -11,6 +11,7 @@ using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Matches.Feed;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Application.Matches.Queries;
+using DownfallArena.Cli.Hosting;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Events;
@@ -267,7 +268,8 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
         catch (Exception failure) when (failure is Azure.RequestFailedException or HttpRequestException or Azure.Identity.AuthenticationFailedException)
         {
-            return StudioResponse.OfPlainText(503, $"The relay could not be reached: {failure.Message}");
+            Console.WriteLine($"  The relay could not be reached for a seat: {HttpHost.OneLine(failure)}");
+            return StudioResponse.OfPlainText(503, "The relay could not be reached: read the seat's events.");
         }
     }
 
@@ -801,7 +803,17 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
             return StudioResponse.OfPlainText(400, exception.Message);
         }
 
-        var sent = await Reactions.SendAsync(seat.Name, reaction);
+        ReactionSent sent;
+        try
+        {
+            sent = await Reactions.SendAsync(seat.Name, reaction);
+        }
+        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or ObjectDisposedException or Azure.RequestFailedException)
+        {
+            Console.WriteLine($"  A reaction from {seat.Name} could not be kept: {failure.Message}");
+            sent = ReactionSent.Busy;
+        }
+
         switch (sent.Refusal)
         {
             case null:
@@ -941,11 +953,27 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
     private static object Described(TableReaction reaction) =>
         new { sequence = reaction.Sequence, seat = reaction.Seat, reaction = reaction.Reaction, at = reaction.At };
 
-    /// <summary>What a seat's view says of the reactions: whether it may send one, and the last few, both seats'.</summary>
-    private async Task<object> ReactionsViewAsync() =>
-        Reacting
-            ? new { available = true, cooldownMs = (long)TableReactions.Cooldown.TotalMilliseconds, recent = (await Reactions.RecentAsync()).Select(Described).ToArray() }
-            : new { available = false, cooldownMs = (long)TableReactions.Cooldown.TotalMilliseconds, recent = Array.Empty<object>() };
+    /// <summary>
+    /// What a seat's view says of the reactions: whether it may send one, and the last few, both seats'. None when the
+    /// store cannot be read: the board is what the page needs, and it offers no reactions without this.
+    /// </summary>
+    private async Task<object?> ReactionsViewAsync()
+    {
+        if (!Reacting)
+        {
+            return new { available = false, cooldownMs = (long)TableReactions.Cooldown.TotalMilliseconds, recent = Array.Empty<object>() };
+        }
+
+        try
+        {
+            return new { available = true, cooldownMs = (long)TableReactions.Cooldown.TotalMilliseconds, recent = (await Reactions.RecentAsync()).Select(Described).ToArray() };
+        }
+        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or ObjectDisposedException or Azure.RequestFailedException)
+        {
+            Console.WriteLine($"  The reactions could not be read: {failure.Message}");
+            return null;
+        }
+    }
 
     /// <summary>
     /// Where in the match a note is about to be written, read off the seat's own board. A board that cannot be

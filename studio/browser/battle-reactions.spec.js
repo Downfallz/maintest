@@ -33,12 +33,22 @@ async function mount(page, { available = true, recent = [], both = false, answer
       seats: [{ seat: 'player1', kind: 'person', name: 'Mark' }, { seat: 'player2', kind: 'person', name: 'Bastien' }] },
       seats: [{ seat: 'player1', token: 'first' }, ...(both ? [{ seat: 'player2', token: 'second' }] : [])] }] } });
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [], packages: [] } });
-    if (url.pathname === '/api/seat/player1') return route.fulfill({ json: state.view });
+    if (url.pathname === '/api/seat/player1') {
+      // An acknowledgement reaches no board, so it never says a change arrived.
+      const view = state.view; return route.fulfill({ json: view }).then(() => { if (!url.searchParams.has('shown')) state.answered = view; });
+    }
     return route.fulfill({ status: 404, json: {} });
   });
   await page.goto('/table/battle.html'); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
-  if (!both) await expect(page.locator('#loading')).toBeHidden();
-  const publish = async recent => { state.view = { ...state.view, reactions: { ...state.view.reactions, recent } }; await page.evaluate(() => window.notifyBattle()); };
+  if (!both) { await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live'); }
+  const publish = async recent => {
+    state.view = { ...state.view, reactions: { ...state.view.reactions, recent } }; const published = state.view;
+    await page.evaluate(() => window.notifyBattle());
+    // A change told while a read is in flight is owed one more read, which the page schedules at no delay: a paused
+    // clock runs it only when it is moved. Only a seat read that is no acknowledgement, answered with the published view
+    // (a refusal too), says the change reached the page (#768, #785).
+    await expect.poll(async () => { if (state.answered === published) { return true; } await page.clock.runFor(0); return false; }).toBe(true);
+  };
   return { state, publish };
 }
 
@@ -83,7 +93,7 @@ test('a reaction sent while the player was away is shown once when the game open
 
   await expect(page.locator('#reaction-theirs')).toContainText('Good luck!');
   await expect(page.locator('#reaction-theirs')).toContainText('2 h ago');
-  await page.reload(); await expect(page.locator('#loading')).toBeHidden();
+  await page.reload(); await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live');
   await expect(page.locator('#reaction-theirs')).toBeHidden();
 });
 
@@ -120,6 +130,7 @@ test('a table the host offers no reactions at has no reaction button', async ({ 
 test('a device holding both seats offers no reactions', async ({ page }) => {
   await mount(page, { both: true });
   await page.locator('#seat-choices button').first().click(); await expect(page.locator('#loading')).toBeHidden();
+  await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live');
 
   await expect(page.locator('#reactions-open')).toBeHidden();
 });

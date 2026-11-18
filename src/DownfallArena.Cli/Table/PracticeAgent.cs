@@ -32,7 +32,7 @@ internal sealed class PracticeAgent(PracticeScenario scenario, IPlayerAgent fall
             var id = TierId.Parse($"tier:{name}:v1");
             if (!offered.AvailableTiers.Contains(id))
             {
-                throw new InvalidDataException($"Practice '{scenario.Id}' needs {id} for creature {offered.Creature} in round {board.RoundNumber}. Rebuild the standard catalogue.");
+                throw PracticeRefusal.Of($"Practice '{scenario.Id}' needs {id} for creature {offered.Creature} in round {board.RoundNumber}. Rebuild the standard catalogue.");
             }
 
             return EvolutionDecision.Unlock(new EvolutionChoice(offered.Creature, id));
@@ -108,7 +108,7 @@ internal sealed class PracticeAgent(PracticeScenario scenario, IPlayerAgent fall
         var id = SpellId.Parse($"spell:{name}:v1");
         if (!intentOption.CastableSpells.Contains(id))
         {
-            throw new InvalidDataException($"Practice '{scenario.Id}' needs castable {id} in round {board.RoundNumber}. Rebuild the standard catalogue.");
+            throw PracticeRefusal.Of($"Practice '{scenario.Id}' needs castable {id} in round {board.RoundNumber}. Rebuild the standard catalogue.");
         }
 
         return id;
@@ -125,7 +125,7 @@ internal sealed class PracticeAgent(PracticeScenario scenario, IPlayerAgent fall
         var index = board.Allies.ToList().FindIndex(creature => creature.Id == options.Actor);
         var id = SpellId.Parse($"spell:{Spell(board, index)}:v1");
         var offered = options.For(id)
-            ?? throw new InvalidDataException($"Practice '{scenario.Id}' needs castable {id} in round {board.RoundNumber}. Rebuild the standard catalogue.");
+            ?? throw PracticeRefusal.Of($"Practice '{scenario.Id}' needs castable {id} in round {board.RoundNumber}. Rebuild the standard catalogue.");
 
         return new ChosenAction(id, Targets(board, offered));
     }

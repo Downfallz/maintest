@@ -1,4 +1,5 @@
 using DownfallArena.Application.Agents;
+using DownfallArena.Application.FeedbackBox;
 using DownfallArena.Application.Learning;
 using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Matches.Journaling;
@@ -15,14 +16,21 @@ using Microsoft.Extensions.DependencyInjection;
 namespace DownfallArena.Cli.Table;
 
 /// <summary>
-/// <c>scenario-cut</c>, <c>scenario-check</c> and <c>scenario-generate</c> (docs/tabletop/scenarios-plan.md, stages
-/// S3 and S7, ADR 0179): a recorded session cut at the top of a round into a <c>scenario.json</c>, a scenario file
-/// held to its boards on this engine, and a match of two bots played and cut for <c>scenarios/</c>. Each builds their services over the content the scenario is played on, never over another.
+/// <c>scenario-cut</c>, <c>scenario-check</c>, <c>scenario-generate</c> and <c>scenario-import</c>
+/// (docs/tabletop/scenarios-plan.md, stages S3 and S7, ADR 0179; docs/tabletop/feedback-plan.md, R6): a recorded session
+/// cut at the top of a round into a <c>scenario.json</c>, a scenario file held to its boards on this engine, a match of
+/// two bots played and cut for <c>scenarios/</c>, and a bug's redacted scenario written under <c>scenarios/bugs/</c>. Each builds its services over the content the scenario is played on, never over another.
 /// </summary>
 internal static class ScenarioCommands
 {
     /// <summary>The run a scenario's match is checked under; it is kept nowhere.</summary>
     private const string CheckRun = "scenario-check";
+
+    /// <summary>The one file a bug report's zip holds (docs/tabletop/feedback-plan.md, R5).</summary>
+    private const string ZippedFile = "scenario.json";
+
+    /// <summary>The largest scenario a zip may hold: a carried content and a long match, well past the measured 120 KB.</summary>
+    private const long LargestScenario = 16 * 1024 * 1024;
 
     public static async Task<int> CutAsync(CliOptions options)
     {
@@ -181,19 +189,175 @@ internal static class ScenarioCommands
         return $"{(bots.Length > 30 ? bots[..30].TrimEnd('-') : bots)}-seed-{(seed < 0 ? "m" : string.Empty)}{Math.Abs((long)seed)}-round-{round}.json";
     }
 
-    public static async Task<int> CheckAsync(CliOptions options)
+    /// <summary><c>scenario-check</c>: what it finds is said on <paramref name="said" />, the console by default.</summary>
+    public static async Task<int> CheckAsync(CliOptions options, TextWriter? said = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         ScenarioDocument document;
-        string schema;
         try
         {
             document = ScenarioFile.Read(await File.ReadAllTextAsync(options.Scenario!));
-            schema = await ScenarioContent.SchemaOfAsync(document, options);
         }
         catch (Exception failure) when (failure is InvalidDataException or IOException)
         {
             return await RefusedAsync(failure.Message);
+        }
+
+        return await HeldAsync(document, options, options.TraceBoards, said ?? Console.Out) is { } refused ? await RefusedAsync(refused) : 0;
+    }
+
+    /// <summary>
+    /// <c>scenario-import</c> (docs/tabletop/feedback-plan.md, R6): the zip a session downloaded from a bug's issue,
+    /// holding one <c>scenario.json</c>, checked to be a redacted scenario that carries its content and rebuilds on this
+    /// engine, then written as <c>scenarios/bugs/&lt;issue&gt;-&lt;slug&gt;.json</c> unless <c>--out</c> names another
+    /// file. It writes over an existing file only when <c>--out</c> names it. The file is written as this engine writes a
+    /// scenario, so a field the format does not know never reaches the public repository. <paramref name="scenarios" /> is
+    /// the repository's <c>scenarios/</c> directory, where the host runs by default.
+    /// </summary>
+    public static async Task<int> ImportAsync(CliOptions options, string scenarios = RepositoryScenarios.DefaultDirectory)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        string text;
+        try
+        {
+            text = await ZippedScenarioAsync(options.Zip!);
+        }
+        catch (Exception failure) when (failure is InvalidDataException or IOException or UnauthorizedAccessException)
+        {
+            return await RefusedAsync(failure.Message);
+        }
+
+        ScenarioDocument document;
+        try
+        {
+            document = ScenarioFile.Read(text);
+        }
+        catch (InvalidDataException failure)
+        {
+            return await RefusedAsync($"The zip's {ZippedFile} is not a scenario: {failure.Message}");
+        }
+
+        if (document.Session is not { Length: > 0 } report)
+        {
+            return await RefusedAsync($"The zip's {ZippedFile} names no report as its session, so it is not a redacted scenario like the one the panel's \"Download the scenario\" writes.");
+        }
+
+        var redacted = RedactedScenario.Check(text, report, []);
+        if (redacted.IsFailure)
+        {
+            return await RefusedAsync($"The zip's {ZippedFile} is not redacted: {redacted.Error.Message}");
+        }
+
+        if (document.Schema is null || document.Tutorial is not null)
+        {
+            return await RefusedAsync($"The zip's {ZippedFile} {(document.Schema is null ? "does not carry its content" : "has a tutorial block")}, so it is not a redacted scenario like the one the panel's \"Download the scenario\" writes.");
+        }
+
+        if (await HeldAsync(document, options, trace: false, Console.Out) is { } refused)
+        {
+            return await RefusedAsync(refused);
+        }
+
+        var issue = options.Issue!.Value;
+        var named = options.Output.Length > 0;
+        var output = named ? options.Output : Path.Combine(scenarios, RepositoryScenarios.BugsDirectory, BugFile(issue, document));
+        if (!named && File.Exists(output))
+        {
+            return await RefusedAsync($"'{output}' is already there: name another file with --out, or that one to write over it.");
+        }
+
+        // A file under bugs/ is listed as the issue its name says, which must be the one the import was given.
+        var full = Path.GetFullPath(output);
+        if (Path.GetFileName(Path.GetDirectoryName(full)) == RepositoryScenarios.BugsDirectory
+            && RepositoryScenarios.BugOf($"{RepositoryScenarios.BugsDirectory}/{Path.GetFileName(full)}") != issue)
+        {
+            return await RefusedAsync($"'{output}' is under {RepositoryScenarios.BugsDirectory}/ and is not named after issue {issue}: the host would list it as another bug. Name it {issue}-<slug>.json.");
+        }
+
+        if (Path.GetDirectoryName(full) is { } directory)
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        await File.WriteAllTextAsync(output, ScenarioFile.Write(document));
+        Console.WriteLine($"Bug scenario written to {output}: report {report}, issue #{issue}, round {document.Scenario.Cut.Round}, played as {SeatName(document.Seat)}, {document.Scenario.After.Count} entries after the cut, up to where the player wrote.");
+        if (ScenarioContent.OwnVersion(options) is { } own && !string.Equals(own, document.Content, StringComparison.Ordinal))
+        {
+            Console.WriteLine($"It carries content {document.Content}, not this repository's {own}: review that content in the pull request, since the host plays the file on it.");
+        }
+
+        return 0;
+    }
+
+    /// <summary>
+    /// The file a bug scenario is written as: the issue's number, then the operator's title made a slug and cut short,
+    /// or the round when the title is the one Reproduce gives (<c>Report &lt;id&gt;, round N</c>) or there is none: the
+    /// report's id is in the file already, and the issue's number tells two bugs apart.
+    /// </summary>
+    internal static string BugFile(int issue, ScenarioDocument document)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        var round = $"round-{document.Scenario.Cut.Round.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+        var slug = RepositoryScenarios.Slug(document.Title ?? string.Empty);
+        var given = document.Session is { } report && slug == RepositoryScenarios.Slug($"Report {report}, {round}");
+        slug = slug.Length == 0 || given ? round : slug.Length > 40 ? slug[..40].TrimEnd('-') : slug;
+        return $"{issue.ToString(System.Globalization.CultureInfo.InvariantCulture)}-{slug}.json";
+    }
+
+    /// <summary>What a zip holds as <see cref="ZippedFile" />, its only entry; <see cref="InvalidDataException" /> for any other zip.</summary>
+    private static async Task<string> ZippedScenarioAsync(string path)
+    {
+        try
+        {
+            await using var zip = await System.IO.Compression.ZipArchive.CreateAsync(File.OpenRead(path), System.IO.Compression.ZipArchiveMode.Read, leaveOpen: false, entryNameEncoding: null);
+            if (zip.Entries is not [{ FullName: ZippedFile } entry])
+            {
+                throw new InvalidDataException($"'{path}' does not hold one {ZippedFile} and nothing else, as the panel's \"Download the scenario\" writes it.");
+            }
+
+            if (entry.Length > LargestScenario)
+            {
+                throw new InvalidDataException($"'{path}' holds a {ZippedFile} of {entry.Length} bytes, more than a scenario is ({LargestScenario}).");
+            }
+
+            // The length is what the zip's header claims: the read itself stops past the largest scenario, whatever it says.
+            await using var stream = await entry.OpenAsync();
+            using var bytes = new MemoryStream();
+            var buffer = new byte[81920];
+            int read;
+            while ((read = await stream.ReadAsync(buffer)) > 0)
+            {
+                if (bytes.Length + read > LargestScenario)
+                {
+                    throw new InvalidDataException($"'{path}' holds a {ZippedFile} of more than {LargestScenario} bytes, more than a scenario is.");
+                }
+
+                bytes.Write(buffer, 0, read);
+            }
+
+            return System.Text.Encoding.UTF8.GetString(bytes.GetBuffer(), 0, (int)bytes.Length);
+        }
+        catch (FileNotFoundException)
+        {
+            throw new InvalidDataException($"'{path}' is not there: download the zip from the issue first.");
+        }
+    }
+
+    /// <summary>
+    /// Why a scenario does not hold on this engine, or null when it does: it rebuilds at its cut, its recorded answers
+    /// after the cut still apply, and a tutorial's steps are reached. With <paramref name="trace" />, each seat's board
+    /// after each entry past the cut is printed, to find the entry where a rule went wrong.
+    /// </summary>
+    private static async Task<string?> HeldAsync(ScenarioDocument document, CliOptions options, bool trace, TextWriter said)
+    {
+        string schema;
+        try
+        {
+            schema = await ScenarioContent.SchemaOfAsync(document, options);
+        }
+        catch (Exception failure) when (failure is InvalidDataException or IOException)
+        {
+            return failure.Message;
         }
 
         var scenario = document.Scenario;
@@ -201,13 +365,39 @@ internal static class ScenarioCommands
         var resources = host.Services.GetRequiredService<IGameResources>();
         if (!string.Equals(resources.Version, document.Content, StringComparison.Ordinal))
         {
-            return await RefusedAsync($"The scenario names content {document.Content}, and the content it was given is {resources.Version}.");
+            return $"The scenario names content {document.Content}, and the content it was given is {resources.Version}.";
         }
 
         var started = await host.Services.GetRequiredService<ScenarioStarter>().StartAsync(scenario, CheckRun, MatchId.New());
         if (started.IsFailure)
         {
-            return await RefusedAsync($"The scenario does not hold on engine {EngineVersion.Current}: {started.Error.Message}");
+            return $"The scenario does not hold on engine {EngineVersion.Current}: {started.Error.Message}";
+        }
+
+        var replay = host.Services.GetRequiredService<MatchReplay>();
+        var stepper = host.Services.GetRequiredService<MatchStepper>();
+        var held = HeldAnswers.None;
+        if (trace)
+        {
+            await said.WriteLineAsync($"At the cut, {scenario.Cut.CutAt} entries in, the top of round {scenario.Cut.Round}:");
+            await PrintBoardsAsync(stepper, started.Value.Match.MatchId, held, said);
+        }
+
+        for (var line = 0; line < scenario.After.Count; line++)
+        {
+            var entry = scenario.After[line];
+            var applied = await replay.ContinueAsync(started.Value.Match, held, [entry], scenario.Cut.CutAt + line);
+            if (applied.IsFailure)
+            {
+                return $"The scenario rebuilds at its cut, and its recorded answers after it do not apply on engine {EngineVersion.Current}: {applied.Error.Message}";
+            }
+
+            held = applied.Value;
+            if (trace)
+            {
+                await said.WriteLineAsync($"After entry {scenario.Cut.CutAt + line + 1}, {Described(entry)}:");
+                await PrintBoardsAsync(stepper, started.Value.Match.MatchId, held, said);
+            }
         }
 
         if (document.Tutorial is { } lesson)
@@ -215,14 +405,75 @@ internal static class ScenarioCommands
             var reached = await host.Services.GetRequiredService<LessonReach>().CheckAsync(scenario, document.Seat, lesson);
             if (reached.IsFailure)
             {
-                return await RefusedAsync($"The scenario holds, and its tutorial does not: {reached.Error.Message}");
+                return $"The scenario holds, and its tutorial does not: {reached.Error.Message}";
             }
 
-            Console.WriteLine($"Tutorial {lesson.Order}, {lesson.Title}: its {lesson.Steps.Count} steps are reached in order by the recorded answers.");
+            await said.WriteLineAsync($"Tutorial {lesson.Order}, {lesson.Title}: its {lesson.Steps.Count} steps are reached in order by the recorded answers.");
         }
 
-        Console.WriteLine($"The scenario holds on engine {EngineVersion.Current}: {document.Title ?? $"session {document.Session ?? scenario.Source.Run}"}, round {scenario.Cut.Round}, played as {SeatName(document.Seat)}, on content {document.Content}.");
-        return 0;
+        await said.WriteLineAsync($"The scenario holds on engine {EngineVersion.Current}: {document.Title ?? $"session {document.Session ?? scenario.Source.Run}"}, round {scenario.Cut.Round}, played as {SeatName(document.Seat)}, on content {document.Content}.");
+        return null;
+    }
+
+    /// <summary>An entry as a line of the trace: who answered what, or what happened.</summary>
+    private static string Described(IJournalEntry entry) => entry switch
+    {
+        DecisionEntry decided => $"{SeatName(decided.Decision.Slot)} answered {Described(decided.Decision.Decision)}",
+        ConcessionEntry conceded => $"{SeatName(conceded.Slot)} conceded",
+        TimeoutEntry timedOut => $"{string.Join(" and ", timedOut.Late.Select(SeatName))} timed out",
+        _ => entry.GetType().Name,
+    };
+
+    /// <summary>A decision in a few words: its kind, its creature, and what it chose.</summary>
+    private static string Described(Application.Matches.Decisions.PlayerDecision decision)
+    {
+        var parts = new List<string> { decision.Kind.ToString() };
+        if (decision.IsPass)
+        {
+            parts.Add("pass");
+        }
+
+        if (decision.Creature is { } creature)
+        {
+            parts.Add($"for #{creature.Value}");
+        }
+
+        parts.AddRange(new[] { decision.Spell?.ToString(), decision.Tier?.ToString(), decision.Speed?.ToString() }.OfType<string>());
+        if (decision.Targets.Count > 0)
+        {
+            parts.Add($"at {string.Join(", ", decision.Targets.Select(one => $"#{one.Value}"))}");
+        }
+
+        if (decision.Order.Count > 0)
+        {
+            parts.Add($"in the order {string.Join(", ", decision.Order.Select(one => $"#{one.Value}"))}");
+        }
+
+        return string.Join(' ', parts);
+    }
+
+    /// <summary>Each seat's own creatures as its board shows them: health, energy, stun and conditions, and the outcome once there is one.</summary>
+    private static async Task PrintBoardsAsync(MatchStepper stepper, MatchId match, HeldAnswers held, TextWriter said)
+    {
+        foreach (var slot in new[] { PlayerSlot.Player1, PlayerSlot.Player2 })
+        {
+            var seat = await stepper.SeatAsync(match, slot, held);
+            if (seat.IsFailure)
+            {
+                await said.WriteLineAsync($"  {SeatName(slot)}: {seat.Error.Message}");
+                continue;
+            }
+
+            var board = seat.Value.Board;
+            await said.WriteLineAsync($"  {SeatName(slot)}, round {board.RoundNumber?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "-"} {board.SubPhase?.ToString() ?? board.Phase?.ToString() ?? board.State.ToString()}{(board.Outcome is { } outcome ? $", {(outcome.IsDraw ? "a draw" : $"{(outcome.Winner is { } winner ? SeatName(winner) : "nobody")} won")} by {outcome.Reason}" : string.Empty)}:");
+            foreach (var creature in board.Allies)
+            {
+                var conditions = creature.Conditions.Count == 0
+                    ? string.Empty
+                    : $", {string.Join(", ", creature.Conditions.Select(one => one.RemainingRounds is { } left ? $"{one.Effect.GetType().Name} {left}" : one.Effect.GetType().Name))}";
+                await said.WriteLineAsync($"    #{creature.Id.Value} {creature.Name}: {creature.Health.Value}/{creature.MaxHealth.Value} health, {creature.Energy.Value} energy{(creature.IsStunned ? ", stunned" : string.Empty)}{conditions}");
+            }
+        }
     }
 
     /// <summary>The rounds a session offers, and why its journal stopped rebuilding when it did.</summary>

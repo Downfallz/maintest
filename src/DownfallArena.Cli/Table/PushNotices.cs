@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using DownfallArena.Application.Matches.Projections;
+using DownfallArena.Cli.Hosting;
 using DownfallArena.Domain.Matches;
 
 namespace DownfallArena.Cli.Table;
@@ -119,8 +120,8 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
         }
         catch (Exception failure) when (failure is HttpRequestException or IOException or TaskCanceledException or UnauthorizedAccessException or Azure.RequestFailedException or System.Security.Cryptography.CryptographicException)
         {
-            Console.WriteLine($"  Session {table.Id}: {seat.Name} could not be sent a test notice: {failure.Message}");
-            return new PushTest(false, $"The push service refused it: {failure.Message}");
+            Console.WriteLine($"  Session {table.Id}: {seat.Name} could not be sent a test notice: {HttpHost.OneLine(failure)}");
+            return new PushTest(false, PushTest.Refused(failure));
         }
     }
 

@@ -67,6 +67,9 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
 
                 // Its place in the series when it is a tutorial (ADR 0187), which every signed-in account plays.
                 tutorial = one.Document.Tutorial?.Order,
+
+                // The issue it reproduces when it is a bug scenario of scenarios/bugs/ (docs/tabletop/feedback-plan.md, R6).
+                bug = one.File is { } file ? RepositoryScenarios.BugOf(file) : null,
                 link = Link(one.Id),
             }).ToArray(),
         }, ArtifactJson.LineOptions);

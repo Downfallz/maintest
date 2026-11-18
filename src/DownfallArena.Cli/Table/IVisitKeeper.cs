@@ -8,4 +8,7 @@ internal interface IVisitKeeper
 
     /// <summary>Writes the seat's last visit if what is kept is still what was read under <paramref name="expected" />; the new tag, or none when it moved.</summary>
     Task<string?> WriteVisitIfAsync(string seat, LastVisit visit, string? expected, CancellationToken cancellationToken = default);
+
+    /// <summary>Whether the table's record is still kept: not once the operator deleted its run, which a first write would bring back (#789).</summary>
+    Task<bool> RecordedAsync(CancellationToken cancellationToken = default);
 }

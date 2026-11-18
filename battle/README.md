@@ -587,7 +587,8 @@ when; `src/reactions.ts` draws it. No notification is sent for a reaction and th
 ## The recap
 
 **Where you are** ([async-recap-plan.md](../docs/tabletop/async-recap-plan.md), R3) is one sheet over the field. It
-tells where the game stands and who leads, and the two teams now with each creature's health change. It tells the
+tells where the game stands: each side's creatures standing and health, never who leads (the round cap's reading
+is the host's, #757). It also shows the two teams now, with each creature's health change. It tells the
 last completed round, the round under way, and every round with something the seat has not seen: those lines are
 marked **New**, and older rounds are folded. Then the seat's own choices still in force, and what it is asked now
 with the opponent's reactions. `table/battle-recap.js` builds it from the seat's own view and feed; `src/recap.ts`

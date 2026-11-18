@@ -184,6 +184,24 @@ public sealed class LobbyApiTests : IDisposable
         await rebuilt.QuiesceAsync(TestContext.Current.CancellationToken);
     }
 
+    /// <summary>A table the store cannot keep is not offered, and the answer is a code and a fixed sentence, never the store's words (#786).</summary>
+    [Fact]
+    public async Task A_table_the_store_cannot_keep_is_refused_without_the_store_s_words()
+    {
+        RecordRefused? store = null;
+        using var hosted = new HostedTables(directory => store = new RecordRefused(new FileArtifactStore(directory)) { Failure = () => new IOException("Blob https://secret.blob.core.windows.net/runs/table.json refused") });
+        using var registry = hosted.Registry();
+        var lobby = new LobbyApi(registry, hosted.Composer, TimeProvider.System);
+        store!.Refusing = true;
+
+        var answer = await lobby.HandleAsync("POST", "/api/lobby/tables", "{}");
+
+        answer.Status.ShouldBe(503);
+        var said = JsonDocument.Parse(answer.Body).RootElement;
+        said.GetProperty("error").GetString().ShouldBe("Lobby.Unavailable");
+        said.GetProperty("message").GetString().ShouldNotBeNull().ShouldNotContain("secret", Case.Insensitive);
+    }
+
     /// <summary>A claim the store cannot save is not made: the invitation, its code and the open place are as they were, and no token was handed out.</summary>
     [Fact]
     public async Task An_invitation_whose_acceptance_cannot_be_saved_stays_outstanding()
@@ -625,7 +643,7 @@ public sealed class LobbyApiTests : IDisposable
         table.Seats[0].Push.ShouldBeNull();
     }
 
-    /// <summary>The test notice a player asks for: sent now, or the push service's refusal in words, on the page.</summary>
+    /// <summary>The test notice a player asks for: sent now, or refused in a fixed sentence that never carries the push service's words (#786).</summary>
     [Fact]
     public async Task A_test_notice_is_sent_now_and_its_outcome_said()
     {
@@ -644,10 +662,12 @@ public sealed class LobbyApiTests : IDisposable
         sent.GetProperty("sent").GetBoolean().ShouldBeTrue();
         sender.Sent.ShouldHaveSingleItem().ShouldContain("\"test\":true");
 
-        sender.Failure = new HttpRequestException("The push service answered 403: bad vapid");
+        sender.Failure = new HttpRequestException("The push service answered 403: bad vapid", null, System.Net.HttpStatusCode.Forbidden);
         var refused = await lobby.HandleAsync("POST", "/api/lobby/push/test", "{}", token);
         refused.Status.ShouldBe(502);
-        JsonDocument.Parse(refused.Body).RootElement.GetProperty("message").GetString().ShouldNotBeNull().ShouldContain("bad vapid");
+        var refusal = JsonDocument.Parse(refused.Body).RootElement.GetProperty("message").GetString().ShouldNotBeNull();
+        refusal.ShouldBe("The push service refused it (403).");
+        refusal.ShouldNotContain("bad vapid", Case.Insensitive);
         table.Seats[0].Push.ShouldNotBeNull("a refusal is the service's, the subscription stays");
 
         (await lobby.HandleAsync("POST", "/api/lobby/push/test", "{}", "not-a-seat")).Status.ShouldBe(403);

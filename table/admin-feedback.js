@@ -390,6 +390,7 @@ export function fixedReports(rows, closed) {
 export function downloadNote(sheet) {
   const can = sheetActions(sheet);
   if (sheet?.kind !== 'bug' || can.download) return '';
+  if (sheet.reproduction && sheet.unread) return 'The record of the game this report was sent from is missing or cannot be read (its session may have been deleted): nothing shows the game is over, so the scenario is not offered.';
   if (sheet.reproduction && sheet.underWay) return 'The scenario can be downloaded once the game it was sent from is over: nothing a seat holds face down reaches a public issue.';
   // The host cuts a table's round once its game is over (#736), and says when Reproduce waits for that.
   if (sheet.reproduceOnceOver) return 'The round can be reproduced once the game it was sent from is over: its scenario would hold what the other seat keeps face down.';

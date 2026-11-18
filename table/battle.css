@@ -1881,7 +1881,7 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 .recap-side { display: grid; gap: 2px; min-width: 0; padding: 8px 10px; border: 1px solid color-mix(in srgb, var(--ally) 45%, transparent); border-radius: var(--radius-soft); background: #1b2e34; font-size: 13px; }
 .recap-side[data-side="opponent"] { border-color: color-mix(in srgb, var(--enemy) 45%, transparent); }
 .recap-side strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 15px var(--font-display); }
-.recap-leader { margin: 8px 0 0; font-size: 14px; }
+.recap-ahead { margin: 8px 0 0; font-size: 14px; }
 .recap-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .recap-team, .recap-lines { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .recap-creature { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; min-width: 0; font-size: 13px; }

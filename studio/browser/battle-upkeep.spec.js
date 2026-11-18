@@ -66,7 +66,7 @@ async function mount(page, { waiting = null, round = 1, feed = [energy(round), o
     // A change told while a read is in flight is owed one more read, which the page schedules at no delay: a paused
     // clock runs it only when it is moved, and a loaded machine is when the two overlap. The read in flight answers
     // with the board it was asked for, so only a read that carried this one says the change arrived (#768).
-    await expect.poll(async () => { if (state.answered === published) return true; await page.clock.runFor(0); return false; }).toBe(true);
+    await expect.poll(async () => { if (state.answered === published) { return true; } await page.clock.runFor(0); return false; }).toBe(true);
   };
   return { state, publish };
 }
@@ -163,9 +163,9 @@ test('polls, hidden-tab reconnection and reload do not repeat the same receipt',
   await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')); });
   await expect(page.locator('#upkeep-body')).toBeEmpty();
   await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: false }); document.dispatchEvent(new Event('visibilitychange')); });
-  await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#upkeep-dialog')).toBeHidden();
+  await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live'); await expect(page.locator('#upkeep-dialog')).toBeHidden();
   h.state.view.feed = [energy(1), ongoing(1)]; await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
-  await expect(page.locator('#loading')).toBeHidden();
+  await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live');
   await expect(page.locator('#upkeep-dialog')).toBeHidden(); await page.locator('#planning-close').click();
   await h.publish([energy(2), ongoing(2)], { board: { ...h.state.view.board, roundNumber: 2 } });
   await expect(page.locator('#reading-title')).toHaveText('Upkeep'); await expect(page.locator('#round-number')).toHaveText('02');

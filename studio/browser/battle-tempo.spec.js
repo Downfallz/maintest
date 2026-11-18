@@ -37,7 +37,7 @@ async function mount(page, ids = [1, 2, 3]) {
     return route.fulfill({ status: 500 });
   });
   await page.goto('/table/battle.html'); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
-  await expect(page.locator('#loading')).toBeHidden(); await openTempos(page);
+  await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live'); await openTempos(page);
   return state;
 }
 // The team's tempos open by themselves, docked beside the field (ADR 0150); a journey reaches them whether they

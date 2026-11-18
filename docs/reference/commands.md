@@ -276,7 +276,11 @@ Two people at one screen, or one against a bot (ADR 0054). The table's routes, o
 
 Every route reads a body of at most 64 KB and answers a longer one 413 `Host.BodyTooLarge` (the studio's host
 allows 4 MB). A route that throws answers 500 `Host.Unexpected`; the exception goes to the console, one line,
-never to the answer.
+never to the answer. A failure a route expects answers a code or a fixed sentence, never the exception's
+text (#786). A table the store cannot open or keep is 503 `Lobby.Unavailable`, and one whose content does not
+load is 503 `Lobby.Unplayable`. A relay that is out is 503 `Relay.Unavailable` on `GET /api/lobby/negotiate`,
+and a plain-text 503 on `GET /api/seat/<seat>/negotiate`. A push test the service refuses answers with the
+service's status code. A session page whose files cannot be read is 404.
 
 #### Seats, network and recording
 
@@ -358,7 +362,9 @@ The tab also lists every file of the repository's `scenarios/` directory, read w
 "repository"` and its `"file"` in the list, under the id `sc-repo-<file name>`): played from the tab, on the content
 the file carries, neither removed nor listed there (409 `Scenario.FromRepository`), and opened by the host's
 admin accounts alone when it names some (`--admins`). A tutorial among them (`scenarios/tutorials/`, ADR 0187)
-says its place in the series (`"tutorial": 1`), and every signed-in account opens it.
+says its place in the series (`"tutorial": 1`), and every signed-in account opens it. A bug scenario among them
+(`scenarios/bugs/<issue>-<slug>.json`, under the id `sc-repo-bug-<file name>`, feedback plan, R6) says the issue it
+reproduces (`"bug": 812`), and the tab marks it *Bug #812*; every other row says `"bug": null`.
 
 Its link `/battle?scenario=<id>` a signed-in player opens as practice (`GET /api/scenarios/<id>`,
 `GET`/`POST /api/scenarios/<id>/practice`: resumed, or started from the cut in place of the account's last
@@ -439,10 +445,17 @@ The seat's view says the lesson under `practice.tutorial`:
   - More than 100 new a day for the host: 429 `Feedback.HostFull`.
   - A muted sender gets 403 `Feedback.Muted` once the body is checked, before the spam guards. The mute lasts 30
     days, or until the operator lifts it. The operator sets it, or a third spam dismissal within 30 days does.
+- `GET /api/feedback` asks, before the player writes, whether they are muted (#717). A signed-in request is
+  checked as its account, whatever key it carries; a signed-out one as the guest seat its key names. It answers
+  403 `Feedback.Muted`, or 204 for anyone else, the signed-out and seatless included, never kept by a cache. It
+  looks up no game table, so a host still starting answers it too. A store that fails answers 503
+  `Feedback.Unavailable`. The page asks it once loaded, and the battle view again for each seat it opens or leaves,
+  and hides every **Report or suggest** entry on 403.
 - The operator's Feedback tab (docs/tabletop/feedback-plan.md, R3) lists it newest first, twenty a page
   (`GET /api/admin/feedback?kind&status&category&page`: `kind` is `bug` or `idea`, `status` a status or `open`, the
   tab's default, for what is not closed) and reads one (`GET /api/admin/feedback/<id>`: the words, what the page and
-  the host added, the position, the sender's mute, and `underWay` while its table is still played).
+  the host added, the position, the sender's mute, `underWay` while its table is still being played, and `unread` when
+  its table's record is missing or unparseable).
   A filter naming no kind, status or category is refused 400 `Feedback.Invalid`. The sheet lists the `actions` that
   apply to it, and the page shows only those.
   `PUT /api/admin/feedback/<id>/status {"status","reason?","plan?","issue?"}` marks it `seen` (which reopens it),
@@ -484,8 +497,10 @@ The seat's view says the lesson under `practice.tutorial`:
   It is refused with 409 `Feedback.NotRedacted` if it still names the session, keeps a time, or holds as a word of its
   own the report's table, an account, a seat's key, code or invitation, the pilot's key or a player's name. The
   content it includes and the fields' names are not read, and a content id (`spell:pummel:v1`) is one word, never
-  the name inside it. The error says what the file holds, never the name. A report from a table still under way, or whose scenario
-  was cut from one, is 409 `Feedback.UnderWay`, so nothing a seat holds face down reaches the issue. An idea is 409
+  the name inside it. The error says what the file holds, never the name. A report is 409 `Feedback.UnderWay` when its table is
+  still under way or its scenario was cut from one. It is 409 `Feedback.TableUnread` when its table's record is missing
+  (the session was deleted) or unparseable, because nothing then shows the game is over. Either way, nothing a seat holds
+  face down reaches the issue. An idea is 409
   `Feedback.NotABug`, and a report not reproduced, or whose scenario was removed since, 409 `Feedback.NotReproduced`.
   Each download is an Activity line, `feedback.download`, with the scenario's id. The sheet offers `download` once the
   game is over.
@@ -631,7 +646,7 @@ Two people at a begun match send each other reactions, one of a fixed set of eig
 free text (`POST /api/seat/<seat>/reaction {"reaction":"well-played"}`, one every four seconds a seat, 429
 otherwise, refused against a bot and with one account in both seats, 409 `Reaction.Gone` once the operator
 deleted the table's run, 503 `Reaction.Busy` when it could not be kept), kept with the table's record
-(`reactions.json`, the last eight), served in each seat's view as `reactions`, shown once to the other player
+(`reactions.json`, the last eight), served in each seat's view as `reactions` (null when the store cannot be read), shown once to the other player
 unless their settings hide them, and never notified, counted in the bell or recorded as an event of the match
 (ADR 0173).
 
@@ -642,7 +657,8 @@ The battle view tells the host the last feed sequence each seat was shown (`PUT 
 hidden; a replay sends nothing. The host keeps the larger sequence with the time it was told, beside the table's record
 (`seen-player1.json`, `seen-player2.json`, written only over the version read), ignores a smaller one, and answers
 `{"seen":{"sequence","at"}}` with the mark kept; anything but a sequence of 0 or more is `400 Seen.Invalid`, and
-`503 Seen.Busy` when every retry lost to another process or the store failed. It moves nothing on the table and
+`503 Seen.Busy` when every retry lost to another process or the store failed. It is also the answer once the operator
+has deleted the table's run: the host writes no file, so the run is not brought back. It moves nothing on the table and
 sends no notice. A mark is kept under a stamp of the seat's key, so a seat offered again starts with none. Each
 seat's view carries its own mark as `seen` (null before the first) and when the journal was last written as
 `lastMoveAt` (null for a table that keeps none). The page reads the larger of its browser's mark and the host's
@@ -755,13 +771,15 @@ host's, or the one kept beside the runs under its hash) and `--with-content` car
 ### scenario-check
 
 ```bash
-dotnet run --project src/DownfallArena.Cli -- scenario-check --scenario bug.scenario.json
+dotnet run --project src/DownfallArena.Cli -- scenario-check --scenario bug.scenario.json [--trace]
 ```
 
-Whether a scenario still rebuilds on this engine and stands on the boards recorded at its cut (exit 0 or 1); a
-file kept under `scenarios/` is checked by the tests, so a repro becomes a regression test. For a file with a
-`tutorial` block (ADR 0187) it also plays the recorded answers and says whether each lesson step is reached, in
-the order written (`scenarios/README.md`).
+Whether a scenario still rebuilds on this engine and stands on the boards recorded at its cut, and whether its
+recorded answers after the cut still apply (exit 0 or 1); a file kept under `scenarios/` is checked by the tests, so
+a repro becomes a regression test. For a file with a `tutorial` block (ADR 0187) it also says whether each lesson
+step is reached, in the order written (`scenarios/README.md`). `--trace` is a flag here, not a trace file. It prints
+each seat's creatures (health, energy, stun, conditions) at the cut and after each entry past it, with the entry, to
+find the entry where a rule went wrong (feedback plan, R6).
 
 ### scenario-generate
 
@@ -775,6 +793,23 @@ that content (docs/tabletop/scenarios-plan.md, S7): without `--round` it lists t
 `--seat`, `--title` and `--goal` as `scenario-cut`. It writes `scenarios/<p1>-v-<p2>-seed-<N>-round-<N>.json`
 unless `--out` names another file, and never over one already there. A file under `scenarios/` is listed in the admin panel's Scenarios tab at the
 next start of a recording host (`scenarios/README.md`).
+
+### scenario-import
+
+```bash
+dotnet run --project src/DownfallArena.Cli -- scenario-import --zip report-<id>.zip --issue 812 [--out file]
+```
+
+A bug's redacted scenario, the zip the operator attached to its issue (docs/tabletop/feedback-plan.md, R5 and R6),
+written as `scenarios/bugs/<issue>-<slug>.json`: the slug is the scenario's title, or `round-N` when the title is the
+one Reproduce gives. The zip must hold one `scenario.json` and nothing else. The scenario must be redacted (its source
+is the report's own, and no journal time is kept), carry its content, have no `tutorial` block, and rebuild on this
+engine with its answers applying, as `scenario-check` requires. Otherwise it is refused and nothing is written.
+Players' names were checked by the host when the zip was downloaded (R5); the import cannot check them again, so
+import only a zip the operator's own account attached to the issue. The file is written as this engine writes a
+scenario, so a field the format does not know is dropped. A file under `bugs/` must be named after `--issue`. It never
+writes over an existing file unless `--out` names it, and it says when the content carried is not this repository's.
+The bug's test reads the file with `BugScenario` (`scenarios/README.md`).
 
 ### The hosted table's image
 

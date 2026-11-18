@@ -132,7 +132,8 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
         var group = await feedback.GroupAsync(one);
         var counted = one.Kind == FeedbackKind.Idea && one.MergedInto is null;
         var table = one.Context?.Table;
-        var underWay = await UnderWayAsync(one);
+        var played = await PlayedAsync(one);
+        var underWay = played == Played.UnderWay;
         var now = clock.GetUtcNow();
 
         // A scenario removed from the Scenarios tab since is linked no more, and Reproduce cuts it again; a report turned
@@ -206,7 +207,10 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
 
                 // Reproduce waits for the game's end (#736): what the sheet says while it is not offered.
                 reproduceOnceOver = underWay && reproduction is null && one.MergedInto is null && Reproducible(one),
-                actions = Actions(one, mute, underWay, group, reproduction is not null),
+
+                // A table whose record cannot be read offers neither: nothing shows its game is over (#790).
+                unread = played == Played.Unread,
+                actions = Actions(one, mute, played, group, reproduction is not null),
             },
             Web);
     }
@@ -387,9 +391,12 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
             return Refused(FeedbackErrors.NotABug);
         }
 
-        if (await UnderWayAsync(one))
+        switch (await PlayedAsync(one))
         {
-            return Refused(FeedbackErrors.UnderWay);
+            case Played.UnderWay:
+                return Refused(FeedbackErrors.UnderWay);
+            case Played.Unread:
+                return Refused(FeedbackErrors.TableUnread);
         }
 
         var (refused, file) = await Scenarios!.RedactedAsync(one);
@@ -410,9 +417,25 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
         return new StudioResponse(200, ZipType, bytes.ToArray(), [new KeyValuePair<string, string>("Content-Disposition", $"attachment; filename=\"report-{id}.zip\"")]);
     }
 
-    /// <summary>Whether the table a report was sent from is still played: open and not voided.</summary>
-    private async Task<bool> UnderWayAsync(Feedback one) =>
-        one.Context?.Table is { } table && stored is not null && await stored.RecordAsync(table) is { UnderWay: true };
+    /// <summary>
+    /// Where the table a report was sent from stands: none named, over, still played (open and not voided), or its record
+    /// unread. A record missing or unparseable, or a host that keeps none, shows neither that the game is over nor the
+    /// seats' keys the redaction check gathers from it: the scenario's download refuses it as it refuses a game under way (#790).
+    /// </summary>
+    private async Task<Played> PlayedAsync(Feedback one)
+    {
+        if (one.Context?.Table is not { } table)
+        {
+            return Played.NoTable;
+        }
+
+        if (stored is null || await stored.RecordAsync(table) is not { } record)
+        {
+            return Played.Unread;
+        }
+
+        return record.UnderWay ? Played.UnderWay : Played.Over;
+    }
 
     private async Task<StudioResponse> MuteAsync(string id, string operatorName)
     {
@@ -454,9 +477,9 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
     /// mute or its lifting while a sender can hold one. An idea merged into another is changed through the one it joined:
     /// it offers only its dismissal, as spam or not, which takes it out of the group, and its sender's mute.
     /// </summary>
-    private string[] Actions(Feedback one, FeedbackMute? mute, bool underWay, FeedbackGroup group, bool reproduced)
+    private string[] Actions(Feedback one, FeedbackMute? mute, Played played, FeedbackGroup group, bool reproduced)
     {
-        var offered = one.MergedInto is not null ? ["dismiss", "spam"] : OpenActions(one, underWay, group, reproduced);
+        var offered = one.MergedInto is not null ? ["dismiss", "spam"] : OpenActions(one, played, group, reproduced);
         if (feedback.CanMute(one))
         {
             offered.Add(mute is null ? "mute" : "unmute");
@@ -469,23 +492,23 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
     private bool Reproducible(Feedback one) => one.Kind == FeedbackKind.Bug && Scenarios is not null && Cuttable(one.Context);
 
     /// <summary>What a piece of feedback not merged into another offers, its sender's mute aside.</summary>
-    private List<string> OpenActions(Feedback one, bool underWay, FeedbackGroup group, bool reproduced)
+    private List<string> OpenActions(Feedback one, Played played, FeedbackGroup group, bool reproduced)
     {
         var bug = one.Kind == FeedbackKind.Bug;
         List<string> offered = [.. bug ? BugActions(one) : IdeaActions(one, group)];
         // A table still played is cut once it is over (#736), as its scenario leaves the host only then (R5).
-        if (Reproducible(one) && !underWay)
+        if (Reproducible(one) && played != Played.UnderWay)
         {
             offered.Add("reproduce");
         }
 
-        // The scenario leaves the host only once the game it was cut from is over (R5).
-        if (bug && reproduced && !underWay)
+        // The scenario leaves the host only once the game it was cut from is over (R5), and that its record says so (#790).
+        if (bug && reproduced && played is Played.NoTable or Played.Over)
         {
             offered.Add("download");
         }
 
-        if (underWay && one.Context?.Table is not null)
+        if (played == Played.UnderWay)
         {
             offered.Add("diagnose");
         }
@@ -587,7 +610,7 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
     {
         "Feedback.NotFound" => 404,
         "Feedback.Closed" or "Feedback.NoSender" or "Feedback.MergedAway" or "Feedback.Grouped" or "Feedback.NotABug" or "Feedback.NoPosition"
-            or "Feedback.NotReproduced" or "Feedback.UnderWay" or "Feedback.NotFiled" or "Feedback.NotRedacted" => 409,
+            or "Feedback.NotReproduced" or "Feedback.UnderWay" or "Feedback.TableUnread" or "Feedback.NotFiled" or "Feedback.NotRedacted" => 409,
         "Feedback.Unavailable" => 503,
         _ => 400,
     });
@@ -600,4 +623,13 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
     private sealed record MergeBody(string? Into);
 
     private sealed record KindBody(string? Kind);
+
+    /// <summary>Where the table a report was sent from stands, as its record says (#790).</summary>
+    private enum Played
+    {
+        NoTable,
+        Over,
+        UnderWay,
+        Unread,
+    }
 }

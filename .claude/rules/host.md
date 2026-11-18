@@ -31,7 +31,8 @@ paths:
   on every account change, as the inbox fetches it again each time (#724).
 - When a conditional write is refused because the file moved, read it again. If a file read before is gone, the
   operator deleted the run: give up, as a write would bring the file back (`TableVisits`, `TableReactions`, #739).
-  A file never written has no such guard yet (#789).
+  A file not yet written is written only while the table's record exists (`RecordedAsync`, #789); a delete running
+  at that moment, in this process or another, can still leave one behind (#818).
 - Build one `OperatorActions` per host, in `TableHost.OpenNotesAsync`, and hand it to every admin API. Its ids keep
   the operator log in order only within one instance (#748).
 - A route that answers a file, or whose path ends in an extension, sends `Cache-Control: no-store, private`
@@ -44,6 +45,10 @@ paths:
 - A new route has a host test in `tests/DownfallArena.Cli.Tests/Table`, a line in `table/README.md#routes`,
   and its behaviour in `docs/reference/commands.md`.
 - What a seat holds face down never reaches the other seat's view, a log, or a notification.
+- A guard that keeps face-down data private refuses when the table's record is missing or unparseable, because nothing
+  then shows the game is over (`FeedbackAdminApi.PlayedAsync`, #790). Not yet applied to a scenario's source table
+  (`ScenarioAdminApi.RedactedAsync`, #814) or to `TableServer.StillOpenAsync` (#815). Search for every
+  `is { Status: TableRecord.Open` pattern the rule reaches, and every caller that reads the guard's answer.
 - Anything kept per seat is reset, or keyed by the seat's key (`TableApi.HolderOf`), when the seat changes hands
   (ADR 0170): the newcomer is never served the leaver's state (#739).
 - A field added to the seat view degrades to null when its store fails; it never fails the board read (#739).

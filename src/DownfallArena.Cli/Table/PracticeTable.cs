@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DownfallArena.Cli.Hosting;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Infrastructure.Learning;
 
@@ -74,7 +75,7 @@ internal sealed class PracticeTable(CliOptions options, string token) : IPractic
         }
         catch (Exception exception) when (exception is InvalidDataException or OperationCanceledException)
         {
-            return StudioResponse.OfPlainText(409, $"The scenario could not be prepared: {exception.Message}");
+            return Refused("prepared", exception);
         }
 
         var previous = _run;
@@ -84,6 +85,22 @@ internal sealed class PracticeTable(CliOptions options, string token) : IPractic
             await previous.DisposeAsync();
         }
         return State();
+    }
+
+    /// <summary>The 409 a practice that could not be started answers.</summary>
+    /// <remarks>
+    /// A refusal the host wrote for the person (<see cref="PracticeRefusal" />) is said; any other failure is said as a
+    /// fixed sentence, and its own words go to the console, on one line (#786).
+    /// </remarks>
+    internal static StudioResponse Refused(string what, Exception exception)
+    {
+        if (PracticeRefusal.Said(exception) is { } said)
+        {
+            return StudioResponse.OfPlainText(409, $"The scenario could not be {what}: {said}");
+        }
+
+        Console.WriteLine($"  The scenario could not be {what}: {HttpHost.OneLine(exception)}");
+        return StudioResponse.OfPlainText(409, $"The scenario could not be {what}. The host's console says why.");
     }
 
     public async ValueTask DisposeAsync()

@@ -233,6 +233,18 @@ public sealed class PracticeTableTests : IDisposable
         Encoding.UTF8.GetString(result.Body).ShouldContain("Rebuild the standard catalogue");
     }
 
+    /// <summary>A practice says why it was refused when the reason is its own; anything else is a fixed sentence (#786).</summary>
+    [Fact]
+    public void A_practice_refused_for_a_reason_of_its_own_says_it_and_for_any_other_says_a_fixed_sentence()
+    {
+        var own = PracticeTable.Refused("prepared", PracticeRefusal.Of("Practice 'targeting' needs castable spell:x in round 2. Rebuild the standard catalogue."));
+        var other = PracticeTable.Refused("prepared", new InvalidDataException("Could not find file '/app/secret/game.schema.json'."));
+
+        (own.Status, other.Status).ShouldBe((409, 409));
+        Encoding.UTF8.GetString(own.Body).ShouldContain("Rebuild the standard catalogue");
+        Encoding.UTF8.GetString(other.Body).ShouldNotContain("secret", Case.Insensitive);
+    }
+
     [Fact]
     public void Practice_never_silently_overrides_a_recording_seed_rules_or_seat_choice()
     {

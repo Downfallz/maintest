@@ -44,7 +44,7 @@ internal sealed record ScenarioPlay(SteppedSession Session, TableApi Api, string
         var started = await services.GetRequiredService<ScenarioStarter>().StartAsync(scenario, Run, MatchId.New(), stopping);
         if (started.IsFailure)
         {
-            throw new InvalidDataException($"The scenario cannot be played on this engine: {started.Error.Message}");
+            throw PracticeRefusal.Of($"The scenario cannot be played on this engine: {started.Error.Message}");
         }
 
         var journal = new InMemoryDecisionJournal();
@@ -60,7 +60,7 @@ internal sealed record ScenarioPlay(SteppedSession Session, TableApi Api, string
         var bot = new Occupant(opponent, Run);
         var plan = document.Seat == PlayerSlot.Player1 ? new SeatPlan(SeatPlan.Person(Run), bot) : new SeatPlan(bot, SeatPlan.Person(Run));
         var opened = await SteppedSession.OpenAsync(stepped, journal, started.Value.Match, new SteppedSeats(plan, seats, static (_, _) => null), stopping: stopping);
-        var session = opened.IsSuccess ? opened.Value : throw new InvalidDataException($"The scenario could not be opened: {opened.Error.Message}");
+        var session = opened.IsSuccess ? opened.Value : throw PracticeRefusal.Of($"The scenario could not be opened: {opened.Error.Message}");
         try
         {
             // A tutorial's assisted questions are answered from the first one the match asks.

@@ -45,7 +45,7 @@ async function mount(page, kind = 'Action') {
     return route.fulfill({ status: 500 });
   });
   await page.goto('/table/battle.html'); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
-  await expect(page.locator('#loading')).toBeHidden(); await openSpells(page); return state;
+  await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live'); await openSpells(page); return state;
 }
 const notify = page => page.evaluate(() => window.notifyBattle());
 const target = (page, id) => page.locator(`.creature[data-creature="${id}"]`);

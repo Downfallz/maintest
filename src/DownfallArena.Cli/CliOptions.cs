@@ -192,6 +192,15 @@ internal sealed record CliOptions
     /// <summary>Whether <c>scenario-cut</c> writes the content into the file, so it plays where that content was never kept.</summary>
     public bool WithContent { get; init; }
 
+    /// <summary>The zip <c>scenario-import</c> reads: a redacted scenario downloaded from a bug's issue (docs/tabletop/feedback-plan.md, R6).</summary>
+    public string? Zip { get; init; }
+
+    /// <summary>The issue <c>scenario-import</c> names the bug scenario after, <c>scenarios/bugs/&lt;issue&gt;-&lt;slug&gt;.json</c>.</summary>
+    public int? Issue { get; init; }
+
+    /// <summary>Whether <c>scenario-check --trace</c> prints each seat's board after each entry past the cut.</summary>
+    public bool TraceBoards { get; init; }
+
     public const string DefaultSchemaPath = "data/dst/game.schema.json";
 
     public const string DefaultBenchmarks = "benchmarks";
@@ -215,7 +224,10 @@ internal sealed record CliOptions
     /// <summary>A match of two bots played and cut at the top of a round into a scenario file (S7): one for <c>scenarios/</c>.</summary>
     public const string ScenarioGenerateCommand = "scenario-generate";
 
-    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table|table-tend|table-worker|push-keys|scenario-cut|scenario-check|scenario-generate [--seed N] [--matches N] [--format 3v3|2v2|1v1] [--declaration hidden-intent|at-activation] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--slot-log file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth] [--push-keys file] [--accounts off|google|dev] [--google-client-id id] [--admins acct_...] [--turns process|queue|worker] [--tended] [--scenario file] [--session dir] [--round N] [--seat player1|player2] [--title text] [--goal text] [--with-content]";
+    /// <summary>A redacted scenario from a bug's issue checked and written under <c>scenarios/bugs/</c> (docs/tabletop/feedback-plan.md, R6).</summary>
+    public const string ScenarioImportCommand = "scenario-import";
+
+    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table|table-tend|table-worker|push-keys|scenario-cut|scenario-check|scenario-generate|scenario-import [--seed N] [--matches N] [--format 3v3|2v2|1v1] [--declaration hidden-intent|at-activation] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--slot-log file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth] [--push-keys file] [--accounts off|google|dev] [--google-client-id id] [--admins acct_...] [--turns process|queue|worker] [--tended] [--scenario file] [--session dir] [--round N] [--seat player1|player2] [--title text] [--goal text] [--with-content] [--zip file] [--issue N]";
 
     /// <summary>Every option this command line takes. Anything else is a typo, and says so by name.</summary>
     private const string RecordOption = "--record";
@@ -251,15 +263,21 @@ internal sealed record CliOptions
 
     private const string WithContentOption = "--with-content";
 
+    private const string TraceOption = "--trace";
+
+    private const string ZipOption = "--zip";
+
+    private const string IssueOption = "--issue";
+
     /// <summary>What <c>scenario-cut</c> reads; <c>scenario-generate</c> takes them too, but for the session.</summary>
     private static readonly string[] CutOptions = ["--session", "--round", "--seat", "--title", "--goal"];
 
     private static readonly string[] Known =
     [
-        SeedOption, "--matches", "--out", "--schema", RecordOption, "--traces", "--trace", "--p1", "--p2",
+        SeedOption, "--matches", "--out", "--schema", RecordOption, "--traces", TraceOption, "--p1", "--p2",
         "--seeds", "--benchmarks", "--data", "--port", "--export", HandoverOption, "--rules", "--bind",
         "--who", FormatOption, DeclarationOption, SlotLogOption, PushKeysOption, AccountsOption, GoogleClientIdOption, TurnsOption,
-        AdminsOption, ScenarioOption, "--session", "--round", "--seat", "--title", "--goal",
+        AdminsOption, ScenarioOption, "--session", "--round", "--seat", "--title", "--goal", ZipOption, IssueOption,
     ];
 
     private static readonly string[] PracticeConflicts = [RecordOption, "--trace", "--rules", SeedOption, HandoverOption, "--p1", "--p2", FormatOption, DeclarationOption];
@@ -272,7 +290,7 @@ internal sealed record CliOptions
         ArgumentNullException.ThrowIfNull(args);
 
         var command = args.Count > 0 && !args[0].StartsWith("--", StringComparison.Ordinal) ? args[0] : "play";
-        var (values, flags) = Scan(args, skipCommand: command == args.ElementAtOrDefault(0));
+        var (values, flags) = Scan(args, skipCommand: command == args.ElementAtOrDefault(0), command);
         if (Contradiction(command, values, flags) is { } contradiction)
         {
             throw new ArgumentException(contradiction);
@@ -283,10 +301,10 @@ internal sealed record CliOptions
             Command = command,
             Seed = values.TryGetValue(SeedOption, out var seed) ? int.Parse(seed, CultureInfo.InvariantCulture) : null,
             Matches = values.TryGetValue("--matches", out var matches) ? int.Parse(matches, CultureInfo.InvariantCulture) : 100,
-            Output = values.GetValueOrDefault("--out") ?? command switch { "evaluate" => "evaluation.json", ScenarioCutCommand => "scenario.json", ScenarioGenerateCommand => string.Empty, _ => "simulation.csv" },
+            Output = values.GetValueOrDefault("--out") ?? command switch { "evaluate" => "evaluation.json", ScenarioCutCommand => "scenario.json", ScenarioGenerateCommand or ScenarioImportCommand => string.Empty, _ => "simulation.csv" },
             SchemaPath = values.GetValueOrDefault("--schema") ?? DefaultSchemaPath,
             Record = values.GetValueOrDefault(RecordOption),
-            Trace = values.GetValueOrDefault("--trace"),
+            Trace = values.GetValueOrDefault(TraceOption),
             SlotLog = values.GetValueOrDefault(SlotLogOption),
             Traces = values.TryGetValue("--traces", out var traces) ? ParseTraces(traces) : null,
             Player1 = AgentSpec.Parse(values.GetValueOrDefault("--p1") ?? "random"),
@@ -322,6 +340,9 @@ internal sealed record CliOptions
             Title = values.GetValueOrDefault("--title"),
             Goal = values.GetValueOrDefault("--goal"),
             WithContent = flags.Contains(WithContentOption),
+            Zip = values.GetValueOrDefault(ZipOption),
+            Issue = values.TryGetValue(IssueOption, out var issue) ? ParseIssue(issue) : null,
+            TraceBoards = flags.Contains(TraceOption),
         };
     }
 
@@ -416,14 +437,18 @@ internal sealed record CliOptions
     /// nobody takes is refused here rather than ignored: a mistyped flag that parses is a run that quietly did
     /// something else.
     /// </summary>
-    private static (Dictionary<string, string> Values, HashSet<string> Flags) Scan(IReadOnlyList<string> args, bool skipCommand)
+    /// <remarks>
+    /// <c>--trace</c> names a trace file everywhere but <c>scenario-check</c>, where it carries nothing: it asks for the
+    /// boards after each entry past the cut.
+    /// </remarks>
+    private static (Dictionary<string, string> Values, HashSet<string> Flags) Scan(IReadOnlyList<string> args, bool skipCommand, string command)
     {
         var values = new Dictionary<string, string>(StringComparer.Ordinal);
         var flags = new HashSet<string>(StringComparer.Ordinal);
         for (var index = skipCommand ? 1 : 0; index < args.Count;)
         {
             var option = args[index];
-            if (Valueless.Contains(option))
+            if (Valueless.Contains(option) || (option == TraceOption && command == ScenarioCheckCommand))
             {
                 flags.Add(option);
                 index += 1;
@@ -465,6 +490,17 @@ internal sealed record CliOptions
             return "'scenario-check' needs '--scenario <file>'.";
         }
 
+        if ((values.ContainsKey(ZipOption) || values.ContainsKey(IssueOption)) != (command == ScenarioImportCommand)
+            || (command == ScenarioImportCommand && !(values.ContainsKey(ZipOption) && values.ContainsKey(IssueOption))))
+        {
+            return "'--zip' and '--issue' are for scenario-import, which needs both: the zip downloaded from the issue, and the issue's number.";
+        }
+
+        if (command == ScenarioImportCommand && flags.Contains(WithContentOption))
+        {
+            return "'scenario-import' takes a redacted scenario, which always carries its content: it takes no --with-content.";
+        }
+
         if (command == ScenarioGenerateCommand)
         {
             return values.ContainsKey("--session") || flags.Contains(WithContentOption)
@@ -489,6 +525,11 @@ internal sealed record CliOptions
         values.TryGetValue("--seat", out var seat) && seat is not ("player1" or "player2")
             ? $"'--seat' is player1 or player2, not '{seat}'."
             : null;
+
+    private static int ParseIssue(string text) =>
+        int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var issue) && issue >= 1
+            ? issue
+            : throw new ArgumentException($"'--issue' is the number of the bug's issue, from 1: '{text}' is not one.");
 
     private static int ParseRound(string text)
     {
