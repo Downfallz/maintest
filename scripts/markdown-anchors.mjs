@@ -7,11 +7,15 @@ export function headingAnchors(markdown) {
   let fenced = false;
   for (const line of markdown.split('\n')) {
     if (line.startsWith('```')) fenced = !fenced;
-    const heading = fenced ? null : /^#{1,6}\s+(.+?)\s*$/.exec(line);
+    const heading = fenced ? null : /^#{1,6}\s+(\S.*)$/.exec(line);
     if (!heading) continue;
-    const slug = heading[1].toLowerCase().replace(/[^\p{L}\p{N}\s_-]/gu, '').replace(/\s/g, '-');
+    const slug = heading[1].trimEnd().toLowerCase().replace(/[^\p{L}\p{N}\s_-]/gu, '').replace(/\s/g, '-');
     let anchor = slug;
-    for (let n = 1; anchors.has(anchor); n++) anchor = `${slug}-${n}`;
+    let repeat = 0;
+    while (anchors.has(anchor)) {
+      repeat += 1;
+      anchor = `${slug}-${repeat}`;
+    }
     anchors.add(anchor);
   }
   return anchors;
