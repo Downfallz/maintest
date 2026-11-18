@@ -197,6 +197,44 @@ public sealed class FeedbackIndexTests : IDisposable
     }
 
     [Fact]
+    public async Task A_piece_reopened_by_a_revision_that_keeps_no_index_is_listed_again_once_the_index_is_rebuilt()
+    {
+        var report = await KeptAsync("seat-a");
+        await Desk().SetStatusAsync(report.Id, FeedbackStatus.Dismissed, "not a bug", "mark", Cancel);
+        await _store.SaveAsync((await _store.FindAsync(report.Id, Cancel))! with { Status = FeedbackStatus.Seen, ClosedAt = null, Reason = null }, Cancel);
+
+        var rebuilt = await _index.RebuildAsync(Cancel);
+
+        rebuilt.ShouldBeTrue();
+        (await Desk().PageAsync(new FeedbackFilter(OpenOnly: true), 1, Cancel)).Rows.ShouldHaveSingleItem().Id.ShouldBe(report.Id);
+    }
+
+    [Fact]
+    public async Task A_rebuild_that_another_write_came_before_writes_nothing()
+    {
+        var first = await KeptAsync("seat-a");
+        var second = Sent("seat-b");
+        _store.BeforeIndexWrite = () => _index.Records.SaveAsync(second, Cancel);
+
+        var rebuilt = await _index.RebuildAsync(Cancel);
+
+        rebuilt.ShouldBeFalse();
+        _store.Index!.Rows.Select(row => row.Id).ShouldBe([first.Id, second.Id]);
+    }
+
+    [Fact]
+    public async Task An_operator_s_read_is_answered_when_only_the_index_s_own_write_fails()
+    {
+        await _store.SaveAsync(Sent("seat-a"), Cancel);
+        _store.IndexWritesBeforeFailure = 0;
+
+        var page = await Desk().PageAsync(new FeedbackFilter(OpenOnly: true), 1, Cancel);
+
+        page.Rows.ShouldHaveSingleItem();
+        _said.ShouldHaveSingleItem();
+    }
+
+    [Fact]
     public async Task A_row_the_index_holds_wrong_is_put_right_when_the_list_opens_it()
     {
         var report = await KeptAsync("seat-a");

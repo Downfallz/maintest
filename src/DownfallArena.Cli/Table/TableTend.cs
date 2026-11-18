@@ -112,7 +112,7 @@ internal static class TableTend
             // Every run is kept for the admin panel's Jobs tab (A3), the one that failed too. A log that cannot be
             // opened costs the run its record, never the pass: the tables are tended all the same.
             var log = await OpenLogAsync(() => ArtifactStores.OpenTendLogAsync(target));
-            var (tended, _) = await RecordedAsync(log, TendTrigger.Schedule, by: null, clock, (now, progress) => TendAsync(registry, lobby, now, composer, clock, progress, suspended, feedback));
+            var (tended, _) = await RecordedAsync(log, TendTrigger.Schedule, by: null, clock, (now, progress) => TendAsync(registry, lobby, now, composer, clock, progress, suspended, feedback, feedbackStore));
             if (relay is not null)
             {
                 Announce(relay, tended);
@@ -261,7 +261,7 @@ internal static class TableTend
     /// <param name="progress">Told what the pass has done after each stage, so a pass that stops partway is known by what it did.</param>
     /// <param name="suspended">The suspended accounts' seats (ADR 0178); none on a host that signs nobody in.</param>
     /// <param name="feedback">What lets go of feedback closed 180 days ago (ADR 0189); none on a host that keeps none.</param>
-    internal static async Task<Tended> TendAsync(TableRegistry registry, LobbyApi lobby, DateTimeOffset now, TableComposer? composer = null, TimeProvider? clock = null, Action<Tended>? progress = null, SuspendedSeats? suspended = null, LetGoOfClosedFeedback? feedback = null)
+    internal static async Task<Tended> TendAsync(TableRegistry registry, LobbyApi lobby, DateTimeOffset now, TableComposer? composer = null, TimeProvider? clock = null, Action<Tended>? progress = null, SuspendedSeats? suspended = null, LetGoOfClosedFeedback? feedback = null, FeedbackIndex? feedbackIndex = null)
     {
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(lobby);
@@ -289,6 +289,12 @@ internal static class TableTend
         {
             done = done with { FeedbackLetGo = await feedback.HandleAsync() };
             progress?.Invoke(done);
+        }
+
+        // The index of feedback built again from every record (#866): what a revision that keeps none changed is put right.
+        if (feedbackIndex is not null && !await feedbackIndex.RebuildAsync())
+        {
+            Console.WriteLine("  The index of feedback was written meanwhile: the next pass builds it again.");
         }
 
         return done;

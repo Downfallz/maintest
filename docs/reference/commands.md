@@ -486,7 +486,9 @@ The seat's view says the lesson under `practice.tutorial`:
   The list of open feedback (`status=open` or an open status), the Overview's count and the spam count read the index
   of feedback (`index.json` beside the records, #866), and the list opens the page's rows alone. The index is written
   with each change, checked against a listing of the store at each read, and built from the records at the first
-  read. A record kept while its index could not be written is still answered as kept; the console says so.
+  read. A record kept while its index could not be written is still answered as kept; the console says so. Each
+  tending pass (`table-tend`, or the Jobs tab's) builds it again from every record. Deleting `index.json` makes the
+  next read build it.
   A filter that keeps closed feedback reads every record.
   `PUT .../<id>/kind {"kind"}` turns a bug report into an idea, or an idea into a bug report. It keeps the words,
   position and sender and sets the status to seen. A closed one gets 409 `Feedback.Closed`.

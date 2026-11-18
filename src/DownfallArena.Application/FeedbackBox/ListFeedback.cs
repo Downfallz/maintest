@@ -42,7 +42,7 @@ public sealed class ListFeedback(FeedbackIndex index)
             // what the filter no longer keeps is not shown.
             if (FeedbackSummary.Of(found) != row)
             {
-                await index.NoteAsync(found.Id, cancellationToken);
+                await index.NotedAsync(found.Id, cancellationToken);
                 if (!filter.Keeps(found))
                 {
                     continue;

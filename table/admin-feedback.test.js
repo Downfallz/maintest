@@ -276,7 +276,12 @@ test('past the window of closed issues, each filed issue left is asked by its nu
   asked.length = 0;
   const cut = await closedFiled(github(7), 'Downfallz/maintest', rows);
 
-  assert.deepEqual([cut.complete, cut.closed.has(9001), cut.closed.has(1000)], [false, true, true]);
+  assert.deepEqual([cut.complete, cut.closed.has(9001), cut.closed.has(1000), cut.last], [false, true, true, 9001]);
+  asked.length = 0;
+  const next = await closedFiled(github(6), 'Downfallz/maintest', rows, cut.last);
+
+  assert.deepEqual(asked.filter(path => !path.startsWith('?')).slice(0, 1), ['/9002'], 'the next check starts after the last issue asked, so none waits for good');
+  assert.equal(next.last, 9002);
   asked.length = 0;
   await assert.rejects(closedFiled(github(0), 'Downfallz/maintest', rows), 'a window GitHub refuses is not read at all');
 });

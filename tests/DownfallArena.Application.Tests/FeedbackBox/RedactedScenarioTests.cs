@@ -142,10 +142,13 @@ public sealed class RedactedScenarioTests
         refused.Error.Message.ShouldBe("The scenario still holds a player's name, in its title: it is not offered.");
     }
 
-    [Fact]
-    public void A_seat_taken_by_a_weights_file_is_looked_through_as_any_other_text()
+    [Theory]
+    [InlineData("/home/mark/weights.json")]
+    [InlineData("heuristic:mark.json")]
+    [InlineData("neural:mark")]
+    public void A_seat_taken_by_a_weights_file_is_looked_through_as_any_other_text(string to)
     {
-        var file = File(Report, Report, RedactedScenario.MatchOf(Report).ToString()).Replace("\"to\":\"person\"", "\"to\":\"/home/mark/weights.json\"", StringComparison.Ordinal);
+        var file = File(Report, Report, RedactedScenario.MatchOf(Report).ToString()).Replace("\"to\":\"person\"", $"\"to\":\"{to}\"", StringComparison.Ordinal);
 
         RedactedScenario.Check(file, Report, [("a player's name", "mark")]).Error.Message
             .ShouldBe("The scenario still holds a player's name, in its journal before the cut: it is not offered.");

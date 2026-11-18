@@ -360,8 +360,9 @@ and they are the first thing every player can use.
    the Overview and the spam count read the index of feedback (`FeedbackIndex`, #866): a row for each open piece and
    each spam mark within 30 days, and the ids of the rest. A save takes the id out of the index, writes the record,
    then places it; the index is written only if no other write came since. Each read checks it against a listing of
-   the store, so feedback the tending job deletes leaves it, and an id a cut-short save took out comes back. The list
-   opens the page's rows alone; a filter that keeps closed feedback still reads every record.
+   the store, so feedback the tending job deletes leaves it, and an id a cut-short save took out comes back. Each
+   tending pass builds it again from every record, so a row a revision without the index changed is right within the
+   hour. The list opens the page's rows alone; a filter that keeps closed feedback still reads every record.
 5. **I1, ideas grouped.** **Merge into…**, *asked by N* and the sort by it, *planned* with a plan's path,
    *shipped*, *declined* with a reason, **Copy as a plan prompt**. Tests: a merge keeping every sender and adding
    to the count, a merged idea out of the list and read inside its target, a merge into a bug report or into

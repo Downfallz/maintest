@@ -8,8 +8,11 @@ namespace DownfallArena.Application.FeedbackBox;
 /// the index, then writes the record, then places the record as it is kept then; a write of the index names the version
 /// it read, and reads again when another process wrote first. Each read checks the index against a listing of the
 /// store, which reads no record: an id the index lacks is opened, and one no longer listed dropped. So a save cut short
-/// after its record, by a hiccup or a crash, leaves its id missing, never its row wrong, and the next read puts it back.
-/// Nothing here waits on another write: the players' sending, under <see cref="FeedbackWrites" />, never waits on an
+/// after its record, by a hiccup or a crash, leaves its id missing, and the next read puts it back. A row can still be
+/// wrong in two narrow cases: a revision that keeps no index changed the record (the first deploy's overlap), or a read
+/// rebuilt the row from the record just before a save whose note then failed. The tending pass builds the index again
+/// from every record (<see cref="RebuildAsync" />), and the list puts right a row it shows. A save fails, writing
+/// nothing, when the index cannot take its id out first. Nothing here waits on another write: the players' sending, under <see cref="FeedbackWrites" />, never waits on an
 /// operator's read.
 /// </summary>
 public sealed class FeedbackIndex
@@ -76,8 +79,43 @@ public sealed class FeedbackIndex
         }
 
         var built = Tidied(rows, closed, now);
-        await _kept.WriteIndexAsync(built, read.Version, cancellationToken);
+        try
+        {
+            await _kept.WriteIndexAsync(built, read.Version, cancellationToken);
+        }
+        catch (Exception failure) when (failure is IOException || Passes(failure))
+        {
+            // The rows were read: the read is answered, and the next one writes them.
+            Said($"  The index of feedback could not be written ({failure.Message}): the next read writes it.");
+        }
+
         return built.Rows;
+    }
+
+    /// <summary>
+    /// Builds the index again from every record, the tending pass's share (#866): a row a revision that kept no index
+    /// changed, or a note a crash cut short after its record, is put right within the hour. Written only over the
+    /// version read before the records: a save made meanwhile wins, and the next pass builds it again. Answers whether
+    /// it was written.
+    /// </summary>
+    public async Task<bool> RebuildAsync(CancellationToken cancellationToken = default)
+    {
+        var read = await _kept.ReadIndexAsync(cancellationToken);
+        var rows = new List<FeedbackSummary>();
+        var closed = new List<string>();
+        foreach (var id in await _records.IdsAsync(cancellationToken))
+        {
+            if (await _records.FindAsync(id, cancellationToken) is { } found)
+            {
+                rows.Add(FeedbackSummary.Of(found));
+            }
+            else
+            {
+                closed.Add(id);
+            }
+        }
+
+        return await _kept.WriteIndexAsync(Tidied(rows, closed, _clock.GetUtcNow()), read.Version, cancellationToken);
     }
 
     /// <summary>
@@ -103,7 +141,9 @@ public sealed class FeedbackIndex
             var read = await _kept.ReadIndexAsync(cancellationToken);
             var content = read.Content ?? FeedbackIndexContent.Empty;
             var changed = await change(content);
-            if (read.Content is not null && Same(content, changed))
+            // Nothing to change writes nothing: a save of feedback the index does not hold, a sending among them, takes
+            // nothing out, so the index stands in front of no player's sending but the one write that places it.
+            if (Same(content, changed))
             {
                 return;
             }
@@ -117,8 +157,11 @@ public sealed class FeedbackIndex
         throw new IOException($"The index of feedback lost {Tries} writes in a row to others while placing {id}.");
     }
 
-    /// <summary>Places the feedback after its record was kept: a failure the host passes is said, and the record stays kept.</summary>
-    private async Task NotedAsync(string id, CancellationToken cancellationToken)
+    /// <summary>
+    /// Places the feedback after its record was kept, or after a read found its row wrong: a failure the host passes is
+    /// said, and the record stays kept, the read answered.
+    /// </summary>
+    internal async Task NotedAsync(string id, CancellationToken cancellationToken)
     {
         try
         {

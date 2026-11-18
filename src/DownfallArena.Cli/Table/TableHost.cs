@@ -231,7 +231,7 @@ internal static class TableHost
         {
             admin.Jobs = new JobsApi(tendLog, clock, async (now, progress) =>
             {
-                var tended = await TableTend.TendAsync(registry, admin.Lobby, now, composer, clock, progress, suspendedSeats, feedback is null ? null : new LetGoOfClosedFeedback(feedback, clock));
+                var tended = await TableTend.TendAsync(registry, admin.Lobby, now, composer, clock, progress, suspendedSeats, feedback is null ? null : new LetGoOfClosedFeedback(feedback, clock), feedbackIndex);
                 if (relay is not null)
                 {
                     TableTend.Announce(relay, tended);

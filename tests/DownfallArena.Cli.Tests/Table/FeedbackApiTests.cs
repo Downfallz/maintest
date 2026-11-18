@@ -107,6 +107,30 @@ public sealed class FeedbackApiTests : IDisposable
     }
 
     [Fact]
+    public async Task A_report_kept_while_the_storage_refuses_its_index_is_answered_kept_as_the_host_wires_it()
+    {
+        var table = await BegunAsync();
+        var said = new List<string>();
+        var index = new FeedbackIndex(_feedback, new RefusingIndex(), _clock) { Passes = ArtifactStores.IndexPasses, Said = said.Add };
+        var api = new FeedbackApi(new SendFeedback(index.Records, _addresses, _writes, _clock), new AskFeedbackMuted(new FeedbackMutes(null), _clock), _registry);
+
+        var answer = await api.HandleAsync("POST", Report(), table.Seats[0].Token, SignedOut, Address, null);
+
+        answer.Status.ShouldBe(201, Encoding.UTF8.GetString(answer.Body));
+        (await KeptAsync(answer)).Status.ShouldBe(FeedbackStatus.New);
+        said.ShouldHaveSingleItem().ShouldContain("could not place");
+    }
+
+    /// <summary>An index whose storage answers 503 to every write, as a blob container in trouble does.</summary>
+    private sealed class RefusingIndex : Application.FeedbackBox.Ports.IFeedbackIndexStore
+    {
+        public Task<FeedbackIndexRead> ReadIndexAsync(CancellationToken cancellationToken = default) => Task.FromResult(new FeedbackIndexRead(null, null));
+
+        public Task<bool> WriteIndexAsync(FeedbackIndexContent content, string? version, CancellationToken cancellationToken = default) =>
+            throw new Azure.RequestFailedException(503, "The server is busy.");
+    }
+
+    [Fact]
     public async Task A_report_from_a_seat_is_kept_with_where_the_seat_stands_and_what_the_host_adds()
     {
         var table = await BegunAsync();

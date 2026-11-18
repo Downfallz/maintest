@@ -381,9 +381,10 @@ export function issuePath(repository, number) {
 /**
  * The filed reports' issues GitHub says are closed as done, and whether every one was asked. The closed issues filed
  * from reports are read first, ISSUE_PAGES pages at most; past that window, each filed issue it did not hold is asked by
- * its number, once, until GitHub refuses (#751); one GitHub no longer has is passed over. A refusal while reading the window throws: nothing is known then.
+ * its number, once, until GitHub refuses (#751), starting after `after`, the last one a check cut short asked; one
+ * GitHub no longer has is passed over. A refusal while reading the window throws: nothing is known then.
  */
-export async function closedFiled(github, repository, rows) {
+export async function closedFiled(github, repository, rows, after = null) {
   const since = rows.map(row => row.at).filter(Boolean).sort((one, other) => Date.parse(one) - Date.parse(other))[0] ?? null;
   const closed = new Set();
   let readAll = false;
@@ -398,16 +399,23 @@ export async function closedFiled(github, repository, rows) {
       break;
     }
   }
-  if (readAll) return { closed, complete: true };
+  if (readAll) return { closed, complete: true, last: null };
   const left = [...new Set(rows.map(row => row.issue).filter(issue => Number.isInteger(issue) && !closed.has(issue)))];
-  for (const number of left) {
+  // Asked from the one after the last asked before, so a check GitHub cuts short leaves no issue waiting for good.
+  const start = Math.max(0, left.indexOf(after) + 1);
+  let last = after;
+  for (const number of [...left.slice(start), ...left.slice(0, start)]) {
     const answer = await github(issuePath(repository, number));
     // An issue deleted or moved since (404, 410) is not closed as done: the next is asked all the same.
-    if (answer.status === 404 || answer.status === 410) continue;
-    if (!answer.ok) return { closed, complete: false };
+    if (answer.status === 404 || answer.status === 410) {
+      last = number;
+      continue;
+    }
+    if (!answer.ok) return { closed, complete: false, last };
+    last = number;
     for (const issue of closedIssues([await answer.json()])) closed.add(issue);
   }
-  return { closed, complete: true };
+  return { closed, complete: true, last: null };
 }
 
 /** The issues GitHub's answer says were closed as done: not a pull request, not closed as not planned or as a duplicate. */
@@ -476,6 +484,8 @@ export function mountFeedbackTab({ send, download, github = globalThis.fetch?.bi
   let open = null;
   let checking = false;
   let checked = -Infinity;
+  // The last filed issue a check GitHub cut short asked by its number: the next starts after it.
+  let askedLast = null;
   // Each listing and each sheet read is numbered, so an answer that comes back after a later one is dropped.
   let listed = 0;
   let read = 0;
@@ -820,8 +830,9 @@ export function mountFeedbackTab({ send, download, github = globalThis.fetch?.bi
       if (rows.length === 0 || !issuesPath(repository)) return;
       let closed;
       try {
-        const read = await closedFiled(github, repository, rows);
+        const read = await closedFiled(github, repository, rows, askedLast);
         closed = read.closed;
+        askedLast = read.last;
         // Counted from GitHub's answer, a look cut short included: GitHub answers sixty requests an hour, so the rest
         // are asked ten minutes later at the soonest.
         checked = Date.now();

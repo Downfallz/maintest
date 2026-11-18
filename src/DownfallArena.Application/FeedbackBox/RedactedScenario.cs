@@ -126,11 +126,11 @@ public static class RedactedScenario
     private static readonly HashSet<string> JournalWords = new(["kind", "slot", "speed", "to", "late"], StringComparer.Ordinal);
 
     /// <summary>
-    /// Whether who took a seat is named by a word of the host's (<c>person</c>, an agent such as <c>greedy</c>), not by a
-    /// path to a weights file the pilot typed, which is looked through as any other text.
+    /// Whether who took a seat is named by a bare word of the host's (<c>person</c>, an agent such as <c>greedy</c>), not
+    /// by an agent with a weights file the pilot typed (<c>heuristic:mark.json</c>), which is looked through as any text.
     /// </summary>
     private static bool AgentWord(JsonElement value) =>
-        value.ValueKind == JsonValueKind.String && value.GetString() is { } named && !named.Contains('/', StringComparison.Ordinal) && !named.Contains('\\', StringComparison.Ordinal);
+        value.ValueKind == JsonValueKind.String && value.GetString() is { Length: > 0 } named && named.All(one => char.IsAsciiLetterOrDigit(one) || one == '-');
 
     /// <summary>A top-level field as the refusal names it, so the operator sees where the name was found.</summary>
     private static string WhereOf(string field) => field switch
