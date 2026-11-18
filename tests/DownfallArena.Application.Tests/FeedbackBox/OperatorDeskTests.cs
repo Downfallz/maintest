@@ -8,7 +8,7 @@ using Microsoft.Extensions.Time.Testing;
 namespace DownfallArena.Application.Tests.FeedbackBox;
 
 /// <summary>The operator's side of feedback (docs/tabletop/feedback-plan.md, R3): the status by hand, a kind moved, a sender muted.</summary>
-public sealed class OperatorFeedbackTests : IDisposable
+public sealed class OperatorDeskTests : IDisposable
 {
     private static readonly AccountId Mark = AccountId.New();
 
@@ -18,7 +18,7 @@ public sealed class OperatorFeedbackTests : IDisposable
     private readonly FeedbackWrites _writes = new();
     private readonly FeedbackMutes _mutes;
 
-    public OperatorFeedbackTests()
+    public OperatorDeskTests()
     {
         _mutes = new FeedbackMutes(new AccountActivityLog(_activity, _clock));
         _activity.Kept[Mark] = new AccountActivity(Mark, null, _clock.GetUtcNow());

@@ -336,9 +336,8 @@ and they are the first thing every player can use.
    days muting, a mute ending after 30 days (`FeedbackAdminApiTests`), `admin-feedback.test.js`,
    `admin.ux.spec.js`.
 
-   *Built (2026-11-16)*: the operator's use cases (Application; one class each since #723: `ListFeedback`,
-   `MarkFeedback`, `MergeIdea`, `MoveFeedbackKind`, `MuteFeedbackSender` and their siblings) and `FeedbackAdminApi`
-   behind the panel's gate:
+   *Built (2026-11-16)*: the operator's use cases (Application, one class per action since #723, such as
+   `ListFeedback`, `MarkFeedback` and `MergeIdea`) and `FeedbackAdminApi` behind the panel's gate:
    `GET /api/admin/feedback` filtered by kind, status (`open`, the tab's default, for what is not closed) and
    category, twenty a page; a sheet with the words, what the page and the host added, the position drawn read-only
    as each side's creatures, the session's link, **Diagnose…** while its table is under way, and the `actions` that

@@ -9,7 +9,7 @@ public sealed class UnmuteFeedbackSender(IFeedbackStore store, FeedbackMutes mut
     /// <summary>Lets the feedback's sender send again; nothing changes for one no mute holds on.</summary>
     public async Task<Result<FeedbackMuteChange>> HandleAsync(string id, CancellationToken cancellationToken = default)
     {
-        var sender = await mutes.MuteableAsync(store, id, cancellationToken);
+        var sender = await FeedbackRecords.MuteableAsync(store, mutes, id, cancellationToken);
         if (sender.IsFailure)
         {
             return Result.Failure<FeedbackMuteChange>(sender.Error);

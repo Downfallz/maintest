@@ -28,6 +28,12 @@ public sealed class SendFeedback(IFeedbackStore store, GuestAddresses addresses,
 
     public static readonly TimeSpan Day = TimeSpan.FromDays(1);
 
+    /// <summary>
+    /// How far ahead of the clock an id may be stamped and still be read: a clock stepped back, or two revisions of the
+    /// host overlapping while one replaces the other, would otherwise hide what was just sent from the guards (#693).
+    /// </summary>
+    public static readonly TimeSpan Ahead = TimeSpan.FromMinutes(5);
+
     /// <summary>How long a second idea from the same sender is merged into the first.</summary>
     public static readonly TimeSpan IdeaMerged = TimeSpan.FromHours(1);
 
@@ -147,7 +153,7 @@ public sealed class SendFeedback(IFeedbackStore store, GuestAddresses addresses,
     private async Task<List<Feedback>> RecentAsync(DateTimeOffset now, CancellationToken cancellationToken)
     {
         var recent = new List<Feedback>();
-        foreach (var id in await store.IdsSentAsync(now - Day - Day, now, cancellationToken))
+        foreach (var id in await store.IdsSentAsync(now - Day - Day, now + Ahead, cancellationToken))
         {
             if (await store.FindAsync(id, cancellationToken) is { } found)
             {

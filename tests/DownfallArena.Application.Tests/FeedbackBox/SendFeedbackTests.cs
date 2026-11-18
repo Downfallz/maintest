@@ -280,7 +280,28 @@ public sealed class SendFeedbackTests : IDisposable
         var again = await new SendFeedback(listing, _addresses, _writes, _clock).HandleAsync(Report() with { Text = "Still happens on this round." }, Cancel);
 
         (again.Merged, again.Id).ShouldBe((true, first.Id));
-        listing.Spans.ShouldBe([(_clock.GetUtcNow() - SendFeedback.Day - SendFeedback.Day, _clock.GetUtcNow())]);
+        listing.Spans.ShouldBe([(_clock.GetUtcNow() - SendFeedback.Day - SendFeedback.Day, _clock.GetUtcNow() + SendFeedback.Ahead)]);
+    }
+
+    [Fact]
+    public async Task Feedback_stamped_a_moment_ahead_of_the_clock_still_counts_against_its_sender()
+    {
+        // A clock stepped back, or a second revision while one replaces the other, leaves an id a little ahead of now.
+        var ahead = _clock.GetUtcNow().AddMinutes(1);
+        await _store.SaveAsync(new Feedback
+        {
+            Id = Feedback.NewId(ahead),
+            Kind = FeedbackKind.Bug,
+            At = ahead,
+            Sender = "acct_1",
+            Account = "acct_1",
+            Category = "rules",
+            Text = "The bleed did not tick after the stun.",
+        }, Cancel);
+
+        var again = await Desk().HandleAsync(Report(), Cancel);
+
+        again.Id.ShouldBe(_store.All.Single().Id, "the same words sent again are the same feedback, however its id was stamped");
     }
 
     /// <summary>A store that refuses to list every record, and notes each span it lists by date.</summary>

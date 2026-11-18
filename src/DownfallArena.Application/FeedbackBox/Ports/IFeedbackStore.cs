@@ -15,7 +15,8 @@ public interface IFeedbackStore
     /// <summary>
     /// The ids of feedback sent after <paramref name="after" /> and no later than <paramref name="until" />, the newest
     /// first. Ids start with the day they were sent, so a store lists those days alone and never every record kept:
-    /// what a player's sending reads on every request, refused ones included (#693).
+    /// what a player's sending reads on every request, refused ones included (#693). A caller that reads up to now
+    /// passes a little after it (<see cref="SendFeedback.Ahead" />), so an id stamped by a clock a moment ahead is read.
     /// </summary>
     Task<IReadOnlyList<string>> IdsSentAsync(DateTimeOffset after, DateTimeOffset until, CancellationToken cancellationToken = default);
 

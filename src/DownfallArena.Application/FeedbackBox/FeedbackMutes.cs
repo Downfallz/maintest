@@ -1,8 +1,6 @@
 using System.Collections.Concurrent;
 using DownfallArena.Application.Accounts;
-using DownfallArena.Application.FeedbackBox.Ports;
 using DownfallArena.SharedKernel.Identifiers;
-using DownfallArena.SharedKernel.Primitives;
 
 namespace DownfallArena.Application.FeedbackBox;
 
@@ -34,15 +32,6 @@ public sealed class FeedbackMutes(AccountActivityLog? activity)
             ? Task.FromResult<FeedbackMute?>(null)
             : FindAsync(feedback.Sender, feedback.Account, now, cancellationToken);
     }
-
-    /// <summary>The feedback, read once, when its sender can be muted; or why not.</summary>
-    internal async Task<Result<Feedback>> MuteableAsync(IFeedbackStore store, string id, CancellationToken cancellationToken) =>
-        await FeedbackRecords.FindAsync(store, id, cancellationToken) switch
-        {
-            null => Result.Failure<Feedback>(FeedbackErrors.NotFound(id)),
-            { } found when !CanMute(found) => Result.Failure<Feedback>(FeedbackErrors.NoSender),
-            { } found => Result.Success(found),
-        };
 
     /// <summary>The mute that holds on the sender at that time, or none.</summary>
     public async Task<FeedbackMute?> FindAsync(string sender, string? account, DateTimeOffset now, CancellationToken cancellationToken = default)

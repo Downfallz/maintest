@@ -223,8 +223,9 @@ test('an answer to an earlier question, about a seat no longer on screen, is not
   await expect.poll(() => state.answered).toEqual(['first']);
   await settled(page);
 
+  expect(state.asked).toContain(null);
   releases.none();
-  // Every question asked without a seat answers muted, and after the seat's own.
+  // Each question asked without a seat is answered muted, and only after the seat's own question.
   await expect.poll(() => state.answered.length).toBe(state.asked.length);
   expect(state.answered[0]).toBe('first');
   await settled(page);

@@ -11,7 +11,7 @@ public sealed class MuteFeedbackSender(IFeedbackStore store, FeedbackMutes mutes
     public async Task<Result<FeedbackMuteChange>> HandleAsync(string id, string by, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(by);
-        var sender = await mutes.MuteableAsync(store, id, cancellationToken);
+        var sender = await FeedbackRecords.MuteableAsync(store, mutes, id, cancellationToken);
         if (sender.IsFailure)
         {
             return Result.Failure<FeedbackMuteChange>(sender.Error);

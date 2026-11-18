@@ -12,7 +12,7 @@ public sealed class CountWaitingFeedback(IFeedbackStore store, TimeProvider cloc
     public async Task<FeedbackWaiting> HandleAsync(CancellationToken cancellationToken = default)
     {
         var now = clock.GetUtcNow();
-        var lastDay = (await store.IdsSentAsync(now - SendFeedback.Day, now, cancellationToken)).Count;
+        var lastDay = (await store.IdsSentAsync(now - SendFeedback.Day, now + SendFeedback.Ahead, cancellationToken)).Count;
         var waiting = (await FeedbackRecords.AllAsync(store, cancellationToken)).Where(one => one.Status == FeedbackStatus.New).ToList();
         return new FeedbackWaiting(waiting.Count, waiting.Count(one => one.Kind == FeedbackKind.Bug), lastDay, lastDay >= SendFeedback.PerHost);
     }
