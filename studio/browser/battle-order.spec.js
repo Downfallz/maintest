@@ -96,7 +96,7 @@ test('a tie draft keeps its interleaved places through an order reference, and r
   await expect(page.locator('#history-list')).toContainText('d20 11 → 18');
   await page.keyboard.press('Escape');
   // Read by hand, the order lets the seen mark pass it: coming back does not reveal it again.
-  await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true'); await expect(page.locator('#loading')).toBeHidden();
+  await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true'); await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live');
   await page.clock.runFor(500); await expect(page.locator('#order-continue')).toBeHidden();
   expect(h.state.shown).toEqual([20]); expect(h.state.errors).toEqual([]);
 });
@@ -137,7 +137,8 @@ test('an opponent\'s action arriving while the order is read waits for Continue,
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', ''); await expect(page.locator('#order-continue')).toBeVisible();
   await page.locator('#order-continue').click();
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '12');
-  await page.clock.runFor(WINDUP_MS + IMPACT_MS); await expect(page.locator('#playback-next')).toBeVisible(); await expect(page.locator('#reading-kind')).toContainText("Opponent's action");
+  // From the windup's timer to the impact's, rather than every software frame between them (#784).
+  await page.clock.fastForward(WINDUP_MS); await page.clock.fastForward(IMPACT_MS); await expect(page.locator('#playback-next')).toBeVisible(); await expect(page.locator('#reading-kind')).toContainText("Opponent's action");
   expect(h.state.errors).toEqual([]);
 });
 test('polls preserve focus and scrolling while progress marks completed, current, stunned and defeated slots', async ({ page }) => {
@@ -181,7 +182,8 @@ test('the creature acting first waits for its turn order to be read before its s
   await h.publish({ board: { ...board, activationCursor: 0 }, feed: [reveal(10)], feedNext: 11, waitingFor: 'Action', waitingCreature: 1, waitingAsked: 12,
     options: { action: { creature: 1, spells: [{ spell: 'strike', legalTargets: { candidates: [4, 5, 6], minTargets: 1, maxTargets: 1 } }] } } });
   await expect(page.locator('#order-continue')).toBeVisible(); await expect(page.locator('#combat-dialog')).toBeHidden();
-  await page.clock.runFor(2000);
+  // One jump past every timer that was pending: none may open the spell choice before the order is read (#784).
+  await page.clock.fastForward(2000);
   await expect(page.locator('#order-continue')).toBeVisible(); await expect(page.locator('#combat-dialog')).toBeHidden();
   await page.locator('#order-continue').click();
   await expect(page.locator('#combat-dialog')).toBeVisible(); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
@@ -261,6 +263,8 @@ test('the why card opens the creature\'s sheet, and Escape or its close puts the
 });
 
 test('ordering ties lights the tied creatures on the field with their places, and a tap on the field places one', async ({ page }, info) => {
+  // The field lays its rows out over drawn frames, so the clock runs frame by frame: past 30 s on a loaded runner (#784).
+  test.setTimeout(60000);
   const h = await mount(page, { board: { ...board, subPhase: 'Speed', timeline: [] }, feed: [] });
   await h.publish({ board: { ...board, subPhase: 'TieOrder' }, waitingFor: 'TieOrder', waitingAsked: 20,
     options: { tieOrder: { ties: [[1, 2]] } }, feed: [reveal(11)] });

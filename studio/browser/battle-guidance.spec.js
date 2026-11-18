@@ -92,7 +92,7 @@ test('dismissal survives polls, next creature and reload; a new subject gets its
   const h = await mount(page); await close(page);
   await h.publish([], { waitingAsked: 12, waitingCreature: 2 }); await expect(page.locator('#help-dialog')).toBeHidden();
   await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
-  await expect(page.locator('#loading')).toBeHidden();
+  await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live');
   await expect(page.locator('#help-dialog')).toBeHidden();
   await h.publish([], { waitingFor: 'Speed', waitingAsked: 13, options: { speed: { missing: [1, 2, 3] } } });
   await expect(page.locator('#help-dialog')).toBeVisible(); await expect(page.locator('#help-explanation')).toContainText('only Precision can crit');
@@ -107,7 +107,9 @@ test('mute prevents future tips, keeps History, and Help reopens the current sub
   const h = await mount(page); await page.locator('#help-mute').check(); await close(page); await page.locator('#planning-close').click();
   await h.publish([entry(1)], { waitingFor: 'Speed', waitingAsked: 12, options: { speed: { missing: [1, 2, 3] } } });
   // An opponent's action is read with OK, never skipped (ADR 0139).
-  await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '1'); await page.clock.runFor(WINDUP_MS + IMPACT_MS);
+  await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '1');
+  // From the windup's timer to the impact's, rather than every software frame between them (#784).
+  await page.clock.fastForward(WINDUP_MS); await page.clock.fastForward(IMPACT_MS);
   await page.locator('#playback-next').click(); await expect(page.locator('#help-dialog')).toBeHidden();
   await page.locator('#history-open').click(); await expect(page.locator('#history-list details')).toHaveCount(1); await page.locator('#history-close').click();
   await page.locator('#help-open').click(); await expect(page.locator('#help-title')).toHaveText('Choose how your team acts');
@@ -138,7 +140,9 @@ test('a next-round tip waits for the closing action and never shows its budget o
   await expect(page.locator('#playback-next')).toBeVisible(); await expect(page.locator('#playback-skip')).toBeHidden();
   await expect(page.locator('#help-dialog')).toBeHidden();
   await expect(page.locator('#instruction')).not.toContainText('team picks');
-  await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '1'); await page.clock.runFor(WINDUP_MS + IMPACT_MS);
+  await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '1');
+  // From the windup's timer to the impact's, rather than every software frame between them (#784).
+  await page.clock.fastForward(WINDUP_MS); await page.clock.fastForward(IMPACT_MS);
   await page.locator('#playback-next').click(); await expect(page.locator('#help-dialog')).toBeVisible();
   await expect(page.locator('#help-round')).toHaveText('Round 3 of 12'); expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
 });

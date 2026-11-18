@@ -37,7 +37,7 @@ async function mount(page, { available = true, recent = [], both = false, answer
     return route.fulfill({ status: 404, json: {} });
   });
   await page.goto('/table/battle.html'); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
-  if (!both) await expect(page.locator('#loading')).toBeHidden();
+  if (!both) { await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live'); }
   const publish = async recent => { state.view = { ...state.view, reactions: { ...state.view.reactions, recent } }; await page.evaluate(() => window.notifyBattle()); };
   return { state, publish };
 }
@@ -83,7 +83,7 @@ test('a reaction sent while the player was away is shown once when the game open
 
   await expect(page.locator('#reaction-theirs')).toContainText('Good luck!');
   await expect(page.locator('#reaction-theirs')).toContainText('2 h ago');
-  await page.reload(); await expect(page.locator('#loading')).toBeHidden();
+  await page.reload(); await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live');
   await expect(page.locator('#reaction-theirs')).toBeHidden();
 });
 

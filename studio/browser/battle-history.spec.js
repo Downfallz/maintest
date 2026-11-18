@@ -170,7 +170,8 @@ for (const reason of ['hidden', 'revoked']) test(`${reason} erases all journal s
   await expect(rows(page)).toHaveCount(0); await expect(page.locator('#history-dialog')).toBeHidden();
   await expect(page.locator('#history-open')).not.toHaveAttribute('title');
   await expect(page.locator('#history-open')).toBeDisabled();
-  await page.clock.runFor(3000); await expect(rows(page)).toHaveCount(0); expect(h.state.errors).toEqual([]);
+  // One jump past every timer that was pending: a callback that was not fenced would fire and fill the journal (#784).
+  await page.clock.fastForward(3000); await expect(rows(page)).toHaveCount(0); expect(h.state.errors).toEqual([]);
 });
 test('two-round retention is explicit and capped while viewport controls stay reachable', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop', 'Viewport sweep runs once.');
@@ -213,7 +214,9 @@ test('an opponent\'s actions arriving while the journal is open are written ther
 test('the action result opens the journal over itself and takes the focus back', async ({ page }) => {
   const h = await mount(page); await h.publish([entry(11)]);
   // The opponent's action is read to its end and confirmed with OK (ADR 0139).
-  await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '11'); await page.clock.runFor(WINDUP_MS + IMPACT_MS);
+  await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '11');
+  // From the windup's timer to the impact's, rather than every software frame between them (#784).
+  await page.clock.fastForward(WINDUP_MS); await page.clock.fastForward(IMPACT_MS);
   await page.locator('#playback-next').click(); await page.locator('#playback-result').click();
   await expect(page.locator('#result-dialog')).toBeVisible();
   // The last result is drawn as the journal draws a cast: whose, which spell, the crit, and the chips by target.
@@ -331,7 +334,7 @@ test('reload makes earlier rounds available through an explicit seat history rea
   const h = await mount(page); h.state.view.board.roundNumber = 6;
   const old = { ...entry(1), event: { ...entry(1).event, roundId: 1 } }, recent = { ...entry(50), event: { ...entry(50).event, roundId: 6 } };
   h.state.view.feed = [old, recent]; h.state.view.feedNext = 51;
-  await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true'); await expect(page.locator('#loading')).toBeHidden();
+  await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true'); await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live');
   await page.locator('#history-open').click(); await expect(page.locator('#history-list [data-sequence="1"]')).toHaveCount(0);
   h.state.historyFeed = [old, recent]; await page.locator('#history-earlier').click();
   // The reloaded page opened the mutation tree again (ADR 0138); the history reads acknowledged nothing.

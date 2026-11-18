@@ -50,15 +50,22 @@ async function mount(page, options = {}) {
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: options.missingCatalogue ? {} : catalogue });
     if (url.pathname === '/api/seat/player1') {
       if (url.searchParams.has('shown')) h.shown.push(url.searchParams.get('shown'));
-      return route.fulfill({ status: h.status, json: h.view });
+      // An acknowledgement reaches no board, so it never says a change arrived.
+      const view = h.view; return route.fulfill({ status: h.status, json: view }).then(() => { if (!url.searchParams.has('shown')) h.answered = view; });
     }
     if (url.pathname.endsWith('/decision')) h.writes.push(decided(route.request()));
     return route.fulfill({ status: 500 });
   });
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 10000));
   await page.goto('/table/battle.html'); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
-  await expect(page.locator('#loading')).toBeHidden();
-  h.publish = async () => { await page.evaluate(() => window.notifyBattle()); };
+  await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live');
+  h.publish = async () => {
+    h.view = { ...h.view }; const published = h.view;
+    await page.evaluate(() => window.notifyBattle());
+    // A change told while a read is in flight is owed one more read, which the page schedules at no delay: a paused
+    // clock runs it only when it is moved. Only a board read that carried the published view says it arrived (#768, #785).
+    await expect.poll(async () => { if (h.answered === published) return true; await page.clock.runFor(0); return false; }).toBe(true);
+  };
   return h;
 }
 

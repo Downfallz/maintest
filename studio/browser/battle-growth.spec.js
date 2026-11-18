@@ -3,6 +3,7 @@ import { openSpells } from './battle-spells-fixture.js';
 import { returningBattlePlayer } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
 import { decided } from './decision.js';
+import { WINDUP_MS, IMPACT_MS } from '../../table/battle-timing.js';
 test.beforeEach(returningBattlePlayer);
 const creature = (id, name) => ({ id, name, isAlive: true, health: 20, maxHealth: 20, energy: 6,
   totalDefense: 0, currentInitiative: 0, conditions: [], acquiredTiers: [], knownSpells: ['focus'] });
@@ -38,16 +39,24 @@ async function mount(page, input = initial()) {
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: catalogue });
     if (url.pathname === '/api/seat/player1') {
       if (url.searchParams.has('shown')) { h.shown.push(url.searchParams.get('shown')); if (h.ack) await h.ack; }
-      return route.fulfill({ status: h.status, json: h.view });
+      // An acknowledgement reaches no board, so it never says a change arrived.
+      const view = h.view; await route.fulfill({ status: h.status, json: view }); if (!url.searchParams.has('shown')) h.answered = view; return;
     }
     if (url.pathname.endsWith('/decision')) { h.writes.push(decided(route.request())); return route.fulfill({ status: 204 }); }
     return route.fulfill({ status: 500 });
   });
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
   await page.goto('/table/battle.html'); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
-  await expect(page.locator('#loading')).toBeHidden();
+  await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live');
   // Freeze relative to the browser clock, not the wall time spent compiling/loading the page.
-  h.publish = async () => { await page.evaluate(() => window.notifyBattle()); await page.clock.runFor(50); };
+  h.publish = async () => {
+    h.view = { ...h.view }; const published = h.view;
+    await page.evaluate(() => window.notifyBattle());
+    // A change told while a read is in flight is owed one more read, which the page schedules at no delay: a paused
+    // clock runs it only when it is moved. Only a board read that carried the published view says it arrived (#768, #785).
+    await expect.poll(async () => { if (h.answered === published) return true; await page.clock.runFor(0); return false; }).toBe(true);
+    await page.clock.runFor(50);
+  };
   h.reference = async () => { await page.locator('#help-open').click(); await page.locator('#help-dialog [data-growth-open]').click(); };
   return h;
 }
@@ -166,7 +175,7 @@ test('public unlock receipt and new spell badge appear once; reload is a silent 
   await expect(page.locator('[data-spell="devour"]')).toContainText('New · Available');
   spellChoice(h, 22); await h.publish(); await openSpells(page);
   await expect(page.locator('[data-spell="devour"]')).not.toContainText('New');
-  await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true'); await expect(page.locator('#loading')).toBeHidden();
+  await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true'); await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live');
   await expect(page.locator('#growth-receipt')).toBeHidden(); await openSpells(page);
   await expect(page.locator('[data-spell="devour"]')).not.toContainText('New'); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
@@ -211,7 +220,10 @@ test('a future unlock waits behind a held closing cast and keeps its badge for t
     frame: { before, after: before, timeline: [], rollOffs: [] } } });
   spellChoice(h, 22); await h.publish();
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '20');
-  await page.clock.runFor(3400); await expect(page.locator('#growth-receipt')).toBeHidden();
+  // From the windup's timer to the impact's, then one jump past every timer still pending: none may move the held
+  // cast on. Jumps draw one frame each, where runFor drew every software frame between them (#784).
+  await page.clock.fastForward(WINDUP_MS); await page.clock.fastForward(IMPACT_MS); await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'resolved');
+  await page.clock.fastForward(3400); await expect(page.locator('#growth-receipt')).toBeHidden();
   await expect(page.locator('#round-number')).toHaveText('02');
   await page.locator('[data-creature="1"]').click();
   await expect(page.locator('#inspect-spells')).not.toContainText('Devour');
@@ -236,6 +248,8 @@ test('opening the team tempos by hand reads the reveal: its receipt and crests l
   expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
 for (const read of ['continue', 'see']) test(`the team's tempos wait for a fresh mutation reveal to be read, here with ${read === 'see' ? 'See' : 'Continue'}`, async ({ page }) => {
+  // The reveal plays over drawn frames, and the clock runs through them: past 30 s on a loaded runner (#784).
+  test.setTimeout(60000);
   const h = await mount(page); await page.locator('#planning-close').click();
   unlock(h, { waitingFor: 'Speed', waitingAsked: 21, waitingCreature: 1, options: { speed: { missing: [1, 2] } } }); await h.publish();
   await expect(page.locator('#growth-receipt')).toBeVisible(); await page.clock.runFor(1500);

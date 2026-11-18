@@ -52,7 +52,7 @@ async function mount(page, { over = true, recording = true, outcome = { winner: 
     return route.fulfill({ status: 500 });
   });
   await page.goto('/table/battle.html'); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
-  if (!both) { await expect(page.locator('#loading')).toBeHidden(); if (over) await closeResult(page); }
+  if (!both) { await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live'); if (over) await closeResult(page); }
   return state;
 }
 // A finished match opens its result by itself once (ADR 0145); a test that wants the field closes it first.

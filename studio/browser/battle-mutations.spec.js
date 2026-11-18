@@ -45,7 +45,7 @@ async function mount(page, { content = catalogue, allies = roster, picks = [], i
     return route.fulfill({ status: 500 });
   });
   await page.goto('/table/battle.html'); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
-  await expect(page.locator('#loading')).toBeHidden();
+  await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live');
   // The mutation phase opens its tree by itself (ADR 0138); a test can still reopen it from a creature.
   await expect(page.locator('#planning-dialog')).toBeVisible();
   if (open) await page.locator(open).click();

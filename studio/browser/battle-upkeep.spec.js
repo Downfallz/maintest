@@ -165,7 +165,7 @@ test('polls, hidden-tab reconnection and reload do not repeat the same receipt',
   await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: false }); document.dispatchEvent(new Event('visibilitychange')); });
   await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#upkeep-dialog')).toBeHidden();
   h.state.view.feed = [energy(1), ongoing(1)]; await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
-  await expect(page.locator('#loading')).toBeHidden();
+  await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live');
   await expect(page.locator('#upkeep-dialog')).toBeHidden(); await page.locator('#planning-close').click();
   await h.publish([energy(2), ongoing(2)], { board: { ...h.state.view.board, roundNumber: 2 } });
   await expect(page.locator('#reading-title')).toHaveText('Upkeep'); await expect(page.locator('#round-number')).toHaveText('02');

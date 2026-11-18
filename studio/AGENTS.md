@@ -29,6 +29,9 @@ npm --prefix studio/browser ci --ignore-scripts && npm --prefix studio/browser t
 - A spec, a fixture or a job that starts to read another path says so in `browser/plan.js` and
   `browser-suite.test.js`: CI plays only what the plan names, and the nightly matrix is what finds a gap.
 - CI retries a journey once and `browser/flakes.js` names what passed only then; locally nothing retries.
+- `battle-journeys.test.js` holds the battle specs to what a loaded runner needs (#784, #785): jump between the
+  playback's timers with `fastForward`, or give a test that runs the clock 1 s or more a minute; and wait for
+  `data-connection` live, not the hidden `#loading`, for the first board.
 - In a cloud session Chromium is preinstalled: do not run `playwright install` again, and pass `--trace off`.
 - Each checkout serves the pages on a port derived from its path (`browser/origin.js`). A running server is
   reused only when its `/__root` answer names this checkout (#711). `STUDIO_BROWSER_PORT` sets the port.
