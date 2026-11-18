@@ -36,6 +36,11 @@ npm --prefix studio/browser ci --ignore-scripts && npm --prefix studio/browser t
   loaded runner. Where a test only needs the playback's stages, jump between its timers with `fastForward`; a test
   that runs the fake clock 1 s or more frame by frame gets `test.setTimeout(60000)` (#784). To know the first board
   arrived, wait for `data-connection` to be `live`, never for the hidden `#loading` card (#785).
+- A battle spec reads its mock route's `shown` or `writes` through `expect.poll`: the acknowledgement or decision
+  reaches the route after the click, and a UI change drawn before the request leaves (a menu closed, a bubble drawn)
+  does not order it (#816, #831, #845). A plain read is fine only after a wait on what the host's answer alone
+  produces (an error text, a dialog closed after a frozen batch, a URL change, a poll on `writes.length`). A negative
+  read (`toEqual([])`, nothing was sent) stays plain.
 - In a cloud session Chromium is preinstalled: do not run `playwright install` again, and pass `--trace off`.
 - Each checkout serves the pages on a port derived from its path (`browser/origin.js`). A running server is
   reused only when its `/__root` answer names this checkout (#711). `STUDIO_BROWSER_PORT` sets the port.
