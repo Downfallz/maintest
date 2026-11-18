@@ -41,7 +41,9 @@ whether or not the player saw it; what they did not see is marked as new. It fit
 reads top to bottom:
 
 1. **Where the game is.** Against whom, the round and its step (Upkeep, Command, Combat, Aftermath), the last move
-   so many hours ago, and the time left to answer. Who leads: creatures standing and health, side by side.
+   so many hours ago, and the time left to answer. Standing and health: each side's creatures standing and
+   health, side by side, and which side has more of each. The page only counts; who wins at the round cap is
+   the host's reading (#757).
 2. **The two teams now.** Each creature with its health and energy, the ones defeated while the player was away
    marked, and the difference over the span the sheet tells (`−12 HP`).
 3. **What happened recently.** The last completed round and the round under way, and every earlier round the
@@ -125,7 +127,8 @@ under way: a player who left the page open for two days, or who simply lost the 
    seat's view and feed, the seen sequence, the time now, the catalogue and the opponent's name. It returns five
    parts, and `unseen`, the count of lines marked new, for R3's threshold and R4's count:
    - `where`: the opponent, the round and its step, how long ago the last move was, the time left, the result, each
-     side's creatures standing and health, and who leads (a count: creatures standing, then health).
+     side's creatures standing and health, and `ahead`: which side has more, and on what (creatures standing
+     first, then health). It is a count, never a lead (#757).
    - `teams`: each creature now, whether it is defeated or fell while away (to a cast, or to a bleed at an Upkeep),
      and its health change since the first recorded cast of the span the sheet tells. Frames are the only recorded
      health in a feed, so an Upkeep before that cast is not counted.
