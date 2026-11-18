@@ -1,7 +1,9 @@
 using System.Net.Sockets;
 using System.Text.Json;
+using Azure;
 using Azure.Storage;
 using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Specialized;
 using DownfallArena.Infrastructure.Learning;
 
 namespace DownfallArena.Infrastructure.Tests.Learning;
@@ -52,6 +54,40 @@ public sealed class BlobArtifactStoreTests
         late.ShouldBeNull();
         (await reader.ReadTaggedAsync("table.json", TestContext.Current.CancellationToken)).ShouldNotBeNull().Tag.ShouldBe(second);
         (await reader.ReadTaggedAsync("absent.json", TestContext.Current.CancellationToken)).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task A_document_is_deleted_on_a_condition_only_over_the_blob_its_writer_wrote()
+    {
+        var store = await Store();
+        var writer = store.Writer("run-d");
+        var tag = (await writer.WriteJsonIfAsync("reactions.json", new { Revision = 1 }, expected: null, TestContext.Current.CancellationToken)).ShouldNotBeNull();
+        var moved = (await writer.WriteJsonIfAsync("reactions.json", new { Revision = 2 }, tag, TestContext.Current.CancellationToken)).ShouldNotBeNull();
+
+        var stale = await writer.DeleteIfAsync("reactions.json", tag, TestContext.Current.CancellationToken);
+        var deleted = await writer.DeleteIfAsync("reactions.json", moved, TestContext.Current.CancellationToken);
+        var again = await writer.DeleteIfAsync("reactions.json", moved, TestContext.Current.CancellationToken);
+
+        stale.ShouldBeFalse("the blob moved since that tag");
+        deleted.ShouldBeTrue();
+        again.ShouldBeFalse("there is no blob left");
+        (await store.Reader("run-d").ReadTextAsync("reactions.json", TestContext.Current.CancellationToken)).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Deleting_a_run_deletes_its_record_before_anything_else()
+    {
+        var store = await Store();
+        var writer = store.Writer("run-o");
+        await writer.WriteJsonAsync("table.json", new { Revision = 1 }, TestContext.Current.CancellationToken);
+        await writer.WriteJsonAsync("reactions.json", new { Items = 1 }, TestContext.Current.CancellationToken);
+        var container = new BlobContainerClient(store.Uri, new StorageSharedKeyCredential(Account, Key));
+
+        // A lease on the record makes its delete fail: whatever was deleted before it shows in what is left.
+        await new BlobLeaseClient(container.GetBlobClient("run-o/table.json")).AcquireAsync(TimeSpan.FromSeconds(60), cancellationToken: TestContext.Current.CancellationToken);
+        await Should.ThrowAsync<RequestFailedException>(() => store.DeleteAsync("run-o", TestContext.Current.CancellationToken));
+
+        (await store.Reader("run-o").ReadTextAsync("reactions.json", TestContext.Current.CancellationToken)).ShouldNotBeNull();
     }
 
     [Fact]

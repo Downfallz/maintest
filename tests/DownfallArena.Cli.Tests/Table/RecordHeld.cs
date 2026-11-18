@@ -40,6 +40,9 @@ internal sealed class RecordHeld(IArtifactStore inner) : IArtifactStore
             return await inner.WriteJsonIfAsync(relativePath, value, expected, cancellationToken);
         }
 
+        public Task<bool> DeleteIfAsync(string relativePath, string expected, CancellationToken cancellationToken = default) =>
+            inner.DeleteIfAsync(relativePath, expected, cancellationToken);
+
         public Task StartJsonLinesAsync(string relativePath, CancellationToken cancellationToken = default) =>
             inner.StartJsonLinesAsync(relativePath, cancellationToken);
 

@@ -1026,11 +1026,17 @@ internal sealed class PlaytestRun : IReactionKeeper, IVisitKeeper
     public Task<string?> WriteReactionsIfAsync(IReadOnlyList<TableReaction> items, string? expected, CancellationToken cancellationToken = default) =>
         _writer.WriteJsonIfAsync(ReactionsFile, new Reactions(items), expected, cancellationToken);
 
+    public Task<bool> ForgetReactionsIfAsync(string expected, CancellationToken cancellationToken = default) =>
+        _writer.DeleteIfAsync(ReactionsFile, expected, cancellationToken);
+
     /// <summary>The reactions file: the last few reactions, oldest first.</summary>
     private sealed record Reactions(IReadOnlyList<TableReaction> Items);
 
     /// <summary>Where a seat's last visit is kept (ADR 0194), beside the session: one document a seat, so two seats never race for one tag.</summary>
     public static string SeenFile(string seat) => $"seen-{seat}.json";
+
+    public Task<bool> ForgetVisitIfAsync(string seat, string expected, CancellationToken cancellationToken = default) =>
+        _writer.DeleteIfAsync(SeenFile(seat), expected, cancellationToken);
 
     /// <summary>
     /// Whether the table's record is still there, read before a side file's first write, after this run's own write

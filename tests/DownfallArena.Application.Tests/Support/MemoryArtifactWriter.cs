@@ -34,6 +34,17 @@ internal sealed class MemoryArtifactWriter : IArtifactWriter
         return Task.FromResult<string?>(Tag(value));
     }
 
+    public Task<bool> DeleteIfAsync(string relativePath, string expected, CancellationToken cancellationToken = default)
+    {
+        if (!Documents.TryGetValue(relativePath, out var document) || Tag(document) != expected)
+        {
+            return Task.FromResult(false);
+        }
+
+        Documents.Remove(relativePath);
+        return Task.FromResult(true);
+    }
+
     private static string Tag(object document) => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(document).ToString(System.Globalization.CultureInfo.InvariantCulture);
 
     public Task StartJsonLinesAsync(string relativePath, CancellationToken cancellationToken = default)

@@ -12,6 +12,9 @@ namespace DownfallArena.Infrastructure.Learning;
 /// </summary>
 public sealed class BlobArtifactStore : IArtifactStore
 {
+    // The file a table's record is kept in (TableRecord.File, in the host): deleted before the rest of a run.
+    private const string TableRecordFile = "table.json";
+
     private readonly BlobContainerClient _container;
 
     private BlobArtifactStore(BlobContainerClient container)
@@ -61,11 +64,13 @@ public sealed class BlobArtifactStore : IArtifactStore
     public async Task<bool> DeleteAsync(string run, CancellationToken cancellationToken = default)
     {
         var prefix = BlobArtifactNames.Prefix(run);
-        var any = false;
+
+        // The table's record goes first (#818). A side file written for the first time checks that the record exists, so
+        // nothing new is written once it is gone. A file written just before is removed by the check after its write.
+        var any = (await _container.DeleteBlobIfExistsAsync(BlobArtifactNames.Resolve(prefix, TableRecordFile), cancellationToken: cancellationToken)).Value;
         await foreach (var item in _container.GetBlobsAsync(BlobTraits.None, BlobStates.None, prefix, cancellationToken))
         {
-            await _container.DeleteBlobIfExistsAsync(item.Name, cancellationToken: cancellationToken);
-            any = true;
+            any |= (await _container.DeleteBlobIfExistsAsync(item.Name, cancellationToken: cancellationToken)).Value;
         }
 
         return any;

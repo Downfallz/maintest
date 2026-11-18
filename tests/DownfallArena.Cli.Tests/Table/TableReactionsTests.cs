@@ -100,6 +100,42 @@ public sealed class TableReactionsTests
     }
 
     [Fact]
+    public async Task A_first_reaction_written_while_the_run_is_deleted_is_taken_back_with_it()
+    {
+        var keeper = new Keeper { DeletedAfterWrite = true };
+        var reactions = new TableReactions(new Clock(Start), keeper);
+
+        var sent = await reactions.SendAsync("player1", "hello", Cancel);
+
+        sent.Refusal.ShouldBe("Reaction.Gone");
+        keeper.Exists.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task A_first_reaction_another_process_wrote_over_while_the_run_is_deleted_is_taken_back_too()
+    {
+        var keeper = new Keeper { DeletedAfterWrite = true, WrittenOverAfterWrite = true };
+        var reactions = new TableReactions(new Clock(Start), keeper);
+
+        var sent = await reactions.SendAsync("player1", "hello", Cancel);
+
+        sent.Refusal.ShouldBe("Reaction.Gone");
+        keeper.Exists.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task A_first_reaction_is_kept_when_the_second_look_at_the_record_fails()
+    {
+        var keeper = new Keeper { RecordUnreadableOnceWritten = true };
+        var reactions = new TableReactions(new Clock(Start), keeper);
+
+        var sent = await reactions.SendAsync("player1", "hello", Cancel);
+
+        sent.Reaction.ShouldNotBeNull().Reaction.ShouldBe("hello");
+        keeper.Exists.ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task A_reaction_refused_for_want_of_a_record_is_sent_once_the_record_is_written()
     {
         var keeper = new Keeper { Recorded = false };
@@ -150,7 +186,28 @@ public sealed class TableReactionsTests
         /// <summary>Whether the table's record is still kept: false once the operator deleted the run.</summary>
         public bool Recorded { get; set; } = true;
 
-        public Task<bool> RecordedAsync(CancellationToken cancellationToken = default) => Task.FromResult(Recorded);
+        public Task<bool> RecordedAsync(CancellationToken cancellationToken = default) =>
+            RecordUnreadableOnceWritten && _version > 0 ? Task.FromException<bool>(new IOException("The store is out.")) : Task.FromResult(Recorded);
+
+        /// <summary>A storage failure answers the second look at the record, once the file is written.</summary>
+        public bool RecordUnreadableOnceWritten { get; init; }
+
+        /// <summary>Another process writes over the file between this one's write and its second look at the record.</summary>
+        public bool WrittenOverAfterWrite { get; init; }
+
+        /// <summary>The operator deletes the run right after the first write, as a delete in another process does.</summary>
+        public bool DeletedAfterWrite { get; init; }
+
+        public Task<bool> ForgetReactionsIfAsync(string expected, CancellationToken cancellationToken = default)
+        {
+            if (_version == 0 || _version.ToString(System.Globalization.CultureInfo.InvariantCulture) != expected)
+            {
+                return Task.FromResult(false);
+            }
+
+            Delete();
+            return Task.FromResult(true);
+        }
 
         /// <summary>The operator deletes the run: the file is gone, and a write expecting its tag is refused.</summary>
         public void Delete()
@@ -172,7 +229,18 @@ public sealed class TableReactionsTests
 
             Kept = items;
             _version++;
-            return Task.FromResult<string?>(_version.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            var tag = _version.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (DeletedAfterWrite && current is null)
+            {
+                Recorded = false;
+            }
+
+            if (WrittenOverAfterWrite && current is null)
+            {
+                _version++;
+            }
+
+            return Task.FromResult<string?>(tag);
         }
     }
 }

@@ -35,6 +35,8 @@ public sealed class FileArtifactStore : IArtifactStore
             return Task.FromResult(false);
         }
 
+        // The table's record first (#818), as the blob store does: see BlobArtifactStore.DeleteAsync.
+        File.Delete(Path.Combine(directory, "table.json"));
         Directory.Delete(directory, recursive: true);
         return Task.FromResult(true);
     }

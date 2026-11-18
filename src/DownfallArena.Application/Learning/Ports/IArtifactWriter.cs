@@ -17,6 +17,13 @@ public interface IArtifactWriter
     /// <returns>The tag of what was written, or none when the document had moved.</returns>
     Task<string?> WriteJsonIfAsync<TValue>(string relativePath, TValue value, string? expected, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Deletes a document only if it is still the content written or read under <paramref name="expected" />. Used by a
+    /// writer to undo a first write that should not have been made (#818).
+    /// </summary>
+    /// <returns>Whether the document was deleted; false when it had moved or was already gone.</returns>
+    Task<bool> DeleteIfAsync(string relativePath, string expected, CancellationToken cancellationToken = default);
+
     /// <summary>Creates the JSON lines file at that path empty, replacing any previous one.</summary>
     Task StartJsonLinesAsync(string relativePath, CancellationToken cancellationToken = default);
 

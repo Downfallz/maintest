@@ -11,4 +11,7 @@ internal interface IVisitKeeper
 
     /// <summary>Whether the table's record is still kept: not once the operator deleted its run, which a first write would bring back (#789).</summary>
     Task<bool> RecordedAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Deletes the seat's mark only if it is still the one written under <paramref name="expected" />. Undoes a first write made while the run was being deleted (#818).</summary>
+    Task<bool> ForgetVisitIfAsync(string seat, string expected, CancellationToken cancellationToken = default);
 }

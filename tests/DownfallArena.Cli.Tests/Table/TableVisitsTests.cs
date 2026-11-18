@@ -146,6 +146,30 @@ public sealed class TableVisitsTests
         keeper.Kept.ShouldNotContainKey("player1");
     }
 
+    [Fact]
+    public async Task A_first_mark_written_while_the_run_is_deleted_is_taken_back_with_it()
+    {
+        var keeper = new Keeper { DeletedAfterFirstWrite = true };
+        var visits = new TableVisits(new Clock(Start), keeper);
+
+        var kept = await visits.ShownAsync("player1", Holder, 8, Cancel);
+
+        kept.ShouldBeNull();
+        keeper.Kept.ShouldNotContainKey("player1");
+    }
+
+    [Fact]
+    public async Task A_first_mark_another_process_wrote_over_while_the_run_is_deleted_is_taken_back_too()
+    {
+        var keeper = new Keeper { DeletedAfterFirstWrite = true, WrittenOverAfterFirstWrite = true };
+        var visits = new TableVisits(new Clock(Start), keeper);
+
+        var kept = await visits.ShownAsync("player1", Holder, 8, Cancel);
+
+        kept.ShouldBeNull();
+        keeper.Kept.ShouldNotContainKey("player1");
+    }
+
     private sealed class Clock(DateTimeOffset now) : TimeProvider
     {
         public DateTimeOffset Now { get; set; } = now;
@@ -162,7 +186,25 @@ public sealed class TableVisitsTests
         public Dictionary<string, LastVisit> Kept { get; } = [];
 
         /// <summary>Whether the table's record is still kept: false once the operator deleted the run.</summary>
-        public bool Recorded { get; init; } = true;
+        public bool Recorded { get; set; } = true;
+
+        /// <summary>The operator deletes the run right after a seat's first write, as a delete in another process does.</summary>
+        public bool DeletedAfterFirstWrite { get; init; }
+
+        /// <summary>Another process writes over a seat's first mark between this one's write and its second look at the record.</summary>
+        public bool WrittenOverAfterFirstWrite { get; init; }
+
+        public Task<bool> ForgetVisitIfAsync(string seat, string expected, CancellationToken cancellationToken = default)
+        {
+            if (Tag(seat) != expected)
+            {
+                return Task.FromResult(false);
+            }
+
+            Kept.Remove(seat);
+            _versions.Remove(seat);
+            return Task.FromResult(true);
+        }
 
         public Task<bool> RecordedAsync(CancellationToken cancellationToken = default) => Task.FromResult(Recorded);
 
@@ -204,8 +246,20 @@ public sealed class TableVisitsTests
                 return Task.FromResult<string?>(null);
             }
 
+            var firstWrite = Tag(seat) is null;
             Elsewhere(seat, visit);
-            return Task.FromResult(Tag(seat));
+            var written = Tag(seat);
+            if (DeletedAfterFirstWrite && firstWrite)
+            {
+                Recorded = false;
+            }
+
+            if (WrittenOverAfterFirstWrite && firstWrite)
+            {
+                Elsewhere(seat, visit);
+            }
+
+            return Task.FromResult(written);
         }
 
         private int Version(string seat) => _versions.TryGetValue(seat, out var version) ? version : 0;
