@@ -10,14 +10,18 @@ namespace DownfallArena.Application.Matches.Ports;
 /// </summary>
 public interface IDecisionJournal
 {
-    /// <summary>The entries written so far and where the journal ends; nothing, at the start, for a run nobody wrote.</summary>
+    /// <summary>
+    /// The entries written so far and where the journal ends; nothing, at the start, for a run nobody wrote. A journal
+    /// the store does not hold reads <see cref="JournalReading.Absent" />, apart from one there with nothing in it (#874).
+    /// </summary>
     Task<JournalReading> ReadAsync(string run, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// The entries written after a position read or written earlier, and where the journal ends now: what a
     /// process holding the match as it stood there reads to catch up, rather than the whole journal (inventory
     /// question 13). No entries, at the same position, when nobody wrote since. Nothing when the journal does
-    /// not reach the position, so it is not the journal the position was taken from, and is read whole.
+    /// not reach the position, so it is not the journal the position was taken from, and is read whole. From the start
+    /// of a journal the store does not hold, no entries, <see cref="JournalReading.Absent" /> (#874).
     /// </summary>
     Task<JournalReading?> ReadAfterAsync(string run, JournalPosition after, CancellationToken cancellationToken = default);
 

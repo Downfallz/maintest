@@ -2,6 +2,7 @@ using System.Net.Sockets;
 using Azure.Storage;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Azure.Storage.Blobs.Specialized;
 using DownfallArena.Application.Matches.Journaling;
 using DownfallArena.Infrastructure.Learning;
 using DownfallArena.Infrastructure.Matches;
@@ -28,6 +29,27 @@ public sealed class BlobDecisionJournalTests
 
         reading.Entries.ShouldBeEmpty();
         reading.Position.ShouldBe(JournalPosition.Start);
+        reading.Absent.ShouldBeTrue();
+    }
+
+    /// <summary>A blob started empty, as a recorded table's is, reads as there; deleted since, as absent, whole or after where it was read (#874).</summary>
+    [Fact]
+    public async Task A_journal_started_empty_is_there_and_one_deleted_since_is_absent_from_where_it_was_read()
+    {
+        var (journal, container) = await Opened();
+        var blob = container.GetAppendBlobClient("run-1/decisions.jsonl");
+        await blob.CreateAsync(cancellationToken: TestContext.Current.CancellationToken);
+        var started = await journal.ReadAsync("run-1", TestContext.Current.CancellationToken);
+        var same = await journal.ReadAfterAsync("run-1", started.Position, TestContext.Current.CancellationToken);
+        await blob.DeleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        var after = await journal.ReadAfterAsync("run-1", started.Position, TestContext.Current.CancellationToken);
+        var whole = await journal.ReadAsync("run-1", TestContext.Current.CancellationToken);
+
+        started.Absent.ShouldBeFalse();
+        same.ShouldNotBeNull().Absent.ShouldBeFalse();
+        after.ShouldNotBeNull().Absent.ShouldBeTrue();
+        whole.Absent.ShouldBeTrue();
     }
 
     [Fact]

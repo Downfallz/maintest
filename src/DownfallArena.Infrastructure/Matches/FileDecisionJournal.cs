@@ -39,7 +39,7 @@ public sealed class FileDecisionJournal : IDecisionJournal
         {
             if (!File.Exists(path))
             {
-                return Task.FromResult(JournalReading.Empty);
+                return Task.FromResult(JournalReading.AbsentAt(JournalPosition.Start));
             }
 
             using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
@@ -57,7 +57,7 @@ public sealed class FileDecisionJournal : IDecisionJournal
         {
             if (!File.Exists(path))
             {
-                return Task.FromResult<JournalReading?>(after.Mark == 0 ? new JournalReading([], after) : null);
+                return Task.FromResult<JournalReading?>(after.Mark == 0 ? JournalReading.AbsentAt(after) : null);
             }
 
             using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);

@@ -362,6 +362,24 @@ public sealed class TableWatchTests : IDisposable
     }
 
     /// <summary>
+    /// The same for a table held at the start of its journal, a bot owing the draft and nothing journaled yet (#874):
+    /// the journal read there and empty is gone once deleted, so the bot's turn does not create it again.
+    /// </summary>
+    [Fact]
+    public async Task A_turn_taken_at_the_start_after_another_process_deleted_the_run_does_not_bring_it_back()
+    {
+        using var registry = _here.Registry();
+        var table = await RecordedAsync(registry, Randoms);
+        new FileInfo(Path.Combine(_runs, table.Id, PlaytestRun.JournalFile)).Length.ShouldBe(0);
+        (await _there.Stored!.DeleteAsync(table.Id, Cancel)).ShouldBeTrue();
+
+        await ((IAgentTurnTaker)table.Session).TakeTurnAsync(Cancel);
+
+        Directory.Exists(Path.Combine(_runs, table.Id)).ShouldBeFalse();
+        (await _here.Stored!.ListAsync(Cancel)).ShouldNotContain(session => session.Id == table.Id);
+    }
+
+    /// <summary>
     /// A table whose record this process never managed to store is not taken for deleted (#850): nothing says the
     /// operator deleted it, and letting it go would drop a live table.
     /// </summary>

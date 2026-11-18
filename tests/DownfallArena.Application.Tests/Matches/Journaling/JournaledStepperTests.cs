@@ -186,6 +186,42 @@ public sealed class JournaledStepperTests
         journal.Lines.ShouldBeEmpty();
     }
 
+    /// <summary>
+    /// The same for a recorded table whose journal this process read empty, there but with nothing in it (#874): deleted
+    /// with its run, it is gone, and the next step does not create it again at its start.
+    /// </summary>
+    [Fact]
+    public async Task A_journal_read_empty_and_then_deleted_is_gone_and_is_not_created_again()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent);
+        var journal = new JournalStore(started: true);
+        var replica = new Replica(journal);
+        (await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
+        journal.Delete();
+
+        var step = await replica.Journaled.SubmitAsync(table, MatchSeats.People, new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass), cancellationToken: TestContext.Current.CancellationToken);
+        var read = await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken);
+
+        step.Error.ShouldBe(JournalErrors.Gone);
+        read.Error.ShouldBe(JournalErrors.Gone);
+        journal.Exists.ShouldBeFalse();
+    }
+
+    /// <summary>A journal nobody created yet, as an unrecorded table's, is started at the first step as before (#874).</summary>
+    [Fact]
+    public async Task A_journal_nobody_created_is_started_at_the_first_step()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent);
+        var journal = new JournalStore();
+        var replica = new Replica(journal);
+        (await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
+
+        var step = await replica.Journaled.SubmitAsync(table, MatchSeats.People, new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass), cancellationToken: TestContext.Current.CancellationToken);
+
+        step.IsSuccess.ShouldBeTrue();
+        journal.Exists.ShouldBeTrue();
+    }
+
     /// <summary>The same, when the journal is deleted between a step's read and its write (#856).</summary>
     [Fact]
     public async Task A_journal_deleted_as_a_step_is_written_is_gone_at_the_next_read_and_nothing_is_written_into_it()

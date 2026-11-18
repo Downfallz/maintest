@@ -288,8 +288,41 @@ public sealed class LobbyAccountsTests : IDisposable
         said.Where(line => line.Contains("last move", StringComparison.Ordinal)).ShouldHaveSingleItem().ShouldStartWith("  2 cards were listed without their time to answer");
     }
 
+    /// <summary>The same for the page of games in progress, which describes every card it lists (#875).</summary>
+    [Fact]
+    public async Task The_games_in_progress_whose_journal_is_out_are_said_in_one_line_for_the_page()
+    {
+        var said = new System.Collections.Concurrent.ConcurrentQueue<string>();
+        var (lobby, journal, mark) = await TimedGameOnYourTurnAsync(games: 2, said: said.Enqueue);
+        journal.LastWrittenFails = true;
+
+        var answer = await lobby.HandleAsync("GET", "/api/lobby/page/all/1", "", player: mark);
+
+        answer.Status.ShouldBe(200);
+        Read(answer).GetProperty("items").GetArrayLength().ShouldBe(2);
+        said.Where(line => line.Contains("last move", StringComparison.Ordinal)).ShouldHaveSingleItem().ShouldStartWith("  2 cards were listed without their time to answer");
+    }
+
+    /// <summary>The same for the seats a browser saved, resumed together (#875).</summary>
+    [Fact]
+    public async Task Your_saved_seats_whose_journal_is_out_are_said_in_one_line_for_the_resume_list()
+    {
+        var said = new System.Collections.Concurrent.ConcurrentQueue<string>();
+        var tables = new List<PlayedTable>();
+        var (lobby, journal, mark) = await TimedGameOnYourTurnAsync(games: 2, said: said.Enqueue, tables: tables);
+        journal.LastWrittenFails = true;
+        var saved = JsonSerializer.Serialize(new { tokens = tables.Select(table => table.Seats[0].Token) });
+
+        var answer = await lobby.HandleAsync("POST", "/api/lobby/resume", saved, player: mark);
+
+        answer.Status.ShouldBe(200);
+        Read(answer).GetProperty("tables").GetArrayLength().ShouldBe(2);
+        said.Where(line => line.Contains("last move", StringComparison.Ordinal)).ShouldHaveSingleItem().ShouldStartWith("  2 cards were listed without their time to answer");
+    }
+
     /// <summary>Games between two players, timed as every such game is, begun and waiting for Mark, over a journal that counts.</summary>
-    private async Task<(LobbyApi Lobby, CountedJournal Journal, SignedIn Mark)> TimedGameOnYourTurnAsync(int games = 1, Action<string>? said = null)
+    /// <param name="tables">Given the tables as they are opened, for a test that needs their seats.</param>
+    private async Task<(LobbyApi Lobby, CountedJournal Journal, SignedIn Mark)> TimedGameOnYourTurnAsync(int games = 1, Action<string>? said = null, List<PlayedTable>? tables = null)
     {
         CountedJournal? journal = null;
         var hosted = new HostedTables(directory => new FileArtifactStore(directory), journal: inner => journal = new CountedJournal(inner), said: said);
@@ -309,6 +342,7 @@ public sealed class LobbyAccountsTests : IDisposable
             table.Seats[1].Person!.Arrive();
             table.Session.Begin();
             await WaitingAsync(table.Seats[0]);
+            tables?.Add(table);
         }
 
         return (lobby, journal!, mark);

@@ -38,7 +38,7 @@ public sealed class BlobDecisionJournal : IDecisionJournal
         }
         catch (RequestFailedException failure) when (failure.Status == 404)
         {
-            return JournalReading.Empty;
+            return JournalReading.AbsentAt(JournalPosition.Start);
         }
     }
 
@@ -55,7 +55,7 @@ public sealed class BlobDecisionJournal : IDecisionJournal
         }
         catch (RequestFailedException failure) when (failure.Status == 404)
         {
-            return after.Mark == 0 ? new JournalReading([], after) : null;
+            return after.Mark == 0 ? JournalReading.AbsentAt(after) : null;
         }
         catch (RequestFailedException failure) when (failure.Status == 416)
         {

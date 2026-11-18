@@ -13,22 +13,27 @@ namespace DownfallArena.Application.Tests.Support;
 internal sealed class JournalStore
 {
     private readonly List<IJournalEntry> _lines = [];
+    private bool _exists;
 
-    public JournalStore()
+    /// <param name="started">Whether the journal is there, empty, before anything is written: a recorded table's (#874).</param>
+    public JournalStore(bool started = false)
     {
+        _exists = started;
         Journal = Substitute.For<IDecisionJournal>();
         Journal.ReadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(async _ =>
             {
                 await ReadingAsync();
-                return new JournalReading([.. _lines], End);
+                return _exists ? new JournalReading([.. _lines], End) : JournalReading.AbsentAt(JournalPosition.Start);
             });
         Journal.ReadAfterAsync(Arg.Any<string>(), Arg.Any<JournalPosition>(), Arg.Any<CancellationToken>())
             .Returns(async call =>
             {
                 await ReadingAsync();
                 var after = call.Arg<JournalPosition>();
-                return after.Mark > _lines.Count ? null : new JournalReading([.. _lines.Skip((int)after.Mark)], End);
+                return after.Mark > _lines.Count ? null
+                    : !_exists ? JournalReading.AbsentAt(after)
+                    : new JournalReading([.. _lines.Skip((int)after.Mark)], End);
             });
         Journal.AppendAsync(Arg.Any<string>(), Arg.Any<JournalPosition>(), Arg.Any<IReadOnlyList<IJournalEntry>>(), Arg.Any<CancellationToken>())
             .Returns(call =>
@@ -40,7 +45,9 @@ internal sealed class JournalStore
                     return (JournalPosition?)null;
                 }
 
-                _lines.AddRange(call.Arg<IReadOnlyList<IJournalEntry>>());
+                var entries = call.Arg<IReadOnlyList<IJournalEntry>>();
+                _lines.AddRange(entries);
+                _exists |= entries.Count > 0;
                 return End;
             });
         Journal.EndAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(_ => (long)_lines.Count);
@@ -60,13 +67,24 @@ internal sealed class JournalStore
     public Action? BeforeAppend { get; set; }
 
     /// <summary>The journal deleted with its run by another process (#856): nothing left of it.</summary>
-    public void Delete() => _lines.Clear();
+    public void Delete()
+    {
+        _lines.Clear();
+        _exists = false;
+    }
+
+    /// <summary>Whether the journal is there, empty or not: an append of entries at its start creates it, as the stores do.</summary>
+    public bool Exists => _exists;
 
     /// <summary>A line written by somebody else.</summary>
-    public void WriteElsewhere(SeatDecision line) => _lines.Add(new DecisionEntry(line));
+    public void WriteElsewhere(SeatDecision line) => WriteElsewhere(new DecisionEntry(line));
 
     /// <summary>A line of any kind written by somebody else.</summary>
-    public void WriteElsewhere(IJournalEntry line) => _lines.Add(line);
+    public void WriteElsewhere(IJournalEntry line)
+    {
+        _lines.Add(line);
+        _exists = true;
+    }
 
     private async Task ReadingAsync()
     {

@@ -53,6 +53,44 @@ public sealed class DecisionJournalTests : IDisposable
 
         reading.Entries.ShouldBeEmpty();
         reading.Position.ShouldBe(JournalPosition.Start);
+        reading.Absent.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// A journal started empty, as a recorded table's is, reads as there and empty, apart from one nobody created (#874):
+    /// what tells a holder that the run it read was deleted since.
+    /// </summary>
+    [Fact]
+    public async Task A_journal_started_empty_is_there_and_one_deleted_since_is_absent_from_where_it_was_read()
+    {
+        var journal = Journal("file");
+        Directory.CreateDirectory(Path.Combine(_root, "run-1"));
+        await File.WriteAllBytesAsync(Path.Combine(_root, "run-1", "decisions.jsonl"), [], TestContext.Current.CancellationToken);
+        var started = await journal.ReadAsync("run-1", TestContext.Current.CancellationToken);
+        Directory.Delete(Path.Combine(_root, "run-1"), recursive: true);
+
+        var after = await journal.ReadAfterAsync("run-1", started.Position, TestContext.Current.CancellationToken);
+        var whole = await journal.ReadAsync("run-1", TestContext.Current.CancellationToken);
+
+        started.Absent.ShouldBeFalse();
+        started.Entries.ShouldBeEmpty();
+        after.ShouldNotBeNull().Absent.ShouldBeTrue();
+        whole.Absent.ShouldBeTrue();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("file")]
+    public async Task A_journal_written_to_is_there_whether_read_whole_or_after_a_position(string kept)
+    {
+        var journal = Journal(kept);
+        await journal.AppendAsync("run-1", JournalPosition.Start, [EveryKind[0]], TestContext.Current.CancellationToken);
+
+        var whole = await journal.ReadAsync("run-1", TestContext.Current.CancellationToken);
+        var after = await journal.ReadAfterAsync("run-1", JournalPosition.Start, TestContext.Current.CancellationToken);
+
+        whole.Absent.ShouldBeFalse();
+        after.ShouldNotBeNull().Absent.ShouldBeFalse();
     }
 
     [Theory]
