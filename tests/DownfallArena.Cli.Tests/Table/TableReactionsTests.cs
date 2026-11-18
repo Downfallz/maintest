@@ -100,6 +100,20 @@ public sealed class TableReactionsTests
     }
 
     [Fact]
+    public async Task A_reaction_refused_for_want_of_a_record_is_sent_once_the_record_is_written()
+    {
+        var keeper = new Keeper { Recorded = false };
+        var reactions = new TableReactions(new Clock(Start), keeper);
+        await reactions.SendAsync("player1", "hello", Cancel);
+        keeper.Recorded = true;
+
+        var sent = await reactions.SendAsync("player1", "hello", Cancel);
+
+        sent.Reaction.ShouldNotBeNull().Reaction.ShouldBe("hello");
+        keeper.Exists.ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task A_kept_reaction_the_set_no_longer_offers_is_not_served()
     {
         var keeper = new Keeper();

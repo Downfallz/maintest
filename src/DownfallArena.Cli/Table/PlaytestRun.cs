@@ -1033,11 +1033,22 @@ internal sealed class PlaytestRun : IReactionKeeper, IVisitKeeper
     public static string SeenFile(string seat) => $"seen-{seat}.json";
 
     /// <summary>
-    /// Whether the table's record is still there, read before a side file's first write: a table is recorded before
-    /// it is served, so none means the operator deleted the run, and the write would bring a file of it back (#789).
+    /// Whether the table's record is still there, read before a side file's first write, after this run's own write
+    /// of the record still on its way: none means the operator deleted the run, and the write would bring a file of
+    /// it back (#789). One read of the small record, paid only while the side file has never been written.
     /// </summary>
-    public async Task<bool> RecordedAsync(CancellationToken cancellationToken = default) =>
-        await _reader.ReadTextAsync(TableRecord.File, cancellationToken) is not null;
+    public async Task<bool> RecordedAsync(CancellationToken cancellationToken = default)
+    {
+        Task pending;
+        lock (_recordGate)
+        {
+            pending = _recordWritten;
+        }
+
+        // A write that failed was told to whoever asked for it; here only its end matters.
+        await Task.WhenAny(pending);
+        return await _reader.ReadTextAsync(TableRecord.File, cancellationToken) is not null;
+    }
 
     public async Task<(LastVisit? Visit, string? Tag)> VisitAsync(string seat, CancellationToken cancellationToken = default)
     {

@@ -31,7 +31,8 @@ paths:
   on every account change, as the inbox fetches it again each time (#724).
 - When a conditional write is refused because the file moved, read it again. If a file read before is gone, the
   operator deleted the run: give up, as a write would bring the file back (`TableVisits`, `TableReactions`, #739).
-  A file never written yet is written only while the table's record is there (`RecordedAsync`, #789).
+  A file not yet written is written only while the table's record exists (`RecordedAsync`, #789); a delete running
+  in another process at that moment can still leave one behind (#818).
 - Build one `OperatorActions` per host, in `TableHost.OpenNotesAsync`, and hand it to every admin API. Its ids keep
   the operator log in order only within one instance (#748).
 - A route that answers a file, or whose path ends in an extension, sends `Cache-Control: no-store, private`
