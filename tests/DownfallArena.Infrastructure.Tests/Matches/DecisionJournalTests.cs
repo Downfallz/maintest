@@ -129,6 +129,27 @@ public sealed class DecisionJournalTests : IDisposable
         (await journal.ReadAsync("run-1", TestContext.Current.CancellationToken)).Entries.ShouldBe([EveryKind[0]]);
     }
 
+    /// <summary>
+    /// A writer that names a place past the start of a journal nobody holds was writing a run since deleted: it is
+    /// refused and brings nothing of the run back (#856).
+    /// </summary>
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("file")]
+    public async Task An_append_past_the_start_of_a_journal_nobody_holds_is_refused_and_brings_nothing_back(string kept)
+    {
+        var journal = Journal(kept);
+        var elsewhere = (await Journal(kept).AppendAsync("run-2", JournalPosition.Start, [EveryKind[0]], TestContext.Current.CancellationToken)).ShouldNotBeNull();
+
+        var late = await journal.AppendAsync("run-1", elsewhere, [EveryKind[1]], TestContext.Current.CancellationToken);
+        var nothing = await journal.AppendAsync("run-1", elsewhere, [], TestContext.Current.CancellationToken);
+
+        late.ShouldBeNull();
+        nothing.ShouldBeNull();
+        (await journal.EndAsync("run-1", TestContext.Current.CancellationToken)).ShouldBe(0);
+        Directory.Exists(Path.Combine(_root, "run-1")).ShouldBeFalse();
+    }
+
     [Theory]
     [InlineData("memory")]
     [InlineData("file")]

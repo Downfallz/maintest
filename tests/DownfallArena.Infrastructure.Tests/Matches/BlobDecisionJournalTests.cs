@@ -1,6 +1,7 @@
 using System.Net.Sockets;
 using Azure.Storage;
 using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 using DownfallArena.Application.Matches.Journaling;
 using DownfallArena.Infrastructure.Learning;
 using DownfallArena.Infrastructure.Matches;
@@ -108,6 +109,29 @@ public sealed class BlobDecisionJournalTests
         stale.ShouldBeNull();
     }
 
+    /// <summary>A writer past the start of a blob nobody holds was writing a run since deleted: refused, and no empty blob is left (#856).</summary>
+    [Fact]
+    public async Task An_append_past_the_start_of_a_journal_nobody_holds_is_refused_and_brings_nothing_back()
+    {
+        var (journal, container) = await Opened();
+        var elsewhere = (await journal.AppendAsync("run-2", JournalPosition.Start, [DecisionJournalTests.EveryKind[0]], TestContext.Current.CancellationToken)).ShouldNotBeNull();
+
+        var late = await journal.AppendAsync("run-1", elsewhere, [DecisionJournalTests.EveryKind[1]], TestContext.Current.CancellationToken);
+        var nothing = await journal.AppendAsync("run-1", elsewhere, [], TestContext.Current.CancellationToken);
+        var none = await journal.AppendAsync("run-3", JournalPosition.Start, [], TestContext.Current.CancellationToken);
+
+        late.ShouldBeNull();
+        nothing.ShouldBeNull();
+        none.ShouldBe(JournalPosition.Start);
+        var left = new List<string>();
+        await foreach (var blob in container.GetBlobsAsync(BlobTraits.None, BlobStates.None, prefix: null, TestContext.Current.CancellationToken))
+        {
+            left.Add(blob.Name);
+        }
+
+        left.ShouldAllBe(name => name.StartsWith("run-2", StringComparison.Ordinal), "no blob, not even an empty one");
+    }
+
     [Fact]
     public async Task Read_after_a_position_a_journal_gives_the_entries_written_since_and_where_it_ends_now()
     {
@@ -151,7 +175,9 @@ public sealed class BlobDecisionJournalTests
         none.ShouldBeNull();
     }
 
-    private static async Task<BlobDecisionJournal> Journal()
+    private static async Task<BlobDecisionJournal> Journal() => (await Opened()).Journal;
+
+    private static async Task<(BlobDecisionJournal Journal, BlobContainerClient Container)> Opened()
     {
         if (!await Reachable())
         {
@@ -160,7 +186,7 @@ public sealed class BlobDecisionJournalTests
 
         var container = new BlobContainerClient(new Uri($"{Endpoint}/tests-{Guid.CreateVersion7():N}"), new StorageSharedKeyCredential(Account, Key));
         await BlobArtifactStore.OpenAsync(container, TestContext.Current.CancellationToken);
-        return new BlobDecisionJournal(container, TimeProvider.System);
+        return (new BlobDecisionJournal(container, TimeProvider.System), container);
     }
 
     private static async Task<bool> Reachable()

@@ -228,6 +228,25 @@ public sealed class FeedbackReproduceTests : IDisposable
         document.Scenario.Checkpoint.ShouldBe((await _scenarios.GetAsync(straight, Cancel)).ShouldNotBeNull().Scenario.Checkpoint);
     }
 
+    /// <summary>
+    /// A report from the practice of a scenario cut before #736 from a table still played is not reproduced from while
+    /// that game is played (#833): the entries it copied followed the other seat's face-down plan.
+    /// </summary>
+    [Fact]
+    public async Task A_report_from_a_practice_of_a_scenario_cut_from_a_game_still_played_is_not_reproduced()
+    {
+        var session = await PlayedAsync();
+        var practised = Read(await Cutting().HandleAsync("POST", ScenarioAdminApi.Route, JsonSerializer.Serialize(new { session, round = 2, seat = "player2" }), "mark")).GetProperty("id").GetString()!;
+        var opened = (await _scenarios.GetAsync(practised, Cancel)).ShouldNotBeNull();
+        await StillPlayed.ReopenAsync(_hosted.RunsDirectory, session);
+        var id = await ReportedAsync(new FeedbackContext { Scenario = practised, Seat = "player2", Round = 3, PracticeEntries = ScenarioFile.JournalLinesOf(opened.Scenario.After) });
+
+        var refused = await ReproduceAsync(id);
+
+        (refused.Status, Read(refused).GetProperty("error").GetString()).ShouldBe((409, "Scenario.UnderWay"));
+        (await _scenarios.ListAsync(Cancel)).Select(one => one.Id).ShouldBe([practised]);
+    }
+
     [Fact]
     public async Task A_report_from_a_practice_played_here_reads_back_what_it_copied()
     {

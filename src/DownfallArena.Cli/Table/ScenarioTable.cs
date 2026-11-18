@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DownfallArena.Cli.Hosting;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Infrastructure.Learning;
@@ -41,7 +42,7 @@ internal sealed class ScenarioTable(CliOptions options, string schema, ScenarioD
         {
             if (path == "/api/practice")
             {
-                if (!string.Equals(supplied, token, StringComparison.Ordinal))
+                if (!FixedTime.Same(supplied, token))
                 {
                     return StudioResponse.OfPlainText(403, "Open the practice link printed by the host.");
                 }

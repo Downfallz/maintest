@@ -358,7 +358,10 @@ rounds it can be cut at, `GET`/`POST /api/admin/scenarios {"session","round","se
 `DELETE /api/admin/scenarios/<id>`, `PUT /api/admin/scenarios/<id>/listing {"listed"}` lists it under Practice
 on every signed-in player's home page or takes it off, noted in Activity; ADR 0179,
 docs/tabletop/scenarios-plan.md). A session still being played cannot be cut, and its rounds are not listed: 409
-`Scenario.UnderWay`. Its journal holds the other seat's face-down choices of the round (#736).
+`Scenario.UnderWay`. Its journal holds the other seat's face-down choices of the round (#736). A scenario cut before
+that rule from a game still played is not listed under Practice while that game is played (409 `Scenario.UnderWay`,
+or 409 `Scenario.SourceUnread` when the game's record exists and cannot be parsed, or 503 `Scenario.Unavailable`
+when the store cannot say); taking one off is always allowed (#833).
 
 The tab also lists every file of the repository's `scenarios/` directory, read when the host starts (`"source":
 "repository"` and its `"file"` in the list, under the id `sc-repo-<file name>`): played from the tab, on the content
@@ -374,7 +377,10 @@ practice; `DELETE /api/scenarios/<id>/practice` lets go of it, 204 whether there
 go of after an idle hour, gone with a restart), the battle view saying it is practice in a band with Briefing,
 Restart the round and Leave, and opening a practice started from its cut on a briefing card (its title, goal,
 seat and round). `GET /api/scenarios` lists the scenarios listed under Practice, which a signed-in player's home
-page shows.
+page shows. A scenario cut before #736 from a game still played is neither opened nor resumed until that game is
+over (`GET`/`POST .../practice` 409 `Scenario.UnderWay`, or 409 `Scenario.SourceUnread` when its record cannot be
+parsed, or 503 `Scenario.Unavailable` when the store cannot say), and `GET /api/scenarios` leaves it off, as it
+leaves off one whose game the store cannot read just then, said in one console line for the list (#833).
 
 `GET /api/tutorials` lists the tutorials to any signed-in account (401 signed out), in the order of the series:
 each one's `id`, `order`, `of`, `title`, `goal`, `round`, `seat`, `format` and `link`. A tutorial is opened as a
@@ -486,7 +492,8 @@ The seat's view says the lesson under `practice.tutorial`:
   round will be cut then (#736). A round the journal does not offer is 409
   `Scenario.RoundUnavailable`, with `rounds` listing the rounds it does offer. The source answers as the Scenarios tab
   does: 404 `Scenario.NoSession`, 409 `Scenario.NoRules` or `Scenario.ContentGone`; for a practice, 409
-  `Scenario.NotFound` when the scenario it was opened from is gone, and 409 `Scenario.Invalid` when its copied entries
+  `Scenario.NotFound` when the scenario it was opened from is gone, 409 `Scenario.UnderWay` (or `Scenario.SourceUnread`)
+  while the game that scenario was cut from is still played (#833), and 409 `Scenario.Invalid` when its copied entries
   cannot be read. A report sent without its seat is 409 `Feedback.NoPosition` too: it is never cut in the other one.
   The sheet links the scenario while it is kept, and only on a bug report. A host that keeps no scenarios has no such
   route (404).
@@ -619,7 +626,8 @@ friend's request or an invitation reaches a player who holds no seat (docs/table
 - `GET /api/lobby/mine` lists the tables waiting for the player under `invitations` and says `invited` on their
   own. A game under way that waits for the player at one seat carries `recap`: `casts` (the spells cast since the
   seat's last visit, counting only those it may see; null before a first visit, ADR 0194) and `lastMoveAt` (when the
-  last move was).
+  last move was). While the journal cannot be read, a card has no `answerBy` and no `lastMoveAt`, and the list says
+  so in one console line, not one per card (#861).
 - The friend's devices are told of the invitation, the inviter's of its answer, each seat's account of how the
   match ended and of the opponent leaving a begun match (stage 4).
 
@@ -771,6 +779,7 @@ A recorded session cut at the top of a round into a match scenario (ADR 0179, do
 without `--round` it lists the rounds it can be cut at; `--seat player1|player2` is the seat a person plays,
 `--title` and `--goal` what it is called and asks; it replays on the content the session was played on (this
 host's, or the one kept beside the runs under its hash) and `--with-content` carries that content in the file.
+A session still being played is refused (exit code 1), as the Scenarios tab refuses it (#736, #833).
 
 ### scenario-check
 

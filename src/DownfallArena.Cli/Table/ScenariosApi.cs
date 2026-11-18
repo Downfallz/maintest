@@ -1,7 +1,9 @@
 using DownfallArena.Application.Accounts;
+using DownfallArena.Cli.Hosting;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Infrastructure.Learning;
 using DownfallArena.SharedKernel.Identifiers;
+using DownfallArena.SharedKernel.Primitives;
 
 namespace DownfallArena.Cli.Table;
 
@@ -29,6 +31,15 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
     /// it signs in opens one. A tutorial is not the panel's: every signed-in account opens it.
     /// </summary>
     public IReadOnlySet<AccountId> Admins { get; init; } = new HashSet<AccountId>();
+
+    /// <summary>
+    /// The host's recorded sessions, which say whether the game a scenario was cut from is still played (#833); none on
+    /// a host that records nothing, which has no such game.
+    /// </summary>
+    public StoredSessions? Stored { get; init; }
+
+    /// <summary>Where its console lines go: the host's console unless a test reads them.</summary>
+    public Action<string> Said { get; init; } = Console.WriteLine;
 
     public const string Prefix = "/api/scenarios";
 
@@ -62,6 +73,26 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
         if (!ScenarioStore.Names(id) || Hidden(id, who.Account.Id))
         {
             return Error("Scenario.NotFound", "This scenario does not exist, or was removed.", 404);
+        }
+
+        // A practice follows the source's plan: not opened or resumed while the game it was cut from is played (#833).
+        if (method is "GET" or "POST" && segments is [_, "practice"])
+        {
+            DomainError? heldBack;
+            try
+            {
+                heldBack = await HeldBackAsync(id);
+            }
+            catch (Exception failure) when (TableRegistry.StoreFails(failure))
+            {
+                Said($"  Whether a scenario's source game is over could not be read: {HttpHost.OneLine(failure)}");
+                heldBack = ScenarioSources.Unavailable;
+            }
+
+            if (heldBack is not null)
+            {
+                return Renewed(Error(heldBack.Code, heldBack.Message, heldBack == ScenarioSources.Unavailable ? 503 : 409), who.Renewed);
+            }
         }
 
         var account = who.Account.Id.ToString();
@@ -138,12 +169,46 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
             ? StudioResponse.OfJson(Described(id, document), ArtifactJson.LineOptions)
             : Error("Scenario.NotFound", "This scenario does not exist, or was removed.", 404);
 
-    /// <summary>The scenarios listed under Practice, newest first, each as a player reads it.</summary>
+    /// <summary>
+    /// The scenarios listed under Practice, newest first, each as a player reads it. One listed before #833 whose game
+    /// is still played is left off until it is over: it would not open.
+    /// </summary>
     private async Task<StudioResponse> ListedAsync()
     {
-        var listed = (await store.ListAsync()).Where(one => one.Listed).Select(one => Described(one.Id, one.Document)).ToArray();
+        var listed = new List<object>();
+        var unread = 0;
+        string? why = null;
+        foreach (var one in (await store.ListAsync()).Where(one => one.Listed))
+        {
+            try
+            {
+                if (await HeldBackAsync(one.Document) is null)
+                {
+                    listed.Add(Described(one.Id, one.Document));
+                }
+            }
+            catch (Exception failure) when (TableRegistry.StoreFails(failure))
+            {
+                // Left off, as a scenario held back is: nothing shows its game is over. Said once for the list.
+                unread++;
+                why ??= HttpHost.OneLine(failure);
+            }
+        }
+
+        if (unread > 0)
+        {
+            Said($"  {unread} listed {(unread == 1 ? "scenario was" : "scenarios were")} left off Practice: whether their source game is over could not be read ({why}).");
+        }
+
         return StudioResponse.OfJson(new { scenarios = listed }, ArtifactJson.LineOptions);
     }
+
+    /// <summary>Why the scenario kept under this id is held back (<see cref="ScenarioSources" />), or none.</summary>
+    private async Task<DomainError?> HeldBackAsync(string id) =>
+        Stored is not null && await store.GetAsync(id) is { } document ? await HeldBackAsync(document) : null;
+
+    private Task<DomainError?> HeldBackAsync(Infrastructure.Matches.Scenarios.ScenarioDocument document) =>
+        Stored is { } stored ? ScenarioSources.HeldBackAsync(stored, document) : Task.FromResult<DomainError?>(null);
 
     /// <summary>
     /// The tutorials the repository ships, in the order of the series, each as a player reads it with its place and

@@ -1,4 +1,5 @@
 using DownfallArena.Application.Matches.Journaling;
+using DownfallArena.Cli.Hosting;
 
 namespace DownfallArena.Cli.Table;
 
@@ -104,7 +105,7 @@ internal sealed class TableLoader(StoredSessions stored, TableComposer composer,
     /// </summary>
     public async Task<string?> VoidSeatAsync(string id, string key, CancellationToken cancellationToken = default) =>
         await stored.RecordAsync(id, cancellationToken) is { Void: true } record
-        && record.Seats.Any(seat => seat.Person && string.Equals(seat.Token, key, StringComparison.Ordinal))
+        && record.Seats.Any(seat => seat.Person && FixedTime.Same(key, seat.Token))
             ? record.VoidReason?.Explanation ?? TableComposer.VoidNotice
             : null;
 

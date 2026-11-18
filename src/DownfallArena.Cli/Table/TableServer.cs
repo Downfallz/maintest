@@ -408,7 +408,7 @@ internal sealed class TableServer : IDisposable
     /// </summary>
     private async Task<StudioResponse?> SeatRefusalAsync(PlayedTable table, string? token, AccountRequest account)
     {
-        if (_accounts is null || table.Seats.FirstOrDefault(seat => seat.Token == token && seat.Person is not null) is not { } seat)
+        if (_accounts is null || table.Seats.FirstOrDefault(seat => FixedTime.Same(token, seat.Token) && seat.Person is not null) is not { } seat)
         {
             return null;
         }

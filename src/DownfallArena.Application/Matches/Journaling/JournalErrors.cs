@@ -15,6 +15,12 @@ public static class JournalErrors
     public static readonly DomainError Moved = new("Journal.Moved", "The match moved on while this decision was on its way. Read it again.");
 
     /// <summary>
+    /// The journal went back to nothing under a match that stood further on: its run was deleted (#856). The match is
+    /// not started over into it, which would bring the run back without its record.
+    /// </summary>
+    public static readonly DomainError Gone = new("Journal.Gone", "This match's journal is gone: its session was deleted.");
+
+    /// <summary>
     /// A seat cannot be told to change hands from the top of a round the match has left: whoever sat there has
     /// played it.
     /// </summary>

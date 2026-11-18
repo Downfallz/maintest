@@ -485,6 +485,14 @@ public sealed class JournaledStepper(
 
         kept.Position = null;
         var reading = await journal.ReadAsync(match.Run, cancellationToken);
+        if (kept.Reached > 0 && reading.Position.Mark == 0)
+        {
+            // Gone back to nothing under a match this process saw further on: deleted with its run (#856). Every later
+            // step is refused the same way rather than starting the match over into the run.
+            await matches.ForgetAsync(match.MatchId, cancellationToken);
+            return Result.Failure<JournalPosition>(JournalErrors.Gone);
+        }
+
         Replaying(match, [.. reading.Entries.OfType<SeatChangeEntry>()]);
         var rebuilt = await replay.RebuildAsync(match, reading.Entries, cancellationToken);
         if (rebuilt.IsFailure)
@@ -493,7 +501,7 @@ public sealed class JournaledStepper(
             return Result.Failure<JournalPosition>(rebuilt.Error);
         }
 
-        kept.Position = reading.Position;
+        kept.Stand(reading.Position);
         kept.Held = rebuilt.Value;
         kept.Entries = reading.Entries.Count;
         kept.SeatChanges.Clear();
@@ -518,7 +526,7 @@ public sealed class JournaledStepper(
             return false;
         }
 
-        kept.Position = since.Position;
+        kept.Stand(since.Position);
         kept.Held = continued.Value;
         kept.Entries += since.Entries.Count;
         Count(kept, since.Entries);
@@ -556,7 +564,7 @@ public sealed class JournaledStepper(
             return null;
         }
 
-        kept.Position = written;
+        kept.Stand(written);
         kept.Entries += entries.Count;
         return written;
     }
@@ -608,6 +616,19 @@ public sealed class JournaledStepper(
 
         /// <summary>Where the journal ended when the match in memory was last in step with it; none when it is not.</summary>
         public JournalPosition? Position { get; set; }
+
+        /// <summary>
+        /// The furthest mark this process saw the journal reach, never cleared when the match is let go of: a journal
+        /// read empty below it was deleted with its run (#856), and is not written into again.
+        /// </summary>
+        public long Reached { get; private set; }
+
+        /// <summary>The match in memory stands where the journal ends, at <paramref name="position" />.</summary>
+        public void Stand(JournalPosition position)
+        {
+            Position = position;
+            Reached = Math.Max(Reached, position.Mark);
+        }
 
         public HeldAnswers Held { get; set; } = HeldAnswers.None;
 

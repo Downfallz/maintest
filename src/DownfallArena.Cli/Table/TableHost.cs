@@ -296,7 +296,7 @@ internal static class TableHost
         {
             Feedback = sendFeedback is null ? null : new FeedbackApi(sendFeedback, registry) { Accounts = accounts, Practices = practices },
             Tended = options.Tended,
-            Scenarios = scenarioStore is null || practices is null || accounts is null ? null : new ScenariosApi(scenarioStore, practices, accounts) { Admins = gate.Admins },
+            Scenarios = scenarioStore is null || practices is null || accounts is null ? null : new ScenariosApi(scenarioStore, practices, accounts) { Admins = gate.Admins, Stored = stored },
             Practices = practices,
         };
 

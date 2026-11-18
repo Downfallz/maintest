@@ -270,25 +270,47 @@ public sealed class LobbyAccountsTests : IDisposable
         listed.GetProperty("recap").GetProperty("lastMoveAt").ValueKind.ShouldBe(JsonValueKind.Null);
     }
 
-    /// <summary>A game between two players, timed as every such game is, begun and waiting for Mark, over a journal that counts.</summary>
-    private async Task<(LobbyApi Lobby, CountedJournal Journal, SignedIn Mark)> TimedGameOnYourTurnAsync()
+    /// <summary>
+    /// While the journal is out, a list says so in one console line, not one a card (#861): the inbox fetches it on
+    /// every account change, and the outage's cause would be buried in repeats.
+    /// </summary>
+    [Fact]
+    public async Task Your_timed_games_whose_journal_is_out_are_said_in_one_line_for_the_list()
+    {
+        var said = new System.Collections.Concurrent.ConcurrentQueue<string>();
+        var (lobby, journal, mark) = await TimedGameOnYourTurnAsync(games: 2, said: said.Enqueue);
+        journal.LastWrittenFails = true;
+
+        var answer = await lobby.HandleAsync("GET", "/api/lobby/mine", "", player: mark);
+
+        answer.Status.ShouldBe(200);
+        Read(answer).GetProperty("tables").GetArrayLength().ShouldBe(2);
+        said.Where(line => line.Contains("last move", StringComparison.Ordinal)).ShouldHaveSingleItem().ShouldStartWith("  2 cards were listed without their time to answer");
+    }
+
+    /// <summary>Games between two players, timed as every such game is, begun and waiting for Mark, over a journal that counts.</summary>
+    private async Task<(LobbyApi Lobby, CountedJournal Journal, SignedIn Mark)> TimedGameOnYourTurnAsync(int games = 1, Action<string>? said = null)
     {
         CountedJournal? journal = null;
-        var hosted = new HostedTables(directory => new FileArtifactStore(directory), journal: inner => journal = new CountedJournal(inner));
+        var hosted = new HostedTables(directory => new FileArtifactStore(directory), journal: inner => journal = new CountedJournal(inner), said: said);
         _disposed.Add(hosted);
         var registry = hosted.Registry();
         _disposed.Add(registry);
         _api ??= new AccountApi(_accounts, new AccountSessions(await _store.SessionKeyAsync(Cancel), TimeProvider.System), AccountsMode.Development);
-        var lobby = new LobbyApi(registry, hosted.Composer, TimeProvider.System) { Accounts = _api };
+        var lobby = new LobbyApi(registry, hosted.Composer, TimeProvider.System) { Accounts = _api, Said = said ?? Console.WriteLine };
         var mark = await PlayerAsync("MarkF");
         var bastien = await PlayerAsync("bastien");
-        var id = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", """{"opponent":"person"}""", player: mark)).GetProperty("table").GetProperty("id").GetString()!;
-        var table = (await registry.ByIdAsync(id, Cancel))!;
-        (await lobby.HandleAsync("POST", $"/api/lobby/tables/{table.Id}/join", "{}", player: bastien)).Status.ShouldBe(200);
-        table.Seats[0].Person!.Arrive();
-        table.Seats[1].Person!.Arrive();
-        table.Session.Begin();
-        await WaitingAsync(table.Seats[0]);
+        for (var game = 0; game < games; game++)
+        {
+            var id = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", """{"opponent":"person"}""", player: mark)).GetProperty("table").GetProperty("id").GetString()!;
+            var table = (await registry.ByIdAsync(id, Cancel))!;
+            (await lobby.HandleAsync("POST", $"/api/lobby/tables/{table.Id}/join", "{}", player: bastien)).Status.ShouldBe(200);
+            table.Seats[0].Person!.Arrive();
+            table.Seats[1].Person!.Arrive();
+            table.Session.Begin();
+            await WaitingAsync(table.Seats[0]);
+        }
+
         return (lobby, journal!, mark);
     }
 

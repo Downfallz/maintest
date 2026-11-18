@@ -742,6 +742,12 @@ internal sealed class SteppedSession : ITableSession, IAgentTurnTaker
         if (Interlocked.Exchange(ref _stale, 0) != 0)
         {
             var read = await _stepper.ReadAsync(_match, _stopping);
+            if (read.IsFailure && read.Error == JournalErrors.Gone)
+            {
+                // Its run was deleted (#856): nothing is owed, and the watch lets the table go at its next look.
+                return AgentTurn.Done;
+            }
+
             if (read.IsFailure)
             {
                 Ended(read.Error);
@@ -775,9 +781,13 @@ internal sealed class SteppedSession : ITableSession, IAgentTurnTaker
             return AgentTurn.Moved;
         }
 
-        if (step.IsFailure)
+        if (step.IsFailure && step.Error != JournalErrors.Gone)
         {
             Ended(step.Error);
+        }
+
+        if (step.IsFailure)
+        {
             return AgentTurn.Done;
         }
 
