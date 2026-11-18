@@ -55,7 +55,7 @@ async function mount(page, input = initial()) {
     // A change told while a read is in flight is owed one more read, which the page schedules at no delay: a paused
     // clock runs it only when it is moved. Only a seat read that is no acknowledgement, answered with the published view
     // (a refusal too), says the change reached the page (#768, #785).
-    await expect.poll(async () => { if (h.answered === published) return true; await page.clock.runFor(0); return false; }).toBe(true);
+    await expect.poll(async () => { if (h.answered === published) { return true; } await page.clock.runFor(0); return false; }).toBe(true);
     await page.clock.runFor(50);
   };
   h.reference = async () => { await page.locator('#help-open').click(); await page.locator('#help-dialog [data-growth-open]').click(); };

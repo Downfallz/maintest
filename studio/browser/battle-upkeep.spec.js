@@ -66,7 +66,7 @@ async function mount(page, { waiting = null, round = 1, feed = [energy(round), o
     // A change told while a read is in flight is owed one more read, which the page schedules at no delay: a paused
     // clock runs it only when it is moved, and a loaded machine is when the two overlap. The read in flight answers
     // with the board it was asked for, so only a read that carried this one says the change arrived (#768).
-    await expect.poll(async () => { if (state.answered === published) return true; await page.clock.runFor(0); return false; }).toBe(true);
+    await expect.poll(async () => { if (state.answered === published) { return true; } await page.clock.runFor(0); return false; }).toBe(true);
   };
   return { state, publish };
 }
