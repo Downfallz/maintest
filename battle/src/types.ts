@@ -14,7 +14,8 @@ export interface LabState {
   changes: { creature: string; health?: number; energy?: number; defeated?: boolean }[];
 }
 export interface Placement { x: number; y: number; size: number; hitWidth: number; lift?: number; caption?: number; }
-export interface SpellVisual { family: string; motif: string; delivery: string; }
+// `staging` is the card's own list of beats, as the host serves it (ADR 0196); `table/battle-staging.js` reads it.
+export interface SpellVisual { family: string; motif: string; delivery: string; staging?: unknown; }
 export const creaturesOf = (state: LabState) => [...state.board.allies, ...state.board.enemies];
 export const isEnemy = (state: LabState, id: string) => state.board.enemies.some(one => one.id === id);
 

@@ -29,7 +29,11 @@ Authoring format for the game resources (ADR 0009). One JSON file per item:
 - `presentation/spell-art.json`: how the battle view draws each spell's confirmed cast (ADR 0131): a family, a motif and
   a delivery keyed by the spell's id. The builder checks them against the spells and the vocabularies and
   publishes them beside the schema as `spell-art.json`, outside the content hash; the host serves them on each
-  card as `visual`.
+  card as `visual`. An entry may carry a `staging` (ADR 0196): the beats the battle's effects kit plays, each a
+  `beat` (`motif`, `burst`, `flow`, `trail`, `gather`, `glow`, `flash`, `shake`, `pulse`), the millisecond it
+  starts `at`, and its parameters by name (`on`, `lasts`, `count`, `shape`, `tint`, `blend`, `direction`,
+  `spread`, `reach`, `strength`). The builder refuses a beat or a word it does not know and a beat that outlives
+  its window; without a staging the spell is drawn as its motif.
 - `presentation/mutation-art.json`: which body each package belongs to and the accent it draws on it (ADR 0133),
   keyed by the package's id; a root names a family and no accent. The builder checks them against the packages,
   the vocabularies and the root each package descends from, and publishes them beside the schema as

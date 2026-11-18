@@ -2,7 +2,7 @@
 
 Date: 2026-11-05
 
-Status: Accepted for the opt-in release candidate; physical-device acceptance remains open.
+Status: Accepted for the opt-in release candidate; physical-device acceptance remains open. Extended by [0196](0196-stage-a-spell-in-beats-an-effects-kit-plays.md).
 
 ## Context
 

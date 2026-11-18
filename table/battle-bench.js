@@ -6,11 +6,34 @@ import { IMPACT_MS, WINDUP_MS, playbackRate } from './battle-timing.js';
 
 const words = id => id.split(':')[1].split('_').map(word => word[0].toUpperCase() + word.slice(1)).join(' ');
 
-// Every entry of `data/presentation/spell-art.json`, in the order of their names.
-export function benchEntries(art) {
+// Every entry of `data/presentation/spell-art.json`, in the order of their names. `names` is the name a player
+// reads for each id, from the spells' own files (`battle/build.mjs`); an id it lacks is named by its slug.
+// An entry with a staging carries it (ADR 0196).
+export function benchEntries(art, names = {}) {
   return Object.entries(art)
-    .map(([id, { family, motif, delivery }]) => ({ id, name: words(id), family, motif, delivery }))
+    .map(([id, { family, motif, delivery, staging }]) => ({ id, name: names[id] ?? words(id), family, motif, delivery, ...(staging ? { staging } : {}) }))
     .sort((one, other) => one.name.localeCompare(other.name, 'en'));
+}
+
+// One sample staging a primitive of the effects kit, so a primitive can be seen and filmed before a spell uses
+// it. They are the bench's own, not content: no spell is drawn this way until its stage of the plan stages it.
+const sample = (beat, look, staging) => ({ id: `kit:${beat}`, name: `Kit: ${beat}`, family: look.family, motif: look.motif, delivery: look.delivery, staging });
+export function benchSamples() {
+  const physical = { family: 'physical', motif: 'impact', delivery: 'melee' };
+  const elemental = { family: 'elemental', motif: 'fire', delivery: 'cast' };
+  const necromantic = { family: 'necromantic', motif: 'spirits', delivery: 'cast' };
+  const biological = { family: 'biological', motif: 'quill', delivery: 'projectile' };
+  const astral = { family: 'astral', motif: 'vital', delivery: 'cast' };
+  return [
+    sample('burst', physical, [{ beat: 'motif', at: 840, lasts: 700 }, { beat: 'burst', at: 840, count: 8, shape: 'shard', tint: 'bone', direction: 'along', spread: 50 }]),
+    sample('flow', elemental, [{ beat: 'motif', at: 840 }, { beat: 'flow', at: 900, lasts: 900, shape: 'spark', tint: 'ember' }]),
+    sample('trail', biological, [{ beat: 'trail', at: 240, lasts: 600 }, { beat: 'motif', at: 840 }]),
+    sample('gather', necromantic, [{ beat: 'gather', at: 100, lasts: 700 }, { beat: 'motif', at: 840 }]),
+    sample('glow', astral, [{ beat: 'glow', at: 840, lasts: 500 }, { beat: 'motif', at: 840 }]),
+    sample('flash', physical, [{ beat: 'flash', at: 840 }, { beat: 'motif', at: 840, lasts: 700 }]),
+    sample('shake', physical, [{ beat: 'shake', at: 840, lasts: 240, strength: .5 }, { beat: 'motif', at: 840, lasts: 700 }]),
+    sample('pulse', astral, [{ beat: 'pulse', at: 840, lasts: 600, strength: 1 }, { beat: 'motif', at: 840 }]),
+  ];
 }
 
 // The six creatures of the laboratory's fixture, yours first, each with the side it stands on.
@@ -49,7 +72,7 @@ export function benchFrame({ entry, actor, targets, stage }) {
   if (stage !== 'windup' && stage !== 'impact') return frame;
   const struck = contact.filter(id => creatures.find(one => one.id === id).enemy !== caster?.enemy);
   return { ...frame, cue: { kind: struck.length ? 'strike' : 'pulse',
-    visual: { family: entry.family, motif: entry.motif, delivery: entry.delivery },
+    visual: { family: entry.family, motif: entry.motif, delivery: entry.delivery, ...(entry.staging ? { staging: entry.staging } : {}) },
     recipients: known, contact, struck, effects: [], changes: [], roll: null } };
 }
 

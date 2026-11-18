@@ -1,7 +1,7 @@
 # 0131. Give confirmed arena spells a visual vocabulary
 
 Date: 2026-11-04
-Status: Accepted for the opt-in arena
+Status: Accepted for the opt-in arena; extended by [0196](0196-stage-a-spell-in-beats-an-effects-kit-plays.md)
 
 ## Context
 

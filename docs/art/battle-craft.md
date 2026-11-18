@@ -91,7 +91,7 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 - **Cost**: tweens only.
 - **Reduced motion**: nothing.
 - **Here**: the strike is 600 ms of `Cubic.In` and the return 720 ms of `Cubic.Out`, with no overshoot. BC5 adds
-  the settle, and BC4's kit starts its impact beat on the contact frame, not before.
+  the settle. The kit starts an impact beat on the contact frame, not before: a beat at 840 ms has no delay.
 
 ### Hit stop
 
@@ -156,8 +156,9 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 - **Phaser**: `Phaser.Tweens.TweenManager#stagger` gives each target of one tween its own delay.
 - **Cost**: none beyond the tweens.
 - **Reduced motion**: nothing.
-- **Here**: the three strokes of a slash and the five bones of a ward appear together today. BC4's kit staggers
-  the copies of a beat by 30 to 60 ms (*house*).
+- **Here**: the three strokes of a slash and the five bones of a ward appear together today. The kit staggers
+  the copies of a beat, one a target, by 40 ms (*house*), as far as the beat's window leaves room
+  (`battle/src/spell-effects.ts`). The strokes of one motif still appear together.
 
 ## The body
 
@@ -301,8 +302,8 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   the shapes go on one canvas, not one texture each.
 - **Reduced motion**: the textures exist; nothing plays them.
 - **Here**: every spell effect is a `Graphics` drawn once. The acting halo already makes its soft glow this
-  way, on a canvas with a radial gradient (`battle/src/acting-halo.ts`): BC4 reuses that route for the kit's
-  textures and adds no second helper. A generated sprite sheet is for what these cannot give (question 3 of
+  way, on a canvas with a radial gradient (`battle/src/acting-halo.ts`): the kit draws its one texture the same way
+  (`battle/src/fx/kit.ts`): `fx-kit`, four frames, a dot, a spark, a shard and a ring. A generated sprite sheet is for what these cannot give (question 3 of
   the plan).
 
 ### Burst
@@ -320,9 +321,11 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   for every burst: not one per effect.
 - **Reduced motion**: nothing.
 - **Here**: when the host served no `visual` for an action, as in the battle lab's sample, `burst` in
-  `battle/src/scene.ts` tweens a ring and 14 rectangles by hand; a mutation reveal uses the ring alone. BC4's
-  burst primitive replaces the rectangles: 8 to 24 particles (*house*), cleared with
-  `Phaser.GameObjects.Particles.ParticleEmitter#killAll`.
+  `battle/src/scene.ts` tweens a ring and 14 rectangles by hand; a mutation reveal uses the ring alone. The kit's
+  burst (`battle/src/fx/burst.ts`) is 1 to 24 particles (*house*), 320 ms unless told, cleared with
+  `Phaser.GameObjects.Particles.ParticleEmitter#killAll`. Each beat makes its own emitter, not one per texture:
+  an emitter's settings move its living particles, so two beats that overlap cannot share one (ADR 0196). The
+  sample's rectangles are still drawn by hand: BC5 rewrites that impact.
 
 ### Flow
 
@@ -335,7 +338,7 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   already full. `Phaser.GameObjects.Particles.ParticleEmitter#stop` ends the stream and lets the living finish.
 - **Cost**: one draw call. The cost is the pixels the particles cover: see "A budget of pixels".
 - **Reduced motion**: nothing.
-- **Here**: not built. BC4 makes it a primitive; BC9 uses it for the ground.
+- **Here**: the kit's `flow` (`battle/src/fx/flow.ts`), on a figure. BC9 uses the pattern for the ground.
 
 ### Trail
 
@@ -348,7 +351,8 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   `Phaser.Types.GameObjects.Particles.ParticleEmitterConfig.lifespan` and a scale that falls to 0.
 - **Cost**: one draw call. Keep the trail dimmer and smaller than the head.
 - **Reduced motion**: nothing.
-- **Here**: the quill flies bare. BC4 makes the trail a primitive; BC7 gives it to the two projectile spells.
+- **Here**: the quill flies bare. The kit's `trail` (`battle/src/fx/trail.ts`) follows a head that eases as the
+  quill does; BC7 gives it to the two projectile spells.
 
 ### Gravity well and convergence
 
@@ -361,8 +365,8 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   `.moveToY`.
 - **Cost**: a little arithmetic per particle. One draw call.
 - **Reduced motion**: nothing.
-- **Here**: the windup draws a ring that grows away from the caster. BC4's gather primitive draws particles in
-  instead; BC8 uses it for the blood cost, from the caster's wound to the ward.
+- **Here**: the windup draws a ring that grows away from the caster. The kit's `gather` (`battle/src/fx/gather.ts`) draws particles
+  in from a ring instead, for a spell whose staging asks; BC8 uses it for the blood cost, from the caster's wound to the ward.
 
 ### Additive light
 
@@ -378,7 +382,7 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 - **Here**: four kinds of additive object today: the capstone's halo and its sparks
   (`battle/src/capstone-effects.ts`), the condition's motes and its rings (`battle/src/condition-auras.ts`).
   The ground is basalt under a bright eclipse: additive light reads on the basalt and blows out against the
-  disc and over a pale sprite, where `SCREEN` is used. BC4 gives the kit one additive layer.
+  disc and over a pale sprite, where `SCREEN` is used. The kit draws every lit object one depth above every plain one.
 
 ### A budget of pixels
 
@@ -392,8 +396,8 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   `Phaser.GameObjects.Particles.ParticleEmitter#getAliveParticleCount` is what a test reads.
 - **Cost**: this entry is the cost. Not measured on a phone; BC10 measures it.
 - **Reduced motion**: nothing.
-- **Here**: BC4 sets a cap per primitive and one for the scene: 150 particles alive at once (*house*), until
-  BC10 measures.
+- **Here**: 24 particles a beat and 150 alive on the field (*house*), until BC10 measures: a beat is given the
+  room that is left (`battle/src/fx/kit.ts`).
 
 ## Light and surface
 
@@ -413,8 +417,10 @@ bake the drawing to a texture first, or filter a container.
 - **Cost**: a framebuffer and a pass, each frame, for each glowing object. The cheap form costs little: a
   soft-dot sprite, tinted, additive, drawn behind the shape.
 - **Reduced motion**: nothing. The settled frame holds no effect, a still one included.
-- **Here**: the capstone halo is the cheap form already (`battle/src/capstone-effects.ts`). BC4 keeps the cheap
-  form as the default, and the filter for one hero effect in each family.
+- **Here**: the capstone halo is the cheap form already (`battle/src/capstone-effects.ts`). The kit's `glow` is the
+  cheap form, and its `pulse` is the filter, for one hero effect in each family. A filter is given no room
+  around its object unless asked (`Phaser.Filters.Controller#setPaddingOverride` with null): without it the
+  halo is cut at the picture's edge.
 
 ### Blur
 
@@ -515,7 +521,8 @@ bake the drawing to a texture first, or filter a container.
 - **Cost**: a rope has its own shader, so it starts a new batch. A `Graphics` redrawn each frame batches with
   the other vectors, and rebuilds its path each frame.
 - **Reduced motion**: nothing.
-- **Here**: not built. BC4 chooses one of the two forms on the bench, by measure.
+- **Here**: not built. The kit's trail is particles. The first spell that needs a ribbon chooses one of the
+  two forms on the bench, by measure.
 
 ### Chain between targets
 
@@ -542,7 +549,8 @@ bake the drawing to a texture first, or filter a container.
   `Phaser.Math.RadToDeg`, then give a range around it.
 - **Cost**: none beyond the burst.
 - **Reduced motion**: nothing.
-- **Here**: the recoil already follows that line; the motifs do not. BC4's burst takes a direction and a spread.
+- **Here**: the recoil already follows that line; the motifs do not. The kit's burst takes a direction
+  (`along`, `back`, `up`, `out`) and a spread, and each particle is turned to its heading.
 
 ## The ground
 
@@ -654,7 +662,7 @@ bake the drawing to a texture first, or filter a container.
 - **Cost**: none.
 - **Reduced motion**: nothing.
 - **Here**: the three parts are the game's three windows: the windup's charge, the impact's motif (100 ms to
-  arrive, the rest to fade), the settle. BC4's `staging` is a list of beats placed in those windows.
+  arrive, the rest to fade), the settle. A `staging` is a list of beats placed in the first two (ADR 0196).
 
 ### Flash limits
 
@@ -669,8 +677,8 @@ bake the drawing to a texture first, or filter a container.
   a second. A hit flash (`Phaser.TintModes.FILL`) covers one figure.
 - **Cost**: none.
 - **Reduced motion**: no flash at all. The limit holds with the setting off, for everyone.
-- **Here**: at 2× an action lasts about 1.5 s, and one spell can hit three figures. BC4's flash and light beats
-  are counted: one flash per figure per action, one change of light per cast. BC10 checks all 44 stagings.
+- **Here**: at 2× an action lasts about 1.5 s, and one spell can hit three figures. A staging holds one
+  `flash` and one `shake` at most, and the builder refuses a second: one flash per figure per action. BC10 checks all 44 stagings.
 
 ### Reduced motion
 
@@ -686,7 +694,7 @@ bake the drawing to a texture first, or filter a container.
 - **Reduced motion**: this entry is the rule.
 - **Here**: the page reads the system setting and its own checkbox (`battle/src/live.ts`); the scene then shows
   the frame after the action for 650 ms, with no vector, projectile, shake or displacement. Every primitive of
-  BC4 has a test that it plays nothing.
+  the kit has a test that it plays nothing (`table/battle-fx.test.js`, `studio/browser/battle-fx.spec.js`).
 
 ## Phaser 3 names that are gone
 

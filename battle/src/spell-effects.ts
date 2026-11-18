@@ -1,21 +1,93 @@
 import Phaser from 'phaser';
-import { DRAW_MS, STRIKE_MS, WINDUP_MS, VFX_MS, MOTION_SCALE } from '../../table/battle-timing.js';
+import { DRAW_MS, IMPACT_MS, STRIKE_MS, WINDUP_MS, VFX_MS, MOTION_SCALE } from '../../table/battle-timing.js';
+import { stagingBeats } from '../../table/battle-staging.js';
 import type { SpellVisual } from './types';
+import type { EffectsKit, StagedBeat } from './fx';
 
 export interface EffectAnchor { x: number; y: number; radius: number; }
 const PALETTE: Record<string, number> = {
   physical: 0xd2bbac, biological: 0xadc777, elemental: 0x8dcfe5,
   necromantic: 0x85c9c2, astral: 0xb9a6e5, neutral: 0xaab8c0,
 };
+// The colours a beat names (`table/battle-staging.js`): the palette's bone, and the two a motif already carries.
+// The target marker's gold is not among them.
+const TINTS: Record<string, number> = { bone: 0xd8c7a7, ember: 0xd58b75, blood: 0xb66f7e };
+
+// Between two copies of one beat, at 1× (*house*, the craft book's 30 to 60 ms).
+const STAGGER_MS = 40;
+
+/** Who a beat plays on: where it stands, which creature it is, and its picture when the scene has one. */
+export interface EffectFigure { id: string; anchor: EffectAnchor; image?: Phaser.GameObjects.Image }
 
 // Short-lived vectors, not combat entities. The owner clears every object on skip, resize and seat changes.
+// A spell with a staging is played beat by beat through the effects kit, once the kit has arrived (ADR 0196);
+// without a staging, without the kit, or with a beat the kit does not know, it is drawn as its motif.
 export class SpellEffects {
   private objects = new Set<Phaser.GameObjects.Graphics>();
+  private timers = new Set<Phaser.Tweens.Tween>();
+  private kit: EffectsKit | null = null;
+  // How many targets the current window has played on: the copies of a beat are staggered, one target after another.
+  private copies = 0;
   constructor(private scene: Phaser.Scene) {}
 
+  /** The kit, once its bundle has loaded. Until then every spell is its motif. */
+  attach(kit: EffectsKit) { this.kit = kit; }
+  get equipped() { return this.kit !== null; }
+  /** What the kit holds now: its objects, its particles alive, and the figures it changed and has not put back. */
+  get playing() {
+    return { objects: this.kit?.playing() ?? [], particles: this.kit?.particles() ?? 0, changes: this.kit?.changes() ?? 0 };
+  }
+
   clear() {
+    for (const timer of this.timers) if (!timer.isDestroyed()) timer.stop();
+    this.timers.clear();
+    this.copies = 0;
+    this.kit?.clear();
     for (const object of this.objects) { this.scene.tweens.killTweensOf(object); object.destroy(); }
     this.objects.clear();
+  }
+
+  /** The beats of one window, or null when the spell is drawn as its motif. */
+  private staged(visual: SpellVisual, window: 'windup' | 'impact'): StagedBeat[] | null {
+    if (!this.kit) return null;
+    const beats: StagedBeat[] | null = stagingBeats(visual, ['motif', ...this.kit.beats]);
+    return beats && beats.filter(beat => beat.window === window);
+  }
+
+  private play(staged: StagedBeat, visual: SpellVisual, on: EffectFigure, rate: number, from?: EffectAnchor, toward?: EffectAnchor, copy = 0) {
+    // The same beat on several targets does not land on one frame (the craft book, "Stagger and overlap"): each
+    // copy starts a little after the one before, as far as the beat's window leaves room.
+    const end = staged.window === 'windup' ? WINDUP_MS : WINDUP_MS + IMPACT_MS;
+    const late = Math.max(0, Math.min(copy * STAGGER_MS, end - staged.at - (staged.lasts ?? 0)));
+    const beat = late ? { ...staged, delay: staged.delay + late } : staged;
+    const origin = from ?? on.anchor, aim = toward ?? on.anchor;
+    const heading = origin.x === aim.x && origin.y === aim.y ? null : Math.atan2(aim.y - origin.y, aim.x - origin.x);
+    const color = TINTS[beat.tint ?? ''] ?? PALETTE[visual.family] ?? PALETTE.neutral;
+    this.kit!.play({ beat, at: on.anchor, creature: on.id, figure: on.image, color, rate, heading, from });
+  }
+
+  /** The beats of a window that play once a cast: those on the caster, and the shake, which is the view's. */
+  private once(beats: StagedBeat[], visual: SpellVisual, actor: EffectFigure, rate: number, toward?: EffectAnchor) {
+    for (const beat of beats) {
+      if (beat.beat !== 'motif' && beat.beat !== 'trail' && (beat.on === 'caster' || beat.beat === 'shake')) this.play(beat, visual, actor, rate, undefined, toward);
+    }
+  }
+
+  /** The beats of a window that play on each target. A trail runs from the caster to it. */
+  private each(beats: StagedBeat[], visual: SpellVisual, target: EffectFigure, rate: number, origin?: EffectAnchor) {
+    const copy = this.copies++;
+    for (const beat of beats) {
+      if (beat.beat === 'motif' || beat.beat === 'shake') continue;
+      // A trail keeps to the quill it follows: it is not staggered.
+      if (beat.beat === 'trail') this.play(beat, visual, target, rate, origin);
+      else if (beat.on === 'target') this.play(beat, visual, target, rate, origin, undefined, copy);
+    }
+  }
+
+  private after(ms: number, run: () => void) {
+    if (ms <= 0) { run(); return; }
+    const timer = this.scene.tweens.addCounter({ from: 0, to: 1, duration: ms, onComplete: () => { this.timers.delete(timer); run(); } });
+    this.timers.add(timer);
   }
 
   private graphic(motif: string, creature: string, phase: string) {
@@ -32,9 +104,15 @@ export class SpellEffects {
       } });
   }
 
-  windup(visual: SpellVisual, actor: EffectAnchor, destinations: { id: string; anchor: EffectAnchor }[], rate: number) {
+  windup(visual: SpellVisual, caster: EffectFigure, destinations: EffectFigure[], rate: number) {
     if (visual.motif === 'fizzle') return;
+    const actor = caster.anchor;
     const color = PALETTE[visual.family] ?? PALETTE.neutral;
+    const beats = this.staged(visual, 'windup');
+    if (beats) {
+      this.once(beats, visual, caster, rate, destinations[0]?.anchor);
+      for (const destination of destinations) this.each(beats, visual, destination, rate, actor);
+    }
     if (visual.delivery === 'projectile') {
       for (const { id, anchor } of destinations) {
         const quill = this.graphic('quill', id, 'windup').setPosition(actor.x, actor.y);
@@ -46,6 +124,8 @@ export class SpellEffects {
       }
       return;
     }
+    // A staged spell gathers as its beats say, or not at all: the shared charge is the motif's.
+    if (beats) return;
     const charge = this.graphic(visual.motif, '', 'windup').setPosition(actor.x, actor.y);
     const r = actor.radius * .55;
     charge.lineStyle(2, color, .7);
@@ -62,7 +142,22 @@ export class SpellEffects {
     this.fade(charge, rate, WINDUP_MS, 1.6);
   }
 
-  impact(visual: SpellVisual, target: EffectAnchor, id: string, rate: number, origin?: EffectAnchor) {
+  /** Once a cast, before its recipients: the impact's beats on the caster, and the shake. */
+  cast(visual: SpellVisual, caster: EffectFigure, rate: number, toward?: EffectAnchor) {
+    const beats = this.staged(visual, 'impact');
+    if (beats) this.once(beats, visual, caster, rate, toward);
+  }
+
+  impact(visual: SpellVisual, recipient: EffectFigure, rate: number, origin?: EffectAnchor) {
+    const beats = this.staged(visual, 'impact');
+    if (!beats) { this.motif(visual, recipient.anchor, recipient.id, rate, origin); return; }
+    this.each(beats, visual, recipient, rate, origin);
+    // The motif is one beat among the others: when the staging places it, for as long as it says.
+    const motif = beats.find(beat => beat.beat === 'motif');
+    if (motif) this.after(motif.delay / rate, () => this.motif(visual, recipient.anchor, recipient.id, rate, origin, motif.lasts));
+  }
+
+  private motif(visual: SpellVisual, target: EffectAnchor, id: string, rate: number, origin?: EffectAnchor, lasts = VFX_MS) {
     const motif = visual.motif;
     const color = MOTIF_COLOR[motif] ?? PALETTE[visual.family] ?? PALETTE.neutral;
     const g = this.graphic(motif, id, 'impact').setPosition(target.x, target.y);
@@ -73,7 +168,7 @@ export class SpellEffects {
     g.setScale(motion.scale).setAlpha(.35);
     g.y += target.radius * motion.rise;
     this.scene.tweens.add({ targets: g, scaleX: 1, scaleY: 1, y: target.y, alpha: 1,
-      duration: 100 * MOTION_SCALE / rate, ease: 'Cubic.Out', onComplete: () => this.fade(g, rate, VFX_MS - 100 * MOTION_SCALE, FADE_SCALE[motif] ?? 1.35) });
+      duration: 100 * MOTION_SCALE / rate, ease: 'Cubic.Out', onComplete: () => this.fade(g, rate, Math.max(lasts - 100 * MOTION_SCALE, 100), FADE_SCALE[motif] ?? 1.35) });
   }
 }
 

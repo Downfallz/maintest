@@ -145,6 +145,9 @@ internal sealed partial class TableFiles
             ["/battle-build/game.js"] = (Path.Combine(tableDirectory, "battle-build", "game.js"), JavaScript),
             ["/battle-build/game.js.LEGAL.txt"] = (Path.Combine(tableDirectory, "battle-build", "game.js.LEGAL.txt"), StudioResponse.Plain),
             ["/battle-build/PHASER-LICENSE.txt"] = (Path.Combine(tableDirectory, "battle-build", "PHASER-LICENSE.txt"), StudioResponse.Plain),
+            // The effects kit (ADR 0196): a bundle of its own, which the laboratory's and the live one fetch after
+            // their first frame, by a name stamped with its own hash when they were built.
+            ["/battle-build/fx.js"] = (Path.Combine(tableDirectory, "battle-build", "fx.js"), JavaScript),
             ["/battle-art/eclipse-battle.webp"] = (Path.Combine(tableDirectory, "battle-art", "eclipse-battle.webp"), Webp),
             ["/battle-art/creatures.webp"] = (Path.Combine(tableDirectory, "battle-art", "creatures.webp"), Webp),
             ["/battle-art/base-creature.webp"] = (Path.Combine(tableDirectory, "battle-art", "base-creature.webp"), Webp),
@@ -195,6 +198,7 @@ internal sealed partial class TableFiles
             ["/concepts.js"] = (Path.Combine(tableDirectory, "concepts.js"), JavaScript),
             ["/battle-layout.js"] = (Path.Combine(tableDirectory, "battle-layout.js"), JavaScript),
             ["/battle-timing.js"] = (Path.Combine(tableDirectory, "battle-timing.js"), JavaScript),
+            ["/battle-staging.js"] = (Path.Combine(tableDirectory, "battle-staging.js"), JavaScript),
             ["/battle-build/live.js"] = (Path.Combine(tableDirectory, "battle-build", "live.js"), JavaScript),
             ["/battle-build/live.js.LEGAL.txt"] = (Path.Combine(tableDirectory, "battle-build", "live.js.LEGAL.txt"), StudioResponse.Plain),
 

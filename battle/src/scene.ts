@@ -11,7 +11,8 @@ import { MutationReveal } from './mutation-reveal';
 import { MutationCues } from './mutation-cues';
 import { CapstoneEffects } from './capstone-effects';
 import { EVOLUTION_REGISTRY } from '../../table/battle-evolution-art.js';
-import { SpellEffects, type EffectAnchor } from './spell-effects';
+import { SpellEffects, type EffectAnchor, type EffectFigure } from './spell-effects';
+import { loadKit } from './fx-loader';
 import { ConditionAuras } from './condition-auras';
 import { aurasShown } from '../../table/battle-auras.js';
 
@@ -63,6 +64,10 @@ export class BattleScene extends Phaser.Scene {
   onResizeDuringPlayback: () => void = () => {};
   onImpact: () => void = () => {};
   onCancel: () => void = () => {};
+  // Whether the effects kit arrived (`#lab[data-kit]` on the bench, for the film and the specs).
+  onKit: (equipped: boolean) => void = () => {};
+  /** What the effects kit plays now, for the bench and the browser specs. */
+  get effectsKit() { return this.spellEffects.playing; }
   // Which image a creature now shows: an evolution illustration's id, or `form:<form>` for an audited sprite.
   onArtwork: (id: string, shown: string) => void = () => {};
   // Which creature the acting halo lights now, or null (`#battle[data-halo]` for tests and tools).
@@ -121,6 +126,12 @@ export class BattleScene extends Phaser.Scene {
     });
     this.ready = true;
     this.onReady();
+    // The effects kit is not part of the first frame (ADR 0196): it is fetched now, and until it arrives, or if
+    // it never does, a spell is drawn as its motif.
+    void loadKit().then(createKit => {
+      if (createKit && this.sys.isActive()) this.spellEffects.attach(createKit(Phaser, this, () => this.reduced));
+      this.onKit(this.spellEffects.equipped);
+    });
   }
 
   present(state: SceneFrame, reduced: boolean, rate: number, replay = false) {
@@ -329,9 +340,9 @@ export class BattleScene extends Phaser.Scene {
     if (!actor) return;
     const cue = this.state.cue;
     if (cue) {
-      this.spellEffects.windup(cue.visual, this.anchor(actor), cue.contact.flatMap(id => {
+      this.spellEffects.windup(cue.visual, this.effectFigure(this.state.actor!, actor), cue.contact.flatMap(id => {
         const figure = this.figures.get(id);
-        return figure ? [{ id, anchor: this.anchor(figure) }] : [];
+        return figure ? [this.effectFigure(id, figure)] : [];
       }), this.rate);
       if (cue.visual.delivery !== 'melee') return;
     }
@@ -375,11 +386,19 @@ export class BattleScene extends Phaser.Scene {
       radius: Math.max(16, Math.min(58, figure.home.hitWidth * .3, height * .35)) };
   }
 
+  private effectFigure(id: string, figure: Figure): EffectFigure {
+    return { id, anchor: this.anchor(figure), image: figure.image };
+  }
+
   private spellImpact(cue: NonNullable<SceneFrame['cue']>, actor?: Figure) {
     this.spellEffects.clear();
     if (cue.kind === 'fizzle') {
-      if (actor) this.spellEffects.impact(cue.visual, this.anchor(actor), this.state.actor!, this.rate);
+      if (actor) this.spellEffects.impact(cue.visual, this.effectFigure(this.state.actor!, actor), this.rate);
       return;
+    }
+    if (actor) {
+      const first = cue.contact.map(id => this.figures.get(id)).find(Boolean);
+      this.spellEffects.cast(cue.visual, this.effectFigure(this.state.actor!, actor), this.rate, first && this.anchor(first));
     }
     for (const id of cue.recipients) {
       const target = this.figures.get(id);
@@ -388,13 +407,13 @@ export class BattleScene extends Phaser.Scene {
       // A blood ritual's self-cost is a wound, never a lunge, lightning bolt or summoned spirit at its caster.
       const effects = cue.effects.filter(effect => effect.creature === id);
       if (self && effects.some(effect => effect.wound)) {
-        this.spellEffects.impact({ family: 'physical', motif: 'wound', delivery: 'cast' }, this.anchor(target), id, this.rate);
+        this.spellEffects.impact({ family: 'physical', motif: 'wound', delivery: 'cast' }, this.effectFigure(id, target), this.rate);
         if (effects.every(effect => effect.wound)) continue;
       }
       const tones = effects.filter(effect => !effect.wound).map(effect => effect.tone);
       const visual = self && cue.visual.delivery === 'melee'
         ? { family: cue.visual.family, motif: tones.includes('recovery') ? 'vital' : 'focus', delivery: 'cast' } : cue.visual;
-      this.spellEffects.impact(visual, this.anchor(target), id, this.rate, actor ? this.anchor(actor) : undefined);
+      this.spellEffects.impact(visual, this.effectFigure(id, target), this.rate, actor ? this.anchor(actor) : undefined);
       if (!self && cue.visual.delivery === 'melee' && cue.struck.includes(id) && actor) {
         const { dx, dy } = strikeApproach(actor.home, target.home);
         this.tweens.add({ targets: target.image, x: target.home.x + dx * 12, y: target.home.y + dy * 12,

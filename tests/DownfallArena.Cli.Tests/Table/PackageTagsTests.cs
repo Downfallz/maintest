@@ -75,4 +75,31 @@ public sealed class PackageTagsTests : IDisposable
         guard.GetProperty("delivery").GetString().ShouldBe("cast");
         cards.Single(card => card.GetProperty("id").GetString() == "spell:strike:v1").GetProperty("visual").ValueKind.ShouldBe(JsonValueKind.Null);
     }
+
+    /// <summary>The staging a spell's art carries rides on the card's visual; an entry without one serves null.</summary>
+    [Fact]
+    public async Task The_catalogue_carries_the_staging_of_a_card_s_cast()
+    {
+        const string art = """
+            {
+              "spell:guard:v1": { "family": "physical", "motif": "plates", "delivery": "cast", "staging": [ { "beat": "motif", "at": 840 } ] },
+              "spell:strike:v1": { "family": "physical", "motif": "plates", "delivery": "cast" }
+            }
+            """;
+        using var hosted = new HostedTables(null, content: content => content.Write("presentation/spell-art.json", art));
+        using var registry = hosted.Registry();
+        var table = await hosted.Composer.ComposeAsync(HostedTables.OnePerson, TestContext.Current.CancellationToken);
+        using var place = (await registry.ReserveAsync(TestContext.Current.CancellationToken)).ShouldNotBeNull();
+        await registry.AddAsync(table, place, TestContext.Current.CancellationToken);
+
+        var answer = await table.Api.HandleAsync("GET", "/api/catalogue", string.Empty, table.Seats[0].Token);
+
+        answer.Status.ShouldBe(200);
+        var cards = JsonDocument.Parse(Encoding.UTF8.GetString(answer.Body)).RootElement.GetProperty("cards").EnumerateArray().ToList();
+        var staging = cards.Single(card => card.GetProperty("id").GetString() == "spell:guard:v1").GetProperty("visual").GetProperty("staging");
+        staging.ValueKind.ShouldBe(JsonValueKind.Array);
+        staging[0].GetProperty("beat").GetString().ShouldBe("motif");
+        staging[0].GetProperty("at").GetInt32().ShouldBe(840);
+        cards.Single(card => card.GetProperty("id").GetString() == "spell:strike:v1").GetProperty("visual").GetProperty("staging").ValueKind.ShouldBe(JsonValueKind.Null);
+    }
 }

@@ -27,6 +27,9 @@ export async function openBench(page, base) {
   const asked = address.searchParams.has('bench') ? base : `${base}${address.search ? '&' : '?'}bench`;
   await page.goto(asked);
   await page.locator('#lab[data-bench][data-ready="true"]').waitFor();
+  // The effects kit arrives after the first frame: a film that started before it would show a staged spell as
+  // its motif. `missing` is an answer too: the kit's bundle was not built, and the motifs are what plays.
+  await page.locator('#lab[data-kit]').waitFor();
 }
 
 /**
@@ -77,7 +80,7 @@ export async function filmSheet(page, options = {}) {
   const shots = await filmFrames(page, options);
   const look = await page.evaluate(() => {
     const lab = document.getElementById('lab');
-    const entry = window.battleBench.entries.find(one => one.id === lab.dataset.spell);
+    const entry = [...window.battleBench.entries, ...window.battleBench.samples].find(one => one.id === lab.dataset.spell);
     return `${entry.name} · ${entry.family} · ${entry.motif} · ${entry.delivery}`;
   });
   return contactSheet(page.context(), shots, { title: `${look} · ${options.speed ?? 1}×`, columns: options.columns });

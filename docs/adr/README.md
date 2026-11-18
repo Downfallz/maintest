@@ -153,12 +153,12 @@ UPDATE_INDEXES=1 dotnet test --project tests/DownfallArena.Architecture.Tests
 | [0128](0128-complete-the-game-loop-in-the-arena.md) | Complete the game loop in the arena | Accepted for the opt-in arena |
 | [0129](0129-a-player-keeps-friends-and-invites-one-of-them-to-a-table.md) | A player keeps friends, and invites one of them to a table | Accepted. Builds on [0116](0116-a-seat-invitation-is-accepted-once.md), [0118](0118-your-turn-reaches-a-phone-nobody-is-looking-at.md) and [0122](0122-a-player-signs-in-with-google-and-owns-their-seats.md). |
 | [0130](0130-map-arena-creatures-to-audited-sprites.md) | Map arena creatures to audited sprites | Accepted for the opt-in arena |
-| [0131](0131-give-confirmed-arena-spells-a-visual-vocabulary.md) | Give confirmed arena spells a visual vocabulary | Accepted for the opt-in arena |
+| [0131](0131-give-confirmed-arena-spells-a-visual-vocabulary.md) | Give confirmed arena spells a visual vocabulary | Accepted for the opt-in arena; extended by [0196](0196-stage-a-spell-in-beats-an-effects-kit-plays.md) |
 | [0132](0132-record-ordinary-round-energy-without-renumbering-old-tables.md) | Record ordinary round energy without renumbering old tables | Accepted |
 | [0133](0133-compose-bounded-mutation-cues-on-one-arena-body.md) | Compose bounded mutation cues on one arena body | Accepted for the opt-in arena, as a prototype policy |
 | [0134](0134-polish-confirmed-playback-with-opt-in-sound.md) | Polish confirmed playback with opt-in sound | Accepted for the opt-in arena |
 | [0135](0135-draft-team-tempos-before-sequential-confirmation.md) | Draft team tempos before sequential confirmation | Accepted for the opt-in arena Supersedes: ADR 0128's one-creature tempo confirmation UI only |
-| [0136](0136-gate-the-arena-release-behind-a-reversible-preference.md) | Gate the arena release behind a reversible preference | Accepted for the opt-in release candidate; physical-device acceptance remains open. |
+| [0136](0136-gate-the-arena-release-behind-a-reversible-preference.md) | Gate the arena release behind a reversible preference | Accepted for the opt-in release candidate; physical-device acceptance remains open. Extended by [0196](0196-stage-a-spell-in-beats-an-effects-kit-plays.md). |
 | [0137](0137-name-the-game-downfall-instinct.md) | Name the game Downfall Instinct | Accepted. |
 | [0138](0138-open-the-mutation-tree-with-the-mutation-phase.md) | Open the mutation tree with the mutation phase | Accepted for the opt-in battle view. |
 | [0139](0139-confirm-every-action-before-the-next-choice.md) | Confirm every incoming action before the next choice | Accepted for the opt-in battle view. Amends the AU7 extension of [ADR 0127](0127-play-confirmed-actions-in-the-live-arena.md). |
@@ -218,5 +218,6 @@ UPDATE_INDEXES=1 dotnet test --project tests/DownfallArena.Architecture.Tests
 | [0193](0193-write-the-rulebook-in-french-beside-the-english.md) | Write the rulebook in French beside the English | Accepted (settled by the owner in docs/tabletop/rulebook-plan.md, R6). Extends [0188](0188-build-the-official-rulebook-from-rules.md) |
 | [0194](0194-keep-what-each-seat-was-last-shown-beside-the-table.md) | Keep what each seat was last shown beside the table | Accepted |
 | [0195](0195-open-the-rulebook-in-the-language-its-address-asks-for.md) | Open the rulebook in the language its address asks for | Accepted (settled by the owner on #732). Amends [0193](0193-write-the-rulebook-in-french-beside-the-english.md) (the language `/rules` opens in) |
+| [0196](0196-stage-a-spell-in-beats-an-effects-kit-plays.md) | Stage a spell in beats an effects kit plays | Accepted |
 
 <!-- index:end -->

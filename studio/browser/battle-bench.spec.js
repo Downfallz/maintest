@@ -14,7 +14,7 @@ const film = (page, call, value) => page.evaluate(([name, argument]) => window.b
 test.beforeEach(async ({ page }) => { await openBench(page, '/table/battle-lab.html'); });
 
 test('the bench lists every authored effect and the six creatures, and fits the viewport', async ({ page }) => {
-  const listed = await page.locator('#bench-spell option').evaluateAll(options => options.map(option => option.value));
+  const listed = await page.locator('#bench-spell optgroup[label="Spells"] option').evaluateAll(options => options.map(option => option.value));
   expect(listed).toHaveLength(44);
   expect([...listed].sort()).toEqual(Object.keys(art).sort());
   await expect(page.locator('#bench-actor option')).toHaveCount(6);

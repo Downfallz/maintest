@@ -23,6 +23,13 @@ Names in this table describe the approved direction; ART-4 does not deploy pendi
 `spell:tornado:v1`, `spell:extort:v1` and `spell:soul_devourer:v1` still use their current catalogue labels.
 No biological motif is assigned to the Necrotic/Revenant branch. No spirit is a summoned game unit.
 
+## Staging
+
+Since [ADR 0196](../adr/0196-stage-a-spell-in-beats-an-effects-kit-plays.md) an entry may also carry a `staging`:
+the beats the effects kit plays, the motif one of them. A spell without one is drawn as described here, and so
+is a staged spell until the kit has loaded. `battle/README.md`, "The effects kit", lists the beats. No spell has
+a staging yet: BC6 to BC8 of [the battle's craft plan](battle-craft-plan.md) write them.
+
 ## Timing and integrity
 
 - Use the existing 840 ms windup, 1700 ms impact frame and 500 ms settlement. Quills travel during the
