@@ -22,8 +22,9 @@ Every entry has the same six lines.
 - **Reduced motion**: what is left of it when the player asked for less motion.
 - **Here**: what the view does today, and which stage of the plan uses the pattern.
 
-A number marked *house* is ours: no source gives it, and a film strip (BC2) tunes it. A number marked *to check*
-was read in a search excerpt and not on the page (see "How the book is kept").
+A number marked *house* is ours: no source gives it, and a film strip (BC2) tunes it. A number or a claim marked
+*to check* was read in a search excerpt and not on the page. A source marked *not read* could not be opened: its
+site refused the download (see "How the book is kept").
 
 ## Rules every pattern obeys
 
@@ -91,8 +92,8 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 ### Hit stop
 
 - **What**: the two figures freeze for a few frames at contact, so the hit reads as heavy. The stop grows with
-  the damage. A projectile freezes its target only. The struck figure shakes during the stop, and the shake dies
-  down. SmashWiki gives a cap of 20 frames in Super Smash Bros. Melee and 30 from Brawl on (*to check*).
+  the damage. A projectile gives less of it, an electric attack more. Super Smash Bros. caps it at 20 frames in
+  Melee and 30 from Brawl on. The struck figure shakes during the stop, and the shake dies down (*to check*).
 - **Source**: [Stop for Big Moments!](https://www.youtube.com/watch?v=OdVkEOzdCPw), Masahiro Sakurai, 2022;
   [Thinking About Hitstop](https://sourcegaming.info/2015/11/11/thoughts-on-hitstop-sakurais-famitsu-column-vol-490-1/),
   Sakurai's Famitsu column, translated by Source Gaming, 2015; [Hitlag](https://www.ssbwiki.com/Hitlag), SmashWiki.
@@ -217,9 +218,10 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 ### Breath at rest
 
 - **What**: a still figure is never quite still. A moving hold, a slow rise and fall, keeps a long pose alive.
-- **Source**: [Why all animators need to master the moving hold](https://animationmentor.com/blog/why-all-animators-need-to-master-the-moving-hold),
-  Animation Mentor; [Twelve basic principles of animation](https://en.wikipedia.org/wiki/Twelve_basic_principles_of_animation),
-  on a character at rest.
+- **Source**: [Twelve basic principles of animation](https://en.wikipedia.org/wiki/Twelve_basic_principles_of_animation):
+  a character sitting still can show "some sort of movement, such as breathing", so the picture does not go
+  lifeless; [Why all animators need to master the moving hold](https://animationmentor.com/blog/why-all-animators-need-to-master-the-moving-hold),
+  Animation Mentor (*not read*).
 - **Phaser**: computed in `Phaser.Scene#update` from the scene's time, as the halos are, and applied to
   `Phaser.GameObjects.Image#scaleY`. Not a tween: the cancel path's `Phaser.Tweens.TweenManager#killAll` would
   kill it at the first skip.
@@ -234,8 +236,9 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 
 ### Shake from trauma
 
-- **What**: keep one value, trauma, between 0 and 1. A hit adds to it; it falls back at a steady rate. The shake is
-  trauma squared or cubed, so a small hit barely moves the view and a large one moves it much more. Offset is
+- **What**: keep one value, trauma, between 0 and 1. A hit adds 0.2 to 0.5 to it; it falls back at a steady
+  rate. The shake is trauma squared or cubed, so a small hit barely moves the view and a large one moves it much
+  more: cubed, a trauma of 0.3, 0.6 and 0.9 gives 3%, 22% and 73% of the full shake. Offset is
   `maxOffset × shake × noise`, angle `maxAngle × shake × noise`. Smooth noise reads better than a random draw.
 - **Source**: [Math for Game Programmers: Juicing Your Cameras With Math](https://gdcvault.com/play/1023146/Math-for-Game-Programmers-Juicing),
   Squirrel Eiserloh, GDC 2016 ([slides](https://media.gdcvault.com/gdc2016/Presentations/Eiserloh_Squirrel_JuicingYourCameras.pdf)).
@@ -252,7 +255,8 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 ### Punch zoom
 
 - **What**: the camera jumps a little closer on a heavy hit and eases back. With a hit stop it marks the one
-  blow that matters. Super Smash Bros. keeps it for slow, hard-to-land hits.
+  blow that matters. Super Smash Bros. Ultimate does it on a decisive hit: the background flashes, time slows
+  down and the camera zooms in on the impact.
 - **Source**: [Special Zoom](https://www.ssbwiki.com/Final_Zoom), SmashWiki.
 - **Phaser**: `Phaser.Cameras.Scene2D.Camera#zoomTo` with an ease, or `Phaser.Cameras.Scene2D.Camera#setZoom`
   from a tween. `Phaser.Cameras.Scene2D.Camera#resetFX` does not reset a zoom: the cancel path must also call
@@ -354,11 +358,11 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 
 ### Additive light
 
-- **What**: drawn additively, overlapping particles sum toward white and read as light. On a bright ground they
-  blow out and lose shape and colour; on a dark one they glow.
-- **Source**: [Technical Artist Bootcamp: The VFX of Diablo](https://gdcvault.com/play/1017660/Technical-Artist-Bootcamp-The-VFX),
-  Julian Love, Blizzard, GDC 2013; [Premultiplied alpha](https://iquilezles.org/articles/premultipliedalpha),
-  Inigo Quilez.
+- **What**: drawn additively, a particle's colour is added to what is behind it. Overlaps sum toward white and
+  read as light. On a bright ground the sum is already white and the shape is lost; on a dark one it glows.
+  Premultiplied alpha blends as `c + (1 - a) × d`: where a texture's alpha is 0 it adds, where it is 1 it covers.
+- **Source**: [Premultiplied alpha](https://iquilezles.org/articles/premultipliedalpha/), Inigo Quilez, for the
+  blend's equation. That additive light is lost on a bright ground is arithmetic, not a citation.
 - **Phaser**: `Phaser.Types.GameObjects.Particles.ParticleEmitterConfig.blendMode` at `Phaser.BlendModes.ADD`;
   `Phaser.BlendModes.SCREEN` sums more gently and does not blow out.
 - **Cost**: a change of blend mode starts a new batch. Draw every additive object together.
@@ -371,7 +375,8 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 ### A budget of pixels
 
 - **What**: a phone's GPU runs out of pixels before it runs out of particles. Many blended particles on top of
-  each other are drawn over and over. Prefer fewer and larger; keep the transparent margin of a texture small.
+  each other make it draw each pixel many times, and so do a few particles that are large on the screen. The
+  count to keep low is the pixels covered, times the layers over them.
 - **Source**: [Optimal Particle Rendering on PowerVR](https://docs.imgtec.com/performance-guides/graphics-recommendations/html/topics/optimal-particle-rendering-on-powervr.html),
   Imagination Technologies; [Phaser 4 Rendering Concepts](https://phaser.io/tutorials/phaser-4-rendering-concepts),
   Phaser Studio: "Filling pixels is expensive".
@@ -419,8 +424,7 @@ bake the drawing to a texture first, or filter a container.
 - **What**: pixels are moved by a second picture: heat above a fire, a ring that bends the ground as a shock
   passes.
 - **Source**: [Phaser 4 Filters and Post-FX](https://unpkg.com/phaser@4.2.1/skills/filters-and-postfx/SKILL.md),
-  Phaser 4.2.1; [Stylized VFX in RiME](https://simonschreibt.de/gat/stylized-vfx-in-rime/), Simon Trümpler, for
-  distortion used as a shape and not as noise.
+  Phaser 4.2.1.
 - **Phaser**: `Phaser.GameObjects.Components.FilterList#addDisplacement` with a texture key; the strength is
   `Phaser.Filters.Displacement#x` and `Phaser.Filters.Displacement#y`, very small numbers (0.005).
   `Phaser.GameObjects.Components.FilterList#addBarrel` is a simpler bulge, with no texture.
@@ -463,7 +467,7 @@ bake the drawing to a texture first, or filter a container.
   another gives flame and smoke.
 - **Source**: [Phaser 4 Shader Guide](https://phaser.io/tutorials/phaser-4-shader-guide), Phaser Studio;
   [Fractal Brownian Motion](https://thebookofshaders.com/13/), The Book of Shaders;
-  [Domain warping](https://iquilezles.org/articles/warp), Inigo Quilez.
+  [Domain warping](https://iquilezles.org/articles/warp/), Inigo Quilez.
 - **Phaser**: `Phaser.GameObjects.GameObjectFactory#shader` with a `Phaser.Types.GameObjects.Shader.ShaderQuadConfig`:
   the code in `.fragmentSource`, the values in `.setupUniforms` or through `Phaser.GameObjects.Shader#setUniform`.
   Phaser does not pass the time to the shader; you set it. For no code at all, the engine ships two shaders:
@@ -510,7 +514,7 @@ bake the drawing to a texture first, or filter a container.
   bright one gives it a core and a glow.
 - **Source**: [Lightning Bolts](https://www.drilian.com/posts/2009.02.25-lightning-bolts/), Josh Jersild, 2009;
   [How to Generate Shockingly Good 2D Lightning Effects](https://code.tutsplus.com/how-to-generate-shockingly-good-2d-lightning-effects--gamedev-2681t),
-  Michael Hoffman, 2013.
+  Michael Hoffman, 2013 (*not read*).
 - **Phaser**: `Phaser.GameObjects.Graphics#strokePoints` on points built with `Phaser.Math.Vector2`; the offsets
   come from a `Phaser.Math.RandomDataGenerator` with a seed, so a film strip repeats.
 - **Cost**: one `Graphics`. A redraw is a new path, not a new object.
@@ -539,7 +543,7 @@ bake the drawing to a texture first, or filter a container.
   give one flat painting depth. Godot's own example runs from 0.1 for the sky to 0.7 for the nearest layer
   (*to check*).
 - **Source**: [2D Parallax](https://docs.godotengine.org/en/stable/tutorials/2d/2d_parallax.html), the Godot
-  documentation.
+  documentation (*not read*).
 - **Phaser**: `Phaser.GameObjects.Image#setScrollFactor` on each plate: the camera's shake, punch and push then
   move the near plates more than the far ones, with no code each frame.
 - **Cost**: none.
@@ -549,11 +553,11 @@ bake the drawing to a texture first, or filter a container.
 
 ### Fog and embers
 
-- **What**: slow particles in the air say the place is alive between two actions. Few, large, dim, and behind
-  the figures.
-- **Source**: [Special effects graphic techniques: fog effects](https://support.arm.com/documentation/102259/0100/Fog-effects),
-  Arm, which prefers few large particles; [Particle System](https://unpkg.com/phaser@4.2.1/skills/particles/SKILL.md),
-  Phaser 4.2.1.
+- **What**: slow particles in the air say the place is alive between two actions. Few, dim, and behind the
+  figures.
+- **Source**: [Particle System](https://unpkg.com/phaser@4.2.1/skills/particles/SKILL.md), Phaser 4.2.1, for a
+  flow that starts full; [Optimal Particle Rendering on PowerVR](https://docs.imgtec.com/performance-guides/graphics-recommendations/html/topics/optimal-particle-rendering-on-powervr.html),
+  Imagination Technologies, for what a wide blended particle costs.
 - **Phaser**: one flowing emitter, full from the first frame
   (`Phaser.Types.GameObjects.Particles.ParticleEmitterConfig.advance`), spread by
   `Phaser.Types.GameObjects.Particles.ParticleEmitterConfig.emitZone`. A band of fog is a
@@ -569,8 +573,8 @@ bake the drawing to a texture first, or filter a container.
 
 - **What**: the ground takes the colour of the spell for a moment. The place reacts, so the spell feels as if it
   happened there and not on top of a picture.
-- **Source**: [Special Zoom](https://www.ssbwiki.com/Final_Zoom), SmashWiki: the background answers the great
-  hit; [Understanding SC 2.3.1](https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold.html),
+- **Source**: [Special Zoom](https://www.ssbwiki.com/Final_Zoom), SmashWiki: the background flashes on the
+  decisive hit; [Understanding SC 2.3.1](https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold.html),
   W3C, for its limit.
 - **Phaser**: a `Phaser.GameObjects.PointLight` at the cast: a light with no normal map, built for flashes, with
   `Phaser.GameObjects.PointLight#intensity` and `Phaser.GameObjects.PointLight#radius` to tween. For the whole
@@ -598,12 +602,13 @@ bake the drawing to a texture first, or filter a container.
 
 ### One effect, one meaning
 
-- **What**: the same shape always means the same thing. An effect has one primary element that carries the
-  game's message, and secondary ones that carry the theme, lower in value and opacity. What an effect weighs to
-  the eye should match what it weighs in the game.
-- **Source**: [League's VFX Style Guide](https://nexus.leagueoflegends.com/en-us/2017/10/dev-leagues-vfx-style-guide/),
-  Riot Games, 2017; [Clarity in League](https://www.leagueoflegends.com/en-us/news/dev/clarity-in-league/), Riot
-  Games.
+- **What**: the same shape always means the same thing. What an effect weighs to the eye should match what it
+  weighs in the game. An effect has one primary element that carries the game's message, and secondary ones
+  that carry the theme, lower in value and opacity (*to check*).
+- **Source**: [League's VFX Style Guide](https://web.archive.org/web/20180719210538/https://nexus.leagueoflegends.com/en-us/2017/10/dev-leagues-vfx-style-guide/),
+  Riot Games, 2017 (*not read*: the page is gone, this is its archived copy);
+  [Clarity in League](https://www.leagueoflegends.com/en-us/news/dev/clarity-in-league/), Riot Games: "the amount
+  of attention an ability grabs should match its level of importance", and visual noise adds up quickly.
 - **Phaser**: the primary element is drawn last and highest (`Phaser.GameObjects.Graphics#setDepth`), and each
   object carries its motif, creature and phase (`Phaser.GameObjects.GameObject#setData`), which the browser specs
   read.
@@ -627,11 +632,13 @@ bake the drawing to a texture first, or filter a container.
 
 ### The three parts of an effect
 
-- **What**: an effect has an anticipation, a main beat and a dissipation. The main beat is the brightest and the
-  shortest. The end falls in value, saturation and opacity (*to check*), and never competes with the next action.
+- **What**: an effect has an anticipation, a main beat and a dissipation (*to check*). The main beat is the
+  brightest and the shortest. The end falls in value, saturation and opacity (*to check*), and never competes
+  with the next action.
 - **Source**: [Visual Effects Bootcamp: Artistic Principles of VFX](https://www.gdcvault.com/play/1024439/Visual-Effects-Bootcamp-Artistic-Principles),
-  Hadidjah Chamberlin and Jason Keyser, GDC 2017; [League's VFX Style Guide](https://nexus.leagueoflegends.com/en-us/2017/10/dev-leagues-vfx-style-guide/),
-  Riot Games, 2017.
+  Hadidjah Chamberlin and Jason Keyser, GDC 2017: artistic fundamentals of VFX, with cases from League of
+  Legends; [League's VFX Style Guide](https://web.archive.org/web/20180719210538/https://nexus.leagueoflegends.com/en-us/2017/10/dev-leagues-vfx-style-guide/),
+  Riot Games, 2017 (*not read*).
 - **Phaser**: one `Phaser.Time.Timeline` per effect places the three parts on the game's clock
   (`Phaser.Time.Timeline#add`), and one `Phaser.Time.Timeline#timeScale` follows the playback rate.
 - **Cost**: none.
@@ -720,9 +727,12 @@ The types cannot catch these. They compile, and do the wrong thing.
   (`studio/browser/plan.js`).
 - When Phaser is upgraded, the test says which names moved. Fix the entry, then read "Declared, and dead" again
   against the new version: the test cannot.
-- The links were found by a web search on 2026-11-18. The session's network could not open them, so no page was
-  read here: each source is cited for what it is known to say, and a figure taken from a search excerpt is marked
-  *to check*. The Phaser facts are first hand, read in the installed package and its source. A session that can
-  open the links removes the marks it has checked.
+- The links were found by a web search on 2026-11-18, then opened and read against the entry that cites them.
+  Of 39 links, 32 pages were read. Three are videos: their titles and authors were read, and nobody watched
+  them here. Four are marked *not read*: Animation Mentor, Envato Tuts+ and the Godot documentation refused the
+  download, and Riot's guide is gone from its address, so the link is its archived copy, which did not open
+  either. What a page did not say was taken out of its entry or marked *to check*. The Phaser facts are first
+  hand, read in the installed package and its source.
+- A session that opens a *not read* source, or watches a video, removes the marks it has checked.
 - A new pattern is added with all six lines, under the group it belongs to. A number with no source is marked
   *house*.
