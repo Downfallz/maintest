@@ -8,6 +8,7 @@ using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Infrastructure.Learning;
 using DownfallArena.Infrastructure.Matches.Scenarios;
+using DownfallArena.SharedKernel.Primitives;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DownfallArena.Cli.Table;
@@ -24,6 +25,8 @@ namespace DownfallArena.Cli.Table;
 internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions stored, TableComposer composer)
 {
     public const string Route = "/api/admin/scenarios";
+
+    private static readonly DomainError UnderWay = new("Scenario.UnderWay", "This session is still being played: it can be cut once it is over, so nothing a seat holds face down reaches a scenario.");
 
     /// <summary>What operators do from the panel (A6): a scenario cut or removed is noted with the rest.</summary>
     public OperatorNotes Notes { get; set; } = OperatorNotes.None;
@@ -122,7 +125,7 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
             return (Error(FeedbackErrors.NoPosition.Code, FeedbackErrors.NoPosition.Message, 409), null);
         }
 
-        var read = context.Table is { } table ? await SourceAsync(table) : await PracticeSourceAsync(context.Scenario!, context.PracticeEntries ?? []);
+        var read = context.Table is { } table ? await SourceAsync(table, FeedbackErrors.UnderWay) : await PracticeSourceAsync(context.Scenario!, context.PracticeEntries ?? []);
         if (read.Refused is { } refused)
         {
             return (refused, null);
@@ -198,11 +201,19 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
     /// A recorded session as a scenario is cut from it: the content it was played on, its match as it was created, and
     /// its journal; or the answer that says why it cannot be.
     /// </summary>
-    private async Task<(StudioResponse? Refused, (TableContent Content, JournaledMatch Match, IReadOnlyList<IJournalEntry> Entries)? Source)> SourceAsync(string session)
+    private async Task<(StudioResponse? Refused, (TableContent Content, JournaledMatch Match, IReadOnlyList<IJournalEntry> Entries)? Source)> SourceAsync(string session, DomainError? underWay = null)
     {
         if (!TableKeys.IsTableId(session) || await stored.RecordAsync(session) is not { } record)
         {
             return (Error("Scenario.NoSession", $"No recorded session '{session}' at this host.", 404), null);
+        }
+
+        // A table still played is cut once it is over (#736): its journal holds the other seat's choices of the round,
+        // face down, which the scenario's opponent would follow and anyone holding the scenario's id would open.
+        if (record is { Status: TableRecord.Open, Void: false })
+        {
+            var refused = underWay ?? UnderWay;
+            return (Error(refused.Code, refused.Message, 409), null);
         }
 
         if (record.Rules is not { } recorded)

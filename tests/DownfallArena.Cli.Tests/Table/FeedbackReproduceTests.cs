@@ -302,6 +302,32 @@ public sealed class FeedbackReproduceTests : IDisposable
         (await SheetAsync(id)).GetProperty("reproduction").ValueKind.ShouldBe(JsonValueKind.Null);
     }
 
+    /// <summary>
+    /// A report from a table still played is not cut (#736), as its scenario is not downloaded (#744): the table's journal
+    /// holds the other seat's choices of the round, face down. Its sheet offers Reproduce once the game is over.
+    /// </summary>
+    [Fact]
+    public async Task A_report_from_a_table_still_under_way_is_not_cut_until_it_is_over()
+    {
+        using var registry = _hosted.Registry();
+        var table = await _hosted.Composer.ComposeAsync(HostedTables.OnePerson, Cancel);
+        using (var place = (await registry.ReserveAsync(Cancel)).ShouldNotBeNull())
+        {
+            await registry.AddAsync(table, place, Cancel);
+        }
+
+        var seat = table.Seats[0];
+        (await table.Api.HandleAsync("GET", $"/api/seat/{seat.Name}", string.Empty, seat.Token)).Status.ShouldBe(200);
+        var id = await ReportedAsync(new FeedbackContext { Table = table.Id, Seat = seat.Name, Round = 1 });
+
+        var refused = await ReproduceAsync(id);
+
+        (refused.Status, Read(refused).GetProperty("error").GetString()).ShouldBe((409, "Feedback.UnderWay"));
+        (await _scenarios.ListAsync(Cancel)).ShouldBeEmpty();
+        (await ActivityAsync()).ShouldBeEmpty();
+        (await SheetAsync(id)).GetProperty("actions").EnumerateArray().Select(one => one.GetString()).ShouldNotContain("reproduce");
+    }
+
     [Fact]
     public async Task A_report_from_a_round_offers_reproduce_on_its_sheet()
     {

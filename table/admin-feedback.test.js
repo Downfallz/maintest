@@ -273,4 +273,6 @@ test('the download is offered once the game is over, and the sheet says why whil
   assert.equal(downloadNote({ ...filed, underWay: true, actions: ['file'] }), 'The scenario can be downloaded once the game it was sent from is over: nothing a seat holds face down reaches a public issue.');
   assert.equal(downloadNote({ ...filed, reproduction: null, actions: ['reproduce', 'file'] }), 'Reproduce the round first: its scenario is what the issue carries.');
   assert.equal(downloadNote({ ...filed, kind: 'idea', reproduction: null, actions: [] }), '');
+  assert.equal(downloadNote({ ...filed, reproduction: null, underWay: true, actions: ['file', 'diagnose'] }),
+    'The round can be reproduced once the game it was sent from is over: its scenario would hold what the other seat keeps face down.');
 });

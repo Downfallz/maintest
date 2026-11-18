@@ -467,7 +467,8 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
     {
         var bug = one.Kind == FeedbackKind.Bug;
         List<string> offered = [.. bug ? BugActions(one) : IdeaActions(one, group)];
-        if (bug && Scenarios is not null && Cuttable(one.Context))
+        // A table still played is cut once it is over (#736), as its scenario leaves the host only then (R5).
+        if (bug && Scenarios is not null && Cuttable(one.Context) && !underWay)
         {
             offered.Add("reproduce");
         }
