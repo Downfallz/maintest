@@ -210,7 +210,7 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
 
         // A table still played is cut once it is over (#736): its journal holds the other seat's choices of the round,
         // face down, which the scenario's opponent would follow and anyone holding the scenario's id would open.
-        if (record is { Status: TableRecord.Open, Void: false })
+        if (record.UnderWay)
         {
             var refused = underWay ?? UnderWay;
             return (Error(refused.Code, refused.Message, 409), null);
@@ -302,7 +302,7 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
         // A scenario cut from a table still played, as a practice's may be, holds what its seats keep face down there.
         foreach (var source in new[] { document.Session, document.Scenario.Source.Run }.OfType<string>().Distinct(StringComparer.Ordinal))
         {
-            if (TableKeys.IsTableId(source) && await stored.RecordAsync(source) is { Status: TableRecord.Open, Void: false })
+            if (TableKeys.IsTableId(source) && await stored.RecordAsync(source) is { UnderWay: true })
             {
                 return (Error(FeedbackErrors.UnderWay.Code, FeedbackErrors.UnderWay.Message, 409), null);
             }

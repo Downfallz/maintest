@@ -14,7 +14,7 @@ const report = {
     allies: [{ name: 'Ravager', health: 7, maxHealth: 10, energy: 2, isStunned: true, conditions: [{ effect: { kind: 'Bleed' } }] }],
     enemies: [{ name: 'Warden', health: 0, maxHealth: 12, energy: 0, isStunned: false, conditions: [] }],
   } },
-  session: '/session/20261116-110000-deadbeef', underWay: true, actions: ['reproduce', 'seen', 'reproduced', 'dismiss', 'spam', 'toIdea', 'diagnose', 'mute'],
+  session: '/session/20261116-110000-deadbeef', underWay: true, reproduceOnceOver: true, actions: ['seen', 'reproduced', 'dismiss', 'spam', 'toIdea', 'diagnose', 'mute'],
 };
 
 test('the list\'s address leaves out every filter that is every one, and the first page', () => {
@@ -72,8 +72,8 @@ test('the position is drawn as the reporter\'s side then the other, a creature a
 
 test('the sheet shows the buttons the host offers, and none it does not', () => {
   const bug = sheetActions(report);
-  assert.deepEqual([bug.reproduce, bug.seen, bug.reproduced, bug.toIdea, bug.toBug, bug.diagnose, bug.mute, bug.unmute], [true, true, true, true, false, true, true, false]);
-  assert.equal(sheetActions({ ...report, actions: ['seen'] }).reproduce, false, 'a report sent outside a round has nothing to cut');
+  assert.deepEqual([bug.reproduce, bug.seen, bug.reproduced, bug.toIdea, bug.toBug, bug.diagnose, bug.mute, bug.unmute], [false, true, true, true, false, true, true, false]);
+  assert.equal(sheetActions({ ...report, underWay: false, actions: ['reproduce', 'seen'] }).reproduce, true, 'a game over offers its round to cut');
 
   assert.deepEqual(Object.values(sheetActions({ ...report, actions: ['bogus'] })).filter(Boolean), []);
   assert.deepEqual(Object.values(sheetActions(null)).filter(Boolean), [], 'a sheet still being read offers nothing');
@@ -171,7 +171,7 @@ test('each idea merged into a group opens its own sheet, where it can be dismiss
 
 // ---- R5: the redacted scenario and the issue.
 
-const filed = { ...report, repository: 'Downfallz/maintest', issue: null, reproduction: { id: 'sc-1', link: '/battle?scenario=sc-1' }, underWay: false,
+const filed = { ...report, repository: 'Downfallz/maintest', issue: null, reproduction: { id: 'sc-1', link: '/battle?scenario=sc-1' }, underWay: false, reproduceOnceOver: false,
   actions: ['reproduce', 'download', 'seen', 'reproduced', 'dismiss', 'spam', 'toIdea', 'file', 'mute'] };
 
 const fields = address => Object.fromEntries(new URL(address).searchParams);
@@ -273,6 +273,7 @@ test('the download is offered once the game is over, and the sheet says why whil
   assert.equal(downloadNote({ ...filed, underWay: true, actions: ['file'] }), 'The scenario can be downloaded once the game it was sent from is over: nothing a seat holds face down reaches a public issue.');
   assert.equal(downloadNote({ ...filed, reproduction: null, actions: ['reproduce', 'file'] }), 'Reproduce the round first: its scenario is what the issue carries.');
   assert.equal(downloadNote({ ...filed, kind: 'idea', reproduction: null, actions: [] }), '');
-  assert.equal(downloadNote({ ...filed, reproduction: null, underWay: true, actions: ['file', 'diagnose'] }),
+  assert.equal(downloadNote({ ...filed, reproduction: null, underWay: true, reproduceOnceOver: true, actions: ['file', 'diagnose'] }),
     'The round can be reproduced once the game it was sent from is over: its scenario would hold what the other seat keeps face down.');
+  assert.equal(downloadNote({ ...filed, reproduction: null, underWay: true, reproduceOnceOver: false, actions: ['file', 'diagnose'] }), '', 'a report sent outside a round is never cut');
 });

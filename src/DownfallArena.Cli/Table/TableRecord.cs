@@ -85,6 +85,13 @@ internal sealed record TableRecord
     /// </summary>
     public bool Void { get; init; }
 
+    /// <summary>
+    /// Whether the table is still played: open and not voided. Its journal then holds what a seat keeps face down, so
+    /// it is neither cut as a scenario (#736) nor downloaded redacted (#744).
+    /// </summary>
+    [JsonIgnore]
+    public bool UnderWay => Status == Open && !Void;
+
     /// <summary>Why the operator voided the table (ADR 0176), or null for a table that ended otherwise or voided itself (ADR 0163).</summary>
     public Application.Accounts.MatchVoid? VoidReason { get; init; }
 

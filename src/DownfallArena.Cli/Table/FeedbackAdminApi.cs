@@ -203,6 +203,9 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
 
                 // Diagnose… is offered while the table it was sent from is still under way (scenarios plan, S5b).
                 underWay,
+
+                // Reproduce waits for the game's end (#736): what the sheet says while it is not offered.
+                reproduceOnceOver = underWay && reproduction is null && one.Kind == FeedbackKind.Bug && one.MergedInto is null && Scenarios is not null && Cuttable(one.Context),
                 actions = Actions(one, mute, underWay, group, reproduction is not null),
             },
             Web);
@@ -409,7 +412,7 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
 
     /// <summary>Whether the table a report was sent from is still played: open and not voided.</summary>
     private async Task<bool> UnderWayAsync(Feedback one) =>
-        one.Context?.Table is { } table && stored is not null && await stored.RecordAsync(table) is { Status: TableRecord.Open, Void: false };
+        one.Context?.Table is { } table && stored is not null && await stored.RecordAsync(table) is { UnderWay: true };
 
     private async Task<StudioResponse> MuteAsync(string id, string operatorName)
     {

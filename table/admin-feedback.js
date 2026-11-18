@@ -391,8 +391,8 @@ export function downloadNote(sheet) {
   const can = sheetActions(sheet);
   if (sheet?.kind !== 'bug' || can.download) return '';
   if (sheet.reproduction && sheet.underWay) return 'The scenario can be downloaded once the game it was sent from is over: nothing a seat holds face down reaches a public issue.';
-  // The host cuts a table's round once its game is over (#736), and offers Reproduce only then.
-  if (!sheet.reproduction && sheet.underWay && sheet.context?.table) return 'The round can be reproduced once the game it was sent from is over: its scenario would hold what the other seat keeps face down.';
+  // The host cuts a table's round once its game is over (#736), and says when Reproduce waits for that.
+  if (sheet.reproduceOnceOver) return 'The round can be reproduced once the game it was sent from is over: its scenario would hold what the other seat keeps face down.';
   return !sheet.reproduction && can.reproduce ? 'Reproduce the round first: its scenario is what the issue carries.' : '';
 }
 

@@ -132,7 +132,7 @@ public sealed class ScenariosApiTests : IDisposable
     /// the scripted opponent would follow and any signed-in account holding the scenario's id would open.
     /// </summary>
     [Fact]
-    public async Task A_session_still_under_way_is_neither_cut_nor_offered_rounds_until_it_is_over()
+    public async Task A_session_still_under_way_is_neither_cut_nor_read_for_its_rounds_until_it_is_over()
     {
         using var registry = _hosted.Registry();
         var table = await _hosted.Composer.ComposeAsync(HostedTables.OnePerson, Cancel);
@@ -150,6 +150,11 @@ public sealed class ScenariosApiTests : IDisposable
         (cut.Status, Read(cut).GetProperty("error").GetString()).ShouldBe((409, "Scenario.UnderWay"));
         (rounds.Status, Read(rounds).GetProperty("error").GetString()).ShouldBe((409, "Scenario.UnderWay"));
         (await _store.ListAsync(Cancel)).ShouldBeEmpty();
+
+        // Closed by the operator, it is over: the same round is cut.
+        (await _hosted.Stored!.CloseAsync(table.Id, _hosted.Index, Cancel)).ShouldBeTrue();
+        var later = await Admin().HandleAsync("POST", ScenarioAdminApi.Route, JsonSerializer.Serialize(new { session = table.Id, round = 1 }), "operator");
+        later.Status.ShouldBe(201, Encoding.UTF8.GetString(later.Body));
     }
 
     [Fact]

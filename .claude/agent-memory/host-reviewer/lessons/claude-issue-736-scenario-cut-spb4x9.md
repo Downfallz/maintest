@@ -1,0 +1,2 @@
+- The Sessions tab gates "cut a scenario" on `live` (AdminApi.Described: held in the API's registry), the host on the record (`Status: Open, Void: false`): a finished table still held gets no button, an open table the API does not hold gets one that 409s; check the page's gate against the host's whenever a refusal reads the record (#736 PR).
+- A refusal added at cut time leaves what was cut before it: scenarios already cut from a live table stay openable and listable (PUT .../listing checks no source); ask the PR to say what happens to them (#736 PR).

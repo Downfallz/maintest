@@ -325,7 +325,28 @@ public sealed class FeedbackReproduceTests : IDisposable
         (refused.Status, Read(refused).GetProperty("error").GetString()).ShouldBe((409, "Feedback.UnderWay"));
         (await _scenarios.ListAsync(Cancel)).ShouldBeEmpty();
         (await ActivityAsync()).ShouldBeEmpty();
-        (await SheetAsync(id)).GetProperty("actions").EnumerateArray().Select(one => one.GetString()).ShouldNotContain("reproduce");
+        var sheet = await SheetAsync(id);
+        sheet.GetProperty("actions").EnumerateArray().Select(one => one.GetString()).ShouldNotContain("reproduce");
+        sheet.GetProperty("reproduceOnceOver").GetBoolean().ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task A_report_sent_outside_a_round_of_a_table_under_way_is_not_promised_a_cut()
+    {
+        using var registry = _hosted.Registry();
+        var table = await _hosted.Composer.ComposeAsync(HostedTables.OnePerson, Cancel);
+        using (var place = (await registry.ReserveAsync(Cancel)).ShouldNotBeNull())
+        {
+            await registry.AddAsync(table, place, Cancel);
+        }
+
+        var seat = table.Seats[0];
+        (await table.Api.HandleAsync("GET", $"/api/seat/{seat.Name}", string.Empty, seat.Token)).Status.ShouldBe(200);
+        var id = await ReportedAsync(new FeedbackContext { Table = table.Id, Seat = seat.Name });
+
+        var sheet = await SheetAsync(id);
+
+        (sheet.GetProperty("underWay").GetBoolean(), sheet.GetProperty("reproduceOnceOver").GetBoolean()).ShouldBe((true, false));
     }
 
     [Fact]

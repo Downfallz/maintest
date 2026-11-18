@@ -171,8 +171,9 @@ test('a recorded session reads as live, finished or not finished, with its playe
   const rows = sessionRows({
     sessions: [
       { id: 'a', createdAt: '2026-09-27T12:00:00Z', player1: 'human:mk', player2: 'Greedy', matches: 0, steps: 12, live: true, over: false, session: '/session/a', export: '/api/sessions/a/export', location: 'runs/playtest/a' },
-      { id: 'b', createdAt: '2026-09-26T12:00:00Z', player1: 'human:mk', player2: 'Greedy', matches: 1, steps: 40, live: false, over: true, session: '/session/b', export: '/api/sessions/b/export' },
+      { id: 'b', createdAt: '2026-09-26T12:00:00Z', player1: 'human:mk', player2: 'Greedy', matches: 1, steps: 40, live: false, over: true, underWay: false, session: '/session/b', export: '/api/sessions/b/export' },
       { id: 'c', matches: 0, steps: 0, live: false, over: false, session: '/session/c', export: '/api/sessions/c/export' },
+      { id: 'd', matches: 0, steps: 9, live: false, over: false, underWay: true, session: '/session/d', export: '/api/sessions/d/export' },
     ],
   });
 
@@ -187,6 +188,7 @@ test('a recorded session reads as live, finished or not finished, with its playe
   assert.equal(rows[2].state, 'not finished');
   assert.equal(rows[2].players, 'no manifest');
   assert.equal(rows[2].when, 'unknown date');
+  assert.deepEqual([rows[1].underWay, rows[3].underWay], [false, true], 'a table still played by its record, whichever process holds it (#736)');
   assert.deepEqual(sessionRows(null), []);
 });
 

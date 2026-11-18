@@ -309,7 +309,7 @@ const feedbackReport = {
   context: { table: '20261116-110000-a-long-table-id', seat: 'player1', round: 3, subPhase: 'Upkeep', journalLength: 42, content: 'f3e8a42ddbd02c11', rules: 'Rules 3v3', engine: 'abc', position: {
     allies: [{ name: 'Ravager', health: 7, maxHealth: 10, energy: 2, isStunned: true, conditions: [{ effect: { kind: 'Bleed' } }] }],
     enemies: [{ name: 'Warden', health: 12, maxHealth: 12, energy: 1, isStunned: false, conditions: [] }] } },
-  session: '/session/20261116-110000-a-long-table-id', underWay: true, actions: ['reproduce', 'seen', 'reproduced', 'dismiss', 'spam', 'toIdea', 'diagnose', 'mute'],
+  session: '/session/20261116-110000-a-long-table-id', underWay: true, reproduceOnceOver: true, actions: ['seen', 'reproduced', 'dismiss', 'spam', 'toIdea', 'diagnose', 'mute'],
 };
 const feedbackRow = one => ({ id: one.id, kind: one.kind, category: one.category, line: one.text.slice(0, 120), status: one.status, reason: one.reason, spam: one.reason === 'spam', at: one.at,
   table: one.context?.table ?? null, round: one.context?.round ?? null, additions: 0 });
@@ -324,7 +324,7 @@ test('a bug report is read beside its position, its round cut, turned into an id
   let sheet = { ...feedbackReport };
   const idea = { ...feedbackReport, id: '20261116T100000000Z-def456', kind: 'idea', category: 'lobby', text: 'I wanted to invite a friend by name.', context: null, session: null, underWay: false, actions: [] };
   // What the host offers, as FeedbackAdminApi decides it, for the sheet as it now stands.
-  const offered = one => [one.kind === 'bug' && 'reproduce', one.status !== 'seen' && 'seen', one.kind === 'bug' && one.status !== 'reproduced' && 'reproduced',
+  const offered = one => [one.kind === 'bug' && !one.underWay && 'reproduce', one.status !== 'seen' && 'seen', one.kind === 'bug' && one.status !== 'reproduced' && 'reproduced',
     ...(one.status === 'dismissed' ? [] : ['dismiss', 'spam', one.kind === 'bug' ? 'toIdea' : 'toBug']), one.underWay && 'diagnose', one.mute ? 'unmute' : 'mute'].filter(Boolean);
   const asked = [];
   await page.route(/\/api\/admin\/feedback(\?.*)?$/, route => {
@@ -368,6 +368,15 @@ test('a bug report is read beside its position, its round cut, turned into an id
   expect(await page.evaluate(() => { const body = document.querySelector('#admin-feedback-sheet .home-dialog-body'); return body.scrollWidth <= body.clientWidth; })).toBe(true);
   await page.screenshot({ path: info.outputPath('admin-feedback-sheet.png') });
 
+  // A table still played is cut once it is over (#736): the sheet says so instead of offering Reproduce.
+  await expect(page.locator('#admin-feedback-reproduce')).toBeHidden();
+  await expect(page.locator('#admin-feedback-download-note')).toHaveText('The round can be reproduced once the game it was sent from is over: its scenario would hold what the other seat keeps face down.');
+  await page.locator('#admin-feedback-close').click();
+  sheet = { ...sheet, underWay: false, reproduceOnceOver: false };
+  await page.locator('#admin-feedback-list li').first().locator('button').click();
+  await expect(page.locator('#admin-feedback-diagnose')).toBeHidden();
+  await expect(page.locator('#admin-feedback-download-note')).toBeHidden();
+
   await expect(page.locator('#admin-feedback-reproduction')).toBeHidden();
   await page.locator('#admin-feedback-reproduce').click();
   await expect(page.locator('#admin-feedback-sheet-said')).toHaveText('Round 3 is cut, in the reporter\'s seat. Play it from the link.');
@@ -395,7 +404,7 @@ test('a bug report is read beside its position, its round cut, turned into an id
   await page.locator('#admin-feedback-close').click();
   await page.selectOption('#admin-feedback-kind', 'bug');
   await expect.poll(() => asked.at(-1)).toBe('GET ?kind=bug&status=open');
-  expect(asked.filter(line => !line.startsWith('GET ?'))).toEqual(['GET id', 'POST id/reproduce', 'PUT id/kind {"kind":"idea"}', 'PUT id/status {"status":"dismissed","reason":"spam"}', 'POST id/mute', 'DELETE id/mute']);
+  expect(asked.filter(line => !line.startsWith('GET ?'))).toEqual(['GET id', 'GET id', 'POST id/reproduce', 'PUT id/kind {"kind":"idea"}', 'PUT id/status {"status":"dismissed","reason":"spam"}', 'POST id/mute', 'DELETE id/mute']);
 });
 
 // Filing (feedback plan, R5): a reproduced report from a game that is over is downloaded redacted, filed on GitHub's

@@ -449,6 +449,10 @@ public sealed class AdminApiTests : IDisposable
         still.GetProperty("export").GetString().ShouldBe($"/api/sessions/{kept}/export");
         still.GetProperty("location").GetString().ShouldNotBeNull().ShouldEndWith(kept);
         sessions.Single(session => session.GetProperty("id").GetString() == gone).GetProperty("live").GetBoolean().ShouldBeFalse();
+
+        // Whether a session is still played is read from its record, not from this process's memory (#736).
+        sessions.Select(session => (session.GetProperty("id").GetString()!, session.GetProperty("underWay").GetBoolean()))
+            .ShouldBe(new[] { (kept, true), (gone, false), (live, false) }.OrderByDescending(one => one.Item1, StringComparer.Ordinal));
     }
 
     [Fact]
