@@ -66,7 +66,13 @@ public sealed class InMemoryDecisionJournal : IDecisionJournal
         }
     }
 
-    public Task<JournalPosition?> AppendAsync(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken = default)
+    public Task<JournalPosition?> AppendAsync(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken = default) =>
+        Append(run, after, entries, create: true);
+
+    public Task<JournalPosition?> AppendExistingAsync(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken = default) =>
+        Append(run, after, entries, create: false);
+
+    private Task<JournalPosition?> Append(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, bool create)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(run);
         ArgumentNullException.ThrowIfNull(after);
@@ -74,7 +80,7 @@ public sealed class InMemoryDecisionJournal : IDecisionJournal
         lock (_gate)
         {
             var written = _journals.TryGetValue(run, out var journal) ? journal.Count : 0;
-            if (written != after.Mark)
+            if (written != after.Mark || (!create && journal is null))
             {
                 return Task.FromResult<JournalPosition?>(null);
             }

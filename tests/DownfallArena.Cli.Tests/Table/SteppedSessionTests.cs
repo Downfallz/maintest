@@ -493,7 +493,13 @@ public sealed class SteppedSessionTests : IDisposable
 
         public Task<JournalWrite?> LastWrittenAsync(string run, CancellationToken cancellationToken = default) => _inner.LastWrittenAsync(run, cancellationToken);
 
-        public async Task<JournalPosition?> AppendAsync(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken = default)
+        public Task<JournalPosition?> AppendAsync(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken = default) =>
+            AppendAsync(entries, () => _inner.AppendAsync(run, after, entries, cancellationToken));
+
+        public Task<JournalPosition?> AppendExistingAsync(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken = default) =>
+            AppendAsync(entries, () => _inner.AppendExistingAsync(run, after, entries, cancellationToken));
+
+        private async Task<JournalPosition?> AppendAsync(IReadOnlyList<IJournalEntry> entries, Func<Task<JournalPosition?>> append)
         {
             if (entries.Count > 0 && Volatile.Read(ref _failing) > 0)
             {
@@ -502,7 +508,7 @@ public sealed class SteppedSessionTests : IDisposable
                 throw new IOException("The store is out.");
             }
 
-            var written = await _inner.AppendAsync(run, after, entries, cancellationToken);
+            var written = await append();
             return entries.Count > 0 && Interlocked.Exchange(ref _losing, 0) != 0 ? null : written;
         }
     }

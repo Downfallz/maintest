@@ -32,7 +32,7 @@ public sealed class BlobDecisionJournalTests
         reading.Absent.ShouldBeTrue();
     }
 
-    /// <summary>A blob started empty, as a recorded table's is, reads as there; deleted since, as absent, whole or after where it was read (#874).</summary>
+    /// <summary>A blob started empty, as a recorded table's is, reads as present; once deleted, it reads as absent, whole or from the position it was read at (#874).</summary>
     [Fact]
     public async Task A_journal_started_empty_is_there_and_one_deleted_since_is_absent_from_where_it_was_read()
     {
@@ -50,6 +50,27 @@ public sealed class BlobDecisionJournalTests
         same.ShouldNotBeNull().Absent.ShouldBeFalse();
         after.ShouldNotBeNull().Absent.ShouldBeTrue();
         whole.Absent.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// A writer that read the blob there appends only into a blob the service holds (#874): one deleted since is not
+    /// created again, even at its start, and one started empty takes the append.
+    /// </summary>
+    [Fact]
+    public async Task An_append_into_an_existing_journal_is_refused_when_there_is_none_and_written_when_there_is()
+    {
+        var (journal, container) = await Opened();
+        await container.GetAppendBlobClient("run-2/decisions.jsonl").CreateAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        var some = await journal.AppendExistingAsync("run-1", JournalPosition.Start, [DecisionJournalTests.EveryKind[0]], TestContext.Current.CancellationToken);
+        var none = await journal.AppendExistingAsync("run-1", JournalPosition.Start, [], TestContext.Current.CancellationToken);
+        var started = await journal.AppendExistingAsync("run-2", JournalPosition.Start, [DecisionJournalTests.EveryKind[0]], TestContext.Current.CancellationToken);
+
+        some.ShouldBeNull();
+        none.ShouldBeNull();
+        (await container.GetAppendBlobClient("run-1/decisions.jsonl").ExistsAsync(TestContext.Current.CancellationToken)).Value.ShouldBeFalse();
+        started.ShouldNotBeNull();
+        (await journal.ReadAsync("run-2", TestContext.Current.CancellationToken)).Entries.ShouldBe([DecisionJournalTests.EveryKind[0]]);
     }
 
     [Fact]

@@ -22,6 +22,9 @@ internal sealed class CountedJournal(IDecisionJournal inner) : IDecisionJournal
     public Task<JournalPosition?> AppendAsync(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken = default) =>
         inner.AppendAsync(run, after, entries, cancellationToken);
 
+    public Task<JournalPosition?> AppendExistingAsync(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken = default) =>
+        inner.AppendExistingAsync(run, after, entries, cancellationToken);
+
     public Task<long> EndAsync(string run, CancellationToken cancellationToken = default) => inner.EndAsync(run, cancellationToken);
 
     public Task<JournalWrite?> LastWrittenAsync(string run, CancellationToken cancellationToken = default)

@@ -489,9 +489,9 @@ public sealed class JournaledStepper(
         var reading = await journal.ReadAsync(match.Run, cancellationToken);
         if ((kept.Reached > 0 && reading.Position.Mark == 0) || (kept.Found && reading.Absent))
         {
-            // Gone back to nothing under a match this process saw further on (#856), or gone from the store under one it
-            // read there, empty or not (#874): deleted with its run. Every later step is refused the same way rather
-            // than starting the match over into the run, whose journal it would create again.
+            // Either case means the run was deleted. The journal is back to nothing under a match this process saw further
+            // on (#856), or it is gone from the store after this process read it there, empty or not (#874). Every later
+            // step is refused the same way, so the match is not started over and the run's journal is not created again.
             await matches.ForgetAsync(match.MatchId, cancellationToken);
             return Result.Failure<JournalPosition>(JournalErrors.Gone);
         }
@@ -561,7 +561,10 @@ public sealed class JournaledStepper(
     /// </summary>
     private async Task<JournalPosition?> WriteAsync(JournaledMatch match, Kept kept, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken)
     {
-        var written = await journal.AppendAsync(match.Run, after, entries, cancellationToken);
+        // A journal this process read there is never created again: gone since the read, its run was deleted (#874).
+        var written = kept.Found
+            ? await journal.AppendExistingAsync(match.Run, after, entries, cancellationToken)
+            : await journal.AppendAsync(match.Run, after, entries, cancellationToken);
         if (written is null)
         {
             await LetGoAsync(match.MatchId, kept, cancellationToken);
@@ -629,8 +632,9 @@ public sealed class JournaledStepper(
         public long Reached { get; private set; }
 
         /// <summary>
-        /// Whether this process read the journal there or wrote into it, never cleared either: a recorded table's journal
-        /// is created empty with its run, so one read absent after that was deleted with the run, even at its start (#874).
+        /// Whether this process has read the journal as present, or written into it; like <see cref="Reached" />, not
+        /// cleared when the match is let go of. A recorded table's journal is created empty with its run, so one read
+        /// absent after that was deleted with the run, even at its start (#874), and is never created again.
         /// </summary>
         public bool Found { get; set; }
 

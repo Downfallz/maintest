@@ -36,20 +36,9 @@ internal sealed class JournalStore
                     : new JournalReading([.. _lines.Skip((int)after.Mark)], End);
             });
         Journal.AppendAsync(Arg.Any<string>(), Arg.Any<JournalPosition>(), Arg.Any<IReadOnlyList<IJournalEntry>>(), Arg.Any<CancellationToken>())
-            .Returns(call =>
-            {
-                BeforeAppend?.Invoke();
-                BeforeAppend = null;
-                if (call.Arg<JournalPosition>() != End)
-                {
-                    return (JournalPosition?)null;
-                }
-
-                var entries = call.Arg<IReadOnlyList<IJournalEntry>>();
-                _lines.AddRange(entries);
-                _exists |= entries.Count > 0;
-                return End;
-            });
+            .Returns(call => Append(call.Arg<JournalPosition>(), call.Arg<IReadOnlyList<IJournalEntry>>(), create: true));
+        Journal.AppendExistingAsync(Arg.Any<string>(), Arg.Any<JournalPosition>(), Arg.Any<IReadOnlyList<IJournalEntry>>(), Arg.Any<CancellationToken>())
+            .Returns(call => Append(call.Arg<JournalPosition>(), call.Arg<IReadOnlyList<IJournalEntry>>(), create: false));
         Journal.EndAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(_ => (long)_lines.Count);
     }
 
@@ -84,6 +73,20 @@ internal sealed class JournalStore
     {
         _lines.Add(line);
         _exists = true;
+    }
+
+    private JournalPosition? Append(JournalPosition after, IReadOnlyList<IJournalEntry> entries, bool create)
+    {
+        BeforeAppend?.Invoke();
+        BeforeAppend = null;
+        if (after != End || (!create && !_exists))
+        {
+            return null;
+        }
+
+        _lines.AddRange(entries);
+        _exists |= entries.Count > 0;
+        return End;
     }
 
     private async Task ReadingAsync()

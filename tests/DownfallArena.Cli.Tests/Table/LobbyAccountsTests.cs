@@ -288,7 +288,7 @@ public sealed class LobbyAccountsTests : IDisposable
         said.Where(line => line.Contains("last move", StringComparison.Ordinal)).ShouldHaveSingleItem().ShouldStartWith("  2 cards were listed without their time to answer");
     }
 
-    /// <summary>The same for the page of games in progress, which describes every card it lists (#875).</summary>
+    /// <summary>A journal outage is said in one line for the page of games in progress too, which describes every card it lists (#875).</summary>
     [Fact]
     public async Task The_games_in_progress_whose_journal_is_out_are_said_in_one_line_for_the_page()
     {
@@ -303,7 +303,7 @@ public sealed class LobbyAccountsTests : IDisposable
         said.Where(line => line.Contains("last move", StringComparison.Ordinal)).ShouldHaveSingleItem().ShouldStartWith("  2 cards were listed without their time to answer");
     }
 
-    /// <summary>The same for the seats a browser saved, resumed together (#875).</summary>
+    /// <summary>A journal outage is said in one line for the seats a browser saved, resumed together, too (#875).</summary>
     [Fact]
     public async Task Your_saved_seats_whose_journal_is_out_are_said_in_one_line_for_the_resume_list()
     {

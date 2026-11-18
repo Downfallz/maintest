@@ -6,9 +6,9 @@ namespace DownfallArena.Application.Matches.Journaling;
 public sealed record JournalReading(IReadOnlyList<IJournalEntry> Entries, JournalPosition Position)
 {
     /// <summary>
-    /// Whether the store holds no journal for the run, rather than one with nothing in it (#874). A recorded table's
-    /// journal is created empty with its run, so a holder that read it there and now reads it absent knows the run was
-    /// deleted; an unrecorded table's is absent until its first line.
+    /// True when the store holds no journal for the run, as opposed to a journal with nothing in it (#874). A recorded
+    /// table's journal is created empty with its run, so a holder that read it and now finds it absent knows the run
+    /// was deleted. An unrecorded table's journal is absent until its first line.
     /// </summary>
     public bool Absent { get; init; }
 

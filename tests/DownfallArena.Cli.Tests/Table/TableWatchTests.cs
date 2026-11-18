@@ -362,8 +362,8 @@ public sealed class TableWatchTests : IDisposable
     }
 
     /// <summary>
-    /// The same for a table held at the start of its journal, a bot owing the draft and nothing journaled yet (#874):
-    /// the journal read there and empty is gone once deleted, so the bot's turn does not create it again.
+    /// The same for a table at the start of its journal, where a bot owes the draft and nothing is journaled yet (#874):
+    /// the journal read as present and empty is gone once deleted, so the bot's turn does not create it again.
     /// </summary>
     [Fact]
     public async Task A_turn_taken_at_the_start_after_another_process_deleted_the_run_does_not_bring_it_back()
