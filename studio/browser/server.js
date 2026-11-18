@@ -2,9 +2,10 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { resolve, extname } from 'node:path';
-const root = resolve('../..');
+import { browserPort, checkout as root } from './origin.js';
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.webp': 'image/webp' };
 createServer(async (request, response) => {
+  if (request.url === '/__root') { response.writeHead(200, { 'content-type': 'text/plain' }).end(root); return; }
   const pathname = new URL(request.url, 'http://localhost').pathname.replace(/^\/maintest/, '');
   const table = pathname.startsWith('/table/');
   const asset = table ? pathname.slice('/table'.length) : pathname;
@@ -18,4 +19,4 @@ createServer(async (request, response) => {
     const content = await readFile(file);
     response.writeHead(200, { 'content-type': types[extname(file)] ?? 'application/octet-stream' }).end(content);
   } catch { response.writeHead(404).end(); }
-}).listen(5199, '127.0.0.1');
+}).listen(browserPort(root), '127.0.0.1');

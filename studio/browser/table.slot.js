@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process';
 import { resolve } from 'node:path';
 import { createServer } from 'node:net';
 import { classicTable, archivedTable } from './classic-table-fixture.js';
+import { dotnetBinary } from './dotnet.js';
 test.beforeEach(classicTable);
 
 // A table that chooses each spell at its slot (ADR 0110), played by a person against Greedy through the real
@@ -17,7 +18,7 @@ test.beforeAll(async () => {
   await new Promise(done => probe.listen(0, '127.0.0.1', done));
   const port = probe.address().port;
   await new Promise(done => probe.close(done));
-  const dotnet = resolve(process.env.DOTNET_ROOT ?? '/usr/share/dotnet', 'dotnet');
+  const dotnet = dotnetBinary();
   const cli = resolve(root, 'artifacts/bin/DownfallArena.Cli/debug/DownfallArena.Cli.dll');
   host = spawn(dotnet, [cli, 'table', '--declaration', 'at-activation', '--p2', 'greedy', '--no-record', '--seed', '7', '--port', String(port)], { cwd: root });
   let log = '';

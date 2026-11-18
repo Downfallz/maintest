@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { createServer } from 'node:net';
 import { expect } from '@playwright/test';
 import { hostLinks } from './host-log.js';
+import { dotnetBinary } from './dotnet.js';
 
 const root = resolve('../..');
 
@@ -11,7 +12,7 @@ const root = resolve('../..');
 export async function startHost(declaration, args = [], { twoPeople = false } = {}) {
   const probe = createServer(); await new Promise(done => probe.listen(0, '127.0.0.1', done));
   const port = probe.address().port; await new Promise(done => probe.close(done));
-  const host = spawn(resolve(process.env.DOTNET_ROOT ?? '/usr/share/dotnet', 'dotnet'),
+  const host = spawn(dotnetBinary(),
     [resolve(root, 'artifacts/bin/DownfallArena.Cli/debug/DownfallArena.Cli.dll'), 'table', '--declaration', declaration,
       ...(twoPeople || args.includes('--p2') ? [] : ['--p2', 'greedy']), ...(args.includes('--record') ? [] : ['--no-record']), '--seed', '7', '--port', String(port), ...args], { cwd: root });
   let log = ''; host.stdout.on('data', data => { log += data; }); host.stderr.on('data', data => { log += data; });

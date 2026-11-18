@@ -30,3 +30,7 @@ npm --prefix studio/browser ci --ignore-scripts && npm --prefix studio/browser t
   `browser-suite.test.js`: CI plays only what the plan names, and the nightly matrix is what finds a gap.
 - CI retries a journey once and `browser/flakes.js` names what passed only then; locally nothing retries.
 - In a cloud session Chromium is preinstalled: do not run `playwright install` again, and pass `--trace off`.
+- Each checkout serves the pages on a port derived from its path (`browser/origin.js`). A running server is
+  reused only when its `/__root` answer names this checkout (#711). `STUDIO_BROWSER_PORT` sets the port.
+- The real-engine journeys start the host with `browser/dotnet.js`. It uses the `dotnet` under `DOTNET_ROOT`
+  when set, else the one on `PATH` (#707).

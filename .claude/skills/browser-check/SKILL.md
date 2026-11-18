@@ -28,7 +28,9 @@ journey is found before the pull request. Arguments: $ARGUMENTS (`--all` for eve
    Chromium is preinstalled in a cloud session: never run `playwright install`. Leave `STUDIO_CHROMIUM` unset
    there. Playwright then finds its headless shell under `PLAYWRIGHT_BROWSERS_PATH`, the browser CI uses. The full
    Chrome at `/opt/pw-browsers/chromium` fails a navigation that ends on an empty 404; the headless shell loads it
-   (#741). The real-engine specs also need `DOTNET_ROOT` (`/usr/lib/dotnet`).
+   (#741). The real-engine specs find `dotnet` on `PATH`; `DOTNET_ROOT` is not needed (`studio/browser/dotnet.js`).
+   Each checkout serves the pages on its own port (`studio/browser/origin.js`): a run from a copy and a run from
+   the working tree each start their own server.
 3. Run in the background (`run_in_background`), one command per job, and keep working while they run:
    - Journeys, from `studio/browser`:
      `node node_modules/playwright/cli.js test <specs, or nothing for all> --trace off --reporter=dot,json`

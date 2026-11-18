@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
 import { createServer } from 'node:net';
 import { classicTable, archivedTable } from './classic-table-fixture.js';
+import { dotnetBinary } from './dotnet.js';
 test.beforeEach(classicTable);
 
 // A host with push keys offers "your turn" on the phone (ADR 0118): the page registers the worker, asks the
@@ -16,7 +17,7 @@ const root = resolve('../..');
 let host, seatLink, keysDirectory;
 
 function run(args) {
-  const dotnet = resolve(process.env.DOTNET_ROOT ?? '/usr/share/dotnet', 'dotnet');
+  const dotnet = dotnetBinary();
   const cli = resolve(root, 'artifacts/bin/DownfallArena.Cli/debug/DownfallArena.Cli.dll');
   return spawn(dotnet, [cli, ...args], { cwd: root });
 }
