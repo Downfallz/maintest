@@ -891,6 +891,18 @@ A practice whose view carries `practice.tutorial` is a tutorial (ADR 0187, docs/
 `battle-tutorial.spec.js` plays tutorial 1's own lesson to its end on a fixture board, at 320 px, 390 px and
 desktop.
 
+## The resting loop
+
+The game loop sleeps when nothing on the field moves (`src/rest.ts`, #842). Phaser otherwise draws sixty frames a
+second over a still field: a phone pays for it in battery, and a page whose canvas is drawn in software has no frame
+left for the page around it, so a click's stability check waits. What keeps the loop awake is the scene's `busy()`:
+a tween, a camera effect, the effects kit's particles, a die still tumbling, the horizon giving way, or a file
+loading, and on the bench a play in progress. The halos' breath, the motes, the capstone effects and the auras are
+ambience: they breathe for two seconds after the last movement (`SETTLE_MS`), then stop with the loop, on their own
+clock (`ambient`), so they go on from where they stood when it wakes. A board (`present`), a mutation reveal, a
+tween added, a resize, or a press, key or wheel on the field wakes it. `data-resting` on `#battle` (the seat) and
+`#lab` (the lab and the bench) says the loop sleeps. The bench's film steps the game by hand and is left alone.
+
 ## The effects kit
 
 A spell's entry in the spell art may carry a `staging` (ADR 0196, `data/README.md`): a list of beats. The view

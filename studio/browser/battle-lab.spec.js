@@ -112,6 +112,23 @@ test('keyboard casting and skip need no live API', async ({ page }) => {
   expect(apiRequests).toEqual([]);
 });
 
+test('the game loop rests over a still field and wakes for a cast', async ({ page }) => {
+  // A still field draws nothing (#842): the halos' breath and the motes are ambience, and stop with the loop.
+  const lab = page.locator('#lab');
+  await expect(lab).toHaveAttribute('data-resting', 'true');
+  await choose(page);
+  await page.locator('#confirm').click();
+  // The cast's board wakes the loop before anything of it is drawn, and its tweens keep it awake.
+  await expect(lab).not.toHaveAttribute('data-resting', 'true');
+  await expect(lab).toHaveAttribute('data-stage', 'resolved', { timeout: 15000 });
+  await expect(lab).toHaveAttribute('data-resting', 'true');
+  // A resize wakes it to draw the canvas at its new size, then it rests again.
+  const size = page.viewportSize();
+  await page.setViewportSize({ width: size.width - 40, height: size.height });
+  await expect(lab).not.toHaveAttribute('data-resting', 'true');
+  await expect(lab).toHaveAttribute('data-resting', 'true');
+});
+
 test('reset during playback cancels pending results and a second cast resolves normally', async ({ page }) => {
   // The page's timers are the test's to run: a cast is then in flight for as long as the test says, and the
   // cancelled cues get their due time to fire, which a stale one would, on a board asked to forget it.

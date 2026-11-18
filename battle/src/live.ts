@@ -996,7 +996,8 @@ window.addEventListener('online', () => connection.reconnect());
 // A notice the service worker received for this browser is a second word that something changed, beside the stream.
 navigator.serviceWorker?.addEventListener?.('message', event => { if ((event as MessageEvent).data?.kind === 'notice' && selected && !document.hidden) void connection.refresh(); });
 try {
-  bootScene(scene, $('phaser-mount'), { isReady: () => ready || rendererFailed, onContextLost: failRenderer, onNeverReady: failRenderer });
+  bootScene(scene, $('phaser-mount'), { isReady: () => ready || rendererFailed, onContextLost: failRenderer, onNeverReady: failRenderer,
+    onRest: resting => { if (resting) $('battle').dataset.resting = 'true'; else delete $('battle').dataset.resting; } });
 } catch { failRenderer(); }
 void discover();
 

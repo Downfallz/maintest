@@ -35,13 +35,15 @@ export class DiceLayer {
   private shown = new Map<string, Shown>();
   private links: Phaser.GameObjects.Graphics;
   private versus = new Map<number, Phaser.GameObjects.Text>();
+  // The time of the last frame drawn.
+  private time = 0;
 
   constructor(private scene: Phaser.Scene) {
     this.links = scene.add.graphics().setDepth(1999);
   }
 
   /** The dice the frame asks for, on the figures that stand for their creatures; the others leave. */
-  show(dice: Die[], spotOf: (id: string) => Spot | null, now: number) {
+  show(dice: Die[], spotOf: (id: string) => Spot | null) {
     const wanted = new Set(dice.map(die => die.key));
     for (const [key, one] of this.shown) if (!wanted.has(key)) { one.box.destroy(); this.shown.delete(key); }
     for (const die of dice) {
@@ -57,11 +59,18 @@ export class DiceLayer {
         backgroundColor: '#0b1519d9', padding: { x: 6, y: 2 },
       }).setOrigin(.5, 0).setResolution(SHARP);
       const box = this.scene.add.container(0, 0, caption ? [shape, label, caption] : [shape, label]).setDepth(2000);
-      this.shown.set(die.key, { die, box, shape, label, caption, born: now, spot, drawn: '', at: { x: 0, y: 0, size: 0 } });
+      // A die is born on the first frame that draws it: a board that wakes a resting loop arrives before the loop's
+      // clock moves again, and a die born on the stale clock would land already settled.
+      this.shown.set(die.key, { die, box, shape, label, caption, born: Number.NaN, spot, drawn: '', at: { x: 0, y: 0, size: 0 } });
     }
     const groups = new Set([...this.shown.values()].map(one => one.die.group).filter((group): group is number => Boolean(group)));
     for (const [group, text] of this.versus) if (!groups.has(group)) { text.destroy(); this.versus.delete(group); }
     if (!this.shown.size) this.links.clear();
+  }
+
+  /** Whether a die still tumbles in: its number runs until it settles. */
+  tumbling(reduced: boolean) {
+    return !reduced && [...this.shown.values()].some(one => Number.isNaN(one.born) || this.time - one.born < TUMBLE_MS);
   }
 
   /** How many dice stand on the field now, for the page's own record of what it shows. */
@@ -81,7 +90,9 @@ export class DiceLayer {
   }
 
   follow(time: number, reduced: boolean) {
+    this.time = time;
     for (const one of this.shown.values()) {
+      if (Number.isNaN(one.born)) one.born = time;
       // Beside the head, inside the field whole, its words included (dieSpot).
       const { x, y, size } = dieSpot(one.spot.home, one.caption?.visible ? one.caption.width : 0, this.scene.scale.width);
       one.at = { x, y, size };

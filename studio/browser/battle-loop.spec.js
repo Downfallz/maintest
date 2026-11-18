@@ -83,6 +83,13 @@ test('ties require a complete order within their group', async ({ page }) => {
   await page.locator('[data-tie="3"]').click(); await expect(page.locator('#planning-confirm')).toBeDisabled(); await page.locator('[data-tie="1"]').click(); await page.locator('#planning-confirm').click();
   await expect.poll(() => h.writes).toEqual([{ kind: 'TieOrder', order: [3, 1, 2], asked: 11 }]); expect(h.errors).toEqual([]);
 });
+test('a seat waiting on its choice lets the field rest, though the page renders again and again', async ({ page }) => {
+  // The page presents its frame each time it renders; the same frame again does not wake the game loop (#842).
+  await mount(page);
+  await expect(page.locator('#battle')).toHaveAttribute('data-resting', 'true', { timeout: 15000 });
+  await page.locator('#settings').click(); await expect(page.locator('#settings-dialog')).toBeVisible();
+  await expect(page.locator('#battle')).toHaveAttribute('data-resting', 'true');
+});
 test('concession can be cancelled and displays the host result after confirmation', async ({ page }) => {
   const h = await mount(page); await page.locator('#settings').click(); await page.locator('#concede-open').click(); await page.locator('#concede-cancel').click(); expect(h.concessions).toBe(0);
   await page.locator('#settings').click(); await page.locator('#concede-open').click(); await page.locator('#concede-confirm').click();

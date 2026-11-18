@@ -15,6 +15,7 @@ import { SpellEffects, type EffectAnchor, type EffectFigure } from './spell-effe
 import { loadKit } from './fx-loader';
 import { ConditionAuras } from './condition-auras';
 import { aurasShown } from '../../table/battle-auras.js';
+import type { Restful } from './rest';
 
 const playing = (state: SceneFrame) => state.stage === 'windup' || state.stage === 'impact';
 
@@ -43,7 +44,7 @@ const MOTES = 24;
 // drift outgrows its offset, and a mote that goes negative leaves the screen for good.
 const wrap = (value: number, span: number) => ((value % span) + span) % span;
 
-export class BattleScene extends Phaser.Scene {
+export class BattleScene extends Phaser.Scene implements Restful {
   private figures = new Map<string, Figure>();
   private backdrop?: Phaser.GameObjects.Image;
   private horizon?: BattleHorizon;
@@ -86,6 +87,13 @@ export class BattleScene extends Phaser.Scene {
   onDice: (shown: string) => void = () => {};
   private diceShown = '';
   private haloId: string | null = null;
+  // The clock of what only breathes (the halos, the motes, the capstone effects and the auras): it runs while the
+  // loop does, so a field that wakes from rest goes on from where it stood instead of jumping ahead.
+  private ambient = 0;
+  private presented = '';
+  private lastStep = 0;
+  /** Wakes the game loop when it rests (rest.ts): set by the boot, called before anything new is drawn. */
+  stir: () => void = () => {};
   assetFailed = false;
   // Evolution illustrations load when a creature on the field first asks for one, never all at boot; one that
   // fails stays failed for the page, and the figure keeps its audited sprite.
@@ -135,6 +143,10 @@ export class BattleScene extends Phaser.Scene {
   }
 
   present(state: SceneFrame, reduced: boolean, rate: number, replay = false) {
+    // The page presents its frame whenever it renders, several times a second: only a frame that changed wakes the
+    // resting loop, as the same frame again changes nothing on the field.
+    const presented = JSON.stringify([state, reduced, rate, replay]);
+    if (presented !== this.presented) { this.presented = presented; this.stir(); }
     this.state = state;
     this.reduced = reduced;
     this.rate = playbackRate(rate);
@@ -190,7 +202,7 @@ export class BattleScene extends Phaser.Scene {
     if ((lit?.id ?? null) !== this.haloId) { this.haloId = lit?.id ?? null; this.onHalo(this.haloId); }
     this.lightFocus(state.creatures.filter(one => focus.has(one.id) && one.isAlive).map(one => one.id));
     const standing = (state.dice ?? []).filter(die => this.figures.get(die.id)?.alive);
-    this.dice?.show(standing, id => this.figures.get(id) ?? null, this.time.now);
+    this.dice?.show(standing, id => this.figures.get(id) ?? null);
     // `id:value:tone`, then the tie a roll-off broke and its place in it (`tie1:2`) or the face a crit needed (`14+`).
     const diceShown = standing.map(die => [`${die.id}:${die.value}:${die.tone}`, die.group ? `tie${die.group}:${die.place}` : '', die.needed ? `${die.needed}+` : '']
       .filter(Boolean).join(':')).join(' ');
@@ -204,6 +216,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   revealMutations(ids: string[]) {
+    this.stir();
     for (const id of ids) {
       const figure = this.figures.get(id);
       if (figure) this.burst(figure, GOLD, false);
@@ -469,21 +482,35 @@ export class BattleScene extends Phaser.Scene {
     if (lit !== this.focusLit) { this.focusLit = lit; this.onFocus(lit); }
   }
 
+  /** Whether something on the field moves now, which keeps the game loop awake (rest.ts); ambience does not. */
+  busy() {
+    const camera = this.cameras.main;
+    return this.tweens.getTweens().length > 0 || this.load.isLoading()
+      || camera.shakeEffect.isRunning || camera.flashEffect.isRunning || camera.fadeEffect.isRunning
+      || this.spellEffects.playing.particles > 0 || Boolean(this.dice?.tumbling(this.reduced))
+      || Boolean(this.horizon?.moving);
+  }
+
   update(time: number, delta: number) {
     if (!this.state) return;
+    // A clock that starts again (the bench's film steps the game from zero) starts the ambience with it, so two films
+    // of one effect draw the same frames.
+    this.ambient = time < this.lastStep ? time : this.ambient + delta;
+    this.lastStep = time;
+    const breath = this.ambient;
     this.horizon?.update(delta * this.rate);
-    this.halo?.follow(time, this.reduced);
-    for (const halo of this.focusHalos.values()) halo.follow(time, this.reduced);
+    this.halo?.follow(breath, this.reduced);
+    for (const halo of this.focusHalos.values()) halo.follow(breath, this.reduced);
     this.dice?.follow(time, this.reduced);
     // Creatures stand still between actions: only a played action moves them.
     for (const figure of this.figures.values()) {
       this.followCues(figure);
-      figure.effects.follow(figure.image, figure.alive && figure.image.visible, time, this.reduced);
-      figure.auras.follow(this.body(figure), figure.alive && figure.image.visible, time, this.reduced);
+      figure.effects.follow(figure.image, figure.alive && figure.image.visible, breath, this.reduced);
+      figure.auras.follow(this.body(figure), figure.alive && figure.image.visible, breath, this.reduced);
     }
     const width = Math.max(1, this.cameras.main.displayWidth);
     const height = Math.max(1, this.cameras.main.displayHeight);
-    const drift = this.reduced ? 0 : time * .007;
+    const drift = this.reduced ? 0 : breath * .007;
     this.motes.forEach((mote, i) => {
       mote.setPosition(wrap(i * 131 + drift, width), wrap(i * 73 - drift * .7, height));
       mote.visible = !this.reduced;

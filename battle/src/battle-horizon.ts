@@ -71,6 +71,9 @@ export class BattleHorizon {
     if (!this.scene.load.isLoading()) this.scene.load.start();
   }
 
+  /** Whether the ground is giving way now. */
+  get moving() { return this.elapsed < TRANSITION_MS; }
+
   update(delta: number) {
     if (this.elapsed === TRANSITION_MS) return;
     this.elapsed = Math.min(TRANSITION_MS, this.elapsed + delta);
