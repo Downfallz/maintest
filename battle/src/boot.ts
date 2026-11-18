@@ -11,8 +11,8 @@ function renderSize(mount: HTMLElement) {
 
 // Starting the renderer, once for both pages: the game on its mount, sized by the stage itself rather than the
 // window (mobile browser chrome and rotation need not trigger the window's resize), and the two ways it can
-// fail: the context lost under it, or a scene that never reaches ready. Once ready, the loop rests when nothing
-// moves (rest.ts). `onRest` reports it, and the pages set `data-resting` from it for the specs and tools.
+// fail: the context lost under it, or a scene that never reaches ready. Once ready, a still field is drawn less
+// often (rest.ts). `onRest` reports it, and the pages set `data-resting` from it for the specs and tools.
 export function bootScene(scene: Phaser.Scene & Restful, mount: HTMLElement, { onContextLost, onNeverReady, isReady, onRest = () => {}, moving }:
   { onContextLost: () => void; onNeverReady: () => void; isReady: () => boolean; onRest?: (resting: boolean) => void; moving?: () => boolean }) {
   const game = new Phaser.Game({ type: Phaser.AUTO, parent: mount, backgroundColor: '#17272b',
@@ -22,7 +22,7 @@ export function bootScene(scene: Phaser.Scene & Restful, mount: HTMLElement, { o
   const resize = () => {
     if (!mount.clientWidth || !mount.clientHeight) return;
     const { width, height } = renderSize(mount);
-    // A resized canvas is blank until the next frame is drawn, so a resting loop wakes to draw it.
+    // A resized canvas is blank until the next frame is drawn, so a resting field is drawn at once.
     if (game.scale.width !== width || game.scale.height !== height) { resting?.wake(); game.scale.resize(width, height); }
   };
   let resting: ReturnType<typeof rest> | undefined;

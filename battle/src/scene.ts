@@ -87,13 +87,10 @@ export class BattleScene extends Phaser.Scene implements Restful {
   onDice: (shown: string) => void = () => {};
   private diceShown = '';
   private haloId: string | null = null;
-  // The clock of the ambience (the halos, the motes, the capstone effects and the auras). It runs only while the
-  // loop does, so after a rest the field resumes where it stopped instead of jumping ahead.
+  // The clock of the ambience (the halos, the motes, the capstone effects and the auras): the steps the game takes,
+  // added up, so a page held up for a while resumes the ambience where it stood instead of jumping ahead.
   private ambient = 0;
-  private presented = '';
   private lastStep = 0;
-  /** Wakes the game loop when it rests (rest.ts): set by the boot, called before anything new is drawn. */
-  stir: () => void = () => {};
   assetFailed = false;
   // Evolution illustrations load when a creature on the field first asks for one, never all at boot; one that
   // fails stays failed for the page, and the figure keeps its audited sprite.
@@ -143,10 +140,6 @@ export class BattleScene extends Phaser.Scene implements Restful {
   }
 
   present(state: SceneFrame, reduced: boolean, rate: number, replay = false) {
-    // The page presents its frame each time it renders, several times a second. Only a changed frame wakes the
-    // resting loop: the same frame again changes nothing on the field. A press or a key reaches the field this way.
-    const presented = JSON.stringify([state, reduced, rate, replay]);
-    if (presented !== this.presented) { this.presented = presented; this.stir(); }
     this.state = state;
     this.reduced = reduced;
     this.rate = playbackRate(rate);
@@ -216,7 +209,6 @@ export class BattleScene extends Phaser.Scene implements Restful {
   }
 
   revealMutations(ids: string[]) {
-    this.stir();
     for (const id of ids) {
       const figure = this.figures.get(id);
       if (figure) this.burst(figure, GOLD, false);
@@ -482,7 +474,7 @@ export class BattleScene extends Phaser.Scene implements Restful {
     if (lit !== this.focusLit) { this.focusLit = lit; this.onFocus(lit); }
   }
 
-  /** Whether something on the field moves now, which keeps the game loop awake (rest.ts); ambience does not. */
+  /** Whether something on the field moves now, which keeps the field at its full rate (rest.ts); ambience does not. */
   busy() {
     const camera = this.cameras.main;
     return this.tweens.getTweens().length > 0 || this.load.isLoading()

@@ -112,18 +112,18 @@ test('keyboard casting and skip need no live API', async ({ page }) => {
   expect(apiRequests).toEqual([]);
 });
 
-test('the game loop rests over a still field and wakes for a cast', async ({ page }) => {
-  // A still field draws nothing (#842): the halos' breath and the motes are ambience, and stop with the loop.
-  // The loop sleeps two seconds after the last movement; a loaded runner reaches that later, hence the 15 s.
+test('a still field rests at a lower rate and a cast plays at the full one', async ({ page }) => {
+  // A still field is drawn one frame in four (#842): the halos' breath and the motes are ambience, and go on.
+  // The field rests two seconds after the last movement; a loaded runner reaches that later, hence the 15 s.
   const lab = page.locator('#lab'), rested = { timeout: 15000 };
   await expect(lab).toHaveAttribute('data-resting', 'true', rested);
   await choose(page);
   await page.locator('#confirm').click();
-  // The cast's board wakes the loop before anything of it is drawn, and the tweens keep it awake.
+  // The cast's tweens are movement: the field leaves its rest for as long as they play.
   await expect(lab).not.toHaveAttribute('data-resting', 'true');
   await expect(lab).toHaveAttribute('data-stage', 'resolved', rested);
   await expect(lab).toHaveAttribute('data-resting', 'true', rested);
-  // A resize wakes it to draw the canvas at its new size, then it rests again.
+  // A resize is drawn at once, at the full rate, then the field rests again.
   const size = page.viewportSize();
   await page.setViewportSize({ width: size.width - 40, height: size.height });
   await expect(lab).not.toHaveAttribute('data-resting', 'true');

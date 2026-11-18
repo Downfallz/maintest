@@ -67,8 +67,8 @@ export class DiceLayer {
       backgroundColor: '#0b1519d9', padding: { x: 6, y: 2 },
     }).setOrigin(.5, 0).setResolution(SHARP);
     const box = this.scene.add.container(0, 0, caption ? [shape, label, caption] : [shape, label]).setDepth(2000);
-    // A die is born on the first frame that draws it. A board that wakes a resting loop arrives before the loop's
-    // clock moves again, so a die born at the stale time would already be settled when it is first drawn.
+    // A die is born on the first frame that draws it. A board reaches a resting field between two of its steps, so
+    // a die born at the last step's time would have less of its tumble left when it is first drawn.
     return { die, box, shape, label, caption, born: Number.NaN, spot, drawn: '', at: { x: 0, y: 0, size: 0 } };
   }
 
