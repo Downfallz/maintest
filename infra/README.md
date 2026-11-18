@@ -62,8 +62,8 @@ You need the Azure subscription's owner, signed in, and ideally the GitHub CLI s
    The first revision may restart a few times in its first minutes: the role that lets it write recordings
    is assigned in the same deployment, and Azure takes a moment to honour a new one.
 
-5. **Point the sign-ins at it**: the admin panel's redirect and the Google client's origins,
-   [runbooks/sign-ins.md](runbooks/sign-ins.md). The address exists only once the first deployment made it, and
+5. **Point the sign-ins at it.** Give the table's address to the admin panel's redirect and to the Google client's
+   origins: [runbooks/sign-ins.md](runbooks/sign-ins.md). The address exists only once the first deployment made it, and
    the sign-ins have to know it. This is the last step; nothing here needs doing again.
 
 ## Playing
@@ -93,8 +93,8 @@ not the player name: a deleted account's name can be taken by anybody. Entra sta
 Players sign in on the home page with Google (ADR 0122). The host checks Google's ID token itself, so the only
 setting is a public OAuth client id, and no secret exists. The deployment passes the project's own client id unless
 the `TABLE_GOOGLE_CLIENT_ID` variable names another. The client is made once in Google Cloud Console, under APIs &
-Services, Credentials, *Create OAuth client ID*, type *Web application*, with no redirect URI and no client secret:
-the button hands the page an ID token directly. Its *Authorized JavaScript origins* list every address the table
+Services, Credentials, *Create OAuth client ID*, type *Web application*. It needs no redirect URI and no client
+secret: the button hands the page an ID token directly. Its *Authorized JavaScript origins* list every address the table
 answers at; adding one is a runbook: [runbooks/sign-ins.md](runbooks/sign-ins.md).
 
 Accounts are kept in the storage account's `accounts` container, beside the recordings, and hold a player name, an
