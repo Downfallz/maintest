@@ -53,6 +53,92 @@ public sealed class DecisionJournalTests : IDisposable
 
         reading.Entries.ShouldBeEmpty();
         reading.Position.ShouldBe(JournalPosition.Start);
+        reading.Absent.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// A journal started empty, as a recorded table's is, reads as present and empty, unlike a journal nobody created
+    /// (#874). That tells a holder that the run it read was deleted since.
+    /// </summary>
+    [Fact]
+    public async Task A_journal_started_empty_is_there_and_one_deleted_since_is_absent_from_where_it_was_read()
+    {
+        var journal = Journal("file");
+        Directory.CreateDirectory(Path.Combine(_root, "run-1"));
+        await File.WriteAllBytesAsync(Path.Combine(_root, "run-1", "decisions.jsonl"), [], TestContext.Current.CancellationToken);
+        var started = await journal.ReadAsync("run-1", TestContext.Current.CancellationToken);
+        Directory.Delete(Path.Combine(_root, "run-1"), recursive: true);
+
+        var after = await journal.ReadAfterAsync("run-1", started.Position, TestContext.Current.CancellationToken);
+        var whole = await journal.ReadAsync("run-1", TestContext.Current.CancellationToken);
+
+        started.Absent.ShouldBeFalse();
+        started.Entries.ShouldBeEmpty();
+        after.ShouldNotBeNull().Absent.ShouldBeTrue();
+        whole.Absent.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// A writer that read the journal there appends only into a journal the store holds (#874): gone since, at its start
+    /// too, the journal is not created again, and nothing of the run comes back.
+    /// </summary>
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("file")]
+    public async Task An_append_into_an_existing_journal_is_refused_when_there_is_none_and_creates_nothing(string kept)
+    {
+        var journal = Journal(kept);
+
+        var some = await journal.AppendExistingAsync("run-1", JournalPosition.Start, [EveryKind[0]], TestContext.Current.CancellationToken);
+        var none = await journal.AppendExistingAsync("run-1", JournalPosition.Start, [], TestContext.Current.CancellationToken);
+
+        some.ShouldBeNull();
+        none.ShouldBeNull();
+        (await journal.ReadAsync("run-1", TestContext.Current.CancellationToken)).Absent.ShouldBeTrue();
+        Directory.Exists(Path.Combine(_root, "run-1")).ShouldBeFalse();
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("file")]
+    public async Task An_append_into_an_existing_journal_writes_after_its_lines(string kept)
+    {
+        var journal = Journal(kept);
+        var first = (await journal.AppendAsync("run-1", JournalPosition.Start, [EveryKind[0]], TestContext.Current.CancellationToken)).ShouldNotBeNull();
+
+        var second = await journal.AppendExistingAsync("run-1", first, [EveryKind[1]], TestContext.Current.CancellationToken);
+
+        second.ShouldNotBeNull();
+        (await journal.ReadAsync("run-1", TestContext.Current.CancellationToken)).Entries.ShouldBe([EveryKind[0], EveryKind[1]]);
+    }
+
+    /// <summary>A file started empty, as a recorded table's is, takes an append into it at its start (#874).</summary>
+    [Fact]
+    public async Task An_append_into_a_journal_started_empty_writes_at_its_start()
+    {
+        var journal = Journal("file");
+        Directory.CreateDirectory(Path.Combine(_root, "run-1"));
+        await File.WriteAllBytesAsync(Path.Combine(_root, "run-1", "decisions.jsonl"), [], TestContext.Current.CancellationToken);
+
+        var written = await journal.AppendExistingAsync("run-1", JournalPosition.Start, [EveryKind[0]], TestContext.Current.CancellationToken);
+
+        written.ShouldNotBeNull();
+        (await journal.ReadAsync("run-1", TestContext.Current.CancellationToken)).Entries.ShouldBe([EveryKind[0]]);
+    }
+
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("file")]
+    public async Task A_journal_written_to_is_there_whether_read_whole_or_after_a_position(string kept)
+    {
+        var journal = Journal(kept);
+        await journal.AppendAsync("run-1", JournalPosition.Start, [EveryKind[0]], TestContext.Current.CancellationToken);
+
+        var whole = await journal.ReadAsync("run-1", TestContext.Current.CancellationToken);
+        var after = await journal.ReadAfterAsync("run-1", JournalPosition.Start, TestContext.Current.CancellationToken);
+
+        whole.Absent.ShouldBeFalse();
+        after.ShouldNotBeNull().Absent.ShouldBeFalse();
     }
 
     [Theory]

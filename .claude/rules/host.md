@@ -19,6 +19,10 @@ paths:
 - A token, a seat key, an invitation or a join code is compared with `FixedTime.Same`, never `==`, `!=` or
   `string.Equals`: an ordinal comparison's time tells how much of a guess is right (`SecretComparisonTests`, #862).
 - Expected failures answer a stable, namespaced error code (`Lobby.TooManyGames`), never an exception's text.
+- A list of records in a posted body can hold `null`: `System.Text.Json` lets `[null]` into a `List<T>` of records.
+  Refuse it by name with a 400 and the route's code, or skip it on purpose, as `FeedbackApi` does for errors. Never
+  let it become a `NullReferenceException` answered 500. Its test posts `[null]` (#883):
+  `FeedbackApiTests.An_error_list_holding_nothing_is_read_as_no_error`.
 - A change about exception text greps `\.Message` over `src/DownfallArena.Cli` and reads every hit. Do not trust a
   list: the one in #828 came from a single reading. A fixed sentence names a cause only when the catch admits nothing
   else: split `StoreFails` off first, as a missing file is also an `IOException`.
@@ -43,8 +47,13 @@ paths:
   and the stores' tests pin the order (#851). A process that wrote or read the record never writes over a missing one,
   and its watch lets go of the table (`PlaytestRun.Deleted`, #848). Until it looks, its journal is not written into the
   deleted run: an append past the start of a missing journal is refused, and a match whose journal reads empty below
-  the furthest mark this process saw (`Kept.Reached`) is `Journal.Gone`, never started over (#856). A table that never
-  journaled anything can still bring its journal back in that window.
+  the furthest mark this process saw (`Kept.Reached`) is `Journal.Gone`, never started over (#856). A recorded table's
+  journal is created empty with its run, and the port tells a missing journal from an empty one
+  (`JournalReading.Absent`). If this process read the journal and later reads it absent, that is `Journal.Gone` too,
+  at mark 0, and its appends go through `AppendExistingAsync`, which never creates the journal (`Kept.Found`, #874).
+  The same holds from a process's first read: the composer marks a recorded table's match `JournaledMatch.Recorded`
+  when its journal is the store's own, so a table picked up after its journal was deleted is not rebuilt from nothing. A blob journal read from its start is one
+  call, no range (`BlobDecisionJournalTests.A_journal_read_from_its_start_is_one_call_and_asks_no_range`).
   A missing record this process never saw stored is unknown, not gone: answer busy (503), not gone (409) (#850). The
   operator's delete waits for the reactions and seen marks on their way (`PlayedTable.QuiesceAsync`, #849).
 - Build one `OperatorActions` per host, in `TableHost.OpenNotesAsync`, and hand it to every admin API. Its ids keep

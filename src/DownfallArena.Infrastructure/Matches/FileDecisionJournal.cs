@@ -39,7 +39,7 @@ public sealed class FileDecisionJournal : IDecisionJournal
         {
             if (!File.Exists(path))
             {
-                return Task.FromResult(JournalReading.Empty);
+                return Task.FromResult(JournalReading.AbsentAt(JournalPosition.Start));
             }
 
             using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
@@ -57,7 +57,7 @@ public sealed class FileDecisionJournal : IDecisionJournal
         {
             if (!File.Exists(path))
             {
-                return Task.FromResult<JournalReading?>(after.Mark == 0 ? new JournalReading([], after) : null);
+                return Task.FromResult<JournalReading?>(after.Mark == 0 ? JournalReading.AbsentAt(after) : null);
             }
 
             using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
@@ -73,24 +73,48 @@ public sealed class FileDecisionJournal : IDecisionJournal
         }
     }
 
-    public Task<JournalPosition?> AppendAsync(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken = default)
+    public Task<JournalPosition?> AppendAsync(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken = default) =>
+        Append(run, after, entries, create: true);
+
+    public Task<JournalPosition?> AppendExistingAsync(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken = default) =>
+        Append(run, after, entries, create: false);
+
+    private Task<JournalPosition?> Append(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, bool create)
     {
         ArgumentNullException.ThrowIfNull(after);
         ArgumentNullException.ThrowIfNull(entries);
         var path = PathOf(run);
         lock (Gate)
         {
-            if (!File.Exists(path) && (after.Mark != 0 || entries.Count == 0))
+            if (!File.Exists(path) && (!create || after.Mark != 0 || entries.Count == 0))
             {
-                // Past the start of a journal nobody holds is a writer of a run since deleted: creating it would bring
-                // the run back without its record (#856). Nothing to write makes no file either. A delete from another
-                // process between this look and the open below is not kept out: a directory is one machine's store,
-                // and a table shared between processes is kept in blobs.
-                return Task.FromResult<JournalPosition?>(after.Mark == 0 ? after : null);
+                // Past the start of a journal nobody holds, or anywhere in one its writer read there, is a writer of a
+                // run since deleted: creating it would bring the run back without its record (#856, #874). Nothing to
+                // write makes no file either. A delete from another process between this look and the open below is
+                // kept out only for a writer that may not create the journal: a directory is one machine's store, and a
+                // table shared between processes is kept in blobs.
+                return Task.FromResult<JournalPosition?>(create && after.Mark == 0 ? after : null);
             }
 
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            using var stream = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.Read);
+            // A writer that may not create the journal opens it as it is: deleted since the look above, it is not found
+            // rather than created again (#874).
+            if (create)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            }
+
+            FileStream stream;
+            try
+            {
+                stream = new FileStream(path, create ? FileMode.Append : FileMode.Open, FileAccess.Write, FileShare.Read);
+            }
+            catch (Exception missing) when (!create && missing is FileNotFoundException or DirectoryNotFoundException)
+            {
+                return Task.FromResult<JournalPosition?>(null);
+            }
+
+            using var _ = stream;
+            stream.Seek(0, SeekOrigin.End);
             if (stream.Length != after.Mark)
             {
                 return Task.FromResult<JournalPosition?>(null);

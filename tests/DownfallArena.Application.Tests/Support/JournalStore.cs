@@ -14,35 +14,30 @@ internal sealed class JournalStore
 {
     private readonly List<IJournalEntry> _lines = [];
 
-    public JournalStore()
+    /// <param name="started">Whether the journal is there, empty, before anything is written: a recorded table's (#874).</param>
+    public JournalStore(bool started = false)
     {
+        Exists = started;
         Journal = Substitute.For<IDecisionJournal>();
         Journal.ReadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(async _ =>
             {
                 await ReadingAsync();
-                return new JournalReading([.. _lines], End);
+                return Exists ? new JournalReading([.. _lines], End) : JournalReading.AbsentAt(JournalPosition.Start);
             });
         Journal.ReadAfterAsync(Arg.Any<string>(), Arg.Any<JournalPosition>(), Arg.Any<CancellationToken>())
             .Returns(async call =>
             {
                 await ReadingAsync();
                 var after = call.Arg<JournalPosition>();
-                return after.Mark > _lines.Count ? null : new JournalReading([.. _lines.Skip((int)after.Mark)], End);
+                return after.Mark > _lines.Count ? null
+                    : !Exists ? JournalReading.AbsentAt(after)
+                    : new JournalReading([.. _lines.Skip((int)after.Mark)], End);
             });
         Journal.AppendAsync(Arg.Any<string>(), Arg.Any<JournalPosition>(), Arg.Any<IReadOnlyList<IJournalEntry>>(), Arg.Any<CancellationToken>())
-            .Returns(call =>
-            {
-                BeforeAppend?.Invoke();
-                BeforeAppend = null;
-                if (call.Arg<JournalPosition>() != End)
-                {
-                    return (JournalPosition?)null;
-                }
-
-                _lines.AddRange(call.Arg<IReadOnlyList<IJournalEntry>>());
-                return End;
-            });
+            .Returns(call => Append(call.Arg<JournalPosition>(), call.Arg<IReadOnlyList<IJournalEntry>>(), create: true));
+        Journal.AppendExistingAsync(Arg.Any<string>(), Arg.Any<JournalPosition>(), Arg.Any<IReadOnlyList<IJournalEntry>>(), Arg.Any<CancellationToken>())
+            .Returns(call => Append(call.Arg<JournalPosition>(), call.Arg<IReadOnlyList<IJournalEntry>>(), create: false));
         Journal.EndAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(_ => (long)_lines.Count);
     }
 
@@ -60,13 +55,38 @@ internal sealed class JournalStore
     public Action? BeforeAppend { get; set; }
 
     /// <summary>The journal deleted with its run by another process (#856): nothing left of it.</summary>
-    public void Delete() => _lines.Clear();
+    public void Delete()
+    {
+        _lines.Clear();
+        Exists = false;
+    }
+
+    /// <summary>Whether the journal is there, empty or not: an append of entries at its start creates it, as the stores do.</summary>
+    public bool Exists { get; private set; }
 
     /// <summary>A line written by somebody else.</summary>
-    public void WriteElsewhere(SeatDecision line) => _lines.Add(new DecisionEntry(line));
+    public void WriteElsewhere(SeatDecision line) => WriteElsewhere(new DecisionEntry(line));
 
     /// <summary>A line of any kind written by somebody else.</summary>
-    public void WriteElsewhere(IJournalEntry line) => _lines.Add(line);
+    public void WriteElsewhere(IJournalEntry line)
+    {
+        _lines.Add(line);
+        Exists = true;
+    }
+
+    private JournalPosition? Append(JournalPosition after, IReadOnlyList<IJournalEntry> entries, bool create)
+    {
+        BeforeAppend?.Invoke();
+        BeforeAppend = null;
+        if (after != End || (!create && !Exists))
+        {
+            return null;
+        }
+
+        _lines.AddRange(entries);
+        Exists |= entries.Count > 0;
+        return End;
+    }
 
     private async Task ReadingAsync()
     {

@@ -186,6 +186,96 @@ public sealed class JournaledStepperTests
         journal.Lines.ShouldBeEmpty();
     }
 
+    /// <summary>
+    /// A recorded table's journal that this process read as present and empty, then deleted with its run, is gone too
+    /// (#874): the next step does not create it again at its start.
+    /// </summary>
+    [Fact]
+    public async Task A_journal_read_empty_and_then_deleted_is_gone_and_is_not_created_again()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent);
+        var journal = new JournalStore(started: true);
+        var replica = new Replica(journal);
+        (await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
+        journal.Delete();
+
+        var step = await replica.Journaled.SubmitAsync(table, MatchSeats.People, new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass), cancellationToken: TestContext.Current.CancellationToken);
+        var read = await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken);
+
+        step.Error.ShouldBe(JournalErrors.Gone);
+        read.Error.ShouldBe(JournalErrors.Gone);
+        journal.Exists.ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// The same when it is deleted between the step's read and its write (#874): the append does not create the journal,
+    /// and the next read finds it gone.
+    /// </summary>
+    [Fact]
+    public async Task A_journal_read_empty_and_deleted_as_a_step_is_written_is_not_created_again()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent);
+        var journal = new JournalStore(started: true);
+        var replica = new Replica(journal);
+        (await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
+        journal.BeforeAppend = journal.Delete;
+
+        var step = await replica.Journaled.SubmitAsync(table, MatchSeats.People, new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass), cancellationToken: TestContext.Current.CancellationToken);
+        var read = await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken);
+
+        step.Error.ShouldBe(JournalErrors.Moved);
+        read.Error.ShouldBe(JournalErrors.Gone);
+        journal.Exists.ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// A recorded table's journal is created with its run, so one absent at this process's first read was deleted with
+    /// the run (#874): the match is gone from the start, and no step creates the journal again.
+    /// </summary>
+    [Fact]
+    public async Task A_recorded_table_whose_journal_is_absent_at_the_first_read_is_gone_and_nothing_is_created()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent) with { Recorded = true };
+        var journal = new JournalStore();
+        var replica = new Replica(journal);
+
+        var read = await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken);
+        var step = await replica.Journaled.SubmitAsync(table, MatchSeats.People, new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass), cancellationToken: TestContext.Current.CancellationToken);
+
+        read.Error.ShouldBe(JournalErrors.Gone);
+        step.Error.ShouldBe(JournalErrors.Gone);
+        journal.Exists.ShouldBeFalse();
+    }
+
+    /// <summary>A recorded table's journal there and empty is played from its start, and written into (#874).</summary>
+    [Fact]
+    public async Task A_recorded_table_whose_journal_is_there_and_empty_is_played_from_the_start()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent) with { Recorded = true };
+        var journal = new JournalStore(started: true);
+        var replica = new Replica(journal);
+
+        var step = await replica.Journaled.SubmitAsync(table, MatchSeats.People, new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass), cancellationToken: TestContext.Current.CancellationToken);
+
+        step.IsSuccess.ShouldBeTrue();
+        journal.Lines.Count.ShouldBe(1);
+    }
+
+    /// <summary>A journal nobody created yet, as an unrecorded table's, is started at the first step as before (#874).</summary>
+    [Fact]
+    public async Task A_journal_nobody_created_is_started_at_the_first_step()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent);
+        var journal = new JournalStore();
+        var replica = new Replica(journal);
+        (await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
+
+        var step = await replica.Journaled.SubmitAsync(table, MatchSeats.People, new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass), cancellationToken: TestContext.Current.CancellationToken);
+
+        step.IsSuccess.ShouldBeTrue();
+        journal.Exists.ShouldBeTrue();
+    }
+
     /// <summary>The same, when the journal is deleted between a step's read and its write (#856).</summary>
     [Fact]
     public async Task A_journal_deleted_as_a_step_is_written_is_gone_at_the_next_read_and_nothing_is_written_into_it()

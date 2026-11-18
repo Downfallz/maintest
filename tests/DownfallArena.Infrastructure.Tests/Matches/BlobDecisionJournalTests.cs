@@ -1,7 +1,10 @@
 using System.Net.Sockets;
+using Azure.Core;
+using Azure.Core.Pipeline;
 using Azure.Storage;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Azure.Storage.Blobs.Specialized;
 using DownfallArena.Application.Matches.Journaling;
 using DownfallArena.Infrastructure.Learning;
 using DownfallArena.Infrastructure.Matches;
@@ -28,6 +31,68 @@ public sealed class BlobDecisionJournalTests
 
         reading.Entries.ShouldBeEmpty();
         reading.Position.ShouldBe(JournalPosition.Start);
+        reading.Absent.ShouldBeTrue();
+    }
+
+    /// <summary>A blob started empty, as a recorded table's is, reads as present; once deleted, it reads as absent, whole or from the position it was read at (#874).</summary>
+    [Fact]
+    public async Task A_journal_started_empty_is_there_and_one_deleted_since_is_absent_from_where_it_was_read()
+    {
+        var (journal, container) = await Opened();
+        var blob = container.GetAppendBlobClient("run-1/decisions.jsonl");
+        await blob.CreateAsync(cancellationToken: TestContext.Current.CancellationToken);
+        var started = await journal.ReadAsync("run-1", TestContext.Current.CancellationToken);
+        var same = await journal.ReadAfterAsync("run-1", started.Position, TestContext.Current.CancellationToken);
+        await blob.DeleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        var after = await journal.ReadAfterAsync("run-1", started.Position, TestContext.Current.CancellationToken);
+        var whole = await journal.ReadAsync("run-1", TestContext.Current.CancellationToken);
+
+        started.Absent.ShouldBeFalse();
+        same.ShouldNotBeNull().Absent.ShouldBeFalse();
+        after.ShouldNotBeNull().Absent.ShouldBeTrue();
+        whole.Absent.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// A read from the start of a journal is one call, the whole blob, and never a range answered 416 and then an end
+    /// asked: no delete can fall between two calls and leave an empty blob deleted since read as there (#874).
+    /// </summary>
+    [Fact]
+    public async Task A_journal_read_from_its_start_is_one_call_and_asks_no_range()
+    {
+        var (_, container) = await Opened();
+        await container.GetAppendBlobClient("run-1/decisions.jsonl").CreateAsync(cancellationToken: TestContext.Current.CancellationToken);
+        var asked = new Asked();
+        var options = new BlobClientOptions();
+        options.AddPolicy(asked, HttpPipelinePosition.PerCall);
+        var journal = new BlobDecisionJournal(new BlobContainerClient(container.Uri, new StorageSharedKeyCredential(Account, Key), options), TimeProvider.System);
+
+        var after = await journal.ReadAfterAsync("run-1", JournalPosition.Start, TestContext.Current.CancellationToken);
+
+        after.ShouldNotBeNull().Absent.ShouldBeFalse();
+        asked.Requests.ShouldHaveSingleItem().ShouldBe("GET");
+    }
+
+    /// <summary>
+    /// A writer that read the blob there appends only into a blob the service holds (#874): one deleted since is not
+    /// created again, even at its start, and one started empty takes the append.
+    /// </summary>
+    [Fact]
+    public async Task An_append_into_an_existing_journal_is_refused_when_there_is_none_and_written_when_there_is()
+    {
+        var (journal, container) = await Opened();
+        await container.GetAppendBlobClient("run-2/decisions.jsonl").CreateAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        var some = await journal.AppendExistingAsync("run-1", JournalPosition.Start, [DecisionJournalTests.EveryKind[0]], TestContext.Current.CancellationToken);
+        var none = await journal.AppendExistingAsync("run-1", JournalPosition.Start, [], TestContext.Current.CancellationToken);
+        var started = await journal.AppendExistingAsync("run-2", JournalPosition.Start, [DecisionJournalTests.EveryKind[0]], TestContext.Current.CancellationToken);
+
+        some.ShouldBeNull();
+        none.ShouldBeNull();
+        (await container.GetAppendBlobClient("run-1/decisions.jsonl").ExistsAsync(TestContext.Current.CancellationToken)).Value.ShouldBeFalse();
+        started.ShouldNotBeNull();
+        (await journal.ReadAsync("run-2", TestContext.Current.CancellationToken)).Entries.ShouldBe([DecisionJournalTests.EveryKind[0]]);
     }
 
     [Fact]
@@ -176,6 +241,31 @@ public sealed class BlobDecisionJournalTests
     }
 
     private static async Task<BlobDecisionJournal> Journal() => (await Opened()).Journal;
+
+    /// <summary>The requests sent to the service, each by its method, and “ranged” when it asks a range.</summary>
+    private sealed class Asked : HttpPipelinePolicy
+    {
+        private readonly System.Collections.Concurrent.ConcurrentQueue<string> _requests = new();
+
+        public IReadOnlyList<string> Requests => [.. _requests];
+
+        public override void Process(HttpMessage message, ReadOnlyMemory<HttpPipelinePolicy> pipeline)
+        {
+            Note(message);
+            ProcessNext(message, pipeline);
+        }
+
+        public override ValueTask ProcessAsync(HttpMessage message, ReadOnlyMemory<HttpPipelinePolicy> pipeline)
+        {
+            Note(message);
+            return ProcessNextAsync(message, pipeline);
+        }
+
+        private void Note(HttpMessage message) =>
+            _requests.Enqueue(message.Request.Headers.Contains("x-ms-range") || message.Request.Headers.Contains("Range")
+                ? $"{message.Request.Method} ranged"
+                : message.Request.Method.ToString());
+    }
 
     private static async Task<(BlobDecisionJournal Journal, BlobContainerClient Container)> Opened()
     {

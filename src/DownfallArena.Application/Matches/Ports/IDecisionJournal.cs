@@ -10,14 +10,19 @@ namespace DownfallArena.Application.Matches.Ports;
 /// </summary>
 public interface IDecisionJournal
 {
-    /// <summary>The entries written so far and where the journal ends; nothing, at the start, for a run nobody wrote.</summary>
+    /// <summary>
+    /// The entries written so far and where the journal ends; nothing, at the start, for a run nobody wrote. A journal
+    /// the store does not hold reads as <see cref="JournalReading.Absent" />; one that is there with nothing in it does
+    /// not (#874).
+    /// </summary>
     Task<JournalReading> ReadAsync(string run, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// The entries written after a position read or written earlier, and where the journal ends now: what a
     /// process holding the match as it stood there reads to catch up, rather than the whole journal (inventory
     /// question 13). No entries, at the same position, when nobody wrote since. Nothing when the journal does
-    /// not reach the position, so it is not the journal the position was taken from, and is read whole.
+    /// not reach the position, so it is not the journal the position was taken from, and is read whole. From the start
+    /// of a journal the store does not hold, it answers no entries and <see cref="JournalReading.Absent" /> (#874).
     /// </summary>
     Task<JournalReading?> ReadAfterAsync(string run, JournalPosition after, CancellationToken cancellationToken = default);
 
@@ -26,6 +31,13 @@ public interface IDecisionJournal
     /// nothing written, when somebody else wrote first: two writers cannot both write the same line.
     /// </summary>
     Task<JournalPosition?> AppendAsync(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The same, into a journal the store holds only: never created, even at its start. Null, and nothing written,
+    /// when it is not there: a writer that read it there writes into a run deleted since, and creating it would bring
+    /// the run back without its record (#874).
+    /// </summary>
+    Task<JournalPosition?> AppendExistingAsync(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Where the journal ends, as the store measures it (<see cref="JournalPosition.Mark" />), read without reading

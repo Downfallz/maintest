@@ -36,7 +36,7 @@ public sealed class InMemoryDecisionJournal : IDecisionJournal
         {
             return Task.FromResult(_journals.TryGetValue(run, out var written)
                 ? new JournalReading([.. written], new JournalPosition(written.Count, written.Count))
-                : JournalReading.Empty);
+                : JournalReading.AbsentAt(JournalPosition.Start));
         }
     }
 
@@ -46,7 +46,11 @@ public sealed class InMemoryDecisionJournal : IDecisionJournal
         ArgumentNullException.ThrowIfNull(after);
         lock (_gate)
         {
-            var written = _journals.TryGetValue(run, out var journal) ? journal : [];
+            if (!_journals.TryGetValue(run, out var written))
+            {
+                return Task.FromResult<JournalReading?>(after.Mark == 0 ? JournalReading.AbsentAt(after) : null);
+            }
+
             return Task.FromResult<JournalReading?>(written.Count < after.Mark
                 ? null
                 : new JournalReading([.. written.Skip((int)after.Mark)], new JournalPosition(written.Count, written.Count)));
@@ -62,7 +66,13 @@ public sealed class InMemoryDecisionJournal : IDecisionJournal
         }
     }
 
-    public Task<JournalPosition?> AppendAsync(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken = default)
+    public Task<JournalPosition?> AppendAsync(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken = default) =>
+        Append(run, after, entries, create: true);
+
+    public Task<JournalPosition?> AppendExistingAsync(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken = default) =>
+        Append(run, after, entries, create: false);
+
+    private Task<JournalPosition?> Append(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, bool create)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(run);
         ArgumentNullException.ThrowIfNull(after);
@@ -70,7 +80,7 @@ public sealed class InMemoryDecisionJournal : IDecisionJournal
         lock (_gate)
         {
             var written = _journals.TryGetValue(run, out var journal) ? journal.Count : 0;
-            if (written != after.Mark)
+            if (written != after.Mark || (!create && journal is null))
             {
                 return Task.FromResult<JournalPosition?>(null);
             }

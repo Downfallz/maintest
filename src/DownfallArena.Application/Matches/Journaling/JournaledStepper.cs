@@ -470,8 +470,10 @@ public sealed class JournaledStepper(
         // must not bring back a match that was let go of while it waited.
         cancellationToken.ThrowIfCancellationRequested();
         if (kept.Position is { } known && await matches.FindAsync(match.MatchId, cancellationToken) is not null
-            && await journal.ReadAfterAsync(match.Run, known, cancellationToken) is { } since)
+            && await journal.ReadAfterAsync(match.Run, known, cancellationToken) is { } since
+            && !(since.Absent && Expected(match, kept)))
         {
+            kept.Found |= !since.Absent;
             if (since.Position == known)
             {
                 return Result.Success(known);
@@ -485,10 +487,12 @@ public sealed class JournaledStepper(
 
         kept.Position = null;
         var reading = await journal.ReadAsync(match.Run, cancellationToken);
-        if (kept.Reached > 0 && reading.Position.Mark == 0)
+        if ((kept.Reached > 0 && reading.Position.Mark == 0) || (Expected(match, kept) && reading.Absent))
         {
-            // Gone back to nothing under a match this process saw further on: deleted with its run (#856). Every later
-            // step is refused the same way rather than starting the match over into the run.
+            // Either case means the run was deleted. The journal is back to nothing under a match this process saw further
+            // on (#856), or it is gone from the store when it was there before: read by this process, empty or not, or
+            // created with a recorded table's run (#874). Every later step is refused the same way, so the match is not
+            // started over and the run's journal is not created again.
             await matches.ForgetAsync(match.MatchId, cancellationToken);
             return Result.Failure<JournalPosition>(JournalErrors.Gone);
         }
@@ -502,6 +506,7 @@ public sealed class JournaledStepper(
         }
 
         kept.Stand(reading.Position);
+        kept.Found |= !reading.Absent;
         kept.Held = rebuilt.Value;
         kept.Entries = reading.Entries.Count;
         kept.SeatChanges.Clear();
@@ -557,7 +562,10 @@ public sealed class JournaledStepper(
     /// </summary>
     private async Task<JournalPosition?> WriteAsync(JournaledMatch match, Kept kept, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken)
     {
-        var written = await journal.AppendAsync(match.Run, after, entries, cancellationToken);
+        // A journal that was there is never created again: gone since, its run was deleted (#874).
+        var written = Expected(match, kept)
+            ? await journal.AppendExistingAsync(match.Run, after, entries, cancellationToken)
+            : await journal.AppendAsync(match.Run, after, entries, cancellationToken);
         if (written is null)
         {
             await LetGoAsync(match.MatchId, kept, cancellationToken);
@@ -565,6 +573,7 @@ public sealed class JournaledStepper(
         }
 
         kept.Stand(written);
+        kept.Found |= entries.Count > 0;
         kept.Entries += entries.Count;
         return written;
     }
@@ -608,6 +617,9 @@ public sealed class JournaledStepper(
 
     private static int Index(PlayerSlot slot) => slot == PlayerSlot.Player1 ? 0 : 1;
 
+    /// <summary>Whether the journal was there before: read or written by this process, or created with a recorded table's run (#874).</summary>
+    private static bool Expected(JournaledMatch match, Kept kept) => kept.Found || match.Recorded;
+
     /// <summary>What this process keeps of one match between two steps.</summary>
     private sealed class Kept
     {
@@ -622,6 +634,13 @@ public sealed class JournaledStepper(
         /// read empty below it was deleted with its run (#856), and is not written into again.
         /// </summary>
         public long Reached { get; private set; }
+
+        /// <summary>
+        /// Whether this process has read the journal as present, or written into it; like <see cref="Reached" />, not
+        /// cleared when the match is let go of. A recorded table's journal is created empty with its run, so one read
+        /// absent after that was deleted with the run, even at its start (#874), and is never created again.
+        /// </summary>
+        public bool Found { get; set; }
 
         /// <summary>The match in memory stands where the journal ends, at <paramref name="position" />.</summary>
         public void Stand(JournalPosition position)

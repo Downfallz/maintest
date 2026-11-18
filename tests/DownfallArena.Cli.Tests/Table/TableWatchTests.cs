@@ -362,6 +362,43 @@ public sealed class TableWatchTests : IDisposable
     }
 
     /// <summary>
+    /// The same for a table at the start of its journal, where a bot owes the draft and nothing is journaled yet (#874):
+    /// the journal read as present and empty is gone once deleted, so the bot's turn does not create it again.
+    /// </summary>
+    [Fact]
+    public async Task A_turn_taken_at_the_start_after_another_process_deleted_the_run_does_not_bring_it_back()
+    {
+        using var registry = _here.Registry();
+        var table = await RecordedAsync(registry, Randoms);
+        new FileInfo(Path.Combine(_runs, table.Id, PlaytestRun.JournalFile)).Length.ShouldBe(0);
+        (await _there.Stored!.DeleteAsync(table.Id, Cancel)).ShouldBeTrue();
+
+        await ((IAgentTurnTaker)table.Session).TakeTurnAsync(Cancel);
+
+        Directory.Exists(Path.Combine(_runs, table.Id)).ShouldBeFalse();
+        (await _here.Stored!.ListAsync(Cancel)).ShouldNotContain(session => session.Id == table.Id);
+    }
+
+    /// <summary>
+    /// A table another process picks up after its run's journal was deleted, before that process ever read it (#874), is
+    /// not rebuilt from nothing: a recorded table's journal is created with its run, so it is gone, and is not created again.
+    /// </summary>
+    [Fact]
+    public async Task A_table_picked_up_after_its_journal_was_deleted_is_not_rebuilt_and_its_journal_is_not_created()
+    {
+        using var registry = _here.Registry();
+        var table = await RecordedAsync(registry, Randoms);
+        var journal = Path.Combine(_runs, table.Id, PlaytestRun.JournalFile);
+        File.Delete(journal);
+        using var elsewhere = _there.Registry();
+
+        var picked = await elsewhere.ByIdAsync(table.Id, Cancel);
+
+        picked.ShouldBeNull();
+        File.Exists(journal).ShouldBeFalse();
+    }
+
+    /// <summary>
     /// A table whose record this process never managed to store is not taken for deleted (#850): nothing says the
     /// operator deleted it, and letting it go would drop a live table.
     /// </summary>

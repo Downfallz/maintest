@@ -38,7 +38,7 @@ public sealed class BlobDecisionJournal : IDecisionJournal
         }
         catch (RequestFailedException failure) when (failure.Status == 404)
         {
-            return JournalReading.Empty;
+            return JournalReading.AbsentAt(JournalPosition.Start);
         }
     }
 
@@ -55,28 +55,43 @@ public sealed class BlobDecisionJournal : IDecisionJournal
         }
         catch (RequestFailedException failure) when (failure.Status == 404)
         {
-            return after.Mark == 0 ? new JournalReading([], after) : null;
+            return after.Mark == 0 ? JournalReading.AbsentAt(after) : null;
         }
         catch (RequestFailedException failure) when (failure.Status == 416)
         {
-            // A range that starts at the end, or past it: nothing written since, or not this journal.
+            // A range that starts at the end, or past it: nothing written since, or not this journal. Never from the start,
+            // which is read whole in one call (a range from 0 is no range), so a blob there and empty is not told apart
+            // from one deleted since by a second call here (#874).
             return await EndAsync(run, cancellationToken) == after.Mark ? new JournalReading([], after) : null;
         }
     }
 
-    public async Task<JournalPosition?> AppendAsync(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken = default)
+    public Task<JournalPosition?> AppendAsync(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken = default) =>
+        AppendAsync(run, after, entries, create: true, cancellationToken);
+
+    public Task<JournalPosition?> AppendExistingAsync(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken = default) =>
+        AppendAsync(run, after, entries, create: false, cancellationToken);
+
+    private async Task<JournalPosition?> AppendAsync(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, bool create, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(after);
         ArgumentNullException.ThrowIfNull(entries);
         var blob = _container.GetAppendBlobClient(NameOf(run));
         if (entries.Count == 0)
         {
-            return await EndAsync(run, cancellationToken) == after.Mark ? after : null;
+            var end = await EndIfThereAsync(run, cancellationToken);
+            if (end is null && !create)
+            {
+                return null;
+            }
+
+            return (end ?? 0) == after.Mark ? after : null;
         }
 
-        // Only a writer at the start creates the blob. One past it, with no blob, writes a run since deleted, and
-        // creating it would bring the run back without its record (#856): its append is refused as not found.
-        if (after.Mark == 0)
+        // Only a writer at the start that may create the blob does. One past it, or one that read the blob there, with
+        // no blob, writes a run since deleted, and creating it would bring the run back without its record (#856, #874):
+        // its append is refused as not found.
+        if (create && after.Mark == 0)
         {
             await blob.CreateIfNotExistsAsync(new AppendBlobCreateOptions { HttpHeaders = Json }, cancellationToken);
         }
@@ -98,7 +113,11 @@ public sealed class BlobDecisionJournal : IDecisionJournal
         return new JournalPosition(after.Lines + entries.Count, after.Mark + lines.Length);
     }
 
-    public async Task<long> EndAsync(string run, CancellationToken cancellationToken = default)
+    public async Task<long> EndAsync(string run, CancellationToken cancellationToken = default) =>
+        await EndIfThereAsync(run, cancellationToken) ?? 0;
+
+    /// <summary>Where the blob ends; none when there is no blob.</summary>
+    private async Task<long?> EndIfThereAsync(string run, CancellationToken cancellationToken)
     {
         try
         {
@@ -107,7 +126,7 @@ public sealed class BlobDecisionJournal : IDecisionJournal
         }
         catch (RequestFailedException failure) when (failure.Status == 404)
         {
-            return 0;
+            return null;
         }
     }
 
