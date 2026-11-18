@@ -77,7 +77,7 @@ owns as the step opens: a pick of this round opens nothing until the next mutati
 
 *Example.* Round {rules.firstEvolutionRound}. Every creature knows Strike{?creature.knows = 'spell:heavy_strike:v1'} and Focus{?creature.knows = 'spell:wait:v1'}{?creature.knows.count = 2} and has
 {creature.initiative} initiative. The first player picks Brute for Creature 1 and Warped for Creature 2. They
-would like Oppressor for Creature 1 too, but it needs Brute, which Creature 1 does not own yet, and Creature 1
+would like Oppressor for Creature 1 too, but it needs Brute{?tier:marauder:v1.needs = 'tier:brute:v1'}{?tier:marauder:v1.needs.count = 1}, which Creature 1 does not own yet, and Creature 1
 already has its pick. At the same time, the second player picks Predator for Creature 4 and Brute for Creature 5.
 Both are done, and the four mutations are acquired together:
 

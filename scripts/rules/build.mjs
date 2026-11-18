@@ -274,28 +274,31 @@ function spellValue(definition, name, path) {
   return effectValue((caster ? definition.casterEffects : definition.effects) ?? [], name, first, field);
 }
 
-const VERSIONED_SPELL = /^spell:[a-z0-9_]+:v\d+$/;
+const VERSIONED = { spell: /^spell:[a-z0-9_]+:v\d+$/, mutation: /^tier:[a-z0-9_]+:v\d+$/ };
 
-// A list of spells as data/ writes it, each as a versioned id: data/ may name one by its alias.
-function spellList(ids, what, aliases) {
+// A list of spells or mutations as data/ writes it, each as a versioned id: data/ may name one by its alias.
+function idList(ids, what, aliases, kind = 'spell') {
+  const versioned = VERSIONED[kind];
   return (ids ?? []).map(id => {
-    if (VERSIONED_SPELL.test(id)) return id;
-    if (Object.hasOwn(aliases, id) && VERSIONED_SPELL.test(aliases[id])) return aliases[id];
-    throw new Error(`${what} "${id}" is neither a versioned spell id nor an alias of data/aliases.json`);
+    if (versioned.test(id)) return id;
+    if (Object.hasOwn(aliases, id) && versioned.test(aliases[id])) return aliases[id];
+    throw new Error(`${what} "${id}" is neither a versioned ${kind} id nor an alias of data/aliases.json`);
   });
 }
 
-// A list (`teaches`, `knows`) or its `count`, which a sentence naming the whole list states, so a spell added is caught.
+// A list (`teaches`, `needs`, `knows`) or its `count`, which a sentence naming the whole list states, so a spell added is caught.
 function listValue(list, field) {
   if (field === undefined) return list;
   return field === 'count' ? list.length : undefined;
 }
 
 // A mutation's field (`name`, `level`, `initiativeBonus`), its passive's (`sunder`, `damageBonus`, `upkeepEnergy`),
-// or `teaches`, the list of the spells it teaches, and `teaches.count`.
+// `teaches`, the list of the spells it teaches, or `needs`, the mutations it requires (its prerequisites, not a
+// capstone's any-of), and the `count` of either.
 function mutationValue(definition, path, aliases) {
   const [field, sub] = path.split('.');
-  if (field === 'teaches') return listValue(spellList(definition.spells, `spell of ${definition.id}`, aliases), sub);
+  if (field === 'teaches') return listValue(idList(definition.spells, `spell of ${definition.id}`, aliases), sub);
+  if (field === 'needs') return listValue(idList(definition.prerequisites, `prerequisite of ${definition.id}`, aliases, 'mutation'), sub);
   if (sub !== undefined) return undefined;
   return scalar(Object.hasOwn(definition, field) ? definition[field] : definition.passive?.[field]);
 }
@@ -306,7 +309,7 @@ function lookup({ ruleSet, creature, spells, mutations = new Map(), engine = {},
     if (name.startsWith('rules.')) return scalar(ruleSet.values[name.slice(6)]);
     if (name.startsWith('engine.')) return Object.hasOwn(engine, name.slice(7)) ? scalar(engine[name.slice(7)]) : undefined;
     const knows = /^creature\.knows(?:\.(\w+))?$/.exec(name);
-    if (knows) return listValue(spellList(creature.startingSpellIds, 'starting spell', aliases), knows[1]);
+    if (knows) return listValue(idList(creature.startingSpellIds, 'starting spell', aliases), knows[1]);
     if (name.startsWith('creature.')) return scalar(creature[`base${capital(name.slice(9))}`]);
     const mutation = /^(tier:[a-z0-9_]+:v\d+)\.(\w+(?:\.\w+)?)$/.exec(name);
     if (mutation) {
@@ -492,7 +495,10 @@ class Build {
       if (nouns.length > 0 && (nouns.length !== 2 || nouns.some(noun => !noun))) throw new Error(`"${expression}": a count names its singular and its plural`);
       const value = evaluate(drawn, this.look);
       if (typeof value === 'boolean') throw new Error(`"${drawn}" is a fact, not a value: write {?${drawn}}`);
-      if (Array.isArray(value)) throw new Error(`"${drawn}" is a list of spells: state one it holds with {?${drawn} = 'spell:...'}`);
+      if (Array.isArray(value)) {
+        const [noun, prefix] = /\.needs$/.test(drawn) ? ['mutations', 'tier'] : ['spells', 'spell'];
+        throw new Error(`"${drawn}" is a list of ${noun}: state one it holds with {?${drawn} = '${prefix}:...'}`);
+      }
       if (typeof value !== 'number') return nouns.length > 0 ? `${value} ${nouns[1]}` : value;
       if (!Number.isFinite(value)) throw new Error(`"${drawn}" is not a finite number`);
       const fixed = String(Number(value.toFixed(6)));
@@ -512,18 +518,24 @@ class Build {
       if (!this.given.spells.has(id)) throw new Error(`spell "${id}" is not in data/`);
       this.used.add(id);
     }
+    // A mutation a fact names as text (one a mutation needs) likewise.
+    for (const [, id] of expression.matchAll(/'(tier:[a-z0-9_]+:v\d+)'/g)) {
+      if (!(this.given.mutations ?? new Map()).has(id)) throw new Error(`mutation "${id}" is not in data/`);
+      this.usedMutations.add(id);
+    }
     const holds = evaluate(expression, this.look);
     if (typeof holds !== 'boolean') throw new Error(`"${expression}" is not a fact: a fact is a comparison, or an effect the spell has`);
     if (!holds) throw new Error(`the fact "${expression}" is false`);
     return '';
   }
 
-  // A line's values drawn and its markup checked: the text a player reads.
-  resolve(raw, where) {
+  // A line's values drawn and its markup checked: the text a player reads. `whereAt` names the source line of an
+  // offset in `raw`, for a block that joined several lines: a value that fails is placed on its own line.
+  resolve(raw, where, whereAt = () => where) {
     if (raw.includes('`')) this.refuse(`${where}: code is outside the subset`);
     if (/<[A-Za-z/!]/.test(raw.replace(/\{[^{}]*\}/g, ''))) this.refuse(`${where}: HTML is outside the subset`);
     if (raw.includes('![')) this.refuse(`${where}: an image is outside the subset`);
-    const text = raw.replace(/\{([^{}#][^{}]*)\}/g, (_, expression) => this.value(expression.trim(), where));
+    const text = raw.replace(/\{([^{}#][^{}]*)\}/g, (_, expression, offset) => this.value(expression.trim(), whereAt(offset)));
     if (/[{}]/.test(text)) this.refuse(`${where}: an unmatched brace`);
     this.words(text, where);
     this.counted(raw, where);
@@ -555,8 +567,8 @@ class Build {
   }
 
   // Bold, italics and links, as spans of text.
-  spans(raw, where) {
-    const text = this.resolve(raw, where);
+  spans(raw, where, whereAt = undefined) {
+    const text = this.resolve(raw, where, whereAt);
     const out = [];
     let plain = '';
     let at = 0;
@@ -755,25 +767,47 @@ class PartReader {
     return next;
   }
 
+  // Where a line of this file is, counted from 0.
+  lineAt(at) {
+    return `${this.build.folder}/${this.file}:${at + 1}`;
+  }
+
+  // Lines joined into one block's text, with the source line of any offset in it (#877).
+  joined(pieces) {
+    const starts = [];
+    let length = 0;
+    for (const { text } of pieces) {
+      starts.push(length);
+      length += text.length + 1;
+    }
+    const whereAt = offset => this.lineAt(pieces[starts.findLastIndex(start => start <= offset)].at);
+    return { text: pieces.map(({ text }) => text).join(' '), whereAt };
+  }
+
   list(lines, at, where) {
     const ordered = !lines[at].startsWith('-');
     const items = [];
     let next = at;
     for (; next < lines.length; next += 1) {
       const item = LIST_ITEM.exec(lines[next]);
-      if (item) items.push(item[2]);
-      else if (/^ +\S/.test(lines[next])) items[items.length - 1] += ` ${lines[next].trim()}`;
+      if (item) items.push([{ text: item[2], at: next }]);
+      else if (/^ +\S/.test(lines[next])) items.at(-1).push({ text: lines[next].trim(), at: next });
       else break;
     }
-    this.add({ type: 'list', ordered, items: items.map(text => this.build.spans(text, where)) }, where);
+    const spans = pieces => {
+      const { text, whereAt } = this.joined(pieces);
+      return this.build.spans(text, this.lineAt(pieces[0].at), whereAt);
+    };
+    this.add({ type: 'list', ordered, items: items.map(spans) }, where);
     return next;
   }
 
   paragraph(lines, at, where) {
-    const text = [lines[at].trim()];
+    const pieces = [{ text: lines[at].trim(), at }];
     let next = at + 1;
-    while (next < lines.length && !opensBlock(lines[next])) text.push(lines[next++].trim());
-    this.add({ type: 'paragraph', spans: this.build.spans(text.join(' '), where) }, where);
+    while (next < lines.length && !opensBlock(lines[next])) pieces.push({ text: lines[next].trim(), at: next++ });
+    const { text, whereAt } = this.joined(pieces);
+    this.add({ type: 'paragraph', spans: this.build.spans(text, where, whereAt) }, where);
     return next;
   }
 
