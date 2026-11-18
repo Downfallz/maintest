@@ -97,7 +97,6 @@ function show(next: Stage) {
   lab.dataset.spell = entry.id;
   lab.dataset.motion = reduced() ? 'reduced' : 'full';
   playButton.disabled = !ready;
-  playButton.textContent = playing() ? 'Play again' : 'Play effect';
   if (ready) status.textContent = unknown && stage === 'decision' ? `No effect named ${asked}` : describe(entry.name);
   scene.present(benchFrame({ entry, actor, targets, stage }) as SceneFrame, reduced(), speed());
 }

@@ -43,9 +43,29 @@ test('a chosen effect plays on the chosen creatures: its windup, its impact, the
   await film(page, 'stop');
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'decision');
   // The loop runs again once the film ends: the button plays the effect on the page's own clock.
+  // The field keeps its size from rest to play: a bench that grew a line while playing would resize the scene,
+  // and a resize ends the play.
+  const field = () => page.locator('#battle-zone').evaluate(zone => [zone.clientWidth, zone.clientHeight]);
+  const atRest = await field();
   await page.locator('#bench-play').click();
+  await expect(page.locator('#lab')).not.toHaveAttribute('data-stage', 'decision');
+  expect(await field()).toEqual(atRest);
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'resolved', { timeout: 15000 });
+  expect(await field()).toEqual(atRest);
   await expect(page.locator('#bench-status')).toHaveText('Engulfing Flames: played');
+});
+
+// A machine whose fonts run wider squeezed the button onto two lines at rest and one while playing: the field
+// resized under the effect, and a resize ends the play. Wider text stands in for those fonts here.
+test('an effect plays to its end whatever room the words of the bench take', async ({ page }) => {
+  await page.addStyleTag({ content: '#bench { font-size: 15px; }' });
+  const height = () => page.locator('#battle-zone').evaluate(zone => zone.clientHeight);
+  const atRest = await height();
+  await page.locator('#bench-play').click();
+  await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'impact', { timeout: 15000 });
+  expect(await height()).toBe(atRest);
+  await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'resolved', { timeout: 15000 });
+  expect(await height()).toBe(atRest);
 });
 
 test('the address can name the effect the bench opens on', async ({ page }) => {
