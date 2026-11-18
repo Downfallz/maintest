@@ -361,7 +361,8 @@ internal sealed class SteppedSession : ITableSession, IAgentTurnTaker
             view.Board,
             view.Options,
             SeatSnapshot.StillFaceDown(state.Of(Other(slot)).View.Board),
-            journaled)));
+            journaled,
+            checked((int)state.Position.Lines))));
     }
 
     /// <remarks>

@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using DownfallArena.Application.Admin;
 using DownfallArena.Application.FeedbackBox;
+using DownfallArena.Application.Matches.Journaling;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.Domain.Matches;
@@ -10,6 +11,7 @@ using DownfallArena.Infrastructure.Admin;
 using DownfallArena.Infrastructure.FeedbackBox;
 using DownfallArena.Infrastructure.Learning;
 using DownfallArena.Infrastructure.Matches.Scenarios;
+using DownfallArena.SharedKernel.Identifiers;
 using Microsoft.Extensions.Time.Testing;
 
 namespace DownfallArena.Cli.Tests.Table;
@@ -318,5 +320,137 @@ public sealed class FeedbackIssueTests : IDisposable
         (fixedReport.GetProperty("status").GetString(), fixedReport.GetProperty("issue").GetInt32()).ShouldBe(("fixed", 731));
         (refused.Status, Read(refused).GetProperty("error").GetString()).ShouldBe((409, "Feedback.NotFiled"));
         (await ActivityAsync()).ShouldBe([$"feedback.status {filed.Id} fixed: #731", $"feedback.file {filed.Id} #731"]);
+    }
+
+    /// <summary>
+    /// The seat's journal length when its player wrote is counted in the entries the cut counts (#750): a report sent
+    /// from round 2 of a played table, after the seat's own answer and before the other seat conceded, keeps in its
+    /// download the one and not the other. People sit in both seats from round 2, so nothing else writes to the journal.
+    /// </summary>
+    [Fact]
+    public async Task A_report_sent_from_a_seat_downloads_with_the_entries_its_round_held_when_it_was_sent()
+    {
+        using var registry = _hosted.Registry();
+        var table = await _hosted.Composer.ComposeAsync(new TableRequest(null, null, Who: "mk", Handover: 2, Seed: 7), Cancel);
+        using (var place = (await registry.ReserveAsync(Cancel)).ShouldNotBeNull())
+        {
+            await registry.AddAsync(table, place, Cancel);
+        }
+
+        var seat = table.Seats[0];
+        (await table.Api.HandleAsync("GET", $"/api/seat/{table.Seats[1].Name}", string.Empty, table.Seats[1].Token)).Status.ShouldBe(200);
+        await SpeedAsync(table, await AskedInRoundTwoAsync(table));
+        var sent = await new FeedbackApi(new SendFeedback(_feedback, new GuestAddresses(), _writes, _clock), registry)
+            .HandleAsync("POST", JsonSerializer.Serialize(new { kind = "bug", category = "rules", happened = "The bleed did not tick after the stun.", attach = true }), seat.Token, new AccountRequest(null, Secure: false), "203.0.113.7", "Firefox/140");
+        var id = Read(sent).GetProperty("id").GetString()!;
+        (await table.Api.HandleAsync("POST", $"/api/seat/{table.Seats[1].Name}/concede", string.Empty, table.Seats[1].Token)).Status.ShouldBeLessThan(300);
+        await FinishedAsync(table);
+        var cut = (await _scenarios.GetAsync(Read(await AskAsync("POST", id, "reproduce")).GetProperty("reproduction").GetProperty("id").GetString()!, Cancel)).ShouldNotBeNull();
+
+        var answer = await AskAsync("POST", id, "scenario.zip");
+
+        answer.Status.ShouldBe(200, Encoding.UTF8.GetString(answer.Body));
+        var after = ScenarioFile.Read(Unzipped(answer)).Scenario.After;
+        (await _feedback.FindAsync(id, Cancel)).ShouldNotBeNull().Context.ShouldNotBeNull().JournalLength.ShouldBe(cut.Scenario.Cut.CutAt + after.Count);
+        after.OfType<DecisionEntry>().ShouldHaveSingleItem().Decision.Slot.ShouldBe(PlayerSlot.Player1);
+        after.Count.ShouldBe(cut.Scenario.After.Count - 1, "the other seat conceded after the report");
+        cut.Scenario.After[^1].ShouldBe(new ConcessionEntry(PlayerSlot.Player2));
+    }
+
+    /// <summary>The first seat's view once the understudies have played round 1 and it is asked in round 2.</summary>
+    private static async Task<JsonElement> AskedInRoundTwoAsync(PlayedTable table)
+    {
+        var seat = table.Seats[0];
+        for (var waited = 0; waited < 300; waited++)
+        {
+            var view = Read(await table.Api.HandleAsync("GET", $"/api/seat/{seat.Name}", string.Empty, seat.Token));
+            if (view.GetProperty("board").GetProperty("roundNumber").GetInt32() == 2 && view.TryGetProperty("waitingAsked", out var asked) && asked.ValueKind == JsonValueKind.Number)
+            {
+                return view;
+            }
+
+            await Task.Delay(100, Cancel);
+        }
+
+        throw new TimeoutException("The first seat was never asked in round 2.");
+    }
+
+    /// <summary>The first seat's speed for its first creature still without one, journaled before it answers.</summary>
+    private static async Task SpeedAsync(PlayedTable table, JsonElement view)
+    {
+        var seat = table.Seats[0];
+        var creature = view.GetProperty("options").GetProperty("speed").GetProperty("missing")[0].GetInt32();
+        var decision = JsonSerializer.Serialize(new { asked = view.GetProperty("waitingAsked").GetInt64(), kind = "Speed", creature, speed = "Quick" });
+        var answer = await table.Api.HandleAsync("POST", $"/api/seat/{seat.Name}/decision", decision, seat.Token);
+        answer.Status.ShouldBe(204, Encoding.UTF8.GetString(answer.Body));
+    }
+
+    private static async Task FinishedAsync(PlayedTable table)
+    {
+        await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), Cancel);
+        for (var waited = 0; !table.IsFinished && waited < 300; waited++)
+        {
+            await Task.Delay(100, Cancel);
+        }
+
+        await table.RecordAsync(Cancel);
+    }
+
+    /// <summary>
+    /// A reproduced report whose table's record also holds a seat's code and invitation and a signed-in seat, whose
+    /// player is named: what each of the words the host gathers for the check is, by what the refusal calls it.
+    /// </summary>
+    private async Task<(Feedback Report, ScenarioDocument Cut, Dictionary<string, string> Held)> HeldByItsTableAsync()
+    {
+        var (report, table, cut, _) = await ReproducedAsync();
+        var record = (await _hosted.Stored!.RecordAsync(table, Cancel)).ShouldNotBeNull();
+        // Keys that do not begin with the table's id, as TableKeys draws them: the check finds each by itself, not by the table in it.
+        RecordedSeat[] seats = [record.Seats[0] with { Code = "QX7KM2", Invitation = "inv-3b9c1f2e7a", Account = AccountId.New().ToString() }, record.Seats[1] with { Token = "seat-key-5d0e8a41c7" }];
+        var file = Path.Combine(_hosted.RunsDirectory, table, TableRecord.File);
+        File.Exists(file).ShouldBeTrue();
+        await File.WriteAllTextAsync(file, JsonSerializer.Serialize(record with { Seats = seats, PilotToken = "pilot-key-9b2f6c03e1" }, ArtifactJson.DocumentOptions), Cancel);
+        _hosted.Composer.NameOf = _ => Task.FromResult<string?>("Ysoldequill");
+        return (report, cut, new Dictionary<string, string>
+        {
+            ["a seat's key"] = "seat-key-5d0e8a41c7",
+            ["a seat's code"] = "QX7KM2",
+            ["a seat's invitation"] = "inv-3b9c1f2e7a",
+            ["the pilot's key"] = "pilot-key-9b2f6c03e1",
+            ["a player's name"] = "Ysoldequill",
+        });
+    }
+
+    [Theory]
+    [InlineData("a seat's key")]
+    [InlineData("a seat's code")]
+    [InlineData("a seat's invitation")]
+    [InlineData("the pilot's key")]
+    [InlineData("a player's name")]
+    public async Task A_scenario_that_still_holds_what_its_table_holds_is_not_offered(string what)
+    {
+        var (report, cut, held) = await HeldByItsTableAsync();
+        var named = await _scenarios.PutAsync(cut with { Title = $"Sent by {held[what]}" }, Cancel);
+        await _feedback.SaveAsync(report with { Reproduction = named }, Cancel);
+
+        var refused = await AskAsync("POST", report.Id, "scenario.zip");
+
+        (refused.Status, Read(refused).GetProperty("error").GetString()).ShouldBe((409, "Feedback.NotRedacted"));
+        Read(refused).GetProperty("message").GetString().ShouldBe($"The scenario still holds {what}: it is not offered.");
+    }
+
+    [Fact]
+    public async Task A_practice_s_report_downloads_with_every_entry_it_copied()
+    {
+        var (_, _, cut, practised) = await ReproducedAsync();
+        var copied = ScenarioFile.JournalLinesOf(cut.Scenario.After);
+        // A practice's journal begins at its own cut: the length its seat read is no measure of the source's.
+        var report = await ReportedAsync(new FeedbackContext { Scenario = practised, Seat = "player2", Round = 2, JournalLength = 1, PracticeEntries = copied });
+        (await AskAsync("POST", report.Id, "reproduce")).Status.ShouldBe(200);
+
+        var answer = await AskAsync("POST", report.Id, "scenario.zip");
+
+        answer.Status.ShouldBe(200, Encoding.UTF8.GetString(answer.Body));
+        copied.Count.ShouldBeGreaterThan(2);
+        ScenarioFile.Read(Unzipped(answer)).Scenario.After.Count.ShouldBe(copied.Count);
     }
 }

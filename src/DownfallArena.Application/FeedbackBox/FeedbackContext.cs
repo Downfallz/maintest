@@ -21,6 +21,10 @@ public sealed record FeedbackContext
 
     public string? SubPhase { get; init; }
 
+    /// <summary>
+    /// How many entries the table's journal held when the player wrote, decisions or not: the measure a scenario's cut is
+    /// taken in, so a reproduced report's answers stop there. A practice's is its own journal's, not its source's.
+    /// </summary>
     public int? JournalLength { get; init; }
 
     /// <summary>The hash of the content the table is played on.</summary>

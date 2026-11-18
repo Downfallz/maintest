@@ -432,7 +432,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
             return StudioResponse.OfPlainText(500, snapshot.Error.Message);
         }
 
-        var (waiting, board, options, opponentIntents, journaled) = snapshot.Value;
+        var (waiting, board, options, opponentIntents, journaled, _) = snapshot.Value;
 
         // The two reads beside the table's, side by side: when the last move was, and what this seat was last shown.
         var moving = LastMoveAtAsync();
@@ -1210,7 +1210,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
             seat,
             board.RoundNumber,
             board.SubPhase?.ToString(),
-            snapshot.Value.Journaled,
+            snapshot.Value.JournalLength,
             position ? JsonSerializer.SerializeToElement(board, ArtifactJson.LineOptions) : null);
     }
 

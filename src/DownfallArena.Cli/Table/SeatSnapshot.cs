@@ -11,7 +11,12 @@ namespace DownfallArena.Cli.Table;
 /// How many of the match's trace entries belong to the match this snapshot is of, as its journal holds it: the
 /// feed a seat is shown beside this board stops there. None where every entry recorded is the match's.
 /// </param>
-internal sealed record SeatSnapshot(Asking? Waiting, PlayerBoardState Board, PlayerOptions Options, int OpponentIntents, int? Journaled = null)
+/// <param name="JournalLength">
+/// How many lines the table's journal held at this moment, decisions or not: what a scenario's cut counts its entries
+/// in, never the trace's <paramref name="Journaled" />, since every line a table writes reads back as one entry (a
+/// reader skips only kinds no writer emits). None where no journal is kept.
+/// </param>
+internal sealed record SeatSnapshot(Asking? Waiting, PlayerBoardState Board, PlayerOptions Options, int OpponentIntents, int? Journaled = null, int? JournalLength = null)
 {
     /// <summary>
     /// How many of a board's intents are still face down. A round keeps every intent it was given
