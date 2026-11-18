@@ -170,6 +170,8 @@ test('tutorial 1 is played to its end: each step shows its coach card and opens 
   await expect(page.locator('#planning-dialog')).toBeHidden(); await expect(page.locator('#planning-open')).toBeHidden();
   await expect(page.locator('#combat-open')).toBeHidden();
   await expect(page.locator('#practice-restart')).toHaveText('Play again');
+  // On the smallest phone the card's Restart the round goes once the lesson is done: its end card offers Play again (#728).
+  await expect(page.locator('#coach-restart')).toBeHidden();
   await capture('tutorial-complete');
   await fitsViewport(page, '#coach-again, #coach-leave, #practice-restart, #practice-leave');
   await expect(page.locator('#coach-again')).toHaveText('Play again');

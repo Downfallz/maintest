@@ -1855,7 +1855,8 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 @container hud (max-width: 260px) { #battle .hud-top > .practice-band .eyebrow { display: none; } }
 /* Except on a phone held upright under 360 px, where a member's header is that short: there the band says it is a
    tutorial from the first second (#728). Its place in the series, on two lines, takes Restart's place, and the coach
-   card offers Restart the round under the step's lines until the lesson is done, when its end card offers Play again. */
+   card offers Restart the round under the step's lines until the lesson is done, when its end card offers Play again.
+   Between two steps, while no card shows, there is no Restart; the next step's card brings it back. */
 #coach-restart { display: none; }
 @media (max-width: 359px) and (orientation: portrait) {
   .battle-page[data-home="member"] #battle .hud-top > .practice-band { padding-left: 6px; }
