@@ -16,7 +16,13 @@ internal static class ScenarioSources
 
     public static readonly DomainError SourceUnread = new("Scenario.SourceUnread", "The record of the game this scenario was cut from cannot be read: nothing shows that game is over, so the scenario is not opened, listed or reproduced from.");
 
-    /// <summary>Why the scenario is held back, or none when every table it was cut from is over or not this host's.</summary>
+    /// <summary>The answer when the records that say so cannot be read: the store's failure goes to the console.</summary>
+    public static readonly DomainError Unavailable = new("Scenario.Unavailable", "Whether the game this scenario was cut from is over cannot be read just now. Try again in a moment.");
+
+    /// <summary>
+    /// Why the scenario is held back, or none when every table it was cut from is over or not this host's. A store that
+    /// fails throws (<see cref="TableRegistry.StoreFails" />): the caller answers <see cref="Unavailable" />.
+    /// </summary>
     public static async Task<DomainError?> HeldBackAsync(StoredSessions stored, ScenarioDocument document, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(stored);

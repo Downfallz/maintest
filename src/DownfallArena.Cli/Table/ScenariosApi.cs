@@ -1,3 +1,4 @@
+using DownfallArena.Cli.Hosting;
 using DownfallArena.Application.Accounts;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Infrastructure.Learning;
@@ -37,6 +38,9 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
     /// </summary>
     public StoredSessions? Stored { get; init; }
 
+    /// <summary>Where its console lines go: the host's console unless a test reads them.</summary>
+    public Action<string> Said { get; init; } = Console.WriteLine;
+
     public const string Prefix = "/api/scenarios";
 
     /// <summary>The tutorials, for any signed-in account.</summary>
@@ -72,9 +76,23 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
         }
 
         // A practice follows the source's plan: not opened or resumed while the game it was cut from is played (#833).
-        if (method is "GET" or "POST" && segments is [_, "practice"] && await HeldBackAsync(id) is { } heldBack)
+        if (method is "GET" or "POST" && segments is [_, "practice"])
         {
-            return Renewed(Error(heldBack.Code, heldBack.Message, 409), who.Renewed);
+            DomainError? heldBack;
+            try
+            {
+                heldBack = await HeldBackAsync(id);
+            }
+            catch (Exception failure) when (TableRegistry.StoreFails(failure))
+            {
+                Said($"  Whether a scenario's source game is over could not be read: {HttpHost.OneLine(failure)}");
+                heldBack = ScenarioSources.Unavailable;
+            }
+
+            if (heldBack is not null)
+            {
+                return Renewed(Error(heldBack.Code, heldBack.Message, heldBack == ScenarioSources.Unavailable ? 503 : 409), who.Renewed);
+            }
         }
 
         var account = who.Account.Id.ToString();
@@ -158,12 +176,28 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
     private async Task<StudioResponse> ListedAsync()
     {
         var listed = new List<object>();
+        var unread = 0;
+        string? why = null;
         foreach (var one in (await store.ListAsync()).Where(one => one.Listed))
         {
-            if (await HeldBackAsync(one.Document) is null)
+            try
             {
-                listed.Add(Described(one.Id, one.Document));
+                if (await HeldBackAsync(one.Document) is null)
+                {
+                    listed.Add(Described(one.Id, one.Document));
+                }
             }
+            catch (Exception failure) when (TableRegistry.StoreFails(failure))
+            {
+                // Left off, as a scenario held back is: nothing shows its game is over. Said once for the list.
+                unread++;
+                why ??= HttpHost.OneLine(failure);
+            }
+        }
+
+        if (unread > 0)
+        {
+            Said($"  {unread} listed {(unread == 1 ? "scenario was" : "scenarios were")} left off Practice: whether their source game is over could not be read ({why}).");
         }
 
         return StudioResponse.OfJson(new { scenarios = listed }, ArtifactJson.LineOptions);

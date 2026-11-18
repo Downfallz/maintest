@@ -204,6 +204,27 @@ public sealed class JournaledStepperTests
         journal.Lines.ShouldBeEmpty();
     }
 
+    /// <summary>
+    /// The same after a race this process lost, which let the match go (#856): what it saw of the journal is kept, so
+    /// the match is not rebuilt from nothing and written into the deleted run.
+    /// </summary>
+    [Fact]
+    public async Task A_journal_deleted_after_a_lost_race_is_gone_and_nothing_is_written_into_it()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent);
+        var journal = new JournalStore();
+        var replica = new Replica(journal);
+        (await replica.Journaled.SubmitAsync(table, MatchSeats.People, new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass), cancellationToken: TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
+        journal.BeforeAppend = () => journal.WriteElsewhere(new SeatDecision(PlayerSlot.Player2, PlayerDecision.Pass));
+        (await replica.Journaled.SubmitAsync(table, MatchSeats.People, new SeatDecision(PlayerSlot.Player2, PlayerDecision.Pass), cancellationToken: TestContext.Current.CancellationToken)).Error.ShouldBe(JournalErrors.Moved);
+        journal.Delete();
+
+        var read = await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken);
+
+        read.Error.ShouldBe(JournalErrors.Gone);
+        journal.Lines.ShouldBeEmpty();
+    }
+
     [Fact]
     public async Task A_late_decision_is_refused_without_a_line_and_without_a_rebuild()
     {

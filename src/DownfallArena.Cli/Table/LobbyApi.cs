@@ -252,7 +252,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
         var found = await Task.WhenAll(tokens.Distinct(StringComparer.Ordinal).Select(async token => (Token: token, Table: await registry.ByTokenAsync(token))));
         var held = found
-            .Where(held => held.Table?.Seats.Any(seat => seat.Token == held.Token && seat.Person is not null && Owns(seat, account)) == true)
+            .Where(held => held.Table?.Seats.Any(seat => FixedTime.Same(held.Token, seat.Token) && seat.Person is not null && Owns(seat, account)) == true)
             .GroupBy(held => held.Table!);
 
         // Described together, as the listing is: each description may wait on its table's round.
@@ -260,7 +260,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         var tables = await Task.WhenAll(held.Select(async group => (object)new
         {
             table = await DescribeAsync(group.Key, unread.Of(group.Key)),
-            seats = group.Select(one => new { seat = group.Key.Seats.Single(seat => seat.Token == one.Token).Name, token = one.Token }).ToArray(),
+            seats = group.Select(one => new { seat = group.Key.Seats.Single(seat => FixedTime.Same(one.Token, seat.Token)).Name, token = one.Token }).ToArray(),
         }));
         unread.Say(Said);
 
@@ -946,7 +946,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         try
         {
             var table = await registry.ByTokenAsync(token);
-            var seat = table?.Seats.FirstOrDefault(seat => seat.Token == token && seat.Person is not null && Owns(seat, account));
+            var seat = table?.Seats.FirstOrDefault(seat => FixedTime.Same(token, seat.Token) && seat.Person is not null && Owns(seat, account));
             if (table is null || seat is null)
             {
                 return Problem(403, "This seat is no longer yours.");
@@ -1099,7 +1099,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         try
         {
             var table = await registry.ByTokenAsync(token);
-            var seat = table?.Seats.FirstOrDefault(seat => seat.Token == token && seat.Person is not null && Owns(seat, account));
+            var seat = table?.Seats.FirstOrDefault(seat => FixedTime.Same(token, seat.Token) && seat.Person is not null && Owns(seat, account));
             if (table is null || seat is null)
             {
                 return Problem(403, "This seat is no longer yours.");
@@ -1134,7 +1134,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         }
 
         var table = await registry.ByTokenAsync(token);
-        var seat = table?.Seats.FirstOrDefault(seat => seat.Token == token && seat.Person is not null && Owns(seat, account));
+        var seat = table?.Seats.FirstOrDefault(seat => FixedTime.Same(token, seat.Token) && seat.Person is not null && Owns(seat, account));
         if (table is null || seat is null)
         {
             return Problem(403, "This seat is no longer yours.");
@@ -1165,7 +1165,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 return new { token, kind = "invitation", seat = (string?)offered.Seat.Name, table = (object?)await DescribeAsync(offered.Table) };
             }
 
-            if (await registry.ByTokenAsync(token) is { } table && table.Seats.FirstOrDefault(seat => seat.Token == token && seat.Person is not null) is { } held)
+            if (await registry.ByTokenAsync(token) is { } table && table.Seats.FirstOrDefault(seat => FixedTime.Same(token, seat.Token) && seat.Person is not null) is { } held)
             {
                 return new { token, kind = "seat", seat = (string?)held.Name, table = (object?)await DescribeAsync(table) };
             }
@@ -1288,7 +1288,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
         // Every poll of every table comes through here. Only a seat that is still open has a place to spend, so
         // every other request goes on without waiting behind a claim, a table being opened or an admin delete.
-        if (!table.Seats.Any(seat => seat.Token == token && table.OpenSeats.Contains(seat.Name)))
+        if (!table.Seats.Any(seat => FixedTime.Same(token, seat.Token) && table.OpenSeats.Contains(seat.Name)))
         {
             return;
         }
@@ -1296,7 +1296,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         await Claims.WaitAsync();
         try
         {
-            var seat = table.Seats.FirstOrDefault(seat => seat.Token == token && table.OpenSeats.Contains(seat.Name));
+            var seat = table.Seats.FirstOrDefault(seat => FixedTime.Same(token, seat.Token) && table.OpenSeats.Contains(seat.Name));
             if (seat is not null && !table.IsOver)
             {
                 await ReserveSeatAsync(table, seat.Name);
@@ -1689,7 +1689,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
         foreach (var token in tokens.Distinct(StringComparer.Ordinal))
         {
-            if (await registry.ByTokenAsync(token) is { IsOver: false } table && table.Seats.FirstOrDefault(seat => seat.Token == token && seat.Person is not null) is { Account: null } seat)
+            if (await registry.ByTokenAsync(token) is { IsOver: false } table && table.Seats.FirstOrDefault(seat => FixedTime.Same(token, seat.Token) && seat.Person is not null) is { Account: null } seat)
             {
                 await BindAsync(table, seat, owner);
             }

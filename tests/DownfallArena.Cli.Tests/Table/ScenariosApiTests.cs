@@ -216,6 +216,33 @@ public sealed class ScenariosApiTests : IDisposable
         (opened.Status, Read(opened).GetProperty("error").GetString()).ShouldBe((409, "Scenario.SourceUnread"));
     }
 
+    /// <summary>
+    /// A store that cannot say whether the source game is over fails no list (#833): the scenario is left off Practice,
+    /// said in one console line, and opening it answers 503 rather than an unexpected failure.
+    /// </summary>
+    [Fact]
+    public async Task A_store_that_cannot_say_whether_the_source_game_is_over_leaves_the_scenario_off_and_answers_busy()
+    {
+        var (_, scenario) = await CutAsync();
+        (await Admin().HandleAsync("PUT", $"{ScenarioAdminApi.Route}/{scenario}/listing", """{"listed":true}""", "operator")).Status.ShouldBe(200);
+        var unreadable = new StoredSessions(new RecordRefused(new FileArtifactStore(_hosted.RunsDirectory)) { ReadsRefused = true });
+        await using var practices = new ScenarioPractices(_hosted.Composer, _store, _clock);
+        var accounts = await AccountsAsync();
+        var said = new List<string>();
+        var api = new ScenariosApi(_store, practices, accounts) { Stored = unreadable, Said = said.Add };
+        var learner = await SignedInAsync(accounts, "learner");
+
+        var listed = await api.HandleAsync("GET", ScenariosApi.Prefix, learner);
+        var opened = await api.HandleAsync("POST", $"{ScenariosApi.Prefix}/{scenario}/practice", learner);
+        var listing = await new ScenarioAdminApi(_store, unreadable, _hosted.Composer) { Said = said.Add }.HandleAsync("PUT", $"{ScenarioAdminApi.Route}/{scenario}/listing", """{"listed":true}""", "operator");
+
+        (listed.Status, Read(listed).GetProperty("scenarios").GetArrayLength()).ShouldBe((200, 0));
+        (opened.Status, Read(opened).GetProperty("error").GetString()).ShouldBe((503, "Scenario.Unavailable"));
+        (listing.Status, Read(listing).GetProperty("error").GetString()).ShouldBe((503, "Scenario.Unavailable"));
+        said.Count.ShouldBe(3);
+        said[0].ShouldStartWith("  1 listed scenario was left off Practice");
+    }
+
     [Fact]
     public async Task A_session_the_host_never_recorded_cannot_be_cut() =>
         (await Admin().HandleAsync("POST", ScenarioAdminApi.Route, JsonSerializer.Serialize(new { session = "20261114-000000-deadbeef", round = 1 }), "operator")).Status.ShouldBe(404);

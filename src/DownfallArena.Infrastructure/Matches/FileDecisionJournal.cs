@@ -83,7 +83,9 @@ public sealed class FileDecisionJournal : IDecisionJournal
             if (!File.Exists(path) && (after.Mark != 0 || entries.Count == 0))
             {
                 // Past the start of a journal nobody holds is a writer of a run since deleted: creating it would bring
-                // the run back without its record (#856). Nothing to write makes no file either.
+                // the run back without its record (#856). Nothing to write makes no file either. A delete from another
+                // process between this look and the open below is not kept out: a directory is one machine's store,
+                // and a table shared between processes is kept in blobs.
                 return Task.FromResult<JournalPosition?>(after.Mark == 0 ? after : null);
             }
 

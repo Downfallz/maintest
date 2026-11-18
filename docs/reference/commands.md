@@ -360,8 +360,8 @@ on every signed-in player's home page or takes it off, noted in Activity; ADR 01
 docs/tabletop/scenarios-plan.md). A session still being played cannot be cut, and its rounds are not listed: 409
 `Scenario.UnderWay`. Its journal holds the other seat's face-down choices of the round (#736). A scenario cut before
 that rule from a game still played is not listed under Practice while that game is played (409 `Scenario.UnderWay`,
-or 409 `Scenario.SourceUnread` when the game's record exists and cannot be parsed); taking one off is always
-allowed (#833).
+or 409 `Scenario.SourceUnread` when the game's record exists and cannot be parsed, or 503 `Scenario.Unavailable`
+when the store cannot say); taking one off is always allowed (#833).
 
 The tab also lists every file of the repository's `scenarios/` directory, read when the host starts (`"source":
 "repository"` and its `"file"` in the list, under the id `sc-repo-<file name>`): played from the tab, on the content
@@ -379,7 +379,8 @@ Restart the round and Leave, and opening a practice started from its cut on a br
 seat and round). `GET /api/scenarios` lists the scenarios listed under Practice, which a signed-in player's home
 page shows. A scenario cut before #736 from a game still played is neither opened nor resumed until that game is
 over (`GET`/`POST .../practice` 409 `Scenario.UnderWay`, or 409 `Scenario.SourceUnread` when its record cannot be
-parsed), and `GET /api/scenarios` leaves it off (#833).
+parsed, or 503 `Scenario.Unavailable` when the store cannot say), and `GET /api/scenarios` leaves it off, as it
+leaves off one whose game the store cannot read just then, said in one console line for the list (#833).
 
 `GET /api/tutorials` lists the tutorials to any signed-in account (401 signed out), in the order of the series:
 each one's `id`, `order`, `of`, `title`, `goal`, `round`, `seat`, `format` and `link`. A tutorial is opened as a

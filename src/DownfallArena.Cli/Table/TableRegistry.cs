@@ -1,3 +1,4 @@
+using DownfallArena.Cli.Hosting;
 using DownfallArena.Application.Tables.Ports;
 using DownfallArena.Cli.Studio;
 
@@ -436,7 +437,7 @@ internal sealed class TableRegistry : IDisposable
         }
 
         return id is not null && await ByIdAsync(id, cancellationToken) is { } table
-            && (table.Pilot.Token == token || table.Seats.Any(seat => seat.Token == token))
+            && (FixedTime.Same(token, table.Pilot.Token) || table.Seats.Any(seat => FixedTime.Same(token, seat.Token)))
             ? table
             : null;
     }
@@ -456,7 +457,7 @@ internal sealed class TableRegistry : IDisposable
         }
 
         return id is not null && await ByIdAsync(id, cancellationToken) is { } table
-            && table.Seats.FirstOrDefault(seat => seat.Invitation == invitation) is { } seat
+            && table.Seats.FirstOrDefault(seat => FixedTime.Same(invitation, seat.Invitation)) is { } seat
             ? (table, seat)
             : null;
     }
@@ -475,7 +476,7 @@ internal sealed class TableRegistry : IDisposable
         }
 
         var table = await ByIdAsync(indexed.Table, cancellationToken);
-        return JoinCodes.Answer(table?.Seats.FirstOrDefault(seat => seat.Name == indexed.Seat && seat.Code == code));
+        return JoinCodes.Answer(table?.Seats.FirstOrDefault(seat => seat.Name == indexed.Seat && FixedTime.Same(code, seat.Code)));
     }
 
     /// <summary>A seat's keys as they are, to put back with <see cref="RekeyAsync" /> when what changed them cannot be saved.</summary>

@@ -16,6 +16,8 @@ paths:
   (`closing.json`).
 - A table replays on the content and rules it began on (ADR 0163). A change that breaks replay of a recorded
   journal voids open matches in production: say so in the pull request.
+- A token, a seat key, an invitation or a join code is compared with `FixedTime.Same`, never `==`, `!=` or
+  `string.Equals`: an ordinal comparison's time tells how much of a guess is right (`SecretComparisonTests`, #862).
 - Expected failures answer a stable, namespaced error code (`Lobby.TooManyGames`), never an exception's text.
 - A change about exception text greps `\.Message` over `src/DownfallArena.Cli` and reads every hit. Do not trust a
   list: the one in #828 came from a single reading. A fixed sentence names a cause only when the catch admits nothing
@@ -40,8 +42,9 @@ paths:
   run's files and will find this one (#818). `StoredSessions.DeleteAsync` names the record as the first file to delete,
   and the stores' tests pin the order (#851). A process that wrote or read the record never writes over a missing one,
   and its watch lets go of the table (`PlaytestRun.Deleted`, #848). Until it looks, its journal is not written into the
-  deleted run: an append past the start of a missing journal is refused, and a match whose journal went back to nothing
-  is `Journal.Gone`, never started over (#856).
+  deleted run: an append past the start of a missing journal is refused, and a match whose journal reads empty below
+  the furthest mark this process saw (`Kept.Reached`) is `Journal.Gone`, never started over (#856). A table that never
+  journaled anything can still bring its journal back in that window.
   A missing record this process never saw stored is unknown, not gone: answer busy (503), not gone (409) (#850). The
   operator's delete waits for the reactions and seen marks on their way (`PlayedTable.QuiesceAsync`, #849).
 - Build one `OperatorActions` per host, in `TableHost.OpenNotesAsync`, and hand it to every admin API. Its ids keep

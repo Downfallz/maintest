@@ -1,3 +1,4 @@
+using DownfallArena.Cli.Hosting;
 using System.Text.Json;
 using DownfallArena.Application.Admin;
 using DownfallArena.Application.FeedbackBox;
@@ -27,6 +28,9 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
     public const string Route = "/api/admin/scenarios";
 
     private static readonly DomainError UnderWay = new("Scenario.UnderWay", "This session is still being played: it can be cut once it is over, so nothing a seat holds face down reaches a scenario.");
+
+    /// <summary>Where the lines this change added go (#833): the host's console unless a test reads them.</summary>
+    public Action<string> Said { get; init; } = Console.WriteLine;
 
     /// <summary>What operators do from the panel (A6): a scenario cut or removed is noted with the rest.</summary>
     public OperatorNotes Notes { get; set; } = OperatorNotes.None;
@@ -268,9 +272,20 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
         }
 
         // Not listed while the game it was cut from is played (#833); taken off, always.
-        if (list && await store.GetAsync(id) is { } document && await ScenarioSources.HeldBackAsync(stored, document) is { } heldBack)
+        if (list && await store.GetAsync(id) is { } document)
         {
-            return Error(heldBack.Code, heldBack.Message, 409);
+            try
+            {
+                if (await ScenarioSources.HeldBackAsync(stored, document) is { } heldBack)
+                {
+                    return Error(heldBack.Code, heldBack.Message, 409);
+                }
+            }
+            catch (Exception failure) when (TableRegistry.StoreFails(failure))
+            {
+                Said($"  Whether scenario {id}'s source game is over could not be read: {HttpHost.OneLine(failure)}");
+                return Error(ScenarioSources.Unavailable.Code, ScenarioSources.Unavailable.Message, 503);
+            }
         }
 
         if (!await store.SetListedAsync(id, list))
