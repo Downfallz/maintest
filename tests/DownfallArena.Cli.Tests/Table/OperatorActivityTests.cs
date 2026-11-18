@@ -85,7 +85,7 @@ public sealed class OperatorActivityTests : IDisposable
     [Fact]
     public async Task A_log_that_cannot_be_written_never_stops_the_action_it_notes()
     {
-        var admin = Admin(new Out());
+        var admin = Admin(new OperatorLogOut());
 
         var opened = await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy"}""", Token, principal: null);
 
@@ -100,15 +100,5 @@ public sealed class OperatorActivityTests : IDisposable
 
         (await bare.HandleAsync("GET", ActivityApi.Route, "", Token, principal: null)).Status.ShouldBe(404);
         (await kept.HandleAsync("GET", ActivityApi.Route, "", "a-seat-s-token", principal: null)).Status.ShouldBe(403);
-    }
-
-    /// <summary>A log whose store is out, as one whose storage account does not answer.</summary>
-    private sealed class Out : IOperatorLog
-    {
-        public Task RecordAsync(OperatorAction action, CancellationToken cancellationToken = default) => throw new IOException("The log is out.");
-
-        public Task<IReadOnlyList<string>> IdsAsync(CancellationToken cancellationToken = default) => throw new IOException("The log is out.");
-
-        public Task<OperatorAction?> FindAsync(string id, CancellationToken cancellationToken = default) => throw new IOException("The log is out.");
     }
 }

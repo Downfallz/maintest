@@ -4,6 +4,7 @@ using DownfallArena.Application.Accounts;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.Infrastructure.Accounts;
+using DownfallArena.Infrastructure.Learning;
 
 namespace DownfallArena.Cli.Tests.Table;
 
@@ -231,6 +232,36 @@ public sealed class LobbyAccountsTests : IDisposable
         onTurn.GetProperty("recap").ValueKind.ShouldBe(JsonValueKind.Object, "asked: the card shows the recap");
         table.Seats[0].Person!.Waiting.ShouldBeNull("the seat answered and waits for the other player");
         answered.GetProperty("recap").ValueKind.ShouldBe(JsonValueKind.Null);
+    }
+
+    /// <summary>
+    /// A timed game waiting for the account says when it must answer by and when the last move was: both from one
+    /// read of the journal's last write, as the inbox fetches this list on every account change (#775).
+    /// </summary>
+    [Fact]
+    public async Task Your_timed_game_on_your_turn_reads_its_last_move_once()
+    {
+        CountedJournal? journal = null;
+        using var hosted = new HostedTables(directory => new FileArtifactStore(directory), journal: inner => journal = new CountedJournal(inner));
+        using var registry = hosted.Registry();
+        _api ??= new AccountApi(_accounts, new AccountSessions(await _store.SessionKeyAsync(Cancel), TimeProvider.System), AccountsMode.Development);
+        var lobby = new LobbyApi(registry, hosted.Composer, TimeProvider.System) { Accounts = _api };
+        var mark = await PlayerAsync("MarkF");
+        var bastien = await PlayerAsync("bastien");
+        var id = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", """{"opponent":"person"}""", player: mark)).GetProperty("table").GetProperty("id").GetString()!;
+        var table = (await registry.ByIdAsync(id, Cancel))!;
+        (await lobby.HandleAsync("POST", $"/api/lobby/tables/{table.Id}/join", "{}", player: bastien)).Status.ShouldBe(200);
+        table.Seats[0].Person!.Arrive();
+        table.Seats[1].Person!.Arrive();
+        table.Session.Begin();
+        await WaitingAsync(table.Seats[0]);
+        var before = journal!.LastWrittenReads;
+
+        var listed = Read(await lobby.HandleAsync("GET", "/api/lobby/mine", "", player: mark)).GetProperty("tables")[0];
+
+        listed.GetProperty("table").GetProperty("answerBy").ValueKind.ShouldBe(JsonValueKind.String);
+        listed.GetProperty("recap").ValueKind.ShouldBe(JsonValueKind.Object);
+        (journal.LastWrittenReads - before).ShouldBe(1);
     }
 
     [Fact]

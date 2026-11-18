@@ -92,14 +92,15 @@ internal sealed class PracticeTable(CliOptions options, string token) : IPractic
     /// A refusal the host wrote for the person (<see cref="PracticeRefusal" />) is said; any other failure is said as a
     /// fixed sentence, and its own words go to the console, on one line (#786).
     /// </remarks>
-    internal static StudioResponse Refused(string what, Exception exception)
+    /// <param name="sink">Where the failure's line goes: the console unless a test reads it.</param>
+    internal static StudioResponse Refused(string what, Exception exception, Action<string>? sink = null)
     {
         if (PracticeRefusal.Said(exception) is { } said)
         {
             return StudioResponse.OfPlainText(409, $"The scenario could not be {what}: {said}");
         }
 
-        Console.WriteLine($"  The scenario could not be {what}: {HttpHost.OneLine(exception)}");
+        (sink ?? Console.WriteLine)($"  The scenario could not be {what}: {HttpHost.OneLine(exception)}");
         return StudioResponse.OfPlainText(409, $"The scenario could not be {what}. The host's console says why.");
     }
 

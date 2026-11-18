@@ -1,3 +1,4 @@
+using System.Text.Json;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Infrastructure.Learning;
 using DownfallArena.Infrastructure.Matches.Scenarios;
@@ -15,6 +16,9 @@ internal sealed class ScenarioTable(CliOptions options, string schema, ScenarioD
 
     private readonly SemaphoreSlim _gate = new(1, 1);
     private ScenarioRun? _run;
+
+    /// <summary>Where its console lines go: the host's console unless a test reads them (#846).</summary>
+    public Action<string> Said { get; init; } = Console.WriteLine;
 
     public async Task StartAsync()
     {
@@ -50,9 +54,10 @@ internal sealed class ScenarioTable(CliOptions options, string schema, ScenarioD
                         {
                             await RestartAsync();
                         }
-                        catch (Exception exception) when (exception is InvalidDataException or OperationCanceledException)
+                        catch (Exception exception) when (exception is InvalidDataException or JsonException or OperationCanceledException || TableRegistry.StoreFails(exception))
                         {
-                            return PracticeTable.Refused("started again", exception);
+                            // Content that no longer reads, or that is gone: its words can carry a path (#846).
+                            return PracticeTable.Refused("started again", exception, Said);
                         }
 
                         return State();

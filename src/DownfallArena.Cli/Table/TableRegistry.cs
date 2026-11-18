@@ -79,6 +79,9 @@ internal sealed class TableRegistry : IDisposable
 
     public ITableIndex Index { get; }
 
+    /// <summary>Where its console lines go: the host's console unless a test reads them (#799).</summary>
+    public Action<string> Said { get; init; } = Console.WriteLine;
+
     /// <summary>How many tables may be under way at once.</summary>
     public int Capacity { get; }
 
@@ -108,7 +111,7 @@ internal sealed class TableRegistry : IDisposable
         }
         catch (Exception failure) when (StoreFails(failure))
         {
-            Console.WriteLine($"  The index of the tables did not answer ({failure.Message}): only the tables this host holds are listed.");
+            Said($"  The index of the tables did not answer ({failure.Message}): only the tables this host holds are listed.");
             return [];
         }
     }
@@ -355,14 +358,14 @@ internal sealed class TableRegistry : IDisposable
         }
         catch (Exception failure) when (StoreFails(failure))
         {
-            Console.WriteLine($"  Session {id} could not be picked up for now: {failure.Message}");
+            Said($"  Session {id} could not be picked up for now: {failure.Message}");
             unavailable = $"{failure.GetType().Name}: {failure.Message}";
             table?.Dispose();
             table = null;
         }
         catch (Exception failure) when (TableLoader.Refuses(failure))
         {
-            Console.WriteLine($"  Session {id} was not picked up: {failure.Message}");
+            Said($"  Session {id} was not picked up: {failure.Message}");
         }
 
         lock (_gate)
@@ -762,7 +765,7 @@ internal sealed class TableRegistry : IDisposable
         }
         catch (Exception failure) when (TableLoader.Refuses(failure) || StoreFails(failure))
         {
-            Console.WriteLine($"  Session {id} could not be closed: {failure.Message}");
+            Said($"  Session {id} could not be closed: {failure.Message}");
         }
 
         if (!expired)

@@ -301,8 +301,12 @@ internal sealed class HttpHost : IDisposable
         path is not null && JoinCodes.Names(path) ? $"{JoinCodes.Prefix}…" : path;
 
     /// <summary>An exception as one console line: its type and message, without the stack or a line break.</summary>
+    /// <remarks>
+    /// Line breaks and tabs become spaces, and every other control character is dropped: an ANSI escape in a property
+    /// name a seat's holder chose would otherwise reach the container log as it is (#847).
+    /// </remarks>
     internal static string OneLine(Exception exception) =>
-        $"{exception.GetType().Name}: {exception.Message}".ReplaceLineEndings(" ");
+        string.Concat($"{exception.GetType().Name}: {exception.Message}".ReplaceLineEndings(" ").Replace('\t', ' ').Where(character => !char.IsControl(character)));
 
     private static StudioResponse Problem(int status, string code, string message) =>
         StudioResponse.OfJson(new { error = code, message }, JsonSerializerOptions.Web, status);

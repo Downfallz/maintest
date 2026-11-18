@@ -68,6 +68,9 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     /// </summary>
     public bool Tended { get; set; }
 
+    /// <summary>Where its console lines go: the host's console unless a test reads them (#846).</summary>
+    public Action<string> Said { get; init; } = Console.WriteLine;
+
     public static bool Names(string path) => path == Prefix || path.StartsWith(Prefix + "/", StringComparison.Ordinal);
 
     /// <summary>An admin close or deletion must not race a claim writing the same table record.</summary>
@@ -165,7 +168,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
         // Listed off the index, described off the tables themselves: a page is eight of them, picked up when
         // this host does not hold them yet. One that cannot be is left off its page.
-        var items = await Task.WhenAll((await HeldAsync(tables.Skip(at * PageSize).Take(PageSize))).Select(DescribeAsync));
+        var items = await Task.WhenAll((await HeldAsync(tables.Skip(at * PageSize).Take(PageSize))).Select(table => DescribeAsync(table)));
         return Json(new { total = tables.Length, pages, page = at + 1, items });
     }
 
@@ -355,7 +358,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                     return Unavailable("could not be opened", failure);
                 }
 
-                Console.WriteLine($"  A table could not be composed: {HttpHost.OneLine(failure)}");
+                Said($"  A table could not be composed: {HttpHost.OneLine(failure)}");
                 return Problem(503, "Lobby.Unplayable", "This host cannot open a table: its content does not load. Tell the operator.");
             }
 
@@ -806,7 +809,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             }
 
             await registry.RemoveAsync(id);
-            Console.WriteLine($"  Session {id} closed by its player before it began.");
+            Said($"  Session {id} closed by its player before it began.");
             return new StudioResponse(204, StudioResponse.Plain, []);
         }
         finally
@@ -848,7 +851,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         }
         catch (Exception failure) when (failure is Azure.RequestFailedException or HttpRequestException or Azure.Identity.AuthenticationFailedException)
         {
-            Console.WriteLine($"  The relay could not be reached for a lobby: {HttpHost.OneLine(failure)}");
+            Said($"  The relay could not be reached for a lobby: {HttpHost.OneLine(failure)}");
             return Problem(503, "Relay.Unavailable", "The relay could not be reached: read the lobby's events.");
         }
     }
@@ -1316,7 +1319,8 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         }
     }
 
-    private async Task<object> DescribeAsync(PlayedTable table)
+    /// <param name="lastMove">The table's last move, read once for every field of the list that says it (#775); none reads it here.</param>
+    private async Task<object> DescribeAsync(PlayedTable table, LastMove? lastMove = null)
     {
         var seats = await Task.WhenAll(table.Seats.Select(seat => SeatAsync(table, seat)));
         return new
@@ -1326,7 +1330,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             format = table.Session.Rules.Format.ToString(),
             casual = table.Casual,
             turnLimitHours = table.TurnLimit is { } limit ? (int)limit.TotalHours : (int?)null,
-            answerBy = await TurnTimeouts.AnswerByAsync(table, composer),
+            answerBy = lastMove is null ? await TurnTimeouts.AnswerByAsync(table, composer) : await AnswerByAsync(table, lastMove),
             waiting = !table.Session.HasBegun && !table.IsOver,
             over = table.IsOver,
             round = await AdminApi.RoundNowAsync(table),
@@ -1563,12 +1567,17 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
         var tables = await Task.WhenAll((await TablesAsync(summary => summary.Seats.Any(seat => seat.Account == account.Value.Value), over: true))
             .Where(table => table.Seats.Any(seat => seat.Account == account))
-            .Select(async table => (object)new
+            .Select(async table =>
             {
-                table = await DescribeAsync(table),
-                seats = table.Seats.Where(seat => seat.Account == account).Select(seat => new { seat = seat.Name, token = seat.Token }).ToArray(),
-                invited = table.IsOver || !Inviter(table, account.Value) ? null : await InvitedOfAsync(table, table.Seats.FirstOrDefault(seat => seat.Person is not null && !seat.Taken) ?? table.Seats[1]),
-                recap = await RecapAsync(table, account.Value),
+                // The card's time to answer and its recap say the same last move: one read of the journal (#775).
+                var lastMove = new LastMove(table.Api.LastMoveAtAsync);
+                return (object)new
+                {
+                    table = await DescribeAsync(table, lastMove),
+                    seats = table.Seats.Where(seat => seat.Account == account).Select(seat => new { seat = seat.Name, token = seat.Token }).ToArray(),
+                    invited = table.IsOver || !Inviter(table, account.Value) ? null : await InvitedOfAsync(table, table.Seats.FirstOrDefault(seat => seat.Person is not null && !seat.Taken) ?? table.Seats[1]),
+                    recap = await RecapAsync(table, account.Value, lastMove),
+                };
             }));
 
         // The tables waiting for this account (ADR 0129): each with who asked, and since when.
@@ -1594,16 +1603,34 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     /// shows. None for a game over or not begun, and for a device holding both seats (ADR 0120), which was there for
     /// every move.
     /// </summary>
-    private static async Task<object?> RecapAsync(PlayedTable table, AccountId account)
+    private static async Task<object?> RecapAsync(PlayedTable table, AccountId account, LastMove lastMove)
     {
         if (table.IsOver || !table.Session.HasBegun || table.Seats.Where(seat => seat.Account == account).ToArray() is not [{ Person.Waiting: not null } seat])
         {
             return null;
         }
 
-        var since = await table.Api.SinceVisitAsync(seat.Name);
-        return new { casts = since.Casts, lastMoveAt = since.LastMoveAt };
+        var since = await table.Api.SinceVisitAsync(seat.Name, withLastMove: false);
+        return new { casts = since.Casts, lastMoveAt = (await lastMove.Value).At };
     }
+
+    /// <summary>
+    /// When a table's time to answer runs out, from its last move read once (<see cref="LastMove" />); none when the
+    /// journal could not be asked, as the seat's view says it, and the journal unasked when no time runs.
+    /// </summary>
+    private static async Task<DateTimeOffset?> AnswerByAsync(PlayedTable table, LastMove lastMove)
+    {
+        if (!TurnTimeouts.Runs(table))
+        {
+            return null;
+        }
+
+        var (read, at) = await lastMove.Value;
+        return read ? TurnTimeouts.AnswerBy(table, at) : null;
+    }
+
+    /// <summary>A table's last move, read the first time a field asks for it and kept for the others (#775).</summary>
+    private sealed class LastMove(Func<Task<(bool Read, DateTimeOffset? At)>> read) : Lazy<Task<(bool Read, DateTimeOffset? At)>>(read);
 
     /// <summary>
     /// Seats a browser saved before its player signed in, made the account's (ADR 0122): a seat its token reaches
@@ -1675,9 +1702,9 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     private static StudioResponse Problem(int status, string code, string message) => Json(new { error = code, message }, status);
 
     /// <summary>A table the store could not open or keep: a code and a fixed sentence, the store's words on the console (#786).</summary>
-    private static StudioResponse Unavailable(string what, Exception failure)
+    private StudioResponse Unavailable(string what, Exception failure)
     {
-        Console.WriteLine($"  A table {what}: {HttpHost.OneLine(failure)}");
+        Said($"  A table {what}: {HttpHost.OneLine(failure)}");
         return Problem(503, "Lobby.Unavailable", "The table could not be opened. Try again in a few minutes.");
     }
 

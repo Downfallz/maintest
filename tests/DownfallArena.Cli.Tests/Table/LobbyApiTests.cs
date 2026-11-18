@@ -202,6 +202,28 @@ public sealed class LobbyApiTests : IDisposable
         said.GetProperty("message").GetString().ShouldNotBeNull().ShouldNotContain("secret", Case.Insensitive);
     }
 
+    /// <summary>
+    /// The save after the table is held is the one that fails: the table is let go of, the answer is the fixed
+    /// sentence, and the store's words are on the console's line only (#846).
+    /// </summary>
+    [Fact]
+    public async Task A_table_whose_record_cannot_be_saved_is_let_go_of_and_said_on_the_console_only()
+    {
+        RecordRefused? store = null;
+        using var hosted = new HostedTables(directory => store = new RecordRefused(new FileArtifactStore(directory)) { Failure = () => new IOException("Blob https://secret.blob.core.windows.net/runs/table.json refused") });
+        using var registry = hosted.Registry();
+        var said = new List<string>();
+        var lobby = new LobbyApi(registry, hosted.Composer, TimeProvider.System) { Said = said.Add };
+        store!.Refusing = true;
+
+        var answer = await lobby.HandleAsync("POST", "/api/lobby/tables", "{}");
+
+        answer.Status.ShouldBe(503);
+        Encoding.UTF8.GetString(answer.Body).ShouldNotContain("secret", Case.Insensitive);
+        said.ShouldHaveSingleItem().ShouldStartWith("  A table could not be saved, so it was not opened: ");
+        registry.HeldTables().ShouldBeEmpty();
+    }
+
     /// <summary>A claim the store cannot save is not made: the invitation, its code and the open place are as they were, and no token was handed out.</summary>
     [Fact]
     public async Task An_invitation_whose_acceptance_cannot_be_saved_stays_outstanding()

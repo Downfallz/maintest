@@ -16,6 +16,9 @@ internal sealed class OperatorNotes(OperatorActions? actions)
     /// <summary>The log the Activity tab reads, or none on a host without one.</summary>
     public OperatorActions? Actions => actions;
 
+    /// <summary>Where its console lines go: the host's console unless a test reads them (#800).</summary>
+    public Action<string> Said { get; init; } = Console.WriteLine;
+
     public async Task NoteAsync(string by, string action, string? target, string? detail = null)
     {
         if (actions is null)
@@ -29,7 +32,7 @@ internal sealed class OperatorNotes(OperatorActions? actions)
         }
         catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is JsonException)
         {
-            Console.WriteLine($"  The operator log could not keep {action} on {target ?? "the host"} by {by}: {failure.Message}");
+            Said($"  The operator log could not keep {action} on {target ?? "the host"} by {by}: {failure.Message}");
         }
     }
 }

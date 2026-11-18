@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Ports;
+using DownfallArena.Application.Admin;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.Infrastructure.Learning;
@@ -21,14 +22,15 @@ public sealed class OperatorVoidTests : IDisposable
     private readonly HostedTables _hosted = new(recording: true);
     private readonly Kept _results = new();
     private readonly TableRegistry _registry;
+    private readonly TableComposer _composer;
     private readonly AdminApi _admin;
     private readonly List<string> _said = [];
 
     public OperatorVoidTests()
     {
         _registry = _hosted.Registry();
-        var composer = new TableComposer(_hosted.Services, HostedTables.Rules, new FileArtifactStore(_hosted.RunsDirectory)) { Results = _results, Index = _hosted.Index };
-        _admin = new AdminApi(_registry, composer, OperatorGate.WithToken(Token), TimeProvider.System, "Rules", _hosted.Stored) { Said = _said.Add };
+        _composer = new TableComposer(_hosted.Services, HostedTables.Rules, new FileArtifactStore(_hosted.RunsDirectory)) { Results = _results, Index = _hosted.Index, Said = _said.Add };
+        _admin = new AdminApi(_registry, _composer, OperatorGate.WithToken(Token), TimeProvider.System, "Rules", _hosted.Stored) { Said = _said.Add };
     }
 
     public void Dispose()
@@ -73,7 +75,7 @@ public sealed class OperatorVoidTests : IDisposable
     /// <summary>
     /// The console is read into a public log (ADR 0186): the explanation is free text the operator wrote, over
     /// several lines and maybe naming a player, so it stays on the record and the operator log, not the console.
-    /// Read through the admin's own sink: the composer's and the operator log's failure lines are not (#756).
+    /// The admin, its composer and its operator log are given one sink, so every line the path writes is read (#800).
     /// </summary>
     [Fact]
     public async Task A_void_says_its_category_on_the_console_but_not_the_operator_s_explanation()
@@ -84,6 +86,39 @@ public sealed class OperatorVoidTests : IDisposable
 
         _said.ShouldContain(line => line.StartsWith($"  Session {id} voided by", StringComparison.Ordinal));
         _said.ShouldAllBe(line => !line.Contains("Zelda_42") && !line.Contains("failed to answer"));
+    }
+
+    /// <summary>
+    /// The lines a void writes when its players cannot be told and its operator log cannot keep it are read too: they
+    /// say what failed, never the explanation the operator wrote (#800).
+    /// </summary>
+    [Fact]
+    public async Task A_void_whose_notice_and_operator_log_fail_says_so_without_the_operator_s_explanation()
+    {
+        var (id, _) = await OpenedAsync();
+        await OwnedAsync(id);
+        _composer.Notices = new AccountNotices(new Unsent(), new AccountDevices(new DevicesOut(), TimeProvider.System));
+        _admin.Notes = new OperatorNotes(new OperatorActions(new OperatorLogOut(), TimeProvider.System)) { Said = _said.Add };
+
+        (await VoidAsync(id, Reason("abuse", "Zelda_42 kept stalling.\nThe bot failed to answer."))).Status.ShouldBe(200);
+
+        _said.ShouldContain(line => line.Contains("the players could not be told", StringComparison.Ordinal));
+        _said.ShouldContain(line => line.StartsWith("  The operator log could not keep", StringComparison.Ordinal));
+        _said.ShouldAllBe(line => !line.Contains("Zelda_42") && !line.Contains("failed to answer"));
+    }
+
+    /// <summary>A body that is not JSON is a void without a reason: 400 with the fixed sentence, never the parser's words (#847).</summary>
+    [Fact]
+    public async Task A_void_whose_body_is_not_json_is_refused_as_one_without_a_reason()
+    {
+        var (id, _) = await OpenedAsync();
+
+        var answer = await VoidAsync(id, """{"category":"stuck","explanation":""");
+
+        answer.Status.ShouldBe(400);
+        Json(answer).GetProperty("error").GetString().ShouldBe(MatchVoid.Invalid.Code);
+        Json(answer).GetProperty("message").GetString().ShouldBe(MatchVoid.Invalid.Message);
+        _registry.Held(id).ShouldNotBeNull("nothing is voided");
     }
 
     [Fact]
@@ -230,5 +265,29 @@ public sealed class OperatorVoidTests : IDisposable
         }
 
         public Task<IReadOnlyList<MatchResult>> ListAsync(CancellationToken cancellationToken = default) => Task.FromResult(All);
+    }
+
+    /// <summary>The table's person seat made an account's, as a lobby game's is, so its void is a notice to send.</summary>
+    private async Task OwnedAsync(string id)
+    {
+        var record = (await _hosted.Stored!.RecordAsync(id, Cancel)).ShouldNotBeNull();
+        var owned = record with { Seats = [.. record.Seats.Select(seat => seat.Person ? seat with { Account = AccountId.New().Value } : seat)] };
+        await new FileArtifactStore(_hosted.RunsDirectory).Writer(id).WriteJsonAsync(TableRecord.File, owned, Cancel);
+    }
+
+    /// <summary>A device store that is out, as one whose storage account does not answer.</summary>
+    private sealed class DevicesOut : IDeviceStore
+    {
+        public Task<IReadOnlyList<PushDevice>> ListAsync(AccountId account, CancellationToken cancellationToken = default) => throw new IOException("The devices are out.");
+
+        public Task SaveAsync(AccountId account, IReadOnlyList<PushDevice> devices, CancellationToken cancellationToken = default) => throw new IOException("The devices are out.");
+
+        public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default) => throw new IOException("The devices are out.");
+    }
+
+    /// <summary>A push service nothing reaches: the devices are never listed.</summary>
+    private sealed class Unsent : IPushSender
+    {
+        public Task<bool> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default) => Task.FromResult(false);
     }
 }

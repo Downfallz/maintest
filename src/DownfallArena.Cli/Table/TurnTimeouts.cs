@@ -25,13 +25,14 @@ internal static class TurnTimeouts
     {
         ArgumentNullException.ThrowIfNull(table);
         ArgumentNullException.ThrowIfNull(composer);
-        if (table.TurnLimit is not { } limit || table.IsOver || !table.Session.HasBegun)
-        {
-            return null;
-        }
+        return Runs(table) ? AnswerBy(table, (await composer.LastMoveAsync(table.Id))?.At) : null;
+    }
 
-        var last = await composer.LastMoveAsync(table.Id);
-        return (last?.At ?? table.Session.BegunAt ?? table.CreatedAt) + limit;
+    /// <summary>Whether a table's time to answer is running: it has a limit, has begun and is not over. Only then is its last move read.</summary>
+    internal static bool Runs(PlayedTable table)
+    {
+        ArgumentNullException.ThrowIfNull(table);
+        return table.TurnLimit is not null && !table.IsOver && table.Session.HasBegun;
     }
 
     /// <summary>
@@ -40,10 +41,7 @@ internal static class TurnTimeouts
     /// </summary>
     internal static DateTimeOffset? AnswerBy(PlayedTable table, DateTimeOffset? lastMove)
     {
-        ArgumentNullException.ThrowIfNull(table);
-        return table.TurnLimit is not { } limit || table.IsOver || !table.Session.HasBegun
-            ? null
-            : (lastMove ?? table.Session.BegunAt ?? table.CreatedAt) + limit;
+        return Runs(table) ? (lastMove ?? table.Session.BegunAt ?? table.CreatedAt) + table.TurnLimit!.Value : null;
     }
 
     /// <summary>

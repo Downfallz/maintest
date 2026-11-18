@@ -106,6 +106,9 @@ internal sealed class TableComposer
     /// </summary>
     public AccountNotices? Notices { get; set; }
 
+    /// <summary>Where its console lines go: the host's console unless a test reads them (#800).</summary>
+    public Action<string> Said { get; init; } = Console.WriteLine;
+
     /// <summary>
     /// What tells the lobbies in view that a table they list, or a player's own games, changed (ADR 0164); none in
     /// a process that serves no lobby, such as the turn worker.
@@ -349,7 +352,7 @@ internal sealed class TableComposer
         }
         catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or JsonException || TableRegistry.StoreFails(failure))
         {
-            Console.WriteLine($"  The content {_own.Version} could not be kept for its tables: {failure.Message}");
+            Said($"  The content {_own.Version} could not be kept for its tables: {failure.Message}");
             lock (_pinnedHosts)
             {
                 _kept = null;
@@ -369,7 +372,7 @@ internal sealed class TableComposer
         text ??= _carried.TryGetValue(version, out var carried) ? carried.GetRawText() : null;
         if (text is null)
         {
-            Console.WriteLine($"  The content {version} a table or a scenario began on is not kept: it is replayed on this host's ({_own.Version}).");
+            Said($"  The content {version} a table or a scenario began on is not kept: it is replayed on this host's ({_own.Version}).");
             return null;
         }
 
@@ -412,12 +415,12 @@ internal sealed class TableComposer
                 _pinnedHosts.Add(host);
             }
 
-            Console.WriteLine($"  Content {version} kept for the tables that began on it, beside this host's ({_own.Version}).");
+            Said($"  Content {version} kept for the tables that began on it, beside this host's ({_own.Version}).");
             return content;
         }
         catch (Exception failure) when (failure is InvalidGameContentException or JsonException)
         {
-            Console.WriteLine($"  The content {version} a table began on cannot be read by this engine ({failure.Message}): the table is replayed on this host's ({_own.Version}).");
+            Said($"  The content {version} a table began on cannot be read by this engine ({failure.Message}): the table is replayed on this host's ({_own.Version}).");
             return null;
         }
     }
@@ -491,7 +494,7 @@ internal sealed class TableComposer
             }
 
             var pilot = new TablePilot(record?.PilotToken ?? TableKeys.For(id), SeatingOf);
-            var api = new TableApi(session, seats, content.Catalogue(rules), events, run, pilot) { Guide = content.Guide(rules), Agents = Agents, Push = Push };
+            var api = new TableApi(session, seats, content.Catalogue(rules), events, run, pilot) { Said = Said, Guide = content.Guide(rules), Agents = Agents, Push = Push };
             var table = new PlayedTable(new TableOpening(id, record?.CreatedAt ?? _clock.GetUtcNow(), request), session, api, seats, pilot, run, stopping)
             {
                 EventStreamVersion = record?.EventStreamVersion ?? MatchTrace.CurrentEventStreamVersion,
@@ -556,14 +559,14 @@ internal sealed class TableComposer
     /// </summary>
     private async Task RefusedAsync(string id, PlaytestRun? run, TableRecord? record, string reason, bool diverged, CancellationToken cancellationToken)
     {
-        Console.WriteLine($"  Session {id} was not rebuilt: {reason}");
+        Said($"  Session {id} was not rebuilt: {reason}");
         if (!diverged || run is null)
         {
             return;
         }
 
         await run.MarkVoidAsync(Basis, cancellationToken);
-        Console.WriteLine($"  Session {id} voided: its journal no longer replays on this engine (ADR 0163).");
+        Said($"  Session {id} voided: its journal no longer replays on this engine (ADR 0163).");
         if (record is not null && await run.ClaimClosingAsync(cancellationToken))
         {
             await NotifyVoidAsync(id, record);
@@ -592,7 +595,7 @@ internal sealed class TableComposer
         }
         catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or JsonException or FormatException or Azure.RequestFailedException or HttpRequestException)
         {
-            Console.WriteLine($"  Session {id}: the players could not be told the match was voided: {failure.Message}");
+            Said($"  Session {id}: the players could not be told the match was voided: {failure.Message}");
         }
     }
 
@@ -663,7 +666,7 @@ internal sealed class TableComposer
             await Task.WhenAny(session.Outcome);
             if (!session.Outcome.IsCompletedSuccessfully || session.Outcome.Result.IsFailure)
             {
-                Console.WriteLine($"  Session {run.SessionId} was not finished; '{run.Location}' holds it as far as it got.");
+                Said($"  Session {run.SessionId} was not finished; '{run.Location}' holds it as far as it got.");
                 return;
             }
 
@@ -674,7 +677,7 @@ internal sealed class TableComposer
             var board = await session.BoardAsync(PlayerSlot.Player1);
             if (board.IsFailure)
             {
-                Console.WriteLine($"  Session {run.SessionId} ended but its final board could not be read: {board.Error.Message}");
+                Said($"  Session {run.SessionId} ended but its final board could not be read: {board.Error.Message}");
                 return;
             }
 
@@ -703,7 +706,7 @@ internal sealed class TableComposer
                 {
                     await results.RecordAsync(result with { Voided = reason });
                     voided = true;
-                    Console.WriteLine($"  Session {run.SessionId} was voided as it ended: its result is kept void.");
+                    Said($"  Session {run.SessionId} was voided as it ended: its result is kept void.");
                 }
 
                 foreach (var owner in owners)
@@ -716,15 +719,15 @@ internal sealed class TableComposer
             // past it and was taken over from stops at the next of them, and serves what the other one writes.
             if (!await run.FinishAsync(session.MatchId, board.Value))
             {
-                Console.WriteLine($"  Session {run.SessionId} was taken over by another process, which writes it.");
+                Said($"  Session {run.SessionId} was taken over by another process, which writes it.");
                 await WrittenElsewhereAsync(run, session.MatchId, stopping);
                 return;
             }
 
-            Console.WriteLine($"  Session {run.SessionId} written to '{run.Location}'");
+            Said($"  Session {run.SessionId} written to '{run.Location}'");
             if (!await run.StillClosingAsync())
             {
-                Console.WriteLine($"  Session {run.SessionId} was taken over by another process, which tells its seats how it ended.");
+                Said($"  Session {run.SessionId} was taken over by another process, which tells its seats how it ended.");
                 return;
             }
 
@@ -772,7 +775,7 @@ internal sealed class TableComposer
             }
         }
 
-        Console.WriteLine($"  Session {run.SessionId} is being written by another process that has not finished it.");
+        Said($"  Session {run.SessionId} is being written by another process that has not finished it.");
         return false;
     }
 
@@ -801,7 +804,7 @@ internal sealed class TableComposer
             {
                 if (await run.ClosedElsewhereAsync(matchId, stopping))
                 {
-                    Console.WriteLine($"  Session {run.SessionId} was written to '{run.Location}' by another process.");
+                    Said($"  Session {run.SessionId} was written to '{run.Location}' by another process.");
                     return true;
                 }
 
@@ -855,7 +858,7 @@ internal sealed class TableComposer
         }
         catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or JsonException or Azure.RequestFailedException or HttpRequestException)
         {
-            Console.WriteLine($"  Session {table.Id}: the players could not be told how the match ended: {failure.Message}");
+            Said($"  Session {table.Id}: the players could not be told how the match ended: {failure.Message}");
         }
     }
 

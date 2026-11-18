@@ -71,6 +71,60 @@ public sealed class ScenarioTableTests
         Json(await table.HandleAsync("GET", "/api/seat/player1", "", second))["board"]!["roundNumber"]!.GetValue<int>().ShouldBe(document.Scenario.Cut.Round);
     }
 
+    /// <summary>
+    /// A restart whose content cannot be read any more is answered with a fixed sentence: the failure's own words,
+    /// which can carry a path or the store's, go to the console only (#846).
+    /// </summary>
+    [Fact]
+    public async Task A_restart_on_content_that_no_longer_reads_is_answered_as_one_and_said_on_the_console()
+    {
+        var (answer, said) = await RestartedAfterAsync(schema => File.WriteAllTextAsync(schema, "{ not a schema", TestContext.Current.CancellationToken));
+
+        answer.Status.ShouldBe(409);
+        Encoding.UTF8.GetString(answer.Body).ShouldBe(RestartRefused);
+        said.ShouldHaveSingleItem().ShouldStartWith("  The scenario could not be started again: ");
+    }
+
+    /// <summary>The same for content the store no longer has: its path is the console's, not the page's (#846).</summary>
+    [Fact]
+    public async Task A_restart_on_content_that_is_gone_is_answered_as_one_and_said_on_the_console()
+    {
+        var (answer, said) = await RestartedAfterAsync(schema =>
+        {
+            File.Delete(schema);
+            return Task.CompletedTask;
+        });
+
+        answer.Status.ShouldBe(409);
+        Encoding.UTF8.GetString(answer.Body).ShouldBe(RestartRefused);
+        said.ShouldHaveSingleItem().ShouldStartWith("  The scenario could not be started again: ");
+    }
+
+    private const string RestartRefused = "The scenario could not be started again. The host's console says why.";
+
+    /// <summary>The scenario started on a copy of its content, the copy spoiled, then restarted: the answer and what was said.</summary>
+    private static async Task<(StudioResponse Answer, List<string> Said)> RestartedAfterAsync(Func<string, Task> spoil)
+    {
+        var document = ScenarioFile.Read(await File.ReadAllTextAsync(Kept, TestContext.Current.CancellationToken));
+        var options = new CliOptions { Command = "table", Output = "unused", Scenario = Kept, SchemaPath = Path.Combine(Path.GetTempPath(), "no-content-here", "game.schema.json") };
+        var directory = Path.Combine(Path.GetTempPath(), $"scenario-restart-{Guid.CreateVersion7():N}");
+        var schema = Path.Combine(directory, "game.schema.json");
+        Directory.CreateDirectory(directory);
+        File.Copy(await ScenarioContent.SchemaOfAsync(document, options), schema);
+        var said = new List<string>();
+        try
+        {
+            await using var table = new ScenarioTable(options, schema, document, "practice-token") { Said = said.Add };
+            await table.StartAsync();
+            await spoil(schema);
+            return (await table.HandleAsync("POST", "/api/practice", "{}", "practice-token"), said);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
     [Fact]
     public async Task The_practice_route_answers_only_the_link_the_host_printed()
     {
