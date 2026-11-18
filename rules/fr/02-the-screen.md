@@ -23,7 +23,7 @@ un tempo, un ordre d’égalité. Chacun est révélé aux deux joueurs à la fo
 
 Chaque créature commence la partie de la même façon : une Santé de {creature.health}, une Énergie de
 {creature.energy}, une Défense de {creature.defense} et une initiative de {creature.initiative}, et elle connaît deux
-sorts, Strike et Focus. Tout ce qui les distinguera est une décision que vous n’avez pas encore prise.
+sorts, Strike{?creature.knows = 'spell:heavy_strike:v1'} et Focus{?creature.knows = 'spell:wait:v1'}. Tout ce qui les distinguera est une décision que vous n’avez pas encore prise.
 
 sources: ADR 0011, ADR 0042, ADR 0089, game-rules#match-lifecycle
 

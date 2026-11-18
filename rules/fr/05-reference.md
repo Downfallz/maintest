@@ -59,7 +59,7 @@ Une partie se termine de l’une de ces façons, chacune vérifiée à son propr
 5. **Un joueur laisse s’écouler son temps pour répondre** : il perd. Quand les deux le font, la partie est nulle.
 
 *Exemple.* Round 11. Il ne reste au second joueur que la Créature 4, avec une Santé de
-{spell:heavy_strike:v1.damage} et sans Défense. Le premier tour est celui de la Créature 2, qui lance Strike sur elle : la Créature 4 est
+{spell:heavy_strike:v1.damage} et sans Défense. Le premier tour est celui de la Créature 2, qui lance Strike{?spell:heavy_strike:v1.origin = 'Enemy'} sur elle : la Créature 4 est
 vaincue, et **le premier joueur gagne tout de suite**. Aucun autre tour ne vient, et rien ne décompte.
 
 sources: ADR 0011, ADR 0083, ADR 0087, ADR 0105, ADR 0169, game-rules#match-lifecycle

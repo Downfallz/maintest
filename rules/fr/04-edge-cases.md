@@ -8,14 +8,14 @@ Une créature qui ne peut pas agir quand vient son tour est **sautée** : rien n
 rien, et rien n’est demandé à son propriétaire. Le tour suivant vient.
 
 Une créature ne peut pas agir quand elle a été **vaincue** ou **étourdie** plus tôt dans le round. Une créature qui est
-dans le round peut toujours lancer un sort : Focus coûte {spell:wait:v1.energyCost} d’Énergie et cible son
+dans le round peut toujours lancer un sort : Focus{?creature.knows = 'spell:wait:v1'} coûte {spell:wait:v1.energyCost} d’Énergie et cible son
 lanceur{?spell:wait:v1.origin = 'Self'}. Un sort qu’elle ne peut pas payer maintenant, ou qui n’a aucune cible légale, n’est pas proposé.
 
 Un tour tardif est donc un risque : avant qu’il vienne, votre créature peut être vaincue ou étourdie, et la cible que
 vous visiez peut avoir disparu. C’est le prix d’agir tard, et la raison d’être d’Instinct.
 
 *Exemple.* La Créature 1 est en Précision et la Créature 5 en Instinct. La Créature 5 agit en premier et lance
-Crushing Stomp sur la Créature 1, ce qui l’étourdit{?spell:crushing_stomp:v1.stun}. Quand vient le tour de la Créature 1, elle est sautée, et ne
+Crushing Stomp{?spell:crushing_stomp:v1.origin = 'Enemy'} sur la Créature 1, ce qui l’étourdit{?spell:crushing_stomp:v1.stun}. Quand vient le tour de la Créature 1, elle est sautée, et ne
 dépense pas d’Énergie.
 
 sources: ADR 0083, ADR 0110, ADR 0112, game-rules#implemented, game-rules#round-sequence-adr-0010
@@ -38,7 +38,7 @@ vous comptiez, et un ennemi vaincu laisse votre sort avec moins de cibles. Vous 
 proposé.
 
 *Exemple.* La Créature 1 a 3 points d’Énergie et compte sur Emberstorm, qui coûte {spell:meteor:v1.energyCost}.
-Avant son tour, la Créature 5 lance Soul Feast sur elle, qui réduit son Énergie de
+Avant son tour, la Créature 5 lance Soul Feast{?spell:soul_devourer:v1.origin = 'Enemy'} sur elle, qui réduit son Énergie de
 {spell:soul_devourer:v1.energyDrain} : l’Énergie de la Créature 1 tombe à
 {max(0, 3 - spell:soul_devourer:v1.energyDrain)}. À son tour, l’application ne propose que les sorts qu’elle peut
 payer maintenant.
@@ -105,7 +105,7 @@ maintenant sur la Santé d’une cible**, et rien d’autre :
 L’ordre est celui de [la résolution d’un sort](#resolving-a-spell) : ajoutez le bonus de dégâts, multipliez, puis
 soustrayez la Défense.
 
-*Exemple.* La Créature 2 est en Précision et lance Vital Surge sur la Créature 3, dont la Santé est de
+*Exemple.* La Créature 2 est en Précision et lance Vital Surge{?spell:restorative_gush:v1.origin = 'Ally'} sur la Créature 3, dont la Santé est de
 {creature.health - 12} sur {creature.health} : soin {spell:restorative_gush:v1.heal}, d20 :
 {21 - (creature.criticalChance + spell:restorative_gush:v1.criticalChance) * 20}+. Le d20 donne un critique : le
 soin devient {floor(spell:restorative_gush:v1.heal * rules.criticalMultiplier)}, et la Créature 3 passe à
