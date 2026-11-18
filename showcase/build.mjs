@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { EVOLUTION_REGISTRY } from '../table/battle-evolution-art.js';
 import { loadCatalogue } from './catalogue.mjs';
 import { english, french } from './copy.mjs';
+import { CONCEPT_CARD_SOURCE, publishedShowcaseCss } from './concept-card.mjs';
 import { copyrightPage } from './copyright.mjs';
 import { guidePage } from './guide.mjs';
 import { routes } from './layout.mjs';
@@ -37,7 +38,7 @@ const stage = await mkdtemp(destination + '-');
 try {
   const assets = [
     ['docs/art/branding.css', 'branding.css'],
-    ...['showcase.css', 'gallery.js', 'guide.js', '404.html', '_headers'].map(file => [`showcase/${file}`, file]),
+    ...['gallery.js', 'guide.js', '404.html', '_headers'].map(file => [`showcase/${file}`, file]),
     ...['brand-mark.svg', 'icon.svg'].map(file => [`table/${file}`, `assets/${file}`]),
     ...['marcellus-latin-400.woff2', 'OFL.txt'].map(file => [`table/fonts/${file}`, `fonts/${file}`]),
     ['table/battle-art/eclipse-battle.webp', 'assets/eclipse-battle.webp'],
@@ -50,6 +51,9 @@ try {
       [path.rules, rulesPage(c, books[c.lang], application.href)], [path.privacy, privacyPage(c, application.href)], [path.copyright, copyrightPage(c, application.href)]]
       .map(([route, html]) => [route.slice(1) + 'index.html', html]);
   });
+  // The site's own sheet, with the concept card's rule copied from the table's, so the card looks as it does in the game.
+  documents.push(['showcase.css', publishedShowcaseCss(await readFile(new URL('showcase/showcase.css', source), 'utf8'),
+    await readFile(new URL(CONCEPT_CARD_SOURCE, source), 'utf8'))]);
   // Every file already there must be one this build writes, at any depth: the folder is removed whole below.
   const written = new Set([...assets.map(([, to]) => to), ...documents.map(([to]) => to)].map(to => to.split(sep).join('/')));
   const strangers = existsSync(destination)

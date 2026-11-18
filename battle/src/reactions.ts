@@ -19,9 +19,14 @@ export function reactionControls(controller: ReturnType<typeof createBattleReact
     button.addEventListener('click', () => { dialog.close(); void controller.send(reaction.id); });
     return button;
   }));
-  el('reactions-open').addEventListener('click', () => { dialog.showModal(); render(); });
+  // Under 360 px the header has no room for 💬 beside the opponent: the opponent's card offers the set instead (#767),
+  // and closing the set goes back to the chip that card opened from.
+  let opener = 'reactions-open';
+  const open = (from: string) => { opener = from; dialog.showModal(); render(); };
+  el('reactions-open').addEventListener('click', () => open('reactions-open'));
+  el('opponent-react').addEventListener('click', () => { el<HTMLDialogElement>('opponent-dialog').close(); open('opponent-open'); });
   el('reactions-close').addEventListener('click', () => dialog.close());
-  dialog.addEventListener('close', () => el('reactions-open').focus({ preventScroll: true }));
+  dialog.addEventListener('close', () => el(opener).focus({ preventScroll: true }));
   el('reactions-shown').addEventListener('change', () => onShown(el<HTMLInputElement>('reactions-shown').checked));
 
   function draw(id: string, bubble: Bubble, who: string) {
@@ -42,6 +47,7 @@ export function reactionControls(controller: ReturnType<typeof createBattleReact
   function render() {
     const model = controller.model();
     el('reactions-open').hidden = !model.available;
+    el('opponent-react').hidden = !model.available;
     if (!model.available && dialog.open) dialog.close();
     const waiting = model.sending || model.coolingMs > 0;
     for (const button of el('reactions-list').querySelectorAll<HTMLButtonElement>('button')) button.disabled = waiting;

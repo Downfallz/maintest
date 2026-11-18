@@ -1194,6 +1194,13 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
 .opponent-note { margin: 10px 0 0; color: #c4d0c7; font-size: 13px; }
 .opponent-note[hidden], .opponent-rank[hidden], #opponent-friend[hidden], #opponent-problem[hidden] { display: none; }
 #opponent-friend { width: 100%; min-height: 46px; margin-top: 14px; }
+/* Under 360 px the header has no room for 💬 beside the opponent's chip and the tools (#767): the reactions are a
+   button of the opponent's card there, and the header keeps the chip, History, Help and the settings. */
+#opponent-react { display: none; width: 100%; min-height: 46px; margin-top: 10px; }
+@media (max-width: 359px) {
+  #battle .hud-top:has(#opponent-open:not([hidden])) #reactions-open { display: none; }
+  #opponent-react:not([hidden]) { display: block; }
+}
 #opponent-problem { margin: 10px 0 0; color: #ffb3a7; font-size: 13px; }
 .opponent-ladder { display: inline-block; margin-top: 14px; color: var(--gold); font-size: 13px; }
 
@@ -1767,12 +1774,13 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 .practice-actions { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
 .practice-actions button { min-height: 32px; padding: 4px 10px; font-size: 12px; }
 .practice-actions a { color: #b8c9bd; font-size: 12px; }
-#practice-brief, #concept-dialog { width: min(380px, calc(100vw - 32px)); padding: 18px; border: 1px solid #b7986866; border-radius: var(--radius-soft); background: var(--panel); color: #f2eee2; box-shadow: 0 18px 40px #000a; }
-#practice-brief::backdrop, #concept-dialog::backdrop { background: #050b0db3; }
+/* The briefing and the concept card a tutorial opens one after the other share a frame, a title step (identity.css's
+   .concept-card-title) and the identity's tokens (#809). */
+#practice-brief, #concept-dialog { width: min(380px, calc(100vw - 32px)); padding: 18px; border: 1px solid color-mix(in srgb, var(--gold) 40%, transparent); border-radius: var(--radius-soft); background: var(--panel); color: var(--ink); box-shadow: 0 18px 40px color-mix(in srgb, var(--soot) 70%, transparent); }
+#practice-brief::backdrop, #concept-dialog::backdrop { background: color-mix(in srgb, var(--soot) 70%, transparent); }
 #practice-brief .eyebrow, .coach .eyebrow { margin: 0; color: var(--gold); font-size: 10px; letter-spacing: 1.6px; }
-#practice-brief h2 { margin: 4px 0 10px; font: 24px/1.15 var(--font-display); overflow-wrap: anywhere; }
-.practice-brief-goal { margin: 0 0 10px; color: #e6c88c; font-size: 15px; line-height: 1.4; overflow-wrap: anywhere; }
-.practice-brief-start, .practice-brief-note { margin: 0 0 8px; color: #c4d0c7; font-size: 13px; line-height: 1.4; }
+.practice-brief-goal { margin: 0 0 10px; color: var(--gold); font-size: 15px; line-height: 1.4; overflow-wrap: anywhere; }
+.practice-brief-start, .practice-brief-note { margin: 0 0 8px; color: var(--muted); font-size: 13px; line-height: 1.4; }
 #practice-brief-begin, #practice-brief-skip, #concept-next { width: 100%; min-height: 44px; margin-top: 8px; }
 #practice-brief-skip[hidden] { display: none; }
 @media (max-width: 619px) {
@@ -1782,7 +1790,7 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 /* A tutorial's coach (ADR 0187): the lesson step of the question asked, low on the field so the creatures it talks
    about stay in view, and the concept card a step opens. What it points at is ringed in gold. */
 .coach { position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 8; display: grid; gap: 4px; max-width: 420px; margin: 0 auto; padding: 8px 10px;
-  border: 1px solid #b7986866; border-radius: var(--radius-soft); background: #0e1b20f2; color: #f2eee2; box-shadow: 0 6px 18px #0008; }
+  border: 1px solid color-mix(in srgb, var(--gold) 40%, transparent); border-radius: var(--radius-soft); background: #0e1b20f2; color: var(--ink); box-shadow: 0 6px 18px #0008; }
 .coach[hidden] { display: none; }
 .coach-lines p { margin: 0 0 2px; font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; }
 .coach-cards { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -1845,6 +1853,18 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
   .battle-page[data-home="member"] #battle[data-tutorial]:not([data-tutorial=""]) .hud-top { padding-right: 96px; }
 }
 @container hud (max-width: 260px) { #battle .hud-top > .practice-band .eyebrow { display: none; } }
+/* Except on a phone held upright under 360 px, where a member's header is that short: there the band says it is a
+   tutorial from the first second (#728). Its place in the series, on two lines, takes Restart's place, and the coach
+   card offers Restart the round under the step's lines until the lesson is done, when its end card offers Play again. */
+#coach-restart { display: none; }
+@media (max-width: 359px) and (orientation: portrait) {
+  .battle-page[data-home="member"] #battle .hud-top > .practice-band { padding-left: 6px; }
+  .battle-page[data-home="member"] #battle .hud-top > .practice-band .eyebrow { display: block; max-width: 52px; font-size: 9px; line-height: 1.15; letter-spacing: .3px; white-space: normal; }
+  .battle-page[data-home="member"] #battle .hud-top > .practice-band #practice-leave { padding: 0 4px; }
+  .battle-page[data-home="member"] #battle .hud-top > .practice-band #practice-restart { display: none; }
+  .battle-page[data-home="member"] .coach:not([data-done="true"]) #coach-restart { display: inline-flex; align-items: center; justify-self: start; min-height: 44px; padding: 4px 12px; font-size: 12px; }
+  .battle-page[data-home="member"] .coach.in-sheet #coach-restart { order: 3; }
+}
 /* Wider than a phone, the creatures stand low on the field: the coach card takes the top left corner, across from the band. */
 @media (min-width: 701px) {
   .coach { left: 8px; right: auto; top: 8px; bottom: auto; width: min(360px, 42%); margin: 0; }

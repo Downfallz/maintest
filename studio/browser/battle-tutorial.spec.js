@@ -184,6 +184,34 @@ test('tutorial 1 is played to its end: each step shows its coach card and opens 
   expect(state.errors).toEqual([]);
 });
 
+// The smallest phone reads the band as a tutorial from the first second: its place in the series stays in the header,
+// in Restart's place, and the coach card offers Restart the round until the lesson is done (#728).
+test('on a 320 px phone the header still says Tutorial n of 4, and the coach card offers Restart the round', async ({ page }, info) => {
+  test.skip(info.project.name !== 'small-phone', 'The smallest phone is the one that had no room for it.');
+  const state = await mount(page);
+  await expect(page.locator('#practice-brief')).toBeVisible({ timeout: 10000 });
+  await page.locator('#practice-brief-begin').click();
+  await expect(page.locator('#concept-dialog')).toBeVisible({ timeout: 15000 });
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#practice-eyebrow')).toHaveText('TUTORIAL 1 OF 4');
+  const boxes = await page.evaluate(() => Object.fromEntries(['#recap-open', '#practice-eyebrow', '#practice-leave', '#settings'].map(one => {
+    const node = document.querySelector(one), box = node.getBoundingClientRect();
+    return [one, { left: box.left, right: box.right, width: box.width, clipped: node.scrollWidth > node.clientWidth + 1 }];
+  })));
+  // The eyebrow is read whole, and nothing in the header covers it.
+  expect(boxes['#practice-eyebrow'].clipped).toBe(false);
+  expect(boxes['#practice-eyebrow'].left).toBeGreaterThanOrEqual(boxes['#recap-open'].right - 1);
+  expect(boxes['#practice-eyebrow'].right).toBeLessThanOrEqual(boxes['#practice-leave'].left + 1);
+  expect(boxes['#practice-leave'].right).toBeLessThanOrEqual(boxes['#settings'].left + 1);
+  await fitsViewport(page, '#practice-leave, #settings, #coach-restart');
+  await expect(page.locator('#coach-restart')).toBeVisible();
+  await page.screenshot({ path: info.outputPath('tutorial-header-320.png') });
+  // Restart the round, from the card, restarts it as the band's button does.
+  const opened = state.opened;
+  await page.locator('#coach-restart').click();
+  await expect.poll(() => state.opened).toBeGreaterThan(opened);
+});
+
 test('a tutorial done opens nothing over its end card: the next round\'s upkeep waits, and Leave answers', async ({ page }) => {
   // The view that says the lesson is done brings the next round's upkeep. It arrives under Settings, so its results
   // settle unplayed and the upkeep is left to its own notice, as on a busy machine (#771): closing Settings must

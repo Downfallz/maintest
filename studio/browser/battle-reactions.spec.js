@@ -52,11 +52,42 @@ async function mount(page, { available = true, recent = [], both = false, answer
   return { state, publish };
 }
 
+// Under 360 px the header has no room for 💬 beside the opponent: the reactions are a button of the opponent's card (#767).
+const narrow = page => page.evaluate(() => matchMedia('(max-width: 359px)').matches);
+async function openReactions(page) {
+  if (await narrow(page)) { await page.locator('#opponent-open').click(); await page.locator('#opponent-react').click(); } else await page.locator('#reactions-open').click();
+  await expect(page.locator('#reactions-dialog')).toBeVisible();
+}
+const reactionsOpener = async page => page.locator(await narrow(page) ? '#opponent-open' : '#reactions-open');
+
+test('on a 320 px phone the header fits with reactions on: they open from the opponent\'s card', async ({ page }, info) => {
+  test.skip(info.project.name !== 'small-phone', 'The smallest phone is the one the header overflowed.');
+  const h = await mount(page);
+  await expect(page.locator('#opponent-open')).toBeVisible();
+  await fitsViewport(page, '#opponent-open, #reactions-open, #history-open, #help-open, #settings');
+  await expect(page.locator('#reactions-open')).toBeHidden();
+  await page.screenshot({ path: info.outputPath('reactions-header-320.png') });
+  await page.locator('#opponent-open').click();
+  await expect(page.locator('#opponent-react')).toBeVisible();
+  await fitsViewport(page, '#opponent-react, #opponent-close');
+  await page.screenshot({ path: info.outputPath('reactions-opponent-card-320.png') });
+  await page.locator('#opponent-react').click();
+  await expect(page.locator('#opponent-dialog')).toBeHidden();
+  await expect(page.locator('#reactions-dialog')).toBeVisible();
+  await page.getByRole('button', { name: 'Hello!' }).click();
+  await expect(page.locator('#reaction-mine')).toContainText('Hello!');
+  // The way back is the chip it was opened from.
+  await expect(page.locator('#opponent-open')).toBeFocused();
+  await expect.poll(() => h.state.writes.map(one => one.body)).toEqual([{ reaction: 'hello' }]);
+  expect(h.state.errors).toEqual([]);
+});
+
 test('a reaction is one tap from the header: the set opens, the choice is sent by name and shows on this side', async ({ page }, info) => {
   const h = await mount(page);
+  // Every phone's header holds its tools with the reactions on: a new item in .tools is measured here (#767).
+  await fitsViewport(page, '#opponent-open, #reactions-open, #history-open, #help-open, #settings');
 
-  await page.locator('#reactions-open').click();
-  await expect(page.locator('#reactions-dialog')).toBeVisible();
+  await openReactions(page);
   await expect(page.locator('#reactions-list button')).toHaveCount(8);
   await fitsViewport(page, '#reactions-list button, #reactions-close, .reactions-shown');
   await page.screenshot({ path: info.outputPath('reactions-set.png') });
@@ -64,9 +95,9 @@ test('a reaction is one tap from the header: the set opens, the choice is sent b
 
   await expect(page.locator('#reactions-dialog')).toBeHidden();
   await expect(page.locator('#reaction-mine')).toContainText('Well played!');
-  await expect(page.locator('#reactions-open')).toBeFocused();
+  await expect(await reactionsOpener(page)).toBeFocused();
   await expect.poll(() => h.state.writes).toEqual([{ path: '/api/seat/player1/reaction', body: { reaction: 'well-played' }, token: 'first' }]);
-  await page.locator('#reactions-open').click();
+  await openReactions(page);
   await expect(page.locator('#reactions-list button').first()).toBeDisabled();
   await expect(page.locator('#reactions-note')).toContainText('react again in a moment');
   expect(h.state.errors).toEqual([]);
@@ -99,7 +130,7 @@ test('a reaction sent while the player was away is shown once when the game open
 
 test('hiding the opponent\'s reactions for this game keeps the next ones off the field', async ({ page }) => {
   const h = await mount(page);
-  await page.locator('#reactions-open').click();
+  await openReactions(page);
 
   await page.locator('#reactions-shown').uncheck();
   await page.locator('#reactions-close').click();
@@ -113,10 +144,10 @@ test('hiding the opponent\'s reactions for this game keeps the next ones off the
 test('a reaction refused as too soon is taken back and says to wait', async ({ page }) => {
   await mount(page, { answer: { status: 429, json: { error: 'Reaction.TooSoon', message: 'Wait a moment before reacting again.', retryAfterMs: 2000 } } });
 
-  await page.locator('#reactions-open').click(); await page.getByRole('button', { name: 'Hello!' }).click();
+  await openReactions(page); await page.getByRole('button', { name: 'Hello!' }).click();
 
   await expect(page.locator('#reaction-mine')).toBeHidden();
-  await page.locator('#reactions-open').click();
+  await openReactions(page);
   await expect(page.locator('#reactions-note')).toHaveText('Wait a moment before reacting again.');
 });
 
@@ -124,6 +155,10 @@ test('a table the host offers no reactions at has no reaction button', async ({ 
   await mount(page, { available: false, recent: [reaction(1, 'player2', 'hello')] });
 
   await expect(page.locator('#reactions-open')).toBeHidden();
+  await page.locator('#opponent-open').click();
+  await expect(page.locator('#opponent-dialog')).toBeVisible();
+  await expect(page.locator('#opponent-react')).toBeHidden();
+  await page.locator('#opponent-close').click();
   await expect(page.locator('#reaction-theirs')).toBeHidden();
 });
 
