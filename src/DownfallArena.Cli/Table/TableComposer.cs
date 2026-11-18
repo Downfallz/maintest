@@ -51,6 +51,13 @@ internal sealed class TableComposer
     private Task? _kept;
     private readonly IArtifactStore? _store;
     private readonly IDecisionJournal? _journal;
+
+    /// <summary>
+    /// Whether the journal is the store's own, worked out from it: then the empty journal a recorded table's run starts
+    /// with is the one the table is stepped over, and one read absent was deleted with the run (#874). A journal given
+    /// beside the store is not assumed to be.
+    /// </summary>
+    private readonly bool _journalOfStore;
     private readonly SteppedHost _stepped;
     private readonly TimeProvider _clock;
 
@@ -70,6 +77,7 @@ internal sealed class TableComposer
         _store = store;
         _clock = services.GetRequiredService<TimeProvider>();
         _journal = store is null ? null : journal ?? ArtifactStores.JournalOf(store, _clock);
+        _journalOfStore = store is not null && journal is null;
         _stepped = SteppedHost.Of(services);
 
         // The host's own format is built now, so the ordinary case costs nothing at the first opening: a card
@@ -460,7 +468,9 @@ internal sealed class TableComposer
             var run = await OpenRunAsync(id, setup, events, record, content, cancellationToken);
 
             List<CreatureDefinitionId> roster = [.. Enumerable.Repeat(resources.Creatures.First().Id, rules.TeamSize)];
-            var match = new JournaledMatch(id, record?.MatchId ?? MatchId.New(), rules, seed, roster);
+            // A recorded table's journal is started with its run (PlaytestRun.StartAsync): read absent, from the first read
+            // on, its run was deleted, and the match neither starts over nor creates the journal again (#874).
+            var match = new JournaledMatch(id, record?.MatchId ?? MatchId.New(), rules, seed, roster) { Recorded = run is not null && _journalOfStore };
             var opened = await SteppedSession.OpenAsync(
                 stepped,
                 _journal ?? new InMemoryDecisionJournal(),

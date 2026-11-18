@@ -228,6 +228,39 @@ public sealed class JournaledStepperTests
         journal.Exists.ShouldBeFalse();
     }
 
+    /// <summary>
+    /// A recorded table's journal is created with its run, so one absent at this process's first read was deleted with
+    /// the run (#874): the match is gone from the start, and no step creates the journal again.
+    /// </summary>
+    [Fact]
+    public async Task A_recorded_table_whose_journal_is_absent_at_the_first_read_is_gone_and_nothing_is_created()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent) with { Recorded = true };
+        var journal = new JournalStore();
+        var replica = new Replica(journal);
+
+        var read = await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken);
+        var step = await replica.Journaled.SubmitAsync(table, MatchSeats.People, new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass), cancellationToken: TestContext.Current.CancellationToken);
+
+        read.Error.ShouldBe(JournalErrors.Gone);
+        step.Error.ShouldBe(JournalErrors.Gone);
+        journal.Exists.ShouldBeFalse();
+    }
+
+    /// <summary>A recorded table's journal there and empty is played from its start, and written into (#874).</summary>
+    [Fact]
+    public async Task A_recorded_table_whose_journal_is_there_and_empty_is_played_from_the_start()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent) with { Recorded = true };
+        var journal = new JournalStore(started: true);
+        var replica = new Replica(journal);
+
+        var step = await replica.Journaled.SubmitAsync(table, MatchSeats.People, new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass), cancellationToken: TestContext.Current.CancellationToken);
+
+        step.IsSuccess.ShouldBeTrue();
+        journal.Lines.Count.ShouldBe(1);
+    }
+
     /// <summary>A journal nobody created yet, as an unrecorded table's, is started at the first step as before (#874).</summary>
     [Fact]
     public async Task A_journal_nobody_created_is_started_at_the_first_step()

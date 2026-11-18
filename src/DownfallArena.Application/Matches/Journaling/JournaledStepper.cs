@@ -471,7 +471,7 @@ public sealed class JournaledStepper(
         cancellationToken.ThrowIfCancellationRequested();
         if (kept.Position is { } known && await matches.FindAsync(match.MatchId, cancellationToken) is not null
             && await journal.ReadAfterAsync(match.Run, known, cancellationToken) is { } since
-            && !(since.Absent && kept.Found))
+            && !(since.Absent && Expected(match, kept)))
         {
             kept.Found |= !since.Absent;
             if (since.Position == known)
@@ -487,11 +487,12 @@ public sealed class JournaledStepper(
 
         kept.Position = null;
         var reading = await journal.ReadAsync(match.Run, cancellationToken);
-        if ((kept.Reached > 0 && reading.Position.Mark == 0) || (kept.Found && reading.Absent))
+        if ((kept.Reached > 0 && reading.Position.Mark == 0) || (Expected(match, kept) && reading.Absent))
         {
             // Either case means the run was deleted. The journal is back to nothing under a match this process saw further
-            // on (#856), or it is gone from the store after this process read it there, empty or not (#874). Every later
-            // step is refused the same way, so the match is not started over and the run's journal is not created again.
+            // on (#856), or it is gone from the store when it was there before: read by this process, empty or not, or
+            // created with a recorded table's run (#874). Every later step is refused the same way, so the match is not
+            // started over and the run's journal is not created again.
             await matches.ForgetAsync(match.MatchId, cancellationToken);
             return Result.Failure<JournalPosition>(JournalErrors.Gone);
         }
@@ -561,8 +562,8 @@ public sealed class JournaledStepper(
     /// </summary>
     private async Task<JournalPosition?> WriteAsync(JournaledMatch match, Kept kept, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken)
     {
-        // A journal this process read there is never created again: gone since the read, its run was deleted (#874).
-        var written = kept.Found
+        // A journal that was there is never created again: gone since, its run was deleted (#874).
+        var written = Expected(match, kept)
             ? await journal.AppendExistingAsync(match.Run, after, entries, cancellationToken)
             : await journal.AppendAsync(match.Run, after, entries, cancellationToken);
         if (written is null)
@@ -615,6 +616,9 @@ public sealed class JournaledStepper(
         error.Code.StartsWith(DecisionCodes, StringComparison.Ordinal);
 
     private static int Index(PlayerSlot slot) => slot == PlayerSlot.Player1 ? 0 : 1;
+
+    /// <summary>Whether the journal was there before: read or written by this process, or created with a recorded table's run (#874).</summary>
+    private static bool Expected(JournaledMatch match, Kept kept) => kept.Found || match.Recorded;
 
     /// <summary>What this process keeps of one match between two steps.</summary>
     private sealed class Kept

@@ -13,18 +13,17 @@ namespace DownfallArena.Application.Tests.Support;
 internal sealed class JournalStore
 {
     private readonly List<IJournalEntry> _lines = [];
-    private bool _exists;
 
     /// <param name="started">Whether the journal is there, empty, before anything is written: a recorded table's (#874).</param>
     public JournalStore(bool started = false)
     {
-        _exists = started;
+        Exists = started;
         Journal = Substitute.For<IDecisionJournal>();
         Journal.ReadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(async _ =>
             {
                 await ReadingAsync();
-                return _exists ? new JournalReading([.. _lines], End) : JournalReading.AbsentAt(JournalPosition.Start);
+                return Exists ? new JournalReading([.. _lines], End) : JournalReading.AbsentAt(JournalPosition.Start);
             });
         Journal.ReadAfterAsync(Arg.Any<string>(), Arg.Any<JournalPosition>(), Arg.Any<CancellationToken>())
             .Returns(async call =>
@@ -32,7 +31,7 @@ internal sealed class JournalStore
                 await ReadingAsync();
                 var after = call.Arg<JournalPosition>();
                 return after.Mark > _lines.Count ? null
-                    : !_exists ? JournalReading.AbsentAt(after)
+                    : !Exists ? JournalReading.AbsentAt(after)
                     : new JournalReading([.. _lines.Skip((int)after.Mark)], End);
             });
         Journal.AppendAsync(Arg.Any<string>(), Arg.Any<JournalPosition>(), Arg.Any<IReadOnlyList<IJournalEntry>>(), Arg.Any<CancellationToken>())
@@ -59,11 +58,11 @@ internal sealed class JournalStore
     public void Delete()
     {
         _lines.Clear();
-        _exists = false;
+        Exists = false;
     }
 
     /// <summary>Whether the journal is there, empty or not: an append of entries at its start creates it, as the stores do.</summary>
-    public bool Exists => _exists;
+    public bool Exists { get; private set; }
 
     /// <summary>A line written by somebody else.</summary>
     public void WriteElsewhere(SeatDecision line) => WriteElsewhere(new DecisionEntry(line));
@@ -72,20 +71,20 @@ internal sealed class JournalStore
     public void WriteElsewhere(IJournalEntry line)
     {
         _lines.Add(line);
-        _exists = true;
+        Exists = true;
     }
 
     private JournalPosition? Append(JournalPosition after, IReadOnlyList<IJournalEntry> entries, bool create)
     {
         BeforeAppend?.Invoke();
         BeforeAppend = null;
-        if (after != End || (!create && !_exists))
+        if (after != End || (!create && !Exists))
         {
             return null;
         }
 
         _lines.AddRange(entries);
-        _exists |= entries.Count > 0;
+        Exists |= entries.Count > 0;
         return End;
     }
 

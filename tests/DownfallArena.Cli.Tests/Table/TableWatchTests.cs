@@ -380,6 +380,25 @@ public sealed class TableWatchTests : IDisposable
     }
 
     /// <summary>
+    /// A table another process picks up after its run's journal was deleted, before that process ever read it (#874), is
+    /// not rebuilt from nothing: a recorded table's journal is created with its run, so it is gone, and is not created again.
+    /// </summary>
+    [Fact]
+    public async Task A_table_picked_up_after_its_journal_was_deleted_is_not_rebuilt_and_its_journal_is_not_created()
+    {
+        using var registry = _here.Registry();
+        var table = await RecordedAsync(registry, Randoms);
+        var journal = Path.Combine(_runs, table.Id, PlaytestRun.JournalFile);
+        File.Delete(journal);
+        using var elsewhere = _there.Registry();
+
+        var picked = await elsewhere.ByIdAsync(table.Id, Cancel);
+
+        picked.ShouldBeNull();
+        File.Exists(journal).ShouldBeFalse();
+    }
+
+    /// <summary>
     /// A table whose record this process never managed to store is not taken for deleted (#850): nothing says the
     /// operator deleted it, and letting it go would drop a live table.
     /// </summary>

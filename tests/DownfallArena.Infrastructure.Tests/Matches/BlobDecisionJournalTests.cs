@@ -1,4 +1,6 @@
 using System.Net.Sockets;
+using Azure.Core;
+using Azure.Core.Pipeline;
 using Azure.Storage;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
@@ -50,6 +52,26 @@ public sealed class BlobDecisionJournalTests
         same.ShouldNotBeNull().Absent.ShouldBeFalse();
         after.ShouldNotBeNull().Absent.ShouldBeTrue();
         whole.Absent.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// A read from the start of a journal is one call, the whole blob, and never a range answered 416 and then an end
+    /// asked: no delete can fall between two calls and leave an empty blob deleted since read as there (#874).
+    /// </summary>
+    [Fact]
+    public async Task A_journal_read_from_its_start_is_one_call_and_asks_no_range()
+    {
+        var (_, container) = await Opened();
+        await container.GetAppendBlobClient("run-1/decisions.jsonl").CreateAsync(cancellationToken: TestContext.Current.CancellationToken);
+        var asked = new Asked();
+        var options = new BlobClientOptions();
+        options.AddPolicy(asked, HttpPipelinePosition.PerCall);
+        var journal = new BlobDecisionJournal(new BlobContainerClient(container.Uri, new StorageSharedKeyCredential(Account, Key), options), TimeProvider.System);
+
+        var after = await journal.ReadAfterAsync("run-1", JournalPosition.Start, TestContext.Current.CancellationToken);
+
+        after.ShouldNotBeNull().Absent.ShouldBeFalse();
+        asked.Requests.ShouldHaveSingleItem().ShouldBe("GET");
     }
 
     /// <summary>
@@ -219,6 +241,31 @@ public sealed class BlobDecisionJournalTests
     }
 
     private static async Task<BlobDecisionJournal> Journal() => (await Opened()).Journal;
+
+    /// <summary>The requests sent to the service, each by its method, and “ranged” when it asks a range.</summary>
+    private sealed class Asked : HttpPipelinePolicy
+    {
+        private readonly System.Collections.Concurrent.ConcurrentQueue<string> _requests = new();
+
+        public IReadOnlyList<string> Requests => [.. _requests];
+
+        public override void Process(HttpMessage message, ReadOnlyMemory<HttpPipelinePolicy> pipeline)
+        {
+            Note(message);
+            ProcessNext(message, pipeline);
+        }
+
+        public override ValueTask ProcessAsync(HttpMessage message, ReadOnlyMemory<HttpPipelinePolicy> pipeline)
+        {
+            Note(message);
+            return ProcessNextAsync(message, pipeline);
+        }
+
+        private void Note(HttpMessage message) =>
+            _requests.Enqueue(message.Request.Headers.Contains("x-ms-range") || message.Request.Headers.Contains("Range")
+                ? $"{message.Request.Method} ranged"
+                : message.Request.Method.ToString());
+    }
 
     private static async Task<(BlobDecisionJournal Journal, BlobContainerClient Container)> Opened()
     {

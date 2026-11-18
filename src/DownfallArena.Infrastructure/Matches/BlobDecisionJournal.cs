@@ -59,14 +59,10 @@ public sealed class BlobDecisionJournal : IDecisionJournal
         }
         catch (RequestFailedException failure) when (failure.Status == 416)
         {
-            // A range that starts at the end, or past it: nothing written since, or not this journal. Gone since the
-            // range was asked, it is absent, not there and empty (#874).
-            return await EndIfThereAsync(run, cancellationToken) switch
-            {
-                null => after.Mark == 0 ? JournalReading.AbsentAt(after) : null,
-                var end when end == after.Mark => new JournalReading([], after),
-                _ => null,
-            };
+            // A range that starts at the end, or past it: nothing written since, or not this journal. Never from the start,
+            // which is read whole in one call (a range from 0 is no range), so a blob there and empty is not told apart
+            // from one deleted since by a second call here (#874).
+            return await EndAsync(run, cancellationToken) == after.Mark ? new JournalReading([], after) : null;
         }
     }
 
@@ -84,7 +80,12 @@ public sealed class BlobDecisionJournal : IDecisionJournal
         if (entries.Count == 0)
         {
             var end = await EndIfThereAsync(run, cancellationToken);
-            return (end ?? (create ? 0 : null)) == after.Mark ? after : null;
+            if (end is null && !create)
+            {
+                return null;
+            }
+
+            return (end ?? 0) == after.Mark ? after : null;
         }
 
         // Only a writer at the start that may create the blob does. One past it, or one that read the blob there, with

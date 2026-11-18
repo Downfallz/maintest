@@ -51,7 +51,9 @@ paths:
   journal is created empty with its run, and the port tells a missing journal from an empty one
   (`JournalReading.Absent`). If this process read the journal and later reads it absent, that is `Journal.Gone` too,
   at mark 0, and its appends go through `AppendExistingAsync`, which never creates the journal (`Kept.Found`, #874).
-  A delete before this process's first read of the journal is not kept out.
+  The same holds from a process's first read: the composer marks a recorded table's match `JournaledMatch.Recorded`
+  when its journal is the store's own, so a table picked up after its journal was deleted is not rebuilt from nothing. A blob journal read from its start is one
+  call, no range (`BlobDecisionJournalTests.A_journal_read_from_its_start_is_one_call_and_asks_no_range`).
   A missing record this process never saw stored is unknown, not gone: answer busy (503), not gone (409) (#850). The
   operator's delete waits for the reactions and seen marks on their way (`PlayedTable.QuiesceAsync`, #849).
 - Build one `OperatorActions` per host, in `TableHost.OpenNotesAsync`, and hand it to every admin API. Its ids keep
