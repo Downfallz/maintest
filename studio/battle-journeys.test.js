@@ -117,10 +117,10 @@ test('the connection rule reads a load, a reload, a seat chosen and a tab back i
 const STATE = /(?<![\w$'"`]|[\w$]\.)(?:[\w$]+\.)*(shown|writes)\b(?![='"`])/;
 const POLLED = (field) => new RegExp(`expect\\.poll\\(\\s*(?:async\\s*)?\\(\\)\\s*=>\\s*(?:\\[\\.\\.\\.)?(?:[\\w$]+\\.)*${field}\\b`);
 // Waits that only the host's answer ends: a refusal's text, the problem a notice test reports, a URL the answer chose.
-const ANSWERED = [/-error'\)\)\.(?:not\.)?to(?:Have|Contain)Text\(/, /#notices-problem'\)\)\.toContainText\(/, /\.waitForURL\(/];
-// What can send: a wait before the last of these says nothing of what it sent.
-const ACTION = /\.(?:click|dblclick|press|fill|check|tap|selectOption)\(|keyboardActivate\(/g;
-const TEST = /^\s*(?:for \(.*\) )?test(?:\.(?:only|skip|fixme))?\(/;
+const ANSWERED = [/-error'\)\)\.to(?:Have|Contain)Text\(/, /#notices-problem'\)\)\.toContainText\(/, /\.waitForURL\(/];
+// What can send: a wait before the last of these says nothing of what it sent. A helper the spec awaits may click.
+const ACTION = /\.(?:click|dblclick|press|pressSequentially|type|fill|check|tap|selectOption|dispatchEvent)\(|await (?!expect\b)[A-Za-z_$][\w$]*\(/g;
+const TEST = /^\s*(?:for \(.*\) )?test(?:\.(?:only|skip|fixme|beforeEach|afterEach|beforeAll|afterAll|describe))?\(/;
 // Where a helper starts: the scan back from a read stops there, so that it does not borrow the test before it.
 const TOP = /^(?:export )?(?:async )?function\b|^(?:export )?const\b/;
 const NEGATIVE = new Set(['toEqual([])', 'toStrictEqual([])', 'toHaveLength(0)']);
@@ -177,6 +177,8 @@ const READ_AFTER_HOST = [
     read: 'expect(h.writes.map(one => one.creature)).toEqual', why: 'the tempo sheet closed after its batch' },
   { file: 'battle-tempo.spec.js', title: 'a lost response after acceptance reconciles without resending the accepted creature',
     read: 'expect(h.writes.map(one => one.creature)).toEqual', why: 'the tempo sheet closed after its batch' },
+  { file: 'battle-tempo.spec.js', title: 'backgrounding during a write clears the batch and reopening shows only authoritative remaining choices',
+    read: 'expect(h.writes.length).toBe', why: 'after a poll that saw one write, a read that nothing more was sent: it stays plain, as a negative read does' },
   { file: 'battle-parity.spec.js', title: 'keyboard journey reads energy, compares a mutation, edits every tempo and reopens applied damage',
     read: 'expect(state.writes.length).toBe', why: 'the tempo tip shows only after the host served the asking that follows the mutation' },
   { file: 'battle-parity.spec.js', title: 'keyboard journey reads energy, compares a mutation, edits every tempo and reopens applied damage',
@@ -215,6 +217,13 @@ test('the route rule passes a poll, a host-answered wait and a negative read, an
   assert.deepEqual(unpolled([head, '  expect(h.writes).not.toEqual([]);']), at(2, 'expect(h.writes).not.toEqual'));
   assert.deepEqual(unpolled([head, '  expect([...h.state.shown]).toEqual([1]);']), at(2, 'expect([...h.state.shown]).toEqual'));
   assert.deepEqual(unpolled([head, '  expect(h.writes', '    .map((one) => one.kind)).toEqual([1]);']), at(2, 'expect( not closed on its line'));
+  // A wait that passes at once, a helper that may click, and a hook are not taken as the host's answer.
+  assert.deepEqual(unpolled([head, "  await page.click(); await expect(page.locator('#x-error')).not.toHaveText('boom'); expect(h.writes).toEqual([{}]);"]),
+    at(2, 'expect(h.writes).toEqual'));
+  assert.deepEqual(unpolled([head, '  await expect.poll(() => h.writes.length).toBe(1); await confirmPlan(page); expect(h.writes[1]).toEqual({});']),
+    at(2, 'expect(h.writes[1]).toEqual'));
+  assert.deepEqual(unpolled([head, '  await expect.poll(() => h.writes.length).toBe(1);', '});', 'test.afterEach(async () => {', '  expect(h.writes).toEqual([{}]);', '});']),
+    [{ line: 5, title: '', read: 'expect(h.writes).toEqual' }]);
   // The reads of a request's query are not the route state.
   assert.deepEqual(unpolled([head, "  expect(h.reads.filter(one => !one.query.includes('shown=')).length).toBe(1);"]), []);
 });

@@ -9,9 +9,10 @@ export function stepAnswered(view, latest) {
   return latest.board.roundNumber !== view.board.roundNumber || (latest.waitingFor != null && latest.waitingFor !== 'Speed');
 }
 
-// What shows the game moved on the seat's view: a new feed entry, a new phase or asking, the end.
+// What shows the game moved on the seat's view: the host's feed cursor, a new phase or asking, the end. The feed itself
+// is served from the page's cursor, so it is empty once caught up: its last entry would move back and forth.
 const progress = (latest) => latest && JSON.stringify({ round: latest.board?.roundNumber, subPhase: latest.board?.subPhase,
-  waitingFor: latest.waitingFor ?? null, waitingAsked: latest.waitingAsked ?? null, feed: latest.feed?.at(-1)?.sequence ?? null, over: Boolean(latest.over) });
+  waitingFor: latest.waitingFor ?? null, waitingAsked: latest.waitingAsked ?? null, feedNext: latest.feedNext ?? null, over: Boolean(latest.over) });
 
 // Waits until `read()`, the seat's latest view, shows the step answered. A loaded runner serves the host's next views
 // late but steadily, which outlasted one 10 s window set at the call (#858). So the window restarts at each view that

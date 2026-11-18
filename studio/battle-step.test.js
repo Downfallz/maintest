@@ -30,8 +30,12 @@ function clock() {
 }
 test('a step answered after the first window is waited for while the host keeps moving', async () => {
   const time = clock(), asked = view('Evolution', 3);
-  // The board moves every 6 s (a feed entry), and the next asking comes at 21 s.
-  const read = () => time.now() >= 21000 ? view('Evolution', 4) : view('Evolution', 3, 2, { feed: [{ sequence: Math.floor(time.now() / 6000) }] });
+  // The host's feed moves every 6 s, served as the route does: the new entries once, then none, the cursor rising.
+  // The next asking comes at 21 s.
+  const read = () => {
+    const batch = Math.floor(time.now() / 6000), fresh = time.now() % 6000 < 100;
+    return time.now() >= 21000 ? view('Evolution', 4) : view('Evolution', 3, 2, { feed: fresh ? [{ sequence: batch }] : [], feedNext: batch + 1 });
+  };
   await waitAnswered(asked, read, { timeout: 10000, ...time });
   assert.ok(time.now() >= 21000 && time.now() < 22000);
 });
@@ -43,7 +47,7 @@ test('a step the host stops moving on fails after one window, saying what the se
 });
 test('a host that keeps moving without answering the step still fails at three windows', async () => {
   const time = clock();
-  const read = () => view('Evolution', 3, 2, { feed: [{ sequence: time.now() }] });
+  const read = () => view('Evolution', 3, 2, { feed: [{ sequence: time.now() }], feedNext: time.now() + 1 });
   await assert.rejects(waitAnswered(view('Evolution', 3), read, { timeout: 10000, ...time }), /within 30 s, after \d+ moves, though the seat kept moving/);
   assert.ok(time.now() >= 30000 && time.now() < 31000);
 });
@@ -51,4 +55,10 @@ test("a seat's first view counts as progress", async () => {
   const time = clock();
   await waitAnswered(view('Evolution', 3), () => time.now() < 5000 ? undefined : view(null, null, 2, { over: true }), { timeout: 10000, ...time });
   assert.ok(time.now() >= 5000);
+});
+test('a seat whose feed only empties and refills from the same cursor is stuck', async () => {
+  const time = clock();
+  // A delta read, then a full read of the same feed: the entries differ, the host's cursor does not.
+  const read = () => view('Evolution', 3, 2, { feed: Math.floor(time.now() / 1000) % 2 ? [{ sequence: 4 }] : [], feedNext: 5 });
+  await assert.rejects(waitAnswered(view('Evolution', 3), read, { timeout: 10000, ...time }), /nothing new for 10 s after 0 moves/);
 });
