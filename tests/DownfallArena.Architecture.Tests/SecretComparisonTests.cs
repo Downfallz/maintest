@@ -37,6 +37,6 @@ public sealed partial class SecretComparisonTests
 
     private static bool ComparesASecret(string line) => Secret().IsMatch(line);
 
-    [GeneratedRegex(@"string\.Equals\([^;]*\b(?:[Tt]oken|[Kk]ey|supplied)\b|\b(?:Token|Invitation|token|invitation)\s*[!=]=\s*(?!null\b)|[!=]=\s*[\w.]*(?:Token|Invitation)\b|\.Code\s*[!=]=\s*code\b")]
+    [GeneratedRegex(@"string\.Equals\([^;]*\b(?:[Tt]oken|[Kk]ey|supplied)\b|\b(?:Token|Invitation|token|invitation)\s*[!=]=(?!\s*null\b)|[!=]=\s*[\w.]*(?:Token|Invitation)\b|\.Code\s*[!=]=\s*code\b")]
     private static partial Regex Secret();
 }
