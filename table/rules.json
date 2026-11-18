@@ -972,7 +972,7 @@
             "title": "Mutation",
             "lines": [
               "A mutation gives a creature new spells and an initiative bonus, for the rest of the match.",
-              "The last mutation of a family, its capstone, gives a passive in place of spells and bonus.",
+              "The last mutation of a family, its capstone, gives a passive in place of spells and an initiative bonus.",
               "On a mutation round, the team shares its picks, and a creature takes at most one mutation."
             ],
             "example": "A creature at 5 base initiative acquires Brute, with a bonus of 1: it knows new spells and acts at 6."
@@ -2162,7 +2162,7 @@
                   "emphasis": true
                 },
                 {
-                  "text": " In round 5, Creature 4 is hit by Crushing Stomp: Stun for 2 rounds. It sits out the next 2 rounds whole. At the Cleanup that ends the Stun, it becomes immune for one round. Another Crushing Stomp on it while it is stunned, or immune, deals its damage and stuns nothing."
+                  "text": " In round 5, Creature 4 is hit by Crushing Stomp: Stun for 2 rounds. It then sits out 2 rounds whole. At the Cleanup that ends the Stun, it becomes immune for one round. Another Crushing Stomp on it while it is stunned, or immune, deals its damage and stuns nothing."
                 }
               ]
             }
@@ -2916,10 +2916,23 @@
   "changes": [
     {
       "date": "2026-11-18",
-      "text": "The mutation card no longer says a capstone gives an initiative bonus: a capstone gives a passive in place of spells and bonus. The examples state the damage Blood Price deals its own caster (ADR 0101, ADR 0188).",
+      "text": "The mutation card no longer says a capstone gives an initiative bonus: a capstone gives a passive in place of spells and an initiative bonus (ADR 0101).",
       "adrs": [
-        "0101",
-        "0188"
+        "0101"
+      ]
+    },
+    {
+      "date": "2026-11-18",
+      "text": "The examples state the damage Blood Price deals its own caster (ADR 0031).",
+      "adrs": [
+        "0031"
+      ]
+    },
+    {
+      "date": "2026-11-18",
+      "text": "The shared mutation's card says \"For every creature of the team\", the book's word (ADR 0114).",
+      "adrs": [
+        "0114"
       ]
     },
     {

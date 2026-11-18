@@ -22,7 +22,7 @@ const RULE_SET = 'docs/tabletop/playtest.rules.json';
 const CREATURE = 'data/Creatures/main.v1.json';
 const WORDS = 'rules/words.json';
 // The engine's values the hosted rule set does not hold, each read from the constant the domain declares.
-const ENGINE = { defenseBuffCeiling: { file: 'src/DownfallArena.Domain/Matches/Creatures/Creature.cs', constant: 'DefenseBuffCeiling' } };
+export const ENGINE = { defenseBuffCeiling: { file: 'src/DownfallArena.Domain/Matches/Creatures/Creature.cs', constant: 'DefenseBuffCeiling' } };
 const OUTPUT = 'table/rules.json';
 const OUTPUT_FR = 'table/rules.fr.json';
 
@@ -111,7 +111,8 @@ function editionIn(folder) {
 function engineValues(root) {
   const values = {};
   for (const [name, { file, constant }] of Object.entries(ENGINE)) {
-    const found = new RegExp(String.raw`\bconst int ${constant} = (\d+);`).exec(readFileSync(join(root, file), 'utf8'));
+    const source = existsSync(join(root, file)) ? readFileSync(join(root, file), 'utf8') : '';
+    const found = new RegExp(String.raw`\bconst int ${constant} = (\d+);`).exec(source);
     if (found) values[name] = Number(found[1]);
   }
   return values;
@@ -361,23 +362,27 @@ function retireEnglish(words, english, french) {
 
 // A count's nouns, by language: a value written right before one of them takes both its forms ({n|round|rounds}),
 // so a value of 1 never reads "1 rounds".
+// The words that may stand between a count and its noun ("{n} more rounds").
+const BETWEEN = { en: ['more', 'next', 'extra', 'further', 'other', 'whole'], fr: ['autres', 'prochains', 'prochaines', 'derniers'] };
 const COUNTED = {
   en: [['round', 'rounds'], ['turn', 'turns'], ['enemy', 'enemies'], ['ally', 'allies'], ['target', 'targets'], ['time', 'times'], ['Upkeep', 'Upkeeps']],
   fr: [['tour', 'tours'], ['round', 'rounds'], ['ennemi', 'ennemis'], ['allié', 'alliés'], ['cible', 'cibles'], ['Entretien', 'Entretiens']],
 };
 
 const escaped = text => text.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
-// Where a sentence, a cell or a line starts: its first word is capitalised for that alone.
-const SENTENCE_START = /(?:^|[.!?:;—·]|[«“"])\s*$/u;
+// Where a sentence, a cell, a line or a step label (*Command · Tie order.*) starts: its first word is capitalised
+// for that alone. Not after a colon, a semicolon, a dash or a quote: both languages go on in lowercase there, and
+// a name after "Brute:" must still be read.
+const SENTENCE_START = /(?:^|[.!?·])\s*$/u;
 const ROMAN = /^[IVX]+$/;
 
-// The words the book may capitalise inside a sentence besides the names: rules/words.json, in the book's language,
-// and every bold word of player-terminology.md.
-function capitalWords(given, language) {
-  const words = new Set(given.words?.[language] ?? []);
-  for (const phrase of bold(given.terminology)) for (const word of phrase.split(/[\s(),]+/)) if (word) words.add(word);
-  return words;
-}
+// The words the book may capitalise inside a sentence besides the names: rules/words.json, in the book's language.
+// Not the terminology's bold words: they hold spell names (Strike, Focus), and a name is allowed only while data/
+// holds it.
+const capitalWords = (given, language) => new Set(given.words?.[language] ?? []);
+
+// The words an edition writes in lowercase: a sentence's capitalised first word is an ordinary word when it is one.
+const vocabularyOf = parts => new Set(parts.flatMap(({ text }) => text.replace(/\{[^{}]*\}/g, ' ').match(/(?<![\p{L}\d])\p{Ll}[\p{L}-]*/gu) ?? []));
 
 // --- the Markdown subset ------------------------------------------------------------------------------------------
 
@@ -409,9 +414,10 @@ class Build {
     this.retired = retiredWords(given.terminology, language);
     this.conceptIds = new Set(given.conceptIds);
     this.bookLinks = [];
-    const names = [...given.spells.values(), ...(given.mutations ?? new Map()).values()].map(item => item.name).filter(Boolean);
-    this.names = [...new Set(names)].sort((a, b) => b.length - a.length).map(name => new RegExp(String.raw`(?<![\p{L}\d])${escaped(name)}(?![\p{L}\d])`, 'gu'));
+    const names = [...new Set([...given.spells.values(), ...(given.mutations ?? new Map()).values()].map(item => item.name).filter(Boolean))];
+    this.names = names.sort((a, b) => b.length - a.length).map(name => new RegExp(String.raw`(?<![\p{L}\d])${escaped(name)}(?![\p{L}\d])`, 'gu'));
     this.capitals = capitalWords(given, language);
+    this.vocabulary = vocabularyOf(language === 'fr' ? given.french?.parts ?? [] : given.parts);
   }
 
   // A capitalised word inside a sentence is a spell's or a mutation's name, or a word the book may capitalise, so a
@@ -422,17 +428,22 @@ class Build {
     for (const match of text.matchAll(/\p{Lu}[\p{L}-]*/gu)) {
       const [word] = match;
       const before = text.slice(0, match.index);
-      if (word.length === 1 || ROMAN.test(word) || /[\p{L}\d]$/u.test(before) || SENTENCE_START.test(before)) continue;
+      if (word.length === 1 || ROMAN.test(word) || /[\p{L}\d]$/u.test(before)) continue;
       if (this.capitals.has(word) || (word.endsWith('s') && this.capitals.has(word.slice(0, -1)))) continue;
+      // A sentence's first word is capitalised for that alone when the book writes it in lowercase elsewhere.
+      if (SENTENCE_START.test(before) && this.vocabulary.has(word.toLowerCase())) continue;
       this.refuse(`${where}: "${word}" is not the name of a spell or a mutation in data/, nor a word of rules/words.json`);
     }
   }
 
-  // A value written before a count's noun takes both its forms.
+  // A value written before a count's noun takes both its forms: the noun right after it, or after one more word
+  // ("{n} more rounds"), whatever the bold, the italics or a fact between them.
   counted(raw, where) {
+    const text = raw.replace(/\{\?[^{}]*\}/g, '').replaceAll('*', '');
+    const between = (BETWEEN[this.language] ?? []).join('|');
     for (const [singular, plural] of COUNTED[this.language] ?? []) {
-      const pattern = new RegExp(String.raw`\{([^{}#?|][^{}|]*)\}\s+(?:${singular}|${plural})(?![\p{L}\d])`, 'gu');
-      for (const [whole, expression] of raw.matchAll(pattern)) this.refuse(`${where}: "${whole}": a count takes its noun: {${expression.trim()}|${singular}|${plural}}`);
+      const pattern = new RegExp(String.raw`\{([^{}#?|][^{}|]*)\}\s+(?:(?:${between})\s+)?(?:${singular}|${plural})(?![\p{L}\d])`, 'gu');
+      for (const [whole, expression] of text.matchAll(pattern)) this.refuse(`${where}: "${whole}": a count takes its noun: {${expression.trim()}|${singular}|${plural}}`);
     }
   }
 

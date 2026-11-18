@@ -97,7 +97,7 @@ sources: ADR 0056, ADR 0057, ADR 0059, ADR 0066, ADR 0089, game-rules#round-sequ
 id: mutation
 title: Mutation
 A mutation gives a creature new spells and an initiative bonus, for the rest of the match.
-The last mutation of a family, its capstone, gives a passive in place of spells and bonus.
+The last mutation of a family, its capstone, gives a passive in place of spells and an initiative bonus{?tier:titan:v1.initiativeBonus = 0}{?tier:archmage:v1.initiativeBonus = 0}{?tier:apex:v1.initiativeBonus = 0}.
 On a mutation round, the team shares its picks, and a creature takes at most one mutation.
 > A creature at {creature.initiative} base initiative acquires Brute, with a bonus of {tier:brute:v1.initiativeBonus}: it knows new spells and acts at {creature.initiative + tier:brute:v1.initiativeBonus}.
 ```

@@ -1,0 +1,2 @@
+- Third time (W8, R1, then #687): a word scanner's "sentence start" exemption (`: ; — "`) hid the very case it was built for: a renamed Pummel (4 uses, all after "Brute: ") and Focus (exempt as a terminology bold word) drew 0 refusals. Probe a scanner by renaming each data name and counting refusals against occurrences (rules build, 012dd79).
+- A new value source read from C# source (`engine.*` from Creature.cs) must also be taught to `scripts/rules/reach.mjs`, or `/rules` lists no section when the constant moves (012dd79).

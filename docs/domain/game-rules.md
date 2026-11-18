@@ -200,8 +200,8 @@ replays identically. Time comes from `TimeProvider`, randomness from `IRandomSou
 ## Open questions
 
 - Board: slot-based teams only, or positions with range and adjacency.
-- Effects on the caster (lifesteal, recoil, self-buffs), stat debuffs beyond initiative, and passive
-  spells: three gaps the inherited spells fall into ([spells.md](spells.md)).
+- Stat debuffs beyond initiative, and passive spells: two gaps the inherited spells fall into
+  ([spells.md](spells.md)). Effects on the caster are settled: a spell's caster line (ADR 0031).
 - Team composition between Matches: fixed roster, drafting, or swapping.
 - Sudden death after the round cap instead of a health tiebreak.
 - How much of the ML/simulation work (`legacy/DownfallArena/DA.Game.Tests/ml.md`) shapes the event model.

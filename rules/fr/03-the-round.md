@@ -104,7 +104,7 @@ sources: ADR 0056, ADR 0057, ADR 0059, ADR 0066, ADR 0089, game-rules#round-sequ
 id: mutation
 title: Mutation
 Une mutation donne à une créature de nouveaux sorts et un bonus d’initiative, pour le reste de la partie.
-La dernière mutation d’une famille, sa clé de voûte, donne un passif à la place de sorts et de bonus.
+La dernière mutation d’une famille, sa clé de voûte, donne un passif à la place de sorts et d’un bonus d’initiative{?tier:titan:v1.initiativeBonus = 0}{?tier:archmage:v1.initiativeBonus = 0}{?tier:apex:v1.initiativeBonus = 0}.
 À un round de mutation, l’équipe partage ses choix, et une créature prend au plus une mutation.
 > Une créature à une initiative de base de {creature.initiative} acquiert Brute, au bonus de {tier:brute:v1.initiativeBonus} : elle connaît de nouveaux sorts et agit à {creature.initiative + tier:brute:v1.initiativeBonus}.
 ```

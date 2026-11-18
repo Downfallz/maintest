@@ -42,16 +42,16 @@ creature, and links to the rulebook section. The first set follows the rulebook'
 
 | Concept | What the card says, in short | Rulebook |
 | --- | --- | --- |
-| Health | At zero the creature is defeated; a team with none left loses. | Part 1 |
-| Energy | Every living creature gains it at Upkeep; a spell spends it when it resolves, not when it is declared. | 5.1, 5.8 |
-| Defense | Lowers the damage a creature takes. | 5.8 |
-| Initiative | Base initiative plus a mutation's bonus; it orders creatures inside their tempo. | 5.5 |
-| Tempo | Instinct acts before Precision; only Precision can crit. | 5.4 |
-| Critical | A d20 against the threshold the spell prints; a critical multiplies the effect. | 6.7 |
-| Intent | Nothing is declared in advance: a creature chooses its spell and its targets when its turn comes, and it resolves at once. | 3.8 |
-| Fizzle | A skipped turn: a creature defeated or stunned earlier in the round is skipped, and nothing resolves or is spent. | 4.1 |
-| Conditions | Each one's effect and its countdown; Stun leaves its creature immune for one round. | 7.1 |
-| Mutation | Spells, or a passive at the capstone, and an initiative bonus, for the rest of the match. | 5.3 |
+| Health | At zero the creature is defeated; a team with none left loses. | 1.1 |
+| Energy | Every living creature gains it at Upkeep; a spell spends it when it resolves, not when it is declared. | 3.1 |
+| Defense | Lowers the damage a creature takes. | 3.10 |
+| Initiative | Base initiative plus a mutation's bonus; it orders creatures inside their tempo. | 3.6 |
+| Tempo | Instinct acts before Precision; only Precision can crit. | 3.5 |
+| Critical | A d20 against the threshold the spell prints; a critical multiplies the effect. | 4.5 |
+| Intent | Nothing is declared in advance: a creature chooses its spell and its targets when its turn comes, and the spell resolves at once. | 3.8 |
+| Fizzle | A skipped turn: a creature that was defeated or stunned earlier in the round is skipped, and nothing resolves or is spent. | 4.1 |
+| Conditions | Each one's effect and its countdown; Stun leaves its creature immune for one round. | 5.1 |
+| Mutation | Spells and an initiative bonus, or at the capstone a passive in place of both, for the rest of the match. | 3.3 |
 
 - **Where they open.** In a tutorial only (settled, question 6). A lesson step opens the cards it names, and
   the step's coach card lists them so the person opens one again. An ordinary game shows none: its phase tips

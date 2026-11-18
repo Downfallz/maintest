@@ -61,8 +61,8 @@ s’appliquent quand même, et le Stun en cours ni ne s’allonge ni ne recommen
 étourdie sans interruption : chaque Stun est suivi d’un round où elle ne peut pas être étourdie.
 
 *Exemple.* Au round 5, la Créature 4 est touchée par Crushing Stomp : Stun pendant
-{spell:crushing_stomp:v1.stun.durationRounds|round|rounds}. Elle passe en entier les
-{spell:crushing_stomp:v1.stun.durationRounds|round|rounds} suivants. Au Nettoyage qui termine le Stun, elle devient
+{spell:crushing_stomp:v1.stun.durationRounds|round|rounds}. Elle passe ensuite
+{spell:crushing_stomp:v1.stun.durationRounds|round|rounds} en entier. Au Nettoyage qui termine le Stun, elle devient
 immunisée pour un round. Un autre Crushing Stomp sur elle pendant qu’elle est étourdie, ou immunisée, inflige ses
 dégâts{?spell:crushing_stomp:v1.damage > 0} et n’étourdit rien.
 

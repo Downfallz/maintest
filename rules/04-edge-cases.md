@@ -57,7 +57,7 @@ running Stun neither grows nor restarts. So no creature can be kept stunned: eve
 which it cannot be stunned.
 
 *Example.* In round 5, Creature 4 is hit by Crushing Stomp: Stun for
-{spell:crushing_stomp:v1.stun.durationRounds|round|rounds}. It sits out the next
+{spell:crushing_stomp:v1.stun.durationRounds|round|rounds}. It then sits out
 {spell:crushing_stomp:v1.stun.durationRounds|round|rounds} whole. At the Cleanup that ends
 the Stun, it becomes immune for one round. Another Crushing Stomp on it while it is stunned, or immune, deals
 its damage{?spell:crushing_stomp:v1.damage > 0} and stuns nothing.

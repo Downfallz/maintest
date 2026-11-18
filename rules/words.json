@@ -1,4 +1,14 @@
 {
-  "en": ["Health", "Energy", "Defense", "Bleed", "Regeneration", "Stun", "Cleanup", "Help", "Part"],
-  "fr": ["Santé", "Énergie", "Défense", "Bleed", "Regeneration", "Stun", "Nettoyage", "Help"]
+  "en": [
+    "Health", "Energy", "Defense", "Damage", "Bleed", "Regeneration", "Stun", "Cleanup", "Help", "Part", "Upkeep",
+    "Command", "Combat", "Aftermath", "Instinct", "Precision", "Creature", "Mutation", "Tree", "Stage", "Evolution",
+    "Activation", "Finalization", "Self", "Winning", "Value", "Had", "Ongoing", "Right", "Ordering", "Choosing",
+    "Without", "Edge", "Reference"
+  ],
+  "fr": [
+    "Santé", "Énergie", "Défense", "Dégâts", "Bleed", "Regeneration", "Stun", "Nettoyage", "Help", "Entretien",
+    "Commandement", "Combat", "Retombées", "Instinct", "Précision", "Créature", "Arbre", "Stade", "Évolution",
+    "Activation", "Clôture", "Soi", "Gagner", "Taille", "Multiplicateur", "Juste", "Comment", "Choisir", "Résoudre",
+    "Sinon", "Cas", "Voici", "Combien", "Référence", "Diminue"
+  ]
 }

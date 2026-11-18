@@ -981,7 +981,7 @@
             "title": "Mutation",
             "lines": [
               "Une mutation donne à une créature de nouveaux sorts et un bonus d’initiative, pour le reste de la partie.",
-              "La dernière mutation d’une famille, sa clé de voûte, donne un passif à la place de sorts et de bonus.",
+              "La dernière mutation d’une famille, sa clé de voûte, donne un passif à la place de sorts et d’un bonus d’initiative.",
               "À un round de mutation, l’équipe partage ses choix, et une créature prend au plus une mutation."
             ],
             "example": "Une créature à une initiative de base de 5 acquiert Brute, au bonus de 1 : elle connaît de nouveaux sorts et agit à 6."
@@ -2171,7 +2171,7 @@
                   "emphasis": true
                 },
                 {
-                  "text": " Au round 5, la Créature 4 est touchée par Crushing Stomp : Stun pendant 2 rounds. Elle passe en entier les 2 rounds suivants. Au Nettoyage qui termine le Stun, elle devient immunisée pour un round. Un autre Crushing Stomp sur elle pendant qu’elle est étourdie, ou immunisée, inflige ses dégâts et n’étourdit rien."
+                  "text": " Au round 5, la Créature 4 est touchée par Crushing Stomp : Stun pendant 2 rounds. Elle passe ensuite 2 rounds en entier. Au Nettoyage qui termine le Stun, elle devient immunisée pour un round. Un autre Crushing Stomp sur elle pendant qu’elle est étourdie, ou immunisée, inflige ses dégâts et n’étourdit rien."
                 }
               ]
             }
@@ -2934,10 +2934,23 @@
   "changes": [
     {
       "date": "2026-11-18",
-      "text": "La carte Mutation ne dit plus qu’une clé de voûte donne un bonus d’initiative : une clé de voûte donne un passif à la place de sorts et de bonus. Les exemples disent les dégâts que Blood Price inflige à son propre lanceur (ADR 0101, ADR 0188).",
+      "text": "La carte Mutation ne dit plus qu’une clé de voûte donne un bonus d’initiative : une clé de voûte donne un passif à la place de sorts et d’un bonus d’initiative (ADR 0101).",
       "adrs": [
-        "0101",
-        "0188"
+        "0101"
+      ]
+    },
+    {
+      "date": "2026-11-18",
+      "text": "Les exemples disent les dégâts que Blood Price inflige à son propre lanceur (ADR 0031).",
+      "adrs": [
+        "0031"
+      ]
+    },
+    {
+      "date": "2026-11-18",
+      "text": "La carte de la mutation partagée dit « For every creature of the team », le mot du livre (ADR 0114).",
+      "adrs": [
+        "0114"
       ]
     },
     {

@@ -67,10 +67,32 @@ public sealed class UpkeepRulesTests
 
     /// <summary>
     /// ADR 0114: a shared copy outlives its buyer. The buyer's defeat stops its own Upkeep gain, never what the copy
-    /// gives its teammates, and a board restored from snapshots reads the defeated buyer's packages the same way.
+    /// gives its teammates.
     /// </summary>
     [Fact]
     public void A_shared_copy_keeps_giving_after_its_buyer_is_defeated()
+    {
+        var (creatures, _) = SharedCopyOfADefeatedBuyer();
+
+        var grants = UpkeepRules.EnergyGain(creatures, RuleSet.Create(3, 4, 2, 30, 2.0));
+
+        grants.Select(grant => grant.Creature).ShouldNotContain(Arena.Knight);
+        grants.Single(grant => grant.Creature == Arena.Archer).ShouldBe(new RoundEnergyGrant(Arena.Archer, 4, 2, 6, 0, 6));
+        grants.Single(grant => grant.Creature == Arena.Wraith).ShouldBe(new RoundEnergyGrant(Arena.Wraith, 4, 0, 4, 0, 4));
+    }
+
+    /// <summary>A board restored from snapshots reads a defeated buyer's shared packages as the live board holds them.</summary>
+    [Fact]
+    public void A_restored_board_still_gives_a_defeated_buyers_shared_copy_to_its_teammates()
+    {
+        var (creatures, shared) = SharedCopyOfADefeatedBuyer();
+        var resources = GameResources.Create("probe", [.. Arena.Resources.Creatures], [.. Arena.Resources.Spells], [.. Arena.Resources.TalentTrees], [.. Arena.Resources.Tiers, shared]);
+        var board = creatures.Select(creature => creature.Snapshot()).ToList();
+
+        SharedPackages.HeldBy(board.Single(creature => creature.Id == Arena.Archer), board, resources).UpkeepEnergy.ShouldBe(2);
+    }
+
+    private static (List<Creature> Creatures, Tier Shared) SharedCopyOfADefeatedBuyer()
     {
         var creatures = Arena.FourCreatures();
         var shared = Tier.Create(TierId.Parse("tier:shared:v1"), "Shared", 1, [], [], Initiative.Of(0), passive: Passive.Of(upkeepEnergy: 2), sharedWithTeam: true);
@@ -78,15 +100,7 @@ public sealed class UpkeepRulesTests
         knight.BuyTier(shared).IsSuccess.ShouldBeTrue();
         SharedPackages.Share(creatures, [(knight, shared)]);
         knight.TakeDamage(99);
-
-        var grants = UpkeepRules.EnergyGain(creatures, RuleSet.Create(3, 4, 2, 30, 2.0));
-
-        grants.Select(grant => grant.Creature).ShouldNotContain(Arena.Knight);
-        grants.Single(grant => grant.Creature == Arena.Archer).ShouldBe(new RoundEnergyGrant(Arena.Archer, 4, 2, 6, 0, 6));
-        grants.Single(grant => grant.Creature == Arena.Wraith).ShouldBe(new RoundEnergyGrant(Arena.Wraith, 4, 0, 4, 0, 4));
-        var resources = GameResources.Create("probe", [.. Arena.Resources.Creatures], [.. Arena.Resources.Spells], [.. Arena.Resources.TalentTrees], [.. Arena.Resources.Tiers, shared]);
-        var board = creatures.Select(creature => creature.Snapshot()).ToList();
-        SharedPackages.HeldBy(board.Single(creature => creature.Id == Arena.Archer), board, resources).UpkeepEnergy.ShouldBe(2);
+        return (creatures, shared);
     }
 
     [Fact]

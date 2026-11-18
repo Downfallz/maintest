@@ -73,7 +73,11 @@ function inputs(overrides = {}) {
     adrs: new Set(['0010', '0011']),
     gameRules: new Set(['match-lifecycle']),
     conceptIds: ['health', 'energy'],
-    words: { en: ['Health', 'Energy', 'Defense'], fr: ['Santé', 'Énergie', 'Précision'] },
+    // The small book's capitalised words; the real book's are rules/words.json.
+    words: {
+      en: ['Health', 'Energy', 'Defense', 'Upkeep', 'Evolution', 'Stage', 'What', 'Two', 'Defeat', 'Combat', 'See', 'Value', 'Reference', 'Critical'],
+      fr: ['Santé', 'Énergie', 'Précision', 'Stade', 'Évolution', 'Tempo', 'Battez', 'Ce', 'Combat', 'Deux', 'Entretien', 'Multiplicateur', 'Référence', 'Tous', 'Valeur', 'Voir', 'Au'],
+    },
     engine: { defenseBuffCeiling: 10 },
     links: [],
     previous: null,
@@ -126,7 +130,7 @@ test('the values are drawn from the rule set, the creature and the spell, so a b
   const moved = buildRules(inputs({
     ruleSet: { path: 'x', values: { teamSize: 4, energyPerRound: 3, criticalMultiplier: 1.5 } },
     creature: { id: 'creature:main:v1', baseHealth: 40 },
-    spells: new Map([['spell:pummel:v1', { id: 'spell:pummel:v1', energyCost: 2, effects: [{ kind: 'Damage', amount: 5 }] }]]),
+    spells: new Map([['spell:pummel:v1', { id: 'spell:pummel:v1', name: 'Pummel', energyCost: 2, effects: [{ kind: 'Damage', amount: 5 }] }]]),
   }));
   assert.deepEqual(moved.errors, []);
   const text = JSON.stringify(moved.book);
@@ -187,7 +191,7 @@ test('refuses a value that does not resolve, and a spell id that is not in data/
 
 test('a spell\'s effect is read by its kind, and refused when the spell has two of that kind', () => {
   const spells = new Map([['spell:guard:v1', { id: 'spell:guard:v1', effects: [{ kind: 'DefenseBuff', amount: 2 }, { kind: 'DefenseBuff', amount: 1, durationRounds: 3 }] }],
-    ['spell:latch:v1', { id: 'spell:latch:v1', effects: [{ kind: 'Bleed', amountPerRound: 2, durationRounds: 3 }] }]]);
+    ['spell:latch:v1', { id: 'spell:latch:v1', name: 'Latch', effects: [{ kind: 'Bleed', amountPerRound: 2, durationRounds: 3 }] }]]);
   const book = text => inputs({ spells, parts: [{ file: '01-the-goal.md', text: goal.replace('Pummel costs {spell:pummel:v1.energyCost} and deals {spell:pummel:v1.damage}.', text) }] });
   assert.deepEqual(errorsOf(book('Latch bleeds {spell:latch:v1.bleed} for {spell:latch:v1.bleed.durationRounds|round|rounds}.')), []);
   assert.ok(JSON.stringify(buildRules(book('Latch bleeds {spell:latch:v1.bleed} for {spell:latch:v1.bleed.durationRounds|round|rounds}.')).book).includes('Latch bleeds 2 for 3 rounds.'));
@@ -245,6 +249,9 @@ test('a count is written with its noun, singular for one, so a value of 1 never 
   assert.ok(builtText(at(1)).includes('Every 1 round, two players'));
   refuses(withGoal('Two players', 'For {rules.teamSize} rounds, two players'), /"\{rules\.teamSize\} rounds": a count takes its noun: \{rules\.teamSize\|round\|rounds\}/);
   refuses(withGoal('Two players', 'At the next {rules.teamSize} Upkeeps, two players'), /a count takes its noun: \{rules\.teamSize\|Upkeep\|Upkeeps\}/);
+  for (const written of ['{rules.teamSize} **rounds**', '{rules.teamSize} more rounds', '{rules.teamSize}{?rules.teamSize > 1} rounds', '{rules.teamSize} *more* rounds']) {
+    refuses(withGoal('Two players', `For ${written}, two players`), /a count takes its noun: \{rules\.teamSize\|round\|rounds\}/);
+  }
   refuses(withGoal('Two players', 'Every {rules.teamSize|round} two players'), /"rules\.teamSize\|round": a count names its singular and its plural/);
   assert.deepEqual(errorsOf(withGoal('| {rules.criticalMultiplier} |', '| {rules.energyPerRound|round|rounds} |')), [], 'a count in a table cell keeps its bars');
 });
@@ -257,6 +264,14 @@ test('a capitalised name inside a sentence is a spell\'s or a mutation\'s name i
   assert.deepEqual(errorsOf(book('A creature casts Blood Price{?spell:hateful_sacrifice:v1.origin = \'Enemy\'} on an enemy. Two players')), [], 'a fact against a name');
   refuses(book('A Titan casts Fireball. Two players'), /rules\/01-the-goal\.md:\d+: "Fireball" is not the name of a spell or a mutation in data\/, nor a word of rules\/words\.json/);
   refuses(book('A creature casts Blood Prize. Two players'), /"Prize" is not the name/);
+  refuses(book('A spell. Fireball deals damage. Two players'), /"Fireball" is not the name/);
+  assert.deepEqual(errorsOf(book('A creature. Every creature. Two players')), [], 'a first word the book writes in lowercase elsewhere');
+  for (const opening of ['A spell: Fireball deals damage.', 'A spell; Fireball deals damage.', 'A spell — Fireball deals damage.', 'A spell, "Fireball", deals damage.', 'A spell, «Fireball», deals damage.']) {
+    refuses(book(`${opening} Two players`), /"Fireball" is not the name/);
+  }
+  const renamed = new Map([['spell:wait:v1', { id: 'spell:wait:v1', name: 'Rest', effects: [] }]]);
+  refuses(inputs({ spells: renamed, terminology: `${terminology}\n| Spells | Spell | **Strike** and **Focus** | **Strike** et **Focus** |\n`,
+    parts: [{ file: '01-the-goal.md', text: goal.replace('Two players', 'A creature casts Focus. Two players').replace(pummelLine, 'Two.') }] }), /"Focus" is not the name/);
   refuses(inputs({ spells: new Map([['spell:pummel:v1', { id: 'spell:pummel:v1', name: 'Thump', energyCost: 1, effects: [{ kind: 'Damage', amount: 2 }] }]]),
     parts: [{ file: '01-the-goal.md', text: goal.replace('Two players', 'A creature casts Pummel. Two players') }] }), /"Pummel" is not the name/);
   refuses(withFrench('Deux joueurs', 'Une créature lance Fireball. Deux joueurs'), /rules\/fr\/01-the-goal\.md:\d+: "Fireball" is not the name/);
