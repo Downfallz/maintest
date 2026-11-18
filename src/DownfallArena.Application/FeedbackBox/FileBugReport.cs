@@ -12,6 +12,6 @@ public sealed class FileBugReport(IFeedbackStore store, FeedbackWrites writes, T
     /// </summary>
     public Task<Result<FeedbackStatusChange>> HandleAsync(string id, int? issue, CancellationToken cancellationToken = default) =>
         writes.OneAtATimeAsync(
-            () => FeedbackStatuses.ChangeAsync(store, id, FeedbackStatus.Filed, null, plan: null, issue, clock.GetUtcNow(), cancellationToken),
+            () => FeedbackStatuses.ChangeAsync(store, id, new FeedbackStatuses.Asked(FeedbackStatus.Filed, Issue: issue), clock.GetUtcNow(), cancellationToken),
             cancellationToken);
 }

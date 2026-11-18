@@ -24,7 +24,7 @@ public sealed class MarkFeedback(IFeedbackStore store, FeedbackMutes mutes, Feed
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(by);
         var set = await writes.OneAtATimeAsync(
-            () => FeedbackStatuses.ChangeAsync(store, id, status, reason?.Trim(), plan: null, issue: null, clock.GetUtcNow(), cancellationToken),
+            () => FeedbackStatuses.ChangeAsync(store, id, new FeedbackStatuses.Asked(status, Reason: reason?.Trim()), clock.GetUtcNow(), cancellationToken),
             cancellationToken);
         if (set.IsFailure || !set.Value.Feedback.IsSpam || set.Value.Feedback.SpamCounted)
         {

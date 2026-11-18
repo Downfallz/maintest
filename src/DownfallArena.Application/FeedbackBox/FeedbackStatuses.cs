@@ -11,8 +11,9 @@ internal static class FeedbackStatuses
 {
     public const int LongestReason = 300;
 
-    public static async Task<Result<FeedbackStatusChange>> ChangeAsync(IFeedbackStore store, string id, FeedbackStatus status, string? reason, string? plan, int? issue, DateTimeOffset now, CancellationToken cancellationToken)
+    public static async Task<Result<FeedbackStatusChange>> ChangeAsync(IFeedbackStore store, string id, Asked asked, DateTimeOffset now, CancellationToken cancellationToken)
     {
+        var (status, reason, plan, issue) = asked;
         if (await FeedbackRecords.FindAsync(store, id, cancellationToken) is not { } feedback)
         {
             return Result.Failure<FeedbackStatusChange>(FeedbackErrors.NotFound(id));
@@ -25,13 +26,13 @@ internal static class FeedbackStatuses
             return Result.Failure<FeedbackStatusChange>(FeedbackErrors.MergedAway);
         }
 
-        var asked = Changed(feedback, status, reason, plan, issue, now);
-        if (asked.IsFailure)
+        var wanted = Changed(feedback, status, reason, plan, issue, now);
+        if (wanted.IsFailure)
         {
-            return Result.Failure<FeedbackStatusChange>(asked.Error);
+            return Result.Failure<FeedbackStatusChange>(wanted.Error);
         }
 
-        var changed = asked.Value;
+        var changed = wanted.Value;
         if (changed.Status == feedback.Status && changed.Reason == feedback.Reason && changed.Plan == feedback.Plan && changed.MergedInto == feedback.MergedInto && changed.Issue == feedback.Issue)
         {
             return Result.Success(new FeedbackStatusChange(feedback, Changed: false, Muted: null));
@@ -79,4 +80,7 @@ internal static class FeedbackStatuses
                 : "A bug report is marked seen, reproduced, filed with its issue, fixed or dismissed here.")),
         };
     }
+
+    /// <summary>The status asked for, with what it names: a reason to dismiss or decline, a plan, or an issue's number.</summary>
+    public readonly record struct Asked(FeedbackStatus Status, string? Reason = null, string? Plan = null, int? Issue = null);
 }
