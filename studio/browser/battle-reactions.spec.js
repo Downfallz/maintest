@@ -65,7 +65,7 @@ test('a reaction is one tap from the header: the set opens, the choice is sent b
   await expect(page.locator('#reactions-dialog')).toBeHidden();
   await expect(page.locator('#reaction-mine')).toContainText('Well played!');
   await expect(page.locator('#reactions-open')).toBeFocused();
-  expect(h.state.writes).toEqual([{ path: '/api/seat/player1/reaction', body: { reaction: 'well-played' }, token: 'first' }]);
+  await expect.poll(() => h.state.writes).toEqual([{ path: '/api/seat/player1/reaction', body: { reaction: 'well-played' }, token: 'first' }]);
   await page.locator('#reactions-open').click();
   await expect(page.locator('#reactions-list button').first()).toBeDisabled();
   await expect(page.locator('#reactions-note')).toContainText('react again in a moment');
