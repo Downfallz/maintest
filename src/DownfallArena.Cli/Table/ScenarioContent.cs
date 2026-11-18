@@ -63,6 +63,12 @@ internal static class ScenarioContent
     /// </summary>
     private static async Task<string> WrittenAsync(string version, string schema, CliOptions options)
     {
+        // The version names a directory: a file's own text, so a path in it would write outside the temporary one.
+        if (version.Length == 0 || version.Any(one => !char.IsAsciiLetterOrDigit(one)))
+        {
+            throw new InvalidDataException($"The scenario names its content '{version}', which is not a content hash.");
+        }
+
         var directory = Path.Combine(Path.GetTempPath(), "downfall-scenario", version, Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         var path = Path.Combine(directory, TableComposer.ContentFile);

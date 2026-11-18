@@ -112,6 +112,33 @@ public sealed class RepositoryScenariosTests : IDisposable
     }
 
     [Fact]
+    public void A_bug_scenario_is_read_from_the_bugs_directory_under_an_id_and_the_issue_its_name_says()
+    {
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "scenarios", "greedy-1v1-round-3.json"), Path.Combine(_root, "plain.json"));
+        Directory.CreateDirectory(Path.Combine(_root, "bugs"));
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "scenarios", "greedy-1v1-round-3.json"), Path.Combine(_root, "bugs", "812-bleed-after-a-stun.json"));
+
+        var shipped = RepositoryScenarios.Read(_root);
+
+        shipped.All.Select(one => (one.Id, one.File, one.Bug)).ShouldBe([("sc-repo-plain", "plain.json", null), ("sc-repo-bug-812-bleed-after-a-stun", "bugs/812-bleed-after-a-stun.json", (int?)812)]);
+        ScenarioStore.Names(shipped.All[1].Id).ShouldBeTrue();
+        shipped.Tutorials.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void A_bug_file_not_named_after_its_issue_a_lesson_among_bugs_or_a_file_named_as_a_bug_elsewhere_is_left_out()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "bugs"));
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "scenarios", "greedy-1v1-round-3.json"), Path.Combine(_root, "bugs", "bleed.json"));
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "scenarios", "greedy-1v1-round-3.json"), Path.Combine(_root, "bugs", "012-leading-zero.json"));
+        File.Copy(Tutorial, Path.Combine(_root, "bugs", "9-a-lesson.json"));
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "scenarios", "greedy-1v1-round-3.json"), Path.Combine(_root, "bug-812-elsewhere.json"));
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "scenarios", "greedy-1v1-round-3.json"), Path.Combine(_root, "bugs", "7-kept.json"));
+
+        RepositoryScenarios.Read(_root).All.Select(one => one.File).ShouldBe(["bugs/7-kept.json"]);
+    }
+
+    [Fact]
     public async Task Checking_a_tutorial_file_checks_that_its_steps_are_reached()
     {
         var late = System.Text.Json.Nodes.JsonNode.Parse(await File.ReadAllTextAsync(Tutorial, TestContext.Current.CancellationToken))!.AsObject();
