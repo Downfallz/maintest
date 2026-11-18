@@ -13,7 +13,7 @@ const catalogue = { cards: [
   { id: 'hidden', name: 'PRIVATE_SPELL' },
 ], packages: [
   { id: 'root', name: 'Brute', level: 1, initiativeBonus: 2, spells: ['strike'], tags: ['Resilient'] },
-  { id: 'cap', name: 'Shared bulwark', level: 4, initiativeBonus: 0, spells: [], passiveLines: ['For every creature of the side: defense +2'] },
+  { id: 'cap', name: 'Shared bulwark', level: 4, initiativeBonus: 0, spells: [], passiveLines: ['For every creature of the team: defense +2'] },
   { id: 'pending', name: 'PRIVATE_MUTATION', level: 2, spells: ['hidden'] },
 ], effects: [{ kind: 'Bleed', glyph: '♥', harmful: true }, { kind: 'Regeneration', glyph: '♥', harmful: false },
   { kind: 'DefenseUp', glyph: '◇', harmful: false }, { kind: 'DefenseDown', glyph: '◇', harmful: true }] };
@@ -78,7 +78,7 @@ test('inspect allies, conditions, acquired passives and complete spell faces wit
   expect(await conditions.evaluateAll(nodes => nodes.map(node => node.dataset.cue))).toEqual(['stun', 'health-loss', 'other', 'health-gain']);
   const shared = page.locator('#inspect-mutations [data-inspect-mutation="cap"]');
   await expect(shared.locator('.inspect-chip')).toHaveText(['Stage IV', 'Initiative +0']);
-  await expect(shared).toContainText('For every creature of the side');
+  await expect(shared).toContainText('For every creature of the team');
   // Known spells are the spell choice's cards: cost and crit chips, targeting, effect lines, and their teacher.
   const strike = page.locator('#inspect-spells [data-inspect-spell="strike"]');
   await expect(strike.locator('.spell-card-name')).toHaveText('Strike'); await expect(strike.locator('.spell-card-target')).toHaveText('One enemy');

@@ -7,7 +7,7 @@ const catalogue = { cards: [
 ], packages: [
   { id: 'root', name: 'Brute', level: 1, initiativeBonus: 2, spells: ['strike', 'secret'], tags: ['Resilient'] },
   { id: 'other', name: 'Unacquired', level: 1, initiativeBonus: 9, spells: ['strike'] },
-  { id: 'cap', name: 'Shared passive', level: 4, initiativeBonus: 0, spells: [], passiveLines: ['For every creature of the side: defense +2'] },
+  { id: 'cap', name: 'Shared passive', level: 4, initiativeBonus: 0, spells: [], passiveLines: ['For every creature of the team: defense +2'] },
 ] };
 const one = { id: '1', label: 'Beast · 1', enemy: false, health: 9, maxHealth: 20, energy: 2, totalDefense: 4, currentInitiative: 7,
   acquiredTiers: ['root', 'cap'], knownSpells: ['strike'], conditions: [] };
@@ -16,7 +16,7 @@ test('ownership is explicit, separate from the known spellbook and private choic
   assert.deepEqual(model.mutations.map(pack => pack.id), ['root', 'cap']);
   assert.deepEqual(model.spells.map(spell => spell.id), ['strike']);
   assert.deepEqual(model.spells[0].sources, ['Brute']);
-  assert.deepEqual(model.mutations[1].passives, ['For every creature of the side: defense +2']);
+  assert.deepEqual(model.mutations[1].passives, ['For every creature of the team: defense +2']);
   assert.equal(model.mutations[1].initiative, 0);
   assert.doesNotMatch(JSON.stringify(model), /Unacquired|Not known yet|secret|intents|evolutionChoices/);
 });

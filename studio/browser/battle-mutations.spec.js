@@ -7,7 +7,7 @@ const roster = [1, 2, 3].map(id => ({ id, name: `Creature ${id}`, isAlive: true,
 const roots = ['Brute', 'Predator', 'Warped'];
 const catalogue = { packages: roots.map((name, i) => ({ id: `root${i}`, name, visual: { family: name.toLowerCase() }, level: 1, initiativeBonus: i, spells: [`spell${i}`], tags: [['Guard', 'Pressure'], ['Speed', 'Bleed'], ['Magic', 'Control']][i] })).concat([
   { id: 'future', name: 'Ironhide', level: 2, prerequisites: ['root0'], initiativeBonus: 1, spells: [] },
-  { id: 'cap', name: 'Shared capstone', level: 4, anyOf: ['future'], spells: [], initiativeBonus: 0, passiveLines: ['Defense +2', 'For every creature of the side'] },
+  { id: 'cap', name: 'Shared capstone', level: 4, anyOf: ['future'], spells: [], initiativeBonus: 0, passiveLines: ['Defense +2', 'For every creature of the team'] },
 ]), cards: roots.map((name, i) => ({ id: `spell${i}`, name: ['Strike', 'Devour', 'Death Wail'][i], creatureClass: name, cost: i,
   targeting: 'One enemy', effects: [`Recorded effect ${i}`], casterEffects: ['Recorded caster effect'], critical: i === 1 ? '15%' : '0%',
   criticalThreshold: i === 1 ? 18 : null, criticalNote: i === 1 ? 'A natural 18 or more doubles the damage.' : null,
@@ -153,7 +153,7 @@ test('dead and already-picked creatures explain their state and empty offers; pa
 test('capstones preserve shared passives, no fake tags or spells, and the tree remains read-only', async ({ page }) => {
   const h = await mount(page, { ids: ['cap'], allies: [{ ...roster[0], acquiredTiers: ['root0', 'future'] }] });
   await expect(page.locator('[data-mutation]')).toHaveCount(1); await page.locator('[data-mutation="cap"]').click();
-  await expect(page.locator('.mutation-preview .spell-card')).toHaveCount(0); await expect(page.locator('.mutation-preview')).toContainText('For every creature of the side');
+  await expect(page.locator('.mutation-preview .spell-card')).toHaveCount(0); await expect(page.locator('.mutation-preview')).toContainText('For every creature of the team');
   // The full tree reads what is held without offering it; only the offer is chosen, and only from its card.
   await page.locator('#mutation-atlas-open').click(); const tree = page.locator('#atlas-board'), detail = page.locator('#atlas-detail-body');
   await expect(tree.locator('[data-package="cap"]')).toHaveAttribute('aria-pressed', 'true');

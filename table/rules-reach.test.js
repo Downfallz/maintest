@@ -21,7 +21,7 @@ const PARTS = [
       '',
       '## Winning {#winning}',
       '',
-      'A creature starts at {creature.health} Health.',
+      'A creature starts at {creature.health} Health, and its Defense buffs count for {engine.defenseBuffCeiling} at most.',
       '',
       'sources: ADR 0011, game-rules#match-lifecycle',
     ].join('\n'),
@@ -178,6 +178,14 @@ test('the reference creature reaches the sections that draw the stat it changes'
   const diff = diffOf('data/Creatures/main.v1.json', { removed: ['  "baseHealth": 30,'], added: ['  "baseHealth": 32,'] });
   assert.deepEqual(ids(diff), ['winning']);
   assert.deepEqual(ids(diffOf('data/Creatures/main.v1.json', { removed: ['  "baseSpeed": 3,'], added: ['  "baseSpeed": 4,'] })), []);
+});
+
+test('the engine\'s constant reaches the sections that draw it, and another line of its file reaches none by it', () => {
+  const file = 'src/DownfallArena.Domain/Matches/Creatures/Creature.cs';
+  const diff = diffOf(file, { removed: ['    public const int DefenseBuffCeiling = 10;'], added: ['    public const int DefenseBuffCeiling = 12;'] });
+  assert.deepEqual(ids(diff), ['winning']);
+  assert.deepEqual(reached(diff).sections[0].why, ['draws engine.defenseBuffCeiling']);
+  assert.deepEqual(ids(diffOf(file, { removed: ['    public bool IsDead => Health.IsZero;'], added: ['    public bool IsDead => Health.IsEmpty;'] })), []);
 });
 
 test('a creature change that moves no stat reaches no section by its stats, and is read by hand', () => {

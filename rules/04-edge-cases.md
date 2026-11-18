@@ -8,14 +8,14 @@ A creature that cannot act when its turn comes is **skipped**: nothing resolves 
 its owner is not asked. The next turn comes.
 
 A creature cannot act when it was **defeated** or **stunned** earlier in the round. A creature in the round
-always has a spell it can cast, since Focus costs {spell:wait:v1.energyCost} Energy and targets its caster; a
+always has a spell it can cast, since Focus costs {spell:wait:v1.energyCost} Energy and targets its caster{?spell:wait:v1.origin = 'Self'}; a
 spell it cannot pay for now, or one with no legal target, is not offered.
 
 So a late turn is a risk: before it comes, your creature may be defeated or stunned, and the target you meant
 may be gone. That is the cost of acting late, and the reason Instinct exists.
 
 *Example.* Creature 1 is Precision and Creature 5 Instinct. Creature 5 acts first and casts Crushing Stomp on
-Creature 1, which stuns it. When Creature 1's turn comes, it is skipped, and spends no Energy.
+Creature 1, which stuns{?spell:crushing_stomp:v1.stun} it. When Creature 1's turn comes, it is skipped, and spends no Energy.
 
 sources: ADR 0083, ADR 0110, ADR 0112, game-rules#implemented, game-rules#round-sequence-adr-0010
 
@@ -56,10 +56,11 @@ that reaches a creature already stunned, or immune, is ignored: the spell's othe
 running Stun neither grows nor restarts. So no creature can be kept stunned: every Stun is followed by a round in
 which it cannot be stunned.
 
-*Example.* In round 5, Creature 4 is hit by Crushing Stomp: Stun for {spell:crushing_stomp:v1.stun.durationRounds}
-rounds. It sits out the next {spell:crushing_stomp:v1.stun.durationRounds} rounds whole. At the Cleanup that ends
+*Example.* In round 5, Creature 4 is hit by Crushing Stomp: Stun for
+{spell:crushing_stomp:v1.stun.durationRounds|round|rounds}. It then sits out
+{spell:crushing_stomp:v1.stun.durationRounds|round|rounds} whole. At the Cleanup that ends
 the Stun, it becomes immune for one round. Another Crushing Stomp on it while it is stunned, or immune, deals
-its damage and stuns nothing.
+its damage{?spell:crushing_stomp:v1.damage > 0} and stuns nothing.
 
 sources: ADR 0041, ADR 0072, game-rules#round-sequence-adr-0010
 
@@ -72,10 +73,11 @@ end of this round, then for the rounds it prints: the first countdown after it l
 A condition never restarts: a second one of the same kind sits beside the first, and each counts down on its own.
 Only a Stun is different: a second one is [ignored](#stunned).
 
-*Example.* In round 5, Creature 3 casts Infestation on three enemies: a Bleed of {spell:summon_minions:v1.bleed}
-for {spell:summon_minions:v1.bleed.durationRounds} rounds on each. It deals nothing in round 5. Each target then
-takes {spell:summon_minions:v1.bleed} at the Upkeep of each of the next
-{spell:summon_minions:v1.bleed.durationRounds} rounds, whatever its Defense:
+*Example.* In round 5, Creature 3 casts Infestation on
+{spell:summon_minions:v1.targets|enemy|enemies}{?spell:summon_minions:v1.origin = 'Enemy'}: a Bleed of
+{spell:summon_minions:v1.bleed} for {spell:summon_minions:v1.bleed.durationRounds|round|rounds} on each. It
+deals nothing in round 5. Each target then takes {spell:summon_minions:v1.bleed} at the Upkeep of each of the next
+{spell:summon_minions:v1.bleed.durationRounds|round|rounds}, whatever its Defense:
 {spell:summon_minions:v1.bleed * spell:summon_minions:v1.bleed.durationRounds} in all.
 
 sources: ADR 0041, game-rules#implemented, game-rules#round-sequence-adr-0010
@@ -91,8 +93,9 @@ A critical multiplies by {rules.criticalMultiplier}, dropping any fraction, **wh
 Health now**, and nothing else:
 
 - **Multiplied:** the damage on a target, its damage bonus included, and a heal on a target.
-- **Not multiplied:** anything on the caster's own line; Energy, given or taken; a lasting effect, a Bleed, a
-  Regeneration, a Stun, a buff or a debuff; and a sunder, which takes from the Defense, not from the hit.
+- **Not multiplied:** anything on the caster's own line, such as the {spell:hateful_sacrifice:v1.caster.damage}
+  damage Blood Price deals its caster; Energy, given or taken; a lasting effect, a Bleed, a Regeneration, a
+  Stun, a buff or a debuff; and a sunder, which takes from the Defense, not from the hit.
 
 The order is the one of [resolving a spell](#resolving-a-spell): add the damage bonus, multiply, then subtract
 the Defense.

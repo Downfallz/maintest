@@ -21,6 +21,9 @@ import { rewrites, termRows } from '../terminology.mjs';
 
 const RULE_SET = 'docs/tabletop/playtest.rules.json';
 const CREATURE = 'data/Creatures/main.v1.json';
+const WORDS = 'rules/words.json';
+// The engine's values the hosted rule set does not hold, each read from the constant the domain declares.
+export const ENGINE = { defenseBuffCeiling: { file: 'src/DownfallArena.Domain/Matches/Creatures/Creature.cs', constant: 'DefenseBuffCeiling' } };
 const OUTPUT = 'table/rules.json';
 const OUTPUT_FR = 'table/rules.fr.json';
 
@@ -105,6 +108,20 @@ function editionIn(folder) {
   return { parts, changes };
 }
 
+// The engine's values, each from its `const int` in the domain's source, and a refusal for each the source no
+// longer declares (a file moved, a constant renamed), so the book says where its value went missing.
+function engineValues(root) {
+  const values = {};
+  const missing = [];
+  for (const [name, { file, constant }] of Object.entries(ENGINE)) {
+    const source = existsSync(join(root, file)) ? readFileSync(join(root, file), 'utf8') : '';
+    const found = new RegExp(String.raw`\bconst int ${constant} = (\d+);`).exec(source);
+    if (found) values[name] = Number(found[1]);
+    else missing.push(`${file} declares no const int ${constant}: engine.${name} has no source`);
+  }
+  return { values, missing };
+}
+
 /** Everything the build reads, from the repository at `root`. */
 export function readInputs(root) {
   const rules = join(root, 'rules');
@@ -134,6 +151,8 @@ export function readInputs(root) {
     adrs: new Set(readdirSync(join(root, 'docs/adr')).map(name => /^(\d{4})-/.exec(name)?.[1]).filter(Boolean)),
     gameRules,
     conceptIds,
+    words: existsSync(join(root, WORDS)) ? readJson(join(root, WORDS)) : { en: [], fr: [] },
+    ...(({ values, missing }) => ({ engine: values, engineMissing: missing }))(engineValues(root)),
     links,
     previous: previousIds(root),
   };
@@ -142,13 +161,17 @@ export function readInputs(root) {
 // --- the values -------------------------------------------------------------------------------------------------
 
 const FUNCTIONS = { max: Math.max, min: Math.min, floor: Math.floor };
+const COMPARISONS = {
+  '=': (a, b) => a === b, '!=': (a, b) => a !== b, '<': (a, b) => a < b, '>': (a, b) => a > b, '<=': (a, b) => a <= b, '>=': (a, b) => a >= b,
+};
 
 /**
  * A value of the book: a name (`rules.energyPerRound`, `creature.health`, `spell:pummel:v1.damage`), a number,
- * `+ - * /`, parentheses, and `max`, `min`, `floor`. `look` answers a name, or undefined. Throws on anything else.
+ * `+ - * /`, parentheses, and `max`, `min`, `floor`; or a fact, one comparison (`= != < > <= >=`) of two of them,
+ * where a 'quoted' word is text. `look` answers a name, or undefined. Throws on anything else.
  */
 export function evaluate(expression, look) {
-  const tokens = expression.match(/\d+(?:\.\d+)?|[A-Za-z][\w:.]*|[-+*/(),]|\S/g) ?? [];
+  const tokens = expression.match(/\d+(?:\.\d+)?|'[^']*'|[A-Za-z][\w:.]*|[<>!]=|[-+*/(),=<>]|\S/g) ?? [];
   let at = 0;
   const fail = () => { throw new Error(`"${expression}" is not a value`); };
   const peek = () => tokens[at];
@@ -166,6 +189,7 @@ export function evaluate(expression, look) {
     const token = tokens[at++];
     if (token === undefined) fail();
     if (/^\d/.test(token)) return Number(token);
+    if (token.startsWith("'")) return token.slice(1, -1);
     if (token === '-') return -number(factor());
     if (token === '(') {
       const value = sum();
@@ -189,26 +213,57 @@ export function evaluate(expression, look) {
     return value;
   }
 
-  const value = sum();
+  // A comparison, at most one, answers true or false: a fact the book states (`{?...}`).
+  function comparison() {
+    const left = sum();
+    const operator = peek();
+    if (!Object.hasOwn(COMPARISONS, operator)) return left;
+    at += 1;
+    const right = sum();
+    if (typeof left === 'string' || typeof right === 'string') {
+      if (operator !== '=' && operator !== '!=') fail();
+      return COMPARISONS[operator](left, right);
+    }
+    return COMPARISONS[operator](number(left), number(right));
+  }
+
+  const value = comparison();
   if (at !== tokens.length) fail();
   return value;
 }
 
 const capital = word => word.charAt(0).toUpperCase() + word.slice(1);
-const scalar = value => (typeof value === 'number' || typeof value === 'string' ? value : undefined);
+const scalar = value => (typeof value === 'number' || typeof value === 'string' || typeof value === 'boolean' ? value : undefined);
+const SPELL_FIELDS = { targets: definition => definition.targeting?.maxTargets, origin: definition => definition.targeting?.origin };
 
-// A spell's field (`energyCost`, `name`) or one of its effects by kind (`damage`, `bleed.durationRounds`).
+// An effect of a line by its kind (`damage`), or one of several by its order (`defenseBuff2`), and its field: its
+// amount when none is named, `count` for how many of that kind the line holds, and `true` for an effect with no
+// amount (a Stun), which states that the spell has it.
+function effectValue(line, name, kindName, field) {
+  const [, word, order] = /^([a-zA-Z]+?)(\d*)$/.exec(kindName) ?? [];
+  if (!word) return undefined;
+  const kind = capital(word);
+  const effects = line.filter(effect => effect.kind === kind);
+  if (field === 'count' && !order) return effects.length;
+  if (!order && effects.length > 1) throw new Error(`"${name}" names one of ${effects.length === 2 ? 'two' : effects.length} ${kind} effects; name it by its order (${word}1)`);
+  const effect = effects[order ? Number(order) - 1 : 0];
+  if (!effect) return undefined;
+  if (field) return scalar(effect[field]);
+  return scalar(effect.amount ?? effect.amountPerRound) ?? true;
+}
+
+// A spell's field (`energyCost`, `name`, `targets`, `origin`), one of its effects by kind (`damage`,
+// `bleed.durationRounds`), or one of its caster's own line (`caster.damage`).
 function spellValue(definition, name, path) {
-  const parts = path.split('.');
+  const caster = path.startsWith('caster.');
+  const parts = (caster ? path.slice('caster.'.length) : path).split('.');
   if (parts.length > 2) return undefined;
   const [first, field] = parts;
-  if (parts.length === 1 && scalar(definition[first]) !== undefined) return definition[first];
-  const kind = capital(first);
-  const effects = (definition.effects ?? []).filter(effect => effect.kind === kind);
-  if (effects.length > 1) throw new Error(`"${name}" names one of ${effects.length === 2 ? 'two' : effects.length} ${kind} effects`);
-  const [effect] = effects;
-  if (!effect) return undefined;
-  return scalar(effect[field ?? ('amount' in effect ? 'amount' : 'amountPerRound')]);
+  if (!caster && parts.length === 1) {
+    if (Object.hasOwn(SPELL_FIELDS, first)) return scalar(SPELL_FIELDS[first](definition));
+    if (scalar(definition[first]) !== undefined) return definition[first];
+  }
+  return effectValue((caster ? definition.casterEffects : definition.effects) ?? [], name, first, field);
 }
 
 // A mutation's field (`name`, `level`, `initiativeBonus`) or its passive's (`sunder`, `damageBonus`, `upkeepEnergy`).
@@ -216,10 +271,11 @@ function mutationValue(definition, field) {
   return scalar(Object.hasOwn(definition, field) ? definition[field] : definition.passive?.[field]);
 }
 
-/** Answers a name from the rule set, the reference creature, the spells and the mutations, and notes each it read. */
-function lookup({ ruleSet, creature, spells, mutations = new Map() }, used, usedMutations) {
+/** Answers a name from the rule set, the engine, the reference creature, the spells and the mutations, and notes each it read. */
+function lookup({ ruleSet, creature, spells, mutations = new Map(), engine = {} }, used, usedMutations) {
   return name => {
     if (name.startsWith('rules.')) return scalar(ruleSet.values[name.slice(6)]);
+    if (name.startsWith('engine.')) return Object.hasOwn(engine, name.slice(7)) ? scalar(engine[name.slice(7)]) : undefined;
     if (name.startsWith('creature.')) return scalar(creature[`base${capital(name.slice(9))}`]);
     const mutation = /^(tier:[a-z0-9_]+:v\d+)\.(\w+)$/.exec(name);
     if (mutation) {
@@ -293,6 +349,36 @@ function retireEnglish(words, english, french) {
   if (english && french && english !== french && !words.has(english)) words.set(english, { player: french, pattern: wordPattern(english, 's?', 'u') });
 }
 
+// --- the names a player reads ---------------------------------------------------------------------------------
+
+// A count's nouns, by language: a value written right before one of them takes both its forms ({n|round|rounds}),
+// so a value of 1 never reads "1 rounds".
+// The words that may stand between a count and its noun ("{n} more rounds").
+// A closed list: a wildcard would read "{n} per round" as a count of rounds.
+const BETWEEN = {
+  en: ['more', 'next', 'extra', 'further', 'other', 'whole', 'additional', 'consecutive', 'later', 'full', 'remaining', 'last', 'first'],
+  fr: ['autres', 'prochains', 'prochaines', 'derniers', 'dernières', 'premiers', 'premières', 'nouveaux', 'nouvelles'],
+};
+const COUNTED = {
+  en: [['round', 'rounds'], ['turn', 'turns'], ['enemy', 'enemies'], ['ally', 'allies'], ['target', 'targets'], ['time', 'times'], ['Upkeep', 'Upkeeps']],
+  fr: [['tour', 'tours'], ['round', 'rounds'], ['ennemi', 'ennemis'], ['allié', 'alliés'], ['cible', 'cibles'], ['Entretien', 'Entretiens']],
+};
+
+const escaped = text => text.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+// Where a sentence, a cell, a line or a step label (*Command · Tie order.*) starts: its first word is capitalised
+// for that alone. Not after a colon, a semicolon, a dash or a quote: both languages go on in lowercase there, and
+// a name after "Brute:" must still be read.
+const SENTENCE_START = /(?:^|[.!?·])\s*$/u;
+const ROMAN = /^[IVX]+$/;
+
+// The words the book may capitalise inside a sentence besides the names: rules/words.json, in the book's language.
+// Not the terminology's bold words: they hold spell names (Strike, Focus), and a name is allowed only while data/
+// holds it.
+const capitalWords = (given, language) => new Set(given.words?.[language] ?? []);
+
+// The words an edition writes in lowercase: a sentence's capitalised first word is an ordinary word when it is one.
+const vocabularyOf = parts => new Set(parts.flatMap(({ text }) => text.replace(/\{[^{}]*\}/g, ' ').match(/(?<![\p{L}\d])\p{Ll}[\p{L}-]*/gu) ?? []));
+
 // --- the Markdown subset ------------------------------------------------------------------------------------------
 
 const HEADING = /^(#+) (.*)$/;
@@ -323,6 +409,38 @@ class Build {
     this.retired = retiredWords(given.terminology, language);
     this.conceptIds = new Set(given.conceptIds);
     this.bookLinks = [];
+    const names = [...new Set([...given.spells.values(), ...(given.mutations ?? new Map()).values()].map(item => item.name).filter(Boolean))];
+    this.names = names.sort((a, b) => b.length - a.length).map(name => new RegExp(String.raw`(?<![\p{L}\d])${escaped(name)}(?![\p{L}\d])`, 'gu'));
+    this.capitals = capitalWords(given, language);
+    this.vocabulary = vocabularyOf(language === 'fr' ? given.french?.parts ?? [] : given.parts);
+    this.firstWords = new Set(given.words?.firstWords?.[language] ?? []);
+  }
+
+  // A capitalised word inside a sentence is a spell's or a mutation's name, or a word the book may capitalise, so a
+  // name renamed in data/ fails the book until the book follows. A drawn value is not read: it is drawn.
+  capitalised(raw, where) {
+    let text = raw.replace(/\{\?[^{}]*\}/g, '').replace(/\{[^{}]*\}/g, '0').replace(/\]\([^)]*\)/g, ']').replace(/[*[\]]/g, '');
+    for (const name of this.names) text = text.replace(name, '0');
+    for (const match of text.matchAll(/\p{Lu}[\p{L}-]*/gu)) {
+      const [word] = match;
+      const before = text.slice(0, match.index);
+      if (word.length === 1 || ROMAN.test(word) || /[\p{L}\d]$/u.test(before)) continue;
+      if (this.capitals.has(word) || (word.endsWith('s') && this.capitals.has(word.slice(0, -1)))) continue;
+      // A sentence's first word is capitalised for that alone when the book writes it in lowercase elsewhere.
+      if (SENTENCE_START.test(before) && (this.vocabulary.has(word.toLowerCase()) || this.firstWords.has(word))) continue;
+      this.refuse(`${where}: "${word}" is not the name of a spell or a mutation in data/, nor a word of rules/words.json`);
+    }
+  }
+
+  // A value written before a count's noun takes both its forms: the noun right after it, or after one more word
+  // ("{n} more rounds"), whatever the bold, the italics or a fact between them.
+  counted(raw, where) {
+    const text = raw.replace(/\{\?[^{}]*\}/g, '').replaceAll('*', '');
+    const between = (BETWEEN[this.language] ?? []).join('|');
+    for (const [singular, plural] of COUNTED[this.language] ?? []) {
+      const pattern = new RegExp(String.raw`\{([^{}#?|][^{}|]*)\}\s+(?:(?:${between})\s+)?(?:${singular}|${plural})(?![\p{L}\d])`, 'gu');
+      for (const [whole, expression] of text.matchAll(pattern)) this.refuse(`${where}: "${whole}": a count takes its noun: {${expression.trim()}|${singular}|${plural}}`);
+    }
   }
 
   refuse(message) {
@@ -335,27 +453,44 @@ class Build {
     }
   }
 
+  // `{expr}` draws a value; `{expr|round|rounds}` a count with its noun; `{?fact}` checks a fact and draws nothing.
   value(expression, where) {
     try {
-      const value = evaluate(expression, this.look);
-      if (typeof value !== 'number') return value;
-      if (!Number.isFinite(value)) throw new Error(`"${expression}" is not a finite number`);
-      const written = String(Number(value.toFixed(6)));
-      return this.language === 'fr' ? written.replace('.', ',') : written;
+      if (expression.startsWith('?')) return this.fact(expression.slice(1).trim());
+      const [drawn, ...nouns] = expression.split('|').map(part => part.trim());
+      if (nouns.length > 0 && (nouns.length !== 2 || nouns.some(noun => !noun))) throw new Error(`"${expression}": a count names its singular and its plural`);
+      const value = evaluate(drawn, this.look);
+      if (typeof value === 'boolean') throw new Error(`"${drawn}" is a fact, not a value: write {?${drawn}}`);
+      if (typeof value !== 'number') return nouns.length > 0 ? `${value} ${nouns[1]}` : value;
+      if (!Number.isFinite(value)) throw new Error(`"${drawn}" is not a finite number`);
+      const fixed = String(Number(value.toFixed(6)));
+      const written = this.language === 'fr' ? fixed.replace('.', ',') : fixed;
+      if (nouns.length === 0) return written;
+      const singular = this.language === 'fr' ? Math.abs(value) < 2 : value === 1;
+      return `${written} ${singular ? nouns[0] : nouns[1]}`;
     } catch (error) {
       this.refuse(`${where}: ${error.message}`);
       return '';
     }
   }
 
+  fact(expression) {
+    const holds = evaluate(expression, this.look);
+    if (typeof holds !== 'boolean') throw new Error(`"${expression}" is not a fact: a fact is a comparison, or an effect the spell has`);
+    if (!holds) throw new Error(`the fact "${expression}" is false`);
+    return '';
+  }
+
   // A line's values drawn and its markup checked: the text a player reads.
   resolve(raw, where) {
     if (raw.includes('`')) this.refuse(`${where}: code is outside the subset`);
-    if (/<[A-Za-z/!]/.test(raw)) this.refuse(`${where}: HTML is outside the subset`);
+    if (/<[A-Za-z/!]/.test(raw.replace(/\{[^{}]*\}/g, ''))) this.refuse(`${where}: HTML is outside the subset`);
     if (raw.includes('![')) this.refuse(`${where}: an image is outside the subset`);
     const text = raw.replace(/\{([^{}#][^{}]*)\}/g, (_, expression) => this.value(expression.trim(), where));
     if (/[{}]/.test(text)) this.refuse(`${where}: an unmatched brace`);
     this.words(text, where);
+    this.counted(raw, where);
+    this.capitalised(raw, where);
     return text;
   }
 
@@ -453,6 +588,19 @@ class Build {
     for (const source of named) this.source(source, where);
     return named;
   }
+}
+
+// A table row's cells: a bar inside a value ({n|round|rounds}) is the value's, not a cell's edge.
+function cellsOf(row) {
+  const cells = [''];
+  let depth = 0;
+  for (const character of row) {
+    if (character === '{') depth += 1;
+    else if (character === '}') depth = Math.max(0, depth - 1);
+    if (character === '|' && depth === 0) cells.push('');
+    else cells[cells.length - 1] += character;
+  }
+  return cells;
 }
 
 /** One part file read line by line: each block reader takes the lines it owns and leaves the next one. */
@@ -564,7 +712,7 @@ class PartReader {
     const rows = [];
     let next = at;
     while (next < lines.length && lines[next].startsWith('|')) rows.push(lines[next++]);
-    const cells = row => row.trim().slice(1, row.trim().endsWith('|') ? -1 : undefined).split('|').map(cell => this.build.spans(cell.trim(), where));
+    const cells = row => cellsOf(row.trim().slice(1, row.trim().endsWith('|') ? -1 : undefined)).map(cell => this.build.spans(cell.trim(), where));
     if (rows.length < 2 || !SEPARATOR.test(rows[1].trim())) this.refuse(`${where}: a table needs its header and a separator line`);
     this.add({ type: 'table', header: cells(rows[0]), rows: rows.slice(2).map(cells) }, where);
     return next;
@@ -654,7 +802,8 @@ function readChanges(text, build) {
 
 const listed = ids => (ids.length > 0 ? ids.join(', ') : 'none');
 // The values a section's lines draw, sorted, so a translation may move them but never type one or drop one.
-const valuesOf = text => [...(text ?? '').matchAll(/\{([^{}#][^{}]*)\}/g)].map(match => match[1].replace(/\s+/g, '')).sort((a, b) => a.localeCompare(b));
+// A count's nouns are the language's own, so a value is compared without them.
+const valuesOf = text => [...(text ?? '').matchAll(/\{([^{}#][^{}]*)\}/g)].map(match => match[1].split('|')[0].replace(/\s+/g, '')).sort((a, b) => a.localeCompare(b));
 const cardOf = section => section.card?.id ?? 'none';
 
 // The French part holds the English part's sections, in its order, each citing the same sources and carrying the
@@ -692,7 +841,7 @@ function checkChanges(english, french, build) {
 function bookOf(given, build, parts, cards, moved, changes) {
   return {
     language: build.language,
-    drawnFrom: { ruleSet: given.ruleSet.path, rules: given.ruleSet.values, creature: given.creature.id, spells: [...build.used].sort((a, b) => a.localeCompare(b)), mutations: [...build.usedMutations].sort((a, b) => a.localeCompare(b)) },
+    drawnFrom: { ruleSet: given.ruleSet.path, rules: given.ruleSet.values, engine: given.engine ?? {}, creature: given.creature.id, spells: [...build.used].sort((a, b) => a.localeCompare(b)), mutations: [...build.usedMutations].sort((a, b) => a.localeCompare(b)) },
     parts,
     cards,
     moved,
@@ -721,6 +870,7 @@ function buildFrench(given, english, ids, errors) {
  */
 export function buildRules(given) {
   const build = new Build(given);
+  for (const missing of given.engineMissing ?? []) build.refuse(missing);
   const parts = given.parts.map(({ file, text }, index) => new PartReader(build, file, index + 1).read(text));
   const ids = sectionIds(parts, build);
   const cards = cardsOf(parts, build);
