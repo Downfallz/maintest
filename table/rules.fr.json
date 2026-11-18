@@ -2102,7 +2102,7 @@
                   "emphasis": true
                 },
                 {
-                  "text": " La Créature 1 a 3 points d’Énergie et compte sur Emberstorm, qui coûte 3. Avant son tour, la Créature 5 lance Soul Feast sur elle, qui réduit son Énergie de 3 : l’Énergie de la Créature 1 tombe à 0. À son tour, l’application ne propose que les sorts qu’elle peut payer maintenant."
+                  "text": " La Créature 1 a 3 points d’Énergie et compte sur Emberstorm, qui coûte 3. Avant son tour, la Créature 5 lance Devour sur elle, qui réduit son Énergie de 3 : l’Énergie de la Créature 1 tombe à 0. À son tour, l’application ne propose que les sorts qu’elle peut payer maintenant."
                 }
               ]
             }
@@ -2938,6 +2938,11 @@
   ],
   "moved": {},
   "changes": [
+    {
+      "date": "2026-11-18",
+      "text": "Trois sorts prennent leur nom définitif : Whirlwind devient Groundbreaker, Claim devient Seize, Soul Feast devient Devour. Aucune règle ne change.",
+      "adrs": []
+    },
     {
       "date": "2026-11-18",
       "text": "La carte Mutation ne dit plus qu’une clé de voûte donne un bonus d’initiative : une clé de voûte donne un passif à la place de sorts et d’un bonus d’initiative (ADR 0101).",

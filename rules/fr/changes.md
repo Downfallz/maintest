@@ -1,5 +1,6 @@
 # Ce qui a changé
 
+- 2026-11-18: Trois sorts prennent leur nom définitif : Whirlwind devient Groundbreaker, Claim devient Seize, Soul Feast devient Devour. Aucune règle ne change.
 - 2026-11-18: La carte Mutation ne dit plus qu’une clé de voûte donne un bonus d’initiative : une clé de voûte donne un passif à la place de sorts et d’un bonus d’initiative (ADR 0101).
 - 2026-11-18: Les exemples disent les dégâts que Blood Price inflige à son propre lanceur (ADR 0031).
 - 2026-11-18: La carte de la mutation partagée dit « For every creature of the team », le mot du livre (ADR 0114).

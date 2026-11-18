@@ -2093,7 +2093,7 @@
                   "emphasis": true
                 },
                 {
-                  "text": " Creature 1 has 3 Energy and counts on Emberstorm, which costs 3. Before its turn, Creature 5 casts Soul Feast on it, which drains 3 Energy: Creature 1 is left with 0. At its turn, the app offers only the spells it can pay for now."
+                  "text": " Creature 1 has 3 Energy and counts on Emberstorm, which costs 3. Before its turn, Creature 5 casts Devour on it, which drains 3 Energy: Creature 1 is left with 0. At its turn, the app offers only the spells it can pay for now."
                 }
               ]
             }
@@ -2920,6 +2920,11 @@
   ],
   "moved": {},
   "changes": [
+    {
+      "date": "2026-11-18",
+      "text": "Three spells take their locked names: Whirlwind is Groundbreaker, Claim is Seize, Soul Feast is Devour. No rule moved.",
+      "adrs": []
+    },
     {
       "date": "2026-11-18",
       "text": "The mutation card no longer says a capstone gives an initiative bonus: a capstone gives a passive in place of spells and an initiative bonus (ADR 0101).",

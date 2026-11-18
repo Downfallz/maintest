@@ -1,5 +1,6 @@
 # What changed
 
+- 2026-11-18: Three spells take their locked names: Whirlwind is Groundbreaker, Claim is Seize, Soul Feast is Devour. No rule moved.
 - 2026-11-18: The mutation card no longer says a capstone gives an initiative bonus: a capstone gives a passive in place of spells and an initiative bonus (ADR 0101).
 - 2026-11-18: The examples state the damage Blood Price deals its own caster (ADR 0031).
 - 2026-11-18: The shared mutation's card says "For every creature of the team", the book's word (ADR 0114).

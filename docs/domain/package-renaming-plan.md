@@ -12,7 +12,13 @@
   the level-1 openers (Greedy against itself: 11.3 rounds to 15.3, Player 1 49.5% to 56%).
 - **Kept as records:** ADRs, earlier journal entries, `spells.md` (what the port brought over), and the two
   `tier-evolution-*` documents name things as they were.
-- **Approved later, not yet deployed (2026-11-04 art review):** `spell:tornado:v1` **Groundbreaker / Fracture** replaces Whirlwind / Rafale; `spell:extort:v1` **Seize / Prise de force** replaces Claim / Revendiquer; `spell:soul_devourer:v1` **Devour / Dévorer** replaces Soul Feast / Morsure d’âme. English JSON/balance metadata still hold the 2026-10-06 names. The French choices are documentation only until translation storage is implemented; see [art direction](../art/creature-art-direction.md). **Dévoreur / Dévorer** and **Fracture / Fracas** are intentional, reviewed lexical proximity, not duplicate spell identifiers.
+- **Done (2026-11-18, content `9c6b79d5`): the three names the 2026-11-04 art review approved**, locked by the
+  owner: `spell:tornado:v1` **Groundbreaker / Fracture** replaces Whirlwind / Rafale; `spell:extort:v1`
+  **Seize / Prise de force** replaces Claim / Revendiquer; `spell:soul_devourer:v1` **Devour / Dévorer** replaces
+  Soul Feast / Morsure d’âme. The English names are in the Spells' `name` and in `data/balance/knobs.json`, the
+  French ones in the showcase's field notes; the benchmark digest is the previous one entry for entry (journal,
+  2026-11-18). Every other name is unchanged. **Dévoreur / Dévorer** and **Fracture / Fracas** are intentional,
+  reviewed lexical proximity, not duplicate spell identifiers.
 - **Not yet: the French display names and the family names** (Physical, Predator, Warped). French needs a
   decision on where a translation lives in the presentation layer first (step 3 below).
 
@@ -126,16 +132,16 @@ The starting kit is being simplified. The locked player-facing names are:
 | --- | --- | --- | --- |
 | T1 | **Brute / Brute** | **Pummel / Marteler** | **Brace / Encaisser** |
 | T2 | **Frenzied / Frénétique** | **Fury / Furie** | **Wild Swing / Coup sauvage** |
-| T3 | **Ravager / Ravageur** | **Groundbreaker / Fracture** *(approved; not yet in data)* | **Deranged Charge / Charge démente** |
+| T3 | **Ravager / Ravageur** | **Groundbreaker / Fracture** | **Deranged Charge / Charge démente** |
 | T2 | **Ironhide / Blindé** | **Carapace / Carapace** | **Body Slam / Écrasement** |
 | T3 | **Colossus / Colosse** | **Vital Surge / Afflux vital** | **Crushing Stomp / Piétinement** |
-| T2 | **Oppressor / Oppresseur** | **Crash / Fracas** | **Seize / Prise de force** *(approved; not yet in data)* |
+| T2 | **Oppressor / Oppresseur** | **Crash / Fracas** | **Seize / Prise de force** |
 | T3 | **Tyrant / Tyran** | **Dominate / Dominer** | **Alpha Roar / Rugissement alpha** (Fortress / Forteresse until 2026-10-18) |
 | T1 | **Predator / Prédateur** | **Venom Claw / Griffe venimeuse** | **Quill / Épine** |
 | T2 | **Deathmarked / Condamné** | **Pursuit / Traque** | **Ambush / Embuscade** |
 | T3 | **Deathstalker / Écorcheur** | **Blood Hunt / Chasse sanglante** | **Eviscerate / Éviscérer** |
 | T2 | **Parasite / Parasite** | **Bite / Morsure** | **Latch / Agripper** |
-| T3 | **Soulreaver / Dévoreur** | **Blood Price / Sacrifice** | **Devour / Dévorer** *(approved; not yet in data)* |
+| T3 | **Soulreaver / Dévoreur** | **Blood Price / Sacrifice** | **Devour / Dévorer** |
 | T2 | **Blighted / Corrompu** | **Toxic Mend / Soin toxique** | **Overdrive / Survoltage** |
 | T3 | **Blightweaver / Fléau** | **Paralyzing Barb / Dard paralysant** | **Contagion / Contagion** |
 | T1 | **Warped / Altéré** | **Shock / Décharge** | **Revitalize / Revitaliser** |

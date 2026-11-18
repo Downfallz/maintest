@@ -36,7 +36,7 @@ What changes is the board before your turn. A drain may have left your creature 
 and a defeated enemy leaves your spell with fewer targets. You choose among what is offered.
 
 *Example.* Creature 1 has 3 Energy and counts on Emberstorm, which costs {spell:meteor:v1.energyCost}. Before its
-turn, Creature 5 casts Soul Feast{?spell:soul_devourer:v1.origin = 'Enemy'} on it, which drains {spell:soul_devourer:v1.energyDrain} Energy: Creature 1 is
+turn, Creature 5 casts Devour{?spell:soul_devourer:v1.origin = 'Enemy'} on it, which drains {spell:soul_devourer:v1.energyDrain} Energy: Creature 1 is
 left with {max(0, 3 - spell:soul_devourer:v1.energyDrain)}. At its turn, the app offers only the spells it can pay
 for now.
 
