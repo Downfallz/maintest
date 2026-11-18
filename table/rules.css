@@ -10,6 +10,8 @@
 .rules-filter input { min-height: 44px; width: 100%; padding: 10px 12px; font: 16px var(--font-text); color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-sharp); }
 .rules-filter input:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
 .rules-filter output { font-size: 13px; min-height: 18px; }
+/* The notice of a kept copy (#698) is an <output>, read out as it changes: on its own line, as the loading line is. */
+.rules-kept { display: block; margin: 0 0 1em; }
 
 .rules-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
 .rules-contents { padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--radius-soft); background: var(--paper-glass); align-self: start; scroll-margin-top: 16px; }

@@ -191,7 +191,7 @@ test('a book the service worker gave from its kept copy is told apart from the n
 });
 
 test('the page says when the book is the copy this device kept, in each language, and is quiet until then', () => {
-  assert.match(page, /<p id="rules-kept"[^>]*data-words="offline"[^>]*hidden/);
+  assert.match(page, /<output id="rules-kept"[^>]*data-words="offline"[^>]*hidden/);
   assert.match(WORDS.en.offline, /^Offline: /);
   assert.match(WORDS.fr.offline, /^Hors ligne : /);
 });
