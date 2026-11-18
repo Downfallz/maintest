@@ -17,6 +17,7 @@ public sealed class LobbyAccountsTests : IDisposable
     private readonly FileAccountStore _store;
     private readonly AccountRegistry _accounts;
     private AccountApi? _api;
+    private readonly List<IDisposable> _disposed = [];
 
     public LobbyAccountsTests()
     {
@@ -241,9 +242,42 @@ public sealed class LobbyAccountsTests : IDisposable
     [Fact]
     public async Task Your_timed_game_on_your_turn_reads_its_last_move_once()
     {
+        var (lobby, journal, mark) = await TimedGameOnYourTurnAsync();
+        var before = journal.LastWrittenReads;
+
+        var listed = Read(await lobby.HandleAsync("GET", "/api/lobby/mine", "", player: mark)).GetProperty("tables")[0];
+
+        listed.GetProperty("table").GetProperty("answerBy").ValueKind.ShouldBe(JsonValueKind.String);
+        listed.GetProperty("recap").ValueKind.ShouldBe(JsonValueKind.Object);
+        (journal.LastWrittenReads - before).ShouldBe(1);
+    }
+
+    /// <summary>
+    /// A journal that cannot be asked fails no list: the card says no time to answer, as the seat's view does, and
+    /// no last move, rather than the account losing every game it has (#775).
+    /// </summary>
+    [Fact]
+    public async Task Your_timed_game_whose_journal_is_out_is_listed_without_its_time_to_answer()
+    {
+        var (lobby, journal, mark) = await TimedGameOnYourTurnAsync();
+        journal.LastWrittenFails = true;
+
+        var answer = await lobby.HandleAsync("GET", "/api/lobby/mine", "", player: mark);
+
+        answer.Status.ShouldBe(200);
+        var listed = Read(answer).GetProperty("tables")[0];
+        listed.GetProperty("table").GetProperty("answerBy").ValueKind.ShouldBe(JsonValueKind.Null);
+        listed.GetProperty("recap").GetProperty("lastMoveAt").ValueKind.ShouldBe(JsonValueKind.Null);
+    }
+
+    /// <summary>A game between two players, timed as every such game is, begun and waiting for Mark, over a journal that counts.</summary>
+    private async Task<(LobbyApi Lobby, CountedJournal Journal, SignedIn Mark)> TimedGameOnYourTurnAsync()
+    {
         CountedJournal? journal = null;
-        using var hosted = new HostedTables(directory => new FileArtifactStore(directory), journal: inner => journal = new CountedJournal(inner));
-        using var registry = hosted.Registry();
+        var hosted = new HostedTables(directory => new FileArtifactStore(directory), journal: inner => journal = new CountedJournal(inner));
+        _disposed.Add(hosted);
+        var registry = hosted.Registry();
+        _disposed.Add(registry);
         _api ??= new AccountApi(_accounts, new AccountSessions(await _store.SessionKeyAsync(Cancel), TimeProvider.System), AccountsMode.Development);
         var lobby = new LobbyApi(registry, hosted.Composer, TimeProvider.System) { Accounts = _api };
         var mark = await PlayerAsync("MarkF");
@@ -255,13 +289,7 @@ public sealed class LobbyAccountsTests : IDisposable
         table.Seats[1].Person!.Arrive();
         table.Session.Begin();
         await WaitingAsync(table.Seats[0]);
-        var before = journal!.LastWrittenReads;
-
-        var listed = Read(await lobby.HandleAsync("GET", "/api/lobby/mine", "", player: mark)).GetProperty("tables")[0];
-
-        listed.GetProperty("table").GetProperty("answerBy").ValueKind.ShouldBe(JsonValueKind.String);
-        listed.GetProperty("recap").ValueKind.ShouldBe(JsonValueKind.Object);
-        (journal.LastWrittenReads - before).ShouldBe(1);
+        return (lobby, journal!, mark);
     }
 
     [Fact]
@@ -415,6 +443,12 @@ public sealed class LobbyAccountsTests : IDisposable
 
     public void Dispose()
     {
+        // The registries before the hosts they were made over.
+        foreach (var disposed in Enumerable.Reverse(_disposed))
+        {
+            disposed.Dispose();
+        }
+
         _registry.Dispose();
         _hosted.Dispose();
         if (Directory.Exists(_accountsRoot))

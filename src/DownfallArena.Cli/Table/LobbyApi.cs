@@ -1319,7 +1319,10 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         }
     }
 
-    /// <param name="lastMove">The table's last move, read once for every field of the list that says it (#775); none reads it here.</param>
+    /// <param name="lastMove">
+    /// The table's last move, read once and shared by every field of the list entry that needs it (#775). Without
+    /// one, the card reads its own.
+    /// </param>
     private async Task<object> DescribeAsync(PlayedTable table, LastMove? lastMove = null)
     {
         var seats = await Task.WhenAll(table.Seats.Select(seat => SeatAsync(table, seat)));
@@ -1330,7 +1333,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             format = table.Session.Rules.Format.ToString(),
             casual = table.Casual,
             turnLimitHours = table.TurnLimit is { } limit ? (int)limit.TotalHours : (int?)null,
-            answerBy = lastMove is null ? await TurnTimeouts.AnswerByAsync(table, composer) : await AnswerByAsync(table, lastMove),
+            answerBy = await AnswerByAsync(table, lastMove ?? new LastMove(table.Api.LastMoveAtAsync)),
             waiting = !table.Session.HasBegun && !table.IsOver,
             over = table.IsOver,
             round = await AdminApi.RoundNowAsync(table),
@@ -1615,8 +1618,8 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     }
 
     /// <summary>
-    /// When a table's time to answer runs out, from its last move read once (<see cref="LastMove" />); none when the
-    /// journal could not be asked, as the seat's view says it, and the journal unasked when no time runs.
+    /// When a table's time to answer runs out, worked out from its last move, which is read once (<see cref="LastMove" />).
+    /// Null when the journal cannot be read, as in the seat's view. When no time to answer runs, the journal is not read.
     /// </summary>
     private static async Task<DateTimeOffset?> AnswerByAsync(PlayedTable table, LastMove lastMove)
     {

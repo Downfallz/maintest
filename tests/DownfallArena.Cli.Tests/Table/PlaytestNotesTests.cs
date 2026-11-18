@@ -33,6 +33,7 @@ public sealed class PlaytestNotesTests : IDisposable
     private readonly StudioContent _content = new();
     private readonly CancellationTokenSource _stopping = new();
     private readonly List<SteppedSession> _opened = [];
+    private readonly List<string> _said = [];
     private readonly SteppingClock _clock = new(Start);
     private readonly string _runs = Path.Combine(Path.GetTempPath(), $"downfall-notes-{Guid.NewGuid():N}");
     private IHost? _host;
@@ -492,6 +493,18 @@ public sealed class PlaytestNotesTests : IDisposable
         Text(answer).ShouldBe("The request body is not the JSON this route reads.");
     }
 
+    /// <summary>A recording table's unreadable body is said with the session's id, the one every other line and the panel use (#847).</summary>
+    [Fact]
+    public async Task A_note_that_is_not_json_is_said_with_its_session()
+    {
+        var table = await Recording();
+
+        await table.Api.HandleAsync("POST", "/api/notes", """{"text":""", table.Token);
+
+        _said.Where(said => said.Contains("could not be read", StringComparison.Ordinal)).ShouldHaveSingleItem()
+            .ShouldContain($"(note from player1) on session {table.Run.SessionId}");
+    }
+
     /// <summary>One tap, so a lookup carries no text and is still a note.</summary>
     [Fact]
     public async Task A_note_a_player_taps_needs_no_text()
@@ -646,7 +659,7 @@ public sealed class PlaytestNotesTests : IDisposable
             new FileDecisionJournal(_runs, clock ?? _clock),
             run);
         _opened.Add(session);
-        var api = new TableApi(session, seats, catalogue, events, run);
+        var api = new TableApi(session, seats, catalogue, events, run) { Said = _said.Add };
         session.Begin();
 
         await Waiting(person, "Evolution");

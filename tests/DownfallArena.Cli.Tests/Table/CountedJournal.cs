@@ -11,6 +11,9 @@ internal sealed class CountedJournal(IDecisionJournal inner) : IDecisionJournal
     /// <summary>How many times <see cref="LastWrittenAsync" /> was asked, every run together.</summary>
     public int LastWrittenReads => Volatile.Read(ref _lastWrittenReads);
 
+    /// <summary>Whether asking for the last write fails, as a store that is out does.</summary>
+    public bool LastWrittenFails { get; set; }
+
     public Task<JournalReading> ReadAsync(string run, CancellationToken cancellationToken = default) => inner.ReadAsync(run, cancellationToken);
 
     public Task<JournalReading?> ReadAfterAsync(string run, JournalPosition after, CancellationToken cancellationToken = default) =>
@@ -24,6 +27,6 @@ internal sealed class CountedJournal(IDecisionJournal inner) : IDecisionJournal
     public Task<JournalWrite?> LastWrittenAsync(string run, CancellationToken cancellationToken = default)
     {
         Interlocked.Increment(ref _lastWrittenReads);
-        return inner.LastWrittenAsync(run, cancellationToken);
+        return LastWrittenFails ? Task.FromException<JournalWrite?>(new IOException("The journal is out.")) : inner.LastWrittenAsync(run, cancellationToken);
     }
 }

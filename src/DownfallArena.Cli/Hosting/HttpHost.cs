@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
@@ -302,11 +303,13 @@ internal sealed class HttpHost : IDisposable
 
     /// <summary>An exception as one console line: its type and message, without the stack or a line break.</summary>
     /// <remarks>
-    /// Line breaks and tabs become spaces, and every other control character is dropped: an ANSI escape in a property
-    /// name a seat's holder chose would otherwise reach the container log as it is (#847).
+    /// Line breaks and tabs become spaces, and every other control or format character is dropped: an ANSI escape, or
+    /// a right-to-left override, in text a player chose would otherwise reach the container log unchanged, or make
+    /// the line read otherwise (#847).
     /// </remarks>
     internal static string OneLine(Exception exception) =>
-        string.Concat($"{exception.GetType().Name}: {exception.Message}".ReplaceLineEndings(" ").Replace('\t', ' ').Where(character => !char.IsControl(character)));
+        string.Concat($"{exception.GetType().Name}: {exception.Message}".ReplaceLineEndings(" ").Replace('\t', ' ')
+            .Where(character => !char.IsControl(character) && char.GetUnicodeCategory(character) != UnicodeCategory.Format));
 
     private static StudioResponse Problem(int status, string code, string message) =>
         StudioResponse.OfJson(new { error = code, message }, JsonSerializerOptions.Web, status);

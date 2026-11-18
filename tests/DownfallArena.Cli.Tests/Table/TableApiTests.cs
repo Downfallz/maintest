@@ -477,20 +477,20 @@ public sealed partial class TableApiTests : IDisposable
     }
 
     /// <summary>
-    /// The line an unreadable body writes names the route and the table, so the log ties it to a session; the
-    /// body itself is not printed (#847).
+    /// The line an unreadable body writes names the route, the seat and the match of a table that records no
+    /// session, so the log ties it to one; nothing of the body is printed, not even a property name the parser's
+    /// path would carry (#847).
     /// </summary>
     [Fact]
-    public async Task A_body_that_is_not_json_is_said_with_its_route_and_its_table()
+    public async Task A_body_that_is_not_json_is_said_with_its_route_and_its_match_and_nothing_of_the_body()
     {
         var table = await Seated();
 
-        await table.Api.HandleAsync("POST", "/api/seat/player1/decision", """{"kind":"Zelda_42""", table.Token);
+        await table.Api.HandleAsync("POST", "/api/seat/player1/decision", """{"Zelda_42":""", table.Token);
 
         var line = _said.Where(said => said.Contains("could not be read", StringComparison.Ordinal)).ShouldHaveSingleItem();
-        line.ShouldContain("decision");
-        line.ShouldContain(table.Session.MatchId.ToString());
-        line.ShouldContain("player1");
+        line.ShouldContain("decision from player1");
+        line.ShouldContain($"match {table.Session.MatchId}");
         line.ShouldNotContain("Zelda_42");
     }
 

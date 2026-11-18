@@ -299,12 +299,13 @@ public sealed class HttpHostTests
 
     /// <summary>
     /// A control character in an exception's message, an ANSI escape in a property name a seat's holder chose,
-    /// would reach the container log as it is: it is dropped, a tab becomes a space (#847).
+    /// would reach the container log unchanged, and a format character such as a right-to-left override would make
+    /// the line read otherwise: both are dropped, a tab becomes a space (#847).
     /// </summary>
     [Fact]
     public void An_exception_s_control_characters_never_reach_the_console()
     {
-        var thrown = new InvalidOperationException("Bad '\u001b[31mname\u001b[0m'\u0007 at\tline 1");
+        var thrown = new InvalidOperationException("Bad '\u001b[31mname\u001b[0m'\u0007 at\tline\u202e 1\u200b");
 
         HttpHost.OneLine(thrown).ShouldBe("InvalidOperationException: Bad '[31mname[0m' at line 1");
     }

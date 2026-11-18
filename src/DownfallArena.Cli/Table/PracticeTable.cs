@@ -11,6 +11,9 @@ internal sealed class PracticeTable(CliOptions options, string token) : IPractic
     private readonly SemaphoreSlim _gate = new(1, 1);
     private PracticeRun? _run;
 
+    /// <summary>Where its console lines go: the host's console unless a test reads them (#846).</summary>
+    public Action<string> Said { get; init; } = Console.WriteLine;
+
     public async Task<StudioResponse> HandleAsync(string method, string path, string body, string? supplied, string? ifNoneMatch = null, string? query = null)
     {
         await _gate.WaitAsync();
@@ -73,9 +76,10 @@ internal sealed class PracticeTable(CliOptions options, string token) : IPractic
         {
             next = await PracticeRun.StartAsync(options, scenario);
         }
-        catch (Exception exception) when (exception is InvalidDataException or OperationCanceledException)
+        catch (Exception exception) when (exception is InvalidDataException or JsonException or OperationCanceledException || TableRegistry.StoreFails(exception))
         {
-            return Refused("prepared", exception);
+            // Content that no longer reads, or that is gone, as a scenario restart's: its words can carry a path (#846).
+            return Refused("prepared", exception, Said);
         }
 
         var previous = _run;

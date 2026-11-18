@@ -233,6 +233,48 @@ public sealed class PracticeTableTests : IDisposable
         Encoding.UTF8.GetString(result.Body).ShouldContain("Rebuild the standard catalogue");
     }
 
+    /// <summary>
+    /// A practice prepared on content that no longer reads is answered with the fixed sentence, and its own words go
+    /// to the console only, as a scenario restart's do (#846).
+    /// </summary>
+    [Fact]
+    public async Task A_practice_on_content_that_no_longer_reads_is_answered_as_one_and_said_on_the_console()
+    {
+        var (answer, said) = await PreparedOnAsync("{ not a schema");
+
+        answer.Status.ShouldBe(409);
+        Encoding.UTF8.GetString(answer.Body).ShouldBe(PrepareRefused);
+        said.ShouldHaveSingleItem().ShouldStartWith("  The scenario could not be prepared: ");
+    }
+
+    /// <summary>The same for content that is gone: its path is the console's, not the page's (#846).</summary>
+    [Fact]
+    public async Task A_practice_on_content_that_is_gone_is_answered_as_one_and_said_on_the_console()
+    {
+        var (answer, said) = await PreparedOnAsync(schema: null);
+
+        answer.Status.ShouldBe(409);
+        Encoding.UTF8.GetString(answer.Body).ShouldBe(PrepareRefused);
+        said.ShouldHaveSingleItem().ShouldStartWith("  The scenario could not be prepared: ");
+    }
+
+    private const string PrepareRefused = "The scenario could not be prepared. The host's console says why.";
+
+    /// <summary>A recipe prepared on the schema given, or on none when it is null: the answer and what was said.</summary>
+    private async Task<(StudioResponse Answer, List<string> Said)> PreparedOnAsync(string? schema)
+    {
+        var path = Path.Combine(_scratch.Path, "spoiled", "game.schema.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        if (schema is not null)
+        {
+            await File.WriteAllTextAsync(path, schema, TestContext.Current.CancellationToken);
+        }
+
+        var said = new List<string>();
+        await using var table = new PracticeTable(new CliOptions { Command = "table", Practice = true, Output = "unused", SchemaPath = path }, "practice-token") { Said = said.Add };
+        return (await table.HandleAsync("POST", "/api/practice", """{"scenario":"targeting"}""", "practice-token"), said);
+    }
+
     /// <summary>A practice says why it was refused when the reason is its own; anything else is a fixed sentence (#786).</summary>
     [Fact]
     public void A_practice_refused_for_a_reason_of_its_own_says_it_and_for_any_other_says_a_fixed_sentence()

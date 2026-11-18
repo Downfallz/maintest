@@ -601,12 +601,16 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
 
     /// <summary>
     /// A body the route cannot read. The parser's message names the host's own types and the place in the body, so
-    /// the page gets a fixed sentence and the console the exception (#828), with the route, the seat and the table, so
-    /// the line is tied to a session; the body itself is never printed (#847).
+    /// the page gets a fixed sentence and the console the exception (#828). The line names what was asked and the
+    /// table, by its session's id when it records one (the id every other line and the panel use), or else its
+    /// match's; of the body, only where the parser stopped, as the message's path can carry a property name the
+    /// sender chose (#847).
     /// </summary>
-    private StudioResponse NotJson(string route, string seat, JsonException exception)
+    /// <param name="what">What was sent, and by or for which seat: "decision from player1".</param>
+    private StudioResponse NotJson(string what, JsonException exception)
     {
-        Said($"  A request body to {route} from {seat} on session {session.MatchId} could not be read: {HttpHost.OneLine(exception)}");
+        var table = run is { } recording ? $"session {recording.SessionId}" : $"match {session.MatchId}";
+        Said($"  A request body ({what}) on {table} could not be read: {exception.GetType().Name} at line {exception.LineNumber}, byte {exception.BytePositionInLine}.");
         return StudioResponse.OfPlainText(400, "The request body is not the JSON this route reads.");
     }
 
@@ -624,7 +628,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
         catch (JsonException exception)
         {
-            return NotJson("decision", seat.Name, exception);
+            return NotJson($"decision from {seat.Name}", exception);
         }
 
         if (posted is null)
@@ -778,7 +782,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
         catch (JsonException exception)
         {
-            return NotJson("note", seat.Name, exception);
+            return NotJson($"note from {seat.Name}", exception);
         }
 
         if (posted is null)
@@ -814,7 +818,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
         catch (JsonException exception)
         {
-            return NotJson("reaction", seat.Name, exception);
+            return NotJson($"reaction from {seat.Name}", exception);
         }
 
         ReactionSent sent;
@@ -1182,7 +1186,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
         catch (JsonException exception)
         {
-            return SwapAsked.No(NotJson("a seat swap", TableSeat.NameOf(named), exception));
+            return SwapAsked.No(NotJson($"seat swap of {TableSeat.NameOf(named)}", exception));
         }
 
         if (posted?.Agent is not { Length: > 0 } agent || posted.Round is not { } wantedRound)
