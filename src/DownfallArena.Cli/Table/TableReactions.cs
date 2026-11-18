@@ -48,9 +48,9 @@ internal sealed class TableReactions(TimeProvider clock, IReactionKeeper? keeper
     }
 
     /// <summary>
-    /// Sends <paramref name="reaction" /> for <paramref name="seat" />, or says why it was not sent. Once the operator
-    /// has deleted the table's run, every send is refused as gone. The deletion shows when the file read earlier has
-    /// gone, or when there was none and the table's record has gone.
+    /// Sends <paramref name="reaction" /> for <paramref name="seat" />, or says why it was not sent. Once the file read
+    /// earlier has gone, because the operator deleted the table's run, every send is refused as gone. While there is no
+    /// file yet and the table's record is gone too, the send is refused as gone, that one send only.
     /// </summary>
     public async Task<ReactionSent> SendAsync(string seat, string? reaction, CancellationToken cancellationToken = default)
     {

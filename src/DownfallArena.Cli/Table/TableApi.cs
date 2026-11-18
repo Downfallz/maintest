@@ -806,7 +806,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         {
             sent = await Reactions.SendAsync(seat.Name, reaction);
         }
-        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or Azure.RequestFailedException)
+        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or ObjectDisposedException or Azure.RequestFailedException)
         {
             Console.WriteLine($"  A reaction from {seat.Name} could not be kept: {failure.Message}");
             sent = ReactionSent.Busy;
@@ -966,7 +966,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         {
             return new { available = true, cooldownMs = (long)TableReactions.Cooldown.TotalMilliseconds, recent = (await Reactions.RecentAsync()).Select(Described).ToArray() };
         }
-        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or Azure.RequestFailedException)
+        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or ObjectDisposedException or Azure.RequestFailedException)
         {
             Console.WriteLine($"  The reactions could not be read: {failure.Message}");
             return null;

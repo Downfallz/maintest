@@ -212,6 +212,27 @@ public sealed class TableReactionsApiTests : IDisposable
         await table.QuiesceAsync(Cancel);
     }
 
+    [Fact]
+    public async Task A_record_still_being_written_is_waited_for_before_a_first_reaction_is_judged()
+    {
+        RecordHeld? store = null;
+        using var hosted = new HostedTables(directory => store = new RecordHeld(new FileArtifactStore(directory)));
+        using var registry = hosted.Registry();
+        var table = await Opened(hosted, registry, HostedTables.TwoPeople);
+        store!.Hold();
+        var recording = table.RecordAsync(Cancel);
+
+        var recorded = table.Run!.RecordedAsync(Cancel);
+        await Task.Delay(100, Cancel);
+        var waited = !recorded.IsCompleted;
+        store.Release();
+        await recording;
+
+        waited.ShouldBeTrue();
+        (await recorded).ShouldBeTrue();
+        await table.QuiesceAsync(Cancel);
+    }
+
     private Task<PlayedTable> BegunAsync(TableRequest request) => BegunAsync(_hosted, _registry, request);
 
     private static async Task<PlayedTable> BegunAsync(HostedTables hosted, TableRegistry registry, TableRequest request)
