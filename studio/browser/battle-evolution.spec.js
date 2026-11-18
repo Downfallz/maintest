@@ -148,6 +148,13 @@ test('capstone effects move when motion is allowed', async ({ page }) => {
   const h = await mount(page, { purchases: [[1, 'occultist'], [1, 'elementalist'], [1, 'harbinger'], [1, 'archmage']] });
   await expect(figure(page, 1)).toHaveAttribute('data-capstones', 'capstone-archmage');
   await page.clock.runFor(100); await expect(figure(page, 1)).toHaveAttribute('data-artwork-shown', 'warped-stage3-cataclysm');
+  // The loop sleeps two seconds after the last movement, and the ambience with it (#842); a slow runner was past
+  // that before the first picture. The clock is paused and a changed board wakes the field, so both pictures fall
+  // inside its two seconds.
+  await page.clock.pauseAt(await page.evaluate(() => Date.now()) + 1000);
+  h.view.board = { ...h.view.board, allies: h.view.board.allies.map(one => (one.id === 2 ? { ...one, health: one.health - 1 } : one)) };
+  await h.publish();
+  await page.clock.runFor(100); await expect(page.locator('#battle')).not.toHaveAttribute('data-resting', 'true');
   const box = await figure(page, 1).boundingBox();
   const clip = { x: Math.max(0, box.x - 20), y: Math.max(0, box.y - 120), width: box.width + 40, height: box.height + 140 };
   const first = await page.screenshot({ clip }); await page.clock.runFor(700); const later = await page.screenshot({ clip });
