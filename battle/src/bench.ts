@@ -3,7 +3,8 @@ import { BattleScene } from './scene';
 import { bootScene } from './boot';
 import type { SceneFrame } from './types';
 import art from '../../data/presentation/spell-art.json';
-import { benchCreatures, benchDefaultTargets, benchDuration, benchEntries, benchFrame, benchStage, filmInterval,
+import names from 'virtual:spell-names';
+import { benchCreatures, benchDefaultTargets, benchDuration, benchEntries, benchFrame, benchSamples, benchStage, filmInterval,
   seededRandom, FILM_TICK_MS } from '../../table/battle-bench.js';
 
 // The effects bench: every authored spell look, played on chosen creatures of the laboratory's fixture, with no
@@ -21,7 +22,10 @@ function make<T extends HTMLElement = HTMLElement>(tag: string, properties: Reco
 
 const lab = $('lab');
 const motion = matchMedia('(prefers-reduced-motion: reduce)');
-const entries = benchEntries(art);
+const entries = benchEntries(art, names);
+// The kit's sample stagings, one a primitive: listed after the spells, and never counted among them.
+const samples = benchSamples();
+const listed = [...entries, ...samples];
 const creatures = benchCreatures();
 const scene = new BattleScene(new URL('battle-art/', document.baseURI).href);
 const reduced = () => motion.matches || $<HTMLInputElement>('reduce-motion').checked;
@@ -42,7 +46,8 @@ let game: Phaser.Game | null = null;
 let film: { clock: number; played: number } | null = null;
 
 const spellSelect = make<HTMLSelectElement>('select', { id: 'bench-spell' });
-for (const one of entries) spellSelect.append(make('option', { value: one.id }, `${one.name} · ${one.family} · ${one.motif} · ${one.delivery}`));
+const option = (one: typeof listed[number]) => make('option', { value: one.id }, `${one.name} · ${one.family} · ${one.motif} · ${one.delivery}`);
+spellSelect.append(make('optgroup', { label: 'Spells' }, ...entries.map(option)), make('optgroup', { label: 'The effects kit' }, ...samples.map(option)));
 const actorSelect = make<HTMLSelectElement>('select', { id: 'bench-actor' });
 const targetList = make('div', { id: 'bench-targets', className: 'bench-targets' });
 const side = (enemy: boolean) => enemy ? 'opponent' : 'yours';
@@ -73,13 +78,13 @@ $('reset').setAttribute('aria-label', 'Stop the effect');
 
 const boxes = () => [...targetList.querySelectorAll<HTMLInputElement>('input')];
 const chosen = () => ({
-  entry: entries.find(one => one.id === spellSelect.value) ?? entries[0],
+  entry: listed.find(one => one.id === spellSelect.value) ?? entries[0],
   actor: actorSelect.value,
   targets: boxes().filter(box => box.checked).map(box => box.value),
 });
 function choose({ spell, actor, targets }: FilmOptions) {
   if (spell !== undefined) {
-    if (!entries.some(one => one.id === spell)) throw new Error(`The bench has no effect named ${spell}.`);
+    if (!listed.some(one => one.id === spell)) throw new Error(`The bench has no effect named ${spell}.`);
     spellSelect.value = spell;
   }
   if (actor !== undefined) {
@@ -201,7 +206,7 @@ function fail(message: string) {
 
 // An address that names an effect the art no longer lists (an older version's) opens on the first one, and says so.
 const asked = new URLSearchParams(location.search).get('bench') || undefined;
-const unknown = asked !== undefined && !entries.some(one => one.id === asked);
+const unknown = asked !== undefined && !listed.some(one => one.id === asked);
 choose({ spell: unknown ? undefined : asked, actor: creatures[0].id });
 spellSelect.addEventListener('change', rest);
 actorSelect.addEventListener('change', () => { choose({ actor: actorSelect.value }); rest(); });
@@ -216,6 +221,8 @@ motion.addEventListener('change', rest);
 document.addEventListener('visibilitychange', () => { if (document.hidden && playing() && !film) rest(); });
 
 scene.onResizeDuringPlayback = rest;
+// `ready` once the kit's bundle has arrived, `missing` if it did not: a film waits for one or the other.
+scene.onKit = equipped => { lab.dataset.kit = equipped ? 'ready' : 'missing'; };
 scene.onReady = () => {
   ready = true;
   lab.dataset.ready = 'true'; lab.dataset.renderer = 'phaser';
@@ -233,5 +240,6 @@ try {
 } catch { fail('The renderer could not start. Reload the scene or use another browser.'); }
 
 // What the film strip script and the browser specs drive: the bench's own choices, and its film clock.
-Object.assign(window, { battleBench: { entries, creatures, choose: (options: FilmOptions) => { choose(options); rest(); }, play, film: filmClock,
+Object.assign(window, { battleBench: { entries, samples, creatures, kit: () => scene.effectsKit, stop: rest,
+  shaking: () => scene.cameras.main.shakeEffect.isRunning, choose: (options: FilmOptions) => { choose(options); rest(); }, play, film: filmClock,
   effects: () => scene.children.list.filter(child => child.name === 'spell-vfx').map(child => ({ ...child.data.getAll(), alpha: (child as Phaser.GameObjects.Graphics).alpha })) } });

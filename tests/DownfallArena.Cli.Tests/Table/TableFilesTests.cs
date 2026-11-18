@@ -179,7 +179,7 @@ public sealed class TableFilesTests
     {
         const string hint = "Run `npm --prefix battle ci --ignore-scripts && npm --prefix battle run build` first";
 
-        foreach (var file in new[] { "game.js", "game.js.LEGAL.txt", "live.js", "live.js.LEGAL.txt", "PHASER-LICENSE.txt" })
+        foreach (var file in new[] { "game.js", "game.js.LEGAL.txt", "live.js", "live.js.LEGAL.txt", "fx.js", "PHASER-LICENSE.txt" })
         {
             var served = Files.Get($"/battle-build/{file}");
             served.Status.ShouldBe(200, $"battle-build/{file} is not served. {hint}");

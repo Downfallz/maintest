@@ -27,7 +27,8 @@ show the settled view. The additional WebP tiles load on demand, starting one ro
 
 Rebuild after changing TypeScript or the imported shared table modules; there is no watch server.
 
-`build` type-checks and emits `table/battle-build/game.js` and `live.js`, legal comments and the Phaser MIT license.
+`build` type-checks and emits `table/battle-build/game.js`, `live.js` and the effects kit `fx.js` (below), legal
+comments and the Phaser MIT license.
 Output is ignored, never committed. CI builds before route/browser tests. Docker uses a Node builder
 stage and copies only the bundle/notices into the .NET runtime alongside the local WebP assets.
 No CDN, remote fonts or browser package downloads are needed at runtime.
@@ -40,7 +41,12 @@ No CDN, remote fonts or browser package downloads are needed at runtime.
 - `table/battle-bench.js`: what the bench lists and the frames it presents, from the fixture. No rule.
 - `src/scene.ts`: Phaser scene, local assets, creature figures, cancellable tweens and camera effects.
 - `src/types.ts`: presentation types only.
-- `src/spell-effects.ts`: bounded, cancellable vector motifs for confirmed spell outcomes.
+- `src/spell-effects.ts`: bounded, cancellable vector motifs for confirmed spell outcomes, and the beats of a
+  staged spell, handed to the effects kit (below).
+- `src/fx/`: the effects kit, one file a primitive. It is built as its own bundle, `fx.js`. The engine is not in
+  it, and no other bundle holds it.
+- `src/fx-loader.ts`: fetches the kit after the first frame.
+- `table/battle-staging.js`: reads a card's `staging` into beats, or into nothing, which means the motif.
 - `data/presentation/spell-art.json`: each spell's visual family, motif and delivery, published by the builder
   and served on the card; `table/battle-playback.js` reads it off the card, with neutral and fizzle fallbacks.
 - `table/battle-art.js`: audited sprite manifest, the body and accents a creature's acquired packages give it (read off the
@@ -885,10 +891,45 @@ A practice whose view carries `practice.tutorial` is a tutorial (ADR 0187, docs/
 `battle-tutorial.spec.js` plays tutorial 1's own lesson to its end on a fixture board, at 320 px, 390 px and
 desktop.
 
+## The effects kit
+
+A spell's entry in the spell art may carry a `staging` (ADR 0196, `data/README.md`): a list of beats. The view
+plays them through the kit, `src/fx/`:
+
+| Beat | What plays | On |
+| --- | --- | --- |
+| `motif` | The spell's own motif, starting and lasting as the staging says. Drawn by `spell-effects.ts`. | each target |
+| `burst` | Particles at once from one point, in a fan, fading as they go. | a figure |
+| `flow` | A steady stream from all over a figure, for as long as the beat lasts. | a figure |
+| `trail` | Particles left behind a head that travels from the caster to a target. | caster to target |
+| `gather` | Particles that start on a ring around a figure and land on it. | a figure |
+| `glow` | One soft dot, blended as light, that swells and goes: a glow that costs one image. | a figure |
+| `flash` | The figure filled flat in one colour for a frame or two. One a staging. | a figure |
+| `shake` | The view trembles, and the tremor decays. One a staging; the shared tremor of a physical blow is then left out. | the view |
+| `pulse` | A halo around the figure's own silhouette, by a filter, removed when the beat ends. Costly: see ADR 0196. | a figure |
+
+- The kit is a second bundle. `build.mjs` builds `fx.js` first, refuses it if it holds the engine or a
+  laboratory module, and writes its hash into `game.js` and `live.js`, which fetch `fx.js?v=<hash>` once the
+  scene has shown its first frame (`src/fx-loader.ts`) and hand it the Phaser they carry. `budget.mjs` holds it
+  to limits of its own (48 KiB, 16 KiB gzip).
+- The spell is drawn as its motif, whole, while the kit has not arrived, if it never does, and when a staging
+  holds a beat the page or the kit does not know. That means the charge on the caster, then the motif.
+- A staged spell draws no shared charge on its caster. A projectile's quill still flies: it is the delivery.
+- Beats on the caster and the shake play once a cast; beats on a target play on each, 40 ms apart.
+- Everything the kit makes ends with `SpellEffects.clear`: objects destroyed, a figure's tint and filter put
+  back. Under reduced motion a primitive returns before it makes anything.
+- At most 24 particles a beat and 150 on the field, counted as what the living emitters may hold. The shapes
+  are four frames of one texture drawn at boot (`fx-kit`): a dot, a spark, a shard, a ring. A beat's `tint` is
+  one of `family`, `bone`, `ember` or `blood`.
+- The bench lists one sample staging for each primitive, after the spells (`kit:burst` to `kit:pulse`,
+  `table/battle-bench.js`). They belong to the bench; they are not content. `window.battleBench.kit()` says what the kit
+  holds: its objects, its particles alive, and the figures it changed and has not put back.
+
 ## The effects bench
 
-`/battle-lab?bench` (docs/art/battle-craft-plan.md, BC2) lists every entry of `data/presentation/spell-art.json`
-and plays the chosen one on creatures of the laboratory's fixture: one caster, and any of its six creatures as
+`/battle-lab?bench` (docs/art/battle-craft-plan.md, BC2) lists every entry of `data/presentation/spell-art.json`.
+Each entry shows the name its spell's file gives it (`build.mjs` reads `data/Spells`, and the image's battle
+stage copies it). The bench plays the chosen one on creatures of the laboratory's fixture: one caster, and any of its six creatures as
 targets. `?bench=spell:frostbite:v1` opens on that entry. It asks no host and holds no rule: a target across the
 field from the caster is struck, one on the caster's side receives, and nobody's health moves. Less motion and
 the playback speed are in the settings, as in the laboratory. The bench ships in `game.js` only:

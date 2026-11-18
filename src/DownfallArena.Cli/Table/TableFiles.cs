@@ -145,6 +145,9 @@ internal sealed partial class TableFiles
             ["/battle-build/game.js"] = (Path.Combine(tableDirectory, "battle-build", "game.js"), JavaScript),
             ["/battle-build/game.js.LEGAL.txt"] = (Path.Combine(tableDirectory, "battle-build", "game.js.LEGAL.txt"), StudioResponse.Plain),
             ["/battle-build/PHASER-LICENSE.txt"] = (Path.Combine(tableDirectory, "battle-build", "PHASER-LICENSE.txt"), StudioResponse.Plain),
+            // The effects kit (ADR 0196): a bundle of its own, which the laboratory's and the live one fetch after
+            // their first frame, by a name stamped with its own hash when they were built.
+            ["/battle-build/fx.js"] = (Path.Combine(tableDirectory, "battle-build", "fx.js"), JavaScript),
             ["/battle-art/eclipse-battle.webp"] = (Path.Combine(tableDirectory, "battle-art", "eclipse-battle.webp"), Webp),
             ["/battle-art/creatures.webp"] = (Path.Combine(tableDirectory, "battle-art", "creatures.webp"), Webp),
             ["/battle-art/base-creature.webp"] = (Path.Combine(tableDirectory, "battle-art", "base-creature.webp"), Webp),
@@ -195,6 +198,7 @@ internal sealed partial class TableFiles
             ["/concepts.js"] = (Path.Combine(tableDirectory, "concepts.js"), JavaScript),
             ["/battle-layout.js"] = (Path.Combine(tableDirectory, "battle-layout.js"), JavaScript),
             ["/battle-timing.js"] = (Path.Combine(tableDirectory, "battle-timing.js"), JavaScript),
+            ["/battle-staging.js"] = (Path.Combine(tableDirectory, "battle-staging.js"), JavaScript),
             ["/battle-build/live.js"] = (Path.Combine(tableDirectory, "battle-build", "live.js"), JavaScript),
             ["/battle-build/live.js.LEGAL.txt"] = (Path.Combine(tableDirectory, "battle-build", "live.js.LEGAL.txt"), StudioResponse.Plain),
 
@@ -335,7 +339,9 @@ internal sealed partial class TableFiles
     // deploy running the bundle of another dies at its first missing element: renaming `coach-continue` to `coach-again`
     // left every battle on "Connecting…". The page's own modules are not stamped: one of them imports another by its
     // bare name (`./navigation.js`), and a stamped name beside it would be a second copy of that module, run twice.
-    // The bundles import nothing by name.
+    // The bundles import no module beside the page by name. They do fetch the effects kit, `battle-build/fx.js`,
+    // by a name that carries the hash of the kit they were built with (ADR 0196). The host does not read that
+    // `?v`: it serves the kit it has, and the hash keeps a cache keyed by address from mixing two deploys.
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, StampedPage> _pages = new(StringComparer.Ordinal);
 
     [GeneratedRegex("(?<lead>\\b(?:src|href)=\")(?<name>(?:battle-build/[^\"?#:]+\\.js|[^\"?#:]+\\.css))\"")]

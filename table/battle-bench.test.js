@@ -109,7 +109,7 @@ test('the build refuses the laboratory and the bench in the live bundle, and not
     '../table/battle-lab-state.js', '../table/battle-lab-fixture.js']) assert.equal(laboratoryOnly(path), true, path);
   for (const path of ['src/live.ts', 'src/scene.ts', 'src/spell-effects.ts', '../table/battle-timing.js',
     'src/workbench.ts', '../table/battle-art.js']) assert.equal(laboratoryOnly(path), false, path);
-  assert.match(read('../battle/build.mjs'), /live\.inputs\)\.some\(laboratoryOnly\)/);
+  assert.match(read('../battle/build.mjs'), /live\.some\(laboratoryOnly\)/);
 });
 
 test('the film strip script reads its options, and refuses what it cannot film', () => {
