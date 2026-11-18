@@ -9,6 +9,8 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { headingAnchors } from '../scripts/markdown-anchors.mjs';
+
 import { WINDUP_MS, IMPACT_MS, SETTLE_MS } from '../table/battle-timing.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -30,22 +32,6 @@ export function windows() {
   };
 }
 
-/** The anchors GitHub gives a markdown file's headings (as studio/prompts.test.js reads them). */
-function headingAnchors(markdown) {
-  const anchors = new Set();
-  let fenced = false;
-  for (const line of markdown.split('\n')) {
-    if (line.startsWith('```')) fenced = !fenced;
-    const heading = fenced ? null : /^#{1,6}\s+(.+?)\s*$/.exec(line);
-    if (!heading) continue;
-    const slug = heading[1].toLowerCase().replace(/[^\p{L}\p{N}\s_-]/gu, '').replace(/\s/g, '-');
-    let anchor = slug;
-    for (let n = 1; anchors.has(anchor); n++) anchor = `${slug}-${n}`;
-    anchors.add(anchor);
-  }
-  return anchors;
-}
-
 /** A storyboard file cut at its `##` headings: [{ title, parts: [{ title, body }] }]. */
 export function storyboards(markdown) {
   const found = [];
@@ -59,7 +45,7 @@ export function storyboards(markdown) {
   return found;
 }
 
-/** The rows of the first table of a part, as objects keyed by the header's cells. */
+/** The table rows of a part, as objects keyed by the header's cells. A part holds one table. */
 export function tableRows(body) {
   const lines = body.split('\n').filter(line => line.trim().startsWith('|'));
   const cells = line => line.trim().replace(/^\||\|$/g, '').split('|').map(cell => cell.trim());
@@ -72,9 +58,10 @@ export function tableRows(body) {
 /** What is wrong with one beat, as sentences; none when it fits its window and names a pattern of the book. */
 export function beatProblems(row, bookAnchors, spans = windows()) {
   const problems = [];
+  const whole = cell => /^\d+$/.test(cell ?? '');
   const at = Number(row.At), lasts = Number(row.Lasts);
-  const span = spans[row.Window];
-  if (!Number.isInteger(at) || !Number.isInteger(lasts) || lasts <= 0) problems.push('At and Lasts are whole milliseconds');
+  const span = Object.hasOwn(spans, row.Window ?? '') ? spans[row.Window] : null;
+  if (!whole(row.At) || !whole(row.Lasts) || lasts <= 0) problems.push('At and Lasts are whole milliseconds');
   if (!span) problems.push(`the window is one of ${Object.keys(spans).join(', ')}`);
   else if (at < span[0] || at + lasts > span[1]) problems.push(`${at} to ${at + lasts} ms leaves the ${row.Window} (${span[0]} to ${span[1]} ms)`);
   const links = [...(row.Pattern ?? '').matchAll(/\]\(([^)#]*)#([^)]+)\)/g)];
@@ -88,6 +75,19 @@ export function beatProblems(row, bookAnchors, spans = windows()) {
   return problems;
 }
 
+/** The name a player reads for each spell, from the authored files: { id: name }. */
+function spellNames(folder = join(root, 'data/Spells')) {
+  const names = {};
+  for (const entry of readdirSync(folder, { withFileTypes: true })) {
+    if (entry.isDirectory()) Object.assign(names, spellNames(join(folder, entry.name)));
+    else if (entry.name.endsWith('.json')) {
+      const spell = JSON.parse(readFileSync(join(folder, entry.name), 'utf8'));
+      names[spell.id] = spell.name;
+    }
+  }
+  return names;
+}
+
 const files = () => readdirSync(join(root, FOLDER)).filter(name => name.endsWith('.md') && name !== 'README.md').sort();
 
 test('a beat is refused when it leaves its window, names no pattern, or names one the book does not hold', () => {
@@ -98,7 +98,11 @@ test('a beat is refused when it leaves its window, names no pattern, or names on
   assert.match(beatProblems({ ...beat, At: '800' }, anchors, spans)[0], /leaves the impact/);
   assert.match(beatProblems({ ...beat, Lasts: '1701' }, anchors, spans)[0], /leaves the impact/);
   assert.match(beatProblems({ ...beat, Window: 'later' }, anchors, spans)[0], /the window is one of/);
-  assert.match(beatProblems({ ...beat, Lasts: 'a while' }, anchors, spans)[0], /whole milliseconds/);
+  assert.match(beatProblems({ ...beat, Window: 'constructor' }, anchors, spans)[0], /the window is one of/);
+  for (const cell of ['a while', '', '0x3c', '60.5', '0']) {
+    assert.match(beatProblems({ ...beat, Lasts: cell }, anchors, spans)[0], /whole milliseconds/, `Lasts "${cell}"`);
+  }
+  assert.match(beatProblems({ ...beat, At: '' }, anchors, spans)[0], /whole milliseconds/);
   assert.match(beatProblems({ ...beat, Pattern: 'Hit stop' }, anchors, spans)[0], /a link to its entry/);
   const three = Array(3).fill(beat.Pattern).join(', ');
   assert.match(beatProblems({ ...beat, Pattern: three }, anchors, spans)[0], /two patterns at most/);
@@ -124,6 +128,7 @@ test('the base attack has its storyboard, the worked example', () => {
 
 test('every storyboard names what it stages and has its seven parts, in order', () => {
   const art = JSON.parse(read('data/presentation/spell-art.json'));
+  const names = spellNames();
   const staged = new Set();
   for (const name of files()) {
     const boards = storyboards(read(`${FOLDER}/${name}`));
@@ -132,6 +137,8 @@ test('every storyboard names what it stages and has its seven parts, in order', 
       const where = `${name}, ${board.title}`;
       for (const [, id] of board.title.matchAll(/`(spell:[^`]+)`/g)) {
         assert.ok(Object.hasOwn(art, id), `${where}: ${id} is an entry of the spell art`);
+        // The id is an old slug ("heavy_strike" is Strike): the title is the name the content gives the spell.
+        assert.ok(board.title.startsWith(`${names[id]} (`), `${where}: ${id} is titled ${names[id]}, the name of its file`);
         assert.ok(!staged.has(id), `${where}: ${id} has one storyboard`);
         staged.add(id);
       }
@@ -166,5 +173,10 @@ test('the storyboards are listed where a session looks for them', () => {
   const index = read(`${FOLDER}/README.md`);
   for (const name of files()) assert.ok(index.includes(`(${name})`), `${FOLDER}/README.md lists ${name}`);
   for (const part of PARTS) assert.ok(index.includes(`**${part}**`), `the format names the part ${part}`);
+  // The format states the windows in figures: a change to the timings must reach that sentence.
+  const prose = index.replace(/\s+/g, ' ');
+  for (const [name, [from, to]] of Object.entries(windows())) {
+    assert.ok(prose.includes(`the ${name} runs from ${from} to ${to} ms`), `the format gives the ${name} as ${from} to ${to} ms`);
+  }
   assert.ok(read('docs/README.md').includes('(art/storyboards/README.md)'), 'docs/README.md lists the storyboards');
 });

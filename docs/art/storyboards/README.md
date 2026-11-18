@@ -47,8 +47,10 @@ in this order:
   lines.
 - **Left**: what the storyboard does not settle, a choice the owner may refuse, a pattern the book lacks.
 
-At 1× the windup runs from 0 to 840 ms, the impact from 840 to 2540 ms and the settle from 2540 to 3040 ms. Every
-duration is divided by the playback rate when it is played; a storyboard writes them at 1× only.
+At 1× the windup runs from 0 to 840 ms, the impact runs from 840 to 2540 ms and the settle runs from 2540 to
+3040 ms. Every duration is divided by the playback rate when it is played; a storyboard writes them at 1× only.
+A change to `table/battle-timing.js` moves the windows: the test then says which beats and which of these
+figures to move.
 
 `studio/storyboards.test.js` holds the format in the gate: the seven parts in order, each spell an entry of
 `data/presentation/spell-art.json`, each beat inside its window on the timings of `table/battle-timing.js`, each

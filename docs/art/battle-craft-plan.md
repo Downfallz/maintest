@@ -153,8 +153,8 @@ that extends it.
    [Strike](storyboards/base-actions.md), was written by the designer's prompt from two film strips of `4d51935`:
    the whole action, and the contact at a frame every 60 ms, since the contact falls between two frames of the
    first. What it found on the film: the draw back has no ease and barely shows, a melee blow opens with the
-   gather a cast uses, the strokes lean the same way whatever the blow's direction, and nothing moves from 1680
-   to 2540 ms. Writing it corrected the format (two patterns a beat, the film's caster and targets named) and
+   gather a cast uses, the strokes lean the same way whatever the blow's direction, and nothing moves after
+   1680 ms. Writing it corrected the format (two patterns a beat, the film's caster and targets named) and
    two entries of the craft book. Left: the storyboard is a proposal, and its choices under **Left** wait for
    the owner: no gather on a melee blow, the leaning strokes, the 8 chips. Nothing of it is built: BC4 and BC5
    make the primitives, BC6 places them. The loop's build, critique and published page have not been run yet;

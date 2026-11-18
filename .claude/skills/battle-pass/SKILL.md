@@ -38,13 +38,15 @@ npm --prefix battle ci --ignore-scripts && npm --prefix battle run build
    ```
 
    A spell that strikes several figures is filmed on them (`--targets b1,b3`). A storyboard that exists names
-   its own command under **On the film strip**: film that one. The bench films a spell's look:
-   a move alone, a death or the ground is filmed once its stage has taught the bench to play it.
+   its own command under **On the film strip**: film that one. The bench films a spell's look.
+   A move alone, a death or the ground can be filmed only once its stage has taught the bench to play it.
 
 3. **The storyboard.** Give the `battle-designer` the target and the paths of its two sheets; it writes the
-   storyboard in the family's file under `docs/art/storyboards/`. Several spells: one designer each, in one
-   message. Read what it wrote. A choice a person could refuse, it wrote under **Left**: ask the owner now
-   (AskUserQuestion) when the build depends on it, otherwise carry on and show it with the sheets.
+   storyboard in the family's file under `docs/art/storyboards/`. Several spells of one family: one designer after
+   another, never two at once. They write the same file and each runs the file's test, so two at once lose a
+   storyboard or "fix" the other's half-written one. Read what it wrote. A choice a person could refuse, it
+   wrote under **Left**: ask the owner now (AskUserQuestion) when the build depends on it, otherwise carry on and
+   show it with the sheets.
 
 4. **Build it**, tests first (`battle/AGENTS.md`, and the stage's own tests in the plan): the cancel path
    destroys every object, reduced motion plays nothing, the budgets hold (`npm --prefix battle run build` ends

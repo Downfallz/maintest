@@ -27,6 +27,8 @@ npm --prefix studio/browser ci --ignore-scripts && npm --prefix studio/browser t
 - `battle-craft.test.js` holds the craft book to the Phaser types `npm --prefix battle ci --ignore-scripts`
   installs. Without them its engine checks are skipped and say so. The gate and CI's full build install them
   first, and in CI's full build missing types fail the test.
+- `storyboards.test.js` holds each beat of `docs/art/storyboards/` to the windows of `table/battle-timing.js`: a
+  change to those timings re-times the storyboards and the figures in their `README.md`, in the same change.
 - The published studio is served under a GitHub Pages subpath: no absolute URL.
 - `studio` refuses `--declaration`; the studio plays the engine's default.
 - A spec, a fixture or a job that starts to read another path says so in `browser/plan.js` and
