@@ -4,7 +4,8 @@
 //   git diff origin/main... | node scripts/rules/reach.mjs
 //
 // A section is reached by an ADR or a game-rules heading its `sources:` line cites, by a value it draws (a spell, a
-// mutation, a field of the hosted rule set, a stat of the reference creature, an engine constant), by a spell or a mutation it names,
+// mutation, a field of the hosted rule set, a stat or the starting spells of the reference creature, an engine constant, an alias
+// the starting spells resolve through), by a spell or a mutation it names,
 // and by a change to its own lines. A path that calls for the keeper (scripts/review/reviewers.mjs) and reaches no
 // section is listed for a reading by hand: the domain, the words, the pages' rule text, a rule no section teaches.
 // The French edition (rules/fr/) is read beside the English: its sections cite and draw the same, so a change
@@ -18,6 +19,7 @@ import { ENGINE } from './build.mjs';
 
 const RULE_SET = 'docs/tabletop/playtest.rules.json';
 const CREATURE = 'data/Creatures/main.v1.json';
+const ALIASES = 'data/aliases.json';
 const GAME_RULES = 'docs/domain/game-rules.md';
 
 const HEADING = /^(#{1,2}) ([^{]*)\{#([a-z0-9-]+)\}\s*$/;
@@ -128,7 +130,8 @@ const keysChanged = change => new Set(change.removed.concat(change.added).flatMa
 const namesIn = rows => rows.flatMap(row => [.../"name"\s*:\s*"([^"]+)"/.exec(row) ?? []].slice(1));
 
 /** The creature's stat a key holds, as the book draws it: baseHealth is creature.health. */
-const statOf = key => (/^base[A-Z]/.test(key) ? `${key[4].toLowerCase()}${key.slice(5)}` : null);
+// A creature's field as the book draws it: `baseHealth` is `creature.health`, `startingSpellIds` is `creature.knows`.
+const statOf = key => (key === 'startingSpellIds' ? 'knows' : /^base[A-Z]/.test(key) ? `${key[4].toLowerCase()}${key.slice(5)}` : null);
 
 /** The id a content file has, from its text or, once it is deleted, from its name. */
 function contentOf(path, content, kind) {
@@ -181,6 +184,12 @@ function byValues(change, section) {
   return [...new Set(moved)].filter(draws).map(key => `draws ${prefix}.${key}`);
 }
 
+/** An alias may move a spell the creature starts with or a mutation teaches: it reaches the sections stating those lists. */
+function byAliases(change, section) {
+  if (change.path !== ALIASES) return [];
+  return [...new Set(section.text.match(/\bcreature\.knows\b|\btier:[a-z0-9_]+:v\d+\.teaches\b/g) ?? [])].map(name => `draws ${name}`);
+}
+
 /** A change to an engine constant the book draws (`engine.<name>`) reaches the sections that draw it. */
 function byEngine(change, section) {
   return Object.entries(ENGINE)
@@ -204,6 +213,7 @@ function reasonsFor(change, section, { gameRules, content }) {
     ...byGameRules(change, section, gameRules),
     ...byContent(change, section, content),
     ...byValues(change, section),
+    ...byAliases(change, section),
     ...byEngine(change, section),
     ...byOwnLines(change, section),
   ];

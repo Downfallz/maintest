@@ -50,9 +50,9 @@ export function stageLabel(level) {
 }
 
 // A Stage as a screen reader speaks it: with its number, since "Stage I" may be read as the pronoun I (#769).
-// What is shown keeps the numeral; an announcement or an aria-label says this.
+// What is shown keeps the numeral; an announcement or an aria-label says this. No level is said in words.
 export function stageSpoken(level) {
-  return `Stage ${level ?? '?'}`;
+  return level == null ? 'Stage unavailable' : `Stage ${level}`;
 }
 
 // The four Stages a family climbs, in order, as the Mutation Tree's help reads them.

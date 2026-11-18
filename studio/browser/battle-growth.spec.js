@@ -202,6 +202,8 @@ test('multiclass reference keeps close and creature selection reachable in short
   test.skip(info.project.name !== 'desktop', 'Viewport sweep runs once.');
   const input = initial(); input.board.allies[0].acquiredTiers = ['predator', 'brute', 'upgrade', 'cap'];
   const h = await mount(page, input); await h.reference(); await expect(page.locator('#atlas-progress')).toContainText('Multiclass · Predator · Stage IV / Brute · Stage I');
+  // A tile shows its numeral and speaks its number (#769).
+  await expect(page.locator('#atlas-board .atlas-node[data-package="brute"]')).toHaveAccessibleName(/^Brute · Stage 1 · /);
   for (const size of [{ width: 320, height: 568 }, { width: 844, height: 390 }]) {
     await page.setViewportSize(size); await page.clock.runFor(150); await fitsViewport(page, '#atlas-close, #atlas-creature');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

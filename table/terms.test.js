@@ -37,7 +37,7 @@ test('a level reads as its stage, in Roman numerals', () => {
 test('a stage is spoken with its number, not its numeral', () => {
   assert.equal(stageSpoken(1), 'Stage 1');
   assert.deepEqual([1, 2, 3, 4].map(stageSpoken), ['Stage 1', 'Stage 2', 'Stage 3', 'Stage 4']);
-  assert.equal(stageSpoken(undefined), 'Stage ?');
+  assert.equal(stageSpoken(undefined), 'Stage unavailable', 'a listener hears no question mark');
 });
 
 test('the climb through the four Stages reads in the same numerals', () => {

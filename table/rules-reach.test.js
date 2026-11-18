@@ -21,7 +21,7 @@ const PARTS = [
       '',
       '## Winning {#winning}',
       '',
-      'A creature starts at {creature.health} Health, and its Defense buffs count for {engine.defenseBuffCeiling} at most.',
+      "A creature starts at {creature.health} Health, and its Defense buffs count for {engine.defenseBuffCeiling} at most. It knows Focus{?creature.knows = 'spell:wait:v1'}.",
       '',
       'sources: ADR 0011, game-rules#match-lifecycle',
     ].join('\n'),
@@ -189,8 +189,17 @@ test('the engine\'s constant reaches the sections that draw it, and another line
 });
 
 test('a creature change that moves no stat reaches no section by its stats, and is read by hand', () => {
-  const diff = diffOf('data/Creatures/main.v1.json', { removed: ['  "startingSpellIds": ["a"],'], added: ['  "startingSpellIds": ["b"],'] });
+  const diff = diffOf('data/Creatures/main.v1.json', { removed: ['  "talentTreeId": "a",'], added: ['  "talentTreeId": "b",'] });
   assert.deepEqual(reached(diff), { sections: [], unmapped: ['data/Creatures/main.v1.json'] });
+});
+
+// #805: the creature's starting spells are drawn as creature.knows, resolved through data/aliases.json.
+test('the creature\'s starting spells, or an alias they resolve through, reach the sections that state what it knows', () => {
+  const starting = reached(diffOf('data/Creatures/main.v1.json', { removed: ['  "startingSpellIds": ["spell:heavy_strike", "spell:wait"],'], added: ['  "startingSpellIds": ["spell:heavy_strike"],'] }));
+  assert.deepEqual(starting.sections.map(section => [section.id, section.why]), [['winning', ['draws creature.knows']]]);
+  const alias = reached(diffOf('data/aliases.json', { removed: ['  "spell:wait": "spell:wait:v1",'], added: ['  "spell:wait": "spell:wait:v2",'] }));
+  assert.deepEqual(alias.sections.map(section => [section.id, section.why]), [['winning', ['draws creature.knows']]]);
+  assert.deepEqual(alias.unmapped, []);
 });
 
 test('a renamed spell reaches the sections that still name it by its old name', () => {

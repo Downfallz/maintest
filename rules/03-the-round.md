@@ -75,18 +75,18 @@ it may mix families by acquiring another family's Stage I. Two creatures may tak
 creature may acquire is read from what it
 owns as the step opens: a pick of this round opens nothing until the next mutation round.
 
-*Example.* Round {rules.firstEvolutionRound}. Every creature knows Strike{?creature.knows = 'spell:heavy_strike:v1'} and Focus{?creature.knows = 'spell:wait:v1'} and has
+*Example.* Round {rules.firstEvolutionRound}. Every creature knows Strike{?creature.knows = 'spell:heavy_strike:v1'} and Focus{?creature.knows = 'spell:wait:v1'}{?creature.knows.count = 2} and has
 {creature.initiative} initiative. The first player picks Brute for Creature 1 and Warped for Creature 2. They
 would like Oppressor for Creature 1 too, but it needs Brute, which Creature 1 does not own yet, and Creature 1
 already has its pick. At the same time, the second player picks Predator for Creature 4 and Brute for Creature 5.
 Both are done, and the four mutations are acquired together:
 
-- Creature 1, Brute: Pummel{?tier:brute:v1.teaches = 'spell:pummel:v1'} and Brace{?tier:brute:v1.teaches = 'spell:guard:v1'}, and {creature.initiative + tier:brute:v1.initiativeBonus} initiative.
-- Creature 2, Warped: Shock{?tier:occultist:v1.teaches = 'spell:lightning_bolt:v1'} and Revitalize{?tier:occultist:v1.teaches = 'spell:rejuvenate:v1'}, and {creature.initiative + tier:occultist:v1.initiativeBonus}
+- Creature 1, Brute: Pummel{?tier:brute:v1.teaches = 'spell:pummel:v1'} and Brace{?tier:brute:v1.teaches = 'spell:guard:v1'}{?tier:brute:v1.teaches.count = 2}, and {creature.initiative + tier:brute:v1.initiativeBonus} initiative.
+- Creature 2, Warped: Shock{?tier:occultist:v1.teaches = 'spell:lightning_bolt:v1'} and Revitalize{?tier:occultist:v1.teaches = 'spell:rejuvenate:v1'}{?tier:occultist:v1.teaches.count = 2}, and {creature.initiative + tier:occultist:v1.initiativeBonus}
   initiative.
-- Creature 4, Predator: Venom Claw{?tier:prowler:v1.teaches = 'spell:poison_slash:v1'} and Quill{?tier:prowler:v1.teaches = 'spell:throwing_star:v1'}, and {creature.initiative + tier:prowler:v1.initiativeBonus}
+- Creature 4, Predator: Venom Claw{?tier:prowler:v1.teaches = 'spell:poison_slash:v1'} and Quill{?tier:prowler:v1.teaches = 'spell:throwing_star:v1'}{?tier:prowler:v1.teaches.count = 2}, and {creature.initiative + tier:prowler:v1.initiativeBonus}
   initiative.
-- Creature 5, Brute: Pummel{?tier:brute:v1.teaches = 'spell:pummel:v1'} and Brace{?tier:brute:v1.teaches = 'spell:guard:v1'}, and {creature.initiative + tier:brute:v1.initiativeBonus} initiative.
+- Creature 5, Brute: Pummel{?tier:brute:v1.teaches = 'spell:pummel:v1'} and Brace{?tier:brute:v1.teaches = 'spell:guard:v1'}{?tier:brute:v1.teaches.count = 2}, and {creature.initiative + tier:brute:v1.initiativeBonus} initiative.
 
 Oppressor waits for Creature 1 until round {rules.firstEvolutionRound + rules.evolutionInterval}, the next
 mutation round.

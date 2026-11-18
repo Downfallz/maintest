@@ -274,22 +274,30 @@ function spellValue(definition, name, path) {
   return effectValue((caster ? definition.casterEffects : definition.effects) ?? [], name, first, field);
 }
 
-// A mutation's field (`name`, `level`, `initiativeBonus`), its passive's (`sunder`, `damageBonus`, `upkeepEnergy`),
-// or `teaches`, the list of the spells it teaches.
-function mutationValue(definition, field) {
-  if (field === 'teaches') return [...(definition.spells ?? [])];
-  return scalar(Object.hasOwn(definition, field) ? definition[field] : definition.passive?.[field]);
-}
-
 const VERSIONED_SPELL = /^spell:[a-z0-9_]+:v\d+$/;
 
-// The spells the reference creature starts with, each as a versioned id: data/ may name one by its alias.
-function startingSpells(creature, aliases) {
-  return (creature.startingSpellIds ?? []).map(id => {
+// A list of spells as data/ writes it, each as a versioned id: data/ may name one by its alias.
+function spellList(ids, what, aliases) {
+  return (ids ?? []).map(id => {
     if (VERSIONED_SPELL.test(id)) return id;
     if (Object.hasOwn(aliases, id) && VERSIONED_SPELL.test(aliases[id])) return aliases[id];
-    throw new Error(`starting spell "${id}" is neither a versioned spell id nor an alias of data/aliases.json`);
+    throw new Error(`${what} "${id}" is neither a versioned spell id nor an alias of data/aliases.json`);
   });
+}
+
+// A list (`teaches`, `knows`) or its `count`, which a sentence naming the whole list states, so a spell added is caught.
+function listValue(list, field) {
+  if (field === undefined) return list;
+  return field === 'count' ? list.length : undefined;
+}
+
+// A mutation's field (`name`, `level`, `initiativeBonus`), its passive's (`sunder`, `damageBonus`, `upkeepEnergy`),
+// or `teaches`, the list of the spells it teaches, and `teaches.count`.
+function mutationValue(definition, path, aliases) {
+  const [field, sub] = path.split('.');
+  if (field === 'teaches') return listValue(spellList(definition.spells, `spell of ${definition.id}`, aliases), sub);
+  if (sub !== undefined) return undefined;
+  return scalar(Object.hasOwn(definition, field) ? definition[field] : definition.passive?.[field]);
 }
 
 /** Answers a name from the rule set, the engine, the reference creature, the spells and the mutations, and notes each it read. */
@@ -297,14 +305,15 @@ function lookup({ ruleSet, creature, spells, mutations = new Map(), engine = {},
   return name => {
     if (name.startsWith('rules.')) return scalar(ruleSet.values[name.slice(6)]);
     if (name.startsWith('engine.')) return Object.hasOwn(engine, name.slice(7)) ? scalar(engine[name.slice(7)]) : undefined;
-    if (name === 'creature.knows') return startingSpells(creature, aliases);
+    const knows = /^creature\.knows(?:\.(\w+))?$/.exec(name);
+    if (knows) return listValue(spellList(creature.startingSpellIds, 'starting spell', aliases), knows[1]);
     if (name.startsWith('creature.')) return scalar(creature[`base${capital(name.slice(9))}`]);
-    const mutation = /^(tier:[a-z0-9_]+:v\d+)\.(\w+)$/.exec(name);
+    const mutation = /^(tier:[a-z0-9_]+:v\d+)\.(\w+(?:\.\w+)?)$/.exec(name);
     if (mutation) {
       const definition = mutations.get(mutation[1]);
       if (!definition) throw new Error(`mutation "${mutation[1]}" is not in data/`);
       usedMutations.add(mutation[1]);
-      return mutationValue(definition, mutation[2]);
+      return mutationValue(definition, mutation[2], aliases);
     }
     const spell = /^(spell:[a-z0-9_]+:v\d+)\.([\w.]+)$/.exec(name);
     if (!spell) return undefined;

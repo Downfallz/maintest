@@ -65,6 +65,7 @@ const RULES_FILES = new Set([
   'docs/domain/glossary.md',
   'docs/domain/player-terminology.md',
   'docs/tabletop/playtest.rules.json',
+  'data/aliases.json',
   'table/terms.js',
   'table/battle-guidance.js',
   'battle/src/tempo.ts',

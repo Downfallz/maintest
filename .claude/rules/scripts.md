@@ -13,3 +13,6 @@ paths:
   everyday word such as "speed" because it is lowercase would let "Choose speed" through.
 - A script a skill runs is tested from `studio/`, `table/` or `showcase/` (CI's `node --test` reads only those
   folders), exit codes included.
+- A new name the rulebook's build draws (`lookup` in `scripts/rules/build.mjs`) ships with what reaches it in
+  `scripts/rules/reach.mjs`, and a case in `table/rules-reach.test.js` (#687, #805): a value source `reach.mjs`
+  was never taught reaches no section, and `/rules` says the book is untouched.
