@@ -24,6 +24,8 @@ npm --prefix studio/browser ci --ignore-scripts && npm --prefix studio/browser t
 ## Traps
 
 - No runtime dependency or build step (ADR 0024); only the browser tests use pinned Playwright.
+- `battle-craft.test.js` reads the Phaser types `npm --prefix battle ci --ignore-scripts` installs. Without
+  them it fails and says so; CI's light build, which installs none and never changes the book, skips it.
 - The published studio is served under a GitHub Pages subpath: no absolute URL.
 - `studio` refuses `--declaration`; the studio plays the engine's default.
 - A spec, a fixture or a job that starts to read another path says so in `browser/plan.js` and

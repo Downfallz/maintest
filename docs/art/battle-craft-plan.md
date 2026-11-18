@@ -1,6 +1,6 @@
 # Plan: the battle's craft, every spell, attack, move and the ground staged by a designer who can see
 
-Status: accepted, 2026-11-18 (the owner settled the questions at the end). Nothing here is built yet; each stage
+Status: accepted, 2026-11-18 (the owner settled the questions at the end). BC1 is built; BC2 is next. Each stage
 below is one pull request.
 
 ## What the owner asked for
@@ -111,6 +111,19 @@ that extends it.
 
 1. **BC1, the craft book.** The search and `docs/art/battle-craft.md`. Tests: every engine symbol the book names
    exists in the installed Phaser types; the book is in `docs/README.md`.
+
+   *Built (2026-11-18)*: [the craft book](battle-craft.md), 40 entries in the eight groups, each with its six
+   lines, and two tables of traps: the Phaser 3 names that are gone, and the names still declared that do the
+   wrong thing. `studio/battle-craft.test.js` holds every engine name the book writes to the installed types
+   through `scripts/battle/phaser-symbols.mjs`, which also answers for one name from the command line; a change to
+   the book runs CI's full build, since the light one installs no Phaser. Found on the way, and written in the
+   book: the whole engine is already in `live.js` (1,388,640 of its 1,711,869 bytes), so an engine feature costs
+   only its calling code; `resetFX` does not reset a zoom; `killAll` would kill a breath made of a tween; the
+   particles and the camera shake draw from `Math.random`, which BC2's bench must pin for two film strips to
+   agree. Left: the session's network opened none of the links, so each source was found by search and not
+   read, and the figures taken from a search excerpt are marked *to check*; and no frame time is measured,
+   which is BC10's.
+
 2. **BC2, the bench and the film strip.** `/battle-lab?bench`, `scripts/battle/filmstrip.mjs`, the clock stepping.
    Tests: the bench lists all 44 entries; two runs of one effect give the same sheet; `live.js` holds no bench code.
 3. **BC3, the designer and the pass.** The `battle-designer` agent, the `/battle-pass` skill, and the first

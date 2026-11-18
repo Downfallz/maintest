@@ -173,6 +173,9 @@ test('the full build runs for a path that is not Markdown, for Markdown the lear
   assert.equal(plan(['docs/adr/0182-x.md', 'studio/catalogue.test.js'], specs, { pullRequest: true }).build, 'full');
   // test_knobs.py reads data/README.md's table of effect kinds.
   assert.equal(plan(['data/README.md'], specs, { pullRequest: true }).build, 'full');
+  // battle-craft.test.js checks the book's engine names against battle/node_modules, which the light build does not install.
+  assert.equal(plan(['docs/art/battle-craft.md'], specs, { pullRequest: true }).build, 'full');
+  assert.equal(plan(['docs/art/battle-craft-plan.md'], specs, { pullRequest: true }).build, 'light');
   assert.equal(plan(['docs/adr/0182-x.md'], specs).build, 'full');
   assert.equal(plan([], specs, { pullRequest: true }).build, 'full');
   assert.equal(everything().build, 'full');
