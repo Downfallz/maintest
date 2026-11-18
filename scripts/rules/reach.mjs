@@ -169,6 +169,8 @@ function byContent(change, section, content) {
   const definition = kind && change.path.endsWith('.json') ? contentOf(change.path, content, kind) : null;
   if (!definition) return [];
   const reasons = section.text.includes(`${definition.id}.`) ? [`draws ${definition.id}`] : [];
+  // A fact names one as text: a spell a list holds, a mutation another one needs.
+  if (section.text.includes(`'${definition.id}'`)) reasons.push(`states ${definition.id}`);
   // A renamed spell or mutation is still named by its old name where the book has not caught up.
   const names = new Set([definition.name, ...namesIn(change.removed)].filter(Boolean));
   for (const name of names) if (new RegExp(String.raw`\b${escape(name)}\b`).test(section.text)) reasons.push(`names ${name}`);
@@ -189,7 +191,10 @@ function byValues(change, section) {
   return [...new Set(moved)].filter(draws).map(key => `draws ${prefix}.${key}`);
 }
 
-/** The alias keys a change to data/aliases.json rewrites: `"spell:wait": "spell:wait:v1"` gives spell:wait. */
+/**
+ * The alias keys a change to data/aliases.json rewrites: `"spell:wait": "spell:wait:v1"` gives spell:wait. The file
+ * is one flat object; were it nested, a key such as `"spells": {` would be read as an alias.
+ */
 const aliasesChanged = change => new Set(change.removed.concat(change.added).flatMap(row => [.../^\s*"([^"]+)"\s*:/.exec(row) ?? []].slice(1)));
 
 // The lists a section states, each with the file and field data/ writes it in: what an alias may move.

@@ -228,6 +228,13 @@ test('a mutation\'s prerequisites reach the sections that state what it needs', 
   assert.deepEqual(reached(diff).sections.map(section => [section.id, section.why]), [['energy-gain', ['draws tier:archmage:v1', 'names Archmage']]]);
 });
 
+test('a spell or a mutation a fact names as text reaches the section, even where the book no longer names it', () => {
+  const gone = new Map([['data/Tiers/elementalist.v1.json', { id: 'tier:elementalist:v1', name: 'Stormcaller' }], ['data/Spells/mage/lightning_bolt.v1.json', { id: 'spell:lightning_bolt:v1', name: 'Bolt' }]]);
+  const diff = [diffOf('data/Tiers/elementalist.v1.json', { added: ['x'] }), diffOf('data/Spells/mage/lightning_bolt.v1.json', { added: ['x'] })].join('\n');
+  const { sections } = reach(readDiff(diff), { ...given, content: path => gone.get(path) ?? null });
+  assert.deepEqual(sections.map(section => [section.id, section.why]), [['energy-gain', ['states tier:elementalist:v1', 'states spell:lightning_bolt:v1']]]);
+});
+
 test('a renamed spell reaches the sections that still name it by its old name', () => {
   const diff = diffOf('data/Spells/brawler/heavy_strike.v1.json', { removed: ['  "name": "Heavy Strike",'], added: ['  "name": "Crushing Blow",'] });
   const renamed = new Map([['data/Spells/brawler/heavy_strike.v1.json', { id: 'spell:heavy_strike:v1', name: 'Crushing Blow' }]]);

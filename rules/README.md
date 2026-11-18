@@ -82,12 +82,12 @@ One to three lines.
   (`caster.damage`), `tier:<name>:vN.<field>` from the mutation's file under `data/Tiers/` (`name`, `level`,
   `initiativeBonus`, or its passive's `sunder`, `damageBonus`, `upkeepEnergy`). Three names are lists, read whole
   only in a fact: `tier:<name>:vN.teaches`, the spells the mutation teaches, `creature.knows`, the reference
-  creature's starting spells, and `tier:<name>:vN.needs`, the mutations the mutation needs (its `prerequisites`,
-  not a capstone's any-of); an alias is resolved through `data/aliases.json`. `.count` gives how many each
-  holds, a number that may also be drawn. Numbers, `+ - * /`, parentheses, `max`, `min` and `floor` combine
-  them. Never type a number the content holds. An example draws every value its arithmetic reads, the
-  creature's base stats included (its base Defense, its own critical chance), and states no fact about the
-  content that the build does not check.
+  creature's starting spells, and `tier:<name>:vN.needs`, the mutations it needs (its `prerequisites`; a
+  capstone, which needs any one of its `anyOf`, is refused); an alias is resolved through `data/aliases.json`.
+  `.count` gives how many each holds, a number that may also be drawn. Numbers, `+ - * /`, parentheses, `max`,
+  `min` and `floor` combine them. Never type a number the content holds. An example draws every value its
+  arithmetic reads, the creature's base stats included (its base Defense, its own critical chance), and states
+  no fact about the content that the build does not check.
 - **Counts.** A value before a count's noun (round, turn, enemy, ally, target, time, Upkeep; in French tour,
   round, ennemi, allié, cible, Entretien), right after it or after one word of a closed list (more, next,
   additional, ...), names both forms, `{rules.evolutionInterval|round|rounds}`, so a value of 1 reads "1 round"

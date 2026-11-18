@@ -328,13 +328,15 @@ test('a fact states a mutation another one needs, read from its prerequisites in
   const mutations = new Map([
     ['tier:brute:v1', { id: 'tier:brute:v1', name: 'Brute', level: 1, initiativeBonus: 1, prerequisites: [] }],
     ['tier:marauder:v1', { id: 'tier:marauder:v1', name: 'Oppressor', level: 2, initiativeBonus: 2, prerequisites: ['tier:brute'] }],
-    ['tier:titan:v1', { id: 'tier:titan:v1', name: 'Titan', level: 4, initiativeBonus: 0 }],
+    ['tier:titan:v1', { id: 'tier:titan:v1', name: 'Titan', level: 4, initiativeBonus: 0, prerequisites: [], anyOf: ['tier:marauder:v1'] }],
   ]);
   const aliases = { 'tier:brute': 'tier:brute:v1' };
   const book = text => inputs({ mutations, aliases, parts: [{ file: '01-the-goal.md', text: goal.replace('Pummel costs {spell:pummel:v1.energyCost} and deals {spell:pummel:v1.damage}.', text) }] });
-  const clean = book("Oppressor needs Brute{?tier:marauder:v1.needs = 'tier:brute:v1'}{?tier:marauder:v1.needs.count = 1}; Brute needs nothing{?tier:brute:v1.needs.count = 0}{?tier:titan:v1.needs.count = 0}.");
+  const clean = book("Oppressor needs Brute{?tier:marauder:v1.needs = 'tier:brute:v1'}{?tier:marauder:v1.needs.count = 1}; Brute needs nothing{?tier:brute:v1.needs.count = 0}.");
   assert.deepEqual(errorsOf(clean), []);
-  assert.deepEqual(buildRules(clean).book.drawnFrom.mutations, ['tier:brute:v1', 'tier:marauder:v1', 'tier:titan:v1']);
+  assert.deepEqual(buildRules(clean).book.drawnFrom.mutations, ['tier:brute:v1', 'tier:marauder:v1']);
+  // A capstone needs any one of its anyOf, not its empty prerequisites: "Titan needs nothing" would be false.
+  refuses(book('Titan needs nothing{?tier:titan:v1.needs.count = 0}.'), /"tier:titan:v1\.needs": Titan needs any one of its anyOf; \.needs reads prerequisites only/);
   refuses(book("Oppressor needs Titan{?tier:marauder:v1.needs = 'tier:titan:v1'}."), /the fact "tier:marauder:v1\.needs = 'tier:titan:v1'" is false/);
   refuses(book("Oppressor{?tier:marauder:v1.needs != 'tier:apex:v1'}."), /mutation "tier:apex:v1" is not in data\//);
   refuses(book('Oppressor needs {tier:marauder:v1.needs}.'), /"tier:marauder:v1\.needs" is a list of mutations: state one it holds with \{\?tier:marauder:v1\.needs = 'tier:\.\.\.'\}/);

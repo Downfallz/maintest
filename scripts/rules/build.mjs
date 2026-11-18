@@ -293,11 +293,15 @@ function listValue(list, field) {
 }
 
 // A mutation's field (`name`, `level`, `initiativeBonus`), its passive's (`sunder`, `damageBonus`, `upkeepEnergy`),
-// `teaches`, the list of the spells it teaches, or `needs`, the mutations it requires (its prerequisites, not a
-// capstone's any-of), and the `count` of either.
+// `teaches`, the list of the spells it teaches, or `needs`, the mutations it requires, and the `count` of either.
+// `needs` reads its prerequisites; a capstone needs any one of its `anyOf` instead, and its empty prerequisites
+// would vouch for "it needs nothing", so it is refused.
 function mutationValue(definition, path, aliases) {
   const [field, sub] = path.split('.');
   if (field === 'teaches') return listValue(idList(definition.spells, `spell of ${definition.id}`, aliases), sub);
+  if (field === 'needs' && definition.anyOf?.length > 0) {
+    throw new Error(`"${definition.id}.needs": ${definition.name} needs any one of its anyOf; .needs reads prerequisites only`);
+  }
   if (field === 'needs') return listValue(idList(definition.prerequisites, `prerequisite of ${definition.id}`, aliases, 'mutation'), sub);
   if (sub !== undefined) return undefined;
   return scalar(Object.hasOwn(definition, field) ? definition[field] : definition.passive?.[field]);
