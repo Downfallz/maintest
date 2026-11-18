@@ -255,7 +255,23 @@ public sealed class PracticeTableTests : IDisposable
 
         answer.Status.ShouldBe(409);
         Encoding.UTF8.GetString(answer.Body).ShouldBe(PrepareRefused);
-        said.ShouldHaveSingleItem().ShouldStartWith("  The scenario could not be prepared: ");
+        said.ShouldHaveSingleItem().ShouldStartWith("  The scenario could not be prepared: FileNotFoundException");
+    }
+
+    /// <summary>
+    /// Content of a version this engine does not know, as after a deploy that moved the builder, or not a schema at
+    /// all, is refused the same way: the loader's own refusal is not an <see cref="InvalidDataException" /> (#846).
+    /// </summary>
+    [Theory]
+    [InlineData("""{"schemaVersion":999}""")]
+    [InlineData("[]")]
+    public async Task A_practice_on_content_this_engine_cannot_load_is_answered_as_one_and_said_on_the_console(string schema)
+    {
+        var (answer, said) = await PreparedOnAsync(schema);
+
+        answer.Status.ShouldBe(409);
+        Encoding.UTF8.GetString(answer.Body).ShouldBe(PrepareRefused);
+        said.ShouldHaveSingleItem().ShouldContain("InvalidGameContentException");
     }
 
     private const string PrepareRefused = "The scenario could not be prepared. The host's console says why.";

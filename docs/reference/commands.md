@@ -676,8 +676,8 @@ seat's view carries its own mark as `seen` (null before the first) and when the 
 - A game between two players gives each the time to answer `"turnLimit"` says on `POST /api/lobby/tables` (24,
   72 or 168 hours, 72 by default; none against a bot), and a player who lets it run out loses, both drawing when
   both ran out, and is told once on their devices when a quarter of it is left; every table it lists and each
-  seat's view say when it runs out (`answerBy`), which the lobby's cards and the battle view count down
-  (ADR 0169).
+  seat's view say when it runs out (`answerBy`, null while the journal cannot be read), which the lobby's cards
+  and the battle view count down (ADR 0169).
 - `/stats` (`GET /api/stats`) is a signed-in player's own statistics, computed from the results kept by account
   (ADR 0168) and counting their ranked 3v3 games alone (ADR 0171): the record, streaks, and the mutations and
   spells they played, which each result keeps from the final board and the match's events.

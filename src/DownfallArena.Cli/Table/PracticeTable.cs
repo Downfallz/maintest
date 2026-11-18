@@ -1,6 +1,7 @@
 using System.Text.Json;
 using DownfallArena.Cli.Hosting;
 using DownfallArena.Cli.Studio;
+using DownfallArena.Domain.Resources;
 using DownfallArena.Infrastructure.Learning;
 
 namespace DownfallArena.Cli.Table;
@@ -76,9 +77,10 @@ internal sealed class PracticeTable(CliOptions options, string token) : IPractic
         {
             next = await PracticeRun.StartAsync(options, scenario);
         }
-        catch (Exception exception) when (exception is InvalidDataException or JsonException or OperationCanceledException || TableRegistry.StoreFails(exception))
+        catch (Exception exception) when (exception is InvalidDataException or InvalidGameContentException or JsonException or OperationCanceledException || TableRegistry.StoreFails(exception))
         {
-            // Content that no longer reads, or that is gone, as a scenario restart's: its words can carry a path (#846).
+            // Content that no longer reads, of a version this engine does not load, or gone, as a scenario restart's:
+            // its words can carry a path (#846).
             return Refused("prepared", exception, Said);
         }
 

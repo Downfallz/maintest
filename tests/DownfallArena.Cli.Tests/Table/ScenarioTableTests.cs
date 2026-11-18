@@ -100,6 +100,17 @@ public sealed class ScenarioTableTests
         said.ShouldHaveSingleItem().ShouldStartWith("  The scenario could not be started again: ");
     }
 
+    /// <summary>The same for content of a version this engine does not know: the loader's own refusal (#846).</summary>
+    [Fact]
+    public async Task A_restart_on_content_this_engine_cannot_load_is_answered_as_one_and_said_on_the_console()
+    {
+        var (answer, said) = await RestartedAfterAsync(schema => File.WriteAllTextAsync(schema, """{"schemaVersion":999}""", TestContext.Current.CancellationToken));
+
+        answer.Status.ShouldBe(409);
+        Encoding.UTF8.GetString(answer.Body).ShouldBe(RestartRefused);
+        said.ShouldHaveSingleItem().ShouldContain("InvalidGameContentException");
+    }
+
     private const string RestartRefused = "The scenario could not be started again. The host's console says why.";
 
     /// <summary>The scenario started on a copy of its content, the copy spoiled, then restarted: the answer and what was said.</summary>

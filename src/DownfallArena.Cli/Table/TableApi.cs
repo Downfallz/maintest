@@ -610,7 +610,9 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
     private StudioResponse NotJson(string what, JsonException exception)
     {
         var table = run is { } recording ? $"session {recording.SessionId}" : $"match {session.MatchId}";
-        Said($"  A request body ({what}) on {table} could not be read: {exception.GetType().Name} at line {exception.LineNumber}, byte {exception.BytePositionInLine}.");
+        // The parser counts both from 0; an editor counts lines from 1. A failure the parser did not place has neither.
+        var where = exception.LineNumber is { } line ? $" at line {line + 1}, byte {exception.BytePositionInLine}" : string.Empty;
+        Said($"  A request body ({what}) on {table} could not be read: {exception.GetType().Name}{where}.");
         return StudioResponse.OfPlainText(400, "The request body is not the JSON this route reads.");
     }
 

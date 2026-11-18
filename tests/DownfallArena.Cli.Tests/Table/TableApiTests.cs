@@ -491,6 +491,7 @@ public sealed partial class TableApiTests : IDisposable
         var line = _said.Where(said => said.Contains("could not be read", StringComparison.Ordinal)).ShouldHaveSingleItem();
         line.ShouldContain("decision from player1");
         line.ShouldContain($"match {table.Session.MatchId}");
+        line.ShouldContain("at line 1, byte ", customMessage: "an editor's line, counted from 1");
         line.ShouldNotContain("Zelda_42");
     }
 
