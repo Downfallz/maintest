@@ -23,7 +23,9 @@ apocalyptic battle; the words carry that fantasy and stay short, plain and easy 
 
 A Stage is written in Roman numerals, I to IV, in both languages: Stage III, Stade IV. The domain and the data
 keep the number (`level: 3`); only what a player reads turns it into a numeral (`stageLabel` in `table/terms.js`). The studio is for
-authors, who edit the `level` itself, so it keeps the number (Stage 3).
+authors, who edit the `level` itself, so it keeps the number (Stage 3). What a screen reader speaks, an
+announcement or an `aria-label`, also keeps the number (`stageSpoken`: Stage 1), since "Stage I" may be read
+as the pronoun I (#769).
 
 Use the words naturally in a sentence rather than as literal substitutions:
 

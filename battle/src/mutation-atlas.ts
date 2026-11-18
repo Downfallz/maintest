@@ -1,6 +1,6 @@
 import { cardsById } from '../../table/card.js';
 import { classColour, familyRoot, requirementLine, stageRows, talentPalette } from '../../table/mat.js';
-import { stageLabel } from '../../table/terms.js';
+import { stageLabel, stageSpoken } from '../../table/terms.js';
 import { iconElement } from './condition-icons';
 import { onNextFrame } from './next-frame';
 import { spellCard } from './spell-card';
@@ -130,7 +130,7 @@ export function atlasControls(onVisibility: () => void) {
           const tile = node('button', '', 'atlas-node') as HTMLButtonElement; tile.type = 'button';
           tile.dataset.package = pack.id; tile.dataset.status = pack.status;
           if (lit.has(pack.id)) tile.dataset.path = 'true';
-          tile.setAttribute('aria-label', `${pack.name} · ${stageLabel(pack.level)} · ${STATUS[pack.status] ?? pack.status}`);
+          tile.setAttribute('aria-label', `${pack.name} · ${stageSpoken(pack.level)} · ${STATUS[pack.status] ?? pack.status}`);
           tile.append(node('span', String(pack.level), 'atlas-node-stage'), node('span', pack.name, 'atlas-node-name'));
           if (pack.status === 'available') tile.append(node('span', 'Offer', 'atlas-node-flag'));
           if (pack.status === 'picked') tile.append(node('span', 'Picked', 'atlas-node-flag'));

@@ -1,7 +1,7 @@
 import { mutationChoices } from '../../table/battle-mutations.js';
 import { cardsById } from '../../table/card.js';
 import { classColour, familyRoot, talentPalette } from '../../table/mat.js';
-import { stageLabel } from '../../table/terms.js';
+import { stageSpoken } from '../../table/terms.js';
 import { spellCard } from './spell-card';
 import type { Catalogue, Package } from './planning';
 import { onNextFrame } from './next-frame';
@@ -66,7 +66,7 @@ export function mutationTree(model: Model, catalogue: Catalogue | null, choose: 
     label.append(sigil(family?.visual?.family ?? family?.name?.toLowerCase() ?? ''), node('strong', face?.name ?? pack!.name, 'mutation-name'));
     if (face) {
       const button = label as HTMLButtonElement; button.type = 'button'; button.dataset.mutation = id;
-      button.setAttribute('aria-label', `${face.name} · ${face.family} · ${face.stage == null ? 'Stage unavailable' : stageLabel(face.stage)}`);
+      button.setAttribute('aria-label', `${face.name} · ${face.family} · ${face.stage == null ? 'Stage unavailable' : stageSpoken(face.stage)}`);
       button.setAttribute('aria-description', [face.tags.join(' · '), ...face.spells.map((spell: {name: string}) => spell.name)].filter(Boolean).join('. '));
       label.append(node('small', face.tags.join(' · ') || face.spells[0]?.name || (face.missing ? 'Details unavailable' : 'Passive'), 'mutation-tags'));
       button.addEventListener('click', () => choose(id));

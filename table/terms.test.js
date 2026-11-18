@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { SPEEDS, decisionLabel, phaseLabel, stageClimb, stageLabel, stageNumeral, stepLabel, tempoLabel } from './terms.js';
+import { SPEEDS, decisionLabel, phaseLabel, stageClimb, stageLabel, stageNumeral, stageSpoken, stepLabel, tempoLabel } from './terms.js';
 
 test('a served speed reads as its tempo, and the chooser still sends the engine values in play order', () => {
   assert.equal(tempoLabel('Quick'), 'Instinct');
@@ -31,6 +31,13 @@ test('a sub-phase reads as its words, with the speed step as the tempo', () => {
 test('a level reads as its stage, in Roman numerals', () => {
   assert.equal(stageLabel(2), 'Stage II');
   assert.deepEqual([1, 2, 3, 4].map(stageNumeral), ['I', 'II', 'III', 'IV']);
+});
+
+// #769: a screen reader may read "Stage I" as the pronoun I, so what is spoken keeps the number.
+test('a stage is spoken with its number, not its numeral', () => {
+  assert.equal(stageSpoken(1), 'Stage 1');
+  assert.deepEqual([1, 2, 3, 4].map(stageSpoken), ['Stage 1', 'Stage 2', 'Stage 3', 'Stage 4']);
+  assert.equal(stageSpoken(undefined), 'Stage ?');
 });
 
 test('the climb through the four Stages reads in the same numerals', () => {
