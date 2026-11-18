@@ -7,8 +7,11 @@ namespace DownfallArena.Infrastructure.FeedbackBox;
 /// Feedback (ADR 0189) as files of one directory, for a laptop's table. A record is written beside its place and moved
 /// onto it, so a reader never sees half of one.
 /// </summary>
-public sealed class FileFeedbackStore : IFeedbackStore
+public sealed class FileFeedbackStore : IFeedbackStore, IFeedbackIndexStore
 {
+    /// <summary>One write of an index at a time in this process: a laptop's table is one process, the tending pass in it.</summary>
+    private static readonly SemaphoreSlim IndexWrites = new(1, 1);
+
     public FileFeedbackStore(string directory)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(directory);
@@ -78,6 +81,52 @@ public sealed class FileFeedbackStore : IFeedbackStore
             return null;
         }
     }
+
+    /// <summary>The index of feedback (#866), its version a hash of what the file holds.</summary>
+    public async Task<FeedbackIndexRead> ReadIndexAsync(CancellationToken cancellationToken = default)
+    {
+        var text = await IndexTextAsync(cancellationToken);
+        return text is null ? new FeedbackIndexRead(null, null) : new FeedbackIndexRead(FeedbackDocuments.ReadIndex(text), VersionOf(text));
+    }
+
+    public async Task<bool> WriteIndexAsync(FeedbackIndexContent content, string? version, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+        await IndexWrites.WaitAsync(cancellationToken);
+        try
+        {
+            var now = await IndexTextAsync(cancellationToken);
+            if ((now is null ? null : VersionOf(now)) != version)
+            {
+                return false;
+            }
+
+            System.IO.Directory.CreateDirectory(Directory);
+            var path = Path.Combine(Directory, FeedbackDocuments.IndexName);
+            var staged = $"{path}.{Guid.NewGuid():N}.tmp";
+            await File.WriteAllTextAsync(staged, FeedbackDocuments.WriteIndex(content), cancellationToken);
+            File.Move(staged, path, overwrite: true);
+            return true;
+        }
+        finally
+        {
+            IndexWrites.Release();
+        }
+    }
+
+    private async Task<string?> IndexTextAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await File.ReadAllTextAsync(Path.Combine(Directory, FeedbackDocuments.IndexName), cancellationToken);
+        }
+        catch (Exception exception) when (exception is FileNotFoundException or DirectoryNotFoundException)
+        {
+            return null;
+        }
+    }
+
+    private static string VersionOf(string text) => Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(text)));
 
     public Task DeleteAsync(string id, CancellationToken cancellationToken = default)
     {

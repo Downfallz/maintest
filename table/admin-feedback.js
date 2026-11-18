@@ -237,7 +237,7 @@ export function positionSides(position, seat) {
 
 /** The sheet's buttons, by the names the host offers them under (`actions`), each shown only when the host offers it. */
 export const SHEET_ACTIONS = Object.freeze(['reproduce', 'download', 'file', 'seen', 'reproduced', 'dismiss', 'spam', 'toIdea', 'toBug', 'diagnose', 'mute', 'unmute',
-  'planned', 'shipped', 'declined', 'merge', 'prompt']);
+  'planned', 'shipped', 'declined', 'merge', 'unmerge', 'prompt']);
 
 /** Which of the sheet's buttons apply to this feedback as it stands: what the host says, and nothing else. */
 export function sheetActions(answer) {
@@ -373,6 +373,40 @@ export function issuesPath(repository, since = null, page = 1) {
   return `https://api.github.com/repos/${repository}/issues?state=closed&labels=from-report&sort=updated&direction=desc&per_page=100&page=${page}${from}`;
 }
 
+/** GitHub's public API for one issue of the repository, by its number; none for a number no issue has. */
+export function issuePath(repository, number) {
+  return repository && Number.isInteger(number) && number > 0 ? `https://api.github.com/repos/${repository}/issues/${number}` : null;
+}
+
+/**
+ * The filed reports' issues GitHub says are closed as done, and whether every one was asked. The closed issues filed
+ * from reports are read first, ISSUE_PAGES pages at most; past that window, each filed issue it did not hold is asked by
+ * its number, once, until GitHub refuses (#751). A refusal while reading the window throws: nothing is known then.
+ */
+export async function closedFiled(github, repository, rows) {
+  const since = rows.map(row => row.at).filter(Boolean).sort((one, other) => Date.parse(one) - Date.parse(other))[0] ?? null;
+  const closed = new Set();
+  let windowed = false;
+  for (let number = 1; number <= ISSUE_PAGES; number += 1) {
+    const answer = await github(issuesPath(repository, since, number));
+    if (!answer.ok) throw new Error(`GitHub answered ${answer.status}`);
+    const issues = await answer.json();
+    for (const issue of closedIssues(issues)) closed.add(issue);
+    if (!Array.isArray(issues) || issues.length < 100) {
+      windowed = true;
+      break;
+    }
+  }
+  if (windowed) return { closed, complete: true };
+  const left = [...new Set(rows.map(row => row.issue).filter(issue => Number.isInteger(issue) && !closed.has(issue)))];
+  for (const number of left) {
+    const answer = await github(issuePath(repository, number));
+    if (!answer.ok) return { closed, complete: false };
+    for (const issue of closedIssues([await answer.json()])) closed.add(issue);
+  }
+  return { closed, complete: true };
+}
+
 /** The issues GitHub's answer says were closed as done: not a pull request, not closed as not planned or as a duplicate. */
 export function closedIssues(answer) {
   const issues = Array.isArray(answer) ? answer : [];
@@ -449,7 +483,7 @@ export function mountFeedbackTab({ send, download, github = globalThis.fetch?.bi
 
   const BUTTONS = { reproduce: 'admin-feedback-reproduce', download: 'admin-feedback-download', file: 'admin-feedback-filed', seen: 'admin-feedback-seen', reproduced: 'admin-feedback-reproduced', dismiss: 'admin-feedback-dismiss', spam: 'admin-feedback-spam',
     toIdea: 'admin-feedback-to-idea', toBug: 'admin-feedback-to-bug', diagnose: 'admin-feedback-diagnose', mute: 'admin-feedback-mute', unmute: 'admin-feedback-unmute',
-    planned: 'admin-feedback-planned', shipped: 'admin-feedback-shipped', declined: 'admin-feedback-declined', merge: 'admin-feedback-merge', prompt: 'admin-feedback-prompt' };
+    planned: 'admin-feedback-planned', shipped: 'admin-feedback-shipped', declined: 'admin-feedback-declined', merge: 'admin-feedback-merge', unmerge: 'admin-feedback-unmerge', prompt: 'admin-feedback-prompt' };
 
   // The blocks an idea's actions sit in, each shown while one of its buttons is.
   const BLOCKS = { 'admin-feedback-filing': ['download', 'file'], 'admin-feedback-filing-issue': ['file'], 'admin-feedback-dismissing': ['dismiss'], 'admin-feedback-planning': ['planned', 'shipped'], 'admin-feedback-declining': ['declined'],
@@ -550,7 +584,7 @@ export function mountFeedbackTab({ send, download, github = globalThis.fetch?.bi
   }
 
   // The ideas this one can join: every open idea, CHOICE_PAGES pages at most, read when the operator asks to merge,
-  // since each page is a read of every record the host keeps.
+  // since each page is a read of the index of open feedback and of its rows (#866).
   async function listChoices(id) {
     const asked = read;
     const select = element('admin-feedback-merge-into');
@@ -728,6 +762,10 @@ export function mountFeedbackTab({ send, download, github = globalThis.fetch?.bi
     if (!globalThis.confirm?.(`Merge this idea into "${label}"? It leaves the list and is read inside that one, its player counted.`)) return;
     void change('POST', 'merge', { into: select.value }, 'Merged. It is read inside the idea it joined.');
   });
+  element('admin-feedback-unmerge').addEventListener('click', () => {
+    if (!globalThis.confirm?.('Unmerge this idea? It is listed again as an idea of its own, and its player no longer counts in the group it joined.')) return;
+    void change('DELETE', 'merge', undefined, 'Unmerged. It is listed again as an idea of its own.');
+  });
   element('admin-feedback-joined').addEventListener('click', () => {
     if (open?.mergedInto?.id) void openSheet(open.mergedInto.id);
   });
@@ -762,13 +800,14 @@ export function mountFeedbackTab({ send, download, github = globalThis.fetch?.bi
    * minutes at most. GitHub not answering leaves them filed, and a line says so.
    */
   async function checkFixed() {
-    // Once in ten minutes at most: each look reads every record kept, and GitHub answers sixty requests an hour.
+    // Once in ten minutes at most: each look reads every page of the filed reports, and GitHub answers sixty requests an hour.
     if (checking || !github || Date.now() - checked < CHECK_EVERY) return;
     checking = true;
     try {
       const rows = [];
       let repository = null;
-      for (let number = 1, pages = 1; number <= Math.min(pages, CHOICE_PAGES); number += 1) {
+      // Every page of the open filed reports: the host lists them from its index of open feedback (#866).
+      for (let number = 1, pages = 1; number <= pages; number += 1) {
         const answer = await send('GET', feedbackPath({ kind: 'bug', status: 'open', filed: true, page: number }));
         if (!answer.ok) return;
         rows.push(...(answer.body.feedback ?? []).filter(row => Number.isInteger(row.issue)));
@@ -776,18 +815,17 @@ export function mountFeedbackTab({ send, download, github = globalThis.fetch?.bi
         pages = answer.body.pages ?? 1;
       }
       if (rows.length === 0 || !issuesPath(repository)) return;
-      const since = rows.map(row => row.at).filter(Boolean).sort((one, other) => Date.parse(one) - Date.parse(other))[0] ?? null;
-      const closed = new Set();
+      let closed;
       try {
-        for (let number = 1; number <= ISSUE_PAGES; number += 1) {
-          const answer = await github(issuesPath(repository, since, number));
-          if (!answer.ok) throw new Error(`GitHub answered ${answer.status}`);
-          const issues = await answer.json();
-          for (const issue of closedIssues(issues)) closed.add(issue);
-          if (!Array.isArray(issues) || issues.length < 100) break;
-        }
+        const read = await closedFiled(github, repository, rows);
+        closed = read.closed;
         // Counted from GitHub's answer: a look the host or GitHub could not answer is tried again at the next opening.
-        checked = Date.now();
+        if (read.complete) checked = Date.now();
+        else {
+          const told = element('admin-feedback-said');
+          told.textContent = 'GitHub stopped answering before every filed issue was asked. The rest stay filed until the next look.';
+          told.classList.add('refused');
+        }
       } catch {
         const told = element('admin-feedback-said');
         told.textContent = 'GitHub could not be asked whether the filed issues are closed. The reports stay filed until it can.';

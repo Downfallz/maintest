@@ -130,4 +130,40 @@ public abstract class FeedbackStoreContract
         (await store.FindAsync(Feedback.NewId(Start), Cancel)).ShouldBeNull();
         (await store.FindAsync("../escape", Cancel)).ShouldBeNull();
     }
+
+    private static FeedbackIndexContent Index(params string[] open) => new(
+        [.. open.Select(id => new FeedbackSummary(id, FeedbackKind.Idea, FeedbackStatus.Seen, "battle", "seat-a", Start, Start.AddMinutes(3), MergedInto: null, Issue: 731))],
+        [Feedback.NewId(Start.AddDays(-200))]);
+
+    [Fact]
+    public async Task The_index_reads_back_as_it_was_written_and_no_listing_of_ids_holds_it()
+    {
+        var store = await StoreAsync();
+        var index = (IFeedbackIndexStore)store;
+        var written = Index(Feedback.NewId(Start), Feedback.NewId(Start.AddMinutes(1)));
+
+        (await index.ReadIndexAsync(Cancel)).ShouldBe(new FeedbackIndexRead(null, null));
+        (await index.WriteIndexAsync(written, version: null, Cancel)).ShouldBeTrue();
+
+        var read = await index.ReadIndexAsync(Cancel);
+        read.Content.ShouldNotBeNull().Rows.ShouldBe(written.Rows);
+        read.Content.Closed.ShouldBe(written.Closed);
+        (await store.IdsAsync(Cancel)).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task An_index_write_over_a_version_another_write_replaced_is_refused()
+    {
+        var index = (IFeedbackIndexStore)await StoreAsync();
+        var kept = Feedback.NewId(Start.AddMinutes(1));
+        await index.WriteIndexAsync(Index(Feedback.NewId(Start)), version: null, Cancel);
+        var first = await index.ReadIndexAsync(Cancel);
+        (await index.WriteIndexAsync(Index(kept), first.Version, Cancel)).ShouldBeTrue();
+
+        var late = await index.WriteIndexAsync(Index(Feedback.NewId(Start.AddMinutes(2))), first.Version, Cancel);
+        var created = await index.WriteIndexAsync(Index(Feedback.NewId(Start.AddMinutes(3))), version: null, Cancel);
+
+        (late, created).ShouldBe((false, false));
+        (await index.ReadIndexAsync(Cancel)).Content.ShouldNotBeNull().Rows.ShouldHaveSingleItem().Id.ShouldBe(kept);
+    }
 }

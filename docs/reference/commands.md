@@ -479,6 +479,14 @@ The seat's view says the lesson under `practice.tutorial`:
   `Feedback.Closed`. A merged idea takes no status but dismissed, which takes it out of its group, and no kind (409
   `Feedback.MergedAway`). An idea others joined stays an idea (409 `Feedback.Grouped`). The list filtered to ideas
   sorts by `askedBy`, then by the newest ask.
+  `DELETE .../<id>/merge` puts a merged idea back in the list as an idea of its own (#725): it keeps its status, leaves
+  its group's `asks` and no longer counts towards its `askedBy`. A merged idea's sheet offers it as `unmerge`. An idea
+  not merged, or unmerged already, changes nothing and notes nothing; an unknown id is 404 `Feedback.NotFound`. The
+  Activity line is `feedback.unmerge <id> from <group>`.
+  The list of open feedback (`status=open` or an open status), the Overview's count and the spam count read the index
+  of feedback (`index.json` beside the records, #866), and the list opens the page's rows alone. The index is written
+  with each change, checked against a listing of the store at each read, and built from the records at the first.
+  A filter that keeps closed feedback reads every record.
   `PUT .../<id>/kind {"kind"}` turns a bug report into an idea, or an idea into a bug report. It keeps the words,
   position and sender and sets the status to seen. A closed one gets 409 `Feedback.Closed`.
   `POST .../<id>/reproduce` cuts a bug report's round as a match scenario (feedback plan, R4). The cut is at the top of

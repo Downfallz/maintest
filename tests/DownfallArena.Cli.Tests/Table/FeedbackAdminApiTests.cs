@@ -58,10 +58,10 @@ public sealed class FeedbackAdminApiTests : IDisposable
     private AdminApi Admin() =>
         new(_registry, _hosted.Composer, OperatorGate.WithToken(Token), _clock, "Rules", _hosted.Stored)
         {
-            Feedback = new FeedbackAdminApi(FeedbackDesk.Open(_feedback, _mutes, _writes, _clock), _hosted.Stored, _clock) { Notes = new OperatorNotes(_actions) },
+            Feedback = new FeedbackAdminApi(FeedbackDesk.Open(new FeedbackIndex(_feedback, _feedback, _clock), _mutes, _writes, _clock), _hosted.Stored, _clock) { Notes = new OperatorNotes(_actions) },
         };
 
-    private FeedbackApi Players() => new(new SendFeedback(_feedback, new GuestAddresses(), _writes, _clock, _mutes), _registry);
+    private FeedbackApi Players() => new(new SendFeedback(_feedback, new GuestAddresses(), _writes, _clock, _mutes), new AskFeedbackMuted(_mutes, _clock), _registry);
 
     /// <summary>Asks as the operator, then moves the clock a second, so the Activity lines sort as they were noted.</summary>
     private async Task<StudioResponse> AskAsync(string method, string path, object? body = null, string? query = null, string? token = Token)
@@ -292,7 +292,7 @@ public sealed class FeedbackAdminApiTests : IDisposable
         await _feedback.SaveAsync(new Feedback { Id = id, Kind = FeedbackKind.Idea, At = _clock.GetUtcNow(), Sender = account.Value, Account = account.Value, Category = "lobby", Text = "Invite a friend by name." }, Cancel);
         var admin = new AdminApi(_registry, _hosted.Composer, OperatorGate.WithToken(Token), _clock, "Rules", _hosted.Stored)
         {
-            Feedback = new FeedbackAdminApi(FeedbackDesk.Open(_feedback, new FeedbackMutes(new AccountActivityLog(activity, _clock)), _writes, _clock), _hosted.Stored, _clock) { Notes = new OperatorNotes(_actions) },
+            Feedback = new FeedbackAdminApi(FeedbackDesk.Open(new FeedbackIndex(_feedback, _feedback, _clock), new FeedbackMutes(new AccountActivityLog(activity, _clock)), _writes, _clock), _hosted.Stored, _clock) { Notes = new OperatorNotes(_actions) },
         };
 
         (await admin.HandleAsync("POST", $"{FeedbackAdminApi.Route}/{id}/mute", string.Empty, Token, principal: null)).Status.ShouldBe(200);
@@ -311,7 +311,7 @@ public sealed class FeedbackAdminApiTests : IDisposable
         var merged = Read(await AskAsync("POST", $"{FeedbackAdminApi.Route}/{second}/merge", new { into = first }));
 
         merged.GetProperty("mergedInto").GetProperty("id").GetString().ShouldBe(first);
-        Actions(merged).ShouldBe(["dismiss", "spam", "mute"]);
+        Actions(merged).ShouldBe(["unmerge", "dismiss", "spam", "mute"]);
         merged.GetProperty("askedBy").ValueKind.ShouldBe(JsonValueKind.Null, "a merged idea is counted in the one it joined");
         var row = Read(await AskAsync("GET", FeedbackAdminApi.Route, query: "kind=idea")).GetProperty("feedback").EnumerateArray().ShouldHaveSingleItem();
         (row.GetProperty("id").GetString(), row.GetProperty("askedBy").GetInt32()).ShouldBe((first, 2));
@@ -321,6 +321,27 @@ public sealed class FeedbackAdminApiTests : IDisposable
         (ask.GetProperty("id").GetString(), ask.GetProperty("text").GetString(), ask.GetProperty("guest").GetBoolean()).ShouldBe((second, "I wanted to see the last round again and found no way.", true));
         Actions(sheet).ShouldBe(["seen", "planned", "shipped", "dismiss", "spam", "declined", "merge", "prompt", "diagnose", "mute"]);
         (await ActivityAsync()).ShouldBe([$"feedback.merge {second} into {first}"]);
+    }
+
+    [Fact]
+    public async Task An_idea_unmerged_is_listed_again_as_its_own_and_unmerged_again_is_noted_once()
+    {
+        var first = await SentAsync(await BegunAsync(), Idea());
+        var second = await SentAsync(await BegunAsync(), Idea().Replace("could not", "found no way", StringComparison.Ordinal));
+        await AskAsync("POST", $"{FeedbackAdminApi.Route}/{second}/merge", new { into = first });
+
+        var unmerged = Read(await AskAsync("DELETE", $"{FeedbackAdminApi.Route}/{second}/merge"));
+        var again = await AskAsync("DELETE", $"{FeedbackAdminApi.Route}/{second}/merge");
+
+        (unmerged.GetProperty("mergedInto").ValueKind, unmerged.GetProperty("askedBy").GetInt32()).ShouldBe((JsonValueKind.Null, 1));
+        Actions(unmerged).ShouldContain("merge");
+        Actions(unmerged).ShouldNotContain("unmerge");
+        again.Status.ShouldBe(200);
+        var rows = Read(await AskAsync("GET", FeedbackAdminApi.Route, query: "kind=idea")).GetProperty("feedback").EnumerateArray()
+            .Select(row => (row.GetProperty("id").GetString(), row.GetProperty("askedBy").GetInt32())).ToList();
+        rows.ShouldBe([(second, 1), (first, 1)]);
+        (await AskAsync("DELETE", $"{FeedbackAdminApi.Route}/{Feedback.NewId(_clock.GetUtcNow())}/merge")).Status.ShouldBe(404);
+        (await ActivityAsync()).ShouldBe([$"feedback.unmerge {second} from {first}", $"feedback.merge {second} into {first}"]);
     }
 
     [Fact]

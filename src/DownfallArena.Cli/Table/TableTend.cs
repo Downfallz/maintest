@@ -105,8 +105,9 @@ internal static class TableTend
                 : await OpenSuspendedAsync(target, lobby);
 
             // Feedback closed 180 days ago is let go of (ADR 0189); a store that cannot be opened costs that alone.
-            var feedbackStore = await TableHost.OpenFeedbackAsync(target, CancellationToken.None);
-            var feedback = feedbackStore is null ? null : new LetGoOfClosedFeedback(feedbackStore, clock);
+            // Through the index's store (#866), so what is let go of leaves the index too.
+            var feedbackStore = await TableHost.OpenFeedbackAsync(target, clock, CancellationToken.None);
+            var feedback = feedbackStore is null ? null : new LetGoOfClosedFeedback(feedbackStore.Records, clock);
 
             // Every run is kept for the admin panel's Jobs tab (A3), the one that failed too. A log that cannot be
             // opened costs the run its record, never the pass: the tables are tended all the same.

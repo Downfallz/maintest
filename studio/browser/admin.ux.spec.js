@@ -427,7 +427,7 @@ test('a reproduced report is downloaded, filed as an issue and marked fixed once
   await page.route(/\/api\/admin\/feedback\/[^?]+$/, async route => {
     const request = route.request();
     const path = new URL(request.url()).pathname.replace('/api/admin/feedback/', '').replace(feedbackReport.id, 'id');
-    const body = request.method() === 'GET' ? null : request.postDataJSON();
+    const body = ['GET', 'DELETE'].includes(request.method()) ? null : request.postDataJSON();
     asked.push(`${request.method()} ${path}${body && Object.keys(body).length ? ` ${JSON.stringify(body)}` : ''}`);
     if (path === 'id/scenario.zip') {
       return route.fulfill({ status: 200, contentType: 'application/zip', headers: { 'Content-Disposition': `attachment; filename="report-${feedbackReport.id}.zip"` }, body: Buffer.from('PK\x05\x06' + '\0'.repeat(18), 'binary') });
@@ -502,7 +502,7 @@ test('an idea is merged into another, read with everyone who asked it, planned, 
   const groupOf = id => Object.values(ideas).filter(one => one.mergedInto?.id === id);
   // The sheet as FeedbackAdminApi answers it: how many asked, the ideas merged into it, and the actions that apply.
   const sheetOf = one => {
-    if (one.mergedInto) return { ...one, askedBy: null, since: null, actions: ['dismiss', 'spam', 'mute'] };
+    if (one.mergedInto) return { ...one, askedBy: null, since: null, actions: ['unmerge', 'dismiss', 'spam', 'mute'] };
     const asks = groupOf(one.id);
     const closed = ['shipped', 'declined', 'dismissed'].includes(one.status);
     return { ...one, askedBy: 1 + asks.length, since: one.at, asks: asks.map(ask => ({ id: ask.id, at: ask.at, text: ask.text, expected: null, additions: [], account: null, guest: true, senderGone: false })),
@@ -521,7 +521,8 @@ test('an idea is merged into another, read with everyone who asked it, planned, 
     const one = Object.values(ideas).find(idea => idea.id === id);
     const body = request.method() === 'GET' ? null : request.postDataJSON();
     if (change) asked.push(`${request.method()} ${change} ${JSON.stringify(body)}`);
-    if (change === 'merge') Object.assign(one, { mergedInto: { id: body.into, line: ideas.replay.text, status: 'seen' }, status: 'seen' });
+    if (change === 'merge' && request.method() === 'DELETE') Object.assign(one, { mergedInto: null });
+    else if (change === 'merge') Object.assign(one, { mergedInto: { id: body.into, line: ideas.replay.text, status: 'seen' }, status: 'seen' });
     if (change === 'status') Object.assign(one, { status: body.status, plan: body.plan ?? null });
     return route.fulfill({ json: sheetOf(one) });
   });
@@ -541,6 +542,7 @@ test('an idea is merged into another, read with everyone who asked it, planned, 
   await expect(page.locator('#admin-feedback-facts')).toContainText('Merged into');
   await expect(page.locator('#admin-feedback-merge')).toBeHidden();
   await expect(page.locator('#admin-feedback-spam')).toBeVisible();
+  await expect(page.locator('#admin-feedback-unmerge')).toBeVisible();
 
   await page.locator('#admin-feedback-joined').click();
   await expect(page.locator('#admin-feedback-facts')).toContainText('2 players since');
@@ -565,7 +567,16 @@ test('an idea is merged into another, read with everyone who asked it, planned, 
   expect(await page.evaluate(() => { const body = document.querySelector('#admin-feedback-sheet .home-dialog-body'); return body.scrollWidth <= body.clientWidth; })).toBe(true);
   await page.screenshot({ path: info.outputPath('admin-feedback-idea.png') });
 
-  expect(asked).toEqual([`POST merge {"into":"${ideas.replay.id}"}`, 'PUT status {"status":"planned","plan":"docs/tabletop/replay-plan.md"}']);
+  // A merge made by mistake is undone from the merged idea's sheet (#725): it is listed again as an idea of its own.
+  await page.locator('#admin-feedback-asks button').click();
+  await page.locator('#admin-feedback-unmerge').click();
+  await expect(page.locator('#admin-feedback-sheet-said')).toHaveText('Unmerged. It is listed again as an idea of its own.');
+  await expect(page.locator('#admin-feedback-unmerge')).toBeHidden();
+  await expect(page.locator('#admin-feedback-merge')).toBeVisible();
+  await page.locator('#admin-feedback-close').click();
+  await expect(page.locator('#admin-feedback-list li')).toHaveCount(3);
+
+  expect(asked).toEqual([`POST merge {"into":"${ideas.replay.id}"}`, 'PUT status {"status":"planned","plan":"docs/tabletop/replay-plan.md"}', 'DELETE merge null']);
 });
 
 // The Jobs tab (A3): the tending runs, the totals over them, a pass run now and a run's sheet.

@@ -5,6 +5,7 @@ using Azure.Storage.Blobs;
 using Azure.Storage.Queues;
 using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.Application.Admin.Ports;
+using DownfallArena.Application.FeedbackBox;
 using DownfallArena.Application.FeedbackBox.Ports;
 using DownfallArena.Application.Hosting.Ports;
 using DownfallArena.Application.Learning.Ports;
@@ -142,14 +143,17 @@ internal static class ArtifactStores
     /// <summary>The container feedback is kept in (ADR 0189), next to the recordings' one.</summary>
     public const string FeedbackContainer = "feedback";
 
-    /// <summary>Where the players' feedback is kept (ADR 0189): a directory or a container of its own beside the recordings.</summary>
-    public static async Task<IFeedbackStore> OpenFeedbackAsync(string target, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Where the players' feedback is kept (ADR 0189): a directory or a container of its own beside the recordings, with
+    /// its index (#866) beside the records.
+    /// </summary>
+    public static async Task<FeedbackIndex> OpenFeedbackAsync(string target, TimeProvider clock, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(target);
         if (!IsContainerUrl(target))
         {
             var runs = Path.GetFullPath(target).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            return new FileFeedbackStore(Path.Combine(Path.GetDirectoryName(runs) ?? runs, FeedbackContainer));
+            return Indexed(new FileFeedbackStore(Path.Combine(Path.GetDirectoryName(runs) ?? runs, FeedbackContainer)), clock);
         }
 
         var recordings = new Uri(target, UriKind.Absolute);
@@ -158,8 +162,11 @@ internal static class ArtifactStores
         var container = IsEmulator(uri)
             ? new BlobContainerClient(uri, new StorageSharedKeyCredential(DevelopmentAccount, DevelopmentKey))
             : new BlobContainerClient(uri, new DefaultAzureCredential());
-        return await BlobFeedbackStore.OpenAsync(container, cancellationToken);
+        return Indexed(await BlobFeedbackStore.OpenAsync(container, cancellationToken), clock);
     }
+
+    private static FeedbackIndex Indexed<TStore>(TStore store, TimeProvider clock)
+        where TStore : IFeedbackStore, IFeedbackIndexStore => new(store, store, clock);
 
     /// <summary>The container the content tables began on is kept in, next to the recordings' one (ADR 0163).</summary>
     public const string ContentContainer = "content";

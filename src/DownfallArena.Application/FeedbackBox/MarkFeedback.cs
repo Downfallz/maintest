@@ -8,10 +8,12 @@ namespace DownfallArena.Application.FeedbackBox;
 /// The status the operator sets by hand on feedback (docs/tabletop/feedback-plan.md, R3, I1, ADR 0189). Three pieces
 /// dismissed as spam within 30 days mute their sender on their own. Every write goes through
 /// <see cref="FeedbackWrites" />, so a status set while the sender adds to the same feedback loses neither; counting spam
-/// marks reads every record, outside it, so the players' sending never waits on it.
+/// marks reads the index's rows (#866), outside it, so the players' sending never waits on it.
 /// </summary>
-public sealed class MarkFeedback(IFeedbackStore store, FeedbackMutes mutes, FeedbackWrites writes, TimeProvider clock)
+public sealed class MarkFeedback(FeedbackIndex index, FeedbackMutes mutes, FeedbackWrites writes, TimeProvider clock)
 {
+    private readonly IFeedbackStore _store = index.Records;
+
     /// <summary>
     /// Marks it seen, which reopens it when it was closed; reproduced, for a bug report; shipped or declined, for an idea,
     /// declining with a reason kept for the players who asked; or dismissed, with a reason of one line,
@@ -24,7 +26,7 @@ public sealed class MarkFeedback(IFeedbackStore store, FeedbackMutes mutes, Feed
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(by);
         var set = await writes.OneAtATimeAsync(
-            () => FeedbackStatuses.ChangeAsync(store, id, new FeedbackStatuses.Asked(status, Reason: reason?.Trim()), clock.GetUtcNow(), cancellationToken),
+            () => FeedbackStatuses.ChangeAsync(_store, id, new FeedbackStatuses.Asked(status, Reason: reason?.Trim()), clock.GetUtcNow(), cancellationToken),
             cancellationToken);
         if (set.IsFailure || !set.Value.Feedback.IsSpam || set.Value.Feedback.SpamCounted)
         {
@@ -40,13 +42,13 @@ public sealed class MarkFeedback(IFeedbackStore store, FeedbackMutes mutes, Feed
     /// <summary>Marks a spam mark counted, as it is now; nothing when it is no longer one.</summary>
     private async Task<Feedback?> CountedAsync(string id, CancellationToken cancellationToken)
     {
-        if (await FeedbackRecords.FindAsync(store, id, cancellationToken) is not { IsSpam: true, SpamCounted: false } marked)
+        if (await FeedbackRecords.FindAsync(_store, id, cancellationToken) is not { IsSpam: true, SpamCounted: false } marked)
         {
             return null;
         }
 
         var counted = marked with { SpamCounted = true };
-        await store.SaveAsync(counted, cancellationToken);
+        await _store.SaveAsync(counted, cancellationToken);
         return counted;
     }
 
@@ -59,8 +61,8 @@ public sealed class MarkFeedback(IFeedbackStore store, FeedbackMutes mutes, Feed
             return null;
         }
 
-        var marks = (await FeedbackRecords.AllAsync(store, cancellationToken))
-            .Count(one => one.Sender == marked.Sender && one.IsSpam && one.ClosedAt is { } closed && now - closed <= FeedbackMute.SpamWindow);
+        var marks = (await index.RowsAsync(cancellationToken))
+            .Count(one => one.Sender == marked.Sender && one.Spam && one.ClosedAt is { } closed && now - closed <= FeedbackMute.SpamWindow);
         if (marks < FeedbackMute.SpamMarks)
         {
             return null;

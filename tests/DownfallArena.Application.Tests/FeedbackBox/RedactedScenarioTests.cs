@@ -125,7 +125,21 @@ public sealed class RedactedScenarioTests
     {
         var checkedFile = RedactedScenario.Check(Redacted(title: title), Report, [(what, name)]);
 
-        checkedFile.Error.Message.ShouldBe($"The scenario still holds {what}: it is not offered.");
+        checkedFile.Error.Message.ShouldBe($"The scenario still holds {what}, in its title: it is not offered.");
+    }
+
+    [Theory]
+    [InlineData("person")]
+    [InlineData("decision")]
+    [InlineData("player1")]
+    [InlineData("swap")]
+    public void A_player_named_like_a_word_of_the_journal_s_own_is_looked_for_in_the_file_s_words_alone(string name)
+    {
+        var passed = RedactedScenario.Check(Redacted(), Report, [("a player's name", name)]);
+        var refused = RedactedScenario.Check(Redacted(title: $"Sent by {name}"), Report, [("a player's name", name)]);
+
+        passed.IsSuccess.ShouldBeTrue("the journal's kinds, slots and seats are the format's words, no one's (#751)");
+        refused.Error.Message.ShouldBe("The scenario still holds a player's name, in its title: it is not offered.");
     }
 
     [Fact]

@@ -195,7 +195,7 @@ public sealed class TableServerTests : IAsyncDisposable
         var store = new Infrastructure.FeedbackBox.FileFeedbackStore(Path.Combine(_hosted.RunsDirectory, "..", $"feedback-{Guid.NewGuid():N}"));
         using var writes = new Application.FeedbackBox.FeedbackWrites();
         var desk = new Application.FeedbackBox.SendFeedback(store, new Application.FeedbackBox.GuestAddresses(), writes, _clock);
-        var url = Serve(OperatorGate.BehindPlatform(), feedback: new FeedbackApi(desk, _registry));
+        var url = Serve(OperatorGate.BehindPlatform(), feedback: new FeedbackApi(desk, new Application.FeedbackBox.AskFeedbackMuted(new Application.FeedbackBox.FeedbackMutes(null), _clock), _registry));
         var table = await Opened();
 
         using var request = new HttpRequestMessage(HttpMethod.Post, $"{url}api/feedback");
@@ -214,7 +214,7 @@ public sealed class TableServerTests : IAsyncDisposable
         var store = new Infrastructure.FeedbackBox.FileFeedbackStore(Path.Combine(_hosted.RunsDirectory, "..", $"feedback-{Guid.NewGuid():N}"));
         using var writes = new Application.FeedbackBox.FeedbackWrites();
         var desk = new Application.FeedbackBox.SendFeedback(store, new Application.FeedbackBox.GuestAddresses(), writes, _clock, new Application.FeedbackBox.FeedbackMutes(null));
-        var url = Serve(OperatorGate.BehindPlatform(), feedback: new FeedbackApi(desk, _registry));
+        var url = Serve(OperatorGate.BehindPlatform(), feedback: new FeedbackApi(desk, new Application.FeedbackBox.AskFeedbackMuted(new Application.FeedbackBox.FeedbackMutes(null), _clock), _registry));
         _server!.Starting = true;
 
         var asked = await Get($"{url}api/feedback", "a-token-of-a-table-not-rebuilt-yet");

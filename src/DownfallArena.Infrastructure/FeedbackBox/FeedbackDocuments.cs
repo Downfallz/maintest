@@ -50,7 +50,31 @@ internal static class FeedbackDocuments
     public static bool SentWithin(string id, DateTimeOffset after, DateTimeOffset until) =>
         Feedback.SentAt(id) is { } at && at > after && at <= until;
 
+    /// <summary>
+    /// The index of feedback's own document (#866), beside the records: its name is no feedback id, so no listing of
+    /// ids holds it.
+    /// </summary>
+    public const string IndexName = "index.json";
+
     public static string Write(Feedback feedback) => JsonSerializer.Serialize(feedback, Web);
+
+    public static string WriteIndex(FeedbackIndexContent content) => JsonSerializer.Serialize(content, Compact);
+
+    /// <summary>The index as kept, or none for one that cannot be read: the next read builds it again.</summary>
+    public static FeedbackIndexContent? ReadIndex(string json)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<FeedbackIndexContent>(json, Compact) is { Rows: not null, Closed: not null } content ? content : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>The index is rewritten with each change: written on one line, its nulls left out.</summary>
+    private static readonly JsonSerializerOptions Compact = new(Web) { WriteIndented = false };
 
     public static Feedback Read(string json) =>
         JsonSerializer.Deserialize<Feedback>(json, Web) ?? throw new InvalidDataException("A feedback record is empty.");

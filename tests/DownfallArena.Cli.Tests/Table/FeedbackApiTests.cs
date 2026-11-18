@@ -55,7 +55,7 @@ public sealed class FeedbackApiTests : IDisposable
     private readonly FeedbackWrites _writes = new();
 
     private FeedbackApi Api(AccountApi? accounts = null, ScenarioPractices? practices = null, FeedbackMutes? mutes = null) =>
-        new(new SendFeedback(_feedback, _addresses, _writes, _clock, mutes), _registry) { Accounts = accounts, Practices = practices };
+        new(new SendFeedback(_feedback, _addresses, _writes, _clock, mutes), new AskFeedbackMuted(mutes ?? new FeedbackMutes(null), _clock), _registry) { Accounts = accounts, Practices = practices };
 
     private static string Report(bool attach = true, string happened = "The bleed did not tick after the stun.") =>
         JsonSerializer.Serialize(new

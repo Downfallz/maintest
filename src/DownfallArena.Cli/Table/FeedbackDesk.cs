@@ -1,5 +1,4 @@
 using DownfallArena.Application.FeedbackBox;
-using DownfallArena.Application.FeedbackBox.Ports;
 
 namespace DownfallArena.Cli.Table;
 
@@ -16,20 +15,28 @@ internal sealed record FeedbackDesk(
     FileBugReport File,
     KeepReproduction Reproduced,
     MergeIdea Merge,
+    UnmergeIdea Unmerge,
     MoveFeedbackKind Move,
     MuteFeedbackSender Mute,
     UnmuteFeedbackSender Unmute)
 {
-    public static FeedbackDesk Open(IFeedbackStore store, FeedbackMutes mutes, FeedbackWrites writes, TimeProvider clock) => new(
-        new ListFeedback(store),
-        new FindFeedback(store),
-        new ReadFeedbackSheet(store, mutes, clock),
-        new MarkFeedback(store, mutes, writes, clock),
-        new PlanIdea(store, writes, clock),
-        new FileBugReport(store, writes, clock),
-        new KeepReproduction(store, writes),
-        new MergeIdea(store, writes),
-        new MoveFeedbackKind(store, writes),
-        new MuteFeedbackSender(store, mutes, clock),
-        new UnmuteFeedbackSender(store, mutes, clock));
+    /// <summary>The desk over a store's index (#866): every use case writes through <see cref="FeedbackIndex.Records" />.</summary>
+    public static FeedbackDesk Open(FeedbackIndex index, FeedbackMutes mutes, FeedbackWrites writes, TimeProvider clock)
+    {
+        ArgumentNullException.ThrowIfNull(index);
+        var store = index.Records;
+        return new(
+            new ListFeedback(index),
+            new FindFeedback(store),
+            new ReadFeedbackSheet(store, mutes, clock),
+            new MarkFeedback(index, mutes, writes, clock),
+            new PlanIdea(store, writes, clock),
+            new FileBugReport(store, writes, clock),
+            new KeepReproduction(store, writes),
+            new MergeIdea(store, writes),
+            new UnmergeIdea(store, writes),
+            new MoveFeedbackKind(store, writes),
+            new MuteFeedbackSender(store, mutes, clock),
+            new UnmuteFeedbackSender(store, mutes, clock));
+    }
 }

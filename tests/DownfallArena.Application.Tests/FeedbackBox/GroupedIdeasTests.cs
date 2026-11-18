@@ -336,6 +336,55 @@ public sealed class GroupedIdeasTests : IDisposable
         (await Desk().GroupAsync(left, Cancel)).Into.ShouldBeNull();
     }
 
+    [Fact]
+    public async Task An_unmerged_idea_is_back_in_the_list_as_its_own_and_its_group_is_asked_by_one_fewer()
+    {
+        var first = await IdeaAsync("seat-a");
+        var second = await IdeaAsync("seat-b");
+        await Desk().MergeAsync(second.Id, first.Id, Cancel);
+
+        var unmerged = (await Desk().UnmergeAsync(second.Id, Cancel)).Value;
+
+        (unmerged.Changed, unmerged.From, unmerged.Feedback.MergedInto, unmerged.Feedback.Status).ShouldBe((true, first.Id, null, FeedbackStatus.Seen));
+        var page = await IdeasAsync();
+        page.Rows.Select(one => one.Id).ShouldBe([second.Id, first.Id]);
+        (page.Asks[first.Id].AskedBy, page.Asks[second.Id].AskedBy).ShouldBe((1, 1));
+        (await _store.FindAsync(first.Id, Cancel))!.Joined.ShouldBeEmpty();
+        (await Desk().GroupAsync(first, Cancel)).Merged.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task An_unmerge_asked_again_or_of_an_idea_never_merged_changes_nothing()
+    {
+        var first = await IdeaAsync("seat-a");
+        var second = await IdeaAsync("seat-b");
+        await Desk().MergeAsync(second.Id, first.Id, Cancel);
+        await Desk().UnmergeAsync(second.Id, Cancel);
+
+        var again = (await Desk().UnmergeAsync(second.Id, Cancel)).Value;
+        var never = (await Desk().UnmergeAsync(first.Id, Cancel)).Value;
+
+        (again.Changed, again.From, never.Changed).ShouldBe((false, null, false));
+        (await Desk().UnmergeAsync(Feedback.NewId(_clock.GetUtcNow()), Cancel)).Error.Code.ShouldBe("Feedback.NotFound");
+    }
+
+    [Fact]
+    public async Task An_unmerge_cut_short_by_the_store_leaves_the_group_s_list_naming_one_too_many_which_the_reads_skip()
+    {
+        var group = await IdeaAsync("seat-a");
+        var idea = await IdeaAsync("seat-b");
+        await Desk().MergeAsync(idea.Id, group.Id, Cancel);
+        var failing = new FailsOnSave(_store, failOn: 2);
+        var desk = new OperatorDesk(failing, new FeedbackMutes(null), _writes, _clock);
+
+        await Should.ThrowAsync<IOException>(() => desk.UnmergeAsync(idea.Id, Cancel));
+
+        (await _store.FindAsync(idea.Id, Cancel))!.MergedInto.ShouldBeNull();
+        (await _store.FindAsync(group.Id, Cancel))!.Joined.ShouldBe([idea.Id]);
+        (await desk.GroupAsync(group, Cancel)).Merged.ShouldBeEmpty();
+        (await desk.ChangeKindAsync(group.Id, FeedbackKind.Bug, Cancel)).IsSuccess.ShouldBeTrue();
+    }
+
     /// <summary>A store whose Nth save fails, as a storage hiccup between two records would.</summary>
     private sealed class FailsOnSave(IFeedbackStore inner, int failOn) : IFeedbackStore
     {

@@ -266,6 +266,7 @@ you reported on <date> is fixed", once (`AccountNotices`). A guest's report tell
 | `PUT /api/admin/feedback/<id>/status {"status","reason?","issue?","plan?"}` | operator | Seen, reproduced, filed with the issue's number, planned with the plan's path, shipped, declined or dismissed with a reason (`spam` among them). |
 | `PUT /api/admin/feedback/<id>/kind {"kind"}` | operator | This is an idea, this is a bug. |
 | `POST /api/admin/feedback/<id>/merge {"into"}` | operator | Merges an idea into another. |
+| `DELETE /api/admin/feedback/<id>/merge` | operator | Puts a merged idea back in the list as its own (#725). |
 | `POST`/`DELETE /api/admin/feedback/<id>/mute` | operator | Stops the sender from sending feedback for 30 days; lifts it. |
 | `POST /api/admin/feedback/<id>/reproduce` | operator | Cuts the scenario at the reported round, in the reporter's seat; answers the practice link. |
 | `POST /api/admin/feedback/<id>/scenario.zip` | operator | The redacted scenario, as a zip to attach to the issue (a POST since R5 was built). |
@@ -355,8 +356,11 @@ and they are the first thing every player can use.
    the warning colour while a bug report is new or the host is full. The tab's ids start with `admin-feedback-`,
    because every page's Report or suggest sheet already uses `feedback-`. The privacy panel and policy say the
    operator can stop a player's feedback for 30 days. Until #717 a page learned that its player was muted only when
-   it sent (R2's behaviour); `GET /api/feedback` now answers before the player writes. The list, the Overview and the spam count read every record kept: up to 100 a day, each
-   kept until 180 days after it is closed, so a few thousand at most, read by the operator alone.
+   it sent (R2's behaviour); `GET /api/feedback` now answers before the player writes (`AskFeedbackMuted`, #865). The list of open feedback,
+   the Overview and the spam count read the index of feedback (`FeedbackIndex`, #866): a row for each open piece and
+   each spam mark within 30 days, and the ids of the rest. It is written with each change, over the version it read,
+   and checked against a listing of the store at each read, so what the tending job lets go of leaves it. The list
+   opens the page's rows alone; a filter that keeps closed feedback still reads every record.
 5. **I1, ideas grouped.** **Merge into…**, *asked by N* and the sort by it, *planned* with a plan's path,
    *shipped*, *declined* with a reason, **Copy as a plan prompt**. Tests: a merge keeping every sender and adding
    to the count, a merged idea out of the list and read inside its target, a merge into a bug report or into
@@ -380,7 +384,10 @@ and they are the first thing every player can use.
    *Planned* takes a path shaped like the repository's plans (`PlanPath`). The plan stays until another replaces it.
    *Shipped* closes the idea; *declined* takes a reason of one line and closes it. The tending pass deletes a merged
    idea with the group's idea, or once that one is no longer listed; one listed but unreadable keeps what joined it.
-   The Activity line is `feedback.merge`.
+   The Activity line is `feedback.merge`. A merge made by mistake is undone with **Unmerge** on the merged idea's sheet
+   (`DELETE .../<id>/merge`, #725): the idea is listed again as its own, and its group's *asked by* goes down by one.
+   The idea is written first, then the group's list, so a cut leaves the list naming one too many, which the reads
+   skip. The Activity line is `feedback.unmerge`.
 
    **Copy as a plan prompt** writes the operator's words on one line with "Asked by N players since <date>". It shows
    the prompt to select when the browser refuses the clipboard. **Merge into…** reads the open ideas when the
@@ -465,11 +472,12 @@ and they are the first thing every player can use.
    form puts on its issue to that file. The *What we keep* panel and the privacy policy, in English and French, say a
    bug may be described in a public issue in the operator's words, with nothing that names the player.
 
-   Left: a player named like a word the journal holds on its own (`person`, `player1`) cannot have the scenario
-   downloaded, and the sheet says a player's name is held. Past 500 closed issues updated since the oldest open filed
-   report, or past 100 open filed reports, the rest are not read. A report whose table's record is missing or cannot
-   be read is not held as under way: no host can pick that table up and play it (ADR 0159). The repository is a constant, not the host's
-   configuration. No browser spec plays the new buttons yet.
+   Left, then settled in #751: a player named like a word the journal holds on its own (`person`, `player1`) is looked
+   for in the file's other words alone, since a journal's kinds, slots, tempos and seats are the format's; the
+   refusal names the field that holds a name. The tab reads every page of open filed reports, and past the 500 closed
+   issues it reads in one window, asks each filed issue left by its number until GitHub refuses. A report whose table's record is missing or cannot
+   be read is not held as under way: no host can pick that table up and play it (ADR 0159). The repository stays a
+   constant, not the host's configuration (the owner's decision on #751). No browser spec plays the new buttons yet.
 8. **R6, bug scenarios and their tests.** `scenarios/bugs/` read by the host and listed as *Bug #N*;
    `ScenarioFileTests` asking a bug file's answers only up to its reported point; the `BugScenario` test helper;
    `scenario-import` and `scenario-check --trace`. Tests: `RepositoryScenariosTests` (a bug file listed),
