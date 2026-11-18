@@ -19,21 +19,26 @@ const journeys = readdirSync(folder)
 const LONG_MS = 1000;
 const MINUTE_MS = 60000;
 
-/** The milliseconds a `runFor` argument names, from numbers and the playback's timings; null when it reads a variable. */
+/**
+ * The milliseconds a `runFor` argument names, from numbers and the playback's timings: null when it reads a variable
+ * this test cannot know, NaN when it is written in a form the rule cannot read, so that it is not passed unread.
+ */
 function duration(argument) {
-  const tokens = argument.match(/\d+|[A-Za-z_]\w*|[-+*()]|\S/g) ?? [];
+  const tokens = argument.match(/\d+|[A-Za-z_$][\w$]*|\S/g) ?? [];
+  if (tokens.some((token) => /^[A-Za-z_$]/.test(token) && typeof timing[token] !== 'number')) return null;
   let at = 0;
   // Sums of products of numbers, timings and parentheses: all a journey writes, read without evaluating code.
   const sum = () => { let value = product(); while (tokens[at] === '+' || tokens[at] === '-') value = tokens[at++] === '+' ? value + product() : value - product(); return value; };
   const product = () => { let value = factor(); while (tokens[at] === '*') { at++; value *= factor(); } return value; };
   const factor = () => {
     const token = tokens[at++];
+    if (token === '-') return -factor();
     if (token === '(') { const value = sum(); if (tokens[at++] !== ')') throw new SyntaxError(argument); return value; }
     if (/^\d+$/.test(token ?? '')) return Number(token);
     if (typeof timing[token] === 'number') return timing[token];
     throw new SyntaxError(argument);
   };
-  try { const value = sum(); return at === tokens.length ? value : null; } catch { return null; }
+  try { const value = sum(); return at === tokens.length ? value : Number.NaN; } catch { return Number.NaN; }
 }
 
 /** The longest budget a test gives itself, or the file gives every test, for the line at `index`. */
@@ -54,7 +59,8 @@ test('a battle journey that moves the fake clock a second or more frame by frame
     lines.forEach((line, index) => {
       for (const match of line.matchAll(/clock\.runFor\(([^;]*?)\);/g)) {
         const ms = duration(match[1]);
-        if (ms !== null && ms >= LONG_MS && budget(lines, index) < MINUTE_MS) short.push(`${file}:${index + 1} runFor(${match[1]})`);
+        if (Number.isNaN(ms)) short.push(`${file}:${index + 1} runFor(${match[1]}) is not read`);
+        else if (ms !== null && ms >= LONG_MS && budget(lines, index) < MINUTE_MS) short.push(`${file}:${index + 1} runFor(${match[1]})`);
       }
     });
   }
@@ -63,8 +69,10 @@ test('a battle journey that moves the fake clock a second or more frame by frame
   assert.deepEqual(short, []);
 });
 
-// What opens the battle page or a seat on it: a load, a reload, or a seat chosen on a device that holds both.
-const OPENS = /goto\(['`]\/table\/battle\.html|page\.reload\(\)|#seat-choices button'\)\.first\(\)\.click\(\)/;
+// What opens the battle page or a seat on it: a load, a reload, a seat chosen on a device that holds both, or a tab
+// back in view, which chooses its seat again (live.ts).
+const OPENS = new RegExp([/goto\(['"`]\/table\/battle\.html/, /page\.reload\(\)/, /#seat-choices button'\)\.(?:first\(\)|last\(\)|nth\(\d+\))\.click\(\)/,
+  /visibility\(false\)/, /value: false \}\); document\.dispatchEvent\(new Event\('visibilitychange'\)\)/].map((one) => one.source).join('|'));
 const LOADED = "#loading')).toBeHidden()";
 const LIVE = ["#connection')).toHaveText(/^LIVE/)", "toHaveAttribute('data-connection', 'live')"];
 
@@ -77,7 +85,9 @@ function loadedOnly(lines) {
     if (at === undefined) return;
     // The page puts its loading card away before it asks for the first board (live.ts choose): the connection is
     // live only once that board has been applied (battle-live.js), whatever its label reads while a result plays.
-    const next = lines.slice(at, at + 6).join('\n');
+    // The window ends where the page is opened again: a later open's wait says nothing of this one.
+    const again = lines.findIndex((one, step) => step > at && OPENS.test(one));
+    const next = lines.slice(at, Math.min(at + 6, again === -1 ? lines.length : again)).join('\n');
     if (!LIVE.some((wait) => next.includes(wait))) early.push(at + 1);
   });
   return early;
@@ -88,11 +98,16 @@ test('a battle journey waits for the live connection, not the hidden loading car
   assert.deepEqual(early, []);
 });
 
-test('the connection rule reads a load, a reload and a seat chosen, whatever the quotes of the address', () => {
+test('the connection rule reads a load, a reload, a seat chosen and a tab back in view, each on its own', () => {
   const live = "  await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live');";
   assert.deepEqual(loadedOnly(['  await page.goto(`/table/battle.html${query}`);', '  await ready(page);', `  await expect(page.locator('#loading')).toBeHidden();`]), [3]);
   assert.deepEqual(loadedOnly([`  await page.reload(); await expect(page.locator('#loading')).toBeHidden();`, live]), []);
-  assert.deepEqual(loadedOnly([`  await page.locator('#seat-choices button').first().click(); await expect(page.locator('#loading')).toBeHidden();`]), [1]);
+  assert.deepEqual(loadedOnly([`  await page.locator('#seat-choices button').nth(1).click(); await expect(page.locator('#loading')).toBeHidden();`]), [1]);
+  assert.deepEqual(loadedOnly(['  await page.goto("/table/battle.html");', `  await expect(page.locator('#loading')).toBeHidden();`]), [2]);
+  assert.deepEqual(loadedOnly([`  await visibility(false); await expect(page.locator('#loading')).toBeHidden();`]), [1]);
+  // A reload's wait does not clear the load before it.
+  assert.deepEqual(loadedOnly([`  await page.goto('/table/battle.html'); await expect(page.locator('#loading')).toBeHidden();`,
+    `  await page.reload(); await expect(page.locator('#loading')).toBeHidden();`, live]), [1]);
 });
 
 test('the clock rule reads the playback timings and the budget of the test or the file', () => {
@@ -100,7 +115,9 @@ test('the clock rule reads the playback timings and the budget of the test or th
   assert.equal(duration('2 * (WINDUP_MS + SETTLE_MS)'), 2 * (timing.WINDUP_MS + timing.SETTLE_MS));
   assert.equal(duration('finishAt - impactAt - 1'), null);
   assert.equal(duration('globalThis.process.exit(1)'), null);
-  assert.equal(duration('(WINDUP_MS'), null);
+  assert.ok(Number.isNaN(duration('(WINDUP_MS')));
+  assert.ok(Number.isNaN(duration("'00:03'")));
+  assert.equal(duration('-1000 + 2000'), 1000);
   const lines = ["test('a', async () => {", '  test.setTimeout(60000);', '  await page.clock.runFor(3000);', '});',
     'async function helper(page) {', '  await page.clock.runFor(3000);', '}', "test('b', async () => {", '  await page.clock.runFor(3000);', '});'];
   assert.equal(budget(lines, 2), 60000);

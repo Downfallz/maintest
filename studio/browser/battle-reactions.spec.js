@@ -45,7 +45,8 @@ async function mount(page, { available = true, recent = [], both = false, answer
     state.view = { ...state.view, reactions: { ...state.view.reactions, recent } }; const published = state.view;
     await page.evaluate(() => window.notifyBattle());
     // A change told while a read is in flight is owed one more read, which the page schedules at no delay: a paused
-    // clock runs it only when it is moved. Only a board read that carried the published view says it arrived (#768, #785).
+    // clock runs it only when it is moved. Only a seat read that is no acknowledgement, answered with the published view
+    // (a refusal too), says the change reached the page (#768, #785).
     await expect.poll(async () => { if (state.answered === published) return true; await page.clock.runFor(0); return false; }).toBe(true);
   };
   return { state, publish };

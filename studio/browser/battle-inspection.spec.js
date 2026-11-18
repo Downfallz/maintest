@@ -63,7 +63,8 @@ async function mount(page, options = {}) {
     h.view = { ...h.view }; const published = h.view;
     await page.evaluate(() => window.notifyBattle());
     // A change told while a read is in flight is owed one more read, which the page schedules at no delay: a paused
-    // clock runs it only when it is moved. Only a board read that carried the published view says it arrived (#768, #785).
+    // clock runs it only when it is moved. Only a seat read that is no acknowledgement, answered with the published view
+    // (a refusal too), says the change reached the page (#768, #785).
     await expect.poll(async () => { if (h.answered === published) return true; await page.clock.runFor(0); return false; }).toBe(true);
   };
   return h;
@@ -192,7 +193,7 @@ test('a hidden tab clears the inspection, and the same creature reopened shows i
   await expect(page.locator('#inspect-sheet .inspect-tile')).toHaveCount(4);
   const visibility = hidden => page.evaluate(value => { Object.defineProperty(document, 'hidden', { configurable: true, value }); document.dispatchEvent(new Event('visibilitychange')); }, hidden);
   await visibility(true); await expect(page.locator('#inspect-dialog')).toBeHidden(); await expect(page.locator('#inspect-sheet')).toBeEmpty();
-  await visibility(false); await expect(page.locator('#loading')).toBeHidden();
+  await visibility(false); await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live');
   await page.locator('#actor-layer [data-creature="1"]').click();
   await expect(page.locator('#inspect-sheet .inspect-tile')).toHaveCount(4);
   await expect(page.locator('#inspect-sheet [data-stat="health"] .inspect-tile-value')).toHaveText('20/25');
