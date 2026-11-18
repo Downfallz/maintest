@@ -376,10 +376,11 @@ Each stage is one pull request with its tests, and leaves the gate green.
    matches the EN column, and no page, script sentence or battle label uses a legacy word the column replaced. Left to the
    owner: the Cowork project, made in the Claude app. The design system is made. Standalone Claude Design closes
    on 2026-12-14 and `/design-sync` is the owner's to start, so it was made in Claude from `table/identity.css`
-   and `docs/art/branding.md`. It lives where the Design section says (issue #630). The weekly and monthly runs' prompts are kept in
-   their skills, as the digest's is (issue #632): each attaches the repository with `add_repo`, since `/retro`
-   pushes and `/proposals` files issues, and stops in one French line when it cannot. Not built: the scheduled
-   tasks themselves, the owner's to add one at a time once the digest has run for a week, and
+   and `docs/art/branding.md`. It lives where the Design section says (issue #630).
+   The weekly and monthly runs' prompts are kept in their skills, as the digest's is (issue #632). Each attaches
+   the repository with `add_repo`, because `/retro` pushes and `/proposals` files issues; if it cannot, the session
+   stops with one French line. Not built: the scheduled tasks themselves, the owner's to add one at a time once
+   the digest has run for a week, and
    `.claude-plugin/marketplace.json`, which waits for a Cowork project that would use it.
 
 ## Left out, and why
