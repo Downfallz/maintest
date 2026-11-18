@@ -82,19 +82,9 @@ internal sealed class TableVisits(TimeProvider clock, IVisitKeeper? keeper = nul
         for (var attempt = 0; attempt < Attempts; attempt++)
         {
             var (kept, tag) = await store.VisitAsync(seat, cancellationToken);
-
-            // There was a mark and now there is none: the table's run was deleted meanwhile, and writing would bring a
-            // file of it back.
-            if (existed && tag is null)
+            if (await RefusedBeforeWriteAsync(existed, tag, cancellationToken) is { } refused)
             {
-                return VisitShown.Gone;
-            }
-
-            // No mark yet, and no record either: a write would create the file under a deleted run (#789). Busy, not gone,
-            // when this process never saw the record stored (#850).
-            if (tag is null && await store.RecordedAsync(cancellationToken) is not RecordPresence.Kept and var missing)
-            {
-                return Refused(missing);
+                return refused;
             }
 
             existed |= tag is not null;
@@ -106,19 +96,42 @@ internal sealed class TableVisits(TimeProvider clock, IVisitKeeper? keeper = nul
             var visit = new LastVisit(sequence, clock.GetUtcNow(), holder);
             if (await store.WriteVisitIfAsync(seat, visit, tag, cancellationToken) is { } written)
             {
-                // Same check as in TableReactions, after the first write: a record still there means the delete
-                // has not listed the run's files yet (#818).
-                if (tag is null && await StillRecordedAsync(cancellationToken) is not RecordPresence.Kept and var gone)
-                {
-                    await TakeBackAsync(seat, written, cancellationToken);
-                    return Refused(gone);
-                }
-
-                return VisitShown.Of(visit);
+                return await WrittenAsync(seat, visit, first: tag is null, written, cancellationToken);
             }
         }
 
         return VisitShown.Busy;
+    }
+
+    // Why the mark read under this tag must not be written over; none when it may be.
+    private async Task<VisitShown?> RefusedBeforeWriteAsync(bool existed, string? tag, CancellationToken cancellationToken)
+    {
+        // There was a mark and now there is none: the table's run was deleted meanwhile, and writing would bring a
+        // file of it back.
+        if (existed && tag is null)
+        {
+            return VisitShown.Gone;
+        }
+
+        // No mark yet, and no record either: a write would create the file under a deleted run (#789). Busy, not gone,
+        // when this process never saw the record stored (#850).
+        return tag is null && await keeper!.RecordedAsync(cancellationToken) is not RecordPresence.Kept and var missing
+            ? Refused(missing)
+            : null;
+    }
+
+    // The mark written, or taken back when it was the seat's first and the record has gone since.
+    private async Task<VisitShown> WrittenAsync(string seat, LastVisit visit, bool first, string written, CancellationToken cancellationToken)
+    {
+        // Same check as in TableReactions, after the first write: a record still there means the delete
+        // has not listed the run's files yet (#818).
+        if (first && await StillRecordedAsync(cancellationToken) is not RecordPresence.Kept and var gone)
+        {
+            await TakeBackAsync(seat, written, cancellationToken);
+            return Refused(gone);
+        }
+
+        return VisitShown.Of(visit);
     }
 
     /// <summary>
