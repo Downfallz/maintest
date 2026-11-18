@@ -223,13 +223,29 @@ public sealed class AdminApiTests : IDisposable
     [Fact]
     public async Task A_table_that_cannot_be_composed_does_not_say_the_host_s_path()
     {
-        var admin = Admin(OperatorGate.WithToken(OperatorToken));
+        var said = new List<string>();
+        var admin = Admin(OperatorGate.WithToken(OperatorToken), said: said.Add);
 
         var answer = await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"heuristic:/srv/secret-place/nowhere.json"}""", OperatorToken, null);
 
         answer.Status.ShouldBe(400);
         Text(answer).ShouldNotContain("secret-place");
-        Text(answer).ShouldBe("The table could not be opened: a weights or policy file a seat names is missing or cannot be read. The console says which.");
+        said.ShouldContain(line => line.Contains("secret-place") && line.Contains("by "));
+        Text(answer).ShouldBe("The table could not be opened: a weights or policy file named for a seat is missing, unreadable or not playable on this engine. The console says which.");
+    }
+
+    /// <summary>A store that is out while the table is composed is the host's, not the operator's typo: a 503, not a 400 about a file.</summary>
+    [Fact]
+    public async Task A_store_that_is_out_while_a_table_is_composed_is_answered_as_one()
+    {
+        using var hosted = new HostedTables(directory => new RecordRefused(new FileArtifactStore(directory), file: string.Empty) { Refusing = true });
+        using var registry = hosted.Registry();
+        var admin = new AdminApi(registry, hosted.Composer, OperatorGate.WithToken(OperatorToken), TimeProvider.System, "Rules 2 creatures (a test)", hosted.Stored) { Said = _ => { } };
+
+        var answer = await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy"}""", OperatorToken, null);
+
+        answer.Status.ShouldBe(503, Text(answer));
+        Text(answer).ShouldNotContain("The store is out", Case.Insensitive);
     }
 
     /// <summary>
@@ -822,8 +838,8 @@ public sealed class AdminApiTests : IDisposable
 
     private const string Asymmetric = """{"player1":"person","player2":"greedy","format":"3v2"}""";
 
-    private AdminApi Admin(OperatorGate gate, IReadOnlyList<SeatableAgent>? agents = null) =>
-        new(_registry, _hosted.Composer, gate, TimeProvider.System, "Rules 2 creatures (a test)", _hosted.Stored, agents);
+    private AdminApi Admin(OperatorGate gate, IReadOnlyList<SeatableAgent>? agents = null, Action<string>? said = null) =>
+        new(_registry, _hosted.Composer, gate, TimeProvider.System, "Rules 2 creatures (a test)", _hosted.Stored, agents) { Said = said ?? Console.WriteLine };
 
     private static string Text(StudioResponse response) => Encoding.UTF8.GetString(response.Body);
 

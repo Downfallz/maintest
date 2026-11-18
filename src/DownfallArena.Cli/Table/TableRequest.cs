@@ -1,6 +1,5 @@
 using System.Text.Json;
 using DownfallArena.Application.Agents;
-using DownfallArena.Cli.Hosting;
 using DownfallArena.Domain.Matches;
 
 namespace DownfallArena.Cli.Table;
@@ -45,7 +44,7 @@ internal sealed record TableRequest(AgentSpec? Player1, AgentSpec? Player2, stri
     /// A request as the admin panel posts it, or the reason it is not one. Each seat is <c>person</c> or an agent spec
     /// the CLI understands; a seat left out is a person, as it is on the command line.
     /// </summary>
-    public static TableRequest Parse(string body, out string? problem)
+    public static TableRequest Parse(string body, out string? problem, Action<Exception>? unreadable = null)
     {
         problem = null;
         TableRequestBody? posted;
@@ -55,8 +54,8 @@ internal sealed record TableRequest(AgentSpec? Player1, AgentSpec? Player2, stri
         }
         catch (JsonException exception)
         {
-            // The parser's message names the host's own types: the console gets it, the page a sentence (#828).
-            Console.WriteLine($"  A request to open a table could not be read: {HttpHost.OneLine(exception)}");
+            // The parser's message names the host's own types: the caller's console gets it, the page a sentence (#828).
+            unreadable?.Invoke(exception);
             problem = "The request body is not the JSON a table is opened with.";
             return Nothing;
         }
@@ -126,7 +125,9 @@ internal sealed record TableRequest(AgentSpec? Player1, AgentSpec? Player2, stri
         }
         catch (ArgumentException exception)
         {
-            problem = $"Nobody called '{named}' can sit in {slot}: {exception.Message}";
+            // The framework adds " (Parameter 'text')" to a message thrown with a parameter name.
+            var said = exception.ParamName is { } parameter ? exception.Message.Replace($" (Parameter '{parameter}')", string.Empty, StringComparison.Ordinal) : exception.Message;
+            problem = $"Nobody called '{named}' can sit in {slot}: {said}";
             return null;
         }
     }

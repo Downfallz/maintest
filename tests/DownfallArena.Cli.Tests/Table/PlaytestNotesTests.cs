@@ -481,6 +481,17 @@ public sealed class PlaytestNotesTests : IDisposable
         note.GetProperty("elapsedMs").ValueKind.ShouldBe(JsonValueKind.Null);
     }
 
+    [Fact]
+    public async Task A_note_that_is_not_json_is_refused_without_the_parser_s_words()
+    {
+        var table = await Recording();
+
+        var answer = await table.Api.HandleAsync("POST", "/api/notes", """{"text":""", table.Token);
+
+        answer.Status.ShouldBe(400);
+        Text(answer).ShouldBe("The request body is not the JSON this route reads.");
+    }
+
     /// <summary>One tap, so a lookup carries no text and is still a note.</summary>
     [Fact]
     public async Task A_note_a_player_taps_needs_no_text()

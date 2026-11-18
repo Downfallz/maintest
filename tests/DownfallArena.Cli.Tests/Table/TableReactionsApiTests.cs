@@ -84,6 +84,18 @@ public sealed class TableReactionsApiTests : IDisposable
         answer.Status.ShouldBe(200, Text(answer));
     }
 
+    [Fact]
+    public async Task A_reaction_that_is_not_json_is_refused_without_the_parser_s_words()
+    {
+        var table = await BegunAsync(HostedTables.TwoPeople);
+        var seat = table.Seats[0];
+
+        var answer = await table.Api.HandleAsync("POST", $"/api/seat/{seat.Name}/reaction", """{ "reaction": """, seat.Token);
+
+        answer.Status.ShouldBe(400);
+        Encoding.UTF8.GetString(answer.Body).ShouldBe("The request body is not the JSON this route reads.");
+    }
+
     [Theory]
     [InlineData("""{ "reaction": "you are bad" }""")]
     [InlineData("""{ }""")]
