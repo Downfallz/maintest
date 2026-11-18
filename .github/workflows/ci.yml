@@ -78,7 +78,7 @@ jobs:
   # A pull request of Markdown alone runs the light build (ADR 0192): the build, Architecture.Tests (the
   # instruction files, the ADRs, the generated indexes) and the pages' own tests (the prompts, the rulebook).
   # Nothing else reads its paths, so the learning project, the emulator, the bundle, the format check, Sonar,
-  # the other tests, the content and the benchmark are left out; plan.js says which Markdown the learning tests read.
+  # the other tests, the content and the benchmark are left out; plan.js says which Markdown a test outside it reads.
   build-and-test:
     name: Build, format check, test, analyse
     needs: changes
