@@ -119,7 +119,7 @@ test('a concept card\'s id lands on the section it summarises, and the card is d
   await expect(page).toHaveURL(new RegExp(`#${section.id}$`));
   const drawn = page.locator(`#${section.id} .rules-card`);
   await expect(drawn).toBeVisible();
-  await expect(drawn.locator('.rules-card-title')).toHaveText(section.card.title);
+  await expect(drawn.locator('.concept-card-title')).toHaveText(section.card.title);
   await expect(drawn.locator('.concept-example')).toHaveText(section.card.example);
 });
 

@@ -259,11 +259,11 @@ function drawBlock(doc, block) {
 
 // A concept card, as the battle draws it in a tutorial: its title, its lines and its example.
 function drawCard(doc, card, words) {
-  const aside = node(doc, 'aside', 'rules-card');
+  const aside = node(doc, 'aside', 'rules-card concept-card');
   aside.setAttribute('aria-label', words.cardLabel(card.title));
   const lines = node(doc, 'div', 'concept-lines');
   lines.append(...card.lines.map(line => node(doc, 'p', null, line)));
-  aside.append(node(doc, 'p', 'eyebrow', words.conceptCard), node(doc, 'h4', 'rules-card-title', card.title), lines, node(doc, 'p', 'concept-example', card.example));
+  aside.append(node(doc, 'p', 'eyebrow', words.conceptCard), node(doc, 'h4', 'concept-card-title', card.title), lines, node(doc, 'p', 'concept-example', card.example));
   return aside;
 }
 
