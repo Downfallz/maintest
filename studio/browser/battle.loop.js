@@ -7,6 +7,7 @@ import { join as pathJoin } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fitsViewport, fitsBattlefield } from './fit.js';
 import { decided } from './decision.js';
+import { readSeatViews } from './seat-view.js';
 
 async function enter(page, join) {
   await page.goto(join); await page.locator('#invitation-take').click();
@@ -200,7 +201,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
   const directory = await mkdtemp(pathJoin(tmpdir(), 'battle-loop-'));
   const rules = pathJoin(directory, 'rules.json'); await writeFile(rules, JSON.stringify({ roundCap: declaration === 'at-activation' ? 12 : 2, combatDeclaration: declaration }));
   const hostInfo = await startHost(declaration, ['--rules', rules, '--record', pathJoin(directory, 'sessions')]);
-  const errors = [], writes = [], shown = [], actions = new Map(); let latest;
+  const errors = [], writes = [], shown = [], actions = new Map(), seat = readSeatViews(); let latest;
   page.on('pageerror', error => errors.push(error.message));
   page.on('request', request => {
     if (!new URL(page.url()).pathname.startsWith('/battle')) return; // Invitation acceptance lives on /play.
@@ -212,7 +213,8 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     if (!/\/api\/seat\/player1(?:\?|$)/.test(response.url()) || response.url().includes('shown=')) return;
     const value = await response.json().catch(() => null);
     if (!value?.board) return;
-    latest = value;
+    // An earlier poll's body can finish reading after a later one's: it never takes the newer view's place (#787).
+    if (seat.receive(value)) latest = seat.latest;
     for (const entry of value.feed ?? []) if (entry.event.kind === 'CombatActionResolved') actions.set(entry.sequence, entry);
   });
   try {
