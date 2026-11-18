@@ -208,6 +208,18 @@ public sealed class AdminApiTests : IDisposable
         _registry.HeldTables().ShouldBeEmpty();
     }
 
+    /// <summary>The ops report hides an operator's name after "opened by": the line for an unreadable request keeps that shape.</summary>
+    [Fact]
+    public async Task An_unreadable_request_is_said_on_the_console_in_the_shape_the_ops_report_masks()
+    {
+        var said = new List<string>();
+        var admin = Admin(OperatorGate.WithToken(OperatorToken), said: said.Add);
+
+        await admin.HandleAsync("POST", "/api/tables", "not json", OperatorToken, null);
+
+        said.ShouldContain(line => line.Contains("could not be opened by ") && line.Contains("JsonException"));
+    }
+
     /// <summary>A spec that parses but names a file that is not there fails while composing, and is the operator's typo too.</summary>
     [Fact]
     public async Task A_weights_file_that_is_not_there_is_the_operator_s_typo_not_a_broken_host()

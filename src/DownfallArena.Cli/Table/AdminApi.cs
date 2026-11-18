@@ -340,7 +340,7 @@ internal sealed class AdminApi
 
     private async Task<StudioResponse> OpenAsync(string body, string operatorName)
     {
-        var request = TableRequest.Parse(body, out var problem, unreadable => Said($"  A request to open a table by {operatorName} could not be read: {HttpHost.OneLine(unreadable)}"));
+        var request = TableRequest.Parse(body, out var problem, unreadable => Said($"  A table could not be opened by {operatorName}: its request is not readable ({HttpHost.OneLine(unreadable)})"));
         if (problem is not null)
         {
             return StudioResponse.OfPlainText(400, problem);
