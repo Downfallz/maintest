@@ -33,7 +33,7 @@ const PARTS = [
       '',
       '## Energy gain {#energy-gain}',
       '',
-      'Every living creature gains {rules.energyPerRound} Energy, and Archmage gives {tier:archmage:v1.upkeepEnergy}.',
+      "Every living creature gains {rules.energyPerRound} Energy, and Archmage gives {tier:archmage:v1.upkeepEnergy}. Archmage teaches Shock{?tier:archmage:v1.teaches = 'spell:lightning_bolt:v1'} and needs Elementalist{?tier:archmage:v1.needs = 'tier:elementalist:v1'}.",
       '',
       'sources: ADR 0114, game-rules#round-sequence',
       '',
@@ -59,7 +59,8 @@ const GAME_RULES = ['# Game rules', '', '## Match lifecycle', '', 'A match ends.
 
 const CONTENT = new Map([
   ['data/Spells/brawler/heavy_strike.v1.json', { id: 'spell:heavy_strike:v1', name: 'Heavy Strike' }],
-  ['data/Tiers/archmage.v1.json', { id: 'tier:archmage:v1', name: 'Archmage' }],
+  ['data/Tiers/archmage.v1.json', { id: 'tier:archmage:v1', name: 'Archmage', spells: ['spell:lightning_bolt'], prerequisites: ['tier:elementalist'] }],
+  ['data/Creatures/main.v1.json', { id: 'creature:main:v1', startingSpellIds: ['spell:heavy_strike', 'spell:wait'] }],
   ['data/Tiers/titan.v1.json', { id: 'tier:titan:v1', name: 'Titan' }],
 ]);
 
@@ -203,6 +204,35 @@ test('the creature\'s starting spells, or an alias they resolve through, reach t
   const alias = reached(diffOf('data/aliases.json', { removed: ['  "spell:wait": "spell:wait:v1",'], added: ['  "spell:wait": "spell:wait:v2",'] }));
   assert.deepEqual(alias.sections.map(section => [section.id, section.why]), [['winning', ['draws creature.knows']]]);
   assert.deepEqual(alias.unmapped, []);
+});
+
+// #876: an alias reaches a section only when a list the section states names it.
+test('an alias reaches only the sections whose stated list names it: the creature\'s, or a mutation\'s spells or needs', () => {
+  const alias = (key, from, to) => reached(diffOf('data/aliases.json', { removed: [`  "${key}": "${from}",`], added: [`  "${key}": "${to}",`] }));
+  const why = result => result.sections.map(section => [section.id, section.why]);
+  assert.deepEqual(why(alias('spell:lightning_bolt', 'spell:lightning_bolt:v1', 'spell:lightning_bolt:v2')), [['energy-gain', ['draws tier:archmage:v1.teaches']]]);
+  assert.deepEqual(why(alias('tier:elementalist', 'tier:elementalist:v1', 'tier:elementalist:v2')), [['energy-gain', ['draws tier:archmage:v1.needs']]]);
+  assert.deepEqual(why(alias('spell:heavy_strike', 'spell:heavy_strike:v1', 'spell:heavy_strike:v2')), [['winning', ['draws creature.knows']]]);
+  // An alias no stated list names reaches no section, and is read by hand.
+  assert.deepEqual(alias('spell:pummel', 'spell:pummel:v1', 'spell:pummel:v2'), { sections: [], unmapped: ['data/aliases.json'] });
+  // A hunk that names no alias (a bracket, a blank line) may have moved any of them: every stated list is reached.
+  const bare = reached(diffOf('data/aliases.json', { removed: ['}'], added: ['', '}'] }));
+  assert.deepEqual(why(bare), [['winning', ['draws creature.knows']], ['energy-gain', ['draws tier:archmage:v1.teaches', 'draws tier:archmage:v1.needs']]]);
+  // A list whose file cannot be read is reached, so nothing is missed.
+  const unread = reach(readDiff(diffOf('data/aliases.json', { removed: ['  "spell:pummel": "spell:pummel:v1",'], added: ['  "spell:pummel": "spell:pummel:v2",'] })), { ...given, content: () => null });
+  assert.deepEqual(why(unread), [['winning', ['draws creature.knows']], ['energy-gain', ['draws tier:archmage:v1.teaches', 'draws tier:archmage:v1.needs']]]);
+});
+
+test('a mutation\'s prerequisites reach the sections that state what it needs', () => {
+  const diff = diffOf('data/Tiers/archmage.v1.json', { removed: ['    "tier:elementalist"'], added: ['    "tier:shaman"'] });
+  assert.deepEqual(reached(diff).sections.map(section => [section.id, section.why]), [['energy-gain', ['draws tier:archmage:v1', 'names Archmage']]]);
+});
+
+test('a spell or a mutation a fact names as text reaches the section, even where the book no longer names it', () => {
+  const gone = new Map([['data/Tiers/elementalist.v1.json', { id: 'tier:elementalist:v1', name: 'Stormcaller' }], ['data/Spells/mage/lightning_bolt.v1.json', { id: 'spell:lightning_bolt:v1', name: 'Bolt' }]]);
+  const diff = [diffOf('data/Tiers/elementalist.v1.json', { added: ['x'] }), diffOf('data/Spells/mage/lightning_bolt.v1.json', { added: ['x'] })].join('\n');
+  const { sections } = reach(readDiff(diff), { ...given, content: path => gone.get(path) ?? null });
+  assert.deepEqual(sections.map(section => [section.id, section.why]), [['energy-gain', ['states tier:elementalist:v1', 'states spell:lightning_bolt:v1']]]);
 });
 
 test('a renamed spell reaches the sections that still name it by its old name', () => {

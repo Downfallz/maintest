@@ -323,6 +323,39 @@ test('a fact states a spell a mutation teaches or the reference creature knows, 
     /starting spell "spell:strike" is neither a versioned spell id nor an alias of data\/aliases\.json/);
 });
 
+// #879: the mutations a mutation needs are a list too, read from its prerequisites.
+test('a fact states a mutation another one needs, read from its prerequisites in data/', () => {
+  const mutations = new Map([
+    ['tier:brute:v1', { id: 'tier:brute:v1', name: 'Brute', level: 1, initiativeBonus: 1, prerequisites: [] }],
+    ['tier:marauder:v1', { id: 'tier:marauder:v1', name: 'Oppressor', level: 2, initiativeBonus: 2, prerequisites: ['tier:brute'] }],
+    ['tier:titan:v1', { id: 'tier:titan:v1', name: 'Titan', level: 4, initiativeBonus: 0, prerequisites: [], anyOf: ['tier:marauder:v1'] }],
+  ]);
+  const aliases = { 'tier:brute': 'tier:brute:v1' };
+  const book = text => inputs({ mutations, aliases, parts: [{ file: '01-the-goal.md', text: goal.replace('Pummel costs {spell:pummel:v1.energyCost} and deals {spell:pummel:v1.damage}.', text) }] });
+  const clean = book("Oppressor needs Brute{?tier:marauder:v1.needs = 'tier:brute:v1'}{?tier:marauder:v1.needs.count = 1}; Brute needs nothing{?tier:brute:v1.needs.count = 0}.");
+  assert.deepEqual(errorsOf(clean), []);
+  assert.deepEqual(buildRules(clean).book.drawnFrom.mutations, ['tier:brute:v1', 'tier:marauder:v1']);
+  // A capstone needs any one of its anyOf, not its empty prerequisites: "Titan needs nothing" would be false.
+  refuses(book('Titan needs nothing{?tier:titan:v1.needs.count = 0}.'), /"tier:titan:v1\.needs": Titan needs any one of its anyOf; \.needs reads prerequisites only/);
+  refuses(book("Oppressor needs Titan{?tier:marauder:v1.needs = 'tier:titan:v1'}."), /the fact "tier:marauder:v1\.needs = 'tier:titan:v1'" is false/);
+  refuses(book("Oppressor{?tier:marauder:v1.needs != 'tier:apex:v1'}."), /mutation "tier:apex:v1" is not in data\//);
+  refuses(book('Oppressor needs {tier:marauder:v1.needs}.'), /"tier:marauder:v1\.needs" is a list of mutations: state one it holds with \{\?tier:marauder:v1\.needs = 'tier:\.\.\.'\}/);
+  refuses(inputs({ mutations: new Map([['tier:marauder:v1', { ...mutations.get('tier:marauder:v1'), prerequisites: ['tier:brut'] }]]), parts: [{ file: '01-the-goal.md', text: goal.replace('Two players', "Oppressor{?tier:marauder:v1.needs.count = 1}. Two players") }] }),
+    /prerequisite of tier:marauder:v1 "tier:brut" is neither a versioned mutation id nor an alias of data\/aliases\.json/);
+});
+
+// #877: a paragraph or a list item joins its lines; a value that fails names its own line, not the first.
+test('a value that fails names the line that holds it, inside a paragraph or a list item', () => {
+  const lines = goal.replace('Two players, each with {rules.teamSize} creatures.', "Two players,\neach with {rules.teamSize} creatures{?rules.teamSize = 4}.\nThen {?rules.teamSize = 5}more.")
+    .replace('- Upkeep: every creature gains {rules.energyPerRound} Energy.', '- Upkeep: every creature\n  gains {rules.energyPerRound} Energy{?rules.energyPerRound = 9}.\n- Command{?rules.teamSize = 6}: they plan.');
+  const errors = errorsOf(inputs({ parts: [{ file: '01-the-goal.md', text: lines }], words: { ...inputs().words, en: [...inputs().words.en, 'Then', 'Command'] } }));
+  const at = fact => errors.find(error => error.includes(fact))?.split(': ')[0];
+  assert.equal(at('rules.teamSize = 4'), 'rules/01-the-goal.md:4');
+  assert.equal(at('rules.teamSize = 5'), 'rules/01-the-goal.md:5');
+  assert.equal(at('rules.energyPerRound = 9'), 'rules/01-the-goal.md:23');
+  assert.equal(at('rules.teamSize = 6'), 'rules/01-the-goal.md:24');
+});
+
 test('refuses an engine word where the player\'s word exists, from the terminology page', () => {
   refuses(withGoal('Two players', 'Two players buy a Package'), /"Package": the player's word is Mutation/);
   refuses(withGoal('Upkeep: every', 'StartOfRound: every'), /"StartOfRound": the player's word is Upkeep/);

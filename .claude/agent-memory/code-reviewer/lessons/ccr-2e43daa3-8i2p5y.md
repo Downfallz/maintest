@@ -1,0 +1,2 @@
+# code-reviewer lessons (branch ccr-2e43daa3-8i2p5y)
+- A list the build reads from one field of data/ (`tier:X.needs` from `prerequisites`) can be empty because the rule lives in a sibling field (`anyOf` on apex/archmage/titan): `.needs.count = 0` then holds and "needs nothing" is a false sentence the build vouches for. Check every list source for a sibling field that also constrains it (#879, d1fe8d0).

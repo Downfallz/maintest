@@ -84,7 +84,7 @@ rien avant le round de mutation suivant.
 
 *Exemple.* Round {rules.firstEvolutionRound}. Chaque créature connaît Strike{?creature.knows = 'spell:heavy_strike:v1'} et Focus{?creature.knows = 'spell:wait:v1'}{?creature.knows.count = 2} et a une initiative de
 {creature.initiative}. Le premier joueur choisit Brute pour la Créature 1 et Warped pour la Créature 2. Il
-voudrait aussi Oppressor pour la Créature 1, mais elle demande Brute, que la Créature 1 ne possède pas encore, et la
+voudrait aussi Oppressor pour la Créature 1, mais elle demande Brute{?tier:marauder:v1.needs = 'tier:brute:v1'}{?tier:marauder:v1.needs.count = 1}, que la Créature 1 ne possède pas encore, et la
 Créature 1 a déjà son choix. En même temps, le second joueur choisit Predator pour la Créature 4 et Brute pour la
 Créature 5. Les deux ont fini, et les quatre mutations sont acquises ensemble :
 

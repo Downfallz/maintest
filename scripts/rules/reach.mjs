@@ -5,7 +5,7 @@
 //
 // A section is reached by an ADR or a game-rules heading its `sources:` line cites, by a value it draws (a spell, a
 // mutation, a field of the hosted rule set, a stat or the starting spells of the reference creature, an engine constant, an alias
-// the starting spells resolve through), by a spell or a mutation it names,
+// a list it states names: the starting spells, a mutation's spells or what it needs), by a spell or a mutation it names,
 // and by a change to its own lines. A path that calls for the keeper (scripts/review/reviewers.mjs) and reaches no
 // section is listed for a reading by hand: the domain, the words, the pages' rule text, a rule no section teaches.
 // The French edition (rules/fr/) is read beside the English: its sections cite and draw the same, so a change
@@ -169,6 +169,8 @@ function byContent(change, section, content) {
   const definition = kind && change.path.endsWith('.json') ? contentOf(change.path, content, kind) : null;
   if (!definition) return [];
   const reasons = section.text.includes(`${definition.id}.`) ? [`draws ${definition.id}`] : [];
+  // A fact names one as text: a spell a list holds, a mutation another one needs.
+  if (section.text.includes(`'${definition.id}'`)) reasons.push(`states ${definition.id}`);
   // A renamed spell or mutation is still named by its old name where the book has not caught up.
   const names = new Set([definition.name, ...namesIn(change.removed)].filter(Boolean));
   for (const name of names) if (new RegExp(String.raw`\b${escape(name)}\b`).test(section.text)) reasons.push(`names ${name}`);
@@ -189,10 +191,33 @@ function byValues(change, section) {
   return [...new Set(moved)].filter(draws).map(key => `draws ${prefix}.${key}`);
 }
 
-/** An alias may move a spell the creature starts with or a mutation teaches: it reaches the sections stating those lists. */
-function byAliases(change, section) {
+/**
+ * The alias keys a change to data/aliases.json rewrites: `"spell:wait": "spell:wait:v1"` gives spell:wait. The file
+ * is one flat object; were it nested, a key such as `"spells": {` would be read as an alias.
+ */
+const aliasesChanged = change => new Set(change.removed.concat(change.added).flatMap(row => [.../^\s*"([^"]+)"\s*:/.exec(row) ?? []].slice(1)));
+
+// The lists a section states, each with the file and field data/ writes it in: what an alias may move.
+function listsOf(section) {
+  return [...new Set(section.text.match(/\bcreature\.knows\b|\btier:[a-z0-9_]+:v\d+\.(?:teaches|needs)\b/g) ?? [])].map(name => {
+    if (name === 'creature.knows') return { name, path: CREATURE, field: 'startingSpellIds' };
+    const [, file, version, list] = /^tier:([a-z0-9_]+):(v\d+)\.(\w+)$/.exec(name);
+    return { name, path: `data/Tiers/${file}.${version}.json`, field: list === 'teaches' ? 'spells' : 'prerequisites' };
+  });
+}
+
+/**
+ * An alias may move a spell the creature starts with or a mutation teaches, or a mutation another one needs: it
+ * reaches the sections stating a list that names a changed alias. A list whose file cannot be read, or a hunk that
+ * names no alias, reaches every section stating one: too many sections is the safe side.
+ */
+function byAliases(change, section, content) {
   if (change.path !== ALIASES) return [];
-  return [...new Set(section.text.match(/\bcreature\.knows\b|\btier:[a-z0-9_]+:v\d+\.teaches\b/g) ?? [])].map(name => `draws ${name}`);
+  const keys = aliasesChanged(change);
+  return listsOf(section).filter(({ path, field }) => {
+    const items = content(path)?.[field];
+    return keys.size === 0 || !Array.isArray(items) || items.some(item => keys.has(item));
+  }).map(({ name }) => `draws ${name}`);
 }
 
 /** A change to an engine constant the book draws (`engine.<name>`) reaches the sections that draw it. */
@@ -218,7 +243,7 @@ function reasonsFor(change, section, { gameRules, content }) {
     ...byGameRules(change, section, gameRules),
     ...byContent(change, section, content),
     ...byValues(change, section),
-    ...byAliases(change, section),
+    ...byAliases(change, section, content),
     ...byEngine(change, section),
     ...byOwnLines(change, section),
   ];
