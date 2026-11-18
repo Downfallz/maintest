@@ -3,6 +3,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -277,4 +278,27 @@ test('every reviewer reads a copy of the commit it is given and names that commi
     const rule = 'read the changed files in the\ncopy, never in the checkout';
     assert.ok(body.includes(rule), `${name} reads the copy, never the checkout`);
   }
+});
+
+// An empty list reads as "nobody to call": /reviewers would then review nothing and ship. A failed `git diff`
+// writes nothing on stdout, or its error with 2>&1, so empty input and lines that are no path are refused.
+test('empty input, or a line that is no path, is refused, never read as no reviewer', () => {
+  const script = join(root, 'scripts/review/reviewers.mjs');
+  for (const input of ['', '\n', '  \n\n', 'fatal: bad revision \'origin/main...x\'\n', 'commit 1234abc\nAuthor: someone\n']) {
+    assert.throws(
+      () => execFileSync('node', [script], { cwd: root, input, encoding: 'utf8', stdio: 'pipe' }),
+      error => error.status === 1 && /no path received/.test(error.stderr),
+      JSON.stringify(input),
+    );
+  }
+});
+
+test('a path list that calls for nobody still answers, with no reviewer', () => {
+  const output = execFileSync('node', [join(root, 'scripts/review/reviewers.mjs')], { cwd: root, input: 'legacy/old.js\n', encoding: 'utf8' });
+  assert.equal(output, '');
+});
+
+test('a path with a space in its name is still a path', () => {
+  const output = execFileSync('node', [join(root, 'scripts/review/reviewers.mjs')], { cwd: root, input: 'docs/a note.md\n', encoding: 'utf8' });
+  assert.equal(output, 'copy-editor\n');
 });

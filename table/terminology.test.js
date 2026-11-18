@@ -8,43 +8,16 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { retiredWords } from '../scripts/rules/build.mjs';
+import { rewrites as rewritesOf, termRows } from '../scripts/terminology.mjs';
 import { creatureName, decisionLabel, phaseLabel, stageLabel, stepLabel, tempoLabel } from './terms.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const terminology = readFileSync(join(root, 'docs/domain/player-terminology.md'), 'utf8');
 
-// The rows of the page's tables whose header starts with `Internal`: { internal, legacy, en } as written.
-function rows() {
-  const found = [];
-  let inTable = false;
-  for (const line of terminology.split('\n')) {
-    if (!line.startsWith('|')) {
-      inTable = false;
-      continue;
-    }
-    const cells = line.split('|').slice(1, -1).map(cell => cell.trim());
-    if (cells[0].startsWith('Internal')) {
-      inTable = true;
-      continue;
-    }
-    if (!inTable || /^-+$/.test(cells[0])) continue;
-    found.push({ internal: cells[0], legacy: cells[1], en: cells[2] });
-  }
-  return found;
-}
-
-// The page's "Before | After" table: the sentences it rewrote, as { before, after }.
-function rewrites() {
-  const found = [];
-  let inTable = false;
-  for (const line of terminology.split('\n')) {
-    const cells = line.startsWith('|') ? line.split('|').slice(1, -1).map(cell => cell.trim()) : null;
-    if (!cells) inTable = false;
-    else if (cells[0] === 'Before') inTable = true;
-    else if (inTable && !/^-+$/.test(cells[0])) found.push({ before: cells[0], after: cells[1] });
-  }
-  return found;
-}
+// The page's tables, read by the one reader the rulebook's build shares (scripts/terminology.mjs).
+const rows = () => termRows(terminology).map(([internal, legacy, en]) => ({ internal, legacy, en }));
+const rewrites = () => rewritesOf(terminology);
 
 const bold = cell => /\*\*(.+?)\*\*/.exec(cell)?.[1];
 const row = internal => rows().find(r => r.internal.includes(internal)) ?? assert.fail(`no row for ${internal}`);
@@ -109,6 +82,56 @@ test('the retired words are the ones the page replaced', () => {
   assert.ok(retired().has('Choose speed'));
   assert.ok(retired().has('Speeds revealed'));
   assert.ok(!retired().has('Your spellbook'), 'a sentence the page kept is not retired');
+});
+
+// Every script, page and spec of the repository (not its dependencies, builds or frozen prototypes).
+function repositorySources(folder = '') {
+  const found = [];
+  for (const entry of readdirSync(join(root, folder), { withFileTypes: true })) {
+    const path = folder ? `${folder}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) {
+      if (!/^(\.|node_modules$|battle-build$|legacy$|artifacts$|bin$|obj$|dist$)/.test(entry.name)) found.push(...repositorySources(path));
+    } else if (/\.(m?js|ts|html)$/.test(entry.name)) found.push(path);
+  }
+  return found;
+}
+
+// A file whose code, its comments aside, names player-terminology.md loads it, however it then parses it. Only the
+// reviewer picker names it as a path a diff touches, with its test; it reads no table.
+const PAGE = 'player-terminology';
+const NAMES_THE_PATH = new Set(['scripts/review/reviewers.mjs', 'studio/reviewers.test.js']);
+const code = text => text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/<!--[\s\S]*?-->/g, '').replace(/(^|[^:\\])\/\/.*$/gm, '$1');
+const importsReader = text => /from\s+['"][./]*(scripts\/)?terminology\.mjs['"]/.test(text);
+
+test('one reader loads player-terminology.md, and every scanner goes through it', () => {
+  const texts = new Map(repositorySources().map(path => [path, readFileSync(join(root, path), 'utf8')]));
+  const ownReaders = [...texts]
+    .filter(([path, text]) => code(text).includes(PAGE) && !importsReader(text))
+    .map(([path]) => path)
+    .filter(path => path !== 'scripts/terminology.mjs' && !NAMES_THE_PATH.has(path));
+  assert.deepEqual(ownReaders, [], 'a scanner loads the page itself: import scripts/terminology.mjs');
+  const users = [...texts].filter(([, text]) => importsReader(text)).map(([path]) => path).sort();
+  assert.deepEqual(users, Object.keys(scanners()).sort(), 'a new scanner joins scanners() below, so the Before test reads it');
+});
+
+// The scanners of the player's words, each with its patterns, by the file that reads the page.
+const scanners = () => ({
+  'table/terminology.test.js': [...retired().values()],
+  'scripts/rules/build.mjs': [...retiredWords(terminology).values()].map(word => word.pattern),
+});
+
+// The trap the reviews found twice (W8, then R1): a scanner that exempts an everyday word lets the page's own
+// rewritten sentences through ("Choose speed"). Every scanner refuses each one, whatever the case of its letters.
+test('every scanner of the player\'s words refuses each sentence of the Before column, whatever its case', () => {
+  const replaced = rewrites().filter(({ before, after }) => before.toLowerCase() !== after.toLowerCase());
+  assert.ok(replaced.length > 0, 'the Before column was read');
+  for (const [scanner, patterns] of Object.entries(scanners())) {
+    for (const { before } of replaced) {
+      for (const sentence of [before, before.toLowerCase(), before.toUpperCase()]) {
+        assert.ok(patterns.some(pattern => pattern.test(sentence)), `${scanner} lets "${sentence}" through`);
+      }
+    }
+  }
 });
 
 // What a person reads of a piece of HTML: its text, and the attributes a screen reader, a tooltip or a button says.

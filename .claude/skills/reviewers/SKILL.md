@@ -18,7 +18,8 @@ their word for it.
    for the real-engine specs.
 2. The reviewers: `git diff origin/main...<sha> | node scripts/review/reviewers.mjs`. The whole diff, not
    `--name-only`: a page script that adds a raw colour, an inline style or a class calls for `design-reviewer`
-   by what it adds, not by its name. Add `archivist` only to answer a question a finding raises ("is this
+   by what it adds, not by its name. It exits 1 when it receives no path (a failed `git diff`). Fix the range;
+   do not read that as "no reviewer". Add `archivist` only to answer a question a finding raises ("is this
    decided?"); it is not a reviewer.
 3. Run them in parallel and in the foreground: one Agent call each in the same message, with
    `run_in_background: false`. The memory writes of `code-reviewer` and `host-reviewer` are allowed in advance

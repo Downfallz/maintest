@@ -17,6 +17,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, extname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { rewrites, termRows } from '../terminology.mjs';
 
 const RULE_SET = 'docs/tabletop/playtest.rules.json';
 const CREATURE = 'data/Creatures/main.v1.json';
@@ -244,19 +245,6 @@ function lookup({ ruleSet, creature, spells, mutations = new Map() }, used, used
 const EVERYDAY = new Set(['Speed', 'Quick', 'Standard', 'Planning']);
 const SKIPPED = new Set(['Main', 'Start', 'End']);
 
-/** The rows of the page's tables whose header's first cell passes `isHeader`, as their trimmed cells. */
-function tableRows(text, isHeader) {
-  const rows = [];
-  let inTable = false;
-  for (const line of text.split('\n')) {
-    const cells = line.startsWith('|') ? line.split('|').slice(1, -1).map(cell => cell.trim()) : null;
-    if (!cells) inTable = false;
-    else if (isHeader(cells[0])) inTable = true;
-    else if (inTable && !/^-+$/.test(cells[0])) rows.push(cells);
-  }
-  return rows;
-}
-
 const SPACES = String.raw`\s+`;
 const wordPattern = (phrase, suffix, flags) => new RegExp(String.raw`\b${phrase.split(/\s+/).join(SPACES)}${suffix}\b`, flags);
 
@@ -276,14 +264,14 @@ const bold = cell => [...(cell ?? '').matchAll(/\*\*([^*]+)\*\*/g)].map(match =>
  */
 export function retiredWords(terminology, language = 'en') {
   const words = new Map();
-  const rows = tableRows(terminology, first => first.startsWith('Internal'));
+  const rows = termRows(terminology);
   for (const [internal, legacy, en, fr] of rows) retireRow(words, rowCandidates(internal, legacy), bold(language === 'fr' ? fr : en), language);
   if (language === 'fr') {
     for (const [, , en, fr] of rows) retireEnglish(words, bold(en)[0], bold(fr)[0]);
     return words;
   }
   // The sentences the page rewrote ("Choose speed"), in any case, each with what replaced it.
-  for (const [before, after] of tableRows(terminology, first => first === 'Before')) {
+  for (const { before, after } of rewrites(terminology)) {
     if (before.toLowerCase() !== after.toLowerCase() && !words.has(before)) words.set(before, { player: after, pattern: wordPattern(before, '', 'iu') });
   }
   return words;
