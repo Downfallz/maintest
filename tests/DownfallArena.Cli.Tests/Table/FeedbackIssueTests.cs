@@ -241,6 +241,43 @@ public sealed class FeedbackIssueTests : IDisposable
         (refused.Status, Read(refused).GetProperty("error").GetString()).ShouldBe((409, "Feedback.UnderWay"));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_report_whose_table_record_cannot_be_read_offers_no_scenario(bool unparseable)
+    {
+        var (report, table, _, _) = await ReproducedAsync();
+        var record = Path.Combine(_hosted.RunsDirectory, table, TableRecord.File);
+        if (unparseable)
+        {
+            await File.WriteAllTextAsync(record, "{ not a record", Cancel);
+        }
+        else
+        {
+            File.Delete(record);
+        }
+
+        var refused = await AskAsync("POST", report.Id, "scenario.zip");
+
+        (refused.Status, Read(refused).GetProperty("error").GetString()).ShouldBe((409, "Feedback.TableUnread"));
+        var sheet = Read(await AskAsync("GET", report.Id));
+        (sheet.GetProperty("underWay").GetBoolean(), sheet.GetProperty("unread").GetBoolean()).ShouldBe((false, true));
+        Actions(sheet).ShouldNotContain("download");
+        Actions(sheet).ShouldNotContain("diagnose");
+    }
+
+    [Fact]
+    public async Task A_host_that_keeps_no_sessions_reads_no_report_s_table_as_over()
+    {
+        var report = await ReportedAsync(new FeedbackContext { Table = "20261116-110000-deadbeef", Seat = "player2", Round = 2 });
+        var (_, tab) = TableHost.CuttingTabs(_scenarios, null, _hosted.Composer, new OperatorFeedback(_feedback, new FeedbackMutes(null), _writes, _clock), new OperatorNotes(_actions), _clock);
+
+        var sheet = Read(await tab!.HandleAsync("GET", $"{FeedbackAdminApi.Route}/{report.Id}", string.Empty, "mark"));
+
+        (sheet.GetProperty("underWay").GetBoolean(), sheet.GetProperty("unread").GetBoolean()).ShouldBe((false, true));
+        Actions(sheet).ShouldNotContain("diagnose");
+    }
+
     [Fact]
     public async Task A_download_is_asked_for_with_a_post_and_never_kept_by_a_cache()
     {
