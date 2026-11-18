@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using DownfallArena.Application.Accounts;
+using DownfallArena.Application.FeedbackBox.Ports;
 using DownfallArena.SharedKernel.Identifiers;
+using DownfallArena.SharedKernel.Primitives;
 
 namespace DownfallArena.Application.FeedbackBox;
 
@@ -16,6 +18,31 @@ public sealed class FeedbackMutes(AccountActivityLog? activity)
 
     /// <summary>Whether a mute can be kept for the sender: a guest's always, an account's on a host that keeps account activity.</summary>
     public bool CanHold(string? account) => account is null || (activity is not null && AccountId.TryParse(account, out _));
+
+    /// <summary>Whether the feedback's sender can be muted: one is kept for it, and its account was not deleted.</summary>
+    public bool CanMute(Feedback feedback)
+    {
+        ArgumentNullException.ThrowIfNull(feedback);
+        return feedback.Sender != ForgetFeedbackAccount.Gone && CanHold(feedback.Account);
+    }
+
+    /// <summary>The mute that holds on the feedback's sender at that time, or none; none for a deleted account's.</summary>
+    public Task<FeedbackMute?> OfSenderAsync(Feedback feedback, DateTimeOffset now, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(feedback);
+        return feedback.Sender == ForgetFeedbackAccount.Gone
+            ? Task.FromResult<FeedbackMute?>(null)
+            : FindAsync(feedback.Sender, feedback.Account, now, cancellationToken);
+    }
+
+    /// <summary>The feedback, read once, when its sender can be muted; or why not.</summary>
+    internal async Task<Result<Feedback>> MuteableAsync(IFeedbackStore store, string id, CancellationToken cancellationToken) =>
+        await FeedbackRecords.FindAsync(store, id, cancellationToken) switch
+        {
+            null => Result.Failure<Feedback>(FeedbackErrors.NotFound(id)),
+            { } found when !CanMute(found) => Result.Failure<Feedback>(FeedbackErrors.NoSender),
+            { } found => Result.Success(found),
+        };
 
     /// <summary>The mute that holds on the sender at that time, or none.</summary>
     public async Task<FeedbackMute?> FindAsync(string sender, string? account, DateTimeOffset now, CancellationToken cancellationToken = default)

@@ -141,19 +141,14 @@ public sealed class SendFeedback(IFeedbackStore store, GuestAddresses addresses,
     }
 
     /// <summary>
-    /// The feedback sent in the last two days, read off the ids first so nothing older is opened: what was merged into
-    /// the day before's still counts while its additions are within the day.
+    /// The feedback sent in the last two days, listed by date so nothing older is listed or opened (#693): what was
+    /// merged into the day before's still counts while its additions are within the day.
     /// </summary>
     private async Task<List<Feedback>> RecentAsync(DateTimeOffset now, CancellationToken cancellationToken)
     {
         var recent = new List<Feedback>();
-        foreach (var id in await store.IdsAsync(cancellationToken))
+        foreach (var id in await store.IdsSentAsync(now - Day - Day, now, cancellationToken))
         {
-            if (Feedback.SentAt(id) is not { } at || at <= now - Day - Day)
-            {
-                break;
-            }
-
             if (await store.FindAsync(id, cancellationToken) is { } found)
             {
                 recent.Add(found);

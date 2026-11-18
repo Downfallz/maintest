@@ -78,6 +78,8 @@ public sealed class LetGoOfClosedFeedbackTests
     {
         public Task<IReadOnlyList<string>> IdsAsync(CancellationToken cancellationToken = default) => inner.IdsAsync(cancellationToken);
 
+        public Task<IReadOnlyList<string>> IdsSentAsync(DateTimeOffset after, DateTimeOffset until, CancellationToken cancellationToken = default) => inner.IdsSentAsync(after, until, cancellationToken);
+
         public Task<Feedback?> FindAsync(string wanted, CancellationToken cancellationToken = default) =>
             wanted == id ? Task.FromResult<Feedback?>(null) : inner.FindAsync(wanted, cancellationToken);
 

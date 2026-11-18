@@ -58,7 +58,7 @@ public sealed class FeedbackAdminApiTests : IDisposable
     private AdminApi Admin() =>
         new(_registry, _hosted.Composer, OperatorGate.WithToken(Token), _clock, "Rules", _hosted.Stored)
         {
-            Feedback = new FeedbackAdminApi(new OperatorFeedback(_feedback, _mutes, _writes, _clock), _hosted.Stored, _clock) { Notes = new OperatorNotes(_actions) },
+            Feedback = new FeedbackAdminApi(FeedbackDesk.Open(_feedback, _mutes, _writes, _clock), _hosted.Stored, _clock) { Notes = new OperatorNotes(_actions) },
         };
 
     private FeedbackApi Players() => new(new SendFeedback(_feedback, new GuestAddresses(), _writes, _clock, _mutes), _registry);
@@ -292,7 +292,7 @@ public sealed class FeedbackAdminApiTests : IDisposable
         await _feedback.SaveAsync(new Feedback { Id = id, Kind = FeedbackKind.Idea, At = _clock.GetUtcNow(), Sender = account.Value, Account = account.Value, Category = "lobby", Text = "Invite a friend by name." }, Cancel);
         var admin = new AdminApi(_registry, _hosted.Composer, OperatorGate.WithToken(Token), _clock, "Rules", _hosted.Stored)
         {
-            Feedback = new FeedbackAdminApi(new OperatorFeedback(_feedback, new FeedbackMutes(new AccountActivityLog(activity, _clock)), _writes, _clock), _hosted.Stored, _clock) { Notes = new OperatorNotes(_actions) },
+            Feedback = new FeedbackAdminApi(FeedbackDesk.Open(_feedback, new FeedbackMutes(new AccountActivityLog(activity, _clock)), _writes, _clock), _hosted.Stored, _clock) { Notes = new OperatorNotes(_actions) },
         };
 
         (await admin.HandleAsync("POST", $"{FeedbackAdminApi.Route}/{id}/mute", string.Empty, Token, principal: null)).Status.ShouldBe(200);

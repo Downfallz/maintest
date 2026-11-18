@@ -28,7 +28,7 @@ public sealed class OperatorFeedbackTests : IDisposable
 
     private static CancellationToken Cancel => TestContext.Current.CancellationToken;
 
-    private OperatorFeedback Desk() => new(_store, _mutes, _writes, _clock);
+    private OperatorDesk Desk() => new(_store, _mutes, _writes, _clock);
 
     private SendFeedback Sender() => new(_store, new GuestAddresses(), _writes, _clock, _mutes);
 
@@ -344,7 +344,7 @@ public sealed class OperatorFeedbackTests : IDisposable
     public async Task On_a_host_that_keeps_no_account_activity_an_account_s_sender_cannot_be_muted()
     {
         var idea = await KeptAsync(FeedbackKind.Idea, Mark.Value, Mark.Value, "battle");
-        var desk = new OperatorFeedback(_store, new FeedbackMutes(null), _writes, _clock);
+        var desk = new OperatorDesk(_store, new FeedbackMutes(null), _writes, _clock);
 
         desk.CanMute(idea).ShouldBeFalse();
         (await desk.MuteAsync(idea.Id, "mark", Cancel)).Error.Code.ShouldBe("Feedback.NoSender");
@@ -365,7 +365,7 @@ public sealed class OperatorFeedbackTests : IDisposable
     public async Task A_third_spam_mark_whose_mute_could_not_be_written_mutes_when_asked_again()
     {
         var failing = new FailsOnce(_activity);
-        var desk = new OperatorFeedback(_store, new FeedbackMutes(new AccountActivityLog(failing, _clock)), _writes, _clock);
+        var desk = new OperatorDesk(_store, new FeedbackMutes(new AccountActivityLog(failing, _clock)), _writes, _clock);
         var marked = new List<Feedback>();
         for (var index = 0; index < FeedbackMute.SpamMarks; index++)
         {

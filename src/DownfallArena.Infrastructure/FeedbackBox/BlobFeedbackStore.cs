@@ -9,7 +9,7 @@ namespace DownfallArena.Infrastructure.FeedbackBox;
 /// <summary>
 /// Feedback (ADR 0189) as blobs of its own container, beside the recordings' one: a store of sessions reads every
 /// top-level prefix of its container as a session. A listing returns names in order, so the newest are found without a
-/// read.
+/// read; names start with the day the feedback was sent, so the last days are listed by their prefixes alone.
 /// </summary>
 public sealed class BlobFeedbackStore : IFeedbackStore
 {
@@ -49,6 +49,23 @@ public sealed class BlobFeedbackStore : IFeedbackStore
             if (FeedbackDocuments.IdOf(item.Name) is { } id)
             {
                 ids.Add(id);
+            }
+        }
+
+        return [.. ids.OrderDescending(StringComparer.Ordinal)];
+    }
+
+    public async Task<IReadOnlyList<string>> IdsSentAsync(DateTimeOffset after, DateTimeOffset until, CancellationToken cancellationToken = default)
+    {
+        var ids = new List<string>();
+        foreach (var day in FeedbackDocuments.DaysOf(after, until))
+        {
+            await foreach (var item in _container.GetBlobsAsync(BlobTraits.None, BlobStates.None, prefix: day, cancellationToken))
+            {
+                if (FeedbackDocuments.IdOf(item.Name) is { } id && FeedbackDocuments.SentWithin(id, after, until))
+                {
+                    ids.Add(id);
+                }
             }
         }
 

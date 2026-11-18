@@ -28,6 +28,30 @@ internal static class FeedbackGroups
         return at;
     }
 
+    /// <summary>The ideas that joined this one: those its list names that still name it, as they came.</summary>
+    public static async Task<List<Feedback>> JoinedAsync(IFeedbackStore store, Feedback feedback, CancellationToken cancellationToken)
+    {
+        var joined = new List<Feedback>();
+        foreach (var id in feedback.Joined)
+        {
+            if (await FeedbackRecords.FindAsync(store, id, cancellationToken) is { } one && one.MergedInto == feedback.Id)
+            {
+                joined.Add(one);
+            }
+        }
+
+        return [.. joined.OrderBy(one => one.At)];
+    }
+
+    /// <summary>Takes an idea off the list of the group's idea it left; nothing when that one is no longer kept.</summary>
+    public static async Task LeaveAsync(IFeedbackStore store, string groupId, string id, CancellationToken cancellationToken)
+    {
+        if (await FeedbackRecords.FindAsync(store, groupId, cancellationToken) is { } group && group.Joined.Contains(id, StringComparer.Ordinal))
+        {
+            await store.SaveAsync(group with { Joined = [.. group.Joined.Where(one => one != id)] }, cancellationToken);
+        }
+    }
+
     /// <summary>Every group among what is kept, by the id of the idea it became, that idea first then the rest as they came.</summary>
     public static Dictionary<string, List<Feedback>> Of(IReadOnlyList<Feedback> all)
     {

@@ -20,7 +20,7 @@ namespace DownfallArena.Cli.Table;
 /// issue is closed. Each change is an Activity line;
 /// asked again, a change writes and notes nothing. The sheet says which of its actions apply, so the page decides none.
 /// </summary>
-internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions? stored, TimeProvider clock)
+internal sealed class FeedbackAdminApi(FeedbackDesk feedback, StoredSessions? stored, TimeProvider clock)
 {
     public const string Route = "/api/admin/feedback";
 
@@ -88,7 +88,7 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
 
         var filter = new FeedbackFilter(KindOf(kind), status is { Length: > 0 } and not "open" ? StatusOf(status) : null, category.Length > 0 ? category : null, OpenOnly: status == "open",
             FiledOnly: asked["filed"] == "true");
-        var page = await feedback.PageAsync(filter, int.TryParse(asked["page"], out var number) ? number : 1);
+        var page = await feedback.List.HandleAsync(filter, int.TryParse(asked["page"], out var number) ? number : 1);
         return StudioResponse.OfJson(
             new
             {
@@ -113,7 +113,7 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
                 total = page.Total,
                 page = page.Page,
                 pages = page.Pages,
-                perPage = OperatorFeedback.PerPage,
+                perPage = ListFeedback.PerPage,
 
                 // Where the filed reports' issues are read, so the tab marks fixed what GitHub says is closed (R5).
                 repository = Repository,
@@ -123,13 +123,12 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
 
     private async Task<StudioResponse> SheetAsync(string id)
     {
-        if (await feedback.FindAsync(id) is not { } one)
+        if (await feedback.Find.HandleAsync(id) is not { } one)
         {
             return Refused(FeedbackErrors.NotFound(id));
         }
 
-        var mute = await feedback.MuteOfAsync(one);
-        var group = await feedback.GroupAsync(one);
+        var (group, mute, canMute) = await feedback.Sheet.HandleAsync(one);
         var counted = one.Kind == FeedbackKind.Idea && one.MergedInto is null;
         var table = one.Context?.Table;
         var played = await PlayedAsync(one);
@@ -210,7 +209,7 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
 
                 // A table whose record cannot be read offers neither: nothing shows its game is over (#790).
                 unread = played == Played.Unread,
-                actions = Actions(one, mute, played, group, reproduction is not null),
+                actions = Actions(one, mute, canMute, played, group, reproduction is not null),
             },
             Web);
     }
@@ -225,9 +224,9 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
 
         var changed = status switch
         {
-            FeedbackStatus.Planned => await feedback.PlanAsync(id, asked.Plan),
-            FeedbackStatus.Filed => await feedback.FileAsync(id, asked.Issue),
-            _ => await feedback.SetStatusAsync(id, status, asked.Reason, operatorName),
+            FeedbackStatus.Planned => await feedback.Plan.HandleAsync(id, asked.Plan),
+            FeedbackStatus.Filed => await feedback.File.HandleAsync(id, asked.Issue),
+            _ => await feedback.Mark.HandleAsync(id, status, asked.Reason, operatorName),
         };
         if (changed.IsFailure)
         {
@@ -279,7 +278,7 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
             return Refused(FeedbackErrors.Invalid("Name a kind: bug or idea."));
         }
 
-        var changed = await feedback.ChangeKindAsync(id, kind);
+        var changed = await feedback.Move.HandleAsync(id, kind);
         if (changed.IsFailure)
         {
             return Refused(changed.Error);
@@ -301,7 +300,7 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
             return Refused(FeedbackErrors.Invalid("Name the idea to merge this one into."));
         }
 
-        var merged = await feedback.MergeAsync(id, into);
+        var merged = await feedback.Merge.HandleAsync(id, into);
         if (merged.IsFailure)
         {
             return Refused(merged.Error);
@@ -324,7 +323,7 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
     /// </summary>
     private async Task<StudioResponse> ReproduceAsync(string id, string operatorName)
     {
-        if (await feedback.FindAsync(id) is not { } one)
+        if (await feedback.Find.HandleAsync(id) is not { } one)
         {
             return Refused(FeedbackErrors.NotFound(id));
         }
@@ -348,7 +347,7 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
         Result<Feedback> reproduced;
         try
         {
-            reproduced = await feedback.ReproducedAsync(id, scenario!, Scenarios.KeepsAsync);
+            reproduced = await feedback.Reproduced.HandleAsync(id, scenario!, Scenarios.KeepsAsync);
         }
         catch
         {
@@ -381,7 +380,7 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
     /// </summary>
     private async Task<StudioResponse> ScenarioZipAsync(string id, string operatorName)
     {
-        if (await feedback.FindAsync(id) is not { } one)
+        if (await feedback.Find.HandleAsync(id) is not { } one)
         {
             return Refused(FeedbackErrors.NotFound(id));
         }
@@ -439,7 +438,7 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
 
     private async Task<StudioResponse> MuteAsync(string id, string operatorName)
     {
-        var muted = await feedback.MuteAsync(id, operatorName);
+        var muted = await feedback.Mute.HandleAsync(id, operatorName);
         if (muted.IsFailure)
         {
             return Refused(muted.Error);
@@ -456,7 +455,7 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
 
     private async Task<StudioResponse> UnmuteAsync(string id, string operatorName)
     {
-        var lifted = await feedback.UnmuteAsync(id);
+        var lifted = await feedback.Unmute.HandleAsync(id);
         if (lifted.IsFailure)
         {
             return Refused(lifted.Error);
@@ -477,10 +476,10 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
     /// mute or its lifting while a sender can hold one. An idea merged into another is changed through the one it joined:
     /// it offers only its dismissal, as spam or not, which takes it out of the group, and its sender's mute.
     /// </summary>
-    private string[] Actions(Feedback one, FeedbackMute? mute, Played played, FeedbackGroup group, bool reproduced)
+    private string[] Actions(Feedback one, FeedbackMute? mute, bool canMute, Played played, FeedbackGroup group, bool reproduced)
     {
         var offered = one.MergedInto is not null ? ["dismiss", "spam"] : OpenActions(one, played, group, reproduced);
-        if (feedback.CanMute(one))
+        if (canMute)
         {
             offered.Add(mute is null ? "mute" : "unmute");
         }

@@ -19,6 +19,9 @@ internal sealed class KeptFeedback : IFeedbackStore
     public Task<IReadOnlyList<string>> IdsAsync(CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<string>>([.. _kept.Keys.OrderDescending(StringComparer.Ordinal)]);
 
+    public Task<IReadOnlyList<string>> IdsSentAsync(DateTimeOffset after, DateTimeOffset until, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<string>>([.. _kept.Keys.Where(id => Feedback.SentAt(id) is { } at && at > after && at <= until).OrderDescending(StringComparer.Ordinal)]);
+
     public Task<Feedback?> FindAsync(string id, CancellationToken cancellationToken = default) =>
         Task.FromResult(_kept.GetValueOrDefault(id));
 
