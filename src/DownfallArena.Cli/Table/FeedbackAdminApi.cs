@@ -426,9 +426,12 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
             return Played.NoTable;
         }
 
-        return stored is null || await stored.RecordAsync(table) is not { } record ? Played.Unread
-            : record is { Status: TableRecord.Open, Void: false } ? Played.UnderWay
-            : Played.Over;
+        if (stored is null || await stored.RecordAsync(table) is not { } record)
+        {
+            return Played.Unread;
+        }
+
+        return record is { Status: TableRecord.Open, Void: false } ? Played.UnderWay : Played.Over;
     }
 
     private async Task<StudioResponse> MuteAsync(string id, string operatorName)
