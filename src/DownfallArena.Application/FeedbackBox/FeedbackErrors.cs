@@ -34,7 +34,7 @@ public static class FeedbackErrors
 
     public static readonly DomainError UnderWay = new("Feedback.UnderWay", "The game this report was sent from is still being played: its scenario is offered once it is over, so nothing a seat holds face down reaches a public issue.");
 
-    public static readonly DomainError TableUnread = new("Feedback.TableUnread", "The record of the game this report was sent from cannot be read: nothing shows the game is over, so its scenario is not offered.");
+    public static readonly DomainError TableUnread = new("Feedback.TableUnread", "The record of the game this report was sent from is missing or cannot be read (its session may have been deleted): nothing shows the game is over, so its scenario is not offered.");
 
     public static readonly DomainError NotFiled = new("Feedback.NotFiled", "Only a bug report filed as an issue is marked fixed, by its issue.");
 

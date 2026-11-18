@@ -271,7 +271,7 @@ test('the download is offered once the game is over, and the sheet says why whil
   assert.deepEqual([sheetActions(filed).download, sheetActions(filed).file], [true, true]);
   assert.equal(downloadNote(filed), '');
   assert.equal(downloadNote({ ...filed, underWay: true, actions: ['file'] }), 'The scenario can be downloaded once the game it was sent from is over: nothing a seat holds face down reaches a public issue.');
-  assert.equal(downloadNote({ ...filed, unread: true, actions: ['file'] }), 'The record of the game this report was sent from cannot be read: nothing shows the game is over, so the scenario is not offered.');
+  assert.equal(downloadNote({ ...filed, unread: true, actions: ['file'] }), 'The record of the game this report was sent from is missing or cannot be read (its session may have been deleted): nothing shows the game is over, so the scenario is not offered.');
   assert.equal(downloadNote({ ...filed, reproduction: null, actions: ['reproduce', 'file'] }), 'Reproduce the round first: its scenario is what the issue carries.');
   assert.equal(downloadNote({ ...filed, kind: 'idea', reproduction: null, actions: [] }), '');
 });
