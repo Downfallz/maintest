@@ -212,7 +212,7 @@ test('the sheet says what it counted, creatures standing then health, and never 
   await expect(sheet(page)).toBeVisible();
 
   await expect(page.locator('#recap-where-title')).toHaveText('Standing and health');
-  await expect(page.locator('#recap-leader')).toHaveText('As many creatures standing; Bastien has more health');
+  await expect(page.locator('#recap-ahead')).toHaveText('As many creatures standing; Bastien has more health');
   await expect(page.locator('#recap-dialog')).not.toContainText(/lead/i);
   expect(h.errors).toEqual([]);
 });

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { AWAY_MS, aheadOf, buildRecap, healthChangeText, questionText, recapOpensOnItsOwn } from './battle-recap.js';
+import { AWAY_MS, aheadOf, aheadText, buildRecap, healthChangeText, questionText, recapOpensOnItsOwn } from './battle-recap.js';
 
 // A recorded 3v3 match (play --seed 1) as seat player1 reads it: its feed and its board at named moments.
 const recorded = JSON.parse(readFileSync(new URL('./battle-recap.fixture.json', import.meta.url), 'utf8'));
@@ -83,6 +83,14 @@ test('the sides are compared as a count: creatures standing first, then health a
   assert.deepEqual(aheadOf(sides([3, 41], [3, 40])), { side: 'you', by: 'health' });
   assert.deepEqual(aheadOf(sides([3, 40], [3, 40])), { side: null, by: null });
   assert.ok(!('leader' in at('round9Tempo', 263).where));
+});
+
+test('the sheet says the count it made, on what, and names the opponent', () => {
+  assert.equal(aheadText({ side: 'you', by: 'standing' }, 'Mara'), 'You have more creatures standing');
+  assert.equal(aheadText({ side: 'opponent', by: 'standing' }, 'Mara'), 'Mara has more creatures standing');
+  assert.equal(aheadText({ side: 'you', by: 'health' }, 'Mara'), 'As many creatures standing; you have more health');
+  assert.equal(aheadText({ side: 'opponent', by: 'health' }, 'Mara'), 'As many creatures standing; Mara has more health');
+  assert.equal(aheadText({ side: null, by: null }, 'Mara'), 'As many creatures standing, as much health');
 });
 
 test('the difference each creature took is measured over the span the sheet tells', () => {

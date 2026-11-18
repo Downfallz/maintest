@@ -1,4 +1,4 @@
-import { buildRecap, healthChangeText } from '../../table/battle-recap.js';
+import { aheadText, buildRecap, healthChangeText } from '../../table/battle-recap.js';
 
 type Line = { unseen?: boolean };
 // The shapes buildRecap returns: its arrays start empty, which leaves their items untyped to TypeScript.
@@ -64,11 +64,7 @@ export function recapControls({ onGo, onReplay, onClose }: { onGo: () => void; o
     const them = where.opponent ?? 'Opponent';
     el('recap-sides').replaceChildren(side('You', where.sides.you, 'you'), side(them, where.sides.opponent, 'opponent'));
     // The sheet's own count, said as one: who wins at the round cap is the host's reading, never the page's (#757).
-    const { side: ahead, by } = where.ahead;
-    const has = ahead === 'you' ? 'you have' : `${them} has`;
-    el('recap-leader').textContent = by === 'standing' ? `${ahead === 'you' ? 'You have' : `${them} has`} more creatures standing`
-      : by === 'health' ? `As many creatures standing; ${has} more health` : 'As many creatures standing, as much health';
-    el('recap-leader').dataset.ahead = ahead ?? 'even';
+    el('recap-ahead').textContent = aheadText(where.ahead, them);
   }
 
   function team(id: string, creatures: Recap['teams']['you']) {

@@ -199,6 +199,14 @@ export function aheadOf({ you, opponent }) {
   return { side: null, by: null };
 }
 
+/** The sentence the sheet says of `aheadOf`'s count, `them` being the opponent's name. */
+export function aheadText({ side, by }, them) {
+  const has = side === 'you' ? 'you have' : `${them} has`;
+  if (by === 'standing') return `${has[0].toUpperCase()}${has.slice(1)} more creatures standing`;
+  if (by === 'health') return `As many creatures standing; ${has} more health`;
+  return 'As many creatures standing, as much health';
+}
+
 // The seat's own choices still in force: its tempos this round, the spells it declared face down, and the mutations
 // it bought last. Read from its board, then its own submissions; another seat's never reach this seat's feed, and a
 // submission naming another slot is left out all the same.
