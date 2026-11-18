@@ -131,7 +131,10 @@ const namesIn = rows => rows.flatMap(row => [.../"name"\s*:\s*"([^"]+)"/.exec(ro
 
 /** The creature's stat a key holds, as the book draws it: baseHealth is creature.health. */
 // A creature's field as the book draws it: `baseHealth` is `creature.health`, `startingSpellIds` is `creature.knows`.
-const statOf = key => (key === 'startingSpellIds' ? 'knows' : /^base[A-Z]/.test(key) ? `${key[4].toLowerCase()}${key.slice(5)}` : null);
+function statOf(key) {
+  if (key === 'startingSpellIds') return 'knows';
+  return /^base[A-Z]/.test(key) ? `${key[4].toLowerCase()}${key.slice(5)}` : null;
+}
 
 /** The id a content file has, from its text or, once it is deleted, from its name. */
 function contentOf(path, content, kind) {
