@@ -34,3 +34,5 @@ npm --prefix studio/browser ci --ignore-scripts && npm --prefix studio/browser t
   reused only when its `/__root` answer names this checkout (#711). `STUDIO_BROWSER_PORT` sets the port.
 - The real-engine journeys start the host with `browser/dotnet.js`. It uses the `dotnet` under `DOTNET_ROOT`
   when set, else the one on `PATH` (#707).
+- A team's tempos are one asking per creature, sent one after another from one sheet: a real-engine journey's step
+  that answers them ends once the round leaves its tempos (`browser/battle-step.js`), not when the asking changes (#787).
