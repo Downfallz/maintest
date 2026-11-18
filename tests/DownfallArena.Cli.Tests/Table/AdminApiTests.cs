@@ -537,6 +537,21 @@ public sealed class AdminApiTests : IDisposable
         (row.GetProperty("live").GetBoolean(), row.GetProperty("underWay").GetBoolean()).ShouldBe((false, true));
     }
 
+    /// <summary>
+    /// The lobby the panel builds says its lines where the panel does (#860): a test that sets only the panel's sink
+    /// reads every line of the lobby's routes it serves.
+    /// </summary>
+    [Fact]
+    public void The_lobby_the_panel_builds_says_its_lines_where_the_panel_does()
+    {
+        var said = new List<string>();
+        var admin = Admin(OperatorGate.WithToken(OperatorToken), said: said.Add);
+
+        admin.Lobby.Said("  Session t-1 closed by its player before it began.");
+
+        said.ShouldBe(["  Session t-1 closed by its player before it began."]);
+    }
+
     [Fact]
     public async Task Deleting_sessions_closes_a_table_still_being_played_and_removes_the_runs_named()
     {

@@ -69,11 +69,16 @@ public sealed class BlobDecisionJournal : IDecisionJournal
         ArgumentNullException.ThrowIfNull(after);
         ArgumentNullException.ThrowIfNull(entries);
         var blob = _container.GetAppendBlobClient(NameOf(run));
-        await blob.CreateIfNotExistsAsync(new AppendBlobCreateOptions { HttpHeaders = Json }, cancellationToken);
         if (entries.Count == 0)
         {
-            var properties = await blob.GetPropertiesAsync(cancellationToken: cancellationToken);
-            return properties.Value.ContentLength == after.Mark ? after : null;
+            return await EndAsync(run, cancellationToken) == after.Mark ? after : null;
+        }
+
+        // Only a writer at the start creates the blob. One past it, with no blob, writes a run since deleted, and
+        // creating it would bring the run back without its record (#856): its append is refused as not found.
+        if (after.Mark == 0)
+        {
+            await blob.CreateIfNotExistsAsync(new AppendBlobCreateOptions { HttpHeaders = Json }, cancellationToken);
         }
 
         var lines = JournalLines.Write(after, entries, _clock.GetUtcNow());
@@ -85,7 +90,7 @@ public sealed class BlobDecisionJournal : IDecisionJournal
                 new AppendBlobAppendBlockOptions { Conditions = new AppendBlobRequestConditions { IfAppendPositionEqual = after.Mark } },
                 cancellationToken);
         }
-        catch (RequestFailedException failure) when (failure.Status == 412)
+        catch (RequestFailedException failure) when (failure.Status is 412 or 404)
         {
             return null;
         }

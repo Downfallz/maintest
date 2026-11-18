@@ -80,6 +80,13 @@ public sealed class FileDecisionJournal : IDecisionJournal
         var path = PathOf(run);
         lock (Gate)
         {
+            if (!File.Exists(path) && (after.Mark != 0 || entries.Count == 0))
+            {
+                // Past the start of a journal nobody holds is a writer of a run since deleted: creating it would bring
+                // the run back without its record (#856). Nothing to write makes no file either.
+                return Task.FromResult<JournalPosition?>(after.Mark == 0 ? after : null);
+            }
+
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             using var stream = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.Read);
             if (stream.Length != after.Mark)

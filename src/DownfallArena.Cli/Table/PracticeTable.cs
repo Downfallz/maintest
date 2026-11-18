@@ -22,7 +22,7 @@ internal sealed class PracticeTable(CliOptions options, string token) : IPractic
         {
             if (path == "/api/practice")
             {
-                if (!string.Equals(supplied, token, StringComparison.Ordinal))
+                if (!FixedTime.Same(supplied, token))
                 {
                     return StudioResponse.OfPlainText(403, "Open the practice link printed by the host.");
                 }

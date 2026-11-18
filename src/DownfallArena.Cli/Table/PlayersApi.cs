@@ -40,7 +40,10 @@ internal sealed class PlayersApi
     /// <summary>Where its console lines go (ADR 0186): the host's console unless a test reads them (#756).</summary>
     public Action<string> Said { get; init; } = Console.WriteLine;
 
-    /// <summary>What operators do here (A6), noted beside each action's console line.</summary>
+    /// <summary>
+    /// What operators do here (A6), noted beside each action's console line. Shared with the other admin APIs, so it
+    /// says through its own <see cref="OperatorNotes.Said" />, which the caller wires (#860).
+    /// </summary>
     public OperatorNotes Notes { get; set; } = OperatorNotes.None;
 
     /// <summary>Friendships, for the count a sheet shows; none on a host that keeps none.</summary>

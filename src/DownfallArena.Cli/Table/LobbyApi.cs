@@ -168,7 +168,9 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
         // Listed off the index, described off the tables themselves: a page is eight of them, picked up when
         // this host does not hold them yet. One that cannot be is left off its page.
-        var items = await Task.WhenAll((await HeldAsync(tables.Skip(at * PageSize).Take(PageSize))).Select(table => DescribeAsync(table)));
+        var unread = new UnreadMoves();
+        var items = await Task.WhenAll((await HeldAsync(tables.Skip(at * PageSize).Take(PageSize))).Select(table => DescribeAsync(table, unread.Of(table))));
+        unread.Say(Said);
         return Json(new { total = tables.Length, pages, page = at + 1, items });
     }
 
@@ -254,11 +256,13 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             .GroupBy(held => held.Table!);
 
         // Described together, as the listing is: each description may wait on its table's round.
+        var unread = new UnreadMoves();
         var tables = await Task.WhenAll(held.Select(async group => (object)new
         {
-            table = await DescribeAsync(group.Key),
+            table = await DescribeAsync(group.Key, unread.Of(group.Key)),
             seats = group.Select(one => new { seat = group.Key.Seats.Single(seat => seat.Token == one.Token).Name, token = one.Token }).ToArray(),
         }));
+        unread.Say(Said);
 
         // A saved seat of a void match (ADR 0163) is no seat to resume, and its page is told why rather than that it
         // has none: the tables are named, with why each ended -- the operator's explanation (ADR 0176) or the
@@ -1333,7 +1337,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             format = table.Session.Rules.Format.ToString(),
             casual = table.Casual,
             turnLimitHours = table.TurnLimit is { } limit ? (int)limit.TotalHours : (int?)null,
-            answerBy = await AnswerByAsync(table, lastMove ?? new LastMove(table.Api.LastMoveAtAsync)),
+            answerBy = await AnswerByAsync(table, lastMove ?? new LastMove(() => table.Api.LastMoveAtAsync())),
             waiting = !table.Session.HasBegun && !table.IsOver,
             over = table.IsOver,
             round = await AdminApi.RoundNowAsync(table),
@@ -1568,12 +1572,15 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             }
         }
 
+        // A journal that is out is said once for the whole list, not once a card (#861): the inbox fetches it on every
+        // account change.
+        var unread = new UnreadMoves();
         var tables = await Task.WhenAll((await TablesAsync(summary => summary.Seats.Any(seat => seat.Account == account.Value.Value), over: true))
             .Where(table => table.Seats.Any(seat => seat.Account == account))
             .Select(async table =>
             {
                 // The card's time to answer and its recap say the same last move: one read of the journal (#775).
-                var lastMove = new LastMove(table.Api.LastMoveAtAsync);
+                var lastMove = unread.Of(table);
                 return (object)new
                 {
                     table = await DescribeAsync(table, lastMove),
@@ -1592,11 +1599,12 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 var from = table.Seats.FirstOrDefault(other => other != seat && other.Account is not null)?.Account;
                 return (object)new
                 {
-                    table = await DescribeAsync(table),
+                    table = await DescribeAsync(table, unread.Of(table)),
                     from = from is { } inviter ? new { id = inviter.Value, username = await NameAsync(inviter) } : null,
                     sentAt = seat.InvitedAt,
                 };
             }));
+        unread.Say(Said);
         return Json(new { tables, invitations, ongoingPerKind = OngoingPerKind });
     }
 
@@ -1634,6 +1642,33 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
     /// <summary>A table's last move, read the first time a field asks for it and kept for the others (#775).</summary>
     private sealed class LastMove(Func<Task<(bool Read, DateTimeOffset? At)>> read) : Lazy<Task<(bool Read, DateTimeOffset? At)>>(read);
+
+    /// <summary>
+    /// The cards of one list whose last move could not be read, said in one console line once the list is read
+    /// (#861): while the journal is out, a line a card would bury its cause in repeats on every list.
+    /// </summary>
+    private sealed class UnreadMoves
+    {
+        private int _count;
+        private string? _first;
+
+        /// <summary>A table's last move, read once for its card, a failure counted here rather than said.</summary>
+        public LastMove Of(PlayedTable table) => new(() => table.Api.LastMoveAtAsync(Add));
+
+        public void Say(Action<string> said)
+        {
+            if (Volatile.Read(ref _count) is var count and > 0)
+            {
+                said($"  {count} {(count == 1 ? "card was" : "cards were")} listed without their time to answer: when the last move was could not be read ({_first}).");
+            }
+        }
+
+        private void Add(Exception failure)
+        {
+            Interlocked.Increment(ref _count);
+            Interlocked.CompareExchange(ref _first, HttpHost.OneLine(failure), null);
+        }
+    }
 
     /// <summary>
     /// Seats a browser saved before its player signed in, made the account's (ADR 0122): a seat its token reaches

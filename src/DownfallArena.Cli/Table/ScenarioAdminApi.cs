@@ -164,6 +164,12 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
             return (Error("Scenario.NotFound", $"The scenario '{scenario}' this practice was opened from is no longer kept at this host.", 409), null);
         }
 
+        // Its entries, and the ones the report copied, followed the plan of a game still played (#833).
+        if (await ScenarioSources.HeldBackAsync(stored, document) is { } heldBack)
+        {
+            return (Error(heldBack.Code, heldBack.Message, 409), null);
+        }
+
         var (content, _) = await composer.PlayedOnAsync(document.Content);
         if (!string.Equals(content.Version, document.Content, StringComparison.Ordinal))
         {
@@ -261,6 +267,12 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
             return Error("Scenario.FromRepository", store.Teaches(id) ? "This tutorial comes from the repository and is offered to every signed-in account: it cannot be listed under Practice." : "This scenario comes from the repository and is offered in the admin panel only: it cannot be listed under Practice.", 409);
         }
 
+        // Not listed while the game it was cut from is played (#833); taken off, always.
+        if (list && await store.GetAsync(id) is { } document && await ScenarioSources.HeldBackAsync(stored, document) is { } heldBack)
+        {
+            return Error(heldBack.Code, heldBack.Message, 409);
+        }
+
         if (!await store.SetListedAsync(id, list))
         {
             return Error("Scenario.NotFound", $"No scenario '{id}' at this host.", 404);
@@ -303,25 +315,10 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
         }
 
         // A scenario cut from a table still played, as a practice's may be, holds what its seats keep face down there.
-        foreach (var source in new[] { document.Session, document.Scenario.Source.Run }.OfType<string>().Distinct(StringComparer.Ordinal))
+        if (await ScenarioSources.HeldBackAsync(stored, document) is { } heldBack)
         {
-            if (!TableKeys.IsTableId(source))
-            {
-                continue;
-            }
-
-            // A record that exists and cannot be parsed shows nothing about the game, so it refuses (#814); a missing one
-            // passes: a repository scenario's source run names a table of another host, which has no record here.
-            var read = await stored.ReadRecordAsync(source);
-            if (read.Unparseable)
-            {
-                return (Error(FeedbackErrors.TableUnread.Code, FeedbackErrors.TableUnread.Message, 409), null);
-            }
-
-            if (read.Record is { UnderWay: true })
-            {
-                return (Error(FeedbackErrors.UnderWay.Code, FeedbackErrors.UnderWay.Message, 409), null);
-            }
+            var refused = heldBack == ScenarioSources.UnderWay ? FeedbackErrors.UnderWay : FeedbackErrors.TableUnread;
+            return (Error(refused.Code, refused.Message, 409), null);
         }
 
         if ((document.Schema ?? await SchemaOfAsync(document.Content)) is not { } schema)

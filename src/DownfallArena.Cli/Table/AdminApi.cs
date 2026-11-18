@@ -76,22 +76,33 @@ internal sealed class AdminApi
         _rules = rules;
         _stored = stored;
         _agents = agents ?? [];
-        Lobby = new LobbyApi(registry, composer, clock, push) { Replay = stored is null ? null : id => ReplayAsync(stored, id) };
+        // The lobby it builds speaks where it does, whenever its Said is set (#860).
+        Lobby = new LobbyApi(registry, composer, clock, push) { Replay = stored is null ? null : id => ReplayAsync(stored, id), Said = line => Said(line) };
     }
 
-    /// <summary>Where its console lines go (ADR 0186): the host's console unless a test reads them (#756).</summary>
+    /// <summary>
+    /// Where its console lines go (ADR 0186): the host's console unless a test reads them (#756), and the lobby's it
+    /// builds (#860). What it is handed says through its own sink, which the caller wires: the composer,
+    /// <see cref="Notes" />, <see cref="Jobs" /> and <see cref="Players" />.
+    /// </summary>
     public Action<string> Said { get; init; } = Console.WriteLine;
 
     /// <summary>The operator's list of players (ADR 0174), on a host that signs players in; none otherwise.</summary>
     public PlayersApi? Players { get; init; }
 
-    /// <summary>The operator's jobs (A3): the tending runs and a pass run now, on a host that records; none otherwise.</summary>
+    /// <summary>
+    /// The operator's jobs (A3): the tending runs and a pass run now, on a host that records; none otherwise. It says
+    /// through its own <see cref="JobsApi.Said" />, which the caller wires (#860).
+    /// </summary>
     public JobsApi? Jobs { get; set; }
 
     /// <summary>The bots' turn queues (A3b), on a host whose turns go through queues; none otherwise.</summary>
     public TurnsApi? Turns { get; set; }
 
-    /// <summary>What operators do from the panel (A6), noted beside each action's console line, and the Activity tab.</summary>
+    /// <summary>
+    /// What operators do from the panel (A6), noted beside each action's console line, and the Activity tab. Shared
+    /// with the other admin APIs, so it says through its own <see cref="OperatorNotes.Said" />, which the caller wires (#860).
+    /// </summary>
     public OperatorNotes Notes { get; set; } = OperatorNotes.None;
 
     /// <summary>The Overview tab (A5): the numbers at a glance.</summary>

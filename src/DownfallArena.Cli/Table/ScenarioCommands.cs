@@ -49,6 +49,12 @@ internal static class ScenarioCommands
             return await RefusedAsync($"'{recordPath}' is not a table's record.");
         }
 
+        // The rule the operator's cut keeps (#736, #833): a table still played holds the other seat's face-down choices.
+        if (record.UnderWay)
+        {
+            return await RefusedAsync($"Session {id} is still being played: it can be cut once it is over, so nothing a seat holds face down reaches a scenario.");
+        }
+
         if (record.Rules is not { } recorded)
         {
             return await RefusedAsync($"Session {id} was recorded before its rules were kept with it (ADR 0163): it cannot be replayed on the rules it began on.");

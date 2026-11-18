@@ -157,6 +157,65 @@ public sealed class ScenariosApiTests : IDisposable
         later.Status.ShouldBe(201, Encoding.UTF8.GetString(later.Body));
     }
 
+    /// <summary>
+    /// A scenario cut before #736 from a table still played holds the other seat's face-down choices of its round
+    /// (#833): until that game is over it is neither opened nor resumed by id, listed under Practice or offered there.
+    /// </summary>
+    [Fact]
+    public async Task A_scenario_cut_from_a_game_still_played_is_neither_opened_listed_nor_offered_until_it_is_over()
+    {
+        var (session, scenario) = await CutAsync();
+        (await Admin().HandleAsync("PUT", $"{ScenarioAdminApi.Route}/{scenario}/listing", """{"listed":true}""", "operator")).Status.ShouldBe(200);
+        await StillPlayed.ReopenAsync(_hosted.RunsDirectory, session);
+        await using var practices = new ScenarioPractices(_hosted.Composer, _store, _clock);
+        var accounts = await AccountsAsync();
+        var api = new ScenariosApi(_store, practices, accounts) { Stored = _hosted.Stored };
+        var learner = await SignedInAsync(accounts, "learner");
+
+        var opened = await api.HandleAsync("POST", $"{ScenariosApi.Prefix}/{scenario}/practice", learner);
+        var resumed = await api.HandleAsync("GET", $"{ScenariosApi.Prefix}/{scenario}/practice", learner);
+        var listing = await Admin().HandleAsync("PUT", $"{ScenarioAdminApi.Route}/{scenario}/listing", """{"listed":true}""", "operator");
+        var offered = Read(await api.HandleAsync("GET", ScenariosApi.Prefix, learner)).GetProperty("scenarios").GetArrayLength();
+        var takenOff = await Admin().HandleAsync("PUT", $"{ScenarioAdminApi.Route}/{scenario}/listing", """{"listed":false}""", "operator");
+
+        (opened.Status, Read(opened).GetProperty("error").GetString()).ShouldBe((409, "Scenario.UnderWay"));
+        (resumed.Status, Read(resumed).GetProperty("error").GetString()).ShouldBe((409, "Scenario.UnderWay"));
+        (listing.Status, Read(listing).GetProperty("error").GetString()).ShouldBe((409, "Scenario.UnderWay"));
+        offered.ShouldBe(0);
+        takenOff.Status.ShouldBe(200, "taking it off is always allowed");
+    }
+
+    /// <summary>Once the game it was cut from is over, the same scenario opens again (#833).</summary>
+    [Fact]
+    public async Task A_scenario_cut_from_a_game_since_over_opens()
+    {
+        var (session, scenario) = await CutAsync();
+        await StillPlayed.ReopenAsync(_hosted.RunsDirectory, session);
+        (await _hosted.Stored!.CloseAsync(session, _hosted.Index, Cancel)).ShouldBeTrue();
+        await using var practices = new ScenarioPractices(_hosted.Composer, _store, _clock);
+        var accounts = await AccountsAsync();
+        var api = new ScenariosApi(_store, practices, accounts) { Stored = _hosted.Stored };
+
+        var opened = await api.HandleAsync("POST", $"{ScenariosApi.Prefix}/{scenario}/practice", await SignedInAsync(accounts, "learner"));
+
+        opened.Status.ShouldBe(200, Encoding.UTF8.GetString(opened.Body));
+    }
+
+    /// <summary>A scenario whose source record cannot be parsed is held back too: nothing shows that game is over (#833, #814).</summary>
+    [Fact]
+    public async Task A_scenario_whose_source_record_cannot_be_read_is_not_opened()
+    {
+        var (session, scenario) = await CutAsync();
+        await File.WriteAllTextAsync(Path.Combine(_hosted.RunsDirectory, session, TableRecord.File), "not a record", Cancel);
+        await using var practices = new ScenarioPractices(_hosted.Composer, _store, _clock);
+        var accounts = await AccountsAsync();
+        var api = new ScenariosApi(_store, practices, accounts) { Stored = _hosted.Stored };
+
+        var opened = await api.HandleAsync("POST", $"{ScenariosApi.Prefix}/{scenario}/practice", await SignedInAsync(accounts, "learner"));
+
+        (opened.Status, Read(opened).GetProperty("error").GetString()).ShouldBe((409, "Scenario.SourceUnread"));
+    }
+
     [Fact]
     public async Task A_session_the_host_never_recorded_cannot_be_cut() =>
         (await Admin().HandleAsync("POST", ScenarioAdminApi.Route, JsonSerializer.Serialize(new { session = "20261114-000000-deadbeef", round = 1 }), "operator")).Status.ShouldBe(404);

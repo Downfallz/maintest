@@ -342,7 +342,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
     private static PlayerSlot Other(PlayerSlot slot) => slot == PlayerSlot.Player1 ? PlayerSlot.Player2 : PlayerSlot.Player1;
 
     private TableSeat? Holder(string? token) =>
-        string.IsNullOrWhiteSpace(token) ? null : seats.FirstOrDefault(seat => string.Equals(seat.Token, token, StringComparison.Ordinal));
+        seats.FirstOrDefault(seat => FixedTime.Same(token, seat.Token));
 
     /// <summary>What both seats may know: whose match this is, and whether it is over.</summary>
     private StudioResponse Session() =>
@@ -963,7 +963,11 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
     }
 
     /// <summary>When the last move was, for the view, and whether the journal could be asked at all.</summary>
-    internal async Task<(bool Read, DateTimeOffset? At)> LastMoveAtAsync()
+    /// <param name="unread">
+    /// Who is told of a journal that could not be asked, instead of the console: a list that says it once for all
+    /// its cards (#861).
+    /// </param>
+    internal async Task<(bool Read, DateTimeOffset? At)> LastMoveAtAsync(Action<Exception>? unread = null)
     {
         try
         {
@@ -971,7 +975,15 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
         catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or Azure.RequestFailedException)
         {
-            Said($"  When the last move was could not be read: {failure.Message}");
+            if (unread is null)
+            {
+                Said($"  When the last move was could not be read: {failure.Message}");
+            }
+            else
+            {
+                unread(failure);
+            }
+
             return (false, null);
         }
     }
@@ -1176,8 +1188,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
     /// guessed one character at a time or not at all.
     /// </summary>
     private static StudioResponse? Mistaken(string? token, TablePilot flying) =>
-        string.IsNullOrWhiteSpace(token) || !CryptographicOperations.FixedTimeEquals(
-            Encoding.UTF8.GetBytes(token), Encoding.UTF8.GetBytes(flying.Token))
+        !FixedTime.Same(token, flying.Token)
             ? StudioResponse.OfPlainText(403, $"Piloting carries the pilot's own '{TokenHeader}', which is not a seat's.")
             : null;
 

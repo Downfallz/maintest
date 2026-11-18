@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using DownfallArena.Application.Accounts;
+using DownfallArena.Cli.Hosting;
 using DownfallArena.SharedKernel.Identifiers;
 
 namespace DownfallArena.Cli.Table;
@@ -83,8 +84,7 @@ internal sealed class OperatorGate
 
         if (Token is { } expected)
         {
-            return !string.IsNullOrWhiteSpace(token)
-                && CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(token), Encoding.UTF8.GetBytes(expected))
+            return FixedTime.Same(token, expected)
                 ? "operator"
                 : null;
         }

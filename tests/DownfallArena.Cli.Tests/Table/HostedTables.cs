@@ -49,7 +49,8 @@ internal sealed class HostedTables : IDisposable
     /// <param name="turns">Where the bots' turns are taken, this process unless given: a test that takes them itself.</param>
     /// <param name="content">A change to the content before it is built: a host after a deploy that moved it.</param>
     /// <param name="journal">What the journal the store keeps is wrapped in: a test that counts its reads.</param>
-    public HostedTables(Func<string, IArtifactStore>? store, RuleSet? rules = null, PushNotices? push = null, ReplayBasis? basis = null, InMemoryTableIndex? index = null, IAgentTurns? turns = null, Action<StudioContent>? content = null, Func<IDecisionJournal, IDecisionJournal>? journal = null)
+    /// <param name="said">Where the composer and the tables it composes say their console lines: the console unless given.</param>
+    public HostedTables(Func<string, IArtifactStore>? store, RuleSet? rules = null, PushNotices? push = null, ReplayBasis? basis = null, InMemoryTableIndex? index = null, IAgentTurns? turns = null, Action<StudioContent>? content = null, Func<IDecisionJournal, IDecisionJournal>? journal = null, Action<string>? said = null)
     {
         Index = index ?? new InMemoryTableIndex();
         _content.Write("presentation/package-tags.json", PackageTags);
@@ -72,8 +73,8 @@ internal sealed class HostedTables : IDisposable
         ContentsDirectory = $"{(opened as FileArtifactStore)?.RootDirectory ?? RunsDirectory}-content";
         var contents = opened is null ? null : new FileArtifactStore(ContentsDirectory);
         Composer = turns is null
-            ? new TableComposer(_host.Services, rules ?? Rules, opened, journaled) { Push = push, Basis = basis, Index = Index, Contents = contents }
-            : new TableComposer(_host.Services, rules ?? Rules, opened, journaled) { Push = push, Basis = basis, Index = Index, Turns = turns, Contents = contents };
+            ? new TableComposer(_host.Services, rules ?? Rules, opened, journaled) { Push = push, Basis = basis, Index = Index, Contents = contents, Said = said ?? Console.WriteLine }
+            : new TableComposer(_host.Services, rules ?? Rules, opened, journaled) { Push = push, Basis = basis, Index = Index, Turns = turns, Contents = contents, Said = said ?? Console.WriteLine };
         Stored = opened is null ? null : new StoredSessions(opened);
     }
 

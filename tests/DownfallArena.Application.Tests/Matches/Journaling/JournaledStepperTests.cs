@@ -165,6 +165,45 @@ public sealed class JournaledStepperTests
         replica.Events.All.OfType<EvolutionPassed>().Select(pass => pass.Slot).ShouldBe([PlayerSlot.Player1, PlayerSlot.Player2]);
     }
 
+    /// <summary>
+    /// A journal deleted with its run under a match that stood further on is gone (#856): the match is not started over
+    /// into it, which would bring the run back without its record, and every later step is refused the same way.
+    /// </summary>
+    [Fact]
+    public async Task A_journal_deleted_under_the_match_is_gone_and_nothing_is_written_into_it()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent);
+        var journal = new JournalStore();
+        var replica = new Replica(journal);
+        (await replica.Journaled.SubmitAsync(table, MatchSeats.People, new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass), cancellationToken: TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
+        journal.Delete();
+
+        var step = await replica.Journaled.SubmitAsync(table, MatchSeats.People, new SeatDecision(PlayerSlot.Player2, PlayerDecision.Pass), cancellationToken: TestContext.Current.CancellationToken);
+        var read = await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken);
+
+        step.Error.ShouldBe(JournalErrors.Gone);
+        read.Error.ShouldBe(JournalErrors.Gone);
+        journal.Lines.ShouldBeEmpty();
+    }
+
+    /// <summary>The same, when the journal is deleted between a step's read and its write (#856).</summary>
+    [Fact]
+    public async Task A_journal_deleted_as_a_step_is_written_is_gone_at_the_next_read_and_nothing_is_written_into_it()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent);
+        var journal = new JournalStore();
+        var replica = new Replica(journal);
+        (await replica.Journaled.SubmitAsync(table, MatchSeats.People, new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass), cancellationToken: TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
+        journal.BeforeAppend = journal.Delete;
+
+        var step = await replica.Journaled.SubmitAsync(table, MatchSeats.People, new SeatDecision(PlayerSlot.Player2, PlayerDecision.Pass), cancellationToken: TestContext.Current.CancellationToken);
+        var read = await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken);
+
+        step.Error.ShouldBe(JournalErrors.Moved);
+        read.Error.ShouldBe(JournalErrors.Gone);
+        journal.Lines.ShouldBeEmpty();
+    }
+
     [Fact]
     public async Task A_late_decision_is_refused_without_a_line_and_without_a_rebuild()
     {

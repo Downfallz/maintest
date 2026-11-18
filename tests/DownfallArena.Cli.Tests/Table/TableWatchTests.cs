@@ -343,6 +343,25 @@ public sealed class TableWatchTests : IDisposable
     }
 
     /// <summary>
+    /// A bot's turn journaled by a process still holding a table whose run another process deleted, before its watch
+    /// looks, does not bring the run back (#856): the journal's append past its start is refused, so the operator's
+    /// Sessions tab lists no ghost.
+    /// </summary>
+    [Fact]
+    public async Task A_turn_journaled_after_another_process_deleted_the_run_does_not_bring_it_back()
+    {
+        using var registry = _here.Registry();
+        var table = await RecordedAsync(registry, Randoms);
+        (await ((IAgentTurnTaker)table.Session).TakeTurnAsync(Cancel)).ShouldBe(AgentTurn.Taken);
+        (await _there.Stored!.DeleteAsync(table.Id, Cancel)).ShouldBeTrue();
+
+        await ((IAgentTurnTaker)table.Session).TakeTurnAsync(Cancel);
+
+        Directory.Exists(Path.Combine(_runs, table.Id)).ShouldBeFalse();
+        (await _here.Stored!.ListAsync(Cancel)).ShouldNotContain(session => session.Id == table.Id);
+    }
+
+    /// <summary>
     /// A table whose record this process never managed to store is not taken for deleted (#850): nothing says the
     /// operator deleted it, and letting it go would drop a live table.
     /// </summary>

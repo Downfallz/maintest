@@ -483,8 +483,18 @@ public sealed class JournaledStepper(
             }
         }
 
+        var stood = kept.Position;
         kept.Position = null;
         var reading = await journal.ReadAsync(match.Run, cancellationToken);
+        if (stood is { Mark: > 0 } && reading.Position.Mark == 0)
+        {
+            // Gone back to nothing under a match that stood further on: deleted with its run (#856). Where it stood is
+            // kept, so every later step is refused the same way rather than starting the match over into the run.
+            await matches.ForgetAsync(match.MatchId, cancellationToken);
+            kept.Position = stood;
+            return Result.Failure<JournalPosition>(JournalErrors.Gone);
+        }
+
         Replaying(match, [.. reading.Entries.OfType<SeatChangeEntry>()]);
         var rebuilt = await replay.RebuildAsync(match, reading.Entries, cancellationToken);
         if (rebuilt.IsFailure)
@@ -552,7 +562,10 @@ public sealed class JournaledStepper(
         var written = await journal.AppendAsync(match.Run, after, entries, cancellationToken);
         if (written is null)
         {
+            // A journal refused because it is gone (#856) keeps where it stood, so the next load says so.
+            var gone = after.Mark > 0 && await journal.EndAsync(match.Run, cancellationToken) == 0;
             await LetGoAsync(match.MatchId, kept, cancellationToken);
+            kept.Position = gone ? after : null;
             return null;
         }
 

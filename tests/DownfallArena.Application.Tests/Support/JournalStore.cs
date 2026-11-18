@@ -43,6 +43,7 @@ internal sealed class JournalStore
                 _lines.AddRange(call.Arg<IReadOnlyList<IJournalEntry>>());
                 return End;
             });
+        Journal.EndAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(_ => (long)_lines.Count);
     }
 
     public IDecisionJournal Journal { get; }
@@ -57,6 +58,9 @@ internal sealed class JournalStore
 
     /// <summary>Run once, as the next append arrives and before it is judged: where another writer gets in first.</summary>
     public Action? BeforeAppend { get; set; }
+
+    /// <summary>The journal deleted with its run by another process (#856): nothing left of it.</summary>
+    public void Delete() => _lines.Clear();
 
     /// <summary>A line written by somebody else.</summary>
     public void WriteElsewhere(SeatDecision line) => _lines.Add(new DecisionEntry(line));
