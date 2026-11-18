@@ -41,6 +41,19 @@ public sealed class TableIndexFailuresTests : IDisposable
         (await registry.ReserveAsync(Cancel)).ShouldNotBeNull().Dispose();
     }
 
+    /// <summary>The registry's lines go to the sink it is given, so a test reads them without the console (#799).</summary>
+    [Fact]
+    public async Task An_index_that_does_not_answer_is_said_on_the_registry_s_own_sink()
+    {
+        var said = new List<string>();
+        using var registry = new TableRegistry(_failing) { Said = said.Add };
+        _failing.Fail = true;
+
+        await registry.OpenAsync(Cancel);
+
+        said.ShouldContain(line => line.StartsWith("  The index of the tables did not answer", StringComparison.Ordinal));
+    }
+
     [Fact]
     public async Task The_sweep_goes_on_when_the_index_does_not_answer()
     {

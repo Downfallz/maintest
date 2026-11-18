@@ -1,6 +1,7 @@
 using System.Text.Json;
 using DownfallArena.Cli.Hosting;
 using DownfallArena.Cli.Studio;
+using DownfallArena.Domain.Resources;
 using DownfallArena.Infrastructure.Learning;
 
 namespace DownfallArena.Cli.Table;
@@ -10,6 +11,9 @@ internal sealed class PracticeTable(CliOptions options, string token) : IPractic
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
     private PracticeRun? _run;
+
+    /// <summary>Where its console lines go: the host's console unless a test reads them (#846).</summary>
+    public Action<string> Said { get; init; } = Console.WriteLine;
 
     public async Task<StudioResponse> HandleAsync(string method, string path, string body, string? supplied, string? ifNoneMatch = null, string? query = null)
     {
@@ -73,9 +77,11 @@ internal sealed class PracticeTable(CliOptions options, string token) : IPractic
         {
             next = await PracticeRun.StartAsync(options, scenario);
         }
-        catch (Exception exception) when (exception is InvalidDataException or OperationCanceledException)
+        catch (Exception exception) when (exception is InvalidDataException or InvalidGameContentException or JsonException or OperationCanceledException || TableRegistry.StoreFails(exception))
         {
-            return Refused("prepared", exception);
+            // Content that no longer reads, of a version this engine does not load, or gone, as a scenario restart's:
+            // its words can carry a path (#846).
+            return Refused("prepared", exception, Said);
         }
 
         var previous = _run;
@@ -92,14 +98,15 @@ internal sealed class PracticeTable(CliOptions options, string token) : IPractic
     /// A refusal the host wrote for the person (<see cref="PracticeRefusal" />) is said; any other failure is said as a
     /// fixed sentence, and its own words go to the console, on one line (#786).
     /// </remarks>
-    internal static StudioResponse Refused(string what, Exception exception)
+    /// <param name="sink">Where the failure's line goes: the console unless a test reads it.</param>
+    internal static StudioResponse Refused(string what, Exception exception, Action<string>? sink = null)
     {
         if (PracticeRefusal.Said(exception) is { } said)
         {
             return StudioResponse.OfPlainText(409, $"The scenario could not be {what}: {said}");
         }
 
-        Console.WriteLine($"  The scenario could not be {what}: {HttpHost.OneLine(exception)}");
+        (sink ?? Console.WriteLine)($"  The scenario could not be {what}: {HttpHost.OneLine(exception)}");
         return StudioResponse.OfPlainText(409, $"The scenario could not be {what}. The host's console says why.");
     }
 

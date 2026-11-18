@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Players;
+using DownfallArena.Application.Admin;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.Infrastructure.Accounts;
@@ -191,6 +192,26 @@ public sealed class PlayersApiTests : IDisposable
         line.ShouldContain($"Account {mark.Id} (Mark) suspended by op.");
         line.ShouldNotContain("Zelda_42");
         line.ShouldNotContain("failed to reach");
+    }
+
+    /// <summary>
+    /// The players' API and its operator log are given one sink: the log's failure line is read too, and says what
+    /// failed, never the reason the operator wrote (#800).
+    /// </summary>
+    [Fact]
+    public async Task A_suspension_the_operator_log_cannot_keep_is_said_without_its_reason()
+    {
+        var accounts = await AccountsAsync();
+        var mark = await SignInAsync(accounts, "Mark");
+        var said = new List<string>();
+        var players = Players(accounts, said.Add);
+        players.Notes = new OperatorNotes(new OperatorActions(new OperatorLogOut(), _clock)) { Said = said.Add };
+        var body = """{"reason":"Insulted Zelda_42.\nThe report failed to reach him."}""";
+
+        (await players.HandleAsync("POST", $"{PlayersApi.Prefix}/{mark.Id}/suspension", body, null, "op")).Status.ShouldBe(200);
+
+        said.ShouldContain(line => line.StartsWith("  The operator log could not keep", StringComparison.Ordinal));
+        said.ShouldAllBe(line => !line.Contains("Zelda_42") && !line.Contains("failed to reach"));
     }
 
     [Theory]

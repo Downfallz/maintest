@@ -405,7 +405,17 @@ internal sealed class AdminApi
     /// </summary>
     private async Task<StudioResponse> VoidAsync(string id, string body, string operatorName)
     {
-        var asked = string.IsNullOrWhiteSpace(body) ? null : JsonSerializer.Deserialize<VoidBody>(body, ArtifactJson.LineOptions);
+        VoidBody? asked;
+        try
+        {
+            asked = string.IsNullOrWhiteSpace(body) ? null : JsonSerializer.Deserialize<VoidBody>(body, ArtifactJson.LineOptions);
+        }
+        catch (JsonException)
+        {
+            // A body that does not read gives no reason: the fixed sentence, never the parser's words (#847).
+            return Problem(400, MatchVoid.Invalid.Code, MatchVoid.Invalid.Message);
+        }
+
         var reason = MatchVoid.Create(asked?.Category, asked?.Explanation, operatorName, _clock.GetUtcNow());
         if (reason.IsFailure)
         {

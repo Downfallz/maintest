@@ -1,5 +1,7 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Text.Json;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
@@ -301,8 +303,25 @@ internal sealed class HttpHost : IDisposable
         path is not null && JoinCodes.Names(path) ? $"{JoinCodes.Prefix}…" : path;
 
     /// <summary>An exception as one console line: its type and message, without the stack or a line break.</summary>
-    internal static string OneLine(Exception exception) =>
-        $"{exception.GetType().Name}: {exception.Message}".ReplaceLineEndings(" ");
+    /// <remarks>
+    /// Line breaks and tabs become spaces, and every other control or format character is dropped: an ANSI escape, or
+    /// a right-to-left override, in text a player chose would otherwise reach the container log unchanged, or make
+    /// the line read otherwise (#847). It is read a rune at a time, so a format character written as two halves (a
+    /// tag character) is seen whole.
+    /// </remarks>
+    internal static string OneLine(Exception exception)
+    {
+        var kept = new StringBuilder();
+        foreach (var rune in $"{exception.GetType().Name}: {exception.Message}".ReplaceLineEndings(" ").Replace('\t', ' ').EnumerateRunes())
+        {
+            if (!Rune.IsControl(rune) && Rune.GetUnicodeCategory(rune) != UnicodeCategory.Format)
+            {
+                kept.Append(rune);
+            }
+        }
+
+        return kept.ToString();
+    }
 
     private static StudioResponse Problem(int status, string code, string message) =>
         StudioResponse.OfJson(new { error = code, message }, JsonSerializerOptions.Web, status);

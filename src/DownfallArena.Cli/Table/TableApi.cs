@@ -132,6 +132,9 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
     /// <summary>When the table's journal was last written, its last move (ADR 0169), or none: a table that keeps no journal.</summary>
     public Func<Task<DateTimeOffset?>>? LastMove { get; set; }
 
+    /// <summary>Where its console lines go: the host's console unless a test reads them (#847).</summary>
+    public Action<string> Said { get; init; } = Console.WriteLine;
+
     /// <summary>When the time to answer runs out, from the last move the seat's view read once (<see cref="LastMove" />).</summary>
     public Func<DateTimeOffset?, DateTimeOffset?>? AnswerByFrom { get; set; }
 
@@ -276,7 +279,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
         catch (Exception failure) when (failure is Azure.RequestFailedException or HttpRequestException or Azure.Identity.AuthenticationFailedException)
         {
-            Console.WriteLine($"  The relay could not be reached for a seat: {HttpHost.OneLine(failure)}");
+            Said($"  The relay could not be reached for a seat: {HttpHost.OneLine(failure)}");
             return StudioResponse.OfPlainText(503, "The relay could not be reached: read the seat's events.");
         }
     }
@@ -374,7 +377,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
     /// Writes the table's record, and never fails the request for it: the person has reached their seat and the
     /// match may have begun whether or not the store took it. A table picked up again without it waits again.
     /// </summary>
-    private static async Task RecordedAsync(Func<Task> record)
+    private async Task RecordedAsync(Func<Task> record)
     {
         try
         {
@@ -382,7 +385,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
         catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or JsonException or ObjectDisposedException or Azure.RequestFailedException)
         {
-            Console.WriteLine($"  A seat's arrival could not be written into its table's record: {failure.Message}");
+            Said($"  A seat's arrival could not be written into its table's record: {failure.Message}");
         }
     }
 
@@ -600,17 +603,24 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
         catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or JsonException or ObjectDisposedException or Azure.RequestFailedException)
         {
-            Console.WriteLine($"  The concession of {TableSeat.NameOf(slot)} could not be written down: {failure.Message}");
+            Said($"  The concession of {TableSeat.NameOf(slot)} could not be written down: {failure.Message}");
         }
     }
 
     /// <summary>
     /// A body the route cannot read. The parser's message names the host's own types and the place in the body, so
-    /// the page gets a fixed sentence and the console the exception (#828).
+    /// the page gets a fixed sentence and the console the exception (#828). The line names what was asked and the
+    /// table, by its session's id when it records one (the id every other line and the panel use), or else its
+    /// match's; of the body, only where the parser stopped, as the message's path can carry a property name the
+    /// sender chose (#847).
     /// </summary>
-    private static StudioResponse NotJson(JsonException exception)
+    /// <param name="what">What was sent, and by or for which seat: "decision from player1".</param>
+    private StudioResponse NotJson(string what, JsonException exception)
     {
-        Console.WriteLine($"  A request body could not be read: {HttpHost.OneLine(exception)}");
+        var table = run is { } recording ? $"session {recording.SessionId}" : $"match {session.MatchId}";
+        // The parser counts both from 0; an editor counts lines from 1. A failure the parser did not place has neither.
+        var where = exception.LineNumber is { } line ? $" at line {line + 1}, byte {exception.BytePositionInLine}" : string.Empty;
+        Said($"  A request body ({what}) on {table} could not be read: {exception.GetType().Name}{where}.");
         return StudioResponse.OfPlainText(400, "The request body is not the JSON this route reads.");
     }
 
@@ -628,7 +638,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
         catch (JsonException exception)
         {
-            return NotJson(exception);
+            return NotJson($"decision from {seat.Name}", exception);
         }
 
         if (posted is null)
@@ -782,7 +792,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
         catch (JsonException exception)
         {
-            return NotJson(exception);
+            return NotJson($"note from {seat.Name}", exception);
         }
 
         if (posted is null)
@@ -818,7 +828,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
         catch (JsonException exception)
         {
-            return NotJson(exception);
+            return NotJson($"reaction from {seat.Name}", exception);
         }
 
         ReactionSent sent;
@@ -828,7 +838,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
         catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or ObjectDisposedException or Azure.RequestFailedException)
         {
-            Console.WriteLine($"  A reaction from {seat.Name} could not be kept: {failure.Message}");
+            Said($"  A reaction from {seat.Name} could not be kept: {failure.Message}");
             sent = ReactionSent.Busy;
         }
 
@@ -877,7 +887,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
         catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or Azure.RequestFailedException)
         {
-            Console.WriteLine($"  What {seat.Name} was shown could not be kept: {failure.Message}");
+            Said($"  What {seat.Name} was shown could not be kept: {failure.Message}");
             kept = VisitShown.Busy;
         }
 
@@ -906,7 +916,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
         catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or Azure.RequestFailedException)
         {
-            Console.WriteLine($"  What {seat.Name} was last shown could not be read: {failure.Message}");
+            Said($"  What {seat.Name} was last shown could not be read: {failure.Message}");
             return null;
         }
     }
@@ -953,7 +963,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
     }
 
     /// <summary>When the last move was, for the view, and whether the journal could be asked at all.</summary>
-    private async Task<(bool Read, DateTimeOffset? At)> LastMoveAtAsync()
+    internal async Task<(bool Read, DateTimeOffset? At)> LastMoveAtAsync()
     {
         try
         {
@@ -961,7 +971,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
         catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or Azure.RequestFailedException)
         {
-            Console.WriteLine($"  When the last move was could not be read: {failure.Message}");
+            Said($"  When the last move was could not be read: {failure.Message}");
             return (false, null);
         }
     }
@@ -993,7 +1003,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
         catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or ObjectDisposedException or Azure.RequestFailedException)
         {
-            Console.WriteLine($"  The reactions could not be read: {failure.Message}");
+            Said($"  The reactions could not be read: {failure.Message}");
             return null;
         }
     }
@@ -1177,7 +1187,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
     /// says what it wants. Nothing about the match or the seat is touched, which is what keeps the swap itself
     /// a short read of one moving thing rather than a long one.
     /// </summary>
-    private static SwapAsked Asked(string method, string rest, string body)
+    private SwapAsked Asked(string method, string rest, string body)
     {
         if (method != "POST" || TableSeat.SlotOf(rest.TrimEnd('/')) is not { } named)
         {
@@ -1191,7 +1201,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
         catch (JsonException exception)
         {
-            return SwapAsked.No(NotJson(exception));
+            return SwapAsked.No(NotJson($"seat swap of {TableSeat.NameOf(named)}", exception));
         }
 
         if (posted?.Agent is not { Length: > 0 } agent || posted.Round is not { } wantedRound)
@@ -1225,7 +1235,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
         catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or JsonException)
         {
-            Console.WriteLine($"  The seat change {change.From} -> {change.To} at round {change.AtRound} could not be written down: {failure.Message}");
+            Said($"  The seat change {change.From} -> {change.To} at round {change.AtRound} could not be written down: {failure.Message}");
         }
     }
 

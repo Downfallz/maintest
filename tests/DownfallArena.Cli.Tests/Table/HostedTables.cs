@@ -1,6 +1,7 @@
 using DownfallArena.Application.Agents;
 using DownfallArena.Application.Learning.Ports;
 using DownfallArena.Application.Matches.Journaling;
+using DownfallArena.Application.Matches.Ports;
 using DownfallArena.Cli.Table;
 using DownfallArena.Cli.Tests.Studio;
 using DownfallArena.Domain.Matches;
@@ -47,7 +48,8 @@ internal sealed class HostedTables : IDisposable
     /// <param name="index">The index of the tables, a fresh one unless given: another host's, for two hosts over one store and one index.</param>
     /// <param name="turns">Where the bots' turns are taken, this process unless given: a test that takes them itself.</param>
     /// <param name="content">A change to the content before it is built: a host after a deploy that moved it.</param>
-    public HostedTables(Func<string, IArtifactStore>? store, RuleSet? rules = null, PushNotices? push = null, ReplayBasis? basis = null, InMemoryTableIndex? index = null, IAgentTurns? turns = null, Action<StudioContent>? content = null)
+    /// <param name="journal">What the journal the store keeps is wrapped in: a test that counts its reads.</param>
+    public HostedTables(Func<string, IArtifactStore>? store, RuleSet? rules = null, PushNotices? push = null, ReplayBasis? basis = null, InMemoryTableIndex? index = null, IAgentTurns? turns = null, Action<StudioContent>? content = null, Func<IDecisionJournal, IDecisionJournal>? journal = null)
     {
         Index = index ?? new InMemoryTableIndex();
         _content.Write("presentation/package-tags.json", PackageTags);
@@ -62,15 +64,16 @@ internal sealed class HostedTables : IDisposable
         var opened = store?.Invoke(RunsDirectory);
 
         // A store wrapped by a test still keeps its runs under the directory it was made over, and so does the journal.
-        var journal = opened is null or FileArtifactStore ? null : new FileDecisionJournal(RunsDirectory, TimeProvider.System);
+        var kept = opened is null or FileArtifactStore ? null : new FileDecisionJournal(RunsDirectory, TimeProvider.System);
+        var journaled = opened is null || journal is null ? kept : journal(kept ?? ArtifactStores.JournalOf(opened, TimeProvider.System));
 
         // The content the tables began on, kept beside the runs as a host keeps it (ADR 0163), and shared by every host
         // over the same runs.
         ContentsDirectory = $"{(opened as FileArtifactStore)?.RootDirectory ?? RunsDirectory}-content";
         var contents = opened is null ? null : new FileArtifactStore(ContentsDirectory);
         Composer = turns is null
-            ? new TableComposer(_host.Services, rules ?? Rules, opened, journal) { Push = push, Basis = basis, Index = Index, Contents = contents }
-            : new TableComposer(_host.Services, rules ?? Rules, opened, journal) { Push = push, Basis = basis, Index = Index, Turns = turns, Contents = contents };
+            ? new TableComposer(_host.Services, rules ?? Rules, opened, journaled) { Push = push, Basis = basis, Index = Index, Contents = contents }
+            : new TableComposer(_host.Services, rules ?? Rules, opened, journaled) { Push = push, Basis = basis, Index = Index, Turns = turns, Contents = contents };
         Stored = opened is null ? null : new StoredSessions(opened);
     }
 

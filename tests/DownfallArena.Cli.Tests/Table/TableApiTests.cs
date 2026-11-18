@@ -38,6 +38,7 @@ public sealed partial class TableApiTests : IDisposable
     private readonly StudioContent _content = new();
     private readonly CancellationTokenSource _stopping = new();
     private readonly List<SteppedSession> _opened = [];
+    private readonly List<string> _said = [];
     private IHost? _host;
 
     public void Dispose()
@@ -475,6 +476,25 @@ public sealed partial class TableApiTests : IDisposable
         Text(answer).ShouldBe("The request body is not the JSON this route reads.");
     }
 
+    /// <summary>
+    /// The line an unreadable body writes names the route, the seat and the match of a table that records no
+    /// session, so the log ties it to one; nothing of the body is printed, not even a property name the parser's
+    /// path would carry (#847).
+    /// </summary>
+    [Fact]
+    public async Task A_body_that_is_not_json_is_said_with_its_route_and_its_match_and_nothing_of_the_body()
+    {
+        var table = await Seated();
+
+        await table.Api.HandleAsync("POST", "/api/seat/player1/decision", """{"Zelda_42":""", table.Token);
+
+        var line = _said.Where(said => said.Contains("could not be read", StringComparison.Ordinal)).ShouldHaveSingleItem();
+        line.ShouldContain("decision from player1");
+        line.ShouldContain($"match {table.Session.MatchId}");
+        line.ShouldContain("at line 1, byte ", customMessage: "an editor's line, counted from 1");
+        line.ShouldNotContain("Zelda_42");
+    }
+
     [Fact]
     public async Task What_the_options_offer_is_accepted_and_the_match_moves_on()
     {
@@ -730,7 +750,10 @@ public sealed partial class TableApiTests : IDisposable
             session,
             seats,
             CatalogueProjection.Build(_host.Services.GetRequiredService<IGameResources>(), rules),
-            _host.Services.GetRequiredService<MatchTraceRecorder>());
+            _host.Services.GetRequiredService<MatchTraceRecorder>())
+        {
+            Said = _said.Add,
+        };
         return (api, session, person, token);
     }
 

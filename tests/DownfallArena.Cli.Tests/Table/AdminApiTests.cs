@@ -421,6 +421,31 @@ public sealed class AdminApiTests : IDisposable
         }
     }
 
+    /// <summary>A pass run from the panel is said on the jobs' own sink, so a test reads it without the console (#799).</summary>
+    [Fact]
+    public async Task A_pass_run_from_the_panel_is_said_on_the_jobs_own_sink()
+    {
+        var clock = new MovableClock(DateTimeOffset.UtcNow);
+        var admin = new AdminApi(_registry, _hosted.Composer, OperatorGate.WithToken(OperatorToken), clock, "Rules", _hosted.Stored) { Said = _ => { } };
+        var tend = Path.Combine(_hosted.RunsDirectory, "..", $"tend-{Guid.NewGuid():N}");
+        var said = new List<string>();
+        try
+        {
+            admin.Jobs = new JobsApi(new Infrastructure.Tables.FileTendLog(tend), clock, (now, progress) => TableTend.TendAsync(_registry, admin.Lobby, now, progress: progress)) { Said = said.Add };
+
+            (await admin.HandleAsync("POST", JobsApi.TendRoute, "", OperatorToken, principal: null)).Status.ShouldBe(200);
+
+            said.ShouldHaveSingleItem().ShouldStartWith("  Tending pass ");
+        }
+        finally
+        {
+            if (Directory.Exists(tend))
+            {
+                Directory.Delete(tend, recursive: true);
+            }
+        }
+    }
+
     [Fact]
     public async Task The_turn_queues_are_the_operators_alone_and_none_on_a_host_that_takes_its_turns_itself()
     {

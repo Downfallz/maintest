@@ -297,6 +297,20 @@ public sealed class HttpHostTests
         HttpHost.OneLine(thrown).ShouldBe("InvalidOperationException: first second");
     }
 
+    /// <summary>
+    /// A control character in an exception's message, an ANSI escape in a property name a seat's holder chose,
+    /// would reach the container log unchanged, and a format character such as a right-to-left override would make
+    /// the line read otherwise, even one written as two halves (a tag character): all are dropped, a tab becomes a
+    /// space (#847).
+    /// </summary>
+    [Fact]
+    public void An_exception_s_control_characters_never_reach_the_console()
+    {
+        var thrown = new InvalidOperationException("Bad '\u001b[31mname\u001b[0m'\u0007 at\tline\u202e 1\u200b\U000E0041");
+
+        HttpHost.OneLine(thrown).ShouldBe("InvalidOperationException: Bad '[31mname[0m' at line 1");
+    }
+
     private static async Task<(bool Closed, string Text)> ReadUntilClosedAsync(NetworkStream stream, TimeSpan patience)
     {
         using var waiting = CancellationTokenSource.CreateLinkedTokenSource(Cancel);

@@ -50,6 +50,9 @@ internal sealed class JobsApi
     /// <summary>The kept runs, which this tab pages and the Overview reads the last of (A5).</summary>
     public TendRuns Runs { get; }
 
+    /// <summary>Where its console lines go: the host's console unless a test reads them (#799).</summary>
+    public Action<string> Said { get; init; } = Console.WriteLine;
+
     public static bool Names(string path) => path == Prefix || path.StartsWith(Prefix + "/", StringComparison.Ordinal);
 
     public async Task<StudioResponse> HandleAsync(string method, string path, string? query, string operatorName)
@@ -127,7 +130,7 @@ internal sealed class JobsApi
         {
             var (_, run) = await TableTend.RecordedAsync(_log, TendTrigger.Manual, operatorName, _clock, _pass);
             var did = $"{run.NeverBegan.Count} closed, {run.InvitationsExpired} invitations let go of, {run.TimedOut.Count} timed out, {run.Abandoned.Count} left ended, {run.Warned.Count} warned";
-            Console.WriteLine($"  Tending pass {run.Id} run by {operatorName}: {did}.");
+            Said($"  Tending pass {run.Id} run by {operatorName}: {did}.");
             await Notes.NoteAsync(operatorName, OperatorActions.RunPass, run.Id, did);
             return StudioResponse.OfJson(new { run = Describe(run) }, Web);
         }
