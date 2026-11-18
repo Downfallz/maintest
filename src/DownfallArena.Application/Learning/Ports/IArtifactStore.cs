@@ -21,4 +21,11 @@ public interface IArtifactStore
 
     /// <summary>Removes a run and everything written under it. False when there was no such run.</summary>
     Task<bool> DeleteAsync(string run, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Removes a run and everything written under it, the file named <paramref name="first" /> before anything else:
+    /// a writer that checks that file before writing beside it then sees the run as gone before any of its files
+    /// is listed (#818, #851). False when there was no such run.
+    /// </summary>
+    Task<bool> DeleteAsync(string run, string? first, CancellationToken cancellationToken = default);
 }

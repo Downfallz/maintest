@@ -21,7 +21,8 @@ Look for, in this order:
 1. Behaviour bugs: off-by-one, null paths, wrong error code, state change without invariant check.
 2. Things CI will reject: warnings (they are errors), formatting drift, an analyzer rule that will fire,
    a package version outside `Directory.Packages.props`, a dependency that breaks the layering tests.
-3. Missing tests for new behaviour, or tests that do not actually assert the behaviour.
+3. Missing tests for new behaviour, or tests that do not actually assert the behaviour. A field added to a
+   route's answer is tested through the route, not only by the page's mapper, whose fixture writes it by hand (#812).
 4. Convention drift: naming outside the glossary, public setters in the domain, logic in Infrastructure.
 5. Docs left stale: glossary, ADR needed but absent, `AGENTS.md` now wrong.
 

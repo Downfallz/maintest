@@ -131,7 +131,8 @@ internal sealed class StoredSessions(IArtifactStore store)
         return (buffer.ToArray(), exported, missing);
     }
 
-    public Task<bool> DeleteAsync(string id, CancellationToken cancellationToken = default) => store.DeleteAsync(id, cancellationToken);
+    /// <summary>Removes a session's run, its record first: a side file's first write checks the record, so nothing new is written once it is gone (#818, #851).</summary>
+    public Task<bool> DeleteAsync(string id, CancellationToken cancellationToken = default) => store.DeleteAsync(id, first: TableRecord.File, cancellationToken);
 
     /// <summary>Closes a table no host holds, through its record and the index (<see cref="PlaytestRun.CloseRecordAsync" />).</summary>
     public Task<bool> CloseAsync(string id, Application.Tables.Ports.ITableIndex index, CancellationToken cancellationToken = default) =>

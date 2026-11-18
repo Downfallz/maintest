@@ -28,6 +28,8 @@ internal sealed class RecordRefused(IArtifactStore inner, string? file = null) :
 
     public Task<bool> DeleteAsync(string run, CancellationToken cancellationToken = default) => inner.DeleteAsync(run, cancellationToken);
 
+    public Task<bool> DeleteAsync(string run, string? first, CancellationToken cancellationToken = default) => inner.DeleteAsync(run, first, cancellationToken);
+
     private sealed class Unread(RecordRefused store, IArtifactReader inner) : IArtifactReader
     {
         public Task<IReadOnlyList<string>> ListAsync(string relativePrefix, CancellationToken cancellationToken = default) =>

@@ -19,7 +19,7 @@ public sealed class TableVisitsTests
 
         var kept = await visits.ShownAsync("player1", Holder, 7, Cancel);
 
-        kept.ShouldBe(new LastVisit(7, Start, Holder));
+        kept.ShouldBe(VisitShown.Of(new LastVisit(7, Start, Holder)));
         (await visits.LastAsync("player1", Holder, Cancel)).ShouldBe(new LastVisit(7, Start, Holder));
     }
 
@@ -35,7 +35,7 @@ public sealed class TableVisitsTests
 
         var kept = await visits.ShownAsync("player1", Holder, sequence, Cancel);
 
-        kept.ShouldBe(new LastVisit(9, Start, Holder));
+        kept.ShouldBe(VisitShown.Of(new LastVisit(9, Start, Holder)));
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public sealed class TableVisitsTests
 
         var kept = await visits.ShownAsync("player1", Holder, 15, Cancel);
 
-        kept.ShouldBe(new LastVisit(20, Start, Holder));
+        kept.ShouldBe(VisitShown.Of(new LastVisit(20, Start, Holder)));
         keeper.Kept["player1"].ShouldBe(new LastVisit(20, Start, Holder));
     }
 
@@ -71,7 +71,7 @@ public sealed class TableVisitsTests
 
         var kept = await visits.ShownAsync("player1", Holder, 15, Cancel);
 
-        kept.ShouldBe(new LastVisit(15, later, Holder));
+        kept.ShouldBe(VisitShown.Of(new LastVisit(15, later, Holder)));
         keeper.Kept["player1"].ShouldBe(new LastVisit(15, later, Holder));
     }
 
@@ -83,7 +83,7 @@ public sealed class TableVisitsTests
 
         var kept = await visits.ShownAsync("player1", Holder, 3, Cancel);
 
-        kept.ShouldBeNull();
+        kept.ShouldBe(VisitShown.Busy);
     }
 
     [Fact]
@@ -117,7 +117,7 @@ public sealed class TableVisitsTests
 
         var kept = await visits.ShownAsync("player1", "next-key", 2, Cancel);
 
-        kept.ShouldBe(new LastVisit(2, Start, "next-key"));
+        kept.ShouldBe(VisitShown.Of(new LastVisit(2, Start, "next-key")));
     }
 
     [Fact]
@@ -130,19 +130,19 @@ public sealed class TableVisitsTests
 
         var kept = await visits.ShownAsync("player1", Holder, 8, Cancel);
 
-        kept.ShouldBeNull();
+        kept.ShouldBe(VisitShown.Gone);
         keeper.Kept.ShouldNotContainKey("player1");
     }
 
     [Fact]
     public async Task A_first_mark_after_the_run_was_deleted_does_not_bring_a_file_of_it_back()
     {
-        var keeper = new Keeper { Recorded = false };
+        var keeper = new Keeper { Recorded = RecordPresence.Gone };
         var visits = new TableVisits(new Clock(Start), keeper);
 
         var kept = await visits.ShownAsync("player1", Holder, 8, Cancel);
 
-        kept.ShouldBeNull();
+        kept.ShouldBe(VisitShown.Gone);
         keeper.Kept.ShouldNotContainKey("player1");
     }
 
@@ -154,7 +154,7 @@ public sealed class TableVisitsTests
 
         var kept = await visits.ShownAsync("player1", Holder, 8, Cancel);
 
-        kept.ShouldBeNull();
+        kept.ShouldBe(VisitShown.Gone);
         keeper.Kept.ShouldNotContainKey("player1");
     }
 
@@ -166,7 +166,31 @@ public sealed class TableVisitsTests
 
         var kept = await visits.ShownAsync("player1", Holder, 8, Cancel);
 
-        kept.ShouldBeNull();
+        kept.ShouldBe(VisitShown.Gone);
+        keeper.Kept.ShouldNotContainKey("player1");
+    }
+
+    [Fact]
+    public async Task A_first_mark_while_no_record_was_ever_seen_is_busy_not_gone()
+    {
+        var keeper = new Keeper { Recorded = RecordPresence.Unknown };
+        var visits = new TableVisits(new Clock(Start), keeper);
+
+        var kept = await visits.ShownAsync("player1", Holder, 8, Cancel);
+
+        kept.ShouldBe(VisitShown.Busy);
+        keeper.Kept.ShouldNotContainKey("player1");
+    }
+
+    [Fact]
+    public async Task A_first_mark_whose_record_cannot_be_told_from_a_deleted_one_after_the_write_is_taken_back_as_busy()
+    {
+        var keeper = new Keeper { UnknownAfterFirstWrite = true };
+        var visits = new TableVisits(new Clock(Start), keeper);
+
+        var kept = await visits.ShownAsync("player1", Holder, 8, Cancel);
+
+        kept.ShouldBe(VisitShown.Busy);
         keeper.Kept.ShouldNotContainKey("player1");
     }
 
@@ -186,13 +210,16 @@ public sealed class TableVisitsTests
         public Dictionary<string, LastVisit> Kept { get; } = [];
 
         /// <summary>Whether the table's record is still kept: false once the operator deleted the run.</summary>
-        public bool Recorded { get; set; } = true;
+        public RecordPresence Recorded { get; set; } = RecordPresence.Kept;
 
         /// <summary>The operator deletes the run right after a seat's first write, as a delete in another process does.</summary>
         public bool DeletedAfterFirstWrite { get; init; }
 
         /// <summary>Another process writes over a seat's first mark between this one's write and its second look at the record.</summary>
         public bool WrittenOverAfterFirstWrite { get; init; }
+
+        /// <summary>The record reads as never seen right after a seat's first write, as one whose last write failed does.</summary>
+        public bool UnknownAfterFirstWrite { get; init; }
 
         public Task<bool> ForgetVisitIfAsync(string seat, string expected, CancellationToken cancellationToken = default)
         {
@@ -206,7 +233,7 @@ public sealed class TableVisitsTests
             return Task.FromResult(true);
         }
 
-        public Task<bool> RecordedAsync(CancellationToken cancellationToken = default) => Task.FromResult(Recorded);
+        public Task<RecordPresence> RecordedAsync(CancellationToken cancellationToken = default) => Task.FromResult(Recorded);
 
         /// <summary>Every write is refused, as if another process wrote first each time.</summary>
         public bool AlwaysMoved { get; init; }
@@ -251,7 +278,12 @@ public sealed class TableVisitsTests
             var written = Tag(seat);
             if (DeletedAfterFirstWrite && firstWrite)
             {
-                Recorded = false;
+                Recorded = RecordPresence.Gone;
+            }
+
+            if (UnknownAfterFirstWrite && firstWrite)
+            {
+                Recorded = RecordPresence.Unknown;
             }
 
             if (WrittenOverAfterFirstWrite && firstWrite)

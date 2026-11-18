@@ -90,7 +90,7 @@ public sealed class TableReactionsTests
     [Fact]
     public async Task A_first_reaction_after_the_run_was_deleted_does_not_bring_a_file_of_it_back()
     {
-        var keeper = new Keeper { Recorded = false };
+        var keeper = new Keeper { Recorded = RecordPresence.Gone };
         var reactions = new TableReactions(new Clock(Start), keeper);
 
         var sent = await reactions.SendAsync("player1", "hello", Cancel);
@@ -136,12 +136,36 @@ public sealed class TableReactionsTests
     }
 
     [Fact]
+    public async Task A_first_reaction_while_no_record_was_ever_seen_is_busy_not_gone()
+    {
+        var keeper = new Keeper { Recorded = RecordPresence.Unknown };
+        var reactions = new TableReactions(new Clock(Start), keeper);
+
+        var sent = await reactions.SendAsync("player1", "hello", Cancel);
+
+        sent.Refusal.ShouldBe("Reaction.Busy");
+        keeper.Exists.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task A_first_reaction_whose_record_cannot_be_told_from_a_deleted_one_after_the_write_is_taken_back_as_busy()
+    {
+        var keeper = new Keeper { UnknownAfterWrite = true };
+        var reactions = new TableReactions(new Clock(Start), keeper);
+
+        var sent = await reactions.SendAsync("player1", "hello", Cancel);
+
+        sent.Refusal.ShouldBe("Reaction.Busy");
+        keeper.Exists.ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task A_reaction_refused_for_want_of_a_record_is_sent_once_the_record_is_written()
     {
-        var keeper = new Keeper { Recorded = false };
+        var keeper = new Keeper { Recorded = RecordPresence.Unknown };
         var reactions = new TableReactions(new Clock(Start), keeper);
         await reactions.SendAsync("player1", "hello", Cancel);
-        keeper.Recorded = true;
+        keeper.Recorded = RecordPresence.Kept;
 
         var sent = await reactions.SendAsync("player1", "hello", Cancel);
 
@@ -184,10 +208,10 @@ public sealed class TableReactionsTests
         public bool Exists => _version > 0;
 
         /// <summary>Whether the table's record is still kept: false once the operator deleted the run.</summary>
-        public bool Recorded { get; set; } = true;
+        public RecordPresence Recorded { get; set; } = RecordPresence.Kept;
 
-        public Task<bool> RecordedAsync(CancellationToken cancellationToken = default) =>
-            RecordUnreadableOnceWritten && _version > 0 ? Task.FromException<bool>(new IOException("The store is out.")) : Task.FromResult(Recorded);
+        public Task<RecordPresence> RecordedAsync(CancellationToken cancellationToken = default) =>
+            RecordUnreadableOnceWritten && _version > 0 ? Task.FromException<RecordPresence>(new IOException("The store is out.")) : Task.FromResult(Recorded);
 
         /// <summary>A storage failure answers the second look at the record, once the file is written.</summary>
         public bool RecordUnreadableOnceWritten { get; init; }
@@ -197,6 +221,9 @@ public sealed class TableReactionsTests
 
         /// <summary>The operator deletes the run right after the first write, as a delete in another process does.</summary>
         public bool DeletedAfterWrite { get; init; }
+
+        /// <summary>The record reads as never seen right after the first write, as one whose last write failed does.</summary>
+        public bool UnknownAfterWrite { get; init; }
 
         public Task<bool> ForgetReactionsIfAsync(string expected, CancellationToken cancellationToken = default)
         {
@@ -232,7 +259,12 @@ public sealed class TableReactionsTests
             var tag = _version.ToString(System.Globalization.CultureInfo.InvariantCulture);
             if (DeletedAfterWrite && current is null)
             {
-                Recorded = false;
+                Recorded = RecordPresence.Gone;
+            }
+
+            if (UnknownAfterWrite && current is null)
+            {
+                Recorded = RecordPresence.Unknown;
             }
 
             if (WrittenOverAfterWrite && current is null)

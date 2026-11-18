@@ -77,6 +77,8 @@ public sealed class TableComposerTests
 
         public Task<bool> DeleteAsync(string run, CancellationToken cancellationToken = default) => inner.DeleteAsync(run, cancellationToken);
 
+        public Task<bool> DeleteAsync(string run, string? first, CancellationToken cancellationToken = default) => inner.DeleteAsync(run, first, cancellationToken);
+
         private sealed class Refusing(IArtifactWriter inner) : IArtifactWriter
         {
             public Task WriteJsonAsync<TValue>(string relativePath, TValue value, CancellationToken cancellationToken = default) =>

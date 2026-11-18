@@ -19,6 +19,9 @@ internal sealed class TableVisits(TimeProvider clock, IVisitKeeper? keeper = nul
     private readonly Lock _held = new();
     private readonly Dictionary<string, LastVisit> _visits = [];
 
+    // The marks on their way into the record, which the operator's delete waits for (#849).
+    private readonly HashSet<Task> _writing = [];
+
     /// <summary>The seat's last visit under <paramref name="holder" />, or none before its page said what it was shown.</summary>
     public async Task<LastVisit?> LastAsync(string seat, string holder, CancellationToken cancellationToken = default)
     {
@@ -43,57 +46,95 @@ internal sealed class TableVisits(TimeProvider clock, IVisitKeeper? keeper = nul
     /// time now, when it is further than the mark kept, or when that mark is another holder's. The mark kept
     /// afterwards; none when every retry lost the race to another process, or the record went away meanwhile.
     /// </summary>
-    public async Task<LastVisit?> ShownAsync(string seat, string holder, long sequence, CancellationToken cancellationToken = default)
+    public async Task<VisitShown> ShownAsync(string seat, string holder, long sequence, CancellationToken cancellationToken = default)
     {
         if (keeper is null)
         {
-            return ShownHere(seat, holder, sequence);
+            return VisitShown.Of(ShownHere(seat, holder, sequence));
         }
 
+        var shown = KeptAsync(seat, holder, sequence, cancellationToken);
+        lock (_held)
+        {
+            _writing.Add(shown);
+        }
+
+        try
+        {
+            return await shown;
+        }
+        finally
+        {
+            lock (_held)
+            {
+                _writing.Remove(shown);
+            }
+        }
+    }
+
+    private async Task<VisitShown> KeptAsync(string seat, string holder, long sequence, CancellationToken cancellationToken)
+    {
+        var store = keeper!;
         var existed = false;
         for (var attempt = 0; attempt < Attempts; attempt++)
         {
-            var (kept, tag) = await keeper.VisitAsync(seat, cancellationToken);
+            var (kept, tag) = await store.VisitAsync(seat, cancellationToken);
 
             // There was a mark and now there is none: the table's run was deleted meanwhile, and writing would bring a
             // file of it back.
             if (existed && tag is null)
             {
-                return null;
+                return VisitShown.Gone;
             }
 
-            // No mark yet, and no record either: a write would create the file under a deleted run (#789).
-            if (tag is null && !await keeper.RecordedAsync(cancellationToken))
+            // No mark yet, and no record either: a write would create the file under a deleted run (#789). Busy, not gone,
+            // when this process never saw the record stored (#850).
+            if (tag is null && await store.RecordedAsync(cancellationToken) is not RecordPresence.Kept and var missing)
             {
-                return null;
+                return Refused(missing);
             }
 
             existed |= tag is not null;
             if (kept is not null && kept.Holder == holder && kept.Sequence >= sequence)
             {
-                return kept;
+                return VisitShown.Of(kept);
             }
 
             var visit = new LastVisit(sequence, clock.GetUtcNow(), holder);
-            if (await keeper.WriteVisitIfAsync(seat, visit, tag, cancellationToken) is { } written)
+            if (await store.WriteVisitIfAsync(seat, visit, tag, cancellationToken) is { } written)
             {
                 // Same check as in TableReactions, after the first write: a record still there means the delete
                 // has not listed the run's files yet (#818).
-                if (tag is null && !await StillRecordedAsync(cancellationToken))
+                if (tag is null && await StillRecordedAsync(cancellationToken) is not RecordPresence.Kept and var gone)
                 {
                     await TakeBackAsync(seat, written, cancellationToken);
-                    return null;
+                    return Refused(gone);
                 }
 
-                return visit;
+                return VisitShown.Of(visit);
             }
         }
 
-        return null;
+        return VisitShown.Busy;
+    }
+
+    /// <summary>
+    /// Completes once every mark already on its way into the record has ended, however it ended (#849): what the
+    /// operator's delete waits for, so a mark lands before the run's files are listed, not after.
+    /// </summary>
+    public Task SettledAsync()
+    {
+        Task[] writing;
+        lock (_held)
+        {
+            writing = [.. _writing];
+        }
+
+        return Task.WhenAll(writing.Select(one => Task.WhenAny(one)));
     }
 
     // A failed read of the record is no evidence of a delete, and the write has landed: it is kept.
-    private async Task<bool> StillRecordedAsync(CancellationToken cancellationToken)
+    private async Task<RecordPresence> StillRecordedAsync(CancellationToken cancellationToken)
     {
         try
         {
@@ -101,9 +142,12 @@ internal sealed class TableVisits(TimeProvider clock, IVisitKeeper? keeper = nul
         }
         catch (Exception failure) when (failure is not OperationCanceledException)
         {
-            return true;
+            return RecordPresence.Kept;
         }
     }
+
+    // A record the operator deleted is gone for good; one this process never saw stored may be written yet (#850).
+    private static VisitShown Refused(RecordPresence missing) => missing == RecordPresence.Gone ? VisitShown.Gone : VisitShown.Busy;
 
     // The mark written is deleted. When another process wrote over it meanwhile, what it holds now is deleted instead (#818).
     private async Task TakeBackAsync(string seat, string tag, CancellationToken cancellationToken)

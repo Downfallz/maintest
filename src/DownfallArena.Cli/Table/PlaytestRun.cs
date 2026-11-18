@@ -375,7 +375,11 @@ internal sealed class PlaytestRun : IReactionKeeper, IVisitKeeper
     private async Task WriteRecordAfterAsync(Task before, Func<TableRecord?, TableRecord> over, CancellationToken cancellationToken)
     {
         await Task.WhenAny(before);
-        var (stored, written) = await WriteOverAsync(_reader, _writer, SessionId, over, cancellationToken);
+
+        // A record this process wrote or read and that is gone now was deleted with its run, by the operator, maybe from
+        // another process (ADR 0162). Written again, it would read to every deleted-run guard as a run still kept (#848).
+        var once = Interlocked.Read(ref _revision) > 0;
+        var (stored, written) = await WriteOverAsync(_reader, _writer, SessionId, over, cancellationToken, refuseMissing: once);
         var known = Interlocked.Exchange(ref _revision, written.Revision);
         if (known > 0 && stored is { } other && other.Revision > known)
         {
@@ -431,11 +435,16 @@ internal sealed class PlaytestRun : IReactionKeeper, IVisitKeeper
     /// A record written over the one stored, on the condition that nobody wrote it since it was read, read again
     /// and written again when somebody had (ADR 0159). What is written is worked out from what is stored.
     /// </summary>
-    private static async Task<(TableRecord? Stored, TableRecord Written)> WriteOverAsync(IArtifactReader reader, IArtifactWriter writer, string sessionId, Func<TableRecord?, TableRecord> over, CancellationToken cancellationToken)
+    private static async Task<(TableRecord? Stored, TableRecord Written)> WriteOverAsync(IArtifactReader reader, IArtifactWriter writer, string sessionId, Func<TableRecord?, TableRecord> over, CancellationToken cancellationToken, bool refuseMissing = false)
     {
         for (var attempt = 1; ; attempt++)
         {
             var read = await reader.ReadTaggedAsync(TableRecord.File, cancellationToken);
+            if (read is null && refuseMissing)
+            {
+                throw new IOException($"The record of session {sessionId} is gone: its run was deleted, and the record is not written again.");
+            }
+
             var stored = read is null ? null : StoredSessions.RecordOf(read.Text);
             var written = over(stored).Over(stored);
             if (await writer.WriteJsonIfAsync(TableRecord.File, written, read?.Tag, cancellationToken) is not null)
@@ -1040,10 +1049,12 @@ internal sealed class PlaytestRun : IReactionKeeper, IVisitKeeper
 
     /// <summary>
     /// Whether the table's record is still there, read before a side file's first write, after this run's own write
-    /// of the record still on its way: none means the operator deleted the run, and the write would bring a file of
-    /// it back (#789). One read of the small record, paid only while the side file has never been written.
+    /// of the record still on its way. Missing once this process wrote or read it, the operator deleted the run, and
+    /// the write would bring a file of it back (#789). Missing when this process never saw it stored, its own writes
+    /// failed, which says nothing of a delete (#850). One read of the small record, paid only while the side file has
+    /// never been written.
     /// </summary>
-    public async Task<bool> RecordedAsync(CancellationToken cancellationToken = default)
+    public async Task<RecordPresence> RecordedAsync(CancellationToken cancellationToken = default)
     {
         Task pending;
         lock (_recordGate)
@@ -1053,7 +1064,12 @@ internal sealed class PlaytestRun : IReactionKeeper, IVisitKeeper
 
         // A write that failed was told to whoever asked for it; here only its end matters.
         await Task.WhenAny(pending);
-        return await _reader.ReadTextAsync(TableRecord.File, cancellationToken) is not null;
+        if (await _reader.ReadTextAsync(TableRecord.File, cancellationToken) is not null)
+        {
+            return RecordPresence.Kept;
+        }
+
+        return Interlocked.Read(ref _revision) > 0 ? RecordPresence.Gone : RecordPresence.Unknown;
     }
 
     public async Task<(LastVisit? Visit, string? Tag)> VisitAsync(string seat, CancellationToken cancellationToken = default)

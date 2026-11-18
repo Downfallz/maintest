@@ -3,13 +3,25 @@ using DownfallArena.Cli.Table;
 
 namespace DownfallArena.Cli.Tests.Table;
 
-/// <summary>A store whose writes of the table's record wait, once held, until they are let go: a record write still on its way.</summary>
-internal sealed class RecordHeld(IArtifactStore inner) : IArtifactStore
+/// <summary>
+/// A store whose writes of the table's record, or of another document when named, wait, once held, until they are let
+/// go: a write still on its way.
+/// </summary>
+internal sealed class RecordHeld(IArtifactStore inner, string? file = null) : IArtifactStore
 {
+    private readonly string _file = file ?? TableRecord.File;
     private TaskCompletionSource? _held;
+    private TaskCompletionSource _reached = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-    /// <summary>The next writes of the record wait until <see cref="Release" />.</summary>
-    public void Hold() => _held = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    /// <summary>The next writes of the document wait until <see cref="Release" />.</summary>
+    public void Hold()
+    {
+        _reached = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _held = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    }
+
+    /// <summary>Completes once a write of the document is waiting on the hold.</summary>
+    public Task Reached => _reached.Task;
 
     public void Release() => _held?.TrySetResult();
 
@@ -23,8 +35,18 @@ internal sealed class RecordHeld(IArtifactStore inner) : IArtifactStore
 
     public Task<bool> DeleteAsync(string run, CancellationToken cancellationToken = default) => inner.DeleteAsync(run, cancellationToken);
 
-    private Task Wait(string relativePath) =>
-        _held is { } held && relativePath.EndsWith(TableRecord.File, StringComparison.Ordinal) ? held.Task : Task.CompletedTask;
+    public Task<bool> DeleteAsync(string run, string? first, CancellationToken cancellationToken = default) => inner.DeleteAsync(run, first, cancellationToken);
+
+    private Task Wait(string relativePath)
+    {
+        if (_held is not { } held || !relativePath.EndsWith(_file, StringComparison.Ordinal))
+        {
+            return Task.CompletedTask;
+        }
+
+        _reached.TrySetResult();
+        return held.Task;
+    }
 
     private sealed class Waiter(RecordHeld store, IArtifactWriter inner) : IArtifactWriter
     {

@@ -129,6 +129,24 @@ public sealed class FileArtifactStoreTests
         (await store.DeleteAsync("run-1", TestContext.Current.CancellationToken)).ShouldBeFalse("it is already gone");
     }
 
+    /// <summary>
+    /// The file named first goes before the rest of the run (#818, #851): the recursive delete is made to fail, and
+    /// whatever was deleted before it shows in what is left.
+    /// </summary>
+    [Fact]
+    public async Task Deleting_a_run_deletes_the_file_named_first_before_anything_else()
+    {
+        using var directory = new ContentDirectory();
+        var store = new FileArtifactStore(directory.Path, _ => throw new IOException("The directory could not be removed."));
+        await store.Writer("run-o").WriteJsonAsync("first.json", new { Revision = 1 }, TestContext.Current.CancellationToken);
+        await store.Writer("run-o").WriteJsonAsync("reactions.json", new { Items = 1 }, TestContext.Current.CancellationToken);
+
+        await Should.ThrowAsync<IOException>(() => store.DeleteAsync("run-o", first: "first.json", TestContext.Current.CancellationToken));
+
+        File.Exists(Path.Combine(directory.Path, "run-o", "first.json")).ShouldBeFalse();
+        File.Exists(Path.Combine(directory.Path, "run-o", "reactions.json")).ShouldBeTrue();
+    }
+
     [Fact]
     public async Task A_run_name_that_leaves_the_root_is_refused_before_anything_is_deleted()
     {

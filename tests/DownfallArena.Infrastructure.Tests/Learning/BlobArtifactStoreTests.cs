@@ -75,7 +75,7 @@ public sealed class BlobArtifactStoreTests
     }
 
     [Fact]
-    public async Task Deleting_a_run_deletes_its_record_before_anything_else()
+    public async Task Deleting_a_run_deletes_the_file_named_first_before_anything_else()
     {
         var store = await Store();
         var writer = store.Writer("run-o");
@@ -85,7 +85,7 @@ public sealed class BlobArtifactStoreTests
 
         // A lease on the record makes its delete fail: whatever was deleted before it shows in what is left.
         await new BlobLeaseClient(container.GetBlobClient("run-o/table.json")).AcquireAsync(TimeSpan.FromSeconds(60), cancellationToken: TestContext.Current.CancellationToken);
-        await Should.ThrowAsync<RequestFailedException>(() => store.DeleteAsync("run-o", TestContext.Current.CancellationToken));
+        await Should.ThrowAsync<RequestFailedException>(() => store.DeleteAsync("run-o", first: "table.json", TestContext.Current.CancellationToken));
 
         (await store.Reader("run-o").ReadTextAsync("reactions.json", TestContext.Current.CancellationToken)).ShouldNotBeNull();
     }

@@ -28,6 +28,8 @@ For every route the diff adds or changes, answer:
 6. Does what a seat holds face down reach the other seat, a log or a notification?
 7. Does it break replay of a journal recorded before it? Then the pull request must say open matches are void.
 8. Is there a host test, a line in `table/README.md#routes`, and the behaviour in `docs/reference/commands.md`?
+9. Does every field the diff adds to a route's answer have a test through the route? A test of the page's mapper
+   alone writes the field in its fixture, and stays green when the host drops it (#812).
 
 Verify by reading the code and the tests, not the description. Run the host tests you need
 (`dotnet test --project tests/DownfallArena.Cli.Tests -- --filter-namespace DownfallArena.Cli.Tests.Table`); a storage test skipped

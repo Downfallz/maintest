@@ -37,7 +37,10 @@ paths:
   A file not yet written is written only while the table's record exists (`RecordedAsync`, #789). The record is checked
   again after the first write: if it is gone, the file is deleted (`DeleteIfAsync`). A delete removes the record
   (`table.json`) first, then the rest, so a record still there after the write means the delete has not yet listed the
-  run's files and will find this one (#818). This holds unless a process holding the table writes the record again.
+  run's files and will find this one (#818). The caller names that first file (`StoredSessions.DeleteAsync`), and the
+  stores' tests pin the order (#851). A process that wrote or read the record never writes over a missing one (#848).
+  A missing record this process never saw stored is unknown, not gone: answer busy (503), not gone (409) (#850). The
+  operator's delete waits for the reactions and seen marks on their way (`PlayedTable.QuiesceAsync`, #849).
 - Build one `OperatorActions` per host, in `TableHost.OpenNotesAsync`, and hand it to every admin API. Its ids keep
   the operator log in order only within one instance (#748).
 - A route that answers a file, or whose path ends in an extension, sends `Cache-Control: no-store, private`
@@ -59,6 +62,8 @@ paths:
 - Anything kept per seat is reset, or keyed by the seat's key (`TableApi.HolderOf`), when the seat changes hands
   (ADR 0170): the newcomer is never served the leaver's state (#739).
 - A field added to the seat view degrades to null when its store fails; it never fails the board read (#739).
+- A field added to a route's answer gets one test through the route, not only the page's mapper, whose fixture
+  writes the field by hand (#812).
 - A second reader of a seat's feed applies the seat view's two limits, `FeedStart` and `session.Journaled`
   (`TableApi.SinceVisitAsync`), or it counts entries the page never shows (#724).
 - Storage tests need Azurite; without it they are skipped. Report them as skipped.

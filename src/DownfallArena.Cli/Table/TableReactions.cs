@@ -102,10 +102,10 @@ internal sealed class TableReactions(TimeProvider clock, IReactionKeeper? keeper
         }
 
         // No file yet: a write would create it, under a run the operator deleted too (#789). Refused this once
-        // and not for good, as a record whose write failed may be written again.
-        if (_tag is null && !await keeper.RecordedAsync(cancellationToken))
+        // and not for good, as a record whose write failed may be written again: busy then, not gone (#850).
+        if (_tag is null && await keeper.RecordedAsync(cancellationToken) is not RecordPresence.Kept and var missing)
         {
-            return ReactionSent.Gone;
+            return Refused(missing);
         }
 
         var first = _tag is null;
@@ -113,10 +113,10 @@ internal sealed class TableReactions(TimeProvider clock, IReactionKeeper? keeper
         {
             // The record existed a moment ago. A delete may have listed the run's files since and missed this one. The
             // delete removes the record first, so a record still there now means it has not listed the files yet (#818).
-            if (first && !await StillRecordedAsync(cancellationToken))
+            if (first && await StillRecordedAsync(cancellationToken) is not RecordPresence.Kept and var gone)
             {
                 await TakeBackAsync(tag, cancellationToken);
-                return ReactionSent.Gone;
+                return Refused(gone);
             }
 
             _tag = tag;
@@ -129,7 +129,7 @@ internal sealed class TableReactions(TimeProvider clock, IReactionKeeper? keeper
     }
 
     // A failed read of the record is no evidence of a delete, and the write has landed: it is kept.
-    private async Task<bool> StillRecordedAsync(CancellationToken cancellationToken)
+    private async Task<RecordPresence> StillRecordedAsync(CancellationToken cancellationToken)
     {
         try
         {
@@ -137,9 +137,12 @@ internal sealed class TableReactions(TimeProvider clock, IReactionKeeper? keeper
         }
         catch (Exception failure) when (failure is not OperationCanceledException)
         {
-            return true;
+            return RecordPresence.Kept;
         }
     }
+
+    // A record the operator deleted is gone for good; one this process never saw stored may be written yet (#850).
+    private static ReactionSent Refused(RecordPresence missing) => missing == RecordPresence.Gone ? ReactionSent.Gone : ReactionSent.Busy;
 
     // The file written is deleted. When another process wrote over it meanwhile, what it holds now is deleted instead:
     // the run is gone, and that write was not a first one, so it never checked (#818).
@@ -153,6 +156,18 @@ internal sealed class TableReactions(TimeProvider clock, IReactionKeeper? keeper
             }
 
             tag = current;
+        }
+    }
+
+    /// <summary>
+    /// Completes once every read and send already in turn has ended, however it ended (#849): what the operator's delete
+    /// waits for, so a reaction on its way lands before the run's files are listed, not after.
+    /// </summary>
+    public Task SettledAsync()
+    {
+        lock (_order)
+        {
+            return Task.WhenAny(_last);
         }
     }
 
