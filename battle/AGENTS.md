@@ -36,7 +36,7 @@ npm --prefix studio/browser test -- --trace off battle-lab.spec.js battle-bench.
 - The view plays the host's confirmed frames. It never decides an outcome, and never holds the player's own
   cast (ADR 0141).
 - Reduced motion and replay navigation show the settled view; first loads and hidden-tab returns replay nothing.
-- An effect is looked at before it is called done: the bench (`/battle-lab?bench`) plays any entry of the spell
-  art, and its film strip is twelve frames of it on one sheet (`README.md`, "The effects bench").
+- Look at an effect before calling it done. The bench (`/battle-lab?bench`) plays any entry of the spell art.
+  Its film strip puts twelve frames of the play on one sheet (`README.md`, "The effects bench").
 - The words a player reads come from docs/domain/player-terminology.md.
 - The suite takes 30 to 45 minutes in a session: run the specs the change touches first, then the list above.

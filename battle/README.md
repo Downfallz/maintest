@@ -888,11 +888,11 @@ desktop.
 ## The effects bench
 
 `/battle-lab?bench` (docs/art/battle-craft-plan.md, BC2) lists every entry of `data/presentation/spell-art.json`
-and plays the chosen one on chosen creatures of the laboratory's fixture: a caster, and any of the six as
+and plays the chosen one on creatures of the laboratory's fixture: one caster, and any of its six creatures as
 targets. `?bench=spell:frostbite:v1` opens on that entry. It asks no host and holds no rule: a target across the
 field from the caster is struck, one on the caster's side receives, and nobody's health moves. Less motion and
-the playback speed are in the settings, as in the laboratory. The bench is in `game.js` only: `build.mjs` refuses
-its modules and the spell art in `live.js`.
+the playback speed are in the settings, as in the laboratory. The bench ships in `game.js` only:
+`build.mjs` fails the build if `live.js` contains a bench module or the spell art (`live-guard.mjs`).
 
 The film strip is one effect on one sheet, twelve frames with the millisecond under each:
 
@@ -904,10 +904,12 @@ node scripts/battle/filmstrip.mjs --all                           # one sheet an
 ```
 
 The script serves `table/` itself and opens the bench in Chromium at phone size (390 by 844). The bench's film
-clock (`window.battleBench.film`) is what makes two runs agree: `start` stops the game's loop, hands `Date.now`
-to the film (Phaser's tweens read it), seeds `Math.random` (its camera shake and particles read that), lets the
-scene rest, and shows the play's first frame; `advance` steps the game in ticks of 20 ms; `stop` gives the
-clocks back and restarts the loop. The frames are spread over the whole play, 240 ms apart at 1×; `--interval`
-takes another multiple of 20. Two sheets of one effect are the same file, byte for byte, on one machine:
-`studio/browser/battle-bench.spec.js` films twice and compares. Across machines the renderer may differ, so a
-sheet is compared with one filmed on the same machine, before and after a change.
+clock (`window.battleBench.film`) makes two runs agree. `start` stops the game's loop and hands `Date.now` to
+the film, because Phaser's tweens read it. It also seeds `Math.random`, which the camera shake and the
+particles read. It lets the scene rest and shows the play's first frame. `advance` steps the game in ticks of
+20 ms. `stop` gives the clocks back and restarts the loop. The frames are spread over the whole play, 240 ms
+apart at 1×; `--interval` takes another multiple of 20, and `--speed` is 0.5, 1 or 2.
+
+Two sheets of one effect are the same file, byte for byte, on one machine: `studio/browser/battle-bench.spec.js`
+films twice and compares. The renderer may differ across machines, so compare a sheet only with one filmed on
+the same machine, before and after a change.

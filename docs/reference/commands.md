@@ -1044,9 +1044,10 @@ Films one effect on the effects bench (`/battle-lab?bench`) and writes its conta
 size with the millisecond under each (battle/README.md, "The effects bench"). It needs the built bundle
 (`npm --prefix battle run build`) and the browser suite's Playwright, and serves `table/` itself; `--url` films
 a laboratory page served elsewhere. `--actor` and `--targets` name creatures of the fixture (`a1` to `a3`, `b1`
-to `b3`), `--speed` a playback speed, `--frames`, `--interval` (a multiple of 20 ms) and `--columns` the sheet,
-`--scale` the device pixel ratio. `--out` is a `.png` for one effect, a folder otherwise
-(`artifacts/filmstrips/` by default). It exits 1 with no effect named, or an effect the bench does not list.
+to `b3`), `--speed` sets the playback speed (0.5, 1 or 2). `--frames`, `--interval` (a multiple of 20 ms) and `--columns`
+set the sheet. `--scale` sets the device pixel ratio. `--out` is a `.png` for one effect, a folder otherwise
+(`artifacts/filmstrips/` by default). It exits 1 with no effect named, an option it cannot film, or an effect
+the bench does not list.
 
 ### recap-fixture.py
 

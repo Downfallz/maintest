@@ -15,6 +15,7 @@ import { createRequire } from 'node:module';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { FILM_TICK_MS } from '../../table/battle-bench.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const PHONE = { width: 390, height: 844 };
@@ -22,7 +23,9 @@ const COLUMNS = 4;
 
 /** Open the bench on a page and wait for its scene. `base` is where the laboratory's page is served. */
 export async function openBench(page, base) {
-  await page.goto(base.includes('?') ? base : `${base}?bench`);
+  const address = new URL(base, 'http://localhost');
+  const asked = address.searchParams.has('bench') ? base : `${base}${address.search ? '&' : '?'}bench`;
+  await page.goto(asked);
   await page.locator('#lab[data-bench][data-ready="true"]').waitFor();
 }
 
@@ -31,9 +34,10 @@ export async function openBench(page, base) {
  * apart, the first at 0. Returns [{ ms, stage, png }], and leaves the bench at rest with its loop running.
  */
 export async function filmFrames(page, { spell, actor, targets, speed, frames = 12, interval } = {}) {
+  // Refused before the film starts: a started film has stopped the bench's loop.
+  if (interval !== undefined && interval % FILM_TICK_MS !== 0) throw new Error(`The interval must be a multiple of ${FILM_TICK_MS} ms.`);
   const started = await page.evaluate(options => window.battleBench.film.start(options), { spell, actor, targets, speed });
   const step = interval ?? started.interval;
-  if (step % started.tick !== 0) throw new Error(`The interval must be a multiple of ${started.tick} ms.`);
   const field = page.locator('#battle-zone');
   const shots = [{ ms: 0, stage: started.stage, png: await field.screenshot() }];
   try {
@@ -127,6 +131,9 @@ export function parseArguments(argv) {
     else options.spells.push(word);
   }
   if (options.all === options.spells.length > 0) throw new Error('Name one or more effects (spell:pummel:v1), or --all.');
+  if (film.speed !== undefined && ![0.5, 1, 2].includes(film.speed)) throw new Error('--speed is 0.5, 1 or 2, as the page offers.');
+  if (film.interval !== undefined && film.interval % FILM_TICK_MS !== 0) throw new Error(`--interval is a multiple of ${FILM_TICK_MS} ms.`);
+  if (options.out?.endsWith('.png') && (options.all || options.spells.length > 1)) throw new Error('--out names a folder when several effects are filmed.');
   return { ...options, film };
 }
 
@@ -142,7 +149,7 @@ async function main(argv) {
     const page = await context.newPage();
     await openBench(page, options.base ?? served.base);
     const spells = options.all ? await page.evaluate(() => window.battleBench.entries.map(one => one.id)) : options.spells;
-    const single = spells.length === 1 && options.out?.endsWith('.png');
+    const single = Boolean(options.out?.endsWith('.png'));
     const folder = single ? null : resolve(options.out ?? join(root, 'artifacts/filmstrips'));
     for (const spell of spells) {
       const sheet = await filmSheet(page, { ...options.film, spell });

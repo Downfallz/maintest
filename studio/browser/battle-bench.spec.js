@@ -28,6 +28,7 @@ test('the bench lists every authored effect and the six creatures, and fits the 
 });
 
 test('a chosen effect plays on the chosen creatures: its windup, its impact, then nothing left', async ({ page }) => {
+  test.slow();
   await page.locator('#bench-spell').selectOption('spell:engulfing_flames:v1');
   await page.locator('#bench-targets input[value="b2"]').check();
   const started = await film(page, 'start');
@@ -44,12 +45,28 @@ test('a chosen effect plays on the chosen creatures: its windup, its impact, the
   // The loop runs again once the film ends: the button plays the effect on the page's own clock.
   await page.locator('#bench-play').click();
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'resolved', { timeout: 15000 });
+  await expect(page.locator('#bench-status')).toHaveText('Engulfing Flames: played');
 });
 
 test('the address can name the effect the bench opens on', async ({ page }) => {
-  await openBench(page, '/table/battle-lab.html?bench=spell:frostbite:v1&');
+  await openBench(page, '/table/battle-lab.html?bench=spell:frostbite:v1');
   await expect(page.locator('#bench-spell')).toHaveValue('spell:frostbite:v1');
   await expect(page.locator('#lab')).toHaveAttribute('data-spell', 'spell:frostbite:v1');
+});
+
+test('an address naming an effect the art does not list opens the bench on the first one, and says so', async ({ page }) => {
+  await openBench(page, '/table/battle-lab.html?bench=spell:nothing:v1');
+  await expect(page.locator('#bench-spell')).toHaveValue('spell:adrenaline_tonic:v1');
+  await expect(page.locator('#bench-status')).toHaveText('No effect named spell:nothing:v1');
+  await expect(page.locator('#bench-play')).toBeEnabled();
+});
+
+test('a film refuses a speed the page does not offer, and leaves the bench running', async ({ page }) => {
+  const refused = await page.evaluate(() => { try { window.battleBench.film.start({ speed: 1.5 }); return ''; } catch (error) { return error.message; } });
+  expect(refused).toBe('The bench has no speed 1.5.');
+  await expect(page.locator('#playback-speed')).toHaveValue('1');
+  await page.locator('#bench-play').click();
+  await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'resolved', { timeout: 15000 });
 });
 
 test('less motion shows the settled frame and no effect', async ({ page }) => {

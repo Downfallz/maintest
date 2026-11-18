@@ -42,7 +42,8 @@ Every flag of `table` is in docs/reference/commands.md.
   `rules.json` and `rules.fr.json`, the rulebook built from `rules/` by `node scripts/rules/build.mjs` (ADR 0188,
   0193), never edited by hand.
 - A new file is served only once it joins the host's file table (`src/DownfallArena.Cli/Table/TableFiles.cs`)
-  and its test (`TableFilesTests`); a missing one is a 404 in production, not a failing page test.
+  and its test (`TableFilesTests`); a missing one is a 404 in production, not a failing page test. A module
+  only the battle bundle imports joins it too: `Every_module_beside_the_page_is_served` asks it of every script here.
 - `identity.css` stays last in every page's `<head>`.
 - The host serves a page with its stylesheets and `battle-build/` bundles named `?v=<tag>` (`TableFiles`), so a cache
   cannot pair a page with another deploy's bundle. A module another module imports keeps its bare name.

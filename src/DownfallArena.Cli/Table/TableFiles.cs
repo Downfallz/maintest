@@ -153,6 +153,7 @@ internal sealed partial class TableFiles
             ["/battle-art/warped.webp"] = (Path.Combine(tableDirectory, "battle-art", "warped.webp"), Webp),
             ["/battle-lab-state.js"] = (Path.Combine(tableDirectory, "battle-lab-state.js"), JavaScript),
             ["/battle-lab-fixture.js"] = (Path.Combine(tableDirectory, "battle-lab-fixture.js"), JavaScript),
+            ["/battle-bench.js"] = (Path.Combine(tableDirectory, "battle-bench.js"), JavaScript),
 
             // The opt-in live renderer completes the game loop for one seat (ADRs 0125–0128). Its modules bundle into
             // live.js and the page loads none of them by name; they are served because every module beside the page

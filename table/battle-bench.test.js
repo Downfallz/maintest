@@ -7,6 +7,7 @@ import { benchCreatures, benchDefaultTargets, benchDuration, benchEntries, bench
   seededRandom, FILM_FRAMES, FILM_TICK_MS } from './battle-bench.js';
 import { IMPACT_MS, WINDUP_MS } from './battle-timing.js';
 import { parseArguments } from '../scripts/battle/filmstrip.mjs';
+import { laboratoryOnly } from '../battle/live-guard.mjs';
 
 const read = path => readFileSync(new URL(path, import.meta.url), 'utf8');
 const art = JSON.parse(read('../data/presentation/spell-art.json'));
@@ -103,10 +104,12 @@ test('the live bundle holds no bench code, and the laboratory bundle holds it', 
   assert.ok(!live.includes('spell:adrenaline_tonic:v1'));
 });
 
-test('the build refuses the bench in the live bundle', () => {
-  const build = read('../battle/build.mjs');
-  assert.match(build, /battle-bench/);
-  assert.match(build, /spell-art/);
+test('the build refuses the laboratory and the bench in the live bundle, and nothing the live view imports', () => {
+  for (const path of ['../table/battle-bench.js', 'src/bench.ts', '../data/presentation/spell-art.json',
+    '../table/battle-lab-state.js', '../table/battle-lab-fixture.js']) assert.equal(laboratoryOnly(path), true, path);
+  for (const path of ['src/live.ts', 'src/scene.ts', 'src/spell-effects.ts', '../table/battle-timing.js',
+    'src/workbench.ts', '../table/battle-art.js']) assert.equal(laboratoryOnly(path), false, path);
+  assert.match(read('../battle/build.mjs'), /live\.inputs\)\.some\(laboratoryOnly\)/);
 });
 
 test('the film strip script reads its options, and refuses what it cannot film', () => {
@@ -120,6 +123,11 @@ test('the film strip script reads its options, and refuses what it cannot film',
   assert.throws(() => parseArguments(['spell:pummel:v1', '--speed', 'fast']), /positive number/);
   assert.throws(() => parseArguments(['spell:pummel:v1', '--out']), /needs a value/);
   assert.throws(() => parseArguments(['spell:pummel:v1', '--loud']), /Unknown option/);
+  // A speed the page does not offer would film at 1× under another speed's title.
+  assert.throws(() => parseArguments(['spell:pummel:v1', '--speed', '1.5']), /0\.5, 1 or 2/);
+  assert.throws(() => parseArguments(['spell:pummel:v1', '--interval', '250']), /multiple of 20/);
+  assert.throws(() => parseArguments(['--all', '--out', 'sheet.png']), /folder/);
+  assert.throws(() => parseArguments(['spell:pummel:v1', 'spell:frostbite:v1', '--out', 'sheet.png']), /folder/);
 });
 
 test('the film strip script run with nothing to film says so and exits 1', () => {

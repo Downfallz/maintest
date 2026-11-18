@@ -1,7 +1,7 @@
 # Plan: the battle's craft, every spell, attack, move and the ground staged by a designer who can see
 
-Status: accepted, 2026-11-18 (the owner settled the questions at the end). BC1 and BC2 are built; BC3 is next. Each stage
-below is one pull request.
+Status: accepted, 2026-11-18 (the owner settled the questions at the end). BC1 and BC2 are built; BC3 is next.
+Each stage below is one pull request.
 
 ## What the owner asked for
 
@@ -138,9 +138,9 @@ that extends it.
    (`studio/browser/battle-bench.spec.js`); across machines the renderer may differ, so a sheet is compared with
    one filmed on the same machine. `build.mjs` refuses the bench and the spell art in `live.js`, and
    `table/battle-bench.test.js` reads the built bundle for it. Left: the bench plays a spell's look, not yet a
-   move alone, a death or the ground, which BC5 and BC9 add to it when they build them; the blood cost's wound
-   and a fizzle are not offered as choices; the sheets are not published anywhere, which is `/battle-pass`'s
-   (BC3) and BC10's.
+   move alone, a death or the ground. BC5 and BC9 add those when they build them. The blood cost's wound and a
+   fizzle are not offered as choices. The sheets are not published anywhere: `/battle-pass` (BC3) and BC10 do
+   that.
 3. **BC3, the designer and the pass.** The `battle-designer` agent, the `/battle-pass` skill, and the first
    storyboard, for the base attack, as the worked example. Tests: `studio/prompts.test.js` on the paths they name.
 4. **BC4, the effects kit.** `battle/src/fx/`, built as a second bundle loaded after the first frame with its own

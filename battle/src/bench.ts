@@ -35,6 +35,7 @@ const realNow = Date.now, realRandom = Math.random;
 
 let stage: Stage = 'decision';
 let elapsed = 0;
+let last = 0;
 let ready = false;
 let game: Phaser.Game | null = null;
 // While a film runs the game's loop is stopped: this clock is the only one, and it moves when it is told to.
@@ -97,7 +98,7 @@ function show(next: Stage) {
   lab.dataset.motion = reduced() ? 'reduced' : 'full';
   playButton.disabled = !ready;
   playButton.textContent = playing() ? 'Play again' : 'Play effect';
-  if (ready) status.textContent = describe(entry.name);
+  if (ready) status.textContent = unknown && stage === 'decision' ? `No effect named ${asked}` : describe(entry.name);
   scene.present(benchFrame({ entry, actor, targets, stage }) as SceneFrame, reduced(), speed());
 }
 const playing = () => stage === 'windup' || stage === 'impact';
@@ -119,11 +120,16 @@ function play() {
   rest();
   if (reduced()) { show('impact'); show('resolved'); return; }
   Math.random = seededRandom(SEED);
+  last = performance.now();
   show('windup');
 }
+// A film moves the play by the steps it is given. On the page's own loop the play follows the wall clock, as
+// Phaser's tweens do: counting frames would play the stages in slow motion on a slow renderer.
 function advance(delta: number) {
   if (!playing()) return;
-  elapsed += delta;
+  const now = performance.now();
+  elapsed += film ? delta : now - last;
+  last = now;
   const next = benchStage(elapsed, speed());
   if (next === stage) return;
   if (next === 'resolved') Math.random = realRandom;
@@ -152,7 +158,12 @@ const filmClock = {
     if (!ready || !game) throw new Error('The bench is not ready.');
     filmClock.stop();
     choose(options);
-    if (options.speed !== undefined) $<HTMLSelectElement>('playback-speed').value = String(options.speed);
+    if (options.speed !== undefined) {
+      const select = $<HTMLSelectElement>('playback-speed');
+      select.value = String(options.speed);
+      // A speed the page does not offer leaves the select empty, and the film would run at 1× under its name.
+      if (select.value !== String(options.speed)) { select.value = '1'; throw new Error(`The bench has no speed ${options.speed}.`); }
+    }
     game.loop.stop();
     const clock = film = { clock: 0, played: 0 };
     Date.now = () => clock.clock;
@@ -189,7 +200,10 @@ function fail(message: string) {
   playButton.disabled = true;
 }
 
-choose({ spell: new URLSearchParams(location.search).get('bench') || undefined, actor: creatures[0].id });
+// An address that names an effect the art no longer lists (an older version's) opens on the first one, and says so.
+const asked = new URLSearchParams(location.search).get('bench') || undefined;
+const unknown = asked !== undefined && !entries.some(one => one.id === asked);
+choose({ spell: unknown ? undefined : asked, actor: creatures[0].id });
 spellSelect.addEventListener('change', rest);
 actorSelect.addEventListener('change', () => { choose({ actor: actorSelect.value }); rest(); });
 playButton.addEventListener('click', play);

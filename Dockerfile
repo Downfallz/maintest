@@ -22,6 +22,8 @@ COPY battle/ ./
 # one of them, so a new import never has to be listed here. The test files are kept out by .dockerignore.
 COPY table/*.js /src/table/
 COPY table/battle-art/ /src/table/battle-art/
+# The laboratory's effects bench lists the authored spell looks (battle/src/bench.ts).
+COPY data/presentation/spell-art.json /src/data/presentation/spell-art.json
 RUN npm run build
 
 FROM ${SDK_IMAGE} AS build
