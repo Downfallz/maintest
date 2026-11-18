@@ -14,7 +14,6 @@ namespace DownfallArena.Cli.Tests.Table;
 /// The hourly job (ADR 0162, phase 6): one pass of the work that is due on the tables, from a process that holds
 /// none of them, and no bot turn taken by the tables it picks up.
 /// </summary>
-[Collection(ConsoleOutput.Name)]
 public sealed class TableTendTests : IDisposable
 {
     private readonly HostedTables _hosted = new(directory => new FileArtifactStore(directory), turns: new NoAgentTurns());
@@ -352,21 +351,12 @@ public sealed class TableTendTests : IDisposable
         var runs = Path.Combine(_own, "playtest");
         var options = CliOptions.Parse([CliOptions.TendCommand, "--record", runs]) with { SchemaPath = _hosted.SchemaPath };
         using var services = CliHost.Build(options, seed: 7, logMatchToConsole: false);
-        var said = new StringWriter();
-        var before = Console.Out;
-        Console.SetOut(said);
-        int exit;
-        try
-        {
-            exit = await TableTend.RunAsync(services.Services, options, HostedTables.Rules);
-        }
-        finally
-        {
-            Console.SetOut(before);
-        }
+        var said = new List<string>();
+
+        var exit = await TableTend.RunAsync(services.Services, options, HostedTables.Rules, said.Add);
 
         exit.ShouldBe(0);
-        said.ToString().ShouldContain("Tended");
+        said.ShouldContain(line => line.StartsWith("Tended", StringComparison.Ordinal));
         var log = await ArtifactStores.OpenTendLogAsync(runs, Cancel);
         var run = (await log.FindAsync((await log.IdsAsync(Cancel)).ShouldHaveSingleItem(), Cancel)).ShouldNotBeNull();
         run.Trigger.ShouldBe(Application.Tables.Tending.TendTrigger.Schedule);

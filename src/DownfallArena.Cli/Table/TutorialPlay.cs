@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Application.Matches.Scenarios;
@@ -16,6 +17,8 @@ namespace DownfallArena.Cli.Table;
 /// the seat's view says the question; <see cref="Assisted" /> tells the page which kinds it is not to draw.
 /// Once the tutorial is <see cref="Done" />, nothing more is answered: the match waits at the next question, which
 /// the page does not draw either, so the lesson ends where it ends and is not played on.
+/// The play is sent to the page as it is (<c>practice.tutorial</c>): a public member the page must not read is
+/// <see cref="System.Text.Json.Serialization.JsonIgnoreAttribute" />, as <see cref="Said" /> is.
 /// </remarks>
 internal sealed class TutorialPlay
 {
@@ -45,6 +48,11 @@ internal sealed class TutorialPlay
             step.Concepts,
             step.PointsAt is { } pointer ? new Pointer(pointer.Creature?.Value, pointer.Control) : null))];
     }
+
+    /// <summary>Where its console lines go (ADR 0186; said on the thread that answers): the host's console unless a test reads them (#756).</summary>
+    /// <remarks>Never written to the page: the play is sent as it is (<c>practice.tutorial</c>).</remarks>
+    [JsonIgnore]
+    public Action<string> Said { get; init; } = Console.WriteLine;
 
     /// <summary>Its place in the series, from 1.</summary>
     public int Order => _lesson.Order;
@@ -154,14 +162,14 @@ internal sealed class TutorialPlay
     /// </summary>
     private void SayGaveBack()
     {
-        Console.WriteLine($"  Tutorial {Order}: the recorded answers no longer fit the match; the person answers every question from here.");
+        Said($"  Tutorial {Order}: the recorded answers no longer fit the match; the person answers every question from here.");
         try
         {
             GaveBack?.Invoke();
         }
         catch (Exception failure) when (failure is not OutOfMemoryException)
         {
-            Console.WriteLine($"  Tutorial {Order}: telling the table of the hand-back failed ({failure.GetType().Name}).");
+            Said($"  Tutorial {Order}: telling the table of the hand-back failed ({failure.GetType().Name}).");
         }
     }
 
@@ -278,7 +286,7 @@ internal sealed class TutorialPlay
         catch (Exception failure) when (failure is not OutOfMemoryException)
         {
             // The table says what it could not do when its own step fails; the question is the person's to answer.
-            Console.WriteLine($"  Tutorial {Order}: an assisted question could not be answered ({failure.GetType().Name}).");
+            Said($"  Tutorial {Order}: an assisted question could not be answered ({failure.GetType().Name}).");
             if (HandsBack(_assisted.HandBack))
             {
                 SayGaveBack();

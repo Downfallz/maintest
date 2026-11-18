@@ -78,6 +78,9 @@ internal sealed class AdminApi
         Lobby = new LobbyApi(registry, composer, clock, push) { Replay = stored is null ? null : id => ReplayAsync(stored, id) };
     }
 
+    /// <summary>Where its console lines go (ADR 0186): the host's console unless a test reads them (#756).</summary>
+    public Action<string> Said { get; init; } = Console.WriteLine;
+
     /// <summary>The operator's list of players (ADR 0174), on a host that signs players in; none otherwise.</summary>
     public PlayersApi? Players { get; init; }
 
@@ -142,7 +145,7 @@ internal sealed class AdminApi
         // The one moment memory is about to be spent, so the one moment tables nobody is at are let go of.
         foreach (var gone in await _registry.SweepAsync(_clock.GetUtcNow()))
         {
-            Console.WriteLine($"  Session {gone} let go of: nobody has asked for it in a while.");
+            Said($"  Session {gone} let go of: nobody has asked for it in a while.");
         }
 
         if (Under(path, SessionsPrefix))
@@ -374,7 +377,7 @@ internal sealed class AdminApi
 
         await table.RecordAsync();
         var seated = string.Join(", ", table.Seats.Select(seat => $"{seat.Name} {(seat.Person is null ? table.Session.SeatedName(seat.Slot) : $"code {seat.Code}")}"));
-        Console.WriteLine($"  Session {table.Id} opened by {operatorName}: {seated}");
+        Said($"  Session {table.Id} opened by {operatorName}: {seated}");
         await Notes.NoteAsync(operatorName, OperatorActions.OpenTable, table.Id, string.Join(", ", table.Seats.Select(seat => $"{seat.Name} {(seat.Person is null ? table.Session.SeatedName(seat.Slot) : "a person")}")));
         return StudioResponse.OfJson(await DescribedAsync(table), ArtifactJson.LineOptions, status: 201);
     }
@@ -430,7 +433,7 @@ internal sealed class AdminApi
         // Every other process holding the table, finished or not, lets it go and answers its seats 410 (ADR 0165).
         _composer.Relay?.Table(id);
         await _composer.NotifyVoidAsync(id, record, reason.Value.Explanation);
-        Console.WriteLine($"  Session {id} voided by {operatorName} ({reason.Value.Category}){(withdrawn ? ", its result withdrawn" : string.Empty)}.");
+        Said($"  Session {id} voided by {operatorName} ({reason.Value.Category}){(withdrawn ? ", its result withdrawn" : string.Empty)}.");
         await Notes.NoteAsync(operatorName, OperatorActions.VoidMatch, id, $"{reason.Value.Category}: {reason.Value.Explanation}");
         return StudioResponse.OfJson(new { voided = true, withdrawn, category = reason.Value.Category }, ArtifactJson.LineOptions);
     }
@@ -506,7 +509,7 @@ internal sealed class AdminApi
             throw;
         }
 
-        Console.WriteLine($"  Session {id}: {slot} invited again by {operatorName}.");
+        Said($"  Session {id}: {slot} invited again by {operatorName}.");
         await Notes.NoteAsync(operatorName, OperatorActions.Reinvite, id, slot);
         var code = seat.Code;
         return StudioResponse.OfJson(new { slot, code, join = code is null ? null : $"{JoinCodes.Prefix}{code}", link = $"/?{seat.Name}={seat.Key}" }, ArtifactJson.LineOptions);
@@ -519,7 +522,7 @@ internal sealed class AdminApi
             return StudioResponse.OfPlainText(404, $"No table '{id}' at this host.");
         }
 
-        Console.WriteLine($"  Session {id} closed by {operatorName}.");
+        Said($"  Session {id} closed by {operatorName}.");
         await Notes.NoteAsync(operatorName, OperatorActions.CloseTable, id);
         return new StudioResponse(204, StudioResponse.Plain, []);
     }
@@ -644,7 +647,7 @@ internal sealed class AdminApi
 
         if (deleted.Count > 0)
         {
-            Console.WriteLine($"  Sessions deleted by {operatorName}: {string.Join(", ", deleted)}.");
+            Said($"  Sessions deleted by {operatorName}: {string.Join(", ", deleted)}.");
             foreach (var id in deleted)
             {
                 await Notes.NoteAsync(operatorName, OperatorActions.DeleteSessions, id);

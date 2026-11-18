@@ -44,10 +44,12 @@ internal static class TableTend
     /// <summary>How often the job runs (infra/main.bicep): the warning is sent by the one pass of that interval that finds a quarter left.</summary>
     internal static readonly TimeSpan Interval = TimeSpan.FromHours(1);
 
-    public static async Task<int> RunAsync(IServiceProvider services, CliOptions options, RuleSet rules)
+    /// <param name="said">Where the pass's lines go: the console unless a test reads them (#756). Failures stay on the console's error stream.</param>
+    public static async Task<int> RunAsync(IServiceProvider services, CliOptions options, RuleSet rules, Action<string>? said = null)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(options);
+        said ??= Console.WriteLine;
         var clock = services.GetRequiredService<TimeProvider>();
         var target = options.Record ?? TableHost.DefaultRunsDirectory;
         PushKeys? keys;
@@ -116,37 +118,7 @@ internal static class TableTend
                 await Task.WhenAny(relay.SentAsync(), Task.Delay(TimeSpan.FromSeconds(10), clock));
             }
 
-            Console.WriteLine($"Tended '{target}': {tended.Swept.Count} table{(tended.Swept.Count == 1 ? string.Empty : "s")} that never began closed, {tended.Expired} invitation{(tended.Expired == 1 ? string.Empty : "s")} that ran out let go of, {tended.TimedOut.Count} game{(tended.TimedOut.Count == 1 ? string.Empty : "s")} timed out, {tended.Abandoned.Count} left by a player ended.");
-            foreach (var id in tended.Swept)
-            {
-                Console.WriteLine($"  Session {id} closed: it never began.");
-            }
-
-            foreach (var id in tended.TimedOut)
-            {
-                Console.WriteLine($"  Session {id} ended: its player let their time to answer run out.");
-            }
-
-            foreach (var id in tended.Abandoned)
-            {
-                Console.WriteLine($"  Session {id} ended: nobody took the seat its player left.");
-            }
-
-            foreach (var id in tended.Released)
-            {
-                Console.WriteLine($"  Account {id}: suspended a day ago, its seats in unfinished games offered to other players.");
-            }
-
-            if (tended.FeedbackLetGo > 0)
-            {
-                Console.WriteLine($"  Feedback: {tended.FeedbackLetGo} closed more than {Feedback.KeptClosed.TotalDays:0} days ago let go of.");
-            }
-
-            foreach (var id in tended.Warned)
-            {
-                Console.WriteLine($"  Session {id}: its player was told a quarter of their time to answer is left.");
-            }
-
+            Say(said, target, tended);
             return 0;
         }
         catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is Azure.Identity.AuthenticationFailedException)
@@ -154,6 +126,41 @@ internal static class TableTend
             // The job runs again within the hour, and nothing it does is lost by waiting for it.
             await Console.Error.WriteLineAsync($"The tables could not be tended: {failure.Message}");
             return 1;
+        }
+    }
+
+    /// <summary>What a pass did, a line for the pass and one for each table, account or feedback it touched.</summary>
+    private static void Say(Action<string> said, string target, Tended tended)
+    {
+        said($"Tended '{target}': {tended.Swept.Count} table{(tended.Swept.Count == 1 ? string.Empty : "s")} that never began closed, {tended.Expired} invitation{(tended.Expired == 1 ? string.Empty : "s")} that ran out let go of, {tended.TimedOut.Count} game{(tended.TimedOut.Count == 1 ? string.Empty : "s")} timed out, {tended.Abandoned.Count} left by a player ended.");
+        foreach (var id in tended.Swept)
+        {
+            said($"  Session {id} closed: it never began.");
+        }
+
+        foreach (var id in tended.TimedOut)
+        {
+            said($"  Session {id} ended: its player let their time to answer run out.");
+        }
+
+        foreach (var id in tended.Abandoned)
+        {
+            said($"  Session {id} ended: nobody took the seat its player left.");
+        }
+
+        foreach (var id in tended.Released)
+        {
+            said($"  Account {id}: suspended a day ago, its seats in unfinished games offered to other players.");
+        }
+
+        if (tended.FeedbackLetGo > 0)
+        {
+            said($"  Feedback: {tended.FeedbackLetGo} closed more than {Feedback.KeptClosed.TotalDays:0} days ago let go of.");
+        }
+
+        foreach (var id in tended.Warned)
+        {
+            said($"  Session {id}: its player was told a quarter of their time to answer is left.");
         }
     }
 

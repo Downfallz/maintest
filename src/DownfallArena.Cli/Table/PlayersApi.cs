@@ -37,6 +37,9 @@ internal sealed class PlayersApi
         _results = results;
     }
 
+    /// <summary>Where its console lines go (ADR 0186): the host's console unless a test reads them (#756).</summary>
+    public Action<string> Said { get; init; } = Console.WriteLine;
+
     /// <summary>What operators do here (A6), noted beside each action's console line.</summary>
     public OperatorNotes Notes { get; set; } = OperatorNotes.None;
 
@@ -186,7 +189,7 @@ internal sealed class PlayersApi
             return Gone();
         }
 
-        Console.WriteLine($"  Account {account.Id.Value} ({account.Username.Value}) signed out everywhere by {operatorName}.");
+        Said($"  Account {account.Id.Value} ({account.Username.Value}) signed out everywhere by {operatorName}.");
         await Notes.NoteAsync(operatorName, OperatorActions.SignOut, account.Id.Value, account.Username.Value);
         return Answer(new { signedOut = true });
     }
@@ -206,7 +209,7 @@ internal sealed class PlayersApi
             return Refused(suspended.Error);
         }
 
-        Console.WriteLine($"  Account {account.Id.Value} ({account.Username.Value}) suspended by {operatorName}.");
+        Said($"  Account {account.Id.Value} ({account.Username.Value}) suspended by {operatorName}.");
         await Notes.NoteAsync(operatorName, OperatorActions.Suspend, account.Id.Value, $"{account.Username.Value}: {suspension.Value.Reason}");
         return Answer(new { suspension = Describe(suspended.Value.Suspension) });
     }
@@ -219,7 +222,7 @@ internal sealed class PlayersApi
             return Refused(restored.Error);
         }
 
-        Console.WriteLine($"  Account {account.Id.Value} ({account.Username.Value}) restored by {operatorName}.");
+        Said($"  Account {account.Id.Value} ({account.Username.Value}) restored by {operatorName}.");
         await Notes.NoteAsync(operatorName, OperatorActions.Restore, account.Id.Value, account.Username.Value);
         return Answer(new { restored = true });
     }
@@ -236,7 +239,7 @@ internal sealed class PlayersApi
             return Refused(renamed.Error);
         }
 
-        Console.WriteLine($"  Account {account.Id.Value} renamed from {account.Username.Value} to {renamed.Value.Username.Value} by {operatorName}.");
+        Said($"  Account {account.Id.Value} renamed from {account.Username.Value} to {renamed.Value.Username.Value} by {operatorName}.");
         await Notes.NoteAsync(operatorName, OperatorActions.Rename, account.Id.Value, $"{account.Username.Value} to {renamed.Value.Username.Value}");
         return Answer(new { account = AccountApi.Describe(renamed.Value) });
     }
@@ -254,7 +257,7 @@ internal sealed class PlayersApi
             return Gone();
         }
 
-        Console.WriteLine($"  Account {account.Id.Value} ({account.Username.Value}) deleted by {operatorName}.");
+        Said($"  Account {account.Id.Value} ({account.Username.Value}) deleted by {operatorName}.");
         await Notes.NoteAsync(operatorName, OperatorActions.DeletePlayer, account.Id.Value, account.Username.Value);
         return Answer(new { deleted = true });
     }
