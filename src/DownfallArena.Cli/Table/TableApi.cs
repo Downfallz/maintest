@@ -11,6 +11,7 @@ using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Matches.Feed;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Application.Matches.Queries;
+using DownfallArena.Cli.Hosting;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Events;
@@ -267,7 +268,8 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
         catch (Exception failure) when (failure is Azure.RequestFailedException or HttpRequestException or Azure.Identity.AuthenticationFailedException)
         {
-            return StudioResponse.OfPlainText(503, $"The relay could not be reached: {failure.Message}");
+            Console.WriteLine($"  The relay could not be reached for a seat: {HttpHost.OneLine(failure)}");
+            return StudioResponse.OfPlainText(503, "The relay could not be reached: read the seat's events.");
         }
     }
 

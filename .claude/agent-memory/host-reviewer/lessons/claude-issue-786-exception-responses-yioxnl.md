@@ -1,0 +1,3 @@
+- A `using DownfallArena.Cli.Hosting;` added above `using System...` (for `HttpHost.OneLine`) fails `dotnet format --verify-no-changes` (IMPORTS, system first): tests pass, the gate does not; run format on any PR that adds a using (#786 PR, 6 files).
+- AdminApi.cs:375 and :506 still answer a store failure's `failure.Message` (503 plain text, operator-only) after #786 closed the player-facing ones: grep AdminApi too on any "no exception text" PR (#786 PR).
+- A "said to the person" marker on an exception (`PracticeRefusal`, `Exception.Data`) is lost if anything wraps or rethrows it; the route test through `/api/practice` asserting "Rebuild the standard catalogue" is what proves it survives (#786 PR).

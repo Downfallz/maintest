@@ -70,8 +70,8 @@ test('the test reads the two notices together: the page\'s own, the host\'s, and
   assert.match(both, /Only the page's: the push service is not reaching this browser/);
   assert.match(both, /Neither: the browser is not showing notifications/);
 
-  const refused = testReading({ page: null, host: 'The push service refused it: 403.', hostOk: false });
-  assert.equal(refused, 'The page showed one itself. The push service refused it: 403.');
+  const refused = testReading({ page: null, host: 'The push service refused it (403).', hostOk: false });
+  assert.equal(refused, 'The page showed one itself. The push service refused it (403).');
 
   const blocked = testReading({ page: 'permission denied', host: 'Sent.', hostOk: true });
   assert.equal(blocked, 'The page could not show one itself: permission denied. Sent. Allow notifications for this site in the browser\'s settings.');

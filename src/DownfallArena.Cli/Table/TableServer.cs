@@ -160,7 +160,7 @@ internal sealed class TableServer : IDisposable
         }
         catch (Exception exception) when (exception is ArgumentException or DirectoryNotFoundException or FileNotFoundException or InvalidDataException)
         {
-            return StudioResponse.OfPlainText(404, exception.Message);
+            return Unread(id, exception, $"Session '{id}' has no artifact to show.");
         }
     }
 
@@ -204,8 +204,18 @@ internal sealed class TableServer : IDisposable
         }
         catch (Exception exception) when (exception is ArgumentException or DirectoryNotFoundException or FileNotFoundException or InvalidDataException)
         {
-            return StudioResponse.OfPlainText(404, exception.Message);
+            return Unread(id, exception, $"No session '{id}' at this host.");
         }
+    }
+
+    /// <summary>
+    /// A session page whose files could not be read: a 404 in a fixed sentence, as the exception's words carry the
+    /// host's paths; they go to the console, on one line (#786).
+    /// </summary>
+    private static StudioResponse Unread(string id, Exception exception, string said)
+    {
+        Console.WriteLine($"  Session {id}: its page could not be read: {HttpHost.OneLine(exception)}");
+        return StudioResponse.OfPlainText(404, said);
     }
 
     private async Task<StudioResponse> AnswerAsync(HttpListenerRequest request, string body)

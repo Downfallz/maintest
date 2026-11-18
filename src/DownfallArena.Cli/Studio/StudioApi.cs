@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DownfallArena.Application.Agents;
+using DownfallArena.Cli.Hosting;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Infrastructure.Evaluation;
@@ -101,8 +102,15 @@ internal sealed class StudioApi : IDisposable
         }
         catch (Exception exception) when (exception is ArgumentException or DirectoryNotFoundException or FileNotFoundException or InvalidDataException)
         {
-            return StudioResponse.OfPlainText(404, exception.Message);
+            return Unread(exception, $"Run '{first}' or '{second}' could not be read.");
         }
+    }
+
+    /// <summary>A run that could not be read: a 404 in a fixed sentence, as the exception's words carry the runs directory (#786).</summary>
+    private static StudioResponse Unread(Exception exception, string said)
+    {
+        Console.WriteLine($"  {said.ReplaceLineEndings(" ")} {HttpHost.OneLine(exception)}");
+        return StudioResponse.OfPlainText(404, said);
     }
 
     /// <summary>What a run was, read from the artifact it left: a trace is a match, anything else an evaluation.</summary>
@@ -121,7 +129,7 @@ internal sealed class StudioApi : IDisposable
         }
         catch (Exception exception) when (exception is ArgumentException or DirectoryNotFoundException or FileNotFoundException or InvalidDataException)
         {
-            return StudioResponse.OfPlainText(404, exception.Message);
+            return Unread(exception, $"Run '{runId}' could not be read.");
         }
     }
 

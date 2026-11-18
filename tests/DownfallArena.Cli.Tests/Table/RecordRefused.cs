@@ -15,6 +15,9 @@ internal sealed class RecordRefused(IArtifactStore inner, string? file = null) :
 
     public bool ReadsRefused { get; set; }
 
+    /// <summary>What a refused read or write throws: an outage's <see cref="IOException" /> unless given.</summary>
+    public Func<Exception> Failure { get; init; } = () => new IOException("The store is out.");
+
     public IArtifactWriter Writer(string run) => new Refuser(this, inner.Writer(run));
 
     public IArtifactReader Reader(string run) => new Unread(this, inner.Reader(run));
@@ -31,10 +34,10 @@ internal sealed class RecordRefused(IArtifactStore inner, string? file = null) :
             inner.ListAsync(relativePrefix, cancellationToken);
 
         public Task<string?> ReadTextAsync(string relativePath, CancellationToken cancellationToken = default) =>
-            Refused(relativePath) ? Task.FromException<string?>(new IOException("The store is out.")) : inner.ReadTextAsync(relativePath, cancellationToken);
+            Refused(relativePath) ? Task.FromException<string?>(store.Failure()) : inner.ReadTextAsync(relativePath, cancellationToken);
 
         public Task<TaggedText?> ReadTaggedAsync(string relativePath, CancellationToken cancellationToken = default) =>
-            Refused(relativePath) ? Task.FromException<TaggedText?>(new IOException("The store is out.")) : inner.ReadTaggedAsync(relativePath, cancellationToken);
+            Refused(relativePath) ? Task.FromException<TaggedText?>(store.Failure()) : inner.ReadTaggedAsync(relativePath, cancellationToken);
 
         private bool Refused(string relativePath) => store.ReadsRefused && relativePath.EndsWith(store.File, StringComparison.Ordinal);
     }
@@ -43,12 +46,12 @@ internal sealed class RecordRefused(IArtifactStore inner, string? file = null) :
     {
         public Task WriteJsonAsync<TValue>(string relativePath, TValue value, CancellationToken cancellationToken = default) =>
             store.Refusing && relativePath.EndsWith(store.File, StringComparison.Ordinal)
-                ? Task.FromException(new IOException("The store is out."))
+                ? Task.FromException(store.Failure())
                 : inner.WriteJsonAsync(relativePath, value, cancellationToken);
 
         public Task<string?> WriteJsonIfAsync<TValue>(string relativePath, TValue value, string? expected, CancellationToken cancellationToken = default) =>
             store.Refusing && relativePath.EndsWith(store.File, StringComparison.Ordinal)
-                ? Task.FromException<string?>(new IOException("The store is out."))
+                ? Task.FromException<string?>(store.Failure())
                 : inner.WriteJsonIfAsync(relativePath, value, expected, cancellationToken);
 
         public Task StartJsonLinesAsync(string relativePath, CancellationToken cancellationToken = default) =>
