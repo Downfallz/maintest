@@ -132,8 +132,8 @@ together: one sender, one budget.
 
 The operator has the last word. **Dismiss as spam** on a report or an idea counts against its sender; a sender
 with three dismissed as spam in 30 days, or one the operator mutes from the sheet (**Stop feedback from this
-player**), no longer sees **Report or suggest**: the host answers `403 Feedback.Muted` and the page hides the
-entry. A mute is lifted from the sheet, or ends on its own after 30 days. Mutes and spam marks are lines in the
+player**), no longer sees **Report or suggest**: the page asks the host when it loads (`GET /api/feedback`), the host answers
+`403 Feedback.Muted`, and the page hides the entry before the player writes (#717). A mute is lifted from the sheet, or ends on its own after 30 days. Mutes and spam marks are lines in the
 Activity tab (`feedback.spam`, `feedback.mute`, `feedback.unmute`). An account's mute is kept with its activity
 record (ADR 0174); a guest's dies with its seat.
 
@@ -260,6 +260,7 @@ you reported on <date> is fixed", once (`AccountNotices`). A guest's report tell
 
 | Route | Who | What |
 | --- | --- | --- |
+| `GET /api/feedback` | anyone | Whether the signed-in account, else the seat the key names, is muted: `403 Feedback.Muted` or `204` (#717). |
 | `POST /api/feedback` | seat, account | Sends a bug report `{"kind":"bug","category","happened","expected?","attach","page","errors"}` or an idea `{"kind":"idea","where","problem","wish?","page"}`; `429` `Feedback.TooSoon`, `Feedback.TooMany` or `Feedback.HostFull`, `403 Feedback.Muted`, `200 Feedback.Merged` (see "Against spam"). |
 | `GET /api/admin/feedback?kind&status&category&page`, `GET /api/admin/feedback/<id>` | operator | The Feedback tab and one sheet. |
 | `PUT /api/admin/feedback/<id>/status {"status","reason?","issue?","plan?"}` | operator | Seen, reproduced, filed with the issue's number, planned with the plan's path, shipped, declined or dismissed with a reason (`spam` among them). |
@@ -352,8 +353,8 @@ and they are the first thing every player can use.
    are noted at one instant, and read in the order noted: the mute above the mark that earned it (#674). The Overview's *Feedback waiting* card is in
    the warning colour while a bug report is new or the host is full. The tab's ids start with `admin-feedback-`,
    because every page's Report or suggest sheet already uses `feedback-`. The privacy panel and policy say the
-   operator can stop a player's feedback for 30 days. Left: a page learns that its player is muted only when it
-   sends (R2's behaviour). The list, the Overview and the spam count read every record kept: up to 100 a day, each
+   operator can stop a player's feedback for 30 days. A page learned that its player is muted only when it sent
+   (R2's behaviour) until #717: `GET /api/feedback` now answers it before the player writes. The list, the Overview and the spam count read every record kept: up to 100 a day, each
    kept until 180 days after it is closed, so a few thousand at most, read by the operator alone.
 5. **I1, ideas grouped.** **Merge into…**, *asked by N* and the sort by it, *planned* with a plan's path,
    *shipped*, *declined* with a reason, **Copy as a plan prompt**. Tests: a merge keeping every sender and adding

@@ -437,6 +437,10 @@ The seat's view says the lesson under `practice.tutorial`:
   - More than 100 new a day for the host: 429 `Feedback.HostFull`.
   - A muted sender gets 403 `Feedback.Muted` once the body is checked, before the spam guards. The mute lasts 30
     days, or until the operator lifts it. The operator sets it, or a third spam dismissal within 30 days does.
+- `GET /api/feedback` asks, before the player writes, whether the signed-in account, else the seat whose key the
+  request carries, is muted (#717): 403 `Feedback.Muted`, or 204 for anyone else, the signed-out and seatless
+  included. It reads no table: a key only matches a muted guest's. The page asks it once loaded, and the battle
+  view again for each seat it opens, and hides every entry on 403.
 - The operator's Feedback tab (docs/tabletop/feedback-plan.md, R3) lists it newest first, twenty a page
   (`GET /api/admin/feedback?kind&status&category&page`: `kind` is `bug` or `idea`, `status` a status or `open`, the
   tab's default, for what is not closed) and reads one (`GET /api/admin/feedback/<id>`: the words, what the page and

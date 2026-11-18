@@ -189,6 +189,22 @@ public sealed class FeedbackAdminApiTests : IDisposable
     }
 
     [Fact]
+    public async Task A_page_asking_before_its_player_writes_is_told_the_seat_is_muted_and_let_through_once_lifted()
+    {
+        var table = await BegunAsync();
+        var id = await SentAsync(table, Report());
+        (await Players().HandleAsync("GET", string.Empty, table.Seats[0].Token, SignedOut, Address, null)).Status.ShouldBe(204);
+
+        await AskAsync("POST", $"{FeedbackAdminApi.Route}/{id}/mute");
+        var asked = await Players().HandleAsync("GET", string.Empty, table.Seats[0].Token, SignedOut, Address, null);
+
+        (asked.Status, Read(asked).GetProperty("error").GetString()).ShouldBe((403, "Feedback.Muted"));
+        (await Players().HandleAsync("GET", string.Empty, table.Seats[1].Token, SignedOut, Address, null)).Status.ShouldBe(204);
+        await AskAsync("DELETE", $"{FeedbackAdminApi.Route}/{id}/mute");
+        (await Players().HandleAsync("GET", string.Empty, table.Seats[0].Token, SignedOut, Address, null)).Status.ShouldBe(204);
+    }
+
+    [Fact]
     public async Task Three_marked_as_spam_in_thirty_days_mute_their_sender()
     {
         var table = await BegunAsync();

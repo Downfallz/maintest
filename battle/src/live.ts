@@ -173,7 +173,7 @@ const reactionsUI = reactionControls(reactions, {
 });
 // Report or suggest (ADR 0189): from the settings and the result, sent with the seat on screen, which lets the host
 // attach the round and the position; a recording is no seat, and its feedback is the account's.
-mountFeedback(document, { request, token: () => selected?.token ?? null, inGame: () => Boolean(selected?.token),
+const feedbackUI = mountFeedback(document, { request, token: () => selected?.token ?? null, inGame: () => Boolean(selected?.token),
   errors: pageErrors, fallbackFocus: () => $('settings'), onClose: () => render() });
 const inspectionUI = inspectionControls();
 const historyUI = historyControls(history, () => playback.skip(), () => render(), () => recapBack);
@@ -808,6 +808,8 @@ function choose(choice: Choice) {
   if (rendererFailed) return;
   discovering++;
   selected = choice;
+  // A muted player is not offered Report or suggest (#717): the host is asked again for the seat now on screen.
+  void feedbackUI.ask();
   $('loading').hidden = true;
   $('seat-choices').replaceChildren(); $('retry').hidden = true;
   text('perspective', seatName(choice.seat).toUpperCase());
