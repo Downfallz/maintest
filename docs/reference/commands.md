@@ -526,9 +526,11 @@ The seat's view says the lesson under `practice.tutorial`:
   contents, every part and section, the concept cards and What changed. `/rules#<id>` opens a section, a part, an
   id `rules/moved.json` redirects, or a concept card's section, at the top of the screen; the filter keeps the
   sections whose title or text hold every word typed. It reads in English or in French (`table/rules.fr.json`, ADR
-  0193): the language stored on the device, else the browser's, and two buttons switch. **Rules** is in the main menu. The service worker keeps the
+  0193): the language the address asks for (`?lang=fr` or `?lang=en`, the public book's link), else the one stored
+  on the device, else the browser's, and two buttons switch; a switch, once its book is read, drops `lang` from the address. **Rules** is in the main menu. The service worker keeps the
   page and the book, asks the network first and gives its copy only when the host cannot be reached or, for the
-  rulebook's own files, answers with a server error, as Cloudflare does for a host that is down (ADR 0191).
+  rulebook's own files, answers with a server error, as Cloudflare does for a host that is down (ADR 0191). A copy carries `X-Rulebook-Copy: kept`, and the page then
+  says the book is the one this device last read.
 - `/lobby?token=...` still redirects to admin.
 - The table page shows an Admin link to whoever `/api/me` says is the operator.
 

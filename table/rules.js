@@ -64,7 +64,7 @@ export const WORDS = {
     kept: (sections, total) => `${count(sections, 'section', 'sections')} of ${total} ${sections === 1 ? 'holds' : 'hold'} those words`,
     noMatch: 'No rule holds those words. Try another word.',
     problem: 'Could not read the rulebook. Check your connection and reload the page.',
-    offline: 'Offline: the rulebook as this device last read it. The table may now play a newer one.',
+    offline: 'Offline: this is the rulebook as this device last read it. The table may play a newer one now.',
     drawn: date => 'Every number in this book is drawn from the rule set and the content this table plays' + (date ? `. Last changed ${date}.` : '.'),
     date: (year, month, day) => `${day} ${['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][month - 1]} ${year}`,
   },
@@ -87,7 +87,7 @@ export const WORDS = {
     kept: (sections, total) => `${compte(sections, 'section', 'sections')} sur ${total} ${sections > 1 ? 'contiennent' : 'contient'} ces mots`,
     noMatch: 'Aucune règle ne contient ces mots. Essayez un autre mot.',
     problem: 'Impossible de lire le livre de règles. Vérifiez votre connexion et rechargez la page.',
-    offline: 'Hors ligne : le livre de règles tel que cet appareil l’a lu la dernière fois. La table en joue peut-être un plus récent.',
+    offline: 'Hors ligne : voici le livre de règles tel que cet appareil l’a lu la dernière fois. La table en joue peut-être un plus récent.',
     drawn: date => 'Chaque nombre de ce livre vient des règles et du contenu de cette table' + (date ? `. Dernière modification le ${date}.` : '.'),
     date: (year, month, day) => `${day === 1 ? '1er' : day} ${['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'][month - 1]} ${year}`,
   },
@@ -462,8 +462,8 @@ async function bookIn(language) {
   return { book: await response.json(), kept: isKeptCopy(response.headers) };
 }
 
-// A choice made on the page is the reader's from then on: the language a link asked for leaves the address, so a
-// reload reads the one chosen.
+// A choice made on the page, once its book is read, is the reader's from then on: the language a link asked for
+// leaves the address, so a reload reads the one chosen.
 function forgetAsked(win) {
   try {
     const url = new URL(win.location.href);
@@ -492,15 +492,17 @@ async function load(doc, win = globalThis) {
   const show = ({ book, kept }) => {
     if (rules) rules.show(book);
     else rules = mountRules(doc, book, win);
-    doc.getElementById('rules-kept').hidden = !kept;
+    // A page kept from before the notice has none: the book is still drawn.
+    const notice = doc.getElementById('rules-kept');
+    if (notice) notice.hidden = !kept;
   };
   for (const button of doc.querySelectorAll('[data-language]')) {
     button.addEventListener('click', async () => {
       const chosen = button.dataset.language;
       const ticket = ++latest;
-      forgetAsked(win);
       if (rules?.book.language === chosen) {
         keep(win, chosen);
+        forgetAsked(win);
         translatePage(doc, chosen);
         doc.getElementById('rules-problem').hidden = true;
         return;
@@ -510,6 +512,7 @@ async function load(doc, win = globalThis) {
         if (ticket !== latest) return;
         // Kept only once its book is read: a choice that cannot be read must not be the next visit's.
         keep(win, chosen);
+        forgetAsked(win);
         show(read);
       } catch {
         if (ticket !== latest) return;

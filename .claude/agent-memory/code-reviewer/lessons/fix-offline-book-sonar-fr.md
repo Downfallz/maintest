@@ -1,0 +1,2 @@
+- A precedence a page follows (ADR 0193: stored language, else the browser's) changed in code and table/README.md but not in docs/reference/commands.md, the ADR's Decision nor rulebook-plan.md: grep docs/ (not only docs/adr) for the old sentence whenever README's wording of an order changes (#732, 78962ca).
+- A side effect run on a tap before the fetch succeeds (forgetAsked dropping `?lang=` before keep()) undoes the "a choice that cannot be read is not the next visit's" guard: the address is state too, move it beside keep() (#732, table/rules.js:501).

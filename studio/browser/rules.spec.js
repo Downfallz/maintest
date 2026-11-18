@@ -234,7 +234,7 @@ test('a book the service worker gave from its kept copy says it is the copy this
 
   await open(page);
 
-  await expect(page.locator('#rules-kept')).toHaveText('Offline: the rulebook as this device last read it. The table may now play a newer one.');
+  await expect(page.locator('#rules-kept')).toHaveText('Offline: this is the rulebook as this device last read it. The table may play a newer one now.');
   await page.getByRole('button', { name: 'Français' }).click();
   await expect(page.locator('body')).toHaveAttribute('data-language', 'fr');
   await expect(page.locator('#rules-kept')).toBeHidden();
@@ -258,6 +258,18 @@ test('a link asking for French opens the French book on an English browser, and 
   await page.reload();
   await expect(page.locator('body')).toHaveAttribute('data-language', 'en');
   expect(errors).toEqual([]);
+});
+
+test('a language that cannot be read keeps the one the link asked for in the address', async ({ page }) => {
+  await guest(page);
+  await page.route('**/rules.json', route => route.fulfill({ status: 503, body: 'down' }));
+  await page.goto('/table/rules.html?lang=fr#tempo');
+  await expect(page.locator('body')).toHaveAttribute('data-language', 'fr');
+
+  await page.getByRole('button', { name: 'English' }).click();
+
+  await expect(page.locator('#rules-problem')).toBeVisible();
+  await expect(page).toHaveURL(/\?lang=fr#tempo$/);
 });
 
 test.describe('a browser in French', () => {
