@@ -37,6 +37,8 @@ line.
 - `NN-<name>.md`: one file a Part, in teaching order. The number is the file's place, never written in it.
 - `moved.json`: `{ "old-id": "new-id" }`, for a section removed or renamed, so an old link still lands.
 - `changes.md`: what changed for a player, one line each: `- YYYY-MM-DD: what changed (ADR NNNN).`
+- `words.json`: the words, other than the names and the terminology's, the book may capitalise inside a sentence,
+  in English and French.
 - `fr/`: the French edition (ADR 0193), below.
 
 ## The format
@@ -70,14 +72,28 @@ One to three lines.
   `origin/main` and in the working tree, so fetch `main` first. A conflict in `table/rules.json` is settled by
   taking `main`'s file and rebuilding.
 - **Values.** `{...}` is drawn when the book is built: `rules.<field>` from the hosted rule set
-  (`docs/tabletop/playtest.rules.json`), `creature.<stat>` from the reference creature
+  (`docs/tabletop/playtest.rules.json`), `engine.<name>` from a constant of the domain the rule set does not hold
+  (`engine.defenseBuffCeiling`, `Creature.DefenseBuffCeiling`), `creature.<stat>` from the reference creature
   (`data/Creatures/main.v1.json`, `health` reads `baseHealth`), `spell:<name>:vN.<field>` from the spell's file
-  (`energyCost`, `name`, `criticalChance`, or an effect by its kind: `damage`, `bleed`, `bleed.durationRounds`),
-  `tier:<name>:vN.<field>` from the mutation's file under `data/Tiers/` (`name`, `level`, `initiativeBonus`, or
-  its passive's `sunder`, `damageBonus`, `upkeepEnergy`). A spell's or a mutation's name may be typed. Numbers,
-  `+ - * /`, parentheses, `max`, `min` and `floor` combine them. Never type a number the content holds. An
-  example draws every value its arithmetic reads, the creature's base stats included (its base Defense, its own
-  critical chance), and states no fact about the content that the build does not check.
+  (`energyCost`, `name`, `criticalChance`, `targets` for its most targets, `origin` for `Enemy`, `Ally` or `Self`,
+  or an effect by its kind: `damage`, `bleed`, `bleed.durationRounds`, `defenseBuff.count` for how many it has,
+  `defenseBuff2` for the second of them), `spell:<name>:vN.caster.<kind>` from the caster's own line
+  (`caster.damage`), `tier:<name>:vN.<field>` from the mutation's file under `data/Tiers/` (`name`, `level`,
+  `initiativeBonus`, or its passive's `sunder`, `damageBonus`, `upkeepEnergy`). Numbers, `+ - * /`,
+  parentheses, `max`, `min` and `floor` combine them. Never type a number the content holds. An example draws
+  every value its arithmetic reads, the creature's base stats included (its base Defense, its own critical
+  chance), and states no fact about the content that the build does not check.
+- **Counts.** A value before a count's noun (round, turn, enemy, ally, target, time, Upkeep; in French tour,
+  round, ennemi, allié, cible, Entretien) names both forms, `{rules.evolutionInterval|round|rounds}`, so a value of 1 reads
+  "1 round" (in French, 0 and 1 take the singular). The build refuses the bare `{...} rounds`.
+- **Facts.** `{?...}` checks a fact the text states and draws nothing: an effect the spell has
+  (`{?spell:crushing_stomp:v1.stun}`), a field (`{?spell:infectious_blast:v1.defenseDebuff.permanent}`), or one
+  comparison, `= != < > <= >=`, with a 'quoted' word as text (`{?spell:guard:v1.origin = 'Ally'}`,
+  `{?spell:meteor:v1.targets > 1}`). Write it against the word it checks: "Brace{?...}, for one ally".
+- **Names.** A spell's or a mutation's name may be typed. Inside a sentence, a capitalised word is a name in
+  `data/`, a bold word of `player-terminology.md`, or a word of `words.json` (Health, Defense, Bleed, ...); the
+  build refuses any other, so a renamed spell fails the book until the book follows. A word opening a sentence,
+  a list item, a cell or an italic step label escapes the check.
 - **Sources.** Every section ends with its `sources:` line: the ADRs and the `game-rules.md` headings (as
   `game-rules#<anchor>`) it gives a reading of. Only its card may follow it.
 - **Cards.** A section a concept card summarises carries it, once: its id from `ConceptCards.Ids`, its title,

@@ -73,6 +73,8 @@ function inputs(overrides = {}) {
     adrs: new Set(['0010', '0011']),
     gameRules: new Set(['match-lifecycle']),
     conceptIds: ['health', 'energy'],
+    words: { en: ['Health', 'Energy', 'Defense'], fr: ['Santé', 'Énergie', 'Précision'] },
+    engine: { defenseBuffCeiling: 10 },
     links: [],
     previous: null,
     ...overrides,
@@ -187,9 +189,78 @@ test('a spell\'s effect is read by its kind, and refused when the spell has two 
   const spells = new Map([['spell:guard:v1', { id: 'spell:guard:v1', effects: [{ kind: 'DefenseBuff', amount: 2 }, { kind: 'DefenseBuff', amount: 1, durationRounds: 3 }] }],
     ['spell:latch:v1', { id: 'spell:latch:v1', effects: [{ kind: 'Bleed', amountPerRound: 2, durationRounds: 3 }] }]]);
   const book = text => inputs({ spells, parts: [{ file: '01-the-goal.md', text: goal.replace('Pummel costs {spell:pummel:v1.energyCost} and deals {spell:pummel:v1.damage}.', text) }] });
-  assert.deepEqual(errorsOf(book('Latch bleeds {spell:latch:v1.bleed} for {spell:latch:v1.bleed.durationRounds} rounds.')), []);
-  assert.ok(JSON.stringify(buildRules(book('Latch bleeds {spell:latch:v1.bleed} for {spell:latch:v1.bleed.durationRounds} rounds.')).book).includes('Latch bleeds 2 for 3 rounds.'));
+  assert.deepEqual(errorsOf(book('Latch bleeds {spell:latch:v1.bleed} for {spell:latch:v1.bleed.durationRounds|round|rounds}.')), []);
+  assert.ok(JSON.stringify(buildRules(book('Latch bleeds {spell:latch:v1.bleed} for {spell:latch:v1.bleed.durationRounds|round|rounds}.')).book).includes('Latch bleeds 2 for 3 rounds.'));
   refuses(book('Guard gives {spell:guard:v1.defenseBuff}.'), /"spell:guard:v1\.defenseBuff" names one of two DefenseBuff effects/);
+});
+
+const pummelLine = 'Pummel costs {spell:pummel:v1.energyCost} and deals {spell:pummel:v1.damage}.';
+const spellBook = (spells, text, overrides = {}) => inputs({ spells, parts: [{ file: '01-the-goal.md', text: goal.replace(pummelLine, text) }], ...overrides });
+const builtText = given => JSON.stringify(buildRules(given).book);
+const bloodPrice = ['spell:hateful_sacrifice:v1', { id: 'spell:hateful_sacrifice:v1', name: 'Blood Price', targeting: { origin: 'Enemy', scope: 'SingleTarget', maxTargets: 1 },
+  effects: [{ kind: 'Damage', amount: 11 }], casterEffects: [{ kind: 'Damage', amount: 3 }] }];
+const wraithguard = ['spell:revenant_guards:v1', { id: 'spell:revenant_guards:v1', name: 'Wraithguard', targeting: { origin: 'Ally', scope: 'Multi', maxTargets: 3 },
+  effects: [{ kind: 'DefenseBuff', amount: 3, permanent: true }, { kind: 'DefenseBuff', amount: 5, durationRounds: 2 }, { kind: 'Stun', durationRounds: 1 }] }];
+
+test('the caster\'s own line is drawn from casterEffects, by its kind, as the targets\' line is', () => {
+  const spells = new Map([bloodPrice]);
+  const clean = spellBook(spells, 'Blood Price deals {spell:hateful_sacrifice:v1.damage}, and {spell:hateful_sacrifice:v1.caster.damage} to its caster.');
+  assert.deepEqual(errorsOf(clean), []);
+  assert.ok(builtText(clean).includes('Blood Price deals 11, and 3 to its caster.'));
+  refuses(spellBook(spells, '{spell:hateful_sacrifice:v1.caster.heal}'), /"spell:hateful_sacrifice:v1\.caster\.heal" does not resolve/);
+});
+
+test('a spell\'s targets, its origin, the count of an effect kind and one effect of several by its order are drawn', () => {
+  const spells = new Map([wraithguard]);
+  const clean = spellBook(spells, 'Wraithguard ({spell:revenant_guards:v1.origin}, up to {spell:revenant_guards:v1.targets}) gives {spell:revenant_guards:v1.defenseBuff.count} buffs: {spell:revenant_guards:v1.defenseBuff1} and {spell:revenant_guards:v1.defenseBuff2} for {spell:revenant_guards:v1.defenseBuff2.durationRounds|round|rounds}.');
+  assert.deepEqual(errorsOf(clean), []);
+  assert.ok(builtText(clean).includes('Wraithguard (Ally, up to 3) gives 2 buffs: 3 and 5 for 2 rounds.'));
+  refuses(spellBook(spells, '{spell:revenant_guards:v1.defenseBuff3}'), /"spell:revenant_guards:v1\.defenseBuff3" does not resolve/);
+});
+
+test('a fact the book states is checked when it is built, and draws nothing a player reads', () => {
+  const spells = new Map([wraithguard, bloodPrice]);
+  const clean = spellBook(spells, 'Wraithguard{?spell:revenant_guards:v1.origin = \'Ally\'}{?spell:revenant_guards:v1.targets > 1} shields several allies; its first buff is permanent{?spell:revenant_guards:v1.defenseBuff1.permanent}, and it stuns{?spell:revenant_guards:v1.stun}.');
+  assert.deepEqual(errorsOf(clean), []);
+  assert.ok(builtText(clean).includes('Wraithguard shields several allies; its first buff is permanent, and it stuns.'));
+  refuses(spellBook(spells, 'Blood Price stuns{?spell:hateful_sacrifice:v1.stun}.'), /"spell:hateful_sacrifice:v1\.stun" does not resolve/);
+  refuses(spellBook(spells, 'Blood Price{?spell:hateful_sacrifice:v1.origin = \'Ally\'} heals.'), /the fact "spell:hateful_sacrifice:v1\.origin = 'Ally'" is false/);
+  refuses(spellBook(spells, 'Wraithguard{?spell:revenant_guards:v1.targets = 1}.'), /the fact "spell:revenant_guards:v1\.targets = 1" is false/);
+  refuses(spellBook(spells, 'Its second buff{?spell:revenant_guards:v1.defenseBuff2.permanent} lasts.'), /"spell:revenant_guards:v1\.defenseBuff2\.permanent" does not resolve/);
+  refuses(spellBook(spells, 'It stuns for {spell:revenant_guards:v1.stun}.'), /"spell:revenant_guards:v1\.stun" is a fact, not a value: write \{\?/);
+  refuses(spellBook(spells, '{?spell:revenant_guards:v1.targets}'), /"spell:revenant_guards:v1\.targets" is not a fact/);
+});
+
+test('the engine\'s Defense ceiling is drawn by its name, and the book says it was', () => {
+  const clean = withGoal('Two players', 'Defense buffs count for {engine.defenseBuffCeiling} at most. Two players');
+  assert.deepEqual(errorsOf(clean), []);
+  assert.ok(builtText(inputs({ ...clean, engine: { defenseBuffCeiling: 12 } })).includes('count for 12 at most'));
+  refuses(withGoal('Two players', '{engine.defenseCap} Two players'), /"engine\.defenseCap" does not resolve/);
+});
+
+test('a count is written with its noun, singular for one, so a value of 1 never reads "1 rounds"', () => {
+  const at = interval => inputs({ ruleSet: { path: 'x', values: { teamSize: 3, energyPerRound: 2, criticalMultiplier: 2, evolutionInterval: interval } },
+    parts: [{ file: '01-the-goal.md', text: goal.replace('Two players', 'Every {rules.evolutionInterval|round|rounds}, two players') }] });
+  assert.ok(builtText(at(2)).includes('Every 2 rounds, two players'));
+  assert.ok(builtText(at(1)).includes('Every 1 round, two players'));
+  refuses(withGoal('Two players', 'For {rules.teamSize} rounds, two players'), /"\{rules\.teamSize\} rounds": a count takes its noun: \{rules\.teamSize\|round\|rounds\}/);
+  refuses(withGoal('Two players', 'At the next {rules.teamSize} Upkeeps, two players'), /a count takes its noun: \{rules\.teamSize\|Upkeep\|Upkeeps\}/);
+  refuses(withGoal('Two players', 'Every {rules.teamSize|round} two players'), /"rules\.teamSize\|round": a count names its singular and its plural/);
+  assert.deepEqual(errorsOf(withGoal('| {rules.criticalMultiplier} |', '| {rules.energyPerRound|round|rounds} |')), [], 'a count in a table cell keeps its bars');
+});
+
+test('a capitalised name inside a sentence is a spell\'s or a mutation\'s name in data/, or a word the book may capitalise', () => {
+  const spells = new Map([['spell:pummel:v1', { id: 'spell:pummel:v1', name: 'Pummel', energyCost: 1, effects: [{ kind: 'Damage', amount: 2 }] }], bloodPrice]);
+  const mutations = new Map([['tier:titan:v1', { id: 'tier:titan:v1', name: 'Titan', level: 4, initiativeBonus: 0 }]]);
+  const book = text => inputs({ spells, mutations, parts: [{ file: '01-the-goal.md', text: goal.replace('Two players', text) }] });
+  assert.deepEqual(errorsOf(book('A Titan casts Blood Price and Pummel at Upkeep for Energy. Every creature. Two players')), []);
+  assert.deepEqual(errorsOf(book('A creature casts Blood Price{?spell:hateful_sacrifice:v1.origin = \'Enemy\'} on an enemy. Two players')), [], 'a fact against a name');
+  refuses(book('A Titan casts Fireball. Two players'), /rules\/01-the-goal\.md:\d+: "Fireball" is not the name of a spell or a mutation in data\/, nor a word of rules\/words\.json/);
+  refuses(book('A creature casts Blood Prize. Two players'), /"Prize" is not the name/);
+  refuses(inputs({ spells: new Map([['spell:pummel:v1', { id: 'spell:pummel:v1', name: 'Thump', energyCost: 1, effects: [{ kind: 'Damage', amount: 2 }] }]]),
+    parts: [{ file: '01-the-goal.md', text: goal.replace('Two players', 'A creature casts Pummel. Two players') }] }), /"Pummel" is not the name/);
+  refuses(withFrench('Deux joueurs', 'Une créature lance Fireball. Deux joueurs'), /rules\/fr\/01-the-goal\.md:\d+: "Fireball" is not the name/);
+  assert.deepEqual(errorsOf(withFrench('Deux joueurs', 'Au Stade III, l’Énergie. Deux joueurs')), [], 'the French player\'s words, an elided article and a Stage numeral');
 });
 
 test('a mutation\'s values are drawn from its file: its name, stage, initiative bonus and passive', () => {
@@ -276,7 +347,7 @@ test('the changes are dated lines, each with its ADR when it has one', () => {
 
 test('the book says what it was drawn from', () => {
   const { book } = buildRules(inputs());
-  assert.deepEqual(book.drawnFrom, { ruleSet: 'docs/tabletop/playtest.rules.json', rules: { teamSize: 3, energyPerRound: 2, criticalMultiplier: 2 }, creature: 'creature:main:v1', spells: ['spell:pummel:v1'], mutations: [] });
+  assert.deepEqual(book.drawnFrom, { ruleSet: 'docs/tabletop/playtest.rules.json', rules: { teamSize: 3, energyPerRound: 2, criticalMultiplier: 2 }, engine: { defenseBuffCeiling: 10 }, creature: 'creature:main:v1', spells: ['spell:pummel:v1'], mutations: [] });
 });
 
 const but = `# Ce que vous cherchez à faire {#the-goal}
@@ -357,6 +428,16 @@ test('refuses a French section that types a number the English draws, or drops a
   assert.deepEqual(errorsOf(withFrench('chaque créature gagne {rules.energyPerRound} Énergie', 'l’Énergie de chaque créature augmente de {rules.energyPerRound}')), [], 'a value may move in the sentence');
 });
 
+test('a French count takes the French noun, singular for zero and one, and the values compare without their nouns', () => {
+  const given = interval => withFrench('Deux joueurs', 'Tous les {rules.evolutionInterval|tour|tours}, deux joueurs', {
+    ruleSet: { path: 'x', values: { teamSize: 3, energyPerRound: 2, criticalMultiplier: 2, evolutionInterval: interval } },
+    parts: [{ file: '01-the-goal.md', text: goal.replace('Two players', 'Every {rules.evolutionInterval|round|rounds}, two players') }] });
+  assert.deepEqual(errorsOf(given(2)), []);
+  assert.ok(JSON.stringify(buildRules(given(2)).french).includes('Tous les 2 tours, deux joueurs'));
+  assert.ok(JSON.stringify(buildRules(given(1)).french).includes('Tous les 1 tour, deux joueurs'));
+  refuses(withFrench('Deux joueurs', 'Pendant {rules.teamSize} tours, deux joueurs'), /a count takes its noun: \{rules\.teamSize\|tour\|tours\}/);
+});
+
 test('refuses an engine word in French only as written, for "tiers" and "stage" are French words', () => {
   assert.deepEqual(errorsOf(withFrench('Deux joueurs', 'Un tiers des joueurs, en stage,')), []);
   refuses(withFrench('Deux joueurs', 'Un Tier des joueurs'), /"Tier": the player's word is Stade/);
@@ -415,6 +496,8 @@ test('a link to the rules is /rules#<id>, wherever it is written; the pages\' te
   assert.deepEqual(linksIn('href="https://table.example/rules#winning" and /rules/#a-round'), ['winning', 'a-round']);
   assert.deepEqual(['table/x.js', 'battle/src/tutorial.ts', 'scenarios/tutorials/a.json', 'table/x.test.js', 'battle/src/x.spec.ts', 'table/rules.json', 'table/rules.fr.json', 'table/logo.png'].filter(linksFrom),
     ['table/x.js', 'battle/src/tutorial.ts', 'scenarios/tutorials/a.json']);
-  const { conceptIds } = readInputs(root);
+  const { conceptIds, engine } = readInputs(root);
   assert.ok(conceptIds.includes('health') && conceptIds.includes('tempo'));
+  const ceiling = /DefenseBuffCeiling = (\d+);/.exec(readFileSync(join(root, 'src/DownfallArena.Domain/Matches/Creatures/Creature.cs'), 'utf8'))[1];
+  assert.deepEqual(engine, { defenseBuffCeiling: Number(ceiling) }, 'the engine\'s values are read from the domain\'s source');
 });

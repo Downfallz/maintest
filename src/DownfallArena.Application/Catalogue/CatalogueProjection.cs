@@ -95,13 +95,13 @@ public static class CatalogueProjection
     /// <summary>
     /// One package as its card. Ordered by level and then by id, which is the order a player reads a family
     /// in: the opener before what it opens. A shared package's card says so last (ADR 0114): what it gives is
-    /// the lines above, to every creature of the side.
+    /// the lines above, to every creature of the team.
     /// </summary>
     private static PackageCard Package(Tier tier) =>
         new(tier.Id, tier.Name, tier.Level, tier.Prerequisites, tier.Spells, tier.InitiativeBonus.Value, tier.AnyOf, tier.Passive, tier.SharedWithTeam ? [.. EffectLine.Of(tier.Passive), SharedLine] : EffectLine.Of(tier.Passive));
 
     /// <summary>The line a shared package's card ends on (ADR 0114).</summary>
-    public const string SharedLine = "For every creature of the side";
+    public const string SharedLine = "For every creature of the team";
 
     /// <summary>
     /// The round, as the strip a table prints. The sub-phases are <see cref="RoundSubPhase" /> in declaration

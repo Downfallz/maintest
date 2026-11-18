@@ -1,5 +1,6 @@
 # What changed
 
+- 2026-11-18: The mutation card no longer says a capstone gives an initiative bonus: a capstone gives a passive in place of spells and bonus. The examples state the damage Blood Price deals its own caster (ADR 0101, ADR 0188).
 - 2026-11-17: A Stage is written in Roman numerals, Stage I to Stage IV, as the table and the field guide write it.
 - 2026-11-16: The official rulebook is the app's edition. A creature chooses its spell when its turn comes. Every number follows the table's rule set and content (ADR 0112, ADR 0188).
 - 2026-11-16: The tutorials' cards come from this book and link to their sections. The Health card says healing stops at the starting Health, and the Defense card that its buffs count for 10 at most (ADR 0076, ADR 0187).

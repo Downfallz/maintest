@@ -54,7 +54,7 @@ sources: ADR 0019, ADR 0020, ADR 0083, game-rules#round-sequence-adr-0010
 ## Mutations {#evolution}
 
 *Command · Evolution.* Only on a mutation round: round {rules.firstEvolutionRound}, then every
-{rules.evolutionInterval} rounds. On any other round this step asks nobody and the round goes on to the tempos.
+{rules.evolutionInterval|round|rounds}. On any other round this step asks nobody and the round goes on to the tempos.
 
 Each team has {rules.evolutionPicksPerOpportunity} picks. One pick acquires one mutation for one of your
 **living** creatures, and **a creature acquires at most one mutation a round**: your picks go to different
@@ -97,7 +97,7 @@ sources: ADR 0056, ADR 0057, ADR 0059, ADR 0066, ADR 0089, game-rules#round-sequ
 id: mutation
 title: Mutation
 A mutation gives a creature new spells and an initiative bonus, for the rest of the match.
-The last mutation of a family, its capstone, gives a passive in place of spells.
+The last mutation of a family, its capstone, gives a passive in place of spells and bonus.
 On a mutation round, the team shares its picks, and a creature takes at most one mutation.
 > A creature at {creature.initiative} base initiative acquires Brute, with a bonus of {tier:brute:v1.initiativeBonus}: it knows new spells and acts at {creature.initiative + tier:brute:v1.initiativeBonus}.
 ```
@@ -214,7 +214,7 @@ before the next turn. The spell and its targets become public together.
 
 Nothing is declared in advance. You choose among the spells the creature knows and can pay for now, and you
 choose knowing everything that has happened this round. Every creature knows Focus, which costs
-{spell:wait:v1.energyCost} Energy and targets only its caster: a creature in the round always has a spell to cast.
+{spell:wait:v1.energyCost} Energy and targets only its caster{?spell:wait:v1.origin = 'Self'}: a creature in the round always has a spell to cast.
 
 **Nothing is a reservation.** The Energy is spent when the spell resolves. Until its turn comes, a creature can
 be defeated, stunned or drained. A creature defeated or stunned before its turn is
@@ -239,10 +239,10 @@ A spell says whom it may target:
 - **Enemy**: any living creature of the other team.
 
 A spell for one target takes exactly one. A spell for several takes **one or more, up to its maximum**:
-Emberstorm, for several enemies, may take a single one. A defeated creature cannot be a target, and no
+Emberstorm, for several{?spell:meteor:v1.targets > 1} enemies{?spell:meteor:v1.origin = 'Enemy'}, may take a single one. A defeated creature cannot be a target, and no
 creature can be named twice by one cast.
 
-*Example.* Creature 6's turn comes, and its spell is Brace, for one ally: it may target itself or Creature 4,
+*Example.* Creature 6's turn comes, and its spell is Brace, for one{?spell:guard:v1.targets = 1} ally{?spell:guard:v1.origin = 'Ally'}: it may target itself or Creature 4,
 but not Creature 5, defeated earlier this round. Then Creature 3 casts Emberstorm while two enemies stand: it
 may name one or both.
 
@@ -262,8 +262,8 @@ A spell resolves completely before the next turn comes, in this order:
 4. **The caster's own line**, if the spell has one, once for the whole cast. Damage there is lowered by the
    caster's own Defense, and never takes a damage bonus or a critical.
 
-A creature's **Defense** is its base Defense plus its Defense buffs, which count for 10 at most however many
-there are, less its Defense debuffs, never below zero.
+A creature's **Defense** is its base Defense plus its Defense buffs, which count for {engine.defenseBuffCeiling} at most
+however many there are, less its Defense debuffs, never below zero.
 
 A hit never goes past the Health left: a creature at 3 Health hit for 10 loses 3. A spell that changes nothing on
 a target, 0 damage through a Defense or a heal at full Health, did nothing to it.
@@ -292,7 +292,7 @@ sources: ADR 0033, ADR 0035, ADR 0076, ADR 0083, ADR 0101, game-rules#round-sequ
 id: defense
 title: Defense
 Defense lowers the damage of every hit a creature takes, never below zero.
-Defense buffs add at most 10 to it, however many it holds.
+Defense buffs add at most {engine.defenseBuffCeiling} to it, however many it holds.
 Only damage over time, applied at Upkeep, ignores it.
 > A hit of 7 on a creature with {creature.defense + 2} Defense deals {max(0, 5 - creature.defense)}. A creature starts at {creature.defense} Defense: the same hit on it deals {max(0, 7 - creature.defense)}.
 ```
@@ -310,7 +310,9 @@ multiplies and before Defense is subtracted. It never touches a Bleed, a heal, o
 Creature 1 loses
 {max(0, floor((spell:hateful_sacrifice:v1.damage + tier:apex:v1.damageBonus) * rules.criticalMultiplier) - 3)}.
 Without one, {max(0, spell:hateful_sacrifice:v1.damage + tier:apex:v1.damageBonus - 3)}. **Add, multiply,
-subtract**, in that order.
+subtract**, in that order. Blood Price's own line then deals {spell:hateful_sacrifice:v1.caster.damage} damage to
+Creature 4, less its own Defense of {creature.defense}: it loses
+{max(0, spell:hateful_sacrifice:v1.caster.damage - creature.defense)}, with no bonus and no critical.
 
 *Example, damage buffs.* Alpha Roar gave Creature 5 a damage buff of {spell:thundering_seal:v1.damageBuff}, and
 Overdrive another of {spell:adrenaline_tonic:v1.damageBuff}. Its Strike, for {spell:heavy_strike:v1.damage},
@@ -329,7 +331,7 @@ with no Defense it does nothing. It moves no Defense: the target's Defense is th
 *Example.* Creature 3 owns Titan and casts Dominate, damage {spell:chain_slash:v1.damage}, on Creature 5, which
 holds Alpha Roar's Defense of {creature.defense + spell:thundering_seal:v1.defenseBuff}, and on Creature 4, at its base Defense of
 {creature.defense}. With no
-critical, both lose
+critical, both{?spell:chain_slash:v1.targets > 1} lose
 {max(0, spell:chain_slash:v1.damage - max(0, creature.defense + spell:thundering_seal:v1.defenseBuff - tier:titan:v1.sunder))}. A
 caster with no sunder would have dealt Creature 5 only
 {max(0, spell:chain_slash:v1.damage - creature.defense - spell:thundering_seal:v1.defenseBuff)}.

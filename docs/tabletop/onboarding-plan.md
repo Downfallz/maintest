@@ -48,8 +48,8 @@ creature, and links to the rulebook section. The first set follows the rulebook'
 | Initiative | Base initiative plus a mutation's bonus; it orders creatures inside their tempo. | 5.5 |
 | Tempo | Instinct acts before Precision; only Precision can crit. | 5.4 |
 | Critical | A d20 against the threshold the spell prints; a critical multiplies the effect. | 6.7 |
-| Intent | The spell a creature will cast, hidden until its turn. | 5.6 |
-| Fizzle | A cast that does nothing: its caster died, was stunned or cannot pay. | 6.1 |
+| Intent | Nothing is declared in advance: a creature chooses its spell and its targets when its turn comes, and it resolves at once. | 3.8 |
+| Fizzle | A skipped turn: a creature defeated or stunned earlier in the round is skipped, and nothing resolves or is spent. | 4.1 |
 | Conditions | Each one's effect and its countdown; Stun leaves its creature immune for one round. | 7.1 |
 | Mutation | Spells, or a passive at the capstone, and an initiative bonus, for the rest of the match. | 5.3 |
 

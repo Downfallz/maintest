@@ -9,13 +9,13 @@ rien, et rien n’est demandé à son propriétaire. Le tour suivant vient.
 
 Une créature ne peut pas agir quand elle a été **vaincue** ou **étourdie** plus tôt dans le round. Une créature qui est
 dans le round peut toujours lancer un sort : Focus coûte {spell:wait:v1.energyCost} d’Énergie et cible son
-lanceur. Un sort qu’elle ne peut pas payer maintenant, ou qui n’a aucune cible légale, n’est pas proposé.
+lanceur{?spell:wait:v1.origin = 'Self'}. Un sort qu’elle ne peut pas payer maintenant, ou qui n’a aucune cible légale, n’est pas proposé.
 
 Un tour tardif est donc un risque : avant qu’il vienne, votre créature peut être vaincue ou étourdie, et la cible que
 vous visiez peut avoir disparu. C’est le prix d’agir tard, et la raison d’être d’Instinct.
 
 *Exemple.* La Créature 1 est en Précision et la Créature 5 en Instinct. La Créature 5 agit en premier et lance
-Crushing Stomp sur la Créature 1, ce qui l’étourdit. Quand vient le tour de la Créature 1, elle est sautée, et ne
+Crushing Stomp sur la Créature 1, ce qui l’étourdit{?spell:crushing_stomp:v1.stun}. Quand vient le tour de la Créature 1, elle est sautée, et ne
 dépense pas d’Énergie.
 
 sources: ADR 0083, ADR 0110, ADR 0112, game-rules#implemented, game-rules#round-sequence-adr-0010
@@ -61,10 +61,10 @@ s’appliquent quand même, et le Stun en cours ni ne s’allonge ni ne recommen
 étourdie sans interruption : chaque Stun est suivi d’un round où elle ne peut pas être étourdie.
 
 *Exemple.* Au round 5, la Créature 4 est touchée par Crushing Stomp : Stun pendant
-{spell:crushing_stomp:v1.stun.durationRounds} rounds. Elle passe en entier les
-{spell:crushing_stomp:v1.stun.durationRounds} rounds suivants. Au Nettoyage qui termine le Stun, elle devient
+{spell:crushing_stomp:v1.stun.durationRounds|round|rounds}. Elle passe en entier les
+{spell:crushing_stomp:v1.stun.durationRounds|round|rounds} suivants. Au Nettoyage qui termine le Stun, elle devient
 immunisée pour un round. Un autre Crushing Stomp sur elle pendant qu’elle est étourdie, ou immunisée, inflige ses
-dégâts et n’étourdit rien.
+dégâts{?spell:crushing_stomp:v1.damage > 0} et n’étourdit rien.
 
 sources: ADR 0041, ADR 0072, game-rules#round-sequence-adr-0010
 
@@ -77,10 +77,11 @@ round inflige ses dégâts une fois, à l’Entretien suivant. Un Stun de 2 roun
 Un état ne recommence jamais : un second du même type se place à côté du premier, et chacun décompte de son côté.
 Seul le Stun est différent : un second est [ignoré](#stunned).
 
-*Exemple.* Au round 5, la Créature 3 lance Infestation sur trois ennemis : un Bleed de
-{spell:summon_minions:v1.bleed} pendant {spell:summon_minions:v1.bleed.durationRounds} rounds sur chacun. Il
+*Exemple.* Au round 5, la Créature 3 lance Infestation sur
+{spell:summon_minions:v1.targets|ennemi|ennemis}{?spell:summon_minions:v1.origin = 'Enemy'} : un Bleed de
+{spell:summon_minions:v1.bleed} pendant {spell:summon_minions:v1.bleed.durationRounds|round|rounds} sur chacun. Il
 n’inflige rien au round 5. Chaque cible subit ensuite {spell:summon_minions:v1.bleed} à l’Entretien de chacun des
-{spell:summon_minions:v1.bleed.durationRounds} rounds suivants, quelle que soit sa Défense :
+{spell:summon_minions:v1.bleed.durationRounds|round|rounds} suivants, quelle que soit sa Défense :
 {spell:summon_minions:v1.bleed * spell:summon_minions:v1.bleed.durationRounds} en tout.
 
 sources: ADR 0041, game-rules#implemented, game-rules#round-sequence-adr-0010
@@ -96,7 +97,8 @@ Un critique multiplie par {rules.criticalMultiplier}, en laissant tomber toute f
 maintenant sur la Santé d’une cible**, et rien d’autre :
 
 - **Multiplié :** les dégâts sur une cible, son bonus de dégâts compris, et un soin sur une cible.
-- **Non multiplié :** tout ce qui est sur la ligne du lanceur ; l’Énergie, donnée ou prise ; un effet durable, un
+- **Non multiplié :** tout ce qui est sur la ligne du lanceur, comme les
+  {spell:hateful_sacrifice:v1.caster.damage} dégâts que Blood Price inflige à son lanceur ; l’Énergie, donnée ou prise ; un effet durable, un
   Bleed, une Regeneration, un Stun, un renfort ou un malus ; et une brèche, qui prend sur la Défense, pas sur le
   coup.
 

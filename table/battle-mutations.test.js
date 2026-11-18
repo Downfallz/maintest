@@ -5,7 +5,7 @@ const catalogue = { packages: [
   { id: 'root', name: 'Brute', level: 1, spells: ['strike'], initiativeBonus: 0, tags: ['Guard', 'Pressure'] },
   { id: 'branch', name: 'Ironhide', level: 2, prerequisites: ['root'], spells: ['ward'], initiativeBonus: 2 },
   { id: 'third', name: 'Colossus', level: 3, prerequisites: ['branch'], spells: ['ward'], initiativeBonus: 1 },
-  { id: 'cap', name: 'Capstone', level: 4, anyOf: ['third'], spells: [], initiativeBonus: 0, passiveLines: ['Defense +2', 'For every creature of the side'] },
+  { id: 'cap', name: 'Capstone', level: 4, anyOf: ['third'], spells: [], initiativeBonus: 0, passiveLines: ['Defense +2', 'For every creature of the team'] },
   { id: 'other', name: 'Seer', level: 1, spells: [], initiativeBonus: 1 },
 ], cards: [{ id: 'strike', name: 'Strike', cost: 0, targeting: 'One enemy', effects: ['Deal 3 damage'], critical: '0%' }] };
 const view = { board: { allies: [{ id: 1, name: 'One', isAlive: true, acquiredTiers: ['root'], knownSpells: ['ward'] },
@@ -32,7 +32,7 @@ test('capstones inherit family colour and preserve authored shared passive text 
   const seer = mutationChoices({ ...view, options: { evolution: { remainingPicks: 1, creatures: [{ creature: 1, availableTiers: ['other'] }] } } }, catalogue).faces[0];
   assert.equal(seer.family, 'Seer'); assert.notEqual(seer.colour, cap.colour);
   assert.deepEqual(cap.tags, []); assert.deepEqual(cap.spells, []);
-  assert.deepEqual(cap.passives, ['Defense +2', 'For every creature of the side']);
+  assert.deepEqual(cap.passives, ['Defense +2', 'For every creature of the team']);
   assert.match(cap.requirement, /Requires one of: Colossus/); assert.equal(cap.initiative, 0);
 });
 test('missing catalogue details remain playable by id without invented stats', () => {

@@ -57,7 +57,7 @@ sources: ADR 0019, ADR 0020, ADR 0083, game-rules#round-sequence-adr-0010
 ## Mutations {#evolution}
 
 *Commandement · Évolution.* Seulement à un round de mutation : le round {rules.firstEvolutionRound}, puis tous les
-{rules.evolutionInterval} rounds. À tout autre round, cette étape ne demande rien à personne et le round passe aux
+{rules.evolutionInterval|round|rounds}. À tout autre round, cette étape ne demande rien à personne et le round passe aux
 tempos.
 
 Chaque équipe a {rules.evolutionPicksPerOpportunity} choix. Un choix acquiert une mutation pour une de vos
@@ -104,7 +104,7 @@ sources: ADR 0056, ADR 0057, ADR 0059, ADR 0066, ADR 0089, game-rules#round-sequ
 id: mutation
 title: Mutation
 Une mutation donne à une créature de nouveaux sorts et un bonus d’initiative, pour le reste de la partie.
-La dernière mutation d’une famille, sa clé de voûte, donne un passif à la place de sorts.
+La dernière mutation d’une famille, sa clé de voûte, donne un passif à la place de sorts et de bonus.
 À un round de mutation, l’équipe partage ses choix, et une créature prend au plus une mutation.
 > Une créature à une initiative de base de {creature.initiative} acquiert Brute, au bonus de {tier:brute:v1.initiativeBonus} : elle connaît de nouveaux sorts et agit à {creature.initiative + tier:brute:v1.initiativeBonus}.
 ```
@@ -226,7 +226,7 @@ aussitôt, avant le tour suivant. Le sort et ses cibles deviennent publics ensem
 
 Rien n’est déclaré à l’avance. Vous choisissez parmi les sorts que la créature connaît et peut payer maintenant, et
 vous choisissez en sachant tout ce qui s’est passé dans ce round. Chaque créature connaît Focus, dont le coût en
-Énergie est de {spell:wait:v1.energyCost} et qui ne cible que son lanceur : une créature dans le round a toujours un
+Énergie est de {spell:wait:v1.energyCost} et qui ne cible que son lanceur{?spell:wait:v1.origin = 'Self'} : une créature dans le round a toujours un
 sort à lancer.
 
 **Rien n’est réservé.** L’Énergie est dépensée quand le sort se résout. Jusqu’à ce que vienne son tour, une
@@ -252,10 +252,12 @@ Un sort dit qui il peut cibler :
 - **Ennemi** : n’importe quelle créature vivante de l’autre équipe.
 
 Un sort pour une cible en prend exactement une. Un sort pour plusieurs en prend **une ou plus, jusqu’à son
-maximum** : Emberstorm, pour plusieurs ennemis, peut n’en prendre qu’un. Une créature vaincue ne peut pas être une
+maximum** : Emberstorm, pour plusieurs{?spell:meteor:v1.targets > 1}
+ennemis{?spell:meteor:v1.origin = 'Enemy'}, peut n’en prendre qu’un. Une créature vaincue ne peut pas être une
 cible, et aucune créature ne peut être désignée deux fois par un même lancer.
 
-*Exemple.* Le tour de la Créature 6 vient, et son sort est Brace, pour un allié : elle peut se cibler elle-même ou
+*Exemple.* Le tour de la Créature 6 vient, et son sort est Brace, pour un{?spell:guard:v1.targets = 1}
+allié{?spell:guard:v1.origin = 'Ally'} : elle peut se cibler elle-même ou
 cibler la Créature 4, mais pas la Créature 5, vaincue plus tôt dans ce round. Puis la Créature 3 lance Emberstorm
 alors que deux ennemis sont debout : elle peut en désigner un ou les deux.
 
@@ -275,8 +277,8 @@ Un sort se résout entièrement avant que vienne le tour suivant, dans cet ordre
 4. **La ligne du lanceur**, si le sort en a une, une fois pour tout le lancer. Les dégâts qu’elle inflige sont
    réduits par la propre Défense du lanceur, et ne prennent jamais de bonus de dégâts ni de critique.
 
-La **Défense** d’une créature est sa Défense de base plus ses renforts de Défense, qui comptent pour 10 au plus
-quel que soit leur nombre, moins ses malus de Défense, jamais en dessous de zéro.
+La **Défense** d’une créature est sa Défense de base plus ses renforts de Défense, qui comptent pour
+{engine.defenseBuffCeiling} au plus quel que soit leur nombre, moins ses malus de Défense, jamais en dessous de zéro.
 
 Un coup ne va jamais au-delà de la Santé qui reste : une créature à 3 points de Santé touchée pour 10 en perd 3. Un
 sort qui ne change rien sur une cible, 0 dégât à travers une Défense ou un soin à Santé pleine, ne lui a rien fait.
@@ -304,7 +306,7 @@ sources: ADR 0033, ADR 0035, ADR 0076, ADR 0083, ADR 0101, game-rules#round-sequ
 id: defense
 title: Défense
 La Défense réduit les dégâts de chaque coup que reçoit une créature, jamais en dessous de zéro.
-Les renforts de Défense y ajoutent au plus 10, quel que soit leur nombre.
+Les renforts de Défense y ajoutent au plus {engine.defenseBuffCeiling}, quel que soit leur nombre.
 Seuls les dégâts dans la durée, appliqués à l’Entretien, l’ignorent.
 > Un coup de 7 sur une créature à {creature.defense + 2} de Défense inflige {max(0, 5 - creature.defense)}. Une créature commence à {creature.defense} de Défense : le même coup sur elle inflige {max(0, 7 - creature.defense)}.
 ```
@@ -324,7 +326,9 @@ de 3 : dégâts {spell:hateful_sacrifice:v1.damage}, d20 :
 Créature 1 perd
 {max(0, floor((spell:hateful_sacrifice:v1.damage + tier:apex:v1.damageBonus) * rules.criticalMultiplier) - 3)}.
 Sans critique, {max(0, spell:hateful_sacrifice:v1.damage + tier:apex:v1.damageBonus - 3)}. **Ajoutez, multipliez,
-soustrayez**, dans cet ordre.
+soustrayez**, dans cet ordre. La ligne du lanceur de Blood Price inflige ensuite
+{spell:hateful_sacrifice:v1.caster.damage} dégâts à la Créature 4, moins sa propre Défense de {creature.defense} :
+elle perd {max(0, spell:hateful_sacrifice:v1.caster.damage - creature.defense)}, sans bonus ni critique.
 
 *Exemple, renforts de dégâts.* Alpha Roar a donné à la Créature 5 un renfort de dégâts de
 {spell:thundering_seal:v1.damageBuff}, et Overdrive un autre de {spell:adrenaline_tonic:v1.damageBuff}. Son
@@ -343,7 +347,7 @@ reste la même face à tous les autres.
 
 *Exemple.* La Créature 3 possède Titan et lance Dominate, dégâts {spell:chain_slash:v1.damage}, sur la Créature 5,
 qui détient la Défense d’Alpha Roar, {creature.defense + spell:thundering_seal:v1.defenseBuff}, et sur la Créature
-4, à sa Défense de base de {creature.defense}. Sans critique, les deux perdent
+4, à sa Défense de base de {creature.defense}. Sans critique, les deux{?spell:chain_slash:v1.targets > 1} perdent
 {max(0, spell:chain_slash:v1.damage - max(0, creature.defense + spell:thundering_seal:v1.defenseBuff - tier:titan:v1.sunder))}.
 Un lanceur sans brèche n’aurait infligé à la Créature 5 que
 {max(0, spell:chain_slash:v1.damage - creature.defense - spell:thundering_seal:v1.defenseBuff)}.
