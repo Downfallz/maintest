@@ -8,13 +8,13 @@ A creature that cannot act when its turn comes is **skipped**: nothing resolves 
 its owner is not asked. The next turn comes.
 
 A creature cannot act when it was **defeated** or **stunned** earlier in the round. A creature in the round
-always has a spell it can cast, since Focus costs {spell:wait:v1.energyCost} Energy and targets its caster{?spell:wait:v1.origin = 'Self'}; a
+always has a spell it can cast, since Focus{?creature.knows = 'spell:wait:v1'} costs {spell:wait:v1.energyCost} Energy and targets its caster{?spell:wait:v1.origin = 'Self'}; a
 spell it cannot pay for now, or one with no legal target, is not offered.
 
 So a late turn is a risk: before it comes, your creature may be defeated or stunned, and the target you meant
 may be gone. That is the cost of acting late, and the reason Instinct exists.
 
-*Example.* Creature 1 is Precision and Creature 5 Instinct. Creature 5 acts first and casts Crushing Stomp on
+*Example.* Creature 1 is Precision and Creature 5 Instinct. Creature 5 acts first and casts Crushing Stomp{?spell:crushing_stomp:v1.origin = 'Enemy'} on
 Creature 1, which stuns{?spell:crushing_stomp:v1.stun} it. When Creature 1's turn comes, it is skipped, and spends no Energy.
 
 sources: ADR 0083, ADR 0110, ADR 0112, game-rules#implemented, game-rules#round-sequence-adr-0010
@@ -36,7 +36,7 @@ What changes is the board before your turn. A drain may have left your creature 
 and a defeated enemy leaves your spell with fewer targets. You choose among what is offered.
 
 *Example.* Creature 1 has 3 Energy and counts on Emberstorm, which costs {spell:meteor:v1.energyCost}. Before its
-turn, Creature 5 casts Soul Feast on it, which drains {spell:soul_devourer:v1.energyDrain} Energy: Creature 1 is
+turn, Creature 5 casts Soul Feast{?spell:soul_devourer:v1.origin = 'Enemy'} on it, which drains {spell:soul_devourer:v1.energyDrain} Energy: Creature 1 is
 left with {max(0, 3 - spell:soul_devourer:v1.energyDrain)}. At its turn, the app offers only the spells it can pay
 for now.
 
@@ -100,7 +100,7 @@ Health now**, and nothing else:
 The order is the one of [resolving a spell](#resolving-a-spell): add the damage bonus, multiply, then subtract
 the Defense.
 
-*Example.* Creature 2 is Precision and casts Vital Surge on Creature 3, which has {creature.health - 12} of
+*Example.* Creature 2 is Precision and casts Vital Surge{?spell:restorative_gush:v1.origin = 'Ally'} on Creature 3, which has {creature.health - 12} of
 {creature.health} Health: heal {spell:restorative_gush:v1.heal}, d20:
 {21 - (creature.criticalChance + spell:restorative_gush:v1.criticalChance) * 20}+. The d20 shows a critical: the heal becomes
 {floor(spell:restorative_gush:v1.heal * rules.criticalMultiplier)}, and Creature 3 goes to

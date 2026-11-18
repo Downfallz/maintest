@@ -296,6 +296,33 @@ test('a mutation\'s values are drawn from its file: its name, stage, initiative 
   refuses(book('{tier:apex:v1.name}'), /mutation "tier:apex:v1" is not in data\//);
 });
 
+// #805: the spells a mutation teaches and the reference creature knows are lists; a fact states what one holds.
+test('a fact states a spell a mutation teaches or the reference creature knows, read from data/', () => {
+  const spells = new Map(['pummel', 'guard', 'heavy_strike', 'wait', 'shock'].map(name => [`spell:${name}:v1`, { id: `spell:${name}:v1`, name, energyCost: 1, effects: [] }]));
+  const mutations = new Map([['tier:brute:v1', { id: 'tier:brute:v1', name: 'Brute', level: 1, initiativeBonus: 1, spells: ['spell:pummel:v1', 'spell:guard:v1'] }]]);
+  const creature = { id: 'creature:main:v1', baseHealth: 30, baseDefense: 0, baseInitiative: 5, startingSpellIds: ['spell:heavy_strike', 'spell:wait:v1'] };
+  const aliases = { 'spell:heavy_strike': 'spell:heavy_strike:v1' };
+  const book = text => inputs({ spells, mutations, creature, aliases, parts: [{ file: '01-the-goal.md', text: goal.replace('Pummel costs {spell:pummel:v1.energyCost} and deals {spell:pummel:v1.damage}.', text) }] });
+  const clean = book("Brute{?tier:brute:v1.teaches = 'spell:pummel:v1'}{?tier:brute:v1.teaches = 'spell:guard:v1'}{?tier:brute:v1.teaches != 'spell:shock:v1'}; every creature knows{?creature.knows = 'spell:heavy_strike:v1'}{?creature.knows = 'spell:wait:v1'} two.");
+  assert.deepEqual(errorsOf(clean), []);
+  const built = buildRules(clean).book;
+  assert.deepEqual(built.drawnFrom.mutations, ['tier:brute:v1']);
+  assert.deepEqual(built.drawnFrom.spells, ['spell:guard:v1', 'spell:heavy_strike:v1', 'spell:pummel:v1', 'spell:shock:v1', 'spell:wait:v1']);
+  refuses(book("Brute{?tier:brute:v1.teaches = 'spell:shock:v1'}."), /the fact "tier:brute:v1\.teaches = 'spell:shock:v1'" is false/);
+  refuses(book("Every creature knows{?creature.knows = 'spell:pummel:v1'}."), /the fact "creature\.knows = 'spell:pummel:v1'" is false/);
+  refuses(book("Brute{?tier:brute:v1.teaches = 'spell:fireball:v1'}."), /spell "spell:fireball:v1" is not in data\//);
+  refuses(book('Brute teaches {tier:brute:v1.teaches}.'), /"tier:brute:v1\.teaches" is a list of spells: state one it holds with \{\?tier:brute:v1\.teaches = 'spell:\.\.\.'\}/);
+  refuses(book('Brute{?tier:brute:v1.teaches > 1}.'), /is not a value/);
+  // A sentence that names the whole list states its count too, so a spell added to it is caught.
+  assert.deepEqual(errorsOf(book('Brute teaches two{?tier:brute:v1.teaches.count = 2}; a creature knows two{?creature.knows.count = 2}.')), []);
+  refuses(book('Brute teaches three{?tier:brute:v1.teaches.count = 3}.'), /the fact "tier:brute:v1\.teaches\.count = 3" is false/);
+  assert.ok(JSON.stringify(buildRules(book('A creature knows {creature.knows.count|spell|spells}.')).book).includes('A creature knows 2 spells.'));
+  const aliased = new Map([['tier:brute:v1', { ...mutations.get('tier:brute:v1'), spells: ['spell:heavy_strike', 'spell:guard:v1'] }]]);
+  assert.deepEqual(errorsOf(inputs({ spells, mutations: aliased, creature, aliases, parts: [{ file: '01-the-goal.md', text: goal.replace('Pummel costs {spell:pummel:v1.energyCost} and deals {spell:pummel:v1.damage}.', "Brute{?tier:brute:v1.teaches = 'spell:heavy_strike:v1'}.") }] })), [], 'a mutation\'s spells resolve through the aliases too');
+  refuses(inputs({ spells, creature: { ...creature, startingSpellIds: ['spell:strike'] }, parts: [{ file: '01-the-goal.md', text: goal.replace('Two players', "Every creature knows{?creature.knows = 'spell:wait:v1'}. Two players") }] }),
+    /starting spell "spell:strike" is neither a versioned spell id nor an alias of data\/aliases\.json/);
+});
+
 test('refuses an engine word where the player\'s word exists, from the terminology page', () => {
   refuses(withGoal('Two players', 'Two players buy a Package'), /"Package": the player's word is Mutation/);
   refuses(withGoal('Upkeep: every', 'StartOfRound: every'), /"StartOfRound": the player's word is Upkeep/);

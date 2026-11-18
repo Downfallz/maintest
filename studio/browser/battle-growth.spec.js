@@ -126,7 +126,7 @@ test('inspection selects the opponent and reveals its progress only after public
 test('a reveal reads as one line and crests on the field, opens on cards by side, and each card leads to its path', async ({ page }, info) => {
   const h = await mount(page); await page.locator('#planning-close').click(); unlock(h); await h.publish();
   await expect(page.locator('#growth-receipt')).toBeVisible(); await expect(page.locator('#growth-receipt-summary')).toHaveText('You 1 · Opponent 1 · Round 3');
-  await expect(page.locator('#growth-announcement')).toHaveText(/First, your team: Predator, Stage I, new Devour\. Rival, opponent: Brute, Stage I\./);
+  await expect(page.locator('#growth-announcement')).toHaveText(/First, your team: Predator, Stage 1, new Devour\. Rival, opponent: Brute, Stage 1\./);
   await expect(page.locator('#battle')).toHaveAttribute('data-reveal', '1 3');
   await fitsViewport(page, '#growth-receipt [data-growth-open], #growth-dismiss');
   await page.locator('#growth-receipt [data-growth-open]').click();
@@ -202,6 +202,8 @@ test('multiclass reference keeps close and creature selection reachable in short
   test.skip(info.project.name !== 'desktop', 'Viewport sweep runs once.');
   const input = initial(); input.board.allies[0].acquiredTiers = ['predator', 'brute', 'upgrade', 'cap'];
   const h = await mount(page, input); await h.reference(); await expect(page.locator('#atlas-progress')).toContainText('Multiclass · Predator · Stage IV / Brute · Stage I');
+  // A tile speaks its Stage with its number (#769).
+  await expect(page.locator('#atlas-board .atlas-node[data-package="brute"]')).toHaveAccessibleName(/^Brute · Stage 1 · /);
   for (const size of [{ width: 320, height: 568 }, { width: 844, height: 390 }]) {
     await page.setViewportSize(size); await page.clock.runFor(150); await fitsViewport(page, '#atlas-close, #atlas-creature');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

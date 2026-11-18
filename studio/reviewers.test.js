@@ -184,6 +184,7 @@ test('what the rules are made of gets the rules keeper', () => {
   assert.deepEqual(reviewersFor(['docs/domain/game-rules.md']), ['copy-editor', 'rules-keeper']);
   assert.deepEqual(reviewersFor(['docs/domain/glossary.md']), ['copy-editor', 'rules-keeper']);
   assert.deepEqual(reviewersFor(['docs/domain/player-terminology.md']), ['copy-editor', 'rules-keeper']);
+  assert.ok(reviewersFor(['data/aliases.json']).includes('rules-keeper'), 'the book resolves the creature\'s spells through it');
   assert.deepEqual(reviewersFor(['docs/adr/0114-a-shared-package-is-held-by-the-whole-side.md']), ['copy-editor', 'rules-keeper']);
   for (const path of [
     'data/Spells/base/heavy_strike.v1.json',

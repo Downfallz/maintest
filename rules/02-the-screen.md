@@ -22,7 +22,7 @@ Nothing about a creature is hidden. What is hidden is a choice not yet revealed:
 tempo, a tie order. Each is revealed for both players at once.
 
 Every creature starts the match the same: {creature.health} Health, {creature.energy} Energy,
-{creature.defense} Defense and {creature.initiative} initiative, and it knows two spells, Strike and Focus.
+{creature.defense} Defense and {creature.initiative} initiative, and it knows two spells, Strike{?creature.knows = 'spell:heavy_strike:v1'} and Focus{?creature.knows = 'spell:wait:v1'}{?creature.knows.count = 2}.
 Everything that will separate them is a decision you have not made yet.
 
 sources: ADR 0011, ADR 0042, ADR 0089, game-rules#match-lifecycle

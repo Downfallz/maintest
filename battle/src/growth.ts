@@ -1,4 +1,4 @@
-import { stageLabel } from '../../table/terms.js';
+import { stageLabel, stageSpoken } from '../../table/terms.js';
 import { mutationReference, createBattleGrowth } from '../../table/battle-growth.js';
 import type { Catalogue } from './planning';
 import type { atlasControls, AtlasView } from './mutation-atlas';
@@ -23,7 +23,7 @@ function heldLine(families: Reference['families']) {
 // One reveal as the status line speaks it: who, what it became, its Stage and the spells it learned.
 function spokenReveal(row: Row) {
   const parts = [row.name, (row.enemy ? 'opponent' : 'your team') + ': ' + row.mutation];
-  if (row.stage != null) parts.push(stageLabel(row.stage));
+  if (row.stage != null) parts.push(stageSpoken(row.stage));
   if (row.spells.length) parts.push('new ' + row.spells.join(', '));
   return parts.join(', ');
 }

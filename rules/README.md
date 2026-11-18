@@ -80,7 +80,10 @@ One to three lines.
   or an effect by its kind: `damage`, `bleed`, `bleed.durationRounds`, `defenseBuff.count` for how many it has,
   `defenseBuff2` for the second of them), `spell:<name>:vN.caster.<kind>` from the caster's own line
   (`caster.damage`), `tier:<name>:vN.<field>` from the mutation's file under `data/Tiers/` (`name`, `level`,
-  `initiativeBonus`, or its passive's `sunder`, `damageBonus`, `upkeepEnergy`). Numbers, `+ - * /`,
+  `initiativeBonus`, or its passive's `sunder`, `damageBonus`, `upkeepEnergy`). Two names are lists of spells,
+  read whole only in a fact: `tier:<name>:vN.teaches`, the spells the mutation teaches, and `creature.knows`, the
+  reference creature's starting spells (an alias resolved through `data/aliases.json`); `.count` gives how many
+  each holds, a number that may also be drawn. Numbers, `+ - * /`,
   parentheses, `max`, `min` and `floor` combine them. Never type a number the content holds. An example draws
   every value its arithmetic reads, the creature's base stats included (its base Defense, its own critical
   chance), and states no fact about the content that the build does not check.
@@ -91,7 +94,9 @@ One to three lines.
 - **Facts.** `{?...}` checks a fact the text states and draws nothing: an effect the spell has
   (`{?spell:crushing_stomp:v1.stun}`), a field (`{?spell:infectious_blast:v1.defenseDebuff.permanent}`), or one
   comparison, `= != < > <= >=`, with a 'quoted' word as text (`{?spell:guard:v1.origin = 'Ally'}`,
-  `{?spell:meteor:v1.targets > 1}`). Put it right after the word it checks: `for one{?...} ally{?...}`.
+  `{?spell:meteor:v1.targets > 1}`). Against a list, `=` says the list contains the spell and `!=` that it does
+  not (`{?tier:brute:v1.teaches = 'spell:guard:v1'}`, `{?creature.knows = 'spell:wait:v1'}`); a sentence that names
+  the whole list also states its count (`{?creature.knows.count = 2}`), so a spell added is caught. Put it right after the word it checks: `for one{?...} ally{?...}`.
 - **Names.** A spell's or a mutation's name may be typed. Inside a sentence, a capitalised word must be a name in
   `data/` or a word of `words.json` (Health, Defense, Upkeep, Creature, ...); the build refuses any other, so a
   renamed spell fails the book until the book follows. A word opening a sentence, a list item, a cell or a step

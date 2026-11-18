@@ -57,7 +57,7 @@ A match ends in one of these ways, each checked at its own moment:
 5. **A player lets their time to answer run out**: they lose. When both do, it is a draw.
 
 *Example.* Round 11. The second player has only Creature 4 left, at {spell:heavy_strike:v1.damage} Health and no
-Defense. The first turn is Creature 2's, which casts Strike on it: Creature 4 is defeated, and **the first player
+Defense. The first turn is Creature 2's, which casts Strike{?spell:heavy_strike:v1.origin = 'Enemy'} on it: Creature 4 is defeated, and **the first player
 wins now**. No other turn comes, and nothing counts down.
 
 sources: ADR 0011, ADR 0083, ADR 0087, ADR 0105, ADR 0169, game-rules#match-lifecycle

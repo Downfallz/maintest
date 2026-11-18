@@ -75,18 +75,18 @@ it may mix families by acquiring another family's Stage I. Two creatures may tak
 creature may acquire is read from what it
 owns as the step opens: a pick of this round opens nothing until the next mutation round.
 
-*Example.* Round {rules.firstEvolutionRound}. Every creature knows Strike and Focus and has
+*Example.* Round {rules.firstEvolutionRound}. Every creature knows Strike{?creature.knows = 'spell:heavy_strike:v1'} and Focus{?creature.knows = 'spell:wait:v1'}{?creature.knows.count = 2} and has
 {creature.initiative} initiative. The first player picks Brute for Creature 1 and Warped for Creature 2. They
 would like Oppressor for Creature 1 too, but it needs Brute, which Creature 1 does not own yet, and Creature 1
 already has its pick. At the same time, the second player picks Predator for Creature 4 and Brute for Creature 5.
 Both are done, and the four mutations are acquired together:
 
-- Creature 1, Brute: Pummel and Brace, and {creature.initiative + tier:brute:v1.initiativeBonus} initiative.
-- Creature 2, Warped: Shock and Revitalize, and {creature.initiative + tier:occultist:v1.initiativeBonus}
+- Creature 1, Brute: Pummel{?tier:brute:v1.teaches = 'spell:pummel:v1'} and Brace{?tier:brute:v1.teaches = 'spell:guard:v1'}{?tier:brute:v1.teaches.count = 2}, and {creature.initiative + tier:brute:v1.initiativeBonus} initiative.
+- Creature 2, Warped: Shock{?tier:occultist:v1.teaches = 'spell:lightning_bolt:v1'} and Revitalize{?tier:occultist:v1.teaches = 'spell:rejuvenate:v1'}{?tier:occultist:v1.teaches.count = 2}, and {creature.initiative + tier:occultist:v1.initiativeBonus}
   initiative.
-- Creature 4, Predator: Venom Claw and Quill, and {creature.initiative + tier:prowler:v1.initiativeBonus}
+- Creature 4, Predator: Venom Claw{?tier:prowler:v1.teaches = 'spell:poison_slash:v1'} and Quill{?tier:prowler:v1.teaches = 'spell:throwing_star:v1'}{?tier:prowler:v1.teaches.count = 2}, and {creature.initiative + tier:prowler:v1.initiativeBonus}
   initiative.
-- Creature 5, Brute: Pummel and Brace, and {creature.initiative + tier:brute:v1.initiativeBonus} initiative.
+- Creature 5, Brute: Pummel{?tier:brute:v1.teaches = 'spell:pummel:v1'} and Brace{?tier:brute:v1.teaches = 'spell:guard:v1'}{?tier:brute:v1.teaches.count = 2}, and {creature.initiative + tier:brute:v1.initiativeBonus} initiative.
 
 Oppressor waits for Creature 1 until round {rules.firstEvolutionRound + rules.evolutionInterval}, the next
 mutation round.
@@ -213,7 +213,7 @@ you choose its **spell** and its **targets**, on the board as it stands, and con
 before the next turn. The spell and its targets become public together.
 
 Nothing is declared in advance. You choose among the spells the creature knows and can pay for now, and you
-choose knowing everything that has happened this round. Every creature knows Focus, which costs
+choose knowing everything that has happened this round. Every creature knows Focus{?creature.knows = 'spell:wait:v1'}, which costs
 {spell:wait:v1.energyCost} Energy and targets only its caster{?spell:wait:v1.origin = 'Self'}: a creature in the round always has a spell to cast.
 
 **Nothing is a reservation.** The Energy is spent when the spell resolves. Until its turn comes, a creature can
@@ -268,7 +268,7 @@ however many there are, less its Defense debuffs, never below zero.
 A hit never goes past the Health left: a creature at 3 Health hit for 10 loses 3. A spell that changes nothing on
 a target, 0 damage through a Defense or a heal at full Health, did nothing to it.
 
-*Example.* Creature 2 is Precision, at 4 Energy, and casts Incinerate on Creature 5: cost
+*Example.* Creature 2 is Precision, at 4 Energy, and casts Incinerate{?spell:engulfing_flames:v1.origin = 'Enemy'} on Creature 5: cost
 {spell:engulfing_flames:v1.energyCost}, damage {spell:engulfing_flames:v1.damage}, d20:
 {21 - (creature.criticalChance + spell:engulfing_flames:v1.criticalChance) * 20}+. Creature 5 cast Carapace last round: its Defense is
 {creature.defense + spell:full_plate:v1.defenseBuff}.
@@ -303,7 +303,7 @@ A creature's **damage bonus** is added to every hit it deals: Apex gives
 {tier:apex:v1.damageBonus}, and each damage buff on it adds its own number. It is added **before** the critical
 multiplies and before Defense is subtracted. It never touches a Bleed, a heal, or the caster's own line.
 
-*Example.* Creature 4 owns Apex, is Precision, and casts Blood Price on Creature 1, whose Defense is 3: damage
+*Example.* Creature 4 owns Apex, is Precision, and casts Blood Price{?spell:hateful_sacrifice:v1.origin = 'Enemy'} on Creature 1, whose Defense is 3: damage
 {spell:hateful_sacrifice:v1.damage}, d20: {21 - (creature.criticalChance + spell:hateful_sacrifice:v1.criticalChance) * 20}+. Add the bonus:
 {spell:hateful_sacrifice:v1.damage + tier:apex:v1.damageBonus}. On a critical,
 {floor((spell:hateful_sacrifice:v1.damage + tier:apex:v1.damageBonus) * rules.criticalMultiplier)}, less 3:
@@ -328,7 +328,7 @@ Titan's passive is a **sunder**: every hit its creature deals meets the target's
 {tier:titan:v1.sunder}, never below zero. A sunder takes Defense away; it never adds damage, and against a target
 with no Defense it does nothing. It moves no Defense: the target's Defense is the same against everyone else.
 
-*Example.* Creature 3 owns Titan and casts Dominate, damage {spell:chain_slash:v1.damage}, on Creature 5, which
+*Example.* Creature 3 owns Titan and casts Dominate{?spell:chain_slash:v1.origin = 'Enemy'}, damage {spell:chain_slash:v1.damage}, on Creature 5, which
 holds Alpha Roar's Defense of {creature.defense + spell:thundering_seal:v1.defenseBuff}, and on Creature 4, at its base Defense of
 {creature.defense}. With no
 critical, both{?spell:chain_slash:v1.targets > 1} lose

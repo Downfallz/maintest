@@ -82,18 +82,18 @@ famille. Deux créatures peuvent prendre la même mutation. Ce qu’une
 créature peut acquérir se lit d’après ce qu’elle possède à l’ouverture de l’étape : un choix de ce round n’ouvre
 rien avant le round de mutation suivant.
 
-*Exemple.* Round {rules.firstEvolutionRound}. Chaque créature connaît Strike et Focus et a une initiative de
+*Exemple.* Round {rules.firstEvolutionRound}. Chaque créature connaît Strike{?creature.knows = 'spell:heavy_strike:v1'} et Focus{?creature.knows = 'spell:wait:v1'}{?creature.knows.count = 2} et a une initiative de
 {creature.initiative}. Le premier joueur choisit Brute pour la Créature 1 et Warped pour la Créature 2. Il
 voudrait aussi Oppressor pour la Créature 1, mais elle demande Brute, que la Créature 1 ne possède pas encore, et la
 Créature 1 a déjà son choix. En même temps, le second joueur choisit Predator pour la Créature 4 et Brute pour la
 Créature 5. Les deux ont fini, et les quatre mutations sont acquises ensemble :
 
-- Créature 1, Brute : Pummel et Brace, et une initiative de {creature.initiative + tier:brute:v1.initiativeBonus}.
-- Créature 2, Warped : Shock et Revitalize, et une initiative de
+- Créature 1, Brute : Pummel{?tier:brute:v1.teaches = 'spell:pummel:v1'} et Brace{?tier:brute:v1.teaches = 'spell:guard:v1'}{?tier:brute:v1.teaches.count = 2}, et une initiative de {creature.initiative + tier:brute:v1.initiativeBonus}.
+- Créature 2, Warped : Shock{?tier:occultist:v1.teaches = 'spell:lightning_bolt:v1'} et Revitalize{?tier:occultist:v1.teaches = 'spell:rejuvenate:v1'}{?tier:occultist:v1.teaches.count = 2}, et une initiative de
   {creature.initiative + tier:occultist:v1.initiativeBonus}.
-- Créature 4, Predator : Venom Claw et Quill, et une initiative de
+- Créature 4, Predator : Venom Claw{?tier:prowler:v1.teaches = 'spell:poison_slash:v1'} et Quill{?tier:prowler:v1.teaches = 'spell:throwing_star:v1'}{?tier:prowler:v1.teaches.count = 2}, et une initiative de
   {creature.initiative + tier:prowler:v1.initiativeBonus}.
-- Créature 5, Brute : Pummel et Brace, et une initiative de {creature.initiative + tier:brute:v1.initiativeBonus}.
+- Créature 5, Brute : Pummel{?tier:brute:v1.teaches = 'spell:pummel:v1'} et Brace{?tier:brute:v1.teaches = 'spell:guard:v1'}{?tier:brute:v1.teaches.count = 2}, et une initiative de {creature.initiative + tier:brute:v1.initiativeBonus}.
 
 Oppressor attend la Créature 1 jusqu’au round {rules.firstEvolutionRound + rules.evolutionInterval}, le round de
 mutation suivant.
@@ -225,7 +225,7 @@ vous choisissez son **sort** et ses **cibles**, sur le plateau tel qu’il est, 
 aussitôt, avant le tour suivant. Le sort et ses cibles deviennent publics ensemble.
 
 Rien n’est déclaré à l’avance. Vous choisissez parmi les sorts que la créature connaît et peut payer maintenant, et
-vous choisissez en sachant tout ce qui s’est passé dans ce round. Chaque créature connaît Focus, dont le coût en
+vous choisissez en sachant tout ce qui s’est passé dans ce round. Chaque créature connaît Focus{?creature.knows = 'spell:wait:v1'}, dont le coût en
 Énergie est de {spell:wait:v1.energyCost} et qui ne cible que son lanceur{?spell:wait:v1.origin = 'Self'} : une créature dans le round a toujours un
 sort à lancer.
 
@@ -283,7 +283,7 @@ La **Défense** d’une créature est sa Défense de base plus ses renforts de D
 Un coup ne va jamais au-delà de la Santé qui reste : une créature à 3 points de Santé touchée pour 10 en perd 3. Un
 sort qui ne change rien sur une cible, 0 dégât à travers une Défense ou un soin à Santé pleine, ne lui a rien fait.
 
-*Exemple.* La Créature 2 est en Précision, à 4 points d’Énergie, et lance Incinerate sur la Créature 5 : coût
+*Exemple.* La Créature 2 est en Précision, à 4 points d’Énergie, et lance Incinerate{?spell:engulfing_flames:v1.origin = 'Enemy'} sur la Créature 5 : coût
 {spell:engulfing_flames:v1.energyCost}, dégâts {spell:engulfing_flames:v1.damage}, d20 :
 {21 - (creature.criticalChance + spell:engulfing_flames:v1.criticalChance) * 20}+. La Créature 5 a lancé Carapace
 au round précédent : sa Défense est de {creature.defense + spell:full_plate:v1.defenseBuff}.
@@ -318,7 +318,7 @@ Le **bonus de dégâts** d’une créature s’ajoute à chaque coup qu’elle p
 que le critique multiplie et avant que la Défense soit soustraite. Il ne touche jamais un Bleed, un soin, ni la
 ligne du lanceur.
 
-*Exemple.* La Créature 4 possède Apex, est en Précision, et lance Blood Price sur la Créature 1, dont la Défense est
+*Exemple.* La Créature 4 possède Apex, est en Précision, et lance Blood Price{?spell:hateful_sacrifice:v1.origin = 'Enemy'} sur la Créature 1, dont la Défense est
 de 3 : dégâts {spell:hateful_sacrifice:v1.damage}, d20 :
 {21 - (creature.criticalChance + spell:hateful_sacrifice:v1.criticalChance) * 20}+. Ajoutez le bonus :
 {spell:hateful_sacrifice:v1.damage + tier:apex:v1.damageBonus}. Sur un critique,
@@ -345,7 +345,7 @@ de {tier:titan:v1.sunder}, jamais en dessous de zéro. Une brèche retire de la 
 dégâts, et contre une cible sans Défense elle ne fait rien. Elle ne déplace aucune Défense : la Défense de la cible
 reste la même face à tous les autres.
 
-*Exemple.* La Créature 3 possède Titan et lance Dominate, dégâts {spell:chain_slash:v1.damage}, sur la Créature 5,
+*Exemple.* La Créature 3 possède Titan et lance Dominate{?spell:chain_slash:v1.origin = 'Enemy'}, dégâts {spell:chain_slash:v1.damage}, sur la Créature 5,
 qui détient la Défense d’Alpha Roar, {creature.defense + spell:thundering_seal:v1.defenseBuff}, et sur la Créature
 4, à sa Défense de base de {creature.defense}. Sans critique, les deux{?spell:chain_slash:v1.targets > 1} perdent
 {max(0, spell:chain_slash:v1.damage - max(0, creature.defense + spell:thundering_seal:v1.defenseBuff - tier:titan:v1.sunder))}.

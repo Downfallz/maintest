@@ -132,6 +132,7 @@ export function readInputs(root) {
     .map(path => readJson(join(root, path))).map(item => [item.id, item]));
   const spells = byId('data/Spells');
   const mutations = byId('data/Tiers');
+  const aliases = join(root, 'data/aliases.json');
   const gameRules = new Set(readFileSync(join(root, 'docs/domain/game-rules.md'), 'utf8').split('\n')
     .filter(line => /^#{1,6} /.test(line)).map(line => anchorOf(line.replace(/^#+ /, ''))));
   const conceptCards = readFileSync(join(root, 'src/DownfallArena.Application/Matches/Scenarios/ConceptCards.cs'), 'utf8');
@@ -147,6 +148,7 @@ export function readInputs(root) {
     creature: readJson(join(root, CREATURE)),
     spells,
     mutations,
+    aliases: existsSync(aliases) ? readJson(aliases) : {},
     terminology: readFileSync(join(root, 'docs/domain/player-terminology.md'), 'utf8'),
     adrs: new Set(readdirSync(join(root, 'docs/adr')).map(name => /^(\d{4})-/.exec(name)?.[1]).filter(Boolean)),
     gameRules,
@@ -168,7 +170,8 @@ const COMPARISONS = {
 /**
  * A value of the book: a name (`rules.energyPerRound`, `creature.health`, `spell:pummel:v1.damage`), a number,
  * `+ - * /`, parentheses, and `max`, `min`, `floor`; or a fact, one comparison (`= != < > <= >=`) of two of them,
- * where a 'quoted' word is text. `look` answers a name, or undefined. Throws on anything else.
+ * where a 'quoted' word is text. A name may answer a list (`creature.knows`): `=` then says it holds the text,
+ * `!=` that it does not. `look` answers a name, or undefined. Throws on anything else.
  */
 export function evaluate(expression, look) {
   const tokens = expression.match(/\d+(?:\.\d+)?|'[^']*'|[A-Za-z][\w:.]*|[<>!]=|[-+*/(),=<>]|\S/g) ?? [];
@@ -220,6 +223,11 @@ export function evaluate(expression, look) {
     if (!Object.hasOwn(COMPARISONS, operator)) return left;
     at += 1;
     const right = sum();
+    if (Array.isArray(left) || Array.isArray(right)) {
+      const [list, item] = Array.isArray(left) ? [left, right] : [right, left];
+      if ((operator !== '=' && operator !== '!=') || typeof item !== 'string') fail();
+      return list.includes(item) === (operator === '=');
+    }
     if (typeof left === 'string' || typeof right === 'string') {
       if (operator !== '=' && operator !== '!=') fail();
       return COMPARISONS[operator](left, right);
@@ -266,23 +274,46 @@ function spellValue(definition, name, path) {
   return effectValue((caster ? definition.casterEffects : definition.effects) ?? [], name, first, field);
 }
 
-// A mutation's field (`name`, `level`, `initiativeBonus`) or its passive's (`sunder`, `damageBonus`, `upkeepEnergy`).
-function mutationValue(definition, field) {
+const VERSIONED_SPELL = /^spell:[a-z0-9_]+:v\d+$/;
+
+// A list of spells as data/ writes it, each as a versioned id: data/ may name one by its alias.
+function spellList(ids, what, aliases) {
+  return (ids ?? []).map(id => {
+    if (VERSIONED_SPELL.test(id)) return id;
+    if (Object.hasOwn(aliases, id) && VERSIONED_SPELL.test(aliases[id])) return aliases[id];
+    throw new Error(`${what} "${id}" is neither a versioned spell id nor an alias of data/aliases.json`);
+  });
+}
+
+// A list (`teaches`, `knows`) or its `count`, which a sentence naming the whole list states, so a spell added is caught.
+function listValue(list, field) {
+  if (field === undefined) return list;
+  return field === 'count' ? list.length : undefined;
+}
+
+// A mutation's field (`name`, `level`, `initiativeBonus`), its passive's (`sunder`, `damageBonus`, `upkeepEnergy`),
+// or `teaches`, the list of the spells it teaches, and `teaches.count`.
+function mutationValue(definition, path, aliases) {
+  const [field, sub] = path.split('.');
+  if (field === 'teaches') return listValue(spellList(definition.spells, `spell of ${definition.id}`, aliases), sub);
+  if (sub !== undefined) return undefined;
   return scalar(Object.hasOwn(definition, field) ? definition[field] : definition.passive?.[field]);
 }
 
 /** Answers a name from the rule set, the engine, the reference creature, the spells and the mutations, and notes each it read. */
-function lookup({ ruleSet, creature, spells, mutations = new Map(), engine = {} }, used, usedMutations) {
+function lookup({ ruleSet, creature, spells, mutations = new Map(), engine = {}, aliases = {} }, used, usedMutations) {
   return name => {
     if (name.startsWith('rules.')) return scalar(ruleSet.values[name.slice(6)]);
     if (name.startsWith('engine.')) return Object.hasOwn(engine, name.slice(7)) ? scalar(engine[name.slice(7)]) : undefined;
+    const knows = /^creature\.knows(?:\.(\w+))?$/.exec(name);
+    if (knows) return listValue(spellList(creature.startingSpellIds, 'starting spell', aliases), knows[1]);
     if (name.startsWith('creature.')) return scalar(creature[`base${capital(name.slice(9))}`]);
-    const mutation = /^(tier:[a-z0-9_]+:v\d+)\.(\w+)$/.exec(name);
+    const mutation = /^(tier:[a-z0-9_]+:v\d+)\.(\w+(?:\.\w+)?)$/.exec(name);
     if (mutation) {
       const definition = mutations.get(mutation[1]);
       if (!definition) throw new Error(`mutation "${mutation[1]}" is not in data/`);
       usedMutations.add(mutation[1]);
-      return mutationValue(definition, mutation[2]);
+      return mutationValue(definition, mutation[2], aliases);
     }
     const spell = /^(spell:[a-z0-9_]+:v\d+)\.([\w.]+)$/.exec(name);
     if (!spell) return undefined;
@@ -461,6 +492,7 @@ class Build {
       if (nouns.length > 0 && (nouns.length !== 2 || nouns.some(noun => !noun))) throw new Error(`"${expression}": a count names its singular and its plural`);
       const value = evaluate(drawn, this.look);
       if (typeof value === 'boolean') throw new Error(`"${drawn}" is a fact, not a value: write {?${drawn}}`);
+      if (Array.isArray(value)) throw new Error(`"${drawn}" is a list of spells: state one it holds with {?${drawn} = 'spell:...'}`);
       if (typeof value !== 'number') return nouns.length > 0 ? `${value} ${nouns[1]}` : value;
       if (!Number.isFinite(value)) throw new Error(`"${drawn}" is not a finite number`);
       const fixed = String(Number(value.toFixed(6)));
@@ -475,6 +507,11 @@ class Build {
   }
 
   fact(expression) {
+    // A spell a fact names as text (a spell a list holds) is a spell of data/ like one it draws a value from.
+    for (const [, id] of expression.matchAll(/'(spell:[a-z0-9_]+:v\d+)'/g)) {
+      if (!this.given.spells.has(id)) throw new Error(`spell "${id}" is not in data/`);
+      this.used.add(id);
+    }
     const holds = evaluate(expression, this.look);
     if (typeof holds !== 'boolean') throw new Error(`"${expression}" is not a fact: a fact is a comparison, or an effect the spell has`);
     if (!holds) throw new Error(`the fact "${expression}" is false`);
