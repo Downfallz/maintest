@@ -809,9 +809,13 @@ test('a session is cut at a round from its row, and the scenario is listed with 
     }
     return route.fulfill({ json: { scenarios: kept } });
   });
+  // A table still played, by its record, whichever process holds it, is cut once it is over (#736).
+  await page.route('**/api/sessions', route => route.fulfill({ json: { sessions: [{ ...session('people-playing', 'human:mk', 'human:jo', false), underWay: true }, ...sessions] } }));
   await page.reload();
   await expect(page.locator('#tab-scenarios')).toBeVisible();
   await page.locator('#tab-sessions').click();
+  await expect(page.locator('#sessions li', { hasText: 'people-playing' })).toBeVisible();
+  await expect(page.locator('#sessions li', { hasText: 'people-playing' }).locator('.link-button', { hasText: 'practice from a round' })).toHaveCount(0);
 
   await page.locator('#sessions li', { hasText: 'people-finished' }).locator('.link-button', { hasText: 'practice from a round' }).click();
   await expect(page.locator('#scenario-round option')).toHaveCount(4);

@@ -455,6 +455,20 @@ public sealed class AdminApiTests : IDisposable
             .ShouldBe(new[] { (kept, true), (gone, false), (live, false) }.OrderByDescending(one => one.Item1, StringComparer.Ordinal));
     }
 
+    /// <summary>A table another process holds is still played by its record, and its row offers no cut until it is over (#736).</summary>
+    [Fact]
+    public async Task A_session_this_process_let_go_of_is_still_under_way_by_its_record()
+    {
+        var admin = Admin(OperatorGate.WithToken(OperatorToken));
+        var elsewhere = Opened(await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy","who":"mk"}""", OperatorToken, null));
+        _registry.LetGo(elsewhere).ShouldBeTrue();
+
+        var answer = await admin.HandleAsync("GET", "/api/sessions", "", OperatorToken, null);
+
+        var row = JsonDocument.Parse(Text(answer)).RootElement.GetProperty("sessions").EnumerateArray().Single(session => session.GetProperty("id").GetString() == elsewhere);
+        (row.GetProperty("live").GetBoolean(), row.GetProperty("underWay").GetBoolean()).ShouldBe((false, true));
+    }
+
     [Fact]
     public async Task Deleting_sessions_closes_a_table_still_being_played_and_removes_the_runs_named()
     {

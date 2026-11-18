@@ -205,7 +205,7 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
                 underWay,
 
                 // Reproduce waits for the game's end (#736): what the sheet says while it is not offered.
-                reproduceOnceOver = underWay && reproduction is null && one.Kind == FeedbackKind.Bug && one.MergedInto is null && Scenarios is not null && Cuttable(one.Context),
+                reproduceOnceOver = underWay && reproduction is null && one.MergedInto is null && Reproducible(one),
                 actions = Actions(one, mute, underWay, group, reproduction is not null),
             },
             Web);
@@ -465,13 +465,16 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
         return [.. offered];
     }
 
+    /// <summary>Whether Reproduce can cut this feedback once its game is over: a bug report from a round and a seat, on a host that keeps scenarios.</summary>
+    private bool Reproducible(Feedback one) => one.Kind == FeedbackKind.Bug && Scenarios is not null && Cuttable(one.Context);
+
     /// <summary>What a piece of feedback not merged into another offers, its sender's mute aside.</summary>
     private List<string> OpenActions(Feedback one, bool underWay, FeedbackGroup group, bool reproduced)
     {
         var bug = one.Kind == FeedbackKind.Bug;
         List<string> offered = [.. bug ? BugActions(one) : IdeaActions(one, group)];
         // A table still played is cut once it is over (#736), as its scenario leaves the host only then (R5).
-        if (bug && Scenarios is not null && Cuttable(one.Context) && !underWay)
+        if (Reproducible(one) && !underWay)
         {
             offered.Add("reproduce");
         }
