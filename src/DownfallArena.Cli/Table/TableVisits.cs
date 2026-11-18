@@ -77,11 +77,11 @@ internal sealed class TableVisits(TimeProvider clock, IVisitKeeper? keeper = nul
             var visit = new LastVisit(sequence, clock.GetUtcNow(), holder);
             if (await keeper.WriteVisitIfAsync(seat, visit, tag, cancellationToken) is { } written)
             {
-                // The same check after a first write as in the reactions: the record taken first means one still
-                // there now proves the run's listing is yet to come (#818).
-                if (tag is null && !await keeper.RecordedAsync(cancellationToken))
+                // Same check as in TableReactions, after the first write: a record still there means the delete
+                // has not listed the run's files yet (#818).
+                if (tag is null && !await StillRecordedAsync(cancellationToken))
                 {
-                    await keeper.ForgetVisitIfAsync(seat, written, cancellationToken);
+                    await TakeBackAsync(seat, written, cancellationToken);
                     return null;
                 }
 
@@ -90,6 +90,33 @@ internal sealed class TableVisits(TimeProvider clock, IVisitKeeper? keeper = nul
         }
 
         return null;
+    }
+
+    // A failed read of the record is no evidence of a delete, and the write has landed: it is kept.
+    private async Task<bool> StillRecordedAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await keeper!.RecordedAsync(cancellationToken);
+        }
+        catch (Exception failure) when (failure is not OperationCanceledException)
+        {
+            return true;
+        }
+    }
+
+    // The mark written is deleted. When another process wrote over it meanwhile, what it holds now is deleted instead (#818).
+    private async Task TakeBackAsync(string seat, string tag, CancellationToken cancellationToken)
+    {
+        for (var attempt = 1; attempt <= Attempts && !await keeper!.ForgetVisitIfAsync(seat, tag, cancellationToken); attempt++)
+        {
+            if ((await keeper.VisitAsync(seat, cancellationToken)).Tag is not { } current)
+            {
+                return;
+            }
+
+            tag = current;
+        }
     }
 
     // A table nobody records: the mark is kept in memory, for as long as the table is held.

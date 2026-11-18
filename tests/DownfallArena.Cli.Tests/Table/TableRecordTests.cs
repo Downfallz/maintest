@@ -9,6 +9,13 @@ namespace DownfallArena.Cli.Tests.Table;
 public sealed class TableRecordTests
 {
     [Fact]
+    public void The_record_is_the_file_the_stores_delete_first()
+    {
+        // BlobArtifactStore and FileArtifactStore delete this name before the rest of a run (#818).
+        TableRecord.File.ShouldBe("table.json");
+    }
+
+    [Fact]
     public void A_record_written_over_a_table_that_ended_keeps_it_ended()
     {
         var written = Record(TableRecord.Open).Over(Record(TableRecord.Finished));

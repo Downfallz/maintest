@@ -79,16 +79,18 @@ public sealed class FileArtifactWriter : IArtifactWriter
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(expected);
 
-        var path = Resolve(relativePath);
+        // Resolved without creating the run's directory: the run may be deleted, and taking a file back must not bring it back (#818).
+        var path = Resolve(relativePath, create: false);
         var deleted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         var turn = InTurnAsync(() =>
         {
             lock (Conditional)
             {
-                var current = FileTags.Current(path) == expected;
+                var current = Directory.Exists(Path.GetDirectoryName(path)) && FileTags.Current(path) == expected;
                 if (current)
                 {
                     File.Delete(path);
+                    RemoveIfEmpty(Path.GetDirectoryName(path));
                 }
 
                 deleted.TrySetResult(current);
@@ -102,6 +104,21 @@ public sealed class FileArtifactWriter : IArtifactWriter
         {
             await turn;
             return await answer;
+        }
+    }
+
+    // A run whose last file was taken back is no run: the directory goes with it. A directory with something left stays.
+    private static void RemoveIfEmpty(string? directory)
+    {
+        try
+        {
+            if (directory is not null)
+            {
+                Directory.Delete(directory, recursive: false);
+            }
+        }
+        catch (IOException)
+        {
         }
     }
 
@@ -171,7 +188,7 @@ public sealed class FileArtifactWriter : IArtifactWriter
         }
     }
 
-    private string Resolve(string relativePath)
+    private string Resolve(string relativePath, bool create = true)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(relativePath);
 
@@ -184,7 +201,11 @@ public sealed class FileArtifactWriter : IArtifactWriter
             throw new ArgumentException($"Artifact path '{relativePath}' leaves the run directory.", nameof(relativePath));
         }
 
-        Directory.CreateDirectory(Path.GetDirectoryName(fullPath) ?? RootDirectory);
+        if (create)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(fullPath) ?? RootDirectory);
+        }
+
         return fullPath;
     }
 }

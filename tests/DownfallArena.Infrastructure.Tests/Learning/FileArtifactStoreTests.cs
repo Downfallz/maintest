@@ -51,6 +51,35 @@ public sealed class FileArtifactStoreTests
     }
 
     [Fact]
+    public async Task Taking_a_document_back_from_a_deleted_run_does_not_bring_the_run_back()
+    {
+        using var directory = new ContentDirectory();
+        var store = new FileArtifactStore(directory.Path);
+        var writer = store.Writer("run-1");
+        await writer.WriteJsonAsync("table.json", new { Revision = 1 }, TestContext.Current.CancellationToken);
+        var tag = (await writer.WriteJsonIfAsync("seen-player1.json", new { Sequence = 1 }, expected: null, TestContext.Current.CancellationToken)).ShouldNotBeNull();
+        await store.DeleteAsync("run-1", TestContext.Current.CancellationToken);
+
+        var deleted = await writer.DeleteIfAsync("seen-player1.json", tag, TestContext.Current.CancellationToken);
+
+        deleted.ShouldBeFalse();
+        (await store.RunsAsync(TestContext.Current.CancellationToken)).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Taking_back_the_last_document_of_a_run_leaves_no_run()
+    {
+        using var directory = new ContentDirectory();
+        var store = new FileArtifactStore(directory.Path);
+        var writer = store.Writer("run-1");
+        var tag = (await writer.WriteJsonIfAsync("seen-player1.json", new { Sequence = 1 }, expected: null, TestContext.Current.CancellationToken)).ShouldNotBeNull();
+
+        await writer.DeleteIfAsync("seen-player1.json", tag, TestContext.Current.CancellationToken);
+
+        (await store.RunsAsync(TestContext.Current.CancellationToken)).ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task A_document_nobody_wrote_reads_as_none()
     {
         using var directory = new ContentDirectory();

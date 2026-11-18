@@ -80,7 +80,7 @@ public sealed class BlobArtifactWriter : IArtifactWriter
         }
     }
 
-    /// <remarks>On the service's own condition: the blob's entity tag.</remarks>
+    /// <remarks>The condition is the blob's entity tag (ETag).</remarks>
     public Task<bool> DeleteIfAsync(string relativePath, string expected, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(expected);

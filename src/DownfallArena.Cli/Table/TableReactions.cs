@@ -111,11 +111,11 @@ internal sealed class TableReactions(TimeProvider clock, IReactionKeeper? keeper
         var first = _tag is null;
         if (await keeper.WriteReactionsIfAsync(next, _tag, cancellationToken) is { } tag)
         {
-            // The record was there a moment ago; a delete may have listed the run since, and missed this file. The
-            // delete takes the record first, so a record still there now proves the listing is yet to come (#818).
-            if (first && !await keeper.RecordedAsync(cancellationToken))
+            // The record existed a moment ago. A delete may have listed the run's files since and missed this one. The
+            // delete removes the record first, so a record still there now means it has not listed the files yet (#818).
+            if (first && !await StillRecordedAsync(cancellationToken))
             {
-                await keeper.ForgetReactionsIfAsync(tag, cancellationToken);
+                await TakeBackAsync(tag, cancellationToken);
                 return ReactionSent.Gone;
             }
 
@@ -126,6 +126,34 @@ internal sealed class TableReactions(TimeProvider clock, IReactionKeeper? keeper
 
         Volatile.Write(ref _items, null);
         return null;
+    }
+
+    // A failed read of the record is no evidence of a delete, and the write has landed: it is kept.
+    private async Task<bool> StillRecordedAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await keeper!.RecordedAsync(cancellationToken);
+        }
+        catch (Exception failure) when (failure is not OperationCanceledException)
+        {
+            return true;
+        }
+    }
+
+    // The file written is deleted. When another process wrote over it meanwhile, what it holds now is deleted instead:
+    // the run is gone, and that write was not a first one, so it never checked (#818).
+    private async Task TakeBackAsync(string tag, CancellationToken cancellationToken)
+    {
+        for (var attempt = 1; attempt <= Attempts && !await keeper!.ForgetReactionsIfAsync(tag, cancellationToken); attempt++)
+        {
+            if ((await keeper.ReactionsAsync(cancellationToken)).Tag is not { } current)
+            {
+                return;
+            }
+
+            tag = current;
+        }
     }
 
     private Task<T> InTurn<T>(Func<Task<T>> work)

@@ -12,6 +12,6 @@ internal interface IReactionKeeper
     /// <summary>Whether the table's record is still kept: not once the operator deleted its run, which a first write would bring back (#789).</summary>
     Task<bool> RecordedAsync(CancellationToken cancellationToken = default);
 
-    /// <summary>Deletes the reactions file if it is still the one written under <paramref name="expected" />: a first write taken back because the run was deleted meanwhile (#818).</summary>
+    /// <summary>Deletes the reactions file only if it is still the one written under <paramref name="expected" />. Undoes a first write made while the run was being deleted (#818).</summary>
     Task<bool> ForgetReactionsIfAsync(string expected, CancellationToken cancellationToken = default);
 }

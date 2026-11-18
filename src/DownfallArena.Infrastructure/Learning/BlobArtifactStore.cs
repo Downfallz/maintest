@@ -65,8 +65,8 @@ public sealed class BlobArtifactStore : IArtifactStore
     {
         var prefix = BlobArtifactNames.Prefix(run);
 
-        // The table's record first (#818): a side file written for the first time checks the record is there, so once
-        // it is gone nothing new is written, and one written just before is found by the check after the write.
+        // The table's record goes first (#818). A side file written for the first time checks that the record exists, so
+        // nothing new is written once it is gone. A file written just before is removed by the check after its write.
         var any = (await _container.DeleteBlobIfExistsAsync(BlobArtifactNames.Resolve(prefix, TableRecordFile), cancellationToken: cancellationToken)).Value;
         await foreach (var item in _container.GetBlobsAsync(BlobTraits.None, BlobStates.None, prefix, cancellationToken))
         {
