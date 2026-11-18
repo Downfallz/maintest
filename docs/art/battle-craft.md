@@ -40,7 +40,10 @@ These come from the decisions already taken. No pattern below is an exception to
    A pattern that starts something this path does not stop adds its own line to it.
 4. Reduced motion shows the settled frame. Each entry says its form; for most it is "nothing".
 5. Randomness is pinned where a film strip must repeat. Phaser's particles and its camera shake draw from
-   `Math.random`, not from `Phaser.Math.RND`, so BC2 pins `Math.random` in the bench.
+   `Math.random`, not from `Phaser.Math.RND`, so the bench pins `Math.random` for the length of a play
+   (`battle/src/bench.ts`). Phaser's tweens keep a clock of their own, read from `Date.now` and not from the
+   time the game's step hands a scene: a film pins `Date.now` too, and a pattern that reads the wall clock itself
+   cannot be filmed.
 6. The budgets hold (`battle/budget.mjs`, ADR 0136). The measures are in the next section.
 7. Sound is another matter (ADR 0134). No entry here plays one.
 

@@ -8,7 +8,8 @@ every seat opens in (ADR 0157). `README.md` describes each slice (AU1–AU14, A7
 ```bash
 npm --prefix battle ci --ignore-scripts
 npm --prefix battle run build          # type-checks and emits table/battle-build/game.js and live.js
-dotnet run --project src/DownfallArena.Cli -- table --lobby   # then /battle-lab, or a seat's /battle
+dotnet run --project src/DownfallArena.Cli -- table --lobby   # then /battle-lab, /battle-lab?bench, or a seat's /battle
+node scripts/battle/filmstrip.mjs spell:pummel:v1    # one effect's film strip, from the built bundle
 ```
 
 There is no watch server: rebuild after changing TypeScript or the shared table modules it imports.
@@ -22,7 +23,7 @@ There is no watch server: rebuild after changing TypeScript or the shared table 
 ```bash
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium   # skip in a cloud session: Chromium is installed
-npm --prefix studio/browser test -- --trace off battle-lab.spec.js battle-live.spec.js battle-combat.spec.js battle-playback.spec.js battle-loop.spec.js battle-history.spec.js battle-guidance.spec.js battle-upkeep.spec.js battle-mutations.spec.js battle-evolution.spec.js battle-tempo.spec.js battle-spellbook.spec.js battle-pacing.spec.js battle-growth.spec.js battle-order.spec.js battle-targets.spec.js battle-inspection.spec.js battle-services.spec.js battle-parity.spec.js battle-reactions.spec.js battle-recap.spec.js battle-tutorial.spec.js battle-release.spec.js
+npm --prefix studio/browser test -- --trace off battle-lab.spec.js battle-bench.spec.js battle-live.spec.js battle-combat.spec.js battle-playback.spec.js battle-loop.spec.js battle-history.spec.js battle-guidance.spec.js battle-upkeep.spec.js battle-mutations.spec.js battle-evolution.spec.js battle-tempo.spec.js battle-spellbook.spec.js battle-pacing.spec.js battle-growth.spec.js battle-order.spec.js battle-targets.spec.js battle-inspection.spec.js battle-services.spec.js battle-parity.spec.js battle-reactions.spec.js battle-recap.spec.js battle-tutorial.spec.js battle-release.spec.js
 ```
 
 - Complete games against the real engine: `node node_modules/playwright/cli.js test --config table.config.js battle.loop.js`
@@ -35,5 +36,7 @@ npm --prefix studio/browser test -- --trace off battle-lab.spec.js battle-live.s
 - The view plays the host's confirmed frames. It never decides an outcome, and never holds the player's own
   cast (ADR 0141).
 - Reduced motion and replay navigation show the settled view; first loads and hidden-tab returns replay nothing.
+- Look at an effect before calling it done. The bench (`/battle-lab?bench`) plays any entry of the spell art.
+  Its film strip puts twelve frames of the play on one sheet (`README.md`, "The effects bench").
 - The words a player reads come from docs/domain/player-terminology.md.
 - The suite takes 30 to 45 minutes in a session: run the specs the change touches first, then the list above.

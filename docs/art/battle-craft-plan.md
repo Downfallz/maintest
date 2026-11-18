@@ -1,7 +1,7 @@
 # Plan: the battle's craft, every spell, attack, move and the ground staged by a designer who can see
 
-Status: accepted, 2026-11-18 (the owner settled the questions at the end). BC1 is built; BC2 is next. Each stage
-below is one pull request.
+Status: accepted, 2026-11-18 (the owner settled the questions at the end). BC1 and BC2 are built; BC3 is next.
+Each stage below is one pull request.
 
 ## What the owner asked for
 
@@ -126,6 +126,21 @@ that extends it.
 
 2. **BC2, the bench and the film strip.** `/battle-lab?bench`, `scripts/battle/filmstrip.mjs`, the clock stepping.
    Tests: the bench lists all 44 entries; two runs of one effect give the same sheet; `live.js` holds no bench code.
+
+   *Built (2026-11-18)*: the bench is the laboratory's page with `?bench` (`battle/src/bench.ts`, and
+   `table/battle-bench.js` for what it lists and presents): the 44 entries, a caster and any of the fixture's six
+   creatures as targets, the speed and less motion. It holds no rule: a target across the field is struck, one
+   on the caster's side receives. `scripts/battle/filmstrip.mjs` serves `table/` itself, films at 390 by 844 and
+   writes one sheet an effect, or all 44 with `--all` (about three minutes in a session). The film clock had one surprise:
+   Phaser's tweens do not run on the time the game's step is given, they read `Date.now`. So a film stops the
+   loop, steps the game in ticks of 20 ms, and pins `Date.now` as well as `Math.random`; the craft book's rule 5
+   says so now. Two sheets of one effect are the same file byte for byte on one machine
+   (`studio/browser/battle-bench.spec.js`); across machines the renderer may differ, so a sheet is compared with
+   one filmed on the same machine. `build.mjs` refuses the bench and the spell art in `live.js`, and
+   `table/battle-bench.test.js` reads the built bundle for it. Left: the bench plays a spell's look, not yet a
+   move alone, a death or the ground. BC5 and BC9 add those when they build them. The blood cost's wound and a
+   fizzle are not offered as choices. The sheets are not published anywhere: `/battle-pass` (BC3) and BC10 do
+   that.
 3. **BC3, the designer and the pass.** The `battle-designer` agent, the `/battle-pass` skill, and the first
    storyboard, for the base attack, as the worked example. Tests: `studio/prompts.test.js` on the paths they name.
 4. **BC4, the effects kit.** `battle/src/fx/`, built as a second bundle loaded after the first frame with its own

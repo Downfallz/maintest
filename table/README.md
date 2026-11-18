@@ -612,6 +612,9 @@ It has provisional illustrated creatures, a fixed sample action with three targe
 impact, keyboard/touch controls and inspection/settings overlays. It uses no seat or API. Reset, skip,
 2× playback, optional sound and reduced motion are available. `/play` remains the actual game.
 
+`/battle-lab?bench` is the effects bench: every authored spell look, played on chosen creatures of the same
+fixture, and what `scripts/battle/filmstrip.mjs` films ([battle/README.md](../battle/README.md), "The effects bench").
+
 Build the local renderer before opening the lab or running host route tests:
 
 ```bash
@@ -718,7 +721,7 @@ the store cannot open or keep is 503 `Lobby.Unavailable`. A relay that is out is
 | `/`, `/lobby` | anyone | The player lobby (ADR 0115); `/lobby?token=...` redirects to admin; `/lobby?rematch=<accountId>\|bot\|hotseat&format=...` opens the create dialog on the same opponent. |
 | `/play` | seat | The game's doorway; `/play?replay=<id>` replays a finished session for the operator. |
 | `/battle` | seat | The battle view; `/battle?replay=<table>&seat=<seat>` a finished game's recap (ADR 0156); `/battle?scenario=<id>` a scenario's practice (ADR 0179), a tutorial with its coach and concept cards (ADR 0187). |
-| `/battle-lab` | anyone | The visual study on fictional frames (ADR 0123). |
+| `/battle-lab` | anyone | The visual study on fictional frames (ADR 0123); with `?bench`, the effects bench. |
 | `/admin?token=<operator token>` | operator | The admin panel (ADR 0081). |
 | `/pilot?token=<pilot token>` | pilot | The operator's own page for the seats of a console table. |
 | `/session/<id>` | anyone | A finished recorded session in the viewer; 409 while it is played or when its record cannot be parsed. |

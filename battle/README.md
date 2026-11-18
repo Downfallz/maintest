@@ -34,7 +34,10 @@ No CDN, remote fonts or browser package downloads are needed at runtime.
 
 ## Boundaries
 
-- `src/main.ts`: accessible DOM controller, input, dialogs, lifecycle and optional synthesized sound.
+- `src/main.ts`: opens the sample action (`src/lab.ts`) or, with `?bench`, the effects bench (`src/bench.ts`).
+- `src/lab.ts`: accessible DOM controller, input, dialogs, lifecycle and optional synthesized sound.
+- `src/bench.ts`: the effects bench and its film clock (below). Laboratory bundle only.
+- `table/battle-bench.js`: what the bench lists and the frames it presents, from the fixture. No rule.
 - `src/scene.ts`: Phaser scene, local assets, creature figures, cancellable tweens and camera effects.
 - `src/types.ts`: presentation types only.
 - `src/spell-effects.ts`: bounded, cancellable vector motifs for confirmed spell outcomes.
@@ -881,3 +884,32 @@ A practice whose view carries `practice.tutorial` is a tutorial (ADR 0187, docs/
 
 `battle-tutorial.spec.js` plays tutorial 1's own lesson to its end on a fixture board, at 320 px, 390 px and
 desktop.
+
+## The effects bench
+
+`/battle-lab?bench` (docs/art/battle-craft-plan.md, BC2) lists every entry of `data/presentation/spell-art.json`
+and plays the chosen one on creatures of the laboratory's fixture: one caster, and any of its six creatures as
+targets. `?bench=spell:frostbite:v1` opens on that entry. It asks no host and holds no rule: a target across the
+field from the caster is struck, one on the caster's side receives, and nobody's health moves. Less motion and
+the playback speed are in the settings, as in the laboratory. The bench ships in `game.js` only:
+`build.mjs` fails the build if `live.js` contains a bench module or the spell art (`live-guard.mjs`).
+
+The film strip is one effect on one sheet, twelve frames with the millisecond under each:
+
+```bash
+npm --prefix battle run build
+node scripts/battle/filmstrip.mjs spell:pummel:v1                 # artifacts/filmstrips/pummel.png (ignored)
+node scripts/battle/filmstrip.mjs spell:frostbite:v1 --actor a3 --targets b1,b3 --speed 2 --out frost.png
+node scripts/battle/filmstrip.mjs --all                           # one sheet an entry
+```
+
+The script serves `table/` itself and opens the bench in Chromium at phone size (390 by 844). The bench's film
+clock (`window.battleBench.film`) makes two runs agree. `start` stops the game's loop and hands `Date.now` to
+the film, because Phaser's tweens read it. It also seeds `Math.random`, which the camera shake and the
+particles read. It lets the scene rest and shows the play's first frame. `advance` steps the game in ticks of
+20 ms. `stop` gives the clocks back and restarts the loop. The frames are spread over the whole play, 240 ms
+apart at 1×; `--interval` takes another multiple of 20, and `--speed` is 0.5, 1 or 2.
+
+Two sheets of one effect are the same file, byte for byte, on one machine: `studio/browser/battle-bench.spec.js`
+films twice and compares. The renderer may differ across machines, so compare a sheet only with one filmed on
+the same machine, before and after a change.
