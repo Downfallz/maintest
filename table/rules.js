@@ -7,14 +7,31 @@ export const LANGUAGES = ['en', 'fr'];
 // The language chosen on this page, kept on the device: an account holds no language yet.
 const STORED_LANGUAGE = 'downfall.language';
 
-/** The language the page opens in: the one stored on the device, else the browser's first English or French. */
-export function languageOf({ stored, languages } = {}) {
+/**
+ * The language the page opens in: the one the address asks for (a link from the public book, `?lang=fr`), else the
+ * one stored on the device, else the browser's first English or French.
+ */
+export function languageOf({ asked, stored, languages } = {}) {
+  if (LANGUAGES.includes(asked)) return asked;
   if (LANGUAGES.includes(stored)) return stored;
   for (const tag of languages ?? []) {
     const base = String(tag ?? '').toLowerCase().split('-')[0];
     if (LANGUAGES.includes(base)) return base;
   }
   return 'en';
+}
+
+/** The language an address asks for (`?lang=`), lower case, or null. */
+export function askedLanguage(search) {
+  return new URLSearchParams(search ?? '').get('lang')?.toLowerCase() ?? null;
+}
+
+// The service worker marks the book it gives from its kept copy (table/sw.js, #698).
+const KEPT_COPY = 'X-Rulebook-Copy';
+
+/** Whether an answer's headers say it is the copy this device kept rather than the network's. */
+export function isKeptCopy(headers) {
+  return headers?.get(KEPT_COPY) === 'kept';
 }
 
 /** The book a language reads, by a relative path, so the page works at /rules and under /table/. */
@@ -47,6 +64,7 @@ export const WORDS = {
     kept: (sections, total) => `${count(sections, 'section', 'sections')} of ${total} ${sections === 1 ? 'holds' : 'hold'} those words`,
     noMatch: 'No rule holds those words. Try another word.',
     problem: 'Could not read the rulebook. Check your connection and reload the page.',
+    offline: 'Offline: this is the rulebook as this device last read it. The table may play a newer one now.',
     drawn: date => 'Every number in this book is drawn from the rule set and the content this table plays' + (date ? `. Last changed ${date}.` : '.'),
     date: (year, month, day) => `${day} ${['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][month - 1]} ${year}`,
   },
@@ -69,6 +87,7 @@ export const WORDS = {
     kept: (sections, total) => `${compte(sections, 'section', 'sections')} sur ${total} ${sections > 1 ? 'contiennent' : 'contient'} ces mots`,
     noMatch: 'Aucune règle ne contient ces mots. Essayez un autre mot.',
     problem: 'Impossible de lire le livre de règles. Vérifiez votre connexion et rechargez la page.',
+    offline: 'Hors ligne : voici le livre de règles tel que cet appareil l’a lu la dernière fois. La table en joue peut-être un plus récent.',
     drawn: date => 'Chaque nombre de ce livre vient des règles et du contenu de cette table' + (date ? `. Dernière modification le ${date}.` : '.'),
     date: (year, month, day) => `${day === 1 ? '1er' : day} ${['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'][month - 1]} ${year}`,
   },
@@ -436,10 +455,24 @@ function keep(win, language) {
   }
 }
 
+// A book and whether it is the device's kept copy.
 async function bookIn(language) {
   const response = await fetch(bookFile(language), { credentials: 'same-origin' });
   if (!response.ok) throw new Error(`The host answered ${response.status}.`);
-  return response.json();
+  return { book: await response.json(), kept: isKeptCopy(response.headers) };
+}
+
+// A choice made on the page, once its book is read, is the reader's from then on: the language a link asked for
+// leaves the address, so a reload reads the one chosen.
+function forgetAsked(win) {
+  try {
+    const url = new URL(win.location.href);
+    if (!url.searchParams.has('lang')) return;
+    url.searchParams.delete('lang');
+    win.history?.replaceState(win.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+  } catch {
+    // An address that cannot be rewritten keeps its language until the page is left.
+  }
 }
 
 function trouble(doc, language) {
@@ -450,15 +483,18 @@ function trouble(doc, language) {
 }
 
 async function load(doc, win = globalThis) {
-  const language = languageOf({ stored: stored(win), languages: win.navigator?.languages ?? [win.navigator?.language] });
+  const language = languageOf({ asked: askedLanguage(win.location?.search), stored: stored(win), languages: win.navigator?.languages ?? [win.navigator?.language] });
   translatePage(doc, language);
   let rules = null;
   // Each request for a book takes a ticket; only the latest one's answer is drawn, so two quick taps end on the
   // second, and the first load never covers a book the reader chose meanwhile.
   let latest = 0;
-  const show = book => {
+  const show = ({ book, kept }) => {
     if (rules) rules.show(book);
     else rules = mountRules(doc, book, win);
+    // A page kept from before the notice has none: the book is still drawn.
+    const notice = doc.getElementById('rules-kept');
+    if (notice) notice.hidden = !kept;
   };
   for (const button of doc.querySelectorAll('[data-language]')) {
     button.addEventListener('click', async () => {
@@ -466,16 +502,18 @@ async function load(doc, win = globalThis) {
       const ticket = ++latest;
       if (rules?.book.language === chosen) {
         keep(win, chosen);
+        forgetAsked(win);
         translatePage(doc, chosen);
         doc.getElementById('rules-problem').hidden = true;
         return;
       }
       try {
-        const book = await bookIn(chosen);
+        const read = await bookIn(chosen);
         if (ticket !== latest) return;
         // Kept only once its book is read: a choice that cannot be read must not be the next visit's.
         keep(win, chosen);
-        show(book);
+        forgetAsked(win);
+        show(read);
       } catch {
         if (ticket !== latest) return;
         const shown = rules?.book.language ?? language;
@@ -488,8 +526,8 @@ async function load(doc, win = globalThis) {
   // The language's book, else the other one: a book the worker kept is better than none.
   for (const each of [language, ...LANGUAGES.filter(one => one !== language)]) {
     try {
-      const book = await bookIn(each);
-      if (ticket === latest || !rules) show(book);
+      const read = await bookIn(each);
+      if (ticket === latest || !rules) show(read);
       return;
     } catch {
       // The next language's book.
@@ -498,4 +536,4 @@ async function load(doc, win = globalThis) {
   if (!rules) trouble(doc, language);
 }
 
-if (typeof document !== 'undefined') void load(document);
+if (typeof document !== 'undefined') await load(document);

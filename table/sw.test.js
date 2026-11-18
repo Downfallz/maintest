@@ -236,12 +236,16 @@ function fetched(mode, { preloadResponse, url = 'https://table.example/battle', 
 // An answer as fetch gives one: whether it is ok, and a copy to keep while the page reads the original.
 const answer = (body, status = 200, { redirected = false } = {}) => ({ body, status, redirected, ok: status >= 200 && status < 300, clone() { return { ...this, copy: true }; } });
 
+// What an answer says: its text when it is a real one, the fake's body otherwise.
+const bodyOf = async answered => { const given = await answered; return given instanceof Response ? given.text() : given; };
+
 // The Cache Storage a worker sees: one store per name, each a map from a path to the answer kept for it.
 function offlineWorker({ network, cached = 'offline page', kept = {} }) {
   const deleted = [];
-  const store = new Map(Object.entries({ '/offline.html': cached, ...kept }));
+  // A kept copy is an answer, as the Cache Storage gives one, read afresh each time it is matched.
+  const store = new Map(Object.entries({ '/offline.html': cached, ...Object.fromEntries(Object.entries(kept).map(([path, body]) => [path, typeof body === 'string' ? new Response(body) : body])) }));
   const caches = {
-    match: async path => store.get(path),
+    match: async path => { const found = store.get(path); return found instanceof Response ? found.clone() : found; },
     open: async () => ({
       add: async path => { store.set(path, `installed ${path}`); },
       put: async (path, response) => { store.set(path, response); },
@@ -253,7 +257,7 @@ function offlineWorker({ network, cached = 'offline page', kept = {} }) {
   const self = { addEventListener: (kind, handler) => { handlers[kind] = handler; }, skipWaiting: async () => {},
     location: new URL('https://table.example/sw.js'),
     clients: { claim: async () => {} }, registration: { navigationPreload: { enable: async () => {} } } };
-  vm.runInContext(readFileSync(new URL('./sw.js', import.meta.url), 'utf8'), vm.createContext({ self, URL, caches, fetch: network, Response: { error: () => 'error' } }));
+  vm.runInContext(readFileSync(new URL('./sw.js', import.meta.url), 'utf8'), vm.createContext({ self, URL, caches, fetch: network, Headers, Response }));
   return { handlers, deleted, store };
 }
 
@@ -338,8 +342,44 @@ test('the rulebook the network cannot load is the kept copy, at any of its deep 
   for (const url of ['https://table.example/rules', 'https://table.example/rules?from=battle']) {
     const f = fetched('navigate', { url });
     w.handlers.fetch(f.event);
-    assert.equal(await f.answered(), 'the kept rulebook', url);
+    assert.equal(await bodyOf(f.answered()), 'the kept rulebook', url);
   }
+});
+
+test('the rulebook asked in a language is still the kept copy offline', async () => {
+  const w = offlineWorker({ network: async () => { throw new TypeError('offline'); }, kept: { '/rules': 'the kept rulebook' } });
+  const f = fetched('navigate', { url: 'https://table.example/rules?lang=fr' });
+
+  w.handlers.fetch(f.event);
+
+  assert.equal(await bodyOf(f.answered()), 'the kept rulebook');
+});
+
+// A kept copy as the Cache Storage gives one: a real answer, so the worker can say it is a copy.
+const keptAnswer = body => new Response(body, { headers: { 'Content-Type': 'application/json' } });
+
+test('the book given from its kept copy says so in a header, so the page can tell the player it may be older', async () => {
+  for (const network of [async () => { throw new TypeError('offline'); }, async () => answer('origin unreachable', 522)]) {
+    const w = offlineWorker({ network, kept: { '/rules.json': keptAnswer('{"kept":true}') } });
+    const f = fetched('cors', { url: 'https://table.example/rules.json' });
+
+    w.handlers.fetch(f.event);
+
+    const given = await f.answered();
+    assert.equal(given.headers.get('X-Rulebook-Copy'), 'kept');
+    assert.equal(given.headers.get('Content-Type'), 'application/json');
+    assert.equal(await given.text(), '{"kept":true}');
+  }
+});
+
+test('the book the network answers carries no mark of a copy', async () => {
+  const fresh = new Response('{"fresh":true}');
+  const w = offlineWorker({ network: async () => fresh, kept: { '/rules.json': keptAnswer('{}') } });
+  const f = fetched('cors', { url: 'https://table.example/rules.json' });
+
+  w.handlers.fetch(f.event);
+
+  assert.equal((await f.answered()).headers.get('X-Rulebook-Copy'), null);
 });
 
 test('the rulebook never kept and not reachable is the offline page', async () => {
@@ -363,7 +403,7 @@ test('the book and the page\'s files go to the network first, their copies refre
     const offline = offlineWorker({ network: async () => { throw new TypeError('offline'); }, kept: { [path]: `old ${path}` } });
     const missed = fetched('cors', { url: `https://table.example${path}` });
     offline.handlers.fetch(missed.event);
-    assert.equal(await missed.answered(), `old ${path}`);
+    assert.equal(await bodyOf(missed.answered()), `old ${path}`);
   }
 });
 
@@ -376,7 +416,7 @@ test('a redirected answer is passed on and never kept: a browser refuses it as t
 
   assert.equal(await f.answered(), moved);
   await f.settled();
-  assert.equal(w.store.get('/rules'), 'the kept rulebook');
+  assert.equal(await w.store.get('/rules').text(), 'the kept rulebook');
 });
 
 test('the rulebook whose host answers with a server error, as Cloudflare does for a host that is down, is the kept copy', async () => {
@@ -386,7 +426,7 @@ test('the rulebook whose host answers with a server error, as Cloudflare does fo
 
     w.handlers.fetch(f.event);
 
-    assert.equal(await f.answered(), `the kept ${path}`, path);
+    assert.equal(await bodyOf(f.answered()), `the kept ${path}`, path);
   }
 });
 
@@ -421,7 +461,7 @@ test('an answer that is not a success is passed on and never kept', async () => 
 
   assert.equal(await f.answered(), failed);
   await f.settled();
-  assert.equal(w.store.get('/rules.json'), 'the kept book');
+  assert.equal(await w.store.get('/rules.json').text(), 'the kept book');
 });
 
 test('a rulebook\'s path on another site, or asked with another method, is not the worker\'s', () => {

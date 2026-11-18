@@ -21,10 +21,13 @@ test('the rulebook read once is read again at a deep link with the host gone, an
 
     await expect(reader.locator('body')).toHaveAttribute('data-rules', 'ready');
     await expect(reader.locator('#sunder h3')).toBeInViewport();
+    // The worker says the book is its copy, and the page tells the reader (#698).
+    await expect(reader.locator('#rules-kept')).toBeVisible();
     // The other language was kept too.
     await reader.getByRole('button', { name: 'Français' }).click();
     await expect(reader.locator('body')).toHaveAttribute('data-language', 'fr');
     await expect(reader.locator('#sunder h3')).toBeInViewport();
+    await expect(reader.locator('#rules-kept')).toBeVisible();
     await expect(reader.getByRole('link', { name: 'Downfall Instinct home' })).toBeVisible();
     await reader.goto(`${origin}/leaderboard`);
     await expect(reader).toHaveTitle('Downfall Instinct · Offline');
