@@ -47,15 +47,7 @@ internal sealed class TableVisits(TimeProvider clock, IVisitKeeper? keeper = nul
     {
         if (keeper is null)
         {
-            lock (_held)
-            {
-                if (_visits.GetValueOrDefault(seat) is { } held && held.Holder == holder && held.Sequence >= sequence)
-                {
-                    return held;
-                }
-
-                return _visits[seat] = new LastVisit(sequence, clock.GetUtcNow(), holder);
-            }
+            return ShownHere(seat, holder, sequence);
         }
 
         var existed = false;
@@ -90,5 +82,19 @@ internal sealed class TableVisits(TimeProvider clock, IVisitKeeper? keeper = nul
         }
 
         return null;
+    }
+
+    // A table nobody records: the mark is kept in memory, for as long as the table is held.
+    private LastVisit ShownHere(string seat, string holder, long sequence)
+    {
+        lock (_held)
+        {
+            if (_visits.GetValueOrDefault(seat) is { } held && held.Holder == holder && held.Sequence >= sequence)
+            {
+                return held;
+            }
+
+            return _visits[seat] = new LastVisit(sequence, clock.GetUtcNow(), holder);
+        }
     }
 }

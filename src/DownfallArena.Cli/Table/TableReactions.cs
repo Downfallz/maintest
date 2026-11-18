@@ -79,34 +79,44 @@ internal sealed class TableReactions(TimeProvider clock, IReactionKeeper? keeper
             }
 
             var sent = new TableReaction((items.Count == 0 ? 0 : items[^1].Sequence) + 1, seat, reaction, now);
-            IReadOnlyList<TableReaction> next = [.. items.Append(sent).TakeLast(Kept)];
-            if (keeper is null)
+            if (await KeptAsync(sent, [.. items.Append(sent).TakeLast(Kept)], cancellationToken) is { } outcome)
             {
-                Volatile.Write(ref _items, next);
-                return ReactionSent.Of(sent);
+                return outcome;
             }
 
-            // No file yet: a write would create it, under a run the operator deleted too (#789). Refused this once
-            // and not for good, as a record whose write failed may be written again.
-            if (_tag is null && !await keeper.RecordedAsync(cancellationToken))
-            {
-                return ReactionSent.Gone;
-            }
-
-            if (await keeper.WriteReactionsIfAsync(next, _tag, cancellationToken) is { } tag)
-            {
-                _tag = tag;
-                Volatile.Write(ref _items, next);
-                return ReactionSent.Of(sent);
-            }
-
-            // Another process wrote first: what it wrote is read, and this one goes after it.
-            Volatile.Write(ref _items, null);
             if (attempt == Attempts)
             {
                 return ReactionSent.Busy;
             }
         }
+    }
+
+    // In turn. The reactions kept with the one sent, or none when another process wrote first: what it wrote is
+    // read again, and this one goes after it.
+    private async Task<ReactionSent?> KeptAsync(TableReaction sent, IReadOnlyList<TableReaction> next, CancellationToken cancellationToken)
+    {
+        if (keeper is null)
+        {
+            Volatile.Write(ref _items, next);
+            return ReactionSent.Of(sent);
+        }
+
+        // No file yet: a write would create it, under a run the operator deleted too (#789). Refused this once
+        // and not for good, as a record whose write failed may be written again.
+        if (_tag is null && !await keeper.RecordedAsync(cancellationToken))
+        {
+            return ReactionSent.Gone;
+        }
+
+        if (await keeper.WriteReactionsIfAsync(next, _tag, cancellationToken) is { } tag)
+        {
+            _tag = tag;
+            Volatile.Write(ref _items, next);
+            return ReactionSent.Of(sent);
+        }
+
+        Volatile.Write(ref _items, null);
+        return null;
     }
 
     private Task<T> InTurn<T>(Func<Task<T>> work)
