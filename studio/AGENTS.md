@@ -40,9 +40,9 @@ npm --prefix studio/browser ci --ignore-scripts && npm --prefix studio/browser t
   arrived, wait for `data-connection` to be `live`, never for the hidden `#loading` card (#785).
 - A battle spec reads its mock route's `shown` or `writes` through `expect.poll`. The request reaches the route some
   time after the click, and a change the page draws before sending (a menu closed, a bubble drawn) does not mean the
-  route has it yet (#816, #831, #845). A plain read is fine in two cases, with no click, key press or awaited helper between: the
-  test has waited for something only the host's answer produces (an error text, a URL change), or an
-  `expect.poll` on the same field (`writes.length`) has passed. A negative read (`toEqual([])`) stays plain.
+  route has it yet (#816, #831, #845). A plain read is fine in two cases, with no click, key press or awaited
+  helper between: the test has waited for something only the host's answer produces (an error text, a URL
+  change), or an `expect.poll` on the same field (`writes.length`) has passed. A negative read (`toEqual([])`) stays plain.
   `battle-journeys.test.js` checks this by reading the lines before each plain read. A wait it cannot see (a sheet
   closed after its batch) goes in its `READ_AFTER_HOST` list, by test and read, with the reason (#857).
 - In a cloud session Chromium is preinstalled: do not run `playwright install` again, and pass `--trace off`.
