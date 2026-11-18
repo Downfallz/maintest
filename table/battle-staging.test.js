@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { ACTION_MS, ANCHORS, BEATS, BLENDS, DIRECTIONS, MAX_BEATS, MAX_PARTICLES, SHAPES, TINTS, stagingBeats } from './battle-staging.js';
-import { IMPACT_MS, WINDUP_MS } from './battle-timing.js';
+import { IMPACT_MS, VFX_MS, WINDUP_MS } from './battle-timing.js';
 
 const visual = staging => ({ family: 'physical', motif: 'impact', delivery: 'melee', staging });
 
@@ -18,7 +18,8 @@ test('a beat is read with its defaults, its window and its delay inside it', () 
     { beat: 'motif', at: 840 }, { beat: 'burst', at: 900, count: 8, direction: 'along' }, { beat: 'gather', at: 200, lasts: null },
   ]));
   assert.deepEqual({ beat: motif.beat, window: motif.window, delay: motif.delay, on: motif.on }, { beat: 'motif', window: 'impact', delay: 0, on: 'target' });
-  assert.equal(motif.lasts, undefined);
+  // The motif lasts as it did before the kit, unless its beat says.
+  assert.equal(motif.lasts, VFX_MS);
   assert.deepEqual([burst.window, burst.delay, burst.count, burst.direction, burst.spread, burst.shape, burst.tint], ['impact', 60, 8, 'along', 50, 'spark', 'family']);
   // The host writes a parameter left out as null: it is a parameter left out.
   assert.deepEqual([gather.window, gather.delay, gather.on, gather.lasts], ['windup', 200, 'caster', 400]);
@@ -32,6 +33,8 @@ test('a burst nobody aimed fans all around', () => {
 test('a beat near the end of its window is shortened to end inside it', () => {
   assert.equal(stagingBeats(visual([{ beat: 'gather', at: 700 }]))[0].lasts, WINDUP_MS - 700);
   assert.equal(stagingBeats(visual([{ beat: 'flow', at: ACTION_MS - 100 }]))[0].lasts, 100);
+  // The motif too: placed late, it is gone when the impact ends.
+  assert.equal(stagingBeats(visual([{ beat: 'motif', at: ACTION_MS - 140 }]))[0].lasts, 140);
 });
 
 test('a beat the page does not know falls back to the motif, whole', () => {

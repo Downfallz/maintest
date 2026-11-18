@@ -51,12 +51,42 @@ for (const sample of samples) {
   });
 
   test(`${name} ends by itself inside the action`, async ({ page }) => {
+    // A filter is drawn slowly by a renderer with no graphics card: the pulse's film takes several seconds.
+    if (name === 'pulse') test.slow();
     await film(page, 'start', { spell: sample.id, actor: 'a1', targets: ['b1'] });
     await film(page, 'advance', WINDUP_MS + IMPACT_MS);
     expect(await kit(page)).toEqual({ objects: [], particles: 0, changes: 0 });
     await film(page, 'stop');
   });
 }
+
+test('a staged motif is drawn at its beat and for as long as the beat says', async ({ page }) => {
+  // The burst's sample places its motif at the contact, for 700 ms: gone well before the 1200 ms it had.
+  await film(page, 'start', { spell: 'kit:burst', actor: 'a1', targets: ['b1'] });
+  await film(page, 'advance', WINDUP_MS - 20);
+  expect(await motifs(page)).toEqual([]);
+  await film(page, 'advance', 40);
+  expect(await motifs(page)).toEqual(['impact:impact']);
+  await film(page, 'advance', 600);
+  expect(await motifs(page)).toEqual(['impact:impact']);
+  await film(page, 'advance', 140);
+  expect(await motifs(page)).toEqual([]);
+  await film(page, 'stop');
+});
+
+test('a staging that shakes the view shakes it once: the shared tremor of a physical blow is left out', async ({ page }) => {
+  const shaking = () => page.evaluate(() => window.battleBench.shaking());
+  await film(page, 'start', { spell: 'kit:shake', actor: 'a1', targets: ['b1'] });
+  // The sample shakes 60 ms after the contact: until then the view is still, where the shared tremor started at once.
+  await film(page, 'advance', WINDUP_MS + 40);
+  expect(await shaking()).toBe(false);
+  await film(page, 'advance', 60);
+  expect(await shaking()).toBe(true);
+  await film(page, 'advance', 240);
+  expect(await shaking()).toBe(false);
+  expect((await kit(page)).changes).toBe(0);
+  await film(page, 'stop');
+});
 
 test('particles are counted while a burst flies, and never more than the beat asked for', async ({ page }) => {
   await film(page, 'start', { spell: 'kit:burst', actor: 'a1', targets: ['b1', 'b2', 'b3'] });

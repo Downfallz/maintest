@@ -38,8 +38,10 @@ npm --prefix studio/browser test -- --trace off battle-lab.spec.js battle-bench.
 - Reduced motion and replay navigation show the settled view; first loads and hidden-tab returns replay nothing.
 - Look at an effect before calling it done. The bench (`/battle-lab?bench`) plays any entry of the spell art.
   Its film strip puts twelve frames of the play on one sheet (`README.md`, "The effects bench").
-- The effects kit (`src/fx/`, ADR 0196) is a bundle of its own with no engine in it: import Phaser there as a
-  type only, and never import the kit from another module but as a type. `build.mjs` refuses both.
+- The effects kit (`src/fx/`, ADR 0196) is a bundle of its own with no engine in it. In `src/fx/`, import
+  Phaser as a type only. Elsewhere, import the kit as a type only. `build.mjs` refuses both.
+- A path `build.mjs` reads outside `battle/` needs its `COPY` in the Dockerfile's `battle-build` stage, or the
+  image does not build while the local gate stays green.
 - An effect is staged before it is built: its storyboard is in `docs/art/storyboards/`, and `/battle-pass` runs
   the loop of storyboard, build, film and critique with the `battle-designer` agent.
 - The words a player reads come from docs/domain/player-terminology.md.

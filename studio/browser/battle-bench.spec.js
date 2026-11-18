@@ -52,7 +52,8 @@ test('a chosen effect plays on the chosen creatures: its windup, its impact, the
   expect(await field()).toEqual(atRest);
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'resolved', { timeout: 15000 });
   expect(await field()).toEqual(atRest);
-  await expect(page.locator('#bench-status')).toHaveText('Engulfing Flames: played');
+  // The bench names a spell as its file does: `spell:engulfing_flames:v1` is Incinerate.
+  await expect(page.locator('#bench-status')).toHaveText('Incinerate: played');
 });
 
 // A machine whose fonts run wider squeezed the button onto two lines at rest and one while playing: the field
@@ -76,7 +77,8 @@ test('the address can name the effect the bench opens on', async ({ page }) => {
 
 test('an address naming an effect the art does not list opens the bench on the first one, and says so', async ({ page }) => {
   await openBench(page, '/table/battle-lab.html?bench=spell:nothing:v1');
-  await expect(page.locator('#bench-spell')).toHaveValue('spell:adrenaline_tonic:v1');
+  const first = await page.locator('#bench-spell optgroup[label="Spells"] option').first().getAttribute('value');
+  await expect(page.locator('#bench-spell')).toHaveValue(first);
   await expect(page.locator('#bench-status')).toHaveText('No effect named spell:nothing:v1');
   await expect(page.locator('#bench-play')).toBeEnabled();
 });

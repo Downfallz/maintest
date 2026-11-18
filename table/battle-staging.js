@@ -1,7 +1,7 @@
 // A spell's staging (ADR 0196): the list of beats its card's `visual` carries, read into what the battle plays.
 // The host's builder checked it (`SpellArt`); the page reads it again, because a page and a catalogue are not
 // always the same deploy's. What the page does not understand it does not half-play: the motif is drawn instead.
-import { IMPACT_MS, WINDUP_MS } from './battle-timing.js';
+import { IMPACT_MS, VFX_MS, WINDUP_MS } from './battle-timing.js';
 
 // The same words as `SpellArt` (src/DownfallArena.Infrastructure/Resources/SpellArt.cs); the test reads both.
 export const BEATS = Object.freeze(['motif', 'burst', 'flow', 'trail', 'gather', 'glow', 'flash', 'shake', 'pulse']);
@@ -19,7 +19,7 @@ export const ACTION_MS = WINDUP_MS + IMPACT_MS;
 // What a beat plays with when its author left a parameter out. `lasts` is at 1×; a beat near the end of its
 // window is shortened to end inside it.
 const DEFAULTS = Object.freeze({
-  motif: { on: 'target' },
+  motif: { on: 'target', lasts: VFX_MS },
   burst: { on: 'target', lasts: 320, count: 12, shape: 'spark', tint: 'family', blend: 'normal', direction: 'out', reach: 200 },
   flow: { on: 'target', lasts: 600, count: 12, shape: 'dot', tint: 'family', blend: 'add', direction: 'up', spread: 40, reach: 100 },
   trail: { on: 'target', lasts: 600, count: 16, shape: 'dot', tint: 'family', blend: 'add' },

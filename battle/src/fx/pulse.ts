@@ -11,7 +11,7 @@ export const pulse: Primitive = (kit, play) => {
   figure.enableFilters();
   const filters = figure.filters?.internal;
   if (!filters) return;
-  const halo = filters.addGlow(color, 0, 0, 1, false, 6, 10);
+  const halo = filters.addGlow(color, 0, 0, 1, false, 2, 8);
   // A filter is given no room around its object unless asked: without it the halo is cut at the picture's edge.
   halo.setPaddingOverride(null);
   const remove = kit.restore(() => { if (figure.active) filters.remove(halo, true); });

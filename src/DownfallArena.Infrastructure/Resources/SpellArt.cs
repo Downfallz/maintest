@@ -191,10 +191,17 @@ public sealed class SpellArt
         }
     }
 
-    private static IEnumerable<string> StagingProblems(string spell, List<AuthoredBeat>? staging)
+    private static IEnumerable<string> StagingProblems(string spell, List<AuthoredBeat?>? staging)
     {
         if (staging is null)
         {
+            yield break;
+        }
+
+        // A null among the beats is refused by name before anything reads it: the serializer lets it through.
+        if (staging.Any(beat => beat is null))
+        {
+            yield return $"{SourceFile}: '{spell}' stages a beat that is null.";
             yield break;
         }
 
@@ -208,12 +215,12 @@ public sealed class SpellArt
             yield return $"{SourceFile}: '{spell}' stages {staging.Count} beats, more than {MaxBeats}.";
         }
 
-        foreach (var kind in Single.Where(kind => staging.Count(beat => beat.Beat == kind) > 1))
+        foreach (var kind in Single.Where(kind => staging.Count(beat => beat!.Beat == kind) > 1))
         {
             yield return $"{SourceFile}: '{spell}' stages '{kind}' more than once.";
         }
 
-        foreach (var problem in staging.SelectMany(beat => BeatProblems(spell, beat)))
+        foreach (var problem in staging.SelectMany(beat => BeatProblems(spell, beat!)))
         {
             yield return problem;
         }
@@ -221,23 +228,30 @@ public sealed class SpellArt
 
     private static IEnumerable<string> BeatProblems(string spell, AuthoredBeat beat)
     {
-        var where = $"{SourceFile}: '{spell}', the beat '{beat.Beat}' at {Text(beat.At)}";
+        if (beat.At is not { } at)
+        {
+            yield return $"{SourceFile}: '{spell}' stages a beat '{beat.Beat}' with no 'at': a beat says the millisecond it starts.";
+            yield break;
+        }
+
+        var where = $"{SourceFile}: '{spell}', the beat '{beat.Beat}' at {Text(at)}";
         if (!Beats.Contains(beat.Beat, StringComparer.Ordinal))
         {
             yield return $"{SourceFile}: '{spell}' stages a beat '{beat.Beat}', which is none of {string.Join(", ", Beats)}.";
         }
 
-        if (beat.At is < 0 or >= ActionMs)
+        if (at is < 0 or >= ActionMs)
         {
-            yield return $"{where} starts at '{Text(beat.At)}', outside the action's 0 to {ActionMs - 1} ms.";
+            yield return $"{where} starts at '{Text(at)}', outside the action's 0 to {ActionMs - 1} ms.";
         }
-        else if (beat.Beat == "motif" && beat.At < WindupMs)
+        else if (beat.Beat == "motif" && at < WindupMs)
         {
-            yield return $"{where} starts at '{Text(beat.At)}': the motif is drawn in the impact, from {WindupMs} ms.";
+            yield return $"{where} starts at '{Text(at)}': the motif is drawn in the impact, from {WindupMs} ms.";
         }
 
-        var end = beat.At < WindupMs ? WindupMs : ActionMs;
-        if (beat.Lasts is { } lasts && (lasts <= 0 || beat.At + lasts > end))
+        // Compared without adding the two: a huge `lasts` must not wrap around and pass.
+        var end = at < WindupMs ? WindupMs : ActionMs;
+        if (beat.Lasts is { } lasts && (lasts <= 0 || lasts > end - at))
         {
             yield return $"{where} lasts '{Text(lasts)}' ms: a beat lasts more than 0 and ends inside its window, by {end} ms.";
         }
@@ -272,7 +286,12 @@ public sealed class SpellArt
 
     private static string Text(int number) => number.ToString(CultureInfo.InvariantCulture);
 
-    /// <summary>The authored shape: three words, each the empty string when the author left it out, so it is refused by name.</summary>
+    /// <summary>
+    /// The authored shape: three words, each the empty string when the author left it out, so it is refused by name.
+    /// A property it does not know is refused when the file is read: a misspelt <c>staging</c> would otherwise be
+    /// dropped, and the spell drawn as its motif with nobody told.
+    /// </summary>
+    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
     private sealed record AuthoredVisual
     {
         public string Family { get; init; } = string.Empty;
@@ -281,9 +300,9 @@ public sealed class SpellArt
 
         public string Delivery { get; init; } = string.Empty;
 
-        public List<AuthoredBeat>? Staging { get; init; }
+        public List<AuthoredBeat?>? Staging { get; init; }
 
-        public SpellVisual ToVisual() => new(Family, Motif, Delivery, Staging?.ConvertAll(beat => beat.ToBeat()));
+        public SpellVisual ToVisual() => new(Family, Motif, Delivery, Staging?.OfType<AuthoredBeat>().Select(beat => beat.ToBeat()).ToList());
     }
 
     /// <summary>
@@ -295,7 +314,7 @@ public sealed class SpellArt
     {
         public string Beat { get; init; } = string.Empty;
 
-        public int At { get; init; }
+        public int? At { get; init; }
 
         public string? On { get; init; }
 
@@ -317,6 +336,6 @@ public sealed class SpellArt
 
         public double? Strength { get; init; }
 
-        public SpellBeat ToBeat() => new(Beat, At, On, Lasts, Count, Shape, Tint, Blend, Direction, Spread, Reach, Strength);
+        public SpellBeat ToBeat() => new(Beat, At ?? 0, On, Lasts, Count, Shape, Tint, Blend, Direction, Spread, Reach, Strength);
     }
 }

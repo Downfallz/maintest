@@ -98,3 +98,9 @@ test('the bench bundle carries the real names, and the live one none', { skip },
   assert.match(read('battle-build/game.js'), /"spell:heavy_strike:v1":"Strike"/);
   assert.ok(!read('battle-build/live.js').includes('spell:heavy_strike:v1'));
 });
+
+// The image builds the bundle in a stage that copies its inputs one by one: what `build.mjs` reads must be there.
+test('the image\'s battle stage copies the spell files the build reads', () => {
+  assert.match(read('../battle/build.mjs'), /spellNames\(folder = '\.\.\/data\/Spells'\)/);
+  assert.match(read('../Dockerfile'), /^COPY data\/Spells\/ \/src\/data\/Spells\/$/m);
+});

@@ -47,7 +47,8 @@ type Owned = Phaser.GameObjects.GameObject;
  */
 export class KitContext {
   private objects = new Set<Owned>();
-  private emitters = new Set<Emitter>();
+  // Each living emitter with the most particles it may hold.
+  private emitters = new Map<Emitter, number>();
   private tweens = new Set<Phaser.Tweens.Tween>();
   private undo = new Set<() => void>();
 
@@ -97,14 +98,19 @@ export class KitContext {
     object.destroy();
   }
 
-  /** How many of the particles a beat asks for the field still has room for. */
+  /**
+   * How many of the particles a beat asks for the field still has room for. What counts is what each living
+   * emitter may hold, not what it holds now: a stream that has just started holds none yet.
+   */
   room(count: number) {
-    return Math.max(0, Math.min(count, SCENE_PARTICLES - this.alive()));
+    let reserved = 0;
+    for (const cap of this.emitters.values()) reserved += cap;
+    return Math.max(0, Math.min(count, SCENE_PARTICLES - reserved));
   }
 
   alive() {
     let alive = 0;
-    for (const emitter of this.emitters) alive += emitter.getAliveParticleCount();
+    for (const emitter of this.emitters.keys()) alive += emitter.getAliveParticleCount();
     return alive;
   }
 
@@ -114,7 +120,7 @@ export class KitContext {
     const { beat, at, color } = play;
     const emitter = this.scene.add.particles(at.x, at.y, TEXTURE, {
       frame: beat.shape, tint: color, blendMode: this.blend(beat.blend), maxAliveParticles: cap, ...config });
-    this.emitters.add(emitter);
+    this.emitters.set(emitter, cap);
     return this.own(emitter, play, beat.blend !== 'normal');
   }
 
@@ -161,7 +167,7 @@ export class KitContext {
     for (const tween of this.tweens) if (!tween.isDestroyed()) tween.stop();
     this.tweens.clear();
     for (const undo of [...this.undo]) undo();
-    for (const emitter of this.emitters) emitter.killAll();
+    for (const emitter of this.emitters.keys()) emitter.killAll();
     this.emitters.clear();
     for (const object of this.objects) { this.scene.tweens.killTweensOf(object); object.destroy(); }
     this.objects.clear();

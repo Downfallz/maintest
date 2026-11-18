@@ -157,7 +157,7 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 - **Cost**: none beyond the tweens.
 - **Reduced motion**: nothing.
 - **Here**: the three strokes of a slash and the five bones of a ward appear together today. The kit staggers
-  the copies of a beat, one a target, by 40 ms (*house*), as far as the beat's window leaves room
+  the copies of a beat, one a target, by 40 ms (*house*) when the beat's window has room
   (`battle/src/spell-effects.ts`). The strokes of one motif still appear together.
 
 ## The body
@@ -396,8 +396,8 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   `Phaser.GameObjects.Particles.ParticleEmitter#getAliveParticleCount` is what a test reads.
 - **Cost**: this entry is the cost. Not measured on a phone; BC10 measures it.
 - **Reduced motion**: nothing.
-- **Here**: 24 particles a beat and 150 alive on the field (*house*), until BC10 measures: a beat is given the
-  room that is left (`battle/src/fx/kit.ts`).
+- **Here**: 24 particles a beat and 150 alive on the field (*house*), until BC10 measures: a beat gets only
+  the room left under the 150, counted as what the living emitters may hold (`battle/src/fx/kit.ts`).
 
 ## Light and surface
 
@@ -418,9 +418,10 @@ bake the drawing to a texture first, or filter a container.
   soft-dot sprite, tinted, additive, drawn behind the shape.
 - **Reduced motion**: nothing. The settled frame holds no effect, a still one included.
 - **Here**: the capstone halo is the cheap form already (`battle/src/capstone-effects.ts`). The kit's `glow` is the
-  cheap form, and its `pulse` is the filter, for one hero effect in each family. A filter is given no room
-  around its object unless asked (`Phaser.Filters.Controller#setPaddingOverride` with null): without it the
-  halo is cut at the picture's edge.
+  cheap form, and its `pulse` is the filter, for one hero effect in each family. The kit calls
+  `Phaser.Filters.Controller#setPaddingOverride` with null so the filter has room around its object: without
+  that call the halo is cut at the picture's edge. Under a renderer with no graphics card a frame with the
+  pulse takes about ten times a frame without (*house*, measured on the bench): BC10 measures it on a phone.
 
 ### Blur
 
@@ -677,8 +678,8 @@ bake the drawing to a texture first, or filter a container.
   a second. A hit flash (`Phaser.TintModes.FILL`) covers one figure.
 - **Cost**: none.
 - **Reduced motion**: no flash at all. The limit holds with the setting off, for everyone.
-- **Here**: at 2× an action lasts about 1.5 s, and one spell can hit three figures. A staging holds one
-  `flash` and one `shake` at most, and the builder refuses a second: one flash per figure per action. BC10 checks all 44 stagings.
+- **Here**: at 2× an action lasts about 1.5 s, and one spell can hit three figures. A staging holds at most
+  one `flash` and one `shake`; the builder refuses a second. That is one flash per figure per action. BC10 checks all 44 stagings.
 
 ### Reduced motion
 

@@ -240,5 +240,6 @@ try {
 } catch { fail('The renderer could not start. Reload the scene or use another browser.'); }
 
 // What the film strip script and the browser specs drive: the bench's own choices, and its film clock.
-Object.assign(window, { battleBench: { entries, samples, creatures, kit: () => scene.effectsKit, stop: rest, choose: (options: FilmOptions) => { choose(options); rest(); }, play, film: filmClock,
+Object.assign(window, { battleBench: { entries, samples, creatures, kit: () => scene.effectsKit, stop: rest,
+  shaking: () => scene.cameras.main.shakeEffect.isRunning, choose: (options: FilmOptions) => { choose(options); rest(); }, play, film: filmClock,
   effects: () => scene.children.list.filter(child => child.name === 'spell-vfx').map(child => ({ ...child.data.getAll(), alpha: (child as Phaser.GameObjects.Graphics).alpha })) } });

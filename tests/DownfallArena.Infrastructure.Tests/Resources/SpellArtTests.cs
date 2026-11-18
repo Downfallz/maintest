@@ -182,6 +182,36 @@ public sealed class SpellArtTests
         problems.ShouldContain(problem => problem.Contains("'spell:guard:v1'", StringComparison.Ordinal) && problem.Contains(value, StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void A_null_among_the_beats_is_refused_and_not_a_crash()
+    {
+        ProblemsOf(Staged("[ null ]")).ShouldContain(problem => problem.Contains("'spell:guard:v1'", StringComparison.Ordinal) && problem.Contains("null", StringComparison.Ordinal));
+    }
+
+    /// <summary>A beat with no start would otherwise be published as starting at 0, with nobody told.</summary>
+    [Fact]
+    public void A_beat_that_does_not_say_when_it_starts_is_refused()
+    {
+        ProblemsOf(Staged("""[ { "beat": "burst", "count": 8 } ]""")).ShouldContain(problem => problem.Contains("'spell:guard:v1'", StringComparison.Ordinal) && problem.Contains("no 'at'", StringComparison.Ordinal));
+    }
+
+    /// <summary>The page refuses it, so the builder must: the sum of the start and the length must not wrap around.</summary>
+    [Fact]
+    public void A_beat_that_lasts_past_what_a_number_holds_is_refused()
+    {
+        ProblemsOf(Staged("""[ { "beat": "glow", "at": 900, "lasts": 2147483647 } ]""")).ShouldContain(problem => problem.Contains("'2147483647'", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void A_misspelt_staging_refuses_the_file_and_is_not_dropped()
+    {
+        using var content = new ContentDirectory().WithValidContent()
+            .WithFile("presentation/spell-art.json", """{ "spell:guard:v1": { "family": "physical", "motif": "plates", "delivery": "cast", "stagin": [ { "beat": "glow", "at": 900 } ] } }""");
+        var schema = GameSchemaBuilder.Build(content.Path);
+
+        Should.Throw<InvalidGameContentException>(() => SpellArt.Publish(content.Path, Path.Combine(content.Path, "dst"), schema));
+    }
+
     [Theory]
     [InlineData("""{ "beat": "glow", "at": 0, "lasts": 840 }""")]
     [InlineData("""{ "beat": "glow", "at": 840, "lasts": 1700 }""")]

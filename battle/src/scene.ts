@@ -396,9 +396,10 @@ export class BattleScene extends Phaser.Scene {
       if (actor) this.spellEffects.impact(cue.visual, this.effectFigure(this.state.actor!, actor), this.rate);
       return;
     }
+    let shaken = false;
     if (actor) {
       const first = cue.contact.map(id => this.figures.get(id)).find(Boolean);
-      this.spellEffects.cast(cue.visual, this.effectFigure(this.state.actor!, actor), this.rate, first && this.anchor(first));
+      shaken = this.spellEffects.cast(cue.visual, this.effectFigure(this.state.actor!, actor), this.rate, first && this.anchor(first));
     }
     for (const id of cue.recipients) {
       const target = this.figures.get(id);
@@ -420,7 +421,8 @@ export class BattleScene extends Phaser.Scene {
           angle: dx * 4, yoyo: true, duration: 140 * MOTION_SCALE / this.rate, ease: 'Quad.Out' });
       }
     }
-    if (cue.visual.family === 'physical' && cue.contact.some(id => cue.struck.includes(id))) {
+    // A staging that shakes the view says how; the shared tremor of a physical blow is the motif's.
+    if (!shaken && cue.visual.family === 'physical' && cue.contact.some(id => cue.struck.includes(id))) {
       this.cameras.main.shake(120 * MOTION_SCALE / this.rate, .0015);
     }
   }

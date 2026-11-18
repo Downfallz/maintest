@@ -26,8 +26,8 @@ No biological motif is assigned to the Necrotic/Revenant branch. No spirit is a 
 ## Staging
 
 Since [ADR 0196](../adr/0196-stage-a-spell-in-beats-an-effects-kit-plays.md) an entry may also carry a `staging`:
-the beats the effects kit plays, the motif one of them. A spell without one is drawn as described here, and so
-is a staged spell until the kit has loaded. `battle/README.md`, "The effects kit", lists the beats. No spell has
+a list of beats the effects kit plays. The spell's own motif is one of those beats. A spell without a staging
+is drawn as described here. So is a staged spell until the kit has loaded. `battle/README.md`, "The effects kit", lists the beats. No spell has
 a staging yet: BC6 to BC8 of [the battle's craft plan](battle-craft-plan.md) write them.
 
 ## Timing and integrity

@@ -24,6 +24,8 @@ COPY table/*.js /src/table/
 COPY table/battle-art/ /src/table/battle-art/
 # The laboratory's effects bench lists the authored spell looks (battle/src/bench.ts).
 COPY data/presentation/spell-art.json /src/data/presentation/spell-art.json
+# The bench names each look as its spell's file does (battle/build.mjs reads every file under data/Spells).
+COPY data/Spells/ /src/data/Spells/
 RUN npm run build
 
 FROM ${SDK_IMAGE} AS build

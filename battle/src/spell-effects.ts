@@ -9,9 +9,11 @@ const PALETTE: Record<string, number> = {
   physical: 0xd2bbac, biological: 0xadc777, elemental: 0x8dcfe5,
   necromantic: 0x85c9c2, astral: 0xb9a6e5, neutral: 0xaab8c0,
 };
-// The colours a beat names (`table/battle-staging.js`): the palette's bone, and the two a motif already carries.
-// The target marker's gold is not among them.
-const TINTS: Record<string, number> = { bone: 0xd8c7a7, ember: 0xd58b75, blood: 0xb66f7e };
+// A motif that carries its own colour whatever the family: embers are warm, a wound is blood.
+const MOTIF_COLOR: Record<string, number> = { fire: 0xd58b75, wound: 0xb66f7e };
+// The colours a beat names (`table/battle-staging.js`): the palette's bone, which stays equal to `--brand-bone`
+// (docs/art/branding.css), and the two a motif already carries. The target marker's gold is not among them.
+const TINTS: Record<string, number> = { bone: 0xd8c7a7, ember: MOTIF_COLOR.fire, blood: MOTIF_COLOR.wound };
 
 // Between two copies of one beat, at 1× (*house*, the craft book's 30 to 60 ms).
 const STAGGER_MS = 40;
@@ -84,6 +86,7 @@ export class SpellEffects {
     }
   }
 
+  // The kit has the same helper, and this one cannot borrow it: the motif is drawn here, kit or no kit.
   private after(ms: number, run: () => void) {
     if (ms <= 0) { run(); return; }
     const timer = this.scene.tweens.addCounter({ from: 0, to: 1, duration: ms, onComplete: () => { this.timers.delete(timer); run(); } });
@@ -142,10 +145,15 @@ export class SpellEffects {
     this.fade(charge, rate, WINDUP_MS, 1.6);
   }
 
-  /** Once a cast, before its recipients: the impact's beats on the caster, and the shake. */
+  /**
+   * Once a cast, before its recipients: the impact's beats on the caster, and the shake. Says whether the
+   * staging shakes the view itself, so the scene does not shake it a second time.
+   */
   cast(visual: SpellVisual, caster: EffectFigure, rate: number, toward?: EffectAnchor) {
     const beats = this.staged(visual, 'impact');
-    if (beats) this.once(beats, visual, caster, rate, toward);
+    if (!beats) return false;
+    this.once(beats, visual, caster, rate, toward);
+    return beats.some(beat => beat.beat === 'shake');
   }
 
   impact(visual: SpellVisual, recipient: EffectFigure, rate: number, origin?: EffectAnchor) {
@@ -178,8 +186,6 @@ const ENVELOPES: Record<string, { scale: number; rise: number }> = {
   wave: { scale: .4, rise: 0 }, roar: { scale: .5, rise: 0 }, fizzle: { scale: 1, rise: 0 },
 };
 
-// A motif that carries its own colour whatever the family: embers are warm, a wound is blood.
-const MOTIF_COLOR: Record<string, number> = { fire: 0xd58b75, wound: 0xb66f7e };
 // An arc has absolute endpoints relative to its target; scaling it would move its source off the caster.
 const FADE_SCALE: Record<string, number> = { arc: 1, void: .55 };
 

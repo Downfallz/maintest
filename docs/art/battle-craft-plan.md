@@ -169,28 +169,37 @@ that extends it.
    motif; the budgets hold.
 
    *Built (2026-11-18)*: [ADR 0196](../adr/0196-stage-a-spell-in-beats-an-effects-kit-plays.md) extends ADR 0131
-   and ADR 0136. An entry of the spell art may carry a `staging`, at most 12 beats: `motif`, the spell's own
-   motif placed in time, and the kit's eight primitives, `burst`, `flow`, `trail`, `gather`, `glow`, `flash`,
-   `shake` and `pulse`, each with its start in milliseconds and its parameters by name. `SpellArt` refuses a
-   beat or a word it does not know, a beat that outlives its window, a second motif, flash or shake, and a
-   misspelt parameter, and the card's `visual` carries the staging. The page reads it again
-   (`table/battle-staging.js`): no staging, no kit, or one beat it does not understand, and the spell is drawn
-   as its motif, whole. The kit is `battle/src/fx/`, one file a primitive, built as `fx.js`: 6,745 bytes, 2,632
-   gzip, under limits of 48 KiB and 16 KiB in `battle/budget.mjs`. It holds no engine; the scene fetches it after
-   its first frame, by the hash of what was built, and hands it the Phaser it carries. The live bundle grew by about
-   5 KiB, to 1,717,056 of 1,769,472 bytes. No spell has a staging yet: the bench lists one sample a primitive
-   (`kit:burst` to `kit:pulse`), and each was filmed and looked at. The films found three faults, fixed here: a
-   burst's chips stayed under the motif (its reach is now twice the figure's radius unless told), the trail ran
-   ahead of the quill, and the pulse's halo was cut at the picture's edge. The bench names a spell as its file
-   does: Strike, not Heavy Strike. On the 120 ms BC3 left: a burst of 120 ms is two or three frames at 60 a
-   second and reads as a flicker; the kit's default is 320 ms, and a staging that wants the book's rule says
-   `lasts`. BC5, which builds the hold, decides whether the rule keeps the burst. Left: each beat makes its own
-   emitter, not one per texture as the book asked, because an emitter's settings move its living particles. The
-   `shake` is a decaying tremor, not yet the one trauma value BC5 builds; the `flash` is the tint BC5's hit flash
-   will call. The laboratory's sample still draws its 14 sparks by hand: BC5 rewrites that impact. No ribbon. An
-   action that plays before the kit has arrived is drawn as its motif. Frame time is not measured: BC10. The
-   pulse turns a figure's filters on and leaves them on, empty, when it ends: what that costs on a phone is
-   BC10's to measure before a staging uses it widely.
+   and ADR 0136, and holds the decision: the `staging`, its nine kinds of beat, what the builder refuses and
+   when the page falls back to the motif. What follows is what the build found.
+
+   - Sizes. The kit, `battle/src/fx/`, builds as `fx.js`: under 7 KiB, about 2.6 KiB gzip, against limits of
+     48 KiB and 16 KiB in `battle/budget.mjs`. The live bundle grew by about 5 KiB and stays under its limits.
+   - No spell has a staging yet. The bench lists one sample for each primitive (`kit:burst` to `kit:pulse`), and
+     each was filmed and looked at.
+   - Faults the films found, fixed here. A burst's chips stayed under the motif: its reach is now twice the
+     figure's radius unless told. The trail ran ahead of the quill. The pulse's halo was cut at the picture's
+     edge.
+   - Faults the reviewers found, fixed here. The image's battle stage did not copy `data/Spells`, which the
+     bench's names are read from. The builder let through a null beat, a beat with no `at`, a `lasts` large
+     enough to wrap around, and a misspelt `staging`. The 150 counted particles alive, so streams that start
+     together passed it. A staged shake and the shared tremor of a physical blow both played.
+   - The bench names a spell as its file does: Strike, not Heavy Strike.
+   - The 120 ms BC3 left. A 120 ms burst is two or three frames at 60 a second and reads as a flicker, so the
+     kit defaults to 320 ms. A staging that wants 120 ms says `lasts`. BC5, which builds the hold, decides
+     whether the book's rule keeps the burst.
+
+   Left for later stages:
+
+   - Each beat makes its own emitter, not one per texture as the book asked. An emitter's settings move its
+     living particles.
+   - The `shake` is a decaying tremor, not yet the one trauma value BC5 builds. The `flash` is the tint BC5's
+     hit flash will call. The laboratory's sample still draws its 14 sparks by hand: BC5 rewrites that impact.
+   - No ribbon is built.
+   - An action that plays before the kit has arrived is drawn as its motif.
+   - The `pulse` is costly: under a renderer with no graphics card, a frame with it takes about ten times a
+     frame without. BC10 measures it on a phone before a staging uses it on more than one figure.
+   - Frame time is not measured: BC10.
+
 5. **BC5, the movement.** Anticipation, strike, recoil, the hit reaction, the death, the return, and a slow breath
    at rest. Tests: no breath under reduced motion; the timings still agree with `table/battle-timing.js` at every
    playback rate; a skip settles the figures.

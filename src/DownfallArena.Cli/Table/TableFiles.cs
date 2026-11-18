@@ -339,7 +339,9 @@ internal sealed partial class TableFiles
     // deploy running the bundle of another dies at its first missing element: renaming `coach-continue` to `coach-again`
     // left every battle on "Connecting…". The page's own modules are not stamped: one of them imports another by its
     // bare name (`./navigation.js`), and a stamped name beside it would be a second copy of that module, run twice.
-    // The bundles import nothing by name.
+    // The bundles import no module beside the page by name. They do fetch the effects kit, `battle-build/fx.js`,
+    // by a name that carries the hash of the kit they were built with (ADR 0196). The host does not read that
+    // `?v`: it serves the kit it has, and the hash keeps a cache keyed by address from mixing two deploys.
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, StampedPage> _pages = new(StringComparer.Ordinal);
 
     [GeneratedRegex("(?<lead>\\b(?:src|href)=\")(?<name>(?:battle-build/[^\"?#:]+\\.js|[^\"?#:]+\\.css))\"")]
