@@ -17,6 +17,7 @@
 | [art/branding.md](art/branding.md) | The official UI palette and type (with `branding.css`; regenerate with `node scripts/sync-branding.mjs`), the bone and soot of ADR 0158, and the published design system built from them (`design-system/`). |
 | [art/spell-vfx.md](art/spell-vfx.md) | Spell visual effects in the battle view. |
 | [art/mutation-cues.md](art/mutation-cues.md) | Mutation cues on one arena body. |
+| [art/battle-craft-plan.md](art/battle-craft-plan.md) | Plan: the battle's craft. A researched pattern book, a bench and a film strip to see an effect, a `battle-designer` agent and a `/battle-pass` skill, then every spell, move and the ground staged in ten stages. |
 | [art/battle-polish.md](art/battle-polish.md) | Playback polish, and the art pipeline's follow-ups. The ART-2 source list is `art/source-intake.json`. |
 | [adr/](adr/README.md) | Architecture Decision Records: what was decided, why, and what it cost. The index is generated from the files. |
 | [architecture/overview.md](architecture/overview.md) | Layers, dependency rule, folder layout, how a request flows. |
