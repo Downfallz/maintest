@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { returningBattlePlayer, matchResult } from './battle-help-fixture.js';
+import { returningBattlePlayer, matchResult, withoutCanvas } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
 test.beforeEach(returningBattlePlayer);
 const creature = (id, health) => ({ id, name: `Creature ${id}`, health, maxHealth: 30, energy: 2, totalDefense: 1,
@@ -10,6 +10,7 @@ async function mount(page, { over = true, recording = true, outcome = { winner: 
     waitingFor: null, feed, feedNext: feed.length, board: { slot: 'Player1', roundNumber: 7, phase: 'Combat', subPhase: 'Activation',
       allies: [creature(1, 17), creature(2, 4), creature(3, 0)], enemies: [creature(4, 0), creature(5, 0), creature(6, 0)], timeline: [] } } };
   page.on('pageerror', error => state.errors.push(error.message));
+  if (over) await withoutCanvas({ context: page.context() });
   await page.addInitScript(({ both, permission, unsupported }) => {
     localStorage.setItem('downfall.table.seats', JSON.stringify(both ? { player1: 'first', player2: 'second' } : { player1: 'first' }));
     window.serviceCalls = []; let subscription = null;

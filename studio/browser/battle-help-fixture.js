@@ -52,8 +52,31 @@ export async function matchResult(page) {
   const dialog = page.locator('#match-dialog'), button = page.locator('#match-open');
   // A loaded machine can take longer than one short click to reach the button: the click is tried until the result
   // is open, instead of once with its failure swallowed.
-  await expect(async () => {
-    if (!await dialog.isVisible()) await button.click({ timeout: 2000 });
-    await expect(dialog).toBeVisible({ timeout: 2000 });
-  }).toPass({ timeout: 20000 });
+  // When it still fails, the page says why: each refused click's error is kept, with how many frames the page drew
+  // in the last second (a page that draws two cannot answer a click's stability check, which waits for frames).
+  const refused = [];
+  try {
+    await expect(async () => {
+      if (!await dialog.isVisible()) await button.click({ timeout: 2000 }).catch(error => { refused.push(String(error.message).split('\n').slice(0, 4).join(' | ')); throw error; });
+      await expect(dialog).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 20000 });
+  } catch (error) {
+    const frames = await page.evaluate(() => new Promise(done => { let n = 0; const end = performance.now() + 1000;
+      const tick = () => { n++; if (performance.now() < end) requestAnimationFrame(tick); else done(n); }; requestAnimationFrame(tick); })).catch(() => 'unknown');
+    throw new Error(`The match result did not open (${frames} frames drawn in the last second). Each refused click said:\n${refused.join('\n')}\n${error.message}`);
+  }
+}
+
+// What a result journey reads is the result and its controls, not the canvas. The canvas draws all the same, sixty
+// times a second, and on a runner that renders it in software those frames starve the page until a click's
+// stability check (two frames) cannot finish: #match-open was visible and in place, and five 2 s clicks were
+// refused (#819). A journey that does not read the field leaves its canvas undrawn.
+export async function withoutCanvas({ context }) {
+  await context.addInitScript(() => {
+    addEventListener('DOMContentLoaded', () => {
+      const style = document.createElement('style');
+      style.textContent = '#phaser-mount canvas { display: none !important }';
+      document.head.append(style);
+    });
+  });
 }
