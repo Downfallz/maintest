@@ -77,6 +77,7 @@ internal sealed class PlaytestRun : IReactionKeeper, IVisitKeeper
         {
             _record = value ?? _record;
             _revision = value?.Revision ?? 0;
+            _seenStored = value is not null;
         }
     }
 
@@ -375,7 +376,11 @@ internal sealed class PlaytestRun : IReactionKeeper, IVisitKeeper
     private async Task WriteRecordAfterAsync(Task before, Func<TableRecord?, TableRecord> over, CancellationToken cancellationToken)
     {
         await Task.WhenAny(before);
-        var (stored, written) = await WriteOverAsync(_reader, _writer, SessionId, over, cancellationToken);
+
+        // A record this process wrote or read and that is gone now was deleted with its run, by the operator, maybe from
+        // another process (ADR 0162). Written again, it would read to every deleted-run guard as a run still kept (#848).
+        var (stored, written) = await WriteOverAsync(_reader, _writer, SessionId, over, cancellationToken, refuseMissing: Volatile.Read(ref _seenStored));
+        Volatile.Write(ref _seenStored, true);
         var known = Interlocked.Exchange(ref _revision, written.Revision);
         if (known > 0 && stored is { } other && other.Revision > known)
         {
@@ -389,6 +394,16 @@ internal sealed class PlaytestRun : IReactionKeeper, IVisitKeeper
 
     // The revision of the record as this process last wrote it, or read it as it reopened the run.
     private long _revision;
+
+    // Whether this process wrote the record or reopened the run from it: a record from before revisions has revision 0,
+    // so the revision cannot say so. Missing after that, the record was deleted with its run (#848, #850).
+    private bool _seenStored;
+
+    /// <summary>
+    /// Whether the record this process wrote or read is gone, as the last look at it found (<see cref="RewrittenAsync" />):
+    /// the operator deleted the run, maybe from another process, and the table is let go of (#848).
+    /// </summary>
+    public bool Deleted { get; private set; }
 
     /// <summary>
     /// Why the operator voided this table (ADR 0176), as its record says now; none for a table not voided so. Read as
@@ -420,6 +435,7 @@ internal sealed class PlaytestRun : IReactionKeeper, IVisitKeeper
         }
 
         var read = await _reader.ReadTaggedAsync(TableRecord.File, cancellationToken);
+        Deleted = read is null && Volatile.Read(ref _seenStored) && pending == Volatile.Read(ref _recordWritten);
         return read is not null && StoredSessions.RecordOf(read.Text) is { } stored
             && pending == Volatile.Read(ref _recordWritten)
             && stored.Revision > Interlocked.Read(ref _revision)
@@ -431,11 +447,16 @@ internal sealed class PlaytestRun : IReactionKeeper, IVisitKeeper
     /// A record written over the one stored, on the condition that nobody wrote it since it was read, read again
     /// and written again when somebody had (ADR 0159). What is written is worked out from what is stored.
     /// </summary>
-    private static async Task<(TableRecord? Stored, TableRecord Written)> WriteOverAsync(IArtifactReader reader, IArtifactWriter writer, string sessionId, Func<TableRecord?, TableRecord> over, CancellationToken cancellationToken)
+    private static async Task<(TableRecord? Stored, TableRecord Written)> WriteOverAsync(IArtifactReader reader, IArtifactWriter writer, string sessionId, Func<TableRecord?, TableRecord> over, CancellationToken cancellationToken, bool refuseMissing = false)
     {
         for (var attempt = 1; ; attempt++)
         {
             var read = await reader.ReadTaggedAsync(TableRecord.File, cancellationToken);
+            if (read is null && refuseMissing)
+            {
+                throw new IOException($"The record of session {sessionId} is gone: its run was deleted, and the record is not written again.");
+            }
+
             var stored = read is null ? null : StoredSessions.RecordOf(read.Text);
             var written = over(stored).Over(stored);
             if (await writer.WriteJsonIfAsync(TableRecord.File, written, read?.Tag, cancellationToken) is not null)
@@ -1040,10 +1061,12 @@ internal sealed class PlaytestRun : IReactionKeeper, IVisitKeeper
 
     /// <summary>
     /// Whether the table's record is still there, read before a side file's first write, after this run's own write
-    /// of the record still on its way: none means the operator deleted the run, and the write would bring a file of
-    /// it back (#789). One read of the small record, paid only while the side file has never been written.
+    /// of the record still on its way. Missing once this process wrote or read it, the operator deleted the run, and
+    /// the write would bring a file of it back (#789). Missing when this process never saw it stored, its own writes
+    /// failed, which says nothing of a delete (#850). One read of the small record, paid only while the side file has
+    /// never been written.
     /// </summary>
-    public async Task<bool> RecordedAsync(CancellationToken cancellationToken = default)
+    public async Task<RecordPresence> RecordedAsync(CancellationToken cancellationToken = default)
     {
         Task pending;
         lock (_recordGate)
@@ -1053,7 +1076,12 @@ internal sealed class PlaytestRun : IReactionKeeper, IVisitKeeper
 
         // A write that failed was told to whoever asked for it; here only its end matters.
         await Task.WhenAny(pending);
-        return await _reader.ReadTextAsync(TableRecord.File, cancellationToken) is not null;
+        if (await _reader.ReadTextAsync(TableRecord.File, cancellationToken) is not null)
+        {
+            return RecordPresence.Kept;
+        }
+
+        return Volatile.Read(ref _seenStored) ? RecordPresence.Gone : RecordPresence.Unknown;
     }
 
     public async Task<(LastVisit? Visit, string? Tag)> VisitAsync(string seat, CancellationToken cancellationToken = default)

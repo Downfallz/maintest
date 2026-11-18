@@ -241,8 +241,48 @@ public sealed class TableReactionsApiTests : IDisposable
         await recording;
 
         waited.ShouldBeTrue();
-        (await recorded).ShouldBeTrue();
+        (await recorded).ShouldBe(RecordPresence.Kept);
         await table.QuiesceAsync(Cancel);
+    }
+
+    [Fact]
+    public async Task A_record_this_run_never_saw_stored_is_unknown_and_one_it_wrote_is_gone_once_deleted()
+    {
+        var table = await Opened(HostedTables.TwoPeople);
+        var before = await table.Run!.RecordedAsync(Cancel);
+        await table.RecordAsync(Cancel);
+        (await _hosted.Stored!.DeleteAsync(table.Id, Cancel)).ShouldBeTrue();
+
+        var after = await table.Run.RecordedAsync(Cancel);
+
+        before.ShouldBe(RecordPresence.Unknown, "nothing was written yet, which is no evidence of a delete (#850)");
+        after.ShouldBe(RecordPresence.Gone);
+        await table.QuiesceAsync(Cancel);
+    }
+
+    [Fact]
+    public async Task The_operator_s_delete_waits_for_a_reaction_on_its_way_and_leaves_nothing_of_the_run()
+    {
+        RecordHeld? store = null;
+        using var hosted = new HostedTables(directory => store = new RecordHeld(new FileArtifactStore(directory), PlaytestRun.ReactionsFile));
+        using var registry = hosted.Registry();
+        var admin = new AdminApi(registry, hosted.Composer, OperatorGate.WithToken("operator"), TimeProvider.System, "Rules", hosted.Stored) { Said = _ => { } };
+        var table = await BegunAsync(hosted, registry, HostedTables.TwoPeople);
+        (await ReactAsync(table, 0, "hello")).Status.ShouldBe(200);
+        store!.Hold();
+        var reacting = ReactAsync(table, 1, "good-luck");
+        await store.Reached.WaitAsync(TimeSpan.FromSeconds(30), Cancel);
+
+        var deleting = admin.HandleAsync("DELETE", "/api/sessions", $$"""{"ids":["{{table.Id}}"]}""", "operator", null);
+        await Task.Delay(200, Cancel);
+        var waited = !deleting.IsCompleted;
+        store.Release();
+        var deleted = await deleting;
+        await reacting;
+
+        waited.ShouldBeTrue("the delete waits for the reaction on its way (#849)");
+        deleted.Status.ShouldBe(200, Text(deleted));
+        Directory.Exists(Path.Combine(hosted.RunsDirectory, table.Id)).ShouldBeFalse();
     }
 
     private Task<PlayedTable> BegunAsync(TableRequest request) => BegunAsync(_hosted, _registry, request);

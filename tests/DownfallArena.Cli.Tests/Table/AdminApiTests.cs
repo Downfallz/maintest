@@ -533,6 +533,26 @@ public sealed class AdminApiTests : IDisposable
     }
 
     /// <summary>
+    /// A process holding a table whose run another process deleted writes its record no more (#848): neither a seat's
+    /// change nor the closing mark brings <c>table.json</c> back, which every deleted-run guard reads as the run's end.
+    /// </summary>
+    [Fact]
+    public async Task A_table_held_while_another_process_deletes_its_run_does_not_write_its_record_again()
+    {
+        var admin = Admin(OperatorGate.WithToken(OperatorToken));
+        var playing = Opened(await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy"}""", OperatorToken, null));
+        var table = (await _registry.ByIdAsync(playing, TestContext.Current.CancellationToken)).ShouldNotBeNull();
+        await table.RecordAsync(TestContext.Current.CancellationToken);
+        (await _hosted.Stored!.DeleteAsync(playing, TestContext.Current.CancellationToken)).ShouldBeTrue();
+
+        await Should.ThrowAsync<IOException>(() => table.RecordAsync(TestContext.Current.CancellationToken));
+        table.Close();
+        await table.Closing;
+
+        File.Exists(Path.Combine(_hosted.RunsDirectory, playing, TableRecord.File)).ShouldBeFalse();
+    }
+
+    /// <summary>
     /// Deleting a table still being played waits for its match to stop and its files to land before the run is
     /// removed: a checkpoint still on its way would otherwise bring the run back, after the deletion was reported.
     /// </summary>

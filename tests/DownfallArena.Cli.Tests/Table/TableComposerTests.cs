@@ -75,7 +75,7 @@ public sealed class TableComposerTests
 
         public Task<IReadOnlyList<string>> RunsAsync(CancellationToken cancellationToken = default) => inner.RunsAsync(cancellationToken);
 
-        public Task<bool> DeleteAsync(string run, CancellationToken cancellationToken = default) => inner.DeleteAsync(run, cancellationToken);
+        public Task<bool> DeleteAsync(string run, string? first, CancellationToken cancellationToken = default) => inner.DeleteAsync(run, first, cancellationToken);
 
         private sealed class Refusing(IArtifactWriter inner) : IArtifactWriter
         {

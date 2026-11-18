@@ -58,7 +58,7 @@ public sealed class FileArtifactStoreTests
         var writer = store.Writer("run-1");
         await writer.WriteJsonAsync("table.json", new { Revision = 1 }, TestContext.Current.CancellationToken);
         var tag = (await writer.WriteJsonIfAsync("seen-player1.json", new { Sequence = 1 }, expected: null, TestContext.Current.CancellationToken)).ShouldNotBeNull();
-        await store.DeleteAsync("run-1", TestContext.Current.CancellationToken);
+        await store.DeleteAsync("run-1", first: null, TestContext.Current.CancellationToken);
 
         var deleted = await writer.DeleteIfAsync("seen-player1.json", tag, TestContext.Current.CancellationToken);
 
@@ -110,7 +110,7 @@ public sealed class FileArtifactStoreTests
         var store = new FileArtifactStore(Path.Combine(Path.GetTempPath(), $"downfall-store-{Guid.NewGuid():N}"));
 
         (await store.RunsAsync(TestContext.Current.CancellationToken)).ShouldBeEmpty();
-        (await store.DeleteAsync("nowhere", TestContext.Current.CancellationToken)).ShouldBeFalse();
+        (await store.DeleteAsync("nowhere", first: null, TestContext.Current.CancellationToken)).ShouldBeFalse();
     }
 
     [Fact]
@@ -122,11 +122,29 @@ public sealed class FileArtifactStoreTests
         await store.Writer("run-1").AppendJsonLinesAsync("notes.jsonl", [new { Kind = "note" }], TestContext.Current.CancellationToken);
         await store.Writer("run-2").WriteJsonAsync("manifest.json", new { Matches = 0 }, TestContext.Current.CancellationToken);
 
-        (await store.DeleteAsync("run-1", TestContext.Current.CancellationToken)).ShouldBeTrue();
+        (await store.DeleteAsync("run-1", first: null, TestContext.Current.CancellationToken)).ShouldBeTrue();
 
         Directory.Exists(Path.Combine(directory.Path, "run-1")).ShouldBeFalse();
         (await store.RunsAsync(TestContext.Current.CancellationToken)).ShouldBe(["run-2"]);
-        (await store.DeleteAsync("run-1", TestContext.Current.CancellationToken)).ShouldBeFalse("it is already gone");
+        (await store.DeleteAsync("run-1", first: null, TestContext.Current.CancellationToken)).ShouldBeFalse("it is already gone");
+    }
+
+    /// <summary>
+    /// The file named first goes before the rest of the run (#818, #851): the recursive delete is made to fail, and
+    /// whatever was deleted before it shows in what is left.
+    /// </summary>
+    [Fact]
+    public async Task Deleting_a_run_deletes_the_file_named_first_before_anything_else()
+    {
+        using var directory = new ContentDirectory();
+        var store = new FileArtifactStore(directory.Path, _ => throw new IOException("The directory could not be removed."));
+        await store.Writer("run-o").WriteJsonAsync("first.json", new { Revision = 1 }, TestContext.Current.CancellationToken);
+        await store.Writer("run-o").WriteJsonAsync("reactions.json", new { Items = 1 }, TestContext.Current.CancellationToken);
+
+        await Should.ThrowAsync<IOException>(() => store.DeleteAsync("run-o", first: "first.json", TestContext.Current.CancellationToken));
+
+        File.Exists(Path.Combine(directory.Path, "run-o", "first.json")).ShouldBeFalse();
+        File.Exists(Path.Combine(directory.Path, "run-o", "reactions.json")).ShouldBeTrue();
     }
 
     [Fact]
@@ -135,7 +153,7 @@ public sealed class FileArtifactStoreTests
         using var directory = new ContentDirectory();
         var store = new FileArtifactStore(directory.Path);
 
-        await Should.ThrowAsync<ArgumentException>(() => store.DeleteAsync("..", TestContext.Current.CancellationToken));
-        await Should.ThrowAsync<ArgumentException>(() => store.DeleteAsync("a/b", TestContext.Current.CancellationToken));
+        await Should.ThrowAsync<ArgumentException>(() => store.DeleteAsync("..", first: null, TestContext.Current.CancellationToken));
+        await Should.ThrowAsync<ArgumentException>(() => store.DeleteAsync("a/b", first: null, TestContext.Current.CancellationToken));
     }
 }
