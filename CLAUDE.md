@@ -18,6 +18,8 @@
   `boardgame-director` (what survives the table), `tabletop-mathematician` (measures a candidate rule set),
   `component-designer` (what is in the box), `rulebook-writer` (the official rulebook, `rules/`, and the player aid),
   `playtest-app-architect` (the app ADR). Use them for their purpose instead of doing it all inline.
+- For how the battle looks in motion (`docs/art/battle-craft-plan.md`): `battle-designer` writes the storyboard of
+  a spell, a move or the ground (`docs/art/storyboards/`) and reads its film strip against it; it writes no code.
 - Skills in `.claude/skills/`: the pipeline from an idea to a merged pull request
   (docs/engineering/ai-workflow-plan.md): `/new-plan` (an idea becomes a plan; `/plan` is Claude Code's plan
   mode), `/stage` (one stage in a fresh session), `/verify` (the gate, chosen from the diff), `/reviewers` (the
@@ -30,7 +32,8 @@
   `main`, each with a prompt to paste into a fresh session), `/retro` (the week's numbers and recurring findings,
   as a pull request on the rules and skills), `/adr`, `/new-aggregate`, `/spells-report` (the spells the bots cast
   and leave, republished to the owner's report page), `/design-system` (the design system rebuilt from the
-  repository and republished to its page).
+  repository and republished to its page), `/battle-pass` (one pass on a family of spells, the movement or
+  the ground: the storyboard, the build, the film strip, the critique, the sheets shown to the owner).
 - `studio/prompts.test.js` checks what an agent or a skill names in backticks: every repository path exists,
   a heading named as an anchor (`table/README.md#routes`) is in its file, a label is declared in
   `.github/labels.json`, and a `search/issues` query names `is:issue` or `is:pr` (GitHub refuses it otherwise).

@@ -1,6 +1,6 @@
 # Plan: the battle's craft, every spell, attack, move and the ground staged by a designer who can see
 
-Status: accepted, 2026-11-18 (the owner settled the questions at the end). BC1 and BC2 are built; BC3 is next.
+Status: accepted, 2026-11-18 (the owner settled the questions at the end). BC1 to BC3 are built; BC4 is next.
 Each stage below is one pull request.
 
 ## What the owner asked for
@@ -143,6 +143,26 @@ that extends it.
    that.
 3. **BC3, the designer and the pass.** The `battle-designer` agent, the `/battle-pass` skill, and the first
    storyboard, for the base attack, as the worked example. Tests: `studio/prompts.test.js` on the paths they name.
+
+   *Built (2026-11-18)*: the agent (`.claude/agents/battle-designer.md`) with its two jobs, a storyboard and a
+   critique, and the skill (`.claude/skills/battle-pass/SKILL.md`): film what plays today, the storyboard, the
+   build, the film, the critique, at most three rounds, the sheets on one page for the owner, then the gate.
+   [The storyboards](storyboards/README.md) have a format of seven parts, and
+   `studio/storyboards.test.js` holds it: each spell is an entry of the spell art, each beat stays inside its
+   window on the timings of `table/battle-timing.js`, each pattern is a heading of the craft book. The first one,
+   [Strike](storyboards/base-actions.md), was written by the designer's prompt from two film strips of `4d51935`:
+   the whole action, and the contact at a frame every 60 ms, since the contact falls between two frames of the
+   first. What it found on the film: the draw back has no ease and barely shows, a melee blow opens with the
+   gather a cast uses, the strokes lean the same way whatever the blow's direction, and nothing moves after
+   1680 ms. Writing it corrected the format (two patterns a beat, the film's caster and targets named) and
+   two entries of the craft book. Left: the storyboard is a proposal, and its choices under **Left** wait for
+   the owner: no gather on a melee blow, the leaning strokes, the 8 chips. Nothing of it is built: BC4 and BC5
+   make the primitives, BC6 places them. The loop's build, critique and published page have not been run yet;
+   BC5 is the first stage to run them. The book's rule that the bright beats end within 120 ms of contact
+   leaves a burst about one frame on a sheet: BC4 looks at it again on its first burst. The bench and a sheet's
+   title still name a spell by its id's old slug ("Heavy Strike" for Strike), with no mutation: the designer is
+   told to stage from the content's name and the approved execution in `creature-art-direction.md`, and BC4,
+   which changes what the builder publishes for an effect, gives the bench the real names.
 4. **BC4, the effects kit.** `battle/src/fx/`, built as a second bundle loaded after the first frame with its own
    limit, the `staging` field, the builder's validation. Needs an ADR extending ADR 0131 and ADR 0136. Tests: each
    primitive is destroyed on cancel and plays nothing under reduced motion; an unknown beat falls back to the

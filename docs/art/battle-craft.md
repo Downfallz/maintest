@@ -3,7 +3,8 @@
 The patterns the battle view stages its spells, attacks, moves and ground with: what each one is, where it comes
 from, the Phaser API that does it, what it costs, what it becomes under reduced motion, and where this game uses
 it. It is BC1 of [the battle's craft plan](battle-craft-plan.md). The `battle-designer` agent (BC3) writes
-storyboards in these words, and the session that builds a stage reads the entry before it writes a tween.
+[storyboards](storyboards/README.md) in these words, and the session that builds a stage reads the entry before
+it writes a tween.
 
 Written on 2026-11-18 from the installed engine (Phaser 4.2.1, `battle/node_modules/phaser`) and a search of the
 web. It is a reference, not a decision: a pattern is used when a stage of the plan builds it.
@@ -75,7 +76,8 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   object; the draw back eases out (`Phaser.Math.Easing.Cubic.Out`), so it slows as it loads.
 - **Cost**: one tween. No draw call.
 - **Reduced motion**: nothing. The frame after the action is shown at once.
-- **Here**: the caster draws back 14 px and leans 7° over `DRAW_MS` (240 ms) in `battle/src/scene.ts`, melee only.
+- **Here**: the caster draws back 14 px and leans 7° over `DRAW_MS` (240 ms) in `battle/src/scene.ts`, melee only,
+  at a steady speed: the tween names no ease.
   BC5 scales the draw back to the weight of the strike and gives a cast its own: a gather, with no lunge.
 
 ### Contact and follow-through
@@ -103,7 +105,8 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 - **Phaser**: `Phaser.Tweens.TweenManager#setGlobalTimeScale` at 0 freezes every tween;
   `Phaser.Time.Clock#delayedCall` still runs and sets it back to 1. Emitters have their own
   `Phaser.GameObjects.Particles.ParticleEmitter#timeScale`. To freeze two figures only, use
-  `Phaser.Tweens.Tween#pause` and `Phaser.Tweens.Tween#resume`.
+  `Phaser.Tweens.Tween#pause` and `Phaser.Tweens.Tween#resume`: the global scale stops the effect's own tweens
+  too, so a motif meant to arrive during the stop needs this second route.
 - **Cost**: none to draw. The stop is spent inside the impact window, never added to it. The cancel path must
   set the time scale back to 1 and remove the timer (`Phaser.Time.TimerEvent#remove`): `killAll` does neither.
 - **Reduced motion**: nothing. The action is not played, so there is nothing to freeze.
@@ -741,5 +744,7 @@ The types cannot catch these. They compile, and do the wrong thing.
 - Sources looked for and left out, because they could not be read: Riot's VFX style guide (gone from its
   address), Animation Mentor on the moving hold, Envato Tuts+ on 2D lightning, Arm on fog, and the talks of
   Sakurai, Nijman and Holmér as videos. An entry that would lean on one says *house* where it does.
+- A storyboard names a pattern by a link to its heading here, and `studio/storyboards.test.js` follows the link:
+  renaming an entry means renaming it in the storyboards that use it.
 - A new pattern is added with all six lines, under the group it belongs to. A number with no source is marked
   *house*.

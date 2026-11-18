@@ -38,5 +38,7 @@ npm --prefix studio/browser test -- --trace off battle-lab.spec.js battle-bench.
 - Reduced motion and replay navigation show the settled view; first loads and hidden-tab returns replay nothing.
 - Look at an effect before calling it done. The bench (`/battle-lab?bench`) plays any entry of the spell art.
   Its film strip puts twelve frames of the play on one sheet (`README.md`, "The effects bench").
+- An effect is staged before it is built: its storyboard is in `docs/art/storyboards/`, and `/battle-pass` runs
+  the loop of storyboard, build, film and critique with the `battle-designer` agent.
 - The words a player reads come from docs/domain/player-terminology.md.
 - The suite takes 30 to 45 minutes in a session: run the specs the change touches first, then the list above.
