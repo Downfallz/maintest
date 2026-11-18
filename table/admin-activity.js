@@ -32,6 +32,7 @@ export const ACTION_LABELS = Object.freeze({
   'feedback.mute': 'Stopped feedback from a player',
   'feedback.unmute': 'Let a player send feedback again',
   'feedback.merge': 'Merged an idea into another',
+  'feedback.unmerge': 'Put a merged idea back in the list',
   'feedback.reproduce': 'Cut a bug report\'s round as a scenario',
   'feedback.download': 'Downloaded a bug report\'s redacted scenario',
   'feedback.file': 'Filed a bug report as an issue',

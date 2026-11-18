@@ -15,10 +15,10 @@ namespace DownfallArena.Cli.Table;
 /// key the request carries or from a signed-in account. The page sends the words; the host adds what it knows and the
 /// page cannot be trusted with -- the table, the seat, where it stands, the content, rules and engine, and, when the
 /// player attaches it, the seat's own view, or a practice's entries since its cut. The guards against spam are
-/// <see cref="SendFeedback" />'s. <c>GET</c> asks, before the player writes, whether the seat or account is muted
+/// <see cref="SendFeedback" />'s. <c>GET</c> asks <see cref="AskFeedbackMuted" />, before the player writes, whether the seat or account is muted
 /// (#717): 403 <c>Feedback.Muted</c>, or 204 for anyone else.
 /// </summary>
-internal sealed partial class FeedbackApi(SendFeedback desk, TableRegistry registry)
+internal sealed partial class FeedbackApi(SendFeedback desk, AskFeedbackMuted asking, TableRegistry registry)
 {
     public const string Route = "/api/feedback";
 
@@ -131,8 +131,8 @@ internal sealed partial class FeedbackApi(SendFeedback desk, TableRegistry regis
         {
             var signedIn = Accounts is null ? null : (await Accounts.WhoAsync(account))?.Account.Id.ToString();
             muted = signedIn is not null
-                ? await desk.MutedAsync(signedIn, signedIn)
-                : !string.IsNullOrEmpty(token) && await desk.MutedAsync(SeatSender(token), account: null);
+                ? await asking.HandleAsync(signedIn, signedIn)
+                : !string.IsNullOrEmpty(token) && await asking.HandleAsync(SeatSender(token), account: null);
         }
         catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is Azure.Identity.AuthenticationFailedException)
         {

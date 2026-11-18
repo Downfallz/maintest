@@ -13,7 +13,9 @@ namespace DownfallArena.Cli.Table;
 /// <c>GET .../&lt;id&gt;</c> is one sheet, the position the player attached included; <c>PUT .../&lt;id&gt;/status
 /// {"status","reason?"}</c> marks it seen, reproduced or dismissed (<c>"reason":"spam"</c> is the spam mark);
 /// <c>PUT .../&lt;id&gt;/kind {"kind"}</c> turns a bug report into an idea or back; <c>POST</c> and <c>DELETE
-/// .../&lt;id&gt;/mute</c> stop its sender from sending feedback for 30 days, and lift it; <c>POST .../&lt;id&gt;/reproduce</c>
+/// .../&lt;id&gt;/mute</c> stop its sender from sending feedback for 30 days, and lift it; <c>POST .../&lt;id&gt;/merge
+/// {"into"}</c> merges an idea into another, and <c>DELETE .../&lt;id&gt;/merge</c> puts it back in the list as one of its
+/// own (#725); <c>POST .../&lt;id&gt;/reproduce</c>
 /// cuts a bug report's round as a match scenario in its sender's seat (R4) and answers the sheet with its link;
 /// <c>POST .../&lt;id&gt;/scenario.zip</c> answers that scenario redacted, to attach to a public issue (R5), and
 /// <c>PUT .../&lt;id&gt;/status {"status":"filed","issue"}</c> keeps the issue's number, which <c>fixed</c> follows once the
@@ -68,6 +70,7 @@ internal sealed class FeedbackAdminApi(FeedbackDesk feedback, StoredSessions? st
             ("PUT", [var id, "status"]) => await StatusAsync(id, body, operatorName),
             ("PUT", [var id, "kind"]) => await KindAsync(id, body, operatorName),
             ("POST", [var id, "merge"]) => await MergeAsync(id, body, operatorName),
+            ("DELETE", [var id, "merge"]) => await UnmergeAsync(id, operatorName),
             ("POST", [var id, "reproduce"]) when Scenarios is not null => await ReproduceAsync(id, operatorName),
             ("POST", [var id, "scenario.zip"]) when Scenarios is not null => (await ScenarioZipAsync(id, operatorName)).NotKept(),
             ("POST", [var id, "mute"]) => await MuteAsync(id, operatorName),
@@ -315,6 +318,23 @@ internal sealed class FeedbackAdminApi(FeedbackDesk feedback, StoredSessions? st
         return await SheetAsync(id);
     }
 
+    private async Task<StudioResponse> UnmergeAsync(string id, string operatorName)
+    {
+        var unmerged = await feedback.Unmerge.HandleAsync(id);
+        if (unmerged.IsFailure)
+        {
+            return Refused(unmerged.Error);
+        }
+
+        if (unmerged.Value.Changed)
+        {
+            Console.WriteLine($"  Idea {id} unmerged from {unmerged.Value.From} by {operatorName}.");
+            await Notes.NoteAsync(operatorName, OperatorActions.FeedbackUnmerge, id, $"from {unmerged.Value.From}");
+        }
+
+        return await SheetAsync(id);
+    }
+
     /// <summary>
     /// Cuts the reported round as a scenario in the reporter's seat (R4), and keeps it with the report. Asked again while
     /// that scenario is kept, it cuts nothing and notes nothing; two presses at once each cut, and the one that keeps
@@ -474,11 +494,12 @@ internal sealed class FeedbackAdminApi(FeedbackDesk feedback, StoredSessions? st
     /// What the sheet offers on this feedback as it stands, by the names the page knows its buttons by: marks and moves
     /// while it is open, an idea's plan, shipping, merge and plan prompt, Diagnose… while its table is played, and the
     /// mute or its lifting while a sender can hold one. An idea merged into another is changed through the one it joined:
-    /// it offers only its dismissal, as spam or not, which takes it out of the group, and its sender's mute.
+    /// it offers only its unmerge (#725), which puts it back in the list as an idea of its own, its dismissal, as spam or
+    /// not, which takes it out of the group, and its sender's mute.
     /// </summary>
     private string[] Actions(Feedback one, FeedbackMute? mute, bool canMute, Played played, FeedbackGroup group, bool reproduced)
     {
-        var offered = one.MergedInto is not null ? ["dismiss", "spam"] : OpenActions(one, played, group, reproduced);
+        var offered = one.MergedInto is not null ? ["unmerge", "dismiss", "spam"] : OpenActions(one, played, group, reproduced);
         if (canMute)
         {
             offered.Add(mute is null ? "mute" : "unmute");

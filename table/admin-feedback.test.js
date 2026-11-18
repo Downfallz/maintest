@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ADDRESS_LIMIT, askedLine, askLinks, categoryFilters, choicesNote, categoryLabel, changeSaid, closedIssues, creatureLine, downloadNote, feedbackLine, feedbackPath, feedbackRows, filedSaid, fixedReports, issueAddress, issueLink, issueNumber, issuesPath, mergeChoices, muteLine, planPrompt, positionSides, reproduceSaid, sheetActions, sheetFacts, sheetWords, statusLine, STATUS_FILTERS } from './admin-feedback.js';
+import { ADDRESS_LIMIT, askedLine, askLinks, categoryFilters, choicesNote, categoryLabel, changeSaid, closedIssues, creatureLine, downloadNote, feedbackLine, feedbackPath, feedbackRows, filedSaid, fixedReports, issueAddress, issueLink, issueNumber, issuePath, issuesPath, closedFiled, mergeChoices, muteLine, planPrompt, positionSides, reproduceSaid, sheetActions, sheetFacts, sheetWords, statusLine, STATUS_FILTERS } from './admin-feedback.js';
 
 const NOW = Date.parse('2026-11-16T12:00:00Z');
 
@@ -75,6 +75,7 @@ test('the sheet shows the buttons the host offers, and none it does not', () => 
   assert.deepEqual([bug.reproduce, bug.seen, bug.reproduced, bug.toIdea, bug.toBug, bug.diagnose, bug.mute, bug.unmute], [false, true, true, true, false, true, true, false]);
   assert.equal(sheetActions({ ...report, underWay: false, actions: ['reproduce', 'seen'] }).reproduce, true, 'a game over offers its round to cut');
 
+  assert.equal(sheetActions({ ...report, actions: ['unmerge', 'dismiss'] }).unmerge, true, 'a merged idea offers its unmerge (#725)');
   assert.deepEqual(Object.values(sheetActions({ ...report, actions: ['bogus'] })).filter(Boolean), []);
   assert.deepEqual(Object.values(sheetActions(null)).filter(Boolean), [], 'a sheet still being read offers nothing');
 });
@@ -249,6 +250,40 @@ test('the tab reads the closed issues filed from reports, updated since the olde
     'https://api.github.com/repos/Downfallz/maintest/issues?state=closed&labels=from-report&sort=updated&direction=desc&per_page=100&page=1&since=2026-11-01T08%3A00%3A00.000Z');
   assert.equal(issuesPath('Downfallz/maintest', null, 3), 'https://api.github.com/repos/Downfallz/maintest/issues?state=closed&labels=from-report&sort=updated&direction=desc&per_page=100&page=3');
   assert.equal(issuesPath(null), null);
+});
+
+test('past the window of closed issues, each filed issue left is asked by its number, and GitHub refusing keeps what was read (#751)', async () => {
+  assert.equal(issuePath('Downfallz/maintest', 731), 'https://api.github.com/repos/Downfallz/maintest/issues/731');
+  assert.equal(issuePath('Downfallz/maintest', 'x'), null);
+  const page = (from) => Array.from({ length: 100 }, (_, index) => ({ number: from + index, state: 'closed', state_reason: 'completed' }));
+  const rows = [{ id: 'a', issue: 1000, at: '2026-11-01T08:00:00Z' }, { id: 'z', issue: 9000, at: '2026-11-01T09:00:00Z' }, { id: 'b', issue: 9001, at: '2026-11-02T08:00:00Z' }, { id: 'c', issue: 9002, at: '2026-11-03T08:00:00Z' }, { id: 'd', issue: 9001, at: '2026-11-04T08:00:00Z' }];
+  const asked = [];
+  const github = (limit) => async (address) => {
+    asked.push(address.replace('https://api.github.com/repos/Downfallz/maintest/issues', ''));
+    if (asked.length > limit) return { ok: false, status: 403, json: async () => ({}) };
+    const number = Number(address.match(/issues\/(\d+)$/)?.[1]);
+    if (number === 9000) return { ok: false, status: 410, json: async () => ({}) };
+    if (number) return { ok: true, json: async () => ({ number, state: number === 9001 ? 'closed' : 'open', state_reason: number === 9001 ? 'completed' : null }) };
+    return { ok: true, json: async () => page(Number(address.match(/&page=(\d+)/)[1]) * 1000) };
+  };
+
+  const read = await closedFiled(github(Infinity), 'Downfallz/maintest', rows);
+
+  assert.equal(read.complete, true);
+  assert.deepEqual([read.closed.has(9001), read.closed.has(9002), read.closed.has(1000)], [true, false, true]);
+  assert.deepEqual(asked.filter(path => !path.startsWith('?')), ['/9000', '/9001', '/9002'], 'only the issues the window did not hold, each once, past one GitHub no longer has');
+
+  asked.length = 0;
+  const cut = await closedFiled(github(7), 'Downfallz/maintest', rows);
+
+  assert.deepEqual([cut.complete, cut.closed.has(9001), cut.closed.has(1000), cut.last], [false, true, true, 9001]);
+  asked.length = 0;
+  const next = await closedFiled(github(6), 'Downfallz/maintest', rows, cut.last);
+
+  assert.deepEqual(asked.filter(path => !path.startsWith('?')).slice(0, 1), ['/9002'], 'the next check starts after the last issue asked, so none waits for good');
+  assert.equal(next.last, 9002);
+  asked.length = 0;
+  await assert.rejects(closedFiled(github(0), 'Downfallz/maintest', rows), 'a window GitHub refuses is not read at all');
 });
 
 test('an issue closed as completed fixes the reports filed as it; one closed as not planned, a pull request or one still open does not', () => {

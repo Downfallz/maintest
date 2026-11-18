@@ -57,7 +57,7 @@ public sealed class FeedbackIssueTests : IDisposable
     private static JsonElement Read(StudioResponse response) => JsonDocument.Parse(Encoding.UTF8.GetString(response.Body)).RootElement.Clone();
 
     private FeedbackAdminApi Tab() =>
-        new(FeedbackDesk.Open(_feedback, new FeedbackMutes(null), _writes, _clock), _hosted.Stored, _clock)
+        new(FeedbackDesk.Open(new FeedbackIndex(_feedback, _feedback, _clock), new FeedbackMutes(null), _writes, _clock), _hosted.Stored, _clock)
         {
             Notes = new OperatorNotes(_actions),
             Scenarios = new ScenarioAdminApi(_scenarios, _hosted.Stored!, _hosted.Composer),
@@ -179,7 +179,7 @@ public sealed class FeedbackIssueTests : IDisposable
         var refused = await AskAsync("POST", report.Id, "scenario.zip");
 
         (refused.Status, Read(refused).GetProperty("error").GetString()).ShouldBe((409, "Feedback.NotRedacted"));
-        Read(refused).GetProperty("message").GetString().ShouldBe("The scenario still holds an account: it is not offered.");
+        Read(refused).GetProperty("message").GetString().ShouldBe("The scenario still holds an account, in its title: it is not offered.");
         (await ActivityAsync()).ShouldNotContain(line => line.StartsWith("feedback.download", StringComparison.Ordinal));
     }
 
@@ -301,7 +301,7 @@ public sealed class FeedbackIssueTests : IDisposable
     public async Task A_host_that_keeps_no_sessions_reads_no_report_s_table_as_over()
     {
         var report = await ReportedAsync(new FeedbackContext { Table = "20261116-110000-deadbeef", Seat = "player2", Round = 2 });
-        var (_, tab) = TableHost.CuttingTabs(_scenarios, null, _hosted.Composer, FeedbackDesk.Open(_feedback, new FeedbackMutes(null), _writes, _clock), new OperatorNotes(_actions), _clock);
+        var (_, tab) = TableHost.CuttingTabs(_scenarios, null, _hosted.Composer, FeedbackDesk.Open(new FeedbackIndex(_feedback, _feedback, _clock), new FeedbackMutes(null), _writes, _clock), new OperatorNotes(_actions), _clock);
 
         var sheet = Read(await tab!.HandleAsync("GET", $"{FeedbackAdminApi.Route}/{report.Id}", string.Empty, "mark"));
 
@@ -408,7 +408,7 @@ public sealed class FeedbackIssueTests : IDisposable
         var seat = table.Seats[0];
         (await table.Api.HandleAsync("GET", $"/api/seat/{table.Seats[1].Name}", string.Empty, table.Seats[1].Token)).Status.ShouldBe(200);
         await SpeedAsync(table, await AskedInRoundTwoAsync(table));
-        var sent = await new FeedbackApi(new SendFeedback(_feedback, new GuestAddresses(), _writes, _clock), registry)
+        var sent = await new FeedbackApi(new SendFeedback(_feedback, new GuestAddresses(), _writes, _clock), new AskFeedbackMuted(new FeedbackMutes(null), _clock), registry)
             .HandleAsync("POST", JsonSerializer.Serialize(new { kind = "bug", category = "rules", happened = "The bleed did not tick after the stun.", attach = true }), seat.Token, new AccountRequest(null, Secure: false), "203.0.113.7", "Firefox/140");
         var id = Read(sent).GetProperty("id").GetString()!;
         (await table.Api.HandleAsync("POST", $"/api/seat/{table.Seats[1].Name}/concede", string.Empty, table.Seats[1].Token)).Status.ShouldBeLessThan(300);
@@ -503,7 +503,7 @@ public sealed class FeedbackIssueTests : IDisposable
         var refused = await AskAsync("POST", report.Id, "scenario.zip");
 
         (refused.Status, Read(refused).GetProperty("error").GetString()).ShouldBe((409, "Feedback.NotRedacted"));
-        Read(refused).GetProperty("message").GetString().ShouldBe($"The scenario still holds {what}: it is not offered.");
+        Read(refused).GetProperty("message").GetString().ShouldBe($"The scenario still holds {what}, in its title: it is not offered.");
     }
 
     [Fact]

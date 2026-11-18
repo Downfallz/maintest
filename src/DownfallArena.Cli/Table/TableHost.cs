@@ -212,7 +212,8 @@ internal static class TableHost
 
         // The players' bug reports and ideas (ADR 0189), kept beside the recordings in a store of their own; a pass
         // lets go of what was closed 180 days ago.
-        var feedback = store is null ? null : await OpenFeedbackAsync(options.Record ?? DefaultRunsDirectory, stopping.Token);
+        var feedbackIndex = store is null ? null : await OpenFeedbackAsync(options.Record ?? DefaultRunsDirectory, clock, stopping.Token);
+        var feedback = feedbackIndex?.Records;
         using var feedbackWrites = new FeedbackWrites();
         if (feedback is not null && accounts is not null)
         {
@@ -230,7 +231,7 @@ internal static class TableHost
         {
             admin.Jobs = new JobsApi(tendLog, clock, async (now, progress) =>
             {
-                var tended = await TableTend.TendAsync(registry, admin.Lobby, now, composer, clock, progress, suspendedSeats, feedback is null ? null : new LetGoOfClosedFeedback(feedback, clock));
+                var tended = await TableTend.TendAsync(registry, admin.Lobby, now, composer, clock, progress, suspendedSeats, feedback is null ? null : new LetGoOfClosedFeedback(feedback, clock), feedbackIndex);
                 if (relay is not null)
                 {
                     TableTend.Announce(relay, tended);
@@ -253,12 +254,12 @@ internal static class TableHost
         // The Feedback tab (feedback plan, R3): the operator reads, marks and moves feedback, and mutes a sender; an
         // account's mute is kept with its activity, a guest's in this process's memory.
         var feedbackMutes = new FeedbackMutes(accounts?.Activity);
-        var feedbackDesk = feedback is null ? null : FeedbackDesk.Open(feedback, feedbackMutes, feedbackWrites, clock);
+        var feedbackDesk = feedbackIndex is null ? null : FeedbackDesk.Open(feedbackIndex, feedbackMutes, feedbackWrites, clock);
 
         // The Overview (A5): the numbers at a glance, each read from the source its own tab reads.
         admin.Overview = new OverviewApi(registry, composer, clock)
         {
-            Feedback = feedback is null ? null : new CountWaitingFeedback(feedback, clock),
+            Feedback = feedbackIndex is null ? null : new CountWaitingFeedback(feedbackIndex, clock),
             Players = directory,
             Results = results,
             Tending = admin.Jobs?.Runs,
@@ -294,7 +295,7 @@ internal static class TableHost
         var sendFeedback = feedback is null ? null : new SendFeedback(feedback, new GuestAddresses(), feedbackWrites, clock, feedbackMutes);
         using var server = new TableServer(options.Bind, options.Port, registry, new TableFiles(TableDirectory), admin, clock, stored, accounts, leaderboard, friends, stats)
         {
-            Feedback = sendFeedback is null ? null : new FeedbackApi(sendFeedback, registry) { Accounts = accounts, Practices = practices },
+            Feedback = sendFeedback is null ? null : new FeedbackApi(sendFeedback, new AskFeedbackMuted(feedbackMutes, clock), registry) { Accounts = accounts, Practices = practices },
             Tended = options.Tended,
             Scenarios = scenarioStore is null || practices is null || accounts is null ? null : new ScenariosApi(scenarioStore, practices, accounts) { Admins = gate.Admins, Stored = stored },
             Practices = practices,
@@ -504,11 +505,11 @@ internal static class TableHost
     }
 
     /// <summary>Where feedback is kept (ADR 0189), or none when it cannot be opened: the host then takes none, which is said.</summary>
-    internal static async Task<IFeedbackStore?> OpenFeedbackAsync(string target, CancellationToken cancellationToken)
+    internal static async Task<FeedbackIndex?> OpenFeedbackAsync(string target, TimeProvider clock, CancellationToken cancellationToken)
     {
         try
         {
-            return await ArtifactStores.OpenFeedbackAsync(target, cancellationToken);
+            return await ArtifactStores.OpenFeedbackAsync(target, clock, cancellationToken);
         }
         catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is Azure.Identity.AuthenticationFailedException)
         {

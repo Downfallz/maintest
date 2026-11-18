@@ -53,10 +53,10 @@ internal static class FeedbackGroups
     }
 
     /// <summary>Every group among what is kept, by the id of the idea it became, that idea first then the rest as they came.</summary>
-    public static Dictionary<string, List<Feedback>> Of(IReadOnlyList<Feedback> all)
+    public static Dictionary<string, List<FeedbackSummary>> Of(IReadOnlyList<FeedbackSummary> all)
     {
         var byId = all.ToDictionary(one => one.Id, StringComparer.Ordinal);
-        var groups = new Dictionary<string, List<Feedback>>(StringComparer.Ordinal);
+        var groups = new Dictionary<string, List<FeedbackSummary>>(StringComparer.Ordinal);
         foreach (var one in all.OrderBy(one => one.MergedInto is not null).ThenBy(one => one.At))
         {
             if (Root(one, byId) is { } root)
@@ -74,12 +74,15 @@ internal static class FeedbackGroups
     }
 
     /// <summary>How many asked: each sender once, but each deleted account's feedback apart, since they were different players.</summary>
-    public static FeedbackAsks AsksOf(IReadOnlyCollection<Feedback> group) => new(
+    public static FeedbackAsks AsksOf(IReadOnlyCollection<Feedback> group) => AsksOf([.. group.Select(FeedbackSummary.Of)]);
+
+    /// <summary>How many asked, read off the index's rows (#866).</summary>
+    public static FeedbackAsks AsksOf(IReadOnlyCollection<FeedbackSummary> group) => new(
         group.Select(one => one.Sender == ForgetFeedbackAccount.Gone ? $"{ForgetFeedbackAccount.Gone}:{one.Id}" : one.Sender).Distinct(StringComparer.Ordinal).Count(),
         group.Min(one => one.At),
         group.Max(one => one.LastWritten));
 
-    private static Feedback? Root(Feedback feedback, Dictionary<string, Feedback> byId)
+    private static FeedbackSummary? Root(FeedbackSummary feedback, Dictionary<string, FeedbackSummary> byId)
     {
         var passed = new HashSet<string>(StringComparer.Ordinal);
         var at = feedback;

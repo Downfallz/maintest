@@ -81,9 +81,9 @@ public static class RedactedScenario
         var words = Words(root).ToList();
         foreach (var (what, name) in names)
         {
-            if (!string.IsNullOrWhiteSpace(name) && words.Any(word => Holds(word, name)))
+            if (!string.IsNullOrWhiteSpace(name) && words.FirstOrDefault(word => Holds(word.Text, name)) is { Text: not null } held)
             {
-                return Refused($"The scenario still holds {what}: it is not offered.");
+                return Refused($"The scenario still holds {what}, in its {held.Where}: it is not offered.");
             }
         }
 
@@ -99,18 +99,45 @@ public static class RedactedScenario
             || (at.ValueKind == JsonValueKind.String && DateTimeOffset.TryParse(at.GetString(), System.Globalization.CultureInfo.InvariantCulture, out var time) && time == DateTimeOffset.UnixEpoch));
 
     /// <summary>
-    /// Every text the file holds, the content it carries left out. Not its fields' names: the format's own words
-    /// (<c>seat</c>, <c>kind</c>) are no one's.
+    /// Every text the file holds, with the top-level field it is in, the content it carries left out. Not its fields'
+    /// names, nor the values the format writes from words of its own: a file's format and seat, and a journal line's
+    /// kind, slot, speed and who took a seat, when an agent's word names it. A player may well be named <c>person</c>, <c>decision</c> or
+    /// <c>player1</c>, and is then looked for in the file's other words alone (#751).
     /// </summary>
-    private static IEnumerable<string> Words(JsonElement root) =>
-        root.EnumerateObject().Where(property => property.Name != Schema).SelectMany(property => Texts(property.Value));
+    private static IEnumerable<(string Where, string Text)> Words(JsonElement root) =>
+        root.EnumerateObject()
+            .Where(property => property.Name != Schema && !FormatWords.Contains(property.Name))
+            .SelectMany(property => Texts(property.Value, journal: property.Name is "before" or "after").Select(text => (WhereOf(property.Name), text)));
 
-    private static IEnumerable<string> Texts(JsonElement element) => element.ValueKind switch
+    private static IEnumerable<string> Texts(JsonElement element, bool journal) => element.ValueKind switch
     {
         JsonValueKind.String => [element.GetString()!],
-        JsonValueKind.Array => element.EnumerateArray().SelectMany(Texts),
-        JsonValueKind.Object => element.EnumerateObject().SelectMany(property => Texts(property.Value)),
+        JsonValueKind.Array => element.EnumerateArray().SelectMany(item => Texts(item, journal)),
+        JsonValueKind.Object => element.EnumerateObject()
+            .Where(property => !journal || !JournalWords.Contains(property.Name) || (property.Name == "to" && !AgentWord(property.Value)))
+            .SelectMany(property => Texts(property.Value, journal)),
         _ => [],
+    };
+
+    /// <summary>The top-level fields a scenario file writes from the format's own words.</summary>
+    private static readonly HashSet<string> FormatWords = new(["format", "seat"], StringComparer.Ordinal);
+
+    /// <summary>The fields of a journal line written from the format's own words: a kind of line, a seat, a tempo, an agent.</summary>
+    private static readonly HashSet<string> JournalWords = new(["kind", "slot", "speed", "to", "late"], StringComparer.Ordinal);
+
+    /// <summary>
+    /// Whether who took a seat is named by a bare word of the host's (<c>person</c>, an agent such as <c>greedy</c>), not
+    /// by an agent with a weights file the pilot typed (<c>heuristic:mark.json</c>), which is looked through as any text.
+    /// </summary>
+    private static bool AgentWord(JsonElement value) =>
+        value.ValueKind == JsonValueKind.String && value.GetString() is { Length: > 0 } named && named.All(one => char.IsAsciiLetterOrDigit(one) || one == '-');
+
+    /// <summary>A top-level field as the refusal names it, so the operator sees where the name was found.</summary>
+    private static string WhereOf(string field) => field switch
+    {
+        "before" => "journal before the cut",
+        "after" => "journal after the cut",
+        _ => field,
     };
 
     /// <summary>

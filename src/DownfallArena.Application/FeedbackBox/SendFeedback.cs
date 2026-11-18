@@ -45,10 +45,6 @@ public sealed class SendFeedback(IFeedbackStore store, GuestAddresses addresses,
 
     private const int LongestLine = 500;
 
-    /// <summary>Whether the sender is muted now: what a page asks before its player writes, so a muted one is offered nothing.</summary>
-    public async Task<bool> MutedAsync(string sender, string? account, CancellationToken cancellationToken = default) =>
-        mutes is not null && await mutes.FindAsync(sender, account, clock.GetUtcNow(), cancellationToken) is not null;
-
     public async Task<FeedbackAnswer> HandleAsync(FeedbackSent sent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(sent);
@@ -57,7 +53,7 @@ public sealed class SendFeedback(IFeedbackStore store, GuestAddresses addresses,
             return FeedbackAnswer.Refuse(FeedbackErrors.Invalid(invalid));
         }
 
-        if (await MutedAsync(sent.Sender, sent.Account, cancellationToken))
+        if (mutes is not null && await new AskFeedbackMuted(mutes, clock).HandleAsync(sent.Sender, sent.Account, cancellationToken))
         {
             return FeedbackAnswer.Refuse(FeedbackErrors.Muted);
         }
