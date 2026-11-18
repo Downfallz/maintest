@@ -261,4 +261,67 @@ public sealed class SendFeedbackTests : IDisposable
         answers.Count(answer => answer.Refused is null).ShouldBe(1);
         _store.All.Count.ShouldBe(1);
     }
+
+    [Fact]
+    public async Task Sending_lists_only_the_last_two_days_never_every_record_kept()
+    {
+        await _store.SaveAsync(new Feedback
+        {
+            Id = Feedback.NewId(_clock.GetUtcNow().AddDays(-30)),
+            Kind = FeedbackKind.Bug,
+            At = _clock.GetUtcNow().AddDays(-30),
+            Sender = "acct_1",
+            Category = "rules",
+            Text = "A report from a month ago.",
+        }, Cancel);
+        var first = await SentAsync(Report());
+        var listing = new ListsNothingWhole(_store);
+
+        var again = await new SendFeedback(listing, _addresses, _writes, _clock).HandleAsync(Report() with { Text = "Still happens on this round." }, Cancel);
+
+        (again.Merged, again.Id).ShouldBe((true, first.Id));
+        listing.Spans.ShouldBe([(_clock.GetUtcNow() - SendFeedback.Day - SendFeedback.Day, _clock.GetUtcNow() + SendFeedback.Ahead)]);
+    }
+
+    [Fact]
+    public async Task Feedback_stamped_a_moment_ahead_of_the_clock_still_counts_against_its_sender()
+    {
+        // A clock stepped back, or a second revision while one replaces the other, leaves an id a little ahead of now.
+        var ahead = _clock.GetUtcNow().AddMinutes(1);
+        await _store.SaveAsync(new Feedback
+        {
+            Id = Feedback.NewId(ahead),
+            Kind = FeedbackKind.Bug,
+            At = ahead,
+            Sender = "acct_1",
+            Account = "acct_1",
+            Category = "rules",
+            Text = "The bleed did not tick after the stun.",
+        }, Cancel);
+
+        var again = await Desk().HandleAsync(Report(), Cancel);
+
+        again.Id.ShouldBe(_store.All.Single().Id, "the same words sent again are the same feedback, however its id was stamped");
+    }
+
+    /// <summary>A store that refuses to list every record, and notes each span it lists by date.</summary>
+    private sealed class ListsNothingWhole(KeptFeedback inner) : DownfallArena.Application.FeedbackBox.Ports.IFeedbackStore
+    {
+        public List<(DateTimeOffset After, DateTimeOffset Until)> Spans { get; } = [];
+
+        public Task<IReadOnlyList<string>> IdsAsync(CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("Every record was listed.");
+
+        public Task<IReadOnlyList<string>> IdsSentAsync(DateTimeOffset after, DateTimeOffset until, CancellationToken cancellationToken = default)
+        {
+            Spans.Add((after, until));
+            return inner.IdsSentAsync(after, until, cancellationToken);
+        }
+
+        public Task SaveAsync(Feedback feedback, CancellationToken cancellationToken = default) => inner.SaveAsync(feedback, cancellationToken);
+
+        public Task<Feedback?> FindAsync(string id, CancellationToken cancellationToken = default) => inner.FindAsync(id, cancellationToken);
+
+        public Task DeleteAsync(string id, CancellationToken cancellationToken = default) => inner.DeleteAsync(id, cancellationToken);
+    }
 }

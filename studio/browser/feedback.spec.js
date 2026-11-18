@@ -11,9 +11,16 @@ const creature = id => ({ id, name: `Creature ${id}`, health: 30, maxHealth: 30,
 async function answering(state, route) {
   const request = route.request();
   // Asked before the player writes whether they are muted (#717): 204 unless the test mutes them.
+  // A test may hold a seat's question (keyed by its token, or 'none') and say what it answers, muted or not (#824).
   if (request.method() === 'GET') {
-    state.asked.push(request.headers()['x-seat-token'] ?? null);
-    return state.muted ? route.fulfill({ status: 403, json: { error: 'Feedback.Muted' } }) : route.fulfill({ status: 204, body: '' });
+    const token = request.headers()['x-seat-token'] ?? null;
+    state.asked.push(token);
+    const key = token ?? 'none';
+    if (state.askHolds?.[key]) await state.askHolds[key];
+    const muted = state.askMuted?.[key] ?? state.muted;
+    await (muted ? route.fulfill({ status: 403, json: { error: 'Feedback.Muted' } }) : route.fulfill({ status: 204, body: '' }));
+    state.answered?.push(token);
+    return;
   }
   state.sent.push({ body: request.postDataJSON(), token: request.headers()['x-seat-token'] ?? null });
   if (state.hold) await state.hold;
@@ -22,7 +29,12 @@ async function answering(state, route) {
 }
 
 async function seat(page, { account = null, muted = false } = {}) {
-  const state = { sent: [], answers: [], errors: [], asked: [], muted };
+  return seatWith(page, { muted }, { account });
+}
+
+/** A seat in a game, its host answering into `held`: what a test set on it before the page loads holds from the first question. */
+async function seatWith(page, held, { account = null } = {}) {
+  const state = Object.assign(held, { sent: [], answers: [], errors: [], asked: [] });
   page.on('pageerror', error => state.errors.push(error.message));
   await returningBattlePlayer({ context: page.context() });
   await page.addInitScript(() => {
@@ -187,6 +199,64 @@ test('a player the host says is muted is offered no entry in a game before they 
   await expect(page.locator('#settings-dialog .settings-feedback')).toBeHidden();
   expect(await page.locator('#feedback-open-match').evaluate(node => getComputedStyle(node).display)).toBe('none');
   expect(state.sent).toEqual([]);
+});
+
+/** Holds the questions the page asks for these tokens ('none' for the one asked without a seat) until released. */
+function holdAsking(state, keys) {
+  const releases = {};
+  state.askHolds = Object.fromEntries(keys.map(key => [key, new Promise(resolve => { releases[key] = resolve; })]));
+  state.answered = [];
+  return releases;
+}
+
+/** Lets the page read the answer it was just given: the question's handler runs once its response has arrived. */
+async function settled(page) {
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 100))));
+}
+
+test('an answer to an earlier question, about a seat no longer on screen, is not read over the latest one (#824)', async ({ page }) => {
+  // The page asks once mounted, without a seat, then again for the seat it shows; the first answer, muted, comes last.
+  const state = { muted: false };
+  const releases = holdAsking(state, ['none']);
+  state.askMuted = { none: true, first: false };
+  await seatWith(page, state);
+  await expect.poll(() => state.answered).toEqual(['first']);
+  await settled(page);
+
+  expect(state.asked).toContain(null);
+  releases.none();
+  // Each question asked without a seat is answered muted, and only after the seat's own question.
+  await expect.poll(() => state.answered.length).toBe(state.asked.length);
+  expect(state.answered[0]).toBe('first');
+  await settled(page);
+
+  await expect(page.locator('html')).not.toHaveAttribute('data-feedback-muted', 'true');
+  await page.locator('#settings').click();
+  await expect(page.locator('#feedback-open-settings')).toBeVisible();
+});
+
+test('a send refused as muted is not undone by a question still on its way (#824)', async ({ page }) => {
+  const state = { muted: false };
+  const releases = holdAsking(state, ['first']);
+  await seatWith(page, state);
+  await expect.poll(() => state.asked).toContain('first');
+  state.answers.push({ status: 403, json: { error: 'Feedback.Muted' } });
+
+  await page.locator('#settings').click();
+  await page.locator('#feedback-open-settings').click();
+  await page.getByRole('button', { name: /I have an idea/ }).click();
+  await page.getByRole('radio', { name: 'The battle' }).check();
+  await page.getByLabel(/What were you trying to do/).fill('I wanted to see my last turn again.');
+  await page.locator('#feedback-send').click();
+  await expect(page.locator('#feedback-refusal')).toHaveText('Your feedback is paused for now.');
+
+  releases.first();
+  await expect.poll(() => state.answered).toContain('first');
+  await settled(page);
+
+  await expect(page.locator('html')).toHaveAttribute('data-feedback-muted', 'true');
+  await page.locator('#feedback-close').click();
+  await expect(page.locator('#feedback-open-settings')).toBeHidden();
 });
 
 test('a signed-in player the host says is muted finds no entry in the lobby’s account menu (#717)', async ({ page }) => {

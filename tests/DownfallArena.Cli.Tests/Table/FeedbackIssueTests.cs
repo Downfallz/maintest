@@ -57,7 +57,7 @@ public sealed class FeedbackIssueTests : IDisposable
     private static JsonElement Read(StudioResponse response) => JsonDocument.Parse(Encoding.UTF8.GetString(response.Body)).RootElement.Clone();
 
     private FeedbackAdminApi Tab() =>
-        new(new OperatorFeedback(_feedback, new FeedbackMutes(null), _writes, _clock), _hosted.Stored, _clock)
+        new(FeedbackDesk.Open(_feedback, new FeedbackMutes(null), _writes, _clock), _hosted.Stored, _clock)
         {
             Notes = new OperatorNotes(_actions),
             Scenarios = new ScenarioAdminApi(_scenarios, _hosted.Stored!, _hosted.Composer),
@@ -301,7 +301,7 @@ public sealed class FeedbackIssueTests : IDisposable
     public async Task A_host_that_keeps_no_sessions_reads_no_report_s_table_as_over()
     {
         var report = await ReportedAsync(new FeedbackContext { Table = "20261116-110000-deadbeef", Seat = "player2", Round = 2 });
-        var (_, tab) = TableHost.CuttingTabs(_scenarios, null, _hosted.Composer, new OperatorFeedback(_feedback, new FeedbackMutes(null), _writes, _clock), new OperatorNotes(_actions), _clock);
+        var (_, tab) = TableHost.CuttingTabs(_scenarios, null, _hosted.Composer, FeedbackDesk.Open(_feedback, new FeedbackMutes(null), _writes, _clock), new OperatorNotes(_actions), _clock);
 
         var sheet = Read(await tab!.HandleAsync("GET", $"{FeedbackAdminApi.Route}/{report.Id}", string.Empty, "mark"));
 

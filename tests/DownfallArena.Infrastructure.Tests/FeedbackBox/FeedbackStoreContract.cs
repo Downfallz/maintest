@@ -77,6 +77,36 @@ public abstract class FeedbackStoreContract
     }
 
     [Fact]
+    public async Task Ids_sent_within_a_span_are_listed_newest_first_and_none_outside_it()
+    {
+        var store = await StoreAsync();
+        var after = Start.AddDays(-1);
+        Feedback[] inside = [Report(after.AddMinutes(1)), Report(Start.AddHours(-1)), Report(Start)];
+        Feedback[] outside = [Report(Start.AddDays(-3)), Report(after), Report(Start.AddMinutes(1)), Report(Start.AddDays(2))];
+        foreach (var feedback in inside.Concat(outside))
+        {
+            await store.SaveAsync(feedback, Cancel);
+        }
+
+        (await store.IdsSentAsync(after, Start, Cancel)).ShouldBe([inside[2].Id, inside[1].Id, inside[0].Id]);
+    }
+
+    [Fact]
+    public async Task Ids_sent_across_the_turn_of_a_year_are_listed_from_both_years()
+    {
+        var store = await StoreAsync();
+        var newYear = new DateTimeOffset(2027, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        Feedback[] sent = [Report(newYear.AddHours(-2)), Report(newYear.AddHours(1)), Report(newYear.AddDays(-40))];
+        foreach (var feedback in sent)
+        {
+            await store.SaveAsync(feedback, Cancel);
+        }
+
+        (await store.IdsSentAsync(newYear.AddDays(-2), newYear.AddHours(2), Cancel)).ShouldBe([sent[1].Id, sent[0].Id]);
+        (await store.IdsSentAsync(newYear, newYear.AddDays(-1), Cancel)).ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task Deleted_feedback_is_no_longer_found_or_listed()
     {
         var store = await StoreAsync();
@@ -96,6 +126,7 @@ public abstract class FeedbackStoreContract
         var store = await StoreAsync();
 
         (await store.IdsAsync(Cancel)).ShouldBeEmpty();
+        (await store.IdsSentAsync(Start.AddDays(-2), Start, Cancel)).ShouldBeEmpty();
         (await store.FindAsync(Feedback.NewId(Start), Cancel)).ShouldBeNull();
         (await store.FindAsync("../escape", Cancel)).ShouldBeNull();
     }

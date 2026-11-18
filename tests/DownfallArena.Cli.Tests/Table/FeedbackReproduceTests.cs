@@ -54,7 +54,7 @@ public sealed class FeedbackReproduceTests : IDisposable
     private ScenarioAdminApi Cutting() => new(_scenarios, _hosted.Stored!, _hosted.Composer);
 
     private FeedbackAdminApi Tab() =>
-        new(new OperatorFeedback(_feedback, new FeedbackMutes(null), _writes, _clock), _hosted.Stored, _clock) { Notes = new OperatorNotes(_actions), Scenarios = Cutting() };
+        new(FeedbackDesk.Open(_feedback, new FeedbackMutes(null), _writes, _clock), _hosted.Stored, _clock) { Notes = new OperatorNotes(_actions), Scenarios = Cutting() };
 
     private async Task<StudioResponse> ReproduceAsync(string id)
     {
@@ -130,7 +130,7 @@ public sealed class FeedbackReproduceTests : IDisposable
     public async Task The_feedback_tab_the_host_composes_offers_and_cuts_a_report_s_round()
     {
         var id = await ReportedAsync(new FeedbackContext { Table = await PlayedAsync(), Seat = "player2", Round = 2 });
-        var (_, composed) = TableHost.CuttingTabs(_scenarios, _hosted.Stored, _hosted.Composer, new OperatorFeedback(_feedback, new FeedbackMutes(null), _writes, _clock), new OperatorNotes(_actions), _clock);
+        var (_, composed) = TableHost.CuttingTabs(_scenarios, _hosted.Stored, _hosted.Composer, FeedbackDesk.Open(_feedback, new FeedbackMutes(null), _writes, _clock), new OperatorNotes(_actions), _clock);
         var tab = composed.ShouldNotBeNull();
 
         var sheet = Read(await tab.HandleAsync("GET", $"{FeedbackAdminApi.Route}/{id}", string.Empty, "mark"));

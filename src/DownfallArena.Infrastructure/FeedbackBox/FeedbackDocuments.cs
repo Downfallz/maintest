@@ -34,6 +34,22 @@ internal static class FeedbackDocuments
         return Feedback.IsId(id) ? id : null;
     }
 
+    /// <summary>
+    /// The start every name of feedback sent on each day of the span shares, its first day first: ids start with the
+    /// day, <c>yyyyMMdd</c>, so a store lists those days alone. None when the span ends before it begins.
+    /// </summary>
+    public static IEnumerable<string> DaysOf(DateTimeOffset after, DateTimeOffset until)
+    {
+        for (var day = after.UtcDateTime.Date; day <= until.UtcDateTime.Date; day = day.AddDays(1))
+        {
+            yield return day.ToString("yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture);
+        }
+    }
+
+    /// <summary>Whether the feedback the id names was sent within the span: after its start, and no later than its end.</summary>
+    public static bool SentWithin(string id, DateTimeOffset after, DateTimeOffset until) =>
+        Feedback.SentAt(id) is { } at && at > after && at <= until;
+
     public static string Write(Feedback feedback) => JsonSerializer.Serialize(feedback, Web);
 
     public static Feedback Read(string json) =>

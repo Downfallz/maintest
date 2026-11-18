@@ -37,7 +37,7 @@ internal sealed class OverviewApi(TableRegistry registry, TableComposer composer
     public HostSettingsCache? Settings { get; init; }
 
     /// <summary>The players' feedback (feedback plan, R3), on a host that keeps it.</summary>
-    public OperatorFeedback? Feedback { get; init; }
+    public CountWaitingFeedback? Feedback { get; init; }
 
     public static bool Names(string path) => path == Route;
 
@@ -65,7 +65,7 @@ internal sealed class OverviewApi(TableRegistry registry, TableComposer composer
                     lastRun = Tending is { } tending ? await TryAsync(async () => Run(await tending.LatestAsync())) : null,
                     turns = Turns is { } turns ? await TryAsync(async () => Queues(await turns.StatesAsync())) : null,
                 },
-                feedback = Feedback is { } feedback ? await TryAsync(async () => await feedback.WaitingAsync()) : null,
+                feedback = Feedback is { } feedback ? await TryAsync(async () => await feedback.HandleAsync()) : null,
                 registration = Settings is { } settings ? new { open = (await settings.CurrentAsync()).RegistrationOpen } : null,
             },
             Web);

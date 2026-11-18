@@ -20,7 +20,7 @@ public sealed class GroupedIdeasTests : IDisposable
 
     private static CancellationToken Cancel => TestContext.Current.CancellationToken;
 
-    private OperatorFeedback Desk() => new(_store, new FeedbackMutes(null), _writes, _clock);
+    private OperatorDesk Desk() => new(_store, new FeedbackMutes(null), _writes, _clock);
 
     private async Task<Feedback> IdeaAsync(string sender, string text = "I wanted to see the last round again but could not.", FeedbackKind kind = FeedbackKind.Idea)
     {
@@ -267,7 +267,7 @@ public sealed class GroupedIdeasTests : IDisposable
         var idea = await IdeaAsync("seat-a");
         var other = await IdeaAsync("seat-b");
         var counting = new CountsListings(_store);
-        var desk = new OperatorFeedback(counting, new FeedbackMutes(null), _writes, _clock);
+        var desk = new OperatorDesk(counting, new FeedbackMutes(null), _writes, _clock);
         await desk.MergeAsync(other.Id, idea.Id, Cancel);
 
         (await desk.ChangeKindAsync(idea.Id, FeedbackKind.Bug, Cancel)).Error.Code.ShouldBe("Feedback.Grouped");
@@ -313,7 +313,7 @@ public sealed class GroupedIdeasTests : IDisposable
         var group = await IdeaAsync("seat-a");
         var idea = await IdeaAsync("seat-b");
         var failing = new FailsOnSave(_store, failOn: 2);
-        var desk = new OperatorFeedback(failing, new FeedbackMutes(null), _writes, _clock);
+        var desk = new OperatorDesk(failing, new FeedbackMutes(null), _writes, _clock);
         await Should.ThrowAsync<IOException>(() => desk.MergeAsync(idea.Id, group.Id, Cancel));
 
         var again = (await desk.MergeAsync(idea.Id, group.Id, Cancel)).Value;
@@ -346,6 +346,8 @@ public sealed class GroupedIdeasTests : IDisposable
 
         public Task<IReadOnlyList<string>> IdsAsync(CancellationToken cancellationToken = default) => inner.IdsAsync(cancellationToken);
 
+        public Task<IReadOnlyList<string>> IdsSentAsync(DateTimeOffset after, DateTimeOffset until, CancellationToken cancellationToken = default) => inner.IdsSentAsync(after, until, cancellationToken);
+
         public Task<Feedback?> FindAsync(string id, CancellationToken cancellationToken = default) => inner.FindAsync(id, cancellationToken);
 
         public Task DeleteAsync(string id, CancellationToken cancellationToken = default) => inner.DeleteAsync(id, cancellationToken);
@@ -360,6 +362,12 @@ public sealed class GroupedIdeasTests : IDisposable
         {
             Listings++;
             return inner.IdsAsync(cancellationToken);
+        }
+
+        public Task<IReadOnlyList<string>> IdsSentAsync(DateTimeOffset after, DateTimeOffset until, CancellationToken cancellationToken = default)
+        {
+            Listings++;
+            return inner.IdsSentAsync(after, until, cancellationToken);
         }
 
         public Task SaveAsync(Feedback feedback, CancellationToken cancellationToken = default) => inner.SaveAsync(feedback, cancellationToken);

@@ -29,7 +29,7 @@ paths:
   reads a flag or a list kept on the record (`Feedback.Joined`, #724).
 - An operator action that writes several records writes first the record the guards read. If the action is cut
   short, asking again finishes the rest; until then that record names one record too many, which the reads skip
-  (`OperatorFeedback.MergingAsync`, #724).
+  (`MergeIdea.MergingAsync`, #724).
 - A listing route counts its storage reads per row. One read added to each table of `GET /api/lobby/mine` is paid
   on every account change, as the inbox fetches it again each time (#724).
 - When a conditional write is refused because the file moved, read it again. If a file read before is gone, the

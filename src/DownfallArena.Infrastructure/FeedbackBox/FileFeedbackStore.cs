@@ -46,6 +46,22 @@ public sealed class FileFeedbackStore : IFeedbackStore
         return Task.FromResult(ids);
     }
 
+    public Task<IReadOnlyList<string>> IdsSentAsync(DateTimeOffset after, DateTimeOffset until, CancellationToken cancellationToken = default)
+    {
+        if (!System.IO.Directory.Exists(Directory))
+        {
+            return Task.FromResult<IReadOnlyList<string>>([]);
+        }
+
+        IReadOnlyList<string> ids = [.. FeedbackDocuments.DaysOf(after, until)
+            .SelectMany(day => System.IO.Directory.EnumerateFiles(Directory, $"{day}*{FeedbackDocuments.Extension}"))
+            .Select(FeedbackDocuments.IdOf)
+            .OfType<string>()
+            .Where(id => FeedbackDocuments.SentWithin(id, after, until))
+            .OrderDescending(StringComparer.Ordinal)];
+        return Task.FromResult(ids);
+    }
+
     public async Task<Feedback?> FindAsync(string id, CancellationToken cancellationToken = default)
     {
         if (!Feedback.IsId(id))

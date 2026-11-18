@@ -253,12 +253,12 @@ internal static class TableHost
         // The Feedback tab (feedback plan, R3): the operator reads, marks and moves feedback, and mutes a sender; an
         // account's mute is kept with its activity, a guest's in this process's memory.
         var feedbackMutes = new FeedbackMutes(accounts?.Activity);
-        var operatorFeedback = feedback is null ? null : new OperatorFeedback(feedback, feedbackMutes, feedbackWrites, clock);
+        var feedbackDesk = feedback is null ? null : FeedbackDesk.Open(feedback, feedbackMutes, feedbackWrites, clock);
 
         // The Overview (A5): the numbers at a glance, each read from the source its own tab reads.
         admin.Overview = new OverviewApi(registry, composer, clock)
         {
-            Feedback = operatorFeedback,
+            Feedback = feedback is null ? null : new CountWaitingFeedback(feedback, clock),
             Players = directory,
             Results = results,
             Tending = admin.Jobs?.Runs,
@@ -290,7 +290,7 @@ internal static class TableHost
 
         await using var practices = scenarioStore is null ? null : new ScenarioPractices(composer, scenarioStore, clock);
 
-        (admin.Scenarios, admin.Feedback) = CuttingTabs(scenarioStore, stored, composer, operatorFeedback, notes, clock);
+        (admin.Scenarios, admin.Feedback) = CuttingTabs(scenarioStore, stored, composer, feedbackDesk, notes, clock);
         var sendFeedback = feedback is null ? null : new SendFeedback(feedback, new GuestAddresses(), feedbackWrites, clock, feedbackMutes);
         using var server = new TableServer(options.Bind, options.Port, registry, new TableFiles(TableDirectory), admin, clock, stored, accounts, leaderboard, friends, stats)
         {
@@ -457,7 +457,7 @@ internal static class TableHost
     /// cuts a bug report's round through the Scenarios tab's own cutting, and without it the route is a 404 and the
     /// sheet offers no Reproduce. Each is none on a host that keeps no scenarios, no sessions or no feedback.
     /// </summary>
-    internal static (ScenarioAdminApi? Scenarios, FeedbackAdminApi? Feedback) CuttingTabs(ScenarioStore? scenarios, StoredSessions? stored, TableComposer composer, OperatorFeedback? feedback, OperatorNotes notes, TimeProvider clock)
+    internal static (ScenarioAdminApi? Scenarios, FeedbackAdminApi? Feedback) CuttingTabs(ScenarioStore? scenarios, StoredSessions? stored, TableComposer composer, FeedbackDesk? feedback, OperatorNotes notes, TimeProvider clock)
     {
         var cutting = scenarios is null || stored is null ? null : new ScenarioAdminApi(scenarios, stored, composer) { Notes = notes };
         return (cutting, feedback is null ? null : new FeedbackAdminApi(feedback, stored, clock) { Notes = notes, Scenarios = cutting });

@@ -111,8 +111,7 @@ public sealed class OverviewApiTests : IDisposable
         var now = DateTimeOffset.UtcNow;
         await store.SaveAsync(new Feedback { Id = Feedback.NewId(now), Kind = FeedbackKind.Bug, At = now, Sender = "seat-a", Category = "rules", Text = "The bleed did not tick." }, TestContext.Current.CancellationToken);
         await store.SaveAsync(new Feedback { Id = Feedback.NewId(now.AddSeconds(-1)), Kind = FeedbackKind.Idea, At = now.AddSeconds(-1), Sender = "seat-a", Category = "battle", Text = "Show the last round again." }, TestContext.Current.CancellationToken);
-        using var writes = new FeedbackWrites();
-        var admin = Admin(new OverviewApi(_registry, _hosted.Composer, TimeProvider.System) { Feedback = new OperatorFeedback(store, new FeedbackMutes(null), writes, TimeProvider.System) });
+        var admin = Admin(new OverviewApi(_registry, _hosted.Composer, TimeProvider.System) { Feedback = new CountWaitingFeedback(store, TimeProvider.System) });
 
         var feedback = (await OverviewAsync(admin)).GetProperty("feedback");
 
@@ -122,8 +121,7 @@ public sealed class OverviewApiTests : IDisposable
     [Fact]
     public async Task A_feedback_store_that_does_not_answer_leaves_only_its_card_empty()
     {
-        using var writes = new FeedbackWrites();
-        var admin = Admin(new OverviewApi(_registry, _hosted.Composer, TimeProvider.System) { Feedback = new OperatorFeedback(new Unreadable(), new FeedbackMutes(null), writes, TimeProvider.System) });
+        var admin = Admin(new OverviewApi(_registry, _hosted.Composer, TimeProvider.System) { Feedback = new CountWaitingFeedback(new Unreadable(), TimeProvider.System) });
 
         var overview = await OverviewAsync(admin);
 
@@ -137,6 +135,8 @@ public sealed class OverviewApiTests : IDisposable
         public Task SaveAsync(Feedback feedback, CancellationToken cancellationToken = default) => throw new IOException("The disk is gone.");
 
         public Task<IReadOnlyList<string>> IdsAsync(CancellationToken cancellationToken = default) => throw new IOException("The disk is gone.");
+
+        public Task<IReadOnlyList<string>> IdsSentAsync(DateTimeOffset after, DateTimeOffset until, CancellationToken cancellationToken = default) => throw new IOException("The disk is gone.");
 
         public Task<Feedback?> FindAsync(string id, CancellationToken cancellationToken = default) => throw new IOException("The disk is gone.");
 
