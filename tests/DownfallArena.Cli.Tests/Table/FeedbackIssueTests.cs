@@ -241,6 +241,28 @@ public sealed class FeedbackIssueTests : IDisposable
         (refused.Status, Read(refused).GetProperty("error").GetString()).ShouldBe((409, "Feedback.UnderWay"));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_report_whose_table_record_cannot_be_read_offers_no_scenario(bool unparseable)
+    {
+        var (report, table, _, _) = await ReproducedAsync();
+        var record = Path.Combine(_hosted.RunsDirectory, table, TableRecord.File);
+        if (unparseable)
+        {
+            await File.WriteAllTextAsync(record, "{ not a record", Cancel);
+        }
+        else
+        {
+            File.Delete(record);
+        }
+
+        var refused = await AskAsync("POST", report.Id, "scenario.zip");
+
+        (refused.Status, Read(refused).GetProperty("error").GetString()).ShouldBe((409, "Feedback.UnderWay"));
+        Actions(Read(await AskAsync("GET", report.Id))).ShouldNotContain("download");
+    }
+
     [Fact]
     public async Task A_download_is_asked_for_with_a_post_and_never_kept_by_a_cache()
     {

@@ -407,9 +407,14 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
         return new StudioResponse(200, ZipType, bytes.ToArray(), [new KeyValuePair<string, string>("Content-Disposition", $"attachment; filename=\"report-{id}.zip\"")]);
     }
 
-    /// <summary>Whether the table a report was sent from is still played: open and not voided.</summary>
+    /// <summary>
+    /// Whether the table a report was sent from is still played: open and not voided. A record that cannot be read,
+    /// missing or unparseable, is held as under way: nothing shows the game is over, and the redaction check could not
+    /// gather the seats' keys from it, so what the guard keeps face down stays in (#790).
+    /// </summary>
     private async Task<bool> UnderWayAsync(Feedback one) =>
-        one.Context?.Table is { } table && stored is not null && await stored.RecordAsync(table) is { Status: TableRecord.Open, Void: false };
+        one.Context?.Table is { } table
+        && (stored is null || await stored.RecordAsync(table) is not { } record || record is { Status: TableRecord.Open, Void: false });
 
     private async Task<StudioResponse> MuteAsync(string id, string operatorName)
     {

@@ -44,6 +44,8 @@ paths:
 - A new route has a host test in `tests/DownfallArena.Cli.Tests/Table`, a line in `table/README.md#routes`,
   and its behaviour in `docs/reference/commands.md`.
 - What a seat holds face down never reaches the other seat's view, a log, or a notification.
+- A guard that keeps face-down data in refuses when it cannot read its record, missing or unparseable: nothing then
+  shows the game is over (`FeedbackAdminApi.UnderWayAsync`, #790).
 - Anything kept per seat is reset, or keyed by the seat's key (`TableApi.HolderOf`), when the seat changes hands
   (ADR 0170): the newcomer is never served the leaver's state (#739).
 - A field added to the seat view degrades to null when its store fails; it never fails the board read (#739).

@@ -480,8 +480,8 @@ The seat's view says the lesson under `practice.tutorial`:
   It is refused with 409 `Feedback.NotRedacted` if it still names the session, keeps a time, or holds as a word of its
   own the report's table, an account, a seat's key, code or invitation, the pilot's key or a player's name. The
   content it includes and the fields' names are not read, and a content id (`spell:pummel:v1`) is one word, never
-  the name inside it. The error says what the file holds, never the name. A report from a table still under way, or whose scenario
-  was cut from one, is 409 `Feedback.UnderWay`, so nothing a seat holds face down reaches the issue. An idea is 409
+  the name inside it. The error says what the file holds, never the name. A report from a table still under way, or whose
+  record cannot be read (missing or unparseable), or whose scenario was cut from one, is 409 `Feedback.UnderWay`, so nothing a seat holds face down reaches the issue. An idea is 409
   `Feedback.NotABug`, and a report not reproduced, or whose scenario was removed since, 409 `Feedback.NotReproduced`.
   Each download is an Activity line, `feedback.download`, with the scenario's id. The sheet offers `download` once the
   game is over.
