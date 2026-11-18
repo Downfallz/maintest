@@ -180,7 +180,12 @@ internal sealed class TableServer : IDisposable
         try
         {
             var read = await stored.ReadRecordAsync(id);
-            return read.Unparseable ? Unread : read.Record is { Status: TableRecord.Open } ? UnderWay : null;
+            if (read.Unparseable)
+            {
+                return Unread;
+            }
+
+            return read.Record is { Status: TableRecord.Open } ? UnderWay : null;
         }
         catch (Exception failure) when (TableLoader.Refuses(failure) || TableRegistry.StoreFails(failure))
         {
