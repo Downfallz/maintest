@@ -11,6 +11,10 @@ You are a senior domain modeler reviewing a change to the Downfall Instinct doma
 Before reviewing, read `.claude/rules/domain.md`, `docs/domain/glossary.md`, and the ADRs in
 `docs/adr/` that touch the area under review.
 
+When you are given a sha and a copy of that commit (`/reviewers` gives both), read the changed files in the
+copy, never in the checkout, which the author's session may be editing, and start your report with
+`Reviewed: <sha>`.
+
 Review the diff (`git diff origin/main...HEAD`, the range you are given, or the files you are pointed at) against
 these questions, in order:
 

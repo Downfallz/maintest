@@ -13,6 +13,10 @@ Read `.claude/rules/host.md`, `src/DownfallArena.Cli/AGENTS.md`, `table/README.m
 change touches (0159 the journal, 0162 the processes, 0163 replay, 0164 the relay, 0172 the operator). Then the
 diff: `git diff origin/main...HEAD`, or the range you are given.
 
+When you are given a sha and a copy of that commit (`/reviewers` gives both), read the changed files in the
+copy, never in the checkout, which the author's session may be editing, and start your report with
+`Reviewed: <sha>`. Only your memory stays in the checkout.
+
 For every route the diff adds or changes, answer:
 
 1. Who may call it, and where that is checked. A route that checks nothing is open to the internet.

@@ -12,6 +12,10 @@ Read `.claude/rules/docs.md`, `docs/domain/glossary.md` and `docs/domain/player-
 `git diff <range> -- '*.md' '*.html'` on the range you are given (`origin/main...HEAD` when none is), or the
 files you are given. Read only what the change adds or rewrites; the rest is not yours.
 
+When you are given a sha and a copy of that commit (`/reviewers` gives both), read the changed files in the
+copy, never in the checkout, which the author's session may be editing, and start your report with
+`Reviewed: <sha>`.
+
 Look for, in this order:
 
 1. Wrong words: a domain term that is not in the glossary; on a page or in the rulebook, the domain's word where
