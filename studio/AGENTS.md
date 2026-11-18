@@ -40,11 +40,11 @@ npm --prefix studio/browser ci --ignore-scripts && npm --prefix studio/browser t
   arrived, wait for `data-connection` to be `live`, never for the hidden `#loading` card (#785).
 - A battle spec reads its mock route's `shown` or `writes` through `expect.poll`. The request reaches the route some
   time after the click, and a change the page draws before sending (a menu closed, a bubble drawn) does not mean the
-  route has it yet (#816, #831, #845). A plain read is fine after the test has waited for something only the host's
-  answer produces (an error text, a dialog closed after a frozen batch, a URL change), or after an earlier
-  `expect.poll` on `writes.length`. A negative read (`toEqual([])`, nothing was sent) stays plain. The test reads
-  the waits it can see on the lines before; a wait it cannot see (a sheet closed after its batch) goes in its
-  `READ_AFTER_HOST` list, with the reason (#857).
+  route has it yet (#816, #831, #845). A plain read is fine in two cases, with no click or key press between: the
+  test has waited for something only the host's answer produces (an error text, a URL change), or an
+  `expect.poll` on the same field (`writes.length`) has passed. A negative read (`toEqual([])`) stays plain.
+  `battle-journeys.test.js` checks this by reading the lines before each plain read. A wait it cannot see (a sheet
+  closed after its batch) goes in its `READ_AFTER_HOST` list, by test and read, with the reason (#857).
 - In a cloud session Chromium is preinstalled: do not run `playwright install` again, and pass `--trace off`.
 - Each checkout serves the pages on a port derived from its path (`browser/origin.js`). A running server is
   reused only when its `/__root` answer names this checkout (#711). `STUDIO_BROWSER_PORT` sets the port.
@@ -52,4 +52,5 @@ npm --prefix studio/browser ci --ignore-scripts && npm --prefix studio/browser t
   when set, else the one on `PATH` (#707).
 - A team's tempos are one asking per creature, sent one after another from one sheet: a real-engine journey's step
   that answers them ends once the round leaves its tempos (`browser/battle-step.js`), not when the asking changes (#787).
-  `waitAnswered` waits for it with a window that restarts each time the seat's view moves, up to three windows (#858).
+  `waitAnswered` waits for any step. Its window (10 s by default) restarts each time the seat's view moves, and the
+  wait ends at three windows at most (#858).

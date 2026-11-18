@@ -1,0 +1,3 @@
+- Second time (after #784/#785's forward windows): a static "plain read follows a wait" check that scans from the test's start lets a wait made before a later click excuse the read after it (battle-tempo.spec.js:88 passes on :85's error wait); probe a wait, a click, a read (#857, battle-journeys.test.js unpolled, 775d384).
+- A source-check allowlist keyed on file + read text, not on the test or the line, excuses every later identical read in that file: probe by adding a fresh copy of an allowed read in a new test (#857, READ_AFTER_HOST, 775d384).
+- A "negative read stays plain" exemption that matches the expected value but lets `.not.` through turns `.not.toEqual([])` (something was sent) into an exempt read: probe every exemption with its `.not.` (#857, 775d384).

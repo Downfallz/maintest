@@ -22,8 +22,8 @@ test('any other step is answered once the seat is asked something else', () => {
   assert.equal(stepAnswered(view('Action', 9), view(null, null)), true);
 });
 
-// #858: a loaded runner served the next view after the 10 s window of a poll set at the call, while the host still
-// moved. The window restarts at each view that shows the game moved; a seat that stands still for a window fails.
+// #858: on a loaded runner the next view arrived after the first 10 s, counted from the poll's start, while the host
+// was still moving. The window restarts at each view that shows the game moved; a seat that stands still for a window fails.
 function clock() {
   let now = 0;
   return { now: () => now, sleep: async (ms) => { now += ms; } };
@@ -44,10 +44,10 @@ test('a step the host stops moving on fails after one window, saying what the se
 test('a host that keeps moving without answering the step still fails at three windows', async () => {
   const time = clock();
   const read = () => view('Evolution', 3, 2, { feed: [{ sequence: time.now() }] });
-  await assert.rejects(waitAnswered(view('Evolution', 3), read, { timeout: 10000, ...time }), /in 30 s in all/);
+  await assert.rejects(waitAnswered(view('Evolution', 3), read, { timeout: 10000, ...time }), /within 30 s, after \d+ moves, though the seat kept moving/);
   assert.ok(time.now() >= 30000 && time.now() < 31000);
 });
-test('a seat with no view yet moves once its first view arrives', async () => {
+test("a seat's first view counts as progress", async () => {
   const time = clock();
   await waitAnswered(view('Evolution', 3), () => time.now() < 5000 ? undefined : view(null, null, 2, { over: true }), { timeout: 10000, ...time });
   assert.ok(time.now() >= 5000);

@@ -193,6 +193,7 @@ async function playLesson(page, tutorial, seat, info) {
     else if (view.waitingFor === 'Speed') await answerSpeed(page, next);
     else if (view.waitingFor === 'TieOrder') await answerTieOrder(page, next);
     else await answerAction(page, view, next);
+    // A step waits three 15 s windows at most. Late in the test's 240 s, the test's own timeout can report first.
     await waitAnswered(view, () => seat.latest, { timeout: 15000 });
   }
   // Every step showed, in the lesson's order, and the cards they open were read.
