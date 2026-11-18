@@ -544,7 +544,7 @@ opens a section, a part, an id `rules/moved.json` redirects (the address shows t
 card's section, at the top of the screen; the browser's back returns where the reader was. The filter keeps the
 sections whose title, text or card hold every word typed, without case or accents. What changed lists
 `rules/changes.md`, the latest first. The book reads in English or in French (`rules.fr.json`, built from `rules/fr/`,
-ADR 0193): the language the address asks for (`/rules?lang=fr`, the public book's link), else the one chosen on this
+ADR 0193, 0195): the language the address asks for (`/rules?lang=fr`, the public book's link), else the one chosen on this
 device (`downfall.language`), else the browser's first English or French, else English. A switch on the page, once its book is read, drops
 `lang` from the address. **English** and **Français** switch, at the same section; the battle and the other pages stay
 English.

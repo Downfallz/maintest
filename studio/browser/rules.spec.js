@@ -235,14 +235,18 @@ test('a book the service worker gave from its kept copy says it is the copy this
   await open(page);
 
   await expect(page.locator('#rules-kept')).toHaveText('Offline: this is the rulebook as this device last read it. The table may play a newer one now.');
-  await page.getByRole('button', { name: 'Français' }).click();
-  await expect(page.locator('body')).toHaveAttribute('data-language', 'fr');
-  await expect(page.locator('#rules-kept')).toBeHidden();
 });
 
-test('a fresh book shows no notice of a kept copy', async ({ page }) => {
+test('a fresh book read after a kept one takes the notice away', async ({ page }) => {
   await guest(page);
+  const kept = readFileSync(new URL('../../table/rules.json', import.meta.url), 'utf8');
+  await page.route('**/rules.json', route => route.fulfill({ status: 200, contentType: 'application/json', headers: { 'X-Rulebook-Copy': 'kept' }, body: kept }));
   await open(page);
+  await expect(page.locator('#rules-kept')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Français' }).click();
+
+  await expect(page.locator('body')).toHaveAttribute('data-language', 'fr');
   await expect(page.locator('#rules-kept')).toBeHidden();
 });
 
