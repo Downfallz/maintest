@@ -74,6 +74,16 @@ test('a staged motif is drawn at its beat and for as long as the beat says', asy
   await film(page, 'stop');
 });
 
+test('a motif shorter than its usual arrival is still gone when its beat ends', async ({ page }) => {
+  // The flash's sample gives its motif 120 ms, less than the 200 ms a motif takes to arrive.
+  await film(page, 'start', { spell: 'kit:flash', actor: 'a1', targets: ['b1'] });
+  await film(page, 'advance', WINDUP_MS + 100);
+  expect(await motifs(page)).toEqual(['impact:impact']);
+  await film(page, 'advance', 60);
+  expect(await motifs(page)).toEqual([]);
+  await film(page, 'stop');
+});
+
 test('a staging that shakes the view shakes it once: the shared tremor of a physical blow is left out', async ({ page }) => {
   const shaking = () => page.evaluate(() => window.battleBench.shaking());
   await film(page, 'start', { spell: 'kit:shake', actor: 'a1', targets: ['b1'] });

@@ -175,8 +175,10 @@ export class SpellEffects {
     // Arcs stay pinned to both endpoints; other motifs arrive, hold briefly, then dissipate.
     g.setScale(motion.scale).setAlpha(.35);
     g.y += target.radius * motion.rise;
+    // The arrival and the fade together are what the beat lasts: a short beat shortens both, a third to arrive.
+    const arrive = Math.min(100 * MOTION_SCALE, lasts / 3);
     this.scene.tweens.add({ targets: g, scaleX: 1, scaleY: 1, y: target.y, alpha: 1,
-      duration: 100 * MOTION_SCALE / rate, ease: 'Cubic.Out', onComplete: () => this.fade(g, rate, Math.max(lasts - 100 * MOTION_SCALE, 100), FADE_SCALE[motif] ?? 1.35) });
+      duration: arrive / rate, ease: 'Cubic.Out', onComplete: () => this.fade(g, rate, lasts - arrive, FADE_SCALE[motif] ?? 1.35) });
   }
 }
 
