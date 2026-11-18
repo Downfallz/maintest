@@ -1,5 +1,5 @@
 /* The rulebook (/rules): the contents first on a phone, beside the text on a wide screen; the book's own blocks;
-   the concept cards drawn as the battle draws them (battle.css, #concept-dialog). */
+   the concept card's frame (its parts are identity.css's .concept-card, shared with the battle). */
 .rules-hero { padding-bottom: 18px; }
 /* English or French: two buttons, the pressed one the book shown, pressed as the lobby's filters are (lobby.css). */
 .rules-languages { flex: none; align-self: flex-start; display: flex; gap: 6px; margin: 0; padding: 0; border: 0; min-width: 0; }

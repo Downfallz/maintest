@@ -93,6 +93,20 @@ test('the battle page draws the rune in its navigation header', () => {
   assert.doesNotMatch(read('table/battle.html'), /href="table\.css"/);
   assert.match(read('table/battle.css'), /\.home-header \.brand-mark \{[^}]*url\('\/brand-mark\.svg'\)/);
 });
+// The battle's concept dialog and the rulebook's card are one card: both carry identity.css's .concept-card, and
+// neither page sheet styles its parts again, which is how the two drifted apart (#699).
+test('the concept card of the battle and of the rulebook is drawn by one rule of the identity sheet', () => {
+  assert.match(read('table/battle.html'), /<dialog id="concept-dialog" class="concept-card"[^>]*>\s*<p class="eyebrow">[^<]*<\/p>\s*<h2 id="concept-title" class="concept-card-title">/);
+  assert.match(read('table/rules.js'), /node\(doc, 'aside', 'rules-card concept-card'\)/);
+  assert.match(read('table/rules.js'), /node\(doc, 'h4', 'concept-card-title', card\.title\)/);
+  const identity = read('table/identity.css');
+  for (const part of ['.concept-card .eyebrow', '.concept-card-title', '.concept-card .concept-lines p', '.concept-card .concept-example']) {
+    assert.ok(identity.includes(`${part} {`), part);
+  }
+  for (const sheet of ['table/battle.css', 'table/rules.css']) {
+    assert.doesNotMatch(read(sheet), /#concept-dialog (?:\.eyebrow|h2)|\.concept-(?:lines p|example)\s*[{,]|\.rules-card(?:-title| \.)/, sheet);
+  }
+});
 // Every page of the table ends with the shared identity sheet, so one rule restyles a shared part everywhere.
 test('every page of the table loads the identity sheet last and the display face is the host\'s own', () => {
   for (const page of ['index', 'lobby', 'leaderboard', 'admin', 'pilot', 'battle']) {
