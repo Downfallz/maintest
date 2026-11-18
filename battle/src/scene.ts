@@ -100,7 +100,7 @@ export class BattleScene extends Phaser.Scene implements Restful {
   private readonly loadingArt = new Set<string>();
   private readonly failedArt = new Set<string>();
 
-  constructor(private assetRoot: string) { super('battle'); }
+  constructor(private readonly assetRoot: string) { super('battle'); }
 
   preload() {
     this.load.image('battle-floor', `${this.assetRoot}eclipse-battle.webp`);
