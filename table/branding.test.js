@@ -107,6 +107,16 @@ test('the concept card of the battle and of the rulebook is drawn by one rule of
     assert.doesNotMatch(read(sheet), /#concept-dialog (?:\.eyebrow|h2)|\.concept-(?:lines p|example)\s*[{,]|\.rules-card(?:-title| \.)/, sheet);
   }
 });
+// A tutorial shows the briefing, then the concept cards: one frame in the identity's tokens, and one title step (#809).
+test('the practice briefing shares the concept card\'s frame and title step, in the identity\'s tokens', () => {
+  assert.match(read('table/battle.html'), /<h2 id="practice-brief-title" class="concept-card-title">/);
+  const css = read('table/battle.css');
+  const rules = [...css.matchAll(/^([^{}\n]*(?:#practice-brief|\.practice-brief-)[^{}\n]*)\{([^}]*)\}/gm)];
+  assert.ok(rules.length >= 4, 'the briefing\'s rules');
+  for (const [, selector, body] of rules) assert.doesNotMatch(body, /#[0-9a-f]{3,8}\b/i, `${selector.trim()} names a raw colour`);
+  assert.doesNotMatch(css, /#practice-brief h2 \{/);
+});
+
 // Every page of the table ends with the shared identity sheet, so one rule restyles a shared part everywhere.
 test('every page of the table loads the identity sheet last and the display face is the host\'s own', () => {
   for (const page of ['index', 'lobby', 'leaderboard', 'admin', 'pilot', 'battle']) {

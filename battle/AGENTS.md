@@ -41,4 +41,6 @@ npm --prefix studio/browser test -- --trace off battle-lab.spec.js battle-bench.
 - An effect is staged before it is built: its storyboard is in `docs/art/storyboards/`, and `/battle-pass` runs
   the loop of storyboard, build, film and critique with the `battle-designer` agent.
 - The words a player reads come from docs/domain/player-terminology.md.
+- Every new item in the header's `.tools` is measured at 320 px with every button it can show: `battle-reactions.spec.js`
+  checks the header with the reactions on (#767). Under 360 px, 💬 lives in the opponent's card.
 - The suite takes 30 to 45 minutes in a session: run the specs the change touches first, then the list above.

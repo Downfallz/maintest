@@ -115,6 +115,24 @@ test('the published CSS has its local font and battlefield layers', () => {
   assert.ok(statSync(join(root, 'fonts/OFL.txt')).isFile());
 });
 
+// The public rulebook draws the concept card as the game does: the table's .concept-card rule, copied whole into the
+// published sheet, and the card in that rule's classes (#810).
+test('the published sheet carries the table\'s concept card rule, and the rulebook draws its cards in its classes', () => {
+  const identity = readFileSync(new URL('../table/identity.css', import.meta.url), 'utf8');
+  const rule = identity.split('\n').filter(line => line.startsWith('.concept-card'));
+  assert.ok(rule.length >= 4, 'identity.css still holds the concept card');
+  assert.ok(read('showcase.css').trimEnd().endsWith(rule.join('\n')), 'showcase.css ends with the table\'s rule, line for line');
+  for (const file of ['rules/index.html', 'fr/regles/index.html']) {
+    const cards = read(file).match(/<aside class="rules-card[^"]*"[\s\S]*?<\/aside>/g) ?? [];
+    assert.ok(cards.length > 0, file);
+    for (const card of cards) {
+      assert.match(card, /^<aside class="rules-card concept-card"/);
+      for (const part of ['<p class="eyebrow">', '<h4 class="concept-card-title">', '<div class="concept-lines">', '<p class="concept-example">']) assert.ok(card.includes(part), `${file}: ${part}`);
+    }
+  }
+  assert.doesNotMatch(read('showcase.css'), /rules-example|\.rules-card h4/);
+});
+
 const pages = {
   en: ['index.html', 'mutations/index.html', 'privacy/index.html', 'copyright/index.html', 'rules/index.html'],
   fr: ['fr/index.html', 'fr/mutations/index.html', 'fr/confidentialite/index.html', 'fr/droit-auteur/index.html', 'fr/regles/index.html'],

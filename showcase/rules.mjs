@@ -30,10 +30,11 @@ function block(entry) {
     <tbody>${entry.rows.map(row => `<tr>${row.map(cell => `<td>${inline(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
 }
 
-// A concept card, as the battle and the table's page draw it: its title, its lines and its example.
-const card = (entry, words) => `<aside class="rules-card" aria-label="${escape(words.cardLabel(entry.title))}">
-      <p class="kicker">${escape(words.conceptCard)}</p><h4>${escape(entry.title)}</h4>
-      ${entry.lines.map(line => `<p>${escape(line)}</p>`).join('')}<p class="rules-example">${escape(entry.example)}</p></aside>`;
+// A concept card, as the battle and the table's page draw it: its title, its lines and its example, in the classes of
+// the table's .concept-card rule, which the build copies into showcase.css (#810).
+const card = (entry, words) => `<aside class="rules-card concept-card" aria-label="${escape(words.cardLabel(entry.title))}">
+      <p class="eyebrow">${escape(words.conceptCard)}</p><h4 class="concept-card-title">${escape(entry.title)}</h4>
+      <div class="concept-lines">${entry.lines.map(line => `<p>${escape(line)}</p>`).join('')}</div><p class="concept-example">${escape(entry.example)}</p></aside>`;
 
 // The ids the page and its layout write: an alias never takes one, so the skip link and the contents stay theirs.
 export const PAGE_IDS = ['top', 'main', 'rules-title', 'rules-contents', 'rules-contents-title', 'what-changed', 'rules-changes-title'];

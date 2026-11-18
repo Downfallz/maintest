@@ -129,6 +129,8 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
   dialog.addEventListener('close', () => { queue = []; onChange(); });
   // A tutorial done is not played on: its end card stays, with Play again, which starts it over from its cut, and Leave.
   el('coach-again').addEventListener('click', () => el('practice-restart').click());
+  // On the smallest phone the band's place in the series takes Restart's place in the header, and the card offers it (#728).
+  el('coach-restart').addEventListener('click', () => el('practice-restart').click());
 
   function point(card: Coach | null) {
     const next = [card?.creature ? document.querySelector<HTMLElement>(`#actor-layer [data-creature="${card.creature}"]`) : null,

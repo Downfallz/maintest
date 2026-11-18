@@ -311,10 +311,9 @@ h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.0
 .rules-table th { text-align: left; color: var(--muted); font-size: 11px; font-weight: 650; letter-spacing: .12em; text-transform: uppercase; padding: 10px 12px; border-bottom: 1px solid var(--line); }
 .rules-table td { padding: 10px 12px; vertical-align: top; border-bottom: 1px solid var(--line-soft); }
 .rules-table tr:last-child td { border-bottom: 0; }
-.rules-card { max-width: 400px; margin: 16px 0 8px; padding: 16px 18px; background: var(--tex-grain), var(--paper); border-top: 2px solid var(--brand-ember); }
-.rules-card h4 { margin: 6px 0 8px; font: 400 22px/1.15 var(--font-display); color: var(--bone); }
-.rules-card p:not(.kicker) { margin: 0 0 8px; font-size: 15px; line-height: 1.45; }
-.rules-card .rules-example { padding-left: 10px; border-left: 2px solid var(--gold); color: var(--gold); font-size: 14px; }
+/* The concept card's frame, as the table's rulebook draws it (table/rules.css). Its eyebrow, title, lines and example
+   are the table's .concept-card rule, which the build appends to this sheet (showcase/concept-card.mjs, #810). */
+.rules-card { max-width: 380px; margin: 14px 0 6px; padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--radius-soft); background: var(--panel); }
 .rules-changes { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line); scroll-margin-top: 16px; }
 .rules-changes h2 { font-size: clamp(25px, 2.6vw, 34px); margin: 0 0 12px; }
 .rules-changes ul { margin: 0 0 16px; padding-left: 20px; color: var(--muted); }
