@@ -375,7 +375,7 @@ test('a bug report is read beside its position, its round cut, turned into an id
   sheet = { ...sheet, underWay: false, reproduceOnceOver: false };
   await page.locator('#admin-feedback-list li').first().locator('button').click();
   await expect(page.locator('#admin-feedback-diagnose')).toBeHidden();
-  await expect(page.locator('#admin-feedback-download-note')).toBeHidden();
+  await expect(page.locator('#admin-feedback-download-note')).toHaveText('Reproduce the round first: its scenario is what the issue carries.');
 
   await expect(page.locator('#admin-feedback-reproduction')).toBeHidden();
   await page.locator('#admin-feedback-reproduce').click();
