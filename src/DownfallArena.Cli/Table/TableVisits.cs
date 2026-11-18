@@ -19,7 +19,8 @@ internal sealed class TableVisits(TimeProvider clock, IVisitKeeper? keeper = nul
     private readonly Lock _held = new();
     private readonly Dictionary<string, LastVisit> _visits = [];
 
-    // The marks on their way into the record, which the operator's delete waits for (#849).
+    // The marks on their way into the record, which the operator's delete waits for (#849). Each is counted before its
+    // first read, so a delete never misses one that has started.
     private readonly HashSet<Task> _writing = [];
 
     /// <summary>The seat's last visit under <paramref name="holder" />, or none before its page said what it was shown.</summary>
@@ -53,22 +54,24 @@ internal sealed class TableVisits(TimeProvider clock, IVisitKeeper? keeper = nul
             return VisitShown.Of(ShownHere(seat, holder, sequence));
         }
 
-        var shown = KeptAsync(seat, holder, sequence, cancellationToken);
+        var writing = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         lock (_held)
         {
-            _writing.Add(shown);
+            _writing.Add(writing.Task);
         }
 
         try
         {
-            return await shown;
+            return await KeptAsync(seat, holder, sequence, cancellationToken);
         }
         finally
         {
             lock (_held)
             {
-                _writing.Remove(shown);
+                _writing.Remove(writing.Task);
             }
+
+            writing.TrySetResult();
         }
     }
 
@@ -130,7 +133,7 @@ internal sealed class TableVisits(TimeProvider clock, IVisitKeeper? keeper = nul
             writing = [.. _writing];
         }
 
-        return Task.WhenAll(writing.Select(one => Task.WhenAny(one)));
+        return Task.WhenAll(writing);
     }
 
     // A failed read of the record is no evidence of a delete, and the write has landed: it is kept.

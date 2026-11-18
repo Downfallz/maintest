@@ -1,0 +1,6 @@
+# host-reviewer lessons, #848-#851 PR
+
+- Since #848 a PlaytestRun whose `_revision` > 0 refuses to write over a missing record (IOException), but TableWatch.LookAsync only lets go on a record *rewritten* (RewrittenAsync is null for a missing one): a process holding a table deleted elsewhere keeps it, every seat change answers 503 Lobby.Unavailable "try again", and its journal writes still land under the deleted run; check the watch whenever a "record gone" rule is added (#848 PR).
+- `_revision` is the "this process saw the record" flag for #848/#850 (RecordPresence.Gone vs Unknown): a Reopen of a record with Revision 0 (written before revisions) reads as Unknown until this process writes it once (#850 PR).
+- Since #851 the run-delete order lives in the caller (`StoredSessions.DeleteAsync` passes `first: TableRecord.File`); the one-argument `IArtifactStore.DeleteAsync` deletes in listing order: any new caller deleting a table run must go through StoredSessions (#851 PR).
+- The battle page's seen sender (table/battle-seen.js createSeenSender) treats every non-ok answer alike (holds the mark, resends on the next one): a new status for `PUT .../seen` changes no page behaviour; check the page before claiming a refusal "stops" it (#850 PR).

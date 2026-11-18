@@ -326,6 +326,45 @@ public sealed class TableWatchTests : IDisposable
         stored.Seats.Single(seat => seat.Slot == "player1").Token.ShouldBe(picked.Seats[0].Token);
     }
 
+    /// <summary>
+    /// A table whose run another process deleted is let go of at the next look (#848): its record is not written again,
+    /// so holding it would answer every seat change with a failure, and its match would write into the deleted run.
+    /// </summary>
+    [Fact]
+    public async Task A_table_whose_run_another_process_deleted_is_let_go_of()
+    {
+        using var registry = _here.Registry();
+        var table = await RecordedAsync(registry, HostedTables.OnePerson);
+        (await _there.Stored!.DeleteAsync(table.Id, Cancel)).ShouldBeTrue();
+
+        await new TableWatch(registry, TimeProvider.System).WatchOnceAsync(Cancel);
+
+        registry.Held(table.Id).ShouldBeNull();
+    }
+
+    /// <summary>
+    /// A record from before revisions, picked up by another process, is one that process saw stored: deleted, it reads as
+    /// gone, and it is not written again (#848, #850).
+    /// </summary>
+    [Fact]
+    public async Task A_record_picked_up_without_a_revision_reads_as_gone_once_its_run_is_deleted()
+    {
+        using var registry = _here.Registry();
+        var table = await RecordedAsync(registry, HostedTables.OnePerson);
+        var path = Path.Combine(_runs, table.Id, TableRecord.File);
+        var record = System.Text.Json.Nodes.JsonNode.Parse(await File.ReadAllTextAsync(path, Cancel))!.AsObject();
+        record.Remove("revision");
+        await File.WriteAllTextAsync(path, record.ToJsonString(), Cancel);
+        using var elsewhere = _there.Registry();
+        var picked = (await elsewhere.ByIdAsync(table.Id, Cancel)).ShouldNotBeNull();
+        (await _here.Stored!.DeleteAsync(table.Id, Cancel)).ShouldBeTrue();
+
+        var presence = await picked.Run!.RecordedAsync(Cancel);
+
+        presence.ShouldBe(RecordPresence.Gone);
+        await Should.ThrowAsync<IOException>(() => picked.RecordAsync(Cancel));
+    }
+
     [Fact]
     public async Task A_table_let_go_of_is_picked_up_again_at_the_next_request()
     {

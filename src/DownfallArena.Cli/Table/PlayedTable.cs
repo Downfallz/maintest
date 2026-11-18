@@ -221,12 +221,14 @@ internal sealed class PlayedTable : IDisposable
     /// </summary>
     public async Task QuiesceAsync(CancellationToken cancellationToken = default)
     {
-        await Task.WhenAny(Session.Outcome, Task.Delay(QuiesceWithin, cancellationToken));
+        // One deadline for every wait: an operator's delete loops over its ids, each waited for in turn.
+        var limit = Task.Delay(QuiesceWithin, cancellationToken);
+        await Task.WhenAny(Session.Outcome, limit);
 
         // The closed marker is one of the writes to wait for: landing after a deletion, it would be the one
         // file of a run that was deleted, and the run would be listed again.
-        await Task.WhenAny(Closing, Task.Delay(QuiesceWithin, cancellationToken));
-        await Task.WhenAny(Api.SettledAsync(), Task.Delay(QuiesceWithin, cancellationToken));
+        await Task.WhenAny(Closing, limit);
+        await Task.WhenAny(Api.SettledAsync(), limit);
         if (Run is { } run)
         {
             await run.DrainAsync(cancellationToken);

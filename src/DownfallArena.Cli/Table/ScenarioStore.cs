@@ -133,7 +133,7 @@ internal sealed class ScenarioStore(IArtifactStore store, TimeProvider clock, Re
     }
 
     public async Task<bool> DeleteAsync(string id, CancellationToken cancellationToken = default) =>
-        Names(id) && !Ships(id) && await store.DeleteAsync(id, cancellationToken);
+        Names(id) && !Ships(id) && await store.DeleteAsync(id, first: null, cancellationToken);
 
     /// <summary>Whether text is a scenario's id, which also keeps a request from naming anything else in the store.</summary>
     public static bool Names(string? id) =>

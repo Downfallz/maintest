@@ -37,8 +37,9 @@ paths:
   A file not yet written is written only while the table's record exists (`RecordedAsync`, #789). The record is checked
   again after the first write: if it is gone, the file is deleted (`DeleteIfAsync`). A delete removes the record
   (`table.json`) first, then the rest, so a record still there after the write means the delete has not yet listed the
-  run's files and will find this one (#818). The caller names that first file (`StoredSessions.DeleteAsync`), and the
-  stores' tests pin the order (#851). A process that wrote or read the record never writes over a missing one (#848).
+  run's files and will find this one (#818). `StoredSessions.DeleteAsync` names the record as the first file to delete,
+  and the stores' tests pin the order (#851). A process that wrote or read the record never writes over a missing one,
+  and its watch lets go of the table (`PlaytestRun.Deleted`, #848).
   A missing record this process never saw stored is unknown, not gone: answer busy (503), not gone (409) (#850). The
   operator's delete waits for the reactions and seen marks on their way (`PlayedTable.QuiesceAsync`, #849).
 - Build one `OperatorActions` per host, in `TableHost.OpenNotesAsync`, and hand it to every admin API. Its ids keep
