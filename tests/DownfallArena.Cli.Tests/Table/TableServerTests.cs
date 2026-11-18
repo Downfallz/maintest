@@ -209,6 +209,20 @@ public sealed class TableServerTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task While_the_tables_are_being_rebuilt_a_page_asking_whether_its_seat_is_muted_is_still_answered()
+    {
+        var store = new Infrastructure.FeedbackBox.FileFeedbackStore(Path.Combine(_hosted.RunsDirectory, "..", $"feedback-{Guid.NewGuid():N}"));
+        using var writes = new Application.FeedbackBox.FeedbackWrites();
+        var desk = new Application.FeedbackBox.SendFeedback(store, new Application.FeedbackBox.GuestAddresses(), writes, _clock, new Application.FeedbackBox.FeedbackMutes(null));
+        var url = Serve(OperatorGate.BehindPlatform(), feedback: new FeedbackApi(desk, _registry));
+        _server!.Starting = true;
+
+        var asked = await Get($"{url}api/feedback", "a-token-of-a-table-not-rebuilt-yet");
+
+        asked.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
     public async Task A_host_that_keeps_no_feedback_has_no_feedback_route()
     {
         var url = Serve(OperatorGate.BehindPlatform());

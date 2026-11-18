@@ -1,13 +1,16 @@
 using System.Text;
 using System.Text.Json;
 using DownfallArena.Application.Accounts;
+using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.Application.FeedbackBox;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.Infrastructure.Accounts;
 using DownfallArena.Infrastructure.FeedbackBox;
 using DownfallArena.Infrastructure.Learning;
+using DownfallArena.SharedKernel.Identifiers;
 using Microsoft.Extensions.Time.Testing;
+using NSubstitute;
 
 namespace DownfallArena.Cli.Tests.Table;
 
@@ -51,8 +54,8 @@ public sealed class FeedbackApiTests : IDisposable
 
     private readonly FeedbackWrites _writes = new();
 
-    private FeedbackApi Api(AccountApi? accounts = null, ScenarioPractices? practices = null) =>
-        new(new SendFeedback(_feedback, _addresses, _writes, _clock), _registry) { Accounts = accounts, Practices = practices };
+    private FeedbackApi Api(AccountApi? accounts = null, ScenarioPractices? practices = null, FeedbackMutes? mutes = null) =>
+        new(new SendFeedback(_feedback, _addresses, _writes, _clock, mutes), _registry) { Accounts = accounts, Practices = practices };
 
     private static string Report(bool attach = true, string happened = "The bleed did not tick after the stun.") =>
         JsonSerializer.Serialize(new
@@ -172,6 +175,49 @@ public sealed class FeedbackApiTests : IDisposable
         (kept.Kind, kept.Category, kept.Expected, kept.Context).ShouldBe((FeedbackKind.Idea, "lobby", "A name field.", null));
         kept.Account.ShouldNotBeNull().ShouldStartWith("acct_");
         kept.Sender.ShouldBe(kept.Account);
+    }
+
+    [Fact]
+    public async Task A_page_asking_for_a_muted_account_is_told_so_with_or_without_a_seat_and_let_through_once_lifted()
+    {
+        var accounts = await AccountsAsync();
+        var player = await SignedInAsync(accounts, "muted");
+        var account = (await accounts.WhoAsync(player, Cancel)).ShouldNotBeNull().Account.Id.ToString();
+        var mutes = new FeedbackMutes(new AccountActivityLog(new FileActivityStore(Path.Combine(_root, "accounts")), _clock));
+        var api = Api(accounts, mutes: mutes);
+        await mutes.SetAsync(account, account, FeedbackMute.Begun(_clock.GetUtcNow(), "operator", FeedbackMute.ByOperator), Cancel);
+
+        var alone = await api.HandleAsync("GET", string.Empty, token: null, player, Address, null);
+        var seated = await api.HandleAsync("GET", string.Empty, token: "a-guest-seat-key", player, Address, null);
+        await mutes.SetAsync(account, account, mute: null, Cancel);
+        var lifted = await api.HandleAsync("GET", string.Empty, token: null, player, Address, null);
+
+        (alone.Status, Read(alone).GetProperty("error").GetString()).ShouldBe((403, "Feedback.Muted"));
+        (seated.Status, Read(seated).GetProperty("error").GetString()).ShouldBe((403, "Feedback.Muted"));
+        lifted.Status.ShouldBe(204);
+        alone.Headers.ShouldNotBeNull().ShouldContain(new KeyValuePair<string, string>("Cache-Control", "no-store, private"));
+        lifted.Headers.ShouldNotBeNull().ShouldContain(new KeyValuePair<string, string>("Cache-Control", "no-store, private"));
+    }
+
+    [Fact]
+    public async Task A_page_asking_signed_out_and_without_a_seat_is_let_through_without_a_lookup()
+    {
+        var answer = await Api(await AccountsAsync(), mutes: new FeedbackMutes(null)).HandleAsync("GET", string.Empty, token: null, SignedOut, Address, null);
+
+        answer.Status.ShouldBe(204);
+    }
+
+    [Fact]
+    public async Task A_page_asking_while_the_activity_store_fails_is_told_feedback_is_unavailable()
+    {
+        var accounts = await AccountsAsync();
+        var player = await SignedInAsync(accounts, "unlucky");
+        var failing = Substitute.For<IAccountActivityStore>();
+        failing.FindAsync(Arg.Any<AccountId>(), Arg.Any<CancellationToken>()).Returns<AccountActivity?>(_ => throw new IOException("The disk is gone."));
+
+        var answer = await Api(accounts, mutes: new FeedbackMutes(new AccountActivityLog(failing, _clock))).HandleAsync("GET", string.Empty, token: null, player, Address, null);
+
+        (answer.Status, Read(answer).GetProperty("error").GetString()).ShouldBe((503, "Feedback.Unavailable"));
     }
 
     [Fact]
