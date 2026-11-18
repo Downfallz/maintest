@@ -89,6 +89,26 @@ public sealed class MatchDriverTests
     }
 
     /// <summary>
+    /// A seat that waits for the other waits as long as the other takes: a loaded machine that stalls seat 1 must
+    /// not make seat 2 give up (#829).
+    /// </summary>
+    [Fact]
+    public async Task A_seat_waiting_for_the_other_s_picks_waits_however_long_the_other_takes()
+    {
+        var store = new MatchStore();
+        var match = store.Started(MatchStore.TwoOnTwo(roundCap: 1), new TestRandom(1));
+        using var done = new SemaphoreSlim(0);
+        using var waiting = new SemaphoreSlim(0);
+        var first = new Buying(Scripted(TestContent.Strike), done: done, stalledUntil: waiting, stall: TimeSpan.FromSeconds(2.5));
+        var second = new Buying(Scripted(TestContent.Strike), waitsFor: done, waiting: waiting);
+
+        var outcome = await Driver(store, together: true).PlayAsync(match.Id, first, second, TestContext.Current.CancellationToken).WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+        outcome.IsSuccess.ShouldBeTrue();
+        second.Waited.ShouldBeTrue();
+    }
+
+    /// <summary>
     /// What lets a seat at a table make all its picks before any is submitted: a pick changes its owner's board by
     /// that pick alone and its options by one pick and that creature, and the other seat's board and options not
     /// at all, since every pick stays face down until both players are done (ADR 0089, ADR 0117).
@@ -286,9 +306,10 @@ public sealed class MatchDriverTests
     /// <summary>
     /// An agent that buys the first package it is offered at every pick, and notes how many picks of its own each
     /// pick is shown and how many it has left. It can say when it has made its last pick, or wait before its first
-    /// until the other seat has said so, giving up after a while rather than hang.
+    /// until the other seat has said so, without a clock: a driver that deadlocks is stopped by the test's own
+    /// time limit, and a loaded machine only makes the wait longer.
     /// </summary>
-    private sealed class Buying(IPlayerAgent inner, SemaphoreSlim? done = null, SemaphoreSlim? waitsFor = null) : IPlayerAgent
+    private sealed class Buying(IPlayerAgent inner, SemaphoreSlim? done = null, SemaphoreSlim? waitsFor = null, SemaphoreSlim? waiting = null, SemaphoreSlim? stalledUntil = null, TimeSpan stall = default) : IPlayerAgent
     {
         public List<(int Picked, int Remaining)> Seen { get; } = [];
 
@@ -296,9 +317,17 @@ public sealed class MatchDriverTests
 
         public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options)
         {
+            if (stalledUntil is not null && Seen.Count == 0)
+            {
+                stalledUntil.Wait(TestContext.Current.CancellationToken);
+                Thread.Sleep(stall);
+            }
+
             if (waitsFor is not null && Seen.Count == 0)
             {
-                Waited = waitsFor.Wait(TimeSpan.FromSeconds(2));
+                waiting?.Release();
+                waitsFor.Wait(TestContext.Current.CancellationToken);
+                Waited = true;
             }
 
             Seen.Add((board.EvolutionChoices.Count, options.RemainingPicks));
