@@ -15,5 +15,6 @@ The scripts the gate, the learning loop and the reports run. Each command, with 
 | `ops/` | The production report (`/ops`, ADR 0186). |
 | `spells-report/` | The spells the bots cast and leave (`/spells-report`). |
 | `design-system/` | The design system rebuilt from the repository (`/design-system`). |
+| `terminology.mjs` | The one reader of docs/domain/player-terminology.md's tables, for every scanner of the player's words. |
 | `sync-branding.mjs`, `matte-opaque-art.py` | The brand tokens inlined into the pages, and a portrait given its alpha. |
 | `workflow-metrics.py` | The numbers of docs/engineering/ai-workflow-plan.md (`/retro`). |
