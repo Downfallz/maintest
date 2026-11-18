@@ -40,8 +40,6 @@ public sealed class FileArtifactStore : IArtifactStore
         return Task.FromResult(runs);
     }
 
-    public Task<bool> DeleteAsync(string run, CancellationToken cancellationToken = default) => DeleteAsync(run, first: null, cancellationToken);
-
     public Task<bool> DeleteAsync(string run, string? first, CancellationToken cancellationToken = default)
     {
         var directory = LocationOf(run);

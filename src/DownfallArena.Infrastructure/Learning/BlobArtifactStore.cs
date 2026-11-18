@@ -58,8 +58,6 @@ public sealed class BlobArtifactStore : IArtifactStore
         return runs;
     }
 
-    public Task<bool> DeleteAsync(string run, CancellationToken cancellationToken = default) => DeleteAsync(run, first: null, cancellationToken);
-
     public async Task<bool> DeleteAsync(string run, string? first, CancellationToken cancellationToken = default)
     {
         var prefix = BlobArtifactNames.Prefix(run);

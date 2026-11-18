@@ -33,7 +33,6 @@ internal sealed class RecordHeld(IArtifactStore inner, string? file = null) : IA
 
     public Task<IReadOnlyList<string>> RunsAsync(CancellationToken cancellationToken = default) => inner.RunsAsync(cancellationToken);
 
-
     public Task<bool> DeleteAsync(string run, string? first, CancellationToken cancellationToken = default) => inner.DeleteAsync(run, first, cancellationToken);
 
     private Task Wait(string relativePath)

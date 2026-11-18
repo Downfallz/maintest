@@ -663,10 +663,10 @@ hidden; a replay sends nothing. The host keeps the larger sequence with the time
 table's run it answers `409 Seen.Gone`: the host writes no file, so the run is not brought back. If this process could
 not write the table's record, it cannot tell a deleted run from a missing record. It answers `503 Seen.Busy` (a
 reaction: `503 Reaction.Busy`), not `409`. The operator's delete waits for a mark or a reaction already on its way. A
-seen mark moves nothing on the table and sends no notice. A mark is kept under a stamp of the seat's key, so a seat offered again starts with none. Each
-seat's view carries its own mark as `seen` (null before the first) and when the journal was last written as
-`lastMoveAt` (null for a table that keeps none). The page reads the larger of its browser's mark and the host's
-(ADR 0194).
+seen mark moves nothing on the table and sends no notice. A mark is kept under a stamp of the seat's key, so a seat
+offered again starts with none. Each seat's view carries its own mark as `seen` (null before the first) and when the
+journal was last written as `lastMoveAt` (null for a table that keeps none). The page reads the larger of its browser's
+mark and the host's (ADR 0194).
 
 #### The ladder, formats and the time to answer
 

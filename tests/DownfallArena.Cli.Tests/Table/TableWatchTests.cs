@@ -343,6 +343,28 @@ public sealed class TableWatchTests : IDisposable
     }
 
     /// <summary>
+    /// A table whose record this process never managed to store is not taken for deleted (#850): nothing says the
+    /// operator deleted it, and letting it go would drop a live table.
+    /// </summary>
+    [Fact]
+    public async Task A_table_whose_record_was_never_stored_is_not_let_go_of_as_deleted()
+    {
+        using var hosted = new HostedTables(directory => new RecordRefused(new FileArtifactStore(directory)) { Refusing = true }, turns: new Owed());
+        using var registry = hosted.Registry();
+        var table = await hosted.Composer.ComposeAsync(HostedTables.OnePerson, Cancel);
+        using (var place = (await registry.ReserveAsync(Cancel)).ShouldNotBeNull())
+        {
+            await registry.AddAsync(table, place, Cancel);
+        }
+
+        await Should.ThrowAsync<IOException>(() => table.RecordAsync(Cancel));
+
+        await new TableWatch(registry, TimeProvider.System).WatchOnceAsync(Cancel);
+
+        registry.Held(table.Id).ShouldNotBeNull();
+    }
+
+    /// <summary>
     /// A record from before revisions, picked up by another process, is one that process saw stored: deleted, it reads as
     /// gone, and it is not written again (#848, #850).
     /// </summary>

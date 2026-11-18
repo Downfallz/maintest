@@ -167,12 +167,12 @@ public sealed class BlobArtifactStoreTests
         runs.ShouldContain(one);
         runs.ShouldContain(two);
 
-        (await store.DeleteAsync(one, TestContext.Current.CancellationToken)).ShouldBeTrue();
+        (await store.DeleteAsync(one, first: null, TestContext.Current.CancellationToken)).ShouldBeTrue();
 
         (await store.RunsAsync(TestContext.Current.CancellationToken)).ShouldNotContain(one);
         (await store.Reader(one).ReadTextAsync("manifest.json", TestContext.Current.CancellationToken)).ShouldBeNull();
         (await store.Reader(two).ReadTextAsync("notes.jsonl", TestContext.Current.CancellationToken)).ShouldNotBeNull();
-        (await store.DeleteAsync(one, TestContext.Current.CancellationToken)).ShouldBeFalse();
+        (await store.DeleteAsync(one, first: null, TestContext.Current.CancellationToken)).ShouldBeFalse();
     }
 
     private static async Task<BlobArtifactStore> Store()
