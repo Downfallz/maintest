@@ -125,8 +125,8 @@ internal sealed class TableServer : IDisposable
                 return StartingUp();
             }
 
-            return await StillOpenAsync(id)
-                ? StudioResponse.OfPlainText(409, "The session is still being played. Its trace carries both seats' boards, so it is served once the match has an outcome.")
+            return await RefusedStoredAsync(id) is { } refusal
+                ? StudioResponse.OfPlainText(409, refusal)
                 : await StoredSessionPageAsync(id);
         }
 
@@ -165,29 +165,40 @@ internal sealed class TableServer : IDisposable
     }
 
     /// <summary>
+    /// Why a run's stored trace is not served, or null when it is: its record says its table is open, or it exists and
+    /// cannot be read to say it is not (#815). A missing record is a run from before ADR 0091, with no table to protect.
+    /// </summary>
+    private async Task<string?> RefusedStoredAsync(string id)
+    {
+        const string UnderWay = "The session is still being played. Its trace carries both seats' boards, so it is served once the match has an outcome.";
+        const string Unread = "This session's record cannot be read, so nothing shows its match is over. Its trace carries both seats' boards, so it is not served.";
+        if (_stored is not { } stored || !TableKeys.IsTableId(id))
+        {
+            return null;
+        }
+
+        try
+        {
+            var read = await stored.ReadRecordAsync(id);
+            if (read.Unparseable)
+            {
+                return Unread;
+            }
+
+            return read.Record is { Status: TableRecord.Open } ? UnderWay : null;
+        }
+        catch (Exception failure) when (TableLoader.Refuses(failure) || TableRegistry.StoreFails(failure))
+        {
+            return Unread;
+        }
+    }
+
+    /// <summary>
     /// A session this process no longer holds, read from the store: the replica that played it is gone
     /// (ADR 0080) or the table was let go of, and the run is what survives. Nothing live is being protected
     /// here -- there is no match in memory to leak a seat of -- so what the store has is what is shown, a
     /// partial trace included.
     /// </summary>
-    /// <summary>Whether a run's record says its table is open, or cannot be read to say it is not.</summary>
-    private async Task<bool> StillOpenAsync(string id)
-    {
-        if (_stored is not { } stored || !TableKeys.IsTableId(id))
-        {
-            return false;
-        }
-
-        try
-        {
-            return await stored.RecordAsync(id) is { Status: TableRecord.Open };
-        }
-        catch (Exception failure) when (TableLoader.Refuses(failure) || TableRegistry.StoreFails(failure))
-        {
-            return true;
-        }
-    }
-
     private async Task<StudioResponse> StoredSessionPageAsync(string id)
     {
         if (_stored is not { } stored || id.Length == 0 || id.Contains('/', StringComparison.Ordinal) || id.Contains('\\', StringComparison.Ordinal) || id == "." || id == "..")
