@@ -62,14 +62,9 @@ You need the Azure subscription's owner, signed in, and ideally the GitHub CLI s
    The first revision may restart a few times in its first minutes: the role that lets it write recordings
    is assigned in the same deployment, and Azure takes a moment to honour a new one.
 
-5. **Point the sign-in at it.**
-
-   ```bash
-   infra/bootstrap.sh redirect
-   ```
-
-   The address exists only once the first deployment made it, and the sign-in has to know where to send you
-   back. This is the last step; nothing here needs doing again.
+5. **Point the sign-ins at it**: the admin panel's redirect and the Google client's origins,
+   [runbooks/sign-ins.md](runbooks/sign-ins.md). The address exists only once the first deployment made it, and
+   the sign-ins have to know it. This is the last step; nothing here needs doing again.
 
 ## Playing
 
@@ -98,11 +93,9 @@ not the player name: a deleted account's name can be taken by anybody. Entra sta
 Players sign in on the home page with Google (ADR 0122). The host checks Google's ID token itself, so the only
 setting is a public OAuth client id, and no secret exists. The deployment passes the project's own client id unless
 the `TABLE_GOOGLE_CLIENT_ID` variable names another. The client is made once in Google Cloud Console, under APIs &
-Services, Credentials, *Create OAuth client ID*, type *Web application*:
-
-- *Authorized JavaScript origins*: the table's address, `https://downfall-table.<...>.azurecontainerapps.io`, and
-  `http://localhost:5099` for a laptop's table (`table --accounts google --google-client-id <id>`).
-- No redirect URI and no client secret: the button hands the page an ID token directly.
+Services, Credentials, *Create OAuth client ID*, type *Web application*, with no redirect URI and no client secret:
+the button hands the page an ID token directly. Its *Authorized JavaScript origins* list every address the table
+answers at; adding one is a runbook: [runbooks/sign-ins.md](runbooks/sign-ins.md).
 
 Accounts are kept in the storage account's `accounts` container, beside the recordings, and hold a player name, an
 internal id and Google's subject id for the sign-in. No email is kept. A player deletes their account from the
@@ -277,5 +270,5 @@ Deleting the environment takes several minutes, and takes the `ME_...` group wit
    az network vnet delete --resource-group "$group" --name "$(az network vnet list --resource-group "$group" --query "[0].name" --output tsv)"
    ```
 
-3. The table has a new address. Run `infra/bootstrap.sh redirect`, and replace the old address with the new
-   one in the Google client's *Authorized JavaScript origins* (see "Player sign-in").
+3. The table has a new address: give it to the sign-ins, and take the old one out of the Google client's origins
+   ([runbooks/sign-ins.md](runbooks/sign-ins.md)).

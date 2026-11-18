@@ -22,8 +22,8 @@ The table answers at `play.downfallinstinct.com` through Cloudflare's proxy (ADR
 
 4. **Bind it**: set the repository variable `TABLE_DOMAIN` to `play.downfallinstinct.com` and run *Deploy the table*.
 5. **Proxy it**: switch the `play` record to *Proxied* (orange).
-6. **Sign-ins**: `DOMAIN=play.downfallinstinct.com infra/bootstrap.sh redirect` for the admin panel, and add
-   `https://play.downfallinstinct.com` to the Google client's *Authorized JavaScript origins* ([../README.md](../README.md#player-sign-in)).
+6. **Sign-ins**: give the domain to the admin panel's redirect and the Google client's origins,
+   [sign-ins.md](sign-ins.md).
 7. **Close the platform's address**, once players have moved: compare the ranges in `infra/main.bicep` with
    <https://www.cloudflare.com/ips-v4>, set `TABLE_ONLY_CLOUDFLARE` to `true`, and run *Deploy the table*. The
    platform's address then answers Cloudflare alone.
