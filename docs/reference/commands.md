@@ -98,7 +98,8 @@ dotnet format --verify-no-changes         # what CI runs; use `dotnet format` to
 node --test studio/*.test.js table/*.test.js showcase/*.test.js
 ```
 
-The static pages' own tests (ADR 0024); needs no install.
+The static pages' own tests (ADR 0024). They need no install of their own; `studio/battle-craft.test.js` reads the
+Phaser types that building the battle view (above) installs, and fails, saying so, without them.
 
 ### The Python side
 
@@ -977,6 +978,18 @@ place it writes): `tokens.json` from `docs/art/branding.css` and `docs/art/desig
 as written. It fails when a palette colour has no usage note, or a note has no colour. A session publishes the
 folder to the design system's page (docs/art/branding.md#design-system) with `/design-system`; it prints the
 pictures to upload.
+
+### battle/phaser-symbols.mjs
+
+```bash
+node scripts/battle/phaser-symbols.mjs "Phaser.Cameras.Scene2D.Camera#shake" Phaser.Geom.Point
+```
+
+Says, for each name, `yes` or `no`: whether the Phaser the battle installs (`battle/node_modules/phaser/types`)
+declares it. A name is written as Phaser's documentation writes it (`Phaser.Namespace.Class#member`); a member is
+also found on what its class extends. It exits 1 when a name is missing, and 2 with no name or when
+`npm --prefix battle ci --ignore-scripts` has not been run. The craft book (docs/art/battle-craft.md) is held to
+it by `studio/battle-craft.test.js`.
 
 ### recap-fixture.py
 
