@@ -217,5 +217,6 @@ UPDATE_INDEXES=1 dotnet test --project tests/DownfallArena.Architecture.Tests
 | [0192](0192-narrow-what-a-pull-request-plays-and-builds.md) | Narrow what a pull request plays and builds | Accepted (settled by the owner, docs/engineering/ci-minutes-plan.md question 6 and the plan's shape, M4). Amends [0182](0182-require-one-gate-check-and-deploy-behind-it.md) (what a pull request builds) and [0190](0190-play-the-release-profiles-webkit-alone-on-a-pull-request.md) (which paths call for the release profiles on a pull request) |
 | [0193](0193-write-the-rulebook-in-french-beside-the-english.md) | Write the rulebook in French beside the English | Accepted (settled by the owner in docs/tabletop/rulebook-plan.md, R6). Extends [0188](0188-build-the-official-rulebook-from-rules.md) |
 | [0194](0194-keep-what-each-seat-was-last-shown-beside-the-table.md) | Keep what each seat was last shown beside the table | Accepted |
+| [0195](0195-open-the-rulebook-in-the-language-its-address-asks-for.md) | Open the rulebook in the language its address asks for | Accepted (settled by the owner on #732). Amends [0193](0193-write-the-rulebook-in-french-beside-the-english.md) (the language `/rules` opens in) |
 
 <!-- index:end -->

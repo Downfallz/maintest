@@ -14,7 +14,7 @@ permanent, décompte au Nettoyage et se termine à zéro, et le premier décompt
 | **Regeneration** (régénération) | Soigne sa valeur, jamais au-dessus de la Santé de départ | Entretien, avant le Bleed |
 | **Régénération d’Énergie** | Donne sa valeur en Énergie | Entretien, en premier |
 | **Stun** (étourdissement) | Pas de tempo, pas de tour ; un second est ignoré, tout comme celui qui arrive au round suivant la fin d’un Stun | Tout le round |
-| **Renfort de Défense** | Augmente la Défense ; tous ensemble comptent pour 10 au plus | Chaque coup que la créature reçoit |
+| **Renfort de Défense** | Augmente la Défense ; tous ensemble comptent pour {engine.defenseBuffCeiling} au plus | Chaque coup que la créature reçoit |
 | **Malus de Défense** | Diminue la Défense | Chaque coup que la créature reçoit |
 | **Renfort d’initiative** | Augmente l’initiative | Quand la frise est construite |
 | **Malus d’initiative** | Diminue l’initiative | Quand la frise est construite |
@@ -22,12 +22,14 @@ permanent, décompte au Nettoyage et se termine à zéro, et le premier décompt
 
 Trois sommes, chacune ramenée à zéro **après** la soustraction si elle tombe en dessous :
 
-- **Défense** = Défense de base + renforts de Défense, 10 au plus, − malus de Défense.
+- **Défense** = Défense de base + renforts de Défense, {engine.defenseBuffCeiling} au plus, − malus de Défense.
 - **Initiative** = initiative de base + renforts d’initiative − malus d’initiative.
 - **Bonus de dégâts** = ce que donnent ses passifs + ses renforts de dégâts.
 
-Un état **permanent** ne décompte jamais : le malus de Défense de Contagion, et le durable des deux renforts de
-Défense de Wraithguard.
+Un état **permanent** ne décompte jamais : le
+malus{?spell:infectious_blast:v1.defenseDebuff.permanent} de Défense de Contagion, et le durable des
+deux{?spell:revenant_guards:v1.defenseBuff.count = 2} renforts de
+Défense{?spell:revenant_guards:v1.defenseBuff1.permanent} de Wraithguard.
 **L’immunité au Stun** n’est pas un état : aucun sort ne la donne, et elle dure du Nettoyage qui termine un Stun
 jusqu’au suivant. Une créature vaincue perd ses états et n’en prend aucun nouveau.
 
@@ -39,7 +41,7 @@ title: États
 Un état est un effet durable sur une créature, avec une valeur et un nombre de rounds.
 Il décompte pendant les Retombées de chaque round, et se termine à zéro.
 Une créature étourdie passe chaque round que dure le Stun. Ensuite, elle ne peut plus être étourdie pendant un round.
-> Le Bleed de Latch inflige {spell:latch:v1.bleed} à chacun des {spell:latch:v1.bleed.durationRounds} prochains Entretiens, quelle que soit la Défense.
+> Le Bleed de Latch inflige {spell:latch:v1.bleed} à chaque Entretien pendant {spell:latch:v1.bleed.durationRounds|round|rounds}, quelle que soit la Défense.
 ```
 
 ## La fin d’une partie {#the-end-of-a-match}

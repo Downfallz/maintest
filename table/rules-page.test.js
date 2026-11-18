@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { contentsOf, targetOf, matching, normalized, spanText, changeText, latestFirst, languageOf, bookFile, WORDS } from './rules.js';
+import { contentsOf, targetOf, matching, normalized, spanText, changeText, latestFirst, languageOf, askedLanguage, isKeptCopy, bookFile, WORDS } from './rules.js';
 
 const book = JSON.parse(readFileSync(new URL('./rules.json', import.meta.url), 'utf8'));
 const french = JSON.parse(readFileSync(new URL('./rules.fr.json', import.meta.url), 'utf8'));
@@ -174,6 +174,26 @@ test('the language is the one stored on the device, else the browser\'s first En
   assert.equal(languageOf({ stored: null, languages: ['de-DE', 'FR'] }), 'fr', 'the first language the book is written in');
   assert.equal(languageOf({ stored: 'de', languages: ['es-ES'] }), 'en', 'neither: English');
   assert.equal(languageOf({}), 'en');
+});
+
+test('a language asked in the address wins over the stored one and the browser\'s: a link from the French public book opens French', () => {
+  assert.equal(languageOf({ asked: 'fr', stored: 'en', languages: ['en-US'] }), 'fr');
+  assert.equal(languageOf({ asked: 'en', stored: 'fr', languages: ['fr-CA'] }), 'en');
+  assert.equal(languageOf({ asked: 'de', stored: 'fr', languages: ['en-US'] }), 'fr', 'a language the book is not written in is not asked');
+  assert.equal(askedLanguage('?lang=fr'), 'fr');
+  assert.equal(askedLanguage('?from=battle&lang=FR'), 'fr');
+  assert.equal(askedLanguage(''), null);
+});
+
+test('a book the service worker gave from its kept copy is told apart from the network\'s', () => {
+  assert.equal(isKeptCopy(new Headers({ 'X-Rulebook-Copy': 'kept' })), true);
+  assert.equal(isKeptCopy(new Headers()), false);
+});
+
+test('the page says when the book is the copy this device kept, in each language, and is quiet until then', () => {
+  assert.match(page, /<p id="rules-kept"[^>]*data-words="offline"[^>]*hidden/);
+  assert.match(WORDS.en.offline, /^Offline: /);
+  assert.match(WORDS.fr.offline, /^Hors ligne : /);
 });
 
 test('each language reads its own book, by a relative path', () => {

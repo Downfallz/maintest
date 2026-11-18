@@ -83,7 +83,7 @@ export function rulesPage(c, book, app) {
   return layout(c, 'rules', app, c.rules, c.rulesDescription, `<div class="rules-page contain">
     <header class="rules-intro"><p class="kicker">${escape(words.eyebrow)}</p><h1 id="rules-title">${escape(words.heading)}</h1>
       <p class="lead">${escape(c.rulesLead)}</p>
-      <a class="editorial-link" href="${new URL('rules', app).href}">${escape(c.rulesInGame)} <span aria-hidden="true">→</span></a></header>
+      <a class="editorial-link" href="${new URL(`rules?lang=${book.language === 'fr' ? 'fr' : 'en'}`, app).href}">${escape(c.rulesInGame)} <span aria-hidden="true">→</span></a></header>
     <div class="rules-layout">
       <nav id="rules-contents" class="rules-contents" aria-labelledby="rules-contents-title">
         <h2 id="rules-contents-title">${escape(words.contents)}</h2><ol>${contents}</ol>

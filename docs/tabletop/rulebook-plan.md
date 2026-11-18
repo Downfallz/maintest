@@ -216,7 +216,8 @@ and the app's edition; it keeps writing, the keeper keeps reading.
    it to `table/rules.fr.json` and refuses a French book whose files, ids, order, sources, cards or changes differ
    from the English, or that uses an English word the French column replaced. Spell and mutation names stay as the
    battle shows them; Bleed, Stun and Regeneration keep the screen's words, glossed once. An account holds no
-   language (the owner chose so): `/rules` opens in the language stored on the device, else the browser's, and
+   language (the owner chose so): `/rules` opens in the language stored on the device, else the browser's (and, since #732 and ADR 0195, the language the
+   address asks for first, `?lang=fr`, which the public French book links), and
    **English** and **Français** switch at the same section. The worker keeps both books, `reach.mjs` lists the
    French sections beside the English (`[fr]`), and the writer, the keeper and `/rules` keep both. Tests:
    `rules.test.js` (a test per French refusal, the file in sync), `rules-page.test.js`, `rules-reach.test.js`,

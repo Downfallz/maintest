@@ -14,7 +14,7 @@ permanent one counts down at Cleanup and ends at zero, and the first countdown a
 | **Regeneration** | Heals its amount, never above the starting Health | Upkeep, before Bleed |
 | **Energy regeneration** | Gives its amount of Energy | Upkeep, first |
 | **Stun** | No tempo, no turn; a second one is ignored, and so is one in the round after a Stun ends | The whole round |
-| **Defense buff** | Raises Defense; all of them count for 10 at most | Every hit the creature takes |
+| **Defense buff** | Raises Defense; all of them count for {engine.defenseBuffCeiling} at most | Every hit the creature takes |
 | **Defense debuff** | Lowers Defense | Every hit the creature takes |
 | **Initiative buff** | Raises initiative | When the timeline is built |
 | **Initiative debuff** | Lowers initiative | When the timeline is built |
@@ -22,12 +22,13 @@ permanent one counts down at Cleanup and ends at zero, and the first countdown a
 
 Three sums, each floored at zero **after** the subtraction:
 
-- **Defense** = base Defense + Defense buffs, 10 at most, − Defense debuffs.
+- **Defense** = base Defense + Defense buffs, {engine.defenseBuffCeiling} at most, − Defense debuffs.
 - **Initiative** = base initiative + initiative buffs − initiative debuffs.
 - **Damage bonus** = what its passives give + its damage buffs.
 
-A **permanent** condition never counts down: Contagion's Defense debuff, and the lasting one of
-Wraithguard's two Defense buffs.
+A **permanent** condition never counts down: Contagion's Defense
+debuff{?spell:infectious_blast:v1.defenseDebuff.permanent}, and the lasting one of Wraithguard's
+two{?spell:revenant_guards:v1.defenseBuff.count = 2} Defense buffs{?spell:revenant_guards:v1.defenseBuff1.permanent}.
 **Stun immunity** is not a condition: no spell gives it, and it lasts from the Cleanup that ends a Stun to the
 next. A defeated creature loses its conditions and takes no new one.
 
@@ -39,7 +40,7 @@ title: Conditions
 A condition is a lasting effect on a creature, with an amount and a number of rounds.
 It counts down in the Aftermath of each round, and ends at zero.
 A stunned creature sits out every round the stun lasts. After that, it cannot be stunned again for one round.
-> Latch's Bleed deals {spell:latch:v1.bleed} at each of the next {spell:latch:v1.bleed.durationRounds} Upkeeps, whatever the Defense.
+> Latch's Bleed deals {spell:latch:v1.bleed} at each Upkeep for the next {spell:latch:v1.bleed.durationRounds|round|rounds}, whatever the Defense.
 ```
 
 ## The end of a match {#the-end-of-a-match}

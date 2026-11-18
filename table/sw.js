@@ -11,11 +11,11 @@ const CACHE = 'downfall-offline-v2';
 // each time the network answers, so the rules a player last read can be read again with no network. Only a path whose
 // answer is the same for everyone may join: what is kept stays after a sign-out.
 const RULEBOOK = '/rules';
-const RULEBOOK_OWN = [RULEBOOK, '/rules.js', '/rules.css', '/rules.json', '/rules.fr.json'];
+const RULEBOOK_OWN = new Set([RULEBOOK, '/rules.js', '/rules.css', '/rules.json', '/rules.fr.json']);
 // What it shares with every page: given only when the network cannot answer at all, never in place of a server error,
 // so that no other page is drawn with an older deploy's style.
 const RULEBOOK_SHARED = ['/table.css', '/lobby.css', '/identity.css', '/brand-mark.svg', '/fonts/marcellus-latin-400.woff2'];
-const RULEBOOK_FILES = [...RULEBOOK_OWN, ...RULEBOOK_SHARED];
+const RULEBOOK_FILES = new Set([...RULEBOOK_OWN, ...RULEBOOK_SHARED]);
 
 const ICON = '/icon-192.png';
 const BADGE = '/notification-badge.png';
@@ -126,7 +126,7 @@ function read(event) {
 function rulebookPath(request) {
   if (request.method && request.method !== 'GET') return null;
   const url = new URL(request.url);
-  return url.origin === self.location.origin && RULEBOOK_FILES.includes(url.pathname) ? url.pathname : null;
+  return url.origin === self.location.origin && RULEBOOK_FILES.has(url.pathname) ? url.pathname : null;
 }
 
 // A successful answer is kept as the copy of its path; anything else is the network's to show, and never kept. A
@@ -136,6 +136,16 @@ const keepable = response => Boolean(response?.ok) && !response.redirected;
 // A host that is down behind Cloudflare is an answer, a 52x, not a network error: for the rulebook it counts as no
 // answer at all, and the copy is given when there is one.
 const unanswered = response => (response?.status ?? 0) >= 500;
+
+// The copy kept of a path, marked as one (ADR 0191, #698): the rulebook's page reads the mark and tells the player the
+// book may be older than the one the table now plays. Undefined when nothing is kept.
+async function copyOf(path) {
+  const copy = await caches.match(path);
+  if (!copy) return undefined;
+  const headers = new Headers(copy.headers);
+  headers.set('X-Rulebook-Copy', 'kept');
+  return new Response(copy.body, { status: copy.status, statusText: copy.statusText, headers });
+}
 
 async function keep(path, response) {
   if (!keepable(response)) return;
@@ -154,10 +164,10 @@ async function navigate(event) {
   try {
     const response = (await event.preloadResponse) ?? await fetch(event.request);
     if (path && keepable(response)) event.waitUntil(keep(path, response.clone()));
-    if (path && unanswered(response)) return (await caches.match(path)) ?? response;
+    if (path && unanswered(response)) return (await copyOf(path)) ?? response;
     return response;
   } catch {
-    return (path && await caches.match(path)) ?? (await caches.match(OFFLINE)) ?? Response.error();
+    return (path && await copyOf(path)) ?? (await caches.match(OFFLINE)) ?? Response.error();
   }
 }
 
@@ -166,10 +176,10 @@ async function rulebookFile(event, path) {
   try {
     const response = await fetch(event.request);
     if (keepable(response)) event.waitUntil(keep(path, response.clone()));
-    if (unanswered(response) && RULEBOOK_OWN.includes(path)) return (await caches.match(path)) ?? response;
+    if (unanswered(response) && RULEBOOK_OWN.has(path)) return (await copyOf(path)) ?? response;
     return response;
   } catch {
-    return (await caches.match(path)) ?? Response.error();
+    return (await copyOf(path)) ?? Response.error();
   }
 }
 
@@ -178,7 +188,7 @@ async function rulebookFile(event, path) {
 async function install() {
   const cache = await caches.open(CACHE);
   await cache.add(OFFLINE);
-  await Promise.allSettled(RULEBOOK_FILES.map(async path => keep(path, await fetch(path))));
+  await Promise.allSettled([...RULEBOOK_FILES].map(async path => keep(path, await fetch(path))));
   await self.skipWaiting();
 }
 

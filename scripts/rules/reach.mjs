@@ -4,7 +4,7 @@
 //   git diff origin/main... | node scripts/rules/reach.mjs
 //
 // A section is reached by an ADR or a game-rules heading its `sources:` line cites, by a value it draws (a spell, a
-// mutation, a field of the hosted rule set, a stat of the reference creature), by a spell or a mutation it names,
+// mutation, a field of the hosted rule set, a stat of the reference creature, an engine constant), by a spell or a mutation it names,
 // and by a change to its own lines. A path that calls for the keeper (scripts/review/reviewers.mjs) and reaches no
 // section is listed for a reading by hand: the domain, the words, the pages' rule text, a rule no section teaches.
 // The French edition (rules/fr/) is read beside the English: its sections cite and draw the same, so a change
@@ -14,6 +14,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { reviewersFor } from '../review/reviewers.mjs';
+import { ENGINE } from './build.mjs';
 
 const RULE_SET = 'docs/tabletop/playtest.rules.json';
 const CREATURE = 'data/Creatures/main.v1.json';
@@ -180,6 +181,15 @@ function byValues(change, section) {
   return [...new Set(moved)].filter(draws).map(key => `draws ${prefix}.${key}`);
 }
 
+/** A change to an engine constant the book draws (`engine.<name>`) reaches the sections that draw it. */
+function byEngine(change, section) {
+  return Object.entries(ENGINE)
+    .filter(([name, { file, constant }]) => change.path === file
+      && [...change.added, ...change.removed].some(line => new RegExp(String.raw`\bconst int ${constant}\b`).test(line))
+      && new RegExp(String.raw`\bengine\.${name}\b`).test(section.text))
+    .map(([name]) => `draws engine.${name}`);
+}
+
 /** A change to the book reaches the sections whose lines it touched. */
 function byOwnLines(change, section) {
   if (change.path !== `rules/${section.file}`) return [];
@@ -194,6 +204,7 @@ function reasonsFor(change, section, { gameRules, content }) {
     ...byGameRules(change, section, gameRules),
     ...byContent(change, section, content),
     ...byValues(change, section),
+    ...byEngine(change, section),
     ...byOwnLines(change, section),
   ];
 }

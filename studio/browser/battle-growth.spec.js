@@ -13,7 +13,7 @@ const catalogue = { cards: [{ id: 'focus', name: 'Focus', cost: 0, targeting: 'S
   { id: 'warped', name: 'Warped', level: 1, initiativeBonus: 2, spells: [] },
   { id: 'upgrade', name: 'Stalker', level: 2, prerequisites: ['predator'], spells: [], initiativeBonus: 1 },
   { id: 'alternative', name: 'Blighted', level: 2, prerequisites: ['predator'], spells: [], initiativeBonus: 2 },
-  { id: 'cap', name: 'Shared capstone', level: 4, anyOf: ['upgrade', 'alternative'], spells: [], initiativeBonus: 0, passiveLines: ['Defense +2', 'For every creature of the side'] },
+  { id: 'cap', name: 'Shared capstone', level: 4, anyOf: ['upgrade', 'alternative'], spells: [], initiativeBonus: 0, passiveLines: ['Defense +2', 'For every creature of the team'] },
 ] };
 const initial = () => ({ board: { slot: 'Player1', roundNumber: 3, nextEvolutionRound: 7, phase: 'Planning', subPhase: 'Evolution',
   allies: [creature(1, 'First'), creature(2, 'Second')], enemies: [creature(3, 'Rival')], evolutionChoices: [{ creature: 2, tier: 'warped' }], timeline: [] },
@@ -76,7 +76,7 @@ test('Help reference opens the full mutation tree: read-only, keyboard navigable
   const cap = board.locator('[data-package="cap"]');
   await cap.focus(); await page.keyboard.press('Enter'); await expect(cap).toHaveAttribute('aria-pressed', 'true');
   await expect(detail).toContainText('Requires one of: Stalker / Blighted');
-  await expect(detail).toContainText('For every creature of the side');
+  await expect(detail).toContainText('For every creature of the team');
   await fitsViewport(page, '#atlas-close, #atlas-creature');
   // A poll keeps the creature, the open card and the focused mutation.
   h.view.board.nextEvolutionRound = 8; await h.publish();
