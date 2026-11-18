@@ -291,7 +291,7 @@ service's status code. A session page whose files cannot be read is 404.
   interface, what its container binds, ADR 0080; refused on Windows).
 - The session is recorded into `runs/playtest/<id>/` (`--record` names another root, or a blob container by its
   URL for the hosted table (ADR 0080); `--who <initials>` stamps who played, `--no-record` writes nothing at
-  all), and `/session/<id>` shows it in the viewer once the match is over.
+  all), and `/session/<id>` shows it in the viewer once the match is over. It is 409 when the run's record exists and cannot be parsed, and served when the run has no record (it predates ADR 0091).
 - `--format` and `--declaration` as on `play`.
 
 #### The pilot page
@@ -501,7 +501,7 @@ The seat's view says the lesson under `practice.tutorial`:
   content it includes and the fields' names are not read, and a content id (`spell:pummel:v1`) is one word, never
   the name inside it. The error says what the file holds, never the name. A report is 409 `Feedback.UnderWay` when its table is
   still under way or its scenario was cut from one. It is 409 `Feedback.TableUnread` when its table's record is missing
-  (the session was deleted) or unparseable, because nothing then shows the game is over. Either way, nothing a seat holds
+  (the session was deleted) or unparseable, or when the record of the table its scenario was cut from is unparseable (a missing one passes: another host's run), because nothing then shows the game is over. Either way, nothing a seat holds
   face down reaches the issue. An idea is 409
   `Feedback.NotABug`, and a report not reproduced, or whose scenario was removed since, 409 `Feedback.NotReproduced`.
   Each download is an Activity line, `feedback.download`, with the scenario's id. The sheet offers `download` once the

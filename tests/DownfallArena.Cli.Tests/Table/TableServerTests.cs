@@ -420,7 +420,13 @@ public sealed class TableServerTests : IAsyncDisposable
             File.Delete(record);
         }
 
-        (await Get($"{url}session/{finished.Id}", token: null)).StatusCode.ShouldBe(expected);
+        var page = await Get($"{url}session/{finished.Id}", token: null);
+
+        page.StatusCode.ShouldBe(expected);
+        if (unparseable)
+        {
+            (await page.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)).ShouldContain("record cannot be read");
+        }
     }
 
     /// <summary>A session the store cannot find is a 404 in a fixed sentence: the store's words carry the host's paths (#786).</summary>

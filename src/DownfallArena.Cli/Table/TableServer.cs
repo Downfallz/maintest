@@ -125,8 +125,8 @@ internal sealed class TableServer : IDisposable
                 return StartingUp();
             }
 
-            return await StillOpenAsync(id)
-                ? StudioResponse.OfPlainText(409, "The session is still being played. Its trace carries both seats' boards, so it is served once the match has an outcome.")
+            return await RefusedStoredAsync(id) is { } refusal
+                ? StudioResponse.OfPlainText(409, refusal)
                 : await StoredSessionPageAsync(id);
         }
 
@@ -165,24 +165,26 @@ internal sealed class TableServer : IDisposable
     }
 
     /// <summary>
-    /// Whether a run's record says its table is open, or exists and cannot be read to say it is not (#815). A missing
-    /// record is a run from before ADR 0091, with no table to protect.
+    /// Why a run's stored trace is not served, or null when it is: its record says its table is open, or it exists and
+    /// cannot be read to say it is not (#815). A missing record is a run from before ADR 0091, with no table to protect.
     /// </summary>
-    private async Task<bool> StillOpenAsync(string id)
+    private async Task<string?> RefusedStoredAsync(string id)
     {
+        const string UnderWay = "The session is still being played. Its trace carries both seats' boards, so it is served once the match has an outcome.";
+        const string Unread = "This session's record cannot be read, so nothing shows its match is over. Its trace carries both seats' boards, so it is not served.";
         if (_stored is not { } stored || !TableKeys.IsTableId(id))
         {
-            return false;
+            return null;
         }
 
         try
         {
             var read = await stored.ReadRecordAsync(id);
-            return read.Unparseable || read.Record is { Status: TableRecord.Open };
+            return read.Unparseable ? Unread : read.Record is { Status: TableRecord.Open } ? UnderWay : null;
         }
         catch (Exception failure) when (TableLoader.Refuses(failure) || TableRegistry.StoreFails(failure))
         {
-            return true;
+            return Unread;
         }
     }
 

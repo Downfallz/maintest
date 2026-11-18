@@ -152,14 +152,14 @@ internal sealed class StoredSessions(IArtifactStore store)
         return (trace is null ? null : await reader.ReadTextAsync(trace, cancellationToken), await reader.ReadTextAsync(PlaytestRun.CatalogueFile, cancellationToken));
     }
 
-    /// <summary>The table's record, or none when the run was never a table of a host that wrote one (ADR 0091), or its record cannot be parsed.</summary>
+    /// <summary>The table's record, or none when the run never had a record (ADR 0091) or its record cannot be parsed. <see cref="ReadRecordAsync" /> tells the two apart.</summary>
     public async Task<TableRecord?> RecordAsync(string id, CancellationToken cancellationToken = default) =>
         (await ReadRecordAsync(id, cancellationToken)).Record;
 
     /// <summary>
-    /// The table's record, told apart from its absence: a guard that keeps face-down data in refuses a record that
-    /// exists and cannot be parsed, because nothing then shows the game is over (#814, #815), and lets a missing one
-    /// pass, because a run from before ADR 0091 or a repository scenario's source run has none on this host.
+    /// The table's record, told apart from its absence. A guard that keeps face-down data private refuses a record that
+    /// exists and cannot be parsed (#814, #815): nothing then shows the game is over. A missing record passes: a run from
+    /// before ADR 0091, or a repository scenario's source run, has none on this host.
     /// </summary>
     public async Task<RecordRead> ReadRecordAsync(string id, CancellationToken cancellationToken = default)
     {
@@ -218,5 +218,5 @@ internal sealed record StoredSession(string Id, DateTimeOffset? CreatedAt, strin
     public bool UnderWay { get; init; }
 }
 
-/// <summary>A table's record as read: the record, or none because it is absent (<c>Unparseable</c> false) or because it exists and cannot be parsed.</summary>
+/// <summary>A table's record as read: the record, or none. <c>Unparseable</c> is true when a record exists and cannot be parsed, false when there is none.</summary>
 internal readonly record struct RecordRead(TableRecord? Record, bool Unparseable);

@@ -721,7 +721,7 @@ the store cannot open or keep is 503 `Lobby.Unavailable`. A relay that is out is
 | `/battle-lab` | anyone | The visual study on fictional frames (ADR 0123). |
 | `/admin?token=<operator token>` | operator | The admin panel (ADR 0081). |
 | `/pilot?token=<pilot token>` | pilot | The operator's own page for the seats of a console table. |
-| `/session/<id>` | anyone | A finished recorded session in the viewer. |
+| `/session/<id>` | anyone | A finished recorded session in the viewer; 409 while it is played or when its record cannot be parsed. |
 | `/leaderboard`, `/stats` | anyone, account | The ladder (ADR 0124) and the player's own statistics (ADR 0168). |
 | `/rules`, `/rules.json`, `/rules.fr.json` | anyone | The official rulebook (ADR 0188) and the books it reads, English and French (ADR 0193); `/rules#<id>` opens a section, `?lang=fr` or `?lang=en` its language. |
 | `/offline.html` | anyone | The page the service worker keeps (ADR 0166). |
