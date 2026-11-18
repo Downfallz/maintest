@@ -440,7 +440,8 @@ The seat's view says the lesson under `practice.tutorial`:
 - The operator's Feedback tab (docs/tabletop/feedback-plan.md, R3) lists it newest first, twenty a page
   (`GET /api/admin/feedback?kind&status&category&page`: `kind` is `bug` or `idea`, `status` a status or `open`, the
   tab's default, for what is not closed) and reads one (`GET /api/admin/feedback/<id>`: the words, what the page and
-  the host added, the position, the sender's mute, and `underWay` while its table is still played).
+  the host added, the position, the sender's mute, `underWay` while its table is still played, and `unread` when its
+  record is missing or unparseable).
   A filter naming no kind, status or category is refused 400 `Feedback.Invalid`. The sheet lists the `actions` that
   apply to it, and the page shows only those.
   `PUT /api/admin/feedback/<id>/status {"status","reason?","plan?","issue?"}` marks it `seen` (which reopens it),
@@ -480,8 +481,9 @@ The seat's view says the lesson under `practice.tutorial`:
   It is refused with 409 `Feedback.NotRedacted` if it still names the session, keeps a time, or holds as a word of its
   own the report's table, an account, a seat's key, code or invitation, the pilot's key or a player's name. The
   content it includes and the fields' names are not read, and a content id (`spell:pummel:v1`) is one word, never
-  the name inside it. The error says what the file holds, never the name. A report from a table still under way, or whose
-  record cannot be read (missing or unparseable), or whose scenario was cut from one, is 409 `Feedback.UnderWay`, so nothing a seat holds face down reaches the issue. An idea is 409
+  the name inside it. The error says what the file holds, never the name. A report is 409 `Feedback.UnderWay` when its table is
+  still under way or its scenario was cut from one, and 409 `Feedback.TableUnread` when its table's record is missing or
+  unparseable: nothing then shows the game is over. So nothing a seat holds face down reaches the issue. An idea is 409
   `Feedback.NotABug`, and a report not reproduced, or whose scenario was removed since, 409 `Feedback.NotReproduced`.
   Each download is an Activity line, `feedback.download`, with the scenario's id. The sheet offers `download` once the
   game is over.

@@ -259,8 +259,23 @@ public sealed class FeedbackIssueTests : IDisposable
 
         var refused = await AskAsync("POST", report.Id, "scenario.zip");
 
-        (refused.Status, Read(refused).GetProperty("error").GetString()).ShouldBe((409, "Feedback.UnderWay"));
-        Actions(Read(await AskAsync("GET", report.Id))).ShouldNotContain("download");
+        (refused.Status, Read(refused).GetProperty("error").GetString()).ShouldBe((409, "Feedback.TableUnread"));
+        var sheet = Read(await AskAsync("GET", report.Id));
+        (sheet.GetProperty("underWay").GetBoolean(), sheet.GetProperty("unread").GetBoolean()).ShouldBe((false, true));
+        Actions(sheet).ShouldNotContain("download");
+        Actions(sheet).ShouldNotContain("diagnose");
+    }
+
+    [Fact]
+    public async Task A_host_that_keeps_no_sessions_reads_no_report_s_table_as_over()
+    {
+        var report = await ReportedAsync(new FeedbackContext { Table = "20261116-110000-deadbeef", Seat = "player2", Round = 2 });
+        var (_, tab) = TableHost.CuttingTabs(_scenarios, null, _hosted.Composer, new OperatorFeedback(_feedback, new FeedbackMutes(null), _writes, _clock), new OperatorNotes(_actions), _clock);
+
+        var sheet = Read(await tab!.HandleAsync("GET", $"{FeedbackAdminApi.Route}/{report.Id}", string.Empty, "mark"));
+
+        (sheet.GetProperty("underWay").GetBoolean(), sheet.GetProperty("unread").GetBoolean()).ShouldBe((false, true));
+        Actions(sheet).ShouldNotContain("diagnose");
     }
 
     [Fact]
