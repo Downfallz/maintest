@@ -1047,7 +1047,7 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
 .atlas-family-head small { color: var(--muted); font-size: 11px; }
 .atlas-stage { position: relative; display: flex; flex-wrap: nowrap; justify-content: space-evenly; gap: 8px; }
 .atlas-node { position: relative; display: inline-flex; flex: 0 1 auto; min-width: 0; align-items: center; gap: 5px; min-height: 44px; max-width: 100%; padding: 6px 8px 6px 5px; border: 1px solid #4c6159; border-radius: var(--radius-sharp); background: #182b31; color: #9fb0a6; font-size: 13px; text-align: left; cursor: pointer; }
-.atlas-node-stage { display: inline-grid; place-items: center; flex: none; width: 20px; height: 20px; border-radius: 50%; border: 1px solid currentColor; font: 800 11px/1 system-ui, sans-serif; }
+.atlas-node-stage { display: inline-grid; place-items: center; flex: none; min-width: 20px; height: 20px; padding: 0 4px; box-sizing: border-box; border-radius: 10px; border: 1px solid currentColor; font: 800 11px/1 system-ui, sans-serif; }
 /* A name breaks inside a word only when nothing else fits: the node is tight so that three of them share a row. */
 .atlas-node-name { min-width: 0; overflow-wrap: anywhere; font-size: 12px; font-weight: 650; line-height: 1.15; letter-spacing: -.01em; }
 .atlas-node-flag { padding: 1px 6px; border-radius: var(--radius-sharp); background: var(--gold); color: #1a1d1a; font: 800 9px/1.4 system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; }
@@ -1106,7 +1106,7 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
   .atlas-family { padding: 12px 6px 18px; }
   .atlas-stage { gap: 4px; }
   .atlas-node { gap: 4px; padding: 4px 8px 4px 4px; font-size: 11.5px; }
-  .atlas-node-stage { width: 17px; height: 17px; font-size: 9px; }
+  .atlas-node-stage { min-width: 17px; height: 17px; padding: 0 3px; border-radius: 9px; font-size: 9px; }
   .atlas-node-name { overflow-wrap: normal; word-break: keep-all; }
   .atlas-family { scroll-snap-align: center; }
   #atlas-detail { position: absolute; left: 0; right: 0; bottom: 0; width: auto; max-height: 72%; border-left: 0; border-top: 1px solid #5b7064; border-radius: 16px 16px 0 0; box-shadow: 0 -10px 30px #000a; }
@@ -1188,10 +1188,10 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
 .opponent-head { display: flex; align-items: center; gap: 12px; }
 .opponent-head .eyebrow { margin: 0; color: #d98b6f; font-size: 10px; letter-spacing: .16em; }
 .opponent-head h2 { margin: 2px 0 0; font: 24px/1.15 var(--font-display); overflow-wrap: anywhere; }
-#opponent-close { margin-left: auto; min-width: 44px; min-height: 44px; border: 0; background: transparent; color: #c4d0c7; font-size: 22px; }
+#opponent-close { margin-left: auto; min-width: 44px; min-height: 44px; border: 0; background: transparent; color: var(--muted); font-size: 22px; }
 .opponent-avatar.large { width: 48px; height: 48px; font-size: 22px; }
 .opponent-rank { margin: 14px 0 0; color: #e6c88c; font-size: 14px; }
-.opponent-note { margin: 10px 0 0; color: #c4d0c7; font-size: 13px; }
+.opponent-note { margin: 10px 0 0; color: var(--muted); font-size: 13px; }
 .opponent-note[hidden], .opponent-rank[hidden], #opponent-friend[hidden], #opponent-problem[hidden] { display: none; }
 #opponent-friend { width: 100%; min-height: 46px; margin-top: 14px; }
 /* Under 360 px the header has no room for 💬 beside the opponent's chip and the tools (#767): the reactions are a
@@ -1201,7 +1201,7 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
   #battle .hud-top:has(#opponent-open:not([hidden])) #reactions-open { display: none; }
   #opponent-react:not([hidden]) { display: block; }
 }
-#opponent-problem { margin: 10px 0 0; color: #ffb3a7; font-size: 13px; }
+#opponent-problem { margin: 10px 0 0; color: var(--refused); font-size: 13px; }
 .opponent-ladder { display: inline-block; margin-top: 14px; color: var(--gold); font-size: 13px; }
 
 /* The spell choice opens by itself on the player's turn and docks beside the field as the mutation choice does
@@ -1790,7 +1790,7 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 /* A tutorial's coach (ADR 0187): the lesson step of the question asked, low on the field so the creatures it talks
    about stay in view, and the concept card a step opens. What it points at is ringed in gold. */
 .coach { position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 8; display: grid; gap: 4px; max-width: 420px; margin: 0 auto; padding: 8px 10px;
-  border: 1px solid color-mix(in srgb, var(--gold) 40%, transparent); border-radius: var(--radius-soft); background: #0e1b20f2; color: var(--ink); box-shadow: 0 6px 18px #0008; }
+  border: 1px solid color-mix(in srgb, var(--gold) 40%, transparent); border-radius: var(--radius-soft); background: color-mix(in srgb, var(--panel) 95%, transparent); color: var(--ink); box-shadow: 0 6px 18px color-mix(in srgb, var(--soot) 55%, transparent); }
 .coach[hidden] { display: none; }
 .coach-lines p { margin: 0 0 2px; font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; }
 .coach-cards { display: flex; flex-wrap: wrap; gap: 6px; }

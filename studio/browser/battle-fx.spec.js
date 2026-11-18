@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { IMPACT_MS, WINDUP_MS } from '../../table/battle-timing.js';
 import { benchSamples } from '../../table/battle-bench.js';
-import { stagingBeats } from '../../table/battle-staging.js';
+import { SCENE_PARTICLES, stagingBeats } from '../../table/battle-staging.js';
 import { openBench } from '../../scripts/battle/filmstrip.mjs';
 
 // The effects kit (docs/art/battle-craft-plan.md, BC4; ADR 0196): each primitive played on the bench from its
@@ -14,6 +14,8 @@ const film = (page, call, value) => page.evaluate(([name, argument]) => window.b
 // What a primitive holds while it plays: an object of its own, or a change to a figure or to the view.
 const CHANGES = ['flash', 'shake', 'pulse'];
 const samples = benchSamples();
+// One sample a primitive, and the one that asks past the field's budget (#882).
+const primitives = samples.filter(one => one.id !== 'kit:budget');
 
 test.beforeEach(async ({ page }) => { await openBench(page, '/table/battle-lab.html'); });
 
@@ -26,7 +28,7 @@ test('the kit arrives after the first frame, as a file of its own, and the bench
   expect(await kit(page)).toEqual({ objects: [], particles: 0, changes: 0 });
 });
 
-for (const sample of samples) {
+for (const sample of primitives) {
   const name = sample.id.split(':')[1];
   const beat = stagingBeats(sample).find(one => one.beat === name);
 
@@ -108,6 +110,24 @@ test('particles are counted while a burst flies, and never more than the beat as
   // One burst a target, eight chips each.
   expect(playing.objects.map(one => one.creature)).toEqual(['b1', 'b2', 'b3']);
   expect(playing.particles).toBe(24);
+  await film(page, 'stop');
+});
+
+// #882: the kit counts what each living stream may hold, not what it holds yet. Streams that start together each
+// found the field empty when it counted particles alive, and passed the cap between them.
+test('streams that start together never hold more than the field\'s budget of particles', async ({ page }) => {
+  test.slow();
+  await film(page, 'start', { spell: 'kit:budget', actor: 'a1', targets: ['b1', 'b2', 'b3'] });
+  await film(page, 'advance', WINDUP_MS);
+  let most = 0;
+  for (let step = 0; step < IMPACT_MS / 40; step++) {
+    await film(page, 'advance', 40);
+    const { particles } = await kit(page);
+    expect(particles).toBeLessThanOrEqual(SCENE_PARTICLES);
+    most = Math.max(most, particles);
+  }
+  // The streams filled the field: the budget held them, not a quiet staging.
+  expect(most).toBeGreaterThan(SCENE_PARTICLES * .8);
   await film(page, 'stop');
 });
 

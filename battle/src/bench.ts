@@ -3,15 +3,15 @@ import { BattleScene } from './scene';
 import { bootScene } from './boot';
 import type { SceneFrame } from './types';
 import art from '../../data/presentation/spell-art.json';
-import names from 'virtual:spell-names';
-import { benchCreatures, benchDefaultTargets, benchDuration, benchEntries, benchFrame, benchSamples, benchStage, filmInterval,
-  seededRandom, FILM_TICK_MS } from '../../table/battle-bench.js';
+import spells from 'virtual:bench-spells';
+import { benchCreatures, benchDefaultTargets, benchDuration, benchEntries, benchFrame, benchSamples, benchStage, benchTitle, filmInterval,
+  filmTitle, seededRandom, BENCH_OUTCOMES, FILM_TICK_MS } from '../../table/battle-bench.js';
 
 // The effects bench: every authored spell look, played on chosen creatures of the laboratory's fixture, with no
 // host and no rule. Its film clock is what `scripts/battle/filmstrip.mjs` steps to draw a contact sheet.
 
 type Stage = 'decision' | 'windup' | 'impact' | 'resolved';
-interface FilmOptions { spell?: string; actor?: string; targets?: string[]; speed?: number }
+interface FilmOptions { spell?: string; actor?: string; targets?: string[]; speed?: number; outcome?: string; wound?: boolean }
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 function make<T extends HTMLElement = HTMLElement>(tag: string, properties: Record<string, unknown> = {}, ...children: (Node | string)[]) {
@@ -22,7 +22,7 @@ function make<T extends HTMLElement = HTMLElement>(tag: string, properties: Reco
 
 const lab = $('lab');
 const motion = matchMedia('(prefers-reduced-motion: reduce)');
-const entries = benchEntries(art, names);
+const entries = benchEntries(art, spells);
 // The kit's sample stagings, one a primitive: listed after the spells, and never counted among them.
 const samples = benchSamples();
 const listed = [...entries, ...samples];
@@ -46,7 +46,7 @@ let game: Phaser.Game | null = null;
 let film: { clock: number; played: number } | null = null;
 
 const spellSelect = make<HTMLSelectElement>('select', { id: 'bench-spell' });
-const option = (one: typeof listed[number]) => make('option', { value: one.id }, `${one.name} · ${one.family} · ${one.motif} · ${one.delivery}`);
+const option = (one: typeof listed[number]) => make('option', { value: one.id }, benchTitle(one));
 spellSelect.append(make('optgroup', { label: 'Spells' }, ...entries.map(option)), make('optgroup', { label: 'The effects kit' }, ...samples.map(option)));
 const actorSelect = make<HTMLSelectElement>('select', { id: 'bench-actor' });
 const targetList = make('div', { id: 'bench-targets', className: 'bench-targets' });
@@ -57,6 +57,11 @@ for (const one of creatures) {
   box.addEventListener('change', rest);
   targetList.append(make('label', { title: `${one.name} · ${side(one.enemy)}` }, box, make('span', {}, one.name)));
 }
+// What the play does, each a fixture's choice and no rule: the spell played or fizzled, and its caster paying in
+// blood. The live page draws no outcome with a fizzle, so a fizzle takes no wound.
+const OUTCOME_WORDS: Record<string, string> = { played: 'Played', fizzled: 'Fizzled' };
+const outcomeSelect = make<HTMLSelectElement>('select', { id: 'bench-outcome' }, ...BENCH_OUTCOMES.map(one => make('option', { value: one }, OUTCOME_WORDS[one])));
+const woundBox = make<HTMLInputElement>('input', { id: 'bench-wound', type: 'checkbox' });
 const playButton = make<HTMLButtonElement>('button', { id: 'bench-play', type: 'button', className: 'primary', disabled: true }, 'Play effect');
 const status = make('p', { id: 'bench-status' }, 'Preparing the scene…');
 status.setAttribute('role', 'status');
@@ -65,6 +70,9 @@ const bench = make('section', { id: 'bench' },
   make('label', { className: 'bench-field' }, make('span', {}, 'Effect'), spellSelect),
   make('label', { className: 'bench-field' }, make('span', {}, 'Caster'), actorSelect),
   make('fieldset', { className: 'bench-field' }, legend, targetList),
+  make('div', { className: 'bench-outcome' },
+    make('label', { className: 'bench-field' }, make('span', {}, 'Outcome'), outcomeSelect),
+    make('label', { className: 'bench-wound' }, woundBox, make('span', {}, 'The caster pays in blood'))),
   make('div', { className: 'bench-run' }, playButton, status));
 bench.setAttribute('aria-label', 'Effects bench');
 lab.dataset.bench = 'true';
@@ -81,8 +89,16 @@ const chosen = () => ({
   entry: listed.find(one => one.id === spellSelect.value) ?? entries[0],
   actor: actorSelect.value,
   targets: boxes().filter(box => box.checked).map(box => box.value),
+  outcome: outcomeSelect.value,
+  wound: woundBox.checked && !woundBox.disabled,
 });
-function choose({ spell, actor, targets }: FilmOptions) {
+function choose({ spell, actor, targets, outcome, wound }: FilmOptions) {
+  if (outcome !== undefined) {
+    if (!(BENCH_OUTCOMES as readonly string[]).includes(outcome)) throw new Error(`The bench has no outcome ${outcome}.`);
+    outcomeSelect.value = outcome;
+  }
+  if (wound !== undefined) woundBox.checked = wound;
+  woundBox.disabled = outcomeSelect.value === 'fizzled';
   if (spell !== undefined) {
     if (!listed.some(one => one.id === spell)) throw new Error(`The bench has no effect named ${spell}.`);
     spellSelect.value = spell;
@@ -97,19 +113,21 @@ function choose({ spell, actor, targets }: FilmOptions) {
 
 function show(next: Stage) {
   stage = next;
-  const { entry, actor, targets } = chosen();
+  const { entry, actor, targets, outcome, wound } = chosen();
   lab.dataset.stage = stage;
   lab.dataset.spell = entry.id;
+  lab.dataset.outcome = outcome;
+  lab.dataset.wound = String(wound);
   lab.dataset.motion = reduced() ? 'reduced' : 'full';
   playButton.disabled = !ready;
   if (ready) status.textContent = unknown && stage === 'decision' ? `No effect named ${asked}` : describe(entry.name);
-  scene.present(benchFrame({ entry, actor, targets, stage }) as SceneFrame, reduced(), speed());
+  scene.present(benchFrame({ entry, actor, targets, stage, outcome, wound }) as SceneFrame, reduced(), speed());
 }
 const playing = () => stage === 'windup' || stage === 'impact';
 function describe(name: string) {
   if (stage === 'windup') return `${name}: windup`;
   if (stage === 'impact') return `${name}: impact`;
-  if (stage === 'resolved') return reduced() ? `${name}: less motion, settled frame only` : `${name}: played`;
+  if (stage === 'resolved') return reduced() ? `${name}: less motion, settled frame only` : `${name}: ${chosen().outcome}`;
   return 'Choose an effect and its targets';
 }
 
@@ -210,6 +228,8 @@ const unknown = asked !== undefined && !listed.some(one => one.id === asked);
 choose({ spell: unknown ? undefined : asked, actor: creatures[0].id });
 spellSelect.addEventListener('change', rest);
 actorSelect.addEventListener('change', () => { choose({ actor: actorSelect.value }); rest(); });
+outcomeSelect.addEventListener('change', () => { choose({}); rest(); });
+woundBox.addEventListener('change', rest);
 playButton.addEventListener('click', play);
 $('reset').addEventListener('click', rest);
 $('reload').addEventListener('click', () => location.reload());
@@ -242,6 +262,8 @@ try {
 } catch { fail('The renderer could not start. Reload the scene or use another browser.'); }
 
 // What the film strip script and the browser specs drive: the bench's own choices, and its film clock.
-Object.assign(window, { battleBench: { entries, samples, creatures, kit: () => scene.effectsKit, stop: rest,
+// `title` names what the bench plays now, as a film strip is titled.
+const title = () => { const { entry, outcome, wound } = chosen(); return filmTitle(entry, { speed: speed(), outcome, wound }); };
+Object.assign(window, { battleBench: { entries, samples, creatures, kit: () => scene.effectsKit, stop: rest, title,
   shaking: () => scene.cameras.main.shakeEffect.isRunning, choose: (options: FilmOptions) => { choose(options); rest(); }, play, film: filmClock,
   effects: () => scene.children.list.filter(child => child.name === 'spell-vfx').map(child => ({ ...child.data.getAll(), alpha: (child as Phaser.GameObjects.Graphics).alpha })) } });

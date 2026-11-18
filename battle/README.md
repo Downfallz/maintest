@@ -940,15 +940,19 @@ plays them through the kit, `src/fx/`:
   are four frames of one texture drawn at boot (`fx-kit`): a dot, a spark, a shard, a ring. A beat's `tint` is
   one of `family`, `bone`, `ember` or `blood`.
 - The bench lists one sample staging for each primitive, after the spells (`kit:burst` to `kit:pulse`,
-  `table/battle-bench.js`). They belong to the bench; they are not content. `window.battleBench.kit()` says what the kit
+  `table/battle-bench.js`), and `kit:budget`, whose streams ask for more than the field holds (#882). They belong to the bench; they are not content. `window.battleBench.kit()` says what the kit
   holds: its objects, its particles alive, and the figures it changed and has not put back.
 
 ## The effects bench
 
 `/battle-lab?bench` (docs/art/battle-craft-plan.md, BC2) lists every entry of `data/presentation/spell-art.json`.
-Each entry shows the name its spell's file gives it (`build.mjs` reads `data/Spells`, and the image's battle
-stage copies it). The bench plays the chosen one on creatures of the laboratory's fixture: one caster, and any of its six creatures as
-targets. `?bench=spell:frostbite:v1` opens on that entry. It asks no host and holds no rule: a target across the
+Each entry shows the name its spell's file gives it and the mutation that casts it, with its Stage, or "starting
+spell" (`bench-spells.mjs` reads `data/Spells`, `data/Tiers`, `data/Creatures` and `data/aliases.json` when the
+bundle is built, and the image's battle stage copies them). A film strip's title is the same line, then what the
+film asked. The bench plays the chosen one on creatures of the laboratory's fixture: one caster, and any of its six creatures as
+targets. **Outcome** plays the spell or fizzles it, drawn as the live page draws a fizzle: the caster's mark,
+and no recipient. **The caster pays in blood** adds the caster's wound, the way a blood cost is drawn; it is off
+under a fizzle. `?bench=spell:frostbite:v1` opens on that entry. It asks no host and holds no rule: a target across the
 field from the caster is struck, one on the caster's side receives, and nobody's health moves. Less motion and
 the playback speed are in the settings, as in the laboratory. The bench ships in `game.js` only:
 `build.mjs` fails the build if `live.js` contains a bench module or the spell art (`live-guard.mjs`).
@@ -959,6 +963,8 @@ The film strip is one effect on one sheet, twelve frames with the millisecond un
 npm --prefix battle run build
 node scripts/battle/filmstrip.mjs spell:pummel:v1                 # artifacts/filmstrips/pummel.png (ignored)
 node scripts/battle/filmstrip.mjs spell:frostbite:v1 --actor a3 --targets b1,b3 --speed 2 --out frost.png
+node scripts/battle/filmstrip.mjs spell:pummel:v1 --fizzle        # artifacts/filmstrips/pummel-fizzled.png
+node scripts/battle/filmstrip.mjs spell:hateful_sacrifice:v1 --wound   # its caster pays in blood
 node scripts/battle/filmstrip.mjs --all                           # one sheet an entry
 ```
 

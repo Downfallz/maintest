@@ -1,6 +1,6 @@
 import { cardsById } from '../../table/card.js';
 import { classColour, familyRoot, requirementLine, stageRows, talentPalette } from '../../table/mat.js';
-import { stageLabel, stageSpoken } from '../../table/terms.js';
+import { stageLabel, stageNumeral, stageSpoken } from '../../table/terms.js';
 import { iconElement } from './condition-icons';
 import { onNextFrame } from './next-frame';
 import { spellCard } from './spell-card';
@@ -131,7 +131,8 @@ export function atlasControls(onVisibility: () => void) {
           tile.dataset.package = pack.id; tile.dataset.status = pack.status;
           if (lit.has(pack.id)) tile.dataset.path = 'true';
           tile.setAttribute('aria-label', `${pack.name} · ${stageSpoken(pack.level)} · ${STATUS[pack.status] ?? pack.status}`);
-          tile.append(node('span', String(pack.level), 'atlas-node-stage'), node('span', pack.name, 'atlas-node-name'));
+          // The badge shows the Stage as the progress line does, in Roman numerals; the label speaks its number (#769, #878).
+          tile.append(node('span', stageNumeral(pack.level), 'atlas-node-stage'), node('span', pack.name, 'atlas-node-name'));
           if (pack.status === 'available') tile.append(node('span', 'Offer', 'atlas-node-flag'));
           if (pack.status === 'picked') tile.append(node('span', 'Picked', 'atlas-node-flag'));
           tile.addEventListener('click', () => show(pack.id));

@@ -3,11 +3,12 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { benchCreatures, benchDefaultTargets, benchDuration, benchEntries, benchFrame, benchStage, filmInterval,
-  seededRandom, FILM_FRAMES, FILM_TICK_MS } from './battle-bench.js';
+import { benchCreatures, benchDefaultTargets, benchDuration, benchEntries, benchFrame, benchStage, benchTitle, filmInterval,
+  filmTitle, seededRandom, FILM_FRAMES, FILM_TICK_MS } from './battle-bench.js';
 import { IMPACT_MS, WINDUP_MS } from './battle-timing.js';
-import { parseArguments } from '../scripts/battle/filmstrip.mjs';
+import { fileName, parseArguments } from '../scripts/battle/filmstrip.mjs';
 import { laboratoryOnly } from '../battle/live-guard.mjs';
+import { benchSpells } from '../battle/bench-spells.mjs';
 
 const read = path => readFileSync(new URL(path, import.meta.url), 'utf8');
 const art = JSON.parse(read('../data/presentation/spell-art.json'));
@@ -23,6 +24,53 @@ test('the bench lists every entry of the spell art, each with its look and a nam
     assert.match(one.name, /^[A-Z][a-z]+( [A-Z][a-z]+)*$/);
   }
   assert.deepEqual(entries.map(one => one.name), entries.map(one => one.name).sort((a, b) => a.localeCompare(b, 'en')));
+});
+
+// #867: the bench lists a spell by the name its file gives it, and says which mutation casts it, at which Stage.
+test('the bench names each spell and the mutation that casts it from the content, at build time', async () => {
+  const spells = await benchSpells(fileURLToPath(new URL('../data', import.meta.url)));
+  const named = benchEntries(art, spells);
+  const find = id => named.find(one => one.id === id);
+  assert.deepEqual([find('spell:pummel:v1').name, find('spell:pummel:v1').castBy], ['Pummel', 'Brute, Stage I']);
+  assert.deepEqual([find('spell:ice_spear:v1').name, find('spell:ice_spear:v1').castBy], ['Deep Freeze', 'Cataclysm, Stage III']);
+  assert.deepEqual([find('spell:heavy_strike:v1').name, find('spell:heavy_strike:v1').castBy], ['Strike', 'starting spell']);
+  assert.equal(find('spell:wait:v1').castBy, 'starting spell');
+  // Every spell the art draws is cast by a mutation or known from the start: none is left unnamed.
+  assert.ok(named.every(one => one.castBy !== ''), named.filter(one => !one.castBy).map(one => one.id).join());
+  assert.equal(benchTitle(find('spell:pummel:v1')), 'Pummel · Brute, Stage I · physical · impact · melee');
+  // A sample of the kit is cast by nothing.
+  assert.equal(benchTitle({ name: 'Kit: burst', castBy: '', family: 'physical', motif: 'impact', delivery: 'melee' }), 'Kit: burst · physical · impact · melee');
+});
+
+test('a film\'s title names the spell, its mutation, the outcome filmed and the speed', () => {
+  const pummel = { name: 'Pummel', castBy: 'Brute, Stage I', family: 'physical', motif: 'impact', delivery: 'melee' };
+  assert.equal(filmTitle(pummel), 'Pummel · Brute, Stage I · physical · impact · melee · 1×');
+  assert.equal(filmTitle(pummel, { speed: 2, outcome: 'fizzled' }), 'Pummel · Brute, Stage I · physical · impact · melee · fizzled · 2×');
+  assert.equal(filmTitle(pummel, { wound: true }), 'Pummel · Brute, Stage I · physical · impact · melee · the caster pays in blood · 1×');
+});
+
+// #843: a fizzle and a blood cost are what the scene already draws; the bench asks for them as a fixture's choice.
+test('a fizzle is played as the live page plays one: the caster\'s fizzle mark, no recipient and no effect', () => {
+  const pummel = entry('spell:pummel:v1');
+  for (const stage of ['windup', 'impact']) {
+    const { cue } = benchFrame({ entry: pummel, actor: 'a1', targets: ['b1', 'b2'], stage, outcome: 'fizzled', wound: true });
+    assert.equal(cue.kind, 'fizzle');
+    assert.deepEqual(cue.visual, { family: 'neutral', motif: 'fizzle', delivery: 'cast' });
+    assert.deepEqual([cue.recipients, cue.contact, cue.struck, cue.effects], [[], [], [], []]);
+  }
+  assert.equal(benchFrame({ entry: pummel, actor: 'a1', targets: ['b1'], stage: 'resolved', outcome: 'fizzled' }).cue, undefined);
+});
+
+test('a caster who pays in blood receives a wound beside the spell\'s own recipients', () => {
+  const pummel = entry('spell:pummel:v1');
+  const { cue } = benchFrame({ entry: pummel, actor: 'a1', targets: ['b1'], stage: 'impact', wound: true });
+  assert.equal(cue.kind, 'strike');
+  assert.deepEqual(cue.recipients, ['b1', 'a1']);
+  assert.deepEqual(cue.contact, ['b1']);
+  assert.deepEqual(cue.effects.map(one => [one.creature, one.wound]), [['a1', true]]);
+  // A caster who is also among its targets is listed once.
+  assert.deepEqual(benchFrame({ entry: pummel, actor: 'a1', targets: ['a1', 'b1'], stage: 'impact', wound: true }).cue.recipients, ['a1', 'b1']);
+  assert.deepEqual(benchFrame({ entry: pummel, actor: 'a1', targets: ['b1'], stage: 'impact' }).cue.effects, []);
 });
 
 test('the bench plays on the six creatures of the fixture, three a side', () => {
@@ -116,6 +164,13 @@ test('the film strip script reads its options, and refuses what it cannot film',
   const read = parseArguments(['spell:pummel:v1', '--actor', 'a2', '--targets', 'b1,b3', '--speed', '2', '--out', 'sheet.png']);
   assert.deepEqual(read.spells, ['spell:pummel:v1']);
   assert.deepEqual(read.film, { actor: 'a2', targets: ['b1', 'b3'], speed: 2 });
+  assert.deepEqual(parseArguments(['spell:pummel:v1', '--fizzle']).film, { outcome: 'fizzled' });
+  assert.deepEqual(parseArguments(['spell:pummel:v1', '--wound']).film, { wound: true });
+  // The live page draws no outcome with a fizzle (`actionCue`), so a wound with one would film what never plays.
+  assert.throws(() => parseArguments(['spell:pummel:v1', '--fizzle', '--wound']), /fizzle/);
+  // Their sheets lie beside the spell's own.
+  assert.deepEqual([fileName('spell:pummel:v1'), fileName('spell:pummel:v1', { outcome: 'fizzled' }), fileName('spell:pummel:v1', { wound: true })],
+    ['pummel.png', 'pummel-fizzled.png', 'pummel-wound.png']);
   assert.equal(read.out, 'sheet.png');
   assert.equal(parseArguments(['--all']).all, true);
   assert.throws(() => parseArguments([]), /Name one or more effects/);

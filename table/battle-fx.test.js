@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
-import { BEATS, stagingBeats } from './battle-staging.js';
+import { BEATS, SCENE_PARTICLES, stagingBeats } from './battle-staging.js';
 import { benchEntries, benchFrame, benchSamples } from './battle-bench.js';
 import { engineOrLaboratory, kitOnly, laboratoryOnly } from '../battle/live-guard.mjs';
 
@@ -61,46 +61,62 @@ test('the kit is a small file of its own: no engine in it, and it in no other bu
 });
 
 test('the build keeps the kit apart: no engine or laboratory in it, and no kit module in another bundle', () => {
-  for (const path of ['node_modules/phaser/dist/phaser.esm.js', '../table/battle-bench.js', 'src/bench.ts', 'spell-names:spell-names']) assert.equal(engineOrLaboratory(path), true, path);
+  for (const path of ['node_modules/phaser/dist/phaser.esm.js', '../table/battle-bench.js', 'src/bench.ts', 'bench-spells:bench-spells']) assert.equal(engineOrLaboratory(path), true, path);
   for (const path of ['src/fx/kit.ts', 'src/fx/burst.ts', '../table/battle-staging.js', '../table/battle-timing.js']) assert.equal(engineOrLaboratory(path), false, path);
   for (const path of ['src/fx/index.ts', 'src/fx/pulse.ts']) assert.equal(kitOnly(path), true, path);
   for (const path of ['src/fx-loader.ts', 'src/spell-effects.ts', 'src/effects.ts']) assert.equal(kitOnly(path), false, path);
-  // The spell names the bench reads are the laboratory's: the live page names no spell.
-  assert.equal(laboratoryOnly('spell-names:spell-names'), true);
+  // The spell names and mutations the bench reads are the laboratory's: the live page names no spell.
+  assert.equal(laboratoryOnly('bench-spells:bench-spells'), true);
   const build = read('../battle/build.mjs');
   assert.match(build, /inputs\(kit, 'fx'\)\.some\(engineOrLaboratory\)/);
   assert.match(build, /\.some\(kitOnly\)/);
   assert.match(read('../battle/budget.mjs'), /kitBundle: \d+ \* 1024, gzipKit: \d+ \* 1024/);
 });
 
-test('the bench has one sample staging a primitive, each one the page can read', () => {
-  assert.deepEqual(samples.map(one => one.id), BEATS.filter(beat => beat !== 'motif').map(beat => `kit:${beat}`));
+test('the bench has one sample staging a primitive, each one the page can read, and one that asks past the field\'s budget', () => {
+  const primitives = samples.filter(one => one.id !== 'kit:budget');
+  assert.deepEqual(primitives.map(one => one.id), BEATS.filter(beat => beat !== 'motif').map(beat => `kit:${beat}`));
+  assert.equal(samples.at(-1).id, 'kit:budget');
   for (const sample of samples) {
     const beats = stagingBeats(sample);
     assert.ok(beats, sample.id);
-    assert.ok(beats.some(beat => beat.beat === sample.id.split(':')[1]), sample.id);
+    if (sample.id !== 'kit:budget') assert.ok(beats.some(beat => beat.beat === sample.id.split(':')[1]), sample.id);
     const { cue } = benchFrame({ entry: sample, actor: 'a1', targets: ['b1'], stage: 'impact' });
     assert.deepEqual(cue.visual.staging, sample.staging);
   }
+  // #882: on one target its streams already ask for more than the field may hold, and they start together.
+  const streams = stagingBeats(samples.at(-1)).filter(beat => beat.count);
+  assert.ok(streams.reduce((sum, beat) => sum + beat.count, 0) > SCENE_PARTICLES);
+  assert.equal(new Set(streams.map(beat => beat.at)).size, 1);
 });
 
 test('the bench names a spell as its file does, and by its id\'s slug when it has no name', () => {
   const art = { 'spell:heavy_strike:v1': { family: 'physical', motif: 'impact', delivery: 'melee' }, 'spell:ice_spear:v1': { family: 'elemental', motif: 'ice', delivery: 'cast',
     staging: [{ beat: 'motif', at: 840 }] } };
-  const entries = benchEntries(art, { 'spell:heavy_strike:v1': 'Strike' });
+  const entries = benchEntries(art, { 'spell:heavy_strike:v1': { name: 'Strike', mutations: [], starting: true } });
   assert.deepEqual(entries.map(one => one.name), ['Ice Spear', 'Strike']);
   assert.equal(entries[1].staging, undefined);
   assert.deepEqual(entries[0].staging, [{ beat: 'motif', at: 840 }]);
+  // What casts a spell the content does not know is not guessed.
+  assert.equal(entries[0].castBy, '');
+  assert.equal(entries[1].castBy, 'starting spell');
 });
 
 test('the bench bundle carries the real names, and the live one none', { skip }, () => {
-  // `spell:heavy_strike:v1` is named Strike by its file (`data/Spells`).
-  assert.match(read('battle-build/game.js'), /"spell:heavy_strike:v1":"Strike"/);
+  // `spell:heavy_strike:v1` is named Strike by its file (`data/Spells`); Brute teaches Pummel.
+  // The minified bundle writes the keys bare and `true` as `!0`.
+  assert.match(read('battle-build/game.js'), /"spell:heavy_strike:v1":\{name:"Strike",mutations:\[\],starting:!0\}/);
+  assert.match(read('battle-build/game.js'), /"spell:pummel:v1":\{name:"Pummel",mutations:\[\{name:"Brute",level:1\}\]/);
   assert.ok(!read('battle-build/live.js').includes('spell:heavy_strike:v1'));
 });
 
 // The image builds the bundle in a stage that copies its inputs one by one: what `build.mjs` reads must be there.
-test('the image\'s battle stage copies the spell files the build reads', () => {
-  assert.match(read('../battle/build.mjs'), /spellNames\(folder = '\.\.\/data\/Spells'\)/);
-  assert.match(read('../Dockerfile'), /^COPY data\/Spells\/ \/src\/data\/Spells\/$/m);
+test('the image\'s battle stage copies the content files the build reads', () => {
+  assert.match(read('../battle/build.mjs'), /benchSpells\('\.\.\/data'\)/);
+  assert.match(read('../battle/bench-spells.mjs'), /join\(data, 'aliases\.json'\)/);
+  for (const folder of ['Spells', 'Tiers', 'Creatures']) {
+    assert.match(read('../battle/bench-spells.mjs'), new RegExp(`join\\(data, '${folder}'\\)`), folder);
+    assert.match(read('../Dockerfile'), new RegExp(`^COPY data/${folder}/ /src/data/${folder}/$`, 'm'), folder);
+  }
+  assert.match(read('../Dockerfile'), /^COPY data\/aliases\.json \/src\/data\/aliases\.json$/m);
 });

@@ -1059,6 +1059,8 @@ by `studio/battle-craft.test.js`.
 ```bash
 node scripts/battle/filmstrip.mjs spell:pummel:v1
 node scripts/battle/filmstrip.mjs spell:frostbite:v1 --actor a3 --targets b1,b3 --speed 2 --out frost.png
+node scripts/battle/filmstrip.mjs spell:pummel:v1 --fizzle
+node scripts/battle/filmstrip.mjs spell:hateful_sacrifice:v1 --wound
 node scripts/battle/filmstrip.mjs --all --out artifacts/filmstrips
 ```
 
@@ -1066,7 +1068,9 @@ Films one effect on the effects bench (`/battle-lab?bench`) and writes its conta
 size with the millisecond under each (battle/README.md, "The effects bench"). It needs the built bundle
 (`npm --prefix battle run build`) and the browser suite's Playwright, and serves `table/` itself; `--url` films
 a laboratory page served elsewhere. `--actor` and `--targets` name creatures of the fixture (`a1` to `a3`, `b1`
-to `b3`), `--speed` sets the playback speed (0.5, 1 or 2). `--frames`, `--interval` (a multiple of 20 ms) and `--columns`
+to `b3`), `--speed` sets the playback speed (0.5, 1 or 2). `--fizzle` films the spell fizzling, and `--wound` its
+caster paying in blood; the two are refused together, and their sheets are named `pummel-fizzled.png` and
+`pummel-wound.png`. `--frames`, `--interval` (a multiple of 20 ms) and `--columns`
 set the sheet. `--scale` sets the device pixel ratio. `--out` is a `.png` for one effect, a folder otherwise
 (`artifacts/filmstrips/` by default). It exits 1 with no effect named, an option it cannot film, or an effect
 the bench does not list.
