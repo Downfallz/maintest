@@ -213,6 +213,8 @@ for (const away of ['hidden', 'reload']) test(`a seat ${away === 'hidden' ? 'tha
 });
 
 test('a strip entry lights its creature in blue and says why it holds its place, and a second tap puts it out', async ({ page }, info) => {
+  // The layout poll below runs the fake clock frame by frame, which is slow under load (#844).
+  test.setTimeout(60000);
   const h = await mount(page);
   const entry = page.locator('#timeline [data-order-creature="4"]');
   // Each place says its initiative, and a d20 marks those a roll-off placed.
@@ -234,12 +236,13 @@ test('a strip entry lights its creature in blue and says why it holds its place,
   await expect(page.locator('.order-why-die.is-self')).toContainText('Creature 4');
   await fitsViewport(page, '#order-why-close, #order-why-inspect');
   // The card stands away from the creature it lights, so the creature stays in view. The field lays its creatures
-  // out on the scene's own frames, so a loaded runner is given until it settles rather than one measure.
+  // out on the scene's own frames, so a loaded runner is given until it settles rather than one measure. Each pass
+  // draws a quarter second of frames. On a loaded runner one pass took 11 s, so a 5 s poll never finished its first (#844).
   await expect.poll(async () => {
     await page.clock.runFor(250);
     const [card, lit] = await Promise.all([why.boundingBox(), page.locator('#actor-layer [data-creature="4"] .caption').boundingBox()]);
     return card.y > lit.y + lit.height || card.y + card.height < lit.y || card.x > lit.x + lit.width || card.x + card.width < lit.x;
-  }, { timeout: 5000 }).toBe(true);
+  }, { timeout: 30000 }).toBe(true);
   await page.screenshot({ path: info.outputPath('order-why.jpg'), type: 'jpeg', quality: 85, animations: 'disabled' });
 
   await entry.click();
