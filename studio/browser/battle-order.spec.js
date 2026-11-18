@@ -213,7 +213,7 @@ for (const away of ['hidden', 'reload']) test(`a seat ${away === 'hidden' ? 'tha
 });
 
 test('a strip entry lights its creature in blue and says why it holds its place, and a second tap puts it out', async ({ page }, info) => {
-  // The layout poll moves the clock frame by frame; see below.
+  // The layout poll below runs the fake clock frame by frame, which is slow under load (#844).
   test.setTimeout(60000);
   const h = await mount(page);
   const entry = page.locator('#timeline [data-order-creature="4"]');
@@ -236,8 +236,8 @@ test('a strip entry lights its creature in blue and says why it holds its place,
   await expect(page.locator('.order-why-die.is-self')).toContainText('Creature 4');
   await fitsViewport(page, '#order-why-close, #order-why-inspect');
   // The card stands away from the creature it lights, so the creature stays in view. The field lays its creatures
-  // out on the scene's own frames, so a loaded runner is given until it settles rather than one measure. Each look
-  // draws a quarter second of frames, which took 11 s on a loaded runner: a 5 s poll never finished its first (#844).
+  // out on the scene's own frames, so a loaded runner is given until it settles rather than one measure. Each pass
+  // draws a quarter second of frames. On a loaded runner one pass took 11 s, so a 5 s poll never finished its first (#844).
   await expect.poll(async () => {
     await page.clock.runFor(250);
     const [card, lit] = await Promise.all([why.boundingBox(), page.locator('#actor-layer [data-creature="4"] .caption').boundingBox()]);
