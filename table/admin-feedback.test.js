@@ -256,12 +256,13 @@ test('past the window of closed issues, each filed issue left is asked by its nu
   assert.equal(issuePath('Downfallz/maintest', 731), 'https://api.github.com/repos/Downfallz/maintest/issues/731');
   assert.equal(issuePath('Downfallz/maintest', 'x'), null);
   const page = (from) => Array.from({ length: 100 }, (_, index) => ({ number: from + index, state: 'closed', state_reason: 'completed' }));
-  const rows = [{ id: 'a', issue: 1000, at: '2026-11-01T08:00:00Z' }, { id: 'b', issue: 9001, at: '2026-11-02T08:00:00Z' }, { id: 'c', issue: 9002, at: '2026-11-03T08:00:00Z' }, { id: 'd', issue: 9001, at: '2026-11-04T08:00:00Z' }];
+  const rows = [{ id: 'a', issue: 1000, at: '2026-11-01T08:00:00Z' }, { id: 'z', issue: 9000, at: '2026-11-01T09:00:00Z' }, { id: 'b', issue: 9001, at: '2026-11-02T08:00:00Z' }, { id: 'c', issue: 9002, at: '2026-11-03T08:00:00Z' }, { id: 'd', issue: 9001, at: '2026-11-04T08:00:00Z' }];
   const asked = [];
   const github = (limit) => async (address) => {
     asked.push(address.replace('https://api.github.com/repos/Downfallz/maintest/issues', ''));
     if (asked.length > limit) return { ok: false, status: 403, json: async () => ({}) };
     const number = Number(address.match(/issues\/(\d+)$/)?.[1]);
+    if (number === 9000) return { ok: false, status: 410, json: async () => ({}) };
     if (number) return { ok: true, json: async () => ({ number, state: number === 9001 ? 'closed' : 'open', state_reason: number === 9001 ? 'completed' : null }) };
     return { ok: true, json: async () => page(Number(address.match(/&page=(\d+)/)[1]) * 1000) };
   };
@@ -270,10 +271,10 @@ test('past the window of closed issues, each filed issue left is asked by its nu
 
   assert.equal(read.complete, true);
   assert.deepEqual([read.closed.has(9001), read.closed.has(9002), read.closed.has(1000)], [true, false, true]);
-  assert.deepEqual(asked.filter(path => !path.startsWith('?')), ['/9001', '/9002'], 'only the issues the window did not hold, each once');
+  assert.deepEqual(asked.filter(path => !path.startsWith('?')), ['/9000', '/9001', '/9002'], 'only the issues the window did not hold, each once, past one GitHub no longer has');
 
   asked.length = 0;
-  const cut = await closedFiled(github(6), 'Downfallz/maintest', rows);
+  const cut = await closedFiled(github(7), 'Downfallz/maintest', rows);
 
   assert.deepEqual([cut.complete, cut.closed.has(9001), cut.closed.has(1000)], [false, true, true]);
   asked.length = 0;

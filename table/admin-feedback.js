@@ -381,26 +381,29 @@ export function issuePath(repository, number) {
 /**
  * The filed reports' issues GitHub says are closed as done, and whether every one was asked. The closed issues filed
  * from reports are read first, ISSUE_PAGES pages at most; past that window, each filed issue it did not hold is asked by
- * its number, once, until GitHub refuses (#751). A refusal while reading the window throws: nothing is known then.
+ * its number, once, until GitHub refuses (#751); one GitHub no longer has is passed over. A refusal while reading the window throws: nothing is known then.
  */
 export async function closedFiled(github, repository, rows) {
   const since = rows.map(row => row.at).filter(Boolean).sort((one, other) => Date.parse(one) - Date.parse(other))[0] ?? null;
   const closed = new Set();
-  let windowed = false;
+  let readAll = false;
   for (let number = 1; number <= ISSUE_PAGES; number += 1) {
     const answer = await github(issuesPath(repository, since, number));
     if (!answer.ok) throw new Error(`GitHub answered ${answer.status}`);
     const issues = await answer.json();
     for (const issue of closedIssues(issues)) closed.add(issue);
+    // A short page is the last: every closed issue updated since was read, so none needs asking by its number.
     if (!Array.isArray(issues) || issues.length < 100) {
-      windowed = true;
+      readAll = true;
       break;
     }
   }
-  if (windowed) return { closed, complete: true };
+  if (readAll) return { closed, complete: true };
   const left = [...new Set(rows.map(row => row.issue).filter(issue => Number.isInteger(issue) && !closed.has(issue)))];
   for (const number of left) {
     const answer = await github(issuePath(repository, number));
+    // An issue deleted or moved since (404, 410) is not closed as done: the next is asked all the same.
+    if (answer.status === 404 || answer.status === 410) continue;
     if (!answer.ok) return { closed, complete: false };
     for (const issue of closedIssues([await answer.json()])) closed.add(issue);
   }
@@ -763,7 +766,7 @@ export function mountFeedbackTab({ send, download, github = globalThis.fetch?.bi
     void change('POST', 'merge', { into: select.value }, 'Merged. It is read inside the idea it joined.');
   });
   element('admin-feedback-unmerge').addEventListener('click', () => {
-    if (!globalThis.confirm?.('Unmerge this idea? It is listed again as an idea of its own, and its player no longer counts in the group it joined.')) return;
+    if (!globalThis.confirm?.('Unmerge this idea? It is listed again as an idea of its own, and it no longer counts towards the group it was merged into.')) return;
     void change('DELETE', 'merge', undefined, 'Unmerged. It is listed again as an idea of its own.');
   });
   element('admin-feedback-joined').addEventListener('click', () => {
@@ -819,11 +822,12 @@ export function mountFeedbackTab({ send, download, github = globalThis.fetch?.bi
       try {
         const read = await closedFiled(github, repository, rows);
         closed = read.closed;
-        // Counted from GitHub's answer: a look the host or GitHub could not answer is tried again at the next opening.
-        if (read.complete) checked = Date.now();
-        else {
+        // Counted from GitHub's answer, a look cut short included: GitHub answers sixty requests an hour, so the rest
+        // are asked ten minutes later at the soonest.
+        checked = Date.now();
+        if (!read.complete) {
           const told = element('admin-feedback-said');
-          told.textContent = 'GitHub stopped answering before every filed issue was asked. The rest stay filed until the next look.';
+          told.textContent = 'GitHub stopped answering before every filed issue was checked. The rest stay filed until the next check.';
           told.classList.add('refused');
         }
       } catch {

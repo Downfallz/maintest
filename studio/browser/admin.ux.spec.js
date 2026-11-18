@@ -427,7 +427,7 @@ test('a reproduced report is downloaded, filed as an issue and marked fixed once
   await page.route(/\/api\/admin\/feedback\/[^?]+$/, async route => {
     const request = route.request();
     const path = new URL(request.url()).pathname.replace('/api/admin/feedback/', '').replace(feedbackReport.id, 'id');
-    const body = ['GET', 'DELETE'].includes(request.method()) ? null : request.postDataJSON();
+    const body = request.method() === 'GET' ? null : request.postDataJSON();
     asked.push(`${request.method()} ${path}${body && Object.keys(body).length ? ` ${JSON.stringify(body)}` : ''}`);
     if (path === 'id/scenario.zip') {
       return route.fulfill({ status: 200, contentType: 'application/zip', headers: { 'Content-Disposition': `attachment; filename="report-${feedbackReport.id}.zip"` }, body: Buffer.from('PK\x05\x06' + '\0'.repeat(18), 'binary') });
@@ -519,7 +519,7 @@ test('an idea is merged into another, read with everyone who asked it, planned, 
     const request = route.request();
     const [id, change] = new URL(request.url()).pathname.replace('/api/admin/feedback/', '').split('/');
     const one = Object.values(ideas).find(idea => idea.id === id);
-    const body = request.method() === 'GET' ? null : request.postDataJSON();
+    const body = ['GET', 'DELETE'].includes(request.method()) ? null : request.postDataJSON();
     if (change) asked.push(`${request.method()} ${change} ${JSON.stringify(body)}`);
     if (change === 'merge' && request.method() === 'DELETE') Object.assign(one, { mergedInto: null });
     else if (change === 'merge') Object.assign(one, { mergedInto: { id: body.into, line: ideas.replay.text, status: 'seen' }, status: 'seen' });
