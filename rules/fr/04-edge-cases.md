@@ -38,7 +38,7 @@ vous comptiez, et un ennemi vaincu laisse votre sort avec moins de cibles. Vous 
 proposé.
 
 *Exemple.* La Créature 1 a 3 points d’Énergie et compte sur Emberstorm, qui coûte {spell:meteor:v1.energyCost}.
-Avant son tour, la Créature 5 lance Soul Feast{?spell:soul_devourer:v1.origin = 'Enemy'} sur elle, qui réduit son Énergie de
+Avant son tour, la Créature 5 lance Devour{?spell:soul_devourer:v1.origin = 'Enemy'} sur elle, qui réduit son Énergie de
 {spell:soul_devourer:v1.energyDrain} : l’Énergie de la Créature 1 tombe à
 {max(0, 3 - spell:soul_devourer:v1.energyDrain)}. À son tour, l’application ne propose que les sorts qu’elle peut
 payer maintenant.

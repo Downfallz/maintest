@@ -5,6 +5,7 @@ command that rebuilds this list, are in [../journal.md](../journal.md).
 
 <!-- index:start (generated, do not edit) -->
 
+- [2026-11-18. Three spells take their locked names, and no match changes](2026-11-18-01-three-spells-take-their-locked-names-and-no-match-changes.md)
 - [2026-11-02. lookahead-55: the lookahead's rung from search-51 takes the first seat](2026-11-02-01-lookahead-55-the-lookahead-s-rung-from-search-51-takes-the.md)
 - [2026-11-01. The lookahead guessing with search-51 takes the first seat, and the only one in the lobby](2026-11-01-03-the-lookahead-guessing-with-search-51-takes-the-first-seat.md)
 - [2026-11-01. search-51: the heuristic's rung on f3e8a42d beats the lookahead](2026-11-01-02-search-51-the-heuristic-s-rung-on-f3e8a42d-beats-the.md)

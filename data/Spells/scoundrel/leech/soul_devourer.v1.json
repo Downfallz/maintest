@@ -1,6 +1,6 @@
 {
   "id": "spell:soul_devourer:v1",
-  "name": "Soul Feast",
+  "name": "Devour",
   "spellType": "Offensive",
   "creatureClass": "Leech",
   "energyCost": 3,

@@ -2,12 +2,12 @@
 // English display names come from the game. French follows the naming register for the live spell set.
 export const spellNamesFr = {
   heavy_strike: 'Frappe', wait: 'Focus', pummel: 'Marteler', guard: 'Encaisser', enraged_charge: 'Furie',
-  reckless_swing: 'Coup sauvage', tornado: 'Rafale', psycho_rush: 'Charge démente', full_plate: 'Carapace',
+  reckless_swing: 'Coup sauvage', tornado: 'Fracture', psycho_rush: 'Charge démente', full_plate: 'Carapace',
   shield_bash: 'Écrasement', restorative_gush: 'Afflux vital', crushing_stomp: 'Piétinement',
-  protective_slam: 'Fracas', extort: 'Revendiquer', chain_slash: 'Dominer', thundering_seal: 'Rugissement alpha',
+  protective_slam: 'Fracas', extort: 'Prise de force', chain_slash: 'Dominer', thundering_seal: 'Rugissement alpha',
   poison_slash: 'Griffe venimeuse', throwing_star: 'Épine', momentum: 'Traque', ambush: 'Embuscade',
   night_raid: 'Chasse sanglante', mortal_wound: 'Éviscérer', parasite_jab: 'Morsure', latch: 'Agripper',
-  hateful_sacrifice: 'Sacrifice', soul_devourer: 'Morsure d’âme', noxious_cure: 'Soin toxique',
+  hateful_sacrifice: 'Sacrifice', soul_devourer: 'Dévorer', noxious_cure: 'Soin toxique',
   adrenaline_tonic: 'Survoltage', tranquilizer_dart: 'Dard paralysant', infectious_blast: 'Contagion',
   lightning_bolt: 'Décharge', rejuvenate: 'Revitaliser', meteor: 'Brasier', frostbite: 'Emprise glaciale',
   engulfing_flames: 'Incinérer', ice_spear: 'Gel profond', summon_minions: 'Infestation', bone_ward: 'Mur d’os',

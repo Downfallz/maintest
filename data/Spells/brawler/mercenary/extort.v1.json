@@ -1,6 +1,6 @@
 {
   "id": "spell:extort:v1",
-  "name": "Claim",
+  "name": "Seize",
   "spellType": "Offensive",
   "creatureClass": "Mercenary",
   "energyCost": 2,
