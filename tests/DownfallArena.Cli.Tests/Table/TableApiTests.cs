@@ -465,6 +465,17 @@ public sealed partial class TableApiTests : IDisposable
     }
 
     [Fact]
+    public async Task A_decision_that_is_not_json_is_refused_without_the_parser_s_words()
+    {
+        var table = await Seated();
+
+        var answer = await table.Api.HandleAsync("POST", "/api/seat/player1/decision", """{"kind":""", table.Token);
+
+        answer.Status.ShouldBe(400);
+        Text(answer).ShouldBe("The request body is not the JSON this route reads.");
+    }
+
+    [Fact]
     public async Task What_the_options_offer_is_accepted_and_the_match_moves_on()
     {
         var table = await Seated();

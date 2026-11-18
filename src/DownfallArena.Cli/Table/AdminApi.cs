@@ -340,7 +340,7 @@ internal sealed class AdminApi
 
     private async Task<StudioResponse> OpenAsync(string body, string operatorName)
     {
-        var request = TableRequest.Parse(body, out var problem);
+        var request = TableRequest.Parse(body, out var problem, unreadable => Said($"  A table could not be opened by {operatorName}: its request is not readable ({HttpHost.OneLine(unreadable)})"));
         if (problem is not null)
         {
             return StudioResponse.OfPlainText(400, problem);
@@ -362,8 +362,13 @@ internal sealed class AdminApi
         catch (Exception failure) when (failure is ArgumentException or IOException or JsonException or InvalidDataException)
         {
             // A weights file that is not there, a policy trained under another schema: the operator naming
-            // the wrong thing, answered as such rather than as a broken host.
-            return StudioResponse.OfPlainText(400, failure.Message);
+            // the wrong thing, answered as such rather than as a broken host. Its message carries the host's
+            // path or a store's words, so the console gets it and the page a sentence (#828). A store that is
+            // out is also an IOException, and is the host's to say, not the operator's typo.
+            Said($"  A table could not be opened by {operatorName}: {HttpHost.OneLine(failure)}");
+            return TableRegistry.StoreFails(failure) && failure is not (FileNotFoundException or DirectoryNotFoundException)
+                ? StudioResponse.OfPlainText(503, "The table could not be opened: the store did not answer. The host's console says why.")
+                : StudioResponse.OfPlainText(400, "The table could not be opened: a weights or policy file named for a seat is missing, unreadable or not playable on this engine. The console says which.");
         }
 
         try

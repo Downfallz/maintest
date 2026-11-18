@@ -596,6 +596,16 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
     }
 
+    /// <summary>
+    /// A body the route cannot read. The parser's message names the host's own types and the place in the body, so
+    /// the page gets a fixed sentence and the console the exception (#828).
+    /// </summary>
+    private static StudioResponse NotJson(JsonException exception)
+    {
+        Console.WriteLine($"  A request body could not be read: {HttpHost.OneLine(exception)}");
+        return StudioResponse.OfPlainText(400, "The request body is not the JSON this route reads.");
+    }
+
     private async Task<StudioResponse> DecideAsync(TableSeat seat, string body)
     {
         if (seat.Person is not { } person)
@@ -610,7 +620,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
         catch (JsonException exception)
         {
-            return StudioResponse.OfPlainText(400, exception.Message);
+            return NotJson(exception);
         }
 
         if (posted is null)
@@ -764,7 +774,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
         catch (JsonException exception)
         {
-            return StudioResponse.OfPlainText(400, exception.Message);
+            return NotJson(exception);
         }
 
         if (posted is null)
@@ -800,7 +810,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
         catch (JsonException exception)
         {
-            return StudioResponse.OfPlainText(400, exception.Message);
+            return NotJson(exception);
         }
 
         ReactionSent sent;
@@ -1168,7 +1178,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
         catch (JsonException exception)
         {
-            return SwapAsked.No(StudioResponse.OfPlainText(400, exception.Message));
+            return SwapAsked.No(NotJson(exception));
         }
 
         if (posted?.Agent is not { Length: > 0 } agent || posted.Round is not { } wantedRound)

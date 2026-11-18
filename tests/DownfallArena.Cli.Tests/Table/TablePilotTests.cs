@@ -404,6 +404,17 @@ public sealed class TablePilotTests : IDisposable
         (await table.Api.HandleAsync("GET", "/api/pilot/nowhere", string.Empty, PilotToken)).Status.ShouldBe(404);
     }
 
+    [Fact]
+    public async Task A_swap_that_is_not_json_is_refused_without_the_parser_s_words()
+    {
+        var table = await Started();
+
+        var answer = await table.Api.HandleAsync("POST", "/api/pilot/seats/player1", """{"agent":""", PilotToken);
+
+        answer.Status.ShouldBe(400);
+        Text(answer).ShouldBe("The request body is not the JSON this route reads.");
+    }
+
     private static Task<StudioResponse> Swap(Table table, string slot, string agent, int round) =>
         table.Api.HandleAsync("POST", $"/api/pilot/seats/{slot}", $$"""{"agent":"{{agent}}","round":{{round}}}""", PilotToken);
 
