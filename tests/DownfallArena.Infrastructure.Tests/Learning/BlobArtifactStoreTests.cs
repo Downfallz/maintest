@@ -55,6 +55,24 @@ public sealed class BlobArtifactStoreTests
     }
 
     [Fact]
+    public async Task A_document_is_deleted_on_a_condition_only_over_the_blob_its_writer_wrote()
+    {
+        var store = await Store();
+        var writer = store.Writer("run-d");
+        var tag = (await writer.WriteJsonIfAsync("reactions.json", new { Revision = 1 }, expected: null, TestContext.Current.CancellationToken)).ShouldNotBeNull();
+        var moved = (await writer.WriteJsonIfAsync("reactions.json", new { Revision = 2 }, tag, TestContext.Current.CancellationToken)).ShouldNotBeNull();
+
+        var stale = await writer.DeleteIfAsync("reactions.json", tag, TestContext.Current.CancellationToken);
+        var deleted = await writer.DeleteIfAsync("reactions.json", moved, TestContext.Current.CancellationToken);
+        var again = await writer.DeleteIfAsync("reactions.json", moved, TestContext.Current.CancellationToken);
+
+        stale.ShouldBeFalse("the blob moved since that tag");
+        deleted.ShouldBeTrue();
+        again.ShouldBeFalse("there is no blob left");
+        (await store.Reader("run-d").ReadTextAsync("reactions.json", TestContext.Current.CancellationToken)).ShouldBeNull();
+    }
+
+    [Fact]
     public async Task Lines_append_to_one_blob_and_starting_it_again_empties_it()
     {
         var store = await Store();

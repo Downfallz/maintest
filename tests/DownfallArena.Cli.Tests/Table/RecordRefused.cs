@@ -54,6 +54,9 @@ internal sealed class RecordRefused(IArtifactStore inner, string? file = null) :
                 ? Task.FromException<string?>(store.Failure())
                 : inner.WriteJsonIfAsync(relativePath, value, expected, cancellationToken);
 
+        public Task<bool> DeleteIfAsync(string relativePath, string expected, CancellationToken cancellationToken = default) =>
+            inner.DeleteIfAsync(relativePath, expected, cancellationToken);
+
         public Task StartJsonLinesAsync(string relativePath, CancellationToken cancellationToken = default) =>
             inner.StartJsonLinesAsync(relativePath, cancellationToken);
 

@@ -100,6 +100,18 @@ public sealed class TableReactionsTests
     }
 
     [Fact]
+    public async Task A_first_reaction_written_while_the_run_is_deleted_is_taken_back_with_it()
+    {
+        var keeper = new Keeper { DeletedAfterWrite = true };
+        var reactions = new TableReactions(new Clock(Start), keeper);
+
+        var sent = await reactions.SendAsync("player1", "hello", Cancel);
+
+        sent.Refusal.ShouldBe("Reaction.Gone");
+        keeper.Exists.ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task A_reaction_refused_for_want_of_a_record_is_sent_once_the_record_is_written()
     {
         var keeper = new Keeper { Recorded = false };
@@ -152,6 +164,20 @@ public sealed class TableReactionsTests
 
         public Task<bool> RecordedAsync(CancellationToken cancellationToken = default) => Task.FromResult(Recorded);
 
+        /// <summary>The operator deletes the run right after the first write, as a delete in another process does.</summary>
+        public bool DeletedAfterWrite { get; init; }
+
+        public Task<bool> ForgetReactionsIfAsync(string expected, CancellationToken cancellationToken = default)
+        {
+            if (_version == 0 || _version.ToString(System.Globalization.CultureInfo.InvariantCulture) != expected)
+            {
+                return Task.FromResult(false);
+            }
+
+            Delete();
+            return Task.FromResult(true);
+        }
+
         /// <summary>The operator deletes the run: the file is gone, and a write expecting its tag is refused.</summary>
         public void Delete()
         {
@@ -172,6 +198,11 @@ public sealed class TableReactionsTests
 
             Kept = items;
             _version++;
+            if (DeletedAfterWrite && current is null)
+            {
+                Recorded = false;
+            }
+
             return Task.FromResult<string?>(_version.ToString(System.Globalization.CultureInfo.InvariantCulture));
         }
     }

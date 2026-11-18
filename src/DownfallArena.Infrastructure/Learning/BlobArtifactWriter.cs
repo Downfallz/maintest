@@ -80,6 +80,34 @@ public sealed class BlobArtifactWriter : IArtifactWriter
         }
     }
 
+    /// <remarks>On the service's own condition: the blob's entity tag.</remarks>
+    public Task<bool> DeleteIfAsync(string relativePath, string expected, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(expected);
+
+        var blob = _container.GetBlobClient(BlobArtifactNames.Resolve(Prefix, relativePath));
+        var deleted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var turn = InTurnAsync(async () =>
+        {
+            try
+            {
+                var response = await blob.DeleteIfExistsAsync(conditions: new BlobRequestConditions { IfMatch = new ETag(expected) }, cancellationToken: cancellationToken);
+                deleted.TrySetResult(response.Value);
+            }
+            catch (RequestFailedException failure) when (failure.Status is 409 or 412)
+            {
+                deleted.TrySetResult(false);
+            }
+        });
+        return AnsweredAsync(turn, deleted.Task);
+
+        static async Task<bool> AnsweredAsync(Task turn, Task<bool> answer)
+        {
+            await turn;
+            return await answer;
+        }
+    }
+
     public Task StartJsonLinesAsync(string relativePath, CancellationToken cancellationToken = default)
     {
         var blob = _container.GetAppendBlobClient(BlobArtifactNames.Resolve(Prefix, relativePath));

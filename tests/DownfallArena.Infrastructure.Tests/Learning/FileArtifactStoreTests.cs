@@ -33,6 +33,24 @@ public sealed class FileArtifactStoreTests
     }
 
     [Fact]
+    public async Task A_document_is_deleted_on_a_condition_only_over_the_content_its_writer_wrote()
+    {
+        using var directory = new ContentDirectory();
+        var store = new FileArtifactStore(directory.Path);
+        var writer = store.Writer("run-1");
+        var tag = (await writer.WriteJsonIfAsync("reactions.json", new { Revision = 1 }, expected: null, TestContext.Current.CancellationToken)).ShouldNotBeNull();
+
+        var stale = await writer.DeleteIfAsync("reactions.json", "not-the-tag", TestContext.Current.CancellationToken);
+        var deleted = await writer.DeleteIfAsync("reactions.json", tag, TestContext.Current.CancellationToken);
+        var again = await writer.DeleteIfAsync("reactions.json", tag, TestContext.Current.CancellationToken);
+
+        stale.ShouldBeFalse("the document is not the one that was written");
+        deleted.ShouldBeTrue();
+        again.ShouldBeFalse("there is nothing left to delete");
+        (await store.Reader("run-1").ReadTextAsync("reactions.json", TestContext.Current.CancellationToken)).ShouldBeNull();
+    }
+
+    [Fact]
     public async Task A_document_nobody_wrote_reads_as_none()
     {
         using var directory = new ContentDirectory();

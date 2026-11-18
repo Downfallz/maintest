@@ -75,8 +75,16 @@ internal sealed class TableVisits(TimeProvider clock, IVisitKeeper? keeper = nul
             }
 
             var visit = new LastVisit(sequence, clock.GetUtcNow(), holder);
-            if (await keeper.WriteVisitIfAsync(seat, visit, tag, cancellationToken) is not null)
+            if (await keeper.WriteVisitIfAsync(seat, visit, tag, cancellationToken) is { } written)
             {
+                // The same check after a first write as in the reactions: the record taken first means one still
+                // there now proves the run's listing is yet to come (#818).
+                if (tag is null && !await keeper.RecordedAsync(cancellationToken))
+                {
+                    await keeper.ForgetVisitIfAsync(seat, written, cancellationToken);
+                    return null;
+                }
+
                 return visit;
             }
         }

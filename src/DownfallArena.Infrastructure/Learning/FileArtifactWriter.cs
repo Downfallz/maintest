@@ -75,6 +75,36 @@ public sealed class FileArtifactWriter : IArtifactWriter
         }
     }
 
+    public Task<bool> DeleteIfAsync(string relativePath, string expected, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(expected);
+
+        var path = Resolve(relativePath);
+        var deleted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var turn = InTurnAsync(() =>
+        {
+            lock (Conditional)
+            {
+                var current = FileTags.Current(path) == expected;
+                if (current)
+                {
+                    File.Delete(path);
+                }
+
+                deleted.TrySetResult(current);
+            }
+
+            return Task.CompletedTask;
+        });
+        return AnsweredAsync(turn, deleted.Task);
+
+        static async Task<bool> AnsweredAsync(Task turn, Task<bool> answer)
+        {
+            await turn;
+            return await answer;
+        }
+    }
+
     private static string? Replaced(string path, byte[] bytes, string? expected)
     {
         lock (Conditional)

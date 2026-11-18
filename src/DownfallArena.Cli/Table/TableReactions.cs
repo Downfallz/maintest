@@ -108,8 +108,17 @@ internal sealed class TableReactions(TimeProvider clock, IReactionKeeper? keeper
             return ReactionSent.Gone;
         }
 
+        var first = _tag is null;
         if (await keeper.WriteReactionsIfAsync(next, _tag, cancellationToken) is { } tag)
         {
+            // The record was there a moment ago; a delete may have listed the run since, and missed this file. The
+            // delete takes the record first, so a record still there now proves the listing is yet to come (#818).
+            if (first && !await keeper.RecordedAsync(cancellationToken))
+            {
+                await keeper.ForgetReactionsIfAsync(tag, cancellationToken);
+                return ReactionSent.Gone;
+            }
+
             _tag = tag;
             Volatile.Write(ref _items, next);
             return ReactionSent.Of(sent);
