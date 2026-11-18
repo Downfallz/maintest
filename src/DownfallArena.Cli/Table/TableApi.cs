@@ -99,6 +99,14 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
     public TableVisits Visits => LazyInitializer.EnsureInitialized(ref _visits, () => new TableVisits(Clock, run));
 
     /// <summary>
+    /// Waits for the reactions and seen marks this API has on their way into the run's files (#849), so the operator's
+    /// delete, which waits for this, lists the run after they landed and not beside them. Nothing to wait for when
+    /// neither was ever asked for.
+    /// </summary>
+    public Task SettledAsync() =>
+        Task.WhenAll(Volatile.Read(ref _reactions)?.SettledAsync() ?? Task.CompletedTask, Volatile.Read(ref _visits)?.SettledAsync() ?? Task.CompletedTask);
+
+    /// <summary>
     /// Whether the two seats may react to each other (ADR 0173): two people, the match begun, and not one account in
     /// both seats, which is one person on a shared device. Against a bot there is nobody to read a reaction.
     /// </summary>
@@ -872,7 +880,7 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
             return StudioResponse.OfJson(new { error = "Seen.Invalid", message = "Say what was shown as { \"sequence\": N }, N a feed sequence." }, ArtifactJson.LineOptions, status: 400);
         }
 
-        LastVisit? kept;
+        VisitShown kept;
         try
         {
             kept = await Visits.ShownAsync(seat.Name, HolderOf(seat), shown);
@@ -880,11 +888,16 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or Azure.RequestFailedException)
         {
             Said($"  What {seat.Name} was shown could not be kept: {failure.Message}");
-            kept = null;
+            kept = VisitShown.Busy;
         }
 
-        return kept is not null
-            ? StudioResponse.OfJson(new { seen = Seen(kept) }, ArtifactJson.LineOptions)
+        if (kept.Visit is { } visit)
+        {
+            return StudioResponse.OfJson(new { seen = Seen(visit) }, ArtifactJson.LineOptions);
+        }
+
+        return kept.Refusal == VisitShown.Gone.Refusal
+            ? StudioResponse.OfJson(new { error = kept.Refusal, message = "This game is no longer kept, so what was shown is not kept." }, ArtifactJson.LineOptions, status: 409)
             : StudioResponse.OfJson(new { error = "Seen.Busy", message = "What was shown could not be kept. Try again." }, ArtifactJson.LineOptions, status: 503);
     }
 

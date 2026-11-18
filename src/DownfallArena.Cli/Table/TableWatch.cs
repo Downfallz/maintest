@@ -107,6 +107,15 @@ internal sealed class TableWatch(TableRegistry registry, TimeProvider clock)
                 return true;
             }
 
+            if (table.Run is { Deleted: true })
+            {
+                // Deleted by the operator, maybe from another process: its record is not written again (#848), so holding
+                // it would fail every seat change, and its match would write into a run that is gone.
+                Console.WriteLine($"  Session {table.Id} was deleted by another process: let go of.");
+                registry.LetGo(table.Id);
+                return true;
+            }
+
             return !table.IsOver && await table.Session.CatchUpAsync(cancellationToken);
         }
         catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is ObjectDisposedException)

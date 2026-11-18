@@ -7,10 +7,23 @@ namespace DownfallArena.Infrastructure.Learning;
 /// </summary>
 public sealed class FileArtifactStore : IArtifactStore
 {
+    private readonly Action<string> _deleteDirectory;
+
     public FileArtifactStore(string rootDirectory)
+        : this(rootDirectory, directory => Directory.Delete(directory, recursive: true))
+    {
+    }
+
+    /// <summary>
+    /// A store whose run directories, once their first file is gone, are removed by <paramref name="deleteDirectory" />:
+    /// the seam a test fails the recursive delete through, to see what was deleted before it (#851).
+    /// </summary>
+    public FileArtifactStore(string rootDirectory, Action<string> deleteDirectory)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(rootDirectory);
+        ArgumentNullException.ThrowIfNull(deleteDirectory);
         RootDirectory = Path.GetFullPath(rootDirectory);
+        _deleteDirectory = deleteDirectory;
     }
 
     public string RootDirectory { get; }
@@ -27,7 +40,7 @@ public sealed class FileArtifactStore : IArtifactStore
         return Task.FromResult(runs);
     }
 
-    public Task<bool> DeleteAsync(string run, CancellationToken cancellationToken = default)
+    public Task<bool> DeleteAsync(string run, string? first, CancellationToken cancellationToken = default)
     {
         var directory = LocationOf(run);
         if (!Directory.Exists(directory))
@@ -35,9 +48,13 @@ public sealed class FileArtifactStore : IArtifactStore
             return Task.FromResult(false);
         }
 
-        // The table's record first (#818), as the blob store does: see BlobArtifactStore.DeleteAsync.
-        File.Delete(Path.Combine(directory, "table.json"));
-        Directory.Delete(directory, recursive: true);
+        // The file named first goes first (#818), as in the blob store: see BlobArtifactStore.DeleteAsync.
+        if (first is not null)
+        {
+            File.Delete(Path.Combine(directory, first));
+        }
+
+        _deleteDirectory(directory);
         return Task.FromResult(true);
     }
 

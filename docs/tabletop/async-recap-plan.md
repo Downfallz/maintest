@@ -111,8 +111,8 @@ under way: a player who left the page open for two days, or who simply lost the 
    when), beside the table's record as `seen-player1.json` and `seen-player2.json` through the run's artifact store
    (a file, a blob, or memory for a table nobody records), only a larger sequence, written only over the version
    read and read again on a conflict. `PUT /api/seat/<seat>/seen` answers the mark kept (`400 Seen.Invalid`,
-   `503 Seen.Busy`) and moves nothing on the table. The seat's view reads the record on every read and carries
-   `seen` and `lastMoveAt`. `battle-seen.js` reads the larger of the two marks. It sends its own at once, then at
+   `409 Seen.Gone` once the run was deleted, #850, `503 Seen.Busy`) and moves nothing on the table. The seat's view
+   reads the record on every read and carries `seen` and `lastMoveAt`. `battle-seen.js` reads the larger of the two marks. It sends its own at once, then at
    most once every five seconds, and once more, kept alive, when the page is hidden (`createSeenSender`); a
    replay's transport sends nothing. Tests: `TableSeenApiTests`, `TableVisitsTests`, `TableVisitsBlobTests` (Azurite), and the Node
    tests of `battle-seen.js` and `transport.js`. Left to R2: the glossary's *Recap*; nothing reads `seen.at` or

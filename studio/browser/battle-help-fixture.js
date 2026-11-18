@@ -28,18 +28,31 @@ async function planningSheet(page) {
 // would: it presses OK whenever one is waiting, until the condition it is after holds.
 // A revealed turn order holds the field until Continue (ADR 0144): a journey reads it too, through `onOrder` when
 // it checks the order, then continues.
+// The deadline restarts at each OK or Continue that goes through, instead of running from the call. A loaded machine
+// reads a long round slowly but steadily, and a whole round's results outlasted one deadline set at the call (#832).
+// A page with nothing to press for `timeout` is stuck, and the error says what it showed. A press the page ignores
+// still counts, so the whole call stops at three times `timeout` all the same.
 export async function acknowledge(page, until, timeout = 45000, onOrder = null) {
-  const next = page.locator('#playback-next'), order = page.locator('#order-continue'), end = Date.now() + timeout;
+  const next = page.locator('#playback-next'), order = page.locator('#order-continue'), cap = Date.now() + 3 * timeout;
+  let end = Date.now() + timeout, pressed = 0;
+  const moved = () => { pressed++; end = Math.min(cap, Date.now() + timeout); };
   for (;;) {
     if (await until()) return;
-    if (Date.now() > end) throw new Error('Timed out reading confirmed results');
+    if (Date.now() > end) {
+      const shown = await page.evaluate(() => ({ reading: document.querySelector('#battle')?.getAttribute('data-reading'),
+        next: document.querySelector('#playback-next')?.getAttribute('aria-disabled'), title: document.querySelector('#reading-title')?.textContent }))
+        .catch(() => null);
+      throw new Error(`Timed out reading confirmed results: nothing to press for ${timeout / 1000} s after ${pressed} presses `
+        + `(or ${3 * timeout / 1000} s in all). The page showed ${shown ? JSON.stringify(shown) : 'nothing it could say'}.`);
+    }
     if (await order.isVisible()) {
-      if (onOrder) await onOrder();
-      if (await order.isVisible()) await order.click({ timeout: 2000 }).catch(() => {});
+      // A journey that reads the order presses Continue itself: that press is progress too.
+      if (onOrder) { await onOrder(); if (!await order.isVisible()) moved(); }
+      if (await order.isVisible()) await order.click({ timeout: 2000 }).then(moved, () => {});
     } else if (await next.isVisible() && await next.getAttribute('aria-disabled') === 'false') {
       // What is now waiting may be the very thing the journey stops at: look again before pressing.
       if (await until()) return;
-      await next.click({ timeout: 2000 }).catch(() => {});
+      await next.click({ timeout: 2000 }).then(moved, () => {});
     }
     else await page.waitForTimeout(100);
   }

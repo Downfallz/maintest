@@ -183,8 +183,51 @@ public sealed class TableSeenApiTests : IDisposable
 
         var answer = await SeenAsync(table, 0, """{ "sequence": 2 }""");
 
-        answer.Status.ShouldBe(503, Text(answer));
+        answer.Status.ShouldBe(409, Text(answer));
+        using var refusal = JsonDocument.Parse(answer.Body);
+        refusal.RootElement.GetProperty("error").GetString().ShouldBe("Seen.Gone");
         Directory.Exists(Path.Combine(_hosted.RunsDirectory, table.Run!.SessionId)).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task A_mark_on_a_run_the_operator_deleted_after_an_earlier_mark_is_refused_as_gone_and_keeps_no_file()
+    {
+        var table = await BegunAsync();
+        (await SeenAsync(table, 0, """{ "sequence": 2 }""")).Status.ShouldBe(200);
+        await table.QuiesceAsync(Cancel);
+        (await _hosted.Stored!.DeleteAsync(table.Id, Cancel)).ShouldBeTrue();
+
+        var answer = await SeenAsync(table, 0, """{ "sequence": 3 }""");
+
+        answer.Status.ShouldBe(409, Text(answer));
+        using var refusal = JsonDocument.Parse(answer.Body);
+        refusal.RootElement.GetProperty("error").GetString().ShouldBe("Seen.Gone");
+        Directory.Exists(Path.Combine(_hosted.RunsDirectory, table.Id)).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task The_operator_s_delete_waits_for_a_mark_on_its_way_and_leaves_nothing_of_the_run()
+    {
+        RecordHeld? store = null;
+        using var hosted = new HostedTables(directory => store = new RecordHeld(new FileArtifactStore(directory), PlaytestRun.SeenFile("player1")), turns: new NoAgentTurns());
+        using var registry = hosted.Registry();
+        var admin = new AdminApi(registry, hosted.Composer, OperatorGate.WithToken("operator"), TimeProvider.System, "Rules", hosted.Stored) { Said = _ => { } };
+        var table = await BegunAsync(hosted, registry);
+        (await SeenAsync(table, 0, """{ "sequence": 2 }""")).Status.ShouldBe(200);
+        store!.Hold();
+        var marking = SeenAsync(table, 0, """{ "sequence": 3 }""");
+        await store.Reached.WaitAsync(TimeSpan.FromSeconds(30), Cancel);
+
+        var deleting = admin.HandleAsync("DELETE", "/api/sessions", $$"""{"ids":["{{table.Id}}"]}""", "operator", null);
+        await Task.Delay(200, Cancel);
+        var waited = !deleting.IsCompleted;
+        store.Release();
+        var deleted = await deleting;
+        await marking;
+
+        waited.ShouldBeTrue("the delete waits for the mark on its way (#849)");
+        deleted.Status.ShouldBe(200, Text(deleted));
+        Directory.Exists(Path.Combine(hosted.RunsDirectory, table.Id)).ShouldBeFalse();
     }
 
     private Task<PlayedTable> BegunAsync() => BegunAsync(_hosted, _registry);

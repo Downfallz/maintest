@@ -659,12 +659,14 @@ The battle view tells the host the last feed sequence each seat was shown (`PUT 
 hidden; a replay sends nothing. The host keeps the larger sequence with the time it was told, beside the table's record
 (`seen-player1.json`, `seen-player2.json`, written only over the version read), ignores a smaller one, and answers
 `{"seen":{"sequence","at"}}` with the mark kept; anything but a sequence of 0 or more is `400 Seen.Invalid`, and
-`503 Seen.Busy` when every retry lost to another process or the store failed. It is also the answer once the operator
-has deleted the table's run: the host writes no file, so the run is not brought back. It moves nothing on the table and
-sends no notice. A mark is kept under a stamp of the seat's key, so a seat offered again starts with none. Each
-seat's view carries its own mark as `seen` (null before the first) and when the journal was last written as
-`lastMoveAt` (null for a table that keeps none). The page reads the larger of its browser's mark and the host's
-(ADR 0194).
+`503 Seen.Busy` when every retry lost to another process or the store failed. Once the operator has deleted the
+table's run it answers `409 Seen.Gone`: the host writes no file, so the run is not brought back. If this process could
+not write the table's record, it cannot tell a deleted run from a missing record. It answers `503 Seen.Busy` (a
+reaction: `503 Reaction.Busy`), not `409`. The operator's delete waits for a mark or a reaction already on its way. A
+seen mark moves nothing on the table and sends no notice. A mark is kept under a stamp of the seat's key, so a seat
+offered again starts with none. Each seat's view carries its own mark as `seen` (null before the first) and when the
+journal was last written as `lastMoveAt` (null for a table that keeps none). The page reads the larger of its browser's
+mark and the host's (ADR 0194).
 
 #### The ladder, formats and the time to answer
 

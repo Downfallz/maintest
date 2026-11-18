@@ -1,0 +1,8 @@
+# host-reviewer lessons, #848-#851 PR
+
+- A "record gone" rule needs the watch too: in round 1 of the #848 PR the run refused to write over a missing record, but TableWatch.LookAsync let go only of a record *rewritten* (RewrittenAsync is null for a missing one), so a table deleted elsewhere stayed held and answered 503 on every seat change. Fixed with `PlaytestRun.Deleted`; check the watch whenever such a rule is added (#848 PR).
+- "This process saw the record" cannot be read from `_revision > 0`: a record from before revisions has Revision 0. Round 1 of the #848 PR did, and a reopened old record read as Unknown; `_seenStored` is the flag now (#848, #850 PR).
+- The run-delete order lives in the caller since #851 (`StoredSessions.DeleteAsync` passes `first: TableRecord.File`), and `first` is required on the port and the stores: a new caller deleting a table run names the record or goes through StoredSessions (#851 PR).
+- The battle page's seen sender (table/battle-seen.js createSeenSender) treats every non-ok answer alike (holds the mark, resends on the next one): a new status for `PUT .../seen` changes no page behaviour; check the page before claiming a refusal "stops" it (#850 PR).
+- The watch lets go of a table whose record is gone (`PlaytestRun.Deleted`, set in RewrittenAsync, looked at every 1 s); the worker's journal append in that window still recreates the run (FileDecisionJournal CreateDirectory+Append, BlobDecisionJournal CreateIfNotExists), and StoredSessions.ListAsync lists a recordless run by name: a ghost in the Sessions tab (#848 PR round 2).
+- A Reopen with a null record sets `_seenStored` to false (#848 PR round 2).

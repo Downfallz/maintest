@@ -215,16 +215,20 @@ internal sealed class PlayedTable : IDisposable
 
     /// <summary>
     /// After the table is let go of: waits for its session to have stopped -- whatever step it was taking
-    /// finished -- and for every write of its recording to land, so what is done to its run next is done after
-    /// the match and not beside it. Bounded: a step that is not coming back must not hold the operator's request.
+    /// finished -- and for every write of its recording to land, the reactions and seen marks on their way too (#849),
+    /// so what is done to its run next is done after the match and not beside it. Bounded: a step that is not coming
+    /// back must not hold the operator's request.
     /// </summary>
     public async Task QuiesceAsync(CancellationToken cancellationToken = default)
     {
-        await Task.WhenAny(Session.Outcome, Task.Delay(QuiesceWithin, cancellationToken));
+        // One deadline for every wait: an operator's delete loops over its ids, each waited for in turn.
+        var limit = Task.Delay(QuiesceWithin, cancellationToken);
+        await Task.WhenAny(Session.Outcome, limit);
 
         // The closed marker is one of the writes to wait for: landing after a deletion, it would be the one
         // file of a run that was deleted, and the run would be listed again.
-        await Task.WhenAny(Closing, Task.Delay(QuiesceWithin, cancellationToken));
+        await Task.WhenAny(Closing, limit);
+        await Task.WhenAny(Api.SettledAsync(), limit);
         if (Run is { } run)
         {
             await run.DrainAsync(cancellationToken);
