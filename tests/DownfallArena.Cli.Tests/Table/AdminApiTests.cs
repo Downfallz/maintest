@@ -452,6 +452,24 @@ public sealed class AdminApiTests : IDisposable
         still.GetProperty("export").GetString().ShouldBe($"/api/sessions/{kept}/export");
         still.GetProperty("location").GetString().ShouldNotBeNull().ShouldEndWith(kept);
         sessions.Single(session => session.GetProperty("id").GetString() == gone).GetProperty("live").GetBoolean().ShouldBeFalse();
+
+        // Whether a session is still played is read from its record, not from this process's memory (#736).
+        sessions.Select(session => (session.GetProperty("id").GetString()!, session.GetProperty("underWay").GetBoolean()))
+            .ShouldBe(new[] { (kept, true), (gone, false), (live, false) }.OrderByDescending(one => one.Item1, StringComparer.Ordinal));
+    }
+
+    /// <summary>A table another process holds is still played by its record, and its row offers no cut until it is over (#736).</summary>
+    [Fact]
+    public async Task A_session_this_process_let_go_of_is_still_under_way_by_its_record()
+    {
+        var admin = Admin(OperatorGate.WithToken(OperatorToken));
+        var elsewhere = Opened(await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy","who":"mk"}""", OperatorToken, null));
+        _registry.LetGo(elsewhere).ShouldBeTrue();
+
+        var answer = await admin.HandleAsync("GET", "/api/sessions", "", OperatorToken, null);
+
+        var row = JsonDocument.Parse(Text(answer)).RootElement.GetProperty("sessions").EnumerateArray().Single(session => session.GetProperty("id").GetString() == elsewhere);
+        (row.GetProperty("live").GetBoolean(), row.GetProperty("underWay").GetBoolean()).ShouldBe((false, true));
     }
 
     [Fact]

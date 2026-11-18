@@ -49,6 +49,7 @@ internal sealed class StoredSessions(IArtifactStore store)
             Table = record is not null,
             Void = record?.Void == true,
             VoidCategory = record?.VoidReason?.Category,
+            UnderWay = record?.UnderWay == true,
         };
     }
 
@@ -198,4 +199,7 @@ internal sealed record StoredSession(string Id, DateTimeOffset? CreatedAt, strin
 
     /// <summary>The category the operator voided it under (ADR 0176); null for a table voided on its own, or not void.</summary>
     public string? VoidCategory { get; init; }
+
+    /// <summary>Whether its table is still played, by its record, whichever process holds it: it is cut once it is over (#736).</summary>
+    public bool UnderWay { get; init; }
 }

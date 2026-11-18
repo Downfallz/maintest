@@ -311,7 +311,8 @@ The host plays many tables at once, each found by its own tokens (ADR 0081).
   into its listing).
 - It lists every recorded session the store holds (`GET /api/sessions`), filtered by state and by who sat and
   paged twenty at a time, with a replay of each finished one (`/play?replay=<id>`, read off
-  `GET /api/sessions/<id>/replay`).
+  `GET /api/sessions/<id>/replay`). `underWay` says, from its record, that a table is still played: its row offers
+  no cut as a scenario until it is over (#736).
 - It deletes sessions (`DELETE /api/sessions {"ids":[...]}`, closing a table still being played).
 - It diagnoses a table in progress from its card (`GET /api/tables/<id>/diagnosis`: its seats and who is asked,
   its journal's length and last lines by kind and seat, the content, rules and engine it is played on and its
@@ -354,7 +355,8 @@ round into a match scenario kept beside the recordings (`GET /api/admin/scenario
 rounds it can be cut at, `GET`/`POST /api/admin/scenarios {"session","round","seat","title","goal"}`,
 `DELETE /api/admin/scenarios/<id>`, `PUT /api/admin/scenarios/<id>/listing {"listed"}` lists it under Practice
 on every signed-in player's home page or takes it off, noted in Activity; ADR 0179,
-docs/tabletop/scenarios-plan.md).
+docs/tabletop/scenarios-plan.md). A session still being played cannot be cut, and its rounds are not listed: 409
+`Scenario.UnderWay`. Its journal holds the other seat's face-down choices of the round (#736).
 
 The tab also lists every file of the repository's `scenarios/` directory, read when the host starts (`"source":
 "repository"` and its `"file"` in the list, under the id `sc-repo-<file name>`): played from the tab, on the content
@@ -477,7 +479,9 @@ The seat's view says the lesson under `practice.tutorial`:
   report copied. Its title is `Report <id>, round N` and its goal is empty. It answers the sheet, whose `reproduction`
   is `{"id","link"}`, the link being `/battle?scenario=<id>`. The status does not change. Asked again while that
   scenario still exists, it cuts nothing and answers the same sheet. An idea is 409 `Feedback.NotABug`, and a report
-  sent outside a round 409 `Feedback.NoPosition`. A round the journal does not offer is 409
+  sent outside a round 409 `Feedback.NoPosition`. Reproduce on a report from a table still being played is 409
+  `Feedback.UnderWay`. Until the game is over, its sheet offers no `reproduce`, and `reproduceOnceOver` says the
+  round will be cut then (#736). A round the journal does not offer is 409
   `Scenario.RoundUnavailable`, with `rounds` listing the rounds it does offer. The source answers as the Scenarios tab
   does: 404 `Scenario.NoSession`, 409 `Scenario.NoRules` or `Scenario.ContentGone`; for a practice, 409
   `Scenario.NotFound` when the scenario it was opened from is gone, and 409 `Scenario.Invalid` when its copied entries

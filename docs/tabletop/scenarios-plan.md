@@ -27,7 +27,8 @@ table. Nothing in the domain changes.
 
 ## Decisions
 
-- **decided**: only the operator creates a scenario, from any recorded session (admin panel, operator token).
+- **decided**: only the operator creates a scenario, from any recorded session whose game is over or voided (admin
+  panel, operator token; a table still played is 409 `Scenario.UnderWay`, #736).
   Players do not, for now.
 - **decided**: the opponent replays its recorded answers while they still fit, then a bot takes over (see
   "The scripted opponent").

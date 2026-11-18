@@ -241,6 +241,8 @@ export function sessionRows(answer) {
     state: sessionState(session),
     steps: session.steps ?? 0,
     live: session.live === true,
+    // Still played by its record, whichever process holds it: the host cuts it once it is over (#736).
+    underWay: session.underWay === true,
     finished: session.live !== true && session.over === true,
     // How many seats a person held at some point: the stamp names a person `human` or `human:<initials>`, and a
     // seat handed over carries each occupant after the first (`Greedy>human:mk@3`).
@@ -485,7 +487,7 @@ function sessionItem(row, transport) {
     voiding.addEventListener('click', () => openVoid({ id: row.id, players: row.players, over: row.finished }));
     links.append(voiding);
   }
-  if (!row.live && openScenario) {
+  if (!row.underWay && openScenario) {
     const practise = document.createElement('button');
     practise.type = 'button';
     practise.className = 'link-button';

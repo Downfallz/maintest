@@ -413,10 +413,11 @@ and they are the first thing every player can use.
    A scenario cut from the practice of a repository scenario does not carry that scenario's content. It plays only
    while the repository scenario still ships.
 
-   Left to R5: the redacted scenario is read from the scenario the report keeps. A report from a table still under
-   way is cut with the entries already journaled after the cut, the other seat's face-down choices of that round
-   among them, as any cut from the Scenarios tab is: the scenario is the operator's, but the redacted one must not
-   carry them.
+   Left to R5: the redacted scenario is read from the scenario the report keeps. Until #736, a report from a table
+   still under way was cut with the entries already journaled after the cut, the other seat's face-down choices of that round
+   among them, as any cut from the Scenarios tab was: the scenario is the operator's, but the redacted one must not
+   carry them. Settled since (#736): Reproduce and the Scenarios tab refuse to cut a table still under way (409
+   `Feedback.UnderWay` and `Scenario.UnderWay`), and the sheet offers Reproduce once the game is over.
 7. **R5, the redacted scenario and the issue.** `RedactedScenario`, **Download the scenario** as a zip, the issue
    form `bug_from_report.yml`, the `from-report` label, **File an issue** with its pre-filled address, *filed #N*,
    and *fixed* read from GitHub. Tests: `RedactedScenarioTests` (every id replaced, times at the epoch, a file

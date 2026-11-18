@@ -127,6 +127,36 @@ public sealed class ScenariosApiTests : IDisposable
         (await Admin().HandleAsync("GET", $"{ScenarioAdminApi.Route}/rounds", "", "operator", "?session=20261114-000000-deadbeef")).Status.ShouldBe(404);
     }
 
+    /// <summary>
+    /// A table still played is not cut (#736): its journal holds the other seat's choices of the round, face down, which
+    /// the scripted opponent would follow and any signed-in account holding the scenario's id would open.
+    /// </summary>
+    [Fact]
+    public async Task A_session_still_under_way_is_neither_cut_nor_read_for_its_rounds_until_it_is_over()
+    {
+        using var registry = _hosted.Registry();
+        var table = await _hosted.Composer.ComposeAsync(HostedTables.OnePerson, Cancel);
+        using (var place = (await registry.ReserveAsync(Cancel)).ShouldNotBeNull())
+        {
+            await registry.AddAsync(table, place, Cancel);
+        }
+
+        var seat = table.Seats[0];
+        (await table.Api.HandleAsync("GET", $"/api/seat/{seat.Name}", string.Empty, seat.Token)).Status.ShouldBe(200);
+
+        var cut = await Admin().HandleAsync("POST", ScenarioAdminApi.Route, JsonSerializer.Serialize(new { session = table.Id, round = 1 }), "operator");
+        var rounds = await Admin().HandleAsync("GET", $"{ScenarioAdminApi.Route}/rounds", "", "operator", $"?session={table.Id}");
+
+        (cut.Status, Read(cut).GetProperty("error").GetString()).ShouldBe((409, "Scenario.UnderWay"));
+        (rounds.Status, Read(rounds).GetProperty("error").GetString()).ShouldBe((409, "Scenario.UnderWay"));
+        (await _store.ListAsync(Cancel)).ShouldBeEmpty();
+
+        // Closed by the operator, it is over: the same round is cut.
+        (await _hosted.Stored!.CloseAsync(table.Id, _hosted.Index, Cancel)).ShouldBeTrue();
+        var later = await Admin().HandleAsync("POST", ScenarioAdminApi.Route, JsonSerializer.Serialize(new { session = table.Id, round = 1 }), "operator");
+        later.Status.ShouldBe(201, Encoding.UTF8.GetString(later.Body));
+    }
+
     [Fact]
     public async Task A_session_the_host_never_recorded_cannot_be_cut() =>
         (await Admin().HandleAsync("POST", ScenarioAdminApi.Route, JsonSerializer.Serialize(new { session = "20261114-000000-deadbeef", round = 1 }), "operator")).Status.ShouldBe(404);

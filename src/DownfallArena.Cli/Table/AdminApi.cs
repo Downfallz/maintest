@@ -752,6 +752,9 @@ internal sealed class AdminApi
             // Whether the operator can void it (ADR 0176): a table's run that is not void yet.
             voidable = session.Table && !session.Void,
             voided = session.Void ? session.VoidCategory ?? "engine" : null,
+
+            // Whether its table is still played, by its record: a cut is offered once it is over (#736).
+            underWay = session.UnderWay,
             session = $"/session/{session.Id}",
             replay = (table?.IsOver ?? session.Matches > 0) ? ReplayPath(session.Id) : null,
             export = $"{SessionsPrefix}/{session.Id}/export",

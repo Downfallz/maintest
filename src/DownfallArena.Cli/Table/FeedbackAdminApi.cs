@@ -205,6 +205,9 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
                 // Diagnose… is offered while the table it was sent from is still under way (scenarios plan, S5b).
                 underWay,
 
+                // Reproduce waits for the game's end (#736): what the sheet says while it is not offered.
+                reproduceOnceOver = underWay && reproduction is null && one.MergedInto is null && Reproducible(one),
+
                 // A table whose record cannot be read offers neither: nothing shows its game is over (#790).
                 unread = played == Played.Unread,
                 actions = Actions(one, mute, played, group, reproduction is not null),
@@ -431,7 +434,7 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
             return Played.Unread;
         }
 
-        return record is { Status: TableRecord.Open, Void: false } ? Played.UnderWay : Played.Over;
+        return record.UnderWay ? Played.UnderWay : Played.Over;
     }
 
     private async Task<StudioResponse> MuteAsync(string id, string operatorName)
@@ -485,12 +488,16 @@ internal sealed class FeedbackAdminApi(OperatorFeedback feedback, StoredSessions
         return [.. offered];
     }
 
+    /// <summary>Whether Reproduce can cut this feedback once its game is over: a bug report from a round and a seat, on a host that keeps scenarios.</summary>
+    private bool Reproducible(Feedback one) => one.Kind == FeedbackKind.Bug && Scenarios is not null && Cuttable(one.Context);
+
     /// <summary>What a piece of feedback not merged into another offers, its sender's mute aside.</summary>
     private List<string> OpenActions(Feedback one, Played played, FeedbackGroup group, bool reproduced)
     {
         var bug = one.Kind == FeedbackKind.Bug;
         List<string> offered = [.. bug ? BugActions(one) : IdeaActions(one, group)];
-        if (bug && Scenarios is not null && Cuttable(one.Context))
+        // A table still played is cut once it is over (#736), as its scenario leaves the host only then (R5).
+        if (Reproducible(one) && played != Played.UnderWay)
         {
             offered.Add("reproduce");
         }
