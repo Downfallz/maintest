@@ -256,7 +256,7 @@ for (const [lang, file, bookFile] of [['en', 'rules/index.html', 'rules.json'], 
       const next = html.indexOf('<section class="rules-section"', section + 1);
       assert.ok(next === -1 || at < next, card.id);
     }
-    assert.ok(html.includes(`href="${new URL('rules', game).href}"`), 'the table\'s own page, where the numbers are played');
+    assert.ok(html.includes(`href="${new URL(`rules?lang=${lang}`, game).href}"`), 'the table\'s own page, where the numbers are played, in the language read here');
   });
 }
 

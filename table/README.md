@@ -532,7 +532,8 @@ service worker, which serves nothing from a cache but `offline.html`, shown when
 `rules.json` and `rules.fr.json`, the shared styles, the brand mark and the font are kept at install and refreshed whenever the network
 answers, and given only when it cannot answer; the rulebook's own files also when the host answers with a server
 error (a 52x from Cloudflare for a host that is down), never the shared ones, which other pages draw with.
-Offline, the rulebook draws without the menu, the brand alone leading home.
+Offline, the rulebook draws without the menu, the brand alone leading home. A rulebook file given from its copy
+carries `X-Rulebook-Copy: kept`, and the page then says the book is the one this device last read (#698).
 
 ## The rulebook (ADR 0188)
 
@@ -543,8 +544,9 @@ opens a section, a part, an id `rules/moved.json` redirects (the address shows t
 card's section, at the top of the screen; the browser's back returns where the reader was. The filter keeps the
 sections whose title, text or card hold every word typed, without case or accents. What changed lists
 `rules/changes.md`, the latest first. The book reads in English or in French (`rules.fr.json`, built from `rules/fr/`,
-ADR 0193): the language chosen on this device (`downfall.language`), else the browser's first English or French,
-else English. **English** and **Français** switch, at the same section; the battle and the other pages stay
+ADR 0193): the language the address asks for (`/rules?lang=fr`, the public book's link), else the one chosen on this
+device (`downfall.language`), else the browser's first English or French, else English. A switch on the page drops
+`lang` from the address. **English** and **Français** switch, at the same section; the battle and the other pages stay
 English.
 
 ## Friends
@@ -716,7 +718,7 @@ route. A route that throws is answered 500 `Host.Unexpected`, and the exception 
 | `/pilot?token=<pilot token>` | pilot | The operator's own page for the seats of a console table. |
 | `/session/<id>` | anyone | A finished recorded session in the viewer. |
 | `/leaderboard`, `/stats` | anyone, account | The ladder (ADR 0124) and the player's own statistics (ADR 0168). |
-| `/rules`, `/rules.json`, `/rules.fr.json` | anyone | The official rulebook (ADR 0188) and the books it reads, English and French (ADR 0193); `/rules#<id>` opens a section. |
+| `/rules`, `/rules.json`, `/rules.fr.json` | anyone | The official rulebook (ADR 0188) and the books it reads, English and French (ADR 0193); `/rules#<id>` opens a section, `?lang=fr` or `?lang=en` its language. |
 | `/offline.html` | anyone | The page the service worker keeps (ADR 0166). |
 | `GET /api/me` | anyone | Who is signed in, whether they are the operator, and the host's notice (ADR 0177). |
 | `DELETE /api/account` | account | Deletes the account. |

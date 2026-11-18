@@ -227,6 +227,39 @@ test('a French book that cannot be read leaves the English one, in English, and 
   expect(await page.evaluate(() => localStorage.getItem('downfall.language'))).toBe('en');
 });
 
+test('a book the service worker gave from its kept copy says it is the copy this device last read', async ({ page }) => {
+  await guest(page);
+  const kept = readFileSync(new URL('../../table/rules.json', import.meta.url), 'utf8');
+  await page.route('**/rules.json', route => route.fulfill({ status: 200, contentType: 'application/json', headers: { 'X-Rulebook-Copy': 'kept' }, body: kept }));
+
+  await open(page);
+
+  await expect(page.locator('#rules-kept')).toHaveText('Offline: the rulebook as this device last read it. The table may now play a newer one.');
+  await page.getByRole('button', { name: 'Français' }).click();
+  await expect(page.locator('body')).toHaveAttribute('data-language', 'fr');
+  await expect(page.locator('#rules-kept')).toBeHidden();
+});
+
+test('a fresh book shows no notice of a kept copy', async ({ page }) => {
+  await guest(page);
+  await open(page);
+  await expect(page.locator('#rules-kept')).toBeHidden();
+});
+
+test('a link asking for French opens the French book on an English browser, and a choice made on the page then holds', async ({ page }) => {
+  const errors = await guest(page);
+  await page.goto('/table/rules.html?lang=fr#tempo');
+  await expect(page.locator('body')).toHaveAttribute('data-language', 'fr');
+  await expect(page.locator('#tempo h3')).toContainText(`${frenchTempo.number} ${frenchTempo.title}`);
+
+  await page.getByRole('button', { name: 'English' }).click();
+  await expect(page.locator('body')).toHaveAttribute('data-language', 'en');
+  await expect(page).toHaveURL(/rules\.html#tempo$/);
+  await page.reload();
+  await expect(page.locator('body')).toHaveAttribute('data-language', 'en');
+  expect(errors).toEqual([]);
+});
+
 test.describe('a browser in French', () => {
   test.use({ locale: 'fr-CA' });
 

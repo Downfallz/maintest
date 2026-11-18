@@ -102,8 +102,8 @@ async function load(doc) {
 }
 
 if (typeof document !== 'undefined') {
-  void load(document);
   // Read again when the player's own lists change (their lobby stream, ADR 0164), which a game of theirs ending
   // does, and when the stream opens -- the page loaded, back in view -- rather than on a clock.
   onLobbyChange(event => { if (!document.hidden && (event.event === 'ready' || String(event.data).startsWith('account'))) void load(document); });
+  await load(document);
 }
