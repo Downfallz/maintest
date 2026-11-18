@@ -132,9 +132,9 @@ together: one sender, one budget.
 
 The operator has the last word. **Dismiss as spam** on a report or an idea counts against its sender; a sender
 with three dismissed as spam in 30 days, or one the operator mutes from the sheet (**Stop feedback from this
-player**), no longer sees **Report or suggest**: the page asks the host when it loads (`GET /api/feedback`), the host answers
-`403 Feedback.Muted`, and the page hides the entry before the player writes (#717). A mute is lifted from the sheet, or ends on its own after 30 days. Mutes and spam marks are lines in the
-Activity tab (`feedback.spam`, `feedback.mute`, `feedback.unmute`). An account's mute is kept with its activity
+player**), no longer sees **Report or suggest**. The page asks the host when it loads (`GET /api/feedback`). The
+host answers `403 Feedback.Muted`, and the page hides the entry before the player writes (#717). A mute is lifted
+from the sheet, or ends on its own after 30 days. Mutes and spam marks are lines in the Activity tab (`feedback.spam`, `feedback.mute`, `feedback.unmute`). An account's mute is kept with its activity
 record (ADR 0174); a guest's dies with its seat.
 
 The sheet itself discourages noise without a captcha: **Send** waits until the required text holds 10 characters, and
@@ -353,8 +353,8 @@ and they are the first thing every player can use.
    are noted at one instant, and read in the order noted: the mute above the mark that earned it (#674). The Overview's *Feedback waiting* card is in
    the warning colour while a bug report is new or the host is full. The tab's ids start with `admin-feedback-`,
    because every page's Report or suggest sheet already uses `feedback-`. The privacy panel and policy say the
-   operator can stop a player's feedback for 30 days. A page learned that its player is muted only when it sent
-   (R2's behaviour) until #717: `GET /api/feedback` now answers it before the player writes. The list, the Overview and the spam count read every record kept: up to 100 a day, each
+   operator can stop a player's feedback for 30 days. Until #717 a page learned that its player was muted only when
+   it sent (R2's behaviour); `GET /api/feedback` now answers before the player writes. The list, the Overview and the spam count read every record kept: up to 100 a day, each
    kept until 180 days after it is closed, so a few thousand at most, read by the operator alone.
 5. **I1, ideas grouped.** **Merge into…**, *asked by N* and the sort by it, *planned* with a plan's path,
    *shipped*, *declined* with a reason, **Copy as a plan prompt**. Tests: a merge keeping every sender and adding

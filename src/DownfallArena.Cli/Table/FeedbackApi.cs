@@ -37,9 +37,7 @@ internal sealed partial class FeedbackApi(SendFeedback desk, TableRegistry regis
     {
         if (method == "GET")
         {
-            return await MutedAsync(token, account)
-                ? Problem(403, FeedbackErrors.Muted.Code, FeedbackErrors.Muted.Message)
-                : new StudioResponse(204, StudioResponse.Plain, []);
+            return (await AskedAsync(token, account)).NotKept();
         }
 
         if (method != "POST")
@@ -126,12 +124,25 @@ internal sealed partial class FeedbackApi(SendFeedback desk, TableRegistry regis
     /// Whether the one asking is muted: the signed-in account, else the seat the key names, counted as a sending counts
     /// it. Nothing is looked up for a key: it only names a muted guest when its hash is one, and says nothing else.
     /// </summary>
-    private async Task<bool> MutedAsync(string? token, AccountRequest account)
+    private async Task<StudioResponse> AskedAsync(string? token, AccountRequest account)
     {
-        var signedIn = Accounts is null ? null : (await Accounts.WhoAsync(account))?.Account.Id.ToString();
-        return signedIn is not null
-            ? await desk.MutedAsync(signedIn, signedIn)
-            : !string.IsNullOrEmpty(token) && await desk.MutedAsync(SeatSender(token), account: null);
+        bool muted;
+        try
+        {
+            var signedIn = Accounts is null ? null : (await Accounts.WhoAsync(account))?.Account.Id.ToString();
+            muted = signedIn is not null
+                ? await desk.MutedAsync(signedIn, signedIn)
+                : !string.IsNullOrEmpty(token) && await desk.MutedAsync(SeatSender(token), account: null);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is Azure.Identity.AuthenticationFailedException)
+        {
+            Console.WriteLine($"  Feedback mute could not be read: {failure.Message}");
+            return Problem(503, "Feedback.Unavailable", "Feedback cannot be checked just now. Try again in a few minutes.");
+        }
+
+        return muted
+            ? Problem(403, FeedbackErrors.Muted.Code, FeedbackErrors.Muted.Message)
+            : new StudioResponse(204, StudioResponse.Plain, []);
     }
 
     /// <summary>What the seat the token names adds, or why the token may not send for it; nothing for a request without a seat.</summary>

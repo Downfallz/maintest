@@ -101,9 +101,10 @@ test('finished matches replay before and after frames, then return to result', a
 });
 test('a session replay link reads only that recording and preserves perspective', async ({ page }) => {
   const h = await mount(page, { replay: true }); await matchResult(page); await page.locator('#match-replay').click(); await expect(page.locator('[data-creature="4"]')).toHaveClass(/ally/);
-  // The player's own game settings (ADR 0140) may be read as for any game; no seat is.
+  // The player's own game settings (ADR 0140), and whether their feedback is muted (#717), may be read as for any
+  // game; no seat is.
   // A player opening one of their own games from the lobby holds no operator token: the lobby serves it (ADR 0156).
-  expect([...new Set(h.reads)].filter(path => path !== '/api/account/preferences').sort()).toEqual(['/api/lobby/tables/finished/replay', '/api/me']); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+  expect([...new Set(h.reads)].filter(path => !['/api/account/preferences', '/api/feedback'].includes(path)).sort()).toEqual(['/api/lobby/tables/finished/replay', '/api/me']); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
 test('a replay refused to a signed-out player asks for sign-in, and one of somebody else\'s games says so', async ({ page }) => {
   await mount(page, { replay: true, refused: 401 });

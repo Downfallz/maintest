@@ -135,18 +135,36 @@ test('only the mute hides the entry', () => {
   assert.equal(mutedBy(429, { error: 'Feedback.TooMany' }), false);
 });
 
-test('the page asks the host whether its player is muted before they write, with the seat on screen (#717)', async () => {
+// The host's answer to `GET /api/feedback`, recording what the page asked (#717).
+const asking = (status, json) => {
   const asked = [];
-  const answering = (status, json) => async (path, init) => {
-    asked.push([path, init.method ?? 'GET', init.headers?.['X-Seat-Token'] ?? null]);
+  const request = async (path, init) => {
+    asked.push([path, init.method, init.headers?.['X-Seat-Token'] ?? null]);
     return { status, json: async () => { if (json === undefined) throw new SyntaxError('no body'); return json; } };
   };
+  return { asked, request };
+};
 
-  assert.equal(await feedbackMuteAsked(answering(403, { error: 'Feedback.Muted' }), 'seat-key'), true);
-  assert.equal(await feedbackMuteAsked(answering(204), null), false);
-  assert.equal(await feedbackMuteAsked(answering(503, { error: 'Host.Starting' }), 'seat-key'), null);
+test('the page asks the host, with the seat on screen, whether its player is muted before they write (#717)', async () => {
+  const host = asking(403, { error: 'Feedback.Muted' });
+
+  assert.equal(await feedbackMuteAsked(host.request, 'seat-key'), true);
+  assert.deepEqual(host.asked, [['/api/feedback', 'GET', 'seat-key']]);
+});
+
+test('a player the host lets through, asked as the account without a seat, is not muted', async () => {
+  const host = asking(204);
+
+  assert.equal(await feedbackMuteAsked(host.request, null), false);
+  assert.deepEqual(host.asked, [['/api/feedback', 'GET', null]]);
+});
+
+test('a host that is starting or cannot check says neither, and the page stays as it was', async () => {
+  assert.equal(await feedbackMuteAsked(asking(503, { error: 'Feedback.Unavailable' }).request, 'seat-key'), null);
+});
+
+test('a host that does not answer says neither, and the page stays as it was', async () => {
   assert.equal(await feedbackMuteAsked(async () => { throw new TypeError('offline'); }, null), null);
-  assert.deepEqual(asked, [['/api/feedback', 'GET', 'seat-key'], ['/api/feedback', 'GET', null], ['/api/feedback', 'GET', 'seat-key']]);
 });
 
 test('a kept piece of feedback thanks the player, and a merged one says where it went', () => {
