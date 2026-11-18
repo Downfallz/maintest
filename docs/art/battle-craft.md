@@ -41,7 +41,7 @@ These come from the decisions already taken. No pattern below is an exception to
 4. Reduced motion shows the settled frame. Each entry says its form; for most it is "nothing".
 5. Randomness is pinned where a film strip must repeat. Phaser's particles and its camera shake draw from
    `Math.random`, not from `Phaser.Math.RND`, so BC2 pins `Math.random` in the bench.
-6. The budgets hold (`battle/budget.mjs`, ADR 0136). See what is measured below.
+6. The budgets hold (`battle/budget.mjs`, ADR 0136). The measures are in the next section.
 7. Sound is another matter (ADR 0134). No entry here plays one.
 
 ## Measured on the installed engine
@@ -51,9 +51,9 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 | Fact | Measure | What it means for a pattern |
 | --- | --- | --- |
 | The whole engine is in the bundle | `dist/phaser.esm.js` is 1,388,640 of the 1,711,869 bytes of `live.js`. The bundle already holds the particle emitter, every filter, the shader quad, the point light and the rope. | A pattern that uses an engine feature adds its calling code, and no engine bytes. |
-| What batches | Images, sprites, text, particles and render textures share one batch family; `Graphics` and shapes another; a point light a third (the engine's rendering guide). | Many particles from one emitter are one draw call. Forty `Graphics` objects are not forty: they batch too, until something breaks the batch. |
+| What batches | Images, sprites, text, particles and render textures share one batch family; `Graphics` and shapes another; a point light a third (the engine's rendering guide). | Many particles from one emitter are one draw call. Forty `Graphics` objects are not forty draw calls: they batch too, until something breaks the batch. |
 | What breaks a batch | A filter, a change of blend mode, a change of lighting, another kind of object (a `Phaser.GameObjects.Shader`, a `Phaser.GameObjects.Rope`). | Draw every additive object together, after the normal ones, and not interleaved. |
-| One texture a batch on a phone | `Phaser.Types.Core.RenderConfig.autoMobileTextures` is on by default, and the view does not turn it off: on iOS and Android a batch holds one texture. | Each creature's picture is already its own draw call there. The kit's shapes share one texture, or each costs one more. |
+| One texture a batch on a phone | `Phaser.Types.Core.RenderConfig.autoMobileTextures` is on by default, and the view does not turn it off: on iOS and Android a batch holds one texture. | Each creature's picture is already its own draw call there. Put the kit's shapes on one texture, or each one costs one more draw call. |
 | What a filter costs | The object is drawn to a framebuffer, then one pass per active filter. | A filter is a draw call or more, each frame, for as long as it is active. Remove it when the effect ends. |
 | What the engine warns about | "Draw calls are expensive. Don't use more than a few hundred." "Filling pixels is expensive." | On a phone the limit is pixels filled, before objects counted. |
 | Frame time on a phone | Not measured. No device is attached to a session. | BC10 measures every staging under the browser's CPU throttle. The physical gate stays with ADR 0136. |
@@ -92,7 +92,7 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 
 - **What**: the two figures freeze for a few frames at contact, so the hit reads as heavy. The stop grows with
   the damage. A projectile freezes its target only. The struck figure shakes during the stop, and the shake dies
-  down. SmashWiki gives a cap of 20 frames in Melee and 30 from Brawl on (*to check*).
+  down. SmashWiki gives a cap of 20 frames in Super Smash Bros. Melee and 30 from Brawl on (*to check*).
 - **Source**: [Stop for Big Moments!](https://www.youtube.com/watch?v=OdVkEOzdCPw), Masahiro Sakurai, 2022;
   [Thinking About Hitstop](https://sourcegaming.info/2015/11/11/thoughts-on-hitstop-sakurais-famitsu-column-vol-490-1/),
   Sakurai's Famitsu column, translated by Source Gaming, 2015; [Hitlag](https://www.ssbwiki.com/Hitlag), SmashWiki.
@@ -102,22 +102,23 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   `Phaser.Tweens.Tween#pause` and `Phaser.Tweens.Tween#resume`.
 - **Cost**: none to draw. The stop is spent inside the impact window, never added to it. The cancel path must
   set the time scale back to 1 and remove the timer (`Phaser.Time.TimerEvent#remove`): `killAll` does neither.
-- **Reduced motion**: nothing. There is no motion to stop.
+- **Reduced motion**: nothing. The action is not played, so there is nothing to freeze.
 - **Here**: not built. BC5 builds it: 60 to 120 ms at 1× by damage (*house*), divided by the playback rate.
 
 ### The hold before the number
 
-- **What**: the impact is seen first, then its result is read. A short hold between the flash and the number
-  gives the eye time to move from the body to the text.
+- **What**: the impact is seen first, then its result is read. The loud beats come at once and end early; the
+  scene then goes quiet, so the eye can leave the body for the number.
 - **Source**: [Stop for Big Moments!](https://www.youtube.com/watch?v=OdVkEOzdCPw), Masahiro Sakurai, 2022, for
-  the idea that a pause makes room to read. No source gives a figure: the length is a house rule.
-- **Phaser**: `Phaser.Types.Tweens.TweenBuilderConfig.delay` on the number's own tween, or one
-  `Phaser.Time.Timeline` that places the flash and the number at their milliseconds
-  (`Phaser.Types.Time.TimelineEventConfig.at`).
+  the idea that a pause makes room to read. No source gives a figure: the lengths are house rules.
+- **Phaser**: one `Phaser.Time.Timeline` places the scene's own beats at their milliseconds
+  (`Phaser.Types.Time.TimelineEventConfig.at`): the flash, the burst and the shake first, the slow fade after.
+  The scene holds only what it draws.
 - **Cost**: none.
-- **Reduced motion**: the number is there at once, for `REDUCED_MS` (650 ms), as today.
-- **Here**: the result text is the host's, shown by the page. BC5 holds its entrance 80 to 120 ms after contact
-  (*house*). The text itself is never withheld from a skip.
+- **Reduced motion**: the result is there at once, for `REDUCED_MS` (650 ms), as today.
+- **Here**: the result text is the page's, not the scene's (`battle/src/result-card.ts`): it arrives with the
+  impact frame and no effect delays it (ADR 0131, ADR 0141). So the hold is made on the scene's side: BC5 ends
+  the flash, the burst and the shake within 120 ms of contact (*house*), and nothing bright starts after.
 
 ### Easing families
 
@@ -133,7 +134,8 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   `Phaser.Math.Easing.Back.Out` for an overshoot, `Phaser.Math.Easing.Elastic.Out` for a wobble.
 - **Cost**: none.
 - **Reduced motion**: nothing.
-- **Here**: the view uses `Cubic.In`, `Cubic.Out`, `Quad.Out`, `Sine.Out` and one `Back.Out`. An elastic settle
+- **Here**: the view uses `Cubic.In`, `Cubic.Out`, `Quad.Out` (the short name of `Quadratic.Out`), `Sine.Out`
+  and one `Back.Out`. An elastic settle
   only just fits the 840 ms windup, and does not fit a recoil: BC5 keeps it for the capstones.
 
 ### Stagger and overlap
@@ -162,8 +164,9 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   the feet: `Phaser.GameObjects.Image#setOrigin` at the ground anchor, so a squash does not lift the figure.
 - **Cost**: none. A scale is part of the sprite's transform.
 - **Reduced motion**: nothing.
-- **Here**: not built: a lunge rotates the figure and nothing else. BC5 stretches the strike and squashes the
-  landing by at most 8% (*house*); the mutation cues ride the same transform (`battle/src/mutation-cues.ts`).
+- **Here**: not built: a lunge moves and rotates the figure, and never scales it. BC5 stretches the strike and
+  squashes the landing by at most 8% (*house*). The mutation cues follow the image's scale
+  (`docs/art/mutation-cues.md`), so they squash with it. While an action moves a figure, its breath is stopped.
 
 ### Recoil
 
@@ -176,8 +179,9 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   far end before it returns.
 - **Cost**: one tween.
 - **Reduced motion**: nothing.
-- **Here**: built: 18 px and 5° over 280 ms, eased `Quad.Out`, in `battle/src/scene.ts`; 12 px for a magical hit.
-  BC5 scales it by damage and lets a defeated figure not come back.
+- **Here**: built in `battle/src/scene.ts`: the target a melee spell struck moves 12 px and 4° and comes back,
+  280 ms each way, eased `Quad.Out`; 18 px and 5° when the host served no `visual` for the action. BC5 scales
+  it by damage, and a defeated figure does not come back.
 
 ### Hit flash
 
@@ -191,8 +195,8 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 - **Cost**: none: a tint is a vertex attribute and does not break the batch.
 - **Reduced motion**: nothing. A flash is exactly what the setting removes.
 - **Here**: not built. The acting halo already fills a sprite's shape this way (`battle/src/acting-halo.ts`).
-  BC5 flashes once per hit, 60 to 80 ms (*house*), in bone and never in the target marker's gold. See "Flash
-  limits" before using it on several figures at once.
+  BC5 flashes once per hit, 60 to 80 ms (*house*), in the palette's bone (`--bone`, `docs/art/branding.md`) and
+  never in the target marker's gold. See "Flash limits" before using it on several figures at once.
 
 ### Death
 
@@ -221,14 +225,16 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   kill it at the first skip.
 - **Cost**: one sine per figure per frame.
 - **Reduced motion**: off. The figure stands still.
-- **Here**: removed once (`docs/art/battle-polish.md`); the owner asked for it back. BC5 builds it: about 1.5% of
-  height over 3 to 4 s (*house*), each creature out of phase, stopped while an action moves the figure.
+- **Here**: removed once (`docs/art/battle-polish.md`); the owner asked for it back (question 4 of the plan).
+  BC5 builds it and amends that document: about 1.5% of height over 3 to 4 s (*house*), each creature out of
+  phase, stopped while an action moves the figure. The mutation cues follow the image's scale, so they breathe
+  with it.
 
 ## The camera
 
 ### Shake from trauma
 
-- **What**: keep one value, trauma, between 0 and 1. A hit adds to it; it falls back linearly. The shake is
+- **What**: keep one value, trauma, between 0 and 1. A hit adds to it; it falls back at a steady rate. The shake is
   trauma squared or cubed, so a small hit barely moves the view and a large one moves it much more. Offset is
   `maxOffset × shake × noise`, angle `maxAngle × shake × noise`. Smooth noise reads better than a random draw.
 - **Source**: [Math for Game Programmers: Juicing Your Cameras With Math](https://gdcvault.com/play/1023146/Math-for-Game-Programmers-Juicing),
@@ -239,14 +245,14 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   `Phaser.Cameras.Scene2D.Camera#setRotation` each frame from `Phaser.Math.HashSimplex`.
 - **Cost**: none to draw.
 - **Reduced motion**: nothing. Camera motion is the first thing the setting removes.
-- **Here**: two fixed shakes, 320 ms at 0.003 for a physical hit and 240 ms at 0.0015 for a magical one. BC5
-  replaces them with one trauma value: damage adds to it, and a blood cost alone still shakes nothing
-  (`docs/art/spell-vfx.md`).
+- **Here**: two fixed shakes: 240 ms at 0.0015 when a physical spell's contact struck someone, and 320 ms at
+  0.003 when the host served no `visual` for the action. BC5 replaces them with one trauma value: damage adds
+  to it, and a blood cost alone does not shake the view, as today (`docs/art/spell-vfx.md`).
 
 ### Punch zoom
 
 - **What**: the camera jumps a little closer on a heavy hit and eases back. With a hit stop it marks the one
-  blow that matters. Smash keeps it for slow, hard-to-land hits.
+  blow that matters. Super Smash Bros. keeps it for slow, hard-to-land hits.
 - **Source**: [Special Zoom](https://www.ssbwiki.com/Final_Zoom), SmashWiki.
 - **Phaser**: `Phaser.Cameras.Scene2D.Camera#zoomTo` with an ease, or `Phaser.Cameras.Scene2D.Camera#setZoom`
   from a tween. `Phaser.Cameras.Scene2D.Camera#resetFX` does not reset a zoom: the cancel path must also call
@@ -282,8 +288,10 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 - **Cost**: no download. A 64 px square is 16 KiB of texture memory. On a phone a batch holds one texture, so
   the shapes go on one canvas, not one texture each.
 - **Reduced motion**: the textures exist; nothing plays them.
-- **Here**: not built: every effect is a `Graphics` drawn once. BC4 makes the textures in the kit. A generated
-  sprite sheet is for what these cannot give (question 3 of the plan).
+- **Here**: every spell effect is a `Graphics` drawn once. The acting halo already makes its soft glow this
+  way, on a canvas with a radial gradient (`battle/src/acting-halo.ts`): BC4 reuses that route for the kit's
+  textures and adds no second helper. A generated sprite sheet is for what these cannot give (question 3 of
+  the plan).
 
 ### Burst
 
@@ -299,8 +307,10 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 - **Cost**: one draw call for the emitter, whatever the count. One emitter per texture and blend mode, reused
   for every burst: not one per effect.
 - **Reduced motion**: nothing.
-- **Here**: the lab's impact tweens ten `Graphics` sparks by hand (`battle/src/scene.ts`). BC4's burst primitive
-  replaces that: 8 to 24 particles (*house*), cleared with `Phaser.GameObjects.Particles.ParticleEmitter#killAll`.
+- **Here**: when the host served no `visual` for an action, as in the battle lab's sample, `burst` in
+  `battle/src/scene.ts` tweens a ring and 14 rectangles by hand; a mutation reveal uses the ring alone. BC4's
+  burst primitive replaces the rectangles: 8 to 24 particles (*house*), cleared with
+  `Phaser.GameObjects.Particles.ParticleEmitter#killAll`.
 
 ### Flow
 
@@ -353,8 +363,10 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   `Phaser.BlendModes.SCREEN` sums more gently and does not blow out.
 - **Cost**: a change of blend mode starts a new batch. Draw every additive object together.
 - **Reduced motion**: nothing.
-- **Here**: four additive objects today: the capstone halos and the condition motes. The eclipse ground is dark,
-  so additive light reads on it; over a pale sprite, use `SCREEN`. BC4 gives the kit one additive layer.
+- **Here**: four kinds of additive object today: the capstone's halo and its sparks
+  (`battle/src/capstone-effects.ts`), the condition's motes and its rings (`battle/src/condition-auras.ts`).
+  The ground is basalt under a bright eclipse: additive light reads on the basalt and blows out against the
+  disc and over a pale sprite, where `SCREEN` is used. BC4 gives the kit one additive layer.
 
 ### A budget of pixels
 
@@ -374,9 +386,9 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 
 A filter is Phaser 4's name for what Phaser 3 called an FX, and it replaces masks too. A game object must opt in
 (`Phaser.GameObjects.Image#enableFilters`) before it has a `filters` list; a camera has one from the start. The
-list has two halves: internal filters cover the object and are cheaper, external ones cover the context, usually
-the screen. A `Graphics` has no size, so its internal filters cover the context too: bake the drawing to a
-texture first, or filter a container.
+list has two halves: internal filters cover the object and are cheaper, external ones cover the whole drawing
+area (the context), usually the screen. A `Graphics` has no size, so its internal filters cover the context too:
+bake the drawing to a texture first, or filter a container.
 
 ### Glow
 
@@ -385,11 +397,11 @@ texture first, or filter a container.
   the notes Phaser 4.2.1 ships.
 - **Phaser**: `Phaser.GameObjects.Components.FilterList#addGlow`; tween `Phaser.Filters.Glow#outerStrength` for
   a pulse. The quality and the distance are fixed when the filter is made.
-- **Cost**: a framebuffer and a pass, each frame, for each glowing object. The cheap form costs nothing: a
+- **Cost**: a framebuffer and a pass, each frame, for each glowing object. The cheap form costs little: a
   soft-dot sprite, tinted, additive, drawn behind the shape.
-- **Reduced motion**: a glow that does not move may stay. A pulse is removed.
+- **Reduced motion**: nothing. The settled frame holds no effect, a still one included.
 - **Here**: the capstone halo is the cheap form already (`battle/src/capstone-effects.ts`). BC4 keeps the cheap
-  form as the default, and the filter for one hero effect a family.
+  form as the default, and the filter for one hero effect in each family.
 
 ### Blur
 
@@ -397,7 +409,7 @@ texture first, or filter a container.
 - **Source**: [Phaser 4 Filters and Post-FX](https://unpkg.com/phaser@4.2.1/skills/filters-and-postfx/SKILL.md),
   Phaser 4.2.1.
 - **Phaser**: `Phaser.GameObjects.Components.FilterList#addBlur`, its amount in `Phaser.Filters.Blur#strength`.
-- **Cost**: the most expensive common filter: several samples a pixel. On the camera it is the whole screen.
+- **Cost**: the most expensive common filter: several samples per pixel. On the camera it is the whole screen.
   A smear is cheaper as a stretched sprite.
 - **Reduced motion**: nothing.
 - **Here**: not used. BC9 may blur the ground during a capstone's push, and only if BC10's measure allows it.
@@ -428,7 +440,7 @@ texture first, or filter a container.
   `Phaser.Display.ColorMatrix#saturate`, `Phaser.Display.ColorMatrix#brightness`,
   `Phaser.Display.ColorMatrix#reset`.
 - **Cost**: one pass. Cheap per pixel, but on the camera it forces the whole scene through a framebuffer.
-- **Reduced motion**: a change of colour that does not flash may stay. See "Flash limits".
+- **Reduced motion**: nothing during an action. The settled frame of a defeat keeps today's dimmed figure.
 - **Here**: not used: the ground and the plates are tinted (`battle/src/battle-horizon.ts`). A tint is free, so
   it comes first; the matrix is for what a tint cannot do, the drained colour of a death.
 
@@ -437,11 +449,11 @@ texture first, or filter a container.
 - **What**: the bright parts of the picture bleed light around them.
 - **Source**: [Phaser 4 Filters and Post-FX](https://unpkg.com/phaser@4.2.1/skills/filters-and-postfx/SKILL.md),
   Phaser 4.2.1: there is no Bloom filter in Phaser 4.
-- **Phaser**: `Phaser.Actions.AddEffectBloom` builds it, or by hand:
-  `Phaser.GameObjects.Components.FilterList#addParallelFilters`, a threshold and a blur on
+- **Phaser**: `Phaser.Actions.AddEffectBloom` builds it. By hand:
+  `Phaser.GameObjects.Components.FilterList#addParallelFilters`, with a threshold and a blur on
   `Phaser.Filters.ParallelFilters#top`, blended back additively.
 - **Cost**: three passes or more. The heaviest pattern in the book.
-- **Reduced motion**: static, so it may stay; it is the cost that decides.
+- **Reduced motion**: nothing.
 - **Here**: not used, and not planned for a phone. Additive particles on the dark ground already read as light.
 
 ### One hero shader
@@ -454,10 +466,10 @@ texture first, or filter a container.
   [Domain warping](https://iquilezles.org/articles/warp), Inigo Quilez.
 - **Phaser**: `Phaser.GameObjects.GameObjectFactory#shader` with a `Phaser.Types.GameObjects.Shader.ShaderQuadConfig`:
   the code in `.fragmentSource`, the values in `.setupUniforms` or through `Phaser.GameObjects.Shader#setUniform`.
-  Time is not passed for you. With no code to write: `Phaser.GameObjects.NoiseSimplex2D` and
-  `Phaser.GameObjects.Gradient` are shaders the engine ships.
+  Phaser does not pass the time to the shader; you set it. For no code at all, the engine ships two shaders:
+  `Phaser.GameObjects.NoiseSimplex2D` and `Phaser.GameObjects.Gradient`.
 - **Cost**: one draw call each, and it breaks the batch. Its price is the pixels of its quad: keep the quad small.
-- **Reduced motion**: one still frame of it, or nothing.
+- **Reduced motion**: nothing during an action. A shader that is part of the ground shows one still frame.
 - **Here**: not used. The plan allows one for a hero effect. Candidates: the eclipse's corona (BC9), the void
   (BC8).
 
@@ -528,7 +540,7 @@ texture first, or filter a container.
 - **Source**: [2D Parallax](https://docs.godotengine.org/en/stable/tutorials/2d/2d_parallax.html), the Godot
   documentation.
 - **Phaser**: `Phaser.GameObjects.Image#setScrollFactor` on each plate: the camera's shake, punch and push then
-  move the near plates more than the far ones, with no code a frame.
+  move the near plates more than the far ones, with no code each frame.
 - **Cost**: none.
 - **Reduced motion**: nothing moves, so nothing shifts.
 - **Here**: the horizon plates sit over the painting at fixed places (`battle/src/battle-horizon.ts`). BC9 gives
@@ -549,7 +561,8 @@ texture first, or filter a container.
 - **Cost**: one draw call for the embers, one for the fog. A band of fog covers many pixels: keep it to one.
 - **Reduced motion**: nothing. The motes are hidden, as today.
 - **Here**: 24 gold motes, each a shape moved by hand each frame, hidden under reduced motion
-  (`battle/src/scene.ts`). BC9 makes them one emitter and adds the fog.
+  (`battle/src/scene.ts`). BC9 makes them one emitter, in the same gold at the same faint alpha, and adds the
+  fog, in a slate taken from the painting and not in a colour that means something on the page.
 
 ### A light that answers a cast
 
@@ -639,7 +652,7 @@ texture first, or filter a container.
 - **Cost**: none.
 - **Reduced motion**: no flash at all. The limit holds with the setting off, for everyone.
 - **Here**: at 2× an action lasts about 1.5 s, and one spell can hit three figures. BC4's flash and light beats
-  count: one flash per action for each figure, one change of light per cast. BC10 checks all 44 stagings.
+  are counted: one flash per figure per action, one change of light per cast. BC10 checks all 44 stagings.
 
 ### Reduced motion
 
@@ -671,7 +684,8 @@ one comes back. The left column is the Phaser 3 name, the right what Phaser 4.2.
 | `Phaser.GameObjects.Particles.ParticleEmitterManager` | The emitter is the game object: `Phaser.GameObjects.GameObjectFactory#particles` returns it. |
 | `Phaser.Geom.Point` | `Phaser.Math.Vector2`. |
 | `Phaser.Math.PI2` | `Phaser.Math.TAU`, which is now 2π; it was π/2 in Phaser 3. |
-| `Phaser.GameObjects.Mesh`, `Phaser.GameObjects.Plane` | Removed. |
+| `Phaser.GameObjects.Mesh` | `Phaser.GameObjects.Mesh2D`, made by `Phaser.GameObjects.GameObjectFactory#mesh2d`: a flat textured mesh. |
+| `Phaser.GameObjects.Plane` | Removed. |
 | `Phaser.Textures.TextureManager#generate` | `Phaser.GameObjects.Graphics#generateTexture`, or a canvas texture. |
 
 ## Declared, and dead
@@ -688,12 +702,18 @@ The types cannot catch these. They compile, and do the wrong thing.
 
 ## How the book is kept
 
-- `studio/battle-craft.test.js` reads this file in the gate. Every engine name written in backticks exists in
-  `battle/node_modules/phaser/types`; every name in the left column of "Phaser 3 names that are gone" does not;
-  every entry has its six lines, a linked source and an engine name. So an entry that cannot name a real API is
-  not in the book.
+- `studio/battle-craft.test.js` reads this file in the gate. Every name in backticks that starts with `Phaser.`,
+  and every key continued from one, exists in `battle/node_modules/phaser/types`; every name in the left column
+  of "Phaser 3 names that are gone" does not; every entry has its six lines, a linked source and an engine name.
+  So an entry that cannot name a real API is not in the book.
+- The test reads a name from the first character of its backticks. It refuses a span that hides one further in,
+  or that reaches the engine through an instance: write the class and the member. It does not check the right
+  column of the two tables of traps, nor what a sentence says a name does: a reader checks those.
 - To check a name before writing it:
-  `node scripts/battle/phaser-symbols.mjs "Phaser.Cameras.Scene2D.Camera#shake"`.
+
+  ```bash
+  node scripts/battle/phaser-symbols.mjs "Phaser.Cameras.Scene2D.Camera#shake"
+  ```
 - A change to this file runs the full build in CI, not the light one: the light build installs no Phaser
   (`studio/browser/plan.js`).
 - When Phaser is upgraded, the test says which names moved. Fix the entry, then read "Declared, and dead" again

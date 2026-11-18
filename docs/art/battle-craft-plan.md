@@ -115,14 +115,14 @@ that extends it.
    *Built (2026-11-18)*: [the craft book](battle-craft.md), 40 entries in the eight groups, each with its six
    lines, and two tables of traps: the Phaser 3 names that are gone, and the names still declared that do the
    wrong thing. `studio/battle-craft.test.js` holds every engine name the book writes to the installed types
-   through `scripts/battle/phaser-symbols.mjs`, which also answers for one name from the command line; a change to
-   the book runs CI's full build, since the light one installs no Phaser. Found on the way, and written in the
-   book: the whole engine is already in `live.js` (1,388,640 of its 1,711,869 bytes), so an engine feature costs
-   only its calling code; `resetFX` does not reset a zoom; `killAll` would kill a breath made of a tween; the
-   particles and the camera shake draw from `Math.random`, which BC2's bench must pin for two film strips to
-   agree. Left: the session's network opened none of the links, so each source was found by search and not
-   read, and the figures taken from a search excerpt are marked *to check*; and no frame time is measured,
-   which is BC10's.
+   through `scripts/battle/phaser-symbols.mjs`, which also answers for one name from the command line. A change
+   to the book runs CI's full build, since the light one installs no Phaser. Found on the way, and written in
+   the book: the whole engine is already in `live.js` (1,388,640 of its 1,711,869 bytes). So an engine feature
+   costs only its calling code. On a phone a batch holds one texture. `resetFX` does not reset a zoom. `killAll`
+   would kill a breath made of a tween. The particles and the camera shake draw from `Math.random`, which BC2's
+   bench must pin for two film strips to agree. Left: the session's network opened none of the links, so each
+   source was found by search and not read, and the figures taken from a search excerpt are marked *to check*.
+   No frame time is measured; that is BC10's.
 
 2. **BC2, the bench and the film strip.** `/battle-lab?bench`, `scripts/battle/filmstrip.mjs`, the clock stepping.
    Tests: the bench lists all 44 entries; two runs of one effect give the same sheet; `live.js` holds no bench code.
