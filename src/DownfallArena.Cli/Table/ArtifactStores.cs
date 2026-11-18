@@ -166,7 +166,12 @@ internal static class ArtifactStores
     }
 
     private static FeedbackIndex Indexed<TStore>(TStore store, TimeProvider clock)
-        where TStore : IFeedbackStore, IFeedbackIndexStore => new(store, store, clock);
+        where TStore : IFeedbackStore, IFeedbackIndexStore => new(store, store, clock)
+    {
+        // A record kept stays kept when its index cannot be written: the next read puts the index right (#866).
+        Passes = failure => TableRegistry.StoreFails(failure) || failure is AuthenticationFailedException,
+        Said = Console.WriteLine,
+    };
 
     /// <summary>The container the content tables began on is kept in, next to the recordings' one (ADR 0163).</summary>
     public const string ContentContainer = "content";

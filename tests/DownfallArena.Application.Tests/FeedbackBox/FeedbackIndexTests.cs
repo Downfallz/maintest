@@ -14,10 +14,11 @@ public sealed class FeedbackIndexTests : IDisposable
     private readonly KeptFeedback _store = new();
     private readonly FeedbackWrites _writes = new();
     private readonly FeedbackIndex _index;
+    private readonly List<string> _said = [];
 
     public FeedbackIndexTests()
     {
-        _index = new FeedbackIndex(_store, _store, _clock);
+        _index = new FeedbackIndex(_store, _store, _clock) { Passes = failure => failure is IOException, Said = _said.Add };
     }
 
     public void Dispose() => _writes.Dispose();
@@ -104,7 +105,7 @@ public sealed class FeedbackIndexTests : IDisposable
         var third = await Desk().SetStatusAsync(marks[2].Id, FeedbackStatus.Dismissed, Feedback.SpamReason, "mark", Cancel);
 
         third.Value.Muted.ShouldNotBeNull();
-        (_store.Opened - opened).ShouldBeLessThanOrEqualTo(3, "the mark reads its own record, never the others");
+        (_store.Opened - opened).ShouldBeLessThanOrEqualTo(4, "the mark reads its own record, twice read and twice placed, never the others");
     }
 
     [Fact]
@@ -135,6 +136,64 @@ public sealed class FeedbackIndexTests : IDisposable
         await _index.Records.SaveAsync(second, Cancel);
 
         _store.Index!.Rows.Select(row => row.Id).ShouldBe([first.Id, second.Id, elsewhere.Id], ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task A_piece_reopened_while_the_index_could_not_be_written_is_listed_open_again()
+    {
+        var report = await KeptAsync("seat-a");
+        await Desk().SetStatusAsync(report.Id, FeedbackStatus.Dismissed, "not a bug", "mark", Cancel);
+        _store.IndexWritesBeforeFailure = 1;
+
+        var reopened = await Desk().SetStatusAsync(report.Id, FeedbackStatus.Seen, null, "mark", Cancel);
+
+        reopened.IsSuccess.ShouldBeTrue("the record was kept: the index's hiccup does not fail it");
+        _said.ShouldHaveSingleItem().ShouldContain(report.Id);
+        (await Desk().PageAsync(new FeedbackFilter(OpenOnly: true), 1, Cancel)).Rows.ShouldHaveSingleItem().Id.ShouldBe(report.Id);
+        _store.Index!.Closed.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task A_sending_kept_while_the_index_could_not_be_written_is_answered_kept_and_listed()
+    {
+        await KeptAsync("seat-a");
+        _store.IndexWritesBeforeFailure = 0;
+        var send = new SendFeedback(_index.Records, new GuestAddresses(), _writes, _clock);
+
+        var answer = await send.HandleAsync(new FeedbackSent { Kind = FeedbackKind.Idea, Sender = "seat-b", Category = "battle", Text = "Let me watch the last round again." }, Cancel);
+
+        answer.Refused.ShouldBeNull();
+        (await Desk().PageAsync(new FeedbackFilter(OpenOnly: true), 1, Cancel)).Rows.Select(one => one.Id).ShouldContain(answer.Id!);
+    }
+
+    [Fact]
+    public async Task A_piece_closed_behind_the_index_s_back_is_not_shown_on_an_open_page()
+    {
+        var report = await KeptAsync("seat-a");
+        await Desk().WaitingAsync(Cancel);
+
+        await _store.SaveAsync(report with { Status = FeedbackStatus.Dismissed, ClosedAt = _clock.GetUtcNow(), Reason = "x" }, Cancel);
+
+        (await Desk().PageAsync(new FeedbackFilter(OpenOnly: true), 1, Cancel)).Rows.ShouldBeEmpty();
+        _store.Index!.Closed.ShouldBe([report.Id]);
+    }
+
+    [Fact]
+    public async Task The_third_spam_mark_mutes_its_sender_even_when_the_index_missed_it()
+    {
+        var marks = new List<Feedback>();
+        for (var one = 0; one < FeedbackMute.SpamMarks; one++)
+        {
+            marks.Add(await KeptAsync("seat-flood"));
+        }
+
+        await Desk().SetStatusAsync(marks[0].Id, FeedbackStatus.Dismissed, Feedback.SpamReason, "mark", Cancel);
+        await Desk().SetStatusAsync(marks[1].Id, FeedbackStatus.Dismissed, Feedback.SpamReason, "mark", Cancel);
+        _store.IndexWritesBeforeFailure = 1;
+
+        var third = await Desk().SetStatusAsync(marks[2].Id, FeedbackStatus.Dismissed, Feedback.SpamReason, "mark", Cancel);
+
+        third.Value.Muted.ShouldNotBeNull();
     }
 
     [Fact]

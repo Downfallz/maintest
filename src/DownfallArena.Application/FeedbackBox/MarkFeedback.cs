@@ -61,8 +61,9 @@ public sealed class MarkFeedback(FeedbackIndex index, FeedbackMutes mutes, Feedb
             return null;
         }
 
-        var marks = (await index.RowsAsync(cancellationToken))
-            .Count(one => one.Sender == marked.Sender && one.Spam && one.ClosedAt is { } closed && now - closed <= FeedbackMute.SpamWindow);
+        // This mark is counted from its record, the others from the index's rows: a mark the index missed is this one.
+        var marks = 1 + (await index.RowsAsync(cancellationToken))
+            .Count(one => one.Id != marked.Id && one.Sender == marked.Sender && one.Spam && one.ClosedAt is { } closed && now - closed <= FeedbackMute.SpamWindow);
         if (marks < FeedbackMute.SpamMarks)
         {
             return null;

@@ -1,0 +1,2 @@
+# code-reviewer lessons (branch claude/issues-865-866-725-751-dyk9wl)
+- An index reconciled against a listing by id alone (rows + "closed" ids) heals missing and deleted ids but never a known id whose state changed: a lost note on a closed->open change hides the record for good; ask what re-verifies a *known* id, and whether a note writes the summary it holds or re-reads the record inside the CAS loop (#866, FeedbackIndex.ChangeAsync, 0440b7d).

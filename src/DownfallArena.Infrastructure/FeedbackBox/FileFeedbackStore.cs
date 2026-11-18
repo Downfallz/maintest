@@ -9,8 +9,11 @@ namespace DownfallArena.Infrastructure.FeedbackBox;
 /// </summary>
 public sealed class FileFeedbackStore : IFeedbackStore, IFeedbackIndexStore
 {
-    /// <summary>One write of an index at a time in this process: a laptop's table is one process, the tending pass in it.</summary>
-    private static readonly SemaphoreSlim IndexWrites = new(1, 1);
+    /// <summary>The file a write of the index holds alone while it checks the version and moves its copy in.</summary>
+    private const string IndexLock = "index.lock";
+
+    /// <summary>How long a write of the index waits for another process's, a short try at a time.</summary>
+    private static readonly TimeSpan LockWait = TimeSpan.FromSeconds(5);
 
     public FileFeedbackStore(string directory)
     {
@@ -92,25 +95,40 @@ public sealed class FileFeedbackStore : IFeedbackStore, IFeedbackIndexStore
     public async Task<bool> WriteIndexAsync(FeedbackIndexContent content, string? version, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(content);
-        await IndexWrites.WaitAsync(cancellationToken);
-        try
-        {
-            var now = await IndexTextAsync(cancellationToken);
-            if ((now is null ? null : VersionOf(now)) != version)
-            {
-                return false;
-            }
+        System.IO.Directory.CreateDirectory(Directory);
 
-            System.IO.Directory.CreateDirectory(Directory);
-            var path = Path.Combine(Directory, FeedbackDocuments.IndexName);
-            var staged = $"{path}.{Guid.NewGuid():N}.tmp";
-            await File.WriteAllTextAsync(staged, FeedbackDocuments.WriteIndex(content), cancellationToken);
-            File.Move(staged, path, overwrite: true);
-            return true;
-        }
-        finally
+        // A lock file held alone, so a table and a `table-tend` run on the same directory never interleave a check and a move.
+        await using var held = await LockedAsync(cancellationToken);
+        var now = await IndexTextAsync(cancellationToken);
+        if ((now is null ? null : VersionOf(now)) != version)
         {
-            IndexWrites.Release();
+            return false;
+        }
+
+        var path = Path.Combine(Directory, FeedbackDocuments.IndexName);
+        var staged = $"{path}.{Guid.NewGuid():N}.tmp";
+        await File.WriteAllTextAsync(staged, FeedbackDocuments.WriteIndex(content), cancellationToken);
+        File.Move(staged, path, overwrite: true);
+        return true;
+    }
+
+    /// <summary>
+    /// The lock file, held alone; it is left in place, since a file deleted while another process waits on it would let
+    /// two writers each hold a lock of their own.
+    /// </summary>
+    private async Task<FileStream> LockedAsync(CancellationToken cancellationToken)
+    {
+        var until = DateTime.UtcNow + LockWait;
+        while (true)
+        {
+            try
+            {
+                return new FileStream(Path.Combine(Directory, IndexLock), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+            }
+            catch (IOException) when (DateTime.UtcNow < until)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(20), cancellationToken);
+            }
         }
     }
 

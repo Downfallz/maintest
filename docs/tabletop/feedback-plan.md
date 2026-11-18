@@ -358,8 +358,9 @@ and they are the first thing every player can use.
    operator can stop a player's feedback for 30 days. Until #717 a page learned that its player was muted only when
    it sent (R2's behaviour); `GET /api/feedback` now answers before the player writes (`AskFeedbackMuted`, #865). The list of open feedback,
    the Overview and the spam count read the index of feedback (`FeedbackIndex`, #866): a row for each open piece and
-   each spam mark within 30 days, and the ids of the rest. It is written with each change, over the version it read,
-   and checked against a listing of the store at each read, so what the tending job lets go of leaves it. The list
+   each spam mark within 30 days, and the ids of the rest. A save takes the id out of the index, writes the record,
+   then places it; the index is written only if no other write came since. Each read checks it against a listing of
+   the store, so feedback the tending job deletes leaves it, and an id a cut-short save took out comes back. The list
    opens the page's rows alone; a filter that keeps closed feedback still reads every record.
 5. **I1, ideas grouped.** **Merge into…**, *asked by N* and the sort by it, *planned* with a plan's path,
    *shipped*, *declined* with a reason, **Copy as a plan prompt**. Tests: a merge keeping every sender and adding
@@ -474,8 +475,9 @@ and they are the first thing every player can use.
 
    Left, then settled in #751: a player named like a word the journal holds on its own (`person`, `player1`) is looked
    for in the file's other words alone, since a journal's kinds, slots, tempos and seats are the format's; the
-   refusal names the field that holds a name. The tab reads every page of open filed reports, and past the 500 closed
-   issues it reads in one window, asks each filed issue left by its number until GitHub refuses. A report whose table's record is missing or cannot
+   refusal names the field that holds a name. The tab reads every page of open filed reports. Past the 500 closed
+   issues it can read in one window, it asks for each remaining filed issue by its number, until GitHub refuses. A
+   report whose table's record is missing or cannot
    be read is not held as under way: no host can pick that table up and play it (ADR 0159). The repository stays a
    constant, not the host's configuration (the owner's decision on #751). No browser spec plays the new buttons yet.
 8. **R6, bug scenarios and their tests.** `scenarios/bugs/` read by the host and listed as *Bug #N*;

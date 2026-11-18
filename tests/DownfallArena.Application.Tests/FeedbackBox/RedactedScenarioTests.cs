@@ -143,6 +143,15 @@ public sealed class RedactedScenarioTests
     }
 
     [Fact]
+    public void A_seat_taken_by_a_weights_file_is_looked_through_as_any_other_text()
+    {
+        var file = File(Report, Report, RedactedScenario.MatchOf(Report).ToString()).Replace("\"to\":\"person\"", "\"to\":\"/home/mark/weights.json\"", StringComparison.Ordinal);
+
+        RedactedScenario.Check(file, Report, [("a player's name", "mark")]).Error.Message
+            .ShouldBe("The scenario still holds a player's name, in its journal before the cut: it is not offered.");
+    }
+
+    [Fact]
     public void A_name_inside_a_longer_word_or_in_the_content_the_file_carries_is_not_a_name_it_holds()
     {
         var schema = new JsonObject { ["creatures"] = new JsonArray("creature:mark:v1") };

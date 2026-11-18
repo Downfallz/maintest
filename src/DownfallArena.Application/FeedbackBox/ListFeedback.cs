@@ -38,10 +38,15 @@ public sealed class ListFeedback(FeedbackIndex index)
                 continue;
             }
 
-            // A row the index held wrong, as a change cut short between the record and the index leaves it, is put right.
+            // A row the index held wrong, as a write of another revision that keeps no index leaves it, is put right, and
+            // what the filter no longer keeps is not shown.
             if (FeedbackSummary.Of(found) != row)
             {
-                await index.NoteAsync(found, cancellationToken);
+                await index.NoteAsync(found.Id, cancellationToken);
+                if (!filter.Keeps(found))
+                {
+                    continue;
+                }
             }
 
             rows.Add(found);

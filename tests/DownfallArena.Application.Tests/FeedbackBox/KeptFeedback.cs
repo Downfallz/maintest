@@ -21,6 +21,9 @@ internal sealed class KeptFeedback : IFeedbackStore, IFeedbackIndexStore
     /// <summary>The index as last written; none before the first write.</summary>
     public FeedbackIndexContent? Index => _index;
 
+    /// <summary>How many index writes go through before the next one fails as a storage hiccup would; none never fails.</summary>
+    public int? IndexWritesBeforeFailure { get; set; }
+
     /// <summary>Run once before the next index write is checked: another process's write landing first.</summary>
     public Func<Task>? BeforeIndexWrite { get; set; }
 
@@ -29,6 +32,15 @@ internal sealed class KeptFeedback : IFeedbackStore, IFeedbackIndexStore
 
     public async Task<bool> WriteIndexAsync(FeedbackIndexContent content, string? version, CancellationToken cancellationToken = default)
     {
+        if (IndexWritesBeforeFailure is { } left)
+        {
+            IndexWritesBeforeFailure = left == 0 ? null : left - 1;
+            if (left == 0)
+            {
+                throw new IOException("The storage did not answer.");
+            }
+        }
+
         if (BeforeIndexWrite is { } first)
         {
             BeforeIndexWrite = null;

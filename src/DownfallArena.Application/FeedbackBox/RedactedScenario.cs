@@ -101,7 +101,7 @@ public static class RedactedScenario
     /// <summary>
     /// Every text the file holds, with the top-level field it is in, the content it carries left out. Not its fields'
     /// names, nor the values the format writes from words of its own: a file's format and seat, and a journal line's
-    /// kind, slot, speed and who took a seat. A player may well be named <c>person</c>, <c>decision</c> or
+    /// kind, slot, speed and who took a seat, when an agent's word names it. A player may well be named <c>person</c>, <c>decision</c> or
     /// <c>player1</c>, and is then looked for in the file's other words alone (#751).
     /// </summary>
     private static IEnumerable<(string Where, string Text)> Words(JsonElement root) =>
@@ -114,7 +114,7 @@ public static class RedactedScenario
         JsonValueKind.String => [element.GetString()!],
         JsonValueKind.Array => element.EnumerateArray().SelectMany(item => Texts(item, journal)),
         JsonValueKind.Object => element.EnumerateObject()
-            .Where(property => !journal || !JournalWords.Contains(property.Name))
+            .Where(property => !journal || !JournalWords.Contains(property.Name) || (property.Name == "to" && !AgentWord(property.Value)))
             .SelectMany(property => Texts(property.Value, journal)),
         _ => [],
     };
@@ -124,6 +124,13 @@ public static class RedactedScenario
 
     /// <summary>The fields of a journal line written from the format's own words: a kind of line, a seat, a tempo, an agent.</summary>
     private static readonly HashSet<string> JournalWords = new(["kind", "slot", "speed", "to", "late"], StringComparer.Ordinal);
+
+    /// <summary>
+    /// Whether who took a seat is named by a word of the host's (<c>person</c>, an agent such as <c>greedy</c>), not by a
+    /// path to a weights file the pilot typed, which is looked through as any other text.
+    /// </summary>
+    private static bool AgentWord(JsonElement value) =>
+        value.ValueKind == JsonValueKind.String && value.GetString() is { } named && !named.Contains('/', StringComparison.Ordinal) && !named.Contains('\\', StringComparison.Ordinal);
 
     /// <summary>A top-level field as the refusal names it, so the operator sees where the name was found.</summary>
     private static string WhereOf(string field) => field switch

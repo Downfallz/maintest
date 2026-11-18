@@ -20,8 +20,8 @@ internal static class FeedbackRecords
         };
 
     /// <summary>
-    /// Every record kept, the newest first. Only the operator's list, the Overview's card and the spam count read it,
-    /// never a player's sending (#693), and never under the write gate, so the players' sending never waits on it.
+    /// Every record kept, the newest first. Only the operator's list filtered to closed feedback reads it, the rest reading
+    /// the index of feedback (#866); never a player's sending (#693), and never under the write gate.
     /// </summary>
     public static async Task<List<Feedback>> AllAsync(IFeedbackStore store, CancellationToken cancellationToken)
     {

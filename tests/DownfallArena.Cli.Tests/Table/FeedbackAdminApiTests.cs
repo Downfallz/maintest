@@ -27,6 +27,7 @@ public sealed class FeedbackAdminApiTests : IDisposable
     private readonly FakeTimeProvider _clock = new(new DateTimeOffset(2026, 11, 16, 12, 0, 0, TimeSpan.Zero));
     private readonly TableRegistry _registry;
     private readonly FileFeedbackStore _feedback;
+    private readonly FeedbackIndex _index;
     private readonly FeedbackWrites _writes = new();
     private readonly FeedbackMutes _mutes = new(null);
     private readonly OperatorActions _actions;
@@ -35,6 +36,7 @@ public sealed class FeedbackAdminApiTests : IDisposable
     {
         _registry = _hosted.Registry();
         _feedback = new FileFeedbackStore(Path.Combine(_root, "feedback"));
+        _index = new FeedbackIndex(_feedback, _feedback, _clock);
         _actions = new OperatorActions(new FileOperatorLog(Path.Combine(_root, "log")), _clock);
     }
 
@@ -58,10 +60,11 @@ public sealed class FeedbackAdminApiTests : IDisposable
     private AdminApi Admin() =>
         new(_registry, _hosted.Composer, OperatorGate.WithToken(Token), _clock, "Rules", _hosted.Stored)
         {
-            Feedback = new FeedbackAdminApi(FeedbackDesk.Open(new FeedbackIndex(_feedback, _feedback, _clock), _mutes, _writes, _clock), _hosted.Stored, _clock) { Notes = new OperatorNotes(_actions) },
+            Feedback = new FeedbackAdminApi(FeedbackDesk.Open(_index, _mutes, _writes, _clock), _hosted.Stored, _clock) { Notes = new OperatorNotes(_actions) },
         };
 
-    private FeedbackApi Players() => new(new SendFeedback(_feedback, new GuestAddresses(), _writes, _clock, _mutes), new AskFeedbackMuted(_mutes, _clock), _registry);
+    /// <summary>The players' route over the index's store, as the host wires it (#866).</summary>
+    private FeedbackApi Players() => new(new SendFeedback(_index.Records, new GuestAddresses(), _writes, _clock, _mutes), new AskFeedbackMuted(_mutes, _clock), _registry);
 
     /// <summary>Asks as the operator, then moves the clock a second, so the Activity lines sort as they were noted.</summary>
     private async Task<StudioResponse> AskAsync(string method, string path, object? body = null, string? query = null, string? token = Token)
@@ -122,6 +125,17 @@ public sealed class FeedbackAdminApiTests : IDisposable
         (context.GetProperty("table").GetString(), context.GetProperty("round").GetInt32()).ShouldBe((table.Id, 1));
         context.GetProperty("position").GetProperty("slot").GetString().ShouldBe("Player1");
         sheet.GetProperty("mute").ValueKind.ShouldBe(JsonValueKind.Null);
+    }
+
+    [Fact]
+    public async Task A_report_sent_and_marked_through_the_routes_is_placed_in_the_index_as_it_is_kept()
+    {
+        var id = await SentAsync(await BegunAsync(), Report());
+
+        await AskAsync("PUT", $"{FeedbackAdminApi.Route}/{id}/status", new { status = "seen" });
+
+        var row = (await _feedback.ReadIndexAsync(Cancel)).Content.ShouldNotBeNull().Rows.ShouldHaveSingleItem();
+        (row.Id, row.Status, row.Kind).ShouldBe((id, FeedbackStatus.Seen, FeedbackKind.Bug));
     }
 
     [Fact]
