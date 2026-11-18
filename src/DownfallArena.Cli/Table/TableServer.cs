@@ -165,12 +165,9 @@ internal sealed class TableServer : IDisposable
     }
 
     /// <summary>
-    /// A session this process no longer holds, read from the store: the replica that played it is gone
-    /// (ADR 0080) or the table was let go of, and the run is what survives. Nothing live is being protected
-    /// here -- there is no match in memory to leak a seat of -- so what the store has is what is shown, a
-    /// partial trace included.
+    /// Whether a run's record says its table is open, or exists and cannot be read to say it is not (#815). A missing
+    /// record is a run from before ADR 0091, with no table to protect.
     /// </summary>
-    /// <summary>Whether a run's record says its table is open, or cannot be read to say it is not.</summary>
     private async Task<bool> StillOpenAsync(string id)
     {
         if (_stored is not { } stored || !TableKeys.IsTableId(id))
@@ -180,7 +177,8 @@ internal sealed class TableServer : IDisposable
 
         try
         {
-            return await stored.RecordAsync(id) is { Status: TableRecord.Open };
+            var read = await stored.ReadRecordAsync(id);
+            return read.Unparseable || read.Record is { Status: TableRecord.Open };
         }
         catch (Exception failure) when (TableLoader.Refuses(failure) || TableRegistry.StoreFails(failure))
         {
@@ -188,6 +186,12 @@ internal sealed class TableServer : IDisposable
         }
     }
 
+    /// <summary>
+    /// A session this process no longer holds, read from the store: the replica that played it is gone
+    /// (ADR 0080) or the table was let go of, and the run is what survives. Nothing live is being protected
+    /// here -- there is no match in memory to leak a seat of -- so what the store has is what is shown, a
+    /// partial trace included.
+    /// </summary>
     private async Task<StudioResponse> StoredSessionPageAsync(string id)
     {
         if (_stored is not { } stored || id.Length == 0 || id.Contains('/', StringComparison.Ordinal) || id.Contains('\\', StringComparison.Ordinal) || id == "." || id == "..")

@@ -305,7 +305,20 @@ internal sealed class ScenarioAdminApi(ScenarioStore store, StoredSessions store
         // A scenario cut from a table still played, as a practice's may be, holds what its seats keep face down there.
         foreach (var source in new[] { document.Session, document.Scenario.Source.Run }.OfType<string>().Distinct(StringComparer.Ordinal))
         {
-            if (TableKeys.IsTableId(source) && await stored.RecordAsync(source) is { UnderWay: true })
+            if (!TableKeys.IsTableId(source))
+            {
+                continue;
+            }
+
+            // A record that exists and cannot be parsed shows nothing about the game, so it refuses (#814); a missing one
+            // passes: a repository scenario's source run names a table of another host, which has no record here.
+            var read = await stored.ReadRecordAsync(source);
+            if (read.Unparseable)
+            {
+                return (Error(FeedbackErrors.TableUnread.Code, FeedbackErrors.TableUnread.Message, 409), null);
+            }
+
+            if (read.Record is { UnderWay: true })
             {
                 return (Error(FeedbackErrors.UnderWay.Code, FeedbackErrors.UnderWay.Message, 409), null);
             }

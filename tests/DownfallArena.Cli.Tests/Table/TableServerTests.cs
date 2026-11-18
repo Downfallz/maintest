@@ -396,6 +396,33 @@ public sealed class TableServerTests : IAsyncDisposable
         (await Get($"{url}session/no-such-session", token: null)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 
+    /// <summary>
+    /// A table's record that exists and cannot be parsed shows nothing about the game, so its stored trace, which
+    /// holds both seats' boards, is refused (#815); a record that is missing is a run from before ADR 0091 and is served.
+    /// </summary>
+    [Theory]
+    [InlineData(true, HttpStatusCode.Conflict)]
+    [InlineData(false, HttpStatusCode.OK)]
+    public async Task A_stored_session_whose_record_cannot_be_parsed_is_refused_and_a_missing_one_is_served(bool unparseable, HttpStatusCode expected)
+    {
+        var url = Serve(OperatorGate.BehindPlatform());
+        var finished = await Opened(HostedTables.Bots);
+        await finished.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        await Finished(finished);
+        (await _registry.RemoveAsync(finished.Id, TestContext.Current.CancellationToken)).ShouldBeTrue();
+        var record = Path.Combine(_hosted.RunsDirectory, finished.Id, TableRecord.File);
+        if (unparseable)
+        {
+            await File.WriteAllTextAsync(record, "{ not a record", TestContext.Current.CancellationToken);
+        }
+        else
+        {
+            File.Delete(record);
+        }
+
+        (await Get($"{url}session/{finished.Id}", token: null)).StatusCode.ShouldBe(expected);
+    }
+
     /// <summary>A session the store cannot find is a 404 in a fixed sentence: the store's words carry the host's paths (#786).</summary>
     [Fact]
     public async Task A_session_the_store_cannot_find_is_not_found_without_the_host_s_paths()

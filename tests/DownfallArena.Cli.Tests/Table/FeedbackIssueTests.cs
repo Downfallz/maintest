@@ -266,6 +266,37 @@ public sealed class FeedbackIssueTests : IDisposable
         Actions(sheet).ShouldNotContain("diagnose");
     }
 
+    [Theory]
+    [InlineData(true, "Feedback.TableUnread")]
+    [InlineData(false, null)]
+    public async Task A_practice_report_whose_source_table_record_cannot_be_parsed_offers_no_scenario_and_a_missing_one_passes(bool unparseable, string? refusal)
+    {
+        var (_, table, cut, practised) = await ReproducedAsync();
+        var record = Path.Combine(_hosted.RunsDirectory, table, TableRecord.File);
+        var fromTable = await _scenarios.PutAsync(cut with { Session = null, Scenario = cut.Scenario with { Source = cut.Scenario.Source with { Run = table } } }, Cancel);
+        var report = await ReportedAsync(new FeedbackContext { Scenario = practised, Seat = "player2", Round = 2 });
+        await _feedback.SaveAsync(report with { Reproduction = fromTable }, Cancel);
+        if (unparseable)
+        {
+            await File.WriteAllTextAsync(record, "{ not a record", Cancel);
+        }
+        else
+        {
+            File.Delete(record);
+        }
+
+        var answer = await AskAsync("POST", report.Id, "scenario.zip");
+
+        if (refusal is null)
+        {
+            answer.Status.ShouldBe(200);
+        }
+        else
+        {
+            (answer.Status, Read(answer).GetProperty("error").GetString()).ShouldBe((409, refusal));
+        }
+    }
+
     [Fact]
     public async Task A_host_that_keeps_no_sessions_reads_no_report_s_table_as_over()
     {
