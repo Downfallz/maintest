@@ -1672,14 +1672,14 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
     private static StudioResponse Problem(int status, string message) => Json(new { message }, status);
 
+    private static StudioResponse Problem(int status, string code, string message) => Json(new { error = code, message }, status);
+
     /// <summary>A table the store could not open or keep: a code and a fixed sentence, the store's words on the console (#786).</summary>
     private static StudioResponse Unavailable(string what, Exception failure)
     {
         Console.WriteLine($"  A table {what}: {HttpHost.OneLine(failure)}");
         return Problem(503, "Lobby.Unavailable", "The table could not be opened. Try again in a few minutes.");
     }
-
-    private static StudioResponse Problem(int status, string code, string message) => Json(new { error = code, message }, status);
 
     /// <summary>The time to answer a game between two players can be given (ADR 0169), in hours: a day, three days, a week.</summary>
     internal static readonly IReadOnlyList<int> TurnLimitHours = [24, 72, 168];
