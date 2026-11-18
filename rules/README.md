@@ -38,7 +38,8 @@ line.
 - `moved.json`: `{ "old-id": "new-id" }`, for a section removed or renamed, so an old link still lands.
 - `changes.md`: what changed for a player, one line each: `- YYYY-MM-DD: what changed (ADR NNNN).`
 - `words.json`: the words, other than the spells' and mutations' names, the book may capitalise inside a
-  sentence, in English and French.
+  sentence, in English and French; and under `firstWords`, those it may capitalise only to open one, when the
+  edition never writes them in lowercase.
 - `fr/`: the French edition (ADR 0193), below.
 
 ## The format
@@ -84,9 +85,9 @@ One to three lines.
   every value its arithmetic reads, the creature's base stats included (its base Defense, its own critical
   chance), and states no fact about the content that the build does not check.
 - **Counts.** A value before a count's noun (round, turn, enemy, ally, target, time, Upkeep; in French tour,
-  round, ennemi, allié, cible, Entretien), right after it or after more, next or the like, names both forms,
-  `{rules.evolutionInterval|round|rounds}`, so a value of 1 reads "1 round" (in French, 0 and 1 take the
-  singular). The build refuses the bare `{...} rounds`, bold, italics and facts between them included.
+  round, ennemi, allié, cible, Entretien), right after it or after one word of a closed list (more, next,
+  additional, ...), names both forms, `{rules.evolutionInterval|round|rounds}`, so a value of 1 reads "1 round"
+  (in French, 0 and 1 take the singular). The build refuses the bare `{...} rounds`, bold, italics and facts between them included.
 - **Facts.** `{?...}` checks a fact the text states and draws nothing: an effect the spell has
   (`{?spell:crushing_stomp:v1.stun}`), a field (`{?spell:infectious_blast:v1.defenseDebuff.permanent}`), or one
   comparison, `= != < > <= >=`, with a 'quoted' word as text (`{?spell:guard:v1.origin = 'Ally'}`,
@@ -94,7 +95,7 @@ One to three lines.
 - **Names.** A spell's or a mutation's name may be typed. Inside a sentence, a capitalised word must be a name in
   `data/` or a word of `words.json` (Health, Defense, Upkeep, Creature, ...); the build refuses any other, so a
   renamed spell fails the book until the book follows. A word opening a sentence, a list item, a cell or a step
-  label (*Command · Tie order.*) passes too when the edition writes it in lowercase elsewhere ("The", "Every"); a
+  label (*Command · Tie order.*) passes too when the edition writes it in lowercase elsewhere ("The", "Every") or `firstWords` lists it; a
   word after a colon, a semicolon, a dash or a quote is inside the sentence.
 - **Sources.** Every section ends with its `sources:` line: the ADRs and the `game-rules.md` headings (as
   `game-rules#<anchor>`) it gives a reading of. Only its card may follow it.

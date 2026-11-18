@@ -2,13 +2,20 @@
   "en": [
     "Health", "Energy", "Defense", "Damage", "Bleed", "Regeneration", "Stun", "Cleanup", "Help", "Part", "Upkeep",
     "Command", "Combat", "Aftermath", "Instinct", "Precision", "Creature", "Mutation", "Tree", "Stage", "Evolution",
-    "Activation", "Finalization", "Self", "Winning", "Value", "Had", "Ongoing", "Right", "Ordering", "Choosing",
-    "Without", "Edge", "Reference"
+    "Activation", "Finalization", "Self", "Ongoing"
   ],
   "fr": [
     "Santé", "Énergie", "Défense", "Dégâts", "Bleed", "Regeneration", "Stun", "Nettoyage", "Help", "Entretien",
     "Commandement", "Combat", "Retombées", "Instinct", "Précision", "Créature", "Arbre", "Stade", "Évolution",
-    "Activation", "Clôture", "Soi", "Gagner", "Taille", "Multiplicateur", "Juste", "Comment", "Choisir", "Résoudre",
-    "Sinon", "Cas", "Voici", "Combien", "Référence", "Diminue"
-  ]
+    "Activation", "Clôture", "Soi"
+  ],
+  "firstWords": {
+    "en": [
+      "Had", "Without", "Right", "Choosing", "Ordering", "Winning", "Edge", "Value", "Reference"
+    ],
+    "fr": [
+      "Voici", "Sinon", "Juste", "Diminue", "Combien", "Comment", "Choisir", "Résoudre", "Gagner", "Cas", "Taille",
+      "Multiplicateur", "Référence"
+    ]
+  }
 }

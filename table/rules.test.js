@@ -240,6 +240,7 @@ test('the engine\'s Defense ceiling is drawn by its name, and the book says it w
   assert.deepEqual(errorsOf(clean), []);
   assert.ok(builtText(inputs({ ...clean, engine: { defenseBuffCeiling: 12 } })).includes('count for 12 at most'));
   refuses(withGoal('Two players', '{engine.defenseCap} Two players'), /"engine\.defenseCap" does not resolve/);
+  refuses(inputs({ engine: {}, engineMissing: ['src/Creature.cs declares no const int DefenseBuffCeiling: engine.defenseBuffCeiling has no source'] }), /^src\/Creature\.cs declares no const int DefenseBuffCeiling: engine\.defenseBuffCeiling has no source/);
 });
 
 test('a count is written with its noun, singular for one, so a value of 1 never reads "1 rounds"', () => {
@@ -249,7 +250,7 @@ test('a count is written with its noun, singular for one, so a value of 1 never 
   assert.ok(builtText(at(1)).includes('Every 1 round, two players'));
   refuses(withGoal('Two players', 'For {rules.teamSize} rounds, two players'), /"\{rules\.teamSize\} rounds": a count takes its noun: \{rules\.teamSize\|round\|rounds\}/);
   refuses(withGoal('Two players', 'At the next {rules.teamSize} Upkeeps, two players'), /a count takes its noun: \{rules\.teamSize\|Upkeep\|Upkeeps\}/);
-  for (const written of ['{rules.teamSize} **rounds**', '{rules.teamSize} more rounds', '{rules.teamSize}{?rules.teamSize > 1} rounds', '{rules.teamSize} *more* rounds']) {
+  for (const written of ['{rules.teamSize} **rounds**', '{rules.teamSize} more rounds', '{rules.teamSize} additional rounds', '{rules.teamSize} consecutive rounds', '{rules.teamSize}{?rules.teamSize > 1} rounds', '{rules.teamSize} *more* rounds']) {
     refuses(withGoal('Two players', `For ${written}, two players`), /a count takes its noun: \{rules\.teamSize\|round\|rounds\}/);
   }
   refuses(withGoal('Two players', 'Every {rules.teamSize|round} two players'), /"rules\.teamSize\|round": a count names its singular and its plural/);
@@ -266,6 +267,10 @@ test('a capitalised name inside a sentence is a spell\'s or a mutation\'s name i
   refuses(book('A creature casts Blood Prize. Two players'), /"Prize" is not the name/);
   refuses(book('A spell. Fireball deals damage. Two players'), /"Fireball" is not the name/);
   assert.deepEqual(errorsOf(book('A creature. Every creature. Two players')), [], 'a first word the book writes in lowercase elsewhere');
+  const opening = text => inputs({ words: { en: ['Health', 'Energy', 'Upkeep', 'What', 'Two', 'Defeat', 'Combat', 'See', 'Value', 'Reference', 'Critical'], firstWords: { en: ['Whereas'] } },
+    parts: [{ file: '01-the-goal.md', text: goal.replace('Two players', text) }] });
+  assert.deepEqual(errorsOf(opening('Whereas a creature waits. Two players')), [], 'a first word of firstWords opens a sentence');
+  refuses(opening('A creature, Whereas it waits. Two players'), /"Whereas" is not the name/);
   for (const opening of ['A spell: Fireball deals damage.', 'A spell; Fireball deals damage.', 'A spell — Fireball deals damage.', 'A spell, "Fireball", deals damage.', 'A spell, «Fireball», deals damage.']) {
     refuses(book(`${opening} Two players`), /"Fireball" is not the name/);
   }
@@ -451,6 +456,7 @@ test('a French count takes the French noun, singular for zero and one, and the v
   assert.ok(JSON.stringify(buildRules(given(2)).french).includes('Tous les 2 tours, deux joueurs'));
   assert.ok(JSON.stringify(buildRules(given(1)).french).includes('Tous les 1 tour, deux joueurs'));
   refuses(withFrench('Deux joueurs', 'Pendant {rules.teamSize} tours, deux joueurs'), /a count takes its noun: \{rules\.teamSize\|tour\|tours\}/);
+  refuses(withFrench('Deux joueurs', 'Pendant {rules.teamSize} autres tours, deux joueurs'), /a count takes its noun: \{rules\.teamSize\|tour\|tours\}/);
 });
 
 test('refuses an engine word in French only as written, for "tiers" and "stage" are French words', () => {

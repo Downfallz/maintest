@@ -107,15 +107,18 @@ function editionIn(folder) {
   return { parts, changes };
 }
 
-// The engine's values, each from its `const int` in the domain's source; one the source no longer declares is absent.
+// The engine's values, each from its `const int` in the domain's source, and a refusal for each the source no
+// longer declares (a file moved, a constant renamed), so the book says where its value went missing.
 function engineValues(root) {
   const values = {};
+  const missing = [];
   for (const [name, { file, constant }] of Object.entries(ENGINE)) {
     const source = existsSync(join(root, file)) ? readFileSync(join(root, file), 'utf8') : '';
     const found = new RegExp(String.raw`\bconst int ${constant} = (\d+);`).exec(source);
     if (found) values[name] = Number(found[1]);
+    else missing.push(`${file} declares no const int ${constant}: engine.${name} has no source`);
   }
-  return values;
+  return { values, missing };
 }
 
 /** Everything the build reads, from the repository at `root`. */
@@ -148,7 +151,7 @@ export function readInputs(root) {
     gameRules,
     conceptIds,
     words: existsSync(join(root, WORDS)) ? readJson(join(root, WORDS)) : { en: [], fr: [] },
-    engine: engineValues(root),
+    ...(({ values, missing }) => ({ engine: values, engineMissing: missing }))(engineValues(root)),
     links,
     previous: previousIds(root),
   };
@@ -363,7 +366,11 @@ function retireEnglish(words, english, french) {
 // A count's nouns, by language: a value written right before one of them takes both its forms ({n|round|rounds}),
 // so a value of 1 never reads "1 rounds".
 // The words that may stand between a count and its noun ("{n} more rounds").
-const BETWEEN = { en: ['more', 'next', 'extra', 'further', 'other', 'whole'], fr: ['autres', 'prochains', 'prochaines', 'derniers'] };
+// A closed list: a wildcard would read "{n} per round" as a count of rounds.
+const BETWEEN = {
+  en: ['more', 'next', 'extra', 'further', 'other', 'whole', 'additional', 'consecutive', 'later', 'full', 'remaining', 'last', 'first'],
+  fr: ['autres', 'prochains', 'prochaines', 'derniers', 'dernières', 'premiers', 'premières', 'nouveaux', 'nouvelles'],
+};
 const COUNTED = {
   en: [['round', 'rounds'], ['turn', 'turns'], ['enemy', 'enemies'], ['ally', 'allies'], ['target', 'targets'], ['time', 'times'], ['Upkeep', 'Upkeeps']],
   fr: [['tour', 'tours'], ['round', 'rounds'], ['ennemi', 'ennemis'], ['allié', 'alliés'], ['cible', 'cibles'], ['Entretien', 'Entretiens']],
@@ -418,6 +425,7 @@ class Build {
     this.names = names.sort((a, b) => b.length - a.length).map(name => new RegExp(String.raw`(?<![\p{L}\d])${escaped(name)}(?![\p{L}\d])`, 'gu'));
     this.capitals = capitalWords(given, language);
     this.vocabulary = vocabularyOf(language === 'fr' ? given.french?.parts ?? [] : given.parts);
+    this.firstWords = new Set(given.words?.firstWords?.[language] ?? []);
   }
 
   // A capitalised word inside a sentence is a spell's or a mutation's name, or a word the book may capitalise, so a
@@ -431,7 +439,7 @@ class Build {
       if (word.length === 1 || ROMAN.test(word) || /[\p{L}\d]$/u.test(before)) continue;
       if (this.capitals.has(word) || (word.endsWith('s') && this.capitals.has(word.slice(0, -1)))) continue;
       // A sentence's first word is capitalised for that alone when the book writes it in lowercase elsewhere.
-      if (SENTENCE_START.test(before) && this.vocabulary.has(word.toLowerCase())) continue;
+      if (SENTENCE_START.test(before) && (this.vocabulary.has(word.toLowerCase()) || this.firstWords.has(word))) continue;
       this.refuse(`${where}: "${word}" is not the name of a spell or a mutation in data/, nor a word of rules/words.json`);
     }
   }
@@ -874,6 +882,7 @@ function buildFrench(given, english, ids, errors) {
  */
 export function buildRules(given) {
   const build = new Build(given);
+  for (const missing of given.engineMissing ?? []) build.refuse(missing);
   const parts = given.parts.map(({ file, text }, index) => new PartReader(build, file, index + 1).read(text));
   const ids = sectionIds(parts, build);
   const cards = cardsOf(parts, build);
