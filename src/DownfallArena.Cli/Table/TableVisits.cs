@@ -47,15 +47,7 @@ internal sealed class TableVisits(TimeProvider clock, IVisitKeeper? keeper = nul
     {
         if (keeper is null)
         {
-            lock (_held)
-            {
-                if (_visits.GetValueOrDefault(seat) is { } held && held.Holder == holder && held.Sequence >= sequence)
-                {
-                    return held;
-                }
-
-                return _visits[seat] = new LastVisit(sequence, clock.GetUtcNow(), holder);
-            }
+            return ShownHere(seat, holder, sequence);
         }
 
         var existed = false;
@@ -66,6 +58,12 @@ internal sealed class TableVisits(TimeProvider clock, IVisitKeeper? keeper = nul
             // There was a mark and now there is none: the table's run was deleted meanwhile, and writing would bring a
             // file of it back.
             if (existed && tag is null)
+            {
+                return null;
+            }
+
+            // No mark yet, and no record either: a write would create the file under a deleted run (#789).
+            if (tag is null && !await keeper.RecordedAsync(cancellationToken))
             {
                 return null;
             }
@@ -84,5 +82,19 @@ internal sealed class TableVisits(TimeProvider clock, IVisitKeeper? keeper = nul
         }
 
         return null;
+    }
+
+    // A table nobody records: the mark is kept in memory, for as long as the table is held.
+    private LastVisit ShownHere(string seat, string holder, long sequence)
+    {
+        lock (_held)
+        {
+            if (_visits.GetValueOrDefault(seat) is { } held && held.Holder == holder && held.Sequence >= sequence)
+            {
+                return held;
+            }
+
+            return _visits[seat] = new LastVisit(sequence, clock.GetUtcNow(), holder);
+        }
     }
 }

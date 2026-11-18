@@ -639,7 +639,7 @@ Two people at a begun match send each other reactions, one of a fixed set of eig
 free text (`POST /api/seat/<seat>/reaction {"reaction":"well-played"}`, one every four seconds a seat, 429
 otherwise, refused against a bot and with one account in both seats, 409 `Reaction.Gone` once the operator
 deleted the table's run, 503 `Reaction.Busy` when it could not be kept), kept with the table's record
-(`reactions.json`, the last eight), served in each seat's view as `reactions`, shown once to the other player
+(`reactions.json`, the last eight), served in each seat's view as `reactions` (null when the store cannot be read), shown once to the other player
 unless their settings hide them, and never notified, counted in the bell or recorded as an event of the match
 (ADR 0173).
 
@@ -650,7 +650,8 @@ The battle view tells the host the last feed sequence each seat was shown (`PUT 
 hidden; a replay sends nothing. The host keeps the larger sequence with the time it was told, beside the table's record
 (`seen-player1.json`, `seen-player2.json`, written only over the version read), ignores a smaller one, and answers
 `{"seen":{"sequence","at"}}` with the mark kept; anything but a sequence of 0 or more is `400 Seen.Invalid`, and
-`503 Seen.Busy` when every retry lost to another process or the store failed. It moves nothing on the table and
+`503 Seen.Busy` when every retry lost to another process or the store failed. It is also the answer once the operator
+has deleted the table's run: the host writes no file, so the run is not brought back. It moves nothing on the table and
 sends no notice. A mark is kept under a stamp of the seat's key, so a seat offered again starts with none. Each
 seat's view carries its own mark as `seen` (null before the first) and when the journal was last written as
 `lastMoveAt` (null for a table that keeps none). The page reads the larger of its browser's mark and the host's

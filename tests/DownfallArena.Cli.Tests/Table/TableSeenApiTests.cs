@@ -174,6 +174,19 @@ public sealed class TableSeenApiTests : IDisposable
         await table.QuiesceAsync(Cancel);
     }
 
+    [Fact]
+    public async Task A_first_mark_on_a_run_the_operator_deleted_keeps_no_file()
+    {
+        var table = await BegunAsync();
+        await table.QuiesceAsync(Cancel);
+        (await _hosted.Stored!.DeleteAsync(table.Id, Cancel)).ShouldBeTrue();
+
+        var answer = await SeenAsync(table, 0, """{ "sequence": 2 }""");
+
+        answer.Status.ShouldBe(503, Text(answer));
+        Directory.Exists(Path.Combine(_hosted.RunsDirectory, table.Run!.SessionId)).ShouldBeFalse();
+    }
+
     private Task<PlayedTable> BegunAsync() => BegunAsync(_hosted, _registry);
 
     private static async Task<PlayedTable> BegunAsync(HostedTables hosted, TableRegistry registry)

@@ -740,7 +740,7 @@ the store cannot open or keep is 503 `Lobby.Unavailable`. A relay that is out is
 | `GET /api/lobby/tables/<table>/replay` | account | A finished game's replay, for an account that sat at it (ADR 0156). |
 | `GET /api/seat/<seat>/negotiate` | seat | The relay's address for a seat (ADR 0165). |
 | `POST /api/seat/<seat>/reaction` | seat | A reaction from the fixed set (ADR 0173). `429 Reaction.TooSoon` within the cooldown; `409 Reaction.Gone` once the operator deleted the table's run; `503 Reaction.Busy` when it could not be kept. |
-| `PUT /api/seat/<seat>/seen` | seat | The last feed sequence this seat was shown (ADR 0194); ignored when not larger than the one kept, answered with the one kept. `400 Seen.Invalid` for anything but `{"sequence": N}`, N ≥ 0; `503 Seen.Busy` when it could not be kept. |
+| `PUT /api/seat/<seat>/seen` | seat | The last feed sequence this seat was shown (ADR 0194); ignored when not larger than the one kept, answered with the one kept. `400 Seen.Invalid` for anything but `{"sequence": N}`, N ≥ 0; `503 Seen.Busy` when it could not be kept, or once the operator deleted the table's run. |
 | `GET /api/feedback` | anyone | Whether the signed-in account, else the seat the key names, is muted (#717): `403 Feedback.Muted`, or `204`. |
 | `POST /api/feedback` | seat, account | A bug report or an idea (ADR 0189), kept with the seat's context. `429` when a spam guard stops it; `403 Feedback.Muted` when the operator stopped its sender; `200 Feedback.Merged` when it joins an earlier one. |
 | `GET /api/friends`, `POST /api/friends/requests`, `POST /api/friends/requests/<id>/accept`, `DELETE /api/friends/requests/<id>`, `DELETE /api/friends/<id>` | account | Friends (ADR 0129). |
