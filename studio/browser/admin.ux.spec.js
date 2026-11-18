@@ -461,6 +461,11 @@ test('a reproduced report is downloaded, filed as an issue and marked fixed once
   await expect(page.locator('#admin-feedback-sheet-said')).toHaveText('Filed as #731. The report reads fixed once the issue is closed.');
   await expect(page.locator('#admin-feedback-sheet-kind')).toHaveText('Bug report · Filed #731');
   await expect(page.locator('#admin-feedback-issue-link')).toHaveAttribute('href', `https://github.com/${repository}/issues/731`);
+  expect(await page.evaluate(() => { const body = document.querySelector('#admin-feedback-sheet .home-dialog-body'); return body.scrollWidth <= body.clientWidth; })).toBe(true);
+  for (const control of ['#admin-feedback-download', '#admin-feedback-issue-number', '#admin-feedback-filed']) {
+    expect((await page.locator(control).boundingBox()).height, control).toBeGreaterThanOrEqual(44);
+  }
+  await page.screenshot({ path: info.outputPath('admin-feedback-filed.png') });
 
   // The tab, opened again, asks GitHub whether the filed issues are closed, and marks fixed the one closed as done.
   await page.locator('#admin-feedback-close').click();

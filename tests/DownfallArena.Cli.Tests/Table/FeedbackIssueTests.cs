@@ -2,10 +2,8 @@ using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 using DownfallArena.Application.Admin;
-using DownfallArena.Application.Agents;
 using DownfallArena.Application.FeedbackBox;
 using DownfallArena.Application.Matches.Journaling;
-using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.Domain.Matches;
@@ -326,28 +324,26 @@ public sealed class FeedbackIssueTests : IDisposable
 
     /// <summary>
     /// The seat's journal length when its player wrote is counted in the entries the cut counts (#750): a report sent
-    /// from round 2 of a played table, the seat deciding and conceding after it, keeps in its download only what the
-    /// round held when it was sent.
+    /// from round 2 of a played table, after the seat's own answer and before the other seat conceded, keeps in its
+    /// download the one and not the other. People sit in both seats from round 2, so nothing else writes to the journal.
     /// </summary>
     [Fact]
     public async Task A_report_sent_from_a_seat_downloads_with_the_entries_its_round_held_when_it_was_sent()
     {
         using var registry = _hosted.Registry();
-        var table = await _hosted.Composer.ComposeAsync(new TableRequest(null, AgentSpec.Parse("greedy"), Who: "mk", Handover: 2, Seed: 7), Cancel);
+        var table = await _hosted.Composer.ComposeAsync(new TableRequest(null, null, Who: "mk", Handover: 2, Seed: 7), Cancel);
         using (var place = (await registry.ReserveAsync(Cancel)).ShouldNotBeNull())
         {
             await registry.AddAsync(table, place, Cancel);
         }
 
         var seat = table.Seats[0];
-        var view = await AskedInRoundTwoAsync(table);
+        (await table.Api.HandleAsync("GET", $"/api/seat/{table.Seats[1].Name}", string.Empty, table.Seats[1].Token)).Status.ShouldBe(200);
+        await SpeedAsync(table, await AskedInRoundTwoAsync(table));
         var sent = await new FeedbackApi(new SendFeedback(_feedback, new GuestAddresses(), _writes, _clock), registry)
             .HandleAsync("POST", JsonSerializer.Serialize(new { kind = "bug", category = "rules", happened = "The bleed did not tick after the stun.", attach = true }), seat.Token, new AccountRequest(null, Secure: false), "203.0.113.7", "Firefox/140");
         var id = Read(sent).GetProperty("id").GetString()!;
-        var creature = view.GetProperty("options").GetProperty("speed").GetProperty("missing")[0].GetInt32();
-        var decision = JsonSerializer.Serialize(new { asked = view.GetProperty("waitingAsked").GetInt64(), kind = "Speed", creature, speed = "Quick" });
-        (await table.Api.HandleAsync("POST", $"/api/seat/{seat.Name}/decision", decision, seat.Token)).Status.ShouldBe(204);
-        (await table.Api.HandleAsync("POST", $"/api/seat/{seat.Name}/concede", string.Empty, seat.Token)).Status.ShouldBeLessThan(300);
+        (await table.Api.HandleAsync("POST", $"/api/seat/{table.Seats[1].Name}/concede", string.Empty, table.Seats[1].Token)).Status.ShouldBeLessThan(300);
         await FinishedAsync(table);
         var cut = (await _scenarios.GetAsync(Read(await AskAsync("POST", id, "reproduce")).GetProperty("reproduction").GetProperty("id").GetString()!, Cancel)).ShouldNotBeNull();
 
@@ -356,25 +352,19 @@ public sealed class FeedbackIssueTests : IDisposable
         answer.Status.ShouldBe(200, Encoding.UTF8.GetString(answer.Body));
         var after = ScenarioFile.Read(Unzipped(answer)).Scenario.After;
         (await _feedback.FindAsync(id, Cancel)).ShouldNotBeNull().Context.ShouldNotBeNull().JournalLength.ShouldBe(cut.Scenario.Cut.CutAt + after.Count);
-        after.Count.ShouldBe(cut.Scenario.After.Count - 2, "the seat's own decision and its concession came after the report");
-        after.ShouldNotBeEmpty("the other seat had answered in the round before the report was sent");
-        after.ShouldAllBe(entry => entry is DecisionEntry && ((DecisionEntry)entry).Decision.Slot == PlayerSlot.Player2);
+        after.OfType<DecisionEntry>().ShouldHaveSingleItem().Decision.Slot.ShouldBe(PlayerSlot.Player1);
+        after.Count.ShouldBe(cut.Scenario.After.Count - 1, "the other seat conceded after the report");
+        cut.Scenario.After[^1].ShouldBe(new ConcessionEntry(PlayerSlot.Player2));
     }
 
-    /// <summary>
-    /// The seat's view once the bots have played round 1, the person, taking over, is asked in round 2, and the bot in
-    /// the other seat has journaled its speeds for the round: it answers in the background, not when the person is asked.
-    /// </summary>
-    private async Task<JsonElement> AskedInRoundTwoAsync(PlayedTable table)
+    /// <summary>The first seat's view once the understudies have played round 1 and it is asked in round 2.</summary>
+    private static async Task<JsonElement> AskedInRoundTwoAsync(PlayedTable table)
     {
         var seat = table.Seats[0];
         for (var waited = 0; waited < 300; waited++)
         {
             var view = Read(await table.Api.HandleAsync("GET", $"/api/seat/{seat.Name}", string.Empty, seat.Token));
-            var decisions = (await _hosted.Composer.JournalAsync(table.Id, Cancel))?.Decisions ?? [];
-            var botSpeeds = decisions.Reverse().TakeWhile(one => one.Slot == PlayerSlot.Player2 && one.Decision.Kind == PlayerOptionsKind.Speed).Count();
-            if (view.GetProperty("board").GetProperty("roundNumber").GetInt32() == 2 && view.TryGetProperty("waitingAsked", out var asked) && asked.ValueKind == JsonValueKind.Number
-                && botSpeeds == ThreeASide.TeamSize)
+            if (view.GetProperty("board").GetProperty("roundNumber").GetInt32() == 2 && view.TryGetProperty("waitingAsked", out var asked) && asked.ValueKind == JsonValueKind.Number)
             {
                 return view;
             }
@@ -382,7 +372,17 @@ public sealed class FeedbackIssueTests : IDisposable
             await Task.Delay(100, Cancel);
         }
 
-        throw new TimeoutException("The person's seat was never asked in round 2 with the other seat's speeds journaled.");
+        throw new TimeoutException("The first seat was never asked in round 2.");
+    }
+
+    /// <summary>The first seat's speed for its first creature still without one, journaled before it answers.</summary>
+    private static async Task SpeedAsync(PlayedTable table, JsonElement view)
+    {
+        var seat = table.Seats[0];
+        var creature = view.GetProperty("options").GetProperty("speed").GetProperty("missing")[0].GetInt32();
+        var decision = JsonSerializer.Serialize(new { asked = view.GetProperty("waitingAsked").GetInt64(), kind = "Speed", creature, speed = "Quick" });
+        var answer = await table.Api.HandleAsync("POST", $"/api/seat/{seat.Name}/decision", decision, seat.Token);
+        answer.Status.ShouldBe(204, Encoding.UTF8.GetString(answer.Body));
     }
 
     private static async Task FinishedAsync(PlayedTable table)

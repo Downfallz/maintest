@@ -130,7 +130,8 @@ public sealed class FeedbackReproduceTests : IDisposable
     public async Task The_feedback_tab_the_host_composes_offers_and_cuts_a_report_s_round()
     {
         var id = await ReportedAsync(new FeedbackContext { Table = await PlayedAsync(), Seat = "player2", Round = 2 });
-        var tab = TableHost.FeedbackTab(new OperatorFeedback(_feedback, new FeedbackMutes(null), _writes, _clock), _hosted.Stored, Cutting(), new OperatorNotes(_actions), _clock).ShouldNotBeNull();
+        var (_, composed) = TableHost.CuttingTabs(_scenarios, _hosted.Stored, _hosted.Composer, new OperatorFeedback(_feedback, new FeedbackMutes(null), _writes, _clock), new OperatorNotes(_actions), _clock);
+        var tab = composed.ShouldNotBeNull();
 
         var sheet = Read(await tab.HandleAsync("GET", $"{FeedbackAdminApi.Route}/{id}", string.Empty, "mark"));
         var cut = await tab.HandleAsync("POST", $"{FeedbackAdminApi.Route}/{id}/reproduce", string.Empty, "mark");

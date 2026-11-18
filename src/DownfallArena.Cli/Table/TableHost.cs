@@ -289,10 +289,8 @@ internal static class TableHost
         }
 
         await using var practices = scenarioStore is null ? null : new ScenarioPractices(composer, scenarioStore, clock);
-        admin.Scenarios = scenarioStore is null || stored is null ? null : new ScenarioAdminApi(scenarioStore, stored, composer) { Notes = admin.Notes };
 
-        // Built after the Scenarios tab, and only through FeedbackTab, which the host tests read (#737): Reproduce cuts with it.
-        admin.Feedback = FeedbackTab(operatorFeedback, stored, admin.Scenarios, notes, clock);
+        (admin.Scenarios, admin.Feedback) = CuttingTabs(scenarioStore, stored, composer, operatorFeedback, notes, clock);
         var sendFeedback = feedback is null ? null : new SendFeedback(feedback, new GuestAddresses(), feedbackWrites, clock, feedbackMutes);
         using var server = new TableServer(options.Bind, options.Port, registry, new TableFiles(TableDirectory), admin, clock, stored, accounts, leaderboard, friends, stats)
         {
@@ -455,12 +453,15 @@ internal static class TableHost
     }
 
     /// <summary>
-    /// The Feedback tab the panel serves, none on a host that keeps no feedback. Its Reproduce (feedback plan, R4) cuts a
-    /// bug report's round through the Scenarios tab's own cutting, so it is built once that tab is: without it the route
-    /// is a 404 and the sheet offers no Reproduce.
+    /// The panel's Scenarios and Feedback tabs, built together (#737): the Feedback tab's Reproduce (feedback plan, R4)
+    /// cuts a bug report's round through the Scenarios tab's own cutting, and without it the route is a 404 and the
+    /// sheet offers no Reproduce. Each is none on a host that keeps no scenarios, no sessions or no feedback.
     /// </summary>
-    internal static FeedbackAdminApi? FeedbackTab(OperatorFeedback? feedback, StoredSessions? stored, ScenarioAdminApi? scenarios, OperatorNotes notes, TimeProvider clock) =>
-        feedback is null ? null : new FeedbackAdminApi(feedback, stored, clock) { Notes = notes, Scenarios = scenarios };
+    internal static (ScenarioAdminApi? Scenarios, FeedbackAdminApi? Feedback) CuttingTabs(ScenarioStore? scenarios, StoredSessions? stored, TableComposer composer, OperatorFeedback? feedback, OperatorNotes notes, TimeProvider clock)
+    {
+        var cutting = scenarios is null || stored is null ? null : new ScenarioAdminApi(scenarios, stored, composer) { Notes = notes };
+        return (cutting, feedback is null ? null : new FeedbackAdminApi(feedback, stored, clock) { Notes = notes, Scenarios = cutting });
+    }
 
     /// <summary>The addresses a phone could be told, so choosing one is not a trip to the network settings.</summary>
     /// <summary>
