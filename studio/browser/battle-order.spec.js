@@ -94,7 +94,7 @@ test('a tie draft keeps its interleaved places through an order reference, and r
   await page.keyboard.press('Escape'); await expect(page.locator('#planning-order')).toBeFocused();
   await expect(page.locator('.tie-group').first()).toContainText('#1 → Creature 2');
   await page.locator('#planning-confirm').click();
-  expect(h.state.writes).toEqual([{ kind: 'TieOrder', order: [2, 1], asked: 20 }]);
+  await expect.poll(() => h.state.writes).toEqual([{ kind: 'TieOrder', order: [2, 1], asked: 20 }]);
   await h.publish({ board: { ...board, subPhase: 'IntentSelection', timeline: [slot(2), slot(4), slot(1), ...timeline.slice(3)] },
     waitingFor: null, waitingAsked: null, options: {}, feed: [reveal(12, 'TiesOrdered', [slot(2), slot(4), slot(1), ...timeline.slice(3)])] });
   // The manual reference already consumed this reveal; it must not interrupt the next question again.
@@ -106,7 +106,7 @@ test('a tie draft keeps its interleaved places through an order reference, and r
   // Read by hand, the order lets the seen mark pass it: coming back does not reveal it again.
   await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true'); await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live');
   await page.clock.runFor(500); await expect(page.locator('#order-continue')).toBeHidden();
-  expect(h.state.shown).toEqual([20]); expect(h.state.errors).toEqual([]);
+  await expect.poll(() => h.state.shown).toEqual([20]); expect(h.state.errors).toEqual([]);
 });
 test('a fresh reveal waits until tie ordering ends, opens once and never acknowledges the next question', async ({ page }, info) => {
   const h = await mount(page, { board: { ...board, subPhase: 'Speed', timeline: [] }, feed: [] });
@@ -293,6 +293,6 @@ test('ordering ties lights the tied creatures on the field with their places, an
   await expect(field(1).locator('.focus-badge')).toHaveText('3', 'the last one left takes the last place');
   await expect(page.locator('.tie-group').first()).toContainText('#1 → Creature 2 · #3 → Creature 1');
   await page.locator('#planning-confirm').click();
-  expect(h.state.writes).toEqual([{ kind: 'TieOrder', order: [2, 1], asked: 20 }]);
+  await expect.poll(() => h.state.writes).toEqual([{ kind: 'TieOrder', order: [2, 1], asked: 20 }]);
   expect(h.state.errors).toEqual([]);
 });

@@ -148,7 +148,7 @@ test('reading preserves an open draft and does not acknowledge a new question', 
   await expect(page.locator('#planning-confirm')).toBeEnabled();
   await page.locator('#history-open').click();
   await h.publish([entry(11)], { waitingAsked: 20 }); await expect(rows(page)).toHaveCount(2);
-  expect(h.state.shown).toEqual(['11']); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
+  await expect.poll(() => h.state.shown).toEqual(['11']); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });
 test('new events preserve expanded details, keyboard focus and reading position', async ({ page }) => {
   const h = await mount(page, Array.from({ length: 25 }, (_, i) => entry(i + 10)));
@@ -199,7 +199,7 @@ test('a selected spell and field target survive reading the journal', async ({ p
   await expect(page.locator('[data-creature="4"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#combat-confirm')).toBeEnabled();
   await expect(page.locator('#history-open')).toBeFocused();
-  expect(h.state.shown).toEqual(['12']); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
+  await expect.poll(() => h.state.shown).toEqual(['12']); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });
 test('an opponent\'s actions arriving while the journal is open are written there, and wait to play until it closes', async ({ page }) => {
   const h = await mount(page); await page.locator('#history-open').click();
@@ -338,7 +338,7 @@ test('reload makes earlier rounds available through an explicit seat history rea
   await page.locator('#history-open').click(); await expect(page.locator('#history-list [data-sequence="1"]')).toHaveCount(0);
   h.state.historyFeed = [old, recent]; await page.locator('#history-earlier').click();
   // The reloaded page opened the mutation tree again (ADR 0138); the history reads acknowledged nothing.
-  await expect(page.locator('#history-list [data-sequence="1"]')).toHaveCount(1); expect(h.state.shown).toEqual(['11']); expect(h.state.errors).toEqual([]);
+  await expect(page.locator('#history-list [data-sequence="1"]')).toHaveCount(1); await expect.poll(() => h.state.shown).toEqual(['11']); expect(h.state.errors).toEqual([]);
 });
 test('unread counts stay reachable in the closed journal launcher and clear when it is opened', async ({ page }) => {
   const h = await mount(page);
@@ -367,5 +367,5 @@ test('a covered question stays unacknowledged while an event is inspected and ea
   await rows(page).first().locator('summary').click(); await rows(page).first().getByRole('button', { name: 'Inspect event' }).click();
   await page.locator('#history-earlier').click(); await expect(page.locator('#history-list [data-sequence="1"]')).toHaveCount(1);
   await h.publish([], { waitingAsked: 12 }); await page.clock.runFor(200);
-  expect(h.state.shown).toEqual(['11']); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
+  await expect.poll(() => h.state.shown).toEqual(['11']); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });

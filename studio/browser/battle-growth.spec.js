@@ -92,7 +92,7 @@ test('Help reference opens the full mutation tree: read-only, keyboard navigable
   h.view.board.nextEvolutionRound = 8; await h.publish();
   await expect(progress).toContainText('Next mutation opportunity · Round 8'); await expect(page.locator('#atlas-creature')).toHaveValue('2');
   await expect(cap).toHaveAttribute('aria-pressed', 'true'); await expect(cap).toBeFocused(); await expect(detail).toContainText('Shared capstone');
-  expect(h.shown).toEqual(['10']); expect(h.writes).toEqual([]);
+  await expect.poll(() => h.shown).toEqual(['10']); expect(h.writes).toEqual([]);
   await page.screenshot({ path: info.outputPath('mutation-reference.png') });
   if (info.project.name !== 'desktop') { await page.keyboard.press('Escape'); await expect(page.locator('#atlas-detail')).toBeHidden(); }
   await page.keyboard.press('Escape'); await expect(page.locator('#atlas-dialog')).toBeHidden();
@@ -103,7 +103,7 @@ test('reference over a mutation draft preserves its selection and does not ackno
   const h = await mount(page); await expect(page.locator('#planning-dialog')).toBeVisible(); await page.locator('[data-mutation="predator"]').click();
   await page.locator('#help-open').click(); await page.locator('#help-dialog [data-growth-open]').click();
   await h.publish(); await expect(page.locator('#planning-confirm')).toBeDisabled();
-  expect(h.shown).toEqual(['10']); expect(h.writes).toEqual([]);
+  await expect.poll(() => h.shown).toEqual(['10']); expect(h.writes).toEqual([]);
   await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
   await expect(page.locator('[data-mutation="predator"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#planning-confirm')).toBeEnabled(); expect(h.errors).toEqual([]);
@@ -116,7 +116,7 @@ test('inspection selects the opponent and reveals its progress only after public
   await expect(page.locator('#atlas-board [data-status="available"]')).toHaveCount(0);
   unlock(h); await h.publish(); await expect(page.locator('#atlas-progress')).toContainText(/Brute · Stage I\b/);
   await expect(brute).toHaveAttribute('data-status', 'known');
-  await expect(page.locator('#growth-receipt')).toBeHidden(); expect(h.shown).toEqual(['10']); expect(h.writes).toEqual([]);
+  await expect(page.locator('#growth-receipt')).toBeHidden(); await expect.poll(() => h.shown).toEqual(['10']); expect(h.writes).toEqual([]);
   await page.keyboard.press('Escape'); await page.keyboard.press('Escape'); await expect(page.locator('#growth-receipt')).toBeVisible();
   await page.locator('#growth-receipt [data-growth-open]').click();
   await expect(page.locator('#growth-reveals .reveal-group').first()).toContainText('First');
@@ -229,13 +229,13 @@ test('a future unlock waits behind a held closing cast and keeps its badge for t
   await page.locator('[data-creature="1"]').click();
   await expect(page.locator('#inspect-spells')).not.toContainText('Devour');
   await page.getByRole('button', { name: 'Close inspection' }).click();
-  expect(h.shown).toEqual(['10']); expect(h.writes).toEqual([]);
+  await expect.poll(() => h.shown).toEqual(['10']); expect(h.writes).toEqual([]);
   await page.locator('#playback-next').click();
   await expect(page.locator('#growth-receipt')).toBeVisible();
   await expect(page.locator('#growth-announcement')).toContainText('Devour');
   await openSpells(page);
   await expect(page.locator('[data-spell="devour"]')).toHaveClass(/spell-new/);
-  expect(h.shown).toEqual(['10', '22']); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+  await expect.poll(() => h.shown).toEqual(['10', '22']); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
 test('opening the team tempos by hand reads the reveal: its receipt and crests leave the field', async ({ page }) => {
   const h = await mount(page); await page.locator('#planning-close').click();

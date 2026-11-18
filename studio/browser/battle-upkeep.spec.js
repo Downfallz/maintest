@@ -156,7 +156,7 @@ test('closing attack playback finishes before the next-round receipt and phase t
   // still a tap away once they are closed.
   await page.locator('#help-close').click(); await expect(page.locator('#planning-dialog')).toHaveAttribute('data-kind', 'Speed');
   await page.locator('#planning-close').click(); await page.locator('#playback-result').click();
-  await expect(page.locator('#result-text')).toContainText('base 3'); expect(h.state.shown).toEqual(['11', '12']); expect(h.state.errors).toEqual([]);
+  await expect(page.locator('#result-text')).toContainText('base 3'); await expect.poll(() => h.state.shown).toEqual(['11', '12']); expect(h.state.errors).toEqual([]);
 });
 test('polls, hidden-tab reconnection and reload do not repeat the same receipt', async ({ page }) => {
   const h = await mount(page); await close(page); await h.publish([]);
@@ -171,7 +171,7 @@ test('polls, hidden-tab reconnection and reload do not repeat the same receipt',
   await expect(page.locator('#reading-title')).toHaveText('Upkeep'); await expect(page.locator('#round-number')).toHaveText('02');
   await expect(page.locator('#upkeep-dialog')).toBeHidden();
   // The tree opened once before the reload and once after; neither receipt acknowledged anything.
-  expect(h.state.shown).toEqual(['11', '11']); expect(h.state.errors).toEqual([]);
+  await expect.poll(() => h.state.shown).toEqual(['11', '11']); expect(h.state.errors).toEqual([]);
 });
 test('a legacy receipt states missing ordinary energy alongside actual effects', async ({ page }) => {
   const h = await mount(page, { feed: [ongoing(1, true)] });
@@ -230,7 +230,7 @@ test('connection loss settles an animation without opening the queued receipt of
   await expect(page.locator('#playback-next')).toBeHidden(); await expect(page.locator('#upkeep-dialog')).toBeHidden();
   h.state.status = 200; await h.publish([]);
   await expect(page.locator('#upkeep-dialog')).toBeVisible(); await expect(page.locator('#upkeep-title')).toHaveText('Round 3 · Upkeep');
-  expect(h.state.writes).toEqual([]); expect(h.state.shown).toEqual(['11']); expect(h.state.errors).toEqual([]);
+  expect(h.state.writes).toEqual([]); await expect.poll(() => h.state.shown).toEqual(['11']); expect(h.state.errors).toEqual([]);
 });
 
 test('a newer round never replaces the receipt currently being read under History', async ({ page }) => {
