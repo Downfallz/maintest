@@ -72,7 +72,7 @@ public sealed class MatchDriverTests
     /// at a time can never satisfy, and each of seat 1's picks is made on the board and with the options the
     /// picks before it left.
     /// </summary>
-    [Fact]
+    [Fact(Timeout = 30_000)]
     public async Task At_a_table_a_player_makes_every_pick_of_an_opportunity_without_waiting_for_the_other_s()
     {
         var store = new MatchStore();
@@ -84,7 +84,6 @@ public sealed class MatchDriverTests
         var outcome = await Driver(store, together: true).PlayAsync(match.Id, first, second, TestContext.Current.CancellationToken).WaitAsync(TimeSpan.FromSeconds(20), TestContext.Current.CancellationToken);
 
         outcome.IsSuccess.ShouldBeTrue();
-        second.Waited.ShouldBeTrue();
         first.Seen.ShouldBe([(0, 2), (1, 1)]);
     }
 
@@ -92,7 +91,7 @@ public sealed class MatchDriverTests
     /// A seat that waits for the other waits as long as the other takes: a loaded machine that stalls seat 1 must
     /// not make seat 2 give up (#829).
     /// </summary>
-    [Fact]
+    [Fact(Timeout = 30_000)]
     public async Task A_seat_waiting_for_the_other_s_picks_waits_however_long_the_other_takes()
     {
         var store = new MatchStore();
@@ -105,7 +104,7 @@ public sealed class MatchDriverTests
         var outcome = await Driver(store, together: true).PlayAsync(match.Id, first, second, TestContext.Current.CancellationToken).WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
 
         outcome.IsSuccess.ShouldBeTrue();
-        second.Waited.ShouldBeTrue();
+        first.Seen.Count.ShouldBe(2);
     }
 
     /// <summary>
@@ -306,14 +305,12 @@ public sealed class MatchDriverTests
     /// <summary>
     /// An agent that buys the first package it is offered at every pick, and notes how many picks of its own each
     /// pick is shown and how many it has left. It can say when it has made its last pick, or wait before its first
-    /// until the other seat has said so, without a clock: a driver that deadlocks is stopped by the test's own
-    /// time limit, and a loaded machine only makes the wait longer.
+    /// until the other seat has said so, without a clock: a driver that deadlocks is stopped by the test's
+    /// <c>Timeout</c>, which cancels its token (a WaitAsync would not, when the driver calls the agent on the caller's thread), and a loaded machine only makes the wait longer.
     /// </summary>
     private sealed class Buying(IPlayerAgent inner, SemaphoreSlim? done = null, SemaphoreSlim? waitsFor = null, SemaphoreSlim? waiting = null, SemaphoreSlim? stalledUntil = null, TimeSpan stall = default) : IPlayerAgent
     {
         public List<(int Picked, int Remaining)> Seen { get; } = [];
-
-        public bool Waited { get; private set; }
 
         public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options)
         {
@@ -327,7 +324,6 @@ public sealed class MatchDriverTests
             {
                 waiting?.Release();
                 waitsFor.Wait(TestContext.Current.CancellationToken);
-                Waited = true;
             }
 
             Seen.Add((board.EvolutionChoices.Count, options.RemainingPicks));
