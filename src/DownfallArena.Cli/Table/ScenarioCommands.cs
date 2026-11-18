@@ -19,7 +19,7 @@ namespace DownfallArena.Cli.Table;
 /// <c>scenario-cut</c>, <c>scenario-check</c>, <c>scenario-generate</c> and <c>scenario-import</c>
 /// (docs/tabletop/scenarios-plan.md, stages S3 and S7, ADR 0179; docs/tabletop/feedback-plan.md, R6): a recorded session
 /// cut at the top of a round into a <c>scenario.json</c>, a scenario file held to its boards on this engine, a match of
-/// two bots played and cut for <c>scenarios/</c>, and a bug's redacted scenario written under <c>scenarios/bugs/</c>. Each builds their services over the content the scenario is played on, never over another.
+/// two bots played and cut for <c>scenarios/</c>, and a bug's redacted scenario written under <c>scenarios/bugs/</c>. Each builds its services over the content the scenario is played on, never over another.
 /// </summary>
 internal static class ScenarioCommands
 {
@@ -210,9 +210,11 @@ internal static class ScenarioCommands
     /// <c>scenario-import</c> (docs/tabletop/feedback-plan.md, R6): the zip a session downloaded from a bug's issue,
     /// holding one <c>scenario.json</c>, checked to be a redacted scenario that carries its content and rebuilds on this
     /// engine, then written as <c>scenarios/bugs/&lt;issue&gt;-&lt;slug&gt;.json</c> unless <c>--out</c> names another
-    /// file. It writes over no file it was not named.
+    /// file. It writes over an existing file only when <c>--out</c> names it. The file is written as this engine writes a
+    /// scenario, so a field the format does not know never reaches the public repository. <paramref name="scenarios" /> is
+    /// the repository's <c>scenarios/</c> directory, where the host runs by default.
     /// </summary>
-    public static async Task<int> ImportAsync(CliOptions options)
+    public static async Task<int> ImportAsync(CliOptions options, string scenarios = RepositoryScenarios.DefaultDirectory)
     {
         ArgumentNullException.ThrowIfNull(options);
         string text;
@@ -237,7 +239,7 @@ internal static class ScenarioCommands
 
         if (document.Session is not { Length: > 0 } report)
         {
-            return await RefusedAsync($"The zip's {ZippedFile} names no report as its session: it is not a redacted scenario, which the panel's Download the scenario writes.");
+            return await RefusedAsync($"The zip's {ZippedFile} names no report as its session, so it is not a redacted scenario like the one the panel's \"Download the scenario\" writes.");
         }
 
         var redacted = RedactedScenario.Check(text, report, []);
@@ -248,7 +250,7 @@ internal static class ScenarioCommands
 
         if (document.Schema is null || document.Tutorial is not null)
         {
-            return await RefusedAsync($"The zip's {ZippedFile} {(document.Schema is null ? "does not carry its content" : "has a tutorial block")}: it is not a redacted scenario, which the panel's Download the scenario writes.");
+            return await RefusedAsync($"The zip's {ZippedFile} {(document.Schema is null ? "does not carry its content" : "has a tutorial block")}, so it is not a redacted scenario like the one the panel's \"Download the scenario\" writes.");
         }
 
         if (await HeldAsync(document, options, trace: false, Console.Out) is { } refused)
@@ -256,20 +258,34 @@ internal static class ScenarioCommands
             return await RefusedAsync(refused);
         }
 
+        var issue = options.Issue!.Value;
         var named = options.Output.Length > 0;
-        var output = named ? options.Output : Path.Combine(RepositoryScenarios.DefaultDirectory, RepositoryScenarios.BugsDirectory, BugFile(options.Issue!.Value, document));
+        var output = named ? options.Output : Path.Combine(scenarios, RepositoryScenarios.BugsDirectory, BugFile(issue, document));
         if (!named && File.Exists(output))
         {
             return await RefusedAsync($"'{output}' is already there: name another file with --out, or that one to write over it.");
         }
 
-        if (Path.GetDirectoryName(Path.GetFullPath(output)) is { } directory)
+        // A file under bugs/ is listed as the issue its name says, which must be the one the import was given.
+        var full = Path.GetFullPath(output);
+        if (Path.GetFileName(Path.GetDirectoryName(full)) == RepositoryScenarios.BugsDirectory
+            && RepositoryScenarios.BugOf($"{RepositoryScenarios.BugsDirectory}/{Path.GetFileName(full)}") != issue)
+        {
+            return await RefusedAsync($"'{output}' is under {RepositoryScenarios.BugsDirectory}/ and is not named after issue {issue}: the host would list it as another bug. Name it {issue}-<slug>.json.");
+        }
+
+        if (Path.GetDirectoryName(full) is { } directory)
         {
             Directory.CreateDirectory(directory);
         }
 
-        await File.WriteAllTextAsync(output, text);
-        Console.WriteLine($"Bug scenario written to {output}: report {report}, issue #{options.Issue}, round {document.Scenario.Cut.Round}, played as {SeatName(document.Seat)}, {document.Scenario.After.Count} entries after the cut up to where the player wrote.");
+        await File.WriteAllTextAsync(output, ScenarioFile.Write(document));
+        Console.WriteLine($"Bug scenario written to {output}: report {report}, issue #{issue}, round {document.Scenario.Cut.Round}, played as {SeatName(document.Seat)}, {document.Scenario.After.Count} entries after the cut, up to where the player wrote.");
+        if (ScenarioContent.OwnVersion(options) is { } own && !string.Equals(own, document.Content, StringComparison.Ordinal))
+        {
+            Console.WriteLine($"It carries content {document.Content}, not this repository's {own}: review that content in the pull request, since the host plays the file on it.");
+        }
+
         return 0;
     }
 
@@ -296,7 +312,7 @@ internal static class ScenarioCommands
             await using var zip = await System.IO.Compression.ZipArchive.CreateAsync(File.OpenRead(path), System.IO.Compression.ZipArchiveMode.Read, leaveOpen: false, entryNameEncoding: null);
             if (zip.Entries is not [{ FullName: ZippedFile } entry])
             {
-                throw new InvalidDataException($"'{path}' does not hold one {ZippedFile} and nothing else, as the panel's Download the scenario writes it.");
+                throw new InvalidDataException($"'{path}' does not hold one {ZippedFile} and nothing else, as the panel's \"Download the scenario\" writes it.");
             }
 
             if (entry.Length > LargestScenario)
@@ -304,9 +320,22 @@ internal static class ScenarioCommands
                 throw new InvalidDataException($"'{path}' holds a {ZippedFile} of {entry.Length} bytes, more than a scenario is ({LargestScenario}).");
             }
 
+            // The length is what the zip's header claims: the read itself stops past the largest scenario, whatever it says.
             await using var stream = await entry.OpenAsync();
-            using var reader = new StreamReader(stream, System.Text.Encoding.UTF8);
-            return await reader.ReadToEndAsync();
+            using var bytes = new MemoryStream();
+            var buffer = new byte[81920];
+            int read;
+            while ((read = await stream.ReadAsync(buffer)) > 0)
+            {
+                if (bytes.Length + read > LargestScenario)
+                {
+                    throw new InvalidDataException($"'{path}' holds a {ZippedFile} of more than {LargestScenario} bytes, more than a scenario is.");
+                }
+
+                bytes.Write(buffer, 0, read);
+            }
+
+            return System.Text.Encoding.UTF8.GetString(bytes.GetBuffer(), 0, (int)bytes.Length);
         }
         catch (FileNotFoundException)
         {

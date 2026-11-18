@@ -81,6 +81,66 @@ public sealed class ScenarioImportTests : IDisposable
     }
 
     [Fact]
+    public async Task A_scenario_that_still_names_its_session_is_refused_as_not_redacted()
+    {
+        var named = JsonNode.Parse(await RedactedAsync())!.AsObject();
+        named["source"]!["run"] = "20261114-031619-50a4947c";
+        var zip = await ZipAsync(named.ToJsonString());
+        var output = Path.Combine(_root, "bugs", "812-x.json");
+
+        (await ScenarioCommands.ImportAsync(Import(zip, output))).ShouldBe(1);
+        File.Exists(output).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task A_scenario_whose_content_is_named_as_a_path_is_refused()
+    {
+        var escaping = JsonNode.Parse(await RedactedAsync())!.AsObject();
+        escaping["content"] = "../../escaped";
+        var zip = await ZipAsync(escaping.ToJsonString());
+        var output = Path.Combine(_root, "bugs", "812-x.json");
+
+        (await ScenarioCommands.ImportAsync(Import(zip, output))).ShouldBe(1);
+        File.Exists(output).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Without_out_the_file_is_written_under_bugs_named_after_the_issue_and_never_twice()
+    {
+        var zip = await ZipAsync(await RedactedAsync());
+        var scenarios = Path.Combine(_root, "repository", "scenarios");
+        var options = CliOptions.Parse(["scenario-import", "--zip", zip, "--issue", "812", "--schema", Path.Combine(_root, "none.json")]);
+
+        var first = await ScenarioCommands.ImportAsync(options, scenarios);
+        var second = await ScenarioCommands.ImportAsync(options, scenarios);
+
+        (first, second).ShouldBe((0, 1));
+        Directory.GetFiles(Path.Combine(scenarios, "bugs")).Select(Path.GetFileName).ShouldBe(["812-round-2.json"]);
+    }
+
+    [Fact]
+    public async Task A_file_named_under_bugs_after_another_issue_is_refused()
+    {
+        var zip = await ZipAsync(await RedactedAsync());
+        var output = Path.Combine(_root, "bugs", "7-a-bleed.json");
+
+        (await ScenarioCommands.ImportAsync(Import(zip, output))).ShouldBe(1);
+        File.Exists(output).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task A_field_the_format_does_not_know_never_reaches_the_written_file()
+    {
+        var extra = JsonNode.Parse(await RedactedAsync())!.AsObject();
+        extra["note"] = "Written by a player";
+        var zip = await ZipAsync(extra.ToJsonString());
+        var output = Path.Combine(_root, "bugs", "812-x.json");
+
+        (await ScenarioCommands.ImportAsync(Import(zip, output))).ShouldBe(0);
+        JsonNode.Parse(await File.ReadAllTextAsync(output, TestContext.Current.CancellationToken))!.AsObject().ContainsKey("note").ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task A_zip_that_holds_anything_but_one_scenario_json_is_refused()
     {
         var zip = Path.Combine(_root, "two.zip");

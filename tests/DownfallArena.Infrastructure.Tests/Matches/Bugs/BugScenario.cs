@@ -36,7 +36,16 @@ internal static class BugScenario
         var schema = Path.Combine(Path.GetTempPath(), "downfall-bug-scenarios", Guid.NewGuid().ToString("N"), "game.schema.json");
         Directory.CreateDirectory(Path.GetDirectoryName(schema)!);
         await File.WriteAllTextAsync(schema, document.Schema.ShouldNotBeNull($"{file} carries no content").GetRawText(), cancellation);
-        var resources = GameSchemaBuilder.Load(schema);
+        GameResources resources;
+        try
+        {
+            resources = GameSchemaBuilder.Load(schema);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(schema)!, recursive: true);
+        }
+
         resources.Version.ShouldBe(document.Content, file);
 
         var log = new MatchEventLog();
@@ -55,6 +64,8 @@ internal static class BugScenario
         var stepper = provider.GetRequiredService<MatchStepper>();
         var player1 = await stepper.SeatAsync(match, PlayerSlot.Player1, held.Value, cancellation);
         var player2 = await stepper.SeatAsync(match, PlayerSlot.Player2, held.Value, cancellation);
+        player1.IsSuccess.ShouldBeTrue($"{file}: {(player1.IsFailure ? player1.Error.Message : string.Empty)}");
+        player2.IsSuccess.ShouldBeTrue($"{file}: {(player2.IsFailure ? player2.Error.Message : string.Empty)}");
         return new BugReplay(document, resources, player1.Value.Board, player2.Value.Board, [.. log.Of(match).Skip(before)]);
     }
 }

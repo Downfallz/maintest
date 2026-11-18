@@ -81,7 +81,7 @@ dotnet run --project src/DownfallArena.Cli -- scenario-check --scenario scenario
 A file under `scenarios/bugs/` is a **bug scenario** (docs/tabletop/feedback-plan.md, R6): the redacted scenario of
 a player's bug report, attached to its issue as `report-<id>.zip` from the admin panel's Feedback tab. It is named
 `<issue>-<slug>.json`, its id is `sc-repo-bug-<file name>`, and the Scenarios tab marks it *Bug #N*, so the operator
-plays the fixed round once it deploys. A file here not named after its issue, or with a `tutorial` block, is left
+can play the round again once the fix deploys. A file here not named after its issue, or with a `tutorial` block, is left
 out, and so is a file elsewhere whose name makes a bug's id.
 
 ```bash
@@ -89,16 +89,19 @@ dotnet run --project src/DownfallArena.Cli -- scenario-import --zip report-<id>.
 dotnet run --project src/DownfallArena.Cli -- scenario-check --trace --scenario scenarios/bugs/812-round-4.json
 ```
 
-`scenario-import` refuses a zip that is not redacted, does not carry its content or does not rebuild.
+`scenario-import` refuses a zip that is not redacted, does not carry its content, does not rebuild, or holds anything
+else. Import only a zip the operator's own account attached to the issue: names were checked when it was downloaded,
+and cannot be checked again.
 `scenario-check --trace` prints each seat's creatures after each entry past the cut, to find the entry where the
 rule went wrong. The redaction keeps the recorded answers only up to where the player wrote, so `ScenarioFileTests`
-asks a bug file's answers to apply that far and no further. A fix that changes what the recorded player could do
-before that point shortens the file's `after` to the entry where the rule went wrong, and says so in its pull request.
+asks a bug file's answers to apply that far and no further. A fix may change what the recorded player could do
+before that point. It then shortens the file's `after` to the entry where the rule went wrong, and says so in its pull
+request.
 
 Each bug has one C# test, landed with its fix: a class under `tests/DownfallArena.Infrastructure.Tests/Matches/Bugs/`
-named as the behaviour the fix restores, its issue's number in a comment. `BugScenario.ReplayAsync(file, entries)`
+named as the behaviour the fix restores, and carrying its issue's number in a comment. `BugScenario.ReplayAsync(file, entries)`
 rebuilds the file at its cut, replays that many entries past it, and hands back both seats' boards and the events
-raised, for the test to assert what the rule says. It fails before the fix and passes after. `ExampleBugTests` there
+raised, for the test to assert what the rule says. The test fails before the fix and passes after. `ExampleBugTests` there
 is the pattern, on a redacted greedy match kept beside it rather than here, since it is no issue.
 
 ## What is here

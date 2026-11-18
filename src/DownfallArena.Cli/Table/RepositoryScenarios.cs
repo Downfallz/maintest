@@ -111,7 +111,7 @@ internal sealed class RepositoryScenarios
 
         if (kind == Kind.Plain && id.StartsWith(BugPrefix, StringComparison.Ordinal))
         {
-            Console.WriteLine($"  Scenario file {file} is left out: the id {id} is a bug's, and it is not under {BugsDirectory}/.");
+            Console.WriteLine($"  Scenario file {file} is left out: the id {id} belongs to a bug scenario, but the file is not under {BugsDirectory}/.");
             return;
         }
 

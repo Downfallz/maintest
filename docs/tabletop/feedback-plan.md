@@ -477,9 +477,14 @@ and they are the first thing every player can use.
    `sc-repo-bug-<file name>`, and the Scenarios tab marks it *Bug #N* (`"bug"` in `GET /api/admin/scenarios`). A file
    there not named after its issue (from 1, no leading zero) or with a `tutorial` block is left out, and so is a file
    elsewhere whose name makes a bug's id. `scenario-import --zip <file> --issue <N> [--out file]` takes a zip holding one
-   `scenario.json` and nothing else, refuses it unless `RedactedScenario.Check` passes on its own report id, it carries
-   its content, has no lesson, and rebuilds with its answers applying, and writes `scenarios/bugs/<N>-<slug>.json`,
-   never over a file it was not named. The slug is the operator's title, or `round-N` for the title Reproduce gives.
+   `scenario.json` and nothing else. It refuses the zip unless `RedactedScenario.Check` passes on its own report id, the
+   scenario carries its content, has no lesson, and rebuilds with its answers applying. Then it writes
+   `scenarios/bugs/<N>-<slug>.json` as this engine writes a scenario, so an unknown field is dropped, never over an
+   existing file unless `--out` names it, and never under `bugs/` named after another issue. The slug is the operator's
+   title, or `round-N` for the title Reproduce gives. It cannot check the players' names again, which the host checked
+   at download, so a session imports only a zip the operator's own account attached (R7's skill checks the author).
+   It says when the carried content is not the repository's, and refuses a content hash that is not one, since it names
+   a temporary directory.
    `scenario-check` now also replays the answers after the cut, as `ScenarioFileTests` does, and `--trace` (a flag
    there, a file everywhere else) prints each seat's creatures at the cut and after each entry, with the entry.
 
@@ -491,8 +496,10 @@ and they are the first thing every player can use.
    `ExampleBugTests` follows it on a redacted greedy 1v1 (seed 5, round 3): an action costs its caster the spell's energy.
    That example is no issue, so its file is kept beside the test, not under `scenarios/bugs/`, where the host would
    list a bug that does not exist. Tests: `RepositoryScenariosTests`, `CliOptionsTests`, `ScenarioImportTests` (a zip
-   refused when not redacted, when it does not rebuild, or when it holds anything else; the trace's lines), and
-   `admin-scenarios.test.js`.
+   refused when not redacted, when it does not rebuild, when it holds anything else, or when its content names a path;
+   the default file and its refusal the second time; a name under `bugs/` that is another issue's; an unknown field
+   dropped; the trace's lines), `ScenariosApiTests` (the `bug` field through the route, a bug scenario closed to a
+   non-admin, and the pinned lists of shipped files that leave `bugs/` out), and `admin-scenarios.test.js`.
 
    Left to R7: no file is under `scenarios/bugs/` yet; the first real report is R7's test. The trace prints the board,
    not the hidden choices or the timeline.

@@ -756,11 +756,10 @@ dotnet run --project src/DownfallArena.Cli -- scenario-check --scenario bug.scen
 
 Whether a scenario still rebuilds on this engine and stands on the boards recorded at its cut, and whether its
 recorded answers after the cut still apply (exit 0 or 1); a file kept under `scenarios/` is checked by the tests, so
-a repro becomes a regression test. `--trace`, which here names no file, prints each seat's creatures (health,
-energy, stun, conditions) at the cut and after each entry past it, with the entry, so a session finds the entry
-where a rule went wrong (feedback plan, R6). For a file with a
-`tutorial` block (ADR 0187) it also plays the recorded answers and says whether each lesson step is reached, in
-the order written (`scenarios/README.md`).
+a repro becomes a regression test. For a file with a `tutorial` block (ADR 0187) it also says whether each lesson
+step is reached, in the order written (`scenarios/README.md`). `--trace` is a flag here, not a trace file. It prints
+each seat's creatures (health, energy, stun, conditions) at the cut and after each entry past it, with the entry, to
+find the entry where a rule went wrong (feedback plan, R6).
 
 ### scenario-generate
 
@@ -783,10 +782,14 @@ dotnet run --project src/DownfallArena.Cli -- scenario-import --zip report-<id>.
 
 A bug's redacted scenario, the zip the operator attached to its issue (docs/tabletop/feedback-plan.md, R5 and R6),
 written as `scenarios/bugs/<issue>-<slug>.json`: the slug is the scenario's title, or `round-N` when the title is the
-one Reproduce gives. The zip must hold one `scenario.json` and nothing else, redacted (its source the report's own,
-no journal time kept), carrying its content, with no `tutorial` block, and rebuilding on this engine with its
-answers applying as `scenario-check` holds it; anything else is refused and nothing is written. It never writes over
-a file unless `--out` names it. The bug's test reads the file with `BugScenario` (`scenarios/README.md`).
+one Reproduce gives. The zip must hold one `scenario.json` and nothing else. The scenario must be redacted (its source
+is the report's own, and no journal time is kept), carry its content, have no `tutorial` block, and rebuild on this
+engine with its answers applying, as `scenario-check` requires. Otherwise it is refused and nothing is written.
+Players' names were checked by the host when the zip was downloaded (R5); the import cannot check them again, so
+import only a zip the operator's own account attached to the issue. The file is written as this engine writes a
+scenario, so a field the format does not know is dropped. A file under `bugs/` must be named after `--issue`. It never
+writes over an existing file unless `--out` names it, and it says when the content carried is not this repository's.
+The bug's test reads the file with `BugScenario` (`scenarios/README.md`).
 
 ### The hosted table's image
 

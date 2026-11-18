@@ -1,7 +1,7 @@
 using DownfallArena.Application.FeedbackBox;
 using DownfallArena.Domain.Matches;
-using DownfallArena.Infrastructure.Matches.Scenarios;
 using DownfallArena.Domain.Matches.Events;
+using DownfallArena.Infrastructure.Matches.Scenarios;
 
 namespace DownfallArena.Infrastructure.Tests.Matches.Bugs;
 
