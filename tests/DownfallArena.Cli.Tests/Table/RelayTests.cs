@@ -63,6 +63,27 @@ public sealed class RelayTests : IDisposable
         (await table.Api.HandleAsync("GET", "/api/seat/player1/negotiate", string.Empty, table.Seats[1].Token)).Status.ShouldBe(403);
     }
 
+    /// <summary>A relay that is out answers 503 in a fixed sentence: the relay's words can name its endpoint (#786).</summary>
+    [Fact]
+    public async Task A_relay_that_is_out_is_said_without_its_words()
+    {
+        var refusal = new HttpRequestException("No such host: secret-relay.webpubsub.azure.com");
+        _hosted.Composer.Relay = new RecordedRelay { Refusal = refusal };
+        var table = await _hosted.Composer.ComposeAsync(HostedTables.OnePerson, Cancel);
+        using var registry = _hosted.Registry();
+        var lobby = new LobbyApi(registry, _hosted.Composer, TimeProvider.System) { Relay = new RecordedRelay { Refusal = refusal } };
+
+        var seat = await table.Api.HandleAsync("GET", $"/api/seat/{table.Seats[0].Name}/negotiate", string.Empty, table.Seats[0].Token);
+        var place = await lobby.HandleAsync("GET", "/api/lobby/negotiate", string.Empty);
+
+        seat.Status.ShouldBe(503);
+        Encoding.UTF8.GetString(seat.Body).ShouldNotContain("secret", Case.Insensitive);
+        place.Status.ShouldBe(503);
+        var said = JsonDocument.Parse(place.Body).RootElement;
+        said.GetProperty("error").GetString().ShouldBe("Relay.Unavailable");
+        said.GetProperty("message").GetString().ShouldNotBeNull().ShouldNotContain("secret", Case.Insensitive);
+    }
+
     [Fact]
     public async Task A_lobby_is_sent_to_the_lobby_as_its_signed_in_player_and_to_nothing_without_a_relay()
     {

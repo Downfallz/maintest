@@ -382,6 +382,26 @@ public sealed class TableServerTests : IAsyncDisposable
         (await Get($"{url}session/no-such-session", token: null)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 
+    /// <summary>A session the store cannot find is a 404 in a fixed sentence: the store's words carry the host's paths (#786).</summary>
+    [Fact]
+    public async Task A_session_the_store_cannot_find_is_not_found_without_the_host_s_paths()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), $"runs-{Guid.NewGuid():N}");
+        var refusing = new RecordRefused(new FileArtifactStore(directory), "manifest.json")
+        {
+            ReadsRefused = true,
+            Failure = () => new FileNotFoundException("Could not find file '/app/secret/runs/manifest.json'."),
+        };
+        var url = Serve(OperatorGate.BehindPlatform(), stored: new StoredSessions(refusing));
+
+        var page = await Get($"{url}session/no-such-session", token: null);
+
+        page.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        var said = await page.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        said.ShouldNotContain("secret", Case.Insensitive);
+        said.ShouldNotContain(directory);
+    }
+
     /// <summary>
     /// A seat of a table an earlier host left open answers here: the host picks the table up from its record at the
     /// request that names it (ADR 0159, ADR 0161), and a page coming back finds its game rather than a refusal.
@@ -482,10 +502,10 @@ public sealed class TableServerTests : IAsyncDisposable
         (await Get($"{url}api/seat/player1", "a-token-of-a-table-not-rebuilt-yet")).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
 
-    private string Serve(OperatorGate gate, bool tended = false, FeedbackApi? feedback = null)
+    private string Serve(OperatorGate gate, bool tended = false, FeedbackApi? feedback = null, StoredSessions? stored = null)
     {
         var admin = new AdminApi(_registry, _hosted.Composer, gate, _clock, "Rules 2 creatures (a test)", _hosted.Stored);
-        _server = new TableServer(HttpHost.Loopback, FreePort(), _registry, new TableFiles(Path.Combine(AppContext.BaseDirectory, "table")), admin, _clock, _hosted.Stored) { Tended = tended, Feedback = feedback };
+        _server = new TableServer(HttpHost.Loopback, FreePort(), _registry, new TableFiles(Path.Combine(AppContext.BaseDirectory, "table")), admin, _clock, stored ?? _hosted.Stored) { Tended = tended, Feedback = feedback };
         _serving = _server.RunAsync(_stopping.Token);
         return _server.Url;
     }

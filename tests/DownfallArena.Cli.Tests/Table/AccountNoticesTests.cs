@@ -106,6 +106,18 @@ public sealed class AccountNoticesTests
         (await _devices.ListAsync(_mark, Cancel)).ShouldBeEmpty();
     }
 
+    [Fact]
+    public async Task A_test_the_push_service_refuses_says_its_status_and_not_its_words()
+    {
+        await _devices.AddAsync(_mark, Phone("phone"), Cancel);
+        _sender.Failure = new HttpRequestException("The push service answered 403: vapid key for acct_secret", null, System.Net.HttpStatusCode.Forbidden);
+
+        var test = await _notices.TestAsync(_mark, "https://push.example/phone", Cancel);
+
+        test.Sent.ShouldBeFalse();
+        test.Message.ShouldBe("The push service refused it (403).");
+    }
+
     private sealed class Sender : IPushSender
     {
         public List<(PushSubscription To, string Payload, string Topic)> Sent { get; } = [];

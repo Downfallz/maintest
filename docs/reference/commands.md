@@ -276,7 +276,10 @@ Two people at one screen, or one against a bot (ADR 0054). The table's routes, o
 
 Every route reads a body of at most 64 KB and answers a longer one 413 `Host.BodyTooLarge` (the studio's host
 allows 4 MB). A route that throws answers 500 `Host.Unexpected`; the exception goes to the console, one line,
-never to the answer.
+never to the answer. A failure a route expects answers a code or a fixed sentence, never the exception's
+text (#786): a table the store cannot open or keep is 503 `Lobby.Unavailable`, a relay that is out 503
+`Relay.Unavailable` on `GET /api/lobby/negotiate` (plain text on the seat's), a push test the service refuses
+says its status, and a session page whose files cannot be read is 404.
 
 #### Seats, network and recording
 

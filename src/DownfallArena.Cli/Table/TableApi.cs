@@ -1,3 +1,4 @@
+using DownfallArena.Cli.Hosting;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -267,7 +268,8 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         }
         catch (Exception failure) when (failure is Azure.RequestFailedException or HttpRequestException or Azure.Identity.AuthenticationFailedException)
         {
-            return StudioResponse.OfPlainText(503, $"The relay could not be reached: {failure.Message}");
+            Console.WriteLine($"  The relay could not be reached for a seat: {HttpHost.OneLine(failure)}");
+            return StudioResponse.OfPlainText(503, "The relay could not be reached: read the seat's events.");
         }
     }
 

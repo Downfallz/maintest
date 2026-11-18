@@ -1,3 +1,4 @@
+using DownfallArena.Cli.Hosting;
 using System.Text.Json;
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Friends;
@@ -348,7 +349,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             {
                 // The same failures the admin panel answers as a refusal (AdminApi.OpenAsync): content that does
                 // not load, or a store that is out. A visitor reads a sentence, not a 500.
-                return Problem(503, $"The table could not be opened: {failure.Message}");
+                return Unavailable("could not be opened", failure);
             }
 
             table.OpenSeats = opponent == "person" ? ["player2"] : [];
@@ -378,7 +379,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             catch (Exception failure) when (TableRegistry.StoreFails(failure))
             {
                 table.Dispose();
-                return Problem(503, $"The table could not be opened: {failure.Message}");
+                return Unavailable("could not be opened", failure);
             }
 
             // Its seats were handed out after it was composed: the lobbies in view read it as it now stands (ADR 0164).
@@ -392,7 +393,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             {
                 // A game that cannot be saved is not offered: it would be lost on the next redeploy.
                 await registry.RemoveAsync(table.Id);
-                return Problem(503, $"The table could not be saved, so it was not opened: {failure.Message}");
+                return Unavailable("could not be saved, so it was not opened", failure);
             }
 
             if (friend is not null)
@@ -840,7 +841,8 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         }
         catch (Exception failure) when (failure is Azure.RequestFailedException or HttpRequestException or Azure.Identity.AuthenticationFailedException)
         {
-            return Problem(503, $"The relay could not be reached: {failure.Message}");
+            Console.WriteLine($"  The relay could not be reached for a lobby: {HttpHost.OneLine(failure)}");
+            return Problem(503, "Relay.Unavailable", "The relay could not be reached: read the lobby's events.");
         }
     }
 
@@ -1662,6 +1664,13 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     private static StudioResponse Json(object value, int status = 200) => StudioResponse.OfJson(value, ArtifactJson.LineOptions, status);
 
     private static StudioResponse Problem(int status, string message) => Json(new { message }, status);
+
+    /// <summary>A table the store could not open or keep: a code and a fixed sentence, the store's words on the console (#786).</summary>
+    private static StudioResponse Unavailable(string what, Exception failure)
+    {
+        Console.WriteLine($"  A table {what}: {HttpHost.OneLine(failure)}");
+        return Problem(503, "Lobby.Unavailable", "The table could not be opened just now. Try again in a few minutes.");
+    }
 
     private static StudioResponse Problem(int status, string code, string message) => Json(new { error = code, message }, status);
 

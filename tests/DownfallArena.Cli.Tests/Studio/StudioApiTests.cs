@@ -164,6 +164,18 @@ public sealed class StudioApiTests : IDisposable
     }
 
     [Fact]
+    public void A_run_that_does_not_exist_is_answered_without_the_runs_directory()
+    {
+        var viewer = Path.Combine(AppContext.BaseDirectory, "viewer");
+
+        var page = _api.RunPage("no-such-run", viewer);
+        var comparison = _api.ComparePage("no-such-run", "another", viewer);
+
+        System.Text.Encoding.UTF8.GetString(page.Body).ShouldNotContain(_content.Path);
+        System.Text.Encoding.UTF8.GetString(comparison.Body).ShouldNotContain(_content.Path);
+    }
+
+    [Fact]
     public async Task The_audit_reports_what_no_creature_can_reach_and_what_a_match_cannot_tell_apart()
     {
         // A spell nothing teaches and nobody starts with: valid content the builder has no reason to refuse.

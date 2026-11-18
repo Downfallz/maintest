@@ -67,11 +67,11 @@ internal sealed class PracticeRun : IAsyncDisposable
             TableSeat[] seats = [new TableSeat(PlayerSlot.Player1, token, person), new TableSeat(PlayerSlot.Player2, NewToken(), null)];
             var plan = new SeatPlan(SeatPlan.Person(Run), new Occupant(new PracticeAgent(scenario, fallback), Run));
             var opened = await SteppedSession.OpenAsync(stepped, journal, match, new SteppedSeats(plan, seats, static (_, _) => null), stopping: stopping.Token);
-            session = opened.IsSuccess ? opened.Value : throw new InvalidDataException($"Practice '{scenario.Id}' could not be opened: {opened.Error.Message}");
+            session = opened.IsSuccess ? opened.Value : throw PracticeRefusal.Of($"Practice '{scenario.Id}' could not be opened: {opened.Error.Message}");
             session.Begin();
             if (person.Waiting is null)
             {
-                throw new InvalidDataException($"Practice '{scenario.Id}' ended before reaching its question.");
+                throw PracticeRefusal.Of($"Practice '{scenario.Id}' ended before reaching its question.");
             }
 
             var api = new TableApi(session, seats, CatalogueProjection.Build(resources, rules), services.GetRequiredService<MatchTraceRecorder>())
@@ -108,7 +108,7 @@ internal sealed class PracticeRun : IAsyncDisposable
             {
                 if (state.Outcome is not null)
                 {
-                    throw new InvalidDataException($"Practice '{scenario.Id}' ended before reaching its question.");
+                    throw PracticeRefusal.Of($"Practice '{scenario.Id}' ended before reaching its question.");
                 }
 
                 var person = state.Player1.View;
@@ -121,13 +121,13 @@ internal sealed class PracticeRun : IAsyncDisposable
                 var view = state.Of(slot).View;
                 if (view.Asked is null)
                 {
-                    throw new InvalidDataException($"Practice '{scenario.Id}' stopped where nobody is asked anything.");
+                    throw PracticeRefusal.Of($"Practice '{scenario.Id}' stopped where nobody is asked anything.");
                 }
 
                 var step = await preparing.SubmitAsync(match, MatchSeats.People, new SeatDecision(slot, SeatAnswer.Of(recipe, view)), cancellationToken: cancellationToken);
                 state = step.IsSuccess
                     ? step.Value.State
-                    : throw new InvalidDataException($"Practice '{scenario.Id}' was refused a step of its recipe: {step.Error.Message}");
+                    : throw PracticeRefusal.Of($"Practice '{scenario.Id}' was refused a step of its recipe: {step.Error.Message}");
             }
         }
         finally
@@ -137,7 +137,7 @@ internal sealed class PracticeRun : IAsyncDisposable
     }
 
     private static JournaledState Read(SharedKernel.Primitives.Result<JournaledState> read, PracticeScenario scenario) =>
-        read.IsSuccess ? read.Value : throw new InvalidDataException($"Practice '{scenario.Id}' could not be set up: {read.Error.Message}");
+        read.IsSuccess ? read.Value : throw PracticeRefusal.Of($"Practice '{scenario.Id}' could not be set up: {read.Error.Message}");
 
     public async ValueTask DisposeAsync() => await StopAsync(_stopping, _session, _host);
 

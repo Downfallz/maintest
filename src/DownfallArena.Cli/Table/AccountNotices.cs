@@ -1,3 +1,4 @@
+using DownfallArena.Cli.Hosting;
 using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -87,8 +88,8 @@ internal sealed class AccountNotices(IPushSender sender, AccountDevices devices)
         }
         catch (Exception failure) when (failure is HttpRequestException or IOException or TaskCanceledException or UnauthorizedAccessException or Azure.RequestFailedException or System.Security.Cryptography.CryptographicException)
         {
-            Console.WriteLine($"  Account {account}: could not be sent a test notice: {failure.Message}");
-            return new PushTest(false, $"The push service refused it: {failure.Message}");
+            Console.WriteLine($"  Account {account}: could not be sent a test notice: {HttpHost.OneLine(failure)}");
+            return new PushTest(false, PushTest.Refused(failure));
         }
     }
 
