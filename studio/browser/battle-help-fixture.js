@@ -52,8 +52,34 @@ export async function matchResult(page) {
   const dialog = page.locator('#match-dialog'), button = page.locator('#match-open');
   // A loaded machine can take longer than one short click to reach the button: the click is tried until the result
   // is open, instead of once with its failure swallowed.
-  await expect(async () => {
-    if (!await dialog.isVisible()) await button.click({ timeout: 2000 });
-    await expect(dialog).toBeVisible({ timeout: 2000 });
-  }).toPass({ timeout: 20000 });
+  // When it still fails, the page says why: each refused click's error is kept, with the frames the page draws in
+  // the second after (a page that draws two cannot answer a click's stability check, which waits for frames). Best
+  // effort: a test timeout that falls before this budget ends reports itself first.
+  const refused = [];
+  try {
+    await expect(async () => {
+      if (!await dialog.isVisible()) await button.click({ timeout: 2000 }).catch(error => { refused.push(String(error.message).split('\n').slice(0, 4).join(' | ')); throw error; });
+      await expect(dialog).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 20000 });
+  } catch (error) {
+    const frames = await page.evaluate(() => new Promise(done => { let n = 0; const end = performance.now() + 1000;
+      setTimeout(() => done(n), 1500);
+      const tick = () => { n++; if (performance.now() < end) requestAnimationFrame(tick); else done(n); }; requestAnimationFrame(tick); })).catch(() => 'unknown');
+    throw new Error(`The match result did not open (${frames} frames drawn in the second after). Each refused click said:\n${refused.join('\n')}`, { cause: error });
+  }
+}
+
+// What a result journey reads is the result and its controls, not the canvas. Phaser draws it sixty times a second
+// all the same, and on a runner that renders in software the page's compositing of it starves the page until a
+// click's stability check (two frames) cannot finish: #match-open was visible and in place, and five 2 s clicks were
+// refused (#819). The canvas is left undisplayed (Phaser still renders into it; the page no longer composites it).
+// Only a journey that does not read the field may use it.
+export async function withoutCanvas({ context }) {
+  await context.addInitScript(() => {
+    addEventListener('DOMContentLoaded', () => {
+      const style = document.createElement('style');
+      style.textContent = '#phaser-mount canvas { display: none !important }';
+      document.head.append(style);
+    });
+  });
 }
