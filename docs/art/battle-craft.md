@@ -22,9 +22,8 @@ Every entry has the same six lines.
 - **Reduced motion**: what is left of it when the player asked for less motion.
 - **Here**: what the view does today, and which stage of the plan uses the pattern.
 
-A number marked *house* is ours: no source gives it, and a film strip (BC2) tunes it. A number or a claim marked
-*to check* was read in a search excerpt and not on the page. A source marked *not read* could not be opened: its
-site refused the download (see "How the book is kept").
+A number or a claim marked *house* is ours: no source read for this book gives it, and a film strip (BC2) tunes
+it.
 
 ## Rules every pattern obeys
 
@@ -93,10 +92,11 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 
 - **What**: the two figures freeze for a few frames at contact, so the hit reads as heavy. The stop grows with
   the damage. A projectile gives less of it, an electric attack more. Super Smash Bros. caps it at 20 frames in
-  Melee and 30 from Brawl on. The struck figure shakes during the stop, and the shake dies down (*to check*).
-- **Source**: [Stop for Big Moments!](https://www.youtube.com/watch?v=OdVkEOzdCPw), Masahiro Sakurai, 2022;
-  [Thinking About Hitstop](https://sourcegaming.info/2015/11/11/thoughts-on-hitstop-sakurais-famitsu-column-vol-490-1/),
-  Sakurai's Famitsu column, translated by Source Gaming, 2015; [Hitlag](https://www.ssbwiki.com/Hitlag), SmashWiki.
+  Melee and 30 from Brawl on. The struck figure shakes more than the attacker, sideways on the ground and up and
+  down in the air, and the shake lessens gradually; the attacker keeps moving just a little.
+- **Source**: [Thinking About Hitstop](https://sourcegaming.info/2015/11/11/thoughts-on-hitstop-sakurais-famitsu-column-vol-490-1/), Masahiro Sakurai's Famitsu column, translated by Source Gaming, 2015;
+  [Hitlag](https://www.ssbwiki.com/Hitlag), SmashWiki; [Fine-tuning hit stop](https://nintendowire.com/news/2022/12/12/this-week-in-sakurai-12-5-12-11-fine-tuning-hit-stop-and-cheating-the-system/), Nintendo Wire, 2022, on Sakurai's eight hit stop
+  techniques.
 - **Phaser**: `Phaser.Tweens.TweenManager#setGlobalTimeScale` at 0 freezes every tween;
   `Phaser.Time.Clock#delayedCall` still runs and sets it back to 1. Emitters have their own
   `Phaser.GameObjects.Particles.ParticleEmitter#timeScale`. To freeze two figures only, use
@@ -110,8 +110,9 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 
 - **What**: the impact is seen first, then its result is read. The loud beats come at once and end early; the
   scene then goes quiet, so the eye can leave the body for the number.
-- **Source**: [Stop for Big Moments!](https://www.youtube.com/watch?v=OdVkEOzdCPw), Masahiro Sakurai, 2022, for
-  the idea that a pause makes room to read. No source gives a figure: the lengths are house rules.
+- **Source**: [Thinking About Hitstop](https://sourcegaming.info/2015/11/11/thoughts-on-hitstop-sakurais-famitsu-column-vol-490-1/), Sakurai's Famitsu column, 2015: in the stop both sides
+  "momentarily freeze, emphasizing the power of impact". No source gives a figure for the hold: the lengths are
+  house rules.
 - **Phaser**: one `Phaser.Time.Timeline` places the scene's own beats at their milliseconds
   (`Phaser.Types.Time.TimelineEventConfig.at`): the flash, the burst and the shake first, the slow fade after.
   The scene holds only what it draws.
@@ -171,10 +172,11 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 
 ### Recoil
 
-- **What**: the struck figure is pushed along the line of the attack and comes back. Knockback is feedback: it
-  says who was hit and how hard.
-- **Source**: [The art of screenshake](https://www.youtube.com/watch?v=AJdEqssNZ-U), Jan Willem Nijman, Vlambeer,
-  2013, which lists knockback of the enemy among its tweaks.
+- **What**: the struck figure is pushed along the line of the attack and comes back. It says who was hit and how
+  hard (*house*).
+- **Source**: [Vlambeer co-founder shares advice on building better action games](https://www.gamedeveloper.com/design/vlambeer-co-founder-shares-advice-on-building-better-action-games), Game Developer, 2014, on Jan Willem Nijman's talk "The art of screenshake": thirty
+  small tweaks, each making a dull shooter read better. The talk was not watched for this book, so the recoil
+  stands as a house pattern.
 - **Phaser**: one tween with `Phaser.Types.Tweens.TweenBuilderConfig.yoyo`, its direction from the caster to
   the target (`Phaser.Math.Angle.Between`); `Phaser.Types.Tweens.TweenBuilderConfig.hold` keeps the figure at the
   far end before it returns.
@@ -187,9 +189,10 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 ### Hit flash
 
 - **What**: the struck sprite turns one flat colour for a frame or two at contact. Its job is to say "this one
-  took damage" faster than any number.
-- **Source**: [The art of screenshake](https://www.youtube.com/watch?v=AJdEqssNZ-U), Nijman, 2013, which lists
-  the hit animation. No source gives a duration: ours is a house rule.
+  took damage" faster than any number (*house*).
+- **Source**: [Vlambeer co-founder shares advice on building better action games](https://www.gamedeveloper.com/design/vlambeer-co-founder-shares-advice-on-building-better-action-games), Game Developer, 2014, on the same thirty tweaks; and
+  [Understanding SC 2.3.1](https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold.html),
+  W3C, for what a flash may not do. No source gives a duration: ours is a house rule.
 - **Phaser**: `Phaser.GameObjects.Image#setTint` with `Phaser.GameObjects.Image#setTintMode` at
   `Phaser.TintModes.FILL`, then `Phaser.GameObjects.Image#clearTint`, which also puts the mode back to
   `Phaser.TintModes.MULTIPLY`.
@@ -202,10 +205,10 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 ### Death
 
 - **What**: the last hit pays off and the body stays. A figure that vanishes leaves no history on the field; one
-  that falls and remains does.
+  that falls and remains does (*house*).
 - **Source**: [The dark art of creating gorgeous death animations](https://www.pcgamer.com/the-dark-art-of-creating-gorgeous-death-animations/),
-  PC Gamer; [The art of screenshake](https://www.youtube.com/watch?v=AJdEqssNZ-U), Nijman, 2013, on permanence.
-  No source describes a death for a single picture: the staging is ours.
+  PC Gamer: a death animation is "a splash of reward. You did something right!". No source describes a death
+  for a single picture: the staging is ours.
 - **Phaser**: a tween of `Phaser.GameObjects.Image#alpha` and scale about the feet, and a
   `Phaser.Filters.ColorMatrix` added with `Phaser.GameObjects.Components.FilterList#addColorMatrix`, whose
   `Phaser.Display.ColorMatrix#grayscale` drains the colour.
@@ -220,8 +223,7 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 - **What**: a still figure is never quite still. A moving hold, a slow rise and fall, keeps a long pose alive.
 - **Source**: [Twelve basic principles of animation](https://en.wikipedia.org/wiki/Twelve_basic_principles_of_animation):
   a character sitting still can show "some sort of movement, such as breathing", so the picture does not go
-  lifeless; [Why all animators need to master the moving hold](https://animationmentor.com/blog/why-all-animators-need-to-master-the-moving-hold),
-  Animation Mentor (*not read*).
+  lifeless.
 - **Phaser**: computed in `Phaser.Scene#update` from the scene's time, as the halos are, and applied to
   `Phaser.GameObjects.Image#scaleY`. Not a tween: the cancel path's `Phaser.Tweens.TweenManager#killAll` would
   kill it at the first skip.
@@ -483,7 +485,9 @@ bake the drawing to a texture first, or filter a container.
 
 - **What**: a thrown thing rises and falls. A curve from caster to target, with one control point above the
   middle, reads as weight; a straight line reads as a beam.
-- **Source**: [The Beauty of Bézier Curves](https://youtu.be/aVwxzDHniEw), Freya Holmér, 2021.
+- **Source**: [Curves and Paths](https://unpkg.com/phaser@4.2.1/skills/curves-and-paths/SKILL.md), the notes
+  Phaser 4.2.1 ships: a quadratic Bézier has a start, one control point and an end. That an arc reads as weight
+  is a house rule.
 - **Phaser**: `Phaser.Curves.QuadraticBezier`; drive a value from 0 to 1 with
   `Phaser.Tweens.TweenManager#addCounter`, place the projectile with `Phaser.Curves.QuadraticBezier#getPoint` and
   turn it with `Phaser.Curves.QuadraticBezier#getTangent`. `Phaser.Curves.Curve#getPointAt` gives an even speed
@@ -510,11 +514,9 @@ bake the drawing to a texture first, or filter a container.
 ### Chain between targets
 
 - **What**: a jagged line from one target to the next. Split each segment at its middle and move the middle
-  sideways; halve the move at each pass. Redraw it two or three times so it flickers. A wide dim line under a thin
-  bright one gives it a core and a glow.
-- **Source**: [Lightning Bolts](https://www.drilian.com/posts/2009.02.25-lightning-bolts/), Josh Jersild, 2009;
-  [How to Generate Shockingly Good 2D Lightning Effects](https://code.tutsplus.com/how-to-generate-shockingly-good-2d-lightning-effects--gamedev-2681t),
-  Michael Hoffman, 2013 (*not read*).
+  sideways; halve the move at each pass. Draw two bolts and move their points every frame, so it flickers. A
+  glow under the bright line gives it a core.
+- **Source**: [Lightning Bolts](https://www.drilian.com/posts/2009.02.25-lightning-bolts/), Josh Jersild, 2009.
 - **Phaser**: `Phaser.GameObjects.Graphics#strokePoints` on points built with `Phaser.Math.Vector2`; the offsets
   come from a `Phaser.Math.RandomDataGenerator` with a seed, so a film strip repeats.
 - **Cost**: one `Graphics`. A redraw is a new path, not a new object.
@@ -526,8 +528,9 @@ bake the drawing to a texture first, or filter a container.
 
 - **What**: what flies off an impact goes on the way the blow was going. Debris in a cone along the line of
   travel says where the hit came from; a round burst says nothing.
-- **Source**: [The art of screenshake](https://www.youtube.com/watch?v=AJdEqssNZ-U), Nijman, 2013, for effects
-  that carry the direction of the shot. No source was found for this pattern by name.
+- **Source**: [Vlambeer co-founder shares advice on building better action games](https://www.gamedeveloper.com/design/vlambeer-co-founder-shares-advice-on-building-better-action-games), Game Developer, 2014: one of Nijman's tweaks shakes the screen
+  "slightly in the opposite direction of the player's gunfire". An effect that carries the direction of the blow
+  is the same idea, applied to debris.
 - **Phaser**: `Phaser.Math.Angle.Between` the caster and the target gives the heading in radians. The emitter's
   `Phaser.Types.GameObjects.Particles.ParticleEmitterConfig.angle` is in degrees: convert with
   `Phaser.Math.RadToDeg`, then give a range around it.
@@ -540,10 +543,10 @@ bake the drawing to a texture first, or filter a container.
 ### Parallax
 
 - **What**: far things move less than near things. Layers that shift by different amounts when the view moves
-  give one flat painting depth. Godot's own example runs from 0.1 for the sky to 0.7 for the nearest layer
-  (*to check*).
+  give one flat painting depth. Godot's own example runs from 0.1 for the sky and 0.2 and 0.3 for the clouds to
+  0.5 for the hills and 0.7 for the forest.
 - **Source**: [2D Parallax](https://docs.godotengine.org/en/stable/tutorials/2d/2d_parallax.html), the Godot
-  documentation (*not read*).
+  documentation.
 - **Phaser**: `Phaser.GameObjects.Image#setScrollFactor` on each plate: the camera's shake, punch and push then
   move the near plates more than the far ones, with no code each frame.
 - **Cost**: none.
@@ -587,9 +590,10 @@ bake the drawing to a texture first, or filter a container.
 
 ### A scar that fades
 
-- **What**: a mark left where the blow landed, which fades. For a few seconds the ground remembers.
-- **Source**: [The art of screenshake](https://www.youtube.com/watch?v=AJdEqssNZ-U), Nijman, 2013, on
-  permanence. No source gives a duration.
+- **What**: a mark left where the blow landed, which fades. For a few seconds the ground remembers
+  (*house*).
+- **Source**: [Phaser 4 Rendering Concepts](https://phaser.io/tutorials/phaser-4-rendering-concepts), Phaser
+  Studio, for what a render texture costs. No source read here describes the pattern or gives a duration.
 - **Phaser**: one image under the figure, blended with `Phaser.BlendModes.MULTIPLY`, its alpha tweened to 0. For
   many marks, stamp them into a `Phaser.GameObjects.RenderTexture` with `Phaser.GameObjects.RenderTexture#stamp`,
   then `Phaser.GameObjects.RenderTexture#render`: in Phaser 4 nothing is drawn until `render` is called.
@@ -603,12 +607,12 @@ bake the drawing to a texture first, or filter a container.
 ### One effect, one meaning
 
 - **What**: the same shape always means the same thing. What an effect weighs to the eye should match what it
-  weighs in the game. An effect has one primary element that carries the game's message, and secondary ones
-  that carry the theme, lower in value and opacity (*to check*).
-- **Source**: [League's VFX Style Guide](https://web.archive.org/web/20180719210538/https://nexus.leagueoflegends.com/en-us/2017/10/dev-leagues-vfx-style-guide/),
-  Riot Games, 2017 (*not read*: the page is gone, this is its archived copy);
-  [Clarity in League](https://www.leagueoflegends.com/en-us/news/dev/clarity-in-league/), Riot Games: "the amount
-  of attention an ability grabs should match its level of importance", and visual noise adds up quickly.
+  weighs in the game. The part of an effect that carries the game's message is its focus; the rest carries the
+  theme, and is kept lower in value and opacity (*house*).
+- **Source**: [Clarity in League](https://www.leagueoflegends.com/en-us/news/dev/clarity-in-league/), Riot
+  Games: "the amount of attention an ability grabs should match its level of importance", and visual noise adds
+  up quickly; [Anatomy of a League of Legends missile, part 1](https://realtimevfx.com/t/anatomy-of-a-league-of-legends-missile-part-1-creating-areas-of-focus/11614),
+  Oli McDonald, Riot, 2020: the area of focus "should be the element that is communicating gameplay".
 - **Phaser**: the primary element is drawn last and highest (`Phaser.GameObjects.Graphics#setDepth`), and each
   object carries its motif, creature and phase (`Phaser.GameObjects.GameObject#setData`), which the browser specs
   read.
@@ -632,13 +636,13 @@ bake the drawing to a texture first, or filter a container.
 
 ### The three parts of an effect
 
-- **What**: an effect has an anticipation, a main beat and a dissipation (*to check*). The main beat is the
-  brightest and the shortest. The end falls in value, saturation and opacity (*to check*), and never competes
-  with the next action.
-- **Source**: [Visual Effects Bootcamp: Artistic Principles of VFX](https://www.gdcvault.com/play/1024439/Visual-Effects-Bootcamp-Artistic-Principles),
+- **What**: an effect has an anticipation, a main beat and a dissipation: the animator's anticipation,
+  action and follow-through, applied to an effect (*house*). The main beat is the brightest and the shortest. The
+  end falls in value, saturation and opacity, and never competes with the next action (*house*).
+- **Source**: [Twelve basic principles of animation](https://en.wikipedia.org/wiki/Twelve_basic_principles_of_animation),
+  for anticipation and follow-through; [Visual Effects Bootcamp: Artistic Principles of VFX](https://www.gdcvault.com/play/1024439/Visual-Effects-Bootcamp-Artistic-Principles),
   Hadidjah Chamberlin and Jason Keyser, GDC 2017: artistic fundamentals of VFX, with cases from League of
-  Legends; [League's VFX Style Guide](https://web.archive.org/web/20180719210538/https://nexus.leagueoflegends.com/en-us/2017/10/dev-leagues-vfx-style-guide/),
-  Riot Games, 2017 (*not read*).
+  Legends.
 - **Phaser**: one `Phaser.Time.Timeline` per effect places the three parts on the game's clock
   (`Phaser.Time.Timeline#add`), and one `Phaser.Time.Timeline#timeScale` follows the playback rate.
 - **Cost**: none.
@@ -727,12 +731,12 @@ The types cannot catch these. They compile, and do the wrong thing.
   (`studio/browser/plan.js`).
 - When Phaser is upgraded, the test says which names moved. Fix the entry, then read "Declared, and dead" again
   against the new version: the test cannot.
-- The links were found by a web search on 2026-11-18, then opened and read against the entry that cites them.
-  Of 39 links, 32 pages were read. Three are videos: their titles and authors were read, and nobody watched
-  them here. Four are marked *not read*: Animation Mentor, Envato Tuts+ and the Godot documentation refused the
-  download, and Riot's guide is gone from its address, so the link is its archived copy, which did not open
-  either. What a page did not say was taken out of its entry or marked *to check*. The Phaser facts are first
-  hand, read in the installed package and its source.
-- A session that opens a *not read* source, or watches a video, removes the marks it has checked.
+- Every link was opened and read against the entry that cites it, on 2026-11-18. What a page did not say was
+  taken out of its entry, or kept and marked *house*. No video is cited: a talk is cited through a page that
+  describes it, and for what that page says. The Phaser facts are first hand, read in the installed package and
+  its source.
+- Sources looked for and left out, because they could not be read: Riot's VFX style guide (gone from its
+  address), Animation Mentor on the moving hold, Envato Tuts+ on 2D lightning, Arm on fog, and the talks of
+  Sakurai, Nijman and Holmér as videos. An entry that would lean on one says *house* where it does.
 - A new pattern is added with all six lines, under the group it belongs to. A number with no source is marked
   *house*.

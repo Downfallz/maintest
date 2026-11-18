@@ -120,10 +120,9 @@ that extends it.
    the book: the whole engine is already in `live.js` (1,388,640 of its 1,711,869 bytes). So an engine feature
    costs only its calling code. On a phone a batch holds one texture. `resetFX` does not reset a zoom. `killAll`
    would kill a breath made of a tween. The particles and the camera shake draw from `Math.random`, which BC2's
-   bench must pin for two film strips to agree. The sources were opened and read against their entries: 32 of
-   39 pages, and the titles of three videos. Left: four sources are marked *not read*, their sites refused the
-   download or the page is gone, and five claims are marked *to check*. No frame time is measured; that is
-   BC10's.
+   bench must pin for two film strips to agree. Every one of the book's 36 links was opened and read against the entry that cites it;
+   what no page says is marked *house*, and the sources that could not be read are left out and listed. Left:
+   no frame time is measured; that is BC10's.
 
 2. **BC2, the bench and the film strip.** `/battle-lab?bench`, `scripts/battle/filmstrip.mjs`, the clock stepping.
    Tests: the bench lists all 44 entries; two runs of one effect give the same sheet; `live.js` holds no bench code.
