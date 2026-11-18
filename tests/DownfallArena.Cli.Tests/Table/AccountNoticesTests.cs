@@ -118,6 +118,17 @@ public sealed class AccountNoticesTests
         test.Message.ShouldBe("The push service refused it (403).");
     }
 
+    [Fact]
+    public async Task A_test_whose_keys_cannot_be_used_says_so_rather_than_to_try_again()
+    {
+        await _devices.AddAsync(_mark, Phone("phone"), Cancel);
+        _sender.Failure = new System.Security.Cryptography.CryptographicException("The point is not on the curve.");
+
+        var test = await _notices.TestAsync(_mark, "https://push.example/phone", Cancel);
+
+        test.Message.ShouldBe("This device's subscription could not be used. Turn notifications off and on again.");
+    }
+
     private sealed class Sender : IPushSender
     {
         public List<(PushSubscription To, string Payload, string Topic)> Sent { get; } = [];

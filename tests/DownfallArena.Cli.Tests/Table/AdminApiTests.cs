@@ -151,7 +151,10 @@ public sealed class AdminApiTests : IDisposable
         var held = JsonDocument.Parse(Text(claimed)).RootElement.GetProperty("seats")[0].GetProperty("token").GetString()!;
         store!.Refusing = true;
 
-        (await admin.HandleAsync("POST", $"/api/tables/{id}/seats/player1/invite", "", OperatorToken, null)).Status.ShouldBe(503);
+        var refused = await admin.HandleAsync("POST", $"/api/tables/{id}/seats/player1/invite", "", OperatorToken, null);
+
+        refused.Status.ShouldBe(503);
+        Text(refused).ShouldNotContain("The store is out", Case.Insensitive);
 
         (await registry.ByTokenAsync(held, TestContext.Current.CancellationToken)).ShouldBeSameAs(table);
         table.Seats[0].Taken.ShouldBeTrue();

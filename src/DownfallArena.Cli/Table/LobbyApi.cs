@@ -1,8 +1,8 @@
-using DownfallArena.Cli.Hosting;
 using System.Text.Json;
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Friends;
 using DownfallArena.Application.Agents;
+using DownfallArena.Cli.Hosting;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Infrastructure.Learning;
@@ -348,8 +348,15 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             catch (Exception failure) when (failure is ArgumentException or IOException or InvalidDataException or Azure.RequestFailedException)
             {
                 // The same failures the admin panel answers as a refusal (AdminApi.OpenAsync): content that does
-                // not load, or a store that is out. A visitor reads a sentence, not a 500.
-                return Unavailable("could not be opened", failure);
+                // not load, or a store that is out. A visitor reads a sentence, not a 500, and asking again helps
+                // only with the store.
+                if (TableRegistry.StoreFails(failure))
+                {
+                    return Unavailable("could not be opened", failure);
+                }
+
+                Console.WriteLine($"  A table could not be composed: {HttpHost.OneLine(failure)}");
+                return Problem(503, "Lobby.Unplayable", "This host cannot open a table: its content does not load. Tell the operator.");
             }
 
             table.OpenSeats = opponent == "person" ? ["player2"] : [];
@@ -1669,7 +1676,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     private static StudioResponse Unavailable(string what, Exception failure)
     {
         Console.WriteLine($"  A table {what}: {HttpHost.OneLine(failure)}");
-        return Problem(503, "Lobby.Unavailable", "The table could not be opened just now. Try again in a few minutes.");
+        return Problem(503, "Lobby.Unavailable", "The table could not be opened. Try again in a few minutes.");
     }
 
     private static StudioResponse Problem(int status, string code, string message) => Json(new { error = code, message }, status);

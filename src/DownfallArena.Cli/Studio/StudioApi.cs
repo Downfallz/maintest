@@ -1,6 +1,6 @@
-using DownfallArena.Cli.Hosting;
 using System.Text.Json;
 using DownfallArena.Application.Agents;
+using DownfallArena.Cli.Hosting;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Infrastructure.Evaluation;
@@ -109,7 +109,7 @@ internal sealed class StudioApi : IDisposable
     /// <summary>A run that could not be read: a 404 in a fixed sentence, as the exception's words carry the runs directory (#786).</summary>
     private static StudioResponse Unread(Exception exception, string said)
     {
-        Console.WriteLine($"  {said} {HttpHost.OneLine(exception)}");
+        Console.WriteLine($"  {said.ReplaceLineEndings(" ")} {HttpHost.OneLine(exception)}");
         return StudioResponse.OfPlainText(404, said);
     }
 

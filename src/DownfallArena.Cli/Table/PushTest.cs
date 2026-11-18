@@ -8,7 +8,10 @@ internal sealed record PushTest(bool Sent, string Message)
     /// service's response text, so they go to the console only (#786).
     /// </summary>
     public static string Refused(Exception failure) =>
-        failure is HttpRequestException { StatusCode: { } status }
-            ? $"The push service refused it ({(int)status})."
-            : "The push service could not be reached. Try again in a moment.";
+        failure switch
+        {
+            HttpRequestException { StatusCode: { } status } => $"The push service refused it ({(int)status}).",
+            System.Security.Cryptography.CryptographicException => "This device's subscription could not be used. Turn notifications off and on again.",
+            _ => "The push service could not be reached. Try again in a moment.",
+        };
 }

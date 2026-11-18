@@ -1,8 +1,8 @@
-using DownfallArena.Cli.Hosting;
 using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using DownfallArena.Application.Accounts;
+using DownfallArena.Cli.Hosting;
 using DownfallArena.SharedKernel.Identifiers;
 
 namespace DownfallArena.Cli.Table;

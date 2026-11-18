@@ -1,4 +1,3 @@
-using DownfallArena.Cli.Hosting;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -12,6 +11,7 @@ using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Matches.Feed;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Application.Matches.Queries;
+using DownfallArena.Cli.Hosting;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Events;
