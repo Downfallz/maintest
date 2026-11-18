@@ -5,7 +5,7 @@ import { cutAsked, listingToggle, roundChoices, scenarioRows, shareLink } from '
 test('a scenario is listed by its title, where it was cut from, and its link', () => {
   const [row] = scenarioRows({ scenarios: [{ id: 'sc-1', title: 'Bleed after a stun', goal: 'Keep it alive', session: 's 1', round: 4, seat: 'player2', link: '/battle?scenario=sc-1' }] });
 
-  assert.deepEqual(row, { id: 'sc-1', title: 'Bleed after a stun', goal: 'Keep it alive', facts: 'session s 1 · round 4 · played as player2', session: '/session/s%201', link: '/battle?scenario=sc-1', listed: false, shipped: false, tutorial: null });
+  assert.deepEqual(row, { id: 'sc-1', title: 'Bleed after a stun', goal: 'Keep it alive', facts: 'session s 1 · round 4 · played as player2', session: '/session/s%201', link: '/battle?scenario=sc-1', listed: false, shipped: false, tutorial: null, bug: null });
   assert.equal(scenarioRows({ scenarios: [{ id: 'sc-2', round: 3, seat: 'player1', link: '/x' }] })[0].title, 'Round 3');
 });
 
@@ -54,4 +54,15 @@ test('a tutorial of the series carries its place in it, and a scenario that is n
 
   assert.equal(tutorial.tutorial, 1);
   assert.equal(plain.tutorial, null);
+});
+
+test('a bug scenario carries the issue it reproduces, and a scenario that is none carries null', () => {
+  const [bug, plain] = scenarioRows({ scenarios: [
+    { id: 'sc-repo-bug-812-bleed', round: 4, seat: 'player2', source: 'repository', file: 'bugs/812-bleed.json', link: '/a', bug: 812 },
+    { id: 'sc-repo-greedy', round: 3, seat: 'player1', source: 'repository', file: 'greedy.json', link: '/b', bug: null },
+  ] });
+
+  assert.equal(bug.bug, 812);
+  assert.equal(bug.facts, 'scenarios/bugs/812-bleed.json · round 4 · played as player2');
+  assert.equal(plain.bug, null);
 });

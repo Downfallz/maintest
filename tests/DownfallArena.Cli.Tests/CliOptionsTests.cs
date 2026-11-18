@@ -478,6 +478,45 @@ public sealed class CliOptionsTests
     }
 
     [Fact]
+    public void An_import_reads_its_zip_and_issue_and_names_its_own_file()
+    {
+        var options = CliOptions.Parse(["scenario-import", "--zip", "report.zip", "--issue", "812"]);
+
+        (options.Zip, options.Issue, options.Output).ShouldBe(("report.zip", 812, string.Empty));
+    }
+
+    [Fact]
+    public void An_import_needs_both_its_zip_and_its_issue_and_they_are_its_alone()
+    {
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["scenario-import", "--zip", "report.zip"])).Message.ShouldContain("--issue");
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["scenario-import", "--issue", "812"])).Message.ShouldContain("--zip");
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["scenario-check", "--scenario", "s.json", "--zip", "report.zip"])).Message.ShouldContain("scenario-import");
+    }
+
+    [Fact]
+    public void An_issue_is_a_number_from_one()
+    {
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["scenario-import", "--zip", "z", "--issue", "0"])).Message.ShouldContain("'0'");
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["scenario-import", "--zip", "z", "--issue", "#12"])).Message.ShouldContain("'#12'");
+    }
+
+    [Fact]
+    public void A_trace_on_a_check_takes_no_file_and_asks_for_the_boards()
+    {
+        var options = CliOptions.Parse(["scenario-check", "--trace", "--scenario", "s.json"]);
+
+        (options.TraceBoards, options.Trace, options.Scenario).ShouldBe((true, null, "s.json"));
+    }
+
+    [Fact]
+    public void A_trace_elsewhere_still_names_its_file()
+    {
+        var options = CliOptions.Parse(["play", "--trace", "trace.json"]);
+
+        (options.TraceBoards, options.Trace).ShouldBe((false, "trace.json"));
+    }
+
+    [Fact]
     public void A_seat_is_one_of_the_two() =>
         Should.Throw<ArgumentException>(() => CliOptions.Parse(["scenario-cut", "--session", "s", "--seat", "player3"])).Message.ShouldContain("player3");
 

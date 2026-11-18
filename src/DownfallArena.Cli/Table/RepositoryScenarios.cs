@@ -4,8 +4,8 @@ namespace DownfallArena.Cli.Table;
 
 /// <summary>
 /// The match scenarios the repository ships (docs/tabletop/scenarios-plan.md, S7): every <c>*.json</c> of the
-/// <c>scenarios/</c> directory and of its <c>tutorials/</c> (ADR 0187), read once when the host starts, each under
-/// an id made of its file's name. They are
+/// <c>scenarios/</c> directory, of its <c>tutorials/</c> (ADR 0187) and of its <c>bugs/</c> (docs/tabletop/feedback-plan.md,
+/// R6), read once when the host starts, each under an id made of its file's name. They are
 /// the repository's, not this host's: the admin panel lists and plays them, and nothing at the host removes one or
 /// lists it for players. A file that is not a scenario, or that does not carry its content, is said on the console and
 /// left out.
@@ -24,6 +24,12 @@ internal sealed class RepositoryScenarios
     /// <summary>What a tutorial's id begins with, which no other shipped scenario's does.</summary>
     public const string TutorialPrefix = Prefix + "tutorial-";
 
+    /// <summary>The directory of <c>scenarios/</c> the bug scenarios are kept in, each named <c>&lt;issue&gt;-&lt;slug&gt;.json</c>.</summary>
+    public const string BugsDirectory = "bugs";
+
+    /// <summary>What a bug scenario's id begins with, which no other shipped scenario's does.</summary>
+    public const string BugPrefix = Prefix + "bug-";
+
     /// <summary>The longest id a scenario's routes take is 63 characters.</summary>
     private const int LongestName = 63 - 8;
 
@@ -37,7 +43,11 @@ internal sealed class RepositoryScenarios
     }
 
     /// <summary>A scenario the repository ships: its id, the file it is, and what it holds.</summary>
-    internal sealed record Shipped(string Id, string File, ScenarioDocument Document);
+    internal sealed record Shipped(string Id, string File, ScenarioDocument Document)
+    {
+        /// <summary>The issue a bug scenario reproduces; none for any other.</summary>
+        public int? Bug => BugOf(File);
+    }
 
     public static RepositoryScenarios None { get; } = new([]);
 
@@ -60,7 +70,7 @@ internal sealed class RepositoryScenarios
         var all = new List<Shipped>();
         foreach (var path in Directory.EnumerateFiles(directory, "*.json").Order(StringComparer.Ordinal))
         {
-            Add(all, path, Path.GetFileName(path), IdOf(Path.GetFileName(path)), tutorial: false);
+            Add(all, path, Path.GetFileName(path), IdOf(Path.GetFileName(path)), Kind.Plain);
         }
 
         var tutorials = Path.Combine(directory, TutorialsDirectory);
@@ -68,7 +78,16 @@ internal sealed class RepositoryScenarios
         {
             foreach (var path in Directory.EnumerateFiles(tutorials, "*.json").Order(StringComparer.Ordinal))
             {
-                Add(all, path, $"{TutorialsDirectory}/{Path.GetFileName(path)}", IdOf($"tutorial-{Path.GetFileName(path)}"), tutorial: true);
+                Add(all, path, $"{TutorialsDirectory}/{Path.GetFileName(path)}", IdOf($"tutorial-{Path.GetFileName(path)}"), Kind.Tutorial);
+            }
+        }
+
+        var bugs = Path.Combine(directory, BugsDirectory);
+        if (Directory.Exists(bugs))
+        {
+            foreach (var path in Directory.EnumerateFiles(bugs, "*.json").Order(StringComparer.Ordinal))
+            {
+                Add(all, path, $"{BugsDirectory}/{Path.GetFileName(path)}", IdOf($"bug-{Path.GetFileName(path)}"), Kind.Bug);
             }
         }
 
@@ -78,13 +97,27 @@ internal sealed class RepositoryScenarios
     /// <summary>
     /// One file read into <paramref name="all" />, or said on the console and left out: another file has its id, it
     /// is not a scenario, it does not carry its content, it is a tutorial outside the tutorials' directory or named
-    /// as one there, or another tutorial already has its place in the series.
+    /// as one there, another tutorial already has its place in the series, or it is a bug's not named after its issue
+    /// or teaching a lesson.
     /// </summary>
-    private static void Add(List<Shipped> all, string path, string file, string id, bool tutorial)
+    private static void Add(List<Shipped> all, string path, string file, string id, Kind kind)
     {
-        if (!tutorial && id.StartsWith(TutorialPrefix, StringComparison.Ordinal))
+        var tutorial = kind == Kind.Tutorial;
+        if (kind == Kind.Plain && id.StartsWith(TutorialPrefix, StringComparison.Ordinal))
         {
             Console.WriteLine($"  Scenario file {file} is left out: the id {id} is a tutorial's, and it is not under {TutorialsDirectory}/.");
+            return;
+        }
+
+        if (kind == Kind.Plain && id.StartsWith(BugPrefix, StringComparison.Ordinal))
+        {
+            Console.WriteLine($"  Scenario file {file} is left out: the id {id} is a bug's, and it is not under {BugsDirectory}/.");
+            return;
+        }
+
+        if (kind == Kind.Bug && BugOf(file) is null)
+        {
+            Console.WriteLine($"  Scenario file {file} is left out: a bug scenario is named after its issue, <number>-<slug>.json.");
             return;
         }
 
@@ -104,10 +137,16 @@ internal sealed class RepositoryScenarios
                 return;
             }
 
-            if (document.Tutorial is not null && !tutorial)
+            if (document.Tutorial is not null && kind == Kind.Plain)
             {
                 // Only the tutorials' directory is held step by step by the tests; a lesson elsewhere would be offered unchecked.
                 Console.WriteLine($"  Scenario file {file} is left out: it has a tutorial block, and a tutorial is kept under {TutorialsDirectory}/.");
+                return;
+            }
+
+            if (document.Tutorial is not null && kind == Kind.Bug)
+            {
+                Console.WriteLine($"  Scenario file {file} is left out: it is under {BugsDirectory}/ and has a tutorial block.");
                 return;
             }
 
@@ -129,6 +168,33 @@ internal sealed class RepositoryScenarios
         {
             Console.WriteLine($"  Scenario file {file} is left out: {failure.Message}");
         }
+    }
+
+    /// <summary>
+    /// The issue a shipped file reproduces: the number a file under <c>bugs/</c> is named after, from 1, as
+    /// <c>scenario-import</c> writes it; none for any other file.
+    /// </summary>
+    internal static int? BugOf(string file)
+    {
+        var prefix = $"{BugsDirectory}/";
+        if (!file.StartsWith(prefix, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var name = file[prefix.Length..];
+        var digits = name.TakeWhile(char.IsAsciiDigit).Count();
+        return digits is > 0 and <= 9 && name.Length > digits && name[digits] == '-' && name[0] != '0'
+            && int.TryParse(name.AsSpan(0, digits), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var issue)
+            ? issue
+            : null;
+    }
+
+    private enum Kind
+    {
+        Plain,
+        Tutorial,
+        Bug,
     }
 
     /// <summary>The id a file's scenario is opened by: its name in lower case, whatever is not a letter or a digit a dash.</summary>
