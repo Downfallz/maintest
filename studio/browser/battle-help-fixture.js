@@ -20,8 +20,9 @@ export async function teamTempos(page) { await planningSheet(page); await expect
 async function planningSheet(page) {
   const dialog = page.locator('#planning-dialog'), button = page.locator('#planning-open');
   await acknowledge(page, async () => await dialog.isVisible() || await button.isVisible());
-  if (!await dialog.isVisible()) await button.click({ timeout: 2000 }).catch(() => {});
-  await expect(dialog).toBeVisible();
+  // Tried until the sheet opens, as the match result is: one click with its failure swallowed, then one 5 s wait,
+  // failed under load without saying whether the click was refused or the sheet was slow (#859).
+  await openBehind(page, dialog, button, 'The planning sheet');
 }
 
 // The battle holds every confirmed action for the player's OK (ADR 0139). A journey reads them as a player
@@ -62,12 +63,15 @@ export const readResults = (page, onOrder = null) => acknowledge(page, async () 
 // The match result opens by itself once a finished match's last result is read; a journey reaches it whether it
 // already opened or still waits behind its button.
 export async function matchResult(page) {
-  const dialog = page.locator('#match-dialog'), button = page.locator('#match-open');
-  // A loaded machine can take longer than one short click to reach the button: the click is tried until the result
-  // is open, instead of once with its failure swallowed.
-  // When it still fails, the page says why: each refused click's error is kept, with the frames the page draws in
-  // the second after (a page that draws two cannot answer a click's stability check, which waits for frames). Best
-  // effort: a test timeout that falls before this budget ends reports itself first.
+  await openBehind(page, page.locator('#match-dialog'), page.locator('#match-open'), 'The match result');
+}
+
+// A dialog that opens by itself, or waits behind its button. A loaded machine can take longer than one short click to
+// reach the button: the click is tried until the dialog is open, instead of once with its failure swallowed (#841).
+// When it still fails, the page says why: each refused click's error is kept, with the frames the page draws in
+// the second after (a page that draws two cannot answer a click's stability check, which waits for frames, #842).
+// Best effort: a test timeout that falls before this budget ends reports itself first.
+async function openBehind(page, dialog, button, name) {
   const refused = [];
   try {
     await expect(async () => {
@@ -78,7 +82,8 @@ export async function matchResult(page) {
     const frames = await page.evaluate(() => new Promise(done => { let n = 0; const end = performance.now() + 1000;
       setTimeout(() => done(n), 1500);
       const tick = () => { n++; if (performance.now() < end) requestAnimationFrame(tick); else done(n); }; requestAnimationFrame(tick); })).catch(() => 'unknown');
-    throw new Error(`The match result did not open (${frames} frames drawn in the second after). Each refused click said:\n${refused.join('\n')}`, { cause: error });
+    const clicks = refused.length ? `Each refused click said:\n${refused.join('\n')}` : 'No click was refused: the dialog was slow to show.';
+    throw new Error(`${name} did not open (${frames} frames drawn in the second after). ${clicks}`, { cause: error });
   }
 }
 

@@ -110,6 +110,82 @@ test('the connection rule reads a load, a reload, a seat chosen and a tab back i
     `  await page.reload(); await expect(page.locator('#loading')).toBeHidden();`, live]), [1]);
 });
 
+// A battle spec reads its mock route's `shown` or `writes` through `expect.poll` (studio/AGENTS.md, #816, #831, #845):
+// the request reaches the route some time after the click. A plain read that expects something was sent follows,
+// in the same test, a poll on that route state or a wait only the host's answer ends. A negative read stays plain.
+const STATE = /(?<![\w'"`.])(?:[\w$]+\.)*(?:shown|writes)\b(?![='"`])/;
+const POLLED = /expect\.poll\(\s*(?:async\s*)?\(\)\s*=>\s*(?:\[\.\.\.)?(?:[\w$]+\.)*(?:shown|writes)\b/;
+// Waits that only the host's answer ends: a refusal's text, the problem a notice test reports, a URL the answer chose.
+const ANSWERED = [/-error'\)\)\.(?:not\.)?to(?:Have|Contain)Text\(/, /#notices-problem'\)\)\.toContainText\(/, /\.waitForURL\(/];
+const TEST = /^\s*(?:for \(.*\) )?test(?:\.(?:only|skip|fixme))?\(/;
+
+/** Where the parenthesis opened at `open` closes on the line, or -1. */
+function closing(line, open) {
+  let depth = 0;
+  for (let at = open; at < line.length; at++) {
+    if (line[at] === '(') depth++;
+    else if (line[at] === ')' && --depth === 0) return at;
+  }
+  return -1;
+}
+
+/** The plain reads of the route state that expect something was sent, with nothing before them that makes them safe. */
+function unpolled(lines) {
+  const found = [];
+  lines.forEach((line, index) => {
+    for (const match of line.matchAll(/(?<![.\w])expect\(/g)) {
+      const open = match.index + 'expect'.length, close = closing(line, open);
+      const subject = close < 0 ? '' : line.slice(open + 1, close);
+      if (!STATE.test(subject) || /\bawait\b|^page\b/.test(subject)) continue;
+      const rest = line.slice(close + 1), matcher = rest.match(/^\.(?:not\.)?(\w+)\(/);
+      const expected = matcher ? rest.slice(matcher[0].length, closing(rest, matcher[0].length - 1)) : '';
+      if (matcher && ((matcher[1] === 'toEqual' && expected === '[]') || (matcher[1] === 'toHaveLength' && expected === '0'))) continue;
+      let start = index;
+      while (start > 0 && !TEST.test(lines[start])) start--;
+      const before = [...lines.slice(start, index), line.slice(0, match.index)].join('\n');
+      if (POLLED.test(before) || ANSWERED.some((wait) => wait.test(before))) continue;
+      found.push({ line: index + 1, read: `expect(${subject})${matcher ? `.${matcher[1]}` : ''}` });
+    }
+  });
+  return found;
+}
+
+// What a line-based reading cannot see, each with the wait that makes the plain read safe.
+// The tempo sheet stays open while its batch is on the wire, and sends each tempo only once the host answered that
+// asking's `shown` (table/battle-tempo.js pump): once it closes, every write and every `shown` of the batch has reached
+// the route.
+const READ_AFTER_HOST = [
+  { file: 'battle-tempo.spec.js', read: 'expect(h.writes).toEqual', why: 'the tempo sheet closed after its batch' },
+  { file: 'battle-tempo.spec.js', read: 'expect([...new Set(h.shown)]).toEqual', why: 'the tempo sheet closed after its batch' },
+  { file: 'battle-parity.spec.js', read: 'expect(state.writes.slice(1).map(one => one.speed)).toEqual', why: 'the tempo sheet closed after its batch' },
+  { file: 'battle-parity.spec.js', read: 'expect(state.writes.length).toBe', why: 'the tempo tip shows only once the host served the asking after the mutation' },
+  { file: 'battle-tutorial.spec.js', read: 'expect(state.writes.map(one => [one.kind, one.creature, one.targets])).toEqual', why: 'playStep polls writes.length at the end of each step' },
+];
+
+test('a battle journey polls its route for what was sent, unless the host has answered first', () => {
+  const specs = journeys.filter(({ file }) => file.endsWith('.spec.js'));
+  const flagged = specs.flatMap(({ file, lines }) => unpolled(lines).map((one) => ({ file, ...one })));
+  const allowed = (one) => READ_AFTER_HOST.some((entry) => entry.file === one.file && entry.read === one.read);
+  assert.deepEqual(flagged.filter((one) => !allowed(one)).map((one) => `${one.file}:${one.line} ${one.read}`), []);
+  // An entry that no longer matches a read is stale: remove it, so that it cannot excuse a later one.
+  assert.deepEqual(READ_AFTER_HOST.filter((entry) => !flagged.some((one) => one.file === entry.file && one.read === entry.read)).map((entry) => entry.read), []);
+});
+
+test('the route rule passes a poll, a host-answered wait and a negative read, and flags a read after a click', () => {
+  const head = "test('a', async ({ page }) => {";
+  assert.deepEqual(unpolled([head, "  await page.locator('#planning-confirm').click();", '  expect(h.writes).toEqual([{ kind: 1 }]);']),
+    [{ line: 3, read: 'expect(h.writes).toEqual' }]);
+  assert.deepEqual(unpolled([head, '  await page.click(); expect(h.state.writes[0].tier).toBe(2);']), [{ line: 2, read: 'expect(h.state.writes[0].tier).toBe' }]);
+  assert.deepEqual(unpolled([head, '  expect(h.writes).toEqual([]); expect(h.shown).toHaveLength(0);']), []);
+  assert.deepEqual(unpolled([head, '  await expect.poll(() => h.state.writes.length).toBe(1); expect(h.state.writes[0]).toEqual({});']), []);
+  assert.deepEqual(unpolled([head, "  await expect(page.locator('#combat-error')).toHaveText(m);", '  expect(state.writes).toHaveLength(1);']), []);
+  assert.deepEqual(unpolled([head, '  await page.waitForURL(/next$/);', '  expect(h.writes).toEqual([{}]);']), []);
+  // A poll after the read, or in the test before, does not make it safe; the reads of a request's query are not the state.
+  assert.deepEqual(unpolled([head, '  await expect.poll(() => h.writes.length).toBe(1);', '});', head, '  expect(h.writes).toEqual([{}]);',
+    '  await expect.poll(() => h.writes.length).toBe(1);']), [{ line: 5, read: 'expect(h.writes).toEqual' }]);
+  assert.deepEqual(unpolled([head, "  expect(h.reads.filter(one => !one.query.includes('shown=')).length).toBe(1);"]), []);
+});
+
 test('the clock rule reads the playback timings and the budget of the test or the file', () => {
   assert.equal(duration('WINDUP_MS + IMPACT_MS'), timing.WINDUP_MS + timing.IMPACT_MS);
   assert.equal(duration('2 * (WINDUP_MS + SETTLE_MS)'), 2 * (timing.WINDUP_MS + timing.SETTLE_MS));

@@ -7,7 +7,7 @@ import { startHost, stopHost } from './host.js';
 import { mutationTree, teamTempos } from './battle-help-fixture.js';
 import { openSpells } from './battle-spells-fixture.js';
 import { fitsViewport } from './fit.js';
-import { stepAnswered } from './battle-step.js';
+import { waitAnswered } from './battle-step.js';
 
 // The series on the real engine (ADR 0187, onboarding-plan.md O5): each tutorial of scenarios/tutorials/ opened
 // by a signed-in account on a host that records, started from its first card, and played to its end with the
@@ -193,7 +193,7 @@ async function playLesson(page, tutorial, seat, info) {
     else if (view.waitingFor === 'Speed') await answerSpeed(page, next);
     else if (view.waitingFor === 'TieOrder') await answerTieOrder(page, next);
     else await answerAction(page, view, next);
-    await expect.poll(() => stepAnswered(view, seat.latest), { timeout: 15000 }).toBe(true);
+    await waitAnswered(view, () => seat.latest, { timeout: 15000 });
   }
   // Every step showed, in the lesson's order, and the cards they open were read.
   expect([...shown]).toEqual(lesson.steps.map((_, index) => index + 1));

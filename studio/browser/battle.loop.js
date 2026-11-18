@@ -7,7 +7,7 @@ import { join as pathJoin } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fitsViewport, fitsBattlefield } from './fit.js';
 import { decided } from './decision.js';
-import { stepAnswered } from './battle-step.js';
+import { waitAnswered } from './battle-step.js';
 
 async function enter(page, join) {
   await page.goto(join); await page.locator('#invitation-take').click();
@@ -287,7 +287,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
         await page.screenshot({ path: info.outputPath(`${name}.jpg`), type: 'jpeg', quality: 85 }); captured.add(name);
         if (name === 'late-spellbook') spellbookRound = view.board.roundNumber;
       } : null);
-      await expect.poll(() => stepAnswered(view, latest), { timeout: 10000 }).toBe(true);
+      await waitAnswered(view, () => latest);
     }
     expect(latest.over).toBe(true);
     if (declaration === 'hidden-intent') { expect(latest.outcome.reason).toBe('RoundCap'); expect(latest.board.roundNumber).toBe(2); }
