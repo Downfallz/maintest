@@ -281,13 +281,13 @@ test('every reviewer reads a copy of the commit it is given and names that commi
 });
 
 // An empty list reads as "nobody to call": /reviewers would then review nothing and ship. A failed `git diff`
-// writes nothing on stdout, so empty or blank input is refused, never read as no reviewer.
-test('empty or blank input is refused, never read as no reviewer', () => {
+// writes nothing on stdout, or its error with 2>&1, so empty input and lines that are no path are refused.
+test('empty input, or a line that is no path, is refused, never read as no reviewer', () => {
   const script = join(root, 'scripts/review/reviewers.mjs');
-  for (const input of ['', '\n', '  \n\n']) {
+  for (const input of ['', '\n', '  \n\n', 'fatal: bad revision \'origin/main...x\'\n', 'commit 1234abc\nAuthor: someone\n']) {
     assert.throws(
       () => execFileSync('node', [script], { cwd: root, input, encoding: 'utf8', stdio: 'pipe' }),
-      error => error.status === 1 && /no path/.test(error.stderr),
+      error => error.status === 1 && /not a diff/.test(error.stderr),
       JSON.stringify(input),
     );
   }

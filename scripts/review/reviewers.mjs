@@ -177,9 +177,10 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const { paths, added } = input.startsWith('diff --git ')
     ? readDiff(input)
     : { paths: input.split('\n').map(path => path.trim()).filter(Boolean), added: new Map() };
-  // No path must never read as "nobody to call": a failed `git diff` writes nothing on stdout.
-  if (paths.length === 0) {
-    console.error('reviewers.mjs: no path read. Pipe `git diff origin/main...<sha>` into it; fetch main first.');
+  // No path must never read as "nobody to call": a failed `git diff` writes nothing on stdout, or, with 2>&1,
+  // its error, which is no path either. A repository path holds no whitespace.
+  if (paths.length === 0 || paths.some(path => /\s/.test(path))) {
+    console.error('reviewers.mjs: the input is not a diff or a list of paths. Pipe `git diff origin/main...<sha>` into it; fetch main first.');
     process.exit(1);
   }
   for (const name of reviewersFor(paths, added)) console.log(name);

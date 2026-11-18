@@ -84,30 +84,51 @@ test('the retired words are the ones the page replaced', () => {
   assert.ok(!retired().has('Your spellbook'), 'a sentence the page kept is not retired');
 });
 
+// Every script, page and spec of the repository (not its dependencies, builds or frozen prototypes).
+function repositorySources(folder = '') {
+  const found = [];
+  for (const entry of readdirSync(join(root, folder), { withFileTypes: true })) {
+    const path = folder ? `${folder}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) {
+      if (!/^(\.|node_modules$|battle-build$|legacy$|bin$|obj$|dist$)/.test(entry.name)) found.push(...repositorySources(path));
+    } else if (/\.(m?js|ts)$/.test(entry.name)) found.push(path);
+  }
+  return found;
+}
+
+// A file that reads player-terminology.md's tables: it names the page and splits or matches a table row.
+const PAGE = 'player-terminology' + '.md';
+const ROW = new RegExp(String.raw`split\(['"]\\?\|['"]\)|startsWith\(['"]\|`);
+const READER = 'terminology' + '.mjs';
+const readsTables = text => text.includes(PAGE) && ROW.test(text);
+const importsReader = text => text.includes(`/${READER}'`);
+
+test('one reader reads the tables of player-terminology.md, and every scanner goes through it', () => {
+  const texts = new Map(repositorySources().map(path => [path, readFileSync(join(root, path), 'utf8')]));
+  const ownParsers = [...texts].filter(([path, text]) => readsTables(text) && !importsReader(text) && path !== `scripts/${READER}`);
+  assert.deepEqual(ownParsers.map(([path]) => path), [], 'a scanner parses the page itself: import scripts/terminology.mjs');
+  const users = [...texts].filter(([, text]) => importsReader(text)).map(([path]) => path).sort();
+  assert.deepEqual(users, Object.keys(scanners()).sort(), 'a new scanner joins scanners() below, so the Before test reads it');
+});
+
+// The scanners of the player's words, each with its patterns, by the file that reads the page.
+const scanners = () => ({
+  'table/terminology.test.js': [...retired().values()],
+  'scripts/rules/build.mjs': [...retiredWords(terminology).values()].map(word => word.pattern),
+});
+
 // The trap the reviews found twice (W8, then R1): a scanner that exempts an everyday word lets the page's own
-// rewritten sentences through ("Choose speed"). Every scanner of the player's words refuses each one, in any case.
-test('every scanner of the player\'s words refuses each sentence of the Before column, in any case', () => {
-  const scanners = { 'terminology.test.js': [...retired().values()], 'scripts/rules/build.mjs': [...retiredWords(terminology).values()].map(word => word.pattern) };
+// rewritten sentences through ("Choose speed"). Every scanner refuses each one, whatever the case of its letters.
+test('every scanner of the player\'s words refuses each sentence of the Before column, whatever its case', () => {
   const replaced = rewrites().filter(({ before, after }) => before.toLowerCase() !== after.toLowerCase());
   assert.ok(replaced.length > 0, 'the Before column was read');
-  for (const [scanner, patterns] of Object.entries(scanners)) {
+  for (const [scanner, patterns] of Object.entries(scanners())) {
     for (const { before } of replaced) {
       for (const sentence of [before, before.toLowerCase(), before.toUpperCase()]) {
         assert.ok(patterns.some(pattern => pattern.test(sentence)), `${scanner} lets "${sentence}" through`);
       }
     }
   }
-});
-
-test('one reader reads the tables of player-terminology.md', () => {
-  const needle = `=== '${'Before'}'`;
-  const readers = [];
-  for (const folder of ['table', 'studio', 'showcase', 'scripts', 'scripts/rules']) {
-    for (const file of readdirSync(join(root, folder)).filter(name => /\.m?js$/.test(name))) {
-      if (readFileSync(join(root, folder, file), 'utf8').includes(needle)) readers.push(`${folder}/${file}`);
-    }
-  }
-  assert.deepEqual(readers, ['scripts/terminology.mjs']);
 });
 
 // What a person reads of a piece of HTML: its text, and the attributes a screen reader, a tooltip or a button says.
