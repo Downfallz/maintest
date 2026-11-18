@@ -143,8 +143,11 @@ async function main(argv) {
   const options = parseArguments(argv);
   const { chromium } = playwright();
   const served = options.base ? null : await serveTable();
-  const browser = await chromium.launch({ executablePath: process.env.STUDIO_CHROMIUM || undefined });
+  // The launch is inside the cleanup: a browser that does not start must still close the server, or the
+  // script prints its error and never exits.
+  let browser;
   try {
+    browser = await chromium.launch({ executablePath: process.env.STUDIO_CHROMIUM || undefined });
     const context = await browser.newContext({ viewport: PHONE, deviceScaleFactor: options.scale, isMobile: true, hasTouch: true });
     const page = await context.newPage();
     await openBench(page, options.base ?? served.base);
@@ -159,7 +162,7 @@ async function main(argv) {
       console.log(path);
     }
   } finally {
-    await browser.close();
+    await browser?.close();
     await served?.close();
   }
 }

@@ -136,3 +136,13 @@ test('the film strip script run with nothing to film says so and exits 1', () =>
   assert.match(run.stderr, /Name one or more effects/);
   assert.equal(run.stdout, '');
 });
+
+// With or without the browser suite installed, a film that cannot start ends: it does not leave its server
+// listening and the caller waiting.
+test('the film strip script exits 1 when its browser does not start', () => {
+  const run = spawnSync(process.execPath, [fileURLToPath(new URL('../scripts/battle/filmstrip.mjs', import.meta.url)), 'spell:pummel:v1'],
+    { encoding: 'utf8', timeout: 20000, env: { ...process.env, STUDIO_CHROMIUM: '/definitely-not-a-browser' } });
+  assert.equal(run.signal, null);
+  assert.equal(run.status, 1);
+  assert.notEqual(run.stderr, '');
+});
