@@ -35,7 +35,8 @@ async function mount(page, { content = catalogue, allies = roster, picks = [], i
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: content ?? {} });
     if (url.pathname === '/api/seat/player1') {
       if (url.searchParams.has('shown')) { state.shown.push(url.searchParams.get('shown')); if (state.ack) await state.ack; }
-      return route.fulfill({ status: state.status, json: state.view });
+      // An acknowledgement reaches no board, so it never says a change arrived.
+      const view = state.view; await route.fulfill({ status: state.status, json: view }); if (!url.searchParams.has('shown')) state.answered = view; return;
     }
     if (url.pathname.endsWith('/decision')) {
       state.writes.push(decided(route.request())); if (state.hold) await state.hold;
@@ -50,7 +51,13 @@ async function mount(page, { content = catalogue, allies = roster, picks = [], i
   await expect(page.locator('#planning-dialog')).toBeVisible();
   if (open) await page.locator(open).click();
   await page.clock.pauseAt(new Date(Date.now() + 1500));
-  const publish = async () => page.evaluate(() => window.notifyBattle());
+  const publish = async () => {
+    state.view = { ...state.view }; const published = state.view;
+    await page.evaluate(() => window.notifyBattle());
+    // A change told while a read is in flight is owed one more read, which the page schedules at no delay: a paused
+    // clock runs it only when it is moved. Only a board read that carried the published view says it arrived (#768, #785).
+    await expect.poll(async () => { if (state.answered === published) return true; await page.clock.runFor(0); return false; }).toBe(true);
+  };
   return { state, publish };
 }
 test('a battlefield creature opens three branches and only explicit confirmation submits the named pick', async ({ page }, info) => {

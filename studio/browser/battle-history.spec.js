@@ -170,7 +170,7 @@ for (const reason of ['hidden', 'revoked']) test(`${reason} erases all journal s
   await expect(rows(page)).toHaveCount(0); await expect(page.locator('#history-dialog')).toBeHidden();
   await expect(page.locator('#history-open')).not.toHaveAttribute('title');
   await expect(page.locator('#history-open')).toBeDisabled();
-  // One jump past every timer that was pending: a callback that was not fenced would fire and fill the journal (#784).
+  // One jump past every timer pending now, which fires each once: a callback that was not fenced would fill the journal (#784).
   await page.clock.fastForward(3000); await expect(rows(page)).toHaveCount(0); expect(h.state.errors).toEqual([]);
 });
 test('two-round retention is explicit and capped while viewport controls stay reachable', async ({ page }, info) => {

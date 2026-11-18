@@ -32,7 +32,8 @@ async function mount(page, overrides = {}) {
     if (url.pathname.endsWith('/decision')) { state.writes.push(decided(request)); return route.fulfill({ status: 204 }); }
     if (url.pathname === '/api/seat/player1') {
       if (url.searchParams.has('shown')) state.shown.push(Number(url.searchParams.get('shown')));
-      return route.fulfill({ status: state.status, json: state.view });
+      // An acknowledgement reaches no board, so it never says a change arrived.
+      const view = state.view; await route.fulfill({ status: state.status, json: view }); if (!url.searchParams.has('shown')) state.answered = view; return;
     }
     return route.fulfill({ status: 500 });
   });
@@ -40,7 +41,13 @@ async function mount(page, overrides = {}) {
   await page.goto('/table/battle.html'); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
   // Freeze before the first connection so a started poll cannot owe a paused zero-delay refresh.
   await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#connection')).toHaveText(/^LIVE/);
-  const publish = async extra => { state.view = { ...state.view, ...extra }; await page.evaluate(() => window.notifyOrder()); };
+  const publish = async extra => {
+    state.view = { ...state.view, ...extra }; const published = state.view;
+    await page.evaluate(() => window.notifyOrder());
+    // A change told while a read is in flight is owed one more read, which the page schedules at no delay: a paused
+    // clock runs it only when it is moved. Only a board read that carried the published view says it arrived (#768, #785).
+    await expect.poll(async () => { if (state.answered === published) return true; await page.clock.runFor(0); return false; }).toBe(true);
+  };
   return { state, publish };
 }
 test('exact order shows bands, initiative, rerolls and creature inspection with no command', async ({ page }, info) => {
@@ -182,7 +189,7 @@ test('the creature acting first waits for its turn order to be read before its s
   await h.publish({ board: { ...board, activationCursor: 0 }, feed: [reveal(10)], feedNext: 11, waitingFor: 'Action', waitingCreature: 1, waitingAsked: 12,
     options: { action: { creature: 1, spells: [{ spell: 'strike', legalTargets: { candidates: [4, 5, 6], minTargets: 1, maxTargets: 1 } }] } } });
   await expect(page.locator('#order-continue')).toBeVisible(); await expect(page.locator('#combat-dialog')).toBeHidden();
-  // One jump past every timer that was pending: none may open the spell choice before the order is read (#784).
+  // One jump past every timer pending now, which fires each once: none may open the spell choice before the order is read (#784).
   await page.clock.fastForward(2000);
   await expect(page.locator('#order-continue')).toBeVisible(); await expect(page.locator('#combat-dialog')).toBeHidden();
   await page.locator('#order-continue').click();

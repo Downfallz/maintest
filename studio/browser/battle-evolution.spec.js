@@ -41,7 +41,10 @@ async function mount(page, { purchases = [], missing = [] } = {}) {
     const url = new URL(route.request().url());
     if (url.pathname === '/api/lobby/resume') return route.fulfill({ json: { tables: [{ table: { id: 'evolution', format: '3v3' }, seats: [{ seat: 'player1', token: 'seat' }] }] } });
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [], packages } });
-    if (url.pathname === '/api/seat/player1') { const view = h.view; return route.fulfill({ json: view }).then(() => { h.answered = view; }); }
+    if (url.pathname === '/api/seat/player1') {
+      // An acknowledgement reaches no board, so it never says a change arrived.
+      const view = h.view; return route.fulfill({ json: view }).then(() => { if (!url.searchParams.has('shown')) h.answered = view; });
+    }
     return route.fulfill({ status: 500 });
   });
   await page.goto('/table/battle.html'); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');

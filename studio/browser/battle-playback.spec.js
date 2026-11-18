@@ -51,7 +51,8 @@ test('ordered confirmed frames reveal damage at impact and never replay duplicat
   await page.screenshot({ path: info.outputPath('confirmed-impact.jpg'), type: 'jpeg', quality: 85 });
   // From each of the playback's timers to the next, rather than every software frame of the scene between them (#784):
   // the 860 ms above are inside the impact, which ends one windup and one impact after the cast began.
-  await h.publish([entry(10), entry(12)]); await page.clock.fastForward(WINDUP_MS + IMPACT_MS - 860); await page.clock.fastForward(SETTLE_MS);
+  await h.publish([entry(10), entry(12)]); await page.clock.fastForward(WINDUP_MS + IMPACT_MS - 860);
+  await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'resolved'); await page.clock.fastForward(SETTLE_MS);
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '12');
   await stages(page); await expect(page.locator('#playback-skip')).toBeHidden();
   await h.publish([entry(12)]); await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'decision');
@@ -81,8 +82,8 @@ test('an incoming last action holds for its OK however long; the next round and 
   const h = await mount(page); const after = before.map(one => creature(one.id, one.id === 1 ? 0 : 20));
   const board = { ...h.state.view.board, roundNumber: 3, phase: 'Planning', subPhase: 'Evolution', allies: after.slice(0, 3), enemies: after.slice(3) };
   await h.publish([entry(10, { actor: 4, targets: [1], after })], { board, waitingFor: 'Evolution' });
-  // Through the cast's timers, then one jump past twice what the cast and its settle take: a timer still pending
-  // would fire in it and move the held action on.
+  // Through the cast's timers, then one jump past twice what the cast and its settle take: a timer pending now fires
+  // in it once, and would move the held action on.
   await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'windup');
   await stages(page, [WINDUP_MS, IMPACT_MS]); await page.clock.fastForward(2 * (WINDUP_MS + IMPACT_MS + SETTLE_MS));
   await expect(page.locator('[data-creature="1"] .creature-tag')).toHaveText('DEFEATED'); await expect(page.locator('#round-number')).toHaveText('02');
@@ -97,8 +98,8 @@ test('the final lethal action remains in its round before the next upkeep snapsh
   await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'windup');
   await expect(page.locator('#round-number')).toHaveText('02'); await page.clock.runFor(860);
   await expect(page.locator('[data-creature="4"] .creature-tag')).toHaveText('DEFEATED');
-  await page.clock.fastForward(WINDUP_MS + IMPACT_MS - 860); await page.clock.fastForward(SETTLE_MS);
-  await expect(page.locator('#round-number')).toHaveText('03'); expect(h.errors).toEqual([]);
+  await page.clock.fastForward(WINDUP_MS + IMPACT_MS - 860); await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'resolved');
+  await page.clock.fastForward(SETTLE_MS); await expect(page.locator('#round-number')).toHaveText('03'); expect(h.errors).toEqual([]);
 });
 test('multi-target impacts, conditions and an enemy actor render without lab assumptions', async ({ page }) => {
   const h = await mount(page);

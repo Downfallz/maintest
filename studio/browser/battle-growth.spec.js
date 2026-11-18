@@ -220,8 +220,8 @@ test('a future unlock waits behind a held closing cast and keeps its badge for t
     frame: { before, after: before, timeline: [], rollOffs: [] } } });
   spellChoice(h, 22); await h.publish();
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '20');
-  // From the windup's timer to the impact's, then one jump past every timer still pending: none may move the held
-  // cast on. Jumps draw one frame each, where runFor drew every software frame between them (#784).
+  // From the windup's timer to the impact's, then one jump past every timer pending now, which fires each once: none
+  // may move the held cast on. Jumps draw one frame each, where runFor drew every software frame between them (#784).
   await page.clock.fastForward(WINDUP_MS); await page.clock.fastForward(IMPACT_MS); await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'resolved');
   await page.clock.fastForward(3400); await expect(page.locator('#growth-receipt')).toBeHidden();
   await expect(page.locator('#round-number')).toHaveText('02');

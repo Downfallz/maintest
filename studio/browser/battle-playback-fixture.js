@@ -33,7 +33,10 @@ async function mount(page) {
     const request = route.request(), url = new URL(request.url()); state.requests.push({ path: url.pathname, query: url.search, method: request.method() });
     if (url.pathname === '/api/lobby/resume') return route.fulfill({ json: { tables: [{ table: { id: 'table-a', format: '3v3' }, seats: [{ seat: 'player1', token: 'seat' }] }] } });
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [{ id: 'strike', name: 'Strike', cost: 2, critical: '35%', criticalThreshold: 14 }, { id: 'spell:summon_minions:v1', name: 'Infestation', cost: 2, visual: { family: 'necromantic', motif: 'spirits', delivery: 'cast' } }], effects: [{ kind: 'Bleed', glyph: '♥', harmful: true }] } });
-    if (url.pathname === '/api/seat/player1') return route.fulfill({ status: state.status, json: state.view });
+    if (url.pathname === '/api/seat/player1') {
+      // An acknowledgement reaches no board, so it never says a change arrived.
+      const view = state.view; return route.fulfill({ status: state.status, json: view }).then(() => { if (!url.searchParams.has('shown')) state.answered = view; });
+    }
     return route.fulfill({ status: 500, body: 'Unexpected request' });
   });
   // Freeze before connecting: pausing a running poll can strand its owed zero-delay read, so the
@@ -43,7 +46,11 @@ async function mount(page) {
   await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#connection')).toHaveText(/^LIVE/);
   const publish = async (entries, extra = {}) => {
     state.view = { ...state.view, ...extra, feed: entries, feedNext: Math.max(state.view.feedNext, ...entries.map(one => one.sequence + 1)) };
+    const published = state.view;
     await page.evaluate(() => window.notifyBattle());
+    // A change told while a read is in flight is owed one more read, which the page schedules at no delay: a paused
+    // clock runs it only when it is moved. Only a board read that carried the published view says it arrived (#768, #785).
+    await expect.poll(async () => { if (state.answered === published) return true; await page.clock.runFor(0); return false; }).toBe(true);
   };
   return { state, publish, errors };
 }
