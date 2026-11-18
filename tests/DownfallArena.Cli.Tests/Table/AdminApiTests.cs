@@ -618,6 +618,27 @@ public sealed class AdminApiTests : IDisposable
     }
 
     [Fact]
+    public async Task An_export_and_its_refusal_are_kept_by_no_cache()
+    {
+        var admin = Admin(OperatorGate.WithToken(OperatorToken));
+        var closed = Opened(await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy"}""", OperatorToken, null));
+        await ClosedAsync(closed);
+        var playing = Opened(await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy"}""", OperatorToken, null));
+        var noStore = new KeyValuePair<string, string>("Cache-Control", "no-store, private");
+
+        var one = await admin.HandleAsync("GET", $"/api/sessions/{closed}/export", "", OperatorToken, null);
+        var several = await admin.HandleAsync("POST", "/api/sessions/export", $$"""{"ids":["{{closed}}"]}""", OperatorToken, null);
+        var live = await admin.HandleAsync("GET", $"/api/sessions/{playing}/export", "", OperatorToken, null);
+        var missing = await admin.HandleAsync("GET", "/api/sessions/nowhere/export", "", OperatorToken, null);
+
+        one.Status.ShouldBe(200, Text(one));
+        one.Headers.ShouldNotBeNull().ShouldContain(noStore);
+        several.Headers.ShouldNotBeNull().ShouldContain(noStore);
+        live.Headers.ShouldNotBeNull().ShouldContain(noStore);
+        missing.Headers.ShouldNotBeNull().ShouldContain(noStore);
+    }
+
+    [Fact]
     public async Task A_host_that_records_nothing_has_no_session_to_list_and_says_so()
     {
         using var silent = new HostedTables(recording: false);

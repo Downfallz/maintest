@@ -809,6 +809,8 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
                 return StudioResponse.OfJson(new { reaction = Described(sent.Reaction!) }, ArtifactJson.LineOptions);
             case "Reaction.Unknown":
                 return StudioResponse.OfJson(new { error = sent.Refusal, message = $"'{reaction}' is not a reaction. One of: {string.Join(", ", TableReactions.Catalogue)}." }, ArtifactJson.LineOptions, status: 400);
+            case "Reaction.Gone":
+                return StudioResponse.OfJson(new { error = sent.Refusal, message = "This game is no longer kept, so reactions are not sent." }, ArtifactJson.LineOptions, status: 409);
             case "Reaction.TooSoon":
                 return StudioResponse.OfJson(new { error = sent.Refusal, message = "Wait a moment before reacting again.", retryAfterMs = (long)Math.Ceiling(sent.Wait.TotalMilliseconds) }, ArtifactJson.LineOptions, status: 429);
             default:

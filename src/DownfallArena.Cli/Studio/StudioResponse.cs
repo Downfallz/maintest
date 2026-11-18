@@ -42,4 +42,12 @@ internal sealed record StudioResponse(int Status, string ContentType, byte[] Bod
     /// </summary>
     public static StudioResponse OfRedirect(string location) =>
         new(303, Plain, Encoding.UTF8.GetBytes($"Continue at {location}"), [new KeyValuePair<string, string>("Location", location)]);
+
+    /// <summary>
+    /// Marks this answer as not to be cached. Use it for a route that answers a file or whose path ends in an
+    /// extension: when the host says nothing, Cloudflare caches a <c>.zip</c> by its extension and would serve it past
+    /// the operator's gate.
+    /// </summary>
+    public StudioResponse NotKept() =>
+        this with { Headers = [.. Headers ?? [], new KeyValuePair<string, string>("Cache-Control", "no-store, private")] };
 }
