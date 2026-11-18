@@ -32,8 +32,8 @@ internal sealed class TableReactions(TimeProvider clock, IReactionKeeper? keeper
     private IReadOnlyList<TableReaction>? _items;
     private string? _tag;
 
-    // The file was read once and is gone now. The operator deleted the table's run, and a write would recreate the
-    // file (#739). Nothing is written for this table again.
+    // The file was read once and is gone now, or there was none and the table's record is gone. The operator deleted
+    // the table's run, and a write would recreate the file (#739, #789). Nothing is written for this table again.
     private bool _gone;
 
     /// <summary>The reactions kept, oldest first; read from the record the first time they are asked for.</summary>
@@ -49,7 +49,7 @@ internal sealed class TableReactions(TimeProvider clock, IReactionKeeper? keeper
 
     /// <summary>
     /// Sends <paramref name="reaction" /> for <paramref name="seat" />, or says why it was not sent. Once the file read
-    /// earlier has gone, because the operator deleted the table's run, every send is refused as gone.
+    /// earlier has gone, or the table's record has, because the operator deleted the table's run, every send is refused as gone.
     /// </summary>
     public async Task<ReactionSent> SendAsync(string seat, string? reaction, CancellationToken cancellationToken = default)
     {
@@ -83,6 +83,13 @@ internal sealed class TableReactions(TimeProvider clock, IReactionKeeper? keeper
             {
                 Volatile.Write(ref _items, next);
                 return ReactionSent.Of(sent);
+            }
+
+            // No file yet: a write would create it, under a run the operator deleted too (#789).
+            if (_tag is null && !await keeper.RecordedAsync(cancellationToken))
+            {
+                _gone = true;
+                return ReactionSent.Gone;
             }
 
             if (await keeper.WriteReactionsIfAsync(next, _tag, cancellationToken) is { } tag)

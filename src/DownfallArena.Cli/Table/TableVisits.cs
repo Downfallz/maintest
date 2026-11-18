@@ -70,6 +70,12 @@ internal sealed class TableVisits(TimeProvider clock, IVisitKeeper? keeper = nul
                 return null;
             }
 
+            // No mark yet, and no record either: a write would create the file under a deleted run (#789).
+            if (tag is null && !await keeper.RecordedAsync(cancellationToken))
+            {
+                return null;
+            }
+
             existed |= tag is not null;
             if (kept is not null && kept.Holder == holder && kept.Sequence >= sequence)
             {

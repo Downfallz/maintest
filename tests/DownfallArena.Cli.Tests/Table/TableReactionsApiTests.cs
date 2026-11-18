@@ -179,6 +179,21 @@ public sealed class TableReactionsApiTests : IDisposable
         Directory.EnumerateFiles(_hosted.RunsDirectory, PlaytestRun.ReactionsFile, SearchOption.AllDirectories).ShouldBeEmpty();
     }
 
+    [Fact]
+    public async Task A_first_reaction_to_a_run_the_operator_deleted_is_refused_and_keeps_no_file()
+    {
+        var table = await BegunAsync(HostedTables.TwoPeople);
+        await table.QuiesceAsync(Cancel);
+        (await _hosted.Stored!.DeleteAsync(table.Id, Cancel)).ShouldBeTrue();
+
+        var refused = await ReactAsync(table, 0, "hello");
+
+        refused.Status.ShouldBe(409, Text(refused));
+        using var body = JsonDocument.Parse(Text(refused));
+        body.RootElement.GetProperty("error").GetString().ShouldBe("Reaction.Gone");
+        Directory.Exists(Path.Combine(_hosted.RunsDirectory, table.Run!.SessionId)).ShouldBeFalse();
+    }
+
     private async Task<PlayedTable> BegunAsync(TableRequest request)
     {
         var table = await Opened(request);

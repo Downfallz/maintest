@@ -134,6 +134,18 @@ public sealed class TableVisitsTests
         keeper.Kept.ShouldNotContainKey("player1");
     }
 
+    [Fact]
+    public async Task A_first_mark_after_the_run_was_deleted_does_not_bring_a_file_of_it_back()
+    {
+        var keeper = new Keeper { Recorded = false };
+        var visits = new TableVisits(new Clock(Start), keeper);
+
+        var kept = await visits.ShownAsync("player1", Holder, 8, Cancel);
+
+        kept.ShouldBeNull();
+        keeper.Kept.ShouldNotContainKey("player1");
+    }
+
     private sealed class Clock(DateTimeOffset now) : TimeProvider
     {
         public DateTimeOffset Now { get; set; } = now;
@@ -148,6 +160,11 @@ public sealed class TableVisitsTests
         private readonly Dictionary<string, LastVisit?> _meanwhile = [];
 
         public Dictionary<string, LastVisit> Kept { get; } = [];
+
+        /// <summary>Whether the table's record is still kept: false once the operator deleted the run.</summary>
+        public bool Recorded { get; init; } = true;
+
+        public Task<bool> RecordedAsync(CancellationToken cancellationToken = default) => Task.FromResult(Recorded);
 
         /// <summary>Every write is refused, as if another process wrote first each time.</summary>
         public bool AlwaysMoved { get; init; }

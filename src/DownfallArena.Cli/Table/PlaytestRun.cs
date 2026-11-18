@@ -1032,6 +1032,13 @@ internal sealed class PlaytestRun : IReactionKeeper, IVisitKeeper
     /// <summary>Where a seat's last visit is kept (ADR 0194), beside the session: one document a seat, so two seats never race for one tag.</summary>
     public static string SeenFile(string seat) => $"seen-{seat}.json";
 
+    /// <summary>
+    /// Whether the table's record is still there, read before a side file's first write: a table is recorded before
+    /// it is served, so none means the operator deleted the run, and the write would bring a file of it back (#789).
+    /// </summary>
+    public async Task<bool> RecordedAsync(CancellationToken cancellationToken = default) =>
+        await _reader.ReadTextAsync(TableRecord.File, cancellationToken) is not null;
+
     public async Task<(LastVisit? Visit, string? Tag)> VisitAsync(string seat, CancellationToken cancellationToken = default)
     {
         var read = await _reader.ReadTaggedAsync(SeenFile(seat), cancellationToken);
