@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { AWAY_MS, buildRecap, healthChangeText, questionText, recapOpensOnItsOwn } from './battle-recap.js';
+import { AWAY_MS, aheadOf, buildRecap, healthChangeText, questionText, recapOpensOnItsOwn } from './battle-recap.js';
 
 // A recorded 3v3 match (play --seed 1) as seat player1 reads it: its feed and its board at named moments.
 const recorded = JSON.parse(readFileSync(new URL('./battle-recap.fixture.json', import.meta.url), 'utf8'));
@@ -72,7 +72,17 @@ test('a creature defeated while away is marked on its team and in the round that
   assert.deepEqual([fallen.defeated, fallen.fellWhileAway, fallen.health], [true, true, 0]);
   assert.deepEqual(recap.rounds.find(one => one.round === 8).defeated, [{ creature: 'Creature 4', side: 'Opponent', unseen: true }]);
   assert.deepEqual(recap.where.sides, { you: { standing: 3, total: 3, health: 59 }, opponent: { standing: 2, total: 3, health: 41 } });
-  assert.equal(recap.where.leader, 'you');
+  assert.deepEqual(recap.where.ahead, { side: 'you', by: 'standing' });
+});
+
+// The sheet counts; the round cap's reading is the host's (#757). What it says is the count it made, never a lead.
+test('the sides are compared as a count: creatures standing first, then health among them, and even when both match', () => {
+  const sides = (you, opponent) => ({ you: { standing: you[0], total: 3, health: you[1] }, opponent: { standing: opponent[0], total: 3, health: opponent[1] } });
+
+  assert.deepEqual(aheadOf(sides([2, 10], [3, 40])), { side: 'opponent', by: 'standing' });
+  assert.deepEqual(aheadOf(sides([3, 41], [3, 40])), { side: 'you', by: 'health' });
+  assert.deepEqual(aheadOf(sides([3, 40], [3, 40])), { side: null, by: null });
+  assert.ok(!('leader' in at('round9Tempo', 263).where));
 });
 
 test('the difference each creature took is measured over the span the sheet tells', () => {

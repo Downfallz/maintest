@@ -63,9 +63,12 @@ export function recapControls({ onGo, onReplay, onClose }: { onGo: () => void; o
     };
     const them = where.opponent ?? 'Opponent';
     el('recap-sides').replaceChildren(side('You', where.sides.you, 'you'), side(them, where.sides.opponent, 'opponent'));
-    el('recap-leader').textContent = where.leader === 'even' ? 'Even: as many creatures standing, as much health'
-      : where.leader === 'you' ? 'You lead' : `${them} leads`;
-    el('recap-leader').dataset.leader = where.leader;
+    // The sheet's own count, said as one: who wins at the round cap is the host's reading, never the page's (#757).
+    const { side: ahead, by } = where.ahead;
+    const has = ahead === 'you' ? 'you have' : `${them} has`;
+    el('recap-leader').textContent = by === 'standing' ? `${ahead === 'you' ? 'You have' : `${them} has`} more creatures standing`
+      : by === 'health' ? `As many creatures standing; ${has} more health` : 'As many creatures standing, as much health';
+    el('recap-leader').dataset.ahead = ahead ?? 'even';
   }
 
   function team(id: string, creatures: Recap['teams']['you']) {

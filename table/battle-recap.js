@@ -113,7 +113,7 @@ export function buildRecap({ view, feed, seen, seenAt = view?.seen?.at ?? null, 
       step: phaseLabel(board.phase) || null,
       lastMove: view?.lastMoveAt ? { at: view.lastMoveAt, ago: sentAgo(view.lastMoveAt, now) || 'just now' } : null,
       timeLeft: over ? null : timeLeft(view?.answerBy, now),
-      over, result, sides, leader: leaderOf(sides),
+      over, result, sides, ahead: aheadOf(sides),
     },
     teams,
     rounds,
@@ -188,12 +188,15 @@ function teamsNow(board, spanEntries, isNew, bled) {
   return { you: (board.allies ?? []).map(creature), opponent: (board.enemies ?? []).map(creature) };
 }
 
-// Who is ahead as the sheet says it: more creatures standing, then more health among them. A count, not a rule:
-// the round cap's own reading is the host's (outcome).
-function leaderOf({ you, opponent }) {
-  if (you.standing !== opponent.standing) return you.standing > opponent.standing ? 'you' : 'opponent';
-  if (you.health !== opponent.health) return you.health > opponent.health ? 'you' : 'opponent';
-  return 'even';
+/**
+ * Which side has more as the sheet counts it (#757): more creatures standing, then more health among them, and on
+ * what: `{ side: 'you' | 'opponent', by: 'standing' | 'health' }`, or `{ side: null, by: null }` when both match.
+ * A count, never a lead: who wins at the round cap is the host's reading (`outcome`), which the page does not make.
+ */
+export function aheadOf({ you, opponent }) {
+  if (you.standing !== opponent.standing) return { side: you.standing > opponent.standing ? 'you' : 'opponent', by: 'standing' };
+  if (you.health !== opponent.health) return { side: you.health > opponent.health ? 'you' : 'opponent', by: 'health' };
+  return { side: null, by: null };
 }
 
 // The seat's own choices still in force: its tempos this round, the spells it declared face down, and the mutations

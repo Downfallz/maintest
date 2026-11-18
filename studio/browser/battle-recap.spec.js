@@ -12,8 +12,8 @@ const team = (hurt = {}) => [1, 2, 3, 4, 5, 6].map(id => creature(id, hurt[id] ?
 const timeline = team().map(one => ({ creature: one.id, owner: one.id < 4 ? 'Player1' : 'Player2', speed: 'Standard' }));
 const legalTargets = { candidates: [4, 5, 6], minTargets: 1, maxTargets: 1 };
 // A cast of round 2 with its recorded frame: `actor` strikes `target` for 6.
-function cast(sequence, actor, target, before, after) {
-  return { sequence, round: 2, event: { kind: 'CombatActionResolved', roundId: 2,
+function cast(sequence, actor, target, before, after, round = 2) {
+  return { sequence, round, event: { kind: 'CombatActionResolved', roundId: round,
     resolution: { action: { actor, spell: 'strike', targets: [target] }, isCritical: false, fizzled: false },
     appliedOutcomes: [{ kind: 'DamageOutcome', target, amount: 6, critical: false }],
     frame: { before, after, timeline, rollOffs: [] } } };
@@ -26,7 +26,9 @@ const feed = [
 ];
 const hoursAgo = hours => new Date(Date.now() - hours * 3600000).toISOString();
 
-async function mount(page, { seen = 1, away = 3, entries = feed, extra = {} } = {}) {
+// `history` is the seat's feed from its start, what a read without `since` answers once the page holds a view: given,
+// the first read serves `entries`, the live window, and every later one serves `history` (connection.history()).
+async function mount(page, { seen = 1, away = 3, entries = feed, history = null, extra = {} } = {}) {
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await page.addInitScript(() => {
     localStorage.setItem('downfall.table.seats', JSON.stringify({ player1: 'seat' }));
@@ -37,7 +39,7 @@ async function mount(page, { seen = 1, away = 3, entries = feed, extra = {} } = 
     } }), { headers: { 'Content-Type': 'text/event-stream' } })) : original(url, options);
   });
   const board = team({ 4: 14, 1: 14, 2: 14 });
-  const state = { seenWrites: [], view: { seat: 'player1', over: false, recording: true,
+  const state = { seenWrites: [], historyReads: 0, view: { seat: 'player1', over: false, recording: true,
     board: { slot: 'Player1', roundNumber: 2, phase: 'Combat', subPhase: 'Activation', activationCursor: 3,
       allies: board.slice(0, 3), enemies: board.slice(3), timeline },
     waitingFor: 'Action', waitingAsked: 5, waitingCreature: 3, answerBy: hoursAgo(-20), lastMoveAt: hoursAgo(away - 0.5),
@@ -50,7 +52,12 @@ async function mount(page, { seen = 1, away = 3, entries = feed, extra = {} } = 
       seats: [{ seat: 'player1', kind: 'person', name: 'Mark' }, { seat: 'player2', kind: 'person', name: 'Bastien' }] }, seats: [{ seat: 'player1', token: 'seat' }] }] } });
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [{ id: 'strike', name: 'Strike', cost: 2 }], packages: [], effects: [] } });
     if (url.pathname === '/api/seat/player1/seen') { state.seenWrites.push(request.postDataJSON()); return route.fulfill({ json: { seen: { sequence: 4, at: new Date().toISOString() } } }); }
-    if (url.pathname === '/api/seat/player1') return route.fulfill({ json: state.view });
+    if (url.pathname === '/api/seat/player1') {
+      const fromStart = history && !url.searchParams.has('since') && state.served;
+      state.served = true;
+      if (fromStart) state.historyReads++;
+      return route.fulfill({ json: fromStart ? { ...state.view, feed: history } : state.view });
+    }
     return route.fulfill({ status: 404, json: {} });
   });
   await page.goto('/table/battle.html'); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
@@ -172,4 +179,40 @@ test('the journal marks where the seat left off', async ({ page }) => {
   const marker = page.locator('#history-list .history-left-here');
   await expect(marker).toHaveText('You left here');
   await expect(marker.locator('xpath=following-sibling::*[1]')).toHaveAttribute('data-sequence', '3');
+});
+
+// A seat away for three rounds (#758): the live window holds rounds 3 and 4 only, so the sheet loads the feed back
+// to the last visit and tells rounds 1 and 2 from it, every line not seen marked and counted.
+test('a seat away for three rounds is told every round since its last visit, loaded back past the live window', async ({ page }) => {
+  const struck = { 4: 14 }, worse = { 4: 14, 1: 14 }, worst = { 4: 14, 1: 14, 2: 14 }, last = { 4: 8, 1: 14, 2: 14 };
+  const all = [
+    cast(1, 1, 4, team(), team(struck), 1), cast(2, 4, 1, team(struck), team(worse), 1),
+    cast(3, 5, 2, team(worse), team(worst), 2), cast(4, 1, 4, team(worst), team(last), 2),
+    cast(5, 6, 3, team(last), team(last), 3), cast(6, 4, 3, team(last), team(last), 4),
+  ];
+  const h = await mount(page, { seen: 1, entries: all.slice(4), history: all, extra: { feedNext: 7,
+    board: { slot: 'Player1', roundNumber: 4, phase: 'Combat', subPhase: 'Activation', activationCursor: 3,
+      allies: team(last).slice(0, 3), enemies: team(last).slice(3), timeline } } });
+
+  await expect(sheet(page)).toBeVisible();
+  await expect(page.locator('#recap-unseen')).toHaveText('5 new since your last visit');
+  await expect(page.locator('details.recap-round')).toHaveCount(4);
+  const second = page.locator('details.recap-round[data-round="2"]');
+  await expect(second).toHaveAttribute('data-unseen', 'true');
+  await expect(second.locator('.recap-cast')).toHaveCount(2);
+  await expect(page.locator('#recap-rounds .recap-quiet', { hasText: 'Nothing of this round' })).toHaveCount(0);
+  await expect(page.locator('details.recap-round[data-round="1"] .recap-cast[data-unseen="true"]')).toHaveCount(1);
+  expect(h.state.historyReads).toBe(1);
+  expect(h.errors).toEqual([]);
+});
+
+// The sheet compares the sides as a count; the round cap's reading is the host's (#757): it never says who leads.
+test('the sheet says what it counted, creatures standing then health, and never who leads', async ({ page }) => {
+  const h = await mount(page);
+  await expect(sheet(page)).toBeVisible();
+
+  await expect(page.locator('#recap-where-title')).toHaveText('Standing and health');
+  await expect(page.locator('#recap-leader')).toHaveText('As many creatures standing; Bastien has more health');
+  await expect(page.locator('#recap-dialog')).not.toContainText(/lead/i);
+  expect(h.errors).toEqual([]);
 });
