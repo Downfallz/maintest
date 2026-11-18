@@ -177,6 +177,8 @@ function byValues(change, section) {
   if (change.path !== RULE_SET && change.path !== CREATURE) return [];
   const prefix = change.path === RULE_SET ? 'rules' : 'creature';
   const shown = [...keysChanged(change)];
+  // The creature's starting spells are written one id a line: a changed line holding only a spell id is that list.
+  if (prefix === 'creature' && [...change.added, ...change.removed].some(line => /^\s*"spell:[^"]+",?\s*$/.test(line))) shown.push('startingSpellIds');
   const keys = prefix === 'creature' ? shown.map(statOf).filter(Boolean) : shown;
   const draws = key => new RegExp(String.raw`\b${prefix}\.${key}\b`).test(section.text);
   // No key in sight (a hunk of brackets alone): every value the section draws from the file may have moved.

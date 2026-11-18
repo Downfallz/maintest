@@ -197,6 +197,9 @@ test('a creature change that moves no stat reaches no section by its stats, and 
 test('the creature\'s starting spells, or an alias they resolve through, reach the sections that state what it knows', () => {
   const starting = reached(diffOf('data/Creatures/main.v1.json', { removed: ['  "startingSpellIds": ["spell:heavy_strike", "spell:wait"],'], added: ['  "startingSpellIds": ["spell:heavy_strike"],'] }));
   assert.deepEqual(starting.sections.map(section => [section.id, section.why]), [['winning', ['draws creature.knows']]]);
+  // data/ writes the list one spell a line: an edit shows only its elements, which still name the list alone.
+  const elements = reached(diffOf('data/Creatures/main.v1.json', { removed: ['    "spell:wait"'], added: ['    "spell:wait",', '    "spell:guard"'] }));
+  assert.deepEqual(elements.sections.map(section => [section.id, section.why]), [['winning', ['draws creature.knows']]]);
   const alias = reached(diffOf('data/aliases.json', { removed: ['  "spell:wait": "spell:wait:v1",'], added: ['  "spell:wait": "spell:wait:v2",'] }));
   assert.deepEqual(alias.sections.map(section => [section.id, section.why]), [['winning', ['draws creature.knows']]]);
   assert.deepEqual(alias.unmapped, []);

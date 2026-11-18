@@ -81,9 +81,9 @@ One to three lines.
   `defenseBuff2` for the second of them), `spell:<name>:vN.caster.<kind>` from the caster's own line
   (`caster.damage`), `tier:<name>:vN.<field>` from the mutation's file under `data/Tiers/` (`name`, `level`,
   `initiativeBonus`, or its passive's `sunder`, `damageBonus`, `upkeepEnergy`). Two names are lists of spells,
-  read only in a fact: `tier:<name>:vN.teaches`, the spells the mutation teaches, and `creature.knows`, the
+  read whole only in a fact: `tier:<name>:vN.teaches`, the spells the mutation teaches, and `creature.knows`, the
   reference creature's starting spells (an alias resolved through `data/aliases.json`); `.count` gives how many
-  each holds. Numbers, `+ - * /`,
+  each holds, a number that may also be drawn. Numbers, `+ - * /`,
   parentheses, `max`, `min` and `floor` combine them. Never type a number the content holds. An example draws
   every value its arithmetic reads, the creature's base stats included (its base Defense, its own critical
   chance), and states no fact about the content that the build does not check.
