@@ -24,7 +24,7 @@ test('the bench lists every authored effect and the six creatures, and fits the 
   await expect(page.locator('#lab')).toHaveAttribute('data-asset-fallback', 'false');
   // The sample action's controls are the laboratory's, not the bench's.
   for (const id of ['#choose', '#confirm', '#timeline', '#fullscreen']) await expect(page.locator(id)).toBeHidden();
-  await fitsViewport(page, '#bench-spell, #bench-actor, #bench-targets label, #bench-play, #reset, #settings');
+  await fitsViewport(page, '#bench-spell, #bench-actor, #bench-targets label, #bench-outcome, .bench-wound, #bench-play, #reset, #settings');
 });
 
 test('a chosen effect plays on the chosen creatures: its windup, its impact, then nothing left', async ({ page }) => {

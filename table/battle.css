@@ -1183,14 +1183,14 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
   /* The smallest phones keep the round's number whole; the phase is still named in the command dock below. */
   #battle .round:has(~ #opponent-open:not([hidden])) small { display: none; }
 }
-#opponent-dialog { width: min(360px, calc(100vw - 32px)); padding: 18px; border: 1px solid #d98b6f66; border-radius: var(--radius-soft); background: #13232a; color: #f2eee2; box-shadow: 0 18px 40px #000a; }
-#opponent-dialog::backdrop { background: #050b0db3; }
+#opponent-dialog { width: min(360px, calc(100vw - 32px)); padding: 18px; border: 1px solid color-mix(in srgb, var(--brand-ember) 40%, transparent); border-radius: var(--radius-soft); background: var(--panel); color: var(--ink); box-shadow: 0 18px 40px color-mix(in srgb, var(--soot) 67%, transparent); }
+#opponent-dialog::backdrop { background: color-mix(in srgb, var(--soot) 70%, transparent); }
 .opponent-head { display: flex; align-items: center; gap: 12px; }
-.opponent-head .eyebrow { margin: 0; color: #d98b6f; font-size: 10px; letter-spacing: .16em; }
+.opponent-head .eyebrow { margin: 0; color: var(--brand-ember); font-size: 10px; letter-spacing: .16em; }
 .opponent-head h2 { margin: 2px 0 0; font: 24px/1.15 var(--font-display); overflow-wrap: anywhere; }
 #opponent-close { margin-left: auto; min-width: 44px; min-height: 44px; border: 0; background: transparent; color: var(--muted); font-size: 22px; }
 .opponent-avatar.large { width: 48px; height: 48px; font-size: 22px; }
-.opponent-rank { margin: 14px 0 0; color: #e6c88c; font-size: 14px; }
+.opponent-rank { margin: 14px 0 0; color: var(--gold); font-size: 14px; }
 .opponent-note { margin: 10px 0 0; color: var(--muted); font-size: 13px; }
 .opponent-note[hidden], .opponent-rank[hidden], #opponent-friend[hidden], #opponent-problem[hidden] { display: none; }
 #opponent-friend { width: 100%; min-height: 46px; margin-top: 14px; }
