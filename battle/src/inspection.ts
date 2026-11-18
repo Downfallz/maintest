@@ -90,7 +90,8 @@ export function inspectionControls() {
       portrait.style.backgroundImage = sprite;
       if (model.artworkFile) {
         const wanted = model.artworkFile, image = new Image();
-        // The zoom shows what the portrait shows: opened on the sprite, it takes the illustration when it arrives (#880).
+        // The zoom shows what the portrait shows. Opened on the sprite, the zoom switches to the illustration when that
+        // arrives (#880).
         image.onload = () => {
           if (portrait.dataset.artwork !== wanted) return;
           portrait.style.backgroundImage = `url("battle-art/${wanted}")`;

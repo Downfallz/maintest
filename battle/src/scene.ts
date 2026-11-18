@@ -87,8 +87,8 @@ export class BattleScene extends Phaser.Scene implements Restful {
   onDice: (shown: string) => void = () => {};
   private diceShown = '';
   private haloId: string | null = null;
-  // The clock of what only breathes (the halos, the motes, the capstone effects and the auras): it runs while the
-  // loop does, so a field that wakes from rest goes on from where it stood instead of jumping ahead.
+  // The clock of the ambience (the halos, the motes, the capstone effects and the auras). It runs only while the
+  // loop does, so after a rest the field resumes where it stopped instead of jumping ahead.
   private ambient = 0;
   private presented = '';
   private lastStep = 0;
@@ -143,8 +143,8 @@ export class BattleScene extends Phaser.Scene implements Restful {
   }
 
   present(state: SceneFrame, reduced: boolean, rate: number, replay = false) {
-    // The page presents its frame whenever it renders, several times a second: only a frame that changed wakes the
-    // resting loop, as the same frame again changes nothing on the field.
+    // The page presents its frame each time it renders, several times a second. Only a changed frame wakes the
+    // resting loop: the same frame again changes nothing on the field. A press or a key reaches the field this way.
     const presented = JSON.stringify([state, reduced, rate, replay]);
     if (presented !== this.presented) { this.presented = presented; this.stir(); }
     this.state = state;
@@ -487,14 +487,14 @@ export class BattleScene extends Phaser.Scene implements Restful {
     const camera = this.cameras.main;
     return this.tweens.getTweens().length > 0 || this.load.isLoading()
       || camera.shakeEffect.isRunning || camera.flashEffect.isRunning || camera.fadeEffect.isRunning
-      || this.spellEffects.playing.particles > 0 || Boolean(this.dice?.tumbling(this.reduced))
+      || this.spellEffects.playing.particles > 0 || this.spellEffects.playing.objects.length > 0 || Boolean(this.dice?.tumbling(this.reduced))
       || Boolean(this.horizon?.moving);
   }
 
   update(time: number, delta: number) {
     if (!this.state) return;
-    // A clock that starts again (the bench's film steps the game from zero) starts the ambience with it, so two films
-    // of one effect draw the same frames.
+    // When the clock restarts (the bench's film steps the game from zero), the ambient clock restarts too, so two
+    // films of one effect draw the same frames.
     this.ambient = time < this.lastStep ? time : this.ambient + delta;
     this.lastStep = time;
     const breath = this.ambient;

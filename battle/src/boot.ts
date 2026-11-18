@@ -12,7 +12,7 @@ function renderSize(mount: HTMLElement) {
 // Starting the renderer, once for both pages: the game on its mount, sized by the stage itself rather than the
 // window (mobile browser chrome and rotation need not trigger the window's resize), and the two ways it can
 // fail: the context lost under it, or a scene that never reaches ready. Once ready, the loop rests when nothing
-// moves (rest.ts), and `onRest` says so (`data-resting` for the specs and tools).
+// moves (rest.ts). `onRest` reports it, and the pages set `data-resting` from it for the specs and tools.
 export function bootScene(scene: Phaser.Scene & Restful, mount: HTMLElement, { onContextLost, onNeverReady, isReady, onRest = () => {}, moving }:
   { onContextLost: () => void; onNeverReady: () => void; isReady: () => boolean; onRest?: (resting: boolean) => void; moving?: () => boolean }) {
   const game = new Phaser.Game({ type: Phaser.AUTO, parent: mount, backgroundColor: '#17272b',
@@ -22,7 +22,7 @@ export function bootScene(scene: Phaser.Scene & Restful, mount: HTMLElement, { o
   const resize = () => {
     if (!mount.clientWidth || !mount.clientHeight) return;
     const { width, height } = renderSize(mount);
-    // A resized canvas is blank until the next frame is drawn: a resting loop wakes to draw it.
+    // A resized canvas is blank until the next frame is drawn, so a resting loop wakes to draw it.
     if (game.scale.width !== width || game.scale.height !== height) { resting?.wake(); game.scale.resize(width, height); }
   };
   let resting: ReturnType<typeof rest> | undefined;
@@ -40,7 +40,7 @@ export function bootScene(scene: Phaser.Scene & Restful, mount: HTMLElement, { o
     densityQuery?.removeEventListener('change', observeDensity);
   });
   game.events.once(Phaser.Core.Events.READY, () => {
-    resting = rest(game, scene, mount, onRest, moving);
+    resting = rest(game, scene, onRest, moving);
     observer.observe(mount);
     observeDensity();
     game.canvas.addEventListener('webglcontextlost', event => { event.preventDefault(); onContextLost(); });

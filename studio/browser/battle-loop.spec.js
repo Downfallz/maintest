@@ -88,7 +88,7 @@ test('a seat waiting on its choice lets the field rest, though the page renders 
   await mount(page);
   await expect(page.locator('#battle')).toHaveAttribute('data-resting', 'true', { timeout: 15000 });
   await page.locator('#settings').click(); await expect(page.locator('#settings-dialog')).toBeVisible();
-  await expect(page.locator('#battle')).toHaveAttribute('data-resting', 'true');
+  await expect(page.locator('#battle')).toHaveAttribute('data-resting', 'true', { timeout: 15000 });
 });
 test('concession can be cancelled and displays the host result after confirmation', async ({ page }) => {
   const h = await mount(page); await page.locator('#settings').click(); await page.locator('#concede-open').click(); await page.locator('#concede-cancel').click(); expect(h.concessions).toBe(0);

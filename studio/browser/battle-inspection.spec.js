@@ -123,8 +123,8 @@ test('the portrait says it zooms, shows the illustration over the card and gives
   expect(h.writes ?? []).toEqual([]); expect(h.errors).toEqual([]);
 });
 test('a zoom opened on the sprite takes the illustration when it arrives', async ({ page }) => {
-  // The illustration is held until the zoom is open: on a loaded machine it arrived after the zoom had copied the
-  // sprite, and the zoom kept the sprite while the portrait behind it changed (#880).
+  // The test holds the illustration back until the zoom is open. On a loaded machine the illustration arrived after
+  // the zoom had copied the sprite, so the zoom kept the sprite while the portrait behind it changed (#880).
   let release; const held = new Promise(done => { release = done; });
   await page.route('**/battle-art/evolutions/**', async route => { await held; await route.continue(); });
   const h = await mount(page);

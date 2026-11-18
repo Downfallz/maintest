@@ -893,15 +893,21 @@ desktop.
 
 ## The resting loop
 
-The game loop sleeps when nothing on the field moves (`src/rest.ts`, #842). Phaser otherwise draws sixty frames a
-second over a still field: a phone pays for it in battery, and a page whose canvas is drawn in software has no frame
-left for the page around it, so a click's stability check waits. What keeps the loop awake is the scene's `busy()`:
-a tween, a camera effect, the effects kit's particles, a die still tumbling, the horizon giving way, or a file
-loading, and on the bench a play in progress. The halos' breath, the motes, the capstone effects and the auras are
-ambience: they breathe for two seconds after the last movement (`SETTLE_MS`), then stop with the loop, on their own
-clock (`ambient`), so they go on from where they stood when it wakes. A board (`present`), a mutation reveal, a
-tween added, a resize, or a press, key or wheel on the field wakes it. `data-resting` on `#battle` (the seat) and
-`#lab` (the lab and the bench) says the loop sleeps. The bench's film steps the game by hand and is left alone.
+The game loop sleeps when nothing on the field moves (`src/rest.ts`, #842). Otherwise Phaser draws sixty frames a
+second over a still field. A phone pays for that in battery, and a page whose canvas is drawn in software leaves no
+frame for the rest of the page, so a browser test waits for a click to become stable. The scene's `busy()` keeps the
+loop awake while any of these runs: a tween, a camera effect, the effects kit's particles or objects, a die
+tumbling, the horizon giving way, a file loading. On the bench, a play in progress does too.
+
+The halos' breath, the motes, the capstone effects and the auras are ambience. They keep going for two seconds after
+the last movement (`SETTLE_MS`), then stop with the loop. They run on their own clock (`ambient`), so they resume
+where they stopped when the loop wakes.
+
+These wake the loop: a changed board (`present`), a mutation reveal, a tween added, a resize, and the page shown
+again. A press or a key on the field reaches it as the board it changes; one that changes nothing draws nothing. New
+motion on the field goes through a tween or the effects kit, or is counted in `busy()`, or it freezes with the loop.
+`data-resting` is set on `#battle` (the seat) and on `#lab` (the lab and the bench) while the loop sleeps. The
+bench's film steps the game by hand and is left alone.
 
 ## The effects kit
 

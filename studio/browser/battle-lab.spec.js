@@ -114,19 +114,20 @@ test('keyboard casting and skip need no live API', async ({ page }) => {
 
 test('the game loop rests over a still field and wakes for a cast', async ({ page }) => {
   // A still field draws nothing (#842): the halos' breath and the motes are ambience, and stop with the loop.
-  const lab = page.locator('#lab');
-  await expect(lab).toHaveAttribute('data-resting', 'true');
+  // The loop sleeps two seconds after the last movement; a loaded runner reaches that later, hence the 15 s.
+  const lab = page.locator('#lab'), rested = { timeout: 15000 };
+  await expect(lab).toHaveAttribute('data-resting', 'true', rested);
   await choose(page);
   await page.locator('#confirm').click();
-  // The cast's board wakes the loop before anything of it is drawn, and its tweens keep it awake.
+  // The cast's board wakes the loop before anything of it is drawn, and the tweens keep it awake.
   await expect(lab).not.toHaveAttribute('data-resting', 'true');
-  await expect(lab).toHaveAttribute('data-stage', 'resolved', { timeout: 15000 });
-  await expect(lab).toHaveAttribute('data-resting', 'true');
+  await expect(lab).toHaveAttribute('data-stage', 'resolved', rested);
+  await expect(lab).toHaveAttribute('data-resting', 'true', rested);
   // A resize wakes it to draw the canvas at its new size, then it rests again.
   const size = page.viewportSize();
   await page.setViewportSize({ width: size.width - 40, height: size.height });
   await expect(lab).not.toHaveAttribute('data-resting', 'true');
-  await expect(lab).toHaveAttribute('data-resting', 'true');
+  await expect(lab).toHaveAttribute('data-resting', 'true', rested);
 });
 
 test('reset during playback cancels pending results and a second cast resolves normally', async ({ page }) => {
