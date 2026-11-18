@@ -524,8 +524,9 @@ bake the drawing to a texture first, or filter a container.
   travel says where the hit came from; a round burst says nothing.
 - **Source**: [The art of screenshake](https://www.youtube.com/watch?v=AJdEqssNZ-U), Nijman, 2013, for effects
   that carry the direction of the shot. No source was found for this pattern by name.
-- **Phaser**: `Phaser.Math.Angle.Between` the caster and the target, then
-  `Phaser.Types.GameObjects.Particles.ParticleEmitterConfig.angle` as a range around it.
+- **Phaser**: `Phaser.Math.Angle.Between` the caster and the target gives the heading in radians. The emitter's
+  `Phaser.Types.GameObjects.Particles.ParticleEmitterConfig.angle` is in degrees: convert with
+  `Phaser.Math.RadToDeg`, then give a range around it.
 - **Cost**: none beyond the burst.
 - **Reduced motion**: nothing.
 - **Here**: the recoil already follows that line; the motifs do not. BC4's burst takes a direction and a spread.
@@ -698,6 +699,7 @@ The types cannot catch these. They compile, and do the wrong thing.
 | `Phaser.GameObjects.Image#setMask` | Canvas only. Under WebGL a mask is a filter. |
 | `Phaser.Textures.DynamicTexture#draw` | Draws nothing until `Phaser.Textures.DynamicTexture#render` is called. In Phaser 3 it drew at once. |
 | `Phaser.GameObjects.GameObjectFactory#noisesimplex2d` | The name is lower case. The notes the package ships write it in camel case, which does not exist. |
+| `Phaser.Types.GameObjects.Particles.ParticleEmitterConfig.angle` | In degrees, where `Phaser.Math.Angle.Between`, a curve's tangent and a rotation are in radians. A radian given to an emitter sends every particle to the right. |
 | A shader's texture coordinates | `y` is 0 at the bottom in Phaser 4. A Phaser 3 or Shadertoy shader comes out upside down. |
 
 ## How the book is kept
