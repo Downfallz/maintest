@@ -43,9 +43,10 @@ function sections(markdown) {
 }
 
 /**
- * The engine names a text writes in backticks: `Phaser.Namespace.Class#member`, with or without a call after.
- * A span that starts with a dot (`.lifespan`) continues the full name before it, as a key of that type or as a
- * key beside that one: it is returned as the candidates it may stand for, and one of them must exist.
+ * The engine names a text writes in backticks: `Phaser.Namespace.Class#member`, with or without a call after,
+ * as { written, holders }. A span that starts with a dot (`.lifespan`) continues the full name before it: it is
+ * a key of that name when the name holds members (a configuration type), or a key beside that one when the
+ * name is itself a key. `holders` lists the names the key may belong to, in that order.
  */
 function engineNames(text) {
   const names = [];
@@ -55,16 +56,19 @@ function engineNames(text) {
     const key = /^\.([A-Za-z_$][\w$]*)$/.exec(span);
     if (name) {
       last = name[0];
-      names.push([last]);
+      names.push({ written: last });
     } else if (key && last) {
-      names.push([`${last}.${key[1]}`, `${last.replace(/[.#][^.#]+$/, '')}.${key[1]}`]);
+      names.push({ written: `${last}.${key[1]}`, key: key[1], holders: [last, last.replace(/[.#][^.#]+$/, '')] });
     }
   }
   return names;
 }
 
-const written = candidates => candidates[0];
-const found = (index, candidates) => candidates.some(name => declares(index, name));
+/** A full name is declared; a continued key is declared on a name that holds members, never beside a namespace's types. */
+function found(index, name) {
+  if (!name.holders) return declares(index, name.written);
+  return name.holders.some(holder => index.holders.has(holder) && declares(index, `${holder}.${name.key}`));
+}
 
 /** An entry's labelled lines: `- **What**: ...` up to the next label, as { label, text }. */
 function labelled(body) {
@@ -83,13 +87,15 @@ const groups = cut.filter(section => GROUPS.includes(section.title));
 const gone = cut.find(section => section.title === GONE);
 const living = cut.filter(section => section !== gone).map(section => [section.body, ...section.entries.map(entry => entry.body)].join('\n')).join('\n');
 
-// The light build installs no battle package, and runs only for Markdown this test does not read
-// (studio/browser/plan.js keeps the book out of it): nothing to check there. Anywhere else, missing types are a
-// failure, not a pass.
+// The pages' tests need no install (ADR 0024), so without the battle's packages the engine checks are skipped,
+// and say so. Where the change is judged they are never skipped: CI's full build installs the battle before
+// this runs and fails here if the types are missing, and the local gate (scripts/verify.sh) installs them when
+// they are. CI's light build installs nothing, and runs only for Markdown this test does not hold to the
+// engine: studio/browser/plan.js keeps the book out of it.
 const index = installedIndex();
-const light = process.env.LIGHT_BUILD === 'true';
-const engine = { skip: !index && light ? 'the light build installs no Phaser, and the book is unchanged in it' : false };
+const judged = process.env.CI === 'true' && process.env.LIGHT_BUILD !== 'true';
 const INSTALL = 'The Phaser types are not installed: run `npm --prefix battle ci --ignore-scripts` first.';
+const engine = { skip: !index && !judged ? `not checked. ${INSTALL}` : false };
 
 test('the reader of the declarations finds classes, members, inherited members, enums and configuration keys', () => {
   const sample = [
@@ -132,8 +138,9 @@ test('the reader of the declarations finds classes, members, inherited members, 
     'Phaser.GameObjects.Image.RENDER_MASK', 'Phaser.GameObjects.Image#destroy', 'Phaser.Types.Config.lifespan', 'Phaser.Types.Callback', 'Phaser.Math.Clamp', 'Phaser.Math.TAU']) {
     assert.ok(declares(sampled, name), name);
   }
+  // A `#` names a member of something that holds members: a namespace's function is not one.
   for (const name of ['Phaser.Ghost', 'Phaser.GameObjects.Image#constructor', 'Phaser.GameObjects.Image#explode', 'Phaser.GameObjects.GameObject#setTint',
-    'Phaser.Types.Config.inner', 'Phaser.Math.PI2', 'Phaser.Geom.Point']) {
+    'Phaser.Types.Config.inner', 'Phaser.Math.PI2', 'Phaser.Geom.Point', 'Phaser.Math#Clamp', 'Phaser.GameObjects#Image', 'Phaser.GameObjects.Image#setTint#x']) {
     assert.ok(!declares(sampled, name), name);
   }
 });
@@ -151,6 +158,29 @@ test('the command says yes or no for each name, and exits 1 when one is missing 
   assert.equal(none.status, 2);
   assert.equal(none.stdout, '');
   assert.match(none.stderr, /^usage: /);
+});
+
+test('the command exits 2, and names the install, when the declarations are not there', () => {
+  const script = join(root, 'scripts/battle/phaser-symbols.mjs');
+  const absent = spawnSync(process.execPath, [script, 'Phaser.Math.Vector2'], {
+    encoding: 'utf8',
+    env: { ...process.env, PHASER_TYPES_PATH: join(root, 'studio/no-such-phaser.d.ts') },
+  });
+  assert.equal(absent.status, 2);
+  assert.equal(absent.stdout, '');
+  assert.match(absent.stderr, /npm --prefix battle ci --ignore-scripts/);
+});
+
+// The engine checks read a span from its first character. A name written inside a call (`new Phaser.Geom.Point()`)
+// or behind an instance (`this.cameras.main.shake`) would pass unread, so the book writes neither.
+test('an engine name starts its span, and nothing reaches the engine through an instance', () => {
+  for (const section of cut) {
+    const text = [section.body, ...section.entries.map(entry => entry.body)].join('\n');
+    for (const [, span] of text.matchAll(/`([^`\n]+)`/g)) {
+      assert.ok(!/.Phaser\./.test(span), `${section.title}: \`${span}\` hides an engine name the test cannot read`);
+      assert.ok(!/^(this|scene|camera|cam|sprite|image|emitter|tween|gameObject)\./.test(span), `${section.title}: \`${span}\` names the engine through an instance; write the class`);
+    }
+  }
 });
 
 test('the book covers the eight groups of the plan, each with entries', () => {
@@ -175,9 +205,9 @@ test('every entry has the same six lines, a linked source and an engine name', (
 test('every engine name the book writes exists in the installed Phaser', engine, () => {
   assert.ok(index, INSTALL);
   const names = engineNames(living);
-  const distinct = new Set(names.map(written));
+  const distinct = new Set(names.map(name => name.written));
   assert.ok(distinct.size >= 40, `the book names only ${distinct.size} engine symbols: is the convention still \`Phaser.…\` in backticks?`);
-  const missing = [...new Set(names.filter(candidates => !found(index, candidates)).map(written))];
+  const missing = [...new Set(names.filter(name => !found(index, name)).map(name => name.written))];
   assert.deepEqual(missing, [], `not in battle/node_modules/phaser/types: ${missing.join(', ')}`);
 });
 
@@ -186,7 +216,7 @@ test('every Phaser 3 name the book lists as gone is gone from the installed Phas
   assert.ok(gone, `the book has no "${GONE}" section`);
   const names = engineNames(gone.body.split('\n').map(row => row.split('|')[1] ?? '').join('\n'));
   assert.ok(names.length >= 5, 'the gone table lists fewer than five names');
-  const back = names.filter(candidates => found(index, candidates)).map(written);
+  const back = names.filter(name => found(index, name)).map(name => name.written);
   assert.deepEqual(back, [], `listed as gone, yet declared: ${back.join(', ')}`);
 });
 

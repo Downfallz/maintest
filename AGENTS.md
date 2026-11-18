@@ -64,7 +64,7 @@ dotnet restore
 dotnet build --no-restore                       # warnings are errors
 dotnet format --verify-no-changes --no-restore  # `dotnet format` fixes
 dotnet test --no-build                          # Microsoft.Testing.Platform (global.json); `-- --coverage` for coverage
-node --test studio/*.test.js table/*.test.js showcase/*.test.js  # the pages' own tests (ADR 0024); no install but battle's, above
+node --test studio/*.test.js table/*.test.js showcase/*.test.js  # the static pages' own tests (ADR 0024); needs no install
 uv sync --project learning && uv run --project learning ruff check learning && (cd learning && uv run pytest)
 dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst   # validate and consolidate content
 ```

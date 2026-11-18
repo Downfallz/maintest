@@ -98,8 +98,9 @@ dotnet format --verify-no-changes         # what CI runs; use `dotnet format` to
 node --test studio/*.test.js table/*.test.js showcase/*.test.js
 ```
 
-The static pages' own tests (ADR 0024). They need no install of their own; `studio/battle-craft.test.js` reads the
-Phaser types that building the battle view (above) installs, and fails, saying so, without them.
+The static pages' own tests (ADR 0024); needs no install. `studio/battle-craft.test.js` also holds the craft book
+to the Phaser types that building the battle view (above) installs: without them those checks are skipped and
+say so, except in CI's full build, where they fail.
 
 ### The Python side
 
@@ -987,9 +988,10 @@ node scripts/battle/phaser-symbols.mjs "Phaser.Cameras.Scene2D.Camera#shake" Pha
 
 Says, for each name, `yes` or `no`: whether the Phaser the battle installs (`battle/node_modules/phaser/types`)
 declares it. A name is written as Phaser's documentation writes it (`Phaser.Namespace.Class#member`); a member is
-also found on what its class extends. It exits 1 when a name is missing, and 2 with no name or when
-`npm --prefix battle ci --ignore-scripts` has not been run. The craft book (docs/art/battle-craft.md) is held to
-it by `studio/battle-craft.test.js`.
+also found on what its class extends, and `#` names a member of a class or a type, never of a namespace. It
+exits 1 when a name is missing, and 2 with no name or when `npm --prefix battle ci --ignore-scripts` has not been
+run. `PHASER_TYPES_PATH` reads another declaration file. The craft book (docs/art/battle-craft.md) is held to it
+by `studio/battle-craft.test.js`.
 
 ### recap-fixture.py
 

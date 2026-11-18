@@ -6,7 +6,8 @@
 // prints each name with `yes` or `no`, and exits 1 when one is missing. A name is written as Phaser's own
 // documentation writes it: `Phaser.Namespace.Class`, `Phaser.Namespace.Class#member`, or a property of a
 // configuration type (`Phaser.Types.Tweens.TweenBuilderConfig.ease`). A member is also found on what its class
-// extends.
+// extends. `#` names a member of a class, an interface, an enum or an object type, never of a namespace.
+// PHASER_TYPES_PATH reads another declaration file than the installed one.
 
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -15,7 +16,7 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 /** Where `npm --prefix battle ci` puts the declarations. */
-export const TYPES_PATH = join(root, 'battle/node_modules/phaser/types/phaser.d.ts');
+export const TYPES_PATH = process.env.PHASER_TYPES_PATH || join(root, 'battle/node_modules/phaser/types/phaser.d.ts');
 
 const SCOPE = /^(?:declare\s+)?(?:abstract\s+)?(namespace|class|interface|enum)\s+([A-Za-z_$][\w$]*)/;
 const TYPE = /^(?:declare\s+)?type\s+([A-Za-z_$][\w$]*)/;
@@ -26,11 +27,12 @@ const INDENT = 4;
 
 /**
  * Index a generated `phaser.d.ts`. The file is machine-written, four spaces a scope and one declaration a line,
- * so the scopes are read from the indentation. Returns the names declared and what each class or interface
- * extends.
+ * so the scopes are read from the indentation. Returns the names declared, which of them hold members (a
+ * class, an interface, an enum, an object type) and what each class or interface extends.
  */
 export function indexDeclarations(source) {
   const names = new Set();
+  const holders = new Set();
   const parents = new Map();
   const scopes = [];
   let commented = false;
@@ -57,6 +59,7 @@ export function indexDeclarations(source) {
       const name = qualify(scope[2]);
       names.add(name);
       scopes.push({ indent, name, members: scope[1] !== 'namespace' });
+      if (scope[1] !== 'namespace') holders.add(name);
       const extended = EXTENDS.exec(line);
       if (extended) parents.set(name, extended[1].split(',').map(parent => parent.trim().replace(/<.*$/, '')));
       continue;
@@ -66,7 +69,10 @@ export function indexDeclarations(source) {
       const name = qualify(type[1]);
       names.add(name);
       // An object type lists its properties on the lines below; any other type ends on this line.
-      if (line.endsWith('{')) scopes.push({ indent, name, members: true });
+      if (line.endsWith('{')) {
+        scopes.push({ indent, name, members: true });
+        holders.add(name);
+      }
       continue;
     }
     const value = VALUE.exec(line);
@@ -81,12 +87,17 @@ export function indexDeclarations(source) {
       if (member && member[1] !== 'constructor') names.add(qualify(member[1]));
     }
   }
-  return { names, parents };
+  return { names, holders, parents };
 }
 
-/** Whether the index declares a name, on the class itself or on one it extends. `#` and `.` both name a member. */
+/**
+ * Whether the index declares a name, on the class itself or on one it extends. `.` names anything declared;
+ * `#` names a member, so what stands before it must hold members: `Phaser.Math#Clamp` is not a name.
+ */
 export function declares(index, symbol) {
-  const name = symbol.replaceAll('#', '.');
+  const marks = symbol.split('#');
+  if (marks.length > 2 || (marks.length === 2 && !index.holders.has(marks[0]))) return false;
+  const name = marks.join('.');
   if (index.names.has(name)) return true;
   const cut = name.lastIndexOf('.');
   if (cut < 0) return false;
