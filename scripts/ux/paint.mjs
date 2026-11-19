@@ -65,12 +65,12 @@ async function onePaint(browser, url, prepare) {
   }
 }
 
-/** The median, the fastest and the slowest of one reading over the runs. */
-export function spread(values) {
+/** The median, the fastest and the slowest of one reading over the runs, the median kept to `decimals` places. */
+export function spread(values, decimals = 0) {
   const sorted = values.filter(value => value !== null).sort((a, b) => a - b);
   if (!sorted.length) return null;
   const middle = sorted.length >> 1;
-  return { median: sorted.length % 2 ? sorted[middle] : Math.round((sorted[middle - 1] + sorted[middle]) / 2), fastest: sorted[0], slowest: sorted.at(-1) };
+  return { median: sorted.length % 2 ? sorted[middle] : Number(((sorted[middle - 1] + sorted[middle]) / 2).toFixed(decimals)), fastest: sorted[0], slowest: sorted.at(-1) };
 }
 
 export function summary(runs) {
@@ -79,7 +79,7 @@ export function summary(runs) {
     firstPaintMs: spread(runs.map(run => run.first)),
     largestPaintMs: spread(runs.map(run => run.largest)),
     largestIs: [...new Set(runs.map(run => run.element))].join(', '),
-    shift: spread(runs.map(run => run.shift ?? null)),
+    shift: spread(runs.map(run => run.shift ?? null), 2),
     pictureBytes: spread(runs.map(run => run.pictureBytes)).median,
   };
 }

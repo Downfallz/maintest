@@ -95,6 +95,8 @@ test('a paint is reported as its median with the fastest and the slowest run', (
   assert.deepEqual(spread([4400, 4100, 4700]), { median: 4400, fastest: 4100, slowest: 4700 });
   assert.deepEqual(spread([10, 20, 30, 40]), { median: 25, fastest: 10, slowest: 40 });
   assert.equal(spread([null]), null);
+  // A shift is a fraction: the middle of two runs is not rounded to a whole number.
+  assert.deepEqual(spread([0.2, 0.3], 2), { median: 0.25, fastest: 0.2, slowest: 0.3 });
   const told = summary([{ first: 1200, largest: 4400, element: 'picture', shift: 0.26, pictureBytes: 700 }, { first: 1100, largest: 4000, element: 'picture', shift: 0.2, pictureBytes: 700 },
     { first: 1300, largest: 4600, element: 'picture', shift: 0.3, pictureBytes: 700 }]);
   assert.equal(told.runs, 3);
