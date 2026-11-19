@@ -240,7 +240,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     await page.screenshot({ path: info.outputPath('release-settings.jpg'), type: 'jpeg', quality: 85 });
     await page.keyboard.press('Escape'); expect(writes).toEqual([]);
     const captured = new Set(), orderRounds = new Set(); let spellbookRound = 0;
-    for (let step = 0; step < 200 && !(await seat.latest())?.over; step++) {
+    for (let step = 0; step < 200 && !latest?.over; step++) {
       await expect.poll(async () => { latest = await seat.latest(); return latest?.over || Boolean(latest?.waitingFor); }, { timeout: 15000 }).toBe(true);
       const view = structuredClone(latest); if (!view || view.over) break;
       if (view.board.roundNumber > upkeepRound) {

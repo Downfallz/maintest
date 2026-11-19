@@ -14,7 +14,8 @@ export function stepAnswered(view, latest) {
 const progress = (latest) => latest && JSON.stringify({ round: latest.board?.roundNumber, subPhase: latest.board?.subPhase,
   waitingFor: latest.waitingFor ?? null, waitingAsked: latest.waitingAsked ?? null, feedNext: latest.feedNext ?? null, over: Boolean(latest.over) });
 
-// Waits until `read()`, the seat's latest view (or a promise of it, read in the page, #921), shows the step answered. A loaded runner serves the host's next views
+// Waits until `read()`, the seat's latest view (or a promise of it, read in the page, #921), shows the step answered.
+// A read that rejects (a page.evaluate during a navigation) ends the wait with its error: no step navigates today. A loaded runner serves the host's next views
 // late but steadily, which outlasted one 10 s window set at the call (#858). So the window restarts at each view that
 // shows the game moved, as `acknowledge` restarts at each press. A seat that shows nothing new for `timeout` is stuck.
 // A host that keeps moving without answering the step stops at three times `timeout`. The error says what the seat showed.

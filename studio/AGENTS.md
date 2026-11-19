@@ -54,6 +54,7 @@ npm --prefix studio/browser ci --ignore-scripts && npm --prefix studio/browser t
   that answers them ends once the round leaves its tempos (`browser/battle-step.js`), not when the asking changes (#787).
   `waitAnswered` waits for any step. Its window (10 s by default) restarts each time the seat's view moves, and the
   wait ends at three windows at most (#858).
-- A real-engine journey collects the host's bodies in the page (`browser/seat-views.js`, or an `addInitScript`
-  wrapping `fetch`, attached before `goto`), never by parsing them in `page.on('response', async ...)`: Playwright
-  does not await those handlers, so two reads can resolve out of order and the spec can lag what the page drew (#903, #921).
+- A real-engine journey collects the host's seat bodies in the page (`browser/seat-views.js`, or an `addInitScript`
+  wrapping `fetch`, attached before `goto`). It never parses them in `page.on('response', async ...)`: Playwright does
+  not await those handlers, so two reads can finish out of order and the spec can read a view older than the page
+  drew (#903, #921). `seat-views.test.js` refuses such a handler in `browser/`.
