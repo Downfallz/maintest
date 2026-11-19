@@ -115,6 +115,8 @@ const RULES = [
   // The film strip script is played by the bench's own spec, which films with it, and by the effects kit's,
   // which opens the bench through it.
   { matches: (path) => path === 'scripts/battle/filmstrip.mjs', calls: () => ({ journeys: (spec) => ['battle-bench.spec.js', 'battle-fx.spec.js', 'battle-motion.spec.js'].includes(spec) }) },
+  // The journey film is played by its own real-engine journey (table.journey.js), which walks with it.
+  { matches: (path) => path.startsWith('scripts/ux/'), calls: () => ({ realEngine: true }) },
   { matches: (path) => path.startsWith('battle/'), calls: () => ({ journeys: isBattleSpec, realEngine: true, release: true }) },
   { matches: (path) => /^(table|studio)\/.*\.(test\.js|fixture\.json)$/.test(path), calls: () => ({}) },
   { matches: (path) => path.startsWith('table/'), calls: () => ({ journeys: isTableSpec, realEngine: true, release: true }) },

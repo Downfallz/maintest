@@ -1080,6 +1080,45 @@ set the sheet. `--scale` sets the device pixel ratio. `--out` is a `.png` for on
 (`artifacts/filmstrips/` by default). It exits 1 with no effect named, an option it cannot film, or an effect
 the bench does not list.
 
+### ux/journey.mjs
+
+```bash
+node scripts/ux/journey.mjs doors
+node scripts/ux/journey.mjs --all --paint --out <folder>
+node scripts/ux/journey.mjs lobby --width 390
+node scripts/ux/journey.mjs lobby --strip create-window --frames 12 --interval 40
+node scripts/ux/journey.mjs --list
+node scripts/ux/baseline.mjs <folder> --commit <sha> --date <day> > docs/art/journeys/baseline.md
+```
+
+Walks one journey of docs/art/ux-craft-plan.md in Chromium as a new player would, at 320 by 568 and 390 by 844
+(`--width 320` or `--width 390` for one), and writes for each width a contact sheet (`doors-390.png`: the
+screens in order, numbered and named) and a file of measures (`doors-390.measures.jsonl`: a header, then a
+line a screen). The journeys are `doors`, `lessons`, `lobby`, `pages` and `match`; `--all` walks the five, and
+`--list` prints their screens and their strips. Each walk builds its own set: the showcase built into a temporary
+folder and served from it (`--showcase <folder>` reads one already built), and a table host with developer
+accounts, a recording of its own and a table of seed 7. It needs the engine built (`dotnet build`), the content
+consolidated (`data/dst`), the battle bundle and the browser suite's Playwright and axe
+(`npm --prefix studio/browser ci --ignore-scripts`); without axe the measures say it was not run.
+
+A screen's line: the window it was measured on (the modal window when one is open, else the page), its height,
+the words shown, the filled actions, the pictures (`<img>`, CSS backgrounds, the canvas, and those sent at over
+twice the size they are drawn), the smallest text and the words under 11 px, the targets under 44 and under
+24 px, the controls that overlap, what still animates at rest, the layout's shift, and the WCAG 2.2 AA rules
+axe finds failing. Two walks of one journey give the same lines (`studio/browser/table.journey.js`). The walk
+fails when it misses a screen its journey names, or when the page throws.
+
+`--strip <interaction>` films one interaction across time instead: the walk stops at the strip's screen, stops
+the animations and holds the timers, makes the interaction and steps the page (`--frames`, 12 by default,
+`--interval` ms apart, 40 by default) onto `lobby-create-window-390.png`. `--paint` loads the showcase's home,
+the sign-in panel and a new player's home `--runs` times each (5 by default) with nothing cached, on a slow
+phone's network and processor, and writes the median, the fastest and the slowest of the first and the largest
+paint in `paint.json`. `--out` is the folder (`artifacts/journeys/` by default). It exits 1 with nothing named,
+a journey, a width or a strip it does not know, or a build it lacks.
+
+`baseline.mjs` lays the measures and the paints of a folder out as the page a person reads,
+docs/art/journeys/baseline.md; it exits 1 on a folder with no measures.
+
 ### recap-fixture.py
 
 ```bash
