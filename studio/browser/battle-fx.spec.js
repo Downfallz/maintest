@@ -15,8 +15,8 @@ const film = (page, call, value) => page.evaluate(([name, argument]) => window.b
 const CHANGES = ['flash', 'pulse'];
 const shaking = page => page.evaluate(() => window.battleBench.shaking());
 const samples = benchSamples();
-// One sample a primitive, and the one that asks past the field's budget (#882).
-const primitives = samples.filter(one => one.id !== 'kit:budget');
+// One sample a primitive, the one that asks past the field's budget (#882), and the one with no staging at all.
+const primitives = samples.filter(one => !['kit:budget', 'kit:plain'].includes(one.id));
 
 test.beforeEach(async ({ page }) => { await openBench(page, '/table/battle-lab.html'); });
 
@@ -167,7 +167,8 @@ test('with less motion a staged spell plays nothing: no beat, no motif', async (
 });
 
 test('a spell with no staging is drawn as before the kit: its charge, then its motif', async ({ page }) => {
-  await film(page, 'start', { spell: 'spell:engulfing_flames:v1', actor: 'a1', targets: ['b1'] });
+  // Every spell is staged since BC8: the bench keeps one sample with no staging for this.
+  await film(page, 'start', { spell: 'kit:plain', actor: 'a1', targets: ['b1'] });
   expect(await motifs(page)).toEqual(['fire:windup']);
   await film(page, 'advance', WINDUP_MS);
   expect(await motifs(page)).toEqual(['fire:impact']);

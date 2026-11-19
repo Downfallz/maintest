@@ -29,7 +29,8 @@ test('the bench lists every authored effect and the six creatures, and fits the 
 
 test('a chosen effect plays on the chosen creatures: its windup, its impact, then nothing left', async ({ page }) => {
   test.slow();
-  await page.locator('#bench-spell').selectOption('spell:engulfing_flames:v1');
+  // The sample with no staging: what a chosen effect draws, with no beat of the kit beside it.
+  await page.locator('#bench-spell').selectOption('kit:plain');
   await page.locator('#bench-targets input[value="b2"]').check();
   const started = await film(page, 'start');
   expect(started.stage).toBe('windup');
@@ -52,8 +53,9 @@ test('a chosen effect plays on the chosen creatures: its windup, its impact, the
   expect(await field()).toEqual(atRest);
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'resolved', { timeout: 15000 });
   expect(await field()).toEqual(atRest);
+  await expect(page.locator('#bench-status')).toHaveText('Kit: no staging: played');
   // The bench names a spell as its file does: `spell:engulfing_flames:v1` is Incinerate.
-  await expect(page.locator('#bench-status')).toHaveText('Incinerate: played');
+  await expect(page.locator('#bench-spell option[value="spell:engulfing_flames:v1"]')).toContainText('Incinerate');
 });
 
 // A machine whose fonts run wider squeezed the button onto two lines at rest and one while playing: the field

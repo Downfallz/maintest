@@ -39,7 +39,7 @@ Authoring format for the game resources (ADR 0009). One JSON file per item:
   where on its figure the beat starts, and what starts at the feet lies on the ground (a motif, a flash, a shake,
   a pulse and a shock ring, which always lies at the feet, have no level of their own). How much a spell may ask for goes by
   the Stage of the mutation that teaches it: the ladder of `docs/art/storyboards/README.md`, held by
-  `studio/staging-ladder.test.js`. The physical family and Focus are staged (BC6 of the battle's craft plan).
+  `studio/staging-ladder.test.js`. Every entry is staged (BC6 to BC8 of the battle's craft plan).
 - `presentation/mutation-art.json`: which body each package belongs to and the accent it draws on it (ADR 0133),
   keyed by the package's id; a root names a family and no accent. The builder checks them against the packages,
   the vocabularies and the root each package descends from, and publishes them beside the schema as
