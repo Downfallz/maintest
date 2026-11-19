@@ -29,11 +29,25 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
       expect((await context.request.post(`${origin}/api/seat/player1/decision`, { headers, data: { ...data, asked: view.waitingAsked } })).status()).toBe(204);
       return true;
     };
-    const sent = [], shown = [], snapshots = [], frames = new Map();
+    const sent = [], shown = [], snapshots = [];
     // A new tab, as in battle.growth.js (#776): the tab that took the seat may already have shown this round's Upkeep
     // sheet, which a tab shows once (sessionStorage); a new tab shares the seat (localStorage) and not that mark.
     await page.close(); page = await context.newPage();
-    await page.goto(`${origin}/battle`);
+    // The host frames are collected where the page reads them, in the page, before the page itself gets the body:
+    // a frame the page shows is then always held (#903, #908). Collected from Playwright's response events, a frame
+    // could still be parsing when the spec read what the page showed, and the reads before the listeners were
+    // attached (the first one, which may replay what the host kept as seen, ADR 0194) were never collected.
+    await page.addInitScript(() => {
+      const fetch = window.fetch.bind(window); window.hostFrames = {};
+      window.fetch = async (...args) => {
+        const response = await fetch(...args);
+        if (response.ok && new URL(response.url, location.href).pathname.endsWith('/api/seat/player1')) {
+          const body = await response.clone().json().catch(() => null);
+          for (const entry of body?.feed ?? []) if (entry.event?.frame) window.hostFrames[entry.sequence] = entry.event.frame;
+        }
+        return response;
+      };
+    });
     page.on('request', request => {
       const url = new URL(request.url());
       if (url.searchParams.has('shown')) shown.push(Number(url.searchParams.get('shown')));
@@ -41,14 +55,13 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     });
     page.on('response', async response => {
       if (/\/api\/seat\/player1(?:\?|$)/.test(response.url()) && response.ok()) {
-        const body = await response.json().catch(() => null); if (body?.board) {
-          snapshots.push(body.waitingAsked);
-          for (const entry of body.feed ?? []) if (entry.event?.frame) frames.set(entry.sequence, entry.event.frame);
-        }
+        const body = await response.json().catch(() => null); if (body?.board) snapshots.push(body.waitingAsked);
       }
     });
+    await page.goto(`${origin}/battle`);
     await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true'); await expect(page.locator('#loading')).toBeHidden();
     await expect(page.locator('#upkeep-dialog')).toBeVisible();
+    // The listeners hold the first load's reads too: the Upkeep sheet holds the field, so none of them says shown.
     expect(shown).toEqual([]); expect(sent).toEqual([]);
     await page.locator('#upkeep-close').click();
     await page.evaluate(() => {
@@ -116,11 +129,12 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     }
     expect(casts).toBe(3); expect(intents).toBe(declaration === 'hidden-intent' ? 3 : 0);
     expect(new Set(sent.map(one => one.command.asked)).size).toBe(sent.length);
-    const displayed = await page.evaluate(() => window.battleFrames);
+    // One read of the page: what it showed, and the frames it was given before it could show them.
+    const { displayed, frames } = await page.evaluate(() => ({ displayed: window.battleFrames, frames: window.hostFrames }));
     expect(displayed.some(frame => frame.stage === 'windup')).toBe(true);
     expect(displayed.some(frame => frame.stage === 'impact')).toBe(true);
     for (const shown of displayed) {
-      const frame = frames.get(shown.sequence); expect(frame).toBeTruthy();
+      const frame = frames[shown.sequence]; expect(frame).toBeTruthy();
       for (const one of frame[shown.stage === 'windup' ? 'before' : 'after']) {
         expect(shown.creatures.find(creature => creature.id === one.id)?.text).toBe(`${one.health}/${one.maxHealth} HP · ${one.energy} EN`);
       }
