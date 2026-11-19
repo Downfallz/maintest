@@ -152,7 +152,9 @@ export function punches(cue, actor) {
 
 /** The end of every beat of the movement, in milliseconds from the start of the action: what a window must hold. */
 export function lastBeat(weight) {
-  const beats = meleeBeats(weight), struck = reaction({ lost: weight === 'heavy' ? 7 : weight === 'medium' ? 4 : 1 }, true);
+  // The least loss that gives each weight.
+  const lost = { light: 1, medium: 4, heavy: 7 }[weight] ?? 1;
+  const beats = meleeBeats(weight), struck = reaction({ lost }, true);
   return Math.max(beats.home.at + beats.home.lasts, beats.release.at + beats.release.lasts,
     WINDUP_MS + struck.recoil.at + struck.recoil.out + struck.recoil.stay + struck.recoil.back,
     WINDUP_MS + DEATH.settle.at + DEATH.settle.lasts, CAST.release.at + CAST.release.lasts);

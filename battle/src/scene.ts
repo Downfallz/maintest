@@ -395,29 +395,36 @@ export class BattleScene extends Phaser.Scene implements Restful {
     const actor = this.figures.get(this.state.actor!);
     const cue = this.state.cue;
     const melee = !cue || cue.visual.delivery === 'melee';
-    if (actor && !this.falling.has(actor.id)) {
-      const target = this.figures.get(this.state.target!);
-      if (melee) meleeReturn(this, actor, target && target !== actor ? strikeApproach(actor.home, target.home) : null, blowWeight(cue, this.state.actor), this.rate);
-      else castRelease(this, actor, cue?.visual.delivery !== 'projectile', this.rate);
-    }
+    if (actor && !this.falling.has(actor.id)) this.casterAfterContact(actor, melee);
     const thrown = new Set<string>();
     if (cue) this.spellImpact(cue, thrown, actor);
-    else {
-      const target = this.state.target ? this.figures.get(this.state.target) : undefined;
-      if (target && actor && target !== actor) {
-        // The sample tells no loss: it is played as a light blow that took health.
-        thrown.add(target.id);
-        if (this.falling.has(target.id)) this.fell(target, strikeApproach(actor.home, target.home), true);
-        else struck(this, target, strikeApproach(actor.home, target.home), { lost: 1, defeated: false }, true, this.rate);
-        this.spellEffects.impact(SAMPLE_HIT, this.effectFigure(target.id, target), this.rate, this.anchor(actor));
-        this.viewShake.add(WEIGHTS.light.trauma);
-      }
-    }
+    else if (actor) this.sampleImpact(actor, thrown);
     // A figure no blow threw (a caster felled by its own cost) only falls.
     for (const id of this.falling) if (!thrown.has(id)) this.fell(this.figures.get(id)!, null, false);
     // The view trembles by the health lost, whatever the family; a defeat or a critical hit punches the zoom.
     this.viewShake.add(traumaOf(cue, this.state.actor));
     if (punches(cue, this.state.actor)) this.viewShake.punchIn();
+  }
+
+  // The caster once its action has landed: a lunge holds for the stop and goes home, a cast or a throw lets go.
+  private casterAfterContact(actor: Figure, melee: boolean) {
+    const cue = this.state.cue;
+    if (!melee) { castRelease(this, actor, cue?.visual.delivery !== 'projectile', this.rate); return; }
+    const target = this.figures.get(this.state.target!);
+    const line = target && target !== actor ? strikeApproach(actor.home, target.home) : null;
+    meleeReturn(this, actor, line, blowWeight(cue, this.state.actor), this.rate);
+  }
+
+  // The laboratory's sample has no card and tells no loss: it is played as a light blow that took health.
+  private sampleImpact(actor: Figure, thrown: Set<string>) {
+    const target = this.state.target ? this.figures.get(this.state.target) : undefined;
+    if (!target || target === actor) return;
+    const line = strikeApproach(actor.home, target.home);
+    thrown.add(target.id);
+    if (this.falling.has(target.id)) this.fell(target, line, true);
+    else struck(this, target, line, { lost: 1, defeated: false }, true, this.rate);
+    this.spellEffects.impact(SAMPLE_HIT, this.effectFigure(target.id, target), this.rate, this.anchor(actor));
+    this.viewShake.add(WEIGHTS.light.trauma);
   }
 
   private fell(figure: Figure, line: ReturnType<typeof strikeApproach> | null, melee: boolean, flashes = true) {
@@ -469,12 +476,17 @@ export class BattleScene extends Phaser.Scene implements Restful {
       const visual = self && cue.visual.delivery === 'melee'
         ? { family: cue.visual.family, motif: tones.includes('recovery') ? 'vital' : 'focus', delivery: 'cast' } : cue.visual;
       this.spellEffects.impact(visual, this.effectFigure(id, target), this.rate, actor ? this.anchor(actor) : undefined);
-      if (self || !actor) continue;
-      // How the figure answers: a body's blow throws whoever it struck; from a distance, whoever lost health.
-      const loss = lossOf(cue, id), line = strikeApproach(actor.home, target.home);
-      if (this.falling.has(id)) { thrown.add(id); this.fell(target, line, melee, flashes); }
-      else if (melee ? cue.struck.includes(id) : loss.lost > 0) struck(this, target, line, loss, melee, this.rate, flashes);
+      if (!self && actor) this.answer(cue, target, actor, melee, flashes, thrown);
     }
+  }
+
+  // How a figure answers the action that reached it: a body's blow throws whoever it struck; from a distance,
+  // whoever lost health. One the action defeats falls.
+  private answer(cue: NonNullable<SceneFrame['cue']>, target: Figure, actor: Figure, melee: boolean, flashes: boolean, thrown: Set<string>) {
+    const loss = lossOf(cue, target.id), line = strikeApproach(actor.home, target.home);
+    if (this.falling.has(target.id)) { thrown.add(target.id); this.fell(target, line, melee, flashes); return; }
+    const reached = melee ? cue.struck.includes(target.id) : loss.lost > 0;
+    if (reached) struck(this, target, line, loss, melee, this.rate, flashes);
   }
 
   // A ring that opens on a figure and fades: a mutation revealed.

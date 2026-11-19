@@ -101,6 +101,12 @@ const chosen = () => ({
   damage: damageInput.value === '' || damageInput.disabled ? undefined : Math.max(0, Math.round(Number(damageInput.value)) || 0),
   defeat: defeatBox.checked && !defeatBox.disabled,
 });
+// One of the bench's lists set to what was asked, or refused when the bench does not list it.
+function pick(select: HTMLSelectElement, asked: string | undefined, known: readonly { id: string }[], what: string) {
+  if (asked === undefined) return;
+  if (!known.some(one => one.id === asked)) throw new Error(`The bench has no ${what} named ${asked}.`);
+  select.value = asked;
+}
 function choose({ spell, actor, targets, outcome, wound, damage, defeat }: FilmOptions) {
   if (outcome !== undefined) {
     if (!(BENCH_OUTCOMES as readonly string[]).includes(outcome)) throw new Error(`The bench has no outcome ${outcome}.`);
@@ -111,14 +117,8 @@ function choose({ spell, actor, targets, outcome, wound, damage, defeat }: FilmO
   if (damage !== undefined) damageInput.value = damage === null ? '' : String(damage);
   if (defeat !== undefined) defeatBox.checked = defeat;
   woundBox.disabled = damageInput.disabled = defeatBox.disabled = outcomeSelect.value === 'fizzled';
-  if (spell !== undefined) {
-    if (!listed.some(one => one.id === spell)) throw new Error(`The bench has no effect named ${spell}.`);
-    spellSelect.value = spell;
-  }
-  if (actor !== undefined) {
-    if (!creatures.some(one => one.id === actor)) throw new Error(`The bench has no creature named ${actor}.`);
-    actorSelect.value = actor;
-  }
+  pick(spellSelect, spell, listed, 'effect');
+  pick(actorSelect, actor, creatures, 'creature');
   const picked = targets ?? (actor === undefined ? undefined : benchDefaultTargets(actor));
   if (picked) for (const box of boxes()) box.checked = picked.includes(box.value);
 }

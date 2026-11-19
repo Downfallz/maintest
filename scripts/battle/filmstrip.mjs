@@ -157,7 +157,7 @@ export function parseArguments(argv) {
   if (options.all === options.spells.length > 0) throw new Error('Name one or more effects (spell:pummel:v1), or --all.');
   // The live page draws no outcome with a fizzle (`actionCue`): a wound with one would film what never plays.
   if (film.outcome === 'fizzled' && film.wound) throw new Error('--fizzle and --wound do not go together: a fizzle is drawn with no outcome.');
-  if (film.outcome === 'fizzled' && (film.defeat || film.damage !== undefined)) throw new Error('--fizzle goes with no --damage and no --defeat: a fizzle harms nobody.');
+  if (film.outcome === 'fizzled' && (film.defeat || 'damage' in film)) throw new Error('--fizzle goes with no --damage and no --defeat: a fizzle harms nobody.');
   if (film.speed !== undefined && ![0.5, 1, 2].includes(film.speed)) throw new Error('--speed is 0.5, 1 or 2, as the page offers.');
   if (film.interval !== undefined && film.interval % FILM_TICK_MS !== 0) throw new Error(`--interval is a multiple of ${FILM_TICK_MS} ms.`);
   if (options.out?.endsWith('.png') && (options.all || options.spells.length > 1)) throw new Error('--out names a folder when several effects are filmed.');
@@ -170,8 +170,10 @@ export function motionLines({ title, frames }) {
 }
 
 // A fizzle's or a wound's sheet beside the spell's own, not over it.
-export const fileName = (spell, { outcome, wound, damage, defeat } = {}) =>
-  `${spell.split(':')[1] ?? spell}${outcome === 'fizzled' ? '-fizzled' : ''}${wound ? '-wound' : ''}${damage === undefined ? '' : `-${damage}`}${defeat ? '-defeat' : ''}.png`;
+export function fileName(spell, { outcome, wound, damage = null, defeat } = {}) {
+  const asked = [outcome === 'fizzled' ? 'fizzled' : null, wound ? 'wound' : null, damage, defeat ? 'defeat' : null];
+  return `${[spell.split(':')[1] ?? spell, ...asked.filter(one => one !== null)].join('-')}.png`;
+}
 
 async function main(argv) {
   const options = parseArguments(argv);

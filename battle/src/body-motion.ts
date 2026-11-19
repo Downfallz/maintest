@@ -138,6 +138,9 @@ export function fall(scene: Phaser.Scene, body: Body, line: Line | null, melee: 
     delay: delay / rate, duration: lasts / rate,
     onUpdate: tween => { if (image.active) image.setTint(mix(from, to, tween.getValue() ?? 0)); }, onComplete: end });
   drain(WHITE, DRAINED, down.at, down.lasts);
-  drain(DRAINED, WHITE, settle.at, settle.lasts, () => { if (image.active) image.clearTint(); done(); });
+  drain(DRAINED, WHITE, settle.at, settle.lasts, () => {
+    if (image.active) image.clearTint();
+    done();
+  });
   scene.tweens.add({ targets: image, angle: 0, ...rested(body), delay: settle.at / rate, duration: settle.lasts / rate, ease: 'Quad.Out' });
 }
