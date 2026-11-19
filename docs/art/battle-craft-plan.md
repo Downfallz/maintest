@@ -1,6 +1,6 @@
 # Plan: the battle's craft, every spell, attack, move and the ground staged by a designer who can see
 
-Status: accepted, 2026-11-18 (the owner settled the questions at the end). BC1 to BC6 are built; BC7 is next.
+Status: accepted, 2026-11-18 (the owner settled the questions at the end). BC1 to BC7 are built; BC8 is next.
 Each stage below is one pull request.
 
 ## What the owner asked for
@@ -291,6 +291,38 @@ that extends it.
    - A staging cannot tell a critical hit: only the body's punch of the zoom does.
    - Frame time is not measured: BC10. The `pulse` is used four times, each on one figure.
 7. **BC7, the biological spells.** 14 stagings. Same tests.
+
+   *Built (2026-11-19)*: the 14 stagings, each with its storyboard in [the biological family](storyboards/biological.md)
+   and its `staging` in `data/presentation/spell-art.json`, filmed before and after and read by the designer.
+
+   - On the ladder as BC6 left it: 2 spells at Stage I (4 beats), 6 at Stage II (6 beats), 6 at Stage III (9 or
+     10). `studio/staging-ladder.test.js` now holds the biological family to its bands and to its storyboards.
+   - Each spell has one signature a player could name: Venom Claw's weeping scratch, Quill's splinters going
+     through, Overdrive's double jolt, Toxic Mend's mend that sheds, Ambush's burst, Pursuit's streak, Latch's
+     clamp, Bite's gulp, Contagion's cloud that hangs, Paralyzing Barb's pin, Eviscerate's pool, Blood Hunt's
+     theft, Blood Price's price paid first, Devour's siphon and the family's one halo.
+   - The family keeps one meaning a look, written at the head of its file: a round green drop is what a gland
+     makes, green sparks are energy (rising: gained; drawn off toward the foe: lost), bone is a quill, a claw or a
+     flake of hide, blood on the struck figure is its Bleed and blood carried to the caster is what it drank. So
+     Ambush, Blood Hunt and Blood Price's target show no blood.
+   - The quill leaves with the throw (#909). A projectile is not drawn while its caster loads; at 240 ms it
+     appears just over the caster's back and flies 600 ms at an even pace on a low arc to the contact (`FLIGHT`
+     and `flightAt` in `table/battle-motion.js`, the craft book's "Arcing travel"). `THROW` did not move. A `trail`
+     on a projectile follows the same arc: Paralyzing Barb has the family's one; Quill, a Stage I spell with no
+     beat in its windup, flies bare.
+   - What the designer's reading of the first films found, in nearly every spell: pieces thrown `along` or `back`
+     under a reach of 300, or flowing under a reach of 120, never left the struck body; dots under a strength of
+     0.4 piled into one soft cloud; bone pieces cannot be seen on a figure filled in bone by its hit flash, at
+     840 and 900 ms. 43 beats and lines were changed, and the films made again.
+
+   Left:
+
+   - The choices under each storyboard's **Left** wait for the owner, with the sheets: blood kept for a Bleed or
+     a drink, green sparks for energy, the halo for a heal only, Blood Price's cost shown in its windup.
+   - A beat on a caster stays at the caster's home while its body crouches or lunges (Blood Hunt's ring, Blood
+     Price's light); a gather lands on a figure's centre, not its outline (Latch's hooks); a flow cannot fall;
+     Blood Hunt's chain from one victim to the next has no beat. Each is a change to the kit.
+   - Frame time is not measured: BC10. The `pulse` is used once in this family, on Devour's caster.
 8. **BC8, the elemental, astral and necromantic spells.** 14 stagings, the blood cost and the wards among them.
    Same tests.
 9. **BC9, the ground.** Parallax on the horizon plates, fog and embers, the eclipse's light answering a cast.
