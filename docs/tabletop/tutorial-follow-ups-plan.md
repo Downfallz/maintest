@@ -103,7 +103,7 @@ tutorial 2 carries nothing tutorial 3 teaches.
    tutorial, writes **TUTORIAL COMPLETE** in the eyebrow, shows `#match-again` and `#match-leave` and hides
    Rematch and Lobby. Under 400 px Replay the match and Leave the tutorial take a row each, so both read whole.
    The mock specs end a tutorial's match at 320 px, 390 px and desktop; the real-engine journey leaves tutorial 4
-   from its result, and checks the three others never open one. A tutorial's eyebrow no longer shows the round.
+   from its result, and checks the three others never open one. A done tutorial's eyebrow no longer shows the round.
    When the match ends in a draw or a defeat, the eyebrow still says TUTORIAL COMPLETE and the title still says
    Draw or Defeat. The lesson is done whatever the result. The title still tells the truth about the match (the
    owner's choice, #912). As soon as the match has ended, the host reports the tutorial done, even on the first

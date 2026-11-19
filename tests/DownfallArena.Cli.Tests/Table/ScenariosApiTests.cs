@@ -850,12 +850,12 @@ public sealed class ScenariosApiTests : IDisposable
     }
 
     /// <summary>
-    /// A tutorial whose table could not go on did not end its match, so it is not done; nor is it resumed on a finished
-    /// board the person cannot leave as a tutorial's end. It is let go of, and the next time it opens it starts from its
-    /// cut, with nothing kept on the account (#912).
+    /// A tutorial whose table was let go of did not end its match, so it is not done, and it is not resumed on a board
+    /// with nothing left to play. Its practice is let go of, and the next time it opens it starts from its cut, with
+    /// nothing kept on the account (#912).
     /// </summary>
     [Fact]
-    public async Task A_tutorial_whose_table_could_not_go_on_is_not_resumed_and_opens_from_its_cut_the_next_time()
+    public async Task A_tutorial_whose_table_was_let_go_of_is_not_resumed_and_opens_from_its_cut_the_next_time()
     {
         var store = Shipping();
         await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
