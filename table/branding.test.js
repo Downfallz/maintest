@@ -123,7 +123,7 @@ test('the coach\'s window, the opponent\'s card and its chip name no raw colour'
   const css = read('table/battle.css');
   // The round's own rules that only ask whether the chip shows are the round's, not the chip's.
   const card = /\.coach\b|#opponent-|\.opponent-/;
-  const rules = [...css.matchAll(/^([^{}\n@]*)\{([^}]*)\}/gm)].filter(([, selector]) => card.test(selector) && !/\.round\b/.test(selector));
+  const rules = [...css.matchAll(/^([^{}\n@]*)\{([^}]*)\}/gm)].filter(([, selector]) => card.test(selector) && !/\.round(?![\w-])/.test(selector));
   assert.ok(rules.filter(([, selector]) => /\.coach\b/.test(selector)).length >= 8, 'the coach\'s rules');
   for (const name of ['#opponent-dialog {', '#opponent-dialog::backdrop {', '.opponent-head .eyebrow {', '.opponent-rank {', '.opponent-note {', '#opponent-problem {', '#opponent-close {',
     '.opponent-chip {', '.opponent-chip:hover {', '.opponent-avatar {', '.opponent-vs {', '.opponent-badge {', '.opponent-heart {', ':is(.opponent-chip, #opponent-dialog)[data-kind="waiting"] .opponent-avatar {']) {
@@ -131,7 +131,7 @@ test('the coach\'s window, the opponent\'s card and its chip name no raw colour'
   }
   // The medallion's gradients are a portrait and keep their colours (the owner, #895); its rings and letter do not.
   const portrait = /background: radial-gradient\([^;]*\);/;
-  for (const [, selector, body] of rules) assert.doesNotMatch(body.replace(portrait, ''), /#[0-9a-f]{3,8}\b/i, `${selector.trim()} names a raw colour`);
+  for (const [, selector, body] of rules) assert.doesNotMatch(body.replace(portrait, ''), /#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?)\(/i, `${selector.trim()} names a raw colour`);
   assert.equal(rules.filter(([, selector, body]) => /opponent-avatar/.test(selector) && portrait.test(body)).length, 2, 'the two portraits');
   // A refusal reads in the refused colour, as everywhere else.
   assert.match(css, /#opponent-problem \{[^}]*color: var\(--refused\)/);

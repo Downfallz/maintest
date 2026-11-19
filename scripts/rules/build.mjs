@@ -403,8 +403,9 @@ const COUNTED = {
 };
 
 // A text rewritten with the offset in the source of each of its characters, so a refusal found in the rewritten
-// text names the source line of a joined block (#884). A replacement's characters take the offset of what it replaced.
-const traced = text => ({ text, origin: [...text].map((_, at) => at) });
+// text names the source line of a joined block (#884). Offsets count UTF-16 code units, as a match's index does. A
+// replacement's characters take the offset of what it replaced.
+const traced = text => ({ text, origin: Array.from({ length: text.length }, (_, at) => at) });
 
 function rewrite({ text, origin }, pattern, replace) {
   let out = '';
@@ -415,7 +416,7 @@ function rewrite({ text, origin }, pattern, replace) {
     at.push(...origin.slice(last, match.index));
     const replaced = typeof replace === 'function' ? replace(...match, match.index) : replace;
     out += replaced;
-    at.push(...Array.from(replaced, () => origin[match.index]));
+    at.push(...Array.from({ length: replaced.length }, () => origin[match.index]));
     last = match.index + match[0].length;
   }
   return { text: out + text.slice(last), origin: [...at, ...origin.slice(last)] };

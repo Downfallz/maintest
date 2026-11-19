@@ -1165,7 +1165,7 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
 .opponent-badge { flex: none; padding: 1px 7px; border: 1px solid var(--gold); border-radius: 999px; background: color-mix(in srgb, var(--soot) 80%, transparent); color: var(--ink); font: 800 10px/1.5 system-ui, sans-serif; }
 .opponent-badge[hidden], .opponent-heart[hidden] { display: none; }
 .opponent-chip[data-kind="bot"] .opponent-badge { border-color: var(--muted); color: var(--ink); }
-.opponent-heart { flex: none; color: var(--enemy); font-size: 15px; line-height: 1; text-shadow: 0 0 6px color-mix(in srgb, var(--enemy) 40%, transparent); }
+.opponent-heart { flex: none; color: var(--gold); font-size: 15px; line-height: 1; text-shadow: 0 0 6px color-mix(in srgb, var(--gold) 40%, transparent); }
 @container hud (max-width: 760px) {
   .opponent-chip { gap: 6px; margin-left: 10px; padding-right: 10px; }
   #opponent-name { max-width: 110px; font-size: 14px; }

@@ -37,10 +37,10 @@ public static class GameSchemaBuilder
 
         var problems = new List<string>();
         var aliases = LoadAliases(Path.Combine(dataDirectory, AliasesFile), problems);
-        var creatures = LoadAll<CreatureDefinitionDto>(Path.Combine(dataDirectory, CreaturesFolder), problems);
+        var creatures = LoadAll<CreatureDefinitionDto>(Path.Combine(dataDirectory, CreaturesFolder), problems, nullsIn: NullsIn);
         var spells = LoadAll<SpellDto>(Path.Combine(dataDirectory, SpellsFolder), problems, nullsIn: NullsIn);
         var trees = LoadAll<TalentTreeDto>(Path.Combine(dataDirectory, TalentTreesFolder), problems, nullsIn: NullsIn);
-        var tiers = LoadAll<TierDto>(Path.Combine(dataDirectory, TiersFolder), problems, optional: true);
+        var tiers = LoadAll<TierDto>(Path.Combine(dataDirectory, TiersFolder), problems, optional: true, nullsIn: NullsIn);
         ThrowIfAny(problems);
 
         var resolver = new AliasResolver(aliases);
@@ -332,7 +332,7 @@ public static class GameSchemaBuilder
                 var nulls = nullsIn?.Invoke(item).ToList() ?? [];
                 if (nulls.Count > 0)
                 {
-                    problems.AddRange(nulls.Select(place => $"{Path.GetRelativePath(directory, file)}: {place} is null, not a record."));
+                    problems.AddRange(nulls.Select(place => $"{Path.GetRelativePath(directory, file)}: {place} is null."));
                     continue;
                 }
 
@@ -347,23 +347,40 @@ public static class GameSchemaBuilder
         return items;
     }
 
-    // The places of a list of records that hold null: System.Text.Json lets [null] into a list of records (#890).
+    // The places of a list read from authored JSON that are null, the list itself or an element of it: System.Text.Json
+    // lets [null] into a list of records or of ids, and "x": null in place of a list (#890). An optional list may be
+    // left out.
+    private static IEnumerable<string> NullsIn(CreatureDefinitionDto creature) => NullsAt("startingSpellIds", creature.StartingSpellIds);
+
     private static IEnumerable<string> NullsIn(SpellDto spell) =>
-        NullsAt("effects", spell.Effects).Concat(NullsAt("casterEffects", spell.CasterEffects));
+        NullsAt("effects", spell.Effects).Concat(NullsAt("casterEffects", spell.CasterEffects, optional: true));
+
+    private static IEnumerable<string> NullsIn(TierDto tier) =>
+        NullsAt("prerequisites", tier.Prerequisites).Concat(NullsAt("anyOf", tier.AnyOf, optional: true)).Concat(NullsAt("spells", tier.Spells));
 
     private static IEnumerable<string> NullsIn(TalentTreeDto tree) =>
         tree.Root is null ? [] : NullsIn(tree.Root, "root");
 
     private static IEnumerable<string> NullsIn(TalentNodeDto node, string place) =>
-        NullsAt($"{place}.spells", node.Spells)
+        NullsIn(node.Prerequisites, $"{place}.prerequisites")
+            .Concat(NullsAt($"{place}.spells", node.Spells))
+            .Concat(Present(node.Spells).SelectMany(spell => NullsIn(spell.item.Prerequisites, $"{place}.spells[{spell.index}].prerequisites")))
             .Concat(NullsAt($"{place}.children", node.Children))
-            .Concat(node.Children.Select((child, index) => (child, index))
-                .Where(pair => pair.child is not null)
-                .SelectMany(pair => NullsIn(pair.child, $"{place}.children[{pair.index}]")));
+            .Concat(Present(node.Children).SelectMany(child => NullsIn(child.item, $"{place}.children[{child.index}]")));
 
-    private static IEnumerable<string> NullsAt<T>(string place, IReadOnlyList<T>? list)
+    private static IEnumerable<string> NullsIn(PrerequisitesDto? prerequisites, string place) =>
+        prerequisites is null ? [] : NullsAt($"{place}.allOf", prerequisites.AllOf).Concat(NullsAt($"{place}.anyOf", prerequisites.AnyOf));
+
+    private static IEnumerable<string> NullsAt<T>(string place, IReadOnlyList<T>? list, bool optional = false)
         where T : class =>
-        list is null ? [] : list.Select((item, index) => (item, index)).Where(pair => pair.item is null).Select(pair => $"{place}[{pair.index}]");
+        list is null
+            ? optional ? [] : [place]
+            : list.Select((item, index) => (item, index)).Where(pair => pair.item is null).Select(pair => $"{place}[{pair.index}]");
+
+    // The elements of a list that may be null, with their places.
+    private static IEnumerable<(T item, int index)> Present<T>(IReadOnlyList<T>? list)
+        where T : class =>
+        (list ?? []).Select((item, index) => (item, index)).Where(pair => pair.item is not null);
 
     /// <summary>
     /// The die's grid (ADR 0100): a Spell's critical chance is a whole number of twentieths, and a Creature's own

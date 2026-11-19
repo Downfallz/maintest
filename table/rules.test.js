@@ -366,6 +366,9 @@ test('a word the book refuses names the line that holds it, inside a paragraph o
   assert.deepEqual(at('"Package": the player'), ['rules/01-the-goal.md:5']);
   assert.deepEqual(at('a count takes its noun'), ['rules/01-the-goal.md:5']);
   assert.deepEqual(at('"Firebolt"'), ['rules/01-the-goal.md:23']);
+  // An emoji is two code units: the offsets count code units, as the matches do, or a refusal after one is lost.
+  const emoji = goal.replace('Two players, each with {rules.teamSize} creatures.', `Two players ${'🛡️'.repeat(40)},\nthey buy a Package.`);
+  assert.deepEqual(errorsOf(inputs({ parts: [{ file: '01-the-goal.md', text: emoji }] })).filter(error => error.includes('"Package": the player')).map(error => error.split(': ')[0]), ['rules/01-the-goal.md:4']);
 });
 
 test('refuses an engine word where the player\'s word exists, from the terminology page', () => {
