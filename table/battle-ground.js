@@ -16,7 +16,7 @@ export const REST_TINT = Object.freeze({ painting: 0xb5bbc2, arch: 0xa5b1b3 });
  * drawn at boot, tileable across; `puffs` are its soft ellipses, each [x, y, radius across, radius down, alpha].
  */
 export const FOG = Object.freeze({
-  rows: Object.freeze([330, 470]), tint: 0x8aa29c, alpha: .40, drift: .008,
+  rows: Object.freeze([330, 470]), tint: 0x8aa29c, alpha: .50, drift: .008,
   tile: Object.freeze({ width: 256, height: 64 }),
   puffs: Object.freeze([[18, 30, 58, 15, .55], [70, 38, 46, 12, .5], [112, 26, 64, 14, .6], [150, 40, 40, 11, .45],
     [188, 30, 56, 15, .55], [226, 36, 44, 12, .5], [128, 34, 96, 9, .35]].map(Object.freeze)),
@@ -47,7 +47,7 @@ export const EMBERS = Object.freeze({
   tint: EMBER_ORANGE, sway: 3,
   far: Object.freeze({ count: 16, size: 3, alpha: .50, speed: .012, rows: Object.freeze([600, 420]) }),
   near: Object.freeze({ count: 8, size: 6, alpha: .70, speed: .025, rows: Object.freeze([900, 480]) }),
-  glow: Object.freeze({ least: .6, fullAt: 12 }),
+  glow: Object.freeze({ least: .8, fullAt: 12 }),
 });
 export const EMBER_COUNT = EMBERS.far.count + EMBERS.near.count;
 
@@ -114,6 +114,9 @@ export const LIGHT = Object.freeze({ rise: 100, fall: 200, alpha: .8, tint: .5,
   // From the round the sky shatters, the disc's two halves stand apart and reach further: the ring is laid larger,
   // or its band would lie on their dark rock as a grey veil.
   shattered: Object.freeze({ from: 10, scale: 1.5 }),
+  // The same light where the blow landed: a soft pool on the ground under each figure that lost health, as wide
+  // as `reach` radii of the figure and flattened as the ground lies, at `alpha` times the strength.
+  under: Object.freeze({ reach: 3.2, flat: .42, alpha: 1 }),
   strengths: Object.freeze({ light: 0, medium: .5, heavy: 1 }) });
 
 /** How large the corona is laid at a round, over its size around the whole disc. */
@@ -135,19 +138,24 @@ export const LIGHT_COLOURS = Object.freeze({ physical: 0xd2bbac, biological: 0xa
 /**
  * How strongly the ground answers an action: by the health the host confirmed lost by the creatures other than
  * the caster, added up, on the movement's own bands. A base action's few points, a heal, a ward, a blood cost
- * alone, a fizzle and an action of no family get nothing: the place answers harm, and not every turn.
+ * alone, a fizzle and an action of no family get nothing: the place answers harm, and not every turn. The answer
+ * is in two places at once (the owner's choice, #953): on the eclipse, and on the ground under each figure harmed.
  */
 export function lightOf(cue, actor) {
-  if (!cue || cue.kind === 'fizzle' || !Object.hasOwn(LIGHT_COLOURS, cue.visual?.family ?? '')) return { strength: 0, colour: null };
+  const none = { strength: 0, colour: null, under: [] };
+  if (!cue || cue.kind === 'fizzle' || !Object.hasOwn(LIGHT_COLOURS, cue.visual?.family ?? '')) return none;
   let lost = 0, defeated = false;
+  const harmed = [];
   for (const id of new Set((cue.recipients ?? []).map(String))) {
     if (id === String(actor)) continue;
     const loss = lossOf(cue, id);
     lost += loss.lost;
     defeated ||= loss.defeated;
+    if (loss.lost > 0 || loss.defeated) harmed.push(id);
   }
   const strength = LIGHT.strengths[weightOf({ lost, defeated })];
-  return { strength, colour: strength > 0 ? LIGHT_COLOURS[cue.visual.family] : null };
+  // `under`: the figures the light also pools under, each one that lost health to the action.
+  return strength > 0 ? { strength, colour: LIGHT_COLOURS[cue.visual.family], under: harmed } : none;
 }
 
 /** A colour a share of the way from one to another, channel by channel. */

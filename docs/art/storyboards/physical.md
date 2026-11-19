@@ -27,10 +27,11 @@ describes the last films of its spell. What is still open, for the kit or the sc
   is thrown along the blow stays on the target's body or just over it (Pummel's chips, Deranged Charge's cone),
   and what is drawn back does not cross the gap to the caster (Seize). A blow struck across the field throws
   them at full reach. The sheets show only the first case.
-- `ember` (0xd58b75) reads salmon on a normal blend and near white on an additive one over bone: no frame shows it
-  as fire. A warmer ember is a palette change, the owner's.
+- `ember` was 0xd58b75 and read salmon. Settled by the owner, 2026-11-19: warmer, 0xe0763f (`MOTIF_COLOR.fire` in
+  `battle/src/spell-effects.ts`, which the `ember` tint and the `fire` motif share).
 - A ring that lies at the feet and is not aimed opens through the neighbour's legs when its reach passes 300
-  (Crash at 1080 ms, Body Slam at 1260 ms, Crushing Stomp at 1200 ms). Faint by then; the owner may find it noise.
+  (Crash at 1080 ms, Crushing Stomp at 1200 ms; Body Slam's is now aimed). Faint by then. Settled by the owner,
+  2026-11-19: kept.
 
 ## Pummel (`spell:pummel:v1`)
 
@@ -246,7 +247,7 @@ node scripts/battle/filmstrip.mjs spell:enraged_charge:v1 --actor a1 --targets b
 
 - 0 to 360 ms: no arc and no particle on a1. 420 to 660 ms: a few faint warm motes on a1's back, barely above it;
   none on b1. They read only on the zoomed sheet: the heat is a hint, as chosen.
-- 840 ms: a1 covers b1's lower half, not its head; b1 filled in bone, salmon sparks already over it.
+- 840 ms: a1 covers b1's lower half, not its head; b1 filled in bone, ember-orange sparks already over it.
 - 900 ms: sparks and shards on every side of b1, above its head, beside it and down over a1's back.
 - 960 to 1140 ms: b1 washed warm by the additive ember light; the strokes upright, along the blow; shards and
   sparks thinning above and beside b1. 1200 ms: the light fading, a few motes over b1's back.
@@ -259,7 +260,7 @@ The sheets cannot show the stop, the shake, the punch zoom of a critical, or the
 
 ### Left
 
-- The sparks are on a normal blend and read salmon from the contact frame (840 ms), not white: they stay at 840.
+- The sparks are on a normal blend and read ember-orange (0xe0763f) from the contact frame (840 ms), not white: they stay at 840.
   The additive ember light warms b1 for 300 ms; it is the one change of light, and no frame is blown out.
 - The windup motes are Fury's only windup beat; they stay small (strength 0.5, the least the first film could show) so the charge reads as heat, not as
   Deranged Charge's ember gather (Stage III).
@@ -329,7 +330,7 @@ node scripts/battle/filmstrip.mjs spell:reckless_swing:v1 --actor a1 --targets b
 - 1140 ms: a1 nearly home with its wound; on b1 only the strokes and a grain or two.
 - 1680 ms (whole) and every frame after: no effect object on the field; the wound mark on a1 is the scene's.
 - Set beside Fury's sheet at 960 ms: Wild Swing's debris is a flat fan with red in it and its strokes cross the
-  blow; Fury's is a ring of salmon sparks under a warm light, its strokes along it.
+  blow; Fury's is a ring of ember-orange sparks under a warm light, its strokes along it.
 
 The sheets cannot show the stop, the shake, or the feel at full speed.
 
@@ -591,7 +592,7 @@ Filmed at `15ee3b0`, 390 by 844, 1×, a1 on b1, 5 health lost: a whole action an
 | 840 | 480 | impact | the effect | The signature's wave: 18 dust grains (*house*) pushed along the blow in a wide fan that lies on the ground at b1's feet. `burst at 840, count 18, shape dot, tint family, direction along, spread 120, reach 360, strength 0.35, lasts 480, blend normal, level feet` | [Burst](../battle-craft.md#burst), [A beat on the ground](../battle-craft.md#a-beat-on-the-ground) |
 | 840 | 240 | impact | the camera | The weight landing: the largest staged shake of Stage II. `shake at 840, strength 0.15` | [Shake from trauma](../battle-craft.md#shake-from-trauma) |
 | 860 | 320 | impact | the effect | Clods of bone and earth, fewer and heavier than the dust, along the blow. `burst at 860, count 10, shape shard, tint bone, direction along, spread 50, reach 300, lasts 320, blend normal` | [Burst](../battle-craft.md#burst) |
-| 880 | 600 | impact | the effect | The signature's ground ring: wide, slow and dull, opening on the ground at b1's feet past its silhouette after the hit, gone by 1480 ms. *house*. `glow at 880, shape ring, tint family, reach 380, strength 0.6, lasts 600, blend normal` | [Glow](../battle-craft.md#glow), [One effect, one meaning](../battle-craft.md#one-effect-one-meaning) |
+| 880 | 600 | impact | the effect | The signature's ground ring, aimed: a wide, slow, dull arc of 120° opening on the ground at b1's feet on the far side of the blow, past its silhouette, after the hit, gone by 1480 ms. *house*. Aimed on the owner's word (2026-11-19), so it is not Crash's full ring. `glow at 880, shape ring, direction along, reach 380, strength 0.6, lasts 600, tint family, blend normal` | [Glow](../battle-craft.md#glow), [One effect, one meaning](../battle-craft.md#one-effect-one-meaning) |
 | 1000 | 600 | impact | the effect | The dust hanging: 8 grains (*house*) drifting on along the ground at b1's feet, gone by 1600 ms. `flow at 1000, count 8, shape dot, tint family, direction along, spread 60, reach 160, strength 0.4, lasts 600, blend normal, level feet` | [Flow](../battle-craft.md#flow), [A beat on the ground](../battle-craft.md#a-beat-on-the-ground) |
 | 1740 | 800 | impact | the field | Nothing new. Both figures home, breathing. The result is read here. | [The hold before the number](../battle-craft.md#the-hold-before-the-number), [Breath at rest](../battle-craft.md#breath-at-rest) |
 
@@ -622,12 +623,12 @@ node scripts/battle/filmstrip.mjs spell:shield_bash:v1 --actor a1 --targets b1 -
 - 900 ms: a band of dust at b1's feet, drawn over a1's back.
 - 960 ms: the dust a flat band across b1's feet, wider than b1; clods short over b1's back and head, none on a1's
   side. 1020 ms: the ring forming at b1's feet.
-- 1080 to 1260 ms: a dull ring wider than b1, flat, widening until it reaches the next figure's legs; grains low
-  at b1's feet.
-- 1200 ms (whole): the ring still seen. 1440 ms (whole) and every frame after: no effect object on the field; a1
+- 1080 to 1260 ms: a dull arc wider than b1, flat, beyond b1 on the far side of the blow and none on a1's side,
+  widening toward the next figure's legs; grains low at b1's feet. Not a closed ellipse.
+- 1200 ms (whole): the arc still seen. 1440 ms (whole) and every frame after: no effect object on the field; a1
   home. No spark, nothing gold.
-- Beside Crash at 1080 ms: Body Slam lays a dust band along b1's feet and its ring is duller; at 1200 ms Body Slam's
-  ring is still seen and Crash's is all but gone.
+- Beside Crash at 1080 ms: Body Slam lays a dust band along b1's feet and its arc is duller and open; at 1200 ms Body Slam's
+  arc is still seen and Crash's is all but gone.
 
 The sheets cannot show the stop, the shake, the punch zoom of a critical or the feel at full speed.
 
@@ -635,9 +636,8 @@ The sheets cannot show the stop, the shake, the punch zoom of a critical or the 
 
 - "Plates tighten as defense rises" is the caster's +2 defense: the scene's small neutral mark, not the staging's.
   The owner may want a plates beat on a1; it would borrow Carapace's signature, so it is left out.
-- The ring and the wave now lie at b1's feet. Crash's ring and this one are both pale ellipses on the ground;
-  they are kept apart by brightness, time and the dust band, not by shape. If the owner reads them as one, give
-  Body Slam's ring a `direction along`, so it opens as an arc beyond b1.
+- The ring and the wave now lie at b1's feet. Settled by the owner, 2026-11-19: Body Slam's ring is aimed
+  (`direction along`), an arc beyond b1, so it is told from Crash's full ring by shape as well as brightness and time.
 
 ## Dominate (`spell:chain_slash:v1`)
 
@@ -892,8 +892,8 @@ The sheets cannot show the stop, the shake, the punch zoom of a critical, or the
 - The stun is told by the dust that stays; the 2 rounds are the status chip's. A stun mark on b1 is the scene's.
 - The crown, the debris and the dust start at b1's feet (`level feet`), and the crown's reach came down to 300.
   From the feet the crown passes through b1's body before it stands above it: for about 120 ms (960 to 1080 ms)
-  b1's head is half hidden. Chosen: the crown rises out of the ground; if the owner wants b1 clear, start it at
-  `level head`, which loses the ground.
+  b1's head is half hidden. Chosen: the crown rises out of the ground. Settled by the owner, 2026-11-19: kept at
+  the feet.
 - The halo is read now that the pulse quiets a1's gold rim (540 to 780 ms).
 - The staged shake rides the blow's trauma (ceiling 0.6) and may add little on a heavy hit; the film cannot say.
 

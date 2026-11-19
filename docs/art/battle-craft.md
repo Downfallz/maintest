@@ -269,7 +269,7 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 - **Reduced motion**: nothing. Camera motion is the first thing the setting removes.
 - **Here**: built in BC5 (`battle/src/view-shake.ts`), in place of two fixed shakes. Each creature other than
   the caster that lost health adds 0.25, 0.40 or 0.55 by its loss, a defeat 0.10 more, to a ceiling of 0.6; the
-  trauma falls by 0.25 every 120 ms. The offset is trauma squared times 2.5% of the view's shorter side, on two
+  trauma falls by 0.25 every 120 ms. The offset is trauma squared times 5% of the view's shorter side (2.5% as BC5 built it; the owner asked for more, #910), on two
   axes, with no rotation: the page's labels sit over the canvas and would not turn with it. The noise is two
   sines an axis of the action's clock, not `Phaser.Math.HashSimplex`, whose configuration it did not need. A blood
   cost alone, a heal and a blow that took nothing do not move the view (`docs/art/spell-vfx.md`). The kit's
@@ -651,7 +651,8 @@ bake the drawing to a texture first, or filter a container.
   corona brightens in the family's colour and the painting, the plates and the arch go part of the way to it,
   once: a rise of 100 ms and a fall of 200 ms (*house*), gone within 320 ms of the contact as every bright beat
   is. Its strength is the health the host confirmed lost by the others (`lightOf` in `table/battle-ground.js`):
-  nothing to 3, so a base action leaves the ground as it rests, half from 4, all from 7 or on a defeat. A heal, a
+  nothing to 3, so a base action leaves the ground as it rests, half from 4, all from 7 or on a defeat. The same
+  light pools on the ground under each figure harmed, behind every figure (the owner's choice, #953). A heal, a
   ward and a fizzle get nothing. The corona is a soft ring drawn at boot, additive, around a disc left dark: a
   `Phaser.GameObjects.PointLight` on the disc was filmed first, and read as a second sun.
 

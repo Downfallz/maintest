@@ -43,7 +43,8 @@ each its own change:
   the crouched legs, Blood Price's red light sits above the crouched back, and Pursuit's streak runs under the body.
 - A gather lands on its figure's centre, not on its outline: Latch's hooks and Bite's swallow sink into the body.
 - A shard cannot be drawn smaller than about a fifth of a small figure, and a burst's pieces cannot fall: Toxic
-  Mend's and Contagion's flakes of hide are large and bright at 1440 ms, and may read as a hit.
+  Mend's and Contagion's flakes of hide read as a hit at 1440 ms; on the owner's word (2026-11-19) they are now
+  fewer, smaller and darker, in the kit's `hide` tint (0x8c7f68, bone in shadow).
 - A motif is drawn over the particles on its figure: beads and motes on a body show only beside the strokes.
 - On the effects bench every blow is struck up the field, so `along` and `back` are shortened to 0.42 of their
   reach, as in the physical family: the sheets show only that case.
@@ -134,8 +135,7 @@ The sheets cannot show the stop, the shake of the health lost, or the feel at fu
 - The beads drift off the body rather than run down it: a flow has no fall. Blood that runs down needs a `down`
   heading or a weight on the flow, a change to the kit, not a new pattern.
 - Venom Claw shows blood at Stage I, where physical keeps blood for Wild Swing at Stage II. Chosen because Bleed is
-  what the spell does: blood here says "bleeds", as a hit flash says "lost health". The owner may refuse it; then
-  the weep becomes green beads, and the bleed is told by the status chip alone.
+  what the spell does: blood here says "bleeds", as a hit flash says "lost health". Settled by the owner, 2026-11-19: kept.
 - No windup beat, by the band: a venom sheen gathering on the claw before the blow would be a windup gather, which
   Stage I refuses. It is kept for the Stage II and III claws.
 - The Bleed lasts a round; the effect ends by 1560 ms. The round is the status chip's to say.
@@ -233,7 +233,7 @@ The sheets cannot show the stop, the shake of the health lost, or the feel of th
 - No trail behind the quill: the ladder test counts every beat that starts before 840 ms, and Stage I allows none.
   The trail on a projectile is kept for Paralyzing Barb at Stage III, where a windup beat is asked for.
 - One quill a target, as the host confirms one hit each. The approved execution in `docs/art/creature-art-direction.md` says "quills": a volley of three
-  per target would read as three hits. The owner may want it; it is the scene's flight, not the staging's.
+  per target would read as three hits. Settled by the owner, 2026-11-19: one quill.
 - On the bench b1 stands straight up the field from a1, so its quill's arc is seen as a line and its splinters are
   shortened over its head; b3 shows the arc and the needle at nearly full reach.
 - Debris is bone, the motif green: green drops in this family mean venom, and Quill has none. If the film reads
@@ -323,8 +323,8 @@ The sheets cannot show the feel of the two jolts at full speed, nor the sound.
 ### Left
 
 - Green sparks rising mean energy gained, here and on Pursuit's caster: a reading the family did not have. Chosen
-  because a spark is quick and pointed where a drop is round and slow, so it is not read as venom. The owner may
-  refuse it; then the jolts keep their shape in `bone`, and lose the family's colour.
+  because a spark is quick and pointed where a drop is round and slow, so it is not read as venom. Settled by the owner,
+  2026-11-19: kept.
 - The two jolts are one gift told twice, a heartbeat: they do not split the 4 energy from the +1 damage. The round
   of +1 damage is the status chip's to say.
 - Each ally's ring reaches twice its radius (*house*): on the bench the three rings may touch at their widest. The
@@ -361,8 +361,8 @@ Filmed at `28f2dc2`, 390 by 844, 1×, a1 on a1, a2 and a3, nobody struck: a whol
 | 1160 | 580 | impact | the effect | The `spores` motif on each ally, once the drops have soaked in, so the soak and the motif are not one cloud; gone by 1740 ms. `motif at 1160, lasts 580` | [Shape before colour](../battle-craft.md#shape-before-colour), [The three parts of an effect](../battle-craft.md#the-three-parts-of-an-effect) |
 | 840 | 320 | impact | the effect | The secretion landing, the signature's first half: 12 round green drops (*house*) on a ring around each ally close on its centre by 1160 ms. Drops, opaque: what a gland makes. `gather at 840, on target, count 12, shape dot, tint family, reach 200, strength 0.8, lasts 320, blend normal` | [Gravity well and convergence](../battle-craft.md#gravity-well-and-convergence), [One effect, one meaning](../battle-craft.md#one-effect-one-meaning) |
 | 1160 | 420 | impact | the effect | The mend, the one light: a soft green glow on each body, close to it, as the drops soak in, gone by 1580 ms. Not a ring: nothing struck the ground. `glow at 1160, tint family, reach 170, strength 0.55, lasts 420, blend screen` | [Glow](../battle-craft.md#glow), [Additive light](../battle-craft.md#additive-light) |
-| 1240 | 400 | impact | the effect | The price, the signature's second half: 10 small bone flakes (*house*), the ally's own hide loosened, knocked off all round, short, and falling. `burst at 1240, count 10, shape shard, tint bone, direction out, spread 360, reach 140, strength 0.1, lasts 400, blend normal` | [Burst](../battle-craft.md#burst), [One effect, one meaning](../battle-craft.md#one-effect-one-meaning) |
-| 1240 | 600 | impact | the effect | What clings for the round: 6 green beads alive at once well up over each body, drift a little and shrink, gone by 1840 ms. `flow at 1240, count 6, shape dot, tint family, direction out, spread 360, reach 120, strength 0.5, lasts 600, blend normal` | [Flow](../battle-craft.md#flow), [The three parts of an effect](../battle-craft.md#the-three-parts-of-an-effect) |
+| 1240 | 400 | impact | the effect | The price, the signature's second half: 6 small dark flakes (*house*), the ally's own hide loosened, bone in shadow, knocked off all round, short. Fewer, smaller and darker on the owner's word (2026-11-19), so they are not read as a hit. `burst at 1240, count 6, shape shard, tint hide, direction out, spread 360, reach 140, strength 0.05, lasts 400, blend normal` | [Burst](../battle-craft.md#burst), [One effect, one meaning](../battle-craft.md#one-effect-one-meaning) |
+| 1240 | 600 | impact | the effect | What clings for the round: 6 green beads alive at once on or just over each body (a reach of 60: at 120 they stood off it like Contagion's cloud), drift a little and shrink, gone by 1840 ms. `flow at 1240, count 6, shape dot, tint family, direction out, spread 360, reach 60, strength 0.5, lasts 600, blend normal` | [Flow](../battle-craft.md#flow), [The three parts of an effect](../battle-craft.md#the-three-parts-of-an-effect) |
 | 1840 | 700 | impact | the field | Nothing new. Every figure home, breathing. The result is read here. | [The hold before the number](../battle-craft.md#the-hold-before-the-number), [Breath at rest](../battle-craft.md#breath-at-rest) |
 
 Staggered 40 ms an ally as Overdrive's, the third ally's last bead is gone by 1920 ms. Six staged beats, one in the
@@ -399,8 +399,8 @@ node scripts/battle/filmstrip.mjs spell:noxious_cure:v1 --actor a1 --targets a1,
 - 900 to 1080 ms: round green drops on a ring around each of a1, a2 and a3, closing on each body; the spore motif on
   each. Nothing over the heads, no ring on the ground.
 - 1200 to 1380 ms: the drops landed; a soft green light coming up on each body, close to it.
-- 1320 to 1380 ms: small pale flakes close to each outline on every side (a burst cannot fall); a few green
-  beads on each body.
+- 1320 to 1380 ms: a few small dark flakes close to each outline (a burst cannot fall), none bright, no piece
+  that reads as a splinter of a hit; a few green beads on each body.
 - 1440 ms (whole): the light on each body, fading; a flake or two below each figure's middle; beads on each body.
 - 1680 ms (whole): a bead or two at most. 1920 ms (whole) and every frame after: no effect object on the field.
 - b1, b2 and b3 are not lit, moved or marked on any frame. Nothing in the effect is gold.
@@ -412,8 +412,8 @@ The sheets cannot show the feel at full speed, nor the sound.
 ### Left
 
 - The lowered defense is told by flakes of the ally's own hide falling off: bone in this family is a creature's hard
-  parts, here loosened. The owner may read flakes as a hit; then the cost is the status chip's alone and the burst
-  becomes a second, smaller soak of drops, so the staging keeps its six beats.
+  parts, here loosened. The owner read the first flakes as a hit (2026-11-19): they are now six, small,
+  in `hide`, kept as the reading.
 - The beads that cling are green, where Venom Claw's are blood: what stays on the ally is the gland's, not a wound.
 - The heal is a light, not a number: the number is the result text's. A critical heal (35%) cannot be told: a staging
   cannot tell a critical hit.
@@ -506,8 +506,8 @@ The sheets cannot show the stop, the shake, the punch of a critical, or the feel
   [movement.md](movement.md)'s and does not change by spell. A slower next breath on a1 is not the staging's.
 - Pale grains at the feet are grit, a reading the opening adds: bone elsewhere in the family is a quill or a claw.
   The owner may prefer them in the family's green; then they would read as a gland's.
-- Ten damage and no blood: blood here says "bleeds" or "drunk". The owner may want blood on the family's hardest
-  blow; then Ambush's splinters share the field with Wild Swing's fan.
+- Ten damage and no blood: blood here says "bleeds" or "drunk". Settled by the owner, 2026-11-19: blood for a
+  Bleed or a drink only.
 - No windup beat, by choice: the ambush is not announced, and the body's heavy crouch is the windup. The venom sheen
   Venom Claw's storyboard kept for a Stage II claw is not used: neither Ambush nor Pursuit poisons.
 - In a match the host may list a1 among the recipients of its own initiative loss; the scene then draws its own mark
@@ -593,7 +593,7 @@ The sheets cannot show the stop or the feel of the lunge at full speed.
 - The streak is a trail from a1's home to b1's centre, timed by eye to stay behind the lunging body: the two are not
   tied. If the film shows the head ahead of a1, the trail starts later; a trail that follows the body is a change to
   the kit.
-- Green sparks mean energy gained, as on Overdrive: the owner may refuse that reading (Overdrive's **Left**).
+- Green sparks mean energy gained, as on Overdrive. Settled by the owner, 2026-11-19: kept.
 - The light is kept on a1, not on b1, so a spell cast this often stays quiet on its target.
 - In a match the host may list a1 among the recipients of its own energy; the scene then draws its own mark on a1,
   which goes with its body. The bench's film, on `--targets b1`, does not show it beside the sparks.
@@ -756,10 +756,10 @@ The sheets cannot show the stop, the shake, the punch of a critical, or the feel
 ### Left
 
 - Blood carried to the caster means "drunk": a reading the opening adds, where Stage I held blood to a wound that
-  bleeds. Bite leaves no Bleed. The owner may keep blood for the Bleed alone; then the mouthful becomes pale motes,
-  and Bite reads as Seize does.
-- Bite has Seize's shape (taken from b1, landed on a1, one light on a1) in the other family's colours: the owner may
-  find the two too close. The red is what tells them apart.
+  bleeds. Bite leaves no Bleed. Settled by the owner, 2026-11-19: blood for a Bleed
+  or a drink, kept.
+- Bite has Seize's shape (taken from b1, landed on a1, one light on a1) in the other family's colours. The red is what
+  tells them apart. Settled by the owner, 2026-11-19: kept.
 - The gather is placed at a1's home: a1 is all but home at 1440 ms on the sheets, so the drops land on its body.
 - A critical hit (45%) is the body's punch of the zoom; the staging cannot tell it.
 - In a match the host may list a1 among the recipients of its heal; the scene then draws its own mark on a1, which
@@ -800,8 +800,8 @@ Filmed at `28f2dc2`, 390 by 844, 1×, a1 on b1, b2 and b3, 2 health lost each: a
 | 840 | 360 | impact | the effect | The cloud lands: 14 green drops (*house*) puff out on every side of each target, past its outline. `burst at 840, count 14, shape dot, tint family, direction out, spread 360, reach 200, strength 0.5, lasts 360, blend screen` | [Burst](../battle-craft.md#burst), [Stagger and overlap](../battle-craft.md#stagger-and-overlap) |
 | 840 | 900 | impact | the effect | The haze, the impact's light and the signature's first half: a wide, faint green light hangs on each target and fades slowly, gone by 1740 ms. Faint, so three of them do not light the field. `glow at 840, tint family, reach 260, strength 0.35, lasts 900, blend screen` | [Glow](../battle-craft.md#glow), [Additive light](../battle-craft.md#additive-light) |
 | 900 | 1100 | impact | the effect | The cloud that hangs, the signature's second half: 14 large green drops (*house*) alive at once billow slowly off each target on every side, gone by 2000 ms. `flow at 900, count 14, shape dot, tint family, direction out, spread 360, reach 120, strength 0.7, lasts 1100, blend screen` | [Flow](../battle-craft.md#flow), [The three parts of an effect](../battle-craft.md#the-three-parts-of-an-effect) |
-| 1200 | 500 | impact | the effect | The hide eaten: 8 bone flakes (*house*) knocked off each target all round, short. Toxic Mend's reading: defense lowered. `burst at 1200, count 8, shape shard, tint bone, direction out, spread 360, reach 220, strength 0.1, lasts 500, blend normal` | [Burst](../battle-craft.md#burst), [One effect, one meaning](../battle-craft.md#one-effect-one-meaning) |
-| 1300 | 800 | impact | the effect | For good: 6 flakes alive at once keep crumbling off each target, gone by 2100 ms, after the cloud. Toxic Mend sheds once; Contagion goes on. `flow at 1300, count 6, shape shard, tint bone, direction out, spread 360, reach 70, strength 0.25, lasts 800, blend normal` | [Flow](../battle-craft.md#flow), [One effect, one meaning](../battle-craft.md#one-effect-one-meaning) |
+| 1200 | 500 | impact | the effect | The hide eaten: 5 small dark flakes (*house*) knocked off each target all round, short. Toxic Mend's reading: defense lowered. `burst at 1200, count 5, shape shard, tint hide, direction out, spread 360, reach 220, strength 0.05, lasts 500, blend normal` | [Burst](../battle-craft.md#burst), [One effect, one meaning](../battle-craft.md#one-effect-one-meaning) |
+| 1300 | 800 | impact | the effect | For good: 4 flakes alive at once keep crumbling off each target, gone by 2100 ms, after the cloud. Toxic Mend sheds once; Contagion goes on. `flow at 1300, count 4, shape shard, tint hide, direction out, spread 360, reach 70, strength 0.1, lasts 800, blend normal` | [Flow](../battle-craft.md#flow), [One effect, one meaning](../battle-craft.md#one-effect-one-meaning) |
 | 2100 | 440 | impact | the field | Nothing new. Every figure home, breathing. The result is read here; the hold from 2400 ms is empty. | [The hold before the number](../battle-craft.md#the-hold-before-the-number), [Breath at rest](../battle-craft.md#breath-at-rest) |
 
 Nine staged beats, three in the windup; 42 particles asked for on each target (14, 14, 8, 6) and 28 on a1, all of
@@ -842,7 +842,7 @@ node scripts/battle/filmstrip.mjs spell:infectious_blast:v1 --actor a1 --targets
   light on each.
 - 960 to 1140 ms: the spore motif on each; larger, slow green drops around each body, a cloud and not a line; the light
   still on each, fainter.
-- 1260 to 1380 ms: pale flakes on every side of each outline, some above its head; the drops still around
+- 1260 to 1380 ms: a few small dark flakes on every side of each outline, none bright; the drops still around
   each body.
 - 1440 ms (whole): drops and a few flakes around each target; the light faint. 1680 ms (whole): the cloud thinning, a
   flake or two below each figure's middle. 1920 ms (whole): a last drop or flake at most.
@@ -856,8 +856,8 @@ The sheets cannot show the feel of the cloud at full speed, nor the sound.
 ### Left
 
 - The permanence is told by flakes that keep falling after the cloud has gone, 400 ms of it: the "for the rest of
-  the game" is the status chip's. The owner may find the late crumbling noise; then the last flow goes, and the
-  staging still holds nine beats only if the plume stays.
+  the game" is the status chip's. The crumbling is now four small `hide` flakes, on the owner's word
+  (2026-11-19).
 - Three hazes at 0.45 on a screen blend may still read as the field lit: the film tunes the strength. One wider haze
   over the three is a beat on the ground, not a kit word.
 - The cloud's drops are the same green drops as the gland's: a spore is what a gland makes. If the film reads them as
@@ -957,8 +957,8 @@ The sheets cannot show the stop, the feel of the flight at full speed, or the so
 ### Left
 
 - The stun is a tight ring at the feet that holds, not a halo: the one halo in the family says "healed" (Devour), and
-  a halo on the struck figure would read as a heal. The owner may want the stun on the body; then it is a kit change
-  (a halo of another kind), not this staging's.
+  a halo on the struck figure would read as a heal. Settled by the owner, 2026-11-19: the halo is
+  for a heal only.
 - The ring's reach of 130 (*house*) is chosen to stay at b1's own ring, so it reads as held rather than a shock. If
   the film reads it as a ripple, the reach comes down before the strength goes up.
 - The wake is drops, so it reads as venom. Chosen over sparks: green sparks in this family are energy.
@@ -1138,7 +1138,7 @@ node scripts/battle/filmstrip.mjs spell:night_raid:v1 --actor a1 --targets b1,b3
 - 1080 to 1380 ms: the slash strokes on both; a few small green sparks still leaving each toward a1; a1 returning, no
   spark on it.
 - 1440 ms (whole): the arcs gone (they end at 1380 ms, b3's 40 ms later); a spark or two at each victim. 1680 ms (whole): no spark left.
-- 1920 ms (whole) and every frame after: no effect object on the field. b2 is not lit, moved or marked on any frame.
+- 1920 ms (whole) and every frame after: no effect object on the field. b2 is not lit, moved or marked on any frame, but for the ground's own light at the contact ([the ground](ground.md)).
   Nothing in the effect is gold or red.
 - Set beside Pursuit's sheet at 1440 ms: Pursuit's sparks rise off a1 under a light; Blood Hunt's a1 is dark, and any
   spark left is on a victim.
@@ -1151,8 +1151,8 @@ The sheets cannot show the stop, the shake, or the feel of the double strike at 
   the entry ([Chain between targets](../battle-craft.md#chain-between-targets)), not built as a kit word; a streak
   from b1 to b3 needs it, or a trail between two targets, each its own change. Until then both victims are struck in
   one moment, and the arcs on a1's side say where the hunter came from.
-- No blood, by the family's rule: Blood Hunt neither bleeds nor drinks. The owner may want its name seen; then blood
-  goes on the victims, and blood on the struck figure would read as a Bleed it does not have.
+- No blood, by the family's rule: Blood Hunt neither bleeds nor drinks. Settled by the owner, 2026-11-19: blood for a
+  Bleed or a drink only.
 - Green sparks drawn off toward the foe mean energy lost: a reading Stage III adds (the opening). The owner may refuse
   it; then the theft is pale motes, and loses the family's colour.
 - The body goes to b1 only, as [movement.md](movement.md) has it: b3 is struck where it stands.
@@ -1247,10 +1247,8 @@ The sheets cannot show the stop, the shake, the punch of a critical, or the feel
 
 - The price shown before the blow is a reading Stage III adds: blood torn off the caster's own body is what it pays.
   The host has confirmed the whole action when the windup starts, so this shows no outcome ahead of the host
-  (ADR 0131); the owner may still want the cost seen only after contact, with the scene's wound alone. Then the two
-  windup beats become a bone glint, and the price is only the wound.
-- No blood on b1, by the family's rule: eleven damage and no Bleed. The owner may want blood on the heaviest blow;
-  then it reads as a Bleed Blood Price does not leave.
+  (ADR 0131). Settled by the owner, 2026-11-19: the cost stays in the windup.
+- No blood on b1, by the family's rule: eleven damage and no Bleed. Settled by the owner, 2026-11-19: blood for a Bleed or a drink only.
 - The red light on a1 at home starts at 1400 ms, as a1 lands on its ring: the sheets show it all but home by about
   1380 ms, though the heavy blow's return ends at 1740 ms. The light is placed at a1's home either way.
 - A critical hit (50%) is the body's punch of the zoom; the staging cannot tell it.
@@ -1345,8 +1343,7 @@ The sheets cannot show the stop, the shake, the feel of the halo's swell at full
 ### Left
 
 - The halo means "healed", as on Vital Surge: the one `pulse` of the family is kept for the capstone, so neither the
-  barb's stun nor a windup charge uses it. The owner may want it on Bite too; then Bite climbs a rung it does not
-  stand on.
+  barb's stun nor a windup charge uses it. Settled by the owner, 2026-11-19: the halo is for a heal only.
 - The stream is two flows aimed `back`, red and green, and fades before it reaches a1: a stream that lands on the
   caster is Bite's gather. The owner may want the siphon to arrive; then Devour repeats Bite's gulp.
 - The windup's teeth are bone shards gathered onto a1, Latch's hooks drawn inward: the shape is shared, the anchor is

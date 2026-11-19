@@ -59,8 +59,8 @@ test('a far ember is smaller, dimmer and slower than a near one', () => {
   if (risen > 0) assert.ok(Math.abs(risen - EMBERS.far.speed * tall.height) < .01);
 });
 
-test('the embers brighten as the rounds pass, from 0.6 at the first to 1 from the twelfth', () => {
-  assert.deepEqual([null, 1, 12, 30].map(emberGlow), [.6, .6, 1, 1]);
+test('the embers brighten as the rounds pass, from 0.8 at the first to 1 from the twelfth', () => {
+  assert.deepEqual([null, 1, 12, 30].map(emberGlow), [.8, .8, 1, 1]);
   assert.ok(emberGlow(6) > emberGlow(1) && emberGlow(6) < emberGlow(12));
 });
 
@@ -98,11 +98,14 @@ test('the ground answers harm by its weight: nothing to 3 health lost, half from
   assert.equal(lightOf(cue('physical', [{ creature: 'b1', health: -1, defeated: true }]), 'a1').strength, 1);
   // The health lost by the others is added up: three figures that lose 3 each are a heavy blow to the field.
   assert.equal(lightOf(cue('elemental', [{ creature: 'b1', health: -3 }, { creature: 'b2', health: -3 }, { creature: 'b3', health: -3 }]), 'a1').strength, 1);
-  assert.deepEqual(lightOf(cue('elemental', [{ creature: 'b1', health: -5 }]), 'a1'), { strength: .5, colour: 0x8dcfe5 });
+  assert.deepEqual(lightOf(cue('elemental', [{ creature: 'b1', health: -5 }]), 'a1'), { strength: .5, colour: 0x8dcfe5, under: ['b1'] });
+  // The light also pools under each figure that lost health, and under no other: not the caster, not one that only received.
+  const many = cue('physical', [{ creature: 'b1', health: -6 }, { creature: 'b2', health: 2 }, { creature: 'a1', health: -3 }, { creature: 4, defeated: true }]);
+  assert.deepEqual(lightOf({ ...many, recipients: ['b1', 'b2', 'b3', 'a1', 4] }, 'a1').under, ['b1', '4']);
 });
 
 test('a heal, a ward, a blood cost alone, a fizzle and an action of no family leave the ground as it rests', () => {
-  const none = { strength: 0, colour: null };
+  const none = { strength: 0, colour: null, under: [] };
   assert.deepEqual(lightOf(cue('astral', [{ creature: 'a2', health: 8 }]), 'a1'), none);
   assert.deepEqual(lightOf(cue('necromantic', []), 'a1'), none);
   assert.deepEqual(lightOf(cue('necromantic', [{ creature: 'a1', health: -9 }]), 'a1'), none);
@@ -135,7 +138,7 @@ test('the corona is laid larger once the sky has shattered, so it stays off the 
 test('the light is one rise and one fall, gone within 320 ms of the contact, and never the whole way to a colour', () => {
   assert.ok(LIGHT.rise + LIGHT.fall <= 320);
   assert.ok(LIGHT.rise + LIGHT.fall < IMPACT_MS);
-  assert.ok(LIGHT.tint <= .5 && LIGHT.alpha <= 1);
+  assert.ok(LIGHT.tint <= .5 && LIGHT.alpha <= 1 && LIGHT.under.alpha <= 1 && LIGHT.under.flat < 1);
   assert.deepEqual([-20, 0, LIGHT.rise + LIGHT.fall, 5000].map(lightAt), [0, 0, 0, 0]);
   assert.equal(lightAt(LIGHT.rise), 1);
   let peaked = false;

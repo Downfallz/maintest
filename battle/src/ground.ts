@@ -3,6 +3,8 @@ import { DEPTH, EMBERS, EMBER_COUNT, FOG, LIGHT, PAINTING, REST_TINT, coronaScal
 
 /** How the view stands off its fitted place: its offset in pixels and its zoom over the fitted one. */
 export interface ViewOffset { x: number; y: number; zoom: number }
+/** Where a figure stands on the ground: under its feet, and how wide it is. */
+export interface GroundSpot { x: number; feet: number; radius: number }
 /** What takes the ground's tint beside the painting: the horizon's plates and its arch. */
 export interface Tinted { tint(painting: number, arch: number): void; lean(sky: (x: number, y: number) => { x: number; y: number; scale: number }): void; readonly sky: boolean }
 
@@ -31,6 +33,7 @@ export class BattleGround {
   private colour: number | null = null;
   private tint: number = REST_TINT.painting;
   private pulse: Phaser.Tweens.Tween | null = null;
+  private pools: Phaser.GameObjects.Image[] = [];
   private leant = '';
 
   constructor(private readonly scene: Phaser.Scene, private readonly backdrop: Phaser.GameObjects.Image, private readonly horizon: Tinted) {
@@ -141,10 +144,17 @@ export class BattleGround {
    * colour, by the strength the confirmed loss gives. The tweens are the scene's, so the cancel path's `killAll`
    * stops them and `clear` puts the ground back.
    */
-  answer(colour: number | null, strength: number, rate: number) {
+  answer(colour: number | null, strength: number, rate: number, under: readonly GroundSpot[] = []) {
     this.clear();
     if (colour === null || strength <= 0) return;
     this.colour = colour;
+    // The same light where the blow landed: a pool lying on the ground under each figure harmed, behind every
+    // figure, its shadow and its ring. It is the ground that is lit, never the body.
+    for (const spot of under) {
+      const width = spot.radius * LIGHT.under.reach * 2;
+      this.pools.push(this.scene.add.image(spot.x, spot.feet, EMBER_KEY).setName('ground-pool').setTint(colour).setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(-8.7).setDisplaySize(width, width * LIGHT.under.flat).setAlpha(0));
+    }
     // One counter for the rise and the fall: two chained ones lose a step between them at 2×.
     const lasts = LIGHT.rise + LIGHT.fall;
     this.pulse = this.scene.tweens.addCounter({ from: 0, to: lasts, duration: lasts / rate, ease: 'Linear',
@@ -158,6 +168,7 @@ export class BattleGround {
     this.backdrop.setTint(this.tint);
     this.horizon.tint(this.tint, mix(REST_TINT.arch, colour, strength * LIGHT.tint));
     this.light.setVisible(strength > 0).setAlpha(strength * LIGHT.alpha).setTint(colour);
+    for (const pool of this.pools) pool.setAlpha(strength * LIGHT.under.alpha);
   }
 
   /** The cancel path: no light, every tint at its rest. The air goes on: it is the clock's. */
@@ -165,6 +176,8 @@ export class BattleGround {
     // A light still playing is stopped with it: a second answer never shares the ground with the first.
     this.pulse?.remove();
     this.pulse = null;
+    for (const pool of this.pools) pool.destroy();
+    this.pools = [];
     this.shine(0);
     this.colour = null;
   }
@@ -177,7 +190,8 @@ export class BattleGround {
       embers: { shown: this.shown, alpha: round(this.glow) },
       layers: { painting: shift(DEPTH.painting), floor: shift(DEPTH.floor), arch: shift(DEPTH.arch), ...(this.horizon.sky ? { sky: shift(DEPTH.sky) } : {}),
         fog: shift(DEPTH.fog), far: shift(DEPTH.far), near: shift(DEPTH.near) },
-      light: { strength: round(this.strength), colour: this.colour === null ? null : hex(this.colour), tint: hex(this.tint), shown: this.light.visible },
+      light: { strength: round(this.strength), colour: this.colour === null ? null : hex(this.colour), tint: hex(this.tint), shown: this.light.visible,
+        under: this.pools.length, pool: round(this.pools[0]?.alpha ?? 0) },
     };
   }
 }
