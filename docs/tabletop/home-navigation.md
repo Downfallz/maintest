@@ -65,7 +65,8 @@ provider's rendered button, not a custom credential control.
 
 The games in progress are read a page at a time: `GET /api/lobby` counts them and the open seats, and
 `GET /api/lobby/page/<open|all>/<page>` serves eight, newest first (a signed-in player's own open tables are under
-*Your games*, not offered back as open seats). The lobby's ten-second poll reads the page on show, never every game.
+*Your games*, not offered back as open seats). No clock reads them (ADR 0164): the lobby reads the page on show,
+never every game, when its stream (`GET /api/lobby/events`) opens or says something changed.
 Each game is one row (its format and state, who sits, whose turn, and a seat to take), the component finished games
 use too, with the same pager.
 
@@ -85,15 +86,21 @@ The bell sits outside the menu, so a phone sees its count without opening anythi
 then says 9+; its accessible name says how much waits. Where the platform offers one, an installed app shows the
 same count on its icon (`navigator.setAppBadge`). Every action is the route the lobby or the Friends panel already
 uses; a request answered here is read again by the Friends panel, and the lobby reads its lists again. The bell
-reads `GET /api/lobby/mine` and `GET /api/friends` itself every twenty seconds while the page is in view; on the
-lobby, which reads the games every ten, it takes the lobby's read instead of making its own. The pure part
+reads `GET /api/lobby/mine` and `GET /api/friends` when it is opened, when who is signed in changes, and, while the
+page is in view, when the lobby's stream opens or says the player's own lists changed (ADR 0164). On the lobby,
+which reads the player's games itself, the bell takes that read and skips its own read of the games for five
+seconds. A read that fails is tried again a second later, then two, up to thirty. The pure part
 (`inboxItems`, `badgeText`, `bellLabel`) is `table/inbox.js`'s and has its own tests.
 
 ## Refresh and account transitions
 
-The manual Refresh button and browser-save/reconnect prose are removed. The lobby retains its ten-second
-poll and also refreshes when the document becomes visible or the connection returns. A successful retry
-clears the disconnected status even if the game list itself has not changed.
+The manual Refresh button and browser-save/reconnect prose are removed. The lobby reads on no clock (ADR 0164).
+It reads its lists when its stream opens (the page loaded, back in view, back online) and each time the stream says
+something changed, and also when the document becomes visible or the connection returns. The stream is closed
+while the page is hidden. A change heard while the create dialog is open waits until it closes. A failed read is
+tried again a second later, then two, up to thirty, and a successful retry clears the disconnected status even if
+the game list itself has not changed. The one timer left redraws the cards each minute while one counts down a
+time to answer, and reads nothing from the host (ADR 0169).
 
 Account changes clear displayed private games, invitations and friends immediately. In-flight lobby results
 carry a revision and cannot repaint the next account's dashboard; a queued refresh fetches its games. Initial
