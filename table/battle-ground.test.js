@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { DEPTH, EMBERS, EMBER_COUNT, FOG, LIGHT, LIGHT_COLOURS, PAINTING, REST_TINT, depthPlace, depthShift, emberAt, emberGlow, fogDrift, lightOf, mix } from './battle-ground.js';
+import { DEPTH, EMBERS, EMBER_COUNT, FOG, LIGHT, LIGHT_COLOURS, PAINTING, REST_TINT, depthPlace, depthShift, emberAt, emberGlow, fogDrift, lightAt, lightOf, mix } from './battle-ground.js';
 import { TRAUMA, PUNCH } from './battle-motion.js';
 import { IMPACT_MS } from './battle-timing.js';
 
@@ -114,10 +114,32 @@ test('a heal, a ward, a blood cost alone, a fizzle and an action of no family le
   assert.deepEqual(lightOf(cue('necromantic', [{ creature: 4, health: -9 }]), '4'), none);
 });
 
-test('the light is one rise and one fall, gone 320 ms after the contact, and never the whole way to a colour', () => {
-  assert.equal(LIGHT.rise + LIGHT.fall, 320);
+test('the embers are spread over the floor, not strung on a line', () => {
+  // The first film drew each kind on one slant: the place along the rise followed the column. Held here: among
+  // the far embers, the column says nothing of the height.
+  const far = Array.from({ length: EMBERS.far.count }, (_, index) => emberAt(index, 0, field));
+  const mean = values => values.reduce((sum, one) => sum + one, 0) / values.length;
+  const mx = mean(far.map(one => one.x)), my = mean(far.map(one => one.y));
+  const cov = mean(far.map(one => (one.x - mx) * (one.y - my)));
+  const correlation = cov / Math.sqrt(mean(far.map(one => (one.x - mx) ** 2)) * mean(far.map(one => (one.y - my) ** 2)));
+  assert.ok(Math.abs(correlation) < .5, `column and height correlate by ${correlation.toFixed(2)}`);
+});
+
+test('the light is one rise and one fall, gone within 320 ms of the contact, and never the whole way to a colour', () => {
+  assert.ok(LIGHT.rise + LIGHT.fall <= 320);
   assert.ok(LIGHT.rise + LIGHT.fall < IMPACT_MS);
-  assert.ok(LIGHT.tint <= .5 && LIGHT.intensity <= .5);
+  assert.ok(LIGHT.tint <= .5 && LIGHT.alpha <= 1);
+  assert.deepEqual([-20, 0, LIGHT.rise + LIGHT.fall, 5000].map(lightAt), [0, 0, 0, 0]);
+  assert.equal(lightAt(LIGHT.rise), 1);
+  let peaked = false;
+  for (let ms = 20; ms < LIGHT.rise + LIGHT.fall; ms += 20) {
+    const now = lightAt(ms), before = lightAt(ms - 20);
+    assert.ok(now > 0 && now <= 1);
+    if (now < before) peaked = true;
+    assert.ok(peaked ? now < before : now > before, `one rise, then one fall, at ${ms} ms`);
+  }
+  // The corona is around the disc and leaves it dark.
+  assert.ok(LIGHT.ring.inner < 1 && LIGHT.ring.inner < LIGHT.ring.peak && LIGHT.ring.peak < LIGHT.ring.outer);
   assert.equal(mix(REST_TINT.painting, LIGHT_COLOURS.elemental, 0), REST_TINT.painting);
   assert.equal(mix(REST_TINT.painting, LIGHT_COLOURS.elemental, 1), LIGHT_COLOURS.elemental);
   assert.equal(mix(0x000000, 0xff8040, .5), 0x804020);

@@ -16,7 +16,7 @@ export const REST_TINT = Object.freeze({ painting: 0xb5bbc2, arch: 0xa5b1b3 });
  * drawn at boot, tileable across; `puffs` are its soft ellipses, each [x, y, radius across, radius down, alpha].
  */
 export const FOG = Object.freeze({
-  rows: Object.freeze([330, 470]), tint: 0x8aa29c, alpha: .18, drift: .003,
+  rows: Object.freeze([330, 470]), tint: 0x8aa29c, alpha: .30, drift: .003,
   tile: Object.freeze({ width: 256, height: 64 }),
   puffs: Object.freeze([[18, 30, 58, 15, .55], [70, 38, 46, 12, .5], [112, 26, 64, 14, .6], [150, 40, 40, 11, .45],
     [188, 30, 56, 15, .55], [226, 36, 44, 12, .5], [128, 34, 96, 9, .35]].map(Object.freeze)),
@@ -25,7 +25,9 @@ export const FOG = Object.freeze({
 /** How far the fog has drifted at a time of the ambient clock. With less motion it stands still. */
 export const fogDrift = (clock, reduced = false) => reduced ? 0 : clock * FOG.drift;
 
-const GOLDEN = .618034;
+// The steps that spread the embers: one for the column, another for the place along the rise (Roberts' R2
+// sequence). One step for both would make the place follow the column, and the embers would rise on one slant line.
+const ACROSS = .7549, ALONG = .5698;
 const fraction = value => value - Math.floor(value);
 
 /**
@@ -35,8 +37,8 @@ const fraction = value => value - Math.floor(value);
  */
 export const EMBERS = Object.freeze({
   tint: 0xd18d51, sway: 3,
-  far: Object.freeze({ count: 16, size: 2, alpha: .22, speed: .012, rows: Object.freeze([600, 420]) }),
-  near: Object.freeze({ count: 8, size: 4, alpha: .30, speed: .025, rows: Object.freeze([900, 480]) }),
+  far: Object.freeze({ count: 16, size: 2, alpha: .30, speed: .012, rows: Object.freeze([600, 420]) }),
+  near: Object.freeze({ count: 8, size: 4, alpha: .40, speed: .025, rows: Object.freeze([900, 480]) }),
   glow: Object.freeze({ least: .6, fullAt: 12 }),
 });
 export const EMBER_COUNT = EMBERS.far.count + EMBERS.near.count;
@@ -57,11 +59,11 @@ export function emberAt(index, clock, field) {
   const [from, to] = kind.rows;
   // The rise lasts what its length takes at the kind's pace, so a taller field does not make an ember faster.
   const lasts = Math.max(1, (from - to) * field.scale / (kind.speed * field.height) * 1000);
-  const progress = fraction(clock / lasts + index * GOLDEN);
+  const progress = fraction(clock / lasts + index * ALONG);
   const period = 5000 + (index * 977) % 4000;
   return {
     far,
-    x: fraction(.31 + index * GOLDEN) * field.width + EMBERS.sway * Math.sin(clock / period * Math.PI * 2 + index),
+    x: fraction(.31 + index * ACROSS) * field.width + EMBERS.sway * Math.sin(clock / period * Math.PI * 2 + index),
     y: field.top + (from - (from - to) * progress) * field.scale,
     size: kind.size,
     // It fades in and out along its rise: none appears or vanishes at once.
@@ -93,11 +95,24 @@ export function depthPlace(point, factor, view, centre) {
 }
 
 /**
- * The light that answers a blow: the eclipse brightens in the family's colour and the ground's tint goes part of
- * the way to it, once, and is gone 320 ms after the contact, as every bright beat is.
+ * The light that answers a blow: the eclipse's corona brightens in the family's colour and the ground's tint goes
+ * part of the way to it, once, and is gone within 320 ms of the contact, as every bright beat is. The corona is
+ * a ring around the disc, in shares of the disc's radius: nothing inside `inner`, brightest at `peak`, nothing
+ * past `outer`. The disc stays dark: a light that filled it read as a second sun.
  */
-export const LIGHT = Object.freeze({ rise: 100, fall: 220, radius: 1.4, intensity: .5, tint: .5,
+export const LIGHT = Object.freeze({ rise: 100, fall: 200, alpha: .8, tint: .5,
+  ring: Object.freeze({ inner: .9, peak: 1.08, outer: 1.7 }),
   strengths: Object.freeze({ light: 0, medium: .5, heavy: 1 }) });
+
+/**
+ * How much of its strength the light shows, a time after the contact at 1×: up fast and slowing (`Quad.Out`),
+ * then down slowly at first (`Sine.In`), on one clock, so no step is lost between the rise and the fall.
+ */
+export function lightAt(ms) {
+  if (ms <= 0 || ms >= LIGHT.rise + LIGHT.fall) return 0;
+  if (ms < LIGHT.rise) { const left = 1 - ms / LIGHT.rise; return 1 - left * left; }
+  return Math.cos((ms - LIGHT.rise) / LIGHT.fall * Math.PI / 2);
+}
 
 /** The families the ground answers in, and each one's colour (the palette of `battle/src/spell-effects.ts`). */
 export const LIGHT_COLOURS = Object.freeze({ physical: 0xd2bbac, biological: 0xadc777, elemental: 0x8dcfe5, necromantic: 0x85c9c2, astral: 0xb9a6e5 });

@@ -48,6 +48,8 @@ npm --prefix studio/browser test -- --trace off battle-lab.spec.js battle-bench.
   or the effects kit, or is counted in the scene's `busy()`: otherwise it plays at the resting rate, as the breath does.
 - A figure's body is moved by `src/body-motion.ts` on the numbers of `table/battle-motion.js` (README "The movement").
   Whatever a new move changes on a figure (place, lean, scale, tint, alpha), `clearMotion` puts back.
+- The ground's fog and embers (`src/ground.ts`, README "The ground") are read from the ambient clock alone: no emitter and
+  no `Math.random`, or a film of the field at rest stops repeating. What takes the ground's tint is put back by its `clear`.
 - The words a player reads come from docs/domain/player-terminology.md.
 - Every new item in the header's `.tools` is measured at 320 px with every button it can show: `battle-reactions.spec.js`
   checks the header with the reactions on (#767). Under 360 px, 💬 lives in the opponent's card.

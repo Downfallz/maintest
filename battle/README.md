@@ -42,6 +42,8 @@ No CDN, remote fonts or browser package downloads are needed at runtime.
 - `src/scene.ts`: Phaser scene, local assets, creature figures, cancellable tweens and camera effects.
 - `src/body-motion.ts`, `src/view-shake.ts`, `table/battle-motion.js`: how a figure loads, strikes, is struck,
   falls and breathes, and how the view trembles ("The movement", below).
+- `src/ground.ts`, `table/battle-ground.js`: the fog and the embers at rest, the depth of the far layers when the
+  view moves, and the eclipse's light answering a blow ("The ground", below).
 - `src/types.ts`: presentation types only.
 - `src/spell-effects.ts`: bounded, cancellable vector motifs for confirmed spell outcomes, and the beats of a
   staged spell, handed to the effects kit (below).
@@ -906,8 +908,8 @@ kit's particles or
 objects, a die tumbling, the horizon giving way, a file loading. On the bench, a play in progress does too.
 
 Two seconds after the last movement (`SETTLE_MS`) the field rests: the game is stepped one animation frame in four
-(`REST_EVERY`), fifteen frames a second on a sixty-hertz screen. The halos' breath, the creatures' breath, the motes,
-the capstone effects and the auras are ambience: they go on at that rate, on their own clock (`ambient`), at the same pace. Movement is
+(`REST_EVERY`), fifteen frames a second on a sixty-hertz screen. The halos' breath, the creatures' breath, the ground's
+fog and embers, the capstone effects and the auras are ambience: they go on at that rate, on their own clock (`ambient`), at the same pace. Movement is
 looked for on every animation frame, so a cast starts at the full rate, and a board that only changes what stands
 on the field is drawn within four frames. A resize is drawn at once.
 
@@ -951,6 +953,30 @@ view's trauma.
   settled alpha; the trauma at zero and the camera as it was fitted.
 
 `studio/browser/battle-motion.spec.js` plays each of these on the bench, at 0.5×, 1× and 2×.
+
+## The ground
+
+The place the battle stands in (`src/ground.ts`, numbers in `table/battle-ground.js`,
+[its storyboard](../docs/art/storyboards/ground.md), BC9 of docs/art/battle-craft-plan.md). Three things, none of
+them a spell's look:
+
+- The air. A band of fog on the painting's horizon and 24 embers rising from the floor, behind every figure. Both
+  are read from the scene's ambient clock and nothing else: no emitter, no random draw, so two films of the field
+  at rest agree, and a hidden tab, which stops that clock, stops them. They are ambience and play at the resting
+  rate. With less motion the fog stands still and no ember is drawn.
+- The depth. While the view trembles or punches, the sky's plates, the fog and the far embers are laid again each
+  frame, shifted against the view's offset and scaled against its zoom by their factor (`DEPTH`, `depthPlace`).
+  What lies on the floor, the painting included, is left to the camera. No scroll factor: the fitted camera has
+  a zoom and a scroll of its own.
+- The light. At the impact the scene reads `lightOf(cue, actor)`: the health the host confirmed lost by the
+  creatures other than the caster, on the movement's bands. From 4 points the eclipse's corona brightens in the
+  family's colour and the painting, the plates and the arch are tinted part of the way to it, over 100 ms, then
+  back over 200 ms. A base action's few points, a heal, a ward, a blood cost alone and a fizzle leave the ground
+  as it rests. `clearMotion` puts the light out and the tints back.
+
+`window.battleBench.motion().ground` tells the fog's drift, the embers shown, each layer's shift and scale, and the
+light's strength, colour and tint; a film's `--motion` record holds it at each frame.
+`studio/browser/battle-ground.spec.js` plays all of it on the bench.
 
 ## The effects kit
 

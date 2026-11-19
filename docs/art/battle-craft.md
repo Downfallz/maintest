@@ -605,8 +605,12 @@ bake the drawing to a texture first, or filter a container.
   move the near plates more than the far ones, with no code each frame.
 - **Cost**: none.
 - **Reduced motion**: nothing moves, so nothing shifts.
-- **Here**: the horizon plates sit over the painting at fixed places (`battle/src/battle-horizon.ts`). BC9 gives
-  them scroll factors, and the camera work of BC5 makes them show.
+- **Here**: built by BC9, by hand and not with a scroll factor: the fitted camera has a zoom and a scroll that is
+  not zero, so a scroll factor would displace a plate for good. Each far layer is laid again while the view moves,
+  shifted against the view's offset and scaled against its punch (`depthPlace` in `table/battle-ground.js`,
+  `battle/src/ground.ts`): the sky's plates at 0.5, the fog at 0.75, the far embers at 0.8 (*house*). The painting
+  carries the floor and stays at 1. The camera moves a few pixels for under 300 ms, so the depth is felt and not
+  seen ([the ground's storyboard](storyboards/ground.md)).
 
 ### Fog and embers
 
@@ -622,9 +626,13 @@ bake the drawing to a texture first, or filter a container.
   `Phaser.Core.Events.HIDDEN` the emitter is paused.
 - **Cost**: one draw call for the embers, one for the fog. A band of fog covers many pixels: keep it to one.
 - **Reduced motion**: nothing. The motes are hidden, as today.
-- **Here**: 24 gold motes, each a shape moved by hand each frame, hidden under reduced motion
-  (`battle/src/scene.ts`). BC9 makes them one emitter, in the same gold at the same faint alpha, and adds the
-  fog, in a slate taken from the painting and not in a colour that means something on the page.
+- **Here**: built by BC9 with no emitter. An emitter draws from `Math.random`, which the bench pins only for the
+  length of a play: a film of the field at rest would not repeat (rule 5). So the 24 embers are images of one
+  texture whose places are a function of the scene's ambient clock (`emberAt` in `table/battle-ground.js`), and
+  the fog is one `Phaser.GameObjects.TileSprite` drifting on the same clock, in a slate taken from the painting.
+  The embers are the faults' ember orange, behind the figures: the motes' gold was the target marker's. A hidden
+  tab stops them by stopping that clock, and with less motion the fog stands still and no ember is drawn
+  ([the ground's storyboard](storyboards/ground.md)).
 
 ### A light that answers a cast
 
@@ -639,8 +647,13 @@ bake the drawing to a texture first, or filter a container.
 - **Cost**: a point light is one small draw call; a tint is free. `Phaser.Cameras.Scene2D.Camera#flash` covers
   the whole view in one colour, which is what the flash limits forbid at full white.
 - **Reduced motion**: nothing.
-- **Here**: the ground never changes. BC9 builds the answer: a rise of 100 ms and a fall of 400 ms (*house*),
-  one change of light per cast, never a strobe.
+- **Here**: built by BC9 (`battle/src/ground.ts`, [the ground's storyboard](storyboards/ground.md)): the eclipse's
+  corona brightens in the family's colour and the painting, the plates and the arch go part of the way to it,
+  once: a rise of 100 ms and a fall of 200 ms (*house*), gone within 320 ms of the contact as every bright beat
+  is. Its strength is the health the host confirmed lost by the others (`lightOf` in `table/battle-ground.js`):
+  nothing to 3, so a base action leaves the ground as it rests, half from 4, all from 7 or on a defeat. A heal, a
+  ward and a fizzle get nothing. The corona is a soft ring drawn at boot, additive, around a disc left dark: a
+  `Phaser.GameObjects.PointLight` on the disc was filmed first, and read as a second sun.
 
 ### A scar that fades
 
@@ -653,8 +666,9 @@ bake the drawing to a texture first, or filter a container.
   then `Phaser.GameObjects.RenderTexture#render`: in Phaser 4 nothing is drawn until `render` is called.
 - **Cost**: an image is free. A render texture is a framebuffer.
 - **Reduced motion**: nothing: the settled frame has no scar.
-- **Here**: not built. A scar is decoration, never state: a replay and a first load show none. BC9 fades it
-  inside the settle window, so no frame the player can navigate to holds one.
+- **Here**: not built: BC9 staged the ground's air, its depth and its light, and no scar. A scar is decoration,
+  never state: a replay and a first load show none. Whoever builds it fades it inside the settle window, so no
+  frame the player can navigate to holds one.
 
 ### A beat on the ground
 
