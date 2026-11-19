@@ -462,8 +462,14 @@ test("every job that installs a browser keeps the system packages' archives, and
     assert.match(install.body, /sudo rm -f \/etc\/apt\/apt\.conf\.d\/docker-clean/, job);
     assert.match(install.body, /-exec sudo cp -t \/var\/cache\/apt\/archives \{\} \+/, job);
     assert.ok(install.body.indexOf('/var/cache/apt/archives') < install.body.indexOf('playwright/cli.js install --with-deps "$ENGINE"'), job);
-    // What a newer index no longer lists is dropped before the archives are kept.
-    assert.match(keep.body, /sudo apt-get autoclean/, job);
+    // Every slow install fetched from the regional EC2 mirror some runners' images name; the fast ones, Azure's.
+    assert.ok(install.body.includes(String.raw`grep -rlE '[a-z0-9-]+\.ec2\.archive\.ubuntu\.com' /etc/apt`), job);
+    assert.ok(install.body.includes(String.raw`s#https?://[a-z0-9-]+\.ec2\.archive\.ubuntu\.com/#http://azure.archive.ubuntu.com/#g`), job);
+    assert.ok(install.body.indexOf('azure.archive.ubuntu.com') < install.body.indexOf('playwright/cli.js install'), job);
+    // What a newer index no longer lists is dropped before the archives are kept, once a stopped install's apt
+    // has let go of them.
+    assert.ok(keep.body.indexOf('sudo pkill -x apt-get') >= 0 && keep.body.indexOf('sudo pkill -x apt-get') < keep.body.indexOf('autoclean'), job);
+    assert.match(keep.body, /sudo apt-get -o DPkg::Lock::Timeout=\d+ autoclean/, job);
 
     const limit = Number(/^ {4}timeout-minutes: (\d+)$/m.exec(block)[1]);
     const bound = Number(/timeout-minutes: (\d+)\n/.exec(install.body)?.[1]);

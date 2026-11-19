@@ -196,16 +196,20 @@ complete runs.
       (#892). All were in "Install the browser engine and its system packages", none in a spec. WebKit needs 185
       system packages (140 MB) that a fresh runner lacks, and on those runs the Ubuntu mirror sent one package
       every few seconds. The step's median is 32 seconds. The Chromium jobs' install was slow the same way, 3.4 to
-      7.4 minutes on 6 of their 84 jobs on `main`.
+      7.4 minutes on 6 of their 84 jobs on `main`. Every slow install, in 24 jobs read, ran on an image that names
+      the regional EC2 mirror (`us-east-2.ec2.archive.ubuntu.com`, image `20261111.82.6`); every fast one fetched
+      from `azure.archive.ubuntu.com`, at 19 MB/s.
 
-      The fix removes the cause rather than raising the limit. Every browser job now keeps apt's archives in the
-      Actions cache (`~/.cache/playwright-debs`). The key is the image, the engine, Playwright's version and the
-      week, so the updates published since the image are kept too, and a new key starts from the newest archives
-      of the same engine. On a hit apt downloads only the indexes and what changed since. An install that fails
-      keeps what it fetched, under a key of its own run, for the next run to start from. The install is capped at
-      10 minutes, so a stalled mirror fails the job early, with its step named. `browser-suite.test.js` holds all
-      of it. What is left: a run with no archives to start from (the first on `main` after this change) still
-      meets the mirror as it is that day, and can still fail, at 10 minutes instead of 25.
+      The fix removes the cause rather than raising the limit. Every browser job now points apt at Azure's mirror
+      where the image names an EC2 one. It also keeps apt's archives in the Actions cache
+      (`~/.cache/playwright-debs`). The key is the image, the engine, Playwright's version and the week, so the
+      updates published since the image are kept too, and a new key starts from the newest archives of the same
+      engine. On a hit apt downloads only the indexes and what changed since. An install that fails keeps what it
+      fetched, under a key of its own run, for the next run to start from. The install is capped at 10 minutes, so a
+      stalled mirror fails the job early, with its step named. `browser-suite.test.js` holds all of it. On the pull
+      request's first run, a Chromium job with the archives kept fetched none of them ("Need to get 0 B/21.9 MB").
+      What is left: a run with no archives to start from still meets Azure's mirror as it is that day, and can still
+      fail, at 10 minutes instead of 25.
 
 3. **M3, the wait evened out.** Desktop in three shards, Playwright's browsers cached, the learning job folded
    into `build-and-test` (`browser-suite.test.js` holds the gate's `needs`).
