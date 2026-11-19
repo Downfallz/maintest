@@ -2,15 +2,14 @@ import Phaser from 'phaser';
 import { IMPACT_MS, WINDUP_MS, VFX_MS, MOTION_SCALE } from '../../table/battle-timing.js';
 import { stagingBeats } from '../../table/battle-staging.js';
 import { BONE, FLIGHT, flightAt } from '../../table/battle-motion.js';
+import { LIGHT_COLOURS } from '../../table/battle-ground.js';
 import type { SpellVisual } from './types';
 import type { EffectsKit, StagedBeat } from './fx';
 
 /** A figure's centre and radius, and the heights of its feet and its head (the craft book, "A beat on the ground"). */
 export interface EffectAnchor { x: number; y: number; radius: number; feet?: number; head?: number }
-const PALETTE: Record<string, number> = {
-  physical: 0xd2bbac, biological: 0xadc777, elemental: 0x8dcfe5,
-  necromantic: 0x85c9c2, astral: 0xb9a6e5, neutral: 0xaab8c0,
-};
+// The families' colours are named once, where the ground's light reads them too (`table/battle-ground.js`).
+const PALETTE: Record<string, number> = { ...LIGHT_COLOURS, neutral: 0xaab8c0 };
 // A motif that carries its own colour whatever the family: embers are warm, a wound is blood.
 // Blood is a deep brown red: the paler 0xb66f7e read pink over the sky (#919, the owner's choice).
 const MOTIF_COLOR: Record<string, number> = { fire: 0xd58b75, wound: 0x9a3b34 };

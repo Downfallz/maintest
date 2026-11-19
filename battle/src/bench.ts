@@ -5,13 +5,13 @@ import type { SceneFrame } from './types';
 import art from '../../data/presentation/spell-art.json';
 import spells from 'virtual:bench-spells';
 import { benchCreatures, benchDefaultTargets, benchDuration, benchEntries, benchFrame, benchSamples, benchStage, benchTitle, filmInterval,
-  filmTitle, seededRandom, BENCH_OUTCOMES, FILM_TICK_MS } from '../../table/battle-bench.js';
+  filmTitle, seededRandom, benchRound, BENCH_OUTCOMES, BENCH_ROUNDS, FILM_TICK_MS } from '../../table/battle-bench.js';
 
 // The effects bench: every authored spell look, played on chosen creatures of the laboratory's fixture, with no
 // host and no rule. Its film clock is what `scripts/battle/filmstrip.mjs` steps to draw a contact sheet.
 
 type Stage = 'decision' | 'windup' | 'impact' | 'resolved';
-interface FilmOptions { spell?: string; actor?: string; targets?: string[]; speed?: number; outcome?: string; wound?: boolean; damage?: number | null; defeat?: boolean }
+interface FilmOptions { spell?: string; actor?: string; targets?: string[]; speed?: number; outcome?: string; wound?: boolean; damage?: number | null; defeat?: boolean; round?: number; still?: boolean }
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 function make<T extends HTMLElement = HTMLElement>(tag: string, properties: Record<string, unknown> = {}, ...children: (Node | string)[]) {
@@ -44,6 +44,8 @@ let ready = false;
 let game: Phaser.Game | null = null;
 // While a film runs the game's loop is stopped: this clock is the only one, and it moves when it is told to.
 let film: { clock: number; played: number } | null = null;
+let stillFilm = false;
+let shownRound = 1;
 
 const spellSelect = make<HTMLSelectElement>('select', { id: 'bench-spell' });
 const option = (one: typeof listed[number]) => make('option', { value: one.id }, benchTitle(one));
@@ -66,6 +68,8 @@ const woundBox = make<HTMLInputElement>('input', { id: 'bench-wound', type: 'che
 // said, as an action the host served no frames for), and whether the first one struck is defeated by it.
 const damageInput = make<HTMLInputElement>('input', { id: 'bench-damage', type: 'number', min: '0', max: '30', step: '1', inputMode: 'numeric', placeholder: 'not said' });
 const defeatBox = make<HTMLInputElement>('input', { id: 'bench-defeat', type: 'checkbox' });
+// The round the field stands in: the ground gives way as the rounds pass, and the fixture says which one is seen.
+const roundInput = make<HTMLInputElement>('input', { id: 'bench-round', type: 'number', min: String(BENCH_ROUNDS.first), max: String(BENCH_ROUNDS.last), step: '1', inputMode: 'numeric', value: '1' });
 const playButton = make<HTMLButtonElement>('button', { id: 'bench-play', type: 'button', className: 'primary', disabled: true }, 'Play effect');
 const status = make('p', { id: 'bench-status' }, 'Preparing the scene…');
 status.setAttribute('role', 'status');
@@ -80,6 +84,9 @@ const bench = make('section', { id: 'bench' },
   make('div', { className: 'bench-outcome' },
     make('label', { className: 'bench-field' }, make('span', {}, 'Health lost'), damageInput),
     make('label', { className: 'bench-wound' }, defeatBox, make('span', {}, 'The blow defeats its target'))),
+  make('div', { className: 'bench-outcome' },
+    make('label', { className: 'bench-field' }, make('span', {}, 'Round'), roundInput),
+    make('p', { className: 'bench-note' }, 'The ground as it stands at that round')),
   make('div', { className: 'bench-run' }, playButton, status));
 bench.setAttribute('aria-label', 'Effects bench');
 lab.dataset.bench = 'true';
@@ -100,6 +107,7 @@ const chosen = () => ({
   wound: woundBox.checked && !woundBox.disabled,
   damage: damageInput.value === '' || damageInput.disabled ? undefined : Math.max(0, Math.round(Number(damageInput.value)) || 0),
   defeat: defeatBox.checked && !defeatBox.disabled,
+  round: benchRound(roundInput.value),
 });
 // One of the bench's lists set to what was asked, or refused when the bench does not list it.
 function pick(select: HTMLSelectElement, asked: string | undefined, known: readonly { id: string }[], what: string) {
@@ -107,7 +115,8 @@ function pick(select: HTMLSelectElement, asked: string | undefined, known: reado
   if (!known.some(one => one.id === asked)) throw new Error(`The bench has no ${what} named ${asked}.`);
   select.value = asked;
 }
-function choose({ spell, actor, targets, outcome, wound, damage, defeat }: FilmOptions) {
+function choose({ spell, actor, targets, outcome, wound, damage, defeat, round }: FilmOptions) {
+  if (round !== undefined) roundInput.value = String(benchRound(round));
   if (outcome !== undefined) {
     if (!(BENCH_OUTCOMES as readonly string[]).includes(outcome)) throw new Error(`The bench has no outcome ${outcome}.`);
     outcomeSelect.value = outcome;
@@ -125,7 +134,7 @@ function choose({ spell, actor, targets, outcome, wound, damage, defeat }: FilmO
 
 function show(next: Stage) {
   stage = next;
-  const { entry, actor, targets, outcome, wound, damage, defeat } = chosen();
+  const { entry, actor, targets, outcome, wound, damage, defeat, round } = chosen();
   lab.dataset.stage = stage;
   lab.dataset.spell = entry.id;
   lab.dataset.outcome = outcome;
@@ -133,7 +142,11 @@ function show(next: Stage) {
   lab.dataset.motion = reduced() ? 'reduced' : 'full';
   playButton.disabled = !ready;
   if (ready) status.textContent = unknown && stage === 'decision' ? `No effect named ${asked}` : describe(entry.name);
-  scene.present(benchFrame({ entry, actor, targets, stage, outcome, wound, damage, defeat }) as SceneFrame, reduced(), speed());
+  // A change of round is the fixture's, not a round played: the ground is shown as it stands there, at once. Seen
+  // giving way, a film that started one round on would catch the fall wherever the wall clock had left it.
+  const moved = round !== shownRound;
+  shownRound = round;
+  scene.present(benchFrame({ entry, actor, targets, stage, outcome, wound, damage, defeat, round }) as SceneFrame, reduced(), speed(), moved);
 }
 const playing = () => stage === 'windup' || stage === 'impact';
 function describe(name: string) {
@@ -204,7 +217,9 @@ const filmClock = {
     restartTweenClock();
     rest();
     for (let index = 0; index < SETTLE_TICKS; index++) tick();
-    play();
+    // A film of the field at rest plays nothing: the ground alone, on the film's clock.
+    stillFilm = options.still === true;
+    if (!stillFilm) play();
     clock.played = 0;
     tick(0);
     return { duration: benchDuration(speed()), interval: filmInterval(speed()), tick: FILM_TICK_MS, stage };
@@ -217,6 +232,7 @@ const filmClock = {
   stop() {
     if (!film || !game) return;
     film = null;
+    stillFilm = false;
     Date.now = realNow;
     restartTweenClock();
     rest();
@@ -244,6 +260,7 @@ outcomeSelect.addEventListener('change', () => { choose({}); rest(); });
 woundBox.addEventListener('change', rest);
 damageInput.addEventListener('change', rest);
 defeatBox.addEventListener('change', rest);
+roundInput.addEventListener('change', rest);
 playButton.addEventListener('click', play);
 $('reset').addEventListener('click', rest);
 $('reload').addEventListener('click', () => location.reload());
@@ -277,9 +294,9 @@ try {
 
 // What the film strip script and the browser specs drive: the bench's own choices, and its film clock.
 // `title` names what the bench plays now, as a film strip is titled.
-const title = () => { const { entry, outcome, wound, damage, defeat } = chosen(); return filmTitle(entry, { speed: speed(), outcome, wound, damage, defeat }); };
+const title = () => { const { entry, outcome, wound, damage, defeat, round } = chosen(); return filmTitle(entry, { speed: speed(), outcome, wound, damage, defeat, round, still: stillFilm }); };
 Object.assign(window, { battleBench: { entries, samples, creatures, kit: () => scene.effectsKit, stop: rest, title,
-  shaking: () => scene.motion.view.trauma > 0, motion: () => scene.motion, choose: (options: FilmOptions) => { choose(options); rest(); }, play, film: filmClock,
+  loading: () => scene.load.isLoading(), shaking: () => scene.motion.view.trauma > 0, motion: () => scene.motion, groundObjects: () => scene.groundObjects, choose: (options: FilmOptions) => { choose(options); rest(); }, play, film: filmClock,
   places: () => scene.effectsPlaces, anchors: () => scene.anchors, halo: () => scene.actingHalo,
   effects: () => scene.children.list.filter(child => child.name === 'spell-vfx').map(child => {
     const { alpha, x, y, visible } = child as Phaser.GameObjects.Graphics;

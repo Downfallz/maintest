@@ -1,0 +1,1 @@
+- Bundle-only table/*.js (BC9 battle-ground.js, like BC5 battle-motion.js): its only host surface is the TableFiles entry, proven by TableFilesTests (run in the copy with `--filter-class "*TableFilesTests*"`, 34 tests, about 3 s); sibling bundle modules are listed in neither table/README.md#routes nor commands.md, so its absence there is no finding (BC9 PR).

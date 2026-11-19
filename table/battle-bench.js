@@ -28,11 +28,21 @@ export function benchEntries(art, spells = {}) {
 export function benchTitle(entry) {
   return [entry.name, entry.castBy, entry.family, entry.motif, entry.delivery].filter(Boolean).join(' · ');
 }
-export function filmTitle(entry, { speed = 1, outcome = 'played', wound = false, damage = 0, defeat = false } = {}) {
+export function filmTitle(entry, { speed = 1, outcome = 'played', wound = false, damage = 0, defeat = false, round = 1, still = false } = {}) {
+  // A film of the field at rest plays no spell: it is titled by the ground it shows.
+  if (still) return ['The field at rest', `round ${round}`, `${speed}×`].join(' · ');
   const played = outcome !== 'fizzled';
   const asked = [played ? '' : 'fizzled', wound && played ? 'the caster pays in blood' : '',
-    damage > 0 && played ? `${damage} health lost` : '', defeat && played ? 'the blow defeats' : ''];
+    damage > 0 && played ? `${damage} health lost` : '', defeat && played ? 'the blow defeats' : '', round > 1 ? `round ${round}` : ''];
   return [benchTitle(entry), ...asked.filter(Boolean), `${speed}×`].join(' · ');
+}
+
+// The rounds the bench can stand in: the ground changes with the round (`battle/src/battle-horizon.ts`), up to
+// the last fault a long match opens.
+export const BENCH_ROUNDS = Object.freeze({ first: 1, last: 30 });
+export function benchRound(asked) {
+  const round = Math.round(Number(asked));
+  return Number.isFinite(round) ? Math.min(BENCH_ROUNDS.last, Math.max(BENCH_ROUNDS.first, round)) : BENCH_ROUNDS.first;
 }
 
 // What the bench can ask of a play, each a fixture's choice and no rule: the spell played or fizzled.
@@ -93,14 +103,15 @@ export function benchStage(elapsed, speed = 1) {
   return elapsed < (WINDUP_MS + IMPACT_MS) / rate ? 'impact' : 'resolved';
 }
 
-// The frame the scene presents. The first round keeps the ground whole, so no scenery plate loads mid-film.
+// The frame the scene presents. The first round keeps the ground whole; `round` is the fixture's word for another
+// one (BC9), and a film waits for that round's scenery before it starts, so no plate loads mid-film.
 // A creature across the field from the caster is struck; one on the caster's side, or the caster, receives.
 // A fizzle is drawn as the live page draws one (`actionCue`): the fizzle's mark on the caster, and no outcome.
 // A caster who pays in blood receives a wound, as a blood cost's harm to its caster is drawn.
 // `damage` is the health each struck creature loses, which is the weight of the blow (`table/battle-motion.js`);
 // `defeat` fells the first one struck, from the impact on. Both are the fixture's word, as a cue's changes are
 // the host's on the live page.
-export function benchFrame({ entry, actor, targets, stage, outcome = 'played', wound = false, damage = 0, defeat = false }) {
+export function benchFrame({ entry, actor, targets, stage, outcome = 'played', wound = false, damage = 0, defeat = false, round = 1 }) {
   const standing = benchCreatures();
   const caster = standing.find(one => one.id === actor);
   const known = targets.filter(id => standing.some(one => one.id === id));
@@ -110,7 +121,7 @@ export function benchFrame({ entry, actor, targets, stage, outcome = 'played', w
   const fallen = defeat && played ? struck[0] : undefined;
   const creatures = fallen && (stage === 'impact' || stage === 'resolved')
     ? standing.map(one => one.id === fallen ? { ...one, isAlive: false } : one) : standing;
-  const frame = { round: 1, stage, actor, target: contact[0] ?? null, targets: [], creatures };
+  const frame = { round: benchRound(round), stage, actor, target: contact[0] ?? null, targets: [], creatures };
   if (stage !== 'windup' && stage !== 'impact') return frame;
   if (!played) {
     return { ...frame, cue: { kind: 'fizzle', visual: spellVisual({ status: 'Fizzled' }), recipients: [], contact: [], struck: [], effects: [], changes: [], roll: null } };

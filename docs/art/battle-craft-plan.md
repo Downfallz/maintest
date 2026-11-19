@@ -1,6 +1,6 @@
 # Plan: the battle's craft, every spell, attack, move and the ground staged by a designer who can see
 
-Status: accepted, 2026-11-18 (the owner settled the questions at the end). BC1 to BC8 are built; BC9 is next.
+Status: accepted, 2026-11-18 (the owner settled the questions at the end). BC1 to BC9 are built; BC10 is next.
 Each stage below is one pull request.
 
 ## What the owner asked for
@@ -367,6 +367,42 @@ that extends it.
    - Frame time is not measured: BC10. The `pulse` is used once in these families, on Renewal Burst's target.
 9. **BC9, the ground.** Parallax on the horizon plates, fog and embers, the eclipse's light answering a cast.
    Tests: nothing moves under reduced motion; a hidden tab stops the emitters; the art budget holds.
+
+   *Built (2026-11-19)*: [the ground's storyboard](storyboards/ground.md), three parts, built in
+   `battle/src/ground.ts` on the numbers of `table/battle-ground.js` (`battle/README.md`, "The ground").
+
+   - The air. One band of fog on the painting's horizon and 24 embers rising from the floor, behind every figure,
+     in place of the 24 gold motes that drifted in front of them. Their orange is the faults'; the motes' gold was
+     the target marker's. The embers grow brighter as the floor breaks: 0.6 of full at round 1, full from round 12.
+   - No emitter, against this stage's own test line. An emitter draws from `Math.random`, which a film pins only
+     for the length of a play, so a film of the field at rest would not repeat. The fog and the embers are read
+     from the scene's ambient clock alone. "A hidden tab stops the emitters" became: the ambient clock stands
+     still while the tab is hidden, and the air goes on from where it stood.
+   - The depth. While the view trembles or punches, the sky's plates (from round 6), the fog and the far embers
+     are laid again by hand, each by its factor. Not with a scroll factor: the fitted camera has a zoom and a
+     scroll of its own. The camera moves a few pixels for under 300 ms, so this is felt and not seen: the film's
+     record shows it, the sheets do not.
+   - The light. At the contact the eclipse's corona brightens in the family's colour and the ground is tinted part
+     of the way to it, once, by the health the host confirmed lost by the others: nothing to 3 (a base action
+     leaves the ground as it rests), half from 4, all from 7 or on a defeat. A heal, a ward, a blood cost alone
+     and a fizzle get nothing. It is gone 300 ms after the contact.
+   - What the films found. The first light was a point light on the disc, and read as a second sun: it became a
+     ring around a disc left dark, laid wider once the sky shatters at round 10. The embers stood on slant lines
+     under two different constant steps: their places are a fixed table. The fog and the embers could not be
+     found at the storyboard's first numbers, and were raised twice.
+   - The bench stands in a round (`--round`), and films the field at rest with no spell (`--still`). A film's
+     `--motion` record tells the ground: the fog's drift, the embers, each layer's shift, the light.
+   - Cost: no picture file, three small textures drawn at boot; the live bundle grew by about 8 KiB (1,738,691 of
+     1,769,472 bytes), and the art a visit loads did not move.
+
+   Left:
+
+   - The choices under each storyboard's **Left** wait for the owner, with the sheets. The ones a player would
+     notice: the gold motes are gone; the light is on the eclipse and not where the blow lands; it answers harm
+     only, so a heal does not light it; a still band of fog stays with less motion.
+   - "A scar that fades" is in the craft book and was not in this stage's line: not built.
+   - The sky has no depth of its own before round 6, where it is the painting's.
+   - Frame time is not measured, and nobody has seen the air at the resting rate on a phone: BC10.
 10. **BC10, acceptance.** Frame time under the browser's CPU throttle at phone size for every staging, the budgets,
     reduced motion across all 44, the gallery of film strips published. The record goes in `docs/art/`.
 

@@ -150,3 +150,4 @@ fieldset.bench-field, .bench-run { grid-column: 1 / -1; }
 /* One line, whatever it says: a status that wrapped would resize the field under a playing effect. */
 .bench-run p { margin: 0; min-width: 0; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (min-width: 900px) { #bench { grid-template-columns: 1fr 1fr 2fr 1.4fr auto; align-items: end; }fieldset.bench-field, .bench-run, .bench-outcome { grid-column: auto; } }
+.bench-note { margin: 0; align-self: center; color: var(--muted); }

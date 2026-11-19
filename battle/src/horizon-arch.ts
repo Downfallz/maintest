@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { REST_TINT } from '../../table/battle-ground.js';
 
 // Contours in the original eclipse-battle.webp. The right support and its half-span fall as one piece.
 // Reusing the painted stone keeps its palette and detail without another boot download.
@@ -35,11 +36,14 @@ export class HorizonArch {
       }
       // Both pieces share the right foot as their pivot, so the split cannot drift on resize.
       return scene.add.image(0, 0, key).setName(key).setOrigin(.85, .98).setDepth(-9).setVisible(false)
-        .setTint(0xa5b1b3).setAlpha(.91);
+        .setTint(REST_TINT.arch).setAlpha(.91);
     };
     this.pier = piece('pier', standing);
     this.span = piece('span', falling);
   }
+
+  /** The stone takes the ground's tint: its rest, or the light that answers a blow. */
+  tint(colour: number) { this.pier.setTint(colour); this.span.setTint(colour); }
 
   layout(width: number, height: number, horizon: number) {
     this.scale = Math.min(width * .40, height * .28, 190) / 344;

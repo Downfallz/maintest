@@ -1064,6 +1064,8 @@ node scripts/battle/filmstrip.mjs spell:frostbite:v1 --actor a3 --targets b1,b3 
 node scripts/battle/filmstrip.mjs spell:pummel:v1 --fizzle
 node scripts/battle/filmstrip.mjs spell:hateful_sacrifice:v1 --wound
 node scripts/battle/filmstrip.mjs spell:pummel:v1 --damage 8 --defeat --motion
+node scripts/battle/filmstrip.mjs spell:pummel:v1 --round 12
+node scripts/battle/filmstrip.mjs --still --interval 1000
 node scripts/battle/filmstrip.mjs --all --out artifacts/filmstrips
 ```
 
@@ -1075,9 +1077,12 @@ to `b3`), `--speed` sets the playback speed (0.5, 1 or 2). `--fizzle` films the 
 caster paying in blood; the two are refused together, and their sheets are named `pummel-fizzled.png` and
 `pummel-wound.png`. `--damage` is the health each creature struck loses (the weight of the blow) and `--defeat`
 fells the first one struck; neither goes with `--fizzle`. `--motion` writes `<sheet>.motion.jsonl` beside the
-sheet: at each frame, how each figure stands and what the view does. `--frames`, `--interval` (a multiple of 20 ms) and `--columns`
+sheet: at each frame, how each figure stands, what the view does and how the ground stands. `--round` is the round
+the field stands in, 1 to 30 (the ground breaks as the rounds pass); its sheet is named `pummel-round12.png`.
+`--still` films the field at rest, with no spell played, as `ground.png`: it names no effect, and is refused with
+`--all`, `--fizzle`, `--wound`, `--damage` and `--defeat`. `--frames`, `--interval` (a multiple of 20 ms) and `--columns`
 set the sheet. `--scale` sets the device pixel ratio. `--out` is a `.png` for one effect, a folder otherwise
-(`artifacts/filmstrips/` by default). It exits 1 with no effect named, an option it cannot film, or an effect
+(`artifacts/filmstrips/` by default). It exits 1 with no effect named and no `--still`, an option it cannot film, or an effect
 the bench does not list.
 
 ### ux/journey.mjs

@@ -45,6 +45,13 @@ export class ViewShake {
       zoom: round(camera.zoomX / this.fitted.zoomX) };
   }
 
+  /** How the view stands off its fitted place now, unrounded: what the ground's far layers lean by. */
+  get offset() {
+    if (!this.laid) return { x: 0, y: 0, zoom: 1 };
+    const camera = this.scene.cameras.main;
+    return { x: camera.scrollX - this.fitted.scrollX, y: camera.scrollY - this.fitted.scrollY, zoom: camera.zoomX / this.fitted.zoomX };
+  }
+
   /** One step of the action's clock, already divided by the playback rate's inverse: the tremor falls, the punch eases out. */
   update(delta: number) {
     if (!this.moving) return;
