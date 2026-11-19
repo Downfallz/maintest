@@ -301,7 +301,7 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   `Phaser.Cameras.Scene2D.Camera#pan` toward the caster.
 - **Cost**: none to draw. The same reset as the punch zoom.
 - **Reduced motion**: nothing.
-- **Here**: not built. BC8 may use it for a capstone: 4% over the 840 ms windup (*house*), released on contact.
+- **Here**: not built. BC8 staged the Stage III spells without it: a staging has no beat for the camera's zoom.
 
 ## Particles
 
@@ -390,7 +390,7 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 - **Cost**: a little arithmetic per particle. One draw call.
 - **Reduced motion**: nothing.
 - **Here**: the windup draws a ring that grows away from the caster. The kit's `gather` (`battle/src/fx/gather.ts`) draws particles
-  in from a ring instead, for a spell whose staging asks; BC8 uses it for the blood cost, from the caster's wound to the ward.
+  in from a ring instead, for a spell whose staging asks. BC8 uses it for a freeze that closes in, the void and the spirits; the blood cost is drops leaving the caster.
   BC6 uses it first: Focus draws six motes in, Carapace and Brace draw bone shards onto the plates, and the
   Stage III blows load their caster with it through the windup.
 
@@ -520,8 +520,8 @@ bake the drawing to a texture first, or filter a container.
   `Phaser.GameObjects.NoiseSimplex2D` and `Phaser.GameObjects.Gradient`.
 - **Cost**: one draw call each, and it breaks the batch. Its price is the pixels of its quad: keep the quad small.
 - **Reduced motion**: nothing during an action. A shader that is part of the ground shows one still frame.
-- **Here**: not used. The plan allows one for a hero effect. Candidates: the eclipse's corona (BC9), the void
-  (BC8).
+- **Here**: not used. The plan allows one for a hero effect. Candidates: the eclipse's corona (BC9), and the
+  void, which BC8 staged from the kit's beats and left without a dark of its own.
 
 ## Projectiles
 
@@ -572,8 +572,8 @@ bake the drawing to a texture first, or filter a container.
   come from a `Phaser.Math.RandomDataGenerator` with a seed, so a film strip repeats.
 - **Cost**: one `Graphics`. A redraw is a new path, not a new object.
 - **Reduced motion**: nothing. A flickering bolt is a flash: see "Flash limits".
-- **Here**: `lightning_bolt` draws one fixed nine-point arc from the caster to each recipient. BC8 gives it the
-  subdivision and one redraw (*house*), still pinned to both ends.
+- **Here**: `lightning_bolt` draws one fixed nine-point arc from the caster to each recipient. BC8 staged Shock
+  around that arc and did not redraw it: the subdivision and the flicker are not built.
 
 ### An impact that keeps the direction
 

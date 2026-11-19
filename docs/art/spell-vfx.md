@@ -29,9 +29,11 @@ Since [ADR 0196](../adr/0196-stage-a-spell-in-beats-an-effects-kit-plays.md) an 
 a list of beats the effects kit plays. The spell's own motif is one of those beats. A spell without a staging
 is drawn as described here. So is a staged spell until the kit has loaded. `battle/README.md`, "The effects kit", lists the beats.
 
-The 15 physical spells and Focus are staged (BC6 of [the battle's craft plan](battle-craft-plan.md)); BC7 and
-BC8 stage the other families. Each staging is written first as a storyboard
-([physical](storyboards/physical.md), [the base actions](storyboards/base-actions.md)), and how much it may ask
+All 44 entries are staged: the 15 physical spells and Focus in BC6 of [the battle's craft plan](battle-craft-plan.md),
+the 14 biological spells in BC7, the 14 elemental, astral and necromantic spells in BC8. Each staging is written
+first as a storyboard ([the base actions](storyboards/base-actions.md), [physical](storyboards/physical.md),
+[biological](storyboards/biological.md), [elemental](storyboards/elemental.md), [astral](storyboards/astral.md),
+[necromantic](storyboards/necromantic.md)), and how much it may ask
 for goes by the Stage of the mutation that teaches the spell: [the ladder](storyboards/README.md#the-ladder).
 A base action is the quietest thing in the battle, a Stage III spell the loudest. The strokes of the `impact`
 motif run along the line of the blow and the `slash` strokes cut 60° across it, over a dark edge, staged or not.
