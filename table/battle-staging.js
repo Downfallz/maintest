@@ -31,7 +31,9 @@ const DEFAULTS = Object.freeze({
 });
 
 const WORDS = { on: ANCHORS, shape: SHAPES, tint: TINTS, blend: BLENDS, direction: DIRECTIONS };
-const NUMBERS = { count: [1, MAX_PARTICLES], spread: [1, 360], reach: [1, 200] };
+// The reach is a share of the figure's radius, which is about a third of its height: 300 clears the body.
+export const MAX_REACH = 400;
+const NUMBERS = { count: [1, MAX_PARTICLES], spread: [1, 360], reach: [1, MAX_REACH] };
 const given = value => value !== undefined && value !== null;
 
 // The beat's start and its window, or null when it starts outside the action, or a motif starts in the windup.

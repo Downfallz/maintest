@@ -28,6 +28,9 @@ export type Primitive = (kit: KitContext, play: BeatPlay) => void;
 /** The kit's one texture: on a phone a batch holds one texture, so every shape is a frame of it. */
 export const TEXTURE = 'fx-kit';
 const FRAME = 32;
+/** The shock ring's own frame, and the radius it is drawn at: a ring stretched from a 32 px frame would be a band. */
+const WAVE = 128;
+export const WAVE_RADIUS = 58;
 const DEPTH = 2000;
 const UP = -Math.PI / 2;
 
@@ -38,6 +41,11 @@ export function headingOf(direction: string | undefined, heading: number | null)
   return UP;
 }
 export const degrees = (radians: number) => radians * 180 / Math.PI;
+/**
+ * How large a beat's particles are drawn, over their frame: by the figure they play on, never under `least`,
+ * and by the beat's `strength` when its author gave one, from half as large again (1) down to half (near 0).
+ */
+export const sized = (beat: StagedBeat, base: number, least: number) => Math.max(least, base) * (.5 + (beat.strength ?? .5));
 
 type Emitter = Phaser.GameObjects.Particles.ParticleEmitter;
 type EmitterConfig = Phaser.Types.GameObjects.Particles.ParticleEmitterConfig;
@@ -59,11 +67,14 @@ export class KitContext {
   /** Less motion was asked for: a primitive returns before it makes anything. */
   get still() { return this.reduced(); }
 
-  /** The four white shapes, drawn once on one canvas: a soft dot, a spark, a shard and a ring. A tint colours them. */
+  /**
+   * The white shapes, drawn once on one canvas: a soft dot, a spark, a shard and a ring for the particles, and
+   * beside them a thin wide ring, the shock ring a glow opens. A tint colours them.
+   */
   private texture() {
     const textures = this.scene.textures;
     if (textures.exists(TEXTURE)) return;
-    const canvas = textures.createCanvas(TEXTURE, FRAME * 4, FRAME)!;
+    const canvas = textures.createCanvas(TEXTURE, FRAME * 4 + WAVE, WAVE)!;
     const context = canvas.getContext(), half = FRAME / 2;
     const soft = context.createRadialGradient(half, half, 0, half, half, half);
     soft.addColorStop(0, 'rgba(255,255,255,1)'); soft.addColorStop(.45, 'rgba(255,255,255,.5)'); soft.addColorStop(1, 'rgba(255,255,255,0)');
@@ -75,6 +86,12 @@ export class KitContext {
     context.lineWidth = 3; context.strokeStyle = '#fff';
     context.beginPath(); context.arc(FRAME * 3 + half, half, half - 3, 0, Math.PI * 2); context.stroke();
     for (const [index, name] of ['dot', 'spark', 'shard', 'ring'].entries()) canvas.add(name, 0, index * FRAME, 0, FRAME, FRAME);
+    // Two strokes, a wide faint one under a thin full one: the ring's edge is soft without a gradient.
+    for (const [width, alpha] of [[9, .3], [3.5, 1]]) {
+      context.lineWidth = width; context.strokeStyle = `rgba(255,255,255,${alpha})`;
+      context.beginPath(); context.arc(FRAME * 4 + WAVE / 2, WAVE / 2, WAVE_RADIUS - 2, 0, Math.PI * 2); context.stroke();
+    }
+    canvas.add('wave', 0, FRAME * 4, 0, WAVE, WAVE);
     canvas.refresh();
   }
 

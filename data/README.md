@@ -34,6 +34,10 @@ Authoring format for the game resources (ADR 0009). One JSON file per item:
   millisecond it starts `at`, and named parameters (`on`, `lasts`, `count`, `shape`, `tint`, `blend`,
   `direction`, `spread`, `reach`, `strength`). The builder refuses an unknown beat, word or property, a beat
   with no `at`, and a beat that outlives its window. Without a staging, the spell is drawn as its motif.
+  A `reach` is a share of the figure's radius, up to 400 (300 clears its body); a `strength` is a light's
+  brightness, a shake's weight, or the size of a particle beat's pieces. How much a spell may ask for goes by
+  the Stage of the mutation that teaches it: the ladder of `docs/art/storyboards/README.md`, held by
+  `studio/staging-ladder.test.js`. The physical family and Focus are staged (BC6 of the battle's craft plan).
 - `presentation/mutation-art.json`: which body each package belongs to and the accent it draws on it (ADR 0133),
   keyed by the package's id; a root names a family and no accent. The builder checks them against the packages,
   the vocabularies and the root each package descends from, and publishes them beside the schema as

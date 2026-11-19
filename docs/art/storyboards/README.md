@@ -15,6 +15,7 @@ One file a family. A family's stage of the plan (BC5 to BC9) adds its file here,
 | File | What it stages | Built by |
 | --- | --- | --- |
 | [base-actions.md](base-actions.md) | The base attack, Strike. Focus joins it in BC6. | BC6 |
+| [physical.md](physical.md) | The physical family, the Brute's 14 spells, by the ladder: Stage I, then Stage II, then Stage III. | BC6 |
 | [movement.md](movement.md) | What every action shares, and no spell's look: a melee blow, a cast and a projectile, a death, the breath at rest, the camera. | BC5 |
 
 ## The format
@@ -56,6 +57,29 @@ figures to move.
 `studio/storyboards.test.js` holds the format in the gate: the seven parts in order, each spell an entry of
 `data/presentation/spell-art.json`, each beat inside its window on the timings of `table/battle-timing.js`, each
 pattern a heading of the craft book, each file listed in the table above.
+
+## The ladder
+
+The owner's rule (2026-11-19): the higher the Stage of the mutation that teaches a spell, the more spectacular its
+staging. A base action is seen every round and a Stage III spell a few times a game, so the eye is spent where the
+game spends its rarity. A spell is staged inside the band of its Stage, and `studio/staging-ladder.test.js` holds
+the bands on what `data/presentation/spell-art.json` carries. A spell two mutations teach takes the lower Stage.
+
+| | Base action | Stage I | Stage II | Stage III |
+| --- | --- | --- | --- | --- |
+| Beats in the staging | 1 to 3 | 4 to 5 | 6 to 8 | 9 to 12 |
+| Particles asked for on one target, all beats together | up to 8 | up to 24 | up to 60 | up to 120 |
+| Beats in the windup | none | none | one at most | one at least: the charge is seen before the blow |
+| Light (`glow`) | none | none | one at least | two at least |
+| The halo on a figure's outline (`pulse`) | never | never | never | one at most, on one figure |
+| A staged `shake`, over the tremor of the health lost | none | none | up to 0.15 | up to 0.35 |
+| The last beat is gone by | 1540 ms | 1700 ms | 2000 ms | 2400 ms |
+
+All numbers are *house*. What the rule does not move: the windows of `table/battle-timing.js`, one flash a figure
+an action, the field's 150 particles (a spell that strikes three figures asks each for a third), gold kept for the
+target marker, and the body's own movement, which answers the health the host confirmed lost and not the Stage
+([movement.md](movement.md)). A Stage III staging still ends before the result is read: the hold from 2400 ms to
+the end of the impact stays empty.
 
 ## The loop
 

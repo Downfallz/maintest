@@ -342,7 +342,11 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   burst (`battle/src/fx/burst.ts`) is 1 to 24 particles (*house*), 320 ms unless told, cleared with
   `Phaser.GameObjects.Particles.ParticleEmitter#killAll`. Each beat makes its own emitter, not one per texture:
   an emitter's settings move its living particles, so two beats that overlap cannot share one (ADR 0196). The
-  sample's rectangles are still drawn by hand: BC5 rewrites that impact.
+  sample's rectangles are still drawn by hand: BC5 rewrites that impact. BC6's first films showed the burst as
+  BC4 built it could not be read: at a steady pace its pieces spent most of their life over the figure's own
+  body, the colour of the motif. A piece now leaves fast and slows (cubic out), is clear of the body by the
+  second frame, and falls a little; its size goes by the beat's `strength`, and a reach goes to 400 hundredths
+  of the figure's radius, since 200 ends inside the silhouette (*house*).
 
 ### Flow
 
@@ -384,6 +388,8 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 - **Reduced motion**: nothing.
 - **Here**: the windup draws a ring that grows away from the caster. The kit's `gather` (`battle/src/fx/gather.ts`) draws particles
   in from a ring instead, for a spell whose staging asks; BC8 uses it for the blood cost, from the caster's wound to the ward.
+  BC6 uses it first: Focus draws six motes in, Carapace and Brace draw bone shards onto the plates, and the
+  Stage III blows load their caster with it through the windup.
 
 ### Additive light
 
@@ -439,6 +445,9 @@ bake the drawing to a texture first, or filter a container.
   `Phaser.Filters.Controller#setPaddingOverride` with null so the filter has room around its object: without
   that call the halo is cut at the picture's edge. Under a renderer with no graphics card a frame with the
   pulse takes about ten times a frame without (*house*, measured on the bench): BC10 measures it on a phone.
+  Since BC6 a `glow` with the shape of a ring is a shock ring: one image of a thin ring, flattened onto the
+  ground under the figure, that opens to its reach over the whole beat and fades (*house*). Two of them 160 ms
+  apart read as an aftershock. It is the strongest single beat the kit has, kept for Stage II and Stage III.
 
 ### Blur
 
@@ -567,8 +576,9 @@ bake the drawing to a texture first, or filter a container.
   `Phaser.Math.RadToDeg`, then give a range around it.
 - **Cost**: none beyond the burst.
 - **Reduced motion**: nothing.
-- **Here**: the recoil already follows that line; the motifs do not. The kit's burst takes a direction
-  (`along`, `back`, `up`, `out`) and a spread, and each particle is turned to its heading.
+- **Here**: the recoil already follows that line. The kit's burst takes a direction (`along`, `back`, `up`,
+  `out`) and a spread, and each particle is turned to its heading. Since BC6 the strokes of the `impact` and
+  `slash` motifs run along the line of the blow too, each over a dark edge, for every spell that draws them.
 
 ## The ground
 

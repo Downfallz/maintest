@@ -66,6 +66,19 @@ for (const sample of primitives) {
   });
 }
 
+test('a glow with the shape of a ring is one more object of the kit, gone when its beat ends', async ({ page }) => {
+  await film(page, 'start', { spell: 'kit:glow', actor: 'a1', targets: ['b1'] });
+  await film(page, 'advance', 960);
+  expect((await kit(page)).objects).toEqual([{ beat: 'glow', creature: 'b1' }]);
+  // The shock ring opens at 1000 ms, while the soft light, 500 ms long from 840, is still there.
+  await film(page, 'advance', 80);
+  expect((await kit(page)).objects).toEqual([{ beat: 'glow', creature: 'b1' }, { beat: 'glow', creature: 'b1' }]);
+  // The ring's 400 ms end at 1400 ms: one step later nothing is left.
+  await film(page, 'advance', 380);
+  expect((await kit(page)).objects).toEqual([]);
+  await film(page, 'stop');
+});
+
 test('a staged motif is drawn at its beat and for as long as the beat says', async ({ page }) => {
   // The burst's sample places its motif at the contact, for 700 ms: gone well before the 1200 ms it had.
   await film(page, 'start', { spell: 'kit:burst', actor: 'a1', targets: ['b1'] });

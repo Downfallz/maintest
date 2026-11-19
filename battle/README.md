@@ -960,11 +960,11 @@ plays them through the kit, `src/fx/`:
 | Beat | What plays | On |
 | --- | --- | --- |
 | `motif` | The spell's own motif, starting and lasting as the staging says. Drawn by `spell-effects.ts`. | each target |
-| `burst` | Particles at once from one point, in a fan, fading as they go. | a figure |
+| `burst` | Particles at once from one point, in a fan: each leaves fast, slows, falls a little and fades. | a figure |
 | `flow` | A steady stream from all over a figure, for as long as the beat lasts. | a figure |
 | `trail` | Particles left behind a head that travels from the caster to a target. | caster to target |
 | `gather` | Particles that start on a ring around a figure and land on it. | a figure |
-| `glow` | One soft dot, blended as light, that swells and goes: a glow that costs one image. | a figure |
+| `glow` | One soft dot, blended as light, that swells and goes: a glow that costs one image. With `shape: ring`, a shock ring: a thin ring lying on the ground under the figure, which opens to its `reach` over the whole beat and fades. | a figure |
 | `flash` | The figure filled flat in one colour for a frame or two. One a staging. | a figure |
 | `shake` | Adds its `strength` to the view's trauma ("The movement"), on top of what the health lost adds. One a staging. The trauma's own fall sets how long the view moves, not `lasts`. | the view |
 | `pulse` | A halo around the figure's own silhouette, by a filter, removed when the beat ends. Costly: see ADR 0196. | a figure |
@@ -980,8 +980,18 @@ plays them through the kit, `src/fx/`:
 - Everything the kit makes ends with `SpellEffects.clear`: objects destroyed, a figure's tint and filter put
   back. Under reduced motion a primitive returns before it makes anything.
 - At most 24 particles a beat and 150 on the field, counted as what the living emitters may hold. The shapes
-  are four frames of one texture drawn at boot (`fx-kit`): a dot, a spark, a shard, a ring. A beat's `tint` is
-  one of `family`, `bone`, `ember` or `blood`.
+  are four frames of one texture drawn at boot (`fx-kit`): a dot, a spark, a shard, a ring; a fifth, larger
+  frame is the shock ring's. A beat's `tint` is one of `family`, `bone`, `ember` or `blood`.
+- A `reach` is a share of the figure's radius, from 1 to 400. The radius is about a third of the figure's
+  height, so a burst under 250 stays over the body and is lost against the motif, and 300 clears it (BC6's
+  first films). On `burst`, `flow` and `gather` a `strength` is the size of the pieces: 0.5 unless told, 1 half
+  as large again.
+- The `impact` and `slash` strokes of a motif run along the line of the blow, from the caster's side of the
+  figure to the far side, each over an edge in the palette's soot; a wound, which has no caster to come from,
+  leans as before (`paintStrokes` in `src/spell-effects.ts`).
+- Which spells are staged, and how much each may ask for by the Stage of its mutation:
+  `docs/art/storyboards/README.md`, "The ladder". `studio/staging-ladder.test.js` holds the bands, and
+  `studio/browser/battle-stagings.spec.js` plays every staged spell on the bench.
 - The bench lists one sample staging for each primitive, after the spells (`kit:burst` to `kit:pulse`,
   `table/battle-bench.js`), and `kit:budget`, whose streams ask for more than the field holds (#882). They belong to the bench; they are not content. `window.battleBench.kit()` says what the kit
   holds: its objects, its particles alive, and the figures it changed and has not put back.

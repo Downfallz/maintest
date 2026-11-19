@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { ACTION_MS, ANCHORS, BEATS, BLENDS, DIRECTIONS, MAX_BEATS, MAX_PARTICLES, SHAPES, TINTS, stagingBeats } from './battle-staging.js';
+import { ACTION_MS, ANCHORS, BEATS, BLENDS, DIRECTIONS, MAX_BEATS, MAX_PARTICLES, SHAPES, TINTS, stagingBeats, MAX_REACH } from './battle-staging.js';
 import { IMPACT_MS, VFX_MS, WINDUP_MS } from './battle-timing.js';
 
 const visual = staging => ({ family: 'physical', motif: 'impact', delivery: 'melee', staging });
@@ -77,4 +77,5 @@ test('the page and the builder hold one vocabulary', () => {
   assert.equal(number('ActionMs'), WINDUP_MS + IMPACT_MS);
   assert.equal(number('MaxBeats'), MAX_BEATS);
   assert.equal(number('MaxParticles'), MAX_PARTICLES);
+  assert.equal(number('MaxReach'), MAX_REACH);
 });

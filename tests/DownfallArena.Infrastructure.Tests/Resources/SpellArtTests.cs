@@ -172,7 +172,7 @@ public sealed class SpellArtTests
     [InlineData("""{ "beat": "burst", "at": 900, "count": 25 }""", "'25'")]
     [InlineData("""{ "beat": "burst", "at": 900, "count": 0 }""", "'0'")]
     [InlineData("""{ "beat": "burst", "at": 900, "spread": 361 }""", "'361'")]
-    [InlineData("""{ "beat": "burst", "at": 900, "reach": 201 }""", "'201'")]
+    [InlineData("""{ "beat": "burst", "at": 900, "reach": 401 }""", "'401'")]
     [InlineData("""{ "beat": "glow", "at": 900, "strength": 0 }""", "'0'")]
     [InlineData("""{ "beat": "glow", "at": 900, "strength": 1.5 }""", "'1.5'")]
     public void A_beat_with_a_value_out_of_range_is_refused_naming_it(string beat, string value)
@@ -215,7 +215,7 @@ public sealed class SpellArtTests
     [Theory]
     [InlineData("""{ "beat": "glow", "at": 0, "lasts": 840 }""")]
     [InlineData("""{ "beat": "glow", "at": 840, "lasts": 1700 }""")]
-    [InlineData("""{ "beat": "burst", "at": 2539, "count": 24, "spread": 360, "reach": 200, "strength": 1 }""")]
+    [InlineData("""{ "beat": "burst", "at": 2539, "count": 24, "spread": 360, "reach": 400, "strength": 1 }""")]
     public void A_beat_at_the_edge_of_its_limits_is_accepted(string beat)
     {
         using var content = new ContentDirectory().WithValidContent().WithFile("presentation/spell-art.json", Staged($"[ {beat} ]"));
