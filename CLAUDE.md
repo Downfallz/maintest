@@ -20,6 +20,8 @@
   `playtest-app-architect` (the app ADR). Use them for their purpose instead of doing it all inline.
 - For how the battle looks in motion (`docs/art/battle-craft-plan.md`): `battle-designer` writes the storyboard of
   a spell, a move or the ground (`docs/art/storyboards/`) and reads its film strip against it; it writes no code.
+- For how the pages look, read and move (`docs/art/ux-craft-plan.md`): `ux-designer` writes the brief of a journey,
+  a screen at a time (`docs/art/journeys/`), and reads its contact sheet and measures against it; it writes no code.
 - Skills in `.claude/skills/`: the pipeline from an idea to a merged pull request
   (docs/engineering/ai-workflow-plan.md): `/new-plan` (an idea becomes a plan; `/plan` is Claude Code's plan
   mode), `/stage` (one stage in a fresh session), `/verify` (the gate, chosen from the diff), `/reviewers` (the
@@ -33,7 +35,9 @@
   as a pull request on the rules and skills), `/adr`, `/new-aggregate`, `/spells-report` (the spells the bots cast
   and leave, republished to the owner's report page), `/design-system` (the design system rebuilt from the
   repository and republished to its page), `/battle-pass` (one pass on a family of spells, the movement or
-  the ground: the storyboard, the build, the film strip, the critique, the sheets shown to the owner).
+  the ground: the storyboard, the build, the film strip, the critique, the sheets shown to the owner),
+  `/ux-pass` (one pass on a journey of the pages: the brief, the build, the film, the critique, the sheets shown
+  to the owner).
 - `studio/prompts.test.js` checks what an agent or a skill names in backticks: every repository path exists,
   a heading named as an anchor (`table/README.md#routes`) is in its file, a label is declared in
   `.github/labels.json`, and a `search/issues` query names `is:issue` or `is:pr` (GitHub refuses it otherwise).
