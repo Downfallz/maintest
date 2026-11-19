@@ -62,3 +62,9 @@ test('a seat whose feed only empties and refills from the same cursor is stuck',
   const read = () => view('Evolution', 3, 2, { feed: Math.floor(time.now() / 1000) % 2 ? [{ sequence: 4 }] : [], feedNext: 5 });
   await assert.rejects(waitAnswered(view('Evolution', 3), read, { timeout: 10000, ...time }), /nothing new for 10 s after 0 moves/);
 });
+// #921: a real-engine journey reads the seat's view where the page collected it, through page.evaluate: a promise.
+test("a seat's view read from the page, as a promise, is waited for", async () => {
+  const time = clock();
+  await waitAnswered(view('Evolution', 3), async () => time.now() < 5000 ? view('Evolution', 3) : view('Evolution', 4), { timeout: 10000, ...time });
+  assert.ok(time.now() >= 5000 && time.now() < 6000);
+});

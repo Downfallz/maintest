@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import { fitsViewport, fitsBattlefield } from './fit.js';
 import { decided } from './decision.js';
 import { waitAnswered } from './battle-step.js';
+import { collectSeatViews } from './seat-views.js';
 
 async function enter(page, join) {
   await page.goto(join); await page.locator('#invitation-take').click();
@@ -201,7 +202,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
   const directory = await mkdtemp(pathJoin(tmpdir(), 'battle-loop-'));
   const rules = pathJoin(directory, 'rules.json'); await writeFile(rules, JSON.stringify({ roundCap: declaration === 'at-activation' ? 12 : 2, combatDeclaration: declaration }));
   const hostInfo = await startHost(declaration, ['--rules', rules, '--record', pathJoin(directory, 'sessions')]);
-  const errors = [], writes = [], shown = [], actions = new Map(); let latest;
+  const errors = [], writes = [], shown = [];
   page.on('pageerror', error => errors.push(error.message));
   page.on('request', request => {
     if (!new URL(page.url()).pathname.startsWith('/battle')) return; // Invitation acceptance lives on /play.
@@ -209,13 +210,8 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     if (url.searchParams.has('shown')) shown.push(Number(url.searchParams.get('shown')));
     if (url.pathname.endsWith('/decision')) writes.push({ command: decided(request), seen: [...shown] });
   });
-  page.on('response', async response => {
-    if (!/\/api\/seat\/player1(?:\?|$)/.test(response.url()) || response.url().includes('shown=')) return;
-    const value = await response.json().catch(() => null);
-    if (!value?.board) return;
-    latest = value;
-    for (const entry of value.feed ?? []) if (entry.event.kind === 'CombatActionResolved') actions.set(entry.sequence, entry);
-  });
+  // The seat's views are collected in the page, before the page gets them, never from a response handler (#921).
+  const seat = await collectSeatViews(page, { skipShown: true }); let latest = null;
   try {
     const tokens = await enter(page, hostInfo.join); const origin = new URL(hostInfo.join).origin;
     await expect(page.locator('#upkeep-dialog')).toBeVisible();
@@ -244,8 +240,8 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     await page.screenshot({ path: info.outputPath('release-settings.jpg'), type: 'jpeg', quality: 85 });
     await page.keyboard.press('Escape'); expect(writes).toEqual([]);
     const captured = new Set(), orderRounds = new Set(); let spellbookRound = 0;
-    for (let step = 0; step < 200 && !latest?.over; step++) {
-      await expect.poll(() => latest?.over || Boolean(latest?.waitingFor), { timeout: 15000 }).toBe(true);
+    for (let step = 0; step < 200 && !(await seat.latest())?.over; step++) {
+      await expect.poll(async () => { latest = await seat.latest(); return latest?.over || Boolean(latest?.waitingFor); }, { timeout: 15000 }).toBe(true);
       const view = structuredClone(latest); if (!view || view.over) break;
       if (view.board.roundNumber > upkeepRound) {
         await readTurnover(page, view.board.roundNumber, info);
@@ -287,8 +283,9 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
         await page.screenshot({ path: info.outputPath(`${name}.jpg`), type: 'jpeg', quality: 85 }); captured.add(name);
         if (name === 'late-spellbook') spellbookRound = view.board.roundNumber;
       } : null);
-      await waitAnswered(view, () => latest);
+      await waitAnswered(view, seat.latest);
     }
+    latest = await seat.latest(); const actions = await seat.actions();
     expect(latest.over).toBe(true);
     if (declaration === 'hidden-intent') { expect(latest.outcome.reason).toBe('RoundCap'); expect(latest.board.roundNumber).toBe(2); }
     else {

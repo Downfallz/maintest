@@ -8,6 +8,7 @@ import { matchResult, mutationTree, teamTempos } from './battle-help-fixture.js'
 import { openSpells } from './battle-spells-fixture.js';
 import { fitsViewport } from './fit.js';
 import { waitAnswered } from './battle-step.js';
+import { collectSeatViews } from './seat-views.js';
 
 // The series on the real engine (ADR 0187, onboarding-plan.md O5): each tutorial of scenarios/tutorials/ opened
 // by a signed-in account on a host that records, started from its first card, and played to its end with the
@@ -146,18 +147,6 @@ async function readUntilAsked(page, onCards) {
   }
 }
 
-// The seat's view as the page last read it, from before the tutorial opens: its first question may come with the
-// view the page reads as it loads.
-function seatViews(page) {
-  const seat = { latest: null };
-  page.on('response', async response => {
-    if (!/\/api\/seat\/player[12](?:\?|$)/.test(response.url())) return;
-    const value = await response.json().catch(() => null);
-    if (value?.board) seat.latest = value;
-  });
-  return seat;
-}
-
 async function playLesson(page, tutorial, seat, info) {
   const lesson = tutorial.file.tutorial, next = recordedAnswers(tutorial.file), shown = new Set(), opened = [];
   const coach = async view => {
@@ -186,8 +175,8 @@ async function playLesson(page, tutorial, seat, info) {
     await readUntilAsked(page, readCards);
     if ((await shows(page)).done) break;
     // An assisted question is answered by the host, never drawn: the person answers the kinds the lesson teaches.
-    await expect.poll(() => lesson.teaches.includes(seat.latest?.waitingFor), { timeout: 15000 }).toBe(true);
-    const view = structuredClone(seat.latest);
+    let view = null;
+    await expect.poll(async () => { view = await seat.latest(); return lesson.teaches.includes(view?.waitingFor); }, { timeout: 15000 }).toBe(true);
     // The question's sheet open, as the person sees it, before its step is read.
     if (view.waitingFor === 'Action') await openSpells(page);
     else if (view.waitingFor === 'Speed') await teamTempos(page); else await mutationTree(page);
@@ -197,7 +186,7 @@ async function playLesson(page, tutorial, seat, info) {
     else if (view.waitingFor === 'TieOrder') await answerTieOrder(page, next);
     else await answerAction(page, view, next);
     // A step waits three 15 s windows at most. Late in the test's 240 s, the test's own timeout can report first.
-    await waitAnswered(view, () => seat.latest, { timeout: 15000 });
+    await waitAnswered(view, seat.latest, { timeout: 15000 });
   }
   // Every step showed, in the lesson's order, and the cards they open were read.
   expect([...shown]).toEqual(lesson.steps.map((_, index) => index + 1));
@@ -212,7 +201,9 @@ for (const tutorial of series) test(`tutorial ${tutorial.file.tutorial.order}, $
   test.setTimeout(240000);
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await signIn(page);
-  const seat = seatViews(page);
+  // The seat's view as the page last read it, collected in the page from before the tutorial opens: its first
+  // question may come with the view the page reads as it loads. Never from a response handler (#921).
+  const seat = await collectSeatViews(page, { seats: ['player1', 'player2'] });
   const kept = page.waitForResponse(response => response.url().endsWith(`/api/tutorials/${tutorial.id}/done`) && response.request().method() === 'POST', { timeout: 230000 });
   if (tutorial.file.tutorial.order === 1) {
     // A new account's first plain visit opens the first tutorial by itself (O4).

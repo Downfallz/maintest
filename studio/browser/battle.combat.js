@@ -3,6 +3,7 @@ import { openSpells } from './battle-spells-fixture.js';
 import { returningBattlePlayer, readResults } from './battle-help-fixture.js';
 import { startHost, stopHost } from './host.js';
 import { decided } from './decision.js';
+import { collectSeatViews } from './seat-views.js';
 test.beforeEach(returningBattlePlayer);
 
 for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaration}: battle combat commands resolve through the real engine`, async ({ page, context }, info) => {
@@ -29,7 +30,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
       expect((await context.request.post(`${origin}/api/seat/player1/decision`, { headers, data: { ...data, asked: view.waitingAsked } })).status()).toBe(204);
       return true;
     };
-    const sent = [], shown = [], snapshots = [];
+    const sent = [], shown = [];
     // A new tab, as in battle.growth.js (#776): the tab that took the seat may already have shown this round's Upkeep
     // sheet, which a tab shows once (sessionStorage); a new tab shares the seat (localStorage) and not that mark.
     await page.close(); page = await context.newPage();
@@ -53,11 +54,8 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
       if (url.searchParams.has('shown')) shown.push(Number(url.searchParams.get('shown')));
       if (url.pathname.endsWith('/decision')) sent.push({ command: decided(request), seen: [...shown] });
     });
-    page.on('response', async response => {
-      if (/\/api\/seat\/player1(?:\?|$)/.test(response.url()) && response.ok()) {
-        const body = await response.json().catch(() => null); if (body?.board) snapshots.push(body.waitingAsked);
-      }
-    });
+    // The seat's latest view is collected in the page too, never from a response handler (#921).
+    const seat = await collectSeatViews(page);
     await page.goto(`${origin}/battle`);
     await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true'); await expect(page.locator('#loading')).toBeHidden();
     await expect(page.locator('#upkeep-dialog')).toBeVisible();
@@ -78,7 +76,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
       const view = await nextQuestion(); expect(view.over).toBe(false);
       if (await planning(view)) continue;
       expect(['Action', 'Intent', 'Target']).toContain(view.waitingFor);
-      await expect.poll(() => snapshots.at(-1), { timeout: 10000 }).toBe(view.waitingAsked);
+      await expect.poll(async () => (await seat.latest())?.waitingAsked, { timeout: 10000 }).toBe(view.waitingAsked);
       // A round's public order is revealed once, before its first combat question, and holds the field
       // until Continue (AU11, ADR 0144). Reading it writes nothing.
       const readOrder = async () => {
@@ -142,7 +140,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     // Each confirmed action waits for its OK (ADR 0139); read them all as a player would.
     await readResults(page);
     const after = await nextQuestion();
-    await expect.poll(() => snapshots.at(-1), { timeout: 10000 }).toBe(after.waitingAsked);
+    await expect.poll(async () => (await seat.latest())?.waitingAsked, { timeout: 10000 }).toBe(after.waitingAsked);
     for (const one of [...after.board.allies, ...after.board.enemies]) {
       await expect(page.locator(`[data-creature="${one.id}"] .creature-stats`)).toContainText(`${one.health}/${one.maxHealth} HP`);
     }
