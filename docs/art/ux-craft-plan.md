@@ -1,6 +1,6 @@
 # Plan: the pages' craft, the two doors, the lessons, the lobby, a player's pages and the match's frame staged by a designer who can see
 
-Status: accepted, 2026-11-19 (the owner settled the questions at the end). Nothing is built; UX1 is next.
+Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 is built; UX2 is next.
 Each stage below is one pull request.
 
 ## What the owner asked for
@@ -30,7 +30,7 @@ The battle craft's four pieces answer it, on the pages instead of the canvas:
 
 | What makes it good | Its form | Why this form |
 | --- | --- | --- |
-| The knowledge, searched and written down | A document, `docs/art/ux-craft.md` | The search is done ([its notes](ux-craft-research.md)). A book puts it in entries every later session reads. |
+| The knowledge, searched and written down | A document, `docs/art/ux-craft.md` | The search is done. [The book](ux-craft.md) puts it in entries every later session reads. |
 | Eyes: a journey seen screen by screen | A script, `scripts/ux/journey.mjs`: a contact sheet and a file of measures | A session that restyles a page without walking it guesses. A sheet is also what the owner approves on a phone. |
 | A director who stages one journey at a time | An agent, `ux-designer` | `design-reviewer` and `pages-reviewer` read a diff. Nobody reads a journey from its first screen to its last. |
 | The same loop every time | A skill, `/ux-pass` | The brief, the build, the film, the critique, the fix, the sheets shown to the owner. |
@@ -81,14 +81,14 @@ Not measured, and why:
 
 ## What the search found
 
-[The notes](ux-craft-research.md): 78 entries with their sources, and what could not be opened. The
-ones that shape this plan:
+[The craft book](ux-craft.md) holds it since UX1: every entry with its source, read again, what the reading
+changed and what could not be opened. The ones that shape this plan:
 
 - **Show the game before asking for an account.** A sign-in page before any content has a high cost on a phone. The
   showcase is that showing; what it does not show is play. No test on a game was found: this is practice, not a
   number.
-- **A picture of the move beats its sentence.** The maker of Into the Breach: a small loop of the move is "a
-  thousand times more effective" than the text that describes it.
+- **A picture of the move beats its sentence.** The maker of Into the Breach: a little animation of the move is
+  "a thousand times more effective" than the text that describes it.
 - **Teach by doing, one concept, eight words.** A hint at the moment of need raised progress by 40% in the one
   complex game of a study of 45,000 players. Help that restricts what a player may touch showed no gain.
 - **A home has one dominant action, and "your move" comes first.** An empty list says what is going on, teaches,
@@ -99,7 +99,7 @@ ones that shape this plan:
   only `transform` and `opacity`. Less motion keeps a fade and drops the travel.
 - **The largest picture is an `<img>` in the HTML**, with its size, asked for first. Good is 2.5 s.
 - **WCAG 2.2 AA is the standard to hold.** Automation found 37% and 57% of a page's faults in two studies (the
-  notes, part 10), and finds none inside a canvas. A screen reader on a phone stays a session with a person.
+  book, "What a test can see"), and finds none inside a canvas. A screen reader on a phone stays a session with a person.
 - **The platform does this without a library**: a transition between two pages, a window that enters and
   leaves, a spring as an easing. A browser that lacks one ignores it.
 
@@ -120,7 +120,7 @@ ones that shape this plan:
 
 ## The craft book
 
-`docs/art/ux-craft.md`, written from [the notes](ux-craft-research.md) and kept.
+[`docs/art/ux-craft.md`](ux-craft.md), written from the notes of the search and kept.
 
 One entry per pattern, the same six lines each: what it is, where it comes from (a link, read again), how the
 pages do it (the element, the CSS feature or the API, and the browsers that have it), what it costs (bytes, a
@@ -129,7 +129,7 @@ paint, a phone), its form under less motion and for a screen reader, where this 
 Its groups: the first visit, teaching, the home, the match's frame, motion, pictures, accessibility.
 
 A test reads the book: every entry has its six lines, every path it names exists, every token it names is
-declared in `table/identity.css`. A pattern with no source is marked *house*.
+declared in `docs/art/branding.css`, `table/table.css` or `table/identity.css`. A pattern with no source is marked *house*.
 
 ## The journey film and the measures
 
@@ -231,6 +231,23 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
 1. **UX1, the craft book.** `docs/art/ux-craft.md` from the notes, each link read again against its entry, and the
    notes removed once the book holds them. Tests: every entry has its six lines; the paths it names exist; the
    book is in `docs/README.md`.
+
+   *Built (2026-11-19)*: [the book](ux-craft.md), 55 entries in the seven groups, each with its six lines, then
+   the criteria of WCAG 2.2 that bear here, the table of what the platform offers, what is thin, what the
+   reading changed and what could not be opened. Every link of the notes that could be opened was opened again that day: by four
+   agents for teaching, the match's frame, accessibility, testing and the platform, and by the session itself
+   for the first visit, the home, motion and pictures. About thirty claims did not hold as written and were
+   corrected; the book lists them. The versions of the platform's features were read in caniuse's data and in
+   MDN's, not on the rendered pages. `studio/ux-craft.test.js` holds the groups, the six lines, a source that is
+   a link or *house*, the paths, the links to a file or a heading, the tokens, and the book's row in
+   `docs/README.md`; the notes are removed. Review found that the pages already have motion tokens and a blanket
+   rule for less motion, both in `table/table.css`, which the plan's walk and the notes had missed: the book
+   says so, and UX4 starts from them. Left:
+   two pages could not be opened and what rested on them is out of the book (APCA in WCAG 3, Hearthstone's first
+   matches); axe's own list of tags was not read, so UX13 finds which tag turns the target-size rule on; a token
+   is held to `docs/art/branding.css` and `table/table.css` too, since the palette and the motion tokens are
+   declared there and not in `table/identity.css`.
+   No test can say a link still says what its entry says: the book gives the day it was read.
 2. **UX2, the journey film and the measures.** `scripts/ux/journey.mjs`, the five walks, the contact sheet, the
    measures, `--strip`. The first sheets and measures are the baseline, kept in `docs/art/journeys/baseline.md`.
    Tests: two runs of one journey give the same measures; a walk reaches every screen it names; the script is in
