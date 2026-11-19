@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { openSpells } from './battle-spells-fixture.js';
 import { fitsViewport } from './fit.js';
+import { matchResult } from './battle-help-fixture.js';
 import { decided } from './decision.js';
 
 // A tutorial in the battle view (ADR 0187, onboarding-plan.md O3b): the band says Tutorial n of the series, the
@@ -22,14 +23,16 @@ const legal = candidates => ({ candidates, minTargets: 1, maxTargets: 1 });
 const creature = (number, health = 30) => ({ id: number, name: `Creature ${number}`, health, maxHealth: 30, energy: 4, totalDefense: number === 5 ? 2 : 0,
   currentInitiative: 5, isAlive: true, isStunned: false, isStunImmune: false, knownSpells: ['shock'], conditions: [], acquiredTiers: [] });
 
-async function mount(page, { assistedFirst = false, book = null, upkeepAtEnd = false } = {}) {
+async function mount(page, { assistedFirst = false, book = null, upkeepAtEnd = false, endsMatch = false } = {}) {
   const state = { errors: [], writes: [], said: [], left: 0, opened: 0, asked: 20, answered: 0, handedBack: false };
   page.on('pageerror', error => state.errors.push(error.message));
   const order = lesson.steps.map(step => step.at.creature);
   const view = () => {
     const done = state.answered >= order.length, assisted = assistedFirst && state.answered === 0 && !state.released;
+    // A lesson that plays to the match's end (tutorial 4): its last answer ends the match, and the host says it is done.
+    const over = done && endsMatch;
     const board = { slot: 'Player1', roundNumber: done ? 3 : 2, phase: done || assisted ? 'Planning' : 'Combat', subPhase: done || assisted ? 'Speed' : 'Activation', activationCursor: 0,
-      allies: [1, 2, 3].map(number => creature(number)), enemies: [creature(4, Math.max(1, 9 - 3 * state.answered)), creature(5), creature(6)],
+      allies: [1, 2, 3].map(number => creature(number)), enemies: over ? [4, 5, 6].map(number => ({ ...creature(number, 0), isAlive: false })) : [creature(4, Math.max(1, 9 - 3 * state.answered)), creature(5), creature(6)],
       timeline: done || assisted ? [] : [{ creature: order[state.answered], owner: 'Player1', speed: 'Standard' }], speedChoices: [] };
     const tutorial = { order: lesson.order, of: 4, title: lesson.title, teaches: lesson.teaches,
       assisted: state.handedBack ? [] : ['Evolution', 'Speed', 'TieOrder', 'Intent', 'Target'], steps: lesson.steps, shown: Math.min(order.length, state.answered + (assisted ? 0 : 1)), done: done && !state.notYetDone };
@@ -41,7 +44,7 @@ async function mount(page, { assistedFirst = false, book = null, upkeepAtEnd = f
       { sequence: 1, event: { kind: 'RoundEnergyGranted', roundId: 3, grants: [1, 2, 3, 4, 5, 6].map(one => ({ creature: one, gained: 2, before: 2, after: 4, baseRequested: 2, passiveRequested: 0 })) } },
       { sequence: 2, event: { kind: 'OngoingEffectsApplied', roundId: 3, energyRegenerationTicks: [], regenerationTicks: [], bleedTicks: [] } },
     ] : [];
-    return { over: false, recording: false, feed, feedNext: feed.length, practice: { scenario: id, title: file.title, goal: file.goal, round: 2, tutorial }, board, ...question };
+    return { over, outcome: over ? { winner: 'player1', reason: 'Elimination' } : null, recording: false, feed, feedNext: feed.length, practice: { scenario: id, title: file.title, goal: file.goal, round: 2, tutorial }, board, ...question };
   };
   await page.addInitScript(() => {
     const original = window.fetch;
@@ -400,6 +403,62 @@ test('Play again on the end card starts the tutorial over from its cut', async (
   await page.locator('#coach-again').click();
 
   await expect.poll(() => state.opened).toBe(opened + 1);
+  await expect(page.locator('#practice-brief')).toBeVisible();
+  await expect(page.locator('#practice-restart')).toHaveText('Restart the round');
+  expect(state.errors).toEqual([]);
+});
+
+// A tutorial that plays to the match's end (tutorial 4) ends on the match result, which is the tutorial's end
+// (tutorial-follow-ups-plan.md T1, #726): it says so, and offers Play again and Leave the tutorial where a game
+// offers Rematch and Lobby.
+test('a tutorial that ends the match ends on its result: Tutorial complete, Play again and Leave the tutorial', async ({ page }, info) => {
+  test.setTimeout(120000);
+  const state = await mount(page, { endsMatch: true });
+  await page.locator('#practice-brief-begin').click();
+  for (let index = 0; index < lesson.steps.length; index++) await playStep(page, state, index);
+
+  await matchResult(page);
+  await expect(page.locator('#match-eyebrow')).toHaveText('TUTORIAL COMPLETE');
+  await expect(page.locator('#match-title')).toHaveText('Victory');
+  await expect(page.locator('#match-again')).toHaveText('Play again');
+  await expect(page.locator('#match-leave')).toHaveText('Leave the tutorial');
+  await expect(page.locator('#match-leave')).toHaveAttribute('href', '/');
+  // Rematch and Lobby give their places; the replay and Report or suggest stay.
+  await expect(page.locator('#match-rematch')).toBeHidden(); await expect(page.locator('#match-lobby')).toBeHidden();
+  await expect(page.locator('#match-replay')).toBeVisible(); await expect(page.locator('#feedback-open-match')).toBeVisible();
+  await fitsViewport(page, '#match-again, #match-replay, #match-leave, #feedback-open-match, #match-dialog [aria-label="Close match result"]');
+  // Each is read whole: on the smallest phone Replay the match and Leave the tutorial take a row each.
+  expect(await page.evaluate(() => ['match-again', 'match-replay', 'match-leave'].filter(one => { const node = document.getElementById(one); return node.scrollWidth > node.clientWidth + 1; }))).toEqual([]);
+  await page.screenshot({ path: info.outputPath('tutorial-result.png') });
+  await expect.poll(() => state.said).toEqual(['done']);
+  // Leaving from the result is leaving a finished tutorial: not skipped, and its practice let go of.
+  await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: '<title>Home</title>' }));
+  await page.locator('#match-leave').click();
+  await expect(page).toHaveTitle('Home');
+  expect(state.said).toEqual(['done']);
+  expect(state.left).toBe(1);
+  expect(state.errors).toEqual([]);
+});
+
+test('Play again on a tutorial\'s result starts it over from its cut, and the result closed leaves the end card', async ({ page }) => {
+  test.setTimeout(120000);
+  const state = await mount(page, { endsMatch: true });
+  await page.locator('#practice-brief-begin').click();
+  for (let index = 0; index < lesson.steps.length; index++) await playStep(page, state, index);
+  await matchResult(page);
+  // Closed, the coach card's end shows, as in a tutorial that ends before its match does.
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#match-dialog')).toBeHidden();
+  await expect(page.locator('#coach-step')).toHaveText('TUTORIAL COMPLETE');
+  await expect(page.locator('#coach-again')).toBeVisible();
+  await matchResult(page);
+  const opened = state.opened;
+
+  state.answered = 0;
+  await page.locator('#match-again').click();
+
+  await expect.poll(() => state.opened).toBe(opened + 1);
+  await expect(page.locator('#match-dialog')).toBeHidden();
   await expect(page.locator('#practice-brief')).toBeVisible();
   await expect(page.locator('#practice-restart')).toHaveText('Restart the round');
   expect(state.errors).toEqual([]);

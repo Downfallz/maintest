@@ -105,7 +105,7 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
     event.preventDefault();
     void leaveTo((event.currentTarget as HTMLAnchorElement).href);
   }
-  for (const id of ['practice-leave', 'coach-leave']) el(id).addEventListener('click', leave);
+  for (const id of ['practice-leave', 'coach-leave', 'match-leave']) el(id).addEventListener('click', leave);
   el('practice-brief-skip').addEventListener('click', () => {
     el<HTMLButtonElement>('practice-brief-skip').disabled = true;
     void leaveTo('/');
@@ -128,7 +128,14 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
   el('concept-next').addEventListener('click', () => { queue.shift(); if (queue.length) draw(); else dialog.close(); });
   dialog.addEventListener('close', () => { queue = []; onChange(); });
   // A tutorial done is not played on: its end card stays, with Play again, which starts it over from its cut, and Leave.
-  el('coach-again').addEventListener('click', () => el('practice-restart').click());
+  const again = () => el('practice-restart').click();
+  el('coach-again').addEventListener('click', again);
+  /**
+   * The tutorial's end as the match result offers it (tutorial-follow-ups-plan.md T1): in a tutorial that plays
+   * to the match's end the result is the tutorial's end, and its Play again is the coach card's. Leave the
+   * tutorial is a link this file already answers. None outside a tutorial: a game keeps Rematch and Lobby.
+   */
+  const ending = () => tutorialOf(latest) ? { again } : null;
   // On the smallest phone the band's place in the series takes Restart's place in the header, and the card offers it (#728).
   el('coach-restart').addEventListener('click', () => el('practice-restart').click());
 
@@ -196,5 +203,5 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
     text('practice-brief-begin', 'Begin'); el('practice-brief-skip').hidden = true; el<HTMLButtonElement>('practice-brief-skip').disabled = false;
     if (dialog.open) dialog.close();
   }
-  return { render, pending, reset };
+  return { render, pending, reset, ending };
 }
