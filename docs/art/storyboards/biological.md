@@ -30,6 +30,24 @@ that lingers at a figure's feet is venom pinning it: the stun (Paralyzing Barb).
 (`pulse`) says it was healed, as Vital Surge's does in the physical family (Devour): a halo is never a stun or a
 charge.
 
+The pass (2026-11-19) ran three rounds, the most `/battle-pass` allows. The designer read the first films of all
+fourteen against these storyboards and asked for about 50 changes; most had one of three causes. Pieces thrown `along` or
+`back` under a reach of about 300, or flowing under a reach of about 120, never left the struck body. Dots under a
+strength of 0.4 piled into one soft cloud. Bone pieces cannot be seen on a figure its hit flash fills in bone, at 840
+and 900 ms. The second films settled the quill's leave (#909) and left 22 changes, all strengths, reaches and
+sentences; they were made and the spells filmed a third time. The session looked at those last films; the designer
+did not read them. The coded rows below are the stagings as built. What is still open, for the kit or the scene,
+each its own change:
+
+- A beat on a caster stays at the caster's home while its body crouches or lunges: Blood Hunt's ring opens around
+  the crouched legs, Blood Price's red light sits above the crouched back, and Pursuit's streak runs under the body.
+- A gather lands on its figure's centre, not on its outline: Latch's hooks and Bite's swallow sink into the body.
+- A shard cannot be drawn smaller than about a fifth of a small figure, and a burst's pieces cannot fall: Toxic
+  Mend's and Contagion's flakes of hide are large and bright at 1440 ms, and may read as a hit.
+- A motif is drawn over the particles on its figure: beads and motes on a body show only beside the strokes.
+- On the effects bench every blow is struck up the field, so `along` and `back` are shortened to 0.42 of their
+  reach, as in the physical family: the sheets show only that case.
+
 ## Venom Claw (`spell:poison_slash:v1`)
 
 ### Intent

@@ -313,7 +313,8 @@ that extends it.
    - What the designer's reading of the first films found, in nearly every spell: pieces thrown `along` or `back`
      under a reach of 300, or flowing under a reach of 120, never left the struck body; dots under a strength of
      0.4 piled into one soft cloud; bone pieces cannot be seen on a figure filled in bone by its hit flash, at
-     840 and 900 ms. 43 beats and lines were changed, and the films made again.
+     840 and 900 ms. About 50 beats and lines were changed and the films made again; a second reading asked for 22 more,
+     made too. The third films were looked at by the session, not read by the designer.
 
    Left:
 
