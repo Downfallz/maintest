@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { benchCreatures, benchDefaultTargets, benchDuration, benchEntries, benchFrame, benchStage, benchTitle, filmInterval,
-  filmTitle, seededRandom, FILM_FRAMES, FILM_TICK_MS } from './battle-bench.js';
+  filmTitle, seededRandom, benchRound, FILM_FRAMES, FILM_TICK_MS } from './battle-bench.js';
 import { IMPACT_MS, WINDUP_MS } from './battle-timing.js';
 import { fileName, motionLines, parseArguments } from '../scripts/battle/filmstrip.mjs';
 import { laboratoryOnly } from '../battle/live-guard.mjs';
@@ -49,6 +49,17 @@ test('a film\'s title names the spell, its mutation, the outcome filmed and the 
   assert.equal(filmTitle(pummel, { wound: true }), 'Pummel · Brute, Stage I · physical · impact · melee · the caster pays in blood · 1×');
   assert.equal(filmTitle(pummel, { damage: 6, defeat: true }), 'Pummel · Brute, Stage I · physical · impact · melee · 6 health lost · the blow defeats · 1×');
   assert.equal(filmTitle(pummel, { damage: 6, defeat: true, outcome: 'fizzled' }), 'Pummel · Brute, Stage I · physical · impact · melee · fizzled · 1×');
+  // BC9: the round the ground stands in is said when it is not the first, and a film of the field at rest names no spell.
+  assert.equal(filmTitle(pummel, { round: 12 }), 'Pummel · Brute, Stage I · physical · impact · melee · round 12 · 1×');
+  assert.equal(filmTitle(pummel, { round: 12, still: true }), 'The field at rest · round 12 · 1×');
+});
+
+test('the bench stands in the round it is told, inside the rounds the ground knows', () => {
+  const pummel = { name: 'Pummel', family: 'physical', motif: 'impact', delivery: 'melee' };
+  const frame = round => benchFrame({ entry: pummel, actor: 'a1', targets: ['b1'], stage: 'decision', round });
+  assert.equal(frame(undefined).round, 1);
+  assert.equal(frame(12).round, 12);
+  assert.deepEqual(['x', 0, -3, 99, 4.4].map(benchRound), [1, 1, 1, 30, 4]);
 });
 
 // #843: a fizzle and a blood cost are what the scene already draws; the bench asks for them as a fixture's choice.
@@ -213,6 +224,14 @@ test('the film strip script reads its options, and refuses what it cannot film',
   assert.deepEqual([fileName('spell:pummel:v1'), fileName('spell:pummel:v1', { outcome: 'fizzled' }), fileName('spell:pummel:v1', { wound: true })],
     ['pummel.png', 'pummel-fizzled.png', 'pummel-wound.png']);
   assert.equal(read.out, 'sheet.png');
+  // BC9: a round, and the field at rest, which names no effect and plays nothing.
+  assert.deepEqual(parseArguments(['spell:pummel:v1', '--round', '12']).film, { round: 12 });
+  assert.throws(() => parseArguments(['spell:pummel:v1', '--round', '31']), /whole round/);
+  assert.deepEqual(parseArguments(['--still', '--interval', '1000']).film, { still: true, interval: 1000 });
+  assert.throws(() => parseArguments(['spell:pummel:v1', '--still']), /names no effect/);
+  assert.throws(() => parseArguments(['--still', '--defeat']), /plays nothing/);
+  assert.deepEqual([fileName('', { still: true }), fileName('', { still: true, round: 12 }), fileName('spell:pummel:v1', { round: 12 })],
+    ['ground.png', 'ground-round12.png', 'pummel-round12.png']);
   assert.equal(parseArguments(['--all']).all, true);
   assert.throws(() => parseArguments([]), /Name one or more effects/);
   assert.throws(() => parseArguments(['--all', 'spell:pummel:v1']), /Name one or more effects/);

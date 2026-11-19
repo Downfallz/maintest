@@ -1022,7 +1022,8 @@ under a fizzle. `?bench=spell:frostbite:v1` opens on that entry. It asks no host
 field from the caster is struck, and one on the caster's side receives. **Health lost** is what each creature struck
 loses; it sets the weight of the blow. **The blow defeats its target** fells the first creature struck. Both stand
 in for what the host would tell in a cue's changes. Left empty, no loss is told, as for an action the host served
-no frames for. Less motion and
+no frames for. **Round** is the round the field stands in (1 to 30): the ground gives way as the rounds pass, and
+the bench shows it as it stands at that one. Less motion and
 the playback speed are in the settings, as in the laboratory. The bench ships in `game.js` only:
 `build.mjs` fails the build if `live.js` contains a bench module or the spell art (`live-guard.mjs`).
 
@@ -1036,8 +1037,13 @@ node scripts/battle/filmstrip.mjs spell:pummel:v1 --fizzle        # artifacts/fi
 node scripts/battle/filmstrip.mjs spell:hateful_sacrifice:v1 --wound   # its caster pays in blood
 node scripts/battle/filmstrip.mjs spell:pummel:v1 --damage 8 --defeat  # a heavy blow that defeats its target
 node scripts/battle/filmstrip.mjs spell:pummel:v1 --motion        # and pummel.motion.jsonl beside the sheet
+node scripts/battle/filmstrip.mjs spell:pummel:v1 --round 12      # on the ground as it stands at round 12
+node scripts/battle/filmstrip.mjs --still --interval 1000         # ground.png: the field at rest, no spell played
 node scripts/battle/filmstrip.mjs --all                           # one sheet an entry
 ```
+
+A film waits for its round's scenery before it starts, so no plate arrives mid-film. `--still` films the ground
+alone, on the film's clock: it names no effect, and nothing that tells a play goes with it.
 
 `--motion` writes what a sheet cannot show, one line a frame: where each figure stands from its home, its lean,
 its width and height over its own scale, its alpha and whether it is tinted, and the view's trauma, offset and zoom
