@@ -52,8 +52,8 @@ What a brief must hold to:
   asked of the owner: what it shows, its size, where it goes, a prompt to paste in a fenced block, and the
   painting that holds its place until it comes. A screen is never left waiting for a picture.
 - Every beat is one row: what starts it, what it moves (`transform`, `opacity`, nothing else), its pattern as a
-  link to its entry in the craft book, its token. A token must be declared: `grep -n -- '--motion' table/table.css`
-  lists the motion tokens. A value the kit lacks is written `*UX4*` with the number, never a token you invented.
+  link to its entry in the craft book, its token. A token must be declared: `grep -n -- '--motion' docs/art/branding.css`
+  lists the motion tokens (ADR 0197). A value the kit lacks is written `*UX4*` with the number, never a token you invented.
 - A pattern the book does not have is not used. Say what is missing under **Left**: the book gains an entry
   first, with its six lines and its source, in its own change.
 - Each beat has its form under less motion: a fade for a travel, the settled frame, nothing. What moves by

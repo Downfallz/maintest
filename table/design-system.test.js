@@ -52,6 +52,14 @@ test('the radii, the cut and the font come from branding.css', () => {
   assert.ok(existsSync(join(root, 'table', font.file)), font.file);
 });
 
+test('the motion tokens come from branding.css, each with its usage', () => {
+  const tokens = buildTokens();
+  const branding = readBranding().declarations.filter(([name]) => name.startsWith('motion-'));
+  assert.ok(branding.length >= 9);
+  assert.deepEqual(tokens.motion.tokens.map((t) => [t.name, t.value]), branding);
+  for (const token of tokens.motion.tokens) assert.ok(token.usage.length > 10, token.name);
+});
+
 test('the shared stylesheet carries identity.css whole and the textures it reads', () => {
   const css = buildBundleCss();
   assert.ok(css.includes(readFileSync(join(root, 'table', 'identity.css'), 'utf8').trimEnd()));

@@ -53,6 +53,14 @@ Downfall Instinct is a two-player tactical board game played online at a shared 
 - In the site header the current page is underlined 2px in `gold` and its label turns `bone`. In the folded menu (at 1306px and below) the mark moves to a 2px left border on `accent-wash`.
 - In a match the round's bar is the only bar: the site's menu, bell and account sit at its right end.
 
+## Motion
+
+- The pages move by a small vocabulary ([ADR 0197](../../adr/0197-hold-the-pages-to-wcag-aa-a-vocabulary-of-motion-and-a-budget.md)): four durations, three curves, a breath. A rule names a `motion-*` token, never a number, and moves only `transform` (`translate`, `scale`, `rotate`) and `opacity`.
+- Five uses, each with one form, in `components/bundle.css`. **A press** answers on the control: a lighter shade, and the control sinks to 98% in `motion-fast`. **A window** fades in over `motion-normal` from 8px below and leaves in `motion-fast`. **A page** cross-fades into the next in `motion-normal`. **A thing that arrives** in a list takes `.motion-arrive`: the same fade and 8px. **A number that changes** takes `.motion-number` and plays once, in `motion-slow`.
+- Ambience is the one kind that plays unasked: `.motion-breath`, a picture that swells by 1.5% over `motion-breath`. One a screen, only in view.
+- **Less motion is a form, not an absence.** Write each beat first as a fade or a change of shade; add the travel inside `@media (prefers-reduced-motion: no-preference)` under `:root:not([data-motion="less"])`. Under less motion nothing travels, a page changes at once and ambience is still.
+- No spring, no bounce, no parallax. An exit is shorter than its entry. Nothing starts on a clock: a beat answers a press, an arrival the host tells, or a screen in view.
+
 ## Iconography and marks
 
 - The brand mark is the bone-and-soot rune, two angular shards, not a colour of the palette. There is no other logo: set the name in `wordmark` beside the rune.

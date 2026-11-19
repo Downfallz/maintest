@@ -460,8 +460,9 @@ These come from decisions already taken. No pattern below is an exception to the
 - **Cost**: none: `transform` and `opacity` only.
 - **Less motion and screen reader**: a change of colour replaces the movement. A command sent and one refused
   are told as text.
-- **Here**: ten controls of the home take a hover transition from `table/table.css`; nothing answers a press on
-  a phone. UX4 builds the press as one of the kit's five uses.
+- **Here**: the press is the first of the kit's five uses, in `table/identity.css`: every button, filled link and
+  link drawn as a button takes a lighter shade under the finger, and under full motion sinks to 98% in
+  `--motion-fast`. The showcase's two buttons do the same (`showcase/showcase.css`).
 
 ### Juice the frequent actions
 
@@ -492,10 +493,10 @@ These come from decisions already taken. No pattern below is an exception to the
 - **Pages**: `transition-duration` and `transition-timing-function`, from tokens and never a number in a rule.
 - **Cost**: none.
 - **Less motion and screen reader**: the durations stay for a fade; the travel goes.
-- **Here**: `table/table.css`, which the table's pages load, already declares four durations: `--motion-instant`
-  at 80 ms, `--motion-fast` at 120, `--motion-normal` at 220, `--motion-slow` at 360. They are inside this
-  entry's range. `table/identity.css`, `table/lobby.css`, `table/rules.css` and `table/leaderboard.css` hold no
-  animation, and `table/battle.css` does not use the tokens. UX4 starts from them.
+- **Here**: four durations, declared in `docs/art/branding.css` since UX4: `--motion-instant` at 80 ms,
+  `--motion-fast` at 120, `--motion-normal` at 220, `--motion-slow` at 360. They are inside this entry's range.
+  A window enters in `--motion-normal` and leaves in `--motion-fast`. `table/battle.css` does not use the tokens
+  yet: UX11 and UX12.
 
 ### Named durations and curves
 
@@ -507,10 +508,10 @@ These come from decisions already taken. No pattern below is an exception to the
 - **Pages**: custom properties beside the palette's, synced to the showcase by `scripts/sync-branding.mjs`.
 - **Cost**: a few lines in a sheet both doors already load.
 - **Less motion and screen reader**: the tokens stay; a rule under `prefers-reduced-motion` chooses the fade.
-- **Here**: `table/table.css` has the three curves too: `--motion-enter`, `--motion-exit` and
-  `--motion-standard`. The showcase has none: the tokens are not in `docs/art/branding.css`, which
-  `scripts/sync-branding.mjs` copies to both doors. UX4 keeps, renames or moves them, never a second set beside
-  them, and its ADR records the vocabulary.
+- **Here**: three curves, `--motion-enter`, `--motion-exit` and `--motion-standard`, with the durations in
+  `docs/art/branding.css`, which `scripts/sync-branding.mjs` copies into the table's sheets and the showcase's
+  build reads. UX4 moved them there from `table/table.css` under their own names: one set, and [ADR 0197](../adr/0197-hold-the-pages-to-wcag-aa-a-vocabulary-of-motion-and-a-budget.md)
+  records the vocabulary.
 
 ### Transform and opacity only
 
@@ -523,7 +524,9 @@ These come from decisions already taken. No pattern below is an exception to the
   moved by a `transform` of its content.
 - **Cost**: a layer while it moves. `will-change` only for the length of the move.
 - **Less motion and screen reader**: `opacity` is what stays.
-- **Here**: a test of UX4: under less motion no page animates a `transform`.
+- **Here**: `table/motion.test.js` holds the kit to `transform`, its single properties and `opacity`;
+  `studio/browser/motion-kit.spec.js` plays the kit on every page of the table: under less motion none animates
+  a `transform`.
 
 ### Less motion is not no motion
 
@@ -542,10 +545,10 @@ These come from decisions already taken. No pattern below is an exception to the
 - **Cost**: none.
 - **Less motion and screen reader**: this entry is that form: travel, scale and ambience go; a fade and a change
   of colour stay.
-- **Here**: the battle has the setting and reads the system's. On the pages, `table/table.css` answers the
-  system's preference with a blanket: the four durations set to 0, and every animation and transition cut to
-  0.01 ms with `!important`. That is no motion, not less: a fade written for less motion would be cut by it. UX4
-  replaces the blanket with the form of this entry, and brings the account's setting to the pages.
+- **Here**: the kit of `table/identity.css` is written this way: each form first as a fade or a change of shade,
+  its travel added under full motion. `table/motion.js` sets `data-motion="less"` on the root from the account's
+  setting, and from the game's own on the battle's page. `table/table.css` keeps a net for the classic table's
+  own animations, which cuts them under either wish and leaves the kit's parts out by name.
 
 ### A window that enters and leaves
 
@@ -560,8 +563,11 @@ These come from decisions already taken. No pattern below is an exception to the
 - **Cost**: none.
 - **Less motion and screen reader**: `opacity` only. The window is a native `<dialog>` (see
   [A window that holds the focus](#a-window-that-holds-the-focus)).
-- **Here**: `table/battle.html` has 18 windows, the lobby three. None opens with a transition. UX4 builds the
-  form, UX12 applies it to the 18 as one family.
+- **Here**: a `<dialog>` of the lobby and of the admin panel takes the form from `table/identity.css`: a fade in
+  `--motion-normal`, from 8 px below under full motion, and an exit in `--motion-fast`, inside `@supports`. Two
+  are left out: the classic table's mutation tree, always open and shown by `hidden`, and the battle page's 18,
+  which still open at once. A docked sheet there is part of the frame, and a test that asks whether it is
+  visible is answered yes while it fades: UX12 stages the 18 as one family.
 
 ### A page that changes
 
@@ -575,8 +581,9 @@ These come from decisions already taken. No pattern below is an exception to the
 - **Cost**: the next page must paint fast: Chrome gives up on a transition that waits too long.
 - **Less motion and screen reader**: under less motion the rule is not declared. Focus and the page's title
   behave as on any navigation.
-- **Here**: a page changes at once. UX4 declares it between the table's pages: the home, the rules, the
-  leaderboard, the statistics, the battle.
+- **Here**: declared in `table/identity.css`, so between every page of the table, and in
+  `showcase/showcase.css` between the showcase's. Under the account's less motion, which an at-rule cannot read,
+  `table/motion.js` has the page being left skip it. No part moves from one page to the next yet.
 
 ### A spring as an easing
 
@@ -588,8 +595,8 @@ These come from decisions already taken. No pattern below is an exception to the
   `linear()` keeps the first. The fallback is *house*: the page read gives none.
 - **Cost**: a longer string in the sheet.
 - **Less motion and screen reader**: unused: a fade does not overshoot.
-- **Here**: none today. UX4 decides whether one of its three curves is a spring. The battle's own overshoot is
-  in `table/battle-motion.js` and stays there.
+- **Here**: none. [ADR 0197](../adr/0197-hold-the-pages-to-wcag-aa-a-vocabulary-of-motion-and-a-budget.md) decides that no curve of the pages is a spring: bone and soot is carved. The
+  battle's own overshoot is in `table/battle-motion.js` and stays there.
 
 ### Parallax, sparingly
 
@@ -627,8 +634,9 @@ These come from decisions already taken. No pattern below is an exception to the
   says the element left the view.
 - **Cost**: a layer, and a frame to compose for as long as it plays. Battery, on a phone left open.
 - **Less motion and screen reader**: none. The picture is still.
-- **Here**: none on the pages. The battle's breath is in `table/battle-motion.js`. UX4 builds the form, UX9
-  places the first.
+- **Here**: the form is `.motion-breath` in `table/identity.css`: a scale of 1.5% over `--motion-breath`, which
+  `table/motion.js` lets play on the first one in view and in a visible tab only. No page places one yet: UX6
+  for the showcase's hero, UX9 for the home. The battle's breath is in `table/battle-motion.js`.
 
 ## Pictures
 
@@ -657,7 +665,7 @@ These come from decisions already taken. No pattern below is an exception to the
 - **Pages**: a file of budgets a test reads, as `battle/budget.mjs` is for the bundle.
 - **Cost**: none.
 - **Less motion and screen reader**: none to reduce.
-- **Here**: the home's layout shift was 0.26. The plan proposes 2.5 s and under 0.1; the ADR of UX4 sets them.
+- **Here**: the home's layout shift was 0.26. The plan proposed 2.5 s and under 0.1; [ADR 0197](../adr/0197-hold-the-pages-to-wcag-aa-a-vocabulary-of-motion-and-a-budget.md) sets them.
   One run in a session is not a 75th percentile: UX2 makes the measure repeat.
 
 ### The right size and format
@@ -715,7 +723,7 @@ These come from decisions already taken. No pattern below is an exception to the
 ## Accessibility
 
 The standard to hold is WCAG 2.2, a W3C Recommendation since 5 October 2023, at level AA, with what the games'
-guidelines add (question 2 of the plan; the ADR of UX4 records it). The criteria that bear on these pages, each
+guidelines add (question 2 of the plan; [ADR 0197](../adr/0197-hold-the-pages-to-wcag-aa-a-vocabulary-of-motion-and-a-budget.md) records it). The criteria that bear on these pages, each
 read in [the Recommendation](https://www.w3.org/TR/WCAG22/) and in
 [what is new in 2.2](https://www.w3.org/WAI/standards-guidelines/wcag/new-in-22/):
 
@@ -843,7 +851,8 @@ read in [the Recommendation](https://www.w3.org/TR/WCAG22/) and in
 - **Pages**: the account's setting for less motion (ADR 0140) is the switch, and reaches every page.
 - **Cost**: none.
 - **Less motion and screen reader**: this entry is the rule that form obeys.
-- **Here**: the setting exists in the battle and does not reach the pages. UX4.
+- **Here**: the setting reaches every page of the table since UX4, as `data-motion="less"` on the root
+  (`table/motion.js`): under it ambience is still.
 
 ### What a test can see
 
@@ -862,7 +871,7 @@ read in [the Recommendation](https://www.w3.org/TR/WCAG22/) and in
   Chrome for Developers.
 - **Pages**: a development dependency of the browser suite, never of a page. Each screen and each state of the
   five journeys is scanned.
-- **Cost**: a package in `studio/browser/package.json`, named in the ADR of UX4, and seconds of CI a screen.
+- **Cost**: a package in `studio/browser/package.json`, named in [ADR 0197](../adr/0197-hold-the-pages-to-wcag-aa-a-vocabulary-of-motion-and-a-budget.md), and seconds of CI a screen.
 - **Less motion and screen reader**: the suite runs the journeys once more under `reducedMotion: 'reduce'`.
 - **Here**: the suite holds Playwright alone. The plan's walk ran axe by hand over 14 screens: two rules fail,
   the round's button whose name differs from its label (`#recap-open`) and a rulebook table that scrolls and

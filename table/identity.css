@@ -168,3 +168,81 @@ html[data-feedback-muted] #settings-dialog .settings-feedback { display: none; }
   background: color-mix(in srgb, var(--panel) 70%, transparent); color: var(--bone); font-size: 14px; line-height: 1.4;
   overflow-wrap: anywhere;
 }
+
+/* BEGIN MOTION KIT (ADR 0197, docs/art/ux-craft.md#motion). Five uses, each with one form, and ambience. Only
+   transform and opacity move, by the tokens of docs/art/branding.css. Each form is written first as it is under
+   less motion, a fade or a change of shade; what travels is added for full motion alone, where neither the
+   system (prefers-reduced-motion) nor the account (ADR 0140, the root's data-motion, set by motion.js) asks
+   for less. table/motion.test.js reads this block. */
+
+/* 1. A press answers on the control itself, at once: a lighter shade, and under full motion the control sinks.
+   The transition has no specificity, so a control that names its own transitions keeps them. */
+:where(button, a.primary, .button-link):not(:disabled, [aria-disabled="true"]):active { filter: brightness(1.14); }
+@media (prefers-reduced-motion: no-preference) {
+  :where(:root:not([data-motion="less"])) :where(button, a.primary, .button-link) { transition: scale var(--motion-fast) var(--motion-standard); }
+  :root:not([data-motion="less"]) :where(button, a.primary, .button-link):not(:disabled, [aria-disabled="true"]):active { scale: .98; }
+}
+
+/* 2. A window enters from its starting style and leaves through its fade: `display` and `overlay` wait for it.
+   It leaves faster than it enters. A browser without the features opens and closes it at once. Two are left
+   out. The classic table's mutation tree is always open, shown by `hidden` and dragged about, and keeps the fade
+   table.css gives it. The match's windows wait for UX12: its docked sheets are part of the frame, and the frame
+   moves when one opens. */
+@supports (transition-behavior: allow-discrete) {
+  body:not(.battle-page) dialog:not(.talent-window), body:not(.battle-page) dialog:not(.talent-window)::backdrop {
+    opacity: 0;
+    transition: opacity var(--motion-fast) var(--motion-exit), display var(--motion-fast) allow-discrete, overlay var(--motion-fast) allow-discrete;
+  }
+  body:not(.battle-page) dialog:not(.talent-window)[open], body:not(.battle-page) dialog:not(.talent-window)[open]::backdrop { opacity: 1; transition-duration: var(--motion-normal); transition-timing-function: var(--motion-enter); }
+  @starting-style {
+    body:not(.battle-page) dialog:not(.talent-window)[open], body:not(.battle-page) dialog:not(.talent-window)[open]::backdrop { opacity: 0; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    :root:not([data-motion="less"]) body:not(.battle-page) dialog:not(.talent-window) {
+      translate: 0 8px;
+      transition: opacity var(--motion-fast) var(--motion-exit), translate var(--motion-fast) var(--motion-exit), display var(--motion-fast) allow-discrete, overlay var(--motion-fast) allow-discrete;
+    }
+    :root:not([data-motion="less"]) body:not(.battle-page) dialog:not(.talent-window)[open] { translate: 0 0; transition-duration: var(--motion-normal); transition-timing-function: var(--motion-enter); }
+    @starting-style {
+      :root:not([data-motion="less"]) body:not(.battle-page) dialog:not(.talent-window)[open] { translate: 0 8px; }
+    }
+  }
+}
+
+/* 3. A page changes into the next of this origin by a cross-fade. Under the system's less motion the rule is
+   not declared; under the account's, motion.js has the page being left skip it. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition { navigation: auto; }
+}
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: var(--motion-normal); animation-timing-function: var(--motion-standard); }
+
+/* 4. A thing that arrives in a list: `.motion-arrive` on what the page adds because the host said so. Not on
+   what a page draws when it opens. */
+.motion-arrive { transition: opacity var(--motion-normal) var(--motion-enter); }
+@starting-style {
+  .motion-arrive { opacity: 0; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-motion="less"]) .motion-arrive { transition: opacity var(--motion-normal) var(--motion-enter), translate var(--motion-normal) var(--motion-enter); }
+  @starting-style {
+    :root:not([data-motion="less"]) .motion-arrive { translate: 0 8px; }
+  }
+}
+
+/* 5. A number that changes: `.motion-number`, and numberChanged() of motion.js once its new text is set. */
+@keyframes motion-number-fade { from { opacity: .3; } }
+.motion-number { display: inline-block; }
+.motion-number.motion-changed { animation: motion-number-fade var(--motion-slow) var(--motion-enter); }
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes motion-number { from { opacity: .3; scale: 1.18; } }
+  :root:not([data-motion="less"]) .motion-number.motion-changed { animation-name: motion-number; }
+}
+
+/* Ambience: `.motion-breath` on a picture that breathes. The one kind that plays unasked, so it plays only while
+   motion.js says it is the screen's one ambience, in view, in a visible tab. Under less motion it is still. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes motion-breath { 50% { scale: 1.015; } }
+  :root:not([data-motion="less"]) .motion-breath { transform-origin: 50% 100%; animation: motion-breath var(--motion-breath) ease-in-out infinite paused; }
+  :root:not([data-motion="less"]) .motion-breath[data-ambient="playing"] { animation-play-state: running; }
+}
+/* END MOTION KIT */

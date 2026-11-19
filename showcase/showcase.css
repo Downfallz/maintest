@@ -325,3 +325,15 @@ h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.0
   .rules-contents { position: sticky; top: 16px; max-height: calc(100dvh - 32px); overflow-y: auto; }
   .rules-to-contents { display: none; }
 }
+
+/* BEGIN MOTION KIT (ADR 0197, docs/art/ux-craft.md#motion). The showcase's part of the pages' kit: the same
+   tokens, from branding.css. A press and a page that changes; what travels is written for full motion alone.
+   table/motion.test.js reads this block. */
+:is(.gold-button, .outline-button):active { filter: brightness(1.14); }
+@media (prefers-reduced-motion: no-preference) {
+  .gold-button, .outline-button { transition: scale var(--motion-fast) var(--motion-standard); }
+  :is(.gold-button, .outline-button):active { scale: .98; }
+  @view-transition { navigation: auto; }
+}
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: var(--motion-normal); animation-timing-function: var(--motion-standard); }
+/* END MOTION KIT */

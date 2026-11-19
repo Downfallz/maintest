@@ -72,6 +72,7 @@ internal sealed partial class TableFiles
             ["/account.js"] = (Path.Combine(tableDirectory, "account.js"), JavaScript),
             ["/devices.js"] = (Path.Combine(tableDirectory, "devices.js"), JavaScript),
             ["/game-preferences.js"] = (Path.Combine(tableDirectory, "game-preferences.js"), JavaScript),
+            ["/motion.js"] = (Path.Combine(tableDirectory, "motion.js"), JavaScript),
             ["/friends.js"] = (Path.Combine(tableDirectory, "friends.js"), JavaScript),
             ["/inbox.js"] = (Path.Combine(tableDirectory, "inbox.js"), JavaScript),
             ["/changes.js"] = (Path.Combine(tableDirectory, "changes.js"), JavaScript),

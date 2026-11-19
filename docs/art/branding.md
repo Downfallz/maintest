@@ -55,6 +55,31 @@ variants into slate. Copper is a secondary decorative accent, not a new gameplay
 - The font is `table/fonts/marcellus-latin-400.woff2` (SIL OFL 1.1, `table/fonts/OFL.txt`), served by the table and copied into the public showcase at build time. The studio and the viewer fall back to the serif named after it.
 - In a match the round's bar is the only bar: the site's menu, bell and account sit at its right end.
 
+## Motion
+
+[ADR 0197](../adr/0197-hold-the-pages-to-wcag-aa-a-vocabulary-of-motion-and-a-budget.md) gives the pages a
+vocabulary of motion. Its tokens sit with the palette in `branding.css`; its forms are the motion kit at the foot
+of `table/identity.css`, with `table/motion.js`, and the showcase's part in `showcase/showcase.css`.
+
+| Token | Value | Use |
+| --- | --- | --- |
+| `--motion-instant` | 80 ms | The shortest answer |
+| `--motion-fast` | 120 ms | A press; a window that leaves |
+| `--motion-normal` | 220 ms | A window that enters; a page that changes; a thing that arrives |
+| `--motion-slow` | 360 ms | A number that changes |
+| `--motion-enter`, `--motion-exit`, `--motion-standard` | Curves | What enters, what leaves, what stays |
+| `--motion-breath` | 4 s | One cycle of ambience |
+| `--motion-strip` | 1.2 s | One pass of a strip of frames |
+
+- Five uses, each with one form: a press, a window, a page, a thing that arrives in a list (`.motion-arrive`), a
+  number that changes (`.motion-number`, then `numberChanged()`). Ambience is `.motion-breath`: one a screen, in view.
+- A rule names a token, never a number, and moves `transform` (or `translate`, `scale`, `rotate`) and `opacity` only.
+- Less motion is a form: write the fade first, and the travel inside `@media (prefers-reduced-motion:
+  no-preference)` under `:root:not([data-motion="less"])`. `table/motion.test.js` refuses travel written elsewhere
+  in the kit.
+- A new part of the kit that fades under less motion joins the list the net of `table/table.css` leaves out.
+- No spring. An exit is shorter than its entry. Nothing starts on a clock.
+
 ## Usage
 
 - Let slate occupy most of the page. Use gold for the action or selection that needs attention; do not
