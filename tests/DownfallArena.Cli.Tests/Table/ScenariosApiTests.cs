@@ -849,6 +849,29 @@ public sealed class ScenariosApiTests : IDisposable
         practices.ByToken(play.Token).ShouldBeNull();
     }
 
+    /// <summary>
+    /// A tutorial whose table could not go on did not end its match, so it is not done; nor is it resumed on a finished
+    /// board the person cannot leave as a tutorial's end. It is let go of, and the next time it opens it starts from its
+    /// cut, with nothing kept on the account (#912).
+    /// </summary>
+    [Fact]
+    public async Task A_tutorial_whose_table_could_not_go_on_is_not_resumed_and_opens_from_its_cut_the_next_time()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var (api, accounts) = await KeepingAsync(store, practices);
+        var learner = await SignedInAsync(accounts, "learner");
+        var play = await OpenTutorialAsync(store, practices, "learner");
+        play.Session.Dispose();
+        await Task.WhenAny(play.Session.Outcome);
+
+        var reopened = await api.HandleAsync("GET", $"{ScenariosApi.Prefix}/{Tutorial}/practice", learner);
+
+        reopened.Status.ShouldBe(404);
+        practices.Count.ShouldBe(0);
+        Standing(await api.HandleAsync("GET", ScenariosApi.TutorialsRoute, learner)).State.ShouldBe("new");
+    }
+
     [Fact]
     public async Task Leaving_a_practice_lets_go_of_it_and_the_next_one_starts_from_the_cut()
     {
@@ -981,11 +1004,12 @@ public sealed class ScenariosApiTests : IDisposable
     }
 
     /// <summary>
-    /// The seat view that first says the match is over says the tutorial is done in the same answer, read once: the
-    /// result it opens says Tutorial complete, and leaving from it keeps the tutorial done, never skipped (#912).
+    /// The first seat view that says the match is over also says the tutorial is done, in the same answer, read once,
+    /// and the account can keep it done (#912). It pins the field through the route; the race of a view read before
+    /// the play looks again is pinned by TutorialPlayTests, as a concession's change is looked at before this read.
     /// </summary>
     [Fact]
-    public async Task A_tutorial_s_match_ended_says_it_done_in_the_first_seat_view_that_says_it_over()
+    public async Task A_tutorial_is_done_in_the_first_seat_view_that_says_its_match_over()
     {
         var store = Shipping();
         await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);

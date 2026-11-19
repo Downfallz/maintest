@@ -217,7 +217,7 @@ public sealed class TutorialPlayTests
 
         var done = play.Done;
 
-        done.ShouldBeTrue("a match ended means the tutorial is done, so leaving from the result never skips it (#912)");
+        done.ShouldBeTrue("an ended match means the tutorial is done, so leaving from the result never skips it (#912)");
     }
 
     [Fact]

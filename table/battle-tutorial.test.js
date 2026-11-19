@@ -165,6 +165,10 @@ test('a tutorial that is done is not skipped: its card offers no Skip, and leavi
   assert.equal(leavingSkips(view({}, lesson({ done: true }))), false);
 });
 
+test('leaving a tutorial whose match is over is not skipping it, even before the host says it done (#912)', () => {
+  assert.equal(leavingSkips({ ...view(), over: true }), false);
+});
+
 test('leaving a tutorial before its end is skipping it; leaving a game or a plain practice is not', () => {
   assert.equal(leavingSkips(view()), true);
   assert.equal(leavingSkips({ board: {} }), false);

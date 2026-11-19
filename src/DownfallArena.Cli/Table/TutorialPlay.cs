@@ -94,7 +94,7 @@ internal sealed class TutorialPlay
     /// <summary>Whether the last step was shown and its round ended, or the match ended, win or lose.</summary>
     /// <remarks>
     /// Reads the end of the match from the table, not only from the play's last look. A seat view can show the match
-    /// over before the play looks again. Done must already be true then, or leaving from the result would skip the
+    /// over before the play looks again. Done must be true by then, or leaving from the result would skip the
     /// tutorial (#912). A table let go of, or one that could not go on, did not end its match.
     /// </remarks>
     public bool Done
@@ -104,8 +104,7 @@ internal sealed class TutorialPlay
             var ended = Volatile.Read(ref _table)?.Ended() == true;
             lock (_gate)
             {
-                _done |= ended;
-                return _done;
+                return _done || ended;
             }
         }
     }
@@ -235,7 +234,7 @@ internal sealed class TutorialPlay
     /// </summary>
     private bool Finished(SeatSnapshot snapshot, Seat table)
     {
-        // Read outside this gate: the session's own gate is taken to read it, and never under this one.
+        // Read outside this gate: reading it takes the session's gate, which is never taken while this one is held.
         var ended = table.Ended();
         lock (_gate)
         {

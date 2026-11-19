@@ -490,20 +490,26 @@ test('Play again on a tutorial\'s result starts it over from its cut, and the re
   expect(state.errors).toEqual([]);
 });
 
-// A view that says the match is over but not the tutorial done (a table that could not go on): the result does not
-// say Tutorial complete nor offer its doors, and nothing is said of the tutorial, so it is neither done nor skipped (#912).
-test('a tutorial\'s match over without the host saying it done is no tutorial end, and leaving it skips nothing', async ({ page }) => {
+// The view says the match is over but not that the tutorial is done (a table that could not go on). The result is
+// still the tutorial's, with Play again and Leave the tutorial and no game's Rematch or Lobby, but it does not say
+// Tutorial complete. Leaving from it tells the host nothing about the tutorial: it is neither done nor skipped (#912).
+test('a match over before the host says the tutorial done is not called complete, and leaving it skips nothing', async ({ page }) => {
   test.setTimeout(120000);
   const state = await mount(page, { endsMatch: true });
   state.notYetDone = true;
   await page.locator('#practice-brief-begin').click();
   for (let index = 0; index < lesson.steps.length; index++) await playStep(page, state, index);
-
   await matchResult(page);
-
   await expect(page.locator('#match-eyebrow')).not.toHaveText('TUTORIAL COMPLETE');
-  await expect(page.locator('#match-again')).toBeHidden();
-  await expect(page.locator('#match-leave')).toBeHidden();
+  await expect(page.locator('#match-again')).toBeVisible(); await expect(page.locator('#match-leave')).toBeVisible();
+  await expect(page.locator('#match-rematch')).toBeHidden(); await expect(page.locator('#match-lobby')).toBeHidden();
+  await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: '<title>Home</title>' }));
+
+  await page.locator('#match-leave').click();
+
+  await expect(page).toHaveTitle('Home');
+  // The page leaves after 1.5 s at most, its requests sent with keepalive: the route may hear of them after Home shows.
+  await expect.poll(() => state.left).toBe(1);
   expect(state.said).toEqual([]);
   expect(state.errors).toEqual([]);
 });

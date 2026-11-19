@@ -275,7 +275,7 @@ public sealed class SteppedSessionTests : IDisposable
         session.HasEnded.ShouldBeTrue();
     }
 
-    /// <summary>A table let go of plays on no more, but it did not end its match: no outcome, no end (#912).</summary>
+    /// <summary>A table let go of plays on no more, but its match did not end: it has no outcome (#912).</summary>
     [Fact]
     public async Task A_table_let_go_of_is_over_without_having_ended_its_match()
     {
@@ -290,8 +290,9 @@ public sealed class SteppedSessionTests : IDisposable
     }
 
     /// <summary>
-    /// A tutorial played on a table let go of is not done: its practice is not kept as finished on the account. It
-    /// guards the tutorial reading the session's end rather than whether it plays on (#912).
+    /// A tutorial played on a table that was let go of is not done, so the account does not keep its practice as
+    /// finished. This guards against the tutorial reading whether the session plays on, instead of whether its match
+    /// ended (#912).
     /// </summary>
     [Fact]
     public async Task A_tutorial_on_a_table_let_go_of_is_not_done()
