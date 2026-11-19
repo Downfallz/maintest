@@ -92,12 +92,19 @@ internal sealed class TutorialPlay
     }
 
     /// <summary>Whether the last step was shown and its round ended, or the match ended, win or lose.</summary>
+    /// <remarks>
+    /// A match over is read from the table, not only from what the play last looked at: a seat view read before the
+    /// play looks again says the match is over, and must say the tutorial is done with it, or leaving from the
+    /// result would skip it (#912).
+    /// </remarks>
     public bool Done
     {
         get
         {
+            var over = Volatile.Read(ref _table)?.Over() == true;
             lock (_gate)
             {
+                _done |= over;
                 return _done;
             }
         }

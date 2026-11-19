@@ -209,6 +209,18 @@ public sealed class TutorialPlayTests
     }
 
     [Fact]
+    public void A_tutorial_whose_match_is_over_is_done_before_the_play_looks_at_its_seat_again()
+    {
+        var play = Play();
+        var (asked, _) = AskedASpeed(_ => DecisionTaken.Late);
+        play.Follow(asked with { Over = () => true });
+
+        var done = play.Done;
+
+        done.ShouldBeTrue("a seat view that says the match is over says the tutorial is done, so leaving from its result never skips it (#912)");
+    }
+
+    [Fact]
     public void Before_anything_goes_wrong_every_kind_the_lesson_does_not_teach_is_assisted() =>
         Play().Assisted.ShouldBe(["Evolution", "Speed", "TieOrder", "Intent", "Target"]);
 }
