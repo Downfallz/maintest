@@ -164,12 +164,12 @@ export function parseArguments(argv) {
   return { ...options, film };
 }
 
-// A fizzle's or a wound's sheet beside the spell's own, not over it.
-/** The motion of a film as text a person can read down: one line a frame, the view then each figure. */
+/** The motion of a film as JSON Lines, read down by a person or line by line by a script: the title, then a frame a line. */
 export function motionLines({ title, frames }) {
   return `${JSON.stringify({ title })}\n${frames.map(frame => JSON.stringify(frame)).join('\n')}\n`;
 }
 
+// A fizzle's or a wound's sheet beside the spell's own, not over it.
 export const fileName = (spell, { outcome, wound, damage, defeat } = {}) =>
   `${spell.split(':')[1] ?? spell}${outcome === 'fizzled' ? '-fizzled' : ''}${wound ? '-wound' : ''}${damage === undefined ? '' : `-${damage}`}${defeat ? '-defeat' : ''}.png`;
 
@@ -195,7 +195,7 @@ async function main(argv) {
       await writeFile(path, sheet);
       console.log(path);
       if (options.motion) {
-        const beside = path.replace(/\.png$/, '.motion.json');
+        const beside = path.replace(/\.png$/, '.motion.jsonl');
         await writeFile(beside, motionLines(motion));
         console.log(beside);
       }

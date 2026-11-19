@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { DRAW_MS, IMPACT_MS, STRIKE_MS, WINDUP_MS, VFX_MS, MOTION_SCALE } from '../../table/battle-timing.js';
 import { stagingBeats } from '../../table/battle-staging.js';
+import { BONE } from '../../table/battle-motion.js';
 import type { SpellVisual } from './types';
 import type { EffectsKit, StagedBeat } from './fx';
 
@@ -13,7 +14,7 @@ const PALETTE: Record<string, number> = {
 const MOTIF_COLOR: Record<string, number> = { fire: 0xd58b75, wound: 0xb66f7e };
 // The colours a beat names (`table/battle-staging.js`): the palette's bone, which stays equal to `--brand-bone`
 // (docs/art/branding.css), and the two a motif already carries. The target marker's gold is not among them.
-const TINTS: Record<string, number> = { bone: 0xd8c7a7, ember: MOTIF_COLOR.fire, blood: MOTIF_COLOR.wound };
+const TINTS: Record<string, number> = { bone: BONE, ember: MOTIF_COLOR.fire, blood: MOTIF_COLOR.wound };
 
 // Between two copies of one beat, at 1× (*house*, the craft book's 30 to 60 ms).
 const STAGGER_MS = 40;
@@ -143,6 +144,11 @@ export class SpellEffects {
       charge.beginPath().arc(0, 0, r * .7, 2.4, 5).strokePath();
     }
     this.fade(charge, rate, WINDUP_MS, 1.6);
+  }
+
+  /** Whether the spell's own staging flashes its targets, now that the kit is here to play it: the scene then does not. */
+  flashes(visual: SpellVisual) {
+    return this.staged(visual, 'impact')?.some(beat => beat.beat === 'flash' && beat.on === 'target') ?? false;
   }
 
   /** Once a cast, before its recipients: the impact's beats on the caster, and the shake. */

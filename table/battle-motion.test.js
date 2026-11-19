@@ -5,7 +5,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { DRAW_MS, STRIKE_MS, WINDUP_MS, IMPACT_MS, RETURN_MS, RETURN_DELAY_MS, playbackRate } from './battle-timing.js';
-import { ACTION_END_MS, BREATH, CAST, DEATH, FLASH_MS, PUNCH, THROW, TRAUMA, WEIGHTS, blowWeight, breath, lastBeat, lossOf, meleeBeats,
+import { readFileSync } from 'node:fs';
+
+import { ACTION_END_MS, BONE, BREATH, DRAINED, CAST, DEATH, FLASH_MS, PUNCH, THROW, TRAUMA, WEIGHTS, blowWeight, breath, lastBeat, lossOf, meleeBeats,
   punches, reaction, shakeOf, traumaAfter, traumaOf, wander, weightOf } from './battle-motion.js';
 
 const cue = (changes, extra = {}) => ({ recipients: changes.map(one => one.creature), changes, ...extra });
@@ -50,16 +52,10 @@ test('a light blow keeps the draw back and the strike the queue was timed on, an
   assert.deepEqual(meleeBeats('unheard of'), light);
 });
 
-test('every beat of the movement ends inside its window, at every playback rate', () => {
-  for (const rate of [0.5, 1, 1.5, 2]) {
-    const speed = playbackRate(rate);
-    for (const weight of Object.keys(WEIGHTS)) {
-      assert.ok(lastBeat(weight) / speed <= ACTION_END_MS / speed, `${weight} at ${rate}×`);
-      const beats = meleeBeats(weight);
-      // The queue shows the impact when the windup ends: the strike must have landed by then, and not before.
-      assert.equal((beats.strike.at + beats.strike.lasts) / speed, WINDUP_MS / speed);
-    }
-  }
+test('every beat of the movement ends inside its window', () => {
+  // At 1×. The queue divides its windows by the playback rate, so the beats fit at every rate as long as the
+  // scene divides each of them by the same rate: the next test holds it to that.
+  for (const weight of Object.keys(WEIGHTS)) assert.ok(lastBeat(weight) <= ACTION_END_MS, weight);
   assert.equal(ACTION_END_MS, WINDUP_MS + IMPACT_MS);
   assert.equal(CAST.rise.at + CAST.rise.lasts, WINDUP_MS);
   assert.equal(CAST.load.at + CAST.load.lasts, CAST.rise.at);
@@ -67,6 +63,23 @@ test('every beat of the movement ends inside its window, at every playback rate'
   assert.equal(THROW.toss.at, DRAW_MS, 'the thrower lets go when the projectile leaves');
   assert.ok(WINDUP_MS + DEATH.settle.at + DEATH.settle.lasts <= ACTION_END_MS);
   assert.equal(DEATH.fall.at + DEATH.fall.lasts, DEATH.settle.at);
+});
+
+test('every duration the body plays is divided by the playback rate', () => {
+  // A tween that forgot the rate would land after the impact at 2× and before it at 0.5×.
+  const source = readFileSync(new URL('../battle/src/body-motion.ts', import.meta.url), 'utf8');
+  const timed = [...source.matchAll(/\b(duration|delay|hold): ([^,}\n]+)/g)];
+  assert.ok(timed.length >= 20, `${timed.length} durations read`);
+  for (const [, key, value] of timed.filter(([, , value]) => value !== 'number')) assert.match(value, /\/ rate\b|^ms\b/, `${key}: ${value}`);
+  for (const rate of [0.5, 1, 1.5, 2]) assert.equal(playbackRate(rate), rate);
+});
+
+test('the flash is the palette\'s bone and a fallen figure drains toward its line colour', () => {
+  const palette = readFileSync(new URL('../docs/art/branding.css', import.meta.url), 'utf8');
+  const colour = name => Number.parseInt(new RegExp(`--brand-${name}: #([0-9a-f]{6});`).exec(palette)[1], 16);
+  assert.equal(BONE, colour('bone'));
+  assert.equal(DRAINED, colour('line'));
+  assert.notEqual(BONE, colour('gold'));
 });
 
 test('a struck figure flashes only when it lost health, and is thrown further the more it lost', () => {
@@ -81,8 +94,13 @@ test('a struck figure flashes only when it lost health, and is thrown further th
   // From a distance the stop is half as long and the push the same.
   const far = reaction({ lost: 8 }, false);
   assert.deepEqual([far.stop, far.tremor.distance, far.recoil.distance], [60, 1, 26]);
-  // The tremor's swings fill the stop.
-  for (const one of [light, heavy, far]) assert.ok(one.tremor.swings * one.tremor.swing * 2 <= one.stop);
+  // The tremor's swings fill the stop and end with it, for every weight, a body's blow or not: a tremor that ran
+  // on would fight the recoil for the figure's place.
+  for (const lost of [0, 2, 5, 8]) for (const melee of [true, false]) {
+    const { stop, tremor } = reaction({ lost }, melee);
+    assert.ok(Math.abs(tremor.swings * tremor.swing * 2 - stop) < 1e-9, `${lost} lost, melee ${melee}: ${tremor.swings} swings of ${tremor.swing} ms in ${stop} ms`);
+    assert.ok(tremor.swings >= 1 && tremor.swing > 0);
+  }
 });
 
 test('the breath moves the height by 1.5% over 3600 ms, and no two neighbours rise together', () => {
@@ -125,6 +143,8 @@ test('the zoom punches on a defeat or a critical hit only', () => {
   assert.equal(punches(cue([{ creature: 'b1', health: -2, defeated: true }]), 'a1'), true);
   assert.equal(punches(cue([{ creature: 'b1', health: -2 }], { roll: { value: 20, critical: true } }), 'a1'), true);
   assert.equal(punches(cue([{ creature: 'b1', health: -2 }], { roll: { value: 3, critical: false } }), 'a1'), false);
+  // A critical heal or ward took nothing from anyone: no punch.
+  assert.equal(punches(cue([{ creature: 'a2', health: 6 }], { roll: { value: 20, critical: true } }), 'a1'), false);
   // A caster felled by its own cost is not a killing blow.
   assert.equal(punches(cue([{ creature: 'a1', defeated: true }]), 'a1'), false);
   assert.ok(PUNCH.lasts <= IMPACT_MS);

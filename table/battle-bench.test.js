@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { benchCreatures, benchDefaultTargets, benchDuration, benchEntries, benchFrame, benchStage, benchTitle, filmInterval,
   filmTitle, seededRandom, FILM_FRAMES, FILM_TICK_MS } from './battle-bench.js';
 import { IMPACT_MS, WINDUP_MS } from './battle-timing.js';
-import { fileName, parseArguments } from '../scripts/battle/filmstrip.mjs';
+import { fileName, motionLines, parseArguments } from '../scripts/battle/filmstrip.mjs';
 import { laboratoryOnly } from '../battle/live-guard.mjs';
 import { benchSpells } from '../battle/bench-spells.mjs';
 
@@ -198,6 +198,10 @@ test('the film strip script reads its options, and refuses what it cannot film',
   assert.throws(() => parseArguments(['spell:pummel:v1', '--fizzle', '--defeat']), /fizzle/);
   assert.throws(() => parseArguments(['spell:pummel:v1', '--fizzle', '--damage', '3']), /fizzle/);
   assert.equal(fileName('spell:pummel:v1', { damage: 6, defeat: true }), 'pummel-6-defeat.png');
+  assert.equal(parseArguments(['spell:pummel:v1', '--motion']).motion, true);
+  // The motion beside a sheet is JSON Lines: the title, then a frame a line, each read by itself.
+  const lines = motionLines({ title: 'Pummel · 1×', frames: [{ ms: 0, stage: 'windup', view: { trauma: 0 }, figures: [] }, { ms: 240, stage: 'windup', view: { trauma: 0 }, figures: [] }] }).trimEnd().split('\n');
+  assert.deepEqual(lines.map(line => JSON.parse(line)).map(one => one.title ?? one.ms), ['Pummel · 1×', 0, 240]);
   // Their sheets lie beside the spell's own.
   assert.deepEqual([fileName('spell:pummel:v1'), fileName('spell:pummel:v1', { outcome: 'fizzled' }), fileName('spell:pummel:v1', { wound: true })],
     ['pummel.png', 'pummel-fizzled.png', 'pummel-wound.png']);

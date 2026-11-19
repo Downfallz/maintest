@@ -213,7 +213,7 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 - **Cost**: none: a tint is a vertex attribute and does not break the batch.
 - **Reduced motion**: nothing. A flash is exactly what the setting removes.
 - **Here**: built in BC5, as the acting halo fills a sprite's shape (`battle/src/acting-halo.ts`): once per hit,
-  80 ms (*house*), only on a figure that lost health, in the palette's bone (`--bone`, `docs/art/branding.md`) and
+  80 ms (*house*), only on a figure that lost health and that the spell's own staging does not flash, in the palette's bone (`--bone`, `docs/art/branding.md`) and
   never in the target marker's gold. See "Flash limits" before using it on several figures at once.
 
 ### Death
@@ -231,7 +231,7 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 - **Reduced motion**: the settled frame: the figure at its defeated alpha, at once.
 - **Here**: built in BC5, inside the impact window: the flash and the stop at full alpha, a recoil with no
   return, a hold, then the fall. The figure slumps and tips, sinks back onto its own spot, fades to 20% and drains
-  toward slate by a tint, with no filter: it fades as it drains, so a colour matrix would have little left to show
+  toward the palette's cold grey (`--brand-line`) by a tint, with no filter: it fades as it drains, so a colour matrix would have little left to show
   on. It ends on the settled frame: at home, upright, untinted, at 20%.
 
 ### Breath at rest

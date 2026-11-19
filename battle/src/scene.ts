@@ -420,9 +420,9 @@ export class BattleScene extends Phaser.Scene implements Restful {
     if (punches(cue, this.state.actor)) this.viewShake.punchIn();
   }
 
-  private fell(figure: Figure, line: ReturnType<typeof strikeApproach> | null, melee: boolean) {
+  private fell(figure: Figure, line: ReturnType<typeof strikeApproach> | null, melee: boolean, flashes = true) {
     this.tweens.killTweensOf(figure.image);
-    fall(this, figure, line, melee, this.rate, () => this.falling.delete(figure.id));
+    fall(this, figure, line, melee, this.rate, flashes, () => this.falling.delete(figure.id));
   }
 
   // The silhouette as drawn now, wherever the action has carried the image: its foot and its visible size.
@@ -453,6 +453,8 @@ export class BattleScene extends Phaser.Scene implements Restful {
       this.spellEffects.cast(cue.visual, this.effectFigure(this.state.actor!, actor), this.rate, first && this.anchor(first));
     }
     const melee = cue.visual.delivery === 'melee';
+    // One flash a figure an action: a staging that flashes its targets takes the place of the scene's own.
+    const flashes = !this.spellEffects.flashes(cue.visual);
     for (const id of cue.recipients) {
       const target = this.figures.get(id);
       if (!target) continue;
@@ -470,8 +472,8 @@ export class BattleScene extends Phaser.Scene implements Restful {
       if (self || !actor) continue;
       // How the figure answers: a body's blow throws whoever it struck; from a distance, whoever lost health.
       const loss = lossOf(cue, id), line = strikeApproach(actor.home, target.home);
-      if (this.falling.has(id)) { thrown.add(id); this.fell(target, line, melee); }
-      else if (melee ? cue.struck.includes(id) : loss.lost > 0) struck(this, target, line, loss, melee, this.rate);
+      if (this.falling.has(id)) { thrown.add(id); this.fell(target, line, melee, flashes); }
+      else if (melee ? cue.struck.includes(id) : loss.lost > 0) struck(this, target, line, loss, melee, this.rate, flashes);
     }
   }
 

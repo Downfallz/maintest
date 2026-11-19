@@ -79,7 +79,7 @@ const bench = make('section', { id: 'bench' },
     make('label', { className: 'bench-wound' }, woundBox, make('span', {}, 'The caster pays in blood'))),
   make('div', { className: 'bench-outcome' },
     make('label', { className: 'bench-field' }, make('span', {}, 'Health lost'), damageInput),
-    make('label', { className: 'bench-wound' }, defeatBox, make('span', {}, 'The blow defeats'))),
+    make('label', { className: 'bench-wound' }, defeatBox, make('span', {}, 'The blow defeats its target'))),
   make('div', { className: 'bench-run' }, playButton, status));
 bench.setAttribute('aria-label', 'Effects bench');
 lab.dataset.bench = 'true';

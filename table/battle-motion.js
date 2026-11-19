@@ -39,6 +39,11 @@ export function blowWeight(cue, actor) {
 const STRIKE_LEAN = 9, STRETCH_MS = 120, RELEASE_MS = 80, RETURN_AFTER_MS = 60;
 const RECOIL_OUT_MS = 280, TREMOR_SWING_MS = 30;
 
+// The two colours the movement puts on a figure, both the palette's (docs/art/branding.css): the hit flash is
+// `--brand-bone`, never the target marker's gold, and a fallen figure drains toward `--brand-line`, a cold grey.
+export const BONE = 0xd8c7a7;
+export const DRAINED = 0x52636b;
+
 /**
  * The caster of a melee blow, in milliseconds from the start of the action: the draw back, the hold at its far
  * end, the strike, which always ends with the windup, the stretch over the strike's last 120 ms, then, after the
@@ -78,9 +83,12 @@ export const FLASH_MS = 80;
 export function reaction(loss, melee) {
   const scale = WEIGHTS[weightOf(loss)];
   const stop = melee ? scale.stop : scale.stop / 2;
+  // The tremor fills the stop and ends with it, so the recoil never starts while the figure still trembles: whole
+  // swings out and back, about 30 ms each way, their length worked back from the stop.
+  const swings = Math.max(1, Math.round(stop / (TREMOR_SWING_MS * 2)));
   return {
     flash: loss.lost > 0 || loss.defeated ? FLASH_MS : 0,
-    stop, tremor: { distance: melee ? 2 : 1, swing: TREMOR_SWING_MS, swings: Math.max(1, Math.round(stop / (TREMOR_SWING_MS * 2))) },
+    stop, tremor: { distance: melee ? 2 : 1, swing: stop / (swings * 2), swings },
     recoil: { at: stop, out: RECOIL_OUT_MS, stay: scale.stay, back: RECOIL_OUT_MS, distance: scale.recoil, tilt: scale.tilt },
   };
 }
@@ -91,7 +99,7 @@ export function reaction(loss, melee) {
  */
 export const DEATH = Object.freeze({
   recoil: Object.freeze({ lasts: 320, distance: WEIGHTS.heavy.recoil, tilt: WEIGHTS.heavy.tilt }),
-  fall: Object.freeze({ at: 600, lasts: 760, height: .9, width: 1.05, tip: 6, alpha: .2, slate: 0x6f7880 }),
+  fall: Object.freeze({ at: 600, lasts: 760, height: .9, width: 1.05, tip: 6 }),
   settle: Object.freeze({ at: 1360, lasts: 200 }),
 });
 export const DEFEATED_ALPHA = .2;
@@ -137,9 +145,9 @@ export function wander(ms) {
   };
 }
 
-/** Whether a defeat or a critical hit punches the zoom. */
+/** Whether the zoom punches: on a defeat, or on a critical hit that took health. A critical heal or ward does not. */
 export function punches(cue, actor) {
-  return cue?.roll?.critical === true || others(cue, actor).some(id => lossOf(cue, id).defeated);
+  return others(cue, actor).some(id => lossOf(cue, id).defeated) || (cue?.roll?.critical === true && traumaOf(cue, actor) > 0);
 }
 
 /** The end of every beat of the movement, in milliseconds from the start of the action: what a window must hold. */

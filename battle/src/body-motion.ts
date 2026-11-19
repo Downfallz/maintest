@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { CAST, DEATH, DEFEATED_ALPHA, THROW, meleeBeats, reaction } from '../../table/battle-motion.js';
+import { BONE, CAST, DEATH, DEFEATED_ALPHA, DRAINED, THROW, meleeBeats, reaction } from '../../table/battle-motion.js';
 import type { Placement } from './types';
 
 // How a figure's body plays an action (docs/art/storyboards/movement.md): it loads, strikes, is struck, falls.
@@ -12,8 +12,6 @@ export interface Body { image: Phaser.GameObjects.Image; shadow: Phaser.GameObje
 /** The line of a blow: the unit vector from the caster's home to the target's, and where the caster stops. */
 export interface Line { x: number; y: number; dx: number; dy: number }
 
-// The palette's bone (`--brand-bone`, docs/art/branding.md): the hit flash's colour, never the target marker's gold.
-const BONE = 0xd8c7a7;
 const WHITE = 0xffffff;
 const side = (line: Line) => line.dx < 0 ? -1 : 1;
 
@@ -95,11 +93,12 @@ function tremble(scene: Phaser.Scene, body: Body, line: Line, tremor: { distance
 
 /**
  * A struck figure: the flash when it lost health, the stop, then the recoil along the line of the blow, out, held
- * and back. `melee` says a body struck it; from a distance the stop is shorter.
+ * and back. `melee` says a body struck it; from a distance the stop is shorter. `flashes` is false when the
+ * spell's own staging flashes the figure: one flash a figure an action (the craft book, "Flash limits").
  */
-export function struck(scene: Phaser.Scene, body: Body, line: Line, loss: { lost: number; defeated: boolean }, melee: boolean, rate: number) {
+export function struck(scene: Phaser.Scene, body: Body, line: Line, loss: { lost: number; defeated: boolean }, melee: boolean, rate: number, flashes = true) {
   const { image, home } = body, answer = reaction(loss, melee), { recoil } = answer;
-  if (answer.flash) flash(scene, body, answer.flash / rate);
+  if (answer.flash && flashes) flash(scene, body, answer.flash / rate);
   tremble(scene, body, line, answer.tremor, rate);
   // The recoil leaves from home and comes back to it, wherever the tremor stands when the stop ends: at 2× a swing
   // is shorter than a frame, and a recoil that left from the tremor's far end would come back to it.
@@ -119,10 +118,10 @@ const mix = (from: number, to: number, share: number) => {
  * last of it eases the slump out, so the action ends exactly on the settled frame. `line` is null for a figure
  * no blow threw (a caster felled by its own cost): it only falls. `done` runs when the fall is over.
  */
-export function fall(scene: Phaser.Scene, body: Body, line: Line | null, melee: boolean, rate: number, done: () => void) {
+export function fall(scene: Phaser.Scene, body: Body, line: Line | null, melee: boolean, rate: number, flashes: boolean, done: () => void) {
   const { image, shadow, home } = body, lean = line ? side(line) : 1;
   const { recoil, fall: down, settle } = DEATH;
-  flash(scene, body, reaction({ lost: 0, defeated: true }, melee).flash / rate);
+  if (flashes) flash(scene, body, reaction({ lost: 0, defeated: true }, melee).flash / rate);
   if (line) {
     const answer = reaction({ lost: 0, defeated: true }, melee);
     tremble(scene, body, line, answer.tremor, rate);
@@ -133,12 +132,12 @@ export function fall(scene: Phaser.Scene, body: Body, line: Line | null, melee: 
   scene.tweens.add({ targets: image, x: home.x, y: home.y, angle: tilt, scaleX: body.scale * down.width, scaleY: body.scale * down.height,
     alpha: { value: DEFEATED_ALPHA, ease: 'Sine.In' }, delay: down.at / rate, duration: down.lasts / rate, ease: 'Sine.InOut' });
   scene.tweens.add({ targets: shadow, alpha: DEFEATED_ALPHA, delay: down.at / rate, duration: down.lasts / rate, ease: 'Sine.In' });
-  // The colour drained: a multiply tint toward a cold slate, and back as the figure settles. No filter: a tint is
+  // The colour drained: a multiply tint toward a cold grey of the palette, and back as the figure settles. No filter: a tint is
   // a vertex attribute, and by the time a colour matrix would show, the figure has faded.
   const drain = (from: number, to: number, delay: number, lasts: number, end?: () => void) => scene.tweens.addCounter({ from: 0, to: 1,
     delay: delay / rate, duration: lasts / rate,
     onUpdate: tween => { if (image.active) image.setTint(mix(from, to, tween.getValue() ?? 0)); }, onComplete: end });
-  drain(WHITE, down.slate, down.at, down.lasts);
-  drain(down.slate, WHITE, settle.at, settle.lasts, () => { if (image.active) image.clearTint(); done(); });
+  drain(WHITE, DRAINED, down.at, down.lasts);
+  drain(DRAINED, WHITE, settle.at, settle.lasts, () => { if (image.active) image.clearTint(); done(); });
   scene.tweens.add({ targets: image, angle: 0, ...rested(body), delay: settle.at / rate, duration: settle.lasts / rate, ease: 'Quad.Out' });
 }

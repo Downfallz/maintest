@@ -241,19 +241,19 @@ that extends it.
    - The laboratory's sample hit lost its 14 sparks drawn by hand: it is a light blow with the kit's burst.
    - The book's rule of the bright beats is settled: each starts within 120 ms of contact and is gone within
      320 ms of it. The kit's 320 ms burst stands.
-   - Found by the specs: at 2× a tremor's swing is shorter than a frame, and a recoil that left from the
-     tremor's far end came back to it. The recoil now leaves from home.
+   - Found by the specs: at 2× a tremor's swing is shorter than a frame, and a recoil that started from the
+     tremor's far end returned to that end instead of home. The recoil now starts from home.
 
    Left:
 
    - The choices under each storyboard's **Left** wait for the owner. The ones a player would notice: the wind-up
      is scaled by the confirmed outcome before the number shows; every family moves the view, not only the
-     physical one (`docs/art/spell-vfx.md` now says so); the fallen body sinks back onto its own spot.
+     physical one (built so, and `docs/art/spell-vfx.md` says so: the owner may still refuse it); the fallen body sinks back onto its own spot.
    - The motif's pale arc still plays in the windup beside the body's own load: BC6 to BC8 decide each spell's.
    - A projectile's caster throws at 240 ms, when the quill's flight starts, but the quill eases in and is seen to
      leave only near 600 ms. BC7, which gives the quill its arc, makes it leave with the throw.
    - The critique's one fault of the build is fixed: an impact that arrived a frame before the strike's end left
-     the caster short of its contact pose. Its other finding is the line above.
+     the caster short of its contact pose. Its other finding is the projectile's late leave, above.
    - Frame time is not measured, and nobody has seen the breath on a phone: BC10.
 6. **BC6, the physical spells and the two base actions.** 17 stagings. Tests: the film strips, the browser specs
    the change touches, one staging per spell in the data.

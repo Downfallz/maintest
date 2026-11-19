@@ -2,7 +2,8 @@
 
 The body and camera language every action shares, whatever its spell: how a figure loads, strikes, is struck, falls,
 rests, and how the view answers a hit. It is BC5 of [the battle's craft plan](../battle-craft-plan.md). It stages no
-spell: BC6 to BC8 place each spell's own beats on top of these, and [Strike](base-actions.md) already names which of its beats are this file's. The numbers here are the defaults a staging does not repeat.
+spell: BC6 to BC8 place each spell's own beats on top of these, and [Strike](base-actions.md) already names which
+of its beats are this file's. The numbers here are the defaults a staging does not repeat.
 
 The weight of a blow is read from the host's confirmed outcome, `cue.changes`: the health each recipient lost, in
 points. The scene does not know a creature's maximum health, so the scale is in absolute points (*house*). In
@@ -53,7 +54,7 @@ beats on shorter numbers, listed under the table.
 | 320 | 520 | windup | the caster | The strike to the approach point (`strikeApproach`), eased `Cubic.In`, leaning 9° into the blow. Shorter than a light strike's 600 ms over a longer way, so it arrives faster. | [Contact and follow-through](../battle-craft.md#contact-and-follow-through) |
 | 720 | 120 | windup | the caster | Stretch 8% (*house*, the book's ceiling) along the main axis of the travel (up and down on a phone held upright, across on a wide screen), the other axis narrowed to keep the volume, about the feet: the image's origin is already its ground anchor. | [Squash and stretch](../battle-craft.md#squash-and-stretch) |
 | 840 | 120 | impact | the caster and the target | Hit stop, 120 ms (*house*). The caster holds at contact, stretched; the target trembles ±2 px across the line of the blow, 30 ms a swing (*house*). Made of the two figures' tween delays, not the global time scale: the spell's motif and burst play through the stop. | [Hit stop](../battle-craft.md#hit-stop) |
-| 840 | 80 | impact | the target | Hit flash: the target filled flat in bone (`--bone`), 80 ms, then its tint cleared. Only on a figure that lost health. | [Hit flash](../battle-craft.md#hit-flash), [Flash limits](../battle-craft.md#flash-limits) |
+| 840 | 80 | impact | the target | Hit flash: the target filled flat in bone (`--bone`), 80 ms, then its tint cleared. Only on a figure that lost health, and not when the spell's own staging flashes it. | [Hit flash](../battle-craft.md#hit-flash), [Flash limits](../battle-craft.md#flash-limits) |
 | 840 | 264 | impact | the camera | The target's loss adds 0.55 to the trauma, which falls by 0.25 every 120 ms: still by 1104 ms. See "The camera" below. | [Shake from trauma](../battle-craft.md#shake-from-trauma) |
 | 960 | 80 | impact | the caster | The stretch released to rest, eased `Quad.Out`. | [Squash and stretch](../battle-craft.md#squash-and-stretch) |
 | 960 | 640 | impact | the target | Recoil after the stop: 26 px and 8° (*house*) along the line from the caster's home to the target's, 280 ms out eased `Quad.Out`, held 80 ms, 280 ms back. | [Recoil](../battle-craft.md#recoil) |
@@ -137,7 +138,7 @@ The sheets cannot show the 8% stretch on a figure 130 px tall (about 10 px), the
   frame does not already hold (ADR 0131), but the owner may find that a heavy wind-up gives the result away.
 - A heavy blow holds 80 ms at the end of its draw back and strikes in 520 ms: the windup stays 840 ms, so
   `table/battle-timing.js` does not move. The draw back and the strike are no longer `DRAW_MS` and `STRIKE_MS`
-  for a medium or heavy blow; the session keeps their sum.
+  for a medium or heavy blow; the code keeps their sum.
 - A figure that loses nothing is not flashed: the flash says "lost health". This settles the question Strike's
   storyboard left. It still recoils, as a light blow: contact happened (ADR 0131).
 - The recoil is in pixels, as today, whatever the figure's size on the screen. On a wide screen 26 px is a smaller
@@ -160,10 +161,10 @@ Filmed at `7ddc6a9`, 390 by 844, 1×: Quill (`spell:throwing_star:v1`, a project
 (`spell:adrenaline_tonic:v1`, a cast, a1 on a2), each a whole action and a contact, no health change given.
 
 - Overdrive, 0 to 180 ms: a pale arc on a1, fading by 240 ms. From 0 to 2640 ms a1 does not move at all, nor a2.
-  900 to 1380 ms: the spores rise on a2 and fade. Nothing on a1 says it cast, but its halo.
+  900 to 1380 ms: the spores rise on a2 and fade. Nothing on a1 says it cast, except its halo.
 - Quill, 0 to 540 ms: the quill stands upright on a1's body, still, as if part of it. 600 ms: at a1's back. 660 to
   780 ms: across the field. 840 ms: gone, and no motif yet. 900 ms: the strokes on b1, in the biological green.
-- Quill: a1 does not move. b1 does not move: only a melee target recoils today. A1's dorsal quills, the approved
+- Quill: a1 does not move. b1 does not move: only a melee target recoils today. a1's dorsal quills, the approved
   execution ("Detachable dorsal bone quills projected toward up to two foes"), are not seen to throw.
 
 ### Beats
@@ -221,7 +222,7 @@ node scripts/battle/filmstrip.mjs spell:engulfing_flames:v1 --actor a1 --targets
   toward b1 (at 300 ms the throw has only brought it back to its ring). 840 ms: a1 at home. On no frame is a1 more
   than 8 px from home.
 - Quill, 840 and 900 ms: b1 filled flat in bone (the flash is 80 ms), at home; 960 ms: not filled.
-- Quill, 1080 to 1200 ms: b1 off its ring away from a1 (light: 12 px). 1440 ms: b1 home.
+- Quill, 1080 to 1200 ms: b1 off its ring away from a1 (light: 12 px). 1500 ms: b1 home.
 - Incinerate (`spell:engulfing_flames:v1`, the cast sheet with 8 lost), 1200 ms: b1 at the far end of a recoil as
   long as the heavy melee's, away from a1.
 
@@ -248,7 +249,7 @@ keeps it, faded, where it stood. A death is rare and decisive, so it is the one 
 
 ### Today
 
-Not filmed: the bench learns `--defeat` in this stage. From the code (`battle/src/scene.ts`, `present`): a creature
+Not filmed at `7ddc6a9`, before the bench had `--defeat`. From the code (`battle/src/scene.ts`, `present`): a creature
 the frame gives as not alive is drawn at 20% alpha and its shadow at 20% the moment the impact frame arrives. So at
 840 ms the defeated figure drops to 20% in one frame, and its recoil, if melee, plays on a figure already faded. Its
 auras go at once. The settled frame, which this storyboard keeps: the figure at home, unscaled, untinted, at 20%,
@@ -263,11 +264,11 @@ distance the recoil starts at 900 ms, after the target's 60 ms stop, and every l
 | --- | --- | --- | --- | --- | --- |
 | 840 | 80 | impact | the fallen | Hit flash in bone, 80 ms: its one flash. The figure is at full alpha: the scene holds the frame's 20% until the fall gives it. | [Hit flash](../battle-craft.md#hit-flash), [Flash limits](../battle-craft.md#flash-limits) |
 | 840 | 120 | impact | the fallen and the caster | Hit stop, 120 ms, the heavy one, tremor ±2 px. | [Hit stop](../battle-craft.md#hit-stop) |
-| 840 | 200 | impact | the camera | Punch zoom: 3% in at contact, back over 200 ms (*house*, the book's), eased `Quad.Out`. Only on a defeat or a critical hit. | [Punch zoom](../battle-craft.md#punch-zoom) |
+| 840 | 200 | impact | the camera | Punch zoom: 3% in at contact, back over 200 ms (*house*, the book's), eased `Quad.Out`. Only on a defeat, or a critical hit that took health. | [Punch zoom](../battle-craft.md#punch-zoom) |
 | 960 | 320 | impact | the fallen | Recoil with no return: 26 px and 8° along the line of the blow, eased `Quad.Out`, and it stays there. | [Recoil](../battle-craft.md#recoil), [Death](../battle-craft.md#death) |
 | 1280 | 160 | impact | the fallen | Held at the far end: the blow landed. | [Death](../battle-craft.md#death) |
 | 1440 | 760 | impact | the fallen | The fall: it slumps about its feet (height to 90%, width to 105%, *house*), tips 6° further along the blow, and sinks back onto its own ground spot (`Sine.InOut`) while its alpha falls to 20% (`Sine.In`) and its shadow from 55% to 20%. | [Death](../battle-craft.md#death), [Easing families](../battle-craft.md#easing-families) |
-| 1440 | 760 | impact | the fallen | The colour drained: a multiply tint from white to a cold slate, `0x6f7880` (*house*), through `Phaser.Display.Color.Interpolate.ColorWithColor` on a counter. No filter. | [Death](../battle-craft.md#death), [Colour matrix](../battle-craft.md#colour-matrix) |
+| 1440 | 760 | impact | the fallen | The colour drained: a multiply tint from white to the palette's cold grey, `--brand-line` (`0x52636b`), through `Phaser.Display.Color.Interpolate.ColorWithColor` on a counter. No filter. | [Death](../battle-craft.md#death), [Colour matrix](../battle-craft.md#colour-matrix) |
 | 2200 | 200 | impact | the fallen | At 20%, the slump and the tip ease out to scale 1 and 0°; the tint is cleared at 2400 ms. This is today's settled frame. | [Death](../battle-craft.md#death) |
 | 2400 | 140 | impact | the field | Nothing new. The fallen does not breathe. The result is read here. | [The hold before the number](../battle-craft.md#the-hold-before-the-number), [Breath at rest](../battle-craft.md#breath-at-rest) |
 
@@ -285,7 +286,7 @@ No flash, no stop, no zoom, no fall.
   tint. The camera's zoom is the camera's.
 - Why a tint and not the colour matrix: the filter costs the fallen a framebuffer and a pass each frame for the
   760 ms of the fall, on a phone, where a tint is a vertex attribute and costs nothing. A multiply tint darkens toward
-  slate rather than taking the colour out, but the figure is fading to 20% at the same time: by the time the
+  grey rather than taking the colour out, but the figure is fading to 20% at the same time: by the time the
   difference could be seen, there is too little figure left to see it in. The book's own rule is "a tint comes first".
 - `present` sets a defeated figure to 20% on every frame it receives: while the fall plays, it must leave that figure's
   alpha and its shadow's to the fall.
@@ -315,8 +316,8 @@ node scripts/battle/filmstrip.mjs spell:throwing_star:v1 --actor a1 --targets b1
 - Death, 1680 and 1920 ms: b1 fainter at each frame, greyer, lower at its top, tipped away from a1, and closer to its
   ring than at 1440 ms.
 - Death, 2640 ms onward (2640, 2880, 3120): b1 the same on every frame, on its ring, at 20%, upright, and its
-  colour today's settled 20%: no slate left. Its shadow faint. At 2400 ms the film reads one tick before the tint
-  is cleared: b1 already at 20% and upright, the last of the slate on it.
+  colour as on today's settled frame: no grey left. Its shadow faint. The tint is cleared at 2400 ms, so a frame
+  there still shows the last of it, on a figure already at 20% and upright.
 - Death-ranged, 1200 ms: b1 off its ring away from a1, with a1 at home; from 2400 ms, the same settled frame.
 
 The sheets cannot show the stop's tremor or the feel of the zoom at full speed.
@@ -360,11 +361,10 @@ The breath is not an action's: it plays in every window, on every figure no acti
   film.
 - Computed in `Phaser.Scene#update`, on the clock the halos, the motes and the auras already read (`ambient`), as the
   book asks: not a tween, so `killAll` does not end it and a skip does not stop it.
-- At the resting rate. Since #842 a still field is drawn one frame in four, about 15 frames a second. The breath
-  plays at that rate and is not counted as movement in `busy()`. On a phone a figure is about 130 px tall, so the
-  breath is ±1 px; at 15 frames a second it moves at most 0.12 px between two frames, below a pixel, and the eye
-  cannot tell 15 frames from 60. Counted as movement, it would keep every field at 60 frames a second for good, and
-  undo #842 for a pixel. The halos breathe at that rate already.
+- It plays at the resting rate: since #842 a still field is drawn one frame in four, about 15 a second, and the
+  breath is not counted as movement in `busy()`. On a phone it is ±1 px and moves at most 0.12 px a frame, which
+  the eye cannot tell from 60 frames a second. Counting it as movement would keep every field at 60 frames a second
+  and undo #842 for a pixel.
 
 ### Reduced motion
 
@@ -395,7 +395,7 @@ node scripts/battle/filmstrip.mjs spell:adrenaline_tonic:v1 --actor a1 --targets
 - b1 and b2 are not at the top of their breath at the same frame.
 - From 2640 ms the sheet is not five identical frames.
 
-A sheet cannot show ±1 px reliably. I ask the bench to write, beside the sheet, each figure's height scale at each
+A sheet cannot show ±1 px reliably. With `--motion` the bench writes, beside the sheet, each figure's height scale at each
 frame (one line a frame, the figures by id): the critique then checks the period, the amplitude, the phases, that a1
 and a2 do not breathe while their tweens play, and that a fallen figure (`--defeat`) holds still.
 
@@ -450,12 +450,12 @@ it rose.
   shakes more than its damage, never less: the damage's share is always there.
 - The punch zoom plays once an action, however many fall.
 
-The rule of the bright beats. The book says the flash, the burst and the shake end within 120 ms of contact. The kit
-gave its burst 320 ms, because a 120 ms burst is two frames and reads as a flicker (BC4). The kit's number stands. What
-the hold needs is that nothing bright starts after contact has passed, and that what is bright fades from its first
-frame: the flash is 80 ms, the burst's particles fade as they fly, the trauma falls from its peak. So every bright
-beat starts within 120 ms of contact and is gone within 320 ms of it, and the camera's ceiling (288 ms) fits inside
-that.
+The rule of the bright beats. [The craft book](../battle-craft.md) says the flash, the burst and the shake end within
+120 ms of contact. The kit gave its burst 320 ms, because a 120 ms burst is two frames and reads as a flicker (BC4).
+The kit's number stands. What the hold needs is that nothing bright starts after contact has passed, and that what is
+bright fades from its first frame: the flash is 80 ms, the burst's particles fade as they fly, the trauma falls from
+its peak. So every bright beat starts within 120 ms of contact and is gone within 320 ms of it, and the camera's
+ceiling (288 ms) fits inside that.
 
 ### Reduced motion
 
@@ -477,7 +477,7 @@ Nothing. The camera does not move or zoom; trauma is never added.
 
 ### On the film strip
 
-A sheet cannot show a tremor of a few pixels, nor tell it from the figures' own motion. I ask the bench to write
+A sheet cannot show a tremor of a few pixels, nor tell it from the figures' own motion. With `--motion` the bench writes
 beside the sheet, at each frame, the trauma, the camera's offset in pixels and its zoom. Then, with the films of
 "A melee blow" and "A death":
 
@@ -502,13 +502,10 @@ node scripts/battle/filmstrip.mjs spell:bone_ward:v1 --actor a1 --targets a1 --w
   with it, and an angle is what the reduced-motion guidance names first. The offset alone, a few pixels, keeps them
   close enough.
 - Every family shakes by damage, not only the physical one. Damage is the weight; a heavy fireball should be felt as
-  a heavy paw. `docs/art/spell-vfx.md` says "Physical damage on another creature may use a small camera shake": it
-  changes with this stage if the owner agrees.
-- The kit's `shake` beat changes meaning: its `strength` is trauma added, its `lasts` is no longer used. ADR 0196 says
-  what a `shake` is; the session that builds this amends it, or keeps `lasts` as an upper bound.
+  a heavy paw. `docs/art/spell-vfx.md` now says that health lost by another creature, in any family, moves the
+  view. The owner may still refuse it.
+- The kit's `shake` beat changes meaning: its `strength` is trauma added, its `lasts` is no longer used. ADR 0196
+  names the `shake` beat and no more, so it stands; `battle/README.md` says what the beat does now.
 - The scale of the offset is 2.5% of the shorter side, so a desktop shakes more pixels than a phone, the same share.
-- The book's rule changes. Under "The hold before the number", **Here**, the sentence "So the hold is made on the
-  scene's side: BC5 ends the flash, the burst and the shake within 120 ms of contact (*house*), and nothing bright
-  starts after." becomes: "So the hold is made on the scene's side: every bright beat starts within 120 ms of contact
-  and is gone within 320 ms of it, fading from its first frame (*house*): the flash lasts 80 ms, the burst's particles
-  fade as they fly, the trauma falls from its peak. Nothing bright starts after."
+- The book's rule changed: under "The hold before the number", **Here**, the bright beats now start within 120 ms
+  of contact and are gone within 320 ms of it.

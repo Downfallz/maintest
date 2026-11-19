@@ -1072,7 +1072,7 @@ a laboratory page served elsewhere. `--actor` and `--targets` name creatures of 
 to `b3`), `--speed` sets the playback speed (0.5, 1 or 2). `--fizzle` films the spell fizzling, and `--wound` its
 caster paying in blood; the two are refused together, and their sheets are named `pummel-fizzled.png` and
 `pummel-wound.png`. `--damage` is the health each creature struck loses (the weight of the blow) and `--defeat`
-fells the first one struck; neither goes with `--fizzle`. `--motion` writes `<sheet>.motion.json` beside the
+fells the first one struck; neither goes with `--fizzle`. `--motion` writes `<sheet>.motion.jsonl` beside the
 sheet: at each frame, how each figure stands and what the view does. `--frames`, `--interval` (a multiple of 20 ms) and `--columns`
 set the sheet. `--scale` sets the device pixel ratio. `--out` is a `.png` for one effect, a folder otherwise
 (`artifacts/filmstrips/` by default). It exits 1 with no effect named, an option it cannot film, or an effect

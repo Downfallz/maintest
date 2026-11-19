@@ -898,7 +898,8 @@ desktop.
 The game loop never stops, but a still field is drawn less often (`src/rest.ts`, #842). At sixty frames a second
 over a field where only the ambience breathes, a phone pays in battery, and a page whose canvas is drawn in software
 leaves no frame for the rest of the page, so a browser test waits for a click to become stable. The scene's `busy()`
-keeps the field at its full rate while any of these runs: a tween, a camera effect, the view's tremor, the effects kit's particles or
+keeps the field at its full rate while any of these runs: a tween, a camera effect, the view's tremor, the effects
+kit's particles or
 objects, a die tumbling, the horizon giving way, a file loading. On the bench, a play in progress does too.
 
 Two seconds after the last movement (`SETTLE_MS`) the field rests: the game is stepped one animation frame in four
@@ -929,7 +930,7 @@ view's trauma.
   the contact; a projectile's caster loads, throws as the projectile leaves, and is home when it lands. A figure
   that lost health from afar answers as a struck one, on half the stop. One that lost nothing does not move.
 - **A death**: the defeated figure keeps its full alpha at the contact, is thrown back and does not return, then
-  falls: it slumps, tips, sinks back onto its own spot, fades to 20% and drains toward slate (a tint, no filter).
+  falls: it slumps, tips, sinks back onto its own spot, fades to 20% and drains toward the palette's cold grey, `--brand-line` (a tint, no filter).
   It ends on the settled frame before the impact window does. While it plays, `present` leaves that figure's alpha
   to the fall.
 - **The breath**: a standing figure no tween holds rises and falls by 1.5% of its height every 3.6 s, each out of
@@ -938,8 +939,10 @@ view's trauma.
 - **The view**: one trauma value replaces the fixed camera shakes. Each creature other than the caster that lost
   health adds 0.25, 0.40 or 0.55, a defeat 0.10 more, to a ceiling of 0.6; it falls by 0.25 every 120 ms, and the
   offset is its square times 2.5% of the view's shorter side. A defeat or a critical hit also punches the zoom by
-  3% for 200 ms. A blood cost, a heal, a ward and a blow that took nothing add nothing. The offset is laid over the
+  3% for 200 ms, the critical hit only when it took health. A blood cost, a heal, a ward and a blow that took nothing add nothing. The offset is laid over the
   fitted camera and read from the action's clock, never from `Math.random`.
+- **One flash a figure**: when a spell's staging flashes its targets and the kit is there to play it, the scene's
+  own flash is left out.
 - **Less motion**: none of it. No figure moves, breathes or flashes, and the view stays still.
 - **The cancel path** (`clearMotion`): every figure home, upright, at its own scale, untinted, a fallen one at its
   settled alpha; the trauma at zero and the camera as it was fitted.
@@ -991,9 +994,9 @@ targets. **Outcome** plays the spell or fizzles it, drawn as the live page draws
 and no recipient. **The caster pays in blood** adds the caster's wound, the way a blood cost is drawn; it is off
 under a fizzle. `?bench=spell:frostbite:v1` opens on that entry. It asks no host and holds no rule: a target across the
 field from the caster is struck, and one on the caster's side receives. **Health lost** is what each creature struck
-loses, which is the weight of the blow, and **The blow defeats** fells the first one struck: both are the fixture's
-word, as a cue's changes are the host's on a seat. Left empty, no loss is told, as for an action the host served no
-frames for. Less motion and
+loses; it sets the weight of the blow. **The blow defeats its target** fells the first creature struck. Both stand
+in for what the host would tell in a cue's changes. Left empty, no loss is told, as for an action the host served
+no frames for. Less motion and
 the playback speed are in the settings, as in the laboratory. The bench ships in `game.js` only:
 `build.mjs` fails the build if `live.js` contains a bench module or the spell art (`live-guard.mjs`).
 
@@ -1006,7 +1009,7 @@ node scripts/battle/filmstrip.mjs spell:frostbite:v1 --actor a3 --targets b1,b3 
 node scripts/battle/filmstrip.mjs spell:pummel:v1 --fizzle        # artifacts/filmstrips/pummel-fizzled.png
 node scripts/battle/filmstrip.mjs spell:hateful_sacrifice:v1 --wound   # its caster pays in blood
 node scripts/battle/filmstrip.mjs spell:pummel:v1 --damage 8 --defeat  # a heavy blow that defeats its target
-node scripts/battle/filmstrip.mjs spell:pummel:v1 --motion        # and pummel.motion.json beside the sheet
+node scripts/battle/filmstrip.mjs spell:pummel:v1 --motion        # and pummel.motion.jsonl beside the sheet
 node scripts/battle/filmstrip.mjs --all                           # one sheet an entry
 ```
 

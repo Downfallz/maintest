@@ -30,12 +30,16 @@ test('a standing figure breathes, each out of step with its neighbour, and a fig
     expect(swing).toBeLessThanOrEqual(BREATH.amount * 2 + .001);
   }
   expect(heights.b2.indexOf(Math.max(...heights.b2))).not.toBe(heights.b3.indexOf(Math.max(...heights.b3)));
+  // The caster's tweens hold it from the first frame: through its draw back its height does not move, while its
+  // neighbours' does.
+  expect(new Set(heights.a1.slice(0, 4)).size).toBe(1);
+  expect(new Set(heights.b2.slice(0, 4)).size).toBe(4);
   // The breath moves the height alone, about the feet: no figure it moves leaves its home.
   expect(await figure(page, 'b2')).toMatchObject(HOME);
   await film(page, 'stop');
 });
 
-test('with less motion no figure breathes, and a cast moves none', async ({ page }) => {
+test('with less motion no figure breathes, and a blow moves none', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await film(page, 'start', { ...pummel, damage: 8 });
   for (let step = 0; step < 8; step++) {
@@ -47,6 +51,8 @@ test('with less motion no figure breathes, and a cast moves none', async ({ page
   await film(page, 'stop');
 });
 
+// The speeds the bench offers. 1.5×, which a seat also offers, is held by the unit test that every duration the
+// body plays is divided by the rate (`table/battle-motion.test.js`).
 for (const speed of [0.5, 1, 2]) {
   test(`at ${speed}× the blow lands when the windup ends: the draw back, the contact, the flash, the recoil, then home`, async ({ page }) => {
     const at = ms => Math.round(ms / speed / 20) * 20;
