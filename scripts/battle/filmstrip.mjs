@@ -28,8 +28,8 @@ const COLUMNS = 4;
 /** Open the bench on a page and wait for its scene. `base` is where the laboratory's page is served. */
 export async function openBench(page, base) {
   const address = new URL(base, 'http://localhost');
-  const asked = address.searchParams.has('bench') ? base : `${base}${address.search ? '&' : '?'}bench`;
-  await page.goto(asked);
+  const joint = address.search ? '&' : '?';
+  await page.goto(address.searchParams.has('bench') ? base : `${base}${joint}bench`);
   await page.locator('#lab[data-bench][data-ready="true"]').waitFor();
   // The effects kit arrives after the first frame: a film that started before it would show a staged spell as
   // its motif. `missing` is an answer too: the kit's bundle was not built, and the motifs are what plays.
@@ -51,6 +51,7 @@ export async function filmFrames(page, { spell, actor, targets, speed, outcome =
   const motion = () => page.evaluate(() => window.battleBench.motion());
   const shots = [{ ms: 0, stage: started.stage, png: await field.screenshot(), motion: await motion() }];
   try {
+    // One frame after the other, on purpose: each advances the bench's clock before its picture is taken.
     while (shots.length < frames) {
       const { elapsed, stage } = await page.evaluate(ms => window.battleBench.film.advance(ms), step);
       shots.push({ ms: elapsed, stage, png: await field.screenshot(), motion: await motion() });
@@ -125,35 +126,36 @@ function playwright() {
   throw new Error('Playwright is not installed: run `npm --prefix studio/browser ci --ignore-scripts`.');
 }
 
-export function parseArguments(argv) {
-  const options = { spells: [], all: false, out: null, base: null, scale: 1, motion: false };
-  const film = {};
-  const value = (flag, index) => {
-    if (index >= argv.length) throw new Error(`${flag} needs a value.`);
-    return argv[index];
+// The flags that take no value, and what each sets: on the options, or on the film.
+const SWITCHES = {
+  '--all': options => { options.all = true; },
+  '--motion': options => { options.motion = true; },
+  '--fizzle': (_, film) => { film.outcome = 'fizzled'; },
+  '--wound': (_, film) => { film.wound = true; },
+  '--defeat': (_, film) => { film.defeat = true; },
+};
+
+// The flags that take a value, and where it goes.
+const VALUED = {
+  '--out': (text, options) => { options.out = text; },
+  '--url': (text, options) => { options.base = text; },
+  '--actor': (text, _, film) => { film.actor = text; },
+  '--targets': (text, _, film) => { film.targets = text.split(',').filter(Boolean); },
+  '--damage': (text, _, film) => {
+    film.damage = Number(text);
+    if (!Number.isInteger(film.damage) || film.damage < 0) throw new Error('--damage is a whole number of health points.');
+  },
+};
+for (const flag of ['--speed', '--frames', '--interval', '--columns', '--scale']) {
+  VALUED[flag] = (text, options, film) => {
+    const number = Number(text);
+    if (!Number.isFinite(number) || number <= 0) throw new Error(`${flag} needs a positive number.`);
+    if (flag === '--scale') options.scale = number; else film[flag.slice(2)] = number;
   };
-  for (let index = 0; index < argv.length; index++) {
-    const word = argv[index];
-    if (word === '--all') options.all = true;
-    else if (word === '--motion') options.motion = true;
-    else if (word === '--out') options.out = value(word, ++index);
-    else if (word === '--url') options.base = value(word, ++index);
-    else if (word === '--actor') film.actor = value(word, ++index);
-    else if (word === '--targets') film.targets = value(word, ++index).split(',').filter(Boolean);
-    else if (word === '--fizzle') film.outcome = 'fizzled';
-    else if (word === '--wound') film.wound = true;
-    else if (word === '--defeat') film.defeat = true;
-    else if (word === '--damage') {
-      film.damage = Number(value(word, ++index));
-      if (!Number.isInteger(film.damage) || film.damage < 0) throw new Error('--damage is a whole number of health points.');
-    }
-    else if (['--speed', '--frames', '--interval', '--columns', '--scale'].includes(word)) {
-      const number = Number(value(word, ++index));
-      if (!Number.isFinite(number) || number <= 0) throw new Error(`${word} needs a positive number.`);
-      if (word === '--scale') options.scale = number; else film[word.slice(2)] = number;
-    } else if (word.startsWith('--')) throw new Error(`Unknown option ${word}.`);
-    else options.spells.push(word);
-  }
+}
+
+// What the flags cannot say alone: the ones that do not go together.
+function refuseConflicts(options, film) {
   if (options.all === options.spells.length > 0) throw new Error('Name one or more effects (spell:pummel:v1), or --all.');
   // The live page draws no outcome with a fizzle (`actionCue`): a wound with one would film what never plays.
   if (film.outcome === 'fizzled' && film.wound) throw new Error('--fizzle and --wound do not go together: a fizzle is drawn with no outcome.');
@@ -161,6 +163,22 @@ export function parseArguments(argv) {
   if (film.speed !== undefined && ![0.5, 1, 2].includes(film.speed)) throw new Error('--speed is 0.5, 1 or 2, as the page offers.');
   if (film.interval !== undefined && film.interval % FILM_TICK_MS !== 0) throw new Error(`--interval is a multiple of ${FILM_TICK_MS} ms.`);
   if (options.out?.endsWith('.png') && (options.all || options.spells.length > 1)) throw new Error('--out names a folder when several effects are filmed.');
+}
+
+export function parseArguments(argv) {
+  const options = { spells: [], all: false, out: null, base: null, scale: 1, motion: false };
+  const film = {};
+  for (let index = 0; index < argv.length; index++) {
+    const word = argv[index];
+    if (Object.hasOwn(SWITCHES, word)) SWITCHES[word](options, film);
+    else if (Object.hasOwn(VALUED, word)) {
+      index += 1;
+      if (index >= argv.length) throw new Error(`${word} needs a value.`);
+      VALUED[word](argv[index], options, film);
+    } else if (word.startsWith('--')) throw new Error(`Unknown option ${word}.`);
+    else options.spells.push(word);
+  }
+  refuseConflicts(options, film);
   return { ...options, film };
 }
 
@@ -190,6 +208,7 @@ async function main(argv) {
     const spells = options.all ? await page.evaluate(() => window.battleBench.entries.map(one => one.id)) : options.spells;
     const single = Boolean(options.out?.endsWith('.png'));
     const folder = single ? null : resolve(options.out ?? join(root, 'artifacts/filmstrips'));
+    // One effect after the other, on purpose: they are all filmed on the one bench this page holds.
     for (const spell of spells) {
       const { sheet, motion } = await filmRecord(page, { ...options.film, spell });
       const path = single ? resolve(options.out) : join(folder, fileName(spell, options.film));
@@ -209,5 +228,10 @@ async function main(argv) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main(process.argv.slice(2)).catch(error => { console.error(error.message); process.exitCode = 1; });
+  try {
+    await main(process.argv.slice(2));
+  } catch (error) {
+    console.error(error.message);
+    process.exitCode = 1;
+  }
 }

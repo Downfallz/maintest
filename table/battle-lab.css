@@ -144,7 +144,7 @@ fieldset.bench-field, .bench-run { grid-column: 1 / -1; }
 .bench-wound { display: flex; align-items: center; gap: 8px; min-height: 44px; min-width: 0; color: var(--ink); }
 .bench-wound input { flex: 0 0 auto; width: 18px; height: 18px; accent-color: var(--gold); }
 .bench-wound input:disabled + span { color: var(--muted); }
-.bench-run { display: flex; align-items: center; gap: 12px; }.bench-run { min-width: 0; }
+.bench-run { display: flex; align-items: center; gap: 12px; min-width: 0; }
 /* Nothing in the bench changes size with the stage: a field that resized under a playing effect would end it. */
 .bench-run button { flex: 0 0 auto; white-space: nowrap; }
 /* One line, whatever it says: a status that wrapped would resize the field under a playing effect. */
