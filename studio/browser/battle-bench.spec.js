@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { test, expect } from '@playwright/test';
 import { IMPACT_MS, WINDUP_MS } from '../../table/battle-timing.js';
-import { filmFrames, filmSheet, openBench } from '../../scripts/battle/filmstrip.mjs';
+import { filmFrames, filmRecord, filmSheet, openBench } from '../../scripts/battle/filmstrip.mjs';
 import { fitsViewport } from './fit.js';
 
 // The effects bench (docs/art/battle-craft-plan.md, BC2): one Phaser page at a time, as the laboratory's spec.
@@ -152,4 +152,18 @@ test('two films of one effect give the same sheet, and another effect another', 
   const other = await filmSheet(page, { spell: 'spell:frostbite:v1', targets: ['b1', 'b3'] });
   expect(first.equals(other)).toBe(false);
   await testInfo.attach('pummel.png', { body: first, contentType: 'image/png' });
+});
+
+// BC9: the bench stands in a round, and films the field at rest. Found by review: a film of the field at rest was
+// titled as the spell the bench had chosen, and a film one round on from where the bench stood started while the
+// ground was still giving way, so no two runs agreed.
+test('a film of the field at rest is titled as what it is, and a film in the next round is the same film twice', async ({ page }) => {
+  test.setTimeout(60000);
+  await openBench(page, '/table/battle-lab.html');
+  const rest = await filmRecord(page, { still: true, round: 2, frames: 4, interval: 200 });
+  expect(rest.motion.title).toBe('The field at rest · round 2 · 1×');
+  // Back to the first round, then on to the second again: the arch's span must not be caught mid-fall.
+  await filmSheet(page, { still: true, round: 1, frames: 2, interval: 200 });
+  const again = await filmRecord(page, { still: true, round: 2, frames: 4, interval: 200 });
+  expect(rest.sheet.equals(again.sheet)).toBe(true);
 });

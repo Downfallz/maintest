@@ -40,7 +40,7 @@ export async function openBench(page, base) {
 
 /**
  * Film one effect on an open bench: `frames` pictures of the field, `interval` milliseconds of the bench's clock
- * apart, the first at 0. Returns [{ ms, stage, png }], and leaves the bench at rest with its loop running.
+ * apart, the first at 0. Returns [{ ms, stage, png }] with the film's `title`, and leaves the bench at rest with its loop running.
  */
 export async function filmFrames(page, { spell, actor, targets, speed, outcome = 'played', wound = false, damage = null, defeat = false, round = 1, still = false, frames = 12, interval } = {}) {
   // Refused before the film starts: a started film has stopped the bench's loop.
@@ -56,16 +56,20 @@ export async function filmFrames(page, { spell, actor, targets, speed, outcome =
   // What a sheet cannot show (a breath of a pixel, a tremor of the view) is read from the scene at each frame.
   const motion = () => page.evaluate(() => window.battleBench.motion());
   const shots = [{ ms: 0, stage: started.stage, png: await field.screenshot(), motion: await motion() }];
+  let title = '';
   try {
     // One frame after the other, on purpose: each advances the bench's clock before its picture is taken.
     while (shots.length < frames) {
       const { elapsed, stage } = await page.evaluate(ms => window.battleBench.film.advance(ms), step);
       shots.push({ ms: elapsed, stage, png: await field.screenshot(), motion: await motion() });
     }
+    // What the bench played, read while the film still runs: stopping it ends a film of the field at rest, and
+    // the bench would name the spell it has chosen instead.
+    title = await page.evaluate(() => window.battleBench.title());
   } finally {
     await page.evaluate(() => window.battleBench.film.stop());
   }
-  return shots;
+  return Object.assign(shots, { title });
 }
 
 const escape = text => String(text).replace(/[&<>"]/g, mark => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[mark]);
@@ -101,7 +105,7 @@ export async function filmSheet(page, options = {}) {
 export async function filmRecord(page, options = {}) {
   const shots = await filmFrames(page, options);
   // The title is what the bench played, read back from it: the spell, its mutation, the outcome and the speed.
-  const title = await page.evaluate(() => window.battleBench.title());
+  const { title } = shots;
   const sheet = await contactSheet(page.context(), shots, { title, columns: options.columns });
   return { sheet, motion: { title, frames: shots.map(({ ms, stage, motion }) => ({ ms, stage, ...motion })) } };
 }

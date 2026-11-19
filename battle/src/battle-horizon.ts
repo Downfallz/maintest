@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { HorizonArch } from './horizon-arch';
+import { EMBER_ORANGE, REST_TINT } from '../../table/battle-ground.js';
 
 // The sky feathers into the floor across source rows 399–479. When both are present they reconstruct
 // the final painting. The background still owns the original crop and camera in every orientation.
@@ -22,7 +23,7 @@ export class BattleHorizon {
   private elapsed = TRANSITION_MS;
   private width = 0;
   private height = 0;
-  private plateTint = 0xb5bbc2;
+  private plateTint: number = REST_TINT.painting;
   private leaning: Lean | null = null;
 
   constructor(private scene: Phaser.Scene, private backdrop: Phaser.GameObjects.Image, private assetRoot: string) {
@@ -145,7 +146,7 @@ export class BattleHorizon {
       });
       const lip = points.map((point, step) => new Phaser.Math.Vector2(point.x + this.width * .013 * (1 - step / 8) * opening, point.y));
       this.faults.fillStyle(0x100f12, .86).fillPoints([...points, ...lip.reverse()], true)
-        .lineStyle(Math.max(1, this.width * .0016), 0xd18d51, .67 * opening).strokePoints(points);
+        .lineStyle(Math.max(1, this.width * .0016), EMBER_ORANGE, .67 * opening).strokePoints(points);
     }
   }
 }

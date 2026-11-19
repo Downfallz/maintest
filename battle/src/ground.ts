@@ -30,6 +30,8 @@ export class BattleGround {
   private strength = 0;
   private colour: number | null = null;
   private tint: number = REST_TINT.painting;
+  private pulse: Phaser.Tweens.Tween | null = null;
+  private leant = '';
 
   constructor(private readonly scene: Phaser.Scene, private readonly backdrop: Phaser.GameObjects.Image, private readonly horizon: Tinted) {
     this.textures();
@@ -123,7 +125,13 @@ export class BattleGround {
     const fog = depthPlace(this.fogHome, DEPTH.fog, this.view, centre);
     this.fog.setPosition(fog.x, fog.y).setScale(fog.scale);
     this.fog.tilePositionX = -this.drift / this.fogHome.tile;
-    this.horizon.lean((x, y) => depthPlace({ x, y }, DEPTH.sky, this.view, centre));
+    // The sky's plates are laid again only when the view or the field has moved: at rest nothing is rewritten.
+    const leant = `${this.view.x},${this.view.y},${this.view.zoom},${centre.x},${centre.y}`;
+    if (leant !== this.leant) {
+      this.leant = leant;
+      const view = this.view;
+      this.horizon.lean((x, y) => depthPlace({ x, y }, DEPTH.sky, view, centre));
+    }
     const sky = depthPlace(this.lightHome, this.horizon.sky ? DEPTH.sky : DEPTH.painting, this.view, centre);
     this.light.setPosition(sky.x, sky.y).setDisplaySize(this.lightHome.radius * 2 * sky.scale * this.corona, this.lightHome.radius * 2 * sky.scale * this.corona);
   }
@@ -139,7 +147,7 @@ export class BattleGround {
     this.colour = colour;
     // One counter for the rise and the fall: two chained ones lose a step between them at 2×.
     const lasts = LIGHT.rise + LIGHT.fall;
-    this.scene.tweens.addCounter({ from: 0, to: lasts, duration: lasts / rate, ease: 'Linear',
+    this.pulse = this.scene.tweens.addCounter({ from: 0, to: lasts, duration: lasts / rate, ease: 'Linear',
       onUpdate: tween => this.shine(strength * lightAt(tween.getValue() ?? 0)), onComplete: () => this.clear() });
   }
 
@@ -154,6 +162,9 @@ export class BattleGround {
 
   /** The cancel path: no light, every tint at its rest. The air goes on: it is the clock's. */
   clear() {
+    // A light still playing is stopped with it: a second answer never shares the ground with the first.
+    this.pulse?.remove();
+    this.pulse = null;
     this.shine(0);
     this.colour = null;
   }

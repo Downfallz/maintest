@@ -99,15 +99,15 @@ in both settings.
   The 24 shapes they replace batched with the vectors.
 - Textures drawn at boot, in the live bundle (the ground is seen from the first frame, and the kit's `fx-kit` texture
   arrives after it): the fog, 256 by 64, tileable across, made of seven soft ellipses from fixed numbers in
-  `table/battle-ground.js`; the ember's soft dot, 8 by 8. On one canvas if the `TileSprite` takes a frame of it,
-  otherwise two textures; about 66 KiB of texture memory either way. No picture file.
-- Pixels: the fog band is about 390 by 50 px on the bench's field, one layer; 24 dots of at most 4 by 4. The embers
+  `table/battle-ground.js`; the ember's soft dot, 16 by 16. Two textures, about 65 KiB of
+  texture memory. No picture file.
+- Pixels: the fog band is about 390 by 50 px on the bench's field, one layer; 24 dots of at most 6 by 6. The embers
   are not the kit's particles and are not counted in the field's 150.
 - A frame at rest: one `tilePositionX`, 24 positions and alphas, from sines. Nothing is added to `busy()`: the air
   is ambience and plays at the resting rate.
 - A hidden tab: the game's loop is paused and the ambient clock stands still; on return the air resumes where it
   stood. There is no emitter to pause.
-- Bytes: not measured. The live bundle has 38,865 bytes left raw and 33,576 gzip; the session measures the change.
+- Bytes: with the depth and the light, the live bundle grew by about 8 KiB, to 1,738,691 of 1,769,472 bytes raw.
 - Built by BC9: the two textures, the fog, the embers, `table/battle-ground.js`; the motes and their gold go.
 
 ### On the film strip
@@ -123,7 +123,7 @@ node scripts/battle/filmstrip.mjs --still --actor a1 --interval 1000 --round 12 
   --out <folder>/ground-rest-round12-large.png
 ```
 
-- Every frame: a soft grey-green haze across the horizon, between the back row's rings and the front row, under the
+- Every frame: a soft grey-green haze across the horizon, between the back row's rings and the front row, over the
   arch's foot at round 1; the back row's rings drawn over it. Against the sheet of today at the same millisecond, the
   band lifts the floor at its densest rows by 15 to 25 levels a channel (`--scale 2`), never more than 30.
 - Every frame: no gold dot anywhere on the field. Small orange dots between the horizon and the bottom edge only:
@@ -151,10 +151,10 @@ ember shown and the fog's drift 0 under less motion; the ambient clock unchanged
 
 - The motes go, and their gold with them: the craft book's **Here** for "Fog and embers" asks for the motes "in the
   same gold", which is the target marker's (`docs/art/spell-vfx.md`). The embers take the faults' orange. The book's
-  entry is to be amended.
+  entry is amended in this stage.
 - No emitter, against the same **Here** ("BC9 makes them one emitter"): an emitter draws from `Math.random`, and a
   film of the field at rest would not repeat. The entry's **Phaser** line keeps the emitter as the general pattern;
-  its **Here** should say the ground draws its air from the ambient clock, and that a hidden tab stops it by stopping
+  its **Here** now says the ground draws its air from the ambient clock, and that a hidden tab stops it by stopping
   that clock, so the plan's test "a hidden tab stops the emitters" becomes "the ambient clock stands still while
   hidden, and resumes with no jump".
 - The embers move behind the figures, where the motes were in front: the book asks for "behind the figures", and a
@@ -170,7 +170,7 @@ ember shown and the fog's drift 0 under less motion; the ambient clock unchanged
   round's plates), but it is a choice.
 - At round 1 on the 1:1 sheet the haze is measured (16 levels at its densest rows, 20 at `--scale 2`) but the eye
   hardly tells it from the painted mist on the horizon, and a near ember is a faint dot (75 levels on red at its
-  brightest, within the 60 to 100 asked). Both are at the floor of what was asked, on purpose: the air must not
+  brightest). Both sit at the low end of what was asked, on purpose: the air must not
   compete with the figures. The owner's phone decides whether they are found; if not, the fog's alpha and the
   round-1 factor are the knobs.
 
@@ -314,7 +314,7 @@ trauma is: the health lost by recipients other than the caster, added up.
 
 What each action gets, by what the ground knows (the family, the health lost, a fizzle; never the spell):
 
-- 0 to 3 lost by others, in all (Strike's 3, Pummel's 2, Quill's 3): none. The base actions are seen every round: a
+- 0 to 3 lost by others, in all (Strike's 3, Pummel's 2, Quill's 3; a film may tell a larger loss with `--damage`): none. The base actions are seen every round: a
   light on each would be a flash a turn, and the light would mean nothing.
 - 4 to 6 lost (most family spells): 0.5. A medium blow: the corona brightens a little.
 - 7 or more lost, or a defeat (the capstones, any killing blow): 1. A heavy blow: the one change of light the field
@@ -424,7 +424,7 @@ tint is hard to see between two frames: read the record for the strength and the
   strength 0.5 (the disc's pixels lifted by about 70 levels) and blown out over the shattered sky's crack at
   strength 1. It read as a second sun lit in the sky, a flash of its own beside the target's, and no longer as an
   eclipse whose corona answers. The ring is an image drawn at boot ("Textures drawn at boot") and drawn additive
-  ("Additive light"), both in the book; the entry's **Phaser** line, which names a point light at the cast, is to say
+  ("Additive light"), both in the book; the entry's **Phaser** line names a point light at the cast, and its **Here** now says
   that on a dark disc the light is a ring. Over the brightest clouds of the corona the ring may still turn white: the
   second film, at 0.8, turned 29 pixels so, under the disc, on a heavy blow at round 1.
 - Not built, after the last round (BC9, round 3): at round 12, at the defeat's peak (960 ms), the ring's soft inner
@@ -433,4 +433,4 @@ tint is hard to see between two frames: read the record for the strength and the
   radius goes from 1.35 to 1.45 × (*house*), its peak and its end with it.
 - Not staged: "A scar that fades". The craft book's entry names BC9, but the plan's line for BC9 does not, and a
   scar is a mark under the target, the spell's place, not the ground's answer. It waits for its own pass; the book's
-  **Here** is to stop naming BC9 for it.
+  **Here** no longer names BC9 for it.

@@ -373,7 +373,7 @@ that extends it.
 
    - The air. One band of fog on the painting's horizon and 24 embers rising from the floor, behind every figure,
      in place of the 24 gold motes that drifted in front of them. Their orange is the faults'; the motes' gold was
-     the target marker's. The embers grow brighter as the floor breaks, round by round.
+     the target marker's. The embers grow brighter as the floor breaks: 0.6 of full at round 1, full from round 12.
    - No emitter, against this stage's own test line. An emitter draws from `Math.random`, which a film pins only
      for the length of a play, so a film of the field at rest would not repeat. The fog and the embers are read
      from the scene's ambient clock alone. "A hidden tab stops the emitters" became: the ambient clock stands

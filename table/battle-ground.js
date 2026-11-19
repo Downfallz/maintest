@@ -39,10 +39,12 @@ const fraction = value => value - Math.floor(value);
 /**
  * The embers that rise from the cracked floor, in place of the gold motes: far ones small, dim and slow near the
  * horizon, near ones larger and faster. `rows` is the rise, from a row of the painting up to another; `speed` is a
- * share of the field's height a second; `size` is a width in pixels. None rises over the sky.
+ * share of the field's height a second; `size` is a width in pixels. None rises over the sky. Their orange is
+ * the one the faults in the floor glow with (`battle/src/battle-horizon.ts`).
  */
+export const EMBER_ORANGE = 0xd18d51;
 export const EMBERS = Object.freeze({
-  tint: 0xd18d51, sway: 3,
+  tint: EMBER_ORANGE, sway: 3,
   far: Object.freeze({ count: 16, size: 3, alpha: .50, speed: .012, rows: Object.freeze([600, 420]) }),
   near: Object.freeze({ count: 8, size: 6, alpha: .70, speed: .025, rows: Object.freeze([900, 480]) }),
   glow: Object.freeze({ least: .6, fullAt: 12 }),
@@ -127,7 +129,7 @@ export function lightAt(ms) {
   return Math.cos((ms - LIGHT.rise) / LIGHT.fall * Math.PI / 2);
 }
 
-/** The families the ground answers in, and each one's colour (the palette of `battle/src/spell-effects.ts`). */
+/** The families' colours, named here once: the ground answers in them, and `battle/src/spell-effects.ts` draws a spell in them. */
 export const LIGHT_COLOURS = Object.freeze({ physical: 0xd2bbac, biological: 0xadc777, elemental: 0x8dcfe5, necromantic: 0x85c9c2, astral: 0xb9a6e5 });
 
 /**

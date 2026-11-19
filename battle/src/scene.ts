@@ -9,7 +9,7 @@ import { MOTION_SCALE, playbackRate } from '../../table/battle-timing.js';
 import { DEFEATED_ALPHA, WEIGHTS, blowWeight, breath, lossOf, punches, traumaOf } from '../../table/battle-motion.js';
 import { castRelease, castWindup, fall, meleeReturn, meleeWindup, struck, throwWindup } from './body-motion';
 import { ViewShake } from './view-shake';
-import { lightOf } from '../../table/battle-ground.js';
+import { REST_TINT, lightOf } from '../../table/battle-ground.js';
 import type { SceneFrame, Placement } from './types';
 import { UpkeepMarkers } from './upkeep-markers';
 import { MutationReveal } from './mutation-reveal';
@@ -140,7 +140,7 @@ export class BattleScene extends Phaser.Scene implements Restful {
 
   create() {
     if (this.textures.exists('battle-floor')) {
-      this.backdrop = this.add.image(0, 0, 'battle-floor').setOrigin(.5, 0).setTint(0xb5bbc2).setDepth(-10);
+      this.backdrop = this.add.image(0, 0, 'battle-floor').setOrigin(.5, 0).setTint(REST_TINT.painting).setDepth(-10);
       this.horizon = new BattleHorizon(this, this.backdrop, this.assetRoot);
       this.ground = new BattleGround(this, this.backdrop, this.horizon);
     }

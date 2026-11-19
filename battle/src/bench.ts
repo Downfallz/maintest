@@ -45,6 +45,7 @@ let game: Phaser.Game | null = null;
 // While a film runs the game's loop is stopped: this clock is the only one, and it moves when it is told to.
 let film: { clock: number; played: number } | null = null;
 let stillFilm = false;
+let shownRound = 1;
 
 const spellSelect = make<HTMLSelectElement>('select', { id: 'bench-spell' });
 const option = (one: typeof listed[number]) => make('option', { value: one.id }, benchTitle(one));
@@ -141,7 +142,11 @@ function show(next: Stage) {
   lab.dataset.motion = reduced() ? 'reduced' : 'full';
   playButton.disabled = !ready;
   if (ready) status.textContent = unknown && stage === 'decision' ? `No effect named ${asked}` : describe(entry.name);
-  scene.present(benchFrame({ entry, actor, targets, stage, outcome, wound, damage, defeat, round }) as SceneFrame, reduced(), speed());
+  // A change of round is the fixture's, not a round played: the ground is shown as it stands there, at once. Seen
+  // giving way, a film that started one round on would catch the fall wherever the wall clock had left it.
+  const moved = round !== shownRound;
+  shownRound = round;
+  scene.present(benchFrame({ entry, actor, targets, stage, outcome, wound, damage, defeat, round }) as SceneFrame, reduced(), speed(), moved);
 }
 const playing = () => stage === 'windup' || stage === 'impact';
 function describe(name: string) {
