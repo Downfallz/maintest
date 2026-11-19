@@ -151,39 +151,66 @@ test('the zoom punches on a defeat or a critical hit only', () => {
 });
 
 // #909: the body let go at 240 ms and the quill, eased in, was seen to leave it only near 600 ms.
-test('a projectile leaves with the throw, at an even pace, and lands as the windup ends', () => {
-  assert.equal(FLIGHT.at, THROW.toss.at, 'it leaves when the thrower lets go');
-  assert.equal(FLIGHT.at + FLIGHT.lasts, WINDUP_MS, 'it lands on the contact');
-  const from = { x: 100, y: 600, radius: 40 }, to = { x: 300, y: 200, radius: 40 };
-  const start = flightAt(from, to, 0), end = flightAt(from, to, 1), whole = Math.hypot(end.x - start.x, end.y - start.y);
-  assert.deepEqual([end.x, end.y], [to.x, to.y]);
-  // It starts over the thrower's back, clear of its spines: drawn on the body, it was still read as part of it.
-  assert.equal(start.x, from.x);
-  assert.ok(start.y < from.y - from.radius * 1.4 && start.y > from.y - from.radius * 2);
-  // One tenth of the flight, 60 ms after the throw: already a tenth of the way, where the ease in had moved it a thousandth.
-  const early = flightAt(from, to, .1);
-  assert.ok(Math.hypot(early.x - start.x, early.y - start.y) >= whole * .1);
-  // Never ahead of an even pace by much, and never back: the distance covered only grows.
-  let last = 0;
-  for (let step = 1; step <= 20; step++) {
-    const now = flightAt(from, to, step / 20), covered = Math.hypot(now.x - start.x, now.y - start.y);
-    assert.ok(covered > last, `the quill goes on at ${step / 20}`);
-    last = covered;
-  }
+const covered = (from, to, share) => { const start = flightAt(from, to, 0), now = flightAt(from, to, share); return Math.hypot(now.x - start.x, now.y - start.y); };
+// The throws a field has: across it, straight up it and straight down it (a phone held upright), and both diagonals.
+const THROWS = Object.entries({
+  level: [{ x: 100, y: 400, radius: 40 }, { x: 400, y: 400 - 40 * (1.4 + FLIGHT.over), radius: 40 }],
+  up: [{ x: 100, y: 700, radius: 40 }, { x: 100, y: 200, radius: 40 }],
+  down: [{ x: 100, y: 200, radius: 40 }, { x: 100, y: 700, radius: 40 }],
+  'up and across': [{ x: 100, y: 600, radius: 40 }, { x: 300, y: 200, radius: 40 }],
+  'down and across': [{ x: 300, y: 200, radius: 40 }, { x: 100, y: 600, radius: 40 }],
 });
 
-test('a projectile flies a low arc, and points where it flies', () => {
-  const from = { x: 100, y: 400, radius: 40 }, to = { x: 400, y: 400 - 40 * FLIGHT.back, radius: 40 };
-  // Thrown across the field at one height: the middle of the flight is above the straight line by half the lift.
-  const start = flightAt(from, to, 0), middle = flightAt(from, to, .5);
-  assert.ok(Math.abs(start.y - to.y) < 1e-9);
-  assert.ok(Math.abs((to.y - middle.y) - 300 * FLIGHT.lift / 2) < 1e-9);
-  // It climbs as it leaves, flies level at the top and comes down onto its target.
-  assert.ok(flightAt(from, to, 0).angle < 0);
-  assert.ok(Math.abs(middle.angle) < 1e-9);
-  assert.ok(flightAt(from, to, 1).angle > 0);
-  assert.ok(FLIGHT.lift > 0 && FLIGHT.lift <= .3, 'low: a lob would read as a mortar');
+test('a projectile leaves with the throw and lands as the windup ends', () => {
+  assert.equal(FLIGHT.at, THROW.toss.at, 'it leaves when the thrower lets go');
+  assert.equal(FLIGHT.at + FLIGHT.lasts, WINDUP_MS, 'it lands on the contact');
+  const [from, to] = THROWS[3][1], start = flightAt(from, to, 0), end = flightAt(from, to, 1);
+  assert.ok(Math.hypot(end.x - to.x, end.y - to.y) < 1e-9);
+  // It starts over the thrower, clear of its back: drawn on the body, it was still read as part of it.
+  assert.equal(start.x, from.x);
+  assert.ok(Math.abs(start.y - (from.y - from.radius * (1.4 + FLIGHT.over))) < 1e-9);
+  // Where the scene says how high the figure's head is, the flight starts over that.
+  assert.ok(Math.abs(flightAt({ ...from, head: 500 }, to, 0).y - (500 - from.radius * FLIGHT.over)) < 1e-9);
   // A place outside the flight is its nearest end.
   assert.deepEqual(flightAt(from, to, -1), flightAt(from, to, 0));
   assert.deepEqual(flightAt(from, to, 2), flightAt(from, to, 1));
+});
+
+test('a projectile flies at an even pace whichever way it is thrown: it neither slows into the hit nor gathers speed', () => {
+  for (const [name, [from, to]] of THROWS) {
+    // The length of the flight, in small steps, and the pace over its first and its last tenth against the mean.
+    let length = 0;
+    for (let step = 1; step <= 200; step++) {
+      const one = flightAt(from, to, (step - 1) / 200), next = flightAt(from, to, step / 200);
+      length += Math.hypot(next.x - one.x, next.y - one.y);
+    }
+    const first = covered(from, to, .1), last = (() => { const one = flightAt(from, to, .9), end = flightAt(from, to, 1); return Math.hypot(end.x - one.x, end.y - one.y); })();
+    for (const [where, tenth] of [['leaving', first], ['landing', last]]) {
+      assert.ok(Math.abs(tenth / (length / 10) - 1) < .05, `${name}, ${where}: a tenth of the time is ${(tenth / length * 100).toFixed(1)}% of the way`);
+    }
+    // 60 ms after the throw it is a tenth of the way: out of the thrower's hands, where the ease in had moved it a thousandth.
+    assert.ok(first > length * .095, name);
+  }
+});
+
+test('a projectile thrown across the field flies a low arc, and points where it flies', () => {
+  const [from, to] = THROWS[0][1];
+  // Thrown at one height: the middle of the flight is above the straight line by half the lift.
+  const start = flightAt(from, to, 0), middle = flightAt(from, to, .5);
+  assert.ok(Math.abs(start.y - to.y) < 1e-9);
+  assert.ok(Math.abs((to.y - middle.y) - 300 * FLIGHT.lift / 2) < .5);
+  // It climbs as it leaves, flies level at the top and comes down onto its target.
+  assert.ok(flightAt(from, to, 0).angle < 0);
+  assert.ok(Math.abs(middle.angle) < .01);
+  assert.ok(flightAt(from, to, 1).angle > 0);
+  assert.ok(FLIGHT.lift > 0 && FLIGHT.lift <= .3, 'low: a lob would read as a mortar');
+});
+
+test('a projectile thrown straight up or down the field keeps to the line: its height lies along it', () => {
+  for (const name of ['up', 'down']) {
+    const [from, to] = Object.fromEntries(THROWS)[name];
+    for (let step = 0; step <= 10; step++) assert.ok(Math.abs(flightAt(from, to, step / 10).x - from.x) < 1e-9, name);
+    // Half the time is half the way: the curve's own parameter put it at 58% thrown up, and 42% thrown down.
+    assert.ok(Math.abs(covered(from, to, .5) / covered(from, to, 1) - .5) < .01, name);
+  }
 });

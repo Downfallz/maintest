@@ -13,15 +13,15 @@ The family keeps one meaning per look, so a player learns it once ([One effect, 
 meaning](../battle-craft.md#one-effect-one-meaning)). The motif carries the family's green and stays the primary
 element. Rounded drops in the family's green are what a gland makes: venom, spores, a secretion. Shards and dots in
 `bone` are the creature's own hard parts: a quill, a claw, a splinter of hide. Drops in `blood` are a wound that
-bleeds. A spell that does not poison does not throw green drops, so Quill's debris is bone and Venom Claw's is green.
+bleeds, or what the caster drank (below). A spell that does not poison does not throw green drops, so Quill's debris is bone and Venom Claw's is green.
 
 Stage II adds three readings, each kept to one look. Green sparks, pointed and quick, rising off a figure are energy
 it gained (Overdrive's allies, Pursuit's caster); the rounded green drop stays the gland's. Blood that stays on the
 struck figure is its Bleed (Venom Claw, Latch); blood carried back to the caster is what it drank (Bite). Pale grains
 on a flat ring at a figure's feet are grit off the ground (Ambush), not a quill. A spell that neither bleeds nor
-drinks shows no blood, whatever it deals: Ambush's ten damage throw bone.
+drinks shows no blood, whatever it deals: Ambush deals ten damage and its pieces are bone.
 
-Stage III adds five readings, each kept to one look. Bone flakes knocked off a figure's hide are its defense lowered
+Stage III adds six readings, each kept to one look. Bone flakes knocked off a figure's hide are its defense lowered
 (Toxic Mend, Contagion). Green sparks drawn off a figure toward its foe, gone before they arrive, are energy it lost
 (Blood Hunt, Devour); rising off a figure, the same sparks are energy gained. Blood torn off the caster's own body is
 the price it pays (Blood Price), and the wound the scene draws on it after the blow is the same price. A dark red
@@ -167,13 +167,13 @@ Filmed at `28f2dc2`, 390 by 844, 1×, a1 on b1 and b3, 3 health lost each: a who
 | At | Lasts | Window | Layer | Beat | Pattern |
 | --- | --- | --- | --- | --- | --- |
 | 0 | 240 | windup | the caster | The load ([movement.md](movement.md), `THROW` in `table/battle-motion.js`): a1 draws 8 px away from its targets with a squash of 4%. No quill is drawn while the body loads. | [Anticipation](../battle-craft.md#anticipation) |
-| 240 | 120 | windup | the caster | The toss as the quills leave: a1 goes 6 px past home toward its targets with a stretch of 4%, then eases back home over 360 to 840 ms, still from 840 ms ([movement.md](movement.md)). | [Contact and follow-through](../battle-craft.md#contact-and-follow-through), [Squash and stretch](../battle-craft.md#squash-and-stretch) |
-| 240 | 600 | windup | the effect | The flight, drawn by the scene (`FLIGHT`, `flightAt`), not a staged beat: one quill for each target appears on a1's back, 1.6 of its radius above its centre (*house*), clear of the spines, and flies for 600 ms at an even pace, no ease in, on a low arc whose one control point stands above the middle by 16% of the flight's length (*house*), turned along its path. It lands at 840 ms. No trail: Stage I flies it bare. | [Arcing travel](../battle-craft.md#arcing-travel) |
+| 240 | 120 | windup | the caster | The toss as the quills leave: a1 goes 6 px past home toward its targets with a stretch of 4%, then eases back home between 360 and 840 ms ([movement.md](movement.md)). | [Contact and follow-through](../battle-craft.md#contact-and-follow-through), [Squash and stretch](../battle-craft.md#squash-and-stretch) |
+| 240 | 600 | windup | the effect | The flight, drawn by the scene (`FLIGHT`, `flightAt`), not a staged beat: one quill for each target appears just over a1's head line, 0.3 of its radius above it (*house*), clear of the spines. It flies for 600 ms at an even pace, no ease in, on a low arc whose one control point stands above the middle by 16% of the flight's length (*house*), turned along its path. It lands at 840 ms. No trail: Stage I flies it bare. | [Arcing travel](../battle-craft.md#arcing-travel) |
 | 840 | 600 | impact | the effect | The `quill` motif on b1 and on b3: its strokes along each quill's flight, on their dark edge, gone by 1440 ms. `motif at 840, lasts 600` | [An impact that keeps the direction](../battle-craft.md#an-impact-that-keeps-the-direction), [Shape before colour](../battle-craft.md#shape-before-colour) |
 | 840 | 160 | impact | the effect | The tip's bite, the brightest and shortest part: 6 small bone sparks (*house*) out on every side of the point of entry, short. `burst at 840, count 6, shape spark, tint bone, direction out, spread 360, reach 120, strength 0.3, lasts 160, blend normal` | [Burst](../battle-craft.md#burst), [The three parts of an effect](../battle-craft.md#the-three-parts-of-an-effect) |
 | 840 | 240 | impact | the effect | Through, the signature: 10 bone splinters (*house*) driven on out of the far side of each target in a narrow 20° needle along the quill's flight, past its outline. Pummel's fan is 50°. `burst at 840, count 10, shape shard, tint bone, direction along, spread 20, reach 320, strength 0.4, lasts 240, blend normal` | [Burst](../battle-craft.md#burst), [An impact that keeps the direction](../battle-craft.md#an-impact-that-keeps-the-direction) |
 | 880 | 280 | impact | the effect | The entry: 6 grains of bone (*house*) spattered back from each target toward a1, short, none past the gap. Bone, not green: Quill is not venom. `burst at 880, count 6, shape dot, tint bone, direction back, spread 90, reach 300, strength 0.15, lasts 220, blend normal` | [Burst](../battle-craft.md#burst), [One effect, one meaning](../battle-craft.md#one-effect-one-meaning) |
-| 840 | 590 | impact | the target | Each struck figure's light hit from a distance ([movement.md](movement.md)): its bone flash for 80 ms, a stop of 30 ms, a recoil of 12 px away from a1, home by about 1430 ms. Both on the contact frame, each by its own loss. | [Hit flash](../battle-craft.md#hit-flash), [Recoil](../battle-craft.md#recoil) |
+| 840 | 590 | impact | the target | Each struck figure's light hit from a distance ([movement.md](movement.md)): its bone flash for 80 ms, a stop of 30 ms, a recoil of 12 px away from a1, home by about 1430 ms. The flash and the stop start on the contact frame; each figure's recoil follows its own loss. | [Hit flash](../battle-craft.md#hit-flash), [Recoil](../battle-craft.md#recoil) |
 | 1440 | 1100 | impact | the field | Nothing new. Every figure home. The result is read here. | [The hold before the number](../battle-craft.md#the-hold-before-the-number), [Breath at rest](../battle-craft.md#breath-at-rest) |
 
 Four staged beats, all in the impact; 22 particles asked for on each target (6, 10, 6), 44 on the field at most; no
@@ -229,10 +229,10 @@ The sheets cannot show the stop, the shake of the health lost, or the feel of th
 ### Left
 
 - The flight is settled (#909, built in this stage): the thrower's body is `THROW`'s, unchanged; the quill appears
-  at 240 ms and flies `FLIGHT`. The 1.6 radius and the 16% lift are *house*: the film tunes them.
+  at 240 ms and flies `FLIGHT`. The 0.3 radius over the head line and the 16% lift are *house*: the film tunes them.
 - No trail behind the quill: the ladder test counts every beat that starts before 840 ms, and Stage I allows none.
   The trail on a projectile is kept for Paralyzing Barb at Stage III, where a windup beat is asked for.
-- One quill a target, as the host confirms one hit each. The approved execution says "quills": a volley of three
+- One quill a target, as the host confirms one hit each. The approved execution in `docs/art/creature-art-direction.md` says "quills": a volley of three
   per target would read as three hits. The owner may want it; it is the scene's flight, not the staging's.
 - On the bench b1 stands straight up the field from a1, so its quill's arc is seen as a line and its splinters are
   shortened over its head; b3 shows the arc and the needle at nearly full reach.
@@ -456,7 +456,7 @@ Filmed at `28f2dc2`, 390 by 844, 1×, a1 on b1, 10 health lost: a whole action a
 | 1440 | 480 | impact | the effect | The weight, the signature's second half: 10 pale grains of grit (*house*) on a flat ring on the ground around a1's feet close slowly on them as a1 lands home, gone by 1920 ms. Played at a1's home: a1 is there, or all but, by 1440 ms. `gather at 1440, on caster, count 10, shape dot, tint bone, reach 200, strength 1, lasts 480, blend normal, level feet` | [Gravity well and convergence](../battle-craft.md#gravity-well-and-convergence), [A beat on the ground](../battle-craft.md#a-beat-on-the-ground) |
 | 1920 | 620 | impact | the field | Nothing new. Both figures home, breathing. The result is read here. | [The hold before the number](../battle-craft.md#the-hold-before-the-number), [Breath at rest](../battle-craft.md#breath-at-rest) |
 
-Six staged beats, none in the windup; 32 particles asked for on b1 (20, 12) and 10 on a1; one glow, a shake of 0.12,
+Six staged beats, none in the windup; 26 particles asked for on b1 (14, 12) and 10 on a1; one glow, a shake of 0.12,
 the last gone by 1920 ms: inside Stage II. One flash, the body's, on b1; one change of light. A critical hit is told
 by the body's punch of the zoom, not by the staging.
 
@@ -538,7 +538,7 @@ Filmed at `28f2dc2`, 390 by 844, 1×, a1 on b1, 3 health lost: a whole action an
 | At | Lasts | Window | Layer | Beat | Pattern |
 | --- | --- | --- | --- | --- | --- |
 | 0 | 840 | windup | the caster | A light blow's draw back and strike by the 3 health b1 lost ([movement.md](movement.md)). No mark on a1's body. | [Anticipation](../battle-craft.md#anticipation), [Contact and follow-through](../battle-craft.md#contact-and-follow-through) |
-| 540 | 300 | windup | the effect | The streak, the one windup beat and the signature: a head runs from a1's place to b1, easing in as the body does, dropping 12 green sparks (*house*) that fade behind it; it reaches b1 at 840 ms. Drawn from where a1 stood, by design: it is the path, not the body. `trail at 540, count 20, shape spark, tint family, strength 1, lasts 300, blend add` | [Trail](../battle-craft.md#trail), [Contact and follow-through](../battle-craft.md#contact-and-follow-through) |
+| 540 | 300 | windup | the effect | The streak, the one windup beat and the signature: a head runs from a1's place to b1, easing in as the body does, dropping 20 green sparks (*house*) that fade behind it; it reaches b1 at 840 ms. Drawn from where a1 stood, by design: it is the path, not the body. `trail at 540, count 20, shape spark, tint family, strength 1, lasts 300, blend add` | [Trail](../battle-craft.md#trail), [Contact and follow-through](../battle-craft.md#contact-and-follow-through) |
 | 840 | 600 | impact | the effect | The `slash` motif on b1, quick, gone by 1440 ms. `motif at 840, lasts 600` | [An impact that keeps the direction](../battle-craft.md#an-impact-that-keeps-the-direction), [Shape before colour](../battle-craft.md#shape-before-colour) |
 | 840 | 220 | impact | the effect | The run carried on: 8 green sparks (*house*) go on beyond b1 along the blow in a narrow 30° line, the streak's end. `burst at 840, count 8, shape spark, tint family, direction along, spread 30, reach 300, strength 0.4, lasts 220, blend add` | [Burst](../battle-craft.md#burst), [An impact that keeps the direction](../battle-craft.md#an-impact-that-keeps-the-direction) |
 | 840 | 840 | impact | the caster and the target | The light blow's hit stop (60 ms), b1's bone flash, its recoil of 12 px, a1's return, home by 1680 ms ([movement.md](movement.md)). | [Hit stop](../battle-craft.md#hit-stop), [Recoil](../battle-craft.md#recoil) |
@@ -547,7 +547,7 @@ Filmed at `28f2dc2`, 390 by 844, 1×, a1 on b1, 3 health lost: a whole action an
 | 1440 | 300 | impact | the effect | Keener: 8 green sparks (*house*) jump straight up off a1, Overdrive's jolt on one figure: energy gained. `burst at 1440, on caster, count 8, shape spark, tint family, direction up, spread 50, reach 220, strength 0.4, lasts 300, blend add` | [Burst](../battle-craft.md#burst), [One effect, one meaning](../battle-craft.md#one-effect-one-meaning) |
 | 1740 | 800 | impact | the field | Nothing new. Both figures home, breathing. The result is read here. | [The hold before the number](../battle-craft.md#the-hold-before-the-number), [Breath at rest](../battle-craft.md#breath-at-rest) |
 
-Six staged beats, one in the windup (the trail); 26 particles asked for on b1 (12, 8, 6) and 8 on a1; one glow, on
+Six staged beats, one in the windup (the trail); 34 particles asked for on b1 (20, 8, 6) and 8 on a1; one glow, on
 a1; no shake; the last gone by 1740 ms: inside Stage II. One flash, the body's, on b1; one change of light, on a1.
 
 ### Reduced motion
@@ -999,11 +999,11 @@ Filmed at `28f2dc2`, 390 by 844, 1×, a1 on b1, 5 health lost: a whole action an
 | 840 | 280 | impact | the effect | The rip's light: a pale bone light on b1, gone by 1120 ms. `glow at 840, tint bone, reach 220, strength 0.6, lasts 280, blend screen` | [Glow](../battle-craft.md#glow), [Additive light](../battle-craft.md#additive-light) |
 | 920 | 300 | impact | the effect | The hooks torn out, once b1's bone fill is gone: 14 bone shards (*house*) ripped back from b1 toward a1 in a 50° fan. Bone, the talons; not blood, which would say "drunk". `burst at 920, count 14, shape shard, tint bone, direction back, spread 50, reach 260, strength 0.5, lasts 300, blend normal` | [Burst](../battle-craft.md#burst), [An impact that keeps the direction](../battle-craft.md#an-impact-that-keeps-the-direction) |
 | 860 | 360 | impact | the effect | The gash opens: 18 deep red drops (*house*) spurt on every side of b1, short, staying near it. `burst at 860, count 18, shape dot, tint blood, direction out, spread 360, reach 220, strength 0.2, lasts 360, blend normal` | [Burst](../battle-craft.md#burst), [Stagger and overlap](../battle-craft.md#stagger-and-overlap) |
-| 920 | 1300 | impact | the effect | The pour, the signature's first half: 16 deep red beads (*house*) alive at once well up over b1 and drift a little off it, gone by 2220 ms: the longest Bleed of the family, for 4 a round. `flow at 920, count 22, shape dot, tint blood, direction out, spread 360, reach 80, strength 0.55, lasts 1300, blend normal` | [Flow](../battle-craft.md#flow), [One effect, one meaning](../battle-craft.md#one-effect-one-meaning) |
+| 920 | 1300 | impact | the effect | The pour, the signature's first half: 22 deep red beads (*house*) alive at once well up over b1 and drift a little off it, gone by 2220 ms: the longest Bleed of the family, for 4 a round. `flow at 920, count 22, shape dot, tint blood, direction out, spread 360, reach 80, strength 0.55, lasts 1300, blend normal` | [Flow](../battle-craft.md#flow), [One effect, one meaning](../battle-craft.md#one-effect-one-meaning) |
 | 1000 | 900 | impact | the ground | The pool, the signature's second half: a dark red ring opens slowly on the ground under b1, a little wider than its ground ring, and fades, gone by 1900 ms. Normal blend: blood is not a light. `glow at 1000, shape ring, tint blood, reach 160, strength 0.85, lasts 900, blend normal` | [Glow](../battle-craft.md#glow), [A beat on the ground](../battle-craft.md#a-beat-on-the-ground) |
 | 2220 | 320 | impact | the field | Nothing new. Both figures home, breathing. The result is read here; the hold from 2400 ms is empty. | [The hold before the number](../battle-craft.md#the-hold-before-the-number), [Breath at rest](../battle-craft.md#breath-at-rest) |
 
-Nine staged beats, two in the windup; 48 particles asked for on b1 (14, 18, 16) and 12 on a1; three glows (one a ring
+Nine staged beats, two in the windup; 54 particles asked for on b1 (14, 18, 22) and 12 on a1; three glows (one a ring
 on the ground), no pulse, a shake of 0.2, the last gone by 2220 ms: inside Stage III. One flash, the body's, on b1;
 two changes of light, the gleam on a1 and the rip on b1. A critical hit is the body's punch of the zoom.
 
@@ -1191,13 +1191,13 @@ Filmed at `28f2dc2`, 390 by 844, 1×, a1 on b1, 11 health lost, a1 paying 3: a w
 | 840 | 300 | impact | the camera | The family's largest staged shake, over the heavy blow's trauma, decaying over about 300 ms (*house*). `shake at 840, strength 0.32` | [Shake from trauma](../battle-craft.md#shake-from-trauma) |
 | 840 | 300 | impact | the effect | The blow's light, the brightest of the family: a hard green light on b1, gone by 1140 ms. `glow at 840, tint family, reach 280, strength 0.8, lasts 300, blend add` | [Glow](../battle-craft.md#glow), [Additive light](../battle-craft.md#additive-light) |
 | 840 | 520 | impact | the ground | The shock: a bone arc opens on the ground at b1's feet, on its far side from a1, gone by 1360 ms. `glow at 840, shape ring, tint bone, direction along, spread 120, reach 230, strength 0.7, lasts 520, blend screen` | [Glow](../battle-craft.md#glow), [A beat on the ground](../battle-craft.md#a-beat-on-the-ground) |
-| 840 | 400 | impact | the effect | The blow carried through: 20 large bone shards (*house*) thrown on beyond b1 along the blow in a 70° fan. `burst at 840, count 16, shape shard, tint bone, direction along, spread 70, reach 400, strength 0.45, lasts 400, blend normal` | [Burst](../battle-craft.md#burst), [An impact that keeps the direction](../battle-craft.md#an-impact-that-keeps-the-direction) |
+| 840 | 400 | impact | the effect | The blow carried through: 16 large bone shards (*house*) thrown on beyond b1 along the blow in a 70° fan. `burst at 840, count 16, shape shard, tint bone, direction along, spread 70, reach 400, strength 0.45, lasts 400, blend normal` | [Burst](../battle-craft.md#burst), [An impact that keeps the direction](../battle-craft.md#an-impact-that-keeps-the-direction) |
 | 840 | 220 | impact | the effect | The crack of it: 12 bright bone sparks (*house*) out on every side of the point of contact, short. `burst at 840, count 12, shape spark, tint bone, direction out, spread 360, reach 220, strength 0.5, lasts 220, blend add` | [Burst](../battle-craft.md#burst), [The three parts of an effect](../battle-craft.md#the-three-parts-of-an-effect) |
 | 880 | 420 | impact | the ground | Grit: 10 pale grains (*house*) thrown out flat on the ground on every side of b1's feet. `burst at 880, count 10, shape dot, tint bone, direction out, spread 360, reach 260, strength 0.35, lasts 420, blend normal, level feet` | [Burst](../battle-craft.md#burst), [A beat on the ground](../battle-craft.md#a-beat-on-the-ground) |
 | 1400 | 500 | impact | the effect | The price felt: a deep red light on a1 as it lands on its ring, gone by 1900 ms. `glow at 1400, on caster, tint blood, reach 170, strength 0.6, lasts 500, blend screen` | [Glow](../battle-craft.md#glow), [A light that answers a cast](../battle-craft.md#a-light-that-answers-a-cast) |
 | 2140 | 400 | impact | the field | Nothing new. Both figures home, breathing. The result is read here; the hold from 2400 ms is empty. | [The hold before the number](../battle-craft.md#the-hold-before-the-number), [Breath at rest](../battle-craft.md#breath-at-rest) |
 
-Ten staged beats, two in the windup; 42 particles asked for on b1 (20, 12, 10) and 12 on a1; four glows (one an arc
+Ten staged beats, two in the windup; 38 particles asked for on b1 (16, 12, 10) and 12 on a1; four glows (one an arc
 on the ground), no pulse, a shake of 0.32, the last gone by 2140 ms: inside Stage III. One flash, the body's, on b1;
 a1's wound is the scene's, not a flash of the staging. Three changes of light: red on a1 before, green on b1 at
 contact, red on a1 at home.
@@ -1288,13 +1288,13 @@ Filmed at `28f2dc2`, 390 by 844, 1×, a1 on b1, 7 health lost: a whole action an
 | 840 | 300 | impact | the camera | A staged shake over the heavy blow's trauma, decaying over about 300 ms (*house*). `shake at 840, strength 0.25` | [Shake from trauma](../battle-craft.md#shake-from-trauma) |
 | 840 | 220 | impact | the effect | The jaws meet: 16 bone shards (*house*) out on every side of b1, short. Bite's are ten small sparks. `burst at 840, count 16, shape shard, tint bone, direction out, spread 360, reach 260, strength 0.3, lasts 220, blend normal` | [Burst](../battle-craft.md#burst), [The three parts of an effect](../battle-craft.md#the-three-parts-of-an-effect) |
 | 840 | 280 | impact | the effect | The bite's light: a hard green light on b1, gone by 1120 ms. `glow at 840, tint family, reach 240, strength 0.75, lasts 280, blend add` | [Glow](../battle-craft.md#glow), [Additive light](../battle-craft.md#additive-light) |
-| 880 | 900 | impact | the effect | The siphon, the signature's first strand: 16 deep red drops (*house*) alive at once drawn out of b1 toward a1 in a narrow stream, gone by 1780 ms. It does not land: Bite's lands. `flow at 880, count 20, shape dot, tint blood, direction back, spread 30, reach 360, strength 0.6, lasts 900, blend normal` | [Flow](../battle-craft.md#flow), [Gravity well and convergence](../battle-craft.md#gravity-well-and-convergence) |
-| 900 | 800 | impact | the effect | The siphon's second strand, the energy drained: 12 green sparks alive at once in the same stream, gone by 1700 ms. Blood Hunt's reading: energy lost. `flow at 900, count 14, shape spark, tint family, direction back, spread 30, reach 360, strength 0.5, lasts 800, blend add` | [Flow](../battle-craft.md#flow), [One effect, one meaning](../battle-craft.md#one-effect-one-meaning) |
+| 880 | 900 | impact | the effect | The siphon, the signature's first strand: 20 deep red drops (*house*) alive at once drawn out of b1 toward a1 in a narrow stream, gone by 1780 ms. It does not land: Bite's lands. `flow at 880, count 20, shape dot, tint blood, direction back, spread 30, reach 360, strength 0.6, lasts 900, blend normal` | [Flow](../battle-craft.md#flow), [Gravity well and convergence](../battle-craft.md#gravity-well-and-convergence) |
+| 900 | 800 | impact | the effect | The siphon's second strand, the energy drained: 14 green sparks alive at once in the same stream, gone by 1700 ms. Blood Hunt's reading: energy lost. `flow at 900, count 14, shape spark, tint family, direction back, spread 30, reach 360, strength 0.5, lasts 800, blend add` | [Flow](../battle-craft.md#flow), [One effect, one meaning](../battle-craft.md#one-effect-one-meaning) |
 | 1380 | 800 | impact | the caster | The swell, the signature's end and the family's one halo: a green halo on a1's own outline swells as it comes home, at its fullest near 1780 ms, gone by 2180 ms. It goes with a1's body. `pulse at 1380, on caster, tint family, strength 0.6, lasts 800` | [Glow](../battle-craft.md#glow), [One hero shader](../battle-craft.md#one-hero-shader) |
 | 1560 | 520 | impact | the effect | Tissue restored: a soft green light on a1 at home, under the halo, gone by 2080 ms. `glow at 1560, on caster, tint family, reach 200, strength 0.15, lasts 520, blend screen` | [Glow](../battle-craft.md#glow), [A light that answers a cast](../battle-craft.md#a-light-that-answers-a-cast) |
 | 2180 | 360 | impact | the field | Nothing new. Both figures home, breathing. The result is read here; the hold from 2400 ms is empty. | [The hold before the number](../battle-craft.md#the-hold-before-the-number), [Breath at rest](../battle-craft.md#breath-at-rest) |
 
-Ten staged beats, two in the windup; 44 particles asked for on b1 (16, 16, 12) and 14 on a1; three glows and the one
+Ten staged beats, two in the windup; 50 particles asked for on b1 (16, 20, 14) and 14 on a1; three glows and the one
 pulse, on a1; a shake of 0.25; the last gone by 2180 ms: inside Stage III. One flash, the body's, on b1; three
 changes of light: a1 in the windup, b1 at contact, a1 at home under its halo.
 

@@ -212,8 +212,9 @@ export class KitContext {
   /** Where each object alive stands, and what else it says of itself, for the bench and the browser specs. */
   places() {
     return [...this.objects].map(object => {
-      const { x, y } = object as unknown as { x: number; y: number };
-      return { ...object.data.getAll() as { beat: string; creature: string }, x, y, kind: object.type };
+      // An emitter that follows a head stands where its head is: a trail's own place is the field's corner.
+      const { x, y, follow } = object as unknown as { x: number; y: number; follow?: { x: number; y: number } | null };
+      return { ...object.data.getAll() as { beat: string; creature: string }, x: x + (follow?.x ?? 0), y: y + (follow?.y ?? 0), kind: object.type };
     });
   }
 

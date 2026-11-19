@@ -538,10 +538,13 @@ bake the drawing to a texture first, or filter a container.
   along the curve.
 - **Cost**: one counter tween.
 - **Reduced motion**: nothing. No projectile is launched, as today.
-- **Here**: since BC7 every projectile flies `flightAt` (`table/battle-motion.js`): it leaves the thrower, just over its back,
-  with the toss, at 240 ms, and lands on the contact, 600 ms at an even pace on a curve whose control point
-  stands above the middle by 16% of the flight's length (*house*). The curve is written by hand: the effects kit
-  holds no engine, and its trail follows the same one. Eased in, the quill stood on the thrower's body for
+- **Here**: since BC7 every projectile flies `flightAt` (`table/battle-motion.js`). It leaves just over the
+  thrower's head with the toss, at 240 ms, and lands on the contact 600 ms later. The curve's control point
+  stands above the middle by 16% of the flight's length (*house*), and the flight covers an even length of the
+  curve a moment: the curve's own parameter slowed a quill thrown up the field into its hit. The lift is up the
+  screen, so a throw across the field bows and one straight up or down it keeps to its line. The curve is
+  written by hand: the effects kit holds no engine, and its trail follows the same curve. What the projectile
+  knocks off its target goes on down the end of the arc. Eased in, the quill stood on the thrower's body for
   300 ms after the throw (#909).
 
 ### Ribbon

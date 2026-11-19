@@ -306,15 +306,16 @@ that extends it.
      flake of hide, blood on the struck figure is its Bleed and blood carried to the caster is what it drank. So
      Ambush, Blood Hunt and Blood Price's target show no blood.
    - The quill leaves with the throw (#909). A projectile is not drawn while its caster loads; at 240 ms it
-     appears just over the caster's back and flies 600 ms at an even pace on a low arc to the contact (`FLIGHT`
-     and `flightAt` in `table/battle-motion.js`, the craft book's "Arcing travel"). `THROW` did not move. A `trail`
-     on a projectile follows the same arc: Paralyzing Barb has the family's one; Quill, a Stage I spell with no
-     beat in its windup, flies bare.
+     appears just over the caster's head and flies 600 ms to the contact, at an even pace whichever way it is
+     thrown (`FLIGHT` and `flightAt` in `table/battle-motion.js`, the craft book's "Arcing travel"). Thrown across
+     the field it bows on a low arc; straight up or down it, its height lies along the line. Its debris and its
+     strokes go on down the end of the arc. `THROW` did not move. A `trail` on a projectile follows the same
+     curve: Paralyzing Barb has the family's one; Quill, a Stage I spell with no beat in its windup, flies bare.
    - What the designer's reading of the first films found, in nearly every spell: pieces thrown `along` or `back`
      under a reach of 300, or flowing under a reach of 120, never left the struck body; dots under a strength of
      0.4 piled into one soft cloud; bone pieces cannot be seen on a figure filled in bone by its hit flash, at
      840 and 900 ms. About 50 beats and lines were changed and the films made again; a second reading asked for 22 more,
-     made too. The third films were looked at by the session, not read by the designer.
+     made too. The session checked the third films; the designer did not read them.
 
    Left:
 

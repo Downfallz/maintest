@@ -238,9 +238,9 @@ frames, and does not judge the feel.
   A cast releases at contact because nothing leaves it before.
 - The distant recoil keeps the melee's distances: damage is damage. Only the stop is halved, as the book's source
   gives less hit stop to a projectile. The owner may want a smaller push from afar.
-- Settled in BC7 (#909): the quill is not drawn while a1 loads, leaves a1's back with the toss at 240 ms and flies
-  a low arc at an even pace to the contact (`FLIGHT` in `table/battle-motion.js`, [Quill](biological.md)). `THROW`
-  did not move.
+- Settled in BC7 (#909): the quill is not drawn while a1 loads, leaves just over a1's head with the toss at
+  240 ms and flies at an even pace to the contact, on a low arc when thrown across the field (`FLIGHT` in
+  `table/battle-motion.js`, [Quill](biological.md#quill-spellthrowing_starv1)). `THROW` did not move.
 
 ## A death
 

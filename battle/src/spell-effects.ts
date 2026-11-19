@@ -72,7 +72,10 @@ export class SpellEffects {
     const late = Math.max(0, Math.min(copy * STAGGER_MS, end - staged.at - (staged.lasts ?? 0)));
     const beat = late ? { ...staged, delay: staged.delay + late } : staged;
     const origin = from ?? on.anchor, aim = toward ?? on.anchor;
-    const heading = origin.x === aim.x && origin.y === aim.y ? null : Math.atan2(aim.y - origin.y, aim.x - origin.x);
+    const straight = origin.x === aim.x && origin.y === aim.y ? null : Math.atan2(aim.y - origin.y, aim.x - origin.x);
+    // What a projectile knocks off its target goes on the way the projectile came in, down the end of its arc,
+    // not along the straight line from its caster's centre.
+    const heading = from && straight !== null && visual.delivery === 'projectile' ? flightAt(from, on.anchor, 1).angle : straight;
     const color = TINTS[beat.tint ?? ''] ?? PALETTE[visual.family] ?? PALETTE.neutral;
     // A projectile's trail keeps to the arc its quill flies.
     const flight = beat.beat === 'trail' && visual.delivery === 'projectile';
@@ -129,7 +132,7 @@ export class SpellEffects {
     }
     if (visual.delivery === 'projectile') {
       for (const { id, anchor } of destinations) {
-        // The quill leaves the caster's back as its body throws, and not before: until then it is not drawn, where
+        // The quill leaves from just over its caster as the body throws, and not before: until then it is not drawn, where
         // it once stood on the body for the whole draw back and 300 ms of an eased flight (#909).
         const quill = this.graphic('quill', id, 'windup').setVisible(false);
         quill.fillStyle(0xdfd9c9).fillTriangle(-16, -3, 16, 0, -16, 3);
@@ -177,11 +180,13 @@ export class SpellEffects {
 
   impact(visual: SpellVisual, recipient: EffectFigure, rate: number, origin?: EffectAnchor) {
     const beats = this.staged(visual, 'impact');
-    if (!beats) { this.motif(visual, recipient.anchor, recipient.id, rate, origin, VFX_MS, recipient.drift); return; }
+    // A projectile's strokes run along the end of its arc: the motif is told it came from back along that line.
+    const came = origin && visual.delivery === 'projectile' ? arrival(origin, recipient.anchor) : origin;
+    if (!beats) { this.motif(visual, recipient.anchor, recipient.id, rate, came, VFX_MS, recipient.drift); return; }
     this.each(beats, visual, recipient, rate, origin);
     // The motif is one beat among the others: when the staging places it, for as long as it says.
     const motif = beats.find(beat => beat.beat === 'motif');
-    if (motif) this.after(motif.delay / rate, () => this.motif(visual, recipient.anchor, recipient.id, rate, origin, motif.lasts, recipient.drift));
+    if (motif) this.after(motif.delay / rate, () => this.motif(visual, recipient.anchor, recipient.id, rate, came, motif.lasts, recipient.drift));
   }
 
   private motif(visual: SpellVisual, target: EffectAnchor, id: string, rate: number, origin?: EffectAnchor, lasts = VFX_MS, drift?: EffectFigure['drift']) {
@@ -212,6 +217,12 @@ export class SpellEffects {
 }
 
 const STILL = { x: 0, y: 0 };
+
+/** Where a projectile seems to have come from, seen from its target: as far as its caster, back along the end of its arc. */
+function arrival(from: EffectAnchor, to: EffectAnchor): EffectAnchor {
+  const angle = flightAt(from, to, 1).angle, far = Math.hypot(to.x - from.x, to.y - from.y);
+  return { ...from, x: to.x - Math.cos(angle) * far, y: to.y - Math.sin(angle) * far };
+}
 
 const ENVELOPES: Record<string, { scale: number; rise: number }> = {
   arc: { scale: 1, rise: 0 }, bones: { scale: .92, rise: .3 }, spirits: { scale: .72, rise: .3 },

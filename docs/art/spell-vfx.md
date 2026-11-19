@@ -39,7 +39,8 @@ motif run along the line of the blow and the `slash` strokes cut 60° across it,
 ## Timing and integrity
 
 - Use the existing 840 ms windup, 1700 ms impact frame and 500 ms settlement. A quill leaves its caster
-  with the throw, at 240 ms, and flies a low arc for the 600 ms left of the windup (#909). Local impact vectors fade over 600 ms, inside the impact frame.
+  with the throw, at 240 ms, and flies for the 600 ms left of the windup, on a low arc when thrown across the field
+  (#909). Local impact vectors fade over 600 ms, inside the impact frame.
 - Apply motifs only to confirmed outcome recipients, once per creature except a separate self-cost wound.
   A caster receiving its own Bonewall shows both the blood cost and the ward.
   Preserve the applied outcome kind, effect and caster flag: Bonewall, Wraithguard and Death Wail
