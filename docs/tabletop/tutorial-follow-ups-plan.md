@@ -107,11 +107,12 @@ tutorial 2 carries nothing tutorial 3 teaches.
    header at the same widths. Then `/design-system`. No ADR.
 
    *Built (2026-11-19)*: `#learn-link` stands in `#home-navigation` after Rules, shown to a signed-in account only,
-   and left the account menu. Measured in Chromium with a 20-character name of `W`, an operator and every entry
-   shown, the bar needs 1275 px; the menu now folds at 1279 px and below (`identity.css`, `lobby.css`,
-   `battle.css`, `navigation.js`), the bar from 1280. `lobby-home.spec.js` checks 1240, 1279, 1280 and 1440 with
-   that name, the bar on one row, Learn to play and Admin in view; `battle-services.spec.js` checks the match's
-   header at the same widths; `lobby-tutorials.test.js` holds where the entry stands. `home-navigation.md`, the
+   and left the account menu. Measured in Chromium with a 20-character name made of `W`, an operator and every
+   entry shown, the bar's content is 1243 px wide, inside the header's 32 px on each side: it needs 1307 px. The
+   menu now folds at 1306 px and below, the bar shows from 1307 (`identity.css`, `lobby.css`, `battle.css`,
+   `navigation.js`). `lobby-home.spec.js` checks 1240, 1306, 1307 and 1440 with that name: the bar on one row,
+   held inside the header, with Learn to play and Admin in view. `battle-services.spec.js` checks the match's
+   header at the same widths. `lobby-tutorials.test.js` holds where the entry stands. `home-navigation.md`, the
    design system's SiteHeader notes and onboarding-plan.md say so. Left: `/design-system` republishes the
    SiteHeader pages once this is merged.
 

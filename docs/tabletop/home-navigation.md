@@ -46,9 +46,9 @@ the tab, Sign out everywhere and Delete account). A visitor sees Game and Privac
 deleting are rare and lasting, so they are not one tap away in the account menu; each still asks its own
 confirmation (deleting asks for the player name). The tabs follow the ARIA tabs pattern (arrow keys, Home, End).
 
-At 1279 CSS pixels and below, the navigation becomes a disclosure menu. The widest bar (a 20-character player
-name of the widest letter, an operator, every entry shown, Learn to play included) needs 1275 pixels; the fold
-keeps a few in hand. Its button exposes `aria-expanded`
+At 1306 CSS pixels and below, the navigation becomes a disclosure menu. The widest bar (a 20-character player
+name made of the letter W, an operator, every entry shown, Learn to play included) is 1243 pixels wide, inside
+the header's 32 on each side: it needs 1307. The menu's button exposes `aria-expanded`
 and `aria-controls`; Escape and an outside click dismiss it. It is ordinary navigation rather than an ARIA
 application menu. Native dialogs handle focus containment and Escape, include an explicit close button,
 and restore focus to the menu toggle on narrow screens or their desktop opener. Long modal content scrolls
@@ -102,7 +102,7 @@ after a failed request. Existing invitation and `next` redirects are preserved.
 
 `studio/browser/lobby-home.spec.js` exercises guest/member/local modes, friend acceptance and invitation,
 modal focus and Escape, code validation, logout during an in-flight request, sign-in and automatic retry.
-Layout checks include 320, 390, 900, 1101, 1240, 1279, 1280 and 1440 CSS-pixel widths and a 740 × 320 landscape viewport.
+Layout checks include 320, 390, 900, 1101, 1240, 1306, 1307 and 1440 CSS-pixel widths and a 740 × 320 landscape viewport.
 The existing table, admin and branding browser suites cover the shared styles and behaviours.
 
 A host whose `/api/me` cannot be reached is neither signed out nor accounts-off: the introduction offers no

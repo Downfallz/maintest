@@ -317,19 +317,21 @@ test('local hosts still resume games and reconnect automatically without a refre
 
 test('navigation and dialogs fit narrow, intermediate and short landscape screens', async ({ page }) => {
   // The widest header: a 20-character name of the widest letter, an operator, and every entry of the bar shown,
-  // Learn to play included. It needs 1275 px; the menu folds up to 1279 (#669).
+  // Learn to play included. Its content is 1243 px wide, inside the header's 32 px on each side: the bar needs 1307 px,
+  // and the menu folds up to 1306 (#669). In the bar, the header holds its content: nothing spills into the gutter.
   await home(page, { account: { ...player, username: 'WWWWWWWWWWWWWWWWWWWW' }, operator: true });
-  for (const [width, height] of [[320, 740], [900, 700], [1101, 800], [1240, 800], [1279, 800], [1280, 800], [1440, 900], [740, 320]]) {
+  for (const [width, height] of [[320, 740], [900, 700], [1101, 800], [1240, 800], [1306, 800], [1307, 800], [1440, 900], [740, 320]]) {
     await page.setViewportSize({ width, height });
     await noOverflow(page);
     await expect(page.locator('#account-menu summary')).toBeInViewport({ ratio: 1 });
-    if (width <= 1279) await expect(page.locator('#home-menu-toggle')).toBeVisible();
+    if (width <= 1306) await expect(page.locator('#home-menu-toggle')).toBeVisible();
     else {
       await expect(page.locator('#home-menu-toggle')).toBeHidden();
       await expect(page.locator('#learn-link')).toBeInViewport({ ratio: 1 });
       await expect(page.locator('#nav-admin-link')).toBeInViewport({ ratio: 1 });
       const rows = await page.locator('#home-navigation > :visible').evaluateAll(items => new Set(items.map(item => Math.round(item.getBoundingClientRect().top))).size);
       expect(rows).toBe(1);
+      expect(await page.locator('.home-header').evaluate(header => header.scrollWidth <= header.clientWidth)).toBe(true);
     }
     await openPanel(page, /^Friends/);
     const dialog = page.locator('#friends-dialog');

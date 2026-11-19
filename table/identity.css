@@ -86,7 +86,7 @@ html dialog { --cut: 16px; }
 .home-navigation > :is(a, button):hover, .home-navigation > [aria-current="page"] { color: var(--bone); background: transparent; border-bottom-color: var(--gold); }
 .inbox-button, .home-menu-toggle, .account-chip { border-radius: var(--radius-sharp); }
 .account-initial { border: 0; border-radius: var(--radius-sharp); background: transparent; font-family: var(--font-display); }
-@media (max-width: 1279px) {
+@media (max-width: 1306px) {
   .home-header .home-navigation { border-color: color-mix(in srgb, var(--bone) 26%, var(--line-soft)); background: var(--tex-grain), var(--panel); }
   .home-navigation > :is(a, button) { border-bottom: 0; border-left: 2px solid transparent; }
   .home-navigation > :is(a, button):hover, .home-navigation > [aria-current="page"] { background: var(--accent-wash); border-left-color: var(--gold); }
@@ -104,7 +104,7 @@ html dialog { --cut: 16px; }
 #battle .command-dock { background: var(--tex-grain), var(--tex-soot) 60% 40%, linear-gradient(color-mix(in srgb, var(--panel) 85%, var(--raised)), var(--paper)); }
 #battle .round b { color: var(--gold); }
 .opponent-chip { border-radius: var(--radius-sharp); }
-@media (min-width: 620px) and (min-height: 501px), (min-width: 1280px) {
+@media (min-width: 620px) and (min-height: 501px), (min-width: 1307px) {
   .battle-page[data-home="member"] .home-header {
     position: absolute; z-index: 6; top: env(safe-area-inset-top); left: auto; right: max(12px, env(safe-area-inset-right));
     width: auto; height: 74px; min-height: 0; gap: 6px; padding: 0; background: transparent; border: 0;
