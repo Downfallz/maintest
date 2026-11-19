@@ -18,10 +18,17 @@ public sealed class AliasResolver
     /// <summary>
     /// Returns the versioned id for <paramref name="reference"/>, or <c>null</c> after recording the problem.
     /// </summary>
-    public string? Resolve<TId>(string reference, string context, ICollection<string> problems)
+    public string? Resolve<TId>(string? reference, string context, ICollection<string> problems)
         where TId : VersionedId, IVersionedId<TId>
     {
         ArgumentNullException.ThrowIfNull(problems);
+
+        // System.Text.Json writes an authored null into a string it declares non-nullable (#890).
+        if (reference is null)
+        {
+            problems.Add($"{context}: a {TId.Kind} reference is null.");
+            return null;
+        }
 
         if (VersionedId.TryParse<TId>(reference, out _))
         {

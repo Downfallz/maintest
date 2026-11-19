@@ -402,6 +402,26 @@ const COUNTED = {
   fr: [['tour', 'tours'], ['round', 'rounds'], ['ennemi', 'ennemis'], ['allié', 'alliés'], ['cible', 'cibles'], ['Entretien', 'Entretiens']],
 };
 
+// A text rewritten with the offset in the source of each of its characters, so a refusal found in the rewritten
+// text names the source line of a joined block (#884). Offsets count UTF-16 code units, as a match's index does. A
+// replacement's characters take the offset of what it replaced.
+const traced = text => ({ text, origin: Array.from({ length: text.length }, (_, at) => at) });
+
+function rewrite({ text, origin }, pattern, replace) {
+  let out = '';
+  const at = [];
+  let last = 0;
+  for (const match of text.matchAll(pattern)) {
+    out += text.slice(last, match.index);
+    at.push(...origin.slice(last, match.index));
+    const replaced = typeof replace === 'function' ? replace(...match, match.index) : replace;
+    out += replaced;
+    at.push(...Array.from({ length: replaced.length }, () => origin[match.index]));
+    last = match.index + match[0].length;
+  }
+  return { text: out + text.slice(last), origin: [...at, ...origin.slice(last)] };
+}
+
 const escaped = text => text.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 // Where a sentence, a cell, a line or a step label (*Command · Tie order.*) starts: its first word is capitalised
 // for that alone. Not after a colon, a semicolon, a dash or a quote: both languages go on in lowercase there, and
@@ -456,9 +476,11 @@ class Build {
 
   // A capitalised word inside a sentence is a spell's or a mutation's name, or a word the book may capitalise, so a
   // name renamed in data/ fails the book until the book follows. A drawn value is not read: it is drawn.
-  capitalised(raw, where) {
-    let text = raw.replace(/\{\?[^{}]*\}/g, '').replace(/\{[^{}]*\}/g, '0').replace(/\]\([^)]*\)/g, ']').replace(/[*[\]]/g, '');
-    for (const name of this.names) text = text.replace(name, '0');
+  capitalised(raw, where, whereAt = () => where) {
+    let source = traced(raw);
+    for (const [pattern, replace] of [[/\{\?[^{}]*\}/g, ''], [/\{[^{}]*\}/g, '0'], [/\]\([^)]*\)/g, ']'], [/[*[\]]/g, '']]) source = rewrite(source, pattern, replace);
+    for (const name of this.names) source = rewrite(source, name, '0');
+    const { text, origin } = source;
     for (const match of text.matchAll(/\p{Lu}[\p{L}-]*/gu)) {
       const [word] = match;
       const before = text.slice(0, match.index);
@@ -466,18 +488,18 @@ class Build {
       if (this.capitals.has(word) || (word.endsWith('s') && this.capitals.has(word.slice(0, -1)))) continue;
       // A sentence's first word is capitalised for that alone when the book writes it in lowercase elsewhere.
       if (SENTENCE_START.test(before) && (this.vocabulary.has(word.toLowerCase()) || this.firstWords.has(word))) continue;
-      this.refuse(`${where}: "${word}" is not the name of a spell or a mutation in data/, nor a word of rules/words.json`);
+      this.refuse(`${whereAt(origin[match.index])}: "${word}" is not the name of a spell or a mutation in data/, nor a word of rules/words.json`);
     }
   }
 
   // A value written before a count's noun takes both its forms: the noun right after it, or after one more word
   // ("{n} more rounds"), whatever the bold, the italics or a fact between them.
-  counted(raw, where) {
-    const text = raw.replace(/\{\?[^{}]*\}/g, '').replaceAll('*', '');
+  counted(raw, where, whereAt = () => where) {
+    const { text, origin } = rewrite(rewrite(traced(raw), /\{\?[^{}]*\}/g, ''), /\*/g, '');
     const between = (BETWEEN[this.language] ?? []).join('|');
     for (const [singular, plural] of COUNTED[this.language] ?? []) {
       const pattern = new RegExp(String.raw`\{([^{}#?|][^{}|]*)\}\s+(?:(?:${between})\s+)?(?:${singular}|${plural})(?![\p{L}\d])`, 'gu');
-      for (const [whole, expression] of text.matchAll(pattern)) this.refuse(`${where}: "${whole}": a count takes its noun: {${expression.trim()}|${singular}|${plural}}`);
+      for (const { 0: whole, 1: expression, index } of text.matchAll(pattern)) this.refuse(`${whereAt(origin[index])}: "${whole}": a count takes its noun: {${expression.trim()}|${singular}|${plural}}`);
     }
   }
 
@@ -485,9 +507,11 @@ class Build {
     this.errors.push(message);
   }
 
-  words(text, where) {
+  // `whereIn` names the source line of an offset in `text`.
+  words(text, where, whereIn = () => where) {
     for (const [word, { player, pattern }] of this.retired) {
-      if (pattern.test(text)) this.refuse(`${where}: "${word}": the player's word is ${player}`);
+      const found = pattern.exec(text);
+      if (found) this.refuse(`${whereIn(found.index)}: "${word}": the player's word is ${player}`);
     }
   }
 
@@ -539,11 +563,11 @@ class Build {
     if (raw.includes('`')) this.refuse(`${where}: code is outside the subset`);
     if (/<[A-Za-z/!]/.test(raw.replace(/\{[^{}]*\}/g, ''))) this.refuse(`${where}: HTML is outside the subset`);
     if (raw.includes('![')) this.refuse(`${where}: an image is outside the subset`);
-    const text = raw.replace(/\{([^{}#][^{}]*)\}/g, (_, expression, offset) => this.value(expression.trim(), whereAt(offset)));
+    const { text, origin } = rewrite(traced(raw), /\{([^{}#][^{}]*)\}/g, (_, expression, offset) => this.value(expression.trim(), whereAt(offset)));
     if (/[{}]/.test(text)) this.refuse(`${where}: an unmatched brace`);
-    this.words(text, where);
-    this.counted(raw, where);
-    this.capitalised(raw, where);
+    this.words(text, where, at => whereAt(origin[at]));
+    this.counted(raw, where, whereAt);
+    this.capitalised(raw, where, whereAt);
     return text;
   }
 

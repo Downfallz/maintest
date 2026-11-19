@@ -356,6 +356,22 @@ test('a value that fails names the line that holds it, inside a paragraph or a l
   assert.equal(at('rules.teamSize = 6'), 'rules/01-the-goal.md:24');
 });
 
+// #884: an unknown capitalised word, a retired word and a count without its noun name their own line too.
+test('a word the book refuses names the line that holds it, inside a paragraph or a list item', () => {
+  const lines = goal.replace('Two players, each with {rules.teamSize} creatures.', 'Two players,\neach with {rules.teamSize} **creatures** and a [Fireball](#winning).\nThey buy a Package for {rules.teamSize} rounds.')
+    .replace('- Upkeep: every creature gains {rules.energyPerRound} Energy.', '- Upkeep: every creature\n  gains {rules.energyPerRound} Energy and a Firebolt.');
+  const errors = errorsOf(inputs({ parts: [{ file: '01-the-goal.md', text: lines }] }));
+  const at = word => errors.filter(error => error.includes(word)).map(error => error.split(': ')[0]);
+  assert.deepEqual(at('"Fireball"'), ['rules/01-the-goal.md:4']);
+  assert.deepEqual(at('"Package": the player'), ['rules/01-the-goal.md:5']);
+  assert.deepEqual(at('a count takes its noun'), ['rules/01-the-goal.md:5']);
+  assert.deepEqual(at('"Firebolt"'), ['rules/01-the-goal.md:23']);
+  // An emoji is two code units and one code point: the offsets count code units, as the matches do, or a refusal
+  // in the block's tail is lost.
+  const emoji = goal.replace('Two players, each with {rules.teamSize} creatures.', `Two players ${'🐉'.repeat(40)},\nthey buy a Package.`);
+  assert.deepEqual(errorsOf(inputs({ parts: [{ file: '01-the-goal.md', text: emoji }] })).filter(error => error.includes('"Package": the player')).map(error => error.split(': ')[0]), ['rules/01-the-goal.md:4']);
+});
+
 test('refuses an engine word where the player\'s word exists, from the terminology page', () => {
   refuses(withGoal('Two players', 'Two players buy a Package'), /"Package": the player's word is Mutation/);
   refuses(withGoal('Upkeep: every', 'StartOfRound: every'), /"StartOfRound": the player's word is Upkeep/);

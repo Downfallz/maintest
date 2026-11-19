@@ -145,6 +145,83 @@ public sealed class GameSchemaBuilderTests
         exception.Problems.ShouldContain(problem => problem.Contains("'creature:strike:v1'", StringComparison.Ordinal));
     }
 
+    /// <summary>#890: System.Text.Json lets <c>[null]</c>, or a null list, into a list of records or of ids; the builder names it, it does not crash.</summary>
+    [Theory]
+    [InlineData("Spells/strike.v1.json", "\"effects\": [ { \"kind\": \"Damage\", \"amount\": 1 }", "\"effects\": [ null, { \"kind\": \"Damage\", \"amount\": 1 }", "strike.v1.json: effects[0] is null")]
+    [InlineData("Spells/strike.v1.json", "\"effects\": [", "\"casterEffects\": [ null ], \"effects\": [", "strike.v1.json: casterEffects[0] is null")]
+    [InlineData("TalentTrees/base.v1.json", "\"spells\": [ { \"id\": \"spell:strike\" } ]", "\"spells\": [ { \"id\": \"spell:strike\" }, null ]", "base.v1.json: root.spells[1] is null")]
+    [InlineData("TalentTrees/base.v1.json", "\"anyOf\": [\"spell:strike\"] } } ] }", "\"anyOf\": [\"spell:strike\"] } } ], \"children\": [ null ] }", "base.v1.json: root.children[0].children[0] is null")]
+    [InlineData("TalentTrees/base.v1.json", "\"anyOf\": [\"spell:strike\"] } } ] }", "\"anyOf\": [\"spell:strike\"] } } ], \"children\": null }", "base.v1.json: root.children[0].children is null")]
+    [InlineData("TalentTrees/base.v1.json", "\"anyOf\": [\"spell:strike\"] } } ] }", "\"anyOf\": [ null ] } } ] }", "base.v1.json: root.children[0].spells[0].prerequisites.anyOf[0] is null")]
+    [InlineData("TalentTrees/base.v1.json", "\"allOf\": [\"spell:strike\"], \"anyOf\": [] }", "\"allOf\": [ null ], \"anyOf\": [] }", "base.v1.json: root.children[0].prerequisites.allOf[0] is null")]
+    [InlineData("Spells/strike.v1.json", "\"effects\": [ { \"kind\": \"Damage\", \"amount\": 1 }, { \"kind\": \"Bleed\", \"amountPerRound\": 1, \"durationRounds\": 2 } ]", "\"effects\": null", "strike.v1.json: effects is null")]
+    [InlineData("Creatures/main.v1.json", "\"startingSpellIds\": [\"spell:strike\"]", "\"startingSpellIds\": [\"spell:strike\", null]", "main.v1.json: startingSpellIds[1] is null")]
+    [InlineData("Creatures/main.v1.json", "\"startingSpellIds\": [\"spell:strike\"]", "\"startingSpellIds\": null", "main.v1.json: startingSpellIds is null")]
+    public void A_null_list_or_a_null_in_a_list_is_refused_with_its_file_and_place_and_not_a_crash(string file, string authored, string withNull, string problem)
+    {
+        using var content = new ContentDirectory().WithValidContent();
+        var path = Path.Combine(content.Path, file);
+        File.WriteAllText(path, File.ReadAllText(path).Replace(authored, withNull, StringComparison.Ordinal));
+
+        var exception = Should.Throw<InvalidGameContentException>(() => GameSchemaBuilder.Build(content.Path));
+
+        exception.Problems.ShouldContain(found => found.StartsWith(problem, StringComparison.Ordinal));
+    }
+
+    /// <summary>A single reference written null is refused with what holds it, not thrown from the alias lookup.</summary>
+    [Fact]
+    public void A_null_reference_is_refused_and_not_a_crash()
+    {
+        using var content = new ContentDirectory().WithValidContent();
+        var path = Path.Combine(content.Path, "Creatures/main.v1.json");
+        File.WriteAllText(path, File.ReadAllText(path).Replace("\"talentTreeId\": \"talent-tree:base\"", "\"talentTreeId\": null", StringComparison.Ordinal));
+
+        var exception = Should.Throw<InvalidGameContentException>(() => GameSchemaBuilder.Build(content.Path));
+
+        exception.Problems.ShouldContain("creature 'creature:main:v1': a talent-tree reference is null.");
+    }
+
+    [Fact]
+    public void An_optional_list_written_null_is_left_out_and_accepted()
+    {
+        using var content = new ContentDirectory().WithValidContent()
+            .WithFile("Tiers/brute.v1.json", """
+                { "id": "tier:brute:v1", "name": "Brute", "level": 1, "prerequisites": [], "anyOf": null, "spells": ["spell:guard"], "initiativeBonus": 2 }
+                """);
+        var path = Path.Combine(content.Path, "Spells/strike.v1.json");
+        File.WriteAllText(path, File.ReadAllText(path).Replace("\"effects\": [", "\"casterEffects\": null, \"effects\": [", StringComparison.Ordinal));
+
+        var schema = GameSchemaBuilder.Build(content.Path);
+
+        schema.Spells.Single(spell => spell.Id == "spell:strike:v1").CasterEffects.ShouldBeNull();
+    }
+
+    [Fact]
+    public void A_null_among_a_packages_spells_is_refused_with_its_file_and_place_and_not_a_crash()
+    {
+        using var content = new ContentDirectory().WithValidContent()
+            .WithFile("Tiers/brute.v1.json", """
+                { "id": "tier:brute:v1", "name": "Brute", "level": 1, "prerequisites": [], "spells": ["spell:guard", null], "initiativeBonus": 2 }
+                """);
+
+        var exception = Should.Throw<InvalidGameContentException>(() => GameSchemaBuilder.Build(content.Path));
+
+        exception.Problems.ShouldContain(found => found.StartsWith("brute.v1.json: spells[1] is null", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void A_null_among_a_packages_prerequisites_is_refused_with_its_file_and_place_and_not_a_crash()
+    {
+        using var content = new ContentDirectory().WithValidContent()
+            .WithFile("Tiers/brute.v1.json", """
+                { "id": "tier:brute:v1", "name": "Brute", "level": 1, "prerequisites": [ null ], "spells": ["spell:guard"], "initiativeBonus": 2 }
+                """);
+
+        var exception = Should.Throw<InvalidGameContentException>(() => GameSchemaBuilder.Build(content.Path));
+
+        exception.Problems.ShouldContain(found => found.StartsWith("brute.v1.json: prerequisites[0] is null", StringComparison.Ordinal));
+    }
+
     [Fact]
     public void A_mistyped_field_is_reported_with_its_file()
     {
