@@ -435,8 +435,9 @@ test('a tutorial that ends the match ends on its result: Tutorial complete, Play
   await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: '<title>Home</title>' }));
   await page.locator('#match-leave').click();
   await expect(page).toHaveTitle('Home');
+  // The page leaves after 1.5 s at most, its requests sent with keepalive: the route may hear of them after Home shows.
+  await expect.poll(() => state.left).toBe(1);
   expect(state.said).toEqual(['done']);
-  expect(state.left).toBe(1);
   expect(state.errors).toEqual([]);
 });
 
