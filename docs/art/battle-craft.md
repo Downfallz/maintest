@@ -373,7 +373,9 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 - **Cost**: one draw call. Keep the trail dimmer and smaller than the head.
 - **Reduced motion**: nothing.
 - **Here**: the quill flies bare. The kit's `trail` (`battle/src/fx/trail.ts`) follows a head that eases as the
-  quill does; BC7 gives it to the two projectile spells.
+  quill does; BC7 gives it to the two projectile spells. At the feet it is a crack: the head goes at an even pace
+  and what it leaves stays for the whole beat, since a head that eased in crossed the field between two frames
+  (#918, Groundbreaker).
 
 ### Gravity well and convergence
 
