@@ -157,9 +157,9 @@ test('a projectile leaves with the throw, at an even pace, and lands as the wind
   const from = { x: 100, y: 600, radius: 40 }, to = { x: 300, y: 200, radius: 40 };
   const start = flightAt(from, to, 0), end = flightAt(from, to, 1), whole = Math.hypot(end.x - start.x, end.y - start.y);
   assert.deepEqual([end.x, end.y], [to.x, to.y]);
-  // It starts on the thrower's back, above its centre and inside its body.
+  // It starts over the thrower's back, clear of its spines: drawn on the body, it was still read as part of it.
   assert.equal(start.x, from.x);
-  assert.ok(start.y < from.y && start.y > from.y - from.radius * 1.4);
+  assert.ok(start.y < from.y - from.radius * 1.4 && start.y > from.y - from.radius * 2);
   // One tenth of the flight, 60 ms after the throw: already a tenth of the way, where the ease in had moved it a thousandth.
   const early = flightAt(from, to, .1);
   assert.ok(Math.hypot(early.x - start.x, early.y - start.y) >= whole * .1);

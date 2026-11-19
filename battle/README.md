@@ -977,7 +977,7 @@ plays them through the kit, `src/fx/`:
   holds a beat the page or the kit does not know. That means the charge on the caster, then the motif.
 - A staged spell draws no shared charge on its caster. A projectile's quill still flies: it is the delivery.
 - A projectile flies `flightAt` (`table/battle-motion.js`): not drawn while its caster loads, it leaves the
-  caster's back with the toss, at 240 ms, and lands on the contact, at an even pace on a low arc. A `trail` on a
+  caster, just over its back, with the toss at 240 ms, and lands on the contact, at an even pace on a low arc. A `trail` on a
   projectile follows the same arc; any other trail runs straight and eases in (#909).
 - Beats on the caster and the shake play once a cast; beats on a target play on each, 40 ms apart.
 - Everything the kit makes ends with `SpellEffects.clear`: objects destroyed, a figure's tint and filter put

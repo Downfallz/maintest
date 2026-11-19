@@ -77,10 +77,10 @@ export const THROW = Object.freeze({
 /**
  * A projectile's flight (the craft book, "Arcing travel"): it leaves the thrower's back with the toss, at an even
  * pace, on a low arc, and lands as the windup ends (#909: eased in, it stood on the body for 300 ms after the
- * throw). `back` is how far above the thrower's centre it starts, in radii; `lift` is how far the arc's control
+ * throw). `back` is how far above the thrower's centre it starts, in radii, just over the top of its back; `lift` is how far the arc's control
  * point stands above the middle of the flight, as a share of its length. Both are house numbers.
  */
-export const FLIGHT = Object.freeze({ at: THROW.toss.at, lasts: WINDUP_MS - THROW.toss.at, back: .6, lift: .16 });
+export const FLIGHT = Object.freeze({ at: THROW.toss.at, lasts: WINDUP_MS - THROW.toss.at, back: 1.6, lift: .16 });
 
 /** Where a projectile is at a share `t` of its flight from one figure to another, and the angle it points at, in radians. */
 export function flightAt(from, to, t) {
