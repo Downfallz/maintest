@@ -23,6 +23,7 @@ import { askedKey, validTargets, emptyCastAllowed, combatDecision } from './slot
 import { activeTurn, boardPresentation, decisionView, presentedView } from './presentation.js';
 import { practice, storage } from './startup.js';
 import { preferredPresentation } from './battle-preferences.js';
+import { wantsLessMotion } from './motion.js';
 import { SPEEDS, TEMPO_RULE, phaseLabel, stageClimb, stageLabel, stepLabel, tempoLabel } from './terms.js';
 
 // The page renders what the host serves and submits what a player taps. It holds no rule: which spells are
@@ -814,7 +815,7 @@ function refreshUnlockFx(state, current) {
   }
   const old = unlockBaselines.get(key);
   unlockBaselines.set(key, inventory);
-  if (!old || globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+  if (!old || wantsLessMotion()) return;
   for (const [id, currentInventory] of inventory) {
     const previous = old.get(id);
     if (!previous) continue;
@@ -1398,7 +1399,7 @@ function renderTimeline(board) {
 // previous confirmed HP, never from a DOM node that no longer exists.
 const healthFxTracker = createCombatTransitionTracker();
 function animateHealthBars(board, changes) {
-  if (globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+  if (wantsLessMotion()) return;
   for (const change of changes) {
     if (!Number.isFinite(change.health) || change.health === 0) continue;
     const creature = [...(board.allies ?? []), ...(board.enemies ?? [])].find(one => one.id === change.creature);
@@ -1423,7 +1424,7 @@ function animateHealthBars(board, changes) {
 // inferred: values come from visible server snapshots only. The nodes are rebuilt
 // on render, so effects are attached after replaceChildren and never intercept taps.
 function combatFeedback(board, changes) {
-  if (globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+  if (wantsLessMotion()) return;
   for (const change of changes) {
     const hasHealth = Number.isFinite(change.health) && change.health !== 0;
     const hasDefense = Number.isFinite(change.defense) && change.defense !== 0;
@@ -1495,7 +1496,7 @@ function markNewReveal(seat, round, action) {
   return previous !== undefined && previous !== sequence;
 }
 function showSpellReveal(current, board, action, animated) {
-  if (!animated || globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+  if (!animated || wantsLessMotion()) return;
   for (const container of ['enemies', 'allies', 'mini-enemies', 'mini-allies']) {
     for (const node of element(container).querySelectorAll?.('.creature, .mini-creature') ?? []) {
       if (node.dataset.creatureId === String(action.actor?.id)) node.classList.toggle('spell-reveal-caster', true);
@@ -2728,7 +2729,7 @@ function animatePlayback(state, held) {
   const key = `${replay.seat}/${replay.round}/${replay.match ? 'match' : 'round'}/${replay.index}/${replay.stage}`;
   if (state.playbackFrame === key) return;
   state.playbackFrame = key;
-  if (!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) held.animate?.([{ opacity: .25 }, { opacity: 1 }], { duration: 240 });
+  if (!wantsLessMotion()) held.animate?.([{ opacity: .25 }, { opacity: 1 }], { duration: 240 });
 }
 
 function recapPerson(person) {
@@ -3033,7 +3034,7 @@ function cuePhaseChange(state, seat, board, heading, roundLabel) {
   const previous = phaseMotionSeen.get(key);
   phaseMotionSeen.set(key, { round, phase });
   if (!previous || previous.round === round && previous.phase === phase) return;
-  if (globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+  if (wantsLessMotion()) return;
   const roundChanged = previous.round !== round;
   // Web Animations runs independently from the render loop. Cancel any old cue
   // when a rapid SSE update advances phases again; no timers or blocking UI.
@@ -3336,7 +3337,7 @@ function showPhaseNotice(state, entry, replay = false) {
   notice.dataset.kind = entry.newRound ? 'round' : 'phase';
   renderNoticeContent(state, replay);
   notice.hidden = false;
-  if (!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+  if (!wantsLessMotion()) {
     state.phaseMotion = notice.animate?.([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 280, easing: 'ease-out' });
   }
   schedulePhaseNotice(state);

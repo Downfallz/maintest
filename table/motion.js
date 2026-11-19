@@ -25,6 +25,14 @@ export function reach(root, less) {
   if (less) root.setAttribute('data-motion', 'less'); else root.removeAttribute('data-motion');
 }
 
+/**
+ * Whether a script holds its own animation back: the system asks for less motion, or the page was told to show
+ * less (the root's attribute). A rule of CSS reads both; an animation a script starts must ask here.
+ */
+export function wantsLessMotion(win = globalThis) {
+  return win.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true || win.document?.documentElement.getAttribute('data-motion') === 'less';
+}
+
 /** The one ambience a screen plays: the first in the page's order that is in view, none in a hidden tab. */
 export function ambienceToPlay(elements, inView, hidden) {
   return hidden ? null : elements.find(element => inView.has(element)) ?? null;

@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import test from 'node:test';
-import { SETTINGS_KEY, abortedTransition, ambienceToPlay, lessMotion, mountMotion, numberChanged, reach, savedLess } from './motion.js';
+import { SETTINGS_KEY, abortedTransition, ambienceToPlay, lessMotion, wantsLessMotion, mountMotion, numberChanged, reach, savedLess } from './motion.js';
 import { mountGameSettings, saveLocalSettings } from './game-preferences.js';
 
 const root = new URL('../', import.meta.url);
@@ -302,4 +302,16 @@ test('a press never outranks a control\'s own look: a fallen creature\'s portrai
   const press = declarations(kitOf('table/identity.css')).filter(one => one.property === 'filter');
   assert.equal(press.length, 1);
   assert.match(press[0].under.at(-1), /:where\([^()]*\):where\(.*:active\)$/, 'the press has no specificity');
+});
+
+test('a script asks the kit whether to move: the system\'s wish or the account\'s, never the system\'s alone', () => {
+  const asks = (system, attribute) => wantsLessMotion({
+    matchMedia: query => ({ matches: system && query === '(prefers-reduced-motion: reduce)' }),
+    document: { documentElement: elementOf(attribute ? { 'data-motion': 'less' } : {}) },
+  });
+  assert.deepEqual([asks(false, false), asks(true, false), asks(false, true), asks(true, true)], [false, true, true, true]);
+  assert.equal(wantsLessMotion({ document: { documentElement: elementOf() } }), false, 'a browser without matchMedia');
+  for (const name of readdirSync(new URL('table/', root)).filter(name => name.endsWith('.js') && !name.endsWith('.test.js') && name !== 'motion.js')) {
+    assert.doesNotMatch(read(`table/${name}`), /prefers-reduced-motion/, `table/${name} reads the system's preference alone: ask wantsLessMotion() of motion.js`);
+  }
 });

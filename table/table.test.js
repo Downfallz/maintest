@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { wantsLessMotion } from './motion.js';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
@@ -83,6 +84,8 @@ function page() {
     document, storage: null, practice: null, URLSearchParams, console, innerHeight: 800, location: { search: '' }, setInterval: () => {},
     setTimeout: (action, delay) => { timers.set(++timerId, action); delays.set(timerId, delay); return timerId; }, clearTimeout: id => timers.delete(id),
   });
+  // The motion kit's question, asked of this page: its matchMedia and its root.
+  context.wantsLessMotion = () => wantsLessMotion(context);
   const script = readFileSync(new URL('./table.js', import.meta.url), 'utf8').replace(/^import .*;\n/gm, '');
   vm.runInContext(script, context);
   const cards = new Map([['one', { id: 'one', name: 'First card', cost: 2 }], ['two', { id: 'two', name: 'Second card', cost: 3 }]]);
@@ -1404,6 +1407,15 @@ test('handover hides and cancels the old notice before the other seat sees the t
   assert.equal(p.nodes['phase-notice'].hidden, true);
   assert.equal(p.timers.has(timer), false);
   p.state.holder = 'player2'; p.draw();
+  assert.equal(p.nodes['phase-notice'].hidden, false);
+});
+
+test('the account\'s less motion keeps the phase announcement without animating it, as the system\'s does', () => {
+  const p = page(); let animated = false;
+  p.context.document.documentElement.attributes['data-motion'] = 'less';
+  p.nodes['phase-notice'].animate = () => { animated = true; };
+  p.draw();
+  assert.equal(animated, false);
   assert.equal(p.nodes['phase-notice'].hidden, false);
 });
 
