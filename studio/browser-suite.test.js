@@ -532,3 +532,18 @@ test('every diff the changed paths are read from turns rename detection off', ()
   assert.equal(diffs.length, 2);
   for (const diff of diffs) assert.match(diff, /--no-renames/, diff);
 });
+
+// A registry connection cut once failed the build job in one second and skipped every step after it (#905): an
+// image a step runs is pulled first, in a loop that tries again before it gives up.
+test('every image a CI step runs is pulled first, with a few tries', () => {
+  const workflow = ciWorkflow();
+  const runs = [...workflow.matchAll(/^( *)docker run [^\n]*?(mcr\.microsoft\.com\/\S+)/gm)];
+  assert.ok(runs.length > 0, 'the storage emulator is started with docker run');
+  for (const { 2: image, index } of runs) {
+    const step = workflow.slice(workflow.lastIndexOf('- name:', index), index);
+    const loop = /for attempt in ((?:\d+ ?)+); do\n\s*if docker pull (\S+); then break; fi/.exec(step);
+    assert.ok(loop, `${image} is pulled in a loop before docker run`);
+    assert.equal(loop[2], image, 'the loop pulls the image docker run starts');
+    assert.ok(loop[1].trim().split(' ').length >= 3, 'the pull is tried at least three times');
+  }
+});

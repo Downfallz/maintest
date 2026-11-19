@@ -140,6 +140,16 @@ jobs:
       - name: Start the storage emulator
         if: env.LIGHT_BUILD != 'true'
         run: |
+          # The image is pulled first, a few times: a registry connection cut once (#905) would otherwise fail
+          # the job here and skip every step after it.
+          for attempt in 1 2 3 4; do
+            if docker pull mcr.microsoft.com/azure-storage/azurite; then break; fi
+            if [ "$attempt" = 4 ]; then
+              echo "The storage emulator's image could not be pulled after $attempt attempts." >&2
+              exit 1
+            fi
+            sleep $((attempt * 10))
+          done
           docker run --detach --name azurite --publish 10000:10000 --publish 10001:10001 --publish 10002:10002 mcr.microsoft.com/azure-storage/azurite \
             azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --skipApiVersionCheck
           for port in 10000 10001 10002; do
