@@ -74,10 +74,15 @@ test('the build keeps the kit apart: no engine or laboratory in it, and no kit m
 });
 
 test('the bench has one sample staging a primitive, each one the page can read, and one that asks past the field\'s budget', () => {
-  const primitives = samples.filter(one => one.id !== 'kit:budget');
+  // The first has no staging at all: what a page plays without one is the motif (BC8 staged every spell).
+  const [plain, ...staged] = samples;
+  assert.equal(plain.id, 'kit:plain');
+  assert.equal(stagingBeats(plain), null);
+  assert.equal(Object.hasOwn(benchFrame({ entry: plain, actor: 'a1', targets: ['b1'], stage: 'impact' }).cue.visual, 'staging'), false);
+  const primitives = staged.filter(one => one.id !== 'kit:budget');
   assert.deepEqual(primitives.map(one => one.id), BEATS.filter(beat => beat !== 'motif').map(beat => `kit:${beat}`));
   assert.equal(samples.at(-1).id, 'kit:budget');
-  for (const sample of samples) {
+  for (const sample of staged) {
     const beats = stagingBeats(sample);
     assert.ok(beats, sample.id);
     if (sample.id !== 'kit:budget') assert.ok(beats.some(beat => beat.beat === sample.id.split(':')[1]), sample.id);

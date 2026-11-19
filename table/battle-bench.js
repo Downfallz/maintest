@@ -48,6 +48,9 @@ export function benchSamples() {
   const biological = { family: 'biological', motif: 'quill', delivery: 'projectile' };
   const astral = { family: 'astral', motif: 'vital', delivery: 'cast' };
   return [
+    // No staging at all: every spell has one since BC8, and what plays without one (a page older than its
+    // catalogue, a kit that did not arrive) is still the motif alone. This one keeps that seen and tested.
+    { id: 'kit:plain', name: 'Kit: no staging', ...elemental },
     sample('burst', physical, [{ beat: 'motif', at: 840, lasts: 700 }, { beat: 'burst', at: 840, count: 8, shape: 'shard', tint: 'bone', direction: 'along', spread: 50 }]),
     sample('flow', elemental, [{ beat: 'motif', at: 840 }, { beat: 'flow', at: 900, lasts: 900, shape: 'spark', tint: 'ember' }]),
     sample('trail', biological, [{ beat: 'trail', at: 240, lasts: 600 }, { beat: 'motif', at: 840 }]),
@@ -118,9 +121,11 @@ export function benchFrame({ entry, actor, targets, stage, outcome = 'played', w
   });
   const paid = Boolean(wound && caster);
   const recipients = paid && !known.includes(actor) ? [...known, actor] : known;
-  // A caster among its own recipients received the spell as well as its cost: with the wound alone, the scene
-  // draws the cost and nothing of the spell on it.
-  const own = paid && known.includes(actor) ? [{ creature: actor, text: '', tone: 'neutral' }] : [];
+  // A caster among the recipients of its own ward or heal received the spell as well as its cost: with the wound
+  // alone, the scene draws the cost and nothing of the spell on it. A spell that strikes is all harm to its
+  // caster on the live page, and stays the wound alone.
+  const own = paid && known.includes(actor) && struck.length === 0
+    ? [{ creature: actor, text: entry.name ?? '', tone: 'neutral', wound: false }] : [];
   const effects = paid ? [{ creature: actor, text: 'Blood cost', tone: 'harm', wound: true }, ...own] : [];
   return { ...frame, cue: { kind: struck.length || paid ? 'strike' : 'pulse',
     visual: { family: entry.family, motif: entry.motif, delivery: entry.delivery, ...(entry.staging ? { staging: entry.staging } : {}) },

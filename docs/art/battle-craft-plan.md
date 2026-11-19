@@ -347,6 +347,8 @@ that extends it.
      Freeze), a slow has none (Ice Grip), and blood stays a Bleed, even from fire or the void.
    - The bench gave a caster who pays in blood the wound alone, so a ward cast on oneself was filmed without its
      ward. A caster among its own recipients now receives the spell too (`benchFrame`, `table/battle-bench.js`).
+   - Every spell is staged, so the bench keeps one sample with none, `kit:plain`: the two browser specs that
+     played Incinerate as "a spell with no staging" play it, and the motif alone stays seen and tested.
    - The pass ran two rounds. The designer's first reading asked for 37 changes (8, 14 and 15 by family), nearly all
      of three causes: a beat in the windup nobody could see, soft dots piled in one cloud, a trail too short to
      show. They were made and the spells filmed again. The designer read the second films and the data was not

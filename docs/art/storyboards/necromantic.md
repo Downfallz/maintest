@@ -318,8 +318,8 @@ The sheets cannot show the feel at full speed, nor the sound.
   host does for a ward cast on oneself ([spell-vfx.md](../spell-vfx.md)), and the second film shows a1's motif,
   ring, dots and light over its wound from 960 ms. Nothing is left for the scene.
 - The guard ring opens over its whole beat; a ring that opens fast and then stands is a pattern the book lacks.
-- The trail on a1, its own ward, has no length: a1 is fed where it stands. The trail plays once a target, so a1's
-  gives nothing to see; the owner may want a1's ward told apart, which the kit cannot do by target.
+- The trail on a1, its own ward, has no length: a1 is fed where it stands, and its drops stay at its own feet
+  for the trail's time. The owner may want a1's ward told apart, which the kit cannot do by target.
 - The price is carried to the wards by a trail, the only blood that crosses the field in this family; the others
   bleed at home. A person could read the red line as a1 hurting its allies; the film says whether it does.
 - The permanent +3 and the +5 for 2 rounds are one ward on the field: the split is the status chips'.

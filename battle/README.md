@@ -1006,7 +1006,7 @@ plays them through the kit, `src/fx/`:
   `docs/art/storyboards/README.md`, "The ladder". `studio/staging-ladder.test.js` holds the bands, and
   `studio/browser/battle-stagings.spec.js` plays every staged spell on the bench.
 - The bench lists one sample staging for each primitive, after the spells (`kit:burst` to `kit:pulse`,
-  `table/battle-bench.js`), and `kit:budget`, whose streams ask for more than the field holds (#882). They belong to the bench; they are not content. `window.battleBench.kit()` says what the kit
+  `table/battle-bench.js`), and `kit:budget`, whose streams ask for more than the field holds (#882). `kit:plain` has no staging: it is what a page plays without one, the motif alone, now that every spell is staged (BC8). They belong to the bench; they are not content. `window.battleBench.kit()` says what the kit
   holds: its objects, its particles alive, and the figures it changed and has not put back.
 
 ## The effects bench

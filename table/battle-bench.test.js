@@ -75,7 +75,10 @@ test('a caster who pays in blood receives a wound beside the spell\'s own recipi
   // A caster among its own recipients receives the spell too, as the host says of a ward cast on oneself: the
   // scene draws the wound alone when the wound is all its caster received.
   const own = benchFrame({ entry: pummel, actor: 'a1', targets: ['a1', 'a2'], stage: 'impact', wound: true }).cue.effects;
-  assert.deepEqual(own.map(one => [one.creature, Boolean(one.wound)]), [['a1', true], ['a1', false]]);
+  assert.deepEqual(own.map(one => [one.creature, one.wound]), [['a1', true], ['a1', false]]);
+  // A spell that strikes is all harm to its caster, as on the live page: the wound alone.
+  const harmed = benchFrame({ entry: pummel, actor: 'a1', targets: ['a1', 'b1'], stage: 'impact', wound: true }).cue.effects;
+  assert.deepEqual(harmed.map(one => [one.creature, one.wound]), [['a1', true]]);
   assert.deepEqual(benchFrame({ entry: pummel, actor: 'a1', targets: ['b1'], stage: 'impact' }).cue.effects, []);
 });
 

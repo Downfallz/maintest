@@ -390,7 +390,7 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 - **Cost**: a little arithmetic per particle. One draw call.
 - **Reduced motion**: nothing.
 - **Here**: the windup draws a ring that grows away from the caster. The kit's `gather` (`battle/src/fx/gather.ts`) draws particles
-  in from a ring instead, for a spell whose staging asks. BC8 uses it for a freeze that closes in, the void and the spirits; the blood cost is drops leaving the caster.
+  in from a ring instead, for a spell whose staging asks. BC8 uses it too, for a charge, a freeze that closes in, the void and the spirits among others; the blood cost is drops leaving the caster.
   BC6 uses it first: Focus draws six motes in, Carapace and Brace draw bone shards onto the plates, and the
   Stage III blows load their caster with it through the windup.
 
