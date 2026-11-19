@@ -16,6 +16,9 @@ export const pulse: Primitive = (kit, play) => {
   // A filter is given no room around its object unless asked: without it the halo is cut at the picture's edge.
   halo.setPaddingOverride(null);
   kit.view?.quiet?.(play.creature, true);
-  const remove = kit.restore(() => { if (figure.active) filters.remove(halo, true); kit.view?.quiet?.(play.creature, false); });
+  const remove = kit.restore(() => {
+    if (figure.active) filters.remove(halo, true);
+    kit.view?.quiet?.(play.creature, false);
+  });
   kit.tween({ targets: halo, outerStrength: FULL * beat.strength!, duration: beat.lasts! / rate / 2, ease: 'Quad.Out', yoyo: true, onComplete: remove });
 };

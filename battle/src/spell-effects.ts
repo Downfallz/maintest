@@ -225,7 +225,8 @@ const SLASH = Math.PI / 3;
 const paintStrokes: Painter = (g, r, color, motif, from) => {
   const far = from ? Math.hypot(from.x, from.y) : 0;
   const blow = far > 0 ? Math.atan2(-from!.y, -from!.x) : null;
-  const angle = blow === null ? Math.atan2(.9, .43) : blow + (motif === 'slash' ? SLASH : 0);
+  const turn = motif === 'slash' ? SLASH : 0;
+  const angle = blow === null ? Math.atan2(.9, .43) : blow + turn;
   const along = { x: Math.cos(angle), y: Math.sin(angle) };
   g.setData('strokes', angle * 180 / Math.PI);
   const across = { x: -along.y, y: along.x }, width = motif === 'impact' ? 4 : 2.5, half = r * .62;

@@ -1,6 +1,5 @@
 import type Phaser from 'phaser';
-import { GROUND, WAVE_RADIUS, degrees, headingOf, onGround, placed, type BeatPlay, type Primitive } from './kit';
-import type { KitContext } from './kit';
+import { GROUND, WAVE_RADIUS, degrees, headingOf, onGround, placed, type BeatPlay, type KitContext, type Primitive } from './kit';
 
 // Glow, the cheap form (the craft book, "Glow" and "Additive light"): one soft dot, tinted, blended as light,
 // that swells and goes. It costs one image, where the filter costs a framebuffer and a pass each frame.
