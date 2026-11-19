@@ -69,10 +69,25 @@ test('every resolved combat action the feeds carry is kept by its sequence', asy
   assert.deepEqual(Object.keys(scope.seatViews.actions), ['7', '9']);
 });
 
-// The trap in studio/AGENTS.md, held: no browser spec or fixture parses a body in an async response handler.
-test('no browser spec parses the host bodies in an async response handler', () => {
+// The trap in studio/AGENTS.md, held: no browser spec or fixture reads a body in a response handler, which Playwright
+// does not await, whether the handler is async or chains on the body's promise. Handlers that read the url, ok() or
+// status() stay. A handler is read up to the line that closes it.
+function browserFiles(folder) {
+  return readdirSync(folder, { withFileTypes: true }).flatMap((entry) => entry.isDirectory()
+    ? (entry.name === 'node_modules' ? [] : browserFiles(join(folder, entry.name)))
+    : entry.name.endsWith('.js') ? [join(folder, entry.name)] : []);
+}
+const readsBodyInHandler = (source) =>
+  [...source.matchAll(/\.on\(\s*['"`]response['"`]\s*,([\s\S]*?)\n?\s*\}?\);/g)].some(([, handler]) => /^\s*async\b|\.(json|text|body)\(/.test(handler));
+
+test('the trap reader sees a body read in a response handler, however it is written', () => {
+  assert.equal(readsBodyInHandler("page.on('response', async response => {\n  latest = await response.json();\n});"), true);
+  assert.equal(readsBodyInHandler('page.on("response", async r => r.json());'), true);
+  assert.equal(readsBodyInHandler("page.on('response', r => r.json().then(b => { x = b; }));"), true);
+  assert.equal(readsBodyInHandler("page.on('response', response => { if (!response.ok()) failed.push(response.url()); });"), false);
+});
+
+test('no browser spec reads the host bodies in a response handler', () => {
   const folder = join(dirname(fileURLToPath(import.meta.url)), 'browser');
-  const offenders = readdirSync(folder).filter((file) => file.endsWith('.js'))
-    .filter((file) => /\.on\(\s*'response'\s*,\s*async\b/.test(readFileSync(join(folder, file), 'utf8')));
-  assert.deepEqual(offenders, []);
+  assert.deepEqual(browserFiles(folder).filter((file) => readsBodyInHandler(readFileSync(file, 'utf8'))), []);
 });
