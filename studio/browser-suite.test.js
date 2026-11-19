@@ -60,6 +60,10 @@ test('a studio page plays the studio and the identity, and builds nothing', () =
   assert.deepEqual(plan(['studio/catalogue.js'], specs), { ...nothing, journeys: specs.filter((spec) => spec === 'branding.spec.js' || spec === 'studio.spec.js').join(' ') });
 });
 
+test('the frame time script, and what it shares with the stagings\' spec, play that spec', () => {
+  for (const path of ['scripts/battle/frametime.mjs', 'scripts/battle/cast.mjs']) assert.equal(plan([path], specs).journeys, 'battle-stagings.spec.js');
+});
+
 test('the film strip script plays the two specs that open the bench through it', () => {
   assert.equal(plan(['scripts/battle/filmstrip.mjs'], specs).journeys, 'battle-bench.spec.js battle-fx.spec.js battle-ground.spec.js battle-motion.spec.js');
 });

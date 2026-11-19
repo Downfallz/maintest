@@ -10,6 +10,7 @@ npm --prefix battle ci --ignore-scripts
 npm --prefix battle run build          # type-checks and emits table/battle-build/game.js, live.js and fx.js
 dotnet run --project src/DownfallArena.Cli -- table --lobby   # then /battle-lab, /battle-lab?bench, or a seat's /battle
 node scripts/battle/filmstrip.mjs spell:pummel:v1    # one effect's film strip, from the built bundle
+node scripts/battle/frametime.mjs spell:pummel:v1    # what it costs a frame, the processor slowed four times
 ```
 
 There is no watch server: rebuild after changing TypeScript or the shared table modules it imports.

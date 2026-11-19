@@ -1,10 +1,13 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test, expect } from '@playwright/test';
 import { IMPACT_MS, WINDUP_MS } from '../../table/battle-timing.js';
 import { SCENE_PARTICLES, stagingBeats } from '../../table/battle-staging.js';
+import { benchDuration, FILM_TICK_MS } from '../../table/battle-bench.js';
+import { castTargets } from '../../scripts/battle/cast.mjs';
 import { openBench } from '../../scripts/battle/filmstrip.mjs';
+import { measureFrames, measureSteps } from '../../scripts/battle/frametime.mjs';
 
 // The stagings the spell art carries (docs/art/battle-craft-plan.md, BC6 to BC8): each staged spell is played on
 // the bench, on the film's clock, as the content says it is cast: on as many figures as it may reach. Each beat
@@ -14,18 +17,8 @@ test.describe.configure({ mode: 'default' });
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const art = JSON.parse(readFileSync(join(root, 'data/presentation/spell-art.json'), 'utf8'));
-const targeting = Object.fromEntries(readdirSync(join(root, 'data/Spells'), { withFileTypes: true, recursive: true })
-  .filter(entry => entry.isFile() && entry.name.endsWith('.json'))
-  .map(entry => JSON.parse(readFileSync(join(entry.parentPath, entry.name), 'utf8')))
-  .map(spell => [spell.id, spell.targeting ?? {}]));
-
 // Who the bench plays a spell on: the caster itself, one ally, or as many enemies as the spell may reach.
-function targetsOf(id) {
-  const { origin, maxTargets = 1 } = targeting[id] ?? {};
-  if (origin === 'Self') return ['a1'];
-  if (origin === 'Ally') return ['a2'];
-  return ['b1', 'b2', 'b3'].slice(0, maxTargets);
-}
+const targetsOf = castTargets(root);
 
 const staged = Object.entries(art).filter(([, visual]) => visual.staging)
   .map(([id, visual]) => ({ id, beats: stagingBeats(visual), targets: targetsOf(id) }));
@@ -83,14 +76,39 @@ test('a stop at the height of the richest staging leaves nothing of it', async (
   await film(page, 'stop');
 });
 
-test('with less motion no staged spell plays a beat or a motif', async ({ page }) => {
+// The acceptance of the whole set (BC10): with less motion every entry of the spell art goes straight to its
+// settled frame. No beat, no motif, no figure off its home, leaning, stretched or tinted, and a view that does
+// not move, though the fixture says each creature struck lost health.
+test('with less motion no entry of the spell art plays a beat or a motif, moves a figure or moves the view', async ({ page }) => {
+  expect(staged.map(one => one.id).sort()).toEqual(Object.keys(art).sort());
   await page.emulateMedia({ reducedMotion: 'reduce' });
   // The bench rests when the media query's change event arrives: the attribute says it has (#894).
   await expect(page.locator('#lab')).toHaveAttribute('data-motion', 'reduced');
   for (const { id, targets } of staged) {
-    await page.evaluate(([spell, on]) => { window.battleBench.choose({ spell, actor: 'a1', targets: on }); window.battleBench.play(); }, [id, targets]);
+    await page.evaluate(([spell, on]) => { window.battleBench.choose({ spell, actor: 'a1', targets: on, damage: 5 }); window.battleBench.play(); }, [id, targets]);
     await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'resolved');
     expect(await kit(page), id).toEqual({ objects: [], particles: 0, changes: 0 });
     expect(await motifs(page), id).toEqual([]);
+    const { figures, view } = await page.evaluate(() => window.battleBench.motion());
+    for (const one of figures) expect(one, `${id}: ${one.id}`).toMatchObject({ x: 0, y: 0, angle: 0, width: 1, height: 1, tinted: false });
+    expect(view, id).toEqual({ trauma: 0, x: 0, y: 0, zoom: 1 });
   }
+});
+
+// The frame time script (scripts/battle/frametime.mjs) is run by hand, for the record: its numbers are a
+// machine's and no test holds them. What is held is that it measures: a time a step over the whole action, a
+// time a frame until the action resolves, and a bench left at rest.
+test('the frame time script times every step of an action, then every frame of its play', async ({ page }) => {
+  const [{ id, targets }] = staged;
+  const steps = await measureSteps(page, { spell: id, targets });
+  expect(steps).toHaveLength(Math.ceil(benchDuration(1) / FILM_TICK_MS));
+  for (const one of steps) expect(one).toBeGreaterThanOrEqual(0);
+  await expect(page.locator('#lab')).not.toHaveAttribute('data-film');
+  const frames = await measureFrames(page, { spell: id, targets, speed: 2 });
+  // At 2× the action lasts half as long: the frames counted are those of the play, and of nothing after it.
+  const played = frames.reduce((sum, one) => sum + one, 0);
+  expect(played).toBeGreaterThanOrEqual(benchDuration(2) - 100);
+  expect(played).toBeLessThan(benchDuration(2) + 1500);
+  await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'resolved');
+  expect(await kit(page)).toEqual({ objects: [], particles: 0, changes: 0 });
 });
