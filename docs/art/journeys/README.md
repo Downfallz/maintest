@@ -26,7 +26,8 @@ screen of the journey. A screen the walk films and the brief leaves out is named
 
 Each screen is a `##` heading: the name a person would give it, then in backticks the screens of the walk it
 stages, as in ``## The sign-in panel (`sign-in-panel`, `invitation-sign-in`)``. A screen has one brief. A screen
-the brief adds, which no walk films yet, ends with `(new)`; the stage that builds it adds it to the walk. Under
+the brief adds, which no walk films yet, ends with `(new)`; the stage that builds it adds it to the walk. A part
+added to a long page that scrolls (a round seen played, inside the showcase's home) is a `(new)` screen too. Under
 the heading, nine `###` parts, in this order:
 
 - **Job**: what the screen is for, in one or two sentences, and who arrives on it from where. It ends with the
@@ -40,8 +41,10 @@ the heading, nine `###` parts, in this order:
 
   | Picture | Drawn at | Answers | From |
   | --- | --- | --- | --- |
-  | What it shows. | Its width by its height, at 390 px: `308 by 205 px`. | The question it answers for the person looking. | The file in backticks, or `asked of the owner`. |
+  | What it shows. | Its width by its height, at 390 px: `308 by 205 px`. A strip gives the size of one frame. | The question it answers for the person looking. | The file in backticks, the script that makes it, or `asked of the owner`. |
 
+  A picture the session makes from the game itself, a frame of the battle or a screen of a journey, names the
+  script that makes it (`scripts/battle/filmstrip.mjs`, `scripts/ux/journey.mjs`) and what is filmed.
   A picture the library lacks is asked of the owner: its row says `asked of the owner` and which painting of the
   library holds its place until it comes, and under the table a fenced block holds the prompt to paste. A stage
   never waits for a picture.

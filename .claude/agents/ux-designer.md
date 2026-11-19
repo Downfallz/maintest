@@ -27,7 +27,8 @@ For one journey, or the screens of it a stage builds. You are given its name and
 contact sheet and a file of measures at each width (`doors-390.png`, `doors-390.measures.jsonl`, and `-320`).
 
 1. Look before you write. Read both sheets with the Read tool, screen by screen, in order, and the two files of
-   measures beside them. `node scripts/ux/journey.mjs --list` names each journey's screens and strips. If you
+   measures beside them. The walk is `scripts/ux/journey.mjs`: `node scripts/ux/journey.mjs --list` names each
+   journey's screens and strips. If you
    were given no film, ask the session for one: the walk needs the engine, the content and the bundle built,
    and the session has them. Do not brief a screen you have not seen. Write the commit and the command of the
    walk in the brief's opening, so the critique films the same journey.
