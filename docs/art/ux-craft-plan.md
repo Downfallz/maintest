@@ -1,4 +1,4 @@
-# Plan: the pages' craft, the two doors, the lessons, the lobby and the match's frame staged by a designer who can see
+# Plan: the pages' craft, the two doors, the lessons, the lobby, a player's pages and the match's frame staged by a designer who can see
 
 Status: accepted, 2026-11-19 (the owner settled the questions at the end). Nothing is built; UX1 is next.
 Each stage below is one pull request.
@@ -48,7 +48,7 @@ its folder, and a host started with developer accounts (`table --lobby --account
 
 | Concern | What the code and the docs hold |
 | --- | --- |
-| The pages of the four journeys | `table/lobby.html`: the sign-in panel, the name window, the home and its Create window. `table/battle.html`: the match, the tutorials, and 18 windows (its dialogs). `table/rules.html`. Static, no build step (`table/AGENTS.md`). |
+| The pages of the journeys | `table/lobby.html`: the sign-in panel, the name window, the home and its Create window. `table/battle.html`: the match, the tutorials, and 18 windows (its dialogs). `table/rules.html`. Static, no build step (`table/AGENTS.md`). |
 | The identity | Settled: ADR 0158, `docs/art/branding.md`, `table/identity.css` loaded last, the published design system (`docs/art/design-system/`). |
 | Pictures | 56 WebP files under `table/battle-art`, 25 MB: 22 evolutions, 24 hybrids, 4 horizon plates, 6 others. The pages show two, on the sign-in panel, as CSS backgrounds (`table/lobby.css`). No page holds an `<img>`. On the battle page, 23 controls carry an emoji as their icon. |
 | Motion on the pages | `identity.css`, `lobby.css`, `rules.css` and `leaderboard.css` hold no animation; `lobby.css` holds no transition. On every screen walked, `document.getAnimations()` was empty at rest. No view transition, no `@starting-style`. `battle.css` has 9 keyframes, for the match's frame. `table.css`, which the lobby loads too, has 16, for the classic table; ten controls of the home take a hover transition from it. |
@@ -60,6 +60,7 @@ its folder, and a host started with developer accounts (`table --lobby --account
 | The lessons | Four tutorials (ADR 0187), ten concept cards, six phase tips (ADR 0142), Learn to play. A tutorial's brief is 66 words. The first phase tip of a real game is 153 words in a window. A newcomer has never been watched (`docs/tabletop/onboarding-plan.md`, "Novice observation"). |
 | The lobby | A new player's home at 390 px: 1,923 px tall, 191 words, five filled gold actions where `branding.md` asks for one, no picture. An empty list is a sentence. Its sections arrive after the first paint: a layout shift of 0.26 in one run, past the 0.25 that is poor. |
 | The match's frame | DOM around the canvas (`#phaser-mount`): the round's bar, the order of play, the team labels, the dock, the windows. At 390 px, text under 11 px: the order of play at 7 and 9, a creature's health and initiative at 9, the team labels at 7, the round's phase at 8. In a tutorial, Leave and Settings overlap by 20 px. |
+| The player's pages | Friends is a window of the menu; `/leaderboard` and `/stats` are pages (`table/leaderboard.html`, `table/stats.html`). Walked on a new account, so each was empty. Friends: a list and a field, 48 words. The ladder: a table, then 211 words, most of them on how a rating is computed. The statistics: a record written 0–0–0, two empty tables, three lines of form. None holds a picture, a chart or a transition. A player is an initial in a square: the account keeps no picture (ADR 0122). |
 | Targets | No control under 44 px in the battle screens walked. On the table's pages: the menu's button is 34 px wide and 44 high, the footer's links 12 px tall, the rulebook's contents 17. On the showcase: a caption in 8 px text, and 27 of the field guide's 85 controls under 24 px. |
 | Accessibility, automated | axe, on the WCAG 2.2 AA rules, over 14 screens at two widths: two rules fail. The round's button has an accessible name that differs from its visible label (`#recap-open`). A rulebook table scrolls and cannot be focused at 320 px. The browser suite does not run axe: `studio/browser/package.json` holds Playwright alone. 22 specs press keys; none asks for forced colours or more contrast. |
 | What is decided | 320 px first and 44 px targets (`.claude/rules/pages.md`); contrast of 4.5:1 and 7:1 between tokens (`branding.md`). No WCAG level, no budget for a page, no rule on motion or on pictures on a page: no ADR says. |
@@ -72,8 +73,9 @@ Not measured, and why:
 - An invitation followed signed out: read in `accounts-plan.md`, not walked.
 - Google's own button: the walk signed in with the developer form.
 - A game against a person: the waiting room, a turn that arrives, a notice. The walk played a bot.
+- The player's pages with something on them: a friend, a rank, a season of games. The account walked was new.
 - The end of a tutorial and of a match: the walk stopped at the first choice.
-- A keyboard alone, a screen reader, forced colours, text at 200%. UX2 and UX11 build those checks.
+- A keyboard alone, a screen reader, forced colours, text at 200%. UX2 and UX13 build those checks.
 - A physical phone and a real newcomer. No device and no person is in a session.
 - The paint times are one run each, in Chromium, on the session's machine. UX2 makes them repeatable.
 
@@ -140,13 +142,14 @@ journey in Chromium as a new player would, at 320 by 568 and 390 by 844. It writ
 - with `--strip <interaction>`, one interaction across time: a window that opens, a turn that arrives. It pins the
   clock as `scripts/battle/filmstrip.mjs` does, so two runs give the same strip.
 
-The four journeys:
+The five journeys:
 
 | Journey | From | To |
 | --- | --- | --- |
 | The two doors | A visitor who knows nothing opens the showcase, or follows a friend's invitation | They are signed in and named |
 | The lessons | Tutorial 1's brief | Tutorial 4's result, and the home that follows |
 | The lobby | The home of a player with nothing | A game created, a turn that waits, a game that ended |
+| The player's pages | The home's menu | Friends with a friend asked and invited, the leaderboard, the statistics |
 | The match | A game's first Command phase | Its result, through a round of combat |
 
 A journey's film is its sheet and its measures. The sheet is what the designer critiques and what the owner
@@ -208,7 +211,7 @@ budget or level of accessibility today.
 
 ## What a stage is held to
 
-Proposed here; the ADR of UX4 sets them, and UX13 reads them again.
+Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
 
 | Measure | Today | Proposed |
 | --- | --- | --- |
@@ -217,7 +220,7 @@ Proposed here; the ADR of UX4 sets them, and UX13 reads them again.
 | A turn seen played before any account | no | yes, on the showcase |
 | The home's layout shift | 0.26 | under 0.1 |
 | Filled actions on a screen | 5 on the home | 1 |
-| Smallest text in the match's frame | 7 px | 11 px, or what the owner approves on UX10's sheet |
+| Smallest text in the match's frame | 7 px | 11 px, or what the owner approves on UX11's sheet |
 | axe findings on the screens walked | 2 rules | 0 |
 | Windows that open with a transition | none | all |
 | Controls that overlap at 320 and 390 px | 1 | 0 |
@@ -228,7 +231,7 @@ Proposed here; the ADR of UX4 sets them, and UX13 reads them again.
 1. **UX1, the craft book.** `docs/art/ux-craft.md` from the notes, each link read again against its entry, and the
    notes removed once the book holds them. Tests: every entry has its six lines; the paths it names exist; the
    book is in `docs/README.md`.
-2. **UX2, the journey film and the measures.** `scripts/ux/journey.mjs`, the four walks, the contact sheet, the
+2. **UX2, the journey film and the measures.** `scripts/ux/journey.mjs`, the five walks, the contact sheet, the
    measures, `--strip`. The first sheets and measures are the baseline, kept in `docs/art/journeys/baseline.md`.
    Tests: two runs of one journey give the same measures; a walk reaches every screen it names; the script is in
    `docs/reference/commands.md`.
@@ -262,27 +265,33 @@ Proposed here; the ADR of UX4 sets them, and UX13 reads them again.
    battle), a game's card with its creatures and its standing, empty lists that teach and link, room held for
    what arrives, a turn that arrives seen arriving, the waiting room, the Create window. Tests:
    `lobby-home.spec.js`, the journey's measures, the layout's shift.
-10. **UX10, the match's frame.** The round's bar, the order of play, the labels and the dock: the floor of text
+10. **UX10, the player's pages.** Friends, the leaderboard and the statistics: a player seen as more than an
+    initial, a record and a rating drawn and not only written, the mutation and the spell a player leans on shown
+    with their paintings, a rank that moves seen moving, and each empty page teaching and linking to the game that
+    fills it. Tests: `studio/browser/lobby-home.spec.js` for Friends, the pages' own tests
+    (`table/leaderboard.test.js`, `table/stats.test.js`, `table/friends.test.js`), the journey's measures.
+11. **UX11, the match's frame.** The round's bar, the order of play, the labels and the dock: the floor of text
     size, the icons, no overlap at 320 and 390 px, the frame answering a blow in step with the canvas, whose turn
     it is and what is waited for. Tests: `studio/browser/battle-density.spec.js` and the battle specs the change
     touches; the journey's measures.
-11. **UX11, the match's windows.** The 18 windows as one family: how each enters, leaves and returns the focus,
+12. **UX12, the match's windows.** The 18 windows as one family: how each enters, leaves and returns the focus,
     the spellbook and the mutation tree on a phone, the result of a match as a moment. Tests: each window's
     contract (the focus goes in, stays in, comes back; Escape closes); the battle specs.
-12. **UX12, accessibility.** The checks the gate runs: axe on every screen and state of the four journeys (a
+13. **UX13, accessibility.** The checks the gate runs: axe on every screen and state of the five journeys (a
     development dependency of the browser suite, named in the ADR of UX4), a whole turn by keyboard, a turn told in
     one live region, forced colours and more contrast, text spacing and 200%, the flash guard on the brightest
     window. What stays for a person is listed for the owner. Tests: these.
-13. **UX13, acceptance.** The four journeys filmed again against the baseline, the table of measures above, the
+14. **UX14, acceptance.** The five journeys filmed again against the baseline, the table of measures above, the
     budgets, less motion across every screen, the sheets published. The record goes in `docs/art/`, with the two
     gates only the owner can close: a newcomer watched, a physical phone.
-14. **UX14, a lesson before an account.** A visitor plays tutorial 1 as a guest, from either door, and is asked
+15. **UX15, a lesson before an account.** A visitor plays tutorial 1 as a guest, from either door, and is asked
     to sign in when it ends, with what the account keeps. Needs an ADR that amends question 5 of
     `accounts-plan.md`: what a guest is on the host, what it may reach, how long it lives, and how its lesson
     joins the account. Tests: the host's routes for a guest and their limits; a guest reaches nothing but
     tutorial 1; the journey's measures. `security-reviewer` and `host-reviewer` read it.
 
-UX6 to UX11 and UX14 each end with the owner approving the journey's sheets before the pull request is reported ready.
+UX6 to UX12 and UX15 each end with the owner approving the journey's sheets before the pull request is reported
+ready.
 
 ## Questions the owner settled (2026-11-19)
 
@@ -295,8 +304,10 @@ UX6 to UX11 and UX14 each end with the owner approving the journey's sheets befo
    of frames.
 4. How much moves: what answers the player, and ambience. Ambience stops under less motion and out of view.
 5. The two doors: each its job. The showcase gains the game seen played (UX6), the game's panel stays short and
-   answers the invited friend (UX7), and a visitor plays tutorial 1 as a guest in a last stage with its ADR (UX14).
-6. The order of the journeys: a newcomer's. The doors, the lessons, the lobby, then the match.
-7. The showcase is part of the pass. The owner pointed at it as the door that already explains the game, the
+   answers the invited friend (UX7), and a visitor plays tutorial 1 as a guest in a last stage with its ADR (UX15).
+6. The order of the journeys: a newcomer's. The doors, the lessons, the lobby, the player's pages, then the match.
+7. The player's pages are part of the pass: Friends, the leaderboard and the statistics. The owner asked for
+   them once the plan was written. They are walked above, on a new account, and UX10 is their stage.
+8. The showcase is part of the pass. The owner pointed at it as the door that already explains the game, the
    rulebook and the spells, and asked for it to be analysed and improved with the game's own door, or instead of
    it. It is walked and measured above, and UX6 is its stage.
