@@ -87,7 +87,7 @@ give what is said and when. It reuses everything ADR 0179 built, and the regress
 | # | Title | What it teaches | Played for the person |
 | --- | --- | --- | --- |
 | 1 | Your first combat | Choosing a spell, targets, Energy, Health, Defense | Evolution, Tempo, Tie order |
-| 2 | Who acts first | Tempo, initiative, the critical, Tie order, the skipped turn | Evolution |
+| 2 | Who acts first | Tempo, initiative, the critical, Tie order | Evolution |
 | 3 | Grow by mutating | Evolution, mutations, the Mutation Tree, the initiative bonus | Nothing |
 | 4 | To the end | Conditions and their countdown, the stun's immunity, the end of a match | Nothing; the match is played to its end |
 
@@ -235,7 +235,8 @@ give what is said and when. It reuses everything ADR 0179 built, and the regress
    | 3 | `grow-by-mutating.json` | seed 5, round 3 | the mutation (Mutation), the tempos (Initiative), the tie, the spells it brings |
    | 4 | `to-the-end.json` | seed 3, round 5, to the match's end in round 8 | Regeneration and Bleed (Conditions), the stun (Conditions, A skipped turn), the end of a match (Health) |
 
-   Tutorial 1's first step also opens **Choosing a spell** (`intent`), and tutorial 2 the skipped turn (`fizzle`):
+   Tutorial 1's first step also opens **Choosing a spell** (`intent`), and tutorial 2 the skipped turn (`fizzle`,
+   until it was cut again, below):
    R4 gave the two cards the hosted table's rules, so they have a place (question 7). Tutorial 4 is the end of a
    match, not a whole one, and is called **To the end** (question 8). `TutorialFileTests` holds the series: four
    files, in order, each teaching what the table above says.
@@ -257,6 +258,13 @@ give what is said and when. It reuses everything ADR 0179 built, and the regress
      coach's **Leave the tutorial**, which shows once the result is closed.
    - Tutorials 1, 3 and 2 are rounds 2, 3 and 4 of one match: tutorial 2's creatures already carry the mutations
      tutorial 3 teaches. Its lesson does not talk about them.
+
+   *Tutorial 2 cut again (2026-11-19, #727,
+   [tutorial-follow-ups-plan.md](tutorial-follow-ups-plan.md), T2)*: `who-acts-first.json` is now random against
+   greedy on seed 51, cut at the top of round 2, with three steps: the tempos (Tempo), the tie (Initiative), a
+   Precision cast (Critical). Its creatures carry round 1's mutations alone, and `TutorialFileTests` holds that
+   of every tutorial ordered before the one that teaches Evolution. The skipped turn left it: no round before 3
+   has one. It is taught in tutorial 4, with the stun.
    - **Learn to play** in the main menu's bar stays the owner's (#669).
 
 ## Questions for the owner
@@ -287,6 +295,8 @@ give what is said and when. It reuses everything ADR 0179 built, and the regress
 ## Questions the owner settled (2026-11-16)
 
 7. **Choosing a spell** (the `intent` card) opens at tutorial 1's first step, and **A skipped turn** (`fizzle`)
-   in tutorial 2 and again in tutorial 4, with the stun.
+   in tutorial 2 and again in tutorial 4, with the stun. Amended on 2026-11-19
+   ([tutorial-follow-ups-plan.md](tutorial-follow-ups-plan.md), question 2): the skipped turn is taught in
+   tutorial 4 alone, since tutorial 2 is cut at round 2, where no turn is skipped.
 8. Tutorial 4 is cut at round 5 of its match and played to the end: the conditions, the stun and the end of a
    match, in about four rounds, not a whole match.

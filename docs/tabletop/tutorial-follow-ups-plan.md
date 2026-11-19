@@ -1,6 +1,6 @@
 # Tutorial follow-ups: the end of tutorial 4, tutorial 2's cut, and Learn to play in the bar
 
-Status: accepted, 2026-11-19. Nothing is built.
+Status: accepted, 2026-11-19. T2 is built; T1 and T3 are not.
 
 ## What the owner asked for
 
@@ -101,6 +101,17 @@ tutorial 2 carries nothing tutorial 3 teaches.
    again with the rulebook-writer and the copy-editor, onboarding-plan.md's series table and O5 note brought in
    line, `scenarios/README.md`. Tests: the new `TutorialFileTests` fact, `LessonReach` on the file, the series
    fact unchanged, and `battle.tutorials.js` on tutorial 2. No ADR: ADR 0187 holds.
+
+   *Built (2026-11-19)*: `who-acts-first.json` is random against greedy, 3v3 on seed 51 under the hosted
+   table's rules, cut at the top of round 2 by `scenario-generate`, on today's content (`9c6b79d5…`). Player 1's
+   creatures carry Brute, nothing and Brute. Creatures 1 and 3 are tied in Precision at initiative 6, with enemy
+   6 between them after the roll-off; in the recorded answers creature 3's Pummel lands a critical. Of the 22
+   seeds of 120 where player 1 holds a tie in round 2, it is the one where no creature of the person casts Focus
+   or a spell that does nothing, and a Precision cast lands a critical. Three steps, written by the
+   rulebook-writer: the tempos, the tie, the critical. The critical's lines changed: only Pummel rolls among
+   creature 1's spells, and a critical doubles damage, not everything a spell does. The new `TutorialFileTests`
+   fact holds every tutorial ordered before the one that teaches Evolution to a cut, and a last step, before
+   the second Evolution.
 3. **T3, Learn to play in the bar.** The entry moved, the fold measured and moved everywhere it is named,
    `home-navigation.md` and onboarding-plan.md updated, #669 closed. Tests: `lobby-home.spec.js` with a long
    name at the new widths and the one under them, `lobby-tutorials.test.js` for the entry, the battle page's
