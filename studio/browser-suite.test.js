@@ -418,6 +418,54 @@ test("every job that installs a browser restores Playwright's browsers first, ke
   }
 });
 
+// #892: on main, 5 of the 42 release-ios jobs from 2026-11-16 to 2026-11-18 were cancelled at their 25-minute
+// limit in the install, fetching WebKit's 185 system packages (140 MB) from a mirror that sent one a few
+// seconds; the step otherwise takes 32 seconds. The archives are kept between runs, and apt, which checks each
+// against the signed index, fetches none of them again. The install is bounded well inside the job's limit.
+test("every job that installs a browser keeps the system packages' archives, and bounds the install", () => {
+  const workflow = browserWorkflow();
+  for (const job of ['journeys', 'real-engine', 'battle-release']) {
+    const block = jobBlock(workflow, job);
+    const steps = [...block.matchAll(/^ {6}- (?:name: (.*)|uses: .*)\n((?: {8}.*\n)*)/gm)].map((match) => ({ name: match[1] ?? '', body: match[2], at: match.index }));
+    const named = (name) => {
+      const step = steps.find((candidate) => candidate.name === name);
+      assert.ok(step, `${job} has the step "${name}"`);
+      return step;
+    };
+    const restore = named("Restore the system packages' archives");
+    const install = named('Install the browser engine and its system packages');
+    const keep = named("Keep the system packages' archives for the next run");
+    const save = steps.find((step) => step.at > keep.at && /uses: actions\/cache\/save@/.test(block.slice(step.at, step.at + 80)));
+    assert.ok(save, `${job} saves the archives`);
+    assert.ok(restore.at < install.at && install.at < keep.at && keep.at < save.at, `${job} restores, installs, then keeps`);
+    assert.ok(save.at < block.indexOf('npm --prefix battle'), `${job} saves before any build or spec runs code`);
+
+    assert.match(block, /key=playwright-\$ImageOS-\$version-\$ENGINE/, job);
+    assert.match(block, /debs-key=playwright-debs-\$ImageOS-\$ENGINE-\$ImageVersion-\$version"/, job);
+    assert.match(block, /debs-prefix=playwright-debs-\$ImageOS-\$ENGINE-"/, job);
+    for (const step of [restore, save]) {
+      assert.match(step.body, /path: ~\/\.cache\/playwright-debs\n/, job);
+      assert.match(step.body, /key: \$\{\{ steps\.playwright\.outputs\.debs-key \}\}\n/, job);
+    }
+    assert.match(restore.body, /id: debs\n/, job);
+    assert.match(restore.body, /restore-keys: \$\{\{ steps\.playwright\.outputs\.debs-prefix \}\}\n/, job);
+    assert.match(keep.body, /if: steps\.debs\.outputs\.cache-hit != 'true'\n/, job);
+    assert.match(block.slice(save.at), /^ {8}if: steps\.debs\.outputs\.cache-hit != 'true'\n/m, job);
+
+    // apt keeps what it fetched, and finds what the cache held where it looks first.
+    assert.match(install.body, /APT::Keep-Downloaded-Packages "true";/, job);
+    assert.match(install.body, /sudo rm -f \/etc\/apt\/apt\.conf\.d\/docker-clean/, job);
+    assert.match(install.body, /-exec sudo cp -t \/var\/cache\/apt\/archives \{\} \+/, job);
+    assert.ok(install.body.indexOf('/var/cache/apt/archives') < install.body.indexOf('playwright/cli.js install --with-deps "$ENGINE"'), job);
+    // What a newer index no longer lists is dropped before the archives are kept.
+    assert.match(keep.body, /sudo apt-get autoclean/, job);
+
+    const limit = Number(/^ {4}timeout-minutes: (\d+)$/m.exec(block)[1]);
+    const bound = Number(/timeout-minutes: (\d+)\n/.exec(install.body)?.[1]);
+    assert.ok(bound > 0 && bound <= limit / 2, `${job} bounds the install at half its limit at most (${bound} of ${limit})`);
+  }
+});
+
 // The learning project's own job paid a minute to run ruff, then build-and-test ran pytest again for Sonar.
 test('the learning project is linted and tested once, in build-and-test, and its failure fails the job', () => {
   const workflow = ciWorkflow();

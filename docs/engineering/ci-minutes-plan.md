@@ -165,9 +165,39 @@ complete runs.
    `scripts/verify.sh` read the pull request's plan.
 
    Not done: release-desktop is not dropped on `main` where table-desktop plays the same spec, since the owner
-   keeps the three profiles before the deployment (question 3). Not measured: the saving, which the first
-   `/retro` after the merge reads with M1's meter, and whether the per-profile timeout, cut from 35 to 25
-   minutes, holds WebKit's job with its retry. M4 narrows which paths call for the release profiles at all.
+   keeps the three profiles before the deployment (question 3). M4 narrows which paths call for the release
+   profiles at all.
+
+   *Measured (2026-11-19, #688)*: every `battle-release` job of CI from 2026-11-12 to 2026-11-19, read from the
+   jobs API and billed as M1's meter bills them (each job rounded up to the minute). Before M2 means the single
+   job, until 2026-11-16 at 16:20 UTC; after, the jobs per profile. The meter's week (2026-11-12 to 2026-11-18)
+   puts 3,475 of CI's 22,950 minutes in the group, both layouts together.
+
+   | `battle-release` a run | Before M2 | After M2 |
+   | --- | --- | --- |
+   | Pull request, billed (median of the runs it finished) | 21 min (60 runs) | 6 min (81 runs) |
+   | Pull request, wall clock (median) | 19.7 min | 5.3 min |
+   | `main`, billed (median) | 20 min (21 runs) | 26 min (42 runs) |
+   | `main`, wall clock (median) | 19.6 min | 10.6 min |
+
+   1. *The saving.* A pull request bills 15 minutes less a run and waits 14 less: the plan's estimate of 9 was
+      pessimistic, since WebKit alone takes 5 minutes. `main` bills 6 minutes more and waits 9 less.
+   2. *The set-up on `main`.* A job's set-up, everything but the matches (checkout, `npm ci`, the browsers'
+      cache, the install, the bundle, the CLI and the content), takes 1.1 to 1.4 minutes (medians per profile)
+      with M3's cache. Two more set-ups are about 2.5 minutes; the rest of the 6 is each job's rounding and
+      Android's emulated phone, which plays its matches in 9.4 minutes on its own. The infra review's 5 to 10 is
+      the right range, and what M3's cache leaves is the build, not the browsers.
+   3. *The timeout.* The slowest finished jobs on `main` were release-android at 15.5 minutes and
+      release-desktop at 14.1, retries included, against 25; a release-ios job that finished never passed 6.2.
+      But 5 of the 42 release-ios jobs on `main` (and 1 of 81 on pull requests) were cancelled at the 25 minutes, all in "Install
+      the browser engine and its system packages", none in a spec (#892): WebKit needs 185 system packages,
+      140 MB, a fresh runner lacks, and on those runs the Ubuntu mirror sent one every few seconds. The step's
+      median is 32 seconds. The fix keeps the cause out rather than the limit up: every browser job now keeps
+      apt's archives in the Actions cache (`~/.cache/playwright-debs`, keyed by the image, the engine and
+      Playwright's version, with the last image's archives as the fallback), so apt downloads only the indexes
+      and what changed, and the install is bounded at 10 minutes, so a mirror that stalls on a cache miss fails
+      the job early, with its step named. `browser-suite.test.js` holds both. The Chromium jobs' install was slow
+      the same way, 3.4 to 7.4 minutes on 6 of their 84 jobs on `main`, and is kept the same way.
 3. **M3, the wait evened out.** Desktop in three shards, Playwright's browsers cached, the learning job folded
    into `build-and-test` (`browser-suite.test.js` holds the gate's `needs`).
 
