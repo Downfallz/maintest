@@ -448,6 +448,8 @@ bake the drawing to a texture first, or filter a container.
   Since BC6 a `glow` with the shape of a ring is a shock ring: one image of a thin ring, flattened onto the
   ground under the figure, that opens to its reach over the whole beat and fades (*house*). Two of them 160 ms
   apart read as an aftershock. It is the strongest single beat the kit has, kept for Stage II and Stage III.
+  A pulse on the acting figure was lost on the gold rim the scene draws around it: while one plays, the rim is
+  quieted to a fifth (*house*) and given back when the beat ends or is cleared (#919).
 
 ### Blur
 
@@ -577,8 +579,9 @@ bake the drawing to a texture first, or filter a container.
 - **Cost**: none beyond the burst.
 - **Reduced motion**: nothing.
 - **Here**: the recoil already follows that line. The kit's burst takes a direction (`along`, `back`, `up`,
-  `out`) and a spread, and each particle is turned to its heading. Since BC6 the strokes of the `impact` and
-  `slash` motifs run along the line of the blow too, each over a dark edge, for every spell that draws them.
+  `out`) and a spread, and each particle is turned to its heading. Since BC6 the strokes of the `impact` motif
+  run along the line of the blow too, each over a dark edge, for every spell that draws it; the `slash` strokes
+  cut 60° across it (*house*), so a claw and a hammer differ when the blow is vertical (#919).
 
 ## The ground
 
@@ -666,7 +669,7 @@ bake the drawing to a texture first, or filter a container.
 - **Here**: the kit's `level` (`feet`, `centre`, `head`), read by `table/battle-staging.js` and checked by
   `SpellArt`; the scene gives each figure its feet and head besides its centre. The ring of a `glow` lies at the
   feet whatever its level; with a `direction` of `along` or `back` it is an arc, 120° unless its `spread` says
-  (*house*). Along and back, a piece's travel is shortened at every level, since it follows a blow struck across
+  (*house*). Along and back, a burst's piece is shortened at every level, since it follows a blow struck across
   the ground. The physical spells use it first: Pummel's and Body Slam's dust, Crushing Stomp's crown, Alpha
   Roar's rings and Groundbreaker's ring and crack.
 

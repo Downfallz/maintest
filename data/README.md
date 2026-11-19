@@ -32,10 +32,11 @@ Authoring format for the game resources (ADR 0009). One JSON file per item:
   card as `visual`. An entry may carry a `staging` (ADR 0196): the beats the battle's effects kit plays. Each
   beat has a `beat` kind (`motif`, `burst`, `flow`, `trail`, `gather`, `glow`, `flash`, `shake`, `pulse`), the
   millisecond it starts `at`, and named parameters (`on`, `lasts`, `count`, `shape`, `tint`, `blend`,
-  `direction`, `spread`, `reach`, `strength`). The builder refuses an unknown beat, word or property, a beat
+  `direction`, `spread`, `reach`, `strength`, `level`). The builder refuses an unknown beat, word or property, a beat
   with no `at`, and a beat that outlives its window. Without a staging, the spell is drawn as its motif.
   A `reach` is a share of the figure's radius, up to 400 (300 clears its body); a `strength` is a light's
-  brightness, a shake's weight, or the size of a particle beat's pieces. How much a spell may ask for goes by
+  brightness, a shake's weight, or the size of a particle beat's pieces; a `level` (`feet`, `centre`, `head`) is
+  where on its figure the beat starts, and what starts at the feet lies on the ground. How much a spell may ask for goes by
   the Stage of the mutation that teaches it: the ladder of `docs/art/storyboards/README.md`, held by
   `studio/staging-ladder.test.js`. The physical family and Focus are staged (BC6 of the battle's craft plan).
 - `presentation/mutation-art.json`: which body each package belongs to and the accent it draws on it (ADR 0133),
