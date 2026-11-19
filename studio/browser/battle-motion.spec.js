@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { IMPACT_MS, WINDUP_MS } from '../../table/battle-timing.js';
-import { BREATH, DEFEATED_ALPHA, PUNCH, TRAUMA, WEIGHTS, meleeBeats } from '../../table/battle-motion.js';
+import { BREATH, DEFEATED_ALPHA, FLIGHT, PUNCH, TRAUMA, WEIGHTS, flightAt, meleeBeats } from '../../table/battle-motion.js';
 import { openBench } from '../../scripts/battle/filmstrip.mjs';
 
 // The movement every action shares (docs/art/storyboards/movement.md, BC5 of docs/art/battle-craft-plan.md),
@@ -190,5 +190,71 @@ test('a blood cost alone does not move the view, and the caster does not answer 
     expect(now.view).toEqual({ trauma: 0, x: 0, y: 0, zoom: 1 });
     expect(now.figures.find(one => one.id === 'a1')).toMatchObject({ x: 0, y: 0, tinted: false });
   }
+  await film(page, 'stop');
+});
+
+// #909: the thrower let go at 240 ms and its quill, eased in, stood on its body until about 540 ms.
+test('a quill is not drawn before the throw, leaves the thrower as it lets go, and lands on the contact', async ({ page }) => {
+  const quill = async () => (await page.evaluate(() => window.battleBench.effects())).find(one => one.motif === 'quill');
+  const anchors = await page.evaluate(() => window.battleBench.anchors());
+  const [a1, b3] = ['a1', 'b3'].map(id => anchors.find(one => one.id === id));
+  const start = flightAt(a1, b3, 0), whole = Math.hypot(b3.x - start.x, b3.y - start.y);
+  const flown = one => Math.hypot(one.x - start.x, one.y - start.y);
+  await film(page, 'start', { spell: 'spell:throwing_star:v1', actor: 'a1', targets: ['b3'], damage: 3 });
+  // While the body loads, nothing stands on it.
+  for (let elapsed = 0; elapsed < FLIGHT.at; elapsed += 60) {
+    expect((await quill()).visible, `at ${elapsed} ms`).toBe(false);
+    await film(page, 'advance', 60);
+  }
+  // 60 ms after the throw it is seen, and already more than its own length away: out of the thrower's hands.
+  await film(page, 'advance', 60);
+  const early = await quill();
+  expect(early.visible).toBe(true);
+  expect(flown(early)).toBeGreaterThan(whole * .06);
+  // Half way through the flight it is about half way along its arc, a tick or two of the film's clock behind at
+  // most, and above the straight line: a low arc.
+  await film(page, 'advance', FLIGHT.lasts / 2 - 60);
+  const middle = await quill();
+  const shares = Array.from({ length: 11 }, (_, index) => .4 + index * .01);
+  const off = Math.min(...shares.map(share => { const on = flightAt(a1, b3, share); return Math.hypot(middle.x - on.x, middle.y - on.y); }));
+  expect(off).toBeLessThan(3);
+  // Off the straight line from its start to its target, at right angles to it, on the upper side.
+  const along = { x: (b3.x - start.x) / whole, y: (b3.y - start.y) / whole };
+  const bow = (middle.x - start.x) * along.y - (middle.y - start.y) * along.x;
+  expect(Math.abs(bow)).toBeGreaterThan(4);
+  expect(middle.y).toBeLessThan(start.y + (middle.x - start.x) / along.x * along.y);
+  // One frame before the contact it is on its target, and the thrower is home.
+  await film(page, 'advance', FLIGHT.lasts / 2 - 20);
+  expect(flown(await quill())).toBeGreaterThan(whole * .9);
+  expect(far(await figure(page, 'a1'))).toBeLessThan(1);
+  await film(page, 'stop');
+});
+
+test('a trail behind a projectile keeps to its quill: the same arc at the same pace, never ahead', async ({ page }) => {
+  const anchors = await page.evaluate(() => window.battleBench.anchors());
+  const [a1, b3] = ['a1', 'b3'].map(id => anchors.find(one => one.id === id));
+  const start = flightAt(a1, b3, 0);
+  await film(page, 'start', { spell: 'spell:tranquilizer_dart:v1', actor: 'a1', targets: ['b3'], damage: 2 });
+  await film(page, 'advance', FLIGHT.at);
+  for (let elapsed = 120; elapsed < FLIGHT.lasts; elapsed += 120) {
+    await film(page, 'advance', 120);
+    const quill = (await page.evaluate(() => window.battleBench.effects())).find(one => one.motif === 'quill');
+    const head = (await page.evaluate(() => window.battleBench.places())).find(one => one.beat === 'trail');
+    expect(head, `a trail at ${elapsed} ms of the flight`).toBeTruthy();
+    // The head is where the quill is, a tick of the film's clock apart at most: an eased, straight trail was
+    // tens of pixels behind it at first and off its arc all the way.
+    expect(Math.hypot(head.x - quill.x, head.y - quill.y), `at ${elapsed} ms`).toBeLessThan(8);
+    expect(Math.hypot(head.x - start.x, head.y - start.y)).toBeLessThanOrEqual(Math.hypot(quill.x - start.x, quill.y - start.y) + 8);
+  }
+  await film(page, 'stop');
+});
+
+test('what a projectile knocks off its target goes on the way it came in, down the end of its arc', async ({ page }) => {
+  const anchors = await page.evaluate(() => window.battleBench.anchors());
+  const [a1, b3] = ['a1', 'b3'].map(id => anchors.find(one => one.id === id));
+  await film(page, 'start', { spell: 'spell:throwing_star:v1', actor: 'a1', targets: ['b3'], damage: 3 });
+  await film(page, 'advance', WINDUP_MS + 100);
+  const strokes = (await page.evaluate(() => window.battleBench.effects())).find(one => one.phase === 'impact' && one.strokes !== undefined);
+  expect(strokes.strokes).toBeCloseTo(flightAt(a1, b3, 1).angle * 180 / Math.PI, 0);
   await film(page, 'stop');
 });

@@ -10,6 +10,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { benchSpells } from '../battle/bench-spells.mjs';
+import { FLIGHT } from '../table/battle-motion.js';
 import { SCENE_PARTICLES, stagingBeats } from '../table/battle-staging.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -17,8 +18,8 @@ const read = path => readFileSync(join(root, path), 'utf8');
 const art = JSON.parse(read('data/presentation/spell-art.json'));
 const spells = await benchSpells(join(root, 'data'));
 
-// The families whose stage of the plan is built, each with the file of its storyboards. BC7 and BC8 add theirs.
-const BUILT = { physical: 'physical.md', neutral: 'base-actions.md' };
+// The families whose stage of the plan is built, each with the file of its storyboards. BC8 adds its own.
+const BUILT = { physical: 'physical.md', biological: 'biological.md', neutral: 'base-actions.md' };
 // A base action's storyboard is with the base actions, whatever its family.
 const BASE_FILE = 'base-actions.md';
 
@@ -71,7 +72,7 @@ const staged = Object.entries(art).filter(([, visual]) => visual.staging);
 const built = Object.entries(art).filter(([, visual]) => Object.hasOwn(BUILT, visual.family));
 
 test('every spell of a family whose stage is built has a staging the page reads', () => {
-  assert.ok(built.length >= 16);
+  assert.ok(built.length >= 30);
   for (const [id, visual] of built) {
     assert.ok(visual.staging, `${id} has no staging`);
     assert.ok(stagingBeats(visual), `${id}: the page cannot read its staging, and would draw the motif`);
@@ -123,6 +124,14 @@ test('a halo on the outline is one figure\'s: a pulse is on the caster, or on a 
     const targets = JSON.parse(read(spellFile(id))).targeting?.maxTargets ?? 1;
     for (const beat of stagingBeats(visual).filter(one => one.beat === 'pulse')) {
       assert.ok(beat.on === 'caster' || targets === 1, `${id} pulses ${targets} figures`);
+    }
+  }
+});
+
+test('a trail behind a projectile lasts as long as its flight: it leaves with the quill and lands with it', () => {
+  for (const [id, visual] of staged.filter(([, one]) => one.delivery === 'projectile')) {
+    for (const beat of stagingBeats(visual).filter(one => one.beat === 'trail')) {
+      assert.deepEqual([beat.at, beat.lasts], [FLIGHT.at, FLIGHT.lasts], `${id}: its trail is the flight's`);
     }
   }
 });

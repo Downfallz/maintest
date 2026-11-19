@@ -15,6 +15,7 @@ One file a family. A family's stage of the plan (BC5 to BC9) adds its file here,
 | File | What it stages | Built by |
 | --- | --- | --- |
 | [base-actions.md](base-actions.md) | The base attack, Strike. Focus joins it in BC6. | BC6 |
+| [biological.md](biological.md) | The biological family, the Scoundrel's 14 spells, by the ladder: Stage I, then Stage II, then Stage III. | BC7 |
 | [physical.md](physical.md) | The physical family, the Brute's 14 spells, by the ladder: Stage I, then Stage II, then Stage III. | BC6 |
 | [movement.md](movement.md) | What every action shares, and no spell's look: a melee blow, a cast and a projectile, a death, the breath at rest, the camera. | BC5 |
 

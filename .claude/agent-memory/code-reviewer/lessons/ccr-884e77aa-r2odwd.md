@@ -1,0 +1,4 @@
+# code-reviewer lessons (branch ccr-884e77aa-r2odwd)
+
+- An arc whose control point is lifted in screen y ("above the middle") collapses on a vertical throw, which is the phone's portrait layout (a1 straight up at b1): no curve at all, and a collinear control off the midpoint makes the pace uneven (start/end speed 1.93 up, 0.52 down). Probe any hand-written curve with vertical, level and both directions, and measure speed at both ends, not only "distance grows" (BC7 #909, table/battle-motion.js flightAt, f1e8552).
+- A flag passed only to make a primitive follow a path (`flight` on a projectile's trail) can be dropped with nothing failing when the specs read only timings and the kit's `places()` cannot see an emitter's follow point: ask for the head's position on the arc to be asserted (BC7, battle/src/fx/trail.ts, f1e8552).

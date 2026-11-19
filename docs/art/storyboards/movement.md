@@ -200,7 +200,8 @@ Nothing. The frame after the action at once, for 650 ms: no load, no throw, no f
 - The cancel path: the same lines as the melee blow (scale back to the figure's own, tint cleared, position home,
   angle 0). A skip during the load leaves the caster at rest.
 - Built by BC5: the load and release of a cast, the throw of a projectile caster, the hit reaction from a distance
-  (today `spellImpact` recoils a target only when the delivery is melee). BC7 gives the quill its arc and its trail.
+  (today `spellImpact` recoils a target only when the delivery is melee). BC7 gave the quill its arc; its trail
+  is Paralyzing Barb's.
 
 ### On the film strip
 
@@ -237,8 +238,9 @@ frames, and does not judge the feel.
   A cast releases at contact because nothing leaves it before.
 - The distant recoil keeps the melee's distances: damage is damage. Only the stop is halved, as the book's source
   gives less hit stop to a projectile. The owner may want a smaller push from afar.
-- Quill's quill standing still on a1's body until 540 ms is BC7's to fix (it should leave from the dorsal quills),
-  not this file's.
+- Settled in BC7 (#909): the quill is not drawn while a1 loads, leaves just over a1's head with the toss at
+  240 ms and flies at an even pace to the contact, on a low arc when thrown across the field (`FLIGHT` in
+  `table/battle-motion.js`, [Quill](biological.md#quill-spellthrowing_starv1)). `THROW` did not move.
 
 ## A death
 

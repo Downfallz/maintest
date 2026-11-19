@@ -962,7 +962,7 @@ plays them through the kit, `src/fx/`:
 | `motif` | The spell's own motif, starting and lasting as the staging says. Drawn by `spell-effects.ts`. | each target |
 | `burst` | Particles at once from one point, in a fan: each leaves fast, slows, falls a little and fades. | a figure |
 | `flow` | A steady stream from all over a figure, for as long as the beat lasts. | a figure |
-| `trail` | Particles left behind a head that travels from the caster to a target. At the feet, a crack along the ground. | caster to target |
+| `trail` | Particles left behind a head that travels from the caster to a target. Behind a projectile, on its arc. At the feet, a crack along the ground. | caster to target |
 | `gather` | Particles that start on a ring around a figure and land on it. | a figure |
 | `glow` | One soft dot, blended as light, that swells and goes: a glow that costs one image. With `shape: ring`, a shock ring: a thin ring lying on the ground at the figure's feet, which opens to its `reach` over the whole beat and fades; aimed `along` or `back`, an arc on that side only, 120° unless its `spread` says. | a figure |
 | `flash` | The figure filled flat in one colour for a frame or two. One a staging. | a figure |
@@ -976,6 +976,11 @@ plays them through the kit, `src/fx/`:
 - The spell is drawn as its motif, whole, while the kit has not arrived, if it never does, and when a staging
   holds a beat the page or the kit does not know. That means the charge on the caster, then the motif.
 - A staged spell draws no shared charge on its caster. A projectile's quill still flies: it is the delivery.
+- A projectile follows `flightAt` (`table/battle-motion.js`). It is not drawn while its caster loads. It leaves
+  just over the caster's head with the toss, at 240 ms, and lands on the contact, at an even pace whichever way it
+  is thrown. Across the field it bows on a low arc; straight up or down the field its height lies along the line.
+  What it knocks off its target, and its strokes, go on down the end of that arc. A `trail` on a projectile
+  follows the same curve; any other trail runs straight and eases in (#909).
 - Beats on the caster and the shake play once a cast; beats on a target play on each, 40 ms apart.
 - Everything the kit makes ends with `SpellEffects.clear`: objects destroyed, a figure's tint and filter put
   back. Under reduced motion a primitive returns before it makes anything.

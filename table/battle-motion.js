@@ -74,6 +74,46 @@ export const THROW = Object.freeze({
   home: Object.freeze({ at: DRAW_MS + 120, lasts: WINDUP_MS - DRAW_MS - 120 }),
 });
 
+/**
+ * A projectile's flight (the craft book, "Arcing travel"): it leaves just over the thrower's head with the toss,
+ * at an even pace, on a low arc, and lands as the windup ends (#909: eased in, it stood on the body for 300 ms
+ * after the throw). `over` is how far above the top of the thrower it starts, in radii; `lift` is how high the
+ * arc's control point stands above the middle of the flight, as a share of its length. Both are house numbers.
+ * The lift is height, and height is up the screen: thrown across the field the flight bows; thrown straight up
+ * or down it, the height lies along the line, and the flight is that line at the same even pace.
+ */
+export const FLIGHT = Object.freeze({ at: THROW.toss.at, lasts: WINDUP_MS - THROW.toss.at, over: .3, lift: .16 });
+const FLIGHT_STEPS = 24;
+
+/** Where a projectile is at a share `t` of its flight from one figure to another, and the angle it points at, in radians. */
+export function flightAt(from, to, t) {
+  const top = from.head ?? from.y - from.radius * 1.4;
+  const start = { x: from.x, y: top - from.radius * FLIGHT.over };
+  // One control point above the middle: a quadratic curve, by hand, since the effects kit holds no engine.
+  const control = { x: (start.x + to.x) / 2, y: (start.y + to.y) / 2 - Math.hypot(to.x - start.x, to.y - start.y) * FLIGHT.lift };
+  const at = share => {
+    const rest = 1 - share;
+    return { x: rest * rest * start.x + 2 * rest * share * control.x + share * share * to.x,
+      y: rest * rest * start.y + 2 * rest * share * control.y + share * share * to.y };
+  };
+  // An even pace is an even length of the curve a moment, and the curve's own parameter is not that: it runs
+  // fast where the control point pulls. So the length is measured in steps, and the share of it turned back
+  // into the curve's parameter.
+  const lengths = [0];
+  for (let step = 1, last = start; step <= FLIGHT_STEPS; step++) {
+    const now = at(step / FLIGHT_STEPS);
+    lengths.push(lengths[step - 1] + Math.hypot(now.x - last.x, now.y - last.y));
+    last = now;
+  }
+  const wanted = Math.min(1, Math.max(0, t)) * lengths[FLIGHT_STEPS];
+  let step = 1;
+  while (step < FLIGHT_STEPS && lengths[step] < wanted) step++;
+  const span = lengths[step] - lengths[step - 1];
+  const share = (step - 1 + (span > 0 ? (wanted - lengths[step - 1]) / span : 0)) / FLIGHT_STEPS, rest = 1 - share;
+  return { ...at(share),
+    angle: Math.atan2(rest * (control.y - start.y) + share * (to.y - control.y), rest * (control.x - start.x) + share * (to.x - control.x)) };
+}
+
 export const FLASH_MS = 80;
 
 /**
