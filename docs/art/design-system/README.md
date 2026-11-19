@@ -50,7 +50,7 @@ Downfall Instinct is a two-player tactical board game played online at a shared 
 - Every button is at least `control-height` (44px) tall.
 - Hover moves a base button's border to `gold`. Disabled controls drop to 50% opacity.
 - Focus is a 3px `gold` outline offset 4px (`focus-ring`), always visible.
-- In the site header the current page is underlined 2px in `gold` and its label turns `bone`. In the folded menu (under 1240px) the mark moves to a 2px left border on `accent-wash`.
+- In the site header the current page is underlined 2px in `gold` and its label turns `bone`. In the folded menu (at 1306px and below) the mark moves to a 2px left border on `accent-wash`.
 - In a match the round's bar is the only bar: the site's menu, bell and account sit at its right end.
 
 ## Iconography and marks

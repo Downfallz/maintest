@@ -77,7 +77,7 @@ export function mountTutorials(doc, { request = fetched, session = null, go = li
     }
     const answer = await series(request);
     if (ticket !== reading) return;
-    // An address that asks for something (a rematch, the account menu's Learn to play) is answered first: the tutorial
+    // An address that asks for something (a rematch, the main menu's Learn to play) is answered first: the tutorial
     // waits for a plain visit.
     const first = plain() ? opensByItself(answer, session) : null;
     if (first) { go(first); return; }
@@ -97,7 +97,7 @@ export function mountTutorials(doc, { request = fetched, session = null, go = li
       return root;
     }));
     section.hidden = listed.length === 0;
-    // The account menu's Learn to play names this section, which was not on the page when the address was read.
+    // The main menu's Learn to play names this section, which was not on the page when the address was read.
     if (listed.length && hash() === '#learn-to-play') section.scrollIntoView?.({ block: 'start' });
   }
 

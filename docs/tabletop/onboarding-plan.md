@@ -220,6 +220,8 @@ give what is said and when. It reuses everything ADR 0179 built, and the regress
    - The browser specs play on a mock host. The first visit on the real engine is O5's, with its per-tutorial specs.
    - **Learn to play** stands in the account menu, not in the main menu's bar as this plan says: whether to put it
      in the bar and fold the menu later than 1240 px is the owner's (#669).
+     Settled since: **Learn to play** stands in the main menu's bar, beside Rules, for a signed-in account, and the
+     menu folds at 1306 px and below ([tutorial-follow-ups-plan.md](tutorial-follow-ups-plan.md), T3).
    - On a 320 px phone the coach card in the docked sheet leaves one spell card in view (#670): judged at O5,
      below.
 6. **O5, the series.** Tutorials 2, 3 and 4 written with the rulebook-writer and the copy-editor, each a scenario
@@ -259,7 +261,8 @@ give what is said and when. It reuses everything ADR 0179 built, and the regress
      **Tutorial complete** and offers **Play again** and **Leave the tutorial**.
    - Tutorials 1, 3 and 2 were rounds 2, 3 and 4 of one match: tutorial 2's creatures already carried the
      mutations tutorial 3 teaches (until #727, below).
-   - **Learn to play** in the main menu's bar stays the owner's (#669).
+   - **Learn to play** in the main menu's bar was the owner's call (#669). Built since, in the bar
+     ([tutorial-follow-ups-plan.md](tutorial-follow-ups-plan.md), T3).
 
    *Tutorial 2 cut again (2026-11-19, #727,
    [tutorial-follow-ups-plan.md](tutorial-follow-ups-plan.md), T2)*: `who-acts-first.json` is now random against
