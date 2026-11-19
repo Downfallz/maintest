@@ -4,7 +4,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { join as pathJoin } from 'node:path';
 import { tmpdir } from 'node:os';
 import { startHost, stopHost } from './host.js';
-import { mutationTree, teamTempos } from './battle-help-fixture.js';
+import { matchResult, mutationTree, teamTempos } from './battle-help-fixture.js';
 import { openSpells } from './battle-spells-fixture.js';
 import { fitsViewport } from './fit.js';
 import { waitAnswered } from './battle-step.js';
@@ -23,6 +23,9 @@ const series = readdirSync(folder).filter(name => name.endsWith('.json'))
 // The cards are read from the official rulebook the table serves (rulebook-plan.md R4), as the page reads it.
 const book = JSON.parse(readFileSync(new URL('../../table/rules.json', import.meta.url), 'utf8'));
 const cardTitles = new Map(book.parts.flatMap(part => part.sections).filter(one => one.card).map(one => [one.card.id, one.card.title]));
+
+// The tutorial that plays to the match's end: it ends on the match result, the others on the coach card.
+const ENDS_THE_MATCH = 'to-the-end.json';
 
 let hostInfo, origin, directory, signedIn = 0;
 test.beforeAll(async () => {
@@ -227,10 +230,19 @@ for (const tutorial of series) test(`tutorial ${tutorial.file.tutorial.order}, $
   await page.locator('#practice-brief-begin').click();
   await playLesson(page, tutorial, seat, info);
   expect((await kept).status()).toBe(200);
-  // Left, the home page says it is done, and opens nothing by itself. A lesson that ends the match ends under its
-  // result, which is closed first.
-  if (await page.locator('#match-dialog').isVisible()) await page.keyboard.press('Escape');
-  await page.locator('#coach-leave').click();
+  // Left, the home page says it is done, and opens nothing by itself. A lesson that ends the match ends on its
+  // result, which is the tutorial's end: it is left from there (tutorial-follow-ups-plan.md T1).
+  if (tutorial.name === ENDS_THE_MATCH) {
+    await matchResult(page);
+    await expect(page.locator('#match-eyebrow')).toHaveText('TUTORIAL COMPLETE');
+    await expect(page.locator('#match-rematch')).toBeHidden(); await expect(page.locator('#match-lobby')).toBeHidden();
+    await fitsViewport(page, '#match-again, #match-leave');
+    await page.screenshot({ path: info.outputPath('tutorial-result.png') });
+    await page.locator('#match-leave').click();
+  } else {
+    await expect(page.locator('#match-dialog')).toBeHidden();
+    await page.locator('#coach-leave').click();
+  }
   await page.waitForURL(`${origin}/`);
   const card = page.locator(`#tutorial-cards [data-tutorial="${tutorial.id}"]`);
   await expect(card).toContainText('Done');

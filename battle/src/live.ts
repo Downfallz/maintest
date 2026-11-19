@@ -162,7 +162,7 @@ const rematchOf = () => {
   const held = heldSeats.filter(one => one.table.id === selected!.table.id).map(one => one.seat);
   return rematchPlan(selected.table, held.length ? held : [selected.seat], opponentCard(opponent.seat, opponent.ladder, opponent.friends).friend);
 };
-const matchUI = matchControls(match, () => { passOver(); combat.close(); planning.close(); }, rematchOf, () => catalogue?.effects ?? []);
+const matchUI = matchControls(match, () => { passOver(); combat.close(); planning.close(); }, rematchOf, () => catalogue?.effects ?? [], () => tutorialUI.ending());
 const services = createBattleServices({ onChange: () => servicesUI.render() });
 const servicesUI = serviceControls(services, storage);
 // Reactions (ADR 0173): the set of short messages the two players send each other, and the bubbles that show them.

@@ -73,6 +73,8 @@ for (const [winner, reason, title] of [['player1', 'Elimination', 'Victory'], ['
     await expect(page.locator('#match-dialog [data-history-open]')).toHaveCount(0);
     await expect(page.locator('#match-lobby')).toHaveText('Lobby'); await expect(page.locator('#match-lobby')).toHaveAttribute('href', '/');
     await expect(page.locator('#match-rematch')).toBeHidden();
+    // A tutorial's Play again and Leave the tutorial are no part of a game's result (tutorial-follow-ups-plan.md T1).
+    await expect(page.locator('#match-again')).toBeHidden(); await expect(page.locator('#match-leave')).toBeHidden();
     await fitsViewport(page, '#match-replay, #match-lobby, #match-dialog [aria-label="Close match result"]');
     await page.screenshot({ path: info.outputPath('final-result-fixture.jpg'), type: 'jpeg', quality: 85 });
     expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
@@ -261,6 +263,7 @@ async function standIn(page) {
 test('Rematch against the bot opens the same game at once, on a new table', async ({ page }, info) => {
   const h = await mount(page, { opponent: { seat: 'player2', kind: 'bot', name: 'Lookahead' } }); await matchResult(page);
   await expect(page.locator('#match-rematch')).toHaveText('Rematch');
+  await expect(page.locator('#match-lobby')).toBeVisible(); await expect(page.locator('#match-again')).toBeHidden(); await expect(page.locator('#match-leave')).toBeHidden();
   await fitsViewport(page, '#match-rematch, #match-replay, #match-lobby');
   await page.screenshot({ path: info.outputPath('final-result-rematch.jpg'), type: 'jpeg', quality: 85 });
   await standIn(page); await page.locator('#match-rematch').click();
