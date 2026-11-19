@@ -28,7 +28,7 @@ export function benchEntries(art, spells = {}) {
 export function benchTitle(entry) {
   return [entry.name, entry.castBy, entry.family, entry.motif, entry.delivery].filter(Boolean).join(' · ');
 }
-export function filmTitle(entry, { speed = 1, outcome = 'played', wound = false, damage, defeat = false } = {}) {
+export function filmTitle(entry, { speed = 1, outcome = 'played', wound = false, damage = 0, defeat = false } = {}) {
   const played = outcome !== 'fizzled';
   const asked = [played ? '' : 'fizzled', wound && played ? 'the caster pays in blood' : '',
     damage > 0 && played ? `${damage} health lost` : '', defeat && played ? 'the blow defeats' : ''];
@@ -95,7 +95,7 @@ export function benchStage(elapsed, speed = 1) {
 // `damage` is the health each struck creature loses, which is the weight of the blow (`table/battle-motion.js`);
 // `defeat` fells the first one struck, from the impact on. Both are the fixture's word, as a cue's changes are
 // the host's on the live page.
-export function benchFrame({ entry, actor, targets, stage, outcome = 'played', wound = false, damage, defeat = false }) {
+export function benchFrame({ entry, actor, targets, stage, outcome = 'played', wound = false, damage = 0, defeat = false }) {
   const standing = benchCreatures();
   const caster = standing.find(one => one.id === actor);
   const known = targets.filter(id => standing.some(one => one.id === id));
