@@ -226,6 +226,31 @@ public sealed class TutorialFileTests
         series[3].Teaches.ShouldBe(everything);
     }
 
+    /// <summary>
+    /// A tutorial ordered before the one that teaches Evolution is cut, and ends, before the match's second
+    /// Evolution (docs/tabletop/tutorial-follow-ups-plan.md, T2): its creatures carry the first Evolution's
+    /// mutations alone, and none the later lesson teaches the person to choose.
+    /// </summary>
+    [Fact]
+    public void A_tutorial_ordered_before_the_one_that_teaches_Evolution_ends_before_the_second_Evolution()
+    {
+        var series = System.IO.Directory.GetFiles(Directory, "*.json")
+            .Select(file => (Name: Path.GetFileName(file), Document: ScenarioFile.Read(File.ReadAllText(file))))
+            .OrderBy(one => one.Document.Tutorial.ShouldNotBeNull().Order)
+            .ToList();
+        var before = series.TakeWhile(one => !one.Document.Tutorial!.Teaches.Contains(PlayerOptionsKind.Evolution)).ToList();
+
+        before.Count.ShouldBeInRange(1, series.Count - 1);
+        foreach (var (name, document) in before)
+        {
+            var rules = document.Scenario.Source.Rules;
+            var secondEvolution = rules.FirstEvolutionRound + rules.EvolutionInterval;
+
+            document.Scenario.Cut.Round.ShouldBeLessThan(secondEvolution, $"{name} is cut after round {secondEvolution}'s Evolution began");
+            document.Tutorial!.Steps.Max(step => step.Round).ShouldBeLessThan(secondEvolution, $"{name} plays into round {secondEvolution}'s Evolution");
+        }
+    }
+
     private static async Task<Result> ReachAsync(string text)
     {
         var document = ScenarioFile.Read(text);
