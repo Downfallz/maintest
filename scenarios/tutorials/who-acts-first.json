@@ -48,7 +48,7 @@
           "creature": 1
         },
         "says": [
-          "In Precision, Pummel rolls a d20 for a critical. Strike and Brace never roll.",
+          "In Precision, Pummel rolls a d20 for a critical. Its other spells never roll.",
           "A critical doubles the damage on its target."
         ],
         "concepts": [
