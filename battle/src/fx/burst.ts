@@ -7,7 +7,7 @@ type Flying = Phaser.GameObjects.Particles.Particle & { fxX: number; fxY: number
 // fading as it goes. The impact's debris. A piece leaves fast and slows, as a thrown thing does: it is clear of
 // the figure within a few frames, where a steady pace left it over the body for most of its life. Then it falls
 // a little, since debris has weight. On the ground (the craft book, "A beat on the ground") a piece's travel
-// toward or away from the eye is shortened, and one thrown from the feet stays on it and does not fall.
+// toward or away from the eye is shortened, and one thrown along it from the feet stays on it and does not fall.
 export const burst: Primitive = (kit, play) => {
   const { beat, rate } = play, at = placed(play.at, beat.level);
   const count = kit.room(beat.count!);
@@ -15,7 +15,7 @@ export const burst: Primitive = (kit, play) => {
   const life = beat.lasts! / rate, reach = at.radius * beat.reach! / 100;
   const centre = headingOf(beat.direction, play.heading), fan = beat.spread! * Math.PI / 180, size = sized(beat, at.radius / 34, .5);
   const out = (t: number) => 1 - (1 - t) ** 3;
-  const slant = grounded(beat) ? GROUND : 1, fall = beat.level === 'feet' ? 0 : reach * .18;
+  const slant = grounded(beat) ? GROUND : 1, fall = beat.level === 'feet' && beat.direction !== 'up' ? 0 : reach * .18;
   const emitter = kit.emitter({ ...play, at }, count, {
     emitting: false, lifespan: { min: life * .6, max: life }, speed: 0,
     // The engine asks for a particle's place first, then its turn: the heading drawn here serves both, so a

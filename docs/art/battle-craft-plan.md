@@ -273,11 +273,11 @@ that extends it.
      Crushing Stomp's crown, Vital Surge's wave, Deranged Charge's cone, Groundbreaker's travelling shock.
    - What the first films found, fixed in the kit. A burst as BC4 built it could not be read: its pieces spent
      their life over the figure's own body. A piece now leaves fast, slows and falls a little; a `strength` on a
-     particle beat is its pieces' size; a `reach` goes to 400 hundredths of the radius, since 200 ends inside
+     particle beat is its pieces' size; a `reach` goes up to 4 radii (400 hundredths), since 200 ends inside
      the silhouette. A `glow` with the shape of a ring is a shock ring lying on the ground.
    - The choices BC3 left on Strike are built as proposed, for every spell that draws those motifs: a staged
-     melee blow shows no gather on its caster unless its beats say so, and the strokes of the `impact` and
-     `slash` motifs run along the line of the blow, each over a dark edge.
+     melee blow shows no gather on its caster unless its beats say so, and the strokes of the `impact` motif run
+     along the line of the blow, each over a dark edge. Since #919 the `slash` strokes cut 60° across it.
    - `studio/browser/battle-stagings.spec.js` plays every staged spell on the bench, on as many figures as the
      content lets it reach: every beat is seen, the field stays inside its 150 particles, nothing is left when
      the action has resolved, a stop at the height of the richest one clears it, and less motion plays none.
@@ -285,10 +285,9 @@ that extends it.
    Left:
 
    - The choices under each storyboard's **Left** wait for the owner, with the sheets.
-   - A ring and a burst start at the figure's centre: the kit has no anchor at the feet, nor a way to aim a
-     ring. A crack that runs along the ground from caster to targets is a pattern the book lacks.
-   - A melee spell that also changes its caster (Wild Swing's wound, Body Slam's defence) draws the caster's
-     part at its home while the body is still at the target: the scene's, not a staging's.
+   - Settled in BC6's follow-ups (#917 to #919): a beat's `level` starts it at the feet, the centre or the head,
+     a shock ring can be aimed, and a trail at the feet is a crack. The caster's own wound or mark goes with its
+     body. A windup beat on a melee caster still stays where the caster stood (`storyboards/physical.md`).
    - A staging cannot tell a critical hit: only the body's punch of the zoom does.
    - Frame time is not measured: BC10. The `pulse` is used four times, each on one figure.
 7. **BC7, the biological spells.** 14 stagings. Same tests.

@@ -989,8 +989,8 @@ plays them through the kit, `src/fx/`:
 - A beat's `level` is where on its figure it starts: `feet`, `centre` (unless told) or `head`; the scene gives
   each figure's feet and head besides its centre. At the feet a beat lies on the ground: a burst's pieces travel
   across it at 0.42 of their reach toward or away from the eye and do not fall, a gather's ring and a flow's band
-  are as flat. Along or back against the blow, a burst's pieces are shortened so at every level (the craft book,
-  "A beat on the ground").
+  are flattened the same way. A burst aimed `along` or `back` has its pieces shortened at every level, since it
+  follows a blow struck across the ground (the craft book, "A beat on the ground").
 - The `impact` strokes of a motif run along the line of the blow, from the caster's side of the figure to the far
   side, and the `slash` strokes cut 60° across it, each over an edge in the palette's soot; a wound, which has no
   caster to come from, leans as before (`paintStrokes` in `src/spell-effects.ts`). The `blood` tint and the wound

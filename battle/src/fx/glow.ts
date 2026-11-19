@@ -12,7 +12,8 @@ export const glow: Primitive = (kit, play) => {
   const lasts = beat.lasts! / rate, reach = play.at.radius * beat.reach! / 100;
   if (beat.shape === 'ring') {
     const ground = placed(play.at, 'feet');
-    if (beat.direction === 'along' || beat.direction === 'back') { arc(kit, { ...play, at: ground }, lasts, reach); return; }
+    // A ring aimed at nobody, a cast on its own caster, has no side to open on: it opens all around.
+    if ((beat.direction === 'along' || beat.direction === 'back') && play.heading !== null) { arc(kit, { ...play, at: ground }, lasts, reach); return; }
     const full = reach / WAVE_RADIUS;
     const ring = kit.image({ ...play, at: ground }, 'wave').setScale(full * .2, full * .2 * GROUND).setAlpha(beat.strength!);
     kit.tween({ targets: ring, scaleX: full, scaleY: full * GROUND, duration: lasts, ease: 'Cubic.Out' });
@@ -31,7 +32,8 @@ function arc(kit: KitContext, play: BeatPlay, lasts: number, reach: number) {
   const { beat, color } = play;
   const heading = headingOf(beat.direction, play.heading), middle = onGround(heading), half = beat.spread! * Math.PI / 360;
   const shape = kit.graphics(play);
-  shape.setData('facing', degrees(heading));
+  // Where its middle is drawn, on the screen: what the browser spec checks against the blow.
+  shape.setData('facing', degrees(Math.atan2(Math.sin(middle) * GROUND, Math.cos(middle))));
   const opening = { radius: reach * .2, alpha: beat.strength! };
   const draw = () => {
     if (!shape.active) return;

@@ -333,7 +333,7 @@
       { "beat": "glow", "at": 840, "on": "caster", "shape": "ring", "reach": 400, "strength": 0.9, "lasts": 600, "tint": "bone", "blend": "screen", "direction": "along" },
       { "beat": "burst", "at": 840, "on": "caster", "count": 16, "shape": "shard", "tint": "bone", "direction": "up", "spread": 70, "reach": 300, "lasts": 360, "blend": "normal", "strength": 0.6, "level": "feet" },
       { "beat": "shake", "at": 840, "strength": 0.3 },
-      { "beat": "trail", "at": 480, "lasts": 360, "count": 14, "shape": "shard", "tint": "bone", "blend": "normal", "level": "feet", "strength": 1 },
+      { "beat": "trail", "at": 420, "lasts": 360, "count": 14, "shape": "shard", "tint": "bone", "blend": "normal", "level": "feet", "strength": 1 },
       { "beat": "motif", "at": 880, "lasts": 1000 },
       { "beat": "glow", "at": 880, "shape": "ring", "reach": 300, "strength": 0.8, "lasts": 520, "tint": "bone", "blend": "screen" },
       { "beat": "burst", "at": 880, "count": 16, "shape": "shard", "tint": "bone", "direction": "up", "spread": 50, "reach": 340, "lasts": 400, "blend": "normal", "strength": 0.6, "level": "feet" },

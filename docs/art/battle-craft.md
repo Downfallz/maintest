@@ -450,7 +450,7 @@ bake the drawing to a texture first, or filter a container.
   Since BC6 a `glow` with the shape of a ring is a shock ring: one image of a thin ring, flattened onto the
   ground under the figure, that opens to its reach over the whole beat and fades (*house*). Two of them 160 ms
   apart read as an aftershock. It is the strongest single beat the kit has, kept for Stage II and Stage III.
-  A pulse on the acting figure was lost on the gold rim the scene draws around it: while one plays, the rim is
+  A pulse on the acting figure was drowned out by the gold rim the scene draws around it: while one plays, the rim is
   quieted to a fifth (*house*) and given back when the beat ends or is cleared (#919).
 
 ### Blur

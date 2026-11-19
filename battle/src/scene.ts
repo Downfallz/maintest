@@ -158,8 +158,9 @@ export class BattleScene extends Phaser.Scene implements Restful {
     void loadKit().then(createKit => {
       if (createKit && this.sys.isActive()) this.spellEffects.attach(createKit(Phaser, this, () => this.reduced, {
         shake: strength => this.viewShake.add(strength),
-        // A halo on the figure the gold rim lights quiets the rim while it plays; any end gives the rim back.
-        quiet: (creature, on) => { if (!on || creature === this.haloId) this.halo?.quieten(on); },
+        // A halo on the figure the gold rim lights quiets the rim while it plays; its end gives the rim back.
+        // One that started on another figure is not counted, so its end gives nothing back.
+        quiet: (creature, on) => { if (creature === this.haloId) this.halo?.quieten(on); },
       }));
       this.onKit(this.spellEffects.equipped);
     });

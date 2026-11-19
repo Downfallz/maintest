@@ -22,8 +22,9 @@ export class ActingHalo {
   private rims: Phaser.GameObjects.Image[];
   private pool: Phaser.GameObjects.Image;
   private target: Lit | null = null;
-  // While a spell's halo swells on the lit figure, its rim steps back to a trace: drawn over gold, the halo was lost (#919).
-  private quieted = false;
+  // While a spell's halo swells on the lit figure, its rim steps back to a trace: drawn over gold, the halo was
+  // drowned out (#919). Counted, so two halos that overlap give the rim back only when the last one ends.
+  private quieted = 0;
 
   constructor(scene: Phaser.Scene, tone: HaloTone = ACTING) {
     // The pool is a round glow drawn once, its colour in the texture and its edge fading to nothing, blended
@@ -43,6 +44,7 @@ export class ActingHalo {
 
   /** The figure that acts now, or null; a fallen figure is never lit. */
   show(target: Lit | null) {
+    if (target?.image !== this.target?.image) this.quieted = 0;
     this.target = target;
     for (const rim of this.rims) rim.setVisible(Boolean(target));
     this.pool.setVisible(Boolean(target));
@@ -51,14 +53,14 @@ export class ActingHalo {
   get visible() { return Boolean(this.target); }
 
   /** Quiet the rim while another halo is read on the figure, or give it back. */
-  quieten(on: boolean) { this.quieted = on; }
-  get quiet() { return this.quieted; }
+  quieten(on: boolean) { this.quieted = Math.max(0, this.quieted + (on ? 1 : -1)); }
+  get quiet() { return this.quieted > 0; }
 
   follow(time: number, reduced: boolean) {
     const target = this.target;
     if (!target) return;
     const { image, home } = target;
-    const breath = reduced ? 1 : .82 + .18 * Math.sin(time / 520), strength = breath * (this.quieted ? QUIET : 1);
+    const breath = reduced ? 1 : .82 + .18 * Math.sin(time / 520), strength = breath * (this.quieted > 0 ? QUIET : 1);
     for (const [index, rim] of this.rims.entries()) {
       if (rim.texture.key !== image.texture.key || rim.frame.name !== image.frame.name) rim.setTexture(image.texture.key, image.frame.name);
       const grow = index === 0 ? 1.06 : 1.13;

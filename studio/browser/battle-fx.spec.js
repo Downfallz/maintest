@@ -203,6 +203,16 @@ test('a ring aimed along the blow opens on the target\'s side, at its feet', asy
   await film(page, 'stop');
 });
 
+test('a ring aimed at no one, a cast on its own caster, opens all around', async ({ page }) => {
+  // Alpha Roar aims its three rings at the ally; cast on itself, the blow has no direction (#918 review).
+  await film(page, 'start', { spell: 'spell:thundering_seal:v1', actor: 'a1', targets: ['a1'] });
+  await film(page, 'advance', 900);
+  const rings = (await places(page)).filter(one => one.beat === 'glow' && one.creature === 'a1');
+  expect(rings.length).toBeGreaterThan(0);
+  for (const ring of rings) expect([ring.kind, ring.facing]).toEqual(['Image', undefined]);
+  await film(page, 'stop');
+});
+
 test('the caster\'s own wound goes with its body, and comes home with it', async ({ page }) => {
   // Wild Swing's caster pays in blood while it is at the target: the wound is drawn on the body, wherever it is.
   await film(page, 'start', { spell: 'spell:reckless_swing:v1', actor: 'a1', targets: ['b1'], wound: true });

@@ -5,25 +5,25 @@ family](../spell-vfx.md)), on the family's pale taupe, with ember kept for the F
 tears flesh. Its 15 spells climb [the ladder](README.md#the-ladder): Strike, the base attack, is staged in
 [base-actions.md](base-actions.md); this file holds Stage I (Pummel, Brace), then Stage II, then Stage III, which
 later passes append. Each step must look heavier than the one below it, and each spell must keep one signature a
-player could name. The body's own movement is [movement.md](movement.md)'s: a storyboard here names it in one row a
+player could name. The body's own movement is [movement.md](movement.md)'s: a storyboard here names it in one row per
 window and spends its rows on the spell.
 
 The pass (2026-11-19) ran four rounds. The designer read the first films of all sixteen against these
-storyboards, the second round applied what it asked for, and the kit then gained a level for each beat
+storyboards, and the second round applied what it asked for. The kit then gained a level for each beat
 ([A beat on the ground](../battle-craft.md#a-beat-on-the-ground)): dust and rings lie at the feet, a ring aimed
 `along` opens as an arc, `along` and `back` travel along the ground, and a trail at the feet is a crack. The
-designer read the third films (`be36ed2`) frame by frame and asked for five changes; the fourth round made them
-(Crash's daze, Dominate's windup, Vital Surge's white blot, Groundbreaker's crack, whose trail at the feet the kit
-now keeps at an even pace) and the designer read those four films again. The coded rows below are the stagings as
-built, and each **On the film strip** describes the last films of its spell. The slash now cuts across the blow, a
-pulse quiets the caster's gold rim, blood is a deep red, the caster's wound goes with its body, and ember light is
-additive. What is still open, for the kit or the scene, each its own change:
+designer read the third films (`be36ed2`) frame by frame and asked for five changes. The fourth round made them:
+Crash's daze, Dominate's windup, Vital Surge's white blot, and Groundbreaker's crack, whose trail at the feet the
+kit now keeps at an even pace. The designer then read those four films again. The scene changed too: the slash
+cuts across the blow, a pulse quiets the caster's gold rim, blood is a deep red, the caster's wound goes with its
+body, and ember light is additive. The coded rows below are the stagings as built, and each **On the film strip**
+describes the last films of its spell. What is still open, for the kit or the scene, each its own change:
 
 - A windup beat on a melee caster stays where the caster stood: when the body leaves its ring at about 720 ms,
   the last of a gather or a glow is left behind on the ground. The wound now goes with the body; a windup beat
   does not yet. Dominate's windup ends by 720 ms to stay clear of it; Deranged Charge leaves a faint warm haze at
   780 ms.
-- On the bench every blow is struck up the field, so `along` and `back` are shortened to 0.42 of their reach: what
+- On the effects bench every blow is struck up the field, so `along` and `back` are shortened to 0.42 of their reach: what
   is thrown along the blow stays on the target's body or just over it (Pummel's chips, Deranged Charge's cone),
   and what is drawn back does not cross the gap to the caster (Seize). A blow struck across the field throws
   them at full reach. The sheets show only the first case.
@@ -56,7 +56,7 @@ Filmed at `15ee3b0`, 390 by 844, 1×, a1 on b1, no health change given: a whole 
 | At | Lasts | Window | Layer | Beat | Pattern |
 | --- | --- | --- | --- | --- | --- |
 | 0 | 840 | windup | the caster | A light melee blow's draw back and strike ([movement.md](movement.md)), scaled by the health b1 lost (2, or more on a critical). No mark on a1's body: the staging has no windup beat, so the shared arc is not drawn. | [Anticipation](../battle-craft.md#anticipation), [Contact and follow-through](../battle-craft.md#contact-and-follow-through) |
-| 840 | 760 | impact | the effect | The `impact` motif on b1: its strokes lean along the line from a1 to b1, on their dark edge. Ends at 1600 ms, shorter than its default, inside the band. `motif at 840, lasts 760` | [An impact that keeps the direction](../battle-craft.md#an-impact-that-keeps-the-direction), [Shape before colour](../battle-craft.md#shape-before-colour) |
+| 840 | 760 | impact | the effect | The `impact` motif on b1: its strokes run along the line from a1 to b1, on their dark edge. Ends at 1600 ms, shorter than its default, inside the band. `motif at 840, lasts 760` | [An impact that keeps the direction](../battle-craft.md#an-impact-that-keeps-the-direction), [Shape before colour](../battle-craft.md#shape-before-colour) |
 | 840 | 240 | impact | the effect | Bone chips knocked off b1 and thrown on beyond it, in a 50° fan along the blow, to twice its radius. 10 (*house*), two more than Strike's 8. `burst at 840, count 10, shape shard, tint bone, direction along, spread 50, reach 320, lasts 240, blend normal` | [Burst](../battle-craft.md#burst), [An impact that keeps the direction](../battle-craft.md#an-impact-that-keeps-the-direction) |
 | 840 | 400 | impact | the effect | The dust collar, the signature: 8 grains of dust (*house*) pushed out all round b1's feet, flat on the ground, to just past its ground ring, slower than the chips, in the family's taupe. `burst at 840, count 8, shape dot, tint family, direction out, reach 220, strength 0.4, lasts 400, blend normal, level feet` | [Burst](../battle-craft.md#burst), [A beat on the ground](../battle-craft.md#a-beat-on-the-ground) |
 | 840 | 840 | impact | the caster and the target | The light blow's hit stop, b1's bone flash when it lost health, its recoil, a1's return, home by 1680 ms ([movement.md](movement.md)). A critical hit adds the punch zoom there, not here. | [Hit stop](../battle-craft.md#hit-stop), [Recoil](../battle-craft.md#recoil) |
@@ -1043,7 +1043,7 @@ node scripts/battle/filmstrip.mjs spell:psycho_rush:v1 --actor a1 --targets b1 -
   haze left where it stood.
 - 840 ms: b1 filled bone; a1 covers b1's lower half, not its head.
 - 900 ms: a short column of shards rising from b1's back, none on a1's side; the strokes upright, along the blow.
-- 960 to 1080 ms: the cone a dense, near-white column over b1's back, as high again as b1's head, no wider than b1's
+- 960 to 1080 ms: the cone is a dense, near-white column over b1's back, as high again as b1's head, no wider than b1's
   middle; b1's head beside it, clear. No ring around b1.
 - 1140 ms: the column gone; a little dust over b1's back. 1260 ms: the strokes fading, a mote or two.
 - 1440 ms (whole) and every frame after: no effect object on the field. Nothing in the effect is gold.
@@ -1057,7 +1057,8 @@ The sheets cannot show the shake, the stop, the punch zoom of a critical or the 
 - "Flanks exposed after attack" (the 2 defense lost) is the scene's small mark on a1, not the staging's. If the
   owner wants it seen, it is a wound or a crack on a1's flank after the return: a scene change, not a beat.
 - No pulse: Crushing Stomp owns the halo on a Brute's windup; the ember gather keeps the two apart.
-- One ember light at contact and one in the windup: one change of light a cast is read as the contact's.
+- Two ember lights, one in the windup and one at contact. A cast counts one change of light, the contact's: the
+  windup's is faint and on the caster.
 - The sparks are additive over bone shards and read near white in the column (960 to 1080 ms): the cone reads as
   white-hot, not as ember. Left: it is the owner's ember choice, and the column still reads as Deranged Charge's.
 - No blood: Wild Swing owns the tearing; this is mass thrown through.
@@ -1087,7 +1088,7 @@ Filmed at `15ee3b0`, 390 by 844, 1×, a1 on b1, b2 and b3, 8 health lost each: a
 | 0 | 840 | windup | the caster | A cast's load and rise ([movement.md](movement.md)): a1 squats with its weight on its forelegs, and rises. No shared arc. | [Anticipation](../battle-craft.md#anticipation), [Squash and stretch](../battle-craft.md#squash-and-stretch) |
 | 240 | 560 | windup | the effect | The ground answers the load: 14 grains of dust alive at once lift off a1. `flow at 240, on caster, count 14, shape dot, tint bone, direction up, spread 70, reach 160, strength 0.8, lasts 560, blend normal` | [Flow](../battle-craft.md#flow), [Anticipation](../battle-craft.md#anticipation) |
 | 420 | 420 | windup | the effect | The one pulse: an ember halo on a1's outline swells to the release. `pulse at 420, on caster, tint ember, strength 1, lasts 420` | [Glow](../battle-craft.md#glow), [One hero shader](../battle-craft.md#one-hero-shader) |
-| 480 | 360 | windup | the ground | The crack: a head runs along the ground at an even pace from a1's feet to each target's feet, leaving 14 bone shards behind it (*house*) that stay until the contact, and arrives as the forelegs come down. `trail at 480, lasts 360, count 14, shape shard, tint bone, blend normal, level feet, strength 1` | [Trail](../battle-craft.md#trail), [A beat on the ground](../battle-craft.md#a-beat-on-the-ground) |
+| 420 | 360 | windup | the ground | The crack: a head runs along the ground at an even pace from a1's feet to each target's feet, leaving 14 bone shards behind it (*house*) that stay until the contact. It is whole at 780 ms, as the forelegs come down, and is wiped at the contact with the windup. `trail at 420, lasts 360, count 14, shape shard, tint bone, blend normal, level feet, strength 1` | [Trail](../battle-craft.md#trail), [A beat on the ground](../battle-craft.md#a-beat-on-the-ground) |
 | 840 | 360 | impact | the caster | The release, as a cast lets go ([movement.md](movement.md)): the forelegs come down. | [Contact and follow-through](../battle-craft.md#contact-and-follow-through) |
 | 840 | 600 | impact | the effect | The largest ring: a bone arc of 120° opens on the ground at a1's feet toward the targets, out to 400, the kit's widest, and fades; it no longer sweeps through a1's ally. `glow at 840, on caster, shape ring, tint bone, reach 400, strength 0.9, lasts 600, blend screen, direction along` | [Glow](../battle-craft.md#glow), [A beat on the ground](../battle-craft.md#a-beat-on-the-ground) |
 | 840 | 360 | impact | the effect | The ground breaks: 16 bone shards (*house*) thrown up from the ground at a1's forelegs. `burst at 840, on caster, count 16, shape shard, tint bone, direction up, spread 70, reach 300, strength 0.6, lasts 360, blend normal, level feet` | [Burst](../battle-craft.md#burst), [A beat on the ground](../battle-craft.md#a-beat-on-the-ground) |
@@ -1111,7 +1112,8 @@ Nothing. The frame after the action is shown at once with the result text: no lo
 ### Cost
 
 - Objects at the peak (920 to 1200 ms): three motif `Graphics`, four rings (a1's arc is one `Graphics`), seven
-  emitters (a1's shards, two a target); the crack's three emitters are released by 960 ms. Draw calls: lit objects batch above plain ones; the pulse's pass ends at 840 ms, before the peak.
+  emitters (a1's shards, two a target); the crack's three emitters are cleared at the contact, with the windup.
+- Draw calls: lit objects batch above plain ones; the pulse's pass ends at 840 ms, before the peak.
 - Particles at the peak: 94 at 960 ms (16 on a1, 26 on each target); under 48 a target and the field's 150.
 - Bytes: not measured. Built by BC4 (motif, burst, flow, glow, shake), BC5 (the cast's body), BC6 (ring, pulse);
   BC6 places the beats. The cancel path is the kit's: every emitter, ring and filter killed with the action.
