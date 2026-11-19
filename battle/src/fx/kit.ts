@@ -48,13 +48,13 @@ type Owned = Phaser.GameObjects.GameObject;
  * `clear` ends them all: the path a skip, a rotation, a hidden tab and a seat change already run.
  */
 export class KitContext {
-  private objects = new Set<Owned>();
+  private readonly objects = new Set<Owned>();
   // Each living emitter with the most particles it may hold.
-  private emitters = new Map<Emitter, number>();
-  private tweens = new Set<Phaser.Tweens.Tween>();
-  private undo = new Set<() => void>();
+  private readonly emitters = new Map<Emitter, number>();
+  private readonly tweens = new Set<Phaser.Tweens.Tween>();
+  private readonly undo = new Set<() => void>();
 
-  constructor(readonly engine: Engine, readonly scene: Phaser.Scene, private reduced: () => boolean, readonly view?: KitView) {}
+  constructor(readonly engine: Engine, readonly scene: Phaser.Scene, private readonly reduced: () => boolean, readonly view?: KitView) {}
 
   /** Less motion was asked for: a primitive returns before it makes anything. */
   get still() { return this.reduced(); }
@@ -168,6 +168,7 @@ export class KitContext {
   clear() {
     for (const tween of this.tweens) if (!tween.isDestroyed()) tween.stop();
     this.tweens.clear();
+    // A copy: each undo takes itself out of the set it is read from (`once` above).
     for (const undo of [...this.undo]) undo();
     for (const emitter of this.emitters.keys()) emitter.killAll();
     this.emitters.clear();

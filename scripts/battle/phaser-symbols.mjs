@@ -22,8 +22,68 @@ const SCOPE = /^(?:declare\s+)?(?:abstract\s+)?(namespace|class|interface|enum)\
 const TYPE = /^(?:declare\s+)?type\s+([A-Za-z_$][\w$]*)/;
 const VALUE = /^(?:declare\s+)?(?:function|var|let|const)\s+([A-Za-z_$][\w$]*)/;
 const MEMBER = /^(?:(?:static|readonly|protected|private|public|abstract)\s+)*([A-Za-z_$][\w$]*)\??\s*(?:[:(<=,]|$)/;
-const EXTENDS = /\sextends\s+([^{]+?)(?:\simplements\s|\{|$)/;
 const INDENT = 4;
+
+/** What a class or an interface extends, read without a backtracking pattern: `A<T>, B implements C {` is A and B. */
+function extendedBy(line) {
+  const at = line.search(/\sextends\s/);
+  if (at < 0) return null;
+  const rest = line.slice(at).trimStart().slice('extends'.length);
+  const cut = [rest.indexOf(' implements '), rest.indexOf('{')].filter(index => index >= 0);
+  const list = cut.length > 0 ? rest.slice(0, Math.min(...cut)) : rest;
+  return list.split(',').map(parent => parent.split('<')[0].trim()).filter(Boolean);
+}
+
+/** Whether a line is inside a block comment, or opens or closes one; `state.commented` carries it to the next. */
+function inComment(line, state) {
+  if (state.commented) {
+    state.commented = !line.includes('*/');
+    return true;
+  }
+  if (line.startsWith('/*')) {
+    state.commented = !line.includes('*/');
+    return true;
+  }
+  return false;
+}
+
+/** Read one declaration line into the index; `owner` is the scope it sits in, `scopes` the stack it may push on. */
+function readDeclaration(line, indent, owner, index, scopes) {
+  const qualify = name => (owner ? `${owner.name}.${name}` : name);
+  const scope = SCOPE.exec(line);
+  if (scope) {
+    const name = qualify(scope[2]);
+    const members = scope[1] !== 'namespace';
+    index.names.add(name);
+    scopes.push({ indent, name, members });
+    if (members) index.holders.add(name);
+    const parents = extendedBy(line);
+    if (parents) index.parents.set(name, parents);
+    return;
+  }
+  const type = TYPE.exec(line);
+  if (type) {
+    const name = qualify(type[1]);
+    index.names.add(name);
+    // An object type lists its properties on the lines below; any other type ends on this line.
+    if (line.endsWith('{')) {
+      scopes.push({ indent, name, members: true });
+      index.holders.add(name);
+    }
+    return;
+  }
+  const value = VALUE.exec(line);
+  if (value) {
+    index.names.add(qualify(value[1]));
+    return;
+  }
+  // A member sits one step inside its class, interface, enum or object type; anything deeper is the inside
+  // of a member's own type.
+  if (owner?.members && indent === owner.indent + INDENT) {
+    const member = MEMBER.exec(line);
+    if (member && member[1] !== 'constructor') index.names.add(qualify(member[1]));
+  }
+}
 
 /**
  * Index a generated `phaser.d.ts`. The file is machine-written, four spaces a scope and one declaration a line,
@@ -31,63 +91,18 @@ const INDENT = 4;
  * class, an interface, an enum, an object type) and what each class or interface extends.
  */
 export function indexDeclarations(source) {
-  const names = new Set();
-  const holders = new Set();
-  const parents = new Map();
+  const index = { names: new Set(), holders: new Set(), parents: new Map() };
   const scopes = [];
-  let commented = false;
+  const state = { commented: false };
 
   for (const raw of source.split('\n')) {
     const line = raw.trim();
-    if (commented) {
-      commented = !line.includes('*/');
-      continue;
-    }
-    if (line.startsWith('/*')) {
-      commented = !line.includes('*/');
-      continue;
-    }
-    if (line === '' || line.startsWith('//')) continue;
-
+    if (inComment(line, state) || line === '' || line.startsWith('//')) continue;
     const indent = raw.length - raw.trimStart().length;
     while (scopes.length > 0 && scopes.at(-1).indent >= indent) scopes.pop();
-    const owner = scopes.at(-1);
-    const qualify = name => (owner ? `${owner.name}.${name}` : name);
-
-    const scope = SCOPE.exec(line);
-    if (scope) {
-      const name = qualify(scope[2]);
-      names.add(name);
-      scopes.push({ indent, name, members: scope[1] !== 'namespace' });
-      if (scope[1] !== 'namespace') holders.add(name);
-      const extended = EXTENDS.exec(line);
-      if (extended) parents.set(name, extended[1].split(',').map(parent => parent.trim().replace(/<.*$/, '')));
-      continue;
-    }
-    const type = TYPE.exec(line);
-    if (type) {
-      const name = qualify(type[1]);
-      names.add(name);
-      // An object type lists its properties on the lines below; any other type ends on this line.
-      if (line.endsWith('{')) {
-        scopes.push({ indent, name, members: true });
-        holders.add(name);
-      }
-      continue;
-    }
-    const value = VALUE.exec(line);
-    if (value) {
-      names.add(qualify(value[1]));
-      continue;
-    }
-    // A member sits one step inside its class, interface, enum or object type; anything deeper is the inside
-    // of a member's own type.
-    if (owner?.members && indent === owner.indent + INDENT) {
-      const member = MEMBER.exec(line);
-      if (member && member[1] !== 'constructor') names.add(qualify(member[1]));
-    }
+    readDeclaration(line, indent, scopes.at(-1), index, scopes);
   }
-  return { names, holders, parents };
+  return index;
 }
 
 /**

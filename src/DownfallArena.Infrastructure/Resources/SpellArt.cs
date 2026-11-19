@@ -240,6 +240,14 @@ public sealed class SpellArt
             yield return $"{SourceFile}: '{spell}' stages a beat '{beat.Beat}', which is none of {string.Join(", ", Beats)}.";
         }
 
+        foreach (var problem in TimingProblems(where, beat, at).Concat(ParameterProblems(where, beat)))
+        {
+            yield return problem;
+        }
+    }
+
+    private static IEnumerable<string> TimingProblems(string where, AuthoredBeat beat, int at)
+    {
         if (at is < 0 or >= ActionMs)
         {
             yield return $"{where} starts at '{Text(at)}', outside the action's 0 to {ActionMs - 1} ms.";
@@ -255,7 +263,10 @@ public sealed class SpellArt
         {
             yield return $"{where} lasts '{Text(lasts)}' ms: a beat lasts more than 0 and ends inside its window, by {end} ms.";
         }
+    }
 
+    private static IEnumerable<string> ParameterProblems(string where, AuthoredBeat beat)
+    {
         (string Name, string? Word, IReadOnlyList<string> Among)[] words =
         [
             ("on", beat.On, Anchors), ("shape", beat.Shape, Shapes), ("tint", beat.Tint, Tints),

@@ -34,32 +34,51 @@ const WORDS = { on: ANCHORS, shape: SHAPES, tint: TINTS, blend: BLENDS, directio
 const NUMBERS = { count: [1, MAX_PARTICLES], spread: [1, 360], reach: [1, 200] };
 const given = value => value !== undefined && value !== null;
 
-function readBeat(authored, known) {
-  if (!authored || typeof authored !== 'object' || !known.includes(authored.beat) || !Object.hasOwn(DEFAULTS, authored.beat)) return null;
+// The beat's start and its window, or null when it starts outside the action, or a motif starts in the windup.
+function timing(authored) {
   const { at } = authored;
   if (!Number.isInteger(at) || at < 0 || at >= ACTION_MS) return null;
   const window = at < WINDUP_MS ? 'windup' : 'impact';
   if (authored.beat === 'motif' && window !== 'impact') return null;
-  const start = window === 'windup' ? 0 : WINDUP_MS, end = window === 'windup' ? WINDUP_MS : ACTION_MS;
-  const beat = { ...DEFAULTS[authored.beat], beat: authored.beat, at, window, delay: at - start };
-  for (const [key, among] of Object.entries(WORDS)) {
+  const [start, end] = window === 'windup' ? [0, WINDUP_MS] : [WINDUP_MS, ACTION_MS];
+  return { at, window, delay: at - start, end };
+}
+
+// Copy onto the beat each parameter its author gave, if `allowed` accepts it. False when one is refused.
+function copyGiven(authored, beat, keys, allowed) {
+  for (const key of keys) {
     if (!given(authored[key])) continue;
-    if (!among.includes(authored[key])) return null;
+    if (!allowed(key, authored[key])) return false;
     beat[key] = authored[key];
   }
-  for (const [key, [least, most]] of Object.entries(NUMBERS)) {
-    if (!given(authored[key])) continue;
-    if (!Number.isInteger(authored[key]) || authored[key] < least || authored[key] > most) return null;
-    beat[key] = authored[key];
+  return true;
+}
+
+const isWord = (key, value) => WORDS[key].includes(value);
+const isCount = (key, value) => Number.isInteger(value) && value >= NUMBERS[key][0] && value <= NUMBERS[key][1];
+const isStrength = (_, value) => typeof value === 'number' && value > 0 && value <= 1;
+
+// How long it lasts: as authored, which must end inside the window, or the default shortened to end inside it.
+function readLasts(authored, beat, end) {
+  if (!given(authored.lasts)) {
+    if (given(beat.lasts)) beat.lasts = Math.min(beat.lasts, end - beat.at);
+    return true;
   }
-  if (given(authored.strength)) {
-    if (typeof authored.strength !== 'number' || !(authored.strength > 0 && authored.strength <= 1)) return null;
-    beat.strength = authored.strength;
-  }
-  if (given(authored.lasts)) {
-    if (!Number.isInteger(authored.lasts) || authored.lasts <= 0 || at + authored.lasts > end) return null;
-    beat.lasts = authored.lasts;
-  } else if (given(beat.lasts)) beat.lasts = Math.min(beat.lasts, end - at);
+  if (!Number.isInteger(authored.lasts) || authored.lasts <= 0 || beat.at + authored.lasts > end) return false;
+  beat.lasts = authored.lasts;
+  return true;
+}
+
+function readBeat(authored, known) {
+  if (!authored || typeof authored !== 'object' || !known.includes(authored.beat) || !Object.hasOwn(DEFAULTS, authored.beat)) return null;
+  const when = timing(authored);
+  if (!when) return null;
+  const beat = { ...DEFAULTS[authored.beat], beat: authored.beat, at: when.at, window: when.window, delay: when.delay };
+  const read = copyGiven(authored, beat, Object.keys(WORDS), isWord)
+    && copyGiven(authored, beat, Object.keys(NUMBERS), isCount)
+    && copyGiven(authored, beat, ['strength'], isStrength)
+    && readLasts(authored, beat, when.end);
+  if (!read) return null;
   // A fan all around unless its author aimed it; an aimed one is 50° wide unless told.
   if (authored.beat === 'burst' && !given(beat.spread)) beat.spread = beat.direction === 'out' ? 360 : 50;
   return beat;
