@@ -132,7 +132,7 @@ dialog { background: #132228; color: #dce5d8; border: 1px solid #ac966c; border-
 #lab[data-bench] :is(.round, .timeline-wrap, .command-dock, footer, .team-label, #actor-layer, #scene-callout) { display: none; }
 #bench { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; padding: 10px 12px; background: linear-gradient(100deg,#101d22,#1c2a2d,#111d24); border-top: 1px solid #b8a77a66; font-size: 12px; }
 .bench-field { display: grid; gap: 4px; min-width: 0; margin: 0; padding: 0; border: 0; color: var(--muted); }
-.bench-field select { min-height: 44px; width: 100%; background: var(--raised); border: 1px solid var(--line); border-radius: var(--radius-sharp); padding: 0 8px; color: var(--ink); }
+.bench-field select, .bench-field input[type="number"] { min-height: 44px; width: 100%; background: var(--raised); border: 1px solid var(--line); border-radius: var(--radius-sharp); padding: 0 8px; color: var(--ink); }
 fieldset.bench-field, .bench-run { grid-column: 1 / -1; }
 .bench-field legend { padding: 0; margin-bottom: 4px; }
 .bench-targets { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 4px; }

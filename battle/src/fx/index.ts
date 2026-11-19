@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { KitContext, type BeatPlay, type Engine, type Primitive } from './kit';
+import { KitContext, type BeatPlay, type Engine, type KitView, type Primitive } from './kit';
 import { burst } from './burst';
 import { flow } from './flow';
 import { trail } from './trail';
@@ -27,9 +27,9 @@ export interface EffectsKit {
   changes(): number;
 }
 
-/** The kit for one scene. `engine` is the Phaser the caller already holds; `reduced` is read at each beat. */
-export function createKit(engine: Engine, scene: Phaser.Scene, reduced: () => boolean): EffectsKit {
-  const context = new KitContext(engine, scene, reduced);
+/** The kit for one scene. `engine` is the Phaser the caller already holds; `reduced` is read at each beat; `view` is the scene's trauma. */
+export function createKit(engine: Engine, scene: Phaser.Scene, reduced: () => boolean, view?: KitView): EffectsKit {
+  const context = new KitContext(engine, scene, reduced, view);
   return {
     beats: Object.keys(PRIMITIVES),
     play(play) {

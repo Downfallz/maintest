@@ -76,9 +76,10 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   object; the draw back eases out (`Phaser.Math.Easing.Cubic.Out`), so it slows as it loads.
 - **Cost**: one tween. No draw call.
 - **Reduced motion**: nothing. The frame after the action is shown at once.
-- **Here**: the caster draws back 14 px and leans 7° over `DRAW_MS` (240 ms) in `battle/src/scene.ts`, melee only,
-  at a steady speed: the tween names no ease.
-  BC5 scales the draw back to the weight of the strike and gives a cast its own: a gather, with no lunge.
+- **Here**: built in BC5 (`battle/src/body-motion.ts`, on the numbers of `table/battle-motion.js`). A melee caster
+  draws back 20, 26 or 32 px by the weight of the blow, eased out, and holds 0, 40 or 80 ms before it strikes. A
+  cast loads in the body, a squash of 4% where it stands; a projectile's caster loads 8 px away from its target.
+  Neither lunges.
 
 ### Contact and follow-through
 
@@ -90,8 +91,8 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   `Phaser.Math.Easing.Back.Out`, its overshoot set by `Phaser.Types.Tweens.TweenBuilderConfig.easeParams`.
 - **Cost**: tweens only.
 - **Reduced motion**: nothing.
-- **Here**: the strike is 600 ms of `Cubic.In` and the return 720 ms of `Cubic.Out`, with no overshoot. BC5 adds
-  the settle. The kit starts an impact beat on the contact frame, not before: a beat at 840 ms has no delay.
+- **Here**: the strike eases in and lands when the windup ends: 600, 560 or 520 ms by the weight of the blow. The
+  return is 720 ms of `Back.Out` with an overshoot of 1.2 (BC5). The kit starts an impact beat on the contact frame, not before: a beat at 840 ms has no delay.
 
 ### Hit stop
 
@@ -110,7 +111,10 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 - **Cost**: none to draw. The stop is spent inside the impact window, never added to it. The cancel path must
   set the time scale back to 1 and remove the timer (`Phaser.Time.TimerEvent#remove`): `killAll` does neither.
 - **Reduced motion**: nothing. The action is not played, so there is nothing to freeze.
-- **Here**: not built. BC5 builds it: 60 to 120 ms at 1× by damage (*house*), divided by the playback rate.
+- **Here**: built in BC5: 60, 90 or 120 ms at 1× by the health lost (*house*), half that from a distance, divided
+  by the playback rate. It is made of the two figures' tween delays, not of the global time scale: the caster's
+  return and the target's recoil wait, the target trembles, and the spell's own effects play through. So the
+  cancel path has no time scale and no timer to put back.
 
 ### The hold before the number
 
@@ -125,8 +129,10 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 - **Cost**: none.
 - **Reduced motion**: the result is there at once, for `REDUCED_MS` (650 ms), as today.
 - **Here**: the result text is the page's, not the scene's (`battle/src/result-card.ts`): it arrives with the
-  impact frame and no effect delays it (ADR 0131, ADR 0141). So the hold is made on the scene's side: BC5 ends
-  the flash, the burst and the shake within 120 ms of contact (*house*), and nothing bright starts after.
+  impact frame and no effect delays it (ADR 0131, ADR 0141). So the hold is made on the scene's side: every
+  bright beat starts within 120 ms of contact and is gone within 320 ms of it, fading from its first frame
+  (*house*): the flash lasts 80 ms, the burst's particles fade as they fly, the trauma falls from its peak.
+  Nothing bright starts after.
 
 ### Easing families
 
@@ -173,8 +179,8 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   the feet: `Phaser.GameObjects.Image#setOrigin` at the ground anchor, so a squash does not lift the figure.
 - **Cost**: none. A scale is part of the sprite's transform.
 - **Reduced motion**: nothing.
-- **Here**: not built: a lunge moves and rotates the figure, and never scales it. BC5 stretches the strike and
-  squashes the landing by at most 8% (*house*). The mutation cues follow the image's scale
+- **Here**: built in BC5: the strike stretches 5, 6.5 or 8% (*house*) along the main axis of its travel over its
+  last 120 ms, and lets go after the stop; a cast squashes 4% and stands 4% tall on the contact. The mutation cues follow the image's scale
   (`docs/art/mutation-cues.md`), so they squash with it. While an action moves a figure, its breath is stopped.
 
 ### Recoil
@@ -189,9 +195,10 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   far end before it returns.
 - **Cost**: one tween.
 - **Reduced motion**: nothing.
-- **Here**: built in `battle/src/scene.ts`: the target a melee spell struck moves 12 px and 4° and comes back,
-  280 ms each way, eased `Quad.Out`; 18 px and 5° when the host served no `visual` for the action. BC5 scales
-  it by damage, and a defeated figure does not come back.
+- **Here**: built in `battle/src/body-motion.ts`: after the stop, a struck figure moves 12 px and 4°, 18 px and
+  6° or 26 px and 8° by the health it lost, holds 0, 40 or 80 ms, and comes back, 280 ms each way, eased
+  `Quad.Out`. A body's blow throws whoever it struck; from a distance, whoever lost health. A defeated figure
+  does not come back ("Death").
 
 ### Hit flash
 
@@ -205,8 +212,8 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   `Phaser.TintModes.MULTIPLY`.
 - **Cost**: none: a tint is a vertex attribute and does not break the batch.
 - **Reduced motion**: nothing. A flash is exactly what the setting removes.
-- **Here**: not built. The acting halo already fills a sprite's shape this way (`battle/src/acting-halo.ts`).
-  BC5 flashes once per hit, 60 to 80 ms (*house*), in the palette's bone (`--bone`, `docs/art/branding.md`) and
+- **Here**: built in BC5, as the acting halo fills a sprite's shape (`battle/src/acting-halo.ts`): once per hit,
+  80 ms (*house*), only on a figure that lost health and that the spell's own staging does not flash, in the palette's bone (`--bone`, `docs/art/branding.md`) and
   never in the target marker's gold. See "Flash limits" before using it on several figures at once.
 
 ### Death
@@ -219,11 +226,13 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 - **Phaser**: a tween of `Phaser.GameObjects.Image#alpha` and scale about the feet, and a
   `Phaser.Filters.ColorMatrix` added with `Phaser.GameObjects.Components.FilterList#addColorMatrix`, whose
   `Phaser.Display.ColorMatrix#grayscale` drains the colour.
-- **Cost**: the filter is a framebuffer and a pass for that figure, each frame, while it is on. Keep it for
-  the fall, then remove it and leave a tint.
+- **Cost**: the filter is a framebuffer and a pass for that figure, each frame, while it is on. A multiply tint
+  costs nothing and comes first; the filter only if a film shows the tint does not read.
 - **Reduced motion**: the settled frame: the figure at its defeated alpha, at once.
-- **Here**: a defeated creature is drawn at 20% alpha with no transition. BC5 stages the fall inside the impact
-  window: a recoil with no return, a sink, the colour drained, then today's settled frame.
+- **Here**: built in BC5, inside the impact window: the flash and the stop at full alpha, a recoil with no
+  return, a hold, then the fall. The figure slumps and tips, sinks back onto its own spot, fades to 20% and drains
+  toward the palette's cold grey (`--brand-line`) by a tint, with no filter: it fades as it drains, so a colour matrix would have little left to show
+  on. It ends on the settled frame: at home, upright, untinted, at 20%.
 
 ### Breath at rest
 
@@ -236,9 +245,10 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   kill it at the first skip.
 - **Cost**: one sine per figure per frame.
 - **Reduced motion**: off. The figure stands still.
-- **Here**: removed once (`docs/art/battle-polish.md`); the owner asked for it back (question 4 of the plan).
-  BC5 builds it and amends that document: about 1.5% of height over 3 to 4 s (*house*), each creature out of
-  phase, stopped while an action moves the figure. The mutation cues follow the image's scale, so they breathe
+- **Here**: removed once (`docs/art/battle-polish.md`); the owner asked for it back (question 4 of the plan), and
+  BC5 built it: 1.5% of height over 3.6 s (*house*), each creature 0.37 of a cycle after the one before, stopped
+  while a tween holds the figure, and never on a fallen one. It plays at the resting rate (one frame in four) and
+  is not counted as movement. The mutation cues follow the image's scale, so they breathe
   with it.
 
 ## The camera
@@ -257,9 +267,13 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   `Phaser.Cameras.Scene2D.Camera#setRotation` each frame from `Phaser.Math.HashSimplex`.
 - **Cost**: none to draw.
 - **Reduced motion**: nothing. Camera motion is the first thing the setting removes.
-- **Here**: two fixed shakes: 240 ms at 0.0015 when a physical spell's contact struck someone, and 320 ms at
-  0.003 when the host served no `visual` for the action. BC5 replaces them with one trauma value: damage adds
-  to it, and a blood cost alone does not shake the view, as today (`docs/art/spell-vfx.md`).
+- **Here**: built in BC5 (`battle/src/view-shake.ts`), in place of two fixed shakes. Each creature other than
+  the caster that lost health adds 0.25, 0.40 or 0.55 by its loss, a defeat 0.10 more, to a ceiling of 0.6; the
+  trauma falls by 0.25 every 120 ms. The offset is trauma squared times 2.5% of the view's shorter side, on two
+  axes, with no rotation: the page's labels sit over the canvas and would not turn with it. The noise is two
+  sines an axis of the action's clock, not `Phaser.Math.HashSimplex`, whose configuration it did not need. A blood
+  cost alone, a heal and a blow that took nothing do not move the view (`docs/art/spell-vfx.md`). The kit's
+  `shake` beat adds its strength to the same value.
 
 ### Punch zoom
 
@@ -269,10 +283,13 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 - **Source**: [Special Zoom](https://www.ssbwiki.com/Final_Zoom), SmashWiki.
 - **Phaser**: `Phaser.Cameras.Scene2D.Camera#zoomTo` with an ease, or `Phaser.Cameras.Scene2D.Camera#setZoom`
   from a tween. `Phaser.Cameras.Scene2D.Camera#resetFX` does not reset a zoom: the cancel path must also call
-  `Phaser.Cameras.Scene2D.Effects.Zoom#reset` on `Phaser.Cameras.Scene2D.Camera#zoomEffect` and set the zoom to 1.
+  `Phaser.Cameras.Scene2D.Effects.Zoom#reset` on `Phaser.Cameras.Scene2D.Camera#zoomEffect` and set the zoom back
+  to the fitted one, which is not 1 here: the view's camera zooms by the canvas's pixel ratio.
 - **Cost**: none to draw. Everything on the camera moves, the labels and dice drawn in the scene included.
 - **Reduced motion**: nothing.
-- **Here**: not built. BC5 allows it on a defeat and on a critical hit only: 3% in, back over 200 ms (*house*).
+- **Here**: built in BC5, on a defeat and on a critical hit only: 3% in, back over 200 ms (*house*), once an
+  action. It is laid over the fitted zoom with `Phaser.Cameras.Scene2D.Camera#setZoom` from the scene's update
+  (`battle/src/view-shake.ts`), beside the trauma, and not a zoom effect: the cancel path sets the fitted zoom back.
 
 ### Slow push on a capstone
 

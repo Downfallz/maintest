@@ -1,0 +1,1 @@
+- A table/*.js imported only by the battle bundle (BC5 battle-motion.js, through battle/src/*.ts) still needs its TableFiles entry (TableFilesTests fails otherwise) but is never fetched at runtime; the image's battle-build stage copies table/*.js whole, so check only imports outside table/*.js and data/ the stage lists (BC5 PR).

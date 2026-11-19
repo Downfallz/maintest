@@ -4,7 +4,10 @@ import { BattleHorizon } from './battle-horizon';
 import { DiceLayer } from './dice';
 import { placements, strikeApproach } from '../../table/battle-layout.js';
 import { CREATURE_ART, figureArt, figureGeometry } from '../../table/battle-art.js';
-import { DRAW_MS, STRIKE_MS, RETURN_MS, RETURN_DELAY_MS, MOTION_SCALE, playbackRate } from '../../table/battle-timing.js';
+import { MOTION_SCALE, playbackRate } from '../../table/battle-timing.js';
+import { DEFEATED_ALPHA, WEIGHTS, blowWeight, breath, lossOf, punches, traumaOf } from '../../table/battle-motion.js';
+import { castRelease, castWindup, fall, meleeReturn, meleeWindup, struck, throwWindup } from './body-motion';
+import { ViewShake } from './view-shake';
 import type { SceneFrame, Placement } from './types';
 import { UpkeepMarkers } from './upkeep-markers';
 import { MutationReveal } from './mutation-reveal';
@@ -28,6 +31,8 @@ interface Figure {
   id: string;
   image: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Ellipse; ring: Phaser.GameObjects.Ellipse;
   cues: MutationCues; home: Placement; art: Art; enemy: boolean; alive: boolean;
+  // Its own scale on the field, which the breath multiplies and a stretch returns to.
+  scale: number;
   // The form the creature asked for: when the art drew another, the accents shaped for the asked one stay hidden.
   form: string;
   // The evolution illustration it asked for (ADR 0151), its capstone effects, and the appearance they were made for.
@@ -39,6 +44,9 @@ interface Figure {
 const GOLD = 0xeac88e;
 const EMBER = 0xd18472;
 const MOTES = 24;
+// The laboratory's sample has no card: its hit is drawn as a plain physical blow, the kit's burst along it.
+const SAMPLE_HIT = { family: 'physical', motif: 'impact', delivery: 'melee',
+  staging: [{ beat: 'motif', at: 840 }, { beat: 'burst', at: 840, count: 8, direction: 'along', tint: 'bone', blend: 'normal' }] };
 
 // A remainder that stays in [0, span) whatever the sign of the value: `%` alone turns negative once a
 // drift outgrows its offset, and a mote that goes negative leaves the screen for good.
@@ -54,6 +62,9 @@ export class BattleScene extends Phaser.Scene implements Restful {
   private readonly upkeepMarkers = new UpkeepMarkers(this);
   private readonly mutationReveal = new MutationReveal(this);
   private readonly spellEffects = new SpellEffects(this);
+  private readonly viewShake = new ViewShake(this);
+  // The figures a death is playing on: until the fall is over, their alpha is the fall's and not the frame's.
+  private readonly falling = new Set<string>();
   private state!: SceneFrame;
   private reduced = false;
   private rate = 1;
@@ -69,6 +80,13 @@ export class BattleScene extends Phaser.Scene implements Restful {
   onKit: (equipped: boolean) => void = () => {};
   /** What the effects kit plays now, for the bench and the browser specs. */
   get effectsKit() { return this.spellEffects.playing; }
+  /** How the figures and the view stand now, for the bench, its film and the browser specs. */
+  get motion() {
+    const round = (value: number) => Math.round(value * 1000) / 1000;
+    return { view: this.viewShake.state, figures: [...this.figures.values()].map(({ id, image, shadow, home, scale }) => ({ id,
+      x: round(image.x - home.x), y: round(image.y - home.y), angle: round(image.angle), width: round(image.scaleX / scale), height: round(image.scaleY / scale),
+      alpha: round(image.alpha), shadow: round(shadow.alpha), tinted: image.isTinted })) };
+  }
   // Which image a creature now shows: an evolution illustration's id, or `form:<form>` for an audited sprite.
   onArtwork: (id: string, shown: string) => void = () => {};
   // Which creature the acting halo lights now, or null (`#battle[data-halo]` for tests and tools).
@@ -134,7 +152,7 @@ export class BattleScene extends Phaser.Scene implements Restful {
     // The effects kit is not part of the first frame (ADR 0196): it is fetched now, and until it arrives, or if
     // it never does, a spell is drawn as its motif.
     void loadKit().then(createKit => {
-      if (createKit && this.sys.isActive()) this.spellEffects.attach(createKit(Phaser, this, () => this.reduced));
+      if (createKit && this.sys.isActive()) this.spellEffects.attach(createKit(Phaser, this, () => this.reduced, { shake: strength => this.viewShake.add(strength) }));
       this.onKit(this.spellEffects.equipped);
     });
   }
@@ -163,6 +181,7 @@ export class BattleScene extends Phaser.Scene implements Restful {
     if (shown !== this.aurasShown) { this.aurasShown = shown; this.onAuras(shown); }
     const changed = state.stage !== this.previous;
     if (changed && (state.stage === 'decision' || state.stage === 'resolved')) this.clearMotion();
+    if (changed && state.stage !== 'impact') this.falling.clear();
     this.arrange(rosterChanged);
     const focus = new Set(state.focus ?? []);
     for (const creature of state.creatures) {
@@ -183,9 +202,13 @@ export class BattleScene extends Phaser.Scene implements Restful {
       if (!creature.isAlive) alpha = .20;
       else if ((state.mutationFocus && !selected) || aside) alpha = .52;
       else if (unlit) alpha = .62;
-      figure.image.setAlpha(alpha);
+      // A creature the impact defeats is seen to fall: its alpha is the fall's until it has settled on this one.
+      if (changed && state.stage === 'impact' && !reduced && figure.alive && !creature.isAlive) this.falling.add(creature.id);
+      if (!this.falling.has(creature.id)) {
+        figure.image.setAlpha(alpha);
+        figure.shadow.setAlpha(creature.isAlive ? .55 : DEFEATED_ALPHA);
+      }
       figure.alive = creature.isAlive;
-      figure.shadow.setAlpha(creature.isAlive ? .55 : .2);
       this.followCues(figure);
     }
     // The acting creature carries a halo, whatever the stage: it says whose slot it is without a word.
@@ -211,7 +234,7 @@ export class BattleScene extends Phaser.Scene implements Restful {
   revealMutations(ids: string[]) {
     for (const id of ids) {
       const figure = this.figures.get(id);
-      if (figure) this.burst(figure, GOLD, false);
+      if (figure) this.ring(figure, GOLD);
     }
   }
 
@@ -225,7 +248,7 @@ export class BattleScene extends Phaser.Scene implements Restful {
       // Team identity remains in labels, formation and targeting; preserve the approved art palette.
       const cues = new MutationCues(this, creature.layers ?? [], creature.id, creature.form);
       this.figures.set(creature.id, { id: creature.id, image, shadow, ring, art, enemy, cues, form: creature.form, alive: creature.isAlive,
-        wanted: null, effects: new CapstoneEffects(this, []), auras: new ConditionAuras(this), look: '', cueKey: '', home: { x: 0, y: 0, size: 0, hitWidth: 0 } });
+        wanted: null, effects: new CapstoneEffects(this, []), auras: new ConditionAuras(this), look: '', cueKey: '', scale: 1, home: { x: 0, y: 0, size: 0, hitWidth: 0 } });
     }
   }
 
@@ -293,9 +316,12 @@ export class BattleScene extends Phaser.Scene implements Restful {
     if (!width || !height) return;
     this.cameras.main.setSize(this.scale.width, this.scale.height)
       .setZoom(this.scale.width / width, this.scale.height / height).centerOn(width / 2, height / 2);
+    this.viewShake.fit();
   }
 
   private arrange(resetPositions = false) {
+    // The field is measured on the camera as it was fitted, not as a tremor or a punch of the zoom holds it now.
+    this.viewShake.rest();
     const { displayWidth: width, displayHeight: height } = this.cameras.main;
     if (this.backdrop) {
       const source = this.backdrop.texture.getSourceImage();
@@ -320,9 +346,12 @@ export class BattleScene extends Phaser.Scene implements Restful {
       figure.home = home;
       const geometry = figureGeometry(figure.art, home, figure.enemy);
       // Figures of one row share a y: a step per figure keeps each one's accents under its neighbour's image.
-      figure.image.setOrigin(geometry.originX, geometry.originY).setScale(geometry.scale).setDepth(home.y + index * .001);
-      // Reduced motion can enter impact directly with newly mutated historical figures.
+      figure.image.setOrigin(geometry.originX, geometry.originY).setDepth(home.y + index * .001);
+      // Reduced motion can enter impact directly with newly mutated historical figures. In flight the action
+      // holds the figure's place and its scale; a figure whose own scale changed takes the new one at once.
       if (!inFlight || resetPositions) figure.image.setPosition(home.x, home.y).setAngle(0);
+      if (!inFlight || resetPositions || geometry.scale !== figure.scale) figure.image.setScale(geometry.scale);
+      figure.scale = geometry.scale;
       figure.shadow.setPosition(home.x, home.y - 2).setDisplaySize(home.size * .75, Math.max(12, home.size * .10)).setDepth(home.y - 1);
       figure.ring.setPosition(home.x, home.y).setDisplaySize(home.size * .80, Math.max(14, home.size * .13)).setDepth(home.y - .5);
     }
@@ -349,33 +378,58 @@ export class BattleScene extends Phaser.Scene implements Restful {
         const figure = this.figures.get(id);
         return figure ? [this.effectFigure(id, figure)] : [];
       }), this.rate);
-      if (cue.visual.delivery !== 'melee') return;
+      if (cue.visual.delivery !== 'melee') {
+        // A caster who does not lunge still acts: a cast loads in the body, a projectile's caster throws.
+        const aim = cue.contact.map(id => this.figures.get(id)).find(one => one && one !== actor);
+        if (cue.visual.delivery === 'projectile' && aim) throwWindup(this, actor, strikeApproach(actor.home, aim.home), this.rate);
+        else if (cue.kind !== 'fizzle') castWindup(this, actor, this.rate);
+        return;
+      }
     }
     if (!target || actor === target) return;
-    const approach = strikeApproach(actor.home, target.home);
-    const direction = approach.dx < 0 ? -1 : 1;
-    this.tweens.add({ targets: actor.image, x: actor.home.x - approach.dx * 14, y: actor.home.y - approach.dy * 14, angle: -direction * 7, duration: DRAW_MS / this.rate,
-      onComplete: () => this.tweens.add({ targets: actor.image, x: approach.x, y: approach.y, angle: direction * 9, duration: STRIKE_MS / this.rate, ease: 'Cubic.In' }) });
+    // The blow's weight is the host's confirmed outcome: the heaviest loss among the creatures it reached.
+    meleeWindup(this, actor, strikeApproach(actor.home, target.home), blowWeight(cue, this.state.actor), this.rate);
   }
 
   private impact() {
     const actor = this.figures.get(this.state.actor!);
-    if (actor) {
-      this.tweens.killTweensOf(actor.image);
-      this.tweens.add({ targets: actor.image, x: actor.home.x, y: actor.home.y, angle: 0, duration: RETURN_MS / this.rate, delay: RETURN_DELAY_MS / this.rate, ease: 'Cubic.Out' });
-    }
     const cue = this.state.cue;
-    if (cue) { this.spellImpact(cue, actor); return; }
-    const fallback = this.state.target ? [this.state.target] : [];
-    const struck = fallback;
-    for (const id of struck) {
-      const target = this.figures.get(id);
-      if (!target) continue;
-      const { dx, dy } = actor ? strikeApproach(actor.home, target.home) : { dx: 0, dy: 0 };
-      this.tweens.add({ targets: target.image, x: target.home.x + dx * 18, y: target.home.y + dy * 18, angle: dx * 5, yoyo: true, duration: 140 * MOTION_SCALE / this.rate, ease: 'Quad.Out' });
-      this.burst(target, 0xffd995, true);
-    }
-    if (struck.length) this.cameras.main.shake(160 * MOTION_SCALE / this.rate, .003);
+    const melee = !cue || cue.visual.delivery === 'melee';
+    if (actor && !this.falling.has(actor.id)) this.casterAfterContact(actor, melee);
+    const thrown = new Set<string>();
+    if (cue) this.spellImpact(cue, thrown, actor);
+    else if (actor) this.sampleImpact(actor, thrown);
+    // A figure no blow threw (a caster felled by its own cost) only falls.
+    for (const id of this.falling) if (!thrown.has(id)) this.fell(this.figures.get(id)!, null, false);
+    // The view trembles by the health lost, whatever the family; a defeat or a critical hit punches the zoom.
+    this.viewShake.add(traumaOf(cue, this.state.actor));
+    if (punches(cue, this.state.actor)) this.viewShake.punchIn();
+  }
+
+  // The caster once its action has landed: a lunge holds for the stop and goes home, a cast or a throw lets go.
+  private casterAfterContact(actor: Figure, melee: boolean) {
+    const cue = this.state.cue;
+    if (!melee) { castRelease(this, actor, cue?.visual.delivery !== 'projectile', this.rate); return; }
+    const target = this.figures.get(this.state.target!);
+    const line = target && target !== actor ? strikeApproach(actor.home, target.home) : null;
+    meleeReturn(this, actor, line, blowWeight(cue, this.state.actor), this.rate);
+  }
+
+  // The laboratory's sample has no card and tells no loss: it is played as a light blow that took health.
+  private sampleImpact(actor: Figure, thrown: Set<string>) {
+    const target = this.state.target ? this.figures.get(this.state.target) : undefined;
+    if (!target || target === actor) return;
+    const line = strikeApproach(actor.home, target.home);
+    thrown.add(target.id);
+    if (this.falling.has(target.id)) this.fell(target, line, true);
+    else struck(this, target, line, { lost: 1, defeated: false }, true, this.rate);
+    this.spellEffects.impact(SAMPLE_HIT, this.effectFigure(target.id, target), this.rate, this.anchor(actor));
+    this.viewShake.add(WEIGHTS.light.trauma);
+  }
+
+  private fell(figure: Figure, line: ReturnType<typeof strikeApproach> | null, melee: boolean, flashes = true) {
+    this.tweens.killTweensOf(figure.image);
+    fall(this, figure, line, melee, this.rate, flashes, () => this.falling.delete(figure.id));
   }
 
   // The silhouette as drawn now, wherever the action has carried the image: its foot and its visible size.
@@ -395,17 +449,19 @@ export class BattleScene extends Phaser.Scene implements Restful {
     return { id, anchor: this.anchor(figure), image: figure.image };
   }
 
-  private spellImpact(cue: NonNullable<SceneFrame['cue']>, actor?: Figure) {
+  private spellImpact(cue: NonNullable<SceneFrame['cue']>, thrown: Set<string>, actor?: Figure) {
     this.spellEffects.clear();
     if (cue.kind === 'fizzle') {
       if (actor) this.spellEffects.impact(cue.visual, this.effectFigure(this.state.actor!, actor), this.rate);
       return;
     }
-    let shaken = false;
     if (actor) {
       const first = cue.contact.map(id => this.figures.get(id)).find(Boolean);
-      shaken = this.spellEffects.cast(cue.visual, this.effectFigure(this.state.actor!, actor), this.rate, first && this.anchor(first));
+      this.spellEffects.cast(cue.visual, this.effectFigure(this.state.actor!, actor), this.rate, first && this.anchor(first));
     }
+    const melee = cue.visual.delivery === 'melee';
+    // One flash a figure an action: a staging that flashes its targets takes the place of the scene's own.
+    const flashes = !this.spellEffects.flashes(cue.visual);
     for (const id of cue.recipients) {
       const target = this.figures.get(id);
       if (!target) continue;
@@ -420,42 +476,41 @@ export class BattleScene extends Phaser.Scene implements Restful {
       const visual = self && cue.visual.delivery === 'melee'
         ? { family: cue.visual.family, motif: tones.includes('recovery') ? 'vital' : 'focus', delivery: 'cast' } : cue.visual;
       this.spellEffects.impact(visual, this.effectFigure(id, target), this.rate, actor ? this.anchor(actor) : undefined);
-      if (!self && cue.visual.delivery === 'melee' && cue.struck.includes(id) && actor) {
-        const { dx, dy } = strikeApproach(actor.home, target.home);
-        this.tweens.add({ targets: target.image, x: target.home.x + dx * 12, y: target.home.y + dy * 12,
-          angle: dx * 4, yoyo: true, duration: 140 * MOTION_SCALE / this.rate, ease: 'Quad.Out' });
-      }
-    }
-    // A staging that shakes the view says how; the shared tremor of a physical blow is the motif's.
-    if (!shaken && cue.visual.family === 'physical' && cue.contact.some(id => cue.struck.includes(id))) {
-      this.cameras.main.shake(120 * MOTION_SCALE / this.rate, .0015);
+      if (!self && actor) this.answer(cue, target, actor, melee, flashes, thrown);
     }
   }
 
-  private burst(target: Figure, color: number, sparks: boolean) {
+  // How a figure answers the action that reached it: a body's blow throws whoever it struck; from a distance,
+  // whoever lost health. One the action defeats falls.
+  private answer(cue: NonNullable<SceneFrame['cue']>, target: Figure, actor: Figure, melee: boolean, flashes: boolean, thrown: Set<string>) {
+    const loss = lossOf(cue, target.id), line = strikeApproach(actor.home, target.home);
+    if (this.falling.has(target.id)) { thrown.add(target.id); this.fell(target, line, melee, flashes); return; }
+    const reached = melee ? cue.struck.includes(target.id) : loss.lost > 0;
+    if (reached) struck(this, target, line, loss, melee, this.rate, flashes);
+  }
+
+  // A ring that opens on a figure and fades: a mutation revealed.
+  private ring(target: Figure, color: number) {
     const visibleHeight = (target.art.bounds[3] - target.art.bounds[1]) * target.image.scaleY;
-    const x = target.home.x; const y = target.home.y - visibleHeight * .5;
-    const ring = this.add.circle(x, y, 12).setStrokeStyle(4, color).setDepth(2000);
+    const ring = this.add.circle(target.home.x, target.home.y - visibleHeight * .5, 12).setStrokeStyle(4, color).setDepth(2000);
     this.effects.push(ring);
     this.tweens.add({ targets: ring, scale: 5, alpha: 0, duration: 360 * MOTION_SCALE / this.rate });
-    if (!sparks) return;
-    for (let i = 0; i < 14; i++) {
-      const angle = i * Math.PI * 2 / 14;
-      const spark = this.add.rectangle(x, y, 4, 13, i % 2 ? color : 0xcd6d43).setRotation(angle).setDepth(2001);
-      this.effects.push(spark);
-      this.tweens.add({ targets: spark, x: x + Math.cos(angle) * 85, y: y + Math.sin(angle) * 65, alpha: 0, duration: (280 + i * 15) * MOTION_SCALE / this.rate });
-    }
   }
 
   private clearMotion() {
     this.onCancel();
     this.tweens.killAll();
     this.cameras.main.resetFX();
+    this.viewShake.clear();
+    this.falling.clear();
     this.spellEffects.clear();
     for (const effect of this.effects) effect.destroy();
     this.effects = [];
     for (const figure of this.figures.values()) {
-      figure.image.setPosition(figure.home.x, figure.home.y).setAngle(0);
+      // A skip mid-stretch, mid-flash or mid-death leaves the figure home, at its own scale, untinted, and a
+      // fallen one at its settled alpha.
+      figure.image.setPosition(figure.home.x, figure.home.y).setAngle(0).setScale(figure.scale).clearTint();
+      if (!figure.alive) { figure.image.setAlpha(DEFEATED_ALPHA); figure.shadow.setAlpha(DEFEATED_ALPHA); }
       this.followCues(figure);
     }
   }
@@ -478,7 +533,7 @@ export class BattleScene extends Phaser.Scene implements Restful {
   busy() {
     const camera = this.cameras.main;
     return this.tweens.getTweens().length > 0 || this.load.isLoading()
-      || camera.shakeEffect.isRunning || camera.flashEffect.isRunning || camera.fadeEffect.isRunning
+      || this.viewShake.moving || camera.flashEffect.isRunning || camera.fadeEffect.isRunning
       || this.spellEffects.playing.particles > 0 || this.spellEffects.playing.objects.length > 0 || Boolean(this.dice?.tumbling(this.reduced))
       || Boolean(this.horizon?.moving);
   }
@@ -489,20 +544,27 @@ export class BattleScene extends Phaser.Scene implements Restful {
     // films of one effect draw the same frames.
     this.ambient = time < this.lastStep ? time : this.ambient + delta;
     this.lastStep = time;
-    const breath = this.ambient;
+    const breathClock = this.ambient;
     this.horizon?.update(delta * this.rate);
-    this.halo?.follow(breath, this.reduced);
-    for (const halo of this.focusHalos.values()) halo.follow(breath, this.reduced);
+    this.halo?.follow(breathClock, this.reduced);
+    for (const halo of this.focusHalos.values()) halo.follow(breathClock, this.reduced);
     this.dice?.follow(time, this.reduced);
-    // Creatures stand still between actions: only a played action moves them.
+    this.viewShake.update(delta * this.rate);
+    let place = 0;
     for (const figure of this.figures.values()) {
+      // A standing figure no tween holds breathes, each out of phase with its neighbour (the craft book, "Breath
+      // at rest"). It is ambience: computed here and not a tween, at the resting rate, and off with less motion.
+      if (figure.alive && !this.falling.has(figure.id) && this.tweens.getTweensOf(figure.image).length === 0) {
+        figure.image.setScale(figure.scale, figure.scale * (this.reduced ? 1 : breath(breathClock, place)));
+      }
+      place++;
       this.followCues(figure);
-      figure.effects.follow(figure.image, figure.alive && figure.image.visible, breath, this.reduced);
-      figure.auras.follow(this.body(figure), figure.alive && figure.image.visible, breath, this.reduced);
+      figure.effects.follow(figure.image, figure.alive && figure.image.visible, breathClock, this.reduced);
+      figure.auras.follow(this.body(figure), figure.alive && figure.image.visible, breathClock, this.reduced);
     }
     const width = Math.max(1, this.cameras.main.displayWidth);
     const height = Math.max(1, this.cameras.main.displayHeight);
-    const drift = this.reduced ? 0 : breath * .007;
+    const drift = this.reduced ? 0 : breathClock * .007;
     this.motes.forEach((mote, i) => {
       mote.setPosition(wrap(i * 131 + drift, width), wrap(i * 73 - drift * .7, height));
       mote.visible = !this.reduced;

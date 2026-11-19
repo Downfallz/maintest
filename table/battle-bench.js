@@ -28,8 +28,10 @@ export function benchEntries(art, spells = {}) {
 export function benchTitle(entry) {
   return [entry.name, entry.castBy, entry.family, entry.motif, entry.delivery].filter(Boolean).join(' · ');
 }
-export function filmTitle(entry, { speed = 1, outcome = 'played', wound = false } = {}) {
-  const asked = [outcome === 'fizzled' ? 'fizzled' : '', wound && outcome !== 'fizzled' ? 'the caster pays in blood' : ''];
+export function filmTitle(entry, { speed = 1, outcome = 'played', wound = false, damage = 0, defeat = false } = {}) {
+  const played = outcome !== 'fizzled';
+  const asked = [played ? '' : 'fizzled', wound && played ? 'the caster pays in blood' : '',
+    damage > 0 && played ? `${damage} health lost` : '', defeat && played ? 'the blow defeats' : ''];
   return [benchTitle(entry), ...asked.filter(Boolean), `${speed}×`].join(' · ');
 }
 
@@ -90,23 +92,34 @@ export function benchStage(elapsed, speed = 1) {
 // A creature across the field from the caster is struck; one on the caster's side, or the caster, receives.
 // A fizzle is drawn as the live page draws one (`actionCue`): the fizzle's mark on the caster, and no outcome.
 // A caster who pays in blood receives a wound, as a blood cost's harm to its caster is drawn.
-export function benchFrame({ entry, actor, targets, stage, outcome = 'played', wound = false }) {
-  const creatures = benchCreatures();
-  const caster = creatures.find(one => one.id === actor);
-  const known = targets.filter(id => creatures.some(one => one.id === id));
+// `damage` is the health each struck creature loses, which is the weight of the blow (`table/battle-motion.js`);
+// `defeat` fells the first one struck, from the impact on. Both are the fixture's word, as a cue's changes are
+// the host's on the live page.
+export function benchFrame({ entry, actor, targets, stage, outcome = 'played', wound = false, damage = 0, defeat = false }) {
+  const standing = benchCreatures();
+  const caster = standing.find(one => one.id === actor);
+  const known = targets.filter(id => standing.some(one => one.id === id));
   const contact = known.filter(id => id !== actor);
+  const played = outcome !== 'fizzled';
+  const struck = contact.filter(id => standing.find(one => one.id === id).enemy !== caster?.enemy);
+  const fallen = defeat && played ? struck[0] : undefined;
+  const creatures = fallen && (stage === 'impact' || stage === 'resolved')
+    ? standing.map(one => one.id === fallen ? { ...one, isAlive: false } : one) : standing;
   const frame = { round: 1, stage, actor, target: contact[0] ?? null, targets: [], creatures };
   if (stage !== 'windup' && stage !== 'impact') return frame;
-  if (outcome === 'fizzled') {
+  if (!played) {
     return { ...frame, cue: { kind: 'fizzle', visual: spellVisual({ status: 'Fizzled' }), recipients: [], contact: [], struck: [], effects: [], changes: [], roll: null } };
   }
-  const struck = contact.filter(id => creatures.find(one => one.id === id).enemy !== caster?.enemy);
+  const changes = struck.flatMap(id => {
+    const change = { ...(damage > 0 ? { health: -damage } : {}), ...(id === fallen ? { defeated: true } : {}) };
+    return Object.keys(change).length ? [{ creature: id, ...change }] : [];
+  });
   const paid = Boolean(wound && caster);
   const recipients = paid && !known.includes(actor) ? [...known, actor] : known;
   const effects = paid ? [{ creature: actor, text: 'Blood cost', tone: 'harm', wound: true }] : [];
   return { ...frame, cue: { kind: struck.length || paid ? 'strike' : 'pulse',
     visual: { family: entry.family, motif: entry.motif, delivery: entry.delivery, ...(entry.staging ? { staging: entry.staging } : {}) },
-    recipients, contact, struck, effects, changes: [], roll: null } };
+    recipients, contact, struck, effects, changes, roll: null } };
 }
 
 // Phaser's particles and its camera shake draw from `Math.random`: the bench hands them this instead, seeded

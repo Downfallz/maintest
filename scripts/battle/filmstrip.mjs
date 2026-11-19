@@ -8,6 +8,8 @@
 //   node scripts/battle/filmstrip.mjs spell:quill_shot:v1 --actor a2 --targets b1,b3 --speed 2 --out sheet.png
 //   node scripts/battle/filmstrip.mjs spell:pummel:v1 --fizzle              # the spell fizzles
 //   node scripts/battle/filmstrip.mjs spell:hateful_sacrifice:v1 --wound    # its caster pays in blood
+//   node scripts/battle/filmstrip.mjs spell:pummel:v1 --damage 8 --defeat   # a heavy blow that defeats its target
+//   node scripts/battle/filmstrip.mjs spell:pummel:v1 --motion              # and, beside the sheet, how the figures and the view stand at each frame
 //   node scripts/battle/filmstrip.mjs --all --out artifacts/filmstrips      # one sheet an entry
 //
 // It serves `table/` itself; the bundle must be built first (`npm --prefix battle run build`).
@@ -38,18 +40,20 @@ export async function openBench(page, base) {
  * Film one effect on an open bench: `frames` pictures of the field, `interval` milliseconds of the bench's clock
  * apart, the first at 0. Returns [{ ms, stage, png }], and leaves the bench at rest with its loop running.
  */
-export async function filmFrames(page, { spell, actor, targets, speed, outcome = 'played', wound = false, frames = 12, interval } = {}) {
+export async function filmFrames(page, { spell, actor, targets, speed, outcome = 'played', wound = false, damage = null, defeat = false, frames = 12, interval } = {}) {
   // Refused before the film starts: a started film has stopped the bench's loop.
   if (interval !== undefined && interval % FILM_TICK_MS !== 0) throw new Error(`The interval must be a multiple of ${FILM_TICK_MS} ms.`);
   // The outcome and the wound are asked each time: a sheet never inherits the last one's.
-  const started = await page.evaluate(options => window.battleBench.film.start(options), { spell, actor, targets, speed, outcome, wound });
+  const started = await page.evaluate(options => window.battleBench.film.start(options), { spell, actor, targets, speed, outcome, wound, damage, defeat });
   const step = interval ?? started.interval;
   const field = page.locator('#battle-zone');
-  const shots = [{ ms: 0, stage: started.stage, png: await field.screenshot() }];
+  // What a sheet cannot show (a breath of a pixel, a tremor of the view) is read from the scene at each frame.
+  const motion = () => page.evaluate(() => window.battleBench.motion());
+  const shots = [{ ms: 0, stage: started.stage, png: await field.screenshot(), motion: await motion() }];
   try {
     while (shots.length < frames) {
       const { elapsed, stage } = await page.evaluate(ms => window.battleBench.film.advance(ms), step);
-      shots.push({ ms: elapsed, stage, png: await field.screenshot() });
+      shots.push({ ms: elapsed, stage, png: await field.screenshot(), motion: await motion() });
     }
   } finally {
     await page.evaluate(() => window.battleBench.film.stop());
@@ -80,10 +84,19 @@ export async function contactSheet(context, shots, { title = '', columns = COLUM
 
 /** One effect, filmed and laid out: the PNG of its contact sheet. */
 export async function filmSheet(page, options = {}) {
+  return (await filmRecord(page, options)).sheet;
+}
+
+/**
+ * The sheet, and beside it what no sheet can show: at each frame, how every figure stands (its place from its
+ * home, its lean, its scale over its own, its alpha) and what the view does (its trauma, its offset, its zoom).
+ */
+export async function filmRecord(page, options = {}) {
   const shots = await filmFrames(page, options);
   // The title is what the bench played, read back from it: the spell, its mutation, the outcome and the speed.
   const title = await page.evaluate(() => window.battleBench.title());
-  return contactSheet(page.context(), shots, { title, columns: options.columns });
+  const sheet = await contactSheet(page.context(), shots, { title, columns: options.columns });
+  return { sheet, motion: { title, frames: shots.map(({ ms, stage, motion }) => ({ ms, stage, ...motion })) } };
 }
 
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
@@ -113,7 +126,7 @@ function playwright() {
 }
 
 export function parseArguments(argv) {
-  const options = { spells: [], all: false, out: null, base: null, scale: 1 };
+  const options = { spells: [], all: false, out: null, base: null, scale: 1, motion: false };
   const film = {};
   const value = (flag, index) => {
     if (index >= argv.length) throw new Error(`${flag} needs a value.`);
@@ -122,12 +135,18 @@ export function parseArguments(argv) {
   for (let index = 0; index < argv.length; index++) {
     const word = argv[index];
     if (word === '--all') options.all = true;
+    else if (word === '--motion') options.motion = true;
     else if (word === '--out') options.out = value(word, ++index);
     else if (word === '--url') options.base = value(word, ++index);
     else if (word === '--actor') film.actor = value(word, ++index);
     else if (word === '--targets') film.targets = value(word, ++index).split(',').filter(Boolean);
     else if (word === '--fizzle') film.outcome = 'fizzled';
     else if (word === '--wound') film.wound = true;
+    else if (word === '--defeat') film.defeat = true;
+    else if (word === '--damage') {
+      film.damage = Number(value(word, ++index));
+      if (!Number.isInteger(film.damage) || film.damage < 0) throw new Error('--damage is a whole number of health points.');
+    }
     else if (['--speed', '--frames', '--interval', '--columns', '--scale'].includes(word)) {
       const number = Number(value(word, ++index));
       if (!Number.isFinite(number) || number <= 0) throw new Error(`${word} needs a positive number.`);
@@ -138,15 +157,23 @@ export function parseArguments(argv) {
   if (options.all === options.spells.length > 0) throw new Error('Name one or more effects (spell:pummel:v1), or --all.');
   // The live page draws no outcome with a fizzle (`actionCue`): a wound with one would film what never plays.
   if (film.outcome === 'fizzled' && film.wound) throw new Error('--fizzle and --wound do not go together: a fizzle is drawn with no outcome.');
+  if (film.outcome === 'fizzled' && (film.defeat || 'damage' in film)) throw new Error('--fizzle goes with no --damage and no --defeat: a fizzle harms nobody.');
   if (film.speed !== undefined && ![0.5, 1, 2].includes(film.speed)) throw new Error('--speed is 0.5, 1 or 2, as the page offers.');
   if (film.interval !== undefined && film.interval % FILM_TICK_MS !== 0) throw new Error(`--interval is a multiple of ${FILM_TICK_MS} ms.`);
   if (options.out?.endsWith('.png') && (options.all || options.spells.length > 1)) throw new Error('--out names a folder when several effects are filmed.');
   return { ...options, film };
 }
 
+/** The motion of a film as JSON Lines, read down by a person or line by line by a script: the title, then a frame a line. */
+export function motionLines({ title, frames }) {
+  return `${JSON.stringify({ title })}\n${frames.map(frame => JSON.stringify(frame)).join('\n')}\n`;
+}
+
 // A fizzle's or a wound's sheet beside the spell's own, not over it.
-export const fileName = (spell, { outcome, wound } = {}) =>
-  `${spell.split(':')[1] ?? spell}${outcome === 'fizzled' ? '-fizzled' : ''}${wound ? '-wound' : ''}.png`;
+export function fileName(spell, { outcome, wound, damage = null, defeat } = {}) {
+  const asked = [outcome === 'fizzled' ? 'fizzled' : null, wound ? 'wound' : null, damage, defeat ? 'defeat' : null];
+  return `${[spell.split(':')[1] ?? spell, ...asked.filter(one => one !== null)].join('-')}.png`;
+}
 
 async function main(argv) {
   const options = parseArguments(argv);
@@ -164,11 +191,16 @@ async function main(argv) {
     const single = Boolean(options.out?.endsWith('.png'));
     const folder = single ? null : resolve(options.out ?? join(root, 'artifacts/filmstrips'));
     for (const spell of spells) {
-      const sheet = await filmSheet(page, { ...options.film, spell });
+      const { sheet, motion } = await filmRecord(page, { ...options.film, spell });
       const path = single ? resolve(options.out) : join(folder, fileName(spell, options.film));
       await mkdir(dirname(path), { recursive: true });
       await writeFile(path, sheet);
       console.log(path);
+      if (options.motion) {
+        const beside = path.replace(/\.png$/, '.motion.jsonl');
+        await writeFile(beside, motionLines(motion));
+        console.log(beside);
+      }
     }
   } finally {
     await browser?.close();

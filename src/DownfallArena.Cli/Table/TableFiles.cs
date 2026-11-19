@@ -199,6 +199,7 @@ internal sealed partial class TableFiles
             ["/battle-layout.js"] = (Path.Combine(tableDirectory, "battle-layout.js"), JavaScript),
             ["/battle-timing.js"] = (Path.Combine(tableDirectory, "battle-timing.js"), JavaScript),
             ["/battle-staging.js"] = (Path.Combine(tableDirectory, "battle-staging.js"), JavaScript),
+            ["/battle-motion.js"] = (Path.Combine(tableDirectory, "battle-motion.js"), JavaScript),
             ["/battle-build/live.js"] = (Path.Combine(tableDirectory, "battle-build", "live.js"), JavaScript),
             ["/battle-build/live.js.LEGAL.txt"] = (Path.Combine(tableDirectory, "battle-build", "live.js.LEGAL.txt"), StudioResponse.Plain),
 
