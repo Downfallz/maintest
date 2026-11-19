@@ -10,6 +10,8 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { headingAnchors } from '../scripts/markdown-anchors.mjs';
+
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const BOOK = 'docs/art/ux-craft.md';
 const NOTES = 'docs/art/ux-craft-research.md';
@@ -19,17 +21,9 @@ const read = path => readFileSync(join(root, path), 'utf8');
 const GROUPS = ['The first visit', 'Teaching', 'The home', "The match's frame", 'Motion', 'Pictures', 'Accessibility'];
 // The six lines of an entry, in order.
 const LINES = ['What', 'Source', 'Pages', 'Cost', 'Less motion and screen reader', 'Here'];
-// Where a token may be declared: the palette both doors read, and the table's identity sheet (ADR 0158).
-const TOKEN_SHEETS = ['docs/art/branding.css', 'table/identity.css'];
-// Paths the book may name before they exist: what a later stage of the plan builds, and build output.
-const NOT_YET_THERE = [
-  'scripts/ux/', // the journey film, UX2
-  'docs/art/journeys/', // the briefs and the baseline, UX2 and UX3
-  '.claude/agents/ux-designer.md', // UX3
-  '.claude/skills/ux-pass/', // UX3
-  'showcase/dist/', // the showcase's build
-  'table/battle-build/', // the battle bundle
-];
+// Where a token may be declared: the palette both doors read, the sheet every page of the table loads, which
+// holds the motion tokens, and the table's identity sheet (ADR 0158).
+const TOKEN_SHEETS = ['docs/art/branding.css', 'table/table.css', 'table/identity.css'];
 
 /** The book cut at its `##` headings: { title, body, entries: [{ title, body }] }. */
 export function sections(markdown) {
@@ -72,14 +66,24 @@ export function pathsNamed(text, topLevel) {
   return paths;
 }
 
-/** The custom properties a text names in backticks, alone or inside `var(...)`: `--gold`, `var(--cut)`. */
+/** The custom properties a text names in backticks, wherever in the span: `--gold`, `color: var(--ink)`. */
 export function tokensNamed(text) {
   const tokens = [];
   for (const [, span] of text.matchAll(/`([^`\n]+)`/g)) {
-    const token = /^(?:var\()?(--[a-z][a-z0-9-]*)\)?$/.exec(span);
-    if (token) tokens.push(token[1]);
+    tokens.push(...[...span.matchAll(/(?<![\w-])--[a-z][a-z0-9-]*/g)].map(([name]) => name));
   }
   return tokens;
+}
+
+/** The links a text makes to a file beside it or to one of its own headings: { path, anchor }, either empty. */
+export function linksNamed(text) {
+  const links = [];
+  for (const [, target] of text.matchAll(/\]\(([^)\s]+)\)/g)) {
+    if (/^[a-z][a-z0-9+.-]*:/i.test(target)) continue;
+    const [path, anchor = ''] = target.split('#');
+    links.push({ path, anchor });
+  }
+  return links;
 }
 
 /** The custom properties a sheet declares. */
@@ -108,9 +112,17 @@ test('a span is read as a path only when it starts at the root and is not a plac
   assert.deepEqual(pathsNamed(text, top), ['table/lobby.html', 'docs/art/branding.md', 'AGENTS.md']);
 });
 
-test('a token is read alone or inside var(), and a declaration is read from a sheet', () => {
-  assert.deepEqual(tokensNamed('`--gold`, `var(--cut)`, `--Not`, `transform`, `color: var(--ink)`'), ['--gold', '--cut']);
+test('a token is read wherever its span holds it, and a declaration is read from a sheet', () => {
+  assert.deepEqual(tokensNamed('`--gold`, `var(--cut)`, `--Not`, `transform`, `color: var(--ink)`, `a--b`, --bare'), ['--gold', '--cut', '--ink']);
   assert.deepEqual([...tokensDeclared(':root {\n  --gold: #fff; --cut:12px;\n}\na { color: var(--ink); }')], ['--gold', '--cut']);
+});
+
+test('a link is read to a file beside the book or to a heading, and a link to the web is left alone', () => {
+  assert.deepEqual(linksNamed('[a](plan.md), [b](#a-heading), [c](other.md#part), [d](https://example.org/x#y), [e](mailto:x@y.z)'), [
+    { path: 'plan.md', anchor: '' },
+    { path: '', anchor: 'a-heading' },
+    { path: 'other.md', anchor: 'part' },
+  ]);
 });
 
 test('the book covers the seven groups of the plan, in its order, each with entries', () => {
@@ -128,29 +140,38 @@ test('every entry has the same six lines, and a source that is a link or marked 
       assert.deepEqual(lines.map(line => line.label), LINES, where);
       for (const line of lines) assert.ok(line.text.trim().length > 0, `${where}: ${line.label} is empty`);
       const source = lines[1].text;
-      assert.ok(/\]\(https:\/\/[^)\s]+\)/.test(source) || source.includes('*house*'), `${where}: the source is neither a link nor marked *house*`);
+      assert.ok(/\]\(https:\/\/[^)\s]+\)/.test(source) || source.startsWith('*house*'), `${where}: the source has no link and does not start with *house*`);
     }
   }
 });
 
-test('no entry is named twice, so a brief can name a pattern by its heading', () => {
-  const titles = groups.flatMap(group => group.entries.map(entry => entry.title));
-  const twice = titles.filter((title, at) => titles.indexOf(title) !== at);
+// A brief names a pattern by its anchor, and GitHub numbers the second of two headings that give the same one.
+test('no two headings of the book give the same anchor, so a brief can name a pattern by it', () => {
+  const anchors = book.split('\n').filter(line => /^#{1,6}\s+\S/.test(line)).map(line => [...headingAnchors(line)][0]);
+  const twice = anchors.filter((anchor, at) => anchors.indexOf(anchor) !== at);
   assert.deepEqual(twice, []);
+});
+
+test('every link the book makes to a file beside it, or to a heading, leads somewhere', () => {
+  const folder = dirname(BOOK);
+  const broken = linksNamed(book).filter(({ path, anchor }) => {
+    if (path && !existsSync(join(root, folder, path))) return true;
+    if (!anchor) return false;
+    return !headingAnchors(path ? read(join(folder, path)) : book).has(anchor);
+  });
+  assert.deepEqual(broken, []);
 });
 
 test('every repository path the book names exists', () => {
   const topLevel = new Set(readdirSync(root));
-  const missing = [...new Set(pathsNamed(book, topLevel))]
-    .filter(path => !NOT_YET_THERE.some(prefix => path.startsWith(prefix)))
-    .filter(path => !existsSync(join(root, path)));
+  const missing = [...new Set(pathsNamed(book, topLevel))].filter(path => !existsSync(join(root, path)));
   assert.deepEqual(missing, [], `named in ${BOOK}, and not in the repository`);
 });
 
-test('every token the book names is declared in the palette or in the identity sheet', () => {
+test('every token the book names is declared in the palette, the table sheet or the identity sheet', () => {
   const declared = new Set(TOKEN_SHEETS.flatMap(sheet => [...tokensDeclared(read(sheet))]));
   const missing = [...new Set(tokensNamed(book))].filter(token => !declared.has(token));
-  assert.deepEqual(missing, [], `named in ${BOOK}, and declared in neither ${TOKEN_SHEETS.join(' nor ')}`);
+  assert.deepEqual(missing, [], `named in ${BOOK}, and declared in none of ${TOKEN_SHEETS.join(', ')}`);
 });
 
 test('the documentation index lists the book, and the notes it replaces are gone from the repository', () => {

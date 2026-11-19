@@ -1,15 +1,16 @@
 # The pages' craft book
 
 The patterns the pages are staged with: the two doors (the showcase and the sign-in), the lessons, the lobby, a
-player's pages and the frame of a match around the canvas. For each one: what it is, where it comes from, how a
-static page does it, what it costs, what it becomes under less motion and for a screen reader, and where this
-game uses it. It is UX1 of [the pages' craft plan](ux-craft-plan.md). The `ux-designer` agent (UX3) writes its
+player's pages and the frame of a match around the canvas. Each entry says what the pattern is, where it comes
+from, how a static page does it and what it costs. It says what the pattern becomes under less motion and for a
+screen reader, and where this game uses it. It is UX1 of [the pages' craft plan](ux-craft-plan.md). The `ux-designer` agent (UX3) writes its
 briefs in these words, and the session that builds a stage reads the entry before it writes a rule of CSS.
 
-Written on 2026-11-19 from the notes of the search behind the plan. Every link was opened again that day and its
-entry checked against the page: [what the reading changed](#what-the-reading-changed) lists what the notes had
-wrong. A number given here is the source's, not ours. The book is a reference, not a decision: a pattern is used
-when a stage of the plan builds it, and the ADR of UX4 sets what the pages are held to.
+Written on 2026-11-19 from the notes of the search behind the plan. Every link that could be opened was opened
+again that day and its entry checked against the page. [What the reading changed](#what-the-reading-changed)
+lists what the notes had wrong, and [what could not be opened](#what-could-not-be-opened) is cited nowhere. A
+number given here is the source's, not ours. The book is a reference, not a decision: a pattern is used when a
+stage of the plan builds it.
 
 What is inside the canvas is the other book's, [the battle's craft book](battle-craft.md).
 
@@ -25,8 +26,8 @@ Every entry has the same six lines.
 - **Cost**: bytes, a paint, a layout, and what a phone pays.
 - **Less motion and screen reader**: the form it takes when the player asked for less motion, and what a screen
   reader is told.
-- **Here**: what the pages do today, measured in the plan's walk on `main` at `be33327`, and the stage of the
-  plan that uses the pattern.
+- **Here**: what the pages do today, and the stage of the plan (its UX number) that uses the pattern. The
+  numbers are from the plan's walk on `main` at `be33327`.
 
 ## Rules every pattern obeys
 
@@ -58,7 +59,7 @@ These come from decisions already taken. No pattern below is an exception to the
 - **Source**: [Gradual Engagement Boosts Twitter Sign-Ups by 29%](https://www.lukew.com/ff/entry.asp?1128), Luke
   Wroblewski, 2010; [Login Walls Stop Users in Their Tracks](https://www.nngroup.com/articles/login-walls/),
   Nielsen Norman Group, from usability tests, with no number.
-- **Pages**: the showcase is that showing, and needs no account. What it lacks is play: a round as pictures of
+- **Pages**: the showcase is that showing, and needs no account. What it lacks is a look at play: a round as pictures of
   the real battle view, each an `<img>` with its dimensions, beside the sentences.
 - **Cost**: the pictures of a round, inside the page's budget (UX5). Below the first screen they load lazily.
 - **Less motion and screen reader**: the pictures are stills; each has an `alt` that says what the turn shows.
@@ -105,7 +106,7 @@ These come from decisions already taken. No pattern below is an exception to the
 - **Pages**: the door paints the game's own picture first, as an `<img>` asked for with `fetchpriority="high"`
   (see [The largest picture is an image in the HTML](#the-largest-picture-is-an-image-in-the-html)), and offers
   one action.
-- **Cost**: the largest paint of the page. Good is 2.5 s.
+- **Cost**: the largest paint of the page (see [The thresholds](#the-thresholds)).
 - **Less motion and screen reader**: a still picture. The heading says what the game is in one line.
 - **Here**: the panel's largest paint was 4.7 s in one run on a slow phone's profile: the painting, as a CSS
   background of `table/lobby.css`. A new account names itself, then lands on tutorial 1's brief. A visitor who
@@ -182,8 +183,8 @@ These come from decisions already taken. No pattern below is an exception to the
   concept, makes a game easier to learn.
 - **Source**: [The Impact of Tutorials on Games of Varying Complexity](https://grail.cs.washington.edu/projects/game-abtesting/chi2012/),
   Andersen and others, CHI 2012.
-- **Pages**: a lesson leaves the page's controls live wherever the scenario allows. It greys nothing only to
-  steer.
+- **Pages**: a lesson leaves the page's controls live wherever the scenario allows. It disables a control only
+  when the scenario needs it off, never to steer the player.
 - **Cost**: none.
 - **Less motion and screen reader**: a control a lesson does disable says why in its name or beside it.
 - **Here**: this game is the complex case: a tutorial is justified. How much a tutorial restricts is
@@ -260,7 +261,7 @@ These come from decisions already taken. No pattern below is an exception to the
 - **Source**: [Chess.com redesigns its homepage](https://www.chess.com/news/view/chesscom-redesigns-homepage),
   2022.
 - **Pages**: the games that wait for the player are the first section of the home, with a count. The mark is a
-  shape and a word beside the colour.
+  shape and a word in the identity's own colours, not chess.com's red and green.
 - **Cost**: none: the home's stream already says whose turn it is.
 - **Less motion and screen reader**: a turn that arrives appears with a fade, and is said once in a
   `role="status"` region.
@@ -474,7 +475,7 @@ These come from decisions already taken. No pattern below is an exception to the
   the phase. A rare moment gets a screen, not a loop.
 - **Cost**: each answer stays within the vocabulary of [Durations](#durations) and delays no command.
 - **Less motion and screen reader**: the answer becomes a change of state, with no travel.
-- **Here**: outside the canvas, nothing answers. UX11 for the frame, UX12 for the windows.
+- **Here**: outside the canvas, no press and no choice gets a visible answer. UX11 for the frame, UX12 for the windows.
 
 ## Motion
 
@@ -491,8 +492,10 @@ These come from decisions already taken. No pattern below is an exception to the
 - **Pages**: `transition-duration` and `transition-timing-function`, from tokens and never a number in a rule.
 - **Cost**: none.
 - **Less motion and screen reader**: the durations stay for a fade; the travel goes.
-- **Here**: `table/identity.css`, `table/lobby.css`, `table/rules.css` and `table/leaderboard.css` hold no
-  animation. UX4 declares three durations and three curves in `docs/art/branding.css`.
+- **Here**: `table/table.css`, which the table's pages load, already declares four durations: `--motion-instant`
+  at 80 ms, `--motion-fast` at 120, `--motion-normal` at 220, `--motion-slow` at 360. They are inside this
+  entry's range. `table/identity.css`, `table/lobby.css`, `table/rules.css` and `table/leaderboard.css` hold no
+  animation, and `table/battle.css` does not use the tokens. UX4 starts from them.
 
 ### Named durations and curves
 
@@ -504,7 +507,10 @@ These come from decisions already taken. No pattern below is an exception to the
 - **Pages**: custom properties beside the palette's, synced to the showcase by `scripts/sync-branding.mjs`.
 - **Cost**: a few lines in a sheet both doors already load.
 - **Less motion and screen reader**: the tokens stay; a rule under `prefers-reduced-motion` chooses the fade.
-- **Here**: no motion token exists. UX4 names them, and the ADR of UX4 records the vocabulary.
+- **Here**: `table/table.css` has the three curves too: `--motion-enter`, `--motion-exit` and
+  `--motion-standard`. The showcase has none: the tokens are not in `docs/art/branding.css`, which
+  `scripts/sync-branding.mjs` copies to both doors. UX4 keeps, renames or moves them, never a second set beside
+  them, and its ADR records the vocabulary.
 
 ### Transform and opacity only
 
@@ -536,8 +542,10 @@ These come from decisions already taken. No pattern below is an exception to the
 - **Cost**: none.
 - **Less motion and screen reader**: this entry is that form: travel, scale and ambience go; a fade and a change
   of colour stay.
-- **Here**: the battle has the setting and reads the system's. The pages have one rule, for scrolling
-  (`table/lobby.css`): there was nothing to reduce. UX4 brings both to the pages.
+- **Here**: the battle has the setting and reads the system's. On the pages, `table/table.css` answers the
+  system's preference with a blanket: the four durations set to 0, and every animation and transition cut to
+  0.01 ms with `!important`. That is no motion, not less: a fade written for less motion would be cut by it. UX4
+  replaces the blanket with the form of this entry, and brings the account's setting to the pages.
 
 ### A window that enters and leaves
 
@@ -733,7 +741,7 @@ read in [the Recommendation](https://www.w3.org/TR/WCAG22/) and in
 - **What**: WCAG 1.4.1: colour "is not used as the only visual means of conveying information". The games'
   guidelines say the same of sound, and Xbox's asks that what is critical and shown by colour also has "shape,
   pattern, iconography, or text labels". A greyed control says it is unavailable by another method too. Haptics
-  go with another cue, never alone.
+  are never the only cue.
 - **Source**: [WCAG 2.2](https://www.w3.org/TR/WCAG22/), W3C; [Game accessibility guidelines, the full list](https://gameaccessibilityguidelines.com/full-list/);
   [Xbox Accessibility Guideline 103](https://learn.microsoft.com/en-us/xbox/accessibility/xbox-accessibility-guidelines/103),
   Microsoft.
@@ -762,7 +770,7 @@ read in [the Recommendation](https://www.w3.org/TR/WCAG22/) and in
 
 ### A status told without moving the focus
 
-- **What**: `role="status"` for a state that updates, `role="log"` for a log, a game's among MDN's examples,
+- **What**: `role="status"` for a state that updates, `role="log"` for a log (MDN's examples include a game's),
   `role="alert"` for an error. The region is in the first markup, empty, before it is filled. For `log` and
   `status`, add a redundant `aria-live="polite"`; for `alert`, do not add `aria-live`, or VoiceOver on iOS says
   it twice. Only what changed is announced unless `aria-atomic` is set. One sentence for one resolved action is
@@ -774,7 +782,7 @@ read in [the Recommendation](https://www.w3.org/TR/WCAG22/) and in
 - **Cost**: none.
 - **Less motion and screen reader**: this is the screen reader's form of every arrival in this book.
 - **Here**: `table/battle.html` already has regions: `#connection` and `#round-toast` as status, the coach's
-  lines and `#playback-announcement` as polite, three errors as alerts. UX13 makes a whole turn told in one
+  lines and `#playback-announcement` as polite, seven errors as alerts. UX13 makes a whole turn told in one
   region and tests it.
 
 ### A window that holds the focus
@@ -916,7 +924,6 @@ Sources: [caniuse](https://caniuse.com/view-transitions) and its data;
 - No source read says "replace movement by a fade" in those words.
 - The floor of text proposed for the match's frame, 11 px, is below the 18 px Xbox's guideline gives for a
   phone. It is a choice of room on a screen of 320 px, for the owner to make on UX11's sheet.
-- A bot that poses as a person costs trust. Label it. This game does.
 
 ## What the reading changed
 
@@ -948,10 +955,11 @@ What the notes said and the pages, read again on 2026-11-19, do not.
 - Playwright's page names neither a canvas nor the tag that turns the target-size rule on. Lighthouse's page
   does not call itself a subset of axe.
 - GDS's 37% counts errors and warnings; with prompts to inspect, the best tool found 41%.
-- `@starting-style` is Safari 17.5, and a window that leaves needs a transition on `display`: Safari 18, no
-  Firefox. No released Firefox does a view transition between two pages. Anchor positioning is in part in
-  Chromium and Firefox and whole on iOS 27. Speculation rules reach Safari 27.3 for prefetch. Lazy loading of an
-  image is iOS 15.4 and Firefox 75.
+- `@starting-style` is Safari 17.5. A window that leaves needs a transition on `display`: Safari 18, no Firefox.
+- No released Firefox does a view transition between two pages.
+- Anchor positioning is partial in Chromium and Firefox, and complete in Safari 27.
+- Speculation rules reach Safari 27.3, for prefetch only.
+- Lazy loading of an image is iOS 15.4 and Firefox 75.
 - The Xbox guidelines moved: their links are the new ones.
 
 ## What could not be opened

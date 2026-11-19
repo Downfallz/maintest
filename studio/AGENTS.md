@@ -28,7 +28,8 @@ npm --prefix studio/browser ci --ignore-scripts && npm --prefix studio/browser t
   installs. Without them its engine checks are skipped and say so. The gate and CI's full build install them
   first, and in CI's full build missing types fail the test.
 - `ux-craft.test.js` holds the pages' craft book (`docs/art/ux-craft.md`): an entry's six lines, the paths it
-  names, and its tokens against `docs/art/branding.css` and `table/identity.css`. It cannot open a link.
+  names, its links to a file or a heading, and its tokens against `docs/art/branding.css`, `table/table.css` and
+  `table/identity.css`. It cannot open a link to the web.
 - `storyboards.test.js` holds each beat of `docs/art/storyboards/` to the windows of `table/battle-timing.js`: a
   change to those timings re-times the storyboards and the figures in their `README.md`, in the same change.
 - The published studio is served under a GitHub Pages subpath: no absolute URL.

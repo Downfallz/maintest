@@ -129,7 +129,7 @@ paint, a phone), its form under less motion and for a screen reader, where this 
 Its groups: the first visit, teaching, the home, the match's frame, motion, pictures, accessibility.
 
 A test reads the book: every entry has its six lines, every path it names exists, every token it names is
-declared in `docs/art/branding.css` or in `table/identity.css`. A pattern with no source is marked *house*.
+declared in `docs/art/branding.css`, `table/table.css` or `table/identity.css`. A pattern with no source is marked *house*.
 
 ## The journey film and the measures
 
@@ -234,15 +234,19 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
 
    *Built (2026-11-19)*: [the book](ux-craft.md), 55 entries in the seven groups, each with its six lines, then
    the criteria of WCAG 2.2 that bear here, the table of what the platform offers, what is thin, what the
-   reading changed and what could not be opened. Every link of the notes was opened again that day: by four
+   reading changed and what could not be opened. Every link of the notes that could be opened was opened again that day: by four
    agents for teaching, the match's frame, accessibility, testing and the platform, and by the session itself
    for the first visit, the home, motion and pictures. About thirty claims did not hold as written and were
    corrected; the book lists them. The versions of the platform's features were read in caniuse's data and in
    MDN's, not on the rendered pages. `studio/ux-craft.test.js` holds the groups, the six lines, a source that is
-   a link or *house*, the paths, the tokens, and the book's row in `docs/README.md`; the notes are removed. Left:
+   a link or *house*, the paths, the links to a file or a heading, the tokens, and the book's row in
+   `docs/README.md`; the notes are removed. Review found that the pages already have motion tokens and a blanket
+   rule for less motion, both in `table/table.css`, which the plan's walk and the notes had missed: the book
+   says so, and UX4 starts from them. Left:
    two pages could not be opened and what rested on them is out of the book (APCA in WCAG 3, Hearthstone's first
    matches); axe's own list of tags was not read, so UX13 finds which tag turns the target-size rule on; a token
-   is held to `docs/art/branding.css` too, since the palette is declared there and not in `table/identity.css`.
+   is held to `docs/art/branding.css` and `table/table.css` too, since the palette and the motion tokens are
+   declared there and not in `table/identity.css`.
    No test can say a link still says what its entry says: the book gives the day it was read.
 2. **UX2, the journey film and the measures.** `scripts/ux/journey.mjs`, the five walks, the contact sheet, the
    measures, `--strip`. The first sheets and measures are the baseline, kept in `docs/art/journeys/baseline.md`.
