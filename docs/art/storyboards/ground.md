@@ -26,7 +26,11 @@ scale of about 0.34: the disc's centre near x 198, y 46, radius about 38 px; the
 below are given in source rows or in shares of the field, so they hold on a phone and a desktop alike.
 
 The film clock: the bench's film restarts the scene's ambient clock with the play, so a still film is deterministic,
-and the ambient clock is the only clock the air reads. Nothing here draws from `Math.random`.
+and the ambient clock is the only clock the air reads. Nothing here draws from `Math.random`. A film lets the scene
+settle 500 ms before its frame 0, and the ambient clock runs through it: at a frame's millisecond the air's clock reads
+that millisecond plus 500. The film steps the game by ticks of 20 ms (`FILM_TICK_MS`), and a tween added on a tick is
+first moved on the next: a beat that starts at contact shows its first value one tick later. Every duration here is
+at 1× and is divided by the playback rate only.
 
 ## The air at rest
 
@@ -58,8 +62,8 @@ the same beats go on.
 
 | At | Lasts | Window | Layer | Beat | Pattern |
 | --- | --- | --- | --- | --- | --- |
-| 0 | 840 | windup | the ground (fog) | One band of fog on the horizon, source rows 330 to 470, the field's whole width, feathered to nothing at its top and bottom: one `Phaser.GameObjects.TileSprite` of a texture drawn at boot. Slate taken from the painting's mist (`0x61857d`, rows 300 to 360) lifted to `0x8aa29c`, alpha .18 (*house*). It drifts left to right, `tilePositionX` = ambient clock × 0.003 px a ms, 3 px a second (*house*): 0.2 px a resting frame. Depth -8.9: over the arch's foot, under every figure. | [Fog and embers](../battle-craft.md#fog-and-embers), [Textures drawn at boot](../battle-craft.md#textures-drawn-at-boot) |
-| 0 | 840 | windup | the ground (embers) | 24 embers in place of the 24 gold motes: one soft dot drawn at boot, as images, additive, depth -8.8, behind every figure. 16 far: 2 px across, peak alpha .22, rising 1.2% of the field's height a second from source row 600 to row 420. 8 near: 4 px across, peak alpha .30, rising 2.5% a second from row 900 to row 480 (*house*). Each sways ±3 px across, on a period of 5 to 9 s by its index, and fades in and out along its rise (alpha × sin(π × progress)), so none appears or vanishes at once. | [Fog and embers](../battle-craft.md#fog-and-embers), [Additive light](../battle-craft.md#additive-light) |
+| 0 | 840 | windup | the ground (fog) | One band of fog on the horizon, source rows 330 to 470, the field's whole width, feathered to nothing at its top and bottom: one `Phaser.GameObjects.TileSprite` of a texture drawn at boot. Slate taken from the painting's mist (`0x61857d`, rows 300 to 360) lifted to `0x8aa29c`, alpha .30 (*house*; .18 on the first film lifted the floor by 5 levels at most, and the band could not be found). It drifts left to right, `tilePositionX` = ambient clock × 0.003 px a ms, 3 px a second (*house*): 0.2 px a resting frame. Depth -8.9: over the arch's foot, under every figure. | [Fog and embers](../battle-craft.md#fog-and-embers), [Textures drawn at boot](../battle-craft.md#textures-drawn-at-boot) |
+| 0 | 840 | windup | the ground (embers) | 24 embers in place of the 24 gold motes: one soft dot drawn at boot, as images, additive, depth -8.8, behind every figure. 16 far: 2 px across, peak alpha .30, rising 1.2% of the field's height a second from source row 600 to row 420. 8 near: 4 px across, peak alpha .40, rising 2.5% a second from row 900 to row 480 (*house*). Each sways ±3 px across, on a period of 5 to 9 s by its index, and fades in and out along its rise (alpha × sin(π × progress)), so none appears or vanishes at once. | [Fog and embers](../battle-craft.md#fog-and-embers), [Additive light](../battle-craft.md#additive-light) |
 | 0 | 840 | windup | the ground (embers) | Their colour is the faults' and the cracks' ember orange, `0xd18d51`, not the gold. They never rise above row 420: none crosses the sky, the eclipse or the bright clouds, where additive light turns white. Their alpha grows with the round as the floor breaks: × (0.6 + 0.4 × min(1, (round − 1) / 11)), 0.6 at round 1, 1 from round 12 (*house*). | [Shape before colour](../battle-craft.md#shape-before-colour), [One effect, one meaning](../battle-craft.md#one-effect-one-meaning) |
 | 840 | 1700 | impact | the ground | The same, through the impact. The air does not answer the hit: the light does ("The light that answers a cast"). | [Fog and embers](../battle-craft.md#fog-and-embers) |
 | 2540 | 500 | settle | the ground | The same. The result is read over a field where only the air moves. | [Fog and embers](../battle-craft.md#fog-and-embers), [The hold before the number](../battle-craft.md#the-hold-before-the-number) |
@@ -68,9 +72,11 @@ the same beats go on.
   state carried from frame to frame. The book's one flowing emitter draws from `Math.random`, which the bench pins
   only for the length of a play: a film of the field at rest would not repeat. Nothing it gives (a lifespan, a zone, a
   cap) is out of reach of a sine and a remainder for 24 dots, so no exception is asked for.
-- Each ember's place: across, a share of the field's width spread by the golden ratio over the indices (*house*); its
-  phase along its rise, its index × 0.618 of a cycle, so no two start together. A near ember's rise takes about 18 s,
-  a far one's about 16 s.
+- Each ember's place: across, its index × 0.7549 of the field's width (after 0.31), and its phase along its rise, its
+  index × 0.5698 of a cycle: the two coordinates of Roberts' R2 sequence (*house*), so no two start together and no
+  three stand on a line. The first film took the golden ratio for both, and the embers of each kind rose on one slant
+  across the floor: with one step for the column and the phase, the phase is the column's, and the dots draw a line.
+  A near ember's rise takes about 18 s, a far one's about 16 s.
 - Depth at rest is in the air itself, not in a camera: far embers are smaller, dimmer, slower and nearer the horizon
   than near ones, and the fog, the furthest, is the slowest of all. The painting and its plates never move at rest.
 - The numbers live in `table/battle-ground.js`, as the movement's live in `table/battle-motion.js`.
@@ -113,15 +119,19 @@ node scripts/battle/filmstrip.mjs --still --actor a1 --interval 1000 --round 12 
 ```
 
 - Every frame: a soft grey-green haze across the horizon, between the back row's rings and the front row, under the
-  arch's foot at round 1; the back row's rings drawn over it.
+  arch's foot at round 1; the back row's rings drawn over it. Against the sheet of today at the same millisecond, the
+  band lifts the floor at its densest rows by 10 to 20 levels a channel (`--scale 2`), never more than 30.
 - Every frame: no gold dot anywhere on the field. Small orange dots between the horizon and the bottom edge only:
-  none over the sky, the eclipse or the clouds, none drawn over a figure's body.
-- 0 and 1000 ms (`--scale 2`): a near ember has risen about 8 px of the field (16 on the sheet), a far one about 4;
-  each is in the same column within 3 px.
+  none over the sky, the eclipse or the clouds, none drawn over a figure's body; spread over the floor, no three of
+  one kind on a line.
+- 0 and 1000 ms (`--scale 2`, which lays about 4 sheet px to a pixel of the field): a near ember has risen about 8 px
+  of the field (about 32 on the sheet), a far one about 4 (about 15); each is in the same column within 3 px of the
+  field.
 - Round 12 against round 1, at the same millisecond: the dots brighter (the record: alpha factor 1 against 0.6).
-- 0 to 11000 ms: the haze's pattern has moved right, slowly (the record: drift 3 px a second, 33 px at 11000 ms).
-  The painting, the plates and the arch the same on all twelve frames.
-- The record (`--motion`), at each frame: `ground.fog.drift` = 0.003 × ms; `ground.embers.shown` 24;
+- 0 to 11000 ms: the haze's pattern has moved right, slowly (the record: drift 3 px a second, 33 px from 0 to
+  11000 ms). The painting, the plates and the arch the same on all twelve frames.
+- The record (`--motion`), at each frame: `ground.fog.drift` = 0.003 × (ms + 500), 1.5 at 0 ms and 34.5 at
+  11000 ms (the film's settling, under "The film clock"); `ground.embers.shown` 24;
   `ground.embers.alpha` 0.6 at round 1 and 1 at round 12; every `ground.layers` shift 0 and every scale 1;
   `ground.light.strength` 0.
 - Two films of one command are the same file byte for byte (`studio/browser/battle-bench.spec.js`).
@@ -230,8 +240,9 @@ node scripts/battle/filmstrip.mjs spell:heavy_strike:v1 --actor a1 --targets b1 
 - Depth-defeat, record, 0 to 800 ms: `ground.layers` every shift 0, every scale 1.
 - Depth-defeat, record, 840 to 1120 ms, every frame: the sky plates' shift is 0.5 × the view's offset (within
   0.01 px), the fog's 0.25 ×, the far embers' 0.2 ×; the painting's, the broken floor's and the near embers' 0.
-- Depth-defeat, record, 840 and 880 ms: the sky plates' scale below 1, so that on the screen they zoom half of the
-  view's punch over its fitted zoom (view zoom 1.03 at the peak: the sky 1.015).
+- Depth-defeat, record, 840 to 920 ms: the sky plates' scale below 1, (1 + 0.5 × (zoom − 1)) / zoom of the view's
+  zoom over its fitted one, so that on the screen they zoom half of the view's punch (the first film: view zoom 1.024
+  at 840 ms, the sky's scale 0.988, 1.012 on the screen; the punch's peak of 1.03 falls between two frames).
 - Depth-defeat, record, from 1160 ms: every shift 0 and every scale 1, on every later frame.
 - Depth-defeat-round1: the same lines for the fog and the far embers; no sky plate in the record at round 1.
 - Depth-light (Strike, 3 lost): the shifts follow a view offset under 1 px, and every scale stays 1 (no punch).
@@ -284,10 +295,10 @@ trauma is: the health lost by recipients other than the caster, added up.
 | At | Lasts | Window | Layer | Beat | Pattern |
 | --- | --- | --- | --- | --- | --- |
 | 0 | 840 | windup | the ground | Nothing. The light answers the contact; nothing anticipates it, so there is one change of light a cast. | [A light that answers a cast](../battle-craft.md#a-light-that-answers-a-cast) |
-| 840 | 100 | impact | the ground (the eclipse) | The rise, eased `Quad.Out` (*house*, the book's 100 ms): one `Phaser.GameObjects.PointLight` on the eclipse's disc (source x 846, y 135), its radius 1.4 × the disc's on the screen (*house*), its colour the family's (`PALETTE` in `battle/src/spell-effects.ts`), its intensity from 0 to 0.5 × strength (*house*). Depth -9.45: over the sky plates, under the arch, the faults and every figure, so it lights the sky behind a figure and never covers one. | [A light that answers a cast](../battle-craft.md#a-light-that-answers-a-cast), [Additive light](../battle-craft.md#additive-light) |
+| 840 | 100 | impact | the ground (the corona) | The rise, eased `Quad.Out` (*house*, the book's 100 ms): one ring of light on the eclipse's rim, an image of a soft annulus drawn at boot, additive, centred on the disc (source x 846, y 135): clear inside 0.9 × the disc's radius, at its peak at 1.08 ×, faded to nothing at 1.7 × (*house*). Tinted the family's colour (`PALETTE` in `battle/src/spell-effects.ts`), its alpha from 0 to 0.35 × strength (*house*). The disc stays dark: the corona brightens, the eclipse is not lit from within. Depth -9.45: over the sky plates, under the arch, the faults and every figure, so it lights the sky behind a figure and never covers one. | [A light that answers a cast](../battle-craft.md#a-light-that-answers-a-cast), [Additive light](../battle-craft.md#additive-light) |
 | 840 | 100 | impact | the ground (the tint) | With the same counter, the painting's, the plates' and the arch's tint go from their rest (`0xb5bbc2`, the arch `0xa5b1b3`) toward the family's colour, half the way × strength (*house*), through `Phaser.Display.Color.Interpolate.ColorWithColor`. | [A light that answers a cast](../battle-craft.md#a-light-that-answers-a-cast), [Flash limits](../battle-craft.md#flash-limits) |
-| 940 | 220 | impact | the ground | The fall, eased `Sine.In` (*house*): the light to 0 and hidden, every tint back to its rest. Gone at 1160 ms, 320 ms after contact. | [A light that answers a cast](../battle-craft.md#a-light-that-answers-a-cast), [The hold before the number](../battle-craft.md#the-hold-before-the-number) |
-| 1160 | 1380 | impact | the ground | Nothing new: the ground as it rests, the air going on. The result is read here. | [The hold before the number](../battle-craft.md#the-hold-before-the-number) |
+| 940 | 200 | impact | the ground | The fall, eased `Sine.In` (*house*): the ring to 0 and hidden, every tint back to its rest. Gone at 1140 ms, 300 ms after contact; on a film, which moves the counter from the tick after contact, at 1160 ms. | [A light that answers a cast](../battle-craft.md#a-light-that-answers-a-cast), [The hold before the number](../battle-craft.md#the-hold-before-the-number) |
+| 1140 | 1400 | impact | the ground | Nothing new: the ground as it rests, the air going on. The result is read here. | [The hold before the number](../battle-craft.md#the-hold-before-the-number) |
 
 What each action gets, by what the ground knows (the family, the health lost, a fizzle; never the spell):
 
@@ -307,14 +318,17 @@ What each action gets, by what the ground knows (the family, the health lost, a 
   blow that kills gets it too, for the same reason the camera punches on it.
 - The colours: physical `0xd2bbac`, biological `0xadc777`, elemental `0x8dcfe5`, necromantic `0x85c9c2`, astral
   `0xb9a6e5`. None is the target marker's gold.
-- One change of light a cast: the light and the tint are one counter, one rise and one fall. It is the field's only
-  one: a staging's `glow` is on a figure, its `flash` on a figure.
+- One change of light a cast: the ring and the tint are one counter, one rise and one fall: a single
+  `addCounter` from 0 to the rise and the fall together, its shape (the rise's ease, then the fall's) computed in its
+  `onUpdate`. Two counters chained by `onComplete` lose a tick between them, and at 2× that tick is a fifth of the fall.
+  It is the field's only one: a staging's `glow` is on a figure, its `flash` on a figure.
 - The flash limits: halfway to the family's colour changes the field's relative luminance by 1% (necromantic,
-  biological) to 7% (astral), under the 10% the W3C counts as a flash; the point light covers the disc and its corona,
-  well under a quarter of a 10° field. At 2× an action lasts about 1.5 s and plays one rise and fall: under one a
+  biological) to 7% (astral), under the 10% the W3C counts as a flash; the ring covers the corona, a band about 30 px
+  wide around a disc of radius 38 on the bench's field, well under a quarter of a 10° field. At 2× an action lasts about 1.5 s and plays one rise and fall: under one a
   second.
-- The craft book's fall is 400 ms; here it is 220, so the light is gone 320 ms after contact, as every bright beat must
-  be ([the camera](movement.md#the-camera)). See **Left**.
+- The craft book's fall is 400 ms; here it is 200, so the light is gone 300 ms after contact, and 320 on a film that
+  moves it from the tick after contact, as every bright beat must be ([the camera](movement.md#the-camera)). The first
+  film, with a fall of 220, still showed strength 0.14 at 1160 ms. See **Left**.
 
 ### Reduced motion
 
@@ -322,16 +336,19 @@ Nothing: no light, no tint change. The ground rests at its tint.
 
 ### Cost
 
-- Objects: one `PointLight`, made at boot, hidden and at intensity 0 at rest, and one counter tween a cast
-  (`Phaser.Tweens.TweenManager#addCounter`) that drives the light and the tints. Draw calls: one more, the light's
-  own batch, during the 320 ms it plays. The tints cost nothing.
+- Objects: one image, the ring, made at boot, hidden and at alpha 0 at rest, and one counter tween a cast
+  (`Phaser.Tweens.TweenManager#addCounter`) that drives the ring and the tints. Its texture is drawn at boot, white, a
+  soft annulus on a canvas of 128 by 128 (64 KiB of texture memory; no picture file), and tinted the family's colour.
+  Draw calls: one more, the ring's own (additive), during the 300 ms it plays. The tints cost nothing. The
+  `PointLight` of the first build goes: it peaks at its centre, and a light at the disc's centre fills the eclipse.
 - The tween counts in `busy()` as every tween does: the light plays at the full rate.
 - The cancel path (`clearMotion`), which a skip, a rotation, a seat change and a hidden tab all run: `killAll` stops
-  the counter, and the path gains the light's intensity set to 0 and the light hidden, and every tint set back to its
+  the counter, and the path gains the ring's alpha set to 0 and the ring hidden, and every tint set back to its
   rest (the painting and the plates `0xb5bbc2`, the arch `0xa5b1b3`). A plate that loads during a light is tinted at
   its rest and stays so.
-- The point light's place follows the backdrop's layout: it is laid again on a resize, from the source point.
-- Built by BC9: the light, the counter, what the scene reads at the impact (the family, the health lost by others, a
+- The ring's place and size follow the backdrop's layout: it is laid again on a resize, from the source point and
+  the disc's radius, and leans with the sky plate (factor 0.5) while the view trembles, as the light did.
+- Built by BC9: the ring and its texture, the counter, what the scene reads at the impact (the family, the health lost by others, a
   defeat), the strength's bands in `table/battle-ground.js`, the record's lines.
 
 ### On the film strip
@@ -353,19 +370,23 @@ node scripts/battle/filmstrip.mjs spell:meteor:v1 --actor a1 --targets b1 --dama
   --frames 36 --interval 20 --columns 6 --motion --out <folder>/light-medium-2x.png
 ```
 
-- Light-medium (Emberstorm, 5 lost), 800 ms: the eclipse as at 0 ms. 920 and 960 ms: the disc and the corona around
-  it paler and cooler than at 800 ms, the sky around it a little lighter; b1 and b2 not covered or brightened (the
-  light is behind them). 1200 ms: the eclipse as at 0 ms.
-- Light-medium, record: `ground.light.strength` 0 up to 800 ms, rising at 880 and 920 ms, its peak 0.5 at 920 or
-  960 ms, falling from 960 ms, 0 from 1160 ms on every frame; `ground.light.colour` `0x8dcfe5`; the painting's tint
+- Light-medium (Emberstorm, 5 lost), 800 ms: the eclipse as at 0 ms. 920 and 960 ms: a cool rim around the disc,
+  the corona paler and cooler than at 800 ms, the sky just around it a little lighter; the disc itself as dark as at
+  800 ms (against the sheet of today, its middle lifted by under 10 levels a channel), and no pixel of the eclipse
+  near white that was not at 800 ms; the ring centred on the disc within 2 px; b1 and b2 not covered or brightened
+  (the ring is behind them). 1160 ms: the eclipse as at 0 ms.
+- Light-medium, record: `ground.light.strength` 0 up to 840 ms, rising at 880 and 920 ms, its peak 0.5 at 960 ms,
+  falling from 1000 ms, 0 from 1160 ms on every frame; `ground.light.colour` `0x8dcfe5`; the painting's tint
   `0xb5bbc2` at 800 ms and from 1160 ms.
-- Light-defeat (Pummel, 8 lost, a defeat, round 12): the same shape at strength 1, colour `0xd2bbac`; the light sits
-  on the shattered sky's cracked disc; at 920 to 960 ms the whole floor a shade warmer than at 800 ms; from 1200 ms
-  every tint at its rest.
+- Light-defeat (Pummel, 8 lost, a defeat, round 12): the same shape at strength 1, colour `0xd2bbac`; the ring sits
+  on the rim of the shattered sky's cracked disc, and the bright crack inside the disc is no brighter than at 800 ms;
+  at 920 to 960 ms the whole floor a shade warmer than at 800 ms; from 1160 ms every tint at its rest. The command is
+  depth-defeat's: one film reads for both.
 - Light-strike, light-fizzle, light-heal: `ground.light.strength` 0 on every frame; the ground the same on every
   frame.
-- Light-medium-2x: the peak at 460 to 480 ms (contact at 420 ms), strength 0 again from 580 ms.
-- Every sheet: on no frame after 1160 ms at 1× is the light's strength above 0, and no frame shows the field in one
+- Light-medium-2x: the peak at 480 to 500 ms (contact at 420 ms, the counter moved from 440), strength 0 again from
+  600 ms (150 ms of counter after the tick that starts it).
+- Every sheet: on no frame from 1160 ms at 1× is the light's strength above 0, and no frame shows the field in one
   flat colour.
 
 A sheet cannot show the rise's ease or how the change of light feels at full speed, and a 7% change of the floor's
@@ -373,9 +394,9 @@ tint is hard to see between two frames: read the record for the strength and the
 
 ### Left
 
-- The fall is 220 ms, not the book's 400: the light is a bright beat, and since BC5 every bright beat is gone 320 ms
+- The fall is 200 ms, not the book's 400: the light is a bright beat, and since BC5 every bright beat is gone 320 ms
   after contact so the result is read on a quiet field. The book's **Here** for "A light that answers a cast" is to
-  say so. If the film shows 220 ms reads as a blink, the other way is a 400 ms fall with the hold's rule amended for a
+  say so. If the film shows 200 ms reads as a blink, the other way is a 400 ms fall with the hold's rule amended for a
   light that only dims.
 - The light is on the eclipse, not under the cast or the target: the figure already has its hit flash and the
   spell's own glow, and one figure gets one flash an action. The eclipse is the place's one source of light, so it is
@@ -384,8 +405,14 @@ tint is hard to see between two frames: read the record for the strength and the
   spells speak of the eclipse; the owner may want them to.
 - The strength is read from the health lost, so it says nothing the frame does not hold (ADR 0131), but at contact it
   shows a heavy blow's weight before the number is read, as the movement's anticipation does.
-- The point light is an additive object the book's "Additive light" counts: it is drawn on the dark disc and the
-  corona, where it reads; over the brightest clouds of the corona it may turn white. The film decides its intensity.
+- A ring, not the book's `PointLight`. The first film put a `PointLight` at intensity 0.5 × strength on the disc: a
+  point light is brightest at its centre, so it filled the dark disc with a pale ball, near white at its middle at
+  strength 0.5 (the disc's pixels lifted by about 70 levels) and blown out over the shattered sky's crack at
+  strength 1. It read as a second sun lit in the sky, a flash of its own beside the target's, and no longer as an
+  eclipse whose corona answers. The ring is an image drawn at boot ("Textures drawn at boot") and drawn additive
+  ("Additive light"), both in the book; the entry's **Phaser** line, which names a point light at the cast, is to say
+  that on a dark disc the light is a ring. Over the brightest clouds of the corona the ring may still turn white: the
+  film decides its alpha.
 - Not staged: "A scar that fades". The craft book's entry names BC9, but the plan's line for BC9 does not, and a
   scar is a mark under the target, the spell's place, not the ground's answer. It waits for its own pass; the book's
   **Here** is to stop naming BC9 for it.
