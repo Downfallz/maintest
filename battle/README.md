@@ -943,7 +943,7 @@ view's trauma.
   rate and is not counted in `busy()`. A fallen figure does not breathe.
 - **The view**: one trauma value replaces the fixed camera shakes. Each creature other than the caster that lost
   health adds 0.25, 0.40 or 0.55, a defeat 0.10 more, to a ceiling of 0.6; it falls by 0.25 every 120 ms, and the
-  offset is its square times 2.5% of the view's shorter side. A defeat or a critical hit also punches the zoom by
+  offset is its square times 5% of the view's shorter side (2.5% until the owner asked for more, #910). A defeat or a critical hit also punches the zoom by
   3% for 200 ms, the critical hit only when it took health. A blood cost, a heal, a ward and a blow that took nothing add nothing. The offset is laid over the
   fitted camera and read from the action's clock, never from `Math.random`.
 - **One flash a figure**: when a spell's staging flashes its targets and the kit is there to play it, the scene's
@@ -971,7 +971,8 @@ them a spell's look:
 - The light. At the impact the scene reads `lightOf(cue, actor)`: the health the host confirmed lost by the
   creatures other than the caster, on the movement's bands. From 4 points the eclipse's corona brightens in the
   family's colour and the painting, the plates and the arch are tinted part of the way to it, over 100 ms, then
-  back over 200 ms. A base action's few points, a heal, a ward, a blood cost alone and a fizzle leave the ground
+  back over 200 ms. The same light pools on the ground under each figure that lost health (`lightOf(...).under`),
+  behind every figure: the owner asked for the answer in both places (#953). A base action's few points, a heal, a ward, a blood cost alone and a fizzle leave the ground
   as it rests. `clearMotion` puts the light out and the tints back.
 
 `window.battleBench.motion().ground` tells the fog's drift, the embers shown, each layer's shift and scale, and the
@@ -1012,7 +1013,7 @@ plays them through the kit, `src/fx/`:
   back. Under reduced motion a primitive returns before it makes anything.
 - At most 24 particles a beat and 150 on the field, counted as what the living emitters may hold. The shapes
   are four frames of one texture drawn at boot (`fx-kit`): a dot, a spark, a shard, a ring; a fifth, larger
-  frame is the shock ring's. A beat's `tint` is one of `family`, `bone`, `ember` or `blood`.
+  frame is the shock ring's. A beat's `tint` is one of `family`, `bone`, `ember`, `blood` or `hide` (bone in shadow: a flake of a figure's own hide).
 - A `reach` is a share of the figure's radius, from 1 to 400. The radius is about a third of the figure's
   height, so a burst under 250 stays over the body and is lost against the motif, and 300 clears it (BC6's
   first films). On `burst`, `flow` and `gather` a `strength` is the size of the pieces: 0.5 unless told, 1 half

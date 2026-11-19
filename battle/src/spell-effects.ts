@@ -12,10 +12,11 @@ export interface EffectAnchor { x: number; y: number; radius: number; feet?: num
 const PALETTE: Record<string, number> = { ...LIGHT_COLOURS, neutral: 0xaab8c0 };
 // A motif that carries its own colour whatever the family: embers are warm, a wound is blood.
 // Blood is a deep brown red: the paler 0xb66f7e read pink over the sky (#919, the owner's choice).
-const MOTIF_COLOR: Record<string, number> = { fire: 0xd58b75, wound: 0x9a3b34 };
+const MOTIF_COLOR: Record<string, number> = { fire: 0xe0763f, wound: 0x9a3b34 };
 // The colours a beat names (`table/battle-staging.js`): the palette's bone, which stays equal to `--brand-bone`
 // (docs/art/branding.css), and the two a motif already carries. The target marker's gold is not among them.
-const TINTS: Record<string, number> = { bone: BONE, ember: MOTIF_COLOR.fire, blood: MOTIF_COLOR.wound };
+// `hide` is bone in shadow: a flake of a figure's own hide, which must not read as the bright chip of a blow.
+const TINTS: Record<string, number> = { bone: BONE, ember: MOTIF_COLOR.fire, blood: MOTIF_COLOR.wound, hide: 0x8c7f68 };
 
 // Between two copies of one beat, at 1× (*house*, the craft book's 30 to 60 ms).
 const STAGGER_MS = 40;

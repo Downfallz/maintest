@@ -48,7 +48,7 @@ public sealed class SpellArt
     public static readonly IReadOnlyList<string> Shapes = ["dot", "spark", "shard", "ring"];
 
     /// <summary>The colours a beat may take, by name: the family's own, or one of the palette's. Never the marker's gold.</summary>
-    public static readonly IReadOnlyList<string> Tints = ["family", "bone", "ember", "blood"];
+    public static readonly IReadOnlyList<string> Tints = ["family", "bone", "ember", "blood", "hide"];
 
     /// <summary>How a beat is blended over the field.</summary>
     public static readonly IReadOnlyList<string> Blends = ["normal", "add", "screen"];

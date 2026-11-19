@@ -7,7 +7,7 @@ import { IMPACT_MS, VFX_MS, WINDUP_MS } from './battle-timing.js';
 export const BEATS = Object.freeze(['motif', 'burst', 'flow', 'trail', 'gather', 'glow', 'flash', 'shake', 'pulse']);
 export const ANCHORS = Object.freeze(['caster', 'target']);
 export const SHAPES = Object.freeze(['dot', 'spark', 'shard', 'ring']);
-export const TINTS = Object.freeze(['family', 'bone', 'ember', 'blood']);
+export const TINTS = Object.freeze(['family', 'bone', 'ember', 'blood', 'hide']);
 export const BLENDS = Object.freeze(['normal', 'add', 'screen']);
 export const DIRECTIONS = Object.freeze(['out', 'along', 'back', 'up']);
 // Where on its figure a beat starts (the craft book, "A beat on the ground"): what starts at the feet lies on the ground.

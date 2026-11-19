@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { WINDUP_MS } from '../../table/battle-timing.js';
-import { DEPTH, EMBER_COUNT, FOG, LIGHT, LIGHT_COLOURS, REST_TINT } from '../../table/battle-ground.js';
+import { DEPTH, EMBER_COUNT, FOG, LIGHT, LIGHT_COLOURS, REST_TINT, emberGlow } from '../../table/battle-ground.js';
 import { openBench } from '../../scripts/battle/filmstrip.mjs';
 
 // The ground (docs/art/storyboards/ground.md, BC9 of docs/art/battle-craft-plan.md): the air at rest, the depth of
@@ -13,7 +13,7 @@ const ground = async page => (await page.evaluate(() => window.battleBench.motio
 const view = async page => (await page.evaluate(() => window.battleBench.motion())).view;
 const hex = colour => `0x${colour.toString(16).padStart(6, '0')}`;
 const REST = hex(REST_TINT.painting);
-const DARK = { strength: 0, colour: null, tint: REST, shown: false };
+const DARK = { strength: 0, colour: null, tint: REST, shown: false, under: 0, pool: 0 };
 const STILL = { x: 0, y: 0, scale: 1 };
 const defeat = { spell: 'spell:pummel:v1', actor: 'a1', targets: ['b1'], damage: 8, defeat: true };
 // The round's scenery is waited for before a film, as the film strip script does.
@@ -27,7 +27,7 @@ test.beforeEach(async ({ page }) => { await openBench(page, '/table/battle-lab.h
 test('at rest the fog drifts and the embers rise on the ambient clock, and nothing else of the ground moves', async ({ page }) => {
   await film(page, 'start', { still: true, actor: 'a1' });
   const first = await ground(page);
-  expect(first.embers).toEqual({ shown: EMBER_COUNT, alpha: .6 });
+  expect(first.embers).toEqual({ shown: EMBER_COUNT, alpha: emberGlow(1) });
   expect(first.light).toEqual(DARK);
   await film(page, 'advance', 2000);
   const later = await ground(page);
@@ -81,6 +81,9 @@ test('a blow that defeats lights the eclipse once in its family\'s colour, and t
   }
   const peak = seen.reduce((best, one) => one.strength > best.strength ? one : best);
   expect(peak).toMatchObject({ strength: 1, colour: hex(LIGHT_COLOURS.physical), shown: true });
+  // The same light pools on the ground under the one figure the blow harmed (#953), at its strength.
+  expect(peak.under).toBe(1);
+  expect(peak.pool).toBeCloseTo(LIGHT.under.alpha, 2);
   expect(peak.tint).not.toBe(REST);
   expect(peak.ms).toBeLessThanOrEqual(WINDUP_MS + LIGHT.rise + 40);
   // One rise and one fall: once it has started to fall it never rises again.
@@ -163,4 +166,17 @@ test('a hidden tab stops the air, and it goes on from where it stood when the ta
   await expect.poll(drift).toBeGreaterThan(stood);
   // No jump: the 1.2 s the tab was hidden are not caught up (3.6 px of drift); it resumes within a step or two.
   expect(await drift() - stood).toBeLessThan(1200 * FOG.drift);
+});
+
+test('the light pools under each figure that lost health, behind every figure, and under none that only received', async ({ page }) => {
+  await film(page, 'start', { spell: 'spell:lightning_bolt:v1', actor: 'b2', targets: ['a1', 'a3'], damage: 5 });
+  await film(page, 'advance', WINDUP_MS + LIGHT.rise);
+  expect((await ground(page)).light).toMatchObject({ under: 2, colour: hex(LIGHT_COLOURS.elemental) });
+  const drawn = await page.evaluate(() => window.battleBench.groundObjects());
+  expect(drawn.pools).toBe(2);
+  expect(drawn.poolDepth).toBeLessThan(0);
+  await film(page, 'advance', LIGHT.fall + 80);
+  expect((await ground(page)).light).toEqual(DARK);
+  expect((await page.evaluate(() => window.battleBench.groundObjects())).pools).toBe(0);
+  await film(page, 'stop');
 });

@@ -94,7 +94,8 @@ export class BattleScene extends Phaser.Scene implements Restful {
     const embers = named('ground-ember').filter(one => one.visible);
     const painted = this.children.list.filter(child => child === this.backdrop || child.name.startsWith('horizon-') && child.name !== 'horizon-faults'
       && child.name !== 'horizon-pier' && child.name !== 'horizon-span') as Phaser.GameObjects.Image[];
-    return { embers: embers.length, deepest: Math.max(-Infinity, ...embers.map(one => one.depth)), fog: named('ground-fog').some(one => one.visible),
+    const pools = named('ground-pool');
+    return { pools: pools.length, poolDepth: Math.max(-Infinity, ...pools.map(one => one.depth)), embers: embers.length, deepest: Math.max(-Infinity, ...embers.map(one => one.depth)), fog: named('ground-fog').some(one => one.visible),
       tints: [...new Set(painted.map(one => `0x${one.tintTopLeft.toString(16).padStart(6, '0')}`))] };
   }
   // Which image a creature now shows: an evolution illustration's id, or `form:<form>` for an audited sprite.
@@ -422,7 +423,11 @@ export class BattleScene extends Phaser.Scene implements Restful {
     if (punches(cue, this.state.actor)) this.viewShake.punchIn();
     // The eclipse answers harm, by its weight, in the family's colour (the craft book, "A light that answers a cast").
     const light = lightOf(cue, this.state.actor);
-    this.ground?.answer(light.colour, light.strength, this.rate);
+    const under = light.under.flatMap(id => {
+      const figure = this.figures.get(id);
+      return figure ? [{ x: figure.home.x, feet: figure.home.y, radius: this.anchor(figure).radius }] : [];
+    });
+    this.ground?.answer(light.colour, light.strength, this.rate, under);
   }
 
   // The caster once its action has landed: a lunge holds for the stop and goes home, a cast or a throw lets go.

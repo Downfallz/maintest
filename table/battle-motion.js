@@ -153,7 +153,7 @@ export function breath(ms, place = 0) {
 }
 
 /** The view's trauma: what a defeat adds, its ceiling, how fast it falls, and the reach of a full shake. */
-export const TRAUMA = Object.freeze({ defeat: .10, ceiling: .6, fall: .25 / 120, reach: .025 });
+export const TRAUMA = Object.freeze({ defeat: .10, ceiling: .6, fall: .25 / 120, reach: .05 });
 /** A punch of the zoom, on a defeat or a critical hit. */
 export const PUNCH = Object.freeze({ amount: .03, lasts: 200 });
 
