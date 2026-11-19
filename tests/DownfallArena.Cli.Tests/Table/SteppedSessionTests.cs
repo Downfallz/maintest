@@ -261,12 +261,9 @@ public sealed class SteppedSessionTests : IDisposable
         api.Changes.Version.ShouldBe(before);
     }
 
-    /// <summary>
-    /// A match ended is the match the session keeps, read at once: a seat view reads the end from that board, and a
-    /// tutorial is done from the same fact (#912).
-    /// </summary>
+    /// <summary>A concession ends the match the session keeps: the board the seats read has its outcome (#912).</summary>
     [Fact]
-    public async Task A_concession_ends_the_match_the_session_keeps_as_soon_as_it_is_taken()
+    public async Task A_concession_ends_the_match_the_session_keeps()
     {
         var (session, person, _) = await Opened(_host);
         session.Begin();
@@ -278,12 +275,26 @@ public sealed class SteppedSessionTests : IDisposable
         session.HasEnded.ShouldBeTrue();
     }
 
+    /// <summary>A table let go of plays on no more, but it did not end its match: no outcome, no end (#912).</summary>
+    [Fact]
+    public async Task A_table_let_go_of_is_over_without_having_ended_its_match()
+    {
+        var (session, person, _) = await Opened(_host);
+        session.Begin();
+        await Waiting(person, PlayerOptionsKind.Evolution);
+
+        await _stopping.CancelAsync();
+        await Task.WhenAny(session.Outcome);
+
+        (session.IsOver, session.HasEnded).ShouldBe((true, false));
+    }
+
     /// <summary>
-    /// A table let go of did not end its match: a tutorial played on it is not done, so its practice is not kept as
-    /// finished on the account (#912).
+    /// A tutorial played on a table let go of is not done: its practice is not kept as finished on the account. It
+    /// guards the tutorial reading the session's end rather than whether it plays on (#912).
     /// </summary>
     [Fact]
-    public async Task A_table_let_go_of_has_not_ended_its_match_and_a_tutorial_on_it_is_not_done()
+    public async Task A_tutorial_on_a_table_let_go_of_is_not_done()
     {
         var (session, person, _) = await Opened(_host);
         var lesson = TutorialLesson.Create(1, "Your first combat", [PlayerOptionsKind.Action], [new LessonStep(PlayerOptionsKind.Action, 2, null, ["Pick a spell."], [])]).Value;
@@ -295,8 +306,6 @@ public sealed class SteppedSessionTests : IDisposable
         await _stopping.CancelAsync();
         await Task.WhenAny(session.Outcome);
 
-        session.IsOver.ShouldBeTrue();
-        session.HasEnded.ShouldBeFalse();
         tutorial.Done.ShouldBeFalse();
     }
 

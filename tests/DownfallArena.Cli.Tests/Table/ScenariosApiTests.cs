@@ -980,6 +980,27 @@ public sealed class ScenariosApiTests : IDisposable
         Standing(await api.HandleAsync("GET", ScenariosApi.TutorialsRoute, learner)).State.ShouldBe("new");
     }
 
+    /// <summary>
+    /// The seat view that first says the match is over says the tutorial is done in the same answer, read once: the
+    /// result it opens says Tutorial complete, and leaving from it keeps the tutorial done, never skipped (#912).
+    /// </summary>
+    [Fact]
+    public async Task A_tutorial_s_match_ended_says_it_done_in_the_first_seat_view_that_says_it_over()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var (api, accounts) = await KeepingAsync(store, practices);
+        var learner = await SignedInAsync(accounts, "learner");
+        var play = await OpenTutorialAsync(store, practices, "learner");
+        (await play.Api.HandleAsync("POST", "/api/seat/player1/concede", "", play.Token)).Status.ShouldBe(200);
+
+        var view = Read(await play.Api.HandleAsync("GET", "/api/seat/player1", "", play.Token));
+        var done = await api.HandleAsync("POST", $"{ScenariosApi.TutorialsRoute}/{Tutorial}/done", learner);
+
+        (view.GetProperty("over").GetBoolean(), view.GetProperty("practice").GetProperty("tutorial").GetProperty("done").GetBoolean()).ShouldBe((true, true));
+        done.Status.ShouldBe(200, Encoding.UTF8.GetString(done.Body));
+    }
+
     [Fact]
     public async Task A_tutorial_played_to_its_end_is_kept_done_even_after_it_was_skipped_and_skipping_it_again_leaves_it_done()
     {
