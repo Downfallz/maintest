@@ -1128,9 +1128,9 @@ node scripts/battle/filmstrip.mjs spell:tornado:v1 --actor a1 --targets b1,b2,b3
 
 - 0 ms: a1's gold rim. 360 to 540 ms: a1's rim quieted and its body paler under the ember halo, dust over its
   middle. 600 to 780 ms: the halo fading.
-- 480 to 600 ms: the crack's first shards at a1's front feet. 660 ms: a few shards leaving a1 toward the targets.
+- 600 ms: the crack's first shards leaving a1's front feet toward the targets. 660 ms: three short dotted lines.
 - 720 ms: three dotted lines of shards across the gap, low over the ground, one toward each target. 780 ms: the
-  lines reach the targets' ground; none beside a1 or behind it. 840 ms: the crack gone.
+  lines whole, reaching the targets' ground; none beside a1 or behind it. 840 ms: the crack gone with the windup.
 - 840 ms: the three targets filled flat in bone; a bright arc at a1's front feet, toward the targets.
 - 900 ms: shards rising out of a1's forelegs; on b1 a white burst at its feet, rings and the wave motif on b2 and b3.
 - 960 and 1020 ms: shards and sparks erupt from each target's feet as near-white spurts; rings at each target's
