@@ -98,12 +98,12 @@ tutorial 2 carries nothing tutorial 3 teaches.
    px and desktop; `battle-services.spec.js` still shows Rematch and Lobby in an ordinary game;
    `battle.tutorials.js` plays tutorial 4 to the end and leaves from the result. No ADR.
 
-   *Built (2026-11-19)*: `tutorialControls` gives `ending()`, the tutorial's Play again, and answers the
+   *Built (2026-11-19)*: `tutorialControls` gives `ending()`, which carries the tutorial's Play again, and answers the
    result's **Leave the tutorial** link as it answers the coach card's; `matchControls` reads it and, in a
    tutorial, writes **TUTORIAL COMPLETE** in the eyebrow, shows `#match-again` and `#match-leave` and hides
-   Rematch and Lobby. Under 360 px Replay the match and Leave the tutorial take a row each, so both read whole.
+   Rematch and Lobby. Under 400 px Replay the match and Leave the tutorial take a row each, so both read whole.
    The mock specs end a tutorial's match at 320 px, 390 px and desktop; the real-engine journey leaves tutorial 4
-   from its result, and checks the three others never open one. Left: the round no longer shows in a tutorial's
+   from its result, and checks the three others never open one. Still open: the round no longer shows in a tutorial's
    eyebrow, and a tutorial whose match ends in a draw or a defeat keeps that title under the same eyebrow.
 2. **T2, tutorial 2 cut at round 2.** A new `who-acts-first.json` from `scenario-generate`, its steps written
    again with the rulebook-writer and the copy-editor, onboarding-plan.md's series table and O5 note brought in

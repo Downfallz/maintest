@@ -1372,8 +1372,8 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { display: none; }
 #match-dialog .match-footer #feedback-open-match:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
 @media (min-width: 560px) { #match-dialog .match-footer :is(#match-rematch, #match-again) { flex: 1.4 1 0; } }
-/* On the smallest phone Replay the match and Leave the tutorial do not fit one row whole: each takes its own. */
-@media (max-width: 359px) { #match-dialog[data-tutorial="true"] .match-footer :is(#match-replay, #match-leave) { flex: 1 1 100%; } }
+/* On a phone Replay the match and Leave the tutorial do not fit one row whole (300 px of footer at 360 px): each takes its own. */
+@media (max-width: 399px) { #match-dialog[data-tutorial="true"] .match-footer :is(#match-replay, #match-leave) { flex: 1 1 100%; } }
 /* A creature's effects (upkeep ticks, a spell's outcomes, its place in the order) read above its head, not over its
    body; a stage squeezed under a docked sheet keeps them at the top of the head, inside the field. */
 #battle .creature > .creature-effect { left: -24px; right: -24px; top: 0; bottom: auto; padding-bottom: 0; transform: translateY(-100%); }

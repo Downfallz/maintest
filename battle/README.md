@@ -727,7 +727,7 @@ shared device opens the same table at once. **Invite to rematch** keeps a friend
 player who is not a friend. Then come **Replay the match** and **Lobby**; History stays in the field's header.
 In a tutorial the result is the tutorial's end (`docs/tabletop/tutorial-follow-ups-plan.md`, T1): its eyebrow says
 **Tutorial complete**, and **Play again** and **Leave the tutorial**, the coach card's own two actions
-(`tutorialControls().ending()`), take the places of Rematch and Lobby. The replay, the report and Report or suggest stay.
+(`tutorialControls().ending()`), take the places of Rematch and Lobby. The replay, the battle report and **Report or suggest…** stay.
 Match replay now reaches the host's final public snapshot after
 all recorded actions/cleanup, then returns to the scorecard. Its dock says where it stands (round, step and a thin
 progress bar, before or after the recorded action) and draws each step as the last result is drawn
