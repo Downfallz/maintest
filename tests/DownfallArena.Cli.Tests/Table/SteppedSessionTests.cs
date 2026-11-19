@@ -6,6 +6,7 @@ using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Matches.Journaling;
 using DownfallArena.Application.Matches.Ports;
 using DownfallArena.Application.Matches.Projections;
+using DownfallArena.Application.Matches.Scenarios;
 using DownfallArena.Cli.Table;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Rounds;
@@ -258,6 +259,45 @@ public sealed class SteppedSessionTests : IDisposable
         await Failed();
 
         api.Changes.Version.ShouldBe(before);
+    }
+
+    /// <summary>
+    /// A match ended is the match the session keeps, read at once: a seat view reads the end from that board, and a
+    /// tutorial is done from the same fact (#912).
+    /// </summary>
+    [Fact]
+    public async Task A_concession_ends_the_match_the_session_keeps_as_soon_as_it_is_taken()
+    {
+        var (session, person, _) = await Opened(_host);
+        session.Begin();
+        await Waiting(person, PlayerOptionsKind.Evolution);
+
+        var conceded = await session.ConcedeAsync(PlayerSlot.Player1);
+
+        conceded.IsSuccess.ShouldBeTrue();
+        session.HasEnded.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// A table let go of did not end its match: a tutorial played on it is not done, so its practice is not kept as
+    /// finished on the account (#912).
+    /// </summary>
+    [Fact]
+    public async Task A_table_let_go_of_has_not_ended_its_match_and_a_tutorial_on_it_is_not_done()
+    {
+        var (session, person, _) = await Opened(_host);
+        var lesson = TutorialLesson.Create(1, "Your first combat", [PlayerOptionsKind.Action], [new LessonStep(PlayerOptionsKind.Action, 2, null, ["Pick a spell."], [])]).Value;
+        var tutorial = new TutorialPlay(lesson, new AssistedSeat(lesson, []), PlayerSlot.Player1, of: 1) { Said = _ => { } };
+        tutorial.Follow(session);
+        session.Begin();
+        await Waiting(person, PlayerOptionsKind.Evolution);
+
+        await _stopping.CancelAsync();
+        await Task.WhenAny(session.Outcome);
+
+        session.IsOver.ShouldBeTrue();
+        session.HasEnded.ShouldBeFalse();
+        tutorial.Done.ShouldBeFalse();
     }
 
     /// <summary>

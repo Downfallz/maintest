@@ -170,7 +170,24 @@ internal sealed class SteppedSession : ITableSession, IAgentTurnTaker
 
     public Task<Result<MatchOutcome>> Outcome => _outcome.Task;
 
+    /// <summary>Whether the session plays on no more: its match ended, or it was let go of, or it could not go on.</summary>
     public bool IsOver => _outcome.Task.IsCompleted;
+
+    /// <summary>
+    /// Whether the match ended, win, loss, draw or concession: the match this session keeps has an outcome. Read from
+    /// the board the seats read, so it holds as soon as a seat view can say it; a session let go of, or one that could
+    /// not go on, did not end its match (#912).
+    /// </summary>
+    public bool HasEnded
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _state?.Outcome is not null;
+            }
+        }
+    }
 
     public bool HasBegun => Volatile.Read(ref _begun) != 0;
 
