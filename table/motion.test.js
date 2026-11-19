@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import test from 'node:test';
-import { SETTINGS_KEY, abortedTransition, ambienceToPlay, lessMotion, wantsLessMotion, mountMotion, numberChanged, reach, savedLess } from './motion.js';
+import { SETTINGS_KEY, ambienceToPlay, lessMotion, wantsLessMotion, mountMotion, numberChanged, reach, savedLess } from './motion.js';
 import { mountGameSettings, saveLocalSettings } from './game-preferences.js';
 
 const root = new URL('../', import.meta.url);
@@ -99,10 +99,8 @@ for (const sheet of ['table/identity.css', 'showcase/showcase.css']) {
     }
   });
 
-  test(`${sheet}: a page changes with a transition under full motion only`, () => {
-    const page = declarations(kitOf(sheet)).filter(one => one.under.includes('@view-transition'));
-    assert.deepEqual(page.map(one => `${one.property}: ${one.value}`), ['navigation: auto']);
-    assert.ok(page[0].under.includes(FULL_MOTION));
+  test(`${sheet}: no page takes a transition yet: on the host the browser refused it and reported an error`, () => {
+    assert.doesNotMatch(read(sheet).replace(/\/\*[\s\S]*?\*\//g, ''), /@view-transition/);
   });
 }
 
@@ -170,9 +168,9 @@ const elementOf = (attributes = {}) => ({
 test('less motion is one attribute on the root, set and taken away', () => {
   const html = elementOf();
   reach(html, true);
-  assert.equal(html.attributes['data-motion'], 'less');
+  assert.equal(html.dataset.motion, 'less');
   reach(html, false);
-  assert.equal('data-motion' in html.attributes, false);
+  assert.equal('motion' in html.dataset, false);
 });
 
 test('one ambience plays a screen: the first in view, and none in a hidden tab', () => {
@@ -184,7 +182,7 @@ test('one ambience plays a screen: the first in view, and none in a hidden tab',
 
 test('a number that changes plays its beat again each time', () => {
   const calls = [];
-  const el = { classList: { remove: name => calls.push(`-${name}`), add: name => calls.push(`+${name}`) }, get offsetWidth() { calls.push('reflow'); return 0; } };
+  const el = { classList: { remove: name => calls.push(`-${name}`), add: name => calls.push(`+${name}`) }, getBoundingClientRect() { calls.push('reflow'); return {}; } };
   numberChanged(el);
   assert.deepEqual(calls, ['-motion-changed', 'reflow', '+motion-changed']);
   assert.doesNotThrow(() => numberChanged(null));
@@ -207,13 +205,13 @@ function windowOf({ saved = false, battle = null } = {}) {
 test('a page opens with the account\'s setting, and follows it when another tab or the settings panel changes it', () => {
   const { win, html, storage, listeners } = windowOf({ saved: true });
   mountMotion(win);
-  assert.equal(html.attributes['data-motion'], 'less');
+  assert.equal(html.dataset.motion, 'less');
   saveLocalSettings(storage, { reducedMotion: false });
   for (const listener of listeners.storage) listener({ key: SETTINGS_KEY });
-  assert.equal('data-motion' in html.attributes, false);
+  assert.equal('motion' in html.dataset, false);
   saveLocalSettings(storage, { reducedMotion: true });
   for (const listener of listeners['downfall:settings']) listener({});
-  assert.equal(html.attributes['data-motion'], 'less');
+  assert.equal(html.dataset.motion, 'less');
 });
 
 test('the battle\'s page follows the game\'s own setting, as the match settings change it', () => {
@@ -221,44 +219,14 @@ test('the battle\'s page follows the game\'s own setting, as the match settings 
   battle.dataset.reducedMotion = 'false';
   const { win, html, observed } = windowOf({ saved: true, battle });
   mountMotion(win);
-  assert.equal('data-motion' in html.attributes, false, 'the game said full motion');
+  assert.equal('motion' in html.dataset, false, 'the game said full motion');
   assert.deepEqual(observed.map(one => one.options), [{ attributes: true, attributeFilter: ['data-reduced-motion'] }]);
   battle.dataset.reducedMotion = 'true';
   observed[0].callback();
-  assert.equal(html.attributes['data-motion'], 'less');
+  assert.equal(html.dataset.motion, 'less');
 });
 
-test('under less motion a page is left at once: the old page skips the transition the account cannot gate in CSS', () => {
-  const { win, listeners } = windowOf({ saved: true });
-  mountMotion(win);
-  let skipped = 0;
-  for (const listener of listeners.pageswap) listener({ viewTransition: { skipTransition() { skipped++; } } });
-  for (const listener of listeners.pageswap) listener({ viewTransition: null });
-  assert.equal(skipped, 1);
-  const full = windowOf({ saved: false });
-  mountMotion(full.win);
-  for (const listener of full.listeners.pageswap) listener({ viewTransition: { skipTransition() { skipped++; } } });
-  assert.equal(skipped, 1);
-});
-
-test('a page\'s transition the browser gave up on is answered, and no other rejection is', () => {
-  const aborted = Object.assign(new Error('Transition was aborted because of invalid state. Viewport size changed'), { name: 'InvalidStateError' });
-  assert.equal(abortedTransition(aborted), true);
-  assert.equal(abortedTransition(Object.assign(new Error('The object is in an invalid state.'), { name: 'InvalidStateError' })), false);
-  assert.equal(abortedTransition(new Error('Transition was aborted, said a host')), false);
-  assert.equal(abortedTransition('Transition was aborted'), false);
-  assert.equal(abortedTransition(undefined), false);
-
-  const { win, listeners } = windowOf();
-  mountMotion(win);
-  const answered = [];
-  for (const reason of [aborted, new Error('The host did not answer')]) {
-    for (const listener of listeners.unhandledrejection) listener({ reason, preventDefault: () => answered.push(reason.message) });
-  }
-  assert.deepEqual(answered, [aborted.message]);
-});
-
-test('the kit\'s module comes before a page\'s own scripts, so its answer is given before theirs', () => {
+test('the kit\'s module comes before a page\'s own scripts, so less motion is on the root before they draw', () => {
   for (const name of readdirSync(new URL('table/', root)).filter(name => name.endsWith('.html'))) {
     const page = read(`table/${name}`), kit = page.indexOf('src="motion.js"');
     if (kit < 0) continue;
@@ -307,7 +275,7 @@ test('a press never outranks a control\'s own look: a fallen creature\'s portrai
 test('a script asks the kit whether to move: the system\'s wish or the account\'s, never the system\'s alone', () => {
   const asks = (system, attribute) => wantsLessMotion({
     matchMedia: query => ({ matches: system && query === '(prefers-reduced-motion: reduce)' }),
-    document: { documentElement: elementOf(attribute ? { 'data-motion': 'less' } : {}) },
+    document: { documentElement: { dataset: attribute ? { motion: 'less' } : {} } },
   });
   assert.deepEqual([asks(false, false), asks(true, false), asks(false, true), asks(true, true)], [false, true, true, true]);
   assert.equal(wantsLessMotion({ document: { documentElement: elementOf() } }), false, 'a browser without matchMedia');

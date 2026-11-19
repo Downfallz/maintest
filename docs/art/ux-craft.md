@@ -581,9 +581,11 @@ These come from decisions already taken. No pattern below is an exception to the
 - **Cost**: the next page must paint fast: Chrome gives up on a transition that waits too long.
 - **Less motion and screen reader**: under less motion the rule is not declared. Focus and the page's title
   behave as on any navigation.
-- **Here**: declared in `table/identity.css`, so between every page of the table, and in
-  `showcase/showcase.css` between the showcase's. An at-rule cannot read the account's less motion, so
-  `table/motion.js` makes the page being left skip the transition. No part moves from one page to the next yet.
+- **Here**: a page changes at once. UX4 declared the rule on the table's pages and the showcase's, and took
+  it out: it played on a static server, and on the host the browser refused it in seven changes of ten and
+  handed the arriving page a rejection ("opt-in disabled"), which the page's error catcher would report. It
+  seems to follow the menu's mounting; the cause was not found (ADR 0197). That a refused transition reaches
+  the page as an unhandled rejection is *house*: seen in Chromium, in no page read.
 
 ### A spring as an easing
 

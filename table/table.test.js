@@ -1412,7 +1412,7 @@ test('handover hides and cancels the old notice before the other seat sees the t
 
 test('the account\'s less motion keeps the phase announcement without animating it, as the system\'s does', () => {
   const p = page(); let animated = false;
-  p.context.document.documentElement.attributes['data-motion'] = 'less';
+  p.context.document.documentElement.dataset.motion = 'less';
   p.nodes['phase-notice'].animate = () => { animated = true; };
   p.draw();
   assert.equal(animated, false);

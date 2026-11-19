@@ -210,12 +210,9 @@ html[data-feedback-muted] #settings-dialog .settings-feedback { display: none; }
   }
 }
 
-/* 3. A page changes into the next of this origin by a cross-fade. Under the system's less motion the rule is
-   not declared; under the account's, motion.js has the page being left skip it. */
-@media (prefers-reduced-motion: no-preference) {
-  @view-transition { navigation: auto; }
-}
-::view-transition-old(root), ::view-transition-new(root) { animation-duration: var(--motion-normal); animation-timing-function: var(--motion-standard); }
+/* 3. A page that changes has no form here yet. A transition between two pages (`@view-transition`) was tried: on
+   the host the browser refused it more often than it played it, and reported each refusal to the page as an
+   error (ADR 0197). */
 
 /* 4. A thing that arrives in a list: `.motion-arrive` on what the page adds because the host said so. Not on
    what a page draws when it opens. */

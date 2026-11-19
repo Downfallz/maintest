@@ -5,11 +5,6 @@ import { fitsViewport } from './fit.js';
 import { matchResult } from './battle-help-fixture.js';
 import { decided } from './decision.js';
 
-// The home a tutorial leaves for, stubbed. It takes the page's transition as every page of the table does (the
-// motion kit, ADR 0197): arriving from a page that offers one at a page that does not, or at one of another size, is a rejection
-// the browser reports.
-const HOME = '<title>Home</title><meta name="viewport" content="width=device-width, initial-scale=1"><style>@view-transition { navigation: auto; }</style>';
-
 // A tutorial in the battle view (ADR 0187, onboarding-plan.md O3b): the band says Tutorial n of the series, the
 // coach card shows the lesson step of the question asked, a step opens its concept cards before the spell choice,
 // an assisted question is not drawn, and the phase tips stay silent. The lesson is tutorial 1's own, read from its
@@ -195,7 +190,7 @@ test('tutorial 1 is played to its end: each step shows its coach card and opens 
   await expect(page.locator('#coach-again')).toHaveText('Play again');
   await expect(page.locator('#coach-leave')).toHaveAttribute('href', '/');
   // Leaving a finished tutorial is not skipping it, and lets go of its practice: it opens from its cut the next time.
-  await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: HOME }));
+  await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: '<title>Home</title>' }));
   await page.locator('#coach-leave').click();
   await expect(page).toHaveTitle('Home');
   expect(state.said).toEqual(['done']);
@@ -250,7 +245,7 @@ test('a tutorial done opens nothing over its end card: the next round\'s upkeep 
   await expect(page.locator('#settings-dialog')).toBeHidden();
   await expect(page.locator('#coach-step')).toHaveText('TUTORIAL COMPLETE');
   await expect(page.locator('#upkeep-dialog')).toBeHidden();
-  await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: HOME }));
+  await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: '<title>Home</title>' }));
   await page.locator('#coach-leave').click({ timeout: 5000 });
   await expect(page).toHaveTitle('Home');
   expect(state.said).toEqual(['done']);
@@ -277,7 +272,7 @@ test('an upkeep already open when the tutorial is done is put away: the end card
   await page.evaluate(() => window.notifyBattle());
   await expect(page.locator('#coach-step')).toHaveText('TUTORIAL COMPLETE');
   await expect(page.locator('#upkeep-dialog')).toBeHidden();
-  await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: HOME }));
+  await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: '<title>Home</title>' }));
   await page.locator('#coach-leave').click({ timeout: 5000 });
   await expect(page).toHaveTitle('Home');
   expect(state.errors).toEqual([]);
@@ -375,7 +370,7 @@ test('an assisted question is not drawn, and is the person\'s once the host hand
 
 test('Skip the tutorial on the first card says it is skipped and leaves for the home page', async ({ page }) => {
   const state = await mount(page);
-  await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: HOME }));
+  await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: '<title>Home</title>' }));
   await expect(page.locator('#practice-brief')).toBeVisible();
 
   await page.locator('#practice-brief-skip').click();
@@ -388,7 +383,7 @@ test('Skip the tutorial on the first card says it is skipped and leaves for the 
 
 test('Leave before the end counts as skipping: the tutorial never opens by itself again', async ({ page }) => {
   const state = await mount(page);
-  await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: HOME }));
+  await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: '<title>Home</title>' }));
   await page.locator('#practice-brief-begin').click();
   // The step's concept card opens once the board is drawn: it is put away once it is there, not before, or it
   // opens over Leave a moment later (a slow desktop canvas on a CI runner).
@@ -447,7 +442,7 @@ test('a tutorial that ends the match ends on its result: Tutorial complete, Play
   await page.screenshot({ path: info.outputPath('tutorial-result.png') });
   await expect.poll(() => state.said).toEqual(['done']);
   // Leaving from the result is leaving a finished tutorial: not skipped, and its practice let go of.
-  await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: HOME }));
+  await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: '<title>Home</title>' }));
   await page.locator('#match-leave').click();
   await expect(page).toHaveTitle('Home');
   // The page leaves after 1.5 s at most, its requests sent with keepalive: the route may hear of them after Home shows.
@@ -508,7 +503,7 @@ test('a match over before the host says the tutorial done is not called complete
   await expect(page.locator('#match-eyebrow')).not.toHaveText('TUTORIAL COMPLETE');
   await expect(page.locator('#match-again')).toBeVisible(); await expect(page.locator('#match-leave')).toBeVisible();
   await expect(page.locator('#match-rematch')).toBeHidden(); await expect(page.locator('#match-lobby')).toBeHidden();
-  await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: HOME }));
+  await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: '<title>Home</title>' }));
 
   await page.locator('#match-leave').click();
 

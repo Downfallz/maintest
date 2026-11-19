@@ -65,14 +65,14 @@ of `table/identity.css`, with `table/motion.js`, and the showcase's part in `sho
 | --- | --- | --- |
 | `--motion-instant` | 80 ms | The shortest answer |
 | `--motion-fast` | 120 ms | A press; a window that leaves |
-| `--motion-normal` | 220 ms | A window that enters; a page that changes; a thing that arrives |
+| `--motion-normal` | 220 ms | A window that enters; a thing that arrives |
 | `--motion-slow` | 360 ms | A number that changes |
 | `--motion-enter`, `--motion-exit`, `--motion-standard` | Curves | For what enters, what leaves, what stays on screen |
 | `--motion-breath` | 4 s | One cycle of ambience |
 | `--motion-strip` | 1.2 s | One pass of a strip of frames |
 
-- Five uses, each with one form: a press, a window, a page, a thing that arrives in a list (`.motion-arrive`), a
-  number that changes (`.motion-number`, then `numberChanged()`). Ambience is `.motion-breath`: one a screen, in view.
+- Four uses have their form: a press, a window, a thing that arrives in a list (`.motion-arrive`), a number
+  that changes (`.motion-number`, then `numberChanged()`). A page still changes at once (ADR 0197). Ambience is `.motion-breath`: one a screen, in view.
 - A rule names a token, never a number, and moves `transform` (or `translate`, `scale`, `rotate`) and `opacity` only.
 - Less motion is a form: write the fade first, and the travel inside `@media (prefers-reduced-motion:
   no-preference)` under `:root:not([data-motion="less"])`. `table/motion.test.js` fails when the kit writes

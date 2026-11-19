@@ -1,10 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { returningBattlePlayer, matchResult, withoutCanvas } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
-
-// A stubbed page takes the page's transition as every page of the table does (the motion kit, ADR 0197): arriving
-// from a page that offers one at a page that does not, or at one of another size, is a rejection the browser reports.
-const TAKES_TRANSITION = '<meta name="viewport" content="width=device-width, initial-scale=1"><style>@view-transition { navigation: auto; }</style>';
 test.beforeEach(returningBattlePlayer);
 const creature = (id, health) => ({ id, name: `Creature ${id}`, health, maxHealth: 30, energy: 2, totalDefense: 1,
   currentInitiative: 5, isAlive: health > 0, conditions: [], knownSpells: [], acquiredTiers: [] });
@@ -120,6 +116,7 @@ test('the result reports what each creature did, its creature of the match first
 test('an illustration that does not load leaves the creature\'s figure in the zoom, not an empty picture', async ({ page }) => {
   await page.route('**/battle-art/evolutions/**', route => route.fulfill({ status: 404, body: '' }));
   await mount(page, { feed: reported }); await matchResult(page);
+
   await page.locator('.match-report-table[data-side="ally"] tr[data-report-creature="3"] .match-zoom-open').click();
 
   const picture = page.locator('#match-zoom-close');
@@ -261,7 +258,7 @@ test('on a phone held upright the round\'s header is the only one: the menu and 
 // These tests check where a rematch goes, not the page there, which this server does not serve. A stand-in page
 // answers the request, because an empty 404 loads in the headless shell but fails the navigation in a full Chrome (#741).
 async function standIn(page) {
-  await page.route(url => ['/battle', '/lobby'].includes(url.pathname), route => route.fulfill({ contentType: 'text/html', body: `<!doctype html><title>Next</title>${TAKES_TRANSITION}` }));
+  await page.route(url => ['/battle', '/lobby'].includes(url.pathname), route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Next</title>' }));
 }
 test('Rematch against the bot opens the same game at once, on a new table', async ({ page }, info) => {
   const h = await mount(page, { opponent: { seat: 'player2', kind: 'bot', name: 'Lookahead' } }); await matchResult(page);

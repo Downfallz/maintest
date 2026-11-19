@@ -1,7 +1,7 @@
 // The motion kit's module (ADR 0197, docs/art/ux-craft.md#motion). The kit itself is CSS, in identity.css: this
 // brings it what CSS cannot read. The setting for less motion (ADR 0140) becomes one attribute on the root, which
-// the kit's rules read beside the system's preference; under it a page being left skips its transition; one ambience
-// plays a screen, in view and in a visible tab; and a number that changes plays its beat again.
+// the kit's rules read beside the system's preference; one ambience plays a screen, in view and in a visible tab;
+// and a number that changes plays its beat again.
 // It imports nothing, so any page may load it.
 
 /** Where the game settings are kept in this browser (game-preferences.js); read here, never written. */
@@ -22,7 +22,7 @@ export function lessMotion({ saved = false, game } = {}) {
 
 /** Less motion reaches a page as `data-motion="less"` on its root. */
 export function reach(root, less) {
-  if (less) root.setAttribute('data-motion', 'less'); else root.removeAttribute('data-motion');
+  if (less) root.dataset.motion = 'less'; else delete root.dataset.motion;
 }
 
 /**
@@ -30,7 +30,7 @@ export function reach(root, less) {
  * less (the root's attribute). A rule of CSS reads both; an animation a script starts must ask here.
  */
 export function wantsLessMotion(win = globalThis) {
-  return win.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true || win.document?.documentElement.getAttribute('data-motion') === 'less';
+  return win.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true || win.document?.documentElement.dataset.motion === 'less';
 }
 
 /** The one ambience a screen plays: the first in the page's order that is in view, none in a hidden tab. */
@@ -42,18 +42,9 @@ export function ambienceToPlay(elements, inView, hidden) {
 export function numberChanged(element) {
   if (!element) return;
   element.classList.remove('motion-changed');
-  // Reading a layout value between the two is what lets the same animation start again.
-  void element.offsetWidth;
+  // Asking for a layout between the two is what lets the same animation start again.
+  element.getBoundingClientRect();
   element.classList.add('motion-changed');
-}
-
-/**
- * Whether a rejection is the browser's own, for a page's transition it gave up on: the page arrived at a size
- * that differs, or from a page that offered a transition this one does not take. The page changed at once, as
- * the kit allows, and nothing is wrong.
- */
-export function abortedTransition(reason) {
-  return reason?.name === 'InvalidStateError' && String(reason.message ?? '').startsWith('Transition was aborted because of');
 }
 
 /** Plays `.motion-breath` only in view and in a visible tab, one a screen. The kit's CSS leaves it still otherwise. */
@@ -71,7 +62,10 @@ function watchAmbience(win) {
     for (const entry of entries) { if (entry.isIntersecting) inView.add(entry.target); else inView.delete(entry.target); }
     play();
   });
-  const watch = () => { for (const element of elements()) observer.observe(element); play(); };
+  const watch = () => {
+    for (const element of elements()) observer.observe(element);
+    play();
+  };
   doc.addEventListener('visibilitychange', play);
   watch();
   return watch;
@@ -87,11 +81,6 @@ export function mountMotion(win = globalThis) {
   win.addEventListener('storage', event => { if (!event.key || event.key === SETTINGS_KEY) apply(); });
   win.addEventListener('downfall:settings', apply);
   if (battle && win.MutationObserver) new win.MutationObserver(apply).observe(battle, { attributes: true, attributeFilter: ['data-reduced-motion'] });
-  // A rule of CSS cannot gate a page's transition on an attribute: the page being left skips it.
-  win.addEventListener('pageswap', event => { if (less()) event.viewTransition?.skipTransition(); });
-  // The browser hands that to the page as a rejection nobody holds. Answered here, it is not reported as an error,
-  // by the browser or by the page's own catcher (feedback-sheet.js), which this module's place in the head precedes.
-  win.addEventListener('unhandledrejection', event => { if (abortedTransition(event.reason)) event.preventDefault(); });
   return { watch: watchAmbience(win) };
 }
 

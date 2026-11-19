@@ -86,14 +86,6 @@ test('an error’s message is never cut inside an emoji, which would leave half 
   assert.doesNotThrow(() => encodeURIComponent(errors.list()[0].message));
 });
 
-test('the catcher leaves out a rejection another listener answered: a page\'s transition the browser gave up on', () => {
-  const listeners = {};
-  const errors = createPageErrors();
-  catchPageErrors({ addEventListener: (name, listener) => { listeners[name] = listener; } }, errors);
-  listeners.unhandledrejection({ defaultPrevented: true, reason: new Error('Transition was aborted because of invalid state. Viewport size changed') });
-  assert.deepEqual(errors.list(), []);
-});
-
 test('an error’s words lose any address’s query, which can carry a seat’s key', () => {
   const errors = createPageErrors();
   errors.add('Failed to load https://table.example/battle?seat=abc123#key=secret, then gave up', null);

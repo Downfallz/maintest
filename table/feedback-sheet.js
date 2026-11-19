@@ -86,8 +86,6 @@ export function catchPageErrors(target, errors) {
     errors.add(event.message || event.error?.message, file ? `${file}:${event.lineno ?? 0}` : null);
   });
   target.addEventListener('unhandledrejection', event => {
-    // One another listener answered is no fault to report: the motion kit answers a page's transition the browser gave up on.
-    if (event.defaultPrevented) return;
     const reason = event.reason;
     const message = reason instanceof Error ? reason.message : String(reason ?? '');
     errors.add(message, null);

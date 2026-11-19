@@ -29,17 +29,17 @@ the table and the showcase read the same: four durations (`--motion-instant` 80 
 names a token, never a number. Only `transform`, its single properties (`translate`, `scale`, `rotate`) and
 `opacity` move.
 
-**The uses.** Five, each with one form, in `table/identity.css` (and the showcase's part in
-`showcase/showcase.css`): a press, on the control itself; a window, which enters from `@starting-style` and
-leaves faster than it entered; a page, which cross-fades into the next of its origin (`@view-transition`); a
-thing that arrives in a list (`.motion-arrive`); a number that changes (`.motion-number`). Ambience
+**The uses.** Five: a press, a window, a page that changes, a thing that arrives in a list, a number that
+changes. Four have their one form in `table/identity.css` (the press in `showcase/showcase.css` too): a press
+answers on the control itself; a window enters from `@starting-style` and leaves faster than it entered; an
+arrival is `.motion-arrive`; a number is `.motion-number`. A page that changes has no form yet (below). Ambience
 (`.motion-breath`) is the one kind that plays unasked: one a screen, in view, in a visible tab.
 
 **Less motion.** Each form is written first as it is under less motion: a fade, or a change of shade. What
 travels is added where neither the system (`prefers-reduced-motion`) nor the player asks for less. The player's
 setting reaches a page as `data-motion="less"` on its root, set by `table/motion.js` from what the browser keeps
-of the account's settings, and on the battle's page from the game's own. Under it travel becomes a fade, a page
-changes at once and ambience is still. A browser without a feature shows the page as before.
+of the account's settings, and on the battle's page from the game's own. Under it travel becomes a fade and
+ambience is still. A browser without a feature shows the page as before.
 
 **The budget.** On a slow phone's profile, the median of five loads (`scripts/ux/journey.mjs --paint`): a page's
 largest paint within 2.5 s and its layout's shift under 0.1. A screen has one filled action, no finding of axe
@@ -52,12 +52,13 @@ load are set in the file UX5 writes, from the pictures at the size they are draw
 - Good: less motion is a form of its own, tested: under it no page animates a `transform`, and a window still fades.
 - Bad: the classic table keeps a net that cuts its own animations under less motion, with the kit's parts left
   out by name. A part added to the kit joins that list.
-- Bad: no released Firefox changes a page with a transition, and a busy phone may drop one: the page then changes
-  at once. A window's exit needs `transition-behavior`; without it the window closes at once.
+- Bad: a page still changes at once. A transition between two pages (`@view-transition`) was built and taken
+  out: on a static server it played, and on the host the browser refused it in seven changes of ten ("opt-in
+  disabled", with the menu mounted) and handed the page a rejection each time, which the page's error catcher
+  would send with a player's report. The cause was not found. A window's exit needs `transition-behavior`;
+  without it the window closes at once.
 - Bad: the account's setting is read from the browser's copy, by a module that runs after the first paint: a new
   device shows full motion until the settings are read there once. The system's preference needs neither.
-- Bad: a page of the origin that does not take the transition, arrived at from one that offers it, is handed a
-  rejection by the browser. Every page that loads the identity takes it; a page that does not is the lab's.
 - Neutral: the match's windows still open at once. Its docked sheets are part of the frame, which moves when
   one opens, and a fade there is staged with the 18 as one family (UX12). The classic table's mutation tree,
   always open and dragged about, is not a window of the kit.
@@ -70,12 +71,11 @@ load are set in the file UX5 writes, from the pictures at the size they are draw
 - An animation library: the platform does each form in CSS, and the pages take no dependency (ADR 0024).
 - Keep the blanket that cuts everything: it removes all motion rather than lessening it, the fade that tells a
   player a window has opened included.
-- Gate a page's transition on the attribute in CSS: an at-rule cannot read one; the page being left skips it.
 
 ## Follow-up
 
 - `docs/art/branding.css` and `scripts/sync-branding.mjs`; `table/identity.css`, `table/table.css`,
-  `table/motion.js`, `table/game-preferences.js`, `showcase/showcase.css`; the host's file table.
+  `table/motion.js`, `table/table.js`, `table/game-preferences.js`, `showcase/showcase.css`; the host's file table.
 - Tests: `table/motion.test.js`, `studio/browser/motion-kit.spec.js`.
 - `docs/art/ux-craft.md`, `docs/art/branding.md`, `docs/art/design-system/`, `docs/art/journeys/doors.md`.
 - UX5 writes the budget's file; UX13 puts axe in the gate; UX6 to UX12 place the forms.

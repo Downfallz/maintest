@@ -259,7 +259,7 @@
         },
         {
           "name": "motion-normal",
-          "usage": "A window that enters; a page that changes; a thing that arrives in a list."
+          "usage": "A window that enters; a thing that arrives in a list."
         },
         {
           "name": "motion-slow",
@@ -275,7 +275,7 @@
         },
         {
           "name": "motion-standard",
-          "usage": "The curve of what stays on screen: a press, a cross-fade."
+          "usage": "The curve of what stays on screen: a press."
         },
         {
           "name": "motion-breath",

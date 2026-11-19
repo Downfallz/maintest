@@ -1,5 +1,5 @@
 // The pages' motion kit as a browser plays it (ADR 0197, table/identity.css, table/motion.js): every window
-// enters and leaves, a page changes into the next, and under less motion, the system's or the account's,
+// enters and leaves, and under less motion, the system's or the account's,
 // nothing animates a transform. The pages are read as the host serves them, with no script but the kit's own
 // module: what is held here is the sheets and that module, not a page's own journey.
 import { test, expect } from '@playwright/test';
@@ -124,51 +124,6 @@ test('the match\'s windows open and close at once, as before: they are staged as
     return entered || getComputedStyle(dialog).display !== 'none';
   }), ids);
   expect(moved).toEqual([]);
-});
-
-/** Goes to the rulebook once the page being left has painted: a browser gives no transition from a page never shown. */
-async function leave(page) {
-  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-  await page.evaluate(() => { location.href = '/table/rules.html'; });
-  await page.waitForURL('**/rules.html');
-}
-
-test('a page changes into the next by a transition, and at once under less motion', async ({ page }) => {
-  const changed = async () => {
-    await leave(page);
-    return (await page.waitForFunction(() => window.pageChange)).jsonValue();
-  };
-  // What the page that arrives was given: a transition, or none.
-  await page.addInitScript(() => addEventListener('pagereveal', event => { window.pageChange = event.viewTransition ? 'transition' : 'at once'; }));
-
-  // A browser drops a page's transition when it cannot take the old page's picture in time, which a busy
-  // machine makes it miss now and then: the page then changes at once, as the kit allows. So the change is
-  // asked for until one is given; under less motion, below, none ever is.
-  await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await open(page, 'leaderboard.html');
-  await expect(async () => {
-    await page.goto('/table/leaderboard.html');
-    expect(await changed()).toBe('transition');
-  }).toPass({ timeout: 20000 });
-
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  for (let attempt = 0; attempt < 3; attempt++) {
-    await page.goto('/table/leaderboard.html');
-    expect(await changed()).toBe('at once');
-  }
-});
-
-test('under the account\'s less motion the page being left skips the transition', async ({ page }) => {
-  // The page that arrives says what it was given, as above; the account's setting is in both pages' storage.
-  await page.addInitScript(() => addEventListener('pagereveal', event => {
-    window.pageChange = 'at once';
-    event.viewTransition?.ready.then(() => { window.pageChange = 'transition'; }, () => { window.pageChange = 'skipped'; });
-  }));
-  await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await open(page, 'leaderboard.html', { less: true });
-  await leave(page);
-  await expect.poll(() => page.evaluate(() => window.pageChange)).not.toBe('transition');
-  expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
 });
 
 test('one ambience plays a screen, in view, and none under less motion', async ({ page }) => {
