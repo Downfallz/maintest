@@ -1,6 +1,6 @@
 # Plan: the pages' craft, the two doors, the lessons, the lobby, a player's pages and the match's frame staged by a designer who can see
 
-Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 and UX2 are built; UX3 is next.
+Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 to UX3 are built; UX4 is next.
 Each stage below is one pull request.
 
 ## What the owner asked for
@@ -276,6 +276,27 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
 3. **UX3, the designer and the pass.** The `ux-designer` agent, the `/ux-pass` skill, the format of a brief
    (`docs/art/journeys/README.md`) with a test that holds it, and the first brief, for the two doors, as the
    worked example. Tests: `studio/prompts.test.js` on the paths they name; the brief's nine parts.
+
+   *Built (2026-11-19)*: the `ux-designer` agent (`.claude/agents/ux-designer.md`), the `/ux-pass` skill
+   (`.claude/skills/ux-pass/SKILL.md`) and [the format of a brief](journeys/README.md): one file a journey, a
+   `##` heading a screen that names the walk's screens it stages, and the nine parts above, with fixed lines for
+   the job, the words, the six states, accessibility and the cost, and fixed tables for the pictures, the motion
+   and less motion. `studio/journey-briefs.test.js` holds it: a file named after its journey, every screen of
+   the walk briefed or named in the opening, each picture a file of the repository or asked of the owner with
+   its prompt, each beat moving `transform` or `opacity` only and naming an entry of the book and a declared
+   token, each beat with its form under less motion. The format also says which measure of a screen's line the
+   critique reads each part against. [The first brief](journeys/doors.md) was written by the designer's prompt
+   from a walk of the doors filmed in the session, both sheets and both files of measures: the showcase's home in
+   its two languages, a round seen played as a new screen for UX6, the sign-in panel plain and invited, the name
+   window and the place taken. It leaves out the field guide and the rulebook, which are reference pages, and
+   the first lesson's brief, which is UX8's. It asks the owner for one painting, two teams facing each other,
+   for the invited friend. Left: the loop itself has not run, since no screen is built here, so the critique and
+   step 8's page are tried first by UX6; the paints were not run again and are the baseline's; the states a walk
+   does not film (waiting, an error, offline) were read in the code, not seen; a motion token the kit lacks is
+   written `*UX4*` in a brief, and UX4 replaces each with its token; naming who invites on the signed-out panel
+   needs a route of the host a signed-out visitor may call, which UX7 decides with `host-reviewer` and
+   `security-reviewer`; the brief's other choices wait under each screen's **Left** for the owner, with UX6's
+   and UX7's sheets.
 4. **UX4, the motion kit.** The ADR: the pages are held to WCAG 2.2 AA with the games' additions, a vocabulary
    of motion and a budget. The tokens (`scripts/sync-branding.mjs`, so the showcase has them too), the five uses,
    ambience, less motion reaching the pages, the design system republished

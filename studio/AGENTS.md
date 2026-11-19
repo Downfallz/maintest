@@ -33,6 +33,9 @@ npm --prefix studio/browser ci --ignore-scripts && npm --prefix studio/browser t
 - `ux-journey.test.js` holds the journey film (`scripts/ux/`) without a browser: its arguments, its journeys'
   names, its measures and the baseline's page. The walk is played by `browser/table.journey.js`, twice, on the real
   engine: a measure that reads a clock or an id breaks it. A new screen of a journey also needs its line in the baseline.
+- `journey-briefs.test.js` holds each brief of `docs/art/journeys/` to its nine parts, to the screens its journey's
+  walk names (`scripts/ux/journeys.mjs`), to the craft book's headings and to the declared tokens: a screen or a
+  heading renamed there renames it in the brief, in the same change.
 - `storyboards.test.js` holds each beat of `docs/art/storyboards/` to the windows of `table/battle-timing.js`: a
   change to those timings re-times the storyboards and the figures in their `README.md`, in the same change.
 - The published studio is served under a GitHub Pages subpath: no absolute URL.

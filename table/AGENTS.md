@@ -35,6 +35,8 @@ Every flag of `table` is in docs/reference/commands.md.
   read these files.
 - A change to `battle-*` files: rebuild the bundle and run the battle specs (`battle/AGENTS.md`).
 - A change a person sees: the browser suite's table projects (`studio/browser`, `table.config.js`).
+- A change to how a journey looks, reads or moves is staged first: its brief is in `docs/art/journeys/`, and
+  `/ux-pass` runs the loop of brief, build, film and critique with the `ux-designer` agent.
 
 ## Traps
 
