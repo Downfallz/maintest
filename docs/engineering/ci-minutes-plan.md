@@ -165,9 +165,52 @@ complete runs.
    `scripts/verify.sh` read the pull request's plan.
 
    Not done: release-desktop is not dropped on `main` where table-desktop plays the same spec, since the owner
-   keeps the three profiles before the deployment (question 3). Not measured: the saving, which the first
-   `/retro` after the merge reads with M1's meter, and whether the per-profile timeout, cut from 35 to 25
-   minutes, holds WebKit's job with its retry. M4 narrows which paths call for the release profiles at all.
+   keeps the three profiles before the deployment (question 3). M4 narrows which paths call for the release
+   profiles at all.
+
+   *Measured (2026-11-19, #688)*: every `battle-release` job of CI from 2026-11-12 to 2026-11-19, read from the
+   jobs API. Each job is billed as M1's meter bills it, rounded up to the minute. "Before M2" is the single job,
+   up to 2026-11-16 at 16:20 UTC; "after M2" is the jobs per profile. In the meter's week (2026-11-12 to
+   2026-11-18), the group took 3,475 of CI's 22,950 minutes, before and after M2 together.
+
+   | `battle-release`, per run | Before M2 | After M2 |
+   | --- | --- | --- |
+   | Pull request, billed (median of the runs it finished) | 21 min (60 runs) | 6 min (81 runs) |
+   | Pull request, wall clock (median) | 19.7 min | 5.3 min |
+   | `main`, billed (median) | 20 min (21 runs) | 26 min (42 runs) |
+   | `main`, wall clock (median) | 19.6 min | 10.6 min |
+
+   1. *The saving.* A pull request bills 15 minutes less per run and finishes 14 minutes sooner. The plan
+      estimated 9 minutes after M2; WebKit's job alone takes 5. `main` bills 6 minutes more and finishes 9
+      minutes sooner.
+   2. *The set-up on `main`.* A job's set-up is everything but the matches: the checkout, `npm ci`, the
+      browsers' cache, the install, the bundle, the CLI and the content. With M3's cache it takes 1.1 to 1.4
+      minutes (medians per profile), so two more set-ups add about 2.5 minutes. The rest of the 6 extra minutes
+      is each job's rounding up, and Android's emulated phone, which plays its matches in 9.4 minutes alone. The
+      infra review's range of 5 to 10 was right. What M3's cache leaves is the build, not the browsers.
+   3. *The timeout.* The slowest finished jobs on `main` took 15.5 minutes (release-android) and 14.1
+      (release-desktop), retries included, against a limit of 25. A release-ios job that finished never passed
+      6.2.
+
+      But 5 of the 42 release-ios jobs on `main`, and 1 of 81 on pull requests, were cancelled at 25 minutes
+      (#892). All were in "Install the browser engine and its system packages", none in a spec. WebKit needs 185
+      system packages (140 MB) that a fresh runner lacks, and on those runs the Ubuntu mirror sent one package
+      every few seconds. The step's median is 32 seconds. The Chromium jobs' install was slow the same way, 3.4 to
+      7.4 minutes on 6 of their 84 jobs on `main`. Every slow install, in 24 jobs read, ran on an image that names
+      the regional EC2 mirror (`us-east-2.ec2.archive.ubuntu.com`, image `20261111.82.6`); every fast one fetched
+      from `azure.archive.ubuntu.com`, at 19 MB/s.
+
+      The fix removes the cause rather than raising the limit. Every browser job now points apt at Azure's mirror
+      where the image names an EC2 one. It also keeps apt's archives in the Actions cache
+      (`~/.cache/playwright-debs`). The key is the image, the engine, Playwright's version and the week, so the
+      updates published since the image are kept too, and a new key starts from the newest archives of the same
+      engine. On a hit apt downloads only the indexes and what changed since. An install that fails keeps what it
+      fetched, under a key of its own run, for the next run to start from. The install is capped at 10 minutes, so a
+      stalled mirror fails the job early, with its step named. `browser-suite.test.js` holds all of it. On the pull
+      request's first run, a Chromium job with the archives kept fetched none of them ("Need to get 0 B/21.9 MB").
+      What is left: a run with no archives to start from still meets Azure's mirror as it is that day, and can still
+      fail, at 10 minutes instead of 25.
+
 3. **M3, the wait evened out.** Desktop in three shards, Playwright's browsers cached, the learning job folded
    into `build-and-test` (`browser-suite.test.js` holds the gate's `needs`).
 

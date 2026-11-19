@@ -133,6 +133,10 @@ test('streams that start together never hold more than the field\'s budget of pa
 
 test('with less motion a staged spell plays nothing: no beat, no motif', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
+  // The bench rests when the media query's change event arrives, one rendering step after the emulation. A play
+  // started before that was put back to its decision frame on a loaded runner (#894). The rest is what marks the
+  // bench as reduced: once the attribute shows it, no change event is left to undo a play.
+  await expect(page.locator('#lab')).toHaveAttribute('data-motion', 'reduced');
   for (const sample of samples) {
     await page.evaluate(id => { window.battleBench.choose({ spell: id, actor: 'a1', targets: ['b1'] }); window.battleBench.play(); }, sample.id);
     await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'resolved');

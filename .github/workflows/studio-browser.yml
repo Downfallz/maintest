@@ -78,7 +78,7 @@ jobs:
           persist-credentials: false
       # Playwright's browsers are kept between runs, keyed by the runner's image, Playwright's version and the
       # engine (the job's ENGINE), so a run downloads an engine only when one of those moved. The system packages
-      # are installed every time (`--with-deps`): a fresh runner has none, and the cache keeps only the browsers.
+      # are installed every time (`--with-deps`), from the archives kept below: a fresh runner has none.
       # A miss is saved straight after the install, before the battle build and the specs run. What keeps a pull
       # request from planting a browser is the cache's scope: its run saves under its own ref, which main never
       # reads, and a pull request reads main's.
@@ -89,21 +89,65 @@ jobs:
           npm ci --ignore-scripts
           version=$(node -p "require('./node_modules/playwright/package.json').version")
           echo "key=playwright-$ImageOS-$version-$ENGINE" >> "$GITHUB_OUTPUT"
+          echo "debs-key=playwright-debs-$ImageOS-$ENGINE-$version-$ImageVersion-$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+          echo "debs-prefix=playwright-debs-$ImageOS-$ENGINE-" >> "$GITHUB_OUTPUT"
       - name: Restore Playwright's browsers
         id: browsers
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: ${{ steps.playwright.outputs.key }}
+      # The system packages' archives are kept too (#892). WebKit needs 185 system packages (140 MB) that a fresh
+      # runner lacks, and the Ubuntu mirror sometimes sends only one every few seconds: 5 of 42 release-ios jobs on
+      # main were cancelled in the install. apt looks in its own cache first, checks each archive against the signed
+      # index, and fetches only what is missing or newer. The key changes with the image, Playwright's version and
+      # the week, so the updates published since the image are kept too; a new key starts from the newest archives
+      # of the same engine. An install that fails keeps what it fetched, under a key of its own run, for the next
+      # run to start from. The install is capped at 10 minutes, so a slow mirror fails the job early.
+      - name: Restore the system packages' archives
+        id: debs
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/playwright-debs
+          key: ${{ steps.playwright.outputs.debs-key }}
+          restore-keys: ${{ steps.playwright.outputs.debs-prefix }}
       - name: Install the browser engine and its system packages
         working-directory: studio/browser
-        run: node node_modules/playwright/cli.js install --with-deps "$ENGINE"
+        timeout-minutes: 10
+        run: |
+          # Every slow install had a runner whose image names the regional EC2 mirror; every fast one, Azure's (#892).
+          mirrors=$(grep -rlE '[a-z0-9-]+\.ec2\.archive\.ubuntu\.com' /etc/apt || true)
+          if [[ -n "$mirrors" ]]; then
+            echo "Fetching from Azure's Ubuntu mirror instead of the EC2 one named in: $mirrors"
+            echo "$mirrors" | xargs sudo sed -i -E 's#https?://[a-z0-9-]+\.ec2\.archive\.ubuntu\.com/#https://azure.archive.ubuntu.com/#g'
+          fi
+          echo 'APT::Keep-Downloaded-Packages "true";' | sudo tee /etc/apt/apt.conf.d/90keep-archives > /dev/null
+          sudo rm -f /etc/apt/apt.conf.d/docker-clean
+          mkdir -p ~/.cache/playwright-debs
+          find ~/.cache/playwright-debs -name '*.deb' -exec sudo cp -t /var/cache/apt/archives {} +
+          node node_modules/playwright/cli.js install --with-deps "$ENGINE"
       - name: Keep Playwright's browsers for the next run
         if: steps.browsers.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: ${{ steps.playwright.outputs.key }}
+      # Only a saving: a failure here leaves the job as it was.
+      - name: Keep the system packages' archives for the next run
+        if: ${{ !cancelled() && steps.debs.outputs.cache-hit != 'true' }}
+        continue-on-error: true
+        run: |
+          # An install stopped at its limit leaves its apt running as root, holding the archives' lock.
+          sudo pkill -x apt-get || true
+          sudo apt-get -o DPkg::Lock::Timeout=30 autoclean -qq || true
+          find ~/.cache/playwright-debs -name '*.deb' -delete
+          find /var/cache/apt/archives -maxdepth 1 -name '*.deb' -exec cp -t ~/.cache/playwright-debs {} +
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: ${{ !cancelled() && steps.debs.outputs.cache-hit != 'true' }}
+        continue-on-error: true
+        with:
+          path: ~/.cache/playwright-debs
+          key: ${{ steps.playwright.outputs.debs-key }}${{ job.status == 'failure' && format('-partial-{0}', github.run_id) || '' }}
       # These journeys answer every request from a mock host (server.js and page routes): no .NET build.
       - name: Build the isolated battle prototype
         run: npm --prefix battle ci --ignore-scripts && npm --prefix battle run build
@@ -155,7 +199,7 @@ jobs:
           persist-credentials: false
       # Playwright's browsers are kept between runs, keyed by the runner's image, Playwright's version and the
       # engine (the job's ENGINE), so a run downloads an engine only when one of those moved. The system packages
-      # are installed every time (`--with-deps`): a fresh runner has none, and the cache keeps only the browsers.
+      # are installed every time (`--with-deps`), from the archives kept below: a fresh runner has none.
       # A miss is saved straight after the install, before the battle build and the specs run. What keeps a pull
       # request from planting a browser is the cache's scope: its run saves under its own ref, which main never
       # reads, and a pull request reads main's.
@@ -166,21 +210,65 @@ jobs:
           npm ci --ignore-scripts
           version=$(node -p "require('./node_modules/playwright/package.json').version")
           echo "key=playwright-$ImageOS-$version-$ENGINE" >> "$GITHUB_OUTPUT"
+          echo "debs-key=playwright-debs-$ImageOS-$ENGINE-$version-$ImageVersion-$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+          echo "debs-prefix=playwright-debs-$ImageOS-$ENGINE-" >> "$GITHUB_OUTPUT"
       - name: Restore Playwright's browsers
         id: browsers
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: ${{ steps.playwright.outputs.key }}
+      # The system packages' archives are kept too (#892). WebKit needs 185 system packages (140 MB) that a fresh
+      # runner lacks, and the Ubuntu mirror sometimes sends only one every few seconds: 5 of 42 release-ios jobs on
+      # main were cancelled in the install. apt looks in its own cache first, checks each archive against the signed
+      # index, and fetches only what is missing or newer. The key changes with the image, Playwright's version and
+      # the week, so the updates published since the image are kept too; a new key starts from the newest archives
+      # of the same engine. An install that fails keeps what it fetched, under a key of its own run, for the next
+      # run to start from. The install is capped at 10 minutes, so a slow mirror fails the job early.
+      - name: Restore the system packages' archives
+        id: debs
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/playwright-debs
+          key: ${{ steps.playwright.outputs.debs-key }}
+          restore-keys: ${{ steps.playwright.outputs.debs-prefix }}
       - name: Install the browser engine and its system packages
         working-directory: studio/browser
-        run: node node_modules/playwright/cli.js install --with-deps "$ENGINE"
+        timeout-minutes: 10
+        run: |
+          # Every slow install had a runner whose image names the regional EC2 mirror; every fast one, Azure's (#892).
+          mirrors=$(grep -rlE '[a-z0-9-]+\.ec2\.archive\.ubuntu\.com' /etc/apt || true)
+          if [[ -n "$mirrors" ]]; then
+            echo "Fetching from Azure's Ubuntu mirror instead of the EC2 one named in: $mirrors"
+            echo "$mirrors" | xargs sudo sed -i -E 's#https?://[a-z0-9-]+\.ec2\.archive\.ubuntu\.com/#https://azure.archive.ubuntu.com/#g'
+          fi
+          echo 'APT::Keep-Downloaded-Packages "true";' | sudo tee /etc/apt/apt.conf.d/90keep-archives > /dev/null
+          sudo rm -f /etc/apt/apt.conf.d/docker-clean
+          mkdir -p ~/.cache/playwright-debs
+          find ~/.cache/playwright-debs -name '*.deb' -exec sudo cp -t /var/cache/apt/archives {} +
+          node node_modules/playwright/cli.js install --with-deps "$ENGINE"
       - name: Keep Playwright's browsers for the next run
         if: steps.browsers.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: ${{ steps.playwright.outputs.key }}
+      # Only a saving: a failure here leaves the job as it was.
+      - name: Keep the system packages' archives for the next run
+        if: ${{ !cancelled() && steps.debs.outputs.cache-hit != 'true' }}
+        continue-on-error: true
+        run: |
+          # An install stopped at its limit leaves its apt running as root, holding the archives' lock.
+          sudo pkill -x apt-get || true
+          sudo apt-get -o DPkg::Lock::Timeout=30 autoclean -qq || true
+          find ~/.cache/playwright-debs -name '*.deb' -delete
+          find /var/cache/apt/archives -maxdepth 1 -name '*.deb' -exec cp -t ~/.cache/playwright-debs {} +
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: ${{ !cancelled() && steps.debs.outputs.cache-hit != 'true' }}
+        continue-on-error: true
+        with:
+          path: ~/.cache/playwright-debs
+          key: ${{ steps.playwright.outputs.debs-key }}${{ job.status == 'failure' && format('-partial-{0}', github.run_id) || '' }}
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           global-json-file: global.json
@@ -234,7 +322,7 @@ jobs:
           persist-credentials: false
       # Playwright's browsers are kept between runs, keyed by the runner's image, Playwright's version and the
       # engine (the job's ENGINE), so a run downloads an engine only when one of those moved. The system packages
-      # are installed every time (`--with-deps`): a fresh runner has none, and the cache keeps only the browsers.
+      # are installed every time (`--with-deps`), from the archives kept below: a fresh runner has none.
       # A miss is saved straight after the install, before the battle build and the specs run. What keeps a pull
       # request from planting a browser is the cache's scope: its run saves under its own ref, which main never
       # reads, and a pull request reads main's.
@@ -245,21 +333,65 @@ jobs:
           npm ci --ignore-scripts
           version=$(node -p "require('./node_modules/playwright/package.json').version")
           echo "key=playwright-$ImageOS-$version-$ENGINE" >> "$GITHUB_OUTPUT"
+          echo "debs-key=playwright-debs-$ImageOS-$ENGINE-$version-$ImageVersion-$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+          echo "debs-prefix=playwright-debs-$ImageOS-$ENGINE-" >> "$GITHUB_OUTPUT"
       - name: Restore Playwright's browsers
         id: browsers
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: ${{ steps.playwright.outputs.key }}
+      # The system packages' archives are kept too (#892). WebKit needs 185 system packages (140 MB) that a fresh
+      # runner lacks, and the Ubuntu mirror sometimes sends only one every few seconds: 5 of 42 release-ios jobs on
+      # main were cancelled in the install. apt looks in its own cache first, checks each archive against the signed
+      # index, and fetches only what is missing or newer. The key changes with the image, Playwright's version and
+      # the week, so the updates published since the image are kept too; a new key starts from the newest archives
+      # of the same engine. An install that fails keeps what it fetched, under a key of its own run, for the next
+      # run to start from. The install is capped at 10 minutes, so a slow mirror fails the job early.
+      - name: Restore the system packages' archives
+        id: debs
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/playwright-debs
+          key: ${{ steps.playwright.outputs.debs-key }}
+          restore-keys: ${{ steps.playwright.outputs.debs-prefix }}
       - name: Install the browser engine and its system packages
         working-directory: studio/browser
-        run: node node_modules/playwright/cli.js install --with-deps "$ENGINE"
+        timeout-minutes: 10
+        run: |
+          # Every slow install had a runner whose image names the regional EC2 mirror; every fast one, Azure's (#892).
+          mirrors=$(grep -rlE '[a-z0-9-]+\.ec2\.archive\.ubuntu\.com' /etc/apt || true)
+          if [[ -n "$mirrors" ]]; then
+            echo "Fetching from Azure's Ubuntu mirror instead of the EC2 one named in: $mirrors"
+            echo "$mirrors" | xargs sudo sed -i -E 's#https?://[a-z0-9-]+\.ec2\.archive\.ubuntu\.com/#https://azure.archive.ubuntu.com/#g'
+          fi
+          echo 'APT::Keep-Downloaded-Packages "true";' | sudo tee /etc/apt/apt.conf.d/90keep-archives > /dev/null
+          sudo rm -f /etc/apt/apt.conf.d/docker-clean
+          mkdir -p ~/.cache/playwright-debs
+          find ~/.cache/playwright-debs -name '*.deb' -exec sudo cp -t /var/cache/apt/archives {} +
+          node node_modules/playwright/cli.js install --with-deps "$ENGINE"
       - name: Keep Playwright's browsers for the next run
         if: steps.browsers.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: ${{ steps.playwright.outputs.key }}
+      # Only a saving: a failure here leaves the job as it was.
+      - name: Keep the system packages' archives for the next run
+        if: ${{ !cancelled() && steps.debs.outputs.cache-hit != 'true' }}
+        continue-on-error: true
+        run: |
+          # An install stopped at its limit leaves its apt running as root, holding the archives' lock.
+          sudo pkill -x apt-get || true
+          sudo apt-get -o DPkg::Lock::Timeout=30 autoclean -qq || true
+          find ~/.cache/playwright-debs -name '*.deb' -delete
+          find /var/cache/apt/archives -maxdepth 1 -name '*.deb' -exec cp -t ~/.cache/playwright-debs {} +
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: ${{ !cancelled() && steps.debs.outputs.cache-hit != 'true' }}
+        continue-on-error: true
+        with:
+          path: ~/.cache/playwright-debs
+          key: ${{ steps.playwright.outputs.debs-key }}${{ job.status == 'failure' && format('-partial-{0}', github.run_id) || '' }}
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           global-json-file: global.json
