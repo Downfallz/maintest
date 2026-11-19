@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 import { PAGE_ART } from '../table/page-art.js';
-import { asked, budgetOf, check, fileName, moduleText, origin, phoneSize, widthsOf, webpSize } from '../scripts/ux/pictures.mjs';
+import { asked, budgetOf, check, fileName, moduleText, origin, paintingSize, phoneSize, widthsOf, webpSize } from '../scripts/ux/pictures.mjs';
 
 const root = new URL('../', import.meta.url);
 const read = path => readFileSync(new URL(path, root));
@@ -26,6 +26,15 @@ test('a WebP file says its width and its height, in each of its three forms', ()
   assert.deepEqual(webpSize(header('VP8L', [0x2f, 0x33, 0x01, 0x33, 0x00])), { width: 308, height: 205 });
   assert.deepEqual(webpSize(header('VP8X', [0, 0, 0, 0, 0x33, 0x01, 0x00, 0xcc, 0x00, 0x00])), { width: 308, height: 205 });
   assert.throws(() => webpSize(Buffer.from('not a picture')), /not a WebP file/);
+});
+
+test('a painting the owner hands over as a PNG says its size too, so it can be derived and held', () => {
+  const png = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13]), Buffer.from('IHDR'), Buffer.from([0, 0, 6, 0, 0, 0, 4, 0])]);
+  assert.deepEqual(paintingSize(png), { width: 1536, height: 1024 });
+  assert.deepEqual(paintingSize(read('table/battle-art/eclipse-battle.webp')), { width: 1672, height: 941 });
+  const one = authored.pictures[0], drawn = { ...authored, pictures: [{ ...one, source: 'painting.png' }, ...authored.pictures.slice(1)] };
+  const problems = check({ authored: drawn, art: PAGE_ART, read: path => (path === 'painting.png' ? png : read(path)), list: () => readdirSync(new URL('table/page-art', root)) });
+  assert.doesNotMatch(problems.join('\n'), /neither a PNG nor a WebP/);
 });
 
 test('a file is named by its picture, its width and its own bytes, so a day-long cache never shows the old one', () => {

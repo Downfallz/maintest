@@ -38,6 +38,12 @@ export function webpSize(bytes) {
   return { width: bytes.readUIntLE(at + 4, 3) + 1, height: bytes.readUIntLE(at + 7, 3) + 1 };
 }
 
+/** A painting's width and height: the owner hands a PNG or a WebP over; what is derived from it is always WebP. */
+export function paintingSize(bytes) {
+  const png = bytes.length >= 24 && bytes.readUInt32BE(0) === 0x89504e47 && bytes.toString('latin1', 12, 16) === 'IHDR';
+  return png ? { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) } : webpSize(bytes);
+}
+
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 
 /** A derived file's name: its own bytes are in it, since the host lets a browser keep a picture for a day. */
@@ -103,7 +109,7 @@ export function check({ authored, art, read, list }) {
       problems.push(`${picture.name}: the module does not say what the declaration says: run node scripts/ux/pictures.mjs`);
     const frames = paintings.length;
     let widths;
-    try { widths = widthsOf(picture.drawn, Math.min(...paintings.map(one => webpSize(one).width))); } catch { problems.push(`${picture.name}: a painting it names is not a WebP file`); continue; }
+    try { widths = widthsOf(picture.drawn, Math.min(...paintings.map(one => paintingSize(one).width))); } catch { problems.push(`${picture.name}: a painting it names is neither a PNG nor a WebP file`); continue; }
     if (JSON.stringify(entry.sizes.map(size => size.width / frames)) !== JSON.stringify(widths))
       problems.push(`${picture.name}: it is sent at ${widths.join(', ')} px, and the module names ${entry.sizes.map(size => size.width / frames).join(', ')}: run node scripts/ux/pictures.mjs`);
     for (const size of entry.sizes) {
@@ -169,7 +175,7 @@ async function derive() {
       const paintings = paintingsOf(picture), bytes = paintings.map(read), from = origin(picture, bytes, authored.encoding);
       const kept = before[picture.name];
       if (kept?.from === from && kept.sizes.every(size => list().includes(size.file))) { art[picture.name] = { ...kept, pages: picture.pages ?? {}, drawn: picture.drawn }; continue; }
-      const widths = widthsOf(picture.drawn, Math.min(...bytes.map(one => webpSize(one).width)));
+      const widths = widthsOf(picture.drawn, Math.min(...bytes.map(one => paintingSize(one).width)));
       const jobs = widths.map(width => ({ sources: paintings.map(path => fileURLToPath(new URL(path, ROOT))), width, out: join(work, `${picture.name}-${width}.webp`), ...authored.encoding }));
       // NOSONAR S4036: python3 is found on the PATH of whoever derives a picture; nothing a visitor sends reaches this.
       const ran = spawnSync('python3', [fileURLToPath(new URL('encode.py', import.meta.url))], { input: JSON.stringify(jobs), encoding: 'utf8' }); // NOSONAR
