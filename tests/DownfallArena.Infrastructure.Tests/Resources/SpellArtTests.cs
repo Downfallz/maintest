@@ -107,7 +107,7 @@ public sealed class SpellArtTests
     {
         using var content = new ContentDirectory().WithValidContent().WithFile("presentation/spell-art.json", Staged("""
             [ { "beat": "motif", "at": 840 },
-              { "beat": "burst", "at": 840, "lasts": 120, "count": 8, "shape": "shard", "tint": "bone", "direction": "along", "spread": 50 } ]
+              { "beat": "burst", "at": 840, "lasts": 120, "count": 8, "shape": "shard", "tint": "bone", "direction": "along", "spread": 50, "level": "feet" } ]
             """));
         var output = Path.Combine(content.Path, "dst");
         var schema = GameSchemaBuilder.Build(content.Path);
@@ -128,6 +128,8 @@ public sealed class SpellArtTests
         staging[1].Tint.ShouldBe("bone");
         staging[1].Direction.ShouldBe("along");
         staging[1].Spread.ShouldBe(50);
+        staging[1].Level.ShouldBe("feet");
+        staging[0].Level.ShouldBeNull();
     }
 
     [Fact]
@@ -169,6 +171,7 @@ public sealed class SpellArtTests
     [InlineData("""{ "beat": "burst", "at": 900, "tint": "azure" }""", "'azure'")]
     [InlineData("""{ "beat": "burst", "at": 900, "blend": "multiply" }""", "'multiply'")]
     [InlineData("""{ "beat": "burst", "at": 900, "direction": "sideways" }""", "'sideways'")]
+    [InlineData("""{ "beat": "burst", "at": 900, "level": "knees" }""", "'knees'")]
     [InlineData("""{ "beat": "burst", "at": 900, "count": 25 }""", "'25'")]
     [InlineData("""{ "beat": "burst", "at": 900, "count": 0 }""", "'0'")]
     [InlineData("""{ "beat": "burst", "at": 900, "spread": 361 }""", "'361'")]

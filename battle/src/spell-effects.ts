@@ -5,13 +5,15 @@ import { BONE } from '../../table/battle-motion.js';
 import type { SpellVisual } from './types';
 import type { EffectsKit, StagedBeat } from './fx';
 
-export interface EffectAnchor { x: number; y: number; radius: number; }
+/** A figure's centre and radius, and the heights of its feet and its head (the craft book, "A beat on the ground"). */
+export interface EffectAnchor { x: number; y: number; radius: number; feet?: number; head?: number }
 const PALETTE: Record<string, number> = {
   physical: 0xd2bbac, biological: 0xadc777, elemental: 0x8dcfe5,
   necromantic: 0x85c9c2, astral: 0xb9a6e5, neutral: 0xaab8c0,
 };
 // A motif that carries its own colour whatever the family: embers are warm, a wound is blood.
-const MOTIF_COLOR: Record<string, number> = { fire: 0xd58b75, wound: 0xb66f7e };
+// Blood is a deep brown red: the paler 0xb66f7e read pink over the sky (#919, the owner's choice).
+const MOTIF_COLOR: Record<string, number> = { fire: 0xd58b75, wound: 0x9a3b34 };
 // The colours a beat names (`table/battle-staging.js`): the palette's bone, which stays equal to `--brand-bone`
 // (docs/art/branding.css), and the two a motif already carries. The target marker's gold is not among them.
 const TINTS: Record<string, number> = { bone: BONE, ember: MOTIF_COLOR.fire, blood: MOTIF_COLOR.wound };
@@ -19,8 +21,12 @@ const TINTS: Record<string, number> = { bone: BONE, ember: MOTIF_COLOR.fire, blo
 // Between two copies of one beat, at 1× (*house*, the craft book's 30 to 60 ms).
 const STAGGER_MS = 40;
 
-/** Who a beat plays on: where it stands, which creature it is, and its picture when the scene has one. */
-export interface EffectFigure { id: string; anchor: EffectAnchor; image?: Phaser.GameObjects.Image }
+/**
+ * Who a beat plays on: where it stands, which creature it is, and its picture when the scene has one. `drift` is
+ * how far its body has been carried from that place now: a motif drawn on a caster still at its target goes with
+ * it, and comes home with it (#919).
+ */
+export interface EffectFigure { id: string; anchor: EffectAnchor; image?: Phaser.GameObjects.Image; drift?: () => { x: number; y: number } }
 
 // Short-lived vectors, not combat entities. The owner clears every object on skip, resize and seat changes.
 // A spell with a staging is played beat by beat through the effects kit, once the kit has arrived (ADR 0196);
@@ -40,6 +46,8 @@ export class SpellEffects {
   get playing() {
     return { objects: this.kit?.playing() ?? [], particles: this.kit?.particles() ?? 0, changes: this.kit?.changes() ?? 0 };
   }
+  /** Where each of the kit's objects stands, for the bench and the browser specs. */
+  get places() { return this.kit?.places() ?? []; }
 
   clear() {
     for (const timer of this.timers) if (!timer.isDestroyed()) timer.stop();
@@ -101,9 +109,9 @@ export class SpellEffects {
     return graphic;
   }
 
-  private fade(graphic: Phaser.GameObjects.Graphics, rate: number, duration: number, scale = 1.25) {
+  private fade(graphic: Phaser.GameObjects.Graphics, rate: number, duration: number, scale = 1.25, onUpdate?: () => void) {
     this.scene.tweens.add({ targets: graphic, alpha: 0, scaleX: scale, scaleY: scale,
-      duration: duration / rate, ease: 'Quad.Out', onComplete: () => {
+      duration: duration / rate, ease: 'Quad.Out', onUpdate, onComplete: () => {
         this.objects.delete(graphic); graphic.destroy();
       } });
   }
@@ -159,29 +167,41 @@ export class SpellEffects {
 
   impact(visual: SpellVisual, recipient: EffectFigure, rate: number, origin?: EffectAnchor) {
     const beats = this.staged(visual, 'impact');
-    if (!beats) { this.motif(visual, recipient.anchor, recipient.id, rate, origin); return; }
+    if (!beats) { this.motif(visual, recipient.anchor, recipient.id, rate, origin, VFX_MS, recipient.drift); return; }
     this.each(beats, visual, recipient, rate, origin);
     // The motif is one beat among the others: when the staging places it, for as long as it says.
     const motif = beats.find(beat => beat.beat === 'motif');
-    if (motif) this.after(motif.delay / rate, () => this.motif(visual, recipient.anchor, recipient.id, rate, origin, motif.lasts));
+    if (motif) this.after(motif.delay / rate, () => this.motif(visual, recipient.anchor, recipient.id, rate, origin, motif.lasts, recipient.drift));
   }
 
-  private motif(visual: SpellVisual, target: EffectAnchor, id: string, rate: number, origin?: EffectAnchor, lasts = VFX_MS) {
+  private motif(visual: SpellVisual, target: EffectAnchor, id: string, rate: number, origin?: EffectAnchor, lasts = VFX_MS, drift?: EffectFigure['drift']) {
     const motif = visual.motif;
     const color = MOTIF_COLOR[motif] ?? PALETTE[visual.family] ?? PALETTE.neutral;
-    const g = this.graphic(motif, id, 'impact').setPosition(target.x, target.y);
+    const g = this.graphic(motif, id, 'impact');
     g.lineStyle(2.5, color, .95).fillStyle(color, .22);
     (PAINTERS[motif] ?? paintMark)(g, target.radius, color, motif, origin ? { x: origin.x - target.x, y: origin.y - target.y } : null);
     const motion = Object.hasOwn(ENVELOPES, motif) ? ENVELOPES[motif] : { scale: .82, rise: 0 };
-    // Arcs stay pinned to both endpoints; other motifs arrive, hold briefly, then dissipate.
+    // Arcs stay pinned to both endpoints; other motifs arrive, hold briefly, then dissipate. The motif rises into
+    // place, and goes wherever its figure's body is carried meanwhile.
+    const place = { rise: target.radius * motion.rise };
+    const track = () => {
+      if (!g.active) return;
+      const shift = drift?.() ?? STILL;
+      g.setPosition(target.x + shift.x, target.y + place.rise + shift.y);
+    };
+    track();
     g.setScale(motion.scale).setAlpha(.35);
-    g.y += target.radius * motion.rise;
     // The arrival and the fade together are what the beat lasts: a short beat shortens both, a third to arrive.
     const arrive = Math.min(100 * MOTION_SCALE, lasts / 3);
-    this.scene.tweens.add({ targets: g, scaleX: 1, scaleY: 1, y: target.y, alpha: 1,
-      duration: arrive / rate, ease: 'Cubic.Out', onComplete: () => this.fade(g, rate, lasts - arrive, FADE_SCALE[motif] ?? 1.35) });
+    const rising = this.scene.tweens.add({ targets: place, rise: 0, duration: arrive / rate, ease: 'Cubic.Out', onUpdate: track,
+      onComplete: () => this.timers.delete(rising) });
+    this.timers.add(rising);
+    this.scene.tweens.add({ targets: g, scaleX: 1, scaleY: 1, alpha: 1,
+      duration: arrive / rate, ease: 'Cubic.Out', onComplete: () => this.fade(g, rate, lasts - arrive, FADE_SCALE[motif] ?? 1.35, drift && track) });
   }
 }
+
+const STILL = { x: 0, y: 0 };
 
 const ENVELOPES: Record<string, { scale: number; rise: number }> = {
   arc: { scale: 1, rise: 0 }, bones: { scale: .92, rise: .3 }, spirits: { scale: .72, rise: .3 },
@@ -198,10 +218,16 @@ const vector = (x: number, y: number) => new Phaser.Math.Vector2(x, y);
 // The palette's soot (`--brand-soot`, docs/art/branding.css): the edge a pale stroke is read against on a pale hide.
 const SOOT = 0x070d10;
 // A blow has a direction, and its strokes run along it: from the caster's side of the figure to the far side
-// (the craft book, "An impact that keeps the direction"). With no caster to come from, a wound, they lean as before.
+// (the craft book, "An impact that keeps the direction"). A slash cuts across it instead, 60° off the blow, as a
+// claw rakes (#919, the owner's choice): with the blow vertical, the two motifs no longer read the same. With no
+// caster to come from, a wound, the strokes lean as before.
+const SLASH = Math.PI / 3;
 const paintStrokes: Painter = (g, r, color, motif, from) => {
   const far = from ? Math.hypot(from.x, from.y) : 0;
-  const along = far > 0 ? { x: -from!.x / far, y: -from!.y / far } : { x: .43, y: .9 };
+  const blow = far > 0 ? Math.atan2(-from!.y, -from!.x) : null;
+  const angle = blow === null ? Math.atan2(.9, .43) : blow + (motif === 'slash' ? SLASH : 0);
+  const along = { x: Math.cos(angle), y: Math.sin(angle) };
+  g.setData('strokes', angle * 180 / Math.PI);
   const across = { x: -along.y, y: along.x }, width = motif === 'impact' ? 4 : 2.5, half = r * .62;
   const stroke = (shift: number) => {
     const x = across.x * shift + along.x * r * .03, y = across.y * shift + along.y * r * .03;

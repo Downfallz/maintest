@@ -644,6 +644,32 @@ bake the drawing to a texture first, or filter a container.
 - **Here**: not built. A scar is decoration, never state: a replay and a first load show none. BC9 fades it
   inside the settle window, so no frame the player can navigate to holds one.
 
+### A beat on the ground
+
+- **What**: a beat says where it starts on its figure: at the feet, at the centre or at the head. What starts at
+  the feet lies on the ground: its travel toward or away from the eye is shortened, so dust from a stamp stays low
+  and a blow struck up the field throws its debris along the ground, not up the screen. A shock ring lies there
+  too, and a ring aimed at its targets opens as an arc on their side only, so it does not sweep through a
+  neighbour. A trail at the feet of both figures is a crack running from the caster to its target.
+- **Source**: [Particle System](https://unpkg.com/phaser@4.2.1/skills/particles/SKILL.md), Phaser 4.2.1, for an
+  emitter's zone and its place. The ground's slant, 0.42 of a distance across it (*house*), is the one the `wave`
+  and `roar` motifs already draw their rings with.
+- **Phaser**: the emitter placed at the level's point, its pieces' vertical travel multiplied by the slant, and a
+  zone flattened the same way through `Phaser.Types.GameObjects.Particles.ParticleEmitterConfig.emitZone`. The
+  aimed ring is one `Phaser.GameObjects.Graphics` whose arc is drawn again on each step with
+  `Phaser.GameObjects.Graphics#clear` and `Phaser.GameObjects.Graphics#strokePoints`, from
+  `Phaser.Types.Tweens.TweenBuilderConfig.onUpdate`; its heading is `Phaser.Math.Angle.Between` the two figures,
+  turned onto the ground.
+- **Cost**: none for a level. An aimed ring is one `Graphics` of about 20 points, drawn again each frame of its
+  beat, in the vectors' batch.
+- **Reduced motion**: nothing.
+- **Here**: the kit's `level` (`feet`, `centre`, `head`), read by `table/battle-staging.js` and checked by
+  `SpellArt`; the scene gives each figure its feet and head besides its centre. The ring of a `glow` lies at the
+  feet whatever its level; with a `direction` of `along` or `back` it is an arc, 120° unless its `spread` says
+  (*house*). Along and back, a piece's travel is shortened at every level, since it follows a blow struck across
+  the ground. The physical spells use it first: Pummel's and Body Slam's dust, Crushing Stomp's crown, Alpha
+  Roar's rings and Groundbreaker's ring and crack.
+
 ## Reading
 
 ### One effect, one meaning

@@ -23,6 +23,8 @@ export interface EffectsKit {
   clear(): void;
   /** What is alive, for the bench and the browser specs. */
   playing(): { beat: string; creature: string }[];
+  /** Where each object alive stands, for the bench and the browser specs. */
+  places(): { beat: string; creature: string; x: number; y: number; kind: string }[];
   particles(): number;
   changes(): number;
 }
@@ -40,6 +42,7 @@ export function createKit(engine: Engine, scene: Phaser.Scene, reduced: () => bo
     },
     clear: () => context.clear(),
     playing: () => context.playing(),
+    places: () => context.places(),
     particles: () => context.alive(),
     changes: () => context.changes,
   };

@@ -80,6 +80,10 @@ export class BattleScene extends Phaser.Scene implements Restful {
   onKit: (equipped: boolean) => void = () => {};
   /** What the effects kit plays now, for the bench and the browser specs. */
   get effectsKit() { return this.spellEffects.playing; }
+  /** Where the kit's objects stand, each figure's centre, feet and head, and the acting rim: for the bench and the browser specs. */
+  get effectsPlaces() { return this.spellEffects.places; }
+  get anchors() { return [...this.figures.values()].map(figure => ({ id: figure.id, ...this.anchor(figure) })); }
+  get actingHalo() { return { id: this.haloId, quiet: this.halo?.quiet ?? false }; }
   /** How the figures and the view stand now, for the bench, its film and the browser specs. */
   get motion() {
     const round = (value: number) => Math.round(value * 1000) / 1000;
@@ -152,7 +156,11 @@ export class BattleScene extends Phaser.Scene implements Restful {
     // The effects kit is not part of the first frame (ADR 0196): it is fetched now, and until it arrives, or if
     // it never does, a spell is drawn as its motif.
     void loadKit().then(createKit => {
-      if (createKit && this.sys.isActive()) this.spellEffects.attach(createKit(Phaser, this, () => this.reduced, { shake: strength => this.viewShake.add(strength) }));
+      if (createKit && this.sys.isActive()) this.spellEffects.attach(createKit(Phaser, this, () => this.reduced, {
+        shake: strength => this.viewShake.add(strength),
+        // A halo on the figure the gold rim lights quiets the rim while it plays; any end gives the rim back.
+        quiet: (creature, on) => { if (!on || creature === this.haloId) this.halo?.quieten(on); },
+      }));
       this.onKit(this.spellEffects.equipped);
     });
   }
@@ -439,14 +447,19 @@ export class BattleScene extends Phaser.Scene implements Restful {
       height: (bottom - top) * figure.image.scaleY, depth: figure.image.depth };
   }
 
+  // Where an effect plays on a figure at home: its centre and radius, its feet on the ground and its head, a little
+  // inside the top of the silhouette.
   private anchor(figure: Figure): EffectAnchor {
     const height = (figure.art.bounds[3] - figure.art.bounds[1]) * figure.image.scaleY;
-    return { x: figure.home.x, y: figure.home.y - height * .5,
+    return { x: figure.home.x, y: figure.home.y - height * .5, feet: figure.home.y, head: figure.home.y - height * .9,
       radius: Math.max(16, Math.min(58, figure.home.hitWidth * .3, height * .35)) };
   }
 
-  private effectFigure(id: string, figure: Figure): EffectFigure {
-    return { id, anchor: this.anchor(figure), image: figure.image };
+  // A figure an effect plays on. `drifts`: what is drawn on it goes with its body wherever the action carries it,
+  // as a caster's own wound or mark does while the caster is still at its target (#919).
+  private effectFigure(id: string, figure: Figure, drifts = false): EffectFigure {
+    const drift = drifts ? () => ({ x: figure.image.x - figure.home.x, y: figure.image.y - figure.home.y }) : undefined;
+    return { id, anchor: this.anchor(figure), image: figure.image, drift };
   }
 
   private spellImpact(cue: NonNullable<SceneFrame['cue']>, thrown: Set<string>, actor?: Figure) {
@@ -469,13 +482,13 @@ export class BattleScene extends Phaser.Scene implements Restful {
       // A blood ritual's self-cost is a wound, never a lunge, lightning bolt or summoned spirit at its caster.
       const effects = cue.effects.filter(effect => effect.creature === id);
       if (self && effects.some(effect => effect.wound)) {
-        this.spellEffects.impact({ family: 'physical', motif: 'wound', delivery: 'cast' }, this.effectFigure(id, target), this.rate);
+        this.spellEffects.impact({ family: 'physical', motif: 'wound', delivery: 'cast' }, this.effectFigure(id, target, true), this.rate);
         if (effects.every(effect => effect.wound)) continue;
       }
       const tones = effects.filter(effect => !effect.wound).map(effect => effect.tone);
       const visual = self && cue.visual.delivery === 'melee'
         ? { family: cue.visual.family, motif: tones.includes('recovery') ? 'vital' : 'focus', delivery: 'cast' } : cue.visual;
-      this.spellEffects.impact(visual, this.effectFigure(id, target), this.rate, actor ? this.anchor(actor) : undefined);
+      this.spellEffects.impact(visual, this.effectFigure(id, target, self), this.rate, actor ? this.anchor(actor) : undefined);
       if (!self && actor) this.answer(cue, target, actor, melee, flashes, thrown);
     }
   }

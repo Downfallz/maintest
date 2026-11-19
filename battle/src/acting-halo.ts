@@ -3,6 +3,8 @@ import Phaser from 'phaser';
 // A saturated gold: the pale UI gold reads as part of the bone-coloured illustrations.
 const GOLD = 0xffb938;
 const KEY = 'acting-glow';
+// How much of the rim is left while a spell's halo plays on the figure (*house*).
+const QUIET = .2;
 
 type Lit = { image: Phaser.GameObjects.Image; home: { x: number; y: number; size: number } };
 
@@ -20,6 +22,8 @@ export class ActingHalo {
   private rims: Phaser.GameObjects.Image[];
   private pool: Phaser.GameObjects.Image;
   private target: Lit | null = null;
+  // While a spell's halo swells on the lit figure, its rim steps back to a trace: drawn over gold, the halo was lost (#919).
+  private quieted = false;
 
   constructor(scene: Phaser.Scene, tone: HaloTone = ACTING) {
     // The pool is a round glow drawn once, its colour in the texture and its edge fading to nothing, blended
@@ -46,17 +50,21 @@ export class ActingHalo {
 
   get visible() { return Boolean(this.target); }
 
+  /** Quiet the rim while another halo is read on the figure, or give it back. */
+  quieten(on: boolean) { this.quieted = on; }
+  get quiet() { return this.quieted; }
+
   follow(time: number, reduced: boolean) {
     const target = this.target;
     if (!target) return;
     const { image, home } = target;
-    const breath = reduced ? 1 : .82 + .18 * Math.sin(time / 520);
+    const breath = reduced ? 1 : .82 + .18 * Math.sin(time / 520), strength = breath * (this.quieted ? QUIET : 1);
     for (const [index, rim] of this.rims.entries()) {
       if (rim.texture.key !== image.texture.key || rim.frame.name !== image.frame.name) rim.setTexture(image.texture.key, image.frame.name);
       const grow = index === 0 ? 1.06 : 1.13;
       rim.setOrigin(image.originX, image.originY).setFlipX(image.flipX).setAngle(image.angle)
         .setScale(image.scaleX * grow, image.scaleY * grow).setPosition(image.x, image.y + (index === 0 ? 2 : 4))
-        .setAlpha((index === 0 ? 1 : .42) * breath * image.alpha).setDepth(image.depth - .0004 - index * .0001)
+        .setAlpha((index === 0 ? 1 : .42) * strength * image.alpha).setDepth(image.depth - .0004 - index * .0001)
         .setVisible(image.visible);
     }
     this.pool.setPosition(home.x, home.y - 2).setDisplaySize(home.size * 1.15, Math.max(22, home.size * .26))

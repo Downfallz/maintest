@@ -10,6 +10,8 @@ export const SHAPES = Object.freeze(['dot', 'spark', 'shard', 'ring']);
 export const TINTS = Object.freeze(['family', 'bone', 'ember', 'blood']);
 export const BLENDS = Object.freeze(['normal', 'add', 'screen']);
 export const DIRECTIONS = Object.freeze(['out', 'along', 'back', 'up']);
+// Where on its figure a beat starts (the craft book, "A beat on the ground"): what starts at the feet lies on the ground.
+export const LEVELS = Object.freeze(['feet', 'centre', 'head']);
 export const MAX_BEATS = 12;
 export const MAX_PARTICLES = 24;
 // The most particles alive on the field at once, whatever the beats ask for (the craft book, "A budget of pixels").
@@ -30,10 +32,11 @@ const DEFAULTS = Object.freeze({
   pulse: { on: 'target', lasts: 300, tint: 'family', strength: .5 },
 });
 
-const WORDS = { on: ANCHORS, shape: SHAPES, tint: TINTS, blend: BLENDS, direction: DIRECTIONS };
+const WORDS = { on: ANCHORS, shape: SHAPES, tint: TINTS, blend: BLENDS, direction: DIRECTIONS, level: LEVELS };
 // The reach is a share of the figure's radius, which is about a third of its height: 300 clears the body.
 export const MAX_REACH = 400;
 const NUMBERS = { count: [1, MAX_PARTICLES], spread: [1, 360], reach: [1, MAX_REACH] };
+const AIMED = Object.freeze(['along', 'back']);
 const given = value => value !== undefined && value !== null;
 
 // The beat's start and its window, or null when it starts outside the action, or a motif starts in the windup.
@@ -75,7 +78,7 @@ function readBeat(authored, known) {
   if (!authored || typeof authored !== 'object' || !known.includes(authored.beat) || !Object.hasOwn(DEFAULTS, authored.beat)) return null;
   const when = timing(authored);
   if (!when) return null;
-  const beat = { ...DEFAULTS[authored.beat], beat: authored.beat, at: when.at, window: when.window, delay: when.delay };
+  const beat = { level: 'centre', ...DEFAULTS[authored.beat], beat: authored.beat, at: when.at, window: when.window, delay: when.delay };
   const read = copyGiven(authored, beat, Object.keys(WORDS), isWord)
     && copyGiven(authored, beat, Object.keys(NUMBERS), isCount)
     && copyGiven(authored, beat, ['strength'], isStrength)
@@ -83,6 +86,8 @@ function readBeat(authored, known) {
   if (!read) return null;
   // A fan all around unless its author aimed it; an aimed one is 50° wide unless told.
   if (authored.beat === 'burst' && !given(beat.spread)) beat.spread = beat.direction === 'out' ? 360 : 50;
+  // A ring aimed at the blow's side opens as an arc, 120° wide unless told; one not aimed opens all around.
+  if (authored.beat === 'glow' && beat.shape === 'ring' && AIMED.includes(beat.direction) && !given(beat.spread)) beat.spread = 120;
   return beat;
 }
 

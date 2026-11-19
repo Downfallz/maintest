@@ -6,12 +6,13 @@ import { SCENE_PARTICLES } from '../../../table/battle-staging.js';
 // So nothing here imports Phaser but as a type; `build.mjs` refuses the kit if it does.
 
 export type Engine = typeof Phaser;
-export interface Anchor { x: number; y: number; radius: number }
+/** A figure's place: its centre and its radius, and when the scene knows them the heights of its feet and its head. */
+export interface Anchor { x: number; y: number; radius: number; feet?: number; head?: number }
 /** One beat as `table/battle-staging.js` reads it: its defaults filled in, its delay inside its window. */
 export interface StagedBeat {
   beat: string; at: number; delay: number; window: string; on: string;
   lasts?: number; count?: number; shape?: string; tint?: string; blend?: string; direction?: string;
-  spread?: number; reach?: number; strength?: number;
+  spread?: number; reach?: number; strength?: number; level?: string;
 }
 /** One beat to play: where, on which figure, from where the blow came, in which colour, at which rate. */
 export interface BeatPlay {
@@ -21,8 +22,11 @@ export interface BeatPlay {
   from?: Anchor;
   figure?: Phaser.GameObjects.Image;
 }
-/** What the kit asks of the scene's view: the trauma is the scene's, one value for every hit. */
-export interface KitView { shake(strength: number): void }
+/**
+ * What the kit asks of the scene's view: the trauma is the scene's, one value for every hit; and while a halo
+ * swells on a figure the scene quiets the gold rim it draws around the acting one, so the halo is read.
+ */
+export interface KitView { shake(strength: number): void; quiet?(creature: string, on: boolean): void }
 export type Primitive = (kit: KitContext, play: BeatPlay) => void;
 
 /** The kit's one texture: on a phone a batch holds one texture, so every shape is a frame of it. */
@@ -33,6 +37,26 @@ const WAVE = 128;
 export const WAVE_RADIUS = 58;
 const DEPTH = 2000;
 const UP = -Math.PI / 2;
+/** How flat the ground lies under the eye: a distance toward or away from it is drawn at this share (*house*). */
+export const GROUND = .42;
+
+/**
+ * Where a beat starts on its figure (the craft book, "A beat on the ground"): at its feet, its centre or its
+ * head. A figure the scene gave no feet or head to has them a body's height apart, about three radii.
+ */
+export function placed(at: Anchor, level: string | undefined): Anchor {
+  if (level === 'feet') return { ...at, y: at.feet ?? at.y + at.radius * 1.4 };
+  if (level === 'head') return { ...at, y: at.head ?? at.y - at.radius * 1.4 };
+  return at;
+}
+
+/** Whether a beat's pieces travel on the ground: along or back against a blow struck across it, or anywhere but up from the feet. */
+export function grounded(beat: StagedBeat) {
+  return beat.direction === 'along' || beat.direction === 'back' || (beat.level === 'feet' && beat.direction !== 'up');
+}
+
+/** A heading on the screen turned onto the ground: the angle a ring lying there opens around. */
+export const onGround = (heading: number) => Math.atan2(Math.sin(heading) / GROUND, Math.cos(heading));
 
 /** Where a beat heads, in radians: along the blow, back against it, or up. A blow with no direction heads up. */
 export function headingOf(direction: string | undefined, heading: number | null) {
@@ -177,7 +201,24 @@ export class KitContext {
 
   /** What the bench and the browser specs read: every object alive, with its beat and its creature. */
   playing() {
-    return [...this.objects].map(object => ({ ...object.data.getAll() as { beat: string; creature: string } }));
+    return [...this.objects].map(object => {
+      const { beat, creature } = object.data.getAll() as { beat: string; creature: string };
+      return { beat, creature };
+    });
+  }
+
+  /** Where each object alive stands, and what else it says of itself, for the bench and the browser specs. */
+  places() {
+    return [...this.objects].map(object => {
+      const { x, y } = object as unknown as { x: number; y: number };
+      return { ...object.data.getAll() as { beat: string; creature: string }, x, y, kind: object.type };
+    });
+  }
+
+  /** A Graphics the kit owns, for a shape no frame of its texture draws. */
+  graphics(play: BeatPlay) {
+    const graphics = this.scene.add.graphics({ x: play.at.x, y: play.at.y }).setBlendMode(this.blend(play.beat.blend));
+    return this.own(graphics, play, play.beat.blend !== 'normal');
   }
 
   get changes() { return this.undo.size; }
