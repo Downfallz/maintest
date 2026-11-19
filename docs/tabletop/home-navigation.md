@@ -48,7 +48,9 @@ confirmation (deleting asks for the player name). The tabs follow the ARIA tabs 
 
 At 1306 CSS pixels and below, the navigation becomes a disclosure menu. The widest bar (a 20-character player
 name made of the letter W, an operator, every entry shown, Learn to play included) is 1243 pixels wide, inside
-the header's 32 on each side: it needs 1307. The menu's button exposes `aria-expanded`
+the header's 32 on each side: it needs 1307 in Inter. The bar's width hangs on the system's text face; where it
+is wider (DejaVu Sans on Linux), the player's name in the account chip is cut shorter, so the bar stays inside the
+header. The menu's button exposes `aria-expanded`
 and `aria-controls`; Escape and an outside click dismiss it. It is ordinary navigation rather than an ARIA
 application menu. Native dialogs handle focus containment and Escape, include an explicit close button,
 and restore focus to the menu toggle on narrow screens or their desktop opener. Long modal content scrolls

@@ -110,7 +110,8 @@ tutorial 2 carries nothing tutorial 3 teaches.
    and left the account menu. Measured in Chromium with a 20-character name made of `W`, an operator and every
    entry shown, the bar's content is 1243 px wide, inside the header's 32 px on each side: it needs 1307 px. The
    menu now folds at 1306 px and below, the bar shows from 1307 (`identity.css`, `lobby.css`, `battle.css`,
-   `navigation.js`). `lobby-home.spec.js` checks 1240, 1306, 1307 and 1440 with that name: the bar on one row,
+   `navigation.js`). The text face is the system's: in DejaVu Sans (CI's Linux runner) the same bar is 1318 px, wider
+   than the header's 1280 px cap, so the account chip's name gives way and is cut shorter instead. `lobby-home.spec.js` checks 1240, 1306, 1307 and 1440 with that name: the bar on one row,
    held inside the header, with Learn to play and Admin in view. `battle-services.spec.js` checks the match's
    header at the same widths. `lobby-tutorials.test.js` holds where the entry stands. `home-navigation.md`, the
    design system's SiteHeader notes and onboarding-plan.md say so. Left: `/design-system` republishes the

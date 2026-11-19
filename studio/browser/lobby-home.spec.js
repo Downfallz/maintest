@@ -344,6 +344,16 @@ test('navigation and dialogs fit narrow, intermediate and short landscape screen
     await expect(page.getByRole('button', { name: 'Close friends' })).toBeInViewport();
     await page.keyboard.press('Escape');
   }
+  // The text face is the system's. In a wide one (DejaVu Sans, CI's Linux runner) the bar is wider than the header's
+  // cap: the player's name gives way, and the bar still fits at the first width it shows and on a wide screen.
+  await page.addStyleTag({ content: 'body, body * { font-family: "DejaVu Sans", sans-serif !important; }' });
+  for (const width of [1307, 1440]) {
+    await page.setViewportSize({ width, height: 800 });
+    await noOverflow(page);
+    expect(await page.locator('.home-header').evaluate(header => header.scrollWidth <= header.clientWidth)).toBe(true);
+    await expect(page.locator('#account-menu summary')).toBeInViewport({ ratio: 1 });
+    expect((await page.locator('#account-menu summary').boundingBox()).width).toBeGreaterThanOrEqual(44);
+  }
   await page.setViewportSize({ width: 390, height: 844 });
   await openNavigation(page);
   await page.keyboard.press('Escape');

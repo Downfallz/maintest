@@ -166,12 +166,15 @@
 .home-header .brand { flex: none; }
 .home-header .brand .eyebrow { font-size: 8px; letter-spacing: 1.6px; }
 .home-header h1 { font-size: 23px; white-space: nowrap; }
-.home-header .home-navigation { margin-left: auto; display: flex; align-items: center; gap: 3px; }
+.home-header .home-navigation { flex: none; margin-left: auto; display: flex; align-items: center; gap: 3px; }
 .home-navigation > :is(a, button) { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 10px 11px; font-size: 12px; font-weight: 600; border: 1px solid transparent; border-radius: var(--radius-soft); background: transparent; color: var(--muted); text-decoration: none; white-space: nowrap; }
 .home-navigation > :is(a, button):hover, .home-navigation > [aria-current="page"] { color: var(--gold); background: var(--accent-wash); }
 .home-menu-toggle { display: none; }
-.home-header .account { flex: none; }
-.home-header #account-name { max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+/* The bar's width hangs on the system's text face. Where the face is wide (DejaVu Sans on Linux), the player's name
+   gives way first and is cut shorter, so the bar stays inside the header (#669). */
+.home-header .account, .home-header #account-menu { flex: 0 1 auto; min-width: 0; }
+.home-header .account-chip { min-width: 0; }
+.home-header #account-name { min-width: 0; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .home-header .account-chip { font-size: 12px; }
 .nav-badge { display: inline-grid; place-items: center; min-width: 19px; height: 19px; border-radius: 50%; padding: 0 4px; background: var(--gold); color: var(--accent-ink); font-size: 10px; }
 /* The bell: what waits for the player (their turns, invitations, friend requests), counted on it in every page's
