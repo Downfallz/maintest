@@ -212,6 +212,31 @@ public sealed class TableFilesTests
     }
 
     /// <summary>
+    /// A page's pictures at the size they are drawn (ADR 0198): every file the kit's module names is served as the
+    /// image it is, kept a day like any picture, and the host serves no other from that folder.
+    /// </summary>
+    [Fact]
+    public void Every_picture_the_kit_names_is_served_as_webp_bytes()
+    {
+        var module = Encoding.UTF8.GetString(Files.Get("/page-art.js").Body);
+        var named = System.Text.RegularExpressions.Regex.Matches(module, @"file: '([^']+\.webp)'")
+            .Select(match => match.Groups[1].Value).Order(StringComparer.Ordinal).ToList();
+
+        var served = Files.Routes.Where(route => route.StartsWith("/page-art/", StringComparison.Ordinal))
+            .Select(route => route["/page-art/".Length..]).Order(StringComparer.Ordinal).ToList();
+
+        named.ShouldNotBeEmpty();
+        served.ShouldBe(named);
+        foreach (var file in named)
+        {
+            var image = Files.Get($"/page-art/{file}");
+            image.ContentType.ShouldBe("image/webp");
+            Encoding.ASCII.GetString(image.Body, 8, 4).ShouldBe("WEBP");
+            image.Headers.ShouldNotBeNull().ShouldContain(header => header.Key == "Cache-Control" && header.Value == TableFiles.LastingCache);
+        }
+    }
+
+    /// <summary>
     /// Every evolution illustration the page can ask for is served as the image it is, and none is left out: the
     /// route table names each file of the folder and of its hybrids (ADR 0151, ADR 0152).
     /// </summary>

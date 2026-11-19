@@ -1,0 +1,24 @@
+{
+  "about": "The pictures the pages draw, each from a painting of the library (docs/art/page-pictures.md). scripts/ux/pictures.mjs derives table/page-art/ and table/page-art.js from this file; a test holds the three together.",
+  "encoding": { "quality": 82, "method": 6, "alphaQuality": 100 },
+  "pictures": [
+    {
+      "name": "eclipse-ground",
+      "source": "table/battle-art/eclipse-battle.webp",
+      "drawn": [533, 1440],
+      "pages": { "showcase/home": "largest", "table/sign-in": "largest" }
+    },
+    {
+      "name": "colossus",
+      "source": "table/battle-art/evolutions/brute-stage3-colossus.webp",
+      "drawn": [308, 620],
+      "pages": { "showcase/home": "largest" }
+    },
+    {
+      "name": "revenant",
+      "source": "table/battle-art/evolutions/warped-stage3-revenant.webp",
+      "drawn": [107, 550],
+      "pages": { "table/sign-in": "first" }
+    }
+  ]
+}

@@ -1125,6 +1125,26 @@ nothing is named, when a journey, a width or a strip is unknown, or when a build
 `baseline.mjs` lays the measures and the paints of a folder out as the page a person reads,
 docs/art/journeys/baseline.md; it exits 1 on a folder with no measures.
 
+### ux/pictures.mjs
+
+```bash
+node scripts/ux/pictures.mjs
+node scripts/ux/pictures.mjs --check
+node scripts/ux/pictures.mjs --budget
+node scripts/ux/pictures.mjs --asked
+```
+
+The picture kit's script (ADR 0198, docs/art/page-pictures.md). With no argument it derives the pictures of
+`docs/art/page-pictures.json` at the size each is drawn, once and twice, into `table/page-art/`, writes
+`table/page-art.js`, removes the files no picture needs, and prints each page's bytes against its budget. It
+encodes only a picture whose painting, declaration or encoding changed, through `scripts/ux/encode.py`, which
+needs `python3` with Pillow. `--check` encodes nothing: it holds the committed files against the declaration
+(every file, its dimensions, its bytes, its painting) and exits 1 with what is wrong, as
+`studio/ux-pictures.test.js` does in the gate. `--budget` prints each page of `docs/art/page-budget.json`, as a
+phone 390 px wide at twice the density takes its pictures, and exits 1 when one is over. `--asked` prints the
+pictures the briefs of `docs/art/journeys/` ask of the owner, each with its screen, its size, the painting that
+holds its place and its prompt.
+
 ### recap-fixture.py
 
 ```bash

@@ -169,6 +169,10 @@ html[data-feedback-muted] #settings-dialog .settings-feedback { display: none; }
   overflow-wrap: anywhere;
 }
 
+/* The icon set (icons.js, ADR 0198): a drawing in the identity's line, in the colour and at the size of the text
+   it sits in. It is never alone in a control without a name. */
+.icon { display: inline-block; flex: none; width: 1.25em; height: 1.25em; vertical-align: -.25em; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: square; stroke-linejoin: miter; }
+
 /* BEGIN MOTION KIT (ADR 0197, docs/art/ux-craft.md#motion). Five uses, each with one form, and ambience. Only
    transform and opacity move, by the tokens of docs/art/branding.css. Each form is written first as it is under
    less motion, a fade or a change of shade; what travels is added for full motion alone, where neither the
@@ -242,5 +246,26 @@ html[data-feedback-muted] #settings-dialog .settings-feedback { display: none; }
   @keyframes motion-breath { 50% { scale: 1.015; } }
   :root:not([data-motion="less"]) .motion-breath { transform-origin: 50% 100%; animation: motion-breath var(--motion-breath) ease-in-out infinite paused; }
   :root:not([data-motion="less"]) .motion-breath[data-ambient="playing"] { animation-play-state: running; }
+}
+/* A picture that moves, the second form: `.motion-strip` around one file that holds its frames side by side
+   (picture.js). It is ambience, like the breath: it plays once while motion.js says it is the screen's one, rests
+   on its last frame, and starts again when it comes back into view. Before that, and under less motion, it is its
+   first frame. The count comes as an attribute, one rule each: the showcase's policy refuses an inline style. */
+.motion-strip { display: block; overflow: hidden; }
+.motion-strip > img { display: block; width: calc(var(--frames) * 100%); max-width: none; height: auto; }
+.motion-strip[data-frames="2"] { --frames: 2; }
+.motion-strip[data-frames="3"] { --frames: 3; }
+.motion-strip[data-frames="4"] { --frames: 4; }
+.motion-strip[data-frames="5"] { --frames: 5; }
+.motion-strip[data-frames="6"] { --frames: 6; }
+.motion-strip[data-frames="7"] { --frames: 7; }
+.motion-strip[data-frames="8"] { --frames: 8; }
+.motion-strip[data-frames="9"] { --frames: 9; }
+.motion-strip[data-frames="10"] { --frames: 10; }
+.motion-strip[data-frames="11"] { --frames: 11; }
+.motion-strip[data-frames="12"] { --frames: 12; }
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes motion-strip { to { translate: calc(-100% * (var(--frames) - 1) / var(--frames)) 0; } }
+  :root:not([data-motion="less"]) .motion-strip[data-ambient="playing"] > img { animation: motion-strip var(--motion-strip) steps(var(--frames), jump-none) forwards; }
 }
 /* END MOTION KIT */

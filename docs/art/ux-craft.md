@@ -655,8 +655,8 @@ These come from decisions already taken. No pattern below is an exception to the
 - **Less motion and screen reader**: none to reduce. An `alt` that says what is shown, or an empty one for
   decoration.
 - **Here**: no page of the table holds an `<img>`. The showcase's largest paint was 4.4 s and the sign-in
-  panel's 4.7 s, one run each on a slow phone's profile; both are the hero's painting as a CSS background. UX6
-  and UX7, on the form UX5 builds.
+  panel's 4.7 s, one run each on a slow phone's profile; both are the hero's painting as a CSS background. The
+  form is `table/picture.js` ([the pages' pictures](page-pictures.md)); UX6 and UX7 place it.
 
 ### The thresholds
 
@@ -665,7 +665,7 @@ These come from decisions already taken. No pattern below is an exception to the
   0.25.
 - **Source**: [How the Core Web Vitals thresholds were defined](https://web.dev/articles/defining-core-web-vitals-thresholds),
   web.dev.
-- **Pages**: a file of budgets a test reads, as `battle/budget.mjs` is for the bundle.
+- **Pages**: a file of budgets a test reads, `docs/art/page-budget.json`, as `battle/budget.mjs` is for the bundle.
 - **Cost**: none.
 - **Less motion and screen reader**: none to reduce.
 - **Here**: the home's layout shift was 0.26. The plan proposed 2.5 s and under 0.1; [ADR 0197](../adr/0197-hold-the-pages-to-wcag-aa-a-vocabulary-of-motion-and-a-budget.md) sets them.
@@ -682,7 +682,8 @@ These come from decisions already taken. No pattern below is an exception to the
 - **Cost**: bytes on disk for each size, inside the image's budget; bytes saved on every visit.
 - **Less motion and screen reader**: none to reduce.
 - **Here**: 56 WebP files, 25 MB, under the table's battle art. The showcase draws a creature of 1536 by 1024
-  at 308 px wide, and loads 763 KB of pictures before any scroll. UX5 builds the script; UX6 uses it first.
+  at 308 px wide, and loads 763 KB of pictures before any scroll. `scripts/ux/pictures.mjs` derives the sizes
+  from `docs/art/page-pictures.json`; UX6 uses it first.
 
 ### Room held while it loads
 
@@ -708,20 +709,21 @@ These come from decisions already taken. No pattern below is an exception to the
   moved by `animation-timing-function: steps()`, which `animation-play-state` pauses.
 - **Cost**: a strip is as many pictures as it has frames: it counts in the page's budget, and is ambience.
 - **Less motion and screen reader**: the first frame, still.
-- **Here**: none. The owner asked for pictures that move (question 3 of the plan): by code first, then a strip
-  the owner generates. UX5 builds both forms.
+- **Here**: no page shows one yet. The owner asked for pictures that move (question 3 of the plan): by code
+  first, then a strip the owner generates. Both forms are in the kit: `.motion-breath`, and `.motion-strip`
+  with `stripElement` of `table/picture.js`. UX6 shows the first strip.
 
 ### Icons drawn in the identity's line
 
 - **What**: one set of drawn icons, in the line of the identity, in place of emoji, which each system draws its
   own way and a screen reader reads by its name.
-- **Source**: *house*: the plan's kit.
+- **Source**: *house*: the plan's kit, [ADR 0198](../adr/0198-send-a-pages-pictures-at-the-size-they-are-drawn-and-draw-one-icon-set.md).
 - **Pages**: inline SVG that takes `currentColor`, hidden from a screen reader, beside a label or inside a
   control that has a name.
 - **Cost**: a few hundred bytes an icon, in the HTML.
 - **Less motion and screen reader**: `aria-hidden="true"` on the drawing; the control's name is its text.
-- **Here**: 23 controls of the battle page carry an emoji as their icon. UX5 draws the set, UX11 and UX12 place
-  it.
+- **Here**: 23 controls of the battle page carry an emoji or a glyph as their icon. The set is `table/icons.js`,
+  twenty drawings; UX11 and UX12 place it.
 
 ## Accessibility
 
