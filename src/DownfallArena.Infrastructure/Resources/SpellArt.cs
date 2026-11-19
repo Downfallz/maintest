@@ -68,6 +68,9 @@ public sealed class SpellArt
     /// <summary>The most particles one beat holds (docs/art/battle-craft.md, "Burst").</summary>
     public const int MaxParticles = 24;
 
+    /// <summary>The farthest a beat reaches, in hundredths of its figure's radius: 300 clears the body.</summary>
+    public const int MaxReach = 400;
+
     /// <summary>The beats a staging holds once at most: the motif, and the two the flash limits count.</summary>
     private static readonly IReadOnlyList<string> Single = ["motif", "flash", "shake"];
 
@@ -269,7 +272,7 @@ public sealed class SpellArt
             }
         }
 
-        (string Name, int? Value, int Most)[] numbers = [("count", beat.Count, MaxParticles), ("spread", beat.Spread, 360), ("reach", beat.Reach, 200)];
+        (string Name, int? Value, int Most)[] numbers = [("count", beat.Count, MaxParticles), ("spread", beat.Spread, 360), ("reach", beat.Reach, MaxReach)];
         foreach (var (name, value, most) in numbers)
         {
             if (value is { } number && (number < 1 || number > most))

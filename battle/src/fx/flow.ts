@@ -1,4 +1,4 @@
-import { degrees, headingOf, type Primitive } from './kit';
+import { degrees, headingOf, sized, type Primitive } from './kit';
 
 // Flow (the craft book, "Flow"): a steady stream for as long as the beat lasts, a few particles at a time,
 // from all over the figure. Embers above a fire, a mending rising from a body.
@@ -8,7 +8,7 @@ export const flow: Primitive = (kit, play) => {
   if (!cap) return;
   const lasts = beat.lasts! / rate, life = Math.min(400 / rate, lasts / 2);
   const centre = degrees(headingOf(beat.direction, play.heading)), half = beat.spread! / 2;
-  const reach = at.radius * beat.reach! / 100, size = Math.max(.25, at.radius / 90);
+  const reach = at.radius * beat.reach! / 100, size = sized(beat, at.radius / 70, .3);
   const emitter = kit.emitter(play, cap, {
     lifespan: life, frequency: life / cap, quantity: 1,
     x: { min: -at.radius * .6, max: at.radius * .6 }, y: { min: -at.radius * .4, max: at.radius * .4 },

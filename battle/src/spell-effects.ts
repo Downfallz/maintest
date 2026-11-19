@@ -195,11 +195,23 @@ const FADE_SCALE: Record<string, number> = { arc: 1, void: .55 };
 type Painter = (g: Phaser.GameObjects.Graphics, r: number, color: number, motif: string, from: { x: number; y: number } | null) => void;
 const vector = (x: number, y: number) => new Phaser.Math.Vector2(x, y);
 
-const paintStrokes: Painter = (g, r, color, motif) => {
-  for (let i = -1; i <= 1; i++) {
-    const offset = i * r * .38;
-    g.lineStyle(motif === 'impact' ? 4 : 2.5, color).lineBetween(offset - r * .25, -r * .65, offset + r * .3, r * .5);
-  }
+// The palette's soot (`--brand-soot`, docs/art/branding.css): the edge a pale stroke is read against on a pale hide.
+const SOOT = 0x070d10;
+// A blow has a direction, and its strokes run along it: from the caster's side of the figure to the far side
+// (the craft book, "An impact that keeps the direction"). With no caster to come from, a wound, they lean as before.
+const paintStrokes: Painter = (g, r, color, motif, from) => {
+  const far = from ? Math.hypot(from.x, from.y) : 0;
+  const along = far > 0 ? { x: -from!.x / far, y: -from!.y / far } : { x: .43, y: .9 };
+  const across = { x: -along.y, y: along.x }, width = motif === 'impact' ? 4 : 2.5, half = r * .62;
+  const stroke = (shift: number) => {
+    const x = across.x * shift + along.x * r * .03, y = across.y * shift + along.y * r * .03;
+    g.lineBetween(x - along.x * half, y - along.y * half, x + along.x * half, y + along.y * half);
+  };
+  // Every edge first, then every stroke: one stroke's edge never covers its neighbour.
+  g.lineStyle(width + 3, SOOT, .6);
+  for (let i = -1; i <= 1; i++) stroke(i * r * .38);
+  g.lineStyle(width, color);
+  for (let i = -1; i <= 1; i++) stroke(i * r * .38);
   if (motif === 'impact') g.lineStyle(2, color, .5).strokeCircle(0, 0, r * .75);
 };
 const paintBite: Painter = (g, r, color) => {

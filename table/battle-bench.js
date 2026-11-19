@@ -52,7 +52,8 @@ export function benchSamples() {
     sample('flow', elemental, [{ beat: 'motif', at: 840 }, { beat: 'flow', at: 900, lasts: 900, shape: 'spark', tint: 'ember' }]),
     sample('trail', biological, [{ beat: 'trail', at: 240, lasts: 600 }, { beat: 'motif', at: 840 }]),
     sample('gather', necromantic, [{ beat: 'gather', at: 100, lasts: 700 }, { beat: 'motif', at: 840 }]),
-    sample('glow', astral, [{ beat: 'glow', at: 840, lasts: 500 }, { beat: 'motif', at: 840 }]),
+    // Both forms of the glow: the soft light, then the shock ring.
+    sample('glow', astral, [{ beat: 'glow', at: 840, lasts: 500 }, { beat: 'glow', at: 1000, lasts: 400, shape: 'ring', reach: 300 }, { beat: 'motif', at: 840 }]),
     sample('flash', physical, [{ beat: 'flash', at: 840 }, { beat: 'motif', at: 840, lasts: 120 }]),
     sample('shake', physical, [{ beat: 'shake', at: 900, lasts: 240, strength: .5 }, { beat: 'motif', at: 840, lasts: 700 }]),
     sample('pulse', astral, [{ beat: 'pulse', at: 840, lasts: 600, strength: 1 }, { beat: 'motif', at: 840 }]),
