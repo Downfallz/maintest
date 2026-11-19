@@ -27,10 +27,10 @@ async function mount(page, { assistedFirst = false, book = null, upkeepAtEnd = f
   const state = { errors: [], writes: [], said: [], left: 0, opened: 0, asked: 20, answered: 0, handedBack: false };
   page.on('pageerror', error => state.errors.push(error.message));
   const order = lesson.steps.map(step => step.at.creature);
-  // The lesson's casts, each one Shock on creature 4, as a match played to its end records them: what Replay the
-  // match reads back (#904). This mock gives them only once the match is over.
+  // The lesson's casts, each one Shock on creature 4, as a match played to its end records them: the live seat reads
+  // each in the poll after its answer, and Replay the match reads them all back from the start (#904).
   const enemy = health => [creature(4, health), creature(5), creature(6)], allies = [1, 2, 3].map(number => creature(number));
-  const casts = order.map((actor, step) => ({ sequence: step + 1, round: 2, event: { kind: 'CombatActionResolved', roundId: 2,
+  const casts = order.map((actor, step) => ({ sequence: step, round: 2, event: { kind: 'CombatActionResolved', roundId: 2,
     resolution: { action: { actor, spell: 'shock', targets: [4] } }, appliedOutcomes: [{ kind: 'DamageOutcome', amount: 3, target: 4 }],
     frame: { before: [...allies, ...enemy(9 - 3 * step)], after: [...allies, ...enemy(Math.max(0, 6 - 3 * step))], timeline: [], rollOffs: [] } } }));
   const view = (since = 0) => {
@@ -49,10 +49,11 @@ async function mount(page, { assistedFirst = false, book = null, upkeepAtEnd = f
     const feed = done && upkeepAtEnd ? [
       { sequence: 1, event: { kind: 'RoundEnergyGranted', roundId: 3, grants: [1, 2, 3, 4, 5, 6].map(one => ({ creature: one, gained: 2, before: 2, after: 4, baseRequested: 2, passiveRequested: 0 })) } },
       { sequence: 2, event: { kind: 'OngoingEffectsApplied', roundId: 3, energyRegenerationTicks: [], regenerationTicks: [], bleedTicks: [] } },
-    ] : over ? casts : [];
-    // The feed from `since` on, as the host trims it: a replay reads it whole, the live seat only what it has not seen.
-    const read = feed.filter(entry => entry.sequence >= since);
-    return { over, outcome: over ? { winner: 'player1', reason: 'Elimination' } : null, recording: false, feed: read, feedNext: feed.length ? feed.at(-1).sequence + 1 : 0, practice: { scenario: id, title: file.title, goal: file.goal, round: 2, tutorial }, board, ...question };
+    ] : endsMatch ? casts.slice(0, state.answered) : [];
+    // The feed from `since` on, counted as the host counts it (TableApi): a replay reads it whole, the live seat only
+    // what it has not seen.
+    const read = endsMatch ? feed.filter(entry => entry.sequence >= since) : feed;
+    return { over, outcome: over ? { winner: 'player1', reason: 'Elimination' } : null, recording: false, feed: read, feedNext: feed.length, practice: { scenario: id, title: file.title, goal: file.goal, round: 2, tutorial }, board, ...question };
   };
   await page.addInitScript(() => {
     const original = window.fetch;
@@ -482,6 +483,10 @@ test('Play again on a tutorial\'s result starts it over from its cut, and the re
   await expect(page.locator('#match-title')).toHaveText('Victory');
   await expect(page.locator('#match-again')).toHaveText('Play again');
   await expect(page.locator('#match-leave')).toHaveText('Leave the tutorial');
+  await expect(page.locator('#match-rematch')).toBeHidden(); await expect(page.locator('#match-lobby')).toBeHidden();
+  // Each pass answered every step once, and each said the tutorial is done.
+  await expect.poll(() => state.writes.length).toBe(2 * lesson.steps.length);
+  await expect.poll(() => state.said).toEqual(['done', 'done']);
   expect(state.errors).toEqual([]);
 });
 
