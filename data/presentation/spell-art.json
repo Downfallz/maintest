@@ -2,12 +2,28 @@
   "spell:adrenaline_tonic:v1": {
     "family": "biological",
     "motif": "spores",
-    "delivery": "cast"
+    "delivery": "cast",
+    "staging": [
+      { "beat": "flow", "at": 360, "lasts": 480, "on": "caster", "count": 10, "shape": "dot", "tint": "family", "direction": "up", "spread": 60, "reach": 200, "strength": 0.4, "blend": "screen" },
+      { "beat": "motif", "at": 840, "lasts": 900 },
+      { "beat": "glow", "at": 840, "lasts": 400, "shape": "ring", "tint": "family", "reach": 200, "strength": 0.6, "blend": "add" },
+      { "beat": "burst", "at": 840, "lasts": 300, "count": 14, "shape": "spark", "tint": "family", "direction": "up", "spread": 40, "reach": 300, "strength": 0.5, "blend": "add" },
+      { "beat": "burst", "at": 1100, "lasts": 300, "count": 10, "shape": "spark", "tint": "family", "direction": "up", "spread": 30, "reach": 340, "strength": 0.45, "blend": "add" },
+      { "beat": "flow", "at": 1160, "lasts": 560, "count": 6, "shape": "spark", "tint": "family", "direction": "up", "spread": 20, "reach": 200, "strength": 0.3, "blend": "add" }
+    ]
   },
   "spell:ambush:v1": {
     "family": "biological",
     "motif": "slash",
-    "delivery": "melee"
+    "delivery": "melee",
+    "staging": [
+      { "beat": "motif", "at": 840, "lasts": 800 },
+      { "beat": "glow", "at": 840, "lasts": 280, "tint": "family", "reach": 240, "strength": 0.8, "blend": "add" },
+      { "beat": "burst", "at": 840, "lasts": 360, "count": 20, "shape": "shard", "tint": "bone", "direction": "out", "spread": 360, "reach": 300, "strength": 0.5, "blend": "normal" },
+      { "beat": "burst", "at": 840, "lasts": 260, "count": 12, "shape": "spark", "tint": "bone", "direction": "along", "spread": 60, "reach": 360, "strength": 0.5, "blend": "add" },
+      { "beat": "shake", "at": 840, "strength": 0.12 },
+      { "beat": "gather", "at": 1440, "lasts": 480, "on": "caster", "count": 10, "shape": "dot", "tint": "bone", "reach": 200, "strength": 0.3, "blend": "normal", "level": "feet" }
+    ]
   },
   "spell:bone_ward:v1": {
     "family": "necromantic",
@@ -146,7 +162,15 @@
   "spell:latch:v1": {
     "family": "biological",
     "motif": "bite",
-    "delivery": "melee"
+    "delivery": "melee",
+    "staging": [
+      { "beat": "motif", "at": 840, "lasts": 900 },
+      { "beat": "gather", "at": 840, "lasts": 200, "on": "target", "count": 6, "shape": "shard", "tint": "bone", "reach": 240, "strength": 0.5, "blend": "normal" },
+      { "beat": "flow", "at": 1000, "lasts": 900, "count": 10, "shape": "dot", "tint": "blood", "direction": "out", "spread": 360, "reach": 60, "strength": 0.35, "blend": "normal" },
+      { "beat": "burst", "at": 1040, "lasts": 240, "count": 6, "shape": "dot", "tint": "blood", "direction": "out", "spread": 360, "reach": 80, "strength": 0.3, "blend": "normal" },
+      { "beat": "flow", "at": 1040, "lasts": 560, "count": 8, "shape": "dot", "tint": "blood", "direction": "back", "spread": 30, "reach": 240, "strength": 0.3, "blend": "normal" },
+      { "beat": "glow", "at": 1440, "lasts": 500, "on": "caster", "tint": "family", "reach": 150, "strength": 0.4, "blend": "screen" }
+    ]
   },
   "spell:lightning_bolt:v1": {
     "family": "elemental",
@@ -161,7 +185,15 @@
   "spell:momentum:v1": {
     "family": "biological",
     "motif": "slash",
-    "delivery": "melee"
+    "delivery": "melee",
+    "staging": [
+      { "beat": "trail", "at": 540, "lasts": 300, "count": 12, "shape": "spark", "tint": "family", "strength": 0.3, "blend": "add" },
+      { "beat": "motif", "at": 840, "lasts": 600 },
+      { "beat": "burst", "at": 840, "lasts": 220, "count": 8, "shape": "spark", "tint": "family", "direction": "along", "spread": 30, "reach": 300, "strength": 0.4, "blend": "add" },
+      { "beat": "burst", "at": 860, "lasts": 200, "count": 6, "shape": "shard", "tint": "bone", "direction": "out", "spread": 360, "reach": 120, "strength": 0.3, "blend": "normal" },
+      { "beat": "glow", "at": 1440, "lasts": 260, "on": "caster", "tint": "family", "reach": 150, "strength": 0.5, "blend": "add" },
+      { "beat": "burst", "at": 1440, "lasts": 300, "on": "caster", "count": 8, "shape": "spark", "tint": "family", "direction": "up", "spread": 50, "reach": 220, "strength": 0.4, "blend": "add" }
+    ]
   },
   "spell:mortal_wound:v1": {
     "family": "biological",
@@ -176,17 +208,39 @@
   "spell:noxious_cure:v1": {
     "family": "biological",
     "motif": "spores",
-    "delivery": "cast"
+    "delivery": "cast",
+    "staging": [
+      { "beat": "gather", "at": 480, "lasts": 360, "on": "caster", "count": 12, "shape": "dot", "tint": "family", "reach": 220, "strength": 0.4, "blend": "normal" },
+      { "beat": "motif", "at": 840, "lasts": 900 },
+      { "beat": "gather", "at": 840, "lasts": 320, "on": "target", "count": 12, "shape": "dot", "tint": "family", "reach": 200, "strength": 0.5, "blend": "normal" },
+      { "beat": "glow", "at": 1160, "lasts": 420, "tint": "family", "reach": 170, "strength": 0.55, "blend": "screen" },
+      { "beat": "burst", "at": 1240, "lasts": 400, "count": 10, "shape": "shard", "tint": "bone", "direction": "out", "spread": 360, "reach": 180, "strength": 0.25, "blend": "normal" },
+      { "beat": "flow", "at": 1240, "lasts": 600, "count": 6, "shape": "dot", "tint": "family", "direction": "out", "spread": 360, "reach": 50, "strength": 0.3, "blend": "normal" }
+    ]
   },
   "spell:parasite_jab:v1": {
     "family": "biological",
     "motif": "bite",
-    "delivery": "melee"
+    "delivery": "melee",
+    "staging": [
+      { "beat": "motif", "at": 840, "lasts": 700 },
+      { "beat": "burst", "at": 840, "lasts": 180, "count": 10, "shape": "spark", "tint": "bone", "direction": "out", "spread": 360, "reach": 140, "strength": 0.4, "blend": "normal" },
+      { "beat": "shake", "at": 840, "strength": 0.08 },
+      { "beat": "burst", "at": 860, "lasts": 320, "count": 12, "shape": "dot", "tint": "blood", "direction": "back", "spread": 40, "reach": 280, "strength": 0.35, "blend": "normal" },
+      { "beat": "gather", "at": 1200, "lasts": 320, "on": "caster", "count": 12, "shape": "dot", "tint": "blood", "reach": 240, "strength": 0.35, "blend": "normal" },
+      { "beat": "glow", "at": 1520, "lasts": 300, "on": "caster", "tint": "family", "reach": 170, "strength": 0.6, "blend": "screen" }
+    ]
   },
   "spell:poison_slash:v1": {
     "family": "biological",
     "motif": "slash",
-    "delivery": "melee"
+    "delivery": "melee",
+    "staging": [
+      { "beat": "motif", "at": 840, "lasts": 700 },
+      { "beat": "burst", "at": 840, "lasts": 280, "count": 8, "shape": "dot", "tint": "family", "direction": "along", "spread": 40, "reach": 260, "strength": 0.3, "blend": "normal" },
+      { "beat": "flow", "at": 920, "lasts": 640, "count": 8, "shape": "dot", "tint": "blood", "direction": "out", "spread": 360, "reach": 60, "strength": 0.3, "blend": "normal" },
+      { "beat": "flow", "at": 960, "lasts": 600, "count": 6, "shape": "dot", "tint": "family", "direction": "up", "spread": 30, "reach": 100, "strength": 0.3, "blend": "screen" }
+    ]
   },
   "spell:protective_slam:v1": {
     "family": "physical",
@@ -304,7 +358,13 @@
   "spell:throwing_star:v1": {
     "family": "biological",
     "motif": "quill",
-    "delivery": "projectile"
+    "delivery": "projectile",
+    "staging": [
+      { "beat": "motif", "at": 840, "lasts": 600 },
+      { "beat": "burst", "at": 840, "lasts": 160, "count": 6, "shape": "spark", "tint": "bone", "direction": "out", "spread": 360, "reach": 120, "strength": 0.3, "blend": "normal" },
+      { "beat": "burst", "at": 840, "lasts": 240, "count": 10, "shape": "shard", "tint": "bone", "direction": "along", "spread": 20, "reach": 320, "strength": 0.4, "blend": "normal" },
+      { "beat": "burst", "at": 880, "lasts": 280, "count": 6, "shape": "dot", "tint": "bone", "direction": "back", "spread": 60, "reach": 140, "strength": 0.3, "blend": "normal" }
+    ]
   },
   "spell:thundering_seal:v1": {
     "family": "physical",

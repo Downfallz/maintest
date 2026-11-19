@@ -40,7 +40,7 @@ const film = (page, call, value) => page.evaluate(([name, argument]) => window.b
 test.beforeEach(async ({ page }) => { await openBench(page, '/table/battle-lab.html'); });
 
 test('the spell art stages spells, and the page reads each staging', () => {
-  expect(staged.length).toBeGreaterThanOrEqual(16);
+  expect(staged.length).toBeGreaterThanOrEqual(30);
   for (const { id, beats } of staged) expect(beats, id).not.toBeNull();
 });
 
