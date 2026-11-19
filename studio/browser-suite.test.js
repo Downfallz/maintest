@@ -66,6 +66,9 @@ test('the film strip script plays the two specs that open the bench through it',
 
 test('the journey film plays its real-engine journey', () => {
   assert.deepEqual(plan(['scripts/ux/journey.mjs'], specs), { ...nothing, realEngine: true });
+  // The doors are walked on the showcase the journey builds.
+  assert.equal(plan(['showcase/showcase.css'], specs).realEngine, true);
+  assert.equal(plan(['showcase/showcase.test.js'], specs).realEngine, false);
 });
 
 test("the pages' own tests play no journey", () => {

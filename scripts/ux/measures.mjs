@@ -2,7 +2,7 @@
 // actions, the pictures, the smallest text, the targets a finger could miss, the controls that overlap, what
 // still animates at rest, the layout's shift, and what axe finds. Read in the page, on the window a player is
 // in: the modal window when one is open, the whole page otherwise. Nothing here reads a clock, so the same
-// screen gives the same line twice; what depends on time (a paint) is measured apart (`paint.mjs`).
+// screen gives the same line twice, the shift aside (`TIMED`); a paint is measured apart (`paint.mjs`).
 
 /** The WCAG 2.2 AA rules, as axe tags them: the level the pages are held to (the plan, question 2). */
 export const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
@@ -136,6 +136,12 @@ export function parseMeasures(text) {
   return { header, screens };
 }
 
+/**
+ * What a screen's line holds that depends on when things arrived: the layout's shift moves by a hundredth with
+ * the order a page's parts come in. It is written, and left out when two walks are compared.
+ */
+export const TIMED = ['shift'];
+
 /** What differs between two walks of one journey, a line a difference; empty when they measure the same. */
 export function differences(first, second) {
   const lines = [];
@@ -151,7 +157,7 @@ export function differences(first, second) {
     if (!other) break;
     const mine = flat(screen.measures ?? screen), theirs = flat(other.measures ?? other);
     for (const key of new Set([...Object.keys(mine), ...Object.keys(theirs)])) {
-      if (mine[key] !== theirs[key]) lines.push(`${screen.screen ?? screen.name}: ${key} ${mine[key]} | ${theirs[key]}`);
+      if (!TIMED.includes(key) && mine[key] !== theirs[key]) lines.push(`${screen.screen ?? screen.name}: ${key} ${mine[key]} | ${theirs[key]}`);
     }
   }
   return lines;

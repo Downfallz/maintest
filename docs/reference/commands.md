@@ -1105,16 +1105,17 @@ A screen's line: the window it was measured on (the modal window when one is ope
 the words shown, the filled actions, the pictures (`<img>`, CSS backgrounds, the canvas, and those sent at over
 twice the size they are drawn), the smallest text and the words under 11 px, the targets under 44 and under
 24 px, the controls that overlap, what still animates at rest, the layout's shift, and the WCAG 2.2 AA rules
-axe finds failing. Two walks of one journey give the same lines (`studio/browser/table.journey.js`). The walk
+axe finds failing. Two walks of one journey give the same lines (`studio/browser/table.journey.js`), the shift aside: it
+moves by a hundredth with the order a page's parts arrive in, and is read on the slow phone by `--paint`. The walk
 fails when it misses a screen its journey names, or when the page throws.
 
 `--strip <interaction>` films one interaction across time instead: the walk stops at the strip's screen, stops
 the animations and holds the timers, makes the interaction and steps the page (`--frames`, 12 by default,
-`--interval` ms apart, 40 by default) onto `lobby-create-window-390.png`. `--paint` loads the showcase's home,
+`--interval` ms apart, 40 by default) onto one sheet a width, `lobby-create-window-390.png`. `--paint` loads the showcase's home,
 the sign-in panel and a new player's home `--runs` times each (5 by default) with nothing cached, on a slow
 phone's network and processor, and writes the median, the fastest and the slowest of the first and the largest
-paint in `paint.json`. `--out` is the folder (`artifacts/journeys/` by default). It exits 1 with nothing named,
-a journey, a width or a strip it does not know, or a build it lacks.
+paint in `paint.json`. `--out` is the folder (`artifacts/journeys/` by default). It exits 1 when
+nothing is named, when a journey, a width or a strip is unknown, or when a build is missing.
 
 `baseline.mjs` lays the measures and the paints of a folder out as the page a person reads,
 docs/art/journeys/baseline.md; it exits 1 on a folder with no measures.

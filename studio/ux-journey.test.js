@@ -83,6 +83,9 @@ test('two walks differ by the screens they reach and by any measure, however dee
   const deeper = screen('one', 12); deeper.measures.text.smallest = 7; deeper.measures.axe = { 'color-contrast': 2 };
   assert.deepEqual(differences([screen('one', 12)], [deeper]), ['one: text.smallest 10 | 7', 'one: axe.color-contrast undefined | 2']);
   assert.match(differences([screen('one', 12)], [screen('other', 12)])[0], /^screens: one \| other$/);
+  // The shift depends on when a page's parts arrive: it is written, not compared.
+  const shifted = screen('one', 12); shifted.measures.shift = 0.03;
+  assert.deepEqual(differences([screen('one', 12)], [shifted]), []);
   // The lines of a measures file compare as the walk's own screens do.
   const written = parseMeasures(measuresLines({ journey: 'doors', viewport: VIEWPORTS[1], axe: true, screens: [screen('one', 12)] })).screens;
   assert.deepEqual(differences(written, written), []);

@@ -171,6 +171,7 @@ export async function contactSheet(browser, cells, { title, columns = COLUMNS, w
   try {
     const figures = cells.map(({ png, caption, note }) =>
       `<figure><img src="data:image/png;base64,${png.toString('base64')}"><figcaption><b>${escape(caption)}</b>${note ? ` ${escape(note)}` : ''}</figcaption></figure>`).join('');
+    // The sheet's colours are the brand's (docs/art/branding.css), written out: the sheet loads no stylesheet.
     await page.setContent(`<!doctype html><meta charset="utf-8"><style>
       body { margin: 0; padding: 12px; background: #0b1519; color: #ece9dc; font: 13px system-ui, sans-serif; width: max-content; }
       h1 { font-size: 15px; font-weight: 600; margin: 0 0 10px; }

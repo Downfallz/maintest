@@ -15,7 +15,9 @@ const phone = { width: 390, height: 844 };
 const doors = JOURNEYS.find(journey => journey.id === 'doors');
 
 let folder, showcase;
-test.beforeAll(async () => {
+test.beforeAll(async ({}, info) => {
+  // Built for the one project that walks: the other skips both tests.
+  if (info.project.name !== 'table-phone') return;
   folder = await mkdtemp(join(tmpdir(), 'ux-journey-spec-'));
   showcase = await buildShowcase(join(folder, 'dist'));
 });

@@ -6,17 +6,18 @@ accounts, in Chromium. Written by `scripts/ux/baseline.mjs` from the files of th
 later stage walks its journey again and reads its measures against these.
 
 A screen is measured on the window a player is in: the modal window when one is open, the whole page
-otherwise. Words are the words shown. A filled action is a control whose background is the brand's gold. A
-target is a control; it is counted under 44 px when either side is. An overlap is two controls sharing more
-than 2 px each way. Animating is what still runs once the screen is at rest. The shift is the layout's, summed
-since the page loaded. axe ran the rules tagged WCAG 2.2 AA; a number is the elements a rule fails on. A staged
-screen was opened by the walk itself, where a walk cannot press what a player presses.
+otherwise. Words counts the words shown. A filled action is a control whose background is the brand's gold, and no
+other colour. A target is a control; it counts as under 44 px when either side is under 44 px. An overlap is two controls sharing more
+than 2 px each way. Animating is what still runs once the screen is at rest. The shift is the layout shift, summed
+since the page loaded; it moves by a hundredth from one walk to the next, and is not what two walks are compared on. axe ran the rules tagged WCAG 2.2 AA; a number is the elements a rule fails on. A staged
+screen was opened by the walk itself, because the walk cannot press what a player can (Google's button).
+axe cannot read the text set over a picture or inside the canvas.
 
 ## The two doors
 
 At 320 by 568:
 
-| Screen | Height | Words | Filled actions | Pictures | Smallest text | Words under 11 px | Targets under 44 px | under 24 px | Overlaps | Animating | Shift | axe |
+| Screen | Height | Words | Filled actions | Pictures | Smallest text | Words under 11 px | Targets under 44 px | Targets under 24 px | Overlaps | Animating | Shift | axe |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | showcase-home | 6745 px | 741 | 2 | 5 img, 8 background; 5 sent over twice their size | 8 px | 4 | 7 of 29 | 0 | 0 | 0 | 0.00 | label-content-name-mismatch (1) |
 | showcase-home-fr | 7307 px | 830 | 2 | 5 img, 8 background; 5 sent over twice their size | 8 px | 4 | 7 of 29 | 0 | 0 | 0 | 0.00 | label-content-name-mismatch (1) |
@@ -30,7 +31,7 @@ At 320 by 568:
 
 At 390 by 844:
 
-| Screen | Height | Words | Filled actions | Pictures | Smallest text | Words under 11 px | Targets under 44 px | under 24 px | Overlaps | Animating | Shift | axe |
+| Screen | Height | Words | Filled actions | Pictures | Smallest text | Words under 11 px | Targets under 44 px | Targets under 24 px | Overlaps | Animating | Shift | axe |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | showcase-home | 6305 px | 741 | 2 | 5 img, 8 background; 5 sent over twice their size | 8 px | 4 | 7 of 29 | 0 | 0 | 0 | 0.00 | label-content-name-mismatch (1) |
 | showcase-home-fr | 6754 px | 830 | 2 | 5 img, 8 background; 5 sent over twice their size | 8 px | 4 | 7 of 29 | 0 | 0 | 0 | 0.00 | label-content-name-mismatch (1) |
@@ -46,7 +47,7 @@ At 390 by 844:
 
 At 320 by 568:
 
-| Screen | Height | Words | Filled actions | Pictures | Smallest text | Words under 11 px | Targets under 44 px | under 24 px | Overlaps | Animating | Shift | axe |
+| Screen | Height | Words | Filled actions | Pictures | Smallest text | Words under 11 px | Targets under 44 px | Targets under 24 px | Overlaps | Animating | Shift | axe |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | lesson-1-brief | 387 px, a window | 66 | 1 | 1 background | 10 px | 4 | 0 of 2 | 0 | 0 | 0 | 0.05 | nothing |
 | lesson-1-concept-card | 398 px, a window | 65 | 1 | 1 background | 10 px | 2 | 0 of 2 | 0 | 0 | 0 | 0.05 | nothing |
@@ -66,7 +67,7 @@ At 320 by 568:
 | lesson-result | 542 px, a window | 122 | 1 | 1 img, 2 background; 1 sent over twice their size | 9 px | 26 | 6 of 12 | 0 | 5 | 0 | 0.50 | label-content-name-mismatch (1) |
 | home-after-the-lessons | 1999 px | 180 | 5 | 9 background | 10 px | 11 | 5 of 15 | 2 | 0 | 0 | 0.00 | nothing |
 
-Out of a player's reach at this size, and chosen by the walk's script so the rest is filmed:
+Out of a player's reach at this size. The walk's script made these choices so the rest could be filmed:
 
 - after lesson-2-first-step: [data-speed="Standard"] could not be pressed
 - after lesson-3-first-step: #planning-creatures [data-creature="1"] could not be pressed
@@ -80,7 +81,7 @@ Out of a player's reach at this size, and chosen by the walk's script so the res
 
 At 390 by 844:
 
-| Screen | Height | Words | Filled actions | Pictures | Smallest text | Words under 11 px | Targets under 44 px | under 24 px | Overlaps | Animating | Shift | axe |
+| Screen | Height | Words | Filled actions | Pictures | Smallest text | Words under 11 px | Targets under 44 px | Targets under 24 px | Overlaps | Animating | Shift | axe |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | lesson-1-brief | 348 px, a window | 66 | 1 | 1 background | 10 px | 4 | 0 of 2 | 0 | 0 | 0 | 0.03 | nothing |
 | lesson-1-concept-card | 336 px, a window | 65 | 1 | 1 background | 10 px | 2 | 0 of 2 | 0 | 0 | 0 | 0.03 | nothing |
@@ -104,7 +105,7 @@ At 390 by 844:
 
 At 320 by 568:
 
-| Screen | Height | Words | Filled actions | Pictures | Smallest text | Words under 11 px | Targets under 44 px | under 24 px | Overlaps | Animating | Shift | axe |
+| Screen | Height | Words | Filled actions | Pictures | Smallest text | Words under 11 px | Targets under 44 px | Targets under 24 px | Overlaps | Animating | Shift | axe |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | home-new | 1971 px | 176 | 5 | 9 background | 10 px | 11 | 5 of 15 | 2 | 0 | 0 | 0.00 | nothing |
 | home-menu | 1971 px | 189 | 5 | 10 background | 10 px | 11 | 5 of 22 | 2 | 3 | 0 | 0.00 | nothing |
@@ -115,13 +116,13 @@ At 320 by 568:
 | home-waiting | 2408 px | 209 | 7 | 11 background | 9 px | 12 | 5 of 17 | 2 | 0 | 0 | 0.00 | label-content-name-mismatch (2) |
 | home-game-ended | 2139 px | 193 | 5 | 10 background | 9 px | 13 | 6 of 16 | 2 | 0 | 0 | 0.00 | nothing |
 
-Out of a player's reach at this size, and chosen by the walk's script so the rest is filmed:
+Out of a player's reach at this size. The walk's script made these choices so the rest could be filmed:
 
 - after home-waiting: #settings could not be pressed
 
 At 390 by 844:
 
-| Screen | Height | Words | Filled actions | Pictures | Smallest text | Words under 11 px | Targets under 44 px | under 24 px | Overlaps | Animating | Shift | axe |
+| Screen | Height | Words | Filled actions | Pictures | Smallest text | Words under 11 px | Targets under 44 px | Targets under 24 px | Overlaps | Animating | Shift | axe |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | home-new | 1923 px | 176 | 5 | 9 background | 10 px | 11 | 4 of 15 | 2 | 0 | 0 | 0.00 | nothing |
 | home-menu | 1923 px | 189 | 5 | 10 background | 10 px | 11 | 4 of 22 | 2 | 3 | 0 | 0.00 | nothing |
@@ -136,7 +137,7 @@ At 390 by 844:
 
 At 320 by 568:
 
-| Screen | Height | Words | Filled actions | Pictures | Smallest text | Words under 11 px | Targets under 44 px | under 24 px | Overlaps | Animating | Shift | axe |
+| Screen | Height | Words | Filled actions | Pictures | Smallest text | Words under 11 px | Targets under 44 px | Targets under 24 px | Overlaps | Animating | Shift | axe |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | friends-empty | 383 px, a window | 46 | 0 | 3 background | 10 px | 2 | 0 of 3 | 0 | 0 | 0 | 0.00 | nothing |
 | friends-asked | 514 px, a window | 58 | 0 | 3 background | 10 px | 2 | 0 of 4 | 0 | 0 | 0 | 0.00 | nothing |
@@ -147,7 +148,7 @@ At 320 by 568:
 
 At 390 by 844:
 
-| Screen | Height | Words | Filled actions | Pictures | Smallest text | Words under 11 px | Targets under 44 px | under 24 px | Overlaps | Animating | Shift | axe |
+| Screen | Height | Words | Filled actions | Pictures | Smallest text | Words under 11 px | Targets under 44 px | Targets under 24 px | Overlaps | Animating | Shift | axe |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | friends-empty | 361 px, a window | 46 | 0 | 3 background | 10 px | 2 | 0 of 3 | 0 | 0 | 0 | 0.00 | nothing |
 | friends-asked | 492 px, a window | 58 | 0 | 3 background | 10 px | 2 | 0 of 4 | 0 | 0 | 0 | 0.00 | nothing |
@@ -160,7 +161,7 @@ At 390 by 844:
 
 At 320 by 568:
 
-| Screen | Height | Words | Filled actions | Pictures | Smallest text | Words under 11 px | Targets under 44 px | under 24 px | Overlaps | Animating | Shift | axe |
+| Screen | Height | Words | Filled actions | Pictures | Smallest text | Words under 11 px | Targets under 44 px | Targets under 24 px | Overlaps | Animating | Shift | axe |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | upkeep | 157 px, a window | 11 | 1 | none | 13 px | 0 | 0 of 3 | 0 | 0 | 0 | 0.03 | nothing |
 | phase-tip | 328 px, a window | 152 | 0 | 2 background | 9 px | 4 | 1 of 5 | 1 | 0 | 0 | 0.03 | nothing |
@@ -175,7 +176,7 @@ At 320 by 568:
 | concede | 326 px, a window | 15 | 0 | 1 background | 16 px | 0 | 0 of 2 | 0 | 0 | 0 | 0.32 | nothing |
 | match-result | 542 px, a window | 112 | 1 | 1 img, 2 background; 1 sent over twice their size | 9 px | 20 | 6 of 12 | 0 | 4 | 0 | 0.32 | nothing |
 
-Out of a player's reach at this size, and chosen by the walk's script so the rest is filmed:
+Out of a player's reach at this size. The walk's script made these choices so the rest could be filmed:
 
 - after mutation-tree: #planning-creatures [data-creature="1"] could not be pressed
 - after mutation-tree: #planning-creatures [data-creature="2"] could not be pressed
@@ -183,7 +184,7 @@ Out of a player's reach at this size, and chosen by the walk's script so the res
 
 At 390 by 844:
 
-| Screen | Height | Words | Filled actions | Pictures | Smallest text | Words under 11 px | Targets under 44 px | under 24 px | Overlaps | Animating | Shift | axe |
+| Screen | Height | Words | Filled actions | Pictures | Smallest text | Words under 11 px | Targets under 44 px | Targets under 24 px | Overlaps | Animating | Shift | axe |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | upkeep | 113 px, a window | 11 | 1 | none | 13 px | 0 | 0 of 3 | 0 | 0 | 0 | 0.04 | nothing |
 | phase-tip | 489 px, a window | 152 | 0 | 2 background | 9 px | 4 | 1 of 5 | 1 | 0 | 0 | 0.04 | nothing |

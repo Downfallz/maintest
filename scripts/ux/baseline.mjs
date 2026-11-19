@@ -12,7 +12,7 @@ import { pathToFileURL } from 'node:url';
 import { JOURNEYS } from './journeys.mjs';
 import { parseMeasures } from './measures.mjs';
 
-const COLUMNS = ['Screen', 'Height', 'Words', 'Filled actions', 'Pictures', 'Smallest text', 'Words under 11 px', 'Targets under 44 px', 'under 24 px', 'Overlaps', 'Animating', 'Shift', 'axe'];
+const COLUMNS = ['Screen', 'Height', 'Words', 'Filled actions', 'Pictures', 'Smallest text', 'Words under 11 px', 'Targets under 44 px', 'Targets under 24 px', 'Overlaps', 'Animating', 'Shift', 'axe'];
 
 function row(screen, axe) {
   const { pictures, text, targets } = screen;
@@ -39,18 +39,19 @@ accounts, in Chromium. Written by \`scripts/ux/baseline.mjs\` from the files of 
 later stage walks its journey again and reads its measures against these.
 
 A screen is measured on the window a player is in: the modal window when one is open, the whole page
-otherwise. Words are the words shown. A filled action is a control whose background is the brand's gold. A
-target is a control; it is counted under 44 px when either side is. An overlap is two controls sharing more
-than 2 px each way. Animating is what still runs once the screen is at rest. The shift is the layout's, summed
-since the page loaded. axe ran the rules tagged WCAG 2.2 AA; a number is the elements a rule fails on. A staged
-screen was opened by the walk itself, where a walk cannot press what a player presses.`];
+otherwise. Words counts the words shown. A filled action is a control whose background is the brand's gold, and no
+other colour. A target is a control; it counts as under 44 px when either side is under 44 px. An overlap is two controls sharing more
+than 2 px each way. Animating is what still runs once the screen is at rest. The shift is the layout shift, summed
+since the page loaded; it moves by a hundredth from one walk to the next, and is not what two walks are compared on. axe ran the rules tagged WCAG 2.2 AA; a number is the elements a rule fails on. A staged
+screen was opened by the walk itself, because the walk cannot press what a player can (Google's button).
+axe cannot read the text set over a picture or inside the canvas.`];
   for (const journey of JOURNEYS) {
     const mine = walks.filter(walk => walk.header.journey === journey.id);
     if (!mine.length) continue;
     parts.push(`## ${journey.title}`);
     for (const walk of mine) {
       parts.push(`At ${walk.header.viewport.replace('x', ' by ')}:`, table(COLUMNS, walk.screens.map(screen => row(screen, walk.header.axe))));
-      if (walk.header.blocked?.length) parts.push(`Out of a player's reach at this size, and chosen by the walk's script so the rest is filmed:\n\n${walk.header.blocked.map(line => `- ${line.replaceAll('|', '\\|')}`).join('\n')}`);
+      if (walk.header.blocked?.length) parts.push(`Out of a player's reach at this size. The walk's script made these choices so the rest could be filmed:\n\n${walk.header.blocked.map(line => `- ${line.replaceAll('|', '\\|')}`).join('\n')}`);
     }
   }
   if (paint) {

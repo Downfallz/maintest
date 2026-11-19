@@ -264,10 +264,11 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
    walks the doors twice on the real engine and compares, and films a strip twice. axe-core joins the browser
    suite's development dependencies here, since the measures need it; UX4's ADR still names it.
    What the baseline shows beyond the walk above: at 320 by 568 a player cannot reach a tempo or a second
-   creature's tab in the planning sheet, in three lessons and in a game, and the match's Settings button lies
-   under the notifications'; the walk says so (`blocked`) and chooses by script so the rest is filmed. The paints
-   agree with the walk above (4.3 s and 4.7 s). The home's shift is 0.26 on the slow phone and 0.00 on a fast
-   network: UX9 is held to the slow one. Left: Google's button cannot be pressed, so the name window is opened by
+   creature's tab in the planning sheet, in three lessons and in a game, and the notifications' button covers the
+   match's Settings; the walk records each as `blocked` and makes the choice by script, so the rest is filmed. The paints
+   agree with this plan's own walk (4.3 s and 4.7 s). The home's shift is 0.26 on the slow phone and 0.00 on a fast
+   network: UX9 is held to the slow one. A screen's shift moves by a hundredth between two walks, so it is
+   written on the line and left out of the comparison. Left: Google's button cannot be pressed, so the name window is opened by
    the walk and marked staged; a lobby table's seed is the host's, so the lobby's game differs between walks
    while its screens measure the same; a game against a person, a turn that arrives and an invitation accepted
    are not walked; a strip holds the timers set after it starts, not those already running; the sheets are
