@@ -1,6 +1,6 @@
 # Plan: the battle's craft, every spell, attack, move and the ground staged by a designer who can see
 
-Status: accepted, 2026-11-18 (the owner settled the questions at the end). BC1 to BC4 are built; BC5 is next.
+Status: accepted, 2026-11-18 (the owner settled the questions at the end). BC1 to BC5 are built; BC6 is next.
 Each stage below is one pull request.
 
 ## What the owner asked for
@@ -218,6 +218,39 @@ that extends it.
    at rest. Since #842 a still field is drawn one frame in four (`battle/README.md`, "The resting loop"): a breath
    at rest plays at that rate, or is counted as movement and costs the full rate, measured in BC10. Tests: no breath under reduced motion; the timings still agree with `table/battle-timing.js` at every
    playback rate; a skip settles the figures.
+
+   *Built (2026-11-19)*: [the movement's storyboard](storyboards/movement.md), five parts, and the first run of
+   the whole `/battle-pass` loop. The numbers are in `table/battle-motion.js`, the body's moves in
+   `battle/src/body-motion.ts`, the view's in `battle/src/view-shake.ts` (`battle/README.md`, "The movement").
+
+   - The weight of a blow is the health the host confirmed lost: light to 3, medium to 6, heavy from 7 or on a
+     defeat. In absolute points: the scene's frame does not carry a creature's maximum health.
+   - A melee blow: the draw back and its hold by the weight, the strike that lands when the windup ends, the
+     stretch, the hit stop, the hit flash on a figure that lost health, the recoil after the stop, the return a
+     little past home. The windup stays 840 ms: `table/battle-timing.js` did not move.
+   - A cast loads where it stands; a projectile's caster throws. A figure that lost health from afar now answers,
+     on half the stop.
+   - A death is seen: thrown back with no return, then a fall that ends on the settled frame, inside the impact.
+     A tint drains the colour, not the colour matrix: the figure fades as it drains.
+   - The breath at rest is back (question 4): 1.5% of height every 3.6 s, off with less motion. It is ambience,
+     so it plays at the resting rate and #842's saving stands; `docs/art/battle-polish.md` is amended.
+   - One trauma value replaces the two fixed camera shakes, and the kit's `shake` beat adds to it. A defeat or a
+     critical hit punches the zoom by 3%.
+   - The bench tells a blow's weight and a death (`--damage`, `--defeat`), and a film writes beside its sheet
+     what no sheet shows (`--motion`): each figure's place, lean, scale and alpha, and the view's trauma.
+   - The laboratory's sample hit lost its 14 sparks drawn by hand: it is a light blow with the kit's burst.
+   - The book's rule of the bright beats is settled: each starts within 120 ms of contact and is gone within
+     320 ms of it. The kit's 320 ms burst stands.
+   - Found by the specs: at 2× a tremor's swing is shorter than a frame, and a recoil that left from the
+     tremor's far end came back to it. The recoil now leaves from home.
+
+   Left:
+
+   - The choices under each storyboard's **Left** wait for the owner. The ones a player would notice: the wind-up
+     is scaled by the confirmed outcome before the number shows; every family moves the view, not only the
+     physical one (`docs/art/spell-vfx.md` now says so); the fallen body sinks back onto its own spot.
+   - The motif's pale arc still plays in the windup beside the body's own load: BC6 to BC8 decide each spell's.
+   - Frame time is not measured, and nobody has seen the breath on a phone: BC10.
 6. **BC6, the physical spells and the two base actions.** 17 stagings. Tests: the film strips, the browser specs
    the change touches, one staging per spell in the data.
 7. **BC7, the biological spells.** 14 stagings. Same tests.
