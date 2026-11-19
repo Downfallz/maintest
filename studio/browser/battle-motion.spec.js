@@ -55,6 +55,8 @@ test('with less motion no figure breathes, and a blow moves none', async ({ page
 // body plays is divided by the rate (`table/battle-motion.test.js`).
 for (const speed of [0.5, 1, 2]) {
   test(`at ${speed}× the blow lands when the windup ends: the draw back, the contact, the flash, the recoil, then home`, async ({ page }) => {
+    // The whole action is stepped frame by frame, 5 s of it at 0.5×: a loaded runner needs the room (#784).
+    test.setTimeout(60000);
     const at = ms => Math.round(ms / speed / 20) * 20;
     const beats = meleeBeats('heavy');
     await film(page, 'start', { ...pummel, damage: 8, speed });
