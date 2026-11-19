@@ -94,9 +94,9 @@
     "motif": "fire",
     "delivery": "cast",
     "staging": [
-      { "beat": "gather", "at": 240, "lasts": 480, "on": "caster", "count": 14, "shape": "spark", "tint": "ember", "reach": 260, "strength": 0.3, "blend": "add" },
-      { "beat": "glow", "at": 480, "lasts": 300, "on": "caster", "tint": "ember", "reach": 180, "strength": 0.5, "blend": "screen" },
-      { "beat": "trail", "at": 600, "lasts": 240, "on": "target", "count": 16, "shape": "dot", "tint": "ember", "strength": 0.4, "blend": "add" },
+      { "beat": "gather", "at": 240, "lasts": 480, "on": "caster", "count": 18, "shape": "dot", "tint": "ember", "reach": 300, "strength": 0.5, "blend": "add" },
+      { "beat": "glow", "at": 480, "lasts": 300, "on": "caster", "tint": "ember", "reach": 180, "strength": 0.7, "blend": "add" },
+      { "beat": "trail", "at": 440, "lasts": 400, "on": "target", "count": 20, "shape": "dot", "tint": "ember", "strength": 0.6, "blend": "add" },
       { "beat": "motif", "at": 840, "lasts": 900 },
       { "beat": "glow", "at": 840, "lasts": 280, "on": "target", "tint": "ember", "reach": 240, "strength": 0.9, "blend": "add" },
       { "beat": "shake", "at": 840, "lasts": 160, "strength": 0.3 },
@@ -140,7 +140,7 @@
       { "beat": "motif", "at": 840, "lasts": 800 },
       { "beat": "glow", "at": 840, "lasts": 260, "on": "target", "tint": "family", "reach": 170, "strength": 0.6, "blend": "add" },
       { "beat": "shake", "at": 840, "lasts": 120, "strength": 0.1 },
-      { "beat": "burst", "at": 900, "lasts": 360, "on": "target", "count": 10, "shape": "shard", "tint": "family", "direction": "up", "spread": 50, "reach": 140, "strength": 0.25, "blend": "normal", "level": "feet" },
+      { "beat": "burst", "at": 900, "lasts": 360, "on": "target", "count": 10, "shape": "shard", "tint": "family", "direction": "up", "spread": 100, "reach": 200, "strength": 0.35, "blend": "normal", "level": "feet" },
       { "beat": "flow", "at": 1000, "lasts": 900, "on": "target", "count": 10, "shape": "dot", "tint": "family", "direction": "up", "spread": 60, "reach": 60, "strength": 0.45, "blend": "screen", "level": "feet" },
       { "beat": "glow", "at": 1000, "lasts": 900, "on": "target", "tint": "family", "reach": 140, "strength": 0.35, "blend": "screen", "level": "feet" }
     ]
@@ -216,7 +216,7 @@
     "staging": [
       { "beat": "gather", "at": 120, "lasts": 400, "on": "caster", "count": 12, "shape": "shard", "tint": "family", "reach": 260, "strength": 0.25, "blend": "add" },
       { "beat": "glow", "at": 240, "lasts": 360, "on": "caster", "tint": "family", "reach": 170, "strength": 0.5, "blend": "screen" },
-      { "beat": "trail", "at": 520, "lasts": 320, "on": "target", "count": 14, "shape": "shard", "tint": "family", "strength": 0.2, "blend": "add", "level": "feet" },
+      { "beat": "trail", "at": 520, "lasts": 320, "on": "target", "count": 20, "shape": "shard", "tint": "family", "strength": 0.5, "blend": "add", "level": "feet" },
       { "beat": "motif", "at": 840, "lasts": 1000 },
       { "beat": "glow", "at": 840, "lasts": 300, "on": "target", "tint": "family", "reach": 200, "strength": 0.8, "blend": "add" },
       { "beat": "shake", "at": 840, "lasts": 120, "strength": 0.15 },
@@ -262,7 +262,7 @@
       { "beat": "motif", "at": 840, "lasts": 700 },
       { "beat": "burst", "at": 840, "lasts": 240, "on": "caster", "count": 6, "shape": "spark", "tint": "family", "direction": "up", "spread": 90, "reach": 160, "strength": 0.2, "blend": "add", "level": "head" },
       { "beat": "burst", "at": 840, "lasts": 280, "on": "target", "count": 12, "shape": "spark", "tint": "family", "direction": "out", "spread": 360, "reach": 260, "strength": 0.25, "blend": "add" },
-      { "beat": "flow", "at": 960, "lasts": 600, "on": "target", "count": 6, "shape": "spark", "tint": "family", "direction": "out", "spread": 360, "reach": 130, "strength": 0.2, "blend": "add" }
+      { "beat": "flow", "at": 960, "lasts": 600, "on": "target", "count": 10, "shape": "spark", "tint": "family", "direction": "out", "spread": 360, "reach": 180, "strength": 0.35, "blend": "add" }
     ]
   },
   "spell:meteor:v1": {
@@ -270,13 +270,13 @@
     "motif": "fire",
     "delivery": "cast",
     "staging": [
-      { "beat": "flow", "at": 360, "lasts": 420, "on": "caster", "count": 12, "shape": "spark", "tint": "ember", "direction": "up", "spread": 50, "reach": 200, "strength": 0.25, "blend": "add" },
+      { "beat": "flow", "at": 360, "lasts": 420, "on": "caster", "count": 16, "shape": "spark", "tint": "ember", "direction": "up", "spread": 50, "reach": 300, "strength": 0.55, "blend": "add", "level": "head" },
       { "beat": "motif", "at": 840, "lasts": 800 },
       { "beat": "glow", "at": 840, "lasts": 240, "on": "target", "tint": "ember", "reach": 160, "strength": 0.6, "blend": "add" },
       { "beat": "shake", "at": 840, "lasts": 120, "strength": 0.12 },
       { "beat": "burst", "at": 860, "lasts": 360, "on": "target", "count": 12, "shape": "spark", "tint": "ember", "direction": "out", "spread": 360, "reach": 220, "strength": 0.25, "blend": "add" },
-      { "beat": "flow", "at": 960, "lasts": 700, "on": "target", "count": 8, "shape": "dot", "tint": "ember", "direction": "up", "spread": 40, "reach": 120, "strength": 0.4, "blend": "screen" },
-      { "beat": "flow", "at": 1000, "lasts": 700, "on": "target", "count": 4, "shape": "dot", "tint": "blood", "direction": "out", "spread": 360, "reach": 50, "strength": 0.4, "blend": "normal" }
+      { "beat": "flow", "at": 960, "lasts": 700, "on": "target", "count": 6, "shape": "dot", "tint": "ember", "direction": "up", "spread": 40, "reach": 120, "strength": 0.4, "blend": "screen" },
+      { "beat": "flow", "at": 1000, "lasts": 700, "on": "target", "count": 6, "shape": "dot", "tint": "blood", "direction": "out", "spread": 360, "reach": 60, "strength": 0.6, "blend": "normal" }
     ]
   },
   "spell:momentum:v1": {
