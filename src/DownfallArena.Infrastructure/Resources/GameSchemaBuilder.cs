@@ -372,10 +372,15 @@ public static class GameSchemaBuilder
         prerequisites is null ? [] : NullsAt($"{place}.allOf", prerequisites.AllOf).Concat(NullsAt($"{place}.anyOf", prerequisites.AnyOf));
 
     private static IEnumerable<string> NullsAt<T>(string place, IReadOnlyList<T>? list, bool optional = false)
-        where T : class =>
-        list is null
-            ? optional ? [] : [place]
-            : list.Select((item, index) => (item, index)).Where(pair => pair.item is null).Select(pair => $"{place}[{pair.index}]");
+        where T : class
+    {
+        if (list is null)
+        {
+            return optional ? [] : [place];
+        }
+
+        return list.Select((item, index) => (item, index)).Where(pair => pair.item is null).Select(pair => $"{place}[{pair.index}]");
+    }
 
     // The elements of a list that may be null, with their places.
     private static IEnumerable<(T item, int index)> Present<T>(IReadOnlyList<T>? list)
