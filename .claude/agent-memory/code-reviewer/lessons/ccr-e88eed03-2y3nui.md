@@ -1,0 +1,4 @@
+# code-reviewer lessons (branch ccr-e88eed03-2y3nui)
+- A mock that serves a match's whole feed only once `over` (so the replay has history) also hands it to the live seat in one poll, since the cursor sat at 0 all lesson: every `endsMatch` spec now reaches the result through a path no host produces; serve each cast from the poll after its decision, trimmed by `since` (#904, battle-tutorial.spec.js:49, ed6afd0).
+- A "Closes #N" on a pull request that settles only the issue's spec gaps drops the issue's other open items (an unanswered question to the owner, a closing paragraph's edge case): ask for "Part of" or a follow-up issue (#904, ed6afd0).
+- Mutation for a per-table "opened once" guard in a mock: put the fixed table id back (`practice-lesson`) and the second-pass result assertion goes red at its 15 s wait; proven on small-phone (#904, ed6afd0).

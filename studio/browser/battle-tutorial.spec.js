@@ -27,7 +27,13 @@ async function mount(page, { assistedFirst = false, book = null, upkeepAtEnd = f
   const state = { errors: [], writes: [], said: [], left: 0, opened: 0, asked: 20, answered: 0, handedBack: false };
   page.on('pageerror', error => state.errors.push(error.message));
   const order = lesson.steps.map(step => step.at.creature);
-  const view = () => {
+  // The lesson's casts, each one Shock on creature 4, as a match played to its end records them: the live seat reads
+  // each in the poll after its answer, and Replay the match reads them all back from the start (#904).
+  const enemy = health => [creature(4, health), creature(5), creature(6)], allies = [1, 2, 3].map(number => creature(number));
+  const casts = order.map((actor, step) => ({ sequence: step, round: 2, event: { kind: 'CombatActionResolved', roundId: 2,
+    resolution: { action: { actor, spell: 'shock', targets: [4] } }, appliedOutcomes: [{ kind: 'DamageOutcome', amount: 3, target: 4 }],
+    frame: { before: [...allies, ...enemy(9 - 3 * step)], after: [...allies, ...enemy(Math.max(0, 6 - 3 * step))], timeline: [], rollOffs: [] } } }));
+  const view = (since = 0) => {
     const done = state.answered >= order.length, assisted = assistedFirst && state.answered === 0 && !state.released;
     // A lesson that plays to the match's end (tutorial 4): its last answer ends the match, and the host says it is done.
     const over = done && endsMatch;
@@ -43,8 +49,11 @@ async function mount(page, { assistedFirst = false, book = null, upkeepAtEnd = f
     const feed = done && upkeepAtEnd ? [
       { sequence: 1, event: { kind: 'RoundEnergyGranted', roundId: 3, grants: [1, 2, 3, 4, 5, 6].map(one => ({ creature: one, gained: 2, before: 2, after: 4, baseRequested: 2, passiveRequested: 0 })) } },
       { sequence: 2, event: { kind: 'OngoingEffectsApplied', roundId: 3, energyRegenerationTicks: [], regenerationTicks: [], bleedTicks: [] } },
-    ] : [];
-    return { over, outcome: over ? { winner: 'player1', reason: 'Elimination' } : null, recording: false, feed, feedNext: feed.length, practice: { scenario: id, title: file.title, goal: file.goal, round: 2, tutorial }, board, ...question };
+    ] : endsMatch ? casts.slice(0, state.answered) : [];
+    // The feed from `since` on, counted as the host counts it (TableApi): a replay reads it whole, the live seat only
+    // what it has not seen.
+    const read = endsMatch ? feed.filter(entry => entry.sequence >= since) : feed;
+    return { over, outcome: over ? { winner: 'player1', reason: 'Elimination' } : null, recording: false, feed: read, feedNext: feed.length, practice: { scenario: id, title: file.title, goal: file.goal, round: 2, tutorial }, board, ...question };
   };
   await page.addInitScript(() => {
     const original = window.fetch;
@@ -61,8 +70,9 @@ async function mount(page, { assistedFirst = false, book = null, upkeepAtEnd = f
       if (request.method() === 'GET') return route.fulfill({ status: 404, json: { error: 'Scenario.NoPractice', message: 'None.' } });
       // Leaving lets go of the practice, so the next time it opens it starts from its cut.
       if (request.method() === 'DELETE') { state.left++; return route.fulfill({ status: 204 }); }
+      // Each practice opened is a new table, as the host gives it (ScenariosApi): the result opens once per table.
       state.opened++;
-      return route.fulfill({ json: { seat: 'player1', token: 'lesson', table: { id: 'practice-lesson', format: '3v3', seats: [{ seat: 'player1', name: 'Learner', kind: 'person' }, { seat: 'player2', name: 'Practice bot', kind: 'bot' }] }, practice: view().practice } });
+      return route.fulfill({ json: { seat: 'player1', token: 'lesson', table: { id: `practice-lesson-${state.opened}`, format: '3v3', seats: [{ seat: 'player1', name: 'Learner', kind: 'person' }, { seat: 'player2', name: 'Practice bot', kind: 'bot' }] }, practice: view().practice } });
     }
     // What the page says of the account's progress (O4): skipped, or done once the host's view says so.
     if (url.pathname.startsWith(`/api/tutorials/${id}/`) && request.method() === 'POST') { const what = url.pathname.split('/').at(-1); state.said.push(what); return route.fulfill({ json: { id, state: what === 'done' ? 'done' : 'skipped' } }); }
@@ -71,7 +81,7 @@ async function mount(page, { assistedFirst = false, book = null, upkeepAtEnd = f
     // Held, the last answer is written but the view that says the lesson is done waits for the test to let it through.
     if (url.pathname.endsWith('/decision') && state.holdEnd && state.answered + 1 === order.length) state.held = view();
     if (url.pathname.endsWith('/decision')) { state.writes.push(decided(request)); state.answered++; state.asked++; return route.fulfill({ status: 204 }); }
-    if (url.pathname === '/api/seat/player1') return route.fulfill({ json: state.held ?? view() });
+    if (url.pathname === '/api/seat/player1') return route.fulfill({ json: state.held ?? view(Number(url.searchParams.get('since') ?? 0)) });
     return route.fulfill({ status: 404, json: {} });
   });
   // The rulebook the cards are read from, held until the test lets it through.
@@ -84,7 +94,7 @@ async function mount(page, { assistedFirst = false, book = null, upkeepAtEnd = f
 // One lesson step as a person plays it: the concept cards it opens, read one after the other, then the coach card
 // beside the spell choice, then the cast.
 async function playStep(page, state, index, capture) {
-  const step = lesson.steps[index], dialog = page.locator('#concept-dialog');
+  const step = lesson.steps[index], dialog = page.locator('#concept-dialog'), sent = state.writes.length;
   await expect(dialog).toBeVisible({ timeout: 15000 });
   await expect(page.locator('#combat-dialog')).toBeHidden();
   for (let card = 0; card < step.concepts.length; card++) {
@@ -130,7 +140,7 @@ async function playStep(page, state, index, capture) {
   if (index === 0 && capture) await capture('coach-targets');
   await page.locator('[data-creature="4"]').click();
   await page.locator('#combat-confirm').click();
-  await expect.poll(() => state.writes.length).toBe(index + 1);
+  await expect.poll(() => state.writes.length).toBe(sent + 1);
 }
 
 test('tutorial 1 is played to its end: each step shows its coach card and opens its concept cards', async ({ page }, info) => {
@@ -442,7 +452,8 @@ test('a tutorial that ends the match ends on its result: Tutorial complete, Play
 });
 
 test('Play again on a tutorial\'s result starts it over from its cut, and the result closed leaves the end card', async ({ page }) => {
-  test.setTimeout(120000);
+  // The lesson is played twice to its result: six steps on a software-rendered canvas.
+  test.setTimeout(240000);
   const state = await mount(page, { endsMatch: true });
   await page.locator('#practice-brief-begin').click();
   for (let index = 0; index < lesson.steps.length; index++) await playStep(page, state, index);
@@ -462,5 +473,47 @@ test('Play again on a tutorial\'s result starts it over from its cut, and the re
   await expect(page.locator('#match-dialog')).toBeHidden();
   await expect(page.locator('#practice-brief')).toBeVisible();
   await expect(page.locator('#practice-restart')).toHaveText('Restart the round');
+
+  // Played again to its end, the lesson ends on its result again: the host gave the new practice its own table,
+  // and the result opens once per table and seat (#904).
+  await page.locator('#practice-brief-begin').click();
+  for (let index = 0; index < lesson.steps.length; index++) await playStep(page, state, index);
+  await expect(page.locator('#match-dialog')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('#match-eyebrow')).toHaveText('TUTORIAL COMPLETE');
+  await expect(page.locator('#match-title')).toHaveText('Victory');
+  await expect(page.locator('#match-again')).toHaveText('Play again');
+  await expect(page.locator('#match-leave')).toHaveText('Leave the tutorial');
+  await expect(page.locator('#match-rematch')).toBeHidden(); await expect(page.locator('#match-lobby')).toBeHidden();
+  // Each pass answered every step once, and each said the tutorial is done.
+  await expect.poll(() => state.writes.length).toBe(2 * lesson.steps.length);
+  await expect.poll(() => state.said).toEqual(['done', 'done']);
+  expect(state.errors).toEqual([]);
+});
+
+// Replay the match from a tutorial's result reads the lesson's casts, and closed it gives the tutorial's result
+// back: Tutorial complete, Play again and Leave the tutorial (#904).
+test('Replay the match from a tutorial\'s result, closed, gives back Tutorial complete', async ({ page }) => {
+  test.setTimeout(120000);
+  const state = await mount(page, { endsMatch: true });
+  await page.locator('#practice-brief-begin').click();
+  for (let index = 0; index < lesson.steps.length; index++) await playStep(page, state, index);
+  await matchResult(page);
+  await expect(page.locator('#match-eyebrow')).toHaveText('TUTORIAL COMPLETE');
+
+  await page.locator('#match-replay').click();
+
+  await expect(page.locator('#match-dialog')).toBeHidden();
+  await expect(page.locator('#replay-controls')).toBeVisible();
+  // The lesson's casts, then the match's result as the replay's last step.
+  await expect(page.locator('#replay-position')).toHaveText(`Round 2 · 1 of ${lesson.steps.length + 1}`);
+  await expect(page.locator('#replay-text')).toContainText('Shock');
+  await page.locator('#replay-close').click();
+  await expect(page.locator('#replay-controls')).toBeHidden();
+  await expect(page.locator('#match-dialog')).toBeVisible();
+  await expect(page.locator('#match-eyebrow')).toHaveText('TUTORIAL COMPLETE');
+  await expect(page.locator('#match-title')).toHaveText('Victory');
+  await expect(page.locator('#match-again')).toHaveText('Play again');
+  await expect(page.locator('#match-leave')).toHaveText('Leave the tutorial');
+  await expect(page.locator('#match-rematch')).toBeHidden(); await expect(page.locator('#match-lobby')).toBeHidden();
   expect(state.errors).toEqual([]);
 });
