@@ -119,7 +119,7 @@ jobs:
           mirrors=$(grep -rlE '[a-z0-9-]+\.ec2\.archive\.ubuntu\.com' /etc/apt || true)
           if [[ -n "$mirrors" ]]; then
             echo "Fetching from Azure's Ubuntu mirror instead of the EC2 one named in: $mirrors"
-            echo "$mirrors" | xargs sudo sed -i -E 's#https?://[a-z0-9-]+\.ec2\.archive\.ubuntu\.com/#http://azure.archive.ubuntu.com/#g'
+            echo "$mirrors" | xargs sudo sed -i -E 's#https?://[a-z0-9-]+\.ec2\.archive\.ubuntu\.com/#https://azure.archive.ubuntu.com/#g'
           fi
           echo 'APT::Keep-Downloaded-Packages "true";' | sudo tee /etc/apt/apt.conf.d/90keep-archives > /dev/null
           sudo rm -f /etc/apt/apt.conf.d/docker-clean
@@ -240,7 +240,7 @@ jobs:
           mirrors=$(grep -rlE '[a-z0-9-]+\.ec2\.archive\.ubuntu\.com' /etc/apt || true)
           if [[ -n "$mirrors" ]]; then
             echo "Fetching from Azure's Ubuntu mirror instead of the EC2 one named in: $mirrors"
-            echo "$mirrors" | xargs sudo sed -i -E 's#https?://[a-z0-9-]+\.ec2\.archive\.ubuntu\.com/#http://azure.archive.ubuntu.com/#g'
+            echo "$mirrors" | xargs sudo sed -i -E 's#https?://[a-z0-9-]+\.ec2\.archive\.ubuntu\.com/#https://azure.archive.ubuntu.com/#g'
           fi
           echo 'APT::Keep-Downloaded-Packages "true";' | sudo tee /etc/apt/apt.conf.d/90keep-archives > /dev/null
           sudo rm -f /etc/apt/apt.conf.d/docker-clean
@@ -363,7 +363,7 @@ jobs:
           mirrors=$(grep -rlE '[a-z0-9-]+\.ec2\.archive\.ubuntu\.com' /etc/apt || true)
           if [[ -n "$mirrors" ]]; then
             echo "Fetching from Azure's Ubuntu mirror instead of the EC2 one named in: $mirrors"
-            echo "$mirrors" | xargs sudo sed -i -E 's#https?://[a-z0-9-]+\.ec2\.archive\.ubuntu\.com/#http://azure.archive.ubuntu.com/#g'
+            echo "$mirrors" | xargs sudo sed -i -E 's#https?://[a-z0-9-]+\.ec2\.archive\.ubuntu\.com/#https://azure.archive.ubuntu.com/#g'
           fi
           echo 'APT::Keep-Downloaded-Packages "true";' | sudo tee /etc/apt/apt.conf.d/90keep-archives > /dev/null
           sudo rm -f /etc/apt/apt.conf.d/docker-clean

@@ -464,7 +464,7 @@ test("every job that installs a browser keeps the system packages' archives, and
     assert.ok(install.body.indexOf('/var/cache/apt/archives') < install.body.indexOf('playwright/cli.js install --with-deps "$ENGINE"'), job);
     // Every slow install fetched from the regional EC2 mirror some runners' images name; the fast ones, Azure's.
     assert.ok(install.body.includes(String.raw`grep -rlE '[a-z0-9-]+\.ec2\.archive\.ubuntu\.com' /etc/apt`), job);
-    assert.ok(install.body.includes(String.raw`s#https?://[a-z0-9-]+\.ec2\.archive\.ubuntu\.com/#http://azure.archive.ubuntu.com/#g`), job);
+    assert.ok(install.body.includes(String.raw`s#https?://[a-z0-9-]+\.ec2\.archive\.ubuntu\.com/#https://azure.archive.ubuntu.com/#g`), job);
     assert.ok(install.body.indexOf('azure.archive.ubuntu.com') < install.body.indexOf('playwright/cli.js install'), job);
     // What a newer index no longer lists is dropped before the archives are kept, once a stopped install's apt
     // has let go of them.
