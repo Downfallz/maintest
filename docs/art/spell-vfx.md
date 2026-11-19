@@ -27,8 +27,14 @@ No biological motif is assigned to the Necrotic/Revenant branch. No spirit is a 
 
 Since [ADR 0196](../adr/0196-stage-a-spell-in-beats-an-effects-kit-plays.md) an entry may also carry a `staging`:
 a list of beats the effects kit plays. The spell's own motif is one of those beats. A spell without a staging
-is drawn as described here. So is a staged spell until the kit has loaded. `battle/README.md`, "The effects kit", lists the beats. No spell has
-a staging yet: BC6 to BC8 of [the battle's craft plan](battle-craft-plan.md) write them.
+is drawn as described here. So is a staged spell until the kit has loaded. `battle/README.md`, "The effects kit", lists the beats.
+
+The 15 physical spells and Focus are staged (BC6 of [the battle's craft plan](battle-craft-plan.md)); BC7 and
+BC8 stage the other families. Each staging is written first as a storyboard
+([physical](storyboards/physical.md), [the base actions](storyboards/base-actions.md)), and how much it may ask
+for goes by the Stage of the mutation that teaches the spell: [the ladder](storyboards/README.md#the-ladder).
+A base action is the quietest thing in the battle, a Stage III spell the loudest. The strokes of the `impact`
+and `slash` motifs now run along the line of the blow, over a dark edge, staged or not.
 
 ## Timing and integrity
 

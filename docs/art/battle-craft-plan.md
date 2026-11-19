@@ -1,6 +1,6 @@
 # Plan: the battle's craft, every spell, attack, move and the ground staged by a designer who can see
 
-Status: accepted, 2026-11-18 (the owner settled the questions at the end). BC1 to BC5 are built; BC6 is next.
+Status: accepted, 2026-11-18 (the owner settled the questions at the end). BC1 to BC6 are built; BC7 is next.
 Each stage below is one pull request.
 
 ## What the owner asked for
@@ -257,6 +257,40 @@ that extends it.
    - Frame time is not measured, and nobody has seen the breath on a phone: BC10.
 6. **BC6, the physical spells and the two base actions.** 17 stagings. Tests: the film strips, the browser specs
    the change touches, one staging per spell in the data.
+
+   *Built (2026-11-19)*: 16 stagings, not 17: the data holds 15 physical spells, Strike among them, and Focus.
+   Each has its storyboard ([the base actions](storyboards/base-actions.md), [the physical family](storyboards/physical.md))
+   and its `staging` in `data/presentation/spell-art.json`, filmed before and after and read by the designer.
+
+   - The owner's rule for this stage: the higher the Stage of the mutation that teaches a spell, the more
+     spectacular its staging. It is written as [the ladder](storyboards/README.md#the-ladder), four bands (a base
+     action, Stage I, II, III) on what a staging may ask for: beats, particles, a beat in the windup, lights, the
+     halo, the staged shake, when it is gone. `studio/staging-ladder.test.js` holds each staged spell to its
+     band, and the bands to the README. BC7 and BC8 stage inside the same bands.
+   - Each spell has one signature a player could name: Pummel's dust collar, Brace's rings and plates, Fury's
+     explosion, Wild Swing's fan and blood, Seize's pull back to the caster, Crash's hard ring, Carapace's
+     shards closing in, Body Slam's ground ring and dust, Dominate's two blows, Alpha Roar's three rings,
+     Crushing Stomp's crown, Vital Surge's wave, Deranged Charge's cone, Groundbreaker's travelling shock.
+   - What the first films found, fixed in the kit. A burst as BC4 built it could not be read: its pieces spent
+     their life over the figure's own body. A piece now leaves fast, slows and falls a little; a `strength` on a
+     particle beat is its pieces' size; a `reach` goes to 400 hundredths of the radius, since 200 ends inside
+     the silhouette. A `glow` with the shape of a ring is a shock ring lying on the ground.
+   - The choices BC3 left on Strike are built as proposed, for every spell that draws those motifs: a staged
+     melee blow shows no gather on its caster unless its beats say so, and the strokes of the `impact` and
+     `slash` motifs run along the line of the blow, each over a dark edge.
+   - `studio/browser/battle-stagings.spec.js` plays every staged spell on the bench, on as many figures as the
+     content lets it reach: every beat is seen, the field stays inside its 150 particles, nothing is left when
+     the action has resolved, a stop at the height of the richest one clears it, and less motion plays none.
+
+   Left:
+
+   - The choices under each storyboard's **Left** wait for the owner, with the sheets.
+   - A ring and a burst start at the figure's centre: the kit has no anchor at the feet, nor a way to aim a
+     ring. A crack that runs along the ground from caster to targets is a pattern the book lacks.
+   - A melee spell that also changes its caster (Wild Swing's wound, Body Slam's defence) draws the caster's
+     part at its home while the body is still at the target: the scene's, not a staging's.
+   - A staging cannot tell a critical hit: only the body's punch of the zoom does.
+   - Frame time is not measured: BC10. The `pulse` is used four times, each on one figure.
 7. **BC7, the biological spells.** 14 stagings. Same tests.
 8. **BC8, the elemental, astral and necromantic spells.** 14 stagings, the blood cost and the wards among them.
    Same tests.
