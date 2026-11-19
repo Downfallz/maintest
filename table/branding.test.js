@@ -133,6 +133,8 @@ test('the coach\'s window, the opponent\'s card and its chip name no raw colour'
   const portrait = /background: radial-gradient\([^;]*\);/;
   for (const [, selector, body] of rules) assert.doesNotMatch(body.replace(portrait, ''), /#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?)\(/i, `${selector.trim()} names a raw colour`);
   assert.equal(rules.filter(([, selector, body]) => /opponent-avatar/.test(selector) && portrait.test(body)).length, 2, 'the two portraits');
+  // The friend's heart reads in the gold the lobby gives its friends, not in the enemy's side colour (#895).
+  assert.match(css, /\.opponent-heart \{[^}]*color: var\(--gold\)/);
   // A refusal reads in the refused colour, as everywhere else.
   assert.match(css, /#opponent-problem \{[^}]*color: var\(--refused\)/);
 });
