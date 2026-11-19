@@ -231,7 +231,7 @@ give what is said and when. It reuses everything ADR 0179 built, and the regress
 
    | # | File | Cut | Steps |
    | --- | --- | --- | --- |
-   | 2 | `who-acts-first.json` | seed 5, round 4 | the tempos (Tempo), the tie (Initiative), a Precision cast (Critical), a skipped turn (A skipped turn) |
+   | 2 | `who-acts-first.json` | seed 5, round 4 (until #727, below) | the tempos (Tempo), the tie (Initiative), a Precision cast (Critical), a skipped turn (A skipped turn) |
    | 3 | `grow-by-mutating.json` | seed 5, round 3 | the mutation (Mutation), the tempos (Initiative), the tie, the spells it brings |
    | 4 | `to-the-end.json` | seed 3, round 5, to the match's end in round 8 | Regeneration and Bleed (Conditions), the stun (Conditions, A skipped turn), the end of a match (Health) |
 
@@ -256,16 +256,16 @@ give what is said and when. It reuses everything ADR 0179 built, and the regress
      the steps still show by the question asked (ADR 0187).
    - Tutorial 4 ends the match: its result opens over the coach card, and offers Rematch and Lobby beside the
      coach's **Leave the tutorial**, which shows once the result is closed.
-   - Tutorials 1, 3 and 2 are rounds 2, 3 and 4 of one match: tutorial 2's creatures already carry the mutations
-     tutorial 3 teaches. Its lesson does not talk about them.
+   - Tutorials 1, 3 and 2 were rounds 2, 3 and 4 of one match: tutorial 2's creatures already carried the
+     mutations tutorial 3 teaches (until #727, below).
+   - **Learn to play** in the main menu's bar stays the owner's (#669).
 
    *Tutorial 2 cut again (2026-11-19, #727,
    [tutorial-follow-ups-plan.md](tutorial-follow-ups-plan.md), T2)*: `who-acts-first.json` is now random against
    greedy on seed 51, cut at the top of round 2, with three steps: the tempos (Tempo), the tie (Initiative), a
-   Precision cast (Critical). Its creatures carry round 1's mutations alone, and `TutorialFileTests` holds that
-   of every tutorial ordered before the one that teaches Evolution. The skipped turn left it: no round before 3
+   Precision cast (Critical). Its creatures carry only the mutations of round 1. `TutorialFileTests` checks this
+   for every tutorial that comes before the one teaching Evolution. The skipped turn left it: no round before 3
    has one. It is taught in tutorial 4, with the stun.
-   - **Learn to play** in the main menu's bar stays the owner's (#669).
 
 ## Questions for the owner
 

@@ -19,7 +19,7 @@ The owner settled the three issues at triage (2026-11-18, the issues' comments):
 
 This plan turns those three decisions into stages and asks what they leave open.
 
-## What exists today
+## What existed before the stages (2026-11-19)
 
 | Concern | What the code and the docs hold |
 | --- | --- |
@@ -105,13 +105,13 @@ tutorial 2 carries nothing tutorial 3 teaches.
    *Built (2026-11-19)*: `who-acts-first.json` is random against greedy, 3v3 on seed 51 under the hosted
    table's rules, cut at the top of round 2 by `scenario-generate`, on today's content (`9c6b79d5…`). Player 1's
    creatures carry Brute, nothing and Brute. Creatures 1 and 3 are tied in Precision at initiative 6, with enemy
-   6 between them after the roll-off; in the recorded answers creature 3's Pummel lands a critical. Of the 22
-   seeds of 120 where player 1 holds a tie in round 2, it is the one where no creature of the person casts Focus
+   6 between them after the roll-off; in the recorded answers creature 3's Pummel lands a critical. Of 120
+   seeds, 22 give player 1 a tie in round 2. This is the only one where no creature of the person casts Focus
    or a spell that does nothing, and a Precision cast lands a critical. Three steps, written by the
    rulebook-writer: the tempos, the tie, the critical. The critical's lines changed: only Pummel rolls among
    creature 1's spells, and a critical doubles damage, not everything a spell does. The new `TutorialFileTests`
-   fact holds every tutorial ordered before the one that teaches Evolution to a cut, and a last step, before
-   the second Evolution.
+   fact checks every tutorial ordered before the one that teaches Evolution: it is cut, and its last step
+   shows, before the second Evolution.
 3. **T3, Learn to play in the bar.** The entry moved, the fold measured and moved everywhere it is named,
    `home-navigation.md` and onboarding-plan.md updated, #669 closed. Tests: `lobby-home.spec.js` with a long
    name at the new widths and the one under them, `lobby-tutorials.test.js` for the entry, the battle page's
