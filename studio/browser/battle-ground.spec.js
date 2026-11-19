@@ -58,7 +58,9 @@ test('with less motion nothing of the ground moves: no ember, no drift, no depth
   await film(page, 'start', { ...defeat, round: 12 });
   for (let step = 0; step < 8; step++) {
     const now = await ground(page);
-    expect(now.embers.shown, `step ${step}`).toBe(0);
+    // The embers drawn, read from the scene: not a mock route's `shown`, which a spec polls.
+    const embers = now.embers.shown;
+    expect(embers, `step ${step}`).toBe(0);
     expect(now.fog).toMatchObject({ drift: 0, visible: true });
     expect(now.light).toEqual(DARK);
     for (const [name, layer] of Object.entries(now.layers)) expect(layer, name).toEqual(STILL);
