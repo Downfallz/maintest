@@ -47,6 +47,8 @@ test('a film\'s title names the spell, its mutation, the outcome filmed and the 
   assert.equal(filmTitle(pummel), 'Pummel · Brute, Stage I · physical · impact · melee · 1×');
   assert.equal(filmTitle(pummel, { speed: 2, outcome: 'fizzled' }), 'Pummel · Brute, Stage I · physical · impact · melee · fizzled · 2×');
   assert.equal(filmTitle(pummel, { wound: true }), 'Pummel · Brute, Stage I · physical · impact · melee · the caster pays in blood · 1×');
+  assert.equal(filmTitle(pummel, { damage: 6, defeat: true }), 'Pummel · Brute, Stage I · physical · impact · melee · 6 health lost · the blow defeats · 1×');
+  assert.equal(filmTitle(pummel, { damage: 6, defeat: true, outcome: 'fizzled' }), 'Pummel · Brute, Stage I · physical · impact · melee · fizzled · 1×');
 });
 
 // #843: a fizzle and a blood cost are what the scene already draws; the bench asks for them as a fixture's choice.
@@ -71,6 +73,29 @@ test('a caster who pays in blood receives a wound beside the spell\'s own recipi
   // A caster who is also among its targets is listed once.
   assert.deepEqual(benchFrame({ entry: pummel, actor: 'a1', targets: ['a1', 'b1'], stage: 'impact', wound: true }).cue.recipients, ['a1', 'b1']);
   assert.deepEqual(benchFrame({ entry: pummel, actor: 'a1', targets: ['b1'], stage: 'impact' }).cue.effects, []);
+});
+
+// BC5: the weight of a blow and a death are what the scene reads from a cue's changes; the bench says them.
+test('a blow takes the health it was told from each creature it strikes, and none it was not told', () => {
+  const pummel = entry('spell:pummel:v1');
+  const frame = options => benchFrame({ entry: pummel, actor: 'a1', targets: ['b1', 'b2', 'a2'], stage: 'impact', ...options });
+  assert.deepEqual(frame({}).cue.changes, []);
+  assert.deepEqual(frame({ damage: 6 }).cue.changes, [{ creature: 'b1', health: -6 }, { creature: 'b2', health: -6 }]);
+  assert.deepEqual(frame({ damage: 0 }).cue.changes, []);
+  // A fizzle harms nobody, whatever was asked.
+  assert.deepEqual(frame({ damage: 6, defeat: true, outcome: 'fizzled' }).cue.changes, []);
+});
+
+test('a blow that defeats fells the first creature it strikes, from the impact on', () => {
+  const pummel = entry('spell:pummel:v1');
+  const frame = (stage, options = { defeat: true }) => benchFrame({ entry: pummel, actor: 'a1', targets: ['a2', 'b2', 'b1'], stage, ...options });
+  const fallen = stage => frame(stage).creatures.filter(one => !one.isAlive).map(one => one.id);
+  assert.deepEqual([fallen('decision'), fallen('windup'), fallen('impact'), fallen('resolved')], [[], [], ['b2'], ['b2']]);
+  assert.deepEqual(frame('impact').cue.changes, [{ creature: 'b2', defeated: true }]);
+  assert.deepEqual(frame('impact', { defeat: true, damage: 9 }).cue.changes, [{ creature: 'b2', health: -9, defeated: true }, { creature: 'b1', health: -9 }]);
+  // Nobody across the field is struck: nobody falls. A fizzle fells nobody.
+  assert.deepEqual(benchFrame({ entry: pummel, actor: 'a1', targets: ['a2'], stage: 'impact', defeat: true }).creatures.every(one => one.isAlive), true);
+  assert.deepEqual(frame('impact', { defeat: true, outcome: 'fizzled' }).creatures.every(one => one.isAlive), true);
 });
 
 test('the bench plays on the six creatures of the fixture, three a side', () => {
@@ -168,6 +193,11 @@ test('the film strip script reads its options, and refuses what it cannot film',
   assert.deepEqual(parseArguments(['spell:pummel:v1', '--wound']).film, { wound: true });
   // The live page draws no outcome with a fizzle (`actionCue`), so a wound with one would film what never plays.
   assert.throws(() => parseArguments(['spell:pummel:v1', '--fizzle', '--wound']), /fizzle/);
+  assert.deepEqual(parseArguments(['spell:pummel:v1', '--damage', '6', '--defeat']).film, { damage: 6, defeat: true });
+  assert.throws(() => parseArguments(['spell:pummel:v1', '--damage', '2.5']), /whole number/);
+  assert.throws(() => parseArguments(['spell:pummel:v1', '--fizzle', '--defeat']), /fizzle/);
+  assert.throws(() => parseArguments(['spell:pummel:v1', '--fizzle', '--damage', '3']), /fizzle/);
+  assert.equal(fileName('spell:pummel:v1', { damage: 6, defeat: true }), 'pummel-6-defeat.png');
   // Their sheets lie beside the spell's own.
   assert.deepEqual([fileName('spell:pummel:v1'), fileName('spell:pummel:v1', { outcome: 'fizzled' }), fileName('spell:pummel:v1', { wound: true })],
     ['pummel.png', 'pummel-fizzled.png', 'pummel-wound.png']);

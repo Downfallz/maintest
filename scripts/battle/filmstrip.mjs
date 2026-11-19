@@ -38,11 +38,11 @@ export async function openBench(page, base) {
  * Film one effect on an open bench: `frames` pictures of the field, `interval` milliseconds of the bench's clock
  * apart, the first at 0. Returns [{ ms, stage, png }], and leaves the bench at rest with its loop running.
  */
-export async function filmFrames(page, { spell, actor, targets, speed, outcome = 'played', wound = false, frames = 12, interval } = {}) {
+export async function filmFrames(page, { spell, actor, targets, speed, outcome = 'played', wound = false, damage = null, defeat = false, frames = 12, interval } = {}) {
   // Refused before the film starts: a started film has stopped the bench's loop.
   if (interval !== undefined && interval % FILM_TICK_MS !== 0) throw new Error(`The interval must be a multiple of ${FILM_TICK_MS} ms.`);
   // The outcome and the wound are asked each time: a sheet never inherits the last one's.
-  const started = await page.evaluate(options => window.battleBench.film.start(options), { spell, actor, targets, speed, outcome, wound });
+  const started = await page.evaluate(options => window.battleBench.film.start(options), { spell, actor, targets, speed, outcome, wound, damage, defeat });
   const step = interval ?? started.interval;
   const field = page.locator('#battle-zone');
   const shots = [{ ms: 0, stage: started.stage, png: await field.screenshot() }];
@@ -128,6 +128,11 @@ export function parseArguments(argv) {
     else if (word === '--targets') film.targets = value(word, ++index).split(',').filter(Boolean);
     else if (word === '--fizzle') film.outcome = 'fizzled';
     else if (word === '--wound') film.wound = true;
+    else if (word === '--defeat') film.defeat = true;
+    else if (word === '--damage') {
+      film.damage = Number(value(word, ++index));
+      if (!Number.isInteger(film.damage) || film.damage < 0) throw new Error('--damage is a whole number of health points.');
+    }
     else if (['--speed', '--frames', '--interval', '--columns', '--scale'].includes(word)) {
       const number = Number(value(word, ++index));
       if (!Number.isFinite(number) || number <= 0) throw new Error(`${word} needs a positive number.`);
@@ -138,6 +143,7 @@ export function parseArguments(argv) {
   if (options.all === options.spells.length > 0) throw new Error('Name one or more effects (spell:pummel:v1), or --all.');
   // The live page draws no outcome with a fizzle (`actionCue`): a wound with one would film what never plays.
   if (film.outcome === 'fizzled' && film.wound) throw new Error('--fizzle and --wound do not go together: a fizzle is drawn with no outcome.');
+  if (film.outcome === 'fizzled' && (film.defeat || film.damage !== undefined)) throw new Error('--fizzle goes with no --damage and no --defeat: a fizzle harms nobody.');
   if (film.speed !== undefined && ![0.5, 1, 2].includes(film.speed)) throw new Error('--speed is 0.5, 1 or 2, as the page offers.');
   if (film.interval !== undefined && film.interval % FILM_TICK_MS !== 0) throw new Error(`--interval is a multiple of ${FILM_TICK_MS} ms.`);
   if (options.out?.endsWith('.png') && (options.all || options.spells.length > 1)) throw new Error('--out names a folder when several effects are filmed.');
@@ -145,8 +151,8 @@ export function parseArguments(argv) {
 }
 
 // A fizzle's or a wound's sheet beside the spell's own, not over it.
-export const fileName = (spell, { outcome, wound } = {}) =>
-  `${spell.split(':')[1] ?? spell}${outcome === 'fizzled' ? '-fizzled' : ''}${wound ? '-wound' : ''}.png`;
+export const fileName = (spell, { outcome, wound, damage, defeat } = {}) =>
+  `${spell.split(':')[1] ?? spell}${outcome === 'fizzled' ? '-fizzled' : ''}${wound ? '-wound' : ''}${damage === undefined ? '' : `-${damage}`}${defeat ? '-defeat' : ''}.png`;
 
 async function main(argv) {
   const options = parseArguments(argv);
