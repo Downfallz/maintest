@@ -41,6 +41,9 @@ export class HorizonArch {
     this.span = piece('span', falling);
   }
 
+  /** The stone takes the ground's tint: its rest, or the light that answers a blow. */
+  tint(colour: number) { this.pier.setTint(colour); this.span.setTint(colour); }
+
   layout(width: number, height: number, horizon: number) {
     this.scale = Math.min(width * .40, height * .28, 190) / 344;
     // The portrait formation has an opponent under the eclipse. Keep the keystone in the gap to its left.

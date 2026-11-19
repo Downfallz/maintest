@@ -61,7 +61,7 @@ test('a studio page plays the studio and the identity, and builds nothing', () =
 });
 
 test('the film strip script plays the two specs that open the bench through it', () => {
-  assert.equal(plan(['scripts/battle/filmstrip.mjs'], specs).journeys, 'battle-bench.spec.js battle-fx.spec.js battle-motion.spec.js');
+  assert.equal(plan(['scripts/battle/filmstrip.mjs'], specs).journeys, 'battle-bench.spec.js battle-fx.spec.js battle-ground.spec.js battle-motion.spec.js');
 });
 
 test('the journey film plays its real-engine journey', () => {

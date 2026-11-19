@@ -4,12 +4,14 @@ import { HorizonArch } from './horizon-arch';
 // The sky feathers into the floor across source rows 399–479. When both are present they reconstruct
 // the final painting. The background still owns the original crop and camera in every orientation.
 const plates = [
-  { file: 'fallen-ledge', round: 4, left: 450, top: 300, replacedAt: 6, depth: -9.9 },
-  { file: 'breach', round: 6, left: 0, top: 0, replacedAt: 12, depth: -9.8 },
-  { file: 'shattered-sky', round: 10, left: 0, top: 0, replacedAt: Infinity, depth: -9.5 },
-  { file: 'broken-floor', round: 12, left: 0, top: 399, replacedAt: Infinity, depth: -9.6 },
+  { file: 'fallen-ledge', round: 4, left: 450, top: 300, replacedAt: 6, depth: -9.9, sky: false },
+  { file: 'breach', round: 6, left: 0, top: 0, replacedAt: 12, depth: -9.8, sky: true },
+  { file: 'shattered-sky', round: 10, left: 0, top: 0, replacedAt: Infinity, depth: -9.5, sky: true },
+  { file: 'broken-floor', round: 12, left: 0, top: 399, replacedAt: Infinity, depth: -9.6, sky: false },
 ] as const;
 const TRANSITION_MS = 950;
+/** Where a plate of the sky is laid for a place of its own: the ground's depth (`ground.ts`). */
+type Lean = (x: number, y: number) => { x: number; y: number; scale: number };
 
 export class BattleHorizon {
   private readonly arch: HorizonArch;
@@ -20,6 +22,8 @@ export class BattleHorizon {
   private elapsed = TRANSITION_MS;
   private width = 0;
   private height = 0;
+  private plateTint = 0xb5bbc2;
+  private leaning: Lean | null = null;
 
   constructor(private scene: Phaser.Scene, private backdrop: Phaser.GameObjects.Image, private assetRoot: string) {
     this.arch = new HorizonArch(scene, backdrop.texture.getSourceImage() as HTMLImageElement);
@@ -30,12 +34,38 @@ export class BattleHorizon {
     this.width = width;
     this.height = height;
     this.arch.layout(width, height, this.backdrop.y + this.backdrop.displayHeight * .42);
-    for (const plate of plates) {
-      this.images.get(plate.file)?.setScale(this.backdrop.scaleX, this.backdrop.scaleY)
-        .setPosition(this.backdrop.x - this.backdrop.displayWidth / 2 + plate.left * this.backdrop.scaleX,
-          this.backdrop.y + plate.top * this.backdrop.scaleY);
-    }
+    this.place();
     this.draw();
+  }
+
+  // Each plate over its place in the painting. A plate of the sky lies further than the floor: when the view
+  // moves, the ground says where it is laid (the craft book, "Parallax").
+  private place() {
+    for (const plate of plates) {
+      const image = this.images.get(plate.file);
+      if (!image) continue;
+      const x = this.backdrop.x - this.backdrop.displayWidth / 2 + plate.left * this.backdrop.scaleX, y = this.backdrop.y + plate.top * this.backdrop.scaleY;
+      const laid = plate.sky && this.leaning ? this.leaning(x, y) : { x, y, scale: 1 };
+      image.setScale(this.backdrop.scaleX * laid.scale, this.backdrop.scaleY * laid.scale).setPosition(laid.x, laid.y);
+    }
+  }
+
+  /** The sky's plates laid by the ground's depth. */
+  lean(sky: Lean) {
+    this.leaning = sky;
+    this.place();
+  }
+
+  /** Whether a plate of the sky stands over the painting's own sky now. */
+  get sky() {
+    return plates.some(plate => plate.sky && this.images.get(plate.file)?.visible === true);
+  }
+
+  /** The plates and the arch take the ground's tint: its rest, or the light that answers a blow. */
+  tint(painting: number, arch: number) {
+    this.plateTint = painting;
+    for (const image of this.images.values()) image.setTint(painting);
+    this.arch.tint(arch);
   }
 
   present(round: number | null, animate: boolean) {
@@ -62,7 +92,7 @@ export class BattleHorizon {
     const key = 'horizon-' + plate.file;
     this.scene.load.once('filecomplete-image-' + key, () => {
       const image = this.scene.add.image(0, 0, key).setName(key).setOrigin(0, 0)
-        .setTint(0xb5bbc2).setDepth(plate.depth);
+        .setTint(this.plateTint).setDepth(plate.depth);
       this.images.set(plate.file, image);
       // The player may have rewound or rotated while the file was in flight.
       this.layout(this.width, this.height);

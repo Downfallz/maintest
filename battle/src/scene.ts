@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { ActingHalo, FOCUS } from './acting-halo';
 import { BattleHorizon } from './battle-horizon';
+import { BattleGround } from './ground';
 import { DiceLayer } from './dice';
 import { placements, strikeApproach } from '../../table/battle-layout.js';
 import { CREATURE_ART, figureArt, figureGeometry } from '../../table/battle-art.js';
@@ -8,6 +9,7 @@ import { MOTION_SCALE, playbackRate } from '../../table/battle-timing.js';
 import { DEFEATED_ALPHA, WEIGHTS, blowWeight, breath, lossOf, punches, traumaOf } from '../../table/battle-motion.js';
 import { castRelease, castWindup, fall, meleeReturn, meleeWindup, struck, throwWindup } from './body-motion';
 import { ViewShake } from './view-shake';
+import { lightOf } from '../../table/battle-ground.js';
 import type { SceneFrame, Placement } from './types';
 import { UpkeepMarkers } from './upkeep-markers';
 import { MutationReveal } from './mutation-reveal';
@@ -43,21 +45,16 @@ interface Figure {
 
 const GOLD = 0xeac88e;
 const EMBER = 0xd18472;
-const MOTES = 24;
 // The laboratory's sample has no card: its hit is drawn as a plain physical blow, the kit's burst along it.
 const SAMPLE_HIT = { family: 'physical', motif: 'impact', delivery: 'melee',
   staging: [{ beat: 'motif', at: 840 }, { beat: 'burst', at: 840, count: 8, direction: 'along', tint: 'bone', blend: 'normal' }] };
-
-// A remainder that stays in [0, span) whatever the sign of the value: `%` alone turns negative once a
-// drift outgrows its offset, and a mote that goes negative leaves the screen for good.
-const wrap = (value: number, span: number) => ((value % span) + span) % span;
 
 export class BattleScene extends Phaser.Scene implements Restful {
   private readonly figures = new Map<string, Figure>();
   private backdrop?: Phaser.GameObjects.Image;
   private horizon?: BattleHorizon;
   private replay = false;
-  private readonly motes: Phaser.GameObjects.Arc[] = [];
+  private ground?: BattleGround;
   private effects: Phaser.GameObjects.GameObject[] = [];
   private readonly upkeepMarkers = new UpkeepMarkers(this);
   private readonly mutationReveal = new MutationReveal(this);
@@ -87,9 +84,18 @@ export class BattleScene extends Phaser.Scene implements Restful {
   /** How the figures and the view stand now, for the bench, its film and the browser specs. */
   get motion() {
     const round = (value: number) => Math.round(value * 1000) / 1000;
-    return { view: this.viewShake.state, figures: [...this.figures.values()].map(({ id, image, shadow, home, scale }) => ({ id,
+    return { view: this.viewShake.state, ground: this.ground?.state ?? null, figures: [...this.figures.values()].map(({ id, image, shadow, home, scale }) => ({ id,
       x: round(image.x - home.x), y: round(image.y - home.y), angle: round(image.angle), width: round(image.scaleX / scale), height: round(image.scaleY / scale),
       alpha: round(image.alpha), shadow: round(shadow.alpha), tinted: image.isTinted })) };
+  }
+  /** What the ground draws, for the browser specs: its embers and their depth, the fog, and the tints of the painting and its plates. */
+  get groundObjects() {
+    const named = (name: string) => this.children.list.filter(child => child.name === name) as Phaser.GameObjects.Image[];
+    const embers = named('ground-ember').filter(one => one.visible);
+    const painted = this.children.list.filter(child => child === this.backdrop || child.name.startsWith('horizon-') && child.name !== 'horizon-faults'
+      && child.name !== 'horizon-pier' && child.name !== 'horizon-span') as Phaser.GameObjects.Image[];
+    return { embers: embers.length, deepest: Math.max(-Infinity, ...embers.map(one => one.depth)), fog: named('ground-fog').some(one => one.visible),
+      tints: [...new Set(painted.map(one => `0x${one.tintTopLeft.toString(16).padStart(6, '0')}`))] };
   }
   // Which image a creature now shows: an evolution illustration's id, or `form:<form>` for an audited sprite.
   onArtwork: (id: string, shown: string) => void = () => {};
@@ -109,7 +115,7 @@ export class BattleScene extends Phaser.Scene implements Restful {
   onDice: (shown: string) => void = () => {};
   private diceShown = '';
   private haloId: string | null = null;
-  // The clock of the ambience (the halos, the motes, the capstone effects and the auras): the steps the game takes,
+  // The clock of the ambience (the halos, the ground's air, the capstone effects and the auras): the steps the game takes,
   // added up, so a page held up for a while resumes the ambience where it stood instead of jumping ahead.
   private ambient = 0;
   private lastStep = 0;
@@ -136,6 +142,7 @@ export class BattleScene extends Phaser.Scene implements Restful {
     if (this.textures.exists('battle-floor')) {
       this.backdrop = this.add.image(0, 0, 'battle-floor').setOrigin(.5, 0).setTint(0xb5bbc2).setDepth(-10);
       this.horizon = new BattleHorizon(this, this.backdrop, this.assetRoot);
+      this.ground = new BattleGround(this, this.backdrop, this.horizon);
     }
     // A local vector fallback keeps the scene selectable if an image fails to load.
     const fallback = this.add.graphics();
@@ -144,7 +151,6 @@ export class BattleScene extends Phaser.Scene implements Restful {
     fallback.destroy();
     this.halo = new ActingHalo(this);
     this.dice = new DiceLayer(this);
-    for (let index = 0; index < MOTES; index++) this.motes.push(this.add.circle(0, 0, index % 3 === 0 ? 2 : 1, GOLD, .24).setDepth(1000));
     this.fitCamera();
     this.scale.on('resize', () => {
       this.fitCamera();
@@ -337,6 +343,7 @@ export class BattleScene extends Phaser.Scene implements Restful {
       const factor = Math.max(width / source.width, height / source.height);
       this.backdrop.setDisplaySize(source.width * factor, source.height * factor).setPosition(width / 2, -(source.height * factor - height) * .35);
       this.horizon?.layout(width, height);
+      this.ground?.layout(width, height);
     }
     if (!this.figures.size) {
       this.upkeepMarkers.present(this.state?.upkeep, new Map(), this.reduced);
@@ -413,6 +420,9 @@ export class BattleScene extends Phaser.Scene implements Restful {
     // The view trembles by the health lost, whatever the family; a defeat or a critical hit punches the zoom.
     this.viewShake.add(traumaOf(cue, this.state.actor));
     if (punches(cue, this.state.actor)) this.viewShake.punchIn();
+    // The eclipse answers harm, by its weight, in the family's colour (the craft book, "A light that answers a cast").
+    const light = lightOf(cue, this.state.actor);
+    this.ground?.answer(light.colour, light.strength, this.rate);
   }
 
   // The caster once its action has landed: a lunge holds for the stop and goes home, a cast or a throw lets go.
@@ -516,6 +526,7 @@ export class BattleScene extends Phaser.Scene implements Restful {
     this.tweens.killAll();
     this.cameras.main.resetFX();
     this.viewShake.clear();
+    this.ground?.clear();
     this.falling.clear();
     this.spellEffects.clear();
     for (const effect of this.effects) effect.destroy();
@@ -556,7 +567,9 @@ export class BattleScene extends Phaser.Scene implements Restful {
     if (!this.state) return;
     // When the clock restarts (the bench's film steps the game from zero), the ambient clock restarts too, so two
     // films of one effect draw the same frames.
-    this.ambient = time < this.lastStep ? time : this.ambient + delta;
+    // A hidden tab stops the ambience: a browser stops the frames of most hidden tabs by itself, and where it only
+    // slows them the clock still stands, so the air and the breath go on from where they stood (BC9).
+    this.ambient = time < this.lastStep ? time : this.ambient + (document.hidden ? 0 : delta);
     this.lastStep = time;
     const breathClock = this.ambient;
     this.horizon?.update(delta * this.rate);
@@ -576,12 +589,7 @@ export class BattleScene extends Phaser.Scene implements Restful {
       figure.effects.follow(figure.image, figure.alive && figure.image.visible, breathClock, this.reduced);
       figure.auras.follow(this.body(figure), figure.alive && figure.image.visible, breathClock, this.reduced);
     }
-    const width = Math.max(1, this.cameras.main.displayWidth);
-    const height = Math.max(1, this.cameras.main.displayHeight);
-    const drift = this.reduced ? 0 : breathClock * .007;
-    this.motes.forEach((mote, i) => {
-      mote.setPosition(wrap(i * 131 + drift, width), wrap(i * 73 - drift * .7, height));
-      mote.visible = !this.reduced;
-    });
+    // The air is the ambient clock's and the far layers lean by how the view stands now (`ground.ts`).
+    this.ground?.update(breathClock, this.reduced, this.state.round ?? null, this.viewShake.offset);
   }
 }
