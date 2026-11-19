@@ -23,8 +23,8 @@ covered:
 - **The pictures are in the game and not on its pages.** The table serves 56 paintings. The showcase shows a
   dozen, each sent at five times the size it is drawn. The game's own pages show two, on the sign-in panel. A new
   player's home is 1,923 pixels of text with no creature.
-- **The frame of a match is written too small.** Around the canvas, a creature's health is 9 pixels high and the
-  order of play 7.
+- **The match's frame is written too small.** Around the canvas, a creature's health is set in 9 px text and the
+  order of play in 7.
 
 The battle craft's four pieces answer it, on the pages instead of the canvas:
 
@@ -48,21 +48,21 @@ its folder, and a host started with developer accounts (`table --lobby --account
 
 | Concern | What the code and the docs hold |
 | --- | --- |
-| The pages of the four journeys | `table/lobby.html`: the sign-in panel, the name window, the home and its Create window. `table/battle.html`: the match, the tutorials, and 18 windows. `table/rules.html`. Static, no build step (`table/AGENTS.md`). |
+| The pages of the four journeys | `table/lobby.html`: the sign-in panel, the name window, the home and its Create window. `table/battle.html`: the match, the tutorials, and 18 windows (its dialogs). `table/rules.html`. Static, no build step (`table/AGENTS.md`). |
 | The identity | Settled: ADR 0158, `docs/art/branding.md`, `table/identity.css` loaded last, the published design system (`docs/art/design-system/`). |
 | Pictures | 56 WebP files under `table/battle-art`, 25 MB: 22 evolutions, 24 hybrids, 4 horizon plates, 6 others. The pages show two, on the sign-in panel, as CSS backgrounds (`table/lobby.css`). No page holds an `<img>`. On the battle page, 23 controls carry an emoji as their icon. |
-| Motion on the pages | `identity.css`, `lobby.css`, `rules.css` and `leaderboard.css` hold no animation; `lobby.css` holds no transition. On every screen walked, `document.getAnimations()` was empty at rest. No view transition, no `@starting-style`. `battle.css` has 9 keyframes, for the frame of a match. |
+| Motion on the pages | `identity.css`, `lobby.css`, `rules.css` and `leaderboard.css` hold no animation; `lobby.css` holds no transition. On every screen walked, `document.getAnimations()` was empty at rest. No view transition, no `@starting-style`. `battle.css` has 9 keyframes, for the match's frame. `table.css`, which the lobby loads too, has 16, for the classic table; ten controls of the home take a hover transition from it. |
 | Less motion | The battle has a setting, kept with the account (ADR 0140), and reads the system's. The pages have one rule, for scrolling: there is nothing to reduce. |
 | The first door: the showcase | `showcase/`, built into ten pages, English and French, published at the apex (`showcase/README.md`). Its home at 390 px: 754 words over 6,305 px, five parts (how a round works, the battlefield, the mutations, the creator's note, who you play), 12 pictures each with its dimensions, nine of them lazy, no layout shift. Play now three times, each to the game's origin in the same tab. The field guide and the rulebook are whole and need no account. |
-| What the showcase lacks | No picture of the battle view and no turn seen played: a round is three sentences. `showcase.css` holds no transition and no animation. A creature of 1536 by 1024 is drawn 308 px wide. One run on a slow phone's network and processor: first paint at 1.2 s, largest at 4.4 s, the hero's ground, a CSS background; 763 KB of pictures before any scroll. A caption at 8 px. On the field guide, 27 of 85 controls are under 24 px. |
-| The second door: the game's sign-in | Signing in is required to play (`docs/tabletop/accounts-plan.md`, question 5). The signed-out page is a panel of 41 words: a title, the same painting, one creature, the button. `accounts-plan.md` describes an introduction in three steps there; `docs/tabletop/home-navigation.md` says sign-in at once. The page is the second, and for a visitor who comes from the showcase that is right: the introduction is behind them. A visitor who comes by a friend's invitation (`/j/<code>`) never saw it, and meets the panel alone. |
+| What the showcase lacks | No picture of the battle view and no turn seen played: a round is three sentences. `showcase.css` holds no transition and no animation. A creature of 1536 by 1024 is drawn 308 px wide. One run on a slow phone's network and processor: first paint at 1.2 s, largest at 4.4 s, the hero's ground, a CSS background; 763 KB of pictures before any scroll. |
+| The second door: the game's sign-in | Signing in is required to play (`docs/tabletop/accounts-plan.md`, question 5). The signed-out page is a panel of 41 words: a title, the same painting, one creature, the button. `accounts-plan.md` describes an introduction in three steps there; `docs/tabletop/home-navigation.md` says sign-in at once. The two disagree. The page follows `home-navigation.md`, and that is right for a visitor who comes from the showcase: the introduction is behind them. A visitor who comes by a friend's invitation (`/j/<code>`) never saw it, and meets the panel alone. |
 | The seam between the two | Two origins, so no transition can join them. The panel's largest paint is 4.7 s in the same run: the painting again, a CSS background, in 809 KB of pictures. The showcase speaks French; the game does not (ADR 0193). A new account names itself, then lands on tutorial 1's brief in the battle. |
 | The lessons | Four tutorials (ADR 0187), ten concept cards, six phase tips (ADR 0142), Learn to play. A tutorial's brief is 66 words. The first phase tip of a real game is 153 words in a window. A newcomer has never been watched (`docs/tabletop/onboarding-plan.md`, "Novice observation"). |
 | The lobby | A new player's home at 390 px: 1,923 px tall, 191 words, five filled gold actions where `branding.md` asks for one, no picture. An empty list is a sentence. Its sections arrive after the first paint: a layout shift of 0.26 in one run, past the 0.25 that is poor. |
 | The match's frame | DOM around the canvas (`#phaser-mount`): the round's bar, the order of play, the team labels, the dock, the windows. At 390 px, text under 11 px: the order of play at 7 and 9, a creature's health and initiative at 9, the team labels at 7, the round's phase at 8. In a tutorial, Leave and Settings overlap by 20 px. |
-| Targets | No control under 44 px in the battle screens walked. On the pages: the menu's button is 34 by 44, the footer's links 12 px tall, the rulebook's contents 17. |
-| Accessibility, automated | axe, on the WCAG 2.2 AA rules, over 14 screens at two widths: two rules fail. The round's button says one name and shows another (`#recap-open`). A rulebook table scrolls and cannot be focused at 320 px. The browser suite does not run axe: `studio/browser/package.json` holds Playwright alone. 22 specs press keys; none asks for forced colours or more contrast. |
-| What is decided | 320 px first and 44 px targets (`.claude/rules/pages.md`); contrast of 4.5:1 and 7:1 between tokens (`branding.md`). No level of WCAG, no budget for a page, no rule on motion or on pictures on a page: no ADR says. |
+| Targets | No control under 44 px in the battle screens walked. On the table's pages: the menu's button is 34 px wide and 44 high, the footer's links 12 px tall, the rulebook's contents 17. On the showcase: a caption in 8 px text, and 27 of the field guide's 85 controls under 24 px. |
+| Accessibility, automated | axe, on the WCAG 2.2 AA rules, over 14 screens at two widths: two rules fail. The round's button has an accessible name that differs from its visible label (`#recap-open`). A rulebook table scrolls and cannot be focused at 320 px. The browser suite does not run axe: `studio/browser/package.json` holds Playwright alone. 22 specs press keys; none asks for forced colours or more contrast. |
+| What is decided | 320 px first and 44 px targets (`.claude/rules/pages.md`); contrast of 4.5:1 and 7:1 between tokens (`branding.md`). No WCAG level, no budget for a page, no rule on motion or on pictures on a page: no ADR says. |
 | Gates left open | `docs/tabletop/battle-ux-acceptance.md`: a new player watched, physical phones, screen readers and zoom. All still open. |
 | Review | `design-reviewer` and `pages-reviewer` read a diff. Neither looks at a render, and neither follows a journey. |
 
@@ -79,10 +79,10 @@ Not measured, and why:
 
 ## What the search found
 
-[The notes](ux-craft-research.md): about eighty patterns with their sources, and what could not be opened. The
+[The notes](ux-craft-research.md): 78 entries with their sources, and what could not be opened. The
 ones that shape this plan:
 
-- **Show the game before asking for an account.** A wall before any value has a high cost on a phone. The
+- **Show the game before asking for an account.** A sign-in page before any content has a high cost on a phone. The
   showcase is that showing; what it does not show is play. No test on a game was found: this is practice, not a
   number.
 - **A picture of the move beats its sentence.** The maker of Into the Breach: a small loop of the move is "a
@@ -96,16 +96,16 @@ ones that shape this plan:
 - **A vocabulary of motion.** About 100 ms for a press, 200 to 300 for a window, an exit shorter than its entry,
   only `transform` and `opacity`. Less motion keeps a fade and drops the travel.
 - **The largest picture is an `<img>` in the HTML**, with its size, asked for first. Good is 2.5 s.
-- **WCAG 2.2 AA is the standard to hold.** Automation finds between a third and a half of the faults on a page,
-  and none inside a canvas. A screen reader on a phone stays a session with a person.
-- **The platform now does this without a library**: a transition between two pages, a window that enters and
-  leaves, a spring as an easing. Each is ignored by a browser that lacks it.
+- **WCAG 2.2 AA is the standard to hold.** Automation found 37% and 57% of a page's faults in two studies (the
+  notes, part 10), and finds none inside a canvas. A screen reader on a phone stays a session with a person.
+- **The platform does this without a library**: a transition between two pages, a window that enters and
+  leaves, a spring as an easing. A browser that lacks one ignores it.
 
 ## The boundary
 
-- The battle craft owns what is inside the canvas. This plan owns the DOM: the pages, and the frame and windows
-  around the canvas. Where the two meet, a health bar answering a blow, the frame follows the timings of
-  `table/battle-timing.js` and decides nothing.
+- The battle craft owns what is inside the canvas. This plan owns the DOM: the pages, and the match's frame, which
+  is the bars, the labels, the dock and the windows around the canvas. Where the two meet, a health bar answering a
+  blow, the frame follows the timings of `table/battle-timing.js` and decides nothing.
 - This plan changes how a journey looks, moves and reads. What a tutorial teaches stays
   `docs/tabletop/onboarding-plan.md`'s, who may play `accounts-plan.md`'s, the lobby's sections
   `home-navigation.md`'s, what the battle offers `docs/tabletop/battle-ux-parity-plan.md`'s. A brief that finds a
@@ -124,7 +124,7 @@ One entry per pattern, the same six lines each: what it is, where it comes from 
 pages do it (the element, the CSS feature or the API, and the browsers that have it), what it costs (bytes, a
 paint, a phone), its form under less motion and for a screen reader, where this game uses it.
 
-Its groups: the first visit, teaching, the home, the frame of a match, motion, pictures, access.
+Its groups: the first visit, teaching, the home, the match's frame, motion, pictures, accessibility.
 
 A test reads the book: every entry has its six lines, every path it names exists, every token it names is
 declared in `table/identity.css`. A pattern with no source is marked *house*.
@@ -149,7 +149,8 @@ The four journeys:
 | The lobby | The home of a player with nothing | A game created, a turn that waits, a game that ended |
 | The match | A game's first Command phase | Its result, through a round of combat |
 
-The sheet is what the designer critiques and what the owner approves. The measures are what a stage is held to.
+A journey's film is its sheet and its measures. The sheet is what the designer critiques and what the owner
+approves. The measures are what a stage is held to.
 
 ## The designer and the pass
 
@@ -171,7 +172,7 @@ A screen's brief has nine parts:
 4. The states: the first paint, empty, loaded, waiting, an error, offline.
 5. The motion: each beat by its name in the book and its token.
 6. Less motion: the form each beat takes.
-7. Access: the order of focus, the names, what is announced, the targets.
+7. Accessibility: the order of focus, the names, what is announced, the targets.
 8. The cost: bytes, the largest paint, the layout's shift.
 9. Left: the choices that wait for the owner.
 
@@ -183,7 +184,7 @@ most three rounds, then the sheets on one page for the owner, then `/verify` and
 Shared by every page of the table and of the showcase: the tokens in `docs/art/branding.css`, which both read,
 the table's parts in `table/identity.css` and one small module, the showcase's in `showcase/showcase.css`. UX4
 and UX5 build it. An ADR written in UX4 holds its decisions, since no ADR covers a page's motion, pictures,
-budget or level of access today.
+budget or level of accessibility today.
 
 - **Motion.** Tokens beside the palette's: three durations and three curves. Five uses, each with one form: a
   press, a window that enters and leaves (`@starting-style`), a page that changes (`@view-transition`), a thing
@@ -268,27 +269,26 @@ Proposed here; the ADR of UX4 sets them, and UX13 reads them again.
 11. **UX11, the match's windows.** The 18 windows as one family: how each enters, leaves and returns the focus,
     the spellbook and the mutation tree on a phone, the result of a match as a moment. Tests: each window's
     contract (the focus goes in, stays in, comes back; Escape closes); the battle specs.
-12. **UX12, access.** The checks the gate runs: axe on every screen and state of the four journeys (a development
-    dependency of the browser suite, named in the ADR of UX4), a whole turn by keyboard, a turn told in one live
-    region, forced colours and more contrast, text spacing and 200%, the flash guard on the brightest window.
-    What stays for a person is listed for the owner. Tests: these.
+12. **UX12, accessibility.** The checks the gate runs: axe on every screen and state of the four journeys (a
+    development dependency of the browser suite, named in the ADR of UX4), a whole turn by keyboard, a turn told in
+    one live region, forced colours and more contrast, text spacing and 200%, the flash guard on the brightest
+    window. What stays for a person is listed for the owner. Tests: these.
 13. **UX13, acceptance.** The four journeys filmed again against the baseline, the table of measures above, the
     budgets, less motion across every screen, the sheets published. The record goes in `docs/art/`, with the two
     gates only the owner can close: a newcomer watched, a physical phone.
-
 14. **UX14, a lesson before an account.** A visitor plays tutorial 1 as a guest, from either door, and is asked
     to sign in when it ends, with what the account keeps. Needs an ADR that amends question 5 of
     `accounts-plan.md`: what a guest is on the host, what it may reach, how long it lives, and how its lesson
     joins the account. Tests: the host's routes for a guest and their limits; a guest reaches nothing but
     tutorial 1; the journey's measures. `security-reviewer` and `host-reviewer` read it.
 
-UX6 to UX11 each end with the owner approving the journey's sheets before the pull request is reported ready.
+UX6 to UX11 and UX14 each end with the owner approving the journey's sheets before the pull request is reported ready.
 
 ## Questions the owner settled (2026-11-19)
 
 1. The approach: the four pieces, as for the battle. The craft book, the journey film and its measures, the
    `ux-designer` agent and the `/ux-pass` skill, then the passes by hand, one stage a session.
-2. The level of access: WCAG 2.2 AA on the pages and on the DOM around the battle, with what the games'
+2. The level of accessibility: WCAG 2.2 AA on the pages and on the DOM around the battle, with what the games'
    guidelines add: a floor of text size, and no fact carried by colour or by sound alone. UX4's ADR records it.
 3. The pictures: the 56 paintings first, at a page's size. New ones are generated by the owner on request, as the
    56 were: a brief asks for each. The owner wants pictures that move too: by code on a still first, then a strip

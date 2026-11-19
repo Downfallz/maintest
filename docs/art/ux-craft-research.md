@@ -5,8 +5,8 @@ into the pages' craft book and reads every link again against its entry.
 
 Two searches of the web ran in the session that wrote the plan: one on the patterns of games (the first visit,
 teaching, the home of an asynchronous game, the frame of a match on a phone), one on accessibility and on what
-the web platform offers a static page. Each link below was opened by the search that cites it. The session that
-wrote the plan did not open them a second time. A number given here is the source's, not ours.
+the web platform offers a static page. The search that cites a link opened it. The session that wrote the
+plan did not open it again; UX1 does. A number given here is the source's, not ours.
 
 What could not be opened is listed at the end and is cited nowhere.
 
