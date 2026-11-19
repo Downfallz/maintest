@@ -1,6 +1,6 @@
 ---
 name: ship
-description: The standing orders as steps - commit, push, open the pull request from the template, subscribe to it, ask Codex for its review, answer every thread, merge main in on a conflict, and report ready only when every check is green and no thread is open. Use once the gate passed, or when the owner says "ouvre la PR", "ship", "abonne-toi".
+description: The standing orders as steps - commit, push, open the pull request from the template, subscribe to it, ask Codex for its review, answer every thread, merge main in on a conflict, and report ready only when every check is green, no thread is open and Sonar's new issues are answered. Use once the gate passed, or when the owner says "ouvre la PR", "ship", "abonne-toi".
 ---
 
 # Ship
@@ -33,5 +33,12 @@ The standing orders in `CLAUDE.md`, in order. None of them is asked first.
    - Reply to each thread with the commit that answers it, once it is on the branch, and resolve the thread.
    - An event that needs nothing: no answer.
 8. Ready means: every check finished and green, the `gate` check among them, no commit left unpushed, and no
-   thread unanswered. Only then tell the owner it is ready, in French, with the link. Never merge: the owner
-   merges.
+   thread unanswered. Then read Sonar's new issues on the pull request; the list answers without a token:
+
+   ```bash
+   curl -sS "https://sonarcloud.io/api/issues/search?componentKeys=Downfallz_maintest&pullRequest=<n>&ps=100"
+   ```
+
+   A passing quality gate is not enough. Fix each issue in a new commit, or say in the pull request why not: that
+   round goes through step 7 like a thread. A Markdown-only pull request runs no Sonar (ADR 0192), so it has none
+   to read. Only then tell the owner it is ready, in French, with the link. Never merge: the owner merges.
