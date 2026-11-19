@@ -128,7 +128,7 @@ test('a film refuses a speed the page does not offer, and leaves the bench runni
 
 test('less motion shows the settled frame and no effect', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  // Played once the bench has rested on the media query's change, or that rest undoes the play (#894).
+  // Play only after the bench has rested on the media query's change: otherwise the rest undoes the play (#894).
   await expect(page.locator('#lab')).toHaveAttribute('data-motion', 'reduced');
   await page.locator('#bench-play').click();
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'resolved');

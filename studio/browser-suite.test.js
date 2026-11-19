@@ -418,10 +418,10 @@ test("every job that installs a browser restores Playwright's browsers first, ke
   }
 });
 
-// #892: on main, 5 of the 42 release-ios jobs from 2026-11-16 to 2026-11-18 were cancelled at their 25-minute
-// limit in the install, fetching WebKit's 185 system packages (140 MB) from a mirror that sent one a few
-// seconds; the step otherwise takes 32 seconds. The archives are kept between runs, and apt, which checks each
-// against the signed index, fetches none of them again. The install is bounded well inside the job's limit.
+// #892: on main, from 2026-11-16 to 2026-11-18, 5 of the 42 release-ios jobs hit their 25-minute limit in the
+// install. They were fetching WebKit's 185 system packages (140 MB) from a mirror that sent one package every few
+// seconds. The step normally takes 32 seconds. The archives are now kept between runs, a failed install's too,
+// and apt checks each against the signed index. The install is bounded well inside the job's limit.
 test("every job that installs a browser keeps the system packages' archives, and bounds the install", () => {
   const workflow = browserWorkflow();
   for (const job of ['journeys', 'real-engine', 'battle-release']) {
@@ -441,16 +441,21 @@ test("every job that installs a browser keeps the system packages' archives, and
     assert.ok(save.at < block.indexOf('npm --prefix battle'), `${job} saves before any build or spec runs code`);
 
     assert.match(block, /key=playwright-\$ImageOS-\$version-\$ENGINE/, job);
-    assert.match(block, /debs-key=playwright-debs-\$ImageOS-\$ENGINE-\$ImageVersion-\$version"/, job);
+    // The week moves the key, so the updates published since the image are kept too.
+    assert.match(block, /debs-key=playwright-debs-\$ImageOS-\$ENGINE-\$version-\$ImageVersion-\$\(date -u \+%G-W%V\)"/, job);
     assert.match(block, /debs-prefix=playwright-debs-\$ImageOS-\$ENGINE-"/, job);
-    for (const step of [restore, save]) {
-      assert.match(step.body, /path: ~\/\.cache\/playwright-debs\n/, job);
-      assert.match(step.body, /key: \$\{\{ steps\.playwright\.outputs\.debs-key \}\}\n/, job);
-    }
+    const saveBody = block.slice(save.at, block.indexOf('\n      - ', save.at + 1));
+    for (const body of [restore.body, saveBody]) assert.match(body, /path: ~\/\.cache\/playwright-debs\n/, job);
+    assert.match(restore.body, /key: \$\{\{ steps\.playwright\.outputs\.debs-key \}\}\n/, job);
     assert.match(restore.body, /id: debs\n/, job);
     assert.match(restore.body, /restore-keys: \$\{\{ steps\.playwright\.outputs\.debs-prefix \}\}\n/, job);
-    assert.match(keep.body, /if: steps\.debs\.outputs\.cache-hit != 'true'\n/, job);
-    assert.match(block.slice(save.at), /^ {8}if: steps\.debs\.outputs\.cache-hit != 'true'\n/m, job);
+    // Kept after a failed install too, under a key of that run, so that the next run starts from what it fetched;
+    // and only a saving, so that its own failure fails nothing.
+    for (const body of [keep.body, saveBody]) {
+      assert.match(body, /if: \$\{\{ !cancelled\(\) && steps\.debs\.outputs\.cache-hit != 'true' \}\}\n/, job);
+      assert.match(body, /continue-on-error: true\n/, job);
+    }
+    assert.match(saveBody, /key: \$\{\{ steps\.playwright\.outputs\.debs-key \}\}\$\{\{ job\.status == 'failure' && format\('-partial-\{0\}', github\.run_id\) \|\| '' \}\}/, job);
 
     // apt keeps what it fetched, and finds what the cache held where it looks first.
     assert.match(install.body, /APT::Keep-Downloaded-Packages "true";/, job);
