@@ -22,6 +22,7 @@ function stretched(body: Body, line: Line | null, amount: number) {
   const along = body.scale * (1 + amount), across = body.scale / (1 + amount);
   return !line || Math.abs(line.dy) >= Math.abs(line.dx) ? { scaleX: across, scaleY: along } : { scaleX: along, scaleY: across };
 }
+const scaleOf = ({ scaleX, scaleY }: { scaleX: number; scaleY: number }) => [scaleX, scaleY] as const;
 const rested = (body: Body) => ({ scaleX: body.scale, scaleY: body.scale });
 
 /** The caster of a melee blow: the draw back, the hold, the strike that lands as the windup ends, the stretch into it. */
@@ -36,9 +37,13 @@ export function meleeWindup(scene: Phaser.Scene, body: Body, line: Line, weight:
 }
 
 /** After the contact: the caster holds for the stop, lets its stretch go, then goes home a little past it. */
-export function meleeReturn(scene: Phaser.Scene, body: Body, weight: string, rate: number) {
+export function meleeReturn(scene: Phaser.Scene, body: Body, line: Line | null, weight: string, rate: number) {
   const beats = meleeBeats(weight), { image, home } = body;
+  // The contact pose is the one the eye keeps, and the strike eases in: its last frame carries the most travel.
+  // So a windup still in flight when the impact arrives is put on its last frame, not stopped a frame short.
+  const lunging = line !== null && scene.tweens.getTweensOf(image).length > 0;
   scene.tweens.killTweensOf(image);
+  if (lunging) image.setPosition(line.x, line.y).setAngle(side(line) * beats.strike.lean).setScale(...scaleOf(stretched(body, line, beats.stretch.amount)));
   scene.tweens.add({ targets: image, ...rested(body), delay: beats.stop / rate, duration: beats.release.lasts / rate, ease: 'Quad.Out' });
   scene.tweens.add({ targets: image, x: home.x, y: home.y, angle: 0, delay: (beats.home.at - beats.release.at + beats.stop) / rate,
     duration: beats.home.lasts / rate, ease: 'Back.Out', easeParams: [beats.home.overshoot] });
@@ -63,9 +68,12 @@ export function throwWindup(scene: Phaser.Scene, body: Body, line: Line, rate: n
 }
 
 /** After the contact, a caster who did not lunge lets go: back to rest, a little past it. */
-export function castRelease(scene: Phaser.Scene, body: Body, rate: number) {
+export function castRelease(scene: Phaser.Scene, body: Body, risen: boolean, rate: number) {
   const { image, home } = body;
+  // A cast is at its tallest on the contact frame; a thrower is already home.
+  const loading = risen && scene.tweens.getTweensOf(image).length > 0;
   scene.tweens.killTweensOf(image);
+  if (loading) image.setScale(...scaleOf(stretched(body, null, CAST.rise.stretch)));
   scene.tweens.add({ targets: image, x: home.x, y: home.y, angle: 0, ...rested(body),
     duration: CAST.release.lasts / rate, ease: 'Back.Out', easeParams: [CAST.release.overshoot] });
 }

@@ -250,6 +250,10 @@ that extends it.
      is scaled by the confirmed outcome before the number shows; every family moves the view, not only the
      physical one (`docs/art/spell-vfx.md` now says so); the fallen body sinks back onto its own spot.
    - The motif's pale arc still plays in the windup beside the body's own load: BC6 to BC8 decide each spell's.
+   - A projectile's caster throws at 240 ms, when the quill's flight starts, but the quill eases in and is seen to
+     leave only near 600 ms. BC7, which gives the quill its arc, makes it leave with the throw.
+   - The critique's one fault of the build is fixed: an impact that arrived a frame before the strike's end left
+     the caster short of its contact pose. Its other finding is the line above.
    - Frame time is not measured, and nobody has seen the breath on a phone: BC10.
 6. **BC6, the physical spells and the two base actions.** 17 stagings. Tests: the film strips, the browser specs
    the change touches, one staging per spell in the data.

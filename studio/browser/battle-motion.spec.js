@@ -62,7 +62,11 @@ for (const speed of [0.5, 1, 2]) {
     const struck = await figure(page, 'b1');
     expect(struck.tinted, 'the target flashes on the contact').toBe(true);
     expect((await motion(page)).view.trauma).toBeGreaterThan(0);
-    expect(far(await figure(page, 'a1')), 'the caster reached its target').toBeGreaterThan(40);
+    // The contact pose is whole, whatever the frame the impact arrived on: at its target, leaning, fully stretched.
+    const landed = await figure(page, 'a1');
+    expect(far(landed), 'the caster reached its target').toBeGreaterThan(40);
+    expect(Math.abs(landed.angle)).toBe(beats.strike.lean);
+    expect(Math.max(landed.width, landed.height)).toBeCloseTo(1 + beats.stretch.amount, 2);
     // After the stop the target is thrown back, further than a light blow would send it.
     await film(page, 'advance', at(WEIGHTS.heavy.stop + 280));
     const thrown = await figure(page, 'b1');
@@ -123,7 +127,7 @@ test('a caster who does not lunge loads where it stands, and a figure harmed fro
   expect((await figure(page, 'a1')).height).toBeLessThan(.97);
   await film(page, 'advance', 240);
   const tall = await figure(page, 'a1');
-  expect(tall.height).toBeGreaterThan(1.02);
+  expect(tall.height).toBeGreaterThan(1.03);
   expect(far(tall)).toBe(0);
   expect(await figure(page, 'a2')).toMatchObject({ x: 0, y: 0, angle: 0, tinted: false });
   expect((await motion(page)).view.trauma).toBe(0);

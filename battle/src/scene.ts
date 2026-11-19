@@ -396,8 +396,9 @@ export class BattleScene extends Phaser.Scene implements Restful {
     const cue = this.state.cue;
     const melee = !cue || cue.visual.delivery === 'melee';
     if (actor && !this.falling.has(actor.id)) {
-      if (melee) meleeReturn(this, actor, blowWeight(cue, this.state.actor), this.rate);
-      else castRelease(this, actor, this.rate);
+      const target = this.figures.get(this.state.target!);
+      if (melee) meleeReturn(this, actor, target && target !== actor ? strikeApproach(actor.home, target.home) : null, blowWeight(cue, this.state.actor), this.rate);
+      else castRelease(this, actor, cue?.visual.delivery !== 'projectile', this.rate);
     }
     const thrown = new Set<string>();
     if (cue) this.spellImpact(cue, thrown, actor);

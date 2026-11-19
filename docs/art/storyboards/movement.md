@@ -119,7 +119,8 @@ node scripts/battle/filmstrip.mjs spell:pummel:v1 --actor a1 --targets b1 --dama
   at 840 and 900 ms and on no other frame. a1 at the same place on both frames.
 - Heavy contact, 960 ms: b1 no longer filled; a1 still touching b1 (the stop ends here).
 - Heavy contact, 1080 ms: a1 has left b1. b1 off its ring, away from a1, further than on the light sheet at 1080 ms.
-- Heavy contact, 1200 and 1260 ms: b1 at the same place, the far end of its recoil (the hold).
+- Heavy contact, 1260 and 1320 ms: b1 at the same place, the far end of its recoil (the hold: out from 960 ms for
+  280 ms, held from 1240 to 1320 ms).
 - Heavy sheet, 1680 ms: b1 home. a1 within a few pixels of its ring, past it or on it.
 - Heavy sheet, 1920 ms: both figures home. Nothing else on the field but the spell's own motif, if it still fades.
 - Medium sheet, 1200 ms: b1's recoil visibly shorter than the heavy's and longer than the light's.
@@ -216,9 +217,10 @@ node scripts/battle/filmstrip.mjs spell:engulfing_flames:v1 --actor a1 --targets
 - Overdrive, 480 and 540 ms: a1 lower at its top than at 0 ms, its feet on the same line.
 - Overdrive, 840 ms: a1 taller than at 0 ms, its feet on the same line, not moved sideways.
 - Overdrive, 1200 to 1380 ms: a1 the same as at 0 ms. a2 does not move on any frame.
-- Quill, 180 and 240 ms: a1 a few pixels below its home, away from b1. 300 and 360 ms: a few pixels above it,
-  toward b1. 840 ms: a1 at home. On no frame is a1 more than 8 px from home.
-- Quill, 840 ms: b1 filled flat in bone; 900 ms: not filled, still at home.
+- Quill, 180 and 240 ms: a1 a few pixels below its home, away from b1. 360 and 420 ms: a few pixels above it,
+  toward b1 (at 300 ms the throw has only brought it back to its ring). 840 ms: a1 at home. On no frame is a1 more
+  than 8 px from home.
+- Quill, 840 and 900 ms: b1 filled flat in bone (the flash is 80 ms), at home; 960 ms: not filled.
 - Quill, 1080 to 1200 ms: b1 off its ring away from a1 (light: 12 px). 1440 ms: b1 home.
 - Incinerate (`spell:engulfing_flames:v1`, the cast sheet with 8 lost), 1200 ms: b1 at the far end of a recoil as
   long as the heavy melee's, away from a1.
@@ -312,8 +314,9 @@ node scripts/battle/filmstrip.mjs spell:throwing_star:v1 --actor a1 --targets b1
 - Death, 1440 ms: b1 at the same place as at 1200 ms.
 - Death, 1680 and 1920 ms: b1 fainter at each frame, greyer, lower at its top, tipped away from a1, and closer to its
   ring than at 1440 ms.
-- Death, 2400 ms onward (2400, 2640, 2880, 3120): b1 the same on every frame, on its ring, at 20%, upright, and its
-  colour today's settled 20%: no slate left. Its shadow faint.
+- Death, 2640 ms onward (2640, 2880, 3120): b1 the same on every frame, on its ring, at 20%, upright, and its
+  colour today's settled 20%: no slate left. Its shadow faint. At 2400 ms the film reads one tick before the tint
+  is cleared: b1 already at 20% and upright, the last of the slate on it.
 - Death-ranged, 1200 ms: b1 off its ring away from a1, with a1 at home; from 2400 ms, the same settled frame.
 
 The sheets cannot show the stop's tremor or the feel of the zoom at full speed.
@@ -386,8 +389,9 @@ node scripts/battle/filmstrip.mjs spell:adrenaline_tonic:v1 --actor a1 --targets
   --frames 16 --interval 240 --columns 4 --scale 2 --out <folder>/breath.png
 ```
 
-- At 0, 1800 and 3600 ms each standing figure's top is at one height; at 900 and 2700 ms it is at another, about
-  1 px apart (2 px on the sheet at `--scale 2`), and its feet do not move.
+- At 0 and 3600 ms each standing figure's top is at one height (the period); between them it reaches a height
+  about 1 px away (2 px on the sheet at `--scale 2`), and its feet do not move. Its height scale stays within
+  0.9925 and 1.0075 of its own.
 - b1 and b2 are not at the top of their breath at the same frame.
 - From 2640 ms the sheet is not five identical frames.
 
