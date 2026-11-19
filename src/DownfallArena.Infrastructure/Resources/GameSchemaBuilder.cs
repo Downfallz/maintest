@@ -38,8 +38,8 @@ public static class GameSchemaBuilder
         var problems = new List<string>();
         var aliases = LoadAliases(Path.Combine(dataDirectory, AliasesFile), problems);
         var creatures = LoadAll<CreatureDefinitionDto>(Path.Combine(dataDirectory, CreaturesFolder), problems);
-        var spells = LoadAll<SpellDto>(Path.Combine(dataDirectory, SpellsFolder), problems);
-        var trees = LoadAll<TalentTreeDto>(Path.Combine(dataDirectory, TalentTreesFolder), problems);
+        var spells = LoadAll<SpellDto>(Path.Combine(dataDirectory, SpellsFolder), problems, nullsIn: NullsIn);
+        var trees = LoadAll<TalentTreeDto>(Path.Combine(dataDirectory, TalentTreesFolder), problems, nullsIn: NullsIn);
         var tiers = LoadAll<TierDto>(Path.Combine(dataDirectory, TiersFolder), problems, optional: true);
         ThrowIfAny(problems);
 
@@ -304,7 +304,7 @@ public static class GameSchemaBuilder
     /// day it exists this argument has nothing left to allow.
     /// </para>
     /// </summary>
-    private static List<T> LoadAll<T>(string directory, List<string> problems, bool optional = false)
+    private static List<T> LoadAll<T>(string directory, List<string> problems, bool optional = false, Func<T, IEnumerable<string>>? nullsIn = null)
         where T : class
     {
         var items = new List<T>();
@@ -329,6 +329,13 @@ public static class GameSchemaBuilder
                     continue;
                 }
 
+                var nulls = nullsIn?.Invoke(item).ToList() ?? [];
+                if (nulls.Count > 0)
+                {
+                    problems.AddRange(nulls.Select(place => $"{Path.GetRelativePath(directory, file)}: {place} is null, not a record."));
+                    continue;
+                }
+
                 items.Add(item);
             }
             catch (JsonException exception)
@@ -339,6 +346,24 @@ public static class GameSchemaBuilder
 
         return items;
     }
+
+    // The places of a list of records that hold null: System.Text.Json lets [null] into a list of records (#890).
+    private static IEnumerable<string> NullsIn(SpellDto spell) =>
+        NullsAt("effects", spell.Effects).Concat(NullsAt("casterEffects", spell.CasterEffects));
+
+    private static IEnumerable<string> NullsIn(TalentTreeDto tree) =>
+        tree.Root is null ? [] : NullsIn(tree.Root, "root");
+
+    private static IEnumerable<string> NullsIn(TalentNodeDto node, string place) =>
+        NullsAt($"{place}.spells", node.Spells)
+            .Concat(NullsAt($"{place}.children", node.Children))
+            .Concat(node.Children.Select((child, index) => (child, index))
+                .Where(pair => pair.child is not null)
+                .SelectMany(pair => NullsIn(pair.child, $"{place}.children[{pair.index}]")));
+
+    private static IEnumerable<string> NullsAt<T>(string place, IReadOnlyList<T>? list)
+        where T : class =>
+        list is null ? [] : list.Select((item, index) => (item, index)).Where(pair => pair.item is null).Select(pair => $"{place}[{pair.index}]");
 
     /// <summary>
     /// The die's grid (ADR 0100): a Spell's critical chance is a whole number of twentieths, and a Creature's own

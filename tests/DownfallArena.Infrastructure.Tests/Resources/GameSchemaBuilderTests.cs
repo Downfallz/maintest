@@ -145,6 +145,23 @@ public sealed class GameSchemaBuilderTests
         exception.Problems.ShouldContain(problem => problem.Contains("'creature:strike:v1'", StringComparison.Ordinal));
     }
 
+    /// <summary>#890: System.Text.Json lets <c>[null]</c> into a list of records; the builder names it, it does not crash.</summary>
+    [Theory]
+    [InlineData("Spells/strike.v1.json", "\"effects\": [ { \"kind\": \"Damage\", \"amount\": 1 }", "\"effects\": [ null, { \"kind\": \"Damage\", \"amount\": 1 }", "strike.v1.json: effects[0] is null")]
+    [InlineData("Spells/strike.v1.json", "\"effects\": [", "\"casterEffects\": [ null ], \"effects\": [", "strike.v1.json: casterEffects[0] is null")]
+    [InlineData("TalentTrees/base.v1.json", "\"spells\": [ { \"id\": \"spell:strike\" } ]", "\"spells\": [ { \"id\": \"spell:strike\" }, null ]", "base.v1.json: root.spells[1] is null")]
+    [InlineData("TalentTrees/base.v1.json", "\"anyOf\": [\"spell:strike\"] } } ] }", "\"anyOf\": [\"spell:strike\"] } } ], \"children\": [ null ] }", "base.v1.json: root.children[0].children[0] is null")]
+    public void A_null_in_a_list_of_records_is_refused_with_its_file_and_place_and_not_a_crash(string file, string authored, string withNull, string problem)
+    {
+        using var content = new ContentDirectory().WithValidContent();
+        var path = Path.Combine(content.Path, file);
+        File.WriteAllText(path, File.ReadAllText(path).Replace(authored, withNull, StringComparison.Ordinal));
+
+        var exception = Should.Throw<InvalidGameContentException>(() => GameSchemaBuilder.Build(content.Path));
+
+        exception.Problems.ShouldContain(found => found.StartsWith(problem, StringComparison.Ordinal));
+    }
+
     [Fact]
     public void A_mistyped_field_is_reported_with_its_file()
     {
