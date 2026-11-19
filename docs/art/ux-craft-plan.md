@@ -342,8 +342,8 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
    and [the pages' pictures](page-pictures.md), the page a session follows. A picture is declared in
    `docs/art/page-pictures.json`; `scripts/ux/pictures.mjs` derives it at the size it is drawn, once and twice,
    into `table/page-art/`, each file named by its own bytes, and writes `table/page-art.js`. `table/picture.js`
-   writes the `<img>` with its width, its height, its `srcset` and its `sizes`, the largest paint asked for
-   first, as an element for the table and as text for the showcase's build. The doors' three paintings are
+   writes the `<img>` with its width, its height, its `srcset` and its `sizes`, the picture that is the largest
+   paint asked for first, as an element for the table and as text for the showcase's build. The doors' three paintings are
    derived: the eclipse ground, the Colossus and the Revenant, 146 KB for the showcase's first screen and 108 KB
    for the sign-in panel as a phone takes them, against 744 KB and 790 KB sent today.
    `docs/art/page-budget.json` holds each page's bytes, and ADR 0197's two times. A strip of frames is
@@ -362,10 +362,10 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
    UX6 moves the showcase's own twelve to the form: until then the budget holds the kit's files, not what a
    door loads. UX6 has the showcase's build copy `table/page-art/` and carries the strip's and the icon's rules
    to `showcase/showcase.css`. No strip is committed: the first is UX6's, from the battle's films, and the
-   encoder's strip was tried by hand, not in the gate. The `drawn` widths of a wide screen are read from the
-   sheets, not measured. A painting is made smaller and never cut, so a ground that covers its box is sent
-   whole. Deriving needs Pillow and its bytes change with the encoder's version. `--paint` does not read the
-   budget's times from the file. The design system's page is not republished: the owner runs `/design-system`
+   encoder's strip was tried by hand, not in the gate. The `drawn` widths for a wide screen are estimated from
+   the sheets' CSS, not measured. A painting is made smaller and never cut, so a ground that covers its box is sent
+   whole. Deriving needs Pillow and its bytes change with the encoder's version. `--paint` reports the paints and holds them to
+   nothing: the budget's two times are read by a person. The design system's page is not republished: the owner runs `/design-system`
    after the merge, as for UX4.
 6. **UX6, the showcase.** The first door shows the game played: a round in pictures of the real battle view,
    taken from the films the battle craft makes, beside the three sentences. Its pictures at the size they are

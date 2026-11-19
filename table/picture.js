@@ -23,7 +23,8 @@ function entryOf(name, page, art) {
 /**
  * The attributes of a picture's `<img>`, in the order they are written. `page` is the page's name in the
  * declaration, which says whether the picture is asked for first. `sizes` is the width it is drawn at when the
- * page draws it at another than the declaration's first; `alt` is empty for decoration.
+ * page draws it at another than the declaration's first, and for a strip the width of all its frames, since its
+ * file holds them side by side; `alt` is empty for decoration.
  */
 export function pictureAttributes(name, { page, alt = '', sizes, base = PAGE_ART_BASE, art = PAGE_ART } = {}) {
   const entry = entryOf(name, page, art), role = entry.pages[page], whole = entry.drawn[0] * entry.frames;
@@ -45,15 +46,18 @@ export function pictureAttributes(name, { page, alt = '', sizes, base = PAGE_ART
 
 const written = attributes => Object.entries(attributes).map(([name, value]) => `${name}="${escaped(value)}"`).join(' ');
 
+/** Every picture of the kit is a `.picture`: never wider than its room, its height following (identity.css). */
+const classOf = options => (options.class ? `picture ${options.class}` : 'picture');
+
 /** A picture as text, for a page built before it is served. */
 export function pictureHtml(name, options = {}) {
-  return `<img ${written({ ...(options.class ? { class: options.class } : {}), ...pictureAttributes(name, options) })}>`;
+  return `<img ${written({ class: classOf(options), ...pictureAttributes(name, options) })}>`;
 }
 
 /** A picture as an element, for a page that builds itself. */
 export function pictureElement(doc, name, options = {}) {
   const image = doc.createElement('img');
-  if (options.class) image.className = options.class;
+  image.className = classOf(options);
   for (const [attribute, value] of Object.entries(pictureAttributes(name, options))) image.setAttribute(attribute, String(value));
   return image;
 }

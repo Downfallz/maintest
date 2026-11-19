@@ -32,10 +32,11 @@ One entry in `docs/art/page-pictures.json`:
 
 - `name`: lower case, digits and hyphens. It names the files.
 - `source`: a painting of the repository. A strip gives `frames` instead: its frames in order, all of one size.
-- `drawn`: the width the whole painting is drawn at, in CSS pixels, the phone's first (a screen 390 px wide),
-  then any wider layout's. A painting that covers its box and is cut by it is drawn wider than the box: a
-  16:9 ground that covers 358 by 300 px is drawn 533 px wide. For a strip, the width of one frame.
-- `pages`: each page that draws it, by a name the budget shares, and its role there: `largest` (asked for
+- `drawn`: the width the whole painting is drawn at, in CSS pixels. List the phone first (a screen 390 px
+  wide), then any wider layout. A painting that covers its box and is cut by it is drawn wider than the box: a
+  16:9 ground that covers 358 by 300 px is drawn 533 px wide. One shown whole in its box is drawn no wider
+  than the box. For a strip, give the width of one frame.
+- `pages`: each page that draws it, named as in `docs/art/page-budget.json`, and its role there: `largest` (asked for
   first, one or two a page), `first` (on the first screen, not lazy) or `lazy`.
 
 Then derive, and commit what it writes:
@@ -46,8 +47,8 @@ node scripts/ux/pictures.mjs --check    # what the gate holds: the files against
 node scripts/ux/pictures.mjs --budget   # each page's bytes against its budget
 ```
 
-It sends a picture at each width of `drawn`, once and twice, never past its painting, and keeps one of two
-sizes a tenth apart. Nothing is cropped or retouched. It encodes only what changed: a picture whose painting,
+It sends a picture at each width of `drawn`, once and twice: at one and at two times the screen's density,
+never wider than its painting. When two sizes differ by less than a tenth, it keeps the larger. Nothing is cropped or retouched. It encodes only what changed: a picture whose painting,
 declaration and encoding are as they were keeps its files. A file it no longer needs is removed. The bytes
 depend on the encoder's version, so two machines may write two names for one picture: commit one.
 
@@ -60,10 +61,11 @@ hero.append(pictureElement(document, 'colossus', { page: 'showcase/home', sizes:
 
 - `page` is required and must be in the picture's `pages`: that is what the budget counts.
 - `alt` says what is shown; leave it out for decoration. `sizes` says the width it is drawn at when it is not
-  the declaration's first. `class` goes on the image.
+  the declaration's first; for a strip it is the width of all its frames. `class` goes on the image.
 - `pictureHtml` and `stripHtml` write the same as text, for a page built before it is served. The showcase's
   build passes its own folder as `base`, once UX6 has it copy `table/page-art/` there.
-- The image carries its `width` and `height`: give it `height: auto` in CSS and its room is held.
+- The image carries its `width` and `height`, and the class `picture`: never wider than its room, its height
+  following. Its room is held before it loads.
 - Never write a derived file's name in a page: it changes when the picture is derived again.
 
 ## A picture that moves
@@ -72,7 +74,8 @@ First by code, on a still: `.motion-breath` ([ADR 0197](../adr/0197-hold-the-pag
 
 Then a strip, where code cannot give the move: 2 to 12 frames, declared with `frames`. `stripElement` writes a
 `.motion-strip` frame around one file that holds them side by side; `table/identity.css` steps it by `translate`
-over `--motion-strip`. It is ambience: `table/motion.js` plays one a screen, in view, in a visible tab. It plays
+over `--motion-strip`. It is ambience: `table/motion.js` plays one ambience at a time on a screen, in view, in
+a visible tab. It plays
 once and rests on its last frame; out of view it returns to its first, and plays again when it comes back.
 Under less motion it is its first frame. The strip has one name for a screen reader, its `alt`; its frames
 have none. A page that adds one after it opened calls `watch()` of `mountMotion()`.
@@ -117,6 +120,7 @@ that holds its place in backticks, and the prompt in a fenced block under the ta
 
 2. Until the painting comes, the picture is declared with the stand-in as its `source`, and the page is built
    with it.
+   A host running from a checkout is started again after a picture is derived: it reads the folder once.
 3. The owner generates the painting from the prompt and hands the file over, either way:
    - in a session: attach the file and say which request it answers;
    - on github.com: the repository, `docs/art/sources/pages`, **Add file**, **Upload files**, on a new branch.

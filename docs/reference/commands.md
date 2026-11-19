@@ -1135,8 +1135,9 @@ node scripts/ux/pictures.mjs --asked
 ```
 
 The picture kit's script (ADR 0198, docs/art/page-pictures.md). With no argument it derives the pictures of
-`docs/art/page-pictures.json` at the size each is drawn, once and twice, into `table/page-art/`, writes
-`table/page-art.js`, removes the files no picture needs, and prints each page's bytes against its budget. It
+`docs/art/page-pictures.json` at the size each is drawn, at one and at two times the density, into
+`table/page-art/`, and writes `table/page-art.js`. It removes the files no picture needs and prints each page's
+bytes against its budget. It
 encodes only a picture whose painting, declaration or encoding changed, through `scripts/ux/encode.py`, which
 needs `python3` with Pillow. `--check` encodes nothing: it holds the committed files against the declaration
 (every file, its dimensions, its bytes, its painting) and exits 1 with what is wrong, as

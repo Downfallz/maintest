@@ -78,7 +78,7 @@ test('a picture of the kit holds its room before it loads and takes the file its
   const taken = await page.evaluate(async () => {
     const { pictureElement } = await import('./picture.js');
     const image = pictureElement(document, 'colossus', { page: 'showcase/home', base: 'page-art/' });
-    image.style.cssText = 'display: block; width: 308px; height: auto;';
+    image.style.cssText = 'position: fixed; top: 0; left: 0; display: block; width: 308px;';
     const room = (document.body.append(image), [image.offsetWidth, image.offsetHeight]);
     await image.decode();
     return { room, file: new URL(image.currentSrc).pathname, natural: image.naturalWidth, priority: image.getAttribute('fetchpriority') };
@@ -88,6 +88,22 @@ test('a picture of the kit holds its room before it loads and takes the file its
   expect(taken.natural).toBe(density >= 2 ? 620 : 308);
   expect(taken.file).toMatch(/^\/table\/page-art\/colossus-\d+\.[0-9a-f]{8}\.webp$/);
   expect(taken.priority).toBe('high');
+});
+
+test('a picture wider than the screen is held to it, and the page does not scroll sideways', async ({ page }) => {
+  await open(page);
+  const held = await page.evaluate(async () => {
+    const { pictureElement } = await import('./picture.js');
+    const image = pictureElement(document, 'eclipse-ground', { page: 'table/sign-in', base: 'page-art/', sizes: '100vw' });
+    image.style.display = 'block';
+    const room = Object.assign(document.createElement('div'), { id: 'kit-room' });
+    room.append(image);
+    document.body.prepend(room);
+    return { fits: image.offsetWidth <= room.clientWidth, ratio: image.offsetWidth / image.offsetHeight, sideways: document.documentElement.scrollWidth > document.documentElement.clientWidth };
+  });
+  expect(held.fits).toBe(true);
+  expect(held.ratio).toBeCloseTo(1672 / 941, 1);
+  expect(held.sideways).toBe(false);
 });
 
 test('an icon takes the colour and the size of its text, and says nothing of its own', async ({ page }) => {

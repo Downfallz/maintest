@@ -11,7 +11,7 @@
 //   node scripts/ux/pictures.mjs --asked    the pictures the briefs ask of the owner, each with its prompt
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -31,12 +31,11 @@ export function widthsOf(drawn, sourceWidth) {
 
 /** A WebP file's width and height, read from its header: the lossy, the lossless and the extended form. */
 export function webpSize(bytes) {
-  if (bytes.length < 25 || bytes.toString('latin1', 0, 4) !== 'RIFF' || bytes.toString('latin1', 8, 12) !== 'WEBP') throw new Error('not a WebP file');
-  const form = bytes.toString('latin1', 12, 16), at = 20;
+  const form = bytes.toString('latin1', 12, 16), at = 20, needs = { 'VP8 ': 30, VP8L: 25, VP8X: 30 }[form];
+  if (bytes.toString('latin1', 0, 4) !== 'RIFF' || bytes.toString('latin1', 8, 12) !== 'WEBP' || !needs || bytes.length < needs) throw new Error('not a WebP file');
   if (form === 'VP8 ') return { width: bytes.readUInt16LE(at + 6) & 0x3fff, height: bytes.readUInt16LE(at + 8) & 0x3fff };
   if (form === 'VP8L') { const bits = bytes.readUInt32LE(at + 1); return { width: (bits & 0x3fff) + 1, height: ((bits >>> 14) & 0x3fff) + 1 }; }
-  if (form === 'VP8X') return { width: bytes.readUIntLE(at + 4, 3) + 1, height: bytes.readUIntLE(at + 7, 3) + 1 };
-  throw new Error('not a WebP file');
+  return { width: bytes.readUIntLE(at + 4, 3) + 1, height: bytes.readUIntLE(at + 7, 3) + 1 };
 }
 
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -88,9 +87,11 @@ function declared(picture) {
  * the names in table/page-art. Returns what is wrong, in words; nothing is encoded.
  */
 export function check({ authored, art, read, list }) {
-  const problems = [], expected = new Set(), files = list();
+  const problems = [], expected = new Set(), files = list(), seen = new Set();
   for (const picture of authored.pictures) {
     const wrong = declared(picture);
+    if (seen.has(picture.name)) wrong.push(`${picture.name} is declared twice`);
+    seen.add(picture.name);
     problems.push(...wrong);
     if (wrong.length) continue;
     const entry = art[picture.name];
@@ -100,6 +101,11 @@ export function check({ authored, art, read, list }) {
     if (entry.from !== origin(picture, paintings, authored.encoding)) problems.push(`${picture.name}: its painting or its declaration changed since it was derived: run node scripts/ux/pictures.mjs`);
     if (JSON.stringify(entry.pages) !== JSON.stringify(picture.pages ?? {}) || JSON.stringify(entry.drawn) !== JSON.stringify(picture.drawn) || entry.frames !== paintingsOf(picture).length)
       problems.push(`${picture.name}: the module does not say what the declaration says: run node scripts/ux/pictures.mjs`);
+    const frames = paintings.length;
+    let widths;
+    try { widths = widthsOf(picture.drawn, Math.min(...paintings.map(one => webpSize(one).width))); } catch { problems.push(`${picture.name}: a painting it names is not a WebP file`); continue; }
+    if (JSON.stringify(entry.sizes.map(size => size.width / frames)) !== JSON.stringify(widths))
+      problems.push(`${picture.name}: it is sent at ${widths.join(', ')} px, and the module names ${entry.sizes.map(size => size.width / frames).join(', ')}: run node scripts/ux/pictures.mjs`);
     for (const size of entry.sizes) {
       expected.add(size.file);
       if (!files.includes(size.file)) { problems.push(`${picture.name}: ${size.file} is missing from ${FOLDER}`); continue; }
@@ -153,7 +159,8 @@ const list = () => { try { return readdirSync(new URL(FOLDER, ROOT)); } catch { 
 /** Derives what the declaration asks for and the folder lacks. Encoding is Pillow's, through scripts/ux/encode.py. */
 async function derive() {
   const authored = json(DECLARATION), before = await committed().catch(() => ({}));
-  const wrong = authored.pictures.flatMap(declared);
+  const names = authored.pictures.map(picture => picture.name);
+  const wrong = [...authored.pictures.flatMap(declared), ...names.filter((name, index) => names.indexOf(name) !== index).map(name => `${name} is declared twice`)];
   if (wrong.length) throw new Error(wrong.join('\n'));
   const art = {}, work = mkdtempSync(join(tmpdir(), 'page-art-'));
   mkdirSync(new URL(FOLDER, ROOT), { recursive: true });
@@ -164,12 +171,14 @@ async function derive() {
       if (kept?.from === from && kept.sizes.every(size => list().includes(size.file))) { art[picture.name] = { ...kept, pages: picture.pages ?? {}, drawn: picture.drawn }; continue; }
       const widths = widthsOf(picture.drawn, Math.min(...bytes.map(one => webpSize(one).width)));
       const jobs = widths.map(width => ({ sources: paintings.map(path => fileURLToPath(new URL(path, ROOT))), width, out: join(work, `${picture.name}-${width}.webp`), ...authored.encoding }));
-      const ran = spawnSync('python3', [fileURLToPath(new URL('encode.py', import.meta.url))], { input: JSON.stringify(jobs), encoding: 'utf8' });
+      // NOSONAR S4036: python3 is found on the PATH of whoever derives a picture; nothing a visitor sends reaches this.
+      const ran = spawnSync('python3', [fileURLToPath(new URL('encode.py', import.meta.url))], { input: JSON.stringify(jobs), encoding: 'utf8' }); // NOSONAR
       if (ran.status !== 0) throw new Error(`python3 scripts/ux/encode.py failed (it needs Pillow: python3 -m pip install pillow)\n${ran.stderr ?? ran.error}`);
       const sizes = jobs.map(job => {
         // A strip's file is its frames side by side: its width is all of them, and that is what names it.
         const made = readFileSync(job.out), size = webpSize(made), file = fileName(picture.name, size.width, made);
-        renameSync(job.out, new URL(`${FOLDER}/${file}`, ROOT));
+        // Copied, not renamed: the work folder is often on another disk than the repository.
+        copyFileSync(job.out, new URL(`${FOLDER}/${file}`, ROOT));
         return { file, ...size, bytes: made.length };
       });
       art[picture.name] = { from, frames: paintings.length, drawn: picture.drawn, pages: picture.pages ?? {}, sizes };

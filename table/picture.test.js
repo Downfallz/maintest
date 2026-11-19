@@ -24,7 +24,7 @@ function fakeDocument() {
 
 test('a picture is an image with its width, its height and the sizes it is sent at', () => {
   assert.equal(pictureHtml('beast', { page: 'door', art: ART }),
-    '<img src="/page-art/beast-308.aa.webp" srcset="/page-art/beast-308.aa.webp 308w, /page-art/beast-620.bb.webp 620w" sizes="308px" width="308" height="205" alt="" decoding="async">');
+    '<img class="picture" src="/page-art/beast-308.aa.webp" srcset="/page-art/beast-308.aa.webp 308w, /page-art/beast-620.bb.webp 620w" sizes="308px" width="308" height="205" alt="" decoding="async">');
 });
 
 test('the largest paint is asked for first and never lazy; a picture below the first screen loads when near', () => {
@@ -37,7 +37,7 @@ test('the largest paint is asked for first and never lazy; a picture below the f
 
 test('a page says its own width, its words for the picture and its folder', () => {
   const html = pictureHtml('beast', { page: 'home', art: ART, alt: 'A Colossus, "armoured" & low', sizes: '(min-width: 900px) 620px, 79vw', base: '/assets/pages/', class: 'hero-beast' });
-  assert.match(html, /^<img class="hero-beast" src="\/assets\/pages\/beast-308\.aa\.webp"/);
+  assert.match(html, /^<img class="picture hero-beast" src="\/assets\/pages\/beast-308\.aa\.webp"/);
   assert.match(html, /sizes="\(min-width: 900px\) 620px, 79vw"/);
   assert.match(html, /alt="A Colossus, &quot;armoured&quot; &amp; low"/);
 });
@@ -50,13 +50,13 @@ test('a picture nobody declared, or not for this page, is a fault and not a brok
 test('a page that builds itself gets the same picture as an element', () => {
   const image = pictureElement(fakeDocument(), 'beast', { page: 'home', art: ART, class: 'beast' });
   assert.equal(image.tag, 'img');
-  assert.equal(image.className, 'beast');
+  assert.equal(image.className, 'picture beast');
   assert.deepEqual(image.attributes, Object.fromEntries(Object.entries(pictureAttributes('beast', { page: 'home', art: ART })).map(([name, value]) => [name, String(value)])));
 });
 
 test('a strip is one element with one name, its frames in one file as wide as all of them', () => {
   const html = stripHtml('cast', { page: 'home', art: ART, alt: 'A creature casts, and the blow lands.' });
-  assert.match(html, /^<span class="motion-strip" data-frames="6" role="img" aria-label="A creature casts, and the blow lands\."><img /);
+  assert.match(html, /^<span class="motion-strip" data-frames="6" role="img" aria-label="A creature casts, and the blow lands\."><img class="picture" /);
   assert.match(html, /src="\/page-art\/cast-2148\.cc\.webp"/);
   assert.match(html, /sizes="2148px" width="2148" height="201" alt="" decoding="async" loading="lazy"><\/span>$/);
   assert.match(stripHtml('cast', { page: 'home', art: ART }), /^<span class="motion-strip" data-frames="6" aria-hidden="true">/);

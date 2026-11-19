@@ -246,7 +246,8 @@ internal sealed partial class TableFiles
 
         // A page's pictures at the size they are drawn (ADR 0198). Each file is named by its own bytes and derived
         // again when its painting changes, so the folder is read rather than listed here: a list would go stale at
-        // every derivation. `page-art.js` names the same files, and a test holds the two together.
+        // every derivation. `page-art.js` names the same files, and a test holds the two together. The folder is
+        // read once: a host running from a checkout is started again after a picture is derived.
         var pageArt = Path.Combine(tableDirectory, "page-art");
         if (Directory.Exists(pageArt))
         {

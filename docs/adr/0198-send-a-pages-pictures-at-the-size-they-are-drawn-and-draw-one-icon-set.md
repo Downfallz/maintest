@@ -20,7 +20,8 @@ frames.
 
 **Declared, derived once, committed.** A picture a page draws is declared in `docs/art/page-pictures.json`: its
 painting, the width it is drawn at (a phone's first), the pages that draw it and whether each asks for it first.
-`scripts/ux/pictures.mjs` derives it at each width, once and twice, never past its painting, as WebP into
+`scripts/ux/pictures.mjs` derives it at each width, once and twice (at one and at two times the screen's density), never wider than
+its painting, as WebP into
 `table/page-art/`, and writes `table/page-art.js`. A file is named by its own bytes, since the host lets a
 browser keep a picture for a day. The gate encodes nothing: it reads the committed files against the declaration.
 

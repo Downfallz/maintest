@@ -257,7 +257,7 @@ reads "You are invited to a battle." The eyebrow "Player lobby" goes: the visito
 | --- | --- | --- | --- |
 | The eclipse ground behind the panel, as an `<img>` asked for first. | 358 by 300 px | Is this the same game the showcase showed? The same ground says yes. | `table/battle-art/eclipse-battle.webp` |
 | The Revenant beside the title. | 107 by 86 px | What do I play? | `table/battle-art/evolutions/warped-stage3-revenant.webp` |
-| The duel, for the invited friend: two teams of three facing across the ground. | 358 by 201 px | What is this game, for someone who never saw the showcase? | asked of the owner; until it comes, `table/battle-art/eclipse-battle.webp` and the Revenant hold its place, as today |
+| The duel, for the invited friend: two teams of three facing across the ground. | 358 by 201 px | What is this game, for someone who never saw the showcase? | asked of the owner; until it comes, `table/battle-art/eclipse-battle.webp` and the Revenant hold its place |
 
 At 320 px the panel is 288 px wide and the ground 288 by 300 px. No painting of the library shows two teams
 facing each other: `table/battle-art/creatures.webp` shows three creatures on a white ground, which cannot sit on

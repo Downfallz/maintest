@@ -19,7 +19,7 @@ test('an icon is drawn on a grid of 24 with no colour and no size of its own', (
   for (const [name, path] of Object.entries(ICONS)) {
     assert.match(path, /^[MmLlHhVvAaZz0-9 .,-]+$/, `${name}: lines and arcs only`);
     const numbers = path.replace(/[Aa][^MmLlHhVvZz]*/g, '').match(/-?\d*\.?\d+/g).map(Number);
-    assert.ok(numbers.every(number => number >= -24 && number <= 24), `${name} stays on the grid`);
+    assert.ok(numbers.every(number => number >= -24 && number <= 24), `${name}: no stroke is longer than the grid`);
     assert.ok(path.length < 240, `${name}: a few hundred bytes at most`);
   }
 });

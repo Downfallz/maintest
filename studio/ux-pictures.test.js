@@ -63,6 +63,8 @@ test('a painting that changed, a file that went or a stranger in the folder is s
   const one = PAGE_ART[authored.pictures[0].name].sizes[0].file;
   assert.match(check({ authored, art: PAGE_ART, read, list: () => list().filter(file => file !== one) }).join('\n'), new RegExp(`${one.replaceAll('.', '\\.')} is missing`));
   assert.match(check({ authored, art: PAGE_ART, read, list: () => [...list(), 'stray.webp'] }).join('\n'), /stray\.webp is no picture of the declaration/);
+  const name = authored.pictures[0].name, short = { ...PAGE_ART, [name]: { ...PAGE_ART[name], sizes: PAGE_ART[name].sizes.slice(1) } };
+  assert.match(check({ authored, art: short, read, list: () => list().filter(file => file !== one) }).join('\n'), /eclipse-ground: it is sent at 533, 1066, 1440, 1672 px, and the module names 1066, 1440, 1672/);
   const fewer = { ...authored, pictures: authored.pictures.slice(1) };
   assert.match(check({ authored: fewer, art: PAGE_ART, read, list }).join('\n'), /eclipse-ground is derived but not declared/);
 });
@@ -93,6 +95,8 @@ test('a declaration is refused when a role is unknown, a name is no file name, o
   assert.match(bad({ name: 'Eclipse Ground' }), /lower case, digits and hyphens/);
   assert.match(bad({ source: undefined, frames: ['table/battle-art/eclipse-battle.webp'] }), /a strip has at least two frames/);
   assert.match(bad({ drawn: [] }), /the width it is drawn at/);
+  assert.match(check({ authored: { ...authored, pictures: [...authored.pictures, authored.pictures[0]] }, art: PAGE_ART, read, list }).join('\n'), /eclipse-ground is declared twice/);
+  assert.throws(() => webpSize(Buffer.concat([Buffer.from('RIFF\0\0\0\0WEBPVP8X'), Buffer.alloc(10)])), /not a WebP file/, 'a header cut short');
 });
 
 test('a brief\'s request is listed with its screen, its size, what holds its place and its prompt', () => {
