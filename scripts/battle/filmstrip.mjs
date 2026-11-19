@@ -51,6 +51,7 @@ export async function filmFrames(page, { spell, actor, targets, speed, outcome =
   const motion = () => page.evaluate(() => window.battleBench.motion());
   const shots = [{ ms: 0, stage: started.stage, png: await field.screenshot(), motion: await motion() }];
   try {
+    // One frame after the other, on purpose: each advances the bench's clock before its picture is taken.
     while (shots.length < frames) {
       const { elapsed, stage } = await page.evaluate(ms => window.battleBench.film.advance(ms), step);
       shots.push({ ms: elapsed, stage, png: await field.screenshot(), motion: await motion() });
@@ -207,6 +208,7 @@ async function main(argv) {
     const spells = options.all ? await page.evaluate(() => window.battleBench.entries.map(one => one.id)) : options.spells;
     const single = Boolean(options.out?.endsWith('.png'));
     const folder = single ? null : resolve(options.out ?? join(root, 'artifacts/filmstrips'));
+    // One effect after the other, on purpose: they are all filmed on the one bench this page holds.
     for (const spell of spells) {
       const { sheet, motion } = await filmRecord(page, { ...options.film, spell });
       const path = single ? resolve(options.out) : join(folder, fileName(spell, options.film));

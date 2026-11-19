@@ -24,14 +24,31 @@ const VALUE = /^(?:declare\s+)?(?:function|var|let|const)\s+([A-Za-z_$][\w$]*)/;
 const MEMBER = /^(?:(?:static|readonly|protected|private|public|abstract)\s+)*([A-Za-z_$][\w$]*)\??\s*(?:[:(<=,]|$)/;
 const INDENT = 4;
 
-/** What a class or an interface extends, read without a backtracking pattern: `A<T>, B implements C {` is A and B. */
-function extendedBy(line) {
+/** The names of a list, split on the commas outside angle brackets: `A<B, C>, D` is `A<B, C>` and `D`. */
+function topLevel(list) {
+  const parts = [''];
+  let depth = 0;
+  for (const mark of list) {
+    if (mark === '<') depth += 1;
+    else if (mark === '>') depth -= 1;
+    if (mark === ',' && depth === 0) parts.push('');
+    else parts[parts.length - 1] += mark;
+  }
+  return parts;
+}
+
+/**
+ * What a class or an interface extends, read without a backtracking pattern: in `A<T>, B implements C {` it is
+ * A and B, each without its type arguments. Null when it extends nothing.
+ */
+export function extendedBy(line) {
   const at = line.search(/\sextends\s/);
   if (at < 0) return null;
   const rest = line.slice(at).trimStart().slice('extends'.length);
-  const cut = [rest.indexOf(' implements '), rest.indexOf('{')].filter(index => index >= 0);
+  const cut = [rest.search(/\simplements\s/), rest.indexOf('{')].filter(index => index >= 0);
   const list = cut.length > 0 ? rest.slice(0, Math.min(...cut)) : rest;
-  return list.split(',').map(parent => parent.split('<')[0].trim()).filter(Boolean);
+  const parents = topLevel(list).map(parent => parent.split('<')[0].trim()).filter(Boolean);
+  return parents.length > 0 ? parents : null;
 }
 
 /** Whether a line is inside a block comment, or opens or closes one; `state.commented` carries it to the next. */

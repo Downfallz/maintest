@@ -168,8 +168,7 @@ export class KitContext {
   clear() {
     for (const tween of this.tweens) if (!tween.isDestroyed()) tween.stop();
     this.tweens.clear();
-    // A copy: each undo takes itself out of the set it is read from (`once` above).
-    for (const undo of [...this.undo]) undo();
+    for (const undo of this.undo) undo();
     for (const emitter of this.emitters.keys()) emitter.killAll();
     this.emitters.clear();
     for (const object of this.objects) { this.scene.tweens.killTweensOf(object); object.destroy(); }

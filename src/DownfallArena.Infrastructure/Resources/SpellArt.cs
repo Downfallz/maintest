@@ -318,7 +318,8 @@ public sealed class SpellArt
 
     /// <summary>
     /// One authored beat. A property the kit does not know is refused when the file is read, and not dropped: a
-    /// misspelt parameter would otherwise play as the default with nobody told.
+    /// misspelt parameter would otherwise play as the default with nobody told. Its <c>init</c> accessors are the
+    /// ones <c>System.Text.Json</c> sets when it reads the file, as are <see cref="AuthoredVisual"/>'s.
     /// </summary>
     [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
     private sealed record AuthoredBeat

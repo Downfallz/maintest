@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { declares, indexDeclarations, installedIndex } from '../scripts/battle/phaser-symbols.mjs';
+import { declares, extendedBy, indexDeclarations, installedIndex } from '../scripts/battle/phaser-symbols.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const BOOK = 'docs/art/battle-craft.md';
@@ -143,6 +143,15 @@ test('the reader of the declarations finds classes, members, inherited members, 
     'Phaser.Types.Config.inner', 'Phaser.Math.PI2', 'Phaser.Geom.Point', 'Phaser.Math#Clamp', 'Phaser.GameObjects#Image', 'Phaser.GameObjects.Image#setTint#x']) {
     assert.ok(!declares(sampled, name), name);
   }
+});
+
+test('what a class extends is read up to its implements or its brace, each parent without its type arguments', () => {
+  assert.deepEqual(extendedBy('class Sprite extends GameObject implements Components.Alpha {'), ['GameObject']);
+  assert.deepEqual(extendedBy('class Sprite extends GameObject\timplements Components.Alpha {'), ['GameObject']);
+  assert.deepEqual(extendedBy('interface Both extends Map<string, number>, Phaser.Events.EventEmitter {'), ['Map', 'Phaser.Events.EventEmitter']);
+  assert.deepEqual(extendedBy('class Last extends Base'), ['Base']);
+  assert.equal(extendedBy('class Alone {'), null);
+  assert.equal(extendedBy('class Empty extends {'), null);
 });
 
 test('the command says yes or no for each name, and exits 1 when one is missing and 2 with no name', engine, () => {

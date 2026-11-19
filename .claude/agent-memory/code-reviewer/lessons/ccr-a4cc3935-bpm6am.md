@@ -1,0 +1,5 @@
+# code-reviewer lessons (branch ccr-a4cc3935-bpm6am)
+
+- SonarCloud's issue list for this project answers without a token: `curl "https://sonarcloud.io/api/issues/search?componentKeys=Downfallz_maintest&pullRequest=<n>&ps=100&sinceLeakPeriod=true"`. The #834/#881 "a session cannot read it" claim was wrong. Read the list and match each issue to the diff before accepting a "Closes" on a Sonar loose end: the fix covered 11 of 29 issues and explained none of the other 18 (Sonar PR, 0d000b2).
+- "Copy the Set first: each callback deletes itself" is no reason: a JS Set's for-of tolerates deleting entries already visited (probed, all 5 ran). The real risk is a callback that adds to the set during the pass. Read the explanation against the language before accepting it as the answer to a Sonar issue (kit.ts:171, 0d000b2).
+- Proving a pure refactor of a parser equivalent: import the `git show origin/main:` copy next to the new one and fuzz both with the same inputs (200k staging beats, 300k argv lists, the real phaser.d.ts). 0 differences there; only synthetic lines differed (a tab before `implements`, an empty `extends {`) (0d000b2).
