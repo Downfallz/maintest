@@ -10,7 +10,7 @@ does today is in `table/` and `showcase/`, and in [the baseline](baseline.md), n
 
 ## The files
 
-One file a journey, named after it as `scripts/ux/journey.mjs` names it: `doors.md`, `lessons.md`, `lobby.md`,
+One file a journey, named as `scripts/ux/journeys.mjs` names it: `doors.md`, `lessons.md`, `lobby.md`,
 `pages.md`, `match.md`. The stage that builds a journey writes its file, or the part of it the stage builds.
 
 | File | What it stages | Built by |
@@ -55,7 +55,7 @@ the heading, nine `###` parts, in this order:
 
   | Beat | When | Moves | Pattern | Token |
   | --- | --- | --- | --- | --- |
-  | Its name. | What starts it: a press, an arrival the host's stream tells, the screen in view. Never a clock. | `transform`, `opacity` or both: nothing else moves. | A link to the pattern's entry in the craft book, two at most. | Its duration and its curve, as tokens in backticks. A token the kit has not declared is written `*UX4*` with the value asked for. |
+  | Its name. | What starts it: a press, an arrival the host's stream tells, the screen in view. Never a clock. | `transform`, `opacity` or both: nothing else moves. | A link to the pattern's entry in the craft book, two at most. | Its duration and its curve, as tokens in backticks. A token the kit has not declared is written `*UX4*:` then the value asked for. |
 
 - **Less motion**: one table, a row for each beat of Motion under the same name, or `None` when nothing moves.
 
@@ -91,11 +91,15 @@ What no measure says is read on the sheet: the reading order, whether a picture 
 other than the one walked. What a sheet cannot say either is said plainly: how a beat feels at full speed, a
 screen reader's voice, a real phone.
 
-`studio/journey-briefs.test.js` holds the format in the gate: a file named after its journey, every screen of the
-walk briefed or named in the opening, the nine parts in order with their lines and their tables, each picture a
-file of the repository or asked with its prompt, each beat moving `transform` or `opacity` only and naming an
-entry of the craft book and a declared token, each beat with its form under less motion, each file listed in the
-table above.
+`studio/journey-briefs.test.js` holds the format in the gate:
+
+- a file is named after its journey, and is listed in the table above;
+- every screen of the walk is briefed, or named in the opening;
+- a screen has the nine parts in order, with their lines and their tables;
+- a picture is a file of the repository, or is asked of the owner with its prompt;
+- a beat moves `transform` or `opacity` only, names an entry of the craft book, and names a declared token or
+  the value asked of UX4;
+- every beat has its form under less motion.
 
 ## The loop
 

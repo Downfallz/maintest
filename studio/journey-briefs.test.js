@@ -44,7 +44,7 @@ export const COLUMNS = {
 const MOVES = new Set(['transform', 'opacity']);
 // A picture the library lacks, and a token the kit has not declared yet, are said in these words.
 const ASKED = 'asked of the owner';
-const NO_TOKEN_YET = '*UX4*';
+const NO_TOKEN_YET = /^\*UX4\*:\s*\S/;
 
 /** A brief cut at its headings: { opening, screens: [{ title, parts: [{ title, body }] }] }. */
 export function brief(markdown) {
@@ -142,15 +142,16 @@ export function screenProblems(screen, known) {
     const name = row.Beat ?? 'a beat';
     const moves = (row.Moves ?? '').split(',').map(move => move.trim().replaceAll('`', ''));
     if (moves.some(move => !MOVES.has(move))) problems.push(`Motion, ${name}: a beat moves transform, opacity or both`);
-    const links = [...(row.Pattern ?? '').matchAll(/\]\(([^)#]*)#([^)]+)\)/g)];
+    const links = [...(row.Pattern ?? '').matchAll(/\]\(([^)#]*)(?:#([^)]*))?\)/g)];
     if (links.length === 0) problems.push(`Motion, ${name}: the pattern is a link to its entry in the craft book`);
     if (links.length > 2) problems.push(`Motion, ${name}: a beat names two patterns at most`);
     for (const [, file, anchor] of links) {
       if (file !== '../ux-craft.md') problems.push(`Motion, ${name}: the pattern links ../ux-craft.md, not ${file}`);
+      else if (!anchor) problems.push(`Motion, ${name}: the pattern links an entry of the craft book, by its anchor`);
       else if (!known.anchors.has(anchor)) problems.push(`Motion, ${name}: the craft book has no entry #${anchor}`);
     }
     const tokens = [...(row.Token ?? '').matchAll(/`(--[a-z][a-z0-9-]*)`/g)].map(([, token]) => token);
-    if (tokens.length === 0 && !(row.Token ?? '').startsWith(NO_TOKEN_YET)) problems.push(`Motion, ${name}: a token in backticks, or ${NO_TOKEN_YET} and what the kit must declare`);
+    if (tokens.length === 0 && !NO_TOKEN_YET.test(row.Token ?? '')) problems.push(`Motion, ${name}: a token in backticks, or *UX4*: and what the kit must declare`);
     for (const token of tokens) if (!known.tokens.has(token)) problems.push(`Motion, ${name}: ${token} is declared in no sheet`);
   }
   const beats = rows => rows.map(row => row.Beat).sort();
@@ -245,6 +246,9 @@ test('a beat is refused when it moves a layout, names no pattern of the book, no
   assert.match(changed('../ux-craft.md#answer', '../battle-craft.md#answer')[0], /not \.\.\/battle-craft\.md/);
   assert.match(changed('| `--motion-fast` |', '| `--motion-quick` |')[0], /--motion-quick is declared in no sheet/);
   assert.match(changed('*UX4*: a duration of 240 ms', '240 ms')[0], /a token in backticks, or \*UX4\*/);
+  assert.match(changed('*UX4*: a duration of 240 ms', '*UX4*')[0], /a token in backticks, or \*UX4\*/);
+  assert.match(changed('[Answer](../ux-craft.md#answer)', '[Answer](../ux-craft.md#answer), [Other](../battle-craft.md)')[0], /not \.\.\/battle-craft\.md/);
+  assert.match(changed('[Answer](../ux-craft.md#answer)', '[Answer](../ux-craft.md)')[0], /by its anchor/);
   assert.match(changed('| The window | A fade. |\n', '')[0], /gives a form to each beat of Motion/);
   assert.match(changed('| The window | A fade. |', '| The sheet | A fade. |')[0], /gives a form to each beat of Motion/);
   assert.match(changed('| The press | The same. |', '| The press | |')[0], /a row has no Form/);

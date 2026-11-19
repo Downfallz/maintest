@@ -9,8 +9,8 @@ disable-model-invocation: false
 
 The pass: $ARGUMENTS
 
-A journey as `scripts/ux/journey.mjs` names it (`doors`, `lessons`, `lobby`, `pages`, `match`), and the screens
-of it the stage builds when it does not build them all. The plan is `docs/art/ux-craft-plan.md`: a pass builds
+A journey of the walk, `scripts/ux/journey.mjs`, by its name in `scripts/ux/journeys.mjs` (`doors`, `lessons`,
+`lobby`, `pages`, `match`), and the screens of it the stage builds when it does not build them all. The plan is `docs/art/ux-craft-plan.md`: a pass builds
 what its stage describes and no more.
 
 The session builds, in the main session and not in a subagent: the build needs the gate and the browser. The
@@ -54,7 +54,8 @@ dotnet build && dotnet run --project tools/DownfallArena.DataBuilder -- data dat
 4. **Build it**, tests first (the area's `AGENTS.md`, and the stage's own tests in the plan). Read the craft
    book's entry before writing a rule of CSS. A new file of `table/` joins
    `src/DownfallArena.Cli/Table/TableFiles.cs`. A screen the brief adds, marked `(new)`, joins the journey's
-   walk in `scripts/ux/journeys.mjs` under a name, and the brief's heading takes that name.
+   walk in `scripts/ux/journeys.mjs` under a name, with its line at both widths in `docs/art/journeys/baseline.md`
+   (`studio/ux-journey.test.js` asks for it), and the brief's heading takes that name in place of `(new)`.
 
 5. **Film it**, the same commands, into `$F/after`. Look at the sheets yourself first (the Read tool reads a
    sheet) and compare the measures, screen by screen:

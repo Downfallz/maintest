@@ -98,7 +98,7 @@ the hero for it, not the round below, because the round's strip is ambience of i
 | --- | --- |
 | The press | A change of colour on the control, no scale. |
 | The breath | Nothing: the Colossus is still. |
-| The language | The page changes at once: the rule is not declared. |
+| The language | The page changes at once, with no fade. |
 
 ### Accessibility
 
@@ -190,8 +190,7 @@ The strip is ambience: it stops under less motion, out of view and in a hidden t
 ### Accessibility
 
 - **Focus**: nothing new takes the focus; Read the rules stays the section's one link.
-- **Names**: each frame's `alt` as written under **Words**. The strip is one `<img>`-like element with one `alt`,
-  not six.
+- **Names**: each frame's `alt` as written under **Words**. The strip is one element with one `alt`, not six.
 - **Announced**: nothing.
 - **Targets**: no new control.
 
@@ -335,7 +334,7 @@ No ambience: the panel's job is one press, and the showcase's breath was the vis
 - Google draws a pill (`shape: 'pill'` in `table/account.js`) where the identity's buttons are square. Google's
   `rectangular` shape is closer; the owner chooses.
 - The panel's arrival, once the host says signed out, is not one of the kit's five uses: it appears at once in
-  its held room. A fade would need the book to say a section that arrives is an arrival in a list.
+  its held room. A fade would need the craft book to count a section that arrives among the kit's uses.
 - The line on the game is mine; the owner may prefer the showcase's own kicker, "Turn-based 3v3 combat".
 
 ## The name window (`name-window`)
@@ -352,7 +351,7 @@ Google's button cannot be pressed by a walk, and the developer's form names the 
 ### Words
 
 - **Order**: the eyebrow, the title, why the name matters, the field and its check, the rule of a name, the button.
-- **Budget**: 38 words, today 41.
+- **Budget**: 44 words with the check's line shown, today 41 without it: the walk films the field empty.
 
 ```text
 Welcome to Downfall Instinct

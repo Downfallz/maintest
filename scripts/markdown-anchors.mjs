@@ -1,6 +1,6 @@
 // The anchors GitHub gives a markdown file's headings: lower case, punctuation dropped, a hyphen for a space, and
 // a number after a repeated one. The tests that follow a link to a heading read it here (studio/prompts.test.js,
-// studio/storyboards.test.js), so the two cannot drift.
+// studio/storyboards.test.js, studio/journey-briefs.test.js), so they cannot drift.
 
 export function headingAnchors(markdown) {
   const anchors = new Set();
