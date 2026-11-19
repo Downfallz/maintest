@@ -23,7 +23,7 @@ There is no watch server: rebuild after changing TypeScript or the shared table 
 ```bash
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium   # skip in a cloud session: Chromium is installed
-npm --prefix studio/browser test -- --trace off battle-lab.spec.js battle-bench.spec.js battle-fx.spec.js battle-live.spec.js battle-combat.spec.js battle-playback.spec.js battle-loop.spec.js battle-history.spec.js battle-guidance.spec.js battle-upkeep.spec.js battle-mutations.spec.js battle-evolution.spec.js battle-tempo.spec.js battle-spellbook.spec.js battle-pacing.spec.js battle-growth.spec.js battle-order.spec.js battle-targets.spec.js battle-inspection.spec.js battle-services.spec.js battle-parity.spec.js battle-reactions.spec.js battle-recap.spec.js battle-tutorial.spec.js battle-release.spec.js
+npm --prefix studio/browser test -- --trace off battle-lab.spec.js battle-bench.spec.js battle-fx.spec.js battle-motion.spec.js battle-live.spec.js battle-combat.spec.js battle-playback.spec.js battle-loop.spec.js battle-history.spec.js battle-guidance.spec.js battle-upkeep.spec.js battle-mutations.spec.js battle-evolution.spec.js battle-tempo.spec.js battle-spellbook.spec.js battle-pacing.spec.js battle-growth.spec.js battle-order.spec.js battle-targets.spec.js battle-inspection.spec.js battle-services.spec.js battle-parity.spec.js battle-reactions.spec.js battle-recap.spec.js battle-tutorial.spec.js battle-release.spec.js
 ```
 
 - Complete games against the real engine: `node node_modules/playwright/cli.js test --config table.config.js battle.loop.js`
@@ -45,7 +45,9 @@ npm --prefix studio/browser test -- --trace off battle-lab.spec.js battle-bench.
 - An effect is staged before it is built: its storyboard is in `docs/art/storyboards/`, and `/battle-pass` runs
   the loop of storyboard, build, film and critique with the `battle-designer` agent.
 - A still field is drawn one frame in four (`src/rest.ts`, README "The resting loop"). New motion goes through a tween
-  or the effects kit, or is counted in the scene's `busy()`: otherwise it plays at the resting rate.
+  or the effects kit, or is counted in the scene's `busy()`: otherwise it plays at the resting rate, as the breath does.
+- A figure's body is moved by `src/body-motion.ts` on the numbers of `table/battle-motion.js` (README "The movement").
+  Whatever a new move changes on a figure (place, lean, scale, tint, alpha), `clearMotion` puts back.
 - The words a player reads come from docs/domain/player-terminology.md.
 - Every new item in the header's `.tools` is measured at 320 px with every button it can show: `battle-reactions.spec.js`
   checks the header with the reactions on (#767). Under 360 px, 💬 lives in the opponent's card.

@@ -12,7 +12,8 @@ const kit = page => page.evaluate(() => window.battleBench.kit());
 const motifs = page => page.evaluate(() => window.battleBench.effects().map(one => `${one.motif}:${one.phase}`));
 const film = (page, call, value) => page.evaluate(([name, argument]) => window.battleBench.film[name](argument), [call, value]);
 // What a primitive holds while it plays: an object of its own, or a change to a figure or to the view.
-const CHANGES = ['flash', 'shake', 'pulse'];
+const CHANGES = ['flash', 'pulse'];
+const shaking = page => page.evaluate(() => window.battleBench.shaking());
 const samples = benchSamples();
 // One sample a primitive, and the one that asks past the field's budget (#882).
 const primitives = samples.filter(one => one.id !== 'kit:budget');
@@ -42,6 +43,8 @@ for (const sample of primitives) {
     } else await film(page, 'advance', 40);
     const playing = await kit(page);
     if (CHANGES.includes(name)) expect(playing.changes).toBe(1);
+    // The shake is the view's: the kit adds to the scene's trauma and holds nothing of its own.
+    else if (name === 'shake') expect(await shaking(page)).toBe(true);
     else expect(playing.objects).toEqual([{ beat: name, creature: beat.on === 'caster' ? 'a1' : 'b1' }]);
     // A staged spell draws no shared charge on its caster: it gathers as its beats say.
     if (beat.window === 'windup') expect((await motifs(page)).filter(one => one.endsWith(':windup') && !one.startsWith('quill'))).toEqual([]);
@@ -49,6 +52,7 @@ for (const sample of primitives) {
     await page.evaluate(() => window.battleBench.stop());
     expect(await kit(page)).toEqual({ objects: [], particles: 0, changes: 0 });
     expect(await motifs(page)).toEqual([]);
+    expect(await shaking(page)).toBe(false);
     await film(page, 'stop');
   });
 
@@ -86,16 +90,15 @@ test('a motif shorter than its usual arrival is still gone when its beat ends', 
   await film(page, 'stop');
 });
 
-test('a staging that shakes the view shakes it once: the shared tremor of a physical blow is left out', async ({ page }) => {
-  const shaking = () => page.evaluate(() => window.battleBench.shaking());
+test('a staged shake adds to the view\'s one trauma at its beat, and the trauma falls back by itself', async ({ page }) => {
   await film(page, 'start', { spell: 'kit:shake', actor: 'a1', targets: ['b1'] });
-  // The sample shakes 60 ms after the contact: until then the view is still, where the shared tremor started at once.
+  // The sample shakes 60 ms after the contact, and the bench told no loss: until then the view is still.
   await film(page, 'advance', WINDUP_MS + 40);
-  expect(await shaking()).toBe(false);
-  await film(page, 'advance', 60);
-  expect(await shaking()).toBe(true);
-  await film(page, 'advance', 240);
-  expect(await shaking()).toBe(false);
+  expect(await shaking(page)).toBe(false);
+  await film(page, 'advance', 40);
+  expect(await shaking(page)).toBe(true);
+  await film(page, 'advance', 300);
+  expect(await shaking(page)).toBe(false);
   expect((await kit(page)).changes).toBe(0);
   await film(page, 'stop');
 });

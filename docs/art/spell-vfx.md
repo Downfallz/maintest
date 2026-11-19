@@ -41,8 +41,9 @@ a staging yet: BC6 to BC8 of [the battle's craft plan](battle-craft-plan.md) wri
   recipients from the declaration. Fizzles never launch quills or hit a recipient.
 - Scale shapes to the visible creature and viewport; mirrored creatures use the same ground/body anchors.
   Shapes differ as well as colors. Warm gold remains reserved for the target/active marker.
-- Only melee moves the caster; magic and support spells stay at their origin. Physical damage on another
-  creature may use a small camera shake. A blood cost cannot cause that shake on its own.
+- Only melee moves the caster across the field; a cast loads where it stands and a projectile's caster throws
+  from its ground (BC5 of [the battle's craft plan](battle-craft-plan.md)). Health lost by another creature,
+  whatever the family, moves the view a little, by how much was lost. A blood cost cannot cause that on its own.
 - Skip, rotation, connection interruption, hidden tab and seat changes reuse the existing cancellation
   path. Completed graphics are destroyed immediately; cancelled graphics and their tweens are destroyed.
 - Reduced motion keeps the same authoritative result text and after-frame, without vector animation,

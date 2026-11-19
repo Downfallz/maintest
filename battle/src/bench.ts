@@ -279,5 +279,5 @@ try {
 // `title` names what the bench plays now, as a film strip is titled.
 const title = () => { const { entry, outcome, wound, damage, defeat } = chosen(); return filmTitle(entry, { speed: speed(), outcome, wound, damage, defeat }); };
 Object.assign(window, { battleBench: { entries, samples, creatures, kit: () => scene.effectsKit, stop: rest, title,
-  shaking: () => scene.cameras.main.shakeEffect.isRunning, choose: (options: FilmOptions) => { choose(options); rest(); }, play, film: filmClock,
+  shaking: () => scene.motion.view.trauma > 0, motion: () => scene.motion, choose: (options: FilmOptions) => { choose(options); rest(); }, play, film: filmClock,
   effects: () => scene.children.list.filter(child => child.name === 'spell-vfx').map(child => ({ ...child.data.getAll(), alpha: (child as Phaser.GameObjects.Graphics).alpha })) } });

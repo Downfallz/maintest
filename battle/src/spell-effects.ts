@@ -145,15 +145,10 @@ export class SpellEffects {
     this.fade(charge, rate, WINDUP_MS, 1.6);
   }
 
-  /**
-   * Once a cast, before its recipients: the impact's beats on the caster, and the shake. Says whether the
-   * staging shakes the view itself, so the scene does not shake it a second time.
-   */
+  /** Once a cast, before its recipients: the impact's beats on the caster, and the shake. */
   cast(visual: SpellVisual, caster: EffectFigure, rate: number, toward?: EffectAnchor) {
     const beats = this.staged(visual, 'impact');
-    if (!beats) return false;
-    this.once(beats, visual, caster, rate, toward);
-    return beats.some(beat => beat.beat === 'shake');
+    if (beats) this.once(beats, visual, caster, rate, toward);
   }
 
   impact(visual: SpellVisual, recipient: EffectFigure, rate: number, origin?: EffectAnchor) {

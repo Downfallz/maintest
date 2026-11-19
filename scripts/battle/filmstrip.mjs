@@ -8,6 +8,8 @@
 //   node scripts/battle/filmstrip.mjs spell:quill_shot:v1 --actor a2 --targets b1,b3 --speed 2 --out sheet.png
 //   node scripts/battle/filmstrip.mjs spell:pummel:v1 --fizzle              # the spell fizzles
 //   node scripts/battle/filmstrip.mjs spell:hateful_sacrifice:v1 --wound    # its caster pays in blood
+//   node scripts/battle/filmstrip.mjs spell:pummel:v1 --damage 8 --defeat   # a heavy blow that defeats its target
+//   node scripts/battle/filmstrip.mjs spell:pummel:v1 --motion              # and, beside the sheet, how the figures and the view stand at each frame
 //   node scripts/battle/filmstrip.mjs --all --out artifacts/filmstrips      # one sheet an entry
 //
 // It serves `table/` itself; the bundle must be built first (`npm --prefix battle run build`).
@@ -45,11 +47,13 @@ export async function filmFrames(page, { spell, actor, targets, speed, outcome =
   const started = await page.evaluate(options => window.battleBench.film.start(options), { spell, actor, targets, speed, outcome, wound, damage, defeat });
   const step = interval ?? started.interval;
   const field = page.locator('#battle-zone');
-  const shots = [{ ms: 0, stage: started.stage, png: await field.screenshot() }];
+  // What a sheet cannot show (a breath of a pixel, a tremor of the view) is read from the scene at each frame.
+  const motion = () => page.evaluate(() => window.battleBench.motion());
+  const shots = [{ ms: 0, stage: started.stage, png: await field.screenshot(), motion: await motion() }];
   try {
     while (shots.length < frames) {
       const { elapsed, stage } = await page.evaluate(ms => window.battleBench.film.advance(ms), step);
-      shots.push({ ms: elapsed, stage, png: await field.screenshot() });
+      shots.push({ ms: elapsed, stage, png: await field.screenshot(), motion: await motion() });
     }
   } finally {
     await page.evaluate(() => window.battleBench.film.stop());
@@ -80,10 +84,19 @@ export async function contactSheet(context, shots, { title = '', columns = COLUM
 
 /** One effect, filmed and laid out: the PNG of its contact sheet. */
 export async function filmSheet(page, options = {}) {
+  return (await filmRecord(page, options)).sheet;
+}
+
+/**
+ * The sheet, and beside it what no sheet can show: at each frame, how every figure stands (its place from its
+ * home, its lean, its scale over its own, its alpha) and what the view does (its trauma, its offset, its zoom).
+ */
+export async function filmRecord(page, options = {}) {
   const shots = await filmFrames(page, options);
   // The title is what the bench played, read back from it: the spell, its mutation, the outcome and the speed.
   const title = await page.evaluate(() => window.battleBench.title());
-  return contactSheet(page.context(), shots, { title, columns: options.columns });
+  const sheet = await contactSheet(page.context(), shots, { title, columns: options.columns });
+  return { sheet, motion: { title, frames: shots.map(({ ms, stage, motion }) => ({ ms, stage, ...motion })) } };
 }
 
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
@@ -113,7 +126,7 @@ function playwright() {
 }
 
 export function parseArguments(argv) {
-  const options = { spells: [], all: false, out: null, base: null, scale: 1 };
+  const options = { spells: [], all: false, out: null, base: null, scale: 1, motion: false };
   const film = {};
   const value = (flag, index) => {
     if (index >= argv.length) throw new Error(`${flag} needs a value.`);
@@ -122,6 +135,7 @@ export function parseArguments(argv) {
   for (let index = 0; index < argv.length; index++) {
     const word = argv[index];
     if (word === '--all') options.all = true;
+    else if (word === '--motion') options.motion = true;
     else if (word === '--out') options.out = value(word, ++index);
     else if (word === '--url') options.base = value(word, ++index);
     else if (word === '--actor') film.actor = value(word, ++index);
@@ -151,6 +165,11 @@ export function parseArguments(argv) {
 }
 
 // A fizzle's or a wound's sheet beside the spell's own, not over it.
+/** The motion of a film as text a person can read down: one line a frame, the view then each figure. */
+export function motionLines({ title, frames }) {
+  return `${JSON.stringify({ title })}\n${frames.map(frame => JSON.stringify(frame)).join('\n')}\n`;
+}
+
 export const fileName = (spell, { outcome, wound, damage, defeat } = {}) =>
   `${spell.split(':')[1] ?? spell}${outcome === 'fizzled' ? '-fizzled' : ''}${wound ? '-wound' : ''}${damage === undefined ? '' : `-${damage}`}${defeat ? '-defeat' : ''}.png`;
 
@@ -170,11 +189,16 @@ async function main(argv) {
     const single = Boolean(options.out?.endsWith('.png'));
     const folder = single ? null : resolve(options.out ?? join(root, 'artifacts/filmstrips'));
     for (const spell of spells) {
-      const sheet = await filmSheet(page, { ...options.film, spell });
+      const { sheet, motion } = await filmRecord(page, { ...options.film, spell });
       const path = single ? resolve(options.out) : join(folder, fileName(spell, options.film));
       await mkdir(dirname(path), { recursive: true });
       await writeFile(path, sheet);
       console.log(path);
+      if (options.motion) {
+        const beside = path.replace(/\.png$/, '.motion.json');
+        await writeFile(beside, motionLines(motion));
+        console.log(beside);
+      }
     }
   } finally {
     await browser?.close();

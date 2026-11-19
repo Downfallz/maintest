@@ -114,7 +114,7 @@ const RULES = [
   { matches: (path) => path.startsWith('studio/browser/'), calls: (path) => suiteFile(path.slice('studio/browser/'.length)) },
   // The film strip script is played by the bench's own spec, which films with it, and by the effects kit's,
   // which opens the bench through it.
-  { matches: (path) => path === 'scripts/battle/filmstrip.mjs', calls: () => ({ journeys: (spec) => spec === 'battle-bench.spec.js' || spec === 'battle-fx.spec.js' }) },
+  { matches: (path) => path === 'scripts/battle/filmstrip.mjs', calls: () => ({ journeys: (spec) => ['battle-bench.spec.js', 'battle-fx.spec.js', 'battle-motion.spec.js'].includes(spec) }) },
   { matches: (path) => path.startsWith('battle/'), calls: () => ({ journeys: isBattleSpec, realEngine: true, release: true }) },
   { matches: (path) => /^(table|studio)\/.*\.(test\.js|fixture\.json)$/.test(path), calls: () => ({}) },
   { matches: (path) => path.startsWith('table/'), calls: () => ({ journeys: isTableSpec, realEngine: true, release: true }) },

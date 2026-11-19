@@ -21,6 +21,8 @@ export interface BeatPlay {
   from?: Anchor;
   figure?: Phaser.GameObjects.Image;
 }
+/** What the kit asks of the scene's view: the trauma is the scene's, one value for every hit. */
+export interface KitView { shake(strength: number): void }
 export type Primitive = (kit: KitContext, play: BeatPlay) => void;
 
 /** The kit's one texture: on a phone a batch holds one texture, so every shape is a frame of it. */
@@ -52,7 +54,7 @@ export class KitContext {
   private tweens = new Set<Phaser.Tweens.Tween>();
   private undo = new Set<() => void>();
 
-  constructor(readonly engine: Engine, readonly scene: Phaser.Scene, private reduced: () => boolean) {}
+  constructor(readonly engine: Engine, readonly scene: Phaser.Scene, private reduced: () => boolean, readonly view?: KitView) {}
 
   /** Less motion was asked for: a primitive returns before it makes anything. */
   get still() { return this.reduced(); }

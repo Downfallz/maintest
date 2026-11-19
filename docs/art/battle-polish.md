@@ -9,7 +9,9 @@ no content IDs return to page code, and no timing or audio changes a domain resu
 The live settings now offer 0.5×, 1×, 1.5× and 2× playback. All motion was later slowed to half its first pace (`MOTION_SCALE = 2`): today's 2× is the former 1×, and 0.5× is a quarter of it. One normalized rate drives the queue and renderer;
 projectile launch/arrival, melee anticipation and impact cannot choose independent clocks. The standard
 840 ms windup, 1700 ms outcome and 500 ms interval are the default. The caster returns home over 720 ms
-after a 120 ms impact hold. These timings and the 1200 ms effect lifetime live in `battle-timing.js`. Creatures no longer bob between actions: they stand still until an action moves them.
+after a 120 ms impact hold. These timings and the 1200 ms effect lifetime live in `battle-timing.js`. Creatures no longer bob between actions: they stand still until an action moves them. (Amended by BC5 of
+[the battle's craft plan](battle-craft-plan.md), 2026-11-19: the owner asked for a slow breath back. A standing
+creature's height rises and falls by 1.5% every 3.6 s, off with less motion; see battle/README.md, "The movement".)
 
 A speed change during playback settles the entire pending queue to its latest authoritative board and
 invalidates pending callbacks. It never repeats consumed events, predicts targets or delays a command.

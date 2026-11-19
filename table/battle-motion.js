@@ -1,0 +1,152 @@
+// The movement every action shares (docs/art/storyboards/movement.md, BC5 of docs/art/battle-craft-plan.md):
+// how far a figure draws back, how long two figures hold at contact, how far the struck one is thrown, how a
+// fallen one goes down, how a standing one breathes, and how much the view trembles. Numbers only, at 1×: the
+// scene divides every duration by the playback rate, and each beat stays inside the windows of battle-timing.js.
+// The weight of a blow is the host's confirmed outcome (a cue's `changes`): the view decides nothing.
+
+import { DRAW_MS, WINDUP_MS, IMPACT_MS, RETURN_MS } from './battle-timing.js';
+
+/** The scale of a blow, light to heavy. Every number is a house number the film strips tuned. */
+export const WEIGHTS = Object.freeze({
+  light: Object.freeze({ draw: 20, lean: 8, hold: 0, stretch: .05, stop: 60, recoil: 12, tilt: 4, stay: 0, trauma: .25 }),
+  medium: Object.freeze({ draw: 26, lean: 10, hold: 40, stretch: .065, stop: 90, recoil: 18, tilt: 6, stay: 40, trauma: .40 }),
+  heavy: Object.freeze({ draw: 32, lean: 12, hold: 80, stretch: .08, stop: 120, recoil: 26, tilt: 8, stay: 80, trauma: .55 }),
+});
+const ORDER = ['light', 'medium', 'heavy'];
+
+/** What a creature lost to an action, from the cue's changes: its health lost, and whether the action defeated it. */
+export function lossOf(cue, id) {
+  const change = (cue?.changes ?? []).find(one => String(one.creature) === String(id));
+  return { lost: Math.max(0, -(change?.health ?? 0)), defeated: change?.defeated === true };
+}
+
+/** Light is 0 to 3 health lost, medium 4 to 6, heavy 7 or more, or a defeat. */
+export function weightOf({ lost = 0, defeated = false } = {}) {
+  if (defeated || lost >= 7) return 'heavy';
+  return lost >= 4 ? 'medium' : 'light';
+}
+
+/** The creatures an action reached other than its caster. */
+const others = (cue, actor) => (cue?.recipients ?? []).filter(id => String(id) !== String(actor));
+
+/** The weight of the whole blow: the heaviest among the creatures it reached. It sets the anticipation and the stop. */
+export function blowWeight(cue, actor) {
+  const ranks = others(cue, actor).map(id => ORDER.indexOf(weightOf(lossOf(cue, id))));
+  return ORDER[Math.max(0, ...ranks)];
+}
+
+// The lean into the blow, the ease of the stretch's release, the pause between the stop and the way home.
+const STRIKE_LEAN = 9, STRETCH_MS = 120, RELEASE_MS = 80, RETURN_AFTER_MS = 60;
+const RECOIL_OUT_MS = 280, TREMOR_SWING_MS = 30;
+
+/**
+ * The caster of a melee blow, in milliseconds from the start of the action: the draw back, the hold at its far
+ * end, the strike, which always ends with the windup, the stretch over the strike's last 120 ms, then, after the
+ * stop, the stretch released and the way home.
+ */
+export function meleeBeats(weight) {
+  const scale = WEIGHTS[weight] ?? WEIGHTS.light;
+  const strikeAt = DRAW_MS + scale.hold;
+  return {
+    draw: { at: 0, lasts: DRAW_MS, distance: scale.draw, lean: scale.lean },
+    strike: { at: strikeAt, lasts: WINDUP_MS - strikeAt, lean: STRIKE_LEAN },
+    stretch: { at: WINDUP_MS - STRETCH_MS, lasts: STRETCH_MS, amount: scale.stretch },
+    stop: scale.stop,
+    release: { at: WINDUP_MS + scale.stop, lasts: RELEASE_MS },
+    home: { at: WINDUP_MS + scale.stop + RETURN_AFTER_MS, lasts: RETURN_MS, overshoot: 1.2 },
+  };
+}
+
+/** A caster who does not lunge. A cast loads in the body and lets go at contact; a projectile's caster throws. */
+export const CAST = Object.freeze({
+  load: Object.freeze({ at: 0, lasts: 600, squash: .04 }),
+  rise: Object.freeze({ at: 600, lasts: WINDUP_MS - 600, stretch: .04 }),
+  release: Object.freeze({ at: WINDUP_MS, lasts: 360, overshoot: 1.2 }),
+});
+export const THROW = Object.freeze({
+  load: Object.freeze({ at: 0, lasts: DRAW_MS, distance: 8, squash: .04 }),
+  toss: Object.freeze({ at: DRAW_MS, lasts: 120, distance: 6, stretch: .04 }),
+  home: Object.freeze({ at: DRAW_MS + 120, lasts: WINDUP_MS - DRAW_MS - 120 }),
+});
+
+export const FLASH_MS = 80;
+
+/**
+ * How a struck figure answers, in milliseconds from the contact. `melee` says the blow was a body's: from a
+ * distance the stop is half as long and the tremor half as wide. The flash says "lost health": none without a loss.
+ */
+export function reaction(loss, melee) {
+  const scale = WEIGHTS[weightOf(loss)];
+  const stop = melee ? scale.stop : scale.stop / 2;
+  return {
+    flash: loss.lost > 0 || loss.defeated ? FLASH_MS : 0,
+    stop, tremor: { distance: melee ? 2 : 1, swing: TREMOR_SWING_MS, swings: Math.max(1, Math.round(stop / (TREMOR_SWING_MS * 2))) },
+    recoil: { at: stop, out: RECOIL_OUT_MS, stay: scale.stay, back: RECOIL_OUT_MS, distance: scale.recoil, tilt: scale.tilt },
+  };
+}
+
+/**
+ * A death, in milliseconds from the contact: thrown back with no return, held, then the fall, which brings the
+ * figure back onto its own spot while it fades, and the last of it, which ends on the settled frame.
+ */
+export const DEATH = Object.freeze({
+  recoil: Object.freeze({ lasts: 320, distance: WEIGHTS.heavy.recoil, tilt: WEIGHTS.heavy.tilt }),
+  fall: Object.freeze({ at: 600, lasts: 760, height: .9, width: 1.05, tip: 6, alpha: .2, slate: 0x6f7880 }),
+  settle: Object.freeze({ at: 1360, lasts: 200 }),
+});
+export const DEFEATED_ALPHA = .2;
+
+/** The breath at rest: the height rises and falls by 1.5% from top to bottom, once every 3600 ms. */
+export const BREATH = Object.freeze({ period: 3600, amount: .0075, apart: .37 });
+
+/** What a standing figure's height is multiplied by, at a time of the ambient clock, for its place in the roster. */
+export function breath(ms, place = 0) {
+  return 1 + BREATH.amount * Math.sin((ms / BREATH.period + place * BREATH.apart) * Math.PI * 2);
+}
+
+/** The view's trauma: what a defeat adds, its ceiling, how fast it falls, and the reach of a full shake. */
+export const TRAUMA = Object.freeze({ defeat: .10, ceiling: .6, fall: .25 / 120, reach: .025 });
+/** A punch of the zoom, on a defeat or a critical hit. */
+export const PUNCH = Object.freeze({ amount: .03, lasts: 200 });
+
+/**
+ * What an action adds to the trauma: each creature other than the caster that lost health adds by its loss, and
+ * a defeat a little more. A blood cost, a heal, a ward, a blow that took nothing and a fizzle add nothing.
+ */
+export function traumaOf(cue, actor) {
+  let added = 0;
+  for (const id of others(cue, actor)) {
+    const loss = lossOf(cue, id);
+    if (loss.lost > 0 || loss.defeated) added += WEIGHTS[weightOf(loss)].trauma + (loss.defeated ? TRAUMA.defeat : 0);
+  }
+  return Math.min(TRAUMA.ceiling, added);
+}
+
+/** Trauma after some time, and how much of the full shake it gives: squared, so a small hit is barely felt. */
+export const traumaAfter = (trauma, ms) => Math.max(0, trauma - TRAUMA.fall * ms);
+export const shakeOf = trauma => trauma * trauma;
+
+/**
+ * A smooth wander between -1 and 1 on two axes, from a time alone: no random draw, so two films of one hit agree.
+ * Two sines a axis, at periods that share no beat.
+ */
+export function wander(ms) {
+  return {
+    x: (Math.sin(ms * .0731) + Math.sin(ms * .1193 + 1.3)) / 2,
+    y: (Math.sin(ms * .0877 + 2.1) + Math.sin(ms * .1361 + .7)) / 2,
+  };
+}
+
+/** Whether a defeat or a critical hit punches the zoom. */
+export function punches(cue, actor) {
+  return cue?.roll?.critical === true || others(cue, actor).some(id => lossOf(cue, id).defeated);
+}
+
+/** The end of every beat of the movement, in milliseconds from the start of the action: what a window must hold. */
+export function lastBeat(weight) {
+  const beats = meleeBeats(weight), struck = reaction({ lost: weight === 'heavy' ? 7 : weight === 'medium' ? 4 : 1 }, true);
+  return Math.max(beats.home.at + beats.home.lasts, beats.release.at + beats.release.lasts,
+    WINDUP_MS + struck.recoil.at + struck.recoil.out + struck.recoil.stay + struck.recoil.back,
+    WINDUP_MS + DEATH.settle.at + DEATH.settle.lasts, CAST.release.at + CAST.release.lasts);
+}
+export const ACTION_END_MS = WINDUP_MS + IMPACT_MS;

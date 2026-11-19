@@ -40,6 +40,8 @@ No CDN, remote fonts or browser package downloads are needed at runtime.
 - `src/bench.ts`: the effects bench and its film clock (below). Laboratory bundle only.
 - `table/battle-bench.js`: what the bench lists and the frames it presents, from the fixture. No rule.
 - `src/scene.ts`: Phaser scene, local assets, creature figures, cancellable tweens and camera effects.
+- `src/body-motion.ts`, `src/view-shake.ts`, `table/battle-motion.js`: how a figure loads, strikes, is struck,
+  falls and breathes, and how the view trembles ("The movement", below).
 - `src/types.ts`: presentation types only.
 - `src/spell-effects.ts`: bounded, cancellable vector motifs for confirmed spell outcomes, and the beats of a
   staged spell, handed to the effects kit (below).
@@ -896,18 +898,53 @@ desktop.
 The game loop never stops, but a still field is drawn less often (`src/rest.ts`, #842). At sixty frames a second
 over a field where only the ambience breathes, a phone pays in battery, and a page whose canvas is drawn in software
 leaves no frame for the rest of the page, so a browser test waits for a click to become stable. The scene's `busy()`
-keeps the field at its full rate while any of these runs: a tween, a camera effect, the effects kit's particles or
+keeps the field at its full rate while any of these runs: a tween, a camera effect, the view's tremor, the effects kit's particles or
 objects, a die tumbling, the horizon giving way, a file loading. On the bench, a play in progress does too.
 
 Two seconds after the last movement (`SETTLE_MS`) the field rests: the game is stepped one animation frame in four
-(`REST_EVERY`), fifteen frames a second on a sixty-hertz screen. The halos' breath, the motes, the capstone effects
-and the auras are ambience: they go on at that rate, on their own clock (`ambient`), at the same pace. Movement is
+(`REST_EVERY`), fifteen frames a second on a sixty-hertz screen. The halos' breath, the creatures' breath, the motes,
+the capstone effects and the auras are ambience: they go on at that rate, on their own clock (`ambient`), at the same pace. Movement is
 looked for on every animation frame, so a cast starts at the full rate, and a board that only changes what stands
 on the field is drawn within four frames. A resize is drawn at once.
 
 `data-resting` is set on `#battle` (the seat) and on `#lab` (the lab and the bench) while the field rests. The
 bench's film steps the game by hand and is left alone. Motion that should play at the full rate goes through a
 tween or the effects kit, or is counted in `busy()`.
+
+## The movement
+
+How a figure's body plays an action, whatever its spell (docs/art/storyboards/movement.md, BC5 of the craft plan).
+The numbers are in `table/battle-motion.js`, at 1×, each divided by the playback rate; `src/body-motion.ts` plays
+them as tweens of the figure's place, lean, scale about its feet, tint and alpha, and `src/view-shake.ts` keeps the
+view's trauma.
+
+- **The weight of a blow** is the health the host confirmed lost (`cue.changes`): light to 3, medium to 6, heavy
+  from 7 or on a defeat. The heaviest loss sets the caster's anticipation and the stop; each figure's own loss sets
+  its recoil and what it adds to the view. With no change told, a blow is light.
+- **A melee blow**: the caster draws back (20, 26 or 32 px), holds, strikes so that it lands when the windup ends,
+  and stretches into the contact. Both figures hold for the stop (60, 90 or 120 ms), made of the tweens' delays:
+  the spell's own effects play through it. The struck figure flashes in bone when it lost health, trembles, and is
+  thrown back (12, 18 or 26 px) and returns. The caster goes home a little past it.
+- **A cast and a projectile**: the caster does not lunge. A cast squashes where it stands and is at its tallest on
+  the contact; a projectile's caster loads, throws as the projectile leaves, and is home when it lands. A figure
+  that lost health from afar answers as a struck one, on half the stop. One that lost nothing does not move.
+- **A death**: the defeated figure keeps its full alpha at the contact, is thrown back and does not return, then
+  falls: it slumps, tips, sinks back onto its own spot, fades to 20% and drains toward slate (a tint, no filter).
+  It ends on the settled frame before the impact window does. While it plays, `present` leaves that figure's alpha
+  to the fall.
+- **The breath**: a standing figure no tween holds rises and falls by 1.5% of its height every 3.6 s, each out of
+  step with its neighbour. It is computed in `update` on the ambient clock, not a tween, so it plays at the resting
+  rate and is not counted in `busy()`. A fallen figure does not breathe.
+- **The view**: one trauma value replaces the fixed camera shakes. Each creature other than the caster that lost
+  health adds 0.25, 0.40 or 0.55, a defeat 0.10 more, to a ceiling of 0.6; it falls by 0.25 every 120 ms, and the
+  offset is its square times 2.5% of the view's shorter side. A defeat or a critical hit also punches the zoom by
+  3% for 200 ms. A blood cost, a heal, a ward and a blow that took nothing add nothing. The offset is laid over the
+  fitted camera and read from the action's clock, never from `Math.random`.
+- **Less motion**: none of it. No figure moves, breathes or flashes, and the view stays still.
+- **The cancel path** (`clearMotion`): every figure home, upright, at its own scale, untinted, a fallen one at its
+  settled alpha; the trauma at zero and the camera as it was fitted.
+
+`studio/browser/battle-motion.spec.js` plays each of these on the bench, at 0.5×, 1× and 2×.
 
 ## The effects kit
 
@@ -923,7 +960,7 @@ plays them through the kit, `src/fx/`:
 | `gather` | Particles that start on a ring around a figure and land on it. | a figure |
 | `glow` | One soft dot, blended as light, that swells and goes: a glow that costs one image. | a figure |
 | `flash` | The figure filled flat in one colour for a frame or two. One a staging. | a figure |
-| `shake` | The view trembles, and the tremor decays. One a staging; the shared tremor of a physical blow is then left out. | the view |
+| `shake` | Adds its `strength` to the view's trauma ("The movement"), on top of what the health lost adds. One a staging. The trauma's own fall sets how long the view moves, not `lasts`. | the view |
 | `pulse` | A halo around the figure's own silhouette, by a filter, removed when the beat ends. Costly: see ADR 0196. | a figure |
 
 - The kit is a second bundle. `build.mjs` builds `fx.js` first, refuses it if it holds the engine or a
@@ -953,7 +990,10 @@ film asked. The bench plays the chosen one on creatures of the laboratory's fixt
 targets. **Outcome** plays the spell or fizzles it, drawn as the live page draws a fizzle: the caster's mark,
 and no recipient. **The caster pays in blood** adds the caster's wound, the way a blood cost is drawn; it is off
 under a fizzle. `?bench=spell:frostbite:v1` opens on that entry. It asks no host and holds no rule: a target across the
-field from the caster is struck, one on the caster's side receives, and nobody's health moves. Less motion and
+field from the caster is struck, and one on the caster's side receives. **Health lost** is what each creature struck
+loses, which is the weight of the blow, and **The blow defeats** fells the first one struck: both are the fixture's
+word, as a cue's changes are the host's on a seat. Left empty, no loss is told, as for an action the host served no
+frames for. Less motion and
 the playback speed are in the settings, as in the laboratory. The bench ships in `game.js` only:
 `build.mjs` fails the build if `live.js` contains a bench module or the spell art (`live-guard.mjs`).
 
@@ -965,8 +1005,14 @@ node scripts/battle/filmstrip.mjs spell:pummel:v1                 # artifacts/fi
 node scripts/battle/filmstrip.mjs spell:frostbite:v1 --actor a3 --targets b1,b3 --speed 2 --out frost.png
 node scripts/battle/filmstrip.mjs spell:pummel:v1 --fizzle        # artifacts/filmstrips/pummel-fizzled.png
 node scripts/battle/filmstrip.mjs spell:hateful_sacrifice:v1 --wound   # its caster pays in blood
+node scripts/battle/filmstrip.mjs spell:pummel:v1 --damage 8 --defeat  # a heavy blow that defeats its target
+node scripts/battle/filmstrip.mjs spell:pummel:v1 --motion        # and pummel.motion.json beside the sheet
 node scripts/battle/filmstrip.mjs --all                           # one sheet an entry
 ```
+
+`--motion` writes what a sheet cannot show, one line a frame: where each figure stands from its home, its lean,
+its width and height over its own scale, its alpha and whether it is tinted, and the view's trauma, offset and zoom
+(`window.battleBench.motion()`).
 
 The script serves `table/` itself and opens the bench in Chromium at phone size (390 by 844). The bench's film
 clock (`window.battleBench.film`) makes two runs agree. `start` stops the game's loop and hands `Date.now` to
