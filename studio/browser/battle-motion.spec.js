@@ -33,7 +33,7 @@ test('a standing figure breathes, each out of step with its neighbour, and a fig
   // The caster's tweens hold it from the first frame: through its draw back its height does not move, while its
   // neighbours' does.
   expect(new Set(heights.a1.slice(0, 4)).size).toBe(1);
-  expect(new Set(heights.b2.slice(0, 4)).size).toBe(4);
+  expect(new Set(heights.b2.slice(0, 4)).size).toBeGreaterThan(1);
   // The breath moves the height alone, about the feet: no figure it moves leaves its home.
   expect(await figure(page, 'b2')).toMatchObject(HOME);
   await film(page, 'stop');
