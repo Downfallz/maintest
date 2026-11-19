@@ -139,7 +139,22 @@ export function matchControls(controller: Controller, beforeOpen: () => void, re
     finally { starting = false; render(); }
   });
   // Play again starts the tutorial over from its cut: the result of the match it ended gives way to its first card.
-  el('match-again').addEventListener('click', () => { const lesson = tutorial(); if (!lesson) return; result.close(); lesson.again(); });
+  el('match-again').addEventListener('click', () => {
+    const lesson = tutorial();
+    if (!lesson) return;
+    result.close();
+    lesson.again();
+  });
+  // What the result is called and which of its doors show: a tutorial's end, or a game's.
+  function drawEnding(model: ReturnType<Controller['model']>) {
+    const lesson = model.over ? tutorial() : null;
+    const round = Number.isInteger(model.result?.round) ? ` · ROUND ${model.result.round}` : '';
+    text('match-eyebrow', lesson ? 'TUTORIAL COMPLETE' : `MATCH COMPLETE${round}`);
+    result.dataset.tutorial = String(Boolean(lesson));
+    el('match-again').hidden = !lesson; el('match-leave').hidden = !lesson; el('match-lobby').hidden = Boolean(lesson);
+    el<HTMLButtonElement>('match-again').disabled = model.busy;
+    return lesson;
+  }
   // The report's zoom: a creature tapped shows large over the whole result; a tap on it or Escape gives the report back.
   const zoom = el('match-zoom'), picture = el<HTMLButtonElement>('match-zoom-close');
   let zoomedFrom: HTMLElement | null = null;
@@ -188,11 +203,7 @@ export function matchControls(controller: Controller, beforeOpen: () => void, re
     el<HTMLButtonElement>('match-replay').disabled = model.busy;
     if (!model.over) result.close();
     text('match-title', model.result?.title ?? 'Match complete');
-    const lesson = model.over ? tutorial() : null;
-    text('match-eyebrow', lesson ? 'TUTORIAL COMPLETE' : Number.isInteger(model.result?.round) ? `MATCH COMPLETE · ROUND ${model.result.round}` : 'MATCH COMPLETE');
-    result.dataset.tutorial = String(Boolean(lesson));
-    el('match-again').hidden = !lesson; el('match-leave').hidden = !lesson; el('match-lobby').hidden = Boolean(lesson);
-    el<HTMLButtonElement>('match-again').disabled = model.busy;
+    const lesson = drawEnding(model);
     result.dataset.tone = model.result?.tone ?? 'unknown';
     text('match-replay-error', rematchError || model.error);
     const plan = model.over && !lesson ? rematch() : null, again = el<HTMLButtonElement>('match-rematch');
