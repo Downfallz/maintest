@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { DEPTH, EMBERS, EMBER_COUNT, FOG, LIGHT, PAINTING, REST_TINT, depthPlace, depthShift, emberAt, emberGlow, fogDrift, lightAt, mix } from '../../table/battle-ground.js';
+import { DEPTH, EMBERS, EMBER_COUNT, FOG, LIGHT, PAINTING, REST_TINT, coronaScale, depthPlace, depthShift, emberAt, emberGlow, fogDrift, lightAt, mix } from '../../table/battle-ground.js';
 
 /** How the view stands off its fitted place: its offset in pixels and its zoom over the fitted one. */
 export interface ViewOffset { x: number; y: number; zoom: number }
@@ -26,6 +26,7 @@ export class BattleGround {
   private drift = 0;
   private shown = 0;
   private glow = 1;
+  private corona = 1;
   private strength = 0;
   private colour: number | null = null;
   private tint: number = REST_TINT.painting;
@@ -101,6 +102,7 @@ export class BattleGround {
     this.view = reduced ? STILL : view;
     this.drift = fogDrift(clock, reduced);
     this.glow = emberGlow(round);
+    this.corona = coronaScale(round);
     this.shown = 0;
     const centre = this.centre;
     for (const [index, image] of this.embers.entries()) {
@@ -123,7 +125,7 @@ export class BattleGround {
     this.fog.tilePositionX = -this.drift / this.fogHome.tile;
     this.horizon.lean((x, y) => depthPlace({ x, y }, DEPTH.sky, this.view, centre));
     const sky = depthPlace(this.lightHome, this.horizon.sky ? DEPTH.sky : DEPTH.painting, this.view, centre);
-    this.light.setPosition(sky.x, sky.y).setDisplaySize(this.lightHome.radius * 2 * sky.scale, this.lightHome.radius * 2 * sky.scale);
+    this.light.setPosition(sky.x, sky.y).setDisplaySize(this.lightHome.radius * 2 * sky.scale * this.corona, this.lightHome.radius * 2 * sky.scale * this.corona);
   }
 
   /**

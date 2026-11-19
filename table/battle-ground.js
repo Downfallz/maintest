@@ -16,7 +16,7 @@ export const REST_TINT = Object.freeze({ painting: 0xb5bbc2, arch: 0xa5b1b3 });
  * drawn at boot, tileable across; `puffs` are its soft ellipses, each [x, y, radius across, radius down, alpha].
  */
 export const FOG = Object.freeze({
-  rows: Object.freeze([330, 470]), tint: 0x8aa29c, alpha: .30, drift: .003,
+  rows: Object.freeze([330, 470]), tint: 0x8aa29c, alpha: .40, drift: .008,
   tile: Object.freeze({ width: 256, height: 64 }),
   puffs: Object.freeze([[18, 30, 58, 15, .55], [70, 38, 46, 12, .5], [112, 26, 64, 14, .6], [150, 40, 40, 11, .45],
     [188, 30, 56, 15, .55], [226, 36, 44, 12, .5], [128, 34, 96, 9, .35]].map(Object.freeze)),
@@ -25,9 +25,15 @@ export const FOG = Object.freeze({
 /** How far the fog has drifted at a time of the ambient clock. With less motion it stands still. */
 export const fogDrift = (clock, reduced = false) => reduced ? 0 : clock * FOG.drift;
 
-// The steps that spread the embers: one for the column, another for the place along the rise (Roberts' R2
-// sequence). One step for both would make the place follow the column, and the embers would rise on one slant line.
-const ACROSS = .7549, ALONG = .5698;
+// Where each ember stands: its column, a share of the field's width, and where along its rise it is when the
+// clock starts, the far ones first. A fixed table, drawn once: a constant step, whichever it is, strings the embers
+// on lines (the first two films showed it). No two of one kind stand close and no three share a row or a column.
+const PLACES = Object.freeze([
+  [0.04, 0.055], [0.731, 0.096], [0.204, 0.157], [0.523, 0.224], [0.287, 0.29], [0.145, 0.332],
+  [0.601, 0.428], [0.986, 0.465], [0.857, 0.556], [0.79, 0.597], [0.464, 0.677], [0.101, 0.74],
+  [0.65, 0.77], [0.326, 0.82], [0.893, 0.91], [0.388, 0.972], [0.968, 0.081], [0.293, 0.224],
+  [0.048, 0.36], [0.689, 0.468], [0.402, 0.609], [0.559, 0.696], [0.175, 0.808], [0.807, 0.986],
+].map(Object.freeze));
 const fraction = value => value - Math.floor(value);
 
 /**
@@ -37,8 +43,8 @@ const fraction = value => value - Math.floor(value);
  */
 export const EMBERS = Object.freeze({
   tint: 0xd18d51, sway: 3,
-  far: Object.freeze({ count: 16, size: 2, alpha: .30, speed: .012, rows: Object.freeze([600, 420]) }),
-  near: Object.freeze({ count: 8, size: 4, alpha: .40, speed: .025, rows: Object.freeze([900, 480]) }),
+  far: Object.freeze({ count: 16, size: 3, alpha: .50, speed: .012, rows: Object.freeze([600, 420]) }),
+  near: Object.freeze({ count: 8, size: 6, alpha: .70, speed: .025, rows: Object.freeze([900, 480]) }),
   glow: Object.freeze({ least: .6, fullAt: 12 }),
 });
 export const EMBER_COUNT = EMBERS.far.count + EMBERS.near.count;
@@ -59,11 +65,12 @@ export function emberAt(index, clock, field) {
   const [from, to] = kind.rows;
   // The rise lasts what its length takes at the kind's pace, so a taller field does not make an ember faster.
   const lasts = Math.max(1, (from - to) * field.scale / (kind.speed * field.height) * 1000);
-  const progress = fraction(clock / lasts + index * ALONG);
+  const [column, start] = PLACES[index % PLACES.length];
+  const progress = fraction(clock / lasts + start);
   const period = 5000 + (index * 977) % 4000;
   return {
     far,
-    x: fraction(.31 + index * ACROSS) * field.width + EMBERS.sway * Math.sin(clock / period * Math.PI * 2 + index),
+    x: column * field.width + EMBERS.sway * Math.sin(clock / period * Math.PI * 2 + index),
     y: field.top + (from - (from - to) * progress) * field.scale,
     size: kind.size,
     // It fades in and out along its rise: none appears or vanishes at once.
@@ -102,7 +109,13 @@ export function depthPlace(point, factor, view, centre) {
  */
 export const LIGHT = Object.freeze({ rise: 100, fall: 200, alpha: .8, tint: .5,
   ring: Object.freeze({ inner: .9, peak: 1.08, outer: 1.7 }),
+  // From the round the sky shatters, the disc's two halves stand apart and reach further: the ring is laid larger,
+  // or its band would lie on their dark rock as a grey veil.
+  shattered: Object.freeze({ from: 10, scale: 1.5 }),
   strengths: Object.freeze({ light: 0, medium: .5, heavy: 1 }) });
+
+/** How large the corona is laid at a round, over its size around the whole disc. */
+export const coronaScale = round => (round ?? 1) >= LIGHT.shattered.from ? LIGHT.shattered.scale : 1;
 
 /**
  * How much of its strength the light shows, a time after the contact at 1×: up fast and slowing (`Quad.Out`),

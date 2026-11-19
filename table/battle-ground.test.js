@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { DEPTH, EMBERS, EMBER_COUNT, FOG, LIGHT, LIGHT_COLOURS, PAINTING, REST_TINT, depthPlace, depthShift, emberAt, emberGlow, fogDrift, lightAt, lightOf, mix } from './battle-ground.js';
+import { DEPTH, EMBERS, EMBER_COUNT, FOG, LIGHT, LIGHT_COLOURS, PAINTING, REST_TINT, coronaScale, depthPlace, depthShift, emberAt, emberGlow, fogDrift, lightAt, lightOf, mix } from './battle-ground.js';
 import { TRAUMA, PUNCH } from './battle-motion.js';
 import { IMPACT_MS } from './battle-timing.js';
 
@@ -12,9 +12,9 @@ import { IMPACT_MS } from './battle-timing.js';
 const field = { width: 390, height: 320, top: 0, scale: .34 };
 const cue = (family, changes, extra = {}) => ({ kind: 'strike', visual: { family }, recipients: changes.map(one => one.creature), changes, ...extra });
 
-test('the fog drifts three pixels a second on the ambient clock, and stands still with less motion', () => {
+test('the fog drifts eight pixels a second on the ambient clock, and stands still with less motion', () => {
   assert.equal(fogDrift(0), 0);
-  assert.ok(Math.abs(fogDrift(11000) - 33) < 1e-9);
+  assert.ok(Math.abs(fogDrift(11000) - 88) < 1e-9);
   assert.equal(fogDrift(11000, true), 0);
   // One texture, tileable across: a puff that crosses an edge is drawn again on the other side by the scene.
   assert.equal(FOG.puffs.length, 7);
@@ -114,15 +114,22 @@ test('a heal, a ward, a blood cost alone, a fizzle and an action of no family le
   assert.deepEqual(lightOf(cue('necromantic', [{ creature: 4, health: -9 }]), '4'), none);
 });
 
-test('the embers are spread over the floor, not strung on a line', () => {
-  // The first film drew each kind on one slant: the place along the rise followed the column. Held here: among
-  // the far embers, the column says nothing of the height.
-  const far = Array.from({ length: EMBERS.far.count }, (_, index) => emberAt(index, 0, field));
-  const mean = values => values.reduce((sum, one) => sum + one, 0) / values.length;
-  const mx = mean(far.map(one => one.x)), my = mean(far.map(one => one.y));
-  const cov = mean(far.map(one => (one.x - mx) * (one.y - my)));
-  const correlation = cov / Math.sqrt(mean(far.map(one => (one.x - mx) ** 2)) * mean(far.map(one => (one.y - my) ** 2)));
-  assert.ok(Math.abs(correlation) < .5, `column and height correlate by ${correlation.toFixed(2)}`);
+test('the embers are spread over the floor: no two of one kind close, no three in one row or one column', () => {
+  // The first two films strung them on lines: a constant step for the column and the rise makes a lattice.
+  for (const [from, count] of [[0, EMBERS.far.count], [EMBERS.far.count, EMBERS.near.count]]) {
+    const kind = Array.from({ length: count }, (_, index) => emberAt(from + index, 0, field));
+    for (const [at, one] of kind.entries()) for (const other of kind.slice(at + 1)) {
+      assert.ok(Math.hypot(one.x - other.x, one.y - other.y) >= 20, 'two embers of one kind stand apart');
+    }
+    for (const axis of ['x', 'y']) {
+      const along = kind.map(one => one[axis]).sort((a, b) => a - b);
+      for (let at = 0; at + 2 < along.length; at++) assert.ok(along[at + 2] - along[at] >= 3, `no three share one ${axis === 'x' ? 'column' : 'row'}`);
+    }
+  }
+});
+
+test('the corona is laid larger once the sky has shattered, so it stays off the disc\'s two halves', () => {
+  assert.deepEqual([null, 1, 9, 10, 12, 30].map(coronaScale), [1, 1, 1, 1.5, 1.5, 1.5]);
 });
 
 test('the light is one rise and one fall, gone within 320 ms of the contact, and never the whole way to a colour', () => {
