@@ -139,9 +139,14 @@ fieldset.bench-field, .bench-run { grid-column: 1 / -1; }
 .bench-targets label { display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 6px; border: 1px solid var(--line-soft); border-radius: var(--radius-sharp); color: var(--ink); overflow: hidden; }
 .bench-targets input { flex: 0 0 auto; width: 18px; height: 18px; accent-color: var(--gold); }
 .bench-targets span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The outcome and the blood cost (#843): one row under the targets, the choice beside the box. */
+.bench-outcome { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: end; }
+.bench-wound { display: flex; align-items: center; gap: 8px; min-height: 44px; min-width: 0; color: var(--ink); }
+.bench-wound input { flex: 0 0 auto; width: 18px; height: 18px; accent-color: var(--gold); }
+.bench-wound input:disabled + span { color: var(--muted); }
 .bench-run { display: flex; align-items: center; gap: 12px; }.bench-run { min-width: 0; }
 /* Nothing in the bench changes size with the stage: a field that resized under a playing effect would end it. */
 .bench-run button { flex: 0 0 auto; white-space: nowrap; }
 /* One line, whatever it says: a status that wrapped would resize the field under a playing effect. */
 .bench-run p { margin: 0; min-width: 0; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-@media (min-width: 900px) { #bench { grid-template-columns: 1fr 1fr 2fr auto; align-items: end; }fieldset.bench-field, .bench-run { grid-column: auto; } }
+@media (min-width: 900px) { #bench { grid-template-columns: 1fr 1fr 2fr 1.4fr auto; align-items: end; }fieldset.bench-field, .bench-run, .bench-outcome { grid-column: auto; } }

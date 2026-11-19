@@ -24,7 +24,7 @@ test('the bench lists every authored effect and the six creatures, and fits the 
   await expect(page.locator('#lab')).toHaveAttribute('data-asset-fallback', 'false');
   // The sample action's controls are the laboratory's, not the bench's.
   for (const id of ['#choose', '#confirm', '#timeline', '#fullscreen']) await expect(page.locator(id)).toBeHidden();
-  await fitsViewport(page, '#bench-spell, #bench-actor, #bench-targets label, #bench-play, #reset, #settings');
+  await fitsViewport(page, '#bench-spell, #bench-actor, #bench-targets label, #bench-outcome, .bench-wound, #bench-play, #reset, #settings');
 });
 
 test('a chosen effect plays on the chosen creatures: its windup, its impact, then nothing left', async ({ page }) => {
@@ -67,6 +67,41 @@ test('an effect plays to its end whatever room the words of the bench take', asy
   expect(await height()).toBe(atRest);
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'resolved', { timeout: 15000 });
   expect(await height()).toBe(atRest);
+});
+
+// #867: each spell is listed as its file names it, with the mutation that casts it.
+test('the bench lists each spell with the mutation that casts it, and a film is titled the same', async ({ page }) => {
+  await expect(page.locator('#bench-spell option[value="spell:pummel:v1"]')).toHaveText('Pummel · Brute, Stage I · physical · impact · melee');
+  await expect(page.locator('#bench-spell option[value="spell:heavy_strike:v1"]')).toHaveText('Strike · starting spell · physical · impact · melee');
+  const frames = await filmFrames(page, { spell: 'spell:pummel:v1', frames: 1 });
+  expect(frames).toHaveLength(1);
+  expect(await page.evaluate(() => window.battleBench.title())).toBe('Pummel · Brute, Stage I · physical · impact · melee · 1×');
+  await expect(page.locator('#lab')).toHaveAttribute('data-outcome', 'played');
+});
+
+// #843: a fizzle and a blood cost, each a choice of the fixture, drawn as the live scene draws them.
+test('a fizzle plays the caster\'s fizzle mark and nothing on the targets', async ({ page }) => {
+  await page.locator('#bench-spell').selectOption('spell:pummel:v1');
+  await page.locator('#bench-outcome').selectOption('fizzled');
+  await expect(page.locator('#bench-wound')).toBeDisabled();
+  await film(page, 'start');
+  await film(page, 'advance', WINDUP_MS + 40);
+  expect((await effects(page)).map(one => [one.motif, one.creature])).toEqual([['fizzle', 'a1']]);
+  await film(page, 'stop');
+  await expect(page.locator('#lab')).toHaveAttribute('data-outcome', 'fizzled');
+});
+
+test('a caster who pays in blood takes a wound while its spell lands on the target', async ({ page }) => {
+  await film(page, 'start', { spell: 'spell:pummel:v1', actor: 'a1', targets: ['b1'], wound: true });
+  await expect(page.locator('#bench-wound')).toBeChecked();
+  await film(page, 'advance', WINDUP_MS + 40);
+  expect((await effects(page)).map(one => [one.motif, one.creature]).sort()).toEqual([['impact', 'b1'], ['wound', 'a1']]);
+  await film(page, 'stop');
+  // The film strip asks for both each time, so a sheet never inherits the last one's choices.
+  await film(page, 'start', { spell: 'spell:pummel:v1', actor: 'a1', targets: ['b1'], outcome: 'played', wound: false });
+  await film(page, 'advance', WINDUP_MS + 40);
+  expect((await effects(page)).map(one => one.motif)).toEqual(['impact']);
+  await film(page, 'stop');
 });
 
 test('the address can name the effect the bench opens on', async ({ page }) => {

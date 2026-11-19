@@ -6,6 +6,8 @@
 //
 //   node scripts/battle/filmstrip.mjs spell:pummel:v1                       # artifacts/filmstrips/pummel.png
 //   node scripts/battle/filmstrip.mjs spell:quill_shot:v1 --actor a2 --targets b1,b3 --speed 2 --out sheet.png
+//   node scripts/battle/filmstrip.mjs spell:pummel:v1 --fizzle              # the spell fizzles
+//   node scripts/battle/filmstrip.mjs spell:hateful_sacrifice:v1 --wound    # its caster pays in blood
 //   node scripts/battle/filmstrip.mjs --all --out artifacts/filmstrips      # one sheet an entry
 //
 // It serves `table/` itself; the bundle must be built first (`npm --prefix battle run build`).
@@ -36,10 +38,11 @@ export async function openBench(page, base) {
  * Film one effect on an open bench: `frames` pictures of the field, `interval` milliseconds of the bench's clock
  * apart, the first at 0. Returns [{ ms, stage, png }], and leaves the bench at rest with its loop running.
  */
-export async function filmFrames(page, { spell, actor, targets, speed, frames = 12, interval } = {}) {
+export async function filmFrames(page, { spell, actor, targets, speed, outcome = 'played', wound = false, frames = 12, interval } = {}) {
   // Refused before the film starts: a started film has stopped the bench's loop.
   if (interval !== undefined && interval % FILM_TICK_MS !== 0) throw new Error(`The interval must be a multiple of ${FILM_TICK_MS} ms.`);
-  const started = await page.evaluate(options => window.battleBench.film.start(options), { spell, actor, targets, speed });
+  // The outcome and the wound are asked each time: a sheet never inherits the last one's.
+  const started = await page.evaluate(options => window.battleBench.film.start(options), { spell, actor, targets, speed, outcome, wound });
   const step = interval ?? started.interval;
   const field = page.locator('#battle-zone');
   const shots = [{ ms: 0, stage: started.stage, png: await field.screenshot() }];
@@ -78,12 +81,9 @@ export async function contactSheet(context, shots, { title = '', columns = COLUM
 /** One effect, filmed and laid out: the PNG of its contact sheet. */
 export async function filmSheet(page, options = {}) {
   const shots = await filmFrames(page, options);
-  const look = await page.evaluate(() => {
-    const lab = document.getElementById('lab');
-    const entry = [...window.battleBench.entries, ...window.battleBench.samples].find(one => one.id === lab.dataset.spell);
-    return `${entry.name} · ${entry.family} · ${entry.motif} · ${entry.delivery}`;
-  });
-  return contactSheet(page.context(), shots, { title: `${look} · ${options.speed ?? 1}×`, columns: options.columns });
+  // The title is what the bench played, read back from it: the spell, its mutation, the outcome and the speed.
+  const title = await page.evaluate(() => window.battleBench.title());
+  return contactSheet(page.context(), shots, { title, columns: options.columns });
 }
 
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
@@ -126,6 +126,8 @@ export function parseArguments(argv) {
     else if (word === '--url') options.base = value(word, ++index);
     else if (word === '--actor') film.actor = value(word, ++index);
     else if (word === '--targets') film.targets = value(word, ++index).split(',').filter(Boolean);
+    else if (word === '--fizzle') film.outcome = 'fizzled';
+    else if (word === '--wound') film.wound = true;
     else if (['--speed', '--frames', '--interval', '--columns', '--scale'].includes(word)) {
       const number = Number(value(word, ++index));
       if (!Number.isFinite(number) || number <= 0) throw new Error(`${word} needs a positive number.`);
@@ -134,13 +136,17 @@ export function parseArguments(argv) {
     else options.spells.push(word);
   }
   if (options.all === options.spells.length > 0) throw new Error('Name one or more effects (spell:pummel:v1), or --all.');
+  // The live page draws no outcome with a fizzle (`actionCue`): a wound with one would film what never plays.
+  if (film.outcome === 'fizzled' && film.wound) throw new Error('--fizzle and --wound do not go together: a fizzle is drawn with no outcome.');
   if (film.speed !== undefined && ![0.5, 1, 2].includes(film.speed)) throw new Error('--speed is 0.5, 1 or 2, as the page offers.');
   if (film.interval !== undefined && film.interval % FILM_TICK_MS !== 0) throw new Error(`--interval is a multiple of ${FILM_TICK_MS} ms.`);
   if (options.out?.endsWith('.png') && (options.all || options.spells.length > 1)) throw new Error('--out names a folder when several effects are filmed.');
   return { ...options, film };
 }
 
-const fileName = spell => `${spell.split(':')[1] ?? spell}.png`;
+// A fizzle's or a wound's sheet beside the spell's own, not over it.
+export const fileName = (spell, { outcome, wound } = {}) =>
+  `${spell.split(':')[1] ?? spell}${outcome === 'fizzled' ? '-fizzled' : ''}${wound ? '-wound' : ''}.png`;
 
 async function main(argv) {
   const options = parseArguments(argv);
@@ -159,7 +165,7 @@ async function main(argv) {
     const folder = single ? null : resolve(options.out ?? join(root, 'artifacts/filmstrips'));
     for (const spell of spells) {
       const sheet = await filmSheet(page, { ...options.film, spell });
-      const path = single ? resolve(options.out) : join(folder, fileName(spell));
+      const path = single ? resolve(options.out) : join(folder, fileName(spell, options.film));
       await mkdir(dirname(path), { recursive: true });
       await writeFile(path, sheet);
       console.log(path);

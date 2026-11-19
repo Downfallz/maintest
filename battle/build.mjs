@@ -1,26 +1,16 @@
 import { build } from 'esbuild';
 import { createHash } from 'node:crypto';
-import { copyFile, mkdir, readFile, readdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { copyFile, mkdir, readFile } from 'node:fs/promises';
+import { benchSpells } from './bench-spells.mjs';
 import { engineOrLaboratory, kitOnly, laboratoryOnly } from './live-guard.mjs';
 
-// The name a player reads for each spell (`data/Spells/**`), for the effects bench: the spell art holds ids only,
-// and an id's slug is not always the name (`spell:heavy_strike:v1` is Strike). The laboratory's bundle alone
-// carries them; the live page names no spell.
-async function spellNames(folder = '../data/Spells') {
-  const names = {};
-  for (const entry of await readdir(folder, { withFileTypes: true, recursive: true })) {
-    if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
-    const { id, name } = JSON.parse(await readFile(join(entry.parentPath, entry.name), 'utf8'));
-    if (typeof id === 'string' && typeof name === 'string') names[id] = name;
-  }
-  return names;
-}
-const names = {
-  name: 'spell-names',
+// What the content says of each spell, for the effects bench (`bench-spells.mjs`): its name and what casts it.
+// The laboratory's bundle alone carries it; the live page names no spell.
+const spells = {
+  name: 'bench-spells',
   setup(builder) {
-    builder.onResolve({ filter: /^virtual:spell-names$/ }, () => ({ path: 'spell-names', namespace: 'spell-names' }));
-    builder.onLoad({ filter: /.*/, namespace: 'spell-names' }, async () => ({ contents: JSON.stringify(await spellNames()), loader: 'json' }));
+    builder.onResolve({ filter: /^virtual:bench-spells$/ }, () => ({ path: 'bench-spells', namespace: 'bench-spells' }));
+    builder.onLoad({ filter: /.*/, namespace: 'bench-spells' }, async () => ({ contents: JSON.stringify(await benchSpells('../data')), loader: 'json' }));
   },
 };
 
@@ -35,7 +25,7 @@ if (!inputs(kit, 'fx').length || inputs(kit, 'fx').some(engineOrLaboratory)) {
   throw new Error('The effects kit must not include the engine or the laboratory: it is handed the Phaser the page already holds.');
 }
 const tag = createHash('sha256').update(await readFile('../table/battle-build/fx.js')).digest('hex').slice(0, 12);
-const result = await build({ ...options, entryPoints: { game: 'src/main.ts', live: 'src/live.ts' }, plugins: [names], define: { __KIT_TAG__: JSON.stringify(tag) } });
+const result = await build({ ...options, entryPoints: { game: 'src/main.ts', live: 'src/live.ts' }, plugins: [spells], define: { __KIT_TAG__: JSON.stringify(tag) } });
 // Enforce the separate live dependency graph at build time, including transitive imports.
 const live = inputs(result, 'live');
 if (!live.length || live.some(laboratoryOnly)) {

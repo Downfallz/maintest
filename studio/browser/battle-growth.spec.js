@@ -204,6 +204,10 @@ test('multiclass reference keeps close and creature selection reachable in short
   const h = await mount(page, input); await h.reference(); await expect(page.locator('#atlas-progress')).toContainText('Multiclass · Predator · Stage IV / Brute · Stage I');
   // A tile speaks its Stage with its number (#769).
   await expect(page.locator('#atlas-board .atlas-node[data-package="brute"]')).toHaveAccessibleName(/^Brute · Stage 1 · /);
+  // And shows it in Roman numerals, as the progress line does (#878).
+  await expect(page.locator('#atlas-board .atlas-node[data-package="brute"] .atlas-node-stage')).toHaveText('I');
+  await expect(page.locator('#atlas-board .atlas-node[data-package="predator"] .atlas-node-stage')).toHaveText('I');
+  await expect(page.locator('#atlas-board .atlas-node[data-package="cap"] .atlas-node-stage')).toHaveText('IV');
   for (const size of [{ width: 320, height: 568 }, { width: 844, height: 390 }]) {
     await page.setViewportSize(size); await page.clock.runFor(150); await fitsViewport(page, '#atlas-close, #atlas-creature');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

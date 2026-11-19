@@ -138,9 +138,15 @@ that extends it.
    (`studio/browser/battle-bench.spec.js`); across machines the renderer may differ, so a sheet is compared with
    one filmed on the same machine. `build.mjs` refuses the bench and the spell art in `live.js`, and
    `table/battle-bench.test.js` reads the built bundle for it. Left: the bench plays a spell's look, not yet a
-   move alone, a death or the ground. BC5 and BC9 add those when they build them. The blood cost's wound and a
-   fizzle are not offered as choices. The sheets are not published anywhere: `/battle-pass` (BC3) and BC10 do
-   that.
+   move alone, a death or the ground. BC5 and BC9 add those when they build them. The sheets are not published
+   anywhere: `/battle-pass` (BC3) and BC10 do that.
+
+   *Built later (2026-11-18, #843)*: the bench offers a fizzle and a blood cost, each a choice of the fixture and
+   no rule. **Outcome** plays the spell or fizzles it; a fizzle is drawn as the live page draws one
+   (`actionCue`): the fizzle's mark on the caster, and no recipient. **The caster pays in blood** adds the
+   caster as a recipient with a wound, as a blood cost's harm to its caster is drawn. It is off under a fizzle,
+   which draws no outcome. The film strip takes `--fizzle` and `--wound` (refused together), and names their
+   sheets `pummel-fizzled.png` and `pummel-wound.png`, beside the spell's own.
 3. **BC3, the designer and the pass.** The `battle-designer` agent, the `/battle-pass` skill, and the first
    storyboard, for the base attack, as the worked example. Tests: `studio/prompts.test.js` on the paths they name.
 
@@ -163,6 +169,11 @@ that extends it.
    title still name a spell by its id's old slug ("Heavy Strike" for Strike), with no mutation: the designer is
    told to stage from the content's name and the approved execution in `creature-art-direction.md`, and BC4,
    which changes what the builder publishes for an effect, gives the bench the real names.
+
+   *Built later (2026-11-18, #867)*: the bench lists each spell, and a film strip is titled, with the mutation
+   that casts it and its Stage: "Pummel · Brute, Stage I · physical · impact · melee". Strike and Focus are
+   starting spells. `battle/bench-spells.mjs` reads the spells, the mutations (`data/Tiers`), the creatures and
+   the aliases when the bundle is built; the image's battle stage copies all four, and `live.js` holds none.
 4. **BC4, the effects kit.** `battle/src/fx/`, built as a second bundle loaded after the first frame with its own
    limit, the `staging` field, the builder's validation. Needs an ADR extending ADR 0131 and ADR 0136. Tests: each
    primitive is destroyed on cancel and plays nothing under reduced motion; an unknown beat falls back to the
@@ -184,6 +195,9 @@ that extends it.
      enough to wrap around, and a misspelt `staging`. The 150 counted particles alive, so streams that start
      together passed it. A staged shake and the shared tremor of a physical blow both played.
    - The bench names a spell as its file does: Strike, not Heavy Strike.
+   - *Later (#882)*: a test reaches the cap. The bench's `kit:budget` sample starts seven streams of 24 together
+     on each target, and `studio/browser/battle-fx.spec.js` steps its film and holds the field to 150 particles
+     at every step. Counting particles alive, as the first version did, it reached 196.
    - The 120 ms BC3 left. A 120 ms burst is two or three frames at 60 a second and reads as a flicker, so the
      kit defaults to 320 ms. A staging that wants 120 ms says `lasts`. BC5, which builds the hold, decides
      whether the book's rule keeps the burst.
