@@ -403,6 +403,20 @@ that extends it.
    - "A scar that fades" is in the craft book and was not in this stage's line: not built.
    - The sky has no depth of its own before round 6, where it is the painting's.
    - Frame time is not measured, and nobody has seen the air at the resting rate on a phone: BC10.
+   *Built later (2026-11-19)*: the owner answered the choices BC5 to BC9 had left (#910, #934, #943, #953),
+   and what the answers changed is built. Everything else they asked was approved as it stood, and each
+   storyboard's **Left** says so.
+
+   - BC5: the view trembles twice as far (5% of its shorter side, `TRAUMA.reach`). The breath did not move.
+   - BC6: the battle's ember is warmer (`0xe0763f`), so fire reads as fire. Body Slam's ground ring is an arc
+     aimed at its target; Crash keeps the whole ring.
+   - BC7: the flakes of a lowered defense are fewer, smaller and in a new, darker tint, `hide`, so they no longer
+     read as the chips of a hit. The designer read the family's last films, which BC7 had left unread: thirteen
+     agree, and Toxic Mend's beads were pulled in to its body.
+   - BC9: the light answers in both places, on the eclipse and in a pool on the ground under each figure that lost
+     health. The fog and the embers are a little stronger at round 1.
+   - Not asked, and still as built: the depth, and the finer choices under BC8's three storyboards.
+
 10. **BC10, acceptance.** Frame time under the browser's CPU throttle at phone size for every staging, the budgets,
     reduced motion across all 44, the gallery of film strips published. The record goes in `docs/art/`.
 

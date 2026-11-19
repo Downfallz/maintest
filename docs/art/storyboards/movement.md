@@ -135,7 +135,7 @@ The sheets cannot show the 8% stretch on a figure 130 px tall (about 10 px), the
 - The weight is read in absolute points, 0 to 3, 4 to 6, 7 and up. A creature's maximum health would make it a share,
   but the scene frame does not carry it; if it ever does, the scale should become one.
 - The anticipation is scaled by the outcome the host confirmed, before the number is shown. It shows nothing the
-  frame does not already hold (ADR 0131), but the owner may find that a heavy wind-up gives the result away.
+  frame does not already hold (ADR 0131). Settled by the owner, 2026-11-19: kept.
 - A heavy blow holds 80 ms at the end of its draw back and strikes in 520 ms: the windup stays 840 ms, so
   `table/battle-timing.js` does not move. The draw back and the strike are no longer `DRAW_MS` and `STRIKE_MS`
   for a medium or heavy blow; the code keeps their sum.
@@ -328,7 +328,7 @@ The sheets cannot show the stop's tremor or the feel of the zoom at full speed.
 
 - The body does not stay where it fell: it sinks back onto its own spot while it fades, because the settled frame,
   which replays and reloads also show, has it at home. A body that stays where the blow sent it would need the
-  settled frame to change, which reaches `arrange` and every replay: a decision for the owner, not this stage.
+  settled frame to change, which reaches `arrange` and every replay. Settled by the owner, 2026-11-19: kept.
 - No colour matrix: a tint, for the reason under Cost. The book's Death entry asks for the filter during the fall;
   it should say the tint comes first, and the filter only if a film shows the tint does not read.
 - The punch zoom moves the labels and dice drawn in the scene for 200 ms, and the page's own labels over the canvas
@@ -436,13 +436,14 @@ The rows are the heaviest case: a defeat, which reaches the ceiling.
 
 | At | Lasts | Window | Layer | Beat | Pattern |
 | --- | --- | --- | --- | --- | --- |
-| 840 | 288 | impact | the camera | Trauma rises at contact by the sum of what the harmed figures add, to a ceiling of 0.6 (*house*), and falls by 0.25 every 120 ms (*house*): from 0.6, still by 1128 ms. The view's offset is 2.5% of its shorter side (*house*) × trauma² × a smooth wander on two axes, two sines an axis of the action's clock (`wander`, `table/battle-motion.js`). No rotation. | [Shake from trauma](../battle-craft.md#shake-from-trauma) |
+| 840 | 288 | impact | the camera | Trauma rises at contact by the sum of what the harmed figures add, to a ceiling of 0.6 (*house*), and falls by 0.25 every 120 ms (*house*): from 0.6, still by 1128 ms. The view's offset is 5% of its shorter side (*house*; 2.5% until the owner asked for more tremor, 2026-11-19) × trauma² × a smooth wander on two axes, two sines an axis of the action's clock (`wander`, `table/battle-motion.js`). No rotation. | [Shake from trauma](../battle-craft.md#shake-from-trauma) |
 | 840 | 200 | impact | the camera | Punch zoom on a defeat or a critical hit only: 3% in, back over 200 ms. | [Punch zoom](../battle-craft.md#punch-zoom) |
 | 1128 | 1412 | impact | the camera | Still. Nothing bright starts after 960 ms, and nothing bright remains after 1160 ms. | [The hold before the number](../battle-craft.md#the-hold-before-the-number) |
 
 What each harmed figure adds, by the health it lost: light 0.25, medium 0.40, heavy 0.55; a defeat adds 0.10 more.
-Squared, the shake is 6%, 16%, 30% and, at the ceiling, 36% of its full reach: on a phone 390 px wide, about 0.6 px,
-1.6 px, 2.9 px and 3.5 px. The light one is today's physical tremor. Still by 120 ms, 192 ms, 264 ms and 288 ms after
+Squared, the shake is 6%, 16%, 30% and, at the ceiling, 36% of its full reach: on a phone 390 px wide, about 1.2 px,
+3.1 px, 5.9 px and 7.0 px (`TRAUMA.reach` 0.05 in `table/battle-motion.js`). The light one is twice the old physical
+tremor across. Still by 120 ms, 192 ms, 264 ms and 288 ms after
 it rose.
 
 - What adds: a recipient other than the caster that lost health, in any family and any delivery. A blood cost, a
@@ -492,8 +493,8 @@ node scripts/battle/filmstrip.mjs spell:bone_ward:v1 --actor a1 --targets a1 --w
   --frames 24 --interval 60 --columns 6 --out <folder>/camera-blood.png
 ```
 
-- Light: trauma 0.25 at 840 ms, 0 at 960 ms; offset under 1 px at every frame; zoom unchanged.
-- Defeat: trauma 0.6 at 840 ms, about 0.35 at 960 ms, 0 by 1140 ms; offset under 4 px; zoom 3% above its fitted
+- Light: trauma 0.25 at 840 ms, 0 at 960 ms; offset under 1.5 px at every frame; zoom unchanged.
+- Defeat: trauma 0.6 at 840 ms, about 0.35 at 960 ms, 0 by 1140 ms; offset under 8 px (on a phone at most 7 px; on the bench, 2.6 px at 880 ms); zoom 3% above its fitted
   value at 840 ms, back by 1080 ms.
 - Blood cost (Bonewall, the caster's own ward paid in blood): trauma 0 and offset 0 at every frame.
 - Every sheet, from 1200 ms: the camera exactly where it was at 0 ms.
@@ -505,9 +506,10 @@ node scripts/battle/filmstrip.mjs spell:bone_ward:v1 --actor a1 --targets a1 --w
   close enough.
 - Every family shakes by damage, not only the physical one. Damage is the weight; a heavy fireball should be felt as
   a heavy paw. `docs/art/spell-vfx.md` now says that health lost by another creature, in any family, moves the
-  view. The owner may still refuse it.
+  view. Settled by the owner, 2026-11-19: kept.
 - The kit's `shake` beat changes meaning: its `strength` is trauma added, its `lasts` is no longer used. ADR 0196
   names the `shake` beat and no more, so it stands; `battle/README.md` says what the beat does now.
-- The scale of the offset is 2.5% of the shorter side, so a desktop shakes more pixels than a phone, the same share.
+- The scale of the offset is 5% of the shorter side (doubled from 2.5% on the owner's word, 2026-11-19, for more
+  tremor; the breath is unchanged), so a desktop shakes more pixels than a phone, the same share.
 - The book's rule changed: under "The hold before the number", **Here**, the bright beats now start within 120 ms
   of contact and are gone within 320 ms of it.

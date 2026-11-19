@@ -334,7 +334,7 @@
       { "beat": "gather", "at": 840, "lasts": 320, "on": "target", "count": 12, "shape": "dot", "tint": "family", "reach": 200, "strength": 0.8, "blend": "normal" },
       { "beat": "glow", "at": 1160, "lasts": 420, "tint": "family", "reach": 170, "strength": 0.55, "blend": "screen" },
       { "beat": "burst", "at": 1240, "lasts": 400, "count": 6, "shape": "shard", "tint": "hide", "direction": "out", "spread": 360, "reach": 140, "strength": 0.05, "blend": "normal" },
-      { "beat": "flow", "at": 1240, "lasts": 600, "count": 6, "shape": "dot", "tint": "family", "direction": "out", "spread": 360, "reach": 120, "strength": 0.5, "blend": "normal" }
+      { "beat": "flow", "at": 1240, "lasts": 600, "count": 6, "shape": "dot", "tint": "family", "direction": "out", "spread": 360, "reach": 60, "strength": 0.5, "blend": "normal" }
     ]
   },
   "spell:parasite_jab:v1": {
