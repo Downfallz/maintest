@@ -10,6 +10,8 @@
 //   node scripts/battle/filmstrip.mjs spell:hateful_sacrifice:v1 --wound    # its caster pays in blood
 //   node scripts/battle/filmstrip.mjs spell:pummel:v1 --damage 8 --defeat   # a heavy blow that defeats its target
 //   node scripts/battle/filmstrip.mjs spell:pummel:v1 --motion              # and, beside the sheet, how the figures and the view stand at each frame
+//   node scripts/battle/filmstrip.mjs spell:pummel:v1 --round 12            # on the ground as it stands at round 12
+//   node scripts/battle/filmstrip.mjs --still --interval 1000               # the field at rest: the ground alone
 //   node scripts/battle/filmstrip.mjs --all --out artifacts/filmstrips      # one sheet an entry
 //
 // It serves `table/` itself; the bundle must be built first (`npm --prefix battle run build`).
@@ -40,11 +42,15 @@ export async function openBench(page, base) {
  * Film one effect on an open bench: `frames` pictures of the field, `interval` milliseconds of the bench's clock
  * apart, the first at 0. Returns [{ ms, stage, png }], and leaves the bench at rest with its loop running.
  */
-export async function filmFrames(page, { spell, actor, targets, speed, outcome = 'played', wound = false, damage = null, defeat = false, frames = 12, interval } = {}) {
+export async function filmFrames(page, { spell, actor, targets, speed, outcome = 'played', wound = false, damage = null, defeat = false, round = 1, still = false, frames = 12, interval } = {}) {
   // Refused before the film starts: a started film has stopped the bench's loop.
   if (interval !== undefined && interval % FILM_TICK_MS !== 0) throw new Error(`The interval must be a multiple of ${FILM_TICK_MS} ms.`);
   // The outcome and the wound are asked each time: a sheet never inherits the last one's.
-  const started = await page.evaluate(options => window.battleBench.film.start(options), { spell, actor, targets, speed, outcome, wound, damage, defeat });
+  // The round's scenery is asked for before the film and waited for: a plate that arrived mid-film would change
+  // the sheet from one run to the next.
+  await page.evaluate(asked => window.battleBench.choose({ round: asked }), round);
+  await page.waitForFunction(() => !window.battleBench.loading());
+  const started = await page.evaluate(options => window.battleBench.film.start(options), { spell, actor, targets, speed, outcome, wound, damage, defeat, round, still });
   const step = interval ?? started.interval;
   const field = page.locator('#battle-zone');
   // What a sheet cannot show (a breath of a pixel, a tremor of the view) is read from the scene at each frame.
@@ -133,6 +139,7 @@ const SWITCHES = {
   '--fizzle': (_, film) => { film.outcome = 'fizzled'; },
   '--wound': (_, film) => { film.wound = true; },
   '--defeat': (_, film) => { film.defeat = true; },
+  '--still': (_, film) => { film.still = true; },
 };
 
 // The flags that take a value, and where it goes.
@@ -146,7 +153,7 @@ const VALUED = {
     if (!Number.isInteger(film.damage) || film.damage < 0) throw new Error('--damage is a whole number of health points.');
   },
 };
-for (const flag of ['--speed', '--frames', '--interval', '--columns', '--scale']) {
+for (const flag of ['--speed', '--frames', '--interval', '--columns', '--scale', '--round']) {
   VALUED[flag] = (text, options, film) => {
     const number = Number(text);
     if (!Number.isFinite(number) || number <= 0) throw new Error(`${flag} needs a positive number.`);
@@ -156,7 +163,12 @@ for (const flag of ['--speed', '--frames', '--interval', '--columns', '--scale']
 
 // What the flags cannot say alone: the ones that do not go together.
 function refuseConflicts(options, film) {
-  if (options.all === options.spells.length > 0) throw new Error('Name one or more effects (spell:pummel:v1), or --all.');
+  if (film.still) {
+    // The field at rest plays no spell: nothing that tells a play goes with it.
+    if (options.all || options.spells.length > 0) throw new Error('--still films the field at rest: it names no effect and takes no --all.');
+    if (film.outcome || film.wound || film.defeat || 'damage' in film) throw new Error('--still plays nothing: no --fizzle, --wound, --damage or --defeat.');
+  } else if (options.all === options.spells.length > 0) throw new Error('Name one or more effects (spell:pummel:v1), --all, or --still.');
+  if (film.round !== undefined && (!Number.isInteger(film.round) || film.round > 30)) throw new Error('--round is a whole round, 1 to 30.');
   // The live page draws no outcome with a fizzle (`actionCue`): a wound with one would film what never plays.
   if (film.outcome === 'fizzled' && film.wound) throw new Error('--fizzle and --wound do not go together: a fizzle is drawn with no outcome.');
   if (film.outcome === 'fizzled' && (film.defeat || 'damage' in film)) throw new Error('--fizzle goes with no --damage and no --defeat: a fizzle harms nobody.');
@@ -188,9 +200,9 @@ export function motionLines({ title, frames }) {
 }
 
 // A fizzle's or a wound's sheet beside the spell's own, not over it.
-export function fileName(spell, { outcome, wound, damage = null, defeat } = {}) {
-  const asked = [outcome === 'fizzled' ? 'fizzled' : null, wound ? 'wound' : null, damage, defeat ? 'defeat' : null];
-  return `${[spell.split(':')[1] ?? spell, ...asked.filter(one => one !== null)].join('-')}.png`;
+export function fileName(spell, { outcome, wound, damage = null, defeat, round, still } = {}) {
+  const asked = [outcome === 'fizzled' ? 'fizzled' : null, wound ? 'wound' : null, damage, defeat ? 'defeat' : null, round > 1 ? `round${round}` : null];
+  return `${[still ? 'ground' : spell.split(':')[1] ?? spell, ...asked.filter(one => one !== null)].join('-')}.png`;
 }
 
 async function main(argv) {
@@ -205,13 +217,15 @@ async function main(argv) {
     const context = await browser.newContext({ viewport: PHONE, deviceScaleFactor: options.scale, isMobile: true, hasTouch: true });
     const page = await context.newPage();
     await openBench(page, options.base ?? served.base);
-    const spells = options.all ? await page.evaluate(() => window.battleBench.entries.map(one => one.id)) : options.spells;
+    const all = options.all ? await page.evaluate(() => window.battleBench.entries.map(one => one.id)) : options.spells;
+    // The field at rest is one film, of no effect.
+    const spells = options.film.still ? [undefined] : all;
     const single = Boolean(options.out?.endsWith('.png'));
     const folder = single ? null : resolve(options.out ?? join(root, 'artifacts/filmstrips'));
     // One effect after the other, on purpose: they are all filmed on the one bench this page holds.
     for (const spell of spells) {
       const { sheet, motion } = await filmRecord(page, { ...options.film, spell });
-      const path = single ? resolve(options.out) : join(folder, fileName(spell, options.film));
+      const path = single ? resolve(options.out) : join(folder, fileName(spell ?? '', options.film));
       await mkdir(dirname(path), { recursive: true });
       await writeFile(path, sheet);
       console.log(path);
