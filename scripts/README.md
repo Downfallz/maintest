@@ -16,6 +16,7 @@ The scripts the gate, the learning loop and the reports run. Each command, with 
 | `spells-report/` | The spells the bots cast and leave (`/spells-report`). |
 | `design-system/` | The design system rebuilt from the repository (`/design-system`). |
 | `battle/` | The names the installed Phaser declares, for the craft book (docs/art/battle-craft.md) and its test; and the film strip of one effect, filmed on the bench (`battle/README.md`). |
+| `ux/` | The journey film (docs/art/ux-craft-plan.md, UX2): the five journeys walked on the built showcase and a real host, a contact sheet and a file of measures each, one interaction across time, the first paints, and the baseline's page. |
 | `markdown-anchors.mjs` | The anchors GitHub gives a markdown file's headings, for the tests that follow a link to one (`studio/prompts.test.js`, `studio/storyboards.test.js`). |
 | `terminology.mjs` | The one reader of docs/domain/player-terminology.md's tables, for every scanner of the player's words. |
 | `sync-branding.mjs`, `matte-opaque-art.py` | The brand tokens inlined into the pages, and a portrait given its alpha. |

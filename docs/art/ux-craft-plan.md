@@ -1,6 +1,6 @@
 # Plan: the pages' craft, the two doors, the lessons, the lobby, a player's pages and the match's frame staged by a designer who can see
 
-Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 is built; UX2 is next.
+Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 and UX2 are built; UX3 is next.
 Each stage below is one pull request.
 
 ## What the owner asked for
@@ -252,6 +252,27 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
    measures, `--strip`. The first sheets and measures are the baseline, kept in `docs/art/journeys/baseline.md`.
    Tests: two runs of one journey give the same measures; a walk reaches every screen it names; the script is in
    `docs/reference/commands.md`.
+
+   *Built (2026-11-19)*: `scripts/ux/journey.mjs` walks `doors`, `lessons`, `lobby`, `pages` and `match` at 320 by
+   568 and 390 by 844, each on a set of its own: the showcase built and served, and a host with developer
+   accounts and a table of seed 7. It writes a contact sheet and a file of measures a width, `--strip` films one
+   interaction with the animations stopped and the timers held, and `--paint` loads the three doors five times on
+   a slow phone and reports the median with the fastest and the slowest. `scripts/ux/baseline.mjs` lays a walk
+   out as [the baseline](journeys/baseline.md): 104 screens, then the paints. The lessons are played with their
+   recorded answers, the match's first round with the first choice the host offers. `studio/ux-journey.test.js`
+   holds the arguments, the journeys' names, the measures and the baseline's page; `studio/browser/table.journey.js`
+   walks the doors twice on the real engine and compares, and films a strip twice. axe-core joins the browser
+   suite's development dependencies here, since the measures need it; UX4's ADR still names it.
+   What the baseline shows beyond the walk above: at 320 by 568 a player cannot reach a tempo or a second
+   creature's tab in the planning sheet, in three lessons and in a game, and the notifications' button covers the
+   match's Settings; the walk records each as `blocked` and makes the choice by script, so the rest is filmed. The paints
+   agree with this plan's own walk (4.3 s and 4.7 s). The home's shift is 0.26 on the slow phone and 0.00 on a fast
+   network: UX9 is held to the slow one. A screen's shift moves by a hundredth between two walks, so it is
+   written on the line and left out of the comparison. Left: Google's button cannot be pressed, so the name window is opened by
+   the walk and marked staged; a lobby table's seed is the host's, so the lobby's game differs between walks
+   while its screens measure the same; a game against a person, a turn that arrives and an invitation accepted
+   are not walked; a strip holds the timers set after it starts, not those already running; the sheets are
+   written to `artifacts/journeys/`, not committed.
 3. **UX3, the designer and the pass.** The `ux-designer` agent, the `/ux-pass` skill, the format of a brief
    (`docs/art/journeys/README.md`) with a test that holds it, and the first brief, for the two doors, as the
    worked example. Tests: `studio/prompts.test.js` on the paths they name; the brief's nine parts.
