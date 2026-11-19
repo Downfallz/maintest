@@ -82,7 +82,7 @@ public sealed class PackageTagsTests : IDisposable
     {
         const string art = """
             {
-              "spell:guard:v1": { "family": "physical", "motif": "plates", "delivery": "cast", "staging": [ { "beat": "motif", "at": 840 } ] },
+              "spell:guard:v1": { "family": "physical", "motif": "plates", "delivery": "cast", "staging": [ { "beat": "motif", "at": 840 }, { "beat": "burst", "at": 840, "direction": "along", "level": "feet" } ] },
               "spell:strike:v1": { "family": "physical", "motif": "plates", "delivery": "cast" }
             }
             """;
@@ -100,6 +100,8 @@ public sealed class PackageTagsTests : IDisposable
         staging.ValueKind.ShouldBe(JsonValueKind.Array);
         staging[0].GetProperty("beat").GetString().ShouldBe("motif");
         staging[0].GetProperty("at").GetInt32().ShouldBe(840);
+        staging[1].GetProperty("direction").GetString().ShouldBe("along");
+        staging[1].GetProperty("level").GetString().ShouldBe("feet");
         cards.Single(card => card.GetProperty("id").GetString() == "spell:strike:v1").GetProperty("visual").GetProperty("staging").ValueKind.ShouldBe(JsonValueKind.Null);
     }
 }

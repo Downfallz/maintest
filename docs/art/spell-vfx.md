@@ -34,7 +34,7 @@ BC8 stage the other families. Each staging is written first as a storyboard
 ([physical](storyboards/physical.md), [the base actions](storyboards/base-actions.md)), and how much it may ask
 for goes by the Stage of the mutation that teaches the spell: [the ladder](storyboards/README.md#the-ladder).
 A base action is the quietest thing in the battle, a Stage III spell the loudest. The strokes of the `impact`
-and `slash` motifs now run along the line of the blow, over a dark edge, staged or not.
+motif run along the line of the blow and the `slash` strokes cut 60° across it, over a dark edge, staged or not.
 
 ## Timing and integrity
 

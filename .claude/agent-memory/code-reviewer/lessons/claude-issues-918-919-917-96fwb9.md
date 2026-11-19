@@ -1,0 +1,4 @@
+# code-reviewer lessons (branch claude/issues-918-919-917-96fwb9)
+- A test that reads a label an effect writes about itself (`setData('facing', degrees(heading))`) proves the label, not the drawing: the arc is drawn around `onGround(heading)`, which no test reads. Assert the drawn geometry, or write the label from the value drawn (#918, glow.ts arc, 2311c0f).
+- An "aimed" beat (`direction: along`) falls back to UP when there is no blow: an Ally spell cast on its caster (TargetingRules: Ally includes the actor, battle-playback.js:164 drops it from `contact`) gets arcs behind the figure. Grep each aimed beat's spell targeting for Self/Ally (#918, Thundering Seal, 2311c0f).
+- Second time (#812, then #918): a field added to SpellBeat reaches `/api/catalogue`, whose route test (PackageTagsTests) reads only `beat` and `at`; belongs in `.claude/rules/tests.md` for every record a route serializes.

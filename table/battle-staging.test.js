@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { ACTION_MS, ANCHORS, BEATS, BLENDS, DIRECTIONS, MAX_BEATS, MAX_PARTICLES, SHAPES, TINTS, stagingBeats, MAX_REACH } from './battle-staging.js';
+import { ACTION_MS, ANCHORS, BEATS, BLENDS, DIRECTIONS, LEVELS, MAX_BEATS, MAX_PARTICLES, SHAPES, TINTS, stagingBeats, MAX_REACH } from './battle-staging.js';
 import { IMPACT_MS, VFX_MS, WINDUP_MS } from './battle-timing.js';
 
 const visual = staging => ({ family: 'physical', motif: 'impact', delivery: 'melee', staging });
@@ -28,6 +28,24 @@ test('a beat is read with its defaults, its window and its delay inside it', () 
 test('a burst nobody aimed fans all around', () => {
   assert.equal(stagingBeats(visual([{ beat: 'burst', at: 840 }]))[0].spread, 360);
   assert.equal(stagingBeats(visual([{ beat: 'burst', at: 840, spread: 90 }]))[0].spread, 90);
+});
+
+test('a beat starts at its figure\'s centre unless it says its feet or its head', () => {
+  assert.deepEqual([...LEVELS], ['feet', 'centre', 'head']);
+  const [centre, feet, head] = stagingBeats(visual([
+    { beat: 'burst', at: 840 }, { beat: 'flow', at: 900, level: 'feet' }, { beat: 'glow', at: 900, level: 'head' },
+  ]));
+  assert.deepEqual([centre.level, feet.level, head.level], ['centre', 'feet', 'head']);
+  assert.equal(stagingBeats(visual([{ beat: 'burst', at: 840, level: 'knees' }])), null);
+});
+
+test('a ring aimed along the blow or back against it opens as an arc of 120° unless told', () => {
+  const [round, along, back, told] = stagingBeats(visual([
+    { beat: 'glow', at: 840, shape: 'ring' }, { beat: 'glow', at: 900, shape: 'ring', direction: 'along' },
+    { beat: 'glow', at: 960, shape: 'ring', direction: 'back' }, { beat: 'glow', at: 1000, shape: 'ring', direction: 'along', spread: 90 },
+  ]));
+  assert.equal(round.spread, undefined);
+  assert.deepEqual([along.spread, back.spread, told.spread], [120, 120, 90]);
 });
 
 test('a beat near the end of its window is shortened to end inside it', () => {
@@ -72,6 +90,7 @@ test('the page and the builder hold one vocabulary', () => {
   assert.deepEqual(list('Tints'), [...TINTS]);
   assert.deepEqual(list('Blends'), [...BLENDS]);
   assert.deepEqual(list('Directions'), [...DIRECTIONS]);
+  assert.deepEqual(list('Levels'), [...LEVELS]);
   assert.deepEqual(list('Single'), ['motif', 'flash', 'shake']);
   assert.equal(number('WindupMs'), WINDUP_MS);
   assert.equal(number('ActionMs'), WINDUP_MS + IMPACT_MS);

@@ -280,4 +280,8 @@ try {
 const title = () => { const { entry, outcome, wound, damage, defeat } = chosen(); return filmTitle(entry, { speed: speed(), outcome, wound, damage, defeat }); };
 Object.assign(window, { battleBench: { entries, samples, creatures, kit: () => scene.effectsKit, stop: rest, title,
   shaking: () => scene.motion.view.trauma > 0, motion: () => scene.motion, choose: (options: FilmOptions) => { choose(options); rest(); }, play, film: filmClock,
-  effects: () => scene.children.list.filter(child => child.name === 'spell-vfx').map(child => ({ ...child.data.getAll(), alpha: (child as Phaser.GameObjects.Graphics).alpha })) } });
+  places: () => scene.effectsPlaces, anchors: () => scene.anchors, halo: () => scene.actingHalo,
+  effects: () => scene.children.list.filter(child => child.name === 'spell-vfx').map(child => {
+    const { alpha, x, y } = child as Phaser.GameObjects.Graphics;
+    return { ...child.data.getAll(), alpha, x, y };
+  }) } });

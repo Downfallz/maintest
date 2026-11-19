@@ -373,7 +373,9 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 - **Cost**: one draw call. Keep the trail dimmer and smaller than the head.
 - **Reduced motion**: nothing.
 - **Here**: the quill flies bare. The kit's `trail` (`battle/src/fx/trail.ts`) follows a head that eases as the
-  quill does; BC7 gives it to the two projectile spells.
+  quill does; BC7 gives it to the two projectile spells. At the feet it is a crack: the head goes at an even pace
+  and what it leaves stays for the whole beat, since a head that eased in crossed the field between two frames
+  (#918, Groundbreaker).
 
 ### Gravity well and convergence
 
@@ -448,6 +450,8 @@ bake the drawing to a texture first, or filter a container.
   Since BC6 a `glow` with the shape of a ring is a shock ring: one image of a thin ring, flattened onto the
   ground under the figure, that opens to its reach over the whole beat and fades (*house*). Two of them 160 ms
   apart read as an aftershock. It is the strongest single beat the kit has, kept for Stage II and Stage III.
+  A pulse on the acting figure was drowned out by the gold rim the scene draws around it: while one plays, the rim is
+  quieted to a fifth (*house*) and given back when the beat ends or is cleared (#919).
 
 ### Blur
 
@@ -577,8 +581,9 @@ bake the drawing to a texture first, or filter a container.
 - **Cost**: none beyond the burst.
 - **Reduced motion**: nothing.
 - **Here**: the recoil already follows that line. The kit's burst takes a direction (`along`, `back`, `up`,
-  `out`) and a spread, and each particle is turned to its heading. Since BC6 the strokes of the `impact` and
-  `slash` motifs run along the line of the blow too, each over a dark edge, for every spell that draws them.
+  `out`) and a spread, and each particle is turned to its heading. Since BC6 the strokes of the `impact` motif
+  run along the line of the blow too, each over a dark edge, for every spell that draws it; the `slash` strokes
+  cut 60° across it (*house*), so a claw and a hammer differ when the blow is vertical (#919).
 
 ## The ground
 
@@ -643,6 +648,32 @@ bake the drawing to a texture first, or filter a container.
 - **Reduced motion**: nothing: the settled frame has no scar.
 - **Here**: not built. A scar is decoration, never state: a replay and a first load show none. BC9 fades it
   inside the settle window, so no frame the player can navigate to holds one.
+
+### A beat on the ground
+
+- **What**: a beat says where it starts on its figure: at the feet, at the centre or at the head. What starts at
+  the feet lies on the ground: its travel toward or away from the eye is shortened, so dust from a stamp stays low
+  and a blow struck up the field throws its debris along the ground, not up the screen. A shock ring lies there
+  too, and a ring aimed at its targets opens as an arc on their side only, so it does not sweep through a
+  neighbour. A trail at the feet of both figures is a crack running from the caster to its target.
+- **Source**: [Particle System](https://unpkg.com/phaser@4.2.1/skills/particles/SKILL.md), Phaser 4.2.1, for an
+  emitter's zone and its place. The ground's slant, 0.42 of a distance across it (*house*), is the one the `wave`
+  and `roar` motifs already draw their rings with.
+- **Phaser**: the emitter placed at the level's point, its pieces' vertical travel multiplied by the slant, and a
+  zone flattened the same way through `Phaser.Types.GameObjects.Particles.ParticleEmitterConfig.emitZone`. The
+  aimed ring is one `Phaser.GameObjects.Graphics` whose arc is drawn again on each step with
+  `Phaser.GameObjects.Graphics#clear` and `Phaser.GameObjects.Graphics#strokePoints`, from
+  `Phaser.Types.Tweens.TweenBuilderConfig.onUpdate`; its heading is `Phaser.Math.Angle.Between` the two figures,
+  turned onto the ground.
+- **Cost**: none for a level. An aimed ring is one `Graphics` of about 20 points, drawn again each frame of its
+  beat, in the vectors' batch.
+- **Reduced motion**: nothing.
+- **Here**: the kit's `level` (`feet`, `centre`, `head`), read by `table/battle-staging.js` and checked by
+  `SpellArt`; the scene gives each figure its feet and head besides its centre. The ring of a `glow` lies at the
+  feet whatever its level; with a `direction` of `along` or `back` it is an arc, 120° unless its `spread` says
+  (*house*). Along and back, a burst's piece is shortened at every level, since it follows a blow struck across
+  the ground. The physical spells use it first: Pummel's and Body Slam's dust, Crushing Stomp's crown, Alpha
+  Roar's rings and Groundbreaker's ring and crack.
 
 ## Reading
 

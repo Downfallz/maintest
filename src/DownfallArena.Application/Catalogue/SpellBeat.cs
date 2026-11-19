@@ -17,6 +17,7 @@ namespace DownfallArena.Application.Catalogue;
 /// <param name="Spread">The width of its fan, in degrees.</param>
 /// <param name="Reach">How far it reaches, as a percentage of the figure's radius.</param>
 /// <param name="Strength">How strong it is, between 0 and 1.</param>
+/// <param name="Level">Where on its figure it starts: its feet, its centre or its head.</param>
 public sealed record SpellBeat(
     string Beat,
     int At,
@@ -29,4 +30,5 @@ public sealed record SpellBeat(
     string? Direction = null,
     int? Spread = null,
     int? Reach = null,
-    double? Strength = null);
+    double? Strength = null,
+    string? Level = null);

@@ -56,6 +56,9 @@ public sealed class SpellArt
     /// <summary>Where a beat heads: all around, along the blow, back against it, or up.</summary>
     public static readonly IReadOnlyList<string> Directions = ["out", "along", "back", "up"];
 
+    /// <summary>Where on its figure a beat starts: at its feet, which lie on the ground, at its centre, or at its head.</summary>
+    public static readonly IReadOnlyList<string> Levels = ["feet", "centre", "head"];
+
     /// <summary>The length of the windup at 1×, in milliseconds (<c>table/battle-timing.js</c>): a beat that starts before it ends inside it.</summary>
     public const int WindupMs = 840;
 
@@ -273,7 +276,7 @@ public sealed class SpellArt
         (string Name, string? Word, IReadOnlyList<string> Among)[] words =
         [
             ("on", beat.On, Anchors), ("shape", beat.Shape, Shapes), ("tint", beat.Tint, Tints),
-            ("blend", beat.Blend, Blends), ("direction", beat.Direction, Directions),
+            ("blend", beat.Blend, Blends), ("direction", beat.Direction, Directions), ("level", beat.Level, Levels),
         ];
         foreach (var (name, word, among) in words)
         {
@@ -351,6 +354,8 @@ public sealed class SpellArt
 
         public double? Strength { get; init; }
 
-        public SpellBeat ToBeat() => new(Beat, At ?? 0, On, Lasts, Count, Shape, Tint, Blend, Direction, Spread, Reach, Strength);
+        public string? Level { get; init; }
+
+        public SpellBeat ToBeat() => new(Beat, At ?? 0, On, Lasts, Count, Shape, Tint, Blend, Direction, Spread, Reach, Strength, Level);
     }
 }

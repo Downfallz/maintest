@@ -962,12 +962,12 @@ plays them through the kit, `src/fx/`:
 | `motif` | The spell's own motif, starting and lasting as the staging says. Drawn by `spell-effects.ts`. | each target |
 | `burst` | Particles at once from one point, in a fan: each leaves fast, slows, falls a little and fades. | a figure |
 | `flow` | A steady stream from all over a figure, for as long as the beat lasts. | a figure |
-| `trail` | Particles left behind a head that travels from the caster to a target. | caster to target |
+| `trail` | Particles left behind a head that travels from the caster to a target. At the feet, a crack along the ground. | caster to target |
 | `gather` | Particles that start on a ring around a figure and land on it. | a figure |
-| `glow` | One soft dot, blended as light, that swells and goes: a glow that costs one image. With `shape: ring`, a shock ring: a thin ring lying on the ground under the figure, which opens to its `reach` over the whole beat and fades. | a figure |
+| `glow` | One soft dot, blended as light, that swells and goes: a glow that costs one image. With `shape: ring`, a shock ring: a thin ring lying on the ground at the figure's feet, which opens to its `reach` over the whole beat and fades; aimed `along` or `back`, an arc on that side only, 120° unless its `spread` says. | a figure |
 | `flash` | The figure filled flat in one colour for a frame or two. One a staging. | a figure |
 | `shake` | Adds its `strength` to the view's trauma ("The movement"), on top of what the health lost adds. One a staging. The trauma's own fall sets how long the view moves, not `lasts`. | the view |
-| `pulse` | A halo around the figure's own silhouette, by a filter, removed when the beat ends. Costly: see ADR 0196. | a figure |
+| `pulse` | A halo around the figure's own silhouette, by a filter, removed when the beat ends. On the acting figure its gold rim is quieted meanwhile. Costly: see ADR 0196. | a figure |
 
 - The kit is a second bundle. `build.mjs` builds `fx.js` first, refuses it if it holds the engine or a
   laboratory module, and writes its hash into `game.js` and `live.js`, which fetch `fx.js?v=<hash>` once the
@@ -986,9 +986,17 @@ plays them through the kit, `src/fx/`:
   height, so a burst under 250 stays over the body and is lost against the motif, and 300 clears it (BC6's
   first films). On `burst`, `flow` and `gather` a `strength` is the size of the pieces: 0.5 unless told, 1 half
   as large again.
-- The `impact` and `slash` strokes of a motif run along the line of the blow, from the caster's side of the
-  figure to the far side, each over an edge in the palette's soot; a wound, which has no caster to come from,
-  leans as before (`paintStrokes` in `src/spell-effects.ts`).
+- A beat's `level` is where on its figure it starts: `feet`, `centre` (unless told) or `head`; the scene gives
+  each figure's feet and head besides its centre. At the feet a beat lies on the ground: a burst's pieces travel
+  across it at 0.42 of their reach toward or away from the eye and do not fall, a gather's ring and a flow's band
+  are flattened the same way. A burst aimed `along` or `back` has its pieces shortened at every level, since it
+  follows a blow struck across the ground (the craft book, "A beat on the ground").
+- The `impact` strokes of a motif run along the line of the blow, from the caster's side of the figure to the far
+  side, and the `slash` strokes cut 60° across it, each over an edge in the palette's soot; a wound, which has no
+  caster to come from, leans as before (`paintStrokes` in `src/spell-effects.ts`). The `blood` tint and the wound
+  are a deep red, 0x9a3b34.
+- What is drawn on the caster itself, its wound or its mark, goes with its body while the action carries it and
+  comes home with it (`EffectFigure.drift`).
 - Which spells are staged, and how much each may ask for by the Stage of its mutation:
   `docs/art/storyboards/README.md`, "The ladder". `studio/staging-ladder.test.js` holds the bands, and
   `studio/browser/battle-stagings.spec.js` plays every staged spell on the bench.
