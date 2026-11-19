@@ -14,7 +14,8 @@ const RULEBOOK = '/rules';
 const RULEBOOK_OWN = new Set([RULEBOOK, '/rules.js', '/rules.css', '/rules.json', '/rules.fr.json']);
 // What it shares with every page: given only when the network cannot answer at all, never in place of a server error,
 // so that no other page is drawn with an older deploy's style.
-const RULEBOOK_SHARED = ['/table.css', '/lobby.css', '/identity.css', '/brand-mark.svg', '/fonts/marcellus-latin-400.woff2'];
+// The motion kit's module is one of them (ADR 0197): without it the account's less motion would not reach the book.
+const RULEBOOK_SHARED = ['/table.css', '/lobby.css', '/identity.css', '/motion.js', '/brand-mark.svg', '/fonts/marcellus-latin-400.woff2'];
 const RULEBOOK_FILES = new Set([...RULEBOOK_OWN, ...RULEBOOK_SHARED]);
 
 const ICON = '/icon-192.png';

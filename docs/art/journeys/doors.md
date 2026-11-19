@@ -19,8 +19,7 @@ What holds for every screen of the journey:
 
 - The identity is settled: slate, bone and soot, gold for the one action, the cut corner on the filled action and
   on a centred window. No shade and no face is added. The showcase reads the same tokens through
-  `docs/art/branding.css`; the motion tokens named here are declared in `table/table.css` today, and UX4 brings
-  them to the showcase through `scripts/sync-branding.mjs`. Until it does, no beat of the showcase plays.
+  `docs/art/branding.css`, which has held the motion tokens beside the palette since UX4 (ADR 0197).
 - Every beat moves `transform` or `opacity`, is written inside `prefers-reduced-motion: no-preference`, and
   starts on a press, a navigation or the screen in view. Nothing starts on a clock.
 - The game's pages show what the host said: signed out, an invitation, a name taken. The page decides none of it.
@@ -86,7 +85,7 @@ today five are sent at more than twice it. The mutations' specimens are not rest
 | Beat | When | Moves | Pattern | Token |
 | --- | --- | --- | --- | --- |
 | The press | A pointer down on Play now or How to play. | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms) | `--motion-fast`, `--motion-standard` |
-| The breath | The hero's Colossus in view. | `transform` | [Ambience](../ux-craft.md#ambience), [A picture that moves](../ux-craft.md#a-picture-that-moves) | *UX4*: a breath of about 4 s, eased in and out, one scale of at most 1.5% |
+| The breath | The hero's Colossus in view. | `transform` | [Ambience](../ux-craft.md#ambience), [A picture that moves](../ux-craft.md#a-picture-that-moves) | `--motion-breath`: the kit's `.motion-breath`, a scale of 1.5%, eased in and out |
 | The language | A press on FR or EN: a navigation inside the showcase's one origin. | `opacity` | [A page that changes](../ux-craft.md#a-page-that-changes) | `--motion-normal`, `--motion-standard` |
 
 The breath is the one ambience of the screen. It stops out of view, in a hidden tab and under less motion. I chose
@@ -124,7 +123,8 @@ the hero for it, not the round below, because the round's strip is ambience of i
 - The foot's Play now as an outline is a choice: it never shares a phone's screen with the hero's, and the owner
   may keep it filled. The measure would then read 2.
 - Whether the ground or the Colossus is the largest paint after the change is to be read on the next `--paint`.
-- The breath needs UX4's form of ambience. Until UX4, the Colossus stays still.
+- The breath is the kit's `.motion-breath`. UX6 places it and loads `table/motion.js` on the showcase, so
+  that the breath plays only in view.
 
 ## A round seen played (new)
 
@@ -176,7 +176,7 @@ again. They are drawn at 320 px as 288 by 162 px. They go through UX5's sizes li
 
 | Beat | When | Moves | Pattern | Token |
 | --- | --- | --- | --- | --- |
-| The cast | The Cast strip comes into view. It plays once, rests on its last frame, and plays again only when the strip comes back into view. | `transform` | [Show the effect](../ux-craft.md#show-the-effect), [A picture that moves](../ux-craft.md#a-picture-that-moves) | *UX4*: six steps over about 1.2 s, `steps()` timing |
+| The cast | The Cast strip comes into view. It plays once, rests on its last frame, and plays again only when the strip comes back into view. | `transform` | [Show the effect](../ux-craft.md#show-the-effect), [A picture that moves](../ux-craft.md#a-picture-that-moves) | `--motion-strip`: six steps, `steps()` timing |
 
 The strip is ambience: it stops under less motion, out of view and in a hidden tab. It plays once, so WCAG's
 2.2.2 does not ask for a pause; it never repeats faster than three times a second.

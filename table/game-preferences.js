@@ -105,6 +105,8 @@ export function mountGameSettings(doc, storage, { request = accountRequest } = {
     fields.help.checked = settings.help; fields.reducedMotion.checked = settings.reducedMotion; fields.reactions.checked = settings.reactions;
     el('game-settings-where').textContent = settingsWhere(account);
   }
+  // The motion kit (motion.js) reads less motion from what this browser keeps: it is told when that may have changed.
+  const told = () => doc.defaultView?.dispatchEvent?.(new Event('downfall:settings'));
   function problem(message) { el('game-settings-problem').textContent = message ?? ''; el('game-settings-problem').hidden = !message; }
   async function refresh() {
     const mine = ++ticket;
@@ -113,13 +115,15 @@ export function mountGameSettings(doc, storage, { request = accountRequest } = {
     await saving;
     const answer = await loadSettings(storage, request);
     if (mine !== ticket) return;
-    account = answer.account; show(answer.settings);
+    account = answer.account; show(answer.settings); told();
     el('game-settings-fields').disabled = false;
   }
   for (const opener of doc.querySelectorAll('[data-home-dialog="app-settings-dialog"]')) opener.addEventListener('click', () => { problem(null); void refresh(); });
   el('game-settings').addEventListener('submit', event => event.preventDefault());
   el('game-settings').addEventListener('change', () => {
     const value = { pace: fields.pace.value, speed: Number(fields.speed.value), help: fields.help.checked, reducedMotion: fields.reducedMotion.checked, reactions: fields.reactions.checked };
+    // This browser keeps the choice at once, and the page follows it, without waiting for the host's answer.
+    saveLocalSettings(storage, value); told();
     saving = saving.then(() => saveSettings(storage, value, { account, request })).then(() => problem(null),
       error => problem(`Saved in this browser only: ${error?.message ?? 'the host did not answer'}.`));
   });

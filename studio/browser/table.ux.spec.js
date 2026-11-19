@@ -93,7 +93,7 @@ test('the table draws the timeline in the host\'s order, with its cursor and its
 // The motion tokens (UX 01): buttons, creatures and held cards ease their colours over --motion-fast, and a
 // person who asks the system for reduced motion gets every token at zero and no transition or animation that
 // lasts, whether or not the effect was built on the tokens.
-test('interaction transitions use the motion tokens, and reduced motion makes every one immediate', async ({ page }) => {
+test('interaction transitions use the motion tokens, and less motion, the system\'s or the account\'s, makes every one immediate', async ({ page }) => {
   const read = () => page.evaluate(() => {
     const root = getComputedStyle(document.documentElement);
     const button = getComputedStyle(document.querySelector('#board-toggle'));
@@ -102,14 +102,19 @@ test('interaction transitions use the motion tokens, and reduced motion makes ev
 
   const moving = await read();
   expect(moving.normal).toBe('220ms');
-  // Border and background over --motion-fast; UX 02 adds the shadow, and the press over --motion-instant.
-  expect(moving.duration).toBe('0.12s, 0.12s, 0.12s, 0.08s');
+  // Border, background and shadow over --motion-fast, and so is the motion kit's press (ADR 0197).
+  expect(moving.duration).toBe('0.12s, 0.12s, 0.12s, 0.12s');
   expect(moving.easing).toContain('cubic-bezier(0.2, 0, 0, 1)');
 
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const still = await read();
-  expect(still.normal).toBe('0ms');
+  // The tokens stay, for the kit's fades; the classic sheet's net cuts what the page itself moves.
+  expect(still.normal).toBe('220ms');
   expect(still.duration.split(', ').map(parseFloat).every(seconds => seconds < 0.001)).toBe(true);
+
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.evaluate(() => document.documentElement.setAttribute('data-motion', 'less'));
+  expect((await read()).duration.split(', ').map(parseFloat).every(seconds => seconds < 0.001)).toBe(true);
 });
 
 // Buttons (UX 02): a pressed toggle says so in gold, but a component's own selected look stays its own -- a
@@ -161,16 +166,16 @@ test('panels fade in as they open, and not at all with reduced motion', async ({
   expect(await animation('#talent-window')).toBe('none');
 });
 
-test('the lobby\'s dialog opens with the table\'s entrance', async ({ page }) => {
+test('the lobby\'s dialog opens with the motion kit\'s entrance, and no second one from the classic sheet', async ({ page }) => {
   await page.route('**/api/**', route => route.fulfill({ json: {} }));
   await page.goto('/table/lobby.html');
-  const name = await page.evaluate(() => {
+  const entrance = await page.evaluate(() => {
     const dialog = document.getElementById('create-dialog');
     dialog.showModal();
-    return getComputedStyle(dialog).animationName;
+    return { animation: getComputedStyle(dialog).animationName, fades: dialog.getAnimations().map(one => one.transitionProperty).includes('opacity') };
   });
 
-  expect(name).toBe('panel-enter');
+  expect(entrance).toEqual({ animation: 'none', fades: true });
 });
 
 test('mobile header saves space and the guide stays above the sticky round bar', async ({ page }, info) => {

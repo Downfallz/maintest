@@ -6,3 +6,4 @@ A centred window (`dialog`): cut top right by `cut-window` (16px), grain and soo
 - The consumer provides the body and at most one `.primary`, placed last among the actions.
 - The backdrop is `soot` at 82%.
 - A sheet docked to an edge of the screen (the match's planning, combat and upkeep sheets, any window under 620px wide) sets `--cut: 0px` and stays square.
+- It enters by the motion kit: a fade over `motion-normal`, from 8px below under full motion, and leaves faster, in `motion-fast`. Its backdrop fades with it. Nothing to add in a page sheet.

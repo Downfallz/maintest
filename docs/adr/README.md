@@ -219,5 +219,6 @@ UPDATE_INDEXES=1 dotnet test --project tests/DownfallArena.Architecture.Tests
 | [0194](0194-keep-what-each-seat-was-last-shown-beside-the-table.md) | Keep what each seat was last shown beside the table | Accepted |
 | [0195](0195-open-the-rulebook-in-the-language-its-address-asks-for.md) | Open the rulebook in the language its address asks for | Accepted (settled by the owner on #732). Amends [0193](0193-write-the-rulebook-in-french-beside-the-english.md) (the language `/rules` opens in) |
 | [0196](0196-stage-a-spell-in-beats-an-effects-kit-plays.md) | Stage a spell in beats an effects kit plays | Accepted |
+| [0197](0197-hold-the-pages-to-wcag-aa-a-vocabulary-of-motion-and-a-budget.md) | Hold the pages to WCAG 2.2 AA, a vocabulary of motion and a budget | Accepted |
 
 <!-- index:end -->

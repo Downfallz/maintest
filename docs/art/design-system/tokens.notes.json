@@ -246,6 +246,47 @@
         }
       ]
     },
+    "motion": {
+      "note": "The pages' vocabulary of motion (ADR 0197). A rule names a token, never a number; only transform and opacity move. Under less motion travel becomes a fade.",
+      "tokens": [
+        {
+          "name": "motion-instant",
+          "usage": "The shortest answer: a card of the classic table under a finger."
+        },
+        {
+          "name": "motion-fast",
+          "usage": "A press on a control; a window that leaves; a change of border or fill."
+        },
+        {
+          "name": "motion-normal",
+          "usage": "A window that enters; a thing that arrives in a list."
+        },
+        {
+          "name": "motion-slow",
+          "usage": "A number that changes. No beat is longer."
+        },
+        {
+          "name": "motion-enter",
+          "usage": "The curve of what enters: fast, then it settles."
+        },
+        {
+          "name": "motion-exit",
+          "usage": "The curve of what leaves: it gathers speed and goes."
+        },
+        {
+          "name": "motion-standard",
+          "usage": "The curve of what stays on screen: a press."
+        },
+        {
+          "name": "motion-breath",
+          "usage": "One cycle of ambience: a picture that breathes. One a screen, in view; still under less motion."
+        },
+        {
+          "name": "motion-strip",
+          "usage": "One pass of a strip of frames, stepped. Ambience, as the breath is."
+        }
+      ]
+    },
     "shadow": {
       "tokens": [
         {
