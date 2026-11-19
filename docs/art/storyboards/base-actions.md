@@ -91,9 +91,10 @@ node scripts/battle/filmstrip.mjs spell:heavy_strike:v1 --actor a1 --targets b1 
 - 720 ms: the caster about halfway to b1.
 - 840 and 900 ms: the caster's silhouette touches b1's and does not cover its head. b1 is filled flat in bone in
   these two frames and in no other frame of either sheet.
-- 900 ms: the three strokes lean along the line from a1 to b1, each with its dark edge, and read against b1's hide.
-  The chips are on the far side of b1 from a1, none on a1's side. Nothing in the effect is gold.
-- 960 ms: b1 is no longer filled; the chips above b1's head, clear of its outline.
+- 900 ms: the strokes faint on b1's bone fill. Nothing in the effect is gold.
+- 960 ms: b1 is no longer filled; the three strokes upright, along the blow struck up the field, each with its dark
+  edge, and read against b1's hide. The chips short, just over b1's head, on its far side from a1, none on a1's
+  side: along a blow struck up the field they are shortened to 0.42 of their reach.
 - 1080 ms: no chip left; the strokes still near full. The caster has left b1.
 - 1200 ms: the strokes at about half their brightness.
 - 1140 or 1200 ms: b1 at the far end of its recoil, off its home along the line from a1, away from a1.
@@ -110,8 +111,8 @@ feel at full speed: do not judge them from a sheet.
 - The four choices below are built as proposed; the owner approves or refuses on the sheets.
   - No gather in Strike's windup. A melee blow loads in the body, and a gather on the caster says "cast". The other
     melee spells take the same answer unless their own storyboard stages a windup beat.
-  - The strokes lean along the blow for the whole `impact` and `slash` motif, not for Strike alone: every melee blow
-    has a direction.
+  - The strokes follow the blow for every `impact` motif, not for Strike alone: every melee blow has a direction.
+    The `slash` strokes now cut 60° across it instead (the owner's choice), so the two motifs read apart.
   - The dark edge under the strokes, 1.5 px (*house*); the film strip tunes it. Raising the ring's alpha instead was
     set aside, because the ring is the motif's secondary shape and should stay lower.
   - The 8 chips. They may be refused as too much for an action seen every round; without them Strike still reads,
@@ -152,7 +153,7 @@ Filmed at `15ee3b0`, 390 by 844, 1×, a1 on itself:
 | --- | --- | --- | --- | --- | --- |
 | 0 | 840 | windup | the caster | The body loads and rises as every cast does ([movement.md](movement.md), "A cast and a projectile"): a 4% squash, then a 4% stretch upward at contact. No mark, no arc, no particle on the caster. | [Anticipation](../battle-craft.md#anticipation), [Squash and stretch](../battle-craft.md#squash-and-stretch) |
 | 840 | 360 | impact | the caster | The release to rest, as every cast. The caster lost no health: no flash, no recoil, no trauma. | [Contact and follow-through](../battle-craft.md#contact-and-follow-through) |
-| 840 | 300 | impact | the effect | Gather: six soft grey-blue dots (*house*) start on a ring at 1.3 radii from a1's centre (*house*) and land on it at 1140 ms, brightening as they arrive. Screen blend, so they do not blow out on the hide: `gather at 840, on caster, count 6, shape dot, tint family, reach 220, lasts 300, blend screen` | [Gravity well and convergence](../battle-craft.md#gravity-well-and-convergence), [Additive light](../battle-craft.md#additive-light) |
+| 840 | 300 | impact | the effect | Gather: six soft grey-blue dots (*house*) start on a ring 220 px from a1's centre (*house*), just outside its outline, and land on it at 1140 ms, brightening as they arrive. Screen blend, so they do not blow out on the hide: `gather at 840, on caster, count 6, shape dot, tint family, reach 220, lasts 300, blend screen` | [Gravity well and convergence](../battle-craft.md#gravity-well-and-convergence), [Additive light](../battle-craft.md#additive-light) |
 | 1080 | 460 | impact | the effect | The motif settles where the dots land: the ellipse and its vertical stroke on a1's body, arriving over a third of its life, then fading. Destroyed at 1540 ms: `motif at 1080, lasts 460` | [Shape before colour](../battle-craft.md#shape-before-colour), [The three parts of an effect](../battle-craft.md#the-three-parts-of-an-effect) |
 | 1540 | 1000 | impact | the field | Nothing. a1 at rest, moved by its breath only. The result, the energy gained, is read here. | [The hold before the number](../battle-craft.md#the-hold-before-the-number), [Breath at rest](../battle-craft.md#breath-at-rest) |
 
@@ -189,10 +190,10 @@ node scripts/battle/filmstrip.mjs spell:wait:v1 --actor a1 --targets a1 \
 ```
 
 - 0 to 780 ms: no arc, mark or particle on a1, only its halo.
-- 900 and 960 ms: faint grey-blue dots around a1, none farther than about 1.3 radii from its centre, none on its
+- 900 ms: nothing seen yet. 960 ms: two or three faint dots just above a1's back, outside its outline, none on its
   middle; no mark yet.
-- 1080 ms: the dots nearer a1's centre than at 960 ms, and brighter.
-- 1140 or 1200 ms: no dot left; the ellipse and its stroke on a1's chest, at full strength.
+- 1020 and 1080 ms: the dots on a1's back and nearer its centre than at 960 ms.
+- 1140 ms: no dot left, no mark yet. 1200 ms: the ellipse and its stroke on a1's chest, at full strength.
 - 1380 ms: the mark fainter than at 1200 ms.
 - 1680 ms: no effect object on the field.
 - Every frame: a1 never filled flat in any colour; nothing on a2, a3 or the other side; nothing in the effect gold;
@@ -208,8 +209,10 @@ The sheets cannot show the load's squash, the feel at full speed or the sound: d
   owner wants it. Until then the dots carry the inward reading.
 - The gather plays after contact, not in the windup: the Base action band allows no windup beat, and the body's
   load already says "about to cast".
-- Six dots, not eight: Focus must stay under Strike. Screen, not add, so they stay grey-blue on the hide; the film
-  strip says whether they read at all, and reach or count is tuned there.
+- Six dots, not eight: Focus must stay under Strike. Screen, not add, so they stay grey-blue on the hide.
+- The reach: built at 220, which the storyboard first wrote as "about 1.3 radii" (#917). I keep 220: on the film
+  the dots start just outside a1's outline (960 ms), which is what the 1.3 radii meant, and they read without
+  drawing the eye. The row now says 220.
 - The craft book's "Gravity well and convergence" names only BC8's use of the kit's `gather`; Focus is the first.
   Its **Here** line could say so, in the book's own change.
 - The energy gained is the result text's to say, not an effect's.
