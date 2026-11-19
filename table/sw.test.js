@@ -310,7 +310,7 @@ test('installing keeps the offline page and the rulebook: the page, its script, 
 
   await install(w);
 
-  for (const path of ['/offline.html', '/rules', '/rules.js', '/rules.css', '/rules.json', '/rules.fr.json', '/identity.css', '/brand-mark.svg']) {
+  for (const path of ['/offline.html', '/rules', '/rules.js', '/rules.css', '/rules.json', '/rules.fr.json', '/identity.css', '/motion.js', '/brand-mark.svg']) {
     assert.ok(w.store.has(path), `${path} is kept`);
   }
 });

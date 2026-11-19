@@ -176,8 +176,9 @@ html[data-feedback-muted] #settings-dialog .settings-feedback { display: none; }
    for less. table/motion.test.js reads this block. */
 
 /* 1. A press answers on the control itself, at once: a lighter shade, and under full motion the control sinks.
-   The transition has no specificity, so a control that names its own transitions keeps them. */
-:where(button, a.primary, .button-link):not(:disabled, [aria-disabled="true"]):active { filter: brightness(1.14); }
+   Neither the shade nor the transition has any specificity: a control that has a filter of its own, as a fallen
+   creature's grey portrait has, or names its own transitions, keeps them. */
+:where(button, a.primary, .button-link):where(:not(:disabled, [aria-disabled="true"]):active) { filter: brightness(1.14); }
 @media (prefers-reduced-motion: no-preference) {
   :where(:root:not([data-motion="less"])) :where(button, a.primary, .button-link) { transition: scale var(--motion-fast) var(--motion-standard); }
   :root:not([data-motion="less"]) :where(button, a.primary, .button-link):not(:disabled, [aria-disabled="true"]):active { scale: .98; }

@@ -4,8 +4,8 @@
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import test from 'node:test';
-import { SETTINGS_KEY, ambienceToPlay, lessMotion, mountMotion, numberChanged, reach, savedLess } from './motion.js';
-import { saveLocalSettings } from './game-preferences.js';
+import { SETTINGS_KEY, abortedTransition, ambienceToPlay, lessMotion, mountMotion, numberChanged, reach, savedLess } from './motion.js';
+import { mountGameSettings, saveLocalSettings } from './game-preferences.js';
 
 const root = new URL('../', import.meta.url);
 const read = path => readFileSync(new URL(path, root), 'utf8');
@@ -241,7 +241,65 @@ test('under less motion a page is left at once: the old page skips the transitio
   assert.equal(skipped, 1);
 });
 
-test('the settings panel tells the page when a setting is saved or read from the account', () => {
-  const source = read('table/game-preferences.js');
-  assert.match(source, /downfall:settings/);
+test('a page\'s transition the browser gave up on is answered, and no other rejection is', () => {
+  const aborted = Object.assign(new Error('Transition was aborted because of invalid state. Viewport size changed'), { name: 'InvalidStateError' });
+  assert.equal(abortedTransition(aborted), true);
+  assert.equal(abortedTransition(Object.assign(new Error('The object is in an invalid state.'), { name: 'InvalidStateError' })), false);
+  assert.equal(abortedTransition(new Error('Transition was aborted, said a host')), false);
+  assert.equal(abortedTransition('Transition was aborted'), false);
+  assert.equal(abortedTransition(undefined), false);
+
+  const { win, listeners } = windowOf();
+  mountMotion(win);
+  const answered = [];
+  for (const reason of [aborted, new Error('The host did not answer')]) {
+    for (const listener of listeners.unhandledrejection) listener({ reason, preventDefault: () => answered.push(reason.message) });
+  }
+  assert.deepEqual(answered, [aborted.message]);
+});
+
+test('the kit\'s module comes before a page\'s own scripts, so its answer is given before theirs', () => {
+  for (const name of readdirSync(new URL('table/', root)).filter(name => name.endsWith('.html'))) {
+    const page = read(`table/${name}`), kit = page.indexOf('src="motion.js"');
+    if (kit < 0) continue;
+    const others = [...page.matchAll(/<script[^>]*\ssrc="([^"]+)"/g)].filter(match => match[1] !== 'motion.js').map(match => match.index);
+    for (const at of others) assert.ok(at > kit, `table/${name}: a script before motion.js`);
+  }
+});
+
+test('the settings panel tells the page at once when less motion is ticked, before the host answers, and again once the account is read', async () => {
+  const made = {};
+  const el = id => (made[id] ??= { id, listeners: {}, value: 'step', checked: false, hidden: false, textContent: '', addEventListener(type, listener) { this.listeners[type] = listener; } });
+  const told = [];
+  let answerSave;
+  const storage = storageOf();
+  const doc = { getElementById: el, querySelectorAll: () => [], defaultView: { dispatchEvent: event => told.push(`${event.type}: ${savedLess(storage) ? 'less' : 'full'}`) } };
+  const request = (path, body) => (body ? new Promise(resolve => { answerSave = resolve; }) : Promise.resolve({ saved: false }));
+  const panel = mountGameSettings(doc, storage, { request });
+  el('game-settings-speed').value = '1';
+
+  el('game-settings-motion').checked = true;
+  el('game-settings').listeners.change();
+  assert.deepEqual(told, ['downfall:settings: less'], 'the page follows before the host has answered');
+  answerSave?.({});
+
+  panel.setAccount();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(told.at(-1), 'downfall:settings: less');
+  assert.ok(told.length >= 2, 'the account once read is told too');
+});
+
+test('a keyframe written outside full motion moves opacity alone, whatever its name', () => {
+  for (const sheet of ['table/identity.css', 'showcase/showcase.css']) {
+    for (const { under, property } of declarations(kitOf(sheet))) {
+      if (!under.some(rule => rule.startsWith('@keyframes')) || under.includes(FULL_MOTION)) continue;
+      assert.equal(property, 'opacity', `${sheet}: ${under.join(' { ')} { ${property}`);
+    }
+  }
+});
+
+test('a press never outranks a control\'s own look: a fallen creature\'s portrait stays grey under the finger', () => {
+  const press = declarations(kitOf('table/identity.css')).filter(one => one.property === 'filter');
+  assert.equal(press.length, 1);
+  assert.match(press[0].under.at(-1), /:where\([^()]*\):where\(.*:active\)$/, 'the press has no specificity');
 });

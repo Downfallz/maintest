@@ -19,7 +19,7 @@ What holds for every screen of the journey:
 
 - The identity is settled: slate, bone and soot, gold for the one action, the cut corner on the filled action and
   on a centred window. No shade and no face is added. The showcase reads the same tokens through
-  `docs/art/branding.css`, the motion tokens with the palette since UX4 (ADR 0197).
+  `docs/art/branding.css`, which has held the motion tokens beside the palette since UX4 (ADR 0197).
 - Every beat moves `transform` or `opacity`, is written inside `prefers-reduced-motion: no-preference`, and
   starts on a press, a navigation or the screen in view. Nothing starts on a clock.
 - The game's pages show what the host said: signed out, an invitation, a name taken. The page decides none of it.
@@ -123,8 +123,8 @@ the hero for it, not the round below, because the round's strip is ambience of i
 - The foot's Play now as an outline is a choice: it never shares a phone's screen with the hero's, and the owner
   may keep it filled. The measure would then read 2.
 - Whether the ground or the Colossus is the largest paint after the change is to be read on the next `--paint`.
-- The breath is the kit's `.motion-breath`. UX6 places it, and brings `table/motion.js` to the showcase, which
-  lets it play in view only.
+- The breath is the kit's `.motion-breath`. UX6 places it and loads `table/motion.js` on the showcase, so
+  that the breath plays only in view.
 
 ## A round seen played (new)
 

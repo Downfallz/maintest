@@ -11,7 +11,7 @@ What the client may never decide is in docs/tabletop/playtest-app.md; the routes
 - `identity.css`, loaded last by every page, owns the shared bone-and-soot parts: buttons, cards, windows,
   headers (ADR 0158, docs/art/branding.md). `fonts/` holds the display face the host serves.
 - The motion kit (ADR 0197, `docs/art/branding.md#motion`): its forms at the foot of `identity.css`, and
-  `motion.js`, which every page that loads `identity.css` loads, for less motion and ambience.
+  `motion.js`, which every page that loads `identity.css` also loads: it handles less motion and ambience.
 - `battle-*.js`: the shared modules the battle view imports. `battle-build/` is the bundle `battle/` builds:
   ignored, never committed, never edited by hand.
 - `/battle-lab` is an isolated visual study on fictional sample frames, not a live seat
@@ -50,7 +50,7 @@ Every flag of `table` is in docs/reference/commands.md.
   only the battle bundle imports joins it too: `Every_module_beside_the_page_is_served` asks it of every script here.
 - `identity.css` stays last in every page's `<head>`.
 - Motion comes from the kit: a token of `docs/art/branding.css`, never a number; `transform` and `opacity` only;
-  travel under full motion alone. A closed `<dialog>` is still displayed while it fades: read `open`, not `display`. The
+  travel under full motion alone. A `<dialog>` stays displayed while it fades after closing: test `open`, not `display`. The
   match's windows are not in the kit yet (UX12).
 - The host serves a page with its stylesheets and `battle-build/` bundles named `?v=<tag>` (`TableFiles`), so a cache
   cannot pair a page with another deploy's bundle. A module another module imports keeps its bare name.

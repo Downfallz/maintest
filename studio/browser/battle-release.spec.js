@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
 
+// A stubbed page takes the page's transition as every page of the table does (the motion kit, ADR 0197): arriving
+// from a page that offers one at a page that does not, or at one of another size, is a rejection the browser reports.
+const TAKES_TRANSITION = '<meta name="viewport" content="width=device-width, initial-scale=1"><style>@view-transition { navigation: auto; }</style>';
+
 test('the lobby opens every seat in the battle view, with no view to choose, whatever an older choice said (ADR 0157)', async ({ page }) => {
   const held = { table: { id: 'release-table', format: '3v3', round: 2, openSeats: 0 }, seats: [{ seat: 'player1', token: 'accepted-seat' }] };
   await page.route('**/api/**', route => {
@@ -8,8 +12,8 @@ test('the lobby opens every seat in the battle view, with no view to choose, wha
     if (path === '/api/lobby') return route.fulfill({ json: { tables: [], recording: true } });
     return route.fulfill({ json: { mode: 'off' } });
   });
-  await page.route('**/battle?**', route => route.fulfill({ contentType: 'text/html', body: '<p>Chosen battle</p>' }));
-  await page.route('**/play?**', route => route.fulfill({ contentType: 'text/html', body: '<p>Chosen table</p>' }));
+  await page.route('**/battle?**', route => route.fulfill({ contentType: 'text/html', body: `<p>Chosen battle</p>${TAKES_TRANSITION}` }));
+  await page.route('**/play?**', route => route.fulfill({ contentType: 'text/html', body: `<p>Chosen table</p>${TAKES_TRANSITION}` }));
   // A browser that once chose the table in the old dropdown plays the battle too.
   await page.addInitScript(() => localStorage.setItem('downfall.presentation', 'table'));
   await page.goto('/table/lobby.html'); await expect(page.locator('#presentation')).toHaveCount(0);

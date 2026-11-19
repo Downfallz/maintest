@@ -1,6 +1,6 @@
 // The motion kit's module (ADR 0197, docs/art/ux-craft.md#motion). The kit itself is CSS, in identity.css: this
 // brings it what CSS cannot read. The setting for less motion (ADR 0140) becomes one attribute on the root, which
-// the kit's rules read beside the system's preference; a page left under it skips its transition; one ambience
+// the kit's rules read beside the system's preference; under it a page being left skips its transition; one ambience
 // plays a screen, in view and in a visible tab; and a number that changes plays its beat again.
 // It imports nothing, so any page may load it.
 
@@ -39,6 +39,15 @@ export function numberChanged(element) {
   element.classList.add('motion-changed');
 }
 
+/**
+ * Whether a rejection is the browser's own, for a page's transition it gave up on: the page arrived at a size
+ * that differs, or from a page that offered a transition this one does not take. The page changed at once, as
+ * the kit allows, and nothing is wrong.
+ */
+export function abortedTransition(reason) {
+  return reason?.name === 'InvalidStateError' && String(reason.message ?? '').startsWith('Transition was aborted because of');
+}
+
 /** Plays `.motion-breath` only in view and in a visible tab, one a screen. The kit's CSS leaves it still otherwise. */
 function watchAmbience(win) {
   const doc = win.document, inView = new Set();
@@ -72,6 +81,9 @@ export function mountMotion(win = globalThis) {
   if (battle && win.MutationObserver) new win.MutationObserver(apply).observe(battle, { attributes: true, attributeFilter: ['data-reduced-motion'] });
   // A rule of CSS cannot gate a page's transition on an attribute: the page being left skips it.
   win.addEventListener('pageswap', event => { if (less()) event.viewTransition?.skipTransition(); });
+  // The browser hands that to the page as a rejection nobody holds. Answered here, it is not reported as an error,
+  // by the browser or by the page's own catcher (feedback-sheet.js), which this module's place in the head precedes.
+  win.addEventListener('unhandledrejection', event => { if (abortedTransition(event.reason)) event.preventDefault(); });
   return { watch: watchAmbience(win) };
 }
 

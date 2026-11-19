@@ -54,8 +54,10 @@ load are set in the file UX5 writes, from the pictures at the size they are draw
   out by name. A part added to the kit joins that list.
 - Bad: no released Firefox changes a page with a transition, and a busy phone may drop one: the page then changes
   at once. A window's exit needs `transition-behavior`; without it the window closes at once.
-- Bad: the account's setting is read from the browser's copy, so a page opened on a new device shows full motion
-  until the settings are read once there. The system's preference needs no copy.
+- Bad: the account's setting is read from the browser's copy, by a module that runs after the first paint: a new
+  device shows full motion until the settings are read there once. The system's preference needs neither.
+- Bad: a page of the origin that does not take the transition, arrived at from one that offers it, is handed a
+  rejection by the browser. Every page that loads the identity takes it; a page that does not is the lab's.
 - Neutral: the match's windows still open at once. Its docked sheets are part of the frame, which moves when
   one opens, and a fade there is staged with the 18 as one family (UX12). The classic table's mutation tree,
   always open and dragged about, is not a window of the kit.
@@ -66,7 +68,8 @@ load are set in the file UX5 writes, from the pictures at the size they are draw
 - Three durations, as the plan proposed: the four were in use, and a rename is a second set for a while.
 - A spring for what enters: bone and soot is carved, and an overshoot on a window reads as play, not weight.
 - An animation library: the platform does each form in CSS, and the pages take no dependency (ADR 0024).
-- Keep the blanket that cuts everything: it is no motion, not less, and it cut the fade that tells a window came.
+- Keep the blanket that cuts everything: it removes all motion rather than lessening it, the fade that tells a
+  player a window has opened included.
 - Gate a page's transition on the attribute in CSS: an at-rule cannot read one; the page being left skips it.
 
 ## Follow-up

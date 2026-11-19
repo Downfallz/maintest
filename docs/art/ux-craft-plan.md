@@ -306,25 +306,31 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
    *Built (2026-11-19)*: [ADR 0197](../adr/0197-hold-the-pages-to-wcag-aa-a-vocabulary-of-motion-and-a-budget.md)
    sets the level, the vocabulary, the five uses, less motion and the budget, and names axe-core. The motion
    tokens moved from `table/table.css` to `docs/art/branding.css` under their own names, four durations and three
-   curves, with a breath and a strip beside them; `scripts/sync-branding.mjs` and the showcase's build carry
-   them to both doors. The kit is a block at the foot of `table/identity.css`: a press, a window, a page that
-   changes, a thing that arrives (`.motion-arrive`), a number that changes (`.motion-number`) and the breath
-   (`.motion-breath`), each written first as a fade and given its travel under full motion alone.
-   `table/motion.js`, loaded by every page that loads the identity, sets `data-motion="less"` on the root from
-   the account's setting, and from the game's own on the battle's page, has a page left under it skip its
-   transition, and lets one breath play, in view. The classic sheet's blanket became a net that leaves the
-   kit's parts out, and its own entrance of a window went. The showcase has the press and the page that
-   changes. The two values the doors' brief asked of the kit are tokens. `table/motion.test.js` holds the
-   tokens, the forms as text and the module; `studio/browser/motion-kit.spec.js` plays the kit on seven pages:
-   under less motion, the system's or the account's, none animates a `transform` and a window still fades.
-   The design system has a motion family and a Motion chapter. Left: the match's 18 windows open at once as
-   before. A first try gave them the form, and a docked sheet that fades is still visible to a test, and to a
-   player, after it closed: UX12 stages them. The classic table's mutation tree is not a window of the kit. No page places an
-   arrival, a number or a breath yet, and the showcase does not load the module: UX6 and UX9 do. A
-   page's transition is offered by Chromium and Safari and by no released Firefox, and was seen dropped on a
-   busy machine. The account's setting is read from the browser's copy, so a new device shows full motion until
-   the settings are read there once. A brief still writes `*UX4*` for a value the kit lacks. The budget's bytes
-   wait for UX5's file.
+   curves; `scripts/sync-branding.mjs` and the showcase's build carry them to both doors. The two values the
+   doors' brief asked for are now tokens (`--motion-breath`, `--motion-strip`). The kit is a block at the foot
+   of `table/identity.css`: a press, a window, a page that changes, a thing that arrives (`.motion-arrive`), a
+   number that changes (`.motion-number`) and the breath (`.motion-breath`), each written first as a fade, with
+   its travel added under full motion only. `table/motion.js`, loaded by every page that loads the identity,
+   sets `data-motion="less"` on the root from the account's setting, and from the game's own on the battle's
+   page; under it a page being left skips its transition. It lets one breath play, in view. The classic
+   sheet's blanket became a net that leaves the kit's parts out, and its own entrance of a window went. The
+   showcase has the press and the page that changes. The design system has a motion family and a Motion
+   chapter.
+
+   `table/motion.test.js` holds the tokens, the forms as text and the module.
+   `studio/browser/motion-kit.spec.js` plays the kit on seven pages: under less motion, the system's or the
+   account's, none animates a `transform`, and a window still fades.
+
+   Left: the match's 18 windows still open at once. A first try gave them the form, but a docked sheet that
+   fades stays visible, to a test and to a player, after it has closed. UX12 stages them. The classic table's
+   mutation tree is not a window of the kit. No page places an arrival, a number or a breath yet, and the
+   showcase does not load the module: UX6 and UX9 place them, and UX6 brings the module to the showcase.
+   Chromium and Safari offer a page's transition, no released Firefox does, and it was seen dropped on a busy
+   machine. A page of the origin that does not take the transition, arrived at from one that offers it, is
+   handed a rejection by the browser: every page of the table takes it, and the specs' stubbed pages now do.
+   The account's setting is read from the browser's copy, by a module that runs after the first paint: a new
+   device shows full motion until the settings are read there once. A brief still writes `*UX4*` for a value
+   the kit lacks. The budget's bytes wait for UX5's file.
 5. **UX5, the picture kit.** The script that derives a page's sizes from the library, the `<img>` form, a still
    moved by code and the form of a strip of frames, the icon set, the budget file and its test, and how a brief's
    request reaches the owner and comes back through the intake. Tests: every picture a page names has its size

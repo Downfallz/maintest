@@ -263,7 +263,7 @@
         },
         {
           "name": "motion-slow",
-          "usage": "A number that changes. The longest a beat may take."
+          "usage": "A number that changes. No beat is longer."
         },
         {
           "name": "motion-enter",

@@ -67,7 +67,7 @@ of `table/identity.css`, with `table/motion.js`, and the showcase's part in `sho
 | `--motion-fast` | 120 ms | A press; a window that leaves |
 | `--motion-normal` | 220 ms | A window that enters; a page that changes; a thing that arrives |
 | `--motion-slow` | 360 ms | A number that changes |
-| `--motion-enter`, `--motion-exit`, `--motion-standard` | Curves | What enters, what leaves, what stays |
+| `--motion-enter`, `--motion-exit`, `--motion-standard` | Curves | For what enters, what leaves, what stays on screen |
 | `--motion-breath` | 4 s | One cycle of ambience |
 | `--motion-strip` | 1.2 s | One pass of a strip of frames |
 
@@ -75,9 +75,9 @@ of `table/identity.css`, with `table/motion.js`, and the showcase's part in `sho
   number that changes (`.motion-number`, then `numberChanged()`). Ambience is `.motion-breath`: one a screen, in view.
 - A rule names a token, never a number, and moves `transform` (or `translate`, `scale`, `rotate`) and `opacity` only.
 - Less motion is a form: write the fade first, and the travel inside `@media (prefers-reduced-motion:
-  no-preference)` under `:root:not([data-motion="less"])`. `table/motion.test.js` refuses travel written elsewhere
-  in the kit.
-- A new part of the kit that fades under less motion joins the list the net of `table/table.css` leaves out.
+  no-preference)` under `:root:not([data-motion="less"])`. `table/motion.test.js` fails when the kit writes
+  travel outside that block.
+- A new part of the kit that fades under less motion is added to the exceptions of the net in `table/table.css`.
 - No spring. An exit is shorter than its entry. Nothing starts on a clock.
 
 ## Usage

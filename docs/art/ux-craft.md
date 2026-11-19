@@ -510,7 +510,7 @@ These come from decisions already taken. No pattern below is an exception to the
 - **Less motion and screen reader**: the tokens stay; a rule under `prefers-reduced-motion` chooses the fade.
 - **Here**: three curves, `--motion-enter`, `--motion-exit` and `--motion-standard`, with the durations in
   `docs/art/branding.css`, which `scripts/sync-branding.mjs` copies into the table's sheets and the showcase's
-  build reads. UX4 moved them there from `table/table.css` under their own names: one set, and [ADR 0197](../adr/0197-hold-the-pages-to-wcag-aa-a-vocabulary-of-motion-and-a-budget.md)
+  build reads. UX4 moved them there from `table/table.css` under their own names, so there is one set. [ADR 0197](../adr/0197-hold-the-pages-to-wcag-aa-a-vocabulary-of-motion-and-a-budget.md)
   records the vocabulary.
 
 ### Transform and opacity only
@@ -524,7 +524,7 @@ These come from decisions already taken. No pattern below is an exception to the
   moved by a `transform` of its content.
 - **Cost**: a layer while it moves. `will-change` only for the length of the move.
 - **Less motion and screen reader**: `opacity` is what stays.
-- **Here**: `table/motion.test.js` holds the kit to `transform`, its single properties and `opacity`;
+- **Here**: `table/motion.test.js` holds the kit to `transform` (and `translate`, `scale`, `rotate`) and `opacity`;
   `studio/browser/motion-kit.spec.js` plays the kit on every page of the table: under less motion none animates
   a `transform`.
 
@@ -563,11 +563,11 @@ These come from decisions already taken. No pattern below is an exception to the
 - **Cost**: none.
 - **Less motion and screen reader**: `opacity` only. The window is a native `<dialog>` (see
   [A window that holds the focus](#a-window-that-holds-the-focus)).
-- **Here**: a `<dialog>` of the lobby and of the admin panel takes the form from `table/identity.css`: a fade in
+- **Here**: each `<dialog>` of the lobby and of the admin panel takes the form from `table/identity.css`: a fade in
   `--motion-normal`, from 8 px below under full motion, and an exit in `--motion-fast`, inside `@supports`. Two
-  are left out: the classic table's mutation tree, always open and shown by `hidden`, and the battle page's 18,
-  which still open at once. A docked sheet there is part of the frame, and a test that asks whether it is
-  visible is answered yes while it fades: UX12 stages the 18 as one family.
+  are left out: the classic table's mutation tree, always open and shown by `hidden`, and the battle page's 18
+  windows, which still open at once. A docked sheet there is part of the frame, and a test that asks whether it
+  is visible gets yes while it fades. UX12 stages the 18 as one family.
 
 ### A page that changes
 
@@ -582,8 +582,8 @@ These come from decisions already taken. No pattern below is an exception to the
 - **Less motion and screen reader**: under less motion the rule is not declared. Focus and the page's title
   behave as on any navigation.
 - **Here**: declared in `table/identity.css`, so between every page of the table, and in
-  `showcase/showcase.css` between the showcase's. Under the account's less motion, which an at-rule cannot read,
-  `table/motion.js` has the page being left skip it. No part moves from one page to the next yet.
+  `showcase/showcase.css` between the showcase's. An at-rule cannot read the account's less motion, so
+  `table/motion.js` makes the page being left skip the transition. No part moves from one page to the next yet.
 
 ### A spring as an easing
 
@@ -595,7 +595,8 @@ These come from decisions already taken. No pattern below is an exception to the
   `linear()` keeps the first. The fallback is *house*: the page read gives none.
 - **Cost**: a longer string in the sheet.
 - **Less motion and screen reader**: unused: a fade does not overshoot.
-- **Here**: none. [ADR 0197](../adr/0197-hold-the-pages-to-wcag-aa-a-vocabulary-of-motion-and-a-budget.md) decides that no curve of the pages is a spring: bone and soot is carved. The
+- **Here**: none. [ADR 0197](../adr/0197-hold-the-pages-to-wcag-aa-a-vocabulary-of-motion-and-a-budget.md) decides that no curve of the pages is a spring: the look is carved, and an
+  overshoot reads as play. The
   battle's own overshoot is in `table/battle-motion.js` and stays there.
 
 ### Parallax, sparingly

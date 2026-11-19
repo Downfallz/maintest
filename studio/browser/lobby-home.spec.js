@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
 
+// A stubbed page takes the page's transition as every page of the table does (the motion kit, ADR 0197): arriving
+// from a page that offers one at a page that does not, or at one of another size, is a rejection the browser reports.
+const TAKES_TRANSITION = '<meta name="viewport" content="width=device-width, initial-scale=1"><style>@view-transition { navigation: auto; }</style>';
+
 const player = { id: 'acct_aaaaaaaaaaaaaaaa', username: 'MarcF' };
 const friend = { id: 'acct_bbbbbbbbbbbbbbbb', username: 'Bastien' };
 const challenger = { id: 'acct_cccccccccccccccc', username: 'Alex' };
@@ -107,7 +111,7 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
     return route.fulfill({ status: 404, json: { message: `Unexpected ${path}` } });
   });
   // A tutorial's own page is the battle view's to test: here it is only where the lobby leads.
-  await page.route('**/battle?scenario=*', route => route.fulfill({ contentType: 'text/html', body: '<title>Tutorial</title>' }));
+  await page.route('**/battle?scenario=*', route => route.fulfill({ contentType: 'text/html', body: `<title>Tutorial</title>${TAKES_TRANSITION}` }));
   await page.goto(`/table/lobby.html${search}`);
   if (opensTutorial) return state;
   await expect(page.locator('body')).toHaveAttribute('data-home', account ? 'member' : mode === 'off' ? 'local' : 'guest');
@@ -270,7 +274,7 @@ test('joining validates the code inside its window and follows a valid invitatio
   await page.getByRole('button', { name: 'Join →', exact: true }).click();
   await expect(page.locator('#join-problem')).toHaveText('Enter the eight-character code from your invitation.');
   await expect(page.getByLabel('Invitation code')).toBeFocused();
-  await page.route('**/j/K7F2Q9XM', route => route.fulfill({ contentType: 'text/html', body: '<h1>Invitation</h1>' }));
+  await page.route('**/j/K7F2Q9XM', route => route.fulfill({ contentType: 'text/html', body: `<h1>Invitation</h1>${TAKES_TRANSITION}` }));
   await page.getByLabel('Invitation code').fill('k7f2-q9xm');
   await page.getByRole('button', { name: 'Join →', exact: true }).click();
   await expect(page).toHaveURL(/\/j\/K7F2Q9XM$/);
@@ -490,7 +494,7 @@ test('every game against a player waiting for the player is gathered under Your 
   await page.locator('#my-games-section').screenshot({ path: info.outputPath('lobby-your-turn.png') });
 
   // The battle view itself is not served here: where the tap goes is what is checked.
-  await page.route('**/battle?**', route => route.fulfill({ contentType: 'text/html', body: '<title>Battle</title>' }));
+  await page.route('**/battle?**', route => route.fulfill({ contentType: 'text/html', body: `<title>Battle</title>${TAKES_TRANSITION}` }));
   await page.locator('#play-next').click();
   await page.waitForURL(/\/battle\?player1=friend-soon-token$/);
   expect(state.errors).toEqual([]);
@@ -681,7 +685,7 @@ test('a player who has met nobody yet sees no recent opponents section', async (
 test('the bell counts what waits for the player and acts on each: play a turn, answer an invitation, answer a friend request', async ({ page }, info) => {
   const state = await home(page, { invitations: [{ table: { id: 'invited', format: '1v1' }, from: { id: friend.id, username: friend.username }, sentAt: '2026-11-09T20:00:00Z' }] });
   // The game page itself is not this test's: a stand-in answers where the bell sends the player.
-  await page.route('**/battle?**', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Game</title>' }));
+  await page.route('**/battle?**', route => route.fulfill({ contentType: 'text/html', body: `<!doctype html><title>Game</title>${TAKES_TRANSITION}` }));
   const bell = page.locator('#inbox-open'), badge = page.locator('#inbox-badge');
   await expect(bell).toBeInViewport();
   await expect(badge).toHaveText('3');
@@ -712,7 +716,7 @@ test('the bell counts what waits for the player and acts on each: play a turn, a
 test('accepting an invitation from the bell takes the seat and opens the game', async ({ page }) => {
   const state = await home(page, { incoming: [], games: [], invitations: [{ table: { id: 'invited', format: '1v1' }, from: { id: friend.id, username: friend.username } }] });
   // The game page itself is not this test's: a stand-in answers where the bell sends the player.
-  await page.route('**/battle?**', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Game</title>' }));
+  await page.route('**/battle?**', route => route.fulfill({ contentType: 'text/html', body: `<!doctype html><title>Game</title>${TAKES_TRANSITION}` }));
   await expect(page.locator('#inbox-badge')).toHaveText('1');
   await page.locator('#inbox-open').click();
   await page.locator('#inbox-dialog .inbox-item.invitation').getByRole('button', { name: 'Accept & play →' }).click();

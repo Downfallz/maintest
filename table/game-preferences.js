@@ -122,7 +122,9 @@ export function mountGameSettings(doc, storage, { request = accountRequest } = {
   el('game-settings').addEventListener('submit', event => event.preventDefault());
   el('game-settings').addEventListener('change', () => {
     const value = { pace: fields.pace.value, speed: Number(fields.speed.value), help: fields.help.checked, reducedMotion: fields.reducedMotion.checked, reactions: fields.reactions.checked };
-    saving = saving.then(() => saveSettings(storage, value, { account, request })).finally(told).then(() => problem(null),
+    // This browser keeps the choice at once, and the page follows it, without waiting for the host's answer.
+    saveLocalSettings(storage, value); told();
+    saving = saving.then(() => saveSettings(storage, value, { account, request })).then(() => problem(null),
       error => problem(`Saved in this browser only: ${error?.message ?? 'the host did not answer'}.`));
   });
   show(localSettings(storage));
