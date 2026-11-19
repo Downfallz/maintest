@@ -225,6 +225,19 @@ test('a signed-in player can read a menu panel and return to the same live match
   await fitsViewport(page, '#home-menu-toggle, #settings, #order-open');
   await page.screenshot({ path: info.outputPath('signed-in-battle-landscape.jpg'), type: 'jpeg' });
 });
+test('in a match the site\'s menu holds Learn to play at the widths either side of the lobby\'s fold', async ({ page }) => {
+  test.skip(page.viewportSize().width < 620, 'a wide screen');
+  await mount(page, { over: false, account: { id: 'acct_one', username: 'WWWWWWWWWWWWWWWWWWWW' } });
+  for (const [width, height] of [[1240, 800], [1279, 800], [1280, 800], [1440, 900]]) {
+    await page.setViewportSize({ width, height });
+    await fitsViewport(page, '#home-menu-toggle, .home-header .account-chip, #settings');
+    await page.locator('#home-menu-toggle').click();
+    const learn = page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Learn to play' });
+    await expect(learn).toBeInViewport({ ratio: 1 });
+    await expect(learn).toHaveAttribute('href', '/#learn-to-play');
+    await page.locator('#home-menu-toggle').click();
+  }
+});
 test('on a phone held upright the round\'s header is the only one: the menu and the player fold into it, History is a clock', async ({ page }, info) => {
   test.skip(page.viewportSize().width >= 620, 'a phone held upright');
   await mount(page, { over: false, account: { id: 'acct_one', username: 'Marc' } });

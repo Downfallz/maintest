@@ -28,6 +28,7 @@ a viewpoint before either private board is read.
 | Lobby | Home/dashboard | Everyone |
 | Friends | Dialog with requests, friend list, add/remove and Invite | Signed-in players |
 | Leaderboard | Existing `/leaderboard` page | Account hosts |
+| Learn to play | The lobby's Learn to play section (`/#learn-to-play`), beside Rules | Signed-in players |
 | Join with a code | Dialog validating an eight-character invitation and following `/j/<code>` | Signed-in players and local accounts-off hosts |
 | Settings | One dialog of tabs (below) | Guests in the main menu; signed-in players in the account menu, beside who is signed in |
 | Admin | Existing `/admin` page | Existing operator check |
@@ -45,7 +46,9 @@ the tab, Sign out everywhere and Delete account). A visitor sees Game and Privac
 deleting are rare and lasting, so they are not one tap away in the account menu; each still asks its own
 confirmation (deleting asks for the player name). The tabs follow the ARIA tabs pattern (arrow keys, Home, End).
 
-At 1240 CSS pixels and below, the navigation becomes a disclosure menu. Its button exposes `aria-expanded`
+At 1279 CSS pixels and below, the navigation becomes a disclosure menu. The widest bar (a 20-character player
+name of the widest letter, an operator, every entry shown, Learn to play included) needs 1275 pixels; the fold
+keeps a few in hand. Its button exposes `aria-expanded`
 and `aria-controls`; Escape and an outside click dismiss it. It is ordinary navigation rather than an ARIA
 application menu. Native dialogs handle focus containment and Escape, include an explicit close button,
 and restore focus to the menu toggle on narrow screens or their desktop opener. Long modal content scrolls
@@ -99,7 +102,7 @@ after a failed request. Existing invitation and `next` redirects are preserved.
 
 `studio/browser/lobby-home.spec.js` exercises guest/member/local modes, friend acceptance and invitation,
 modal focus and Escape, code validation, logout during an in-flight request, sign-in and automatic retry.
-Layout checks include 320, 390, 900, 1101, 1240, 1241 and 1280 CSS-pixel widths and a 740 × 320 landscape viewport.
+Layout checks include 320, 390, 900, 1101, 1240, 1279, 1280 and 1440 CSS-pixel widths and a 740 × 320 landscape viewport.
 The existing table, admin and branding browser suites cover the shared styles and behaviours.
 
 A host whose `/api/me` cannot be reached is neither signed out nor accounts-off: the introduction offers no

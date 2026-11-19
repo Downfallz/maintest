@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { firstTutorial, mountShowAgain, mountTutorials, opensByItself, tutorialCards } from './lobby-tutorials.js';
 
 const first = { id: 'sc-repo-tutorial-your-first-combat', order: 1, of: 4, title: 'Your first combat', goal: 'Hit the wounded enemy.', link: '/battle?scenario=sc-repo-tutorial-your-first-combat', state: 'new' };
@@ -128,4 +129,15 @@ test('Show the first tutorial again says so when the host has no tutorial', asyn
   assert.deepEqual(went, []);
   assert.equal(doc.ids['tutorial-again-problem'].hidden, false);
   assert.equal(doc.ids['tutorial-again-problem'].textContent, 'No tutorial is available here right now.');
+});
+
+// #669: Learn to play is an entry of the main menu's bar, beside Rules, for a signed-in account; the account menu no
+// longer holds it. Every page draws its header from navigation.js, so its source says where the entry stands.
+test('Learn to play stands in the main menu beside Rules, for a signed-in account, and not in the account menu', () => {
+  const source = readFileSync(new URL('./navigation.js', import.meta.url), 'utf8');
+  const bar = source.match(/<nav id="home-navigation"[\s\S]*?<\/nav>/)[0];
+  const accountMenu = source.match(/<div class="account-menu">[\s\S]*?<\/div><\/details>/)[0];
+  assert.match(bar, /<a id="rules-link" href="\/rules">Rules<\/a>\s*<a id="learn-link" href="\/#learn-to-play" hidden>Learn to play<\/a>/);
+  assert.doesNotMatch(accountMenu, /Learn to play/);
+  assert.match(source, /el\('learn-link'\)\.hidden = !account;/);
 });

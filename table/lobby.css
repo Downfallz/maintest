@@ -256,7 +256,7 @@
 .game-settings-panel select { min-height: 44px; min-width: 96px; }
 .game-settings-panel input[type="checkbox"] { width: 22px; height: 22px; flex: none; }
 .game-settings-panel #game-settings-where { font-size: 13px; line-height: 1.6; margin: 14px 0 0; }
-@media (max-width: 1240px) {
+@media (max-width: 1279px) {
   .home-header { gap: 14px; }
   .home-menu-toggle { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; background: transparent; min-height: 44px; }
   .home-menu-toggle > span:first-child { font-size: 18px; }

@@ -768,7 +768,7 @@
 
 /* On short landscape screens the menu and the player's button sit at the right end of the match toolbar, where the
    lobby keeps them. */
-@media (orientation: landscape) and (max-height: 500px) and (max-width: 1240px) {
+@media (orientation: landscape) and (max-height: 500px) and (max-width: 1279px) {
   .battle-page[data-home="member"] .home-header {
     position: absolute; top: env(safe-area-inset-top); left: auto; right: env(safe-area-inset-right);
     width: auto; height: 46px; min-height: 0; background: transparent; border: 0;

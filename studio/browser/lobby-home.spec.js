@@ -316,13 +316,21 @@ test('local hosts still resume games and reconnect automatically without a refre
 });
 
 test('navigation and dialogs fit narrow, intermediate and short landscape screens', async ({ page }) => {
-  await home(page, { account: { ...player, username: 'VeryLongPlayerName123' }, operator: true });
-  for (const [width, height] of [[320, 740], [900, 700], [1101, 800], [1240, 800], [1241, 800], [1280, 800], [740, 320]]) {
+  // The widest header: a 20-character name of the widest letter, an operator, and every entry of the bar shown,
+  // Learn to play included. It needs 1275 px; the menu folds up to 1279 (#669).
+  await home(page, { account: { ...player, username: 'WWWWWWWWWWWWWWWWWWWW' }, operator: true });
+  for (const [width, height] of [[320, 740], [900, 700], [1101, 800], [1240, 800], [1279, 800], [1280, 800], [1440, 900], [740, 320]]) {
     await page.setViewportSize({ width, height });
     await noOverflow(page);
     await expect(page.locator('#account-menu summary')).toBeInViewport({ ratio: 1 });
-    if (width <= 1240) await expect(page.locator('#home-menu-toggle')).toBeVisible();
-    else await expect(page.locator('#home-menu-toggle')).toBeHidden();
+    if (width <= 1279) await expect(page.locator('#home-menu-toggle')).toBeVisible();
+    else {
+      await expect(page.locator('#home-menu-toggle')).toBeHidden();
+      await expect(page.locator('#learn-link')).toBeInViewport({ ratio: 1 });
+      await expect(page.locator('#nav-admin-link')).toBeInViewport({ ratio: 1 });
+      const rows = await page.locator('#home-navigation > :visible').evaluateAll(items => new Set(items.map(item => Math.round(item.getBoundingClientRect().top))).size);
+      expect(rows).toBe(1);
+    }
     await openPanel(page, /^Friends/);
     const dialog = page.locator('#friends-dialog');
     await expect(dialog).toBeVisible();
@@ -394,7 +402,7 @@ for (const file of ['leaderboard', 'battle', 'index']) {
     expect(await page.locator('#inbox-badge').evaluate(badge => badge.getBoundingClientRect().top >= 0)).toBe(true);
     await openNavigation(page);
     const nav = page.getByRole('navigation', { name: 'Main navigation' });
-    await expect(nav.locator(':scope > :visible')).toHaveText(['Lobby', /Friends/, 'Leaderboard', 'Your stats', 'Rules', 'Join with a code']);
+    await expect(nav.locator(':scope > :visible')).toHaveText(['Lobby', /Friends/, 'Leaderboard', 'Your stats', 'Rules', 'Learn to play', 'Join with a code']);
     const sharedStyle = await nav.evaluate(node => {
       const props = ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'padding', 'minHeight'];
       const styleOf = selector => props.map(prop => getComputedStyle(node.querySelector(selector))[prop]);
@@ -840,7 +848,7 @@ test('an address that asks for a rematch is answered before the first tutorial, 
   expect(state.errors).toEqual([]);
 });
 
-test('a skipped tutorial never opens by itself again: it waits under Learn to play, and in the account menu', async ({ page }, info) => {
+test('a skipped tutorial never opens by itself again: it waits under Learn to play, and in the main menu', async ({ page }, info) => {
   const state = await home(page, { tutorials: series('skipped', 'done') });
   const section = page.locator('#learn-to-play');
 
@@ -855,11 +863,13 @@ test('a skipped tutorial never opens by itself again: it waits under Learn to pl
   await section.scrollIntoViewIfNeeded();
   await page.screenshot({ path: info.outputPath('lobby-learn.png') });
   await noOverflow(page);
-  // The account menu leads there from every page: it holds what is a signed-in player's, as it holds Settings.
-  await page.locator('#account-menu summary').click();
-  await expect(page.locator('#learn-link')).toBeVisible();
-  await expect(page.locator('#learn-link')).toHaveAttribute('href', '/#learn-to-play');
-  expect((await page.locator('#learn-link').boundingBox()).height).toBeGreaterThanOrEqual(44);
+  // The main menu leads there from every page, beside Rules, for a signed-in player (#669); the account menu no longer does.
+  await openNavigation(page);
+  const learn = page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Learn to play' });
+  await expect(learn).toBeVisible();
+  await expect(learn).toHaveAttribute('href', '/#learn-to-play');
+  expect((await learn.boundingBox()).height).toBeGreaterThanOrEqual(44);
+  await expect(page.locator('#account-menu .account-menu')).not.toContainText('Learn to play');
   expect(state.errors).toEqual([]);
 });
 

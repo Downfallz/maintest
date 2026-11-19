@@ -1,6 +1,6 @@
 # Tutorial follow-ups: the end of tutorial 4, tutorial 2's cut, and Learn to play in the bar
 
-Status: accepted, 2026-11-19. Nothing is built.
+Status: accepted, 2026-11-19. T3 is built; T1 and T2 are not.
 
 ## What the owner asked for
 
@@ -105,6 +105,15 @@ tutorial 2 carries nothing tutorial 3 teaches.
    `home-navigation.md` and onboarding-plan.md updated, #669 closed. Tests: `lobby-home.spec.js` with a long
    name at the new widths and the one under them, `lobby-tutorials.test.js` for the entry, the battle page's
    header at the same widths. Then `/design-system`. No ADR.
+
+   *Built (2026-11-19)*: `#learn-link` stands in `#home-navigation` after Rules, shown to a signed-in account only,
+   and left the account menu. Measured in Chromium with a 20-character name of `W`, an operator and every entry
+   shown, the bar needs 1275 px; the menu now folds at 1279 px and below (`identity.css`, `lobby.css`,
+   `battle.css`, `navigation.js`), the bar from 1280. `lobby-home.spec.js` checks 1240, 1279, 1280 and 1440 with
+   that name, the bar on one row, Learn to play and Admin in view; `battle-services.spec.js` checks the match's
+   header at the same widths; `lobby-tutorials.test.js` holds where the entry stands. `home-navigation.md`, the
+   design system's SiteHeader notes and onboarding-plan.md say so. Left: `/design-system` republishes the
+   SiteHeader pages once this is merged.
 
 The three stages touch different files and can ship in any order.
 
