@@ -219,8 +219,8 @@ public sealed class TableFilesTests
     public void Every_picture_the_kit_names_is_served_as_webp_bytes()
     {
         var module = Encoding.UTF8.GetString(Files.Get("/page-art.js").Body);
-        var named = System.Text.RegularExpressions.Regex.Matches(module, @"file: '([^']+\.webp)'")
-            .Select(match => match.Groups[1].Value).Order(StringComparer.Ordinal).ToList();
+        var named = module.Split("file: '").Skip(1).Select(rest => rest[..rest.IndexOf('\'', StringComparison.Ordinal)])
+            .Order(StringComparer.Ordinal).ToList();
 
         var served = Files.Routes.Where(route => route.StartsWith("/page-art/", StringComparison.Ordinal))
             .Select(route => route["/page-art/".Length..]).Order(StringComparer.Ordinal).ToList();

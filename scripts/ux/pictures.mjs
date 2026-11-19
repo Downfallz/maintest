@@ -19,7 +19,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const ROOT = new URL('../../', import.meta.url);
 export const DECLARATION = 'docs/art/page-pictures.json', BUDGET = 'docs/art/page-budget.json';
 export const FOLDER = 'table/page-art', MODULE = 'table/page-art.js', BRIEFS = 'docs/art/journeys';
-const ROLES = ['largest', 'first', 'lazy'];
+const ROLES = new Set(['largest', 'first', 'lazy']);
 const ASKED = 'asked of the owner';
 
 /** The widths a picture is sent at: each width it is drawn at, once and twice, never past its painting. */
@@ -84,8 +84,34 @@ function declared(picture) {
   if (picture.frames && !(Array.isArray(picture.frames) && picture.frames.length >= 2)) problems.push(`${name}: a strip has at least two frames`);
   if (!(Array.isArray(picture.drawn) && picture.drawn.length && picture.drawn.every(width => Number.isInteger(width) && width > 0)))
     problems.push(`${name}: the width it is drawn at, in whole pixels, the phone's first`);
-  for (const [page, role] of Object.entries(picture.pages ?? {})) if (!ROLES.includes(role)) problems.push(`${name}: on ${page} it is largest, first or lazy, not ${role}`);
+  for (const [page, role] of Object.entries(picture.pages ?? {})) if (!ROLES.has(role)) problems.push(`${name}: on ${page} it is largest, first or lazy, not ${role}`);
   return problems;
+}
+
+/** One derived file held against what the module says of it. */
+function fileProblems(name, size, files, read) {
+  if (!files.includes(size.file)) return [`${name}: ${size.file} is missing from ${FOLDER}`];
+  const problems = [], bytes = read(`${FOLDER}/${size.file}`), actual = webpSize(bytes);
+  if (size.file !== fileName(name, size.width, bytes)) problems.push(`${size.file} is not named by its own bytes`);
+  if (bytes.length !== size.bytes || actual.width !== size.width || actual.height !== size.height)
+    problems.push(`${size.file}: the module says ${size.width} by ${size.height}, ${size.bytes} bytes; the file is ${actual.width} by ${actual.height}, ${bytes.length}`);
+  return problems;
+}
+
+/** One declared picture held against its entry of the module, its paintings and its files. */
+function pictureProblems(picture, entry, { authored, read, files }) {
+  const again = 'run node scripts/ux/pictures.mjs';
+  if (!entry) return [`${picture.name} is declared but not derived: ${again}`];
+  let paintings, widths;
+  try { paintings = paintingsOf(picture).map(read); } catch { return [`${picture.name}: a painting it names is not in the repository`]; }
+  const problems = [], frames = paintings.length, same = (one, other) => JSON.stringify(one) === JSON.stringify(other);
+  if (entry.from !== origin(picture, paintings, authored.encoding)) problems.push(`${picture.name}: its painting or its declaration changed since it was derived: ${again}`);
+  if (!same(entry.pages, picture.pages ?? {}) || !same(entry.drawn, picture.drawn) || entry.frames !== frames)
+    problems.push(`${picture.name}: the module does not say what the declaration says: ${again}`);
+  try { widths = widthsOf(picture.drawn, Math.min(...paintings.map(one => paintingSize(one).width))); } catch { return [...problems, `${picture.name}: a painting it names is neither a PNG nor a WebP file`]; }
+  const sent = entry.sizes.map(size => size.width / frames);
+  if (!same(sent, widths)) problems.push(`${picture.name}: it is sent at ${widths.join(', ')} px, and the module names ${sent.join(', ')}: ${again}`);
+  return [...problems, ...entry.sizes.flatMap(size => fileProblems(picture.name, size, files, read))];
 }
 
 /**
@@ -93,36 +119,15 @@ function declared(picture) {
  * the names in table/page-art. Returns what is wrong, in words; nothing is encoded.
  */
 export function check({ authored, art, read, list }) {
-  const problems = [], expected = new Set(), files = list(), seen = new Set();
+  const problems = [], files = list(), seen = new Set();
   for (const picture of authored.pictures) {
     const wrong = declared(picture);
     if (seen.has(picture.name)) wrong.push(`${picture.name} is declared twice`);
     seen.add(picture.name);
-    problems.push(...wrong);
-    if (wrong.length) continue;
-    const entry = art[picture.name];
-    if (!entry) { problems.push(`${picture.name} is declared but not derived: run node scripts/ux/pictures.mjs`); continue; }
-    let paintings;
-    try { paintings = paintingsOf(picture).map(read); } catch { problems.push(`${picture.name}: a painting it names is not in the repository`); continue; }
-    if (entry.from !== origin(picture, paintings, authored.encoding)) problems.push(`${picture.name}: its painting or its declaration changed since it was derived: run node scripts/ux/pictures.mjs`);
-    if (JSON.stringify(entry.pages) !== JSON.stringify(picture.pages ?? {}) || JSON.stringify(entry.drawn) !== JSON.stringify(picture.drawn) || entry.frames !== paintingsOf(picture).length)
-      problems.push(`${picture.name}: the module does not say what the declaration says: run node scripts/ux/pictures.mjs`);
-    const frames = paintings.length;
-    let widths;
-    try { widths = widthsOf(picture.drawn, Math.min(...paintings.map(one => paintingSize(one).width))); } catch { problems.push(`${picture.name}: a painting it names is neither a PNG nor a WebP file`); continue; }
-    if (JSON.stringify(entry.sizes.map(size => size.width / frames)) !== JSON.stringify(widths))
-      problems.push(`${picture.name}: it is sent at ${widths.join(', ')} px, and the module names ${entry.sizes.map(size => size.width / frames).join(', ')}: run node scripts/ux/pictures.mjs`);
-    for (const size of entry.sizes) {
-      expected.add(size.file);
-      if (!files.includes(size.file)) { problems.push(`${picture.name}: ${size.file} is missing from ${FOLDER}`); continue; }
-      const bytes = read(`${FOLDER}/${size.file}`), actual = webpSize(bytes);
-      if (size.file !== fileName(picture.name, size.width, bytes)) problems.push(`${size.file} is not named by its own bytes`);
-      if (bytes.length !== size.bytes || actual.width !== size.width || actual.height !== size.height)
-        problems.push(`${size.file}: the module says ${size.width} by ${size.height}, ${size.bytes} bytes; the file is ${actual.width} by ${actual.height}, ${bytes.length}`);
-    }
+    problems.push(...(wrong.length ? wrong : pictureProblems(picture, art[picture.name], { authored, read, files })));
   }
-  const names = new Set(authored.pictures.map(picture => picture.name));
-  for (const name of Object.keys(art)) if (!names.has(name)) problems.push(`${name} is derived but not declared`);
+  for (const name of Object.keys(art)) if (!seen.has(name)) problems.push(`${name} is derived but not declared`);
+  const expected = new Set(authored.pictures.flatMap(picture => art[picture.name]?.sizes.map(size => size.file) ?? []));
   for (const file of files) if (!expected.has(file)) problems.push(`${FOLDER}/${file} is no picture of the declaration`);
   return problems;
 }
@@ -141,15 +146,22 @@ export function moduleText(art) {
 
 /** The pictures a brief asks of the owner: the row of its Pictures table, and the prompt in the fenced block after it. */
 export function asked(markdown, brief) {
-  const requests = [], lines = markdown.split('\n');
+  const requests = [];
   let screen = null, waiting = [], fence = null;
-  for (const line of lines) {
-    if (fence) {
-      if (line.startsWith('```')) { const request = waiting.shift(); if (request) requests.push({ ...request, prompt: fence.join('\n') }); fence = null; }
-      else fence.push(line);
-    } else if (line.startsWith('```')) fence = [];
-    else if (/^## /.test(line)) { screen = line.slice(3).replace(/\s*\(.*$/, '').trim(); waiting = []; }
-    else if (line.startsWith('|') && line.includes(ASKED)) {
+  for (const line of markdown.split('\n')) {
+    const mark = line.startsWith('```');
+    if (fence && mark) {
+      const request = waiting.shift();
+      if (request) requests.push({ ...request, prompt: fence.join('\n') });
+      fence = null;
+    } else if (fence) fence.push(line);
+    else if (mark) fence = [];
+    else if (line.startsWith('## ')) {
+      // The heading without the walk's screens it names in brackets.
+      const bracket = line.indexOf('(');
+      screen = line.slice(3, bracket < 0 ? line.length : bracket).trim();
+      waiting = [];
+    } else if (line.startsWith('|') && line.includes(ASKED)) {
       const cells = line.split('|').slice(1, -1).map(cell => cell.trim());
       waiting.push({ brief, screen, shows: cells[0], drawn: cells[1], holds: /`([^`]+\.\w+)`/.exec(cells.at(-1))?.[1] ?? null });
     }
@@ -188,7 +200,8 @@ async function derive() {
         return { file, ...size, bytes: made.length };
       });
       art[picture.name] = { from, frames: paintings.length, drawn: picture.drawn, pages: picture.pages ?? {}, sizes };
-      console.log(`${picture.name}: ${sizes.map(size => `${size.width} px, ${size.bytes} bytes`).join('; ')}`);
+      const sent = sizes.map(size => size.width + ' px, ' + size.bytes + ' bytes').join('; ');
+      console.log(`${picture.name}: ${sent}`);
     }
     const wanted = new Set(Object.values(art).flatMap(entry => entry.sizes.map(size => size.file)));
     for (const file of list()) if (!wanted.has(file)) { rmSync(new URL(`${FOLDER}/${file}`, ROOT)); console.log(`removed ${file}`); }

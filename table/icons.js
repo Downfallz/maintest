@@ -40,7 +40,8 @@ function pathOf(name) {
 /** An icon as text, for a page's HTML. */
 export function iconHtml(name) {
   const path = pathOf(name);
-  return `<svg ${Object.entries(ATTRIBUTES).map(([attribute, value]) => `${attribute}="${value}"`).join(' ')}><path d="${path}"/></svg>`;
+  const attributes = Object.entries(ATTRIBUTES).map(([attribute, value]) => attribute + '="' + value + '"').join(' ');
+  return `<svg ${attributes}><path d="${path}"/></svg>`;
 }
 
 /** An icon as an element, for a page that builds itself. */
