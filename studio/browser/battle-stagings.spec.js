@@ -76,23 +76,47 @@ test('a stop at the height of the richest staging leaves nothing of it', async (
   await film(page, 'stop');
 });
 
-// The acceptance of the whole set (BC10): with less motion every entry of the spell art goes straight to its
-// settled frame. No beat, no motif, no figure off its home, leaning, stretched or tinted, and a view that does
-// not move, though the fixture says each creature struck lost health.
+// The acceptance of the whole set (BC10): with less motion every entry of the spell art is its settled frame from
+// the first step. On the film's clock, through the time its windup and its contact would take: no beat, no
+// motif, no figure off its home, leaning, stretched, breathing or tinted, and a view that does not move, though
+// the fixture says each creature struck lost health. With full motion the same steps see the caster load and
+// the blow land, so the reading is not one a resolved action passes anyway.
+const HOME = { x: 0, y: 0, angle: 0, width: 1, height: 1, tinted: false };
+const STILL = { trauma: 0, x: 0, y: 0, zoom: 1 };
+const moved = ({ figures, view }) => figures.some(one => Object.entries(HOME).some(([key, value]) => one[key] !== value)) || Object.entries(STILL).some(([key, value]) => view[key] !== value);
+const standing = page => page.evaluate(() => window.battleBench.motion());
+
 test('with less motion no entry of the spell art plays a beat or a motif, moves a figure or moves the view', async ({ page }) => {
+  test.setTimeout(300000);
   expect(staged.map(one => one.id).sort()).toEqual(Object.keys(art).sort());
   await page.emulateMedia({ reducedMotion: 'reduce' });
   // The bench rests when the media query's change event arrives: the attribute says it has (#894).
   await expect(page.locator('#lab')).toHaveAttribute('data-motion', 'reduced');
   for (const { id, targets } of staged) {
-    await page.evaluate(([spell, on]) => { window.battleBench.choose({ spell, actor: 'a1', targets: on, damage: 5 }); window.battleBench.play(); }, [id, targets]);
+    await film(page, 'start', { spell: id, actor: 'a1', targets, damage: 5 });
     await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'resolved');
-    expect(await kit(page), id).toEqual({ objects: [], particles: 0, changes: 0 });
-    expect(await motifs(page), id).toEqual([]);
-    const { figures, view } = await page.evaluate(() => window.battleBench.motion());
-    for (const one of figures) expect(one, `${id}: ${one.id}`).toMatchObject({ x: 0, y: 0, angle: 0, width: 1, height: 1, tinted: false });
-    expect(view, id).toEqual({ trauma: 0, x: 0, y: 0, zoom: 1 });
+    for (let elapsed = 0; elapsed <= WINDUP_MS + 240; elapsed += 180) {
+      expect(await kit(page), `${id} at ${elapsed} ms`).toEqual({ objects: [], particles: 0, changes: 0 });
+      expect(await motifs(page), `${id} at ${elapsed} ms`).toEqual([]);
+      const now = await standing(page);
+      for (const one of now.figures) expect(one, `${id} at ${elapsed} ms: ${one.id}`).toMatchObject(HOME);
+      expect(now.view, `${id} at ${elapsed} ms`).toEqual(STILL);
+      await film(page, 'advance', 180);
+    }
+    await film(page, 'stop');
   }
+});
+
+test('with full motion the same reading sees a figure or the view move, so it says something', async ({ page }) => {
+  const [{ id, targets }] = staged;
+  await film(page, 'start', { spell: id, actor: 'a1', targets, damage: 5 });
+  let seen = false;
+  for (let elapsed = 0; elapsed <= WINDUP_MS + 240; elapsed += 180) {
+    seen ||= moved(await standing(page));
+    await film(page, 'advance', 180);
+  }
+  expect(seen).toBe(true);
+  await film(page, 'stop');
 });
 
 // The frame time script (scripts/battle/frametime.mjs) is run by hand, for the record: its numbers are a

@@ -112,9 +112,10 @@ const RULES = [
   { matches: (path) => path.endsWith('.md'), calls: () => ({}) },
   { matches: (path) => WORKFLOWS.has(path), calls: () => ({ journeys: anySpec, realEngine: true, release: true }) },
   { matches: (path) => path.startsWith('studio/browser/'), calls: (path) => suiteFile(path.slice('studio/browser/'.length)) },
-  // The film strip script is played by the bench's own spec, which films with it, and by the effects kit's,
-  // which opens the bench through it.
-  { matches: (path) => path === 'scripts/battle/filmstrip.mjs', calls: () => ({ journeys: (spec) => ['battle-bench.spec.js', 'battle-fx.spec.js', 'battle-motion.spec.js', 'battle-ground.spec.js'].includes(spec) }) },
+  // The film strip script is played by the bench's own spec, which films with it, and by the specs that open the
+  // bench through it: the effects kit's, the movement's, the ground's, and the stagings', which also measures
+  // with the frame time script built on it.
+  { matches: (path) => path === 'scripts/battle/filmstrip.mjs', calls: () => ({ journeys: (spec) => ['battle-bench.spec.js', 'battle-fx.spec.js', 'battle-motion.spec.js', 'battle-ground.spec.js', 'battle-stagings.spec.js'].includes(spec) }) },
   // The frame time script and what it shares with the stagings' spec are played by that spec.
   { matches: (path) => path === 'scripts/battle/frametime.mjs' || path === 'scripts/battle/cast.mjs', calls: () => ({ journeys: (spec) => spec === 'battle-stagings.spec.js' }) },
   // The journey film is played by its own real-engine journey (table.journey.js), which walks with it; and it

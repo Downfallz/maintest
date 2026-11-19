@@ -1,6 +1,6 @@
 # Plan: the battle's craft, every spell, attack, move and the ground staged by a designer who can see
 
-Status: built, 2026-11-19. BC1 to BC10 are built; the frame time on a phone stays with the physical gate of ADR 0136.
+Status: built, 2026-11-19. The frame time on a phone is still open, at the physical gate of ADR 0136.
 Each stage below is one pull request.
 
 ## What the owner asked for
@@ -433,9 +433,10 @@ that extends it.
       as `studio/staging-ladder.test.js` already holds. No staging was changed.
     - The budgets hold, all five. The live bundle grew by 27,655 bytes over the whole plan and has 30 KiB left;
       the kit is 11,045 of 49,152 bytes.
-    - Less motion: `battle-stagings.spec.js` now holds all 44 entries to the settled frame, and reads the
-      figures and the view as well as the kit and the motifs.
-    - The gallery: the 44 film strips on one page for the owner, each with its measures; the record links it.
+    - Less motion: `battle-stagings.spec.js` now holds all 44 entries to the settled frame through the time
+      the action would take, and reads the figures and the view as well as the kit and the motifs.
+    - The gallery: the 44 film strips on one page, each with its measures. The page is private to the owner;
+      the record links it and names the command that films the sheets again.
     - `scripts/battle/cast.mjs` says whom a spell is cast on, from the content, for the spec and the measure.
 
     Left:

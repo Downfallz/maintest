@@ -123,7 +123,8 @@ export function recordTable(results) {
 // The flags that take a value: what each must be, and its name on the options.
 const VALUED = {
   '--throttle': { name: 'throttle', accepts: number => number >= 1, says: '--throttle is the browser\'s CPU slowdown, 1 (none) or more.' },
-  '--runs': { name: 'runs', accepts: number => Number.isInteger(number) && number >= 1, says: '--runs is a whole number of runs, 1 or more.' },
+  // An odd number: the middle one of the runs is then a run's own number, and a count stays whole.
+  '--runs': { name: 'runs', accepts: number => Number.isInteger(number) && number >= 1 && number % 2 === 1, says: '--runs is an odd number of runs, 1 or more: each number is the middle one of the runs.' },
   '--speed': { name: 'speed', accepts: number => SPEEDS.includes(number), says: '--speed is 0.5, 1 or 2, as the page offers.' },
 };
 const TEXTS = { '--out': 'out', '--url': 'base' };

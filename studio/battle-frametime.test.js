@@ -47,6 +47,8 @@ test('the flags refuse what cannot be measured', () => {
   assert.throws(() => parseArguments(['--all', '--throttle', '0.5']), /--throttle/);
   assert.throws(() => parseArguments(['--all', '--runs', '0']), /--runs/);
   assert.throws(() => parseArguments(['--all', '--runs', '2.5']), /--runs/);
+  // With an even number of runs the middle falls between two: a count of frames would come out as 1.5.
+  assert.throws(() => parseArguments(['--all', '--runs', '4']), /odd number/);
   assert.throws(() => parseArguments(['--all', '--speed', '3']), /--speed/);
   assert.throws(() => parseArguments(['--all', '--out']), /needs a value/);
   assert.throws(() => parseArguments(['--all', '--fast']), /Unknown option/);

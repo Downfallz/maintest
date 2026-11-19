@@ -13,9 +13,9 @@ numbers are kept to be compared with, by `node scripts/battle/frametime.mjs`.
 | --- | --- |
 | Does a staging's code fit in a frame on a slow processor? | Yes, all 44. Slowed four times, the worst step of the worst staging takes 11.8 ms of a 16.7 ms frame; the medians are 1.3 to 3.1 ms. |
 | Does a staging drop frames while it plays? | 26 of the 44 drop none, slowed four times. 12 double a frame now and then (33 ms), Contagion the most: 12 frames of its play. The 6 that hold a `pulse` stall: two or three frames of about 300 ms each. |
-| Is the stall a phone's? | Not known. It is the renderer's cost, and a session draws in software. The page's thread pays nothing for a pulse. A phone's graphics card decides, and that is the physical gate's. |
+| Is the stall a phone's? | Not known. The cost is in the renderer, and a session draws in software. The page's thread pays nothing for a pulse. Only a phone's graphics card can tell, at the physical-device gate. |
 | The budgets | All five hold. The effects kit is 11,045 of its 49,152 bytes. |
-| Less motion | Every one of the 44 goes straight to its settled frame: no beat, no motif, no figure moved, no view moved. |
+| Less motion | With less motion, every one of the 44 goes straight to its settled frame: no beat, no motif, no figure moved, no view moved. |
 | The gallery | The 44 film strips are on one page for the owner. |
 
 ## Frame time
@@ -33,7 +33,7 @@ Two measures, because the throttle slows one thing and not the other:
 - **The step**: what one 20 ms step of the game costs the page's thread, in milliseconds. The bench's film clock
   steps the whole action, 127 steps at 1×, and each step is timed where it runs: the scene's update and the
   drawing calls it issues. The throttle slows this, so this is the number that speaks for a slow phone's
-  processor. A step is over when it takes more than one frame of a sixty-hertz screen, 16.7 ms.
+  processor. A step is counted over a frame when it takes longer than one frame of a sixty-hertz screen, 16.7 ms.
 - **The frame**: the time between two animation frames while the effect plays on the page's own loop, from the
   play to the resolved action. It holds everything: the page's thread, and what the renderer does with the
   drawing calls. A frame is long when it takes two frames or more (32.3 ms).
@@ -115,12 +115,15 @@ fill the field's 150.
   pulses, the sample: frames of 833 ms. The step of the same stagings stays under 12 ms, so the whole cost is
   the filter's passes in the renderer. This is what ADR 0196 warned of; it is now measured, and it grows with
   each figure that wears one.
-- **Twelve stagings double a frame.** Half of them are cast on two or three figures. Contagion (three figures, nine
-  beats, a cloud that hangs) doubles 12 frames, Crash 4, Bite and Death Wail 3, the others 1 or 2. With no throttle none of them does (the second table).
+- **Twelve stagings double a frame.** Half of them are cast on two or three figures. Contagion (three figures,
+  nine beats, a cloud that hangs) doubles 12 frames. Crash doubles 4, Bite and Death Wail 3, the others 1 or 2.
+  All twelve were measured again with no throttle: none doubles a frame there, and the worst frame of each is
+  16.8 ms. So the doubled frames come from the slowed processor, though no step of the game is over a frame:
+  the page does more in a frame than step the game.
 
 ## At other settings
 
-Eight effects measured again: with no throttle, slowed six times, and slowed four times at the 2× speed, where
+Eight effects measured again (three samples and five spells): with no throttle, slowed six times, and slowed four times at the 2× speed, where
 an action lasts half as long. The rows "Slowed 4 times" repeat the first table.
 
 | Effect | Setting | Step, median | Step, worst | Steps over a frame | Frame, worst | Long frames |
@@ -168,7 +171,8 @@ an action lasts half as long. The rows "Slowed 4 times" repeat the first table.
 
 - **The pulse stays on one figure.** ADR 0196 asked for this measure before a staging used a pulse on more than
   one. The answer is no: the cost adds up by the figure. `studio/staging-ladder.test.js` already refuses a pulse
-  on a spell with several targets, and keeps one pulse to a Stage III spell. Six spells hold one today.
+  on the targets of a spell with several (a pulse on its caster is allowed: Groundbreaker's), and keeps one
+  pulse to a Stage III spell. Six spells hold one today, each on one figure.
 - **The 24 particles a beat and the 150 on the field stand.** The measure gives no reason to lower them, and
   none to raise them: the pixels they fill on a phone are not measured.
 - **No staging is changed by this stage.** Nothing measured here is a fault on a phone until a phone says so.
@@ -194,12 +198,16 @@ large feature of the battle view meets that limit before any other.
 
 With less motion asked for, by the system or by the page's setting, an action is shown as its settled frame
 (`battle/AGENTS.md`). Held for the whole set by `studio/browser/battle-stagings.spec.js`: each of the 44 entries
-is played on the bench on the figures it reaches, each struck for 5 health, and after each one
+is played on the bench on the figures it reaches, each struck for 5 health, on the film's clock, and read every
+180 ms through the time its windup and its contact would take. At every reading
 
 - the kit holds no object, no particle, and has changed no figure;
 - no motif is drawn;
-- every figure stands at its home, upright, at its own size, untinted;
+- every figure stands at its home, upright, at its own size, not breathing, untinted;
 - the view has no trauma, no offset and no zoom.
+
+A second test plays one spell with full motion and makes the same reading: it sees a figure or the view move.
+A reading taken once the action has resolved would not: the scene puts every figure back by then.
 
 The body and the breath (`battle-motion.spec.js`) and the ground (`battle-ground.spec.js`) hold their own part:
 no breath, no drifting fog, no rising ember, no light on the eclipse.
@@ -218,7 +226,9 @@ no breath, no drifting fog, no rising ember, no light on the eclipse.
 ## The gallery
 
 The 44 film strips, one sheet a spell, by family and by Stage, are on one page for the owner:
-[the gallery](https://claude.ai/artifact/M81YCyHog3TBW5pAe54nha), private to the owner, with each spell's step and frame beside its sheet. Each spell is filmed on the figures it reaches, each struck for 5 health, twelve frames 240 ms apart.
+[the gallery](https://claude.ai/artifact/M81YCyHog3TBW5pAe54nha), private to the owner, with each spell's step and frame beside its sheet.
+Nobody else can open the link: the sheets themselves are filmed again by the command below. Each spell is filmed
+on the figures it reaches, each struck for 5 health, in twelve frames 240 ms apart.
 The sheets are not committed. `node scripts/battle/filmstrip.mjs --all` films them again, and a sheet is compared
 only with one filmed on the same machine.
 
