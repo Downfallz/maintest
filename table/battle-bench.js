@@ -12,8 +12,10 @@ const words = id => id.split(':')[1].split('_').map(word => word[0].toUpperCase(
 // says of each id (`battle/bench-spells.mjs`, read when the bundle is built): the name a player reads, the
 // mutations that teach it and whether a creature starts with it. An id it lacks is named by its slug, and what
 // casts it is left unsaid. An entry with a staging carries it (ADR 0196).
-const castBy = spell => spell?.mutations?.length ? spell.mutations.map(one => `${one.name}, ${stageLabel(one.level)}`).join(' / ')
-  : spell?.starting ? 'starting spell' : '';
+function castBy(spell) {
+  if (spell?.mutations?.length) return spell.mutations.map(one => `${one.name}, ${stageLabel(one.level)}`).join(' / ');
+  return spell?.starting ? 'starting spell' : '';
+}
 export function benchEntries(art, spells = {}) {
   return Object.entries(art)
     .map(([id, { family, motif, delivery, staging }]) => ({ id, name: spells[id]?.name ?? words(id), castBy: castBy(spells[id]),

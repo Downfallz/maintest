@@ -6,11 +6,8 @@ import { join } from 'node:path';
 // (`data/Creatures`). The spell art holds ids only, and an id's slug is not always the name (`spell:heavy_strike:v1`
 // is Strike). The laboratory's bundle alone carries this; the live page names no spell.
 async function documents(folder) {
-  const found = [];
-  for (const entry of await readdir(folder, { withFileTypes: true, recursive: true })) {
-    if (entry.isFile() && entry.name.endsWith('.json')) found.push(JSON.parse(await readFile(join(entry.parentPath, entry.name), 'utf8')));
-  }
-  return found;
+  const files = (await readdir(folder, { withFileTypes: true, recursive: true })).filter(entry => entry.isFile() && entry.name.endsWith('.json'));
+  return Promise.all(files.map(async entry => JSON.parse(await readFile(join(entry.parentPath, entry.name), 'utf8'))));
 }
 
 export async function benchSpells(data = '../data') {
