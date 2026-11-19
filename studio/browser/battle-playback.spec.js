@@ -219,7 +219,11 @@ test('each family draws its motif on the confirmed recipients only, and every ca
     await page.clock.runFor(400);
     if (frame.cue.visual.delivery !== 'melee') {
       const position = await actorPosition(page);
-      expect(position.x).toBe(position.homeX); expect(position.y).toBe(position.homeY);
+      // No lunge: a cast loads where it stands, and a projectile's caster throws from its ground, a few pixels
+      // from home at most (docs/art/storyboards/movement.md).
+      const away = Math.hypot(position.x - position.homeX, position.y - position.homeY);
+      if (frame.cue.visual.delivery === 'projectile') expect(away).toBeLessThanOrEqual(8.5);
+      else expect(away).toBe(0);
     }
     await presentSpell(page, frame, 'impact'); await page.clock.runFor(32);
     const effects = await renderedEffects(page);
