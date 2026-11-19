@@ -394,8 +394,10 @@ tutorial that opens by itself: the first of the series while it is new to the ac
 on a host that keeps no game settings. `POST /api/tutorials/<id>/skip` records that the account skipped a tutorial;
 the battle view says it for **Skip the tutorial** and for **Leave** before the end. `POST /api/tutorials/<id>/done`
 records that it finished one, and answers 409 `Tutorial.NotDone` unless the account's practice of it at this host
-says `done`. Both answer `{ id, state }`, 404 `Tutorial.NotFound` for an id that is no tutorial, and 404
-`Account.NoPreferences` on a host that keeps no game settings. Skipping a tutorial the account has finished leaves it done.
+says `done`. A tutorial is done once its match ends, conceded included; a practice whose table was let go of or
+could not go on is not done, is not resumed, and opens from its cut the next time. Both answer `{ id, state }`,
+404 `Tutorial.NotFound` for an id that is no tutorial, and 404 `Account.NoPreferences` on a host that keeps no game
+settings. Skipping a tutorial the account has finished leaves it done.
 
 While it plays, the host answers the person's assisted questions from the recorded answers, as the person's own
 decisions. At the first recorded answer that does not fit, it stops and gives every question back to the person.

@@ -6,6 +6,7 @@ using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Matches.Journaling;
 using DownfallArena.Application.Matches.Ports;
 using DownfallArena.Application.Matches.Projections;
+using DownfallArena.Application.Matches.Scenarios;
 using DownfallArena.Cli.Table;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Rounds;
@@ -258,6 +259,55 @@ public sealed class SteppedSessionTests : IDisposable
         await Failed();
 
         api.Changes.Version.ShouldBe(before);
+    }
+
+    /// <summary>A concession ends the match the session keeps: the board the seats read has its outcome (#912).</summary>
+    [Fact]
+    public async Task A_concession_ends_the_match_the_session_keeps()
+    {
+        var (session, person, _) = await Opened(_host);
+        session.Begin();
+        await Waiting(person, PlayerOptionsKind.Evolution);
+
+        var conceded = await session.ConcedeAsync(PlayerSlot.Player1);
+
+        conceded.IsSuccess.ShouldBeTrue();
+        session.HasEnded.ShouldBeTrue();
+    }
+
+    /// <summary>A table let go of plays on no more, but its match did not end: it has no outcome (#912).</summary>
+    [Fact]
+    public async Task A_table_let_go_of_is_over_without_having_ended_its_match()
+    {
+        var (session, person, _) = await Opened(_host);
+        session.Begin();
+        await Waiting(person, PlayerOptionsKind.Evolution);
+
+        await _stopping.CancelAsync();
+        await Task.WhenAny(session.Outcome);
+
+        (session.IsOver, session.HasEnded).ShouldBe((true, false));
+    }
+
+    /// <summary>
+    /// A tutorial played on a table that was let go of is not done, so the account does not keep its practice as
+    /// finished. This guards against the tutorial reading whether the session plays on, instead of whether its match
+    /// ended (#912).
+    /// </summary>
+    [Fact]
+    public async Task A_tutorial_on_a_table_let_go_of_is_not_done()
+    {
+        var (session, person, _) = await Opened(_host);
+        var lesson = TutorialLesson.Create(1, "Your first combat", [PlayerOptionsKind.Action], [new LessonStep(PlayerOptionsKind.Action, 2, null, ["Pick a spell."], [])]).Value;
+        var tutorial = new TutorialPlay(lesson, new AssistedSeat(lesson, []), PlayerSlot.Player1, of: 1) { Said = _ => { } };
+        tutorial.Follow(session);
+        session.Begin();
+        await Waiting(person, PlayerOptionsKind.Evolution);
+
+        await _stopping.CancelAsync();
+        await Task.WhenAny(session.Outcome);
+
+        tutorial.Done.ShouldBeFalse();
     }
 
     /// <summary>

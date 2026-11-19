@@ -133,9 +133,11 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
   /**
    * The tutorial's end as the match result offers it (tutorial-follow-ups-plan.md T1): in a tutorial that plays
    * to the match's end the result is the tutorial's end, and its Play again is the coach card's. Leave the
-   * tutorial is a link this file already answers. None outside a tutorial: a game keeps Rematch and Lobby.
+   * tutorial is a link this file already answers. None outside a tutorial: a game keeps Rematch and Lobby. `done`
+   * is the host's word that the tutorial is complete: a match that is over on a table that could not go on keeps
+   * the tutorial's doors, but is not called complete (#912).
    */
-  const ending = () => tutorialOf(latest) ? { again } : null;
+  const ending = () => tutorialOf(latest) ? { again, done: tutorialOf(latest)?.done === true } : null;
   // On the smallest phone the band's place in the series takes Restart's place in the header, and the card offers it (#728).
   el('coach-restart').addEventListener('click', () => el('practice-restart').click());
 

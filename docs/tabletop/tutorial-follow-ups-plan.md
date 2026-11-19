@@ -103,8 +103,15 @@ tutorial 2 carries nothing tutorial 3 teaches.
    tutorial, writes **TUTORIAL COMPLETE** in the eyebrow, shows `#match-again` and `#match-leave` and hides
    Rematch and Lobby. Under 400 px Replay the match and Leave the tutorial take a row each, so both read whole.
    The mock specs end a tutorial's match at 320 px, 390 px and desktop; the real-engine journey leaves tutorial 4
-   from its result, and checks the three others never open one. Still open: the round no longer shows in a tutorial's
-   eyebrow, and a tutorial whose match ends in a draw or a defeat keeps that title under the same eyebrow (#912).
+   from its result, and checks the three others never open one. A done tutorial's eyebrow no longer shows the round.
+   When the match ends in a draw or a defeat, the eyebrow still says TUTORIAL COMPLETE and the title still says
+   Draw or Defeat. The lesson is done whatever the result. The title still tells the truth about the match (the
+   owner's choice, #912). As soon as the match has ended, the host reports the tutorial done, even on the first
+   seat read: `TutorialPlay.Done` also reads `SteppedSession.HasEnded`. A table that was let go of, or could not go
+   on, did not end its match, so its tutorial is not done. Conceding ends the match, so it finishes the tutorial
+   (ADR 0187: done when the match ends, won or lost). A match that is over without the host saying the tutorial is
+   done keeps the tutorial's doors (Play again, Leave the tutorial), but its eyebrow does not say TUTORIAL
+   COMPLETE. Leaving it skips nothing, and on the next open the host starts the tutorial again from its cut.
 2. **T2, tutorial 2 cut at round 2.** A new `who-acts-first.json` from `scenario-generate`, its steps written
    again with the rulebook-writer and the copy-editor, onboarding-plan.md's series table and O5 note brought in
    line, `scenarios/README.md`. Tests: the new `TutorialFileTests` fact, `LessonReach` on the file, the series

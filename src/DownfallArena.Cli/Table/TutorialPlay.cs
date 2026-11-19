@@ -92,13 +92,19 @@ internal sealed class TutorialPlay
     }
 
     /// <summary>Whether the last step was shown and its round ended, or the match ended, win or lose.</summary>
+    /// <remarks>
+    /// Reads the end of the match from the table, not only from the play's last look. A seat view can show the match
+    /// over before the play looks again. Done must be true by then, or leaving from the result would skip the
+    /// tutorial (#912). A table let go of, or one that could not go on, did not end its match.
+    /// </remarks>
     public bool Done
     {
         get
         {
+            var ended = Volatile.Read(ref _table)?.Ended() == true;
             lock (_gate)
             {
-                return _done;
+                return _done || ended;
             }
         }
     }
@@ -120,8 +126,8 @@ internal sealed class TutorialPlay
     /// </summary>
     public event Action? GaveBack;
 
-    /// <summary>What this reads and answers of a practice's table: the person's seat as it stands, whether the match is over, and the gate a decision goes through.</summary>
-    internal sealed record Seat(Func<SeatSnapshot?> Read, Func<bool> Over, Func<Application.Matches.Decisions.PlayerDecision, long, Task<DecisionTaken>> Decide);
+    /// <summary>What this reads and answers of a practice's table: the person's seat as it stands, whether the match ended, and the gate a decision goes through.</summary>
+    internal sealed record Seat(Func<SeatSnapshot?> Read, Func<bool> Ended, Func<Application.Matches.Decisions.PlayerDecision, long, Task<DecisionTaken>> Decide);
 
     /// <summary>Follows a practice's session from now on: every change of what the seats read is looked at.</summary>
     /// <remarks>
@@ -133,7 +139,7 @@ internal sealed class TutorialPlay
         ArgumentNullException.ThrowIfNull(session);
         Follow(new Seat(
             () => session.SnapshotAsync(_seat).GetAwaiter().GetResult() is { IsSuccess: true } read ? read.Value : null,
-            () => session.IsOver,
+            () => session.HasEnded,
             (decision, asked) => session.DecideAsync(_seat, decision, asked)));
         session.Changed += Look;
     }
@@ -207,7 +213,7 @@ internal sealed class TutorialPlay
         }
     }
 
-    private void Note(SeatSnapshot snapshot, bool over)
+    private void Note(SeatSnapshot snapshot, bool ended)
     {
         var round = snapshot.Board.RoundNumber;
         if (snapshot.Waiting is { } waiting && round is { } asked)
@@ -219,7 +225,7 @@ internal sealed class TutorialPlay
             }
         }
 
-        _done |= over || snapshot.Board.State == MatchState.Ended || (_shown[^1] && round > _lesson.Steps[^1].Round);
+        _done |= ended || snapshot.Board.State == MatchState.Ended || (_shown[^1] && round > _lesson.Steps[^1].Round);
     }
 
     /// <summary>
@@ -228,9 +234,11 @@ internal sealed class TutorialPlay
     /// </summary>
     private bool Finished(SeatSnapshot snapshot, Seat table)
     {
+        // Read outside this gate: reading it takes the session's gate, which is never taken while this one is held.
+        var ended = table.Ended();
         lock (_gate)
         {
-            Note(snapshot, table.Over());
+            Note(snapshot, ended);
             return _done;
         }
     }

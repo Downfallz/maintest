@@ -48,10 +48,14 @@ export function tutorialBrief(lesson) {
   };
 }
 
-/** Whether leaving now is skipping: a tutorial the host has not said is done. It never opens by itself again. */
+/**
+ * Whether leaving now is skipping: a tutorial the host has not said is done, whose match still plays on. It never
+ * opens by itself again. A match over that the host has not called done (a table that could not go on) is neither:
+ * nothing is said of the tutorial, so it opens again (#912).
+ */
 export function leavingSkips(view) {
   const lesson = tutorialOf(view);
-  return Boolean(lesson && !lesson.done);
+  return Boolean(lesson && !lesson.done && !view?.over);
 }
 
 /**

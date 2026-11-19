@@ -69,7 +69,9 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
 
     /// <summary>
     /// The account's practice of a scenario to go on with, as a reloaded page asks for it: the one it has, except a
-    /// tutorial that is done, which is let go of so the next time it opens it starts from its cut.
+    /// tutorial that is done, which is let go of so the next time it opens it starts from its cut. A tutorial whose
+    /// table plays on no more without having ended its match (let go of, or it could not go on) is let go of too,
+    /// with nothing kept on the account: it is not done, and there is nothing left to play (#912).
     /// </summary>
     public async Task<Practice?> ResumeAsync(string account, string scenario)
     {
@@ -82,7 +84,7 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
                 return null;
             }
 
-            if (practice.Play.Api.Practice?.Tutorial is { Done: true })
+            if (practice.Play.Api.Practice?.Tutorial is { } tutorial && (tutorial.Done || practice.Play.Session.IsOver))
             {
                 await StopAsync(practice);
                 return null;
