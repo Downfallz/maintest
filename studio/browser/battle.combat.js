@@ -61,6 +61,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     await page.goto(`${origin}/battle`);
     await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true'); await expect(page.locator('#loading')).toBeHidden();
     await expect(page.locator('#upkeep-dialog')).toBeVisible();
+    // The listeners hold the first load's reads too: the Upkeep sheet holds the field, so none of them says shown.
     expect(shown).toEqual([]); expect(sent).toEqual([]);
     await page.locator('#upkeep-close').click();
     await page.evaluate(() => {

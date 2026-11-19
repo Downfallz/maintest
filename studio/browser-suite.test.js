@@ -537,12 +537,14 @@ test('every diff the changed paths are read from turns rename detection off', ()
 // image a step runs is pulled first, in a loop that tries again before it gives up.
 test('every image a CI step runs is pulled first, with a few tries', () => {
   const workflow = ciWorkflow();
-  const runs = [...workflow.matchAll(/^( *)docker run [^\n]*?(mcr\.microsoft\.com\/\S+)/gm)];
+  // The image is the first argument after docker run's options, on its line or a continued one.
+  const runs = [...workflow.matchAll(/docker run((?: +(?:--?[a-z-]+(?: +[^\s-]\S*)?|\\\n))*) +([a-z0-9.-]+(?:\/[\w.-]+)+(?::[\w.-]+)?)/g)];
   assert.ok(runs.length > 0, 'the storage emulator is started with docker run');
   for (const { 2: image, index } of runs) {
-    const step = workflow.slice(workflow.lastIndexOf('- name:', index), index);
+    // Its step: from the nearest step item before it, whether it opens with a name or a run.
+    const step = workflow.slice(workflow.slice(0, index).search(/\n {6}- [^\n]*(?![\s\S]*\n {6}- )/), index);
     const loop = /for attempt in ((?:\d+ ?)+); do\n\s*if docker pull (\S+); then break; fi/.exec(step);
-    assert.ok(loop, `${image} is pulled in a loop before docker run`);
+    assert.ok(loop, `${image} is pulled in a loop before docker run, in the same step`);
     assert.equal(loop[2], image, 'the loop pulls the image docker run starts');
     assert.ok(loop[1].trim().split(' ').length >= 3, 'the pull is tried at least three times');
   }
